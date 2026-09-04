@@ -10,3 +10,4 @@ build/
 *.wav
 *.raw
 .DS_Store
+*.sh
