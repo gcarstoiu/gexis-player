@@ -2,6 +2,7 @@
 
 **Status:** Accepted
 **Date:** 2026-09-04
+**Amended:** 2026-09-04 — the silence rule was restated. See "Rules" below.
 **Answers:** ADR-0004 (one active renderer — semantics were left open)
 
 ## Context
@@ -61,8 +62,26 @@ pauses instead, because it is the base.**
   the audio path is not sufficient — the source would still show "playing" into
   a silent room. Adapters must disconnect or pause on demand and report success
   or failure.
-- **The UI must never show "playing" while silent.** Handoff is a displayed
-  state.
+- **Never show a state the user cannot account for.** This is the rule that
+  matters, and it is broader than the wording it replaces.
+
+  The failure it exists to prevent is specific: the system believes it is
+  playing, the room is silent, and the user has no way to understand why.
+  Handoff is therefore a displayed state, and a renderer must not lose the
+  device without its source being told.
+
+  It is **not** a prohibition on silence. Several legitimate states are silent
+  while playing, and all of them pass because the user caused them, they are
+  displayed, and they are reversible by the same action:
+
+  - **Mute** (ADR-0018) — user-initiated, indicated, one action to undo
+  - **Fixed output into a powered-down amplifier** — nothing we can detect, and
+    nothing the user needs told
+  - **Volume at minimum** — self-evident from the control
+
+  The earlier wording — "never show playing while silent" — would have required
+  an exception for each of these, and the list would keep growing. The rule is
+  about accountability, not about silence.
 
 ### LMS power state
 
