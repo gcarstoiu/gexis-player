@@ -1,0 +1,12 @@
+__pycache__/
+*.py[cod]
+node_modules/
+dist/
+build/
+.venv/
+*.egg-info/
+.env
+*.log
+*.wav
+*.raw
+.DS_Store
