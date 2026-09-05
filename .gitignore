@@ -13,3 +13,7 @@ build/
 
 # pi-gen build output
 /image/deploy/
+
+# real provisioning credentials (SSH key, Wi-Fi) - image/provision.env.example
+# documents the shape; this file holds the actual values and never gets committed
+/image/provision.local.env
