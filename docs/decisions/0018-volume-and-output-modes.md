@@ -3,6 +3,8 @@
 **Status:** Accepted
 **Date:** 2026-09-04
 **Amends:** ADR-0010 (the silence rule was restated to accommodate mute)
+**Amended:** 2026-09-05 — confirmed from source that the startup assertion
+below has to be ours. See "squeezelite must be told".
 
 ## Context
 
@@ -70,6 +72,18 @@ silently falls back to software volume** — no error, no warning, and a
 bit-perfect claim that is quietly false. This is a startup assertion, not a
 configuration preference: if the flag is missing or the control name is wrong,
 the daemon should refuse to start rather than play.
+
+**Confirmed by reading squeezelite's source (`output_alsa.c`), Phase 2:**
+squeezelite will not enforce this itself. A missing or misnamed mixer
+control doesn't stop it — `mixer_init_alsa()` failing is caught, logged as
+an error, and squeezelite carries on with software volume, process still
+running, unit still "active" to systemd. The refusal-to-start this record
+already calls for has to be built by us: `squeezelite.service` runs
+`amixer -D output sget DAC` as `ExecStartPre`, so systemd refuses to start
+the unit at all if the control isn't there, rather than starting it and
+quietly losing the bit-perfect claim. Not a workaround for a squeezelite
+defect — squeezelite was never going to do this, and the assertion was
+always ours to build.
 
 ### The mixer is subscribed, not polled
 
