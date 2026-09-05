@@ -56,16 +56,27 @@ looks finished.
 
 ### Phase 1 — Takeover gap
 
-**Acceptance**
-
-1. Time from stop of renderer A to first sample of renderer B, measured
-   same-rate and cross-rate, reported as a distribution over at least 20 runs.
-2. Result recorded as a finding with scope stated.
-3. ADR-0010 amended to say whether handoff needs a transition screen.
+**Absorbed into Phase 2.** The takeover gap has to be measured on the image,
+not a hand-built machine — measuring it on `rig` would characterise `rig`,
+not the product. The renderers it needs (squeezelite, go-librespot) are
+Phase 2 deliverables, so a standalone Phase 1 cannot run before Phase 2
+exists to run it on. Its three criteria are now Phase 2 criteria 8-10. This
+heading is kept, unnumbered content, so the later phase numbers do not
+shift.
 
 ### Phase 2 — Audio layer and arbitration
 
 No UI. Verified from logs and CLI.
+
+All deliverables ship in the image, via `stage-gexis`. Hand-installing on
+`gexis` is acceptable for exploration mid-phase, but nothing in this phase
+is done until it is in the build.
+
+The Python core first appears here, not in Phase 3: the arbitration
+supervisor has to exist, in the image, for criteria 3-7 to be real and for
+the takeover gap measurement (criteria 8-10, absorbed from Phase 1) to
+characterise the product rather than a hand-built stand-in. This exercises
+ADR-0021's venv packaging decision earlier than the phase order implied.
 
 **Acceptance**
 
@@ -80,6 +91,11 @@ No UI. Verified from logs and CLI.
    does nothing in fixed mode.
 6. Boot volume is the configured safe level, not restored.
 7. No renderer can be made to play while another holds the device.
+8. Takeover gap: time from stop of renderer A to first sample of renderer B,
+   measured same-rate and cross-rate, reported as a distribution over at
+   least 20 runs.
+9. Result recorded as a finding with scope stated.
+10. ADR-0010 amended to say whether handoff needs a transition screen.
 
 ### Phase 3 — Core state daemon
 

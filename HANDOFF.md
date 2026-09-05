@@ -21,19 +21,26 @@ finished artefact, is **37m21s** (2026-09-05, this dev machine, under Docker
 earlier assumption that a rig-testing loop would need rsync-to-rig rather
 than full rebuilds, because of build cost, is withdrawn.
 
-**Phase 1 is mostly done.** Five findings in `docs/findings/`. The takeover
-gap measurement is the one remaining item.
+**Phase 1 is absorbed into Phase 2** (`docs/DEVELOPMENT.md`). The takeover
+gap has to be measured on the image, not a hand-built machine — measuring it
+on `rig` would characterise `rig`, not the product. Its renderers are Phase 2
+deliverables, so a standalone Phase 1 could never actually run. Its three
+criteria are now Phase 2 criteria 8-10. Five findings in `docs/findings/`
+stand regardless — that work already happened.
 
 **Phase 0's image-build tooling exists** (`image/`, root `Makefile`) — no
-player or control-plane code yet (Phase 2 onward).
+player or control-plane code yet. Phase 2 changes that: the Python core's
+arbitration supervisor has to be *in the image* for Phase 2's own criteria
+to mean anything, so it now first appears there rather than in Phase 3 —
+exercising ADR-0021's venv packaging decision earlier than expected.
 
 ## Machines
 
 | Name | What it is | Notes |
 |---|---|---|
 | `C3PO` | dev machine | CachyOS, **fish shell** — no heredocs. Hand it script files to run with `bash`, not pasted multi-line commands. Claude Code 2.1.260, Node 26.8.1, git 2.55.0. |
-| `rig` | Raspberry Pi 4, 4 GB | Raspberry Pi OS Lite 64-bit, Trixie, kernel `6.18.34+rpt-rpi-v8`. Headless, Wi-Fi. DAC2 HD fitted, screen not connected. peppyalsa built and installed by hand. **Hand-built reference system** — Findings 002-004 were measured here. |
-| `gexis` | Raspberry Pi 4 | Flashed from this project's own `make image` output (Phase 0). User `pi`, SSH key auth via `firstrun.sh`. Reachable as `pi@gexis.local`. DAC2 HD fitted; `output` device verified with `speaker-test`. |
+| `rig` | Raspberry Pi 4, 4 GB | Raspberry Pi OS Lite 64-bit, Trixie, kernel `6.18.34+rpt-rpi-v8`. Headless, Wi-Fi. DAC2 HD fitted, screen not connected. peppyalsa built and installed by hand. **Reference machine now** — holds the environment Findings 002-004 were measured against. Not the build/test target going forward. |
+| `gexis` | Raspberry Pi 4 | Flashed from this project's own `make image` output (Phase 0). User `pi`, SSH key auth via `firstrun.sh`. Reachable as `pi@gexis.local`. DAC2 HD fitted; `output` device verified with `speaker-test`. **The image-built target** — Phase 2 onward is built and measured here, not on `rig`. |
 | SD card 2 | moOde | Reference install. Read-only recon source. Do not modify. |
 
 Both dev-adjacent machines have separate GitHub SSH keys (`id_ed25519_github`),
@@ -41,16 +48,21 @@ authenticated as `gcarstoiu`.
 
 ## Next actions, in order
 
-1. **Takeover gap measurement.** The last Phase 1 item. Stop → close → open →
-   first sample, same-rate and cross-rate. Needs squeezelite and go-librespot on
-   the rig. Decides whether handoff needs a transition screen or can be silent
-   (ADR-0010).
+1. **Phase 2 — audio layer and arbitration.** squeezelite, go-librespot and
+   bluealsa-aplay into `stage-gexis` as systemd units; the Python arbitration
+   supervisor (first appearance of the core); volume bridge; timeout ladder
+   on release. Everything ships in the image — hand-installing on `gexis` is
+   fine for exploration, nothing is done until it is in the build. Criteria
+   8-10 are the takeover gap measurement, absorbed from the old standalone
+   Phase 1, run against the image itself once its renderers exist. Decides
+   whether handoff needs a transition screen or can be silent (ADR-0010).
 
 2. **Fill the Finding 003 grid.** The meter plugin loses the final 768 frames at
    S32_LE/192000 and does not at S16_LE/44100. Two data points, four candidate
    variables (rate, format, data rate, period size), none eliminated. 16
    remaining cells. Reproduction is in the finding. Good first
-   hardware-in-the-loop test on the self-hosted runner.
+   hardware-in-the-loop test on the self-hosted runner. `rig`, not `gexis` —
+   this characterises the metering path, not the product image.
 
 Not blocking, and needed before their phases:
 
@@ -67,8 +79,9 @@ screens can.
 
 ```
 0  reproducible image                     ✓ done — pi-gen, ADR-0021
-1  measurements                           ← takeover gap outstanding
-2  audio layer + arbitration              squeezelite, go-librespot, bluealsa
+1  measurements                           absorbed into 2 — needs 2's own renderers
+2  audio layer + arbitration              ← squeezelite, go-librespot, bluealsa;
+                                             Python core arrives here; takeover gap
 3  core state daemon                      no UI; test with a WebSocket client
 4  UI shell + idle + display-only nowplay
 5  visualisation service + Peppy screen   capability-blind, proves the model
