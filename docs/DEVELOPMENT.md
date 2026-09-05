@@ -50,7 +50,9 @@ looks finished.
 4. `aplay -D output <testfile>` plays audibly. Card referenced by name.
 5. `/etc/alsa/conf.d/output.conf` contains no `type plug` and no card index.
 6. `libasound2t64` is `1.2.14-1+rpt1` and held.
-7. Rebuilding from the same commit produces the same package set.
+7. Every build records the exact package set it produced, as a manifest
+   alongside the `.img`. Rebuilds are not guaranteed to produce an
+   identical set.
 
 ### Phase 1 — Takeover gap
 

@@ -1,6 +1,6 @@
 # ADR-0021 — Deployment as a flashable image
 
-**Status:** Accepted (Q1 distribution channel deferred; see below)
+**Status:** Accepted (Q1 distribution channel, Q3 archive snapshot pinning deferred; see below)
 **Date:** 2026-09-04
 **Blocked by:** ADR-0022 handed this record the first-boot provisioning problem
 **Overlaps:** ADR-0001 (base OS, still open)
@@ -180,11 +180,36 @@ Three routes exist and the choice does not block anything now:
 The last is the outcome to aim at and cannot be a dependency for a first
 release. Revisit when there is something to distribute.
 
+### Q3 — archive snapshot pinning
+
+Not adopted. Raspberry Pi's and Debian's apt archives are live, so a rebuild
+from the same commit at a later date can resolve different transitive package
+versions even though our own pinned commit is unchanged (see Reproducibility,
+below). Pinning the build to a dated snapshot mirror would make a rebuild
+identical over time, at the cost of standing snapshot infrastructure.
+
+No concrete need has appeared yet. Revisit if reproducing an old build's exact
+package set is ever actually required — e.g. bisecting a regression against a
+specific shipped archive state — rather than building it speculatively.
+
 ## Reproducibility
 
-Whatever is chosen, the build must be reproducible and CI-drivable. Package
-versions are pinned, and the build records what it pinned, so that a fault
-reported against a shipped image can be reproduced against the same package set.
+Whatever is chosen, the build must be CI-drivable and must record exactly what
+it produced: every build writes a manifest of resolved package versions
+alongside the `.img`, so a fault reported against a shipped image can be
+traced to a package set.
+
+**Rebuilding is not guaranteed to reproduce that same set.** In-place `apt`
+updates (above) mean a running device diverges from its image after its first
+update anyway — reproducing an image tells us what shipped, not what a given
+device is currently running. The manifest exists to answer "what did we ship,"
+not to pin the archive in time. The one package that must not drift silently,
+`libasound2t64`, is pinned and held for that specific reason (Findings
+002/003), independent of whether the rest of the build is reproducible.
+
+Snapshot-pinning the apt archive (so a rebuild months later resolves
+identically) was considered and deferred — see Q3 below — rather than built
+into Phase 0 speculatively.
 
 This is the same requirement that blocks ADR-0001: whether DietPi supports a
 build pipeline comparable to Volumio's `build.sh` or moOde's pi-gen wrapper.
