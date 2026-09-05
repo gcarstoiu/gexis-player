@@ -24,10 +24,13 @@ tar -xzf "${WORK}/${GO_LIBRESPOT_ASSET}" -C "${WORK}" go-librespot
 
 install -D -m 755 "${WORK}/go-librespot" "${ROOTFS_DIR}/usr/local/bin/go-librespot"
 
-# go-librespot: config at its own default location (~/.config/go-librespot)
-# for the user the unit runs as - no -config_dir override needed.
+# go-librespot: config under systemd's StateDirectory= (/var/lib/go-
+# librespot), not ~/.config - see go-librespot.service for why. systemd
+# (re-)chowns this to User=/Group= on every start regardless of what
+# ownership this install leaves it at, so -o/-g here is defence in depth,
+# not load-bearing.
 install -D -m 644 -o 1000 -g 1000 files/go-librespot-config.yml \
-	"${ROOTFS_DIR}/home/pi/.config/go-librespot/config.yml"
+	"${ROOTFS_DIR}/var/lib/go-librespot/config.yml"
 install -D -m 644 files/go-librespot.service \
 	"${ROOTFS_DIR}/etc/systemd/system/go-librespot.service"
 
@@ -44,6 +47,12 @@ install -D -m 755 files/squeezelite-mixer-check.sh \
 install -D -m 644 files/bluealsa-aplay-override.conf \
 	"${ROOTFS_DIR}/etc/systemd/system/bluealsa-aplay.service.d/override.conf"
 
+# bluealsa (the daemon): same override pattern, dropping the a2dp-source
+# profile its shipped default advertises unasked (see the override's own
+# comment - confirmed running on gexis, not something we configured).
+install -D -m 644 files/bluealsa-override.conf \
+	"${ROOTFS_DIR}/etc/systemd/system/bluealsa.service.d/override.conf"
+
 # Enable our own units. Symlinked directly rather than via systemctl -
 # there is no running systemd inside this chroot to talk to.
 mkdir -p "${ROOTFS_DIR}/etc/systemd/system/multi-user.target.wants"
@@ -56,11 +65,12 @@ ln -sf /etc/systemd/system/squeezelite.service \
 # where the systemd units expect it, and pi owns what it needs to own.
 for f in \
 	"${ROOTFS_DIR}/usr/local/bin/go-librespot" \
-	"${ROOTFS_DIR}/home/pi/.config/go-librespot/config.yml" \
+	"${ROOTFS_DIR}/var/lib/go-librespot/config.yml" \
 	"${ROOTFS_DIR}/etc/systemd/system/go-librespot.service" \
 	"${ROOTFS_DIR}/etc/systemd/system/squeezelite.service" \
 	"${ROOTFS_DIR}/usr/local/lib/gexis/squeezelite-mixer-check.sh" \
-	"${ROOTFS_DIR}/etc/systemd/system/bluealsa-aplay.service.d/override.conf"
+	"${ROOTFS_DIR}/etc/systemd/system/bluealsa-aplay.service.d/override.conf" \
+	"${ROOTFS_DIR}/etc/systemd/system/bluealsa.service.d/override.conf"
 do
 	if [ ! -e "${f}" ]; then
 		echo "ERROR: ${f} missing after install" >&2

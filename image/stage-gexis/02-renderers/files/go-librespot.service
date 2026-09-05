@@ -3,10 +3,24 @@ Description=go-librespot (Spotify Connect renderer)
 Documentation=https://github.com/devgianlu/go-librespot
 After=network-online.target avahi-daemon.service sound.target
 Wants=network-online.target
+# A misconfigured unit restarts forever otherwise, burying the real error
+# in noise (hit this directly: 114 restarts in 25 minutes with no limit).
+# 5 failures in 60s and systemd gives up, unit stays "failed" instead of
+# spinning - StartLimit* is Unit-level, not Service-level.
+StartLimitIntervalSec=60
+StartLimitBurst=5
 
 [Service]
 Type=simple
-ExecStart=/usr/local/bin/go-librespot
+# /home/pi is wrong for a system service's state - it's tied to a specific
+# user account and, per install(1), install -D creates intermediate
+# directories root-owned regardless of -o/-g on the target file, which is
+# exactly what broke this (mkdir permission denied at first boot on
+# gexis). StateDirectory= is systemd's own answer: /var/lib/go-librespot,
+# created and (re-)chowned to User=/Group= on every start, survives the
+# user account changing, self-healing against ownership drift.
+StateDirectory=go-librespot
+ExecStart=/usr/local/bin/go-librespot -config_dir /var/lib/go-librespot
 Restart=on-failure
 RestartSec=2
 User=pi

@@ -1,6 +1,8 @@
-# go-librespot config. Default location (~/.config/go-librespot/config.yml
-# for the user the systemd unit runs as) - no -config_dir flag, so this is
-# the file that path resolves to.
+# go-librespot config. Lives under systemd's StateDirectory=
+# (/var/lib/go-librespot), not ~/.config - a system service's state
+# shouldn't live under a user account's home directory. go-librespot.service
+# passes -config_dir /var/lib/go-librespot explicitly; this is the file
+# that path resolves to.
 #
 # device_name is hardcoded for now. ADR-0022 eventually wants one device
 # name propagated everywhere (mDNS hostname, Spotify, Bluetooth); until

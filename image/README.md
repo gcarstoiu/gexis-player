@@ -200,15 +200,22 @@ bluealsa-aplay, each as a systemd unit writing to `output`.
   independently, not just trusted from the API
   (`stage-gexis/02-renderers/01-run.sh`). Downloaded and verified on the
   host, not in the qemu-emulated chroot — no reason to pay emulation cost
-  for a plain HTTPS GET and a `sha256sum`. Config at its own default
-  location, `zeroconf_backend: avahi` (shares the image's already-running
-  `avahi-daemon` rather than standing up a second mDNS responder).
-- **bluealsa-aplay** — `bluez-alsa-utils` (Debian trixie, arm64) already
-  ships and auto-enables `bluealsa.service` and `bluealsa-aplay.service`
-  (`WantedBy=bluetooth.target`). We only override `bluealsa-aplay`'s
-  `ExecStart` to point `--pcm` at `output` instead of its shipped default
-  of `default` — a systemd drop-in, per upstream's own documented
-  customisation path, not a replacement unit.
+  for a plain HTTPS GET and a `sha256sum`. `zeroconf_backend: avahi`
+  (shares the image's already-running `avahi-daemon` rather than standing
+  up a second mDNS responder). Config lives under systemd's
+  `StateDirectory=` (`/var/lib/go-librespot`, passed via `-config_dir`),
+  not `~/.config` — see "First hardware pass" below for why that matters.
+- **bluealsa / bluealsa-aplay** — `bluez-alsa-utils` (Debian trixie, arm64)
+  already ships and auto-enables both units
+  (`WantedBy=bluetooth.target`). We override two things via systemd
+  drop-ins, per upstream's own documented customisation path, not
+  replacement units: `bluealsa-aplay`'s `ExecStart` to point `--pcm` at
+  `output` instead of its shipped default of `default`, and `bluealsa`'s
+  `ExecStart` to drop the `a2dp-source` profile its shipped default
+  advertises unasked (confirmed running as `-p a2dp-source -p a2dp-sink`
+  on hardware — not something we'd set deliberately; only `a2dp-sink` is
+  a requirement, and fewer advertised profiles is less for a phone to
+  negotiate wrongly).
 
 **`output.conf` gained a `ctl.output` block.** ADR-0009's indirection had
 only ever been exercised for playback (`pcm.output`) before Phase 2's
@@ -217,6 +224,27 @@ squeezelite's `-V <name>` resolves against a ctl device matching the PCM
 name it was given, not through the PCM's slave chain, so `-o output -V DAC`
 needed `ctl.output` to exist. Completing ADR-0009's own stated indirection,
 not a new decision.
+
+### First hardware pass (2026-09-05, `gexis`)
+
+squeezelite, bluealsa and bluealsa-aplay came up healthy first try — the
+`ExecStartPre` mixer guard ran and passed, confirming `ctl.output`
+resolves on real hardware, not just in theory.
+
+go-librespot crash-looped — 114 restarts in 25 minutes, no backoff limit,
+burying `failed creating config directory: mkdir
+/home/pi/.config/go-librespot: permission denied` in noise. Root cause:
+`install -D` (see `01-run.sh`) creates intermediate directories owned by
+whoever runs it — root, in the build container — regardless of `-o`/`-g`
+on the target file, so `/home/pi/.config` ended up root-owned. `/home/pi`
+was also the wrong place on principle: a system service's state shouldn't
+live under a user account's home directory at all. Fixed by moving to
+`StateDirectory=go-librespot` (systemd creates and re-chowns
+`/var/lib/go-librespot` to `User=`/`Group=` on every start — self-healing
+against exactly this class of ownership mistake) and adding
+`StartLimitIntervalSec=`/`StartLimitBurst=` to both renderer units so a
+misconfigured service gives up and stays failed instead of spinning
+forever. Not yet reverified on hardware.
 
 ## Testing a build
 
