@@ -1,0 +1,24 @@
+# pi-gen config for the Gexis Player image.
+#
+# Only stage0/1/2 (Raspberry Pi OS Lite) plus our own stage-gexis are built —
+# stage3/4/5 are the Desktop stages and are deliberately not in STAGE_LIST.
+# stage-gexis is bind-mounted into the container by the root Makefile
+# (PIGEN_DOCKER_OPTS), so it lives outside the pinned pi-gen submodule.
+#
+# This file is sourced twice: once by build-docker.sh on the host (under
+# set -eu, before pi-gen's own BASE_DIR exists) and once by build.sh inside
+# the container. /pi-gen is hardcoded rather than using ${BASE_DIR} so the
+# host-side sourcing doesn't fail on an unbound variable — we only ever
+# build via the Docker wrapper, where pi-gen always lives at /pi-gen
+# (Dockerfile: COPY . /pi-gen/).
+
+IMG_NAME="gexis-player"
+
+STAGE_LIST="/pi-gen/stage0 /pi-gen/stage1 /pi-gen/stage2 /pi-gen/stage-gexis"
+
+# ADR-0021 chose the systemd/firstrun.sh first-boot mechanism, not
+# cloud-init (stage-gexis/01-firstboot installs our own firstrun.sh).
+# Cloud-init's own stage2/04-cloud-init otherwise ships inert, unedited
+# Ubuntu cloud-config templates on the boot partition regardless of whether
+# anything on the image reads them — misleading, not just unused.
+ENABLE_CLOUD_INIT=0

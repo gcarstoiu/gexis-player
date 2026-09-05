@@ -1,6 +1,6 @@
 # Handoff
 
-Last updated: 2026-09-04
+Last updated: 2026-09-05
 
 ## Where things stand
 
@@ -9,21 +9,35 @@ records in `docs/decisions/`. Start with `docs/decisions/README.md` — it carri
 the numbering gap explanation, the cross-cutting rules, and eight deferred items
 that are not lost but are not decided either.
 
-**Phase 1 is mostly done.** Three findings in `docs/findings/`. Two questions
-answered, one open defect, one measurement not started.
+**Phase 0 is done.** All seven acceptance criteria (`docs/DEVELOPMENT.md`)
+verified — build-artefact checks (manifest, package pin/hold, boot-partition
+content) and hardware checks (SSH by key, audible playback via
+`speaker-test -D output`) both pass. PR open from `phase-0-image` to `main`,
+not yet merged — awaiting review.
 
-**No product code exists yet.**
+**Build cost is known and it's cheap.** A full `make image` run, start to
+finished artefact, is **37m21s** (2026-09-05, this dev machine, under Docker
++ QEMU emulation). Rebuild-per-iteration is viable for Phase 2 onward — the
+earlier assumption that a rig-testing loop would need rsync-to-rig rather
+than full rebuilds, because of build cost, is withdrawn.
+
+**Phase 1 is mostly done.** Five findings in `docs/findings/`. The takeover
+gap measurement is the one remaining item.
+
+**Phase 0's image-build tooling exists** (`image/`, root `Makefile`) — no
+player or control-plane code yet (Phase 2 onward).
 
 ## Machines
 
 | Name | What it is | Notes |
 |---|---|---|
 | `C3PO` | dev machine | CachyOS, **fish shell** — no heredocs. Hand it script files to run with `bash`, not pasted multi-line commands. Claude Code 2.1.260, Node 26.8.1, git 2.55.0. |
-| `rig` | Raspberry Pi 4, 4 GB | Raspberry Pi OS Lite 64-bit, Trixie, kernel `6.18.34+rpt-rpi-v8`. Headless, Wi-Fi. DAC2 HD fitted, screen not connected. peppyalsa built and installed. |
+| `rig` | Raspberry Pi 4, 4 GB | Raspberry Pi OS Lite 64-bit, Trixie, kernel `6.18.34+rpt-rpi-v8`. Headless, Wi-Fi. DAC2 HD fitted, screen not connected. peppyalsa built and installed by hand. **Hand-built reference system** — Findings 002-004 were measured here. |
+| `gexis` | Raspberry Pi 4 | Flashed from this project's own `make image` output (Phase 0). User `pi`, SSH key auth via `firstrun.sh`. Reachable as `pi@gexis.local`. DAC2 HD fitted; `output` device verified with `speaker-test`. |
 | SD card 2 | moOde | Reference install. Read-only recon source. Do not modify. |
 
-Both machines have separate GitHub SSH keys (`id_ed25519_github`), authenticated
-as `gcarstoiu`.
+Both dev-adjacent machines have separate GitHub SSH keys (`id_ed25519_github`),
+authenticated as `gcarstoiu`.
 
 ## Next actions, in order
 
@@ -37,9 +51,6 @@ as `gcarstoiu`.
    variables (rate, format, data rate, period size), none eliminated. 16
    remaining cells. Reproduction is in the finding. Good first
    hardware-in-the-loop test on the self-hosted runner.
-
-3. **Set up the pi-gen build pipeline** (ADR-0001, ADR-0021). Reproducible,
-   CI-drivable, pinned package versions recorded by the build.
 
 Not blocking, and needed before their phases:
 
@@ -55,7 +66,7 @@ Risk retirement, not visible progress. Audio arbitration cannot be retrofitted;
 screens can.
 
 ```
-0  reproducible image                     ← pi-gen, ADR-0021
+0  reproducible image                     ✓ done — pi-gen, ADR-0021
 1  measurements                           ← takeover gap outstanding
 2  audio layer + arbitration              squeezelite, go-librespot, bluealsa
 3  core state daemon                      no UI; test with a WebSocket client
@@ -69,8 +80,9 @@ screens can.
 
 ## Things that will bite if forgotten
 
-- **Never reference an ALSA card by index.** It is 3 on the rig, 2 on moOde. Use
-  `hw:sndrpihifiberry`.
+- **Never reference an ALSA card by index.** 3 on `rig`, 2 on moOde, 1 on
+  `gexis` — same DAC model, three different indices, none of them
+  predictable (Finding 005). Use `hw:sndrpihifiberry`.
 - **`squeezelite -V DAC`** — omitting it silently falls back to software volume
   and quietly falsifies the bit-perfect claim. ADR-0018 makes this a startup
   assertion, not a preference.
