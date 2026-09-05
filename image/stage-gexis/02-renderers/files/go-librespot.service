@@ -1,0 +1,16 @@
+[Unit]
+Description=go-librespot (Spotify Connect renderer)
+Documentation=https://github.com/devgianlu/go-librespot
+After=network-online.target avahi-daemon.service sound.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/go-librespot
+Restart=on-failure
+RestartSec=2
+User=pi
+Group=audio
+
+[Install]
+WantedBy=multi-user.target

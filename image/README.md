@@ -52,8 +52,10 @@ successful build, 2026-09-05, 36m43s wall-clock):
   unmodified pi-gen. Harmless; ignore it.
 - `image_<date>-gexis-player.zip` — **this is the actual deliverable.** Built
   from `stage-gexis` on top of stage2: pins and holds `libasound2t64` at
-  `1.2.14-1+rpt1`, builds peppyalsa from source, and installs
-  `/etc/alsa/conf.d/output.conf`.
+  `1.2.14-1+rpt1`, builds peppyalsa from source, installs
+  `/etc/alsa/conf.d/output.conf`, wires up first-boot provisioning, and
+  installs squeezelite, go-librespot and bluealsa-aplay (Phase 2a — see
+  below).
 
 Each is a zip containing one file, `<date>-gexis-player[-lite].img` — pi-gen's
 default `DEPLOY_COMPRESSION=zip`, not overridden in `image/config`. Both
@@ -67,12 +69,13 @@ is roughly a third the size (a real 2026-09-05 build: 836 MB zipped vs.
 Each image gets a matching `.info` file (from pi-gen's own
 `export-image/05-finalise` step) containing the exact `dpkg -l` package list
 at build time — the manifest required by Phase 0 acceptance criterion 2/7.
-peppyalsa isn't an apt package, so pi-gen's manifest doesn't cover it: the
-root `Makefile` appends its pinned upstream commit
-(`7dcb0c5e783e0c86315a0f655684613affd3e9d2`, read out of
-`stage-gexis/00-alsa/01-run-chroot.sh` so there's one source of truth) and
-the total wall-clock build time to the `.info` file after the build
-completes — post-processing on the host, not a pi-gen change.
+peppyalsa and go-librespot aren't apt packages, so pi-gen's manifest doesn't
+cover them: the root `Makefile` appends peppyalsa's pinned commit (read out
+of `stage-gexis/00-alsa/01-run-chroot.sh`) and go-librespot's pinned release
+tag (read out of `stage-gexis/02-renderers/01-run.sh`) — one source of truth
+each, not duplicated into the Makefile — plus the total wall-clock build
+time, after the build completes. Post-processing on the host, not a pi-gen
+change.
 
 Rebuilding is not guaranteed to reproduce the same package set — see
 `docs/DEVELOPMENT.md` criterion 7 and ADR-0021.
@@ -165,9 +168,51 @@ mdir -i "/tmp/gexis.img@@${OFFSET}" -/
 mcopy -i "/tmp/gexis.img@@${OFFSET}" ::cmdline.txt -
 ```
 
+## Renderers (Phase 2a)
+
+`stage-gexis/02-renderers` installs squeezelite, go-librespot and
+bluealsa-aplay, each as a systemd unit writing to `output`.
+
+- **squeezelite** — `apt install squeezelite` (Debian trixie, arm64,
+  confirmed via packages.debian.org — not assumed). Not held: no Finding
+  ties us to an exact version the way `libasound2t64` is. `-V DAC`'s mixer
+  resolution needed `output.conf`'s new `ctl.output` block (see below) —
+  without it, squeezelite doesn't fail, it silently reverts to software
+  volume (confirmed by reading `output_alsa.c`, ADR-0018's exact warning).
+  `squeezelite.service`'s `ExecStartPre` runs `amixer -D output sget DAC`
+  first, so a broken mixer control fails the unit instead of playing
+  silently-wrong audio. `-C 10` (closes the ALSA device after 10s idle,
+  which is what actually frees it for takeover, per ADR-0010's
+  implementation note) is a **provisional value** — real tuning is
+  criteria 8-10's job once there's a real takeover-gap distribution to
+  tune against.
+- **go-librespot** — no Debian package (confirmed empty search). Pinned
+  the same way peppyalsa is: an exact release tag and a checksum verified
+  independently, not just trusted from the API
+  (`stage-gexis/02-renderers/01-run.sh`). Downloaded and verified on the
+  host, not in the qemu-emulated chroot — no reason to pay emulation cost
+  for a plain HTTPS GET and a `sha256sum`. Config at its own default
+  location, `zeroconf_backend: avahi` (shares the image's already-running
+  `avahi-daemon` rather than standing up a second mDNS responder).
+- **bluealsa-aplay** — `bluez-alsa-utils` (Debian trixie, arm64) already
+  ships and auto-enables `bluealsa.service` and `bluealsa-aplay.service`
+  (`WantedBy=bluetooth.target`). We only override `bluealsa-aplay`'s
+  `ExecStart` to point `--pcm` at `output` instead of its shipped default
+  of `default` — a systemd drop-in, per upstream's own documented
+  customisation path, not a replacement unit.
+
+**`output.conf` gained a `ctl.output` block.** ADR-0009's indirection had
+only ever been exercised for playback (`pcm.output`) before Phase 2's
+renderers arrived — nothing had needed the mixer-control half of it yet.
+squeezelite's `-V <name>` resolves against a ctl device matching the PCM
+name it was given, not through the PCM's slave chain, so `-o output -V DAC`
+needed `ctl.output` to exist. Completing ADR-0009's own stated indirection,
+not a new decision.
+
 ## Testing a build
 
-`george@rig.local` is the test target.
+`pi@gexis.local` is the test target — `gexis` is the image-built machine,
+not the hand-built `rig` (see `HANDOFF.md`).
 
 ```
 aplay -D output <testfile>   # card referenced by name, no `type plug`, no index
