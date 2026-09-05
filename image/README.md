@@ -35,6 +35,13 @@ These are host environment setup, same category as installing Docker itself.
    `build-docker.sh` itself is untouched; this just satisfies its existing
    check with the binary Arch actually ships.
 
+4. **The `loop` kernel module must be loaded: `sudo modprobe loop`.**
+   Per-boot, not one-time — it doesn't persist across a reboot unless
+   configured to autoload. Unlike the other prerequisites, a missing or
+   broken loop driver doesn't fail loudly up front; it fails deep into
+   `export-image` instead (see below). Checking this before a build is
+   cheap; diagnosing it after the fact is not.
+
 ## What `make image` produces
 
 `image/deploy/` will contain **two** images:
@@ -60,32 +67,43 @@ completes — post-processing on the host, not a pi-gen change.
 Rebuilding is not guaranteed to reproduce the same package set — see
 `docs/DEVELOPMENT.md` criterion 7 and ADR-0021.
 
-## Known issue: loop device setup in export-image (unresolved)
+## Known issue: loop device setup in export-image — root-caused
 
 First build attempt (2026-09-05, this host) reached `export-image/prerun.sh`
 and failed there — everything before it, including all of stage-gexis,
 succeeded. `pi-gen/scripts/common`'s `ensure_next_loopdev()` calls `losetup -f`
 to get the next free loop device, then extracts its minor number with a sed
-pattern anchored on trailing digits. On this host `losetup -f` returned
-`/dev/loop0 (lost)` instead of a plain path, the sed pattern didn't match
-(no trailing digits), and the unmodified string got passed to `mknod`:
+pattern anchored on trailing digits. `losetup -f` returned `/dev/loop0 (lost)`
+instead of a plain path, the sed pattern didn't match (no trailing digits),
+and the unmodified string got passed to `mknod`:
 
 ```
 mknod: invalid minor device number '/dev/loop0 (lost)'
 ```
 
 pi-gen retries this 5 times (`build.sh`'s own retry loop) and hard-fails when
-they all reproduce identically. `/dev/loop0` appeared on the host itself at
-the same timestamp, created by the container's own `mknod` — device nodes
-for loop devices aren't container-namespaced (they're a shared kernel
-subsystem), so a container run can reach out and touch host loop-device
-state this way.
+they all reproduce identically.
 
-Not root-caused. Not a Debian-vs-Arch package-naming issue like the
-qemu-aarch64 one above — this looks like a losetup/kernel-state interaction,
-possibly specific to this kernel (`7.2.2-1-cachyos`) or to how this Docker
-setup handles loop devices in a `--privileged` container. Nothing in
-`export-image/` was touched to work around it.
+**Root cause, confirmed with `sudo losetup -f` directly on the host:** the
+`loop` kernel module was not loaded before the container's first access to
+`/dev/loop-control`. `losetup -f` can see via `/dev/loop-control` that loop0
+is free, but the `mknod` pi-gen's own container ran against it produced a
+device node that udev never properly backed — losetup can see the kernel
+state but can't resolve a working path to it, hence "(lost)". This is stable,
+reproducible state, not a race: `sudo losetup -f` as root, well after the
+module had ostensibly been loaded, still returned the same "(lost)" result
+until the driver was reloaded.
+
+**Fix:** `sudo modprobe -r loop && sudo modprobe loop`. This makes the driver
+and udev recreate the device nodes from scratch. **Do not `rm` the device
+node** — that discards the evidence and doesn't fix the underlying state;
+reload the module instead. This is a Docker/CachyOS loop-device
+interaction, not a pi-gen defect — nothing in `export-image/` was touched.
+
+**Not a symptom, ignore it:** `losetup -f` as an unprivileged user always
+fails on Arch with `Permission denied` (`/dev/loop-control` is root-only).
+Any diagnosis of loop-device issues here must use `sudo`, or the result is
+meaningless.
 
 ## Testing a build
 
