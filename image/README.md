@@ -116,17 +116,65 @@ fails on Arch with `Permission denied` (`/dev/loop-control` is root-only).
 Any diagnosis of loop-device issues here must use `sudo`, or the result is
 meaningless.
 
+## First boot: the boot-partition edit
+
+Nothing on this image is pre-provisioned — no default password, no cloud-init,
+no baked-in Wi-Fi. The **only** first-boot mechanism is `firstrun.sh`, wired
+in via `cmdline.txt`'s `systemd.run=` (ADR-0021). It runs once, very early in
+boot, then deletes itself and its `cmdline.txt` entry.
+
+After flashing (`image_<date>-gexis-player.zip`, direct — Imager and Etcher
+both accept the zip), mount the boot partition on your own machine and edit
+`firstrun.sh` in a text editor before ejecting the card:
+
+```sh
+SSH_PUBKEY="ssh-ed25519 AAAA... you@host"   # required — no other remote access exists
+WIFI_SSID="your-network"                     # leave blank for Ethernet-only
+WIFI_PASS="your-password"
+WIFI_COUNTRY="GB"                            # ISO 3166-1 alpha-2
+HOSTNAME=""                                  # optional
+```
+
+Save, eject, boot. `firstrun.sh` calls the same platform helpers Raspberry Pi
+Imager's own customisation dialogue calls
+(`/usr/lib/raspberrypi-sys-mods/imager_custom`, `/usr/lib/userconf-pi/userconf`)
+— confirmed against their current source, not assumed. Wi-Fi goes through
+NetworkManager (`imager_custom set_wlan` → `nmcli`); a `wpa_supplicant.conf`
+dropped on the boot partition does **nothing** on current Raspberry Pi OS —
+confirmed dead since the Bookworm NetworkManager switch
+([raspberrypi/bookworm-feedback#72](https://github.com/raspberrypi/bookworm-feedback/issues/72)).
+
+The default user stays `pi`, password-locked (SSH key only — `enable_ssh -k`
+disables password auth). To change the username, edit `firstrun.sh`'s
+`userconf` call directly rather than adding a variable for it; that's a rarer
+edit and not worth a placeholder.
+
+`stage-gexis/01-firstboot`'s build step **fails the build** if `firstrun.sh`
+is missing, `cmdline.txt` doesn't invoke it, or a stale cloud-init template
+made it onto the boot partition — this class of defect (Phase 0's first
+build shipped with *no* working first-boot path at all, caught only by
+hand-inspecting a flashed card) should never again reach `deploy/`.
+
+Verifying the boot partition doesn't require hardware — `mtools` reads it
+straight out of the `.img` inside the zip:
+
+```
+unzip -p image_<date>-gexis-player.zip > /tmp/gexis.img
+OFFSET=$(( $(fdisk -l /tmp/gexis.img | awk '/FAT32/{print $3}') * 512 ))
+mdir -i "/tmp/gexis.img@@${OFFSET}" -/
+mcopy -i "/tmp/gexis.img@@${OFFSET}" ::cmdline.txt -
+```
+
 ## Testing a build
 
-Flash `image_<date>-gexis-player.zip` (Imager and Etcher both accept the zip
-directly). Wi-Fi credentials and SSH enablement are **not** baked into the
-image (ADR-0021) — add them to the boot partition by hand after flashing,
-before first boot. `george@rig.local` is the test target.
+`george@rig.local` is the test target.
 
 ```
 aplay -D output <testfile>   # card referenced by name, no `type plug`, no index
 ```
 
 Not yet done as of the 2026-09-05 build: flashing and hardware verification
-(Phase 0 criteria 3–5) — the build itself is confirmed good (criteria 1, 2,
-6, and amended 7), but nothing has booted on real hardware yet.
+(Phase 0 criteria 3–5). The build itself is confirmed good (criteria 1, 2, 6,
+amended 7), and the boot partition is confirmed correct by direct inspection
+(criterion 3's mechanism) — but nothing has actually booted on real hardware
+yet.

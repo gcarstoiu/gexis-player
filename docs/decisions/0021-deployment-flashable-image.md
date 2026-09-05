@@ -236,3 +236,20 @@ Neither has been evaluated. That evaluation belongs with ADR-0001.
 - Reports exist of Imager 2.0.3 and 2.0.6 applying only some customisations even
   for official images. If accurate, first-boot provisioning through Imager is
   less reliable than it appears and a fallback matters more.
+
+## Update, 2026-09-05: `init_format` has moved on upstream
+
+Confirmed against `raspberrypi/rpi-imager`'s own
+[`doc/os_customisation_formats.md`](https://github.com/raspberrypi/rpi-imager/blob/main/doc/os_customisation_formats.md)
+while implementing Phase 0's first-boot fix: Raspberry Pi's own official
+Trixie images have already moved past `init_format: systemd` (this record's
+choice) to `cloudinit-rpi`, and their newest images again to a single
+`rpi-preseed.toml` file with no `cmdline.txt` entry at all.
+
+Not a reversal — `systemd`/`firstrun.sh` is still a supported `init_format`
+value, we are not consuming Raspberry Pi's own OS-list manifest (that's Q1,
+still deferred), and the record's stated rationale (one file, hand-edited or
+Imager-written, one path to test) still holds for our own image. Recorded
+because the platform keeps moving under this decision, and the next person
+to touch first-boot provisioning should know that before assuming `systemd`
+is still current upstream practice.
