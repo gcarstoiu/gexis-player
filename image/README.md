@@ -50,9 +50,12 @@ These are host environment setup, same category as installing Docker itself.
 Each `.img` gets a matching `.info` file (from pi-gen's own
 `export-image/05-finalise` step) containing the exact `dpkg -l` package list
 at build time — the manifest required by Phase 0 acceptance criterion 2/7.
-peppyalsa isn't an apt package, so its pinned upstream commit
-(`7dcb0c5e783e0c86315a0f655684613affd3e9d2`, see
-`stage-gexis/00-alsa/01-run-chroot.sh`) is the other half of "what shipped."
+peppyalsa isn't an apt package, so pi-gen's manifest doesn't cover it: the
+root `Makefile` appends its pinned upstream commit
+(`7dcb0c5e783e0c86315a0f655684613affd3e9d2`, read out of
+`stage-gexis/00-alsa/01-run-chroot.sh` so there's one source of truth) and
+the total wall-clock build time to the `.info` file after the build
+completes — post-processing on the host, not a pi-gen change.
 
 Rebuilding is not guaranteed to reproduce the same package set — see
 `docs/DEVELOPMENT.md` criterion 7 and ADR-0021.
