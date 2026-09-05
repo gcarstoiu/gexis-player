@@ -5,6 +5,15 @@ with the Gexis Player audio layer, via pi-gen's own Docker wrapper. Unmodified
 pi-gen — everything project-specific lives in `image/stage-gexis/` and
 `image/config`, bind-mounted in at build time.
 
+**Retrying after a failed build:** `build-docker.sh` doesn't clean up its
+container on failure. A retry without removing it first fails immediately
+with `Container pigen_work already exists` — not a build problem, just
+stale state:
+
+```
+docker rm -v pigen_work
+```
+
 ## Host prerequisites (one-time, not part of `make image`)
 
 These are host environment setup, same category as installing Docker itself.
