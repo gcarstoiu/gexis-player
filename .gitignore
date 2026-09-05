@@ -10,4 +10,6 @@ build/
 *.wav
 *.raw
 .DS_Store
-*.sh
+
+# pi-gen build output
+/image/deploy/
