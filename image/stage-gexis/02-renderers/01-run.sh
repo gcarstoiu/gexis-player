@@ -60,11 +60,23 @@ for f in \
 	"${ROOTFS_DIR}/etc/systemd/system/go-librespot.service" \
 	"${ROOTFS_DIR}/etc/systemd/system/squeezelite.service" \
 	"${ROOTFS_DIR}/usr/local/lib/gexis/squeezelite-mixer-check.sh" \
-	"${ROOTFS_DIR}/etc/systemd/system/bluealsa-aplay.service.d/override.conf" \
+	"${ROOTFS_DIR}/etc/systemd/system/bluealsa-aplay.service.d/override.conf"
+do
+	if [ ! -e "${f}" ]; then
+		echo "ERROR: ${f} missing after install" >&2
+		exit 1
+	fi
+done
+# These two are symlinks to an absolute path (/etc/systemd/system/...)
+# that only resolves once ${ROOTFS_DIR} is the real root, i.e. after boot -
+# not from here. -e follows the link and fails against the build host's
+# filesystem; -L only checks the link itself exists, which is what's
+# actually verifiable at build time.
+for f in \
 	"${ROOTFS_DIR}/etc/systemd/system/multi-user.target.wants/go-librespot.service" \
 	"${ROOTFS_DIR}/etc/systemd/system/multi-user.target.wants/squeezelite.service"
 do
-	if [ ! -e "${f}" ]; then
+	if [ ! -L "${f}" ]; then
 		echo "ERROR: ${f} missing after install" >&2
 		exit 1
 	fi
