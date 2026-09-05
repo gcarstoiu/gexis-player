@@ -15,3 +15,10 @@
 IMG_NAME="gexis-player"
 
 STAGE_LIST="/pi-gen/stage0 /pi-gen/stage1 /pi-gen/stage2 /pi-gen/stage-gexis"
+
+# ADR-0021 chose the systemd/firstrun.sh first-boot mechanism, not
+# cloud-init (stage-gexis/01-firstboot installs our own firstrun.sh).
+# Cloud-init's own stage2/04-cloud-init otherwise ships inert, unedited
+# Ubuntu cloud-config templates on the boot partition regardless of whether
+# anything on the image reads them — misleading, not just unused.
+ENABLE_CLOUD_INIT=0
