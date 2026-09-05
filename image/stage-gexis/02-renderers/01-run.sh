@@ -72,6 +72,12 @@ done
 # not from here. -e follows the link and fails against the build host's
 # filesystem; -L only checks the link itself exists, which is what's
 # actually verifiable at build time.
+#
+# -L is weaker than it looks: it confirms the symlink is there, not that
+# it points anywhere real. A typo'd target would still pass this. The
+# full check - does this symlink actually resolve - is only completable
+# on a booted system (tier 3, gexis), not here. Do not "fix" this back
+# to -e; that's the exact failure this comment exists to prevent.
 for f in \
 	"${ROOTFS_DIR}/etc/systemd/system/multi-user.target.wants/go-librespot.service" \
 	"${ROOTFS_DIR}/etc/systemd/system/multi-user.target.wants/squeezelite.service"

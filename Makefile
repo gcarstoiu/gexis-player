@@ -36,4 +36,11 @@ image:
 	fi
 
 clean:
+	# build-docker.sh never removes its own container, on success or
+	# failure - a failed run's leftover pigen_work blocks the next
+	# attempt with "Container pigen_work already exists", which looks
+	# unrelated to whatever actually failed. Recovery shouldn't depend
+	# on a human remembering that. "pigen_work" is build-docker.sh's own
+	# default CONTAINER_NAME; harmless if it doesn't exist.
+	docker rm -v pigen_work 2>/dev/null || true
 	rm -rf image/deploy
