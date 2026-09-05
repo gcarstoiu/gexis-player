@@ -56,16 +56,27 @@ looks finished.
 
 ### Phase 1 — Takeover gap
 
-**Acceptance**
-
-1. Time from stop of renderer A to first sample of renderer B, measured
-   same-rate and cross-rate, reported as a distribution over at least 20 runs.
-2. Result recorded as a finding with scope stated.
-3. ADR-0010 amended to say whether handoff needs a transition screen.
+**Absorbed into Phase 2.** The takeover gap has to be measured on the image,
+not a hand-built machine — measuring it on `rig` would characterise `rig`,
+not the product. The renderers it needs (squeezelite, go-librespot) are
+Phase 2 deliverables, so a standalone Phase 1 cannot run before Phase 2
+exists to run it on. Its three criteria are now Phase 2 criteria 8-10. This
+heading is kept, unnumbered content, so the later phase numbers do not
+shift.
 
 ### Phase 2 — Audio layer and arbitration
 
 No UI. Verified from logs and CLI.
+
+All deliverables ship in the image, via `stage-gexis`. Hand-installing on
+`gexis` is acceptable for exploration mid-phase, but nothing in this phase
+is done until it is in the build.
+
+The Python core first appears here, not in Phase 3: the arbitration
+supervisor has to exist, in the image, for criteria 3-7 to be real and for
+the takeover gap measurement (criteria 8-10, absorbed from Phase 1) to
+characterise the product rather than a hand-built stand-in. This exercises
+ADR-0021's venv packaging decision earlier than the phase order implied.
 
 **Acceptance**
 
@@ -80,6 +91,11 @@ No UI. Verified from logs and CLI.
    does nothing in fixed mode.
 6. Boot volume is the configured safe level, not restored.
 7. No renderer can be made to play while another holds the device.
+8. Takeover gap: time from stop of renderer A to first sample of renderer B,
+   measured same-rate and cross-rate, reported as a distribution over at
+   least 20 runs.
+9. Result recorded as a finding with scope stated.
+10. ADR-0010 amended to say whether handoff needs a transition screen.
 
 ### Phase 3 — Core state daemon
 
@@ -175,7 +191,7 @@ Purely additive. Cannot break playback.
 | 0 — static | pre-commit | lint, format, type checks |
 | 1 — unit | every commit | state daemon, adapters, skin parser |
 | 2 — container ALSA | every commit | arbitration via `snd-aloop`, no hardware |
-| 3 — hardware in the loop | self-hosted runner on `rig` | real DAC, real mixer |
+| 3 — hardware in the loop | self-hosted runner on `gexis` | real DAC, real mixer |
 | 4 — skin corpus | every commit | parse all 84 skins, fail on unknown constructs |
 
 Boundary and architecture tests are non-deferrable. Coverage floors and lint
@@ -184,12 +200,17 @@ ceilings can be added later.
 ### Two rules for tier 3
 
 **The runner asserts its environment before every job.** `alsa-lib` version,
-checksum of `output.conf`, no process holding the ALSA device, expected packages
-at expected versions. On failure the job stops with "environment dirty" rather
-than running tests. `rig` is both the scratch machine and the runner, so a
-half-finished experiment must produce a clear message rather than a confusing
-test failure.
+checksum of `output.conf`, no process holding the ALSA device, expected
+packages at expected versions, matching what the image build's own manifest
+recorded. On failure the job stops with "environment dirty" rather than
+running tests. `gexis` is the runner — image-built, not hand-built — but
+Phase 2's own preamble permits hand-installing on it for exploration, so a
+not-yet-rolled-back experiment or a process left holding the device must
+still produce a clear message rather than a confusing test failure. `rig` is
+no longer the runner; it stays a reference machine (Findings 002-004) and a
+scratch machine for exactly this kind of hand-installed exploration.
 
 **Any test using `snd-aloop` runs its condition at least 20 times and reports
-the distribution.** A single run has roughly a 30% chance of a spurious failure
-(Finding 004). Single-verdict tests on this rig are not trustworthy.
+the distribution.** A single run has roughly a 30% chance of a spurious
+failure (Finding 004, measured on `rig`). Single-verdict tests are not
+trustworthy regardless of which machine runs them.
