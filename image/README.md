@@ -44,17 +44,27 @@ These are host environment setup, same category as installing Docker itself.
 
 ## What `make image` produces
 
-`image/deploy/` will contain **two** images:
+`image/deploy/` will contain artefacts for **two** images (confirmed by a
+successful build, 2026-09-05, 36m43s wall-clock):
 
-- `<date>-gexis-player-lite.img` — bare Raspberry Pi OS Lite, no
+- `image_<date>-gexis-player-lite.zip` — bare Raspberry Pi OS Lite, no
   customisation. A side effect of `stage2/EXPORT_IMAGE` being unconditional,
   unmodified pi-gen. Harmless; ignore it.
-- `<date>-gexis-player.img` — **this is the actual deliverable.** Built from
-  `stage-gexis` on top of stage2: pins and holds `libasound2t64` at
+- `image_<date>-gexis-player.zip` — **this is the actual deliverable.** Built
+  from `stage-gexis` on top of stage2: pins and holds `libasound2t64` at
   `1.2.14-1+rpt1`, builds peppyalsa from source, and installs
   `/etc/alsa/conf.d/output.conf`.
 
-Each `.img` gets a matching `.info` file (from pi-gen's own
+Each is a zip containing one file, `<date>-gexis-player[-lite].img` — pi-gen's
+default `DEPLOY_COMPRESSION=zip`, not overridden in `image/config`. Both
+Raspberry Pi Imager and balenaEtcher flash directly from the zip without
+extracting it, so this doesn't reintroduce a manual step for criterion 1.
+Whether we want a literal `.img` in `deploy/` instead (set
+`DEPLOY_COMPRESSION=none` in `image/config`) is an open call — the zip form
+is roughly a third the size (a real 2026-09-05 build: 836 MB zipped vs.
+2.9 GB raw).
+
+Each image gets a matching `.info` file (from pi-gen's own
 `export-image/05-finalise` step) containing the exact `dpkg -l` package list
 at build time — the manifest required by Phase 0 acceptance criterion 2/7.
 peppyalsa isn't an apt package, so pi-gen's manifest doesn't cover it: the
@@ -67,11 +77,12 @@ completes — post-processing on the host, not a pi-gen change.
 Rebuilding is not guaranteed to reproduce the same package set — see
 `docs/DEVELOPMENT.md` criterion 7 and ADR-0021.
 
-## Known issue: loop device setup in export-image — root-caused
+## Known issue (resolved): loop device setup in export-image
 
 First build attempt (2026-09-05, this host) reached `export-image/prerun.sh`
 and failed there — everything before it, including all of stage-gexis,
-succeeded. `pi-gen/scripts/common`'s `ensure_next_loopdev()` calls `losetup -f`
+succeeded. A second attempt, after the fix below, completed end to end in
+36m43s. `pi-gen/scripts/common`'s `ensure_next_loopdev()` calls `losetup -f`
 to get the next free loop device, then extracts its minor number with a sed
 pattern anchored on trailing digits. `losetup -f` returned `/dev/loop0 (lost)`
 instead of a plain path, the sed pattern didn't match (no trailing digits),
@@ -107,11 +118,15 @@ meaningless.
 
 ## Testing a build
 
-Flash `<date>-gexis-player.img`. Wi-Fi credentials and SSH enablement are
-**not** baked into the image (ADR-0021) — add them to the boot partition by
-hand after flashing, before first boot. `george@rig.local` is the test
-target.
+Flash `image_<date>-gexis-player.zip` (Imager and Etcher both accept the zip
+directly). Wi-Fi credentials and SSH enablement are **not** baked into the
+image (ADR-0021) — add them to the boot partition by hand after flashing,
+before first boot. `george@rig.local` is the test target.
 
 ```
 aplay -D output <testfile>   # card referenced by name, no `type plug`, no index
 ```
+
+Not yet done as of the 2026-09-05 build: flashing and hardware verification
+(Phase 0 criteria 3–5) — the build itself is confirmed good (criteria 1, 2,
+6, and amended 7), but nothing has booted on real hardware yet.
