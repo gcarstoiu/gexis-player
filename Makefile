@@ -2,7 +2,7 @@ STAGE_GEXIS_DIR := $(CURDIR)/image/stage-gexis
 PEPPYALSA_REPO := https://github.com/project-owner/peppyalsa
 PEPPYALSA_COMMIT := $(shell grep -oP 'git checkout \K[0-9a-f]{40}' image/stage-gexis/00-alsa/01-run-chroot.sh)
 
-.PHONY: image clean
+.PHONY: image clean provision
 
 # Builds via pi-gen's own build-docker.sh, unmodified. Our custom stage lives
 # outside the pinned pi-gen submodule and is bind-mounted in at build time
@@ -33,3 +33,12 @@ image:
 
 clean:
 	rm -rf image/deploy
+
+# Fills in a flashed card's firstrun.sh from image/provision.local.env and
+# clears its stale SSH host key entry. See image/README.md.
+provision:
+	@if [ -z "$(DEVICE)" ]; then \
+		echo "Usage: make provision DEVICE=/dev/sdX  (whole disk, not a partition — never guessed)" >&2; \
+		exit 1; \
+	fi
+	./image/provision.sh "$(DEVICE)"

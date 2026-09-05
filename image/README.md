@@ -124,8 +124,8 @@ in via `cmdline.txt`'s `systemd.run=` (ADR-0021). It runs once, very early in
 boot, then deletes itself and its `cmdline.txt` entry.
 
 After flashing (`image_<date>-gexis-player.zip`, direct — Imager and Etcher
-both accept the zip), mount the boot partition on your own machine and edit
-`firstrun.sh` in a text editor before ejecting the card:
+both accept the zip), the boot partition's `firstrun.sh` needs five values
+filled in:
 
 ```sh
 SSH_PUBKEY="ssh-ed25519 AAAA... you@host"   # required — no other remote access exists
@@ -134,6 +134,34 @@ WIFI_PASS="your-password"
 WIFI_COUNTRY="GB"                            # ISO 3166-1 alpha-2
 HOSTNAME=""                                  # optional
 ```
+
+**`make provision DEVICE=/dev/sdX`** does this — the SSH key is a long
+single line, and a hand-edit that truncates it costs a reflash to discover.
+One-time setup, then every reflash after:
+
+```
+cp image/provision.env.example image/provision.local.env   # once
+$EDITOR image/provision.local.env                            # fill in real values
+make provision DEVICE=/dev/sdX                                # every card
+```
+
+`image/provision.local.env` is gitignored — real credentials never reach the
+repo. `DEVICE` is the whole card (e.g. `/dev/sdb`), never guessed: writing to
+the wrong block device is destructive, so the tool refuses to run without it
+and refuses if the device looks like the machine's own disk. It also refuses
+to write anything if `SSH_PUBKEY` is empty — a card provisioned with a blank
+key boots unreachable, which is the exact failure Phase 0 hit — and verifies
+every substitution actually landed (by having a shell parse the written line
+back out and comparing, not just checking that the edit command didn't
+error) before declaring the card ready.
+
+It finishes by running `ssh-keygen -R <hostname>` and
+`ssh-keygen -R <hostname>.local` for you. **This is not a workaround for
+anything broken** — every reflash generates a fresh SSH host key at first
+boot, so reconnecting to the same hostname after a reflash normally fails
+with `REMOTE HOST IDENTIFICATION HAS CHANGED` until the stale entry is
+cleared by hand. `ssh-keygen -R` matches the exact string given, which is
+why both the bare hostname and the `.local` form are cleared separately.
 
 Save, eject, boot. `firstrun.sh` calls the same platform helpers Raspberry Pi
 Imager's own customisation dialogue calls
