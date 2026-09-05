@@ -60,6 +60,33 @@ completes — post-processing on the host, not a pi-gen change.
 Rebuilding is not guaranteed to reproduce the same package set — see
 `docs/DEVELOPMENT.md` criterion 7 and ADR-0021.
 
+## Known issue: loop device setup in export-image (unresolved)
+
+First build attempt (2026-09-05, this host) reached `export-image/prerun.sh`
+and failed there — everything before it, including all of stage-gexis,
+succeeded. `pi-gen/scripts/common`'s `ensure_next_loopdev()` calls `losetup -f`
+to get the next free loop device, then extracts its minor number with a sed
+pattern anchored on trailing digits. On this host `losetup -f` returned
+`/dev/loop0 (lost)` instead of a plain path, the sed pattern didn't match
+(no trailing digits), and the unmodified string got passed to `mknod`:
+
+```
+mknod: invalid minor device number '/dev/loop0 (lost)'
+```
+
+pi-gen retries this 5 times (`build.sh`'s own retry loop) and hard-fails when
+they all reproduce identically. `/dev/loop0` appeared on the host itself at
+the same timestamp, created by the container's own `mknod` — device nodes
+for loop devices aren't container-namespaced (they're a shared kernel
+subsystem), so a container run can reach out and touch host loop-device
+state this way.
+
+Not root-caused. Not a Debian-vs-Arch package-naming issue like the
+qemu-aarch64 one above — this looks like a losetup/kernel-state interaction,
+possibly specific to this kernel (`7.2.2-1-cachyos`) or to how this Docker
+setup handles loop devices in a `--privileged` container. Nothing in
+`export-image/` was touched to work around it.
+
 ## Testing a build
 
 Flash `<date>-gexis-player.img`. Wi-Fi credentials and SSH enablement are
