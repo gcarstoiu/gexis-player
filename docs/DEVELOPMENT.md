@@ -46,7 +46,17 @@ looks finished.
 2. The build records every package version it pinned, in a file committed with
    the artefact.
 3. Flashing the image, adding Wi-Fi credentials to the boot partition, and
-   booting yields a machine reachable over SSH by key.
+   booting yields a machine reachable over SSH by key, **with root
+   available to that session** (passwordless sudo for `pi`) — a shell
+   that cannot become root cannot be administered. Amended 2026-09-05:
+   the original wording asked only for a reachable shell and got exactly
+   that — `pi` locked, password-less, no sudoers grant, unreachable to
+   itself as root. Found on hardware, not by re-reading this criterion.
+   The provisioning-credentials gitignore defect had the same shape: a
+   rule that was correct exactly where it was checked and absent
+   everywhere it wasn't stated to matter. Both times the criterion (or
+   the check) was satisfied precisely and literally, and that was the
+   problem.
 4. `aplay -D output <testfile>` plays audibly. Card referenced by name.
 5. `/etc/alsa/conf.d/output.conf` contains no `type plug` and no card index.
 6. `libasound2t64` is `1.2.14-1+rpt1` and held.

@@ -244,7 +244,37 @@ live under a user account's home directory at all. Fixed by moving to
 against exactly this class of ownership mistake) and adding
 `StartLimitIntervalSec=`/`StartLimitBurst=` to both renderer units so a
 misconfigured service gives up and stays failed instead of spinning
-forever. Not yet reverified on hardware.
+forever.
+
+### Second hardware pass (2026-09-05, `gexis`)
+
+Two more found on this pass, both build-time fixes since neither is
+fixable once a card is already running:
+
+**`pi` had no way to become root at all** — `sudo -n true` failed with
+"a password is required", and there's no other path: the account is
+locked and password-less by design (SSH-key-only, see `userconf pi ""`
+above). Verified, not assumed, that stock Raspberry Pi OS Lite normally
+grants this via `/etc/sudoers.d/010_pi-nopasswd`, created by the
+interactive first-boot wizard this image never triggers — checked both
+this image's rootfs and the bare, unmodified `-lite` artefact directly
+(`dd` + `debugfs`); neither ships the file. Not something this stage
+removed; never there in the first place. `stage-gexis/01-firstboot/01-run.sh`
+now ships it directly, and asserts what actually matters for sudo to
+honour it — mode `440` exactly, and `visudo -cf` syntax-valid — because
+sudo silently ignores a sudoers.d file with the wrong permissions or a
+syntax error rather than erroring, which is exactly the failure mode this
+gap already took the shape of once.
+
+**go-librespot's `--config_dir` was `-config_dir`** — a single dash. Its
+own CLI parses `-c` as a distinct short flag for config overrides
+(`field=value`, documented in its own README), POSIX-style, not Go's
+stdlib `flag` package (which treats `-x` and `--x` identically). A single
+dash reads as `-c` consuming `onfig_dir` as its argument — exactly the
+observed `invalid config override format: onfig_dir` crash. The
+`config.yml` content itself was already correct.
+
+Not yet reverified on hardware.
 
 ## Testing a build
 

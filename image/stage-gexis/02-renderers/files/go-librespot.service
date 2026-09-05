@@ -20,7 +20,15 @@ Type=simple
 # created and (re-)chowned to User=/Group= on every start, survives the
 # user account changing, self-healing against ownership drift.
 StateDirectory=go-librespot
-ExecStart=/usr/local/bin/go-librespot -config_dir /var/lib/go-librespot
+# --config_dir, not -config_dir: go-librespot parses -c as a distinct
+# short flag for config overrides (field=value, see its own README) using
+# POSIX-style bundling, not Go's stdlib flag package (which treats -x and
+# --x identically). A single dash here gets parsed as -c "onfig_dir" -
+# the leading "c" consumed as the flag, the rest as its argument - which
+# is exactly the "invalid config override format: onfig_dir" failure
+# found on gexis. Confirmed against go-librespot's own documented -c
+# usage, not just inferred from the error text.
+ExecStart=/usr/local/bin/go-librespot --config_dir /var/lib/go-librespot
 Restart=on-failure
 RestartSec=2
 User=pi
