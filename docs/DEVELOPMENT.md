@@ -118,7 +118,14 @@ when their criteria pass:
    **Ships without ADR-0010's sync-group and empty-base-slot behaviour** —
    both are explicitly deferred, not unresolved; see ADR-0010's "Open"
    section.
-4. Timeout ladder on release: polite stop → SIGTERM → SIGKILL, each step logged.
+4. Timeout ladder on release: polite stop → SIGTERM → SIGKILL, each step
+   logged. **LMS is a two-rung exception, decided 2026-09-06** after
+   measurement showed a commanded pause never releases squeezelite
+   faster than its own `-C` idle timeout (~8.5s, against go-librespot's
+   <100ms) — for LMS only, the polite rung is skipped unconditionally
+   and release goes straight to SIGTERM (~100ms measured), with the
+   pause still sent as a courtesy so LMS's own state reflects "paused."
+   See ADR-0010's amended implementation note.
 5. Volume bridge: phone-app volume moves the hardware mixer in variable mode and
    does nothing in fixed mode.
 6. Boot volume is the configured safe level, not restored.

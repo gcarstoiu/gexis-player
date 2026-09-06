@@ -177,12 +177,19 @@ it.
 
 ## Open
 
-- **Sync group interaction — deferred.** Squeezelite stays in its LMS group
-  while another renderer holds the device, so a group play command becomes
-  an acquisition that interrupts. Consistent with the rule, possibly
-  surprising. Unverified how LMS handles a member that goes silent
-  mid-group. **Criterion 3 (Phase 2b) ships without resolving this** — a
-  decision, not an oversight; see `docs/DEVELOPMENT.md`.
+- **Sync group interaction — deferred, but no longer only theoretical.**
+  Squeezelite stays in its LMS group while another renderer holds the
+  device, so a group play command becomes an acquisition that
+  interrupts. Consistent with the rule, possibly surprising. Unverified
+  how LMS handles a member that goes silent mid-group. **Criterion 3
+  (Phase 2b) ships without resolving this** — a decision, not an
+  oversight; see `docs/DEVELOPMENT.md`. **Sharper as of 2026-09-06:**
+  the LMS release mechanism is now `SIGTERM` on squeezelite (see the
+  Implementation note below), not just a device going silent — the
+  process itself dies and restarts (`Restart=on-failure`), dropping out
+  of its LMS sync group on the way rather than merely pausing within it.
+  Measured on hardware, not inferred. May need un-deferring before this
+  ships further than Phase 2b — George's call.
 - **Empty base slot — deferred.** Valid if run headless with no LMS.
   Undefined behaviour. **Criterion 3 (Phase 2b) ships without resolving
   this** — a decision, not an oversight; see `docs/DEVELOPMENT.md`.
