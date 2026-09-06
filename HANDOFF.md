@@ -1,86 +1,96 @@
 # Handoff
 
-Last updated: 2026-09-05
+Last updated: 2026-09-06
 
 ## Where things stand
 
-**Design is settled.** `docs/ARCHITECTURE.md` plus sixteen accepted decision
-records in `docs/decisions/`. Start with `docs/decisions/README.md` — it carries
-the numbering gap explanation, the cross-cutting rules, and eight deferred items
-that are not lost but are not decided either.
+**Phase 0 is merged** (PR #1, into `main`). All seven acceptance criteria
+passed, hardware-verified on `gexis`. Build cost is known: a full
+`make image` is ~37-40 minutes on this dev machine under Docker + QEMU
+emulation — rebuild-per-iteration is viable for Phase 2 onward, not just
+in principle but measured.
 
-**Phase 0 is done.** All seven acceptance criteria (`docs/DEVELOPMENT.md`)
-verified — build-artefact checks (manifest, package pin/hold, boot-partition
-content) and hardware checks (SSH by key, audible playback via
-`speaker-test -D output`) both pass. PR open from `phase-0-image` to `main`,
-not yet merged — awaiting review.
+**Phase 1 is absorbed into Phase 2** — decided and acted on, but the
+`docs/DEVELOPMENT.md` change recording it is **PR #2, still open**, not
+on `main` yet. The takeover gap has to be measured on the image, not a
+hand-built machine; its three criteria are Phase 2 criteria 8-10.
 
-**Build cost is known and it's cheap.** A full `make image` run, start to
-finished artefact, is **37m21s** (2026-09-05, this dev machine, under Docker
-+ QEMU emulation). Rebuild-per-iteration is viable for Phase 2 onward — the
-earlier assumption that a rig-testing loop would need rsync-to-rig rather
-than full rebuilds, because of build cost, is withdrawn.
+**Phase 2a (renderer packaging) is in progress on `phase-2a-renderers`**
+(branched from `phase-2-arbitration`, from PR #2's branch — neither has a
+PR open yet). squeezelite, go-librespot and bluealsa-aplay are packaged
+into `stage-gexis` as systemd units. Two hardware-found defects are fixed
+and committed, **not yet reverified on hardware**: `pi` had no sudo at all
+(shipped `/etc/sudoers.d/010_pi-nopasswd` directly — verified empirically
+that stock Raspberry Pi OS Lite never ships it either, since this image's
+`firstrun.sh` replaces the flow that would normally create it), and
+go-librespot's `ExecStart` had `-config_dir` (one dash; its CLI parses `-c`
+as a distinct short flag, so this got parsed as `-c onfig_dir`) instead of
+`--config_dir`. A rebuild to verify both is in flight or just finished —
+check `phase-2a-renderers`' latest commits and the chat log rather than
+assume either way.
 
-**Phase 1 is absorbed into Phase 2** (`docs/DEVELOPMENT.md`). The takeover
-gap has to be measured on the image, not a hand-built machine — measuring it
-on `rig` would characterise `rig`, not the product. Its renderers are Phase 2
-deliverables, so a standalone Phase 1 could never actually run. Its three
-criteria are now Phase 2 criteria 8-10. Five findings in `docs/findings/`
-stand regardless — that work already happened.
+**`docs/DEVELOPMENT.md` on `main` is behind.** It doesn't yet show Phase
+1's absorption, Phase 2's criteria 8-10, the tier-3-moves-to-`gexis`
+change, or criterion 3's root-access amendment (a reachable SSH shell
+with no sudo access is a Phase 0 gap found on hardware, same shape as the
+provisioning-credentials gitignore defect below — criterion met literally,
+intent unchecked). All of that exists on `phase1-absorbed-into-phase2`
+(PR #2) and/or `phase-2a-renderers`. Read the branch, not just `main`, for
+the current criteria.
 
-**Phase 0's image-build tooling exists** (`image/`, root `Makefile`) — no
-player or control-plane code yet. Phase 2 changes that: the Python core's
-arbitration supervisor has to be *in the image* for Phase 2's own criteria
-to mean anything, so it now first appears there rather than in Phase 3 —
-exercising ADR-0021's venv packaging decision earlier than expected.
+**A live credential-exposure defect was found and fixed across every
+affected branch.** `image/provision.local.env` (real SSH key, real Wi-Fi
+password) was untracked and *not* gitignored on `phase-2a-renderers` and
+three other branches — the ignore rule merged into `main` via PR #3, but
+those branches were cut before that merge and never got it back. Fixed on
+all affected branches directly. **PR #4** (open) adds a standing
+regression test to `main`. **PR #5** (open) adds `docs/LESSONS.md`, naming
+the general "verification ran against the wrong reality" pattern this and
+two earlier incidents share.
 
 ## Machines
 
 | Name | What it is | Notes |
 |---|---|---|
-| `C3PO` | dev machine | CachyOS, **fish shell** — no heredocs. Hand it script files to run with `bash`, not pasted multi-line commands. Claude Code 2.1.260, Node 26.8.1, git 2.55.0. |
-| `rig` | Raspberry Pi 4, 4 GB | Raspberry Pi OS Lite 64-bit, Trixie, kernel `6.18.34+rpt-rpi-v8`. Headless, Wi-Fi. DAC2 HD fitted, screen not connected. peppyalsa built and installed by hand. **Reference machine now** — holds the environment Findings 002-004 were measured against. Not the build/test target going forward. |
-| `gexis` | Raspberry Pi 4 | Flashed from this project's own `make image` output (Phase 0). User `pi`, SSH key auth via `firstrun.sh`. Reachable as `pi@gexis.local`. DAC2 HD fitted; `output` device verified with `speaker-test`. **The image-built target** — Phase 2 onward is built and measured here, not on `rig`. |
+| `C3PO` | dev machine | CachyOS, **fish shell** — no heredocs. Hand it script files to run with `bash`, not pasted multi-line commands. |
+| `rig` | Raspberry Pi 4, 4 GB | Raspberry Pi OS Lite 64-bit, Trixie. **Reference machine** — holds the environment Findings 002-004 were measured against. Not the build/test target. |
+| `gexis` | Raspberry Pi 4 | Flashed from this project's own `make image` output. User `pi`. Reachable as `pi@gexis.local` by SSH key. **The image-built target** — Phase 2 onward is built and measured here. |
 | SD card 2 | moOde | Reference install. Read-only recon source. Do not modify. |
 
-Both dev-adjacent machines have separate GitHub SSH keys (`id_ed25519_github`),
-authenticated as `gcarstoiu`.
+**Provisioning a freshly flashed card:** `make provision DEVICE=/dev/sdX`
+fills in `firstrun.sh`'s SSH key / Wi-Fi / hostname from
+`image/provision.local.env` (gitignored, copy `image/provision.env.example`
+to create it) and clears the card's stale SSH host key. See
+`image/README.md`.
 
 ## Next actions, in order
 
-1. **Phase 2 — audio layer and arbitration.** squeezelite, go-librespot and
-   bluealsa-aplay into `stage-gexis` as systemd units; the Python arbitration
-   supervisor (first appearance of the core); volume bridge; timeout ladder
-   on release. Everything ships in the image — hand-installing on `gexis` is
-   fine for exploration, nothing is done until it is in the build. Criteria
-   8-10 are the takeover gap measurement, absorbed from the old standalone
-   Phase 1, run against the image itself once its renderers exist. Decides
-   whether handoff needs a transition screen or can be silent (ADR-0010).
+1. **Reflash `gexis`** with the latest `phase-2a-renderers` build. Verify
+   `sudo -n true` now succeeds and `go-librespot.service` actually starts
+   (both were the blockers found on the previous hardware pass).
+2. **Phase 2 criteria 3-7**: arbitration (base/active slot, ADR-0010),
+   timeout ladder on release, volume bridge, boot volume. This is where
+   the Python core first appears — in the image, via `stage-gexis`, not
+   Phase 3.
+3. Criteria 8-10 (takeover gap measurement) once 1-7 hold on real
+   hardware — needs LMS (George has one; CI gets a containerised
+   throwaway) and, for the Spotify leg, the registered Spotify API app
+   (transfer-playback confirmed available to new apps — see
+   `docs/ARCHITECTURE.md`'s open-questions list).
+4. **Fill the Finding 003 grid** on `rig`, not `gexis` — characterises the
+   metering path, not the product image. 16 of 18 cells remain.
 
-2. **Fill the Finding 003 grid.** The meter plugin loses the final 768 frames at
-   S32_LE/192000 and does not at S16_LE/44100. Two data points, four candidate
-   variables (rate, format, data rate, period size), none eliminated. 16
-   remaining cells. Reproduction is in the finding. Good first
-   hardware-in-the-loop test on the self-hosted runner. `rig`, not `gexis` —
-   this characterises the metering path, not the product image.
-
-Not blocking, and needed before their phases:
-
-- **Skin assets.** Needle sprite pivot convention and the meaning of `distance`;
-  font faces the skins assume; the `playinfo.type` icon set. Blocks skin renderer
-  implementation, not the ADR.
-- **peppyalsa FIFO byte format.** A `hexdump` with a stream running settles it.
-  Blocks the visualisation service.
+Not blocking, needed before their phases: skin asset conventions (needle
+pivot, `distance`, icon set — blocks the skin renderer) and the peppyalsa
+FIFO byte format (blocks the visualisation service).
 
 ## Phase order
 
-Risk retirement, not visible progress. Audio arbitration cannot be retrofitted;
-screens can.
-
 ```
-0  reproducible image                     ✓ done — pi-gen, ADR-0021
+0  reproducible image                     ✓ merged — pi-gen, ADR-0021
 1  measurements                           absorbed into 2 — needs 2's own renderers
-2  audio layer + arbitration              ← squeezelite, go-librespot, bluealsa;
+2  audio layer + arbitration              ← in progress: renderers packaged,
+                                             2 hardware fixes pending reverify;
                                              Python core arrives here; takeover gap
 3  core state daemon                      no UI; test with a WebSocket client
 4  UI shell + idle + display-only nowplay
@@ -94,26 +104,28 @@ screens can.
 ## Things that will bite if forgotten
 
 - **Never reference an ALSA card by index.** 3 on `rig`, 2 on moOde, 1 on
-  `gexis` — same DAC model, three different indices, none of them
-  predictable (Finding 005). Use `hw:sndrpihifiberry`.
-- **`squeezelite -V DAC`** — omitting it silently falls back to software volume
-  and quietly falsifies the bit-perfect claim. ADR-0018 makes this a startup
-  assertion, not a preference.
-- **`type plug` must not appear in the `output` chain.** It converts silently
-  when formats do not match.
-- **`alsa-lib` is pinned at `1.2.14-1+rpt1`.** Findings 002 and 003 characterise
-  the metering path against that version and no other.
-- **moOde's patched alsa-lib is not needed** for this hardware. Finding 002.
-  Do not copy their held packages.
+  `gexis` — same DAC model, three different indices (Finding 005). Use
+  `hw:sndrpihifiberry`.
+- **`ctl.output`, not just `pcm.output`, in `output.conf`.** Mixer access
+  (`squeezelite -V DAC`) resolves through the control interface, not the
+  PCM slave chain — ADR-0009 was itself incomplete on this until Phase 2a.
+- **`squeezelite -V DAC` does not fail on a bad mixer name** — confirmed
+  from its source. It logs and silently falls back to software volume.
+  `squeezelite.service`'s `ExecStartPre` is the actual assertion.
+- **A `.gitignore` fix on one branch does not protect other branches**
+  working off the same tree. Run `./test-gitignored-credentials.sh` on
+  whatever branch you're on if you're not sure.
+- **`type plug` must not appear in the `output` chain.**
+- **`alsa-lib` is pinned at `1.2.14-1+rpt1`.** Findings 002/003.
+- **`docs/DEVELOPMENT.md` on `main` is stale** — see above.
 
 ## Working agreement
 
 George is product manager: requirements, acceptance criteria, trade-offs, UX.
-Claude handles implementation, tooling, tests, commits.
-
-Opus in chat for decisions and architecture; Sonnet in Claude Code for
-implementation. Escalate to Opus in Claude Code after two failed Sonnet attempts,
-or immediately for anything that would become an ADR.
+Claude handles implementation, tooling, tests, commits. Does not commit to
+`main` — opens PRs.
 
 Every architectural decision becomes a numbered ADR before implementation.
-Findings state their scope: what was tested, under what conditions, what was not.
+Findings state their scope: what was tested, under what conditions, what was
+not. `docs/LESSONS.md` (PR #5) tracks recurring verification-methodology
+failures, kept distinct from findings and ADRs.
