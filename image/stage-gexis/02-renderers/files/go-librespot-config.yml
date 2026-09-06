@@ -23,11 +23,28 @@ zeroconf_backend: avahi
 # The arbitration core (Phase 2b) needs this: /events (WebSocket) is the
 # only acquisition signal for Spotify Connect ("device selected in the
 # app", ADR-0010), and /player/stop is how it disconnects on takeover.
-# address/port left at upstream's own defaults (confirmed against
-# devgianlu/go-librespot's README, not assumed) - loopback-only, so
-# nothing outside this machine can reach it.
+#
+# `port` is explicit and fixed, not left at whatever upstream defaults to
+# when omitted - measured on gexis (2026-09-06, `ss -tlnp` across a
+# `systemctl restart`) that leaving it out gives a *different port every
+# start* (46227, then 39773), which the arbitration core cannot hardcode
+# or discover without extra machinery. `address` is left at upstream's
+# documented default (`localhost` - confirmed against
+# devgianlu/go-librespot's README) since only the core, on this same
+# machine, needs to reach it.
+#
+# This is NOT the only listener go-librespot opens. Zeroconf pairing
+# (`zeroconf_enabled` below) opens a second, separate one, on all
+# interfaces - also measured ephemeral by default (42769, then 36043).
+# That one is *supposed* to be network-reachable: it's how the Spotify
+# phone app finds and pairs with this device over the LAN in the first
+# place. An earlier version of this comment claimed the whole server was
+# "loopback-only, so nothing outside this machine can reach it" - false,
+# conflated the two listeners, corrected here after the all-interfaces
+# socket was found by direct measurement, not read in any doc.
 server:
   enabled: true
+  port: 3678
 
 credentials:
   type: zeroconf
