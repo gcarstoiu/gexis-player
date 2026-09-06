@@ -1,0 +1,12 @@
+[Unit]
+Description=Gexis Bluetooth setup: unblock rfkill, power on, pairable/discoverable
+After=bluetooth.service gexis-bt-agent.service
+Before=bluealsa.service bluealsa-aplay.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/local/lib/gexis/bluetooth-setup.sh
+
+[Install]
+WantedBy=multi-user.target

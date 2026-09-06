@@ -53,6 +53,27 @@ install -D -m 644 files/bluealsa-aplay-override.conf \
 install -D -m 644 files/bluealsa-override.conf \
 	"${ROOTFS_DIR}/etc/systemd/system/bluealsa.service.d/override.conf"
 
+# BlueZ's adapter name defaults to the system hostname (already "gexis"
+# via firstrun.sh) unless main.conf's Name= is set - but relying on that
+# implicitly is exactly the kind of thing ADR-0022 wants made explicit
+# everywhere a device name shows up (mDNS, Spotify, Bluetooth). Set
+# explicitly here rather than trusted as an implicit side effect.
+# Targeted sed on the vendor-shipped file, not a full replacement - it's
+# ~250 lines of reference documentation for settings this project
+# doesn't otherwise touch, and replacing it wholesale would bury that
+# for no gain here.
+sed -i 's/^#Name = BlueZ$/Name = gexis/' "${ROOTFS_DIR}/etc/bluetooth/main.conf"
+
+# Bluetooth pairing setup (ADR-0024): unblock the rfkill soft-block
+# main.conf can't override on its own, power on, and register a
+# PIN-free pairing agent. See the two units' own comments.
+install -D -m 755 files/gexis-bluetooth-setup.sh \
+	"${ROOTFS_DIR}/usr/local/lib/gexis/bluetooth-setup.sh"
+install -D -m 644 files/gexis-bluetooth-setup.service \
+	"${ROOTFS_DIR}/etc/systemd/system/gexis-bluetooth-setup.service"
+install -D -m 644 files/gexis-bt-agent.service \
+	"${ROOTFS_DIR}/etc/systemd/system/gexis-bt-agent.service"
+
 # Enable our own units. Symlinked directly rather than via systemctl -
 # there is no running systemd inside this chroot to talk to.
 mkdir -p "${ROOTFS_DIR}/etc/systemd/system/multi-user.target.wants"
@@ -60,6 +81,10 @@ ln -sf /etc/systemd/system/go-librespot.service \
 	"${ROOTFS_DIR}/etc/systemd/system/multi-user.target.wants/go-librespot.service"
 ln -sf /etc/systemd/system/squeezelite.service \
 	"${ROOTFS_DIR}/etc/systemd/system/multi-user.target.wants/squeezelite.service"
+ln -sf /etc/systemd/system/gexis-bluetooth-setup.service \
+	"${ROOTFS_DIR}/etc/systemd/system/multi-user.target.wants/gexis-bluetooth-setup.service"
+ln -sf /etc/systemd/system/gexis-bt-agent.service \
+	"${ROOTFS_DIR}/etc/systemd/system/multi-user.target.wants/gexis-bt-agent.service"
 
 # Build-time assertion: every file this stage installs actually landed
 # where the systemd units expect it, and pi owns what it needs to own.
@@ -70,13 +95,24 @@ for f in \
 	"${ROOTFS_DIR}/etc/systemd/system/squeezelite.service" \
 	"${ROOTFS_DIR}/usr/local/lib/gexis/squeezelite-mixer-check.sh" \
 	"${ROOTFS_DIR}/etc/systemd/system/bluealsa-aplay.service.d/override.conf" \
-	"${ROOTFS_DIR}/etc/systemd/system/bluealsa.service.d/override.conf"
+	"${ROOTFS_DIR}/etc/systemd/system/bluealsa.service.d/override.conf" \
+	"${ROOTFS_DIR}/usr/local/lib/gexis/bluetooth-setup.sh" \
+	"${ROOTFS_DIR}/etc/systemd/system/gexis-bluetooth-setup.service" \
+	"${ROOTFS_DIR}/etc/systemd/system/gexis-bt-agent.service"
 do
 	if [ ! -e "${f}" ]; then
 		echo "ERROR: ${f} missing after install" >&2
 		exit 1
 	fi
 done
+# The sed above must have actually matched - a missed pattern (e.g. if
+# the vendor file's default comment text ever changes upstream) fails
+# silently otherwise, leaving the adapter name on whatever bluetoothd's
+# hostname-derived fallback happens to be.
+if ! grep -q "^Name = gexis$" "${ROOTFS_DIR}/etc/bluetooth/main.conf"; then
+	echo "ERROR: main.conf's Name= substitution did not take - pattern may have changed upstream" >&2
+	exit 1
+fi
 # These two are symlinks to an absolute path (/etc/systemd/system/...)
 # that only resolves once ${ROOTFS_DIR} is the real root, i.e. after boot -
 # not from here. -e follows the link and fails against the build host's
@@ -90,7 +126,9 @@ done
 # to -e; that's the exact failure this comment exists to prevent.
 for f in \
 	"${ROOTFS_DIR}/etc/systemd/system/multi-user.target.wants/go-librespot.service" \
-	"${ROOTFS_DIR}/etc/systemd/system/multi-user.target.wants/squeezelite.service"
+	"${ROOTFS_DIR}/etc/systemd/system/multi-user.target.wants/squeezelite.service" \
+	"${ROOTFS_DIR}/etc/systemd/system/multi-user.target.wants/gexis-bluetooth-setup.service" \
+	"${ROOTFS_DIR}/etc/systemd/system/multi-user.target.wants/gexis-bt-agent.service"
 do
 	if [ ! -L "${f}" ]; then
 		echo "ERROR: ${f} missing after install" >&2
@@ -99,5 +137,9 @@ do
 done
 if [ ! -x "${ROOTFS_DIR}/usr/local/bin/go-librespot" ]; then
 	echo "ERROR: go-librespot binary not executable" >&2
+	exit 1
+fi
+if [ ! -x "${ROOTFS_DIR}/usr/local/lib/gexis/bluetooth-setup.sh" ]; then
+	echo "ERROR: gexis bluetooth-setup.sh not executable" >&2
 	exit 1
 fi
