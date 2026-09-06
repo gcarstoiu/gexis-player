@@ -18,14 +18,22 @@ hand-built machine; its three criteria are Phase 2 criteria 8-10.
 **Phase 2a (renderer packaging) is in progress on `phase-2a-renderers`**
 (branched from `phase-2-arbitration`, from PR #2's branch — neither has a
 PR open yet). squeezelite, go-librespot and bluealsa-aplay are packaged
-into `stage-gexis` as systemd units. Two hardware-found defects are fixed
-and committed, **not yet reverified on hardware**: `pi` had no sudo at all
-(shipped `/etc/sudoers.d/010_pi-nopasswd` directly — verified empirically
-that stock Raspberry Pi OS Lite never ships it either, since this image's
-`firstrun.sh` replaces the flow that would normally create it), and
-go-librespot's `ExecStart` had `-config_dir` (one dash; its CLI parses `-c`
-as a distinct short flag, so this got parsed as `-c onfig_dir`) instead of
-`--config_dir`.
+into `stage-gexis` as systemd units. Two hardware-found defects are fixed,
+committed, and **now reverified on hardware** on `gexis`: `pi` had no
+sudo at all (shipped `/etc/sudoers.d/010_pi-nopasswd` directly — verified
+empirically that stock Raspberry Pi OS Lite never ships it either, since
+this image's `firstrun.sh` replaces the flow that would normally create
+it; `sudo -n true` now succeeds on the flashed card), and go-librespot's
+`ExecStart` had `-config_dir` (one dash; its CLI parses `-c` as a
+distinct short flag, so this got parsed as `-c onfig_dir`) instead of
+`--config_dir` (`go-librespot.service` now starts). Both blockers from
+the previous hardware pass are closed. Also verified on this pass: all
+four units (squeezelite, go-librespot, bluealsa, bluealsa-aplay) enabled
+and active, squeezelite `NRestarts=0`; `speaker-test -D output` plays
+audibly (criterion 4); `output.conf` has no `type plug`, no card index,
+and has `ctl.output` (criterion 5); `libasound2t64` is
+`1.2.14-1+rpt1` and held per `apt-mark showhold` (criterion 6);
+squeezelite's `ExecStartPre` mixer check is present and passes.
 
 The sudoers fix's `visudo -cf` validation (`stage-gexis/01-firstboot/01-run.sh`)
 was reviewed on a concern that it might skip validation if `visudo` is
@@ -39,13 +47,24 @@ it somehow didn't, `capsh`'s non-zero exit would propagate through
 unvalidated sudoers file can ship. No host-side `sudo` package install
 needed; none was made.
 
-**The rebuild to verify both hardware fixes has not run yet** — blocked on
-Docker access on `C3PO`. George added his user to the `docker` group, but
-group membership only refreshes on a new login session, not a Claude Code
-restart; the shell Claude Code is currently attached to still shows the
-pre-change group list (`id` lacks `docker` even though `/etc/group` already
-has it). George is restarting his terminal session to pick it up; retry
-after that.
+**Docker access on `C3PO` is resolved** — the `docker` group membership
+picked up after George's terminal restart, and `make image` has since
+built successfully (one retry needed: the first attempt failed at
+`export-image`'s `losetup` step with `mknod: invalid minor device
+number '/dev/loop0 (lost)'`, a transient loop-device race, not a code
+issue — `make clean` to drop the leftover `pigen_work` container and
+rerunning `make image` succeeded, 40m59s).
+
+**`squeezelite-mixer-check.sh` no longer execs `amixer`** (`6ee6d6f`,
+pushed to `phase-2a-renderers`). A successful check now logs a positive
+line; the failure path dumps `amixer -D output scontrols` so a misnamed
+control and an absent card are distinguishable. Previously a pass
+produced no journal output at all, so a boot where the assertion ran and
+a boot where it was never wired up looked identical in
+`journalctl -u squeezelite -b`. **Not yet verified**: that the new
+success line actually appears in the journal on a real boot — tested
+only by running the script body in an interactive shell. Needs a
+rebuild+reflash to confirm.
 
 **`docs/DEVELOPMENT.md` on `main` is behind.** It doesn't yet show Phase
 1's absorption, Phase 2's criteria 8-10, the tier-3-moves-to-`gexis`
@@ -66,6 +85,59 @@ regression test to `main`. **PR #5** (open) adds `docs/LESSONS.md`, naming
 the general "verification ran against the wrong reality" pattern this and
 two earlier incidents share.
 
+**New defect found on `gexis`, not blocking Phase 2: the peppyalsa meter
+FIFO doesn't write.** `/tmp/peppyspectrum` carries data during playback;
+`/tmp/peppymeter` does not. Scope: single reader, single stream
+(`speaker-test` sine 440 Hz, 48 kHz S16_LE), two runs, read as `pi`, ~8s
+window opened before playback — not decisive on its own. Established:
+the scope loads and attaches (`libpeppyalsa.so` symlink resolves,
+spectrum FIFO writes, no scope-related errors in alsa-lib output);
+`meter_show` controls console display only, not FIFO writing (set to 1,
+ASCII level bars appear on the terminal and the FIFO stays silent, so
+the meter path computes levels — only the FIFO write is missing); both
+FIFOs exist as named pipes, `pi:audio`, created at boot (11:11), which
+suggests something other than peppyalsa creates them. Unchecked
+candidates, none eliminated: peppyalsa's open mode for the meter FIFO
+vs. the spectrum FIFO; pre-existing FIFOs with unexpected ownership/mode
+affecting behaviour; a meter-side option missing from `output.conf`
+(the spectrum block has `spectrum_size`, `logarithmic_amplitude`,
+`smoothing_factor`, `window`; the meter side has only `meter`,
+`meter_max`, `meter_show`); `decay_ms 400` interacting with the write
+path; a build variant with the meter FIFO write compiled out. Every
+remaining candidate needs peppyalsa's source — stopped here because
+further permutation on the box costs more than reading the code. This
+is Phase 5 input, already on `docs/ARCHITECTURE.md`'s open-questions
+list as "the peppyalsa FIFO byte format (blocks the visualisation
+service)." Not written up as a finding yet — exists only here.
+
+**First data on the FIFO format** (from the spectrum FIFO, which does
+write): 64 bytes of one frame, fixed-width 4-byte groups, low byte
+first (32-bit LE inferred from the pattern, not confirmed against
+source). Values decoded 5, 16, 50, 62, 64, 56, 34, 0, 2, then zeros —
+consistent with `spectrum_size 30` and `spectrum_max 100` in
+`output.conf`; consistent is not confirmed.
+
+`gexis`'s state as of this pass: the `meter_show 1` exploration was
+reverted, config matches the shipped image again, no other hand-edits.
+
+**Build self-identification gap.** Nothing on the running system
+identifies which build it is — checked `/boot/firmware/` and
+`/etc/gexis*` only, no manifest, no version file, no marker (doesn't
+establish absence everywhere, just that those are the two obvious
+places). Criterion 7 says the manifest ships alongside the `.img`, i.e.
+on `C3PO`. But `docs/DEVELOPMENT.md`'s tier-3 rule has the runner assert
+its environment against "what the image build's own manifest recorded"
+— and the runner is `gexis`, where the manifest isn't reachable. Needs
+either the manifest shipped onto the image or a fetch path. **George's
+call** whether that's a criterion 7 amendment.
+
+**Method note, candidate `docs/LESSONS.md` instance:** a command run on
+`C3PO` instead of `gexis` produced a false finding (`pcm.output` not
+resolving), later retracted — the tell was `speaker-test` 1.2.16 on
+`C3PO` vs. 1.2.14 on `gexis`. The wrong-host risk is structural to
+pasting command blocks between machines, not a one-off slip — same
+"verification ran against the wrong reality" shape PR #5 tracks.
+
 ## Machines
 
 | Name | What it is | Notes |
@@ -83,22 +155,23 @@ to create it) and clears the card's stale SSH host key. See
 
 ## Next actions, in order
 
-1. **Rebuild and reflash `gexis`** with the latest `phase-2a-renderers`
-   build. Currently blocked: retry `make image` on `C3PO` once George's
-   terminal restart has picked up `docker` group membership (see above).
-   Then verify `sudo -n true` now succeeds and `go-librespot.service`
-   actually starts (both were the blockers found on the previous hardware
-   pass).
+1. **Rebuild and reflash `gexis`** to pick up `6ee6d6f` (mixer-check
+   journal logging). Verify the new success line actually appears in
+   `journalctl -u squeezelite -b` on a real boot — the only thing about
+   that commit not yet checked on hardware. ~37-40 min per the measured
+   build cost above.
 2. **Phase 2 criteria 3-7**: arbitration (base/active slot, ADR-0010),
    timeout ladder on release, volume bridge, boot volume. This is where
    the Python core first appears — in the image, via `stage-gexis`, not
    Phase 3.
-3. Criteria 8-10 (takeover gap measurement) once 1-7 hold on real
+3. **Write up the peppyalsa meter FIFO finding** (see above) with its
+   stated scope.
+4. Criteria 8-10 (takeover gap measurement) once 1-7 hold on real
    hardware — needs LMS (George has one; CI gets a containerised
    throwaway) and, for the Spotify leg, the registered Spotify API app
    (transfer-playback confirmed available to new apps — see
    `docs/ARCHITECTURE.md`'s open-questions list).
-4. **Fill the Finding 003 grid** on `rig`, not `gexis` — characterises the
+5. **Fill the Finding 003 grid** on `rig`, not `gexis` — characterises the
    metering path, not the product image. 16 of 18 cells remain.
 
 Not blocking, needed before their phases: skin asset conventions (needle
@@ -143,6 +216,15 @@ FIFO byte format (blocks the visualisation service).
   just relaunching Claude Code — a shell spawned before the change keeps
   its old group list until it's re-created (new terminal / re-login).
   Check with `id` before assuming `docker` commands will work.
+- **A failed `make image` leaves `pigen_work` behind even after
+  `make clean`** if `clean` ran before the failing attempt rather than
+  after it — `clean`'s `docker rm -v pigen_work` only removes what
+  exists *at the time it runs*. Run `make clean` again after any failure,
+  right before retrying.
+- **Don't assume `C3PO`'s tooling is on the image.** `xxd` isn't there
+  (ships with vim; Lite base doesn't have it) — use `od`. More broadly,
+  never paste command blocks across machines without checking which host
+  a shell is actually attached to first (see the method note above).
 
 ## Working agreement
 
