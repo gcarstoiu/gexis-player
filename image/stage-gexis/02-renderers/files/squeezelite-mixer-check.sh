@@ -9,4 +9,10 @@
 # resolves -V against (see output.conf's ctl.output block), not a
 # separate hw:sndrpihifiberry reference - ADR-0009 stays true even in
 # a guard script.
-exec amixer -D output sget DAC >/dev/null
+if amixer -D output sget DAC >/dev/null 2>&1; then
+    echo "mixer check: control 'DAC' present on ctl 'output' - hardware volume asserted"
+    exit 0
+fi
+echo "mixer check: control 'DAC' NOT found on ctl 'output' - refusing to start" >&2
+amixer -D output scontrols >&2 || true
+exit 1
