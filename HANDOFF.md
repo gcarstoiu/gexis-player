@@ -25,9 +25,27 @@ that stock Raspberry Pi OS Lite never ships it either, since this image's
 `firstrun.sh` replaces the flow that would normally create it), and
 go-librespot's `ExecStart` had `-config_dir` (one dash; its CLI parses `-c`
 as a distinct short flag, so this got parsed as `-c onfig_dir`) instead of
-`--config_dir`. A rebuild to verify both is in flight or just finished —
-check `phase-2a-renderers`' latest commits and the chat log rather than
-assume either way.
+`--config_dir`.
+
+The sudoers fix's `visudo -cf` validation (`stage-gexis/01-firstboot/01-run.sh`)
+was reviewed on a concern that it might skip validation if `visudo` is
+absent on the pi-gen build host. Checked, not assumed: `on_chroot` (
+`pi-gen/scripts/common:82-108`) runs the check via `capsh --chroot=...`
+*inside the target rootfs*, not on the host, so host-side `visudo`
+availability is irrelevant. That rootfs already has `sudo`/`visudo`
+installed by `stage2/01-sys-tweaks/00-packages` (an earlier stage), and if
+it somehow didn't, `capsh`'s non-zero exit would propagate through
+`on_chroot`'s return code and the script's `exit 1` — fails closed, no
+unvalidated sudoers file can ship. No host-side `sudo` package install
+needed; none was made.
+
+**The rebuild to verify both hardware fixes has not run yet** — blocked on
+Docker access on `C3PO`. George added his user to the `docker` group, but
+group membership only refreshes on a new login session, not a Claude Code
+restart; the shell Claude Code is currently attached to still shows the
+pre-change group list (`id` lacks `docker` even though `/etc/group` already
+has it). George is restarting his terminal session to pick it up; retry
+after that.
 
 **`docs/DEVELOPMENT.md` on `main` is behind.** It doesn't yet show Phase
 1's absorption, Phase 2's criteria 8-10, the tier-3-moves-to-`gexis`
@@ -65,9 +83,12 @@ to create it) and clears the card's stale SSH host key. See
 
 ## Next actions, in order
 
-1. **Reflash `gexis`** with the latest `phase-2a-renderers` build. Verify
-   `sudo -n true` now succeeds and `go-librespot.service` actually starts
-   (both were the blockers found on the previous hardware pass).
+1. **Rebuild and reflash `gexis`** with the latest `phase-2a-renderers`
+   build. Currently blocked: retry `make image` on `C3PO` once George's
+   terminal restart has picked up `docker` group membership (see above).
+   Then verify `sudo -n true` now succeeds and `go-librespot.service`
+   actually starts (both were the blockers found on the previous hardware
+   pass).
 2. **Phase 2 criteria 3-7**: arbitration (base/active slot, ADR-0010),
    timeout ladder on release, volume bridge, boot volume. This is where
    the Python core first appears — in the image, via `stage-gexis`, not
@@ -118,6 +139,10 @@ FIFO byte format (blocks the visualisation service).
 - **`type plug` must not appear in the `output` chain.**
 - **`alsa-lib` is pinned at `1.2.14-1+rpt1`.** Findings 002/003.
 - **`docs/DEVELOPMENT.md` on `main` is stale** — see above.
+- **Adding a user to the `docker` group needs a new login session**, not
+  just relaunching Claude Code — a shell spawned before the change keeps
+  its old group list until it's re-created (new terminal / re-login).
+  Check with `id` before assuming `docker` commands will work.
 
 ## Working agreement
 

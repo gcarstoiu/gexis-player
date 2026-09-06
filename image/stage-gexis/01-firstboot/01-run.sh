@@ -38,10 +38,15 @@ if [ "${ACTUAL_MODE}" != "440" ]; then
 fi
 
 # Syntax check, not architecture-dependent (sudoers grammar doesn't vary
-# by arch or, for a line this simple, by version) - runs on the host,
-# verified against both a valid and a deliberately broken file before
+# by arch or, for a line this simple, by version). Runs inside the target
+# chroot, not the host: the pi-gen build container has no visudo/sudo
+# package installed on the host side, only in the rootfs being built.
+# Verified against both a valid and a deliberately broken file before
 # trusting it, rather than assumed from visudo's man page.
-if ! visudo -cf "${SUDOERS}" >/dev/null; then
+if ! on_chroot << EOF
+visudo -cf /etc/sudoers.d/010_pi-nopasswd >/dev/null
+EOF
+then
 	echo "ERROR: ${SUDOERS} failed visudo syntax check" >&2
 	exit 1
 fi
