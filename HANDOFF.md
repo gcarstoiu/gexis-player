@@ -295,18 +295,42 @@ is exactly the failure mode Phase 2b's arbitration supervisor exists to
 prevent — expected in the absence of a running, correctly-wired
 supervisor, not a new defect in the renderers themselves.**
 
-**UNEXPLAINED — do not build further arbitration work on top of this
-until it's understood:** George observed pressing play in LMS started
-playback in **Spotify**, not LMS. No mechanism accounts for this —
-squeezelite has no path to go-librespot. Un-eliminated candidates: the
-phone's Spotify app still had `gexis` selected and something triggered
-a resume independently of the LMS action; go-librespot's `/events` or
-its persisted Zeroconf session state reacting to something unrelated;
-coincidental timing between two unrelated actions. LMS takeover of
-Spotify only worked after Spotify was manually paused first — expected,
-since no arbitration exists yet — but the LMS-play-starts-Spotify
-direction has no explanation at all. **George's instruction: reproduce
-and understand this before Phase 2b builds on it.**
+**UNEXPLAINED — George observed pressing play in LMS started playback in
+Spotify, not LMS.** Attempted reproduction the same session, on `gexis`:
+with go-librespot idle/stopped (`/status`: `stopped: true, track: null`)
+and a WebSocket watcher attached to its `/events`, sent a plain LMS
+`play` for the `gexis` player. LMS's mode went to `play` as expected;
+go-librespot's status did not change and **no event fired at all** on
+`/events`. Single clean attempt, did not reproduce.
+
+While investigating, found `gexis-core.service` is running on this
+build and its Spotify adapter is **completely broken right now**:
+it's built against `Config.go_librespot_port`'s default (3678), but
+this build predates the port-pinning fix (see below) so go-librespot is
+actually listening on an ephemeral port (39773 at the time of testing)
+— every Spotify-adapter call has been failing with connection-refused
+since boot (`journalctl -u gexis-core` confirms this on a loop). This
+**rules out the arbitration core itself** as the mechanism behind
+George's original observation, on this build at least — it structurally
+cannot reach go-librespot's API to do anything to it. The LMS side is
+confirmed working correctly on the live daemon, separately: the
+acquisition test above logged `lms: player mode -> play (acquisition)`
+right on cue.
+
+Also found while reading the journal: go-librespot logs repeated
+`loading previously persisted zeroconf credentials` / `authenticated
+AP` / `authenticated Login5` cycles with no service restart between
+them and no matching `accepted zeroconf from <device>` line (which
+*did* appear once, at initial pairing) — i.e. something is making it
+periodically re-authenticate with Spotify's backend using its stored
+credentials, without a fresh local pairing handshake. Not tied to a
+fixed timer (gaps of 5m and 1m seen). Left unexplained; noted as the
+most plausible lead for George's observation (a phone-side or
+session-refresh event, not a pairing event) without being confirmed as
+the cause of it. **Not blocking further work** — see below for why: the
+arbitration core couldn't have acted on it either way, given the port
+bug above, and George has since given the criterion 4 decision (below)
+that this session acted on.
 
 **go-librespot's API port is ephemeral by default — breaks a hardcoded-
 port assumption.** `ss -tlnp` across a single `systemctl restart` showed
@@ -326,8 +350,8 @@ it" — false, conflated the two listeners; corrected in the same commit
 that fixed the port, credited to direct measurement (`ss -tlnp`), not a
 doc.
 
-**Release-timing data, input to criterion 4 — not yet acted on, George's
-call per DEVELOPMENT.md's stop-and-ask rule:**
+**Release-timing data, input to criterion 4 — decided and implemented
+this session:**
 
 | Renderer | Release path | Measured |
 |---|---|---|
@@ -335,17 +359,22 @@ call per DEVELOPMENT.md's stop-and-ask rule:**
 | squeezelite | LMS CLI pause | ~8500ms after the pause command (single run; an earlier ~7000ms UI-pause run had unmeasured lead time, so this is the cleaner figure). Consistent with `-C 10`. |
 
 Both single runs, neither the ≥20-run distribution criterion 8 requires.
-**The finding that matters even from one run each:** a commanded pause
-does not release squeezelite faster than its idle timeout — arbitration
-cannot get a fast release out of squeezelite through LMS's own pause
-command. One ladder timeout cannot serve both renderers: too slow for
-Spotify (<100ms suffices), premature if sized for LMS's ~8.5s, and 8.5s
-of dead air on takeover is well past tolerable. Candidate direction
-(George's, not decided): arbitration may need to drive squeezelite's
-release actively rather than wait out `-C` — a shorter `-C`, or
-escalating past the polite rung quickly for squeezelite specifically.
-**Explicitly not decided in implementation** — bears on ADR-0010 and
-criterion 4's shape, needs George's decision first.
+**George's decision:** drive squeezelite's release actively rather than
+wait out `-C` — the LMS pause is still sent, as a courtesy so LMS's own
+state reflects "paused" not "disconnected," but the supervisor no
+longer waits on it during a takeover and escalates straight to
+`SIGTERM`. Implemented via a new per-adapter `release_ladder` override
+(`Adapter.release_ladder`, `core/src/gexis_core/adapters/base.py`) so
+this didn't need a bespoke code path — `LmsAdapter` sets
+`polite_grace=0.0`. `-C 10` still governs the non-arbitration idle case
+(LMS stops on its own, nothing else wants the device); only the
+takeover path bypasses it now. ADR-0010's implementation note amended —
+it previously said `-C` was "what actually frees the device," which
+this measurement showed isn't fast enough on its own. New test
+(`test_adapter_specific_ladder_skips_the_polite_wait`) verifies the skip
+via recorded `asyncio.sleep` calls, not wall-clock timing — 10 tests
+total, still no hardware needed. **Not yet reflashed or hardware-
+verified** — this build predates the change.
 
 **LMS details for testing:** CLI on port 9090 (works from `gexis` via
 `bash`'s `/dev/tcp`; telnet and `nc` aren't on the image). `gexis`
@@ -380,33 +409,38 @@ to create it) and clears the card's stale SSH host key. See
 
 ## Next actions, in order
 
-1. **Reproduce and understand the LMS-play-starts-Spotify observation**
-   (hardware session above) before any further Phase 2b arbitration work
-   builds on this build. No mechanism is known; George's explicit
-   instruction is not to proceed past this blind.
-2. **Decide criterion 4's ladder shape with George** — the
-   go-librespot/squeezelite release-timing asymmetry above (<100ms vs.
-   ~8.5s) means one timeout can't serve both renderers. Stop-and-ask per
-   `docs/DEVELOPMENT.md`, not Claude's call to implement around.
-3. **Phase 2b, criteria 3-6**, once 1-2 above are resolved: the
-   supervisor, adapters and volume bridge are written and unit-tested
-   (`core/`) and the image builds and boots them, but no live takeover
-   has actually been exercised end-to-end yet — everything measured on
-   hardware so far is either baseline health or the two items above.
-4. **Write up the peppyalsa meter FIFO finding** (see above) with its
+1. **Rebuild and reflash `gexis`** — the running build has two known,
+   already-fixed-in-source bugs: go-librespot's ephemeral API port
+   (breaks the Spotify adapter entirely, confirmed by the connection-
+   refused loop in `gexis-core`'s own journal) and squeezelite's release
+   waiting out `-C` instead of being driven actively. Neither is
+   verified on hardware until this rebuild happens.
+2. **Phase 2b, criteria 3-6**, once reflashed: the supervisor, adapters
+   and volume bridge are written and unit-tested (`core/`) and the image
+   builds and boots them, but no live takeover has actually been
+   exercised end-to-end yet — everything measured on hardware so far is
+   either baseline health, the boot-time contention defect, or the two
+   fixes above.
+3. **Write up the peppyalsa meter FIFO finding** (see above) with its
    stated scope.
-5. Criteria 7-10 (the attack test and takeover gap measurement) once 3-6
+4. Criteria 7-10 (the attack test and takeover gap measurement) once 2-3
    hold on real hardware — needs LMS (have one; CI gets a containerised
    throwaway) and, for the Spotify leg, the registered Spotify API app
    (transfer-playback confirmed available to new apps — see
    `docs/ARCHITECTURE.md`'s open-questions list).
-6. **Fill the Finding 003 grid** on `rig`, not `gexis` — characterises the
+5. **Fill the Finding 003 grid** on `rig`, not `gexis` — characterises the
    metering path, not the product image. 16 of 18 cells remain.
 
-Decisions pending from George: items 1-2 above, the criterion 7
-build-self-identification amendment (above), and whether to act on the
-develop-on-hardware workflow inversion (above, needs an ADR first if
-so).
+The LMS-play-starts-Spotify observation was attempted-and-not-reproduced
+this session (see hardware session above) — not blocking further work,
+since the arbitration core structurally couldn't have caused it (the
+port bug above meant it couldn't reach go-librespot at all), and George
+has since given the criterion 4 decision this session already acted on.
+Still worth another look if it recurs on the rebuilt image.
+
+Decisions pending from George: the criterion 7 build-self-identification
+amendment (above), and whether to act on the develop-on-hardware
+workflow inversion (above, needs an ADR first if so).
 
 Not blocking, needed before their phases: skin asset conventions (needle
 pivot, `distance`, icon set — blocks the skin renderer) and the peppyalsa
