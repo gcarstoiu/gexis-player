@@ -60,9 +60,13 @@ Answers the open scope question above, on `gexis` specifically: not
 | Build | Card index |
 |---|---|
 | Phase 0 (original) | 1 |
-| Phase 2b (this rebuild, same source, same hardware) | 2 |
+| Phase 2b, rebuild 1 (port fix + active release) | 2 |
+| Phase 2b, rebuild 2 (this session's fixes) | 3 |
 
-This is a **stronger** version of the finding than the one above: it isn't
+Three consecutive builds of the same image on the same hardware, three
+different indices — no repeat yet, though three data points isn't enough
+to claim it never will. This is a **stronger** version of the finding than
+the one above: it isn't
 only that different systems assign different indices, but that rebuilding
 and reflashing *the same system* can too. Nothing in the build pins probe
 order, so there is no reason to expect it to hold constant even between

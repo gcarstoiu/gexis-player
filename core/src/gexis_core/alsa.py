@@ -17,8 +17,16 @@ def resolve_card_number(card_id: str = CARD_ID, cards_file: Path | None = None) 
     """Resolve e.g. "sndrpihifiberry" to its current ALSA card number."""
     path = cards_file or Path("/proc/asound/cards")
     for line in path.read_text().splitlines():
-        m = re.match(r"\s*(\d+)\s+\[(\S+)", line)
-        if m and m.group(2) == card_id:
+        # /proc/asound/cards pads the bracketed id to a fixed 15-char
+        # field. A short id ("vc4hdmi0") has trailing spaces inside the
+        # brackets that \S+ stops at; an id that exactly fills the field
+        # ("sndrpihifiberry" - also 15 chars) has none, so a \S+ match
+        # greedily runs past the closing bracket and the colon after it.
+        # Found on hardware, 2026-09-06: this card id is the exact-fit
+        # case, so the old \S+ pattern never matched it. Match up to the
+        # bracket explicitly instead of relying on whitespace to stop it.
+        m = re.match(r"\s*(\d+)\s+\[([^\]]+)\]", line)
+        if m and m.group(2).strip() == card_id:
             return int(m.group(1))
     raise RuntimeError(f"ALSA card {card_id!r} not found in {path}")
 
