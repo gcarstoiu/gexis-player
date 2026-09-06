@@ -208,6 +208,57 @@ resolving), later retracted — the tell was `speaker-test` 1.2.16 on
 pasting command blocks between machines, not a one-off slip — same
 "verification ran against the wrong reality" shape PR #5 tracks.
 
+**Phase 2b (arbitration core, criteria 3-6) is in progress on
+`phase-2b-arbitration`**, branched from `phase-2-arbitration` after 2a
+closed. ADR-0021 amended with a venv-packaging addendum: the Python core
+builds into `/opt/gexis-core/venv` inside the pi-gen chroot, `dbus-next`
+over `dbus-python` (pure Python, no build toolchain needed on the
+image), exact-version pins (hash-pinning flagged as a follow-up, not
+done). `core/` holds the supervisor (`Supervisor` + `TimeoutLadder`, base
+slot always LMS, ADR-0010's policy, criterion 4's polite-stop → SIGTERM →
+SIGKILL ladder via `systemctl kill`), fully unit-tested — 9 tests, no
+hardware, all passing — plus adapters for LMS, Spotify and Bluetooth, a
+volume bridge (criterion 5) and boot volume (criterion 6). Packaged into
+`image/stage-gexis/03-core`; the Makefile now bind-mounts `core/` into
+the pi-gen container as well as `stage-gexis`, so build-time `pip
+install` runs against the same source tree the unit tests run against,
+not a copy.
+
+**A second "verification ran against the wrong reality" instance, caught
+and corrected in the same session it was made:** the LMS-unreachable
+claim two sections above was wrong. The original reachability check was
+a bare GET to `/jsonrpc.js` with no body and a 5s timeout — LMS
+apparently only handles POST there, so the GET just hung until the
+timeout, which read as "unreachable." A real JSON-RPC POST succeeded
+immediately, confirmed the "gexis" LMS player exists
+(`e4:5f:01:58:89:07`, `192.168.178.188:9000`), and running the LMS
+adapter's `run()` against it end-to-end — handshake, `/slim/subscribe`,
+then a real `playlist play` triggered from the test itself — produced a
+genuine CometD `mode -> play` push and fired `on_acquire()` within 4
+seconds. First time the CometD subscription (previously the file's own
+"unverified" flag) has been watched work at all. **Not independently
+reconfirmed:** whether `release()`'s `pause` call takes effect within
+any particular time bound — the JSON-RPC call returned success, but the
+test moved on to clearing the playlist before checking mode again.
+`adapters/lms.py`'s own comments now record this precisely rather than
+carry a blanket "verified" claim forward. Add this as a second
+`docs/LESSONS.md` instance alongside the `C3PO`/`gexis` one above — same
+shape, different mechanism (wrong HTTP method instead of wrong host).
+
+**Two decisions closed this session:** the boot volume placeholder
+(`boot_volume_steps = 60`, i.e. −90dB on ADR-0018's scale — 0.5dB/step,
+0=mute/−120dB, 240=0dB) is confirmed by George as the real safe level,
+not a placeholder — code comments updated accordingly. LMS's
+address needed its port spelled out (`192.168.178.188:9000`); the core's
+config defaults to that address now (there is no sane localhost default
+for a renderer that lives on a different machine, unlike go-librespot),
+and `image/stage-gexis/03-core/files/core.toml` sets it explicitly too.
+
+**A full rebuild including the new `03-core` stage is in flight** on
+`C3PO` to confirm the whole thing actually packages and boots — not yet
+reflashed or hardware-verified end-to-end. `phase-2b-arbitration` is not
+yet pushed to `origin`.
+
 ## Machines
 
 | Name | What it is | Notes |
