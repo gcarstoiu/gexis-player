@@ -254,10 +254,113 @@ config defaults to that address now (there is no sane localhost default
 for a renderer that lives on a different machine, unlike go-librespot),
 and `image/stage-gexis/03-core/files/core.toml` sets it explicitly too.
 
-**A full rebuild including the new `03-core` stage is in flight** on
-`C3PO` to confirm the whole thing actually packages and boots — not yet
-reflashed or hardware-verified end-to-end. `phase-2b-arbitration` is not
-yet pushed to `origin`.
+**The rebuild including the new `03-core` stage succeeded** (39m33s,
+after two false starts: one from a bug in this session's own build-time
+assertion — checked `venv/bin/python`, a relative symlink to
+`venv/bin/python3`, itself an *absolute* symlink to `/usr/bin/python3`,
+which only resolves once `${ROOTFS_DIR}` is the real root — fixed by
+checking `venv/bin/pip` instead, a plain file; the other two attempts
+were killed by `C3PO`'s own low-memory condition, unrelated to the build
+itself, and succeeded once more memory was free). All commits pushed to
+`origin/phase-2b-arbitration`.
+
+**Reflashed and hardware-tested — see the session below for what was
+found.** None of it is clean yet; do not treat criteria 3-6 as met.
+
+---
+
+### Hardware session, 2026-09-06: reflashed with the Phase 2b build
+
+**Baseline carried forward cleanly:** mixer-check success line in the
+journal on a real boot, all four units active, `sudo -n true` OK.
+
+**DAC card index also varies across rebuilds of the same image on the
+same hardware** — card 2 this time, card 1 on the Phase 0 build.
+Finding 005 said index varies *across machines*; this is a stronger
+version (same machine, same source, different build) and has been added
+to that finding. Doesn't change anything already built — `output` was
+already never referencing an index — recorded because it sharpens the
+finding, not because it's actionable.
+
+**Defect found at boot: squeezelite couldn't open the device while
+go-librespot held it.** `alsa_open:360 playback open error: Device or
+resource busy` logged every 5s; `fuser` showed go-librespot (PID 872)
+on `/dev/snd/pcmC2D0p`. All four systemd units reported "active"
+throughout — `is-active` looked healthy while squeezelite could not
+play at all, a real gap in what "active" tells you about this system.
+Only happened while LMS had something to play; squeezelite acquires on
+demand, not at boot, so this was contention between two renderers both
+trying to hold the device, not eager acquisition by squeezelite. **This
+is exactly the failure mode Phase 2b's arbitration supervisor exists to
+prevent — expected in the absence of a running, correctly-wired
+supervisor, not a new defect in the renderers themselves.**
+
+**UNEXPLAINED — do not build further arbitration work on top of this
+until it's understood:** George observed pressing play in LMS started
+playback in **Spotify**, not LMS. No mechanism accounts for this —
+squeezelite has no path to go-librespot. Un-eliminated candidates: the
+phone's Spotify app still had `gexis` selected and something triggered
+a resume independently of the LMS action; go-librespot's `/events` or
+its persisted Zeroconf session state reacting to something unrelated;
+coincidental timing between two unrelated actions. LMS takeover of
+Spotify only worked after Spotify was manually paused first — expected,
+since no arbitration exists yet — but the LMS-play-starts-Spotify
+direction has no explanation at all. **George's instruction: reproduce
+and understand this before Phase 2b builds on it.**
+
+**go-librespot's API port is ephemeral by default — breaks a hardcoded-
+port assumption.** `ss -tlnp` across a single `systemctl restart` showed
+both of go-librespot's listeners reassigned: the loopback API
+46227→39773, and a second, all-interfaces listener 42769→36043. Fixed
+now: `server.port: 3678` added explicitly to
+`image/stage-gexis/02-renderers/files/go-librespot-config.yml` (the
+arbitration core's `Config.go_librespot_port` already defaulted to
+3678, so this makes that default true rather than lucky). The
+all-interfaces listener is Zeroconf pairing, not the API — it's
+*supposed* to be network-reachable (that's how the phone app finds and
+pairs with the device at all), left as upstream's own random-per-start
+default since nothing on this device needs to address it by a fixed
+port. The same config file's comment previously claimed the whole
+server was "loopback-only, so nothing outside this machine can reach
+it" — false, conflated the two listeners; corrected in the same commit
+that fixed the port, credited to direct measurement (`ss -tlnp`), not a
+doc.
+
+**Release-timing data, input to criterion 4 — not yet acted on, George's
+call per DEVELOPMENT.md's stop-and-ask rule:**
+
+| Renderer | Release path | Measured |
+|---|---|---|
+| go-librespot | `POST /player/stop` | device free before first 100ms poll (single run, so "<100ms", not "100ms") |
+| squeezelite | LMS CLI pause | ~8500ms after the pause command (single run; an earlier ~7000ms UI-pause run had unmeasured lead time, so this is the cleaner figure). Consistent with `-C 10`. |
+
+Both single runs, neither the ≥20-run distribution criterion 8 requires.
+**The finding that matters even from one run each:** a commanded pause
+does not release squeezelite faster than its idle timeout — arbitration
+cannot get a fast release out of squeezelite through LMS's own pause
+command. One ladder timeout cannot serve both renderers: too slow for
+Spotify (<100ms suffices), premature if sized for LMS's ~8.5s, and 8.5s
+of dead air on takeover is well past tolerable. Candidate direction
+(George's, not decided): arbitration may need to drive squeezelite's
+release actively rather than wait out `-C` — a shorter `-C`, or
+escalating past the polite rung quickly for squeezelite specifically.
+**Explicitly not decided in implementation** — bears on ADR-0010 and
+criterion 4's shape, needs George's decision first.
+
+**LMS details for testing:** CLI on port 9090 (works from `gexis` via
+`bash`'s `/dev/tcp`; telnet and `nc` aren't on the image). `gexis`
+registers with playerid `e4:5f:01:58:89:07` — the **wlan0** MAC, not
+eth0 (the machine has both). moOde is also registered
+(`88:a2:9e:79:e1:32`), useful as a second player for takeover testing.
+
+**Volume is confirmed global across renderers, as criterion 5 expects:**
+moving it via LMS moves the hardware mixer, which then also affects
+go-librespot, since the mixer is one physical control shared by the
+card. Expected, not a defect.
+
+**Image tooling gaps, added to "things that will bite" below:** `bc` is
+not on the image (also not `xxd`, `telnet`, `nc`). `od`, `curl`, `ss`,
+`fuser` are.
 
 ## Machines
 
@@ -277,24 +380,33 @@ to create it) and clears the card's stale SSH host key. See
 
 ## Next actions, in order
 
-1. **Phase 2 criteria 3-7**: arbitration (base/active slot, ADR-0010),
-   timeout ladder on release, volume bridge, boot volume. This is where
-   the Python core first appears — in the image, via `stage-gexis`, not
-   Phase 3. Criteria 1, 2, 4, 5, 6 are now met; this picks up where they
-   left off.
-2. **Write up the peppyalsa meter FIFO finding** (see above) with its
+1. **Reproduce and understand the LMS-play-starts-Spotify observation**
+   (hardware session above) before any further Phase 2b arbitration work
+   builds on this build. No mechanism is known; George's explicit
+   instruction is not to proceed past this blind.
+2. **Decide criterion 4's ladder shape with George** — the
+   go-librespot/squeezelite release-timing asymmetry above (<100ms vs.
+   ~8.5s) means one timeout can't serve both renderers. Stop-and-ask per
+   `docs/DEVELOPMENT.md`, not Claude's call to implement around.
+3. **Phase 2b, criteria 3-6**, once 1-2 above are resolved: the
+   supervisor, adapters and volume bridge are written and unit-tested
+   (`core/`) and the image builds and boots them, but no live takeover
+   has actually been exercised end-to-end yet — everything measured on
+   hardware so far is either baseline health or the two items above.
+4. **Write up the peppyalsa meter FIFO finding** (see above) with its
    stated scope.
-3. Criteria 8-10 (takeover gap measurement) once 3-7 hold on real
-   hardware — needs LMS (George has one; CI gets a containerised
+5. Criteria 7-10 (the attack test and takeover gap measurement) once 3-6
+   hold on real hardware — needs LMS (have one; CI gets a containerised
    throwaway) and, for the Spotify leg, the registered Spotify API app
    (transfer-playback confirmed available to new apps — see
    `docs/ARCHITECTURE.md`'s open-questions list).
-4. **Fill the Finding 003 grid** on `rig`, not `gexis` — characterises the
+6. **Fill the Finding 003 grid** on `rig`, not `gexis` — characterises the
    metering path, not the product image. 16 of 18 cells remain.
 
-Decisions pending from George: the criterion 7 build-self-identification
-amendment (above), and whether to act on the develop-on-hardware
-workflow inversion (above, needs an ADR first if so).
+Decisions pending from George: items 1-2 above, the criterion 7
+build-self-identification amendment (above), and whether to act on the
+develop-on-hardware workflow inversion (above, needs an ADR first if
+so).
 
 Not blocking, needed before their phases: skin asset conventions (needle
 pivot, `distance`, icon set — blocks the skin renderer) and the peppyalsa
@@ -343,10 +455,28 @@ FIFO byte format (blocks the visualisation service).
   after it — `clean`'s `docker rm -v pigen_work` only removes what
   exists *at the time it runs*. Run `make clean` again after any failure,
   right before retrying.
-- **Don't assume `C3PO`'s tooling is on the image.** `xxd` isn't there
-  (ships with vim; Lite base doesn't have it) — use `od`. More broadly,
-  never paste command blocks across machines without checking which host
-  a shell is actually attached to first (see the method note above).
+- **Don't assume `C3PO`'s tooling is on the image.** `xxd`, `bc`,
+  `telnet`, `nc` aren't there (Lite base doesn't have them) — `od`,
+  `curl`, `ss`, `fuser` are. Reach LMS's CLI (port 9090) via bash's
+  `/dev/tcp` instead of `telnet`/`nc`. More broadly, never paste command
+  blocks across machines without checking which host a shell is actually
+  attached to first (see the method note above).
+- **`systemctl is-active` does not mean "working."** squeezelite reported
+  active while go-librespot held the ALSA device out from under it,
+  retrying every 5s with no way to see that from unit status alone —
+  found on hardware, 2026-09-06. Check the actual symptom (audio, or in
+  this case `fuser` on the PCM node), not just unit state.
+- **A commanded pause does not make squeezelite release faster than its
+  `-C` idle timeout** — measured ~8.5s from an LMS CLI pause to the ALSA
+  device actually freeing, 2026-09-06. Arbitration cannot get a fast
+  release out of squeezelite through LMS's own pause command; see the
+  hardware session above for what this means for criterion 4.
+- **go-librespot's `server.port` and `zeroconf_port` are ephemeral if
+  left unset** — measured differing across a single `systemctl restart`.
+  `server.port` is now pinned (`config.yml`); `zeroconf_port` is left
+  random on purpose, since nothing on this device needs to address it by
+  a fixed port and it must stay reachable from off-device (the phone
+  app) regardless of which port it lands on.
 - **`$EDITOR` is unset on `C3PO`.** `git merge` without `--no-edit` stops
   waiting for `vi`, which isn't installed. Use `git commit --no-edit` (or
   set an explicit editor) rather than let it hang.
