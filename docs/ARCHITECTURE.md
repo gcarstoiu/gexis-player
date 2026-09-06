@@ -607,6 +607,15 @@ not. A single negative result is not decisive.
 - PeppyMeter skin asset conventions: needle sprite pivot, the meaning of
   `distance`, the font faces the skins assume, the `playinfo.type` icon set.
 - Spotify Web API scope availability for the account-navigation Should.
+  **Partially resolved, Phase 2 (2026-09-05):** the Player API — transfer
+  playback, play/pause, read playback state — is confirmed available to a
+  brand-new Development Mode app, unaffected by either the Nov 2024 or Feb
+  2026 endpoint restrictions (verified against developer.spotify.com, not
+  assumed). That's what Connect device control needs, and it isn't blocked.
+  **Still unverified:** the browse/library/playlist endpoints account
+  *navigation* would need beyond playback control — the Feb 2026 change
+  specifically restricted browse/categories and batch catalog endpoints for
+  new apps, which was not checked against what navigation would require.
 - Synced lyrics sources for non-LMS renderers.
 - BlueZ AVRCP cover art in the controller role.
 

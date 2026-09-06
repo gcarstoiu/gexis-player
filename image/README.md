@@ -5,6 +5,15 @@ with the Gexis Player audio layer, via pi-gen's own Docker wrapper. Unmodified
 pi-gen — everything project-specific lives in `image/stage-gexis/` and
 `image/config`, bind-mounted in at build time.
 
+**Retrying after a failed build:** `build-docker.sh` doesn't clean up its
+container on failure. A retry without removing it first fails immediately
+with `Container pigen_work already exists` — not a build problem, just
+stale state:
+
+```
+docker rm -v pigen_work
+```
+
 ## Host prerequisites (one-time, not part of `make image`)
 
 These are host environment setup, same category as installing Docker itself.
@@ -52,8 +61,10 @@ successful build, 2026-09-05, 36m43s wall-clock):
   unmodified pi-gen. Harmless; ignore it.
 - `image_<date>-gexis-player.zip` — **this is the actual deliverable.** Built
   from `stage-gexis` on top of stage2: pins and holds `libasound2t64` at
-  `1.2.14-1+rpt1`, builds peppyalsa from source, and installs
-  `/etc/alsa/conf.d/output.conf`.
+  `1.2.14-1+rpt1`, builds peppyalsa from source, installs
+  `/etc/alsa/conf.d/output.conf`, wires up first-boot provisioning, and
+  installs squeezelite, go-librespot and bluealsa-aplay (Phase 2a — see
+  below).
 
 Each is a zip containing one file, `<date>-gexis-player[-lite].img` — pi-gen's
 default `DEPLOY_COMPRESSION=zip`, not overridden in `image/config`. Both
@@ -67,12 +78,13 @@ is roughly a third the size (a real 2026-09-05 build: 836 MB zipped vs.
 Each image gets a matching `.info` file (from pi-gen's own
 `export-image/05-finalise` step) containing the exact `dpkg -l` package list
 at build time — the manifest required by Phase 0 acceptance criterion 2/7.
-peppyalsa isn't an apt package, so pi-gen's manifest doesn't cover it: the
-root `Makefile` appends its pinned upstream commit
-(`7dcb0c5e783e0c86315a0f655684613affd3e9d2`, read out of
-`stage-gexis/00-alsa/01-run-chroot.sh` so there's one source of truth) and
-the total wall-clock build time to the `.info` file after the build
-completes — post-processing on the host, not a pi-gen change.
+peppyalsa and go-librespot aren't apt packages, so pi-gen's manifest doesn't
+cover them: the root `Makefile` appends peppyalsa's pinned commit (read out
+of `stage-gexis/00-alsa/01-run-chroot.sh`) and go-librespot's pinned release
+tag (read out of `stage-gexis/02-renderers/01-run.sh`) — one source of truth
+each, not duplicated into the Makefile — plus the total wall-clock build
+time, after the build completes. Post-processing on the host, not a pi-gen
+change.
 
 Rebuilding is not guaranteed to reproduce the same package set — see
 `docs/DEVELOPMENT.md` criterion 7 and ADR-0021.
@@ -124,8 +136,8 @@ in via `cmdline.txt`'s `systemd.run=` (ADR-0021). It runs once, very early in
 boot, then deletes itself and its `cmdline.txt` entry.
 
 After flashing (`image_<date>-gexis-player.zip`, direct — Imager and Etcher
-both accept the zip), mount the boot partition on your own machine and edit
-`firstrun.sh` in a text editor before ejecting the card:
+both accept the zip), the boot partition's `firstrun.sh` needs five values
+filled in:
 
 ```sh
 SSH_PUBKEY="ssh-ed25519 AAAA... you@host"   # required — no other remote access exists
@@ -134,6 +146,34 @@ WIFI_PASS="your-password"
 WIFI_COUNTRY="GB"                            # ISO 3166-1 alpha-2
 HOSTNAME=""                                  # optional
 ```
+
+**`make provision DEVICE=/dev/sdX`** does this — the SSH key is a long
+single line, and a hand-edit that truncates it costs a reflash to discover.
+One-time setup, then every reflash after:
+
+```
+cp image/provision.env.example image/provision.local.env   # once
+$EDITOR image/provision.local.env                            # fill in real values
+make provision DEVICE=/dev/sdX                                # every card
+```
+
+`image/provision.local.env` is gitignored — real credentials never reach the
+repo. `DEVICE` is the whole card (e.g. `/dev/sdb`), never guessed: writing to
+the wrong block device is destructive, so the tool refuses to run without it
+and refuses if the device looks like the machine's own disk. It also refuses
+to write anything if `SSH_PUBKEY` is empty — a card provisioned with a blank
+key boots unreachable, which is the exact failure Phase 0 hit — and verifies
+every substitution actually landed (by having a shell parse the written line
+back out and comparing, not just checking that the edit command didn't
+error) before declaring the card ready.
+
+It finishes by running `ssh-keygen -R <hostname>` and
+`ssh-keygen -R <hostname>.local` for you. **This is not a workaround for
+anything broken** — every reflash generates a fresh SSH host key at first
+boot, so reconnecting to the same hostname after a reflash normally fails
+with `REMOTE HOST IDENTIFICATION HAS CHANGED` until the stale entry is
+cleared by hand. `ssh-keygen -R` matches the exact string given, which is
+why both the bare hostname and the `.local` form are cleared separately.
 
 Save, eject, boot. `firstrun.sh` calls the same platform helpers Raspberry Pi
 Imager's own customisation dialogue calls
@@ -165,9 +205,109 @@ mdir -i "/tmp/gexis.img@@${OFFSET}" -/
 mcopy -i "/tmp/gexis.img@@${OFFSET}" ::cmdline.txt -
 ```
 
+## Renderers (Phase 2a)
+
+`stage-gexis/02-renderers` installs squeezelite, go-librespot and
+bluealsa-aplay, each as a systemd unit writing to `output`.
+
+- **squeezelite** — `apt install squeezelite` (Debian trixie, arm64,
+  confirmed via packages.debian.org — not assumed). Not held: no Finding
+  ties us to an exact version the way `libasound2t64` is. `-V DAC`'s mixer
+  resolution needed `output.conf`'s new `ctl.output` block (see below) —
+  without it, squeezelite doesn't fail, it silently reverts to software
+  volume (confirmed by reading `output_alsa.c`, ADR-0018's exact warning).
+  `squeezelite.service`'s `ExecStartPre` runs `amixer -D output sget DAC`
+  first, so a broken mixer control fails the unit instead of playing
+  silently-wrong audio. `-C 10` (closes the ALSA device after 10s idle,
+  which is what actually frees it for takeover, per ADR-0010's
+  implementation note) is a **provisional value** — real tuning is
+  criteria 8-10's job once there's a real takeover-gap distribution to
+  tune against.
+- **go-librespot** — no Debian package (confirmed empty search). Pinned
+  the same way peppyalsa is: an exact release tag and a checksum verified
+  independently, not just trusted from the API
+  (`stage-gexis/02-renderers/01-run.sh`). Downloaded and verified on the
+  host, not in the qemu-emulated chroot — no reason to pay emulation cost
+  for a plain HTTPS GET and a `sha256sum`. `zeroconf_backend: avahi`
+  (shares the image's already-running `avahi-daemon` rather than standing
+  up a second mDNS responder). Config lives under systemd's
+  `StateDirectory=` (`/var/lib/go-librespot`, passed via `-config_dir`),
+  not `~/.config` — see "First hardware pass" below for why that matters.
+- **bluealsa / bluealsa-aplay** — `bluez-alsa-utils` (Debian trixie, arm64)
+  already ships and auto-enables both units
+  (`WantedBy=bluetooth.target`). We override two things via systemd
+  drop-ins, per upstream's own documented customisation path, not
+  replacement units: `bluealsa-aplay`'s `ExecStart` to point `--pcm` at
+  `output` instead of its shipped default of `default`, and `bluealsa`'s
+  `ExecStart` to drop the `a2dp-source` profile its shipped default
+  advertises unasked (confirmed running as `-p a2dp-source -p a2dp-sink`
+  on hardware — not something we'd set deliberately; only `a2dp-sink` is
+  a requirement, and fewer advertised profiles is less for a phone to
+  negotiate wrongly).
+
+**`output.conf` gained a `ctl.output` block.** ADR-0009's indirection had
+only ever been exercised for playback (`pcm.output`) before Phase 2's
+renderers arrived — nothing had needed the mixer-control half of it yet.
+squeezelite's `-V <name>` resolves against a ctl device matching the PCM
+name it was given, not through the PCM's slave chain, so `-o output -V DAC`
+needed `ctl.output` to exist. Completing ADR-0009's own stated indirection,
+not a new decision.
+
+### First hardware pass (2026-09-05, `gexis`)
+
+squeezelite, bluealsa and bluealsa-aplay came up healthy first try — the
+`ExecStartPre` mixer guard ran and passed, confirming `ctl.output`
+resolves on real hardware, not just in theory.
+
+go-librespot crash-looped — 114 restarts in 25 minutes, no backoff limit,
+burying `failed creating config directory: mkdir
+/home/pi/.config/go-librespot: permission denied` in noise. Root cause:
+`install -D` (see `01-run.sh`) creates intermediate directories owned by
+whoever runs it — root, in the build container — regardless of `-o`/`-g`
+on the target file, so `/home/pi/.config` ended up root-owned. `/home/pi`
+was also the wrong place on principle: a system service's state shouldn't
+live under a user account's home directory at all. Fixed by moving to
+`StateDirectory=go-librespot` (systemd creates and re-chowns
+`/var/lib/go-librespot` to `User=`/`Group=` on every start — self-healing
+against exactly this class of ownership mistake) and adding
+`StartLimitIntervalSec=`/`StartLimitBurst=` to both renderer units so a
+misconfigured service gives up and stays failed instead of spinning
+forever.
+
+### Second hardware pass (2026-09-05, `gexis`)
+
+Two more found on this pass, both build-time fixes since neither is
+fixable once a card is already running:
+
+**`pi` had no way to become root at all** — `sudo -n true` failed with
+"a password is required", and there's no other path: the account is
+locked and password-less by design (SSH-key-only, see `userconf pi ""`
+above). Verified, not assumed, that stock Raspberry Pi OS Lite normally
+grants this via `/etc/sudoers.d/010_pi-nopasswd`, created by the
+interactive first-boot wizard this image never triggers — checked both
+this image's rootfs and the bare, unmodified `-lite` artefact directly
+(`dd` + `debugfs`); neither ships the file. Not something this stage
+removed; never there in the first place. `stage-gexis/01-firstboot/01-run.sh`
+now ships it directly, and asserts what actually matters for sudo to
+honour it — mode `440` exactly, and `visudo -cf` syntax-valid — because
+sudo silently ignores a sudoers.d file with the wrong permissions or a
+syntax error rather than erroring, which is exactly the failure mode this
+gap already took the shape of once.
+
+**go-librespot's `--config_dir` was `-config_dir`** — a single dash. Its
+own CLI parses `-c` as a distinct short flag for config overrides
+(`field=value`, documented in its own README), POSIX-style, not Go's
+stdlib `flag` package (which treats `-x` and `--x` identically). A single
+dash reads as `-c` consuming `onfig_dir` as its argument — exactly the
+observed `invalid config override format: onfig_dir` crash. The
+`config.yml` content itself was already correct.
+
+Not yet reverified on hardware.
+
 ## Testing a build
 
-`george@rig.local` is the test target.
+`pi@gexis.local` is the test target — `gexis` is the image-built machine,
+not the hand-built `rig` (see `HANDOFF.md`).
 
 ```
 aplay -D output <testfile>   # card referenced by name, no `type plug`, no index

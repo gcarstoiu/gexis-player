@@ -1,0 +1,29 @@
+# go-librespot config. Lives under systemd's StateDirectory=
+# (/var/lib/go-librespot), not ~/.config - a system service's state
+# shouldn't live under a user account's home directory. go-librespot.service
+# passes --config_dir /var/lib/go-librespot explicitly; this is the file
+# that path resolves to.
+#
+# device_name is hardcoded for now. ADR-0022 eventually wants one device
+# name propagated everywhere (mDNS hostname, Spotify, Bluetooth); until
+# that settings infrastructure exists, this is a plain static value.
+
+device_name: gexis
+device_type: avr
+
+audio_backend: alsa
+audio_device: output
+
+zeroconf_enabled: true
+# avahi, not go-librespot's own built-in mDNS responder: avahi-daemon is
+# already running on this image (base layer), so this shares it rather
+# than standing up a second mDNS responder.
+zeroconf_backend: avahi
+
+credentials:
+  type: zeroconf
+  zeroconf:
+    # After the one-time Zeroconf pairing from the phone app, credentials
+    # persist so later boots (and scripted testing via the Web API) don't
+    # need a phone at all.
+    persist_credentials: true

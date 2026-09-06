@@ -1,0 +1,22 @@
+[Unit]
+Description=Squeezelite (LMS renderer, base slot)
+Documentation=man:squeezelite(1)
+After=network-online.target sound.target
+Wants=network-online.target
+ConditionPathExists=/usr/bin/squeezelite
+# See go-librespot.service for why: a misconfigured unit should give up
+# and stay failed, not restart forever.
+StartLimitIntervalSec=60
+StartLimitBurst=5
+
+[Service]
+Type=simple
+ExecStartPre=/usr/local/lib/gexis/squeezelite-mixer-check.sh
+ExecStart=/usr/bin/squeezelite -o output -V DAC -C 10 -n gexis
+Restart=on-failure
+RestartSec=2
+User=pi
+Group=audio
+
+[Install]
+WantedBy=multi-user.target
