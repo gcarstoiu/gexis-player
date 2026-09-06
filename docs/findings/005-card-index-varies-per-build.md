@@ -50,3 +50,25 @@ whether a single system's own index is stable across its own reboots or
 kernel updates — plausible it is not, for the same reason it differs across
 systems. Not a claim that card index is *random*, only that it is not safe
 to assume, predict, or hardcode.
+
+## Update, 2026-09-06 — same machine, same image, different rebuild: also varies
+
+Answers the open scope question above, on `gexis` specifically: not
+"reboot," but "rebuild" — a fresh `make image` of the same
+`phase-2b-arbitration` source, reflashed onto the same hardware.
+
+| Build | Card index |
+|---|---|
+| Phase 0 (original) | 1 |
+| Phase 2b (this rebuild, same source, same hardware) | 2 |
+
+This is a **stronger** version of the finding than the one above: it isn't
+only that different systems assign different indices, but that rebuilding
+and reflashing *the same system* can too. Nothing in the build pins probe
+order, so there is no reason to expect it to hold constant even between
+two builds nominally producing "the same" image. Still not root-caused to
+a mechanism (see "Why this happens" above — same reasoning applies, and
+still isn't necessary to act on given ADR-0009). Reinforces, rather than
+changes, the existing rule: `hw:sndrpihifiberry`, never an index, anywhere
+— including in ad hoc test/debug commands run by hand during hardware
+sessions, not only in shipped config.
