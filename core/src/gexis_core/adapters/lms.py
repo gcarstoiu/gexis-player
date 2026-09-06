@@ -33,6 +33,7 @@ import logging
 import aiohttp
 
 from gexis_core.adapters.base import Adapter, ReleaseAction
+from gexis_core.arbitration import TimeoutLadder
 from gexis_core.systemd import kill_unit
 
 logger = logging.getLogger("gexis_core.adapters.lms")
@@ -45,6 +46,17 @@ _id_counter = itertools.count(1)
 class LmsAdapter(Adapter):
     renderer_id = "lms"
     release_action = ReleaseAction.PAUSE
+
+    # George's decision, 2026-09-06, from the release-timing measurement
+    # above `release()`'s docstring: don't wait out squeezelite's `-C`
+    # idle timer at all. `polite_grace=0` means the supervisor checks
+    # once right after the pause call and, finding the device still
+    # held (expected - pause alone never releases it in any UI-tolerable
+    # time), escalates to SIGTERM immediately rather than sleeping first.
+    # sigterm/sigkill grace are left at the supervisor's defaults -
+    # only the "wait and hope -C helps" step is being skipped, not the
+    # confirmation that a sent signal actually worked.
+    release_ladder = TimeoutLadder(polite_grace=0.0)
 
     def __init__(self, host: str, port: int, player_name: str) -> None:
         self._base = f"http://{host}:{port}"

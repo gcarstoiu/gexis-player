@@ -86,6 +86,7 @@ class Supervisor:
 
     async def _release_with_ladder(self, renderer_id: str) -> ReleaseOutcome:
         adapter = self._adapters[renderer_id]
+        ladder = adapter.release_ladder or self._ladder
         t0 = time.monotonic()
 
         confirmed = await adapter.release()
@@ -102,21 +103,22 @@ class Supervisor:
             )
             return ReleaseOutcome.POLITE
 
-        await asyncio.sleep(self._ladder.polite_grace)
-        if not await self._busy():
-            logger.info(
-                "release[%s]: freed within polite grace (%.1fs)",
-                renderer_id,
-                time.monotonic() - t0,
-            )
-            return ReleaseOutcome.POLITE
+        if ladder.polite_grace > 0:
+            await asyncio.sleep(ladder.polite_grace)
+            if not await self._busy():
+                logger.info(
+                    "release[%s]: freed within polite grace (%.1fs)",
+                    renderer_id,
+                    time.monotonic() - t0,
+                )
+                return ReleaseOutcome.POLITE
 
         logger.warning(
             "release[%s]: still holds the device after polite stop, sending SIGTERM",
             renderer_id,
         )
         await adapter.signal_stop(force=False)
-        await asyncio.sleep(self._ladder.sigterm_grace)
+        await asyncio.sleep(ladder.sigterm_grace)
         if not await self._busy():
             logger.warning(
                 "release[%s]: freed after SIGTERM (%.1fs)",
@@ -130,7 +132,7 @@ class Supervisor:
             renderer_id,
         )
         await adapter.signal_stop(force=True)
-        await asyncio.sleep(self._ladder.sigkill_grace)
+        await asyncio.sleep(ladder.sigkill_grace)
         if await self._busy():
             logger.error(
                 "release[%s]: STILL holds the device after SIGKILL (%.1fs)",

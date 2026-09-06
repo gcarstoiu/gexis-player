@@ -156,8 +156,24 @@ disconnecting, so it does not outweigh the notification problem.
 ## Implementation note
 
 Squeezelite holds the ALSA device open by default. `-C <seconds>` makes it close
-after idle, which is what actually frees the device. That flag is part of how
-release is implemented, not a tuning option.
+after idle, which is part of how release is implemented, not a tuning option.
+
+**Amended, 2026-09-06, measured on `gexis`:** `-C` alone is not fast
+enough for a takeover. A commanded LMS pause does not make squeezelite
+release the device any faster than `-C`'s own idle timer — measured
+~8.5s from an LMS CLI pause to the ALSA device actually freeing, against
+`-C 10`. That is well past what a user tolerates as a takeover gap.
+Contrast go-librespot, which frees the device in under 100ms via its own
+`/player/stop`. One shared release mechanism cannot serve both
+renderers. **Decision (George):** the supervisor does not wait out `-C`
+during a takeover — it sends the LMS pause as a courtesy (so LMS's own
+state reflects "paused," not "disconnected," consistent with this
+record's release table) and then drives squeezelite's release actively,
+escalating straight to `SIGTERM` with no polite-grace wait
+(`LmsAdapter.release_ladder`, `core/src/gexis_core/adapters/lms.py`).
+`-C 10` still governs the *non-arbitration* idle case (LMS stops on its
+own, nothing else wants the device) — only the takeover path bypasses
+it.
 
 ## Open
 

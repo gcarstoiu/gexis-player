@@ -4,6 +4,8 @@ few milliseconds - tier 1, runs on every commit.
 """
 from __future__ import annotations
 
+import asyncio
+
 import pytest
 
 from gexis_core.adapters.base import Adapter, ReleaseAction
@@ -18,12 +20,22 @@ class FakeAdapter(Adapter):
     ladder step actually lets go, so tests can force each escalation path.
     """
 
-    def __init__(self, renderer_id, release_action, holder, *, confirms=True, frees_at="release"):
+    def __init__(
+        self,
+        renderer_id,
+        release_action,
+        holder,
+        *,
+        confirms=True,
+        frees_at="release",
+        release_ladder=None,
+    ):
         self.renderer_id = renderer_id
         self.release_action = release_action
         self._holder = holder
         self._confirms = confirms
         self._frees_at = frees_at  # "release" | "sigterm" | "sigkill"
+        self.release_ladder = release_ladder
         self.signals: list[str] = []
         self.release_calls = 0
 
@@ -139,6 +151,48 @@ async def test_ladder_escalates_to_sigkill():
     await _make_spotify_active(supervisor, holder)
     await supervisor.acquire("lms")
     assert adapters["spotify"].signals == ["SIGTERM", "SIGKILL"]
+
+
+@pytest.mark.asyncio
+async def test_adapter_specific_ladder_skips_the_polite_wait(monkeypatch):
+    """George's decision, 2026-09-06: LMS shouldn't wait out squeezelite's
+    `-C` idle timer at all. An adapter with `release_ladder.polite_grace
+    == 0` should escalate to SIGTERM with no sleep in between, not just
+    "a short one" - verified by recording every asyncio.sleep call rather
+    than trusting wall-clock timing in a unit test.
+    """
+    slept: list[float] = []
+    real_sleep = asyncio.sleep
+
+    async def recording_sleep(seconds):
+        slept.append(seconds)
+        await real_sleep(0)  # yield control without actually waiting
+
+    monkeypatch.setattr("gexis_core.arbitration.asyncio.sleep", recording_sleep)
+
+    holder = {"who": "lms"}
+    lms = FakeAdapter(
+        "lms",
+        ReleaseAction.PAUSE,
+        holder,
+        frees_at="sigterm",
+        release_ladder=TimeoutLadder(polite_grace=0.0, sigterm_grace=5.0, sigkill_grace=5.0),
+    )
+    spotify = FakeAdapter("spotify", ReleaseAction.DISCONNECT, holder)
+    bluetooth = FakeAdapter("bluetooth", ReleaseAction.DISCONNECT, holder)
+    supervisor = Supervisor(
+        {"lms": lms, "spotify": spotify, "bluetooth": bluetooth},
+        device_busy=lambda: holder["who"] is not None,
+        ladder=FAST_LADDER,
+    )
+
+    holder["who"] = "lms"  # lms is active by default (supervisor starts on base)
+    await supervisor.acquire("spotify")  # takeover: lms is released, using its own ladder
+
+    assert lms.signals == ["SIGTERM"]  # escalated, frees_at="sigterm" resolves it there
+    # Only the sigterm_grace sleep happened - no 0.0 polite sleep, and no
+    # sigkill_grace sleep since SIGTERM already freed it.
+    assert slept == [5.0]
 
 
 @pytest.mark.asyncio

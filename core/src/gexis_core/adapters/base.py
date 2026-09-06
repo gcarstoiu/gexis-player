@@ -8,6 +8,10 @@ from __future__ import annotations
 
 import abc
 import enum
+import typing
+
+if typing.TYPE_CHECKING:
+    from gexis_core.arbitration import TimeoutLadder
 
 
 class ReleaseAction(enum.Enum):
@@ -24,6 +28,17 @@ class Adapter(abc.ABC):
     #: supervisor's adapter map.
     renderer_id: str
     release_action: ReleaseAction
+
+    #: Per-renderer override of the supervisor's default timeout ladder.
+    #: None means "use the supervisor's default". Exists because release
+    #: timing is not uniform across renderers - measured on gexis,
+    #: 2026-09-06: go-librespot frees the device in <100ms via its own
+    #: /player/stop, but a commanded LMS pause does not make squeezelite
+    #: release faster than its `-C` idle timeout (~8.5s measured) - a
+    #: shared ladder sized for one renderer is wrong for the other.
+    #: LmsAdapter sets this; adapters whose default timing is fine (or
+    #: not yet measured) leave it None.
+    release_ladder: "TimeoutLadder | None" = None
 
     @abc.abstractmethod
     async def run(self, on_acquire) -> None:
