@@ -391,6 +391,124 @@ card. Expected, not a defect.
 not on the image (also not `xxd`, `telnet`, `nc`). `od`, `curl`, `ss`,
 `fuser` are.
 
+### Hardware session, 2026-09-06 (later): reflashed again, three real bugs found and fixed
+
+Card index moved again — 3 this time (1, then 2, then 3 across three
+consecutive builds of the same image on the same hardware). Amended
+into Finding 005 alongside the earlier update.
+
+**Bug 1 — `alsa.py`'s card-id regex never matched our own card.**
+`/proc/asound/cards` pads the bracketed id to a fixed 15 characters.
+`sndrpihifiberry` is exactly 15 characters, so there's no padding left
+for `\S+` to stop at — it ran past the closing bracket and the colon
+after it. Shorter ids (`vc4hdmi0`) have trailing spaces inside the
+brackets and happened to work, which is presumably why this went
+unnoticed until hardware testing hit our exact id. Fixed
+(`re.match(r"\s*(\d+)\s+\[([^\]]+)\]", line)`); new test fixture covers
+both the padded and exact-fit cases in one file so this can't regress
+to only-the-padded-case again.
+
+**Bug 2 — the hardware mixer was stuck at 0%, restored on every boot.**
+Root cause: the stock image ships `alsa-restore.service` enabled
+(`alsactl restore` on boot, `alsactl store` on shutdown), which is
+exactly the restoring ADR-0018 forbids. Some earlier session's level
+got stored on a clean shutdown; `gexis-boot-volume.service`'s own
+explicit set raced it with no guaranteed order (both only declared
+`After=sound.target`) and evidently lost. **This is what George heard
+at the speakers**: LMS showing "playing" with no sound, fixed by
+nudging the volume — the stream was fine, the mixer was at zero.
+Likely also explains "finicky" Spotify takeovers (connected, silent,
+fixed by disconnect/reconnect — probably the same zero-volume state,
+not a takeover defect). Fixed by masking `alsa-restore.service`
+entirely, which is more correct than winning the race: it makes "never
+restored" actually true rather than "restored, then immediately
+overwritten."
+
+**Bug 3 — the volume bridge could ratchet the mixer to zero.** Two
+independent feedback paths, not one: our own `set_raw` write shows up
+on `alsactl monitor` (sometimes as more than one line per write), *and*
+go-librespot can echo our `POST /player/volume` back as its own
+`"volume"` WS event. The old "skip exactly one incoming line" boolean
+covered neither reliably. One real logged sequence: 179, 172, 162, 140,
+119, 97, 0/240, ~50ms apart, one direction, never stopping until it hit
+zero — a candidate mechanism for Bug 2's zero, though not proven (could
+also have been a held phone volume-down gesture). A single deliberate
+change (`amixer sset DAC 50%`) converged after exactly one echo,
+~325ms round trip — the good case, when it works. Fixed with a single
+shared "last own write" timestamp: anything we write, either direction,
+arms a short window (750ms), and anything arriving inside it — however
+many lines or events — is dropped as our own echo, rather than trying
+to count exactly one. Documented as a mitigation, not a proof of
+convergence, in the code itself.
+
+**Not fixed, recorded as a finding:** LMS's "mixer volume" (0-100) and
+the hardware's 240 steps don't map linearly or by a dB-linear curve
+either — `mixer volume 30` produced hardware `170/240` (71%). Something
+in squeezelite's own volume mapping, not this bridge (the bridge only
+observes the hardware value afterwards; squeezelite writes it directly
+via `-V DAC`, outside the bridge entirely). Worth pinning down — it's
+the visible "jump" George noticed switching between LMS- and
+Spotify-set volume — but no owner or fix decided yet.
+
+**Bluetooth: two separate blockers, one fix each.** Naming: BlueZ's
+adapter name relies on the hostname-derived default rather than an
+explicit `main.conf` `Name=`, and George saw an unrecognisable name
+while attempting to pair — fixed with a targeted `sed` setting
+`Name = gexis` explicitly (ADR-0022's "one name everywhere" intent).
+Pairing: failed with a PIN error. Investigating traced this past the
+PIN itself to something more fundamental — **the adapter was rfkill
+soft-blocked** (`hciconfig hci0 up` → `Can't init device hci0:
+Operation not possible due to RF-kill (132)`; confirmed at the sysfs
+level, `/sys/class/rfkill/rfkill0/soft = 1`). Nothing in Raspberry Pi OS
+Lite's unattended boot ever clears this — it's normally done by
+`raspi-config`'s interactive country-code step, which `firstrun.sh`'s
+headless flow never runs, so **Bluetooth has likely never actually been
+pairable on any build of this image before now**, criterion 1's
+"installed and writing to output" check having no way to catch it.
+Fixed: `gexis-bluetooth-setup.service` runs `rfkill unblock bluetooth`,
+powers the adapter on, and sets it pairable/discoverable.
+
+Once unblocked, PIN-free pairing needed its own fix regardless:
+**George's decision (ADR-0024, new)** — pair without a PIN at this
+installation, now and after a display exists (a screen changes what
+*could* be shown during pairing, not whether confirmation is *needed*
+here). Implemented with `bt-agent --capability=NoInputNoOutput`
+("Just Works"), registered as the default agent. The ADR states the
+consequence plainly — anyone within range can pair and play audio with
+no on-device confirmation — and that this is a per-installation choice,
+not a shipping default: a flat with neighbours in range is a different
+threat model, and this shouldn't be read as the answer for that case.
+Recorded in `decisions/README.md`'s deferred-items table as needing
+ADR-0022's settings infrastructure before it can be anything but
+hardcoded.
+
+**None of the Bluetooth fixes above have been hardware-verified with an
+actual phone pairing yet** — verified individually (rfkill unblocks,
+adapter powers on, `bt-agent` registers as default agent with the
+right capability) but not as one real end-to-end pairing attempt. First
+thing to check on the next reflash.
+
+**Port fix and criterion 4 decision both validated on hardware this
+session:** go-librespot now listens on the fixed `127.0.0.1:3678`;
+`gexis-core` connects to it (`spotify: connected to
+http://127.0.0.1:3678/events`) — the config comment describing the two
+listeners (fixed API port, ephemeral-by-design Zeroconf port on all
+interfaces) was re-checked against the file and is already accurate,
+no further edit needed. Squeezelite's SIGTERM release measured ~100ms
+against the idle timeout's ~8500ms — roughly 85x faster, confirming
+last session's decision. **Cost worth carrying forward:** SIGTERM kills
+squeezelite outright rather than pausing it — it restarts
+(`Restart=on-failure`) but drops out of its LMS sync group on the way.
+ADR-0010's sync-group-interaction item was already deferred as
+*theoretical*; this makes it concrete. Flagged as possibly needing
+un-deferring — not decided, George's call. Criterion 4's wording
+amended to say LMS is a two-rung exception, so it doesn't read as
+"met literally, intent unchecked" the way earlier defects on this
+project have.
+
+The earlier LMS-play-starts-Spotify behaviour did **not** recur this
+session.
+
 ## Machines
 
 | Name | What it is | Notes |
@@ -409,38 +527,45 @@ to create it) and clears the card's stale SSH host key. See
 
 ## Next actions, in order
 
-1. **Rebuild and reflash `gexis`** — the running build has two known,
-   already-fixed-in-source bugs: go-librespot's ephemeral API port
-   (breaks the Spotify adapter entirely, confirmed by the connection-
-   refused loop in `gexis-core`'s own journal) and squeezelite's release
-   waiting out `-C` instead of being driven actively. Neither is
-   verified on hardware until this rebuild happens.
-2. **Phase 2b, criteria 3-6**, once reflashed: the supervisor, adapters
-   and volume bridge are written and unit-tested (`core/`) and the image
-   builds and boots them, but no live takeover has actually been
-   exercised end-to-end yet — everything measured on hardware so far is
-   either baseline health, the boot-time contention defect, or the two
-   fixes above.
-3. **Write up the peppyalsa meter FIFO finding** (see above) with its
+1. **Rebuild and reflash `gexis`** to pick up this session's fixes: the
+   `alsa.py` regex, the `alsa-restore.service` mask (boot volume),
+   the volume-bridge echo window, and the whole Bluetooth rfkill/naming/
+   pairing-agent set. None of these are hardware-verified on a rebuilt
+   image yet — everything above was checked live against the *running*
+   system, then fixed in source for the next build to carry.
+2. **On the reflashed image, in order:**
+   - Confirm the mixer holds the boot-volume level (doesn't drift to 0%
+     on its own or on a reboot).
+   - Attempt a real phone pairing — first actual end-to-end test of the
+     Bluetooth fixes.
+   - Re-run a volume-slider-drag by hand and watch for the ratchet
+     pattern (179→172→...→0) — the echo-window fix should prevent it,
+     but hasn't been watched do so live yet.
+3. **Phase 2b, criteria 3-6**, once 1-2 hold: the supervisor, adapters
+   and volume bridge are written and unit-tested (`core/`), but no live
+   takeover has actually been exercised end-to-end yet — everything
+   measured on hardware so far has been baseline health or bug-hunting,
+   not a real acquisition/release cycle watched start to finish.
+4. **Write up the peppyalsa meter FIFO finding** (see above) with its
    stated scope.
-4. Criteria 7-10 (the attack test and takeover gap measurement) once 2-3
-   hold on real hardware — needs LMS (have one; CI gets a containerised
+5. Criteria 7-10 (the attack test and takeover gap measurement) once 3
+   holds on real hardware — needs LMS (have one; CI gets a containerised
    throwaway) and, for the Spotify leg, the registered Spotify API app
    (transfer-playback confirmed available to new apps — see
    `docs/ARCHITECTURE.md`'s open-questions list).
-5. **Fill the Finding 003 grid** on `rig`, not `gexis` — characterises the
+6. **Fill the Finding 003 grid** on `rig`, not `gexis` — characterises the
    metering path, not the product image. 16 of 18 cells remain.
 
-The LMS-play-starts-Spotify observation was attempted-and-not-reproduced
-this session (see hardware session above) — not blocking further work,
-since the arbitration core structurally couldn't have caused it (the
-port bug above meant it couldn't reach go-librespot at all), and George
-has since given the criterion 4 decision this session already acted on.
-Still worth another look if it recurs on the rebuilt image.
+Decisions pending from George: whether ADR-0010's sync-group-interaction
+item needs un-deferring now that SIGTERM-killing squeezelite makes the
+cost concrete (above); pinning down squeezelite's LMS-volume-to-hardware
+mapping (above, no owner yet); the criterion 7 build-self-identification
+amendment; whether to act on the develop-on-hardware workflow inversion
+(needs an ADR first if so).
 
-Decisions pending from George: the criterion 7 build-self-identification
-amendment (above), and whether to act on the develop-on-hardware
-workflow inversion (above, needs an ADR first if so).
+The LMS-play-starts-Spotify observation was attempted-and-not-reproduced
+in an earlier session (see hardware session above) and did not recur in
+this one either — not blocking further work.
 
 Not blocking, needed before their phases: skin asset conventions (needle
 pivot, `distance`, icon set — blocks the skin renderer) and the peppyalsa
@@ -514,6 +639,26 @@ FIFO byte format (blocks the visualisation service).
 - **`$EDITOR` is unset on `C3PO`.** `git merge` without `--no-edit` stops
   waiting for `vi`, which isn't installed. Use `git commit --no-edit` (or
   set an explicit editor) rather than let it hang.
+- **Bluetooth is rfkill soft-blocked by default on this image** —
+  nothing in the unattended boot clears it (that's normally
+  `raspi-config`'s interactive country-code step). `rfkill list` and
+  `/sys/class/rfkill/*/soft` show it directly; `hciconfig hci0 up`'s
+  error message names it explicitly. Don't trust `bluetoothd`'s own
+  "Failed to set mode: Failed (0x03)" to self-diagnose this — it's the
+  same underlying block, several layers removed. `rfkill` itself is on
+  the image already (`/usr/sbin/rfkill`, needs `sudo` and isn't on a
+  non-root `PATH` by default) — it was never actually missing, just not
+  found by an unqualified `which rfkill`.
+- **A stock `alsa-restore.service` fights any "boot volume is fixed,
+  never restored" requirement.** It's enabled by default on Raspberry
+  Pi OS Lite and does exactly the opposite. Mask it, don't just order
+  your own unit to run after it and hope you win the race.
+- **A lossy bidirectional bridge over two different scales needs echo
+  suppression on *both* directions, and a single write can produce more
+  than one incoming event.** A boolean "skip the next one" flag missed
+  both — see the volume bridge fix above for the measured consequence
+  (a real ratchet to zero) and the fix (a shared time-window, not a
+  one-shot flag).
 
 ## Working agreement
 
