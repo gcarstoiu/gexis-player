@@ -161,9 +161,15 @@ release is implemented, not a tuning option.
 
 ## Open
 
-- **Sync group interaction.** Squeezelite stays in its LMS group while another
-  renderer holds the device, so a group play command becomes an acquisition that
-  interrupts. Consistent with the rule, possibly surprising. Unverified how LMS
-  handles a member that goes silent mid-group.
-- **Empty base slot.** Valid if run headless with no LMS. Undefined behaviour.
-- **Takeover gap.** Unmeasured, same-rate and cross-rate.
+- **Sync group interaction — deferred.** Squeezelite stays in its LMS group
+  while another renderer holds the device, so a group play command becomes
+  an acquisition that interrupts. Consistent with the rule, possibly
+  surprising. Unverified how LMS handles a member that goes silent
+  mid-group. **Criterion 3 (Phase 2b) ships without resolving this** — a
+  decision, not an oversight; see `docs/DEVELOPMENT.md`.
+- **Empty base slot — deferred.** Valid if run headless with no LMS.
+  Undefined behaviour. **Criterion 3 (Phase 2b) ships without resolving
+  this** — a decision, not an oversight; see `docs/DEVELOPMENT.md`.
+- **Takeover gap — not deferred, scheduled.** Unmeasured, same-rate and
+  cross-rate. This is Phase 2c, criteria 8-10 — active work, not a
+  deferral.

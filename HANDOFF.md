@@ -36,6 +36,15 @@ and has `ctl.output` (criterion 5); `libasound2t64` is
 `1.2.14-1+rpt1` and held per `apt-mark showhold` (criterion 6);
 squeezelite's `ExecStartPre` mixer check is present and passes.
 
+**Phase 2's sub-phase mapping is confirmed as three-way** (2a criteria
+1-2, 2b criteria 3-6, 2c criteria 7-10 — recorded in
+`docs/DEVELOPMENT.md`). A four-way split was discussed and approved in
+an earlier chat, but never written down anywhere, and by the time that
+was noticed nobody had the record — it is **unrecoverable, not
+withheld**. The three-way split is the version of record; if a fourth
+sub-PR resurfaces from memory later, it does not override this — this
+note exists so that isn't mistaken for a new discrepancy.
+
 **Criterion 1 is now fully confirmed** (was partial). All three
 renderers verified writing to `"output"`, each checked at its own
 location, on a fresh boot (14:31:54) of a rebuilt-and-reflashed image:
