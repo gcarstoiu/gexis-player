@@ -82,11 +82,30 @@ All deliverables ship in the image, via `stage-gexis`. Hand-installing on
 `gexis` is acceptable for exploration mid-phase, but nothing in this phase
 is done until it is in the build.
 
+**Iteration loop, demonstrated for systemd units and config files only:**
+edit on `gexis` over SSH, confirm the fix works there, then port the
+change into `stage-gexis` and rebuild once. The rebuild makes the fix
+real — part of the reproducible image — it is not how you find out
+whether the fix works; that happens on `gexis` first. This loop is *not*
+yet demonstrated for the Python core, which has never been iterated on
+in the image. Do not assume it holds there until it has been.
+
 The Python core first appears here, not in Phase 3: the arbitration
 supervisor has to exist, in the image, for criteria 3-7 to be real and for
 the takeover gap measurement (criteria 8-10, absorbed from Phase 1) to
 characterise the product rather than a hand-built stand-in. This exercises
 ADR-0021's venv packaging decision earlier than the phase order implied.
+
+**Sub-phases**, one branch each off `phase-2-arbitration`, merged back to it
+when their criteria pass:
+
+- **2a — criteria 1-2.** Renderer packaging. **Done, verified on
+  hardware.**
+- **2b — criteria 3-6.** Arbitration core, timeout ladder, volume bridge,
+  boot volume. The Python core lands here, plus ADR-0021's venv addendum.
+- **2c — criteria 7-10.** Criterion 7 is an attack test across all
+  renderers, not a feature, so it belongs with the takeover gap
+  measurement rather than with 3-6.
 
 **Acceptance**
 
@@ -96,6 +115,9 @@ ADR-0021's venv packaging decision earlier than the phase order implied.
    mixer control is absent or misnamed.
 3. Arbitration: base slot LMS, one active slot. Acquisition on connection per
    ADR-0010's table. Takeover disconnects Connect-type renderers and pauses LMS.
+   **Ships without ADR-0010's sync-group and empty-base-slot behaviour** —
+   both are explicitly deferred, not unresolved; see ADR-0010's "Open"
+   section.
 4. Timeout ladder on release: polite stop → SIGTERM → SIGKILL, each step logged.
 5. Volume bridge: phone-app volume moves the hardware mixer in variable mode and
    does nothing in fixed mode.
