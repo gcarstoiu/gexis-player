@@ -556,12 +556,20 @@ to create it) and clears the card's stale SSH host key. See
 6. **Fill the Finding 003 grid** on `rig`, not `gexis` — characterises the
    metering path, not the product image. 16 of 18 cells remain.
 
-Decisions pending from George: whether ADR-0010's sync-group-interaction
-item needs un-deferring now that SIGTERM-killing squeezelite makes the
-cost concrete (above); pinning down squeezelite's LMS-volume-to-hardware
-mapping (above, no owner yet); the criterion 7 build-self-identification
-amendment; whether to act on the develop-on-hardware workflow inversion
-(needs an ADR first if so).
+**ADR-0010's sync-group-interaction item stays deferred — George's
+decision, 2026-09-07.** SIGTERM-killing squeezelite on takeover drops it
+out of any LMS sync group and it reappears as a fresh player on restart;
+a user who had `gexis` grouped and then casts Spotify to it will find
+the grouping silently gone. Accepted for now. Three options were
+considered and recorded in the ADR itself (accept it — chosen; capture
+and restore group membership via the LMS CLI; or lower `-C` enough that
+pausing alone frees the device fast enough, untested) so this doesn't
+need re-deriving later.
+
+Decisions pending from George: pinning down squeezelite's
+LMS-volume-to-hardware mapping (above, no owner yet); the criterion 7
+build-self-identification amendment; whether to act on the
+develop-on-hardware workflow inversion (needs an ADR first if so).
 
 The LMS-play-starts-Spotify observation was attempted-and-not-reproduced
 in an earlier session (see hardware session above) and did not recur in

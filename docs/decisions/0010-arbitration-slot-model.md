@@ -177,19 +177,34 @@ it.
 
 ## Open
 
-- **Sync group interaction — deferred, but no longer only theoretical.**
+- **Sync group interaction — deferred, with a known cost, by decision.**
   Squeezelite stays in its LMS group while another renderer holds the
   device, so a group play command becomes an acquisition that
-  interrupts. Consistent with the rule, possibly surprising. Unverified
-  how LMS handles a member that goes silent mid-group. **Criterion 3
-  (Phase 2b) ships without resolving this** — a decision, not an
-  oversight; see `docs/DEVELOPMENT.md`. **Sharper as of 2026-09-06:**
-  the LMS release mechanism is now `SIGTERM` on squeezelite (see the
-  Implementation note below), not just a device going silent — the
-  process itself dies and restarts (`Restart=on-failure`), dropping out
-  of its LMS sync group on the way rather than merely pausing within it.
-  Measured on hardware, not inferred. May need un-deferring before this
-  ships further than Phase 2b — George's call.
+  interrupts. Consistent with the rule, possibly surprising. **Criterion
+  3 (Phase 2b) ships without resolving this** — a decision, not an
+  oversight; see `docs/DEVELOPMENT.md`.
+
+  **The cost is concrete, not theoretical, as of 2026-09-06.** The LMS
+  release mechanism is `SIGTERM` on squeezelite (see the Implementation
+  note below), which removes it from LMS entirely rather than merely
+  pausing it within its group: it drops out of any sync group it
+  belonged to and reappears as a fresh player on restart
+  (`Restart=on-failure`). A user who had `gexis` grouped with another
+  player, and who then casts Spotify to it, will find the grouping gone
+  afterwards with no explanation. Measured on hardware, not inferred.
+
+  **Three options were considered, so a later reader does not re-derive
+  them:**
+  1. Accept the breakage. **Chosen.**
+  2. Capture group membership before the kill and restore it after
+     restart, via the LMS CLI.
+  3. Lower `-C` enough that pausing frees the device fast enough that
+     killing squeezelite is never needed. Untested — nobody has measured
+     whether a short `-C` actually behaves fast enough in practice, only
+     that the default (`-C 10`) does not.
+
+  **George's decision: stays deferred, option 1, for now.** Not an
+  oversight — the cost is accepted, not unknown.
 - **Empty base slot — deferred.** Valid if run headless with no LMS.
   Undefined behaviour. **Criterion 3 (Phase 2b) ships without resolving
   this** — a decision, not an oversight; see `docs/DEVELOPMENT.md`.
