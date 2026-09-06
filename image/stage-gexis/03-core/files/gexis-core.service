@@ -1,0 +1,24 @@
+[Unit]
+Description=Gexis arbitration core (Phase 2b)
+Documentation=file:///etc/gexis/core.toml
+After=network-online.target squeezelite.service go-librespot.service bluealsa.service bluealsa-aplay.service
+Wants=network-online.target
+# Same reasoning as go-librespot.service: a misconfigured unit should give
+# up and stay failed rather than restart forever and bury the real error.
+StartLimitIntervalSec=60
+StartLimitBurst=5
+
+[Service]
+Type=simple
+ExecStart=/opt/gexis-core/venv/bin/python -m gexis_core
+Restart=on-failure
+RestartSec=2
+# Root, not a dedicated user: this needs `systemctl kill` on the renderer
+# units (timeout ladder, criterion 4) and the BlueZ system bus (arbitrary
+# object paths under org.bluez, not a fixed set a polkit rule could scope
+# tightly). Matches bluealsa-aplay.service's own User=root on this image,
+# not a new precedent.
+User=root
+
+[Install]
+WantedBy=multi-user.target

@@ -20,6 +20,15 @@ zeroconf_enabled: true
 # than standing up a second mDNS responder.
 zeroconf_backend: avahi
 
+# The arbitration core (Phase 2b) needs this: /events (WebSocket) is the
+# only acquisition signal for Spotify Connect ("device selected in the
+# app", ADR-0010), and /player/stop is how it disconnects on takeover.
+# address/port left at upstream's own defaults (confirmed against
+# devgianlu/go-librespot's README, not assumed) - loopback-only, so
+# nothing outside this machine can reach it.
+server:
+  enabled: true
+
 credentials:
   type: zeroconf
   zeroconf:

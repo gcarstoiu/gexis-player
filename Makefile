@@ -1,4 +1,5 @@
 STAGE_GEXIS_DIR := $(CURDIR)/image/stage-gexis
+CORE_SRC_DIR := $(CURDIR)/core
 PEPPYALSA_REPO := https://github.com/project-owner/peppyalsa
 PEPPYALSA_COMMIT := $(shell grep -oP 'git checkout \K[0-9a-f]{40}' image/stage-gexis/00-alsa/01-run-chroot.sh)
 GO_LIBRESPOT_REPO := https://github.com/devgianlu/go-librespot
@@ -16,7 +17,7 @@ GO_LIBRESPOT_VERSION := $(shell grep -oP 'GO_LIBRESPOT_VERSION="\K[^"]+' image/s
 # inside pi-gen.
 image:
 	@start=$$(date +%s); \
-	( cd image && PIGEN_DOCKER_OPTS="--volume $(STAGE_GEXIS_DIR):/pi-gen/stage-gexis:ro" \
+	( cd image && PIGEN_DOCKER_OPTS="--volume $(STAGE_GEXIS_DIR):/pi-gen/stage-gexis:ro --volume $(CORE_SRC_DIR):/pi-gen/gexis-core-src:ro" \
 		./pi-gen/build-docker.sh -c config ); \
 	status=$$?; \
 	end=$$(date +%s); \

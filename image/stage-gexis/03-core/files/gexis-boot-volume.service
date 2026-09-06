@@ -1,0 +1,18 @@
+[Unit]
+Description=Gexis boot volume (ADR-0018: fixed safe level, never restored)
+Documentation=file:///etc/gexis/core.toml
+After=sound.target
+# Must run before any renderer can possibly play, not just before they
+# start - a renderer that starts and immediately plays into whatever
+# volume alsactl happened to leave from the previous boot is exactly the
+# hazard ADR-0018 exists to prevent.
+Before=squeezelite.service go-librespot.service bluealsa-aplay.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/opt/gexis-core/venv/bin/python -m gexis_core.boot_volume
+User=root
+
+[Install]
+WantedBy=multi-user.target

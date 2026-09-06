@@ -1,0 +1,17 @@
+# Gexis arbitration core config. See core/src/gexis_core/config.py for the
+# full field list and defaults - this file only needs to override what
+# must not be the code default.
+
+# ADR-0018: boot volume is a fixed safe level, never restored from the
+# previous session. The specific level is George's call, not a code
+# decision ("a configuration value, not a decision for this record") -
+# confirmed 2026-09-06 (HANDOFF.md). -90dB of the 120dB range.
+boot_volume_steps = 60
+
+# LMS lives on its own machine on the home network, not on gexis.
+# Confirmed reachable (see adapters/lms.py's 2026-09-06 note) at this
+# address on port 9000. Set explicitly here even though it currently
+# matches the code default (config.py) - deployment-specific values
+# belong in this file, not assumed from a code fallback.
+lms_host = "192.168.178.188"
+lms_port = 9000

@@ -1,0 +1,30 @@
+[build-system]
+requires = ["hatchling==1.27.0"]
+build-backend = "hatchling.build"
+
+[project]
+name = "gexis-core"
+version = "0.1.0"
+description = "Gexis Player arbitration core (Phase 2b)"
+requires-python = ">=3.11"
+# Exact pins, not ranges - matches the pin-and-verify discipline the image
+# build already applies to peppyalsa (commit) and go-librespot (checksum).
+# Hash-pinning (pip install --require-hashes) is stronger and not done yet -
+# see ADR-0021's venv addendum, "Unverified".
+dependencies = [
+    "aiohttp==3.14.3",
+    "dbus-next==0.2.3",
+]
+
+[project.optional-dependencies]
+test = [
+    "pytest==8.3.4",
+    "pytest-asyncio==0.25.2",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/gexis_core"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+
