@@ -19,7 +19,7 @@ hand-built machine; its three criteria are Phase 2 criteria 8-10.
 (branched from `phase-2-arbitration`, from PR #2's branch — neither has a
 PR open yet). squeezelite, go-librespot and bluealsa-aplay are packaged
 into `stage-gexis` as systemd units. Two hardware-found defects are fixed,
-committed, and **now reverified on hardware** on `gexis`: `pi` had no
+committed, and **reverified on hardware** on `gexis`: `pi` had no
 sudo at all (shipped `/etc/sudoers.d/010_pi-nopasswd` directly — verified
 empirically that stock Raspberry Pi OS Lite never ships it either, since
 this image's `firstrun.sh` replaces the flow that would normally create
@@ -27,13 +27,33 @@ it; `sudo -n true` now succeeds on the flashed card), and go-librespot's
 `ExecStart` had `-config_dir` (one dash; its CLI parses `-c` as a
 distinct short flag, so this got parsed as `-c onfig_dir`) instead of
 `--config_dir` (`go-librespot.service` now starts). Both blockers from
-the previous hardware pass are closed. Also verified on this pass: all
-four units (squeezelite, go-librespot, bluealsa, bluealsa-aplay) enabled
-and active, squeezelite `NRestarts=0`; `speaker-test -D output` plays
+that hardware pass are closed. Also verified: all four units
+(squeezelite, go-librespot, bluealsa, bluealsa-aplay) enabled and
+active, squeezelite `NRestarts=0`; `speaker-test -D output` plays
 audibly (criterion 4); `output.conf` has no `type plug`, no card index,
 and has `ctl.output` (criterion 5); `libasound2t64` is
 `1.2.14-1+rpt1` and held per `apt-mark showhold` (criterion 6);
 squeezelite's `ExecStartPre` mixer check is present and passes.
+
+**Criterion 1 is now fully confirmed** (was partial). All three
+renderers verified writing to `"output"`, each checked at its own
+location, on a fresh boot (14:31:54) of a rebuilt-and-reflashed image:
+squeezelite passes `-o output` in `ExecStart`; bluealsa-aplay has a
+drop-in override at
+`/etc/systemd/system/bluealsa-aplay.service.d/override.conf` that
+clears the shipped `ExecStart` and sets `--pcm=output` — the packaged
+default was `--pcm=default`, which would have played through whatever
+`"default"` resolved to while the unit still looked healthy; go-librespot
+has `audio_device: output` with `audio_backend: alsa` in
+`/var/lib/go-librespot/config.yml` — not in the unit, which only passes
+`--config_dir`, so this one is a two-place check (unit + config). Both
+criteria 1 and 2 are met on the current build.
+
+**The mixer-check journal-logging fix (`6ee6d6f`) is now verified on a
+real boot**, not just an interactive shell: the success line appears in
+`journalctl -u squeezelite -b`, attributed to
+`squeezelite-mixer-check.sh[848]`, between systemd's `Starting` and
+`Started`. This was the one outstanding piece of that commit — closed.
 
 The sudoers fix's `visudo -cf` validation (`stage-gexis/01-firstboot/01-run.sh`)
 was reviewed on a concern that it might skip validation if `visudo` is
@@ -61,10 +81,46 @@ line; the failure path dumps `amixer -D output scontrols` so a misnamed
 control and an absent card are distinguishable. Previously a pass
 produced no journal output at all, so a boot where the assertion ran and
 a boot where it was never wired up looked identical in
-`journalctl -u squeezelite -b`. **Not yet verified**: that the new
-success line actually appears in the journal on a real boot — tested
-only by running the script body in an interactive shell. Needs a
-rebuild+reflash to confirm.
+`journalctl -u squeezelite -b`. Verified on the rebuilt image (see
+criterion 1 note above).
+
+**`go-librespot-config.yml`'s comment was fixed** (`210f7e7`): it said
+the unit "passes `-config_dir`" (single dash) — the exact broken form
+that cost a hardware round-trip earlier. No functional effect; it would
+have misled whoever next debugged that file. The two occurrences in
+`go-librespot.service` are correct and untouched (one of them quotes
+the broken form deliberately, as part of explaining the fix).
+
+**Branch divergence found and closed.** `make provision DEVICE=/dev/sdb`
+failed with "No rule to make target 'provision'" — `HANDOFF.md`
+documented the target, but the Makefile on `phase-2a-renderers` only
+had `image:` and `clean:`. Cause: `e715344` ("Add make provision") is
+on `main` via PR #3 (2026-09-05 20:36); the phase-branch line
+(`phase1-absorbed-into-phase2` → `phase-2-arbitration` →
+`phase-2a-renderers`) was cut before that and never took it back —
+exactly two commits diverged (`e715344` and its merge `5e4be7d`), and
+PRs #4/#5 are still open so haven't reached `main` either. Same shape as
+the credential-exposure defect above, with a twist: PR #3's gitignore
+rule *was* back-ported to the phase branches, but the rest of PR #3 (the
+`provision` target, `provision.env.example`, the `image/README.md`
+content) was not — the credential half got backported, the functional
+half didn't. Resolved by merging `main` into `phase-2a-renderers`
+(`514a6ff`) rather than cherry-picking, so the branches converge instead
+of drifting further — auto-merged cleanly (`Makefile`,
+`image/README.md`), no conflicts. `./test-gitignored-credentials.sh`
+passes on the branch. Provisioning then ran and the flash booted with
+SSH access.
+
+**New concern, Phase 5, not tested — only inferred from the unit file:**
+the shipped `bluealsa-aplay.service` runs `User=root` with
+`PrivateTmp=true`, `ProtectSystem=strict`,
+`DevicePolicy=closed` + `DeviceAllow=char-alsa rw`. `PrivateTmp` gives
+the unit its own `/tmp` namespace; the peppyalsa FIFOs live at
+`/tmp/peppymeter` and `/tmp/peppyspectrum`, so when Bluetooth is the
+active renderer, its scope writes would land somewhere the
+visualisation service can't see. This does *not* explain the meter-FIFO
+finding below (that was `speaker-test` as `pi`, unaffected by this
+unit's sandboxing) — it's a second, independent Phase 5 problem.
 
 **`docs/DEVELOPMENT.md` on `main` is behind.** It doesn't yet show Phase
 1's absorption, Phase 2's criteria 8-10, the tier-3-moves-to-`gexis`
@@ -120,6 +176,10 @@ consistent with `spectrum_size 30` and `spectrum_max 100` in
 `gexis`'s state as of this pass: the `meter_show 1` exploration was
 reverted, config matches the shipped image again, no other hand-edits.
 
+**Develop-on-hardware workflow inversion: discussed with George, no
+decision yet.** Would change `docs/DEVELOPMENT.md`'s working contract,
+so by its own stop-and-ask rules it wants an ADR before implementation.
+
 **Build self-identification gap.** Nothing on the running system
 identifies which build it is — checked `/boot/firmware/` and
 `/etc/gexis*` only, no manifest, no version file, no marker (doesn't
@@ -155,24 +215,24 @@ to create it) and clears the card's stale SSH host key. See
 
 ## Next actions, in order
 
-1. **Rebuild and reflash `gexis`** to pick up `6ee6d6f` (mixer-check
-   journal logging). Verify the new success line actually appears in
-   `journalctl -u squeezelite -b` on a real boot — the only thing about
-   that commit not yet checked on hardware. ~37-40 min per the measured
-   build cost above.
-2. **Phase 2 criteria 3-7**: arbitration (base/active slot, ADR-0010),
+1. **Phase 2 criteria 3-7**: arbitration (base/active slot, ADR-0010),
    timeout ladder on release, volume bridge, boot volume. This is where
    the Python core first appears — in the image, via `stage-gexis`, not
-   Phase 3.
-3. **Write up the peppyalsa meter FIFO finding** (see above) with its
+   Phase 3. Criteria 1, 2, 4, 5, 6 are now met; this picks up where they
+   left off.
+2. **Write up the peppyalsa meter FIFO finding** (see above) with its
    stated scope.
-4. Criteria 8-10 (takeover gap measurement) once 1-7 hold on real
+3. Criteria 8-10 (takeover gap measurement) once 3-7 hold on real
    hardware — needs LMS (George has one; CI gets a containerised
    throwaway) and, for the Spotify leg, the registered Spotify API app
    (transfer-playback confirmed available to new apps — see
    `docs/ARCHITECTURE.md`'s open-questions list).
-5. **Fill the Finding 003 grid** on `rig`, not `gexis` — characterises the
+4. **Fill the Finding 003 grid** on `rig`, not `gexis` — characterises the
    metering path, not the product image. 16 of 18 cells remain.
+
+Decisions pending from George: the criterion 7 build-self-identification
+amendment (above), and whether to act on the develop-on-hardware
+workflow inversion (above, needs an ADR first if so).
 
 Not blocking, needed before their phases: skin asset conventions (needle
 pivot, `distance`, icon set — blocks the skin renderer) and the peppyalsa
@@ -183,9 +243,9 @@ FIFO byte format (blocks the visualisation service).
 ```
 0  reproducible image                     ✓ merged — pi-gen, ADR-0021
 1  measurements                           absorbed into 2 — needs 2's own renderers
-2  audio layer + arbitration              ← in progress: renderers packaged,
-                                             2 hardware fixes pending reverify;
-                                             Python core arrives here; takeover gap
+2  audio layer + arbitration              ← in progress: renderers packaged and
+                                             hardware-verified (criteria 1,2,4,5,6);
+                                             Python core arrives here for 3-7; takeover gap
 3  core state daemon                      no UI; test with a WebSocket client
 4  UI shell + idle + display-only nowplay
 5  visualisation service + Peppy screen   capability-blind, proves the model
@@ -225,6 +285,9 @@ FIFO byte format (blocks the visualisation service).
   (ships with vim; Lite base doesn't have it) — use `od`. More broadly,
   never paste command blocks across machines without checking which host
   a shell is actually attached to first (see the method note above).
+- **`$EDITOR` is unset on `C3PO`.** `git merge` without `--no-edit` stops
+  waiting for `vi`, which isn't installed. Use `git commit --no-edit` (or
+  set an explicit editor) rather than let it hang.
 
 ## Working agreement
 
