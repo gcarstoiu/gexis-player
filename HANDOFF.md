@@ -15,9 +15,10 @@ in principle but measured.
 on `main` yet. The takeover gap has to be measured on the image, not a
 hand-built machine; its three criteria are Phase 2 criteria 8-10.
 
-**Phase 2a (renderer packaging) is in progress on `phase-2a-renderers`**
-(branched from `phase-2-arbitration`, from PR #2's branch — neither has a
-PR open yet). squeezelite, go-librespot and bluealsa-aplay are packaged
+**Phase 2a (renderer packaging, criteria 1-2) is done and closed** —
+merged from `phase-2a-renderers` into `phase-2-arbitration`, its home
+phase branch (neither has a PR open yet against `main`). squeezelite,
+go-librespot and bluealsa-aplay are packaged
 into `stage-gexis` as systemd units. Two hardware-found defects are fixed,
 committed, and **reverified on hardware** on `gexis`: `pi` had no
 sudo at all (shipped `/etc/sudoers.d/010_pi-nopasswd` directly — verified
@@ -206,6 +207,7 @@ pasting command blocks between machines, not a one-off slip — same
 | `rig` | Raspberry Pi 4, 4 GB | Raspberry Pi OS Lite 64-bit, Trixie. **Reference machine** — holds the environment Findings 002-004 were measured against. Not the build/test target. |
 | `gexis` | Raspberry Pi 4 | Flashed from this project's own `make image` output. User `pi`. Reachable as `pi@gexis.local` by SSH key. **The image-built target** — Phase 2 onward is built and measured here. |
 | SD card 2 | moOde | Reference install. Read-only recon source. Do not modify. |
+| LMS server | `192.168.178.188` | For manual testing (arbitration base slot, etc). **CI gets a containerised throwaway instead — CI must not depend on this server being up.** |
 
 **Provisioning a freshly flashed card:** `make provision DEVICE=/dev/sdX`
 fills in `firstrun.sh`'s SSH key / Wi-Fi / hostname from
