@@ -45,3 +45,8 @@ do
 		exit 1
 	fi
 done
+mask_target="$(readlink "${ROOTFS_DIR}/etc/systemd/system/alsa-restore.service" 2>/dev/null || true)"
+if [ "${mask_target}" != "/dev/null" ]; then
+	echo "ERROR: alsa-restore.service mask missing or wrong (got '${mask_target}')" >&2
+	exit 1
+fi

@@ -25,3 +25,17 @@ install -D -m 644 files/gexis-core.service \
 	"${ROOTFS_DIR}/etc/systemd/system/gexis-core.service"
 install -D -m 644 files/gexis-boot-volume.service \
 	"${ROOTFS_DIR}/etc/systemd/system/gexis-boot-volume.service"
+
+# ADR-0018: "alsactl state is not used to restore volume across boots."
+# The stock image ships alsa-restore.service (ExecStart=alsactl restore,
+# ExecStop=alsactl store) enabled by default, which does exactly the
+# restoring that record forbids - found on hardware, 2026-09-06: the
+# mixer was stuck at 0% because some earlier session's level got stored
+# on a clean shutdown and restored on every boot since, with
+# gexis-boot-volume.service's own explicit set racing it with no
+# guaranteed order (both only declare `After=sound.target`). Masking is
+# more correct than winning the race: it makes "never restored" actually
+# true rather than "restored, then immediately overwritten," and stops
+# alsactl from persisting a level on shutdown at all.
+mkdir -p "${ROOTFS_DIR}/etc/systemd/system"
+ln -sf /dev/null "${ROOTFS_DIR}/etc/systemd/system/alsa-restore.service"
