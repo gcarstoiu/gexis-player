@@ -119,13 +119,17 @@ when their criteria pass:
    both are explicitly deferred, not unresolved; see ADR-0010's "Open"
    section.
 4. Timeout ladder on release: polite stop → SIGTERM → SIGKILL, each step
-   logged. **LMS is a two-rung exception, decided 2026-09-06** after
-   measurement showed a commanded pause never releases squeezelite
-   faster than its own `-C` idle timeout (~8.5s, against go-librespot's
-   <100ms) — for LMS only, the polite rung is skipped unconditionally
-   and release goes straight to SIGTERM (~100ms measured), with the
-   pause still sent as a courtesy so LMS's own state reflects "paused."
-   See ADR-0010's amended implementation note.
+   logged. **LMS is a two-rung exception, decided 2026-09-06, amended
+   2026-09-07:** measurement showed a commanded pause never releases
+   squeezelite faster than its own `-C` idle timeout (~8.5s, against
+   go-librespot's <100ms), so the polite rung is skipped unconditionally
+   for LMS — but the escalation rung sends **SIGKILL, not SIGTERM**
+   (~100ms measured either way): squeezelite exits *cleanly* on SIGTERM,
+   which systemd's `Restart=on-failure` doesn't count as a failure, so
+   it never came back after a takeover on the first implementation. The
+   LMS pause is still sent as a courtesy so LMS's own state reflects
+   "paused." See ADR-0010's amended implementation note for the three
+   options weighed and why SIGKILL was chosen over a short `-C`.
 5. Volume bridge: phone-app volume moves the hardware mixer in variable mode and
    does nothing in fixed mode.
 6. Boot volume is the configured safe level, not restored.

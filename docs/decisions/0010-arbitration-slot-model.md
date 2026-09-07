@@ -169,11 +169,20 @@ renderers. **Decision (George):** the supervisor does not wait out `-C`
 during a takeover — it sends the LMS pause as a courtesy (so LMS's own
 state reflects "paused," not "disconnected," consistent with this
 record's release table) and then drives squeezelite's release actively,
-escalating straight to `SIGTERM` with no polite-grace wait
-(`LmsAdapter.release_ladder`, `core/src/gexis_core/adapters/lms.py`).
-`-C 10` still governs the *non-arbitration* idle case (LMS stops on its
-own, nothing else wants the device) — only the takeover path bypasses
-it.
+with no polite-grace wait (`LmsAdapter.release_ladder`,
+`core/src/gexis_core/adapters/lms.py`). `-C 10` still governs the
+*non-arbitration* idle case (LMS stops on its own, nothing else wants
+the device) — only the takeover path bypasses it.
+
+**Amended again, 2026-09-07:** the active step is `SIGKILL`, not
+`SIGTERM` as first implemented. squeezelite exits *cleanly* on
+`SIGTERM` (systemd sees `Result=success`), so `Restart=on-failure` never
+fired and squeezelite did not come back after a takeover — found on
+hardware. `LmsAdapter.signal_stop` now sends `SIGKILL` regardless of
+which ladder rung called it; see the "Open" section's sync-group item
+below for the three options weighed and why. Release timing is
+unaffected (~100ms measured either way — SIGKILL has no clean-shutdown
+handler to run, if anything it should be faster, not slower).
 
 ## Open
 
@@ -206,14 +215,38 @@ it.
   **George's decision: stays deferred, option 1, for now.** Not an
   oversight — the cost is accepted, not unknown.
 
-  **Superseded, 2026-09-07: a bigger defect makes this moot for now.**
-  squeezelite does not come back after the SIGTERM above at all —
-  `Restart=on-failure` never fires, because squeezelite exits *cleanly*
-  on SIGTERM (`Result=success`, `ExecMainStatus=0`), which systemd does
-  not count as a failure. LMS is gone from the system until a manual
-  restart or a reboot. A player with no sync group to lose, because it
-  has no players. Not fixed here — see criterion 3's "Not met" note and
-  `docs/decisions/README.md`'s deferred-items table.
+  **Found, then fixed, 2026-09-07: squeezelite did not come back after
+  the SIGTERM above at all.** `Restart=on-failure` never fired, because
+  squeezelite exits *cleanly* on SIGTERM (`Result=success`,
+  `ExecMainStatus=0`), which systemd does not count as a failure. LMS
+  was gone from the system until a manual restart or a reboot — a
+  player with no players has no sync group to lose, which is what
+  briefly superseded this item entirely.
+
+  **Three options were weighed (recorded in HANDOFF.md in full):**
+  1. SIGKILL instead of SIGTERM for LMS's escalation — an uncaught
+     fatal signal is not clean by systemd's own accounting, so
+     `Restart=on-failure` fires normally. Smallest change; same class
+     of systemd-exit-status assumption that produced the defect.
+  2. The adapter explicitly relaunches squeezelite after confirming
+     release, decoupled from `Restart=` semantics entirely.
+  3. Lower `-C` enough that pausing alone frees the device, so killing
+     is never needed — sidesteps the question rather than answering it.
+
+  **George's decision: option 1.** Option 3 is the architecturally
+  cleanest — no kill, no restart question at all — but cannot reach the
+  ~100ms release tempo SIGKILL already measured; a `-C` short enough to
+  compete was untested and unlikely to get there. `LmsAdapter.
+  signal_stop` now ignores the ladder's `force` parameter and always
+  sends `SIGKILL` for this renderer specifically (`kill_unit(...,
+  force=True)` on both the "SIGTERM" and "SIGKILL" rungs — the second
+  call, if ever reached, is a harmless no-op against an already-dead
+  process).
+
+  This reopens the sync-group question above rather than mooting it —
+  squeezelite returns again, so it has a sync group to lose again.
+  That deferral (option 1 there too: accept the breakage) stands as
+  recorded.
 - **Empty base slot — deferred.** Valid if run headless with no LMS.
   Undefined behaviour. **Criterion 3 (Phase 2b) ships without resolving
   this** — a decision, not an oversight; see `docs/DEVELOPMENT.md`.

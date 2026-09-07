@@ -193,4 +193,15 @@ class LmsAdapter(Adapter):
                 return False
 
     async def signal_stop(self, force: bool) -> None:
-        kill_unit(UNIT_NAME, force=force)
+        # George's decision, 2026-09-07, from three options recorded in
+        # ADR-0010 and HANDOFF.md: SIGKILL, not SIGTERM, for squeezelite
+        # specifically - `force` from the ladder is ignored on purpose.
+        # squeezelite exits *cleanly* on SIGTERM (exit 0), which
+        # systemd's Restart=on-failure does not count as a failure, so
+        # it never came back after a takeover (found on hardware,
+        # 2026-09-07). SIGKILL is an uncaught fatal signal, which is not
+        # clean by systemd's own accounting, so Restart=on-failure fires
+        # normally. The cleaner option - a short -C so pausing alone
+        # frees the device, no kill needed at all - was rejected: it
+        # can't reach the ~100ms release tempo SIGKILL already measured.
+        kill_unit(UNIT_NAME, force=True)
