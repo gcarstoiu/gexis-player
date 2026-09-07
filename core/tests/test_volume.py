@@ -17,7 +17,7 @@ import time as time_module
 import pytest
 
 from gexis_core import volume as volume_module
-from gexis_core.volume import ECHO_WINDOW_S, VolumeBridge
+from gexis_core.volume import ECHO_WINDOW_S, VolumeBridge, db_to_raw, raw_to_db
 
 
 class FakeSpotify:
@@ -125,3 +125,28 @@ def test_echo_window_is_positive_and_not_absurdly_long():
     # Sanity bound, not a precise spec - see module docstring on why this
     # is a mitigation rather than a proven-convergent design.
     assert 0 < ECHO_WINDOW_S < 5
+
+
+class TestDbConversion:
+    """ADR-0018's documented scale: raw 0 = -120dB (mute), raw 240 =
+    0dB, 0.5dB/step. Regression coverage for the finding that reasoning
+    about this control in raw-step percentages is misleading - it's
+    dB-linear per step, not perceptually linear (2026-09-08)."""
+
+    def test_endpoints(self):
+        assert raw_to_db(0) == -120.0
+        assert raw_to_db(240) == 0.0
+
+    def test_matches_measured_hardware_points(self):
+        # 230/240 measured as -5dB, 60/240 as -90dB (HANDOFF.md,
+        # 2026-09-07/08 hardware sessions).
+        assert raw_to_db(230) == -5.0
+        assert raw_to_db(60) == -90.0
+
+    def test_round_trip(self):
+        for raw in (0, 60, 120, 170, 230, 240):
+            assert db_to_raw(raw_to_db(raw)) == raw
+
+    def test_db_to_raw_clamps_to_hardware_range(self):
+        assert db_to_raw(-200.0) == 0
+        assert db_to_raw(50.0) == 240

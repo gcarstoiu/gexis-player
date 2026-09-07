@@ -21,8 +21,22 @@ DEFAULT_CONFIG_PATH = Path("/etc/gexis/core.toml")
 class Config:
     # ALSA mixer steps, 0-240 (ADR-0018: 240 steps of 0.5dB, 0=mute,
     # 240=0dB). Confirmed by George, 2026-09-06 (HANDOFF.md) - -90dB,
-    # deliberately quiet.
+    # deliberately quiet. This is the *boot* default only - it is not
+    # subject to restore_volume_floor_db below, on purpose (see
+    # __main__.py's restore_volume).
     boot_volume_steps: int = 60
+
+    # dB floor applied only when *restoring a renderer's own remembered
+    # volume* (criterion 5, per-renderer memory) - never to the boot
+    # default above. Found necessary on hardware, 2026-09-08: a
+    # renderer with no memory yet falling back to the boot level (-90dB)
+    # was indistinguishable from a broken renderer - inaudible, no
+    # obvious cause, nothing to diagnose (the exact "state the user
+    # cannot account for" ADR-0010/0018 both warn against). PLACEHOLDER
+    # value - a reasonable "clearly audible" floor, not confirmed by
+    # George. See HANDOFF.md.
+    restore_volume_floor_db: float = -40.0
+
     mixer_name: str = "DAC"
 
     # LMS runs on its own machine, not on gexis - there is no sane

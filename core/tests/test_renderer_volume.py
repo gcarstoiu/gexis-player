@@ -46,3 +46,34 @@ def test_corrupt_state_file_is_not_fatal(tmp_path: Path):
     path.write_text("not valid json{{{")
     memory = RendererVolumeMemory(path)
     assert memory.get("lms") is None
+
+
+class TestResolveRestore:
+    """Regression coverage for the bug found on hardware, 2026-09-08:
+    Bluetooth acquisitions were falling through to the boot-safe default
+    (-90dB), silently muting it regardless of the phone's own volume."""
+
+    def test_unmanaged_renderer_returns_none(self, tmp_path: Path):
+        memory = RendererVolumeMemory(tmp_path / "v.json")
+        assert (
+            memory.resolve_restore("bluetooth", boot_default=60, floor_db=-40.0)
+            is None
+        )
+
+    def test_no_memory_yet_uses_boot_default_unfloored(self, tmp_path: Path):
+        # boot_default (60 raw = -90dB) is below the floor (-40dB) on
+        # purpose in this test - it must NOT be clamped. The floor only
+        # applies to a *remembered* value.
+        memory = RendererVolumeMemory(tmp_path / "v.json")
+        assert memory.resolve_restore("lms", boot_default=60, floor_db=-40.0) == 60
+
+    def test_remembered_value_above_floor_is_used_as_is(self, tmp_path: Path):
+        memory = RendererVolumeMemory(tmp_path / "v.json")
+        memory.remember("spotify", 200)  # well above -40dB
+        assert memory.resolve_restore("spotify", boot_default=60, floor_db=-40.0) == 200
+
+    def test_remembered_value_below_floor_is_clamped_up(self, tmp_path: Path):
+        memory = RendererVolumeMemory(tmp_path / "v.json")
+        memory.remember("lms", 60)  # -90dB, below a -40dB floor
+        raw = memory.resolve_restore("lms", boot_default=60, floor_db=-40.0)
+        assert raw == 160  # db_to_raw(-40.0)

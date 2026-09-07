@@ -25,6 +25,8 @@ import json
 import logging
 from pathlib import Path
 
+from gexis_core.volume import db_to_raw, raw_to_db
+
 logger = logging.getLogger("gexis_core.renderer_volume")
 
 DEFAULT_STATE_PATH = Path("/var/lib/gexis-core/volume.json")
@@ -35,6 +37,32 @@ class RendererVolumeMemory:
     def __init__(self, path: Path = DEFAULT_STATE_PATH) -> None:
         self._path = path
         self._levels: dict[str, int] = self._load()
+
+    def resolve_restore(
+        self, renderer_id: str, *, boot_default: int, floor_db: float
+    ) -> int | None:
+        """The raw value to write to the hardware mixer when
+        `renderer_id` becomes active, or None if this renderer's volume
+        should be left untouched entirely (anything not in
+        MANAGED_RENDERERS - see the module docstring on why Bluetooth is
+        excluded).
+
+        `boot_default` (a remembered-nothing-yet fallback) is
+        deliberately NOT subject to `floor_db` - that's a separate,
+        already-confirmed-quiet value (ADR-0018's boot volume), not a
+        degenerate remembered one. The floor only guards against
+        restoring a *remembered* level so low it reads as broken rather
+        than quiet - found necessary on hardware, 2026-09-08 (see
+        HANDOFF.md and config.py's restore_volume_floor_db).
+        """
+        if renderer_id not in MANAGED_RENDERERS:
+            return None
+        raw = self.get(renderer_id)
+        if raw is None:
+            return boot_default
+        if raw_to_db(raw) < floor_db:
+            return db_to_raw(floor_db)
+        return raw
 
     def _load(self) -> dict[str, int]:
         try:

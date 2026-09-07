@@ -75,7 +75,28 @@ ECHO_WINDOW_S = 0.75
 
 MIXER_DEVICE = "output"
 HARDWARE_MAX = 240  # ADR-0018: 240 steps, 0=mute, 240=0dB
+DB_MIN = -120.0  # raw 0
+DB_STEP = 0.5  # dB per raw step (ADR-0018, confirmed against amixer's own dBscale readout)
 _VALUE_RE = re.compile(rb"Playback (\d+) \[")
+
+
+def raw_to_db(raw: int) -> float:
+    """Raw ALSA step (0-240) to dB, per ADR-0018's documented scale.
+
+    Found necessary on hardware, 2026-09-08: reasoning about this
+    control in raw-step percentages is actively misleading - it's
+    dB-linear per step, not perceptually linear, so e.g. 230/240 (96%)
+    is -5dB but 60/240 (25%) is -90dB, nowhere near "a quarter as
+    loud." Convert to dB before doing anything that should track
+    perceived loudness - clamping a restore floor, comparing renderers'
+    levels, anything like that.
+    """
+    return DB_MIN + raw * DB_STEP
+
+
+def db_to_raw(db: float) -> int:
+    raw = round((db - DB_MIN) / DB_STEP)
+    return max(0, min(HARDWARE_MAX, raw))
 
 
 async def get_raw(mixer_name: str) -> int | None:
