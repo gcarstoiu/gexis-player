@@ -74,6 +74,25 @@ are. Enough to say "something other than the hardware mixer is
 attenuating Bluetooth volume below ~96%," not enough to say what, or to
 rule out something specific to this phone or this session.
 
+## Update, 2026-09-08 — a candidate mechanism, not yet confirmed
+
+A separate defect diagnosed the same later session:
+`bluealsa-aplay --pcm=output` alone (no `--mixer-device`/`--mixer-name`)
+logged `Couldn't open ALSA mixer: Mixer element not found`, looking for
+ALSA's own defaults (`name=default elem=Master`), which don't exist on
+this image. Fixed by adding `--mixer-device=output --mixer-name=DAC`
+(`image/stage-gexis/02-renderers/files/bluealsa-aplay-override.conf`).
+
+`bluealsa-aplay --help` documents `--volume=auto|mixer|none|software`,
+defaulting to `auto`. A failed mixer lookup is a plausible reason `auto`
+would have fallen back to `software` for the *entire* range, which
+would be a different, larger claim than this finding's original
+"partial, below ~96%" one — possibly all of Bluetooth's volume was
+software before this fix, not just the bottom of the range. **Not
+confirmed** — the mixer-args fix hasn't been re-tested against this
+finding's original observation yet. Check on the next hardware pass
+before revising the finding's own answer above.
+
 ## Consequence for criterion 5
 
 The per-renderer volume-memory decision (HANDOFF.md, 2026-09-07:
