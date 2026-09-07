@@ -46,21 +46,25 @@ class LmsAdapter(Adapter):
     renderer_id = "lms"
     release_action = ReleaseAction.PAUSE
 
-    # No release_ladder override, deliberately - back to the
-    # supervisor's default (2026-09-08). Two prior attempts to route
-    # around squeezelite's -C idle timer during a takeover (skip the
-    # polite wait and SIGTERM, then SIGKILL unconditionally) both cost
-    # more than they fixed: SIGTERM exits squeezelite cleanly, so
-    # Restart=on-failure never fired and LMS was gone until a manual
-    # restart; SIGKILL brought it back but dropped it from its LMS sync
-    # group and reset session state. Measured fix instead: -C 1 on
-    # squeezelite.service releases the device in ~700ms against a
-    # commanded pause, comfortably inside the default 3s polite grace,
-    # with no audible artefacts across track boundaries or a deliberate
-    # pause-then-resume. See ADR-0010's amended implementation note.
-    # SIGTERM/SIGKILL stay available as the ladder's normal escalation
-    # if -C 1 ever doesn't free the device in time - a safety net, not
-    # the primary mechanism anymore.
+    # No release_ladder override - -C 1 on squeezelite.service (measured
+    # ~700ms release against a commanded pause) makes the supervisor's
+    # default 3s polite grace work fine for LMS in the ordinary case,
+    # same as every other adapter. See ADR-0010's amended implementation
+    # note for the two reverted attempts that preceded this.
+    #
+    # signal_stop below is NOT reverted, though - a distinct decision
+    # from the ladder timing one, and reverting it too was a mistake
+    # that cost a real regression on hardware, 2026-09-08: -C 1 makes
+    # escalation *rare*, not impossible (a real run needed 8+ seconds -
+    # this control mixer's DAC handshake, LMS's own network hiccups,
+    # whatever - variance is real, George's own original measurement
+    # was a single run). When escalation does happen, SIGTERM is simply
+    # the wrong signal for squeezelite regardless of frequency: it exits
+    # *cleanly* on SIGTERM (exit 0), which Restart=on-failure never
+    # counts as a failure - confirmed reproduced live, same shape as the
+    # original 2026-09-07 defect, from the ladder's own genuine
+    # escalation this time, not a bespoke "always kill" policy. SIGKILL
+    # is the only signal that reliably brings it back.
 
     def __init__(self, host: str, port: int, player_name: str) -> None:
         self._base = f"http://{host}:{port}"
@@ -197,8 +201,9 @@ class LmsAdapter(Adapter):
                 return False
 
     async def signal_stop(self, force: bool) -> None:
-        # Reverted, 2026-09-08 - see the class-level comment above.
-        # Respects `force` normally again, same as every other adapter;
-        # this is the ladder's escalation safety net now, not the
-        # primary release mechanism (-C 1 + a plain pause is).
-        kill_unit(UNIT_NAME, force=force)
+        # Ignores `force` on purpose - see the class-level comment.
+        # SIGTERM is a no-op against squeezelite ever coming back on its
+        # own, so both ladder rungs use SIGKILL. The second call, if the
+        # ladder ever reaches it, is a harmless no-op against an
+        # already-dead process.
+        kill_unit(UNIT_NAME, force=True)
