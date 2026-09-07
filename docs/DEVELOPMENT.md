@@ -119,17 +119,24 @@ when their criteria pass:
    both are explicitly deferred, not unresolved; see ADR-0010's "Open"
    section.
 4. Timeout ladder on release: polite stop → SIGTERM → SIGKILL, each step
-   logged. **LMS is a two-rung exception, decided 2026-09-06, amended
-   2026-09-07:** measurement showed a commanded pause never releases
-   squeezelite faster than its own `-C` idle timeout (~8.5s, against
-   go-librespot's <100ms), so the polite rung is skipped unconditionally
-   for LMS — but the escalation rung sends **SIGKILL, not SIGTERM**
-   (~100ms measured either way): squeezelite exits *cleanly* on SIGTERM,
-   which systemd's `Restart=on-failure` doesn't count as a failure, so
-   it never came back after a takeover on the first implementation. The
-   LMS pause is still sent as a courtesy so LMS's own state reflects
-   "paused." See ADR-0010's amended implementation note for the three
-   options weighed and why SIGKILL was chosen over a short `-C`.
+   logged, applying uniformly to every renderer as written. **History,
+   not current behaviour:** LMS went through two reverted attempts
+   (2026-09-06, 2026-09-07) at routing around squeezelite's `-C` idle
+   timer — skip the polite rung and SIGTERM immediately, then SIGKILL
+   unconditionally — before landing on the actual fix, 2026-09-08:
+   `squeezelite.service` runs `-C 1`, which measured ~700ms to release
+   against a commanded pause (no audible artefacts), comfortably inside
+   the default 3s polite grace. LMS needs no ladder exception anymore.
+   See ADR-0010's amended implementation note for the full history and
+   why each intermediate attempt was reverted.
+
+   **Bluetooth is a live, unresolved exception as of 2026-09-08:** the
+   full ladder ran against `bluealsa-aplay.service` — polite stop
+   (disconnect), SIGTERM, SIGKILL — and the device was still held after
+   SIGKILL. Not fixed; see ADR-0010's "Open" section for the two
+   candidate causes (a too-fast unit restart racing the check; the
+   process holding the PCM open even after its IO worker exits on
+   disconnect) and why the fix likely isn't "kill it more reliably."
 5. Volume bridge: phone-app volume moves the hardware mixer in variable mode and
    does nothing in fixed mode.
 6. Boot volume is the configured safe level, not restored.

@@ -184,6 +184,28 @@ below for the three options weighed and why. Release timing is
 unaffected (~100ms measured either way — SIGKILL has no clean-shutdown
 handler to run, if anything it should be faster, not slower).
 
+**Reverted, 2026-09-08 — the active-kill approach itself was the wrong
+fix.** Measured on hardware: `-C 1` releases the device in ~700ms
+against a commanded pause, with no audible clicks, pops or dropouts
+across track boundaries or a deliberate 2-3s pause-then-resume (the
+case that actually forces a close and reopen). 700ms is a plausible
+handoff gap. This removes the reason to kill squeezelite at all —
+`squeezelite.service` now runs `-C 1`, and `LmsAdapter` has no
+`release_ladder` override and no `signal_stop` override: it uses the
+supervisor's plain default ladder like every other adapter, with
+`SIGTERM`/`SIGKILL` staying available as the normal escalation safety
+net rather than the primary mechanism. This resolves the restart defect
+(nothing kills squeezelite in the ordinary case, so
+`Restart=on-failure` never needs to fire) and the sync-group loss below
+in one move, without needing either of the two prior amendments' extra
+machinery. Scope of the `-C 1` measurement: single timing run, 100ms
+poll granularity with `sudo fuser` latency in the loop; squeezelite's
+own help text documents `-C` in whole seconds, sub-second values are
+otherwise untested; the listening test for artefacts was subjective,
+not instrumented. `-C` is squeezelite-only — it says nothing about
+Bluetooth's own release mechanism, which is a separate, still-open
+problem (see "Open," below).
+
 ## Open
 
 - **Sync group interaction — deferred, with a known cost, by decision.**
@@ -247,9 +269,43 @@ handler to run, if anything it should be faster, not slower).
   squeezelite returns again, so it has a sync group to lose again.
   That deferral (option 1 there too: accept the breakage) stands as
   recorded.
+
+  **Resolved for real, 2026-09-08: `-C 1` replaced the kill approach
+  entirely** (see the Implementation note's own final amendment,
+  above). squeezelite is no longer killed during an ordinary takeover
+  at all — `SIGTERM`/`SIGKILL` are the ladder's escalation safety net,
+  not the primary path — so there is no longer a sync-group loss to
+  accept. The deferral above is now moot in the good sense: not
+  "accepted cost" but "cost no longer occurs in normal operation."
+  Still theoretically reachable if `-C 1` ever fails to free the device
+  within the polite grace window and the ladder actually escalates —
+  same shape as the original 2026-09-04 note, now genuinely rare rather
+  than the routine path it briefly was.
 - **Empty base slot — deferred.** Valid if run headless with no LMS.
   Undefined behaviour. **Criterion 3 (Phase 2b) ships without resolving
   this** — a decision, not an oversight; see `docs/DEVELOPMENT.md`.
 - **Takeover gap — not deferred, scheduled.** Unmeasured, same-rate and
   cross-rate. This is Phase 2c, criteria 8-10 — active work, not a
   deferral.
+- **Bluetooth's release ladder doesn't actually release the device —
+  open, not deferred, needs a different mechanism.** Found on hardware,
+  2026-09-08: `release()` (`Device1.Disconnect()`), then the full
+  ladder — `SIGTERM`, then `SIGKILL` on `bluealsa-aplay.service` — ran
+  and the device was **still held after `SIGKILL`** (10.7s). Two
+  threads, neither confirmed:
+  - `bluealsa-aplay.service`'s stock unit (`bluez-alsa-utils` package)
+    sets `Restart=on-failure` with no explicit `RestartSec` — systemd's
+    default is 100ms. A killed process could plausibly restart and
+    reopen the PCM well before the ladder's own `sigkill_grace` (2s
+    default) check runs, which would read as "still held" even though
+    what's actually holding it is a *new* process, not survival of the
+    old one. Checked the static unit file, not measured live.
+  - Separately, and not explained by the above: **`bluealsa-aplay` was
+    observed (via `fuser`) holding the PCM open even after its own IO
+    worker exits on phone disconnect** — i.e. `Device1.Disconnect()`
+    succeeding doesn't reliably free the device either, which is the
+    step that's supposed to make killing unnecessary in the first
+    place (same shape as squeezelite's fix above: use the renderer's
+    own release path, don't rely on process death). If this holds up,
+    Bluetooth's real fix looks more like "why doesn't disconnect free
+    the PCM" than "how do we kill it more reliably."
