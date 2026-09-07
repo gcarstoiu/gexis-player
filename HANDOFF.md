@@ -743,6 +743,81 @@ foreground shells for the testing above. Nothing hand-edited on disk
 except `bluetoothctl trust` (persists). Superseded by the next reflash
 — not cleaned up separately since the whole rootfs gets replaced.
 
+### Hardware session, 2026-09-07 (v0.2.0 build): two regressions found live, both diagnosed and fixed
+
+George reported two symptoms after reflashing v0.2.0: Bluetooth
+connecting unreliably and playing silent even at max volume, and
+squeezelite crashing and not recovering. Investigated live over SSH
+(box was on, George wasn't near speakers) rather than guessed at —
+`journalctl` across `gexis-core`, `bluealsa`, `bluealsa-aplay` and
+`bluetooth.service` for the actual session gave a full, consistent
+picture for both.
+
+**squeezelite: the SIGTERM regression came back, self-inflicted.**
+`systemctl status squeezelite.service` showed `code=exited,
+status=0/SUCCESS`, `Deactivated successfully`, no restart.
+`gexis-core`'s own log gave the exact sequence: `21:20:41` Spotify
+acquired, `21:20:45` "still holds the device after polite stop, sending
+SIGTERM" (so `-C 1`'s ~700ms measurement didn't hold this time — single-
+run variance, exactly the caveat that measurement already carried),
+`21:20:48` SIGKILL. squeezelite exited on the SIGTERM specifically
+(clean, `Restart=on-failure` never fires on a clean exit) — the
+*identical* defect from two sessions ago, reproduced live from the
+ladder's own genuine escalation. Root cause of the regression: reverting
+`signal_stop` back to respecting the ladder's `force` parameter was
+bundled into the same change as the (correct) `-C 1` timing fix, but
+they're independent decisions — `-C 1` makes escalation *rare*, it
+doesn't make SIGTERM the right signal on the rare occasions escalation
+still happens. **Fixed:** `signal_stop` ignores `force` again, always
+sends SIGKILL, `-C 1` and the plain ladder timing stay as they were.
+
+**Bluetooth: mechanically working, just never given an audible starting
+volume.** The mixer-args and trust fixes from last session are both
+confirmed correct in this session's own logs — `bluealsa-aplay` opened
+`name=output elem=DAC` cleanly on every connection (no "Mixer element
+not found" this time), and `bluealsa`'s log showed AVRCP volume updates
+from the phone landing on the hardware mixer correctly once the phone's
+slider was actually moved ("Updating A2DP volume: 91 [-4.80 dB]"). What
+was actually missing: Bluetooth is deliberately unmanaged by the
+per-renderer volume system (Finding 006 — its own volume path isn't
+understood well enough to restore a remembered level for it), which
+meant *nothing* set a starting level when it acquired the device — the
+mixer just carried over whatever LMS or Spotify had last left it at.
+That explains the exact sequence George described: silent at first
+because the inherited level was quiet, then "the volume increased" and
+a fraction-of-a-second of audible Bluetooth right as LMS's takeover
+restored its own (louder) remembered level and Bluetooth's audio was
+still draining out. **Fixed, one-directional:** on any unmanaged
+renderer's acquire, bump the mixer up to the same audible floor used
+for remembered LMS/Spotify levels if it's below that — never push down,
+never fight an already-reasonable level, still not "managing"
+Bluetooth's own curve.
+
+**George's suggestion to revert everything Bluetooth-related back to
+two builds ago was not taken** — the evidence pointed to a specific,
+fixable gap (no starting volume) rather than the mixer-args or trust
+fixes themselves being wrong, and both of those fixes are independently
+confirmed correct by this session's own logs. Reverting them would
+restore the two problems they were written to solve (mixer element not
+found; PIN-free pairing needing a manual trust step) without a clear
+reason to expect it would touch the actual cause. Flagging this
+explicitly rather than silently overriding the suggestion — worth a
+second look if the floor fix above doesn't hold up.
+
+**Also fixed, likely explanation for "doesn't connect the first time,
+works every time after":** `bluealsa-aplay` logged `Couldn't get
+BlueALSA PCM list: The name org.bluealsa was not provided by any
+.service files` right at boot — the stock unit has no `After=` on
+`bluealsa.service`, so it can start before `bluealsa` registers on
+D-Bus. Survivable (it picks up connections later via D-Bus signals
+regardless, and every connection attempted after boot this session did
+work), so this is a hygiene fix for a confirmed race, not a proven fix
+for the specific symptom — but the shape matches closely. Added
+`After=`/`Wants=bluealsa.service`.
+
+**Not yet re-verified on a rebuilt image** — all four fixes above are
+committed, none are on hardware yet.
+
 ## Machines
 
 | Name | What it is | Notes |
@@ -773,33 +848,31 @@ the tag) — tag manually before a build worth naming, for now.
 
 ## Next actions, in order
 
-1. **Rebuild and reflash `gexis`**, to pick up everything since the last
-   flash: the `-C 1` revert (squeezelite release), the Bluetooth
-   volume-memory bug fix, the `bluealsa-aplay` mixer-args fix, and the
-   new auto-trust service. Nothing from this session is hardware-
-   verified on a rebuilt image yet.
+1. **Rebuild and reflash `gexis`**, to pick up this session's fixes: the
+   squeezelite SIGKILL restoration, the Bluetooth mixer-floor fix, and
+   the `bluealsa`/`bluealsa-aplay` ordering fix. None hardware-verified
+   yet — v0.2.0 is confirmed to still have both regressions.
 2. **On the reflashed image, in order:**
-   - A real end-to-end Bluetooth pairing and playback test — trust,
-     mixer, and volume all changed this session; none re-verified
-     together yet.
-   - Confirm LMS takeover releases in ~700ms with no artefacts, matches
-     the `-C 1` measurement across more than one run.
+   - Force several takeovers in a row (not just one) and confirm
+     squeezelite always comes back — v0.2.0's failure took a specific,
+     not-guaranteed-to-repeat-every-time sequence to surface.
+   - A real end-to-end Bluetooth pairing and playback test, this time
+     watching whether the mixer floor actually produces audible volume
+     on first connect, not just on takeover from LMS.
    - Recheck George's original issue 3 (position reset on switch) —
-     expected to resolve with LMS no longer killed, not yet confirmed.
+     expected to resolve with LMS no longer killed, still not
+     confirmed.
    - Re-run the LMS-app-volume-buttons scenario against Spotify (the
-     false-acquisition fix from two sessions ago still isn't
-     independently reconfirmed — LMS's `/jsonrpc.js` POST endpoint was
-     down when that was investigated).
-3. **Bluetooth's release ladder — needs its own investigation, not a
-   guess.** Two candidate causes recorded (ADR-0010's "Open" section):
-   a too-fast unit restart racing the ladder's check, or
-   `bluealsa-aplay` holding the PCM open past its own IO worker exiting
-   on disconnect. Likely needs the same shape of fix LMS got — make the
-   renderer's own release path actually work, rather than lean harder
-   on killing the process.
+     false-acquisition fix from three sessions ago still isn't
+     independently reconfirmed).
+3. **Bluetooth's release ladder — still needs its own investigation.**
+   Two candidate causes recorded (ADR-0010's "Open" section): a
+   too-fast unit restart racing the ladder's check, or `bluealsa-aplay`
+   holding the PCM open past its own IO worker exiting on disconnect.
+   Not touched this session.
 4. **Re-test Finding 006** (Bluetooth volume partly software below
-   ~96%) against the mixer-args fix — plausible but unconfirmed that
-   fixing `--mixer-device`/`--mixer-name` also fixes or changes this.
+   ~96%) against the mixer-args fix from last session — plausible but
+   unconfirmed that it also fixes or changes this.
 5. **Phase 2b, criteria 3-6**, once 1-4 hold: the supervisor, adapters
    and volume bridge are written and unit-tested (`core/`), but no live
    takeover has actually been exercised end-to-end and left working —
