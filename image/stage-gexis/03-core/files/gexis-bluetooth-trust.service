@@ -1,0 +1,18 @@
+[Unit]
+# ADR-0024: PIN-free pairing (bt-agent, gexis-bt-agent.service) answers
+# the pairing handshake but doesn't set Trusted - BlueZ leaves that as a
+# separate step. Without it, bluealsa-aplay opens the PCM for a newly
+# paired device and then immediately marks it inactive, pulling no
+# audio. See core/src/gexis_core/bluetooth_trust.py.
+Description=Gexis Bluetooth auto-trust for newly paired devices (ADR-0024)
+After=bluetooth.service gexis-bt-agent.service
+
+[Service]
+Type=simple
+ExecStart=/opt/gexis-core/venv/bin/python -m gexis_core.bluetooth_trust
+Restart=on-failure
+RestartSec=2
+User=root
+
+[Install]
+WantedBy=multi-user.target

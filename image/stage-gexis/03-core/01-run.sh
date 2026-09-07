@@ -7,6 +7,8 @@ ln -sf /etc/systemd/system/gexis-core.service \
 	"${ROOTFS_DIR}/etc/systemd/system/multi-user.target.wants/gexis-core.service"
 ln -sf /etc/systemd/system/gexis-boot-volume.service \
 	"${ROOTFS_DIR}/etc/systemd/system/multi-user.target.wants/gexis-boot-volume.service"
+ln -sf /etc/systemd/system/gexis-bluetooth-trust.service \
+	"${ROOTFS_DIR}/etc/systemd/system/multi-user.target.wants/gexis-bluetooth-trust.service"
 
 # Build-time assertion: the venv actually landed and the src copy this
 # stage used to install from didn't linger (00-run-chroot.sh's rm -rf
@@ -23,7 +25,8 @@ for f in \
 	"${ROOTFS_DIR}/opt/gexis-core/venv/bin/pip" \
 	"${ROOTFS_DIR}/etc/gexis/core.toml" \
 	"${ROOTFS_DIR}/etc/systemd/system/gexis-core.service" \
-	"${ROOTFS_DIR}/etc/systemd/system/gexis-boot-volume.service"
+	"${ROOTFS_DIR}/etc/systemd/system/gexis-boot-volume.service" \
+	"${ROOTFS_DIR}/etc/systemd/system/gexis-bluetooth-trust.service"
 do
 	if [ ! -e "${f}" ]; then
 		echo "ERROR: ${f} missing after install" >&2
@@ -38,7 +41,8 @@ fi
 # see 02-renderers/01-run.sh's comment on why this is -L, not -e.
 for f in \
 	"${ROOTFS_DIR}/etc/systemd/system/multi-user.target.wants/gexis-core.service" \
-	"${ROOTFS_DIR}/etc/systemd/system/multi-user.target.wants/gexis-boot-volume.service"
+	"${ROOTFS_DIR}/etc/systemd/system/multi-user.target.wants/gexis-boot-volume.service" \
+	"${ROOTFS_DIR}/etc/systemd/system/multi-user.target.wants/gexis-bluetooth-trust.service"
 do
 	if [ ! -L "${f}" ]; then
 		echo "ERROR: ${f} missing after install" >&2

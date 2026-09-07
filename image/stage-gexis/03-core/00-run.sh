@@ -25,6 +25,8 @@ install -D -m 644 files/gexis-core.service \
 	"${ROOTFS_DIR}/etc/systemd/system/gexis-core.service"
 install -D -m 644 files/gexis-boot-volume.service \
 	"${ROOTFS_DIR}/etc/systemd/system/gexis-boot-volume.service"
+install -D -m 644 files/gexis-bluetooth-trust.service \
+	"${ROOTFS_DIR}/etc/systemd/system/gexis-bluetooth-trust.service"
 
 # ADR-0018: "alsactl state is not used to restore volume across boots."
 # The stock image ships alsa-restore.service (ExecStart=alsactl restore,
