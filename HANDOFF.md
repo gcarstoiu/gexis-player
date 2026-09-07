@@ -509,6 +509,130 @@ project have.
 The earlier LMS-play-starts-Spotify behaviour did **not** recur this
 session.
 
+### Hardware session, 2026-09-07: Bluetooth confirmed working; criterion 3 blocked
+
+**Bluetooth pairs and plays, no PIN.** rfkill was the real blocker, as
+suspected — first successful pairing on any build of this image.
+
+**DEFECT — criterion 3 not met: squeezelite does not come back after a
+takeover.** After a takeover kills it: `is-active: inactive`,
+`Result=success`, `ExecMainStatus=0`, `NRestarts=0`. squeezelite exits
+*cleanly* on SIGTERM, so systemd sees success, not failure, and
+`Restart=on-failure` never fires. LMS is gone from the system — not
+paused, not paused-and-resumable, gone — until a manual restart or a
+reboot. **Takeover from LMS works exactly once, in one direction.** The
+unit tests couldn't have caught this: they verify the adapter *sends*
+SIGTERM, not what systemd does with the resulting exit code. Recorded
+in ADR-0010, which also notes this supersedes the sync-group deferral —
+a player with no players has no sync group to lose.
+
+**Not fixed — this is a policy decision, not a config tweak, and George
+asked for options rather than a unilateral pick.** `Restart=always`
+brings squeezelite back, but then the supervisor can't deliberately
+stop it at all — systemd would relaunch it (and it could reopen the
+device) immediately, defeating the ladder's SIGTERM/SIGKILL escalation
+as a way to actually force a release. Three options, not one obviously
+right:
+
+1. **Send `SIGKILL` instead of `SIGTERM` for LMS's escalation.**
+   squeezelite handling `SIGTERM` as a graceful, "successful" shutdown
+   is well-behaved software on its own terms — it's just the wrong
+   behaviour for what we need from it. An uncaught fatal signal (which
+   `SIGKILL` always is) is *not* clean by systemd's own accounting, so
+   `Restart=on-failure` should fire normally, no config change needed
+   beyond what signal `LmsAdapter` sends. Smallest change; keeps every
+   renderer on the same `Restart=on-failure` semantics. Release timing
+   should stay fast (SIGKILL has no cleanup handler to run at all,
+   likely faster than the ~100ms measured for SIGTERM, not slower).
+   Risk: still depends on systemd's exit-status classification being
+   what we think it is — exactly the kind of assumption that produced
+   this defect in the first place with SIGTERM.
+2. **Have the adapter explicitly relaunch squeezelite** (`systemctl
+   start squeezelite.service`) once release is confirmed, rather than
+   relying on `Restart=` semantics at all. Fully decoupled from how
+   systemd happens to classify a given exit — deterministic, doesn't
+   depend on getting an exit-code assumption right a second time. Costs
+   a small amount of new bookkeeping in the adapter (when exactly to
+   relaunch, and confirming it actually came back) that options 1 and 3
+   don't need.
+3. **Lower `-C` enough that pausing alone frees the device fast enough
+   that killing squeezelite is never necessary**, sidestepping the
+   restart question by not causing it. Already logged as ADR-0010's
+   option 3 for the sync-group question too, and still untested there
+   for the same reason: nobody has measured whether a short `-C`
+   actually behaves fast enough in practice, only that the default
+   (`-C 10`) does not.
+
+**Leaning towards option 1** for being the smallest change that keeps
+the existing signal-based design intact, but it carries the same class
+of risk (an assumption about systemd's own behaviour) that caused this
+defect — worth being clear-eyed about that before picking it over
+option 2's more self-contained determinism.
+
+**Volume: George's decision, implemented this session.** Each renderer
+keeps its own volume, restored when it becomes active — not reset to
+the safe level on every takeover, only at boot (criterion 6 as
+written). A renderer with no remembered level gets the safe one.
+Implemented as `renderer_volume.RendererVolumeMemory` (small JSON state
+file, survives the daemon restarting) plus a `restore_volume` hook the
+supervisor calls right after a takeover completes. **Scoped to LMS and
+Spotify only** — see Finding 006 below for why Bluetooth is left out
+for now. Unit-tested (arbitration's hook, the bridge's attribution and
+active-renderer gating, and the memory class itself — 26 tests total,
+still no hardware needed) but **not yet exercised on hardware.**
+
+**Finding 006 (new): Bluetooth volume is hardware above ~96%, something
+else below it.** Mixer stayed at 230/240 (96%, -5dB) across two
+readings while the sound kept getting audibly quieter as the phone's
+slider was dragged down — something other than the shared hardware
+mixer is attenuating it below that point, which is exactly the kind of
+undisclosed attenuation `ctl.output`/ADR-0009 exists to prevent. Which
+component, and whether it's upstream of encode or on our own side, is
+not established — full detail and what's not yet known in the finding
+itself. Also: Bluetooth's own slider mapping is at least as bad as
+LMS's (half the slider spans 5dB); Bluetooth and Spotify sound the same
+at 100%, ruling out a simple fixed offset.
+
+**Fixed: the LMS-app-volume-buttons-took-over-Spotify bug.** Root
+cause, not just a workaround: the CometD subscription pushes on *any*
+status field changing (volume included, not just play/pause), and
+`last_mode` was reset to `None` on every reconnect — so the first
+status push after any reconnect (a network blip, an LMS restart, or
+just this process starting) read as a fresh "→ play" edge if the
+player already happened to be playing, firing a real acquisition
+against whatever renderer actually held the device. A volume-button
+press is exactly the kind of unrelated field change that would trigger
+this. Fixed by seeding `last_mode` with an actual status query before
+entering the subscription loop. **Not independently reconfirmed on
+hardware** — LMS's `/jsonrpc.js` `POST` endpoint was returning empty
+replies (connection accepted, request received, no HTTP response at
+all) while investigating this, unrelated to the fix itself; plain `GET`
+requests to the same server still worked fine. Needs a live recheck
+once that clears — worth checking LMS's own logs/state before assuming
+it's transient.
+
+**Takeover gap, Bluetooth → LMS: worse than expected, not yet
+explained.** LMS shows itself trying to play for *several seconds*
+before sound actually appears. Both directions' release timings were
+measured at ~100ms last session, so whatever's adding the delay is on
+the acquisition/start side, not release — device open, buffer fill, or
+LMS/squeezelite startup behaviour are the candidates, none checked.
+Worth investigating before criterion 8's formal takeover-gap
+measurement, since a multi-second real-world gap would badly skew what
+that measurement is supposed to characterise.
+
+**Also observed, not yet acted on:**
+- Spotify ↔ Bluetooth switching works cleanly both ways — no volume or
+  timing complaints on this pair specifically.
+- Bluetooth → Spotify Connect while playing pauses the Spotify track
+  *and* resets its progress; only way to resume is skipping to the next
+  track. Plausibly an inherent consequence of ADR-0010's own release
+  table (Spotify: disconnect, not pause) rather than a defect to fix —
+  reconnecting to a fully-disconnected Spotify Connect session not
+  preserving exact scrub position is ordinary behaviour on other
+  Connect-capable devices too, not something unique to this
+  implementation. Not confirmed either way; noted, not chased.
+
 ## Machines
 
 | Name | What it is | Notes |
@@ -527,46 +651,55 @@ to create it) and clears the card's stale SSH host key. See
 
 ## Next actions, in order
 
-1. **Rebuild and reflash `gexis`** to pick up this session's fixes: the
-   `alsa.py` regex, the `alsa-restore.service` mask (boot volume),
-   the volume-bridge echo window, and the whole Bluetooth rfkill/naming/
-   pairing-agent set. None of these are hardware-verified on a rebuilt
-   image yet — everything above was checked live against the *running*
-   system, then fixed in source for the next build to carry.
-2. **On the reflashed image, in order:**
-   - Confirm the mixer holds the boot-volume level (doesn't drift to 0%
-     on its own or on a reboot).
-   - Attempt a real phone pairing — first actual end-to-end test of the
-     Bluetooth fixes.
-   - Re-run a volume-slider-drag by hand and watch for the ratchet
-     pattern (179→172→...→0) — the echo-window fix should prevent it,
-     but hasn't been watched do so live yet.
-3. **Phase 2b, criteria 3-6**, once 1-2 hold: the supervisor, adapters
+1. **Decide the squeezelite-restart approach with George** (hardware
+   session above) — blocking, criterion 3 is not met until this ships.
+   Three options recorded in HANDOFF (SIGKILL instead of SIGTERM for
+   LMS's escalation; explicit relaunch by the adapter; a short `-C` that
+   makes killing unnecessary, untested). Claude's lean is option 1, not
+   a pick — George's call per the usual stop-and-ask rule, since this
+   trades real architectural properties against each other, not a
+   config value.
+2. **Rebuild and reflash `gexis`** once 1 is resolved, to pick up
+   everything since the last flash: the squeezelite-restart fix itself,
+   per-renderer volume memory, the LMS false-acquisition fix, and (from
+   the session before) the `alsa.py` regex, `alsa-restore.service`
+   mask, volume-bridge echo window, and Bluetooth rfkill/naming/agent
+   set. Bluetooth pairing and the boot-volume/echo-window fixes are
+   hardware-confirmed already (this session); everything from this
+   session's code changes onward is not.
+3. **On the reflashed image, in order:**
+   - Confirm squeezelite actually comes back after a takeover, however
+     many times in a row.
+   - Re-run the LMS-app-volume-buttons scenario against Spotify, now
+     that LMS's `/jsonrpc.js` POST endpoint is reachable again (it
+     wasn't while investigating this session — check that first).
+   - Watch per-renderer volume actually restore correctly across a few
+     takeover cycles.
+   - Investigate the Bluetooth → LMS multi-second takeover gap before
+     trusting criterion 8's formal measurement to characterise it
+     correctly.
+4. **Phase 2b, criteria 3-6**, once 1-3 hold: the supervisor, adapters
    and volume bridge are written and unit-tested (`core/`), but no live
-   takeover has actually been exercised end-to-end yet — everything
-   measured on hardware so far has been baseline health or bug-hunting,
-   not a real acquisition/release cycle watched start to finish.
-4. **Write up the peppyalsa meter FIFO finding** (see above) with its
+   takeover has actually been exercised end-to-end and left working —
+   every hardware session so far has found and fixed a defect in the
+   attempt.
+5. **Write up the peppyalsa meter FIFO finding** (see above) with its
    stated scope.
-5. Criteria 7-10 (the attack test and takeover gap measurement) once 3
+6. Criteria 7-10 (the attack test and takeover gap measurement) once 4
    holds on real hardware — needs LMS (have one; CI gets a containerised
    throwaway) and, for the Spotify leg, the registered Spotify API app
    (transfer-playback confirmed available to new apps — see
    `docs/ARCHITECTURE.md`'s open-questions list).
-6. **Fill the Finding 003 grid** on `rig`, not `gexis` — characterises the
+7. **Fill the Finding 003 grid** on `rig`, not `gexis` — characterises the
    metering path, not the product image. 16 of 18 cells remain.
 
-**ADR-0010's sync-group-interaction item stays deferred — George's
-decision, 2026-09-07.** SIGTERM-killing squeezelite on takeover drops it
-out of any LMS sync group and it reappears as a fresh player on restart;
-a user who had `gexis` grouped and then casts Spotify to it will find
-the grouping silently gone. Accepted for now. Three options were
-considered and recorded in the ADR itself (accept it — chosen; capture
-and restore group membership via the LMS CLI; or lower `-C` enough that
-pausing alone frees the device fast enough, untested) so this doesn't
-need re-deriving later.
+**ADR-0010's sync-group-interaction item stays deferred, but is
+superseded for now** by the squeezelite-restart defect above — a player
+with no players has no sync group to lose. Revisit once item 1 ships.
 
-Decisions pending from George: pinning down squeezelite's
+Decisions pending from George: item 1 above (blocking); which
+component applies Bluetooth's software volume attenuation below ~96%
+(Finding 006, no owner yet); pinning down squeezelite's
 LMS-volume-to-hardware mapping (above, no owner yet); the criterion 7
 build-self-identification amendment; whether to act on the
 develop-on-hardware workflow inversion (needs an ADR first if so).
