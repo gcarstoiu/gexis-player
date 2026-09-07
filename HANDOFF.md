@@ -633,6 +633,116 @@ that measurement is supposed to characterise.
   Connect-capable devices too, not something unique to this
   implementation. Not confirmed either way; noted, not chased.
 
+### Hardware session, 2026-09-08: three bugs diagnosed, one design result
+
+**Design result: `-C 1` replaces killing squeezelite entirely.**
+Measured: `-C 10` (original) ~8500ms to release; `-C 1` ~700ms; SIGTERM
+~100ms. 700ms is a plausible handoff gap — tested with no clicks, pops
+or dropouts across track boundaries, or on a deliberate 2-3s
+pause-then-resume (the case that actually forces a close and reopen).
+This removes the reason to kill squeezelite on takeover at all, and
+with it every side effect the kill approach cost across the last two
+sessions: the `Restart=on-failure` defect, the sync-group loss, and
+(expected, not yet reverified) the session-state reset George's third
+reported issue described. **Reverted**: `squeezelite.service` is back
+to a plain pause release, `-C 1` instead of `-C 10`; `LmsAdapter` has no
+ladder override anymore. `-C` is squeezelite-only — it does nothing for
+Bluetooth's release problem, below. Scope: single timing run, 100ms
+poll granularity with `sudo fuser` latency in the loop; sub-second `-C`
+values are undocumented in squeezelite's own help text; the listening
+test was subjective, not instrumented.
+
+**BUG, still open: the kill ladder does not release Bluetooth at all.**
+Disconnect, then SIGTERM, then SIGKILL on `bluealsa-aplay.service` — all
+ran, and the device was **still held after SIGKILL** (10.7s). Two
+candidate causes, neither confirmed: the stock unit's `Restart=
+on-failure` has no explicit `RestartSec`, so systemd's 100ms default
+could restart-and-reopen well before the ladder's 2s check runs; and,
+observed separately with `fuser`, `bluealsa-aplay` holds the PCM open
+even after its own IO worker exits on phone disconnect — meaning
+`Device1.Disconnect()` succeeding doesn't reliably free the device
+either, which undercuts "kill it more reliably" as the fix (same shape
+as squeezelite's own resolution: fix the renderer's own release path,
+don't fight process death). Recorded in ADR-0010's "Open" section.
+**Not fixed — needs its own investigation.**
+
+**BUG, fixed: per-renderer volume memory was muting Bluetooth on every
+acquisition.** `restore_volume: bluetooth to 60/240` (−90dB, inaudible)
+logged on every Bluetooth acquisition, regardless of the phone's own
+volume — **this alone was the entire cause of "Bluetooth outputs no
+sound,"** not `bluealsa-aplay`, not routing. Root cause: `restore_
+volume` fell through to the boot-safe default for *any* renderer with
+no remembered level, including Bluetooth, which was never supposed to
+be volume-managed at all (Finding 006). Fixed: `resolve_restore()` now
+returns `None` for anything outside `MANAGED_RENDERERS`, meaning
+"leave the mixer alone," not "apply a fallback." Also fixes the design
+error underneath it: this control is dB-linear per raw step, not
+perceptually linear (230/240 is −5dB, 60/240 is −90dB — a quarter of
+the range reads as "inaudible," not "a quarter as loud"), which is also
+the root cause of the LMS/Spotify scale mismatches reported earlier.
+Added `raw_to_db`/`db_to_raw` and a restore-only dB floor
+(`restore_volume_floor_db`, placeholder −40dB, **not confirmed by
+George**) so a remembered-but-degenerate level can never be restored as
+effective silence — applied only to a *remembered* value, never to the
+boot default, which stays exactly the confirmed −90dB regardless.
+
+**BUG, fixed: `bluealsa-aplay`'s mixer args were missing from the
+override.** `Couldn't open ALSA mixer: Mixer element not found` — it
+was looking for ALSA's own defaults (`name=default elem=Master`), which
+don't exist on this image, not the `output`/`DAC` control LMS and
+Spotify already use. Fixed by hand and verified:
+`--mixer-device=output --mixer-name=DAC` added to the override; mixer
+then opened cleanly. Flag names checked against this build's own
+`bluealsa-aplay --help` before committing, not assumed. **Possible
+connection to Finding 006** (Bluetooth volume partly software below
+~96%): `--volume` defaults to `auto`, and a failed mixer lookup is a
+plausible reason it fell back to software for the *entire* range, not
+just the bottom of it — flagged in the finding as an unconfirmed
+candidate, needs re-testing against the finding's original observation.
+
+**BUG, fixed: PIN-free pairing doesn't set trust.** `bluetoothctl info`
+showed `Trusted: no` for the paired phone even after a successful
+PIN-free pairing; with trust unset, `bluealsa-aplay` opened the PCM and
+then immediately logged `BT device marked as inactive` on a loop,
+pulling no audio. `bluetoothctl trust <mac>` fixed it by hand — George:
+"manual trust is not acceptable as a step for a user." Fixed with a new
+`gexis-bluetooth-trust.service`: polls BlueZ every 2s for paired-but-
+untrusted devices and sets `Trusted` itself via D-Bus. Polling, not a
+`PropertiesChanged` subscription — deliberate given pairing is a rare,
+human-paced event where a couple of seconds is imperceptible, not the
+ADR-0018 "subscribed, not polled" principle being set aside (that
+principle is about not adding lag to a *live-updating* value). **Not
+yet verified on real hardware** — written and import-checked, no
+`bluetoothd` available to test the actual D-Bus calls against here.
+
+**Method note, from George's own report:** two earlier misdiagnoses
+this session (a claimed missing device-tree overlay, then a claimed
+hardware fault) both traced back to `speaker-test` on `output` and
+`hw:sndrpihifiberry` appearing silent while Spotify was actually
+playing normally the whole time — nothing in the audio hardware path
+was broken. Worth remembering: the HiFiBerry overlay loads from the
+HAT's own EEPROM, not `config.txt`, which is why `config.txt` has no
+hifiberry line on any build — its absence is normal, not a defect.
+
+**Status of George's three originally reported issues**, per this
+session:
+1. **Bluetooth silent** → the volume-memory bug above, plus the trust
+   and mixer-args bugs. All three fixed, none reverified on a rebuilt
+   image yet.
+2. **squeezelite not restarting** → moot: `-C 1` means it's never
+   killed in normal operation, so `Restart=on-failure` never needs to
+   fire.
+3. **Position reset on renderer switch** → expected to resolve now that
+   LMS is paused rather than killed on takeover. **Not yet reverified**
+   — check specifically on the next hardware pass.
+
+**State the box was left in:** `squeezelite.service` and
+`bluealsa-aplay.service` stopped; a hand-run `squeezelite` (`-C 1`,
+name `gexis-test`) and possibly a hand-run `bluealsa-aplay` were left in
+foreground shells for the testing above. Nothing hand-edited on disk
+except `bluetoothctl trust` (persists). Superseded by the next reflash
+— not cleaned up separately since the whole rootfs gets replaced.
+
 ## Machines
 
 | Name | What it is | Notes |
@@ -663,53 +773,59 @@ the tag) — tag manually before a build worth naming, for now.
 
 ## Next actions, in order
 
-1. **Decided, 2026-09-07: option 1, SIGKILL.** `LmsAdapter.signal_stop`
-   now always sends SIGKILL for squeezelite regardless of the ladder
-   rung that called it. Option 3 (a short `-C`, no kill needed at all)
-   was the architecturally cleanest but can't reach the ~100ms release
-   tempo SIGKILL already measured. Implemented, not yet on a rebuilt
-   image — see next item.
-2. **Rebuild and reflash `gexis`**, to pick up everything since the last
-   flash: the SIGKILL fix, per-renderer volume memory, the LMS
-   false-acquisition fix, and (from the session before) the `alsa.py`
-   regex, `alsa-restore.service` mask, volume-bridge echo window, and
-   Bluetooth rfkill/naming/agent set. Bluetooth pairing and the
-   boot-volume/echo-window fixes are hardware-confirmed already (this
-   session); everything from this session's code changes onward is not.
-3. **On the reflashed image, in order:**
-   - Confirm squeezelite actually comes back after a takeover, however
-     many times in a row.
-   - Re-run the LMS-app-volume-buttons scenario against Spotify, now
-     that LMS's `/jsonrpc.js` POST endpoint is reachable again (it
-     wasn't while investigating this session — check that first).
-   - Watch per-renderer volume actually restore correctly across a few
-     takeover cycles.
-   - Investigate the Bluetooth → LMS multi-second takeover gap before
-     trusting criterion 8's formal measurement to characterise it
-     correctly.
-4. **Phase 2b, criteria 3-6**, once 1-3 hold: the supervisor, adapters
+1. **Rebuild and reflash `gexis`**, to pick up everything since the last
+   flash: the `-C 1` revert (squeezelite release), the Bluetooth
+   volume-memory bug fix, the `bluealsa-aplay` mixer-args fix, and the
+   new auto-trust service. Nothing from this session is hardware-
+   verified on a rebuilt image yet.
+2. **On the reflashed image, in order:**
+   - A real end-to-end Bluetooth pairing and playback test — trust,
+     mixer, and volume all changed this session; none re-verified
+     together yet.
+   - Confirm LMS takeover releases in ~700ms with no artefacts, matches
+     the `-C 1` measurement across more than one run.
+   - Recheck George's original issue 3 (position reset on switch) —
+     expected to resolve with LMS no longer killed, not yet confirmed.
+   - Re-run the LMS-app-volume-buttons scenario against Spotify (the
+     false-acquisition fix from two sessions ago still isn't
+     independently reconfirmed — LMS's `/jsonrpc.js` POST endpoint was
+     down when that was investigated).
+3. **Bluetooth's release ladder — needs its own investigation, not a
+   guess.** Two candidate causes recorded (ADR-0010's "Open" section):
+   a too-fast unit restart racing the ladder's check, or
+   `bluealsa-aplay` holding the PCM open past its own IO worker exiting
+   on disconnect. Likely needs the same shape of fix LMS got — make the
+   renderer's own release path actually work, rather than lean harder
+   on killing the process.
+4. **Re-test Finding 006** (Bluetooth volume partly software below
+   ~96%) against the mixer-args fix — plausible but unconfirmed that
+   fixing `--mixer-device`/`--mixer-name` also fixes or changes this.
+5. **Phase 2b, criteria 3-6**, once 1-4 hold: the supervisor, adapters
    and volume bridge are written and unit-tested (`core/`), but no live
    takeover has actually been exercised end-to-end and left working —
    every hardware session so far has found and fixed a defect in the
    attempt.
-5. **Write up the peppyalsa meter FIFO finding** (see above) with its
+6. **Write up the peppyalsa meter FIFO finding** (see above) with its
    stated scope.
-6. Criteria 7-10 (the attack test and takeover gap measurement) once 4
+7. Criteria 7-10 (the attack test and takeover gap measurement) once 5
    holds on real hardware — needs LMS (have one; CI gets a containerised
    throwaway) and, for the Spotify leg, the registered Spotify API app
    (transfer-playback confirmed available to new apps — see
    `docs/ARCHITECTURE.md`'s open-questions list).
-7. **Fill the Finding 003 grid** on `rig`, not `gexis` — characterises the
+8. **Fill the Finding 003 grid** on `rig`, not `gexis` — characterises the
    metering path, not the product image. 16 of 18 cells remain.
 
-**ADR-0010's sync-group-interaction item stays deferred, but is
-superseded for now** by the squeezelite-restart defect above — a player
-with no players has no sync group to lose. Revisit once item 1 ships.
+**ADR-0010's sync-group-interaction item is moot in the good sense
+now** — `-C 1` means squeezelite is never killed in normal operation,
+so there's no sync-group loss to accept anymore. See the ADR's own
+final amendment.
 
-Decisions pending from George: item 1 above (blocking); which
-component applies Bluetooth's software volume attenuation below ~96%
-(Finding 006, no owner yet); pinning down squeezelite's
-LMS-volume-to-hardware mapping (above, no owner yet); the criterion 7
+Decisions pending from George: confirming (or picking a different)
+`restore_volume_floor_db` — currently a −40dB placeholder, not
+reviewed; which component applies Bluetooth's software volume
+attenuation below ~96% (Finding 006, no owner yet, possibly connected
+to this session's mixer-args fix); pinning down squeezelite's
+LMS-volume-to-hardware mapping (no owner yet); the criterion 7
 build-self-identification amendment; whether to act on the
 develop-on-hardware workflow inversion (needs an ADR first if so).
 
