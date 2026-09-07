@@ -33,7 +33,6 @@ import logging
 import aiohttp
 
 from gexis_core.adapters.base import Adapter, ReleaseAction
-from gexis_core.arbitration import TimeoutLadder
 from gexis_core.systemd import kill_unit
 
 logger = logging.getLogger("gexis_core.adapters.lms")
@@ -47,16 +46,21 @@ class LmsAdapter(Adapter):
     renderer_id = "lms"
     release_action = ReleaseAction.PAUSE
 
-    # George's decision, 2026-09-06, from the release-timing measurement
-    # above `release()`'s docstring: don't wait out squeezelite's `-C`
-    # idle timer at all. `polite_grace=0` means the supervisor checks
-    # once right after the pause call and, finding the device still
-    # held (expected - pause alone never releases it in any UI-tolerable
-    # time), escalates to SIGTERM immediately rather than sleeping first.
-    # sigterm/sigkill grace are left at the supervisor's defaults -
-    # only the "wait and hope -C helps" step is being skipped, not the
-    # confirmation that a sent signal actually worked.
-    release_ladder = TimeoutLadder(polite_grace=0.0)
+    # No release_ladder override, deliberately - back to the
+    # supervisor's default (2026-09-08). Two prior attempts to route
+    # around squeezelite's -C idle timer during a takeover (skip the
+    # polite wait and SIGTERM, then SIGKILL unconditionally) both cost
+    # more than they fixed: SIGTERM exits squeezelite cleanly, so
+    # Restart=on-failure never fired and LMS was gone until a manual
+    # restart; SIGKILL brought it back but dropped it from its LMS sync
+    # group and reset session state. Measured fix instead: -C 1 on
+    # squeezelite.service releases the device in ~700ms against a
+    # commanded pause, comfortably inside the default 3s polite grace,
+    # with no audible artefacts across track boundaries or a deliberate
+    # pause-then-resume. See ADR-0010's amended implementation note.
+    # SIGTERM/SIGKILL stay available as the ladder's normal escalation
+    # if -C 1 ever doesn't free the device in time - a safety net, not
+    # the primary mechanism anymore.
 
     def __init__(self, host: str, port: int, player_name: str) -> None:
         self._base = f"http://{host}:{port}"
@@ -193,15 +197,8 @@ class LmsAdapter(Adapter):
                 return False
 
     async def signal_stop(self, force: bool) -> None:
-        # George's decision, 2026-09-07, from three options recorded in
-        # ADR-0010 and HANDOFF.md: SIGKILL, not SIGTERM, for squeezelite
-        # specifically - `force` from the ladder is ignored on purpose.
-        # squeezelite exits *cleanly* on SIGTERM (exit 0), which
-        # systemd's Restart=on-failure does not count as a failure, so
-        # it never came back after a takeover (found on hardware,
-        # 2026-09-07). SIGKILL is an uncaught fatal signal, which is not
-        # clean by systemd's own accounting, so Restart=on-failure fires
-        # normally. The cleaner option - a short -C so pausing alone
-        # frees the device, no kill needed at all - was rejected: it
-        # can't reach the ~100ms release tempo SIGKILL already measured.
-        kill_unit(UNIT_NAME, force=True)
+        # Reverted, 2026-09-08 - see the class-level comment above.
+        # Respects `force` normally again, same as every other adapter;
+        # this is the ladder's escalation safety net now, not the
+        # primary release mechanism (-C 1 + a plain pause is).
+        kill_unit(UNIT_NAME, force=force)
