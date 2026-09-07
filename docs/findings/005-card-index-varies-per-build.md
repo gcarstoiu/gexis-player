@@ -61,12 +61,13 @@ Answers the open scope question above, on `gexis` specifically: not
 |---|---|
 | Phase 0 (original) | 1 |
 | Phase 2b, rebuild 1 (port fix + active release) | 2 |
-| Phase 2b, rebuild 2 (this session's fixes) | 3 |
+| Phase 2b, rebuild 2 (SIGKILL fix, volume memory) | 3 |
+| Phase 2b, rebuild 3 (this session's fixes) | 2 |
 
-Three consecutive builds of the same image on the same hardware, three
-different indices — no repeat yet, though three data points isn't enough
-to claim it never will. This is a **stronger** version of the finding than
-the one above: it isn't
+Four consecutive builds of the same image on the same hardware: 1, 2, 3,
+2 — a repeat, but not a cycle (only four points; not enough to claim a
+period). This is a **stronger** version of the finding than the one
+above: it isn't
 only that different systems assign different indices, but that rebuilding
 and reflashing *the same system* can too. Nothing in the build pins probe
 order, so there is no reason to expect it to hold constant even between
