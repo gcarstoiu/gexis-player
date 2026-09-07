@@ -123,7 +123,23 @@ class LmsAdapter(Adapter):
             )
             logger.info("lms: subscribed to %s", response_channel)
 
-            last_mode: str | None = None
+            # Seed with the *actual* current mode, not None. The
+            # subscription (`subscribe:1`) pushes on any status field
+            # changing - volume included, not just play/pause - and
+            # each push's `mode` is just whatever mode currently is, not
+            # a statement that it just changed. Starting from None meant
+            # the first push after *any* reconnect (network blip, LMS
+            # restart, or just this being a fresh process) would read as
+            # a fresh "-> play" edge if the player happened to already
+            # be playing - and fire a real, wrong acquisition if some
+            # other renderer currently held the device. Root-caused,
+            # 2026-09-07, from George's report of an LMS app volume
+            # button press taking over an active Spotify session -
+            # volume is exactly the kind of unrelated field change that
+            # would trigger this via `subscribe:1`.
+            status = await self._rpc(session, self._player_id, ["status", "-", 1])
+            last_mode = status.get("result", {}).get("mode")
+
             while True:
                 frames = await self._cometd_post(
                     session,
