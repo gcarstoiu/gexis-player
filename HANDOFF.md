@@ -649,24 +649,33 @@ fills in `firstrun.sh`'s SSH key / Wi-Fi / hostname from
 to create it) and clears the card's stale SSH host key. See
 `image/README.md`.
 
+**Builds are versioned, starting 2026-09-07** (George: "can we start
+giving release numbers to the builds"). `git describe --tags --always
+--dirty` at build time, appended to the `.info` manifest as "Image
+version: vX.Y.Z" — same place peppyalsa's commit and go-librespot's
+version already live, not a new mechanism. First tag: `v0.1.0`
+(annotated, on `phase-2b-arbitration`). Filenames are unchanged — still
+date-stamped (`image/config`'s `IMG_NAME`), not version-stamped;
+threading the version through pi-gen's own two-pass config sourcing was
+more plumbing than this needed given the manifest already carries it.
+No bump convention decided yet (when to cut `v0.2.0` vs. just moving
+the tag) — tag manually before a build worth naming, for now.
+
 ## Next actions, in order
 
-1. **Decide the squeezelite-restart approach with George** (hardware
-   session above) — blocking, criterion 3 is not met until this ships.
-   Three options recorded in HANDOFF (SIGKILL instead of SIGTERM for
-   LMS's escalation; explicit relaunch by the adapter; a short `-C` that
-   makes killing unnecessary, untested). Claude's lean is option 1, not
-   a pick — George's call per the usual stop-and-ask rule, since this
-   trades real architectural properties against each other, not a
-   config value.
-2. **Rebuild and reflash `gexis`** once 1 is resolved, to pick up
-   everything since the last flash: the squeezelite-restart fix itself,
-   per-renderer volume memory, the LMS false-acquisition fix, and (from
-   the session before) the `alsa.py` regex, `alsa-restore.service`
-   mask, volume-bridge echo window, and Bluetooth rfkill/naming/agent
-   set. Bluetooth pairing and the boot-volume/echo-window fixes are
-   hardware-confirmed already (this session); everything from this
-   session's code changes onward is not.
+1. **Decided, 2026-09-07: option 1, SIGKILL.** `LmsAdapter.signal_stop`
+   now always sends SIGKILL for squeezelite regardless of the ladder
+   rung that called it. Option 3 (a short `-C`, no kill needed at all)
+   was the architecturally cleanest but can't reach the ~100ms release
+   tempo SIGKILL already measured. Implemented, not yet on a rebuilt
+   image — see next item.
+2. **Rebuild and reflash `gexis`**, to pick up everything since the last
+   flash: the SIGKILL fix, per-renderer volume memory, the LMS
+   false-acquisition fix, and (from the session before) the `alsa.py`
+   regex, `alsa-restore.service` mask, volume-bridge echo window, and
+   Bluetooth rfkill/naming/agent set. Bluetooth pairing and the
+   boot-volume/echo-window fixes are hardware-confirmed already (this
+   session); everything from this session's code changes onward is not.
 3. **On the reflashed image, in order:**
    - Confirm squeezelite actually comes back after a takeover, however
      many times in a row.
