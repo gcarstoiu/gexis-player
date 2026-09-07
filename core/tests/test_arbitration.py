@@ -206,3 +206,57 @@ async def test_unknown_renderer_rejected():
 async def test_base_renderer_missing_adapter_rejected():
     with pytest.raises(ValueError):
         Supervisor({"spotify": FakeAdapter("spotify", ReleaseAction.DISCONNECT, {})}, device_busy=lambda: False)
+
+
+@pytest.mark.asyncio
+async def test_restore_volume_called_with_the_newly_active_renderer():
+    """George's decision, 2026-09-07: each renderer's volume is restored
+    when it becomes active - not reset to the boot-safe level on every
+    takeover."""
+    holder = {"who": None}
+    adapters = {
+        "lms": FakeAdapter("lms", ReleaseAction.PAUSE, holder),
+        "spotify": FakeAdapter("spotify", ReleaseAction.DISCONNECT, holder),
+        "bluetooth": FakeAdapter("bluetooth", ReleaseAction.DISCONNECT, holder),
+    }
+    restored: list[str] = []
+
+    async def restore_volume(renderer_id):
+        restored.append(renderer_id)
+
+    supervisor = Supervisor(
+        adapters, device_busy=lambda: holder["who"] is not None, ladder=FAST_LADDER,
+        restore_volume=restore_volume,
+    )
+
+    holder["who"] = "lms"
+    await supervisor.acquire("spotify")
+    holder["who"] = "spotify"
+    await supervisor.acquire("bluetooth")
+
+    assert restored == ["spotify", "bluetooth"]
+
+
+@pytest.mark.asyncio
+async def test_restore_volume_not_called_on_a_noop_reacquire():
+    holder = {"who": None}
+    adapters = {
+        "lms": FakeAdapter("lms", ReleaseAction.PAUSE, holder),
+        "spotify": FakeAdapter("spotify", ReleaseAction.DISCONNECT, holder),
+        "bluetooth": FakeAdapter("bluetooth", ReleaseAction.DISCONNECT, holder),
+    }
+    restored: list[str] = []
+
+    async def restore_volume(renderer_id):
+        restored.append(renderer_id)
+
+    supervisor = Supervisor(
+        adapters, device_busy=lambda: holder["who"] is not None, ladder=FAST_LADDER,
+        restore_volume=restore_volume,
+    )
+
+    holder["who"] = "lms"
+    await supervisor.acquire("spotify")
+    await supervisor.acquire("spotify")  # already active - no-op
+
+    assert restored == ["spotify"]

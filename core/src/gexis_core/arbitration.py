@@ -47,17 +47,28 @@ class Supervisor:
         *,
         device_busy,
         ladder: TimeoutLadder | None = None,
+        restore_volume=None,
     ) -> None:
         """`device_busy` is a zero-arg callable (sync or async) returning
         whether the shared ALSA device is currently held by anything -
         injected rather than imported directly so the state machine is
         testable without touching /proc or spawning fuser.
+
+        `restore_volume`, if given, is an async callable taking the
+        renderer_id that just acquired the device - George's decision,
+        2026-09-07: each renderer keeps its own volume, restored when it
+        becomes active (not reset to the boot-safe level on every
+        takeover). Injected rather than imported for the same testing
+        reason as `device_busy`; the lookup-remembered-or-default and
+        hardware-mixer-scale logic lives in renderer_volume.py and
+        __main__.py's wiring, not here - this module stays pure policy.
         """
         if BASE_RENDERER not in adapters:
             raise ValueError(f"base slot renderer {BASE_RENDERER!r} must have an adapter")
         self._adapters = adapters
         self._device_busy = device_busy
         self._ladder = ladder or TimeoutLadder()
+        self._restore_volume = restore_volume
         self._active: str | None = None  # None means LMS (base) is current
         self._lock = asyncio.Lock()
 
@@ -79,6 +90,8 @@ class Supervisor:
             outgoing = self.active
             self._active = None if renderer_id == BASE_RENDERER else renderer_id
             logger.info("acquire: %s takes the device (was %s)", renderer_id, outgoing)
+            if self._restore_volume is not None:
+                await self._restore_volume(renderer_id)
             # ADR-0010: "release, uniformly" - LMS is not skipped just
             # because it's the base. Whoever was current gets released,
             # full stop.

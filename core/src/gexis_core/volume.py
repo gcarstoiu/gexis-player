@@ -44,6 +44,20 @@ would have the second one dropped too. Not observed, but not excluded
 either - the measured 325ms bridge round-trip (single deliberate
 `amixer` change, logged separately) is the basis for the window below,
 not a formal bound.
+
+**Per-renderer memory, added 2026-09-07** (George's decision, after the
+cross-renderer volume jumps this bridge alone couldn't fix): every
+genuine hardware change is attributed to whichever renderer currently
+holds the device (`get_active_renderer`) and fed to
+`renderer_volume.RendererVolumeMemory`, which `arbitration.Supervisor`
+reads from on the *next* acquire to restore that renderer's own level.
+This module only records; it does not itself decide when to restore -
+that's the supervisor's job, on takeover, not this bridge's.
+
+A Spotify volume report while Spotify is *not* currently active is
+still remembered (for whenever it next becomes active) but not applied
+to the live mixer, which some other renderer currently owns - writing
+it anyway would move that renderer's volume out from under it.
 """
 from __future__ import annotations
 
@@ -95,9 +109,26 @@ async def set_raw(mixer_name: str, value: int) -> None:
 
 
 class VolumeBridge:
-    def __init__(self, mixer_name: str, spotify_adapter) -> None:
+    """Bridges the hardware mixer with go-librespot's own volume, and
+    feeds every genuine hardware change to `volume_memory` (renderer_
+    volume.py) so it can be restored the next time that renderer becomes
+    active - George's decision, 2026-09-07.
+
+    `get_active_renderer` is a zero-arg callable (typically
+    `lambda: supervisor.active`) - who a hardware change gets attributed
+    to, and whether an incoming Spotify volume report should actually
+    touch the live mixer, both depend on who currently owns the device.
+    Reporting into `volume_memory` while a renderer is *not* active is
+    still correct (e.g. go-librespot firing a stale event) - it updates
+    what will be restored later without touching the mixer someone else
+    currently owns.
+    """
+
+    def __init__(self, mixer_name: str, spotify_adapter, *, volume_memory, get_active_renderer) -> None:
         self._mixer_name = mixer_name
         self._spotify = spotify_adapter
+        self._volume_memory = volume_memory
+        self._get_active_renderer = get_active_renderer
         self._last_own_write = 0.0
         spotify_adapter.on_volume_change(self._on_spotify_volume)
 
@@ -112,6 +143,16 @@ class VolumeBridge:
             logger.debug("volume: ignoring spotify volume event within echo window")
             return
         raw = round(value / max_ * HARDWARE_MAX)
+        self._volume_memory.remember("spotify", raw)
+        if self._get_active_renderer() != "spotify":
+            # Remembered for next time, but spotify doesn't currently
+            # own the mixer - writing now would move someone else's
+            # volume out from under them.
+            logger.debug(
+                "volume: spotify reported %s/240 while inactive, remembered but not applied",
+                raw,
+            )
+            return
         logger.info("volume: spotify -> hardware (%s/%s -> %s/240)", value, max_, raw)
         self._last_own_write = time.monotonic()
         asyncio.create_task(set_raw(self._mixer_name, raw))
@@ -140,6 +181,10 @@ class VolumeBridge:
             if raw is None or raw == last_raw:
                 continue
             last_raw = raw
+            active = self._get_active_renderer()
+            self._volume_memory.remember(active, raw)
+            if active != "spotify":
+                continue
             steps = await self._spotify.get_volume_steps()
             logger.info("volume: hardware -> spotify (%s/240)", raw)
             self._last_own_write = time.monotonic()
