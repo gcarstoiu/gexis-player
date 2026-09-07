@@ -205,6 +205,15 @@ it.
 
   **George's decision: stays deferred, option 1, for now.** Not an
   oversight — the cost is accepted, not unknown.
+
+  **Superseded, 2026-09-07: a bigger defect makes this moot for now.**
+  squeezelite does not come back after the SIGTERM above at all —
+  `Restart=on-failure` never fires, because squeezelite exits *cleanly*
+  on SIGTERM (`Result=success`, `ExecMainStatus=0`), which systemd does
+  not count as a failure. LMS is gone from the system until a manual
+  restart or a reboot. A player with no sync group to lose, because it
+  has no players. Not fixed here — see criterion 3's "Not met" note and
+  `docs/decisions/README.md`'s deferred-items table.
 - **Empty base slot — deferred.** Valid if run headless with no LMS.
   Undefined behaviour. **Criterion 3 (Phase 2b) ships without resolving
   this** — a decision, not an oversight; see `docs/DEVELOPMENT.md`.
