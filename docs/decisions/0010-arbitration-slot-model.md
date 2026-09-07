@@ -191,19 +191,33 @@ across track boundaries or a deliberate 2-3s pause-then-resume (the
 case that actually forces a close and reopen). 700ms is a plausible
 handoff gap. This removes the reason to kill squeezelite at all —
 `squeezelite.service` now runs `-C 1`, and `LmsAdapter` has no
-`release_ladder` override and no `signal_stop` override: it uses the
-supervisor's plain default ladder like every other adapter, with
-`SIGTERM`/`SIGKILL` staying available as the normal escalation safety
-net rather than the primary mechanism. This resolves the restart defect
-(nothing kills squeezelite in the ordinary case, so
-`Restart=on-failure` never needs to fire) and the sync-group loss below
-in one move, without needing either of the two prior amendments' extra
-machinery. Scope of the `-C 1` measurement: single timing run, 100ms
-poll granularity with `sudo fuser` latency in the loop; squeezelite's
-own help text documents `-C` in whole seconds, sub-second values are
-otherwise untested; the listening test for artefacts was subjective,
-not instrumented. `-C` is squeezelite-only — it says nothing about
-Bluetooth's own release mechanism, which is a separate, still-open
+`release_ladder` override: it uses the supervisor's plain default ladder
+timing like every other adapter. This resolves the restart defect and
+the sync-group loss below in the ordinary case, without needing either
+of the two prior amendments' timing machinery. Scope of the `-C 1`
+measurement: single timing run, 100ms poll granularity with `sudo
+fuser` latency in the loop; squeezelite's own help text documents `-C`
+in whole seconds, sub-second values are otherwise untested; the
+listening test for artefacts was subjective, not instrumented. `-C` is
+squeezelite-only — it says nothing about Bluetooth's own release
+mechanism, which is a separate, still-open
+
+**Correction, same day, after this reverted too far:** `signal_stop`
+was also reverted to respect the ladder's `force` parameter normally,
+on the reasoning that escalation would now be rare enough not to
+matter. Wrong — reproduced live within hours: a real takeover needed
+the full ladder (still busy after the 3s polite grace, `SIGTERM` at
+21:20:45, still busy, `SIGKILL` at 21:20:48), squeezelite exited via
+the `SIGTERM` (clean, exit 0), and because that exit is clean,
+`Restart=on-failure` never fired — the identical defect, reproduced
+from the ladder's own genuine escalation rather than a contrived one.
+`-C 1`'s timing fix and `signal_stop`'s signal choice are **independent
+decisions**: the first makes escalation rare, the second determines
+what happens the rare time it's still needed. `signal_stop` now ignores
+`force` again and always sends `SIGKILL` for this renderer — SIGTERM
+is not "less aggressive," it is simply the wrong signal for squeezelite
+regardless of how often it's reached, since it never makes
+`Restart=on-failure` fire.
 problem (see "Open," below).
 
 ## Open

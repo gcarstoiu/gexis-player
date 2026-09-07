@@ -126,9 +126,14 @@ when their criteria pass:
    unconditionally — before landing on the actual fix, 2026-09-08:
    `squeezelite.service` runs `-C 1`, which measured ~700ms to release
    against a commanded pause (no audible artefacts), comfortably inside
-   the default 3s polite grace. LMS needs no ladder exception anymore.
-   See ADR-0010's amended implementation note for the full history and
-   why each intermediate attempt was reverted.
+   the default 3s polite grace. LMS's ladder *timing* needs no exception
+   anymore. Its escalation *signal* still does, permanently: squeezelite
+   exits cleanly on SIGTERM (systemd never counts that as a failure), so
+   `LmsAdapter.signal_stop` always sends SIGKILL regardless of which
+   rung called it — confirmed necessary twice, including a live
+   reproduction from the ladder's own genuine escalation after `-C 1`
+   shipped (a real takeover still needed the full ladder once). See
+   ADR-0010's amended implementation note for the full history.
 
    **Bluetooth is a live, unresolved exception as of 2026-09-08:** the
    full ladder ran against `bluealsa-aplay.service` — polite stop
