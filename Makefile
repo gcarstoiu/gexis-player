@@ -21,9 +21,33 @@ IMAGE_VERSION := $(shell git describe --tags --always --dirty)
 # (the .info file, dpkg -l) doesn't cover them. Their pinned versions, the
 # image version, and the wall-clock build time are appended here, on the
 # host, after the fact — not inside pi-gen.
+#
+# Two speed changes, 2026-09-08 (HANDOFF.md has the measured numbers):
+#
+# 1. stage2/EXPORT_IMAGE (a file inside the pinned pi-gen submodule) makes
+#    pi-gen export a second, unused "-lite" checkpoint image - a full
+#    loop-device/zerofree/compress cycle (measured: 6m41s) for an artefact
+#    nobody consumes. Removed here, at build time, rather than edited
+#    in-place in the submodule: a submodule's working-tree edit isn't
+#    durably committable in this repo and `git submodule update` would
+#    silently discard it, restoring the wasted export with no warning.
+#    Idempotent - safe whether or not the file is already gone.
+#
+# 2. CONTINUE=1/PRESERVE_CONTAINER=1 (both build-docker.sh's own, documented
+#    flags) reuse the previous build's container and volumes instead of
+#    starting from scratch, letting pi-gen skip re-populating any stage
+#    whose own inputs haven't changed - stage0-2 (the base OS, ~20 minutes)
+#    for the common case where only stage-gexis/core changed. Safe on a
+#    first/cold build too: CONTINUE=1 only changes behaviour when a
+#    container from a previous run actually exists. The trade-off: a
+#    successful build now leaves the container behind on purpose (it no
+#    longer self-cleans) - `make clean` is how you force a truly fresh
+#    build, not just how you recover from a failed one; see its own
+#    comment below.
 image:
-	@start=$$(date +%s); \
-	( cd image && PIGEN_DOCKER_OPTS="--volume $(STAGE_GEXIS_DIR):/pi-gen/stage-gexis:ro --volume $(CORE_SRC_DIR):/pi-gen/gexis-core-src:ro" \
+	@rm -f image/pi-gen/stage2/EXPORT_IMAGE; \
+	start=$$(date +%s); \
+	( cd image && CONTINUE=1 PRESERVE_CONTAINER=1 PIGEN_DOCKER_OPTS="--volume $(STAGE_GEXIS_DIR):/pi-gen/stage-gexis:ro --volume $(CORE_SRC_DIR):/pi-gen/gexis-core-src:ro" \
 		./pi-gen/build-docker.sh -c config ); \
 	status=$$?; \
 	end=$$(date +%s); \
@@ -44,12 +68,18 @@ image:
 	fi
 
 clean:
-	# build-docker.sh never removes its own container, on success or
-	# failure - a failed run's leftover pigen_work blocks the next
-	# attempt with "Container pigen_work already exists", which looks
-	# unrelated to whatever actually failed. Recovery shouldn't depend
-	# on a human remembering that. "pigen_work" is build-docker.sh's own
-	# default CONTAINER_NAME; harmless if it doesn't exist.
+	# Two reasons to remove the container, not just one since
+	# PRESERVE_CONTAINER=1 (image target, 2026-09-08): a failed run's
+	# leftover pigen_work blocks the next attempt with "Container
+	# pigen_work already exists" regardless of PRESERVE_CONTAINER,
+	# which looks unrelated to whatever actually failed - recovery
+	# shouldn't depend on a human remembering that; and a *successful*
+	# run now leaves pigen_work around on purpose, for CONTINUE=1 to
+	# reuse next time, so this is also the only way left to force a
+	# truly from-scratch build (a stale pi-gen submodule bump, a
+	# suspected caching bug, or just wanting a clean-room result).
+	# "pigen_work" is build-docker.sh's own default CONTAINER_NAME;
+	# harmless if it doesn't exist.
 	docker rm -v pigen_work 2>/dev/null || true
 	rm -rf image/deploy
 
