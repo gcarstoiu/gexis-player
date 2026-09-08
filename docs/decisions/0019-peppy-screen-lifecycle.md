@@ -4,6 +4,13 @@
 **Date:** 2026-09-04
 **Relates to:** ADR-0014 (distinct screens), ADR-0015 (skin format), ADR-0010
 (arbitration and the accountability rule)
+**Amended:** 2026-09-08 — "Pre-rendering" and "Renderer takeover exits to
+now playing" below describe a DOM-visibility mechanism that no longer
+applies now that the renderer is a native process (ADR-0026). The *policy*
+in both sections is unchanged — no visible construction on entry, skin
+decided at track start, takeover exits to now playing, idle timeout
+returns — only the mechanism that implements it. See ADR-0026 for the
+replacement.
 
 ## Context
 

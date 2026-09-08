@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Boot volume (criterion 6): set the mixer to a fixed safe level on every
 boot. Not restored from the previous session - ADR-0018 is explicit that
 `alsactl` state must not be used to restore volume across boots ("a device

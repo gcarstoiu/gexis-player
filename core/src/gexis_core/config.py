@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Core configuration.
 
 Loaded from a TOML file rather than baked into the package, so values like

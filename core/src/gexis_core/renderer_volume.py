@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Per-renderer volume memory (criterion 5), George's decision 2026-09-07:
 each renderer keeps its own volume, restored when it becomes active
 again. The safe boot level (criterion 6, ADR-0018) applies once, at

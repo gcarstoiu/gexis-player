@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Process-level escalation via systemd, shared by every adapter.
 
 `systemctl kill` rather than hunting PIDs directly: every renderer is

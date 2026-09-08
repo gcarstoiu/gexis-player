@@ -29,6 +29,13 @@ and continue.
 Sonnet in Claude Code for implementation. Escalate to Opus after two failed
 attempts, or immediately for anything that would become an ADR.
 
+### Licence
+
+gexis-player is GPL v3 (ADR-0025). Every source file we author carries
+`# SPDX-License-Identifier: GPL-3.0-or-later` (or the equivalent comment
+syntax) as its first line. Vendored third-party files keep whatever header
+their upstream carries; do not add our SPDX line to a file we didn't write.
+
 ---
 
 ## Phases

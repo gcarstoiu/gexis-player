@@ -3,6 +3,13 @@
 **Status:** Accepted (one implementation decision deferred to a spike)
 **Date:** 2026-09-04
 **Relates to:** ADR-0011 (meter data transports), ADR-0014 (distinct screens)
+**Amended:** 2026-09-08 — the "Rendering model" section below (in-browser
+CSS) is reversed. The decision to adopt foonerd's PeppyMeter/PeppySpectrum
+fork (Finding 007, ADR-0025) means we run their actual rendering engine
+rather than reimplementing it in CSS. See ADR-0026 for the replacement
+mechanism. Everything else in this record — the corpus, the schema, the
+validation criterion (amended per Finding 007 §4) — is unaffected: we are
+adopting how the format is *interpreted*, unmodified either way.
 
 ## Context
 
@@ -171,6 +178,13 @@ albumart + text     from playback state      per track
 `transform: rotate()` on an `<img>` — GPU-composited, with no repaint of the
 static layers. PeppyMeter blits sprites on the CPU, which is where its cost
 comes from.
+
+**Superseded, 2026-09-08 — see ADR-0026.** We now run PeppyMeter's own
+CPU-blit rendering directly (the adopted engine), not a browser
+reimplementation of it. The layering argument above was correct as a
+description of *why* browser rendering would have been cheaper; it is not
+a reason the engine is unusable — Blocker 2 in Finding 007 tracks whether
+its CPU cost is acceptable at 1280x800 with Chromium also running.
 
 ## Validation
 

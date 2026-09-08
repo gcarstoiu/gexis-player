@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Auto-trust newly paired Bluetooth devices (ADR-0024: PIN-free pairing).
 
 `bt-agent` (bluez-tools, `gexis-bt-agent.service`) answers the pairing

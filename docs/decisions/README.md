@@ -42,7 +42,10 @@ the question blocking it was answered.
 | [0020](0020-library-browse-tree.md) | Library browse as a normalised tree | Accepted |
 | [0021](0021-deployment-flashable-image.md) | Deployment as a flashable image | Accepted, distribution channel deferred |
 | [0022](0022-settings.md) | Settings | Accepted |
+| [0023](0023-svelte-ui.md) | The UI is Svelte | Accepted |
 | [0024](0024-bluetooth-pairing-no-pin.md) | Bluetooth pairing: no PIN, for this installation | Accepted |
+| [0025](0025-project-licence-gplv3.md) | gexis-player is licensed GPL v3 | Accepted |
+| [0026](0026-peppymeter-native-process-integration.md) | Peppy screen: native PeppyMeter process, labwc-mediated screen ownership | Accepted, compositor mechanism unverified |
 
 ## Cross-cutting rules
 
