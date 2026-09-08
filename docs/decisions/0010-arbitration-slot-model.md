@@ -3,6 +3,9 @@
 **Status:** Accepted
 **Date:** 2026-09-04
 **Amended:** 2026-09-04 — the silence rule was restated. See "Rules" below.
+**Amended:** 2026-09-08 — two more hardware-found defects in the release
+ladder and LMS's own acquisition detection, both fixed. See "Implementation
+note" below.
 **Answers:** ADR-0004 (one active renderer — semantics were left open)
 
 ## Context
@@ -219,6 +222,71 @@ is not "less aggressive," it is simply the wrong signal for squeezelite
 regardless of how often it's reached, since it never makes
 `Restart=on-failure` fire.
 problem (see "Open," below).
+
+**Amended, 2026-09-08 — the release ladder's own busy check was
+misattributing "still held" and driving false escalation.**
+`device_busy()` asked "is anyone holding the PCM", a global check. But
+`Supervisor.acquire()` marks the incoming renderer active and restores
+its volume *before* releasing the outgoing one — and the incoming
+renderer isn't driven by our own code (LMS tells squeezelite to play
+independently of `acquire()`), so it can legitimately grab the device
+while the outgoing renderer's ladder is still running its checks. At
+that point the global check reports "busy" regardless of whether the
+outgoing renderer ever let go. Reproduced live: go-librespot exited
+cleanly on its own `/player/stop` at 07:36:25 ("Deactivated
+successfully" in the journal), but the ladder logged "still holds the
+device after SIGTERM" at the same second and "STILL holds the device
+after SIGKILL" three seconds later — both false, against a process
+already gone. Combined with go-librespot's own SIGTERM-is-a-clean-exit
+behaviour (same shape as squeezelite's already-documented defect above),
+this escalation left go-librespot dead with nothing to restart it -
+reported as "Spotify Connect died and didn't restart."
+
+Fixed two ways:
+
+1. **The busy check is now renderer-specific.** `alsa.device_held_by(unit)`
+   checks whether *that unit's own PID* is among the PCM's holders (via
+   `fuser` + `systemctl show ... MainPID`), not whether the holder list
+   is merely non-empty. `Supervisor._busy()` now takes the renderer_id
+   being checked; `device_busy` (kept, unchanged) remains available for
+   anything that genuinely wants "is anyone holding it at all."
+2. **`SpotifyAdapter.signal_stop` now always sends SIGKILL**, mirroring
+   `LmsAdapter`'s existing fix for the identical failure shape:
+   go-librespot exits cleanly (exit 0) on SIGTERM, which
+   `Restart=on-failure` never treats as a failure. Fix (1) makes
+   escalation rare again (a correctly-attributed busy check means the
+   ladder stops at "polite" almost every time, matching go-librespot's
+   own documented <100ms release via `/player/stop`) - fix (2) is the
+   same defence-in-depth this ADR already applies to LMS, for the rare
+   case escalation is still reached.
+
+Unit-tested: a new regression test
+(`test_release_not_confused_by_incoming_renderer_already_holding_device`,
+`core/tests/test_arbitration.py`) reproduces the exact race - the
+outgoing renderer's release frees the device *to* the incoming renderer
+(not to nobody), and the ladder must read that as released, not busy.
+
+**Amended, 2026-09-08 — LMS's own mode-tracking fires spurious
+acquisitions, unrelated to anything the user did.** Separate from the
+above: even with the busy-check fixed, Spotify kept getting bumped back
+to LMS moments after a genuine takeover. Traced to a real, repeating
+pattern in the logs - every occurrence of squeezelite's own retried
+`alsa_open` against a device another renderer legitimately held was
+followed, within one second, by LMS's CometD stream reporting a fresh
+`mode: play`. Confirmed this is not a stale/reconnect artefact (the
+subscription's `last_mode` tracking never reconnected in the affected
+window) - LMS's server-side mode genuinely bounces while paused-for-
+arbitration (connected, not powered off - this record's own release
+table), not just while genuinely idle. `LmsAdapter._watch()` now
+debounces: on seeing `mode: play`, it waits ~0.4s and re-confirms via a
+fresh RPC status query before calling `on_acquire()`. A bounce doesn't
+survive the wait; a real "user pressed play" does. Costs ~0.4s of extra
+latency on every genuine LMS acquisition - not measured against the
+takeover-gap criteria (Phase 2c, below), worth checking against those
+once they're run. Root mechanism inside squeezelite/LMS not fully
+traced - the fix targets the observed pattern, not a confirmed root
+cause; flagged as such, not asserted with more confidence than the
+evidence supports.
 
 ## Open
 

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
 """The adapter protocol every renderer implements (ARCHITECTURE.md §8).
 
 Policy - who wins, what happens to who loses - lives in the supervisor
@@ -28,6 +29,12 @@ class Adapter(abc.ABC):
     #: supervisor's adapter map.
     renderer_id: str
     release_action: ReleaseAction
+
+    #: Set by subclasses. The systemd unit whose process actually opens
+    #: the ALSA device for this renderer - used by the release ladder's
+    #: device_held_by check (alsa.py) to attribute a still-busy device to
+    #: the right PID, not just "someone" (see arbitration.py's `_busy`).
+    unit_name: str
 
     #: Per-renderer override of the supervisor's default timeout ladder.
     #: None means "use the supervisor's default". Exists because release

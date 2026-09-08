@@ -5,6 +5,9 @@
 **Amends:** ADR-0010 (the silence rule was restated to accommodate mute)
 **Amended:** 2026-09-05 — confirmed from source that the startup assertion
 below has to be ours. See "squeezelite must be told".
+**Amended:** 2026-09-08 — squeezelite and bluealsa-aplay no longer engage
+the real hardware mixer directly (B2, George's decision). See "Dummy
+mixer controls" below.
 
 ## Context
 
@@ -84,6 +87,54 @@ the unit at all if the control isn't there, rather than starting it and
 quietly losing the bit-perfect claim. Not a workaround for a squeezelite
 defect — squeezelite was never going to do this, and the assertion was
 always ours to build.
+
+### Dummy mixer controls — squeezelite and bluealsa-aplay no longer touch the real mixer directly
+
+**Amended, 2026-09-08 (B2, George's decision).** `squeezelite -V DAC` and
+`bluealsa-aplay --mixer-name=DAC` (as configured above) both write
+straight to the shared hardware mixer whenever their own upstream (the
+LMS app, the phone's AVRCP slider) tells them to - **regardless of
+which renderer is actually allowed to be heard.** Confirmed on hardware:
+raising LMS's volume from its own app audibly changed an actively
+playing Bluetooth stream's loudness, because both were writing to the
+identical `DAC` control unconditionally. Only Spotify's volume path was
+ever isolated from this - go-librespot keeps its own software volume
+state, and only `VolumeBridge` (gexis-core) decides when that reaches
+hardware.
+
+**Fix: give each of them a private control with no audio path behind
+it at all**, rather than the real one. `snd-dummy` (already present on
+this kernel, no build needed) creates a virtual sound card whose
+`Master` control is a genuine ALSA simple-mixer element - readable and
+writable through the exact same API `amixer`, squeezelite and
+bluealsa-aplay already use - with nothing wired to it. Writing to it
+changes nothing anyone can hear, by construction.
+
+```
+squeezelite -o output -O hw:gexislmsvol -V Master ...   (-o unchanged: still the real playback path)
+bluealsa-aplay --pcm=output --mixer-device=hw:gexisbtvol --mixer-name=Master
+```
+
+`gexis-core`'s `DummyMixerBridge` (`core/src/gexis_core/volume.py`) is
+the only thing that ever copies a dummy control's value onto the real
+`DAC`, and only while that control's renderer is the currently active
+one - the same "mirror when active, remember otherwise" shape
+`_on_spotify_volume` already used for Spotify, generalised to the two
+renderers that didn't have an equivalent private state of their own.
+Scale translation is by **fractional position within each control's own
+dB range** (dummy: -45..0dB over 150 raw steps; DAC: -120..0dB over 240,
+per this record), not a flat raw ratio or a flat dB offset - a 1:1 dB
+copy would mean the dummy's quietest setting could never reach the DAC's
+true mute.
+
+No software attenuation is introduced anywhere by this - the real DAC's
+hardware attenuator is still the only thing that ever changes what's
+audible, matching this record's "variable output" mode exactly as
+before. This does not change squeezelite's own startup assertion
+(`squeezelite-mixer-check.sh` now checks `hw:gexislmsvol`'s `Master`
+control instead of `output`'s `DAC`) - the underlying concern (a
+missing/misnamed mixer control silently falling back to software
+volume) is unchanged, just checked against the new target.
 
 ### The mixer is subscribed, not polled
 

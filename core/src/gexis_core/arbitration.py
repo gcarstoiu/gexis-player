@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Arbitration supervisor: base slot + active slot (ADR-0010).
 
 Base slot is permanently LMS - its connection is structural, not a user
@@ -49,10 +50,18 @@ class Supervisor:
         ladder: TimeoutLadder | None = None,
         restore_volume=None,
     ) -> None:
-        """`device_busy` is a zero-arg callable (sync or async) returning
-        whether the shared ALSA device is currently held by anything -
-        injected rather than imported directly so the state machine is
-        testable without touching /proc or spawning fuser.
+        """`device_busy` is a one-arg callable (sync or async), taking a
+        renderer_id and returning whether *that specific renderer* still
+        holds the shared ALSA device - not whether anyone does. Checking
+        "anyone" is wrong here: by the time the release ladder runs, the
+        incoming renderer (set active earlier in `acquire`, above) may
+        already have legitimately opened the device, which would make a
+        generic busy check report True forever regardless of whether the
+        outgoing renderer ever released - found on hardware, 2026-09-08,
+        as a false "still holds the device after SIGKILL" against
+        go-librespot after it had already exited cleanly. Injected rather
+        than imported directly so the state machine is testable without
+        touching /proc or spawning fuser.
 
         `restore_volume`, if given, is an async callable taking the
         renderer_id that just acquired the device - George's decision,
@@ -108,7 +117,7 @@ class Supervisor:
                 "release[%s]: adapter's own API did not confirm the action",
                 renderer_id,
             )
-        if not await self._busy():
+        if not await self._busy(renderer_id):
             logger.info(
                 "release[%s]: polite stop freed the device (%.1fs)",
                 renderer_id,
@@ -118,7 +127,7 @@ class Supervisor:
 
         if ladder.polite_grace > 0:
             await asyncio.sleep(ladder.polite_grace)
-            if not await self._busy():
+            if not await self._busy(renderer_id):
                 logger.info(
                     "release[%s]: freed within polite grace (%.1fs)",
                     renderer_id,
@@ -132,7 +141,7 @@ class Supervisor:
         )
         await adapter.signal_stop(force=False)
         await asyncio.sleep(ladder.sigterm_grace)
-        if not await self._busy():
+        if not await self._busy(renderer_id):
             logger.warning(
                 "release[%s]: freed after SIGTERM (%.1fs)",
                 renderer_id,
@@ -146,7 +155,7 @@ class Supervisor:
         )
         await adapter.signal_stop(force=True)
         await asyncio.sleep(ladder.sigkill_grace)
-        if await self._busy():
+        if await self._busy(renderer_id):
             logger.error(
                 "release[%s]: STILL holds the device after SIGKILL (%.1fs)",
                 renderer_id,
@@ -158,8 +167,8 @@ class Supervisor:
         )
         return ReleaseOutcome.SIGKILL
 
-    async def _busy(self) -> bool:
-        result = self._device_busy()
+    async def _busy(self, renderer_id: str) -> bool:
+        result = self._device_busy(renderer_id)
         if asyncio.iscoroutine(result):
             return await result
         return result

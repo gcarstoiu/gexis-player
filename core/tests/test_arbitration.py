@@ -28,13 +28,20 @@ class FakeAdapter(Adapter):
         *,
         confirms=True,
         frees_at="release",
+        frees_to=None,
         release_ladder=None,
     ):
         self.renderer_id = renderer_id
+        self.unit_name = f"{renderer_id}.service"
         self.release_action = release_action
         self._holder = holder
         self._confirms = confirms
         self._frees_at = frees_at  # "release" | "sigterm" | "sigkill"
+        # What the shared holder becomes once freed - None (nobody holds
+        # it) by default, but a test can pass another renderer_id to
+        # model the incoming renderer already having grabbed the device
+        # by the time this one's release is checked.
+        self._frees_to = frees_to
         self.release_ladder = release_ladder
         self.signals: list[str] = []
         self.release_calls = 0
@@ -45,15 +52,15 @@ class FakeAdapter(Adapter):
     async def release(self):
         self.release_calls += 1
         if self._frees_at == "release":
-            self._holder["who"] = None
+            self._holder["who"] = self._frees_to
         return self._confirms
 
     async def signal_stop(self, force: bool) -> None:
         self.signals.append("SIGKILL" if force else "SIGTERM")
         if not force and self._frees_at == "sigterm":
-            self._holder["who"] = None
+            self._holder["who"] = self._frees_to
         if force and self._frees_at in ("sigterm", "sigkill"):
-            self._holder["who"] = None
+            self._holder["who"] = self._frees_to
 
 
 def build(frees_at_map: dict[str, str] | None = None):
@@ -76,7 +83,7 @@ def build(frees_at_map: dict[str, str] | None = None):
             frees_at=frees_at_map.get("bluetooth", "release"),
         ),
     }
-    supervisor = Supervisor(adapters, device_busy=lambda: holder["who"] is not None, ladder=FAST_LADDER)
+    supervisor = Supervisor(adapters, device_busy=lambda renderer_id: holder["who"] == renderer_id, ladder=FAST_LADDER)
     return supervisor, adapters, holder
 
 
@@ -138,6 +145,40 @@ async def test_ladder_stops_at_polite_when_that_frees_the_device():
 
 
 @pytest.mark.asyncio
+async def test_release_not_confused_by_incoming_renderer_already_holding_device():
+    """Found on hardware, 2026-09-08: the incoming renderer isn't driven by
+    our own acquire() call - LMS tells squeezelite to play independently
+    of it - so it can legitimately grab the device while the outgoing
+    renderer's release ladder is still running. A busy check that only
+    asks "is anyone holding it" can't tell that apart from the outgoing
+    renderer never having let go, and escalated to SIGTERM then SIGKILL
+    against go-librespot after it had already released cleanly - this is
+    why `device_busy` takes the renderer_id being checked (alsa.py's
+    `device_held_by`), not just "anyone"."""
+    holder = {"who": None}
+    lms = FakeAdapter("lms", ReleaseAction.PAUSE, holder)
+    # spotify's release() here frees the device to "lms", not to None -
+    # modelling the incoming renderer already holding it by the time this
+    # release() call lands, the actual race reproduced on hardware.
+    spotify = FakeAdapter(
+        "spotify", ReleaseAction.DISCONNECT, holder, frees_at="release", frees_to="lms"
+    )
+    bluetooth = FakeAdapter("bluetooth", ReleaseAction.DISCONNECT, holder)
+    supervisor = Supervisor(
+        {"lms": lms, "spotify": spotify, "bluetooth": bluetooth},
+        device_busy=lambda renderer_id: holder["who"] == renderer_id,
+        ladder=FAST_LADDER,
+    )
+
+    holder["who"] = "lms"
+    await supervisor.acquire("spotify")
+    holder["who"] = "spotify"
+    await supervisor.acquire("lms")  # "lms" already holds it by the time spotify's release() runs
+
+    assert spotify.signals == []  # never escalated - correctly read as freed
+
+
+@pytest.mark.asyncio
 async def test_ladder_escalates_to_sigterm():
     supervisor, adapters, holder = build({"spotify": "sigterm"})
     await _make_spotify_active(supervisor, holder)
@@ -182,7 +223,7 @@ async def test_adapter_specific_ladder_skips_the_polite_wait(monkeypatch):
     bluetooth = FakeAdapter("bluetooth", ReleaseAction.DISCONNECT, holder)
     supervisor = Supervisor(
         {"lms": lms, "spotify": spotify, "bluetooth": bluetooth},
-        device_busy=lambda: holder["who"] is not None,
+        device_busy=lambda renderer_id: holder["who"] == renderer_id,
         ladder=FAST_LADDER,
     )
 
@@ -205,7 +246,10 @@ async def test_unknown_renderer_rejected():
 @pytest.mark.asyncio
 async def test_base_renderer_missing_adapter_rejected():
     with pytest.raises(ValueError):
-        Supervisor({"spotify": FakeAdapter("spotify", ReleaseAction.DISCONNECT, {})}, device_busy=lambda: False)
+        Supervisor(
+            {"spotify": FakeAdapter("spotify", ReleaseAction.DISCONNECT, {})},
+            device_busy=lambda renderer_id: False,
+        )
 
 
 @pytest.mark.asyncio
@@ -225,7 +269,7 @@ async def test_restore_volume_called_with_the_newly_active_renderer():
         restored.append(renderer_id)
 
     supervisor = Supervisor(
-        adapters, device_busy=lambda: holder["who"] is not None, ladder=FAST_LADDER,
+        adapters, device_busy=lambda renderer_id: holder["who"] == renderer_id, ladder=FAST_LADDER,
         restore_volume=restore_volume,
     )
 
@@ -251,7 +295,7 @@ async def test_restore_volume_not_called_on_a_noop_reacquire():
         restored.append(renderer_id)
 
     supervisor = Supervisor(
-        adapters, device_busy=lambda: holder["who"] is not None, ladder=FAST_LADDER,
+        adapters, device_busy=lambda renderer_id: holder["who"] == renderer_id, ladder=FAST_LADDER,
         restore_volume=restore_volume,
     )
 

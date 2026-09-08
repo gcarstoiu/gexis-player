@@ -17,7 +17,13 @@ import time as time_module
 import pytest
 
 from gexis_core import volume as volume_module
-from gexis_core.volume import ECHO_WINDOW_S, VolumeBridge, db_to_raw, raw_to_db
+from gexis_core.volume import (
+    ECHO_WINDOW_S,
+    VolumeBridge,
+    db_to_raw,
+    dummy_raw_to_hardware_raw,
+    raw_to_db,
+)
 
 
 class FakeSpotify:
@@ -150,3 +156,33 @@ class TestDbConversion:
     def test_db_to_raw_clamps_to_hardware_range(self):
         assert db_to_raw(-200.0) == 0
         assert db_to_raw(50.0) == 240
+
+
+class TestDummyRawToHardwareRaw:
+    """B2, George's decision 2026-09-08: LMS and Bluetooth each write to
+    a private snd-dummy control instead of the real DAC directly (see
+    volume.py's module docstring and DummyMixerBridge). This is the
+    translation between the dummy's own scale (-50..100 raw, -45..0dB,
+    measured on hardware) and the real DAC's (0..240 raw, -120..0dB,
+    ADR-0018) - by fractional position in each control's own dB range,
+    not a flat raw-to-raw ratio."""
+
+    def test_endpoints_map_to_endpoints(self):
+        # Dummy's quietest (-45dB, its floor) must reach the DAC's true
+        # mute, not stop at -45dB on a -120dB-deep control.
+        assert dummy_raw_to_hardware_raw(-50) == 0
+        assert dummy_raw_to_hardware_raw(100) == 240
+
+    def test_midpoint_preserves_fractional_position_not_raw_ratio(self):
+        # Dummy raw 25 is dB (-45 + 75*0.30) = -22.5dB, which is 50% of
+        # the dummy's own -45..0dB span - so it should land at 50% of
+        # the DAC's -120..0dB span (-60dB -> raw 120), not at 50% of the
+        # dummy's raw *range* (-50..100) mapped onto 0..240.
+        assert dummy_raw_to_hardware_raw(25) == 120
+
+    def test_measured_hardware_point(self):
+        # Live reading, 2026-09-08: dummy raw 59 measured as -12.30dB.
+        # -12.30 is 72.67% up from -45dB; 72.67% of the DAC's 120dB span
+        # from mute is -32.8dB, which is raw 174 (rounding to the
+        # nearest 0.5dB step).
+        assert dummy_raw_to_hardware_raw(59) == 174

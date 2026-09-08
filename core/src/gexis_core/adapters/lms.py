@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
 """LMS (base slot) adapter, per ARCHITECTURE.md §8: "CometD subscribe for
 push; JSON-RPC on :9000 for calls."
 
@@ -45,6 +46,7 @@ _id_counter = itertools.count(1)
 class LmsAdapter(Adapter):
     renderer_id = "lms"
     release_action = ReleaseAction.PAUSE
+    unit_name = UNIT_NAME
 
     # No release_ladder override - -C 1 on squeezelite.service (measured
     # ~700ms release against a commanded pause) makes the supervisor's
@@ -164,6 +166,34 @@ class LmsAdapter(Adapter):
                         continue
                     mode = (frame.get("data") or {}).get("mode")
                     if mode == "play" and last_mode != "play":
+                        # Debounce, found necessary on hardware, 2026-09-08:
+                        # while paused for arbitration (not powered off -
+                        # ADR-0010's PAUSE action stays connected), LMS's
+                        # own mode intermittently reports "play" for well
+                        # under a second before reverting - observed
+                        # correlated with squeezelite's own retried
+                        # `alsa_open` against a device another renderer
+                        # currently holds (e.g. mid-Spotify-playback), not
+                        # with anything the user did. Firing on_acquire()
+                        # on the raw push repeatedly yanked the device back
+                        # from Spotify every time this happened - "shows
+                        # connected but never actually takes over".
+                        # Re-confirming via a fresh RPC status query after
+                        # a short wait filters the transient case: a real
+                        # user-initiated play stays "play" past this
+                        # window, a bounce does not. Costs ~0.4s of extra
+                        # latency on every genuine LMS acquisition.
+                        await asyncio.sleep(0.4)
+                        confirm = await self._rpc(session, self._player_id, ["status", "-", 1])
+                        confirmed_mode = confirm.get("result", {}).get("mode")
+                        if confirmed_mode != "play":
+                            logger.debug(
+                                "lms: mode->play did not hold past debounce (now %r), "
+                                "not treating as acquisition",
+                                confirmed_mode,
+                            )
+                            last_mode = confirmed_mode
+                            continue
                         logger.info("lms: player mode -> play (acquisition)")
                         on_acquire()
                     last_mode = mode

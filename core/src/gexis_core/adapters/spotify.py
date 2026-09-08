@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Spotify Connect adapter, via go-librespot's HTTP + WebSocket API.
 
 Transport confirmed against devgianlu/go-librespot's own docs (API.md,
@@ -37,6 +38,7 @@ UNIT_NAME = "go-librespot.service"
 class SpotifyAdapter(Adapter):
     renderer_id = "spotify"
     release_action = ReleaseAction.DISCONNECT
+    unit_name = UNIT_NAME
 
     def __init__(self, host: str, port: int) -> None:
         self._base = f"http://{host}:{port}"
@@ -127,4 +129,16 @@ class SpotifyAdapter(Adapter):
             logger.warning("spotify: /player/volume failed: %s", exc)
 
     async def signal_stop(self, force: bool) -> None:
-        kill_unit(UNIT_NAME, force=force)
+        # Ignores `force` on purpose, same reasoning and same regression
+        # shape as LmsAdapter (see its class-level comment): go-librespot
+        # exits *cleanly* on SIGTERM (exit 0), which `Restart=on-failure`
+        # never counts as a failure, so it never comes back on its own -
+        # reproduced live 2026-09-08, "Spotify Connect died and didn't
+        # restart" after an LMS takeover escalated past SIGTERM. Normally
+        # the ladder should not even reach here: release()'s own
+        # `/player/stop` frees the device in <100ms (adapters/base.py's
+        # release_ladder comment). It escalated this time chiefly because
+        # of the device_held_by bug fixed alongside this - but *if* it
+        # ever legitimately needs to escalate, SIGKILL is the only signal
+        # that reliably brings the unit back.
+        kill_unit(UNIT_NAME, force=True)

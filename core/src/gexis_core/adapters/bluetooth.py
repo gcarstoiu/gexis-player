@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Bluetooth (A2DP) adapter, via BlueZ's system D-Bus API.
 
 Transport per ARCHITECTURE.md §8's adapter table: `org.bluez.MediaPlayer1`,
@@ -42,6 +43,7 @@ UNIT_NAME = "bluealsa-aplay.service"
 class BluetoothAdapter(Adapter):
     renderer_id = "bluetooth"
     release_action = ReleaseAction.DISCONNECT
+    unit_name = UNIT_NAME
 
     def __init__(self) -> None:
         self._bus: MessageBus | None = None

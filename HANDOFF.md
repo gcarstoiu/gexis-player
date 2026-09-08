@@ -1,6 +1,6 @@
 # Handoff
 
-Last updated: 2026-09-06
+Last updated: 2026-09-08
 
 ## Where things stand
 
@@ -818,6 +818,116 @@ for the specific symptom — but the shape matches closely. Added
 **Not yet re-verified on a rebuilt image** — all four fixes above are
 committed, none are on hardware yet.
 
+### 2026-09-08: PeppyMeter adoption research and licence decision
+
+George decided to adopt foonerd's PeppyMeter/PeppySpectrum fork (the
+engine and skin rendering, not a browser reimplementation) rather than
+write a renderer from scratch. Ordered research done before any
+vendoring, all in **Finding 007**: licence facts for all three upstream
+repos (read from source headers, not repo badges — `PeppyMeter` and
+`PeppySpectrum` are GPL v3, `peppy_screensaver`'s handler files carry no
+licence header of their own and only function combined with the GPL
+engine), the NEON/pygame blocker (Debian Trixie's stock `python3-pygame`
+tested clean under the same Docker+QEMU pipeline this project already
+uses — likely dissolves the blocker, pending a hardware frame-rate
+measurement), and the remaining ADR-0015 open items (`distance`,
+font faces, the format-icon set — all confirmed from source).
+
+**George's licence ruling: gexis-player is GPL v3** (personal project,
+costs nothing we'd otherwise want, vendoring the engine is the whole
+point). Recorded as **ADR-0025**, with the `LICENSE` file (already
+present, unmodified GPLv3 text) and `# SPDX-License-Identifier:
+GPL-3.0-or-later` headers added to every file in `core/src/gexis_core/`.
+The convention is documented in `docs/DEVELOPMENT.md`.
+
+**Integration approach proposed and accepted as ADR-0026**, after
+surfacing (not silently overriding) a real conflict: running the actual
+PeppyMeter engine reverses ADR-0015/0019's "renderer lives in the
+browser" premise those records were built on. Both amended to point at
+ADR-0026 rather than left contradicted. George confirmed the mechanism:
+an always-on native PeppyMeter process, pre-rendering continuously,
+with labwc-mediated raise/hide against the Chromium kiosk (mirrors
+ADR-0019's original "no process to start, only a state change"
+principle, just via compositor stacking instead of DOM visibility). The
+exact labwc-side mechanism is flagged **unverified, needs a spike** —
+not guessed at from memory. Scope: meters and spectrum only; turntable
+and cassette handlers not vendored, pending George's ruling on whether
+they're needed.
+
+**Not yet done, by design:** no vendoring. Step 5 was "propose an
+approach," not "implement it" — the actual vendoring and handler-adapter
+work is future Phase 5 work.
+
+**Process note:** this work landed on `phase-2b-arbitration` (the
+current branch) because that's what was checked out — it's Phase 5
+content, not Phase 2b. Flagging rather than silently rewriting history;
+worth moving to its own branch before a PR, if that matters before the
+next one.
+
+### 2026-09-08 (continued): four live-fixed defects, dummy-control volume isolation
+
+George ran a hardware test round and reported four symptoms: Bluetooth's
+volume audibly changing when LMS's volume was adjusted from its own app
+(even with Bluetooth actively playing), Spotify Connect dying and never
+restarting, LMS's track appearing to start three times, and — after the
+first fixes landed — Spotify showing "connected" but not sustaining a
+takeover from LMS. All four diagnosed live over SSH against `gexis`
+before any fix, per George's request this round ("make the fixes on the
+device first"), then folded back into the repo. Full detail, evidence
+and what's confirmed vs not in **Finding 008** — summary:
+
+1. **Spotify Connect dying:** the release ladder's busy check asked "is
+   anyone holding the device," which reports busy forever once the
+   *incoming* renderer (not driven by our own code — LMS tells
+   squeezelite to play independently of `acquire()`) has already grabbed
+   it, regardless of whether the outgoing one ever let go. Confirmed
+   from logs: go-librespot exited cleanly on its own `/player/stop`, but
+   the ladder logged false "still holds"/"STILL holds" lines seconds
+   later and escalated to SIGKILL against a process already gone.
+   Compounded by go-librespot exiting cleanly (status 0) on SIGTERM,
+   which `Restart=on-failure` never treats as failure — same defect
+   shape ADR-0010 already documents for squeezelite, just never ported
+   to `SpotifyAdapter`. **Fixed:** `alsa.device_held_by(unit)` checks
+   the specific unit's own PID against the PCM's holders, not "anyone";
+   `SpotifyAdapter.signal_stop` always sends SIGKILL now. ADR-0010
+   amended.
+2. **LMS starting a track three times:** same family as (1), still open
+   after it — squeezelite's own retried `alsa_open` (while another
+   renderer legitimately holds the device) correlates 1-for-1 with LMS's
+   CometD stream reporting a fresh `mode: play`, kicking whichever
+   renderer just took over back off. Confirmed not a reconnect/stale-
+   frame artefact. Root mechanism inside squeezelite/LMS not traced —
+   the fix (a ~0.4s debounce with a re-confirming status query before
+   `LmsAdapter` fires an acquisition) targets the observed pattern, not
+   a proven cause. Live-verified LMS play advancing normally
+   (`time: 2.8s` after issuing play) after the fix; the specific
+   "starts three times" repro wasn't independently re-run.
+3. **Bluetooth volume changing when LMS's volume changes:** confirmed
+   mechanism — `squeezelite -V DAC` and `bluealsa-aplay
+   --mixer-name=DAC` both write straight to the one shared hardware
+   mixer whenever their own upstream says to, with no awareness of
+   arbitration state; only Spotify's path was ever isolated (via
+   go-librespot's own software volume). **Fixed (B2, George's decision):
+   dummy mixer controls.** Each of squeezelite and bluealsa-aplay now
+   points its volume control at its own private `snd-dummy` card
+   (`hw:gexislmsvol`, `hw:gexisbtvol` — no audio path behind either), and
+   a new `DummyMixerBridge` (`core/src/gexis_core/volume.py`) mirrors
+   whichever one belongs to the active renderer onto the real DAC. No
+   software attenuation introduced anywhere. ADR-0018 amended. Two
+   non-obvious implementation bugs found and fixed along the way:
+   `alsactl monitor <card>` needs the `hw:` prefix (undocumented in its
+   own SYNOPSIS), and `amixer`'s value-line format differs between the
+   real DAC's control and a dummy control (parsing regex widened).
+   Verified live, both directions (mirrors when active; does not touch
+   hardware when inactive, confirmed with the real daemon stopped and an
+   isolated instance run in its place) — **but a full multi-switch
+   end-to-end retest has not yet been done**, and should happen on the
+   rebuilt image.
+
+**Everything above is committed to `phase-2b-arbitration` and about to
+be rebuilt** — George will reflash and retest on the new image rather
+than trusting the live-patched state further.
+
 ## Machines
 
 | Name | What it is | Notes |
@@ -848,45 +958,49 @@ the tag) — tag manually before a build worth naming, for now.
 
 ## Next actions, in order
 
-1. **Rebuild and reflash `gexis`**, to pick up this session's fixes: the
-   squeezelite SIGKILL restoration, the Bluetooth mixer-floor fix, and
-   the `bluealsa`/`bluealsa-aplay` ordering fix. None hardware-verified
-   yet — v0.2.0 is confirmed to still have both regressions.
+1. **Rebuild and reflash `gexis`**, to pick up 2026-09-08's fixes: the
+   arbitration busy-check fix, `SpotifyAdapter`'s SIGKILL fix, LMS's
+   acquisition debounce, and the dummy-control volume isolation (B2).
+   All four verified live-patched on `gexis` (Finding 008); none yet
+   verified from a clean rebuilt image.
 2. **On the reflashed image, in order:**
-   - Force several takeovers in a row (not just one) and confirm
-     squeezelite always comes back — v0.2.0's failure took a specific,
-     not-guaranteed-to-repeat-every-time sequence to surface.
-   - A real end-to-end Bluetooth pairing and playback test, this time
-     watching whether the mixer floor actually produces audible volume
-     on first connect, not just on takeover from LMS.
-   - Recheck George's original issue 3 (position reset on switch) —
-     expected to resolve with LMS no longer killed, still not
-     confirmed.
-   - Re-run the LMS-app-volume-buttons scenario against Spotify (the
-     false-acquisition fix from three sessions ago still isn't
-     independently reconfirmed).
+   - Repeat the Spotify ↔ LMS ↔ Bluetooth switching George just tested,
+     several times each direction — confirm Spotify Connect survives
+     takeovers and actually sustains playback, not just avoids dying.
+   - **Full multi-switch volume-isolation retest** (Finding 008's "Not
+     yet done") — raise each renderer's volume while a different one is
+     actively playing, confirm nothing audible changes except when the
+     renderer being adjusted is the one currently active.
+   - Re-check LMS's track-start behaviour specifically (Finding 008 §2
+     — the debounce fix's effect on this was inferred from a shared
+     mechanism, not independently re-run).
 3. **Bluetooth's release ladder — still needs its own investigation.**
    Two candidate causes recorded (ADR-0010's "Open" section): a
    too-fast unit restart racing the ladder's check, or `bluealsa-aplay`
    holding the PCM open past its own IO worker exiting on disconnect.
-   Not touched this session.
+   Not touched this session; the busy-check fix (Finding 008 §1) is a
+   different failure mode and does not resolve this one.
 4. **Re-test Finding 006** (Bluetooth volume partly software below
-   ~96%) against the mixer-args fix from last session — plausible but
-   unconfirmed that it also fixes or changes this.
-5. **Phase 2b, criteria 3-6**, once 1-4 hold: the supervisor, adapters
-   and volume bridge are written and unit-tested (`core/`), but no live
-   takeover has actually been exercised end-to-end and left working —
-   every hardware session so far has found and fixed a defect in the
-   attempt.
-6. **Write up the peppyalsa meter FIFO finding** (see above) with its
-   stated scope.
-7. Criteria 7-10 (the attack test and takeover gap measurement) once 5
-   holds on real hardware — needs LMS (have one; CI gets a containerised
-   throwaway) and, for the Spotify leg, the registered Spotify API app
-   (transfer-playback confirmed available to new apps — see
-   `docs/ARCHITECTURE.md`'s open-questions list).
-8. **Fill the Finding 003 grid** on `rig`, not `gexis` — characterises the
+   ~96%) now that `bluealsa-aplay`'s mixer target has changed again (a
+   private dummy control, not `output`/`DAC` directly) — the routing
+   changed, the underlying software-attenuation question did not.
+5. **Phase 2b, criteria 3-6**, once 1-4 hold on the rebuilt image.
+6. Criteria 7-10 (the attack test and takeover gap measurement) once 5
+   holds — needs LMS (have one; CI gets a containerised throwaway) and,
+   for the Spotify leg, the registered Spotify API app (transfer-
+   playback confirmed available to new apps — see `docs/ARCHITECTURE.md`'s
+   open-questions list). Note Finding 008's ~0.4s LMS debounce adds
+   directly to whatever this measures for that direction.
+7. **Fill the Finding 003 grid** on `rig`, not `gexis` — characterises the
    metering path, not the product image. 16 of 18 cells remain.
+8. **Phase 5 (not blocking Phase 2b):** Finding 007's research is done
+   and ADR-0025/0026 record the licence and integration-approach
+   decisions. Still needed before vendoring: George's ruling on
+   turntable/cassette handlers (ADR-0026 assumes meters+spectrum only
+   until then), the labwc screen-ownership mechanism spike (ADR-0026
+   flags this unverified), and a Pi-4 frame-rate measurement for
+   Blocker 2 (Finding 007) — this last one is also the cleanest way to
+   close the residual NEON doubt from the same finding.
 
 **ADR-0010's sync-group-interaction item is moot in the good sense
 now** — `-C 1` means squeezelite is never killed in normal operation,
@@ -896,19 +1010,18 @@ final amendment.
 Decisions pending from George: confirming (or picking a different)
 `restore_volume_floor_db` — currently a −40dB placeholder, not
 reviewed; which component applies Bluetooth's software volume
-attenuation below ~96% (Finding 006, no owner yet, possibly connected
-to this session's mixer-args fix); pinning down squeezelite's
-LMS-volume-to-hardware mapping (no owner yet); the criterion 7
-build-self-identification amendment; whether to act on the
-develop-on-hardware workflow inversion (needs an ADR first if so).
+attenuation below ~96% (Finding 006, no owner yet); pinning down
+squeezelite's LMS-volume-to-hardware mapping (Finding 008's B2 fix
+addresses the *cross-renderer bleed* symptom this was originally raised
+under, but the underlying mapping/curve question is separate and still
+open); the criterion 7 build-self-identification amendment; whether to
+act on the develop-on-hardware workflow inversion (needs an ADR first
+if so); turntable/cassette handlers for Phase 5 (ADR-0026).
 
-The LMS-play-starts-Spotify observation was attempted-and-not-reproduced
-in an earlier session (see hardware session above) and did not recur in
-this one either — not blocking further work.
-
-Not blocking, needed before their phases: skin asset conventions (needle
-pivot, `distance`, icon set — blocks the skin renderer) and the peppyalsa
-FIFO byte format (blocks the visualisation service).
+Not blocking, needed before their phases: the peppyalsa FIFO byte format
+(blocks the visualisation service) and George supplying format icons for
+LMS/Spotify/Bluetooth (Finding 007's follow-up notes — the bundled set
+covers none of our three sources).
 
 ## Phase order
 
@@ -935,9 +1048,26 @@ FIFO byte format (blocks the visualisation service).
 - **`ctl.output`, not just `pcm.output`, in `output.conf`.** Mixer access
   (`squeezelite -V DAC`) resolves through the control interface, not the
   PCM slave chain — ADR-0009 was itself incomplete on this until Phase 2a.
-- **`squeezelite -V DAC` does not fail on a bad mixer name** — confirmed
-  from its source. It logs and silently falls back to software volume.
-  `squeezelite.service`'s `ExecStartPre` is the actual assertion.
+- **`squeezelite -V <control>` does not fail on a bad mixer name** —
+  confirmed from its source. It logs and silently falls back to software
+  volume. `squeezelite.service`'s `ExecStartPre` is the actual assertion.
+  As of 2026-09-08 (B2) the target is `hw:gexislmsvol`'s `Master`, a
+  private `snd-dummy` control, not the real `DAC` — same risk, different
+  target; the check was updated to match, don't let it drift back.
+- **`alsactl monitor <card>` needs the `hw:` prefix** — `alsactl monitor
+  gexislmsvol` fails with `Invalid CTL`, `alsactl monitor
+  hw:gexislmsvol` works. Not documented in `alsactl(1)`'s own SYNOPSIS.
+  Found 2026-09-08 wiring up `DummyMixerBridge`.
+- **`amixer sget`'s value line format differs by control** — a control
+  with distinct playback/capture volumes prints `Front Left: Playback
+  216 [...]`; one without (e.g. a `snd-dummy` card's `Master`) prints
+  `Front Left: 30 [...]` — no "Playback" word. `volume.py`'s `get_raw()`
+  parses both now; a regex written against only the real DAC's format
+  will silently return `None` for a dummy control.
+- **gexis-player is GPL v3 (ADR-0025, 2026-09-08).** Every file we
+  author under `core/src/gexis_core/` carries `# SPDX-License-Identifier:
+  GPL-3.0-or-later` as its first line — see `docs/DEVELOPMENT.md`'s
+  "Licence" section. Don't add it to a vendored third-party file.
 - **A `.gitignore` fix on one branch does not protect other branches**
   working off the same tree. Run `./test-gitignored-credentials.sh` on
   whatever branch you're on if you're not sure.

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Arbitration core entrypoint (`python -m gexis_core`). Runs the
 supervisor and every adapter for the process lifetime - this is
 `gexis-core.service` (image/stage-gexis/03-core).
@@ -14,7 +15,8 @@ from gexis_core.adapters.spotify import SpotifyAdapter
 from gexis_core.arbitration import BASE_RENDERER, Supervisor
 from gexis_core.config import Config
 from gexis_core.renderer_volume import RendererVolumeMemory
-from gexis_core.volume import VolumeBridge, db_to_raw, get_raw, raw_to_db, set_raw
+from gexis_core import volume
+from gexis_core.volume import DummyMixerBridge, VolumeBridge, db_to_raw, get_raw, raw_to_db, set_raw
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(levelname)s %(message)s")
 logger = logging.getLogger("gexis_core")
@@ -96,7 +98,9 @@ async def main() -> None:
     restore_volume = make_restore_volume(config, volume_memory)
 
     supervisor = Supervisor(
-        adapters, device_busy=lambda: alsa.device_busy(), restore_volume=restore_volume
+        adapters,
+        device_busy=lambda renderer_id: alsa.device_held_by(adapters[renderer_id].unit_name),
+        restore_volume=restore_volume,
     )
 
     def make_on_acquire(renderer_id: str):
@@ -111,11 +115,34 @@ async def main() -> None:
         volume_memory=volume_memory,
         get_active_renderer=lambda: supervisor.active,
     )
+    # B2, George's decision 2026-09-08: LMS and Bluetooth each write to
+    # their own private snd-dummy control (image/stage-gexis/00-alsa's
+    # modprobe config), not the real DAC directly - these mirror that
+    # control onto real hardware only while its renderer is active. See
+    # volume.py's module docstring.
+    lms_volume_bridge = DummyMixerBridge(
+        "lms",
+        volume.DUMMY_CARD_LMS,
+        volume.DUMMY_CONTROL,
+        config.mixer_name,
+        volume_memory=volume_memory,
+        get_active_renderer=lambda: supervisor.active,
+    )
+    bluetooth_volume_bridge = DummyMixerBridge(
+        "bluetooth",
+        volume.DUMMY_CARD_BLUETOOTH,
+        volume.DUMMY_CONTROL,
+        config.mixer_name,
+        volume_memory=volume_memory,
+        get_active_renderer=lambda: supervisor.active,
+    )
 
     logger.info("gexis-core starting: adapters=%s", list(adapters))
     await asyncio.gather(
         *(adapter.run(make_on_acquire(rid)) for rid, adapter in adapters.items()),
         volume_bridge.run(),
+        lms_volume_bridge.run(),
+        bluetooth_volume_bridge.run(),
     )
 
 
