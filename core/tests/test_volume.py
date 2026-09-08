@@ -23,7 +23,9 @@ from gexis_core.volume import (
     db_to_raw,
     dummy_raw_to_hardware_raw,
     get_raw,
+    hardware_raw_to_spotify_fraction,
     raw_to_db,
+    spotify_fraction_to_hardware_raw,
 )
 
 
@@ -93,8 +95,11 @@ async def test_genuine_spotify_change_outside_window_is_applied(fake_set_raw):
     bridge._on_spotify_volume(50, 100)
     await asyncio.sleep(0)
 
-    assert fake_set_raw == [("DAC", 120)]  # 50/100 * 240
-    assert memory.remembered == [("spotify", 120)]
+    # dB-linear (spotify_fraction_to_hardware_raw), not raw-linear: 50%
+    # is -22.5dB on the -45..0dB curve Spotify shares with LMS/Bluetooth
+    # for consistency, not 50/100 * 240 = 120.
+    assert fake_set_raw == [("DAC", 195)]
+    assert memory.remembered == [("spotify", 195)]
 
 
 @pytest.mark.asyncio
@@ -124,13 +129,13 @@ async def test_spotify_volume_arms_the_window_so_a_second_echo_is_also_dropped(f
 
     bridge._on_spotify_volume(50, 100)
     await asyncio.sleep(0)
-    assert fake_set_raw == [("DAC", 120)]
+    assert fake_set_raw == [("DAC", 195)]
 
     # A second event arriving immediately after (e.g. a duplicate WS
     # frame) is inside the window this write just armed.
     bridge._on_spotify_volume(51, 100)
     await asyncio.sleep(0)
-    assert fake_set_raw == [("DAC", 120)]  # unchanged - second call ignored
+    assert fake_set_raw == [("DAC", 195)]  # unchanged - second call ignored
 
 
 @pytest.mark.asyncio
@@ -145,7 +150,7 @@ async def test_spotify_volume_while_inactive_is_remembered_not_applied(fake_set_
     await asyncio.sleep(0)
 
     assert fake_set_raw == []  # not applied to the live mixer
-    assert memory.remembered == [("spotify", 120)]  # but remembered
+    assert memory.remembered == [("spotify", 195)]  # but remembered
 
 
 def test_echo_window_is_positive_and_not_absurdly_long():
@@ -276,3 +281,41 @@ class TestDummyRawToHardwareRaw:
         assert dummy_raw_to_hardware_raw(-23) == 166  # LMS ~25%, -36.9dB
         assert dummy_raw_to_hardware_raw(18) == 191  # LMS ~50%, -24.6dB
         assert dummy_raw_to_hardware_raw(59) == 215  # LMS ~75%, -12.3dB
+
+
+class TestSpotifyFractionToHardwareRaw:
+    """Regression coverage for a bug found on hardware, 2026-09-08 - same
+    day, same shape as LMS's own curve bug (TestDummyRawToHardwareRaw),
+    just never touched by that fix: `_on_spotify_volume` mapped Spotify's
+    value/max_ fraction *linearly in raw steps* onto the DAC's full
+    0..240 - raw steps are dB-linear, not perceptually linear, so this
+    compressed nearly all perceived loudness change into the last
+    quarter of the slider. George: "60% volume there is no sound." Fixed
+    the same way LMS was: dB-linear across a reasonable span (-45..0dB,
+    matching LMS's own effective curve for consistency), not raw-linear
+    across the DAC's full 120dB."""
+
+    def test_endpoints(self):
+        assert spotify_fraction_to_hardware_raw(0.0) == 150  # -45dB
+        assert spotify_fraction_to_hardware_raw(1.0) == 240  # 0dB
+
+    def test_reported_symptom_60_percent_is_now_audible(self):
+        # Old (raw-linear) formula: round(0.6 * 240) = 144 -> -108dB.
+        # New (dB-linear): -45 + 0.6*45 = -18dB -> raw 204.
+        assert spotify_fraction_to_hardware_raw(0.6) == 204
+
+    def test_round_trip_recovers_the_original_fraction(self):
+        # Within 1 percentage point, not exact - the DAC's 0.5dB raw
+        # steps quantise both directions, so a round trip can land one
+        # step off (e.g. 25% -> raw 172 -> 24.4%, not a bug).
+        for pct in (0, 25, 50, 60, 75, 90, 100):
+            frac = pct / 100
+            raw = spotify_fraction_to_hardware_raw(frac)
+            recovered = hardware_raw_to_spotify_fraction(raw) * 100
+            assert abs(recovered - pct) <= 1
+
+    def test_hardware_raw_below_the_curves_floor_clamps_to_zero(self):
+        # Reachable from LMS/Bluetooth's own lower range, or a manual
+        # amixer write - not a fraction Spotify's own slider can express
+        # a negative version of.
+        assert hardware_raw_to_spotify_fraction(0) == 0.0

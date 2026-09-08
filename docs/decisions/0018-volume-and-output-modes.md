@@ -161,6 +161,48 @@ first real hardware test of this, both fixed, full detail in Finding
    equal an unrelated earlier or later real reading and get deduped
    against it). Fixed: `-?\d+`.
 
+**Amended a third time, 2026-09-08 (George's next hardware round) - two
+more bugs, full detail in Finding 010:**
+
+3. **`DummyMixerBridge` carried an echo window copied from
+   `VolumeBridge` without re-deriving whether it applied - it didn't.**
+   `VolumeBridge` both watches and writes the same real-DAC `alsactl`
+   stream, so its own writes genuinely echo back on it and the window
+   exists to recognise "that was us." `DummyMixerBridge` watches the
+   *dummy* card but writes to the *real DAC* - different cards, so a
+   write here can never echo back on the dummy's own monitor stream.
+   The window could only ever swallow *genuine* updates arriving within
+   0.75s of the previous mirror - and Bluetooth's AVRCP updates during a
+   phone slider drag land as little as ~35ms apart, so a chain of them
+   could silence itself indefinitely (each mirror re-arming the window
+   before the next real update got through). Explains both a Bluetooth
+   session with zero mirrored volume changes despite a full slider drag,
+   and Bluetooth's usable maximum reading quieter than Spotify/LMS's (a
+   drag toward maximum getting silenced partway). **Fixed: removed
+   entirely** - `raw == last_raw` already dedupes the one case an echo
+   window would legitimately have covered (multiple monitor lines from
+   one underlying change). Verified live: five writes 150ms apart, and
+   two negative-value writes 200ms apart, all mirrored correctly
+   afterward - previously this exact cadence would have silenced itself
+   after the first write or two.
+4. **Spotify's own volume mapping had the identical raw-linear bug as
+   LMS's original one, just never touched by that fix.**
+   `_on_spotify_volume` mapped Spotify's `value/max_` fraction linearly
+   in *raw steps* onto the DAC's full 0..240 - raw steps are dB-linear,
+   not perceptually linear (this record's own `raw_to_db` finding), so
+   this compressed nearly all perceived loudness change into the last
+   quarter of the slider, same shape as LMS's bug, just never
+   discovered because the echo-window bug (this section, first
+   amendment) made Spotify's volume too unreliable to properly assess
+   until that was fixed. George: "60% volume there is no sound."
+   **Fixed the same way LMS was**: `spotify_fraction_to_hardware_raw()`
+   maps dB-linearly across -45..0dB (matching LMS's own effective span,
+   for consistency across renderers - Spotify has no hardware control
+   of its own to derive a span from, unlike LMS/Bluetooth). 60% now
+   lands at -18dB (raw 204) instead of -108dB (raw 144, inaudible).
+   Applied to both directions - `_on_spotify_volume` and `run()`'s
+   hardware-changed-so-tell-Spotify path both go through it now.
+
 ### The mixer is subscribed, not polled
 
 ALSA ctl events are subscribed to, so the UI slider stays in sync when the

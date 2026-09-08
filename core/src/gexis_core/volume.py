@@ -192,6 +192,43 @@ def db_to_raw(db: float) -> int:
     return max(0, min(HARDWARE_MAX, raw))
 
 
+# Spotify's own volume report is a bare fraction (value/max_, go-librespot's
+# software scale) with no hardware control - and therefore no declared TLV
+# range - behind it, unlike LMS/Bluetooth which each derive their own
+# curve from a real control's range (see dummy_raw_to_hardware_raw's
+# docstring). `_on_spotify_volume` used to map that fraction *linearly in
+# raw steps* straight onto the DAC's full 0..240 - found wrong on
+# hardware, 2026-09-08, the same day and the same shape as LMS's bug:
+# George reported 60% inaudible. Raw steps are dB-linear, not
+# perceptually linear (raw_to_db's own docstring), so a linear-in-percent
+# mapping across the DAC's full 120dB span compresses nearly all
+# perceived loudness change into the last quarter of the slider - exactly
+# what a wide-range control does to any naive curve, LMS's included
+# before its own fix. -45dB matches the effective span LMS's curve
+# settled on via the dummy control - chosen here for consistency across
+# renderers' sliders, not derived from anything Spotify-specific (Spotify
+# has no declared hardware range of its own to derive one from).
+SPOTIFY_DB_MIN = -45.0
+
+
+def spotify_fraction_to_hardware_raw(fraction: float) -> int:
+    db = SPOTIFY_DB_MIN + fraction * (0.0 - SPOTIFY_DB_MIN)
+    return db_to_raw(db)
+
+
+def hardware_raw_to_spotify_fraction(raw: int) -> float:
+    """Inverse of `spotify_fraction_to_hardware_raw` - used when a hardware
+    change (a manual amixer change, a restored remembered level) needs
+    reporting back to Spotify as its own value/steps. Clamped to 0..1:
+    a raw value quieter than SPOTIFY_DB_MIN represents (reachable from
+    LMS/Bluetooth's own dummy floor, or a manual amixer write) has no
+    fraction below 0% to express - report 0%, not a negative one.
+    """
+    db = raw_to_db(raw)
+    frac = (db - SPOTIFY_DB_MIN) / (0.0 - SPOTIFY_DB_MIN)
+    return max(0.0, min(1.0, frac))
+
+
 async def get_raw(mixer_name: str, device: str = MIXER_DEVICE) -> int | None:
     """`device` defaults to the real hardware mixer ("output"); pass
     "hw:<dummy card id>" to read one of the per-renderer dummy controls
@@ -285,7 +322,7 @@ class VolumeBridge:
         if self._within_echo_window():
             logger.debug("volume: ignoring spotify volume event within echo window")
             return
-        raw = round(value / max_ * HARDWARE_MAX)
+        raw = spotify_fraction_to_hardware_raw(value / max_)
         self._volume_memory.remember("spotify", raw)
         if self._get_active_renderer() != "spotify":
             # Remembered for next time, but spotify doesn't currently
@@ -340,7 +377,7 @@ class VolumeBridge:
             steps = await self._spotify.get_volume_steps()
             logger.info("volume: hardware -> spotify (%s/240)", raw)
             self._last_own_write = time.monotonic()
-            await self._spotify.set_volume(round(raw / HARDWARE_MAX * steps))
+            await self._spotify.set_volume(round(hardware_raw_to_spotify_fraction(raw) * steps))
 
 
 class DummyMixerBridge:
@@ -353,6 +390,28 @@ class DummyMixerBridge:
     go-librespot's own software volume). `hardware_control` is the real
     DAC's control name ("DAC"); `dummy_card`/`dummy_control` identify the
     renderer's own snd-dummy control ("gexislmsvol"/"Master", say).
+
+    **Deliberately has no echo window**, unlike `VolumeBridge` - found
+    wrong on hardware, 2026-09-08. This class watches the *dummy* card
+    but writes to the *real DAC*; those are different ALSA cards, so a
+    write here can never show up on the dummy's own `alsactl monitor`
+    stream the way `VolumeBridge`'s writes echo back on the one card it
+    both watches and writes. An earlier version armed a window here
+    anyway (copied from `VolumeBridge` without re-deriving whether it
+    applied) - since it could never see a genuine echo of its own write,
+    all it did was silently swallow real, rapid updates from
+    squeezelite/bluealsa-aplay arriving within the window of a previous
+    mirror. Bluetooth's AVRCP volume updates during a phone slider drag
+    land well under the old 0.75s window apart (as little as ~35ms) -
+    every mirror re-armed the window before the next genuine update
+    could get through, so once started, an update chain could silence
+    itself for as long as updates kept arriving that fast, explaining
+    both a Bluetooth session with *zero* mirrored volume changes despite
+    a full slider drag, and Bluetooth's usable maximum reading quieter
+    than Spotify/LMS's (a drag toward maximum getting silenced partway).
+    `raw == last_raw` below already dedupes multiple monitor lines from
+    one underlying change - the only case an echo window would have
+    covered.
     """
 
     def __init__(
@@ -371,10 +430,6 @@ class DummyMixerBridge:
         self._hardware_control = hardware_control
         self._volume_memory = volume_memory
         self._get_active_renderer = get_active_renderer
-        self._last_own_write = 0.0
-
-    def _within_echo_window(self) -> bool:
-        return time.monotonic() - self._last_own_write < ECHO_WINDOW_S
 
     async def run(self) -> None:
         proc = await asyncio.create_subprocess_exec(
@@ -393,13 +448,6 @@ class DummyMixerBridge:
                 )
                 await asyncio.sleep(5)
                 return await self.run()
-            if self._within_echo_window():
-                # Our own mirroring write lands back on the *hardware*
-                # control, not this dummy one, so this only ever guards
-                # against a burst of monitor lines from one dummy change
-                # - same reasoning as VolumeBridge's echo window, applied
-                # to the source side instead of the destination side.
-                continue
             raw = await get_raw(self._dummy_control, device=f"hw:{self._dummy_card}")
             if raw is None or raw == last_raw:
                 continue
@@ -424,5 +472,4 @@ class DummyMixerBridge:
                 raw,
                 hardware_raw,
             )
-            self._last_own_write = time.monotonic()
             await set_raw(self._hardware_control, hardware_raw)

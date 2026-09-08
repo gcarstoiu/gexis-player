@@ -978,6 +978,60 @@ The two open items are **not** blocking that rebuild - they're
 pre-existing, already-tracked gaps, not regressions from this round's
 work.
 
+### 2026-09-08 (fourth session): DummyMixerBridge's echo window and Spotify's curve fixed; Bluetooth race and LMS reclaim narrowed further
+
+George tested the rebuilt image again and reported four more symptoms.
+Full detail in **Finding 010**; summary:
+
+**Fixed and verified live:**
+- **Spotify's volume compressed into the last part of the slider ("60%
+  = no sound").** The exact same raw-linear-not-dB-linear bug LMS had
+  (Finding 009 §2), just on the renderer that fix never touched -
+  plausibly always broken, only assessable once Finding 009 §1's echo
+  bug stopped making Spotify's volume racy. Fixed the same way:
+  `spotify_fraction_to_hardware_raw()`, dB-linear across -45..0dB
+  (matching LMS's own effective span). Unit-tested and hand-verified;
+  not yet re-confirmed against a live phone-driven change (go-librespot
+  doesn't echo API-driven changes back over its own event stream, so
+  there's no way to trigger this from SSH alone).
+- **Bluetooth's usable maximum quieter than Spotify/LMS, and a session
+  with zero mirrored Bluetooth volume changes despite a full slider
+  drag.** Real bug in `DummyMixerBridge`: it carried an echo window
+  copied from `VolumeBridge` without checking whether it applied - it
+  didn't. `VolumeBridge` watches and writes the *same* card, so its own
+  writes genuinely echo back; `DummyMixerBridge` watches the *dummy*
+  card but writes to the *real DAC* - different cards, so a write here
+  can never echo on what it's watching. The window could only ever
+  swallow genuine rapid updates, and Bluetooth's AVRCP updates during a
+  slider drag land as little as ~35ms apart - a fast enough chain could
+  silence itself indefinitely. Fixed: removed the echo window entirely
+  (`raw == last_raw` already covers the one legitimate case). Verified
+  live: seven writes 150-200ms apart all mirrored correctly afterward -
+  previously that cadence would have gone silent after the first one or
+  two.
+
+**Narrowed but still open, both refined with new evidence rather than
+just reconfirmed:**
+- **Bluetooth's unreliable first connect** now has a precisely-timed
+  cause in the logs: `bluealsa-aplay` tries to open its ALSA PCM as soon
+  as the A2DP *transport* starts, which fired ~1 second *before*
+  `MediaPlayer1 appeared` (the signal we use for acquisition, chosen
+  deliberately per ADR-0010 to not be stream-start). That second is
+  enough for `bluealsa-aplay` to race ahead of our own release-the-
+  previous-renderer logic. Confirmed one such race recovering via
+  `bluealsa-aplay`'s own retry within the same second; a full-failure
+  case is consistent with the same race landing worse, not confirmed.
+  Not fixed - swapping the acquisition signal is a real ADR-0010
+  trade-off, needs George's call.
+- **LMS reclaiming the device from Spotify** reproduced again, but this
+  session's log shows it happening *once* per Spotify session, not as a
+  sustained fight - narrows the likely mechanism from "LMS server keeps
+  re-asserting play" to "a single delayed play notification arrives
+  shortly after LMS was paused." Still not fixed - a debounce can't tell
+  a slow, single delayed echo from a genuine new user action.
+
+Both volume fixes are committed and included in the next rebuild.
+
 ## Machines
 
 | Name | What it is | Notes |

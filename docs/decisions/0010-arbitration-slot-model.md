@@ -310,6 +310,25 @@ what else might be issuing play commands during a test (another LMS
 client left open, a sync group, anything) to make progress. Full detail
 in Finding 009.
 
+**Refined, 2026-09-08 (third session) - George reproduced it again
+("Lms doesn't release to Spotify unless paused"), and this session's log
+narrows the shape further, not just confirms it.** In the captured
+session, the reclaim happened **once** per Spotify acquisition, not as a
+sustained fight - LMS reclaimed the device ~50s into a Spotify session,
+Spotify then struggled to get it back for about a minute (same
+resource-busy pattern as before), but once it succeeded a second time it
+held the device cleanly for over a minute afterward with no further
+reclaim, until a Bluetooth connection intentionally interrupted it. That
+changes the likely shape of the root cause from "LMS server keeps
+re-asserting play indefinitely" to "LMS server sends one delayed,
+late-arriving play notification shortly after being paused, which our
+code correctly treats as a fresh acquisition since nothing distinguishes
+it from a genuine one." Still not fixed - the 0.4s debounce can't tell
+a slow, single delayed echo of the *previous* pause from a genuinely new
+user action, since both look identical from a sub-second window, and
+widening the window further only trades a real, if rare, false takeover
+for added latency on every genuine one. Full detail in Finding 010.
+
 ## Open
 
 - **Sync group interaction — deferred, with a known cost, by decision.**
@@ -413,11 +432,31 @@ in Finding 009.
     own release path, don't rely on process death). If this holds up,
     Bluetooth's real fix looks more like "why doesn't disconnect free
     the PCM" than "how do we kill it more reliably."
-  - **Possibly connected, 2026-09-08: George reported an LMS→Bluetooth
-    takeover failing the first time, then working normally right after.**
-    Consistent with this item (stale state from a previous
-    Bluetooth session not fully released colliding with a fresh
-    connection attempt) but not confirmed - a single occurrence, no
-    logs captured at the time pointing at a specific cause. Noted here
-    rather than treated as a new, separate defect; investigate together
-    if it recurs.
+  - **Recurred, 2026-09-08, with logs this time - a real, precisely
+    evidenced race, not confirmed as the same cause as the item above but
+    likely related.** `bluealsa-aplay` attempts to open its ALSA playback
+    PCM as soon as BlueZ's A2DP *transport* starts
+    (`ba-transport.c:1075: Starting transport`) - a signal that, in the
+    captured log, fired a full **~1 second before** `MediaPlayer1
+    appeared`, the signal `BluetoothAdapter` uses for acquisition
+    (chosen, per that adapter's own docstring, because ADR-0010 wants
+    "A2DP profile connect," not stream start - deliberately not the
+    earliest possible signal). That second matters: `bluealsa-aplay`'s
+    own PCM-open attempt can race ahead of our own release-the-previous-
+    renderer logic, which hasn't even been *triggered* yet. Confirmed
+    directly in the log: `bluealsa-aplay` logged "Couldn't open ALSA
+    playback PCM: Device or resource busy" at the transport-start
+    signal, then retried and succeeded ~1s later once `MediaPlayer1`
+    triggered our own acquisition and released Spotify. This time the
+    retry recovered on its own within the same second; a first-connect
+    failure serious enough that a phone has to fully reconnect is
+    consistent with the same race landing worse (e.g. the previous
+    renderer needing the full ~3s polite-grace release rather than the
+    ~0.1-0.3s usually seen), not confirmed.
+
+    **Not fixed** - the acquisition signal (`MediaPlayer1` vs. transport
+    start) is the kind of trade-off ADR-0010 already deliberated
+    (stream-start detection was explicitly rejected as an acquisition
+    trigger for Spotify/Bluetooth generally - see "Rejected
+    alternatives" above), so swapping it for Bluetooth specifically needs
+    George's call, not a unilateral change. Full detail in Finding 010.
