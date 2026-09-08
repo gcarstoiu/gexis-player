@@ -1071,6 +1071,37 @@ change nothing about what's being tested), then 3 if the remaining time
 still matters, since it's the only one removing the emulation tax rather
 than just avoiding redundant work.
 
+**Estimated savings from 1 and 2, from the successful 2026-09-08 build's
+own per-stage log** (`image/deploy/build.log`'s `Begin`/`End` timestamps
+— option 2's number is a direct measurement, option 1's is a ceiling, not
+yet measured, since an incremental build has never actually been run):
+
+| Stage | Measured duration |
+|---|---|
+| stage0 (debootstrap, apt, locale, firmware) | 10m38s |
+| stage1 (boot files, sys/net tweaks) | 42s |
+| stage2 (Lite additions) | 8m31s |
+| stage-gexis (our own stage) | 4m49s |
+| export-image #1 — stage2's `EXPORT_IMAGE` (the unneeded "-lite" image) | 6m41s |
+| export-image #2 — the final `gexis-player` image | 7m50s |
+| **Total (matches the build's own reported time)** | **39m11s** |
+
+- **Option 2 alone** (drop stage2's `EXPORT_IMAGE`): removes export-image
+  #1 → **39m11s → ~32m30s**.
+- **Option 1 alone** (`CONTINUE=1`/`PRESERVE_CONTAINER=1`, reusing a
+  preserved container from the immediately preceding run): skips
+  stage0+stage1+stage2 (19m51s combined) *when their inputs haven't
+  changed* — the common case, since iteration is almost always in
+  `core/src/gexis_core/` or `image/stage-gexis/`. Doesn't help a `make
+  clean`'d or fresh-session build, which still pays the full cost.
+- **Both together, for a typical "only stage-gexis/core changed since
+  last build" iteration:** 39m11s − 6m41s − 19m51s ≈ **12m39s**.
+
+Caveat carried forward: option 1's ceiling ignores whatever overhead
+`CONTINUE=1`'s volume-reattach/rootfs-restore actually costs, since that
+has never been measured — don't quote ~12m39s as a promise, treat it as
+the number to beat once this is actually tried.
+
 ## Phase order
 
 ```
