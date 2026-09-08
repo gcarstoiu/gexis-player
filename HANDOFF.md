@@ -1023,84 +1023,61 @@ Not blocking, needed before their phases: the peppyalsa FIFO byte format
 LMS/Spotify/Bluetooth (Finding 007's follow-up notes — the bundled set
 covers none of our three sources).
 
-**Build speed — options researched 2026-09-08, nothing implemented yet.**
-`make image` runs ~40 minutes; George asked for ways to cut that (stability
+**Build speed — options 1 and 2 implemented and verified, 2026-09-08.**
+`make image` ran ~40 minutes; George asked for ways to cut that (stability
 still comes first — this doesn't reopen ADR-0001's pi-gen-over-rpi-image-gen
-call, see its 2026-09-08 amendment). Ranked by confidence and expected
-impact, in the order worth trying:
+call, see its 2026-09-08 amendment). Five options were researched and
+ranked; George asked to implement 1 and 2 and rebuild to see the effect.
+Both are now live in the `Makefile` (see its own comment on the `image`
+target for the full reasoning) and verified with two real, back-to-back
+builds — not estimated:
 
-1. **We aren't using pi-gen's own incremental-build mechanism at all —
-   highest-confidence, biggest lever, verified from `image/pi-gen/
-   build-docker.sh` itself, not assumed.** It supports `CONTINUE=1` (reuses
-   the previous container's `work`/`deploy` volumes via
-   `--volumes-from`, letting pi-gen skip any stage whose scripts/config
-   haven't changed) and `PRESERVE_CONTAINER=1` (keeps the container
-   instead of deleting it at the end, so a later `CONTINUE=1` run has
-   something to attach to). Our `Makefile`'s `image` target sets neither,
-   and `make clean`'s `docker rm -v pigen_work` actively destroys the
-   volumes even when they exist. Every build redoes the entire stage0
-   debootstrap and every package install from scratch under QEMU, even
-   when only a `core/src/gexis_core/*.py` file or one systemd unit
-   changed. For iterative development (most of our builds), this is
-   likely the dominant cost, not the emulation itself.
-2. **We build and export an image we don't need.** `image/pi-gen/stage2/
-   EXPORT_IMAGE` exists (upstream pi-gen default) — confirmed present in
-   this repo — which is why `deploy/` gets both a `-lite` image and the
-   final `gexis-player` image: two full export passes (loop device,
-   zerofree, compression) when only the final one is ever used. Removing
-   that marker (or overriding it in `image/config`) cuts one whole
-   export/compress cycle per build.
+| Build | What changed | Measured time |
+|---|---|---|
+| Baseline (2026-09-08, earlier session) | neither option | 39m11s |
+| Cold build, option 2 only (`stage2/EXPORT_IMAGE` removed) | drops the unused "-lite" export | **32m01s** (predicted ~32m30s) |
+| Warm build, both options (`CONTINUE=1` against the preserved container from the run above) | also skips stage0-2 | **11m33s** (predicted ceiling ~12m39s) |
+
+Both measurements beat the prediction slightly. Confirmed correct, not
+just fast: `stage0/prerun.sh` (the ~3.5-minute debootstrap) went from
+Begin to End in the same second on the warm build — the rootfs is
+reused wholesale — while `stage-gexis/03-core/00-run-chroot.sh` (the
+`pip install` of `gexis-core`) still ran in full (30s) against the live
+bind-mounted source, and only one `export-image` pass ran. The cache
+skips the base OS layers, not our own code.
+
+One wrinkle noticed, not a problem: `work/*/build.log` (mirrored to
+`deploy/build.log`) *appends* across `CONTINUE=1` runs rather than
+starting fresh, so grepping it for one run's stage timings after several
+warm rebuilds will show more than one run's entries mixed together — use
+the live `docker logs`/Makefile-reported wall time for a single run's
+number, not this file, once several incremental builds have piled up.
+
+**Consequence for the day-to-day workflow:** `make image` now leaves the
+`pigen_work` container behind on success (`PRESERVE_CONTAINER=1`) instead
+of self-cleaning — `make clean` is the only way left to force a truly
+from-scratch build (a pi-gen submodule bump, a suspected caching bug, or
+just wanting a clean-room result before a release). Its own comment in
+the `Makefile` explains this.
+
+**Not implemented, still open if the remaining ~11-12 minutes (mostly the
+QEMU-emulated final export/compress and whatever base-OS work wasn't
+cached) is ever worth chasing further:**
+
 3. **Native arm64 build host** — removes the QEMU emulation tax entirely
-   (the dominant *remaining* cost once 1-2 are fixed: QEMU user-mode
-   emulation runs every `dpkg`/`apt` post-install script
-   instruction-by-instruction). Building on real arm64 (a Pi 4/5, or an
-   arm64 CI runner/cloud VM) is the single biggest possible win, but
-   changes the build environment away from the one ADR-0001/Findings
-   002-003 were measured on — not free of its own verification cost.
+   (the dominant remaining cost: QEMU user-mode emulation runs every
+   `dpkg`/`apt` post-install script instruction-by-instruction). The
+   single biggest possible further win, but changes the build environment
+   away from the one ADR-0001/Findings 002-003 were measured on — not
+   free of its own verification cost.
 4. **Local apt caching** (`apt-cacher-ng` or similar) — smaller win here
-   than usual: build logs show package *fetching* is already fast (tens
-   of MB in seconds); the slow part is unpack/configure under emulation,
-   not download. Cheap to add, helps most on a slow/flaky network day.
+   than usual: build logs show package *fetching* is already fast; the
+   slow part is unpack/configure under emulation, not download. Cheap to
+   add, helps most on a slow/flaky network day.
 5. **Audit whether stage0/1/2 install anything this product doesn't
-   need** — least certain of the five, nothing checked yet, and cuts
-   against ADR-0001's "less of the base is ours to maintain" reasoning.
-   Last resort, not a first move.
-
-Suggested order: 1 and 2 first (free, verified from our own config,
-change nothing about what's being tested), then 3 if the remaining time
-still matters, since it's the only one removing the emulation tax rather
-than just avoiding redundant work.
-
-**Estimated savings from 1 and 2, from the successful 2026-09-08 build's
-own per-stage log** (`image/deploy/build.log`'s `Begin`/`End` timestamps
-— option 2's number is a direct measurement, option 1's is a ceiling, not
-yet measured, since an incremental build has never actually been run):
-
-| Stage | Measured duration |
-|---|---|
-| stage0 (debootstrap, apt, locale, firmware) | 10m38s |
-| stage1 (boot files, sys/net tweaks) | 42s |
-| stage2 (Lite additions) | 8m31s |
-| stage-gexis (our own stage) | 4m49s |
-| export-image #1 — stage2's `EXPORT_IMAGE` (the unneeded "-lite" image) | 6m41s |
-| export-image #2 — the final `gexis-player` image | 7m50s |
-| **Total (matches the build's own reported time)** | **39m11s** |
-
-- **Option 2 alone** (drop stage2's `EXPORT_IMAGE`): removes export-image
-  #1 → **39m11s → ~32m30s**.
-- **Option 1 alone** (`CONTINUE=1`/`PRESERVE_CONTAINER=1`, reusing a
-  preserved container from the immediately preceding run): skips
-  stage0+stage1+stage2 (19m51s combined) *when their inputs haven't
-  changed* — the common case, since iteration is almost always in
-  `core/src/gexis_core/` or `image/stage-gexis/`. Doesn't help a `make
-  clean`'d or fresh-session build, which still pays the full cost.
-- **Both together, for a typical "only stage-gexis/core changed since
-  last build" iteration:** 39m11s − 6m41s − 19m51s ≈ **12m39s**.
-
-Caveat carried forward: option 1's ceiling ignores whatever overhead
-`CONTINUE=1`'s volume-reattach/rootfs-restore actually costs, since that
-has never been measured — don't quote ~12m39s as a promise, treat it as
-the number to beat once this is actually tried.
+   need** — least certain, nothing checked yet, and cuts against
+   ADR-0001's "less of the base is ours to maintain" reasoning. Last
+   resort, not a first move.
 
 ## Phase order
 
