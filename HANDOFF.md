@@ -1023,6 +1023,54 @@ Not blocking, needed before their phases: the peppyalsa FIFO byte format
 LMS/Spotify/Bluetooth (Finding 007's follow-up notes — the bundled set
 covers none of our three sources).
 
+**Build speed — options researched 2026-09-08, nothing implemented yet.**
+`make image` runs ~40 minutes; George asked for ways to cut that (stability
+still comes first — this doesn't reopen ADR-0001's pi-gen-over-rpi-image-gen
+call, see its 2026-09-08 amendment). Ranked by confidence and expected
+impact, in the order worth trying:
+
+1. **We aren't using pi-gen's own incremental-build mechanism at all —
+   highest-confidence, biggest lever, verified from `image/pi-gen/
+   build-docker.sh` itself, not assumed.** It supports `CONTINUE=1` (reuses
+   the previous container's `work`/`deploy` volumes via
+   `--volumes-from`, letting pi-gen skip any stage whose scripts/config
+   haven't changed) and `PRESERVE_CONTAINER=1` (keeps the container
+   instead of deleting it at the end, so a later `CONTINUE=1` run has
+   something to attach to). Our `Makefile`'s `image` target sets neither,
+   and `make clean`'s `docker rm -v pigen_work` actively destroys the
+   volumes even when they exist. Every build redoes the entire stage0
+   debootstrap and every package install from scratch under QEMU, even
+   when only a `core/src/gexis_core/*.py` file or one systemd unit
+   changed. For iterative development (most of our builds), this is
+   likely the dominant cost, not the emulation itself.
+2. **We build and export an image we don't need.** `image/pi-gen/stage2/
+   EXPORT_IMAGE` exists (upstream pi-gen default) — confirmed present in
+   this repo — which is why `deploy/` gets both a `-lite` image and the
+   final `gexis-player` image: two full export passes (loop device,
+   zerofree, compression) when only the final one is ever used. Removing
+   that marker (or overriding it in `image/config`) cuts one whole
+   export/compress cycle per build.
+3. **Native arm64 build host** — removes the QEMU emulation tax entirely
+   (the dominant *remaining* cost once 1-2 are fixed: QEMU user-mode
+   emulation runs every `dpkg`/`apt` post-install script
+   instruction-by-instruction). Building on real arm64 (a Pi 4/5, or an
+   arm64 CI runner/cloud VM) is the single biggest possible win, but
+   changes the build environment away from the one ADR-0001/Findings
+   002-003 were measured on — not free of its own verification cost.
+4. **Local apt caching** (`apt-cacher-ng` or similar) — smaller win here
+   than usual: build logs show package *fetching* is already fast (tens
+   of MB in seconds); the slow part is unpack/configure under emulation,
+   not download. Cheap to add, helps most on a slow/flaky network day.
+5. **Audit whether stage0/1/2 install anything this product doesn't
+   need** — least certain of the five, nothing checked yet, and cuts
+   against ADR-0001's "less of the base is ours to maintain" reasoning.
+   Last resort, not a first move.
+
+Suggested order: 1 and 2 first (free, verified from our own config,
+change nothing about what's being tested), then 3 if the remaining time
+still matters, since it's the only one removing the emulation tax rather
+than just avoiding redundant work.
+
 ## Phase order
 
 ```
