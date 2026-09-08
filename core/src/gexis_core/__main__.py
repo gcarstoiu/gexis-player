@@ -16,7 +16,7 @@ from gexis_core.arbitration import BASE_RENDERER, Supervisor
 from gexis_core.config import Config
 from gexis_core.renderer_volume import RendererVolumeMemory
 from gexis_core import volume
-from gexis_core.volume import DummyMixerBridge, VolumeBridge, db_to_raw, get_raw, raw_to_db, set_raw
+from gexis_core.volume import DummyMixerBridge, VolumeBridge, db_to_raw, get_raw, raw_to_db
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(levelname)s %(message)s")
 logger = logging.getLogger("gexis_core")
@@ -45,13 +45,20 @@ def unmanaged_floor_raw(current: int | None, floor_db: float) -> int | None:
     return db_to_raw(floor_db)
 
 
-def make_restore_volume(config: Config, volume_memory: RendererVolumeMemory):
+def make_restore_volume(config: Config, volume_memory: RendererVolumeMemory, volume_bridge: VolumeBridge):
     async def restore_volume(renderer_id: str) -> None:
         # George's decision, 2026-09-07: each renderer keeps its own
         # volume, restored when it becomes active - not reset to the
         # boot-safe level on every takeover. A renderer with no
         # remembered level (never used yet) gets that same safe level as
         # its starting point.
+        #
+        # Writes go through volume_bridge.write_hardware(), not set_raw()
+        # directly, so this doesn't arrive on `alsactl monitor` looking
+        # like an external change - found on hardware, 2026-09-08 (see
+        # write_hardware's own docstring): a direct set_raw() here was
+        # getting echoed straight back out to Spotify on every
+        # acquisition, racing go-librespot's own volume report.
         raw = volume_memory.resolve_restore(
             renderer_id,
             boot_default=config.boot_volume_steps,
@@ -59,7 +66,7 @@ def make_restore_volume(config: Config, volume_memory: RendererVolumeMemory):
         )
         if raw is not None:
             logger.info("volume: restoring %s to %s/240", renderer_id, raw)
-            await set_raw(config.mixer_name, raw)
+            await volume_bridge.write_hardware(raw)
             return
 
         # Not volume-managed (None above) - genuinely not remembered or
@@ -81,7 +88,7 @@ def make_restore_volume(config: Config, volume_memory: RendererVolumeMemory):
             raw_to_db(current),
             config.restore_volume_floor_db,
         )
-        await set_raw(config.mixer_name, floor_raw)
+        await volume_bridge.write_hardware(floor_raw)
 
     return restore_volume
 
@@ -95,7 +102,19 @@ async def main() -> None:
     adapters = {BASE_RENDERER: lms, "spotify": spotify, "bluetooth": bluetooth}
 
     volume_memory = RendererVolumeMemory()
-    restore_volume = make_restore_volume(config, volume_memory)
+
+    # Constructed before Supervisor/restore_volume, which both need to
+    # write through it (write_hardware()) rather than around it - its
+    # get_active_renderer callback references `supervisor` by closure, so
+    # it's fine that `supervisor` itself doesn't exist yet here; nothing
+    # calls the callback until well after `supervisor` is assigned below.
+    volume_bridge = VolumeBridge(
+        config.mixer_name,
+        spotify,
+        volume_memory=volume_memory,
+        get_active_renderer=lambda: supervisor.active,
+    )
+    restore_volume = make_restore_volume(config, volume_memory, volume_bridge)
 
     supervisor = Supervisor(
         adapters,
@@ -108,13 +127,6 @@ async def main() -> None:
             asyncio.create_task(supervisor.acquire(renderer_id))
 
         return _on_acquire
-
-    volume_bridge = VolumeBridge(
-        config.mixer_name,
-        spotify,
-        volume_memory=volume_memory,
-        get_active_renderer=lambda: supervisor.active,
-    )
     # B2, George's decision 2026-09-08: LMS and Bluetooth each write to
     # their own private snd-dummy control (image/stage-gexis/00-alsa's
     # modprobe config), not the real DAC directly - these mirror that

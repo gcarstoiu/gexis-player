@@ -928,6 +928,56 @@ and what's confirmed vs not in **Finding 008** — summary:
 be rebuilt** — George will reflash and retest on the new image rather
 than trusting the live-patched state further.
 
+### 2026-09-08 (third session): hardware round on the rebuilt image — three volume bugs fixed, two issues still open
+
+George tested the rebuilt image (with the fixes above) and reported five
+symptoms. Full detail and evidence in **Finding 009**; summary:
+
+**Fixed and verified live, all three volume-related:**
+- **Spotify volume "finicky" (behind, delayed, sometimes absent, once
+  inverted).** `restore_volume()` wrote straight to the real DAC on every
+  acquisition, bypassing `VolumeBridge`'s echo window - its own write got
+  misread as an external change and echoed straight back to Spotify,
+  racing go-librespot's own volume report. Added
+  `VolumeBridge.write_hardware()`; `restore_volume` and the unmanaged-
+  renderer floor bump now go through it.
+- **LMS volume silent below ~75%.** Measured directly: squeezelite
+  derives its percent-to-dB curve from *whatever control's own declared
+  range it's pointed at* - against the dummy control (-45dB span) this
+  is a much gentler curve than it'd ever compute against the real DAC
+  (-120dB span). `dummy_raw_to_hardware_raw()`'s fractional-position
+  rescaling was undoing that gentleness, re-stretching the curve back
+  across the DAC's full range. Fixed: direct dB copy, no rescaling.
+  Verified live, before/after table in Finding 009 - 75% went from
+  -32.8dB to -12.5dB.
+- **Found while verifying the above, not one of George's five:** the
+  mixer-value parsing regex silently dropped minus signs (`\d+` doesn't
+  match `-`), wrong for the dummy controls' -50..100 range - a *wrong*
+  parsed value, not a failure, affecting roughly the bottom third of
+  LMS/Bluetooth's own volume range. Fixed: `-?\d+`.
+
+**Narrowed but still open, both the same underlying family already
+flagged in Finding 008/ADR-0010:**
+- **LMS repeatedly reclaims the device from whoever just took it over**
+  ("Spotify cannot takeover LMS unless LMS is paused"; Spotify failing to
+  open the device for over a minute after a single LMS reclaim). New this
+  round: squeezelite itself is now ruled out empirically (paused it,
+  held the ALSA device open with an unrelated process for 12s, watched
+  its log - zero retry attempts). The repeated `mode: play` must
+  genuinely originate from LMS *server*, sustained well past the
+  existing 0.4s debounce each time - mechanism not established, needs
+  either LMS server's own logs (a different machine, out of reach from
+  `gexis`) or context only George has.
+- **LMS→Bluetooth takeover failed once, then worked.** Single
+  occurrence, no logs captured pointing at a cause - noted against
+  ADR-0010's already-open Bluetooth release-ladder item as a plausible
+  match, not treated as a new defect.
+
+All three volume fixes are committed and included in the next rebuild.
+The two open items are **not** blocking that rebuild - they're
+pre-existing, already-tracked gaps, not regressions from this round's
+work.
+
 ## Machines
 
 | Name | What it is | Notes |
@@ -958,22 +1008,30 @@ the tag) — tag manually before a build worth naming, for now.
 
 ## Next actions, in order
 
-1. **Rebuild and reflash `gexis`**, to pick up 2026-09-08's fixes: the
-   arbitration busy-check fix, `SpotifyAdapter`'s SIGKILL fix, LMS's
-   acquisition debounce, and the dummy-control volume isolation (B2).
-   All four verified live-patched on `gexis` (Finding 008); none yet
-   verified from a clean rebuilt image.
+1. **Rebuild and reflash `gexis`**, to pick up 2026-09-08's fixes: Finding
+   008's arbitration/B2 work plus Finding 009's three volume-bug fixes
+   (Spotify's echo-window bypass, the wrong curve-rescaling formula, the
+   sign-dropping regex). All verified live-patched on `gexis`; the volume
+   curve fix specifically confirmed against real hardware readings
+   (Finding 009 §2's before/after table) — none yet verified from a
+   clean rebuilt image.
 2. **On the reflashed image, in order:**
-   - Repeat the Spotify ↔ LMS ↔ Bluetooth switching George just tested,
+   - Repeat the Spotify ↔ LMS ↔ Bluetooth switching George tested,
      several times each direction — confirm Spotify Connect survives
-     takeovers and actually sustains playback, not just avoids dying.
+     takeovers and sustains playback, and that its volume tracks the
+     phone's own display without lag/inversion (Finding 009 §1).
+   - Confirm LMS's volume is usable across its full range, not just the
+     top quarter (Finding 009 §2 — already confirmed on `gexis` directly,
+     this is about the rebuilt image specifically).
    - **Full multi-switch volume-isolation retest** (Finding 008's "Not
-     yet done") — raise each renderer's volume while a different one is
-     actively playing, confirm nothing audible changes except when the
-     renderer being adjusted is the one currently active.
-   - Re-check LMS's track-start behaviour specifically (Finding 008 §2
-     — the debounce fix's effect on this was inferred from a shared
-     mechanism, not independently re-run).
+     yet done", still outstanding) — raise each renderer's volume while a
+     different one is actively playing, confirm nothing audible changes
+     except when the renderer being adjusted is the one currently active.
+   - **LMS repeatedly reclaiming the device (Finding 009 §4/5) needs
+     George's input, not just retesting** — squeezelite itself is ruled
+     out; if this recurs, capturing *what else was happening on the LMS
+     side* (another client open, a sync group, anything issuing play
+     commands) matters more than another log pull from `gexis` alone.
 3. **Bluetooth's release ladder — still needs its own investigation.**
    Two candidate causes recorded (ADR-0010's "Open" section): a
    too-fast unit restart racing the ladder's check, or `bluealsa-aplay`

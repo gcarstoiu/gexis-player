@@ -22,6 +22,7 @@ from gexis_core.volume import (
     VolumeBridge,
     db_to_raw,
     dummy_raw_to_hardware_raw,
+    get_raw,
     raw_to_db,
 )
 
@@ -97,6 +98,26 @@ async def test_genuine_spotify_change_outside_window_is_applied(fake_set_raw):
 
 
 @pytest.mark.asyncio
+async def test_write_hardware_arms_the_echo_window(fake_set_raw):
+    """Found on hardware, 2026-09-08: restore_volume (__main__.py) called
+    set_raw() directly on every acquisition, bypassing the echo window -
+    that write still shows up on alsactl monitor, so it got treated as a
+    genuine external change and echoed straight back to Spotify via
+    _on_spotify_volume's own path, racing go-librespot's own volume
+    report. write_hardware() is what restore_volume and the unmanaged-
+    renderer floor bump now call instead; this is the fix's core
+    property: a write through it must not be mistaken for a fresh
+    external change afterward."""
+    bridge, _ = make_bridge()
+    bridge._last_own_write = 0.0  # long ago - not already in a window
+
+    await bridge.write_hardware(120)
+
+    assert fake_set_raw == [("DAC", 120)]
+    assert bridge._within_echo_window()  # armed by the write itself
+
+
+@pytest.mark.asyncio
 async def test_spotify_volume_arms_the_window_so_a_second_echo_is_also_dropped(fake_set_raw):
     bridge, _ = make_bridge()
     bridge._last_own_write = 0.0
@@ -133,6 +154,57 @@ def test_echo_window_is_positive_and_not_absurdly_long():
     assert 0 < ECHO_WINDOW_S < 5
 
 
+class FakeProcess:
+    def __init__(self, stdout: bytes):
+        self._stdout = stdout
+
+    async def communicate(self):
+        return self._stdout, b""
+
+
+class TestGetRawNegativeValues:
+    """Regression coverage for a bug found on hardware, 2026-09-08: the
+    dummy controls' own range is -50..100 (unlike the real DAC's 0..240),
+    and the parsing regex's `\\d+` silently dropped the sign on every
+    negative reading ("-50" parsed as 50) - a wrong value, not a parse
+    failure, so `get_raw()` returning *something* didn't mean it returned
+    the right thing. Affects roughly the bottom third of the dummy
+    controls' range; invisible on the real DAC, which never goes
+    negative."""
+
+    @pytest.mark.asyncio
+    async def test_negative_dummy_reading_parses_with_its_sign(self, monkeypatch):
+        # Live-format capture, 2026-09-08: `amixer -D hw:gexislmsvol sget
+        # Master` at LMS 0%.
+        stdout = (
+            b"Simple mixer control 'Master',0\n"
+            b"  Capabilities: volume cswitch\n"
+            b"  Playback channels: Front Left - Front Right\n"
+            b"  Capture channels: Front Left - Front Right\n"
+            b"  Limits: -50 - 100\n"
+            b"  Front Left: -50 [0%] [-45.00dB] Capture [off]\n"
+            b"  Front Right: -50 [0%] [-45.00dB] Capture [off]\n"
+        )
+
+        async def fake_exec(*args, **kwargs):
+            return FakeProcess(stdout)
+
+        monkeypatch.setattr(asyncio, "create_subprocess_exec", fake_exec)
+
+        assert await get_raw("Master", device="hw:gexislmsvol") == -50
+
+    @pytest.mark.asyncio
+    async def test_positive_reading_still_parses(self, monkeypatch):
+        stdout = b"  Front Left: Playback 216 [90%] [-12.00dB]\n"
+
+        async def fake_exec(*args, **kwargs):
+            return FakeProcess(stdout)
+
+        monkeypatch.setattr(asyncio, "create_subprocess_exec", fake_exec)
+
+        assert await get_raw("DAC") == 216
+
+
 class TestDbConversion:
     """ADR-0018's documented scale: raw 0 = -120dB (mute), raw 240 =
     0dB, 0.5dB/step. Regression coverage for the finding that reasoning
@@ -164,25 +236,43 @@ class TestDummyRawToHardwareRaw:
     volume.py's module docstring and DummyMixerBridge). This is the
     translation between the dummy's own scale (-50..100 raw, -45..0dB,
     measured on hardware) and the real DAC's (0..240 raw, -120..0dB,
-    ADR-0018) - by fractional position in each control's own dB range,
-    not a flat raw-to-raw ratio."""
+    ADR-0018) - a direct dB copy, clamped to the DAC's range.
 
-    def test_endpoints_map_to_endpoints(self):
-        # Dummy's quietest (-45dB, its floor) must reach the DAC's true
-        # mute, not stop at -45dB on a -120dB-deep control.
-        assert dummy_raw_to_hardware_raw(-50) == 0
-        assert dummy_raw_to_hardware_raw(100) == 240
+    **Not** fractional-position rescaling, which is what this used to do
+    until found wrong on hardware, 2026-09-08 (George: LMS silent below
+    ~75%). Measured directly: squeezelite derives its percent-to-dB curve
+    from the *target control's own declared TLV range*, so pointed at the
+    dummy (-45dB span) it produces a much gentler curve than it would
+    against the DAC directly (-120dB span) - rescaling by fractional
+    position undid that gentleness by re-stretching the curve back across
+    the DAC's full range, recreating the exact "everything crammed into
+    the last quarter" compression the dummy's narrower range had
+    incidentally fixed. See dummy_raw_to_hardware_raw's own docstring."""
 
-    def test_midpoint_preserves_fractional_position_not_raw_ratio(self):
-        # Dummy raw 25 is dB (-45 + 75*0.30) = -22.5dB, which is 50% of
-        # the dummy's own -45..0dB span - so it should land at 50% of
-        # the DAC's -120..0dB span (-60dB -> raw 120), not at 50% of the
-        # dummy's raw *range* (-50..100) mapped onto 0..240.
-        assert dummy_raw_to_hardware_raw(25) == 120
+    def test_endpoint_dont_reach_true_mute(self):
+        # The dummy's floor (-45dB) is the quietest LMS/Bluetooth can
+        # reach via this path - short of the DAC's true mute (-120dB),
+        # accepted: silence is pause/mute's job, not the volume slider's.
+        assert dummy_raw_to_hardware_raw(-50) == 150  # -45dB
+        assert dummy_raw_to_hardware_raw(100) == 240  # 0dB, unattenuated
+
+    def test_dont_rescale_by_fractional_position(self):
+        # Dummy raw 25 is -22.5dB ((-45 + 75*0.30)). A direct copy lands
+        # the DAC at the *same* -22.5dB (raw 195) - not at 50% of the
+        # DAC's own -120..0dB span (which the old, wrong formula computed
+        # as -60dB / raw 120).
+        assert dummy_raw_to_hardware_raw(25) == 195
 
     def test_measured_hardware_point(self):
         # Live reading, 2026-09-08: dummy raw 59 measured as -12.30dB.
-        # -12.30 is 72.67% up from -45dB; 72.67% of the DAC's 120dB span
-        # from mute is -32.8dB, which is raw 174 (rounding to the
-        # nearest 0.5dB step).
-        assert dummy_raw_to_hardware_raw(59) == 174
+        # Copied directly: raw 215 on the DAC (-12.5dB, nearest 0.5dB step).
+        assert dummy_raw_to_hardware_raw(59) == 215
+
+    def test_measured_lms_percent_curve_stays_audible_below_75_percent(self):
+        # Regression coverage for the actual reported symptom: LMS set to
+        # 25/50/75% via its own RPC measured as dummy raw -23/18/59
+        # (2026-09-08, live). None of these should land near the DAC's
+        # silent end.
+        assert dummy_raw_to_hardware_raw(-23) == 166  # LMS ~25%, -36.9dB
+        assert dummy_raw_to_hardware_raw(18) == 191  # LMS ~50%, -24.6dB
+        assert dummy_raw_to_hardware_raw(59) == 215  # LMS ~75%, -12.3dB

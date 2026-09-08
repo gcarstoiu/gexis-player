@@ -111,7 +111,18 @@ DB_STEP = 0.5  # dB per raw step (ADR-0018, confirmed against amixer's own dBsca
 # when DummyMixerBridge's get_raw() against a dummy control silently
 # returned None (the old Playback-only pattern never matched). Both
 # forms share "Front Left: <n> [", with or without "Playback" in between.
-_VALUE_RE = re.compile(rb"Front Left: (?:Playback )?(\d+) \[")
+#
+# `-?` on the value group: found on hardware, 2026-09-08, the *second*
+# time - the dummy control's own range is -50..100 (unlike the DAC's
+# 0..240), and `\d+` alone silently dropped the sign on every negative
+# reading ("-50" parsed as 50), producing wrong mirrored values and
+# erratic missed-update behaviour (a wrongly-sign-stripped reading could
+# coincidentally equal a later or earlier *real* positive reading and
+# get deduped against it) for roughly the bottom third of LMS/Bluetooth's
+# own volume range. Silent, not a parse failure - `re.search` still
+# matched, just the wrong number - so nothing short of comparing against
+# a live reading would have caught it.
+_VALUE_RE = re.compile(rb"Front Left: (?:Playback )?(-?\d+) \[")
 
 # snd-dummy's own scale (mixer_volume_level_min/max module params, left
 # at their defaults) - measured on hardware, 2026-09-08, from a fresh
@@ -134,18 +145,32 @@ def dummy_raw_to_db(raw: int) -> float:
 def dummy_raw_to_hardware_raw(raw: int) -> int:
     """Map a dummy control's raw value onto the real DAC's raw scale.
 
-    By *fractional position within each control's own dB range*, not a
-    flat raw-to-raw ratio or a flat dB offset - raw steps are dB-linear
-    on both controls but the two ranges differ (dummy: -45..0dB over
-    150 steps; DAC: -120..0dB over 240 steps, ADR-0018), so a 1:1 dB
-    copy would mean the dummy's quietest setting (-45dB) never reaches
-    the DAC's true mute. Position-preserving keeps "all the way down"
-    meaning the same thing on both.
+    A direct dB copy (dummy's dB value applied unchanged to the DAC,
+    clamped to its range) - **not** fractional-position rescaling, which
+    is what this function did until found wrong on hardware, 2026-09-08:
+    George reported LMS silent below ~75%. Measured directly (set LMS to
+    0/25/50/75/100% via LMS's own RPC, read the resulting dummy raw):
+    squeezelite computes its percent-to-dB curve *from the target
+    control's own declared TLV range* - 0% lands exactly on the dummy's
+    floor (-45dB) and 100% on its ceiling (0dB) - not from some fixed
+    internal assumption. Against the real DAC directly (pre-B2, -120dB
+    span) the identical logic would have made squeezelite's own curve
+    spread across the full 120dB, putting 75% at -30dB and 50% at -60dB -
+    quiet enough to read as "silent" in a normal room. That was never a
+    B2 regression to reproduce faithfully; it's squeezelite's own
+    curve-generation being naive about wide-range controls, and the
+    dummy's narrower declared span happens to produce a *gentler, more
+    usable* curve as a side effect. Rescaling by fractional position
+    (the original approach here) undid that by re-stretching the gentle
+    curve back across the DAC's full range - reintroducing the exact
+    compression this is meant to avoid. A straight dB copy keeps the
+    gentler curve: 75% lands at -12.3dB, 50% at -24.6dB, both clearly
+    audible. Costs reachability of the DAC's own quietest ~140 raw steps
+    from LMS/Bluetooth specifically (the dummy's floor, -45dB, is well
+    short of the DAC's -120dB) - accepted, since dead silence is what
+    pause/mute are for, not the bottom of a renderer's own volume slider.
     """
-    db = dummy_raw_to_db(raw)
-    frac = (db - DUMMY_DB_MIN) / (0.0 - DUMMY_DB_MIN)
-    hardware_db = DB_MIN + frac * (0.0 - DB_MIN)
-    return db_to_raw(hardware_db)
+    return db_to_raw(dummy_raw_to_db(raw))
 
 
 def raw_to_db(raw: int) -> float:
@@ -228,6 +253,31 @@ class VolumeBridge:
     def _within_echo_window(self) -> bool:
         return time.monotonic() - self._last_own_write < ECHO_WINDOW_S
 
+    async def write_hardware(self, raw: int) -> None:
+        """Write `raw` to the real DAC and arm the echo window first.
+
+        Found on hardware, 2026-09-08: `restore_volume` (`__main__.py`)
+        was calling `set_raw()` directly on acquire, bypassing this
+        class's echo window entirely. That write still shows up on
+        `alsactl monitor` like any other, so `run()`'s loop treated it as
+        a genuine external change and echoed it straight back out to
+        go-librespot via `_spotify.set_volume()` - a spurious round trip
+        on every Spotify acquisition, racing whatever go-librespot's own
+        fresh-connect volume report happened to be at the same moment.
+        Matches George's report exactly: volume "behind" the phone's own
+        display, occasionally absent, and once actually inverted (phone
+        showed the level dropping while the speaker got louder) - two
+        writes to the same control, arriving in whichever order the two
+        async tasks happened to schedule in.
+
+        Anything that writes the real DAC outside a renderer's own live
+        volume-report path (`_on_spotify_volume`) must go through this,
+        not `set_raw` directly - restore-on-acquire and the unmanaged-
+        renderer floor bump both do now.
+        """
+        self._last_own_write = time.monotonic()
+        await set_raw(self._mixer_name, raw)
+
     def _on_spotify_volume(self, value: int, max_: int) -> None:
         if max_ <= 0:
             logger.warning("volume: spotify reported max=%r, ignoring", max_)
@@ -247,8 +297,7 @@ class VolumeBridge:
             )
             return
         logger.info("volume: spotify -> hardware (%s/%s -> %s/240)", value, max_, raw)
-        self._last_own_write = time.monotonic()
-        asyncio.create_task(set_raw(self._mixer_name, raw))
+        asyncio.create_task(self.write_hardware(raw))
 
     async def run(self) -> None:
         """Watch `alsactl monitor` and push hardware changes to Spotify.

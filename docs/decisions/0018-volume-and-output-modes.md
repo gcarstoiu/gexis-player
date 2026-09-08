@@ -121,11 +121,6 @@ the only thing that ever copies a dummy control's value onto the real
 one - the same "mirror when active, remember otherwise" shape
 `_on_spotify_volume` already used for Spotify, generalised to the two
 renderers that didn't have an equivalent private state of their own.
-Scale translation is by **fractional position within each control's own
-dB range** (dummy: -45..0dB over 150 raw steps; DAC: -120..0dB over 240,
-per this record), not a flat raw ratio or a flat dB offset - a 1:1 dB
-copy would mean the dummy's quietest setting could never reach the DAC's
-true mute.
 
 No software attenuation is introduced anywhere by this - the real DAC's
 hardware attenuator is still the only thing that ever changes what's
@@ -135,6 +130,36 @@ before. This does not change squeezelite's own startup assertion
 control instead of `output`'s `DAC`) - the underlying concern (a
 missing/misnamed mixer control silently falling back to software
 volume) is unchanged, just checked against the new target.
+
+**Amended again, 2026-09-08 (later the same day) - two bugs found on the
+first real hardware test of this, both fixed, full detail in Finding
+009:**
+
+1. **Scale translation was wrong.** Originally by fractional position
+   within each control's own dB range (dummy: -45..0dB over 150 raw
+   steps; DAC: -120..0dB over 240) - reasoned at the time as "a 1:1 dB
+   copy would mean the dummy's quietest setting could never reach the
+   DAC's true mute." George reported LMS silent below ~75%. Measured on
+   hardware: squeezelite derives its own percent-to-dB curve from
+   *whatever control it's pointed at*'s declared TLV range, so against
+   the dummy (-45dB span) it already computes a gentler curve than it
+   ever would against the DAC directly (-120dB span) - fractional-
+   position rescaling threw that gentleness away by re-stretching the
+   curve back across the DAC's full range, recreating the exact "most of
+   the slider does nothing" compression a wide-range hardware mixer
+   already has a well-known reputation for. **Fixed: a direct dB copy**,
+   no rescaling - `dummy_raw_to_hardware_raw()`'s own docstring has the
+   full reasoning and the measured before/after curve.
+2. **The value-parsing regex silently dropped minus signs.** The dummy
+   controls' own range is -50..100 (unlike the DAC's 0..240), and
+   `_VALUE_RE`'s `\d+` doesn't match a leading `-` - every negative
+   reading parsed as its own absolute value ("-50" as 50), which is a
+   *wrong* value, not a failure, so nothing short of comparing against a
+   live reading would have caught it. Affected roughly the bottom third
+   of LMS/Bluetooth's own volume range with wrong mirrored values and
+   erratic missed updates (a mis-parsed reading could coincidentally
+   equal an unrelated earlier or later real reading and get deduped
+   against it). Fixed: `-?\d+`.
 
 ### The mixer is subscribed, not polled
 

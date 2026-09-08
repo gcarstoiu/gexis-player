@@ -288,6 +288,28 @@ traced - the fix targets the observed pattern, not a confirmed root
 cause; flagged as such, not asserted with more confidence than the
 evidence supports.
 
+**Amended again, 2026-09-08 (later the same day) - the debounce above
+only ever covered the *sub-second* case, and George's next hardware
+round showed the same symptom family persisting well beyond it: Spotify
+struggling to open the device for over a minute after a genuine LMS
+reclaim, and a separate report that Spotify "cannot take over LMS unless
+LMS is paused" - both consistent with `mode: play` being reported by LMS
+*repeatedly, sustained well past 0.4s each time*, not a momentary bounce.
+**Squeezelite itself is now ruled out as the source, empirically, not by
+inference:** paused LMS via RPC, held the ALSA device open with an
+unrelated `aplay` process for 12s, and squeezelite logged zero open
+attempts throughout - it does not retry spontaneously while genuinely
+paused. The repeated `mode: play` has to be LMS server itself re-sending
+play to squeezelite, for a reason not established - no sync group, no
+random-mix/repeat setting active, nothing in `gexis-core`'s own code
+sends LMS a play command. **Still open** - the 0.4s debounce is a partial
+mitigation for the fast case, not a fix for this one, and nothing further
+was changed here this round. Needs either LMS server-side logs (a
+different machine, out of reach from `gexis`) or George's own account of
+what else might be issuing play commands during a test (another LMS
+client left open, a sync group, anything) to make progress. Full detail
+in Finding 009.
+
 ## Open
 
 - **Sync group interaction — deferred, with a known cost, by decision.**
@@ -391,3 +413,11 @@ evidence supports.
     own release path, don't rely on process death). If this holds up,
     Bluetooth's real fix looks more like "why doesn't disconnect free
     the PCM" than "how do we kill it more reliably."
+  - **Possibly connected, 2026-09-08: George reported an LMS→Bluetooth
+    takeover failing the first time, then working normally right after.**
+    Consistent with this item (stale state from a previous
+    Bluetooth session not fully released colliding with a fresh
+    connection attempt) but not confirmed - a single occurrence, no
+    logs captured at the time pointing at a specific cause. Noted here
+    rather than treated as a new, separate defect; investigate together
+    if it recurs.
