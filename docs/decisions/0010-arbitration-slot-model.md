@@ -411,8 +411,8 @@ for added latency on every genuine one. Full detail in Finding 010.
   cross-rate. This is Phase 2c, criteria 8-10 — active work, not a
   deferral.
 - **Bluetooth's release ladder doesn't actually release the device —
-  open, not deferred, needs a different mechanism.** Found on hardware,
-  2026-09-08: `release()` (`Device1.Disconnect()`), then the full
+  deferred, George's decision, 2026-09-10 (was "open, not deferred"
+  until then).** Found on hardware, 2026-09-08: `release()` (`Device1.Disconnect()`), then the full
   ladder — `SIGTERM`, then `SIGKILL` on `bluealsa-aplay.service` — ran
   and the device was **still held after `SIGKILL`** (10.7s). Two
   threads, neither confirmed:
@@ -460,6 +460,20 @@ for added latency on every genuine one. Full detail in Finding 010.
     trigger for Spotify/Bluetooth generally - see "Rejected
     alternatives" above), so swapping it for Bluetooth specifically needs
     George's call, not a unilateral change. Full detail in Finding 010.
+
+  **The original "still held after SIGKILL" failure (10.7s, 2026-09-08)
+  itself was never specifically re-reproduced after the fixes above.**
+  Every Bluetooth release measured since (Findings 011/012, several
+  sessions) succeeded via polite stop alone, 2.0-3.2s, never escalating
+  - plausible that it's now moot (the busy-check fix, Finding 008 §1,
+  removed a false-"still held" misattribution that could explain the
+  original symptom without a real device-still-open bug at all), but
+  that's a plausible explanation, not a confirmed one - the escalation
+  path itself hasn't been forced and watched since. **George's decision,
+  2026-09-10: defer, same treatment as the sync-group and empty-base-slot
+  items above.** Criterion 4 (Phase 2b) ships without a targeted
+  re-reproduction of this specific failure mode - a decision, not an
+  oversight.
 
   **George's decision, 2026-09-08: proceed with an earlier acquisition
   signal for Bluetooth.** Not the same trade-off "Rejected alternatives"
@@ -528,5 +542,6 @@ for added latency on every genuine one. Full detail in Finding 010.
   outgoing renderer first, restoring the incoming renderer's volume only
   after - the incoming renderer generally can't produce sound yet at
   `acquire()`-time anyway (the device is still held by whoever's being
-  released), so this costs nothing. Deployed live on `gexis`, not yet
-  re-verified against a real handoff.
+  released), so this costs nothing. **Confirmed working, 2026-09-10** -
+  George tested both this and the SoftVolume fix (docs/decisions/0018)
+  live: "both fixes look good."

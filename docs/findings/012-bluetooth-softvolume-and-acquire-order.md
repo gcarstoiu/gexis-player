@@ -7,10 +7,9 @@ acquisition-signal fixes hold up ("clear improvement on all fronts")
 and reported one remaining Bluetooth volume symptom.
 **Scope:** both root causes below are confirmed directly on hardware
 (BlueALSA's own persisted per-device state, its own upstream source,
-and `gexis`'s own arbitration log), not inferred. Both fixes are
-**deployed live on `gexis`, not yet re-tested by George** - this
-finding is written to hand off for that confirmation before an image
-build.
+and `gexis`'s own arbitration log), not inferred. Both fixes were
+deployed live on `gexis` and **George confirmed both live: "just tested,
+both fixes look good."** Folded into the 2026-09-10 image rebuild.
 
 ---
 
@@ -73,12 +72,11 @@ it differs from the currently persisted value - so this will take
 effect on the paired phone's **next** reconnect, not needing any manual
 edit of BlueALSA's storage file.
 
-**Deployed live** (`/etc/systemd/system/bluealsa-aplay.service.d/
-override.conf` updated, `daemon-reload` + `systemctl restart
+**Deployed live and confirmed** (`/etc/systemd/system/bluealsa-aplay.
+service.d/override.conf` updated, `daemon-reload` + `systemctl restart
 bluealsa-aplay.service`, confirmed active with the new `ExecStart`
-argv). **Not yet re-tested** - needs a real Bluetooth reconnect and a
-full-range slider drag to confirm `"bluetooth -> hardware"` mirror
-lines now appear and the DAC tracks the phone's own volume.
+argv) - George re-tested with a real Bluetooth reconnect and confirmed
+the fix.
 
 ## 2. Restoring the incoming renderer's volume before the outgoing one had actually released — a real, general ordering bug, not Bluetooth-specific
 
@@ -120,24 +118,20 @@ nothing and removes the blip. All 56 existing tests pass unchanged (the
 two tests asserting `restore_volume` is called with the right
 renderer_id don't assert its position relative to release).
 
-**Deployed live** (`gexis-core.service` restarted, clean startup
-confirmed). **Not yet re-tested against a real handoff** - needs a
-Bluetooth-at-full-volume -> LMS-at-a-lower-level switch, watching for
-the blip to be gone.
+**Deployed live and confirmed** (`gexis-core.service` restarted, clean
+startup confirmed) - George re-tested a Bluetooth-at-full-volume ->
+LMS-at-a-lower-level switch and confirmed the blip is gone.
 
 ---
 
 ## Not established
 
-- Whether §1's fix (`--volume=mixer`) actually restores Bluetooth's
-  usable ceiling to match Spotify/LMS in practice, and whether the
-  mirror log now fires - needs a real reconnect and slider drag,
-  George's to confirm.
 - Whether §2's reordering fully eliminates the blip in every handoff
   direction (LMS->Bluetooth, Spotify->Bluetooth, etc.), or only the
-  specific direction captured here - the mechanism is general, but only
-  one direction has been observed with timestamps precise enough to
-  confirm the gap.
+  specific direction captured here and the one George re-tested
+  (Bluetooth->LMS) - the mechanism is general, but only one direction
+  has been observed with timestamps precise enough to confirm the gap,
+  and George's confirmation covered that same direction.
 - Whether BlueALSA's `SoftVolume` defaults to `true` for every newly
   paired device, or whether this phone's `true` came from some earlier
   testing session (stock Volumio config, an earlier build) - doesn't

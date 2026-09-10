@@ -304,6 +304,20 @@ Carving out an exception for mute would have been the first of several.
 - Whether a maximum-volume ceiling is offered as a safety setting.
 - Behaviour when a HAT without a mixer is fitted — detection and fallback to
   software volume, including how the UI communicates the loss of bit-perfect.
+- **Fixed output mode itself is not implemented — deferred, George's
+  decision, 2026-09-10.** Phase 2b's criterion 5 ("phone-app volume
+  moves the hardware mixer in variable mode and does nothing in fixed
+  mode") only has variable mode built and hardware-verified
+  (`gexis_core` has no config toggle or code path that locks the mixer
+  at 240 and stops the volume bridges — checked, not assumed, via the
+  three bullets above this one already flagging the mode-selection
+  mechanism as unresolved). Criterion 4's Bluetooth SIGKILL item (see
+  ADR-0010's "Open" section) is deferred the same way, same decision.
+  Phase 2b ships on variable mode only; fixed output mode is real,
+  design-complete work (the table and "Settled consequences" above), not
+  a placeholder — it needs its own implementation pass, most naturally
+  once mode *selection* has a UI to live in (Phase 4+), not invented
+  ad hoc here.
 - **Two floor/fallback values, found too conservative on hardware,
   2026-09-08/10 (Finding 011), need George's call on the actual number -
   not fixed here, the mechanisms already do the right thing:**

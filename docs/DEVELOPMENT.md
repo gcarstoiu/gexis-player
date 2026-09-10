@@ -110,6 +110,17 @@ when their criteria pass:
   hardware.**
 - **2b — criteria 3-6.** Arbitration core, timeout ladder, volume bridge,
   boot volume. The Python core lands here, plus ADR-0021's venv addendum.
+  **Done, verified on hardware, 2026-09-10.** Criteria 3 and 6 hold
+  cleanly. Criterion 4 (timeout ladder) and criterion 5's fixed-output
+  half each carry one explicitly deferred item, George's decision,
+  2026-09-10 — not oversights: Bluetooth's release ladder was found
+  once (2026-09-08) to still hold the device after a full SIGKILL
+  escalation, not specifically re-reproduced since (every Bluetooth
+  release measured this phase succeeded via polite stop alone); and
+  fixed output mode (mixer locked at 240, phone sliders inert) was
+  never implemented in `gexis_core` — only variable mode is built and
+  hardware-verified. See ADR-0010's "Open" section and ADR-0018's "To be
+  recorded once resolved" for the full record of both.
 - **2c — criteria 7-10.** Criterion 7 is an attack test across all
   renderers, not a feature, so it belongs with the takeover gap
   measurement rather than with 3-6.

@@ -1117,13 +1117,37 @@ on Bluetooth's still-playing audio, exactly George's "fraction of a
 second louder" report. Fixed by reordering `acquire()` to release
 first, restore volume after; all 56 tests pass unchanged.
 
-Both deployed live on `gexis`, **not yet re-verified by George** - next
-step is a real Bluetooth reconnect + full-range slider drag (confirm
-`"bluetooth -> hardware"` mirror lines now appear and the ceiling
-matches Spotify/LMS) and a Bluetooth-at-full-volume → LMS-takeover
-(confirm the blip is gone), then rebuild and reflash - this is likely
-the last round of live-patch-and-verify before Phase 2b's remaining
-criteria.
+Both deployed live on `gexis` and **confirmed by George**: "just
+tested, both fixes look good." Image rebuilt (`v0.2.1-13-g6f7f3e4`,
+14m13s, `--volume=mixer` in the version tag comes from a commit not yet
+tagged - the `-dirty` suffix `git describe` reports is only the known
+`pi-gen` submodule `EXPORT_IMAGE` artefact, not an uncommitted change of
+ours).
+
+### Phase 2b closed, 2026-09-10
+
+Checked criteria 3-6 against this week's evidence (not assumed from the
+list alone):
+
+- **Criterion 3** (arbitration model) - passes, exercised extensively
+  all week across all three renderers.
+- **Criterion 4** (timeout ladder) - mechanism passes; one item
+  deferred, George's decision: Bluetooth's release ladder was once
+  found (2026-09-08) to still hold the device after a full SIGKILL
+  escalation, and that specific failure mode hasn't been re-reproduced
+  since (every Bluetooth release measured this phase succeeded via
+  polite stop alone, 2.0-3.2s). Recorded in ADR-0010's "Open" section.
+- **Criterion 5** (volume bridge, variable/fixed) - variable mode
+  passes, hardware-verified end to end (Finding 012). Fixed output mode
+  isn't implemented anywhere in `gexis_core` - no config toggle, no
+  mixer-lock code path - deferred, George's decision, same session.
+  Recorded in ADR-0018's "To be recorded once resolved".
+- **Criterion 6** (boot volume) - passes, confirmed at every boot in
+  the logs.
+
+`docs/DEVELOPMENT.md`'s Phase 2b entry marked done, matching 2a's own
+convention. PR from `phase-2b-arbitration` into `phase-2-arbitration`
+(its home branch, same pattern as 2a) is next.
 
 ## Machines
 
@@ -1155,54 +1179,23 @@ the tag) — tag manually before a build worth naming, for now.
 
 ## Next actions, in order
 
-1. **Verify Finding 011's two acquisition-signal fixes live, then
-   rebuild and reflash `gexis`.** Both are deployed on `gexis` right now
-   (adapter files copied in, `gexis-core.service` restarted, clean
-   startup confirmed) but not yet exercised against a real cycle:
-   - Bluetooth: a few real connect/disconnect cycles, watching for the
-     first-connect failure Finding 010 §3 described to actually be gone.
-   - Spotify: an LMS-playing → Spotify-takeover, watching for the
-     device-busy retry loop Finding 011 §2 described to actually be
-     gone (or at least closed - a real user re-transfer working
-     opportunistically doesn't count as confirmation).
-   Only fold into an image build once both hold up.
-2. **On the reflashed image, in order:**
-   - Repeat the Spotify ↔ LMS ↔ Bluetooth switching George tested,
-     several times each direction — confirm Spotify Connect survives
-     takeovers and sustains playback, and that its volume tracks the
-     phone's own display without lag/inversion (Finding 009 §1).
-   - Confirm LMS's volume is usable across its full range, not just the
-     top quarter (Finding 009 §2 — already confirmed on `gexis` directly,
-     this is about the rebuilt image specifically).
-   - **Full multi-switch volume-isolation retest** (Finding 008's "Not
-     yet done", still outstanding) — raise each renderer's volume while a
-     different one is actively playing, confirm nothing audible changes
-     except when the renderer being adjusted is the one currently active.
-   - **LMS repeatedly reclaiming the device (Finding 009 §4/5) needs
-     George's input, not just retesting** — squeezelite itself is ruled
-     out; if this recurs, capturing *what else was happening on the LMS
-     side* (another client open, a sync group, anything issuing play
-     commands) matters more than another log pull from `gexis` alone.
-3. **Bluetooth's release ladder — still needs its own investigation.**
-   Two candidate causes recorded (ADR-0010's "Open" section): a
-   too-fast unit restart racing the ladder's check, or `bluealsa-aplay`
-   holding the PCM open past its own IO worker exiting on disconnect.
-   Not touched this session; the busy-check fix (Finding 008 §1) is a
-   different failure mode and does not resolve this one.
-4. **Re-test Finding 006** (Bluetooth volume partly software below
-   ~96%) now that `bluealsa-aplay`'s mixer target has changed again (a
-   private dummy control, not `output`/`DAC` directly) — the routing
-   changed, the underlying software-attenuation question did not.
-5. **Phase 2b, criteria 3-6**, once 1-4 hold on the rebuilt image.
-6. Criteria 7-10 (the attack test and takeover gap measurement) once 5
-   holds — needs LMS (have one; CI gets a containerised throwaway) and,
-   for the Spotify leg, the registered Spotify API app (transfer-
-   playback confirmed available to new apps — see `docs/ARCHITECTURE.md`'s
-   open-questions list). Note Finding 008's ~0.4s LMS debounce adds
-   directly to whatever this measures for that direction.
-7. **Fill the Finding 003 grid** on `rig`, not `gexis` — characterises the
+1. **Open the PR: `phase-2b-arbitration` → `phase-2-arbitration`**
+   (its home branch, same pattern 2a used - see `docs/DEVELOPMENT.md`'s
+   sub-phase note). Phase 2b (criteria 3-6) is done and closed,
+   2026-09-10 - see this file's own "Phase 2b closed" section above for
+   the criterion-by-criterion check and the two explicitly deferred
+   items (Bluetooth's SIGKILL escalation path, fixed output mode - both
+   George's decision, recorded in ADR-0010/ADR-0018).
+2. **Phase 2c, criteria 7-10** (the attack test and takeover gap
+   measurement), once the PR above lands — needs LMS (have one; CI gets
+   a containerised throwaway) and, for the Spotify leg, the registered
+   Spotify API app (transfer-playback confirmed available to new apps —
+   see `docs/ARCHITECTURE.md`'s open-questions list). Note Finding 008's
+   ~0.4s LMS debounce adds directly to whatever this measures for that
+   direction.
+3. **Fill the Finding 003 grid** on `rig`, not `gexis` — characterises the
    metering path, not the product image. 16 of 18 cells remain.
-8. **Phase 5 (not blocking Phase 2b):** Finding 007's research is done
+4. **Phase 5 (not blocking Phase 2c):** Finding 007's research is done
    and ADR-0025/0026 record the licence and integration-approach
    decisions. Still needed before vendoring: George's ruling on
    turntable/cassette handlers (ADR-0026 assumes meters+spectrum only
@@ -1210,6 +1203,23 @@ the tag) — tag manually before a build worth naming, for now.
    flags this unverified), and a Pi-4 frame-rate measurement for
    Blocker 2 (Finding 007) — this last one is also the cleanest way to
    close the residual NEON doubt from the same finding.
+5. **Two items deferred out of Phase 2b, not gone — pick up whenever
+   they matter again, not urgent:**
+   - Fixed output mode has no implementation at all in `gexis_core` —
+     real, design-complete work (ADR-0018's table and "Settled
+     consequences"), most naturally built once mode *selection* has a
+     UI to live in (Phase 4+).
+   - Bluetooth's SIGKILL-escalation path (device still held after a
+     full ladder run, reproduced once 2026-09-08, not since) — worth a
+     deliberate forced-escalation test if it's ever a live problem
+     again; not chased further while polite stop keeps working.
+   - LMS device-reclaim mystery (Finding 009/010 §4/5) — possibly
+     related to the second squeezelite player "Moode"
+     (192.168.178.131) seen on George's LMS server; still not confirmed
+     or investigated further.
+   - The LMS/Spotify boot-default-vs-mid-session fallback question and
+     Bluetooth's `restore_volume_floor_db` number (Finding 011 §3/§4) —
+     both need George to pick an actual value, not a mechanism fix.
 
 **ADR-0010's sync-group-interaction item is moot in the good sense
 now** — `-C 1` means squeezelite is never killed in normal operation,
