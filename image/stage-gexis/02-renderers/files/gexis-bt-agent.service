@@ -1,0 +1,18 @@
+[Unit]
+# See docs/decisions/0024-bluetooth-pairing-no-pin.md (repo, not shipped
+# on the image) for why this is PIN-free and what that implies.
+Description=Gexis Bluetooth pairing agent (PIN-free, ADR-0024)
+After=bluetooth.service
+Before=gexis-bluetooth-setup.service
+
+[Service]
+Type=simple
+# NoInputNoOutput = "Just Works" pairing: no PIN, no on-device
+# confirmation. ADR-0024 - a deliberate choice for this installation,
+# not a default to copy elsewhere without rereading that record.
+ExecStart=/usr/bin/bt-agent --capability=NoInputNoOutput
+Restart=on-failure
+RestartSec=2
+
+[Install]
+WantedBy=multi-user.target

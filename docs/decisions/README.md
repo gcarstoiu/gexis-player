@@ -42,6 +42,10 @@ the question blocking it was answered.
 | [0020](0020-library-browse-tree.md) | Library browse as a normalised tree | Accepted |
 | [0021](0021-deployment-flashable-image.md) | Deployment as a flashable image | Accepted, distribution channel deferred |
 | [0022](0022-settings.md) | Settings | Accepted |
+| [0023](0023-svelte-ui.md) | The UI is Svelte | Accepted |
+| [0024](0024-bluetooth-pairing-no-pin.md) | Bluetooth pairing: no PIN, for this installation | Accepted |
+| [0025](0025-project-licence-gplv3.md) | gexis-player is licensed GPL v3 | Accepted |
+| [0026](0026-peppymeter-native-process-integration.md) | Peppy screen: native PeppyMeter process, labwc-mediated screen ownership | Accepted, compositor mechanism unverified |
 
 ## Cross-cutting rules
 
@@ -82,6 +86,7 @@ selection criteria. Protect the audio path with priority, not by doing less.
 | Empty base slot behaviour | 0010 | Valid state if run headless with no LMS. Undefined. |
 | Factory reset | 0021 | Implied by configuration persistence, specified nowhere. |
 | Plugin settings pages | 0022 | Whether plugins can add their own settings belongs to the plugin contract (0016). |
+| Pairing mode as a per-installation setting | 0024 | PIN-free is right for this installation, wrong as a shipping default (different threat model elsewhere). Needs the settings infrastructure (0022) before it can be anything but hardcoded. |
 
 ## Conventions
 

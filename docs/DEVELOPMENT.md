@@ -29,6 +29,13 @@ and continue.
 Sonnet in Claude Code for implementation. Escalate to Opus after two failed
 attempts, or immediately for anything that would become an ADR.
 
+### Licence
+
+gexis-player is GPL v3 (ADR-0025). Every source file we author carries
+`# SPDX-License-Identifier: GPL-3.0-or-later` (or the equivalent comment
+syntax) as its first line. Vendored third-party files keep whatever header
+their upstream carries; do not add our SPDX line to a file we didn't write.
+
 ---
 
 ## Phases
@@ -103,6 +110,17 @@ when their criteria pass:
   hardware.**
 - **2b — criteria 3-6.** Arbitration core, timeout ladder, volume bridge,
   boot volume. The Python core lands here, plus ADR-0021's venv addendum.
+  **Done, verified on hardware, 2026-09-10.** Criteria 3 and 6 hold
+  cleanly. Criterion 4 (timeout ladder) and criterion 5's fixed-output
+  half each carry one explicitly deferred item, George's decision,
+  2026-09-10 — not oversights: Bluetooth's release ladder was found
+  once (2026-09-08) to still hold the device after a full SIGKILL
+  escalation, not specifically re-reproduced since (every Bluetooth
+  release measured this phase succeeded via polite stop alone); and
+  fixed output mode (mixer locked at 240, phone sliders inert) was
+  never implemented in `gexis_core` — only variable mode is built and
+  hardware-verified. See ADR-0010's "Open" section and ADR-0018's "To be
+  recorded once resolved" for the full record of both.
 - **2c — criteria 7-10.** Criterion 7 is an attack test across all
   renderers, not a feature, so it belongs with the takeover gap
   measurement rather than with 3-6.
@@ -118,7 +136,30 @@ when their criteria pass:
    **Ships without ADR-0010's sync-group and empty-base-slot behaviour** —
    both are explicitly deferred, not unresolved; see ADR-0010's "Open"
    section.
-4. Timeout ladder on release: polite stop → SIGTERM → SIGKILL, each step logged.
+4. Timeout ladder on release: polite stop → SIGTERM → SIGKILL, each step
+   logged, applying uniformly to every renderer as written. **History,
+   not current behaviour:** LMS went through two reverted attempts
+   (2026-09-06, 2026-09-07) at routing around squeezelite's `-C` idle
+   timer — skip the polite rung and SIGTERM immediately, then SIGKILL
+   unconditionally — before landing on the actual fix, 2026-09-08:
+   `squeezelite.service` runs `-C 1`, which measured ~700ms to release
+   against a commanded pause (no audible artefacts), comfortably inside
+   the default 3s polite grace. LMS's ladder *timing* needs no exception
+   anymore. Its escalation *signal* still does, permanently: squeezelite
+   exits cleanly on SIGTERM (systemd never counts that as a failure), so
+   `LmsAdapter.signal_stop` always sends SIGKILL regardless of which
+   rung called it — confirmed necessary twice, including a live
+   reproduction from the ladder's own genuine escalation after `-C 1`
+   shipped (a real takeover still needed the full ladder once). See
+   ADR-0010's amended implementation note for the full history.
+
+   **Bluetooth is a live, unresolved exception as of 2026-09-08:** the
+   full ladder ran against `bluealsa-aplay.service` — polite stop
+   (disconnect), SIGTERM, SIGKILL — and the device was still held after
+   SIGKILL. Not fixed; see ADR-0010's "Open" section for the two
+   candidate causes (a too-fast unit restart racing the check; the
+   process holding the PCM open even after its IO worker exits on
+   disconnect) and why the fix likely isn't "kill it more reliably."
 5. Volume bridge: phone-app volume moves the hardware mixer in variable mode and
    does nothing in fixed mode.
 6. Boot volume is the configured safe level, not restored.
