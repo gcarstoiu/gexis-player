@@ -508,3 +508,25 @@ for added latency on every genuine one. Full detail in Finding 010.
   trade-off, a corrected signal choice. **Deployed live on `gexis`, not
   yet verified against a real LMS-playing -> Spotify-takeover cycle** -
   next test session should confirm.
+
+  **Both confirmed working, 2026-09-10** - George: "Testing on the
+  device after the last fixes show clear improvement on all fronts."
+
+- **`acquire()` wrote the incoming renderer's volume to the shared real
+  DAC before releasing the outgoing one - a real ordering bug, fixed
+  2026-09-10 (Finding 012).** Not a signal-choice trade-off like the two
+  above; a straightforward correctness fix. Confirmed directly in
+  `gexis`'s log: a Bluetooth->LMS handoff wrote the real DAC to LMS's
+  240/240 target at the moment of acquisition, 2.3s before Bluetooth's
+  own release ladder actually finished - audible as a loud blip on
+  Bluetooth's still-playing audio (George: "for a fraction of a second
+  before LMS takes over, the sound gets louder on the song playing on
+  bluetooth"). Not Bluetooth-specific - a property of the shared
+  physical DAC, applies to any renderer pair; Bluetooth's release ladder
+  (2-3s polite-stop grace, measured repeatedly) just makes the gap
+  noticeable where LMS's ~0.1s usually isn't. Fixed by releasing the
+  outgoing renderer first, restoring the incoming renderer's volume only
+  after - the incoming renderer generally can't produce sound yet at
+  `acquire()`-time anyway (the device is still held by whoever's being
+  released), so this costs nothing. Deployed live on `gexis`, not yet
+  re-verified against a real handoff.

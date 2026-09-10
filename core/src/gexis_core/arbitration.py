@@ -99,12 +99,28 @@ class Supervisor:
             outgoing = self.active
             self._active = None if renderer_id == BASE_RENDERER else renderer_id
             logger.info("acquire: %s takes the device (was %s)", renderer_id, outgoing)
-            if self._restore_volume is not None:
-                await self._restore_volume(renderer_id)
             # ADR-0010: "release, uniformly" - LMS is not skipped just
             # because it's the base. Whoever was current gets released,
             # full stop.
+            #
+            # Released *before* restoring the incoming renderer's volume,
+            # not after - found on hardware, 2026-09-10 (Finding 012).
+            # Both write the same shared real DAC; the old order wrote the
+            # incoming renderer's target volume first, which the outgoing
+            # renderer's still-playing audio would carry for however long
+            # its release ladder took (its own polite-stop grace is
+            # seconds, not instant) - confirmed directly in gexis's log,
+            # a Bluetooth->LMS handoff wrote the real DAC to LMS's 240/240
+            # target 2.3s before Bluetooth's release actually completed,
+            # audible as a brief loud blip on the Bluetooth audio still
+            # playing. The incoming renderer generally can't produce
+            # sound yet at this point anyway - the shared device is still
+            # held by whoever's being released - so restoring its volume
+            # only after release completes costs nothing and removes the
+            # blip.
             await self._release_with_ladder(outgoing)
+            if self._restore_volume is not None:
+                await self._restore_volume(renderer_id)
 
     async def _release_with_ladder(self, renderer_id: str) -> ReleaseOutcome:
         adapter = self._adapters[renderer_id]

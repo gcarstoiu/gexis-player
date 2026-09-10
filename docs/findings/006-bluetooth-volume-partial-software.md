@@ -93,6 +93,32 @@ confirmed** — the mixer-args fix hasn't been re-tested against this
 finding's original observation yet. Check on the next hardware pass
 before revising the finding's own answer above.
 
+## Confirmed and closed, 2026-09-10 (Finding 012)
+
+**It was the entire range, the whole time — not "below ~96%", and not
+the mixer-args issue above.** Read directly off `gexis`, not inferred:
+BlueALSA's own persisted per-device state
+(`/var/lib/bluealsa/<MAC>`, root-only) had `SoftVolume=true` for the
+paired phone, both PCM directions. `bluealsa-aplay`'s own source
+(`utils/aplay/aplay.c`) skips writing to the ALSA mixer entirely
+whenever that's set — `if (ba_pcm->soft_volume) return 0;` — so with
+`--volume=auto` (the config this finding's mixer-args fix left in
+place), `bluealsa-aplay` just inherited whatever `SoftVolume` BlueALSA's
+daemon already had on file for this device, and never wrote to our
+mixer control at all: confirmed against the log, zero `"bluetooth ->
+hardware"` mirror lines across two full boot sessions despite dozens of
+real AVRCP volume changes. The "~96%" boundary in this finding's
+original observation was some other, unexplained artefact of that
+session's specific test, not the actual mechanism — worth remembering
+if something like it resurfaces, but not chased further now that the
+real cause is confirmed.
+
+**Fixed:** `--volume=mixer` added to `bluealsa-aplay`'s `ExecStart`,
+forcing it to push `SoftVolume=false` for the PCM on every connection.
+Full detail, plus a second unrelated ordering bug found in the same
+investigation, in Finding 012. Deployed live on `gexis`, not yet
+re-verified by George against a real reconnect.
+
 ## Consequence for criterion 5
 
 The per-renderer volume-memory decision (HANDOFF.md, 2026-09-07:
