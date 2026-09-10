@@ -5,9 +5,18 @@ After=network-online.target sound.target
 Wants=network-online.target
 ConditionPathExists=/usr/bin/squeezelite
 # See go-librespot.service for why: a misconfigured unit should give up
-# and stay failed, not restart forever.
+# and stay failed, not restart forever. Burst raised 5->20, 2026-09-10:
+# measured on gexis during Phase 2c's attack test - rapid adversarial
+# takeovers (SIGKILL while the device is still busy from the previous
+# renderer's own release) can make squeezelite fail-and-retry fast enough
+# to exhaust a burst of 5 within this window on its own, with no
+# misconfiguration involved - that permanently failed the unit and
+# silently dropped "gexis" off the LMS server's player list until a
+# manual `systemctl reset-failed`. 20 gives real racing enough room
+# while a genuinely misconfigured unit (wrong flags, missing device)
+# still gives up within the same 60s at RestartSec=2.
 StartLimitIntervalSec=60
-StartLimitBurst=5
+StartLimitBurst=20
 
 [Service]
 Type=simple
