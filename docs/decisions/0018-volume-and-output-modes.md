@@ -304,6 +304,41 @@ Carving out an exception for mute would have been the first of several.
 - Whether a maximum-volume ceiling is offered as a safety setting.
 - Behaviour when a HAT without a mixer is fitted — detection and fallback to
   software volume, including how the UI communicates the loss of bit-perfect.
+- **Two floor/fallback values, found too conservative on hardware,
+  2026-09-08/10 (Finding 011), need George's call on the actual number -
+  not fixed here, the mechanisms already do the right thing:**
+  - `boot_volume_steps` (raw 60, -90dB) is written by two different
+    callers with different intent, and only one of them matches this
+    record's own rationale above ("a device that was left loud and boots
+    into playback is a real hazard"). The boot script's one-time write is
+    that case. But `RendererVolumeMemory.resolve_restore()` *also* falls
+    back to the same value for any managed renderer's (LMS/Spotify)
+    first-ever acquisition, including mid-session, long after boot's own
+    safety concern has passed - confirmed directly in `gexis`'s log:
+    Spotify's first acquisition of a session that had already had LMS
+    playing loud for over 20 minutes still restored to 60/240 (-90dB),
+    quiet enough to read as "no sound from Spotify until the volume
+    button on the phone is pressed" (George's report). `resolve_restore`'s
+    own docstring already documents this as deliberate ("boot_default...
+    is deliberately NOT subject to floor_db - that's a separate,
+    already-confirmed-quiet value... not a degenerate remembered one"),
+    so this isn't a bug to silently fix - it's this record's own boot-time
+    rationale not covering the case it's actually being used for. Options:
+    keep as-is (accept the UX cost as the price of the boot-safety
+    guarantee), or give "never remembered, mid-session" its own fallback
+    (e.g. the same floor-bump `unmanaged_floor_raw` already gives
+    Bluetooth) distinct from the true boot-time default.
+  - `restore_volume_floor_db` (-40.0dB) is the floor Bluetooth's
+    unmanaged-renderer bump already targets (see "Dummy mixer controls"
+    below), and the mechanism fired correctly and reached hardware
+    (confirmed in the log: `"bluetooth is not volume-managed, but the
+    mixer was left at -45.0dB - bumping to the -40.0dB floor"`) - but
+    George's live report on that same connection was "no sound came
+    until I first played something over lms and then reconnected",
+    meaning -40dB itself wasn't loud enough to register as sound on his
+    hardware. The mechanism isn't in question; the number is - and
+    that's a hardware/room-dependent judgement call, not something to
+    pick unilaterally.
 
 ## Unverified
 

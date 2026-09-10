@@ -460,3 +460,51 @@ for added latency on every genuine one. Full detail in Finding 010.
     trigger for Spotify/Bluetooth generally - see "Rejected
     alternatives" above), so swapping it for Bluetooth specifically needs
     George's call, not a unilateral change. Full detail in Finding 010.
+
+  **George's decision, 2026-09-08: proceed with an earlier acquisition
+  signal for Bluetooth.** Not the same trade-off "Rejected alternatives"
+  rejected above - that rejection was about detecting actual *stream
+  start* (audio flowing). What's added here (Finding 011) is
+  `org.bluez.MediaTransport1` appearing at its `.../dev_XX/fdN` object
+  path, confirmed against BlueZ's own `doc/media-api.txt` and directly
+  in `gexis`'s bluealsa log - the transport *object*, in "idle" or
+  "pending" state, created once profile negotiation begins, independent
+  of whether audio is flowing. Same "control plane, not stream start"
+  shape as `MediaPlayer1`, just earlier in BlueZ's own sequence -
+  `BluetoothAdapter` now acquires on whichever of the two fires first,
+  the other a harmless idempotent re-fire (`Supervisor.acquire()` is a
+  no-op for an already-current renderer). **Deployed live on `gexis`,
+  not yet verified against a real connect/disconnect cycle** - the next
+  test session should confirm before this is folded into an image
+  build.
+
+- **Spotify's own acquisition signal could never fire while the device
+  was busy - a real deadlock, not a race. Found with evidence, fixed,
+  not yet live-verified.** Finding 010 §4 narrowed "LMS doesn't release
+  to Spotify" to a single delayed LMS reclaim with no server-side
+  visibility to explain it. This round's log (Finding 011) explains the
+  *downstream* half precisely, from upstream source, not guessed:
+  `SpotifyAdapter` acquires on go-librespot's `"active"` WS event, whose
+  docstring assumed it "fires when a device is selected in the app."
+  Reading devgianlu/go-librespot's own `daemon/controls.go` shows that's
+  wrong - `ApiEventTypeActive` is only emitted *after*
+  `loadCurrentTrackOrSkip()` returns successfully, which requires
+  opening the ALSA device first. If that open fails, the function
+  returns an error and `"active"` is never emitted at all. Confirmed
+  directly against `gexis`'s log: after LMS reclaimed the device,
+  go-librespot logged four consecutive `"ALSA error at snd_pcm_open:
+  Device or resource busy"` over ~13s trying to resume a transferred
+  session, and no `"active"` event fired until 37s after the reclaim -
+  by which point the phone had given up and re-initiated the transfer
+  from scratch, and the second attempt happened to land in a moment the
+  device was free. Not a race with a ~1s window like Bluetooth's - a
+  genuine catch-22 that only resolved by chance.
+
+  **Fix: also acquire on go-librespot's `"will_play"` event**, which the
+  same source read shows is emitted earlier in the same call chain
+  (`loadCurrentTrack`, before any ALSA access), for both the "transfer"
+  and "play" command paths. Same "control plane, not stream start" shape
+  already established for the other two renderers - not a new kind of
+  trade-off, a corrected signal choice. **Deployed live on `gexis`, not
+  yet verified against a real LMS-playing -> Spotify-takeover cycle** -
+  next test session should confirm.

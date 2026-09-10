@@ -7,14 +7,26 @@ connect" (ADR-0010's table), not stream start - so this watches for a
 MediaPlayer1 object to *appear* (via ObjectManager's InterfacesAdded),
 which BlueZ only exposes once a phone has connected the A2DP+AVRCP
 profiles, rather than watching PlaybackStatus on an object that may
-already exist from a previous connection.
+already exist from a previous connection. Confirmed against a live phone
+connect on `gexis`, 2026-09-08 - MediaPlayer1 does appear reliably on
+connect.
 
-**UNVERIFIED - flagged, not silently assumed:** this has not been
-confirmed against a live phone connect. Whether MediaPlayer1's appearance
-is the cleanest signal, versus e.g. Device1.Connected, needs one real BT
-connect/disconnect cycle on `gexis` to confirm - the interactive
-iteration loop this project already uses for units/config
-(docs/DEVELOPMENT.md) applies here, not a rebuild-to-find-out.
+**Second, earlier trigger added 2026-09-10 (Finding 010 §3, ADR-0010
+amendment): also acquire on `org.bluez.MediaTransport1` appearing**, at
+a `.../dev_XX/fdN` object path - confirmed both against BlueZ's own
+doc/media-api.txt ("MediaTransport1 hierarchy", object path
+`.../dev_XX_XX_XX_XX_XX_XX/fdX`) and directly in `gexis`'s own bluealsa
+log, which shows `fdN` appearing via InterfacesAdded well before
+`bluealsa-aplay` ever attempts to open its ALSA playback PCM. Finding
+010 measured a ~1s gap between transport-start and `bluealsa-aplay`'s
+PCM-open attempt racing our old MediaPlayer1-only trigger; this closes
+it by acquiring at the earliest BlueZ control-plane signal available,
+same "not stream start" spirit as MediaPlayer1 (the transport object
+exists once profile negotiation begins, independent of whether audio is
+flowing yet - it starts in "idle"/"pending" state, matching
+media-api.txt's own State property, not "active"). Whichever of the two
+signals arrives first wins; the other is a harmless idempotent re-fire
+into `on_acquire()`.
 
 release() disconnects the Device1 that owns the MediaPlayer1 - matches
 ADR-0010's "Bluetooth: disconnect" (the AVRCP-pause alternative was
@@ -37,6 +49,7 @@ BLUEZ_SERVICE = "org.bluez"
 OBJECT_MANAGER_IFACE = "org.freedesktop.DBus.ObjectManager"
 DEVICE_IFACE = "org.bluez.Device1"
 MEDIA_PLAYER_IFACE = "org.bluez.MediaPlayer1"
+MEDIA_TRANSPORT_IFACE = "org.bluez.MediaTransport1"
 UNIT_NAME = "bluealsa-aplay.service"
 
 
@@ -73,6 +86,10 @@ class BluetoothAdapter(Adapter):
             if MEDIA_PLAYER_IFACE in interfaces:
                 self._connected_device_path = self._device_path_for_player(path)
                 logger.info("bluetooth: MediaPlayer1 appeared at %s (acquisition)", path)
+                on_acquire()
+            if MEDIA_TRANSPORT_IFACE in interfaces:
+                self._connected_device_path = self._device_path_for_player(path)
+                logger.info("bluetooth: MediaTransport1 appeared at %s (acquisition)", path)
                 on_acquire()
 
         def on_interfaces_removed(path, interfaces):

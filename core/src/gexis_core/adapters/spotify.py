@@ -14,6 +14,30 @@ api-spec.yml) before writing this, not assumed:
     adapter only depends on `type`, never on `data`'s shape, for anything
     that must not silently break. Volume-event parsing is best-effort and
     logs loudly rather than guessing quietly if the shape doesn't match.
+  - **Also acquire on "will_play" (added 2026-09-10, Finding 010's "LMS
+    doesn't release to Spotify" symptom traced to a real cause, not
+    guessed):** read upstream's own source (devgianlu/go-librespot
+    daemon/controls.go, both the "transfer" and "play" command paths via
+    loadContext -> loadCurrentTrackOrSkip -> loadCurrentTrack) to find
+    that ApiEventTypeActive is emitted only *after*
+    loadCurrentTrackOrSkip() returns successfully - which means it opens
+    the ALSA device first. If that open fails (EBUSY, because LMS still
+    holds the device - exactly gexis's case), the function returns an
+    error and "active" is never emitted at all. Confirmed directly
+    against gexis's own log: LMS reclaimed the device, go-librespot
+    logged four consecutive "ALSA error at snd_pcm_open: Device or
+    resource busy" over ~13s trying to resume a transferred session, and
+    no "active" event fired until 37s after the reclaim - by which point
+    the phone had given up and re-initiated the transfer from scratch.
+    "will_play" (emitted in loadCurrentTrack, before any ALSA access -
+    confirmed from the same source read) is upstream's own earlier,
+    device-independent "about to try playing" signal - the same "control
+    plane, not stream start" shape ADR-0010 already uses for the other
+    two renderers, not a new kind of trade-off. Acquiring LMS's release on
+    this signal instead means the ALSA device is actually free by the
+    time go-librespot's own retry (or the same call, once re-entered)
+    tries to open it, breaking the deadlock rather than depending on
+    the phone re-initiating a fresh transfer to escape it by chance.
   - POST /player/stop disconnects the session - this is ADR-0010's
     "Spotify Connect: disconnect" release action.
   - POST /player/volume body is `{"volume": <int32>}` (confirmed from
@@ -74,6 +98,9 @@ class SpotifyAdapter(Adapter):
                     event_type = frame.get("type")
                     if event_type == "active":
                         logger.info("spotify: device became active (acquisition)")
+                        on_acquire()
+                    elif event_type == "will_play":
+                        logger.info("spotify: will_play (acquisition, ahead of ALSA open)")
                         on_acquire()
                     elif event_type == "volume":
                         self._handle_volume_event(frame.get("data") or {})
