@@ -54,7 +54,7 @@ image:
 	elapsed=$$((end - start)); \
 	echo "Build took $${elapsed}s"; \
 	if [ $$status -ne 0 ]; then exit $$status; fi; \
-	info=$$(ls image/deploy/*-gexis-player.info 2>/dev/null | grep -v -- '-lite\.info$$'); \
+	info=$$(ls -t image/deploy/*-gexis-player.info 2>/dev/null | grep -v -- '-lite\.info$$' | head -1); \
 	if [ -n "$$info" ]; then \
 		{ echo ""; \
 		  echo "Image version: $(IMAGE_VERSION)"; \

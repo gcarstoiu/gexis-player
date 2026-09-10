@@ -21,6 +21,7 @@ cd "$(CDPATH='' cd -- "$(dirname -- "$0")" && pwd)"
 # Add future credential-file paths here as they appear.
 PATHS_THAT_MUST_BE_IGNORED=(
 	"image/provision.local.env"
+	"tools/phase-2c/spotify.local.env"
 )
 
 FAILED=0
