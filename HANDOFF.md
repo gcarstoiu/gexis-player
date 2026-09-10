@@ -1,6 +1,6 @@
 # Handoff
 
-Last updated: 2026-09-10
+Last updated: 2026-09-10 (sixth session)
 
 ## Where things stand
 
@@ -1088,6 +1088,42 @@ Both signal fixes are committed. **Neither is included in a rebuild
 yet** - next step is a live verification pass (real Bluetooth
 connect/disconnect, real Spotify takeover while LMS is actively
 playing), then rebuild.
+
+### 2026-09-10 (sixth session): Finding 011's two signal fixes confirmed; Bluetooth's frozen volume ceiling and a blip on takeover fixed
+
+George tested and confirmed: "Testing on the device after the last
+fixes show clear improvement on all fronts." One Bluetooth volume issue
+remained - full detail in **Finding 012**:
+
+**Root cause 1, confirmed directly on `gexis`, closes Finding 006:**
+BlueALSA's own persisted per-device state (`/var/lib/bluealsa/<MAC>`)
+had `SoftVolume=true` for the paired phone - `bluealsa-aplay`'s own
+source skips writing to our ALSA mixer entirely whenever that's set, so
+the real DAC's gain during a Bluetooth session was frozen at whatever
+it inherited at acquire time, never tracking the phone's own slider.
+Confirmed: zero `"bluetooth -> hardware"` mirror lines across two full
+boot sessions despite dozens of real AVRCP volume changes in bluealsa's
+own log. Fixed: `--volume=mixer` added to `bluealsa-aplay`'s
+`ExecStart`, confirmed against this build's own `--help` first. This
+was Finding 006's "Bluetooth volume partly software" open item, now
+closed - it was the whole range, not "below ~96%".
+
+**Root cause 2, a general ordering bug, not Bluetooth-specific:**
+`Supervisor.acquire()` wrote the incoming renderer's volume to the
+shared real DAC *before* releasing the outgoing one. Confirmed in the
+log: a Bluetooth→LMS handoff wrote the DAC to LMS's 240/240 target 2.3s
+before Bluetooth's own release ladder finished - a loud, audible blip
+on Bluetooth's still-playing audio, exactly George's "fraction of a
+second louder" report. Fixed by reordering `acquire()` to release
+first, restore volume after; all 56 tests pass unchanged.
+
+Both deployed live on `gexis`, **not yet re-verified by George** - next
+step is a real Bluetooth reconnect + full-range slider drag (confirm
+`"bluetooth -> hardware"` mirror lines now appear and the ceiling
+matches Spotify/LMS) and a Bluetooth-at-full-volume → LMS-takeover
+(confirm the blip is gone), then rebuild and reflash - this is likely
+the last round of live-patch-and-verify before Phase 2b's remaining
+criteria.
 
 ## Machines
 
