@@ -1,6 +1,6 @@
 # Handoff
 
-Last updated: 2026-09-08
+Last updated: 2026-09-10
 
 ## Where things stand
 
@@ -1032,6 +1032,63 @@ just reconfirmed:**
 
 Both volume fixes are committed and included in the next rebuild.
 
+### 2026-09-10 (fifth session): two acquisition-signal fixes for the takeover deadlocks, two floor/fallback values flagged for George
+
+George tested the rebuilt image again and reported four more symptoms
+after a 2026-09-08 session; investigation was interrupted mid-way by a
+context limit and picked back up 2026-09-10 against the same captured
+log (`journalctl -b`, still present on `gexis`). Full detail in
+**Finding 011**; summary:
+
+**Implemented and deployed live on `gexis`, but NOT yet verified
+against a real connect/takeover cycle** (George unavailable to test
+this round) **- do not rebuild the image around these until that
+verification happens:**
+- **Bluetooth's ~1s acquisition race (Finding 010)** - George approved
+  moving the trigger earlier. `BluetoothAdapter` now also acquires on
+  `org.bluez.MediaTransport1` appearing (the A2DP transport object, at
+  `.../dev_XX/fdN`), confirmed against BlueZ's own `doc/media-api.txt`
+  and against `gexis`'s own log (the transport object appears several
+  seconds before `bluealsa-aplay`'s own PCM-open attempt, not just ~1s
+  before it) - alongside the existing `MediaPlayer1` trigger, not
+  instead of it.
+- **"Spotify cannot take over from LMS while LMS is playing" traced to
+  a real deadlock, not a race.** Read go-librespot's own source
+  (`daemon/controls.go`): its `"active"` WS event - the only signal
+  `SpotifyAdapter` acquired on - is emitted only *after* the ALSA device
+  opens successfully, so it can never fire while another renderer holds
+  the device. Confirmed directly in `gexis`'s log: after LMS reclaimed
+  the device, go-librespot logged four straight `Device or resource
+  busy` failures over ~13s, and `"active"` didn't fire until 37s later,
+  once the phone gave up and re-initiated the transfer from scratch (an
+  opportunistic recovery, not a fix). `SpotifyAdapter` now also acquires
+  on `"will_play"`, emitted earlier in the same call chain, before any
+  ALSA access - confirmed from the same source read.
+
+**Flagged, deliberately not changed - both need George's call on a
+number, not a mechanism fix:**
+- **Spotify's first-ever acquisition of a session falls back to the
+  same -90dB boot-safety default used at true cold boot**, even when
+  it's 20+ minutes into a session where LMS has already been playing
+  loud - confirmed in the log (`restoring spotify to 60/240`, Spotify's
+  first acquisition of that session). `RendererVolumeMemory.
+  resolve_restore()`'s own docstring already documents this as
+  deliberate, so it's ADR-0018's boot-safety rationale not covering the
+  case it's actually firing on, not an oversight.
+- **Bluetooth's unmanaged-floor bump fired correctly and reached
+  hardware** (confirmed: `bumping to the -40.0dB floor` in the log) **but
+  George still reported "no sound"** until LMS separately raised the
+  real DAC to a loud level. The mechanism (`unmanaged_floor_raw`) is
+  doing exactly what it was built to do; `-40.0dB` just isn't loud
+  enough on his hardware/room.
+- Confirmed, no action needed: **"the volume curves are good"** -
+  Finding 009/010's dB-linear curve fixes are holding up in real use.
+
+Both signal fixes are committed. **Neither is included in a rebuild
+yet** - next step is a live verification pass (real Bluetooth
+connect/disconnect, real Spotify takeover while LMS is actively
+playing), then rebuild.
+
 ## Machines
 
 | Name | What it is | Notes |
@@ -1062,13 +1119,17 @@ the tag) — tag manually before a build worth naming, for now.
 
 ## Next actions, in order
 
-1. **Rebuild and reflash `gexis`**, to pick up 2026-09-08's fixes: Finding
-   008's arbitration/B2 work plus Finding 009's three volume-bug fixes
-   (Spotify's echo-window bypass, the wrong curve-rescaling formula, the
-   sign-dropping regex). All verified live-patched on `gexis`; the volume
-   curve fix specifically confirmed against real hardware readings
-   (Finding 009 §2's before/after table) — none yet verified from a
-   clean rebuilt image.
+1. **Verify Finding 011's two acquisition-signal fixes live, then
+   rebuild and reflash `gexis`.** Both are deployed on `gexis` right now
+   (adapter files copied in, `gexis-core.service` restarted, clean
+   startup confirmed) but not yet exercised against a real cycle:
+   - Bluetooth: a few real connect/disconnect cycles, watching for the
+     first-connect failure Finding 010 §3 described to actually be gone.
+   - Spotify: an LMS-playing → Spotify-takeover, watching for the
+     device-busy retry loop Finding 011 §2 described to actually be
+     gone (or at least closed - a real user re-transfer working
+     opportunistically doesn't count as confirmation).
+   Only fold into an image build once both hold up.
 2. **On the reflashed image, in order:**
    - Repeat the Spotify ↔ LMS ↔ Bluetooth switching George tested,
      several times each direction — confirm Spotify Connect survives
@@ -1120,15 +1181,25 @@ so there's no sync-group loss to accept anymore. See the ADR's own
 final amendment.
 
 Decisions pending from George: confirming (or picking a different)
-`restore_volume_floor_db` — currently a −40dB placeholder, not
-reviewed; which component applies Bluetooth's software volume
-attenuation below ~96% (Finding 006, no owner yet); pinning down
-squeezelite's LMS-volume-to-hardware mapping (Finding 008's B2 fix
-addresses the *cross-renderer bleed* symptom this was originally raised
-under, but the underlying mapping/curve question is separate and still
-open); the criterion 7 build-self-identification amendment; whether to
-act on the develop-on-hardware workflow inversion (needs an ADR first
-if so); turntable/cassette handlers for Phase 5 (ADR-0026).
+`restore_volume_floor_db` — currently a −40dB placeholder, and now
+measured on hardware as genuinely too quiet for Bluetooth's
+unmanaged-floor bump (Finding 011 §4), not just unreviewed; whether
+`boot_volume_steps`'s -90dB fallback should keep applying to any
+never-remembered LMS/Spotify acquisition mid-session, or only to true
+cold boot (Finding 011 §3 — a mid-session first-use currently lands as
+quiet as a fresh power-on, confirmed on hardware); which component
+applies Bluetooth's software volume attenuation below ~96% (Finding
+006, no owner yet); pinning down squeezelite's LMS-volume-to-hardware
+mapping (Finding 008's B2 fix addresses the *cross-renderer bleed*
+symptom this was originally raised under, but the underlying
+mapping/curve question is separate and still open); the criterion 7
+build-self-identification amendment; whether to act on the
+develop-on-hardware workflow inversion (needs an ADR first if so);
+turntable/cassette handlers for Phase 5 (ADR-0026); whether the LMS
+device-reclaim mystery (Finding 009/010 §4/5) is related to the second
+squeezelite player "Moode" (192.168.178.131) seen registered on
+George's LMS server early in the 2026-09-08 session — flagged to
+George, not yet confirmed or investigated further.
 
 Not blocking, needed before their phases: the peppyalsa FIFO byte format
 (blocks the visualisation service) and George supplying format icons for
