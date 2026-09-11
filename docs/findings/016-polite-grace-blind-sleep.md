@@ -97,18 +97,57 @@ Expected effect, not yet confirmed on hardware: normal LMS handoff drops
 from ~3.2s to ~0.7s (matching the `-C 1` figure above), moving the common
 case away from the escalation edge instead of sitting right against it.
 
-**Status: implemented in code (`core/src/gexis_core/arbitration.py`,
-`core/tests/test_arbitration.py`), unit-tested (`test_polite_grace_polls_
-instead_of_sleeping_blind` — verifies via recorded `asyncio.sleep` calls,
-not wall-clock timing, following this file's own established pattern),
-not yet hardware-verified.** Per George's order of work: next is deploying
-to `gexis`, re-running the Bluetooth-churn pattern that broke Finding 013
-§1's fix (LMS playing → Spotify → rapid Bluetooth connect/disconnect ×5-10
-→ back to LMS, ×3), and re-collecting the release-timing distribution
-before this goes into a `stage-gexis` rebuild. Explicitly out of scope for
-this change: Finding 014's LMS-to-Spotify first-attempt race and Finding
-013 §1's explicit-restart approach — both reverted, both stay reverted;
-this finding's fix is evaluated on its own.
+**Status: implemented in code, unit-tested, hot-patched live onto `gexis`
+2026-09-11 16:23 (`/opt/gexis-core/venv/.../gexis_core/arbitration.py`,
+pre-fix version preserved at `/tmp/arbitration.py.bak-pre-finding016` on
+the device), service restarted cleanly (`Deactivated successfully` →
+`Started`, reconnected to LMS and go-librespot's `/events` normally).**
+
+**Partial hardware confirmation, same session, ordinary LMS↔Spotify
+switching (not yet the Bluetooth-churn pattern):** the polling fix is
+demonstrably real, not just theoretically live — `release[lms]` now logs
+genuinely varying values (2.1s, 2.0s, 1.4s across three LMS→Spotify
+handoffs) instead of the pre-fix's uniform 3.1-3.2s. No escalation
+(`signals == []` throughout, confirmed via journal — no SIGTERM/SIGKILL
+lines) across four handoffs each direction. **This is evidence the fix
+works, not yet evidence it fixes the restart storm** — that needs the
+adversarial Bluetooth-churn pattern below, which this round did not
+include.
+
+**Still needed per George's order of work, not yet done:** the
+Bluetooth-churn pattern (LMS playing → Spotify → rapid Bluetooth
+connect/disconnect ×5-10 → back to LMS, ×3) that broke Finding 013 §1's
+fix, and the full ≥20-run release-timing re-collection, before this goes
+into a `stage-gexis` rebuild. Explicitly out of scope for this change:
+Finding 014's LMS-to-Spotify first-attempt race and Finding 013 §1's
+explicit-restart approach — both reverted, both stay reverted; this
+finding's fix is evaluated on its own.
+
+**Two things George noticed during this round, both pre-existing and
+outside this finding's scope — not new regressions from this fix:**
+
+- **LMS→Spotify: elapsed time resets and nothing plays until "next" is
+  pressed.** Matches this session's own log exactly: `spotify: will_play`
+  fires immediately on acquisition, well before `release[lms]` actually
+  completes (e.g. 16:25:06.041 vs. 16:25:08.153, a 2.1s gap) — go-librespot's
+  ALSA-open attempt loses that race, then a second `will_play` fires
+  ~1.4s after release completes, which is the phone/Spotify backend's own
+  retry, not anything this code does (`SpotifyAdapter.device_freed()` is
+  the inherited no-op, reverted per ADR-0010). This is Finding 014's
+  already-documented, still-unresolved Mode A race, reproducing on cue -
+  not something today's fix touched or was meant to touch. Worth noting:
+  this fix's faster LMS release (1.4-2.1s vs. the old blind 3.1-3.2s)
+  narrows the race window but does not close it, since go-librespot's own
+  attempt still happens within about a second of acquisition, before even
+  the faster release completes.
+- **Spotify→LMS: elapsed time jumps forward a few seconds compared to
+  where it was.** Not yet root-caused, but consistent in shape with
+  Finding 015's already-measured Spotify→LMS acquisition-side latency
+  (~4.2s median) - if LMS's server-side elapsed counter keeps ticking
+  through the gap while squeezelite is still starting up, the jump is
+  the visible face of a gap this project already has numbers for, not a
+  new defect. Not confirmed against Finding 015's numbers directly this
+  round.
 
 ## What was not done
 
