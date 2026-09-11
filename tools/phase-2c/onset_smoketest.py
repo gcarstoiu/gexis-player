@@ -19,8 +19,7 @@ import sys
 import threading
 import time
 
-sys.path.insert(0, "/tmp")
-from spectrum_fifo import wait_for_onset  # noqa: E402
+from spectrum_fifo import SpectrumReader, wait_for_onset
 
 WAV = "/tmp/onset-test.wav"
 STATUS_PATH = "/proc/asound/card5/pcm0p/sub0/status"
@@ -51,16 +50,26 @@ def wait_for_running_and_trigger_time(poll_timeout=5.0):
     raise TimeoutError("PCM never reached RUNNING with a trigger_time")
 
 
+reader = SpectrumReader().start()
+time.sleep(0.2)  # let the reader attach to the FIFO before playback starts
+
 onset_result = {}
 
 
 def fifo_thread():
-    onset_result["fifo_onset"] = wait_for_onset(timeout=15)
+    onset_result["fifo_onset"] = wait_for_onset(reader, timeout=15)
 
 
 t = threading.Thread(target=fifo_thread, daemon=True)
 t.start()
-time.sleep(0.2)  # let the reader attach to the FIFO before playback starts
+
+import pcm_holder  # noqa: E402
+assert not pcm_holder.current_holders(), (
+    f"PCM already held before this test even starts: {pcm_holder.current_holders()} - "
+    "clean the state first, aplay would just fail busy and this test would silently "
+    "measure something else entirely (caught 2026-09-10: a leftover Spotify session did"
+    " exactly that)"
+)
 
 proc = subprocess.Popen(["aplay", "-D", "output", WAV], stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
 
@@ -73,6 +82,9 @@ expected_onset_monotonic = trigger_time + SILENCE_S
 
 t.join(timeout=15)
 proc.wait(timeout=15)
+if proc.returncode != 0:
+    print(f"WARNING: aplay exited {proc.returncode}: {proc.stderr.read().decode()}")
+reader.stop()
 
 fifo_onset = onset_result.get("fifo_onset")
 if fifo_onset is None:
