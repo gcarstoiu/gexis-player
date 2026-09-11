@@ -1502,12 +1502,34 @@ giving release numbers to the builds"). `git describe --tags --always
 --dirty` at build time, appended to the `.info` manifest as "Image
 version: vX.Y.Z" — same place peppyalsa's commit and go-librespot's
 version already live, not a new mechanism. First tag: `v0.1.0`
-(annotated, on `phase-2b-arbitration`). Filenames are unchanged — still
-date-stamped (`image/config`'s `IMG_NAME`), not version-stamped;
-threading the version through pi-gen's own two-pass config sourcing was
-more plumbing than this needed given the manifest already carries it.
-No bump convention decided yet (when to cut `v0.2.0` vs. just moving
-the tag) — tag manually before a build worth naming, for now.
+(annotated, on `phase-2b-arbitration`). No bump convention decided yet
+(when to cut `v0.2.0` vs. just moving the tag) — tag manually before a
+build worth naming, for now.
+
+**Filenames carry the version too, starting 2026-09-11** (George asked).
+The `.info`-only note above is now out of date on this point - the
+plumbing concern it named (threading the version through pi-gen's own
+two-pass `image/config` sourcing, which would need git access *inside*
+the container that isn't there) turned out to have a simpler answer:
+pi-gen already exposes `IMG_SUFFIX`, appended to every export-image
+filename with no default of its own unless a stage sets one (none of
+ours do), so the `Makefile`'s `image:` target now passes
+`-e IMG_SUFFIX=-$(IMAGE_VERSION)` via `PIGEN_DOCKER_OPTS` - no
+`image/config` change, no submodule edit. Confirmed the env var reaches
+the container intact via a standalone `docker run -e` test (a plain host
+environment variable does not cross that boundary on its own - `docker
+run` only forwards what's explicitly passed) and confirmed the resulting
+filename shape by simulating `build.sh`'s own variable-resolution lines
+directly. **Not yet confirmed against a real `make image` run** - next
+build's filenames will be the first real check, expected shape
+`2026-09-11-gexis-player-v0.2.1-28-ge916f86-dirty.img`/`.zip` (date, name,
+then version - `-dirty` included honestly if the tree wasn't clean, same
+as the manifest already does). The `image:` target's own manifest-lookup
+glob was widened (`*-gexis-player.info` → `*-gexis-player*.info`) to
+still find the now-longer filename - the exact class of thing that broke
+silently once already (the multi-manifest annotation bug, Phase 2c's
+prerequisites) - check this first if a future build's manifest looks
+unannotated again.
 
 ## Next actions, in order
 
@@ -1764,6 +1786,12 @@ cached) is ever worth chasing further:**
   both — see the volume bridge fix above for the measured consequence
   (a real ratchet to zero) and the fix (a shared time-window, not a
   one-shot flag).
+- **Build filenames now carry the version (2026-09-11)** — the
+  `Makefile`'s `image:` target manifest-lookup glob is
+  `*-gexis-player*.info`, not `*-gexis-player.info` — if a future edit
+  narrows it back, the annotation step will silently stop finding the
+  manifest again, the same shape as the multi-manifest bug this project
+  already hit once (Phase 2c's prerequisites, `ls -t | head -1`).
 
 ## Working agreement
 

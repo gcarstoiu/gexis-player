@@ -22,6 +22,29 @@ IMAGE_VERSION := $(shell git describe --tags --always --dirty)
 # image version, and the wall-clock build time are appended here, on the
 # host, after the fact — not inside pi-gen.
 #
+# Filenames carry the version too, 2026-09-11 (George asked after the
+# first several builds only had a date to tell them apart). pi-gen's own
+# IMG_FILENAME/ARCHIVE_FILENAME default to "${IMG_DATE}-${IMG_NAME}", and
+# both are freely overridable - but overriding them directly would need
+# git access *inside* the container to compute IMAGE_VERSION, which isn't
+# there (only stage-gexis/ and core/ are bind-mounted, not this repo's
+# .git - the same reason image/config itself never tried to compute a
+# version despite being sourced both host-side and container-side).
+# IMG_SUFFIX sidesteps that: pi-gen exports it with no default of its own
+# (build.sh's `export IMG_SUFFIX`, unset unless something provides one -
+# only stage4/5's own EXPORT_IMAGE files ever set it, and neither stage
+# is in our STAGE_LIST) and appends it to every export-image filename
+# (.img, .info, .sbom, .bmap, and whichever compressed archive
+# DEPLOY_COMPRESSION picks - .zip by default). Passed in via
+# PIGEN_DOCKER_OPTS's own `-e` (confirmed this reaches the container
+# intact, unlike a plain host-side environment variable, which docker run
+# does not inherit automatically) rather than editing build-docker.sh -
+# same "don't hand-edit the pinned submodule" reasoning as the
+# EXPORT_IMAGE removal below. Result: `2026-09-11-gexis-player-v0.2.1-
+# 28-ge916f86-dirty.img`/`.zip` instead of just the date - the manifest
+# lookup glob below was widened (`*-gexis-player.info` ->
+# `*-gexis-player*.info`) to still find it.
+#
 # Two speed changes, 2026-09-08 (HANDOFF.md has the measured numbers):
 #
 # 1. stage2/EXPORT_IMAGE (a file inside the pinned pi-gen submodule) makes
@@ -47,14 +70,14 @@ IMAGE_VERSION := $(shell git describe --tags --always --dirty)
 image:
 	@rm -f image/pi-gen/stage2/EXPORT_IMAGE; \
 	start=$$(date +%s); \
-	( cd image && CONTINUE=1 PRESERVE_CONTAINER=1 PIGEN_DOCKER_OPTS="--volume $(STAGE_GEXIS_DIR):/pi-gen/stage-gexis:ro --volume $(CORE_SRC_DIR):/pi-gen/gexis-core-src:ro" \
+	( cd image && CONTINUE=1 PRESERVE_CONTAINER=1 PIGEN_DOCKER_OPTS="--volume $(STAGE_GEXIS_DIR):/pi-gen/stage-gexis:ro --volume $(CORE_SRC_DIR):/pi-gen/gexis-core-src:ro -e IMG_SUFFIX=-$(IMAGE_VERSION)" \
 		./pi-gen/build-docker.sh -c config ); \
 	status=$$?; \
 	end=$$(date +%s); \
 	elapsed=$$((end - start)); \
 	echo "Build took $${elapsed}s"; \
 	if [ $$status -ne 0 ]; then exit $$status; fi; \
-	info=$$(ls -t image/deploy/*-gexis-player.info 2>/dev/null | grep -v -- '-lite\.info$$' | head -1); \
+	info=$$(ls -t image/deploy/*-gexis-player*.info 2>/dev/null | grep -v -- '-lite\.info$$' | head -1); \
 	if [ -n "$$info" ]; then \
 		{ echo ""; \
 		  echo "Image version: $(IMAGE_VERSION)"; \
