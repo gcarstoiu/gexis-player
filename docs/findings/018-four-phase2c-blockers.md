@@ -349,6 +349,80 @@ re-anchor load-bearing rather than cosmetic: capturing the position at
 release and seeking back to it on acquisition is what restores it. One
 mechanism, both blockers.
 
+### Verifying the power-as-acquisition signal — and a correction
+
+The design rests on the LMS adapter being able to see, and act on, a
+power-on before squeezelite needs the device. Measured on `gexis`, with a
+subscriber built exactly like `LmsAdapter._watch()`.
+
+**The two easy questions pass:**
+
+- `power` **is** carried in the CometD push. Full key set captured:
+  `can_seek, digital_volume_control, duration, mixer volume, mode,
+  player_connected, player_ip, player_name, playlist mode, playlist
+  repeat, playlist shuffle, playlist_cur_index, playlist_loop,
+  playlist_timestamp, playlist_tracks, power, randomplay, rate, seq_no,
+  signalstrength, time, use_volume_control`.
+- Changing power **does** trigger a push, in **0.523s and 0.517s** — two
+  rounds, consistent.
+
+**The hard question fails.** squeezelite attempts its ALSA open
+**58 milliseconds** after the power-on command (`power 1` sent
+22:55:20.723; `alsa_open ... Device or resource busy` logged
+22:55:20.781). Our notification arrives at ~520ms. **We are ~460ms too
+late — the window is negative, not positive.** There is no arrangement in
+which we release the outgoing renderer before squeezelite's first attempt.
+
+**And losing that attempt costs 5 seconds.** squeezelite retries on a
+strict 5.00s cadence — measured 22:55:20.781, 22:55:25.782, 22:55:30.783
+— and **nothing shortens it**:
+
+| after the device is free | squeezelite took it |
+|---|---|
+| do nothing | 2.53s |
+| re-issue LMS `play` | 2.50s |
+| power cycle the player | 2.42s |
+
+All three simply wait for the next scheduled tick (the test deliberately
+freed the device mid-way between ticks so there was ~2.5s to save).
+
+**Correction to this finding's own earlier numbers, both measured wrong:**
+
+1. "squeezelite's own recovery once the device *is* free: 0.96, 0.97,
+   0.96, 0.90s" — **wrong**. That test freed the device about a second
+   before a scheduled tick, so it measured the alignment, not a recovery
+   time. The real behaviour is a 5.00s tick: 0-5s wait, ~2.5s average.
+2. The first power-push run measured a "4.5s window" — **contaminated**.
+   `gexis-core` was running throughout and released Spotify itself via the
+   existing `mode`-based path, so that measured today's behaviour, not
+   squeezelite's own timing.
+
+**This explains Finding 015's Spotify→LMS number.** A median of 4170.9ms
+with a stdev of just 33.2ms was always suspiciously deterministic for
+something supposedly dominated by buffering and startup work. It is
+squeezelite's 5s retry tick. It also explains George's own description of
+blocker 1 self-correcting "in 3 to 5 seconds" — that is the remaining time
+on the tick.
+
+**What this does and does not change about the design:**
+
+- **LMS as the outgoing renderer (power off): unaffected and still the
+  win.** 0.06s release, Spotify's first open succeeds, `active` fires,
+  0.7s takeover. Blocker 2 stands fixed by this.
+- **LMS as the incoming renderer (power on as acquisition): does not fix
+  the slow LMS takeover.** squeezelite races ahead of any signal we could
+  receive, loses, and then waits out its tick. It is **no worse** than
+  today — the same thing happens on the current `mode -> play` path — but
+  it is not fixed, and it should not be claimed as fixed.
+- Blocker 1's *visible duration* is therefore governed by this tick, not
+  by the release. The seek re-anchor fixes the *size* of the wrong value;
+  the tick decides how long it stays up.
+
+**Open, and worth its own investigation:** whether squeezelite's retry
+interval is tunable at all (no such option in `squeezelite -?`; `-C`
+governs close-on-idle, not retry-on-busy), or whether the only route is
+ensuring the first attempt never fails.
+
 **This changes a decision, not just an implementation.** ADR-0010 states
 that power state plays no role in arbitration ("A powered-off player is
 one that will not play; it neither acquires nor releases"). Using power
