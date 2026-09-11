@@ -312,6 +312,43 @@ reclaims (Findings 009/010 §4 — plausible, since a powered-off player
 should not be told to play, but not tested); and Bluetooth's release path
 is untouched by this, since `power` is an LMS concept only.
 
+### Powering back on *during* the other renderer's session breaks it — measured
+
+George's proposal was to power off "for 3 to 4 secs while the other
+renderer takes over," then back on. Tested exactly that, and it does not
+work — the player must stay off for as long as the other renderer holds
+the device:
+
+```
++0.52s  POWER 0
++1.02s  event: active        <- spotify's first open succeeds, as designed
+        pcm=('spotify',)
++4.62s  POWER 1              <- powering LMS back on, spotify still playing
++5.58s  event: inactive      <- spotify kicked off
+  +5s   pcm=('lms',)         <- LMS has taken the device back
+```
+
+**Why:** powering the player on restores its *previous transport state*,
+which was `play` (it was playing when we powered it off). LMS therefore
+resumes playback and squeezelite grabs the device back, evicting Spotify.
+This is the spurious-reclaim shape, produced deterministically and on
+demand — the first time that mechanism has been reproduced under control
+rather than observed after the fact.
+
+So the workable shape is: **stay powered off for the duration the other
+renderer holds the device**, and power back on as part of LMS
+re-acquiring. That is the version already measured as working (`active`
+fires, first open succeeds, 0.7s takeover).
+
+Its one real cost stands: a plain `play` against a powered-off player
+auto-powers-on and **restarts the track from 0**, where `power 1` *then*
+`play` resumes correctly (60.22 → 60.55). Since the user's play is what
+triggers the acquisition in the first place, LMS has already restarted
+from 0 by the time we see it — which is what makes the blocker 1 seek
+re-anchor load-bearing rather than cosmetic: capturing the position at
+release and seeking back to it on acquisition is what restores it. One
+mechanism, both blockers.
+
 **This changes a decision, not just an implementation.** ADR-0010 states
 that power state plays no role in arbitration ("A powered-off player is
 one that will not play; it neither acquires nor releases"). Using power
