@@ -35,16 +35,43 @@ sequence: 179, 172, 162, 140, 119, 97, 0/240, each hop ~50ms apart, one
 direction, never stopping until it hit zero.
 
 Replaced with a single shared timestamp, `_last_own_write`: anything
-*we* write - either direction - arms a short window, and any incoming
+*we* write - either direction - armed a short window, and any incoming
 signal (an `alsactl monitor` line, or a `"volume"` WS event) arriving
-inside that window is treated as our own echo and dropped, however many
-lines or events it produced. This is a mitigation, not a proof of
-convergence: two independent *genuine* changes landing inside the same
-window (a live slider drag against a near-simultaneous LMS change, say)
-would have the second one dropped too. Not observed, but not excluded
-either - the measured 325ms bridge round-trip (single deliberate
-`amixer` change, logged separately) is the basis for the window below,
-not a formal bound.
+inside that window was treated as our own echo and dropped, however many
+lines or events it produced.
+
+**That blanket time window was itself found wrong on hardware,
+2026-09-11 (blocker 4).** Its own docstring already named the risk -
+"two independent *genuine* changes landing inside the same window would
+have the second one dropped too" - and that is exactly what a real
+Spotify slider drag is: a rapid burst of genuine, *different* values.
+The first one through armed the window and every later one, including
+the value the user actually let go on, was discarded. Measured
+directly: a fast ramp to 100/100 left the real DAC at 226/240, 7.0dB
+below the selected level, reproducibly, while the identical ramp spaced
+1.5s apart reached 240/240. Since Bluetooth and LMS lost their own echo
+windows when `DummyMixerBridge` was fixed (see its docstring - same bug,
+found there first), Spotify was left as the only renderer that could not
+reach full scale from its own slider, which is what George reported as
+"the highest volume for Bluetooth is higher than the highest volume with
+Spotify."
+
+Replaced with **value-matched echo suppression**: we record the exact
+value we ourselves wrote in each direction (`_expected_hw_raw`,
+`_expected_spotify_value`) and drop exactly one incoming signal carrying
+*that same value*. An echo, by definition, carries back what we just
+wrote; a genuine change carries something different and is never
+dropped, however fast it arrives. The recorded expectation still expires
+after `ECHO_WINDOW_S` so an echo that never arrives (dropped WS frame,
+a value that rounded differently on the way back) cannot suppress a
+later genuine change that happens to carry the same number.
+
+This converges rather than ratchets, which the old flag could not
+promise: the two scales are stable inverses to within a step (raw 226 ->
+84/100 -> raw 226, checked against the live control), so a round trip
+either matches the expectation and stops, or lands one step away and
+stops on the next hop - it cannot walk downward indefinitely the way the
+original measured ratchet (179, 172, 162, 140, 119, 97, 0) did.
 
 **Per-renderer memory, added 2026-09-07** (George's decision, after the
 cross-renderer volume jumps this bridge alone couldn't fix): every
@@ -284,11 +311,22 @@ class VolumeBridge:
         self._spotify = spotify_adapter
         self._volume_memory = volume_memory
         self._get_active_renderer = get_active_renderer
-        self._last_own_write = 0.0
+        # Each is (value, armed_at) or None - the exact value we wrote in
+        # that direction, awaiting its own echo back. See the module
+        # docstring on why this is value-matched rather than a time window.
+        self._expected_hw_raw: tuple[int, float] | None = None
+        self._expected_spotify_value: tuple[int, float] | None = None
         spotify_adapter.on_volume_change(self._on_spotify_volume)
 
-    def _within_echo_window(self) -> bool:
-        return time.monotonic() - self._last_own_write < ECHO_WINDOW_S
+    @staticmethod
+    def _consume(expected: tuple[int, float] | None, value: int) -> bool:
+        """True if `value` is the echo we were waiting for, and not stale."""
+        if expected is None:
+            return False
+        wanted, armed_at = expected
+        if time.monotonic() - armed_at >= ECHO_WINDOW_S:
+            return False
+        return value == wanted
 
     async def write_hardware(self, raw: int) -> None:
         """Write `raw` to the real DAC and arm the echo window first.
@@ -312,15 +350,16 @@ class VolumeBridge:
         not `set_raw` directly - restore-on-acquire and the unmanaged-
         renderer floor bump both do now.
         """
-        self._last_own_write = time.monotonic()
+        self._expected_hw_raw = (raw, time.monotonic())
         await set_raw(self._mixer_name, raw)
 
     def _on_spotify_volume(self, value: int, max_: int) -> None:
         if max_ <= 0:
             logger.warning("volume: spotify reported max=%r, ignoring", max_)
             return
-        if self._within_echo_window():
-            logger.debug("volume: ignoring spotify volume event within echo window")
+        if self._consume(self._expected_spotify_value, value):
+            self._expected_spotify_value = None
+            logger.debug("volume: ignoring spotify's echo of our own %s", value)
             return
         raw = spotify_fraction_to_hardware_raw(value / max_)
         self._volume_memory.remember("spotify", raw)
@@ -361,13 +400,18 @@ class VolumeBridge:
                 logger.warning("volume: alsactl monitor exited, restarting in 5s")
                 await asyncio.sleep(5)
                 return await self.run()
-            if self._within_echo_window():
-                # Our own set_raw write, possibly reported as more than
-                # one line for a single change - every line inside the
-                # window is our own echo, not just the first.
-                continue
             raw = await get_raw(self._mixer_name)
             if raw is None or raw == last_raw:
+                # `raw == last_raw` also absorbs the extra monitor lines a
+                # single write can produce - they all read back the same
+                # value, so only the first reaches anything below.
+                continue
+            if self._consume(self._expected_hw_raw, raw):
+                # Our own write coming back at us, not somebody turning
+                # the knob. Record it as the new baseline so the next
+                # genuine change still registers as a change.
+                self._expected_hw_raw = None
+                last_raw = raw
                 continue
             last_raw = raw
             active = self._get_active_renderer()
@@ -375,9 +419,10 @@ class VolumeBridge:
             if active != "spotify":
                 continue
             steps = await self._spotify.get_volume_steps()
+            value = round(hardware_raw_to_spotify_fraction(raw) * steps)
             logger.info("volume: hardware -> spotify (%s/240)", raw)
-            self._last_own_write = time.monotonic()
-            await self._spotify.set_volume(round(hardware_raw_to_spotify_fraction(raw) * steps))
+            self._expected_spotify_value = (value, time.monotonic())
+            await self._spotify.set_volume(value)
 
 
 class DummyMixerBridge:

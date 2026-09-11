@@ -6,7 +6,7 @@ Regression coverage for a real ratchet-to-zero measured on hardware,
 volume.py's module docstring for both). Only `_on_spotify_volume` is
 exercised directly here - `run()`'s `alsactl monitor` side needs a real
 subprocess and isn't covered by these tests; the shared
-`_within_echo_window` and remember/apply logic is the same code path
+value-matched echo suppression and remember/apply logic is the same code path
 either way.
 """
 from __future__ import annotations
@@ -77,9 +77,11 @@ def make_bridge(active="spotify"):
 
 
 @pytest.mark.asyncio
-async def test_spotify_echo_within_window_is_ignored(fake_set_raw):
+async def test_spotify_echo_of_our_own_value_is_ignored(fake_set_raw):
+    """An echo carries back exactly what we pushed out - that, and only
+    that, is what gets dropped."""
     bridge, _ = make_bridge()
-    bridge._last_own_write = time_module.monotonic()  # "we just wrote"
+    bridge._expected_spotify_value = (71, time_module.monotonic())
 
     bridge._on_spotify_volume(71, 100)
     await asyncio.sleep(0)  # let any scheduled task run
@@ -88,9 +90,57 @@ async def test_spotify_echo_within_window_is_ignored(fake_set_raw):
 
 
 @pytest.mark.asyncio
+async def test_a_different_value_arriving_immediately_is_still_applied(fake_set_raw):
+    """Blocker 4, found on hardware 2026-09-11: the old blanket time
+    window dropped *everything* for 750ms after our own write, so a fast
+    Spotify slider drag lost every value after the first - including the
+    one the user let go on. Measured: a fast ramp to 100/100 left the DAC
+    at 226/240, 7.0dB low, reproducibly, where the same ramp spaced 1.5s
+    apart reached 240/240. A value we did not write is a genuine change,
+    however fast it arrives."""
+    bridge, _ = make_bridge()
+    bridge._expected_spotify_value = (71, time_module.monotonic())
+
+    bridge._on_spotify_volume(72, 100)  # one step away, immediately after
+    await asyncio.sleep(0)
+
+    assert fake_set_raw == [("DAC", spotify_fraction_to_hardware_raw(0.72))]
+
+
+@pytest.mark.asyncio
+async def test_fast_ramp_to_max_reaches_full_scale(fake_set_raw):
+    """The drag that blocker 4 was reported as: every value lands, and the
+    last one reaches 0dB (240/240), not somewhere short of it."""
+    bridge, _ = make_bridge()
+
+    for value in (40, 55, 70, 85, 100):
+        bridge._on_spotify_volume(value, 100)
+        await asyncio.sleep(0)
+
+    assert [raw for _, raw in fake_set_raw] == [
+        spotify_fraction_to_hardware_raw(v / 100) for v in (40, 55, 70, 85, 100)
+    ]
+    assert fake_set_raw[-1] == ("DAC", 240)  # 100% is 0dB, full scale
+
+
+@pytest.mark.asyncio
+async def test_a_stale_expectation_does_not_suppress_a_genuine_change(fake_set_raw):
+    """If our echo never arrives (dropped frame, a value that rounded
+    differently coming back), the expectation must expire rather than
+    silently swallow a later genuine change carrying the same number."""
+    bridge, _ = make_bridge()
+    bridge._expected_spotify_value = (50, time_module.monotonic() - ECHO_WINDOW_S - 1)
+
+    bridge._on_spotify_volume(50, 100)
+    await asyncio.sleep(0)
+
+    assert fake_set_raw == [("DAC", 195)]
+
+
+@pytest.mark.asyncio
 async def test_genuine_spotify_change_outside_window_is_applied(fake_set_raw):
     bridge, memory = make_bridge()
-    bridge._last_own_write = 0.0  # long ago
+    bridge._expected_spotify_value = None
 
     bridge._on_spotify_volume(50, 100)
     await asyncio.sleep(0)
@@ -114,28 +164,15 @@ async def test_write_hardware_arms_the_echo_window(fake_set_raw):
     property: a write through it must not be mistaken for a fresh
     external change afterward."""
     bridge, _ = make_bridge()
-    bridge._last_own_write = 0.0  # long ago - not already in a window
+    bridge._expected_hw_raw = None
 
     await bridge.write_hardware(120)
 
     assert fake_set_raw == [("DAC", 120)]
-    assert bridge._within_echo_window()  # armed by the write itself
-
-
-@pytest.mark.asyncio
-async def test_spotify_volume_arms_the_window_so_a_second_echo_is_also_dropped(fake_set_raw):
-    bridge, _ = make_bridge()
-    bridge._last_own_write = 0.0
-
-    bridge._on_spotify_volume(50, 100)
-    await asyncio.sleep(0)
-    assert fake_set_raw == [("DAC", 195)]
-
-    # A second event arriving immediately after (e.g. a duplicate WS
-    # frame) is inside the window this write just armed.
-    bridge._on_spotify_volume(51, 100)
-    await asyncio.sleep(0)
-    assert fake_set_raw == [("DAC", 195)]  # unchanged - second call ignored
+    # Recorded as *that* value, so the monitor line it produces is
+    # recognised as our own - and nothing else is.
+    assert bridge._consume(bridge._expected_hw_raw, 120)
+    assert not bridge._consume(bridge._expected_hw_raw, 121)
 
 
 @pytest.mark.asyncio
@@ -144,7 +181,7 @@ async def test_spotify_volume_while_inactive_is_remembered_not_applied(fake_set_
     move the mixer someone else currently owns, but should still be
     remembered for when it next becomes active."""
     bridge, memory = make_bridge(active="lms")
-    bridge._last_own_write = 0.0
+    bridge._expected_spotify_value = None
 
     bridge._on_spotify_volume(50, 100)
     await asyncio.sleep(0)
