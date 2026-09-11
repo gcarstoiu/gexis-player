@@ -1,6 +1,6 @@
 # Handoff
 
-Last updated: 2026-09-11 (ninth session, Phase 2c)
+Last updated: 2026-09-11 (tenth session, Phase 2c)
 
 ## Where things stand
 
@@ -1589,6 +1589,65 @@ a failure rate is part of the finding, not a reason to change behaviour
 until it's clean), then re-collect the LMS release-timing distribution
 before this goes into a `stage-gexis` rebuild. Expected: normal LMS
 handoff drops from ~3.2s to ~0.7s.
+
+### Tenth session, 2026-09-11: George's four blockers — two root-caused and closed, one fixed, one blocked on evidence
+
+George reflashed (new build, new SSH host key) and reported four blockers
+that cannot be deferred. Full detail, measurements and scope in **Finding
+018**; summary:
+
+**Important context for anything measured this session:** the reflashed
+image **predates Finding 016's polling fix** (`POLITE_POLL_INTERVAL`
+absent from the installed `arbitration.py`), so the blockers were all
+observed with the old blind 3.0s polite-grace sleep still live.
+
+1. **LMS elapsed time jumps ahead then back — LMS's own behaviour, not
+   ours.** Reproduced with a plain LMS pause/resume and *no arbitration
+   involved at all*: paused at 157.69, waited 30s, and the first reading
+   on resume was 186.93 (= position + away time), correcting to 158.33
+   within 0.3s. The server's stored position never drifts while paused.
+   All we control is how long the wrong value stays visible — it lasts
+   until squeezelite can actually start, i.e. until the outgoing renderer
+   releases. Shortening the release shortens the symptom; nothing in
+   gexis-player can remove it.
+2. **Spotify position resets — Finding 014's Mode A race, now measured
+   end-to-end, and all three levers are closed.** LMS releases in 1.44s
+   (n=4, tight); go-librespot attempts its ALSA open ~1s after
+   `will_play`; it loses by ~0.4s and the retry reloads at position 0.
+   Tested and ruled out this session: `-C 0` (squeezelite then *never*
+   releases — 4/4, reverted, `-C 1` confirmed restored); an earlier
+   acquisition signal (traced `/events` — `will_play` is the only event
+   before the failed open); and nudging LMS to retry (no effect —
+   squeezelite already recovers in ~0.96s on its own). **Needs George's
+   decision, not another unilateral attempt.**
+3. **Bluetooth first connect after reboot — not root-caused, evidence
+   doesn't exist yet.** Every static cause ruled out (ordering
+   `After=bluealsa` present, rfkill clear, phone paired *and* trusted,
+   both gexis BT units enabled), and on the one available boot the first
+   connect actually *succeeded* at the profile level. `journalctl
+   --list-boots` shows a single boot because the card was just flashed —
+   but `/var/log/journal` exists and `Storage=auto`, so logs persist from
+   here on and the next reboot's attempt is capturable.
+4. **Spotify's volume range smaller than Bluetooth's — root-caused,
+   fixed, verified.** `VolumeBridge`'s blanket 750ms echo window
+   discarded *every* incoming volume event after one of our own writes,
+   so a fast slider drag lost everything after the first value,
+   including the one the user released on. Measured: fast ramp to
+   100/100 left the DAC at 226/240 (7.0dB low), reproducibly; the same
+   ramp 1.5s apart reached 240/240. Both dummy controls lost their echo
+   windows in the 2026-09-08 `DummyMixerBridge` fix — whose docstring
+   describes this identical bug — leaving Spotify the only renderer that
+   couldn't reach full scale. Replaced with value-matched suppression
+   (drop exactly one echo carrying the value we wrote; anything
+   different is genuine). **Verified on hardware:** fast ramp now
+   reaches 240/240 (3/3), and the ratchet-to-zero regression was checked
+   explicitly — a deliberate `amixer sset DAC 200` held at 200 across 16
+   readings over 8s.
+
+**Deployed live on `gexis` (hot-patch, not an image):** the blocker 4
+volume fix and Finding 016's polling fix. Backups at `/tmp/volume.py.bak`
+and `/tmp/arbitration.py.bak` on the device. Box left with all units
+active, `NRestarts=0` everywhere, volume at a sane -13.5dB.
 
 **Also noticed, not acted on:** squeezelite's `ExecStart` now carries
 `-O hw:gexislmsvol -V Master -C 1 -n gexis` — the `-O hw:gexislmsvol -V
