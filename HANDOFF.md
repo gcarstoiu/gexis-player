@@ -1,6 +1,6 @@
 # Handoff
 
-Last updated: 2026-09-10 (sixth session)
+Last updated: 2026-09-11 (seventh session, Phase 2c)
 
 ## Where things stand
 
@@ -1149,6 +1149,127 @@ list alone):
 convention. PR from `phase-2b-arbitration` into `phase-2-arbitration`
 (its home branch, same pattern as 2a) is next.
 
+### Phase 2c started, 2026-09-10/11: criterion 7 passing, criterion 8 in progress, four reliability defects found (Finding 013)
+
+**PR #6 (`phase-2b-arbitration` → `phase-2-arbitration`) merged** before
+this session started - found already done, not redone. Branched
+`phase-2c-takeover` off the now-updated `phase-2-arbitration`.
+
+**Prerequisites, all done before touching criteria 7-10 themselves:**
+Finding 011's two live signal fixes (Bluetooth `MediaTransport1`, Spotify
+`will_play`) verified clean on a real hardware round (Bluetooth
+connect/disconnect, Spotify takeover while LMS played) - George confirmed
+"all went fine." Image rebuilt (`v0.2.1-15-g2396ea2-dirty`, 12m50s) and
+reflashed; found and fixed a real bug in the process - the `Makefile`'s
+version-annotation step silently failed once more than one build's
+`.info` manifest existed in `image/deploy/` (every build after the
+first), so neither the 2026-09-08 nor the 2026-09-10 manifest ever got
+its version line despite the build printing a false "Annotated..."
+success message. Fixed with `ls -t | head -1` instead of a bare glob.
+Spotify Web API app registered by George; one-time PKCE authorization
+done together to get a refresh token, verified end-to-end against the
+live API. `gexis`'s Spotify device_id is **not** cached anywhere it
+matters - `spotify_api.py` resolves it by name on every call, since a
+reflash resets go-librespot's zeroconf identity (confirmed: it changed
+after this session's own reflash) the same way Finding 005's card index
+and the pre-pinning ephemeral API port did; a fresh reflash still needs
+one manual phone-side pairing (Spotify app, select "gexis" once) before
+the name lookup finds anything, since the Web API alone can't bootstrap
+that handshake.
+
+**New test tooling, `tools/phase-2c/`** (gitignored credentials file
+`spotify.local.env`, added to `test-gitignored-credentials.sh`'s standing
+list): `lms_cli.py` (LMS CLI port 9090), `spotify_api.py` (Spotify Web
+API, PKCE), `pcm_holder.py` (independent "who holds the PCM" ground
+truth via `sudo fuser` + `/proc/<pid>/comm` - plain `fuser` can't see
+another process's fds here, Yama `ptrace_scope`, even same-user),
+`spectrum_fifo.py` (onset/silence detection via peppyalsa's spectrum
+FIFO, chosen over an `snd-aloop` tap - ALSA's `type multi` turned out to
+be for channel-remapping, not a clean broadcast-duplicate, and reusing
+the FIFO avoids touching the live `output.conf` slave chain during
+testing), `attack_test.py` / `bt_attack_test.py` (criterion 7),
+`takeover_gap.py` (criterion 8). `spectrum_fifo.py`'s frame format (30 x
+4-byte native-endian uint = 120 bytes, read directly from peppyalsa's
+`spectrum.c`) corrects an earlier unconfirmed "64 bytes" guess this file
+used to carry. The onset detector's own lag was measured at 19.5-40ms
+against real hardware (`onset_smoketest.py`, using `/proc`'s PCM
+`trigger_time` against a known silence-then-tone WAV, no mic/ADC path
+exists on this hardware to calibrate any other way) - small next to the
+gaps being measured.
+
+**Criterion 7 (attack test): passing.** 0 violations of "no two renderers
+hold the device at once" across every scripted race - LMS↔Spotify both
+directions plus a scripted reclaim-spam pattern (15 rounds, clean once
+run against an isolated LMS session rather than George's own real
+background listening, which had confounded an earlier attempt and
+produced what first looked like a live reproduction of Finding 009/010's
+still-open LMS-reclaim item - retracted once isolated), and
+Bluetooth-involving pairs (George live as the audio source; scripted
+`bluetoothctl connect` reliably reconnects the Bluetooth profile but does
+**not** reliably resume real audio streaming, so several rounds ended up
+uncontested rather than genuine races - noted, not fixed, a harness
+limitation not a product defect).
+
+**Four reliability defects found along the way, all in Finding 013:**
+
+1. **squeezelite's restart-rate limit (`StartLimitBurst=5`/60s) can be
+   exhausted by legitimate adversarial arbitration activity**, not just a
+   misconfigured unit (what it was sized for) - SIGKILL firing while the
+   device is still busy raced squeezelite's own restart into 5 failures
+   within 15s, permanently failing the unit with no further auto-restart.
+   `gexis` silently dropped off the LMS server's player list until a
+   manual `systemctl reset-failed`. **Fixed:** burst raised to 20
+   (`image/stage-gexis/02-renderers/files/squeezelite.service`, commit
+   `2eec5f9`), applied live and ported into the image source.
+2. **go-librespot can enter a rapid (50-300ms) internal acquisition-retry
+   storm** under repeated Spotify Connect transfer calls - confirmed real
+   and self-resolving, confirmed **not** reproducible from a single
+   isolated transfer call under the same busy-device precondition.
+   **Deferred, George's decision** - hasn't shown up in normal hands-on
+   testing across recent builds, only under this session's own
+   repeated-API-call testing. Revisit immediately on any real recurrence.
+3. **go-librespot's own retry-then-reauth backoff after a failed device
+   open is ~56s, not immediate** - the takeover-gap harness's own retry
+   cadence (every ~12s) was landing right on top of this, producing a
+   sustained 14-round (~13 minute) cycle where arbitration behaved
+   perfectly (LMS released cleanly every time) but go-librespot never
+   once got real audio playing, confirmed to stop completely the instant
+   the harness itself stopped (not spontaneous). Read as the likely
+   mechanism behind a much older, previously-unexplained item - go-
+   librespot's periodic "loading previously persisted zeroconf
+   credentials" cycles with no known trigger. **Harness fixed** (single
+   attempt per round, 65s cooldown on failure instead of rapid retry);
+   go-librespot itself not touched.
+4. **go-librespot can report itself actively playing a real track while
+   never having opened the ALSA device at all** - found immediately after
+   fixing #3, from a single clean, unhurried arbitration cycle (no
+   repeated calls, no storm). Confirmed independently three ways
+   (`/proc/asound/.../status` showing `closed`, `sudo fuser` showing no
+   holder, the process's own `/proc/<pid>/fd` showing no handle to
+   `/dev/snd/`) - not just this project's own `pcm_holder.py`. Sharpens
+   Finding 011's own caveat that adapter-level signals aren't proof audio
+   is flowing: this shows even a later, steady-state status read can't be
+   trusted either, not just the initial acquisition event. Plausibly a
+   **better-fitting explanation than #3** for the old "Spotify showing
+   'connected' but not sustaining a takeover from LMS" report, since it
+   needs only one ordinary takeover, not repeated contention - neither is
+   confirmed as the actual historical cause. **Not fixed, not
+   root-caused** - needs reading go-librespot's own source to explain,
+   not chased further this session.
+
+**Criterion 8 (takeover-gap measurement): in progress, not complete.**
+The FIFO-based measurement mechanism itself is validated (source-read
+frame format, measured detection lag, and - after two real bugs found and
+fixed in the reader design itself: a multi-reader FIFO corruption issue
+from reopening per attempt rather than using one persistent reader, and a
+wrong assumption that "silence" shows up as zero-valued frames rather
+than an absence of frames during a real cross-renderer gap, since no
+renderer has the PCM open at all during a genuine handoff) - confirmed
+correct via direct instrumented testing. But defects #2-#4 above kept
+interrupting actual measurement runs before a clean ≥20-run distribution
+could be collected for even the LMS↔Spotify same-rate pair. This is
+where testing paused for the session - see "Next actions" below.
+
 ## Machines
 
 | Name | What it is | Notes |
@@ -1179,20 +1300,39 @@ the tag) — tag manually before a build worth naming, for now.
 
 ## Next actions, in order
 
-1. **Open the PR: `phase-2b-arbitration` → `phase-2-arbitration`**
-   (its home branch, same pattern 2a used - see `docs/DEVELOPMENT.md`'s
-   sub-phase note). Phase 2b (criteria 3-6) is done and closed,
-   2026-09-10 - see this file's own "Phase 2b closed" section above for
-   the criterion-by-criterion check and the two explicitly deferred
-   items (Bluetooth's SIGKILL escalation path, fixed output mode - both
-   George's decision, recorded in ADR-0010/ADR-0018).
-2. **Phase 2c, criteria 7-10** (the attack test and takeover gap
-   measurement), once the PR above lands — needs LMS (have one; CI gets
-   a containerised throwaway) and, for the Spotify leg, the registered
-   Spotify API app (transfer-playback confirmed available to new apps —
-   see `docs/ARCHITECTURE.md`'s open-questions list). Note Finding 008's
-   ~0.4s LMS debounce adds directly to whatever this measures for that
-   direction.
+1. **Phase 2c, criterion 8: get a clean ≥20-run takeover-gap distribution.**
+   PR #6 already merged and `phase-2c-takeover` already branched (see this
+   file's own Phase 2c section above) - criterion 7 is passing. What's
+   left, in order:
+   - **LMS↔Spotify, same-rate.** The harness (`tools/phase-2c/
+     takeover_gap.py`) is fixed to stop provoking Finding 013 §3's ~56s
+     go-librespot backoff (single attempt per round, 65s cooldown on
+     failure), but §4 (go-librespot silently not opening the device while
+     reporting itself playing) can still make individual rounds fail for
+     reasons unrelated to arbitration - budget for a noisier, slower
+     collection than the LMS-only side, and don't trust a "fast, clean"
+     result without cross-checking `pcm_holder` actually shows the
+     expected renderer, the way the harness itself already does.
+   - **Cross-rate LMS↔Spotify** - needs picking specific test content at a
+     different sample rate; not set up yet.
+   - **Bluetooth-involving pairs** - needs George live as the audio
+     source, same as criterion 7's Bluetooth legs. `bluetoothctl connect`
+     reconnects the profile but not reliably the actual audio stream (a
+     harness limitation, not a product defect) - manual taps needed for
+     real contested rounds.
+   - **Criterion 9**: write the actual takeover-gap finding once real
+     numbers exist (Finding 013 covers the reliability defects found
+     along the way, not the gap measurements themselves).
+   - **Criterion 10**: amend ADR-0010 on whether the measured gap needs a
+     UI transition screen - George's call, needs criterion 9's numbers
+     first.
+2. **Finding 013's four defects** - one fixed (squeezelite restart
+   burst), one deferred by George's decision (the go-librespot retry
+   storm - revisit on any real recurrence), two documented but not
+   root-caused (the ~56s go-librespot backoff; go-librespot reporting
+   itself playing while never opening the device) - the latter two would
+   need reading go-librespot's own source, the way Finding 011 did for
+   its acquisition signals, and weren't chased further this session.
 3. **Fill the Finding 003 grid** on `rig`, not `gexis` — characterises the
    metering path, not the product image. 16 of 18 cells remain.
 4. **Phase 5 (not blocking Phase 2c):** Finding 007's research is done
