@@ -1696,10 +1696,29 @@ the player is off leaves a valid state. Rule 2 is the largest change —
 it retires the base-slot premise ADR-0010 is built on, so this likely
 wants its own numbered ADR rather than an amendment to that one.
 
-**Still to verify before implementing:** that LMS's CometD
-`playerstatus` subscription actually delivers `power` transitions
-promptly (the adapter currently watches `mode`), and whether powering off
-mid-playback is audible at the cut.
+**Refinement from George, same conversation:** on activation the player
+should be in whatever transport state the user left it in — playing if
+they left it playing, paused if they left it paused — and since "in most
+cases the player is paused," we should not trigger a play.
+
+**Measured consequence (Finding 018):** a *paused* LMS holds no ALSA
+device at all (`-C 1` closes it), so a takeover from a paused player is
+already clean — first open succeeds, `active` fires, 0.93s. Blocker 2 only
+ever manifests when LMS is **playing** at the moment of takeover. So "most
+cases are paused" describes the cases that were never broken; the broken
+case is always the playing one, which George's own rule says must come
+back playing. LMS preserves transport state across a power cycle natively,
+so the rule needs no bookkeeping — the open decision is only whether the
+resume comes from LMS's own restore (leaves the broken case broken, 0-5s)
+or from us replaying one remembered bit (0.07-0.17s).
+
+**Verified since (Finding 018):** the CometD `playerstatus` push *does*
+carry `power`, and a change triggers a push in ~0.52s — but squeezelite
+attempts its ALSA open 58ms after power-on, so we cannot act first, and a
+lost attempt costs up to 5s on an untunable retry tick.
+
+**Still to verify before implementing:** whether powering off mid-playback
+is audible at the cut.
 
 **Also noticed, not acted on:** squeezelite's `ExecStart` now carries
 `-O hw:gexislmsvol -V Master -C 1 -n gexis` — the `-O hw:gexislmsvol -V

@@ -471,6 +471,49 @@ gzipped body to a plain `urllib` POST, which crashed one diagnostic run
 mid-measurement. The real adapter uses `aiohttp`, which decompresses
 transparently, so this affects throwaway scripts only.
 
+### A paused LMS never contends at all — so the broken case is always the playing one
+
+George's refinement: on activation the player should be in whatever
+transport state the user left it in, and since "in most cases the player
+is paused," we should not trigger a play. Measured what "paused" actually
+means for contention:
+
+```
+LMS playing, pcm=('lms',)
+LMS paused (NOT powered off), pcm=()      <- -C 1 closed the device
+  event: will_play / metadata / active / playing
+  spotify took the pcm at: 0.93s
+  will_play count: 1        (first open succeeded)
+  ACTIVE fired: True
+  inactive/stopped seen: False
+```
+
+**A paused LMS holds nothing**, so a takeover from it is already clean —
+one `will_play`, first open succeeds, `active` fires, 0.93s. Blocker 2
+**only ever manifests when LMS is actually playing** at the moment of
+takeover.
+
+That inverts the significance of "most cases are paused": those cases were
+never broken. The contended case is always the playing case — and by
+George's own rule, a player left playing must come back **playing**, which
+is exactly the case that races squeezelite into its 5s tick.
+
+**LMS already preserves transport state across a power cycle by itself:**
+power off while playing → power on → `mode=play` and it resumes; pause
+then power off → power on → `mode=pause`. So George's rule is satisfiable
+with *zero* bookkeeping, simply by not pausing first. The decision is
+therefore narrow and concrete:
+
+| | paused case (never broken) | playing case (the broken one) | who issues the play |
+|---|---|---|---|
+| **plain `power 0`** | clean, 0.93s | resumes, but squeezelite races and loses → **0-5s** silence; full elapsed jump for that whole time | LMS, natively |
+| **`pause` + `power 0` + restore** | clean, 0.93s | **0.07-0.17s**, no failed attempt; jump 0.3-1.6s, or zero with the seek | us, from one remembered bit |
+
+Both honour "the state the user left it in". They differ only in whether
+the resume command comes from LMS's own power-on restore or from us
+replaying a state we recorded — and therefore in whether the only broken
+case stays broken.
+
 **This changes a decision, not just an implementation.** ADR-0010 states
 that power state plays no role in arbitration ("A powered-off player is
 one that will not play; it neither acquires nor releases"). Using power
