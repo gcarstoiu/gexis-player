@@ -371,6 +371,24 @@ order, on the right adapter) - the actual "does this survive a real busy
 race" question is hardware-verification territory, matching this
 project's existing convention for adapter network/process code.
 
+**Verified on hardware, same day.** The core guarantee - `systemctl stop`
+suppresses automatic restart entirely - confirmed directly: stopped
+squeezelite by hand while it held the device, watched `systemctl
+is-active` stay `inactive` for 9 seconds (well past what `RestartSec=2`
+would ever need if `Restart=on-failure` were going to fire), then brought
+it back with a plain `systemctl start`. That same manual `start`, issued
+while Spotify still held the device, *did* trigger `Restart=on-failure`
+and climb `NRestarts` - the exact residual risk this amendment names, not
+just a mechanism proven in the abstract. Then, through the real
+integrated path (`Supervisor.acquire()`, not a manual test): two full
+batches, 15 consecutive LMS-to-Spotify rounds and 20 consecutive
+Spotify-to-LMS rounds, **zero restart-storm recurrences, all units
+healthy throughout** (`NRestarts` unchanged across both batches - the
+kill-escalation path wasn't even needed in either one, which is itself
+consistent with escalation being rare, not with the fix being unexercised
+in anger by the harness). Criterion 8's same-rate LMS↔Spotify distribution
+collected cleanly on both legs as a result - see Finding 015.
+
 ## Open
 
 - **Sync group interaction — deferred, with a known cost, by decision.**

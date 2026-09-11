@@ -1406,6 +1406,81 @@ today. Not attempted again this session, deliberately, rather than risk
 tripping the same failure repeatedly and needing another manual
 recovery each time.
 
+### Same day, third session: George picked "fix the race" - implemented, verified, criterion 8's same-rate LMS↔Spotify leg completed
+
+**Root cause, found by tracing what happens *between* the arbitration
+ladder's own checkpoints, not just at them:** SIGKILL (the 2026-09-07/08
+fix for squeezelite exiting cleanly on SIGTERM and never returning) makes
+`Restart=on-failure` fire correctly, but that automatic restart then runs
+on systemd's own fixed `RestartSec=2` cadence, completely decoupled from
+the arbitration ladder's own timing - squeezelite tests whether it can
+open the ALSA device at every startup, and for as long as the device
+stays legitimately busy it keeps failing and systemd keeps restarting it,
+burning through the burst limit on a clock nothing in `gexis-core` was
+watching or controlling.
+
+**Fixed:** `LmsAdapter.signal_stop` now calls a new `stop_unit`
+(`systemd.py`) - `systemctl stop`, not a raw kill signal - so nothing
+restarts automatically at all once it's called. A new `device_freed`-
+symmetric adapter hook, `restart_after_release` (`adapters/base.py`,
+default no-op), brings squeezelite back explicitly instead, called by
+`Supervisor.acquire()` as the very last step, after the incoming
+renderer's own retry chance and volume restore - `LmsAdapter` is the only
+override. **Residual risk named, not assumed away:** if that one explicit
+restart also finds the device still busy, `Restart=on-failure` (still
+configured, for genuine unrelated crashes) does still govern recovery
+from that fresh failure - a much rarer combination than before, not
+proven impossible. Full detail in ADR-0010's matching amendment and
+Finding 013 §1's own addendum. 63 tests pass.
+
+**Verified on hardware, deployed live (confirmed, then done) after the
+same kind of explicit go-ahead as Finding 014's deploy:**
+- The core guarantee directly confirmed: stopped squeezelite by hand
+  while it held the device, watched it stay `inactive` for 9 seconds (far
+  past `RestartSec=2`), no auto-restart - then a plain `systemctl start`
+  brought it back cleanly.
+- The named residual risk reproduced on purpose, not just theorized: a
+  manual `systemctl start` issued while Spotify still held the device
+  *did* trigger `Restart=on-failure` and climb `NRestarts` - freed
+  immediately by stopping Spotify's own hold rather than let it climb
+  toward the limit again.
+- Through the real `Supervisor.acquire()` path (not manual testing): 15
+  consecutive LMS-to-Spotify rounds, then 20 consecutive Spotify-to-LMS
+  rounds - **zero restart-storm recurrences, all five units healthy
+  throughout, `NRestarts` unchanged across both batches** (the
+  kill-escalation path wasn't needed in either batch, consistent with
+  escalation being rare rather than the fix being unexercised).
+
+**Criterion 8's same-rate LMS↔Spotify distribution collected cleanly on
+both legs as a direct result - written up in Finding 015:**
+
+| Direction | n | min | max | mean | median | stdev |
+|---|---|---|---|---|---|---|
+| LMS→Spotify (combined, 3 batches across the session) | 36 | 895.5ms | 2593.0ms | 1631.5ms | 1827.8ms | 400.3ms |
+| Spotify→LMS (one clean batch) | 20 | 4107.5ms | 4235.5ms | 4173.3ms | 4170.9ms | 33.2ms |
+
+Both directions confirmed same-rate (44.1kHz both sides, read directly
+from `/proc/asound/.../hw_params` and go-librespot's own `/status`, not
+assumed). **A real, notable, unexplained asymmetry:** Spotify→LMS is both
+~2.5x slower and ~12x more consistent (stdev) than LMS→Spotify - plausibly
+LMS/squeezelite's own acquisition-side startup work dominating a
+deterministic total, versus LMS→Spotify's spread being a visible
+fingerprint of Finding 014's retry mechanism interacting with variable
+release timing - neither root-caused, see Finding 015 for exactly what is
+and isn't established.
+
+**Criterion 9** (write the actual finding once real numbers exist) is
+satisfied for this one pair/rate combination - cross-rate and
+Bluetooth-involving pairs still need their own measurement. **Criterion
+10** (UI transition screen - George's call) now has real numbers to
+decide against for this pair, not yet decided.
+
+**None of this session's three fixes (Finding 014, Finding 013 §1's
+resolution, plus the harness/tooling from earlier) are in a rebuilt image
+yet** - all deployed live via hot-patch only. Next rebuild should fold
+all of it in before further hardware sessions rely on it surviving a
+reflash.
+
 ## Machines
 
 | Name | What it is | Notes |
@@ -1438,29 +1513,11 @@ the tag) — tag manually before a build worth naming, for now.
 
 1. **Phase 2c, criterion 8: get a clean ≥20-run takeover-gap distribution.**
    PR #6 already merged and `phase-2c-takeover` already branched (see this
-   file's own Phase 2c section above) - criterion 7 is passing. **Blocked
-   as of the eighth session's second half (2026-09-11) on a Finding 013 §1
-   recurrence - George's call needed before continuing.** What's left, in
-   order:
-   - **LMS→Spotify, same-rate — Finding 014 fixed and its own leg
-     collected.** George picked option 2 (`SpotifyAdapter` retries itself
-     via go-librespot's local `/player/resume`); deployed live, verified
-     5/5, then a real 16-of-20 distribution collected (mean 1619.9ms,
-     median 1827.8ms, min 899.7ms, max 2593.0ms, stdev 484.5ms). This
-     leg's own mechanism is done - see below for why it's not the whole
-     story.
-   - **Spotify→LMS, same-rate — blocked, needs George's call (Finding 013
-     §1 addendum).** Collecting this leg tripped a recurrence of the
-     squeezelite restart-rate-limit exhaustion, now under ordinary paced
-     rounds (~6-8s apart) rather than adversarial racing - the raised
-     5→20 burst limit was exceeded (24) partway through the *previous*
-     leg, leaving squeezelite dead for the entirety of this one. Recovered
-     manually; every unit confirmed healthy again. Don't retry blind
-     collection on this leg (or push the LMS→Spotify leg past ~16
-     consecutive rounds again) until George decides between raising the
-     burst limit further (mitigation, not a cure, per Finding 013 §1's own
-     original text) or fixing the underlying race (SIGKILL firing while
-     the device may still be mid-release) for real.
+   file's own Phase 2c section above) - criterion 7 is passing.
+   **Same-rate LMS↔Spotify is done, both legs** (Finding 015) - George
+   picked both fixes needed to get there (Finding 014's `device_freed`
+   retry, then "fix the race" for Finding 013 §1's recurrence rather than
+   raise the limit again) and both are hardware-verified. What's left:
    - **Cross-rate LMS↔Spotify** - needs picking specific test content at a
      different sample rate; not set up yet.
    - **Bluetooth-involving pairs** - needs George live as the audio
@@ -1468,12 +1525,18 @@ the tag) — tag manually before a build worth naming, for now.
      reconnects the profile but not reliably the actual audio stream (a
      harness limitation, not a product defect) - manual taps needed for
      real contested rounds.
-   - **Criterion 9**: write the actual takeover-gap finding once real
-     numbers exist (Finding 013 covers the reliability defects found
-     along the way, not the gap measurements themselves).
+   - **Criterion 9**: partially done - Finding 015 covers same-rate
+     LMS↔Spotify; cross-rate and Bluetooth pairs still need their own
+     write-up once measured.
    - **Criterion 10**: amend ADR-0010 on whether the measured gap needs a
-     UI transition screen - George's call, needs criterion 9's numbers
-     first.
+     UI transition screen - George's call. Finding 015 has real numbers
+     for the LMS↔Spotify pair (median 1.8s one way, ~4.2s the other) to
+     decide against now, though cross-rate/Bluetooth numbers don't exist
+     yet either.
+   - **Not yet in a rebuilt image** - this session's fixes (Finding 014,
+     Finding 013 §1's resolution) are live-deployed on `gexis` only, via
+     hot-patch. Rebuild before the next hardware session that needs them
+     to survive a reflash.
 2. **Finding 013's four defects** - one fixed (squeezelite restart
    burst), one deferred by George's decision (the go-librespot retry
    storm - revisit on any real recurrence), two documented but not
