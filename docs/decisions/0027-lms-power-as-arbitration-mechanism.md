@@ -212,6 +212,18 @@ either turns out to be audible or annoying in real use.
   only where LMS is the outgoing renderer. Bluetooth's own release still
   measures 2.5-2.9s and remains ADR-0010's open item, which keeps
   Bluetooth→LMS the slowest handoff.
+- **Pressing *play* rather than activating loses the position.** Confirmed on
+  hardware 2026-09-12, after George asked whether the auto-power-on was ours:
+  it is LMS's own, documented since ADR-0010 ("if someone presses play on a
+  powered-off player, LMS powers it on and starts"), and our source contains no
+  `power 1` call at all — only `power 0`. But LMS's auto-power-on starts the
+  track **from zero**: deactivated at 24.4s, a plain `play` came back at 2.3s.
+  `device_freed()`'s resume cannot help here, because LMS is already playing
+  from 0 by the time we see the acquisition. **This gives the deferred seek
+  re-anchor a second, more substantive justification than the elapsed-time
+  flicker it was deferred over** — recording the *position* at release, not just
+  the playing flag, would fix the position loss as well as the flicker. Worth
+  reconsidering the deferral on those grounds.
 - **Bare power-on with nothing playing** takes the device and produces silence
   until the user presses play. Consistent with Bluetooth connecting without
   streaming, and with this ADR's own "play is a separate intention" — recorded
