@@ -254,6 +254,74 @@ on its own it does not fix what George is actually seeing. This is the
 same wall Finding 014's `/player/resume` hit, reached from a different
 direction, and is recorded here so the third attempt is not made blind.
 
+## Third pass: George's idea — release LMS by powering the player off
+
+George proposed releasing the device by disabling the player in LMS for a
+few seconds rather than killing squeezelite. Tested; it works, and it is
+better than anything else examined for this race.
+
+**It bypasses the `-C 1` idle timer completely** — the objection that
+sank every other approach:
+
+| LMS release command | device freed after |
+|---|---|
+| `pause 1` (as shipped) | 1.42s, 1.43s, 1.45s |
+| `stop` | 1.04s, 1.85s (inconsistent) |
+| **`power 0`** | **0.06s, 0.05s** |
+
+0.06s lands far inside go-librespot's ~1s first-attempt window, so the
+race that Findings 014/017 documented as unwinnable is won outright.
+Measured end-to-end against a real Spotify transfer, `power 0` issued on
+`will_play` exactly where the adapter would issue it:
+
+| | `pause 1` (control) | `power 0` | `power 0` (repeat) |
+|---|---|---|---|
+| `will_play` count | 1 | 1 | 1 |
+| first ALSA open succeeded | **no** | **yes** | **yes** |
+| `inactive`/`stopped` (the failure signal) | — | none | none |
+| **`active` fired** | **no** | **YES** | **YES** |
+| spotify holding the PCM after | **never** | **0.7s** | **0.7s** |
+
+`active` firing is the whole point: it is the event that has never once
+appeared after a failed open (0/2 controlled, 0/3 of George's organic
+handoffs), and it is what leaves the phone showing 0:00 against a 0
+duration while sound plays. With this release path the first open
+succeeds, so there is no retry, no reload at position 0, and the Connect
+session is honest — all three halves of blocker 2 at once. The 0.7s
+takeover is also far better than Finding 015's 1827.8ms LMS→Spotify
+median, so criterion 8 should be re-measured on this.
+
+**Two catches, both found in the same runs:**
+
+1. **It does not fix blocker 1.** The elapsed-time jump survives a power
+   cycle unchanged (+20.1s on resume). Blocker 1 still needs its own fix
+   — the seek re-anchor above.
+2. **`power 0` followed by a plain `play` restarts the track from 0.**
+   Measured: released at 68.29, then `play` alone → `time=0`, climbing.
+   `power 1` *then* `play` resumes correctly (60.22 → 60.55). This is the
+   user pressing play in the LMS app while the player is off, and it
+   turns blocker 2's symptom into an LMS-side one unless we power the
+   player back on ourselves, or set the position explicitly. The seek
+   re-anchor covers it, which is a reason to treat the two fixes as one
+   design rather than two.
+
+**Not yet established, and needed before this ships:** whether powering
+off mid-playback is audible (a click at the cut); what it does to sync
+group membership; whether it reduces the long-standing spurious LMS
+reclaims (Findings 009/010 §4 — plausible, since a powered-off player
+should not be told to play, but not tested); and Bluetooth's release path
+is untouched by this, since `power` is an LMS concept only.
+
+**This changes a decision, not just an implementation.** ADR-0010 states
+that power state plays no role in arbitration ("A powered-off player is
+one that will not play; it neither acquires nor releases"). Using power
+as *the* release mechanism contradicts that directly, and it changes what
+the user sees in the LMS app during another renderer's session (powered
+off rather than paused — arguably more honest by ADR-0010's own
+accountability rule, but a visible behaviour change either way). Per this
+project's own rule it needs an ADR amendment before implementation, and
+that is George's call.
+
 ## What is deployed on `gexis` right now
 
 Hot-patched into `/opt/gexis-core/venv/.../gexis_core/`, service restarted,
