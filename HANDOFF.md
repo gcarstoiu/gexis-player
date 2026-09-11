@@ -1746,11 +1746,12 @@ squeezelite's first ALSA attempt lands on a device that is already free
   leave it in place as the escalation safety net, but it should effectively
   never fire.
 
-**Still to verify on hardware, after implementing:** whether powering off
-mid-playback is audible at the cut, and whether blocker 1's residual
-0.3-1.6s flicker is acceptable without the seek re-anchor (the seek removes
-it entirely but makes LMS re-request the stream, which has its own possible
-artefact — deliberately left out of ADR-0027 pending a listening test).
+**Both remaining open items DEFERRED by George, 2026-09-12** — not
+blocking implementation: whether powering off mid-playback is audible at
+the cut, and whether blocker 1's residual 0.3-1.6s elapsed flicker needs
+the seek re-anchor (the seek removes it entirely but makes LMS re-request
+the stream, with its own possible artefact). Revisit only if either proves
+audible or annoying in real use.
 
 **Also noticed, not acted on:** squeezelite's `ExecStart` now carries
 `-O hw:gexislmsvol -V Master -C 1 -n gexis` — the `-O hw:gexislmsvol -V

@@ -167,6 +167,10 @@ and not made worse.
 
 ## Open
 
+**Both of the first two items below are DEFERRED by George's decision,
+2026-09-12** — not unresolved, and not blocking implementation. Revisit if
+either turns out to be audible or annoying in real use.
+
 - **Blocker 1 is not fully fixed by this.** Power-on itself is clean — the
   player returns paused at exactly the stored position (delta +0.00s) — but
   issuing the `play` re-introduces LMS's stale-anchor jump for 0.3-1.6s
