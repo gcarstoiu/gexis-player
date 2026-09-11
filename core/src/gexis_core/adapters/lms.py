@@ -40,6 +40,27 @@ logger = logging.getLogger("gexis_core.adapters.lms")
 
 UNIT_NAME = "squeezelite.service"
 
+#: How far the player's position may drift from what `release()` recorded
+#: before `device_freed()` corrects it with a seek.
+#:
+#: There are two routes back to LMS and they behave differently. *Activating*
+#: the player restores it paused at exactly the stored position, so nothing
+#: needs correcting. Pressing *play* on a deactivated player makes LMS power
+#: it on and **restart the track from zero** - measured on hardware
+#: 2026-09-12 with arbitration stopped so nothing could correct it: paused
+#: and powered off at 115.1s, pressing play reported time=0 and climbed
+#: from there. That is LMS's own
+#: documented auto-power-on (ADR-0010), not something this code does, and it
+#: happens before our acquisition even reaches us, so it can only be
+#: corrected afterwards.
+#:
+#: The tolerance exists so the correction costs nothing in the route that is
+#: already right: a seek makes LMS re-request the stream, which is a
+#: plausible source of an audible artefact at the resume point, so it is
+#: worth avoiding when there is nothing to fix. A couple of seconds of drift
+#: is not worth a re-request.
+RESUME_POSITION_TOLERANCE_S = 3.0
+
 _id_counter = itertools.count(1)
 
 
@@ -78,9 +99,13 @@ class LmsAdapter(Adapter):
         self._base = f"http://{host}:{port}"
         self._player_name = player_name
         self._player_id: str | None = None
-        #: Set by `release()` from the player's own state, consumed by
-        #: `device_freed()`. False means "came back paused, send nothing".
+        #: Both set by `release()` from the player's own state and consumed
+        #: by `device_freed()`. `_resume_playing` False means "came back
+        #: paused, send no play"; `_resume_position` is what the position is
+        #: corrected back to if LMS restarted the track (see
+        #: RESUME_POSITION_TOLERANCE_S).
         self._resume_playing = False
+        self._resume_position: float | None = None
 
     async def _rpc(self, session: aiohttp.ClientSession, player: str, command: list) -> dict:
         body = {"id": next(_id_counter), "method": "slim.request", "params": [player, command]}
@@ -248,11 +273,17 @@ class LmsAdapter(Adapter):
         async with aiohttp.ClientSession() as session:
             try:
                 status = await self._rpc(session, self._player_id, ["status", "-", 1])
-                self._resume_playing = status.get("result", {}).get("mode") == "play"
+                result = status.get("result", {})
+                self._resume_playing = result.get("mode") == "play"
+                position = result.get("time")
+                self._resume_position = (
+                    float(position) if isinstance(position, (int, float)) else None
+                )
                 await self._rpc(session, self._player_id, ["pause", 1])
                 await self._rpc(session, self._player_id, ["power", 0])
                 logger.info(
-                    "lms: paused and powered off (will resume playing: %s)",
+                    "lms: paused and powered off at %s (will resume playing: %s)",
+                    "?" if self._resume_position is None else f"{self._resume_position:.1f}s",
                     self._resume_playing,
                 )
                 return True
@@ -261,30 +292,60 @@ class LmsAdapter(Adapter):
                 return False
 
     async def device_freed(self) -> None:
-        """ADR-0027: put back the transport state `release()` recorded.
+        """ADR-0027: put back what `release()` recorded - the transport state,
+        and the position if LMS threw it away.
 
-        Called by the supervisor on the *incoming* adapter once the
-        outgoing renderer's release is confirmed - which is exactly when
-        squeezelite can actually open the device, so the play we send here
-        is the one LMS would have sent itself on power-on, just landing
-        after the device is free instead of 460ms before it.
+        Called by the supervisor on the *incoming* adapter once the outgoing
+        renderer's release is confirmed, which is exactly when squeezelite can
+        actually open the device.
 
-        Only ever sends `play`, and only for a player that was playing when
-        it lost the device. A player the user left paused comes back paused
-        and we send nothing (George, 2026-09-12: the transport state on
-        return is whatever the user left, never something we impose).
+        Only ever sends `play` for a player that was playing when it lost the
+        device; one the user left paused comes back paused and gets nothing
+        (George, 2026-09-12: the transport state on return is whatever the
+        user left, never something we impose). The position correction is
+        separate and *not* conditional on that flag, because LMS's
+        auto-power-on restarts from zero whichever state the player was in.
         """
-        if not self._resume_playing:
-            return
+        resume_playing = self._resume_playing
+        resume_position = self._resume_position
         self._resume_playing = False
+        self._resume_position = None
         if self._player_id is None:
+            return
+        if not resume_playing and resume_position is None:
             return
         async with aiohttp.ClientSession() as session:
             try:
-                await self._rpc(session, self._player_id, ["play"])
-                logger.info("lms: resumed playback the takeover interrupted")
+                status = await self._rpc(session, self._player_id, ["status", "-", 1])
+                result = status.get("result", {})
+                if resume_playing and result.get("mode") != "play":
+                    await self._rpc(session, self._player_id, ["play"])
+                    logger.info("lms: resumed playback the takeover interrupted")
+
+                position = result.get("time")
+                if (
+                    resume_position is not None
+                    and isinstance(position, (int, float))
+                    and abs(position - resume_position) > RESUME_POSITION_TOLERANCE_S
+                ):
+                    await self._rpc(
+                        session, self._player_id, ["time", f"{resume_position:.2f}"]
+                    )
+                    # Deliberately does not claim *why* the position was
+                    # wrong. Two different things put it there - LMS
+                    # restarting the track from zero on its own
+                    # auto-power-on, and LMS briefly reporting
+                    # position+away_duration from a stale anchor while
+                    # squeezelite catches up - and one reading cannot tell
+                    # them apart. Both are corrected the same way, so log
+                    # the observation rather than an inference.
+                    logger.info(
+                        "lms: position was %.1fs, seeked back to the %.1fs it was released at",
+                        position,
+                        resume_position,
+                    )
             except aiohttp.ClientError as exc:
-                logger.warning("lms: resume after release failed: %s", exc)
+                logger.warning("lms: restoring playback after release failed: %s", exc)
 
     async def signal_stop(self, force: bool) -> None:
         # Ignores `force` on purpose - see the class-level comment.

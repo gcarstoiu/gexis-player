@@ -67,22 +67,27 @@ async def test_restart_after_release_is_the_inherited_noop():
 
 class FakeRpc:
     """Records the commands `release()`/`device_freed()` send, and answers
-    the one status query they make. Stands in for the whole aiohttp session
-    so these stay tier-1 tests with no network."""
+    the status queries they make. Stands in for the whole aiohttp session so
+    these stay tier-1 tests with no network.
 
-    def __init__(self, mode="play"):
+    `mode`/`position` are what the *next* status query reports, so a test can
+    change them between `release()` and `device_freed()` to model what LMS
+    did in between - restarting the track from zero, say."""
+
+    def __init__(self, mode="play", position=60.0):
         self.mode = mode
+        self.position = position
         self.commands = []
 
     async def __call__(self, session, player, command):
         self.commands.append(list(command))
         if command[0] == "status":
-            return {"result": {"mode": self.mode, "power": 1}}
+            return {"result": {"mode": self.mode, "power": 1, "time": self.position}}
         return {"result": {}}
 
 
-def _adapter(monkeypatch, mode):
-    rpc = FakeRpc(mode)
+def _adapter(monkeypatch, mode, position=60.0):
+    rpc = FakeRpc(mode, position)
     monkeypatch.setattr(LmsAdapter, "_rpc", rpc)
     adapter = LmsAdapter("127.0.0.1", 9000, "gexis")
     adapter._player_id = "aa:bb:cc:dd:ee:ff"
@@ -108,11 +113,14 @@ async def test_release_pauses_before_powering_off(monkeypatch):
 async def test_release_records_that_it_was_playing_and_device_freed_resumes(monkeypatch):
     adapter, rpc = _adapter(monkeypatch, mode="play")
     await adapter.release()
+    rpc.mode = "pause"  # LMS restored it paused, as powering on a paused player does
     rpc.commands.clear()
 
     await adapter.device_freed()
 
-    assert rpc.commands == [["play"]]
+    # A status probe first - device_freed has to see what LMS actually did
+    # before deciding what to put back - then the resume itself.
+    assert ["play"] in rpc.commands
 
 
 @pytest.mark.asyncio
@@ -125,7 +133,7 @@ async def test_a_player_left_paused_comes_back_paused(monkeypatch):
 
     await adapter.device_freed()
 
-    assert rpc.commands == []
+    assert ["play"] not in rpc.commands
 
 
 @pytest.mark.asyncio
@@ -148,6 +156,70 @@ async def test_device_freed_sends_nothing_without_a_preceding_release(monkeypatc
     user turning it on after turning it off themselves. LMS restores its own
     transport state natively there; we must not add a play on top."""
     adapter, rpc = _adapter(monkeypatch, mode="play")
+
+    await adapter.device_freed()
+
+    assert rpc.commands == []
+
+
+# --- ADR-0027: the position re-anchor -------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_position_is_restored_when_lms_restarted_the_track(monkeypatch):
+    """The press-play route. Pressing play on a deactivated player makes LMS
+    power it on and restart from zero - its own documented auto-power-on,
+    which happens before our acquisition even reaches us. Measured on
+    hardware 2026-09-12: deactivated at 24.4s, back at 2.3s."""
+    adapter, rpc = _adapter(monkeypatch, mode="play", position=60.0)
+    await adapter.release()          # records playing at 60s
+    rpc.position = 1.2               # LMS restarted the track
+    rpc.commands.clear()
+
+    await adapter.device_freed()
+
+    assert ["time", "60.00"] in rpc.commands
+
+
+@pytest.mark.asyncio
+async def test_no_seek_when_the_position_survived(monkeypatch):
+    """The activate route, which restores the player at exactly the stored
+    position. A seek makes LMS re-request the stream, so it is not worth
+    spending when there is nothing to correct."""
+    adapter, rpc = _adapter(monkeypatch, mode="play", position=60.0)
+    await adapter.release()
+    rpc.position = 60.1              # came back where it left off
+    rpc.commands.clear()
+
+    await adapter.device_freed()
+
+    assert not any(c[0] == "time" for c in rpc.commands)
+
+
+@pytest.mark.asyncio
+async def test_position_restored_even_for_a_player_left_paused(monkeypatch):
+    """LMS restarts from zero whichever transport state the player was in, so
+    the correction cannot be conditional on the play/pause flag. The user
+    pressed play, so it stays playing - only the position was wrong."""
+    adapter, rpc = _adapter(monkeypatch, mode="pause", position=45.0)
+    await adapter.release()          # records paused at 45s
+    rpc.mode = "play"                # LMS auto-powered-on and started
+    rpc.position = 0.8
+    rpc.commands.clear()
+
+    await adapter.device_freed()
+
+    assert ["time", "45.00"] in rpc.commands
+    assert ["play"] not in rpc.commands  # it is already playing; don't impose
+
+
+@pytest.mark.asyncio
+async def test_the_seek_fires_once_not_on_every_later_acquisition(monkeypatch):
+    adapter, rpc = _adapter(monkeypatch, mode="play", position=60.0)
+    await adapter.release()
+    rpc.position = 1.0
+    await adapter.device_freed()
+    rpc.commands.clear()
 
     await adapter.device_freed()
 
