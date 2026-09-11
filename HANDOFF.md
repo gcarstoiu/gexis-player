@@ -1831,7 +1831,8 @@ reverted, currently-flashed image predates this fix.
 ## Next actions, in order
 
 0. **Implement ADR-0027 (LMS power as the arbitration mechanism).** Decided
-   2026-09-12, ADR written, **no code yet** — this is the next thing to build,
+   2026-09-12, ADR written, phase plan updated, **no code yet** — this is the
+   next thing to build,
    and it is what unblocks everything below it. See the design-input section
    above for exactly which files it touches, and Finding 018 for the
    measurements. Sequence George asked for throughout: change it on `gexis`
@@ -1839,6 +1840,22 @@ reverted, currently-flashed image predates this fix.
    Two things need his ear specifically: whether powering off mid-playback
    clicks, and whether blocker 1's residual 0.3-1.6s elapsed flicker is
    acceptable without the seek re-anchor.
+
+   **Phase plan already updated for it (2026-09-12, George's decisions):**
+   `docs/DEVELOPMENT.md` gains sub-phase **2d** (criteria 3-4 reworked —
+   2b was verified against wording ADR-0027 invalidates, so it is reopened
+   under a new number rather than having its history rewritten); criteria
+   7-10 are flagged for re-running since Finding 015's numbers predate the
+   new mechanism; criterion 3 is rewritten and its empty-base-slot deferral
+   **answered**; criterion 4's LMS half is demoted to history while
+   Bluetooth's exception stays live; criterion 10 now expects a per-pair
+   answer. **Phase 3** must publish "no renderer" and per-renderer
+   availability. **Phase 4 gains criteria 6 and 7** — a first-class
+   nobody-holds-the-device screen, and **LMS activation from our own UI**,
+   which George placed in Phase 4 rather than Phase 6 because without it
+   the only route back to LMS is the phone app. That gap between ADR-0027
+   shipping and Phase 4 shipping is a knowingly accepted interim
+   regression, recorded under Phase 2.
 
    **Do not re-derive the closed routes.** Finding 018 records, with numbers,
    why each of these is dead: `-C 0` (squeezelite never releases), `stop`

@@ -123,7 +123,30 @@ when their criteria pass:
   recorded once resolved" for the full record of both.
 - **2c — criteria 7-10.** Criterion 7 is an attack test across all
   renderers, not a feature, so it belongs with the takeover gap
-  measurement rather than with 3-6.
+  measurement rather than with 3-6. **Criteria 7-10 need re-running after
+  2d** — every number in Finding 015 was measured against the release
+  mechanism ADR-0027 replaces.
+- **2d — criteria 3-4, reworked for [ADR-0027](decisions/0027-lms-power-as-arbitration-mechanism.md).**
+  New, 2026-09-12. LMS's player power becomes the arbitration mechanism:
+  record the transport state, `pause`, then `power 0` on release;
+  powering on is the acquisition; restore the recorded state on return;
+  no permanent base slot. This is a **rework of already-accepted
+  criteria, not new scope** — 2b's work was correct against the wording
+  it was verified under, and that wording has since changed. Touches
+  `adapters/lms.py`, `arbitration.py`'s base-slot assumption
+  (`_active is None` currently means "LMS is current" and has to become a
+  real nobody/lms/other tri-state), and the base-slot assumptions baked
+  into `core/tests/test_arbitration.py`. Evidence: Finding 018.
+
+**Known interim regression, accepted deliberately (2026-09-12).** ADR-0027
+makes takeovers clean but leaves LMS deactivated afterwards, and nothing
+re-activates it silently. Until Phase 4's activation control ships
+(criterion 7 there), **the only way back to LMS after a Spotify or
+Bluetooth session is the LMS phone app.** For the phases in between, the
+box is better at handing over and worse at coming back. George accepted
+this knowingly — he uses the LMS app anyway — but it is the reason
+activation was pulled into Phase 4 rather than left to Phase 6's
+capability-driven transport controls.
 
 **Acceptance**
 
@@ -131,14 +154,38 @@ when their criteria pass:
    `output`, each as a systemd unit.
 2. `squeezelite -V DAC` asserted at startup; the unit refuses to start if the
    mixer control is absent or misnamed.
-3. Arbitration: base slot LMS, one active slot. Acquisition on connection per
-   ADR-0010's table. Takeover disconnects Connect-type renderers and pauses LMS.
-   **Ships without ADR-0010's sync-group and empty-base-slot behaviour** —
-   both are explicitly deferred, not unresolved; see ADR-0010's "Open"
-   section.
+3. Arbitration: one renderer holds the device, or none. Acquisition on
+   connection per ADR-0010's table **as amended by
+   [ADR-0027](decisions/0027-lms-power-as-arbitration-mechanism.md)** —
+   for LMS that is powering the player *on*, not pressing play. Takeover
+   disconnects Connect-type renderers; for LMS it records the transport
+   state, pauses, then powers the player off, and the player stays
+   deactivated until the user activates it again.
+   **Ships without ADR-0010's sync-group behaviour** — explicitly
+   deferred, not unresolved; see ADR-0010's "Open" section.
+   **Reworded 2026-09-12 (ADR-0027).** The previous wording said "base
+   slot LMS, one active slot" and deferred empty-base-slot behaviour as
+   undefined. There is no base slot now, and "no renderer holds the
+   device" is a routine state rather than a deferred edge case — so that
+   deferral is answered, not carried. Criterion 3 was verified against
+   the old wording in 2b (2026-09-10); re-verification against this
+   wording is 2d.
 4. Timeout ladder on release: polite stop → SIGTERM → SIGKILL, each step
-   logged, applying uniformly to every renderer as written. **History,
-   not current behaviour:** LMS went through two reverted attempts
+   logged, applying uniformly to every renderer as written.
+
+   **LMS no longer reaches this ladder in normal operation, as of
+   2026-09-12 ([ADR-0027](decisions/0027-lms-power-as-arbitration-mechanism.md)).**
+   Powering the player off frees the ALSA device in 0.06-0.11s (measured,
+   n=4, Finding 018) against 1.44s for a commanded pause, so the polite
+   rung succeeds every time and escalation is unreachable short of a
+   genuine fault. The ladder stays in place as the escalation safety net
+   and still applies in full to Spotify and Bluetooth. Everything in the
+   next paragraph is now **history** — kept because it is the reasoning a
+   later reader would otherwise re-derive, and because the SIGKILL-not-
+   SIGTERM point remains true of squeezelite if the ladder is ever
+   genuinely reached.
+
+   **History, not current behaviour:** LMS went through two reverted attempts
    (2026-09-06, 2026-09-07) at routing around squeezelite's `-C` idle
    timer — skip the polite rung and SIGTERM immediately, then SIGKILL
    unconditionally — before landing on the actual fix, 2026-09-08:
@@ -168,7 +215,11 @@ when their criteria pass:
    measured same-rate and cross-rate, reported as a distribution over at
    least 20 runs.
 9. Result recorded as a finding with scope stated.
-10. ADR-0010 amended to say whether handoff needs a transition screen.
+10. ADR-0010 **and ADR-0027** amended to say whether handoff needs a
+    transition screen. **Note the answer is now likely per-pair, not
+    global:** LMS↔Spotify handoffs measured 0.07-0.7s under ADR-0027,
+    while Bluetooth→LMS is still gated by Bluetooth's own 2.5-2.9s
+    release, which ADR-0027 does not touch.
 
 ### Phase 3 — Core state daemon
 
@@ -177,7 +228,13 @@ Still no UI. Tested with a WebSocket client.
 **Acceptance**
 
 1. Normalised playback model published over WebSocket: the seven skin fields
-   plus position and duration.
+   plus position and duration. **The model must also express "no renderer
+   holds the device" and each renderer's availability**
+   ([ADR-0027](decisions/0027-lms-power-as-arbitration-mechanism.md),
+   2026-09-12) — the old model could always name a current renderer,
+   because LMS was permanently the base. It no longer can, and the UI
+   cannot offer to activate LMS unless the model says LMS is
+   deactivated.
 2. Adapters for LMS (CometD), Spotify (go-librespot API) and Bluetooth (BlueZ
    D-Bus), each declaring capabilities and acquisition/release behaviour.
 3. Adapters implement the public plugin contract — no special casing.
@@ -186,7 +243,7 @@ Still no UI. Tested with a WebSocket client.
 6. Track change on LMS appears on the WebSocket within a bounded time, measured
    and recorded.
 
-### Phase 4 — UI shell, idle screen, display-only now playing
+### Phase 4 — UI shell, idle screen, now playing (display-only, plus LMS activation)
 
 **Acceptance**
 
@@ -197,6 +254,23 @@ Still no UI. Tested with a WebSocket client.
    yet.
 4. Handoff state visible during takeover.
 5. Same page served to a remote browser and renders correctly.
+6. **"No renderer holds the device" is a first-class screen state, and the
+   user can tell why.** New, 2026-09-12
+   ([ADR-0027](decisions/0027-lms-power-as-arbitration-mechanism.md)).
+   Distinct from criterion 2's idle screen, which meant "LMS is current
+   but not playing" — under ADR-0027 nobody need hold the device at all,
+   routinely. ADR-0010's accountability rule applies directly: a user
+   who finds LMS deactivated after a Spotify session must be able to
+   account for it.
+7. **The user can activate LMS from this UI.** New, 2026-09-12, George's
+   decision that it belongs in Phase 4 rather than waiting for Phase 6's
+   capability-driven transport controls. This is the one control this
+   phase is not display-only about, and deliberately so:
+   ADR-0027 leaves LMS deactivated after every takeover and never
+   re-activates it silently, so **without this control the only route back
+   to LMS is the LMS phone app** — unacceptable on an appliance with its
+   own screen. Until it ships, that phone-app dependency is a known,
+   accepted interim regression; see the note under Phase 2.
 
 ### Phase 5 — Visualisation service and Peppy screen
 

@@ -165,6 +165,34 @@ not a broken one. With the daemon down there is no arbitration at all and
 activating LMS will take the device from a playing renderer, which is true today
 and not made worse.
 
+## What this changes in the plan
+
+Recorded here because the decision creates work that did not previously
+exist anywhere. Full wording is in `docs/DEVELOPMENT.md`.
+
+- **Phase 2b is reopened as 2d.** Criteria 3 and 4 were verified in 2b
+  (2026-09-10) against wording this ADR invalidates — criterion 3 described
+  a base slot and deferred empty-base-slot behaviour as undefined; criterion
+  4's LMS half describes a kill path that is now unreachable. 2b's work was
+  correct under the wording it was checked against; the wording changed.
+- **Criteria 7-10 need re-running.** Every number in Finding 015 was measured
+  against the mechanism this ADR replaces.
+- **Phase 3's published model must express "no renderer" and per-renderer
+  availability.** The old model could always name a current renderer because
+  LMS was permanently the base. It cannot now, and the UI cannot offer to
+  activate LMS unless the model says LMS is deactivated.
+- **Phase 4 gains two criteria** (George's decision, 2026-09-12): a
+  first-class "nobody holds the device" screen state, and **the ability to
+  activate LMS from our own UI**. The second is load-bearing: this ADR never
+  re-activates LMS silently, so without it the only route back to LMS is the
+  LMS phone app — unacceptable on an appliance with its own screen. It was
+  pulled into Phase 4 rather than left to Phase 6's capability-driven
+  transport controls for that reason.
+- **Accepted interim regression:** between this ADR shipping and Phase 4's
+  activation control shipping, the box hands over cleanly but comes back only
+  via the phone app. Knowingly accepted.
+- Phases 5 and 7-9 are unaffected. Nothing is removed.
+
 ## Open
 
 **Both of the first two items below are DEFERRED by George's decision,
