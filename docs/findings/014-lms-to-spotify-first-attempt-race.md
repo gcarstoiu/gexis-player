@@ -89,9 +89,71 @@ round - the fix targets Mode A only. If Mode B recurs during full
 collection, it needs its own investigation; it wasn't observed in this
 verification pass.
 
+## Reverted, same day (second session): the fix caused a worse failure than the one it solved
+
+**George's live use, immediately after collecting the ≥20-run distribution
+for this leg, found a real regression the ~40 rounds of scripted testing
+above never surfaced:** after an ordinary LMS-to-Spotify handoff, audio
+would genuinely play through `gexis`, but the Spotify app itself showed
+"gexis disconnected" - and pressing "next" on the phone moved playback
+*to the phone*, not gexis. Confirmed directly from `gexis-core`'s own
+log, not just from the symptom report: some `will_play` acquisitions in
+the same session showed the normal `device became active` line following
+shortly after; others - the ones where `/player/resume`'s rescue must
+have been what actually got audio flowing - never showed `device became
+active` at all, for the rest of that Spotify session.
+
+**Mechanism, best understanding:** `POST /player/resume` can get
+go-librespot to resume real local ALSA playback of an already-loaded
+track without completing whatever internal step actually emits the
+`"active"` WS event - the event that tells Spotify's own Connect backend
+"gexis is genuinely the active device now." Audio flows locally, but
+Spotify's cloud-side state is never told, so the app's own displayed
+state (and anything routed through Spotify's Connect protocol, like a
+remote "next") diverges from reality. Not confirmed against go-librespot's
+own source - inferred from the log pattern (will_play WITH vs. WITHOUT a
+following `device became active`, correlating with which acquisitions
+needed the rescue) rather than proven from first principles.
+
+**Why the scripted testing above didn't catch this:** every automated
+check in this finding and in `takeover_gap.py` verifies real PCM activity
+(via `pcm_holder`/the spectrum FIFO) as the definition of success -
+correctly, per this project's own standing rule not to trust a renderer's
+self-reported state. But *Spotify's own cloud-side Connect state* is a
+third thing, neither "PCM is open" nor "gexis's local status query"
+- nothing in this session's verification ever checked it, because nothing
+in the mechanism up to this point had ever caused it to diverge from
+local reality before.
+
+**This is worse than Mode A's original race, not just a different bug:**
+Mode A's failure was silence for a bit, then normally a full retry
+worked - a state a user can eventually account for. This one leaves
+audio playing correctly while the app that's supposed to control it is
+wrong about what it's controlling, which is exactly the failure shape
+ADR-0010's own core rule exists to prevent ("never show a state the user
+cannot account for").
+
+**Reverted:** `SpotifyAdapter.device_freed()` back to the inherited
+no-op. The `Adapter.device_freed()` hook itself, and `Supervisor.
+acquire()`'s call site, are unchanged and still unit-tested - only this
+adapter's specific action was pulled. Criterion 8's LMS-to-Spotify
+distribution collected earlier the same day (this finding's own numbers,
+n=36) was collected *while the regression was live* - the gap
+measurements themselves are unaffected (they measure real PCM timing,
+which was genuinely correct), but they no longer reflect what
+`gexis-player` actually ships, since the mechanism that produced them has
+been reverted. Treat those numbers as informative about the underlying
+timing, not as a live-shippable baseline until a correct fix exists.
+
+**Not re-opened by the revert:** Mode A's original race (a lone attempt
+loses to LMS's ~3.1s release almost every time) - back to being
+unresolved, exactly as this finding originally described it, pending a
+fix that doesn't bypass Spotify's own Connect handshake.
+
 ## Not chased further this session
 
 - Whether go-librespot's own unprompted retry timer (if one exists at all for Mode A, separate from Mode B's apparent full drop) is real, and if so its actual interval when isolated from repeated external calls.
 - Mode B's trigger condition.
 - Whether Mode A's ~1s go-librespot attempt latency is itself variable, or a fixed near-immediate response to `will_play`'s underlying dealer message.
 - Reading go-librespot's own source for either mechanism, the way Finding 011 did for the acquisition signals — flagged as needed, not done.
+- **New, from the revert:** what go-librespot's own dealer-message-driven track-load path does differently from `/player/resume` that makes one emit `"active"` and the other not - the actual fix likely lives in understanding this, not in avoiding `/player/resume` forever. Also unchecked: whether go-librespot exposes any other local endpoint that *does* complete the full Connect handshake, which would be a much better candidate for a real fix than the Web API (unavailable to a real device) or `/player/resume` (confirmed unsafe here).

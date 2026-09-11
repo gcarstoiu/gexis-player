@@ -34,7 +34,7 @@ import logging
 import aiohttp
 
 from gexis_core.adapters.base import Adapter, ReleaseAction
-from gexis_core.systemd import start_unit, stop_unit
+from gexis_core.systemd import kill_unit
 
 logger = logging.getLogger("gexis_core.adapters.lms")
 
@@ -54,8 +54,9 @@ class LmsAdapter(Adapter):
     # same as every other adapter. See ADR-0010's amended implementation
     # note for the two reverted attempts that preceded this.
     #
-    # signal_stop's escalation mechanism has changed twice since, for two
-    # different reasons - both still relevant to why it looks like this:
+    # signal_stop's escalation mechanism has gone through a full
+    # revert-then-restore-then-revert since, for two different reasons -
+    # both still relevant to why it looks like this:
     #
     # 2026-09-07/08: plain SIGTERM doesn't work at all - squeezelite exits
     # *cleanly* on it (exit 0), which Restart=on-failure never counts as
@@ -63,27 +64,26 @@ class LmsAdapter(Adapter):
     # regardless of the ladder rung that called this - an uncaught fatal
     # signal always counts as a failure, so Restart=on-failure fires.
     #
-    # 2026-09-11 (Finding 013 §1's recurrence): SIGKILL solved "doesn't
-    # come back" but introduced a worse problem - Restart=on-failure then
-    # restarts squeezelite immediately and automatically, and squeezelite
-    # tests whether it can open the ALSA device as part of its own
-    # startup, independently of and in parallel with anything the
-    # arbitration ladder itself is doing. For as long as the device stays
-    # busy (the incoming renderer legitimately holding it), squeezelite
-    # keeps failing that test and systemd keeps restarting it on its own
-    # RestartSec cadence - fast enough, for long enough, to exhaust even
-    # a raised StartLimitBurst (24 restarts observed against a burst
-    # limit of 20). Fixed by using `stop_unit` (systemd's own "this was a
-    # deliberate stop" state, not a raw signal) so nothing restarts
-    # automatically at all, and bringing squeezelite back explicitly via
-    # `restart_after_release` below, once, under this code's own timing
-    # instead of systemd's blind retry loop. **Residual risk, not fully
-    # eliminated:** if that one explicit restart also finds the device
-    # still busy, squeezelite exits again and Restart=on-failure *does*
-    # still govern recovery from that fresh failure - now a much rarer
-    # combination (kill was needed at all, *and* the explicit restart's
-    # own timing also lost the race) than "every kill" as before, but not
-    # proven impossible. See `restart_after_release`'s own docstring.
+    # 2026-09-11 (Finding 013 §1's recurrence, same day): SIGKILL solved
+    # "doesn't come back" but introduced a worse problem - Restart=on-
+    # failure then restarts squeezelite immediately and automatically,
+    # racing squeezelite's own ALSA-open startup test against whoever
+    # just took the device over, independently of anything the
+    # arbitration ladder itself is doing, exhausting even a raised
+    # StartLimitBurst under heavy churn. Tried `stop_unit` (suppresses
+    # automatic restart entirely) plus an explicit `restart_after_release`
+    # bringing squeezelite back once, under this code's own timing -
+    # unit-tested, then hardware-verified clean across 35 real rounds
+    # the same day. **Reverted the same day anyway**: live use afterward
+    # (rapid Bluetooth reconnect churn) reproduced the exact residual risk
+    # that fix's own docs already named - the one explicit restart lost
+    # its own race against the still-busy device, `Restart=on-failure`
+    # (never actually disabled, just no longer the *first* path) took
+    # over from there, and the burst limit tripped again regardless.
+    # Back to plain SIGKILL + `Restart=on-failure` (the well-tested,
+    # if imperfect, prior behaviour) until a design that survives real
+    # churn - not just a clean scripted batch - is found. See Finding
+    # 013 §1's own follow-up note and ADR-0010's matching amendment.
 
     def __init__(self, host: str, port: int, player_name: str) -> None:
         self._base = f"http://{host}:{port}"
@@ -248,17 +248,11 @@ class LmsAdapter(Adapter):
                 return False
 
     async def signal_stop(self, force: bool) -> None:
-        # Ignores `force` on purpose - see the class-level comment. Both
-        # ladder rungs use the same stop_unit call; the second, if the
-        # ladder ever reaches it, is a harmless no-op against a unit
-        # that's already stopping or stopped.
-        stop_unit(UNIT_NAME)
-
-    async def restart_after_release(self) -> None:
-        # Idempotent against squeezelite never actually having been
-        # stopped - the ordinary case, where LMS's own pause + -C 1 freed
-        # the device within the polite grace window and signal_stop was
-        # never called at all. See the class-level comment and
-        # adapters/base.py's docstring for why this exists and what it
-        # doesn't guarantee.
-        start_unit(UNIT_NAME)
+        # Ignores `force` on purpose - see the class-level comment.
+        # SIGTERM is a no-op against squeezelite ever coming back on its
+        # own, so both ladder rungs use SIGKILL. The second call, if the
+        # ladder ever reaches it, is a harmless no-op against an
+        # already-dead process. restart_after_release was tried and
+        # reverted here the same day - see the class-level comment;
+        # Restart=on-failure is what brings squeezelite back again now.
+        kill_unit(UNIT_NAME, force=True)

@@ -1481,6 +1481,65 @@ yet** - all deployed live via hot-patch only. Next rebuild should fold
 all of it in before further hardware sessions rely on it surviving a
 reflash.
 
+### Same day: image rebuilt and reflashed, then both fixes above reverted after live regressions
+
+**Rebuilt and reflashed** (`v0.2.1-28-ge916f86-dirty`, 846s/14m6s warm
+build) - all today's fixes baked in for real, not hot-patched. Confirmed
+on the fresh boot: all five units active, `pip show gexis-core` and a
+grep of the installed `gexis_core` package both confirmed the new code
+was actually there. A fresh reflash reset go-librespot's zeroconf
+identity (expected, per Finding 005's own pattern) and BlueZ's pairing
+state (expected) - Spotify re-paired with one phone-side tap; Bluetooth
+needed three connection attempts before settling into reliably connecting
+(George's own report) - not investigated further, noted as a data point
+since it's stable afterward.
+
+**Build filenames now carry the version too** (George asked, separately
+from the fixes above) - `Makefile`'s `image:` target passes pi-gen's own
+`IMG_SUFFIX` via `PIGEN_DOCKER_OPTS`'s `-e` flag, no `image/config` or
+submodule edit needed. This build predates that change (built right
+before it), so its own filename is still date-only - the *next* rebuild
+is the first real test of it.
+
+**A full library scan (60,974 tracks, LMS's own `songs` JSON-RPC query,
+paginated) found zero non-44.1kHz content anywhere** - criterion 8's
+cross-rate LMS↔Spotify leg has no existing content to test with. Not
+resolved - George's call on whether to add dedicated test content or
+defer this leg.
+
+**Two serious live regressions found during continued use, both traced
+to root cause and reverted the same day - full detail in Finding 014's
+and Finding 013 §1's own follow-up sections, ADR-0010's matching
+amendments, and a new standalone summary (`docs/findings/phase2c-issues-
+overview.md`) written specifically to hand to a fresh session:**
+
+1. **Finding 014's fix** (`SpotifyAdapter.device_freed()` calling
+   go-librespot's local `/player/resume`) could get real audio playing
+   without completing the Spotify Connect handshake that tells Spotify's
+   own backend gexis is genuinely active - confirmed directly in
+   `gexis-core`'s log (`will_play` with no following `device became
+   active`). Symptom exactly as George reported: audio plays, the
+   Spotify app shows "gexis disconnected," and "next" moves playback to
+   the phone. Reverted to the inherited no-op - Mode A's original race
+   (a lone LMS-to-Spotify attempt loses to LMS's release almost every
+   time) is unresolved again.
+2. **Finding 013 §1's fix** (`stop_unit`/`restart_after_release`)
+   passed 35 clean scripted rounds, then recurred for real under
+   continued live use with Bluetooth reconnecting several times -
+   squeezelite hit the identical restart-storm failure again, tripping
+   the burst limit. The residual risk that fix's own docs named
+   ("not proven impossible, only made meaningfully rarer") turned out to
+   matter. Reverted to plain `kill_unit(force=True)` +
+   `Restart=on-failure` - the original, longer-tested (if imperfect)
+   behaviour.
+
+Both reverts: code changed, 63 tests still pass, deployed live on
+`gexis` (hot-patch) to unblock George immediately, then **rebuilt again**
+per George's explicit request so the reverted (safe) state is what's
+actually flashed, not the regressed one. See "Next actions" below for
+what a real fix for either would need to account for that this attempt
+didn't.
+
 ## Machines
 
 | Name | What it is | Notes |
@@ -1536,29 +1595,38 @@ unannotated again.
 1. **Phase 2c, criterion 8: get a clean ≥20-run takeover-gap distribution.**
    PR #6 already merged and `phase-2c-takeover` already branched (see this
    file's own Phase 2c section above) - criterion 7 is passing.
-   **Same-rate LMS↔Spotify is done, both legs** (Finding 015) - George
-   picked both fixes needed to get there (Finding 014's `device_freed`
-   retry, then "fix the race" for Finding 013 §1's recurrence rather than
-   raise the limit again) and both are hardware-verified. What's left:
-   - **Cross-rate LMS↔Spotify** - needs picking specific test content at a
-     different sample rate; not set up yet.
-   - **Bluetooth-involving pairs** - needs George live as the audio
-     source, same as criterion 7's Bluetooth legs. `bluetoothctl connect`
-     reconnects the profile but not reliably the actual audio stream (a
-     harness limitation, not a product defect) - manual taps needed for
-     real contested rounds.
-   - **Criterion 9**: partially done - Finding 015 covers same-rate
-     LMS↔Spotify; cross-rate and Bluetooth pairs still need their own
-     write-up once measured.
-   - **Criterion 10**: amend ADR-0010 on whether the measured gap needs a
-     UI transition screen - George's call. Finding 015 has real numbers
-     for the LMS↔Spotify pair (median 1.8s one way, ~4.2s the other) to
-     decide against now, though cross-rate/Bluetooth numbers don't exist
-     yet either.
-   - **Not yet in a rebuilt image** - this session's fixes (Finding 014,
-     Finding 013 §1's resolution) are live-deployed on `gexis` only, via
-     hot-patch. Rebuild before the next hardware session that needs them
-     to survive a reflash.
+   **Blocked again, both same-day fixes reverted after live regressions -
+   see the standalone `docs/findings/phase2c-issues-overview.md` for a
+   self-contained brief.** Finding 015's same-rate LMS↔Spotify numbers
+   were collected while both fixes were live and are informative about
+   real timing, but don't reflect what's actually shipping now that both
+   are reverted - don't treat them as a final answer for criterion 9/10
+   until a real fix exists and is re-measured. What's left, in order:
+   - **Finding 014's Mode A race (LMS-to-Spotify, first attempt almost
+     always loses)** - unresolved again. Needs a fix that completes
+     Spotify's own Connect handshake, not just gets audio flowing -
+     `/player/resume` is confirmed unsafe. Unchecked: whether go-librespot
+     exposes any other local endpoint that does this properly.
+   - **Finding 013 §1's restart-storm** - unresolved again. A same-day fix
+     survived 35 scripted rounds but not real, sustained use with
+     Bluetooth churn - a next attempt needs to be tested against *that*,
+     not just a clean batch.
+   - **Cross-rate LMS↔Spotify** - blocked on content, not mechanism: a
+     full library scan (60,974 tracks) found zero non-44.1kHz content.
+     George's call - add dedicated test content, or defer this leg.
+   - **Bluetooth-involving pairs** - not attempted this round; paused when
+     the two blockers above surfaced. `bluetoothctl connect` reconnects
+     the profile but not reliably the actual audio stream (a harness
+     limitation, not a product defect) - manual taps needed for real
+     contested rounds, and needed three attempts to first connect after
+     this reflash (stable afterward, not investigated further).
+   - **Criterion 9/10**: on hold until the two blockers above are
+     resolved for real and re-measured - Finding 015's numbers exist but
+     are provisional, see above.
+   - **Image rebuilt twice this session** - once with both fixes
+     (superseded), then again with both reverted (current). The version
+     tag on whatever's flashed tells you which - check before trusting
+     which behaviour is live.
 2. **Finding 013's four defects** - one fixed (squeezelite restart
    burst), one deferred by George's decision (the go-librespot retry
    storm - revisit on any real recurrence), two documented but not

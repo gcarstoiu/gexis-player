@@ -11,6 +11,11 @@ outgoing renderer's release is confirmed (Finding 014). See "Open" below.
 **Amended:** 2026-09-11 (same day, third amendment) — squeezelite's kill
 escalation no longer relies on systemd's automatic restart at all (Finding
 013 §1's recurrence). See the Implementation note's final entry.
+**Reverted:** 2026-09-11 (same day, fourth amendment) — both of the above
+caused worse live regressions than the problems they fixed. Both back to
+their pre-2026-09-11 behaviour. See "Open" and the Implementation note's
+own final entries, and the standalone Phase 2c issues overview for the
+full picture.
 **Answers:** ADR-0004 (one active renderer — semantics were left open)
 
 ## Context
@@ -389,6 +394,26 @@ consistent with escalation being rare, not with the fix being unexercised
 in anger by the harness). Criterion 8's same-rate LMS↔Spotify distribution
 collected cleanly on both legs as a result - see Finding 015.
 
+**Reverted, same day (second session) - the named residual risk
+recurred under real, sustained use, not scripted rounds.** George
+continued using the system normally afterward (LMS/Spotify switching,
+Bluetooth connecting and reconnecting several times) and squeezelite
+failed into the identical restart-storm state again about two hours
+later - consistent with rapid Bluetooth reconnect churn repeatedly
+re-triggering LMS's kill-and-explicit-restart cycle, with the explicit
+restart itself losing its own race against a still-busy device often
+enough, across enough repetitions, to trip the burst limit regardless.
+"Meaningfully rarer" (this amendment's own words) was not the same as
+fixed. **Reverted:** `signal_stop` back to raw `kill_unit(force=True)`,
+`restart_after_release` removed (back to the inherited no-op) -
+`Restart=on-failure` is squeezelite's only path back again, same as
+before this amendment. The 35 clean scripted rounds above are real
+evidence the mechanism works under *that* load pattern; they are not
+evidence it survives *this* one - the gap between the two is exactly
+what a future attempt needs to close, not just re-run the same batch
+again. Full detail in Finding 013 §1's own follow-up and the standalone
+Phase 2c issues overview.
+
 ## Open
 
 - **Sync group interaction — deferred, with a known cost, by decision.**
@@ -631,6 +656,26 @@ collected cleanly on both legs as a result - see Finding 015.
   895.5-1900.2ms (mean 1603.5ms, n=5) - not yet the ≥20-run distribution
   criterion 8 needs, but the deterministic first-attempt failure this
   amendment exists to fix is gone in every attempt observed so far.
+
+  **Reverted, same day (second session) - a real live regression the
+  scripted testing above never caught.** After collecting a full ≥20-run
+  distribution with this fix live (Finding 015), continued ordinary use
+  found that `POST /player/resume` can get go-librespot to resume real
+  local ALSA playback without completing whatever step actually emits
+  the `"active"` WS event - confirmed directly in `gexis-core`'s own log,
+  several `will_play` acquisitions never followed by `device became
+  active` for the rest of that Spotify session. Audio played correctly,
+  but Spotify's own app showed "gexis disconnected," and a remote "next"
+  command routed to the phone instead of `gexis` - exactly the failure
+  shape this record's own core rule forbids ("never show a state the
+  user cannot account for"), and arguably worse than the race it fixed
+  (silence for a bit is at least accountable; playing correctly while the
+  controlling app is wrong about it is not). **`SpotifyAdapter.
+  device_freed()` reverted to the inherited no-op** - the hook itself and
+  `Supervisor.acquire()`'s call site are untouched, only this adapter's
+  action was pulled. Mode A's original race (this amendment's own
+  opening paragraph) is unresolved again as a result - full detail in
+  Finding 014's own follow-up.
 
 - **`acquire()` wrote the incoming renderer's volume to the shared real
   DAC before releasing the outgoing one - a real ordering bug, fixed

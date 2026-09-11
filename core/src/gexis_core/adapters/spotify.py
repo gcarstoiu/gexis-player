@@ -155,32 +155,26 @@ class SpotifyAdapter(Adapter):
         except (aiohttp.ClientError, asyncio.TimeoutError) as exc:
             logger.warning("spotify: /player/volume failed: %s", exc)
 
-    async def device_freed(self) -> None:
-        """Finding 014, ADR-0010: go-librespot's own ALSA-open attempt -
-        triggered by the same "will_play"/"active" event that fired this
-        acquisition - runs within about a second, well before the outgoing
-        renderer's release (typically LMS's ~3.1s polite grace) actually
-        completes, so it has almost always already failed with EBUSY by
-        the time the supervisor calls this. `POST /player/resume` is
-        go-librespot's own local HTTP API - no Spotify Web API call, no
-        account credentials needed, unlike the test harness's
-        `spotify_api.transfer_to_gexis()` - confirmed on gexis, 2026-09-11,
-        three-for-three, reliably resuming real playback within a second
-        once the device is actually free. Also confirmed harmless when the
-        original attempt already succeeded (the ordinary case where no
-        race happened at all): status 200, playback continues with no
-        pause or restart, track position advances normally across the
-        call - so this fires unconditionally on every acquisition rather
-        than trying to detect which case applies, which nothing in
-        go-librespot's API surfaces directly anyway.
-        """
-        try:
-            async with aiohttp.ClientSession() as session:
-                async with session.post(f"{self._base}/player/resume") as resp:
-                    if resp.status >= 300:
-                        logger.warning("spotify: /player/resume retry -> %s", resp.status)
-        except (aiohttp.ClientError, asyncio.TimeoutError) as exc:
-            logger.warning("spotify: /player/resume retry failed: %s", exc)
+    # device_freed was overridden here, 2026-09-11 through 2026-09-11
+    # (Finding 014, ADR-0010's matching amendment): POST /player/resume
+    # rescued the ALSA-open race (go-librespot losing to LMS's polite
+    # release) reliably in this session's own testing (three-for-three
+    # manual rescues, then a clean 5/5 and 16/20 batch through the real
+    # supervisor path). **Reverted the same day**, live hardware use
+    # found a worse failure it didn't catch in testing: /player/resume
+    # can get go-librespot to genuinely resume local ALSA playback
+    # without going through the Spotify Connect handshake that emits the
+    # "active" WS event - confirmed directly in gexis-core's own log,
+    # several acquisitions in a row showed "will_play" and real audio
+    # but never "device became active". Spotify's own app then shows
+    # "gexis disconnected" while audio is genuinely playing, and a
+    # remote "next" command routes to the phone instead of gexis - ADR-
+    # 0010's own core rule violated ("never show a state the user cannot
+    # account for"), and worse than the race it fixed (a slow/racy first
+    # attempt is at least a state the user can account for - nothing
+    # audible happens for a bit). Back to the pre-Finding-014 behavior
+    # (inherited no-op) until a fix is found that doesn't bypass the
+    # Connect handshake - see Finding 014's own follow-up note.
 
     async def signal_stop(self, force: bool) -> None:
         # Ignores `force` on purpose, same reasoning and same regression
