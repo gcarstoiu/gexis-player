@@ -423,6 +423,54 @@ interval is tunable at all (no such option in `squeezelite -?`; `-C`
 governs close-on-idle, not retry-on-busy), or whether the only route is
 ensuring the first attempt never fails.
 
+### The retry is not tunable — but pausing before powering off means we never need it
+
+**Not tunable, confirmed from the complete option list.** `squeezelite -?`
+(2.0.0-1517) has no retry-on-busy setting at all: `-C` is close-on-idle,
+`-a` is buffer/period/format/mmap, `-r` is sample rates. Nothing governs
+how often a failed ALSA open is retried.
+
+**But the failed attempt is avoidable.** squeezelite only attempts an open
+because power-on restores the player's previous transport state, which was
+`play`. If the player is **paused before being powered off**, LMS restores
+*paused*, squeezelite has nothing to play, and it never makes the attempt:
+
+| release | state on power-on | squeezelite ALSA attempts | took the device after it was free |
+|---|---|---|---|
+| `power 0` while playing | `mode=play` | **1 (failed)** | 1.98s (waiting out its tick) |
+| `pause` then `power 0` | `mode=pause` | **0** | **0.17s** |
+| `pause` then `power 0` (repeat) | `mode=pause` | **0** | **0.07s** |
+
+And pausing first costs nothing on the release side — measured
+`pause 1` immediately followed by `power 0`: **0.06s, 0.07s, 0.07s,
+0.11s**, indistinguishable from bare `power 0`.
+
+So the 5s tick stops being something to live with: it is never reached,
+because the first attempt is made against a device that is already free.
+The sequence is release the outgoing renderer (~0.1s), then issue the
+`play` the user's activation implied, and squeezelite takes the device in
+under 0.2s.
+
+**Blocker 1 is much improved but not eliminated by this alone.** Power-on
+itself is clean — the player returns paused at *exactly* the stored
+position, delta **+0.00s** in both runs, where powering off while playing
+showed the usual away-duration error. But issuing the `play` re-introduces
+the jump briefly, because LMS extrapolates from its stale anchor on any
+play:
+
+| | wrong value visible for |
+|---|---|
+| today | 3-5s (George's own report; the retry tick) |
+| pause-before-power-off | **0.3s** and **1.6s** (two runs) |
+| plus the seek re-anchor | **0** (exact from the first reading) |
+
+Down from seconds to a flicker, and the seek removes the flicker.
+
+**Harness note, not a product issue:** LMS intermittently returns a
+gzipped body to a plain `urllib` POST, which crashed one diagnostic run
+mid-measurement. The real adapter uses `aiohttp`, which decompresses
+transparently, so this affects throwaway scripts only.
+
 **This changes a decision, not just an implementation.** ADR-0010 states
 that power state plays no role in arbitration ("A powered-off player is
 one that will not play; it neither acquires nor releases"). Using power
