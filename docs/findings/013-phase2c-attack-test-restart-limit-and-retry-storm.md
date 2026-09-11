@@ -50,6 +50,6 @@ None of these require anything exotic — the common thread is just "try to swit
 - **It self-resolved in the one instance observed**, recovering into a normal, working playback state a few seconds after the storm ended, with no service restart needed. Whether it can persist indefinitely or contribute to further problems (e.g. compounding with the squeezelite restart-limit issue above, if LMS is also being hammered at the same time) is not established.
 - **No evidence of data loss or corruption** — this is a responsiveness/silence problem, not a playback-correctness one.
 
-### Not fixed
+### Not fixed — George's decision, 2026-09-10
 
-Nothing has been changed in `SpotifyAdapter` or go-librespot's own configuration for this. Given the single-call test shows normal single-action use is unaffected, and the storm both requires unusual repeated-call conditions and self-resolved in the one observed case, this is being recorded as a finding rather than acted on immediately — worth a decision on whether it needs a debounce/rate-limit on repeated transfer calls (in `SpotifyAdapter`, separate from arbitration's existing "already current, ignore" check, which does not prevent go-librespot's own internal retries) or whether it's rare/self-healing enough to leave alone.
+Deferred, not chased further for now: it hasn't shown up in any of the last several builds' worth of normal hands-on testing, only under this session's own repeated-API-call attack test. Revisit as soon as it's seen happening under normal use again — this note exists so a recurrence gets connected to this finding immediately rather than re-investigated from scratch.
