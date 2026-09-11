@@ -207,6 +207,12 @@ bit-perfect claim being written into marketing copy until closed.
 
 ## 6. Arbitration
 
+> **Changed by [ADR-0027](decisions/0027-lms-power-as-arbitration-mechanism.md)
+> (2026-09-12).** There is no permanent base slot. LMS is deactivated on every
+> takeover and stays deactivated until the user activates it, so **"no renderer
+> holds the device" is a normal state**, not an undefined one. The *not a stack,
+> no history* rule below is unchanged. Evidence: Finding 018.
+
 **Base slot + active slot.** Not a stack. No history.
 
 - **Base slot** is permanently LMS. Squeezelite's connection to the server is
@@ -228,6 +234,10 @@ changes, where stream-start detection means hooking AVDTP START or PCM open.
 Each adapter **declares its acquisition events**, because the renderers have
 different shapes:
 
+> **LMS's row changed by [ADR-0027](decisions/0027-lms-power-as-arbitration-mechanism.md):**
+> powering the player **on** is the acquisition. Play is a separate intention
+> afterwards, which makes LMS consistent with the other renderers.
+
 | Renderer | Acquisition |
 |---|---|
 | LMS | explicit play or resume (no connect event exists — always connected) |
@@ -239,6 +249,11 @@ different shapes:
 
 **Takeover disconnects the outgoing renderer. The only exception is LMS, which
 pauses, because its connection is structural rather than a user session.**
+
+> **LMS's row changed by [ADR-0027](decisions/0027-lms-power-as-arbitration-mechanism.md):**
+> record the transport state, `pause`, then `power 0` — measured to free the
+> ALSA device in 0.06-0.11s against 1.44s for a commanded pause alone, which is
+> what lets the incoming renderer win its first open.
 
 | Renderer | On losing the device |
 |---|---|
@@ -291,6 +306,11 @@ inbound connection.
 
 ### LMS power state
 
+> **REVERSED by [ADR-0027](decisions/0027-lms-power-as-arbitration-mechanism.md)
+> (2026-09-12).** Power is now exactly the arbitration mechanism. Kept below
+> because the reasoning was sound on what was known then; what changed is
+> measured evidence, not logic.
+
 Power on/off in the LMS interface plays **no role in arbitration**. It is a soft
 state inside LMS — a powered-off player is one that will not play. It does not
 acquire the device and does not release it.
@@ -327,8 +347,10 @@ release is implemented, not a tuning option.
 - Sync group behaviour: squeezelite stays in its LMS group while another
   renderer holds the device, so a group play command becomes an acquisition that
   interrupts. Consistent with the rule, possibly surprising.
-- Empty base slot, if run headless with no LMS. Valid state, undefined
-  behaviour.
+- ~~Empty base slot, if run headless with no LMS.~~ **Answered by
+  [ADR-0027](decisions/0027-lms-power-as-arbitration-mechanism.md):** no
+  renderer holding the device is a routine state, not an edge case — the UI
+  must represent it.
 
 ---
 
@@ -585,7 +607,8 @@ not. A single negative result is not decisive.
   the amp?
 - `steps.per.degree` quantisation — match PeppyMeter or render smooth.
 - Degraded metadata display rule beyond "blank the region".
-- Empty base slot behaviour.
+- How the UI represents "no renderer holds the device" (ADR-0027 makes this
+  routine rather than an edge case).
 - Bluetooth reconnection UX and whether inbound connection is reliable.
 
 **Needing measurement:**

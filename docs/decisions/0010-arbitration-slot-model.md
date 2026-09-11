@@ -20,6 +20,18 @@ full picture.
 grace period was a blind sleep, not a poll, so "freed within polite grace"
 was measuring the sleep, not the renderer (Finding 016). Fixed to poll.
 See the Implementation note's final entry.
+**PARTLY SUPERSEDED:** 2026-09-12 by
+[ADR-0027](0027-lms-power-as-arbitration-mechanism.md). **Read that first
+for anything about LMS's acquisition, LMS's release, the base slot, or
+power state.** Four things in this record are no longer true: the base
+slot (LMS is no longer permanently the base, and "no renderer holds the
+device" is now a normal state), LMS's acquisition row (powering the player
+*on* is the acquisition, not play), LMS's release row (pause *then*
+`power 0`, recording the transport state to restore on return), and the
+"LMS power state" section below (power is now precisely the mechanism it
+says it is not). Everything else here stands unchanged — the no-stack
+rule, the accountability rule, the rejected alternatives, and the
+non-LMS release table.
 **Answers:** ADR-0004 (one active renderer — semantics were left open)
 
 ## Context
@@ -35,6 +47,11 @@ they were dropped will not be obvious.
 ## Decision
 
 ### Slot model
+
+> **Superseded in part by [ADR-0027](0027-lms-power-as-arbitration-mechanism.md)
+> (2026-09-12).** The base slot is gone: LMS is no longer permanently current,
+> and "no renderer holds the device" is a normal state. The *not a stack, no
+> history* rule below survives intact.
 
 **Base slot + active slot. Not a stack. No history.**
 
@@ -52,6 +69,11 @@ than hooking stream starts.
 
 Each adapter declares its acquisition events:
 
+> **LMS's row superseded by [ADR-0027](0027-lms-power-as-arbitration-mechanism.md)
+> (2026-09-12):** powering the player *on* is the acquisition. A connect-like
+> event does exist after all — it just isn't the TCP connection. The other rows
+> are unchanged.
+
 | Renderer | Acquisition |
 |---|---|
 | LMS | explicit play or resume — no connect event exists, it is always connected |
@@ -63,6 +85,11 @@ Each adapter declares its acquisition events:
 
 **Takeover disconnects the outgoing renderer. LMS is the only exception and
 pauses instead, because it is the base.**
+
+> **LMS's row superseded by [ADR-0027](0027-lms-power-as-arbitration-mechanism.md)
+> (2026-09-12):** record the transport state, `pause`, then `power 0` — which
+> frees the device in 0.06-0.11s instead of 1.44s. The player stays deactivated
+> until the user activates it. The other rows are unchanged.
 
 | Renderer | On losing the device |
 |---|---|
@@ -101,6 +128,15 @@ pauses instead, because it is the base.**
   about accountability, not about silence.
 
 ### LMS power state
+
+> **REVERSED by [ADR-0027](0027-lms-power-as-arbitration-mechanism.md)
+> (2026-09-12).** Power is now exactly the mechanism this section says it is
+> not: powering on is LMS's acquisition, and pause-then-power-off is its
+> release. Kept here unedited because the reasoning below is what a later
+> reader will otherwise re-derive — it was sound given what was known, and what
+> changed is the evidence (power-off frees the ALSA device in 0.06s against a
+> commanded pause's 1.44s, which is the difference between winning and losing
+> the race against go-librespot's own ALSA open), not the logic.
 
 Power on/off in the LMS interface plays no role in arbitration. A powered-off
 player is one that will not play; it neither acquires nor releases. If someone
@@ -525,9 +561,12 @@ Phase 2c issues overview.
   within the polite grace window and the ladder actually escalates —
   same shape as the original 2026-09-04 note, now genuinely rare rather
   than the routine path it briefly was.
-- **Empty base slot — deferred.** Valid if run headless with no LMS.
-  Undefined behaviour. **Criterion 3 (Phase 2b) ships without resolving
-  this** — a decision, not an oversight; see `docs/DEVELOPMENT.md`.
+- **Empty base slot — ANSWERED, 2026-09-12, by
+  [ADR-0027](0027-lms-power-as-arbitration-mechanism.md)** (was: deferred,
+  undefined behaviour, valid if run headless with no LMS). It is no longer an
+  edge case to define — with LMS deactivated on every takeover and staying
+  deactivated, "no renderer holds the device" is a routine state the system
+  must represent.
 - **Takeover gap — not deferred, scheduled.** Unmeasured, same-rate and
   cross-rate. This is Phase 2c, criteria 8-10 — active work, not a
   deferral.

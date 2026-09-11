@@ -1,6 +1,6 @@
 # Handoff
 
-Last updated: 2026-09-11 (tenth session, Phase 2c)
+Last updated: 2026-09-12 (tenth session, Phase 2c)
 
 ## Where things stand
 
@@ -1649,12 +1649,18 @@ volume fix and Finding 016's polling fix. Backups at `/tmp/volume.py.bak`
 and `/tmp/arbitration.py.bak` on the device. Box left with all units
 active, `NRestarts=0` everywhere, volume at a sane -13.5dB.
 
-### Design input from George, 2026-09-11 — LMS power as the arbitration mechanism (NOT YET AN ADR)
+### Design input from George, 2026-09-11/12 — LMS power as the arbitration mechanism
 
-Recorded verbatim in substance so it isn't lost. **No code written, no
-ADR written** — George asked for feasibility and feedback first, and
-explicitly withheld the go-ahead. This is the raw input the ADR will be
-built from. Evidence behind it is Finding 018's third pass.
+> **DECIDED, 2026-09-12. Now written up as
+> [ADR-0027](docs/decisions/0027-lms-power-as-arbitration-mechanism.md)** —
+> George chose "`pause` + `power 0`, restore the remembered state". Read the ADR
+> for the decision and Finding 018 for the evidence. The input below is kept as
+> the record of how the decision was reached, including his own reasoning and
+> the two proposals of his that measurement refuted. **Still no implementation
+> code** — the ADR is written, the code is not.
+
+Recorded verbatim in substance so it isn't lost. Evidence behind it is
+Finding 018's third pass.
 
 George's rules:
 
@@ -1717,8 +1723,34 @@ carry `power`, and a change triggers a push in ~0.52s — but squeezelite
 attempts its ALSA open 58ms after power-on, so we cannot act first, and a
 lost attempt costs up to 5s on an untunable retry tick.
 
-**Still to verify before implementing:** whether powering off mid-playback
-is audible at the cut.
+**George's decision, 2026-09-12:** `pause` + `power 0` on release, restore
+the remembered transport state on return — i.e. we issue the `play`
+ourselves in the case where the player was left playing, so that
+squeezelite's first ALSA attempt lands on a device that is already free
+(0.07-0.17s) instead of 460ms before it is (0-5s). Written up as ADR-0027.
+
+**What implementing it touches, for whoever picks this up:**
+
+- `adapters/lms.py` — acquisition moves from `mode -> play` to `power -> 1`
+  (the 0.4s debounce and its confirming RPC go away with it); `release()`
+  becomes record-state → `pause` → `power 0`; a new step restores the
+  recorded state once the supervisor confirms the release.
+- `arbitration.py` — `Supervisor._active` currently treats `None` as "LMS is
+  current" (`active` property returns `BASE_RENDERER`). That has to become a
+  real tri-state: nobody / lms / other. `_release_with_ladder` on an empty
+  slot is a no-op.
+- `core/tests/` — the base-slot assumptions are baked into
+  `test_arbitration.py` (`test_base_slot_is_lms_by_default`,
+  `test_takeover_returns_to_lms_not_a_stack`, and `build()`'s fixture).
+- ADR-0010's kill ladder for LMS stops being reachable in normal operation;
+  leave it in place as the escalation safety net, but it should effectively
+  never fire.
+
+**Still to verify on hardware, after implementing:** whether powering off
+mid-playback is audible at the cut, and whether blocker 1's residual
+0.3-1.6s flicker is acceptable without the seek re-anchor (the seek removes
+it entirely but makes LMS re-request the stream, which has its own possible
+artefact — deliberately left out of ADR-0027 pending a listening test).
 
 **Also noticed, not acted on:** squeezelite's `ExecStart` now carries
 `-O hw:gexislmsvol -V Master -C 1 -n gexis` — the `-O hw:gexislmsvol -V
@@ -1797,7 +1829,29 @@ reverted, currently-flashed image predates this fix.
 
 ## Next actions, in order
 
+0. **Implement ADR-0027 (LMS power as the arbitration mechanism).** Decided
+   2026-09-12, ADR written, **no code yet** — this is the next thing to build,
+   and it is what unblocks everything below it. See the design-input section
+   above for exactly which files it touches, and Finding 018 for the
+   measurements. Sequence George asked for throughout: change it on `gexis`
+   first, he confirms by ear, then it goes into a `stage-gexis` rebuild.
+   Two things need his ear specifically: whether powering off mid-playback
+   clicks, and whether blocker 1's residual 0.3-1.6s elapsed flicker is
+   acceptable without the seek re-anchor.
+
+   **Do not re-derive the closed routes.** Finding 018 records, with numbers,
+   why each of these is dead: `-C 0` (squeezelite never releases), `stop`
+   instead of `pause` (slower and inconsistent), an earlier acquisition signal
+   (`will_play` is the only event before the failed open), `/player/resume`
+   and `/player/play` (both leave `active` unfired), killing squeezelite
+   (restart storms, reverted twice), holding LMS paused until the device frees
+   (freezes the wrong elapsed value on screen), and powering the player back on
+   mid-session (evicts the renderer that just took over).
+
 1. **Phase 2c, criterion 8: get a clean ≥20-run takeover-gap distribution.**
+   **Re-measure after ADR-0027 lands** — Finding 015's numbers were taken
+   against the old mechanism, and the 0.7s LMS→Spotify handoff seen while
+   testing ADR-0027 is far better than that finding's 1827.8ms median.
    PR #6 already merged and `phase-2c-takeover` already branched (see this
    file's own Phase 2c section above) - criterion 7 is passing.
    **Blocked again, both same-day fixes reverted after live regressions -

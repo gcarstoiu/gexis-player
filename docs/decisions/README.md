@@ -29,7 +29,7 @@ the question blocking it was answered.
 | [0001](0001-base-os.md) | Base OS: Raspberry Pi OS Lite 64-bit | Accepted |
 | [0008](0008-direct-alsa-over-pipewire.md) | Direct ALSA, not PipeWire | Accepted |
 | [0009](0009-logical-output-device.md) | The logical `output` device | Accepted |
-| [0010](0010-arbitration-slot-model.md) | Arbitration: base slot, connection acquisition, uniform disconnect | Accepted, amended |
+| [0010](0010-arbitration-slot-model.md) | Arbitration: base slot, connection acquisition, uniform disconnect | Accepted, amended, **partly superseded by [0027](0027-lms-power-as-arbitration-mechanism.md)** |
 | [0011](0011-meter-data-three-transports.md) | Meter data on three transports from one service | Accepted |
 | [0012](0012-enrichment-additive-only.md) | Enrichment is renderer-agnostic and additive only | Accepted |
 | [0013](0013-defaults-implement-public-contract.md) | Default renderers implement the public plugin contract | Accepted |
@@ -46,6 +46,7 @@ the question blocking it was answered.
 | [0024](0024-bluetooth-pairing-no-pin.md) | Bluetooth pairing: no PIN, for this installation | Accepted |
 | [0025](0025-project-licence-gplv3.md) | gexis-player is licensed GPL v3 | Accepted |
 | [0026](0026-peppymeter-native-process-integration.md) | Peppy screen: native PeppyMeter process, labwc-mediated screen ownership | Accepted, compositor mechanism unverified |
+| [0027](0027-lms-power-as-arbitration-mechanism.md) | LMS power is the arbitration mechanism; no permanent base slot | Accepted — supersedes parts of [0010](0010-arbitration-slot-model.md) |
 
 ## Cross-cutting rules
 
@@ -83,7 +84,6 @@ selection criteria. Protect the audio path with priority, not by doing less.
 | `steps.per.degree` quantisation | 0015 | Not decidable from configuration. Spike defined; outcome to be recorded as an amendment. |
 | Apt repository infrastructure | 0021 | In-place updates require a signed, hosted repository. Not specified anywhere. |
 | Maximum volume ceiling | 0018 | Listed as "to be recorded"; still undecided. |
-| Empty base slot behaviour | 0010 | Valid state if run headless with no LMS. Undefined. |
 | Factory reset | 0021 | Implied by configuration persistence, specified nowhere. |
 | Plugin settings pages | 0022 | Whether plugins can add their own settings belongs to the plugin contract (0016). |
 | Pairing mode as a per-installation setting | 0024 | PIN-free is right for this installation, wrong as a shipping default (different threat model elsewhere). Needs the settings infrastructure (0022) before it can be anything but hardcoded. |

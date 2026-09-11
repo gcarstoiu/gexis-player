@@ -1,5 +1,14 @@
 # Finding 018 — the four Phase 2c blockers: root causes
 
+> **Outcome, 2026-09-12:** blockers 2 and (partly) 1 are answered by
+> **[ADR-0027](../decisions/0027-lms-power-as-arbitration-mechanism.md)** —
+> LMS's player power becomes the arbitration mechanism (record the transport
+> state, `pause`, `power 0` on release; power-on is the acquisition; restore the
+> recorded state on return). Blocker 4 is fixed and verified. Blocker 3 still
+> needs a post-reboot reproduction with logs. **Read the ADR for the decision;
+> this finding is the evidence behind it**, in the order it was actually
+> discovered, including the routes that were measured and closed.
+
 **Date:** 2026-09-11
 **System:** `gexis`, freshly reflashed build (booted 18:36, SSH host key regenerated accordingly). **This image predates Finding 016's polling fix** — `POLITE_POLL_INTERVAL` was absent from the installed `arbitration.py`, so every measurement below marked "as shipped" was taken with the old blind 3.0s polite-grace sleep still in place.
 **Question:** George reported four blockers after testing this build and asked for root causes, fixed on `gexis` first. Numbered here as he numbered them.
