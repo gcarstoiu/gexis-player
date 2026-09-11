@@ -48,12 +48,23 @@ class Adapter(abc.ABC):
     release_ladder: "TimeoutLadder | None" = None
 
     @abc.abstractmethod
-    async def run(self, on_acquire) -> None:
+    async def run(self, on_acquire, on_release) -> None:
         """Long-running task. Watch for this renderer's acquisition event
-        (ADR-0010's table - a deliberate connect/play, not a stream start)
-        and call `on_acquire()` (sync, non-blocking) each time it fires.
-        Runs for the lifetime of the process; must not return on a
-        transient error, only log and keep watching.
+        (ADR-0010's table as amended by ADR-0027 - a deliberate
+        connect/activate, not a stream start) and call `on_acquire()`
+        (sync, non-blocking) each time it fires. Runs for the lifetime of
+        the process; must not return on a transient error, only log and
+        keep watching.
+
+        `on_release()` (also sync, non-blocking) is the opposite edge: this
+        renderer gave up the device with nobody taking over, so nobody
+        holds it. Only `LmsAdapter` reports it so far, on the player being
+        deactivated - the state ADR-0027 makes routine. Spotify and
+        Bluetooth disconnects are the same shape and are *not* wired up
+        yet; until they are, the supervisor's view of those two can go
+        stale after a disconnect exactly as it always has. Calling it is
+        safe from any adapter: the supervisor ignores a release from a
+        renderer that is not currently active.
         """
 
     @abc.abstractmethod

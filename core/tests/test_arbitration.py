@@ -9,7 +9,7 @@ import asyncio
 import pytest
 
 from gexis_core.adapters.base import Adapter, ReleaseAction
-from gexis_core.arbitration import BASE_RENDERER, Supervisor, TimeoutLadder
+from gexis_core.arbitration import Supervisor, TimeoutLadder
 
 FAST_LADDER = TimeoutLadder(polite_grace=0.01, sigterm_grace=0.01, sigkill_grace=0.01)
 
@@ -48,7 +48,7 @@ class FakeAdapter(Adapter):
         self.device_freed_calls = 0
         self.restart_after_release_calls = 0
 
-    async def run(self, on_acquire):
+    async def run(self, on_acquire, on_release):
         raise NotImplementedError("driven manually in these tests")
 
     async def release(self):
@@ -71,7 +71,12 @@ class FakeAdapter(Adapter):
         self.restart_after_release_calls += 1
 
 
-def build(frees_at_map: dict[str, str] | None = None):
+def build(frees_at_map: dict[str, str] | None = None, *, active: str | None = None):
+    """`active` seeds "this renderer already holds the device when the test
+    begins". Set directly rather than routed through `acquire()`, which
+    would count adapter calls these tests then assert on. Needed explicitly
+    since ADR-0027: the supervisor no longer assumes LMS is current, so a
+    test wanting an outgoing renderer has to say which one."""
     frees_at_map = frees_at_map or {}
     holder = {"who": None}
     adapters = {
@@ -92,19 +97,23 @@ def build(frees_at_map: dict[str, str] | None = None):
         ),
     }
     supervisor = Supervisor(adapters, device_busy=lambda renderer_id: holder["who"] == renderer_id, ladder=FAST_LADDER)
+    if active is not None:
+        supervisor._active = active
+        holder["who"] = active
     return supervisor, adapters, holder
 
 
 @pytest.mark.asyncio
-async def test_base_slot_is_lms_by_default():
+async def test_nobody_holds_the_device_by_default():
+    """ADR-0027 retired the base slot: `active` is None until some renderer
+    actually acquires, where it used to report LMS unconditionally."""
     supervisor, _, _ = build()
-    assert supervisor.active == BASE_RENDERER
+    assert supervisor.active is None
 
 
 @pytest.mark.asyncio
 async def test_acquire_takes_the_device_and_releases_the_previous_one():
-    supervisor, adapters, holder = build()
-    holder["who"] = "lms"
+    supervisor, adapters, holder = build(active="lms")
     await supervisor.acquire("spotify")
     assert supervisor.active == "spotify"
     assert adapters["lms"].release_calls == 1  # LMS paused, uniformly (ADR-0010)
@@ -112,8 +121,7 @@ async def test_acquire_takes_the_device_and_releases_the_previous_one():
 
 @pytest.mark.asyncio
 async def test_reacquiring_the_current_renderer_is_a_noop():
-    supervisor, adapters, holder = build()
-    holder["who"] = "lms"
+    supervisor, adapters, holder = build(active="lms")
     await supervisor.acquire("spotify")
     await supervisor.acquire("spotify")
     assert adapters["lms"].release_calls == 1  # only released on the first takeover
@@ -131,7 +139,7 @@ async def test_takeover_returns_to_lms_not_a_stack():
     assert supervisor.active == "bluetooth"
     holder["who"] = "bluetooth"
     await supervisor.acquire("lms")
-    assert supervisor.active == BASE_RENDERER  # not "spotify"
+    assert supervisor.active == "lms"  # not "spotify" - no history
 
 
 async def _make_spotify_active(supervisor, holder):
@@ -235,7 +243,8 @@ async def test_adapter_specific_ladder_skips_the_polite_wait(monkeypatch):
         ladder=FAST_LADDER,
     )
 
-    holder["who"] = "lms"  # lms is active by default (supervisor starts on base)
+    holder["who"] = "lms"
+    supervisor._active = "lms"  # ADR-0027: no implicit base, say so explicitly
     await supervisor.acquire("spotify")  # takeover: lms is released, using its own ladder
 
     assert lms.signals == ["SIGTERM"]  # escalated, frees_at="sigterm" resolves it there
@@ -277,6 +286,7 @@ async def test_polite_grace_polls_instead_of_sleeping_blind(monkeypatch):
         device_busy=device_busy,
         ladder=TimeoutLadder(polite_grace=1.0, sigterm_grace=0.01, sigkill_grace=0.01),
     )
+    supervisor._active = "lms"  # ADR-0027: no implicit base, say so explicitly
 
     await supervisor.acquire("spotify")  # lms is released, polled for freedom
 
@@ -294,12 +304,23 @@ async def test_unknown_renderer_rejected():
 
 
 @pytest.mark.asyncio
-async def test_base_renderer_missing_adapter_rejected():
+async def test_supervisor_needs_at_least_one_adapter():
+    """ADR-0027: LMS is a peer, so there is no longer a *required* adapter -
+    a build with no LMS is valid. An empty map is still a mistake."""
     with pytest.raises(ValueError):
-        Supervisor(
-            {"spotify": FakeAdapter("spotify", ReleaseAction.DISCONNECT, {})},
-            device_busy=lambda renderer_id: False,
-        )
+        Supervisor({}, device_busy=lambda renderer_id: False)
+
+
+@pytest.mark.asyncio
+async def test_lms_is_not_privileged_anymore():
+    supervisor = Supervisor(
+        {"spotify": FakeAdapter("spotify", ReleaseAction.DISCONNECT, {"who": None})},
+        device_busy=lambda renderer_id: False,
+        ladder=FAST_LADDER,
+    )
+    assert supervisor.active is None
+    await supervisor.acquire("spotify")
+    assert supervisor.active == "spotify"
 
 
 @pytest.mark.asyncio
@@ -394,8 +415,7 @@ async def test_restart_after_release_called_on_outgoing_adapter_only():
     to come back under our own control once release is confirmed -
     called on the one that was actually released, never the one taking
     over."""
-    supervisor, adapters, holder = build()
-    holder["who"] = "lms"
+    supervisor, adapters, holder = build(active="lms")
     await supervisor.acquire("spotify")
     assert adapters["lms"].restart_after_release_calls == 1
     assert adapters["spotify"].restart_after_release_calls == 0
@@ -404,8 +424,7 @@ async def test_restart_after_release_called_on_outgoing_adapter_only():
 
 @pytest.mark.asyncio
 async def test_restart_after_release_not_called_on_noop_reacquire():
-    supervisor, adapters, holder = build()
-    holder["who"] = "lms"
+    supervisor, adapters, holder = build(active="lms")
     await supervisor.acquire("spotify")
     await supervisor.acquire("spotify")  # already active - no-op
     assert adapters["lms"].restart_after_release_calls == 1
@@ -440,6 +459,7 @@ async def test_restart_after_release_called_after_device_freed():
     )
 
     holder["who"] = "lms"
+    supervisor._active = "lms"
     await supervisor.acquire("spotify")
 
     assert order == ["device_freed:spotify", "restart_after_release:lms"]
@@ -468,3 +488,61 @@ async def test_restore_volume_not_called_on_a_noop_reacquire():
     await supervisor.acquire("spotify")  # already active - no-op
 
     assert restored == ["spotify"]
+
+
+# --- ADR-0027: nobody holds the device ------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_acquiring_from_nobody_releases_nothing():
+    """The ordinary cold start. Under the base slot this path did not exist:
+    something was always current, so every acquisition released someone."""
+    supervisor, adapters, holder = build()
+    await supervisor.acquire("spotify")
+    assert supervisor.active == "spotify"
+    assert all(a.release_calls == 0 for a in adapters.values())
+    assert all(a.restart_after_release_calls == 0 for a in adapters.values())
+
+
+@pytest.mark.asyncio
+async def test_relinquish_leaves_nobody_holding_the_device():
+    supervisor, _, holder = build(active="lms")
+    await supervisor.relinquish("lms")
+    assert supervisor.active is None
+
+
+@pytest.mark.asyncio
+async def test_relinquish_from_a_renderer_that_is_not_current_is_ignored():
+    """This is what lets ADR-0027 skip tracking *who* deactivated the player
+    (George, 2026-09-12). During a takeover the supervisor has already
+    recorded the incoming renderer by the time our own power-off lands, so
+    LMS's resulting "powered off" event arrives for a renderer that is no
+    longer active - and must not blank out the renderer that just took over."""
+    supervisor, _, holder = build(active="lms")
+    await supervisor.acquire("spotify")
+    assert supervisor.active == "spotify"
+
+    await supervisor.relinquish("lms")  # the echo of our own release
+
+    assert supervisor.active == "spotify"
+
+
+@pytest.mark.asyncio
+async def test_relinquish_rejects_an_unknown_renderer():
+    supervisor, _, _ = build()
+    with pytest.raises(ValueError):
+        await supervisor.relinquish("qobuz")
+
+
+@pytest.mark.asyncio
+async def test_reacquiring_after_relinquish_works():
+    """Nobody-holds-it is a state the system passes *through*, not a dead
+    end: the user activates LMS again and it takes the device normally."""
+    supervisor, adapters, holder = build(active="lms")
+    await supervisor.relinquish("lms")
+    assert supervisor.active is None
+
+    await supervisor.acquire("lms")
+
+    assert supervisor.active == "lms"
+    assert adapters["lms"].device_freed_calls == 1

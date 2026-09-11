@@ -62,7 +62,9 @@ class BluetoothAdapter(Adapter):
         self._bus: MessageBus | None = None
         self._connected_device_path: str | None = None
 
-    async def run(self, on_acquire) -> None:
+    async def run(self, on_acquire, on_release) -> None:
+        # on_release: not wired up - a Bluetooth disconnect is the same
+        # shape as LMS deactivation but is out of ADR-0027's scope.
         while True:
             try:
                 await self._watch(on_acquire)

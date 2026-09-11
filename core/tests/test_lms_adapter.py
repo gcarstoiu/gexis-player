@@ -60,3 +60,95 @@ async def test_restart_after_release_is_the_inherited_noop():
     # the two were designed and reverted as a pair, not independently.
     adapter = LmsAdapter("127.0.0.1", 9000, "gexis")
     assert await adapter.restart_after_release() is None
+
+
+# --- ADR-0027: pause-then-power-off, and replaying what the user left ------
+
+
+class FakeRpc:
+    """Records the commands `release()`/`device_freed()` send, and answers
+    the one status query they make. Stands in for the whole aiohttp session
+    so these stay tier-1 tests with no network."""
+
+    def __init__(self, mode="play"):
+        self.mode = mode
+        self.commands = []
+
+    async def __call__(self, session, player, command):
+        self.commands.append(list(command))
+        if command[0] == "status":
+            return {"result": {"mode": self.mode, "power": 1}}
+        return {"result": {}}
+
+
+def _adapter(monkeypatch, mode):
+    rpc = FakeRpc(mode)
+    monkeypatch.setattr(LmsAdapter, "_rpc", rpc)
+    adapter = LmsAdapter("127.0.0.1", 9000, "gexis")
+    adapter._player_id = "aa:bb:cc:dd:ee:ff"
+    return adapter, rpc
+
+
+@pytest.mark.asyncio
+async def test_release_pauses_before_powering_off(monkeypatch):
+    """Order is the whole point (ADR-0027, Finding 018). Powering off a
+    *playing* player makes LMS restore it as playing, which fires
+    squeezelite's ALSA open 58ms later against a device the incoming
+    renderer hasn't released - it fails and then waits out an untunable 5s
+    retry tick. Pausing first means it is restored paused and makes no
+    attempt at all."""
+    adapter, rpc = _adapter(monkeypatch, mode="play")
+
+    assert await adapter.release() is True
+
+    assert rpc.commands == [["status", "-", 1], ["pause", 1], ["power", 0]]
+
+
+@pytest.mark.asyncio
+async def test_release_records_that_it_was_playing_and_device_freed_resumes(monkeypatch):
+    adapter, rpc = _adapter(monkeypatch, mode="play")
+    await adapter.release()
+    rpc.commands.clear()
+
+    await adapter.device_freed()
+
+    assert rpc.commands == [["play"]]
+
+
+@pytest.mark.asyncio
+async def test_a_player_left_paused_comes_back_paused(monkeypatch):
+    """George, 2026-09-12: the transport state on return is whatever the
+    user left, never something we impose. A paused player gets no play."""
+    adapter, rpc = _adapter(monkeypatch, mode="pause")
+    await adapter.release()
+    rpc.commands.clear()
+
+    await adapter.device_freed()
+
+    assert rpc.commands == []
+
+
+@pytest.mark.asyncio
+async def test_the_resume_fires_once_not_on_every_later_acquisition(monkeypatch):
+    """Otherwise a user who activates the player themselves, long after an
+    unrelated takeover, would have playback start under them."""
+    adapter, rpc = _adapter(monkeypatch, mode="play")
+    await adapter.release()
+    await adapter.device_freed()
+    rpc.commands.clear()
+
+    await adapter.device_freed()
+
+    assert rpc.commands == []
+
+
+@pytest.mark.asyncio
+async def test_device_freed_sends_nothing_without_a_preceding_release(monkeypatch):
+    """Activating the player with no takeover involved - first boot, or the
+    user turning it on after turning it off themselves. LMS restores its own
+    transport state natively there; we must not add a play on top."""
+    adapter, rpc = _adapter(monkeypatch, mode="play")
+
+    await adapter.device_freed()
+
+    assert rpc.commands == []

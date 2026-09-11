@@ -48,47 +48,39 @@ class LmsAdapter(Adapter):
     release_action = ReleaseAction.PAUSE
     unit_name = UNIT_NAME
 
-    # No release_ladder override - -C 1 on squeezelite.service (measured
-    # ~700ms release against a commanded pause) makes the supervisor's
-    # default 3s polite grace work fine for LMS in the ordinary case,
-    # same as every other adapter. See ADR-0010's amended implementation
-    # note for the two reverted attempts that preceded this.
+    # ADR-0027, 2026-09-12: this adapter no longer fights squeezelite for
+    # the ALSA device. The player's own LMS *power* state is the
+    # arbitration mechanism - `pause` then `power 0` on release, and
+    # powering on is the acquisition.
     #
-    # signal_stop's escalation mechanism has gone through a full
-    # revert-then-restore-then-revert since, for two different reasons -
-    # both still relevant to why it looks like this:
+    # Why, in one measurement: a commanded pause takes 1.44s to actually
+    # free the device (`-C 1`'s idle timer dominating), while go-librespot
+    # attempts its ALSA open about a second after its own acquisition
+    # event - so Spotify lost that race every time, retried, and never
+    # emitted the `active` event that tells its app the session is real.
+    # Powering the player off frees the device in 0.06-0.11s, which wins
+    # the race outright. Full evidence and the six approaches that were
+    # measured and rejected first: Finding 018.
     #
-    # 2026-09-07/08: plain SIGTERM doesn't work at all - squeezelite exits
-    # *cleanly* on it (exit 0), which Restart=on-failure never counts as
-    # a failure, so it never came back. Fixed by sending SIGKILL
-    # regardless of the ladder rung that called this - an uncaught fatal
-    # signal always counts as a failure, so Restart=on-failure fires.
-    #
-    # 2026-09-11 (Finding 013 §1's recurrence, same day): SIGKILL solved
-    # "doesn't come back" but introduced a worse problem - Restart=on-
-    # failure then restarts squeezelite immediately and automatically,
-    # racing squeezelite's own ALSA-open startup test against whoever
-    # just took the device over, independently of anything the
-    # arbitration ladder itself is doing, exhausting even a raised
-    # StartLimitBurst under heavy churn. Tried `stop_unit` (suppresses
-    # automatic restart entirely) plus an explicit `restart_after_release`
-    # bringing squeezelite back once, under this code's own timing -
-    # unit-tested, then hardware-verified clean across 35 real rounds
-    # the same day. **Reverted the same day anyway**: live use afterward
-    # (rapid Bluetooth reconnect churn) reproduced the exact residual risk
-    # that fix's own docs already named - the one explicit restart lost
-    # its own race against the still-busy device, `Restart=on-failure`
-    # (never actually disabled, just no longer the *first* path) took
-    # over from there, and the burst limit tripped again regardless.
-    # Back to plain SIGKILL + `Restart=on-failure` (the well-tested,
-    # if imperfect, prior behaviour) until a design that survives real
-    # churn - not just a clean scripted batch - is found. See Finding
-    # 013 §1's own follow-up note and ADR-0010's matching amendment.
+    # `signal_stop` below is now only an escalation safety net that
+    # normal operation never reaches, and the SIGKILL-not-SIGTERM point it
+    # encodes remains true if it ever is reached: squeezelite exits
+    # *cleanly* on SIGTERM (exit 0), which `Restart=on-failure` never
+    # counts as a failure, so it would not come back. That was confirmed
+    # twice, including a live reproduction from the ladder's own genuine
+    # escalation. Two attempts to route around the same problem by
+    # stopping and explicitly restarting the unit were shipped and
+    # reverted within a day each (restart storms under real Bluetooth
+    # churn) - see ADR-0010's implementation note and Finding 013 §1
+    # before proposing a third.
 
     def __init__(self, host: str, port: int, player_name: str) -> None:
         self._base = f"http://{host}:{port}"
         self._player_name = player_name
         self._player_id: str | None = None
+        #: Set by `release()` from the player's own state, consumed by
+        #: `device_freed()`. False means "came back paused, send nothing".
+        self._resume_playing = False
 
     async def _rpc(self, session: aiohttp.ClientSession, player: str, command: list) -> dict:
         body = {"id": next(_id_counter), "method": "slim.request", "params": [player, command]}
@@ -106,15 +98,15 @@ class LmsAdapter(Adapter):
             f"lms: no player named {self._player_name!r} found in {players!r}"
         )
 
-    async def run(self, on_acquire) -> None:
+    async def run(self, on_acquire, on_release) -> None:
         while True:
             try:
-                await self._watch(on_acquire)
+                await self._watch(on_acquire, on_release)
             except (aiohttp.ClientError, asyncio.TimeoutError, RuntimeError) as exc:
                 logger.warning("lms: connection/subscription failed (%s), retrying in 5s", exc)
                 await asyncio.sleep(5)
 
-    async def _watch(self, on_acquire) -> None:
+    async def _watch(self, on_acquire, on_release) -> None:
         async with aiohttp.ClientSession() as session:
             if self._player_id is None:
                 self._player_id = await self._resolve_player_id(session)
@@ -150,22 +142,37 @@ class LmsAdapter(Adapter):
             )
             logger.info("lms: subscribed to %s", response_channel)
 
-            # Seed with the *actual* current mode, not None. The
-            # subscription (`subscribe:1`) pushes on any status field
-            # changing - volume included, not just play/pause - and
-            # each push's `mode` is just whatever mode currently is, not
-            # a statement that it just changed. Starting from None meant
-            # the first push after *any* reconnect (network blip, LMS
-            # restart, or just this being a fresh process) would read as
-            # a fresh "-> play" edge if the player happened to already
-            # be playing - and fire a real, wrong acquisition if some
-            # other renderer currently held the device. Root-caused,
-            # 2026-09-07, from George's report of an LMS app volume
-            # button press taking over an active Spotify session -
-            # volume is exactly the kind of unrelated field change that
-            # would trigger this via `subscribe:1`.
+            # Seed with the player's *actual* current power state, so the
+            # first push after connecting isn't read as a fresh edge. The
+            # same trap as the old mode-based seeding: a subscription push
+            # carries whatever the value currently is, not a statement that
+            # it just changed, so starting from None made the first push
+            # after any reconnect look like a transition and fire a real,
+            # wrong acquisition.
+            #
+            # Watching `power` rather than `mode` is ADR-0027's acquisition
+            # change, and it retires the 0.4s debounce that used to sit
+            # here. That debounce existed because LMS's `mode` bounces to
+            # "play" on its own while a player is paused for arbitration -
+            # the spurious-reclaim problem in Findings 009/010 - which
+            # meant re-confirming every edge with a second RPC and paying
+            # 0.4s of latency on every genuine acquisition. `power` does
+            # not bounce that way, so the whole mechanism goes.
             status = await self._rpc(session, self._player_id, ["status", "-", 1])
-            last_mode = status.get("result", {}).get("mode")
+            last_power = status.get("result", {}).get("power")
+
+            # If the player is *already* on when we start watching, it has
+            # already met this adapter's acquisition condition - so say so,
+            # rather than leaving the supervisor believing nobody holds the
+            # device. Without this, the first takeover after a daemon start
+            # would find no outgoing renderer to release and hand Spotify a
+            # device squeezelite was still holding, which is precisely the
+            # race ADR-0027 exists to win. The old base-slot model dodged
+            # this by assuming LMS was current at all times; with the base
+            # slot gone the startup state has to be read, not assumed.
+            if last_power:
+                logger.info("lms: player already powered on at startup (acquisition)")
+                on_acquire()
 
             while True:
                 frames = await self._cometd_post(
@@ -181,39 +188,25 @@ class LmsAdapter(Adapter):
                 for frame in frames:
                     if frame.get("channel") != response_channel:
                         continue
-                    mode = (frame.get("data") or {}).get("mode")
-                    if mode == "play" and last_mode != "play":
-                        # Debounce, found necessary on hardware, 2026-09-08:
-                        # while paused for arbitration (not powered off -
-                        # ADR-0010's PAUSE action stays connected), LMS's
-                        # own mode intermittently reports "play" for well
-                        # under a second before reverting - observed
-                        # correlated with squeezelite's own retried
-                        # `alsa_open` against a device another renderer
-                        # currently holds (e.g. mid-Spotify-playback), not
-                        # with anything the user did. Firing on_acquire()
-                        # on the raw push repeatedly yanked the device back
-                        # from Spotify every time this happened - "shows
-                        # connected but never actually takes over".
-                        # Re-confirming via a fresh RPC status query after
-                        # a short wait filters the transient case: a real
-                        # user-initiated play stays "play" past this
-                        # window, a bounce does not. Costs ~0.4s of extra
-                        # latency on every genuine LMS acquisition.
-                        await asyncio.sleep(0.4)
-                        confirm = await self._rpc(session, self._player_id, ["status", "-", 1])
-                        confirmed_mode = confirm.get("result", {}).get("mode")
-                        if confirmed_mode != "play":
-                            logger.debug(
-                                "lms: mode->play did not hold past debounce (now %r), "
-                                "not treating as acquisition",
-                                confirmed_mode,
-                            )
-                            last_mode = confirmed_mode
-                            continue
-                        logger.info("lms: player mode -> play (acquisition)")
+                    power = (frame.get("data") or {}).get("power")
+                    if power is None:
+                        continue
+                    if power and not last_power:
+                        # ADR-0027: activating the player is the
+                        # acquisition. Play is a separate intention
+                        # afterwards - if the user left it playing, the
+                        # resume is replayed in device_freed() below,
+                        # once the device is actually free.
+                        logger.info("lms: player powered on (acquisition)")
                         on_acquire()
-                    last_mode = mode
+                    elif last_power and not power:
+                        # Either the user deactivated the player, or this
+                        # is the echo of our own release. The supervisor
+                        # tells them apart by whether we are still the
+                        # active renderer - see Supervisor.relinquish.
+                        logger.info("lms: player powered off")
+                        on_release()
+                    last_power = power
 
     async def _cometd_handshake(self, session: aiohttp.ClientSession) -> str:
         frames = await self._cometd_post(
@@ -237,15 +230,61 @@ class LmsAdapter(Adapter):
             return await resp.json()
 
     async def release(self) -> bool:
+        """ADR-0027: record the transport state, pause, then power off.
+
+        The pause is not redundant with the power-off, and the order
+        matters. Powering off a *playing* player makes LMS restore it as
+        playing when it comes back, which fires squeezelite's ALSA open
+        58ms later - long before we are told anything - against a device
+        the incoming renderer has not released yet. That attempt fails and
+        squeezelite then waits out a fixed, untunable 5s retry tick.
+        Pausing first means the player is restored *paused*, makes no
+        attempt at all, and its first open lands on a free device
+        (0.07-0.17s measured, against 1.98s). `device_freed` below puts the
+        playing state back.
+        """
         if self._player_id is None:
             return False
         async with aiohttp.ClientSession() as session:
             try:
+                status = await self._rpc(session, self._player_id, ["status", "-", 1])
+                self._resume_playing = status.get("result", {}).get("mode") == "play"
                 await self._rpc(session, self._player_id, ["pause", 1])
+                await self._rpc(session, self._player_id, ["power", 0])
+                logger.info(
+                    "lms: paused and powered off (will resume playing: %s)",
+                    self._resume_playing,
+                )
                 return True
             except aiohttp.ClientError as exc:
-                logger.warning("lms: pause call failed: %s", exc)
+                logger.warning("lms: pause/power-off failed: %s", exc)
                 return False
+
+    async def device_freed(self) -> None:
+        """ADR-0027: put back the transport state `release()` recorded.
+
+        Called by the supervisor on the *incoming* adapter once the
+        outgoing renderer's release is confirmed - which is exactly when
+        squeezelite can actually open the device, so the play we send here
+        is the one LMS would have sent itself on power-on, just landing
+        after the device is free instead of 460ms before it.
+
+        Only ever sends `play`, and only for a player that was playing when
+        it lost the device. A player the user left paused comes back paused
+        and we send nothing (George, 2026-09-12: the transport state on
+        return is whatever the user left, never something we impose).
+        """
+        if not self._resume_playing:
+            return
+        self._resume_playing = False
+        if self._player_id is None:
+            return
+        async with aiohttp.ClientSession() as session:
+            try:
+                await self._rpc(session, self._player_id, ["play"])
+                logger.info("lms: resumed playback the takeover interrupted")
+            except aiohttp.ClientError as exc:
+                logger.warning("lms: resume after release failed: %s", exc)
 
     async def signal_stop(self, force: bool) -> None:
         # Ignores `force` on purpose - see the class-level comment.

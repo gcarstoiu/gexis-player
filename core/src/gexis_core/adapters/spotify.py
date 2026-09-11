@@ -75,7 +75,9 @@ class SpotifyAdapter(Adapter):
         """
         self._on_volume = callback
 
-    async def run(self, on_acquire) -> None:
+    async def run(self, on_acquire, on_release) -> None:
+        # on_release: not wired up - a Spotify disconnect is the same
+        # shape as LMS deactivation but is out of ADR-0027's scope.
         while True:
             try:
                 await self._watch_events(on_acquire)

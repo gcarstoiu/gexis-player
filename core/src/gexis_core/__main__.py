@@ -12,7 +12,7 @@ from gexis_core import alsa
 from gexis_core.adapters.bluetooth import BluetoothAdapter
 from gexis_core.adapters.lms import LmsAdapter
 from gexis_core.adapters.spotify import SpotifyAdapter
-from gexis_core.arbitration import BASE_RENDERER, Supervisor
+from gexis_core.arbitration import Supervisor
 from gexis_core.config import Config
 from gexis_core.renderer_volume import RendererVolumeMemory
 from gexis_core import volume
@@ -99,7 +99,7 @@ async def main() -> None:
     lms = LmsAdapter(config.lms_host, config.lms_port, config.lms_player_name)
     spotify = SpotifyAdapter(config.go_librespot_host, config.go_librespot_port)
     bluetooth = BluetoothAdapter()
-    adapters = {BASE_RENDERER: lms, "spotify": spotify, "bluetooth": bluetooth}
+    adapters = {"lms": lms, "spotify": spotify, "bluetooth": bluetooth}
 
     volume_memory = RendererVolumeMemory()
 
@@ -127,6 +127,12 @@ async def main() -> None:
             asyncio.create_task(supervisor.acquire(renderer_id))
 
         return _on_acquire
+
+    def make_on_release(renderer_id: str):
+        def _on_release() -> None:
+            asyncio.create_task(supervisor.relinquish(renderer_id))
+
+        return _on_release
     # B2, George's decision 2026-09-08: LMS and Bluetooth each write to
     # their own private snd-dummy control (image/stage-gexis/00-alsa's
     # modprobe config), not the real DAC directly - these mirror that
@@ -151,7 +157,10 @@ async def main() -> None:
 
     logger.info("gexis-core starting: adapters=%s", list(adapters))
     await asyncio.gather(
-        *(adapter.run(make_on_acquire(rid)) for rid, adapter in adapters.items()),
+        *(
+            adapter.run(make_on_acquire(rid), make_on_release(rid))
+            for rid, adapter in adapters.items()
+        ),
         volume_bridge.run(),
         lms_volume_bridge.run(),
         bluetooth_volume_bridge.run(),

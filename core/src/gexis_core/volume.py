@@ -415,6 +415,17 @@ class VolumeBridge:
                 continue
             last_raw = raw
             active = self._get_active_renderer()
+            if active is None:
+                # Nobody holds the device (ADR-0027 makes this routine, not
+                # an error). A hardware change with no active renderer has
+                # nobody to attribute it to - remembering it against None
+                # would poison whichever renderer's level was looked up by
+                # that key next. Track it as the new baseline and move on.
+                logger.debug(
+                    "volume: hardware changed to %s/240 with no active renderer, not attributed",
+                    raw,
+                )
+                continue
             self._volume_memory.remember(active, raw)
             if active != "spotify":
                 continue
