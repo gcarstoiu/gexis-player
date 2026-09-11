@@ -1,6 +1,6 @@
 # Handoff
 
-Last updated: 2026-09-11 (eighth session, Phase 2c)
+Last updated: 2026-09-11 (ninth session, Phase 2c)
 
 ## Where things stand
 
@@ -1540,6 +1540,64 @@ actually flashed, not the regressed one. See "Next actions" below for
 what a real fix for either would need to account for that this attempt
 didn't.
 
+### Ninth session, 2026-09-11: Finding 016 — the polite rung's grace period was a blind sleep, not a poll
+
+**Diagnosed on the device with George**, debugging the restart storm
+further, and found something upstream of it: `Supervisor.
+_release_with_ladder`'s polite rung (`arbitration.py`) checked `_busy()`
+once before `asyncio.sleep(ladder.polite_grace)` and once after, with
+nothing in between. The `"freed within polite grace (%.1fs)"` log line
+read as a per-renderer release measurement; it was actually measuring the
+3.0s sleep itself. Evidence: seven consecutive hand-driven LMS releases on
+the current build logged 3.1-3.2s six times running (the sleep plus
+overhead) and 0.1s once (the pre-sleep check catching a device that was
+already free before the ladder started) — against squeezelite's own
+~700ms passive-release figure from an earlier session (ADR-0010's
+2026-09-08 amendment), which that 3.1-3.2s cluster should never have been
+that far from. Full detail, scope, and what this implies for Finding 015's
+numbers in **Finding 016**.
+
+**Why it mattered beyond the misleading log line:** every LMS takeover
+was landing at 3.1-3.2s against the ladder's 3.0s `polite_grace`
+ceiling — effectively no margin, and a plausible contributor to the
+restart-storm fuel (`LmsAdapter.signal_stop` always sends `SIGKILL`
+regardless of ladder rung, which fires `Restart=on-failure` on escalation)
+under the Bluetooth-churn load pattern that broke Finding 013 §1's fix.
+
+**Fixed:** the polite rung now polls `_busy()` every
+`POLITE_POLL_INTERVAL` (0.1s) up to the same `polite_grace` ceiling,
+returning as soon as the device reports free, instead of sleeping the
+full grace blind. Ceiling, escalation semantics and the SIGTERM/SIGKILL
+rungs are unchanged — same ladder, checked more than twice, not a
+redesign. Shared code, so all three renderers get it. ADR-0010 amended
+(sixth amendment). New unit test
+(`test_polite_grace_polls_instead_of_sleeping_blind`,
+`core/tests/test_arbitration.py`) verifies the poll-and-return-early
+behaviour via recorded `asyncio.sleep` calls, not wall-clock timing — 64
+tests total, all passing, still no hardware needed.
+
+**Explicitly not touched, per George's order of work:** Finding 014's
+LMS-to-Spotify first-attempt race and Finding 013 §1's explicit-restart
+approach — both stay reverted; this change is evaluated on its own before
+either of those is revisited.
+
+**Not yet hardware-verified.** Per George's order of work: deploy to
+`gexis`, re-run the Bluetooth-churn pattern that broke Finding 013 §1's
+fix (LMS playing → Spotify → rapid Bluetooth connect/disconnect ×5-10 →
+back to LMS, ×3, watching for escalation or restart-rate-limit errors —
+a failure rate is part of the finding, not a reason to change behaviour
+until it's clean), then re-collect the LMS release-timing distribution
+before this goes into a `stage-gexis` rebuild. Expected: normal LMS
+handoff drops from ~3.2s to ~0.7s.
+
+**Also noticed, not acted on:** squeezelite's `ExecStart` now carries
+`-O hw:gexislmsvol -V Master -C 1 -n gexis` — the `-O hw:gexislmsvol -V
+Master` part reflects the per-renderer dummy-mixer volume work (Finding
+008 §3 / ADR-0018's amendment) already landing in `ExecStart` as shipped.
+Looks consistent with that fix, but George hasn't specifically tested the
+volume-coupling item as closed on this exact build — worth confirming
+separately, not assumed done here.
+
 ## Machines
 
 | Name | What it is | Notes |
@@ -1627,7 +1685,13 @@ reverted, currently-flashed image predates this fix.
    - **Finding 013 §1's restart-storm** - unresolved again. A same-day fix
      survived 35 scripted rounds but not real, sustained use with
      Bluetooth churn - a next attempt needs to be tested against *that*,
-     not just a clean batch.
+     not just a clean batch. **Finding 016's polling fix (2026-09-11) is
+     the next thing to hardware-verify against exactly that load
+     pattern** before deciding whether the restart-storm fix itself needs
+     revisiting - it targets one plausible source of the storm's fuel (no
+     margin on the polite rung), not the storm mechanism directly, and
+     George asked to see what the storm does with real margin restored
+     before touching Finding 013 §1 or Finding 014 again.
    - **Cross-rate LMS↔Spotify** - blocked on content, not mechanism: a
      full library scan (60,974 tracks) found zero non-44.1kHz content.
      George's call - add dedicated test content, or defer this leg.

@@ -16,6 +16,10 @@ caused worse live regressions than the problems they fixed. Both back to
 their pre-2026-09-11 behaviour. See "Open" and the Implementation note's
 own final entries, and the standalone Phase 2c issues overview for the
 full picture.
+**Amended:** 2026-09-11 (same day, fifth amendment) — the polite rung's
+grace period was a blind sleep, not a poll, so "freed within polite grace"
+was measuring the sleep, not the renderer (Finding 016). Fixed to poll.
+See the Implementation note's final entry.
 **Answers:** ADR-0004 (one active renderer — semantics were left open)
 
 ## Context
@@ -275,6 +279,38 @@ Unit-tested: a new regression test
 `core/tests/test_arbitration.py`) reproduces the exact race - the
 outgoing renderer's release frees the device *to* the incoming renderer
 (not to nobody), and the ladder must read that as released, not busy.
+
+**Amended, 2026-09-11 - the polite rung's grace period was a blind sleep,
+not a poll (Finding 016).** `_release_with_ladder` checked `_busy()` once
+before `asyncio.sleep(ladder.polite_grace)` and once after, with nothing
+in between - so the `"freed within polite grace (%.1fs)"` log line was
+measuring the 3.0s sleep itself, not how long the renderer actually took
+to release. Confirmed directly: seven consecutive hand-driven LMS releases
+on the current build (`-C 1` shipping) logged 3.1-3.2s six times running,
+against squeezelite's own ~700ms passive-release measurement two amendments
+above - the two numbers should not have been that far apart. This mattered
+beyond the misleading log line: every LMS handoff was landing at 3.1-3.2s
+against the ladder's 3.0s `polite_grace` ceiling, effectively no margin,
+which is fuel for a restart storm the moment anything is marginally
+slower (escalation still always sends `SIGKILL` per the amendment above,
+which still fires `Restart=on-failure`). It also means Finding 015's
+Spotify→LMS median (4170.9ms) almost certainly contains most of this sleep
+rather than measuring the renderer.
+
+**Fixed:** the polite rung now polls `_busy()` every `POLITE_POLL_INTERVAL`
+(0.1s, `arbitration.py`) up to the same `polite_grace` ceiling, returning
+as soon as the device reports free. Ceiling, escalation semantics, and the
+SIGTERM/SIGKILL rungs are unchanged - this is the same ladder checked more
+than twice, not a redesign. Shared ladder code, so all three renderers get
+it; Spotify and Bluetooth mostly resolve via the pre-sleep check already
+and were largely unaffected in practice, but get the same benefit the rare
+time they do need the grace period. Unit-tested
+(`test_polite_grace_polls_instead_of_sleeping_blind`, records
+`asyncio.sleep` calls rather than trusting wall-clock timing, matching this
+file's own established pattern) - **not yet hardware-verified.** Expected
+effect: normal LMS handoff drops from ~3.2s to ~0.7s. Full detail,
+including what re-verification this needs before it goes into a rebuild,
+in Finding 016.
 
 **Amended, 2026-09-08 — LMS's own mode-tracking fires spurious
 acquisitions, unrelated to anything the user did.** Separate from the

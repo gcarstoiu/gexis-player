@@ -245,6 +245,48 @@ async def test_adapter_specific_ladder_skips_the_polite_wait(monkeypatch):
 
 
 @pytest.mark.asyncio
+async def test_polite_grace_polls_instead_of_sleeping_blind(monkeypatch):
+    """Finding 016: the polite rung used to sleep the full polite_grace
+    blind, then check once - "freed within polite grace" was measuring the
+    sleep, not the renderer. It must poll and return as soon as the device
+    frees, well short of the ceiling, not wait it out."""
+    slept: list[float] = []
+    real_sleep = asyncio.sleep
+
+    async def recording_sleep(seconds):
+        slept.append(seconds)
+        await real_sleep(0)  # yield control without actually waiting
+
+    monkeypatch.setattr("gexis_core.arbitration.asyncio.sleep", recording_sleep)
+
+    busy_calls = {"n": 0}
+
+    def device_busy(renderer_id):
+        busy_calls["n"] += 1
+        # busy on release()'s own pre-sleep check and the first poll,
+        # free by the second poll - independent of FakeAdapter's holder
+        # dict, to pin down exactly how many polls ran.
+        return busy_calls["n"] < 3
+
+    holder = {"who": None}
+    lms = FakeAdapter("lms", ReleaseAction.PAUSE, holder)
+    spotify = FakeAdapter("spotify", ReleaseAction.DISCONNECT, holder)
+    bluetooth = FakeAdapter("bluetooth", ReleaseAction.DISCONNECT, holder)
+    supervisor = Supervisor(
+        {"lms": lms, "spotify": spotify, "bluetooth": bluetooth},
+        device_busy=device_busy,
+        ladder=TimeoutLadder(polite_grace=1.0, sigterm_grace=0.01, sigkill_grace=0.01),
+    )
+
+    await supervisor.acquire("spotify")  # lms is released, polled for freedom
+
+    # Two 0.1s polls, not one 1.0s blind sleep - freed long before the
+    # 1.0s ceiling, which a blind sleep would have waited out regardless.
+    assert slept == [pytest.approx(0.1), pytest.approx(0.1)]
+    assert lms.signals == []  # never escalated - polling caught the release
+
+
+@pytest.mark.asyncio
 async def test_unknown_renderer_rejected():
     supervisor, _, _ = build()
     with pytest.raises(ValueError):

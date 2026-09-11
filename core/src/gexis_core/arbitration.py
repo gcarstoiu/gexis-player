@@ -24,6 +24,14 @@ logger = logging.getLogger("gexis_core.arbitration")
 
 BASE_RENDERER = "lms"
 
+# Finding 016: the polite rung used to `asyncio.sleep(ladder.polite_grace)`
+# blind, then check once - the "freed within polite grace" log line was
+# measuring the sleep, not the renderer, and every LMS handoff landed at
+# ~polite_grace regardless of how fast the device actually freed. Polling
+# at this cadence makes that log line - and the time it feeds into
+# criterion 8's numbers - an actual measurement instead.
+POLITE_POLL_INTERVAL = 0.1
+
 
 @dataclass(frozen=True)
 class TimeoutLadder:
@@ -160,14 +168,19 @@ class Supervisor:
             return ReleaseOutcome.POLITE
 
         if ladder.polite_grace > 0:
-            await asyncio.sleep(ladder.polite_grace)
-            if not await self._busy(renderer_id):
-                logger.info(
-                    "release[%s]: freed within polite grace (%.1fs)",
-                    renderer_id,
-                    time.monotonic() - t0,
-                )
-                return ReleaseOutcome.POLITE
+            deadline = time.monotonic() + ladder.polite_grace
+            while True:
+                remaining = deadline - time.monotonic()
+                if remaining <= 0:
+                    break
+                await asyncio.sleep(min(POLITE_POLL_INTERVAL, remaining))
+                if not await self._busy(renderer_id):
+                    logger.info(
+                        "release[%s]: freed within polite grace (%.1fs)",
+                        renderer_id,
+                        time.monotonic() - t0,
+                    )
+                    return ReleaseOutcome.POLITE
 
         logger.warning(
             "release[%s]: still holds the device after polite stop, sending SIGTERM",
