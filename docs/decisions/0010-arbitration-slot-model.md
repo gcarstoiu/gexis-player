@@ -8,6 +8,9 @@ ladder and LMS's own acquisition detection, both fixed. See "Implementation
 note" below.
 **Amended:** 2026-09-11 — Spotify's own acquisition retries itself once the
 outgoing renderer's release is confirmed (Finding 014). See "Open" below.
+**Amended:** 2026-09-11 (same day, third amendment) — squeezelite's kill
+escalation no longer relies on systemd's automatic restart at all (Finding
+013 §1's recurrence). See the Implementation note's final entry.
 **Answers:** ADR-0004 (one active renderer — semantics were left open)
 
 ## Context
@@ -330,6 +333,43 @@ a slow, single delayed echo of the *previous* pause from a genuinely new
 user action, since both look identical from a sub-second window, and
 widening the window further only trades a real, if rare, false takeover
 for added latency on every genuine one. Full detail in Finding 010.
+
+**Amended again, 2026-09-11 (Finding 013 §1's recurrence) - SIGKILL
+solved "doesn't come back" but caused a worse, independent problem:
+systemd's own automatic `Restart=on-failure` then races squeezelite's
+own startup device-open test against whoever just took the device over,
+on its own fixed cadence (`RestartSec=2`), completely decoupled from
+anything the arbitration ladder itself is doing.** For as long as the
+device stays busy, squeezelite keeps failing that test and systemd keeps
+restarting it - measured exhausting even the raised `StartLimitBurst`
+(24 restarts against a limit of 20), under ordinary paced measurement
+rounds this time, not adversarial racing (see Finding 013 §1's own
+addendum for the full evidence). **George's decision: fix the race, not
+raise the limit again.** `LmsAdapter.signal_stop` now calls `stop_unit`
+(`systemctl stop`, not a raw kill signal) - systemd does not
+automatically restart a unit that was asked to stop, regardless of how
+the process actually exits getting there, so nothing races in the
+background anymore. A new adapter hook, `restart_after_release`
+(`adapters/base.py`, default no-op), brings squeezelite back explicitly
+instead - called by the supervisor as the very last step of `acquire()`,
+after the incoming renderer's own `device_freed()` retry and volume
+restore, so the device's ownership has had the best available chance to
+settle first. Idempotent (a no-op if squeezelite was never actually
+stopped - the ordinary case).
+
+**Residual risk, named rather than assumed away:** if that one explicit
+restart also finds the device still busy, squeezelite exits again and
+`Restart=on-failure` (still configured, as a safety net for genuine
+unrelated crashes) *does* still govern recovery from that fresh failure
+- the same class of race, just now requiring both "a kill was needed at
+all" (already rare - 15 of 16 rounds this session needed no escalation)
+*and* "the explicit restart's own timing also lost the race against the
+incoming renderer," rather than firing on every kill as before. Not
+proven impossible, only made meaningfully rarer. Unit-tested at the
+mechanism level (`stop_unit`/`start_unit` called correctly, in the right
+order, on the right adapter) - the actual "does this survive a real busy
+race" question is hardware-verification territory, matching this
+project's existing convention for adapter network/process code.
 
 ## Open
 

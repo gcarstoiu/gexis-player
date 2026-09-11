@@ -89,3 +89,23 @@ class Adapter(abc.ABC):
         renderer's release) has no reason to override this.
         """
         return None
+
+    async def restart_after_release(self) -> None:
+        """Called by the supervisor on the *outgoing* renderer's adapter,
+        once per acquisition, as the very last step - after the incoming
+        renderer's own `device_freed()` chance to retry and its volume
+        restore. Default is a no-op.
+
+        Exists for a renderer that must keep running continuously
+        regardless of which renderer holds the device - see `LmsAdapter`
+        (ADR-0010, Finding 013 §1): squeezelite is the base slot and has
+        to stay connected to the LMS server even while paused, so if it
+        ever needed a hard stop to actually free the device,
+        `signal_stop` stopping it deliberately (not killing it) means
+        nothing brings it back automatically - this hook is where that
+        happens, under this code's own timing rather than systemd's blind
+        `Restart=on-failure` retry cadence. A renderer whose process isn't
+        expected to persist across a takeover (everyone else - `release_
+        action` is DISCONNECT, not PAUSE) has no reason to override this.
+        """
+        return None

@@ -46,6 +46,7 @@ class FakeAdapter(Adapter):
         self.signals: list[str] = []
         self.release_calls = 0
         self.device_freed_calls = 0
+        self.restart_after_release_calls = 0
 
     async def run(self, on_acquire):
         raise NotImplementedError("driven manually in these tests")
@@ -65,6 +66,9 @@ class FakeAdapter(Adapter):
 
     async def device_freed(self) -> None:
         self.device_freed_calls += 1
+
+    async def restart_after_release(self) -> None:
+        self.restart_after_release_calls += 1
 
 
 def build(frees_at_map: dict[str, str] | None = None):
@@ -340,6 +344,63 @@ async def test_device_freed_called_after_volume_restored():
     await supervisor.acquire("spotify")
 
     assert order == ["restore_volume:spotify", "device_freed:spotify"]
+
+
+@pytest.mark.asyncio
+async def test_restart_after_release_called_on_outgoing_adapter_only():
+    """Finding 013 §1's recurrence: the *outgoing* renderer gets a chance
+    to come back under our own control once release is confirmed -
+    called on the one that was actually released, never the one taking
+    over."""
+    supervisor, adapters, holder = build()
+    holder["who"] = "lms"
+    await supervisor.acquire("spotify")
+    assert adapters["lms"].restart_after_release_calls == 1
+    assert adapters["spotify"].restart_after_release_calls == 0
+    assert adapters["bluetooth"].restart_after_release_calls == 0
+
+
+@pytest.mark.asyncio
+async def test_restart_after_release_not_called_on_noop_reacquire():
+    supervisor, adapters, holder = build()
+    holder["who"] = "lms"
+    await supervisor.acquire("spotify")
+    await supervisor.acquire("spotify")  # already active - no-op
+    assert adapters["lms"].restart_after_release_calls == 1
+
+
+@pytest.mark.asyncio
+async def test_restart_after_release_called_after_device_freed():
+    """Order matters (arbitration.py's own comment on the call site):
+    the outgoing renderer only gets its chance to come back after the
+    incoming renderer has had its own settled shot at the device."""
+    holder = {"who": None}
+    order: list[str] = []
+
+    class OrderedLms(FakeAdapter):
+        async def restart_after_release(self):
+            order.append("restart_after_release:lms")
+            await super().restart_after_release()
+
+    class OrderedSpotify(FakeAdapter):
+        async def device_freed(self):
+            order.append("device_freed:spotify")
+            await super().device_freed()
+
+    adapters = {
+        "lms": OrderedLms("lms", ReleaseAction.PAUSE, holder),
+        "spotify": OrderedSpotify("spotify", ReleaseAction.DISCONNECT, holder),
+        "bluetooth": FakeAdapter("bluetooth", ReleaseAction.DISCONNECT, holder),
+    }
+    supervisor = Supervisor(
+        adapters, device_busy=lambda renderer_id: holder["who"] == renderer_id,
+        ladder=FAST_LADDER,
+    )
+
+    holder["who"] = "lms"
+    await supervisor.acquire("spotify")
+
+    assert order == ["device_freed:spotify", "restart_after_release:lms"]
 
 
 @pytest.mark.asyncio

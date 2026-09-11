@@ -129,6 +129,16 @@ class Supervisor:
             # audible playback here does so at the right level from the
             # first sample, not a beat later.
             await self._adapters[renderer_id].device_freed()
+            # Finding 013 §1's recurrence, 2026-09-11: give the outgoing
+            # renderer a chance to come back under our own control if it
+            # had to be stopped rather than relying on systemd's automatic
+            # Restart= - by default a no-op, only LmsAdapter currently
+            # overrides it. Called last, after the incoming renderer has
+            # had its own settled chance at the device, not because that
+            # guarantees success (see adapters/base.py's docstring on the
+            # residual risk), just because it's the best available
+            # ordering.
+            await self._adapters[outgoing].restart_after_release()
 
     async def _release_with_ladder(self, renderer_id: str) -> ReleaseOutcome:
         adapter = self._adapters[renderer_id]
