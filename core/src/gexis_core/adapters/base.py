@@ -70,3 +70,22 @@ class Adapter(abc.ABC):
         """Process-level escalation when `release()` didn't free the device
         in time. `force=False` is the SIGTERM step, `force=True` is SIGKILL.
         """
+
+    async def device_freed(self) -> None:
+        """Called by the supervisor on the *incoming* renderer's adapter,
+        once per acquisition, immediately after the outgoing renderer's
+        release is confirmed and its own volume is restored. Default is a
+        no-op.
+
+        Exists for a renderer whose own acquisition attempt can race the
+        release ladder's timing and lose - see `SpotifyAdapter` (ADR-0010,
+        Finding 014): go-librespot attempts its ALSA open within about a
+        second of the event that triggers `on_acquire()`, well before
+        LMS's ~3.1s polite release typically completes, so the very
+        attempt that caused this acquisition has usually already failed
+        by the time the supervisor gets here. A renderer that doesn't have
+        this problem (LMS frees in <1s via `-C 1`; Bluetooth's own
+        acquisition doesn't depend on winning a race against another
+        renderer's release) has no reason to override this.
+        """
+        return None

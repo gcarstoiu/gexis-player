@@ -45,6 +45,7 @@ class FakeAdapter(Adapter):
         self.release_ladder = release_ladder
         self.signals: list[str] = []
         self.release_calls = 0
+        self.device_freed_calls = 0
 
     async def run(self, on_acquire):
         raise NotImplementedError("driven manually in these tests")
@@ -61,6 +62,9 @@ class FakeAdapter(Adapter):
             self._holder["who"] = self._frees_to
         if force and self._frees_at in ("sigterm", "sigkill"):
             self._holder["who"] = self._frees_to
+
+    async def device_freed(self) -> None:
+        self.device_freed_calls += 1
 
 
 def build(frees_at_map: dict[str, str] | None = None):
@@ -279,6 +283,63 @@ async def test_restore_volume_called_with_the_newly_active_renderer():
     await supervisor.acquire("bluetooth")
 
     assert restored == ["spotify", "bluetooth"]
+
+
+@pytest.mark.asyncio
+async def test_device_freed_called_on_incoming_adapter_only():
+    """Finding 014: the incoming renderer gets a chance to retry its own
+    acquisition once the outgoing renderer's release is confirmed - the
+    default no-op costs nothing for adapters that don't need it, but the
+    supervisor must call it on the right one, and only once."""
+    supervisor, adapters, holder = build()
+    holder["who"] = "lms"
+    await supervisor.acquire("spotify")
+    assert adapters["spotify"].device_freed_calls == 1
+    assert adapters["lms"].device_freed_calls == 0
+    assert adapters["bluetooth"].device_freed_calls == 0
+
+
+@pytest.mark.asyncio
+async def test_device_freed_not_called_on_noop_reacquire():
+    supervisor, adapters, holder = build()
+    holder["who"] = "lms"
+    await supervisor.acquire("spotify")
+    await supervisor.acquire("spotify")  # already active - no-op
+    assert adapters["spotify"].device_freed_calls == 1
+
+
+@pytest.mark.asyncio
+async def test_device_freed_called_after_volume_restored():
+    """Order matters (arbitration.py's own comment on the call site): if a
+    renderer's retry actually starts audible playback, volume should
+    already be at the right level, not a beat behind."""
+    holder = {"who": None}
+    adapters = {
+        "lms": FakeAdapter("lms", ReleaseAction.PAUSE, holder),
+        "spotify": FakeAdapter("spotify", ReleaseAction.DISCONNECT, holder),
+        "bluetooth": FakeAdapter("bluetooth", ReleaseAction.DISCONNECT, holder),
+    }
+    order: list[str] = []
+
+    async def restore_volume(renderer_id):
+        order.append(f"restore_volume:{renderer_id}")
+
+    class OrderedSpotify(FakeAdapter):
+        async def device_freed(self):
+            order.append("device_freed:spotify")
+            await super().device_freed()
+
+    adapters["spotify"] = OrderedSpotify("spotify", ReleaseAction.DISCONNECT, holder)
+
+    supervisor = Supervisor(
+        adapters, device_busy=lambda renderer_id: holder["who"] == renderer_id,
+        ladder=FAST_LADDER, restore_volume=restore_volume,
+    )
+
+    holder["who"] = "lms"
+    await supervisor.acquire("spotify")
+
+    assert order == ["restore_volume:spotify", "device_freed:spotify"]
 
 
 @pytest.mark.asyncio

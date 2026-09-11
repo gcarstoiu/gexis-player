@@ -121,6 +121,14 @@ class Supervisor:
             await self._release_with_ladder(outgoing)
             if self._restore_volume is not None:
                 await self._restore_volume(renderer_id)
+            # Finding 014: give the incoming renderer a chance to retry its
+            # own acquisition now that the device is confirmed free - by
+            # default a no-op (adapters/base.py's device_freed docstring),
+            # only SpotifyAdapter currently overrides it. Volume is
+            # restored first so a renderer whose retry actually starts
+            # audible playback here does so at the right level from the
+            # first sample, not a beat later.
+            await self._adapters[renderer_id].device_freed()
 
     async def _release_with_ladder(self, renderer_id: str) -> ReleaseOutcome:
         adapter = self._adapters[renderer_id]

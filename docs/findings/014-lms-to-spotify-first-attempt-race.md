@@ -49,6 +49,46 @@ Combined with Finding 013 §2's own read of ordinary usage: a user selecting "ge
 
 None of these were picked this session — this is new evidence for George's call, same as Finding 013's own open items.
 
+## Fixed and verified, 2026-09-11 (same day, second session)
+
+**George's decision: option 2** - `SpotifyAdapter` retries itself once the
+outgoing renderer's release is confirmed, rather than depending on a
+second Spotify Web API call (which only the phone/Spotify's backend can
+issue) or shrinking LMS's release time (reopening the kill-vs-pause
+trade-off ADR-0010 already settled 2026-09-08).
+
+**Mechanism:** `POST /player/resume` against go-librespot's own local HTTP
+API (`127.0.0.1:3678`) - no Spotify Web API call, no account credentials,
+unlike `spotify_api.transfer_to_gexis()`. Confirmed manually first
+(`tools/phase-2c/diag_resume_rescue.py`, three-for-three rescues of a
+reproduced Mode A busy failure) and confirmed harmless when called after
+an attempt that already succeeded (status 200, no pause/restart, track
+position kept advancing across the call - checked directly against
+`/status` before and after).
+
+**Implemented** as `Adapter.device_freed()` (`adapters/base.py`), a new
+optional hook defaulting to a no-op, called by `Supervisor.acquire()`
+(`arbitration.py`) on the incoming renderer's adapter once the outgoing
+renderer's release is confirmed and its volume restored. `SpotifyAdapter`
+overrides it with the `/player/resume` call above; every other adapter
+keeps the default no-op. Unit-tested at the supervisor call-site level
+(fires on the incoming adapter only, once per acquisition, after volume
+restore) - the HTTP call itself is hardware-verified only, matching this
+project's existing convention for adapter network code (see
+`adapters/base.py`'s docstring and `test_lms_adapter.py`'s own module
+docstring for the same reasoning applied to LMS).
+
+**Verified against the real harness, deployed live on `gexis` (hot-patch,
+no rebuild):** LMS-to-Spotify, 5 of 5 real handoffs succeeded (one
+additional round skipped for an unrelated LMS-side precondition timing
+issue, not this mechanism) - gaps 895.5-1900.2ms, mean 1603.5ms, n=5.
+Baseline before the fix was 0 of 4. Not yet a full ≥20-run distribution,
+and Mode B (the transfer request dropped during go-librespot's own
+reauth cycle, no `will_play` at all) was not specifically re-tested this
+round - the fix targets Mode A only. If Mode B recurs during full
+collection, it needs its own investigation; it wasn't observed in this
+verification pass.
+
 ## Not chased further this session
 
 - Whether go-librespot's own unprompted retry timer (if one exists at all for Mode A, separate from Mode B's apparent full drop) is real, and if so its actual interval when isolated from repeated external calls.

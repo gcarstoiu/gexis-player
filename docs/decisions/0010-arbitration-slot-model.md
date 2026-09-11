@@ -6,6 +6,8 @@
 **Amended:** 2026-09-08 — two more hardware-found defects in the release
 ladder and LMS's own acquisition detection, both fixed. See "Implementation
 note" below.
+**Amended:** 2026-09-11 — Spotify's own acquisition retries itself once the
+outgoing renderer's release is confirmed (Finding 014). See "Open" below.
 **Answers:** ADR-0004 (one active renderer — semantics were left open)
 
 ## Context
@@ -525,6 +527,52 @@ for added latency on every genuine one. Full detail in Finding 010.
 
   **Both confirmed working, 2026-09-10** - George: "Testing on the
   device after the last fixes show clear improvement on all fronts."
+
+  **Sharpened, then fixed, 2026-09-11 (Finding 014) - the race is
+  deterministic on a single clean attempt, not just under repeated
+  calls.** Attempting criterion 8's LMS-to-Spotify measurement with the
+  harness already fixed for Finding 013 §3 (single attempt per round, no
+  rapid retry) still produced 0 successes in 4 rounds. Isolated,
+  instrumented single-call testing pinned the mechanism precisely:
+  go-librespot attempts its ALSA open within about a second of
+  `will_play` firing, while LMS's own polite release takes ~3.1s - a lone
+  attempt loses that race essentially every time, which directly
+  contradicts this record's own 2026-09-10 assumption that acquiring on
+  `will_play` would leave the device free by the time go-librespot's
+  retry (or the same call, re-entered) lands. A second, distinct
+  transfer call 2-3s later reliably succeeded in testing, once the
+  original release had actually finished - but a real fix can't depend on
+  a second Spotify Web API call, which only the phone/Spotify's backend
+  can issue.
+
+  **George's decision: option 2 from Finding 014 - have `SpotifyAdapter`
+  retry itself.** `POST /player/resume` is go-librespot's own local HTTP
+  API (no Spotify account credentials, unlike the Web API calls only the
+  test harness has) - confirmed on `gexis`, three-for-three, reliably
+  resuming real playback within a second of the device actually being
+  free, and confirmed harmless when called after an attempt that already
+  succeeded (status 200, no pause or restart, track position continues
+  advancing normally). Implemented as `Adapter.device_freed()`
+  (`adapters/base.py`), a new optional hook defaulting to a no-op, which
+  `Supervisor.acquire()` calls on the *incoming* renderer's adapter once
+  the outgoing renderer's release is confirmed and its volume restored -
+  `SpotifyAdapter` is the only override so far. Unit-tested at the
+  supervisor call-site level (ordering, and that it fires on the incoming
+  adapter only, once) - the actual `/player/resume` HTTP call is
+  hardware-verified only, matching this file's own established pattern
+  for every other adapter's network-touching code (see
+  `adapters/base.py`'s own reasoning for why this wasn't mocked in a unit
+  test).
+
+  **Verified against a live `takeover_gap.py` run, same day.** Deployed
+  live on `gexis` (hot-patched into the running venv, service restarted -
+  no rebuild). LMS-to-Spotify: **5 of 5 real attempts succeeded** (one
+  additional round skipped for an unrelated reason - LMS itself didn't
+  acquire the PCM within the harness's own precondition window, nothing
+  to do with this fix), where the pre-fix baseline was 0 of 4. Gaps
+  895.5-1900.2ms (mean 1603.5ms, n=5) - not yet the ≥20-run distribution
+  criterion 8 needs, but the deterministic first-attempt failure this
+  amendment exists to fix is gone in every attempt observed so far.
 
 - **`acquire()` wrote the incoming renderer's volume to the shared real
   DAC before releasing the outgoing one - a real ordering bug, fixed
