@@ -1649,6 +1649,58 @@ volume fix and Finding 016's polling fix. Backups at `/tmp/volume.py.bak`
 and `/tmp/arbitration.py.bak` on the device. Box left with all units
 active, `NRestarts=0` everywhere, volume at a sane -13.5dB.
 
+### Design input from George, 2026-09-11 — LMS power as the arbitration mechanism (NOT YET AN ADR)
+
+Recorded verbatim in substance so it isn't lost. **No code written, no
+ADR written** — George asked for feasibility and feedback first, and
+explicitly withheld the go-ahead. This is the raw input the ADR will be
+built from. Evidence behind it is Finding 018's third pass.
+
+George's rules:
+
+1. **A deactivated device in LMS stays deactivated until the user
+   activates it again.** No automatic activation that isn't visible to
+   the user. (His own 3-4s auto-reactivation proposal is withdrawn —
+   measured to evict Spotify, see Finding 018.)
+2. **This kills LMS as the default/base renderer.** There must be a state
+   where *no* renderer holds the device because all of them are off. UX
+   implications to be handled when the interface is designed.
+3. While another renderer holds the device, the squeezelite client is
+   powered off.
+4. **Powering on IS the acquisition, not pressing play.** For consistency
+   with Bluetooth (A2DP connect) and Spotify (device selected), the
+   activation is what takes the device; play is a separate user intention
+   afterwards. Playback on takeover continues from wherever LMS was.
+5. **Do not track who deactivated the device.** What matters is the
+   device's state at any moment, not whether the user or the system
+   caused it — the system's power-off is itself user-triggered (a
+   takeover). We must not silently re-activate what the user turned off,
+   which rule 1 already guarantees.
+6. Crash handling: George unsure whether his other answers change this.
+   (They do — see the feedback note below.)
+7. Bare power-on counts as an acquisition; docs need amending to say so.
+8. Asked for a fuller explanation of the Bluetooth side.
+
+**Claude's feedback, given the same day:** rules 1 and 5 are mutually
+consistent — provenance tracking is unnecessary *precisely because* rule 1
+means we never auto-activate, so there is no user action to accidentally
+undo. Rule 4 is better than the version Claude proposed: it removes the
+restart-from-0 problem at its source (the user activates rather than
+pressing play against a powered-off player), makes LMS's row in
+ADR-0010's acquisition table uniform with the other two renderers, and
+should retire both the 0.4s acquisition debounce and the spurious-reclaim
+class of bug, since a stray server-side `mode: play` would no longer be an
+acquisition signal at all. Rule 6 largely dissolves: once "off" is a
+legitimate, user-restorable state rather than a broken one, a crash while
+the player is off leaves a valid state. Rule 2 is the largest change —
+it retires the base-slot premise ADR-0010 is built on, so this likely
+wants its own numbered ADR rather than an amendment to that one.
+
+**Still to verify before implementing:** that LMS's CometD
+`playerstatus` subscription actually delivers `power` transitions
+promptly (the adapter currently watches `mode`), and whether powering off
+mid-playback is audible at the cut.
+
 **Also noticed, not acted on:** squeezelite's `ExecStart` now carries
 `-O hw:gexislmsvol -V Master -C 1 -n gexis` — the `-O hw:gexislmsvol -V
 Master` part reflects the per-renderer dummy-mixer volume work (Finding
