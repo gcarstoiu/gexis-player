@@ -175,6 +175,85 @@ expectation and stops or lands one step away and stops on the next hop.
 
 ---
 
+## Second pass, same day — deeper investigation of blockers 1 and 2
+
+George: both present bad user experience and cannot be left as they are.
+Everything below was measured on `gexis` after the first pass.
+
+### Blocker 1: an explicit seek on resume removes the jump entirely
+
+LMS re-anchors its clock if it is *told* a position. Measured, 25s away:
+
+| | first reading on resume | correct? |
+|---|---|---|
+| plain resume (today) | 57.84, against a true 32.72 | **+25.1s wrong** |
+| resume, then `time <P>` | 44.50, against a true 44.50 | **exact** |
+
+With the seek the value is right from the first reading and simply holds
+at P for ~1s before advancing normally — the jump never appears. `P` is
+free to obtain: we already call LMS at release time, so the paused
+position can be captured there.
+
+**Cost, not yet measured:** a seek makes LMS re-request the stream at that
+position, so it can add a small delay and is a plausible source of an
+audible artefact at the resume point. That needs a listening test, which
+is George's call to make - this project has been burned before by taking
+a measurement as proof of an *audible* result.
+
+### Blocker 1: holding LMS paused until the device is free is REFUTED
+
+The obvious alternative - re-pause LMS the moment it acquires against a
+busy device, resume once free - was tested and makes things **worse**:
+
+```
+CONTROL:  +0.02s time=11.06 (wrong), +0.33s time=6.45 (corrected)
+HOLD:     +0.02s ... +2.83s  mode='pause' time=24.87  <- frozen, wrong, for the whole hold
+```
+
+Re-pausing freezes the bogus value on screen for as long as we hold it,
+instead of letting it self-correct. Recorded so nobody proposes it again.
+
+### Blocker 2: the race cannot be won, and `stop` does not help either
+
+Added to the `-C 0` result from the first pass:
+
+| LMS release command | measured |
+|---|---|
+| `pause 1` | 1.43s, 1.45s — tight |
+| `stop` | 1.04s, 1.85s — **inconsistent, no better on average** |
+
+`stop` also costs the resume position outright, so it buys nothing.
+
+### Blocker 2: what go-librespot actually does, and the one real defect
+
+Traced its `/events` stream and `/status` through real transfers:
+
+- At `will_play`, **`/status` already carries the intended position** -
+  `{"uri": ..., "position": 619, "duration": 96898}` - so the position is
+  recoverable if we want it.
+- When its ALSA open fails it emits **`inactive` + `stopped`** - an
+  explicit, hookable failure signal.
+- It then **retries by itself ~0.2s after the device frees** (much faster
+  than assumed), and in controlled runs **the position was preserved**
+  (captured 497ms → playing from ~2.1s; captured 1035ms → ~2.15s).
+- **`active` never fires afterwards: 0 of 2 controlled runs, 0 of 3 of
+  George's organic handoffs.** It fires only when the *first* open
+  succeeds (seen once, 18:42:50).
+
+So the audio recovers on its own in ~2-2.6s with the position usually
+intact. The **persistent** defect is that the Connect session is never
+marked active, which is what leaves the phone showing 0:00 and a 0
+duration while sound plays - ADR-0010's "never show a state the user
+cannot account for," broken by go-librespot's own state machine.
+
+Driving the recovery ourselves was tested: `POST /player/play
+{"uri": ..., "seek_ms": <captured>}` returns 200, starts real playback and
+preserves position - **but `active` still does not fire** (0/2). It would
+make the position deterministic; it would not make the session honest, so
+on its own it does not fix what George is actually seeing. This is the
+same wall Finding 014's `/player/resume` hit, reached from a different
+direction, and is recorded here so the third attempt is not made blind.
+
 ## What is deployed on `gexis` right now
 
 Hot-patched into `/opt/gexis-core/venv/.../gexis_core/`, service restarted,
