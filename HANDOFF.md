@@ -1328,6 +1328,84 @@ would hit the same underlying defect from a different angle.
 committed there - it's a deploy target, not a repo). No hand-edits to
 any shipped config.
 
+### Same day, second session: Finding 014 fixed (George: option 2), then a new blocker found collecting the real distribution
+
+**George picked option 2.** `SpotifyAdapter` now retries itself once the
+outgoing renderer's release is confirmed, via `POST /player/resume` -
+go-librespot's own local HTTP API, no Spotify account credentials needed
+(unlike the test harness's Web API calls, which only work because this
+project's own PKCE-authorized `spotify.local.env` exists). Implemented as
+a new optional `Adapter.device_freed()` hook (`adapters/base.py`,
+default no-op), called by `Supervisor.acquire()` after the outgoing
+renderer's release and the incoming renderer's volume restore.
+`SpotifyAdapter` is the only override. Unit-tested at the supervisor
+call-site level (59 tests total, still no hardware needed for the policy
+layer); the actual HTTP call is hardware-verified only, matching this
+project's established convention for adapter network code. Full detail
+in Finding 014's "Fixed and verified" addendum and ADR-0010's matching
+amendment.
+
+**Deployed live on `gexis`** (hot-patched three files into the running
+venv, `systemctl restart gexis-core` - no rebuild) after explicit
+confirmation, since editing a live systemd service's installed files with
+`sudo` on real hardware is exactly the kind of action this project's
+auto-mode classifier pauses for. Verified immediately: 5 of 5 real
+LMS-to-Spotify handoffs succeeded (previously 0 of 4), gaps
+895.5-1900.2ms.
+
+**Moved to collecting the real ≥20-run distribution** criterion 8 needs.
+LMS-to-Spotify: **done, 16 of 20 succeeded** -
+
+| | |
+|---|---|
+| min | 899.7 ms |
+| max | 2593.0 ms |
+| mean | 1619.9 ms |
+| median | 1827.8 ms |
+| stdev | 484.5 ms |
+
+(4 rounds skipped near the end, "lms never acquired PCM within 15s" -
+turned out to be the same root cause as the blocker below, not a separate
+issue.)
+
+**Spotify-to-LMS: 0 of 11 attempted before the run was stopped** - but
+this is **not** evidence of a genuine reverse-direction defect.
+Diagnosed: `squeezelite.service` had gone into `failed` state
+(`Start request repeated too quickly`, restart counter **24** - past the
+raised-to-20 limit from Finding 013 §1) partway through the
+LMS-to-Spotify leg, so every Spotify-to-LMS round failed simply because
+there was no LMS renderer left to acquire anything, not because of
+anything specific to that direction. Recovered
+(`systemctl reset-failed && systemctl start squeezelite`, plus freeing
+Spotify's own hold first via `/player/stop` so the restart wouldn't
+immediately fail busy again) - all five units confirmed active,
+`NRestarts=0`, before stopping for the session.
+
+**This is Finding 013 §1 recurring, but with a materially sharper
+trigger, recorded as an addendum to that finding.** The original
+characterization was "legitimate adversarial arbitration activity" -
+attack-test-style rapid racing. This session's rounds were evenly paced
+(~6-8s apart, each settled before the next began), much closer to
+ordinary repeated use than an attack, and it still tripped the limit.
+`gexis-core`'s own log shows round 16 specifically: LMS still held the
+device after the full 3s polite grace (every one of the 15 rounds before
+it had freed within 3.1-3.2s) - escalated through `LmsAdapter`'s
+always-SIGKILL `signal_stop` twice, finally freeing at 8.3s, by which
+point squeezelite had already restarted and failed busy several times on
+its own. Why round 16 specifically failed to free within the normal
+window after 15 consecutive successes is **not established** - recovery
+took priority over root-causing it this session.
+
+**Blocks resuming criterion 8's Spotify-to-LMS leg** (and any repeat of
+the LMS-to-Spotify leg past ~16 consecutive rounds) **until George
+decides how to handle this** - raising the burst limit further is
+possible but is explicitly a mitigation, not a cure, per Finding 013 §1's
+own original text; the underlying race (SIGKILL firing while the device
+may still be mid-release) is the more correct fix but wasn't chased
+today. Not attempted again this session, deliberately, rather than risk
+tripping the same failure repeatedly and needing another manual
+recovery each time.
+
 ## Machines
 
 | Name | What it is | Notes |
@@ -1361,16 +1439,28 @@ the tag) — tag manually before a build worth naming, for now.
 1. **Phase 2c, criterion 8: get a clean ≥20-run takeover-gap distribution.**
    PR #6 already merged and `phase-2c-takeover` already branched (see this
    file's own Phase 2c section above) - criterion 7 is passing. **Blocked
-   as of the eighth session (2026-09-11) on Finding 014 - George's
-   decision needed before continuing.** What's left, in order:
-   - **LMS↔Spotify, same-rate — blocked, needs George's call (Finding
-     014).** A single clean transfer attempt fails deterministically
-     (0/4 in the last trial), not just under repeated calls as Finding
-     013 §3 assumed - see Finding 014 for the two failure modes and three
-     options (shrink LMS's release time, have `SpotifyAdapter` retry
-     itself once release is confirmed, or redefine the measurement to use
-     only first-successful attempts). Don't resume blind collection on
-     this leg until one is picked.
+   as of the eighth session's second half (2026-09-11) on a Finding 013 §1
+   recurrence - George's call needed before continuing.** What's left, in
+   order:
+   - **LMS→Spotify, same-rate — Finding 014 fixed and its own leg
+     collected.** George picked option 2 (`SpotifyAdapter` retries itself
+     via go-librespot's local `/player/resume`); deployed live, verified
+     5/5, then a real 16-of-20 distribution collected (mean 1619.9ms,
+     median 1827.8ms, min 899.7ms, max 2593.0ms, stdev 484.5ms). This
+     leg's own mechanism is done - see below for why it's not the whole
+     story.
+   - **Spotify→LMS, same-rate — blocked, needs George's call (Finding 013
+     §1 addendum).** Collecting this leg tripped a recurrence of the
+     squeezelite restart-rate-limit exhaustion, now under ordinary paced
+     rounds (~6-8s apart) rather than adversarial racing - the raised
+     5→20 burst limit was exceeded (24) partway through the *previous*
+     leg, leaving squeezelite dead for the entirety of this one. Recovered
+     manually; every unit confirmed healthy again. Don't retry blind
+     collection on this leg (or push the LMS→Spotify leg past ~16
+     consecutive rounds again) until George decides between raising the
+     burst limit further (mitigation, not a cure, per Finding 013 §1's own
+     original text) or fixing the underlying race (SIGKILL firing while
+     the device may still be mid-release) for real.
    - **Cross-rate LMS↔Spotify** - needs picking specific test content at a
      different sample rate; not set up yet.
    - **Bluetooth-involving pairs** - needs George live as the audio
