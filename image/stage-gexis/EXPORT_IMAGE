@@ -1,4 +1,13 @@
-IMG_SUFFIX=""
+# IMG_SUFFIX="", not a bare assignment - found 2026-09-11, the Makefile's
+# `image:` target passes a version suffix via PIGEN_DOCKER_OPTS's -e
+# flag, and this file (sourced by pi-gen's build.sh right before the
+# export-image stage runs, per this project's own EXPORT_IMAGE mechanism)
+# was unconditionally clobbering it back to empty before every build,
+# silently - the annotated .info manifest still got the version (a
+# separate, host-side mechanism), but the .img/.zip filenames themselves
+# never did. `${IMG_SUFFIX:-}` preserves whatever's already in the
+# environment, only defaulting to empty if truly unset.
+IMG_SUFFIX="${IMG_SUFFIX:-}"
 if [ "${USE_QEMU}" = "1" ]; then
 	export IMG_SUFFIX="${IMG_SUFFIX}-qemu"
 fi

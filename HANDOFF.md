@@ -1579,16 +1579,33 @@ the container intact via a standalone `docker run -e` test (a plain host
 environment variable does not cross that boundary on its own - `docker
 run` only forwards what's explicitly passed) and confirmed the resulting
 filename shape by simulating `build.sh`'s own variable-resolution lines
-directly. **Not yet confirmed against a real `make image` run** - next
-build's filenames will be the first real check, expected shape
-`2026-09-11-gexis-player-v0.2.1-28-ge916f86-dirty.img`/`.zip` (date, name,
-then version - `-dirty` included honestly if the tree wasn't clean, same
-as the manifest already does). The `image:` target's own manifest-lookup
-glob was widened (`*-gexis-player.info` → `*-gexis-player*.info`) to
-still find the now-longer filename - the exact class of thing that broke
-silently once already (the multi-manifest annotation bug, Phase 2c's
-prerequisites) - check this first if a future build's manifest looks
-unannotated again.
+directly. The `image:` target's own manifest-lookup glob was widened
+(`*-gexis-player.info` → `*-gexis-player*.info`) to still find the
+now-longer filename - the exact class of thing that broke silently once
+already (the multi-manifest annotation bug, Phase 2c's prerequisites) -
+check this first if a future build's manifest looks unannotated again.
+
+**First real `make image` run found it didn't work at all - the
+filenames came out exactly as before, no version suffix.** Root cause:
+`image/stage-gexis/EXPORT_IMAGE` (this project's own file, not the pinned
+submodule - the mechanism that triggers pi-gen's export-image stage at
+all, adapted from upstream's stage4/5 convention) unconditionally set
+`IMG_SUFFIX=""` at its own top, sourced by `build.sh` right before the
+export stage runs - silently clobbering whatever the Makefile had passed
+in via the container's environment, every single build, before this was
+noticed. The annotated `.info` manifest's own version line still worked
+(a separate, host-side mechanism, unaffected) - only the filenames
+themselves were wrong. Missed originally because the isolated
+verification checked the env-var-passing mechanism and simulated
+`build.sh`'s own variable-resolution lines directly, but never checked
+whether anything sourced *after* those lines could still overwrite the
+result - `EXPORT_IMAGE` files are exactly that, and this project's own
+copy of the pattern wasn't audited. Fixed (`IMG_SUFFIX="${IMG_SUFFIX:-}"`,
+preserves rather than clobbers), confirmed by the same isolated-simulation
+method as before (sourcing the actual fixed file with `IMG_SUFFIX`
+pre-set, exactly as the container would have it). **A second `make
+image` run is what actually proves this** - the one that produced today's
+reverted, currently-flashed image predates this fix.
 
 ## Next actions, in order
 
