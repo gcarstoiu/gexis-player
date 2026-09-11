@@ -1,6 +1,6 @@
 # Handoff
 
-Last updated: 2026-09-11 (seventh session, Phase 2c)
+Last updated: 2026-09-11 (eighth session, Phase 2c)
 
 ## Where things stand
 
@@ -1270,6 +1270,64 @@ interrupting actual measurement runs before a clean ≥20-run distribution
 could be collected for even the LMS↔Spotify same-rate pair. This is
 where testing paused for the session - see "Next actions" below.
 
+### Eighth session, 2026-09-11: LMS→Spotify criterion 8 collection attempted, blocked on a sharper version of Finding 013 §3
+
+The FIFO-reader fixes and `takeover_gap.py`/`bt_attack_test.py` described
+above were still uncommitted at the start of this session (git showed
+them as working-tree changes, not landed) despite the narrative already
+describing them as done - committed now (`ec44674`), no code changes,
+just catching git up to what was already true.
+
+**A 5-round trial of `takeover_gap.py`'s `lms-to-spotify` direction
+(single attempt per round, 65s cooldown - Finding 013 §3's own fix)
+produced 0 successes in 4 rounds** before being stopped deliberately
+rather than run blind to n=20. Instrumented, isolated follow-up
+(`tools/phase-2c/diag_one_transfer.py`, four clean single-call runs, no
+harness retry logic involved) found the failure is **not** the harness
+colliding with go-librespot's own retry cadence, as Finding 013 §3
+framed it - it reproduces on a single, unhurried, non-repeated transfer
+call, deterministically. Full detail, exact timestamps and two distinct
+failure modes in **Finding 014**:
+
+- **Mode A:** go-librespot attempts its ALSA open within about a second
+  of `will_play` firing; LMS's polite release takes ~3.1s. Every clean
+  attempt loses this race. This directly contradicts
+  `adapters/spotify.py`'s own comment justifying the `will_play` trigger
+  (that the device would already be free by the time go-librespot's own
+  retry, or re-entered call, tried again) - confirmed false when
+  go-librespot's attempt is faster than the release, which this session's
+  evidence says is the normal case. **A second, distinct transfer call
+  ~2-3s after the first reliably succeeds** (by then the *original*
+  release has finished) - consistent with why field reports have called
+  this "finicky" rather than "broken": an impatient second tap plausibly
+  rescues most real attempts.
+- **Mode B:** some calls instead produce **no `will_play` at all** - only
+  go-librespot's own credential-reload/reauth cycle, then nothing, for at
+  least 100 seconds watched. Trigger condition not established.
+
+**Criterion 8's LMS→Spotify leg is not currently collectible as "the gap
+of one ordinary takeover action"** - a lone attempt's outcome is
+dominated by which race outcome it hits, not by the thing criterion 8 is
+meant to characterise. Recommend against further blind `takeover_gap.py`
+collection for this leg until George picks one of Finding 014's three
+options: shrink LMS's ~3.1s release (reopens the kill-vs-pause trade-off
+already settled once, 2026-09-08, for a different reason), have
+`SpotifyAdapter` itself retry once LMS's release is confirmed complete
+(no known local go-librespot endpoint for this yet - unchecked whether
+one exists), or redefine what criterion 8 measures for this leg
+(first-successful-attempt only, documented as such).
+
+**Not attempted this session, still open:** cross-rate LMS↔Spotify,
+Bluetooth-involving pairs (both already blocked on their own prerequisites
+per the "Next actions" list below) - stopped once the LMS-Spotify same-
+rate leg turned out to be blocked, rather than moving on to legs that
+would hit the same underlying defect from a different angle.
+
+`gexis`'s state at the end of this session: LMS paused, no PCM holder,
+`tools/phase-2c/` synced to `~/phase-2c` on `gexis` via `rsync` (not
+committed there - it's a deploy target, not a repo). No hand-edits to
+any shipped config.
+
 ## Machines
 
 | Name | What it is | Notes |
@@ -1302,17 +1360,17 @@ the tag) — tag manually before a build worth naming, for now.
 
 1. **Phase 2c, criterion 8: get a clean ≥20-run takeover-gap distribution.**
    PR #6 already merged and `phase-2c-takeover` already branched (see this
-   file's own Phase 2c section above) - criterion 7 is passing. What's
-   left, in order:
-   - **LMS↔Spotify, same-rate.** The harness (`tools/phase-2c/
-     takeover_gap.py`) is fixed to stop provoking Finding 013 §3's ~56s
-     go-librespot backoff (single attempt per round, 65s cooldown on
-     failure), but §4 (go-librespot silently not opening the device while
-     reporting itself playing) can still make individual rounds fail for
-     reasons unrelated to arbitration - budget for a noisier, slower
-     collection than the LMS-only side, and don't trust a "fast, clean"
-     result without cross-checking `pcm_holder` actually shows the
-     expected renderer, the way the harness itself already does.
+   file's own Phase 2c section above) - criterion 7 is passing. **Blocked
+   as of the eighth session (2026-09-11) on Finding 014 - George's
+   decision needed before continuing.** What's left, in order:
+   - **LMS↔Spotify, same-rate — blocked, needs George's call (Finding
+     014).** A single clean transfer attempt fails deterministically
+     (0/4 in the last trial), not just under repeated calls as Finding
+     013 §3 assumed - see Finding 014 for the two failure modes and three
+     options (shrink LMS's release time, have `SpotifyAdapter` retry
+     itself once release is confirmed, or redefine the measurement to use
+     only first-successful attempts). Don't resume blind collection on
+     this leg until one is picked.
    - **Cross-rate LMS↔Spotify** - needs picking specific test content at a
      different sample rate; not set up yet.
    - **Bluetooth-involving pairs** - needs George live as the audio
