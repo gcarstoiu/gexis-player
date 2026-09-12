@@ -126,7 +126,23 @@ when their criteria pass:
   measurement rather than with 3-6. **Criteria 7-10 need re-running after
   2d** — every number in Finding 015 was measured against the release
   mechanism ADR-0027 replaces.
-- **2d — criteria 3-4, reworked for [ADR-0027](decisions/0027-lms-power-as-arbitration-mechanism.md).**
+- **2d — criteria 3-4, reworked for [ADR-0027](decisions/0027-lms-power-as-arbitration-mechanism.md).
+  DONE, verified on the flashed image, 2026-09-12.** Closed on: 84 unit
+  tests; the installed core diffed file-by-file against the branch HEAD so
+  the image genuinely contains it (the previous image silently predated
+  Finding 016 entirely, which is why this is checked rather than assumed);
+  13/13 end-to-end checks run against the flashed build — Spotify's first
+  ALSA open succeeds with `active` firing (0.89s), LMS returns on
+  activation with playback and position restored (0.89s), deactivation
+  leaves nobody holding the device; and George's own listening pass —
+  takeovers correct, seek resumes at the right position, power-off silent,
+  power-on a barely-audible click he judged not worth chasing. Session logs
+  show no ladder escalation of any kind and zero go-librespot
+  "resource busy" failures, the signature blocker 2 used to leave on every
+  handoff.
+  **Not covered by this closure:** criterion 4's Bluetooth exception is
+  unchanged and still open (ADR-0010); criteria 7-10 still need re-running
+  (2c); ADR-0027's own deferred items stand.
   New, 2026-09-12. LMS's player power becomes the arbitration mechanism:
   record the transport state, `pause`, then `power 0` on release;
   powering on is the acquisition; restore the recorded state on return;

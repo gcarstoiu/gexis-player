@@ -41,13 +41,20 @@ adapter persistently pairable and discoverable — see
 > doesn't connect on the first try after a new build" report, and the logs
 > show 60 seconds from first contact to audio with a 36-second dead spot.
 >
-> **DECISION PENDING — George's call, deliberately not taken unilaterally.**
-> The fix is one line (`DiscoverableTimeout = 0` in `main.conf`, or
-> `bluetoothctl discoverable-timeout 0` before `discoverable on`; mechanism
-> confirmed live). But it widens this record's own accepted exposure below
-> from *three minutes after each boot* to *continuously*, which is a real
-> change to the posture even though the class of exposure is unchanged.
-> Until it is decided, the shipped behaviour is the 3-minute window.
+> **DECIDED, 2026-09-12: no change. George's call.** The fix is one line
+> (`DiscoverableTimeout = 0` in `main.conf`, or `bluetoothctl
+> discoverable-timeout 0` before `discoverable on`; mechanism confirmed
+> live) and it is deliberately **not** being applied, because it widens
+> this record's accepted exposure from *three minutes after each boot* to
+> *continuously*. The shipped behaviour stays the 3-minute window.
+>
+> **What that means in practice, so nobody is surprised by it later:**
+> re-pairing a phone — after a reflash, or after the bond is cleared on
+> either side — must happen within three minutes of boot, or the adapter
+> has to be made discoverable by hand first. Reconnecting an
+> already-bonded phone is unaffected and needs no discoverability at all.
+> The wording above this note is therefore now accurate about *intent*
+> only; the implementation deliberately does less.
 
 ## Consequence, stated plainly
 
