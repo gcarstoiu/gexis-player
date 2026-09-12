@@ -63,9 +63,18 @@ class StateStore:
         """Recorded for every renderer regardless of whether it is active -
         so that becoming active immediately has metadata to show rather
         than a blank screen for however long the first push takes - but
-        only broadcast when it belongs to whoever is currently active,
-        since that is the only metadata `state` ever exposes.
+        only broadcast when it belongs to whoever is currently active and
+        actually differs from what was last published. The equality check
+        matters on its own merits (any adapter re-reporting identical data
+        would otherwise spam a broadcast for nothing), but it does not
+        replace fixing a renderer's own over-reporting at the source: LMS's
+        `time` field ticks every second during playback, so even with this
+        check a currently-playing LMS session still broadcasts on every
+        genuine CometD push - see adapters/lms.py's `subscribe:0` comment
+        for why those pushes are change-driven, not a fixed heartbeat.
         """
+        if self._metadata.get(renderer_id) == metadata:
+            return
         self._metadata[renderer_id] = metadata
         if renderer_id == self._active:
             self._notify()

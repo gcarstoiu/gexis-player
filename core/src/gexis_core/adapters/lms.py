@@ -125,10 +125,10 @@ class LmsAdapter(Adapter):
 
     def on_metadata_change(self, callback: Callable[[TrackMetadata], None]) -> None:
         """state.py hooks in here (Phase 3 criterion 1). Fired on every
-        subscribed status push, not just power changes - CometD's
-        "subscribe:1" re-pushes on any player-state change, including a new
-        track loading, which is exactly the edge criterion 6 needs to
-        measure later.
+        subscribed status push, not just power changes - the "status"
+        query's own `subscribe:N` push-on-change behaviour (LMS-CLI.md)
+        covers any player-state change, including a new track loading,
+        which is exactly the edge criterion 6 needs to measure later.
         """
         self._on_metadata = callback
 
@@ -234,9 +234,26 @@ class LmsAdapter(Adapter):
                     "clientId": client_id,
                     "data": {
                         "response": response_channel,
+                        # "subscribe:0", not "subscribe:1" - LMS-CLI.md's
+                        # own wording ("push on player change... the number
+                        # indicates the interval between automatic
+                        # generations in case nothing happened") means the
+                        # digit is a heartbeat period, not an on/off flag.
+                        # `subscribe:1` was pushing a fresh frame every
+                        # second even when nothing changed - harmless
+                        # before this file read anything but `power`, but
+                        # once metadata (including a ticking `time`) was
+                        # added to every push, that heartbeat alone made
+                        # the WebSocket emit a new payload roughly once a
+                        # second regardless of real activity. Found live,
+                        # 2026-09-12, from George watching the raw output.
+                        # `subscribe:0` keeps push-on-real-change (power,
+                        # volume, track load - everything this adapter and
+                        # criterion 6 depend on) and drops only the
+                        # unconditional resend.
                         "request": [
                             self._player_id,
-                            ["status", "-", 1, "subscribe:1", f"tags:{METADATA_TAGS}"],
+                            ["status", "-", 1, "subscribe:0", f"tags:{METADATA_TAGS}"],
                         ],
                     },
                     "id": str(next(_id_counter)),

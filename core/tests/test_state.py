@@ -104,6 +104,24 @@ def test_metadata_blanked_when_nobody_is_active():
     assert store.state.metadata == BLANK_METADATA
 
 
+def test_identical_metadata_is_not_rebroadcast():
+    """A renderer re-reporting the same data (e.g. a duplicate push) must
+    not spam a broadcast - found live, 2026-09-12, from LMS's own
+    change-driven CometD pushes still firing once a second while playing
+    (the `time` field itself differs each time, so this alone doesn't
+    silence that case - see adapters/lms.py's `subscribe:0` fix for that)."""
+    store = StateStore(["lms"])
+    store.set_active("lms")
+    metadata = TrackMetadata(title="Song", source_type="lms")
+    store.set_metadata("lms", metadata)
+    seen = []
+    store.subscribe(seen.append)
+
+    store.set_metadata("lms", TrackMetadata(title="Song", source_type="lms"))
+
+    assert seen == []
+
+
 def test_subscribers_see_the_final_combined_state_not_a_partial_one():
     store = StateStore(["lms"])
     store.set_active("lms")
