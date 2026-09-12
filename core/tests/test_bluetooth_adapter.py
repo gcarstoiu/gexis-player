@@ -5,9 +5,15 @@ covered by hardware sessions - see adapters/bluetooth.py's module and
 """
 from __future__ import annotations
 
+import pytest
 from dbus_next import Variant
 
-from gexis_core.adapters.bluetooth import BluetoothAdapter, _unwrap
+from gexis_core.adapters.bluetooth import (
+    MEDIA_PLAYER_IFACE,
+    PROPERTIES_IFACE,
+    BluetoothAdapter,
+    _unwrap,
+)
 from gexis_core.model import TrackMetadata
 
 
@@ -93,3 +99,92 @@ def test_position_only_update_keeps_the_last_known_track():
 
     assert received[0].title == "Song"
     assert received[0].position == 9.0
+
+
+# --- _attach_media_player: regression test for the interface bug ----------
+
+
+class _FakeInterface:
+    def __init__(self):
+        self.callback = None
+
+    def on_properties_changed(self, callback):
+        self.callback = callback
+
+
+class _FakeProxyObject:
+    def __init__(self):
+        self.interfaces: dict[str, _FakeInterface] = {}
+
+    def get_interface(self, name):
+        return self.interfaces.setdefault(name, _FakeInterface())
+
+
+class _FakeBus:
+    def __init__(self):
+        self.proxy = _FakeProxyObject()
+
+    async def introspect(self, service, path):
+        return None  # unused - _FakeProxyObject ignores it
+
+    def get_proxy_object(self, service, path, introspection):
+        return self.proxy
+
+
+@pytest.mark.asyncio
+async def test_attach_media_player_subscribes_via_the_properties_interface():
+    """Regression test - found broken on hardware, 2026-09-12 (George,
+    testing against a real phone: Bluetooth reported no metadata at all).
+    `MediaPlayer1`'s own proxy interface has no `on_properties_changed` -
+    confirmed by introspection, it defines no signals of its own.
+    `PropertiesChanged` belongs to `org.freedesktop.DBus.Properties`."""
+    adapter = BluetoothAdapter()
+    adapter._bus = _FakeBus()
+
+    await adapter._attach_media_player("/org/bluez/hci0/dev_XX/player0")
+
+    assert adapter._bus.proxy.interfaces[PROPERTIES_IFACE].callback is not None
+    assert MEDIA_PLAYER_IFACE not in adapter._bus.proxy.interfaces
+
+
+@pytest.mark.asyncio
+async def test_attach_media_player_reports_metadata_on_a_real_signal_shape():
+    """End-to-end through the fixed subscription: a PropertiesChanged
+    signal for the right interface, with the two-level Variant nesting a
+    dict-valued property actually has, must reach `on_metadata_change`."""
+    adapter = BluetoothAdapter()
+    adapter._bus = _FakeBus()
+    received = []
+    adapter.on_metadata_change(received.append)
+
+    await adapter._attach_media_player("/org/bluez/hci0/dev_XX/player0")
+    callback = adapter._bus.proxy.interfaces[PROPERTIES_IFACE].callback
+
+    callback(
+        MEDIA_PLAYER_IFACE,
+        {
+            "Track": Variant(
+                "a{sv}",
+                {"Title": Variant("s", "Song"), "Artist": Variant("s", "Band")},
+            )
+        },
+        [],
+    )
+
+    assert received[-1].title == "Song"
+    assert received[-1].artist == "Band"
+
+
+@pytest.mark.asyncio
+async def test_attach_media_player_ignores_a_signal_for_another_interface():
+    adapter = BluetoothAdapter()
+    adapter._bus = _FakeBus()
+    received = []
+    adapter.on_metadata_change(received.append)
+
+    await adapter._attach_media_player("/org/bluez/hci0/dev_XX/player0")
+    callback = adapter._bus.proxy.interfaces[PROPERTIES_IFACE].callback
+
+    callback("org.bluez.Device1", {"Connected": Variant("b", False)}, [])
+
+    assert received == []

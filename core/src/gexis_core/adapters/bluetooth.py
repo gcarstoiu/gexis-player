@@ -49,6 +49,7 @@ logger = logging.getLogger("gexis_core.adapters.bluetooth")
 
 BLUEZ_SERVICE = "org.bluez"
 OBJECT_MANAGER_IFACE = "org.freedesktop.DBus.ObjectManager"
+PROPERTIES_IFACE = "org.freedesktop.DBus.Properties"
 DEVICE_IFACE = "org.bluez.Device1"
 MEDIA_PLAYER_IFACE = "org.bluez.MediaPlayer1"
 MEDIA_TRANSPORT_IFACE = "org.bluez.MediaTransport1"
@@ -190,23 +191,35 @@ class BluetoothAdapter(Adapter):
         changes and position updates after the initial snapshot are
         reported too - not just the acquisition edge `on_acquire()` needs.
 
-        **Not yet hardware-verified against a real phone connection** - the
-        double-unwrap in `on_properties_changed` below (dbus_next Variants
-        nest one level deeper for a dict-valued property like `Track`) is
-        inferred from dbus_next's documented Variant behaviour, not
-        confirmed against BlueZ's actual signal payload on `gexis`. See
-        HANDOFF.md.
+        **Found broken on hardware, 2026-09-12** (George, testing against a
+        real phone): `MediaPlayer1`'s own proxy interface has no
+        `on_properties_changed` at all - confirmed by introspection,
+        `PropertiesChanged` is a signal of the generic
+        `org.freedesktop.DBus.Properties` interface, not of `MediaPlayer1`
+        itself (whose own introspected `signals` list is empty). The fix is
+        to get *that* interface's proxy instead - matching
+        `bluetooth_trust.py`'s existing `PROPERTIES_IFACE` idiom for
+        `call_set`, just for a signal instead of a method call. The
+        double-unwrap for a dict-valued property like `Track` is unchanged
+        and still not independently confirmed against a live payload
+        (the crash above meant no payload was ever received to check).
         """
         try:
             introspection = await self._bus.introspect(BLUEZ_SERVICE, player_path)
-            player = self._bus.get_proxy_object(
+            props = self._bus.get_proxy_object(
                 BLUEZ_SERVICE, player_path, introspection
-            ).get_interface(MEDIA_PLAYER_IFACE)
+            ).get_interface(PROPERTIES_IFACE)
         except Exception as exc:  # noqa: BLE001 - metadata is best-effort
             logger.warning("bluetooth: could not attach to %s: %s", player_path, exc)
             return
 
         def on_properties_changed(interface_name, changed, invalidated):
+            if interface_name != MEDIA_PLAYER_IFACE:
+                # PropertiesChanged is per-object-path, not per-interface -
+                # this object path could in principle carry another
+                # interface's own changes too. Not observed in practice,
+                # guarded rather than assumed away.
+                return
             # `changed`'s values are Variants; "Track" is itself a
             # `dict[str, Variant]` (D-Bus `a{sv}`) once unwrapped once, so
             # it needs a second unwrap - the same two-level shape
@@ -219,7 +232,7 @@ class BluetoothAdapter(Adapter):
             if "Track" in changed or "Position" in changed:
                 self._report_metadata()
 
-        player.on_properties_changed(on_properties_changed)
+        props.on_properties_changed(on_properties_changed)
 
     @staticmethod
     def _device_path_for_player(player_path: str) -> str:
