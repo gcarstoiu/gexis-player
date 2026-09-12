@@ -36,11 +36,13 @@ from __future__ import annotations
 
 import asyncio
 import logging
+from typing import Callable
 
 from dbus_next import BusType
 from dbus_next.aio import MessageBus
 
 from gexis_core.adapters.base import Adapter, ReleaseAction
+from gexis_core.model import TrackMetadata
 from gexis_core.systemd import kill_unit
 
 logger = logging.getLogger("gexis_core.adapters.bluetooth")
@@ -53,6 +55,21 @@ MEDIA_TRANSPORT_IFACE = "org.bluez.MediaTransport1"
 UNIT_NAME = "bluealsa-aplay.service"
 
 
+def _ms_to_s(value) -> float | None:
+    return value / 1000.0 if isinstance(value, (int, float)) else None
+
+
+def _unwrap(props: dict) -> dict:
+    """`org.freedesktop.DBus.ObjectManager`/`PropertiesChanged` values are
+    dbus_next `Variant`s - `.value` unwraps to a plain Python value.
+    Matches bluetooth_trust.py's own `device.get("Paired").value` idiom
+    rather than dbus_next's introspection-generated property getters, so
+    this doesn't depend on BlueZ's introspection XML shape being what
+    dbus_next's codegen expects.
+    """
+    return {key: variant.value for key, variant in props.items()}
+
+
 class BluetoothAdapter(Adapter):
     renderer_id = "bluetooth"
     release_action = ReleaseAction.DISCONNECT
@@ -61,6 +78,44 @@ class BluetoothAdapter(Adapter):
     def __init__(self) -> None:
         self._bus: MessageBus | None = None
         self._connected_device_path: str | None = None
+        self._on_metadata: Callable[[TrackMetadata], None] | None = None
+        self._on_availability: Callable[[bool], None] | None = None
+        #: Track dict and Position (ms) are separate D-Bus properties that
+        #: can change independently - merged the same way Spotify's
+        #: "seek" event merges onto its last "metadata" event, so a
+        #: Position-only update doesn't report a blank title/artist/album.
+        self._last_track: dict = {}
+        self._last_position_ms: int | None = None
+
+    def on_metadata_change(self, callback: Callable[[TrackMetadata], None]) -> None:
+        """state.py hooks in here (Phase 3 criterion 1)."""
+        self._on_metadata = callback
+
+    def on_availability_change(self, callback: Callable[[bool], None]) -> None:
+        """George's decision, 2026-09-12: "available" means BlueZ is
+        reachable over D-Bus, independent of whether a phone is connected.
+        True once the system bus connects, False while `run()`'s outer loop
+        is in its retry sleep after losing the connection.
+        """
+        self._on_availability = callback
+
+    def _report_metadata(self) -> None:
+        if self._on_metadata is None:
+            return
+        self._on_metadata(
+            TrackMetadata(
+                title=self._last_track.get("Title"),
+                artist=self._last_track.get("Artist"),
+                album=self._last_track.get("Album"),
+                # No artwork or sample rate over AVRCP - MediaPlayer1's
+                # Track dict (doc/org.bluez.MediaPlayer.rst) has no such
+                # fields, matching ADR-0014's "Bluetooth supplies no
+                # artwork" expectation rather than an omission here.
+                position=_ms_to_s(self._last_position_ms),
+                duration=_ms_to_s(self._last_track.get("Duration")),
+                source_type="bluetooth",
+            )
+        )
 
     async def run(self, on_acquire, on_release) -> None:
         # on_release: not wired up - a Bluetooth disconnect is the same
@@ -70,6 +125,8 @@ class BluetoothAdapter(Adapter):
                 await self._watch(on_acquire)
             except Exception as exc:  # noqa: BLE001 - keep watching regardless
                 logger.warning("bluetooth: D-Bus watch failed (%s), retrying in 5s", exc)
+                if self._on_availability is not None:
+                    self._on_availability(False)
                 await asyncio.sleep(5)
 
     async def _watch(self, on_acquire) -> None:
@@ -78,16 +135,23 @@ class BluetoothAdapter(Adapter):
         root = self._bus.get_proxy_object(BLUEZ_SERVICE, "/", introspection)
         obj_manager = root.get_interface(OBJECT_MANAGER_IFACE)
 
+        if self._on_availability is not None:
+            self._on_availability(True)
+
         managed = await obj_manager.call_get_managed_objects()
         for path, ifaces in managed.items():
             if MEDIA_PLAYER_IFACE in ifaces:
                 self._connected_device_path = self._device_path_for_player(path)
                 logger.info("bluetooth: MediaPlayer1 already present at %s on startup", path)
+                self._seed_metadata(ifaces[MEDIA_PLAYER_IFACE])
+                asyncio.create_task(self._attach_media_player(path))
 
         def on_interfaces_added(path, interfaces):
             if MEDIA_PLAYER_IFACE in interfaces:
                 self._connected_device_path = self._device_path_for_player(path)
                 logger.info("bluetooth: MediaPlayer1 appeared at %s (acquisition)", path)
+                self._seed_metadata(interfaces[MEDIA_PLAYER_IFACE])
+                asyncio.create_task(self._attach_media_player(path))
                 on_acquire()
             if MEDIA_TRANSPORT_IFACE in interfaces:
                 self._connected_device_path = self._device_path_for_player(path)
@@ -100,6 +164,9 @@ class BluetoothAdapter(Adapter):
             ):
                 logger.info("bluetooth: MediaPlayer1 removed at %s", path)
                 self._connected_device_path = None
+                self._last_track = {}
+                self._last_position_ms = None
+                self._report_metadata()
 
         obj_manager.on_interfaces_added(on_interfaces_added)
         obj_manager.on_interfaces_removed(on_interfaces_removed)
@@ -107,6 +174,52 @@ class BluetoothAdapter(Adapter):
         # Idle forever; callbacks above do the work. Exits (and the outer
         # loop reconnects) only if the bus connection itself drops.
         await self._bus.wait_for_disconnect()
+
+    def _seed_metadata(self, player_props: dict) -> None:
+        """`player_props` is straight from ObjectManager (Variant-valued) -
+        the initial snapshot, before any PropertiesChanged signal fires."""
+        props = _unwrap(player_props)
+        if "Track" in props:
+            self._last_track = _unwrap(props["Track"])
+        if "Position" in props:
+            self._last_position_ms = props["Position"]
+        self._report_metadata()
+
+    async def _attach_media_player(self, player_path: str) -> None:
+        """Subscribes to this MediaPlayer1's own PropertiesChanged, so track
+        changes and position updates after the initial snapshot are
+        reported too - not just the acquisition edge `on_acquire()` needs.
+
+        **Not yet hardware-verified against a real phone connection** - the
+        double-unwrap in `on_properties_changed` below (dbus_next Variants
+        nest one level deeper for a dict-valued property like `Track`) is
+        inferred from dbus_next's documented Variant behaviour, not
+        confirmed against BlueZ's actual signal payload on `gexis`. See
+        HANDOFF.md.
+        """
+        try:
+            introspection = await self._bus.introspect(BLUEZ_SERVICE, player_path)
+            player = self._bus.get_proxy_object(
+                BLUEZ_SERVICE, player_path, introspection
+            ).get_interface(MEDIA_PLAYER_IFACE)
+        except Exception as exc:  # noqa: BLE001 - metadata is best-effort
+            logger.warning("bluetooth: could not attach to %s: %s", player_path, exc)
+            return
+
+        def on_properties_changed(interface_name, changed, invalidated):
+            # `changed`'s values are Variants; "Track" is itself a
+            # `dict[str, Variant]` (D-Bus `a{sv}`) once unwrapped once, so
+            # it needs a second unwrap - the same two-level shape
+            # `_seed_metadata` handles for the ObjectManager snapshot.
+            changed = _unwrap(changed)
+            if "Track" in changed:
+                self._last_track = _unwrap(changed["Track"])
+            if "Position" in changed:
+                self._last_position_ms = changed["Position"]
+            if "Track" in changed or "Position" in changed:
+                self._report_metadata()
+
+        player.on_properties_changed(on_properties_changed)
 
     @staticmethod
     def _device_path_for_player(player_path: str) -> str:
