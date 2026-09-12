@@ -1,6 +1,6 @@
 # Handoff
 
-Last updated: 2026-09-12 (tenth session — Phase 2d closed)
+Last updated: 2026-09-12 (tenth session — **PHASE 2 CLOSED**)
 
 ## Where things stand
 
@@ -1873,8 +1873,29 @@ reverted, currently-flashed image predates this fix.
    (freezes the wrong elapsed value on screen), and powering the player back on
    mid-session (evicts the renderer that just took over).
 
-1. **NEXT: Phase 2c, criteria 7-10 — the takeover-gap distribution, re-measured
-   against ADR-0027.** Every number in Finding 015 predates the mechanism 2d
+1. **~~Phase 2c, criteria 7-10~~ — DONE. PHASE 2 IS CLOSED, 2026-09-12.**
+   All ten criteria met on the flashed image `v0.2.1-51-g89dca15-dirty`:
+   - **Criterion 7** (Finding 019): 24/24 genuinely contended rounds, zero
+     violations. The old attack test had silently stopped contending under
+     ADR-0027 and would have reported a false pass.
+   - **Criteria 8/9** (Finding 020): n=33 LMS→Spotify (median **224.6 ms**)
+     and n=27 Spotify→LMS (median **335.2 ms**), against Finding 015's
+     1827.8 ms and 4170.9 ms — 8.1x and 12.4x. Zero product-side failures
+     across 72 attempted rounds. Finding 020 supersedes Finding 015.
+   - **Criterion 10**: transition screen shown by default, skipped only for
+     a pair measured under 1s. Today that exempts same-rate LMS↔Spotify and
+     nothing else.
+
+   **Five deferrals are listed in `docs/DEVELOPMENT.md` under the Phase 2
+   closure block** — read them before treating Phase 2 as complete in every
+   sense. The cross-rate half of criterion 8 is **unmet**, not
+   met-with-caveats.
+
+   **Next phase is 3** (core state daemon), whose criterion 1 now has to
+   publish "no renderer holds the device" and per-renderer availability —
+   see ADR-0027.
+
+   *Superseded wording follows:* Every number in Finding 015 predates the mechanism 2d
    replaced, so they are all stale: the LMS→Spotify handoff is now 0.7-0.9s
    against that finding's 1827.8ms median, and criterion 10's
    transition-screen answer is likely per-pair rather than global
