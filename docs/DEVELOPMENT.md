@@ -260,6 +260,12 @@ capability-driven transport controls.
    does nothing in fixed mode.
 6. Boot volume is the configured safe level, not restored.
 7. No renderer can be made to play while another holds the device.
+   **MET for LMS↔Spotify, 2026-09-12** — 24/24 genuinely contended rounds,
+   zero violations, with no ladder escalation and `NRestarts=0` throughout
+   (Finding 019). **Unproven for any Bluetooth-involving pair**, deferred
+   with criterion 8's Bluetooth leg for the same reason. Note the previous
+   attack test had silently stopped contending at all under ADR-0027's
+   acquisition model and would have reported a false pass — see the finding.
 8. Takeover gap: time from stop of renderer A to first sample of renderer B,
    measured same-rate and cross-rate, reported as a distribution over at
    least 20 runs.
