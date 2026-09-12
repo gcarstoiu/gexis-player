@@ -127,6 +127,48 @@ pauses instead, because it is the base.**
   an exception for each of these, and the list would keep growing. The rule is
   about accountability, not about silence.
 
+### Handoff transition screen — shown by default, skipped only where measured fast
+
+**George's decision, 2026-09-12, closing criterion 10.** The UI has a
+handoff transition state. Whether it is *shown* is decided per renderer
+pair, on measured evidence:
+
+- **Default: show it.** Any pair that has not been measured shows the
+  transition state. Unmeasured is treated as slow, not as fast.
+- **Skip it for a pair proven fast.** A pair whose measured takeover gap
+  sits comfortably below the threshold is exempt, because a transition
+  state that appears and vanishes inside a few hundred milliseconds is
+  itself a flicker — noise, not information.
+
+**Threshold: 1 second**, as an initial value open to revision once more
+pairs are measured. Chosen because it is roughly where a gap stops reading
+as "the next thing is starting" and starts reading as "something is
+wrong" — the failure this record's accountability rule exists to prevent.
+Nothing in the measurements forces exactly 1s; the two measured pairs sit
+at ~0.2-0.35s and the unmeasured slow one at ~3s, so anything from about
+0.5s to 1.5s would classify today's pairs identically.
+
+Current classification, from [Finding 020](../findings/020-criterion8-takeover-gap-adr0027.md)
+and [Finding 019](../findings/019-criterion7-attack-test-adr0027.md):
+
+| pair | measured gap | transition screen |
+|---|---|---|
+| LMS ↔ Spotify, same rate | 224.6 / 335.2 ms median | **skipped** — proven fast |
+| Any Bluetooth pair | unmeasured; Bluetooth's own release is 2.5-2.9s | **shown** |
+| Cross-rate, any pair | unmeasured (no non-44.1kHz content exists to test with) | **shown** |
+
+This is deliberately evidence-gated rather than a fixed list: a pair earns
+its exemption by being measured, and loses it if a later measurement moves
+it above the threshold. It also means the honest answer to "does handoff
+need a transition screen" is **yes, and it is skipped in the one case we
+have proven it is not needed** — not the flat "no" that generalising from
+LMS↔Spotify alone would have given.
+
+**Consequence for Phase 4:** the transition state is a real UI requirement,
+not an optional nicety, and the renderer pair has to be known at render
+time to decide whether to show it. That sits alongside Phase 4's other new
+requirement from ADR-0027 — representing "no renderer holds the device".
+
 ### LMS power state
 
 > **REVERSED by [ADR-0027](0027-lms-power-as-arbitration-mechanism.md)

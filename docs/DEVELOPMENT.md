@@ -197,6 +197,25 @@ this knowingly — he uses the LMS app anyway — but it is the reason
 activation was pulled into Phase 4 rather than left to Phase 6's
 capability-driven transport controls.
 
+**PHASE 2 CLOSED, 2026-09-12.** All ten criteria met, with five items
+carried out explicitly deferred rather than silently unmet. Sub-phases
+2a/2b/2c/2d all closed; the whole phase was verified on the flashed image
+`v0.2.1-51-g89dca15-dirty`, not on hand-installed builds.
+
+**What is deferred, and therefore what this closure does NOT claim:**
+
+| deferred | criterion | why |
+|---|---|---|
+| Bluetooth's release ladder still does not free the device | 4 | Found 2026-09-08, never re-reproduced since the busy-check fix; George's decision 2026-09-10 to defer. ADR-0010 "Open". |
+| Fixed output mode is unimplemented | 5 | Only variable mode is built and verified. ADR-0018. Most naturally built once mode selection has a UI (Phase 4+). |
+| Criterion 7 unproven for Bluetooth pairs | 7 | Not scriptable — contested rounds need a human tapping a phone each time. |
+| Cross-rate takeover gap unmeasured | 8, 9 | A 60,974-track library scan found zero non-44.1kHz files. Needs test content sourced first. **This half of criterion 8 is unmet, not met-with-caveats.** |
+| Bluetooth takeover gap unmeasured | 8, 9, 10 | Same scriptability limit. Bluetooth pairs therefore show the transition screen by default. |
+
+Also carried forward, decided rather than open: Bluetooth discoverability
+stays at BlueZ's 3-minute default (ADR-0024), so re-pairing after a reflash
+must happen within three minutes of boot.
+
 **Acceptance**
 
 1. squeezelite, go-librespot and bluealsa-aplay installed, each writing to
@@ -303,7 +322,17 @@ capability-driven transport controls.
    LMS↔Spotify only, activation route only, cross-rate and Bluetooth
    deferred and explicitly unmet.
 10. ADR-0010 **and ADR-0027** amended to say whether handoff needs a
-    transition screen. **Note the answer is now likely per-pair, not
+    transition screen. **MET, 2026-09-12 — George's decision: the screen
+    exists and is shown by DEFAULT, skipped only for a pair measured below
+    1 second.** Evidence-gated rather than a fixed list: a pair earns its
+    exemption by being measured and loses it if a later measurement moves
+    it back above. Today that exempts same-rate LMS↔Spotify (224.6 /
+    335.2 ms) and exempts nothing else — Bluetooth pairs and cross-rate are
+    unmeasured and therefore show it. Recorded in ADR-0010's "Handoff
+    transition screen" section; ADR-0027 cross-references it.
+    **Consequence:** the transition state is a real Phase 4 requirement,
+    and the renderer pair must be known at render time to decide whether to
+    show it. **Note the answer is now likely per-pair, not
     global:** LMS↔Spotify handoffs measured 0.07-0.7s under ADR-0027,
     while Bluetooth→LMS is still gated by Bluetooth's own 2.5-2.9s
     release, which ADR-0027 does not touch.

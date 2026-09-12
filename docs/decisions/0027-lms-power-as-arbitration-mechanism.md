@@ -165,6 +165,17 @@ not a broken one. With the daemon down there is no arbitration at all and
 activating LMS will take the device from a playing renderer, which is true today
 and not made worse.
 
+## Criterion 10 — the transition screen
+
+Answered 2026-09-12 and recorded in
+[ADR-0010](0010-arbitration-slot-model.md#handoff-transition-screen--shown-by-default-skipped-only-where-measured-fast)
+rather than duplicated here: the screen is **shown by default and skipped
+only for a pair measured below 1 second**. This ADR is what moved
+LMS↔Spotify into the exempt column — 224.6 ms and 335.2 ms medians
+(Finding 020) against the 1827.8 ms and 4170.9 ms this mechanism replaced.
+Bluetooth pairs are unmeasured and Bluetooth's own release is untouched by
+this decision, so they show the screen.
+
 ## What this changes in the plan
 
 Recorded here because the decision creates work that did not previously
