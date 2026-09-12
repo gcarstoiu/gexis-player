@@ -15,24 +15,44 @@ import logging
 from typing import Callable, Mapping
 
 from gexis_core.adapters.base import Capabilities
-from gexis_core.model import BLANK_METADATA, PlaybackState, TrackMetadata
+from gexis_core.model import (
+    BLANK_METADATA,
+    Handoff,
+    PlaybackState,
+    TrackMetadata,
+    VolumeState,
+)
+from gexis_core.volume import raw_to_db
 
 logger = logging.getLogger("gexis_core.state")
 
 
 class StateStore:
-    def __init__(self, capabilities: Mapping[str, Capabilities]) -> None:
+    def __init__(
+        self,
+        capabilities: Mapping[str, Capabilities],
+        *,
+        handoff_exempt_pairs: tuple[tuple[str, str], ...] = (),
+    ) -> None:
         """`capabilities` is the single source of truth for which
         renderers exist (Phase 3 criterion 2) - one dict, not a separate
         renderer-id list that could drift from it. Static for the process
         lifetime: every adapter declares the same contract regardless of
         configuration, so this is captured once here rather than re-read
         per broadcast.
+
+        `handoff_exempt_pairs` is published, not applied here (Phase 4
+        criterion 4) - this store has no opinion on whether a transition
+        screen is shown; it only carries the evidence-gated list the UI
+        decides from.
         """
         self._capabilities = dict(capabilities)
+        self._handoff_exempt_pairs = tuple(tuple(p) for p in handoff_exempt_pairs)
         self._available: dict[str, bool] = {rid: False for rid in capabilities}
         self._metadata: dict[str, TrackMetadata] = {}
         self._active: str | None = None
+        self._handoff: Handoff | None = None
+        self._volume: VolumeState | None = None
         self._subscribers: list[Callable[[PlaybackState], None]] = []
 
     def subscribe(self, callback: Callable[[PlaybackState], None]) -> None:
@@ -51,6 +71,9 @@ class StateStore:
             available=dict(self._available),
             metadata=metadata,
             capabilities=dict(self._capabilities),
+            handoff=self._handoff,
+            volume=self._volume,
+            handoff_exempt_pairs=self._handoff_exempt_pairs,
         )
 
     def set_active(self, renderer_id: str | None) -> None:
@@ -92,6 +115,39 @@ class StateStore:
         self._metadata[renderer_id] = metadata
         if renderer_id == self._active:
             self._notify()
+
+    def set_handoff(self, from_renderer: str | None, to_renderer: str | None) -> None:
+        """Called by the supervisor at both edges of a takeover (Phase 4
+        criterion 4) - the pair when one starts, `(None, None)` when it
+        finishes. Only a takeover *from* someone has a pair to report: a
+        cold acquisition with nobody holding the device is not a handoff
+        and publishes nothing.
+        """
+        handoff = (
+            Handoff(from_renderer=from_renderer, to_renderer=to_renderer)
+            if from_renderer is not None and to_renderer is not None
+            else None
+        )
+        if handoff == self._handoff:
+            return
+        logger.info(
+            "state: handoff %s",
+            f"{handoff.from_renderer} -> {handoff.to_renderer}" if handoff else "finished",
+        )
+        self._handoff = handoff
+        self._notify()
+
+    def set_volume_raw(self, raw: int) -> None:
+        """The shared hardware mixer moved (Phase 4 criterion 8). Takes the
+        raw 0-240 value - the only unit the hardware actually has - and
+        derives dB and percent in the model, so no caller has to know
+        ADR-0018's scale to report a level.
+        """
+        volume = VolumeState(raw=raw, db=raw_to_db(raw))
+        if volume == self._volume:
+            return
+        self._volume = volume
+        self._notify()
 
     def _notify(self) -> None:
         state = self.state

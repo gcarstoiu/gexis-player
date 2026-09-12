@@ -608,3 +608,73 @@ async def test_reacquiring_after_relinquish_works():
 
     assert supervisor.active == "lms"
     assert adapters["lms"].device_freed_calls == 1
+
+
+# --- Phase 4 criterion 4: handoff pair reporting ---------------------------
+
+
+@pytest.mark.asyncio
+async def test_handoff_reports_the_pair_at_both_edges():
+    """The transition screen needs the pair, and needs a start and an end
+    to appear and disappear on."""
+    holder = {"who": None}
+    adapters = {
+        "lms": FakeAdapter("lms", ReleaseAction.PAUSE, holder),
+        "spotify": FakeAdapter("spotify", ReleaseAction.DISCONNECT, holder),
+        "bluetooth": FakeAdapter("bluetooth", ReleaseAction.DISCONNECT, holder),
+    }
+    seen: list[tuple[str | None, str | None]] = []
+    supervisor = Supervisor(
+        adapters,
+        device_busy=lambda renderer_id: holder["who"] == renderer_id,
+        ladder=FAST_LADDER,
+        on_handoff_change=lambda f, t: seen.append((f, t)),
+    )
+    supervisor._active = "lms"
+    holder["who"] = "lms"
+
+    await supervisor.acquire("spotify")
+
+    assert seen == [("lms", "spotify"), (None, None)]
+
+
+@pytest.mark.asyncio
+async def test_a_cold_acquisition_is_not_a_handoff():
+    """Nobody holding the device is not a takeover - there is no pair, so
+    nothing should be published for a transition screen to show."""
+    supervisor, _, _ = build()
+    seen: list[tuple[str | None, str | None]] = []
+    supervisor._on_handoff_change = lambda f, t: seen.append((f, t))
+
+    await supervisor.acquire("spotify")
+
+    assert seen == []
+
+
+@pytest.mark.asyncio
+async def test_handoff_is_cleared_even_if_the_release_raises():
+    """A transition screen stuck on forever because the ladder blew up
+    would be exactly the unaccountable state ADR-0010 forbids."""
+    holder = {"who": "lms"}
+
+    class ExplodingLms(FakeAdapter):
+        async def release(self):
+            raise RuntimeError("boom")
+
+    adapters = {
+        "lms": ExplodingLms("lms", ReleaseAction.PAUSE, holder),
+        "spotify": FakeAdapter("spotify", ReleaseAction.DISCONNECT, holder),
+    }
+    seen: list[tuple[str | None, str | None]] = []
+    supervisor = Supervisor(
+        adapters,
+        device_busy=lambda renderer_id: holder["who"] == renderer_id,
+        ladder=FAST_LADDER,
+        on_handoff_change=lambda f, t: seen.append((f, t)),
+    )
+    supervisor._active = "lms"
+
+    with pytest.raises(RuntimeError):
+        await supervisor.acquire("spotify")
+
+    assert seen == [("lms", "spotify"), (None, None)]

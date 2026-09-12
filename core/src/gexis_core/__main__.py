@@ -20,7 +20,15 @@ from gexis_core.metadata_file import MetadataFileWriter
 from gexis_core.renderer_volume import RendererVolumeMemory
 from gexis_core.settings import SettingsStore
 from gexis_core.state import StateStore
-from gexis_core.volume import DUMMY_CONTROL, DummyMixerBridge, VolumeBridge, db_to_raw, get_raw, raw_to_db
+from gexis_core.volume import (
+    DUMMY_CONTROL,
+    DummyMixerBridge,
+    VolumeBridge,
+    db_to_raw,
+    get_raw,
+    percent_to_raw,
+    raw_to_db,
+)
 from gexis_core.wsserver import StateServer
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(levelname)s %(message)s")
@@ -130,7 +138,10 @@ async def main() -> None:
     # own metadata/availability reports below - constructed before
     # Supervisor for the same closure reason as volume_bridge (its
     # callbacks reference `supervisor`, assigned later).
-    state_store = StateStore({rid: adapter.capabilities for rid, adapter in adapters.items()})
+    state_store = StateStore(
+        {rid: adapter.capabilities for rid, adapter in adapters.items()},
+        handoff_exempt_pairs=config.handoff_exempt_pairs,
+    )
 
     # Criterion 4: moOde-compatible metadata file, subscribed the same way
     # StateServer is - a plain callback on every published state change.
@@ -170,6 +181,7 @@ async def main() -> None:
         software_api_adapters[0],
         volume_memory=volume_memory,
         get_active_renderer=lambda: supervisor.active,
+        on_hardware_level=state_store.set_volume_raw,
     )
     restore_volume = make_restore_volume(config, volume_memory, volume_bridge)
 
@@ -178,6 +190,7 @@ async def main() -> None:
         device_busy=lambda renderer_id: alsa.device_held_by(adapters[renderer_id].unit_name),
         restore_volume=restore_volume,
         on_active_change=state_store.set_active,
+        on_handoff_change=state_store.set_handoff,
     )
 
     for renderer_id, adapter in adapters.items():
@@ -186,7 +199,44 @@ async def main() -> None:
             lambda available, rid=renderer_id: state_store.set_available(rid, available)
         )
 
-    state_server = StateServer(state_store, host=config.state_host, port=config.state_port)
+    # ADR-0028's command surface. Both handlers live here rather than in
+    # wsserver.py so that module stays transport-only and knows nothing
+    # about adapters or mixer scales.
+    async def activate(renderer_id: str) -> bool:
+        adapter = adapters[renderer_id]
+        activate_method = getattr(adapter, "activate", None)
+        if activate_method is None:
+            # Declared `activate` in capabilities but has no method - a
+            # contract violation on our own side, not a user error.
+            logger.error("command: %s declares activate but implements none", renderer_id)
+            return False
+        return await activate_method()
+
+    async def set_volume(percent: float) -> bool:
+        raw = percent_to_raw(percent)
+        logger.info("command: volume -> %.0f%% (raw %s/240)", percent, raw)
+        # Through the bridge, never set_raw() directly - the echo window is
+        # what stops this write being read back as an external change and
+        # bounced out to the active renderer (Finding 009 §1, which cost a
+        # round of "volume is behind/inverted" reports).
+        await volume_bridge.write_hardware(raw)
+        return True
+
+    state_server = StateServer(
+        state_store,
+        host=config.state_host,
+        port=config.state_port,
+        activate=activate,
+        set_volume=set_volume,
+    )
+
+    # The mixer's level at startup, so the published state carries one
+    # before anybody touches the volume. `None` if amixer's output could
+    # not be parsed, which stays None in the payload rather than becoming
+    # a guessed number.
+    initial_raw = await get_raw(config.mixer_name)
+    if initial_raw is not None:
+        state_store.set_volume_raw(initial_raw)
 
     def make_on_acquire(renderer_id: str):
         def _on_acquire() -> None:

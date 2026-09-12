@@ -70,6 +70,7 @@ class Supervisor:
         ladder: TimeoutLadder | None = None,
         restore_volume=None,
         on_active_change=None,
+        on_handoff_change=None,
     ) -> None:
         """`device_busy` is a one-arg callable (sync or async), taking a
         renderer_id and returning whether *that specific renderer* still
@@ -109,6 +110,12 @@ class Supervisor:
         self._ladder = ladder or TimeoutLadder()
         self._restore_volume = restore_volume
         self._on_active_change = on_active_change
+        #: Phase 4 criterion 4. Called `(outgoing, incoming)` when a
+        #: takeover starts and `(None, None)` when it finishes - both
+        #: edges, so a transition screen has something to appear and
+        #: disappear on. Same sync, non-blocking contract as
+        #: `on_active_change`.
+        self._on_handoff_change = on_handoff_change
         # None means *nobody* holds the device (ADR-0027). Until
         # 2026-09-12 this same None meant "LMS", which is why the
         # distinction is called out rather than left to the type.
@@ -166,29 +173,49 @@ class Supervisor:
             # held by whoever's being released - so restoring its volume
             # only after release completes costs nothing and removes the
             # blip.
+            # Phase 4 criterion 4: a takeover is in flight from here until
+            # the whole sequence below finishes. Reported at both edges so
+            # the UI can show a transition state for the *pair* - and
+            # cleared in a `finally` because a handoff that got stuck on
+            # screen because the ladder raised would be exactly the
+            # unaccountable state ADR-0010 exists to prevent. Only a
+            # takeover has a pair: a cold acquisition with nobody holding
+            # the device reports nothing.
             if outgoing is not None:
-                await self._release_with_ladder(outgoing)
-            if self._restore_volume is not None:
-                await self._restore_volume(renderer_id)
-            # Finding 014: give the incoming renderer a chance to retry its
-            # own acquisition now that the device is confirmed free - by
-            # default a no-op (adapters/base.py's device_freed docstring),
-            # only SpotifyAdapter currently overrides it. Volume is
-            # restored first so a renderer whose retry actually starts
-            # audible playback here does so at the right level from the
-            # first sample, not a beat later.
-            await self._adapters[renderer_id].device_freed()
-            # Finding 013 §1's recurrence, 2026-09-11: give the outgoing
-            # renderer a chance to come back under our own control if it
-            # had to be stopped rather than relying on systemd's automatic
-            # Restart= - by default a no-op, only LmsAdapter currently
-            # overrides it. Called last, after the incoming renderer has
-            # had its own settled chance at the device, not because that
-            # guarantees success (see adapters/base.py's docstring on the
-            # residual risk), just because it's the best available
-            # ordering.
-            if outgoing is not None:
-                await self._adapters[outgoing].restart_after_release()
+                self._notify_handoff(outgoing, renderer_id)
+            try:
+                await self._acquire_sequence(outgoing, renderer_id)
+            finally:
+                if outgoing is not None:
+                    self._notify_handoff(None, None)
+
+    async def _acquire_sequence(self, outgoing: str | None, renderer_id: str) -> None:
+        """The release/restore/retry steps of an acquisition, extracted from
+        `acquire` only so the handoff edges above can bracket it in a
+        `finally` without indenting the whole body."""
+        if outgoing is not None:
+            await self._release_with_ladder(outgoing)
+        if self._restore_volume is not None:
+            await self._restore_volume(renderer_id)
+        # Finding 014: give the incoming renderer a chance to retry its
+        # own acquisition now that the device is confirmed free - by
+        # default a no-op (adapters/base.py's device_freed docstring),
+        # only SpotifyAdapter currently overrides it. Volume is
+        # restored first so a renderer whose retry actually starts
+        # audible playback here does so at the right level from the
+        # first sample, not a beat later.
+        await self._adapters[renderer_id].device_freed()
+        # Finding 013 §1's recurrence, 2026-09-11: give the outgoing
+        # renderer a chance to come back under our own control if it
+        # had to be stopped rather than relying on systemd's automatic
+        # Restart= - by default a no-op, only LmsAdapter currently
+        # overrides it. Called last, after the incoming renderer has
+        # had its own settled chance at the device, not because that
+        # guarantees success (see adapters/base.py's docstring on the
+        # residual risk), just because it's the best available
+        # ordering.
+        if outgoing is not None:
+            await self._adapters[outgoing].restart_after_release()
 
     async def relinquish(self, renderer_id: str) -> None:
         """`renderer_id` gave up the device without anyone taking it over -
@@ -223,6 +250,10 @@ class Supervisor:
     def _notify_active_change(self) -> None:
         if self._on_active_change is not None:
             self._on_active_change(self._active)
+
+    def _notify_handoff(self, from_renderer: str | None, to_renderer: str | None) -> None:
+        if self._on_handoff_change is not None:
+            self._on_handoff_change(from_renderer, to_renderer)
 
     async def _release_with_ladder(self, renderer_id: str) -> ReleaseOutcome:
         adapter = self._adapters[renderer_id]

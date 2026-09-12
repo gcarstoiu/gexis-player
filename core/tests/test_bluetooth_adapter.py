@@ -285,3 +285,85 @@ async def test_attach_media_player_ignores_a_signal_for_another_interface():
     callback("org.bluez.Device1", {"Connected": Variant("b", False)}, [])
 
     assert received == []
+
+
+# --- Phase 4: transport state and codec -----------------------------------
+
+
+def test_status_maps_onto_the_normalised_transport_vocabulary():
+    adapter = BluetoothAdapter()
+    received = []
+    adapter.on_metadata_change(received.append)
+
+    for status, expected in (
+        ("playing", "playing"),
+        ("paused", "paused"),
+        ("stopped", "stopped"),
+        ("forward-seek", "playing"),
+        ("reverse-seek", "playing"),
+    ):
+        adapter._seed_metadata({"Status": Variant("s", status)})
+        assert received[-1].transport == expected
+
+
+def test_an_error_status_reports_no_transport_rather_than_guessing():
+    adapter = BluetoothAdapter()
+    received = []
+    adapter.on_metadata_change(received.append)
+
+    adapter._seed_metadata({"Status": Variant("s", "error")})
+
+    assert received[-1].transport is None
+
+
+def test_codec_is_resolved_from_the_transport_byte():
+    adapter = BluetoothAdapter()
+    received = []
+    adapter.on_metadata_change(received.append)
+
+    adapter._seed_codec({"Codec": Variant("y", 0x02)})
+
+    assert received[-1].codec == "AAC"
+
+
+def test_a_vendor_codec_is_named_vendor_not_guessed():
+    """0xFF is A2DP's vendor escape - aptX and LDAC live behind it and need
+    the vendor ID parsed out of Configuration, which we don't do."""
+    adapter = BluetoothAdapter()
+    received = []
+    adapter.on_metadata_change(received.append)
+
+    adapter._seed_codec({"Codec": Variant("y", 0xFF)})
+
+    assert received[-1].codec == "vendor"
+
+
+def test_codec_survives_a_track_change():
+    """The codec belongs to the connection, not the track."""
+    adapter = BluetoothAdapter()
+    received = []
+    adapter.on_metadata_change(received.append)
+    adapter._seed_codec({"Codec": Variant("y", 0x00)})
+
+    adapter._seed_metadata(
+        {"Track": Variant("a{sv}", {"Title": Variant("s", "Next Song")})}
+    )
+
+    assert received[-1].title == "Next Song"
+    assert received[-1].codec == "SBC"
+
+
+def test_disconnect_clears_transport_and_codec():
+    adapter = BluetoothAdapter()
+    adapter._connected_device_path = "/org/bluez/hci0/dev_XX"
+    adapter._last_transport = "playing"
+    adapter._last_codec = "SBC"
+    received = []
+    adapter.on_metadata_change(received.append)
+
+    adapter._handle_interfaces_removed(
+        "/org/bluez/hci0/dev_XX/player0", {MEDIA_PLAYER_IFACE: {}}, lambda: None
+    )
+
+    assert received[-1].transport is None
+    assert received[-1].codec is None

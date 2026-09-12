@@ -67,6 +67,19 @@ class Config:
     # wraps it in `Path(...)` itself.
     metadata_file_path: str = "/var/local/www/currentsong.txt"
 
+    # Phase 4 criterion 4: renderer pairs whose measured takeover gap is
+    # below ADR-0010's 1s threshold, so a transition screen would be a
+    # flicker rather than information. Published in the state payload
+    # rather than hardcoded in the UI, because the criterion is explicit
+    # that this is "data, not a constant" - a pair earns its exemption by
+    # being measured (Finding 020: 224.6/335.2ms medians) and loses it if
+    # a later measurement moves it back above. Config rather than a user
+    # setting: it is evidence, not preference.
+    handoff_exempt_pairs: tuple[tuple[str, str], ...] = (
+        ("lms", "spotify"),
+        ("spotify", "lms"),
+    )
+
     @classmethod
     def load(cls, path: Path = DEFAULT_CONFIG_PATH) -> "Config":
         if not path.exists():

@@ -61,6 +61,28 @@ def _ms_to_s(value) -> float | None:
     return value / 1000.0 if isinstance(value, (int, float)) else None
 
 
+#: BlueZ's `MediaPlayer1.Status` values (org.bluez.MediaPlayer.rst) mapped
+#: onto the normalised transport vocabulary (Phase 4 criterion 3). The two
+#: seek states report as playing because that is what they are - audio is
+#: running, the position is moving unusually - and "error" reports as None
+#: rather than being invented as stopped, since we genuinely do not know.
+TRANSPORT_STATUS = {
+    "playing": "playing",
+    "paused": "paused",
+    "stopped": "stopped",
+    "forward-seek": "playing",
+    "reverse-seek": "playing",
+}
+
+#: A2DP codec IDs as they appear in `MediaTransport1.Codec` (a byte).
+#: Phase 4 criterion 3 shows this where a sample rate would otherwise go,
+#: per ADR-0019: "the decode rate is the codec's, not the source's."
+#: 0xFF is A2DP's vendor-specific escape - aptX, LDAC and friends live
+#: behind it and need the vendor ID parsed out of `Configuration` to name,
+#: which is not done here: "vendor" is honest, a guess would not be.
+A2DP_CODECS = {0x00: "SBC", 0x01: "MP3", 0x02: "AAC", 0x04: "ATRAC", 0xFF: "vendor"}
+
+
 def _unwrap(props: dict) -> dict:
     """`org.freedesktop.DBus.ObjectManager`/`PropertiesChanged` values are
     dbus_next `Variant`s - `.value` unwraps to a plain Python value.
@@ -108,6 +130,13 @@ class BluetoothAdapter(Adapter):
         #: Position-only update doesn't report a blank title/artist/album.
         self._last_track: dict = {}
         self._last_position_ms: int | None = None
+        #: MediaPlayer1.Status, normalised (Phase 4 criterion 3).
+        self._last_transport: str | None = None
+        #: MediaTransport1.Codec, resolved to a name (criterion 3 shows it
+        #: where a sample rate would go). Kept separately from the track
+        #: because it belongs to the *connection*, not the track, and
+        #: survives track changes within one session.
+        self._last_codec: str | None = None
 
     def on_metadata_change(self, callback: Callable[[TrackMetadata], None]) -> None:
         """state.py hooks in here (Phase 3 criterion 1)."""
@@ -136,6 +165,8 @@ class BluetoothAdapter(Adapter):
                 position=_ms_to_s(self._last_position_ms),
                 duration=_ms_to_s(self._last_track.get("Duration")),
                 source_type="bluetooth",
+                transport=self._last_transport,
+                codec=self._last_codec,
             )
         )
 
@@ -165,6 +196,11 @@ class BluetoothAdapter(Adapter):
                 logger.info("bluetooth: MediaPlayer1 already present at %s on startup", path)
                 self._seed_metadata(ifaces[MEDIA_PLAYER_IFACE])
                 asyncio.create_task(self._attach_media_player(path))
+            if MEDIA_TRANSPORT_IFACE in ifaces:
+                # A phone already connected when the daemon started - its
+                # codec is readable right now and would otherwise not be
+                # known until the next reconnection.
+                self._seed_codec(ifaces[MEDIA_TRANSPORT_IFACE])
 
         obj_manager.on_interfaces_added(
             lambda path, interfaces: self._handle_interfaces_added(path, interfaces, on_acquire)
@@ -191,6 +227,7 @@ class BluetoothAdapter(Adapter):
         if MEDIA_TRANSPORT_IFACE in interfaces:
             self._connected_device_path = self._device_path_for_player(path)
             logger.info("bluetooth: MediaTransport1 appeared at %s (acquisition)", path)
+            self._seed_codec(interfaces[MEDIA_TRANSPORT_IFACE])
             on_acquire()
 
     def _handle_interfaces_removed(self, path: str, interfaces: dict, on_release) -> None:
@@ -201,6 +238,8 @@ class BluetoothAdapter(Adapter):
             self._connected_device_path = None
             self._last_track = {}
             self._last_position_ms = None
+            self._last_transport = None
+            self._last_codec = None
             self._report_metadata()
             # George, 2026-09-12: found live via the state WebSocket - a
             # Bluetooth disconnect never told the supervisor, so `active`
@@ -223,6 +262,22 @@ class BluetoothAdapter(Adapter):
             self._last_track = _unwrap(props["Track"])
         if "Position" in props:
             self._last_position_ms = props["Position"]
+        if "Status" in props:
+            self._last_transport = TRANSPORT_STATUS.get(props["Status"])
+        self._report_metadata()
+
+    def _seed_codec(self, transport_props: dict) -> None:
+        """`transport_props` is `MediaTransport1`'s own snapshot from
+        ObjectManager. The codec belongs to the connection rather than the
+        track, so it is read once per connection here and then left alone -
+        it does not change mid-session (a codec renegotiation would take a
+        new transport object, which arrives as a fresh InterfacesAdded).
+        """
+        codec = _unwrap(transport_props).get("Codec")
+        if codec is None:
+            return
+        self._last_codec = A2DP_CODECS.get(codec, "vendor")
+        logger.info("bluetooth: codec %s (MediaTransport1.Codec=%s)", self._last_codec, codec)
         self._report_metadata()
 
     async def _attach_media_player(self, player_path: str) -> None:
@@ -268,7 +323,9 @@ class BluetoothAdapter(Adapter):
                 self._last_track = _unwrap(changed["Track"])
             if "Position" in changed:
                 self._last_position_ms = changed["Position"]
-            if "Track" in changed or "Position" in changed:
+            if "Status" in changed:
+                self._last_transport = TRANSPORT_STATUS.get(changed["Status"])
+            if {"Track", "Position", "Status"} & changed.keys():
                 self._report_metadata()
 
         props.on_properties_changed(on_properties_changed)

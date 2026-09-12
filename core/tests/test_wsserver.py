@@ -108,3 +108,149 @@ async def test_a_change_before_any_client_connects_is_not_lost():
             msg = await ws.receive_json()
 
     assert msg["active"] == "lms"
+
+
+# --- Phase 4 / ADR-0028: the REST command surface -------------------------
+
+
+def _activatable_caps(renderer_id: str) -> dict[str, Capabilities]:
+    caps = _caps(renderer_id)
+    return {
+        renderer_id: Capabilities(
+            audio_connection="output",
+            acquisition_events=frozenset({"power_on"}),
+            supports_artwork=True,
+            supports_sample_rate=True,
+            volume_managed=True,
+            volume_mechanism=VolumeMechanism.DUMMY_MIXER,
+            controls=frozenset({"activate"}),
+        )
+    }
+
+
+@pytest.mark.asyncio
+async def test_activate_calls_through_and_reports_success():
+    store = StateStore(_activatable_caps("lms"))
+    called = []
+
+    async def activate(renderer_id):
+        called.append(renderer_id)
+        return True
+
+    server = StateServer(store, activate=activate)
+    async with TestClient(TestServer(server.make_app())) as client:
+        resp = await client.post("/renderer/lms/activate")
+
+    assert resp.status == 200
+    assert called == ["lms"]
+
+
+@pytest.mark.asyncio
+async def test_activate_reports_an_upstream_failure_rather_than_pretending():
+    """ADR-0020's rule applied to a command: "LMS unreachable" has to reach
+    the caller, which is the whole reason ADR-0028 chose REST over the
+    socket."""
+    store = StateStore(_activatable_caps("lms"))
+
+    async def activate(renderer_id):
+        return False
+
+    server = StateServer(store, activate=activate)
+    async with TestClient(TestServer(server.make_app())) as client:
+        resp = await client.post("/renderer/lms/activate")
+        # Read inside the context: the body is a stream, and the connection
+        # is gone once the client closes.
+        body = await resp.json()
+
+    assert resp.status == 502
+    assert "did not activate" in body["error"]
+
+
+@pytest.mark.asyncio
+async def test_activating_a_renderer_that_declares_no_such_control_is_refused():
+    """Spotify and Bluetooth are taken over by a phone connecting, never by
+    us asking - so the request is a category error, not a failure."""
+    store = StateStore(_caps("spotify"))  # no controls declared
+
+    async def activate(renderer_id):
+        raise AssertionError("must not be called")
+
+    server = StateServer(store, activate=activate)
+    async with TestClient(TestServer(server.make_app())) as client:
+        resp = await client.post("/renderer/spotify/activate")
+
+    assert resp.status == 409
+
+
+@pytest.mark.asyncio
+async def test_activating_an_unknown_renderer_is_a_404():
+    store = StateStore(_caps("lms"))
+
+    async def activate(renderer_id):
+        raise AssertionError("must not be called")
+
+    server = StateServer(store, activate=activate)
+    async with TestClient(TestServer(server.make_app())) as client:
+        resp = await client.post("/renderer/qobuz/activate")
+
+    assert resp.status == 404
+
+
+@pytest.mark.asyncio
+async def test_volume_accepts_a_percent_and_passes_it_on():
+    store = StateStore(_caps("lms"))
+    got = []
+
+    async def set_volume(percent):
+        got.append(percent)
+        return True
+
+    server = StateServer(store, set_volume=set_volume)
+    async with TestClient(TestServer(server.make_app())) as client:
+        resp = await client.post("/volume", json={"percent": 42})
+
+    assert resp.status == 200
+    assert got == [42.0]
+
+
+@pytest.mark.asyncio
+async def test_volume_rejects_a_missing_or_out_of_range_percent():
+    store = StateStore(_caps("lms"))
+
+    async def set_volume(percent):
+        raise AssertionError("must not be called")
+
+    server = StateServer(store, set_volume=set_volume)
+    async with TestClient(TestServer(server.make_app())) as client:
+        assert (await client.post("/volume", json={})).status == 400
+        assert (await client.post("/volume", json={"percent": 101})).status == 400
+        assert (await client.post("/volume", json={"percent": -1})).status == 400
+        assert (await client.post("/volume", json={"percent": "loud"})).status == 400
+
+
+@pytest.mark.asyncio
+async def test_commands_answer_503_when_nothing_is_wired_up():
+    """A truer answer than 404 for a server that has the concept but no
+    wiring behind it."""
+    store = StateStore(_activatable_caps("lms"))
+    server = StateServer(store)
+    async with TestClient(TestServer(server.make_app())) as client:
+        assert (await client.post("/renderer/lms/activate")).status == 503
+        assert (await client.post("/volume", json={"percent": 50})).status == 503
+
+
+@pytest.mark.asyncio
+async def test_the_socket_is_still_publish_only():
+    """ADR-0028: commands are POSTs by decision. A client sending on the
+    socket must be ignored without desyncing the connection."""
+    store = StateStore(_caps("lms"))
+    server = StateServer(store)
+
+    async with TestClient(TestServer(server.make_app())) as client:
+        async with client.ws_connect("/state") as ws:
+            await ws.receive_json()
+            await ws.send_str('{"command": "activate"}')
+            store.set_active("lms")
+            msg = await ws.receive_json()
+
+    assert msg["active"] == "lms"

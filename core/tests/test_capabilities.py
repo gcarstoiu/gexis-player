@@ -39,12 +39,21 @@ def test_all_three_adapters_declare_output_as_the_audio_connection():
         assert cls.capabilities.audio_connection == "output"
 
 
-def test_no_adapter_declares_transport_controls_yet():
-    # Phase 4 has no transport controls beyond LMS activation; Phase 6
-    # ("capability-driven controls") is where this becomes real. Declared
-    # honestly empty rather than invented ahead of that work.
-    for cls in (LmsAdapter, SpotifyAdapter, BluetoothAdapter):
-        assert cls.capabilities.controls == frozenset()
+def test_only_lms_declares_a_control_and_only_activate():
+    """Phase 4 criterion 7 gave `controls` its first entry. Transport
+    proper (play/pause/next/previous/seek) is still Phase 6, and Spotify
+    and Bluetooth declare nothing at all because they are taken over by a
+    phone connecting, never by us asking."""
+    assert LmsAdapter.capabilities.controls == frozenset({"activate"})
+    assert SpotifyAdapter.capabilities.controls == frozenset()
+    assert BluetoothAdapter.capabilities.controls == frozenset()
+
+
+def test_lms_actually_implements_what_it_declares():
+    """A declaration nothing backs is worse than no declaration - the
+    command surface answers 409 from the capability, so a missing method
+    would be a silent no-op with a 200."""
+    assert callable(getattr(LmsAdapter, "activate", None))
 
 
 def test_lms_declares_power_on_as_its_acquisition_event():

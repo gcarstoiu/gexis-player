@@ -65,6 +65,19 @@ def _ms_to_s(value) -> float | None:
     return value / 1000.0 if isinstance(value, (int, float)) else None
 
 
+#: go-librespot's own event names (API.md) mapped onto the normalised
+#: transport vocabulary (Phase 4 criterion 3). "not_playing" is the track
+#: having *finished*, which upstream distinguishes from "stopped" (the
+#: context being empty) - both read as stopped to a screen, and neither is
+#: paused, which is the distinction the criterion actually needs.
+TRANSPORT_EVENTS = {
+    "playing": "playing",
+    "paused": "paused",
+    "not_playing": "stopped",
+    "stopped": "stopped",
+}
+
+
 class SpotifyAdapter(Adapter):
     renderer_id = "spotify"
     release_action = ReleaseAction.DISCONNECT
@@ -169,6 +182,8 @@ class SpotifyAdapter(Adapter):
                         self._handle_metadata_event(frame.get("data") or {})
                     elif event_type == "seek":
                         self._handle_seek_event(frame.get("data") or {})
+                    elif event_type in TRANSPORT_EVENTS:
+                        self._handle_transport_event(event_type)
 
     def _handle_metadata_event(self, data: dict) -> None:
         if self._on_metadata is None:
@@ -182,7 +197,29 @@ class SpotifyAdapter(Adapter):
             position=_ms_to_s(data.get("position")),
             duration=_ms_to_s(data.get("duration")),
             source_type="spotify",
+            # Carried forward, not reset: API.md's "metadata" event means a
+            # new track was *loaded*, which says nothing about whether
+            # playback is running - the transport edges are their own
+            # events. Constructing this object fresh without it would blank
+            # the transport state on every track change and leave it blank
+            # until the next play/pause edge happened to arrive.
+            transport=self._last_metadata.transport if self._last_metadata else None,
         )
+        self._last_metadata = metadata
+        self._on_metadata(metadata)
+
+    def _handle_transport_event(self, event_type: str) -> None:
+        """A play/pause/stop edge (Phase 4 criterion 3).
+
+        Merged onto the last "metadata" event the same way `seek` is:
+        go-librespot's transport events carry only context/uri/play_origin,
+        never the track fields, so reporting one on its own would blank the
+        title. Nothing to merge onto means nothing to report - a transport
+        event before any metadata would be a state with no track in it.
+        """
+        if self._on_metadata is None or self._last_metadata is None:
+            return
+        metadata = replace(self._last_metadata, transport=TRANSPORT_EVENTS[event_type])
         self._last_metadata = metadata
         self._on_metadata(metadata)
 
