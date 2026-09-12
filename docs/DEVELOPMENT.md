@@ -269,6 +269,11 @@ capability-driven transport controls.
 8. Takeover gap: time from stop of renderer A to first sample of renderer B,
    measured same-rate and cross-rate, reported as a distribution over at
    least 20 runs.
+   **MET for the same-rate LMS↔Spotify pair, 2026-09-12** — n=33
+   (LMS→Spotify, median 224.6 ms) and n=27 (Spotify→LMS, median 335.2 ms),
+   both clearing the ≥20 requirement, against Finding 015's 1827.8 ms and
+   4170.9 ms on the old mechanism. Zero product-side failures across 72
+   attempted rounds. See Finding 020.
 
    **Narrowed by George's decision, 2026-09-12, to the same-rate
    LMS↔Spotify pair only.** Two legs are deferred, both for reasons of
@@ -292,6 +297,11 @@ capability-driven transport controls.
    transition-screen answer is therefore a per-pair answer with two pairs
    unmeasured — say so rather than generalising from the one that was.
 9. Result recorded as a finding with scope stated.
+   **MET, 2026-09-12 — [Finding 020](findings/020-criterion8-takeover-gap-adr0027.md)**,
+   which supersedes Finding 015's numbers entirely (those were measured
+   against the mechanism ADR-0027 replaced). Scope stated there: same-rate
+   LMS↔Spotify only, activation route only, cross-rate and Bluetooth
+   deferred and explicitly unmet.
 10. ADR-0010 **and ADR-0027** amended to say whether handoff needs a
     transition screen. **Note the answer is now likely per-pair, not
     global:** LMS↔Spotify handoffs measured 0.07-0.7s under ADR-0027,

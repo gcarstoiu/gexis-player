@@ -20,6 +20,22 @@ side independently.
 
 Only automates the LMS<->Spotify pairs (no phone needed). Bluetooth pairs
 need a live audio source - not attempted here.
+
+**LMS's trigger is selectable since ADR-0027 (2026-09-12), because there are
+now two genuinely different routes back to LMS and they need not have the
+same gap:**
+
+  activate    - power the player on. This is ADR-0027's *acquisition*, the
+                designed path: LMS is restored paused at the position it was
+                released at and our own resume puts playback back.
+  press-play  - send `play` to a deactivated player. LMS's own auto-power-on
+                takes the device and **restarts the track from zero**, which
+                `LmsAdapter.device_freed()` then corrects with a seek. More
+                work in the path, so measure it rather than assume it matches.
+
+`activate` is the default. The original harness hardcoded `cli.play()`,
+which under ADR-0027 silently means the press-play route - measuring the
+variant while believing it measured the primary one.
 """
 
 import statistics
@@ -27,10 +43,34 @@ import sys
 import threading
 import time
 
+import gzip
+import json
+import urllib.request
+
 import lms_cli
 import pcm_holder
 import spotify_api
 from spectrum_fifo import SpectrumReader, measure_takeover_gap
+
+LMS_BASE = "http://192.168.178.188:9000"
+LMS_PLAYER = "e4:5f:01:58:89:07"
+_rpc_id = [0]
+
+
+def lms_rpc(command):
+    """LMS JSON-RPC. Needed alongside lms_cli since ADR-0027's acquisition is
+    `power`, which the CLI helper does not wrap."""
+    _rpc_id[0] += 1
+    body = json.dumps({"id": _rpc_id[0], "method": "slim.request",
+                       "params": [LMS_PLAYER, command]}).encode()
+    req = urllib.request.Request(f"{LMS_BASE}/jsonrpc.js", data=body,
+                                 headers={"Content-Type": "application/json"},
+                                 method="POST")
+    raw = urllib.request.urlopen(req, timeout=5).read()
+    if raw[:2] == b"\x1f\x8b":      # LMS gzips intermittently
+        raw = gzip.decompress(raw)
+    return json.loads(raw).get("result", {})
+
 
 SETTLE_S = 1.5  # after B acquires, let it play briefly before the next round
 TIMEOUT_S = 15
@@ -108,23 +148,82 @@ def measure_one(reader, outgoing_label, incoming_action, incoming_label, timeout
     raise TimeoutError(f"no handoff observed within {timeout}s")
 
 
-def run_pair(direction, n, cli, reader):
-    """direction: 'lms-to-spotify' or 'spotify-to-lms'."""
+class SpotifyUnavailable(Exception):
+    """Spotify's backend would not route to gexis - not a handoff failure.
+
+    Distinguished from a real timeout on purpose. `gexis` drops out of
+    Spotify's device list when go-librespot's idle session lapses (it
+    re-authenticated 15 times in 3.5h on 2026-09-12), and a transfer then
+    404s. Counting that as a skipped *round* understates n and, worse,
+    makes a skip ambiguous - it should mean "the handoff did not happen",
+    never "the remote API was unavailable". Measured cost of not doing
+    this: 10 of 44 rounds lost in the first collection.
+    """
+
+
+def _spotify_take_device(attempts=5, wait=4.0):
+    """Transfer to gexis, re-resolving the device first and retrying while
+    Spotify's backend catches up. Raises SpotifyUnavailable rather than
+    letting a stale device id 404 look like a lost handoff."""
+    for i in range(attempts):
+        try:
+            names = {d["name"]: d["id"] for d in spotify_api.list_devices()}
+        except Exception as exc:
+            print(f"      (device list unavailable: {exc!r}, retry {i + 1}/{attempts})")
+            time.sleep(wait)
+            continue
+        if "gexis" not in names:
+            print(f"      (gexis absent from Spotify's device list, "
+                  f"retry {i + 1}/{attempts})")
+            time.sleep(wait)
+            continue
+        spotify_api.transfer_to_gexis(play=True)
+        return
+    raise SpotifyUnavailable(
+        f"gexis never appeared in Spotify's device list across {attempts} attempts"
+    )
+
+
+def _lms_take_device(cli, how):
+    """The two routes back to LMS under ADR-0027 - see the module docstring."""
+    if how == "activate":
+        lms_rpc(["power", "1"])
+    else:
+        cli.play()
+
+
+def run_pair(direction, n, cli, reader, lms_trigger="activate"):
+    """direction: 'lms-to-spotify' or 'spotify-to-lms'.
+    lms_trigger: 'activate' or 'press-play' (ADR-0027)."""
     gaps = []
     skipped = 0
+    unavailable = 0
     for i in range(n):
         try:
             if direction == "lms-to-spotify":
-                # get LMS playing first
+                # Get LMS playing first. Power on explicitly rather than
+                # relying on play's auto-power-on, which would restart the
+                # track from zero and put a seek inside the setup.
+                lms_rpc(["power", "1"])
                 cli.play()
                 _wait_for_acquire("lms")
                 time.sleep(SETTLE_S)
-                gap = measure_one(reader, "lms", lambda: spotify_api.transfer_to_gexis(play=True), "spotify")
+                gap = measure_one(reader, "lms", _spotify_take_device, "spotify")
             else:
-                spotify_api.transfer_to_gexis(play=True)
+                _spotify_take_device()
                 _wait_for_acquire("spotify")
                 time.sleep(SETTLE_S)
-                gap = measure_one(reader, "spotify", cli.play, "lms")
+                gap = measure_one(
+                    reader, "spotify", lambda: _lms_take_device(cli, lms_trigger), "lms"
+                )
+        except SpotifyUnavailable as e:
+            # Not a round. Spotify's backend could not route to the device,
+            # so no handoff was ever attempted and there is nothing to
+            # measure or to hold against the product.
+            print(f"  round {i}: NOT ATTEMPTED ({e})")
+            unavailable += 1
+            time.sleep(FAILURE_COOLDOWN_S)
+            continue
         except (TimeoutError, AssertionError) as e:
             print(f"  round {i}: SKIPPED ({e}) - cooling down {FAILURE_COOLDOWN_S}s before the next round")
             skipped += 1
@@ -134,7 +233,10 @@ def run_pair(direction, n, cli, reader):
         print(f"  round {i}: {gap * 1000:.1f} ms")
         time.sleep(SETTLE_S)
     if skipped:
-        print(f"  ({skipped} round(s) skipped out of {n} attempted)")
+        print(f"  ({skipped} round(s) SKIPPED - handoff not observed - out of {n})")
+    if unavailable:
+        print(f"  ({unavailable} round(s) NOT ATTEMPTED - Spotify backend "
+              f"would not route to gexis - out of {n})")
     return gaps
 
 
@@ -152,19 +254,22 @@ def report(direction, gaps):
 def main():
     n = int(sys.argv[1]) if len(sys.argv) > 1 else 20
     direction = sys.argv[2] if len(sys.argv) > 2 else "both"
+    lms_trigger = sys.argv[3] if len(sys.argv) > 3 else "activate"
+    assert lms_trigger in ("activate", "press-play"), lms_trigger
 
     cli = lms_cli.LmsCli()
     reader = SpectrumReader().start()
     try:
         if direction in ("both", "lms-to-spotify"):
             print("=== lms-to-spotify ===")
-            gaps = run_pair("lms-to-spotify", n, cli, reader)
+            gaps = run_pair("lms-to-spotify", n, cli, reader, lms_trigger)
             report("lms-to-spotify", gaps)
         if direction in ("both", "spotify-to-lms"):
-            print("=== spotify-to-lms ===")
-            gaps = run_pair("spotify-to-lms", n, cli, reader)
+            print(f"=== spotify-to-lms (lms trigger: {lms_trigger}) ===")
+            gaps = run_pair("spotify-to-lms", n, cli, reader, lms_trigger)
             report("spotify-to-lms", gaps)
     finally:
+        lms_rpc(["power", "1"])
         cli.close()
         reader.stop()
 
