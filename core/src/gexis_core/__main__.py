@@ -15,8 +15,10 @@ from gexis_core.adapters.spotify import SpotifyAdapter
 from gexis_core.arbitration import Supervisor
 from gexis_core.config import Config
 from gexis_core.renderer_volume import RendererVolumeMemory
+from gexis_core.state import StateStore
 from gexis_core import volume
 from gexis_core.volume import DummyMixerBridge, VolumeBridge, db_to_raw, get_raw, raw_to_db
+from gexis_core.wsserver import StateServer
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(levelname)s %(message)s")
 logger = logging.getLogger("gexis_core")
@@ -103,6 +105,13 @@ async def main() -> None:
 
     volume_memory = RendererVolumeMemory()
 
+    # Phase 3 criterion 1: the normalised playback model, published over
+    # the state WebSocket. Wired to the supervisor's active-renderer
+    # changes and each adapter's own metadata/availability reports below -
+    # constructed before Supervisor for the same closure reason as
+    # volume_bridge (its callbacks reference `supervisor`, assigned later).
+    state_store = StateStore(adapters.keys())
+
     # Constructed before Supervisor/restore_volume, which both need to
     # write through it (write_hardware()) rather than around it - its
     # get_active_renderer callback references `supervisor` by closure, so
@@ -120,7 +129,16 @@ async def main() -> None:
         adapters,
         device_busy=lambda renderer_id: alsa.device_held_by(adapters[renderer_id].unit_name),
         restore_volume=restore_volume,
+        on_active_change=state_store.set_active,
     )
+
+    for renderer_id, adapter in adapters.items():
+        adapter.on_metadata_change(lambda metadata, rid=renderer_id: state_store.set_metadata(rid, metadata))
+        adapter.on_availability_change(
+            lambda available, rid=renderer_id: state_store.set_available(rid, available)
+        )
+
+    state_server = StateServer(state_store, host=config.state_host, port=config.state_port)
 
     def make_on_acquire(renderer_id: str):
         def _on_acquire() -> None:
@@ -164,6 +182,7 @@ async def main() -> None:
         volume_bridge.run(),
         lms_volume_bridge.run(),
         bluetooth_volume_bridge.run(),
+        state_server.run(),
     )
 
 

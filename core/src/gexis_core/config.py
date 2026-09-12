@@ -52,6 +52,14 @@ class Config:
     go_librespot_host: str = "127.0.0.1"
     go_librespot_port: int = 3678
 
+    # Phase 3 criterion 1's state WebSocket (wsserver.py). 0.0.0.0 so the
+    # UI (a future phase, running as a separate process - possibly a
+    # remote browser per ARCHITECTURE.md's "same page served to a remote
+    # browser") can reach it without a same-host assumption; nothing about
+    # this state is sensitive enough to warrant binding to loopback only.
+    state_host: str = "0.0.0.0"
+    state_port: int = 8090
+
     @classmethod
     def load(cls, path: Path = DEFAULT_CONFIG_PATH) -> "Config":
         if not path.exists():
