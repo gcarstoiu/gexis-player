@@ -76,13 +76,52 @@ Built this session, all unit-tested (no hardware) and passing (124 tests):
 - **`__main__.py`/`config.py`**: `StateStore`/`StateServer` wired in,
   `state_host`/`state_port` (default `0.0.0.0:8090`) added to `Config`.
 
-**Not done yet, deliberately** - this is one slice, not the whole
-criterion's hardware verification, per the standing "land one change at a
-time" rule: no reflash, no real WebSocket client against the live daemon,
-no confirmation of the two flagged-unverified mappings above. Next: George
-reviews/tests this slice (a WebSocket client against a running
-`gexis-core`, once pushed and, ideally, exercised on `gexis`) before
-criterion 2 (capability declarations) starts.
+**Update, same session: hand-installed on `gexis` and LMS metadata verified
+live, on George's explicit instruction.** This resolves - for this
+instance, not as a standing policy - the "develop-on-hardware workflow
+inversion" question flagged above as discussed-but-undecided: George asked
+directly for the code to be installed on `gexis` and checked against
+`ws://gexis:8090/state`, rather than waiting for a full image rebuild.
+Installed via `pip install --no-deps` from a rsynced copy of `core/` into
+the existing `/opt/gexis-core/venv` (not yet baked into `stage-gexis` or a
+rebuilt image - this is a hand-install for testing, same shape as the
+config/systemd-file loop already documented, now extended to the Python
+core for the first time). `gexis-core.service` restarted cleanly; journal
+shows a clean startup, all three adapters reporting `available: true`,
+`wsserver: listening on ws://0.0.0.0:8090/state`.
+
+**Both flagged-unverified LMS mappings are now confirmed correct against
+the real server:**
+- `playlist_loop[0]` nesting - confirmed. A live query showed title/
+  artist/album/coverid exactly where expected, and end-to-end through the
+  WebSocket for a real local library track (Snow Patrol, "Eyes Open") -
+  title, artist, album, artwork URL, position, duration, remaining_time
+  all correct.
+- Sample rate is Hz, not kHz - confirmed. `tracks` query on three library
+  files all returned `"samplerate": "44100"` (a string, `int()` handles
+  it fine) for 44.1kHz content - LMS-CLI.md's "in KHz" claim is simply
+  wrong, as suspected from its own contradicting example.
+- **New, incidental finding while testing:** the track playing at the
+  time was a remote radio stream (`remote: 1`) - confirmed the `remote`
+  branch's `current_title` fallback works correctly on live data
+  ("Backstreet Boys - Anywhere for You"), and that remote items report no
+  `samplerate` at all (not a bug - LMS has nothing to report for a stream
+  it hasn't decoded). `remoteMeta` (a field not previously known about)
+  duplicates title/artist/album/coverid for remote items - not used, since
+  `playlist_loop`/`current_title` already covered it, but worth knowing it
+  exists.
+
+**Caused a live playback interruption while testing:** a `playlist play`
+JSON-RPC call was issued directly against the real "gexis" LMS player to
+get a local-file track queued for the sample-rate check, interrupting
+whatever radio stream was playing at the time. Flagging plainly rather
+than burying it - George's own player state was changed mid-test.
+
+**Still not verified:** Spotify and Bluetooth metadata (both need a real
+phone) and a genuinely external WebSocket client connection (all checks
+above ran a client on `gexis` itself against `127.0.0.1:8090` or were
+piped through SSH) - George's own next step, watching
+`ws://gexis:8090/state` from his own machine while using the phone app.
 
 ---
 
