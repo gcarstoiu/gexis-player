@@ -263,6 +263,28 @@ capability-driven transport controls.
 8. Takeover gap: time from stop of renderer A to first sample of renderer B,
    measured same-rate and cross-rate, reported as a distribution over at
    least 20 runs.
+
+   **Narrowed by George's decision, 2026-09-12, to the same-rate
+   LMS↔Spotify pair only.** Two legs are deferred, both for reasons of
+   what can actually be measured rather than of effort:
+   - **Cross-rate: no content exists to test with.** A full library scan
+     (60,974 tracks, LMS's own `songs` JSON-RPC query, paginated) found
+     **zero non-44.1kHz tracks**. Testing this leg would mean sourcing and
+     adding dedicated test content first. Deferred, not skipped — the
+     criterion's cross-rate half is unmet and stays unmet.
+   - **Bluetooth-involving pairs: not scriptable.** `bluetoothctl connect`
+     reconnects the A2DP profile but not reliably the audio stream, so
+     contested Bluetooth rounds need a human tapping a phone for every
+     run — which a ≥20-run distribution makes impractical. A harness
+     limitation, not a product defect. Bluetooth's own release is also
+     still 2.5-2.9s and untouched by ADR-0027, so its numbers would
+     characterise a path with a known open defect (ADR-0010's Bluetooth
+     release item).
+
+   **What this means for criterion 9/10:** they can be satisfied for the
+   same-rate LMS↔Spotify pair and for nothing else. Criterion 10's
+   transition-screen answer is therefore a per-pair answer with two pairs
+   unmeasured — say so rather than generalising from the one that was.
 9. Result recorded as a finding with scope stated.
 10. ADR-0010 **and ADR-0027** amended to say whether handoff needs a
     transition screen. **Note the answer is now likely per-pair, not
