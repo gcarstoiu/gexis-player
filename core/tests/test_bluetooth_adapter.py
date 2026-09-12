@@ -5,11 +5,14 @@ covered by hardware sessions - see adapters/bluetooth.py's module and
 """
 from __future__ import annotations
 
+import asyncio
+
 import pytest
 from dbus_next import Variant
 
 from gexis_core.adapters.bluetooth import (
     MEDIA_PLAYER_IFACE,
+    MEDIA_TRANSPORT_IFACE,
     PROPERTIES_IFACE,
     BluetoothAdapter,
     _unwrap,
@@ -173,6 +176,100 @@ async def test_attach_media_player_reports_metadata_on_a_real_signal_shape():
 
     assert received[-1].title == "Song"
     assert received[-1].artist == "Band"
+
+
+# --- _handle_interfaces_added / _handle_interfaces_removed -----------------
+
+
+@pytest.mark.asyncio
+async def test_interfaces_added_media_player_seeds_metadata_and_acquires():
+    adapter = BluetoothAdapter()
+    received = []
+    adapter.on_metadata_change(received.append)
+    acquired = []
+
+    adapter._handle_interfaces_added(
+        "/org/bluez/hci0/dev_XX/player0",
+        {MEDIA_PLAYER_IFACE: {"Track": Variant("a{sv}", {"Title": Variant("s", "Song")})}},
+        lambda: acquired.append(None),
+    )
+    # `_handle_interfaces_added` fires off `_attach_media_player` as a
+    # background task (real usage has a live `self._bus` to introspect;
+    # this test doesn't) - let it run to its own caught exception so
+    # nothing is left pending when the test ends.
+    await asyncio.sleep(0)
+
+    assert acquired == [None]
+    assert received[-1].title == "Song"
+    assert adapter._connected_device_path == "/org/bluez/hci0/dev_XX"
+
+
+@pytest.mark.asyncio
+async def test_interfaces_added_media_transport_only_acquires_no_metadata():
+    """MediaTransport1 appears before MediaPlayer1 negotiates (Finding 010
+    §3) - it's an acquisition signal, not a metadata source."""
+    adapter = BluetoothAdapter()
+    received = []
+    adapter.on_metadata_change(received.append)
+    acquired = []
+
+    adapter._handle_interfaces_added(
+        "/org/bluez/hci0/dev_XX/fd2", {MEDIA_TRANSPORT_IFACE: {}}, lambda: acquired.append(None)
+    )
+
+    assert acquired == [None]
+    assert received == []
+
+
+def test_interfaces_removed_relinquishes_and_blanks_metadata():
+    """Regression test: George found this live, 2026-09-12 - disconnecting
+    Spotify/Bluetooth left `active` pointed at the disconnected renderer
+    indefinitely instead of returning to "nobody" (ADR-0027), an oversight
+    in the original work, not a deliberate deferral."""
+    adapter = BluetoothAdapter()
+    adapter._connected_device_path = "/org/bluez/hci0/dev_XX"
+    adapter._last_track = {"Title": "Song"}
+    adapter._last_position_ms = 5000
+    received = []
+    adapter.on_metadata_change(received.append)
+    released = []
+
+    adapter._handle_interfaces_removed(
+        "/org/bluez/hci0/dev_XX/player0", {MEDIA_PLAYER_IFACE: {}}, lambda: released.append(None)
+    )
+
+    assert released == [None]
+    assert received[-1] == TrackMetadata(source_type="bluetooth")
+    assert adapter._connected_device_path is None
+
+
+def test_interfaces_removed_ignores_a_path_for_a_different_device():
+    """Two devices could in principle both have MediaPlayer1 objects
+    momentarily (a reconnect race) - only the one this adapter is actually
+    tracking should trigger a release."""
+    adapter = BluetoothAdapter()
+    adapter._connected_device_path = "/org/bluez/hci0/dev_XX"
+    released = []
+
+    adapter._handle_interfaces_removed(
+        "/org/bluez/hci0/dev_YY/player0", {MEDIA_PLAYER_IFACE: {}}, lambda: released.append(None)
+    )
+
+    assert released == []
+    assert adapter._connected_device_path == "/org/bluez/hci0/dev_XX"
+
+
+def test_interfaces_removed_ignores_an_unrelated_interface():
+    adapter = BluetoothAdapter()
+    adapter._connected_device_path = "/org/bluez/hci0/dev_XX"
+    released = []
+
+    adapter._handle_interfaces_removed(
+        "/org/bluez/hci0/dev_XX/player0", {"org.bluez.Battery1": {}}, lambda: released.append(None)
+    )
+
+    assert released == []
+    assert adapter._connected_device_path == "/org/bluez/hci0/dev_XX"
 
 
 @pytest.mark.asyncio

@@ -119,18 +119,16 @@ class BluetoothAdapter(Adapter):
         )
 
     async def run(self, on_acquire, on_release) -> None:
-        # on_release: not wired up - a Bluetooth disconnect is the same
-        # shape as LMS deactivation but is out of ADR-0027's scope.
         while True:
             try:
-                await self._watch(on_acquire)
+                await self._watch(on_acquire, on_release)
             except Exception as exc:  # noqa: BLE001 - keep watching regardless
                 logger.warning("bluetooth: D-Bus watch failed (%s), retrying in 5s", exc)
                 if self._on_availability is not None:
                     self._on_availability(False)
                 await asyncio.sleep(5)
 
-    async def _watch(self, on_acquire) -> None:
+    async def _watch(self, on_acquire, on_release) -> None:
         self._bus = await MessageBus(bus_type=BusType.SYSTEM).connect()
         introspection = await self._bus.introspect(BLUEZ_SERVICE, "/")
         root = self._bus.get_proxy_object(BLUEZ_SERVICE, "/", introspection)
@@ -147,34 +145,54 @@ class BluetoothAdapter(Adapter):
                 self._seed_metadata(ifaces[MEDIA_PLAYER_IFACE])
                 asyncio.create_task(self._attach_media_player(path))
 
-        def on_interfaces_added(path, interfaces):
-            if MEDIA_PLAYER_IFACE in interfaces:
-                self._connected_device_path = self._device_path_for_player(path)
-                logger.info("bluetooth: MediaPlayer1 appeared at %s (acquisition)", path)
-                self._seed_metadata(interfaces[MEDIA_PLAYER_IFACE])
-                asyncio.create_task(self._attach_media_player(path))
-                on_acquire()
-            if MEDIA_TRANSPORT_IFACE in interfaces:
-                self._connected_device_path = self._device_path_for_player(path)
-                logger.info("bluetooth: MediaTransport1 appeared at %s (acquisition)", path)
-                on_acquire()
-
-        def on_interfaces_removed(path, interfaces):
-            if MEDIA_PLAYER_IFACE in interfaces and path.startswith(
-                self._connected_device_path or "\0"
-            ):
-                logger.info("bluetooth: MediaPlayer1 removed at %s", path)
-                self._connected_device_path = None
-                self._last_track = {}
-                self._last_position_ms = None
-                self._report_metadata()
-
-        obj_manager.on_interfaces_added(on_interfaces_added)
-        obj_manager.on_interfaces_removed(on_interfaces_removed)
+        obj_manager.on_interfaces_added(
+            lambda path, interfaces: self._handle_interfaces_added(path, interfaces, on_acquire)
+        )
+        obj_manager.on_interfaces_removed(
+            lambda path, interfaces: self._handle_interfaces_removed(path, interfaces, on_release)
+        )
 
         # Idle forever; callbacks above do the work. Exits (and the outer
         # loop reconnects) only if the bus connection itself drops.
         await self._bus.wait_for_disconnect()
+
+    def _handle_interfaces_added(self, path: str, interfaces: dict, on_acquire) -> None:
+        """Extracted from `_watch` as a bound method, not a closure, so it's
+        directly unit-testable - the closure shape is exactly how the
+        `on_properties_changed` bug (found live, 2026-09-12) went
+        unnoticed: nothing exercised it without real D-Bus."""
+        if MEDIA_PLAYER_IFACE in interfaces:
+            self._connected_device_path = self._device_path_for_player(path)
+            logger.info("bluetooth: MediaPlayer1 appeared at %s (acquisition)", path)
+            self._seed_metadata(interfaces[MEDIA_PLAYER_IFACE])
+            asyncio.create_task(self._attach_media_player(path))
+            on_acquire()
+        if MEDIA_TRANSPORT_IFACE in interfaces:
+            self._connected_device_path = self._device_path_for_player(path)
+            logger.info("bluetooth: MediaTransport1 appeared at %s (acquisition)", path)
+            on_acquire()
+
+    def _handle_interfaces_removed(self, path: str, interfaces: dict, on_release) -> None:
+        if MEDIA_PLAYER_IFACE in interfaces and path.startswith(
+            self._connected_device_path or "\0"
+        ):
+            logger.info("bluetooth: MediaPlayer1 removed at %s (release)", path)
+            self._connected_device_path = None
+            self._last_track = {}
+            self._last_position_ms = None
+            self._report_metadata()
+            # George, 2026-09-12: found live via the state WebSocket - a
+            # Bluetooth disconnect never told the supervisor, so `active`
+            # stayed pointed at Bluetooth indefinitely instead of going
+            # back to "nobody" (ADR-0027) even though the metadata above
+            # was already (separately) blanked. An oversight in the
+            # original ADR-0027 work, not a deliberate deferral - same
+            # shape as SpotifyAdapter's identical fix. Safe to call
+            # unconditionally: Supervisor.relinquish() ignores this unless
+            # bluetooth is still the active renderer, so the echo of our
+            # own takeover-driven Device1.Disconnect() (which also removes
+            # MediaPlayer1) is a no-op.
+            on_release()
 
     def _seed_metadata(self, player_props: dict) -> None:
         """`player_props` is straight from ObjectManager (Variant-valued) -

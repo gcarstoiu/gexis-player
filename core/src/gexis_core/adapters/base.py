@@ -58,13 +58,16 @@ class Adapter(abc.ABC):
 
         `on_release()` (also sync, non-blocking) is the opposite edge: this
         renderer gave up the device with nobody taking over, so nobody
-        holds it. Only `LmsAdapter` reports it so far, on the player being
-        deactivated - the state ADR-0027 makes routine. Spotify and
-        Bluetooth disconnects are the same shape and are *not* wired up
-        yet; until they are, the supervisor's view of those two can go
-        stale after a disconnect exactly as it always has. Calling it is
-        safe from any adapter: the supervisor ignores a release from a
-        renderer that is not currently active.
+        holds it - LMS on the player being deactivated, Spotify on
+        go-librespot's own "inactive" event, Bluetooth on its MediaPlayer1
+        disappearing (all three wired as of 2026-09-12; Spotify/Bluetooth's
+        absence until then was an oversight found live via the state
+        WebSocket showing stale `active`/metadata after a disconnect with
+        nothing taking over, not a deliberate ADR-0027 deferral). Calling
+        it is safe from any adapter: the supervisor ignores a release from
+        a renderer that is not currently active, which is what makes the
+        echo of our own takeover-driven release (also a "went inactive"/
+        "disappeared" event from the same renderer) a harmless no-op.
         """
 
     @abc.abstractmethod

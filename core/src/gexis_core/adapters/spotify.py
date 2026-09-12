@@ -104,18 +104,16 @@ class SpotifyAdapter(Adapter):
         self._on_availability = callback
 
     async def run(self, on_acquire, on_release) -> None:
-        # on_release: not wired up - a Spotify disconnect is the same
-        # shape as LMS deactivation but is out of ADR-0027's scope.
         while True:
             try:
-                await self._watch_events(on_acquire)
+                await self._watch_events(on_acquire, on_release)
             except (aiohttp.ClientError, asyncio.TimeoutError, OSError) as exc:
                 logger.warning("spotify: /events connection lost (%s), retrying in 5s", exc)
                 if self._on_availability is not None:
                     self._on_availability(False)
                 await asyncio.sleep(5)
 
-    async def _watch_events(self, on_acquire) -> None:
+    async def _watch_events(self, on_acquire, on_release) -> None:
         async with aiohttp.ClientSession() as session:
             async with session.ws_connect(f"{self._base}/events") as ws:
                 logger.info("spotify: connected to %s/events", self._base)
@@ -136,6 +134,21 @@ class SpotifyAdapter(Adapter):
                     elif event_type == "will_play":
                         logger.info("spotify: will_play (acquisition, ahead of ALSA open)")
                         on_acquire()
+                    elif event_type == "inactive":
+                        # George, 2026-09-12: found live via the state
+                        # WebSocket - a Spotify disconnect never told the
+                        # supervisor, so `active`/metadata stayed pointed
+                        # at Spotify indefinitely instead of going back to
+                        # "nobody" (ADR-0027). An oversight in the
+                        # original ADR-0027 work, not a deliberate
+                        # deferral - fixed by reporting API.md's own
+                        # "inactive" event. Safe to call unconditionally:
+                        # Supervisor.relinquish() ignores this unless
+                        # spotify is still the active renderer, so the
+                        # echo of our own takeover-driven /player/stop
+                        # (which fires this same event) is a no-op.
+                        logger.info("spotify: device became inactive (release)")
+                        on_release()
                     elif event_type == "volume":
                         self._handle_volume_event(frame.get("data") or {})
                     elif event_type == "metadata":
