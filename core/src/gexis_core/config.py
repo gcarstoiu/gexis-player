@@ -60,6 +60,13 @@ class Config:
     state_host: str = "0.0.0.0"
     state_port: int = 8090
 
+    # Phase 3 criterion 4: moOde's own path (metadata_file.py), so an
+    # external display project built against moOde's file finds it in the
+    # place it already expects. A `str`, not a `Path`, matching every
+    # other field here - TOML gives back strings, and metadata_file.py
+    # wraps it in `Path(...)` itself.
+    metadata_file_path: str = "/var/local/www/currentsong.txt"
+
     @classmethod
     def load(cls, path: Path = DEFAULT_CONFIG_PATH) -> "Config":
         if not path.exists():

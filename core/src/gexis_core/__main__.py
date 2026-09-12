@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+from pathlib import Path
 
 from gexis_core import alsa
 from gexis_core.adapters.base import VolumeMechanism
@@ -15,6 +16,7 @@ from gexis_core.adapters.lms import LmsAdapter
 from gexis_core.adapters.spotify import SpotifyAdapter
 from gexis_core.arbitration import Supervisor
 from gexis_core.config import Config
+from gexis_core.metadata_file import MetadataFileWriter
 from gexis_core.renderer_volume import RendererVolumeMemory
 from gexis_core.state import StateStore
 from gexis_core.volume import DUMMY_CONTROL, DummyMixerBridge, VolumeBridge, db_to_raw, get_raw, raw_to_db
@@ -119,6 +121,11 @@ async def main() -> None:
     # Supervisor for the same closure reason as volume_bridge (its
     # callbacks reference `supervisor`, assigned later).
     state_store = StateStore({rid: adapter.capabilities for rid, adapter in adapters.items()})
+
+    # Criterion 4: moOde-compatible metadata file, subscribed the same way
+    # StateServer is - a plain callback on every published state change.
+    metadata_file_writer = MetadataFileWriter(Path(config.metadata_file_path))
+    state_store.subscribe(metadata_file_writer.write)
 
     # Criterion 3, 2026-09-12: which volume-bridging mechanism a renderer
     # needs is a declared capability (VolumeMechanism), not hardcoded by
