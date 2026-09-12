@@ -1897,6 +1897,18 @@ reverted, currently-flashed image predates this fix.
    - **Cross-rate LMS↔Spotify** - blocked on content, not mechanism: a
      full library scan (60,974 tracks) found zero non-44.1kHz content.
      George's call - add dedicated test content, or defer this leg.
+   - **Blocker 3 (Bluetooth first connect) is ROOT-CAUSED, 2026-09-12** -
+     the adapter is discoverable for only 180s after boot (BlueZ's
+     `DiscoverableTimeout` default, never overridden in `main.conf`, while
+     `bluetooth-setup.sh`'s own comment claims persistent discoverability).
+     A reflash wipes the bond, so re-pairing is needed, and re-pairing needs
+     discoverability that lapsed hours earlier. **Fix is one line and the
+     mechanism is confirmed, but the decision is George's** - it widens
+     ADR-0024's accepted exposure from 3 minutes per boot to continuous.
+     See ADR-0024's amendment and Finding 018's blocker 3 section.
+     **Untested prediction worth one cheap check:** a plain *reboot* should
+     NOT show this, because the bond survives in `/var/lib/bluetooth`. If a
+     reboot does fail, the root cause above is wrong.
    - **Bluetooth-involving pairs** - not attempted this round; paused when
      the two blockers above surfaced. `bluetoothctl connect` reconnects
      the profile but not reliably the actual audio stream (a harness
@@ -2137,6 +2149,13 @@ cached) is ever worth chasing further:**
   both — see the volume bridge fix above for the measured consequence
   (a real ratchet to zero) and the fix (a shared time-window, not a
   one-shot flag).
+- **`bluetoothctl discoverable on` does NOT mean persistently
+  discoverable.** BlueZ's `DiscoverableTimeout` defaults to 180s and
+  silently reverts the adapter afterwards; `Pairable` has no such default
+  and does persist, so the two behave differently despite being set the
+  same way two lines apart. Cost us blocker 3 and 1h36m of a live debug
+  session. Read `bluetoothctl show` back after setting it, rather than
+  trusting "Changing discoverable on succeeded".
 - **Build filenames now carry the version (2026-09-11)** — the
   `Makefile`'s `image:` target manifest-lookup glob is
   `*-gexis-player*.info`, not `*-gexis-player.info` — if a future edit

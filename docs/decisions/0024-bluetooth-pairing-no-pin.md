@@ -26,12 +26,43 @@ adapter persistently pairable and discoverable — see
 `image/stage-gexis/02-renderers/files/gexis-bt-agent.service` and
 `gexis-bluetooth-setup.service`.
 
+> **"Persistently discoverable" has never actually been true — found
+> 2026-09-12 (Finding 018, blocker 3).** `gexis-bluetooth-setup.sh` runs
+> `bluetoothctl discoverable on`, but BlueZ's `DiscoverableTimeout`
+> defaults to **180 seconds** and `/etc/bluetooth/main.conf` (which this
+> image already edits, to set `Name`) never overrides it. So the adapter
+> has been discoverable for three minutes after each boot and not
+> afterwards. `Pairable` is unaffected — its own default is never-expire —
+> which is why pairing still completes once a phone reaches the adapter.
+>
+> Measured consequence: after a reflash, `/var/lib/bluetooth` is wiped, so
+> a phone holding a stale bond has to pair afresh — and fresh pairing needs
+> discoverability, which by then was long gone. That is the "Bluetooth
+> doesn't connect on the first try after a new build" report, and the logs
+> show 60 seconds from first contact to audio with a 36-second dead spot.
+>
+> **DECISION PENDING — George's call, deliberately not taken unilaterally.**
+> The fix is one line (`DiscoverableTimeout = 0` in `main.conf`, or
+> `bluetoothctl discoverable-timeout 0` before `discoverable on`; mechanism
+> confirmed live). But it widens this record's own accepted exposure below
+> from *three minutes after each boot* to *continuously*, which is a real
+> change to the posture even though the class of exposure is unchanged.
+> Until it is decided, the shipped behaviour is the 3-minute window.
+
 ## Consequence, stated plainly
 
 **Anyone within Bluetooth range can pair with `gexis` and play audio
 through it, with no confirmation step on the device.** This is the
 direct effect of `NoInputNoOutput`, not a side effect — accepted for
 this installation, not overlooked.
+
+**Narrower in practice than this says, accidentally** (2026-09-12, see the
+note above): the adapter is only *discoverable* for three minutes after
+boot, so in practice a stranger's window to initiate a fresh pairing has
+been small. That is an accident of an unset BlueZ default, not a designed
+mitigation, and it is exactly what the pending decision above would
+remove. Anyone weighing that decision should read this consequence as
+what it becomes, not what it has been.
 
 ## Not a shipping default
 
