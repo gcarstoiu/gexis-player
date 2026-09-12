@@ -351,6 +351,33 @@ Still no UI. Tested with a WebSocket client.
    because LMS was permanently the base. It no longer can, and the UI
    cannot offer to activate LMS unless the model says LMS is
    deactivated.
+
+   **MET, 2026-09-12** — `model.py`/`state.py`/`wsserver.py` built and
+   hardware-verified on `gexis` (hand-installed into the running
+   `gexis-core.service` over SSH, George's explicit call for this
+   testing round — see HANDOFF.md for why that's noted as a one-off
+   rather than a standing workflow decision). "Availability" means
+   "backend reachable", George's decision: only LMS ever gets an
+   activate control from our own UI (Phase 4), so that's the only thing
+   the field needs to gate or explain; Spotify/Bluetooth availability is
+   a status line, not a button. All three renderers confirmed by George
+   against a live WebSocket client: LMS metadata verified end-to-end
+   against real library tracks and a live radio stream (title, artist,
+   album, artwork, sample rate, position, duration, and the
+   `current_title` remote-stream fallback all correct); Spotify's
+   metadata and its "went inactive" release both confirmed; Bluetooth's
+   metadata confirmed after a same-session fix (see below). "No renderer
+   holds the device" confirmed reachable from all three renderers, not
+   just LMS's own deactivation.
+
+   Two real defects found and fixed live during this verification, both
+   recorded in full in HANDOFF.md: Bluetooth reported no metadata at all
+   (BlueZ's `MediaPlayer1` proxy has no `on_properties_changed` of its
+   own — the signal belongs to `org.freedesktop.DBus.Properties`
+   instead) and Spotify/Bluetooth disconnects never told the supervisor
+   "nobody holds it now" (`on_release` was wired for LMS's deactivation
+   only — an oversight in the original ADR-0027 work, George's call, not
+   a deliberate deferral). Both fixed and re-confirmed on hardware.
 2. Adapters for LMS (CometD), Spotify (go-librespot API) and Bluetooth (BlueZ
    D-Bus), each declaring capabilities and acquisition/release behaviour.
 3. Adapters implement the public plugin contract — no special casing.

@@ -1,12 +1,16 @@
 # Handoff
 
-Last updated: 2026-09-12 (eleventh session — **PHASE 3 STARTED**)
+Last updated: 2026-09-12 (eleventh session — **PHASE 3 CRITERION 1 CLOSED**)
 
 ## Where things stand
 
-**Phase 3 (core state daemon) started, criterion 1's first slice built on
-`phase-3-core-daemon`, not yet hardware-verified or pushed for George's own
-pass.** Before writing any code, George was asked what "availability"
+**Phase 3 (core state daemon) criterion 1 is closed**, built and
+hardware-verified on `gexis`, `phase-3-core-daemon`. Two real defects
+found live during verification (Bluetooth's D-Bus interface bug, the
+Spotify/Bluetooth relinquish() oversight) were fixed and re-confirmed the
+same session — full detail further down this file. **Next: criterion 2**
+(adapters declaring capabilities and acquisition/release behaviour).
+Before writing any code, George was asked what "availability"
 (criterion 1's per-renderer field, alongside "no renderer holds the
 device") should actually mean for the UI, since Phase 3 itself ships no UI
 and the answer only matters through what Phase 4 needs. **George's
@@ -195,9 +199,15 @@ known behaviour:**
    that deferral itself gets revisited.
 
 All three fixes deployed to `gexis` (same hand-install-over-SSH loop) and
-confirmed starting cleanly. **Not yet re-confirmed by George**: a fresh
-Bluetooth connection with real metadata, and a Spotify/Bluetooth
-disconnect actually returning `active` to `null` on the WebSocket.
+confirmed starting cleanly. **George re-tested and confirmed both fixes
+work**: Bluetooth now reports real metadata, and disconnecting from
+Spotify/Bluetooth with nothing else taking over correctly returns `active`
+to `null` with metadata blanked.
+
+**Phase 3 criterion 1 is CLOSED, 2026-09-12** — see `docs/DEVELOPMENT.md`
+for the full acceptance note. All three renderers' metadata, availability,
+and "no renderer holds the device" verified on `gexis` against a real
+WebSocket client, by George.
 
 ---
 
