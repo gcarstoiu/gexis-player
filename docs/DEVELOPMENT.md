@@ -17,6 +17,28 @@ PRs. Decides anything that would become an ADR.
 In all four cases: stop, describe the problem, propose options. Do not decide
 and continue.
 
+### How changes land — George's rules, 2026-09-12
+
+**One change at a time, each gated on George's own hardware regression
+pass.** Stated for Phase 2c's criteria 7-10 and applying from there on:
+
+- **Nothing ships without George running the regression test himself.**
+  Claude's own automated verification is evidence to hand him, never a
+  substitute for it. "Verified on `gexis`" by Claude is not the gate.
+- **Land one change at a time, never a batch.** A batch "results in many
+  possible breaking changes" — it makes a regression impossible to
+  attribute, which is precisely how this project lost two days.
+
+Not a new caution, a scar: Finding 014's `/player/resume` and Finding 013
+§1's `stop_unit`/`restart_after_release` were both shipped and reverted
+within a day, both passed scripted testing first, and both travelled
+alongside other changes. ADR-0010 carries the reverts; `docs/LESSONS.md`
+carries the pattern.
+
+If a measurement turns up a defect part-way through a criterion, surface it
+and let George choose whether to fix it now or after — do not fold the fix
+into the change in flight.
+
 ### Branching
 
 - One branch per phase: `phase-0-image`, `phase-2-arbitration`.
