@@ -195,6 +195,15 @@ exist anywhere. Full wording is in `docs/DEVELOPMENT.md`.
 
 ## Open
 
+**Listening results, George, 2026-09-12, on the deployed 2d build:** the
+power-*off* produces no click at all. The power-*on* has "a fraction of a
+second click - barely audible", which he judged not worth spending time
+on. Recorded as observed-and-accepted rather than left as an open
+question. Takeovers behaved correctly, and the logs for that session show
+no ladder escalation of any kind and zero go-librespot "resource busy"
+failures - the signature blocker 2 used to leave on every LMS→Spotify
+handoff.
+
 **Both of the first two items below are DEFERRED by George's decision,
 2026-09-12** — not unresolved, and not blocking implementation. Revisit if
 either turns out to be audible or annoying in real use.

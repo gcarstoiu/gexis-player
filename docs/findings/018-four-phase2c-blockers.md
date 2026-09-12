@@ -533,6 +533,63 @@ accountability rule, but a visible behaviour change either way). Per this
 project's own rule it needs an ADR amendment before implementation, and
 that is George's call.
 
+## Follow-up, 2026-09-12: is LMS genuinely the loudest at full volume?
+
+George, after testing 2d: "feels like LMS is still the loudest of the
+three at full volume." Checked the whole gain path rather than assumed.
+
+**All three map their own maximum onto the same DAC value, verified
+directly** rather than derived from the formulas:
+
+| renderer | at its own 100% | DAC |
+|---|---|---|
+| LMS | dummy `100 [0.00dB]` | **240 [0.00dB]** |
+| LMS at 50%, as a control | dummy `18 [-24.60dB]` | 191 [-24.50dB] |
+| Spotify | `volume 100/100` | **240 [0.00dB]** |
+| Bluetooth | dummy max → 0dB by the same dB copy | 240 |
+
+**No renderer has a hidden software stage at maximum:**
+
+- **squeezelite** runs `-V Master` against the dummy card, i.e. *hardware*
+  volume mode - its own help text is explicit that `-V <control>`
+  replaces software volume adjustment. The stream leaves at full scale.
+- **bluealsa-aplay** has `SoftVolume=false` on the PCM it actually reads
+  (`a2dpsnk/source`, confirmed in `/var/lib/bluealsa/<MAC>`), so it passes
+  through rather than attenuating. The stored `Volume=-562` matches the
+  dummy's live `-5.70dB`, i.e. the **phone's own AVRCP position is in the
+  chain** - Bluetooth is only as loud as the phone's slider.
+- **go-librespot** has two knobs our config never sets -
+  `normalisation_disabled` and `external_volume` - and they were the
+  obvious suspects. **Measured, and they are not the cause.** Same track,
+  Spotify at 100%, DAC at 240 in every run, level read off the peppyalsa
+  spectrum FIFO:
+
+  | config | mean level | peak | vs as-shipped |
+  |---|---|---|---|
+  | as shipped (neither set) | 40.8 | 70 | — |
+  | `normalisation_disabled: true` | 41.0 | 71 | 1.00x |
+  | + `external_volume: true` | 41.4 | 71 | 1.01x |
+
+  At maximum, go-librespot's software volume is unity and normalisation is
+  not attenuating, so neither knob buys anything. (They would still matter
+  *below* maximum, where go-librespot's software volume and our hardware
+  mixer both act on the same number - but that is a curve question, not a
+  headroom one, and George's report is specifically about full volume.)
+
+**So the gain path is equal and nothing was missed in it.** The level
+difference that remains is source material: LMS's track `Rempompi` read
+mean 50.2 / peak 78 at DAC 240, against Spotify's `Just Like That - Boom,
+Clap` at mean 40.8 / peak 70 at the same DAC 240. **Different recordings,
+so that gap is mastering, not routing** - it is not a fair loudness
+comparison and should not be read as one. A conclusive test would need the
+same recording through both services, which is not practically arrangeable.
+
+**Scope:** one track per renderer, one session, levels read from the
+spectrum FIFO (a relative meter, not a calibrated one). Bluetooth's own
+maximum was not measured - it needs the phone's slider at maximum, which
+needs George. What *is* established is that no renderer loses headroom to
+a software stage of ours at full volume.
+
 ## What is deployed on `gexis` right now
 
 Hot-patched into `/opt/gexis-core/venv/.../gexis_core/`, service restarted,
