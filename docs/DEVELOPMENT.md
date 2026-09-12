@@ -396,6 +396,35 @@ Still no UI. Tested with a WebSocket client.
    `capabilities` field in the state WebSocket payload alongside
    criterion 1's fields; confirmed correct on `gexis`.
 3. Adapters implement the public plugin contract — no special casing.
+
+   **MET, 2026-09-12, scoped by George's explicit decision.** Two
+   readings were possible: removing renderer-name branching from the
+   core's own wiring code (in-process, extending criterion 2's
+   Capabilities), or actually restructuring the three built-ins into
+   separate OS processes per
+   [ADR-0016](decisions/0016-plugins-as-separate-processes.md)'s IPC
+   model. George chose the former — the built-ins stay in-process Python
+   classes; ADR-0016's separate-process architecture is not attempted
+   here and remains open for whenever a real second plugin (Qobuz
+   Connect) needs it.
+
+   Found by grep, not hypothetical: `renderer_volume.py` hardcoded
+   `MANAGED_RENDERERS = ("lms", "spotify")`, `volume.py` branched on
+   `if renderer == "spotify"`, and `__main__.py` constructed two
+   `DummyMixerBridge` instances and one `VolumeBridge` by naming
+   "lms"/"bluetooth"/"spotify" directly. Fixed by extending
+   `Capabilities` with the volume side of the contract —
+   `volume_managed`, `volume_mechanism` (`DUMMY_MIXER` or
+   `SOFTWARE_API` — two genuinely different mechanisms, not an arbitrary
+   split), `dummy_mixer_card` — so `__main__.py`'s wiring derives both
+   the managed-renderer set and which bridge each renderer needs from
+   its own adapter, rather than naming any renderer by hand.
+   `DummyMixerBridge` itself needed no changes — it was already generic;
+   all the special-casing was in what constructed it. Verified on
+   `gexis`: a clean restart, and both `restore_volume`'s write-on-acquire
+   and the `DummyMixerBridge` mirror path (a live LMS volume nudge)
+   produced the same values as before the refactor — no behavioural
+   change, only where the renderer-specific facts live.
 4. Metadata file written in moOde-compatible format.
 5. SQLite config store; settings survive a service restart.
 6. Track change on LMS appears on the WebSocket within a bounded time, measured

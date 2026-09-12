@@ -1,10 +1,10 @@
 # Handoff
 
-Last updated: 2026-09-12 (eleventh session — **PHASE 3 CRITERIA 1-2 CLOSED**)
+Last updated: 2026-09-12 (eleventh session — **PHASE 3 CRITERIA 1-3 CLOSED**)
 
 ## Where things stand
 
-**Phase 3 (core state daemon) criteria 1 and 2 are closed**, built and
+**Phase 3 (core state daemon) criteria 1-3 are closed**, built and
 hardware-verified on `gexis`, `phase-3-core-daemon`. Two real defects
 found live during criterion 1's verification (Bluetooth's D-Bus interface
 bug, the Spotify/Bluetooth relinquish() oversight) were fixed and
@@ -15,12 +15,27 @@ actual, already-verified behaviour (audio connection, named acquisition
 events, which skin fields each can supply), deliberately leaving
 `controls` empty since no adapter can act on a user's command yet and
 Phase 6 is where that becomes real. Published as a new field in the same
-WebSocket payload; confirmed correct on `gexis`. **Next: criterion 3**
-(adapters implement the public plugin contract — no special casing; note
-ADR-0016 describes plugins as separate processes with an IPC contract,
-which these three built-ins currently are not — worth re-reading before
-starting, since criterion 3 may be a bigger structural question than
-criterion 2 was, not just "reuse Capabilities").
+WebSocket payload; confirmed correct on `gexis`.
+
+**Criterion 3 ("no special casing") raised a real scope fork, resolved by
+George before any code:** ADR-0016 describes plugins as separate
+processes with an IPC contract, which the three built-ins are not — a
+full restructure into that model is a much bigger undertaking than
+criterion 2 was. Found by grep first, not guessed: real, existing
+renderer-name branching already in the codebase (`renderer_volume.py`'s
+`MANAGED_RENDERERS` tuple, `volume.py`'s `if renderer == "spotify"`,
+`__main__.py`'s by-name construction of two `DummyMixerBridge` instances
+and one `VolumeBridge`). **George's call: remove that hardcoded
+branching, keep the built-ins in-process** — the separate-process
+question stays open for whenever Qobuz Connect (or another real plugin)
+needs it. Fixed by extending `Capabilities` with `volume_managed`,
+`volume_mechanism` (`DUMMY_MIXER`/`SOFTWARE_API`), and
+`dummy_mixer_card`, so `__main__.py`'s wiring derives everything from
+each adapter's own declaration. Verified on `gexis`: clean restart,
+restore-on-acquire and the `DummyMixerBridge` mirror path both produced
+the same values as before the refactor.
+
+**Next: criterion 4** (metadata file in moOde-compatible format).
 
 Before writing any code for criterion 1, George was asked what "availability"
 (criterion 1's per-renderer field, alongside "no renderer holds the
