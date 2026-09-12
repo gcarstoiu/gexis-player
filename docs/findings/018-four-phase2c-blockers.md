@@ -140,6 +140,81 @@ logs exist. `/var/log/journal` *is* present and `Storage=auto`, so logs
 attempt is capturable, and this is diagnosable as soon as it is
 reproduced once with logs. Until then, any root cause would be a guess.
 
+### ROOT-CAUSED, 2026-09-12, on the v0.2.1-51 build — discoverability lapses after 3 minutes
+
+George reproduced it on the fresh flash and the logs finally caught it.
+Timeline of the connect attempt:
+
+```
+08:44:49  setup service: "Changing discoverable on succeeded"
+          (powered connectable discoverable bondable ssp br/edr le secure-conn)
+   ...    1h36m of nothing
+10:21:07  kernel: ACL packet for unknown connection handle 11  (x2)
+10:21:07  device object appears: InterfacesAdded(.../dev_64_9D_38_E3_E5_2A)
+   ...    36 SECONDS OF SILENCE - nothing logged by anything
+10:21:43  gexis-bluetooth-trust: "trusted newly paired device"
+10:21:44  device object added again
+10:21:58  MediaTransport1 fd0 -> arbitration acquires for bluetooth
+10:22:07  ALSA playback PCM opened - audio finally starts
+```
+
+Sixty seconds from first contact to sound, with a 36-second dead spot in
+the middle. That dead spot is the "doesn't connect on the first try".
+
+**The cause is a gap between what the setup script intends and what BlueZ
+actually does.** `bluetooth-setup.sh` carries this comment:
+
+> ADR-0024: pair without a PIN, at this installation - **persistently
+> discoverable/pairable** is part of that same decision (there is no UI yet
+> to trigger "enter pairing mode" on demand).
+
+but it only runs `bluetoothctl discoverable on`, and BlueZ's
+`DiscoverableTimeout` defaults to **180 seconds**. `/etc/bluetooth/main.conf`
+sets `Name = gexis` and nothing else, so the default stands. Read live:
+
+```
+Discoverable: no
+DiscoverableTimeout: 0x000000b4 (180)
+Pairable: yes
+```
+
+So discoverability turned on at 08:44:49 and **silently lapsed at
+08:47:49** — an hour and a half before the connect attempt. `Pairable`
+persists (its own timeout defaults to never), which is why pairing
+eventually completed once the phone got through; only *discoverability*
+was gone. Another instance of this project's recurring "criterion met
+literally, intent unchecked" pattern: the script does what it says, the
+adapter does not stay in the state the comment claims.
+
+**Why this fits "a new build" specifically.** A reflash wipes
+`/var/lib/bluetooth`, so the bond is gone on our side while the phone
+still holds a stale one. Recovering needs a *fresh pairing*, and fresh
+pairing needs the adapter discoverable — which it no longer was.
+**Prediction, not yet tested:** a plain reboot should *not* show this,
+because the bond survives in `/var/lib/bluetooth` (confirmed present after
+this pairing, with `LinkKey` and `Trusted=true`), so reconnection needs no
+discoverability at all. That is consistent with George's original report
+having "on reboot" as the untested half.
+
+**Fix, mechanism confirmed live:** `bluetoothctl discoverable-timeout 0`
+before `discoverable on` gives `Discoverable: yes` with
+`DiscoverableTimeout: 0x00000000 (0)` — never expires. Setting
+`DiscoverableTimeout = 0` in `main.conf` alongside the existing `Name`
+would do the same at the source. **Not applied to the image yet**: this
+widens ADR-0024's accepted exposure from "three minutes after boot" to
+"permanently", and while that ADR already accepts that anyone in range can
+pair with no on-device confirmation, making it continuous is a real change
+to the posture and is George's call per that record's own
+per-installation framing.
+
+**Also seen, unexplained, not chased:** `kernel: Bluetooth: hci0: ACL
+packet for unknown connection handle 11/12` (4 occurrences) and
+`Unexpected continuation frame (len 0)` (6), clustered exactly at the two
+connection attempts. `hciconfig` reports `errors: 0` on both RX and TX
+counters, and the connection succeeded regardless, so these are recorded
+as an observation rather than a diagnosis — they may be incidental to the
+stale-bond rejection rather than a fault of their own.
+
 ---
 
 ## Blocker 4 — Spotify's volume range is smaller than Bluetooth's
