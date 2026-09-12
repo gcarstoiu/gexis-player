@@ -143,6 +143,62 @@ is what actually stopped this specific spam (a playing track's `time`
 field genuinely differs on every real push, so dedup alone wouldn't have
 silenced it).
 
+**George then ran a real round of Bluetooth/Spotify/LMS testing against
+the WebSocket and reported three findings - two real defects, one already-
+known behaviour:**
+
+1. **Bluetooth reported no metadata at all**, tried from Spotify and
+   Plexamp on his phone. Root cause, confirmed by introspecting BlueZ
+   directly on `gexis`: `MediaPlayer1`'s own proxy interface defines no
+   signals of its own (empty `signals` list), so dbus_next generates no
+   `on_properties_changed` for it - the journal showed
+   `AttributeError("'ProxyInterface' object has no attribute
+   'on_properties_changed'")` every single time a `MediaPlayer1` appeared.
+   `PropertiesChanged` belongs to the generic
+   `org.freedesktop.DBus.Properties` interface instead - matches
+   `bluetooth_trust.py`'s own existing idiom, just for a signal instead of
+   a method call. Fixed. Also extracted `on_interfaces_added`/
+   `on_interfaces_removed` from closures into bound methods
+   (`_handle_interfaces_added`/`_handle_interfaces_removed`) purely for
+   testability - the closure shape is exactly how this bug shipped
+   unnoticed, since nothing exercised it without real D-Bus. New fake-bus
+   regression tests cover the actual `get_interface`/
+   `on_properties_changed` call chain now.
+2. **Stale data after disconnecting from a renderer, with nothing else
+   taking over.** George: "I clearly disconnected from Spotify and was
+   still seeing the old metadata... I think this was an oversight in the
+   previous work." Confirmed by inspection, not just by his report:
+   `on_release` was wired for LMS's own deactivation only -
+   `SpotifyAdapter`/`BluetoothAdapter`'s own `run()` docstrings literally
+   said "not wired up... out of ADR-0027's scope" verbatim in both files.
+   Neither adapter ever told the supervisor "nobody holds it now" on a
+   real disconnect, so `active` stayed pointed at whichever one was last
+   used indefinitely. **George's call: this was an oversight, not a
+   deliberate deferral - fix it.** Fixed both: `SpotifyAdapter` calls
+   `on_release()` on go-librespot's own `"inactive"` event; `BluetoothAdapter`
+   calls it when its `MediaPlayer1` disappears. Both call it
+   unconditionally and safely - `Supervisor.relinquish()` already ignores
+   a release from a renderer that isn't currently active, which is what
+   makes the echo of our own takeover-driven release a no-op (the same
+   mechanism LMS already relied on).
+3. **Two consecutive metadata writes for the same song on an LMS
+   takeover** - not a bug. The logs show exactly why:
+   `lms: position was 0.0s, seeked back to the 35.5s it was released at`.
+   LMS's own auto-power-on restarts the track from zero, and ADR-0027's
+   resume logic then corrects it with a seek - two genuinely different
+   real position values, both correctly published in quick succession.
+   This is the same "residual elapsed flicker" ADR-0027's own Open section
+   already names and defers ("issuing the `play` re-introduces LMS's
+   stale-anchor jump for 0.3-1.6s before it corrects... decide after
+   hearing the fix without it") - just newly visible through the WebSocket
+   instead of only as an on-screen glitch. No change made; revisit only if
+   that deferral itself gets revisited.
+
+All three fixes deployed to `gexis` (same hand-install-over-SSH loop) and
+confirmed starting cleanly. **Not yet re-confirmed by George**: a fresh
+Bluetooth connection with real metadata, and a Spotify/Bluetooth
+disconnect actually returning `active` to `null` on the WebSocket.
+
 ---
 
 **Phase 0 is merged** (PR #1, into `main`). All seven acceptance criteria
