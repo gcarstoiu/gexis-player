@@ -1,8 +1,90 @@
 # Handoff
 
-Last updated: 2026-09-12 (tenth session — **PHASE 2 CLOSED**)
+Last updated: 2026-09-12 (eleventh session — **PHASE 3 STARTED**)
 
 ## Where things stand
+
+**Phase 3 (core state daemon) started, criterion 1's first slice built on
+`phase-3-core-daemon`, not yet hardware-verified or pushed for George's own
+pass.** Before writing any code, George was asked what "availability"
+(criterion 1's per-renderer field, alongside "no renderer holds the
+device") should actually mean for the UI, since Phase 3 itself ships no UI
+and the answer only matters through what Phase 4 needs. **George's
+decision: "backend reachable"** - not whether a renderer has a live
+session - since only LMS ever gets an "activate" control from our own UI
+(Phase 4); Spotify/Bluetooth availability only ever feeds a status line,
+and richer session-awareness for them was deliberately not built ahead of
+a criterion that would use it. Recorded in `model.py`'s module docstring.
+
+Built this session, all unit-tested (no hardware) and passing (124 tests):
+
+- **`core/src/gexis_core/model.py`** - `TrackMetadata` (ADR-0014's seven
+  skin fields plus position/duration, `remaining_time` derived and clamped
+  to never go negative) and `PlaybackState` (active renderer or nobody,
+  per-renderer `available`, the active renderer's metadata or a blank
+  placeholder when nobody holds the device).
+- **`core/src/gexis_core/state.py`** - `StateStore`, the aggregator: the
+  supervisor's `active` changes and each adapter's own metadata/
+  availability reports come in here, and subscribers (the WebSocket
+  server) are notified only when the combined, published state actually
+  changes - a metadata push from a renderer that isn't active is recorded
+  (so becoming active has something to show immediately) but does not
+  broadcast.
+- **`core/src/gexis_core/wsserver.py`** - `StateServer`, an `aiohttp.web`
+  WebSocket endpoint at `/state` (no new dependency - aiohttp is already
+  pinned). Push, not poll: a client gets the current snapshot on connect,
+  then a fresh payload only when the state changes. Tested with a real
+  `aiohttp` WebSocket client via `aiohttp.test_utils`, per Phase 3's own
+  stated testing approach.
+- **`arbitration.py`** gained `Supervisor(..., on_active_change=...)`,
+  fired from `acquire`/`relinquish` after `_active` is already updated -
+  this is what lets `state.py` reflect a takeover the instant it happens
+  rather than on a poll.
+- **Each adapter** (`lms.py`, `spotify.py`, `bluetooth.py`) gained
+  `on_metadata_change`/`on_availability_change` hooks, matching the
+  existing `on_volume_change` idiom rather than changing the abstract
+  `Adapter` contract - that formalisation is criterion 2's job, not this
+  one's. Field mappings sourced from each renderer's own docs, not
+  assumed:
+  - **LMS**: JSON-RPC `status` query, requesting `tags:aldcT` so pushed
+    frames carry metadata, not just power. Per-song fields
+    (title/artist/album/coverid/samplerate) live inside `playlist_loop[0]`
+    in the JSON-RPC response, not at the top level - confirmed against
+    community JSON-RPC examples (LMS-CLI.md itself only documents the raw
+    telnet tagged-parameter format, which flattens differently). **Two
+    things flagged as not yet hardware-verified**: the `playlist_loop`
+    nesting itself, and tag `T`'s unit - LMS-CLI.md's own table says
+    "samplerate, in KHz" but its own worked example returns a raw Hz value
+    (44100) for 44.1kHz content: implemented as Hz, matching the doc's own
+    example over its own prose, but not checked against `gexis`'s real LMS
+    server.
+  - **Spotify**: go-librespot's `/events` "metadata" and "seek" events, per
+    API.md (fetched from the upstream repo, not assumed) - "seek" carries
+    only position/duration, so it merges onto the last "metadata" event
+    rather than reporting a mostly-blank update.
+  - **Bluetooth**: BlueZ `MediaPlayer1`'s `Track` dict and `Position`
+    property (org.bluez.MediaPlayer.rst), read once from the
+    `ObjectManager` snapshot when the player appears and kept current via
+    `PropertiesChanged`. No artwork or sample rate - matches ADR-0014's
+    "Bluetooth supplies no artwork" expectation; the interface genuinely
+    has no such fields, not an omission here. **Not yet hardware-verified**
+    against a real phone connection - the `PropertiesChanged` handler's
+    double-unwrap (a dict-valued D-Bus property nests one Variant level
+    deeper than a scalar one) is inferred from dbus_next's documented
+    behaviour, consistent with `bluetooth_trust.py`'s existing
+    `.value`-unwrapping idiom, but not observed on a live signal yet.
+- **`__main__.py`/`config.py`**: `StateStore`/`StateServer` wired in,
+  `state_host`/`state_port` (default `0.0.0.0:8090`) added to `Config`.
+
+**Not done yet, deliberately** - this is one slice, not the whole
+criterion's hardware verification, per the standing "land one change at a
+time" rule: no reflash, no real WebSocket client against the live daemon,
+no confirmation of the two flagged-unverified mappings above. Next: George
+reviews/tests this slice (a WebSocket client against a running
+`gexis-core`, once pushed and, ideally, exercised on `gexis`) before
+criterion 2 (capability declarations) starts.
+
+---
 
 **Phase 0 is merged** (PR #1, into `main`). All seven acceptance criteria
 passed, hardware-verified on `gexis`. Build cost is known: a full
