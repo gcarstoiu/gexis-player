@@ -3,7 +3,7 @@ memory attribution (criterion 5).
 
 Regression coverage for a real ratchet-to-zero measured on hardware,
 2026-09-06, and for the per-renderer-volume decision, 2026-09-07 (see
-volume.py's module docstring for both). Only `_on_spotify_volume` is
+volume.py's module docstring for both). Only `_on_adapter_volume` is
 exercised directly here - `run()`'s `alsactl monitor` side needs a real
 subprocess and isn't covered by these tests; the shared
 value-matched echo suppression and remember/apply logic is the same code path
@@ -30,6 +30,8 @@ from gexis_core.volume import (
 
 
 class FakeSpotify:
+    renderer_id = "spotify"
+
     def __init__(self):
         self._callback = None
 
@@ -81,9 +83,9 @@ async def test_spotify_echo_of_our_own_value_is_ignored(fake_set_raw):
     """An echo carries back exactly what we pushed out - that, and only
     that, is what gets dropped."""
     bridge, _ = make_bridge()
-    bridge._expected_spotify_value = (71, time_module.monotonic())
+    bridge._expected_adapter_value = (71, time_module.monotonic())
 
-    bridge._on_spotify_volume(71, 100)
+    bridge._on_adapter_volume(71, 100)
     await asyncio.sleep(0)  # let any scheduled task run
 
     assert fake_set_raw == []
@@ -99,9 +101,9 @@ async def test_a_different_value_arriving_immediately_is_still_applied(fake_set_
     apart reached 240/240. A value we did not write is a genuine change,
     however fast it arrives."""
     bridge, _ = make_bridge()
-    bridge._expected_spotify_value = (71, time_module.monotonic())
+    bridge._expected_adapter_value = (71, time_module.monotonic())
 
-    bridge._on_spotify_volume(72, 100)  # one step away, immediately after
+    bridge._on_adapter_volume(72, 100)  # one step away, immediately after
     await asyncio.sleep(0)
 
     assert fake_set_raw == [("DAC", spotify_fraction_to_hardware_raw(0.72))]
@@ -114,7 +116,7 @@ async def test_fast_ramp_to_max_reaches_full_scale(fake_set_raw):
     bridge, _ = make_bridge()
 
     for value in (40, 55, 70, 85, 100):
-        bridge._on_spotify_volume(value, 100)
+        bridge._on_adapter_volume(value, 100)
         await asyncio.sleep(0)
 
     assert [raw for _, raw in fake_set_raw] == [
@@ -129,9 +131,9 @@ async def test_a_stale_expectation_does_not_suppress_a_genuine_change(fake_set_r
     differently coming back), the expectation must expire rather than
     silently swallow a later genuine change carrying the same number."""
     bridge, _ = make_bridge()
-    bridge._expected_spotify_value = (50, time_module.monotonic() - ECHO_WINDOW_S - 1)
+    bridge._expected_adapter_value = (50, time_module.monotonic() - ECHO_WINDOW_S - 1)
 
-    bridge._on_spotify_volume(50, 100)
+    bridge._on_adapter_volume(50, 100)
     await asyncio.sleep(0)
 
     assert fake_set_raw == [("DAC", 195)]
@@ -140,9 +142,9 @@ async def test_a_stale_expectation_does_not_suppress_a_genuine_change(fake_set_r
 @pytest.mark.asyncio
 async def test_genuine_spotify_change_outside_window_is_applied(fake_set_raw):
     bridge, memory = make_bridge()
-    bridge._expected_spotify_value = None
+    bridge._expected_adapter_value = None
 
-    bridge._on_spotify_volume(50, 100)
+    bridge._on_adapter_volume(50, 100)
     await asyncio.sleep(0)
 
     # dB-linear (spotify_fraction_to_hardware_raw), not raw-linear: 50%
@@ -158,7 +160,7 @@ async def test_write_hardware_arms_the_echo_window(fake_set_raw):
     set_raw() directly on every acquisition, bypassing the echo window -
     that write still shows up on alsactl monitor, so it got treated as a
     genuine external change and echoed straight back to Spotify via
-    _on_spotify_volume's own path, racing go-librespot's own volume
+    _on_adapter_volume's own path, racing go-librespot's own volume
     report. write_hardware() is what restore_volume and the unmanaged-
     renderer floor bump now call instead; this is the fix's core
     property: a write through it must not be mistaken for a fresh
@@ -181,9 +183,9 @@ async def test_spotify_volume_while_inactive_is_remembered_not_applied(fake_set_
     move the mixer someone else currently owns, but should still be
     remembered for when it next becomes active."""
     bridge, memory = make_bridge(active="lms")
-    bridge._expected_spotify_value = None
+    bridge._expected_adapter_value = None
 
-    bridge._on_spotify_volume(50, 100)
+    bridge._on_adapter_volume(50, 100)
     await asyncio.sleep(0)
 
     assert fake_set_raw == []  # not applied to the live mixer
@@ -323,7 +325,7 @@ class TestDummyRawToHardwareRaw:
 class TestSpotifyFractionToHardwareRaw:
     """Regression coverage for a bug found on hardware, 2026-09-08 - same
     day, same shape as LMS's own curve bug (TestDummyRawToHardwareRaw),
-    just never touched by that fix: `_on_spotify_volume` mapped Spotify's
+    just never touched by that fix: `_on_adapter_volume` mapped Spotify's
     value/max_ fraction *linearly in raw steps* onto the DAC's full
     0..240 - raw steps are dB-linear, not perceptually linear, so this
     compressed nearly all perceived loudness change into the last

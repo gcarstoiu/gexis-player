@@ -69,6 +69,7 @@ class Supervisor:
         device_busy,
         ladder: TimeoutLadder | None = None,
         restore_volume=None,
+        on_active_change=None,
     ) -> None:
         """`device_busy` is a one-arg callable (sync or async), taking a
         renderer_id and returning whether *that specific renderer* still
@@ -91,6 +92,15 @@ class Supervisor:
         reason as `device_busy`; the lookup-remembered-or-default and
         hardware-mixer-scale logic lives in renderer_volume.py and
         __main__.py's wiring, not here - this module stays pure policy.
+
+        `on_active_change`, if given, is a callable taking the new active
+        renderer id (or None for nobody) - Phase 3 criterion 1's state
+        store (state.py) hooks in here so the published model reflects a
+        takeover the moment it happens, not on some later poll. Called
+        after `_active` is already updated, so a callback that reads
+        `self.active` back sees the new value; called synchronously, so it
+        must not block - state.py's own callback is a plain dict/list
+        update, no I/O.
         """
         if not adapters:
             raise ValueError("supervisor needs at least one adapter")
@@ -98,6 +108,7 @@ class Supervisor:
         self._device_busy = device_busy
         self._ladder = ladder or TimeoutLadder()
         self._restore_volume = restore_volume
+        self._on_active_change = on_active_change
         # None means *nobody* holds the device (ADR-0027). Until
         # 2026-09-12 this same None meant "LMS", which is why the
         # distinction is called out rather than left to the type.
@@ -131,6 +142,7 @@ class Supervisor:
                 return
             outgoing = self._active
             self._active = renderer_id
+            self._notify_active_change()
             logger.info(
                 "acquire: %s takes the device (was %s)", renderer_id, outgoing or "nobody"
             )
@@ -205,7 +217,12 @@ class Supervisor:
                 )
                 return
             self._active = None
+            self._notify_active_change()
             logger.info("relinquish: %s gave up the device, nobody holds it now", renderer_id)
+
+    def _notify_active_change(self) -> None:
+        if self._on_active_change is not None:
+            self._on_active_change(self._active)
 
     async def _release_with_ladder(self, renderer_id: str) -> ReleaseOutcome:
         adapter = self._adapters[renderer_id]

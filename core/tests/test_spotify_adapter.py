@@ -1,0 +1,78 @@
+"""Unit tests for the parts of SpotifyAdapter that don't need a network
+(Phase 3 criterion 1's metadata reporting). The WS event loop itself is
+covered by live hardware sessions - see adapters/spotify.py's own module
+docstring for why (go-librespot's exact event shapes were confirmed
+against its source, not assumed).
+"""
+from __future__ import annotations
+
+from gexis_core.adapters.spotify import SpotifyAdapter
+from gexis_core.model import TrackMetadata
+
+
+def _metadata_event(**overrides) -> dict:
+    """Shaped per API.md's "metadata" event fields."""
+    data = {
+        "name": "Song Title",
+        "artist_names": ["Artist One", "Artist Two"],
+        "album_name": "The Album",
+        "album_cover_url": "https://example.com/cover.jpg",
+        "position": 5000,
+        "duration": 200000,
+        "sample_rate": 44100,
+    }
+    data.update(overrides)
+    return data
+
+
+def test_metadata_event_maps_to_track_metadata():
+    adapter = SpotifyAdapter("127.0.0.1", 3678)
+    received = []
+    adapter.on_metadata_change(received.append)
+
+    adapter._handle_metadata_event(_metadata_event())
+
+    assert received == [
+        TrackMetadata(
+            title="Song Title",
+            artist="Artist One, Artist Two",
+            album="The Album",
+            artwork="https://example.com/cover.jpg",
+            sample_rate=44100,
+            position=5.0,
+            duration=200.0,
+            source_type="spotify",
+        )
+    ]
+
+
+def test_metadata_event_is_a_noop_without_a_registered_callback():
+    adapter = SpotifyAdapter("127.0.0.1", 3678)
+    adapter._handle_metadata_event(_metadata_event())  # must not raise
+
+
+def test_seek_event_updates_timing_but_keeps_the_rest_of_the_last_metadata():
+    """API.md: "seek" carries only context_uri/uri/position/duration/
+    play_origin - not name/artist/album."""
+    adapter = SpotifyAdapter("127.0.0.1", 3678)
+    received = []
+    adapter.on_metadata_change(received.append)
+    adapter._handle_metadata_event(_metadata_event())
+
+    adapter._handle_seek_event({"position": 90000, "duration": 200000})
+
+    assert received[-1].title == "Song Title"  # unchanged
+    assert received[-1].position == 90.0
+    assert received[-1].duration == 200.0
+
+
+def test_seek_event_before_any_metadata_is_a_noop():
+    """A "seek" arriving with nothing to merge onto (should not happen per
+    API.md's ordering, but must not crash if it did)."""
+    adapter = SpotifyAdapter("127.0.0.1", 3678)
+    received = []
+    adapter.on_metadata_change(received.append)
+
+    adapter._handle_seek_event({"position": 1000, "duration": 200000})
+
+    assert received == []

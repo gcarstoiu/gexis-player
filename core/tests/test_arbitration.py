@@ -534,6 +534,68 @@ async def test_relinquish_rejects_an_unknown_renderer():
         await supervisor.relinquish("qobuz")
 
 
+# --- Phase 3 criterion 1: state store notification ------------------------
+
+
+@pytest.mark.asyncio
+async def test_on_active_change_fires_on_acquire():
+    """state.py's StateStore hooks in here so the published model reflects
+    a takeover the moment it happens (Phase 3 criterion 1)."""
+    holder = {"who": None}
+    adapters = {
+        "lms": FakeAdapter("lms", ReleaseAction.PAUSE, holder),
+        "spotify": FakeAdapter("spotify", ReleaseAction.DISCONNECT, holder),
+        "bluetooth": FakeAdapter("bluetooth", ReleaseAction.DISCONNECT, holder),
+    }
+    changes: list[str | None] = []
+    supervisor = Supervisor(
+        adapters,
+        device_busy=lambda renderer_id: holder["who"] == renderer_id,
+        ladder=FAST_LADDER,
+        on_active_change=changes.append,
+    )
+
+    await supervisor.acquire("lms")
+    holder["who"] = "lms"
+    await supervisor.acquire("spotify")
+
+    assert changes == ["lms", "spotify"]
+
+
+@pytest.mark.asyncio
+async def test_on_active_change_fires_on_relinquish():
+    changes: list[str | None] = []
+    supervisor, _, holder = build(active="lms")
+    supervisor._on_active_change = changes.append
+
+    await supervisor.relinquish("lms")
+
+    assert changes == [None]
+
+
+@pytest.mark.asyncio
+async def test_on_active_change_not_fired_on_noop_reacquire():
+    changes: list[str | None] = []
+    supervisor, _, holder = build(active="lms")
+    supervisor._on_active_change = changes.append
+
+    await supervisor.acquire("lms")  # already active - no-op
+
+    assert changes == []
+
+
+@pytest.mark.asyncio
+async def test_on_active_change_not_fired_when_relinquish_is_ignored():
+    changes: list[str | None] = []
+    supervisor, _, holder = build(active="lms")
+    await supervisor.acquire("spotify")
+    supervisor._on_active_change = changes.append
+
+    await supervisor.relinquish("lms")  # not current - ignored
+
+    assert changes == []
+
+
 @pytest.mark.asyncio
 async def test_reacquiring_after_relinquish_works():
     """Nobody-holds-it is a state the system passes *through*, not a dead

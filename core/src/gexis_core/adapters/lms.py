@@ -30,15 +30,26 @@ from __future__ import annotations
 import asyncio
 import itertools
 import logging
+from typing import Callable
 
 import aiohttp
 
-from gexis_core.adapters.base import Adapter, ReleaseAction
+from gexis_core.adapters.base import Adapter, Capabilities, ReleaseAction, VolumeMechanism
+from gexis_core.model import TrackMetadata
 from gexis_core.systemd import kill_unit
+from gexis_core.volume import DUMMY_CARD_LMS
 
 logger = logging.getLogger("gexis_core.adapters.lms")
 
 UNIT_NAME = "squeezelite.service"
+
+#: Requested on every "status" query this adapter makes so pushed frames
+#: carry metadata, not just power (Phase 3 criterion 1). Letters per the
+#: CLI docs' songinfo tag table (LMS-CLI.md): a=artist, l=album, c=coverid,
+#: d=duration, T=samplerate. title/time/duration (top-level, the player's
+#: *current* values) come back regardless of tags - only the per-song
+#: fields need asking for.
+METADATA_TAGS = "aldcT"
 
 #: How far the player's position may drift from what `release()` recorded
 #: before `device_freed()` corrects it with a seek.
@@ -64,10 +75,29 @@ RESUME_POSITION_TOLERANCE_S = 3.0
 _id_counter = itertools.count(1)
 
 
+def _as_float(value) -> float | None:
+    return float(value) if isinstance(value, (int, float)) else None
+
+
 class LmsAdapter(Adapter):
     renderer_id = "lms"
     release_action = ReleaseAction.PAUSE
     unit_name = UNIT_NAME
+    # Phase 3 criterion 2. "power_on" is the one acquisition signal this
+    # adapter treats as a takeover (ADR-0027 - not "play", which is a
+    # separate intention afterwards). Artwork and sample rate both come
+    # from the JSON-RPC "status" query's playlist_loop tags (coverid, T) -
+    # confirmed against a real library track and a live radio stream,
+    # 2026-09-12 (HANDOFF.md).
+    capabilities = Capabilities(
+        audio_connection="output",
+        acquisition_events=frozenset({"power_on"}),
+        supports_artwork=True,
+        supports_sample_rate=True,
+        volume_managed=True,
+        volume_mechanism=VolumeMechanism.DUMMY_MIXER,
+        dummy_mixer_card=DUMMY_CARD_LMS,
+    )
 
     # ADR-0027, 2026-09-12: this adapter no longer fights squeezelite for
     # the ALSA device. The player's own LMS *power* state is the
@@ -106,6 +136,64 @@ class LmsAdapter(Adapter):
         #: RESUME_POSITION_TOLERANCE_S).
         self._resume_playing = False
         self._resume_position: float | None = None
+        self._on_metadata: Callable[[TrackMetadata], None] | None = None
+        self._on_availability: Callable[[bool], None] | None = None
+
+    def on_metadata_change(self, callback: Callable[[TrackMetadata], None]) -> None:
+        """state.py hooks in here (Phase 3 criterion 1). Fired on every
+        subscribed status push, not just power changes - the "status"
+        query's own `subscribe:N` push-on-change behaviour (LMS-CLI.md)
+        covers any player-state change, including a new track loading,
+        which is exactly the edge criterion 6 needs to measure later.
+        """
+        self._on_metadata = callback
+
+    def on_availability_change(self, callback: Callable[[bool], None]) -> None:
+        """George's decision, 2026-09-12: "available" means the backend is
+        reachable, independent of whether the player is powered on. True
+        once the CometD handshake+subscribe succeeds, False while `run()`'s
+        outer loop is in its retry sleep after losing the connection.
+        """
+        self._on_availability = callback
+
+    def _report_metadata(self, result: dict) -> None:
+        """`result` is a "status" query's JSON-RPC result, not the raw CLI
+        tagged-parameter response LMS-CLI.md illustrates - JSON-RPC nests
+        every per-song tag (title/artist/album/coverid/samplerate) inside
+        `playlist_loop`, one entry per requested playlist item; player-level
+        fields (power, mode, time, duration, current_title, remote) stay at
+        the top level. Confirmed against community JSON-RPC examples, not
+        against a live LMS server - **the playlist_loop nesting is not yet
+        hardware-verified**, see HANDOFF.md.
+
+        With `start="-"` and `itemsPerResponse=1` (every call site here),
+        `playlist_loop` holds exactly the current song, so index 0 needs no
+        cross-reference against `playlist_cur_index`.
+        """
+        if self._on_metadata is None:
+            return
+        song = (result.get("playlist_loop") or [{}])[0]
+        remote = bool(result.get("remote"))
+        title = result.get("current_title") if remote else song.get("title")
+        coverid = song.get("coverid")
+        self._on_metadata(
+            TrackMetadata(
+                title=title,
+                artist=song.get("artist"),
+                album=song.get("album"),
+                artwork=f"{self._base}/music/{coverid}/cover.jpg" if coverid else None,
+                # LMS-CLI.md's songinfo table documents tag T ("samplerate")
+                # as "in KHz", but its own worked example returns a raw Hz
+                # value (44100 for 44.1kHz content) - a known doc/reality
+                # mismatch, not this project's assumption. Treated as Hz
+                # here; **not yet confirmed against a live LMS server**, see
+                # HANDOFF.md.
+                sample_rate=int(song["samplerate"]) if "samplerate" in song else None,
+                position=_as_float(result.get("time")),
+                duration=_as_float(result.get("duration")),
+                source_type="lms",
+            )
+        )
 
     async def _rpc(self, session: aiohttp.ClientSession, player: str, command: list) -> dict:
         body = {"id": next(_id_counter), "method": "slim.request", "params": [player, command]}
@@ -129,6 +217,8 @@ class LmsAdapter(Adapter):
                 await self._watch(on_acquire, on_release)
             except (aiohttp.ClientError, asyncio.TimeoutError, RuntimeError) as exc:
                 logger.warning("lms: connection/subscription failed (%s), retrying in 5s", exc)
+                if self._on_availability is not None:
+                    self._on_availability(False)
                 await asyncio.sleep(5)
 
     async def _watch(self, on_acquire, on_release) -> None:
@@ -160,12 +250,34 @@ class LmsAdapter(Adapter):
                     "clientId": client_id,
                     "data": {
                         "response": response_channel,
-                        "request": [self._player_id, ["status", "-", 1, "subscribe:1"]],
+                        # "subscribe:0", not "subscribe:1" - LMS-CLI.md's
+                        # own wording ("push on player change... the number
+                        # indicates the interval between automatic
+                        # generations in case nothing happened") means the
+                        # digit is a heartbeat period, not an on/off flag.
+                        # `subscribe:1` was pushing a fresh frame every
+                        # second even when nothing changed - harmless
+                        # before this file read anything but `power`, but
+                        # once metadata (including a ticking `time`) was
+                        # added to every push, that heartbeat alone made
+                        # the WebSocket emit a new payload roughly once a
+                        # second regardless of real activity. Found live,
+                        # 2026-09-12, from George watching the raw output.
+                        # `subscribe:0` keeps push-on-real-change (power,
+                        # volume, track load - everything this adapter and
+                        # criterion 6 depend on) and drops only the
+                        # unconditional resend.
+                        "request": [
+                            self._player_id,
+                            ["status", "-", 1, "subscribe:0", f"tags:{METADATA_TAGS}"],
+                        ],
                     },
                     "id": str(next(_id_counter)),
                 },
             )
             logger.info("lms: subscribed to %s", response_channel)
+            if self._on_availability is not None:
+                self._on_availability(True)
 
             # Seed with the player's *actual* current power state, so the
             # first push after connecting isn't read as a fresh edge. The
@@ -183,8 +295,12 @@ class LmsAdapter(Adapter):
             # meant re-confirming every edge with a second RPC and paying
             # 0.4s of latency on every genuine acquisition. `power` does
             # not bounce that way, so the whole mechanism goes.
-            status = await self._rpc(session, self._player_id, ["status", "-", 1])
-            last_power = status.get("result", {}).get("power")
+            status = await self._rpc(
+                session, self._player_id, ["status", "-", 1, f"tags:{METADATA_TAGS}"]
+            )
+            result = status.get("result", {})
+            last_power = result.get("power")
+            self._report_metadata(result)
 
             # If the player is *already* on when we start watching, it has
             # already met this adapter's acquisition condition - so say so,
@@ -213,7 +329,13 @@ class LmsAdapter(Adapter):
                 for frame in frames:
                     if frame.get("channel") != response_channel:
                         continue
-                    power = (frame.get("data") or {}).get("power")
+                    data = frame.get("data") or {}
+                    # Every push is a fresh full status result (the
+                    # subscribed request carries the same tags as the seed
+                    # query above), so this is the edge criterion 6 will
+                    # measure later - not just power changes.
+                    self._report_metadata(data)
+                    power = data.get("power")
                     if power is None:
                         continue
                     if power and not last_power:

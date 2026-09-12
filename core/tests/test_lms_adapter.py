@@ -22,6 +22,7 @@ from __future__ import annotations
 import pytest
 
 from gexis_core.adapters.lms import LmsAdapter
+from gexis_core.model import TrackMetadata
 
 
 @pytest.mark.asyncio
@@ -261,6 +262,94 @@ async def test_a_takeover_recording_is_not_overwritten_by_the_power_off_echo(mon
 
     assert adapter._resume_position == 39.9
     assert adapter._resume_playing is True
+
+
+# --- Phase 3 criterion 1: metadata reporting -------------------------------
+
+
+def _status_result(**overrides) -> dict:
+    """A JSON-RPC "status" result shaped the way LMS actually nests it -
+    per-song tags inside `playlist_loop[0]`, player-level fields (power,
+    mode, time, duration, current_title, remote) at the top level. See
+    `_report_metadata`'s own docstring for the sourcing."""
+    song = {
+        "title": "Song Title",
+        "artist": "The Artist",
+        "album": "The Album",
+        "coverid": "abc123",
+        "samplerate": 44100,
+    }
+    song.update(overrides.pop("song", {}))
+    result = {
+        "power": 1,
+        "mode": "play",
+        "time": 30.5,
+        "duration": 200.0,
+        "playlist_loop": [song],
+    }
+    result.update(overrides)
+    return result
+
+
+def test_report_metadata_maps_the_current_song():
+    adapter = LmsAdapter("127.0.0.1", 9000, "gexis")
+    received = []
+    adapter.on_metadata_change(received.append)
+
+    adapter._report_metadata(_status_result())
+
+    assert received == [
+        TrackMetadata(
+            title="Song Title",
+            artist="The Artist",
+            album="The Album",
+            artwork="http://127.0.0.1:9000/music/abc123/cover.jpg",
+            sample_rate=44100,
+            position=30.5,
+            duration=200.0,
+            source_type="lms",
+        )
+    ]
+
+
+def test_report_metadata_uses_current_title_for_remote_streams():
+    adapter = LmsAdapter("127.0.0.1", 9000, "gexis")
+    received = []
+    adapter.on_metadata_change(received.append)
+
+    adapter._report_metadata(
+        _status_result(remote=1, current_title="Radio Station: Now Playing")
+    )
+
+    assert received[0].title == "Radio Station: Now Playing"
+
+
+def test_report_metadata_blanks_artwork_without_a_coverid():
+    adapter = LmsAdapter("127.0.0.1", 9000, "gexis")
+    received = []
+    adapter.on_metadata_change(received.append)
+
+    adapter._report_metadata(_status_result(song={"coverid": None}))
+
+    assert received[0].artwork is None
+
+
+def test_report_metadata_is_a_noop_without_a_registered_callback():
+    adapter = LmsAdapter("127.0.0.1", 9000, "gexis")
+    adapter._report_metadata(_status_result())  # must not raise
+
+
+def test_report_metadata_handles_an_empty_playlist_loop():
+    """A status result before anything has ever loaded (fresh boot, nothing
+    queued) - must blank the fields, not raise on a missing index."""
+    adapter = LmsAdapter("127.0.0.1", 9000, "gexis")
+    received = []
+    adapter.on_metadata_change(received.append)
+
+    adapter._report_metadata({"power": 0, "playlist_loop": []})
+
+    assert received[0].title is None
+    assert received[0].artwork is None
 
 
 @pytest.mark.asyncio

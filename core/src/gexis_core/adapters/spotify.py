@@ -47,11 +47,13 @@ from __future__ import annotations
 
 import asyncio
 import logging
+from dataclasses import replace
 from typing import Callable
 
 import aiohttp
 
-from gexis_core.adapters.base import Adapter, ReleaseAction
+from gexis_core.adapters.base import Adapter, Capabilities, ReleaseAction, VolumeMechanism
+from gexis_core.model import TrackMetadata
 from gexis_core.systemd import kill_unit
 
 logger = logging.getLogger("gexis_core.adapters.spotify")
@@ -59,15 +61,40 @@ logger = logging.getLogger("gexis_core.adapters.spotify")
 UNIT_NAME = "go-librespot.service"
 
 
+def _ms_to_s(value) -> float | None:
+    return value / 1000.0 if isinstance(value, (int, float)) else None
+
+
 class SpotifyAdapter(Adapter):
     renderer_id = "spotify"
     release_action = ReleaseAction.DISCONNECT
     unit_name = UNIT_NAME
+    # Phase 3 criterion 2. Both "active" and "will_play" are treated as
+    # acquisition (Finding 010/014 - "will_play" is upstream's earlier,
+    # device-independent signal, needed because "active" can arrive too
+    # late or not at all when the ALSA open races another renderer's
+    # release). Artwork and sample rate both come straight from the
+    # "metadata" event (API.md) - confirmed live, 2026-09-12.
+    capabilities = Capabilities(
+        audio_connection="output",
+        acquisition_events=frozenset({"active", "will_play"}),
+        supports_artwork=True,
+        supports_sample_rate=True,
+        volume_managed=True,
+        volume_mechanism=VolumeMechanism.SOFTWARE_API,
+    )
 
     def __init__(self, host: str, port: int) -> None:
         self._base = f"http://{host}:{port}"
         self._on_volume: Callable[[int, int], None] | None = None
+        self._on_metadata: Callable[[TrackMetadata], None] | None = None
+        self._on_availability: Callable[[bool], None] | None = None
         self._volume_steps: int | None = None
+        #: The last "metadata" event's position/duration, seconds - a "seek"
+        #: event (API.md) carries a fresh position/duration but no track
+        #: name/artist/album, so reporting it needs the rest of the last
+        #: known metadata rather than emitting a mostly-blank update.
+        self._last_metadata: TrackMetadata | None = None
 
     def on_volume_change(self, callback: Callable[[int, int], None]) -> None:
         """Volume bridge hooks in here: callback(value, max) fires whenever
@@ -75,20 +102,37 @@ class SpotifyAdapter(Adapter):
         """
         self._on_volume = callback
 
+    def on_metadata_change(self, callback: Callable[[TrackMetadata], None]) -> None:
+        """state.py hooks in here (Phase 3 criterion 1). Fired on go-
+        librespot's own "metadata" event (a new track loaded) and "seek"
+        (position moved within the same track) - API.md documents both.
+        """
+        self._on_metadata = callback
+
+    def on_availability_change(self, callback: Callable[[bool], None]) -> None:
+        """George's decision, 2026-09-12: "available" means go-librespot's
+        API is reachable, independent of whether a Spotify Connect session
+        is active. True once /events connects, False while `run()`'s outer
+        loop is in its retry sleep after losing the connection.
+        """
+        self._on_availability = callback
+
     async def run(self, on_acquire, on_release) -> None:
-        # on_release: not wired up - a Spotify disconnect is the same
-        # shape as LMS deactivation but is out of ADR-0027's scope.
         while True:
             try:
-                await self._watch_events(on_acquire)
+                await self._watch_events(on_acquire, on_release)
             except (aiohttp.ClientError, asyncio.TimeoutError, OSError) as exc:
                 logger.warning("spotify: /events connection lost (%s), retrying in 5s", exc)
+                if self._on_availability is not None:
+                    self._on_availability(False)
                 await asyncio.sleep(5)
 
-    async def _watch_events(self, on_acquire) -> None:
+    async def _watch_events(self, on_acquire, on_release) -> None:
         async with aiohttp.ClientSession() as session:
             async with session.ws_connect(f"{self._base}/events") as ws:
                 logger.info("spotify: connected to %s/events", self._base)
+                if self._on_availability is not None:
+                    self._on_availability(True)
                 async for msg in ws:
                     if msg.type != aiohttp.WSMsgType.TEXT:
                         continue
@@ -104,8 +148,58 @@ class SpotifyAdapter(Adapter):
                     elif event_type == "will_play":
                         logger.info("spotify: will_play (acquisition, ahead of ALSA open)")
                         on_acquire()
+                    elif event_type == "inactive":
+                        # George, 2026-09-12: found live via the state
+                        # WebSocket - a Spotify disconnect never told the
+                        # supervisor, so `active`/metadata stayed pointed
+                        # at Spotify indefinitely instead of going back to
+                        # "nobody" (ADR-0027). An oversight in the
+                        # original ADR-0027 work, not a deliberate
+                        # deferral - fixed by reporting API.md's own
+                        # "inactive" event. Safe to call unconditionally:
+                        # Supervisor.relinquish() ignores this unless
+                        # spotify is still the active renderer, so the
+                        # echo of our own takeover-driven /player/stop
+                        # (which fires this same event) is a no-op.
+                        logger.info("spotify: device became inactive (release)")
+                        on_release()
                     elif event_type == "volume":
                         self._handle_volume_event(frame.get("data") or {})
+                    elif event_type == "metadata":
+                        self._handle_metadata_event(frame.get("data") or {})
+                    elif event_type == "seek":
+                        self._handle_seek_event(frame.get("data") or {})
+
+    def _handle_metadata_event(self, data: dict) -> None:
+        if self._on_metadata is None:
+            return
+        metadata = TrackMetadata(
+            title=data.get("name"),
+            artist=", ".join(data["artist_names"]) if data.get("artist_names") else None,
+            album=data.get("album_name"),
+            artwork=data.get("album_cover_url"),
+            sample_rate=data.get("sample_rate"),
+            position=_ms_to_s(data.get("position")),
+            duration=_ms_to_s(data.get("duration")),
+            source_type="spotify",
+        )
+        self._last_metadata = metadata
+        self._on_metadata(metadata)
+
+    def _handle_seek_event(self, data: dict) -> None:
+        # API.md: "seek" carries only context_uri/uri/position/duration/
+        # play_origin - not name/artist/album, so this replaces just the
+        # timing on top of the last "metadata" event rather than reporting
+        # a mostly-blank update.
+        if self._on_metadata is None or self._last_metadata is None:
+            return
+        metadata = replace(
+            self._last_metadata,
+            position=_ms_to_s(data.get("position")),
+            duration=_ms_to_s(data.get("duration")),
+        )
+        self._last_metadata = metadata
+        self._on_metadata(metadata)
 
     def _handle_volume_event(self, data: dict) -> None:
         if self._on_volume is None:

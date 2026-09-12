@@ -1,8 +1,298 @@
 # Handoff
 
-Last updated: 2026-09-12 (tenth session — **PHASE 2 CLOSED**)
+Last updated: 2026-09-12 (eleventh session — **PHASE 3 CLOSED**)
 
 ## Where things stand
+
+**Phase 3 (core state daemon) is closed — all six criteria met.** Built and
+hardware-verified on `gexis`, `phase-3-core-daemon`. Two real defects
+found live during criterion 1's verification (Bluetooth's D-Bus interface
+bug, the Spotify/Bluetooth relinquish() oversight) were fixed and
+re-confirmed the same session — full detail further down this file.
+Criterion 2 (adapters declaring capabilities, ADR-0013) followed
+immediately after: `Capabilities` derived from the three built-ins'
+actual, already-verified behaviour (audio connection, named acquisition
+events, which skin fields each can supply), deliberately leaving
+`controls` empty since no adapter can act on a user's command yet and
+Phase 6 is where that becomes real. Published as a new field in the same
+WebSocket payload; confirmed correct on `gexis`.
+
+**Criterion 3 ("no special casing") raised a real scope fork, resolved by
+George before any code:** ADR-0016 describes plugins as separate
+processes with an IPC contract, which the three built-ins are not — a
+full restructure into that model is a much bigger undertaking than
+criterion 2 was. Found by grep first, not guessed: real, existing
+renderer-name branching already in the codebase (`renderer_volume.py`'s
+`MANAGED_RENDERERS` tuple, `volume.py`'s `if renderer == "spotify"`,
+`__main__.py`'s by-name construction of two `DummyMixerBridge` instances
+and one `VolumeBridge`). **George's call: remove that hardcoded
+branching, keep the built-ins in-process** — the separate-process
+question stays open for whenever Qobuz Connect (or another real plugin)
+needs it. Fixed by extending `Capabilities` with `volume_managed`,
+`volume_mechanism` (`DUMMY_MIXER`/`SOFTWARE_API`), and
+`dummy_mixer_card`, so `__main__.py`'s wiring derives everything from
+each adapter's own declaration. Verified on `gexis`: clean restart,
+restore-on-acquire and the `DummyMixerBridge` mirror path both produced
+the same values as before the refactor.
+
+**Criterion 4 (moOde-compatible metadata file) researched from moOde's
+own source before writing anything**, not assumed: `moode-player/moode`'s
+`worker.php` (`updExtMetaFile()`) confirms `/var/local/www/
+currentsong.txt` is plain `key=value` lines, atomically written (`.tmp` +
+rename + `chmod 0666`) — not JSON, despite a forum thread and some UI
+docs describing a JSON shape elsewhere in moOde's own stack. Its closest
+analog to our architecture (the "external renderer active" branch — none
+of our three sources is moOde's own local MPD library playback) writes
+`file`/`artist`/`album`/`title`/`coverurl` plus `encoded`/`bitrate`/
+`outrate`. **George's decision, presented with the exact gap named: only
+the fields the model already has.** `encoded`/`bitrate` need codec/bit-
+depth info nothing in this codebase tracks (only `sample_rate` in Hz);
+`outrate` needs live ALSA hw_params, which nothing queries yet either.
+Built `metadata_file.py`, wired as a plain `StateStore` subscriber
+alongside `StateServer`, with its own change-dedup (moOde's own writer
+compares before writing too — SD card wear). Renderer labels
+("Squeezelite Active", "Spotify Active", "Bluetooth Active") are moOde's
+own vocabulary verbatim. **Verified on `gexis`**: real file at the
+expected path, `0666` permissions, correct live content against a
+playing LMS track.
+
+**Criterion 5 (SQLite config store) built as generic, currently-empty
+infrastructure** - a key-value store (`settings.py`, JSON-encoded values,
+one table so a future setting never needs a schema migration) for
+ADR-0022's settings inventory, none of which has a UI to change it before
+Phase 4 exists. Deliberately not migrating any existing `Config`/TOML
+value (e.g. `boot_volume_steps`) into it - that would change where an
+already-verified, hardware-tested value lives for no criterion-5 reason,
+and stays a live option for whenever a real settings UI needs it.
+Wired into `__main__.py` so the DB and schema are exercised for real on
+the image. **Verified on `gexis`**: a value set before a service restart
+read back correctly after one (`sqlite3` isn't on the image to inspect
+the file directly - verified through `SettingsStore` itself instead).
+
+**Criterion 6 (LMS track-change latency) measured and closed the same
+session.** One script, run on `gexis` itself (not from a separate
+machine, to avoid adding a network hop the real system doesn't have —
+this project's own "wrong-host" lesson), alternating `playlist play`
+between two distinct local library tracks so every round is an
+unambiguous change, T0 at the JSON-RPC call and T1 at the first WebSocket
+frame carrying the new track. **20/20 rounds, median 699.5 ms** (min
+644.0, max 787.3 — tight, unimodal, no outliers). Recorded as
+[Finding 021](docs/findings/021-criterion6-lms-track-change-latency.md).
+No numeric bound for "bounded" exists anywhere in this project's own
+records, so the finding reports the distribution as the record rather
+than asserting a pass/fail line against a number nobody wrote down.
+
+**PHASE 3 CLOSED, 2026-09-12.** All six criteria met on
+`phase-3-core-daemon`, hand-installed and verified on `gexis` throughout
+(not yet baked into a rebuilt image — see the hand-install note further
+up this file). Two live defects found and fixed during verification
+(Bluetooth's D-Bus interface bug; the Spotify/Bluetooth `relinquish()`
+oversight), both re-confirmed. **Not yet done:** an actual image rebuild
+containing this phase's code (everything so far has been the hand-install
+loop over SSH), and merging `phase-3-core-daemon` toward `main` once
+George decides it's ready. **Next: Phase 4** (UI shell, idle screen, now
+playing — display-only, plus LMS activation).
+
+Before writing any code for criterion 1, George was asked what "availability"
+(criterion 1's per-renderer field, alongside "no renderer holds the
+device") should actually mean for the UI, since Phase 3 itself ships no UI
+and the answer only matters through what Phase 4 needs. **George's
+decision: "backend reachable"** - not whether a renderer has a live
+session - since only LMS ever gets an "activate" control from our own UI
+(Phase 4); Spotify/Bluetooth availability only ever feeds a status line,
+and richer session-awareness for them was deliberately not built ahead of
+a criterion that would use it. Recorded in `model.py`'s module docstring.
+
+Built this session, all unit-tested (no hardware) and passing (124 tests):
+
+- **`core/src/gexis_core/model.py`** - `TrackMetadata` (ADR-0014's seven
+  skin fields plus position/duration, `remaining_time` derived and clamped
+  to never go negative) and `PlaybackState` (active renderer or nobody,
+  per-renderer `available`, the active renderer's metadata or a blank
+  placeholder when nobody holds the device).
+- **`core/src/gexis_core/state.py`** - `StateStore`, the aggregator: the
+  supervisor's `active` changes and each adapter's own metadata/
+  availability reports come in here, and subscribers (the WebSocket
+  server) are notified only when the combined, published state actually
+  changes - a metadata push from a renderer that isn't active is recorded
+  (so becoming active has something to show immediately) but does not
+  broadcast.
+- **`core/src/gexis_core/wsserver.py`** - `StateServer`, an `aiohttp.web`
+  WebSocket endpoint at `/state` (no new dependency - aiohttp is already
+  pinned). Push, not poll: a client gets the current snapshot on connect,
+  then a fresh payload only when the state changes. Tested with a real
+  `aiohttp` WebSocket client via `aiohttp.test_utils`, per Phase 3's own
+  stated testing approach.
+- **`arbitration.py`** gained `Supervisor(..., on_active_change=...)`,
+  fired from `acquire`/`relinquish` after `_active` is already updated -
+  this is what lets `state.py` reflect a takeover the instant it happens
+  rather than on a poll.
+- **Each adapter** (`lms.py`, `spotify.py`, `bluetooth.py`) gained
+  `on_metadata_change`/`on_availability_change` hooks, matching the
+  existing `on_volume_change` idiom rather than changing the abstract
+  `Adapter` contract - that formalisation is criterion 2's job, not this
+  one's. Field mappings sourced from each renderer's own docs, not
+  assumed:
+  - **LMS**: JSON-RPC `status` query, requesting `tags:aldcT` so pushed
+    frames carry metadata, not just power. Per-song fields
+    (title/artist/album/coverid/samplerate) live inside `playlist_loop[0]`
+    in the JSON-RPC response, not at the top level - confirmed against
+    community JSON-RPC examples (LMS-CLI.md itself only documents the raw
+    telnet tagged-parameter format, which flattens differently). **Two
+    things flagged as not yet hardware-verified**: the `playlist_loop`
+    nesting itself, and tag `T`'s unit - LMS-CLI.md's own table says
+    "samplerate, in KHz" but its own worked example returns a raw Hz value
+    (44100) for 44.1kHz content: implemented as Hz, matching the doc's own
+    example over its own prose, but not checked against `gexis`'s real LMS
+    server.
+  - **Spotify**: go-librespot's `/events` "metadata" and "seek" events, per
+    API.md (fetched from the upstream repo, not assumed) - "seek" carries
+    only position/duration, so it merges onto the last "metadata" event
+    rather than reporting a mostly-blank update.
+  - **Bluetooth**: BlueZ `MediaPlayer1`'s `Track` dict and `Position`
+    property (org.bluez.MediaPlayer.rst), read once from the
+    `ObjectManager` snapshot when the player appears and kept current via
+    `PropertiesChanged`. No artwork or sample rate - matches ADR-0014's
+    "Bluetooth supplies no artwork" expectation; the interface genuinely
+    has no such fields, not an omission here. **Not yet hardware-verified**
+    against a real phone connection - the `PropertiesChanged` handler's
+    double-unwrap (a dict-valued D-Bus property nests one Variant level
+    deeper than a scalar one) is inferred from dbus_next's documented
+    behaviour, consistent with `bluetooth_trust.py`'s existing
+    `.value`-unwrapping idiom, but not observed on a live signal yet.
+- **`__main__.py`/`config.py`**: `StateStore`/`StateServer` wired in,
+  `state_host`/`state_port` (default `0.0.0.0:8090`) added to `Config`.
+
+**Update, same session: hand-installed on `gexis` and LMS metadata verified
+live, on George's explicit instruction.** This resolves - for this
+instance, not as a standing policy - the "develop-on-hardware workflow
+inversion" question flagged above as discussed-but-undecided: George asked
+directly for the code to be installed on `gexis` and checked against
+`ws://gexis:8090/state`, rather than waiting for a full image rebuild.
+Installed via `pip install --no-deps` from a rsynced copy of `core/` into
+the existing `/opt/gexis-core/venv` (not yet baked into `stage-gexis` or a
+rebuilt image - this is a hand-install for testing, same shape as the
+config/systemd-file loop already documented, now extended to the Python
+core for the first time). `gexis-core.service` restarted cleanly; journal
+shows a clean startup, all three adapters reporting `available: true`,
+`wsserver: listening on ws://0.0.0.0:8090/state`.
+
+**Both flagged-unverified LMS mappings are now confirmed correct against
+the real server:**
+- `playlist_loop[0]` nesting - confirmed. A live query showed title/
+  artist/album/coverid exactly where expected, and end-to-end through the
+  WebSocket for a real local library track (Snow Patrol, "Eyes Open") -
+  title, artist, album, artwork URL, position, duration, remaining_time
+  all correct.
+- Sample rate is Hz, not kHz - confirmed. `tracks` query on three library
+  files all returned `"samplerate": "44100"` (a string, `int()` handles
+  it fine) for 44.1kHz content - LMS-CLI.md's "in KHz" claim is simply
+  wrong, as suspected from its own contradicting example.
+- **New, incidental finding while testing:** the track playing at the
+  time was a remote radio stream (`remote: 1`) - confirmed the `remote`
+  branch's `current_title` fallback works correctly on live data
+  ("Backstreet Boys - Anywhere for You"), and that remote items report no
+  `samplerate` at all (not a bug - LMS has nothing to report for a stream
+  it hasn't decoded). `remoteMeta` (a field not previously known about)
+  duplicates title/artist/album/coverid for remote items - not used, since
+  `playlist_loop`/`current_title` already covered it, but worth knowing it
+  exists.
+
+**Caused a live playback interruption while testing:** a `playlist play`
+JSON-RPC call was issued directly against the real "gexis" LMS player to
+get a local-file track queued for the sample-rate check, interrupting
+whatever radio stream was playing at the time. Flagging plainly rather
+than burying it - George's own player state was changed mid-test.
+
+**Still not verified:** Spotify and Bluetooth metadata (both need a real
+phone) and a genuinely external WebSocket client connection (all checks
+above ran a client on `gexis` itself against `127.0.0.1:8090` or were
+piped through SSH) - George's own next step, watching
+`ws://gexis:8090/state` from his own machine while using the phone app.
+
+**Bug found and fixed live, same session: the state WebSocket was
+emitting a fresh payload roughly once a second regardless of real
+activity.** George spotted it immediately watching the raw browser
+console output. Cause: `_watch`'s CometD subscribe request used
+`subscribe:1`, and LMS-CLI.md's own wording for that parameter is a
+heartbeat interval in seconds ("the interval between automatic
+generations in case nothing happened"), not an on/off flag - it was
+already in the code before this session, harmless while the only thing
+read from each push was `power`, but once metadata (including a ticking
+`time` field) started flowing to the WebSocket, the heartbeat alone
+produced a new payload every second independent of any genuine change.
+Fixed: `subscribe:0`, which keeps push-on-real-change (power, volume,
+track load) and drops only the unconditional resend - confirmed on
+`gexis`, one message in an 8-second window with LMS playing, against one
+every ~1s before. Also added metadata equality dedup to
+`StateStore.set_metadata` on its own merits, though the `subscribe:0` fix
+is what actually stopped this specific spam (a playing track's `time`
+field genuinely differs on every real push, so dedup alone wouldn't have
+silenced it).
+
+**George then ran a real round of Bluetooth/Spotify/LMS testing against
+the WebSocket and reported three findings - two real defects, one already-
+known behaviour:**
+
+1. **Bluetooth reported no metadata at all**, tried from Spotify and
+   Plexamp on his phone. Root cause, confirmed by introspecting BlueZ
+   directly on `gexis`: `MediaPlayer1`'s own proxy interface defines no
+   signals of its own (empty `signals` list), so dbus_next generates no
+   `on_properties_changed` for it - the journal showed
+   `AttributeError("'ProxyInterface' object has no attribute
+   'on_properties_changed'")` every single time a `MediaPlayer1` appeared.
+   `PropertiesChanged` belongs to the generic
+   `org.freedesktop.DBus.Properties` interface instead - matches
+   `bluetooth_trust.py`'s own existing idiom, just for a signal instead of
+   a method call. Fixed. Also extracted `on_interfaces_added`/
+   `on_interfaces_removed` from closures into bound methods
+   (`_handle_interfaces_added`/`_handle_interfaces_removed`) purely for
+   testability - the closure shape is exactly how this bug shipped
+   unnoticed, since nothing exercised it without real D-Bus. New fake-bus
+   regression tests cover the actual `get_interface`/
+   `on_properties_changed` call chain now.
+2. **Stale data after disconnecting from a renderer, with nothing else
+   taking over.** George: "I clearly disconnected from Spotify and was
+   still seeing the old metadata... I think this was an oversight in the
+   previous work." Confirmed by inspection, not just by his report:
+   `on_release` was wired for LMS's own deactivation only -
+   `SpotifyAdapter`/`BluetoothAdapter`'s own `run()` docstrings literally
+   said "not wired up... out of ADR-0027's scope" verbatim in both files.
+   Neither adapter ever told the supervisor "nobody holds it now" on a
+   real disconnect, so `active` stayed pointed at whichever one was last
+   used indefinitely. **George's call: this was an oversight, not a
+   deliberate deferral - fix it.** Fixed both: `SpotifyAdapter` calls
+   `on_release()` on go-librespot's own `"inactive"` event; `BluetoothAdapter`
+   calls it when its `MediaPlayer1` disappears. Both call it
+   unconditionally and safely - `Supervisor.relinquish()` already ignores
+   a release from a renderer that isn't currently active, which is what
+   makes the echo of our own takeover-driven release a no-op (the same
+   mechanism LMS already relied on).
+3. **Two consecutive metadata writes for the same song on an LMS
+   takeover** - not a bug. The logs show exactly why:
+   `lms: position was 0.0s, seeked back to the 35.5s it was released at`.
+   LMS's own auto-power-on restarts the track from zero, and ADR-0027's
+   resume logic then corrects it with a seek - two genuinely different
+   real position values, both correctly published in quick succession.
+   This is the same "residual elapsed flicker" ADR-0027's own Open section
+   already names and defers ("issuing the `play` re-introduces LMS's
+   stale-anchor jump for 0.3-1.6s before it corrects... decide after
+   hearing the fix without it") - just newly visible through the WebSocket
+   instead of only as an on-screen glitch. No change made; revisit only if
+   that deferral itself gets revisited.
+
+All three fixes deployed to `gexis` (same hand-install-over-SSH loop) and
+confirmed starting cleanly. **George re-tested and confirmed both fixes
+work**: Bluetooth now reports real metadata, and disconnecting from
+Spotify/Bluetooth with nothing else taking over correctly returns `active`
+to `null` with metadata blanked.
+
+**Phase 3 criterion 1 is CLOSED, 2026-09-12** — see `docs/DEVELOPMENT.md`
+for the full acceptance note. All three renderers' metadata, availability,
+and "no renderer holds the device" verified on `gexis` against a real
+WebSocket client, by George.
+
+---
 
 **Phase 0 is merged** (PR #1, into `main`). All seven acceptance criteria
 passed, hardware-verified on `gexis`. Build cost is known: a full
