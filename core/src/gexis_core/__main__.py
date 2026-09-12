@@ -18,6 +18,7 @@ from gexis_core.arbitration import Supervisor
 from gexis_core.config import Config
 from gexis_core.metadata_file import MetadataFileWriter
 from gexis_core.renderer_volume import RendererVolumeMemory
+from gexis_core.settings import SettingsStore
 from gexis_core.state import StateStore
 from gexis_core.volume import DUMMY_CONTROL, DummyMixerBridge, VolumeBridge, db_to_raw, get_raw, raw_to_db
 from gexis_core.wsserver import StateServer
@@ -99,6 +100,15 @@ def make_restore_volume(config: Config, volume_memory: RendererVolumeMemory, vol
 
 async def main() -> None:
     config = Config.load()
+
+    # Criterion 5: opened for the process lifetime, schema created if
+    # missing. Nothing reads or writes a real setting through it yet -
+    # ADR-0022's inventory (output mode, boot volume, device name, ...)
+    # has no UI to change any of it before Phase 4 - but the store itself
+    # is exercised for real here, not just in unit tests: this is what
+    # proves the DB file and schema actually come up clean on the image.
+    settings_store = SettingsStore()
+    logger.info("settings: store ready at %s", settings_store.path)
 
     lms = LmsAdapter(config.lms_host, config.lms_port, config.lms_player_name)
     spotify = SpotifyAdapter(config.go_librespot_host, config.go_librespot_port)
