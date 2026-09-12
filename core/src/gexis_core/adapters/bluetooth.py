@@ -41,9 +41,10 @@ from typing import Callable
 from dbus_next import BusType
 from dbus_next.aio import MessageBus
 
-from gexis_core.adapters.base import Adapter, Capabilities, ReleaseAction
+from gexis_core.adapters.base import Adapter, Capabilities, ReleaseAction, VolumeMechanism
 from gexis_core.model import TrackMetadata
 from gexis_core.systemd import kill_unit
+from gexis_core.volume import DUMMY_CARD_BLUETOOTH
 
 logger = logging.getLogger("gexis_core.adapters.bluetooth")
 
@@ -87,6 +88,13 @@ class BluetoothAdapter(Adapter):
         acquisition_events=frozenset({"media_player_appeared", "media_transport_appeared"}),
         supports_artwork=False,
         supports_sample_rate=False,
+        # Finding 006: Bluetooth's own volume path isn't understood well
+        # enough yet to restore a remembered level for it - not the same
+        # question as *how* its live volume gets bridged (below), which
+        # is unrelated and already correctly wired.
+        volume_managed=False,
+        volume_mechanism=VolumeMechanism.DUMMY_MIXER,
+        dummy_mixer_card=DUMMY_CARD_BLUETOOTH,
     )
 
     def __init__(self) -> None:

@@ -23,6 +23,44 @@ class ReleaseAction(enum.Enum):
     DISCONNECT = "disconnect"  # everyone else
 
 
+class VolumeMechanism(enum.Enum):
+    """How a renderer's volume gets bridged onto the shared real hardware
+    mixer (criterion 3, replacing what used to be hardcoded by renderer
+    name in __main__.py/volume.py/renderer_volume.py - found on hardware
+    across Findings 006/008/009/010/011, not designed up front).
+
+    Two mechanisms exist because the renderers genuinely differ, not as
+    an arbitrary split: a renderer with its own software volume API
+    (Spotify) needs bidirectional echo-suppressed sync with the real DAC
+    (VolumeBridge); a renderer with no such API (LMS via squeezelite,
+    Bluetooth via bluealsa-aplay) instead points its own mixer control at
+    a private snd-dummy card, mirrored onto the real DAC only while it's
+    active (DummyMixerBridge, B2/ADR-0018's amendment) - otherwise the
+    three renderers would fight over the one real control continuously.
+    """
+
+    DUMMY_MIXER = "dummy_mixer"
+    SOFTWARE_API = "software_api"
+
+
+class SoftwareVolumeAdapter(typing.Protocol):
+    """The extra surface a `VolumeMechanism.SOFTWARE_API` adapter must
+    expose, beyond the base `Adapter` contract - `VolumeBridge` (volume.py)
+    calls these polymorphically. Only `SpotifyAdapter` implements this
+    today; documented as a Protocol (not an ABC every adapter must
+    inherit) since it's conditional on `capabilities.volume_mechanism`,
+    not universal.
+    """
+
+    renderer_id: str
+
+    def on_volume_change(self, callback: "typing.Callable[[int, int], None]") -> None: ...
+
+    async def get_volume_steps(self) -> int: ...
+
+    async def set_volume(self, value: int) -> None: ...
+
+
 @dataclass(frozen=True)
 class Capabilities:
     """ADR-0013's "contract fields", as data every adapter declares -
@@ -57,6 +95,28 @@ class Capabilities:
     #: renderer protocol.
     supports_artwork: bool
     supports_sample_rate: bool
+    #: Whether a remembered volume level should be restored when this
+    #: renderer becomes active (criterion 5, George's decision 2026-09-07).
+    #: Replaces renderer_volume.py's old hardcoded `MANAGED_RENDERERS =
+    #: ("lms", "spotify")` tuple (criterion 3) - False for Bluetooth,
+    #: whose own volume path mixes confirmed hardware-mixer control with
+    #: an unconfirmed software-attenuation regime below ~96% raw (Finding
+    #: 006); restoring a remembered level there would write to a mixer
+    #: that doesn't fully govern what the user actually hears.
+    volume_managed: bool
+    #: How this renderer's volume gets bridged onto the shared real
+    #: hardware mixer (see VolumeMechanism's own docstring for why there
+    #: are two, not a special case for a special case's sake). Replaces
+    #: __main__.py's old by-name construction of DummyMixerBridge/
+    #: VolumeBridge instances.
+    volume_mechanism: VolumeMechanism
+    #: Only meaningful when `volume_mechanism` is DUMMY_MIXER - the
+    #: private snd-dummy ALSA card name this renderer's own process
+    #: (squeezelite, bluealsa-aplay) points its mixer control at
+    #: (image/stage-gexis's modprobe config; volume.py's DUMMY_CARD_LMS/
+    #: DUMMY_CARD_BLUETOOTH are the same values, referenced here so the
+    #: two never drift apart).
+    dummy_mixer_card: str | None = None
     #: Transport commands accepted through our own control channel right
     #: now - deliberately empty on all three built-ins today. No adapter
     #: currently exposes a way to send play/pause/seek/etc on a user's
@@ -75,6 +135,9 @@ class Capabilities:
             "acquisition_events": sorted(self.acquisition_events),
             "supports_artwork": self.supports_artwork,
             "supports_sample_rate": self.supports_sample_rate,
+            "volume_managed": self.volume_managed,
+            "volume_mechanism": self.volume_mechanism.value,
+            "dummy_mixer_card": self.dummy_mixer_card,
             "controls": sorted(self.controls),
         }
 

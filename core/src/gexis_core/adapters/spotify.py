@@ -52,7 +52,7 @@ from typing import Callable
 
 import aiohttp
 
-from gexis_core.adapters.base import Adapter, Capabilities, ReleaseAction
+from gexis_core.adapters.base import Adapter, Capabilities, ReleaseAction, VolumeMechanism
 from gexis_core.model import TrackMetadata
 from gexis_core.systemd import kill_unit
 
@@ -80,6 +80,8 @@ class SpotifyAdapter(Adapter):
         acquisition_events=frozenset({"active", "will_play"}),
         supports_artwork=True,
         supports_sample_rate=True,
+        volume_managed=True,
+        volume_mechanism=VolumeMechanism.SOFTWARE_API,
     )
 
     def __init__(self, host: str, port: int) -> None:

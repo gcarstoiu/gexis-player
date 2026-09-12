@@ -4,7 +4,7 @@ already-tested behaviour - not just that a Capabilities object exists.
 """
 from __future__ import annotations
 
-from gexis_core.adapters.base import Capabilities
+from gexis_core.adapters.base import Capabilities, VolumeMechanism
 from gexis_core.adapters.bluetooth import BluetoothAdapter
 from gexis_core.adapters.lms import LmsAdapter
 from gexis_core.adapters.spotify import SpotifyAdapter
@@ -16,6 +16,9 @@ def test_to_json_sorts_the_set_fields_for_stable_output():
         acquisition_events=frozenset({"b", "a"}),
         supports_artwork=True,
         supports_sample_rate=False,
+        volume_managed=True,
+        volume_mechanism=VolumeMechanism.DUMMY_MIXER,
+        dummy_mixer_card="somecard",
         controls=frozenset({"pause", "next"}),
     )
     assert caps.to_json() == {
@@ -23,6 +26,9 @@ def test_to_json_sorts_the_set_fields_for_stable_output():
         "acquisition_events": ["a", "b"],
         "supports_artwork": True,
         "supports_sample_rate": False,
+        "volume_managed": True,
+        "volume_mechanism": "dummy_mixer",
+        "dummy_mixer_card": "somecard",
         "controls": ["next", "pause"],
     }
 
@@ -79,3 +85,32 @@ def test_bluetooth_declares_no_artwork_or_sample_rate():
     # live phone connection, 2026-09-12.
     assert BluetoothAdapter.capabilities.supports_artwork is False
     assert BluetoothAdapter.capabilities.supports_sample_rate is False
+
+
+# --- criterion 3: volume mechanism, replacing what used to be hardcoded --
+
+
+def test_lms_and_spotify_are_volume_managed_bluetooth_is_not():
+    # Finding 006: Bluetooth's own volume path isn't understood well
+    # enough yet to restore a remembered level for it.
+    assert LmsAdapter.capabilities.volume_managed is True
+    assert SpotifyAdapter.capabilities.volume_managed is True
+    assert BluetoothAdapter.capabilities.volume_managed is False
+
+
+def test_lms_and_bluetooth_use_a_dummy_mixer_spotify_uses_the_software_api():
+    assert LmsAdapter.capabilities.volume_mechanism is VolumeMechanism.DUMMY_MIXER
+    assert BluetoothAdapter.capabilities.volume_mechanism is VolumeMechanism.DUMMY_MIXER
+    assert SpotifyAdapter.capabilities.volume_mechanism is VolumeMechanism.SOFTWARE_API
+
+
+def test_dummy_mixer_cards_are_distinct_and_match_volume_py():
+    from gexis_core.volume import DUMMY_CARD_BLUETOOTH, DUMMY_CARD_LMS
+
+    assert LmsAdapter.capabilities.dummy_mixer_card == DUMMY_CARD_LMS
+    assert BluetoothAdapter.capabilities.dummy_mixer_card == DUMMY_CARD_BLUETOOTH
+    assert LmsAdapter.capabilities.dummy_mixer_card != BluetoothAdapter.capabilities.dummy_mixer_card
+
+
+def test_spotify_has_no_dummy_mixer_card():
+    assert SpotifyAdapter.capabilities.dummy_mixer_card is None

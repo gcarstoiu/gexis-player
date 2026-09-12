@@ -10,7 +10,7 @@ from __future__ import annotations
 import pytest
 from aiohttp.test_utils import TestClient, TestServer
 
-from gexis_core.adapters.base import Capabilities
+from gexis_core.adapters.base import Capabilities, VolumeMechanism
 from gexis_core.model import TrackMetadata
 from gexis_core.state import StateStore
 from gexis_core.wsserver import StateServer
@@ -23,6 +23,8 @@ def _caps(*renderer_ids: str) -> dict[str, Capabilities]:
             acquisition_events=frozenset({"acquired"}),
             supports_artwork=True,
             supports_sample_rate=True,
+            volume_managed=True,
+            volume_mechanism=VolumeMechanism.SOFTWARE_API,
         )
         for rid in renderer_ids
     }
@@ -49,6 +51,9 @@ async def test_new_client_receives_the_current_state_on_connect():
         "acquisition_events": ["acquired"],
         "supports_artwork": True,
         "supports_sample_rate": True,
+        "volume_managed": True,
+        "volume_mechanism": "software_api",
+        "dummy_mixer_card": None,
         "controls": [],
     }
 

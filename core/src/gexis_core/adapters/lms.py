@@ -34,9 +34,10 @@ from typing import Callable
 
 import aiohttp
 
-from gexis_core.adapters.base import Adapter, Capabilities, ReleaseAction
+from gexis_core.adapters.base import Adapter, Capabilities, ReleaseAction, VolumeMechanism
 from gexis_core.model import TrackMetadata
 from gexis_core.systemd import kill_unit
+from gexis_core.volume import DUMMY_CARD_LMS
 
 logger = logging.getLogger("gexis_core.adapters.lms")
 
@@ -93,6 +94,9 @@ class LmsAdapter(Adapter):
         acquisition_events=frozenset({"power_on"}),
         supports_artwork=True,
         supports_sample_rate=True,
+        volume_managed=True,
+        volume_mechanism=VolumeMechanism.DUMMY_MIXER,
+        dummy_mixer_card=DUMMY_CARD_LMS,
     )
 
     # ADR-0027, 2026-09-12: this adapter no longer fights squeezelite for

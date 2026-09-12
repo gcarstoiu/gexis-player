@@ -306,17 +306,25 @@ class VolumeBridge:
     currently owns.
     """
 
-    def __init__(self, mixer_name: str, spotify_adapter, *, volume_memory, get_active_renderer) -> None:
+    def __init__(self, mixer_name: str, adapter, *, volume_memory, get_active_renderer) -> None:
+        """`adapter` is any `VolumeMechanism.SOFTWARE_API` renderer
+        (`adapters/base.py`'s `SoftwareVolumeAdapter` protocol) - only
+        `SpotifyAdapter` today (criterion 3, fixed 2026-09-12: this class
+        used to be hardcoded to a `spotify_adapter` param and compared
+        `self._get_active_renderer() == "spotify"` by literal string
+        throughout; both now go through `adapter.renderer_id`, so a
+        second SOFTWARE_API renderer would need no change here).
+        """
         self._mixer_name = mixer_name
-        self._spotify = spotify_adapter
+        self._adapter = adapter
         self._volume_memory = volume_memory
         self._get_active_renderer = get_active_renderer
         # Each is (value, armed_at) or None - the exact value we wrote in
         # that direction, awaiting its own echo back. See the module
         # docstring on why this is value-matched rather than a time window.
         self._expected_hw_raw: tuple[int, float] | None = None
-        self._expected_spotify_value: tuple[int, float] | None = None
-        spotify_adapter.on_volume_change(self._on_spotify_volume)
+        self._expected_adapter_value: tuple[int, float] | None = None
+        adapter.on_volume_change(self._on_adapter_volume)
 
     @staticmethod
     def _consume(expected: tuple[int, float] | None, value: int) -> bool:
@@ -346,37 +354,40 @@ class VolumeBridge:
         async tasks happened to schedule in.
 
         Anything that writes the real DAC outside a renderer's own live
-        volume-report path (`_on_spotify_volume`) must go through this,
+        volume-report path (`_on_adapter_volume`) must go through this,
         not `set_raw` directly - restore-on-acquire and the unmanaged-
         renderer floor bump both do now.
         """
         self._expected_hw_raw = (raw, time.monotonic())
         await set_raw(self._mixer_name, raw)
 
-    def _on_spotify_volume(self, value: int, max_: int) -> None:
+    def _on_adapter_volume(self, value: int, max_: int) -> None:
+        renderer_id = self._adapter.renderer_id
         if max_ <= 0:
-            logger.warning("volume: spotify reported max=%r, ignoring", max_)
+            logger.warning("volume: %s reported max=%r, ignoring", renderer_id, max_)
             return
-        if self._consume(self._expected_spotify_value, value):
-            self._expected_spotify_value = None
-            logger.debug("volume: ignoring spotify's echo of our own %s", value)
+        if self._consume(self._expected_adapter_value, value):
+            self._expected_adapter_value = None
+            logger.debug("volume: ignoring %s's echo of our own %s", renderer_id, value)
             return
         raw = spotify_fraction_to_hardware_raw(value / max_)
-        self._volume_memory.remember("spotify", raw)
-        if self._get_active_renderer() != "spotify":
-            # Remembered for next time, but spotify doesn't currently
-            # own the mixer - writing now would move someone else's
-            # volume out from under them.
+        self._volume_memory.remember(renderer_id, raw)
+        if self._get_active_renderer() != renderer_id:
+            # Remembered for next time, but this renderer doesn't
+            # currently own the mixer - writing now would move someone
+            # else's volume out from under them.
             logger.debug(
-                "volume: spotify reported %s/240 while inactive, remembered but not applied",
+                "volume: %s reported %s/240 while inactive, remembered but not applied",
+                renderer_id,
                 raw,
             )
             return
-        logger.info("volume: spotify -> hardware (%s/%s -> %s/240)", value, max_, raw)
+        logger.info("volume: %s -> hardware (%s/%s -> %s/240)", renderer_id, value, max_, raw)
         asyncio.create_task(self.write_hardware(raw))
 
     async def run(self) -> None:
-        """Watch `alsactl monitor` and push hardware changes to Spotify.
+        """Watch `alsactl monitor` and push hardware changes to the
+        SOFTWARE_API adapter this bridge was built for.
 
         Scoped to the real card (`alsa.CARD_ID`), not every card - added
         2026-09-08 alongside `DummyMixerBridge`. Before the dummy
@@ -427,13 +438,13 @@ class VolumeBridge:
                 )
                 continue
             self._volume_memory.remember(active, raw)
-            if active != "spotify":
+            if active != self._adapter.renderer_id:
                 continue
-            steps = await self._spotify.get_volume_steps()
+            steps = await self._adapter.get_volume_steps()
             value = round(hardware_raw_to_spotify_fraction(raw) * steps)
-            logger.info("volume: hardware -> spotify (%s/240)", raw)
-            self._expected_spotify_value = (value, time.monotonic())
-            await self._spotify.set_volume(value)
+            logger.info("volume: hardware -> %s (%s/240)", self._adapter.renderer_id, raw)
+            self._expected_adapter_value = (value, time.monotonic())
+            await self._adapter.set_volume(value)
 
 
 class DummyMixerBridge:

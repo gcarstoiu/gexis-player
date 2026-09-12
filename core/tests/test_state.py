@@ -1,7 +1,7 @@
 """Unit tests for StateStore (Phase 3 criterion 1's aggregator)."""
 from __future__ import annotations
 
-from gexis_core.adapters.base import Capabilities
+from gexis_core.adapters.base import Capabilities, VolumeMechanism
 from gexis_core.model import BLANK_METADATA, TrackMetadata
 from gexis_core.state import StateStore
 
@@ -15,6 +15,8 @@ def _caps(*renderer_ids: str) -> dict[str, Capabilities]:
             acquisition_events=frozenset(),
             supports_artwork=False,
             supports_sample_rate=False,
+            volume_managed=False,
+            volume_mechanism=VolumeMechanism.DUMMY_MIXER,
         )
         for rid in renderer_ids
     }

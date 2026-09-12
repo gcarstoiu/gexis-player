@@ -9,6 +9,7 @@ import asyncio
 import logging
 
 from gexis_core import alsa
+from gexis_core.adapters.base import VolumeMechanism
 from gexis_core.adapters.bluetooth import BluetoothAdapter
 from gexis_core.adapters.lms import LmsAdapter
 from gexis_core.adapters.spotify import SpotifyAdapter
@@ -16,8 +17,7 @@ from gexis_core.arbitration import Supervisor
 from gexis_core.config import Config
 from gexis_core.renderer_volume import RendererVolumeMemory
 from gexis_core.state import StateStore
-from gexis_core import volume
-from gexis_core.volume import DummyMixerBridge, VolumeBridge, db_to_raw, get_raw, raw_to_db
+from gexis_core.volume import DUMMY_CONTROL, DummyMixerBridge, VolumeBridge, db_to_raw, get_raw, raw_to_db
 from gexis_core.wsserver import StateServer
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(levelname)s %(message)s")
@@ -103,7 +103,14 @@ async def main() -> None:
     bluetooth = BluetoothAdapter()
     adapters = {"lms": lms, "spotify": spotify, "bluetooth": bluetooth}
 
-    volume_memory = RendererVolumeMemory()
+    # Criterion 3, 2026-09-12: which renderers are volume-managed is a
+    # declared capability (adapters/base.py), not a name hardcoded here -
+    # this used to be renderer_volume.py's own MANAGED_RENDERERS tuple.
+    volume_memory = RendererVolumeMemory(
+        managed_renderers=frozenset(
+            rid for rid, adapter in adapters.items() if adapter.capabilities.volume_managed
+        )
+    )
 
     # Phase 3 criteria 1-2: the normalised playback model plus each
     # adapter's declared capabilities, published over the state WebSocket.
@@ -113,6 +120,29 @@ async def main() -> None:
     # callbacks reference `supervisor`, assigned later).
     state_store = StateStore({rid: adapter.capabilities for rid, adapter in adapters.items()})
 
+    # Criterion 3, 2026-09-12: which volume-bridging mechanism a renderer
+    # needs is a declared capability (VolumeMechanism), not hardcoded by
+    # name here - this section used to construct one VolumeBridge for
+    # "spotify" and two DummyMixerBridge instances for "lms"/"bluetooth"
+    # by hand.
+    #
+    # Exactly one SOFTWARE_API adapter is assumed below - the only case
+    # that exists today (Spotify). A second one would need this revisited
+    # (which one restore_volume's shared write_hardware() should use),
+    # not because the capability model can't express two, but because
+    # there is no real second example yet to derive that from (ADR-0013's
+    # own instruction: derive from a working implementation, not ahead of
+    # one).
+    software_api_adapters = [
+        adapter
+        for adapter in adapters.values()
+        if adapter.capabilities.volume_mechanism is VolumeMechanism.SOFTWARE_API
+    ]
+    if len(software_api_adapters) != 1:
+        raise RuntimeError(
+            f"expected exactly one SOFTWARE_API adapter, found {len(software_api_adapters)}"
+        )
+
     # Constructed before Supervisor/restore_volume, which both need to
     # write through it (write_hardware()) rather than around it - its
     # get_active_renderer callback references `supervisor` by closure, so
@@ -120,7 +150,7 @@ async def main() -> None:
     # calls the callback until well after `supervisor` is assigned below.
     volume_bridge = VolumeBridge(
         config.mixer_name,
-        spotify,
+        software_api_adapters[0],
         volume_memory=volume_memory,
         get_active_renderer=lambda: supervisor.active,
     )
@@ -152,27 +182,25 @@ async def main() -> None:
             asyncio.create_task(supervisor.relinquish(renderer_id))
 
         return _on_release
-    # B2, George's decision 2026-09-08: LMS and Bluetooth each write to
-    # their own private snd-dummy control (image/stage-gexis/00-alsa's
-    # modprobe config), not the real DAC directly - these mirror that
+    # B2, George's decision 2026-09-08: a DUMMY_MIXER renderer writes to
+    # its own private snd-dummy control (image/stage-gexis/00-alsa's
+    # modprobe config), not the real DAC directly - this mirrors that
     # control onto real hardware only while its renderer is active. See
-    # volume.py's module docstring.
-    lms_volume_bridge = DummyMixerBridge(
-        "lms",
-        volume.DUMMY_CARD_LMS,
-        volume.DUMMY_CONTROL,
-        config.mixer_name,
-        volume_memory=volume_memory,
-        get_active_renderer=lambda: supervisor.active,
-    )
-    bluetooth_volume_bridge = DummyMixerBridge(
-        "bluetooth",
-        volume.DUMMY_CARD_BLUETOOTH,
-        volume.DUMMY_CONTROL,
-        config.mixer_name,
-        volume_memory=volume_memory,
-        get_active_renderer=lambda: supervisor.active,
-    )
+    # volume.py's module docstring. One instance per such renderer (LMS,
+    # Bluetooth today), built from each adapter's own declared capability
+    # rather than named by hand.
+    dummy_mixer_bridges = [
+        DummyMixerBridge(
+            renderer_id,
+            adapter.capabilities.dummy_mixer_card,
+            DUMMY_CONTROL,
+            config.mixer_name,
+            volume_memory=volume_memory,
+            get_active_renderer=lambda: supervisor.active,
+        )
+        for renderer_id, adapter in adapters.items()
+        if adapter.capabilities.volume_mechanism is VolumeMechanism.DUMMY_MIXER
+    ]
 
     logger.info("gexis-core starting: adapters=%s", list(adapters))
     await asyncio.gather(
@@ -181,8 +209,7 @@ async def main() -> None:
             for rid, adapter in adapters.items()
         ),
         volume_bridge.run(),
-        lms_volume_bridge.run(),
-        bluetooth_volume_bridge.run(),
+        *(bridge.run() for bridge in dummy_mixer_bridges),
         state_server.run(),
     )
 
