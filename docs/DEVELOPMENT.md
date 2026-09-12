@@ -426,6 +426,21 @@ Still no UI. Tested with a WebSocket client.
    produced the same values as before the refactor — no behavioural
    change, only where the renderer-specific facts live.
 4. Metadata file written in moOde-compatible format.
+
+   **MET, 2026-09-12.** `metadata_file.py` writes `/var/local/www/
+   currentsong.txt` in moOde's own key=value format - sourced directly
+   from `moode-player/moode`'s `worker.php` (`updExtMetaFile()`), not
+   assumed: plain `key=value` lines (not JSON, despite some forum/UI
+   docs describing that shape elsewhere in moOde's stack), atomic write
+   via a `.tmp` file, rename, then `chmod 0666`. **Scoped by George's
+   decision to only the fields the model already has** — `file`,
+   `artist`, `album`, `title`, `coverurl` — leaving out `encoded`/
+   `bitrate`/`outrate` (moOde's closest analog, its "external renderer
+   active" branch, needs codec/bit-depth data and live ALSA hw_params
+   this codebase doesn't track) rather than faking them. Renderer labels
+   ("Squeezelite Active", "Spotify Active", "Bluetooth Active") are
+   moOde's own vocabulary verbatim. Verified on `gexis`: real file,
+   correct permissions, correct content against a live LMS track.
 5. SQLite config store; settings survive a service restart.
 6. Track change on LMS appears on the WebSocket within a bounded time, measured
    and recorded.

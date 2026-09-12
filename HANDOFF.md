@@ -1,6 +1,6 @@
 # Handoff
 
-Last updated: 2026-09-12 (eleventh session — **PHASE 3 CRITERIA 1-3 CLOSED**)
+Last updated: 2026-09-12 (eleventh session — **PHASE 3 CRITERIA 1-4 CLOSED**)
 
 ## Where things stand
 
@@ -35,7 +35,28 @@ each adapter's own declaration. Verified on `gexis`: clean restart,
 restore-on-acquire and the `DummyMixerBridge` mirror path both produced
 the same values as before the refactor.
 
-**Next: criterion 4** (metadata file in moOde-compatible format).
+**Criterion 4 (moOde-compatible metadata file) researched from moOde's
+own source before writing anything**, not assumed: `moode-player/moode`'s
+`worker.php` (`updExtMetaFile()`) confirms `/var/local/www/
+currentsong.txt` is plain `key=value` lines, atomically written (`.tmp` +
+rename + `chmod 0666`) — not JSON, despite a forum thread and some UI
+docs describing a JSON shape elsewhere in moOde's own stack. Its closest
+analog to our architecture (the "external renderer active" branch — none
+of our three sources is moOde's own local MPD library playback) writes
+`file`/`artist`/`album`/`title`/`coverurl` plus `encoded`/`bitrate`/
+`outrate`. **George's decision, presented with the exact gap named: only
+the fields the model already has.** `encoded`/`bitrate` need codec/bit-
+depth info nothing in this codebase tracks (only `sample_rate` in Hz);
+`outrate` needs live ALSA hw_params, which nothing queries yet either.
+Built `metadata_file.py`, wired as a plain `StateStore` subscriber
+alongside `StateServer`, with its own change-dedup (moOde's own writer
+compares before writing too — SD card wear). Renderer labels
+("Squeezelite Active", "Spotify Active", "Bluetooth Active") are moOde's
+own vocabulary verbatim. **Verified on `gexis`**: real file at the
+expected path, `0666` permissions, correct live content against a
+playing LMS track.
+
+**Next: criterion 5** (SQLite config store; settings survive a restart).
 
 Before writing any code for criterion 1, George was asked what "availability"
 (criterion 1's per-renderer field, alongside "no renderer holds the
