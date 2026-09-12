@@ -1,16 +1,28 @@
 # Handoff
 
-Last updated: 2026-09-12 (eleventh session — **PHASE 3 CRITERION 1 CLOSED**)
+Last updated: 2026-09-12 (eleventh session — **PHASE 3 CRITERIA 1-2 CLOSED**)
 
 ## Where things stand
 
-**Phase 3 (core state daemon) criterion 1 is closed**, built and
+**Phase 3 (core state daemon) criteria 1 and 2 are closed**, built and
 hardware-verified on `gexis`, `phase-3-core-daemon`. Two real defects
-found live during verification (Bluetooth's D-Bus interface bug, the
-Spotify/Bluetooth relinquish() oversight) were fixed and re-confirmed the
-same session — full detail further down this file. **Next: criterion 2**
-(adapters declaring capabilities and acquisition/release behaviour).
-Before writing any code, George was asked what "availability"
+found live during criterion 1's verification (Bluetooth's D-Bus interface
+bug, the Spotify/Bluetooth relinquish() oversight) were fixed and
+re-confirmed the same session — full detail further down this file.
+Criterion 2 (adapters declaring capabilities, ADR-0013) followed
+immediately after: `Capabilities` derived from the three built-ins'
+actual, already-verified behaviour (audio connection, named acquisition
+events, which skin fields each can supply), deliberately leaving
+`controls` empty since no adapter can act on a user's command yet and
+Phase 6 is where that becomes real. Published as a new field in the same
+WebSocket payload; confirmed correct on `gexis`. **Next: criterion 3**
+(adapters implement the public plugin contract — no special casing; note
+ADR-0016 describes plugins as separate processes with an IPC contract,
+which these three built-ins currently are not — worth re-reading before
+starting, since criterion 3 may be a bigger structural question than
+criterion 2 was, not just "reuse Capabilities").
+
+Before writing any code for criterion 1, George was asked what "availability"
 (criterion 1's per-renderer field, alongside "no renderer holds the
 device") should actually mean for the UI, since Phase 3 itself ships no UI
 and the answer only matters through what Phase 4 needs. **George's

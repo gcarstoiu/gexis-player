@@ -380,6 +380,21 @@ Still no UI. Tested with a WebSocket client.
    a deliberate deferral). Both fixed and re-confirmed on hardware.
 2. Adapters for LMS (CometD), Spotify (go-librespot API) and Bluetooth (BlueZ
    D-Bus), each declaring capabilities and acquisition/release behaviour.
+
+   **MET, 2026-09-12** — `Capabilities` (`adapters/base.py`), ADR-0013's
+   contract fields derived from the three built-ins' actual behaviour:
+   audio connection (ADR-0009, "output" for all three today), the named
+   acquisition events each adapter treats as a takeover, and which of
+   ADR-0014's seven skin fields each renderer can ever supply (artwork/
+   sample rate — Bluetooth has neither, confirmed live against a real
+   phone this session). `release_action` is not duplicated here; it
+   already exists on `Adapter` and is used directly by `arbitration.py`.
+   `controls` (transport commands accepted from outside) is declared but
+   left honestly empty on all three — no adapter exposes a way to send a
+   user's command yet, Phase 4 has no transport controls beyond LMS
+   activation, and Phase 6 is where that becomes real. Published as a new
+   `capabilities` field in the state WebSocket payload alongside
+   criterion 1's fields; confirmed correct on `gexis`.
 3. Adapters implement the public plugin contract — no special casing.
 4. Metadata file written in moOde-compatible format.
 5. SQLite config store; settings survive a service restart.
