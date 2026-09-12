@@ -442,6 +442,18 @@ Still no UI. Tested with a WebSocket client.
    moOde's own vocabulary verbatim. Verified on `gexis`: real file,
    correct permissions, correct content against a live LMS track.
 5. SQLite config store; settings survive a service restart.
+
+   **MET, 2026-09-12.** `settings.py`'s `SettingsStore` - generic
+   key-value persistence, JSON-encoded values in one table so a future
+   setting never needs a schema migration, only a new key. Holds no real
+   setting yet: none of ADR-0022's inventory (output mode, boot volume,
+   device name, Bluetooth trusted devices, ...) has a UI to change it
+   before Phase 4 exists - building the storage mechanism ahead of what
+   will use it, same pattern as criteria 1-4. Distinct from `config.py`'s
+   `Config` (deployment-time TOML, edited by hand over SSH) - this is
+   runtime state. Wired into `__main__.py` so the DB and schema are
+   exercised for real on the image. Verified on `gexis`: a value set
+   before a service restart reads back correctly after one.
 6. Track change on LMS appears on the WebSocket within a bounded time, measured
    and recorded.
 

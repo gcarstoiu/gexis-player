@@ -1,6 +1,6 @@
 # Handoff
 
-Last updated: 2026-09-12 (eleventh session — **PHASE 3 CRITERIA 1-4 CLOSED**)
+Last updated: 2026-09-12 (eleventh session — **PHASE 3 CRITERIA 1-5 CLOSED**)
 
 ## Where things stand
 
@@ -56,7 +56,20 @@ own vocabulary verbatim. **Verified on `gexis`**: real file at the
 expected path, `0666` permissions, correct live content against a
 playing LMS track.
 
-**Next: criterion 5** (SQLite config store; settings survive a restart).
+**Criterion 5 (SQLite config store) built as generic, currently-empty
+infrastructure** - a key-value store (`settings.py`, JSON-encoded values,
+one table so a future setting never needs a schema migration) for
+ADR-0022's settings inventory, none of which has a UI to change it before
+Phase 4 exists. Deliberately not migrating any existing `Config`/TOML
+value (e.g. `boot_volume_steps`) into it - that would change where an
+already-verified, hardware-tested value lives for no criterion-5 reason,
+and stays a live option for whenever a real settings UI needs it.
+Wired into `__main__.py` so the DB and schema are exercised for real on
+the image. **Verified on `gexis`**: a value set before a service restart
+read back correctly after one (`sqlite3` isn't on the image to inspect
+the file directly - verified through `SettingsStore` itself instead).
+
+**Next: criterion 6** (LMS track-change latency, measured and recorded).
 
 Before writing any code for criterion 1, George was asked what "availability"
 (criterion 1's per-renderer field, alongside "no renderer holds the
