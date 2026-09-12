@@ -123,6 +123,26 @@ above ran a client on `gexis` itself against `127.0.0.1:8090` or were
 piped through SSH) - George's own next step, watching
 `ws://gexis:8090/state` from his own machine while using the phone app.
 
+**Bug found and fixed live, same session: the state WebSocket was
+emitting a fresh payload roughly once a second regardless of real
+activity.** George spotted it immediately watching the raw browser
+console output. Cause: `_watch`'s CometD subscribe request used
+`subscribe:1`, and LMS-CLI.md's own wording for that parameter is a
+heartbeat interval in seconds ("the interval between automatic
+generations in case nothing happened"), not an on/off flag - it was
+already in the code before this session, harmless while the only thing
+read from each push was `power`, but once metadata (including a ticking
+`time` field) started flowing to the WebSocket, the heartbeat alone
+produced a new payload every second independent of any genuine change.
+Fixed: `subscribe:0`, which keeps push-on-real-change (power, volume,
+track load) and drops only the unconditional resend - confirmed on
+`gexis`, one message in an 8-second window with LMS playing, against one
+every ~1s before. Also added metadata equality dedup to
+`StateStore.set_metadata` on its own merits, though the `subscribe:0` fix
+is what actually stopped this specific spam (a playing track's `time`
+field genuinely differs on every real push, so dedup alone wouldn't have
+silenced it).
+
 ---
 
 **Phase 0 is merged** (PR #1, into `main`). All seven acceptance criteria
