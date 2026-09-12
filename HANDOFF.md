@@ -1,8 +1,47 @@
 # Handoff
 
-Last updated: 2026-09-12 (eleventh session — **PHASE 3 CLOSED**)
+Last updated: 2026-09-12 (eleventh session — **PHASE 3 CLOSED, PHASE 4 STARTED**)
 
 ## Where things stand
+
+**Phase 4 is starting, and five decisions were taken before any code**
+(George, 2026-09-12), recorded in
+[ADR-0028](docs/decisions/0028-ui-serving-and-command-channel.md) and
+`docs/DEVELOPMENT.md`'s amended Phase 4 criteria:
+
+1. **`gexis-core`'s own aiohttp app serves the UI**, same process and origin
+   as `/state`. Not a separate nginx/lighttpd.
+2. **Commands are REST POSTs**, not WebSocket messages. The socket stays
+   publish-only. Decided chiefly because errors ("LMS unreachable") need
+   somewhere to go, `/state`'s already-verified shape stays untouched, and
+   `curl` is how this project actually debugs — a socket isn't curl-able.
+3. **Volume is in Phase 4** (new criterion 8), displayed as a percentage of
+   the hardware control. Not a transport control; transport proper stays
+   Phase 6. Caveat recorded in the criterion: our percentage won't always
+   match a phone's, Bluetooth especially (Findings 006/009/010). **Still
+   open:** how the slider's *travel* maps onto a dB-linear scale, where
+   raw-linear would cram every usable level into the top quarter.
+4. **Criterion 6 reframed, not dropped.** George's objection was that a user
+   doesn't need "why nobody holds the device" explained, because browse +
+   tap-an-album already works via LMS's own auto-power-on. Correct — so the
+   screen's job changed from explaining the state to offering the one action
+   that gets back to music, and it is **expected to retire when Phase 7's
+   browse lands**. It survives only because browse is three phases away and
+   the activate control needs a host that isn't the user's own idle URL.
+5. **Bluetooth's sample-rate field carries the codec** on now playing too
+   (extending ADR-0019's Peppy-screen rule), so the codec must now be
+   captured — new adapter work, but `MediaTransport1` already being watched
+   makes it an extension rather than new plumbing.
+
+Also George's correction, folded into criterion 3: **missing metadata is
+often transient.** Bluetooth has no artwork, but artist/album/title are
+enough for Phase 8's enrichment to find cover art and lyrics — so the
+layout must reserve artwork space and not reflow when it arrives later
+(ARCHITECTURE.md already required exactly this).
+
+Build order agreed: **4a** model extensions (no UI) → **4b** serving and
+kiosk → **4c** now playing → **4d** idle → **4e** back-to-music screen,
+activate, volume → **4f** transition state. Table in `DEVELOPMENT.md`.
 
 **Phase 3 (core state daemon) is closed — all six criteria met.** Built and
 hardware-verified on `gexis`, `phase-3-core-daemon`. Two real defects

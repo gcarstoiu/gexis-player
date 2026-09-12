@@ -487,7 +487,27 @@ over ADR-0016's separate-process model, criterion 4/5's minimal scope).
 2. Idle screen loads the configured URL, with a built-in fallback for
    unreachable and unconfigured.
 3. Now playing shows metadata for all three renderers. No transport controls
-   yet.
+   yet. **Volume is not a transport control and is in scope — see criterion 8**
+   (George's decision, 2026-09-12); transport proper (play/pause/next/previous/
+   seek) stays Phase 6.
+
+   **Bluetooth's sample-rate field carries the codec, not a rate**
+   (George's decision, 2026-09-12, extending [ADR-0019](decisions/0019-peppy-screen-lifecycle.md)'s
+   rule for the Peppy screen to now playing as well — "the decode rate is the
+   codec's, not the source's"). This needs new adapter work: no codec is
+   captured anywhere today. BlueZ's `MediaTransport1` carries it and that
+   object is already watched (it is one of the two Bluetooth acquisition
+   signals), so it is an extension of existing code rather than new plumbing.
+
+   **Missing metadata may be filled in later and the layout must not move**
+   (George, 2026-09-12). Bluetooth supplies no artwork, but artist/album/title
+   are enough for the Phase 8 enrichment service to find cover art and lyrics,
+   so "absent" is transient, not permanent. ARCHITECTURE.md already states the
+   requirement this creates: "Text appears immediately; art and bio arrive
+   later. Reserve artwork space so late arrival does not reflow."
+   [ADR-0012](decisions/0012-enrichment-additive-only.md) means no
+   "possibly wrong" treatment is needed — enrichment never overwrites
+   renderer-supplied text and shows nothing below its confidence threshold.
 4. Handoff state visible during takeover. **Sharpened 2026-09-12 by
    criterion 10's answer: the transition state is shown by DEFAULT and
    skipped only for a renderer pair measured under 1 second** (ADR-0010,
@@ -501,14 +521,28 @@ over ADR-0016's separate-process model, criterion 4/5's minimal scope).
      the threshold. Today only same-rate LMS↔Spotify is exempt; every
      Bluetooth pair and anything cross-rate shows the screen.
 5. Same page served to a remote browser and renders correctly.
-6. **"No renderer holds the device" is a first-class screen state, and the
-   user can tell why.** New, 2026-09-12
-   ([ADR-0027](decisions/0027-lms-power-as-arbitration-mechanism.md)).
-   Distinct from criterion 2's idle screen, which meant "LMS is current
-   but not playing" — under ADR-0027 nobody need hold the device at all,
-   routinely. ADR-0010's accountability rule applies directly: a user
-   who finds LMS deactivated after a Spotify session must be able to
-   account for it.
+6. **When no renderer holds the device, the screen offers the action that
+   gets back to music.** Reframed 2026-09-12 by George, replacing the
+   original wording ("...and the user can tell why").
+
+   *What changed and why.* The original criterion, added the same day from
+   [ADR-0027](decisions/0027-lms-power-as-arbitration-mechanism.md), leaned
+   on ADR-0010's accountability rule: a user finding LMS deactivated after
+   a Spotify session must be able to account for it. George's objection:
+   the user does not actually need that explained, because the obvious
+   next action already works — Phase 7's library browse, tap an album, and
+   LMS's own auto-power-on starts it (documented and measured in ADR-0027's
+   Open section: deactivated at 24.4s, a plain `play` came back at 2.3s;
+   the lost position does not matter when starting something new).
+
+   *Why the screen survives anyway, with a different job.* Library browse
+   is Phase 7, three phases out. Until it lands, this state needs something
+   on screen and criterion 7's activate control needs a home — and the idle
+   screen is a poor host for it, being a user-configured external page we
+   do not own (criterion 2). So this is a deliberately minimal screen whose
+   purpose is to offer the one action, not to explain the state, **and it
+   is expected to be retired when Phase 7's browse screen can take over
+   that job.**
 7. **The user can activate LMS from this UI.** New, 2026-09-12, George's
    decision that it belongs in Phase 4 rather than waiting for Phase 6's
    capability-driven transport controls. This is the one control this
@@ -518,6 +552,46 @@ over ADR-0016's separate-process model, criterion 4/5's minimal scope).
    to LMS is the LMS phone app** — unacceptable on an appliance with its
    own screen. Until it ships, that phone-app dependency is a known,
    accepted interim regression; see the note under Phase 2.
+8. **Volume is displayed and adjustable from this UI.** New, 2026-09-12,
+   George's decision. Not a transport control (criterion 3), and the only
+   other thing this phase is not display-only about.
+
+   **Displayed as a percentage of the hardware control** (George's
+   decision) — the shared ALSA DAC, ADR-0018's 240 steps of 0.5 dB. That
+   is the one level every renderer genuinely shares; LMS and Spotify each
+   apply their own curve above it (Findings 009/010) and Bluetooth is
+   deliberately unmanaged below ~96% (Finding 006), so **our percentage
+   will not always match what a phone shows, Bluetooth especially.** Said
+   here rather than discovered.
+
+   Why it belongs in this phase and not Phase 6: the mechanism is already
+   built and hardware-verified (`VolumeBridge`/`DummyMixerBridge`,
+   per-renderer memory, hardened across Findings 006/008/009/010/011), the
+   write path rides criterion 7's command channel
+   ([ADR-0028](decisions/0028-ui-serving-and-command-channel.md)) with no
+   new transport, and leaving it out would repeat exactly what criterion 7
+   exists to fix — a panel that shows the track but leaves the phone as the
+   only way to change anything.
+
+   **Open, to settle when the control itself is built:** the *slider's*
+   mapping. The hardware scale is dB-linear, so a raw-linear slider puts
+   every usable level in the top quarter of its travel (raw 60 of 240 is
+   −90 dB — Finding 011 measured that as inaudible). Displaying the raw
+   percentage is George's decision and settled; how the control's travel
+   maps onto it is not, and is the same class of problem Findings 009/010
+   solved for LMS and Spotify.
+
+**How Phase 4 is being built** (2026-09-12, agreed with George — one
+increment at a time, each gated on his own hardware pass as usual):
+
+| step | covers | note |
+|---|---|---|
+| **4a** | model extensions | no UI; transport state, handoff pair, command channel + LMS `power 1`, volume level, Bluetooth codec. Unit-testable and verifiable over the existing WebSocket. |
+| **4b** | criteria 1, 5 | static serving (ADR-0028), `stage-gexis/04-ui`, labwc + Chromium kiosk, the Node build step ADR-0023 named as its cost |
+| **4c** | criterion 3 | now playing |
+| **4d** | criterion 2 | idle screen and its fallback |
+| **4e** | criteria 6, 7, 8 | the minimal back-to-music screen, activate, volume |
+| **4f** | criterion 4 | transition state, with the exempt-pair list as published data rather than a constant in the UI |
 
 ### Phase 5 — Visualisation service and Peppy screen
 
