@@ -138,6 +138,17 @@ when their criteria pass:
   real nobody/lms/other tri-state), and the base-slot assumptions baked
   into `core/tests/test_arbitration.py`. Evidence: Finding 018.
 
+  **Branch: `phase-2d-lms-power`, cut off `phase-2c-takeover` rather than
+  off `phase-2-arbitration`** (George's call, 2026-09-12, to keep 2d's work
+  separate). A deliberate deviation from the one-branch-off-the-phase-branch
+  rule above, not drift: 2d's code modifies the same `arbitration.py` and
+  `volume.py` that 2c's Finding 016 polling fix and blocker 4 volume fix had
+  already changed, so branching off `phase-2-arbitration` would have produced
+  a tree that was never built or tested in that configuration - this repo's
+  recurring "verification ran against the wrong reality" failure. 2c's own
+  branch was moved back to the last pre-ADR-0027 commit so the two do not
+  overlap; it was local-only and unpushed, so nothing published was rewritten.
+
 **Known interim regression, accepted deliberately (2026-09-12).** ADR-0027
 makes takeovers clean but leaves LMS deactivated afterwards, and nothing
 re-activates it silently. Until Phase 4's activation control ships
