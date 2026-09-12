@@ -43,6 +43,39 @@ Build order agreed: **4a** model extensions (no UI) → **4b** serving and
 kiosk → **4c** now playing → **4d** idle → **4e** back-to-music screen,
 activate, volume → **4f** transition state. Table in `DEVELOPMENT.md`.
 
+**4a is done** (194 unit tests, hand-installed and verified on `gexis`).
+The payload now also carries `transport`, `codec`, `handoff`, `volume`
+and `handoff_exempt_pairs`, and the command surface exists:
+
+- `POST /volume {"percent": 55}` moved the real mixer to `132 [55%]
+  [-54.00dB]`, with ALSA's own percent readout agreeing with ours.
+- LMS deactivated from the server side published `active: null` with
+  metadata blanked; `POST /renderer/lms/activate` then returned 200 and
+  LMS came back — **the first `power 1` this project has ever sent**, and
+  it deliberately fires no acquisition of its own, letting the existing
+  CometD watch see the change so there is one acquisition path rather
+  than two that can disagree.
+- `409` for activating Spotify (declares no such control), `404` for an
+  unknown renderer, `400` for a malformed volume body — all confirmed
+  with `curl`, which is exactly why ADR-0028 chose REST.
+
+**Not yet seen on real hardware: the handoff pair.** It is unit-tested,
+including the case where the release ladder raises (cleared in a
+`finally`, because a transition screen stuck on forever is the
+unaccountable state ADR-0010 forbids) — but observing it live needs a
+real takeover, which needs a phone. Note LMS↔Spotify is on the exempt
+list anyway, so the visibly interesting case is a Bluetooth pair.
+
+**Image rebuilt and verified, 2026-09-12** —
+`2026-09-12-gexis-player-v0.2.1-88-g4cf667d-dirty` (34m54s, cold build
+after a `make clean`). First image containing Phase 3, and the first
+with the moved alsa pin: the manifest shows `libasound2t64` at
+`1.2.14-1+rpt1+deb13u1` with the **`hi`** flag (held *and* installed),
+and `libasound2-data` at the same version, so the dev/runtime mismatch
+that existed in the failing run is gone. **It predates 4a** — the
+version string names commit `4cf667d`, the pin fix; everything from
+ADR-0028 onward has only been hand-installed.
+
 **Phase 3 (core state daemon) is closed — all six criteria met.** Built and
 hardware-verified on `gexis`, `phase-3-core-daemon`. Two real defects
 found live during criterion 1's verification (Bluetooth's D-Bus interface
