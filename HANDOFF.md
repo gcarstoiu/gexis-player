@@ -1,10 +1,10 @@
 # Handoff
 
-Last updated: 2026-09-12 (eleventh session — **PHASE 3 CRITERIA 1-5 CLOSED**)
+Last updated: 2026-09-12 (eleventh session — **PHASE 3 CLOSED**)
 
 ## Where things stand
 
-**Phase 3 (core state daemon) criteria 1-3 are closed**, built and
+**Phase 3 (core state daemon) is closed — all six criteria met.** Built and
 hardware-verified on `gexis`, `phase-3-core-daemon`. Two real defects
 found live during criterion 1's verification (Bluetooth's D-Bus interface
 bug, the Spotify/Bluetooth relinquish() oversight) were fixed and
@@ -69,7 +69,29 @@ the image. **Verified on `gexis`**: a value set before a service restart
 read back correctly after one (`sqlite3` isn't on the image to inspect
 the file directly - verified through `SettingsStore` itself instead).
 
-**Next: criterion 6** (LMS track-change latency, measured and recorded).
+**Criterion 6 (LMS track-change latency) measured and closed the same
+session.** One script, run on `gexis` itself (not from a separate
+machine, to avoid adding a network hop the real system doesn't have —
+this project's own "wrong-host" lesson), alternating `playlist play`
+between two distinct local library tracks so every round is an
+unambiguous change, T0 at the JSON-RPC call and T1 at the first WebSocket
+frame carrying the new track. **20/20 rounds, median 699.5 ms** (min
+644.0, max 787.3 — tight, unimodal, no outliers). Recorded as
+[Finding 021](docs/findings/021-criterion6-lms-track-change-latency.md).
+No numeric bound for "bounded" exists anywhere in this project's own
+records, so the finding reports the distribution as the record rather
+than asserting a pass/fail line against a number nobody wrote down.
+
+**PHASE 3 CLOSED, 2026-09-12.** All six criteria met on
+`phase-3-core-daemon`, hand-installed and verified on `gexis` throughout
+(not yet baked into a rebuilt image — see the hand-install note further
+up this file). Two live defects found and fixed during verification
+(Bluetooth's D-Bus interface bug; the Spotify/Bluetooth `relinquish()`
+oversight), both re-confirmed. **Not yet done:** an actual image rebuild
+containing this phase's code (everything so far has been the hand-install
+loop over SSH), and merging `phase-3-core-daemon` toward `main` once
+George decides it's ready. **Next: Phase 4** (UI shell, idle screen, now
+playing — display-only, plus LMS activation).
 
 Before writing any code for criterion 1, George was asked what "availability"
 (criterion 1's per-renderer field, alongside "no renderer holds the

@@ -457,6 +457,28 @@ Still no UI. Tested with a WebSocket client.
 6. Track change on LMS appears on the WebSocket within a bounded time, measured
    and recorded.
 
+   **MET, 2026-09-12 — [Finding 021](findings/021-criterion6-lms-track-change-latency.md).**
+   20/20 rounds, n=20, median **699.5 ms** (min 644.0, max 787.3) —
+   tight, unimodal, no outliers. Measured on `gexis` itself (T0 issuing
+   `playlist play` to the real LMS server, T1 the first WebSocket frame
+   carrying the new track's metadata), alternating between two distinct
+   local library tracks so every round is an unambiguous change. **No
+   numeric bound was specified anywhere in this project's records for
+   what "bounded" means** — the finding reports the measured
+   distribution as the record rather than asserting a pass/fail line
+   against a number that was never written down. Scope: one pass, one
+   session, both tracks 44.1 kHz (the library has no other content to
+   test with), LMS already active throughout (this is a mid-session
+   track change, not an acquisition — Findings 018/020 cover that
+   separately).
+
+**PHASE 3 CLOSED, 2026-09-12.** All six criteria met. See HANDOFF.md for
+the full session record, including two live defects found and fixed
+during verification (Bluetooth's D-Bus interface bug; the Spotify/
+Bluetooth `relinquish()` oversight) and the scope decisions George made
+along the way (availability semantics, criterion 3's in-process fix
+over ADR-0016's separate-process model, criterion 4/5's minimal scope).
+
 ### Phase 4 — UI shell, idle screen, now playing (display-only, plus LMS activation)
 
 **Acceptance**
