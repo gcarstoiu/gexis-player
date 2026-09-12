@@ -2,6 +2,8 @@
 
 **Status:** Accepted
 **Date:** 2026-09-04
+**Amended:** 2026-09-05 — the definition was incomplete, not just its
+implementation. See "The `ctl` half" below.
 
 ## Context
 
@@ -29,7 +31,35 @@ pcm.output {
     slave.pcm "hw:sndrpihifiberry"
     scopes.0 peppyalsa
 }
+
+ctl.output {
+    type hw
+    card sndrpihifiberry
+}
 ```
+
+## The `ctl` half
+
+The original record showed only `pcm.output` and was wrong to. **The
+indirection is the device name, not the PCM block** — a renderer that opens
+the mixer through a card index or a raw `hw:` name has bypassed ADR-0009
+exactly as much as one that opens the wrong PCM. Hardware volume control,
+mute, and any other mixer access resolve through the *control* interface,
+not the playback data path, so `output` needed a `ctl` definition as much
+as a `pcm` one from the start.
+
+This went unnoticed until Phase 2, because nothing before Phase 2 opened a
+mixer through `output` — Finding 002's testing addressed `hw:sndrpihifiberry`
+directly. squeezelite's `-V DAC` was the first thing to actually exercise
+this half, and its mixer resolution defaults to a ctl device matching the
+PCM name it was given (`-O` defaults to `-o`'s value) — not through the PCM's
+`slave.pcm` chain, so there was no ctl device named `output` for it to find.
+
+Consequence, confirmed by reading squeezelite's source (ADR-0018 has the
+detail): this doesn't fail loudly. It fails silently into software volume.
+An ADR that only ever showed the `pcm` half would let this gap get
+reintroduced by anyone implementing from the record rather than the current
+file.
 
 ## Card index is never used
 

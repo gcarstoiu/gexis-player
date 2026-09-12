@@ -253,3 +253,44 @@ Imager-written, one path to test) still holds for our own image. Recorded
 because the platform keeps moving under this decision, and the next person
 to touch first-boot provisioning should know that before assuming `systemd`
 is still current upstream practice.
+
+## Addendum, 2026-09-06: the Python core is packaged in a venv, not apt
+
+Phase 2b needs to actually build and ship the core daemon (ADR-0017), which
+raises the packaging question this record left implicit.
+
+**Decision:** a Python venv, created at build time inside the pi-gen chroot,
+at `/opt/gexis-core/venv`. `stage-gexis/03-core` runs `python3 -m venv`
+against the target's own system Python (no separate interpreter shipped —
+consistent with "pin the interpreter... version" above, since the venv
+inherits whichever CPython `stage2` installed) and then `pip install` from a
+pinned `requirements.txt` (exact versions; see Unverified below) plus the
+core package itself, built from `core/`'s `pyproject.toml`. Systemd units
+invoke `/opt/gexis-core/venv/bin/python -m gexis_core` directly — no
+activation script, no PATH dependency, same pattern as pointing a unit at
+`/usr/local/bin/go-librespot`.
+
+**Why not apt.** None of the core's dependencies (`aiohttp`, `dbus-next`) are
+needed at pinned exact versions that Debian's archive happens to carry, and
+packaging our own `.deb` for a fast-moving in-tree daemon is more
+infrastructure than a venv for no benefit `pip install -e` doesn't already
+give at this stage. Same reasoning ADR-0017 already applied to the language
+choice, extended to how it's installed. Revisit if the core ever needs a
+dependency with a compiled extension absent from piwheels (the arm64 wheel
+mirror `pip` already resolves against here) — that would make the venv
+build-time cost real instead of the wheel-download-only cost it is now.
+
+**Why `dbus-next`, not `dbus-python`.** `dbus-python` binds libdbus and needs
+a C toolchain plus dev headers at install time — the image doesn't carry a
+build toolchain in the shipped rootfs, and adding one for a single Python
+binding is a cost with no other use. `dbus-next` is pure Python, asyncio-native
+(the core is asyncio throughout, per its adapter design), and installs from a
+prebuilt wheel. Confirmed available on piwheels for this target
+(`arm64`/`cp313`) before choosing it, not assumed.
+
+**Unverified:** `requirements.txt` pins exact versions (`==`) but not hashes.
+`pip install --require-hashes` is the stronger guarantee and matches the
+pin-and-verify discipline used for peppyalsa (commit) and go-librespot
+(checksum) — not done yet because it adds a maintenance step (regenerating
+hashes on every dependency bump) that hasn't been weighed against the
+benefit. Revisit before this ships past Phase 2b.

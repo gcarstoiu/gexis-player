@@ -1,0 +1,52 @@
+[Unit]
+Description=Squeezelite (LMS renderer, base slot)
+Documentation=man:squeezelite(1)
+After=network-online.target sound.target
+Wants=network-online.target
+ConditionPathExists=/usr/bin/squeezelite
+# See go-librespot.service for why: a misconfigured unit should give up
+# and stay failed, not restart forever. Burst raised 5->20, 2026-09-10:
+# measured on gexis during Phase 2c's attack test - rapid adversarial
+# takeovers (SIGKILL while the device is still busy from the previous
+# renderer's own release) can make squeezelite fail-and-retry fast enough
+# to exhaust a burst of 5 within this window on its own, with no
+# misconfiguration involved - that permanently failed the unit and
+# silently dropped "gexis" off the LMS server's player list until a
+# manual `systemctl reset-failed`. 20 gives real racing enough room
+# while a genuinely misconfigured unit (wrong flags, missing device)
+# still gives up within the same 60s at RestartSec=2.
+StartLimitIntervalSec=60
+StartLimitBurst=20
+
+[Service]
+Type=simple
+ExecStartPre=/usr/local/lib/gexis/squeezelite-mixer-check.sh
+# -C 1, not the 10s default: measured on hardware, 2026-09-08 - a
+# commanded pause releases the ALSA device in ~700ms at -C 1 versus
+# ~8500ms at -C 10, with no audible clicks/pops/dropouts across track
+# boundaries or a deliberate pause-then-resume (the case that actually
+# forces a close and reopen). That result replaced the earlier
+# SIGKILL-squeezelite-on-takeover approach entirely - see ADR-0010's
+# amended implementation note for why. Untested below 1s; squeezelite's
+# own help text documents -C in whole seconds.
+#
+# -O hw:gexislmsvol -V Master, not -V DAC: B2, George's decision
+# 2026-09-08. -V alone would engage the real hardware mixer directly -
+# fine while LMS is the active renderer, but LMS's own volume commands
+# don't know or care about arbitration state, so the same write landed
+# on the real DAC even while Bluetooth or Spotify was the one actually
+# playing (confirmed on hardware: raising LMS's volume audibly changed
+# an active Bluetooth stream). -O points the *mixer* at a private
+# snd-dummy control instead - -o (the actual audio path) is unchanged,
+# still "output"/hw:sndrpihifiberry. gexis-core mirrors this dummy
+# control onto the real DAC only while LMS is active
+# (volume.py's DummyMixerBridge) - see image/stage-gexis/00-alsa's
+# modprobe config for where hw:gexislmsvol comes from.
+ExecStart=/usr/bin/squeezelite -o output -O hw:gexislmsvol -V Master -C 1 -n gexis
+Restart=on-failure
+RestartSec=2
+User=pi
+Group=audio
+
+[Install]
+WantedBy=multi-user.target

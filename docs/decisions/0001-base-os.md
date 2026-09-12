@@ -5,6 +5,9 @@
 **Note:** This record was drafted in conversation long before the repository
 existed and left open, blocked on a single question. It is written here for the
 first time. See `docs/decisions/README.md` for the numbering gap.
+**Amended:** 2026-09-08 — `rpi-image-gen` evaluated (it hadn't been, at the
+time of the original decision). See "Build tool" below; the decision to use
+pi-gen stands.
 
 ## Context
 
@@ -115,6 +118,44 @@ under active development.
 
 This is a sub-decision and is revisitable without reopening the base OS choice.
 
+**Amended, 2026-09-08 — `rpi-image-gen` evaluated, pi-gen confirmed.**
+George asked to check rather than continue assuming. Findings, all sourced
+from the tool's own repo/README/maintainer, not inferred:
+
+- **Still describes itself as under active development**, a year after its
+  first tagged release (v1.0.0, Sep 2025) and eight minor releases later
+  (v2.8.0, Aug 2026, 55 commits in the month before this check). Matured,
+  not abandoned — but its own maintainers have not dropped that caveat, so
+  the original decision's framing hasn't gone stale.
+- **Our actual build shape — an x86_64 host cross-building arm64 under
+  Docker + QEMU — is explicitly outside what it supports.** Its README:
+  "developed on Raspberry Pi OS, with Debian Bookworm and Trixie arm64 as
+  the supported native hosts... can run in containers or on non-arm64
+  hosts via QEMU, but those environments are not formally supported."
+  Confirmed directly from the maintainer on exactly this scenario
+  ([rpi-image-gen#24](https://github.com/raspberrypi/rpi-image-gen/issues/24)):
+  "qemu and binfmt aren't currently listed in the dependencies because
+  I've never tested this and so cannot declare 'cross build support'."
+  Getting a cross build working needed manual steps the tool doesn't
+  automate (extracting APT keys from a real Pi, building `genimage` from
+  source since it isn't packaged for x86).
+- **Its "fast builds" pitch doesn't clearly apply to our case.** The
+  maintainer's own words: it "carried on quite happily (but slowly due to
+  the emulation)" under QEMU. The claimed speed advantage (`mmdebstrap`
+  over `debootstrap`) is demonstrated for *native* arm64 builds (on a Pi
+  itself); nothing found suggests it changes the QEMU-emulation bottleneck
+  our build actually sits on, which is architectural (per-instruction
+  emulation), not a debootstrap-family tool choice.
+
+pi-gen, by contrast, treats Docker+QEMU cross-building as a first-class,
+documented path — the one already in use, successfully, today. Given
+stability is prioritised over build speed (George's own framing), trading
+a mature, well-supported cross-build path for one its own maintainer
+won't yet call supported is the wrong trade, for a speed win that isn't
+even clearly there in our specific case. **Decision unchanged: pi-gen.**
+Revisiting remains fair once `rpi-image-gen` declares (and someone
+verifies) real cross-build support, not before.
+
 ## Consequences
 
 - Findings 002 and 003 apply to the product directly, not by inference.
@@ -130,7 +171,5 @@ This is a sub-decision and is revisitable without reopening the base OS choice.
 
 - Whether `pi-gen` builds cleanly on the CachyOS dev machine, or needs a Debian
   container. moOde's wrapper presumably addresses this.
-- Whether `rpi-image-gen` would be materially better, since it has not been
-  evaluated.
 - Whether anything in a stock Lite image needs removing rather than merely
   configuring. Nothing found so far, but the image has not been audited.

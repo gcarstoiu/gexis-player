@@ -17,3 +17,7 @@ build/
 # real provisioning credentials (SSH key, Wi-Fi) - image/provision.env.example
 # documents the shape; this file holds the actual values and never gets committed
 /image/provision.local.env
+
+# real Spotify API credentials (client ID, refresh token) for the Phase 2c
+# test harness - tools/phase-2c/spotify.env.example documents the shape
+/tools/phase-2c/spotify.local.env
