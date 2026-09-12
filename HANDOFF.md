@@ -1,6 +1,6 @@
 # Handoff
 
-Last updated: 2026-09-12 (tenth session, Phase 2c)
+Last updated: 2026-09-12 (tenth session — Phase 2d closed)
 
 ## Where things stand
 
@@ -1830,9 +1830,16 @@ reverted, currently-flashed image predates this fix.
 
 ## Next actions, in order
 
-0. **Implement ADR-0027 (LMS power as the arbitration mechanism).** Decided
-   2026-09-12, ADR written, phase plan updated, **no code yet** — this is the
-   next thing to build,
+0. **~~Implement ADR-0027~~ — DONE, Phase 2d CLOSED 2026-09-12.** Built,
+   flashed (`v0.2.1-51-g89dca15-dirty`), and verified on the image: 84 unit
+   tests, the installed core diffed file-by-file against the branch HEAD,
+   13/13 end-to-end, plus George's listening pass. Branch
+   `phase-2d-lms-power`, **not yet merged** — see the branch note below.
+   Blocker 3 (Bluetooth first connect) root-caused the same day and
+   **closed by decision: no change** (ADR-0024). What remains is criteria
+   7-10, item 1 below.
+
+   *Historical note on what this item used to say:*
    and it is what unblocks everything below it. See the design-input section
    above for exactly which files it touches, and Finding 018 for the
    measurements. Sequence George asked for throughout: change it on `gexis`
@@ -1866,8 +1873,22 @@ reverted, currently-flashed image predates this fix.
    (freezes the wrong elapsed value on screen), and powering the player back on
    mid-session (evicts the renderer that just took over).
 
-1. **Phase 2c, criterion 8: get a clean ≥20-run takeover-gap distribution.**
-   **Re-measure after ADR-0027 lands** — Finding 015's numbers were taken
+1. **NEXT: Phase 2c, criteria 7-10 — the takeover-gap distribution, re-measured
+   against ADR-0027.** Every number in Finding 015 predates the mechanism 2d
+   replaced, so they are all stale: the LMS→Spotify handoff is now 0.7-0.9s
+   against that finding's 1827.8ms median, and criterion 10's
+   transition-screen answer is likely per-pair rather than global
+   (LMS↔Spotify is fast now; Bluetooth→LMS is still gated by Bluetooth's
+   own 2.5-2.9s release, which 2d does not touch).
+
+   **Branch, to decide before starting:** 7-10 have to be measured against
+   2d's behaviour, so the work sits on top of `phase-2d-lms-power`. Cleanest
+   is a 2c branch cut from *that*, with the whole line merged back to
+   `phase-2-arbitration` once 2c closes — one merge rather than two
+   overlapping ones. Note `phase-2c-takeover` still exists, moved back to
+   the last pre-ADR-0027 commit, and contains the Findings 013-018 work.
+
+   *Superseded wording:* **Re-measure after ADR-0027 lands** — Finding 015's numbers were taken
    against the old mechanism, and the 0.7s LMS→Spotify handoff seen while
    testing ADR-0027 is far better than that finding's 1827.8ms median.
    PR #6 already merged and `phase-2c-takeover` already branched (see this
