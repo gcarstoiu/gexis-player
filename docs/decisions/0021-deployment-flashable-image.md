@@ -96,6 +96,46 @@ the image alone:
   their patch (Finding 001). We would hold it because we have tested against a
   known version and have not tested against the next one.
 
+  **Amended 2026-09-12 — the pin is now `1.2.14-1+rpt1+deb13u1`, George's
+  decision, and the deferred question below (Q3) came due to force it.**
+  A `make image` run failed outright at `stage-gexis/00-alsa`:
+  `archive.raspberrypi.com/debian` trixie no longer indexes
+  `1.2.14-1+rpt1` at all — confirmed by reading its own `binary-arm64`
+  `Packages` index, not inferred from apt's error message — so the pin
+  had become unresolvable, which is a build failure rather than a silent
+  drift. This is precisely the risk the paragraph above named, arriving
+  from the opposite direction: not an unattended upgrade changing a
+  running device, but the archive moving out from under a rebuild.
+
+  What the new version actually is, since the bullet above makes "the
+  next one" the thing we deliberately don't trust: `+deb13u1` is a
+  Debian stable-update on the **same upstream 1.2.14**, and its changelog
+  carries exactly one line — `CVE-2026-25068 (Closes: #1126629)`,
+  urgency medium. That CVE is a missing bounds check on `num_channels` in
+  `tplg_decode_control_mixer1()`, the topology (`.tplg`) file decoder;
+  denial of service only, no privilege escalation. It is **not** in the
+  PCM or plugin path Findings 002/003 measured, and it is a path this
+  device never executes — the HiFiBerry overlay loads from the HAT's own
+  EEPROM and no `.tplg` files are involved anywhere in this image.
+
+  Two further facts that bore on the decision:
+
+  - The old `.deb` is still *physically* in the pool
+    (`libasound2t64_1.2.14-1+rpt1_arm64.deb`), just unindexed, so holding
+    the exact measured version by direct download was genuinely
+    available and was **rejected**: brittle (pool files do get removed),
+    keeps a known CVE, and does not fix the mismatch below.
+  - The stage was *already* inconsistent before this change:
+    `00-packages` installs `libasound2-dev`, which resolved to
+    `+deb13u1` in the same failing run, so peppyalsa was about to be
+    compiled against `+deb13u1` headers while the runtime pin demanded
+    the older library.
+
+  **Findings 002/003 are not rewritten.** They are measurements of a
+  version that was current when they were taken; this record is where the
+  live pin lives. Re-verification of the metering path against
+  `+deb13u1` is George's regression pass, not a claim made here.
+
 - **The `output` device definition is a packaged file with a known checksum.**
   ADR-0009 made it a single point of audit; updates must not modify it silently,
   and a locally modified copy should be detectable.

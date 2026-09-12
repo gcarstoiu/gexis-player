@@ -2425,7 +2425,20 @@ cached) is ever worth chasing further:**
   working off the same tree. Run `./test-gitignored-credentials.sh` on
   whatever branch you're on if you're not sure.
 - **`type plug` must not appear in the `output` chain.**
-- **`alsa-lib` is pinned at `1.2.14-1+rpt1`.** Findings 002/003.
+- **`alsa-lib` is pinned at `1.2.14-1+rpt1+deb13u1`** (moved from
+  `1.2.14-1+rpt1`, 2026-09-12, George's decision — see ADR-0021's amended
+  pin bullet). Findings 002/003 measured the older version; they are left
+  as the measurements they were, not rewritten. **The failure mode to
+  recognise:** a pinned version can vanish from the archive index and
+  then `make image` fails outright at `stage-gexis/00-alsa` with
+  `E: Version '...' for 'libasound2t64' was not found`. That is the pin
+  working as intended (a hard stop, not silent drift) — check
+  `archive.raspberrypi.com/debian`'s own `binary-arm64` `Packages` index
+  for what is actually available before touching anything, rather than
+  trusting apt's "however the following packages replace it" list, which
+  names armhf and `-data` packages and reads like a restructure when it
+  is only a point release. ADR-0021's deferred Q3 (snapshot-pinning the
+  archive) is the standing fix and is still deferred.
 - **`docs/DEVELOPMENT.md` on `main` is stale** — see above.
 - **Adding a user to the `docker` group needs a new login session**, not
   just relaunching Claude Code — a shell spawned before the change keeps
