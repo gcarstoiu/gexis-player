@@ -224,3 +224,56 @@ async def test_the_seek_fires_once_not_on_every_later_acquisition(monkeypatch):
     await adapter.device_freed()
 
     assert rpc.commands == []
+
+
+# --- the user's own deactivation, not a takeover ---------------------------
+
+
+@pytest.mark.asyncio
+async def test_position_noted_when_the_user_deactivates_the_player(monkeypatch):
+    """George, 2026-09-12: "after a deactivation the player starts from 0".
+    `release()` only runs for a takeover, so a user powering the player off
+    themselves recorded nothing and there was nothing to seek back to.
+    ADR-0027 makes deactivation an ordinary user action, so it has to be
+    covered too."""
+    adapter, rpc = _adapter(monkeypatch, mode="play", position=72.0)
+
+    await adapter._note_position_if_unset(session=None)
+
+    assert adapter._resume_position == 72.0
+    # The transport state is deliberately untouched: LMS restores that
+    # natively on power-on for a deactivation it owns.
+    assert adapter._resume_playing is False
+
+
+@pytest.mark.asyncio
+async def test_a_takeover_recording_is_not_overwritten_by_the_power_off_echo(monkeypatch):
+    """Our own release powers the player off, so the same edge fires ~0.5s
+    later. `release()`'s value is the better one - read before the pause,
+    and carrying the play/pause state a powered-off player no longer
+    reports - so the echo must not clobber it."""
+    adapter, rpc = _adapter(monkeypatch, mode="play", position=39.9)
+    await adapter.release()
+    assert adapter._resume_playing is True
+
+    rpc.position = 0.0  # what a powered-off player might report
+    await adapter._note_position_if_unset(session=None)
+
+    assert adapter._resume_position == 39.9
+    assert adapter._resume_playing is True
+
+
+@pytest.mark.asyncio
+async def test_deactivate_then_press_play_seeks_back(monkeypatch):
+    """The exact sequence George reported: deactivate, then press play -
+    LMS powers the player on and restarts from zero."""
+    adapter, rpc = _adapter(monkeypatch, mode="play", position=72.0)
+    await adapter._note_position_if_unset(session=None)  # user deactivated
+
+    rpc.mode = "play"
+    rpc.position = 1.1  # LMS auto-powered-on and restarted
+    rpc.commands.clear()
+
+    await adapter.device_freed()
+
+    assert ["time", "72.00"] in rpc.commands

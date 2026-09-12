@@ -230,8 +230,40 @@ class LmsAdapter(Adapter):
                         # tells them apart by whether we are still the
                         # active renderer - see Supervisor.relinquish.
                         logger.info("lms: player powered off")
+                        await self._note_position_if_unset(session)
                         on_release()
                     last_power = power
+
+    async def _note_position_if_unset(self, session: aiohttp.ClientSession) -> None:
+        """Record where the track was, for a power-off we did not make.
+
+        `release()` captures this for a takeover, but the user deactivating
+        the player themselves never goes through `release()` - and that is
+        the more ordinary action, now that ADR-0027 makes deactivation a
+        normal part of using the thing. Without this, pressing play
+        afterwards restarts the track from zero with nothing recorded to
+        put it back, which is exactly what George hit on 2026-09-12
+        (log: `player powered off` with no preceding `paused and powered
+        off at Xs`, then a return with no seek).
+
+        Only fills a gap: if `release()` already recorded a position, that
+        one is better - it was read *before* the pause, and it carries the
+        play/pause state with it, which a powered-off player no longer
+        reports. Deliberately does not touch `_resume_playing`: for a
+        user's own deactivation LMS restores the transport state natively
+        on power-on, so there is nothing for us to impose.
+        """
+        if self._resume_position is not None or self._player_id is None:
+            return
+        try:
+            status = await self._rpc(session, self._player_id, ["status", "-", 1])
+            position = status.get("result", {}).get("time")
+        except aiohttp.ClientError as exc:
+            logger.warning("lms: could not read the position at deactivation: %s", exc)
+            return
+        if isinstance(position, (int, float)):
+            self._resume_position = float(position)
+            logger.info("lms: noted position %.1fs at deactivation", self._resume_position)
 
     async def _cometd_handshake(self, session: aiohttp.ClientSession) -> str:
         frames = await self._cometd_post(
