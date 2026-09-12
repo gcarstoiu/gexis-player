@@ -368,7 +368,18 @@ Still no UI. Tested with a WebSocket client.
    unreachable and unconfigured.
 3. Now playing shows metadata for all three renderers. No transport controls
    yet.
-4. Handoff state visible during takeover.
+4. Handoff state visible during takeover. **Sharpened 2026-09-12 by
+   criterion 10's answer: the transition state is shown by DEFAULT and
+   skipped only for a renderer pair measured under 1 second** (ADR-0010,
+   "Handoff transition screen"). Two consequences this phase has to build
+   for, neither of which the original one-line criterion implied:
+   - **The renderer pair must be known at render time**, not just "a
+     handoff is happening" — the decision to show or skip depends on which
+     pair it is.
+   - **The exempt list is data, not a constant.** A pair earns exemption by
+     being measured and loses it if a later measurement moves it back above
+     the threshold. Today only same-rate LMS↔Spotify is exempt; every
+     Bluetooth pair and anything cross-rate shows the screen.
 5. Same page served to a remote browser and renders correctly.
 6. **"No renderer holds the device" is a first-class screen state, and the
    user can tell why.** New, 2026-09-12
