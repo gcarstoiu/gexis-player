@@ -52,7 +52,7 @@ from typing import Callable
 
 import aiohttp
 
-from gexis_core.adapters.base import Adapter, ReleaseAction
+from gexis_core.adapters.base import Adapter, Capabilities, ReleaseAction
 from gexis_core.model import TrackMetadata
 from gexis_core.systemd import kill_unit
 
@@ -69,6 +69,18 @@ class SpotifyAdapter(Adapter):
     renderer_id = "spotify"
     release_action = ReleaseAction.DISCONNECT
     unit_name = UNIT_NAME
+    # Phase 3 criterion 2. Both "active" and "will_play" are treated as
+    # acquisition (Finding 010/014 - "will_play" is upstream's earlier,
+    # device-independent signal, needed because "active" can arrive too
+    # late or not at all when the ALSA open races another renderer's
+    # release). Artwork and sample rate both come straight from the
+    # "metadata" event (API.md) - confirmed live, 2026-09-12.
+    capabilities = Capabilities(
+        audio_connection="output",
+        acquisition_events=frozenset({"active", "will_play"}),
+        supports_artwork=True,
+        supports_sample_rate=True,
+    )
 
     def __init__(self, host: str, port: int) -> None:
         self._base = f"http://{host}:{port}"

@@ -22,6 +22,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
+from gexis_core.adapters.base import Capabilities
+
 
 @dataclass(frozen=True)
 class TrackMetadata:
@@ -79,16 +81,24 @@ class PlaybackState:
     #: The active renderer's metadata, or BLANK_METADATA when `active` is
     #: None - there is nothing to show, not something broken.
     metadata: TrackMetadata = field(default_factory=lambda: BLANK_METADATA)
+    #: renderer_id -> its declared contract (Phase 3 criterion 2,
+    #: ADR-0013). Static for the process lifetime - included in every
+    #: broadcast anyway (cheap, unchanging) rather than split into a
+    #: separate one-off message, so a client never has to remember state
+    #: from two different message shapes to render anything.
+    capabilities: dict[str, Capabilities] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
         # Defensive copy: a caller mutating the dict it passed in must not
         # silently mutate an already-published state. `object.__setattr__`
         # is needed because the dataclass is frozen.
         object.__setattr__(self, "available", dict(self.available))
+        object.__setattr__(self, "capabilities", dict(self.capabilities))
 
     def to_json(self) -> dict:
         return {
             "active": self.active,
             "available": dict(self.available),
             "metadata": self.metadata.to_json(),
+            "capabilities": {rid: cap.to_json() for rid, cap in self.capabilities.items()},
         }

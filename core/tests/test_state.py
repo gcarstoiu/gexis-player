@@ -1,12 +1,27 @@
 """Unit tests for StateStore (Phase 3 criterion 1's aggregator)."""
 from __future__ import annotations
 
+from gexis_core.adapters.base import Capabilities
 from gexis_core.model import BLANK_METADATA, TrackMetadata
 from gexis_core.state import StateStore
 
 
+def _caps(*renderer_ids: str) -> dict[str, Capabilities]:
+    """A minimal capabilities dict for tests that only care about which
+    renderers exist, not what any of them declare (Phase 3 criterion 2)."""
+    return {
+        rid: Capabilities(
+            audio_connection="output",
+            acquisition_events=frozenset(),
+            supports_artwork=False,
+            supports_sample_rate=False,
+        )
+        for rid in renderer_ids
+    }
+
+
 def test_starts_with_nobody_active_and_all_unavailable():
-    store = StateStore(["lms", "spotify", "bluetooth"])
+    store = StateStore(_caps("lms", "spotify", "bluetooth"))
     state = store.state
     assert state.active is None
     assert state.available == {"lms": False, "spotify": False, "bluetooth": False}
@@ -14,7 +29,7 @@ def test_starts_with_nobody_active_and_all_unavailable():
 
 
 def test_set_active_updates_state_and_notifies():
-    store = StateStore(["lms", "spotify"])
+    store = StateStore(_caps("lms", "spotify"))
     seen = []
     store.subscribe(seen.append)
 
@@ -26,7 +41,7 @@ def test_set_active_updates_state_and_notifies():
 
 
 def test_set_active_to_same_value_does_not_notify():
-    store = StateStore(["lms"])
+    store = StateStore(_caps("lms"))
     store.set_active("lms")
     seen = []
     store.subscribe(seen.append)
@@ -37,7 +52,7 @@ def test_set_active_to_same_value_does_not_notify():
 
 
 def test_set_available_updates_and_notifies():
-    store = StateStore(["lms", "spotify"])
+    store = StateStore(_caps("lms", "spotify"))
     seen = []
     store.subscribe(seen.append)
 
@@ -48,7 +63,7 @@ def test_set_available_updates_and_notifies():
 
 
 def test_set_available_to_same_value_does_not_notify():
-    store = StateStore(["lms"])
+    store = StateStore(_caps("lms"))
     seen = []
     store.subscribe(seen.append)
 
@@ -58,7 +73,7 @@ def test_set_available_to_same_value_does_not_notify():
 
 
 def test_set_available_rejects_unknown_renderer():
-    store = StateStore(["lms"])
+    store = StateStore(_caps("lms"))
     try:
         store.set_available("qobuz", True)
     except ValueError:
@@ -67,7 +82,7 @@ def test_set_available_rejects_unknown_renderer():
 
 
 def test_metadata_from_the_active_renderer_is_published():
-    store = StateStore(["lms", "spotify"])
+    store = StateStore(_caps("lms", "spotify"))
     store.set_active("lms")
     metadata = TrackMetadata(title="Song", source_type="lms")
 
@@ -79,7 +94,7 @@ def test_metadata_from_the_active_renderer_is_published():
 def test_metadata_from_an_inactive_renderer_is_not_published_but_is_remembered():
     """Recorded so becoming active shows metadata immediately rather than a
     blank screen for however long the first push after activation takes."""
-    store = StateStore(["lms", "spotify"])
+    store = StateStore(_caps("lms", "spotify"))
     store.set_active("lms")
     seen = []
     store.subscribe(seen.append)
@@ -95,7 +110,7 @@ def test_metadata_from_an_inactive_renderer_is_not_published_but_is_remembered()
 
 
 def test_metadata_blanked_when_nobody_is_active():
-    store = StateStore(["lms"])
+    store = StateStore(_caps("lms"))
     store.set_active("lms")
     store.set_metadata("lms", TrackMetadata(title="Song", source_type="lms"))
 
@@ -110,7 +125,7 @@ def test_identical_metadata_is_not_rebroadcast():
     change-driven CometD pushes still firing once a second while playing
     (the `time` field itself differs each time, so this alone doesn't
     silence that case - see adapters/lms.py's `subscribe:0` fix for that)."""
-    store = StateStore(["lms"])
+    store = StateStore(_caps("lms"))
     store.set_active("lms")
     metadata = TrackMetadata(title="Song", source_type="lms")
     store.set_metadata("lms", metadata)
@@ -122,8 +137,28 @@ def test_identical_metadata_is_not_rebroadcast():
     assert seen == []
 
 
+def test_capabilities_are_published_and_static():
+    caps = _caps("lms", "spotify")
+    store = StateStore(caps)
+
+    assert store.state.capabilities == caps
+    # Unaffected by anything that changes active/available/metadata -
+    # static for the process lifetime (Phase 3 criterion 2).
+    store.set_active("lms")
+    assert store.state.capabilities == caps
+
+
+def test_capabilities_dict_is_copied_not_aliased():
+    caps = _caps("lms")
+    store = StateStore(caps)
+
+    caps["spotify"] = _caps("spotify")["spotify"]
+
+    assert "spotify" not in store.state.capabilities
+
+
 def test_subscribers_see_the_final_combined_state_not_a_partial_one():
-    store = StateStore(["lms"])
+    store = StateStore(_caps("lms"))
     store.set_active("lms")
     seen = []
     store.subscribe(seen.append)

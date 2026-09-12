@@ -41,7 +41,7 @@ from typing import Callable
 from dbus_next import BusType
 from dbus_next.aio import MessageBus
 
-from gexis_core.adapters.base import Adapter, ReleaseAction
+from gexis_core.adapters.base import Adapter, Capabilities, ReleaseAction
 from gexis_core.model import TrackMetadata
 from gexis_core.systemd import kill_unit
 
@@ -75,6 +75,19 @@ class BluetoothAdapter(Adapter):
     renderer_id = "bluetooth"
     release_action = ReleaseAction.DISCONNECT
     unit_name = UNIT_NAME
+    # Phase 3 criterion 2. Two acquisition signals (Finding 010 §3,
+    # ADR-0010 amendment): MediaTransport1 fires earlier than
+    # MediaPlayer1 during profile negotiation, closing a ~1s race a
+    # MediaPlayer1-only trigger used to lose. No artwork or sample rate -
+    # MediaPlayer1's Track dict (org.bluez.MediaPlayer.rst) has no such
+    # fields at all, confirmed by BlueZ's own doc and by a live phone
+    # connection, 2026-09-12 (HANDOFF.md), matching ADR-0014's expectation.
+    capabilities = Capabilities(
+        audio_connection="output",
+        acquisition_events=frozenset({"media_player_appeared", "media_transport_appeared"}),
+        supports_artwork=False,
+        supports_sample_rate=False,
+    )
 
     def __init__(self) -> None:
         self._bus: MessageBus | None = None

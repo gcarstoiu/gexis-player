@@ -34,7 +34,7 @@ from typing import Callable
 
 import aiohttp
 
-from gexis_core.adapters.base import Adapter, ReleaseAction
+from gexis_core.adapters.base import Adapter, Capabilities, ReleaseAction
 from gexis_core.model import TrackMetadata
 from gexis_core.systemd import kill_unit
 
@@ -82,6 +82,18 @@ class LmsAdapter(Adapter):
     renderer_id = "lms"
     release_action = ReleaseAction.PAUSE
     unit_name = UNIT_NAME
+    # Phase 3 criterion 2. "power_on" is the one acquisition signal this
+    # adapter treats as a takeover (ADR-0027 - not "play", which is a
+    # separate intention afterwards). Artwork and sample rate both come
+    # from the JSON-RPC "status" query's playlist_loop tags (coverid, T) -
+    # confirmed against a real library track and a live radio stream,
+    # 2026-09-12 (HANDOFF.md).
+    capabilities = Capabilities(
+        audio_connection="output",
+        acquisition_events=frozenset({"power_on"}),
+        supports_artwork=True,
+        supports_sample_rate=True,
+    )
 
     # ADR-0027, 2026-09-12: this adapter no longer fights squeezelite for
     # the ALSA device. The player's own LMS *power* state is the

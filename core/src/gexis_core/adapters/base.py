@@ -10,6 +10,7 @@ from __future__ import annotations
 import abc
 import enum
 import typing
+from dataclasses import dataclass, field
 
 if typing.TYPE_CHECKING:
     from gexis_core.arbitration import TimeoutLadder
@@ -22,6 +23,62 @@ class ReleaseAction(enum.Enum):
     DISCONNECT = "disconnect"  # everyone else
 
 
+@dataclass(frozen=True)
+class Capabilities:
+    """ADR-0013's "contract fields", as data every adapter declares -
+    derived from the three built-in adapters' actual behaviour (Phase 3
+    criterion 2), not designed in advance: ADR-0013 is explicit that "the
+    error is skipping the derivation, not doing it late." Drives now-
+    playing control rendering and skin field blanking (ADR-0014) once a
+    UI exists to consume it (Phase 4+) - Phase 3 only declares and
+    publishes it.
+
+    `release_action` (ADR-0010/0027's pause-vs-disconnect) is deliberately
+    not repeated here - it already exists as `Adapter.release_action`,
+    used directly by arbitration.py, and duplicating it risks the two
+    drifting apart. Everything in this object is new declared surface, not
+    already captured elsewhere on `Adapter`.
+    """
+
+    #: ADR-0009: every renderer writes to the same logical "output" device
+    #: today. Declared rather than assumed elsewhere, so a future renderer
+    #: with a genuinely different audio path isn't a silent special case.
+    audio_connection: str
+    #: What this adapter treats as "took the device" (ADR-0010's table) -
+    #: not exhaustive code paths, the *names* of the acquisition signals,
+    #: so a future accountability UI ("why did this take over") has
+    #: something to point at instead of "it just did" (the "never show a
+    #: state the user cannot account for" rule, decisions/README.md).
+    acquisition_events: frozenset[str]
+    #: Which of ADR-0014's seven skin fields this renderer can ever
+    #: supply - not whether the *current* track happens to have one.
+    #: title/artist/album/remaining_time/source_type are universal (every
+    #: adapter can always attempt them); only these two genuinely vary by
+    #: renderer protocol.
+    supports_artwork: bool
+    supports_sample_rate: bool
+    #: Transport commands accepted through our own control channel right
+    #: now - deliberately empty on all three built-ins today. No adapter
+    #: currently exposes a way to send play/pause/seek/etc on a user's
+    #: behalf (LMS's pause/power/play/seek calls are only ever issued by
+    #: this project's own takeover/resume logic); Phase 4's own criteria
+    #: have no transport controls beyond LMS activation, and Phase 6
+    #: ("capability-driven controls") is where sending a user's command
+    #: through becomes real. Declared now, honestly empty, rather than
+    #: invented when Phase 6 needs it (ADR-0020: hide a control that
+    #: doesn't exist, never show one that would silently do nothing).
+    controls: frozenset[str] = field(default_factory=frozenset)
+
+    def to_json(self) -> dict:
+        return {
+            "audio_connection": self.audio_connection,
+            "acquisition_events": sorted(self.acquisition_events),
+            "supports_artwork": self.supports_artwork,
+            "supports_sample_rate": self.supports_sample_rate,
+            "controls": sorted(self.controls),
+        }
+
+
 class Adapter(abc.ABC):
     """One renderer's acquisition/release behaviour."""
 
@@ -29,6 +86,10 @@ class Adapter(abc.ABC):
     #: supervisor's adapter map.
     renderer_id: str
     release_action: ReleaseAction
+    #: Set by subclasses (Phase 3 criterion 2). Static per class, not
+    #: per-instance state - every adapter of a given type declares the
+    #: same contract regardless of configuration.
+    capabilities: Capabilities
 
     #: Set by subclasses. The systemd unit whose process actually opens
     #: the ALSA device for this renderer - used by the release ladder's

@@ -105,12 +105,13 @@ async def main() -> None:
 
     volume_memory = RendererVolumeMemory()
 
-    # Phase 3 criterion 1: the normalised playback model, published over
-    # the state WebSocket. Wired to the supervisor's active-renderer
-    # changes and each adapter's own metadata/availability reports below -
-    # constructed before Supervisor for the same closure reason as
-    # volume_bridge (its callbacks reference `supervisor`, assigned later).
-    state_store = StateStore(adapters.keys())
+    # Phase 3 criteria 1-2: the normalised playback model plus each
+    # adapter's declared capabilities, published over the state WebSocket.
+    # Wired to the supervisor's active-renderer changes and each adapter's
+    # own metadata/availability reports below - constructed before
+    # Supervisor for the same closure reason as volume_bridge (its
+    # callbacks reference `supervisor`, assigned later).
+    state_store = StateStore({rid: adapter.capabilities for rid, adapter in adapters.items()})
 
     # Constructed before Supervisor/restore_volume, which both need to
     # write through it (write_hardware()) rather than around it - its

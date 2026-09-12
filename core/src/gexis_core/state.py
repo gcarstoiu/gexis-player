@@ -12,16 +12,25 @@ active does not spam a broadcast nobody's screen would show.
 from __future__ import annotations
 
 import logging
-from typing import Callable, Iterable
+from typing import Callable, Mapping
 
+from gexis_core.adapters.base import Capabilities
 from gexis_core.model import BLANK_METADATA, PlaybackState, TrackMetadata
 
 logger = logging.getLogger("gexis_core.state")
 
 
 class StateStore:
-    def __init__(self, renderer_ids: Iterable[str]) -> None:
-        self._available: dict[str, bool] = {rid: False for rid in renderer_ids}
+    def __init__(self, capabilities: Mapping[str, Capabilities]) -> None:
+        """`capabilities` is the single source of truth for which
+        renderers exist (Phase 3 criterion 2) - one dict, not a separate
+        renderer-id list that could drift from it. Static for the process
+        lifetime: every adapter declares the same contract regardless of
+        configuration, so this is captured once here rather than re-read
+        per broadcast.
+        """
+        self._capabilities = dict(capabilities)
+        self._available: dict[str, bool] = {rid: False for rid in capabilities}
         self._metadata: dict[str, TrackMetadata] = {}
         self._active: str | None = None
         self._subscribers: list[Callable[[PlaybackState], None]] = []
@@ -37,7 +46,12 @@ class StateStore:
     @property
     def state(self) -> PlaybackState:
         metadata = self._metadata.get(self._active, BLANK_METADATA) if self._active else BLANK_METADATA
-        return PlaybackState(active=self._active, available=dict(self._available), metadata=metadata)
+        return PlaybackState(
+            active=self._active,
+            available=dict(self._available),
+            metadata=metadata,
+            capabilities=dict(self._capabilities),
+        )
 
     def set_active(self, renderer_id: str | None) -> None:
         """Called by the supervisor whenever its own `active` changes
