@@ -25,16 +25,23 @@ ENABLE_CLOUD_INIT=0
 
 # Deploy the raw .img rather than pi-gen's default .zip, 2026-09-13.
 #
-# Measured on this repo's own builds: the zip is 1.28GB against a 4.5GB
-# raw image, so compression is not free either way - it trades ~3.2GB of
-# disk and of `docker cp` streaming (build-docker.sh:154 copies the whole
-# deploy dir out on every run) against the CPU time of zip -6 and, at the
-# other end, an unzip before every flash.
+# The deciding reason is George's, and it outranks the rest: Claude builds,
+# George flashes, and a raw .img goes straight into Raspberry Pi Imager
+# with nothing in between. The build host's convenience does not get to
+# add a step to the one part of this loop a human actually performs.
 #
-# The raw image is what the flasher actually wants: `make provision`
-# writes an .img, and bmaptool (which pi-gen already emits a .bmap for,
-# see export-image/05-finalise) can skip unallocated blocks only when it
-# is handed the image, not an archive.
+# Supporting, not deciding: bmaptool (which pi-gen already emits a .bmap
+# for, see export-image/05-finalise) can skip unallocated blocks only when
+# handed the image rather than an archive, and mtools can read the boot
+# partition straight out of it - see image/README.md.
+#
+# Measured cost, since it is not free: the zip is 1.28GB against a 4.5GB
+# raw image, so this trades ~3.2GB of disk and of `docker cp` streaming
+# (build-docker.sh:154 copies the whole deploy dir out on every run)
+# against the CPU time of zip -6. `make prune` is what keeps the disk side
+# bounded; `make fetch-deploy` is what recovers the streaming side when it
+# is killed. Compressing again to make Claude's copy-out cheaper would be
+# optimising the wrong end of the loop.
 #
 # Note this changes the deployed filename: with compression, pi-gen names
 # the archive "${ARCHIVE_FILENAME}${IMG_SUFFIX}" ("image_2026-…zip"); with

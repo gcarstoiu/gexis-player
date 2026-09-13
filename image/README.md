@@ -149,25 +149,28 @@ nobody consumes.
 
 A raw `.img`, not a zip — `DEPLOY_COMPRESSION=none`, set in `image/config`
 2026-09-13; that file carries the reasoning. What settled the previously-open
-call:
+call, in order of weight:
 
-- **Flashing.** Imager and Etcher accept either, but `bmaptool` — which
-  pi-gen already emits a `.bmap` for — can skip unallocated blocks only when
-  handed the image itself.
-- **Inspection.** `mtools` reads the boot partition straight out of the
-  `.img` (see below); with a zip that needed a 4.5GB `unzip` first.
-- **Build time.** Small. A measured pair of warm builds on the same tree:
-  `05-finalise` 8m07s with zip, 7m23s without — the step is dominated by
+- **Who does what.** Claude builds, George flashes (George, 2026-09-13). A raw
+  `.img` drops straight into Raspberry Pi Imager with no extraction step. The
+  build host's convenience does not get to add a step to the one part of this
+  loop a human actually performs.
+- **Inspection.** `mtools` reads the boot partition straight out of the `.img`
+  (see below); with a zip that needed a 4.5GB `unzip` first.
+- **`bmaptool`**, which pi-gen already emits a `.bmap` for, can skip
+  unallocated blocks only when handed the image itself.
+- **Build time.** Barely moves. A measured pair of warm builds on the same
+  tree: `05-finalise` 8m07s with zip, 7m23s without — the step is dominated by
   zerofree and unmount, not compression.
 - **Cost, and it is real.** 4.5GB raw against 1.28GB zipped, measured on the
   2026-09-13 builds. That lands on `image/deploy/` *and* on the container's
   deploy volume, and `build-docker.sh` streams the whole volume to the host on
-  every build (see "A build that dies during the copy-out", below). `make
-  prune` is what keeps this bounded — without it both places accumulate.
+  every build (see "A build that dies during the copy-out", below).
 
-If disk or that copy-out ever becomes the binding constraint, `gz` is the
-middle option: `pigz` is parallel and fast, and both Imager and `bmaptool`
-read `.img.gz` directly.
+Both halves of that cost are handled rather than paid: `make prune` bounds the
+disk side, `make fetch-deploy` recovers the streaming side when it is killed.
+Re-compressing to make Claude's copy-out cheaper would be optimising the wrong
+end of the loop, so don't.
 
 Each image gets a matching `.info` file (from pi-gen's own
 `export-image/05-finalise` step) containing the exact `dpkg -l` package list

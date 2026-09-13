@@ -33,11 +33,13 @@ a genuinely cold build.
 
 **3. `DEPLOY_COMPRESSION=none`** — `image/deploy/` now holds a raw
 `<date>-gexis-player-<version>.img`, no `image_` prefix, no zip. Settled the
-open call `image/README.md` had carried since 2026-09-05: `bmaptool` (pi-gen
-already emits the `.bmap`) can skip unallocated blocks only on a real image,
-and `mtools` reads the boot partition with no 4.5GB unzip first. Costs 4.5GB
-against 1.28GB zipped. `gz` is the documented middle option if the copy-out
-ever becomes the binding constraint.
+open call `image/README.md` had carried since 2026-09-05, and the deciding
+reason is the division of labour: **Claude builds, George flashes** (George,
+2026-09-13), and a raw `.img` goes straight into Raspberry Pi Imager. Costs
+4.5GB against 1.28GB zipped; `mtools` inspection and `bmaptool` support come
+along with it. **Do not re-propose compression to make the copy-out cheaper**
+— that optimises the build host at the cost of the one manual step in the
+loop. `make prune` and `make fetch-deploy` handle both halves of the cost.
 
 **4. `make fetch-deploy` (new) — expect to need it.** `build-docker.sh:154`
 ends every build with `docker cp …/deploy - | tar -xf -`, streaming the whole
