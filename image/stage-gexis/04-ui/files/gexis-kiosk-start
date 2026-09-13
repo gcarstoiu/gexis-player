@@ -1,0 +1,46 @@
+#!/bin/bash -e
+# Launched by labwc as its session (labwc -s). When this exits, labwc
+# exits, so Chromium runs in the foreground deliberately: the compositor's
+# lifetime is the browser's lifetime, and neither outlives the other as an
+# invisible orphan.
+#
+# Flags, and why each is here rather than copied from a kiosk blog post:
+#
+#   --ozone-platform=wayland  labwc is Wayland-only; without this Chromium
+#                             may pick X11 and find no display.
+#   --kiosk                   fullscreen, no browser chrome, no way out.
+#   --noerrdialogs,           an appliance has nobody to dismiss a dialog.
+#   --disable-infobars        "Chrome is being controlled by..." and
+#                             friends would sit over the UI forever.
+#   --disable-session-crashed-bubble
+#                             after an unclean shutdown - which is how this
+#                             device is switched off, per ADR-0019's "the
+#                             device is powered down at night by an
+#                             external trigger" - Chromium otherwise opens
+#                             asking whether to restore, on a screen with
+#                             no keyboard.
+#   --disable-component-update
+#                             an appliance updates via the image, not by
+#                             Chromium quietly fetching components.
+#   --check-for-update-interval
+#                             same reasoning, for the updater nag.
+#   --overscroll-history-navigation=0, --disable-pinch
+#                             this is a touchscreen: a stray swipe must not
+#                             navigate the SPA away, and pinch-zoom on a
+#                             fixed 1280x800 layout only ever breaks it.
+#   --autoplay-policy         nothing autoplays today, but the UI will own
+#                             sound cues later and a user-gesture
+#                             requirement has no user to gesture.
+exec chromium \
+	--ozone-platform=wayland \
+	--kiosk \
+	--noerrdialogs \
+	--disable-infobars \
+	--disable-session-crashed-bubble \
+	--disable-component-update \
+	--check-for-update-interval=31536000 \
+	--overscroll-history-navigation=0 \
+	--disable-pinch \
+	--autoplay-policy=no-user-gesture-required \
+	--user-data-dir="${GEXIS_KIOSK_PROFILE}" \
+	"${GEXIS_KIOSK_URL}"

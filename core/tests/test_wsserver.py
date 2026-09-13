@@ -254,3 +254,63 @@ async def test_the_socket_is_still_publish_only():
             msg = await ws.receive_json()
 
     assert msg["active"] == "lms"
+
+
+# --- Phase 4b: serving the UI (ADR-0028) ----------------------------------
+
+
+def _ui_build(tmp_path):
+    """A minimal stand-in for vite's output: index.html plus assets/."""
+    (tmp_path / "assets").mkdir()
+    (tmp_path / "index.html").write_text("<!doctype html><div id=app></div>")
+    (tmp_path / "assets" / "index-abc123.js").write_text("console.log('gexis')")
+    return tmp_path
+
+
+@pytest.mark.asyncio
+async def test_index_and_assets_are_served(tmp_path):
+    store = StateStore(_caps("lms"))
+    server = StateServer(store, ui_dir=_ui_build(tmp_path))
+
+    async with TestClient(TestServer(server.make_app())) as client:
+        index = await client.get("/")
+        index_body = await index.text()
+        asset = await client.get("/assets/index-abc123.js")
+        asset_body = await asset.text()
+
+    assert index.status == 200
+    assert "id=app" in index_body
+    assert asset.status == 200
+    assert "gexis" in asset_body
+
+
+@pytest.mark.asyncio
+async def test_serving_the_ui_does_not_shadow_the_api(tmp_path):
+    """The reason the UI is registered last and on two narrow routes: a
+    greedy static mount would swallow /state and the command routes."""
+    store = StateStore(_caps("lms"))
+    server = StateServer(store, ui_dir=_ui_build(tmp_path))
+
+    async with TestClient(TestServer(server.make_app())) as client:
+        async with client.ws_connect("/state") as ws:
+            msg = await ws.receive_json()
+        volume = await client.post("/volume", json={"percent": 50})
+
+    assert msg["active"] is None          # the socket, not index.html
+    assert volume.status == 503           # the command route, not a 404 from static
+
+
+@pytest.mark.asyncio
+async def test_no_ui_build_means_api_only():
+    """Every deployment before Phase 4b, and any core-only development
+    install: the daemon must serve the API perfectly well with no UI."""
+    store = StateStore(_caps("lms"))
+    server = StateServer(store)
+
+    async with TestClient(TestServer(server.make_app())) as client:
+        index = await client.get("/")
+        async with client.ws_connect("/state") as ws:
+            msg = await ws.receive_json()
+
+    assert index.status == 404
+    assert msg["active"] is None

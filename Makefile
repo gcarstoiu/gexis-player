@@ -1,5 +1,6 @@
 STAGE_GEXIS_DIR := $(CURDIR)/image/stage-gexis
 CORE_SRC_DIR := $(CURDIR)/core
+UI_DIST_DIR := $(CURDIR)/ui/dist
 PEPPYALSA_REPO := https://github.com/project-owner/peppyalsa
 PEPPYALSA_COMMIT := $(shell grep -oP 'git checkout \K[0-9a-f]{40}' image/stage-gexis/00-alsa/01-run-chroot.sh)
 GO_LIBRESPOT_REPO := https://github.com/devgianlu/go-librespot
@@ -11,7 +12,7 @@ GO_LIBRESPOT_VERSION := $(shell grep -oP 'GO_LIBRESPOT_VERSION="\K[^"]+' image/s
 # so a manifest can never claim a version it wasn't actually built from.
 IMAGE_VERSION := $(shell git describe --tags --always --dirty)
 
-.PHONY: image clean provision
+.PHONY: image ui clean provision
 
 # Builds via pi-gen's own build-docker.sh, unmodified. Our custom stage lives
 # outside the pinned pi-gen submodule and is bind-mounted in at build time
@@ -67,10 +68,25 @@ IMAGE_VERSION := $(shell git describe --tags --always --dirty)
 #    longer self-cleans) - `make clean` is how you force a truly fresh
 #    build, not just how you recover from a failed one; see its own
 #    comment below.
-image:
+
+# ADR-0023's stated cost: "the image build gains a Node build step. Node is
+# already on the dev machine; the image pipeline needs it at build time, not
+# at runtime." So the UI is compiled here, on the host, and the image ships
+# only the static output - no Node, no npm, no toolchain on the device, and
+# no npm install under QEMU emulation (which would be slow and would put a
+# network fetch inside the image build).
+#
+# `npm ci` rather than `npm install`: it installs exactly what
+# package-lock.json pins and fails if the two disagree, which is the same
+# pin-and-verify discipline the rest of this build applies to peppyalsa,
+# go-librespot and alsa-lib.
+ui:
+	cd ui && npm ci && npm run build
+
+image: ui
 	@rm -f image/pi-gen/stage2/EXPORT_IMAGE; \
 	start=$$(date +%s); \
-	( cd image && CONTINUE=1 PRESERVE_CONTAINER=1 PIGEN_DOCKER_OPTS="--volume $(STAGE_GEXIS_DIR):/pi-gen/stage-gexis:ro --volume $(CORE_SRC_DIR):/pi-gen/gexis-core-src:ro -e IMG_SUFFIX=-$(IMAGE_VERSION)" \
+	( cd image && CONTINUE=1 PRESERVE_CONTAINER=1 PIGEN_DOCKER_OPTS="--volume $(STAGE_GEXIS_DIR):/pi-gen/stage-gexis:ro --volume $(CORE_SRC_DIR):/pi-gen/gexis-core-src:ro --volume $(UI_DIST_DIR):/pi-gen/gexis-ui-dist:ro -e IMG_SUFFIX=-$(IMAGE_VERSION)" \
 		./pi-gen/build-docker.sh -c config ); \
 	status=$$?; \
 	end=$$(date +%s); \

@@ -25,6 +25,7 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+from pathlib import Path
 
 from aiohttp import web
 
@@ -46,18 +47,26 @@ class StateServer:
         *,
         activate=None,
         set_volume=None,
+        ui_dir: Path | None = None,
     ) -> None:
         """`activate(renderer_id) -> bool` and `set_volume(percent) -> bool`
         are injected by `__main__.py` (ADR-0028's command surface). Both are
         optional: without them the routes still exist and answer 503, which
         is a truer answer than a 404 for a server that has the concept but
         no wiring behind it.
+
+        `ui_dir` is the built Svelte output (ADR-0028: this daemon serves
+        the UI, in the same process and on the same origin as `/state`).
+        Optional because the daemon must run perfectly well without it -
+        which is every deployment before Phase 4b, and any development run
+        where only the core is installed.
         """
         self._store = store
         self._host = host
         self._port = port
         self._activate = activate
         self._set_volume = set_volume
+        self._ui_dir = ui_dir
         self._clients: set[web.WebSocketResponse] = set()
         store.subscribe(self._broadcast)
 
@@ -148,7 +157,19 @@ class StateServer:
         app.router.add_get("/state", self._handle)
         app.router.add_post("/renderer/{renderer_id}/activate", self._handle_activate)
         app.router.add_post("/volume", self._handle_set_volume)
+        # The UI is registered *after* the API, so nothing it serves can
+        # shadow `/state` or a command route - aiohttp resolves in
+        # registration order. Two routes only, which is why vite is
+        # configured to emit everything under assets/: a greedy catch-all
+        # would put that ordering guarantee back in play every time a
+        # route is added.
+        if self._ui_dir is not None:
+            app.router.add_get("/", self._handle_index)
+            app.router.add_static("/assets", self._ui_dir / "assets")
         return app
+
+    async def _handle_index(self, request: web.Request) -> web.FileResponse:
+        return web.FileResponse(self._ui_dir / "index.html")
 
     async def run(self) -> None:
         runner = web.AppRunner(self.make_app())

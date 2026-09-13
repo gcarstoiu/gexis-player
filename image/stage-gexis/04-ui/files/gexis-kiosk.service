@@ -1,0 +1,37 @@
+[Unit]
+Description=Gexis panel: labwc compositor running the Chromium kiosk
+Documentation=file:///etc/gexis/kiosk.env
+# The UI is served by gexis-core (ADR-0028), so there is nothing to show
+# until it is up. Wants= rather than Requires=: if the core is broken, the
+# right outcome is a panel showing a connection error it retries out of,
+# not a black screen - the UI's own store reconnects with backoff.
+After=gexis-core.service systemd-user-sessions.service
+Wants=gexis-core.service
+
+[Service]
+Type=simple
+User=pi
+PAMName=login
+# Chromium and labwc need a real seat for DRM and input. PAMName=login
+# gives this unit a logind session, which is what grants seat0 - the
+# alternative (autologin on tty1 plus a shell profile launching labwc) has
+# more moving parts and fails less visibly.
+TTYPath=/dev/tty1
+TTYReset=yes
+TTYVHangup=yes
+StandardInput=tty-fail
+StandardOutput=journal
+StandardError=journal
+EnvironmentFile=/etc/gexis/kiosk.env
+ExecStart=/usr/bin/labwc -s /usr/local/bin/gexis-kiosk-start
+
+# Phase 4 criterion 1: "starting on boot, never restarting". Restart=no is
+# the literal reading and the right one - a compositor that respawns in a
+# loop after a real failure hides the failure behind a flicker. If this
+# unit dies, the journal says so and the panel stays dark until someone
+# looks, which is the honest outcome on an appliance that is also an SSH
+# target.
+Restart=no
+
+[Install]
+WantedBy=graphical.target

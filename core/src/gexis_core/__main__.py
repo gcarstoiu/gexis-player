@@ -222,12 +222,22 @@ async def main() -> None:
         await volume_bridge.write_hardware(raw)
         return True
 
+    # Serve the UI only if a build is actually present. A configured path
+    # that does not exist is normal, not an error: the core ships and runs
+    # independently of the UI, and saying so in the log beats a stack trace
+    # on a route nobody has installed yet.
+    ui_dir = Path(config.ui_dir) if config.ui_dir else None
+    if ui_dir is not None and not (ui_dir / "index.html").is_file():
+        logger.info("wsserver: no UI build at %s, serving the API only", ui_dir)
+        ui_dir = None
+
     state_server = StateServer(
         state_store,
         host=config.state_host,
         port=config.state_port,
         activate=activate,
         set_volume=set_volume,
+        ui_dir=ui_dir,
     )
 
     # The mixer's level at startup, so the published state carries one

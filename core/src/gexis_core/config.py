@@ -67,6 +67,12 @@ class Config:
     # wraps it in `Path(...)` itself.
     metadata_file_path: str = "/var/local/www/currentsong.txt"
 
+    # Phase 4b: the built Svelte output this daemon serves (ADR-0028).
+    # Empty string means "no UI installed" - the daemon then runs headless
+    # and answers the API only, which is what every deployment before
+    # Phase 4b did and what a core-only development install still does.
+    ui_dir: str = "/opt/gexis-ui"
+
     # Phase 4 criterion 4: renderer pairs whose measured takeover gap is
     # below ADR-0010's 1s threshold, so a transition screen would be a
     # flicker rather than information. Published in the state payload
