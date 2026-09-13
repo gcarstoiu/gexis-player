@@ -2521,6 +2521,24 @@ cached) is ever worth chasing further:**
   after it — `clean`'s `docker rm -v pigen_work` only removes what
   exists *at the time it runs*. Run `make clean` again after any failure,
   right before retrying.
+- **An interrupted `make image` can leave a *previous* image truncated in
+  `image/deploy/`, looking exactly like a valid one.** Found 2026-09-13.
+  The build itself finished (15m18s, warm) and was killed by `C3PO`'s own
+  low-memory condition during the final `docker cp ... | tar -xf -` that
+  copies results out. That copy rewrites everything in `deploy/`
+  alphabetically, so it had already overwritten the previous day's `.zip`
+  and got part-way: 583 MB where the real file was 1.05 GB. Nothing says
+  so — the filename and timestamp look normal, and flashing it would fail
+  in some interesting way much later.
+  **Recovery needs no rebuild.** `PRESERVE_CONTAINER=1` means the finished
+  artefacts are still in the container: `docker cp
+  pigen_work:/pi-gen/deploy/. <somewhere>` retrieves them from a *stopped*
+  container (`docker exec` will not work on one). Check the recovered
+  sizes against `unzip -t` before trusting either file.
+- **Two images in `deploy/` is ~2.3 GB and the disk is 62 GB.** With the
+  pi-gen container and its volumes also resident, 85% used is a normal
+  post-build state. `make clean` reclaims the container's share; the
+  images themselves are only removed by hand.
 - **Don't assume `C3PO`'s tooling is on the image.** `xxd`, `bc`,
   `telnet`, `nc` aren't there (Lite base doesn't have them) — `od`,
   `curl`, `ss`, `fuser` are. Reach LMS's CLI (port 9090) via bash's
