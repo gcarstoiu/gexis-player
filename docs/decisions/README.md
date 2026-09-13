@@ -62,6 +62,20 @@ Volume in fixed output is hidden (0018); settings text and search on the panel
 are shown but not editable (0022, 0020). ADR-0014's "hidden or greyed" should be
 read through this rule.
 
+**Scope clarified by George, 2026-09-13: this rule binds a *shippable*
+product, and is a guideline during development.** From Phase 4 the UI is
+imported from complete designs while the backend is wired up a phase at a
+time, so screens will legitimately carry controls that do nothing yet — a
+transport row before Phase 6, a lyrics tab before Phase 8. That is
+development scaffolding, not a decision to ship dead controls, and it is
+validated hard before the product is shippable rather than at each step.
+
+**Unresolved: where that validation gate lives.** No phase currently owns
+"remove or justify every unwired control", and an intent with no checkpoint
+is how this project has been burned before. Until it has a home, unwired UI
+is marked in the code so the outstanding list can be produced on demand
+rather than remembered.
+
 **Accountability** — established in [0010](0010-arbitration-slot-model.md),
 restated by [0018](0018-volume-and-output-modes.md):
 
