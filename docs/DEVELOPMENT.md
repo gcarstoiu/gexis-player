@@ -39,6 +39,35 @@ If a measurement turns up a defect part-way through a criterion, surface it
 and let George choose whether to fix it now or after — do not fold the fix
 into the change in flight.
 
+### The settings inventory is kept current as work happens
+
+**George's rule, 2026-09-13.** Implementing anything that comes — or might
+come — with a setting means proposing it for
+[ADR-0022](decisions/0022-settings.md)'s inventory, and appending it **only
+after George confirms**. He is PM; the inventory is his list, so a row is
+proposed, never silently added.
+
+*Why the rule exists:* that inventory went stale once already. Assembled
+2026-09-04, by 2026-09-13 it had missed Phases 2-4, ADRs 0024-0028 and
+every volume finding — 16 items where there should have been about fifty,
+with two whole groups (arbitration, and system/maintenance) absent
+entirely. Nobody decided to leave them out; nothing prompted anyone to
+write them down while the work was happening, so they had to be
+reconstructed from the records afterwards, which loses the reasoning that
+was live at the time.
+
+It also protects a real hazard. Several rows are placeholders nobody ever
+confirmed — `restore_volume_floor_db` at −40 dB is the clearest — and a
+settings screen built on a list nobody kept current would ship those
+placeholders as though they were choices.
+
+*What counts as a trigger:* a hardcoded constant, a new value in `Config`
+or `core.toml`, a behaviour with a plausible second choice, or anything
+that would differ per installation. Mark the proposed row the way that
+record does: **[R]** recorded / **[H]** hardcoded today / **[N]** genuinely
+new suggestion / **[?]** a decision George still owes — and add any **[?]**
+to the waiting-on list at the end of the inventory.
+
 ### Branching
 
 - One branch per phase: `phase-0-image`, `phase-2-arbitration`.

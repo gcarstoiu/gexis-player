@@ -21,3 +21,7 @@ Claude handles implementation, tooling, tests, commits.
 - Do not characterise size, difficulty or risk without naming the evidence.
 - Never reference an ALSA card by index. Use `hw:sndrpihifiberry`.
 - Update `HANDOFF.md` at the end of every session.
+- Implementing anything that comes — or might come — with a setting: propose
+  it for ADR-0022's inventory and append it **only after George confirms**.
+  Mark it as that record does ([R] recorded / [H] hardcoded today / [N] new
+  suggestion / [?] a decision still owed).
