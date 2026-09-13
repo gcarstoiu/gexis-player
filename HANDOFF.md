@@ -1,7 +1,41 @@
 # Handoff
 
-Last updated: 2026-09-13 (twelfth session — **build environment fixed; Phase 4
-still at 4a/4b, waiting on designs**)
+Last updated: 2026-09-14 (twelfth session — **build environment fixed; ADR-0029
+and ADR-0030 decided; Phase 4 still at 4a/4b, waiting on designs**)
+
+## Phase 7 was re-decided (2026-09-14) — ADR-0030
+
+George challenged ADR-0020: *"why did we select slimbrowse and not build
+everything based on LMS capabilities so that we are in control of what we
+display?"* The challenge was right, and ADR-0020 turned out never to have
+written the typed-query alternative up as a considered option.
+
+**The local library is now our own screens over typed queries** (`albums`,
+`artists`, `genres`, `titles`, …) — measured against his LMS 9.1.1: 4554
+albums, 7292 artists, 60974 titles, all with structured fields rather than a
+server-formatted label.
+
+**SlimBrowse survives only for radio, entered at `["radios","menu:radio"]`
+rather than `home`.** That is an entry-point choice, not a filter: LMS's own
+settings node, `My Apps`, global search and Radio Paradise are not filtered out
+— they are never reachable. Podcasts is the one id excluded by name. Nine items
+remain. Both areas share one visual language from the provided designs.
+
+**Verify before building on it:** `playlistcontrol cmd:load album_id:<id>` is
+the load-bearing assumption of the typed half and has **not** been executed —
+doing so would have started music on George's system unannounced. ADR-0030's
+"Unverified" section lists it and three others.
+
+Knock-on: ADR-0020's cross-cutting rule now has **no live case for its second
+branch** ("exists but cannot be operated here, show it and say where") — both
+motivating examples are retired. The rule is kept as a principle; judge future
+cases on the reasoning, not the retired rows.
+
+Also settled this session: **ADR-0029**, text fields editable on every surface,
+no on-screen keyboard, and a focused field with no keyboard attached does
+nothing — a knowingly accepted exception to ADR-0014. Credentials: provisioning
+via `firstrun.sh` remains the interim answer and **"a proper way" still has no
+phase or owner** (George, 2026-09-13).
 
 ## Build environment (2026-09-13) — read this before the next build
 
@@ -2538,7 +2572,8 @@ cached) is ever worth chasing further:**
 4  UI shell + idle + display-only nowplay
 5  visualisation service + Peppy screen   capability-blind, proves the model
 6  now playing, full                      capability-driven controls
-7  library browse                         full SlimBrowse
+7  library browse                         typed queries + our screens; SlimBrowse
+                                            for radio only (ADR-0030)
 8  enrichment + lyrics                    additive only, cannot break playback
 9  plugin contract hardening + themes     Qobuz is the fourth-renderer test
 ```

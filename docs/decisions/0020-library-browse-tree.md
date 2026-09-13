@@ -1,8 +1,15 @@
 # ADR-0020 — Library browse as a normalised tree
 
-**Status:** Accepted
+**Status:** Accepted, **partly superseded by
+[0030](0030-library-typed-radio-slimbrowse.md)**
 **Date:** 2026-09-04
 **Establishes:** a cross-cutting rule on unusable controls — see below
+**Amended:** 2026-09-13 by [0029](0029-text-entry-on-every-surface.md) — one
+row of the cross-cutting table retired.
+2026-09-14 by [0030](0030-library-typed-radio-slimbrowse.md) — the
+pass-through decision is superseded: typed queries for the local library, and
+SlimBrowse only for the radio subtree. The search row of the cross-cutting
+table goes with it, since search is no longer rendered at all.
 
 ## Context
 
@@ -97,6 +104,15 @@ retrieve SlimBrowse-like responses, which is a middle path some clients use.
 
 ### SlimBrowse is the internal browse protocol
 
+> **Superseded 2026-09-14 by
+> [ADR-0030](0030-library-typed-radio-slimbrowse.md).** The local music
+> database is browsed with typed queries (`albums`, `artists`, `genres`,
+> `titles`, …) and our own screens; SlimBrowse is kept only for the radio
+> subtree, entered directly at `["radios","menu:radio"]` rather than at `home`.
+> This record never considered the typed-query alternative — George raised it,
+> and the answer went the other way. The analysis below is still correct about
+> what SlimBrowse *is*, and still governs the part we kept.
+
 **Adopted as-is.** The core passes SlimBrowse through rather than translating it
 into a shape of our own.
 
@@ -178,14 +194,23 @@ disagree. They do not, once the distinction is stated:
 |---|---|---|---|
 | Volume slider in fixed output mode | ADR-0018 | **hidden** | there is no volume control on this device in that mode — the capability is absent |
 | ~~Settings text field on the panel~~ | ~~ADR-0022~~ | **retired 2026-09-13** — see below | |
-| Search item on the panel | this record | **shown, not editable** | the value exists and matters; only editing is elsewhere |
+| ~~Search item on the panel~~ | ~~this record~~ | **retired 2026-09-14** — see below | |
 
 > **Amended 2026-09-13 by [ADR-0029](0029-text-entry-on-every-surface.md).**
 > The settings-text-field row is retired: text fields are now editable on the
-> panel too, so the capability exists there and neither branch applies. The
-> rule itself is unchanged, and the search row keeps its second branch alive —
-> though how search takes input when the designs carry no text-entry widget is
-> an open Phase 7 question.
+> panel too, so the capability exists there and neither branch applies.
+>
+> **Amended 2026-09-14 by
+> [ADR-0030](0030-library-typed-radio-slimbrowse.md).** The search row is
+> retired too. Search is no longer rendered anywhere — the library screens are
+> typed queries with no search entry point, and the one remaining SlimBrowse
+> search item is dropped by the text-input rule.
+>
+> **The rule itself stands, but its second branch now has no live case.** Both
+> examples that motivated it are gone. Keep the branch — it is the right answer
+> when a capability exists but is operated elsewhere — while knowing that
+> nothing in the product currently exercises it. A future case should be
+> checked against the reasoning below rather than against these retired rows.
 
 A search item hidden on the panel would leave the user unable to see that their
 library is searchable at all. A greyed volume slider would imply a volume control

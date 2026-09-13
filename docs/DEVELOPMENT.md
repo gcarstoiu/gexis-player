@@ -681,21 +681,46 @@ increment at a time, each gated on his own hardware pass as usual):
 
 ### Phase 7 — Library browse
 
+**Rewritten 2026-09-14 by [ADR-0030](decisions/0030-library-typed-radio-slimbrowse.md).**
+The previous criteria were sized for "Full SlimBrowse: My Music, Radio, plugin
+menus" and are recorded below. Phase 7 is now materially smaller: the library
+is our own screens over typed queries, and the generic browser handles one
+subtree of nine items.
+
 **Acceptance**
 
-1. Full SlimBrowse: My Music, Radio, plugin menus.
-2. `base.actions` / `itemsParams` dispatch implemented.
-3. `nextWindow` precedence and in-place refresh correct.
-4. Pagination on lists of thousands.
-5. Actions map to controls through the lookup table; unknown actions in a
-   context menu.
-6. **Amended 2026-09-13 by [ADR-0029](decisions/0029-text-entry-on-every-surface.md).**
-   Was: "text-input items shown but not editable on the panel; editable
-   remotely." A text field, where one exists, is now editable on both, via an
-   external keyboard on the panel — there is still no on-screen keyboard.
-   **Open for this phase:** the designs carry no text-entry widgets, so how
-   SlimBrowse's text-input items take input on the panel is undecided. This
-   criterion cannot be marked met until that is answered.
+1. **Library screens over typed queries**, not SlimBrowse: Albums, All
+   Artists, Album Artists, Composers, Genres, Years, Compilations, New Music,
+   Songs, Playlists, Music Folder. Works when the library has any. Counts and
+   commands are in ADR-0030.
+2. **Playback from a typed id works** — `playlistcontrol cmd:load
+   album_id:<id>` and its track/artist equivalents. **Verify first:** ADR-0030
+   records this as the load-bearing assumption of the typed half and it has
+   *not* been executed against a real player.
+3. **Pagination on lists of thousands** — 60974 titles and 7292 artists on
+   George's server, so this is not theoretical.
+4. **Artwork** via `artwork_track_id` → `/music/<id>/cover`.
+5. **Radio browses via SlimBrowse rooted at `["radios","menu:radio"]`**, never
+   at `home`. `base.actions` / `itemsParams` dispatch, `nextWindow` precedence
+   and in-place refresh are still required — but only for this subtree.
+6. **Podcasts (`opmlpodcast`) excluded by id**; Radio Paradise and the rest of
+   `My Apps` are unreachable by construction, not filtered.
+7. **Text-input items dropped wherever they appear** — mechanically, from an
+   `input` block or `__TAGGEDINPUT__` / `__INPUT__` in the action params. One
+   case today (Search TuneIn); the rule stays general because the subtree is
+   plugin-driven.
+8. **Library and Radio are separate areas sharing one visual language** —
+   server-supplied radio items render into our own components, per the
+   provided designs.
+
+*Superseded criteria, kept for history:* (1) Full SlimBrowse: My Music, Radio,
+plugin menus. (2) `base.actions` / `itemsParams` dispatch implemented.
+(3) `nextWindow` precedence and in-place refresh correct. (4) Pagination on
+lists of thousands. (5) Actions map to controls through the lookup table;
+unknown actions in a context menu. (6) Text-input items shown but not editable
+on the panel; editable remotely — itself already amended 2026-09-13 by
+[ADR-0029](decisions/0029-text-entry-on-every-surface.md), and now moot: no
+text input is rendered at all.
 
 ### Phase 8 — Enrichment and lyrics
 
