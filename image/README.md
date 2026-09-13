@@ -106,19 +106,25 @@ pipe, on every build. Two consequences worth knowing:
   *previous* build's artefact truncated. `make prune` reduces the blast radius
   by keeping only the current build in the volume, but does not remove it.
 
-If it dies there, **the build is not lost** — the artefacts are in the volume.
-Copy them out per-file, which avoids the tar pipe entirely (measured: 44s for
-a 4.5GB image):
+If it dies there, **the build is not lost** — it has already finished and the
+artefacts are in the volume. Recover them with:
 
 ```
-docker cp pigen_work:/pi-gen/deploy/<date>-gexis-player-<version>.img image/deploy/
-docker cp pigen_work:/pi-gen/deploy/<date>-gexis-player-<version>.info image/deploy/
+make fetch-deploy
 ```
 
-The `.info` will be missing the root `Makefile`'s trailing annotation block
-(image version, peppyalsa commit, go-librespot version, build time), since
-that step runs after the copy — append it by hand or re-read it from the
-`Makefile`.
+It copies one file at a time, avoiding the tar pipe entirely (measured: 44s
+for a 4.5GB image), then appends the manifest annotation the `image` target
+would have — that step runs *after* the copy, so a killed copy-out skips it
+too. Re-running is cheap and safe: anything already present at the right size
+is skipped, and the annotation stays a single block.
+
+This has to be its own target rather than a fallback inside `image`, because
+the kill signals make itself (`make: *** [image] Terminated`) — by the time
+the copy has failed there is no recipe left running to recover from it.
+
+Verified 2026-09-13: recovered image byte-identical to the one copied out by
+hand, manifest reporting the true 749s build.
 
 Never `docker start pigen_work` to inspect the volumes: that re-runs pi-gen's
 entrypoint and starts a build. Read them through a throwaway container

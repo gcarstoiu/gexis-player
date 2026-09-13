@@ -1,6 +1,74 @@
 # Handoff
 
-Last updated: 2026-09-12 (eleventh session — **PHASE 3 CLOSED, PHASE 4 STARTED**)
+Last updated: 2026-09-13 (twelfth session — **build environment fixed; Phase 4
+still at 4a/4b, waiting on designs**)
+
+## Build environment (2026-09-13) — read this before the next build
+
+No Phase 4 work happened this session. What changed is the build host, and it
+matters because **Claude runs every build** (George, 2026-09-13), which makes
+one failure mode routine rather than incidental.
+
+**1. Docker's `data-root` moved to `/home/docker`.** It was `/var/lib/docker`,
+on `/` — 62G with 9.1G free — while `image/deploy/` is in the repo on `/home`
+(396G). The low-disk warnings were always about `/`; deleting zips from
+`image/deploy/` frees the partition that *wasn't* full. Moved with
+`rsync -aHAX --numeric-ids` (overlay2 needs hardlinks, xattrs and numeric
+ids); `/` went 9.1G → 26G free. The old tree is gone. Roll back by removing
+`/etc/docker/daemon.json` if this ever needs undoing.
+
+**2. `make prune` (new), run automatically by `make image`.** Two things
+accumulated in the preserved volumes, neither a cache: `work/*/export-image/`
+leaked one raw ~4.5GB image *per build* (pi-gen's `prerun.sh` deletes only
+`${IMG_FILENAME}${IMG_SUFFIX}.img`, and our `IMG_SUFFIX` is the git-describe
+version, different every build — the leak is ours, not pi-gen's), and
+`deploy/` kept every build's output, which `build-docker.sh` re-streams to the
+host each run. First run reclaimed **10,194 MB**; volumes 18.89GB → 8.20GB.
+
+**This is what to reach for instead of `make clean`.** `clean` does
+`docker rm -v pigen_work`, which destroys the volumes *including* the ~8.4GB
+of stage rootfs trees that make a build warm. "Clear the disk warning" and
+"lose the warm build" were the same command. `clean` still exists, for forcing
+a genuinely cold build.
+
+**3. `DEPLOY_COMPRESSION=none`** — `image/deploy/` now holds a raw
+`<date>-gexis-player-<version>.img`, no `image_` prefix, no zip. Settled the
+open call `image/README.md` had carried since 2026-09-05: `bmaptool` (pi-gen
+already emits the `.bmap`) can skip unallocated blocks only on a real image,
+and `mtools` reads the boot partition with no 4.5GB unzip first. Costs 4.5GB
+against 1.28GB zipped. `gz` is the documented middle option if the copy-out
+ever becomes the binding constraint.
+
+**4. `make fetch-deploy` (new) — expect to need it.** `build-docker.sh:154`
+ends every build with `docker cp …/deploy - | tar -xf -`, streaming the whole
+directory through a pipe. Under host memory pressure **that** is the step that
+dies, with the build itself already complete. Observed twice on 2026-09-13,
+both times leaving a valid image in the volume.
+
+Two traps here, both of which cost time this session:
+
+- **There is no kernel OOM record.** The kill comes from the process
+  supervising the build, so `journalctl | grep oom-kill` finds nothing and
+  proves nothing. A correct diagnosis was retracted on exactly that
+  non-evidence before the failure was reproduced live.
+- **A fallback inside `make image` cannot work.** The signal reaches make
+  (`make: *** [Makefile:127: image] Terminated`), so no recipe is left
+  running. Recovery must be a separate invocation — hence the target.
+
+`make fetch-deploy` copies per-file (no tar pipe; 44s for 4.5GB), skips
+anything already present at the right size, and appends the manifest
+annotation `image` would have. Verified: recovered image byte-identical,
+manifest reporting the true 749s.
+
+**Current warm-build baseline: 12m29s** (cold ~40m), 2026-09-13, with prune
+and no compression. Latest artefact:
+`image/deploy/2026-09-13-gexis-player-v0.2.1-98-gfec5067-dirty.img` —
+**built and verified as a file, not yet flashed.** `04-ui` (labwc, the
+`PAMName=login` seat, 1280x800, the Chromium flags) is still written entirely
+from documentation and has never been run on hardware.
+
+Commits: `3c13bd1` (prune), `987e84f` (raw .img), plus the `fetch-deploy`
+commit, on `phase-3-core-daemon`.
 
 ## Where things stand
 
@@ -2192,6 +2260,14 @@ reverted, currently-flashed image predates this fix.
 
 ## Next actions, in order
 
+**Immediate (2026-09-13):** flash
+`image/deploy/2026-09-13-gexis-player-v0.2.1-98-gfec5067-dirty.img` and verify
+`04-ui` on hardware — labwc starting, the `PAMName=login` seat, 1280x800, the
+Chromium kiosk flags, and the UI actually served by `gexis-core` under the
+pinned Chromium rather than a remote Firefox. None of that has ever run. This
+is the outstanding half of Phase 4b. Everything after it (4c onward) waits on
+George's `.dc.html` artboards plus static PNG exports.
+
 0. **~~Implement ADR-0027~~ — DONE, Phase 2d CLOSED 2026-09-12.** Built,
    flashed (`v0.2.1-51-g89dca15-dirty`), and verified on the image: 84 unit
    tests, the installed core diffed file-by-file against the branch HEAD,
@@ -2467,6 +2543,26 @@ cached) is ever worth chasing further:**
 
 ## Things that will bite if forgotten
 
+- **Never `docker start pigen_work`.** It re-runs pi-gen's entrypoint and
+  starts a build — done accidentally on 2026-09-13 while inspecting the
+  volumes, killed ~90s into stage0 (no damage: `lists/partial` and
+  `dpkg/updates` were empty, `dpkg/status` untouched). To read the volumes,
+  use a throwaway container, which is what `make prune` does:
+  `docker run --rm --volumes-from pigen_work pi-gen:latest sh -c '…'`.
+  Note the real build never starts `pigen_work` either — when it exists,
+  `build-docker.sh` runs `pigen_work_cont` with `--rm --volumes-from`, so
+  `pigen_work` is only a volume holder and its exit status is irrelevant.
+- **`work/*/build.log` accumulates across `CONTINUE=1` runs.** Its first
+  timestamp is not this build's start. Anything deriving a duration from it
+  must take the *last* `Begin /pi-gen/stage0` to the *last* `Build finished`
+  — a first cut of `fetch-deploy`'s annotation reported 4186s for a 749s
+  build by spanning two runs.
+- **An interrupted `docker cp … | tar -xf -` rewrites `deploy/`
+  alphabetically** and can truncate a *previous* build's artefact, not just
+  the current one. Cost a good image on 2026-09-12 (583MB of a real 1.05GB).
+  `make prune` shrinks the blast radius by keeping only the current build in
+  the volume; it does not remove it. Check sizes before trusting a
+  `deploy/` file that a killed build touched.
 - **Never reference an ALSA card by index.** 3 on `rig`, 2 on moOde, 1 on
   `gexis` — same DAC model, three different indices (Finding 005). Use
   `hw:sndrpihifiberry`.
