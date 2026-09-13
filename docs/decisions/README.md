@@ -87,7 +87,7 @@ selection criteria. Protect the audio path with priority, not by doing less.
 | Maximum volume ceiling | 0018 | Listed as "to be recorded"; still undecided. |
 | Factory reset | 0021 | Implied by configuration persistence, specified nowhere. |
 | Plugin settings pages | 0022 | Whether plugins can add their own settings belongs to the plugin contract (0016). |
-| Pairing mode as a per-installation setting | 0024 | PIN-free is right for this installation, wrong as a shipping default (different threat model elsewhere). Needs the settings infrastructure (0022) before it can be anything but hardcoded. |
+| Pairing mode as a per-installation setting | 0024 | PIN-free is right for this installation, wrong as a shipping default (different threat model elsewhere). Needs the settings infrastructure (0022) before it can be anything but hardcoded. **Half-unblocked 2026-09-13:** Phase 3 criterion 5 built the persistence (`settings.py`), so what remains is the settings *screen*, not the store. |
 
 ## Conventions
 
