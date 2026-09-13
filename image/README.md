@@ -130,27 +130,38 @@ docker run --rm --volumes-from pigen_work pi-gen:latest sh -c 'ls -la /pi-gen/de
 
 ## What `make image` produces
 
-`image/deploy/` will contain artefacts for **two** images (confirmed by a
-successful build, 2026-09-05, 36m43s wall-clock):
+`image/deploy/` will contain **one** image, `<date>-gexis-player-<version>.img`
+— **the deliverable.** Built from `stage-gexis` on top of stage2: pins and
+holds `libasound2t64`, builds peppyalsa from source, installs
+`/etc/alsa/conf.d/output.conf`, wires up first-boot provisioning, and installs
+squeezelite, go-librespot, bluealsa-aplay, gexis-core and the kiosk UI.
 
-- `image_<date>-gexis-player-lite.zip` — bare Raspberry Pi OS Lite, no
-  customisation. A side effect of `stage2/EXPORT_IMAGE` being unconditional,
-  unmodified pi-gen. Harmless; ignore it.
-- `image_<date>-gexis-player.zip` — **this is the actual deliverable.** Built
-  from `stage-gexis` on top of stage2: pins and holds `libasound2t64` at
-  `1.2.14-1+rpt1`, builds peppyalsa from source, installs
-  `/etc/alsa/conf.d/output.conf`, wires up first-boot provisioning, and
-  installs squeezelite, go-librespot and bluealsa-aplay (Phase 2a — see
-  below).
+The second `-lite` image is gone: the root `Makefile` removes
+`stage2/EXPORT_IMAGE` before each build, because that checkpoint export costs
+a full loop-device/zerofree/compress cycle (measured 6m41s) for an artefact
+nobody consumes.
 
-Each is a zip containing one file, `<date>-gexis-player[-lite].img` — pi-gen's
-default `DEPLOY_COMPRESSION=zip`, not overridden in `image/config`. Both
-Raspberry Pi Imager and balenaEtcher flash directly from the zip without
-extracting it, so this doesn't reintroduce a manual step for criterion 1.
-Whether we want a literal `.img` in `deploy/` instead (set
-`DEPLOY_COMPRESSION=none` in `image/config`) is an open call — the zip form
-is roughly a third the size (a real 2026-09-05 build: 836 MB zipped vs.
-2.9 GB raw).
+A raw `.img`, not a zip — `DEPLOY_COMPRESSION=none`, set in `image/config`
+2026-09-13; that file carries the reasoning. What settled the previously-open
+call:
+
+- **Flashing.** Imager and Etcher accept either, but `bmaptool` — which
+  pi-gen already emits a `.bmap` for — can skip unallocated blocks only when
+  handed the image itself.
+- **Inspection.** `mtools` reads the boot partition straight out of the
+  `.img` (see below); with a zip that needed a 4.5GB `unzip` first.
+- **Build time.** Small. A measured pair of warm builds on the same tree:
+  `05-finalise` 8m07s with zip, 7m23s without — the step is dominated by
+  zerofree and unmount, not compression.
+- **Cost, and it is real.** 4.5GB raw against 1.28GB zipped, measured on the
+  2026-09-13 builds. That lands on `image/deploy/` *and* on the container's
+  deploy volume, and `build-docker.sh` streams the whole volume to the host on
+  every build (see "A build that dies during the copy-out", below). `make
+  prune` is what keeps this bounded — without it both places accumulate.
+
+If disk or that copy-out ever becomes the binding constraint, `gz` is the
+middle option: `pigz` is parallel and fast, and both Imager and `bmaptool`
+read `.img.gz` directly.
 
 Each image gets a matching `.info` file (from pi-gen's own
 `export-image/05-finalise` step) containing the exact `dpkg -l` package list
@@ -212,9 +223,9 @@ no baked-in Wi-Fi. The **only** first-boot mechanism is `firstrun.sh`, wired
 in via `cmdline.txt`'s `systemd.run=` (ADR-0021). It runs once, very early in
 boot, then deletes itself and its `cmdline.txt` entry.
 
-After flashing (`image_<date>-gexis-player.zip`, direct — Imager and Etcher
-both accept the zip), the boot partition's `firstrun.sh` needs five values
-filled in:
+After flashing (`<date>-gexis-player-<version>.img` — Imager, Etcher and
+`bmaptool` all take the raw image directly), the boot partition's
+`firstrun.sh` needs five values filled in:
 
 ```sh
 SSH_PUBKEY="ssh-ed25519 AAAA... you@host"   # required — no other remote access exists
@@ -273,14 +284,20 @@ build shipped with *no* working first-boot path at all, caught only by
 hand-inspecting a flashed card) should never again reach `deploy/`.
 
 Verifying the boot partition doesn't require hardware — `mtools` reads it
-straight out of the `.img` inside the zip:
+straight out of the deployed `.img`, with no extraction step since
+`DEPLOY_COMPRESSION=none` (2026-09-13):
 
 ```
-unzip -p image_<date>-gexis-player.zip > /tmp/gexis.img
-OFFSET=$(( $(fdisk -l /tmp/gexis.img | awk '/FAT32/{print $3}') * 512 ))
-mdir -i "/tmp/gexis.img@@${OFFSET}" -/
-mcopy -i "/tmp/gexis.img@@${OFFSET}" ::cmdline.txt -
+IMG=image/deploy/<date>-gexis-player-<version>.img
+OFFSET=$(( $(fdisk -l "$IMG" | awk '/FAT32/{for(i=1;i<=NF;i++) if($i ~ /^[0-9]+$/){print $i; exit}}') * 512 ))
+mdir -i "${IMG}@@${OFFSET}" -/
+mcopy -i "${IMG}@@${OFFSET}" ::cmdline.txt -
 ```
+
+The `awk` takes the first all-numeric field on the FAT32 row (the start
+sector) rather than a fixed column number: `fdisk` only emits the `Boot`
+column when some partition carries the flag, which shifts every column after
+it.
 
 ## Renderers (Phase 2a)
 

@@ -22,3 +22,23 @@ STAGE_LIST="/pi-gen/stage0 /pi-gen/stage1 /pi-gen/stage2 /pi-gen/stage-gexis"
 # Ubuntu cloud-config templates on the boot partition regardless of whether
 # anything on the image reads them — misleading, not just unused.
 ENABLE_CLOUD_INIT=0
+
+# Deploy the raw .img rather than pi-gen's default .zip, 2026-09-13.
+#
+# Measured on this repo's own builds: the zip is 1.28GB against a 4.5GB
+# raw image, so compression is not free either way - it trades ~3.2GB of
+# disk and of `docker cp` streaming (build-docker.sh:154 copies the whole
+# deploy dir out on every run) against the CPU time of zip -6 and, at the
+# other end, an unzip before every flash.
+#
+# The raw image is what the flasher actually wants: `make provision`
+# writes an .img, and bmaptool (which pi-gen already emits a .bmap for,
+# see export-image/05-finalise) can skip unallocated blocks only when it
+# is handed the image, not an archive.
+#
+# Note this changes the deployed filename: with compression, pi-gen names
+# the archive "${ARCHIVE_FILENAME}${IMG_SUFFIX}" ("image_2026-…zip"); with
+# none it copies "${IMG_FILENAME}${IMG_SUFFIX}.img" ("2026-…img"), no
+# "image_" prefix. The Makefile's manifest glob (*-gexis-player*.info) is
+# unaffected - it matches the .info, which is copied either way.
+DEPLOY_COMPRESSION=none
