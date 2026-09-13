@@ -48,6 +48,7 @@ the question blocking it was answered.
 | [0026](0026-peppymeter-native-process-integration.md) | Peppy screen: native PeppyMeter process, labwc-mediated screen ownership | Accepted, compositor mechanism unverified |
 | [0027](0027-lms-power-as-arbitration-mechanism.md) | LMS power is the arbitration mechanism; no permanent base slot | Accepted — supersedes parts of [0010](0010-arbitration-slot-model.md) |
 | [0028](0028-ui-serving-and-command-channel.md) | The core daemon serves the UI; commands go over REST | Accepted — answers what [0023](0023-svelte-ui.md) left open |
+| [0029](0029-text-entry-on-every-surface.md) | Text fields are editable on the panel too; no on-screen keyboard | Accepted — supersedes [0022](0022-settings.md)'s remote-only rule, amends [0020](0020-library-browse-tree.md) |
 
 ## Cross-cutting rules
 
@@ -58,9 +59,15 @@ Rules established in one record that bind the others.
 > If the capability does not exist, hide it. If it exists but cannot be operated
 > here, show it and say where it can be.
 
-Volume in fixed output is hidden (0018); settings text and search on the panel
-are shown but not editable (0022, 0020). ADR-0014's "hidden or greyed" should be
-read through this rule.
+Volume in fixed output is hidden (0018); search on the panel is shown but not
+editable (0020). ADR-0014's "hidden or greyed" should be read through this rule.
+
+**Amended 2026-09-13 by [0029](0029-text-entry-on-every-surface.md):** settings
+text fields are no longer part of the second branch — they are editable on the
+panel too, via an external keyboard. There is no on-screen keyboard, and a
+focused field with no keyboard attached does nothing and says nothing, which
+0029 records as a knowingly accepted exception to 0014. The designs carry no
+text-entry widgets, so this removes a constraint rather than adding a surface.
 
 **Scope clarified by George, 2026-09-13: this rule binds a *shippable*
 product, and is a guideline during development.** From Phase 4 the UI is

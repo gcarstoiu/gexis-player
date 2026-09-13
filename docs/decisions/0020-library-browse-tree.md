@@ -177,8 +177,15 @@ disagree. They do not, once the distinction is stated:
 | Case | Record | Behaviour | Why |
 |---|---|---|---|
 | Volume slider in fixed output mode | ADR-0018 | **hidden** | there is no volume control on this device in that mode — the capability is absent |
-| Settings text field on the panel | ADR-0022 | **shown, not editable**, with where to change it | the value exists and matters; only editing is elsewhere |
-| Search item on the panel | this record | **shown, not editable** | same |
+| ~~Settings text field on the panel~~ | ~~ADR-0022~~ | **retired 2026-09-13** — see below | |
+| Search item on the panel | this record | **shown, not editable** | the value exists and matters; only editing is elsewhere |
+
+> **Amended 2026-09-13 by [ADR-0029](0029-text-entry-on-every-surface.md).**
+> The settings-text-field row is retired: text fields are now editable on the
+> panel too, so the capability exists there and neither branch applies. The
+> rule itself is unchanged, and the search row keeps its second branch alive —
+> though how search takes input when the designs carry no text-entry widget is
+> an open Phase 7 question.
 
 A search item hidden on the panel would leave the user unable to see that their
 library is searchable at all. A greyed volume slider would imply a volume control

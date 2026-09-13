@@ -12,6 +12,10 @@ all 16 survive, several with what has since been measured about them
 attached. Everything this record *decided* (settings are a separate screen,
 text entry is remote-browser only, no authentication, one device name,
 mixed application) is unchanged.
+**Amended again:** 2026-09-13 — **"text entry is remote-browser only" is
+superseded** by [ADR-0029](0029-text-entry-on-every-surface.md). The
+inventory is untouched: that record adds no setting and removes none, it
+changes only where an existing setting may be typed into.
 
 ## Context
 
@@ -159,6 +163,15 @@ Accepted.
 
 ### Text entry is remote-browser only
 
+> **Superseded 2026-09-13 by [ADR-0029](0029-text-entry-on-every-surface.md).**
+> A text field, where one exists, is now editable on both the panel and a
+> remote browser. There is still no on-screen keyboard — the panel's route is
+> an external USB keyboard — and a focused field with no keyboard attached
+> does nothing, with no hint, which ADR-0029 records as a knowingly accepted
+> exception to ADR-0014. The rationale below is not disputed; only the
+> conclusion drawn from it changed. What survives unchanged: **the
+> touchscreen displays every setting, including text values.**
+
 **No on-screen keyboard.** Settings requiring free text — idle screen URL, LMS
 server address, device name — are editable only from a remote browser.
 
@@ -173,6 +186,13 @@ is. Toggles, choices and sliders — which is most of the inventory — remain f
 editable locally.
 
 #### This creates a first-boot blocker
+
+> **Softened, not closed, by [ADR-0029](0029-text-entry-on-every-surface.md)
+> (2026-09-13).** A keyboard on the panel is in principle a route in, but
+> nothing designed today provides a pre-network settings surface to type into,
+> and the designs carry no text-entry widget. The candidate approaches below
+> are still the live options; `firstrun.sh` pre-seeding is what the image
+> actually does.
 
 **Wi-Fi credentials cannot be entered remotely, because without Wi-Fi there is
 no remote browser.**

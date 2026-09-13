@@ -35,6 +35,12 @@ else. Accepted.
 ADR-0022 made text entry remote-browser only. Wi-Fi credentials are text, and
 without Wi-Fi there is no remote browser.
 
+> **Still live after [ADR-0029](0029-text-entry-on-every-surface.md)
+> (2026-09-13).** That record allows text entry on the panel, which is in
+> principle a route in — but nothing provides a pre-network settings surface to
+> type into, and the designs carry no text-entry widget. The problem below is
+> unchanged, and `firstrun.sh` pre-seeding remains what the image does.
+
 The obvious answer — "users flash with Raspberry Pi Imager and enter Wi-Fi in
 the customisation dialogue" — **does not work for a custom image file.**
 Raspberry Pi state that <cite index="4-1">customisation of custom image files was never truly supported, was possible only by means of a defect, and that the defect was dangerous because Imager had no way of knowing whether the customisation was appropriate for the image</cite>. Users of Imager 2.x report the

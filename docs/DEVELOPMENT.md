@@ -689,7 +689,13 @@ increment at a time, each gated on his own hardware pass as usual):
 4. Pagination on lists of thousands.
 5. Actions map to controls through the lookup table; unknown actions in a
    context menu.
-6. Text-input items shown but not editable on the panel; editable remotely.
+6. **Amended 2026-09-13 by [ADR-0029](decisions/0029-text-entry-on-every-surface.md).**
+   Was: "text-input items shown but not editable on the panel; editable
+   remotely." A text field, where one exists, is now editable on both, via an
+   external keyboard on the panel — there is still no on-screen keyboard.
+   **Open for this phase:** the designs carry no text-entry widgets, so how
+   SlimBrowse's text-input items take input on the panel is undecided. This
+   criterion cannot be marked met until that is answered.
 
 ### Phase 8 — Enrichment and lyrics
 
