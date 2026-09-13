@@ -1,8 +1,12 @@
 # ADR-0023 — The UI is Svelte
 
-**Status:** Accepted
+**Status:** Accepted — **decision re-confirmed 2026-09-13 on different grounds**
 **Date:** 2026-09-04
 **Binds:** Phases 4–7
+**Amended:** 2026-09-13 — the rationale below that ranked Svelte *above React*
+is void, because [ADR-0026](0026-peppymeter-native-process-integration.md)
+moved the thing it was about out of the browser. The conclusion survives on
+new grounds. See "Re-confirmed, 2026-09-13" at the end.
 
 ## Context
 
@@ -92,9 +96,54 @@ rather than technical.
 - Chromium is pinned by the image, so no transpilation for browser
   compatibility is needed beyond what Svelte does itself.
 
+## Re-confirmed, 2026-09-13 — and why the original reasoning no longer holds
+
+George raised the right challenge while preparing Phase 4's designs: if the
+design tool emits React components, wiring those directly would avoid a
+translation step and the things lost in it. Checking that properly turned up
+a stale record.
+
+**What is void.** "It does not compromise the skin renderer" above is the
+only argument that ranked Svelte over *React* specifically — everything else
+in the Rationale argues Svelte over *vanilla*, and React answers those
+equally well (recursive keyed lists are not a Svelte speciality). That
+argument was about a 30 fps layered compositing renderer running in the
+browser. [ADR-0026](0026-peppymeter-native-process-integration.md) moved the
+Peppy screen to a **native PeppyMeter process** with labwc-mediated screen
+ownership. ADR-0015 and ADR-0019 were both amended to point at that
+reversal; this record was missed. So its decisive technical differentiator
+has not been weakened — it no longer exists.
+
+That also leaves "a smaller corpus than React", which this record already
+called "the strongest remaining argument against", standing unopposed.
+
+**Why Svelte survives anyway.** The design is delivered as `.dc.html`
+artboards plus static PNG exports (George, 2026-09-13) — not as React
+components. That decides it on the grounds that actually matter here:
+
+- **There is no React structure to preserve.** The risk George was pointing
+  at is real but specific: it is losing a component decomposition in
+  translation. An HTML/CSS artboard has none to lose.
+- **The fidelity-critical parts transfer verbatim either way.** Markup, CSS,
+  tokens and CSS-expressed motion are copied, not re-derived, whichever
+  framework wraps them. The framework only governs logic this project writes
+  itself — and the largest piece of that, the browse tree, is ours
+  regardless of the design.
+- Switching would cost a runtime, a larger toolchain and an ADR, to solve a
+  translation problem that does not arise for this deliverable.
+
+**What would reopen it:** design delivered as structured React components.
+The decision would then turn on preserving that decomposition, and the
+reasoning above inverts. Recorded so the question is re-answered from the
+evidence rather than re-argued from this record's original, now-void,
+premise.
+
 ## Unverified
 
 - Per-frame cost of the layered skin renderer at 1280x800 on a Pi 4, under any
-  approach.
+  approach. **Largely moot for this record since ADR-0026** — the layered
+  renderer is a native process now. It remains a live question for *that*
+  record, not for the framework choice.
 - Whether Svelte's compiled output loads without issue under Chromium's kiosk
-  configuration, served from our own HTTP server.
+  configuration, served from our own HTTP server. **Due in Phase 4b**, which
+  builds exactly that path.

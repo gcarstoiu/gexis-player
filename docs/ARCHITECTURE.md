@@ -120,11 +120,14 @@ Not applicable to the DAC2 HD.
 
 ```
 ┌─ Presentation ─ web UI, one codebase ───────────────────────┐
-│   library nav  │  now playing  │  peppy screen  │  idle     │
-│                   capability-      skin renderer            │
-│                   driven UI        (circular/linear/spec)   │
+│   library nav  │  now playing  │  idle                      │
+│                   capability-driven UI                      │
 │   local: Chromium kiosk under labwc  ·  remote: any browser │
 └────────────── WebSocket (state + levels) ───────────────────┘
+┌─ Peppy screen ─ native process (ADR-0026) ──────────────────┐
+│   PeppyMeter/PeppySpectrum, skins rendered natively         │
+│   raised and hidden by labwc, not by the browser            │
+└─────────────────────────────────────────────────────────────┘
 ┌─ Control plane ─ Python ────────────────────────────────────┐
 │  Core state daemon                                          │
 │    · normalised playback model                              │
