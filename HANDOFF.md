@@ -33,9 +33,18 @@ cases on the reasoning, not the retired rows.
 
 Also settled this session: **ADR-0029**, text fields editable on every surface,
 no on-screen keyboard, and a focused field with no keyboard attached does
-nothing — a knowingly accepted exception to ADR-0014. Credentials: provisioning
-via `firstrun.sh` remains the interim answer and **"a proper way" still has no
-phase or owner** (George, 2026-09-13).
+nothing — a knowingly accepted exception to ADR-0014.
+
+**Credentials now have a phase — ADR-0031, Phase 10.** First boot with no
+network raises a setup access point (NetworkManager AP mode; verified available
+on `gexis` 2026-09-14, NM 1.52.1, `WIFI-PROPERTIES.AP: yes`, but **never
+exercised**). The setup page is served by `gexis-core`, and the typing happens
+**on the user's phone** — which is why the panel still needs no keyboard and
+why this closes ADR-0022's blocker without reopening ADR-0029. It collects
+Wi-Fi credentials *and* the device name (ADR-0022's single name: mDNS, Spotify,
+Bluetooth). `firstrun.sh` pre-seeding is unchanged and wins when present, so
+the development workflow is untouched. **Pull Phase 10 forward the moment a
+device goes to someone who did not build it.**
 
 ## Build environment (2026-09-13) — read this before the next build
 
@@ -2576,6 +2585,9 @@ cached) is ever worth chasing further:**
                                             for radio only (ADR-0030)
 8  enrichment + lyrics                    additive only, cannot break playback
 9  plugin contract hardening + themes     Qobuz is the fourth-renderer test
+10 first boot without a network           setup access point; pull forward the
+                                            moment a non-developer gets a device
+                                            (ADR-0031)
 ```
 
 ## Things that will bite if forgotten

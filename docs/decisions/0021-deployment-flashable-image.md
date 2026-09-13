@@ -38,8 +38,21 @@ without Wi-Fi there is no remote browser.
 > **Still live after [ADR-0029](0029-text-entry-on-every-surface.md)
 > (2026-09-13).** That record allows text entry on the panel, which is in
 > principle a route in — but nothing provides a pre-network settings surface to
-> type into, and the designs carry no text-entry widget. The problem below is
-> unchanged, and `firstrun.sh` pre-seeding remains what the image does.
+> type into, and the designs carry no text-entry widget.
+>
+> **Answered 2026-09-14 by
+> [ADR-0031](0031-first-boot-setup-access-point.md):** a temporary access
+> point on first boot, with the setup page served by `gexis-core` and the
+> typing done on the user's phone. Scheduled as Phase 10.
+>
+> **This does not settle the distribution channel.** The analysis below —
+> that Imager cannot customise a custom image file, and that the supported
+> routes are a self-hosted repository or Imager's community categories —
+> stands. ADR-0031 removes the *dependency* between the two: first boot no
+> longer needs Imager to inject anything, so the channel can be chosen on its
+> own merits rather than being forced by the credentials problem.
+> `firstrun.sh` pre-seeding remains the development route and wins when
+> present.
 
 The obvious answer — "users flash with Raspberry Pi Imager and enter Wi-Fi in
 the customisation dialogue" — **does not work for a custom image file.**

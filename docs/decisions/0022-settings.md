@@ -190,9 +190,17 @@ editable locally.
 > **Softened, not closed, by [ADR-0029](0029-text-entry-on-every-surface.md)
 > (2026-09-13).** A keyboard on the panel is in principle a route in, but
 > nothing designed today provides a pre-network settings surface to type into,
-> and the designs carry no text-entry widget. The candidate approaches below
-> are still the live options; `firstrun.sh` pre-seeding is what the image
-> actually does.
+> and the designs carry no text-entry widget.
+>
+> **Answered 2026-09-14 by
+> [ADR-0031](0031-first-boot-setup-access-point.md)** — the third candidate
+> below ("a one-off exception permitting local entry for network setup only"),
+> in the form of a temporary access point. The device raises its own Wi-Fi,
+> serves the setup page from `gexis-core`, and the typing happens **on the
+> user's phone**, which has a keyboard. The panel stays display-only, so this
+> closes the blocker without reopening the on-screen-keyboard question.
+> Scheduled as Phase 10. `firstrun.sh` pre-seeding remains the route for
+> development and wins when present.
 
 **Wi-Fi credentials cannot be entered remotely, because without Wi-Fi there is
 no remote browser.**

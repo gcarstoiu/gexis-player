@@ -756,6 +756,53 @@ Purely additive. Cannot break playback.
    and should ideally find nothing. Unwired UI is marked in code, so checking
    is a generated list rather than an audit.
 
+### Phase 10 — First boot without a network
+
+Added 2026-09-14, George: give credentials a phase, *"with an initial hotspot
+creation upon the first boot for setting up the device — so basically not only
+the credentials but also things like hostname"*. Decided in
+[ADR-0031](decisions/0031-first-boot-setup-access-point.md); it closes the
+blocker [ADR-0022](decisions/0022-settings.md) raised and
+[ADR-0021](decisions/0021-deployment-flashable-image.md) could not answer.
+
+**Why last, and when to pull it forward.** Nothing in Phases 0-9 needs it —
+development flashes cards and pre-seeds `firstrun.sh`. But no non-developer can
+set the device up without it, so it is a hard gate on anyone else owning one.
+**Pull it forward the moment a device goes to someone who did not build it.**
+
+**Acceptance**
+
+1. **With no configuration, the device raises an access point** and the panel
+   displays the network name, the password, and the address to open. Panel is
+   display-only — no text entry, per
+   [ADR-0029](decisions/0029-text-entry-on-every-surface.md).
+2. **NetworkManager AP mode, no new packages.** `ipv4.method=shared` provides
+   DHCP. Verified available on `gexis` 2026-09-14 (NM 1.52.1,
+   `WIFI-PROPERTIES.AP: yes`) but **never exercised** — criterion 2 is not met
+   by reading the capability bit.
+3. **The setup page is served by `gexis-core`**, the same process and origin as
+   the UI ([ADR-0028](decisions/0028-ui-serving-and-command-channel.md)). No
+   second web server.
+4. **Setup collects Wi-Fi SSID and password, and the device name** — ADR-0022's
+   single name, propagated to the mDNS hostname, Spotify Connect and Bluetooth.
+   LMS address optional, discovery first. **Verify the name reaches all three
+   consumers**; ADR-0031 records this as unknown.
+5. **Applying credentials tears the AP down and joins the network.** One radio:
+   AP and station do not coexist.
+6. **A working network on boot means no AP appears at all** — Ethernet, or
+   already-configured Wi-Fi.
+7. **Pre-seeded configuration wins.** `firstrun.sh` and `make provision` behave
+   exactly as they do today; the AP is what happens when there is none. A
+   developer's workflow must not change.
+8. **The device returns to setup mode when it cannot reach any configured
+   network**, so a replaced router does not lock the owner out. **Specify the
+   threshold as part of this phase** — too eager and the AP flaps on every
+   router reboot, too reluctant and the device is bricked from the user's point
+   of view.
+9. **Decided here, not before:** AP security (recommended: WPA2, password shown
+   on the panel) and whether a captive portal is implemented (recommended: not
+   in the first cut).
+
 ---
 
 ## Test tiers
