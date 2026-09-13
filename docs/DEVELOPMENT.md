@@ -68,6 +68,39 @@ record does: **[R]** recorded / **[H]** hardcoded today / **[N]** genuinely
 new suggestion / **[?]** a decision George still owes — and add any **[?]**
 to the waiting-on list at the end of the inventory.
 
+### UI work: imported whole, wired progressively, checked against a picture
+
+**George's decisions, 2026-09-13.** From Phase 4 the UI is built from
+complete designs rather than per-phase mockups: **import the whole design,
+render it, and wire the backend to whatever phase we are actually at.** The
+alternative — hiding unwired parts — would have made Claude decide what each
+screen looks like with elements removed, which is design work landing in the
+wrong hands.
+
+Three things keep that honest:
+
+1. **Unwired UI is marked in code**, with one convention, so "what is still a
+   shell" is a generated list rather than something remembered. It doubles as
+   the wiring backlog for Phases 6 and 8.
+2. **Removal is continuous.** The phase that wires a control clears its marker
+   as part of that work — it is editing those components regardless. Phase 9
+   criterion 4 is only the backstop for whatever slipped through; a one-off
+   audit there would be the largest-possible-batch change at the point of
+   least appetite for churn.
+3. **Accuracy is checked against a picture, not a description.** For each
+   screen, screenshot the running UI **from the device's own Chromium at
+   1280x800** and compare it to the design's exported PNG. The device's
+   browser is the only authoritative render (ADR-0023 pins it) and it catches
+   what a dev-machine render hides: self-hosted fonts, DPI, real panel
+   colour. The comparison is what stops "is this accurate?" becoming an
+   exchange of opinions.
+
+Design deliverables are therefore: the artboard HTML/CSS, **static PNG
+exports per state**, tokens as CSS custom properties, component boundaries,
+and phase labels on elements. The exports are committed to the repo as
+reference-only, never built, so a later redesign is a diff rather than a
+re-derivation.
+
 ### Branching
 
 - One branch per phase: `phase-0-image`, `phase-2-arbitration`.
@@ -678,6 +711,19 @@ Purely additive. Cannot break playback.
 2. A fourth renderer built against it, in a separate repository, with no changes
    to the core.
 3. Theme engine.
+4. **No unwired UI remains, or each survivor is explicitly justified.** Added
+   2026-09-13. From Phase 4 the UI is imported from complete designs while the
+   backend is wired a phase at a time, so screens legitimately carry controls
+   that do nothing yet (`decisions/README.md`'s scope note on unusable
+   controls). This is the **backstop, not the mechanism** — removal is
+   continuous, each phase clearing the markers for whatever it wires, since
+   that phase is editing those components anyway. George, 2026-09-13: a
+   one-off audit here "can introduce a lot of issues and generate more work",
+   which is also the largest-possible-batch failure the working contract
+   exists to prevent. This criterion exists to catch the shell nobody
+   revisited — a control designed for a feature that was quietly dropped —
+   and should ideally find nothing. Unwired UI is marked in code, so checking
+   is a generated list rather than an audit.
 
 ---
 
