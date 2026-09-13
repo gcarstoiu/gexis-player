@@ -1,7 +1,46 @@
 # Handoff
 
-Last updated: 2026-09-14 (twelfth session — **build environment fixed; ADR-0029
-and ADR-0030 decided; Phase 4 still at 4a/4b, waiting on designs**)
+Last updated: 2026-09-14 (twelfth session — **build environment fixed;
+ADR-0029, 0030 and 0031 decided; Phase 4 still at 4a/4b, waiting on designs**)
+
+## Start here
+
+No code changed this session. It was build-environment repair and four
+decisions. Nothing is half-finished, and the working tree is clean apart from
+`image/pi-gen` (the Makefile deleting `stage2/EXPORT_IMAGE`, which is normal).
+
+**Do these, in this order:**
+
+1. **Flash and verify `04-ui` on hardware.** The image is built and waiting:
+   `image/deploy/2026-09-13-gexis-player-v0.2.1-98-gfec5067-dirty.img` (raw,
+   straight into Imager). labwc, the `PAMName=login` seat, 1280x800 and the
+   Chromium kiosk flags have **never run** — all written from documentation.
+   This is the outstanding half of Phase 4b and needs no designs.
+   `journalctl -u gexis-kiosk` first if the panel is black; the unit is
+   `Restart=no` on purpose so a failure stays visible.
+2. **Verify `playlistcontrol cmd:load album_id:<id>`** against LMS with George
+   present. It is the load-bearing assumption of ADR-0030's typed-library half
+   and was deliberately not executed — running it starts music unannounced.
+3. **Then wait on George's `.dc.html` artboards plus static PNGs** for 4c
+   onward.
+
+**Awaiting George's confirmation** (the settings-inventory rule in `CLAUDE.md`
+requires his sign-off before anything is appended to ADR-0022's inventory):
+ADR-0031 adds no new setting — *Device name* and *Wi-Fi configuration* are both
+already `[R]` — but it raises two candidates that are **not** in the inventory
+and have **not** been added:
+
+- **Return to setup mode deliberately** `[N]` — a way to reopen the access
+  point without waiting for the automatic re-entry condition. Adjacent to the
+  deferred *Factory reset* item.
+- **Access point security** `[?]` — whether the WPA2-vs-open choice is fixed in
+  the build or exposed. ADR-0031 recommends fixed WPA2, i.e. not a setting.
+
+**Unverified claims made this session, do not treat as tested:** AP mode has
+never been raised on this hardware (only `WIFI-PROPERTIES.AP: yes` was read);
+`libraries` returned `{}`, indistinguishable from an unknown command; only the
+top of the `radios` subtree was walked; and whether a hostname change reaches
+Spotify Connect and Bluetooth without a reboot is unknown.
 
 ## Phase 7 was re-decided (2026-09-14) — ADR-0030
 
@@ -2305,13 +2344,19 @@ reverted, currently-flashed image predates this fix.
 
 ## Next actions, in order
 
-**Immediate (2026-09-13):** flash
+**Immediate (2026-09-13, still open):** flash
 `image/deploy/2026-09-13-gexis-player-v0.2.1-98-gfec5067-dirty.img` and verify
 `04-ui` on hardware — labwc starting, the `PAMName=login` seat, 1280x800, the
 Chromium kiosk flags, and the UI actually served by `gexis-core` under the
 pinned Chromium rather than a remote Firefox. None of that has ever run. This
 is the outstanding half of Phase 4b. Everything after it (4c onward) waits on
 George's `.dc.html` artboards plus static PNG exports.
+
+**Second (2026-09-14):** verify `playlistcontrol cmd:load album_id:<id>` with
+George present — ADR-0030's typed-library half rests on it and it was
+deliberately not executed, because running it starts music unannounced. See
+"Start here" at the top of this file for the full list, including what is
+awaiting George's sign-off.
 
 0. **~~Implement ADR-0027~~ — DONE, Phase 2d CLOSED 2026-09-12.** Built,
    flashed (`v0.2.1-51-g89dca15-dirty`), and verified on the image: 84 unit

@@ -103,7 +103,7 @@ Phase 2 and ADR-0027.
 | Setting | Mark | Notes |
 |---|---|---|
 | Device name | [R] | One name → mDNS hostname, Spotify, Bluetooth. The sanitised hostname must be shown alongside what was typed, not silently substituted (see Q4) |
-| Wi-Fi configuration | [R] | Overlaps ADR-0021; the first-boot blocker this record raises (see Q2) |
+| Wi-Fi configuration | [R] | Overlaps ADR-0021; the first-boot blocker this record raises (see Q2) — **answered 2026-09-14 by [ADR-0031](0031-first-boot-setup-access-point.md)**, entered on the user's phone over a setup access point, Phase 10 |
 | Time zone / NTP | [N] | |
 | Restrict the API to loopback | [N] | ADR-0028 binds `0.0.0.0` and is unauthenticated by decision; a lock-down toggle is cheap and consistent with the accepted-risk framing below |
 
