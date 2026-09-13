@@ -51,6 +51,83 @@ These are host environment setup, same category as installing Docker itself.
    `export-image` instead (see below). Checking this before a build is
    cheap; diagnosing it after the fact is not.
 
+## Disk: why `make clean` is not the way to reclaim space
+
+`PRESERVE_CONTAINER=1` keeps `pigen_work`'s two anonymous volumes between
+builds. That is what makes a warm build ~12 minutes instead of ~40, and it is
+also where space accumulates. Measured after two builds, 2026-09-13:
+
+| | | |
+|---|---|---|
+| `work/*/stage{0,1,2,-gexis}/rootfs` | 8.4 GB | **the warm cache — never delete** |
+| `work/*/export-image/*.img` | 8.3 GB | one raw image *per build*, leaked |
+| `deploy/` | 2.2 GB | every build's output, re-copied to the host each run |
+
+The `export-image` leak is ours, not pi-gen's. `export-image/prerun.sh`
+deletes and recreates the image every run, but only the one named
+`${IMG_FILENAME}${IMG_SUFFIX}.img` — and `IMG_SUFFIX` is the git-describe
+version the root `Makefile` passes in, different on every build. So each
+previous build's ~4.5GB image is orphaned forever. Stock pi-gen, which reuses
+a date-based name, doesn't have this problem.
+
+**`make prune`** removes both, and nothing else: it never touches the stage
+rootfs trees, never removes the container, and leaves `image/deploy/` on the
+host alone (that is the artefact you keep). `make image` runs it first. A
+first run reclaimed 10,194 MB and the following build was 12m29s — still warm.
+
+`make clean` is the opposite: `docker rm -v pigen_work` destroys the volumes
+*including* the warm cache, forcing a ~40-minute cold build. It exists to
+force a clean-room build, not to free disk. Reaching for it to clear a disk
+warning is what silently cost the warm builds before `make prune` existed.
+
+Note the two-partition trap this used to hide behind: Docker's data root
+defaults to `/var/lib/docker`, on `/`, while `image/deploy/` is in the repo,
+on `/home`. Deleting zips from `image/deploy/` frees the partition that
+*wasn't* full. Docker's `data-root` was moved to `/home/docker` on 2026-09-13
+so both now live on the same, larger partition.
+
+## A build that dies during the copy-out
+
+`build-docker.sh:154` ends every build with:
+
+```
+${DOCKER} cp "${CONTAINER_NAME}":/pi-gen/deploy - | tar -xf -
+```
+
+That streams the container's **entire** deploy directory to the host through a
+pipe, on every build. Two consequences worth knowing:
+
+- Under host memory pressure this is the step that gets killed — observed
+  twice, 2026-09-13, both times with the build itself already complete
+  (`Build finished` in the log, image intact in the volume). There is no
+  kernel OOM record for it; the kills came from the supervising process, so
+  searching `journalctl` for `oom-kill` finds nothing and proves nothing.
+- An interrupted `tar -xf` rewrites `deploy/` alphabetically and can leave a
+  *previous* build's artefact truncated. `make prune` reduces the blast radius
+  by keeping only the current build in the volume, but does not remove it.
+
+If it dies there, **the build is not lost** — the artefacts are in the volume.
+Copy them out per-file, which avoids the tar pipe entirely (measured: 44s for
+a 4.5GB image):
+
+```
+docker cp pigen_work:/pi-gen/deploy/<date>-gexis-player-<version>.img image/deploy/
+docker cp pigen_work:/pi-gen/deploy/<date>-gexis-player-<version>.info image/deploy/
+```
+
+The `.info` will be missing the root `Makefile`'s trailing annotation block
+(image version, peppyalsa commit, go-librespot version, build time), since
+that step runs after the copy — append it by hand or re-read it from the
+`Makefile`.
+
+Never `docker start pigen_work` to inspect the volumes: that re-runs pi-gen's
+entrypoint and starts a build. Read them through a throwaway container
+instead, which is what `make prune` does:
+
+```
+docker run --rm --volumes-from pigen_work pi-gen:latest sh -c 'ls -la /pi-gen/deploy'
+```
+
 ## What `make image` produces
 
 `image/deploy/` will contain artefacts for **two** images (confirmed by a

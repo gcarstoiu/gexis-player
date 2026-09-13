@@ -12,7 +12,7 @@ GO_LIBRESPOT_VERSION := $(shell grep -oP 'GO_LIBRESPOT_VERSION="\K[^"]+' image/s
 # so a manifest can never claim a version it wasn't actually built from.
 IMAGE_VERSION := $(shell git describe --tags --always --dirty)
 
-.PHONY: image ui clean provision
+.PHONY: image ui prune clean provision
 
 # Builds via pi-gen's own build-docker.sh, unmodified. Our custom stage lives
 # outside the pinned pi-gen submodule and is bind-mounted in at build time
@@ -83,7 +83,47 @@ IMAGE_VERSION := $(shell git describe --tags --always --dirty)
 ui:
 	cd ui && npm ci && npm run build
 
-image: ui
+# Reclaim the two places PRESERVE_CONTAINER=1 lets whole images pile up,
+# 2026-09-13. Measured before this existed: 2.2GB in deploy/ and 8.3GB in
+# export-image/, from two builds.
+#
+# 1. deploy/ - build-docker.sh:154 copies this entire directory to the host
+#    on every run (`docker cp … | tar -xf -`), so last build's output is
+#    re-streamed forever. Already on the host in image/deploy/, which this
+#    does NOT touch: the host copy is the artefact you keep.
+#
+# 2. export-image/*.img - the raw image, which pi-gen's own
+#    export-image/prerun.sh deletes and recreates every run. It only ever
+#    removes "${IMG_FILENAME}${IMG_SUFFIX}.img", and IMG_SUFFIX is our
+#    git-describe version (see the IMAGE_VERSION comment above), different
+#    on every build - so prerun's cleanup misses every previous version and
+#    each leaks ~4.5GB. Stock pi-gen doesn't have this problem; our
+#    versioning introduced it.
+#
+# Neither is a build cache. The warm build comes from the stage rootfs
+# trees (stage0/1/2 and stage-gexis, ~8.1GB), which are untouched here -
+# as is the container itself, so CONTINUE=1 still resumes. `make clean` is
+# still the only thing that forces a cold build.
+#
+# Runs before the build, not after, so a failed build leaves its artefacts
+# in place to inspect. Reads the volumes through --volumes-from rather than
+# by name: they are anonymous, and their hashes change whenever the
+# container is recreated. Never `docker start pigen_work` to get at them -
+# that re-runs pi-gen's entrypoint and starts a build.
+prune:
+	@if docker container inspect pigen_work >/dev/null 2>&1; then \
+		before=$$(docker run --rm --volumes-from pigen_work pi-gen:latest \
+			sh -c 'du -sb /pi-gen/deploy /pi-gen/work/*/export-image 2>/dev/null | awk "{s+=\$$1} END {print s+0}"'); \
+		docker run --rm --volumes-from pigen_work pi-gen:latest \
+			sh -c 'rm -f /pi-gen/deploy/* /pi-gen/work/*/export-image/*.img /pi-gen/work/*/export-image/*.info'; \
+		after=$$(docker run --rm --volumes-from pigen_work pi-gen:latest \
+			sh -c 'du -sb /pi-gen/deploy /pi-gen/work/*/export-image 2>/dev/null | awk "{s+=\$$1} END {print s+0}"'); \
+		echo "Pruned previous builds from the container: $$(( (before - after) / 1024 / 1024 ))MB reclaimed"; \
+	else \
+		echo "No pigen_work container - nothing to prune"; \
+	fi
+
+image: ui prune
 	@rm -f image/pi-gen/stage2/EXPORT_IMAGE; \
 	start=$$(date +%s); \
 	( cd image && CONTINUE=1 PRESERVE_CONTAINER=1 PIGEN_DOCKER_OPTS="--volume $(STAGE_GEXIS_DIR):/pi-gen/stage-gexis:ro --volume $(CORE_SRC_DIR):/pi-gen/gexis-core-src:ro --volume $(UI_DIST_DIR):/pi-gen/gexis-ui-dist:ro -e IMG_SUFFIX=-$(IMAGE_VERSION)" \
