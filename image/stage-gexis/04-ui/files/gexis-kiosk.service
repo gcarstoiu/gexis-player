@@ -8,6 +8,20 @@ Documentation=file:///etc/gexis/kiosk.env
 After=gexis-core.service systemd-user-sessions.service
 Wants=gexis-core.service
 
+# tty1 has an owner already. `cancel-rename` (reached from our own
+# firstrun.sh, via userconf) runs `systemctl enable getty@tty1`, so a getty
+# holds the VT this unit asks for with StandardInput=tty-fail. The failure
+# is silent in the worst way: labwc exits 0 immediately, systemd logs
+# "Deactivated successfully", and Chromium never prints anything at all.
+# Measured 2026-09-14 - see docs/findings/022.
+#
+# Conflicts= is what display managers do, and it is the whole fix:
+# starting this unit stops the getty, stopping it gives the getty back.
+# After= orders the handover so the VT is actually free when labwc opens
+# it, rather than the two racing.
+Conflicts=getty@tty1.service
+After=getty@tty1.service
+
 [Service]
 Type=simple
 User=pi
@@ -34,4 +48,22 @@ ExecStart=/usr/bin/labwc -s /usr/local/bin/gexis-kiosk-start
 Restart=no
 
 [Install]
-WantedBy=graphical.target
+# multi-user.target, not graphical.target (changed 2026-09-14, Finding 022).
+#
+# graphical.target was the tidier-looking choice and it did not survive first
+# boot. `cancel-rename` - which our own firstrun.sh reaches through
+# `userconf` when it cancels the setup wizard - runs
+# `raspi-config nonint do_boot_behaviour B1`, and B1 is
+# `systemctl set-default multi-user.target`. The build wrote
+# default.target -> graphical.target correctly; first boot overwrote it, so
+# graphical.target was never reached and this unit never started.
+#
+# Re-asserting the default target after firstrun would only move the fight:
+# raspi-config owns that setting and resets it whenever it is run. Binding
+# here instead means the panel starts on every boot regardless of the
+# platform's boot-behaviour setting, which is the right answer for an
+# appliance - and nothing is lost, because graphical.target on this image
+# has no display manager behind it. It is multi-user plus this unit. The
+# ordering graphical.target was credited with is stated explicitly in
+# After= above.
+WantedBy=multi-user.target

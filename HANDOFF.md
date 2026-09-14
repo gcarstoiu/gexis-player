@@ -11,7 +11,18 @@ decisions. Nothing is half-finished, and the working tree is clean apart from
 
 **Do these, in this order:**
 
-1. **Flash and verify `04-ui` on hardware.** The image is built and waiting:
+1. ~~**Flash and verify `04-ui` on hardware.**~~ **DONE 2026-09-14 — two
+   defects found and fixed, see [Finding 022](docs/findings/022-kiosk-never-started-target-and-tty.md).**
+   The panel showed a console getty: `firstrun.sh` reaches `raspi-config
+   do_boot_behaviour B1`, which reset `default.target` away from
+   `graphical.target`; and `getty@tty1` held the VT, so `labwc` exited 0 with
+   an empty journal. Fixed by binding the unit to `multi-user.target` and
+   adding `Conflicts=getty@tty1.service`. **Verified on `gexis` by an
+   unattended reboot** — kiosk active, getty stopped, seat0/tty1, UI served,
+   1280x800. Everything downstream of the trigger worked first time, so
+   `04-ui` itself is sound. **Still to do: rebuild the image carrying the fix
+   and reflash**; the fix is proven on a running device, not in an image.
+   *Original text:* The image is built and waiting:
    `image/deploy/2026-09-13-gexis-player-v0.2.1-98-gfec5067-dirty.img` (raw,
    straight into Imager). labwc, the `PAMName=login` seat, 1280x800 and the
    Chromium kiosk flags have **never run** — all written from documentation.

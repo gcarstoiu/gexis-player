@@ -60,6 +60,22 @@ recorded the same failure**: the 2026-09-06 entry notes two build attempts
 "killed by `C3PO`'s own low-memory condition." The project's own history
 contradicted the retraction and was not consulted.
 
+**5. Build-time assertions that could only ever check the build**
+(Finding 022, 2026-09-14). `04-ui` installed the kiosk unit and asserted its
+symlinks existed. They did — the assertions were correct and passed. The panel
+still showed a console on the first flashed image, for two reasons that both
+live *after* the build: our own `firstrun.sh` reaches `raspi-config
+do_boot_behaviour B1`, which reset `default.target` away from the one the
+stage had written; and `getty@tty1` held the VT the unit asked for, so
+`labwc` exited 0 with an empty journal.
+
+Same file and same stage as case 1, which is the point: "does the artefact I
+just built look right" is not "will it do the right thing on a booted
+device," and a stage can only ever ask the first question. **The assertions
+now include what must be true of the *running* system** — the `Conflicts=`
+line must be present, `default.target` must not be written — expressed as
+checks the build *can* make about a property it cannot observe.
+
 ## Common shape
 
 Every case had a *plausible* substitute for the real target — the build
