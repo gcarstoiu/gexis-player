@@ -143,6 +143,22 @@ Two cases the implementation must handle and which nothing else specifies:
 - **The URL is unreachable** — no network, page down, typo. The idle screen
   cannot simply be blank white, and it cannot be an error page.
 - **No URL is configured** — the out-of-box state.
+- **The URL is reachable but refuses to be framed** — added 2026-09-14. A page
+  sending `X-Frame-Options: DENY` or a CSP `frame-ancestors` directive renders
+  perfectly on its own and is blank inside our UI. This produces the *same*
+  blank screen as "unreachable" from a different cause, and the fallback must
+  cover it. See the note below on why framing is the constrained path.
+
+> **Why this record's own exit rule forces embedding, 2026-09-14.** Testing on
+> `gexis` showed the kiosk can navigate to an arbitrary external URL and render
+> it perfectly (Finding 022's device, a live third-party page at 1280x800), and
+> that looked like a simpler idle screen than embedding one. **It is not
+> available to us.** "Renderer takeover exits to now playing" below requires our
+> own code to be running while the idle screen is displayed — navigating the
+> browser away would end our event loop, and nothing else on the device can
+> navigate it back. So the idle screen must be embedded within our UI, and the
+> framing case above is a real constraint rather than a theoretical one. The
+> measured page happened to send neither header; that is luck, not a guarantee.
 
 A minimal built-in fallback is therefore required regardless of how simple the
 external path is.
