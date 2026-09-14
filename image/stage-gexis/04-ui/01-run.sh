@@ -21,6 +21,24 @@ mkdir -p "${ROOTFS_DIR}/etc/systemd/system/multi-user.target.wants"
 ln -sf /etc/systemd/system/gexis-kiosk.service \
 	"${ROOTFS_DIR}/etc/systemd/system/multi-user.target.wants/gexis-kiosk.service"
 
+# Undo what earlier versions of this stage wrote. CONTINUE=1 reuses the
+# previous build's rootfs, so deleting the lines that created these is not
+# enough - the files persist, and only a `make clean` would have removed
+# them. Caught 2026-09-14 by the assertion below, on the first rebuild
+# after the Finding 022 fix.
+#
+# Removing default.target restores the vendor default
+# (/usr/lib/systemd/system/default.target -> graphical.target on this
+# image) and hands the decision back to the platform, which claims it at
+# first boot regardless. Leaving the stale graphical.target.wants symlink
+# would be harmless - same unit, and graphical.target requires
+# multi-user.target - but it would be a second enablement nobody maintains
+# and it contradicts what this stage now says it does.
+rm -f "${ROOTFS_DIR}/etc/systemd/system/default.target"
+rm -f "${ROOTFS_DIR}/etc/systemd/system/graphical.target.wants/gexis-kiosk.service"
+rmdir --ignore-fail-on-non-empty \
+	"${ROOTFS_DIR}/etc/systemd/system/graphical.target.wants" 2>/dev/null || true
+
 # Build-time assertions, same discipline as 03-core: catch a stage that
 # silently half-ran now, rather than on a panel that boots to nothing 35
 # minutes and a reflash later.
@@ -65,10 +83,17 @@ if ! grep -q '^Conflicts=getty@tty1\.service$' \
 fi
 
 # The stage no longer writes default.target, and must not: raspi-config
-# resets it on every provisioning run (see the comment at the top). If a
-# future edit reinstates it, this catches the regression at build time.
+# resets it on every provisioning run (see the comment at the top). This
+# catches both a future edit reinstating it and a CONTINUE=1 rootfs still
+# carrying one from an older build - the removal above handles the second,
+# and this proves the removal worked.
 if [ -e "${ROOTFS_DIR}/etc/systemd/system/default.target" ] || \
    [ -L "${ROOTFS_DIR}/etc/systemd/system/default.target" ]; then
 	echo "ERROR: this stage must not set default.target - raspi-config overwrites it at first boot (Finding 022)" >&2
+	exit 1
+fi
+
+if [ -L "${ROOTFS_DIR}/etc/systemd/system/graphical.target.wants/gexis-kiosk.service" ]; then
+	echo "ERROR: stale graphical.target.wants/gexis-kiosk.service survived - the kiosk is enabled twice (Finding 022)" >&2
 	exit 1
 fi
