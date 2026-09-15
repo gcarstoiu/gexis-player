@@ -53,6 +53,8 @@ Each row is marked:
 | Per-renderer volume memory on/off | [R][H] | George's decision 2026-09-07, currently unconditional |
 | Which renderers are volume-managed | [R][H] | `capabilities.volume_managed`; Bluetooth excluded pending Finding 006 |
 | Volume slider travel curve | [R][H] | **Decided 2026-09-15 by [ADR-0034](0034-panel-volume-travel-and-mute.md):** −45…0 dB linear in dB, bottom of travel is silence, the number shown is slider position. Was [N][?]: the control is dB-linear, so a straight mapping put everything usable in the top quarter |
+| Volume drawer auto-hide delay | [N][H] | Confirmed as a setting by George, 2026-09-15. 3 s today, `AUTO_HIDE_MS` in `ui/src/App.svelte`, applied when a change from elsewhere opened the drawer. Claude Design is to specify auto-hide for the drawer generally |
+| Show the volume drawer when volume changes elsewhere | [N][H] | Confirmed as a setting by George, 2026-09-15. On today: a phone's change opens the drawer; the panel's own changes and a takeover's restored level do not |
 
 ### Arbitration — who gets the device
 

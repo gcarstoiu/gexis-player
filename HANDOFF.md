@@ -38,8 +38,9 @@ halve disk use. Designed, not implemented.
 **4e (volume) is deployed on `gexis`** (2026-09-15, branch `phase-4e-volume`,
 stacked on 4d): Controls drawer from the now playing volume button, slider over
 −45…0 dB shown as slider position, mute restoring the prior level
-(ADR-0034). Previous core at `/opt/gexis-core.4d-backup`. **Awaiting George's
-panel pass.** Only reachable from now playing — Home has no volume button yet.
+(ADR-0034). Previous core at `/opt/gexis-core.4d-backup`. **Passed George's
+panel pass**, plus two port deviations he asked for — see DEVELOPMENT.md,
+"Deviations the port keeps across exports". Only reachable from now playing — Home has no volume button yet.
 
 **4d (idle screen) is deployed on `gexis`** (2026-09-15, branch
 `phase-4d-idle`, stacked on `phase-4c-now-playing` / PR #10): `GET /idle`
