@@ -40,9 +40,11 @@ PR #9 opened for this branch. **Phase 4 criteria 6 and 7 withdrawn** — no
 back-to-music screen, no activate control; 4e is now volume only. The
 phone is the only way to start LMS until Phase 7. Awaiting designs: both
 `.dc.html` files resent in full each iteration into `design/`, plus PNGs and
-change notes for the area that changed. Still open for the design: what the
-panel shows when nothing holds the device (probably the idle screen —
-unconfirmed).
+change notes for the area that changed. **When nothing holds the device the
+panel falls back to the Home screen** (George, 2026-09-15), a design screen
+made for that state. Open: whether Home is the same thing as ADR-0019's idle
+screen (the external URL) or a separate screen, and which Phase 4 step
+builds it.
 
 No code changed in the twelfth session. It was build-environment repair and four
 decisions. Nothing is half-finished, and the working tree is clean apart from
