@@ -21,9 +21,6 @@
 
   const transport = $derived(metadata?.transport ?? null);
   const playing = $derived(transport === 'playing');
-  const stateLabel = $derived(
-    { playing: 'Playing', paused: 'Paused', stopped: 'Stopped' }[transport] ?? '',
-  );
 
   // An artwork URL that fails to load falls back to the pending glyph.
   let failedArtwork = $state(null);
@@ -114,7 +111,6 @@
             <span>artwork pending</span>
           </div>
         {/if}
-        <div class="art__veil"></div>
       </div>
 
       <div class="meta">
@@ -124,8 +120,6 @@
           <button class="tab" type="button" role="tab" aria-selected="false" aria-disabled="true" disabled>Artist</button>
           <button class="tab" type="button" role="tab" aria-selected="false" aria-disabled="true" disabled>Release</button>
         </div>
-
-        <div class="state">{stateLabel}</div>
 
         <div class="panel">
           <div class="trackblock">
@@ -346,15 +340,6 @@
     box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
     pointer-events: none;
   }
-  .art__veil {
-    position: absolute;
-    inset: 0;
-    background: rgba(8, 12, 16, 0.45);
-    opacity: 0;
-    transition: opacity 220ms ease;
-    pointer-events: none;
-  }
-  .screen[data-transport='paused'] .art__veil { opacity: 1; }
 
   .art__empty {
     position: absolute;
@@ -424,18 +409,6 @@
     border-bottom-color: var(--src-accent);
   }
   .tab[aria-disabled='true'] { opacity: 0.4; }
-
-  /* Holds its line always; speaks only when not playing. */
-  .state {
-    font-family: var(--font-mono);
-    font-size: var(--t-label);
-    letter-spacing: 0.18em;
-    text-transform: uppercase;
-    flex-shrink: 0;
-    min-height: 1lh;
-    color: transparent;
-  }
-  .screen:not([data-transport='playing']) .state { color: var(--accent-artist); }
 
   .panel {
     margin-top: 36px;

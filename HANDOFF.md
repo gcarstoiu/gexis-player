@@ -47,9 +47,14 @@ George to decide. Design package corrections from George: **no format badge
 (sample rate/codec) anywhere** — open whether that includes the Peppy screen
 (ADR-0019's codec rule); the design's drifting clock is the **fallback** for
 the idle URL not loading (ADR-0033). Source pill now pulses while playing.
-**Open:** George reported the Paused label and the artwork dimming as not in
-the design, but `design/source/Now Playing.dc.html` has both (`stateLabel`,
-`pausedVeil: playing ? 0 : 0.55`) — asked him to confirm removal.
+**Second design export (2026-09-15):** Paused is shown
+only by the play control — label and artwork dimming removed from the locked
+source, and from the port. `design/source/` is locked: build from it, never
+edit it; run `design/verify.html` over HTTP after any package change (35 pass,
+3 fail — the export references `./assets/`, which this package lacks). The
+export's CSS also omits the pill pulse that the source has; the port follows
+the source. **No sample rate or codec anywhere, Peppy screen included**
+(George) — ADR-0019's codec rule to be amended in Phase 5.
 
 **2026-09-15, thirteenth session:** image flashed and boots cleanly (George).
 PR #9 opened for this branch. **Phase 4 criteria 6 and 7 withdrawn** — no
