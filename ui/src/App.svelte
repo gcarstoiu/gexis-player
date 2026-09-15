@@ -1,10 +1,11 @@
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
 <script>
-  import { onMount } from 'svelte';
-  import { connect, active, metadata, volume } from './lib/state.js';
+  import { onMount, untrack } from 'svelte';
+  import { connect, active, metadata, volume, handoff, handoffExemptPairs } from './lib/state.js';
   import NowPlaying from './screens/NowPlaying.svelte';
   import IdleScreen from './screens/IdleScreen.svelte';
   import VolumeDrawer from './screens/VolumeDrawer.svelte';
+  import HandoffScreen from './screens/HandoffScreen.svelte';
 
   // ADR-0033: idle is "not playing and not touched", one timeout everywhere.
   // Hardcoded until settings exist; `?idle_seconds=` shortens it for testing.
@@ -12,6 +13,27 @@
 
   let idle = $state(false);
   let volumeOpen = $state(false);
+
+  // Criterion 4: shown for the takeover itself unless the pair is measured
+  // fast enough to be exempt, and held long enough not to flash.
+  const HANDOFF_MIN_MS = 1400;
+  let shownHandoff = $state.raw(null);
+  let handoffShownAt = 0;
+  let handoffTimer;
+  $effect(() => {
+    const h = $handoff;
+    const exempt = h && $handoffExemptPairs.some(([a, b]) => a === h.from && b === h.to);
+    untrack(() => {
+      clearTimeout(handoffTimer);
+      if (h && !exempt) {
+        if (!shownHandoff) handoffShownAt = performance.now();
+        shownHandoff = h;
+      } else if (shownHandoff) {
+        const remaining = HANDOFF_MIN_MS - (performance.now() - handoffShownAt);
+        handoffTimer = setTimeout(() => (shownHandoff = null), Math.max(0, remaining));
+      }
+    });
+  });
 
   // Opened by a change from elsewhere, the drawer closes itself once volume
   // activity stops; opened by the panel's own button, it stays until closed.
@@ -70,6 +92,10 @@
 
   {#if idle}
     <IdleScreen ondismiss={() => (idle = false)} />
+  {/if}
+
+  {#if shownHandoff}
+    <HandoffScreen from={shownHandoff.from} to={shownHandoff.to} />
   {/if}
 </div>
 
