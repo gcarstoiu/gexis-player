@@ -35,7 +35,41 @@ and pointing `DEPLOY_DIR` at it would remove the 4.5GB stream entirely and
 halve disk use. Designed, not implemented.
 
 
-No code changed this session. It was build-environment repair and four
+**4c (now playing) is built and hand-installed on `gexis`** (2026-09-15):
+`ui/src/screens/NowPlaying.svelte`, ported from `design/now-playing.html`,
+fonts bundled via fontsource. Previous UI kept at `/opt/gexis-ui.4b-backup`.
+Rendered in all six design states against a mock feed on the dev machine;
+**not yet looked at on the panel** — George's hardware pass is next. With no
+renderer the panel shows a "Nothing playing" placeholder (`data-unwired="home"`)
+until Home is built. `design/` is **not committed**: it holds two
+third-party photos (sample album art, artist photo) and this repo is public —
+George to decide. Design package corrections from George: **no format badge
+(sample rate/codec) anywhere** — open whether that includes the Peppy screen
+(ADR-0019's codec rule); the design's drifting clock is the **fallback** for
+the idle URL not loading (ADR-0033). Source pill now pulses while playing.
+**Second design export (2026-09-15):** Paused is shown
+only by the play control — label and artwork dimming removed from the locked
+source, and from the port. `design/source/` is locked: build from it, never
+edit it; run `design/verify.html` over HTTP after any package change (35 pass,
+3 fail — the export references `./assets/`, which this package lacks). The
+export's CSS also omits the pill pulse that the source has; the port follows
+the source. **No sample rate or codec anywhere, Peppy screen included**
+(George) — ADR-0019's codec rule to be amended in Phase 5.
+
+**2026-09-15, thirteenth session:** image flashed and boots cleanly (George).
+PR #9 opened for this branch. **Phase 4 criteria 6 and 7 withdrawn** — no
+back-to-music screen, no activate control; 4e is now volume only. The
+phone is the only way to start LMS until Phase 7. Awaiting designs: both
+`.dc.html` files resent in full each iteration into `design/`, plus PNGs and
+change notes for the area that changed. **When no renderer is connected the
+panel shows the Home screen** (George, 2026-09-15), a design screen made for
+that state and **distinct from the idle screen**. The idle screen (external
+URL) takes over after 5 minutes without activity; when it is dismissed, Home
+returns. This changes ADR-0019, where "nothing playing" belonged to the idle
+screen directly — **needs ADR-0033 before implementation**; open points were
+put to George.
+
+No code changed in the twelfth session. It was build-environment repair and four
 decisions. Nothing is half-finished, and the working tree is clean apart from
 `image/pi-gen` (the Makefile deleting `stage2/EXPORT_IMAGE`, which is normal).
 

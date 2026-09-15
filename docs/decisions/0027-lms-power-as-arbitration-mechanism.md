@@ -201,7 +201,11 @@ exist anywhere. Full wording is in `docs/DEVELOPMENT.md`.
   transport controls for that reason.
 - **Accepted interim regression:** between this ADR shipping and Phase 4's
   activation control shipping, the box hands over cleanly but comes back only
-  via the phone app. Knowingly accepted.
+  via the phone app. Knowingly accepted. **Amended 2026-09-15:** the Phase 4
+  activation control was withdrawn (George — playing from the phone
+  re-activates LMS, measured in Open below, so nothing is stranded). The
+  regression now lasts until Phase 7's library browse gives the panel its
+  own way to start LMS. See `DEVELOPMENT.md` Phase 4 criterion 6.
 - Phases 5 and 7-9 are unaffected. Nothing is removed.
 
 ## Open

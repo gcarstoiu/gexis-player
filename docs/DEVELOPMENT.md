@@ -80,7 +80,10 @@ wrong hands.
 Three things keep that honest:
 
 1. **Unwired UI is marked in code**, with one convention, so "what is still a
-   shell" is a generated list rather than something remembered. It doubles as
+   shell" is a generated list rather than something remembered. **The
+   convention (2026-09-15): a `data-unwired="<step or phase>"` attribute** on
+   the element — `4e`, `phase-6`, `home` — listed with
+   `grep -rn data-unwired ui/src`. It doubles as
    the wiring backlog for Phases 6 and 8.
 2. **Removal is continuous.** The phase that wires a control clears its marker
    as part of that work — it is editing those components regardless. Phase 9
@@ -258,6 +261,11 @@ box is better at handing over and worse at coming back. George accepted
 this knowingly — he uses the LMS app anyway — but it is the reason
 activation was pulled into Phase 4 rather than left to Phase 6's
 capability-driven transport controls.
+
+**Extended 2026-09-15:** Phase 4 criteria 6 and 7 were withdrawn (George —
+starting playback from the phone re-activates LMS, so nothing is stranded).
+This regression is now accepted **until Phase 7's library browse**, not
+Phase 4.
 
 **PHASE 2 CLOSED, 2026-09-12.** All ten criteria met, with five items
 carried out explicitly deferred rather than silently unmet. Sub-phases
@@ -553,6 +561,11 @@ over ADR-0016's separate-process model, criterion 4/5's minimal scope).
    (George's decision, 2026-09-12); transport proper (play/pause/next/previous/
    seek) stays Phase 6.
 
+   **Now playing shows no sample rate and no codec — dropped in the design
+   (George, 2026-09-15).** The paragraph below is withdrawn for now playing.
+   ADR-0019's codec rule for the *Peppy screen* is untouched, and the `codec`
+   field built in 4a stays in the payload for it. *Withdrawn text follows.*
+
    **Bluetooth's sample-rate field carries the codec, not a rate**
    (George's decision, 2026-09-12, extending [ADR-0019](decisions/0019-peppy-screen-lifecycle.md)'s
    rule for the Peppy screen to now playing as well — "the decode rate is the
@@ -589,7 +602,20 @@ over ADR-0016's separate-process model, criterion 4/5's minimal scope).
    width, not the panel interface shrunk. The panel renders everything;
    a remote browser renders only settings. Only the settings screen is
    responsive; every other screen stays at the fixed 1280x800 artboard.
-6. **When no renderer holds the device, the screen offers the action that
+6. **WITHDRAWN 2026-09-15, together with criterion 7** (George: *"there is no
+   need for this. As soon as I start playing from my phone, LMS activates so
+   there is no risk of getting stuck"*). ADR-0027 measured that auto-power-on,
+   so nothing is stranded. **Consequence, accepted knowingly:** until Phase 7's
+   library browse, the panel alone cannot start LMS after a takeover — the
+   phone is the only route. The regression this pair existed to close (the
+   note under Phase 2) is now accepted until Phase 7 rather than Phase 4. What
+   the panel shows when nothing holds the device is a design question, not
+   an acceptance criterion. The backend half built in 4a — `POST
+   /renderer/lms/activate` and LMS's `activate` control — stays; it is
+   unused by the UI, not wrong. Numbering is kept so older references still
+   resolve. *Original text follows.*
+
+   **When no renderer holds the device, the screen offers the action that
    gets back to music.** Reframed 2026-09-12 by George, replacing the
    original wording ("...and the user can tell why").
 
@@ -611,7 +637,9 @@ over ADR-0016's separate-process model, criterion 4/5's minimal scope).
    purpose is to offer the one action, not to explain the state, **and it
    is expected to be retired when Phase 7's browse screen can take over
    that job.**
-7. **The user can activate LMS from this UI.** New, 2026-09-12, George's
+7. **WITHDRAWN 2026-09-15 — see criterion 6.** *Original text follows.*
+
+   **The user can activate LMS from this UI.** New, 2026-09-12, George's
    decision that it belongs in Phase 4 rather than waiting for Phase 6's
    capability-driven transport controls. This is the one control this
    phase is not display-only about, and deliberately so:
@@ -656,9 +684,9 @@ increment at a time, each gated on his own hardware pass as usual):
 |---|---|---|
 | **4a** | model extensions | no UI; transport state, handoff pair, command channel + LMS `power 1`, volume level, Bluetooth codec. Unit-testable and verifiable over the existing WebSocket. |
 | **4b** | criteria 1, 5 | static serving (ADR-0028), `stage-gexis/04-ui`, labwc + Chromium kiosk, the Node build step ADR-0023 named as its cost |
-| **4c** | criterion 3 | now playing |
-| **4d** | criterion 2 | idle screen and its fallback |
-| **4e** | criteria 6, 7, 8 | the minimal back-to-music screen, activate, volume |
+| **4c** | criterion 3 | now playing. **Built 2026-09-15** from `design/now-playing.html`; all six design states rendered against a mock `/state` in headless Chromium (Brave) on the dev machine, installed on `gexis`. **Not yet checked on the panel itself** — George's pass. |
+| **4d** | criterion 2 | idle screen and its fallback. George's URL was given 2026-09-15 and is deliberately **not in this public repository** — it carries a per-display identifier. It sends no `X-Frame-Options`/CSP header and its HTML has no frame-busting (checked 2026-09-15); its scripts were not checked, so embedding is unproven until it renders on the panel. |
+| **4e** | criterion 8 | volume. *Was criteria 6, 7, 8 until 2026-09-15; the back-to-music screen and activate control were withdrawn.* |
 | **4f** | criterion 4 | transition state, with the exempt-pair list as published data rather than a constant in the UI |
 
 ### Phase 5 — Visualisation service and Peppy screen
