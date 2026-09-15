@@ -35,6 +35,13 @@ and pointing `DEPLOY_DIR` at it would remove the 4.5GB stream entirely and
 halve disk use. Designed, not implemented.
 
 
+**Phase 4 steps 4c–4f all passed George's panel pass (2026-09-15)**,
+hand-installed on `gexis` and **not yet in an image**: a reflash loses them,
+plus the device-only `idle_url` and the Europe/Berlin time zone. PRs #10–#13
+are stacked (4c → 4d → 4e → 4f); merge in order. **Phase 4 criterion 5 is the
+one left** — the settings surface on a phone, which needs the settings HTTP
+API (none exists) and a port of `Settings.dc.html`.
+
 **4e (volume) is deployed on `gexis`** (2026-09-15, branch `phase-4e-volume`,
 stacked on 4d): Controls drawer from the now playing volume button, slider over
 −45…0 dB shown as slider position, mute restoring the prior level
