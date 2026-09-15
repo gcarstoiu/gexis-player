@@ -41,7 +41,7 @@ reports George's page embeddable; `idle_url` added to `/etc/gexis/core.toml`
 (backup `core.toml.4c-backup`); core copied into the venv's site-packages
 (pip cannot build on the device — no hatchling), previous core at
 `/opt/gexis-core.4c-backup`. Device time zone set to Europe/Berlin by hand —
-lost on reflash. **Awaiting George's panel pass for 4c and 4d.**
+lost on reflash. **4d passed George's panel pass (2026-09-15)**, tested with a 10 s timeout via `?idle_seconds=10` in `kiosk.env`, since restored to 5 minutes.
 
 **4c (now playing) is built and hand-installed on `gexis`** (2026-09-15):
 `ui/src/screens/NowPlaying.svelte`, ported from `design/now-playing.html`,
