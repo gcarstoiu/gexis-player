@@ -6,8 +6,9 @@
 -->
 <script>
   import { setVolume, setMute } from '../lib/state.js';
+  import VolumeIcon from '../lib/VolumeIcon.svelte';
 
-  let { open, volume, onclose } = $props();
+  let { open, volume, active, onclose, onexternal, onactivity } = $props();
 
   let dragging = $state(false);
   let settling = $state(false);
@@ -18,7 +19,31 @@
   const muted = $derived(!!volume?.muted);
   const shown = $derived(dragging || settling ? local : (volume?.percent ?? 0));
   const pct = $derived(muted ? 0 : shown);
-  const arcs = $derived(muted || pct === 0 ? 0 : pct < 34 ? 1 : pct < 67 ? 2 : 3);
+
+  // A level change the panel did not cause - a phone, most often - opens the
+  // drawer. Ours are recognised by a short window after each command; a
+  // takeover restoring a renderer's remembered level is not a user action.
+  const OWN_WINDOW_MS = 1500;
+  let ownUntil = 0;
+  let activeChangedAt = 0;
+  let last = null;
+  let lastActive;
+  $effect(() => {
+    if (active !== lastActive) {
+      if (lastActive !== undefined) activeChangedAt = performance.now();
+      lastActive = active;
+    }
+  });
+  $effect(() => {
+    const current = volume ? `${volume.percent}/${volume.muted}` : null;
+    const previous = last;
+    last = current;
+    if (previous === null || current === previous) return;
+    const now = performance.now();
+    if (now < ownUntil || dragging || now - activeChangedAt < 3000) return;
+    onexternal?.();
+  });
+  const markOwn = () => (ownUntil = performance.now() + OWN_WINDOW_MS);
 
   function flash(text) {
     toast = text;
@@ -35,8 +60,10 @@
       return;
     }
     inFlight = true;
+    markOwn();
     try {
       await setVolume(percent);
+      markOwn();
     } catch (err) {
       flash(`Volume not changed: ${err.message}`);
     } finally {
@@ -75,8 +102,10 @@
 
   async function toggleMute() {
     const next = !muted;
+    markOwn();
     try {
       await setMute(next);
+      markOwn();
       flash(next ? 'Muted' : 'Unmuted');
     } catch (err) {
       flash(`Mute not changed: ${err.message}`);
@@ -86,17 +115,11 @@
 
 <div class="scrim" class:is-open={open} role="presentation" onclick={onclose}></div>
 
-<div class="drawer" class:is-open={open}>
+<div class="drawer" class:is-open={open} role="presentation" onpointerdown={onactivity}>
   <div class="drawer__title">Controls</div>
   <div class="row">
     <button class="mute" class:is-muted={muted} type="button" aria-label={muted ? 'Unmute' : 'Mute'} onclick={toggleMute}>
-      <span class="icon">
-        <span class="cone" class:is-dim={muted}></span>
-        <span class="arc arc--1" class:is-lit={arcs >= 1}></span>
-        <span class="arc arc--2" class:is-lit={arcs >= 2}></span>
-        <span class="arc arc--3" class:is-lit={arcs >= 3}></span>
-        {#if muted || pct === 0}<span class="slash"></span>{/if}
-      </span>
+      <VolumeIcon percent={pct} {muted} />
     </button>
 
     <div
@@ -199,52 +222,6 @@
   .mute.is-muted {
     background: rgba(224, 167, 88, 0.16);
     border-color: rgba(224, 167, 88, 0.42);
-  }
-
-  .icon {
-    position: relative;
-    width: 30px;
-    height: 30px;
-    display: block;
-  }
-  .cone {
-    position: absolute;
-    left: 0;
-    top: 50%;
-    transform: translateY(-50%);
-    width: 15px;
-    height: 26px;
-    background: rgba(233, 238, 242, 0.85);
-    clip-path: polygon(0 27%, 42% 27%, 100% 0, 100% 100%, 42% 73%, 0 73%);
-    display: block;
-  }
-  .cone.is-dim {
-    background: rgba(233, 238, 242, 0.45);
-  }
-  .arc {
-    position: absolute;
-    top: 50%;
-    border-radius: 50%;
-    border: 2.5px solid rgba(233, 238, 242, 0.18);
-    clip-path: polygon(50% 10%, 100% 0, 100% 100%, 50% 90%);
-    display: block;
-  }
-  .arc.is-lit {
-    border-color: rgba(233, 238, 242, 0.85);
-  }
-  .arc--1 { left: 5px; width: 16px; height: 16px; margin-top: -8px; }
-  .arc--2 { left: 1px; width: 24px; height: 24px; margin-top: -12px; }
-  .arc--3 { left: -2px; width: 30px; height: 30px; margin-top: -15px; }
-  .slash {
-    position: absolute;
-    left: 1px;
-    top: 50%;
-    width: 28px;
-    height: 3px;
-    border-radius: 2px;
-    transform: translateY(-50%) rotate(-38deg);
-    background: var(--accent-warn);
-    display: block;
   }
 
   .track {

@@ -9,6 +9,7 @@
   import { untrack } from 'svelte';
   import spotifyMark from '../assets/icon-spotify.png';
   import bluetoothMark from '../assets/icon-bluetooth.png';
+  import VolumeIcon from '../lib/VolumeIcon.svelte';
 
   let { active, metadata, volume, onvolume } = $props();
 
@@ -64,12 +65,6 @@
     return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
   };
 
-  const volumeLevel = $derived.by(() => {
-    const p = volume?.percent;
-    if (p == null) return 'mid';
-    if (volume.muted || p === 0) return 'none';
-    return p < 34 ? 'low' : p < 67 ? 'mid' : 'high';
-  });
 
   // Shuffle, repeat and queue are LMS-only in the design. Keyed on the id
   // for now; Phase 6 renders controls from capability declarations instead.
@@ -187,9 +182,7 @@
 
         <div class="bar__right">
           <button class="btn" type="button" aria-label="Volume" disabled={!volume} onclick={onvolume}>
-            <span class="i-volume" data-level={volumeLevel}>
-              <span class="cone"></span><span class="arc"></span><span class="arc"></span><span class="arc"></span>
-            </span>
+            <VolumeIcon percent={volume?.percent ?? null} muted={!!volume?.muted} />
           </button>
           {#if lmsOnly}
             <button class="btn btn--queue" type="button" aria-label="Queue" disabled data-unwired="phase-7">
@@ -633,37 +626,6 @@
   .i-repeat b { width: 0; height: 0; border-left: 4px solid transparent; border-right: 4px solid transparent; }
   .i-repeat b:nth-child(5) { left: 17.5px; top: 2px; border-top: 7px solid var(--ink-body); }
   .i-repeat b:nth-child(6) { left: 0.5px; top: 17px; border-bottom: 7px solid var(--ink-body); }
-
-  .i-volume { position: relative; width: 26px; height: 26px; flex-shrink: 0; display: block; }
-  .i-volume .cone {
-    position: absolute;
-    left: 0;
-    top: 50%;
-    transform: translateY(-50%);
-    width: 13px;
-    height: 22px;
-    display: block;
-    background: var(--ink);
-    clip-path: polygon(0 27%, 42% 27%, 100% 0, 100% 100%, 42% 73%, 0 73%);
-  }
-  .i-volume .arc {
-    position: absolute;
-    top: 50%;
-    border-radius: var(--r-circle);
-    box-sizing: border-box;
-    border: 2px solid var(--ink-body);
-    display: block;
-    clip-path: polygon(50% 10%, 100% 0, 100% 100%, 50% 90%);
-  }
-  .i-volume .arc:nth-of-type(1) { left: 4px; width: 14px; height: 14px; margin-top: -7px; }
-  .i-volume .arc:nth-of-type(2) { left: 0.5px; width: 21px; height: 21px; margin-top: -10.5px; }
-  .i-volume .arc:nth-of-type(3) { left: -2px; width: 26px; height: 26px; margin-top: -13px; }
-  .i-volume[data-level='none'] .arc:nth-of-type(1),
-  .i-volume[data-level='none'] .arc:nth-of-type(2),
-  .i-volume[data-level='none'] .arc:nth-of-type(3),
-  .i-volume[data-level='low'] .arc:nth-of-type(2),
-  .i-volume[data-level='low'] .arc:nth-of-type(3),
-  .i-volume[data-level='mid'] .arc:nth-of-type(3) { border-color: rgba(233, 238, 242, 0.22); }
 
   .btn--queue {
     background: rgba(159, 180, 232, 0.12);

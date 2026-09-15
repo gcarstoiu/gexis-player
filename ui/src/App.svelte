@@ -12,6 +12,25 @@
 
   let idle = $state(false);
   let volumeOpen = $state(false);
+
+  // Opened by a change from elsewhere, the drawer closes itself once volume
+  // activity stops; opened by the panel's own button, it stays until closed.
+  const AUTO_HIDE_MS = 3000;
+  let autoHide = null;
+  function openFromExternal() {
+    if (volumeOpen && autoHide === null) return;
+    volumeOpen = true;
+    clearTimeout(autoHide);
+    autoHide = setTimeout(closeVolume, AUTO_HIDE_MS);
+  }
+  function keepVolumeOpen() {
+    clearTimeout(autoHide);
+    autoHide = null;
+  }
+  function closeVolume() {
+    keepVolumeOpen();
+    volumeOpen = false;
+  }
   let touches = $state(0);
   const playing = $derived($active !== null && $metadata?.transport === 'playing');
 
@@ -32,14 +51,21 @@
 
 <div class="panel">
   {#if $active}
-    <NowPlaying active={$active} metadata={$metadata} volume={$volume} onvolume={() => (volumeOpen = true)} />
+    <NowPlaying active={$active} metadata={$metadata} volume={$volume} onvolume={() => { keepVolumeOpen(); volumeOpen = true; }} />
   {:else}
     <!-- Home (ADR-0033) is the no-renderer screen; its content is Phase 7. -->
     <div class="placeholder" data-unwired="home">Nothing playing</div>
   {/if}
 
   {#if $volume}
-    <VolumeDrawer open={volumeOpen} volume={$volume} onclose={() => (volumeOpen = false)} />
+    <VolumeDrawer
+      open={volumeOpen}
+      volume={$volume}
+      active={$active}
+      onclose={closeVolume}
+      onexternal={openFromExternal}
+      onactivity={keepVolumeOpen}
+    />
   {/if}
 
   {#if idle}
