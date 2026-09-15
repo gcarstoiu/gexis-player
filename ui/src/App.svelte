@@ -6,6 +6,7 @@
   import IdleScreen from './screens/IdleScreen.svelte';
   import VolumeDrawer from './screens/VolumeDrawer.svelte';
   import HandoffScreen from './screens/HandoffScreen.svelte';
+  import Settings from './screens/Settings.svelte';
 
   // ADR-0033: idle is "not playing and not touched", one timeout everywhere.
   // Hardcoded until settings exist; `?idle_seconds=` shortens it for testing.
@@ -66,10 +67,22 @@
     return () => clearTimeout(id);
   });
 
-  onMount(connect);
+  // ADR-0032: the panel renders everything; a remote browser only settings.
+  let surface = $state(null);
+  onMount(() => {
+    connect();
+    fetch('/surface')
+      .then((r) => r.json())
+      .then((body) => (surface = body.surface))
+      .catch(() => (surface = 'panel'));
+  });
 </script>
 
 <svelte:window onpointerdowncapture={() => touches++} />
+
+{#if surface === 'remote'}
+  <div class="remote"><Settings /></div>
+{:else if surface === 'panel'}
 
 <div class="panel">
   {#if $active}
@@ -98,6 +111,7 @@
     <HandoffScreen from={shownHandoff.from} to={shownHandoff.to} />
   {/if}
 </div>
+{/if}
 
 <style>
   :global(*, *::before, *::after) {
@@ -110,6 +124,16 @@
     font-family: var(--font-ui);
     color: var(--ink);
     -webkit-tap-highlight-color: transparent;
+  }
+
+  :global(html),
+  :global(body),
+  :global(#app) {
+    height: 100%;
+  }
+
+  .remote {
+    height: 100%;
   }
 
   .panel {

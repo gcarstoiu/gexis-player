@@ -127,6 +127,10 @@ porting, until the design takes them in:
   phone's volume change opens the drawer, which closes 3 s after the last
   change. The panel's own changes and a takeover's restored level do not
   open it.
+- **Settings inventory (2026-09-15).** `idle_grace` is not a row — ADR-0033
+  merged it into `idle_timeout` (5 min); `travel_curve` is decided (ADR-0034,
+  marks `RH`); `drawer_on_external` and `drawer_autohide` are added under
+  Display › Panel. The daemon's `settings_registry.json` is authoritative.
 
 ### Branching
 
@@ -626,6 +630,13 @@ over ADR-0016's separate-process model, criterion 4/5's minimal scope).
    width, not the panel interface shrunk. The panel renders everything;
    a remote browser renders only settings. Only the settings screen is
    responsive; every other screen stays at the fixed 1280x800 artboard.
+   **Increment 1 built 2026-09-15** per
+   [ADR-0035](decisions/0035-settings-api.md): the daemon's settings registry
+   (every inventory row, none wired), `GET /settings`, `PUT`/`POST
+   /settings/{key}`, `GET /surface`, `settings_revision` in `/state`, and
+   `Settings.dc.html` ported as the responsive component. A remote browser gets
+   only settings. Two design deviations: `idle_grace` merged into
+   `idle_timeout` (ADR-0033), and the two volume-drawer rows added.
 6. **WITHDRAWN 2026-09-15, together with criterion 7** (George: *"there is no
    need for this. As soon as I start playing from my phone, LMS activates so
    there is no risk of getting stuck"*). ADR-0027 measured that auto-power-on,

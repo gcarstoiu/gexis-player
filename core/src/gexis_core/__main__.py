@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import socket
 from pathlib import Path
 
 import aiohttp
@@ -22,6 +23,7 @@ from gexis_core.idle_page import probe as probe_idle_page
 from gexis_core.metadata_file import MetadataFileWriter
 from gexis_core.renderer_volume import RendererVolumeMemory
 from gexis_core.settings import SettingsStore
+from gexis_core.settings_registry import Settings
 from gexis_core.state import StateStore
 from gexis_core.volume import (
     DUMMY_CONTROL,
@@ -108,6 +110,13 @@ def make_restore_volume(config: Config, volume_memory: RendererVolumeMemory, vol
         await volume_bridge.write_hardware(floor_raw)
 
     return restore_volume
+
+
+def read_timezone() -> str | None:
+    try:
+        return Path("/etc/timezone").read_text().strip() or None
+    except OSError:
+        return None
 
 
 async def main() -> None:
@@ -259,6 +268,22 @@ async def main() -> None:
     async def idle_page() -> dict:
         return await probe_idle_page(config.idle_url, idle_session)
 
+    # ADR-0035. Defaults are what is true of this deployment today; nothing
+    # is wired yet, so every row reads and none accepts a write.
+    settings = Settings(
+        settings_store,
+        defaults={
+            "boot_volume": lambda: raw_to_db(config.boot_volume_steps),
+            "restore_floor": lambda: config.restore_volume_floor_db,
+            "lms_server": lambda: f"{config.lms_host}:{config.lms_port}",
+            "lms_player": lambda: config.lms_player_name,
+            "idle_url": lambda: config.idle_url or None,
+            "device_name": socket.gethostname,
+            "timezone": read_timezone,
+        },
+        on_change=state_store.bump_settings_revision,
+    )
+
     state_server = StateServer(
         state_store,
         host=config.state_host,
@@ -267,6 +292,7 @@ async def main() -> None:
         set_volume=set_volume,
         set_mute=set_mute,
         idle_page=idle_page,
+        settings=settings,
         ui_dir=ui_dir,
     )
 

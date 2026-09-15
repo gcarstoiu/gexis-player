@@ -1,0 +1,595 @@
+[
+ {
+  "id": "audio",
+  "label": "Audio",
+  "subtitle": "Level and output",
+  "accent": "#7ed6bc",
+  "rows": [
+   {
+    "key": "output_mode",
+    "type": "choice",
+    "label": "Output mode",
+    "marks": "R",
+    "note": "Only variable is built and hardware-verified. Fixed hides the volume control everywhere and applies after stop.",
+    "options": [
+     "Variable",
+     "Fixed"
+    ],
+    "default": "Variable"
+   },
+   {
+    "key": "boot_volume",
+    "type": "number",
+    "label": "Boot volume",
+    "marks": "RH",
+    "note": "A fixed safe level at every cold boot, never the last session’s.",
+    "min": -90,
+    "max": -20,
+    "unit": "dB",
+    "default": -90
+   },
+   {
+    "key": "max_ceiling",
+    "type": "number",
+    "label": "Maximum ceiling",
+    "marks": "R?",
+    "note": null,
+    "min": -60,
+    "max": 0,
+    "unit": "dB",
+    "default": null
+   },
+   {
+    "key": "restore_floor",
+    "type": "number",
+    "label": "Restore floor",
+    "marks": "RH?",
+    "note": "Placeholder, never confirmed. Measured too quiet for Bluetooth’s unmanaged floor.",
+    "min": -60,
+    "max": -10,
+    "unit": "dB",
+    "default": -40
+   },
+   {
+    "key": "boot_default_scope",
+    "type": "choice",
+    "label": "Boot default applies",
+    "marks": "R?",
+    "note": "A renderer’s first use mid-session currently starts as quiet as a power-on.",
+    "options": [
+     "Cold boot only",
+     "Every renderer start"
+    ],
+    "default": "Cold boot only"
+   },
+   {
+    "key": "per_renderer_volume",
+    "type": "toggle",
+    "label": "Remember level per renderer",
+    "marks": "RH",
+    "note": null,
+    "default": true
+   },
+   {
+    "key": "volume_managed",
+    "type": "readonly",
+    "label": "Volume-managed renderers",
+    "marks": "RH",
+    "note": "Bluetooth excluded pending Finding 006.",
+    "default": "LMS, Spotify"
+   },
+   {
+    "key": "travel_curve",
+    "type": "choice",
+    "label": "Slider travel curve",
+    "marks": "RH",
+    "note": "Decided by ADR-0034: −45…0 dB, linear in dB; the number shown is slider position.",
+    "options": [
+     "dB-linear",
+     "Perceptual"
+    ],
+    "default": "dB-linear"
+   }
+  ]
+ },
+ {
+  "id": "sources",
+  "label": "Sources",
+  "subtitle": "Renderers and services",
+  "accent": "#9fb4e8",
+  "rows": [
+   {
+    "type": "group",
+    "label": "LMS",
+    "accent": "#7ed6bc"
+   },
+   {
+    "key": "lms_enabled",
+    "type": "toggle",
+    "label": "Enabled",
+    "marks": "R",
+    "note": null,
+    "default": true
+   },
+   {
+    "key": "lms_server",
+    "type": "text",
+    "label": "Server",
+    "marks": "RH",
+    "note": "Hardcoded today. Discovery is the alternative.",
+    "default": null
+   },
+   {
+    "key": "lms_player",
+    "type": "text",
+    "label": "Player name",
+    "marks": "H",
+    "note": null,
+    "default": null
+   },
+   {
+    "key": "plugins",
+    "type": "action",
+    "label": "Plugins",
+    "marks": "R",
+    "note": null,
+    "navigation": true,
+    "default": null
+   },
+   {
+    "type": "group",
+    "label": "Spotify Connect",
+    "accent": "#7ed6bc"
+   },
+   {
+    "key": "spotify_enabled",
+    "type": "toggle",
+    "label": "Enabled",
+    "marks": "R",
+    "note": null,
+    "default": true
+   },
+   {
+    "key": "spotify_name",
+    "type": "readonly",
+    "label": "Advertised name",
+    "marks": "R",
+    "note": "Follows the device name.",
+    "default": null
+   },
+   {
+    "type": "group",
+    "label": "Bluetooth",
+    "accent": "#9fb4e8"
+   },
+   {
+    "key": "bt_enabled",
+    "type": "toggle",
+    "label": "Enabled",
+    "marks": "R",
+    "note": null,
+    "default": true
+   },
+   {
+    "key": "bt_pairing",
+    "type": "choice",
+    "label": "Pairing",
+    "marks": "R?",
+    "note": "Needs this screen before it can be anything but hardcoded.",
+    "options": [
+     "PIN-free",
+     "Confirmation required"
+    ],
+    "default": "PIN-free"
+   },
+   {
+    "key": "bt_discoverable",
+    "type": "choice",
+    "label": "Discoverable",
+    "marks": "R",
+    "note": null,
+    "options": [
+     "Always",
+     "3 min after boot",
+     "Off"
+    ],
+    "default": "3 min after boot"
+   },
+   {
+    "key": "bt_trusted",
+    "type": "action",
+    "label": "Trusted devices",
+    "marks": "R",
+    "note": "View and forget remembered devices. Clearing breaks automatic reconnection.",
+    "navigation": true,
+    "default": null
+   },
+   {
+    "key": "bt_autotrust",
+    "type": "toggle",
+    "label": "Auto-trust on pair",
+    "marks": "H",
+    "note": null,
+    "default": true
+   }
+  ]
+ },
+ {
+  "id": "handoff",
+  "label": "Handoff",
+  "subtitle": "Who gets the device",
+  "accent": "#e0a758",
+  "rows": [
+   {
+    "key": "restore_transport",
+    "type": "choice",
+    "label": "Restore transport on return",
+    "marks": "RH",
+    "note": null,
+    "options": [
+     "Play only if playing",
+     "Always pause",
+     "Always play"
+    ],
+    "default": "Play only if playing"
+   },
+   {
+    "key": "seek_reanchor",
+    "type": "toggle",
+    "label": "Re-anchor seek position",
+    "marks": "R?",
+    "note": "Pressing play on a deactivated player currently loses the position entirely.",
+    "default": false
+   },
+   {
+    "key": "reclaim_lms",
+    "type": "toggle",
+    "label": "Reclaim LMS when a session ends",
+    "marks": "N",
+    "note": "Never done by design. Opting in reintroduces the spurious reclaims that were measured.",
+    "default": false
+   },
+   {
+    "key": "release_ladder",
+    "type": "readonly",
+    "label": "Release ladder",
+    "marks": "H",
+    "note": "Polite stop, then SIGTERM, then SIGKILL.",
+    "default": null
+   },
+   {
+    "key": "idle_close",
+    "type": "number",
+    "label": "squeezelite idle close",
+    "marks": "RH",
+    "note": null,
+    "min": 0,
+    "max": 30,
+    "unit": "s",
+    "default": 1
+   },
+   {
+    "key": "handoff_threshold",
+    "type": "number",
+    "label": "Transition screen threshold",
+    "marks": "RH?",
+    "note": "Pairs earn exemption by measurement rather than preference.",
+    "min": 0,
+    "max": 5,
+    "unit": "s",
+    "default": 1
+   }
+  ]
+ },
+ {
+  "id": "display",
+  "label": "Display",
+  "subtitle": "Screen and idle",
+  "accent": "#c8a2d8",
+  "rows": [
+   {
+    "type": "group",
+    "label": "Panel",
+    "accent": "#c8a2d8"
+   },
+   {
+    "key": "theme",
+    "type": "choice",
+    "label": "Theme",
+    "marks": "R",
+    "note": null,
+    "options": [
+     "Deep Teal",
+     "Faded 80s",
+     "Graphite"
+    ],
+    "default": "Deep Teal"
+   },
+   {
+    "key": "brightness",
+    "type": "number",
+    "label": "Brightness",
+    "marks": "N",
+    "note": null,
+    "min": 10,
+    "max": 100,
+    "unit": "%",
+    "default": null
+   },
+   {
+    "key": "time_display",
+    "type": "choice",
+    "label": "Time display",
+    "marks": "N",
+    "note": null,
+    "options": [
+     "Elapsed",
+     "Remaining"
+    ],
+    "default": null
+   },
+   {
+    "key": "show_transition",
+    "type": "toggle",
+    "label": "Show transition screen",
+    "marks": "N",
+    "note": null,
+    "default": true
+   },
+   {
+    "key": "headless",
+    "type": "toggle",
+    "label": "Headless",
+    "marks": "R",
+    "note": "Disables the local screen entirely.",
+    "default": false
+   },
+   {
+    "key": "drawer_on_external",
+    "type": "toggle",
+    "label": "Show volume when changed elsewhere",
+    "marks": "NH",
+    "note": "A phone’s volume change opens the drawer; the panel’s own changes do not.",
+    "default": true
+   },
+   {
+    "key": "drawer_autohide",
+    "type": "number",
+    "label": "Volume drawer auto-hide",
+    "marks": "NH",
+    "min": 1,
+    "max": 30,
+    "unit": "s",
+    "note": "When a change from elsewhere opened it.",
+    "default": 3
+   },
+   {
+    "type": "group",
+    "label": "Idle screen",
+    "accent": "#c8a2d8"
+   },
+   {
+    "key": "idle_url",
+    "type": "text",
+    "label": "URL",
+    "marks": "R",
+    "note": "External and lazy loaded. Falls back to the clock when unreachable or unconfigured.",
+    "default": null
+   },
+   {
+    "key": "idle_timeout",
+    "type": "number",
+    "label": "Timeout",
+    "marks": "RH",
+    "note": "One timeout on every screen, counted while not playing and not touched (ADR-0033).",
+    "min": 1,
+    "max": 60,
+    "unit": "min",
+    "default": 5
+   },
+   {
+    "type": "group",
+    "label": "Visualization",
+    "accent": "#c8a2d8"
+   },
+   {
+    "key": "viz_timeout",
+    "type": "number",
+    "label": "Timeout",
+    "marks": "R",
+    "note": null,
+    "min": 0,
+    "max": 300,
+    "unit": "s",
+    "default": null
+   },
+   {
+    "key": "skin_corpus",
+    "type": "choice",
+    "label": "Skin corpus",
+    "marks": "R",
+    "note": null,
+    "options": [
+     "Meter only",
+     "Meter + spectrum"
+    ],
+    "default": null
+   },
+   {
+    "key": "skin_rotate",
+    "type": "toggle",
+    "label": "Rotate skin per track",
+    "marks": "N",
+    "note": null,
+    "default": true
+   }
+  ]
+ },
+ {
+  "id": "enrich",
+  "label": "Enrichment",
+  "subtitle": "Lyrics and artist info",
+  "accent": "#e8a0b4",
+  "rows": [
+   {
+    "key": "enrichment",
+    "type": "toggle",
+    "label": "Enrichment",
+    "marks": "R",
+    "note": null,
+    "default": null
+   },
+   {
+    "key": "confidence",
+    "type": "number",
+    "label": "Confidence threshold",
+    "marks": "R",
+    "note": "Below it nothing is shown — a confidently wrong biography is worse than a blank panel.",
+    "min": 0,
+    "max": 1,
+    "unit": "",
+    "step": 0.05,
+    "default": null
+   },
+   {
+    "key": "lyrics",
+    "type": "toggle",
+    "label": "Lyrics",
+    "marks": "R",
+    "note": null,
+    "default": null
+   },
+   {
+    "key": "artwork_lookup",
+    "type": "toggle",
+    "label": "Look up missing artwork",
+    "marks": "R",
+    "note": "For renderers that supply none. Title and artist are enough to find it later.",
+    "default": null
+   }
+  ]
+ },
+ {
+  "id": "device",
+  "label": "Device",
+  "subtitle": "Identity and network",
+  "accent": "#8fc4d8",
+  "rows": [
+   {
+    "key": "device_name",
+    "type": "text",
+    "label": "Device name",
+    "marks": "R",
+    "note": "One name for mDNS, Spotify and Bluetooth.",
+    "default": null
+   },
+   {
+    "key": "wifi",
+    "type": "action",
+    "label": "Wi-Fi",
+    "marks": "R",
+    "note": null,
+    "default": null
+   },
+   {
+    "key": "timezone",
+    "type": "choice",
+    "label": "Time zone",
+    "marks": "N",
+    "note": null,
+    "options": [
+     "Europe/Berlin",
+     "Europe/London",
+     "UTC"
+    ],
+    "default": null
+   },
+   {
+    "key": "api_loopback",
+    "type": "toggle",
+    "label": "Restrict API to loopback",
+    "marks": "N",
+    "note": "The API binds all interfaces and is unauthenticated by decision.",
+    "default": false
+   }
+  ]
+ },
+ {
+  "id": "system",
+  "label": "System",
+  "subtitle": "Updates and maintenance",
+  "accent": "#b0bcc4",
+  "rows": [
+   {
+    "key": "updates",
+    "type": "choice",
+    "label": "Updates",
+    "marks": "RN",
+    "note": null,
+    "options": [
+     "Manual",
+     "Automatic"
+    ],
+    "default": null
+   },
+   {
+    "key": "version",
+    "type": "readonly",
+    "label": "Version",
+    "marks": "R?",
+    "note": null,
+    "default": null
+   },
+   {
+    "key": "image_build",
+    "type": "readonly",
+    "label": "Image build",
+    "marks": "R?",
+    "note": "Nothing else on a running device reports which build it is.",
+    "default": null
+   },
+   {
+    "key": "log_level",
+    "type": "choice",
+    "label": "Log level",
+    "marks": "N",
+    "note": null,
+    "options": [
+     "Error",
+     "Warn",
+     "Info",
+     "Debug"
+    ],
+    "default": null
+   },
+   {
+    "key": "backup",
+    "type": "action",
+    "label": "Back up settings",
+    "marks": "N",
+    "note": null,
+    "default": null
+   },
+   {
+    "key": "factory_reset",
+    "type": "action",
+    "label": "Factory reset",
+    "marks": "R",
+    "note": "Every setting returns to its shipped default. Paired devices and Wi-Fi credentials are cleared.",
+    "confirm": "Erase all settings",
+    "danger": true,
+    "default": null
+   },
+   {
+    "key": "power",
+    "type": "action",
+    "label": "Reboot or shut down",
+    "marks": "N",
+    "note": null,
+    "confirm": "Reboot now",
+    "danger": true,
+    "default": null
+   }
+  ]
+ }
+]
