@@ -127,6 +127,10 @@ porting, until the design takes them in:
   phone's volume change opens the drawer, which closes 3 s after the last
   change. The panel's own changes and a takeover's restored level do not
   open it.
+- **Settings inventory (2026-09-15).** `idle_grace` is not a row — ADR-0033
+  merged it into `idle_timeout` (5 min); `travel_curve` is decided (ADR-0034,
+  marks `RH`); `drawer_on_external` and `drawer_autohide` are added under
+  Display › Panel. The daemon's `settings_registry.json` is authoritative.
 
 ### Branching
 
@@ -626,6 +630,18 @@ over ADR-0016's separate-process model, criterion 4/5's minimal scope).
    width, not the panel interface shrunk. The panel renders everything;
    a remote browser renders only settings. Only the settings screen is
    responsive; every other screen stays at the fixed 1280x800 artboard.
+   **Increment 1 built 2026-09-15** per
+   [ADR-0035](decisions/0035-settings-api.md): the daemon's settings registry
+   (every inventory row, none wired), `GET /settings`, `PUT`/`POST
+   /settings/{key}`, `GET /surface`, `settings_revision` in `/state`, and
+   `Settings.dc.html` ported as the responsive component. A remote browser gets
+   only settings. Two design deviations: `idle_grace` merged into
+   `idle_timeout` (ADR-0033), and the two volume-drawer rows added. **Passed George's phone
+   check 2026-09-15.**
+   **Increment 2 built 2026-09-15:** idle timeout, idle URL (editable from the
+   phone; clearing returns to `core.toml`), and both volume-drawer settings
+   wired, reaching the panel live. **Passed George's phone check 2026-09-15.
+   Criterion 5 met.**
 6. **WITHDRAWN 2026-09-15, together with criterion 7** (George: *"there is no
    need for this. As soon as I start playing from my phone, LMS activates so
    there is no risk of getting stuck"*). ADR-0027 measured that auto-power-on,
@@ -717,6 +733,10 @@ increment at a time, each gated on his own hardware pass as usual):
 | **4d** | criterion 2 | idle screen and its fallback. **Built 2026-09-15:** `GET /idle` probes `idle_url` (from `/etc/gexis/core.toml`) for reachability and framing headers; the UI embeds the page in a sandboxed iframe or shows the design's drifting clock. Timer per ADR-0033, hardcoded 5 minutes. Deployed on `gexis`; **passed George's panel pass 2026-09-15**. George's URL was given 2026-09-15 and is deliberately **not in this public repository** — it carries a per-display identifier. It sends no `X-Frame-Options`/CSP header and its HTML has no frame-busting (checked 2026-09-15); its scripts were not checked, so embedding is unproven until it renders on the panel. |
 | **4e** | criterion 8 | volume. *Was criteria 6, 7, 8 until 2026-09-15; the back-to-music screen and activate control were withdrawn.* **Built 2026-09-15** per [ADR-0034](decisions/0034-panel-volume-travel-and-mute.md): the design's Controls drawer, slider over −45…0 dB shown as slider position, mute (`POST /volume/mute`) restoring the prior level. Exercised end to end against the real `StateServer` with a fake mixer in headless Chromium. **Passed George's panel pass 2026-09-15.** |
 | **4f** | criterion 4 | transition state, with the exempt-pair list as published data rather than a constant in the UI. **Built 2026-09-15:** the design's "Handing off" overlay, shown from the published handoff's start until it ends (not the design canvas's fixed 2.7 s), held at least 1.4 s — one note cycle — so it never flashes; exempt pairs from `handoff_exempt_pairs` skip it. **Passed George's panel pass 2026-09-15.** |
+
+**Phase 4 status, 2026-09-15:** criteria 1, 2, 3, 4, 5 and 8 met and checked
+by George; 6 and 7 withdrawn. Closing the phase is George's call. The
+settings increments are not yet in an image.
 
 ### Phase 5 — Visualisation service and Peppy screen
 

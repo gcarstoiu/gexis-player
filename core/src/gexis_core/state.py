@@ -53,6 +53,7 @@ class StateStore:
         self._active: str | None = None
         self._handoff: Handoff | None = None
         self._volume: VolumeState | None = None
+        self._settings_revision = 0
         self._subscribers: list[Callable[[PlaybackState], None]] = []
 
     def subscribe(self, callback: Callable[[PlaybackState], None]) -> None:
@@ -74,6 +75,7 @@ class StateStore:
             handoff=self._handoff,
             volume=self._volume,
             handoff_exempt_pairs=self._handoff_exempt_pairs,
+            settings_revision=self._settings_revision,
         )
 
     def set_active(self, renderer_id: str | None) -> None:
@@ -147,6 +149,10 @@ class StateStore:
         if volume == self._volume:
             return
         self._volume = volume
+        self._notify()
+
+    def bump_settings_revision(self) -> None:
+        self._settings_revision += 1
         self._notify()
 
     def _notify(self) -> None:

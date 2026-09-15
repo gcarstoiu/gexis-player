@@ -156,6 +156,9 @@ class PlaybackState:
     #: is "data, not a constant" - a pair earns exemption by being
     #: measured and loses it if a later measurement moves it back.
     handoff_exempt_pairs: tuple[tuple[str, str], ...] = ()
+    #: Bumped on every settings write (ADR-0035); a client refetches
+    #: `GET /settings` when it moves.
+    settings_revision: int = 0
 
     def __post_init__(self) -> None:
         # Defensive copy: a caller mutating the dict it passed in must not
@@ -176,4 +179,5 @@ class PlaybackState:
             "handoff": self.handoff.to_json() if self.handoff else None,
             "volume": self.volume.to_json() if self.volume else None,
             "handoff_exempt_pairs": [list(pair) for pair in self.handoff_exempt_pairs],
+            "settings_revision": self.settings_revision,
         }

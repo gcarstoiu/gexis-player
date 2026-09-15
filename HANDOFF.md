@@ -47,8 +47,8 @@ built in.
 
 **Settings (ADR-0035) on branch `phase-4-settings`:** increment 1 (registry,
 API, responsive screen) passed George's phone check; increment 2 (idle
-timeout, idle URL, both drawer settings wired) deployed on `gexis`, awaiting
-his check. Number/text editors are minimal and undesigned — Claude Design to
+timeout, idle URL, both drawer settings wired) **passed his check too —
+Phase 4 criterion 5 met**, so every Phase 4 criterion is met or withdrawn. Number/text editors are minimal and undesigned — Claude Design to
 draw them.
 
 **Phase 4 steps 4c–4f all passed George's panel pass (2026-09-15)**,
