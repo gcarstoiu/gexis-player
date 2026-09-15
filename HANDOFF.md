@@ -35,7 +35,16 @@ and pointing `DEPLOY_DIR` at it would remove the 4.5GB stream entirely and
 halve disk use. Designed, not implemented.
 
 
-No code changed this session. It was build-environment repair and four
+**2026-09-15, thirteenth session:** image flashed and boots cleanly (George).
+PR #9 opened for this branch. **Phase 4 criteria 6 and 7 withdrawn** — no
+back-to-music screen, no activate control; 4e is now volume only. The
+phone is the only way to start LMS until Phase 7. Awaiting designs: both
+`.dc.html` files resent in full each iteration into `design/`, plus PNGs and
+change notes for the area that changed. Still open for the design: what the
+panel shows when nothing holds the device (probably the idle screen —
+unconfirmed).
+
+No code changed in the twelfth session. It was build-environment repair and four
 decisions. Nothing is half-finished, and the working tree is clean apart from
 `image/pi-gen` (the Makefile deleting `stage2/EXPORT_IMAGE`, which is normal).
 

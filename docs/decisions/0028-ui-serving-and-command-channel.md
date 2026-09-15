@@ -25,7 +25,9 @@ Phase 4 needs both answered:
 - The UI must be able to **activate LMS** (criterion 7) and **set volume**
   (added 2026-09-12, George's decision). ADR-0027 never re-activates LMS
   silently, so without a write path the phone app stays the only route back
-  to LMS.
+  to LMS. *(2026-09-15: the activate half was withdrawn from Phase 4 — see
+  `DEVELOPMENT.md` criterion 6. Volume alone still needs the write path, so
+  this decision stands unchanged.)*
 
 Phase 3's WebSocket at `/state` is publish-only by construction —
 `wsserver.py` drains and ignores anything a client sends.

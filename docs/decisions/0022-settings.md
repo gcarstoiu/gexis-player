@@ -62,7 +62,7 @@ Phase 2 and ADR-0027.
 | Setting | Mark | Notes |
 |---|---|---|
 | Enable / disable each renderer | [R] | implied by ADR-0013 |
-| Re-activate LMS automatically when another session ends | [N] | ADR-0027 deliberately never does this — the reason Phase 4 criterion 7 exists at all. Plausible opt-in, but it would reintroduce the spurious-reclaim failure that record measured, so not a free toggle |
+| Re-activate LMS automatically when another session ends | [N] | ADR-0027 deliberately never does this — the reason Phase 4 criterion 7 existed at all (withdrawn 2026-09-15). Plausible opt-in, but it would reintroduce the spurious-reclaim failure that record measured, so not a free toggle |
 | Restore transport state on return | [R][H] | ADR-0027: play only if it was playing |
 | Seek re-anchor on return | [R][?] | Deferred twice in ADR-0027's Open, which then found a second argument for it: pressing play on a deactivated player loses the position entirely |
 | Timeout ladder: polite / SIGTERM / SIGKILL grace | [H] | `TimeoutLadder` defaults |

@@ -259,6 +259,11 @@ this knowingly — he uses the LMS app anyway — but it is the reason
 activation was pulled into Phase 4 rather than left to Phase 6's
 capability-driven transport controls.
 
+**Extended 2026-09-15:** Phase 4 criteria 6 and 7 were withdrawn (George —
+starting playback from the phone re-activates LMS, so nothing is stranded).
+This regression is now accepted **until Phase 7's library browse**, not
+Phase 4.
+
 **PHASE 2 CLOSED, 2026-09-12.** All ten criteria met, with five items
 carried out explicitly deferred rather than silently unmet. Sub-phases
 2a/2b/2c/2d all closed; the whole phase was verified on the flashed image
@@ -589,7 +594,20 @@ over ADR-0016's separate-process model, criterion 4/5's minimal scope).
    width, not the panel interface shrunk. The panel renders everything;
    a remote browser renders only settings. Only the settings screen is
    responsive; every other screen stays at the fixed 1280x800 artboard.
-6. **When no renderer holds the device, the screen offers the action that
+6. **WITHDRAWN 2026-09-15, together with criterion 7** (George: *"there is no
+   need for this. As soon as I start playing from my phone, LMS activates so
+   there is no risk of getting stuck"*). ADR-0027 measured that auto-power-on,
+   so nothing is stranded. **Consequence, accepted knowingly:** until Phase 7's
+   library browse, the panel alone cannot start LMS after a takeover — the
+   phone is the only route. The regression this pair existed to close (the
+   note under Phase 2) is now accepted until Phase 7 rather than Phase 4. What
+   the panel shows when nothing holds the device is a design question, not
+   an acceptance criterion. The backend half built in 4a — `POST
+   /renderer/lms/activate` and LMS's `activate` control — stays; it is
+   unused by the UI, not wrong. Numbering is kept so older references still
+   resolve. *Original text follows.*
+
+   **When no renderer holds the device, the screen offers the action that
    gets back to music.** Reframed 2026-09-12 by George, replacing the
    original wording ("...and the user can tell why").
 
@@ -611,7 +629,9 @@ over ADR-0016's separate-process model, criterion 4/5's minimal scope).
    purpose is to offer the one action, not to explain the state, **and it
    is expected to be retired when Phase 7's browse screen can take over
    that job.**
-7. **The user can activate LMS from this UI.** New, 2026-09-12, George's
+7. **WITHDRAWN 2026-09-15 — see criterion 6.** *Original text follows.*
+
+   **The user can activate LMS from this UI.** New, 2026-09-12, George's
    decision that it belongs in Phase 4 rather than waiting for Phase 6's
    capability-driven transport controls. This is the one control this
    phase is not display-only about, and deliberately so:
@@ -658,7 +678,7 @@ increment at a time, each gated on his own hardware pass as usual):
 | **4b** | criteria 1, 5 | static serving (ADR-0028), `stage-gexis/04-ui`, labwc + Chromium kiosk, the Node build step ADR-0023 named as its cost |
 | **4c** | criterion 3 | now playing |
 | **4d** | criterion 2 | idle screen and its fallback |
-| **4e** | criteria 6, 7, 8 | the minimal back-to-music screen, activate, volume |
+| **4e** | criterion 8 | volume. *Was criteria 6, 7, 8 until 2026-09-15; the back-to-music screen and activate control were withdrawn.* |
 | **4f** | criterion 4 | transition state, with the exempt-pair list as published data rather than a constant in the UI |
 
 ### Phase 5 — Visualisation service and Peppy screen
