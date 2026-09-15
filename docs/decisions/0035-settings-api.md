@@ -1,6 +1,6 @@
 # ADR-0035 — Settings: one registry in the daemon, a generic API, wired one setting at a time
 
-**Status:** Proposed — awaiting George
+**Status:** Accepted (George, 2026-09-15, with the answers below)
 **Date:** 2026-09-15
 **Raised by:** Phase 4 criterion 5 ([ADR-0032](0032-one-page-two-surfaces.md)), and George's
 concern that settings discovered later would keep reopening the topic
@@ -85,25 +85,34 @@ Toggles, choices and numbers apply immediately; text rows commit explicitly;
 anything changing audible behaviour mid-playback confirms and defers. Carried
 per row as a flag.
 
-## First increment (criterion 5)
+## Row types (Claude Design, relayed by George, 2026-09-15)
 
-1. Registry holding every inventory row, all unwired except those below.
-2. The three routes, `settings_revision`, `/surface`.
-3. `Settings.dc.html` ported as the responsive component; a remote browser gets
-   only settings.
-4. Wired in the same increment, because they already exist as hardcoded values
-   read in one place: **idle timeout**, **show the drawer on external change**,
-   **drawer auto-hide delay**. Everything else wires with its own feature.
+Build against the six settable types plus `group`. Two refinements:
 
-## Open — for George
+- **`number` requires `min` and `max`.** The design renders a stepper for an
+  unbounded number, but no row is unbounded, so the API rejects a `number` row
+  without bounds rather than carrying an unexercised path.
+- **`bt_trusted` and `plugins` are navigation, not commands.** Typed `action`
+  in the design, each is really a list with per-item removal. They stay
+  unwired and are revisited when one is designed — as its own screen (no new
+  type) or as a seventh, list type. Not guessed now.
 
-- **How the panel reaches settings before Home exists.** The design reaches it
-  from the library root's Settings card (Phase 7). Until then: a temporary
-  entry on the "Nothing playing" placeholder, marked unwired?
-- **Row types.** Confirm with Claude Design that its seven types (`toggle`,
-  `choice`, `number`, `text`, `readonly`, `action`, `group`) are close to
-  settled. The API is generic over them, so a change costs a validator and a
-  component, not a redesign — but a settled list costs nothing.
-- **Idle URL as a `text` row.** Editable from the phone (ADR-0029, no
-  on-screen keyboard); the card-provisioned value is its default. Wire it in
-  the first increment, or with a later one?
+`text` rows have no input on the panel (ADR-0029: no on-screen keyboard); on
+a remote browser they are a native input.
+
+## Increments (criterion 5), each panel- or phone-tested before the next
+
+1. **Registry and screen.** Every inventory row, all unwired; the three routes,
+   `settings_revision`, `/surface`; `Settings.dc.html` ported as the
+   responsive component; a remote browser gets only settings.
+2. **First wired settings:** idle timeout, show the drawer on external change,
+   drawer auto-hide delay, and the idle URL, editable from the phone (George).
+   Everything else wires with its own feature.
+
+## Decided on the open points (George, 2026-09-15)
+
+- **No panel entry to settings before Home exists.** The design reaches
+  settings from the library root (Phase 7); until then the panel has no route
+  in, and the phone is where settings are used.
+- **Row types:** as above.
+- **Idle URL:** editable from the phone, in increment 2.
