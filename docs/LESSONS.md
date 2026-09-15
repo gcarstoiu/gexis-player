@@ -39,18 +39,61 @@ about the remote's current state; the clone answered a question about a
 stale local ref instead. Testing against the actual GitHub remote gave
 the right answer immediately.
 
+**4. `journalctl | grep oom-kill` to test "was it memory?"** (2026-09-13,
+build-environment session). Image builds were dying at
+`docker cp … | tar -xf -`, diagnosed as memory pressure. Re-checking that
+diagnosis, the journal was searched for `oom-kill`, `Killed process`,
+`earlyoom` and `systemd-oomd` across the whole persistent boot — nothing.
+The diagnosis was retracted to George as "not supported by evidence."
+
+It was right the first time. The kill came from the **supervising process**
+(Claude Code's background-task memory guard), which leaves no kernel trace,
+so the journal search answered "did the *kernel* OOM-killer fire" and was
+read as answering "was this memory pressure." Reproducing the build made it
+say so in one line: *"stopped because the system is running low on memory"*,
+at exactly the step originally named.
+
+Two aggravations worth recording. The absence of evidence was treated as
+evidence of absence — an empty grep was reported as a disproof rather than
+as "this particular killer did not fire." And **`HANDOFF.md` already
+recorded the same failure**: the 2026-09-06 entry notes two build attempts
+"killed by `C3PO`'s own low-memory condition." The project's own history
+contradicted the retraction and was not consulted.
+
+**5. Build-time assertions that could only ever check the build**
+(Finding 022, 2026-09-14). `04-ui` installed the kiosk unit and asserted its
+symlinks existed. They did — the assertions were correct and passed. The panel
+still showed a console on the first flashed image, for two reasons that both
+live *after* the build: our own `firstrun.sh` reaches `raspi-config
+do_boot_behaviour B1`, which reset `default.target` away from the one the
+stage had written; and `getty@tty1` held the VT the unit asked for, so
+`labwc` exited 0 with an empty journal.
+
+Same file and same stage as case 1, which is the point: "does the artefact I
+just built look right" is not "will it do the right thing on a booted
+device," and a stage can only ever ask the first question. **The assertions
+now include what must be true of the *running* system** — the `Conflicts=`
+line must be present, `default.target` must not be written — expressed as
+checks the build *can* make about a property it cannot observe.
+
 ## Common shape
 
 Every case had a *plausible* substitute for the real target — the build
 host's filesystem for the booted one, one run for the distribution, a
-local ref for the remote — and the check quietly accepted the substitute.
-None of these failed loudly. Each produced an answer that looked like a
-normal result, not an error.
+local ref for the remote, the kernel's OOM killer for any killer — and the
+check quietly accepted the substitute. None of these failed loudly. Each
+produced an answer that looked like a normal result, not an error.
 
 **What to check before trusting a verification result:** not just "does
 this check look right," but "is the thing I just checked actually the
 thing I care about, and could it be silently answering a related-but-
 different question instead."
+
+**Two corollaries, both from case 4.** A check that finds nothing has not
+proved nothing happened — it has proved *that specific mechanism* left no
+trace, which is a much smaller claim. And before overturning a previous
+conclusion, search this repository for it: the answer was already written
+down, and the retraction contradicted the project's own record.
 
 **Not the same failure mode as the criteria gaps** (`docs/DEVELOPMENT.md`
 criterion 3's root-access amendment, the provisioning `.gitignore`

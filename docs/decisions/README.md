@@ -39,14 +39,19 @@ the question blocking it was answered.
 | [0017](0017-core-daemon-in-python.md) | The core daemon is Python | Accepted |
 | [0018](0018-volume-and-output-modes.md) | Volume and output modes | Accepted |
 | [0019](0019-peppy-screen-lifecycle.md) | Peppy screen: entry, exit and lifecycle | Accepted |
-| [0020](0020-library-browse-tree.md) | Library browse as a normalised tree | Accepted |
+| [0020](0020-library-browse-tree.md) | Library browse as a normalised tree | Accepted, **partly superseded by [0030](0030-library-typed-radio-slimbrowse.md)**; cross-cutting table amended by [0029](0029-text-entry-on-every-surface.md) |
 | [0021](0021-deployment-flashable-image.md) | Deployment as a flashable image | Accepted, distribution channel deferred |
-| [0022](0022-settings.md) | Settings | Accepted |
+| [0022](0022-settings.md) | Settings | Accepted; remote-only text entry superseded by [0029](0029-text-entry-on-every-surface.md), first-boot blocker answered by [0031](0031-first-boot-setup-access-point.md) |
 | [0023](0023-svelte-ui.md) | The UI is Svelte | Accepted |
 | [0024](0024-bluetooth-pairing-no-pin.md) | Bluetooth pairing: no PIN, for this installation | Accepted |
 | [0025](0025-project-licence-gplv3.md) | gexis-player is licensed GPL v3 | Accepted |
 | [0026](0026-peppymeter-native-process-integration.md) | Peppy screen: native PeppyMeter process, labwc-mediated screen ownership | Accepted, compositor mechanism unverified |
 | [0027](0027-lms-power-as-arbitration-mechanism.md) | LMS power is the arbitration mechanism; no permanent base slot | Accepted — supersedes parts of [0010](0010-arbitration-slot-model.md) |
+| [0028](0028-ui-serving-and-command-channel.md) | The core daemon serves the UI; commands go over REST | Accepted — answers what [0023](0023-svelte-ui.md) left open |
+| [0029](0029-text-entry-on-every-surface.md) | Text fields are editable on the panel too; no on-screen keyboard | Accepted — supersedes [0022](0022-settings.md)'s remote-only rule, amends [0020](0020-library-browse-tree.md) |
+| [0030](0030-library-typed-radio-slimbrowse.md) | Library by typed query and our own screens; SlimBrowse only for radio, rooted at `radios` | Accepted — supersedes [0020](0020-library-browse-tree.md)'s pass-through decision |
+| [0031](0031-first-boot-setup-access-point.md) | First boot with no network raises a setup access point; typing happens on the user's phone | Accepted — answers the blocker [0022](0022-settings.md) raised and [0021](0021-deployment-flashable-image.md) could not close |
+| [0032](0032-one-page-two-surfaces.md) | One page, two surfaces: the panel renders everything, a remote browser renders only settings | Accepted — only the settings screen is responsive; clarifies Phase 4 criterion 5 |
 
 ## Cross-cutting rules
 
@@ -57,9 +62,37 @@ Rules established in one record that bind the others.
 > If the capability does not exist, hide it. If it exists but cannot be operated
 > here, show it and say where it can be.
 
-Volume in fixed output is hidden (0018); settings text and search on the panel
-are shown but not editable (0022, 0020). ADR-0014's "hidden or greyed" should be
+Volume in fixed output is hidden (0018). ADR-0014's "hidden or greyed" should be
 read through this rule.
+
+**Amended 2026-09-13 by [0029](0029-text-entry-on-every-surface.md):** settings
+text fields are no longer part of the second branch — they are editable on the
+panel too, via an external keyboard. There is no on-screen keyboard, and a
+focused field with no keyboard attached does nothing and says nothing, which
+0029 records as a knowingly accepted exception to 0014. The designs carry no
+text-entry widgets, so this removes a constraint rather than adding a surface.
+
+**Amended 2026-09-14 by [0030](0030-library-typed-radio-slimbrowse.md):** the
+search example goes too — search is no longer rendered anywhere. **The second
+branch now has no live case.** It is kept as a principle, not deleted, but
+nothing in the product currently exercises it; judge a future case on the
+reasoning, not on the retired examples. The first branch is doing all the work:
+text-input items are dropped wherever they appear, which is how the radio
+subtree stays operable without an on-screen keyboard.
+
+**Scope clarified by George, 2026-09-13: this rule binds a *shippable*
+product, and is a guideline during development.** From Phase 4 the UI is
+imported from complete designs while the backend is wired up a phase at a
+time, so screens will legitimately carry controls that do nothing yet — a
+transport row before Phase 6, a lyrics tab before Phase 8. That is
+development scaffolding, not a decision to ship dead controls, and it is
+validated hard before the product is shippable rather than at each step.
+
+**Resolved 2026-09-13: the gate is Phase 9 criterion 4**, "no unwired UI
+remains, or each survivor is explicitly justified". It is the **backstop, not
+the mechanism** — removal is continuous, each phase clearing the markers for
+whatever it wires. Unwired UI is marked in the code so checking is a generated
+list rather than an audit.
 
 **Accountability** — established in [0010](0010-arbitration-slot-model.md),
 restated by [0018](0018-volume-and-output-modes.md):
@@ -79,14 +112,14 @@ selection criteria. Protect the audio path with priority, not by doing less.
 
 | Subject | Raised by | Why it is not settled |
 |---|---|---|
-| Qobuz navigation model | 0020 | Adopting SlimBrowse means Qobuz menus need an adapter into SlimBrowse form or a second browse path. The architecture's claim that a normalised model makes this cheap is weaker than written. |
+| ~~Qobuz navigation model~~ | 0020 | **Answered 2026-09-14 by [0030](0030-library-typed-radio-slimbrowse.md):** Qobuz is not rendered. `My Apps` is unreachable because the generic browser is rooted at `radios`, not `home`. The cost named here — that a normalised model does not make plugin menus cheap — is now paid as a standing cost: adding a streaming service later is our work, not automatic. |
 | Image distribution channel | 0021 | Plain `.img`, self-hosted Imager repository, or application to Imager's community categories. Does not block anything yet. |
 | `steps.per.degree` quantisation | 0015 | Not decidable from configuration. Spike defined; outcome to be recorded as an amendment. |
 | Apt repository infrastructure | 0021 | In-place updates require a signed, hosted repository. Not specified anywhere. |
 | Maximum volume ceiling | 0018 | Listed as "to be recorded"; still undecided. |
-| Factory reset | 0021 | Implied by configuration persistence, specified nowhere. |
+| Factory reset | 0021 | Implied by configuration persistence, specified nowhere. Adjacent to [0031](0031-first-boot-setup-access-point.md)'s re-entry condition — a device that returns to setup mode is most of a reset — but not the same decision. |
 | Plugin settings pages | 0022 | Whether plugins can add their own settings belongs to the plugin contract (0016). |
-| Pairing mode as a per-installation setting | 0024 | PIN-free is right for this installation, wrong as a shipping default (different threat model elsewhere). Needs the settings infrastructure (0022) before it can be anything but hardcoded. |
+| Pairing mode as a per-installation setting | 0024 | PIN-free is right for this installation, wrong as a shipping default (different threat model elsewhere). Needs the settings infrastructure (0022) before it can be anything but hardcoded. **Half-unblocked 2026-09-13:** Phase 3 criterion 5 built the persistence (`settings.py`), so what remains is the settings *screen*, not the store. |
 
 ## Conventions
 

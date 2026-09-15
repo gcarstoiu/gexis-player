@@ -42,7 +42,12 @@ their OS.
 
 **Interface**
 
-- One web UI codebase serving the touchscreen and remote browsers.
+- One web UI codebase serving the touchscreen and remote browsers. **Refined
+  2026-09-15 by [ADR-0032](decisions/0032-one-page-two-surfaces.md):** still
+  one codebase and one served page, but not parity — the panel renders
+  everything, a remote browser renders only the settings surface. Only the
+  settings screen is responsive; every other screen is a fixed 1280x800
+  artboard, because no other screen is ever served to a phone.
 - Four screen types: library navigation, now playing, Peppy screen, idle.
 - Now playing, artist info and track info available for every renderer.
 - Lyrics on now playing: synced, unsynced, or none.
@@ -120,11 +125,14 @@ Not applicable to the DAC2 HD.
 
 ```
 ┌─ Presentation ─ web UI, one codebase ───────────────────────┐
-│   library nav  │  now playing  │  peppy screen  │  idle     │
-│                   capability-      skin renderer            │
-│                   driven UI        (circular/linear/spec)   │
+│   library nav  │  now playing  │  idle                      │
+│                   capability-driven UI                      │
 │   local: Chromium kiosk under labwc  ·  remote: any browser │
 └────────────── WebSocket (state + levels) ───────────────────┘
+┌─ Peppy screen ─ native process (ADR-0026) ──────────────────┐
+│   PeppyMeter/PeppySpectrum, skins rendered natively         │
+│   raised and hidden by labwc, not by the browser            │
+└─────────────────────────────────────────────────────────────┘
 ┌─ Control plane ─ Python ────────────────────────────────────┐
 │  Core state daemon                                          │
 │    · normalised playback model                              │
@@ -371,6 +379,23 @@ error corrected during design.
 
 ### Library navigation is the whole LMS browse tree
 
+> **Superseded 2026-09-14 by
+> [ADR-0030](decisions/0030-library-typed-radio-slimbrowse.md).** The premise
+> below — one generic browser over the whole server menu — was challenged by
+> George and did not survive. **The local library is now our own screens over
+> typed queries** (`albums`, `artists`, `genres`, `titles`, …), and the generic
+> browser survives only for **radio**, entered directly at
+> `["radios","menu:radio"]`. My Apps, LMS's settings node and search are not
+> filtered out — they are unreachable by construction. The "text input and
+> search" paragraph below is moot: no text input is rendered anywhere
+> ([ADR-0029](decisions/0029-text-entry-on-every-surface.md)).
+>
+> **The Qobuz argument below is the part that was wrong.** It claimed the
+> generic browser made Qobuz tractable. Measured: plugin content is OPML
+> (`hasitems`/`isaudio`) with no typed equivalent, so the generic browser buys
+> less than assumed — and ADR-0030 accepts the opposite cost deliberately,
+> that adding a streaming service later is our work rather than automatic.
+
 Not a music-library browser. The full navigation the LMS server exposes:
 
 - **My Music** — artists, albums, genres, years, new music, random mix,
@@ -461,6 +486,14 @@ Python. One core daemon plus three services.
 ### Library data path
 
 **Core proxies the browse tree and metadata; artwork URLs point directly at LMS.**
+
+> **Partly superseded 2026-09-14 by
+> [ADR-0030](decisions/0030-library-typed-radio-slimbrowse.md).** Core still
+> proxies, and artwork still points directly at LMS —
+> `artwork_track_id` → `/music/<id>/cover` is the same URL either way. What
+> changed is *what* is proxied: typed queries for the local library, SlimBrowse
+> only for radio. The rationale below assumed one normalised browse API would
+> make Qobuz cheap; it would not, and Qobuz is no longer rendered.
 
 Rationale is the Qobuz navigation Should. If the browser learns LMS's API,
 adding Qobuz means teaching it a second one, and the two screens will diverge in

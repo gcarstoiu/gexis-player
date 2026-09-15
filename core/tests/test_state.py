@@ -169,3 +169,77 @@ def test_subscribers_see_the_final_combined_state_not_a_partial_one():
 
     assert seen[-1].active == "lms"
     assert seen[-1].metadata.title == "Song"
+
+
+# --- Phase 4: handoff and volume ------------------------------------------
+
+
+def test_handoff_publishes_the_pair_and_clears():
+    store = StateStore(_caps("lms", "spotify"))
+    seen = []
+    store.subscribe(seen.append)
+
+    store.set_handoff("lms", "spotify")
+    assert store.state.handoff.to_json() == {"from": "lms", "to": "spotify"}
+
+    store.set_handoff(None, None)
+    assert store.state.handoff is None
+    assert len(seen) == 2
+
+
+def test_handoff_with_no_outgoing_renderer_publishes_nothing():
+    """A cold acquisition is not a takeover - there is no pair."""
+    store = StateStore(_caps("lms"))
+    store.set_handoff(None, "lms")
+    assert store.state.handoff is None
+
+
+def test_repeating_the_same_handoff_does_not_rebroadcast():
+    store = StateStore(_caps("lms", "spotify"))
+    store.set_handoff("lms", "spotify")
+    seen = []
+    store.subscribe(seen.append)
+
+    store.set_handoff("lms", "spotify")
+
+    assert seen == []
+
+
+def test_volume_is_published_as_percent_raw_and_db():
+    store = StateStore(_caps("lms"))
+
+    store.set_volume_raw(240)
+
+    assert store.state.volume.to_json() == {"percent": 100, "raw": 240, "db": 0.0}
+
+
+def test_volume_percent_is_the_hardware_controls_own_travel():
+    """George's decision: the number shown is a percentage of the hardware
+    control. It is deliberately NOT perceptual - half travel is -60dB,
+    which is the known consequence recorded in criterion 8."""
+    store = StateStore(_caps("lms"))
+
+    store.set_volume_raw(120)
+
+    published = store.state.volume.to_json()
+    assert published["percent"] == 50
+    assert published["db"] == -60.0
+
+
+def test_setting_the_same_volume_does_not_rebroadcast():
+    store = StateStore(_caps("lms"))
+    store.set_volume_raw(120)
+    seen = []
+    store.subscribe(seen.append)
+
+    store.set_volume_raw(120)
+
+    assert seen == []
+
+
+def test_handoff_exempt_pairs_are_published_not_applied():
+    """Criterion 4 is explicit that the exempt list is data, not a
+    constant - the store carries it and has no opinion about it."""
+    store = StateStore(_caps("lms", "spotify"), handoff_exempt_pairs=(("lms", "spotify"),))
+
+    assert store.state.to_json()["handoff_exempt_pairs"] == [["lms", "spotify"]]

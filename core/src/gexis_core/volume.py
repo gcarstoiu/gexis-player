@@ -219,6 +219,21 @@ def db_to_raw(db: float) -> int:
     return max(0, min(HARDWARE_MAX, raw))
 
 
+def percent_to_raw(percent: float) -> int:
+    """A percentage of the hardware control's own travel to a raw step.
+
+    Phase 4 criterion 8: George's decision is that the UI shows and sets a
+    percentage *of the hardware control*, which is the one level all three
+    renderers share. Note what this is deliberately **not**: it is not a
+    perceptual scale. 50% here is raw 120, which `raw_to_db` will tell you
+    is -60dB. That is the known consequence of the control being dB-linear
+    (see `raw_to_db`), recorded in the criterion, and it is why how a
+    *slider's travel* maps onto this is still an open question rather than
+    "just use the percentage".
+    """
+    return max(0, min(HARDWARE_MAX, round(percent / 100 * HARDWARE_MAX)))
+
+
 # Spotify's own volume report is a bare fraction (value/max_, go-librespot's
 # software scale) with no hardware control - and therefore no declared TLV
 # range - behind it, unlike LMS/Bluetooth which each derive their own
@@ -306,7 +321,15 @@ class VolumeBridge:
     currently owns.
     """
 
-    def __init__(self, mixer_name: str, adapter, *, volume_memory, get_active_renderer) -> None:
+    def __init__(
+        self,
+        mixer_name: str,
+        adapter,
+        *,
+        volume_memory,
+        get_active_renderer,
+        on_hardware_level=None,
+    ) -> None:
         """`adapter` is any `VolumeMechanism.SOFTWARE_API` renderer
         (`adapters/base.py`'s `SoftwareVolumeAdapter` protocol) - only
         `SpotifyAdapter` today (criterion 3, fixed 2026-09-12: this class
@@ -314,11 +337,21 @@ class VolumeBridge:
         `self._get_active_renderer() == "spotify"` by literal string
         throughout; both now go through `adapter.renderer_id`, so a
         second SOFTWARE_API renderer would need no change here).
+
+        `on_hardware_level(raw)`, if given, is called whenever the real
+        DAC's level is known to have changed - Phase 4 criterion 8's
+        display. Reported from **both** the monitor loop (somebody else
+        changed it) and `write_hardware` (we changed it), because the echo
+        suppression that makes this class work means our own writes are
+        deliberately skipped by the monitor path: a display fed only from
+        there would silently miss every level we set ourselves, including
+        restore-on-acquire and the UI's own slider.
         """
         self._mixer_name = mixer_name
         self._adapter = adapter
         self._volume_memory = volume_memory
         self._get_active_renderer = get_active_renderer
+        self._on_hardware_level = on_hardware_level
         # Each is (value, armed_at) or None - the exact value we wrote in
         # that direction, awaiting its own echo back. See the module
         # docstring on why this is value-matched rather than a time window.
@@ -360,6 +393,11 @@ class VolumeBridge:
         """
         self._expected_hw_raw = (raw, time.monotonic())
         await set_raw(self._mixer_name, raw)
+        self._report_hardware_level(raw)
+
+    def _report_hardware_level(self, raw: int) -> None:
+        if self._on_hardware_level is not None:
+            self._on_hardware_level(raw)
 
     def _on_adapter_volume(self, value: int, max_: int) -> None:
         renderer_id = self._adapter.renderer_id
@@ -425,6 +463,11 @@ class VolumeBridge:
                 last_raw = raw
                 continue
             last_raw = raw
+            # Reported before attribution, deliberately: the level is a
+            # fact about the hardware whether or not anyone currently holds
+            # the device, and criterion 8's display should be right even in
+            # the nobody-active state the block below declines to attribute.
+            self._report_hardware_level(raw)
             active = self._get_active_renderer()
             if active is None:
                 # Nobody holds the device (ADR-0027 makes this routine, not

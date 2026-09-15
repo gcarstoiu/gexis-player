@@ -1,5 +1,7 @@
 STAGE_GEXIS_DIR := $(CURDIR)/image/stage-gexis
 CORE_SRC_DIR := $(CURDIR)/core
+UI_DIST_DIR := $(CURDIR)/ui/dist
+IMG_NAME := $(shell grep -oP '^IMG_NAME="\K[^"]+' image/config)
 PEPPYALSA_REPO := https://github.com/project-owner/peppyalsa
 PEPPYALSA_COMMIT := $(shell grep -oP 'git checkout \K[0-9a-f]{40}' image/stage-gexis/00-alsa/01-run-chroot.sh)
 GO_LIBRESPOT_REPO := https://github.com/devgianlu/go-librespot
@@ -11,7 +13,7 @@ GO_LIBRESPOT_VERSION := $(shell grep -oP 'GO_LIBRESPOT_VERSION="\K[^"]+' image/s
 # so a manifest can never claim a version it wasn't actually built from.
 IMAGE_VERSION := $(shell git describe --tags --always --dirty)
 
-.PHONY: image clean provision
+.PHONY: image ui prune fetch-deploy clean provision
 
 # Builds via pi-gen's own build-docker.sh, unmodified. Our custom stage lives
 # outside the pinned pi-gen submodule and is bind-mounted in at build time
@@ -67,10 +69,65 @@ IMAGE_VERSION := $(shell git describe --tags --always --dirty)
 #    longer self-cleans) - `make clean` is how you force a truly fresh
 #    build, not just how you recover from a failed one; see its own
 #    comment below.
-image:
+
+# ADR-0023's stated cost: "the image build gains a Node build step. Node is
+# already on the dev machine; the image pipeline needs it at build time, not
+# at runtime." So the UI is compiled here, on the host, and the image ships
+# only the static output - no Node, no npm, no toolchain on the device, and
+# no npm install under QEMU emulation (which would be slow and would put a
+# network fetch inside the image build).
+#
+# `npm ci` rather than `npm install`: it installs exactly what
+# package-lock.json pins and fails if the two disagree, which is the same
+# pin-and-verify discipline the rest of this build applies to peppyalsa,
+# go-librespot and alsa-lib.
+ui:
+	cd ui && npm ci && npm run build
+
+# Reclaim the two places PRESERVE_CONTAINER=1 lets whole images pile up,
+# 2026-09-13. Measured before this existed: 2.2GB in deploy/ and 8.3GB in
+# export-image/, from two builds.
+#
+# 1. deploy/ - build-docker.sh:154 copies this entire directory to the host
+#    on every run (`docker cp … | tar -xf -`), so last build's output is
+#    re-streamed forever. Already on the host in image/deploy/, which this
+#    does NOT touch: the host copy is the artefact you keep.
+#
+# 2. export-image/*.img - the raw image, which pi-gen's own
+#    export-image/prerun.sh deletes and recreates every run. It only ever
+#    removes "${IMG_FILENAME}${IMG_SUFFIX}.img", and IMG_SUFFIX is our
+#    git-describe version (see the IMAGE_VERSION comment above), different
+#    on every build - so prerun's cleanup misses every previous version and
+#    each leaks ~4.5GB. Stock pi-gen doesn't have this problem; our
+#    versioning introduced it.
+#
+# Neither is a build cache. The warm build comes from the stage rootfs
+# trees (stage0/1/2 and stage-gexis, ~8.1GB), which are untouched here -
+# as is the container itself, so CONTINUE=1 still resumes. `make clean` is
+# still the only thing that forces a cold build.
+#
+# Runs before the build, not after, so a failed build leaves its artefacts
+# in place to inspect. Reads the volumes through --volumes-from rather than
+# by name: they are anonymous, and their hashes change whenever the
+# container is recreated. Never `docker start pigen_work` to get at them -
+# that re-runs pi-gen's entrypoint and starts a build.
+prune:
+	@if docker container inspect pigen_work >/dev/null 2>&1; then \
+		before=$$(docker run --rm --volumes-from pigen_work pi-gen:latest \
+			sh -c 'du -sb /pi-gen/deploy /pi-gen/work/*/export-image 2>/dev/null | awk "{s+=\$$1} END {print s+0}"'); \
+		docker run --rm --volumes-from pigen_work pi-gen:latest \
+			sh -c 'rm -f /pi-gen/deploy/* /pi-gen/work/*/export-image/*.img /pi-gen/work/*/export-image/*.info'; \
+		after=$$(docker run --rm --volumes-from pigen_work pi-gen:latest \
+			sh -c 'du -sb /pi-gen/deploy /pi-gen/work/*/export-image 2>/dev/null | awk "{s+=\$$1} END {print s+0}"'); \
+		echo "Pruned previous builds from the container: $$(( (before - after) / 1024 / 1024 ))MB reclaimed"; \
+	else \
+		echo "No pigen_work container - nothing to prune"; \
+	fi
+
+image: ui prune
 	@rm -f image/pi-gen/stage2/EXPORT_IMAGE; \
 	start=$$(date +%s); \
-	( cd image && CONTINUE=1 PRESERVE_CONTAINER=1 PIGEN_DOCKER_OPTS="--volume $(STAGE_GEXIS_DIR):/pi-gen/stage-gexis:ro --volume $(CORE_SRC_DIR):/pi-gen/gexis-core-src:ro -e IMG_SUFFIX=-$(IMAGE_VERSION)" \
+	( cd image && CONTINUE=1 PRESERVE_CONTAINER=1 PIGEN_DOCKER_OPTS="--volume $(STAGE_GEXIS_DIR):/pi-gen/stage-gexis:ro --volume $(CORE_SRC_DIR):/pi-gen/gexis-core-src:ro --volume $(UI_DIST_DIR):/pi-gen/gexis-ui-dist:ro -e IMG_SUFFIX=-$(IMAGE_VERSION)" \
 		./pi-gen/build-docker.sh -c config ); \
 	status=$$?; \
 	end=$$(date +%s); \
@@ -89,6 +146,75 @@ image:
 	else \
 		echo "WARNING: could not find deploy manifest (image/deploy/*-gexis-player.info) to annotate"; \
 	fi
+
+# Recover a build whose copy-out was killed. Run `make fetch-deploy`.
+#
+# build-docker.sh:154 ends every build with
+#     ${DOCKER} cp "${CONTAINER_NAME}":/pi-gen/deploy - | tar -xf -
+# streaming the whole deploy directory through a pipe. Under host memory
+# pressure that is the step that dies - observed twice, 2026-09-13, both
+# times with the build itself already complete ("Build finished" in the
+# log, image intact in the volume). It is heavier since
+# DEPLOY_COMPRESSION=none: 4.5GB streamed rather than 1.28GB.
+#
+# This has to be a separate target rather than a fallback inside `image`.
+# The signal reaches make itself - the log reads
+#     make: *** [Makefile:...: image] Terminated
+# so by the time the copy has failed there is no recipe left running to
+# recover from it.
+#
+# Copying one file at a time avoids the tar pipe entirely and does not get
+# killed (measured: 44s for a 4.5GB image). Then it applies the same
+# manifest annotation the `image` target appends, since that step runs
+# after the copy and is skipped for exactly the same reason.
+#
+# The version is read back off the artefact's own filename, not from
+# IMAGE_VERSION: a recovery run can happen after the working tree has
+# moved on, and a manifest must never claim a version it wasn't built
+# from. Build time likewise comes from the recovered build.log rather than
+# being re-measured, and is labelled as pi-gen's own elapsed time. That
+# log accumulates across CONTINUE=1 runs, so the window is the *last*
+# "Begin /pi-gen/stage0" to the *last* "Build finished", and only when the
+# second follows the first - otherwise a killed run would be paired with
+# an earlier run's ending and report a fabricated duration. (First cut of
+# this reported 4186s for a 749s build, for exactly that reason.)
+#
+# Re-running is safe and cheap: a file already present at the container's
+# size is skipped, so only the .info is re-copied - it is always smaller
+# in the container than on the host, because the host's has this
+# annotation appended - and then re-annotated. The net result is stable,
+# one annotation block, image untouched.
+fetch-deploy:
+	@if ! docker container inspect pigen_work >/dev/null 2>&1; then \
+		echo "No pigen_work container - nothing to recover" >&2; exit 1; \
+	fi; \
+	list=$$(mktemp); trap 'rm -f "$$list"' EXIT; \
+	docker run --rm --volumes-from pigen_work pi-gen:latest \
+		sh -c 'find /pi-gen/deploy -maxdepth 1 -type f -printf "%f %s\n" 2>/dev/null' > "$$list"; \
+	if [ ! -s "$$list" ]; then echo "Container deploy/ is empty - nothing to recover" >&2; exit 1; fi; \
+	mkdir -p image/deploy; \
+	while read -r f size; do \
+		have=$$(stat -c %s "image/deploy/$$f" 2>/dev/null || echo -1); \
+		if [ "$$have" = "$$size" ]; then echo "  have   $$f"; continue; fi; \
+		echo "  fetch  $$f"; \
+		docker cp "pigen_work:/pi-gen/deploy/$$f" "image/deploy/$$f" || exit 1; \
+	done < "$$list"; \
+	info=$$(ls -t image/deploy/*-$(IMG_NAME)*.info 2>/dev/null | head -1); \
+	if [ -z "$$info" ]; then echo "WARNING: no manifest found to annotate"; exit 0; fi; \
+	version=$$(basename "$$info" .info | sed 's/^[0-9-]*-$(IMG_NAME)-//'); \
+	elapsed=$$(awk -F'[][]' '\
+		/Begin \/pi-gen\/stage0$$/ {start=$$2; sline=NR} \
+		/Build finished$$/ {end=$$2; eline=NR} \
+		END{if(start&&end&&eline>sline){split(start,a,":");split(end,b,":"); \
+			d=(b[1]*3600+b[2]*60+b[3])-(a[1]*3600+a[2]*60+a[3]); if(d<0)d+=86400; print d}}' \
+		image/deploy/build.log 2>/dev/null); \
+	{ echo ""; \
+	  echo "Image version: $$version"; \
+	  echo "peppyalsa: $(PEPPYALSA_COMMIT) ($(PEPPYALSA_REPO))"; \
+	  echo "go-librespot: $(GO_LIBRESPOT_VERSION) ($(GO_LIBRESPOT_REPO))"; \
+	  echo "Build time: $${elapsed:-unknown}s (pi-gen elapsed, recovered via make fetch-deploy)"; \
+	} >> "$$info"; \
+	echo "Annotated $$info with image version ($$version), peppyalsa commit, go-librespot version, and build time"
 
 clean:
 	# Two reasons to remove the container, not just one since

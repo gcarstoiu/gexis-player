@@ -308,6 +308,7 @@ def test_report_metadata_maps_the_current_song():
             position=30.5,
             duration=200.0,
             source_type="lms",
+            transport="playing",
         )
     ]
 

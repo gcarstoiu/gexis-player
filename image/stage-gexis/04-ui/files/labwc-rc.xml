@@ -1,0 +1,25 @@
+<?xml version="1.0"?>
+<!--
+  labwc configuration for the panel.
+
+  Deliberately almost empty. This compositor has exactly one job: put one
+  fullscreen Chromium window on one screen. Decorations, keybindings and
+  window-management policy are all things an appliance panel has no use
+  for, and every one of them left enabled is a way for a stray touch to
+  produce a state nobody can account for (ADR-0010's rule, applied to the
+  compositor rather than to playback).
+-->
+<labwc_config>
+  <core>
+    <decoration>none</decoration>
+    <gap>0</gap>
+  </core>
+  <theme>
+    <cornerRadius>0</cornerRadius>
+  </theme>
+  <!-- No <keyboard> or <mouse> blocks: labwc's defaults include things
+       like Alt+Tab and window drags. There is no keyboard attached, but
+       there is a touchscreen, and "no bindings at all" is the state this
+       panel should be in. -->
+  <keyboard/>
+</labwc_config>

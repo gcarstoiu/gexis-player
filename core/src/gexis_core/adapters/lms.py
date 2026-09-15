@@ -97,6 +97,12 @@ class LmsAdapter(Adapter):
         volume_managed=True,
         volume_mechanism=VolumeMechanism.DUMMY_MIXER,
         dummy_mixer_card=DUMMY_CARD_LMS,
+        # Phase 4 criterion 7: the first entry `controls` has ever had.
+        # Criterion 2 left it deliberately empty in Phase 3 because nothing
+        # could act on a user's command; `activate()` below now can, and
+        # only for LMS - Spotify and Bluetooth are taken over by a phone
+        # connecting, never by us asking.
+        controls=frozenset({"activate"}),
     )
 
     # ADR-0027, 2026-09-12: this adapter no longer fights squeezelite for
@@ -176,6 +182,14 @@ class LmsAdapter(Adapter):
         remote = bool(result.get("remote"))
         title = result.get("current_title") if remote else song.get("title")
         coverid = song.get("coverid")
+        # LMS's `mode` is "play"/"pause"/"stop" (LMS-CLI.md's status query).
+        # A powered-off player reports no mode at all, which is neither
+        # playing nor paused - left as None rather than invented as
+        # "stopped", since ADR-0027 makes deactivated a distinct state the
+        # UI already learns about from `active`.
+        transport = {"play": "playing", "pause": "paused", "stop": "stopped"}.get(
+            result.get("mode")
+        )
         self._on_metadata(
             TrackMetadata(
                 title=title,
@@ -192,6 +206,7 @@ class LmsAdapter(Adapter):
                 position=_as_float(result.get("time")),
                 duration=_as_float(result.get("duration")),
                 source_type="lms",
+                transport=transport,
             )
         )
 
@@ -407,6 +422,35 @@ class LmsAdapter(Adapter):
         async with session.post(f"{self._base}/cometd", json=[message], **kwargs) as resp:
             resp.raise_for_status()
             return await resp.json()
+
+    async def activate(self) -> bool:
+        """Power the player on — Phase 4 criterion 7's control.
+
+        **This is the first `power 1` this project has ever sent.**
+        ADR-0027 recorded the asymmetry deliberately: "we only ever power
+        *off*, and only as part of a takeover; we never power on", which is
+        what makes provenance tracking unnecessary there — there is no user
+        action we could accidentally undo. That reasoning is unchanged by
+        this method, because this *is* the user's action, arriving from
+        their own UI rather than being synthesised by arbitration.
+
+        No `on_acquire()` is fired here. The CometD watch in `_watch` sees
+        `power` go true and reports the acquisition through exactly the
+        same path as the phone app doing it (measured at 0.52s to push,
+        Finding 018) — this method deliberately does not shortcut that, so
+        there is one acquisition path rather than two that can disagree.
+        """
+        if self._player_id is None:
+            logger.warning("lms: activate() with no resolved player id")
+            return False
+        async with aiohttp.ClientSession() as session:
+            try:
+                await self._rpc(session, self._player_id, ["power", 1])
+                logger.info("lms: activated (power 1) on request")
+                return True
+            except aiohttp.ClientError as exc:
+                logger.warning("lms: activate failed: %s", exc)
+                return False
 
     async def release(self) -> bool:
         """ADR-0027: record the transport state, pause, then power off.

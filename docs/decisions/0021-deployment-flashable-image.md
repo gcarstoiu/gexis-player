@@ -35,6 +35,25 @@ else. Accepted.
 ADR-0022 made text entry remote-browser only. Wi-Fi credentials are text, and
 without Wi-Fi there is no remote browser.
 
+> **Still live after [ADR-0029](0029-text-entry-on-every-surface.md)
+> (2026-09-13).** That record allows text entry on the panel, which is in
+> principle a route in — but nothing provides a pre-network settings surface to
+> type into, and the designs carry no text-entry widget.
+>
+> **Answered 2026-09-14 by
+> [ADR-0031](0031-first-boot-setup-access-point.md):** a temporary access
+> point on first boot, with the setup page served by `gexis-core` and the
+> typing done on the user's phone. Scheduled as Phase 10.
+>
+> **This does not settle the distribution channel.** The analysis below —
+> that Imager cannot customise a custom image file, and that the supported
+> routes are a self-hosted repository or Imager's community categories —
+> stands. ADR-0031 removes the *dependency* between the two: first boot no
+> longer needs Imager to inject anything, so the channel can be chosen on its
+> own merits rather than being forced by the credentials problem.
+> `firstrun.sh` pre-seeding remains the development route and wins when
+> present.
+
 The obvious answer — "users flash with Raspberry Pi Imager and enter Wi-Fi in
 the customisation dialogue" — **does not work for a custom image file.**
 Raspberry Pi state that <cite index="4-1">customisation of custom image files was never truly supported, was possible only by means of a defect, and that the defect was dangerous because Imager had no way of knowing whether the customisation was appropriate for the image</cite>. Users of Imager 2.x report the
@@ -95,6 +114,46 @@ the image alone:
   Note the inversion from moOde: they hold `libasound2t64` because it carries
   their patch (Finding 001). We would hold it because we have tested against a
   known version and have not tested against the next one.
+
+  **Amended 2026-09-12 — the pin is now `1.2.14-1+rpt1+deb13u1`, George's
+  decision, and the deferred question below (Q3) came due to force it.**
+  A `make image` run failed outright at `stage-gexis/00-alsa`:
+  `archive.raspberrypi.com/debian` trixie no longer indexes
+  `1.2.14-1+rpt1` at all — confirmed by reading its own `binary-arm64`
+  `Packages` index, not inferred from apt's error message — so the pin
+  had become unresolvable, which is a build failure rather than a silent
+  drift. This is precisely the risk the paragraph above named, arriving
+  from the opposite direction: not an unattended upgrade changing a
+  running device, but the archive moving out from under a rebuild.
+
+  What the new version actually is, since the bullet above makes "the
+  next one" the thing we deliberately don't trust: `+deb13u1` is a
+  Debian stable-update on the **same upstream 1.2.14**, and its changelog
+  carries exactly one line — `CVE-2026-25068 (Closes: #1126629)`,
+  urgency medium. That CVE is a missing bounds check on `num_channels` in
+  `tplg_decode_control_mixer1()`, the topology (`.tplg`) file decoder;
+  denial of service only, no privilege escalation. It is **not** in the
+  PCM or plugin path Findings 002/003 measured, and it is a path this
+  device never executes — the HiFiBerry overlay loads from the HAT's own
+  EEPROM and no `.tplg` files are involved anywhere in this image.
+
+  Two further facts that bore on the decision:
+
+  - The old `.deb` is still *physically* in the pool
+    (`libasound2t64_1.2.14-1+rpt1_arm64.deb`), just unindexed, so holding
+    the exact measured version by direct download was genuinely
+    available and was **rejected**: brittle (pool files do get removed),
+    keeps a known CVE, and does not fix the mismatch below.
+  - The stage was *already* inconsistent before this change:
+    `00-packages` installs `libasound2-dev`, which resolved to
+    `+deb13u1` in the same failing run, so peppyalsa was about to be
+    compiled against `+deb13u1` headers while the runtime pin demanded
+    the older library.
+
+  **Findings 002/003 are not rewritten.** They are measurements of a
+  version that was current when they were taken; this record is where the
+  live pin lives. Re-verification of the metering path against
+  `+deb13u1` is George's regression pass, not a claim made here.
 
 - **The `output` device definition is a packaged file with a known checksum.**
   ADR-0009 made it a single point of audit; updates must not modify it silently,

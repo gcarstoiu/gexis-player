@@ -39,6 +39,68 @@ If a measurement turns up a defect part-way through a criterion, surface it
 and let George choose whether to fix it now or after — do not fold the fix
 into the change in flight.
 
+### The settings inventory is kept current as work happens
+
+**George's rule, 2026-09-13.** Implementing anything that comes — or might
+come — with a setting means proposing it for
+[ADR-0022](decisions/0022-settings.md)'s inventory, and appending it **only
+after George confirms**. He is PM; the inventory is his list, so a row is
+proposed, never silently added.
+
+*Why the rule exists:* that inventory went stale once already. Assembled
+2026-09-04, by 2026-09-13 it had missed Phases 2-4, ADRs 0024-0028 and
+every volume finding — 16 items where there should have been about fifty,
+with two whole groups (arbitration, and system/maintenance) absent
+entirely. Nobody decided to leave them out; nothing prompted anyone to
+write them down while the work was happening, so they had to be
+reconstructed from the records afterwards, which loses the reasoning that
+was live at the time.
+
+It also protects a real hazard. Several rows are placeholders nobody ever
+confirmed — `restore_volume_floor_db` at −40 dB is the clearest — and a
+settings screen built on a list nobody kept current would ship those
+placeholders as though they were choices.
+
+*What counts as a trigger:* a hardcoded constant, a new value in `Config`
+or `core.toml`, a behaviour with a plausible second choice, or anything
+that would differ per installation. Mark the proposed row the way that
+record does: **[R]** recorded / **[H]** hardcoded today / **[N]** genuinely
+new suggestion / **[?]** a decision George still owes — and add any **[?]**
+to the waiting-on list at the end of the inventory.
+
+### UI work: imported whole, wired progressively, checked against a picture
+
+**George's decisions, 2026-09-13.** From Phase 4 the UI is built from
+complete designs rather than per-phase mockups: **import the whole design,
+render it, and wire the backend to whatever phase we are actually at.** The
+alternative — hiding unwired parts — would have made Claude decide what each
+screen looks like with elements removed, which is design work landing in the
+wrong hands.
+
+Three things keep that honest:
+
+1. **Unwired UI is marked in code**, with one convention, so "what is still a
+   shell" is a generated list rather than something remembered. It doubles as
+   the wiring backlog for Phases 6 and 8.
+2. **Removal is continuous.** The phase that wires a control clears its marker
+   as part of that work — it is editing those components regardless. Phase 9
+   criterion 4 is only the backstop for whatever slipped through; a one-off
+   audit there would be the largest-possible-batch change at the point of
+   least appetite for churn.
+3. **Accuracy is checked against a picture, not a description.** For each
+   screen, screenshot the running UI **from the device's own Chromium at
+   1280x800** and compare it to the design's exported PNG. The device's
+   browser is the only authoritative render (ADR-0023 pins it) and it catches
+   what a dev-machine render hides: self-hosted fonts, DPI, real panel
+   colour. The comparison is what stops "is this accurate?" becoming an
+   exchange of opinions.
+
+Design deliverables are therefore: the artboard HTML/CSS, **static PNG
+exports per state**, tokens as CSS custom properties, component boundaries,
+and phase labels on elements. The exports are committed to the repo as
+reference-only, never built, so a later redesign is a diff rather than a
+re-derivation.
+
 ### Branching
 
 - One branch per phase: `phase-0-image`, `phase-2-arbitration`.
@@ -487,7 +549,27 @@ over ADR-0016's separate-process model, criterion 4/5's minimal scope).
 2. Idle screen loads the configured URL, with a built-in fallback for
    unreachable and unconfigured.
 3. Now playing shows metadata for all three renderers. No transport controls
-   yet.
+   yet. **Volume is not a transport control and is in scope — see criterion 8**
+   (George's decision, 2026-09-12); transport proper (play/pause/next/previous/
+   seek) stays Phase 6.
+
+   **Bluetooth's sample-rate field carries the codec, not a rate**
+   (George's decision, 2026-09-12, extending [ADR-0019](decisions/0019-peppy-screen-lifecycle.md)'s
+   rule for the Peppy screen to now playing as well — "the decode rate is the
+   codec's, not the source's"). This needs new adapter work: no codec is
+   captured anywhere today. BlueZ's `MediaTransport1` carries it and that
+   object is already watched (it is one of the two Bluetooth acquisition
+   signals), so it is an extension of existing code rather than new plumbing.
+
+   **Missing metadata may be filled in later and the layout must not move**
+   (George, 2026-09-12). Bluetooth supplies no artwork, but artist/album/title
+   are enough for the Phase 8 enrichment service to find cover art and lyrics,
+   so "absent" is transient, not permanent. ARCHITECTURE.md already states the
+   requirement this creates: "Text appears immediately; art and bio arrive
+   later. Reserve artwork space so late arrival does not reflow."
+   [ADR-0012](decisions/0012-enrichment-additive-only.md) means no
+   "possibly wrong" treatment is needed — enrichment never overwrites
+   renderer-supplied text and shows nothing below its confidence threshold.
 4. Handoff state visible during takeover. **Sharpened 2026-09-12 by
    criterion 10's answer: the transition state is shown by DEFAULT and
    skipped only for a renderer pair measured under 1 second** (ADR-0010,
@@ -500,15 +582,35 @@ over ADR-0016's separate-process model, criterion 4/5's minimal scope).
      being measured and loses it if a later measurement moves it back above
      the threshold. Today only same-rate LMS↔Spotify is exempt; every
      Bluetooth pair and anything cross-rate shows the screen.
-5. Same page served to a remote browser and renders correctly.
-6. **"No renderer holds the device" is a first-class screen state, and the
-   user can tell why.** New, 2026-09-12
-   ([ADR-0027](decisions/0027-lms-power-as-arbitration-mechanism.md)).
-   Distinct from criterion 2's idle screen, which meant "LMS is current
-   but not playing" — under ADR-0027 nobody need hold the device at all,
-   routinely. ADR-0010's accountability rule applies directly: a user
-   who finds LMS deactivated after a Spotify session must be able to
-   account for it.
+5. Same page served to a remote browser and renders correctly. **Clarified
+   2026-09-15 by [ADR-0032](decisions/0032-one-page-two-surfaces.md):** still
+   the same page, and still required to render correctly — but on a remote
+   browser "correctly" means the **settings surface** laid out for phone
+   width, not the panel interface shrunk. The panel renders everything;
+   a remote browser renders only settings. Only the settings screen is
+   responsive; every other screen stays at the fixed 1280x800 artboard.
+6. **When no renderer holds the device, the screen offers the action that
+   gets back to music.** Reframed 2026-09-12 by George, replacing the
+   original wording ("...and the user can tell why").
+
+   *What changed and why.* The original criterion, added the same day from
+   [ADR-0027](decisions/0027-lms-power-as-arbitration-mechanism.md), leaned
+   on ADR-0010's accountability rule: a user finding LMS deactivated after
+   a Spotify session must be able to account for it. George's objection:
+   the user does not actually need that explained, because the obvious
+   next action already works — Phase 7's library browse, tap an album, and
+   LMS's own auto-power-on starts it (documented and measured in ADR-0027's
+   Open section: deactivated at 24.4s, a plain `play` came back at 2.3s;
+   the lost position does not matter when starting something new).
+
+   *Why the screen survives anyway, with a different job.* Library browse
+   is Phase 7, three phases out. Until it lands, this state needs something
+   on screen and criterion 7's activate control needs a home — and the idle
+   screen is a poor host for it, being a user-configured external page we
+   do not own (criterion 2). So this is a deliberately minimal screen whose
+   purpose is to offer the one action, not to explain the state, **and it
+   is expected to be retired when Phase 7's browse screen can take over
+   that job.**
 7. **The user can activate LMS from this UI.** New, 2026-09-12, George's
    decision that it belongs in Phase 4 rather than waiting for Phase 6's
    capability-driven transport controls. This is the one control this
@@ -518,6 +620,46 @@ over ADR-0016's separate-process model, criterion 4/5's minimal scope).
    to LMS is the LMS phone app** — unacceptable on an appliance with its
    own screen. Until it ships, that phone-app dependency is a known,
    accepted interim regression; see the note under Phase 2.
+8. **Volume is displayed and adjustable from this UI.** New, 2026-09-12,
+   George's decision. Not a transport control (criterion 3), and the only
+   other thing this phase is not display-only about.
+
+   **Displayed as a percentage of the hardware control** (George's
+   decision) — the shared ALSA DAC, ADR-0018's 240 steps of 0.5 dB. That
+   is the one level every renderer genuinely shares; LMS and Spotify each
+   apply their own curve above it (Findings 009/010) and Bluetooth is
+   deliberately unmanaged below ~96% (Finding 006), so **our percentage
+   will not always match what a phone shows, Bluetooth especially.** Said
+   here rather than discovered.
+
+   Why it belongs in this phase and not Phase 6: the mechanism is already
+   built and hardware-verified (`VolumeBridge`/`DummyMixerBridge`,
+   per-renderer memory, hardened across Findings 006/008/009/010/011), the
+   write path rides criterion 7's command channel
+   ([ADR-0028](decisions/0028-ui-serving-and-command-channel.md)) with no
+   new transport, and leaving it out would repeat exactly what criterion 7
+   exists to fix — a panel that shows the track but leaves the phone as the
+   only way to change anything.
+
+   **Open, to settle when the control itself is built:** the *slider's*
+   mapping. The hardware scale is dB-linear, so a raw-linear slider puts
+   every usable level in the top quarter of its travel (raw 60 of 240 is
+   −90 dB — Finding 011 measured that as inaudible). Displaying the raw
+   percentage is George's decision and settled; how the control's travel
+   maps onto it is not, and is the same class of problem Findings 009/010
+   solved for LMS and Spotify.
+
+**How Phase 4 is being built** (2026-09-12, agreed with George — one
+increment at a time, each gated on his own hardware pass as usual):
+
+| step | covers | note |
+|---|---|---|
+| **4a** | model extensions | no UI; transport state, handoff pair, command channel + LMS `power 1`, volume level, Bluetooth codec. Unit-testable and verifiable over the existing WebSocket. |
+| **4b** | criteria 1, 5 | static serving (ADR-0028), `stage-gexis/04-ui`, labwc + Chromium kiosk, the Node build step ADR-0023 named as its cost |
+| **4c** | criterion 3 | now playing |
+| **4d** | criterion 2 | idle screen and its fallback |
+| **4e** | criteria 6, 7, 8 | the minimal back-to-music screen, activate, volume |
+| **4f** | criterion 4 | transition state, with the exempt-pair list as published data rather than a constant in the UI |
 
 ### Phase 5 — Visualisation service and Peppy screen
 
@@ -545,15 +687,46 @@ over ADR-0016's separate-process model, criterion 4/5's minimal scope).
 
 ### Phase 7 — Library browse
 
+**Rewritten 2026-09-14 by [ADR-0030](decisions/0030-library-typed-radio-slimbrowse.md).**
+The previous criteria were sized for "Full SlimBrowse: My Music, Radio, plugin
+menus" and are recorded below. Phase 7 is now materially smaller: the library
+is our own screens over typed queries, and the generic browser handles one
+subtree of nine items.
+
 **Acceptance**
 
-1. Full SlimBrowse: My Music, Radio, plugin menus.
-2. `base.actions` / `itemsParams` dispatch implemented.
-3. `nextWindow` precedence and in-place refresh correct.
-4. Pagination on lists of thousands.
-5. Actions map to controls through the lookup table; unknown actions in a
-   context menu.
-6. Text-input items shown but not editable on the panel; editable remotely.
+1. **Library screens over typed queries**, not SlimBrowse: Albums, All
+   Artists, Album Artists, Composers, Genres, Years, Compilations, New Music,
+   Songs, Playlists, Music Folder. Works when the library has any. Counts and
+   commands are in ADR-0030.
+2. **Playback from a typed id works** — `playlistcontrol cmd:load
+   album_id:<id>` and its track/artist equivalents. **Verify first:** ADR-0030
+   records this as the load-bearing assumption of the typed half and it has
+   *not* been executed against a real player.
+3. **Pagination on lists of thousands** — 60974 titles and 7292 artists on
+   George's server, so this is not theoretical.
+4. **Artwork** via `artwork_track_id` → `/music/<id>/cover`.
+5. **Radio browses via SlimBrowse rooted at `["radios","menu:radio"]`**, never
+   at `home`. `base.actions` / `itemsParams` dispatch, `nextWindow` precedence
+   and in-place refresh are still required — but only for this subtree.
+6. **Podcasts (`opmlpodcast`) excluded by id**; Radio Paradise and the rest of
+   `My Apps` are unreachable by construction, not filtered.
+7. **Text-input items dropped wherever they appear** — mechanically, from an
+   `input` block or `__TAGGEDINPUT__` / `__INPUT__` in the action params. One
+   case today (Search TuneIn); the rule stays general because the subtree is
+   plugin-driven.
+8. **Library and Radio are separate areas sharing one visual language** —
+   server-supplied radio items render into our own components, per the
+   provided designs.
+
+*Superseded criteria, kept for history:* (1) Full SlimBrowse: My Music, Radio,
+plugin menus. (2) `base.actions` / `itemsParams` dispatch implemented.
+(3) `nextWindow` precedence and in-place refresh correct. (4) Pagination on
+lists of thousands. (5) Actions map to controls through the lookup table;
+unknown actions in a context menu. (6) Text-input items shown but not editable
+on the panel; editable remotely — itself already amended 2026-09-13 by
+[ADR-0029](decisions/0029-text-entry-on-every-surface.md), and now moot: no
+text input is rendered at all.
 
 ### Phase 8 — Enrichment and lyrics
 
@@ -575,6 +748,66 @@ Purely additive. Cannot break playback.
 2. A fourth renderer built against it, in a separate repository, with no changes
    to the core.
 3. Theme engine.
+4. **No unwired UI remains, or each survivor is explicitly justified.** Added
+   2026-09-13. From Phase 4 the UI is imported from complete designs while the
+   backend is wired a phase at a time, so screens legitimately carry controls
+   that do nothing yet (`decisions/README.md`'s scope note on unusable
+   controls). This is the **backstop, not the mechanism** — removal is
+   continuous, each phase clearing the markers for whatever it wires, since
+   that phase is editing those components anyway. George, 2026-09-13: a
+   one-off audit here "can introduce a lot of issues and generate more work",
+   which is also the largest-possible-batch failure the working contract
+   exists to prevent. This criterion exists to catch the shell nobody
+   revisited — a control designed for a feature that was quietly dropped —
+   and should ideally find nothing. Unwired UI is marked in code, so checking
+   is a generated list rather than an audit.
+
+### Phase 10 — First boot without a network
+
+Added 2026-09-14, George: give credentials a phase, *"with an initial hotspot
+creation upon the first boot for setting up the device — so basically not only
+the credentials but also things like hostname"*. Decided in
+[ADR-0031](decisions/0031-first-boot-setup-access-point.md); it closes the
+blocker [ADR-0022](decisions/0022-settings.md) raised and
+[ADR-0021](decisions/0021-deployment-flashable-image.md) could not answer.
+
+**Why last, and when to pull it forward.** Nothing in Phases 0-9 needs it —
+development flashes cards and pre-seeds `firstrun.sh`. But no non-developer can
+set the device up without it, so it is a hard gate on anyone else owning one.
+**Pull it forward the moment a device goes to someone who did not build it.**
+
+**Acceptance**
+
+1. **With no configuration, the device raises an access point** and the panel
+   displays the network name, the password, and the address to open. Panel is
+   display-only — no text entry, per
+   [ADR-0029](decisions/0029-text-entry-on-every-surface.md).
+2. **NetworkManager AP mode, no new packages.** `ipv4.method=shared` provides
+   DHCP. Verified available on `gexis` 2026-09-14 (NM 1.52.1,
+   `WIFI-PROPERTIES.AP: yes`) but **never exercised** — criterion 2 is not met
+   by reading the capability bit.
+3. **The setup page is served by `gexis-core`**, the same process and origin as
+   the UI ([ADR-0028](decisions/0028-ui-serving-and-command-channel.md)). No
+   second web server.
+4. **Setup collects Wi-Fi SSID and password, and the device name** — ADR-0022's
+   single name, propagated to the mDNS hostname, Spotify Connect and Bluetooth.
+   LMS address optional, discovery first. **Verify the name reaches all three
+   consumers**; ADR-0031 records this as unknown.
+5. **Applying credentials tears the AP down and joins the network.** One radio:
+   AP and station do not coexist.
+6. **A working network on boot means no AP appears at all** — Ethernet, or
+   already-configured Wi-Fi.
+7. **Pre-seeded configuration wins.** `firstrun.sh` and `make provision` behave
+   exactly as they do today; the AP is what happens when there is none. A
+   developer's workflow must not change.
+8. **The device returns to setup mode when it cannot reach any configured
+   network**, so a replaced router does not lock the owner out. **Specify the
+   threshold as part of this phase** — too eager and the AP flaps on every
+   router reboot, too reluctant and the device is bricked from the user's point
+   of view.
+9. **Decided here, not before:** AP security (recommended: WPA2, password shown
+   on the panel) and whether a captive portal is implemented (recommended: not
+   in the first cut).
 
 ---
 

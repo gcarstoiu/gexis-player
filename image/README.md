@@ -51,29 +51,126 @@ These are host environment setup, same category as installing Docker itself.
    `export-image` instead (see below). Checking this before a build is
    cheap; diagnosing it after the fact is not.
 
+## Disk: why `make clean` is not the way to reclaim space
+
+`PRESERVE_CONTAINER=1` keeps `pigen_work`'s two anonymous volumes between
+builds. That is what makes a warm build ~12 minutes instead of ~40, and it is
+also where space accumulates. Measured after two builds, 2026-09-13:
+
+| | | |
+|---|---|---|
+| `work/*/stage{0,1,2,-gexis}/rootfs` | 8.4 GB | **the warm cache — never delete** |
+| `work/*/export-image/*.img` | 8.3 GB | one raw image *per build*, leaked |
+| `deploy/` | 2.2 GB | every build's output, re-copied to the host each run |
+
+The `export-image` leak is ours, not pi-gen's. `export-image/prerun.sh`
+deletes and recreates the image every run, but only the one named
+`${IMG_FILENAME}${IMG_SUFFIX}.img` — and `IMG_SUFFIX` is the git-describe
+version the root `Makefile` passes in, different on every build. So each
+previous build's ~4.5GB image is orphaned forever. Stock pi-gen, which reuses
+a date-based name, doesn't have this problem.
+
+**`make prune`** removes both, and nothing else: it never touches the stage
+rootfs trees, never removes the container, and leaves `image/deploy/` on the
+host alone (that is the artefact you keep). `make image` runs it first. A
+first run reclaimed 10,194 MB and the following build was 12m29s — still warm.
+
+`make clean` is the opposite: `docker rm -v pigen_work` destroys the volumes
+*including* the warm cache, forcing a ~40-minute cold build. It exists to
+force a clean-room build, not to free disk. Reaching for it to clear a disk
+warning is what silently cost the warm builds before `make prune` existed.
+
+Note the two-partition trap this used to hide behind: Docker's data root
+defaults to `/var/lib/docker`, on `/`, while `image/deploy/` is in the repo,
+on `/home`. Deleting zips from `image/deploy/` frees the partition that
+*wasn't* full. Docker's `data-root` was moved to `/home/docker` on 2026-09-13
+so both now live on the same, larger partition.
+
+## A build that dies during the copy-out
+
+`build-docker.sh:154` ends every build with:
+
+```
+${DOCKER} cp "${CONTAINER_NAME}":/pi-gen/deploy - | tar -xf -
+```
+
+That streams the container's **entire** deploy directory to the host through a
+pipe, on every build. Two consequences worth knowing:
+
+- Under host memory pressure this is the step that gets killed — observed
+  twice, 2026-09-13, both times with the build itself already complete
+  (`Build finished` in the log, image intact in the volume). There is no
+  kernel OOM record for it; the kills came from the supervising process, so
+  searching `journalctl` for `oom-kill` finds nothing and proves nothing.
+- An interrupted `tar -xf` rewrites `deploy/` alphabetically and can leave a
+  *previous* build's artefact truncated. `make prune` reduces the blast radius
+  by keeping only the current build in the volume, but does not remove it.
+
+If it dies there, **the build is not lost** — it has already finished and the
+artefacts are in the volume. Recover them with:
+
+```
+make fetch-deploy
+```
+
+It copies one file at a time, avoiding the tar pipe entirely (measured: 44s
+for a 4.5GB image), then appends the manifest annotation the `image` target
+would have — that step runs *after* the copy, so a killed copy-out skips it
+too. Re-running is cheap and safe: anything already present at the right size
+is skipped, and the annotation stays a single block.
+
+This has to be its own target rather than a fallback inside `image`, because
+the kill signals make itself (`make: *** [image] Terminated`) — by the time
+the copy has failed there is no recipe left running to recover from it.
+
+Verified 2026-09-13: recovered image byte-identical to the one copied out by
+hand, manifest reporting the true 749s build.
+
+Never `docker start pigen_work` to inspect the volumes: that re-runs pi-gen's
+entrypoint and starts a build. Read them through a throwaway container
+instead, which is what `make prune` does:
+
+```
+docker run --rm --volumes-from pigen_work pi-gen:latest sh -c 'ls -la /pi-gen/deploy'
+```
+
 ## What `make image` produces
 
-`image/deploy/` will contain artefacts for **two** images (confirmed by a
-successful build, 2026-09-05, 36m43s wall-clock):
+`image/deploy/` will contain **one** image, `<date>-gexis-player-<version>.img`
+— **the deliverable.** Built from `stage-gexis` on top of stage2: pins and
+holds `libasound2t64`, builds peppyalsa from source, installs
+`/etc/alsa/conf.d/output.conf`, wires up first-boot provisioning, and installs
+squeezelite, go-librespot, bluealsa-aplay, gexis-core and the kiosk UI.
 
-- `image_<date>-gexis-player-lite.zip` — bare Raspberry Pi OS Lite, no
-  customisation. A side effect of `stage2/EXPORT_IMAGE` being unconditional,
-  unmodified pi-gen. Harmless; ignore it.
-- `image_<date>-gexis-player.zip` — **this is the actual deliverable.** Built
-  from `stage-gexis` on top of stage2: pins and holds `libasound2t64` at
-  `1.2.14-1+rpt1`, builds peppyalsa from source, installs
-  `/etc/alsa/conf.d/output.conf`, wires up first-boot provisioning, and
-  installs squeezelite, go-librespot and bluealsa-aplay (Phase 2a — see
-  below).
+The second `-lite` image is gone: the root `Makefile` removes
+`stage2/EXPORT_IMAGE` before each build, because that checkpoint export costs
+a full loop-device/zerofree/compress cycle (measured 6m41s) for an artefact
+nobody consumes.
 
-Each is a zip containing one file, `<date>-gexis-player[-lite].img` — pi-gen's
-default `DEPLOY_COMPRESSION=zip`, not overridden in `image/config`. Both
-Raspberry Pi Imager and balenaEtcher flash directly from the zip without
-extracting it, so this doesn't reintroduce a manual step for criterion 1.
-Whether we want a literal `.img` in `deploy/` instead (set
-`DEPLOY_COMPRESSION=none` in `image/config`) is an open call — the zip form
-is roughly a third the size (a real 2026-09-05 build: 836 MB zipped vs.
-2.9 GB raw).
+A raw `.img`, not a zip — `DEPLOY_COMPRESSION=none`, set in `image/config`
+2026-09-13; that file carries the reasoning. What settled the previously-open
+call, in order of weight:
+
+- **Who does what.** Claude builds, George flashes (George, 2026-09-13). A raw
+  `.img` drops straight into Raspberry Pi Imager with no extraction step. The
+  build host's convenience does not get to add a step to the one part of this
+  loop a human actually performs.
+- **Inspection.** `mtools` reads the boot partition straight out of the `.img`
+  (see below); with a zip that needed a 4.5GB `unzip` first.
+- **`bmaptool`**, which pi-gen already emits a `.bmap` for, can skip
+  unallocated blocks only when handed the image itself.
+- **Build time.** Barely moves. A measured pair of warm builds on the same
+  tree: `05-finalise` 8m07s with zip, 7m23s without — the step is dominated by
+  zerofree and unmount, not compression.
+- **Cost, and it is real.** 4.5GB raw against 1.28GB zipped, measured on the
+  2026-09-13 builds. That lands on `image/deploy/` *and* on the container's
+  deploy volume, and `build-docker.sh` streams the whole volume to the host on
+  every build (see "A build that dies during the copy-out", below).
+
+Both halves of that cost are handled rather than paid: `make prune` bounds the
+disk side, `make fetch-deploy` recovers the streaming side when it is killed.
+Re-compressing to make Claude's copy-out cheaper would be optimising the wrong
+end of the loop, so don't.
 
 Each image gets a matching `.info` file (from pi-gen's own
 `export-image/05-finalise` step) containing the exact `dpkg -l` package list
@@ -135,9 +232,9 @@ no baked-in Wi-Fi. The **only** first-boot mechanism is `firstrun.sh`, wired
 in via `cmdline.txt`'s `systemd.run=` (ADR-0021). It runs once, very early in
 boot, then deletes itself and its `cmdline.txt` entry.
 
-After flashing (`image_<date>-gexis-player.zip`, direct — Imager and Etcher
-both accept the zip), the boot partition's `firstrun.sh` needs five values
-filled in:
+After flashing (`<date>-gexis-player-<version>.img` — Imager, Etcher and
+`bmaptool` all take the raw image directly), the boot partition's
+`firstrun.sh` needs five values filled in:
 
 ```sh
 SSH_PUBKEY="ssh-ed25519 AAAA... you@host"   # required — no other remote access exists
@@ -196,14 +293,20 @@ build shipped with *no* working first-boot path at all, caught only by
 hand-inspecting a flashed card) should never again reach `deploy/`.
 
 Verifying the boot partition doesn't require hardware — `mtools` reads it
-straight out of the `.img` inside the zip:
+straight out of the deployed `.img`, with no extraction step since
+`DEPLOY_COMPRESSION=none` (2026-09-13):
 
 ```
-unzip -p image_<date>-gexis-player.zip > /tmp/gexis.img
-OFFSET=$(( $(fdisk -l /tmp/gexis.img | awk '/FAT32/{print $3}') * 512 ))
-mdir -i "/tmp/gexis.img@@${OFFSET}" -/
-mcopy -i "/tmp/gexis.img@@${OFFSET}" ::cmdline.txt -
+IMG=image/deploy/<date>-gexis-player-<version>.img
+OFFSET=$(( $(fdisk -l "$IMG" | awk '/FAT32/{for(i=1;i<=NF;i++) if($i ~ /^[0-9]+$/){print $i; exit}}') * 512 ))
+mdir -i "${IMG}@@${OFFSET}" -/
+mcopy -i "${IMG}@@${OFFSET}" ::cmdline.txt -
 ```
+
+The `awk` takes the first all-numeric field on the FAT32 row (the start
+sector) rather than a fixed column number: `fdisk` only emits the `Boot`
+column when some partition carries the flag, which shifts every column after
+it.
 
 ## Renderers (Phase 2a)
 

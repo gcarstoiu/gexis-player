@@ -41,6 +41,27 @@ class TrackMetadata:
     position: float | None = None  # seconds
     duration: float | None = None  # seconds
     source_type: str | None = None  # renderer_id of whoever supplied this
+    #: playing / paused / stopped, normalised across the three renderers'
+    #: very different vocabularies (LMS's `mode`, go-librespot's event
+    #: names, BlueZ's `MediaPlayer1.Status`). Phase 4 criterion 3 needs a
+    #: paused state to be visibly distinguishable; nothing published it
+    #: before 4a.
+    #:
+    #: It lives on this object rather than beside it because every
+    #: adapter reports it in the same event that carries the track fields
+    #: - one callback, one dedup, one publish path - and because moOde's
+    #: own flat metadata record does the same (`state=` alongside
+    #: `artist=`), which metadata_file.py already mirrors.
+    transport: str | None = None
+    #: Codec name for renderers whose sample rate would be misleading -
+    #: Bluetooth only, today. ADR-0019: "the decode rate is the codec's,
+    #: not the source's. '44.1 kHz' beside a lossy stream is true and
+    #: misleading at once." Published *beside* `sample_rate` rather than
+    #: shoved into it: which one a screen shows is a presentation
+    #: decision (Phase 4 criterion 3 puts the codec in the sample-rate
+    #: field's place for Bluetooth), not a reason to make one field hold
+    #: two types.
+    codec: str | None = None
 
     @property
     def remaining_time(self) -> float | None:
@@ -55,10 +76,12 @@ class TrackMetadata:
             "album": self.album,
             "artwork": self.artwork,
             "sample_rate": self.sample_rate,
+            "codec": self.codec,
             "remaining_time": self.remaining_time,
             "source_type": self.source_type,
             "position": self.position,
             "duration": self.duration,
+            "transport": self.transport,
         }
 
 
@@ -66,6 +89,51 @@ class TrackMetadata:
 #: every field None, matching ADR-0014's "blank the region" rule rather than
 #: leaving the last active renderer's stale metadata on screen.
 BLANK_METADATA = TrackMetadata()
+
+#: ADR-0018: 240 steps of 0.5dB, 0 = mute (-120dB), 240 = 0dB.
+HARDWARE_VOLUME_STEPS = 240
+
+
+@dataclass(frozen=True)
+class Handoff:
+    """A takeover in flight (Phase 4 criterion 4).
+
+    The *pair* is the point, not just "something is happening": whether the
+    UI shows a transition state at all is decided per pair on measured
+    evidence (ADR-0010's "Handoff transition screen"), so the screen cannot
+    make that decision without knowing which two renderers are involved.
+    """
+
+    from_renderer: str
+    to_renderer: str
+
+    def to_json(self) -> dict:
+        return {"from": self.from_renderer, "to": self.to_renderer}
+
+
+@dataclass(frozen=True)
+class VolumeState:
+    """The shared hardware mixer's level (Phase 4 criterion 8).
+
+    `percent` is George's decision for what a screen shows: a percentage of
+    the hardware control, which is the one level all three renderers
+    genuinely share. `raw` and `db` are published alongside it because the
+    scale is dB-linear, not perceptually linear - raw 60 of 240 is -90dB,
+    which Finding 011 measured as inaudible - so anything deciding how a
+    *slider's travel* should map needs the real units, not a percentage of
+    a logarithmic range. That mapping is still open (DEVELOPMENT.md,
+    criterion 8).
+    """
+
+    raw: int
+    db: float
+
+    @property
+    def percent(self) -> int:
+        return round(self.raw / HARDWARE_VOLUME_STEPS * 100)
+
+    def to_json(self) -> dict:
+        return {"percent": self.percent, "raw": self.raw, "db": self.db}
 
 
 @dataclass(frozen=True)
@@ -87,6 +155,19 @@ class PlaybackState:
     #: separate one-off message, so a client never has to remember state
     #: from two different message shapes to render anything.
     capabilities: dict[str, Capabilities] = field(default_factory=dict)
+    #: A takeover in flight, or None. Criterion 4's transition state.
+    handoff: Handoff | None = None
+    #: The shared hardware mixer's level, or None before it has been read
+    #: once (a real startup window, not an error).
+    volume: VolumeState | None = None
+    #: Renderer pairs whose measured takeover gap is fast enough that a
+    #: transition state would be a flicker rather than information
+    #: (ADR-0010: threshold 1s, currently same-rate LMS<->Spotify at
+    #: 224.6/335.2ms medians, Finding 020). **Published rather than
+    #: hardcoded in the UI** because the criterion is explicit that this
+    #: is "data, not a constant" - a pair earns exemption by being
+    #: measured and loses it if a later measurement moves it back.
+    handoff_exempt_pairs: tuple[tuple[str, str], ...] = ()
 
     def __post_init__(self) -> None:
         # Defensive copy: a caller mutating the dict it passed in must not
@@ -94,6 +175,9 @@ class PlaybackState:
         # is needed because the dataclass is frozen.
         object.__setattr__(self, "available", dict(self.available))
         object.__setattr__(self, "capabilities", dict(self.capabilities))
+        object.__setattr__(
+            self, "handoff_exempt_pairs", tuple(tuple(p) for p in self.handoff_exempt_pairs)
+        )
 
     def to_json(self) -> dict:
         return {
@@ -101,4 +185,7 @@ class PlaybackState:
             "available": dict(self.available),
             "metadata": self.metadata.to_json(),
             "capabilities": {rid: cap.to_json() for rid, cap in self.capabilities.items()},
+            "handoff": self.handoff.to_json() if self.handoff else None,
+            "volume": self.volume.to_json() if self.volume else None,
+            "handoff_exempt_pairs": [list(pair) for pair in self.handoff_exempt_pairs],
         }

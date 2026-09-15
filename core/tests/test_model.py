@@ -12,10 +12,12 @@ def test_blank_metadata_is_all_none():
         "album": None,
         "artwork": None,
         "sample_rate": None,
+        "codec": None,
         "remaining_time": None,
         "source_type": None,
         "position": None,
         "duration": None,
+        "transport": None,
     }
 
 

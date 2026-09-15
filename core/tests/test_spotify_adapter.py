@@ -76,3 +76,63 @@ def test_seek_event_before_any_metadata_is_a_noop():
     adapter._handle_seek_event({"position": 1000, "duration": 200000})
 
     assert received == []
+
+
+# --- Phase 4: transport state ---------------------------------------------
+
+
+def test_transport_events_map_onto_the_normalised_vocabulary():
+    adapter = SpotifyAdapter("127.0.0.1", 3678)
+    received = []
+    adapter.on_metadata_change(received.append)
+    adapter._handle_metadata_event(_metadata_event())
+
+    for event, expected in (
+        ("playing", "playing"),
+        ("paused", "paused"),
+        ("not_playing", "stopped"),
+        ("stopped", "stopped"),
+    ):
+        adapter._handle_transport_event(event)
+        assert received[-1].transport == expected
+
+
+def test_a_transport_event_keeps_the_track_it_belongs_to():
+    """go-librespot's transport events carry no track fields, so reporting
+    one on its own would blank the title."""
+    adapter = SpotifyAdapter("127.0.0.1", 3678)
+    received = []
+    adapter.on_metadata_change(received.append)
+    adapter._handle_metadata_event(_metadata_event())
+
+    adapter._handle_transport_event("paused")
+
+    assert received[-1].title == "Song Title"
+    assert received[-1].transport == "paused"
+
+
+def test_a_transport_event_before_any_metadata_is_a_noop():
+    adapter = SpotifyAdapter("127.0.0.1", 3678)
+    received = []
+    adapter.on_metadata_change(received.append)
+
+    adapter._handle_transport_event("playing")
+
+    assert received == []
+
+
+def test_a_track_change_does_not_blank_the_transport_state():
+    """API.md's "metadata" event means a new track was *loaded* - it says
+    nothing about whether playback is running, and the transport edges are
+    separate events. Constructing metadata fresh without carrying this
+    forward left it blank on every track change until the next edge."""
+    adapter = SpotifyAdapter("127.0.0.1", 3678)
+    received = []
+    adapter.on_metadata_change(received.append)
+    adapter._handle_metadata_event(_metadata_event())
+    adapter._handle_transport_event("playing")
+
+    adapter._handle_metadata_event(_metadata_event(name="Next Song"))
+
+    assert received[-1].title == "Next Song"
+    assert received[-1].transport == "playing"

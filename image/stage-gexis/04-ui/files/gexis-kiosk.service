@@ -1,0 +1,69 @@
+[Unit]
+Description=Gexis panel: labwc compositor running the Chromium kiosk
+Documentation=file:///etc/gexis/kiosk.env
+# The UI is served by gexis-core (ADR-0028), so there is nothing to show
+# until it is up. Wants= rather than Requires=: if the core is broken, the
+# right outcome is a panel showing a connection error it retries out of,
+# not a black screen - the UI's own store reconnects with backoff.
+After=gexis-core.service systemd-user-sessions.service
+Wants=gexis-core.service
+
+# tty1 has an owner already. `cancel-rename` (reached from our own
+# firstrun.sh, via userconf) runs `systemctl enable getty@tty1`, so a getty
+# holds the VT this unit asks for with StandardInput=tty-fail. The failure
+# is silent in the worst way: labwc exits 0 immediately, systemd logs
+# "Deactivated successfully", and Chromium never prints anything at all.
+# Measured 2026-09-14 - see docs/findings/022.
+#
+# Conflicts= is what display managers do, and it is the whole fix:
+# starting this unit stops the getty, stopping it gives the getty back.
+# After= orders the handover so the VT is actually free when labwc opens
+# it, rather than the two racing.
+Conflicts=getty@tty1.service
+After=getty@tty1.service
+
+[Service]
+Type=simple
+User=pi
+PAMName=login
+# Chromium and labwc need a real seat for DRM and input. PAMName=login
+# gives this unit a logind session, which is what grants seat0 - the
+# alternative (autologin on tty1 plus a shell profile launching labwc) has
+# more moving parts and fails less visibly.
+TTYPath=/dev/tty1
+TTYReset=yes
+TTYVHangup=yes
+StandardInput=tty-fail
+StandardOutput=journal
+StandardError=journal
+EnvironmentFile=/etc/gexis/kiosk.env
+ExecStart=/usr/bin/labwc -s /usr/local/bin/gexis-kiosk-start
+
+# Phase 4 criterion 1: "starting on boot, never restarting". Restart=no is
+# the literal reading and the right one - a compositor that respawns in a
+# loop after a real failure hides the failure behind a flicker. If this
+# unit dies, the journal says so and the panel stays dark until someone
+# looks, which is the honest outcome on an appliance that is also an SSH
+# target.
+Restart=no
+
+[Install]
+# multi-user.target, not graphical.target (changed 2026-09-14, Finding 022).
+#
+# graphical.target was the tidier-looking choice and it did not survive first
+# boot. `cancel-rename` - which our own firstrun.sh reaches through
+# `userconf` when it cancels the setup wizard - runs
+# `raspi-config nonint do_boot_behaviour B1`, and B1 is
+# `systemctl set-default multi-user.target`. The build wrote
+# default.target -> graphical.target correctly; first boot overwrote it, so
+# graphical.target was never reached and this unit never started.
+#
+# Re-asserting the default target after firstrun would only move the fight:
+# raspi-config owns that setting and resets it whenever it is run. Binding
+# here instead means the panel starts on every boot regardless of the
+# platform's boot-behaviour setting, which is the right answer for an
+# appliance - and nothing is lost, because graphical.target on this image
+# has no display manager behind it. It is multi-user plus this unit. The
+# ordering graphical.target was credited with is stated explicitly in
+# After= above.
+WantedBy=multi-user.target
