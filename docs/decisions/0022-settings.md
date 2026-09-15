@@ -52,7 +52,7 @@ Each row is marked:
 | Boot default mid-session, or only at true cold boot? | [R][?] | Finding 011 §3 — a renderer's first use mid-session currently lands as quiet as a power-on |
 | Per-renderer volume memory on/off | [R][H] | George's decision 2026-09-07, currently unconditional |
 | Which renderers are volume-managed | [R][H] | `capabilities.volume_managed`; Bluetooth excluded pending Finding 006 |
-| Volume slider travel curve | [N][?] | Left open by Phase 4 criterion 8. The control is dB-linear, so travel mapped straight to percentage puts everything usable in the top quarter — 55 % is already −54 dB, measured |
+| Volume slider travel curve | [R][H] | **Decided 2026-09-15 by [ADR-0034](0034-panel-volume-travel-and-mute.md):** −45…0 dB linear in dB, bottom of travel is silence, the number shown is slider position. Was [N][?]: the control is dB-linear, so a straight mapping put everything usable in the top quarter |
 
 ### Arbitration — who gets the device
 

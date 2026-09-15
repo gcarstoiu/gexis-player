@@ -664,6 +664,11 @@ over ADR-0016's separate-process model, criterion 4/5's minimal scope).
    George's decision. Not a transport control (criterion 3), and the only
    other thing this phase is not display-only about.
 
+   **Amended 2026-09-15 by [ADR-0034](decisions/0034-panel-volume-travel-and-mute.md):**
+   the slider travels −45…0 dB, the number shown is slider position (not
+   the hardware percentage), and mute is added, restoring the prior level.
+   *Original text follows.*
+
    **Displayed as a percentage of the hardware control** (George's
    decision) — the shared ALSA DAC, ADR-0018's 240 steps of 0.5 dB. That
    is the one level every renderer genuinely shares; LMS and Spotify each
