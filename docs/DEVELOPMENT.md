@@ -104,6 +104,18 @@ and phase labels on elements. The exports are committed to the repo as
 reference-only, never built, so a later redesign is a diff rather than a
 re-derivation.
 
+**How an export lands (2026-09-15).** Claude Design cannot write to the repo;
+George copies each export into `design/`. So history is kept by commit:
+
+1. The previous export is already committed, so nothing is lost by
+   overwriting it. **Replace the folder's contents wholesale** (delete, then
+   paste) so a file the new export dropped shows up as a deletion.
+2. Claude commits the export **on its own, before any port work**
+   (`Design export: <what changed>`), then reads `git diff HEAD~1 -- design/`
+   to see what actually changed rather than what the export says changed.
+3. `design/source/` is locked — built from, never edited. Run
+   `design/verify.html` over HTTP after any change to the package.
+
 ### Branching
 
 - One branch per phase: `phase-0-image`, `phase-2-arbitration`.
