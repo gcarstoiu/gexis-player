@@ -731,6 +731,10 @@ increment at a time, each gated on his own hardware pass as usual):
 5. Skin rotates per track, with the next track's skin composited ahead of time.
 6. Renderer change exits to now playing; idle timeout returns.
 7. Absent fields do not render their layer.
+8. **Peppy screen entry button** on now playing, as the phase's last step.
+   Moved here from Phase 6 criterion 4 (George, 2026-09-15): criterion 4
+   above already measures entry from now playing, and the button is already
+   rendered, marked `data-unwired="phase-5"`.
 
 ### Phase 6 — Now playing, full
 
@@ -740,7 +744,8 @@ increment at a time, each gated on his own hardware pass as usual):
 2. Controls that would not work are hidden or non-editable per the cross-cutting
    rule, never dead.
 3. Artist and track info panels.
-4. Peppy screen entry button.
+4. ~~Peppy screen entry button.~~ **Moved to Phase 5 criterion 8** (George,
+   2026-09-15).
 
 ### Phase 7 — Library browse
 
