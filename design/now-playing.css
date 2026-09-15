@@ -1,0 +1,516 @@
+@import url('./tokens.css');
+@import url('./fonts.css');
+
+/* gexis panel — Now Playing, first slice (Phase 4 step 4c)
+   Display only. Transport, volume and the meta tabs render but do nothing.
+   Plain CSS, no framework. Values traced from design/source/Now Playing.dc.html. */
+
+*, *::before, *::after { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--bg-desk);
+  font-family: var(--font-ui);
+  color: var(--ink);
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* ── artboard ─────────────────────────────────────────────────────────────
+   Fixed 1280x800. Touch only, no text inputs, nothing scrolls. */
+.screen {
+  position: relative;
+  width: 1280px;
+  height: 800px;
+  overflow: hidden;
+  background: var(--bg-base);
+  user-select: none;
+}
+
+/* Ground: a blurred diagonal weave, the artwork bleeding over it, then a
+   radial veil. With no artwork the weave carries the screen alone. */
+.screen__weave, .screen__veil { position: absolute; pointer-events: none; }
+.screen__weave {
+  inset: -90px;
+  background: repeating-linear-gradient(38deg,
+    var(--bg-weave-a) 0 48px, var(--bg-weave-b) 48px 96px);
+  filter: blur(70px);
+  transform: scale(1.14);
+}
+.screen__bleed {
+  position: absolute;
+  inset: -120px;
+  width: calc(100% + 240px);
+  height: calc(100% + 240px);
+  object-fit: cover;
+  filter: blur(72px) saturate(1.7);
+  transform: scale(1.12);
+  pointer-events: none;
+}
+.screen__veil {
+  inset: 0;
+  background: radial-gradient(130% 105% at 20% 42%,
+    rgba(22, 36, 46, 0.30), rgba(14, 23, 30, 0.86));
+}
+.screen[data-artwork="none"] .screen__bleed { display: none; }
+
+/* 3px accent hairline across the top, in the active source's colour. */
+.screen__accent {
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 3px;
+  background: linear-gradient(90deg, var(--src-accent), var(--accent-artist));
+}
+
+/* Source pill: absolutely placed top-right, above the grid. */
+.srcpill {
+  position: absolute;
+  top: 38px;
+  right: 56px;
+  z-index: 6;
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  padding: 8px 15px;
+  border-radius: var(--r-pill);
+  white-space: nowrap;
+  font-size: var(--t-label);
+  font-weight: 700;
+  letter-spacing: var(--track-label);
+  text-transform: uppercase;
+  color: var(--src-accent);
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid color-mix(in oklab, var(--src-accent) 40%, transparent);
+}
+.srcpill__mark { width: 18px; height: 18px; flex-shrink: 0; display: block; }
+.srcpill__mark--img { object-fit: contain; }
+
+/* The Lyrion mark is a ten-bar figure that antialiases to a smear below about
+   40px, so at pill size the design substitutes a four-bar reduction. Use the
+   SVG (via --src-mark, tinted as a mask) only at 40px and above. */
+.i-lyrion {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  height: 17px;
+  flex-shrink: 0;
+}
+.i-lyrion i { width: 3px; border-radius: 2px; background: currentColor; flex-shrink: 0; }
+.i-lyrion i:nth-child(1) { height: 9px; }
+.i-lyrion i:nth-child(2) { height: 17px; }
+.i-lyrion i:nth-child(3) { height: 12px; }
+.i-lyrion i:nth-child(4) { height: 15px; }
+
+.i-lyrion--lg {
+  display: block;
+  width: 67px;
+  height: 50px;
+  background: currentColor;
+  -webkit-mask: var(--src-mark) center / contain no-repeat;
+  mask: var(--src-mark) center / contain no-repeat;
+}
+
+.screen__body {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  grid-template-rows: var(--art) 1fr auto;
+  padding: var(--pad-screen);
+}
+
+/* ── top row: artwork + metadata ─────────────────────────────────────── */
+.top {
+  display: grid;
+  grid-template-columns: var(--art) minmax(0, 1fr);
+  gap: 48px;
+  min-height: 0;
+}
+
+.art {
+  position: relative;
+  width: var(--art);
+  height: var(--art);
+  border-radius: var(--r-card);
+  overflow: hidden;
+  background: var(--bg-well);
+  box-shadow: 0 28px 64px rgba(0, 0, 0, 0.5);
+}
+.art img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.art::after {            /* inner ring, above the image */
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: var(--r-card);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+  pointer-events: none;
+}
+
+/* No artwork: Bluetooth always, plus any source whose lookup has not
+   returned. The well keeps its size, so the layout never shifts. */
+.art__empty {
+  position: absolute;
+  inset: 0;
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  background: linear-gradient(160deg,
+    rgba(126, 214, 188, 0.07), rgba(242, 164, 143, 0.06));
+}
+.screen[data-artwork="none"] .art img { display: none; }
+.screen[data-artwork="none"] .art__empty { display: flex; }
+
+.art__glyph {
+  width: 110px;
+  height: 110px;
+  border-radius: var(--r-circle);
+  border: 2px solid color-mix(in oklab, var(--accent-lms) 40%, transparent);
+  display: grid;
+  place-items: center;
+}
+.art__glyph::before {
+  content: '';
+  width: 26px;
+  height: 26px;
+  border-radius: var(--r-circle);
+  background: color-mix(in oklab, var(--accent-lms) 45%, transparent);
+}
+.art__empty span {
+  font-family: var(--font-mono);
+  font-size: var(--t-label);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--ink-quiet);
+}
+
+/* ── metadata column ──────────────────────────────────────────────────── */
+.meta { display: flex; flex-direction: column; min-width: 0; }
+
+/* Tabs sit at the top of the column. Rendered for fidelity; the Lyrics,
+   Artist and Release panels behind them are Phase 8. */
+.tabs {
+  display: flex;
+  align-items: center;
+  gap: 26px;
+  align-self: flex-start;
+  flex-shrink: 0;
+  margin-bottom: 18px;
+  border-bottom: 1px solid rgba(233, 238, 242, 0.12);
+}
+.tab {
+  font-family: var(--font-mono);
+  font-size: var(--t-label);
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: var(--ink-quiet);
+  /* grown upward to clear 44px without moving the text or the underline.
+     line-height is pinned so the 44px target does not depend on font metrics
+     — on the fallback face this row measured 42px. */
+  min-height: var(--touch-min);
+  padding: 16px 2px 9px;
+  margin-top: -16px;
+  border-bottom: 3px solid transparent;
+  background: none;
+  border-left: 0; border-right: 0; border-top: 0;
+}
+.tab[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--src-accent); }
+.tab[aria-disabled="true"] { opacity: 0.4; }
+
+/* Transport state, in words. */
+.panel { margin-top: 36px; flex: 1; min-height: 0; position: relative; }
+
+/* Reserved height keeps the row stable between one- and two-line titles
+   and across null fields. */
+.trackblock { min-height: 238px; }
+
+.title {
+  font-size: var(--t-title);
+  line-height: 1.06;
+  font-weight: 700;
+  letter-spacing: var(--track-tight);
+  text-wrap: pretty;
+  margin: 0;
+  min-height: 124px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.artistline { margin-top: 16px; min-height: 38px; }
+.artist {
+  font-size: var(--t-artist);
+  line-height: 1.3;
+  font-weight: 600;
+  color: var(--accent-artist);
+  display: inline-block;
+  max-width: 100%;
+  padding: 7px 0;
+  margin: -7px 0;
+  vertical-align: top;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.albumline {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  margin-top: 8px;
+  min-height: 26px;
+}
+.album {
+  font-size: var(--t-body);
+  line-height: 1.35;
+  color: rgba(233, 238, 242, 0.6);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.year {
+  font-family: var(--font-mono);
+  font-size: 16px;
+  color: var(--ink-quiet);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* A null field hides its own line and leaves the reserve intact. */
+.is-empty { visibility: hidden; }
+
+/* ── progress ─────────────────────────────────────────────────────────── */
+/* One footer holds progress, times and transport; an empty spacer above it
+   absorbs the 1fr row, exactly as the design does. Without the spacer the
+   progress bar floats ~53px high. */
+.spacer { min-height: 0; }
+.footer { flex-shrink: 0; }
+
+.progress__rail { position: relative; height: 12px; }
+.progress__track {
+  position: absolute;
+  inset: 0;
+  border-radius: var(--r-pill);
+  background: rgba(233, 238, 242, 0.13);
+  overflow: hidden;
+}
+.progress__fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: var(--pos, 0%);
+  border-radius: var(--r-pill);
+  background: var(--src-accent);
+  transition: width 400ms linear;
+}
+.progress__times {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 13px;
+  font-family: var(--font-mono);
+  font-size: 16px;
+  letter-spacing: 0.04em;
+  color: rgba(233, 238, 242, 0.62);
+}
+
+/* No position published (Bluetooth): the track becomes a separator that fades
+   out at both ends, so it does not read as a progress bar stuck at zero. The
+   times are hidden rather than zeroed. */
+.screen[data-position="none"] .progress__fill { display: none; }
+.screen[data-position="none"] .progress__track {
+  background: linear-gradient(90deg,
+    rgba(233, 238, 242, 0),
+    rgba(233, 238, 242, 0.15) 16%,
+    rgba(233, 238, 242, 0.15) 84%,
+    rgba(233, 238, 242, 0));
+}
+.screen[data-position="none"] .progress__times { visibility: hidden; }
+
+/* ── transport ────────────────────────────────────────────────────────── */
+.bar {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  margin-top: 26px;
+}
+.bar__left  { justify-self: start;  display: flex; align-items: center; gap: 14px; }
+.bar__mid   { justify-self: center; display: flex; align-items: center; gap: 22px; }
+.bar__right { justify-self: end;    display: flex; align-items: center; gap: 20px; }
+
+.btn {
+  width: var(--ctl);
+  height: var(--ctl);
+  border: 0;
+  padding: 0;
+  border-radius: var(--r-circle);
+  background: var(--ink-fill);
+  color: var(--ink);
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+}
+.btn:active { background: var(--ink-fill-press); }
+.btn--lg { width: var(--ctl-lg); height: var(--ctl-lg); background: rgba(233, 238, 242, 0.09); }
+.btn--play {
+  width: var(--ctl-play);
+  height: var(--ctl-play);
+  background: var(--play-fill);
+  color: var(--ink-on-accent);
+  box-shadow: 0 0 22px rgba(242, 164, 143, 0.22),
+              0 12px 30px rgba(242, 164, 143, 0.35);
+}
+.btn--play:active { transform: scale(0.95); }
+
+/* Shuffle, repeat and the queue are LMS-only: Spotify Connect and Bluetooth
+   do not support them, so they are absent rather than greyed out. */
+.screen:not([data-source="lms"]) [data-lms-only] { display: none; }
+
+/* Glyphs in CSS, so no icon font is needed. */
+.i-play {
+  width: 0; height: 0;
+  border-left: 30px solid currentColor;
+  border-top: 19px solid transparent;
+  border-bottom: 19px solid transparent;
+  margin-left: 8px;
+}
+.i-pause {
+  width: 26px; height: 34px;
+  background: linear-gradient(to right,
+    currentColor 0 8px, transparent 8px 18px, currentColor 18px 26px);
+}
+.i-prev, .i-next { display: flex; align-items: center; }
+.i-prev::before { content: ''; width: 3px; height: 19px; background: currentColor; border-radius: 2px; }
+.i-prev::after {
+  content: ''; width: 0; height: 0;
+  border-right: 13px solid currentColor;
+  border-top: 10px solid transparent; border-bottom: 10px solid transparent;
+  margin-left: 3px;
+}
+.i-next::before {
+  content: ''; width: 0; height: 0;
+  border-left: 13px solid currentColor;
+  border-top: 10px solid transparent; border-bottom: 10px solid transparent;
+  margin-right: 3px;
+}
+.i-next::after { content: ''; width: 3px; height: 19px; background: currentColor; border-radius: 2px; }
+
+.screen[data-transport="playing"] .i-play,
+.screen:not([data-transport="playing"]) .i-pause { display: none; }
+
+.i-tiles {
+  width: 22px; height: 22px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: 1fr 1fr;
+  gap: 3.5px;
+}
+.i-tiles i { border-radius: 3px; background: var(--ink-strong); }
+.i-meter { display: flex; align-items: flex-end; gap: 4px; height: 22px; }
+.i-meter i { width: 4px; border-radius: 2px; background: var(--ink-body); }
+
+/* ── shuffle ──────────────────────────────────────────────────────────── */
+.i-shuffle { position: relative; width: 32px; height: 28px; display: block; }
+.i-shuffle i, .i-shuffle b { position: absolute; display: block; background: var(--ink-body); }
+.i-shuffle i:nth-child(1) { left: 0.5px; top: 13.5px; width: 17px; height: 3px; border-radius: 2px; transform: rotate(-54.5deg); }
+.i-shuffle i:nth-child(2) { left: 0.5px; top: 13.5px; width: 17px; height: 3px; border-radius: 2px; transform: rotate(54.5deg); }
+.i-shuffle i:nth-child(3) { left: 13px; top: 6.5px;  width: 11px; height: 3px; }
+.i-shuffle i:nth-child(4) { left: 13px; top: 20.5px; width: 11px; height: 3px; }
+.i-shuffle b { background: none; width: 0; height: 0;
+  border-left: 8px solid var(--ink-body);
+  border-top: 5px solid transparent; border-bottom: 5px solid transparent; }
+.i-shuffle b:nth-child(5) { left: 24px; top: 3px; }
+.i-shuffle b:nth-child(6) { left: 24px; top: 17px; }
+
+/* ── repeat ───────────────────────────────────────────────────────────────
+   A rectangle broken top-right and bottom-left, each break closed by an
+   arrowhead whose apex sits on the rail's centreline. */
+.i-repeat { position: relative; width: 26px; height: 26px; display: block; }
+.i-repeat i, .i-repeat b { position: absolute; display: block; }
+.i-repeat i { background: var(--ink-body); border-radius: 1px; }
+.i-repeat i:nth-child(1) { left: 3px;  top: 3px;  width: 15px; height: 3px; }
+.i-repeat i:nth-child(2) { left: 3px;  top: 3px;  width: 3px;  height: 14px; }
+.i-repeat i:nth-child(3) { left: 20px; top: 9px;  width: 3px;  height: 14px; }
+.i-repeat i:nth-child(4) { left: 8px;  top: 20px; width: 15px; height: 3px; }
+.i-repeat b { width: 0; height: 0;
+  border-left: 4px solid transparent; border-right: 4px solid transparent; }
+.i-repeat b:nth-child(5) { left: 17.5px; top: 2px;  border-top: 7px solid var(--ink-body); }
+.i-repeat b:nth-child(6) { left: 0.5px;  top: 17px; border-bottom: 7px solid var(--ink-body); }
+
+/* ── volume ───────────────────────────────────────────────────────────────
+   A cone plus three arcs. The number of lit arcs tracks the level, so the
+   icon reports volume rather than merely labelling the control. */
+.i-volume { position: relative; width: 26px; height: 26px; flex-shrink: 0; display: block; }
+.i-volume .cone {
+  position: absolute; left: 0; top: 50%; transform: translateY(-50%);
+  width: 13px; height: 22px; display: block;
+  background: var(--ink);
+  clip-path: polygon(0 27%, 42% 27%, 100% 0, 100% 100%, 42% 73%, 0 73%);
+}
+.i-volume .arc {
+  position: absolute; top: 50%; border-radius: var(--r-circle);
+  box-sizing: border-box; border: 2px solid var(--ink-body); display: block;
+  clip-path: polygon(50% 10%, 100% 0, 100% 100%, 50% 90%);
+}
+.i-volume .arc:nth-of-type(1) { left: 4px;   width: 14px; height: 14px; margin-top: -7px; }
+.i-volume .arc:nth-of-type(2) { left: 0.5px; width: 21px; height: 21px; margin-top: -10.5px; }
+.i-volume .arc:nth-of-type(3) { left: -2px;  width: 26px; height: 26px; margin-top: -13px; }
+/* dimmed arcs read as headroom rather than as disabled controls */
+.i-volume[data-level="low"]  .arc:nth-of-type(2),
+.i-volume[data-level="low"]  .arc:nth-of-type(3),
+.i-volume[data-level="mid"]  .arc:nth-of-type(3) { border-color: rgba(233, 238, 242, 0.22); }
+
+/* ── queue ────────────────────────────────────────────────────────────── */
+.btn--queue {
+  background: rgba(159, 180, 232, 0.12);
+  border: 1px solid rgba(159, 180, 232, 0.30);
+  flex-direction: column;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  position: relative;
+}
+.btn--queue:active { background: rgba(159, 180, 232, 0.28); }
+.btn--queue i { width: 26px; height: 3px; border-radius: 2px; background: var(--accent-bluetooth); }
+.btn--queue i:last-of-type { width: 15px; }
+.btn--queue .count {
+  position: absolute; top: -3px; right: -3px;
+  min-width: 24px; height: 24px; padding: 0 6px;
+  border-radius: var(--r-pill);
+  background: var(--accent-bluetooth);
+  color: var(--ink-on-accent);
+  font-family: var(--font-mono);
+  font-size: var(--t-label);
+  font-weight: 700;
+  display: grid; place-items: center;
+  box-sizing: border-box;
+}
+
+/* ── source theming ───────────────────────────────────────────────────── */
+.screen[data-source="lms"] {
+  --src-accent: var(--accent-lms);
+  --src-mark: url('./assets/icon-lyrion.svg');
+}
+.screen[data-source="spotify"] {
+  --src-accent: var(--accent-spotify);
+  --src-mark: url('./assets/icon-spotify.png');
+}
+.screen[data-source="bluetooth"] {
+  --src-accent: var(--accent-bluetooth);
+  --src-mark: url('./assets/icon-bluetooth.png');
+}
+
+/* ── gallery chrome (not part of the panel UI) ────────────────────────── */
+.gallery { padding: 40px; display: flex; flex-direction: column; gap: 56px; }
+.caption {
+  font-family: var(--font-mono);
+  font-size: var(--t-label);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(233, 238, 242, 0.72);
+  margin: 0 0 14px;
+  max-width: 1280px;
+  text-wrap: pretty;
+  line-height: 1.5;
+}
+.caption b { color: var(--accent-lms); font-weight: 600; }
+.caption em { color: var(--accent-warn); font-style: normal; }

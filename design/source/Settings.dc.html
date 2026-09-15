@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Nunito+Sans:ital,opsz,wght@0,6..12,300..800&family=IBM+Plex+Mono:wght@400;600;700&display=swap" rel="stylesheet" />
+<style>
+  html,body{margin:0;padding:0;background:#0c1014;}
+  a{color:#7ed6bc;}a:hover{color:#a8e5d3;}
+  [data-noscrollbar]::-webkit-scrollbar{display:none;}
+  /* row-level reflow is pure layout, so the row is its own container: below
+     520px the value drops under the label instead of squeezing it */
+  @container srow (max-width: 520px){
+    [data-sbody]{flex-wrap:wrap;}
+    /* order moves the value to its own line while the toggle or chevron stays
+       on the label's line, so the affordance never sits alone in a row */
+    [data-svalue]{order:9;width:100%;text-align:left;padding-top:8px;}
+  }
+</style>
+</helmet>
+<div ref="{{ rootRef }}" style="width:100%;height:100%;min-height:100%;position:relative;overflow:hidden;box-sizing:border-box;font-family:'Nunito Sans','Avenir Next','Segoe UI',system-ui,sans-serif;color:#e9eef2;background:#101a21;-webkit-tap-highlight-color:transparent;">
+  <div style="position:absolute;inset:-90px;background:repeating-linear-gradient(38deg,#3f5a6d 0 48px,#2e4453 48px 96px);filter:blur(70px);transform:scale(1.14);"></div>
+  <div style="position:absolute;inset:0;background:radial-gradient(130% 105% at 20% 42%,rgba(20,33,42,0.72),rgba(13,21,28,0.96));"></div>
+
+  <div style="position:relative;height:100%;display:flex;flex-direction:column;min-height:0;">
+
+    <div style="flex-shrink:0;display:flex;align-items:center;gap:16px;box-sizing:border-box;border-bottom:1px solid rgba(233,238,242,0.09);padding:{{ headPad }};min-height:{{ headMin }};">
+      <div onClick="{{ onBack }}" style="width:56px;height:56px;border-radius:50%;background:rgba(233,238,242,0.07);align-items:center;justify-content:center;flex-shrink:0;display:{{ backDisplay }};" style-active="background:rgba(233,238,242,0.2)">
+        <div style="width:13px;height:13px;border-left:3px solid #e9eef2;border-bottom:3px solid #e9eef2;transform:rotate(45deg);margin-left:10px;"></div>
+      </div>
+      <div style="flex:1;min-width:0;">
+        <div style="font-weight:700;letter-spacing:-0.01em;color:#e9eef2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:{{ titleSize }};">{{ title }}</div>
+        <div style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:13px;letter-spacing:0.06em;color:rgba(233,238,242,0.5);margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:{{ subDisplay }};">{{ subtitle }}</div>
+      </div>
+      <span style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:12px;letter-spacing:0.14em;text-transform:uppercase;color:rgba(233,238,242,0.6);flex-shrink:0;display:{{ buildDisplay }};">{{ buildShort }}</span>
+    </div>
+
+    <div style="position:relative;flex:1;min-height:0;display:flex;">
+
+      <div data-noscrollbar style="width:290px;flex-shrink:0;border-right:1px solid rgba(233,238,242,0.09);padding:18px 16px;box-sizing:border-box;overflow-y:auto;flex-direction:column;gap:4px;display:{{ railDisplay }};">
+        <sc-for list="{{ cats }}" as="c" hint-placeholder-count="7">
+          <div onClick="{{ c.onTap }}" style="flex-shrink:0;display:flex;align-items:center;gap:15px;height:72px;padding:0 16px;border-radius:14px;box-sizing:border-box;background:{{ c.bg }};" style-active="background:rgba(233,238,242,0.13)">
+            <span style="width:4px;height:30px;border-radius:2px;flex-shrink:0;display:block;background:{{ c.bar }};"></span>
+            <span style="flex:1;min-width:0;font-size:19px;font-weight:600;color:{{ c.ink }};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ c.name }}</span>
+            <span style="width:9px;height:9px;border-radius:50%;background:#e0a758;flex-shrink:0;display:{{ c.dotDisplay }};"></span>
+          </div>
+        </sc-for>
+      </div>
+
+      <div data-noscrollbar style="flex:1;min-width:0;overflow-y:auto;box-sizing:border-box;flex-direction:column;gap:6px;padding:{{ listPad }};display:{{ groupsDisplay }};">
+        <sc-for list="{{ cats }}" as="c" hint-placeholder-count="7">
+          <div onClick="{{ c.onTap }}" style="flex-shrink:0;display:flex;align-items:center;gap:16px;min-height:78px;padding:16px 18px;border-radius:16px;box-sizing:border-box;background:rgba(255,255,255,0.05);border:1px solid rgba(233,238,242,0.1);" style-active="background:rgba(233,238,242,0.13)">
+            <span style="width:4px;align-self:stretch;border-radius:2px;flex-shrink:0;display:block;background:{{ c.bar }};"></span>
+            <span style="flex:1;min-width:0;display:block;">
+              <span style="display:flex;align-items:center;gap:9px;">
+                <span style="font-size:19px;font-weight:600;color:#e9eef2;">{{ c.name }}</span>
+                <span style="width:8px;height:8px;border-radius:50%;background:#e0a758;flex-shrink:0;display:{{ c.dotDisplay }};"></span>
+              </span>
+              <span style="display:block;font-family:'IBM Plex Mono','Courier New',monospace;font-size:13px;letter-spacing:0.05em;color:rgba(233,238,242,0.55);margin-top:6px;">{{ c.blurb }}</span>
+            </span>
+            <span style="width:11px;height:11px;border-right:2.5px solid rgba(233,238,242,0.42);border-top:2.5px solid rgba(233,238,242,0.42);transform:rotate(45deg);flex-shrink:0;display:block;"></span>
+          </div>
+        </sc-for>
+      </div>
+
+      <div data-noscrollbar style="flex:1;min-width:0;overflow-y:auto;box-sizing:border-box;flex-direction:column;gap:6px;padding:{{ listPad }};display:{{ rowsDisplay }};">
+        <sc-for list="{{ rows }}" as="r" hint-placeholder-count="8">
+          <div style="flex-shrink:0;width:100%;">
+            <div style="align-items:center;gap:14px;padding:22px 2px 8px;display:{{ r.headDisplay }};">
+              <span style="width:9px;height:9px;border-radius:50%;flex-shrink:0;display:block;background:{{ r.headInk }};"></span>
+              <span style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:13px;letter-spacing:0.2em;text-transform:uppercase;color:{{ r.headInk }};flex-shrink:0;">{{ r.group }}</span>
+              <span style="flex:1;height:1px;background:rgba(233,238,242,0.1);display:block;"></span>
+            </div>
+            <div data-srow onClick="{{ r.onTap }}" style="container-type:inline-size;container-name:srow;box-sizing:border-box;border-radius:15px;padding:14px 20px;display:{{ r.rowDisplay }};background:{{ r.bg }};border:1px solid {{ r.border }};" style-active="background:rgba(233,238,242,0.12)">
+              <div data-sbody style="display:flex;align-items:center;gap:18px;min-width:0;min-height:50px;">
+                <div style="flex:1;min-width:0;">
+                  <div style="display:flex;align-items:center;gap:9px;">
+                    <span style="font-size:18px;font-weight:600;color:{{ r.ink }};">{{ r.label }}</span>
+                    <span style="width:8px;height:8px;border-radius:50%;background:#e0a758;flex-shrink:0;display:{{ r.dotDisplay }};"></span>
+                  </div>
+                  <div style="font-size:14px;line-height:1.36;color:rgba(233,238,242,0.55);margin-top:5px;text-wrap:pretty;display:{{ r.noteDisplay }};">{{ r.note }}</div>
+                </div>
+                <div data-svalue style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:15px;line-height:1.35;flex-shrink:0;max-width:100%;text-align:right;word-break:break-all;color:{{ r.valInk }};display:{{ r.valDisplay }};">{{ r.value }}</div>
+                <span style="width:60px;height:34px;border-radius:17px;flex-shrink:0;position:relative;box-sizing:border-box;transition:background 140ms ease;display:{{ r.togDisplay }};background:{{ r.togBg }};border:1px solid {{ r.togBorder }};">
+                  <span style="position:absolute;top:3px;width:26px;height:26px;border-radius:50%;transition:left 140ms ease;display:block;left:{{ r.knobLeft }};background:{{ r.knobBg }};"></span>
+                </span>
+                <span style="width:11px;height:11px;border-right:2.5px solid rgba(233,238,242,0.42);border-top:2.5px solid rgba(233,238,242,0.42);transform:rotate(45deg);flex-shrink:0;display:{{ r.chevDisplay }};"></span>
+              </div>
+            </div>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+  </div>
+
+  <div onClick="{{ onSheetClose }}" style="position:absolute;inset:0;background:rgba(8,12,16,0.62);backdrop-filter:blur(3px);transition:opacity 180ms ease;opacity:{{ sheetScrim }};pointer-events:{{ sheetPointer }};"></div>
+
+  <div style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:calc(100% - 44px);max-width:560px;max-height:82%;background:#16232c;border:1px solid rgba(233,238,242,0.14);border-radius:22px;box-shadow:0 30px 70px rgba(0,0,0,0.5);box-sizing:border-box;padding:26px;flex-direction:column;gap:18px;transition:opacity 180ms ease;opacity:{{ sheetScrim }};pointer-events:{{ sheetPointer }};display:{{ sheetDisplay }};">
+    <div style="flex-shrink:0;min-width:0;">
+      <div style="font-size:22px;font-weight:700;color:#e9eef2;text-wrap:pretty;">{{ sheetTitle }}</div>
+      <div style="font-size:15px;line-height:1.4;color:rgba(233,238,242,0.6);margin-top:8px;text-wrap:pretty;display:{{ sheetNoteDisplay }};">{{ sheetNote }}</div>
+    </div>
+
+    <div data-noscrollbar style="flex:1;min-height:0;overflow-y:auto;flex-direction:column;gap:6px;display:{{ sheetOptionsDisplay }};">
+      <sc-for list="{{ sheetOptions }}" as="o" hint-placeholder-count="3">
+        <div onClick="{{ o.onTap }}" style="flex-shrink:0;display:flex;align-items:center;gap:16px;min-height:62px;padding:12px 18px;border-radius:14px;box-sizing:border-box;background:{{ o.bg }};border:1px solid {{ o.border }};" style-active="background:rgba(233,238,242,0.14)">
+          <span style="width:22px;height:22px;border-radius:50%;flex-shrink:0;box-sizing:border-box;display:flex;align-items:center;justify-content:center;border:2px solid {{ o.ringInk }};">
+            <span style="width:11px;height:11px;border-radius:50%;background:#7ed6bc;display:{{ o.dotDisplay }};"></span>
+          </span>
+          <span style="flex:1;min-width:0;font-size:17px;font-weight:600;color:{{ o.ink }};text-wrap:pretty;">{{ o.label }}</span>
+        </div>
+      </sc-for>
+    </div>
+
+    <div style="flex-shrink:0;border-radius:14px;background:rgba(8,12,16,0.5);border:1px solid rgba(233,238,242,0.12);padding:16px 18px;font-family:'IBM Plex Mono','Courier New',monospace;font-size:15px;line-height:1.5;color:rgba(233,238,242,0.9);word-break:break-all;display:{{ sheetValueDisplay }};">{{ sheetValue }}</div>
+
+    <div style="flex-shrink:0;align-items:center;gap:12px;display:{{ sheetActionsDisplay }};">
+      <div onClick="{{ onSheetClose }}" style="flex:1;height:58px;border-radius:15px;background:rgba(233,238,242,0.07);border:1px solid rgba(233,238,242,0.14);display:flex;align-items:center;justify-content:center;font-size:17px;font-weight:600;color:#e9eef2;box-sizing:border-box;" style-active="background:rgba(233,238,242,0.2)">{{ sheetCancelLabel }}</div>
+      <div onClick="{{ onSheetConfirm }}" style="flex:1;height:58px;border-radius:15px;box-sizing:border-box;display:flex;align-items:center;justify-content:center;font-size:17px;font-weight:700;background:{{ sheetConfirmBg }};border:1px solid {{ sheetConfirmBorder }};color:{{ sheetConfirmInk }};display:{{ sheetConfirmDisplay }};" style-active="opacity:0.8">{{ sheetConfirmLabel }}</div>
+    </div>
+  </div>
+
+  <div style="position:absolute;left:50%;bottom:26px;transform:translateX(-50%);max-width:calc(100% - 48px);padding:14px 22px;border-radius:999px;background:rgba(8,12,16,0.9);border:1px solid rgba(233,238,242,0.16);font-family:'IBM Plex Mono','Courier New',monospace;font-size:13px;letter-spacing:0.1em;text-transform:uppercase;color:#e9eef2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;transition:opacity 200ms ease;opacity:{{ toastOpacity }};pointer-events:none;">{{ toast }}</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:412,&quot;height&quot;:915},&quot;mode&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;auto&quot;,&quot;wide&quot;,&quot;narrow&quot;],&quot;default&quot;:&quot;auto&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Layout&quot;},&quot;onBack&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;() =&gt; void&quot;}}">
+// Settings inventory. Marks come straight from the record — R recorded, H
+// hardcoded today, N new suggestion, ? a decision still owed — and the amber
+// dot is derived from '?' rather than hand-placed.
+// Row vocabulary: group | toggle | choice | number | text | readonly | action
+const INV = [
+  ['audio', 'Audio', 'Level and output', '#7ed6bc', [
+    { k: 'output_mode', type: 'choice', label: 'Output mode', value: 'Variable', marks: 'R',
+      options: ['Variable', 'Fixed'],
+      note: 'Only variable is built and hardware-verified. Fixed hides the volume control everywhere and applies after stop.' },
+    { k: 'boot_volume', type: 'number', label: 'Boot volume', value: '\u221290 dB', marks: 'RH',
+      unit: 'dB', min: -90, max: -20,
+      note: 'A fixed safe level at every cold boot, never the last session\u2019s.' },
+    { k: 'max_ceiling', type: 'number', label: 'Maximum ceiling', value: 'Not set', marks: 'R?', unit: 'dB', min: -60, max: 0 },
+    { k: 'restore_floor', type: 'number', label: 'Restore floor', value: '\u221240 dB', marks: 'RH?', unit: 'dB', min: -60, max: -10,
+      note: 'Placeholder, never confirmed. Measured too quiet for Bluetooth\u2019s unmanaged floor.' },
+    { k: 'boot_default_scope', type: 'choice', label: 'Boot default applies', value: 'Cold boot only', marks: 'R?',
+      options: ['Cold boot only', 'Every renderer start'],
+      note: 'A renderer\u2019s first use mid-session currently starts as quiet as a power-on.' },
+    { k: 'per_renderer_volume', type: 'toggle', label: 'Remember level per renderer', value: true, marks: 'RH' },
+    { k: 'volume_managed', type: 'readonly', label: 'Volume-managed renderers', value: 'LMS, Spotify', marks: 'RH',
+      note: 'Bluetooth excluded pending Finding 006.' },
+    { k: 'travel_curve', type: 'choice', label: 'Slider travel curve', value: 'dB-linear', marks: 'N?',
+      options: ['dB-linear', 'Perceptual'],
+      note: 'Travel maps straight to dB, so 55% is already \u221254 dB.' }
+  ]],
+  ['sources', 'Sources', 'Renderers and services', '#9fb4e8', [
+    { type: 'group', label: 'LMS', accent: '#7ed6bc' },
+    { k: 'lms_enabled', type: 'toggle', label: 'Enabled', value: true, marks: 'R' },
+    { k: 'lms_server', type: 'text', label: 'Server', value: '192.168.178.188:9000', marks: 'RH',
+      note: 'Hardcoded today. Discovery is the alternative.' },
+    { k: 'lms_player', type: 'text', label: 'Player name', value: 'gexis', marks: 'H' },
+    { k: 'plugins', type: 'action', label: 'Plugins', marks: 'R' },
+    { type: 'group', label: 'Spotify Connect', accent: '#7ed6bc' },
+    { k: 'spotify_enabled', type: 'toggle', label: 'Enabled', value: true, marks: 'R' },
+    { k: 'spotify_name', type: 'readonly', label: 'Advertised name', value: 'gexis', marks: 'R',
+      note: 'Follows the device name.' },
+    { type: 'group', label: 'Bluetooth', accent: '#9fb4e8' },
+    { k: 'bt_enabled', type: 'toggle', label: 'Enabled', value: true, marks: 'R' },
+    { k: 'bt_pairing', type: 'choice', label: 'Pairing', value: 'PIN-free', marks: 'R?',
+      options: ['PIN-free', 'Confirmation required'],
+      note: 'Needs this screen before it can be anything but hardcoded.' },
+    { k: 'bt_discoverable', type: 'choice', label: 'Discoverable', value: '3 min after boot', marks: 'R',
+      options: ['Always', '3 min after boot', 'Off'] },
+    { k: 'bt_trusted', type: 'action', label: 'Trusted devices', value: '4 paired', marks: 'R',
+      note: 'View and forget remembered devices. Clearing breaks automatic reconnection.' },
+    { k: 'bt_autotrust', type: 'toggle', label: 'Auto-trust on pair', value: true, marks: 'H' }
+  ]],
+  ['handoff', 'Handoff', 'Who gets the device', '#e0a758', [
+    { k: 'restore_transport', type: 'choice', label: 'Restore transport on return', value: 'Play only if playing', marks: 'RH',
+      options: ['Play only if playing', 'Always pause', 'Always play'] },
+    { k: 'seek_reanchor', type: 'toggle', label: 'Re-anchor seek position', value: false, marks: 'R?',
+      note: 'Pressing play on a deactivated player currently loses the position entirely.' },
+    { k: 'reclaim_lms', type: 'toggle', label: 'Reclaim LMS when a session ends', value: false, marks: 'N',
+      note: 'Never done by design. Opting in reintroduces the spurious reclaims that were measured.' },
+    { k: 'release_ladder', type: 'readonly', label: 'Release ladder', value: '2s \u00b7 5s \u00b7 kill', marks: 'H',
+      note: 'Polite stop, then SIGTERM, then SIGKILL.' },
+    { k: 'idle_close', type: 'number', label: 'squeezelite idle close', value: '1 s', marks: 'RH', unit: 's', min: 0, max: 30 },
+    { k: 'handoff_threshold', type: 'number', label: 'Transition screen threshold', value: '1 s', marks: 'RH?', unit: 's', min: 0, max: 5,
+      note: 'Pairs earn exemption by measurement rather than preference.' }
+  ]],
+  ['display', 'Display', 'Screen and idle', '#c8a2d8', [
+    { type: 'group', label: 'Panel', accent: '#c8a2d8' },
+    { k: 'theme', type: 'choice', label: 'Theme', value: 'Deep Teal', marks: 'R', options: ['Deep Teal', 'Faded 80s', 'Graphite'] },
+    { k: 'brightness', type: 'number', label: 'Brightness', value: '78%', marks: 'N', unit: '%', min: 10, max: 100 },
+    { k: 'time_display', type: 'choice', label: 'Time display', value: 'Elapsed', marks: 'N', options: ['Elapsed', 'Remaining'] },
+    { k: 'show_transition', type: 'toggle', label: 'Show transition screen', value: true, marks: 'N' },
+    { k: 'headless', type: 'toggle', label: 'Headless', value: false, marks: 'R',
+      note: 'Disables the local screen entirely.' },
+    { type: 'group', label: 'Idle screen', accent: '#c8a2d8' },
+    { k: 'idle_url', type: 'text', label: 'URL', value: 'http://192.168.178.42:8000/idle', marks: 'R',
+      note: 'External and lazy loaded. Falls back to the clock when unreachable or unconfigured.' },
+    { k: 'idle_timeout', type: 'number', label: 'Timeout', value: '10 min', marks: 'R', unit: 'min', min: 1, max: 60,
+      note: 'Reset by local touch only.' },
+    { k: 'idle_grace', type: 'number', label: 'Grace after stop', value: '5 min', marks: 'R', unit: 'min', min: 0, max: 30 },
+    { type: 'group', label: 'Visualization', accent: '#c8a2d8' },
+    { k: 'viz_timeout', type: 'number', label: 'Timeout', value: '30 s', marks: 'R', unit: 's', min: 0, max: 300 },
+    { k: 'skin_corpus', type: 'choice', label: 'Skin corpus', value: 'Meter + spectrum', marks: 'R', options: ['Meter only', 'Meter + spectrum'] },
+    { k: 'skin_rotate', type: 'toggle', label: 'Rotate skin per track', value: true, marks: 'N' }
+  ]],
+  ['enrich', 'Enrichment', 'Lyrics and artist info', '#e8a0b4', [
+    { k: 'enrichment', type: 'toggle', label: 'Enrichment', value: true, marks: 'R' },
+    { k: 'confidence', type: 'number', label: 'Confidence threshold', value: '0.80', marks: 'R', unit: '', min: 0, max: 1, step: 0.05,
+      note: 'Below it nothing is shown \u2014 a confidently wrong biography is worse than a blank panel.' },
+    { k: 'lyrics', type: 'toggle', label: 'Lyrics', value: true, marks: 'R' },
+    { k: 'artwork_lookup', type: 'toggle', label: 'Look up missing artwork', value: true, marks: 'R',
+      note: 'For renderers that supply none. Title and artist are enough to find it later.' }
+  ]],
+  ['device', 'Device', 'Identity and network', '#8fc4d8', [
+    { k: 'device_name', type: 'text', label: 'Device name', value: 'gexis', marks: 'R',
+      note: 'One name for mDNS, Spotify and Bluetooth.' },
+    { k: 'wifi', type: 'action', label: 'Wi-Fi', value: 'Studio 5G', marks: 'R' },
+    { k: 'timezone', type: 'choice', label: 'Time zone', value: 'Europe/Berlin', marks: 'N',
+      options: ['Europe/Berlin', 'Europe/London', 'UTC'] },
+    { k: 'api_loopback', type: 'toggle', label: 'Restrict API to loopback', value: false, marks: 'N',
+      note: 'The API binds all interfaces and is unauthenticated by decision.' }
+  ]],
+  ['system', 'System', 'Updates and maintenance', '#b0bcc4', [
+    { k: 'updates', type: 'choice', label: 'Updates', value: 'Manual', marks: 'RN', options: ['Manual', 'Automatic'] },
+    { k: 'version', type: 'readonly', label: 'Version', value: 'v0.2.1-110-gc49c0a0-dirty', marks: 'R?' },
+    { k: 'image_build', type: 'readonly', label: 'Image build', value: '2026-09-14-gexis-player-v0.2.1-110-gc49c0a0-dirty', marks: 'R?',
+      note: 'Nothing else on a running device reports which build it is.' },
+    { k: 'log_level', type: 'choice', label: 'Log level', value: 'Info', marks: 'N', options: ['Error', 'Warn', 'Info', 'Debug'] },
+    { k: 'backup', type: 'action', label: 'Back up settings', marks: 'N' },
+    { k: 'factory_reset', type: 'action', label: 'Factory reset', marks: 'R', danger: true, confirm: 'Erase all settings',
+      note: 'Every setting returns to its shipped default. Paired devices and Wi-Fi credentials are cleared.' },
+    { k: 'power', type: 'action', label: 'Reboot or shut down', marks: 'N', danger: true, confirm: 'Reboot now' }
+  ]]
+];
+
+// hostnames are sanitised, never silently substituted: the typed name stays in
+// the title and the resolved host is shown beneath it
+const hostOf = (name) => (String(name || '')
+  .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+  .toLowerCase().replace(/[^a-z0-9-]+/g, '-')
+  .replace(/^-+|-+$/g, '')
+  .slice(0, 63) || 'gexis') + '.local';
+
+class Component extends DCLogic {
+  state = { w: 0, cat: 'audio', drilled: null, vals: {}, sheet: null, toast: null };
+
+  componentWillUnmount() { if (this.ro) this.ro.disconnect(); clearTimeout(this._toast); }
+
+  // the mount's own width decides the mode — not the viewport — because the
+  // component is embedded on the panel and standalone on the phone
+  observe(el) {
+    if (!el || el === this._root) return;
+    this._root = el;
+    if (this.ro) this.ro.disconnect();
+    const read = () => {
+      const w = el.clientWidth || 0;
+      if (w && Math.abs(w - this.state.w) > 1) this.setState({ w });
+    };
+    if (window.ResizeObserver) { this.ro = new ResizeObserver(read); this.ro.observe(el); }
+    read();
+  }
+
+  // the panel hands the component its full width; mode="wide" makes that
+  // explicit so an inset panel area can never flip it to the phone layout
+  wide() {
+    const m = this.props.mode || 'auto';
+    if (m === 'wide') return true;
+    if (m === 'narrow') return false;
+    return (this.state.w || 1280) >= 720;
+  }
+
+  val(row) {
+    const v = this.state.vals[row.k];
+    return v === undefined ? row.value : v;
+  }
+
+  flash(msg) {
+    clearTimeout(this._toast);
+    this.setState({ toast: msg });
+    this._toast = setTimeout(() => this.setState({ toast: null }), 1900);
+  }
+
+  row(r, groupAccent) {
+    if (r.type === 'group') {
+      return {
+        headDisplay: 'flex', group: r.label, headInk: r.accent, rowDisplay: 'none',
+        label: '', note: '', noteDisplay: 'none', dotDisplay: 'none', ink: '#e9eef2',
+        bg: 'transparent', border: 'transparent', value: '', valDisplay: 'none',
+        valInk: '#e9eef2', togDisplay: 'none', togBg: '', togBorder: '',
+        knobLeft: '3px', knobBg: '', chevDisplay: 'none', onTap: null
+      };
+    }
+    const pending = r.marks.indexOf('?') >= 0;
+    const v = this.val(r);
+    const isTog = r.type === 'toggle';
+    const on = !!v;
+    const shown = isTog ? '' : (r.type === 'action' ? (r.value || '') : String(v));
+    return {
+      headDisplay: 'none', group: '', headInk: '#e9eef2', rowDisplay: 'block',
+      label: r.label, note: r.note || '',
+      noteDisplay: r.note ? 'block' : 'none',
+      dotDisplay: pending ? 'block' : 'none',
+      ink: r.danger ? '#e0a758' : '#e9eef2',
+      bg: 'rgba(255,255,255,0.05)',
+      border: r.danger ? 'rgba(224,167,88,0.3)' : 'rgba(233,238,242,0.1)',
+      value: shown,
+      valDisplay: !isTog && shown ? 'block' : 'none',
+      valInk: pending ? '#e0a758' : 'rgba(233,238,242,0.72)',
+      togDisplay: isTog ? 'block' : 'none',
+      togBg: on ? 'rgba(126,214,188,0.32)' : 'rgba(233,238,242,0.08)',
+      togBorder: on ? 'rgba(126,214,188,0.5)' : 'rgba(233,238,242,0.16)',
+      knobLeft: on ? '29px' : '3px',
+      knobBg: on ? '#7ed6bc' : 'rgba(233,238,242,0.6)',
+      chevDisplay: isTog ? 'none' : 'flex',
+      onTap: () => {
+        if (isTog) this.setState(s => ({ vals: Object.assign({}, s.vals, { [r.k]: !on }) }));
+        else this.setState({ sheet: r });
+      }
+    };
+  }
+
+  renderVals() {
+    const wide = this.wide();
+    const cat = wide ? this.state.cat : this.state.drilled;
+    const active = INV.find(c => c[0] === (cat || 'audio')) || INV[0];
+    const name = this.val({ k: 'device_name', value: 'gexis' });
+    const sheet = this.state.sheet;
+
+    let accent = '';
+    const rows = (cat || wide) ? active[4].map(r => {
+      if (r.type === 'group') accent = r.accent;
+      return this.row(r, accent);
+    }) : [];
+
+    const sheetOptions = sheet && sheet.type === 'choice' ? sheet.options.map(o => {
+      const sel = String(this.val(sheet)) === o;
+      return {
+        label: o,
+        bg: sel ? 'rgba(126,214,188,0.14)' : 'rgba(255,255,255,0.04)',
+        border: sel ? 'rgba(126,214,188,0.4)' : 'rgba(233,238,242,0.1)',
+        ink: sel ? '#e9eef2' : 'rgba(233,238,242,0.82)',
+        ringInk: sel ? '#7ed6bc' : 'rgba(233,238,242,0.3)',
+        dotDisplay: sel ? 'block' : 'none',
+        onTap: () => {
+          this.setState(s => ({ vals: Object.assign({}, s.vals, { [sheet.k]: o }), sheet: null }));
+          this.flash(sheet.label + ': ' + o);
+        }
+      };
+    }) : [];
+
+    const isChoice = !!sheet && sheet.type === 'choice';
+    const isAction = !!sheet && sheet.type === 'action';
+    const showValue = !!sheet && (sheet.type === 'readonly' || sheet.type === 'text' || sheet.type === 'number');
+
+    return {
+      rootRef: (el) => this.observe(el),
+      title: wide ? 'Settings' : (this.state.drilled ? active[1] : 'Settings'),
+      subtitle: name + '  \u00b7  ' + hostOf(name),
+      subDisplay: wide ? 'none' : 'block',
+      buildShort: '2026.09.14',
+      buildDisplay: wide ? 'block' : 'none',
+      titleSize: wide ? '25px' : '23px',
+      headPad: wide ? '0 36px' : '14px 18px',
+      headMin: wide ? '92px' : '78px',
+      listPad: wide ? '20px 36px 36px' : '14px 16px 30px',
+      backDisplay: (wide && this.props.onBack) || (!wide && this.state.drilled) ? 'flex' : 'none',
+      onBack: () => {
+        if (!wide && this.state.drilled) { this.setState({ drilled: null }); return; }
+        if (this.props.onBack) this.props.onBack();
+      },
+
+      railDisplay: wide ? 'flex' : 'none',
+      groupsDisplay: !wide && !this.state.drilled ? 'flex' : 'none',
+      rowsDisplay: wide || this.state.drilled ? 'flex' : 'none',
+
+      cats: INV.map(c => ({
+        name: c[1], blurb: c[2], bar: c[3],
+        dotDisplay: c[4].some(r => r.marks && r.marks.indexOf('?') >= 0) ? 'block' : 'none',
+        bg: wide && c[0] === cat ? 'rgba(233,238,242,0.1)' : 'transparent',
+        ink: wide && c[0] === cat ? '#e9eef2' : 'rgba(233,238,242,0.76)',
+        onTap: () => this.setState(wide ? { cat: c[0] } : { drilled: c[0] })
+      })),
+      rows,
+
+      sheetDisplay: sheet ? 'flex' : 'none',
+      sheetScrim: sheet ? '1' : '0',
+      sheetPointer: sheet ? 'auto' : 'none',
+      sheetTitle: sheet ? sheet.label : '',
+      sheetNote: sheet && sheet.note ? sheet.note : '',
+      sheetNoteDisplay: sheet && sheet.note ? 'block' : 'none',
+      sheetOptions,
+      sheetOptionsDisplay: isChoice ? 'flex' : 'none',
+      sheetValue: showValue ? String(this.val(sheet)) : '',
+      sheetValueDisplay: showValue ? 'block' : 'none',
+      sheetActionsDisplay: sheet ? 'flex' : 'none',
+      sheetCancelLabel: isChoice ? 'Close' : 'Cancel',
+      sheetConfirmDisplay: sheet && (isAction || sheet.type === 'text' || sheet.type === 'number') ? 'flex' : 'none',
+      sheetConfirmLabel: sheet ? (sheet.confirm || (isAction ? 'Continue' : 'Edit')) : '',
+      sheetConfirmBg: sheet && sheet.danger ? 'rgba(224,167,88,0.2)' : 'rgba(126,214,188,0.16)',
+      sheetConfirmBorder: sheet && sheet.danger ? 'rgba(224,167,88,0.5)' : 'rgba(126,214,188,0.4)',
+      sheetConfirmInk: sheet && sheet.danger ? '#e0a758' : '#7ed6bc',
+      onSheetClose: () => this.setState({ sheet: null }),
+      onSheetConfirm: () => {
+        const label = sheet ? sheet.label : '';
+        this.setState({ sheet: null });
+        this.flash(label + ' \u2014 not wired yet');
+      },
+
+      toast: this.state.toast || '',
+      toastOpacity: this.state.toast ? '1' : '0'
+    };
+  }
+}
+</script>
+</body>
+</html>
