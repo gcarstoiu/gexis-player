@@ -171,3 +171,15 @@ async def test_surface_is_panel_from_loopback():
     server = StateServer(StateStore({}))
     async with TestClient(TestServer(server.make_app())) as client:
         assert await (await client.get("/surface")).json() == {"surface": "panel"}
+
+
+def test_timezone_is_read_from_the_localtime_link(tmp_path):
+    from gexis_core.__main__ import read_timezone
+
+    zone = tmp_path / "usr/share/zoneinfo/Europe/Berlin"
+    zone.parent.mkdir(parents=True)
+    zone.write_bytes(b"TZif")
+    link = tmp_path / "localtime"
+    link.symlink_to(zone)
+    assert read_timezone(link) == "Europe/Berlin"
+    assert read_timezone(tmp_path / "missing") is None

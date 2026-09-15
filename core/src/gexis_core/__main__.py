@@ -112,11 +112,12 @@ def make_restore_volume(config: Config, volume_memory: RendererVolumeMemory, vol
     return restore_volume
 
 
-def read_timezone() -> str | None:
-    try:
-        return Path("/etc/timezone").read_text().strip() or None
-    except OSError:
-        return None
+def read_timezone(localtime: Path = Path("/etc/localtime")) -> str | None:
+    # The /etc/localtime link is what the clock uses; /etc/timezone can be
+    # stale (timedatectl updates only the link).
+    target = str(localtime.resolve())
+    marker = "/zoneinfo/"
+    return target.split(marker, 1)[1] if marker in target else None
 
 
 async def main() -> None:
