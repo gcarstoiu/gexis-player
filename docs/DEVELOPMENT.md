@@ -116,6 +116,18 @@ George copies each export into `design/`. So history is kept by commit:
 3. `design/source/` is locked — built from, never edited. Run
    `design/verify.html` over HTTP after any change to the package.
 
+**Deviations the port keeps across exports.** Claude Design does not know
+about these, so a new export will not contain them. Re-apply them when
+porting, until the design takes them in:
+
+- **Volume glyph (2026-09-15, George).** The now playing volume button draws
+  the drawer's 30px glyph (`ui/src/lib/VolumeIcon.svelte`), not the design's
+  26px one, whose three arcs merge at full volume.
+- **Drawer opens on a change from elsewhere (2026-09-15, George).** A
+  phone's volume change opens the drawer, which closes 3 s after the last
+  change. The panel's own changes and a takeover's restored level do not
+  open it.
+
 ### Branching
 
 - One branch per phase: `phase-0-image`, `phase-2-arbitration`.
@@ -664,6 +676,11 @@ over ADR-0016's separate-process model, criterion 4/5's minimal scope).
    George's decision. Not a transport control (criterion 3), and the only
    other thing this phase is not display-only about.
 
+   **Amended 2026-09-15 by [ADR-0034](decisions/0034-panel-volume-travel-and-mute.md):**
+   the slider travels −45…0 dB, the number shown is slider position (not
+   the hardware percentage), and mute is added, restoring the prior level.
+   *Original text follows.*
+
    **Displayed as a percentage of the hardware control** (George's
    decision) — the shared ALSA DAC, ADR-0018's 240 steps of 0.5 dB. That
    is the one level every renderer genuinely shares; LMS and Spotify each
@@ -698,7 +715,7 @@ increment at a time, each gated on his own hardware pass as usual):
 | **4b** | criteria 1, 5 | static serving (ADR-0028), `stage-gexis/04-ui`, labwc + Chromium kiosk, the Node build step ADR-0023 named as its cost |
 | **4c** | criterion 3 | now playing. **Built 2026-09-15** from `design/now-playing.html`; all six design states rendered against a mock `/state` in headless Chromium (Brave) on the dev machine, installed on `gexis`. **Not yet checked on the panel itself** — George's pass. |
 | **4d** | criterion 2 | idle screen and its fallback. **Built 2026-09-15:** `GET /idle` probes `idle_url` (from `/etc/gexis/core.toml`) for reachability and framing headers; the UI embeds the page in a sandboxed iframe or shows the design's drifting clock. Timer per ADR-0033, hardcoded 5 minutes. Deployed on `gexis`; **passed George's panel pass 2026-09-15**. George's URL was given 2026-09-15 and is deliberately **not in this public repository** — it carries a per-display identifier. It sends no `X-Frame-Options`/CSP header and its HTML has no frame-busting (checked 2026-09-15); its scripts were not checked, so embedding is unproven until it renders on the panel. |
-| **4e** | criterion 8 | volume. *Was criteria 6, 7, 8 until 2026-09-15; the back-to-music screen and activate control were withdrawn.* |
+| **4e** | criterion 8 | volume. *Was criteria 6, 7, 8 until 2026-09-15; the back-to-music screen and activate control were withdrawn.* **Built 2026-09-15** per [ADR-0034](decisions/0034-panel-volume-travel-and-mute.md): the design's Controls drawer, slider over −45…0 dB shown as slider position, mute (`POST /volume/mute`) restoring the prior level. Exercised end to end against the real `StateServer` with a fake mixer in headless Chromium. **Passed George's panel pass 2026-09-15.** |
 | **4f** | criterion 4 | transition state, with the exempt-pair list as published data rather than a constant in the UI |
 
 ### Phase 5 — Visualisation service and Peppy screen

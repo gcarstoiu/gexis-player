@@ -29,7 +29,8 @@ from gexis_core.volume import (
     VolumeBridge,
     db_to_raw,
     get_raw,
-    percent_to_raw,
+    Mute,
+    slider_percent_to_raw,
     raw_to_db,
 )
 from gexis_core.wsserver import StateServer
@@ -184,9 +185,20 @@ async def main() -> None:
         software_api_adapters[0],
         volume_memory=volume_memory,
         get_active_renderer=lambda: supervisor.active,
-        on_hardware_level=state_store.set_volume_raw,
+        on_hardware_level=lambda raw: publish_volume(raw),
     )
     restore_volume = make_restore_volume(config, volume_memory, volume_bridge)
+
+    # ADR-0034. Observes every level before it is published, so a change
+    # from anywhere else ends mute in the same broadcast that shows it.
+    mute = Mute(
+        volume_bridge.write_hardware,
+        lambda: state_store.state.volume.raw if state_store.state.volume else None,
+    )
+
+    def publish_volume(raw: int) -> None:
+        mute.observe(raw)
+        state_store.set_volume_raw(raw, muted=mute.muted)
 
     supervisor = Supervisor(
         adapters,
@@ -216,7 +228,7 @@ async def main() -> None:
         return await activate_method()
 
     async def set_volume(percent: float) -> bool:
-        raw = percent_to_raw(percent)
+        raw = slider_percent_to_raw(percent)
         logger.info("command: volume -> %.0f%% (raw %s/240)", percent, raw)
         # Through the bridge, never set_raw() directly - the echo window is
         # what stops this write being read back as an external change and
@@ -224,6 +236,14 @@ async def main() -> None:
         # round of "volume is behind/inverted" reports).
         await volume_bridge.write_hardware(raw)
         return True
+
+    async def set_mute(muted: bool) -> bool:
+        logger.info("command: %s", "mute" if muted else "unmute")
+        ok = await mute.set(muted)
+        volume = state_store.state.volume
+        if ok and volume is not None:
+            state_store.set_volume_raw(volume.raw, muted=mute.muted)
+        return ok
 
     # Serve the UI only if a build is actually present. A configured path
     # that does not exist is normal, not an error: the core ships and runs
@@ -245,6 +265,7 @@ async def main() -> None:
         port=config.state_port,
         activate=activate,
         set_volume=set_volume,
+        set_mute=set_mute,
         idle_page=idle_page,
         ui_dir=ui_dir,
     )
