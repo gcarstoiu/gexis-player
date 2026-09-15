@@ -1,0 +1,90 @@
+/* gexis panel — design tokens. Copied from design/tokens.css; only change:
+   fontsource names the variable face 'Nunito Sans Variable'.
+   Extracted from the .dc.html design sources; every value here appears in the
+   design rather than being invented. Do not add tokens without a design change.
+   Chromium 152 target: nesting, :has() and container queries are all available. */
+
+:root {
+  /* ---- ground ---------------------------------------------------------- */
+  --bg-base:        #101a21;  /* screen ground, behind the blurred artwork  */
+  --bg-panel:       #16232c;  /* modals, sheets, the volume plate          */
+  --bg-well:        #17242d;  /* artwork well before an image loads        */
+  --bg-scrim:       rgba(8, 12, 16, 0.62);
+  --bg-desk:        #0c1014;  /* outside the artboard; review chrome only  */
+  --bg-weave-a:     #3f5a6d;  /* blurred diagonal weave behind everything  */
+  --bg-weave-b:     #2e4453;
+  --ink-on-accent:  #0d151c;  /* glyph ink on an accent-filled control     */
+
+  /* ---- ink ------------------------------------------------------------- */
+  --ink:            #e9eef2;
+  --ink-strong:     rgba(233, 238, 242, 0.88);
+  --ink-body:       rgba(233, 238, 242, 0.82);
+  --ink-muted:      rgba(233, 238, 242, 0.72);
+  --ink-quiet:      rgba(233, 238, 242, 0.60);  /* 4.5:1 floor on --bg-base */
+  --ink-line:       rgba(233, 238, 242, 0.10);  /* hairline rules           */
+  --ink-fill:       rgba(233, 238, 242, 0.07);  /* resting control ground   */
+  --ink-fill-press: rgba(233, 238, 242, 0.18);
+
+  /* Nothing below 0.60 alpha may carry text at 15px or under: that is the
+     4.5:1 contrast floor on --bg-base. Lower alphas are for fills only. */
+
+  /* ---- accents --------------------------------------------------------- */
+  --accent-lms:       #7ed6bc;  /* also the generic "active/affirm" accent */
+  --accent-spotify:   #8fd9a8;
+  --accent-bluetooth: #9fb4e8;
+  --accent-artist:    #f2a48f;  /* artist name, Hi-Res tier, paused state */
+  --play-fill:        #f2a48f;  /* play control: fixed, NOT the source accent */
+  --accent-warn:      #e0a758;  /* unconfirmed setting, destructive action */
+  --accent-display:   #c8a2d8;  /* settings: Display group                */
+
+  /* ---- type ------------------------------------------------------------ */
+  --font-ui:   'Nunito Sans Variable', 'Nunito Sans', 'Avenir Next', 'Segoe UI', system-ui, sans-serif;
+  --font-mono: 'IBM Plex Mono', 'Courier New', monospace;
+
+  /* Panel scale. 1280x800 at arm's length: nothing under 24px is content,
+     and mono labels below that are chrome only. */
+  --t-hero:     132px;  /* idle clock                                      */
+  --t-display:   76px;  /* handoff screen                                  */
+  --t-title:     58px;  /* now playing track title                         */
+  --t-h1:        34px;
+  --t-h2:        30px;
+  --t-artist:    29px;
+  --t-h3:        26px;
+  --t-lead:      22px;
+  --t-body:      19px;
+  --t-body-sm:   17px;
+  --t-meta:      15px;
+  --t-label:     13px;  /* mono, letter-spaced, uppercase                  */
+  --t-label-sm:  12px;
+  --t-micro:     11px;
+
+  --track-label: 0.20em;  /* mono uppercase labels                         */
+  --track-tight: -0.015em; /* display sizes                                */
+
+  /* ---- radii ----------------------------------------------------------- */
+  --r-sm:    8px;
+  --r-md:   12px;
+  --r-lg:   16px;
+  --r-xl:   22px;
+  --r-card: 24px;
+  --r-pill: 999px;
+  --r-circle: 50%;
+
+  /* ---- metrics --------------------------------------------------------- */
+  --touch-min:   44px;  /* hard floor; audited, nothing on the panel is under */
+  --ctl:         60px;  /* standard round control                          */
+  --ctl-lg:      68px;  /* prev / next                                     */
+  --ctl-play:    92px;  /* play / pause                                    */
+  --art:        500px;  /* now playing artwork                             */
+  --pad-screen: 44px 56px 40px;
+  --header-h:    96px;
+  --ministrip-h: 96px;
+
+  /* ---- motion ---------------------------------------------------------- */
+  /* Raspberry Pi 4 target: transform and opacity only, never layout or
+     filter. Keep concurrent animations to one region. */
+  --ease:        cubic-bezier(0.32, 0.72, 0, 1);
+  --dur-fast:   140ms;
+  --dur:        200ms;
+  --dur-screen: 260ms;
+}

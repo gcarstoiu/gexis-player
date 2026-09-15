@@ -35,6 +35,18 @@ and pointing `DEPLOY_DIR` at it would remove the 4.5GB stream entirely and
 halve disk use. Designed, not implemented.
 
 
+**4c (now playing) is built and hand-installed on `gexis`** (2026-09-15):
+`ui/src/screens/NowPlaying.svelte`, ported from `design/now-playing.html`,
+fonts bundled via fontsource. Previous UI kept at `/opt/gexis-ui.4b-backup`.
+Rendered in all six design states against a mock feed on the dev machine;
+**not yet looked at on the panel** — George's hardware pass is next. With no
+renderer the panel shows a "Nothing playing" placeholder (`data-unwired="home"`)
+until Home is built. `design/` is **not committed**: it holds two
+third-party photos (sample album art, artist photo) and this repo is public —
+George to decide. Reconcile with the design package: it still shows a format
+badge (sample rate/codec) and describes the idle screen as a clock, both
+contrary to George's 2026-09-15 statements.
+
 **2026-09-15, thirteenth session:** image flashed and boots cleanly (George).
 PR #9 opened for this branch. **Phase 4 criteria 6 and 7 withdrawn** — no
 back-to-music screen, no activate control; 4e is now volume only. The
