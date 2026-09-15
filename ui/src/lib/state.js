@@ -88,3 +88,4 @@ async function post(path, body) {
 
 export const activate = (rendererId) => post(`/renderer/${rendererId}/activate`);
 export const setVolume = (percent) => post('/volume', { percent });
+export const setMute = (muted) => post('/volume/mute', { muted });

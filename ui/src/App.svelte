@@ -4,12 +4,14 @@
   import { connect, active, metadata, volume } from './lib/state.js';
   import NowPlaying from './screens/NowPlaying.svelte';
   import IdleScreen from './screens/IdleScreen.svelte';
+  import VolumeDrawer from './screens/VolumeDrawer.svelte';
 
   // ADR-0033: idle is "not playing and not touched", one timeout everywhere.
   // Hardcoded until settings exist; `?idle_seconds=` shortens it for testing.
   const IDLE_MS = (Number(new URLSearchParams(location.search).get('idle_seconds')) || 300) * 1000;
 
   let idle = $state(false);
+  let volumeOpen = $state(false);
   let touches = $state(0);
   const playing = $derived($active !== null && $metadata?.transport === 'playing');
 
@@ -28,16 +30,22 @@
 
 <svelte:window onpointerdowncapture={() => touches++} />
 
-{#if $active}
-  <NowPlaying active={$active} metadata={$metadata} volume={$volume} />
-{:else}
-  <!-- Home (ADR-0033) is the no-renderer screen; its content is Phase 7. -->
-  <div class="placeholder" data-unwired="home">Nothing playing</div>
-{/if}
+<div class="panel">
+  {#if $active}
+    <NowPlaying active={$active} metadata={$metadata} volume={$volume} onvolume={() => (volumeOpen = true)} />
+  {:else}
+    <!-- Home (ADR-0033) is the no-renderer screen; its content is Phase 7. -->
+    <div class="placeholder" data-unwired="home">Nothing playing</div>
+  {/if}
 
-{#if idle}
-  <IdleScreen ondismiss={() => (idle = false)} />
-{/if}
+  {#if $volume}
+    <VolumeDrawer open={volumeOpen} volume={$volume} onclose={() => (volumeOpen = false)} />
+  {/if}
+
+  {#if idle}
+    <IdleScreen ondismiss={() => (idle = false)} />
+  {/if}
+</div>
 
 <style>
   :global(*, *::before, *::after) {
@@ -50,6 +58,13 @@
     font-family: var(--font-ui);
     color: var(--ink);
     -webkit-tap-highlight-color: transparent;
+  }
+
+  .panel {
+    position: relative;
+    width: 1280px;
+    height: 800px;
+    overflow: hidden;
   }
 
   .placeholder {

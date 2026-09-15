@@ -10,7 +10,7 @@
   import spotifyMark from '../assets/icon-spotify.png';
   import bluetoothMark from '../assets/icon-bluetooth.png';
 
-  let { active, metadata, volume } = $props();
+  let { active, metadata, volume, onvolume } = $props();
 
   const SOURCES = {
     lms: { label: 'LMS', mark: null },
@@ -67,7 +67,8 @@
   const volumeLevel = $derived.by(() => {
     const p = volume?.percent;
     if (p == null) return 'mid';
-    return p < 100 / 3 ? 'low' : p < 200 / 3 ? 'mid' : 'high';
+    if (volume.muted || p === 0) return 'none';
+    return p < 34 ? 'low' : p < 67 ? 'mid' : 'high';
   });
 
   // Shuffle, repeat and queue are LMS-only in the design. Keyed on the id
@@ -185,7 +186,7 @@
         </div>
 
         <div class="bar__right">
-          <button class="btn" type="button" aria-label="Volume" disabled data-unwired="4e">
+          <button class="btn" type="button" aria-label="Volume" disabled={!volume} onclick={onvolume}>
             <span class="i-volume" data-level={volumeLevel}>
               <span class="cone"></span><span class="arc"></span><span class="arc"></span><span class="arc"></span>
             </span>
@@ -536,6 +537,9 @@
     place-items: center;
     flex-shrink: 0;
   }
+  .btn:not(:disabled):active {
+    background: var(--ink-fill-press);
+  }
   .btn--lg {
     width: var(--ctl-lg);
     height: var(--ctl-lg);
@@ -654,6 +658,9 @@
   .i-volume .arc:nth-of-type(1) { left: 4px; width: 14px; height: 14px; margin-top: -7px; }
   .i-volume .arc:nth-of-type(2) { left: 0.5px; width: 21px; height: 21px; margin-top: -10.5px; }
   .i-volume .arc:nth-of-type(3) { left: -2px; width: 26px; height: 26px; margin-top: -13px; }
+  .i-volume[data-level='none'] .arc:nth-of-type(1),
+  .i-volume[data-level='none'] .arc:nth-of-type(2),
+  .i-volume[data-level='none'] .arc:nth-of-type(3),
   .i-volume[data-level='low'] .arc:nth-of-type(2),
   .i-volume[data-level='low'] .arc:nth-of-type(3),
   .i-volume[data-level='mid'] .arc:nth-of-type(3) { border-color: rgba(233, 238, 242, 0.22); }

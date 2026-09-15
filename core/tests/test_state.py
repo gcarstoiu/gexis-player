@@ -205,25 +205,32 @@ def test_repeating_the_same_handoff_does_not_rebroadcast():
     assert seen == []
 
 
-def test_volume_is_published_as_percent_raw_and_db():
+def test_volume_is_published_as_percent_raw_db_and_muted():
     store = StateStore(_caps("lms"))
 
     store.set_volume_raw(240)
 
-    assert store.state.volume.to_json() == {"percent": 100, "raw": 240, "db": 0.0}
+    assert store.state.volume.to_json() == {"percent": 100, "raw": 240, "db": 0.0, "muted": False}
 
 
-def test_volume_percent_is_the_hardware_controls_own_travel():
-    """George's decision: the number shown is a percentage of the hardware
-    control. It is deliberately NOT perceptual - half travel is -60dB,
-    which is the known consequence recorded in criterion 8."""
+def test_volume_percent_is_the_slider_position_over_minus_45_db():
+    """ADR-0034: the number shown is slider position, half travel -22.5dB -
+    not the hardware control's own travel, where half was -60dB."""
     store = StateStore(_caps("lms"))
 
-    store.set_volume_raw(120)
+    store.set_volume_raw(195)
 
     published = store.state.volume.to_json()
     assert published["percent"] == 50
-    assert published["db"] == -60.0
+    assert published["db"] == -22.5
+
+
+def test_muted_is_published():
+    store = StateStore(_caps("lms"))
+
+    store.set_volume_raw(0, muted=True)
+
+    assert store.state.volume.muted is True
 
 
 def test_setting_the_same_volume_does_not_rebroadcast():

@@ -47,6 +47,7 @@ class StateServer:
         *,
         activate=None,
         set_volume=None,
+        set_mute=None,
         idle_page=None,
         ui_dir: Path | None = None,
     ) -> None:
@@ -67,6 +68,7 @@ class StateServer:
         self._port = port
         self._activate = activate
         self._set_volume = set_volume
+        self._set_mute = set_mute
         self._idle_page = idle_page
         self._ui_dir = ui_dir
         self._clients: set[web.WebSocketResponse] = set()
@@ -147,6 +149,19 @@ class StateServer:
             return web.json_response({"error": "volume write failed"}, status=502)
         return web.json_response({"percent": percent})
 
+    async def _handle_set_mute(self, request: web.Request) -> web.Response:
+        if self._set_mute is None:
+            return web.json_response({"error": "mute is not wired up"}, status=503)
+        try:
+            muted = (await request.json())["muted"]
+        except (ValueError, KeyError, TypeError):
+            muted = None
+        if not isinstance(muted, bool):
+            return web.json_response({"error": 'body must be {"muted": true|false}'}, status=400)
+        if not await self._set_mute(muted):
+            return web.json_response({"error": "volume level not known yet"}, status=409)
+        return web.json_response({"muted": muted})
+
     async def _handle_idle(self, request: web.Request) -> web.Response:
         """`idle_page() -> {url, embeddable, reason}`, asked each time the
         idle screen opens: reachability changes while the device runs."""
@@ -166,6 +181,7 @@ class StateServer:
         app.router.add_get("/state", self._handle)
         app.router.add_post("/renderer/{renderer_id}/activate", self._handle_activate)
         app.router.add_post("/volume", self._handle_set_volume)
+        app.router.add_post("/volume/mute", self._handle_set_mute)
         app.router.add_get("/idle", self._handle_idle)
         # The UI is registered *after* the API, so nothing it serves can
         # shadow `/state` or a command route - aiohttp resolves in
