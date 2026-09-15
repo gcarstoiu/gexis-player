@@ -93,11 +93,13 @@
   <div class="screen__accent"></div>
 
   <span class="srcpill">
-    {#if source.mark}
-      <img class="srcpill__mark" src={source.mark} alt="" />
-    {:else}
-      <span class="i-lyrion"><i></i><i></i><i></i><i></i></span>
-    {/if}
+    <span class="srcpill__icon">
+      {#if source.mark}
+        <img class="srcpill__mark" src={source.mark} alt="" />
+      {:else}
+        <span class="i-lyrion"><i></i><i></i><i></i><i></i></span>
+      {/if}
+    </span>
     {source.label}
   </span>
 
@@ -266,6 +268,18 @@
     color: var(--src-accent);
     background: rgba(255, 255, 255, 0.08);
     border: 1px solid color-mix(in oklab, var(--src-accent) 40%, transparent);
+  }
+  .srcpill__icon {
+    display: flex;
+    align-items: center;
+  }
+  .screen[data-transport='playing'] .srcpill__icon {
+    animation: pulse 2.4s ease-in-out infinite;
+  }
+  @keyframes pulse {
+    0%,
+    100% { opacity: 1; }
+    50% { opacity: 0.35; }
   }
   .srcpill__mark {
     width: 18px;

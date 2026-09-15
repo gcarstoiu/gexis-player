@@ -41,9 +41,10 @@ idle unimportant of where it happens"*):
   normal renderer rules apply (a renderer arriving shows now playing).
   Unconfirmed.
 - **A renderer disconnecting** — assumed to show Home. Unconfirmed.
-- **What the idle screen shows.** The design package (`design/screens.md`)
-  describes a drifting clock. ADR-0019 and George (2026-09-15, giving the URL)
-  have it embedding an external page. Not reconciled.
+- ~~What the idle screen shows.~~ **Resolved 2026-09-15 (George):** the
+  external page, per ADR-0019. The design's drifting clock is the **fallback**
+  when that page does not load — unreachable, unconfigured, or refusing to be
+  framed.
 - **Settings.** The 5-minute value is configurable per ADR-0019; ADR-0022's
   inventory only lists the Peppy-screen timeout. Proposed as an inventory row,
   not yet appended.

@@ -43,9 +43,13 @@ Rendered in all six design states against a mock feed on the dev machine;
 renderer the panel shows a "Nothing playing" placeholder (`data-unwired="home"`)
 until Home is built. `design/` is **not committed**: it holds two
 third-party photos (sample album art, artist photo) and this repo is public —
-George to decide. Reconcile with the design package: it still shows a format
-badge (sample rate/codec) and describes the idle screen as a clock, both
-contrary to George's 2026-09-15 statements.
+George to decide. Design package corrections from George: **no format badge
+(sample rate/codec) anywhere** — open whether that includes the Peppy screen
+(ADR-0019's codec rule); the design's drifting clock is the **fallback** for
+the idle URL not loading (ADR-0033). Source pill now pulses while playing.
+**Open:** George reported the Paused label and the artwork dimming as not in
+the design, but `design/source/Now Playing.dc.html` has both (`stateLabel`,
+`pausedVeil: playing ? 0 : 0.55`) — asked him to confirm removal.
 
 **2026-09-15, thirteenth session:** image flashed and boots cleanly (George).
 PR #9 opened for this branch. **Phase 4 criteria 6 and 7 withdrawn** — no
