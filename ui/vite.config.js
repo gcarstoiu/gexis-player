@@ -30,6 +30,7 @@ export default defineConfig({
       },
       '/renderer': { target: process.env.GEXIS_CORE ?? 'http://gexis.local:8090' },
       '/volume': { target: process.env.GEXIS_CORE ?? 'http://gexis.local:8090' },
+      '/idle': { target: process.env.GEXIS_CORE ?? 'http://gexis.local:8090' },
     },
   },
 });

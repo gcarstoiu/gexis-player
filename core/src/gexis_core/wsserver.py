@@ -47,6 +47,7 @@ class StateServer:
         *,
         activate=None,
         set_volume=None,
+        idle_page=None,
         ui_dir: Path | None = None,
     ) -> None:
         """`activate(renderer_id) -> bool` and `set_volume(percent) -> bool`
@@ -66,6 +67,7 @@ class StateServer:
         self._port = port
         self._activate = activate
         self._set_volume = set_volume
+        self._idle_page = idle_page
         self._ui_dir = ui_dir
         self._clients: set[web.WebSocketResponse] = set()
         store.subscribe(self._broadcast)
@@ -145,6 +147,13 @@ class StateServer:
             return web.json_response({"error": "volume write failed"}, status=502)
         return web.json_response({"percent": percent})
 
+    async def _handle_idle(self, request: web.Request) -> web.Response:
+        """`idle_page() -> {url, embeddable, reason}`, asked each time the
+        idle screen opens: reachability changes while the device runs."""
+        if self._idle_page is None:
+            return web.json_response({"error": "idle page is not wired up"}, status=503)
+        return web.json_response(await self._idle_page())
+
     def make_app(self) -> web.Application:
         """Split out from `run()` so tests can drive the routes with
         aiohttp's own `test_utils.TestServer`/`TestClient` - a real
@@ -157,6 +166,7 @@ class StateServer:
         app.router.add_get("/state", self._handle)
         app.router.add_post("/renderer/{renderer_id}/activate", self._handle_activate)
         app.router.add_post("/volume", self._handle_set_volume)
+        app.router.add_get("/idle", self._handle_idle)
         # The UI is registered *after* the API, so nothing it serves can
         # shadow `/state` or a command route - aiohttp resolves in
         # registration order. Two routes only, which is why vite is

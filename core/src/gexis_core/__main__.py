@@ -9,6 +9,8 @@ import asyncio
 import logging
 from pathlib import Path
 
+import aiohttp
+
 from gexis_core import alsa
 from gexis_core.adapters.base import VolumeMechanism
 from gexis_core.adapters.bluetooth import BluetoothAdapter
@@ -16,6 +18,7 @@ from gexis_core.adapters.lms import LmsAdapter
 from gexis_core.adapters.spotify import SpotifyAdapter
 from gexis_core.arbitration import Supervisor
 from gexis_core.config import Config
+from gexis_core.idle_page import probe as probe_idle_page
 from gexis_core.metadata_file import MetadataFileWriter
 from gexis_core.renderer_volume import RendererVolumeMemory
 from gexis_core.settings import SettingsStore
@@ -231,12 +234,18 @@ async def main() -> None:
         logger.info("wsserver: no UI build at %s, serving the API only", ui_dir)
         ui_dir = None
 
+    idle_session = aiohttp.ClientSession()
+
+    async def idle_page() -> dict:
+        return await probe_idle_page(config.idle_url, idle_session)
+
     state_server = StateServer(
         state_store,
         host=config.state_host,
         port=config.state_port,
         activate=activate,
         set_volume=set_volume,
+        idle_page=idle_page,
         ui_dir=ui_dir,
     )
 
