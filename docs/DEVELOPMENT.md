@@ -582,7 +582,13 @@ over ADR-0016's separate-process model, criterion 4/5's minimal scope).
      being measured and loses it if a later measurement moves it back above
      the threshold. Today only same-rate LMS↔Spotify is exempt; every
      Bluetooth pair and anything cross-rate shows the screen.
-5. Same page served to a remote browser and renders correctly.
+5. Same page served to a remote browser and renders correctly. **Clarified
+   2026-09-15 by [ADR-0032](decisions/0032-one-page-two-surfaces.md):** still
+   the same page, and still required to render correctly — but on a remote
+   browser "correctly" means the **settings surface** laid out for phone
+   width, not the panel interface shrunk. The panel renders everything;
+   a remote browser renders only settings. Only the settings screen is
+   responsive; every other screen stays at the fixed 1280x800 artboard.
 6. **When no renderer holds the device, the screen offers the action that
    gets back to music.** Reframed 2026-09-12 by George, replacing the
    original wording ("...and the user can tell why").

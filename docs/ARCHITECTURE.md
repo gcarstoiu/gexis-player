@@ -42,7 +42,12 @@ their OS.
 
 **Interface**
 
-- One web UI codebase serving the touchscreen and remote browsers.
+- One web UI codebase serving the touchscreen and remote browsers. **Refined
+  2026-09-15 by [ADR-0032](decisions/0032-one-page-two-surfaces.md):** still
+  one codebase and one served page, but not parity — the panel renders
+  everything, a remote browser renders only the settings surface. Only the
+  settings screen is responsive; every other screen is a fixed 1280x800
+  artboard, because no other screen is ever served to a phone.
 - Four screen types: library navigation, now playing, Peppy screen, idle.
 - Now playing, artist info and track info available for every renderer.
 - Lyrics on now playing: synced, unsynced, or none.

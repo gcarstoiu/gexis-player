@@ -51,6 +51,7 @@ the question blocking it was answered.
 | [0029](0029-text-entry-on-every-surface.md) | Text fields are editable on the panel too; no on-screen keyboard | Accepted — supersedes [0022](0022-settings.md)'s remote-only rule, amends [0020](0020-library-browse-tree.md) |
 | [0030](0030-library-typed-radio-slimbrowse.md) | Library by typed query and our own screens; SlimBrowse only for radio, rooted at `radios` | Accepted — supersedes [0020](0020-library-browse-tree.md)'s pass-through decision |
 | [0031](0031-first-boot-setup-access-point.md) | First boot with no network raises a setup access point; typing happens on the user's phone | Accepted — answers the blocker [0022](0022-settings.md) raised and [0021](0021-deployment-flashable-image.md) could not close |
+| [0032](0032-one-page-two-surfaces.md) | One page, two surfaces: the panel renders everything, a remote browser renders only settings | Accepted — only the settings screen is responsive; clarifies Phase 4 criterion 5 |
 
 ## Cross-cutting rules
 

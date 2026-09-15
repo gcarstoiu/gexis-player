@@ -1,15 +1,61 @@
 # Handoff
 
-Last updated: 2026-09-14 (twelfth session — **build environment fixed;
-ADR-0029, 0030 and 0031 decided; Phase 4 still at 4a/4b, waiting on designs**)
+Last updated: 2026-09-15 (twelfth session — **04-ui fixed and verified on
+hardware; ADR-0029 to 0032 decided; a new image is built and waiting to be
+flashed**)
 
 ## Start here
+
+**A new image is built and needs flashing before anything else:**
+`image/deploy/2026-09-14-gexis-player-v0.2.1-110-gc49c0a0-dirty.img`
+
+It carries the Finding 022 fix. On first boot the panel should come up on its
+own showing `http://127.0.0.1:8090/` — no console getty. **`gexis` currently
+has its panel hand-pointed at a third-party test URL** (`/etc/gexis/kiosk.env`,
+original kept at `.orig`); the reflash reverts that, so a loopback page is the
+expected result, not a regression.
+
+**Then: a PR closing this work**, which George wants before the UI designs
+arrive. Two things worth doing first:
+
+- **A cold build.** Every build this session used `CONTINUE=1`, which reuses
+  the previous rootfs. That is exactly how the stale `default.target` survived
+  and got caught by an assertion. `make clean && make image` (~40 min) is the
+  only way to prove the stage is correct from nothing, and the PR's whole claim
+  is that it is.
+- **`playlistcontrol cmd:load album_id:<id>`** — still unverified, still the
+  load-bearing assumption of ADR-0030's typed-library half. Needs George
+  present; running it starts music.
+
+**Build wart to fix, not blocking:** the copy-out took **3h45m** for 4.5GB on
+the last build (12m02s of actual build, 14212s total). `make fetch-deploy` does
+the same copy per-file in 44s. `pi-gen` accepts a `DEPLOY_DIR` override
+(`build.sh:191`), so bind-mounting the host's `image/deploy` into the container
+and pointing `DEPLOY_DIR` at it would remove the 4.5GB stream entirely and
+halve disk use. Designed, not implemented.
+
 
 No code changed this session. It was build-environment repair and four
 decisions. Nothing is half-finished, and the working tree is clean apart from
 `image/pi-gen` (the Makefile deleting `stage2/EXPORT_IMAGE`, which is normal).
 
 **Do these, in this order:**
+
+0. **ADR-0032 (2026-09-15): the panel renders everything, a remote browser
+   renders only settings.** Same page both ways; the phone shows a subset.
+   George's inversion of a Claude Design "split by capability" proposal, and
+   better than it — under the split some functions would have been phone-only,
+   and the phone exists only while the LAN does. With the panel holding
+   everything, nothing is phone-only and the device stays self-sufficient by
+   construction. **Only the settings screen is responsive**; every other screen
+   stays a fixed 1280x800 artboard. Settings becomes one imported component
+   measuring its own mount width (720px breakpoint), so a setting added once
+   appears on both. All inventory rows render for now, `[N]`/`[?]` included —
+   mock stage, will iterate. Row types deliberately not defined yet; the
+   settings HTTP API will be built to whatever vocabulary the design settles
+   on. **No settings endpoints exist yet** — `settings.py` has the SQLite store
+   from Phase 3 but nothing exposes it over HTTP. That is the next backend
+   task once the design lands.
 
 1. ~~**Flash and verify `04-ui` on hardware.**~~ **DONE 2026-09-14 — two
    defects found and fixed, see [Finding 022](docs/findings/022-kiosk-never-started-target-and-tty.md).**
