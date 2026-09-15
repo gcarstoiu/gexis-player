@@ -234,7 +234,7 @@ boot, then deletes itself and its `cmdline.txt` entry.
 
 After flashing (`<date>-gexis-player-<version>.img` — Imager, Etcher and
 `bmaptool` all take the raw image directly), the boot partition's
-`firstrun.sh` needs five values filled in:
+`firstrun.sh` needs five values filled in, and takes two optional ones:
 
 ```sh
 SSH_PUBKEY="ssh-ed25519 AAAA... you@host"   # required — no other remote access exists
@@ -242,6 +242,8 @@ WIFI_SSID="your-network"                     # leave blank for Ethernet-only
 WIFI_PASS="your-password"
 WIFI_COUNTRY="GB"                            # ISO 3166-1 alpha-2
 HOSTNAME=""                                  # optional
+TIMEZONE="Europe/Berlin"                     # optional
+IDLE_URL=""                                  # optional; the idle screen page
 ```
 
 **`make provision DEVICE=/dev/sdX`** does this — the SSH key is a long

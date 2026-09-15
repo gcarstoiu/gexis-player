@@ -713,10 +713,10 @@ increment at a time, each gated on his own hardware pass as usual):
 |---|---|---|
 | **4a** | model extensions | no UI; transport state, handoff pair, command channel + LMS `power 1`, volume level, Bluetooth codec. Unit-testable and verifiable over the existing WebSocket. |
 | **4b** | criteria 1, 5 | static serving (ADR-0028), `stage-gexis/04-ui`, labwc + Chromium kiosk, the Node build step ADR-0023 named as its cost |
-| **4c** | criterion 3 | now playing. **Built 2026-09-15** from `design/now-playing.html`; all six design states rendered against a mock `/state` in headless Chromium (Brave) on the dev machine, installed on `gexis`. **Not yet checked on the panel itself** — George's pass. |
+| **4c** | criterion 3 | now playing. **Built 2026-09-15** from `design/now-playing.html`; all six design states rendered against a mock `/state` in headless Chromium (Brave) on the dev machine, installed on `gexis`. Checked on the panel by George. **Passed George's panel pass 2026-09-15.** |
 | **4d** | criterion 2 | idle screen and its fallback. **Built 2026-09-15:** `GET /idle` probes `idle_url` (from `/etc/gexis/core.toml`) for reachability and framing headers; the UI embeds the page in a sandboxed iframe or shows the design's drifting clock. Timer per ADR-0033, hardcoded 5 minutes. Deployed on `gexis`; **passed George's panel pass 2026-09-15**. George's URL was given 2026-09-15 and is deliberately **not in this public repository** — it carries a per-display identifier. It sends no `X-Frame-Options`/CSP header and its HTML has no frame-busting (checked 2026-09-15); its scripts were not checked, so embedding is unproven until it renders on the panel. |
 | **4e** | criterion 8 | volume. *Was criteria 6, 7, 8 until 2026-09-15; the back-to-music screen and activate control were withdrawn.* **Built 2026-09-15** per [ADR-0034](decisions/0034-panel-volume-travel-and-mute.md): the design's Controls drawer, slider over −45…0 dB shown as slider position, mute (`POST /volume/mute`) restoring the prior level. Exercised end to end against the real `StateServer` with a fake mixer in headless Chromium. **Passed George's panel pass 2026-09-15.** |
-| **4f** | criterion 4 | transition state, with the exempt-pair list as published data rather than a constant in the UI |
+| **4f** | criterion 4 | transition state, with the exempt-pair list as published data rather than a constant in the UI. **Built 2026-09-15:** the design's "Handing off" overlay, shown from the published handoff's start until it ends (not the design canvas's fixed 2.7 s), held at least 1.4 s — one note cycle — so it never flashes; exempt pairs from `handoff_exempt_pairs` skip it. **Passed George's panel pass 2026-09-15.** |
 
 ### Phase 5 — Visualisation service and Peppy screen
 
@@ -731,6 +731,10 @@ increment at a time, each gated on his own hardware pass as usual):
 5. Skin rotates per track, with the next track's skin composited ahead of time.
 6. Renderer change exits to now playing; idle timeout returns.
 7. Absent fields do not render their layer.
+8. **Peppy screen entry button** on now playing, as the phase's last step.
+   Moved here from Phase 6 criterion 4 (George, 2026-09-15): criterion 4
+   above already measures entry from now playing, and the button is already
+   rendered, marked `data-unwired="phase-5"`.
 
 ### Phase 6 — Now playing, full
 
@@ -740,7 +744,8 @@ increment at a time, each gated on his own hardware pass as usual):
 2. Controls that would not work are hidden or non-editable per the cross-cutting
    rule, never dead.
 3. Artist and track info panels.
-4. Peppy screen entry button.
+4. ~~Peppy screen entry button.~~ **Moved to Phase 5 criterion 8** (George,
+   2026-09-15).
 
 ### Phase 7 — Library browse
 

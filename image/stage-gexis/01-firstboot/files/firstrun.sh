@@ -19,6 +19,8 @@ WIFI_SSID=""                   # leave blank for Ethernet-only
 WIFI_PASS=""
 WIFI_COUNTRY="GB"               # ISO 3166-1 alpha-2; required by set_wlan when WIFI_SSID is set
 HOSTNAME=""                     # leave blank to keep the built-in default
+TIMEZONE=""                     # e.g. "Europe/Berlin"; blank keeps the image default
+IDLE_URL=""                     # idle screen page (ADR-0019); blank shows the built-in clock
 
 IMAGER_CUSTOM=/usr/lib/raspberrypi-sys-mods/imager_custom
 USERCONF=/usr/lib/userconf-pi/userconf
@@ -41,6 +43,16 @@ fi
 
 if [ -n "$WIFI_SSID" ] && [ -x "$IMAGER_CUSTOM" ]; then
 	"$IMAGER_CUSTOM" set_wlan "$WIFI_SSID" "$WIFI_PASS" "$WIFI_COUNTRY"
+fi
+
+if [ -n "$TIMEZONE" ] && [ -x "$IMAGER_CUSTOM" ]; then
+	"$IMAGER_CUSTOM" set_timezone "$TIMEZONE"
+fi
+
+# Set on the card, not in the image: a real idle URL can carry a per-display
+# identifier. Escaped for a TOML basic string.
+if [ -n "$IDLE_URL" ]; then
+	printf '\nidle_url = "%s"\n' "$(printf '%s' "$IDLE_URL" | sed 's/\\/\\\\/g; s/"/\\"/g')" >> /etc/gexis/core.toml
 fi
 
 rm -f /boot/firstrun.sh
