@@ -7,51 +7,37 @@
 -->
 <script>
   import { onMount } from 'svelte';
-  import { playback } from '../lib/state.js';
+  import { settingsGroups, settingsError, loadSettings, writeSetting } from '../lib/settings.js';
 
   const WIDE_MIN = 720;
 
   let width = $state(0);
-  let groups = $state([]);
   let cat = $state(null);
   let drilled = $state(null);
-  let sheet = $state(null);
+  let sheetKey = $state(null);
   let toast = $state(null);
   let toastTimer;
-  let loadError = $state(null);
 
+  const groups = $derived($settingsGroups);
+  const loadError = $derived($settingsError);
   const wide = $derived((width || 1280) >= WIDE_MIN);
   const current = $derived(groups.find((g) => g.id === (wide ? (cat ?? groups[0]?.id) : drilled)) ?? null);
   const rows = $derived(current?.rows ?? []);
   const deviceName = $derived(valueOf('device_name') ?? 'gexis');
   const build = $derived(valueOf('image_build'));
+  const sheet = $derived(sheetKey ? rowOf(sheetKey) : null);
+
+  function rowOf(key) {
+    for (const g of groups) for (const r of g.rows) if (r.key === key) return r;
+    return null;
+  }
 
   function valueOf(key) {
     for (const g of groups) for (const r of g.rows) if (r.key === key) return r.value;
     return undefined;
   }
 
-  async function load() {
-    try {
-      const response = await fetch('/settings');
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
-      groups = (await response.json()).groups;
-      loadError = null;
-    } catch (err) {
-      loadError = err.message;
-    }
-  }
-
-  onMount(load);
-
-  // Another surface changed something: refetch (ADR-0035 §5).
-  let seenRevision;
-  $effect(() => {
-    const revision = $playback?.settings_revision;
-    if (revision === undefined) return;
-    if (seenRevision !== undefined && revision !== seenRevision) load();
-    seenRevision = revision;
-  });
+  onMount(loadSettings);
 
   function flash(text) {
     clearTimeout(toastTimer);
@@ -60,22 +46,10 @@
   }
 
   async function write(row, value) {
-    const response = await fetch(`/settings/${row.key}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ value }),
-    });
-    if (response.status === 409) {
-      flash(`${row.label} — not wired yet`);
-      return false;
-    }
-    const body = await response.json().catch(() => ({}));
-    if (!response.ok) {
-      flash(`${row.label}: ${body.error ?? `HTTP ${response.status}`}`);
-      return false;
-    }
-    await load();
-    return true;
+    const result = await writeSetting(row.key, value);
+    if (result.status === 409) flash(`${row.label} — not wired yet`);
+    else if (!result.ok) flash(`${row.label}: ${result.error ?? `HTTP ${result.status}`}`);
+    return result.ok;
   }
 
   function pending(row) {
@@ -110,20 +84,42 @@
 
   function tap(row) {
     if (row.type === 'toggle') write(row, !row.value);
-    else sheet = row;
+    else openSheet(row);
   }
 
   async function choose(option) {
     const row = sheet;
-    sheet = null;
+    sheetKey = null;
     if (String(row.value) === option) return;
     if (await write(row, option)) flash(`${row.label}: ${option}`);
   }
 
-  function confirmSheet() {
+  let draft = $state(null);
+
+  function openSheet(row) {
+    sheetKey = row.key;
+    draft = row.type === 'text' ? (row.value ?? '') : row.type === 'number' ? (row.value ?? row.min) : null;
+  }
+
+  async function saveNumber() {
     const row = sheet;
-    sheet = null;
-    flash(`${row.label} — not wired yet`);
+    if (Number(draft) === row.value) return;
+    if (await write(row, Number(draft))) flash(`${row.label}: ${shown({ ...row, value: Number(draft) })}`);
+  }
+
+  async function confirmSheet() {
+    const row = sheet;
+    if (!row.wired) {
+      sheetKey = null;
+      flash(`${row.label} — not wired yet`);
+      return;
+    }
+    if (row.type === 'text') {
+      if (await write(row, draft)) {
+        sheetKey = null;
+        flash(`${row.label} saved`);
+      }
+    }
   }
 
   function back() {
@@ -231,7 +227,7 @@
     {/if}
   </div>
 
-  <div class="scrim" class:is-open={sheet} role="presentation" onclick={() => (sheet = null)}></div>
+  <div class="scrim" class:is-open={sheet} role="presentation" onclick={() => (sheetKey = null)}></div>
 
   {#if sheet}
     <div class="sheet" role="dialog" aria-label={sheet.label}>
@@ -252,17 +248,41 @@
         </div>
       {/if}
 
-      {#if sheet.type === 'readonly' || sheet.type === 'text' || sheet.type === 'number'}
+      {#if sheet.wired && sheet.type === 'number'}
+        <div class="editor">
+          <input
+            class="range"
+            type="range"
+            min={sheet.min}
+            max={sheet.max}
+            step={sheet.step ?? 1}
+            bind:value={draft}
+            onchange={saveNumber}
+            aria-label={sheet.label}
+          />
+          <span class="editor__value">{shown({ ...sheet, value: Number(draft) })}</span>
+        </div>
+      {:else if sheet.wired && sheet.type === 'text'}
+        <input
+          class="field"
+          type="text"
+          bind:value={draft}
+          autocomplete="off"
+          autocapitalize="off"
+          spellcheck="false"
+          aria-label={sheet.label}
+        />
+      {:else if sheet.type === 'readonly' || sheet.type === 'text' || sheet.type === 'number'}
         <div class="sheet__value">{shown(sheet)}</div>
       {/if}
 
       <div class="sheet__actions">
-        <button class="btn" type="button" onclick={() => (sheet = null)}>
-          {sheet.type === 'choice' ? 'Close' : 'Cancel'}
+        <button class="btn" type="button" onclick={() => (sheetKey = null)}>
+          {sheet.type === 'choice' || (sheet.wired && sheet.type === 'number') ? 'Close' : 'Cancel'}
         </button>
-        {#if sheet.type === 'action' || sheet.type === 'text' || sheet.type === 'number'}
+        {#if sheet.type === 'action' || sheet.type === 'text' || (sheet.type === 'number' && !sheet.wired)}
           <button class="btn btn--confirm" class:btn--danger={sheet.danger} type="button" onclick={confirmSheet}>
-            {sheet.confirm ?? (sheet.type === 'action' ? 'Continue' : 'Edit')}
+            {sheet.confirm ?? (sheet.type === 'action' ? 'Continue' : sheet.wired ? 'Save' : 'Edit')}
           </button>
         {/if}
       </div>
@@ -770,6 +790,44 @@
     color: rgba(233, 238, 242, 0.9);
     word-break: break-all;
   }
+  /* Not in the design yet: number and text editing (design/settings.md
+     describes them, Settings.dc.html does not draw them). */
+  .editor {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    gap: 18px;
+  }
+  .range {
+    flex: 1;
+    min-width: 0;
+    height: 44px;
+    accent-color: var(--accent-lms);
+  }
+  .editor__value {
+    font-family: var(--font-mono);
+    font-size: 20px;
+    font-weight: 600;
+    min-width: 80px;
+    text-align: right;
+  }
+  .field {
+    flex-shrink: 0;
+    width: 100%;
+    min-height: 56px;
+    border-radius: 14px;
+    background: rgba(8, 12, 16, 0.5);
+    border: 1px solid rgba(126, 214, 188, 0.4);
+    padding: 14px 18px;
+    font-family: var(--font-mono);
+    font-size: 16px;
+    color: var(--ink);
+    outline: none;
+  }
+  .field:focus {
+    border-color: var(--accent-lms);
+  }
+
   .sheet__actions {
     flex-shrink: 0;
     display: flex;

@@ -183,3 +183,12 @@ def test_timezone_is_read_from_the_localtime_link(tmp_path):
     link.symlink_to(zone)
     assert read_timezone(link) == "Europe/Berlin"
     assert read_timezone(tmp_path / "missing") is None
+
+
+def test_clearing_a_text_value_falls_back_to_config(store):
+    settings = Settings(
+        store, registry=REGISTRY, defaults={"idle_url": lambda: "http://from-config/"}, wired={"idle_url": None}
+    )
+    assert settings.set("idle_url", "http://from-user/") == "http://from-user/"
+    assert settings.set("idle_url", "   ") == "http://from-config/"
+    assert store.get("idle_url") is None

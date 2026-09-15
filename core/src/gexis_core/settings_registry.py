@@ -145,7 +145,12 @@ class Settings:
         if key not in self._wired:
             raise NotWired(f"{key} is not wired yet")
         value = validate(row, value)
-        self._store.set(key, value)
+        if value == "" and row["type"] == "text":
+            # Clearing a text value falls back to deployment config (ADR-0035 §4).
+            self._store.delete(key)
+            value = self.value(key)
+        else:
+            self._store.set(key, value)
         callback = self._wired[key]
         if callback is not None:
             callback(value)

@@ -7,10 +7,12 @@
   import VolumeDrawer from './screens/VolumeDrawer.svelte';
   import HandoffScreen from './screens/HandoffScreen.svelte';
   import Settings from './screens/Settings.svelte';
+  import { loadSettings, settingValues } from './lib/settings.js';
 
   // ADR-0033: idle is "not playing and not touched", one timeout everywhere.
-  // Hardcoded until settings exist; `?idle_seconds=` shortens it for testing.
-  const IDLE_MS = (Number(new URLSearchParams(location.search).get('idle_seconds')) || 300) * 1000;
+  // From settings (idle_timeout, minutes); `?idle_seconds=` overrides it for testing.
+  const IDLE_OVERRIDE_S = Number(new URLSearchParams(location.search).get('idle_seconds')) || null;
+  const IDLE_MS = $derived((IDLE_OVERRIDE_S ?? ($settingValues.idle_timeout ?? 5) * 60) * 1000);
 
   let idle = $state(false);
   let volumeOpen = $state(false);
@@ -38,9 +40,10 @@
 
   // Opened by a change from elsewhere, the drawer closes itself once volume
   // activity stops; opened by the panel's own button, it stays until closed.
-  const AUTO_HIDE_MS = 3000;
+  const AUTO_HIDE_MS = $derived(($settingValues.drawer_autohide ?? 3) * 1000);
   let autoHide = null;
   function openFromExternal() {
+    if ($settingValues.drawer_on_external === false) return;
     if (volumeOpen && autoHide === null) return;
     volumeOpen = true;
     clearTimeout(autoHide);
@@ -71,6 +74,7 @@
   let surface = $state(null);
   onMount(() => {
     connect();
+    loadSettings();
     fetch('/surface')
       .then((r) => r.json())
       .then((body) => (surface = body.surface))

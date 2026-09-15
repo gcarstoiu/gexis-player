@@ -267,10 +267,11 @@ async def main() -> None:
     idle_session = aiohttp.ClientSession()
 
     async def idle_page() -> dict:
-        return await probe_idle_page(config.idle_url, idle_session)
+        return await probe_idle_page(settings.value("idle_url") or "", idle_session)
 
-    # ADR-0035. Defaults are what is true of this deployment today; nothing
-    # is wired yet, so every row reads and none accepts a write.
+    # ADR-0035. Defaults are what is true of this deployment today. A wired
+    # row is read where it is used - the idle page probe here, the rest by
+    # the UI - so none needs a callback.
     settings = Settings(
         settings_store,
         defaults={
@@ -282,6 +283,7 @@ async def main() -> None:
             "device_name": socket.gethostname,
             "timezone": read_timezone,
         },
+        wired={"idle_url": None, "idle_timeout": None, "drawer_on_external": None, "drawer_autohide": None},
         on_change=state_store.bump_settings_revision,
     )
 

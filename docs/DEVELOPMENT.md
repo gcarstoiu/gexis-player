@@ -636,7 +636,8 @@ over ADR-0016's separate-process model, criterion 4/5's minimal scope).
    /settings/{key}`, `GET /surface`, `settings_revision` in `/state`, and
    `Settings.dc.html` ported as the responsive component. A remote browser gets
    only settings. Two design deviations: `idle_grace` merged into
-   `idle_timeout` (ADR-0033), and the two volume-drawer rows added.
+   `idle_timeout` (ADR-0033), and the two volume-drawer rows added. **Passed George's phone
+   check 2026-09-15.**
 6. **WITHDRAWN 2026-09-15, together with criterion 7** (George: *"there is no
    need for this. As soon as I start playing from my phone, LMS activates so
    there is no risk of getting stuck"*). ADR-0027 measured that auto-power-on,

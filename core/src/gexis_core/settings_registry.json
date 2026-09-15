@@ -83,7 +83,7 @@
     "type": "choice",
     "label": "Slider travel curve",
     "marks": "RH",
-    "note": "Decided by ADR-0034: −45…0 dB, linear in dB; the number shown is slider position.",
+    "note": "Decided: the slider spans −45 to 0 dB, even in dB, and shows its position.",
     "options": [
      "dB-linear",
      "Perceptual"
@@ -348,7 +348,7 @@
     "key": "drawer_on_external",
     "type": "toggle",
     "label": "Show volume when changed elsewhere",
-    "marks": "NH",
+    "marks": "N",
     "note": "A phone’s volume change opens the drawer; the panel’s own changes do not.",
     "default": true
    },
@@ -356,7 +356,7 @@
     "key": "drawer_autohide",
     "type": "number",
     "label": "Volume drawer auto-hide",
-    "marks": "NH",
+    "marks": "N",
     "min": 1,
     "max": 30,
     "unit": "s",
@@ -380,8 +380,8 @@
     "key": "idle_timeout",
     "type": "number",
     "label": "Timeout",
-    "marks": "RH",
-    "note": "One timeout on every screen, counted while not playing and not touched (ADR-0033).",
+    "marks": "R",
+    "note": "One timeout on every screen, counted while nothing is playing and nobody touches the panel.",
     "min": 1,
     "max": 60,
     "unit": "min",
