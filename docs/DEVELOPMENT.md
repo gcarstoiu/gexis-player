@@ -558,6 +558,11 @@ over ADR-0016's separate-process model, criterion 4/5's minimal scope).
    (George's decision, 2026-09-12); transport proper (play/pause/next/previous/
    seek) stays Phase 6.
 
+   **Now playing shows no sample rate and no codec — dropped in the design
+   (George, 2026-09-15).** The paragraph below is withdrawn for now playing.
+   ADR-0019's codec rule for the *Peppy screen* is untouched, and the `codec`
+   field built in 4a stays in the payload for it. *Withdrawn text follows.*
+
    **Bluetooth's sample-rate field carries the codec, not a rate**
    (George's decision, 2026-09-12, extending [ADR-0019](decisions/0019-peppy-screen-lifecycle.md)'s
    rule for the Peppy screen to now playing as well — "the decode rate is the
@@ -677,7 +682,7 @@ increment at a time, each gated on his own hardware pass as usual):
 | **4a** | model extensions | no UI; transport state, handoff pair, command channel + LMS `power 1`, volume level, Bluetooth codec. Unit-testable and verifiable over the existing WebSocket. |
 | **4b** | criteria 1, 5 | static serving (ADR-0028), `stage-gexis/04-ui`, labwc + Chromium kiosk, the Node build step ADR-0023 named as its cost |
 | **4c** | criterion 3 | now playing |
-| **4d** | criterion 2 | idle screen and its fallback |
+| **4d** | criterion 2 | idle screen and its fallback. George's URL was given 2026-09-15 and is deliberately **not in this public repository** — it carries a per-display identifier. It sends no `X-Frame-Options`/CSP header and its HTML has no frame-busting (checked 2026-09-15); its scripts were not checked, so embedding is unproven until it renders on the panel. |
 | **4e** | criterion 8 | volume. *Was criteria 6, 7, 8 until 2026-09-15; the back-to-music screen and activate control were withdrawn.* |
 | **4f** | criterion 4 | transition state, with the exempt-pair list as published data rather than a constant in the UI |
 
