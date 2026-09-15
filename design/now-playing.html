@@ -1,0 +1,636 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>gexis panel — Now Playing (first slice)</title>
+<link rel="stylesheet" href="./now-playing.css" />
+</head>
+<body>
+<div class="gallery">
+  <section>
+    <p class="caption">1 &mdash; <b>LMS</b>, playing, artwork present. The reference state; every other state is this one with something removed.</p>
+      <div class="screen"
+           data-source="lms"
+           data-transport="playing"
+           data-artwork="ok"
+           data-position="ok">
+
+        <div class="screen__weave"></div>
+        <img class="screen__bleed" src="./assets/album-art.webp" alt="" />
+        <div class="screen__veil"></div>
+        <div class="screen__accent"></div>
+
+        <span class="srcpill">
+          <span class="i-lyrion"><i></i><i></i><i></i><i></i></span>LMS
+        </span>
+
+        <div class="screen__body">
+          <div class="top">
+            <div class="art">
+              <img src="./assets/album-art.webp" alt="" />
+              <div class="art__empty">
+                <div class="art__glyph"></div>
+                <span>artwork pending</span>
+              </div>
+            </div>
+
+            <div class="meta">
+              <div class="tabs" role="tablist" aria-label="Track detail">
+                <button class="tab" type="button" role="tab" aria-selected="true">Track</button>
+                <button class="tab" type="button" role="tab" aria-selected="false" aria-disabled="true">Lyrics</button>
+                <button class="tab" type="button" role="tab" aria-selected="false" aria-disabled="true">Artist</button>
+                <button class="tab" type="button" role="tab" aria-selected="false" aria-disabled="true">Release</button>
+              </div>
+
+
+              <div class="panel">
+                <div class="trackblock">
+                  <div class="title">Rempompi</div>
+                  <div class="artistline">
+                    <span class="artist">Gasca Zurli</span>
+                  </div>
+                  <div class="albumline">
+                    <span class="album">Atentiune, Acceleram!</span>
+                    <span class="year">2014</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="spacer"></div>
+
+          <div class="footer">
+          <div class="progress" data-position="38" data-duration="115">
+            <div class="progress__rail">
+              <div class="progress__track"><div class="progress__fill"></div></div>
+            </div>
+            <div class="progress__times">
+              <span data-elapsed>0:00</span><span data-remaining>-0:00</span>
+            </div>
+          </div>
+
+          <div class="bar">
+            <div class="bar__left">
+              <button class="btn" type="button" aria-label="Home" disabled>
+                <span class="i-tiles"><i></i><i></i><i></i><i></i></span>
+              </button>
+              <button class="btn" type="button" aria-label="Visualization" disabled>
+                <span class="i-meter">
+                  <i style="height:12px"></i><i style="height:22px"></i><i style="height:16px"></i><i style="height:8px"></i>
+                </span>
+              </button>
+            </div>
+
+            <div class="bar__mid">
+              <button class="btn" type="button" aria-label="Shuffle" data-lms-only disabled>
+                <span class="i-shuffle"><i></i><i></i><i></i><i></i><b></b><b></b></span>
+              </button>
+              <button class="btn btn--lg" type="button" aria-label="Previous" disabled><span class="i-prev"></span></button>
+              <button class="btn btn--play" type="button" aria-label="Pause" disabled>
+                <span class="i-play"></span><span class="i-pause"></span>
+              </button>
+              <button class="btn btn--lg" type="button" aria-label="Next" disabled><span class="i-next"></span></button>
+              <button class="btn" type="button" aria-label="Repeat" data-lms-only disabled>
+                <span class="i-repeat"><i></i><i></i><i></i><i></i><b></b><b></b></span>
+              </button>
+            </div>
+
+            <div class="bar__right">
+              <button class="btn" type="button" aria-label="Volume" disabled>
+                <span class="i-volume" data-level="mid"><span class="cone"></span><span class="arc"></span><span class="arc"></span><span class="arc"></span></span>
+              </button>
+              <button class="btn btn--queue" type="button" aria-label="Queue" data-lms-only disabled>
+                <i></i><i></i><i></i>
+                <span class="count">9</span>
+              </button>
+            </div>
+          </div>
+          </div>
+        </div>
+      </div>
+  </section>
+
+  <section>
+    <p class="caption">2 &mdash; <b>LMS</b>, <em>paused</em>. Three simultaneous signals: the control becomes pause-shaped, the state line reads Paused, and the artwork dims. Never opacity alone.</p>
+      <div class="screen"
+           data-source="lms"
+           data-transport="paused"
+           data-artwork="ok"
+           data-position="ok">
+
+        <div class="screen__weave"></div>
+        <img class="screen__bleed" src="./assets/album-art.webp" alt="" />
+        <div class="screen__veil"></div>
+        <div class="screen__accent"></div>
+
+        <span class="srcpill">
+          <span class="i-lyrion"><i></i><i></i><i></i><i></i></span>LMS
+        </span>
+
+        <div class="screen__body">
+          <div class="top">
+            <div class="art">
+              <img src="./assets/album-art.webp" alt="" />
+              <div class="art__empty">
+                <div class="art__glyph"></div>
+                <span>artwork pending</span>
+              </div>
+            </div>
+
+            <div class="meta">
+              <div class="tabs" role="tablist" aria-label="Track detail">
+                <button class="tab" type="button" role="tab" aria-selected="true">Track</button>
+                <button class="tab" type="button" role="tab" aria-selected="false" aria-disabled="true">Lyrics</button>
+                <button class="tab" type="button" role="tab" aria-selected="false" aria-disabled="true">Artist</button>
+                <button class="tab" type="button" role="tab" aria-selected="false" aria-disabled="true">Release</button>
+              </div>
+
+
+              <div class="panel">
+                <div class="trackblock">
+                  <div class="title">Rempompi</div>
+                  <div class="artistline">
+                    <span class="artist">Gasca Zurli</span>
+                  </div>
+                  <div class="albumline">
+                    <span class="album">Atentiune, Acceleram!</span>
+                    <span class="year">2014</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="spacer"></div>
+
+          <div class="footer">
+          <div class="progress" data-position="38" data-duration="115">
+            <div class="progress__rail">
+              <div class="progress__track"><div class="progress__fill"></div></div>
+            </div>
+            <div class="progress__times">
+              <span data-elapsed>0:00</span><span data-remaining>-0:00</span>
+            </div>
+          </div>
+
+          <div class="bar">
+            <div class="bar__left">
+              <button class="btn" type="button" aria-label="Home" disabled>
+                <span class="i-tiles"><i></i><i></i><i></i><i></i></span>
+              </button>
+              <button class="btn" type="button" aria-label="Visualization" disabled>
+                <span class="i-meter">
+                  <i style="height:12px"></i><i style="height:22px"></i><i style="height:16px"></i><i style="height:8px"></i>
+                </span>
+              </button>
+            </div>
+
+            <div class="bar__mid">
+              <button class="btn" type="button" aria-label="Shuffle" data-lms-only disabled>
+                <span class="i-shuffle"><i></i><i></i><i></i><i></i><b></b><b></b></span>
+              </button>
+              <button class="btn btn--lg" type="button" aria-label="Previous" disabled><span class="i-prev"></span></button>
+              <button class="btn btn--play" type="button" aria-label="Play" disabled>
+                <span class="i-play"></span><span class="i-pause"></span>
+              </button>
+              <button class="btn btn--lg" type="button" aria-label="Next" disabled><span class="i-next"></span></button>
+              <button class="btn" type="button" aria-label="Repeat" data-lms-only disabled>
+                <span class="i-repeat"><i></i><i></i><i></i><i></i><b></b><b></b></span>
+              </button>
+            </div>
+
+            <div class="bar__right">
+              <button class="btn" type="button" aria-label="Volume" disabled>
+                <span class="i-volume" data-level="mid"><span class="cone"></span><span class="arc"></span><span class="arc"></span><span class="arc"></span></span>
+              </button>
+              <button class="btn btn--queue" type="button" aria-label="Queue" data-lms-only disabled>
+                <i></i><i></i><i></i>
+                <span class="count">9</span>
+              </button>
+            </div>
+          </div>
+          </div>
+        </div>
+      </div>
+  </section>
+
+  <section>
+    <p class="caption">3 &mdash; <b>Spotify Connect</b>. Shuffle, repeat and the queue are gone: the renderer does not support them, so they are <em>absent rather than greyed out</em>.</p>
+      <div class="screen"
+           data-source="spotify"
+           data-transport="playing"
+           data-artwork="ok"
+           data-position="ok">
+
+        <div class="screen__weave"></div>
+        <img class="screen__bleed" src="./assets/album-art.webp" alt="" />
+        <div class="screen__veil"></div>
+        <div class="screen__accent"></div>
+
+        <span class="srcpill">
+          <img class="srcpill__mark srcpill__mark--img" src="./assets/icon-spotify.png" alt="" />Spotify
+        </span>
+
+        <div class="screen__body">
+          <div class="top">
+            <div class="art">
+              <img src="./assets/album-art.webp" alt="" />
+              <div class="art__empty">
+                <div class="art__glyph"></div>
+                <span>artwork pending</span>
+              </div>
+            </div>
+
+            <div class="meta">
+              <div class="tabs" role="tablist" aria-label="Track detail">
+                <button class="tab" type="button" role="tab" aria-selected="true">Track</button>
+                <button class="tab" type="button" role="tab" aria-selected="false" aria-disabled="true">Lyrics</button>
+                <button class="tab" type="button" role="tab" aria-selected="false" aria-disabled="true">Artist</button>
+                <button class="tab" type="button" role="tab" aria-selected="false" aria-disabled="true">Release</button>
+              </div>
+
+
+              <div class="panel">
+                <div class="trackblock">
+                  <div class="title">Neconditionat</div>
+                  <div class="artistline">
+                    <span class="artist">Andra</span>
+                  </div>
+                  <div class="albumline">
+                    <span class="album">Neconditionat</span>
+                    <span class="year">2015</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="spacer"></div>
+
+          <div class="footer">
+          <div class="progress" data-position="94" data-duration="232">
+            <div class="progress__rail">
+              <div class="progress__track"><div class="progress__fill"></div></div>
+            </div>
+            <div class="progress__times">
+              <span data-elapsed>0:00</span><span data-remaining>-0:00</span>
+            </div>
+          </div>
+
+          <div class="bar">
+            <div class="bar__left">
+              <button class="btn" type="button" aria-label="Home" disabled>
+                <span class="i-tiles"><i></i><i></i><i></i><i></i></span>
+              </button>
+              <button class="btn" type="button" aria-label="Visualization" disabled>
+                <span class="i-meter">
+                  <i style="height:12px"></i><i style="height:22px"></i><i style="height:16px"></i><i style="height:8px"></i>
+                </span>
+              </button>
+            </div>
+
+            <div class="bar__mid">
+              <button class="btn" type="button" aria-label="Shuffle" data-lms-only disabled>
+                <span class="i-shuffle"><i></i><i></i><i></i><i></i><b></b><b></b></span>
+              </button>
+              <button class="btn btn--lg" type="button" aria-label="Previous" disabled><span class="i-prev"></span></button>
+              <button class="btn btn--play" type="button" aria-label="Pause" disabled>
+                <span class="i-play"></span><span class="i-pause"></span>
+              </button>
+              <button class="btn btn--lg" type="button" aria-label="Next" disabled><span class="i-next"></span></button>
+              <button class="btn" type="button" aria-label="Repeat" data-lms-only disabled>
+                <span class="i-repeat"><i></i><i></i><i></i><i></i><b></b><b></b></span>
+              </button>
+            </div>
+
+            <div class="bar__right">
+              <button class="btn" type="button" aria-label="Volume" disabled>
+                <span class="i-volume" data-level="mid"><span class="cone"></span><span class="arc"></span><span class="arc"></span><span class="arc"></span></span>
+              </button>
+              <button class="btn btn--queue" type="button" aria-label="Queue" data-lms-only disabled>
+                <i></i><i></i><i></i>
+                <span class="count">9</span>
+              </button>
+            </div>
+          </div>
+          </div>
+        </div>
+      </div>
+  </section>
+
+  <section>
+    <p class="caption">4 &mdash; <b>Bluetooth</b>. Artwork is <em>always</em> null, and no position or duration is published, so the bar is an inert rule and the times are hidden. Shuffle, repeat and queue are absent here too.</p>
+      <div class="screen"
+           data-source="bluetooth"
+           data-transport="playing"
+           data-artwork="none"
+           data-position="none">
+
+        <div class="screen__weave"></div>
+        
+        <div class="screen__veil"></div>
+        <div class="screen__accent"></div>
+
+        <span class="srcpill">
+          <img class="srcpill__mark srcpill__mark--img" src="./assets/icon-bluetooth.png" alt="" />Bluetooth
+        </span>
+
+        <div class="screen__body">
+          <div class="top">
+            <div class="art">
+              <img src="./assets/album-art.webp" alt="" />
+              <div class="art__empty">
+                <div class="art__glyph"></div>
+                <span>artwork pending</span>
+              </div>
+            </div>
+
+            <div class="meta">
+              <div class="tabs" role="tablist" aria-label="Track detail">
+                <button class="tab" type="button" role="tab" aria-selected="true">Track</button>
+                <button class="tab" type="button" role="tab" aria-selected="false" aria-disabled="true">Lyrics</button>
+                <button class="tab" type="button" role="tab" aria-selected="false" aria-disabled="true">Artist</button>
+                <button class="tab" type="button" role="tab" aria-selected="false" aria-disabled="true">Release</button>
+              </div>
+
+
+              <div class="panel">
+                <div class="trackblock">
+                  <div class="title">Blue Rooms</div>
+                  <div class="artistline">
+                    <span class="artist">Bime</span>
+                  </div>
+                  <div class="albumline">
+                    <span class="album">Late Sets</span>
+                    <span class="year">2019</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="spacer"></div>
+
+          <div class="footer">
+          <div class="progress">
+            <div class="progress__rail">
+              <div class="progress__track"><div class="progress__fill"></div></div>
+            </div>
+            <div class="progress__times">
+              <span data-elapsed>0:00</span><span data-remaining>-0:00</span>
+            </div>
+          </div>
+
+          <div class="bar">
+            <div class="bar__left">
+              <button class="btn" type="button" aria-label="Home" disabled>
+                <span class="i-tiles"><i></i><i></i><i></i><i></i></span>
+              </button>
+              <button class="btn" type="button" aria-label="Visualization" disabled>
+                <span class="i-meter">
+                  <i style="height:12px"></i><i style="height:22px"></i><i style="height:16px"></i><i style="height:8px"></i>
+                </span>
+              </button>
+            </div>
+
+            <div class="bar__mid">
+              <button class="btn" type="button" aria-label="Shuffle" data-lms-only disabled>
+                <span class="i-shuffle"><i></i><i></i><i></i><i></i><b></b><b></b></span>
+              </button>
+              <button class="btn btn--lg" type="button" aria-label="Previous" disabled><span class="i-prev"></span></button>
+              <button class="btn btn--play" type="button" aria-label="Pause" disabled>
+                <span class="i-play"></span><span class="i-pause"></span>
+              </button>
+              <button class="btn btn--lg" type="button" aria-label="Next" disabled><span class="i-next"></span></button>
+              <button class="btn" type="button" aria-label="Repeat" data-lms-only disabled>
+                <span class="i-repeat"><i></i><i></i><i></i><i></i><b></b><b></b></span>
+              </button>
+            </div>
+
+            <div class="bar__right">
+              <button class="btn" type="button" aria-label="Volume" disabled>
+                <span class="i-volume" data-level="mid"><span class="cone"></span><span class="arc"></span><span class="arc"></span><span class="arc"></span></span>
+              </button>
+              <button class="btn btn--queue" type="button" aria-label="Queue" data-lms-only disabled>
+                <i></i><i></i><i></i>
+                <span class="count">9</span>
+              </button>
+            </div>
+          </div>
+          </div>
+        </div>
+      </div>
+  </section>
+
+  <section>
+    <p class="caption">5 &mdash; <b>Long text</b>. The title clamps to two lines; artist and album ellipsize on one. The 238px reserve means this screen is exactly as tall as state 1.</p>
+      <div class="screen"
+           data-source="lms"
+           data-transport="playing"
+           data-artwork="ok"
+           data-position="ok">
+
+        <div class="screen__weave"></div>
+        <img class="screen__bleed" src="./assets/album-art.webp" alt="" />
+        <div class="screen__veil"></div>
+        <div class="screen__accent"></div>
+
+        <span class="srcpill">
+          <span class="i-lyrion"><i></i><i></i><i></i><i></i></span>LMS
+        </span>
+
+        <div class="screen__body">
+          <div class="top">
+            <div class="art">
+              <img src="./assets/album-art.webp" alt="" />
+              <div class="art__empty">
+                <div class="art__glyph"></div>
+                <span>artwork pending</span>
+              </div>
+            </div>
+
+            <div class="meta">
+              <div class="tabs" role="tablist" aria-label="Track detail">
+                <button class="tab" type="button" role="tab" aria-selected="true">Track</button>
+                <button class="tab" type="button" role="tab" aria-selected="false" aria-disabled="true">Lyrics</button>
+                <button class="tab" type="button" role="tab" aria-selected="false" aria-disabled="true">Artist</button>
+                <button class="tab" type="button" role="tab" aria-selected="false" aria-disabled="true">Release</button>
+              </div>
+
+
+              <div class="panel">
+                <div class="trackblock">
+                  <div class="title">Everything I Said Before About Never Coming Back To This Particular Town</div>
+                  <div class="artistline">
+                    <span class="artist">The Extraordinarily Long Names Orchestra Of Greater Bucharest</span>
+                  </div>
+                  <div class="albumline">
+                    <span class="album">Recordings From A Very Long Winter, Volume Two</span>
+                    <span class="year">2021</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="spacer"></div>
+
+          <div class="footer">
+          <div class="progress" data-position="512" data-duration="903">
+            <div class="progress__rail">
+              <div class="progress__track"><div class="progress__fill"></div></div>
+            </div>
+            <div class="progress__times">
+              <span data-elapsed>0:00</span><span data-remaining>-0:00</span>
+            </div>
+          </div>
+
+          <div class="bar">
+            <div class="bar__left">
+              <button class="btn" type="button" aria-label="Home" disabled>
+                <span class="i-tiles"><i></i><i></i><i></i><i></i></span>
+              </button>
+              <button class="btn" type="button" aria-label="Visualization" disabled>
+                <span class="i-meter">
+                  <i style="height:12px"></i><i style="height:22px"></i><i style="height:16px"></i><i style="height:8px"></i>
+                </span>
+              </button>
+            </div>
+
+            <div class="bar__mid">
+              <button class="btn" type="button" aria-label="Shuffle" data-lms-only disabled>
+                <span class="i-shuffle"><i></i><i></i><i></i><i></i><b></b><b></b></span>
+              </button>
+              <button class="btn btn--lg" type="button" aria-label="Previous" disabled><span class="i-prev"></span></button>
+              <button class="btn btn--play" type="button" aria-label="Pause" disabled>
+                <span class="i-play"></span><span class="i-pause"></span>
+              </button>
+              <button class="btn btn--lg" type="button" aria-label="Next" disabled><span class="i-next"></span></button>
+              <button class="btn" type="button" aria-label="Repeat" data-lms-only disabled>
+                <span class="i-repeat"><i></i><i></i><i></i><i></i><b></b><b></b></span>
+              </button>
+            </div>
+
+            <div class="bar__right">
+              <button class="btn" type="button" aria-label="Volume" disabled>
+                <span class="i-volume" data-level="mid"><span class="cone"></span><span class="arc"></span><span class="arc"></span><span class="arc"></span></span>
+              </button>
+              <button class="btn btn--queue" type="button" aria-label="Queue" data-lms-only disabled>
+                <i></i><i></i><i></i>
+                <span class="count">9</span>
+              </button>
+            </div>
+          </div>
+          </div>
+        </div>
+      </div>
+  </section>
+
+  <section>
+    <p class="caption">6 &mdash; <b>Missing metadata</b>. artist, album and year are null: each line blanks itself and holds its space. <em>The region blanks, never the screen.</em></p>
+      <div class="screen"
+           data-source="bluetooth"
+           data-transport="playing"
+           data-artwork="none"
+           data-position="none">
+
+        <div class="screen__weave"></div>
+        
+        <div class="screen__veil"></div>
+        <div class="screen__accent"></div>
+
+        <span class="srcpill">
+          <img class="srcpill__mark srcpill__mark--img" src="./assets/icon-bluetooth.png" alt="" />Bluetooth
+        </span>
+
+        <div class="screen__body">
+          <div class="top">
+            <div class="art">
+              <img src="./assets/album-art.webp" alt="" />
+              <div class="art__empty">
+                <div class="art__glyph"></div>
+                <span>looking for artwork</span>
+              </div>
+            </div>
+
+            <div class="meta">
+              <div class="tabs" role="tablist" aria-label="Track detail">
+                <button class="tab" type="button" role="tab" aria-selected="true">Track</button>
+                <button class="tab" type="button" role="tab" aria-selected="false" aria-disabled="true">Lyrics</button>
+                <button class="tab" type="button" role="tab" aria-selected="false" aria-disabled="true">Artist</button>
+                <button class="tab" type="button" role="tab" aria-selected="false" aria-disabled="true">Release</button>
+              </div>
+
+
+              <div class="panel">
+                <div class="trackblock">
+                  <div class="title">Track 7</div>
+                  <div class="artistline">
+                    <span class="artist is-empty">—</span>
+                  </div>
+                  <div class="albumline">
+                    <span class="album is-empty">—</span>
+                    <span class="year is-empty">0000</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="spacer"></div>
+
+          <div class="footer">
+          <div class="progress">
+            <div class="progress__rail">
+              <div class="progress__track"><div class="progress__fill"></div></div>
+            </div>
+            <div class="progress__times">
+              <span data-elapsed>0:00</span><span data-remaining>-0:00</span>
+            </div>
+          </div>
+
+          <div class="bar">
+            <div class="bar__left">
+              <button class="btn" type="button" aria-label="Home" disabled>
+                <span class="i-tiles"><i></i><i></i><i></i><i></i></span>
+              </button>
+              <button class="btn" type="button" aria-label="Visualization" disabled>
+                <span class="i-meter">
+                  <i style="height:12px"></i><i style="height:22px"></i><i style="height:16px"></i><i style="height:8px"></i>
+                </span>
+              </button>
+            </div>
+
+            <div class="bar__mid">
+              <button class="btn" type="button" aria-label="Shuffle" data-lms-only disabled>
+                <span class="i-shuffle"><i></i><i></i><i></i><i></i><b></b><b></b></span>
+              </button>
+              <button class="btn btn--lg" type="button" aria-label="Previous" disabled><span class="i-prev"></span></button>
+              <button class="btn btn--play" type="button" aria-label="Pause" disabled>
+                <span class="i-play"></span><span class="i-pause"></span>
+              </button>
+              <button class="btn btn--lg" type="button" aria-label="Next" disabled><span class="i-next"></span></button>
+              <button class="btn" type="button" aria-label="Repeat" data-lms-only disabled>
+                <span class="i-repeat"><i></i><i></i><i></i><i></i><b></b><b></b></span>
+              </button>
+            </div>
+
+            <div class="bar__right">
+              <button class="btn" type="button" aria-label="Volume" disabled>
+                <span class="i-volume" data-level="mid"><span class="cone"></span><span class="arc"></span><span class="arc"></span><span class="arc"></span></span>
+              </button>
+              <button class="btn btn--queue" type="button" aria-label="Queue" data-lms-only disabled>
+                <i></i><i></i><i></i>
+                <span class="count">9</span>
+              </button>
+            </div>
+          </div>
+          </div>
+        </div>
+      </div>
+  </section>
+</div>
+<script src="./now-playing.js"></script>
+</body>
+</html>

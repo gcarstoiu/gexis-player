@@ -73,6 +73,11 @@ class Config:
     # Phase 4b did and what a core-only development install still does.
     ui_dir: str = "/opt/gexis-ui"
 
+    # Phase 4d: the idle screen's external page (ADR-0019). Empty means
+    # unconfigured, and the UI shows its built-in clock. Set on the device
+    # only - the real URL carries a per-display identifier.
+    idle_url: str = ""
+
     # Phase 4 criterion 4: renderer pairs whose measured takeover gap is
     # below ADR-0010's 1s threshold, so a transition screen would be a
     # flicker rather than information. Published in the state payload

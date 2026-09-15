@@ -40,7 +40,13 @@ idle unimportant of where it happens"*):
   so the idle screen leaves. Assumed: back to where the panel was, then the
   normal renderer rules apply (a renderer arriving shows now playing).
   Unconfirmed.
-- **A renderer disconnecting** — assumed to show Home. Unconfirmed.
+- ~~A renderer disconnecting~~ **Resolved 2026-09-15 (George):** if the
+  screen the panel was on no longer exists when the idle screen is dismissed —
+  the renderer disconnected and nothing else is connected — it goes to Home.
+  **General rule: when the previous screen is gone, fall back to Home**, in
+  whichever form fits the state (with or without a renderer connected).
+  Phase 4d satisfies this by construction: the idle screen is an overlay, and
+  the screen beneath it already follows `active`.
 - ~~What the idle screen shows.~~ **Resolved 2026-09-15 (George):** the
   external page, per ADR-0019. The design's drifting clock is the **fallback**
   when that page does not load — unreachable, unconfigured, or refusing to be

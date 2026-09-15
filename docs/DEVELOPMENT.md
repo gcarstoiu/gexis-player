@@ -104,6 +104,18 @@ and phase labels on elements. The exports are committed to the repo as
 reference-only, never built, so a later redesign is a diff rather than a
 re-derivation.
 
+**How an export lands (2026-09-15).** Claude Design cannot write to the repo;
+George copies each export into `design/`. So history is kept by commit:
+
+1. The previous export is already committed, so nothing is lost by
+   overwriting it. **Replace the folder's contents wholesale** (delete, then
+   paste) so a file the new export dropped shows up as a deletion.
+2. Claude commits the export **on its own, before any port work**
+   (`Design export: <what changed>`), then reads `git diff HEAD~1 -- design/`
+   to see what actually changed rather than what the export says changed.
+3. `design/source/` is locked — built from, never edited. Run
+   `design/verify.html` over HTTP after any change to the package.
+
 ### Branching
 
 - One branch per phase: `phase-0-image`, `phase-2-arbitration`.
@@ -685,7 +697,7 @@ increment at a time, each gated on his own hardware pass as usual):
 | **4a** | model extensions | no UI; transport state, handoff pair, command channel + LMS `power 1`, volume level, Bluetooth codec. Unit-testable and verifiable over the existing WebSocket. |
 | **4b** | criteria 1, 5 | static serving (ADR-0028), `stage-gexis/04-ui`, labwc + Chromium kiosk, the Node build step ADR-0023 named as its cost |
 | **4c** | criterion 3 | now playing. **Built 2026-09-15** from `design/now-playing.html`; all six design states rendered against a mock `/state` in headless Chromium (Brave) on the dev machine, installed on `gexis`. **Not yet checked on the panel itself** — George's pass. |
-| **4d** | criterion 2 | idle screen and its fallback. George's URL was given 2026-09-15 and is deliberately **not in this public repository** — it carries a per-display identifier. It sends no `X-Frame-Options`/CSP header and its HTML has no frame-busting (checked 2026-09-15); its scripts were not checked, so embedding is unproven until it renders on the panel. |
+| **4d** | criterion 2 | idle screen and its fallback. **Built 2026-09-15:** `GET /idle` probes `idle_url` (from `/etc/gexis/core.toml`) for reachability and framing headers; the UI embeds the page in a sandboxed iframe or shows the design's drifting clock. Timer per ADR-0033, hardcoded 5 minutes. Deployed on `gexis`; **passed George's panel pass 2026-09-15**. George's URL was given 2026-09-15 and is deliberately **not in this public repository** — it carries a per-display identifier. It sends no `X-Frame-Options`/CSP header and its HTML has no frame-busting (checked 2026-09-15); its scripts were not checked, so embedding is unproven until it renders on the panel. |
 | **4e** | criterion 8 | volume. *Was criteria 6, 7, 8 until 2026-09-15; the back-to-music screen and activate control were withdrawn.* |
 | **4f** | criterion 4 | transition state, with the exempt-pair list as published data rather than a constant in the UI |
 
