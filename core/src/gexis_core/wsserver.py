@@ -30,6 +30,7 @@ from pathlib import Path
 from aiohttp import web
 
 from gexis_core.model import PlaybackState
+from gexis_core.settings_registry import InvalidValue, NotSettable, NotWired, UnknownSetting
 from gexis_core.state import StateStore
 
 logger = logging.getLogger("gexis_core.wsserver")
@@ -47,6 +48,9 @@ class StateServer:
         *,
         activate=None,
         set_volume=None,
+        set_mute=None,
+        idle_page=None,
+        settings=None,
         ui_dir: Path | None = None,
     ) -> None:
         """`activate(renderer_id) -> bool` and `set_volume(percent) -> bool`
@@ -66,6 +70,9 @@ class StateServer:
         self._port = port
         self._activate = activate
         self._set_volume = set_volume
+        self._set_mute = set_mute
+        self._idle_page = idle_page
+        self._settings = settings
         self._ui_dir = ui_dir
         self._clients: set[web.WebSocketResponse] = set()
         store.subscribe(self._broadcast)
@@ -145,6 +152,71 @@ class StateServer:
             return web.json_response({"error": "volume write failed"}, status=502)
         return web.json_response({"percent": percent})
 
+    async def _handle_set_mute(self, request: web.Request) -> web.Response:
+        if self._set_mute is None:
+            return web.json_response({"error": "mute is not wired up"}, status=503)
+        try:
+            muted = (await request.json())["muted"]
+        except (ValueError, KeyError, TypeError):
+            muted = None
+        if not isinstance(muted, bool):
+            return web.json_response({"error": 'body must be {"muted": true|false}'}, status=400)
+        if not await self._set_mute(muted):
+            return web.json_response({"error": "volume level not known yet"}, status=409)
+        return web.json_response({"muted": muted})
+
+    async def _handle_idle(self, request: web.Request) -> web.Response:
+        """`idle_page() -> {url, embeddable, reason}`, asked each time the
+        idle screen opens: reachability changes while the device runs."""
+        if self._idle_page is None:
+            return web.json_response({"error": "idle page is not wired up"}, status=503)
+        return web.json_response(await self._idle_page())
+
+    async def _handle_surface(self, request: web.Request) -> web.Response:
+        """ADR-0035 §6: the panel always arrives on loopback, a phone from the LAN."""
+        panel = request.remote in ("127.0.0.1", "::1")
+        return web.json_response({"surface": "panel" if panel else "remote"})
+
+    async def _handle_settings(self, request: web.Request) -> web.Response:
+        if self._settings is None:
+            return web.json_response({"error": "settings are not wired up"}, status=503)
+        return web.json_response({"groups": self._settings.to_json()})
+
+    async def _handle_setting_write(self, request: web.Request) -> web.Response:
+        if self._settings is None:
+            return web.json_response({"error": "settings are not wired up"}, status=503)
+        key = request.match_info["key"]
+        try:
+            body = await request.json()
+            value = body["value"]
+        except (ValueError, KeyError, TypeError):
+            return web.json_response({"error": 'body must be {"value": ...}'}, status=400)
+        return self._settings_call(lambda: {"key": key, "value": self._settings.set(key, value)})
+
+    async def _handle_setting_action(self, request: web.Request) -> web.Response:
+        if self._settings is None:
+            return web.json_response({"error": "settings are not wired up"}, status=503)
+        key = request.match_info["key"]
+
+        def run():
+            self._settings.run(key)
+            return {"key": key}
+
+        return self._settings_call(run)
+
+    @staticmethod
+    def _settings_call(call) -> web.Response:
+        try:
+            return web.json_response(call())
+        except UnknownSetting as exc:
+            return web.json_response({"error": f"unknown setting {exc.args[0]}"}, status=404)
+        except NotSettable as exc:
+            return web.json_response({"error": str(exc)}, status=405)
+        except NotWired as exc:
+            return web.json_response({"error": str(exc)}, status=409)
+        except InvalidValue as exc:
+            return web.json_response({"error": str(exc)}, status=400)
+
     def make_app(self) -> web.Application:
         """Split out from `run()` so tests can drive the routes with
         aiohttp's own `test_utils.TestServer`/`TestClient` - a real
@@ -157,6 +229,12 @@ class StateServer:
         app.router.add_get("/state", self._handle)
         app.router.add_post("/renderer/{renderer_id}/activate", self._handle_activate)
         app.router.add_post("/volume", self._handle_set_volume)
+        app.router.add_post("/volume/mute", self._handle_set_mute)
+        app.router.add_get("/idle", self._handle_idle)
+        app.router.add_get("/surface", self._handle_surface)
+        app.router.add_get("/settings", self._handle_settings)
+        app.router.add_put("/settings/{key}", self._handle_setting_write)
+        app.router.add_post("/settings/{key}", self._handle_setting_action)
         # The UI is registered *after* the API, so nothing it serves can
         # shadow `/state` or a command route - aiohttp resolves in
         # registration order. Two routes only, which is why vite is

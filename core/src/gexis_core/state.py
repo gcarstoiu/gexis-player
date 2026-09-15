@@ -22,7 +22,7 @@ from gexis_core.model import (
     TrackMetadata,
     VolumeState,
 )
-from gexis_core.volume import raw_to_db
+from gexis_core.volume import raw_to_db, raw_to_slider_percent
 
 logger = logging.getLogger("gexis_core.state")
 
@@ -53,6 +53,7 @@ class StateStore:
         self._active: str | None = None
         self._handoff: Handoff | None = None
         self._volume: VolumeState | None = None
+        self._settings_revision = 0
         self._subscribers: list[Callable[[PlaybackState], None]] = []
 
     def subscribe(self, callback: Callable[[PlaybackState], None]) -> None:
@@ -74,6 +75,7 @@ class StateStore:
             handoff=self._handoff,
             volume=self._volume,
             handoff_exempt_pairs=self._handoff_exempt_pairs,
+            settings_revision=self._settings_revision,
         )
 
     def set_active(self, renderer_id: str | None) -> None:
@@ -137,16 +139,20 @@ class StateStore:
         self._handoff = handoff
         self._notify()
 
-    def set_volume_raw(self, raw: int) -> None:
+    def set_volume_raw(self, raw: int, *, muted: bool = False) -> None:
         """The shared hardware mixer moved (Phase 4 criterion 8). Takes the
         raw 0-240 value - the only unit the hardware actually has - and
-        derives dB and percent in the model, so no caller has to know
-        ADR-0018's scale to report a level.
+        derives dB and slider percent (ADR-0034) here, so no caller has to
+        know either scale to report a level.
         """
-        volume = VolumeState(raw=raw, db=raw_to_db(raw))
+        volume = VolumeState(raw=raw, db=raw_to_db(raw), percent=raw_to_slider_percent(raw), muted=muted)
         if volume == self._volume:
             return
         self._volume = volume
+        self._notify()
+
+    def bump_settings_revision(self) -> None:
+        self._settings_revision += 1
         self._notify()
 
     def _notify(self) -> None:

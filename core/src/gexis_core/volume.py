@@ -219,19 +219,57 @@ def db_to_raw(db: float) -> int:
     return max(0, min(HARDWARE_MAX, raw))
 
 
-def percent_to_raw(percent: float) -> int:
-    """A percentage of the hardware control's own travel to a raw step.
+# ADR-0034: the panel slider spans -45..0dB, linear in dB, with the bottom
+# of travel as silence - the span LMS's and Spotify's own sliders settled on
+# (Findings 009, 010). The number shown is the slider position.
+SLIDER_DB_MIN = -45.0
 
-    Phase 4 criterion 8: George's decision is that the UI shows and sets a
-    percentage *of the hardware control*, which is the one level all three
-    renderers share. Note what this is deliberately **not**: it is not a
-    perceptual scale. 50% here is raw 120, which `raw_to_db` will tell you
-    is -60dB. That is the known consequence of the control being dB-linear
-    (see `raw_to_db`), recorded in the criterion, and it is why how a
-    *slider's travel* maps onto this is still an open question rather than
-    "just use the percentage".
-    """
-    return max(0, min(HARDWARE_MAX, round(percent / 100 * HARDWARE_MAX)))
+
+def slider_percent_to_raw(percent: float) -> int:
+    if percent <= 0:
+        return 0
+    return db_to_raw(SLIDER_DB_MIN + min(percent, 100) / 100 * -SLIDER_DB_MIN)
+
+
+def raw_to_slider_percent(raw: int) -> int:
+    """Quieter than the slider's floor but not silent reads as 0%."""
+    if raw <= 0:
+        return 0
+    percent = (raw_to_db(raw) - SLIDER_DB_MIN) / -SLIDER_DB_MIN * 100
+    return max(0, min(100, round(percent)))
+
+
+class Mute:
+    """ADR-0034: mute remembers the level and writes silence; unmute writes it
+    back. Any other change to the level ends mute, so "muted" is never shown
+    over audible music."""
+
+    def __init__(self, write_hardware, current_raw) -> None:
+        self._write_hardware = write_hardware
+        self._current_raw = current_raw
+        self.muted = False
+        self._restore: int | None = None
+
+    async def set(self, muted: bool) -> bool:
+        if muted == self.muted:
+            return True
+        if muted:
+            raw = self._current_raw()
+            if raw is None:
+                return False
+            self._restore = raw
+            self.muted = True
+            await self._write_hardware(0)
+        else:
+            restore, self._restore = self._restore, None
+            self.muted = False
+            await self._write_hardware(restore)
+        return True
+
+    def observe(self, raw: int) -> None:
+        if self.muted and raw != 0:
+            self.muted = False
+            self._restore = None
 
 
 # Spotify's own volume report is a bare fraction (value/max_, go-librespot's

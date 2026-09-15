@@ -56,6 +56,10 @@ set -a
 source "${ENV_FILE}"
 set +a
 
+# Added after the first env files were written, so an older file without
+# them provisions exactly as before rather than failing.
+: "${TIMEZONE=}" "${IDLE_URL=}"
+
 # "Missing" (key absent from the file entirely) is checked separately from
 # "empty" (present, blank) - WIFI_SSID etc. are legitimately blank by
 # design (Ethernet-only, keep the default hostname). A typo'd or deleted
@@ -117,6 +121,8 @@ while IFS= read -r line || [ -n "${line}" ]; do
 		WIFI_PASS=*)     printf "WIFI_PASS='%s'\n" "$(sq_escape "${WIFI_PASS}")" ;;
 		WIFI_COUNTRY=*)  printf "WIFI_COUNTRY='%s'\n" "$(sq_escape "${WIFI_COUNTRY}")" ;;
 		HOSTNAME=*)      printf "HOSTNAME='%s'\n" "$(sq_escape "${HOSTNAME}")" ;;
+		TIMEZONE=*)      printf "TIMEZONE='%s'\n" "$(sq_escape "${TIMEZONE}")" ;;
+		IDLE_URL=*)      printf "IDLE_URL='%s'\n" "$(sq_escape "${IDLE_URL}")" ;;
 		*)               printf '%s\n' "${line}" ;;
 	esac
 done < "${FIRSTRUN}" > "${TMP_FIRSTRUN}"
@@ -129,7 +135,7 @@ mv "${TMP_FIRSTRUN}" "${FIRSTRUN}"
 # is consistent with itself, not that the file actually holds the right
 # value.
 FAILED=0
-for key in SSH_PUBKEY WIFI_SSID WIFI_PASS WIFI_COUNTRY HOSTNAME; do
+for key in SSH_PUBKEY WIFI_SSID WIFI_PASS WIFI_COUNTRY HOSTNAME TIMEZONE IDLE_URL; do
 	expected_value="${!key}"
 	written_line="$(grep "^${key}='" "${FIRSTRUN}" || true)"
 	if [ -z "${written_line}" ]; then

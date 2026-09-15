@@ -52,7 +52,9 @@ Each row is marked:
 | Boot default mid-session, or only at true cold boot? | [R][?] | Finding 011 §3 — a renderer's first use mid-session currently lands as quiet as a power-on |
 | Per-renderer volume memory on/off | [R][H] | George's decision 2026-09-07, currently unconditional |
 | Which renderers are volume-managed | [R][H] | `capabilities.volume_managed`; Bluetooth excluded pending Finding 006 |
-| Volume slider travel curve | [N][?] | Left open by Phase 4 criterion 8. The control is dB-linear, so travel mapped straight to percentage puts everything usable in the top quarter — 55 % is already −54 dB, measured |
+| Volume slider travel curve | [R][H] | **Decided 2026-09-15 by [ADR-0034](0034-panel-volume-travel-and-mute.md):** −45…0 dB linear in dB, bottom of travel is silence, the number shown is slider position. Was [N][?]: the control is dB-linear, so a straight mapping put everything usable in the top quarter |
+| Volume drawer auto-hide delay | [N] | Confirmed as a setting by George, 2026-09-15. 3 s today, `AUTO_HIDE_MS` in `ui/src/App.svelte`, applied when a change from elsewhere opened the drawer. Claude Design is to specify auto-hide for the drawer generally |
+| Show the volume drawer when volume changes elsewhere | [N] | Confirmed as a setting by George, 2026-09-15. On today: a phone's change opens the drawer; the panel's own changes and a takeover's restored level do not |
 
 ### Arbitration — who gets the device
 
@@ -73,10 +75,10 @@ Phase 2 and ADR-0027.
 
 | Setting | Mark | Notes |
 |---|---|---|
-| Idle screen URL | [R] | ADR-0019; external, lazy loaded, needs a fallback for unreachable and unconfigured — and for *reachable but refuses framing*, see the panel home URL below |
+| Idle screen URL | [R] | **Settable from the phone since 2026-09-15** (ADR-0035 increment 2); `core.toml`'s value is the default, clearing the field returns to it. ADR-0019; external, lazy loaded, needs a fallback for unreachable and unconfigured — and for *reachable but refuses framing*, see the panel home URL below |
 | Panel home URL | [H] | `GEXIS_KIOSK_URL` in `/etc/gexis/kiosk.env`, hardcoded to `http://127.0.0.1:8090/`. Proven changeable with no rebuild and no code change (2026-09-14: the panel rendered an arbitrary third-party page correctly at 1280x800). George, 2026-09-14: **keep it hardcoded, we will need it later** — recorded because it is a setting in fact, not because it should be exposed. A panel that can be pointed away from our own UI has no route back except SSH |
 | Idle timeout before the Peppy screen | [R] | ADR-0019, reset by local touch only |
-| Grace period after playback stops | [R] | ADR-0019, five minutes by default |
+| Idle timeout — to the idle screen | [R] | ADR-0019's "grace period after playback stops", generalised by [ADR-0033](0033-idle-and-home.md): one timeout on every screen, counted while not playing and not touched. Hardcoded to 5 minutes in `ui/src/App.svelte` since Phase 4d (confirmed as a setting by George, 2026-09-15) |
 | Skin corpus: meter-only / meter+spectrum | [R] | ADR-0019 |
 | Skin rotation per track on/off | [N] | Rotation is unconditional in ADR-0019 |
 | `steps.per.degree` override | [R] | ADR-0015, deferred to a spike; may not survive as a user setting |
@@ -105,7 +107,7 @@ Phase 2 and ADR-0027.
 |---|---|---|
 | Device name | [R] | One name → mDNS hostname, Spotify, Bluetooth. The sanitised hostname must be shown alongside what was typed, not silently substituted (see Q4) |
 | Wi-Fi configuration | [R] | Overlaps ADR-0021; the first-boot blocker this record raises (see Q2) — **answered 2026-09-14 by [ADR-0031](0031-first-boot-setup-access-point.md)**, entered on the user's phone over a setup access point, Phase 10 |
-| Time zone / NTP | [N] | |
+| Time zone / NTP | [N] | Confirmed as a setting by George, 2026-09-15. The idle clock shows device time, and the image ships no time zone: `gexis` came up as Europe/London and was set to Europe/Berlin by hand on 2026-09-15 — **a reflash loses it** |
 | Restrict the API to loopback | [N] | ADR-0028 binds `0.0.0.0` and is unauthenticated by decision; a lock-down toggle is cheap and consistent with the accepted-risk framing below |
 
 ### Enrichment and lyrics — Phase 8

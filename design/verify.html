@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Verify export — gexis panel</title>
+<style>
+  body { margin:0; padding:32px; background:#0c1014; color:#e9eef2;
+         font-family:'IBM Plex Mono','Courier New',monospace; font-size:14px; }
+  h1 { font-size:19px; letter-spacing:0.04em; margin:0 0 6px; }
+  p  { color:rgba(233,238,242,0.6); margin:0 0 26px; max-width:70ch; line-height:1.6; }
+  section { margin-bottom:28px; }
+  h2 { font-size:13px; letter-spacing:0.2em; text-transform:uppercase;
+       color:rgba(233,238,242,0.6); margin:0 0 10px;
+       border-bottom:1px solid rgba(233,238,242,0.12); padding-bottom:8px; }
+  .row { display:flex; gap:14px; padding:5px 0; align-items:baseline; }
+  .tag { width:60px; flex-shrink:0; font-weight:700; }
+  .pass .tag { color:#7ed6bc; } .fail .tag { color:#e0a758; } .info .tag { color:rgba(233,238,242,0.5); }
+  .what { flex:1; min-width:0; }
+  .detail { color:rgba(233,238,242,0.6); }
+  .fail .detail { color:#e0a758; }
+  #sum { padding:16px 20px; border-radius:12px; margin-bottom:26px;
+         border:1px solid rgba(233,238,242,0.14); background:rgba(255,255,255,0.04); }
+  iframe { width:1280px; height:800px; border:0; position:fixed; left:-4000px; top:0; }
+</style>
+</head>
+<body>
+<h1>Export verification</h1>
+<p>Checks <code>now-playing.html</code> against the geometry baseline measured from
+the design, plus the four audits that caught real bugs during design: landmark
+position, touch-target size, small-text contrast, and token discipline.
+Serve this directory over HTTP — <code>file://</code> blocks the iframe read.</p>
+
+<div id="sum">running…</div>
+<div id="out"></div>
+<iframe id="f" src="./now-playing.html"></iframe>
+<iframe id="d" src="./source/Now Playing.dc.html"></iframe>
+
+<script>
+const out = document.getElementById('out');
+let pass = 0, fail = 0;
+const line = (ok, what, detail) => {
+  if (ok === true) pass++; if (ok === false) fail++;
+  return '<div class="row ' + (ok === null ? 'info' : ok ? 'pass' : 'fail') + '">' +
+    '<span class="tag">' + (ok === null ? '—' : ok ? 'PASS' : 'FAIL') + '</span>' +
+    '<span class="what">' + what + (detail ? ' <span class="detail">' + detail + '</span>' : '') + '</span></div>';
+};
+const sect = (title, body) => { out.insertAdjacentHTML('beforeend', '<section><h2>' + title + '</h2>' + body + '</section>'); };
+
+// contrast ratio, sRGB, with an alpha layer composited over its ground
+const lin = c => { c /= 255; return c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4); };
+const lum = ([r, g, b]) => 0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(b);
+const parse = s => { const m = s.match(/[\d.]+/g); return m ? m.map(Number) : null; };
+const over = (fg, bg) => { const a = fg.length > 3 ? fg[3] : 1; return [0, 1, 2].map(i => fg[i] * a + bg[i] * (1 - a)); };
+const ratio = (fg, bg) => { const a = lum(fg) + 0.05, b = lum(bg) + 0.05; return (Math.max(a, b) / Math.min(a, b)); };
+
+document.getElementById('f').addEventListener('load', async () => {
+  const doc = document.getElementById('f').contentDocument;
+  const base = await (await fetch('./geometry.json')).json();
+  const tol = base._tolerance_px;
+  const screen = doc.querySelector('.screen');
+  const S = screen.getBoundingClientRect();
+  const box = el => { const b = el.getBoundingClientRect();
+    return { x: Math.round(b.left - S.left), y: Math.round(b.top - S.top),
+             w: Math.round(b.width), h: Math.round(b.height) }; };
+
+  // ── 1. geometry vs the design baseline ────────────────────────────────
+  let g = line(Math.round(S.width) === base.canvas.w && Math.round(S.height) === base.canvas.h,
+    'canvas is ' + base.canvas.w + '×' + base.canvas.h,
+    Math.round(S.width) + '×' + Math.round(S.height));
+
+  for (const [sel, want] of Object.entries(base.landmarks)) {
+    const el = screen.querySelector(sel);
+    if (!el) { g += line(false, sel, 'not found in the export'); continue; }
+    if (want.gridRows) {
+      const rows = getComputedStyle(el).gridTemplateRows.split(' ').map(parseFloat);
+      const ok = want.gridRows.every((v, i) => Math.abs(rows[i] - v) <= tol);
+      g += line(ok, sel + ' grid rows', '[' + rows.map(Math.round) + '] want [' + want.gridRows + ']');
+      const ys = [...el.children].map(c => box(c).y);
+      const ok2 = want.childYs.every((v, i) => Math.abs(ys[i] - v) <= tol);
+      g += line(ok2, sel + ' child offsets', '[' + ys + '] want [' + want.childYs + ']');
+      continue;
+    }
+    const b = box(el);
+    const diffs = Object.keys(want).filter(k => Math.abs(b[k] - want[k]) > tol)
+      .map(k => k + ' ' + b[k] + '≠' + want[k]);
+    g += line(diffs.length === 0, sel,
+      diffs.length ? diffs.join(', ') : Object.keys(want).map(k => k + ' ' + b[k]).join(', '));
+  }
+  sect('1 · Geometry vs design baseline (±' + tol + 'px)', g);
+
+  // ── 2. touch targets ──────────────────────────────────────────────────
+  let t = '';
+  const small = [...doc.querySelectorAll('button, [role="tab"], [onclick], .btn, .tab')]
+    .filter(el => { const b = el.getBoundingClientRect();
+      // 0.5px epsilon: sub-pixel layout rounding is not a real target failure
+      return b.width && b.height && Math.min(b.width, b.height) < 43.5; })
+    .map(el => (el.getAttribute('aria-label') || el.textContent.trim() || el.className) +
+      ' (' + Math.round(el.getBoundingClientRect().width) + '×' +
+      Math.round(el.getBoundingClientRect().height) + ')');
+  t += line(small.length === 0, 'every control is at least 44×44',
+    small.length ? small.length + ' under: ' + small.join(', ') : 'checked ' +
+      doc.querySelectorAll('button, .btn, .tab').length + ' controls');
+  sect('2 · Touch targets', t);
+
+  // ── 3. contrast on small text ─────────────────────────────────────────
+  let c = '';
+  const bad = [];
+  doc.querySelectorAll('.screen *').forEach(el => {
+    if (!el.childNodes.length) return;
+    const hasText = [...el.childNodes].some(n => n.nodeType === 3 && n.textContent.trim());
+    if (!hasText) return;
+    const cs = getComputedStyle(el);
+    if (parseFloat(cs.fontSize) > 24) return;              // headline scale, 3:1
+    if (cs.visibility === 'hidden' || cs.display === 'none') return;
+    const fg = parse(cs.color); if (!fg) return;
+    if (fg.length > 3 && fg[3] === 0) return;   // intentionally invisible
+    // walk up for the nearest opaque background: a label on an accent fill
+    // must be judged against that fill, not against the screen ground
+    let bg = [16, 26, 33], n = el;
+    while (n && n !== doc.documentElement) {
+      const b = parse(getComputedStyle(n).backgroundColor);
+      if (b && (b.length < 4 || b[3] >= 0.9)) { bg = b.slice(0, 3); break; }
+      n = n.parentElement;
+    }
+    const r = ratio(over(fg, bg), bg);
+    if (r < 4.5) bad.push(el.textContent.trim().slice(0, 22) + ' @' +
+      Math.round(parseFloat(cs.fontSize)) + 'px = ' + r.toFixed(2) + ':1');
+  });
+  c += line(bad.length === 0, 'text ≤24px clears 4.5:1 over --bg-base',
+    bad.length ? bad.length + ' below: ' + bad.slice(0, 6).join(' | ') : 'no failures');
+  c += line(null, 'measured against the nearest opaque ancestor', 'transparent ink is skipped as intentional');
+  sect('3 · Contrast', c);
+
+  // ── 4. token discipline ───────────────────────────────────────────────
+  let k = '';
+  const css = await (await fetch('./now-playing.css')).text();
+  const toks = await (await fetch('./tokens.css')).text();
+  const known = new Set((toks.match(/#[0-9a-f]{6}/gi) || []).map(s => s.toLowerCase()));
+  const raw = [...new Set((css.match(/#[0-9a-f]{6}/gi) || []).map(s => s.toLowerCase()))]
+    .filter(h => !known.has(h));
+  k += line(raw.length === 0, 'no colour outside tokens.css',
+    raw.length ? 'raw: ' + raw.join(', ') : 'all colours are tokens');
+
+  const unresolved = [];
+  doc.querySelectorAll('.screen, .screen *').forEach(el => {
+    const cs = getComputedStyle(el);
+    ['background-color', 'color', 'border-top-color'].forEach(p => {
+      if (cs.getPropertyValue(p) === '') unresolved.push(el.className + ' ' + p);
+    });
+  });
+  k += line(unresolved.length === 0, 'every var() resolves',
+    unresolved.length ? unresolved.slice(0, 5).join(', ') : 'no empty computed values');
+
+  // assets actually load — a broken mask reads as a solid block, not an error
+  const imgs = [...doc.querySelectorAll('img')];
+  const broken = imgs.filter(i => i.complete && i.naturalWidth === 0).map(i => i.getAttribute('src'));
+  k += line(broken.length === 0, 'images resolve',
+    broken.length ? 'broken: ' + [...new Set(broken)].join(', ') : imgs.length + ' images');
+
+  // a mark is valid either as a tinted mask (the Lyrion silhouette) or as a
+  // loaded image (Spotify, Bluetooth). A broken mask renders as a solid
+  // block rather than throwing, so this has to be asserted.
+  const marks = [...doc.querySelectorAll('.srcpill__mark')];
+  const badMarks = marks.filter(m => {
+    if (m.tagName === 'IMG') return !(m.complete && m.naturalWidth > 0);
+    const cs = getComputedStyle(m);
+    return !(cs.maskImage || cs.webkitMaskImage || '').includes('url');
+  });
+  k += line(badMarks.length === 0, 'every source mark resolves',
+    badMarks.length ? badMarks.length + ' unresolved' : marks.length + ' marks');
+
+  // the play control is fixed coral by design, not the source accent
+  const playBg = [...doc.querySelectorAll('.btn--play')]
+    .map(b => getComputedStyle(b).backgroundColor);
+  k += line(playBg.every(c => c === playBg[0]), 'play control is one colour across sources',
+    playBg[0]);
+
+  // every placeholder glyph replaced with real geometry
+  const stubs = [...doc.querySelectorAll('.btn')]
+    .filter(b => /^(SHUF|REP|VOL|Q)$/.test(b.textContent.trim()));
+  k += line(stubs.length === 0, 'no placeholder glyphs left',
+    stubs.length ? stubs.length + ' stubs' : 'shuffle, repeat, volume, queue all drawn');
+
+  const fontsReal = document.fonts && [...document.fonts].length > 0;
+  k += line(null, 'fonts', fontsReal ? 'local faces present' :
+    'NOT loaded — metrics differ, see README > Fonts. Geometry tolerance absorbs this.');
+  sect('4 · Tokens and assets', k);
+
+  // ── 5. per-source state coverage ──────────────────────────────────────
+  let v = '';
+  const screens = [...doc.querySelectorAll('.screen')];
+  ['lms', 'spotify', 'bluetooth'].forEach(src => {
+    v += line(screens.some(s => s.dataset.source === src), 'a ' + src + ' state is shown');
+  });
+  v += line(screens.some(s => s.dataset.transport === 'paused'), 'a paused state is shown');
+  v += line(screens.some(s => s.dataset.artwork === 'none'), 'a no-artwork state is shown');
+  v += line(screens.some(s => s.dataset.position === 'none'), 'a no-position state is shown');
+  const bt = screens.filter(s => s.dataset.source === 'bluetooth');
+  v += line(bt.every(s => s.dataset.artwork === 'none'), 'Bluetooth never shows artwork');
+  v += line(bt.every(s => s.dataset.position === 'none'), 'Bluetooth never shows a position');
+  v += line(screens.filter(s => s.dataset.source !== 'lms')
+    .every(s => [...s.querySelectorAll('[data-lms-only]')]
+      .every(e => getComputedStyle(e).display === 'none')),
+    'shuffle, repeat and queue are absent off LMS');
+  sect('5 · State coverage', v);
+
+  // ── 6. computed-style diff against the design itself ─────────────────
+  // The baseline in geometry.json only covers what someone remembered to
+  // measure. This group loads source/Now Playing.dc.html and compares live
+  // computed values, so a colour, gradient, radius or shadow that drifted
+  // fails without anyone having predicted it. Landmarks are located by
+  // geometry and computed style, because the design carries no classes.
+  let x = '';
+  try {
+    const dd = document.getElementById('d').contentDocument;
+
+    // The design paints progressively and many of its colours come from
+    // template holes. Until those resolve, the element is there but its
+    // background is empty — which looks exactly like drift. Wait for a known
+    // hole-driven property before comparing anything, and report the group as
+    // NOT RUN rather than failing if it never resolves.
+    let droot = null, hydrated = false;
+    for (let i = 0; i < 40 && !hydrated; i++) {
+      droot = [...dd.querySelectorAll('div')]
+        .find(el => el.offsetWidth === 1280 && el.offsetHeight === 800);
+      if (droot) {
+        const rule = [...droot.querySelectorAll('div')]
+          .find(el => el.offsetHeight === 3 && el.offsetWidth === 1280);
+        hydrated = !!rule && getComputedStyle(rule).backgroundImage !== 'none';
+      }
+      if (!hydrated) await new Promise(r => setTimeout(r, 200));
+    }
+    if (!droot) throw new Error('design artboard not found — is it still 1280x800?');
+    if (!hydrated) throw new Error(
+      'the design did not finish hydrating in 8s, so its hole-driven colours ' +
+      'are still empty. Nothing was compared — re-run rather than trusting a pass.');
+
+    const all = sel => [...droot.querySelectorAll(sel)];
+    const props = ['backgroundColor', 'backgroundImage', 'borderRadius', 'boxShadow'];
+    const cmp = (name, dEl, xEl, only) => {
+      if (!dEl) return line(null, name, 'not found in the design at this state');
+      if (!xEl) return line(false, name, 'missing from the export');
+      const a = getComputedStyle(dEl), b = getComputedStyle(xEl);
+      const diffs = (only || props)
+        .filter(p => a[p] !== b[p] && !(p === 'backgroundImage' && a[p] === 'none' && b[p] === 'none'))
+        .map(p => p + ': design ' + a[p].slice(0, 46) + ' | export ' + b[p].slice(0, 46));
+      return line(diffs.length === 0, name,
+        diffs.length ? diffs.join(' — ') : (only || props).length + ' properties match');
+    };
+
+    const dArt  = all('div').find(el => el.offsetWidth === 500 && el.offsetHeight === 500);
+    const dPlay = all('div').find(el => el.offsetWidth === 92 && el.offsetHeight === 92);
+    const dRail = all('div').find(el => el.offsetHeight === 12 && el.offsetWidth > 600);
+    const dTrk  = dRail && [...dRail.children]
+      .find(el => getComputedStyle(el).borderRadius === '999px'
+        && getComputedStyle(el).backgroundColor !== 'rgba(0, 0, 0, 0)');
+    const dPill = all('span').find(el => {
+      const cs = getComputedStyle(el);
+      return cs.borderRadius === '999px' && parseFloat(cs.fontSize) === 13
+        && cs.backgroundColor !== 'rgba(0, 0, 0, 0)'
+        && el.offsetWidth > 80 && el.offsetHeight < 50;
+    });
+
+    const screen = doc.querySelector('.screen[data-source="lms"][data-position="ok"]');
+    x += cmp('artwork well', dArt, screen.querySelector('.art'));
+    x += cmp('play control', dPlay, screen.querySelector('.btn--play'));
+    x += cmp('progress rail', dRail, screen.querySelector('.progress__rail'));
+    x += cmp('progress track', dTrk, screen.querySelector('.progress__track'));
+    x += cmp('source pill', dPill, screen.querySelector('.srcpill'));
+
+    const dRule = all('div').find(el => el.offsetHeight === 3 && el.offsetWidth === 1280);
+    x += cmp('top accent rule', dRule, screen.querySelector('.screen__accent'));
+
+    // type: the properties that carry the design's voice
+    const type = ['fontSize', 'fontWeight', 'letterSpacing', 'lineHeight', 'color', 'textTransform'];
+    const dTab = all('span').find(el => el.textContent.trim() === 'Track'
+      && parseFloat(getComputedStyle(el).fontSize) === 13);
+    x += cmp('tab type', dTab, screen.querySelector('.tab'), type);
+
+    const dTimes = all('div').find(el => {
+      const cs = getComputedStyle(el);
+      return cs.fontSize === '16px' && cs.justifyContent === 'space-between'
+        && cs.fontFamily.includes('Mono');
+    });
+    x += cmp('elapsed / remaining type', dTimes, screen.querySelector('.progress__times'), type);
+
+    // every glyph in the export's transport row must have painted something:
+    // a mis-sized mask or a dropped child renders as nothing, silently
+    const paints = (el) => {
+      const cs = getComputedStyle(el);
+      const r = el.getBoundingClientRect();
+      const solid = (s) => s.backgroundColor !== 'rgba(0, 0, 0, 0)'
+        || s.backgroundImage !== 'none'
+        || parseFloat(s.borderTopWidth) > 0 || parseFloat(s.borderLeftWidth) > 0
+        || (s.maskImage || s.webkitMaskImage || 'none') !== 'none';
+      if (r.width && r.height && solid(cs)) return true;
+      // prev/next are built from ::before and ::after, which no child walk sees
+      return ['::before', '::after'].some(p => {
+        const ps = getComputedStyle(el, p);
+        return ps.content !== 'none' && solid(ps);
+      });
+    };
+    const empties = [...doc.querySelectorAll('.bar .btn')]
+      .filter(b => b.getBoundingClientRect().width > 0)   // hidden ones are fine
+      .filter(b => !paints(b) && ![...b.querySelectorAll('*')].some(paints))
+      .map(b => b.getAttribute('aria-label'));
+    x += line(empties.length === 0, 'every transport glyph paints ink',
+      empties.length ? 'blank: ' + empties.join(', ') : 'all drawn');
+
+    // and the source pill's mark, in each of the three sources
+    const blankMarks = [...doc.querySelectorAll('.srcpill')].filter(p => {
+      const k = [...p.children];
+      return !k.length || !k.some(e => {
+        const r = e.getBoundingClientRect();
+        if (!r.width || !r.height) return false;
+        if (e.tagName === 'IMG') return e.complete && e.naturalWidth > 0;
+        const cs = getComputedStyle(e);
+        return cs.backgroundColor !== 'rgba(0, 0, 0, 0)'
+          || (cs.maskImage || cs.webkitMaskImage || 'none') !== 'none'
+          || [...e.children].length > 0;
+      });
+    }).map(p => p.textContent.trim());
+    x += line(blankMarks.length === 0, 'every source pill has a visible mark',
+      blankMarks.length ? 'blank: ' + blankMarks.join(', ') : '3 sources');
+  } catch (e) {
+    x += line(false, 'design comparison could not run', e.message);
+  }
+  sect('6 · Computed-style diff vs the design', x);
+
+  document.getElementById('sum').innerHTML =
+    '<b style="color:' + (fail ? '#e0a758' : '#7ed6bc') + '">' +
+    (fail ? fail + ' FAILED' : 'ALL PASSED') + '</b> · ' + pass + ' checks passed' +
+    (fail ? ' · a failure means the export drifted from the design, not that the design changed' : '');
+});
+</script>
+</body>
+</html>

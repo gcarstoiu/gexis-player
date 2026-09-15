@@ -104,6 +104,34 @@ and phase labels on elements. The exports are committed to the repo as
 reference-only, never built, so a later redesign is a diff rather than a
 re-derivation.
 
+**How an export lands (2026-09-15).** Claude Design cannot write to the repo;
+George copies each export into `design/`. So history is kept by commit:
+
+1. The previous export is already committed, so nothing is lost by
+   overwriting it. **Replace the folder's contents wholesale** (delete, then
+   paste) so a file the new export dropped shows up as a deletion.
+2. Claude commits the export **on its own, before any port work**
+   (`Design export: <what changed>`), then reads `git diff HEAD~1 -- design/`
+   to see what actually changed rather than what the export says changed.
+3. `design/source/` is locked — built from, never edited. Run
+   `design/verify.html` over HTTP after any change to the package.
+
+**Deviations the port keeps across exports.** Claude Design does not know
+about these, so a new export will not contain them. Re-apply them when
+porting, until the design takes them in:
+
+- **Volume glyph (2026-09-15, George).** The now playing volume button draws
+  the drawer's 30px glyph (`ui/src/lib/VolumeIcon.svelte`), not the design's
+  26px one, whose three arcs merge at full volume.
+- **Drawer opens on a change from elsewhere (2026-09-15, George).** A
+  phone's volume change opens the drawer, which closes 3 s after the last
+  change. The panel's own changes and a takeover's restored level do not
+  open it.
+- **Settings inventory (2026-09-15).** `idle_grace` is not a row — ADR-0033
+  merged it into `idle_timeout` (5 min); `travel_curve` is decided (ADR-0034,
+  marks `RH`); `drawer_on_external` and `drawer_autohide` are added under
+  Display › Panel. The daemon's `settings_registry.json` is authoritative.
+
 ### Branching
 
 - One branch per phase: `phase-0-image`, `phase-2-arbitration`.
@@ -602,6 +630,18 @@ over ADR-0016's separate-process model, criterion 4/5's minimal scope).
    width, not the panel interface shrunk. The panel renders everything;
    a remote browser renders only settings. Only the settings screen is
    responsive; every other screen stays at the fixed 1280x800 artboard.
+   **Increment 1 built 2026-09-15** per
+   [ADR-0035](decisions/0035-settings-api.md): the daemon's settings registry
+   (every inventory row, none wired), `GET /settings`, `PUT`/`POST
+   /settings/{key}`, `GET /surface`, `settings_revision` in `/state`, and
+   `Settings.dc.html` ported as the responsive component. A remote browser gets
+   only settings. Two design deviations: `idle_grace` merged into
+   `idle_timeout` (ADR-0033), and the two volume-drawer rows added. **Passed George's phone
+   check 2026-09-15.**
+   **Increment 2 built 2026-09-15:** idle timeout, idle URL (editable from the
+   phone; clearing returns to `core.toml`), and both volume-drawer settings
+   wired, reaching the panel live. **Passed George's phone check 2026-09-15.
+   Criterion 5 met.**
 6. **WITHDRAWN 2026-09-15, together with criterion 7** (George: *"there is no
    need for this. As soon as I start playing from my phone, LMS activates so
    there is no risk of getting stuck"*). ADR-0027 measured that auto-power-on,
@@ -652,6 +692,11 @@ over ADR-0016's separate-process model, criterion 4/5's minimal scope).
    George's decision. Not a transport control (criterion 3), and the only
    other thing this phase is not display-only about.
 
+   **Amended 2026-09-15 by [ADR-0034](decisions/0034-panel-volume-travel-and-mute.md):**
+   the slider travels −45…0 dB, the number shown is slider position (not
+   the hardware percentage), and mute is added, restoring the prior level.
+   *Original text follows.*
+
    **Displayed as a percentage of the hardware control** (George's
    decision) — the shared ALSA DAC, ADR-0018's 240 steps of 0.5 dB. That
    is the one level every renderer genuinely shares; LMS and Spotify each
@@ -684,10 +729,14 @@ increment at a time, each gated on his own hardware pass as usual):
 |---|---|---|
 | **4a** | model extensions | no UI; transport state, handoff pair, command channel + LMS `power 1`, volume level, Bluetooth codec. Unit-testable and verifiable over the existing WebSocket. |
 | **4b** | criteria 1, 5 | static serving (ADR-0028), `stage-gexis/04-ui`, labwc + Chromium kiosk, the Node build step ADR-0023 named as its cost |
-| **4c** | criterion 3 | now playing. **Built 2026-09-15** from `design/now-playing.html`; all six design states rendered against a mock `/state` in headless Chromium (Brave) on the dev machine, installed on `gexis`. **Not yet checked on the panel itself** — George's pass. |
-| **4d** | criterion 2 | idle screen and its fallback. George's URL was given 2026-09-15 and is deliberately **not in this public repository** — it carries a per-display identifier. It sends no `X-Frame-Options`/CSP header and its HTML has no frame-busting (checked 2026-09-15); its scripts were not checked, so embedding is unproven until it renders on the panel. |
-| **4e** | criterion 8 | volume. *Was criteria 6, 7, 8 until 2026-09-15; the back-to-music screen and activate control were withdrawn.* |
-| **4f** | criterion 4 | transition state, with the exempt-pair list as published data rather than a constant in the UI |
+| **4c** | criterion 3 | now playing. **Built 2026-09-15** from `design/now-playing.html`; all six design states rendered against a mock `/state` in headless Chromium (Brave) on the dev machine, installed on `gexis`. Checked on the panel by George. **Passed George's panel pass 2026-09-15.** |
+| **4d** | criterion 2 | idle screen and its fallback. **Built 2026-09-15:** `GET /idle` probes `idle_url` (from `/etc/gexis/core.toml`) for reachability and framing headers; the UI embeds the page in a sandboxed iframe or shows the design's drifting clock. Timer per ADR-0033, hardcoded 5 minutes. Deployed on `gexis`; **passed George's panel pass 2026-09-15**. George's URL was given 2026-09-15 and is deliberately **not in this public repository** — it carries a per-display identifier. It sends no `X-Frame-Options`/CSP header and its HTML has no frame-busting (checked 2026-09-15); its scripts were not checked, so embedding is unproven until it renders on the panel. |
+| **4e** | criterion 8 | volume. *Was criteria 6, 7, 8 until 2026-09-15; the back-to-music screen and activate control were withdrawn.* **Built 2026-09-15** per [ADR-0034](decisions/0034-panel-volume-travel-and-mute.md): the design's Controls drawer, slider over −45…0 dB shown as slider position, mute (`POST /volume/mute`) restoring the prior level. Exercised end to end against the real `StateServer` with a fake mixer in headless Chromium. **Passed George's panel pass 2026-09-15.** |
+| **4f** | criterion 4 | transition state, with the exempt-pair list as published data rather than a constant in the UI. **Built 2026-09-15:** the design's "Handing off" overlay, shown from the published handoff's start until it ends (not the design canvas's fixed 2.7 s), held at least 1.4 s — one note cycle — so it never flashes; exempt pairs from `handoff_exempt_pairs` skip it. **Passed George's panel pass 2026-09-15.** |
+
+**Phase 4 status, 2026-09-15:** criteria 1, 2, 3, 4, 5 and 8 met and checked
+by George; 6 and 7 withdrawn. Closing the phase is George's call. The
+settings increments are not yet in an image.
 
 ### Phase 5 — Visualisation service and Peppy screen
 
@@ -702,6 +751,10 @@ increment at a time, each gated on his own hardware pass as usual):
 5. Skin rotates per track, with the next track's skin composited ahead of time.
 6. Renderer change exits to now playing; idle timeout returns.
 7. Absent fields do not render their layer.
+8. **Peppy screen entry button** on now playing, as the phase's last step.
+   Moved here from Phase 6 criterion 4 (George, 2026-09-15): criterion 4
+   above already measures entry from now playing, and the button is already
+   rendered, marked `data-unwired="phase-5"`.
 
 ### Phase 6 — Now playing, full
 
@@ -711,7 +764,8 @@ increment at a time, each gated on his own hardware pass as usual):
 2. Controls that would not work are hidden or non-editable per the cross-cutting
    rule, never dead.
 3. Artist and track info panels.
-4. Peppy screen entry button.
+4. ~~Peppy screen entry button.~~ **Moved to Phase 5 criterion 8** (George,
+   2026-09-15).
 
 ### Phase 7 — Library browse
 

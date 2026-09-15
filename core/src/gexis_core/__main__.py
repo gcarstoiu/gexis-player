@@ -7,7 +7,10 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import socket
 from pathlib import Path
+
+import aiohttp
 
 from gexis_core import alsa
 from gexis_core.adapters.base import VolumeMechanism
@@ -16,9 +19,11 @@ from gexis_core.adapters.lms import LmsAdapter
 from gexis_core.adapters.spotify import SpotifyAdapter
 from gexis_core.arbitration import Supervisor
 from gexis_core.config import Config
+from gexis_core.idle_page import probe as probe_idle_page
 from gexis_core.metadata_file import MetadataFileWriter
 from gexis_core.renderer_volume import RendererVolumeMemory
 from gexis_core.settings import SettingsStore
+from gexis_core.settings_registry import Settings
 from gexis_core.state import StateStore
 from gexis_core.volume import (
     DUMMY_CONTROL,
@@ -26,7 +31,8 @@ from gexis_core.volume import (
     VolumeBridge,
     db_to_raw,
     get_raw,
-    percent_to_raw,
+    Mute,
+    slider_percent_to_raw,
     raw_to_db,
 )
 from gexis_core.wsserver import StateServer
@@ -106,6 +112,14 @@ def make_restore_volume(config: Config, volume_memory: RendererVolumeMemory, vol
     return restore_volume
 
 
+def read_timezone(localtime: Path = Path("/etc/localtime")) -> str | None:
+    # The /etc/localtime link is what the clock uses; /etc/timezone can be
+    # stale (timedatectl updates only the link).
+    target = str(localtime.resolve())
+    marker = "/zoneinfo/"
+    return target.split(marker, 1)[1] if marker in target else None
+
+
 async def main() -> None:
     config = Config.load()
 
@@ -181,9 +195,20 @@ async def main() -> None:
         software_api_adapters[0],
         volume_memory=volume_memory,
         get_active_renderer=lambda: supervisor.active,
-        on_hardware_level=state_store.set_volume_raw,
+        on_hardware_level=lambda raw: publish_volume(raw),
     )
     restore_volume = make_restore_volume(config, volume_memory, volume_bridge)
+
+    # ADR-0034. Observes every level before it is published, so a change
+    # from anywhere else ends mute in the same broadcast that shows it.
+    mute = Mute(
+        volume_bridge.write_hardware,
+        lambda: state_store.state.volume.raw if state_store.state.volume else None,
+    )
+
+    def publish_volume(raw: int) -> None:
+        mute.observe(raw)
+        state_store.set_volume_raw(raw, muted=mute.muted)
 
     supervisor = Supervisor(
         adapters,
@@ -213,7 +238,7 @@ async def main() -> None:
         return await activate_method()
 
     async def set_volume(percent: float) -> bool:
-        raw = percent_to_raw(percent)
+        raw = slider_percent_to_raw(percent)
         logger.info("command: volume -> %.0f%% (raw %s/240)", percent, raw)
         # Through the bridge, never set_raw() directly - the echo window is
         # what stops this write being read back as an external change and
@@ -221,6 +246,14 @@ async def main() -> None:
         # round of "volume is behind/inverted" reports).
         await volume_bridge.write_hardware(raw)
         return True
+
+    async def set_mute(muted: bool) -> bool:
+        logger.info("command: %s", "mute" if muted else "unmute")
+        ok = await mute.set(muted)
+        volume = state_store.state.volume
+        if ok and volume is not None:
+            state_store.set_volume_raw(volume.raw, muted=mute.muted)
+        return ok
 
     # Serve the UI only if a build is actually present. A configured path
     # that does not exist is normal, not an error: the core ships and runs
@@ -231,12 +264,38 @@ async def main() -> None:
         logger.info("wsserver: no UI build at %s, serving the API only", ui_dir)
         ui_dir = None
 
+    idle_session = aiohttp.ClientSession()
+
+    async def idle_page() -> dict:
+        return await probe_idle_page(settings.value("idle_url") or "", idle_session)
+
+    # ADR-0035. Defaults are what is true of this deployment today. A wired
+    # row is read where it is used - the idle page probe here, the rest by
+    # the UI - so none needs a callback.
+    settings = Settings(
+        settings_store,
+        defaults={
+            "boot_volume": lambda: raw_to_db(config.boot_volume_steps),
+            "restore_floor": lambda: config.restore_volume_floor_db,
+            "lms_server": lambda: f"{config.lms_host}:{config.lms_port}",
+            "lms_player": lambda: config.lms_player_name,
+            "idle_url": lambda: config.idle_url or None,
+            "device_name": socket.gethostname,
+            "timezone": read_timezone,
+        },
+        wired={"idle_url": None, "idle_timeout": None, "drawer_on_external": None, "drawer_autohide": None},
+        on_change=state_store.bump_settings_revision,
+    )
+
     state_server = StateServer(
         state_store,
         host=config.state_host,
         port=config.state_port,
         activate=activate,
         set_volume=set_volume,
+        set_mute=set_mute,
+        idle_page=idle_page,
+        settings=settings,
         ui_dir=ui_dir,
     )
 

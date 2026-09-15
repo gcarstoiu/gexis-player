@@ -90,10 +90,6 @@ class TrackMetadata:
 #: leaving the last active renderer's stale metadata on screen.
 BLANK_METADATA = TrackMetadata()
 
-#: ADR-0018: 240 steps of 0.5dB, 0 = mute (-120dB), 240 = 0dB.
-HARDWARE_VOLUME_STEPS = 240
-
-
 @dataclass(frozen=True)
 class Handoff:
     """A takeover in flight (Phase 4 criterion 4).
@@ -113,27 +109,19 @@ class Handoff:
 
 @dataclass(frozen=True)
 class VolumeState:
-    """The shared hardware mixer's level (Phase 4 criterion 8).
+    """The shared hardware mixer's level (Phase 4 criterion 8, ADR-0034).
 
-    `percent` is George's decision for what a screen shows: a percentage of
-    the hardware control, which is the one level all three renderers
-    genuinely share. `raw` and `db` are published alongside it because the
-    scale is dB-linear, not perceptually linear - raw 60 of 240 is -90dB,
-    which Finding 011 measured as inaudible - so anything deciding how a
-    *slider's travel* should map needs the real units, not a percentage of
-    a logarithmic range. That mapping is still open (DEVELOPMENT.md,
-    criterion 8).
+    `percent` is the panel slider's position over -45..0dB, which is what a
+    screen shows; `raw` and `db` are the hardware's own units.
     """
 
     raw: int
     db: float
-
-    @property
-    def percent(self) -> int:
-        return round(self.raw / HARDWARE_VOLUME_STEPS * 100)
+    percent: int
+    muted: bool = False
 
     def to_json(self) -> dict:
-        return {"percent": self.percent, "raw": self.raw, "db": self.db}
+        return {"percent": self.percent, "raw": self.raw, "db": self.db, "muted": self.muted}
 
 
 @dataclass(frozen=True)
@@ -168,6 +156,9 @@ class PlaybackState:
     #: is "data, not a constant" - a pair earns exemption by being
     #: measured and loses it if a later measurement moves it back.
     handoff_exempt_pairs: tuple[tuple[str, str], ...] = ()
+    #: Bumped on every settings write (ADR-0035); a client refetches
+    #: `GET /settings` when it moves.
+    settings_revision: int = 0
 
     def __post_init__(self) -> None:
         # Defensive copy: a caller mutating the dict it passed in must not
@@ -188,4 +179,5 @@ class PlaybackState:
             "handoff": self.handoff.to_json() if self.handoff else None,
             "volume": self.volume.to_json() if self.volume else None,
             "handoff_exempt_pairs": [list(pair) for pair in self.handoff_exempt_pairs],
+            "settings_revision": self.settings_revision,
         }

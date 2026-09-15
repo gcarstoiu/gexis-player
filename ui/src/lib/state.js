@@ -68,6 +68,7 @@ export const metadata = derived(playback, ($s) => $s?.metadata ?? null);
 export const available = derived(playback, ($s) => $s?.available ?? {});
 export const volume = derived(playback, ($s) => $s?.volume ?? null);
 export const handoff = derived(playback, ($s) => $s?.handoff ?? null);
+export const handoffExemptPairs = derived(playback, ($s) => $s?.handoff_exempt_pairs ?? []);
 
 /**
  * Commands go over REST, never the socket (ADR-0028). Returns the parsed
@@ -88,3 +89,4 @@ async function post(path, body) {
 
 export const activate = (rendererId) => post(`/renderer/${rendererId}/activate`);
 export const setVolume = (percent) => post('/volume', { percent });
+export const setMute = (muted) => post('/volume/mute', { muted });

@@ -35,6 +35,44 @@ and pointing `DEPLOY_DIR` at it would remove the 4.5GB stream entirely and
 halve disk use. Designed, not implemented.
 
 
+**Image built (2026-09-15, cold):**
+`image/deploy/2026-09-15-gexis-player-v0.2.1-133-gb94c31c-dirty.img` — 4c–4f plus
+provisioning of `TIMEZONE` and `IDLE_URL`, **no settings** (built from the main
+tree while settings work stayed in a worktree). First cold attempt was killed by
+Claude Code's memory guard; the resume failed in stage1 (`raspi-config` deps)
+on a rootfs the kill had left mid-apt — removing the container again fixed it.
+Flash, then `make provision DEVICE=/dev/sdX` before first boot. **A reflash
+drops the hand-installed settings increments** until they are redeployed or
+built in.
+
+**Settings (ADR-0035) on branch `phase-4-settings`:** increment 1 (registry,
+API, responsive screen) passed George's phone check; increment 2 (idle
+timeout, idle URL, both drawer settings wired) **passed his check too —
+Phase 4 criterion 5 met**, so every Phase 4 criterion is met or withdrawn. Number/text editors are minimal and undesigned — Claude Design to
+draw them.
+
+**Phase 4 steps 4c–4f all passed George's panel pass (2026-09-15)**,
+hand-installed on `gexis` and **not yet in an image**: a reflash loses them,
+plus the device-only `idle_url` and the Europe/Berlin time zone. PRs #10–#13
+are stacked (4c → 4d → 4e → 4f); merge in order. **Phase 4 criterion 5 is the
+one left** — the settings surface on a phone, which needs the settings HTTP
+API (none exists) and a port of `Settings.dc.html`.
+
+**4e (volume) is deployed on `gexis`** (2026-09-15, branch `phase-4e-volume`,
+stacked on 4d): Controls drawer from the now playing volume button, slider over
+−45…0 dB shown as slider position, mute restoring the prior level
+(ADR-0034). Previous core at `/opt/gexis-core.4d-backup`. **Passed George's
+panel pass**, plus two port deviations he asked for — see DEVELOPMENT.md,
+"Deviations the port keeps across exports". Only reachable from now playing — Home has no volume button yet.
+
+**4d (idle screen) is deployed on `gexis`** (2026-09-15, branch
+`phase-4d-idle`, stacked on `phase-4c-now-playing` / PR #10): `GET /idle`
+reports George's page embeddable; `idle_url` added to `/etc/gexis/core.toml`
+(backup `core.toml.4c-backup`); core copied into the venv's site-packages
+(pip cannot build on the device — no hatchling), previous core at
+`/opt/gexis-core.4c-backup`. Device time zone set to Europe/Berlin by hand —
+lost on reflash. **4d passed George's panel pass (2026-09-15)**, tested with a 10 s timeout via `?idle_seconds=10` in `kiosk.env`, since restored to 5 minutes.
+
 **4c (now playing) is built and hand-installed on `gexis`** (2026-09-15):
 `ui/src/screens/NowPlaying.svelte`, ported from `design/now-playing.html`,
 fonts bundled via fontsource. Previous UI kept at `/opt/gexis-ui.4b-backup`.
