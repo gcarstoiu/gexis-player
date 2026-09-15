@@ -35,6 +35,22 @@ and pointing `DEPLOY_DIR` at it would remove the 4.5GB stream entirely and
 halve disk use. Designed, not implemented.
 
 
+**Image built (2026-09-15, cold):**
+`image/deploy/2026-09-15-gexis-player-v0.2.1-133-gb94c31c-dirty.img` — 4c–4f plus
+provisioning of `TIMEZONE` and `IDLE_URL`, **no settings** (built from the main
+tree while settings work stayed in a worktree). First cold attempt was killed by
+Claude Code's memory guard; the resume failed in stage1 (`raspi-config` deps)
+on a rootfs the kill had left mid-apt — removing the container again fixed it.
+Flash, then `make provision DEVICE=/dev/sdX` before first boot. **A reflash
+drops the hand-installed settings increments** until they are redeployed or
+built in.
+
+**Settings (ADR-0035) on branch `phase-4-settings`:** increment 1 (registry,
+API, responsive screen) passed George's phone check; increment 2 (idle
+timeout, idle URL, both drawer settings wired) deployed on `gexis`, awaiting
+his check. Number/text editors are minimal and undesigned — Claude Design to
+draw them.
+
 **Phase 4 steps 4c–4f all passed George's panel pass (2026-09-15)**,
 hand-installed on `gexis` and **not yet in an image**: a reflash loses them,
 plus the device-only `idle_url` and the Europe/Berlin time zone. PRs #10–#13
