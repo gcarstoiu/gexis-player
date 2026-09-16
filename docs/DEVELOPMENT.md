@@ -770,8 +770,9 @@ validates, so the gate covers what ships. Verified inside
    [Finding 024](findings/024-peppyalsa-fifo-frame-formats.md)). Verified on
    `gexis` with music playing: levels reached our WebSocket, and stock
    PeppyMeter rendered from our passthrough pipe rather than peppyalsa's.
-   **Not yet:** the HTTP push transport is untested (needs a PeppyMeter web
-   server), there is no systemd unit and pygame is not in the image.
+   Unit `gexis-meter.service` (stage `03-core`) added 2026-09-16; until then
+   the service had only been started by hand. **Not yet:** the HTTP push
+   transport is untested (needs a PeppyMeter web server).
 2. Skin renderer parses all 84 skins; unknown keys or `meter.type` values fail
    the build. **Built 2026-09-16** — `skins.py`, run by `make skins` before
    every image build and by the unit tests against the real corpus in
@@ -786,8 +787,8 @@ validates, so the gate covers what ships. Verified inside
    10 rounds, the first observation after the raise always showed the finished
    screen, and its background region was byte-identical to the settled frame.
    Mechanism: `wlrctl toplevel minimize/focus` over labwc's
-   `wlr-foreign-toplevel-management`. **Still to do:** a systemd unit, the
-   Gelo5 images on the device, and wiring entry to the button.
+   `wlr-foreign-toplevel-management`. The unit, the Gelo5 images and the button
+   followed (stage `05-peppy`, criterion 8).
 5. Skin rotates per track, with the next track's skin composited ahead of
    time. **Built 2026-09-16**, in the driver: random without repeats until the
    corpus is exhausted, driven by track changes read from the metadata file
@@ -800,8 +801,8 @@ validates, so the gate covers what ships. Verified inside
    **Built 2026-09-16:** the daemon owns show/hide (`peppy.py`), driving labwc
    through `wlrctl`; the UI reports touches (`POST /touch`) because a touch
    lands in whichever window owns the screen. Show, hide and touch verified on
-   the panel. **Still to verify on hardware: the renderer-change path itself**,
-   which needs a real takeover.
+   the panel. **George checked the renderer-change path on the panel**
+   (2026-09-16): a takeover takes the screen back to now playing.
 7. Absent fields do not render their layer. **Built 2026-09-16:** neither
    vendored engine draws metadata, so the driver has its own layer
    (`gexis_peppy_render.py`) over the skins' geometry — title, artist, album,
@@ -810,9 +811,13 @@ validates, so the gate covers what ships. Verified inside
    background; sample rate never renders (ADR-0036). Artwork is drawn before
    text, because some skins place text over it (`dash-spectrum`). 17 tests on
    the device. **George checked metadata on the panel across all three
-   renderers**, and found text behind the artwork on `dash-spectrum`; that
-   fix and the badges are so far seen only in a device screenshot, not by
-   George.
+   renderers**, and found text behind the artwork on `dash-spectrum`, text
+   running over artwork, and remaining time out of line. Fixed by following
+   the layout rules the skins were designed for (Volumio's wrapper): text
+   centred in its box beside the artwork, remaining time `MM:SS` in DSEG7,
+   badges with the renderer's name. **George checked the fixes** (2026-09-16).
+   Not reproduced: the spectrum once overlapping remaining time on
+   `dash-spectrum`.
 8. **Peppy screen entry button** on now playing, as the phase's last step.
    Moved here from Phase 6 criterion 4 (George, 2026-09-15): criterion 4
    above already measures entry from now playing, and the button is already
@@ -820,7 +825,12 @@ validates, so the gate covers what ships. Verified inside
    **Built 2026-09-16:** the button raises the screen, and a touch on it
    hides it — the driver reports touches, since they land in the meter window
    and PeppyMeter's loop discards them. **Both checked on the panel by
-   George.** The five-minute implicit entry is built but not yet observed.
+   George.** The five-minute implicit entry **failed its first observation**
+   (2026-09-16: eight minutes of Spotify playback, no touch, never raised).
+   Cause: Spotify reports position only on events, so every natural track end
+   read as a skip and restarted the five minutes. Fixed by advancing the last
+   reported position while playing, as the UI's progress bar does; paused time
+   no longer counts either. **Unit-tested; not yet observed on hardware.**
    **Entry is also implicit after five minutes of unattended playback**
    ([ADR-0036](decisions/0036-peppy-entry-and-no-rate-or-codec.md), George
    2026-09-16): touch, a forced track change and a renderer change restart the

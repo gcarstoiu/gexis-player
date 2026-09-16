@@ -1,48 +1,65 @@
 # Handoff
 
-Last updated: 2026-09-16 (fourteenth session — **Phase 4 closed: 4c-4f and
-settings built, checked on hardware, merged, and flashed from an image built
-from `main`**)
+Last updated: 2026-09-16 (fifteenth session — **Phase 5 built: visualisation
+service, skin corpus and validator, both engines in one process, rotation,
+entry and exit, metadata layer; checked on the panel by George**)
 
 ## Start here
 
-**The device is running the current image.**
-`image/deploy/2026-09-15-gexis-player-v0.2.1-146-ge89d8bb-dirty.img`, built
-cold from `main` (`e89d8bb`), flashed and checked by George on 2026-09-16:
-now playing, idle screen, volume and mute, handoff, and settings from a phone.
-Provisioning carries the hostname, Wi-Fi, SSH key, time zone (Europe/Berlin)
-and the idle URL, which is deliberately not in the repo.
+**The device runs the 2026-09-15 image plus hand-installed Phase 5 work.**
+`image/deploy/2026-09-15-gexis-player-v0.2.1-146-ge89d8bb-dirty.img` is what
+was flashed. On top of it, by hand and **not in that image**:
 
-**Phase 4 is closed** (2026-09-16). Criteria 1, 2, 3, 4, 5 and 8 met and
-checked by George; 6 and 7 withdrawn. `docs/DEVELOPMENT.md` carries the
-closure and what it does *not* claim — read that before assuming anything
-about fixed output mode, text entry on the panel, or how much of the settings
-inventory is actually wired.
+- the Phase 5 daemon code in `/opt/gexis-core/venv` (Peppy control, metadata
+  file, settings seed);
+- the driver, engines and stock skins in `/tmp/spike/gx`, started by hand —
+  **gone on reboot**;
+- the meter service, started by hand — also gone on reboot;
+- packages `python3-pygame`, `python3-pil`, `wlrctl`, `grim` and
+  `python3-pytest` (the last two test-only).
 
-**Open right now:**
+A new image carries all of it except the test-only packages
+(`stage-gexis/05-peppy`, `03-core/files/gexis-meter.service`), and the
+implicit-entry fix, which the device does **not** have. **Build it and reflash
+before trusting anything above as a product.**
 
-- **PR #16** (`settings-seed`) — provisioning can seed settings so a reflash
-  restores them. Hardware-checked briefly by George; **not merged**.
-- **`playlistcontrol cmd:load album_id:<id>` is still unverified** and is the
-  load-bearing assumption of ADR-0030's typed-library half. Needs George
-  present: running it starts music.
-- **For Claude Design:** number and text editing in settings is described but
-  never drawn, so the port improvises both; the export's CSS drops the source
-  pill's pulse; `design/README.md` still describes a format badge and the
-  paused treatments that were removed.
+**Phase 5 status** — `docs/DEVELOPMENT.md` has each criterion's evidence:
 
-**Next phase: 5 — visualisation service and the Peppy screen.** Seven
-criteria plus the Peppy entry button, moved there from Phase 6 by George on
-2026-09-15 as the phase's last step. Nothing in it is started. Two carried
-decisions change what it must build: **no sample rate or codec anywhere,
-Peppy screen included** (George, 2026-09-15 — ADR-0019's codec rule needs
-amending in this phase), and ADR-0033's idle model, which renames that
-record's "idle timeout while playing".
+- 1 visualisation service: built; levels verified live; **HTTP push
+  untested**. Unit added 2026-09-16 — it had only ever run by hand.
+- 2, 3 skins: Gelo5's 84 in `skins/` (config only; images fetched at build),
+  validator gates `make image`.
+- 4 no visible construction: measured, Finding 025.
+- 5 rotation per track: built, Finding 027.
+- 6 renderer change exits: **George checked**.
+- 7 absent fields: our own metadata layer; **George checked** across all
+  three renderers, including the layout fixes (text in its box, MM:SS in
+  DSEG7, badges with names).
+- 8 button and touch-to-hide: **George checked**. Implicit five-minute entry
+  **failed on hardware** (every Spotify track end read as a skip), fixed and
+  unit-tested, **not yet observed** — the first thing to check on the new
+  image: play for six minutes without touching the panel.
+- 9 no sample rate or codec: nothing renders it, ADR-0036.
 
+**Follow-ups, not blocking:**
 
-Last updated: 2026-09-15 (twelfth session — **04-ui fixed and verified on
-hardware; ADR-0029 to 0032 decided; a new image is built and waiting to be
-flashed**)
+- `viz_timeout` is read by the daemon but not wired in the settings registry,
+  so the phone cannot change it (ADR-0035 says wire it with its feature).
+- The stock skins are Volumio-branded; Gelo5's are the image default.
+- Titles too long for their box are cut with "…"; the wrapper scrolls them.
+- Fonts: DejaVu for text; DSEG7 (OFL) for time. PeppyFont not vendored.
+- George once saw the spectrum overlap remaining time on `dash-spectrum`;
+  not reproduced in 24 rotations or a direct start.
+- **Lesson candidate:** hand-started test processes multiplied because pid
+  files captured the wrong pid; George saw overlapping skins. Stop by looking
+  processes up, not by trusting a pid file.
+
+**Still open from earlier:** `playlistcontrol cmd:load album_id:<id>` is
+unverified (ADR-0030); Claude Design owes drawn number/text editors and a
+corrected `design/README.md`.
+
+**Next phase: 6 — now playing, full** (transport controls from capability
+declarations, hidden when inoperable, artist and track info panels).
 
 ## Build environment (2026-09-13) — read this before the next build
 

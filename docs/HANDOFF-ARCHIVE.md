@@ -2658,3 +2658,53 @@ cached) is ever worth chasing further:**
    ADR-0001's "less of the base is ours to maintain" reasoning. Last
    resort, not a first move.
 
+
+
+---
+
+# Session 14 close (2026-09-16) — superseded 'Start here' block, moved verbatim
+
+Last updated: 2026-09-16 (fourteenth session — **Phase 4 closed: 4c-4f and
+settings built, checked on hardware, merged, and flashed from an image built
+from `main`**)
+
+## Start here
+
+**The device is running the current image.**
+`image/deploy/2026-09-15-gexis-player-v0.2.1-146-ge89d8bb-dirty.img`, built
+cold from `main` (`e89d8bb`), flashed and checked by George on 2026-09-16:
+now playing, idle screen, volume and mute, handoff, and settings from a phone.
+Provisioning carries the hostname, Wi-Fi, SSH key, time zone (Europe/Berlin)
+and the idle URL, which is deliberately not in the repo.
+
+**Phase 4 is closed** (2026-09-16). Criteria 1, 2, 3, 4, 5 and 8 met and
+checked by George; 6 and 7 withdrawn. `docs/DEVELOPMENT.md` carries the
+closure and what it does *not* claim — read that before assuming anything
+about fixed output mode, text entry on the panel, or how much of the settings
+inventory is actually wired.
+
+**Open right now:**
+
+- **PR #16** (`settings-seed`) — provisioning can seed settings so a reflash
+  restores them. Hardware-checked briefly by George; **not merged**.
+- **`playlistcontrol cmd:load album_id:<id>` is still unverified** and is the
+  load-bearing assumption of ADR-0030's typed-library half. Needs George
+  present: running it starts music.
+- **For Claude Design:** number and text editing in settings is described but
+  never drawn, so the port improvises both; the export's CSS drops the source
+  pill's pulse; `design/README.md` still describes a format badge and the
+  paused treatments that were removed.
+
+**Next phase: 5 — visualisation service and the Peppy screen.** Seven
+criteria plus the Peppy entry button, moved there from Phase 6 by George on
+2026-09-15 as the phase's last step. Nothing in it is started. Two carried
+decisions change what it must build: **no sample rate or codec anywhere,
+Peppy screen included** (George, 2026-09-15 — ADR-0019's codec rule needs
+amending in this phase), and ADR-0033's idle model, which renames that
+record's "idle timeout while playing".
+
+
+Last updated: 2026-09-15 (twelfth session — **04-ui fixed and verified on
+hardware; ADR-0029 to 0032 decided; a new image is built and waiting to be
+flashed**)
+
