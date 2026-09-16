@@ -734,9 +734,24 @@ increment at a time, each gated on his own hardware pass as usual):
 | **4e** | criterion 8 | volume. *Was criteria 6, 7, 8 until 2026-09-15; the back-to-music screen and activate control were withdrawn.* **Built 2026-09-15** per [ADR-0034](decisions/0034-panel-volume-travel-and-mute.md): the design's Controls drawer, slider over −45…0 dB shown as slider position, mute (`POST /volume/mute`) restoring the prior level. Exercised end to end against the real `StateServer` with a fake mixer in headless Chromium. **Passed George's panel pass 2026-09-15.** |
 | **4f** | criterion 4 | transition state, with the exempt-pair list as published data rather than a constant in the UI. **Built 2026-09-15:** the design's "Handing off" overlay, shown from the published handoff's start until it ends (not the design canvas's fixed 2.7 s), held at least 1.4 s — one note cycle — so it never flashes; exempt pairs from `handoff_exempt_pairs` skip it. **Passed George's panel pass 2026-09-15.** |
 
-**Phase 4 status, 2026-09-15:** criteria 1, 2, 3, 4, 5 and 8 met and checked
-by George; 6 and 7 withdrawn. Closing the phase is George's call. The
-settings increments are not yet in an image.
+**PHASE 4 CLOSED, 2026-09-16.** Criteria 1, 2, 3, 4, 5 and 8 met; 6 and 7
+withdrawn (George, 2026-09-15). Every step was checked by George on the panel
+or his phone as it landed, and the whole phase was then flashed from an image
+built from `main` (`2026-09-15-gexis-player-v0.2.1-146-ge89d8bb-dirty.img`)
+and checked again — not left on hand-installed builds.
+
+**What is deferred, and therefore what this closure does NOT claim:**
+
+| deferred | criterion | why |
+|---|---|---|
+| Settings cannot be reached from the panel | 5 | The design reaches settings from the library root, which is Phase 7. George declined a temporary entry (2026-09-15). The phone is the settings surface until then. |
+| Almost every settings row is unwired | 5 | ADR-0035 wires a setting with the feature that reads it. Four are wired: idle timeout, idle URL, and the two volume-drawer rows. The rest render and refuse writes. |
+| Text rows cannot be typed into on the panel | 5 | ADR-0029: no on-screen keyboard; the panel's route is a USB keyboard, and the design draws no field. On a phone they are a native input. |
+| Number and text editors are not designed | 5 | `design/settings.md` describes them, `Settings.dc.html` does not draw them. The port improvises both in the design's language, pending Claude Design. |
+| Fixed output mode is still unimplemented | 8 | ADR-0018, carried from Phase 2. The design hides the volume control entirely in that mode; nothing implements the mode itself. |
+| Mute does not reach a renderer's own app | 8 | ADR-0034 records it: panel writes go through the bridge's echo suppression, deliberately. |
+| Home is a placeholder | — | ADR-0033's no-renderer screen is the library root, Phase 7. Today it is a "Nothing playing" line marked unwired. |
+| Sample rate and codec are displayed nowhere | 3 | George, 2026-09-15. The fields are still published; ADR-0019's Peppy-screen codec rule is to be amended in Phase 5. |
 
 ### Phase 5 — Visualisation service and Peppy screen
 
