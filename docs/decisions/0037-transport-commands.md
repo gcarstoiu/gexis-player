@@ -54,7 +54,7 @@ how the UI knows a button would work, and what it shows while it would not.
 | layer | where | changes | example |
 |---|---|---|---|
 | **has** — what this renderer can ever do | `capabilities[id].controls` (static, exists) | never at runtime | LMS has `shuffle`; Spotify does not (design: "the other two renderers just hand us a stream") |
-| **can now** — what works at this moment | `controls` on `/state`, for the active renderer | as the renderer reports | LMS at the last track of a playlist with repeat off: `next` is not available |
+| **can now** — what works at this moment | `controls` on `/state`, for the active renderer | as the renderer reports | LMS playing a radio station (a one-item playlist): `next` is not available |
 
 `controls` carries `available` (the commands that would work now) and the
 current `shuffle` (bool) and `repeat` (`off`/`all`/`one`), each `null` when the
@@ -89,19 +89,26 @@ cannot account for (ADR-0010, decisions/README.md).
 
 ### 5. What each renderer declares is measured, not assumed
 
-`controls` for each built-in adapter is filled from a hardware finding
-(Finding 028, Phase 6 step 1), the way ADR-0013 derives every contract field.
-Expected, **not yet measured**:
+`controls` for each built-in adapter is filled from a hardware finding, the
+way ADR-0013 derives every contract field. **Measured 2026-09-16,
+[Finding 028](../findings/028-transport-commands-on-three-renderers.md)** —
+every command worked on all three:
 
-| | play/pause | next/previous | shuffle/repeat | risk |
-|---|---|---|---|---|
-| LMS | JSON-RPC `pause 0/1` | `playlist index +1/-1` | `playlist shuffle`, `playlist repeat` | radio streams: what next and pause do |
-| Spotify | go-librespot `/player/playpause` | `/player/next`, `/player/prev` | not shown (design) | **[Finding 014](../findings/014-lms-to-spotify-first-attempt-race.md): `/player/resume` once played audio without the Connect handshake** — phone showed "disconnected" |
-| Bluetooth | `MediaPlayer1.Play/Pause` | `Next/Previous` | not shown (design) | AVRCP support is per phone |
+| | play / pause | next | previous | shuffle / repeat | Next and Previous disabled when |
+|---|---|---|---|---|---|
+| LMS | `pause 1` / `pause 0` | `button jump_fwd` | `button jump_rew` (restarts, or goes back near the start — as LMS's apps do) | `playlist shuffle`, `playlist repeat` | the playlist holds one item (a radio station): both only restart the stream |
+| Spotify | `/player/pause`, `/player/resume` | `/player/next` | `/player/prev` | not shown (design) | never: go-librespot reports no "has next" |
+| Bluetooth | `Pause`, `Play` | `Next` | `Previous` | not shown (design) | never: track numbering is not sequential |
+
+The Finding 014 risk did not occur: `/player/resume` *within* a live Spotify
+session kept the phone connected (George watched). An LMS playlist has no end
+for Next: it wraps even with repeat off.
 
 A command that fails its measurement is not declared, and so is hidden — the
 first row of §3. A command that works in general but not in some state
-(the end of a playlist) is declared and disabled in that state — the third.
+(a radio station on LMS) is declared and disabled in that state — the third.
+George's own example, the end of a queue, does not arise on LMS, which wraps;
+the rule stands for any renderer where it does.
 
 ## Consequences
 
@@ -113,7 +120,6 @@ first row of §3. A command that works in general but not in some state
 - A remote browser gets no transport: it renders settings only (ADR-0032).
 - A skip from the panel is also a touch, so it already counts as attention for
   the Peppy screen (ADR-0036); nothing new is needed there.
-- **Not settled here, answered by Finding 028:** how each renderer reports "can
-  now" (LMS's playlist index and length are expected to suffice; go-librespot
-  and AVRCP may not report it at all, in which case the command stays enabled
-  whenever the renderer is playing or paused, and the finding says so).
+- **Bluetooth reports a Previous late** (about 4 s, Finding 028): the progress
+  bar keeps counting until the phone's report arrives. §4 applies; it is not
+  masked.

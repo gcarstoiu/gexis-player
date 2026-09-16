@@ -72,7 +72,7 @@ read through this rule.
 
 **Amended 2026-09-16 by [0037](0037-transport-commands.md)** (George): a third
 case. A control the renderer has, and that is operable here but **not right
-now** — Next at the end of a playlist — stays **visible and disabled**, never
+now** — Next on a radio station — stays **visible and disabled**, never
 hidden. Hiding is only for a capability that does not exist.
 
 **Amended 2026-09-13 by [0029](0029-text-entry-on-every-surface.md):** settings

@@ -849,6 +849,8 @@ validates, so the gate covers what ships. Verified inside
    rule, never dead. **Sharpened by George, 2026-09-16:** a control the
    renderer has is **visible at all times**; when it cannot work *right now*
    (next at the end of a queue or playlist) it is **disabled, not hidden**.
+   Measured case: Next and Previous on an LMS radio station; an LMS playlist
+   wraps, so it has no end (Finding 028).
    Hiding is only for a control the renderer does not have at all.
 3. ~~Artist and track info panels.~~ **Moved to Phase 8 criterion 6** (George,
    2026-09-16): their content (biography, tags, similar artists, label,
@@ -865,6 +867,10 @@ checked on the panel before the next:
    can do now (live); controls show the renderer's reported state, never an
    optimistic one.
 1. **Hardware finding, no product code:** every command on every renderer.
+   **Done 2026-09-16, [Finding 028](findings/028-transport-commands-on-three-renderers.md):**
+   everything works on all three; LMS previous is `button jump_rew`; Next and
+   Previous are disabled only for an LMS one-item playlist (radio). Speakers
+   were off — audible checks at PR validation.
    LMS play/pause/next/previous/shuffle/repeat and whether each change is
    reported back, previous mid-track, radio streams. Spotify through
    go-librespot, including **Finding 014's risk** that its resume bypasses

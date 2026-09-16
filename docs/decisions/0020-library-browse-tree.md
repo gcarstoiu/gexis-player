@@ -214,7 +214,7 @@ disagree. They do not, once the distinction is stated:
 >
 > **Amended 2026-09-16 by [ADR-0037](0037-transport-commands.md)** (George). A
 > third case, about *when* rather than *where*: a control that exists and is
-> operable here but cannot work right now (Next at the end of a playlist) is
+> operable here but cannot work right now (Next on a radio station) is
 > **shown and disabled**, never hidden.
 
 A search item hidden on the panel would leave the user unable to see that their
