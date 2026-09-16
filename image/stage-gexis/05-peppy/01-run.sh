@@ -59,21 +59,27 @@ tar -xzf "${WORK}/screensaver.tar.gz" -C "${WORK}/screensaver" --strip-component
 # (checked 2026-09-16, after a build failed here on exactly that).
 bsdtar -xf "${WORK}/gelo5.zip" -C "${WORK}/gelo5"
 
-install -d -m 755 "${PEPPY_DIR}/skins/stock/templates" "${PEPPY_DIR}/skins/stock/templates_spectrum"
-cp -r "${WORK}/screensaver/templates/1280x800_custom_4/." "${PEPPY_DIR}/skins/stock/templates/"
+# Both engines demand a folder whose NAME is the resolution: it must start
+# with a digit and parse as WIDTHxHEIGHT, or they print one line and call
+# os._exit(0) (configfileparser.py:222-225). Hence the 1280x800 level.
+install -d -m 755 "${PEPPY_DIR}/skins/stock/templates/1280x800" \
+	"${PEPPY_DIR}/skins/stock/templates_spectrum/1280x800"
+cp -r "${WORK}/screensaver/templates/1280x800_custom_4/." \
+	"${PEPPY_DIR}/skins/stock/templates/1280x800/"
 cp -r "${WORK}/screensaver/templates_spectrum/1280x800_custom_4/." \
-	"${PEPPY_DIR}/skins/stock/templates_spectrum/"
+	"${PEPPY_DIR}/skins/stock/templates_spectrum/1280x800/"
 
 # Gelo5 ships six template folders; four are the same 71 skins split into
 # groups of twenty (verified 2026-09-16 by comparing section names). Only the
 # two distinct ones are installed - see skins/README.md.
-install -d -m 755 "${PEPPY_DIR}/skins/gelo5/templates" "${PEPPY_DIR}/skins/gelo5/templates_spectrum"
+install -d -m 755 "${PEPPY_DIR}/skins/gelo5/templates/1280x800" \
+	"${PEPPY_DIR}/skins/gelo5/templates_spectrum/1280x800"
 cp -r "${WORK}/gelo5/template/1280x800_Gelo5 00-99 Skin_400/." \
-	"${PEPPY_DIR}/skins/gelo5/templates/"
+	"${PEPPY_DIR}/skins/gelo5/templates/1280x800/"
 cp -r "${WORK}/gelo5/template/1280x800_Gelo5 Spec&Met_420/." \
-	"${PEPPY_DIR}/skins/gelo5/templates_spectrum/"
+	"${PEPPY_DIR}/skins/gelo5/templates_spectrum/1280x800/"
 cp -r "${WORK}/gelo5/template_spectrum/1280x800_Gelo5 Spec&Met_420/." \
-	"${PEPPY_DIR}/skins/gelo5/templates_spectrum/"
+	"${PEPPY_DIR}/skins/gelo5/templates_spectrum/1280x800/"
 
 # The corpus this repository validates (make skins) must be the corpus that
 # ships: the fetched pack's config files have to match ours byte for byte,
@@ -96,6 +102,8 @@ done
 # working directory (configfileparser.py:174-176), so the file goes in the
 # engine's own folder and the launcher cds there.
 install -D -m 644 files/peppy-meter.txt "${PEPPY_DIR}/peppymeter/config.txt"
+install -D -m 644 files/peppy-spectrum.txt "${PEPPY_DIR}/spectrum/config.txt"
+install -D -m 755 files/gexis-peppy-driver.py "${PEPPY_DIR}/driver.py"
 install -D -m 644 files/gexis-peppy.service \
 	"${ROOTFS_DIR}/etc/systemd/system/gexis-peppy.service"
 install -D -m 755 files/gexis-peppy-start "${ROOTFS_DIR}/usr/local/bin/gexis-peppy-start"
@@ -127,8 +135,8 @@ fi
 for required in \
 	"${PEPPY_DIR}/peppymeter/peppymeter.py" \
 	"${PEPPY_DIR}/spectrum/spectrum.py" \
-	"${PEPPY_DIR}/skins/gelo5/templates/meters.txt" \
-	"${PEPPY_DIR}/skins/stock/templates/meters.txt" \
+	"${PEPPY_DIR}/skins/gelo5/templates/1280x800/meters.txt" \
+	"${PEPPY_DIR}/skins/stock/templates/1280x800/meters.txt" \
 	"${PEPPY_DIR}/peppymeter/config.txt"
 do
 	if [ ! -s "${required}" ]; then
@@ -141,7 +149,7 @@ done
 # install would parse and then render black (the reference document's
 # symptom B, from a different cause).
 for corpus in gelo5 stock; do
-	count=$(find "${PEPPY_DIR}/skins/${corpus}/templates" -maxdepth 1 -type f \
+	count=$(find "${PEPPY_DIR}/skins/${corpus}/templates/1280x800" -maxdepth 1 -type f \
 		\( -name '*.png' -o -name '*.jpg' \) | wc -l)
 	if [ "${count}" -lt 10 ]; then
 		echo "ERROR: ${corpus} templates hold only ${count} images - the pack did not unpack as expected" >&2

@@ -1,0 +1,31 @@
+# Gexis: PeppySpectrum configuration, installed by stage-gexis/05-peppy.
+#
+# The driver rewrites `spectrum` in place on each start to the section the
+# current skin links to by name. Never append a key here: configparser fails
+# hard on a duplicate and the process then will not start.
+#
+# pipe.name is our visualisation service's passthrough, not peppyalsa's.
+[current]
+spectrum =
+base.folder = /opt/gexis-peppy/skins/gelo5/templates_spectrum
+spectrum.folder = 1280x800
+update.period = 10
+max.value = 100
+pipe.name = /tmp/gexis-peppyspectrum
+size = 30
+update.ui.interval = 0.04
+frame.rate = 30
+depth = 32
+exit.on.touch = False
+use.logging = False
+use.test.data =
+
+[sdl.env]
+framebuffer.device = /dev/fb1
+mouse.device = /dev/input/touchscreen
+mouse.driver = TSLIB
+mouse.enabled = True
+video.driver = wayland
+video.display = :0
+double.buffer = True
+no.frame = False

@@ -37,7 +37,7 @@ fi
   done
   echo "WARNING: never saw the meter window; it may be sitting over the panel" >&2 ) &
 
-cd /opt/gexis-peppy/peppymeter || exit 1
-# cd first: PeppyMeter has no --config option, it reads ./config.txt from the
-# working directory.
-exec python3 -u peppymeter.py
+# The driver runs both engines in one process: a skin with meter.visible =
+# False draws no meter, so its whole motion is the spectrum (Finding 026).
+# It changes directory itself, per engine, because each reads ./config.txt.
+exec python3 -u /opt/gexis-peppy/driver.py

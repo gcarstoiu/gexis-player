@@ -5,6 +5,8 @@
 # on a missing one.
 #
 # Three values earn their comments (docs/reference/peppymeter-fork-on-moode.md):
+#   meter.folder must start with a digit and parse as WIDTHxHEIGHT, or the
+#                engine prints one line and calls os._exit(0).
 #   base.folder  absolute, because relative paths resolve against the wrong
 #                directory once the spectrum engine chdirs into its own.
 #   pipe.name    our visualisation service's passthrough, NOT peppyalsa's
@@ -16,8 +18,8 @@
 [current]
 meter = random
 random.meter.interval = 20
-base.folder = /opt/gexis-peppy/skins/gelo5
-meter.folder = templates
+base.folder = /opt/gexis-peppy/skins/gelo5/templates
+meter.folder = 1280x800
 screen.width = 1280
 screen.height = 800
 exit.on.touch = False
