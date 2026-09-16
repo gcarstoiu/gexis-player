@@ -11,7 +11,7 @@
   import bluetoothMark from '../assets/icon-bluetooth.png';
   import VolumeIcon from '../lib/VolumeIcon.svelte';
 
-  let { active, metadata, volume, onvolume } = $props();
+  let { active, metadata, volume, onvolume, onvisualisation } = $props();
 
   const SOURCES = {
     lms: { label: 'LMS', mark: null },
@@ -151,7 +151,7 @@
           <button class="btn" type="button" aria-label="Home" disabled data-unwired="phase-7">
             <span class="i-tiles"><i></i><i></i><i></i><i></i></span>
           </button>
-          <button class="btn" type="button" aria-label="Visualization" disabled data-unwired="phase-5">
+          <button class="btn" type="button" aria-label="Visualization" onclick={onvisualisation}>
             <span class="i-meter">
               <i style="height:12px"></i><i style="height:22px"></i><i style="height:16px"></i><i style="height:8px"></i>
             </span>

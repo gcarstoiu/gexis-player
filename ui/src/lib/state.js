@@ -90,3 +90,13 @@ async function post(path, body) {
 export const activate = (rendererId) => post(`/renderer/${rendererId}/activate`);
 export const setVolume = (percent) => post('/volume', { percent });
 export const setMute = (muted) => post('/volume/mute', { muted });
+
+/** Phase 5 criterion 8: the Visualization button raises the Peppy screen. */
+export const showPeppy = () => post('/peppy/show');
+
+/** The daemon cannot see touches - they land in whichever window owns the
+ *  screen - so the panel tells it, to restart the unattended-playback timer
+ *  (ADR-0036). Fire and forget: a failed report must never block a tap. */
+export function reportTouch() {
+  fetch('/touch', { method: 'POST' }).catch(() => {});
+}

@@ -8,6 +8,7 @@
   import HandoffScreen from './screens/HandoffScreen.svelte';
   import Settings from './screens/Settings.svelte';
   import { loadSettings, settingValues } from './lib/settings.js';
+  import { reportTouch, showPeppy } from './lib/state.js';
 
   // ADR-0033: idle is "not playing and not touched", one timeout everywhere.
   // From settings (idle_timeout, minutes); `?idle_seconds=` overrides it for testing.
@@ -15,6 +16,18 @@
   const IDLE_MS = $derived((IDLE_OVERRIDE_S ?? ($settingValues.idle_timeout ?? 5) * 60) * 1000);
 
   let idle = $state(false);
+
+  // Reported to the daemon at most once a second: it only needs to know the
+  // panel was touched, not how often (ADR-0036).
+  let lastReported = 0;
+  function onPointerDown() {
+    touches++;
+    const now = Date.now();
+    if (now - lastReported > 1000) {
+      lastReported = now;
+      reportTouch();
+    }
+  }
   let volumeOpen = $state(false);
 
   // Criterion 4: shown for the takeover itself unless the pair is measured
@@ -72,6 +85,15 @@
 
   // ADR-0032: the panel renders everything; a remote browser only settings.
   let surface = $state(null);
+  async function showVisualisation() {
+    try {
+      await showPeppy();
+    } catch (err) {
+      // 409 means the meter process is not running; the panel simply stays.
+      console.info('visualisation unavailable:', err.message);
+    }
+  }
+
   onMount(() => {
     connect();
     loadSettings();
@@ -82,7 +104,7 @@
   });
 </script>
 
-<svelte:window onpointerdowncapture={() => touches++} />
+<svelte:window onpointerdowncapture={onPointerDown} />
 
 {#if surface === 'remote'}
   <div class="remote"><Settings /></div>
@@ -90,7 +112,7 @@
 
 <div class="panel">
   {#if $active}
-    <NowPlaying active={$active} metadata={$metadata} volume={$volume} onvolume={() => { keepVolumeOpen(); volumeOpen = true; }} />
+    <NowPlaying active={$active} metadata={$metadata} volume={$volume} onvolume={() => { keepVolumeOpen(); volumeOpen = true; }} onvisualisation={showVisualisation} />
   {:else}
     <!-- Home (ADR-0033) is the no-renderer screen; its content is Phase 7. -->
     <div class="placeholder" data-unwired="home">Nothing playing</div>
