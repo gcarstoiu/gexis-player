@@ -77,7 +77,7 @@ Phase 2 and ADR-0027.
 |---|---|---|
 | Idle screen URL | [R] | **Settable from the phone since 2026-09-15** (ADR-0035 increment 2); `core.toml`'s value is the default, clearing the field returns to it. ADR-0019; external, lazy loaded, needs a fallback for unreachable and unconfigured — and for *reachable but refuses framing*, see the panel home URL below |
 | Panel home URL | [H] | `GEXIS_KIOSK_URL` in `/etc/gexis/kiosk.env`, hardcoded to `http://127.0.0.1:8090/`. Proven changeable with no rebuild and no code change (2026-09-14: the panel rendered an arbitrary third-party page correctly at 1280x800). George, 2026-09-14: **keep it hardcoded, we will need it later** — recorded because it is a setting in fact, not because it should be exposed. A panel that can be pointed away from our own UI has no route back except SSH |
-| Idle timeout before the Peppy screen | [R] | ADR-0019, reset by local touch only |
+| Unattended-playback timeout, to the Peppy screen | [R] | [ADR-0036](0036-peppy-entry-and-no-rate-or-codec.md): five minutes of playback with no touch, forced track change or renderer change; volume does not count. Was "idle timeout before the Peppy screen" |
 | Idle timeout — to the idle screen | [R] | ADR-0019's "grace period after playback stops", generalised by [ADR-0033](0033-idle-and-home.md): one timeout on every screen, counted while not playing and not touched. Hardcoded to 5 minutes in `ui/src/App.svelte` since Phase 4d (confirmed as a setting by George, 2026-09-15) |
 | Skin corpus: meter-only / meter+spectrum | [R] | ADR-0019 |
 | Skin rotation per track on/off | [N] | Rotation is unconditional in ADR-0019 |

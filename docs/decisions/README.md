@@ -55,6 +55,7 @@ the question blocking it was answered.
 | [0033](0033-idle-and-home.md) | Idle is "not playing and not touched"; Home is the no-renderer screen | Accepted — amends [0019](0019-peppy-screen-lifecycle.md) |
 | [0034](0034-panel-volume-travel-and-mute.md) | Panel volume: slider over −45…0 dB, shown as slider position; mute restores the prior level | Accepted — amends Phase 4 criterion 8 |
 | [0035](0035-settings-api.md) | Settings: one registry in the daemon, a generic API, wired one setting at a time | Accepted — the API ADR-0032 deferred |
+| [0036](0036-peppy-entry-and-no-rate-or-codec.md) | Peppy screen entry: the button, or five minutes of unattended playback; no sample rate or codec anywhere | Accepted — amends [0019](0019-peppy-screen-lifecycle.md) |
 
 ## Cross-cutting rules
 
