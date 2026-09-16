@@ -161,7 +161,23 @@ class StateServer:
             return web.json_response(
                 {"error": f"{command} cannot work on {state.active} right now"}, status=409
             )
-        if not await self._transport(state.active, command):
+        argument = None
+        if command in ("shuffle", "repeat"):
+            try:
+                body = await request.json()
+            except ValueError:
+                body = None
+            if command == "shuffle":
+                argument = body.get("on") if isinstance(body, dict) else None
+                if not isinstance(argument, bool):
+                    return web.json_response({"error": 'body must be {"on": true|false}'}, status=400)
+            else:
+                argument = body.get("mode") if isinstance(body, dict) else None
+                if argument not in ("off", "all", "one"):
+                    return web.json_response(
+                        {"error": 'body must be {"mode": "off"|"all"|"one"}'}, status=400
+                    )
+        if not await self._transport(state.active, command, argument):
             return web.json_response({"error": f"{state.active} did not take {command}"}, status=502)
         return web.json_response({"sent": command, "renderer": state.active})
 

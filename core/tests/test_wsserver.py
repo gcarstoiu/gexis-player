@@ -339,8 +339,8 @@ async def test_transport_goes_to_the_active_renderer():
     store.set_active("spotify")
     sent = []
 
-    async def transport(renderer_id, command):
-        sent.append((renderer_id, command))
+    async def transport(renderer_id, command, argument=None):
+        sent.append((renderer_id, command, argument) if argument is not None else (renderer_id, command))
         return True
 
     server = StateServer(store, transport=transport)
@@ -367,7 +367,7 @@ async def test_transport_refuses_what_cannot_be_sent(active, controls, path, sta
     if active:
         store.set_active(active)
 
-    async def transport(renderer_id, command):
+    async def transport(renderer_id, command, argument=None):
         raise AssertionError("must not be called")
 
     server = StateServer(store, transport=transport)
@@ -382,7 +382,7 @@ async def test_transport_reports_a_renderer_refusal():
     store = StateStore(_transport_caps("bluetooth"))
     store.set_active("bluetooth")
 
-    async def transport(renderer_id, command):
+    async def transport(renderer_id, command, argument=None):
         return False
 
     server = StateServer(store, transport=transport)
@@ -414,7 +414,8 @@ async def test_state_publishes_what_the_active_renderer_can_do_now():
         async with client.ws_connect("/state") as ws:
             msg = await ws.receive_json()
 
-    assert msg["controls"] == {"available": ["pause", "play"]}  # activate is not transport
+    # activate is not transport; shuffle and repeat are not declared here
+    assert msg["controls"] == {"available": ["pause", "play"], "shuffle": None, "repeat": None}
     assert "unavailable" not in msg["metadata"]
 
 
@@ -424,7 +425,7 @@ async def test_a_command_that_cannot_work_now_is_refused():
     store.set_active("lms")
     store.set_metadata("lms", TrackMetadata(title="Radio", unavailable=frozenset({"next"})))
 
-    async def transport(renderer_id, command):
+    async def transport(renderer_id, command, argument=None):
         raise AssertionError("must not be called")
 
     server = StateServer(store, transport=transport)
@@ -443,3 +444,40 @@ async def test_nobody_active_publishes_no_controls():
             msg = await ws.receive_json()
 
     assert msg["controls"] is None
+
+
+@pytest.mark.asyncio
+async def test_shuffle_and_repeat_are_published_for_a_renderer_that_declares_them():
+    store = StateStore(_transport_caps("lms", ("play", "pause", "shuffle", "repeat")))
+    store.set_active("lms")
+    store.set_metadata("lms", TrackMetadata(title="Song", shuffle=True, repeat="one"))
+    server = StateServer(store)
+    async with TestClient(TestServer(server.make_app())) as client:
+        async with client.ws_connect("/state") as ws:
+            msg = await ws.receive_json()
+
+    assert msg["controls"]["shuffle"] is True
+    assert msg["controls"]["repeat"] == "one"
+
+
+@pytest.mark.asyncio
+async def test_shuffle_and_repeat_carry_their_setting_to_the_renderer():
+    store = StateStore(_transport_caps("lms", ("shuffle", "repeat")))
+    store.set_active("lms")
+    sent = []
+
+    async def transport(renderer_id, command, argument=None):
+        sent.append((command, argument))
+        return True
+
+    server = StateServer(store, transport=transport)
+    async with TestClient(TestServer(server.make_app())) as client:
+        ok1 = await client.post("/transport/shuffle", json={"on": True})
+        ok2 = await client.post("/transport/repeat", json={"mode": "all"})
+        bad1 = await client.post("/transport/shuffle", json={"on": "yes"})
+        bad2 = await client.post("/transport/repeat", json={"mode": "twice"})
+        bad3 = await client.post("/transport/repeat")
+
+    assert (ok1.status, ok2.status) == (200, 200)
+    assert (bad1.status, bad2.status, bad3.status) == (400, 400, 400)
+    assert sent == [("shuffle", True), ("repeat", "all")]

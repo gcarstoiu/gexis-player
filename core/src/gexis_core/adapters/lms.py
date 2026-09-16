@@ -79,6 +79,27 @@ def _as_float(value) -> float | None:
     return float(value) if isinstance(value, (int, float)) else None
 
 
+#: LMS's `playlist repeat` numbers against ADR-0037's names. LMS's order is
+#: 0 off, 1 one song, 2 all (Finding 028) - not the design's off/all/one.
+REPEAT_FROM_LMS = {0: "off", 1: "one", 2: "all"}
+REPEAT_TO_LMS = {name: number for number, name in REPEAT_FROM_LMS.items()}
+
+
+def _as_int(value) -> int | None:
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def _shuffle(result: dict) -> bool | None:
+    """LMS has three states: 0 off, 1 by song, 2 by album (Finding 028). The
+    design's toggle has two, so both 1 and 2 show as on, and turning it on
+    from the panel means by song."""
+    value = _as_int(result.get("playlist shuffle"))
+    return None if value is None else value != 0
+
+
 def _unavailable_controls(result: dict) -> frozenset[str]:
     """ADR-0037 §3, measured in Finding 028: on a one-item playlist (a radio
     station) `jump_fwd` and `jump_rew` only restart the stream, so Next and
@@ -115,7 +136,7 @@ class LmsAdapter(Adapter):
         # could act on a user's command; `activate()` below now can, and
         # only for LMS - Spotify and Bluetooth are taken over by a phone
         # connecting, never by us asking.
-        controls=frozenset({"activate", "play", "pause", "next", "previous"}),
+        controls=frozenset({"activate", "play", "pause", "next", "previous", "shuffle", "repeat"}),
     )
 
     # ADR-0027, 2026-09-12: this adapter no longer fights squeezelite for
@@ -225,6 +246,8 @@ class LmsAdapter(Adapter):
                 source_type="lms",
                 transport=transport,
                 unavailable=_unavailable_controls(result),
+                shuffle=_shuffle(result),
+                repeat=REPEAT_FROM_LMS.get(_as_int(result.get("playlist repeat"))),
             )
         )
 
@@ -480,6 +503,12 @@ class LmsAdapter(Adapter):
 
     async def next(self) -> bool:
         return await self._command(["button", "jump_fwd"])
+
+    async def shuffle(self, on: bool) -> bool:
+        return await self._command(["playlist", "shuffle", 1 if on else 0])
+
+    async def repeat(self, mode: str) -> bool:
+        return await self._command(["playlist", "repeat", REPEAT_TO_LMS[mode]])
 
     async def previous(self) -> bool:
         """`jump_rew`, not `playlist index -1`: the index always goes back a

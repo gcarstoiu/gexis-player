@@ -73,6 +73,9 @@ export const handoffExemptPairs = derived(playback, ($s) => $s?.handoff_exempt_p
 export const capabilities = derived(playback, ($s) => $s?.capabilities ?? {});
 /** What the active renderer can do right now (ADR-0037 §2's "can now"). */
 export const available = derived(playback, ($s) => $s?.controls?.available ?? []);
+/** The active renderer's own shuffle (bool) and repeat ('off'|'all'|'one'). */
+export const shuffle = derived(playback, ($s) => $s?.controls?.shuffle ?? null);
+export const repeat = derived(playback, ($s) => $s?.controls?.repeat ?? null);
 
 /**
  * Commands go over REST, never the socket (ADR-0028). Returns the parsed
@@ -97,7 +100,7 @@ export const setMute = (muted) => post('/volume/mute', { muted });
 
 /** ADR-0037: to whichever renderer is active. The result arrives on /state;
  *  the button shows what the renderer reports, never what was pressed. */
-export const sendTransport = (command) => post(`/transport/${command}`);
+export const sendTransport = (command, body) => post(`/transport/${command}`, body);
 
 /** Phase 5 criterion 8: the Visualization button raises the Peppy screen. */
 export const showPeppy = () => post('/peppy/show');

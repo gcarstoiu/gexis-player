@@ -13,7 +13,7 @@
 
   import { sendTransport } from '../lib/state.js';
 
-  let { active, metadata, volume, controls = [], available = [], onvolume, onvisualisation } = $props();
+  let { active, metadata, volume, controls = [], available = [], shuffle = null, repeat = null, onvolume, onvisualisation } = $props();
 
   const SOURCES = {
     lms: { label: 'LMS', mark: null },
@@ -94,9 +94,14 @@
     untrack(forgetPress);
   });
 
-  async function skip(command) {
+  // Shuffle and repeat show what the renderer reports (LMS answers in about
+  // 0.5 s, Finding 028), so unlike play they do not flip on press. Repeat
+  // steps off -> all -> one, the design's order.
+  const NEXT_REPEAT = { off: 'all', all: 'one', one: 'off' };
+
+  async function skip(command, body) {
     try {
-      await sendTransport(command);
+      await sendTransport(command, body);
     } catch (err) {
       console.info('transport:', err.message);
     }
@@ -115,8 +120,8 @@
     }
   }
 
-  // Shuffle, repeat and queue are LMS-only in the design. Keyed on the id
-  // for now; Phase 6 renders controls from capability declarations instead.
+  // The queue is LMS-only in the design. Keyed on the id until Phase 7 wires
+  // it; shuffle and repeat follow the renderer's declaration (ADR-0037).
   const lmsOnly = $derived(active === 'lms');
 </script>
 
@@ -208,8 +213,8 @@
         </div>
 
         <div class="bar__mid">
-          {#if lmsOnly}
-            <button class="btn" type="button" aria-label="Shuffle" disabled data-unwired="phase-6">
+          {#if controls.includes('shuffle')}
+            <button class="btn btn--toggle" class:is-on={shuffle === true} type="button" aria-label="Shuffle" aria-pressed={shuffle === true} disabled={!available.includes('shuffle')} onclick={() => skip('shuffle', { on: shuffle !== true })}>
               <span class="i-shuffle"><i></i><i></i><i></i><i></i><b></b><b></b></span>
             </button>
           {/if}
@@ -229,9 +234,9 @@
               <span class="i-next"></span>
             </button>
           {/if}
-          {#if lmsOnly}
-            <button class="btn" type="button" aria-label="Repeat" disabled data-unwired="phase-6">
-              <span class="i-repeat"><i></i><i></i><i></i><i></i><b></b><b></b></span>
+          {#if controls.includes('repeat')}
+            <button class="btn btn--toggle" class:is-on={repeat === 'all' || repeat === 'one'} type="button" aria-label={`Repeat ${repeat ?? 'off'}`} disabled={!available.includes('repeat')} onclick={() => skip('repeat', { mode: NEXT_REPEAT[repeat ?? 'off'] })}>
+              <span class="i-repeat"><i></i><i></i><i></i><i></i><b></b><b></b>{#if repeat === 'one'}<span class="i-repeat__one">1</span>{/if}</span>
             </button>
           {/if}
         </div>
@@ -663,6 +668,37 @@
   .i-tiles i { border-radius: 3px; background: var(--ink-strong); }
   .i-meter { display: flex; align-items: flex-end; gap: 4px; height: 22px; }
   .i-meter i { width: 4px; border-radius: 2px; background: var(--ink-body); }
+
+  /* Shuffle and repeat, off and on - the design's values. */
+  .btn--toggle {
+    background: rgba(233, 238, 242, 0.07);
+    border: 1px solid rgba(233, 238, 242, 0.12);
+    --toggle-ink: rgba(233, 238, 242, 0.66);
+  }
+  .btn--toggle.is-on {
+    background: rgba(126, 214, 188, 0.16);
+    border-color: rgba(126, 214, 188, 0.42);
+    --toggle-ink: #7ed6bc;
+  }
+  .btn--toggle:not(:disabled):active {
+    background: rgba(233, 238, 242, 0.2);
+  }
+  .btn--toggle .i-shuffle i,
+  .btn--toggle .i-repeat i { background: var(--toggle-ink); }
+  .btn--toggle .i-shuffle b { border-left-color: var(--toggle-ink); }
+  .btn--toggle .i-repeat b:nth-child(5) { border-top-color: var(--toggle-ink); }
+  .btn--toggle .i-repeat b:nth-child(6) { border-bottom-color: var(--toggle-ink); }
+  .i-repeat__one {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 1;
+    color: var(--toggle-ink);
+  }
 
   .i-shuffle { position: relative; width: 32px; height: 28px; display: block; }
   .i-shuffle i,

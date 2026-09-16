@@ -67,6 +67,11 @@ class TrackMetadata:
     #: which only restart the stream (Finding 028). Not published inside
     #: `metadata`; `PlaybackState.controls` turns it into what is available.
     unavailable: frozenset[str] = frozenset()
+    #: The renderer's own shuffle and repeat, for a renderer that declares
+    #: them (ADR-0037): shuffle on/off, repeat "off" / "all" / "one". None
+    #: for a renderer with no such thing. Published under `controls`.
+    shuffle: bool | None = None
+    repeat: str | None = None
 
     @property
     def remaining_time(self) -> float | None:
@@ -169,11 +174,15 @@ class PlaybackState:
     def controls(self) -> dict | None:
         """ADR-0037 §2: the active renderer's transport commands that would
         work now - declared, minus what it reports unavailable. None when
-        nobody is active. Shuffle and repeat state join this in step 5."""
+        nobody is active."""
         if self.active is None or self.active not in self.capabilities:
             return None
         declared = self.capabilities[self.active].controls & TRANSPORT_COMMANDS
-        return {"available": sorted(declared - self.metadata.unavailable)}
+        return {
+            "available": sorted(declared - self.metadata.unavailable),
+            "shuffle": self.metadata.shuffle if "shuffle" in declared else None,
+            "repeat": self.metadata.repeat if "repeat" in declared else None,
+        }
 
     def __post_init__(self) -> None:
         # Defensive copy: a caller mutating the dict it passed in must not

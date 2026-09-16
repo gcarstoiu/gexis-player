@@ -445,3 +445,47 @@ def test_next_and_previous_cannot_work_on_a_one_item_playlist(tracks, unavailabl
     adapter._report_metadata(result)
 
     assert received[-1].unavailable == frozenset(unavailable)
+
+
+@pytest.mark.parametrize(
+    ("lms_shuffle", "lms_repeat", "shuffle", "repeat"),
+    [
+        (0, 0, False, "off"),
+        (1, 2, True, "all"),
+        ("2", "1", True, "one"),   # by album shows as on; 1 is one song in LMS
+        (None, None, None, None),  # not reported
+    ],
+)
+def test_shuffle_and_repeat_map_from_lms_numbers(lms_shuffle, lms_repeat, shuffle, repeat):
+    """Finding 028: shuffle 0 off / 1 songs / 2 albums; repeat 0 off / 1 one
+    song / 2 all - not the design's off/all/one order."""
+    adapter = LmsAdapter("127.0.0.1", 9000, "gexis")
+    received = []
+    adapter.on_metadata_change(received.append)
+    result = {"mode": "play"}
+    if lms_shuffle is not None:
+        result["playlist shuffle"] = lms_shuffle
+    if lms_repeat is not None:
+        result["playlist repeat"] = lms_repeat
+
+    adapter._report_metadata(result)
+
+    assert (received[-1].shuffle, received[-1].repeat) == (shuffle, repeat)
+
+
+@pytest.mark.asyncio
+async def test_shuffle_and_repeat_commands_use_lms_numbers(monkeypatch):
+    adapter, rpc = _adapter(monkeypatch, mode="play")
+
+    await adapter.shuffle(True)
+    await adapter.shuffle(False)
+    for mode in ("off", "all", "one"):
+        await adapter.repeat(mode)
+
+    assert rpc.commands == [
+        ["playlist", "shuffle", 1],
+        ["playlist", "shuffle", 0],
+        ["playlist", "repeat", 0],
+        ["playlist", "repeat", 2],
+        ["playlist", "repeat", 1],
+    ]
