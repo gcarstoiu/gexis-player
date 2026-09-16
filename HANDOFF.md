@@ -62,6 +62,19 @@ before trusting anything above as a product.**
   stream-idle signal comes 3 s after the report, so it cannot help. With
   Plexamp the panel's icon falls back after 8 s. Next step, with the speakers
   on: does Plexamp's audio stop at the tap?
+- **LMS had player `gexis` on fixed volume (`digitalVolumeControl` 0), cause
+  unknown.** George found it as "phone volume does nothing while the panel is
+  muted, and LMS's volume bar is frozen". Measured 2026-09-16: with 0, LMS
+  moves its own number but always sends full level, so no LMS volume change
+  reaches the device, muted or not. Mute then became a trap, because the one
+  change that ends it never arrived. Set back to 1 with George's OK; re-tested
+  while playing: LMS volume reaches the DAC again, and a change while muted
+  ends mute (ADR-0034). **George never touched it,** and nothing in this repo
+  sets it; it worked on 2026-09-08 (Finding 008). **Check it after the next
+  reflash and LMS restart.** Nothing warns when it is 0; a candidate for
+  Phase 9.
+- **Pausing LMS moved the DAC slightly** (dummy −47 → −50 dB, DAC 152 → 150)
+  during the same test. Small, unexplained, not investigated.
 - **After a `gexis-core` restart, a phone already connected is not active.**
   The Bluetooth adapter seeds metadata from a `MediaPlayer1` that is already
   present but never calls `on_acquire`. Spotify has the same effect. It only
