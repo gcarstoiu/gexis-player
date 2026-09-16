@@ -1,0 +1,743 @@
+[101G5_Free S+M]
+meter.type = circular
+channels = 2
+ui.refresh.period = 0.033
+bgr.filename = Free_bgr.png
+fgr.filename = Free_fgr.png
+indicator.filename = Free_needle.png
+steps.per.degree = 4
+start.angle = 49
+stop.angle = -49
+distance = 140
+left.origin.x = 326
+left.origin.y = 350
+right.origin.x = 965
+right.origin.y = 350
+meter.x = 0
+meter.y = 0
+screen.bgr = Free.jpg
+
+# --- volumio optional entries -------
+config.extend = True
+meter.visible = True
+albumart.pos = 24,400
+albumart.dimension = 296,294
+albumart.mask = Free_mask.jpg
+playinfo.text.center = True
+
+playinfo.title.pos = 55,738,bold
+playinfo.title.maxwidth = 1150
+playinfo.title.color = 33,19,13
+
+playinfo.artist.pos = 575,595,bold
+playinfo.artist.maxwidth = 658
+playinfo.artist.color = 33,19,13
+
+playinfo.album.pos = 575,645,regular
+playinfo.album.color = 33,19,13
+playinfo.album.maxwidth = 658
+
+playinfo.center = True
+playinfo.maxwidth = 400
+playinfo.type.pos = 364,660
+playinfo.type.color = 33,19,13
+playinfo.type.dimension = 40,40
+playinfo.samplerate.pos = 260,673,light
+
+time.remaining.pos = 366,591
+time.remaining.color = 33,19,13
+font.size.digi = 35
+font.size.light = 13
+font.size.regular = 30
+font.size.bold = 35
+font.color = 220,220,220
+spectrum.visible = True
+spectrum.name = Free
+spectrum.size = 933,176
+
+
+#-----------------------102 NAIM Spectrum-------------------------
+[102G5_Naim S+M]
+meter.type = circular
+channels = 2
+ui.refresh.period = 0.033
+bgr.filename = Naim Spec_bgr.png
+fgr.filename = Naim Spec_fgr.png
+indicator.filename = Naim Spec_needle.png
+steps.per.degree = 4
+start.angle = 44
+stop.angle = -44
+distance = 180
+left.origin.x = 354
+left.origin.y = 670
+right.origin.x = 920
+right.origin.y = 670
+meter.x = 0
+meter.y = 0
+screen.bgr = Naim Spec.jpg
+# --- volumio optional entries -------
+config.extend = True
+meter.visible = True
+albumart.pos = 37,37
+albumart.dimension = 256,256
+#albumart.border = 1
+
+playinfo.title.pos = 285,748,bold
+playinfo.title.maxwidth = 716
+
+playinfo.artist.pos = 385,210,bold
+playinfo.artist.maxwidth = 510
+
+playinfo.album.pos = 385,250,regular
+playinfo.album.maxwidth = 510
+
+playinfo.center = True
+playinfo.maxwidth = 1314
+
+playinfo.type.pos = 350,120
+playinfo.type.color = 48,219,33
+playinfo.type.dimension = 60,60
+playinfo.samplerate.pos = -170,143,light
+
+time.remaining.pos = 667,83
+time.remaining.color = 48,219,33
+font.size.digi = 64
+font.size.light = 16
+font.size.regular = 27
+font.size.bold = 30
+font.color = 48,219,33
+spectrum.visible = True
+spectrum.name = Naim
+spectrum.size = 364,280
+
+#-----------------------103 Marschal---------------------------
+[103G5_Marschal Spectrum]
+meter.type = circular
+channels = 2
+ui.refresh.period = 0.033
+bgr.filename = _dummy.png
+fgr.filename = 
+indicator.filename = _dummy.png
+steps.per.degree = 1
+start.angle = 0
+stop.angle = 0
+distance = 0
+left.origin.x = 0
+left.origin.y = 0
+right.origin.x = 0
+right.origin.y = 0
+meter.x = 1
+meter.y = 1
+screen.bgr = Marshal_S.jpg
+
+# --- volumio optional entries -------
+config.extend = True
+meter.visible = False
+albumart.pos = 550,50
+albumart.dimension = 180,180
+
+playinfo.title.pos = 50,180,bold
+playinfo.title.maxwidth = 500
+
+playinfo.artist.pos = 50,65,light
+playinfo.artist.maxwidth = 500
+playinfo.artist.color = 178,142,78
+
+playinfo.album.pos = 50,120,bold
+playinfo.album.maxwidth = 500
+playinfo.album.color = 178,142,78
+playinfo.center = False
+playinfo.maxwidth = 650
+
+playinfo.type.pos = 1080,85
+playinfo.type.color = 178,142,78
+playinfo.type.dimension = 90,90
+playinfo.samplerate.pos = 1040,178,regular
+
+time.remaining.pos = 755,110
+time.remaining.color = 225,180,101
+font.size.digi = 75
+font.size.light = 40
+font.size.regular = 24
+font.size.bold = 30
+font.color = 255,255,255
+
+spectrum.visible = True
+spectrum.name = Marschal
+spectrum.size = 1244,407
+
+#------------------------- 104 Lyndorf-----------------------
+[104G5_Lyngdorf S+M]
+meter.type = circular
+channels = 2
+ui.refresh.period = 0.033
+bgr.filename = Lyngdorf_bgr.png
+fgr.filename = Lyngdorf_fgr.png
+indicator.filename = Lyngdorf_needle.png
+steps.per.degree = 4
+start.angle = 33
+stop.angle = -33
+distance = 100
+left.origin.x = 135
+left.origin.y = 200
+right.origin.x = 385
+right.origin.y = 200
+meter.x = 0
+meter.y = 0
+screen.bgr = Lyngdorf.jpg
+
+# --- volumio optional entries -------
+config.extend = True
+meter.visible = True
+albumart.pos = 23,206
+albumart.dimension = 243,243
+#albumart.mask = 
+playinfo.text.center = True
+
+playinfo.title.pos = 72,733,bold
+playinfo.title.maxwidth = 1130
+playinfo.title.color = 180,180,180
+
+playinfo.artist.pos = 268,325,regular
+playinfo.artist.maxwidth = 245
+playinfo.artist.color = 180,180,180
+
+playinfo.album.pos = 268,370,regular
+playinfo.album.color = 180,180,180
+playinfo.album.maxwidth = 245
+
+playinfo.center = True
+playinfo.maxwidth = 400
+
+playinfo.type.pos = 290,208
+playinfo.type.color = 180,180,180
+playinfo.type.dimension = 40,40
+playinfo.samplerate.pos = 985,23,light
+
+time.remaining.pos = 690,252
+time.remaining.color = 180,180,180
+font.size.digi = 40
+font.size.light = 20
+font.size.regular = 25
+font.size.bold = 35
+font.color = 220,220,220
+spectrum.visible = True
+spectrum.name = Lyng
+spectrum.size = 946,169
+
+
+#-----------------------105 Kenwood Sp---------------------------
+[105G5_Kenwood Spectrum]
+meter.type = circular
+channels = 2
+ui.refresh.period = 0.033
+bgr.filename = _dummy.png
+fgr.filename = 
+indicator.filename = _dummy.png
+steps.per.degree = 1
+start.angle = 0
+stop.angle = 0
+distance = 0
+left.origin.x = 0
+left.origin.y = 0
+right.origin.x = 0
+right.origin.y = 0
+meter.x = 1
+meter.y = 1
+screen.bgr = Kenwood_Big.jpg
+
+# --- volumio optional entries -------
+config.extend = True
+meter.visible = False
+albumart.pos = 39,64
+albumart.dimension = 277,270
+
+playinfo.title.pos = 45,640,bold
+playinfo.title.maxwidth = 1210
+
+playinfo.artist.pos = 45,730,light
+playinfo.artist.maxwidth = 1210
+
+#playinfo.album.pos = 1175,935,bold
+#playinfo.album.maxwidth = 640
+
+playinfo.center = True
+playinfo.maxwidth = 1250
+
+playinfo.type.pos = 42,505
+playinfo.type.color = 181,255,1
+playinfo.type.dimension = 80,80
+playinfo.samplerate.pos = -390,533,regular
+
+time.remaining.pos = 58,380
+time.remaining.color = 181,255,1
+font.size.digi = 70
+font.size.light = 33
+font.size.regular = 22
+font.size.bold = 30
+font.color = 181,255,1
+
+spectrum.visible = True
+spectrum.name = Kenwood Big
+spectrum.size = 850,501
+
+#-----------------------106 OldPipe---------------------------
+[106G5_OldPipe Spectrum]
+meter.type = circular
+channels = 2
+ui.refresh.period = 0.033
+bgr.filename = _dummy.png
+fgr.filename = 
+indicator.filename = _dummy.png
+steps.per.degree = 1
+start.angle = 0
+stop.angle = 0
+distance = 0
+left.origin.x = 0
+left.origin.y = 0
+right.origin.x = 0
+right.origin.y = 0
+meter.x = 1
+meter.y = 1
+screen.bgr = OldPipe.jpg
+
+# --- volumio optional entries -------
+config.extend = True
+meter.visible = False
+albumart.pos = 132,640
+albumart.dimension = 127,127
+#albumart.mask = 
+
+playinfo.title.pos = 345,581,bold
+playinfo.title.maxwidth = 844
+playinfo.title.color = 241,240,214
+
+playinfo.artist.pos = 345,651,bold
+playinfo.artist.maxwidth = 844
+playinfo.artist.color = 241,240,214
+
+
+playinfo.album.pos = 740,723,bold
+playinfo.album.maxwidth = 450
+
+playinfo.center = True
+playinfo.maxwidth = 690
+
+playinfo.type.pos = 520,720
+playinfo.type.color = 219,207,165
+playinfo.type.dimension = 40,40
+playinfo.samplerate.pos = 300,728,regular
+
+time.remaining.pos = 360,723
+time.remaining.color = 219,207,165
+font.size.digi = 32
+font.size.light = 26
+font.size.regular = 19
+font.size.bold = 28
+font.color = 219,207,165
+
+spectrum.visible = True
+spectrum.name = OPipe
+spectrum.size = 1280,450
+
+
+#-------------------------------107 Marantz-----------------------
+[107G5_Marantz S+M]
+meter.type = circular
+channels = 2
+ui.refresh.period = 0.033
+bgr.filename = Marantz_bgr.png
+fgr.filename = Marantz_fgr.png
+indicator.filename = Marantz_needle.png
+steps.per.degree = 4
+start.angle = 30
+stop.angle = -30
+distance = 95
+left.origin.x = 436
+left.origin.y = 610
+right.origin.x = 850
+right.origin.y = 610
+meter.x = 0
+meter.y = 0
+screen.bgr = Marantz.jpg
+
+# --- volumio optional entries -------
+config.extend = True
+meter.visible = True
+albumart.pos = 580,455
+albumart.dimension = 126,126
+albumart.mask = Marantz_mask.jpg
+playinfo.text.center = True
+
+playinfo.title.pos = 289,710,bold
+playinfo.title.maxwidth = 710
+playinfo.title.color = 180,180,180
+
+playinfo.artist.pos = 445,95,bold
+playinfo.artist.maxwidth = 374
+playinfo.artist.color = 176,167,134
+playinfo.album.pos = 285,334,regular
+playinfo.album.color = 180,180,180
+playinfo.album.maxwidth = 715
+
+playinfo.center = True
+playinfo.maxwidth = 400
+playinfo.type.pos = 880,137
+playinfo.type.color = 180,180,180
+playinfo.type.dimension = 45,45
+
+playinfo.samplerate.pos = 710,193,regular
+
+time.remaining.pos = 338,150
+time.remaining.color = 180,180,180
+font.size.digi = 24
+font.size.light = 17
+font.size.regular = 13
+font.size.bold = 26
+font.color = 220,220,220
+spectrum.visible = True
+spectrum.name = Marantz
+spectrum.size = 406,134
+
+
+#-----------------------108 KENWOOD Rev-------------------------
+[108G5_Kenwood Rev S+M]
+meter.type = circular
+channels = 2
+ui.refresh.period = 0.033
+bgr.filename = Kenwood_1280_rev_bgr.png
+fgr.filename = Kenwood_1280_rev_fgr.png
+indicator.filename = Kenwood_1280_rev_needle.png
+steps.per.degree = 4
+start.angle = -227
+stop.angle = -133
+distance = 190
+left.origin.x = 319
+left.origin.y = 435
+right.origin.x = 968
+right.origin.y = 435
+meter.x = 0
+meter.y = 0
+screen.bgr = Kenwood_1280_rev.jpg
+
+# --- volumio optional entries -------
+config.extend = True
+meter.visible = True
+albumart.pos = 23,15
+albumart.dimension = 190,190
+#albumart.border = 1
+
+playinfo.title.pos = 250,273,bold
+playinfo.title.maxwidth = 1016
+
+playinfo.artist.pos = 250,240,regular
+playinfo.artist.maxwidth = 1016
+
+#playinfo.album.pos = 650,800,bold
+playinfo.center = True
+playinfo.maxwidth = 410
+
+playinfo.type.pos = 1127,420
+playinfo.type.color = 253,172,103
+playinfo.type.dimension = 43,43
+playinfo.samplerate.pos = 1015,438,light
+time.remaining.pos = 33,240
+time.remaining.color = 253,172,103
+font.size.digi = 48
+font.size.light = 12
+font.size.regular = 20
+font.size.bold = 30
+font.color = 253,172,103
+
+spectrum.visible = True
+spectrum.name = Kenwoo
+spectrum.size = 1049,206
+
+#-------------------------------109 475A Spec-----------------------
+[109G5_475A Oscil S+M]
+meter.type = circular
+channels = 2
+ui.refresh.period = 0.033
+bgr.filename = 475A_bgr.png
+fgr.filename = 475A_fgr.png
+indicator.filename = 475A_needle.png
+steps.per.degree = 4
+start.angle = 33
+stop.angle = -35
+distance = 170
+left.origin.x = 413
+left.origin.y = 740
+right.origin.x = 801
+right.origin.y = 740
+meter.x = 0
+meter.y = 0
+screen.bgr = 475A.jpg
+
+# --- volumio optional entries -------
+config.extend = True
+meter.visible = True
+albumart.pos = 1052,62
+albumart.dimension = 152,152
+playinfo.text.center = True
+
+playinfo.title.pos = 212,700,bold
+playinfo.title.maxwidth = 810
+playinfo.title.color = 0,0,0
+
+playinfo.artist.pos = 210,305,bold
+playinfo.artist.maxwidth = 510
+playinfo.artist.color = 0,0,0
+
+#playinfo.album.pos = 285,334,regular
+#playinfo.album.color = 180,180,180
+#playinfo.album.maxwidth = 715
+
+playinfo.center = True
+playinfo.maxwidth = 400
+playinfo.type.pos = 1054,215
+playinfo.type.color = 0,0,0
+playinfo.type.dimension = 30,30
+
+playinfo.samplerate.pos = 950,220,regular
+
+time.remaining.pos = 1090,290
+time.remaining.color = 0,0,0
+font.size.digi = 24
+font.size.light = 17
+font.size.regular = 13
+font.size.bold = 24
+font.color = 220,220,220
+
+spectrum.visible = True
+spectrum.name = 475A
+spectrum.size = 488,228
+
+
+# --------------------- 110 PeppPBang-----------------------
+[110G5_PeppyP S+M]
+meter.type = circular
+channels = 2
+ui.refresh.period = 0.033
+bgr.filename = PeppyP_Bang_bgr.png
+fgr.filename = PeppyP_Bang_fgr.png
+indicator.filename = PeppyP_Bang_needle.png
+steps.per.degree = 3
+left.start.angle = 137
+left.stop.angle = 43
+right.start.angle = -137
+right.stop.angle = -43
+distance = 124
+left.origin.x = 320
+left.origin.y = 315
+right.origin.x = 320
+right.origin.y = 320
+meter.x = 0
+meter.y = 0
+screen.bgr = PeppyP_Bang.jpg
+
+# --- volumio optional entries -------
+config.extend = True
+meter.visible = True
+albumart.pos = 884,8
+albumart.dimension = 385,385
+albumart.mask = PeppyP_Bang_mask.jpg
+playinfo.maxwidth = 580
+playinfo.center = True
+
+playinfo.type.pos = 700,130
+playinfo.type.color = 255,255,255
+playinfo.type.dimension = 110,110
+
+playinfo.samplerate.pos = 470,45,regular
+
+playinfo.artist.pos = 675,675,bold
+playinfo.artist.maxwidth = 560
+playinfo.artist.color = 254,137,230
+
+playinfo.title.pos = 23,695,bold
+playinfo.title.maxwidth = 600
+playinfo.title.color = 253,186,239
+
+playinfo.album.pos = 675,730,light
+playinfo.album.maxwidth = 560
+playinfo.album.color = 254,137,230
+
+time.remaining.pos = 665,300
+time.remaining.color = 255,255,255
+font.size.digi = 50
+font.size.bold = 35
+font.size.light = 26
+font.size.regular = 25
+font.color = 150,160,89
+
+spectrum.visible = True
+spectrum.name = Peppy
+spectrum.size = 635,234
+
+
+#-----------------------111 Teletronix-------------------------
+[111G5_Teletronix S+M]
+meter.type = circular
+channels = 2
+ui.refresh.period = 0.033
+bgr.filename = Teletronix_bgr.png
+fgr.filename = Teletronix_fgr.png
+indicator.filename = Teletronix_needle.png
+steps.per.degree = 4
+start.angle = 58
+stop.angle = -60
+distance = 140
+left.origin.x = 317
+left.origin.y = 350
+right.origin.x = 963
+right.origin.y = 350
+meter.x = 0
+meter.y = 0
+screen.bgr = Teletronix.jpg
+
+# --- volumio optional entries -------
+
+config.extend = True
+meter.visible = True
+albumart.pos = 1004,430
+albumart.dimension = 247,247
+playinfo.center = True
+playinfo.maxwidth = 640
+
+playinfo.title.pos = 25,735,bold
+playinfo.title.maxwidth = 590
+playinfo.title.color = 0,0,0
+
+playinfo.artist.pos = 671,735,bold
+playinfo.artist.maxwidth = 590
+playinfo.artist.color = 0,0,0
+
+
+
+playinfo.type.pos = 110,609
+playinfo.type.color = 0,0,0
+playinfo.type.dimension = 82,82
+playinfo.samplerate.pos = -170,542,regular 
+
+time.remaining.pos = 45,432
+time.remaining.color = 0,0,0
+font.size.digi = 62
+font.size.light = 15
+font.size.regular = 25
+font.size.bold = 30
+font.color = 0,0,0
+spectrum.visible = True
+spectrum.name = Teletronix
+spectrum.size = 672,302
+
+
+#-----------------------112 KeySight S+M ---------------------------
+
+[112G5_KeySlight S+M]
+meter.type = circular
+channels = 2
+ui.refresh.period = 0.033
+bgr.filename = KeySight_bgr.png
+fgr.filename = KeySight_fgr.png
+indicator.filename = KeySight_needle.png
+steps.per.degree = 3
+start.angle = 39
+stop.angle = -37
+distance = 150
+left.origin.x = 329
+left.origin.y = 770
+right.origin.x = 770
+right.origin.y = 770
+meter.x = 0
+meter.y = 0
+screen.bgr = KeySight.jpg
+
+# --- volumio optional entries -------
+config.extend = True
+meter.visible = True
+albumart.pos = 1069,6
+albumart.dimension = 200,200
+albumart.mask = KeySight_mask.jpg
+
+playinfo.center = True
+playinfo.maxwidth = 640
+
+playinfo.title.pos = 253,430,bold
+playinfo.title.maxwidth = 721
+playinfo.title.color = 180,180,180
+
+playinfo.artist.pos = 253,33,bold
+playinfo.artist.maxwidth = 504
+playinfo.artist.color = 180,180,180
+
+
+playinfo.type.pos = 1082,230
+playinfo.type.color = 255,255,255
+playinfo.type.dimension = 51,52
+playinfo.samplerate.pos = 890,252,light 
+time.remaining.pos = 1082,302
+time.remaining.color = 59,172,219
+font.size.digi = 52
+font.size.light = 15
+font.size.regular = 17
+font.size.bold = 23
+font.color = 180,180,180
+spectrum.visible = True
+spectrum.name = KeyS
+spectrum.size = 657,224
+
+#---------------------113 Old Braun Sp ---------------
+
+[113G5_Old Spectrum S+M]
+meter.type = circular
+channels = 2
+ui.refresh.period = 0.033
+bgr.filename = Old2_Spec_bgr.png
+fgr.filename = Old2_Spec_fgr.png
+indicator.filename = Old2_Spec_needle.png
+steps.per.degree = 4
+start.angle = 42
+stop.angle = -44
+distance = 135
+left.origin.x = 255
+left.origin.y = 345
+right.origin.x = 743
+right.origin.y = 345
+meter.x = 0
+meter.y = 0
+screen.bgr = Old2_Spec.jpg
+
+# --- volumio optional entries -------
+config.extend = True
+meter.visible = True
+albumart.pos = 995,268
+albumart.dimension = 275,275
+albumart.mask = Old2_Spec_mask.jpg
+
+playinfo.title.pos = 20,610,bold
+playinfo.title.maxwidth = 1233
+
+playinfo.artist.pos = 20,715,bold
+playinfo.artist.maxwidth = 1233
+
+#playinfo.album.pos = 20,735,light
+playinfo.center = True
+playinfo.maxwidth = 1250
+
+playinfo.type.pos = 610,466
+playinfo.type.color = 0,0,0
+playinfo.type.dimension = 90,90
+playinfo.samplerate.pos = 170,502,regular
+
+time.remaining.pos = 140,480
+time.remaining.color = 0,0,0
+font.size.digi = 60
+font.size.light = 30
+font.size.regular = 20
+font.size.bold = 37
+font.color = 0,0,0
+
+
+spectrum.visible = True
+spectrum.name = Old
+spectrum.size = 279,167

@@ -766,8 +766,14 @@ and checked again — not left on hand-installed builds.
    **Not yet:** the HTTP push transport is untested (needs a PeppyMeter web
    server), there is no systemd unit and pygame is not in the image.
 2. Skin renderer parses all 84 skins; unknown keys or `meter.type` values fail
-   the build.
+   the build. **Built 2026-09-16** — `skins.py`, run by `make skins` before
+   every image build and by the unit tests against the real corpus in
+   `skins/`. Per Finding 007 §4 and ADR-0015 this is an additive build-time
+   gate: the vendored PeppyMeter cannot fail on a bad key at parse time.
+   Key sets are the corpus's own, per meter type.
 3. `spectrum.name` resolves by name; `meter.visible = False` honoured.
+   **Built 2026-09-16**, with the corpus: 13 links all resolve, reversing the
+   spectrum list changes nothing, renaming the sections fails the build.
 4. Entry from now playing shows no construction — measured, not asserted.
 5. Skin rotates per track, with the next track's skin composited ahead of time.
 6. Renderer change exits to now playing; the unattended-playback timeout

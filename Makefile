@@ -13,7 +13,7 @@ GO_LIBRESPOT_VERSION := $(shell grep -oP 'GO_LIBRESPOT_VERSION="\K[^"]+' image/s
 # so a manifest can never claim a version it wasn't actually built from.
 IMAGE_VERSION := $(shell git describe --tags --always --dirty)
 
-.PHONY: image ui prune fetch-deploy clean provision
+.PHONY: image ui skins prune fetch-deploy clean provision
 
 # Builds via pi-gen's own build-docker.sh, unmodified. Our custom stage lives
 # outside the pinned pi-gen submodule and is bind-mounted in at build time
@@ -124,7 +124,14 @@ prune:
 		echo "No pigen_work container - nothing to prune"; \
 	fi
 
-image: ui prune
+# Phase 5 criterion 2: an unknown key or meter.type fails the build here,
+# because the vendored PeppyMeter cannot fail on one at parse time
+# (Finding 007 section 4) - it would surface as a KeyError when someone
+# selects the skin.
+skins:
+	python3 -c "import sys; sys.path.insert(0, 'core/src'); from gexis_core.skins import main; raise SystemExit(main(['skins']))"
+
+image: ui skins prune
 	@rm -f image/pi-gen/stage2/EXPORT_IMAGE; \
 	start=$$(date +%s); \
 	( cd image && CONTINUE=1 PRESERVE_CONTAINER=1 PIGEN_DOCKER_OPTS="--volume $(STAGE_GEXIS_DIR):/pi-gen/stage-gexis:ro --volume $(CORE_SRC_DIR):/pi-gen/gexis-core-src:ro --volume $(UI_DIST_DIR):/pi-gen/gexis-ui-dist:ro -e IMG_SUFFIX=-$(IMAGE_VERSION)" \
