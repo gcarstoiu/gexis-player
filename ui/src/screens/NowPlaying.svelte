@@ -560,6 +560,12 @@
     color: var(--ink-on-accent);
     box-shadow: 0 0 22px rgba(242, 164, 143, 0.22), 0 12px 30px rgba(242, 164, 143, 0.35);
   }
+  /* The design presses play by shrinking it, not by the other buttons' grey
+     fill - which on this one read as a flash (George, 2026-09-16). */
+  .btn--play:not(:disabled):active {
+    background: var(--play-fill);
+    transform: scale(0.95);
+  }
 
   .i-play {
     width: 0;
