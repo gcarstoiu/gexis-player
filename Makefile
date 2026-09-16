@@ -1,6 +1,9 @@
 STAGE_GEXIS_DIR := $(CURDIR)/image/stage-gexis
 CORE_SRC_DIR := $(CURDIR)/core
 UI_DIST_DIR := $(CURDIR)/ui/dist
+# skins/ holds the corpus the validator checks (make skins); stage-gexis/05-peppy
+# compares the fetched pack against it, so the check covers what ships.
+SKINS_DIR := $(CURDIR)/skins
 IMG_NAME := $(shell grep -oP '^IMG_NAME="\K[^"]+' image/config)
 PEPPYALSA_REPO := https://github.com/project-owner/peppyalsa
 PEPPYALSA_COMMIT := $(shell grep -oP 'git checkout \K[0-9a-f]{40}' image/stage-gexis/00-alsa/01-run-chroot.sh)
@@ -134,7 +137,7 @@ skins:
 image: ui skins prune
 	@rm -f image/pi-gen/stage2/EXPORT_IMAGE; \
 	start=$$(date +%s); \
-	( cd image && CONTINUE=1 PRESERVE_CONTAINER=1 PIGEN_DOCKER_OPTS="--volume $(STAGE_GEXIS_DIR):/pi-gen/stage-gexis:ro --volume $(CORE_SRC_DIR):/pi-gen/gexis-core-src:ro --volume $(UI_DIST_DIR):/pi-gen/gexis-ui-dist:ro -e IMG_SUFFIX=-$(IMAGE_VERSION)" \
+	( cd image && CONTINUE=1 PRESERVE_CONTAINER=1 PIGEN_DOCKER_OPTS="--volume $(STAGE_GEXIS_DIR):/pi-gen/stage-gexis:ro --volume $(CORE_SRC_DIR):/pi-gen/gexis-core-src:ro --volume $(UI_DIST_DIR):/pi-gen/gexis-ui-dist:ro --volume $(SKINS_DIR):/pi-gen/gexis-skins:ro -e IMG_SUFFIX=-$(IMAGE_VERSION)" \
 		./pi-gen/build-docker.sh -c config ); \
 	status=$$?; \
 	end=$$(date +%s); \

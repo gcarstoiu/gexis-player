@@ -1,0 +1,43 @@
+#!/bin/bash
+# The Peppy screen's process (ADR-0026, Phase 5).
+#
+# Started with the panel and kept running, hidden: entry must show a finished
+# screen, never a starting process (Finding 025 measured 8 % of one core while
+# minimised, and the first frame after a raise already complete).
+#
+# `python3 -u` is not cosmetic. The spectrum engine's config loader calls
+# os._exit(0) when it cannot find its file, which bypasses stdout flushing:
+# buffered, that failure is an exit 0 with an empty log and no clue
+# (docs/reference/peppymeter-fork-on-moode.md, symptom A).
+set -u
+
+export SDL_VIDEODRIVER=wayland
+export XDG_RUNTIME_DIR="${XDG_RUNTIME_DIR:-/run/user/1000}"
+export WAYLAND_DISPLAY="${WAYLAND_DISPLAY:-wayland-0}"
+
+# labwc may not have its socket up yet; the unit only orders us after the
+# kiosk unit started, which is not the same as the compositor being ready.
+for _ in $(seq 1 60); do
+	[ -S "${XDG_RUNTIME_DIR}/${WAYLAND_DISPLAY}" ] && break
+	sleep 0.5
+done
+if [ ! -S "${XDG_RUNTIME_DIR}/${WAYLAND_DISPLAY}" ]; then
+	echo "ERROR: no Wayland socket at ${XDG_RUNTIME_DIR}/${WAYLAND_DISPLAY} after 30s" >&2
+	exit 1
+fi
+
+# Hide it once it has a window. Raising it is Phase 5's entry path; until
+# that is wired the panel would otherwise boot straight into the meters.
+( for _ in $(seq 1 40); do
+	if wlrctl toplevel list 2>/dev/null | grep -q "pygame window"; then
+		wlrctl toplevel minimize title:"pygame window"
+		exit 0
+	fi
+	sleep 0.5
+  done
+  echo "WARNING: never saw the meter window; it may be sitting over the panel" >&2 ) &
+
+cd /opt/gexis-peppy/peppymeter || exit 1
+# cd first: PeppyMeter has no --config option, it reads ./config.txt from the
+# working directory.
+exec python3 -u peppymeter.py
