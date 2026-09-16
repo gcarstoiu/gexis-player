@@ -757,6 +757,13 @@ and checked again — not left on hand-installed builds.
 
 **Acceptance**
 
+**Installed by `stage-gexis/05-peppy` since 2026-09-16:** both engines pinned
+by commit and checksum, both skin corpora (`stock`, 15 skins; `gelo5`, 84),
+pygame, `wlrctl`, a launcher and a unit wanted by `multi-user.target`. The
+stage compares the fetched pack's config files against the ones `make skins`
+validates, so the gate covers what ships. Verified inside
+`2026-09-16-...-162-g64ee703`; **not yet flashed**.
+
 1. Service reads both peppyalsa FIFOs and publishes on WebSocket, PeppyMeter
    HTTP, and FIFO passthrough. **Built 2026-09-16** — `meters.py`,
    `meter_service.py`, its own process (ADR-0011, frame formats from
