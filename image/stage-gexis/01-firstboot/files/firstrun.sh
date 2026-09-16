@@ -21,6 +21,7 @@ WIFI_COUNTRY="GB"               # ISO 3166-1 alpha-2; required by set_wlan when 
 HOSTNAME=""                     # leave blank to keep the built-in default
 TIMEZONE=""                     # e.g. "Europe/Berlin"; blank keeps the image default
 IDLE_URL=""                     # idle screen page (ADR-0019); blank shows the built-in clock
+SETTINGS=""                     # JSON of settings to start from, e.g. {"idle_timeout": 10}
 
 IMAGER_CUSTOM=/usr/lib/raspberrypi-sys-mods/imager_custom
 USERCONF=/usr/lib/userconf-pi/userconf
@@ -53,6 +54,13 @@ fi
 # identifier. Escaped for a TOML basic string.
 if [ -n "$IDLE_URL" ]; then
 	printf '\nidle_url = "%s"\n' "$(printf '%s' "$IDLE_URL" | sed 's/\\/\\\\/g; s/"/\\"/g')" >> /etc/gexis/core.toml
+fi
+
+# Settings chosen at flash time (ADR-0035). The daemon treats these as
+# defaults, so anything changed later from the phone still wins.
+if [ -n "$SETTINGS" ]; then
+	mkdir -p /etc/gexis
+	printf '%s\n' "$SETTINGS" > /etc/gexis/settings-seed.json
 fi
 
 rm -f /boot/firstrun.sh

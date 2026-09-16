@@ -58,7 +58,7 @@ set +a
 
 # Added after the first env files were written, so an older file without
 # them provisions exactly as before rather than failing.
-: "${TIMEZONE=}" "${IDLE_URL=}"
+: "${TIMEZONE=}" "${IDLE_URL=}" "${SETTINGS=}"
 
 # "Missing" (key absent from the file entirely) is checked separately from
 # "empty" (present, blank) - WIFI_SSID etc. are legitimately blank by
@@ -77,6 +77,13 @@ done
 if [ -z "${SSH_PUBKEY}" ]; then
 	echo "ERROR: SSH_PUBKEY is empty in ${ENV_FILE}." >&2
 	echo "       A card provisioned with this blank boots unreachable." >&2
+	exit 1
+fi
+
+# Malformed JSON here would be discovered on a booted device, where the
+# daemon can only log it and carry on with defaults. Catch it now.
+if [ -n "${SETTINGS}" ] && ! printf '%s' "${SETTINGS}" | python3 -c 'import json,sys; json.load(sys.stdin)' 2>/dev/null; then
+	echo "ERROR: SETTINGS in ${ENV_FILE} is not valid JSON" >&2
 	exit 1
 fi
 
@@ -123,6 +130,7 @@ while IFS= read -r line || [ -n "${line}" ]; do
 		HOSTNAME=*)      printf "HOSTNAME='%s'\n" "$(sq_escape "${HOSTNAME}")" ;;
 		TIMEZONE=*)      printf "TIMEZONE='%s'\n" "$(sq_escape "${TIMEZONE}")" ;;
 		IDLE_URL=*)      printf "IDLE_URL='%s'\n" "$(sq_escape "${IDLE_URL}")" ;;
+		SETTINGS=*)      printf "SETTINGS='%s'\n" "$(sq_escape "${SETTINGS}")" ;;
 		*)               printf '%s\n' "${line}" ;;
 	esac
 done < "${FIRSTRUN}" > "${TMP_FIRSTRUN}"
@@ -135,7 +143,7 @@ mv "${TMP_FIRSTRUN}" "${FIRSTRUN}"
 # is consistent with itself, not that the file actually holds the right
 # value.
 FAILED=0
-for key in SSH_PUBKEY WIFI_SSID WIFI_PASS WIFI_COUNTRY HOSTNAME TIMEZONE IDLE_URL; do
+for key in SSH_PUBKEY WIFI_SSID WIFI_PASS WIFI_COUNTRY HOSTNAME TIMEZONE IDLE_URL SETTINGS; do
 	expected_value="${!key}"
 	written_line="$(grep "^${key}='" "${FIRSTRUN}" || true)"
 	if [ -z "${written_line}" ]; then
