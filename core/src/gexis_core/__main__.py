@@ -22,6 +22,7 @@ from gexis_core.config import Config
 from gexis_core.idle_page import probe as probe_idle_page
 from gexis_core.metadata_file import MetadataFileWriter
 from gexis_core.peppy import PeppyController, PeppyScreen, UnattendedPlayback
+from gexis_core.peppy_metadata import PeppyMetadataWriter
 from gexis_core.renderer_volume import RendererVolumeMemory
 from gexis_core.settings import SettingsStore
 from gexis_core.settings_registry import Settings
@@ -309,6 +310,10 @@ async def main() -> None:
         peppy.on_metadata(state.metadata)
 
     state_store.subscribe(follow_playback)
+
+    # What the Peppy screen draws (criterion 7). A separate file from
+    # currentsong.txt, which is moOde's format for moOde's readers.
+    state_store.subscribe(PeppyMetadataWriter().write)
 
     state_server = StateServer(
         state_store,

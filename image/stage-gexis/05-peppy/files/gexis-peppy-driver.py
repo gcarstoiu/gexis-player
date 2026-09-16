@@ -136,11 +136,12 @@ class Rotation:
     than a timer, so the skin belongs to the track.
     """
 
-    def __init__(self, peppy, skins: dict[str, dict[str, str]], spectrum_state) -> None:
+    def __init__(self, peppy, skins: dict[str, dict[str, str]], spectrum_state, layer=None) -> None:
         self.peppy = peppy
         self.vumeter = peppy.meter
         self.skins = skins
         self.spectrum = spectrum_state
+        self.layer = layer
         self.unseen: list[str] = []
         self.current: str | None = None
         self.prepared: tuple[str, object] | None = None
@@ -199,7 +200,10 @@ class Rotation:
         meter.start()
         self.current = name
         print(f"peppy: skin -> {name}")
-        self.spectrum.follow(self.skins.get(name, {}))
+        skin = self.skins.get(name, {})
+        self.spectrum.follow(skin)
+        if self.layer is not None:
+            self.layer.set_skin(skin)
         pygame.display.update()
         self.prepare_next()
 
@@ -283,6 +287,7 @@ def current_track(path: Path = Path("/var/local/www/currentsong.txt")) -> str | 
 
 
 def main() -> int:
+    sys.path.insert(0, str(PEPPY))  # our own render module lives beside the engines
     sys.path.insert(0, str(METER_DIR))
     sys.path.insert(0, str(SPECTRUM_DIR))
 
@@ -354,9 +359,14 @@ def main() -> int:
         spectrum_state.spectrum = spectrum
         spectrum_state.active = True
 
-    rotation = Rotation(peppy, skins, spectrum_state)
+    from gexis_peppy_render import MetadataLayer, read_metadata
+
+    layer = MetadataLayer(util.PYGAME_SCREEN, corpus)
+
+    rotation = Rotation(peppy, skins, spectrum_state, layer)
     rotation.current = first
     peppy.util.meter_config[METER] = first
+    layer.set_skin(skins[first])
     rotation.prepare_next()
     print(f"peppy: {len(skins)} skins, starting on {first}")
 
@@ -374,6 +384,9 @@ def main() -> int:
             if playing is not None and playing != track:
                 track = playing
                 rotation.switch()
+            dirty = layer.draw(read_metadata())
+            if dirty:
+                pygame.display.update(dirty)
 
         if not spectrum_state.active:
             return
