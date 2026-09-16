@@ -156,16 +156,43 @@ def test_a_forced_track_change_is_attention_but_a_natural_one_is_not():
     controller = PeppyController(FakeScreen(), UnattendedPlayback(300, now=clock))
     controller.on_metadata(playing(title="A", position=10.0, duration=200.0))
 
-    clock.advance(200)
-    controller.on_metadata(playing(title="B", position=0.0, duration=200.0))  # skipped at 10s
+    clock.advance(20)
+    controller.on_metadata(playing(title="B", position=0.0, duration=200.0))  # skipped at 30s
     clock.advance(200)
     assert not controller._timer.due()
 
-    # now let B run to its end, which is not attention
-    controller.on_metadata(playing(title="B", position=197.0, duration=200.0))
-    clock.advance(101)
+    # B ran to its end (200 s since it started), which is not attention
     controller.on_metadata(playing(title="C", position=0.0, duration=200.0))
+    clock.advance(101)
     assert controller._timer.due()
+
+
+def test_a_natural_end_is_natural_when_the_renderer_reported_no_position_since_the_start():
+    """Spotify's shape: position 0.0 at the start of a track and nothing more.
+    Every track shorter than the timeout used to reset it."""
+    clock = FakeClock()
+    controller = PeppyController(FakeScreen(), UnattendedPlayback(300, now=clock))
+    for title in ("A", "B", "C"):
+        controller.on_metadata(playing(title=title, position=0.0, duration=240.0))
+        clock.advance(120)
+        controller.on_metadata(playing(title=title, position=0.0, duration=240.0))  # a volume broadcast
+        clock.advance(120)
+    controller.on_metadata(playing(title="D", position=0.0, duration=240.0))
+    assert controller._timer.due()
+
+
+def test_paused_time_does_not_count_towards_the_track_position():
+    clock = FakeClock()
+    controller = PeppyController(FakeScreen(), UnattendedPlayback(300, now=clock))
+    controller.on_metadata(playing(title="A", position=0.0, duration=200.0))
+    clock.advance(50)
+    controller.on_metadata(TrackMetadata(title="A", position=0.0, duration=200.0, transport="paused"))
+    clock.advance(500)
+    controller.on_metadata(playing(title="A", position=0.0, duration=200.0))
+    clock.advance(50)
+    controller.on_metadata(playing(title="B", position=0.0, duration=200.0))  # 100 s in: a skip
+    clock.advance(299)
+    assert not controller._timer.due()
 
 
 def test_missing_wlrctl_is_not_fatal():
@@ -226,3 +253,17 @@ def test_the_screen_passes_the_compositor_socket_to_wlrctl(monkeypatch):
     assert seen["env"]["XDG_RUNTIME_DIR"] == "/run/user/1000"
     assert seen["env"]["WAYLAND_DISPLAY"] == "wayland-0"
     assert seen["args"][:3] == ["/usr/bin/wlrctl", "toplevel", "focus"]
+
+
+def test_a_long_pause_gives_no_credit_on_resume():
+    clock = FakeClock()
+    timer = UnattendedPlayback(300, now=clock)
+    timer.set_playing(True)
+    clock.advance(100)
+    timer.set_playing(False)
+    clock.advance(1000)
+    timer.set_playing(True)
+    clock.advance(299)
+    assert not timer.due()
+    clock.advance(1)
+    assert timer.due()

@@ -121,9 +121,9 @@ class UnattendedPlayback:
         if playing != self._playing:
             self._playing = playing
             # Starting or stopping playback is not attention, but a stopped
-            # device must not accumulate credit towards entry while silent.
-            if not playing:
-                self.attention()
+            # device must not accumulate credit towards entry while silent:
+            # the five minutes count from when playback (re)started.
+            self.attention()
 
     def due(self) -> bool:
         return self._playing and (self._now() - self._last_attention) >= self.timeout_s
@@ -151,7 +151,14 @@ class PeppyController:
         self._timer = timer
         self._tick_s = tick_s
         self._track: tuple | None = None
-        self._last_seen: tuple[float | None, float | None] = (None, None)
+        self._now = timer._now
+        # (position, duration, playing, when): the last position a renderer
+        # *reported*, advanced by time while playing. Spotify reports position
+        # only on events, so the last broadcast before a natural end still
+        # says 0.0; read raw, every track end looked like a skip and the
+        # screen never came up (found on hardware, 2026-09-16). The UI's
+        # progress bar interpolates the same way.
+        self._anchor: tuple[float | None, float | None, bool, float] = (None, None, False, 0.0)
 
     def on_active_change(self, renderer_id: str | None) -> None:
         """Criterion 6: a renderer change exits to now playing. The timer then
@@ -166,16 +173,30 @@ class PeppyController:
         if self._screen.visible:
             self._screen.hide()
 
+    def _position_now(self) -> float | None:
+        position, _, playing, at = self._anchor
+        if position is None:
+            return None
+        return position + (self._now() - at if playing else 0.0)
+
     def on_metadata(self, metadata) -> None:
         track = (metadata.title, metadata.artist, metadata.album)
-        if self._track is not None and track != self._track:
-            if is_forced_track_change(*self._last_seen):
-                logger.debug("peppy: forced track change counts as attention")
-                self._timer.attention()
+        playing = metadata.transport == "playing"
+        changed = self._track is not None and track != self._track
+        if changed and is_forced_track_change(self._position_now(), self._anchor[1]):
+            logger.info("peppy: forced track change counts as attention")
+            self._timer.attention()
         self._track = track
-        self._timer.set_playing(metadata.transport == "playing")
-        if metadata.position is not None:
-            self._last_seen = (metadata.position, metadata.duration)
+        self._timer.set_playing(playing)
+        # Re-anchor only on news: every broadcast repeats the last position,
+        # volume-only ones included, and re-anchoring on those would stop the
+        # clock. A transport change without a new position keeps what had
+        # elapsed.
+        position, duration, was_playing, _ = self._anchor
+        if changed or metadata.position != position or metadata.duration != duration:
+            self._anchor = (metadata.position, metadata.duration, playing, self._now())
+        elif playing != was_playing:
+            self._anchor = (self._position_now(), duration, playing, self._now())
 
     def request(self, action: str) -> bool:
         """The UI's own button (criterion 8) and anything else that asks."""
