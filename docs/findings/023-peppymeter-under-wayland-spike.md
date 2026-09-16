@@ -53,3 +53,13 @@ and are **not in the image**. Phase 5 will add pygame to the image properly;
 until it does, `gexis` differs from what `make image` produces, which is
 exactly what the tier-3 environment assertion in `docs/DEVELOPMENT.md` exists
 to catch. `/tmp/spike` disappears on reboot.
+
+
+## Follow-up, same day
+
+With the visualisation service built, PeppyMeter was pointed at our
+passthrough pipe (`/tmp/gexis-peppymeter`) instead of peppyalsa's and
+rendered live audio from it — the needle deflecting with the music, screenshot
+taken on the device. CPU 28.9 % of one core at that moment, higher than this
+finding's 12-17 %, with the meter actually moving rather than at rest. Still
+a decorated window; fullscreen ownership remains unverified.

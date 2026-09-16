@@ -73,6 +73,21 @@ class Config:
     # Phase 4b did and what a core-only development install still does.
     ui_dir: str = "/opt/gexis-ui"
 
+    # Phase 5 criterion 1: the visualisation service (ADR-0011). The two
+    # peppyalsa pipes are read by that service alone - a FIFO splits its
+    # bytes between readers - and it republishes on the passthrough pair,
+    # which is what our vendored PeppyMeter is pointed at.
+    meter_fifo: str = "/tmp/peppymeter"
+    spectrum_fifo: str = "/tmp/peppyspectrum"
+    meter_passthrough: str = "/tmp/gexis-peppymeter"
+    spectrum_passthrough: str = "/tmp/gexis-peppyspectrum"
+    spectrum_bands: int = 30  # peppyalsa's spectrum_size, output.conf
+    meter_frame_rate: int = 30  # the skins' own ui.refresh.period, ADR-0015
+    meter_port: int = 8091
+    # Empty by default: pushing to a PeppyMeter web server elsewhere is for a
+    # remote display, not for the panel's own process, which reads the pipe.
+    meter_http_target: str = ""
+
     # Phase 4d: the idle screen's external page (ADR-0019). Empty means
     # unconfigured, and the UI shows its built-in clock. Set on the device
     # only - the real URL carries a per-display identifier.

@@ -758,7 +758,13 @@ and checked again — not left on hand-installed builds.
 **Acceptance**
 
 1. Service reads both peppyalsa FIFOs and publishes on WebSocket, PeppyMeter
-   HTTP, and FIFO passthrough.
+   HTTP, and FIFO passthrough. **Built 2026-09-16** — `meters.py`,
+   `meter_service.py`, its own process (ADR-0011, frame formats from
+   [Finding 024](findings/024-peppyalsa-fifo-frame-formats.md)). Verified on
+   `gexis` with music playing: levels reached our WebSocket, and stock
+   PeppyMeter rendered from our passthrough pipe rather than peppyalsa's.
+   **Not yet:** the HTTP push transport is untested (needs a PeppyMeter web
+   server), there is no systemd unit and pygame is not in the image.
 2. Skin renderer parses all 84 skins; unknown keys or `meter.type` values fail
    the build.
 3. `spectrum.name` resolves by name; `meter.visible = False` honoured.
