@@ -775,6 +775,12 @@ and checked again — not left on hand-installed builds.
    **Built 2026-09-16**, with the corpus: 13 links all resolve, reversing the
    spectrum list changes nothing, renaming the sections fails the build.
 4. Entry from now playing shows no construction — measured, not asserted.
+   **Measured 2026-09-16, [Finding 025](findings/025-peppy-entry-has-no-visible-construction.md):**
+   10 rounds, the first observation after the raise always showed the finished
+   screen, and its background region was byte-identical to the settled frame.
+   Mechanism: `wlrctl toplevel minimize/focus` over labwc's
+   `wlr-foreign-toplevel-management`. **Still to do:** a systemd unit, the
+   Gelo5 images on the device, and wiring entry to the button.
 5. Skin rotates per track, with the next track's skin composited ahead of time.
 6. Renderer change exits to now playing; the unattended-playback timeout
    returns (ADR-0036 renamed it — it is not ADR-0033's idle timer).

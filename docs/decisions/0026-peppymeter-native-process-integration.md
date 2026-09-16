@@ -10,6 +10,18 @@ screen lifecycle, amended 2026-09-08), ADR-0025 (GPL v3)
 **Evidence:** Finding 007 (licence, NEON, skin-format confirmations)
 
 
+## Verified 2026-09-16 — the compositor mechanism
+
+This record's "raised and hidden by labwc, not by the browser" was accepted
+with the mechanism unverified. It is now measured
+([Finding 025](../findings/025-peppy-entry-has-no-visible-construction.md)):
+labwc implements `wlr-foreign-toplevel-management`, and `wlrctl toplevel
+minimize` / `focus` hide and raise the meter process over the Chromium kiosk,
+with no cooperation from the application and no X. Raised, it shows the
+finished frame immediately — it keeps rendering while hidden, at ~8 % of one
+core, which is ADR-0019's "pre-rendered, never constructed on demand" applied
+to a process.
+
 ## Amended 2026-09-16 — we vendor the engines, not the Volumio wrapper
 
 George chose this after the spike (Finding 023) and his own moOde
