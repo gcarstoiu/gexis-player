@@ -47,10 +47,10 @@ def test_only_lms_declares_activate():
     assert "activate" not in BluetoothAdapter.capabilities.controls
 
 
-def test_all_three_declare_play_and_pause():
+def test_all_three_declare_play_pause_next_and_previous():
     """ADR-0037, measured on all three in Finding 028."""
     for cls in (LmsAdapter, SpotifyAdapter, BluetoothAdapter):
-        assert {"play", "pause"} <= cls.capabilities.controls, cls.__name__
+        assert {"play", "pause", "next", "previous"} <= cls.capabilities.controls, cls.__name__
 
 
 def test_every_adapter_implements_what_it_declares():

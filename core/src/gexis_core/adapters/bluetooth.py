@@ -118,7 +118,7 @@ class BluetoothAdapter(Adapter):
         volume_mechanism=VolumeMechanism.DUMMY_MIXER,
         dummy_mixer_card=DUMMY_CARD_BLUETOOTH,
         # ADR-0037, measured on one phone in Finding 028.
-        controls=frozenset({"play", "pause"}),
+        controls=frozenset({"play", "pause", "next", "previous"}),
     )
 
     def __init__(self) -> None:
@@ -349,6 +349,12 @@ class BluetoothAdapter(Adapter):
 
     async def pause(self) -> bool:
         return await self._player_call("Pause")
+
+    async def next(self) -> bool:
+        return await self._player_call("Next")
+
+    async def previous(self) -> bool:
+        return await self._player_call("Previous")
 
     async def _player_call(self, method: str) -> bool:
         """ADR-0037: an AVRCP command to the phone. The result comes back

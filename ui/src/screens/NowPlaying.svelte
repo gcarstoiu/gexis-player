@@ -94,6 +94,14 @@
     untrack(forgetPress);
   });
 
+  async function skip(command) {
+    try {
+      await sendTransport(command);
+    } catch (err) {
+      console.info('transport:', err.message);
+    }
+  }
+
   async function togglePlay() {
     const want = shows === 'playing' ? 'paused' : 'playing';
     clearTimeout(pressTimer);
@@ -205,17 +213,21 @@
               <span class="i-shuffle"><i></i><i></i><i></i><i></i><b></b><b></b></span>
             </button>
           {/if}
-          <button class="btn btn--lg" type="button" aria-label="Previous" disabled data-unwired="phase-6">
-            <span class="i-prev"></span>
-          </button>
+          {#if controls.includes('previous')}
+            <button class="btn btn--lg" type="button" aria-label="Previous" onclick={() => skip('previous')}>
+              <span class="i-prev"></span>
+            </button>
+          {/if}
           {#if hasPlayPause}
             <button class="btn btn--play" type="button" data-shows={shows} aria-label={shows === 'playing' ? 'Pause' : 'Play'} onclick={togglePlay}>
               <span class="i-play"></span><span class="i-pause"></span>
             </button>
           {/if}
-          <button class="btn btn--lg" type="button" aria-label="Next" disabled data-unwired="phase-6">
-            <span class="i-next"></span>
-          </button>
+          {#if controls.includes('next')}
+            <button class="btn btn--lg" type="button" aria-label="Next" onclick={() => skip('next')}>
+              <span class="i-next"></span>
+            </button>
+          {/if}
           {#if lmsOnly}
             <button class="btn" type="button" aria-label="Repeat" disabled data-unwired="phase-6">
               <span class="i-repeat"><i></i><i></i><i></i><i></i><b></b><b></b></span>

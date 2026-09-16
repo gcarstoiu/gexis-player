@@ -98,7 +98,7 @@ class SpotifyAdapter(Adapter):
         # ADR-0037, measured in Finding 028. /player/resume inside a live
         # session kept the phone connected; Finding 014's failure was a
         # resume after a takeover, which this is not.
-        controls=frozenset({"play", "pause"}),
+        controls=frozenset({"play", "pause", "next", "previous"}),
     )
 
     def __init__(self, host: str, port: int) -> None:
@@ -285,6 +285,13 @@ class SpotifyAdapter(Adapter):
 
     async def pause(self) -> bool:
         return await self._post_player("pause")
+
+    async def next(self) -> bool:
+        return await self._post_player("next")
+
+    async def previous(self) -> bool:
+        # Restart-or-go-back is go-librespot's own (Finding 028).
+        return await self._post_player("prev")
 
     async def _post_player(self, action: str) -> bool:
         """ADR-0037. The result arrives as go-librespot's own transport

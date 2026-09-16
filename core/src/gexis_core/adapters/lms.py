@@ -102,7 +102,7 @@ class LmsAdapter(Adapter):
         # could act on a user's command; `activate()` below now can, and
         # only for LMS - Spotify and Bluetooth are taken over by a phone
         # connecting, never by us asking.
-        controls=frozenset({"activate", "play", "pause"}),
+        controls=frozenset({"activate", "play", "pause", "next", "previous"}),
     )
 
     # ADR-0027, 2026-09-12: this adapter no longer fights squeezelite for
@@ -463,6 +463,15 @@ class LmsAdapter(Adapter):
 
     async def pause(self) -> bool:
         return await self._command(["pause", 1])
+
+    async def next(self) -> bool:
+        return await self._command(["button", "jump_fwd"])
+
+    async def previous(self) -> bool:
+        """`jump_rew`, not `playlist index -1`: the index always goes back a
+        whole track, while the button restarts the track unless it is near
+        its start - what LMS's own apps do (Finding 028)."""
+        return await self._command(["button", "jump_rew"])
 
     async def _command(self, command: list) -> bool:
         """A user's transport command. Like `activate()`, it reports nothing

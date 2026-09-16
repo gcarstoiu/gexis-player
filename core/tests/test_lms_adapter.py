@@ -410,3 +410,15 @@ async def test_a_command_without_a_resolved_player_fails_rather_than_pretending(
 
     assert await adapter.pause() is False
     assert rpc.commands == []
+
+
+@pytest.mark.asyncio
+async def test_next_and_previous_use_the_buttons_lms_apps_use(monkeypatch):
+    """Finding 028: `playlist index -1` always goes back a whole track;
+    `jump_rew` restarts the track unless it is near its start."""
+    adapter, rpc = _adapter(monkeypatch, mode="play")
+
+    assert await adapter.next() is True
+    assert await adapter.previous() is True
+
+    assert rpc.commands == [["button", "jump_fwd"], ["button", "jump_rew"]]
