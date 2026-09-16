@@ -9,6 +9,10 @@ ln -sf /etc/systemd/system/gexis-boot-volume.service \
 	"${ROOTFS_DIR}/etc/systemd/system/multi-user.target.wants/gexis-boot-volume.service"
 ln -sf /etc/systemd/system/gexis-bluetooth-trust.service \
 	"${ROOTFS_DIR}/etc/systemd/system/multi-user.target.wants/gexis-bluetooth-trust.service"
+# Phase 5: without this the Peppy screen gets no levels on a fresh image -
+# until 2026-09-16 it had only ever been started by hand.
+ln -sf /etc/systemd/system/gexis-meter.service \
+	"${ROOTFS_DIR}/etc/systemd/system/multi-user.target.wants/gexis-meter.service"
 
 # Build-time assertion: the venv actually landed and the src copy this
 # stage used to install from didn't linger (00-run-chroot.sh's rm -rf
