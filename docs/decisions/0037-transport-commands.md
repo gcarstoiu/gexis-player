@@ -105,7 +105,7 @@ every command worked on all three:
 
 | | play / pause | next | previous | shuffle / repeat | Next and Previous disabled when |
 |---|---|---|---|---|---|
-| LMS | `pause 1` / `pause 0` | `button jump_fwd` | `button jump_rew` (restarts, or goes back near the start — as LMS's apps do) | `playlist shuffle`, `playlist repeat` | the playlist holds one item (a radio station): both only restart the stream |
+| LMS | `pause 1` / `pause 0` | `button jump_fwd` | `button jump_rew` (restarts, or goes back near the start — as LMS's apps do) | `playlist shuffle`, `playlist repeat` | the playlist holds one item (a radio station): both only restart the stream. Shuffle too, with nothing to reorder; Repeat on a live stream, which has no end (George, 2026-09-16) |
 | Spotify | `/player/pause`, `/player/resume` | `/player/next` | `/player/prev` | not shown (design) | never: go-librespot reports no "has next" |
 | Bluetooth | `Pause`, `Play` | `Next` | `Previous` | not shown (design) | never: track numbering is not sequential |
 

@@ -101,16 +101,25 @@ def _shuffle(result: dict) -> bool | None:
 
 
 def _unavailable_controls(result: dict) -> frozenset[str]:
-    """ADR-0037 §3, measured in Finding 028: on a one-item playlist (a radio
-    station) `jump_fwd` and `jump_rew` only restart the stream, so Next and
-    Previous are shown disabled. A longer playlist wraps at both ends, even
-    with repeat off, so it never runs out. An unreported length disables
-    nothing: a button that works is better than one wrongly greyed."""
-    try:
-        tracks = int(result["playlist_tracks"])
-    except (KeyError, TypeError, ValueError):
-        return frozenset()
-    return frozenset({"next", "previous"}) if tracks <= 1 else frozenset()
+    """ADR-0037 §3: declared commands that cannot work right now.
+
+    - **A one-item playlist** (a radio station): `jump_fwd` and `jump_rew`
+      only restart the stream (Finding 028), and there is nothing to
+      shuffle. A longer playlist wraps at both ends, even with repeat off,
+      so it never runs out.
+    - **A live stream** (`remote` with no duration): it has no end to repeat
+      (George, 2026-09-16). A single *song* keeps repeat - looping it is a
+      real use.
+
+    Anything not reported disables nothing: a button that works is better
+    than one wrongly greyed."""
+    unavailable: set[str] = set()
+    tracks = _as_int(result.get("playlist_tracks"))
+    if tracks is not None and tracks <= 1:
+        unavailable |= {"next", "previous", "shuffle"}
+    if bool(_as_int(result.get("remote"))) and not _as_float(result.get("duration")):
+        unavailable.add("repeat")
+    return frozenset(unavailable)
 
 
 class LmsAdapter(Adapter):

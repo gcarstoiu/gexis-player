@@ -425,24 +425,27 @@ async def test_next_and_previous_use_the_buttons_lms_apps_use(monkeypatch):
 
 
 @pytest.mark.parametrize(
-    ("tracks", "unavailable"),
+    ("result", "unavailable"),
     [
-        (1, {"next", "previous"}),   # a radio station: both only restart it
-        ("1", {"next", "previous"}),  # JSON-RPC sends it as a string at times
-        (0, {"next", "previous"}),
-        (12, set()),                   # a playlist wraps, even with repeat off
-        (None, set()),                 # not reported: disable nothing
+        # a radio station: one live item - nothing to skip, shuffle or repeat
+        ({"playlist_tracks": 1, "remote": 1}, {"next", "previous", "shuffle", "repeat"}),
+        ({"playlist_tracks": "1", "remote": "1"}, {"next", "previous", "shuffle", "repeat"}),
+        # one song: repeat-one loops it, so repeat stays
+        ({"playlist_tracks": 1, "duration": 227.6}, {"next", "previous", "shuffle"}),
+        # a playlist wraps, even with repeat off
+        ({"playlist_tracks": 12, "duration": 227.6}, set()),
+        # several stations: skipping and shuffling work, a live stream has no end
+        ({"playlist_tracks": 3, "remote": 1}, {"repeat"}),
+        # nothing reported: disable nothing
+        ({}, set()),
     ],
 )
-def test_next_and_previous_cannot_work_on_a_one_item_playlist(tracks, unavailable):
+def test_what_cannot_work_on_lms_right_now(result, unavailable):
     adapter = LmsAdapter("127.0.0.1", 9000, "gexis")
     received = []
     adapter.on_metadata_change(received.append)
-    result = {"mode": "play", "playlist_loop": [{"title": "#1 Hit Radio"}]}
-    if tracks is not None:
-        result["playlist_tracks"] = tracks
 
-    adapter._report_metadata(result)
+    adapter._report_metadata({"mode": "play", "playlist_loop": [{"title": "x"}], **result})
 
     assert received[-1].unavailable == frozenset(unavailable)
 
