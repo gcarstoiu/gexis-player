@@ -909,6 +909,11 @@ subtree of nine items.
 8. **Library and Radio are separate areas sharing one visual language** —
    server-supplied radio items render into our own components, per the
    provided designs.
+9. **A radio stream's title comes from the stream's own metadata.** Found
+   2026-09-16 during Phase 6's hardware round, on a TuneIn station: LMS sends
+   `current_title` as a single space and the real names in `remoteMeta`
+   (`title` "#1 Hit Radio", `artist` "KissFM  Live!"). The core publishes the
+   blank, so the panel shows no title. George: fix in Phase 7.
 
 *Superseded criteria, kept for history:* (1) Full SlimBrowse: My Music, Radio,
 plugin menus. (2) `base.actions` / `itemsParams` dispatch implemented.
