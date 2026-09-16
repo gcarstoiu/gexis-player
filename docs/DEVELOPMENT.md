@@ -87,7 +87,7 @@ Three things keep that honest:
    the wiring backlog for Phases 6 and 8.
 2. **Removal is continuous.** The phase that wires a control clears its marker
    as part of that work — it is editing those components regardless. Phase 9
-   criterion 4 is only the backstop for whatever slipped through; a one-off
+   criterion 2 is only the backstop for whatever slipped through; a one-off
    audit there would be the largest-possible-batch change at the point of
    least appetite for churn.
 3. **Accuracy is checked against a picture, not a description.** For each
@@ -952,16 +952,21 @@ Purely additive. Cannot break playback.
 6. **Artist and track info panels** — the Artist, Release and Lyrics tabs on
    now playing. Moved from Phase 6 criterion 3 (George, 2026-09-16).
 
-### Phase 9 — Plugin contract and themes
+### Phase 9 — Settings wiring and UI polish
+
+**Added 2026-09-16 (George):** dedicated time after Phase 8 for wiring settings
+and for general UI checks and small improvements. **Phases renumbered the same
+day:** the plugin contract moved from 9 to 10, first boot from 10 to 13, and
+Plexamp (11) and Qobuz Connect (12) were added between them. References in the
+ADRs were updated.
 
 **Acceptance**
 
-1. Contract documented and versioned.
-2. A fourth renderer built against it, in a separate repository, with no changes
-   to the core.
-3. Theme engine.
-4. **No unwired UI remains, or each survivor is explicitly justified.** Added
-   2026-09-13. From Phase 4 the UI is imported from complete designs while the
+1. **Every row in ADR-0022's settings inventory is wired end to end** (panel
+   and phone, ADR-0035), or marked out of scope with the reason.
+2. **No unwired UI remains, or each survivor is explicitly justified.** Added
+   2026-09-13; moved here from the plugin-contract phase 2026-09-16, where
+   the polish happens. From Phase 4 the UI is imported from complete designs while the
    backend is wired a phase at a time, so screens legitimately carry controls
    that do nothing yet (`decisions/README.md`'s scope note on unusable
    controls). This is the **backstop, not the mechanism** — removal is
@@ -973,8 +978,59 @@ Purely additive. Cannot break playback.
    revisited — a control designed for a feature that was quietly dropped —
    and should ideally find nothing. Unwired UI is marked in code, so checking
    is a generated list rather than an audit.
+3. **A review pass on the panel with George:** every issue found is fixed or
+   explicitly deferred.
+4. **The handoff's "issues to look at later" are triaged:** fixed, scheduled,
+   or dropped.
 
-### Phase 10 — First boot without a network
+### Phase 10 — Plugin contract and themes
+
+**Acceptance**
+
+1. Contract documented and versioned.
+2. A fourth renderer built against it, in a separate repository, with no changes
+   to the core. **Qobuz Connect (Phase 12) is that renderer**
+   ([ADR-0016](decisions/0016-plugins-as-separate-processes.md): an optional
+   plugin in a private repository).
+3. Theme engine.
+
+### Phase 11 — Plexamp as a renderer
+
+**Added 2026-09-16 (George).** Same shape as Spotify and LMS. **The phase that
+moves Plexamp into Must**, which is
+[ADR-0008](decisions/0008-direct-alsa-over-pipewire.md)'s reversal condition:
+Plexamp headless is its named non-cooperative renderer. Hence criterion 1
+comes before anything is built.
+
+**Acceptance**
+
+1. **Hardware check first:** Plexamp headless on `gexis`, and whether it
+   releases the audio device on a takeover. If it does not, an ADR on
+   ADR-0008's reversal before anything else in this phase.
+2. Acquisition and release fit the arbitration model (ADR-0010); takeover gaps
+   measured against the other renderers.
+3. Metadata from Plexamp's local API: title, artist, album, artwork, position,
+   duration, transport.
+4. Volume mechanism derived and measured.
+5. Transport commands measured and declared (ADR-0037).
+6. Source pill, handoff screen, Peppy badge; design assets from Claude Design.
+
+### Phase 12 — Qobuz Connect as a renderer
+
+**Added 2026-09-16 (George).** Same shape as Spotify and LMS, delivered as a
+plugin ([ADR-0016](decisions/0016-plugins-as-separate-processes.md)).
+
+**Acceptance**
+
+1. **Client chosen, licence checked:** the open-source client ARCHITECTURE.md
+   §9 points at.
+2. **Delivered as an optional plugin from a separate repository, with no core
+   changes** — this is Phase 10 criterion 2.
+3. Acquisition ("device selected in the app"), release (disconnect), metadata,
+   volume and transport, as for Plexamp.
+4. Source pill, handoff screen, Peppy badge; design assets from Claude Design.
+
+### Phase 13 — First boot without a network
 
 Added 2026-09-14, George: give credentials a phase, *"with an initial hotspot
 creation upon the first boot for setting up the device — so basically not only
@@ -983,7 +1039,7 @@ the credentials but also things like hostname"*. Decided in
 blocker [ADR-0022](decisions/0022-settings.md) raised and
 [ADR-0021](decisions/0021-deployment-flashable-image.md) could not answer.
 
-**Why last, and when to pull it forward.** Nothing in Phases 0-9 needs it —
+**Why last, and when to pull it forward.** Nothing in Phases 0-12 needs it —
 development flashes cards and pre-seeds `firstrun.sh`. But no non-developer can
 set the device up without it, so it is a hard gate on anyone else owning one.
 **Pull it forward the moment a device goes to someone who did not build it.**

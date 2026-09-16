@@ -123,7 +123,7 @@ the rule stands for any renderer where it does.
 
 - The panel's transport row becomes data-driven; the `lmsOnly` checks in
   `NowPlaying.svelte` are replaced by `capabilities[active].controls`.
-- A plugin renderer (Phase 9) gets transport by declaring commands and
+- A plugin renderer (Phase 10) gets transport by declaring commands and
   reporting availability; nothing in the UI names a renderer.
 - The mini strip's play/pause (Phase 7) uses the same route.
 - A remote browser gets no transport: it renders settings only (ADR-0032).

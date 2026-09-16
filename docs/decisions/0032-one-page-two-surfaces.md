@@ -69,7 +69,7 @@ page will go through several iterations before it is settled."* The amber
 "decision still owed" marks are how an unconfirmed placeholder is spotted, and
 they are driven from ADR-0022's `[R]/[H]/[N]/[?]` marks rather than
 hand-placed. **They are build-time scaffolding and must never ship lit** —
-Phase 9 criterion 4 already requires that no unwired UI survives unjustified,
+Phase 9 criterion 2 already requires that no unwired UI survives unjustified,
 and these marks are the generated list that check assumes exists.
 
 **Row types are not defined here.** They are settled when the settings work

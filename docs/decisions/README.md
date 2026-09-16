@@ -98,7 +98,7 @@ transport row before Phase 6, a lyrics tab before Phase 8. That is
 development scaffolding, not a decision to ship dead controls, and it is
 validated hard before the product is shippable rather than at each step.
 
-**Resolved 2026-09-13: the gate is Phase 9 criterion 4**, "no unwired UI
+**Resolved 2026-09-13: the gate is Phase 9 criterion 2**, "no unwired UI
 remains, or each survivor is explicitly justified". It is the **backstop, not
 the mechanism** — removal is continuous, each phase clearing the markers for
 whatever it wires. Unwired UI is marked in the code so checking is a generated
