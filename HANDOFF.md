@@ -54,6 +54,19 @@ before trusting anything above as a product.**
   files captured the wrong pid; George saw overlapping skins. Stop by looking
   processes up, not by trusting a pid file.
 
+**Issues to look at later (Phase 6 hardware rounds, 2026-09-16):**
+
+- **A pause from the phone over Bluetooth takes about 6 s to reach the panel.**
+  It is the Pixel's own late AVRCP report. A2DP's stream-idle signal comes
+  3 s after it, so it cannot help (Finding 028 addendum). Next step, with the
+  speakers on: does the audio stop at the tap?
+- **After a `gexis-core` restart, a phone already connected is not active.**
+  The Bluetooth adapter seeds metadata from a `MediaPlayer1` that is already
+  present but never calls `on_acquire`. Spotify has the same effect. It only
+  matters when the daemon restarts, not at boot.
+- **LMS once reported a position about 5 s ahead on resume**, then corrected
+  it at the next pause. Not reproduced on a second try; recheck with sound.
+
 **Still open from earlier:** `playlistcontrol cmd:load album_id:<id>` is
 unverified (ADR-0030); Claude Design owes drawn number/text editors and a
 corrected `design/README.md`.

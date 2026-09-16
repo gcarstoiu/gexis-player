@@ -112,6 +112,30 @@ and where Next cannot work.
 - **Corrects an assumption in `peppy.py`:** "Bluetooth publishes no position"
   is false for this phone.
 
+## Addendum, same day: timing on the panel
+
+Measured with a recorder on the device timestamping every `/state` message
+against the commands and the renderers' own signals:
+
+| | play reaches the panel | pause reaches the panel |
+|---|---|---|
+| LMS | 0.5 s | 0.5 s |
+| Spotify | ~5 ms after go-librespot's event, ~0.1 s after the command | same |
+| Bluetooth, panel command | 0.2-0.5 s | **4.5 s** (two runs) |
+| Bluetooth, **phone's own button** | — | **about 6 s** (George's count) |
+
+- **The Bluetooth pause delay is the phone's report, not our pipeline.** The
+  core forwards the `Status` change within about 0.1 s.
+- **A2DP gives no earlier signal.** On four pauses from the phone,
+  `MediaTransport1.State` went `idle` 3.1-3.2 s *after* `MediaPlayer1.Status`
+  went `paused`. On play, the stream went `active` only 30-50 ms before the
+  status. A 1.8 s pause never idled the stream at all.
+- **A panel command is masked since the same day:** the play/pause icon flips
+  on press (ADR-0037 §4 amendment). **A pause from the phone is not, and
+  cannot be:** nothing reaches us before the phone's report. George recorded
+  it as an issue to look at later. Open question: does the audio itself stop
+  at the tap, or also about 5 s later? That needs the speakers on.
+
 ## What this settles for ADR-0037
 
 | renderer | declares | Next/Previous disabled when |
