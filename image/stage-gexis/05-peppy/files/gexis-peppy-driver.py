@@ -127,6 +127,49 @@ def install_screensaver_shim(name: str, width: int, height: int) -> None:
     sys.modules["screensaverspectrum"] = module
 
 
+DAEMON_TOUCH_URL = os.environ.get("GEXIS_TOUCH_URL", "http://127.0.0.1:8090/touch")
+TOUCH_EVENTS = {pygame.MOUSEBUTTONUP, getattr(pygame, "FINGERUP", pygame.MOUSEBUTTONUP)}
+
+
+def report_touches_to_the_daemon() -> None:
+    """A touch on the Peppy screen lands in this window, not in the UI, so
+    the daemon never hears of it (George, 2026-09-16: "touching the peppy
+    screen doesn't hide it").
+
+    PeppyMeter's own loop reads the events and discards touches unless told
+    to exit or stop drawing, and we want neither. So the event read itself is
+    wrapped: every touch it returns is reported, and the loop sees the same
+    events as before. The report runs on its own thread, because a slow or
+    absent daemon must never stall a frame.
+    """
+    import threading
+    import urllib.request
+
+    original_get = pygame.event.get
+    last = [0.0]
+
+    def post() -> None:
+        try:
+            urllib.request.urlopen(
+                urllib.request.Request(DAEMON_TOUCH_URL, method="POST"), timeout=2
+            ).close()
+        except Exception as exc:  # never fatal: the screen keeps drawing
+            print(f"peppy: touch report failed: {exc}", file=sys.stderr)
+
+    def get(*args, **kwargs):
+        events = original_get(*args, **kwargs)
+        if any(event.type in TOUCH_EVENTS for event in events):
+            import time
+
+            now = time.monotonic()
+            if now - last[0] > 0.5:  # one report per tap, not per event
+                last[0] = now
+                threading.Thread(target=post, daemon=True).start()
+        return events
+
+    pygame.event.get = get
+
+
 class Rotation:
     """Phase 5 criterion 5: a new skin per track, with the next one built
     before it is needed.
@@ -408,6 +451,7 @@ def main() -> int:
         rects = [r for r in getattr(spectrum, "_dirty_rects", []) if r]
         pygame.display.update(rects or [util.screen_rect])
 
+    report_touches_to_the_daemon()
     peppy.dependent = per_frame
     peppy.start_display_output()
     return 0
