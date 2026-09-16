@@ -56,10 +56,12 @@ before trusting anything above as a product.**
 
 **Issues to look at later (Phase 6 hardware rounds, 2026-09-16):**
 
-- **A pause from the phone over Bluetooth takes about 6 s to reach the panel.**
-  It is the Pixel's own late AVRCP report. A2DP's stream-idle signal comes
-  3 s after it, so it cannot help (Finding 028 addendum). Next step, with the
-  speakers on: does the audio stop at the tap?
+- **Over Bluetooth, the Plexamp app reports pauses late or not at all** — about
+  6 s from its own button, 4.5 s or never for a panel command. The Spotify app
+  on the same phone reports in 0.2 s (Finding 028, addendum 2). A2DP's
+  stream-idle signal comes 3 s after the report, so it cannot help. With
+  Plexamp the panel's icon falls back after 8 s. Next step, with the speakers
+  on: does Plexamp's audio stop at the tap?
 - **After a `gexis-core` restart, a phone already connected is not active.**
   The Bluetooth adapter seeds metadata from a `MediaPlayer1` that is already
   present but never calls `on_acquire`. Spotify has the same effect. It only

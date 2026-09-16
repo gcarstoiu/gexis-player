@@ -136,6 +136,27 @@ against the commands and the renderers' own signals:
   it as an issue to look at later. Open question: does the audio itself stop
   at the tap, or also about 5 s later? That needs the speakers on.
 
+## Addendum 2: it is the app, not the phone
+
+Same day, 22:07-22:10. Same Pixel, Bluetooth, two apps, with BlueZ's own
+signals and every `/state` change recorded next to the panel's commands:
+
+| app playing on the phone | Previous: report of the restart | second Previous within ~2 s | pause from the panel: `paused` reported |
+|---|---|---|---|
+| **Spotify** | 0.2-0.5 s | back a track, 0.3-0.6 s | 0.2 s |
+| **Plexamp** | 0.2 s | back a track, 0.6 s | **not reported at all** for 18 s (tap at 22:10:07; next report was a track change) |
+
+- **The late and missing Bluetooth reports come from the Plexamp app**, not the
+  Pixel or BlueZ. The earlier rounds that measured 4-4.5 s for Pause and
+  Previous were Plexamp. George's report, that Previous "never goes to the
+  previous track", fits a late restart report: the second tap landed after the
+  app's window and restarted again.
+- **Previous works on Bluetooth** with both apps, and George confirmed it on the
+  panel.
+- With Plexamp, the panel's icon flips on press and returns to "playing"
+  after 8 s when no confirmation arrives. That is the designed fallback
+  (ADR-0037 §4 amendment), and it is what George saw as lag.
+
 ## What this settles for ADR-0037
 
 | renderer | declares | Next/Previous disabled when |
