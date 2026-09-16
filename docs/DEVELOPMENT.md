@@ -809,8 +809,10 @@ validates, so the gate covers what ships. Verified inside
    A field with nothing behind it is not drawn and its area stays the skin's
    background; sample rate never renders (ADR-0036). Artwork is drawn before
    text, because some skins place text over it (`dash-spectrum`). 17 tests on
-   the device; **checked on the panel by George** across all three renderers,
-   and the text-behind-artwork defect and the badges confirmed fixed there.
+   the device. **George checked metadata on the panel across all three
+   renderers**, and found text behind the artwork on `dash-spectrum`; that
+   fix and the badges are so far seen only in a device screenshot, not by
+   George.
 8. **Peppy screen entry button** on now playing, as the phase's last step.
    Moved here from Phase 6 criterion 4 (George, 2026-09-15): criterion 4
    above already measures entry from now playing, and the button is already
