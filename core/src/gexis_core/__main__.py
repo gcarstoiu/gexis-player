@@ -291,7 +291,13 @@ async def main() -> None:
     # Phase 5 criteria 6 and 8 (ADR-0036). The meter process keeps running
     # whether or not it is on screen; this only raises and lowers it.
     peppy_timeout = float(settings.value("viz_timeout") or 300)
-    peppy = PeppyController(PeppyScreen(), UnattendedPlayback(peppy_timeout))
+    peppy = PeppyController(
+        PeppyScreen(
+            runtime_dir=config.peppy_runtime_dir,
+            wayland_display=config.peppy_wayland_display,
+        ),
+        UnattendedPlayback(peppy_timeout),
+    )
 
     previous_active = state_store.state.active
 

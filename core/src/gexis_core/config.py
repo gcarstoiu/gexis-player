@@ -88,6 +88,11 @@ class Config:
     # remote display, not for the panel's own process, which reads the pipe.
     meter_http_target: str = ""
 
+    # Phase 5: where the panel's compositor socket lives, for raising and
+    # hiding the Peppy screen. The daemon runs as root with no session.
+    peppy_runtime_dir: str = "/run/user/1000"
+    peppy_wayland_display: str = "wayland-0"
+
     # Phase 4d: the idle screen's external page (ADR-0019). Empty means
     # unconfigured, and the UI shows its built-in clock. Set on the device
     # only - the real URL carries a per-display identifier.

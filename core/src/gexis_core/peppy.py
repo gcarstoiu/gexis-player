@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import os
 import shutil
 import subprocess
 import time
@@ -32,15 +33,35 @@ WINDOW_TITLE = "pygame window"
 #: its duration - our own commands are detectable, a phone's skip is not
 #: (ADR-0036's open question, resolved this way by George).
 FORCED_TRACK_MARGIN_S = 5.0
+#: The panel session's compositor socket. The kiosk runs as uid 1000.
+DEFAULT_RUNTIME_DIR = "/run/user/1000"
+DEFAULT_WAYLAND_DISPLAY = "wayland-0"
 
 
 class PeppyScreen:
     """Show and hide, with `wlrctl`. Absent tooling is not fatal: a device
     without the meter process running is a device that shows now playing."""
 
-    def __init__(self, *, title: str = WINDOW_TITLE, wlrctl: str | None = None) -> None:
+    def __init__(
+        self,
+        *,
+        title: str = WINDOW_TITLE,
+        wlrctl: str | None = None,
+        runtime_dir: str = DEFAULT_RUNTIME_DIR,
+        wayland_display: str = DEFAULT_WAYLAND_DISPLAY,
+    ) -> None:
         self._title = title
         self._wlrctl = wlrctl or shutil.which("wlrctl")
+        # The daemon runs as root with no session of its own, so it must be
+        # told where the compositor's socket is. Found on hardware: without
+        # these, wlrctl exits with "XDG_RUNTIME_DIR is invalid or not set".
+        # Root can open the panel user's socket; the ownership is not a
+        # barrier, the missing environment was.
+        self._env = {
+            **os.environ,
+            "XDG_RUNTIME_DIR": runtime_dir,
+            "WAYLAND_DISPLAY": wayland_display,
+        }
         self.visible = False
         if self._wlrctl is None:
             logger.warning("peppy: wlrctl not found; the Peppy screen cannot be raised")
@@ -54,6 +75,7 @@ class PeppyScreen:
                 capture_output=True,
                 timeout=5,
                 check=False,
+                env=self._env,
             )
         except (OSError, subprocess.TimeoutExpired) as exc:
             logger.warning("peppy: %s failed: %s", action, exc)

@@ -202,3 +202,27 @@ async def test_the_routes_answer_503_when_not_wired():
     async with TestClient(TestServer(server.make_app())) as client:
         assert (await client.post("/peppy/show")).status == 503
         assert (await client.post("/touch")).status == 200  # harmless, nothing to tell
+
+
+def test_the_screen_passes_the_compositor_socket_to_wlrctl(monkeypatch):
+    """The daemon runs as root with no session: without these, wlrctl exits
+    with "XDG_RUNTIME_DIR is invalid or not set" (found on hardware)."""
+    seen = {}
+
+    def fake_run(args, **kwargs):
+        seen["env"] = kwargs["env"]
+        seen["args"] = args
+
+        class Result:
+            returncode = 0
+            stderr = b""
+
+        return Result()
+
+    monkeypatch.setattr("gexis_core.peppy.subprocess.run", fake_run)
+    screen = PeppyScreen(wlrctl="/usr/bin/wlrctl", runtime_dir="/run/user/1000", wayland_display="wayland-0")
+
+    assert screen.show() is True
+    assert seen["env"]["XDG_RUNTIME_DIR"] == "/run/user/1000"
+    assert seen["env"]["WAYLAND_DISPLAY"] == "wayland-0"
+    assert seen["args"][:3] == ["/usr/bin/wlrctl", "toplevel", "focus"]

@@ -797,6 +797,11 @@ validates, so the gate covers what ships. Verified inside
    ([Finding 027](findings/027-one-process-for-meters-and-spectrum.md)).
 6. Renderer change exits to now playing; the unattended-playback timeout
    returns (ADR-0036 renamed it — it is not ADR-0033's idle timer).
+   **Built 2026-09-16:** the daemon owns show/hide (`peppy.py`), driving labwc
+   through `wlrctl`; the UI reports touches (`POST /touch`) because a touch
+   lands in whichever window owns the screen. Show, hide and touch verified on
+   the panel. **Still to verify on hardware: the renderer-change path itself**,
+   which needs a real takeover.
 7. Absent fields do not render their layer.
 8. **Peppy screen entry button** on now playing, as the phase's last step.
    Moved here from Phase 6 criterion 4 (George, 2026-09-15): criterion 4
