@@ -9,6 +9,37 @@ unverified and needs research before it's built)
 screen lifecycle, amended 2026-09-08), ADR-0025 (GPL v3)
 **Evidence:** Finding 007 (licence, NEON, skin-format confirmations)
 
+
+## Amended 2026-09-16 — we vendor the engines, not the Volumio wrapper
+
+George chose this after the spike (Finding 023) and his own moOde
+investigation (`docs/reference/peppymeter-fork-on-moode.md`).
+
+**Vendored:** `project-owner`/`foonerd` **PeppyMeter** and **PeppySpectrum**,
+both GPL-3.0, same licence as this project (ADR-0025).
+
+**Not vendored:** `foonerd/peppy_screensaver`, the Volumio wrapper. It reads
+metadata from Volumio's API on `localhost:3000`, which we do not run, and its
+entry point assumes X (`XInitThreads`, `DISPLAY=:0`). Its value was rotation
+logic and Volumio glue; the glue is useless here and the rotation is a config
+key.
+
+**We write the driver**: our daemon feeds metadata and the peppyalsa levels,
+and owns skin rotation (Phase 5 criterion 5), rather than inheriting the
+wrapper's timing — measured there at 0.6-1.5 s after a title change, which
+criterion 4's "no visible construction" will not accept unaided.
+
+**Evidence this is possible at all:** Finding 023 — stock PeppyMeter drew on
+the panel under Wayland with no X server, unmodified, at 12-17 % of one core
+while the Chromium kiosk ran. Still unverified there: fullscreen ownership by
+labwc, frame rate, spectrum, and the combination in one process.
+
+**The cwd trap comes with the engines.** The reference document records a
+`chdir` into the spectrum directory that makes every later relative path
+resolve wrongly, and a config loader that calls `os._exit(0)` on a missing
+file — a silent exit 0 with an empty log. Our unit runs `python3 -u`, sets
+absolute paths, and places each config where the process will look for it.
+
 ## Context
 
 George decided to adopt foonerd's PeppyMeter/PeppySpectrum fork — the

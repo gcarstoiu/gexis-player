@@ -45,7 +45,7 @@ the question blocking it was answered.
 | [0023](0023-svelte-ui.md) | The UI is Svelte | Accepted |
 | [0024](0024-bluetooth-pairing-no-pin.md) | Bluetooth pairing: no PIN, for this installation | Accepted |
 | [0025](0025-project-licence-gplv3.md) | gexis-player is licensed GPL v3 | Accepted |
-| [0026](0026-peppymeter-native-process-integration.md) | Peppy screen: native PeppyMeter process, labwc-mediated screen ownership | Accepted, compositor mechanism unverified |
+| [0026](0026-peppymeter-native-process-integration.md) | Peppy screen: native PeppyMeter process, labwc-mediated screen ownership | Accepted, **amended 2026-09-16** (vendor the engines, not the Volumio wrapper); compositor mechanism still unverified |
 | [0027](0027-lms-power-as-arbitration-mechanism.md) | LMS power is the arbitration mechanism; no permanent base slot | Accepted — supersedes parts of [0010](0010-arbitration-slot-model.md) |
 | [0028](0028-ui-serving-and-command-channel.md) | The core daemon serves the UI; commands go over REST | Accepted — answers what [0023](0023-svelte-ui.md) left open |
 | [0029](0029-text-entry-on-every-surface.md) | Text fields are editable on the panel too; no on-screen keyboard | Accepted — supersedes [0022](0022-settings.md)'s remote-only rule, amends [0020](0020-library-browse-tree.md) |
