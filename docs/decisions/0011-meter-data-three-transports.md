@@ -26,7 +26,7 @@ transports:**
 
 | Transport | Consumer |
 |---|---|
-| WebSocket | the in-browser skin renderer (primary) |
+| WebSocket | the in-browser skin renderer (primary *as decided in 2026-09-04*; [ADR-0026](0026-peppymeter-native-process-integration.md) replaced that renderer with a native process, so this transport now serves our own UI and anything remote) |
 | PeppyMeter HTTP | unmodified PeppyMeter, droppable in as a plugin |
 | peppyalsa FIFO | compatibility with anything expecting the original pipes |
 
@@ -48,8 +48,30 @@ smoothing_factor 50              window 3
 
 Values scale 0-100. Spectrum is 30 bands. Two named pipes.
 
-**The FIFO byte format is not yet determined.** It is needed to read the pipes,
-and a `hexdump` with a stream running will settle it.
+**The FIFO byte format, read from the consumers' own source, 2026-09-16**
+(`PeppyMeter/datasource.py:get_pipe_value`, `PeppySpectrum/spectrum.py:607`):
+
+| pipe | frame | fields |
+|---|---|---|
+| `/tmp/peppymeter` | 4 bytes | left, right — little-endian `uint16`, against `meter_max` (100) |
+| `/tmp/peppyspectrum` | 4 bytes per band | one little-endian `uint32` per band; 30 bands = 120 bytes, against `spectrum_max` (100) |
+
+Both consumers read the *newest* frame in the buffer and discard the rest, so
+neither treats the pipe as a stream to keep up with.
+
+**Read from source, not yet observed on a live stream.** A `hexdump` with
+audio playing still has to confirm it — reading the consumer proves what it
+expects, not what peppyalsa writes (`docs/LESSONS.md`: the check has to
+answer the question actually asked).
+
+## Amended 2026-09-16 — one reader, because a FIFO has only one
+
+Two processes reading the same pipe split the bytes between them, so the
+vendored PeppyMeter cannot read `/tmp/peppymeter` while this service also
+does. **The service is the sole reader of peppyalsa's pipes**, and PeppyMeter
+is fed from the passthrough pipe this record already required — its own
+`data.source type = pipe`, pointed at ours rather than peppyalsa's. Upstream's
+only other input is HTTP polling; there is no WebSocket input.
 
 ## Consequences
 
