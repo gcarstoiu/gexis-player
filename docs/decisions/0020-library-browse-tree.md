@@ -211,6 +211,11 @@ disagree. They do not, once the distinction is stated:
 > when a capability exists but is operated elsewhere — while knowing that
 > nothing in the product currently exercises it. A future case should be
 > checked against the reasoning below rather than against these retired rows.
+>
+> **Amended 2026-09-16 by [ADR-0037](0037-transport-commands.md)** (George). A
+> third case, about *when* rather than *where*: a control that exists and is
+> operable here but cannot work right now (Next at the end of a playlist) is
+> **shown and disabled**, never hidden.
 
 A search item hidden on the panel would leave the user unable to see that their
 library is searchable at all. A greyed volume slider would imply a volume control
