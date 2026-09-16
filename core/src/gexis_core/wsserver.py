@@ -51,6 +51,7 @@ class StateServer:
         set_mute=None,
         idle_page=None,
         settings=None,
+        peppy=None,
         ui_dir: Path | None = None,
     ) -> None:
         """`activate(renderer_id) -> bool` and `set_volume(percent) -> bool`
@@ -73,6 +74,7 @@ class StateServer:
         self._set_mute = set_mute
         self._idle_page = idle_page
         self._settings = settings
+        self._peppy = peppy
         self._ui_dir = ui_dir
         self._clients: set[web.WebSocketResponse] = set()
         store.subscribe(self._broadcast)
@@ -177,6 +179,24 @@ class StateServer:
         panel = request.remote in ("127.0.0.1", "::1")
         return web.json_response({"surface": "panel" if panel else "remote"})
 
+    async def _handle_touch(self, request: web.Request) -> web.Response:
+        """The panel telling the daemon somebody touched it. The daemon cannot
+        see touches itself: they land in whichever window has the screen."""
+        if self._peppy is not None:
+            self._peppy.on_touch()
+        return web.json_response({"touched": True})
+
+    async def _handle_peppy(self, request: web.Request) -> web.Response:
+        action = request.match_info["action"]
+        if self._peppy is None:
+            return web.json_response({"error": "the Peppy screen is not wired up"}, status=503)
+        if action not in ("show", "hide"):
+            return web.json_response({"error": f"unknown action {action}"}, status=404)
+        shown = self._peppy.request(action)
+        if not shown:
+            return web.json_response({"error": "no Peppy screen window to act on"}, status=409)
+        return web.json_response({"peppy": action})
+
     async def _handle_settings(self, request: web.Request) -> web.Response:
         if self._settings is None:
             return web.json_response({"error": "settings are not wired up"}, status=503)
@@ -232,6 +252,8 @@ class StateServer:
         app.router.add_post("/volume/mute", self._handle_set_mute)
         app.router.add_get("/idle", self._handle_idle)
         app.router.add_get("/surface", self._handle_surface)
+        app.router.add_post("/touch", self._handle_touch)
+        app.router.add_post("/peppy/{action}", self._handle_peppy)
         app.router.add_get("/settings", self._handle_settings)
         app.router.add_put("/settings/{key}", self._handle_setting_write)
         app.router.add_post("/settings/{key}", self._handle_setting_action)
