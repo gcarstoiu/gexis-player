@@ -25,6 +25,10 @@ GELO5_URL="https://github.com/project-owner/PeppyMeter.doc/releases/download/202
 GELO5_SHA256="3a0a99b1584915bc375bc6a2d137a22cbb29a45230ffb6e04a8ccb0bab466997"
 
 PEPPY_DIR="${ROOTFS_DIR}/opt/gexis-peppy"
+for tool in curl sha256sum bsdtar; do
+	command -v "${tool}" >/dev/null || { echo "ERROR: ${tool} is not in the build container" >&2; exit 1; }
+done
+
 WORK="$(mktemp -d)"
 trap 'rm -rf "${WORK}"' EXIT
 
@@ -51,7 +55,9 @@ tar -xzf "${WORK}/peppyspectrum.tar.gz" -C "${PEPPY_DIR}/spectrum" --strip-compo
 # Both skin corpora, side by side (George, 2026-09-16: keep the stock ones).
 mkdir -p "${WORK}/screensaver" "${WORK}/gelo5"
 tar -xzf "${WORK}/screensaver.tar.gz" -C "${WORK}/screensaver" --strip-components=1
-unzip -q "${WORK}/gelo5.zip" -d "${WORK}/gelo5"
+# bsdtar, not unzip: the pi-gen build container has no unzip and no python3
+# (checked 2026-09-16, after a build failed here on exactly that).
+bsdtar -xf "${WORK}/gelo5.zip" -C "${WORK}/gelo5"
 
 install -d -m 755 "${PEPPY_DIR}/skins/stock/templates" "${PEPPY_DIR}/skins/stock/templates_spectrum"
 cp -r "${WORK}/screensaver/templates/1280x800_custom_4/." "${PEPPY_DIR}/skins/stock/templates/"
