@@ -105,6 +105,8 @@ install -D -m 644 files/peppy-meter.txt "${PEPPY_DIR}/peppymeter/config.txt"
 install -D -m 644 files/peppy-spectrum.txt "${PEPPY_DIR}/spectrum/config.txt"
 install -D -m 755 files/gexis-peppy-driver.py "${PEPPY_DIR}/driver.py"
 install -D -m 644 files/gexis_peppy_render.py "${PEPPY_DIR}/gexis_peppy_render.py"
+install -d -m 755 "${PEPPY_DIR}/icons"
+install -m 644 files/icons/* "${PEPPY_DIR}/icons/"
 install -D -m 644 files/gexis-peppy.service \
 	"${ROOTFS_DIR}/etc/systemd/system/gexis-peppy.service"
 install -D -m 755 files/gexis-peppy-start "${ROOTFS_DIR}/usr/local/bin/gexis-peppy-start"

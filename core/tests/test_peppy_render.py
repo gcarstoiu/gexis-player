@@ -150,3 +150,48 @@ def test_parsers():
     assert parse_point(None) is None
     assert parse_colour("1,2,3") == (1, 2, 3)
     assert parse_colour(None, (9, 9, 9)) == (9, 9, 9)
+
+
+def test_artwork_is_drawn_before_the_text_over_it(layer):
+    """dash-spectrum places title, artist and album inside its artwork well;
+    the art has to go down first or it covers them (George, 2026-09-16)."""
+    art = pygame.Surface((170, 170))
+    layer._artwork_url = "http://art/"
+    layer._artwork = art
+
+    layer.draw(full(artwork="http://art/"))
+
+    artwork_rect = pygame.Rect(560, 70, 170, 170)
+    assert layer._painted[0] == artwork_rect
+    text_rects = layer._painted[2:]  # after artwork and badge
+    assert text_rects, "text must still be drawn"
+
+
+def test_each_renderer_gets_its_badge(layer):
+    for source in ("lms", "spotify", "bluetooth"):
+        badge = layer._badge(source, (50, 50))
+        assert badge is not None, source
+        assert badge.get_width() <= 50 and badge.get_height() <= 50
+
+
+def test_the_lyrion_badge_is_tinted_not_black(layer):
+    badge = layer._badge("lms", (50, 50))
+    opaque = [
+        badge.get_at((x, y))
+        for x in range(badge.get_width())
+        for y in range(badge.get_height())
+        if badge.get_at((x, y)).a > 200
+    ]
+    assert opaque, "the mark has visible pixels"
+    assert all(pixel.g > 150 for pixel in opaque)  # the LMS accent is green-teal
+
+
+def test_an_unknown_source_draws_no_badge(layer):
+    assert layer._badge_rect("airplay") is None
+
+
+def test_the_badge_icons_are_the_uis_own():
+    """Copied into the image stage; they must not drift from the UI's."""
+    ui_assets = Path(__file__).parents[2] / "ui" / "src" / "assets"
+    for name in ("icon-spotify.png", "icon-bluetooth.png", "icon-lyrion.svg"):
+        assert (STAGE / "icons" / name).read_bytes() == (ui_assets / name).read_bytes(), name

@@ -802,11 +802,23 @@ validates, so the gate covers what ships. Verified inside
    lands in whichever window owns the screen. Show, hide and touch verified on
    the panel. **Still to verify on hardware: the renderer-change path itself**,
    which needs a real takeover.
-7. Absent fields do not render their layer.
+7. Absent fields do not render their layer. **Built 2026-09-16:** neither
+   vendored engine draws metadata, so the driver has its own layer
+   (`gexis_peppy_render.py`) over the skins' geometry — title, artist, album,
+   remaining time, artwork, and the renderer's badge from the UI's own icons.
+   A field with nothing behind it is not drawn and its area stays the skin's
+   background; sample rate never renders (ADR-0036). Artwork is drawn before
+   text, because some skins place text over it (`dash-spectrum`). 17 tests on
+   the device; **checked on the panel by George** across all three renderers,
+   and the text-behind-artwork defect and the badges confirmed fixed there.
 8. **Peppy screen entry button** on now playing, as the phase's last step.
    Moved here from Phase 6 criterion 4 (George, 2026-09-15): criterion 4
    above already measures entry from now playing, and the button is already
    rendered, marked `data-unwired="phase-5"`.
+   **Built 2026-09-16:** the button raises the screen, and a touch on it
+   hides it — the driver reports touches, since they land in the meter window
+   and PeppyMeter's loop discards them. **Both checked on the panel by
+   George.** The five-minute implicit entry is built but not yet observed.
    **Entry is also implicit after five minutes of unattended playback**
    ([ADR-0036](decisions/0036-peppy-entry-and-no-rate-or-codec.md), George
    2026-09-16): touch, a forced track change and a renderer change restart the

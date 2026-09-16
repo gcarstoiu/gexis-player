@@ -33,7 +33,16 @@ FONTS = {
     "bold": "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
     "digi": "/usr/share/fonts/truetype/dejavu/DejaVuSansMono-Bold.ttf",
 }
-SOURCE_LABELS = {"lms": "LMS", "spotify": "SPOTIFY", "bluetooth": "BLUETOOTH"}
+#: The renderer's mark, from the UI's own assets (copied into the stage;
+#: test_peppy_render checks they have not drifted from ui/src/assets).
+ICON_DIR = Path(__file__).with_name("icons")
+BADGES = {
+    "spotify": ("icon-spotify.png", None),
+    "bluetooth": ("icon-bluetooth.png", None),
+    # Lyrion's mark is a single-colour figure the UI tints with its LMS accent
+    # (--accent-lms); it is drawn the same way here.
+    "lms": ("icon-lyrion.svg", (126, 214, 188)),
+}
 ARTWORK_TIMEOUT_S = 5
 
 
@@ -71,9 +80,11 @@ def parse_size(value: str | None) -> tuple[int, int] | None:
 
 
 class MetadataLayer:
-    def __init__(self, screen: pygame.Surface, corpus: Path) -> None:
+    def __init__(self, screen: pygame.Surface, corpus: Path, icon_dir: Path = ICON_DIR) -> None:
         self._screen = screen
         self._corpus = corpus
+        self._icon_dir = icon_dir
+        self._badges: dict[tuple, pygame.Surface | None] = {}
         self._skin: dict[str, str] = {}
         self._background: pygame.Surface | None = None
         self._painted: list[pygame.Rect] = []
@@ -117,14 +128,26 @@ class MetadataLayer:
         if self._background is None:
             return []
         fields = self._fields(metadata)
-        if fields == self._last_drawn:
+        fingerprint = (fields, metadata.get("source"), metadata.get("artwork"))
+        if fingerprint == self._last_drawn:
             return []
-        self._last_drawn = fields
+        self._last_drawn = fingerprint
 
         dirty = list(self._painted)
         for rect in self._painted:
             self._screen.blit(self._background, rect, rect)
         self._painted = []
+
+        # Artwork first, text last: some skins deliberately place the text
+        # over the artwork (dash-spectrum puts title, artist and album inside
+        # its 770x770 well), and drawing the art second hid it.
+        for rect in (
+            self._artwork_rect(metadata.get("artwork")),
+            self._badge_rect(metadata.get("source")),
+        ):
+            if rect is not None:
+                self._painted.append(rect)
+                dirty.append(rect)
 
         for text, point, colour, size, maxwidth in fields:
             if not text:
@@ -133,11 +156,6 @@ class MetadataLayer:
             if rect is not None:
                 self._painted.append(rect)
                 dirty.append(rect)
-
-        artwork_rect = self._artwork_rect(metadata.get("artwork"))
-        if artwork_rect is not None:
-            self._painted.append(artwork_rect)
-            dirty.append(artwork_rect)
 
         return dirty
 
@@ -168,7 +186,7 @@ class MetadataLayer:
             field("playinfo.artist.pos", metadata.get("artist"), "playinfo.artist.color", "playinfo.artist.maxwidth"),
             field("playinfo.album.pos", metadata.get("album"), "playinfo.album.color", "playinfo.album.maxwidth"),
             field("time.remaining.pos", remaining_time(metadata), "time.remaining.color"),
-            field("playinfo.type.pos", SOURCE_LABELS.get(metadata.get("source") or ""), "playinfo.type.color"),
+            # The source is a badge, not text: see _badge_rect.
             # playinfo.samplerate.pos is never filled: no sample rate and no
             # codec renders anywhere (ADR-0036). The skins keep the position;
             # we keep it empty, which is this criterion's own rule.
@@ -188,6 +206,42 @@ class MetadataLayer:
             x -= surface.get_width() // 2
         self._screen.blit(surface, (x, y))
         return pygame.Rect(x, y, surface.get_width(), surface.get_height())
+
+    def _badge_rect(self, source: str | None) -> pygame.Rect | None:
+        """The renderer's mark, fitted inside the square the skin reserves for
+        it (`playinfo.type.pos`, `playinfo.type.dimension`)."""
+        position = parse_size(self._skin.get("playinfo.type.pos"))
+        if position is None or source not in BADGES:
+            return None
+        box = parse_size(self._skin.get("playinfo.type.dimension")) or (50, 50)
+        badge = self._badge(source, box)
+        if badge is None:
+            return None
+        x = position[0] + (box[0] - badge.get_width()) // 2
+        y = position[1] + (box[1] - badge.get_height()) // 2
+        self._screen.blit(badge, (x, y))
+        return pygame.Rect(x, y, badge.get_width(), badge.get_height())
+
+    def _badge(self, source: str, box: tuple[int, int]) -> pygame.Surface | None:
+        key = (source, box)
+        if key not in self._badges:
+            filename, tint = BADGES[source]
+            try:
+                image = pygame.image.load(str(self._icon_dir / filename)).convert_alpha()
+            except (pygame.error, OSError) as exc:
+                logger.warning("render: no badge for %s: %s", source, exc)
+                self._badges[key] = None
+                return None
+            scale = min(box[0] / image.get_width(), box[1] / image.get_height())
+            size = (max(1, round(image.get_width() * scale)), max(1, round(image.get_height() * scale)))
+            image = pygame.transform.smoothscale(image, size)
+            if tint is not None:
+                # Keep the shape, replace the colour: raise every pixel to
+                # white, then multiply by the accent.
+                image.fill((255, 255, 255, 0), special_flags=pygame.BLEND_RGBA_MAX)
+                image.fill((*tint, 255), special_flags=pygame.BLEND_RGBA_MULT)
+            self._badges[key] = image
+        return self._badges[key]
 
     def _artwork_rect(self, url: str | None) -> pygame.Rect | None:
         position = parse_size(self._skin.get("albumart.pos"))
