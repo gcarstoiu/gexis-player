@@ -11,7 +11,9 @@
   import bluetoothMark from '../assets/icon-bluetooth.png';
   import VolumeIcon from '../lib/VolumeIcon.svelte';
 
-  let { active, metadata, volume, onvolume, onvisualisation } = $props();
+  import { sendTransport } from '../lib/state.js';
+
+  let { active, metadata, volume, controls = [], onvolume, onvisualisation } = $props();
 
   const SOURCES = {
     lms: { label: 'LMS', mark: null },
@@ -65,6 +67,17 @@
     return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
   };
 
+
+  // ADR-0037: shown when the renderer has the command, and the icon is
+  // whatever the renderer last reported. Pressing sends; it does not flip.
+  const hasPlayPause = $derived(controls.includes('play') && controls.includes('pause'));
+  async function togglePlay() {
+    try {
+      await sendTransport(playing ? 'pause' : 'play');
+    } catch (err) {
+      console.info('transport:', err.message);
+    }
+  }
 
   // Shuffle, repeat and queue are LMS-only in the design. Keyed on the id
   // for now; Phase 6 renders controls from capability declarations instead.
@@ -167,9 +180,11 @@
           <button class="btn btn--lg" type="button" aria-label="Previous" disabled data-unwired="phase-6">
             <span class="i-prev"></span>
           </button>
-          <button class="btn btn--play" type="button" aria-label={playing ? 'Pause' : 'Play'} disabled data-unwired="phase-6">
-            <span class="i-play"></span><span class="i-pause"></span>
-          </button>
+          {#if hasPlayPause}
+            <button class="btn btn--play" type="button" aria-label={playing ? 'Pause' : 'Play'} onclick={togglePlay}>
+              <span class="i-play"></span><span class="i-pause"></span>
+            </button>
+          {/if}
           <button class="btn btn--lg" type="button" aria-label="Next" disabled data-unwired="phase-6">
             <span class="i-next"></span>
           </button>

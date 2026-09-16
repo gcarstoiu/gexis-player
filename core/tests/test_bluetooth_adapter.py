@@ -367,3 +367,28 @@ def test_disconnect_clears_transport_and_codec():
 
     assert received[-1].transport is None
     assert received[-1].codec is None
+
+
+@pytest.mark.asyncio
+async def test_a_command_with_no_media_player_fails_rather_than_pretending():
+    adapter = BluetoothAdapter()
+    assert await adapter.play() is False
+    assert await adapter.pause() is False
+
+
+@pytest.mark.asyncio
+async def test_the_player_path_follows_the_media_player_in_and_out(monkeypatch):
+    """ADR-0037's commands go to the MediaPlayer1 object, not the device."""
+    adapter = BluetoothAdapter()
+
+    async def no_dbus(path):
+        return None
+
+    monkeypatch.setattr(adapter, "_attach_media_player", no_dbus)
+    path = "/org/bluez/hci0/dev_64_9D_38_E3_E5_2A/player0"
+
+    adapter._handle_interfaces_added(path, {MEDIA_PLAYER_IFACE: {}}, lambda: None)
+    assert adapter._player_path == path
+
+    adapter._handle_interfaces_removed(path, {MEDIA_PLAYER_IFACE: {}}, lambda: None)
+    assert adapter._player_path is None

@@ -39,21 +39,34 @@ def test_all_three_adapters_declare_output_as_the_audio_connection():
         assert cls.capabilities.audio_connection == "output"
 
 
-def test_only_lms_declares_a_control_and_only_activate():
-    """Phase 4 criterion 7 gave `controls` its first entry. Transport
-    proper (play/pause/next/previous/seek) is still Phase 6, and Spotify
-    and Bluetooth declare nothing at all because they are taken over by a
-    phone connecting, never by us asking."""
-    assert LmsAdapter.capabilities.controls == frozenset({"activate"})
-    assert SpotifyAdapter.capabilities.controls == frozenset()
-    assert BluetoothAdapter.capabilities.controls == frozenset()
+def test_only_lms_declares_activate():
+    """Phase 4 criterion 7. Spotify and Bluetooth are taken over by a phone
+    connecting, never by us asking."""
+    assert "activate" in LmsAdapter.capabilities.controls
+    assert "activate" not in SpotifyAdapter.capabilities.controls
+    assert "activate" not in BluetoothAdapter.capabilities.controls
 
 
-def test_lms_actually_implements_what_it_declares():
+def test_all_three_declare_play_and_pause():
+    """ADR-0037, measured on all three in Finding 028."""
+    for cls in (LmsAdapter, SpotifyAdapter, BluetoothAdapter):
+        assert {"play", "pause"} <= cls.capabilities.controls, cls.__name__
+
+
+def test_every_adapter_implements_what_it_declares():
     """A declaration nothing backs is worse than no declaration - the
     command surface answers 409 from the capability, so a missing method
-    would be a silent no-op with a 200."""
-    assert callable(getattr(LmsAdapter, "activate", None))
+    would be a 502 for a button the panel shows as working."""
+    for cls in (LmsAdapter, SpotifyAdapter, BluetoothAdapter):
+        for control in cls.capabilities.controls:
+            assert callable(getattr(cls, control, None)), f"{cls.__name__}.{control}"
+
+
+def test_declared_controls_are_known_commands():
+    from gexis_core.adapters.base import TRANSPORT_COMMANDS
+
+    for cls in (LmsAdapter, SpotifyAdapter, BluetoothAdapter):
+        assert cls.capabilities.controls <= TRANSPORT_COMMANDS | {"activate"}, cls.__name__
 
 
 def test_lms_declares_power_on_as_its_acquisition_event():

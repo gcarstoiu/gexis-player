@@ -314,3 +314,90 @@ async def test_no_ui_build_means_api_only():
 
     assert index.status == 404
     assert msg["active"] is None
+
+
+# --- ADR-0037: transport ---------------------------------------------------
+
+
+def _transport_caps(renderer_id: str, controls=("play", "pause")) -> dict[str, Capabilities]:
+    return {
+        renderer_id: Capabilities(
+            audio_connection="output",
+            acquisition_events=frozenset({"acquired"}),
+            supports_artwork=True,
+            supports_sample_rate=True,
+            volume_managed=True,
+            volume_mechanism=VolumeMechanism.SOFTWARE_API,
+            controls=frozenset(controls),
+        )
+    }
+
+
+@pytest.mark.asyncio
+async def test_transport_goes_to_the_active_renderer():
+    store = StateStore(_transport_caps("spotify"))
+    store.set_active("spotify")
+    sent = []
+
+    async def transport(renderer_id, command):
+        sent.append((renderer_id, command))
+        return True
+
+    server = StateServer(store, transport=transport)
+    async with TestClient(TestServer(server.make_app())) as client:
+        resp = await client.post("/transport/pause")
+        body = await resp.json()
+
+    assert resp.status == 200
+    assert sent == [("spotify", "pause")]
+    assert body == {"sent": "pause", "renderer": "spotify"}
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("active", "controls", "path", "status"),
+    [
+        (None, ("play", "pause"), "/transport/play", 409),       # nothing active
+        ("spotify", ("play",), "/transport/pause", 409),        # not declared
+        ("spotify", ("play", "pause"), "/transport/seek", 404), # not a command
+    ],
+)
+async def test_transport_refuses_what_cannot_be_sent(active, controls, path, status):
+    store = StateStore(_transport_caps("spotify", controls))
+    if active:
+        store.set_active(active)
+
+    async def transport(renderer_id, command):
+        raise AssertionError("must not be called")
+
+    server = StateServer(store, transport=transport)
+    async with TestClient(TestServer(server.make_app())) as client:
+        resp = await client.post(path)
+
+    assert resp.status == status
+
+
+@pytest.mark.asyncio
+async def test_transport_reports_a_renderer_refusal():
+    store = StateStore(_transport_caps("bluetooth"))
+    store.set_active("bluetooth")
+
+    async def transport(renderer_id, command):
+        return False
+
+    server = StateServer(store, transport=transport)
+    async with TestClient(TestServer(server.make_app())) as client:
+        resp = await client.post("/transport/play")
+
+    assert resp.status == 502
+
+
+@pytest.mark.asyncio
+async def test_transport_unwired_answers_503():
+    store = StateStore(_transport_caps("lms"))
+    store.set_active("lms")
+    server = StateServer(store)
+    async with TestClient(TestServer(server.make_app())) as client:
+        resp = await client.post("/transport/play")
+
+    assert resp.status == 503

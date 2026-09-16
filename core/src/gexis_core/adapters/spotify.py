@@ -95,6 +95,10 @@ class SpotifyAdapter(Adapter):
         supports_sample_rate=True,
         volume_managed=True,
         volume_mechanism=VolumeMechanism.SOFTWARE_API,
+        # ADR-0037, measured in Finding 028. /player/resume inside a live
+        # session kept the phone connected; Finding 014's failure was a
+        # resume after a takeover, which this is not.
+        controls=frozenset({"play", "pause"}),
     )
 
     def __init__(self, host: str, port: int) -> None:
@@ -183,7 +187,8 @@ class SpotifyAdapter(Adapter):
                     elif event_type == "seek":
                         self._handle_seek_event(frame.get("data") or {})
                     elif event_type in TRANSPORT_EVENTS:
-                        self._handle_transport_event(event_type)
+                        position_ms = await self._current_position_ms(session)
+                        self._handle_transport_event(event_type, position_ms)
 
     def _handle_metadata_event(self, data: dict) -> None:
         if self._on_metadata is None:
@@ -208,7 +213,27 @@ class SpotifyAdapter(Adapter):
         self._last_metadata = metadata
         self._on_metadata(metadata)
 
-    def _handle_transport_event(self, event_type: str) -> None:
+    async def _current_position_ms(self, session: aiohttp.ClientSession) -> int | None:
+        """Where the track is now, from `/status`. Transport events carry no
+        position, and without this the published position stayed at the
+        track's start through every pause and resume (Finding 028), which
+        sent the panel's progress bar back to 0:00. None when there is no
+        session or the call fails - the last position is then kept."""
+        try:
+            async with session.get(
+                f"{self._base}/status", timeout=aiohttp.ClientTimeout(total=2)
+            ) as resp:
+                if resp.status != 200:
+                    return None
+                body = await resp.json(content_type=None)
+        except (aiohttp.ClientError, asyncio.TimeoutError, ValueError) as exc:
+            logger.debug("spotify: /status for position failed: %s", exc)
+            return None
+        track = (body or {}).get("track") or {}
+        position = track.get("position")
+        return position if isinstance(position, int) else None
+
+    def _handle_transport_event(self, event_type: str, position_ms: int | None = None) -> None:
         """A play/pause/stop edge (Phase 4 criterion 3).
 
         Merged onto the last "metadata" event the same way `seek` is:
@@ -220,6 +245,8 @@ class SpotifyAdapter(Adapter):
         if self._on_metadata is None or self._last_metadata is None:
             return
         metadata = replace(self._last_metadata, transport=TRANSPORT_EVENTS[event_type])
+        if position_ms is not None:
+            metadata = replace(metadata, position=_ms_to_s(position_ms))
         self._last_metadata = metadata
         self._on_metadata(metadata)
 
@@ -252,6 +279,25 @@ class SpotifyAdapter(Adapter):
             )
             return
         self._on_volume(value, max_)
+
+    async def play(self) -> bool:
+        return await self._post_player("resume")
+
+    async def pause(self) -> bool:
+        return await self._post_player("pause")
+
+    async def _post_player(self, action: str) -> bool:
+        """ADR-0037. The result arrives as go-librespot's own transport
+        event, the same one a phone's command produces."""
+        try:
+            async with aiohttp.ClientSession() as session:
+                async with session.post(f"{self._base}/player/{action}") as resp:
+                    ok = resp.status < 300
+        except aiohttp.ClientError as exc:
+            logger.warning("spotify: /player/%s failed: %s", action, exc)
+            return False
+        logger.info("spotify: /player/%s on request -> %s", action, "ok" if ok else "refused")
+        return ok
 
     async def release(self) -> bool:
         try:

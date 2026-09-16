@@ -29,6 +29,7 @@ from pathlib import Path
 
 from aiohttp import web
 
+from gexis_core.adapters.base import TRANSPORT_COMMANDS
 from gexis_core.model import PlaybackState
 from gexis_core.settings_registry import InvalidValue, NotSettable, NotWired, UnknownSetting
 from gexis_core.state import StateStore
@@ -47,6 +48,7 @@ class StateServer:
         port: int = DEFAULT_PORT,
         *,
         activate=None,
+        transport=None,
         set_volume=None,
         set_mute=None,
         idle_page=None,
@@ -70,6 +72,7 @@ class StateServer:
         self._host = host
         self._port = port
         self._activate = activate
+        self._transport = transport
         self._set_volume = set_volume
         self._set_mute = set_mute
         self._idle_page = idle_page
@@ -137,6 +140,26 @@ class StateServer:
             # tell the user where rather than blame the panel.
             return web.json_response({"error": f"{renderer_id} did not activate"}, status=502)
         return web.json_response({"activated": renderer_id})
+
+    async def _handle_transport(self, request: web.Request) -> web.Response:
+        """ADR-0037 §1: to whoever is active, never to a renderer by name - a
+        command to one that is not active would be an acquisition, and that
+        has its own path. `200` means sent; what happened arrives on /state."""
+        command = request.match_info["command"]
+        if command not in TRANSPORT_COMMANDS:
+            return web.json_response({"error": f"unknown transport command {command}"}, status=404)
+        if self._transport is None:
+            return web.json_response({"error": "transport is not wired up"}, status=503)
+        state = self._store.state
+        if state.active is None:
+            return web.json_response({"error": "nothing is active"}, status=409)
+        if command not in state.capabilities[state.active].controls:
+            return web.json_response(
+                {"error": f"{state.active} does not declare {command}"}, status=409
+            )
+        if not await self._transport(state.active, command):
+            return web.json_response({"error": f"{state.active} did not take {command}"}, status=502)
+        return web.json_response({"sent": command, "renderer": state.active})
 
     async def _handle_set_volume(self, request: web.Request) -> web.Response:
         if self._set_volume is None:
@@ -248,6 +271,7 @@ class StateServer:
         app = web.Application()
         app.router.add_get("/state", self._handle)
         app.router.add_post("/renderer/{renderer_id}/activate", self._handle_activate)
+        app.router.add_post("/transport/{command}", self._handle_transport)
         app.router.add_post("/volume", self._handle_set_volume)
         app.router.add_post("/volume/mute", self._handle_set_mute)
         app.router.add_get("/idle", self._handle_idle)

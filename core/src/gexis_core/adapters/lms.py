@@ -102,7 +102,7 @@ class LmsAdapter(Adapter):
         # could act on a user's command; `activate()` below now can, and
         # only for LMS - Spotify and Bluetooth are taken over by a phone
         # connecting, never by us asking.
-        controls=frozenset({"activate"}),
+        controls=frozenset({"activate", "play", "pause"}),
     )
 
     # ADR-0027, 2026-09-12: this adapter no longer fights squeezelite for
@@ -144,6 +144,8 @@ class LmsAdapter(Adapter):
         self._resume_position: float | None = None
         self._on_metadata: Callable[[TrackMetadata], None] | None = None
         self._on_availability: Callable[[bool], None] | None = None
+        #: The last reported transport, so `play()` can pick its command.
+        self._last_transport: str | None = None
 
     def on_metadata_change(self, callback: Callable[[TrackMetadata], None]) -> None:
         """state.py hooks in here (Phase 3 criterion 1). Fired on every
@@ -176,8 +178,6 @@ class LmsAdapter(Adapter):
         `playlist_loop` holds exactly the current song, so index 0 needs no
         cross-reference against `playlist_cur_index`.
         """
-        if self._on_metadata is None:
-            return
         song = (result.get("playlist_loop") or [{}])[0]
         remote = bool(result.get("remote"))
         title = result.get("current_title") if remote else song.get("title")
@@ -190,6 +190,10 @@ class LmsAdapter(Adapter):
         transport = {"play": "playing", "pause": "paused", "stop": "stopped"}.get(
             result.get("mode")
         )
+        # Recorded before the no-listener return: `play()` needs it either way.
+        self._last_transport = transport
+        if self._on_metadata is None:
+            return
         self._on_metadata(
             TrackMetadata(
                 title=title,
@@ -451,6 +455,30 @@ class LmsAdapter(Adapter):
             except aiohttp.ClientError as exc:
                 logger.warning("lms: activate failed: %s", exc)
                 return False
+
+    async def play(self) -> bool:
+        """ADR-0037. `pause 0` resumes a paused player where it stopped; a
+        stopped one has nothing to resume and needs `play` (Finding 028)."""
+        return await self._command(["pause", 0] if self._last_transport == "paused" else ["play"])
+
+    async def pause(self) -> bool:
+        return await self._command(["pause", 1])
+
+    async def _command(self, command: list) -> bool:
+        """A user's transport command. Like `activate()`, it reports nothing
+        itself: the CometD watch sees the result, so there is one path by
+        which state changes, whoever caused them."""
+        if self._player_id is None:
+            logger.warning("lms: %s with no resolved player id", command)
+            return False
+        async with aiohttp.ClientSession() as session:
+            try:
+                await self._rpc(session, self._player_id, command)
+            except aiohttp.ClientError as exc:
+                logger.warning("lms: %s failed: %s", command, exc)
+                return False
+        logger.info("lms: %s on request", command)
+        return True
 
     async def release(self) -> bool:
         """ADR-0027: record the transport state, pause, then power off.

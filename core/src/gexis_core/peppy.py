@@ -134,8 +134,9 @@ def is_forced_track_change(previous_position: float | None, previous_duration: f
 
     The daemon sees *that* the track changed, never who caused it: a skip from
     a phone app looks identical to a natural end. ADR-0036 settles it by where
-    the previous track stopped. Bluetooth publishes no position, so its track
-    changes always read as natural.
+    the previous track stopped. A renderer that publishes no position has
+    every track change read as natural. (Bluetooth was assumed to be one;
+    Finding 028 found George's phone does publish it.)
     """
     if previous_position is None or previous_duration is None:
         return False

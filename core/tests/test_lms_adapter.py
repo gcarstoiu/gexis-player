@@ -367,3 +367,46 @@ async def test_deactivate_then_press_play_seeks_back(monkeypatch):
     await adapter.device_freed()
 
     assert ["time", "72.00"] in rpc.commands
+
+
+# --- ADR-0037: transport commands -----------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_pause_sends_pause_1(monkeypatch):
+    adapter, rpc = _adapter(monkeypatch, mode="play")
+
+    assert await adapter.pause() is True
+
+    assert rpc.commands == [["pause", 1]]
+
+
+@pytest.mark.asyncio
+async def test_play_resumes_a_paused_player_with_pause_0(monkeypatch):
+    """`play` on some LMS versions restarts the track; `pause 0` resumes
+    where it stopped (Finding 028)."""
+    adapter, rpc = _adapter(monkeypatch, mode="pause")
+    adapter._report_metadata({"mode": "pause", "time": 55.9})
+
+    assert await adapter.play() is True
+
+    assert rpc.commands == [["pause", 0]]
+
+
+@pytest.mark.asyncio
+async def test_play_starts_a_stopped_player_with_play(monkeypatch):
+    adapter, rpc = _adapter(monkeypatch, mode="stop")
+    adapter._report_metadata({"mode": "stop"})
+
+    assert await adapter.play() is True
+
+    assert rpc.commands == [["play"]]
+
+
+@pytest.mark.asyncio
+async def test_a_command_without_a_resolved_player_fails_rather_than_pretending(monkeypatch):
+    adapter, rpc = _adapter(monkeypatch, mode="play")
+    adapter._player_id = None
+
+    assert await adapter.pause() is False
+    assert rpc.commands == []

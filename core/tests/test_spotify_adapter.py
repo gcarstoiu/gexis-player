@@ -136,3 +136,30 @@ def test_a_track_change_does_not_blank_the_transport_state():
 
     assert received[-1].title == "Next Song"
     assert received[-1].transport == "playing"
+
+
+def test_a_transport_event_takes_the_position_from_status_when_given():
+    """Finding 028: transport events carry no position, and without one the
+    published position stayed at the track's start through every pause, so
+    the panel's progress bar went back to 0:00."""
+    adapter = SpotifyAdapter("127.0.0.1", 3678)
+    received = []
+    adapter.on_metadata_change(received.append)
+    adapter._handle_metadata_event(_metadata_event(position=0))
+
+    adapter._handle_transport_event("paused", 41092)
+
+    assert received[-1].transport == "paused"
+    assert received[-1].position == 41.092
+    assert received[-1].title == "Song Title"
+
+
+def test_a_transport_event_keeps_the_last_position_when_status_gave_none():
+    adapter = SpotifyAdapter("127.0.0.1", 3678)
+    received = []
+    adapter.on_metadata_change(received.append)
+    adapter._handle_metadata_event(_metadata_event(position=5000))
+
+    adapter._handle_transport_event("paused", None)
+
+    assert received[-1].position == 5.0

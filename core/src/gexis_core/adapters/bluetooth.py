@@ -117,11 +117,15 @@ class BluetoothAdapter(Adapter):
         volume_managed=False,
         volume_mechanism=VolumeMechanism.DUMMY_MIXER,
         dummy_mixer_card=DUMMY_CARD_BLUETOOTH,
+        # ADR-0037, measured on one phone in Finding 028.
+        controls=frozenset({"play", "pause"}),
     )
 
     def __init__(self) -> None:
         self._bus: MessageBus | None = None
         self._connected_device_path: str | None = None
+        #: The MediaPlayer1 object transport commands go to (ADR-0037).
+        self._player_path: str | None = None
         self._on_metadata: Callable[[TrackMetadata], None] | None = None
         self._on_availability: Callable[[bool], None] | None = None
         #: Track dict and Position (ms) are separate D-Bus properties that
@@ -193,6 +197,7 @@ class BluetoothAdapter(Adapter):
         for path, ifaces in managed.items():
             if MEDIA_PLAYER_IFACE in ifaces:
                 self._connected_device_path = self._device_path_for_player(path)
+                self._player_path = path
                 logger.info("bluetooth: MediaPlayer1 already present at %s on startup", path)
                 self._seed_metadata(ifaces[MEDIA_PLAYER_IFACE])
                 asyncio.create_task(self._attach_media_player(path))
@@ -220,6 +225,7 @@ class BluetoothAdapter(Adapter):
         unnoticed: nothing exercised it without real D-Bus."""
         if MEDIA_PLAYER_IFACE in interfaces:
             self._connected_device_path = self._device_path_for_player(path)
+            self._player_path = path
             logger.info("bluetooth: MediaPlayer1 appeared at %s (acquisition)", path)
             self._seed_metadata(interfaces[MEDIA_PLAYER_IFACE])
             asyncio.create_task(self._attach_media_player(path))
@@ -236,6 +242,7 @@ class BluetoothAdapter(Adapter):
         ):
             logger.info("bluetooth: MediaPlayer1 removed at %s (release)", path)
             self._connected_device_path = None
+            self._player_path = None
             self._last_track = {}
             self._last_position_ms = None
             self._last_transport = None
@@ -336,6 +343,31 @@ class BluetoothAdapter(Adapter):
         # /org/bluez/hci0/dev_AA_BB_CC_DD_EE_FF/player0 -> strip the
         # trailing /playerN segment to get the Device1 path.
         return player_path.rsplit("/", 1)[0]
+
+    async def play(self) -> bool:
+        return await self._player_call("Play")
+
+    async def pause(self) -> bool:
+        return await self._player_call("Pause")
+
+    async def _player_call(self, method: str) -> bool:
+        """ADR-0037: an AVRCP command to the phone. The result comes back
+        as MediaPlayer1's own PropertiesChanged; a phone may report it late
+        (Previous, about 4 s - Finding 028)."""
+        if self._bus is None or self._player_path is None:
+            logger.warning("bluetooth: %s with no known media player", method)
+            return False
+        try:
+            introspection = await self._bus.introspect(BLUEZ_SERVICE, self._player_path)
+            player = self._bus.get_proxy_object(
+                BLUEZ_SERVICE, self._player_path, introspection
+            ).get_interface(MEDIA_PLAYER_IFACE)
+            await getattr(player, f"call_{method.lower()}")()
+        except Exception as exc:  # noqa: BLE001 - a phone refusing is not our crash
+            logger.warning("bluetooth: MediaPlayer1.%s() failed: %s", method, exc)
+            return False
+        logger.info("bluetooth: MediaPlayer1.%s() on request", method)
+        return True
 
     async def release(self) -> bool:
         if self._bus is None or self._connected_device_path is None:

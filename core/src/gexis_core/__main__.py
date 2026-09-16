@@ -239,6 +239,16 @@ async def main() -> None:
             return False
         return await activate_method()
 
+    async def transport(renderer_id: str, command: str) -> bool:
+        # ADR-0037. The route has already checked the declaration; a
+        # declared command with no method is our own contract violation.
+        method = getattr(adapters[renderer_id], command, None)
+        if method is None:
+            logger.error("command: %s declares %s but implements none", renderer_id, command)
+            return False
+        logger.info("command: %s %s", command, renderer_id)
+        return await method()
+
     async def set_volume(percent: float) -> bool:
         raw = slider_percent_to_raw(percent)
         logger.info("command: volume -> %.0f%% (raw %s/240)", percent, raw)
@@ -320,6 +330,7 @@ async def main() -> None:
         host=config.state_host,
         port=config.state_port,
         activate=activate,
+        transport=transport,
         set_volume=set_volume,
         set_mute=set_mute,
         idle_page=idle_page,

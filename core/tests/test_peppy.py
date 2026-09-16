@@ -143,7 +143,7 @@ def test_touch_hides_it_and_restarts_the_timer():
         (100.0, 200.0, True),      # skipped mid-track
         (198.0, 200.0, False),     # ran to the end
         (200.0, 200.0, False),
-        (None, 200.0, False),      # Bluetooth publishes no position
+        (None, 200.0, False),      # a renderer that publishes no position
         (100.0, None, False),
     ],
 )

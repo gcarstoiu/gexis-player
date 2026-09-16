@@ -16,6 +16,12 @@ if typing.TYPE_CHECKING:
     from gexis_core.arbitration import TimeoutLadder
 
 
+#: ADR-0037 §1: every transport command the route knows. An adapter
+#: declares the ones it accepts in `Capabilities.controls` and implements
+#: each as a coroutine method of the same name returning success.
+TRANSPORT_COMMANDS = frozenset({"play", "pause", "next", "previous", "shuffle", "repeat"})
+
+
 class ReleaseAction(enum.Enum):
     """What happens to a renderer that loses the device (ADR-0010 table)."""
 
