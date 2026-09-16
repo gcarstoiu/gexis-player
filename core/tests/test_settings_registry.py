@@ -192,3 +192,37 @@ def test_clearing_a_text_value_falls_back_to_config(store):
     assert settings.set("idle_url", "http://from-user/") == "http://from-user/"
     assert settings.set("idle_url", "   ") == "http://from-config/"
     assert store.get("idle_url") is None
+
+
+def _seed(tmp_path, text):
+    path = tmp_path / "seed.json"
+    path.write_text(text)
+    return path
+
+
+def test_a_flash_time_seed_beats_config_and_loses_to_a_stored_value(store, tmp_path):
+    settings = Settings(
+        store,
+        registry=REGISTRY,
+        defaults={"idle_url": lambda: "http://from-config/"},
+        wired={"idle_timeout": None},
+        seed_path=_seed(tmp_path, '{"idle_timeout": 12, "idle_url": "http://from-seed/"}'),
+    )
+    assert settings.value("idle_timeout") == 12
+    assert settings.value("idle_url") == "http://from-seed/"
+    settings.set("idle_timeout", 30)
+    assert settings.value("idle_timeout") == 30
+
+
+def test_a_missing_seed_is_normal(store, tmp_path):
+    settings = Settings(store, registry=REGISTRY, seed_path=tmp_path / "absent.json")
+    assert settings.value("idle_timeout") == 5
+
+
+@pytest.mark.parametrize(
+    "text",
+    ['{"idle_timeout": 999}', '{"nope": 1}', "[1, 2]", "not json", '{"version": "x"}'],
+)
+def test_a_bad_seed_entry_is_dropped_not_fatal(store, tmp_path, text):
+    settings = Settings(store, registry=REGISTRY, seed_path=_seed(tmp_path, text))
+    assert settings.value("idle_timeout") == 5

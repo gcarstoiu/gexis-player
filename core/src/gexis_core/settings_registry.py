@@ -9,6 +9,7 @@ the code that reads it, in the same change as its feature.
 from __future__ import annotations
 
 import json
+import logging
 import math
 from pathlib import Path
 from typing import Any, Callable
@@ -16,10 +17,13 @@ from typing import Any, Callable
 from gexis_core.settings import SettingsStore
 
 REGISTRY_PATH = Path(__file__).with_name("settings_registry.json")
+SEED_PATH = Path("/etc/gexis/settings-seed.json")
 
 SETTABLE = {"toggle", "choice", "number", "text"}
 TYPES = SETTABLE | {"readonly", "action", "group"}
 TEXT_MAX = 500
+
+logger = logging.getLogger("gexis_core.settings_registry")
 
 
 class UnknownSetting(KeyError):
@@ -83,11 +87,39 @@ def validate(row: dict, value: Any) -> Any:
     return value
 
 
+def load_seed(settings_rows: dict[str, dict], path: Path = SEED_PATH) -> dict[str, Any]:
+    """Settings chosen at flash time (`make provision`). Treated as defaults,
+    so a later change from a phone still wins. A seed is written by hand, so
+    every entry is checked and a bad one is dropped with a log line rather
+    than taking the daemon down."""
+    try:
+        seed = json.loads(path.read_text())
+    except FileNotFoundError:
+        return {}
+    except (OSError, ValueError) as exc:
+        logger.warning("settings: ignoring %s: %s", path, exc)
+        return {}
+    if not isinstance(seed, dict):
+        logger.warning("settings: ignoring %s: expected an object", path)
+        return {}
+    checked = {}
+    for key, value in seed.items():
+        row = settings_rows.get(key)
+        if row is None:
+            logger.warning("settings: %s has unknown setting %r", path, key)
+            continue
+        try:
+            checked[key] = validate(row, value)
+        except (InvalidValue, NotSettable) as exc:
+            logger.warning("settings: %s: %s is invalid: %s", path, key, exc)
+    return checked
+
+
 class Settings:
     """`defaults` maps a key to a callable giving its value from deployment
-    config or the running system; it overrides the registry default, and a
-    stored value overrides both (ADR-0035 §4). `wired` maps a key to a callback
-    run after a write, or None when the feature reads the store itself."""
+    config or the running system. Precedence, highest first (ADR-0035 §4): a
+    stored value, the flash-time seed, a `defaults` callable, the registry's
+    own default."""
 
     def __init__(
         self,
@@ -97,6 +129,7 @@ class Settings:
         defaults: dict[str, Callable[[], Any]] | None = None,
         wired: dict[str, Callable[[Any], None] | None] | None = None,
         on_change: Callable[[], None] | None = None,
+        seed_path: Path = SEED_PATH,
     ) -> None:
         self._store = store
         self._groups = registry if registry is not None else load_registry()
@@ -104,6 +137,7 @@ class Settings:
         self._defaults = defaults or {}
         self._wired = wired or {}
         self._on_change = on_change
+        self._seed = load_seed(self._rows, seed_path)
         unknown = (set(self._defaults) | set(self._wired)) - set(self._rows)
         if unknown:
             raise ValueError(f"not in the registry: {sorted(unknown)}")
@@ -119,6 +153,8 @@ class Settings:
         stored = self._store.get(key, _MISSING)
         if stored is not _MISSING:
             return stored
+        if key in self._seed:
+            return self._seed[key]
         if key in self._defaults:
             return self._defaults[key]()
         return row.get("default")

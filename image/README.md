@@ -244,7 +244,15 @@ WIFI_COUNTRY="GB"                            # ISO 3166-1 alpha-2
 HOSTNAME=""                                  # optional
 TIMEZONE="Europe/Berlin"                     # optional
 IDLE_URL=""                                  # optional; the idle screen page
+SETTINGS=""                                  # optional; settings to start from, as JSON
 ```
+
+`SETTINGS` is JSON keyed by the settings screen's own keys, e.g.
+`{"idle_timeout": 10, "drawer_autohide": 5}`. First boot writes it to
+`/etc/gexis/settings-seed.json`, and the daemon treats those values as
+defaults — so a reflash restores them, and anything changed later from the
+phone still wins. `make provision` refuses invalid JSON; the daemon logs and
+ignores an unknown key or an out-of-range value.
 
 **`make provision DEVICE=/dev/sdX`** does this — the SSH key is a long
 single line, and a hand-edit that truncates it costs a reflash to discover.

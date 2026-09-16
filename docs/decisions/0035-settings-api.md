@@ -59,11 +59,28 @@ like any other step.
 
 ### 4. Values: the store overrides `core.toml`
 
+Precedence, highest first: a stored value, the flash-time seed (§4b),
+`core.toml`, the registry default.
+
 `core.toml` (deployment, provisioning) supplies a setting's default; the
 SQLite store (`settings.py`, built in Phase 3) holds what a user changed, and
 wins. Clearing a stored value falls back to `core.toml`. This keeps the
 provisioning route (`idle_url`, time zone on the card) working after settings
 exist.
+
+### 4b. Settings can be seeded at flash time
+
+**Added 2026-09-16, George's request:** `make provision` writes
+`SETTINGS` — JSON keyed by the settings screen's own keys — into the card's
+`firstrun.sh`, which drops it at `/etc/gexis/settings-seed.json` on first
+boot. The daemon treats the seed as a **default**, above `core.toml` and the
+registry default and below anything the user later changes, so a reflash
+restores the chosen starting point without freezing it.
+
+The seed is hand-written, so every entry is validated against the registry at
+startup and a bad one is dropped with a log line — an unknown key or an
+out-of-range value must not stop the daemon. `make provision` also refuses
+invalid JSON, because the alternative is discovering it on a booted device.
 
 ### 5. Other surfaces learn of a change through `/state`
 
