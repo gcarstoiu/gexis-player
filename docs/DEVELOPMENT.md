@@ -764,12 +764,21 @@ and checked again — not left on hand-installed builds.
 3. `spectrum.name` resolves by name; `meter.visible = False` honoured.
 4. Entry from now playing shows no construction — measured, not asserted.
 5. Skin rotates per track, with the next track's skin composited ahead of time.
-6. Renderer change exits to now playing; idle timeout returns.
+6. Renderer change exits to now playing; the unattended-playback timeout
+   returns (ADR-0036 renamed it — it is not ADR-0033's idle timer).
 7. Absent fields do not render their layer.
 8. **Peppy screen entry button** on now playing, as the phase's last step.
    Moved here from Phase 6 criterion 4 (George, 2026-09-15): criterion 4
    above already measures entry from now playing, and the button is already
    rendered, marked `data-unwired="phase-5"`.
+   **Entry is also implicit after five minutes of unattended playback**
+   ([ADR-0036](decisions/0036-peppy-entry-and-no-rate-or-codec.md), George
+   2026-09-16): touch, a forced track change and a renderer change restart the
+   five minutes; a volume change does not.
+9. **No sample rate and no codec render anywhere, this screen included**
+   (George). A skin carrying that field simply does not draw it, which is
+   criterion 7's existing rule rather than an exception. ADR-0019's
+   "Bluetooth shows the codec" is withdrawn.
 
 ### Phase 6 — Now playing, full
 
