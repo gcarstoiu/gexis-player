@@ -846,10 +846,35 @@ validates, so the gate covers what ships. Verified inside
 
 1. Transport controls rendered from adapter capability declarations.
 2. Controls that would not work are hidden or non-editable per the cross-cutting
-   rule, never dead.
-3. Artist and track info panels.
+   rule, never dead. **Sharpened by George, 2026-09-16:** a control the
+   renderer has is **visible at all times**; when it cannot work *right now*
+   (next at the end of a queue or playlist) it is **disabled, not hidden**.
+   Hiding is only for a control the renderer does not have at all.
+3. ~~Artist and track info panels.~~ **Moved to Phase 8 criterion 6** (George,
+   2026-09-16): their content (biography, tags, similar artists, label,
+   release notes) comes from enrichment, which no renderer supplies. The
+   design already places the Artist, Release and Lyrics tabs in Phase 8.
 4. ~~Peppy screen entry button.~~ **Moved to Phase 5 criterion 8** (George,
    2026-09-15).
+
+**Plan, agreed with George 2026-09-16** — one increment at a time, each
+checked on the panel before the next:
+
+0. **ADR-0037:** one command route, to the active renderer only; capability
+   in two layers, what a renderer can ever do (static, as today) and what it
+   can do now (live); controls show the renderer's reported state, never an
+   optimistic one.
+1. **Hardware finding, no product code:** every command on every renderer.
+   LMS play/pause/next/previous/shuffle/repeat and whether each change is
+   reported back, previous mid-track, radio streams. Spotify through
+   go-librespot, including **Finding 014's risk** that its resume bypasses
+   the Connect handshake. Bluetooth AVRCP on George's phone.
+2. **Play/pause** end to end, all three renderers.
+3. **Previous and next.**
+4. **Disabled when inoperable** — each "cannot work now" case from step 1
+   becomes a rule and a test.
+5. **LMS shuffle and repeat** (three states), read back from the server.
+6. Clear the `phase-6` unwired markers; DEVELOPMENT, HANDOFF, PR, image.
 
 ### Phase 7 — Library browse
 
@@ -905,6 +930,8 @@ Purely additive. Cannot break playback.
 3. Never overwrites renderer-supplied text.
 4. Confidence threshold; below it, nothing shown.
 5. Now playing renders before enrichment returns, every time.
+6. **Artist and track info panels** — the Artist, Release and Lyrics tabs on
+   now playing. Moved from Phase 6 criterion 3 (George, 2026-09-16).
 
 ### Phase 9 — Plugin contract and themes
 

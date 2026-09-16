@@ -58,8 +58,12 @@ before trusting anything above as a product.**
 unverified (ADR-0030); Claude Design owes drawn number/text editors and a
 corrected `design/README.md`.
 
-**Next phase: 6 — now playing, full** (transport controls from capability
-declarations, hidden when inoperable, artist and track info panels).
+**Next phase: 6 — now playing, full**: transport controls only. The info
+panels moved to Phase 8, and a control that cannot work right now is
+disabled, never hidden (both George, 2026-09-16). The agreed plan is under
+Phase 6 in `docs/DEVELOPMENT.md`. **Before any of it:** build the Phase 5
+image (blocked on host memory, 2026-09-16), and check the five-minute Peppy
+entry on it.
 
 ## Build environment (2026-09-13) — read this before the next build
 
