@@ -59,10 +59,11 @@ Values scale 0-100. Spectrum is 30 bands. Two named pipes.
 Both consumers read the *newest* frame in the buffer and discard the rest, so
 neither treats the pipe as a stream to keep up with.
 
-**Read from source, not yet observed on a live stream.** A `hexdump` with
-audio playing still has to confirm it — reading the consumer proves what it
-expects, not what peppyalsa writes (`docs/LESSONS.md`: the check has to
-answer the question actually asked).
+**Confirmed on a live stream, 2026-09-16 —
+[Finding 024](../findings/024-peppyalsa-fifo-frame-formats.md).** The meter
+pipe yields one 4-byte frame per read; the spectrum pipe yielded exactly 120
+bytes on every one of 97 reads. Values sat inside 0-100, so nothing needs
+rescaling to feed either consumer. This record's open item is closed.
 
 ## Amended 2026-09-16 — one reader, because a FIFO has only one
 
