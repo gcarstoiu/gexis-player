@@ -1,7 +1,7 @@
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
 <script>
   import { onMount, untrack } from 'svelte';
-  import { connect, active, metadata, volume, handoff, handoffExemptPairs, capabilities } from './lib/state.js';
+  import { connect, active, metadata, volume, handoff, handoffExemptPairs, capabilities, available } from './lib/state.js';
   import NowPlaying from './screens/NowPlaying.svelte';
   import IdleScreen from './screens/IdleScreen.svelte';
   import VolumeDrawer from './screens/VolumeDrawer.svelte';
@@ -112,7 +112,7 @@
 
 <div class="panel">
   {#if $active}
-    <NowPlaying active={$active} metadata={$metadata} volume={$volume} controls={$capabilities[$active]?.controls ?? []} onvolume={() => { keepVolumeOpen(); volumeOpen = true; }} onvisualisation={showVisualisation} />
+    <NowPlaying active={$active} metadata={$metadata} volume={$volume} controls={$capabilities[$active]?.controls ?? []} available={$available} onvolume={() => { keepVolumeOpen(); volumeOpen = true; }} onvisualisation={showVisualisation} />
   {:else}
     <!-- Home (ADR-0033) is the no-renderer screen; its content is Phase 7. -->
     <div class="placeholder" data-unwired="home">Nothing playing</div>

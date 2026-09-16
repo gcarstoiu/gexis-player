@@ -422,3 +422,26 @@ async def test_next_and_previous_use_the_buttons_lms_apps_use(monkeypatch):
     assert await adapter.previous() is True
 
     assert rpc.commands == [["button", "jump_fwd"], ["button", "jump_rew"]]
+
+
+@pytest.mark.parametrize(
+    ("tracks", "unavailable"),
+    [
+        (1, {"next", "previous"}),   # a radio station: both only restart it
+        ("1", {"next", "previous"}),  # JSON-RPC sends it as a string at times
+        (0, {"next", "previous"}),
+        (12, set()),                   # a playlist wraps, even with repeat off
+        (None, set()),                 # not reported: disable nothing
+    ],
+)
+def test_next_and_previous_cannot_work_on_a_one_item_playlist(tracks, unavailable):
+    adapter = LmsAdapter("127.0.0.1", 9000, "gexis")
+    received = []
+    adapter.on_metadata_change(received.append)
+    result = {"mode": "play", "playlist_loop": [{"title": "#1 Hit Radio"}]}
+    if tracks is not None:
+        result["playlist_tracks"] = tracks
+
+    adapter._report_metadata(result)
+
+    assert received[-1].unavailable == frozenset(unavailable)

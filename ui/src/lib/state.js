@@ -65,12 +65,14 @@ export function connect() {
 /** Convenience views, so components never reach into the payload shape. */
 export const active = derived(playback, ($s) => $s?.active ?? null);
 export const metadata = derived(playback, ($s) => $s?.metadata ?? null);
-export const available = derived(playback, ($s) => $s?.available ?? {});
+export const availability = derived(playback, ($s) => $s?.available ?? {});
 export const volume = derived(playback, ($s) => $s?.volume ?? null);
 export const handoff = derived(playback, ($s) => $s?.handoff ?? null);
 export const handoffExemptPairs = derived(playback, ($s) => $s?.handoff_exempt_pairs ?? []);
 /** What each renderer has (ADR-0037 §2's static layer), by renderer id. */
 export const capabilities = derived(playback, ($s) => $s?.capabilities ?? {});
+/** What the active renderer can do right now (ADR-0037 §2's "can now"). */
+export const available = derived(playback, ($s) => $s?.controls?.available ?? []);
 
 /**
  * Commands go over REST, never the socket (ADR-0028). Returns the parsed

@@ -401,3 +401,45 @@ async def test_transport_unwired_answers_503():
         resp = await client.post("/transport/play")
 
     assert resp.status == 503
+
+
+@pytest.mark.asyncio
+async def test_state_publishes_what_the_active_renderer_can_do_now():
+    store = StateStore(_transport_caps("lms", ("activate", "play", "pause", "next", "previous")))
+    store.set_active("lms")
+    store.set_metadata("lms", TrackMetadata(title="Radio", source_type="lms",
+                                            unavailable=frozenset({"next", "previous"})))
+    server = StateServer(store)
+    async with TestClient(TestServer(server.make_app())) as client:
+        async with client.ws_connect("/state") as ws:
+            msg = await ws.receive_json()
+
+    assert msg["controls"] == {"available": ["pause", "play"]}  # activate is not transport
+    assert "unavailable" not in msg["metadata"]
+
+
+@pytest.mark.asyncio
+async def test_a_command_that_cannot_work_now_is_refused():
+    store = StateStore(_transport_caps("lms", ("play", "pause", "next", "previous")))
+    store.set_active("lms")
+    store.set_metadata("lms", TrackMetadata(title="Radio", unavailable=frozenset({"next"})))
+
+    async def transport(renderer_id, command):
+        raise AssertionError("must not be called")
+
+    server = StateServer(store, transport=transport)
+    async with TestClient(TestServer(server.make_app())) as client:
+        resp = await client.post("/transport/next")
+
+    assert resp.status == 409
+
+
+@pytest.mark.asyncio
+async def test_nobody_active_publishes_no_controls():
+    store = StateStore(_transport_caps("lms"))
+    server = StateServer(store)
+    async with TestClient(TestServer(server.make_app())) as client:
+        async with client.ws_connect("/state") as ws:
+            msg = await ws.receive_json()
+
+    assert msg["controls"] is None

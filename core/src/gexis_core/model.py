@@ -22,7 +22,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
-from gexis_core.adapters.base import Capabilities
+from gexis_core.adapters.base import TRANSPORT_COMMANDS, Capabilities
 
 
 @dataclass(frozen=True)
@@ -62,6 +62,11 @@ class TrackMetadata:
     #: field's place for Bluetooth), not a reason to make one field hold
     #: two types.
     codec: str | None = None
+    #: Declared transport commands that cannot work right now (ADR-0037 §2's
+    #: "can now" layer): LMS's next and previous on a one-item playlist,
+    #: which only restart the stream (Finding 028). Not published inside
+    #: `metadata`; `PlaybackState.controls` turns it into what is available.
+    unavailable: frozenset[str] = frozenset()
 
     @property
     def remaining_time(self) -> float | None:
@@ -160,6 +165,16 @@ class PlaybackState:
     #: `GET /settings` when it moves.
     settings_revision: int = 0
 
+    @property
+    def controls(self) -> dict | None:
+        """ADR-0037 §2: the active renderer's transport commands that would
+        work now - declared, minus what it reports unavailable. None when
+        nobody is active. Shuffle and repeat state join this in step 5."""
+        if self.active is None or self.active not in self.capabilities:
+            return None
+        declared = self.capabilities[self.active].controls & TRANSPORT_COMMANDS
+        return {"available": sorted(declared - self.metadata.unavailable)}
+
     def __post_init__(self) -> None:
         # Defensive copy: a caller mutating the dict it passed in must not
         # silently mutate an already-published state. `object.__setattr__`
@@ -180,4 +195,5 @@ class PlaybackState:
             "volume": self.volume.to_json() if self.volume else None,
             "handoff_exempt_pairs": [list(pair) for pair in self.handoff_exempt_pairs],
             "settings_revision": self.settings_revision,
+            "controls": self.controls,
         }

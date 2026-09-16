@@ -157,6 +157,10 @@ class StateServer:
             return web.json_response(
                 {"error": f"{state.active} does not declare {command}"}, status=409
             )
+        if command not in state.controls["available"]:
+            return web.json_response(
+                {"error": f"{command} cannot work on {state.active} right now"}, status=409
+            )
         if not await self._transport(state.active, command):
             return web.json_response({"error": f"{state.active} did not take {command}"}, status=502)
         return web.json_response({"sent": command, "renderer": state.active})

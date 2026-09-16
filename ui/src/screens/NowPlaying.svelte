@@ -13,7 +13,7 @@
 
   import { sendTransport } from '../lib/state.js';
 
-  let { active, metadata, volume, controls = [], onvolume, onvisualisation } = $props();
+  let { active, metadata, volume, controls = [], available = [], onvolume, onvisualisation } = $props();
 
   const SOURCES = {
     lms: { label: 'LMS', mark: null },
@@ -214,7 +214,8 @@
             </button>
           {/if}
           {#if controls.includes('previous')}
-            <button class="btn btn--lg" type="button" aria-label="Previous" onclick={() => skip('previous')}>
+            <!-- ADR-0037 §3: has it but cannot work now - shown, disabled. -->
+            <button class="btn btn--lg" type="button" aria-label="Previous" disabled={!available.includes('previous')} onclick={() => skip('previous')}>
               <span class="i-prev"></span>
             </button>
           {/if}
@@ -224,7 +225,7 @@
             </button>
           {/if}
           {#if controls.includes('next')}
-            <button class="btn btn--lg" type="button" aria-label="Next" onclick={() => skip('next')}>
+            <button class="btn btn--lg" type="button" aria-label="Next" disabled={!available.includes('next')} onclick={() => skip('next')}>
               <span class="i-next"></span>
             </button>
           {/if}
@@ -587,6 +588,11 @@
   }
   .btn:not(:disabled):active {
     background: var(--ink-fill-press);
+  }
+  /* Cannot work right now (ADR-0037 §3). The design dims an unavailable tab
+     to 0.4; the same here. Unwired scaffolding keeps its own look. */
+  .btn:disabled:not([data-unwired]) {
+    opacity: 0.4;
   }
   .btn--lg {
     width: var(--ctl-lg);
