@@ -869,7 +869,15 @@ checked on the panel before the next:
    reported back, previous mid-track, radio streams. Spotify through
    go-librespot, including **Finding 014's risk** that its resume bypasses
    the Connect handshake. Bluetooth AVRCP on George's phone.
-2. **Play/pause** end to end, all three renderers.
+2. **Play/pause** end to end, all three renderers. **Includes a defect found
+   in step 1** (2026-09-16, recorded at George's request): for Spotify the
+   core's `metadata.position` stays at the value from the start of the track
+   through pause and resume — go-librespot's `/status` had 35 s, 41 s and
+   49 s while the core published 0.0 — because the adapter takes a position
+   only from `metadata` and `seek` events. The UI's progress bar re-anchors
+   when play/pause changes, so a pause very likely sends it back to 0:00.
+   Unconfirmed on the panel; play/pause is not done until the bar is right
+   after a pause.
 3. **Previous and next.**
 4. **Disabled when inoperable** — each "cannot work now" case from step 1
    becomes a rule and a test.
