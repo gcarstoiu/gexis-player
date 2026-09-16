@@ -1,0 +1,373 @@
+[Free]
+origin.x = 84
+origin.y = 140
+spectrum.x = 342
+spectrum.y = 384
+bgr.type = image
+bgr.color =
+bgr.gradient =
+bgr.filename = FreeS_bgr.png
+bar.type = image
+bar.color =
+bar.gradient =
+bar.filename = FreeS_bar.png
+bar.width = 30
+bar.height = 121
+bar.gap = 9
+reflection.type = 
+reflection.color =
+reflection.gradient =
+reflection.filename = 
+reflection.gap = 0
+topping.height = 5
+topping.step = 3
+fgr.filename =
+steps = 25
+
+
+[Naim]
+origin.x = 30
+origin.y = 155
+spectrum.x = 909
+spectrum.y = 22
+bgr.type = image
+bgr.color =
+bgr.gradient =
+bgr.filename = NaimS_bgr.png
+bar.type = image
+bar.color =
+bar.gradient =
+bar.filename = NaimS_bar1.png
+bar.width = 11
+bar.height = 120
+bar.gap = 4
+reflection.type = image.extended
+reflection.color =
+reflection.gradient =
+reflection.filename = NaimS_bar1.png
+reflection.gap = 1
+topping.height = 4
+topping.step = 4
+fgr.filename =
+steps = 15
+
+[Marschal]
+origin.x = 37
+origin.y = 219
+spectrum.x = 18
+spectrum.y = 236
+
+bgr.type = image
+bgr.color =
+bgr.gradient =
+bgr.filename = Marschal_bgr.png
+
+bar.type = image
+bar.color =
+bar.gradient =
+bar.filename = Marschal_bar1.png
+bar.width = 45
+bar.height = 175
+bar.gap = 14
+
+reflection.type = image.extended
+reflection.color =
+reflection.gradient =
+reflection.filename = Marschal_bar2.png
+reflection.gap = 10
+
+topping.height = 7
+topping.step = 5
+fgr.filename = 
+steps = 25
+
+
+[Lyng]
+origin.x = 29
+origin.y = 155
+spectrum.x = 177
+spectrum.y = 506
+bgr.type = image
+bgr.color =
+bgr.gradient =
+bgr.filename = LyngdorfS_bgr.png
+bar.type = image
+bar.color =
+bar.gradient =
+bar.filename = LyngdorfS_bar.png
+bar.width = 35
+bar.height = 135
+bar.gap = 10
+reflection.type = 
+reflection.color =
+reflection.gradient =
+reflection.filename = 
+reflection.gap = 0
+topping.height = 5
+topping.step = 3
+fgr.filename =
+steps = 25
+
+
+[Kenwood Big]
+origin.x = 12
+origin.y = 272
+spectrum.x = 385
+spectrum.y = 83
+
+bgr.type = image
+bgr.color =
+bgr.gradient =
+bgr.filename = KenwoodBig_bgr.png
+
+bar.type = image
+bar.color =
+bar.gradient =
+bar.filename = KenwoodBig_bar1.png
+bar.width = 32
+bar.height = 270
+bar.gap = 10
+
+reflection.type = image.extended
+reflection.color =
+reflection.gradient =
+reflection.filename = KenwoodBig_bar2.png
+reflection.gap = 8
+
+topping.height = 7
+topping.step = 5
+fgr.filename = 
+steps = 30
+
+
+[OPipe]
+origin.x = 83
+origin.y = 420
+spectrum.x = 0
+spectrum.y = 108
+
+bgr.type = image
+bgr.color =
+bgr.gradient =
+bgr.filename = OldPipe_bgr.png
+
+bar.type = image
+bar.color =
+bar.gradient =
+bar.filename = OldPipe_bar.png
+bar.width = 16
+bar.height = 286
+bar.gap = 42
+
+reflection.type = 
+reflection.color =
+reflection.gradient =
+reflection.filename = 
+reflection.gap = 10
+
+topping.height = 6
+topping.step = 4
+fgr.filename = 
+steps = 25
+
+
+[Marantz]
+origin.x = 12
+origin.y = 58
+spectrum.x = 436
+spectrum.y = 145
+
+bgr.type = image
+bgr.color =
+bgr.gradient =
+bgr.filename = Marantz_bgr.png
+
+bar.type = image
+bar.color =
+bar.gradient =
+bar.filename = Marantz_bar1.png
+bar.width = 14
+bar.height = 60
+bar.gap = 5
+
+reflection.type = image.extended
+reflection.color =
+reflection.gradient =
+reflection.filename = Marantz_bar2.png
+reflection.gap = 1
+
+topping.height = 3
+topping.step = 3
+fgr.filename = 
+steps = 20
+
+
+[Kenwoo]
+origin.x = 25
+origin.y = 103
+spectrum.x = 232
+spectrum.y = 11
+
+bgr.type = image
+bgr.color =
+bgr.gradient =
+bgr.filename = Kenwoo_bgr.png
+
+bar.type = image
+bar.color =
+bar.gradient =
+bar.filename = Kenwoo_bar1.png
+bar.width = 36
+bar.height = 110
+bar.gap = 15
+
+reflection.type = image.extended
+reflection.color =
+reflection.gradient =
+reflection.filename = Kenwoo_bar2.png
+reflection.gap = 0
+
+topping.height = 5
+topping.step = 3
+fgr.filename = 
+steps = 25
+
+
+[475A]
+origin.x = 15
+origin.y = 111
+spectrum.x = 226
+spectrum.y = 55
+
+bgr.type = image
+bgr.color =
+bgr.gradient =
+bgr.filename = 475AS_bgr.png
+
+bar.type = image
+bar.color =
+bar.gradient =
+bar.filename = 475AS_bar1.png
+bar.width = 18
+bar.height = 110
+bar.gap = 5
+
+reflection.type = image.extended
+reflection.color =
+reflection.gradient =
+reflection.filename = 475AS_bar2.png
+reflection.gap = 0
+
+topping.height = 6
+topping.step = 3
+fgr.filename = 
+steps = 25
+
+
+[Peppy]
+origin.x = 34
+origin.y = 120
+spectrum.x = 640
+spectrum.y = 400
+bgr.type = image
+bgr.color =
+bgr.gradient =
+bgr.filename = Peppy_bgr.png
+bar.type = image
+bar.color =
+bar.gradient =
+bar.filename = Peppy_bar1.png
+bar.width = 13
+bar.height = 95
+bar.gap = 16
+reflection.type = image.extended
+reflection.color =
+reflection.gradient =
+reflection.filename = Peppy_bar2.png
+reflection.gap = 1
+topping.height = 5
+topping.step = 3
+fgr.filename = 
+steps = 20
+
+[Teletronix]
+origin.x = 45
+origin.y = 246
+spectrum.x = 304
+spectrum.y = 400
+bgr.type = image
+bgr.color =
+bgr.gradient =
+bgr.filename = Teletronix_bgr.png
+bar.type = image
+bar.color =
+bar.gradient =
+bar.filename = Teletronix_bar.png
+bar.width = 22
+bar.height = 174
+bar.gap = 8
+reflection.type = 
+reflection.color =
+reflection.gradient =
+reflection.filename = 
+reflection.gap = 0
+topping.height = 5
+topping.step = 3
+fgr.filename =
+steps = 20
+
+[KeyS]
+origin.x = 25
+origin.y = 110
+spectrum.x = 111
+spectrum.y = 95
+bgr.type = image
+bgr.color =
+bgr.gradient =
+bgr.filename = KeySight1_bgr.png
+bar.type = image
+bar.color =
+bar.gradient =
+bar.filename = KeyS_bar1.png
+bar.width = 18
+bar.height = 110
+bar.gap = 13
+reflection.type = image.extended
+reflection.color =
+reflection.gradient =
+reflection.filename = KeyS_bar2.png
+reflection.gap = 5
+topping.height = 5
+topping.step = 3
+fgr.filename =
+steps = 20
+
+[Old]
+origin.x = 36
+origin.y = 167
+spectrum.x = 998
+spectrum.y = 17
+
+bgr.type = image
+bgr.color =
+bgr.gradient =
+bgr.filename = OldVU_bgr.png
+
+bar.type = image
+bar.color =
+bar.gradient =
+bar.filename = OldVU_bar.png
+bar.width = 6
+bar.height = 140
+bar.gap = 5
+
+reflection.type = 
+reflection.color =
+reflection.gradient =
+reflection.filename = 
+reflection.gap = 10
+
+topping.height = 6
+topping.step = 4
+fgr.filename = OldVU_fgr.png
+steps = 25

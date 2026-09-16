@@ -757,19 +757,88 @@ and checked again — not left on hand-installed builds.
 
 **Acceptance**
 
+**Installed by `stage-gexis/05-peppy` since 2026-09-16:** both engines pinned
+by commit and checksum, both skin corpora (`stock`, 15 skins; `gelo5`, 84),
+pygame, `wlrctl`, a launcher and a unit wanted by `multi-user.target`. The
+stage compares the fetched pack's config files against the ones `make skins`
+validates, so the gate covers what ships. Verified inside
+`2026-09-16-...-162-g64ee703`; **not yet flashed**.
+
 1. Service reads both peppyalsa FIFOs and publishes on WebSocket, PeppyMeter
-   HTTP, and FIFO passthrough.
+   HTTP, and FIFO passthrough. **Built 2026-09-16** — `meters.py`,
+   `meter_service.py`, its own process (ADR-0011, frame formats from
+   [Finding 024](findings/024-peppyalsa-fifo-frame-formats.md)). Verified on
+   `gexis` with music playing: levels reached our WebSocket, and stock
+   PeppyMeter rendered from our passthrough pipe rather than peppyalsa's.
+   Unit `gexis-meter.service` (stage `03-core`) added 2026-09-16; until then
+   the service had only been started by hand. **Not yet:** the HTTP push
+   transport is untested (needs a PeppyMeter web server).
 2. Skin renderer parses all 84 skins; unknown keys or `meter.type` values fail
-   the build.
+   the build. **Built 2026-09-16** — `skins.py`, run by `make skins` before
+   every image build and by the unit tests against the real corpus in
+   `skins/`. Per Finding 007 §4 and ADR-0015 this is an additive build-time
+   gate: the vendored PeppyMeter cannot fail on a bad key at parse time.
+   Key sets are the corpus's own, per meter type.
 3. `spectrum.name` resolves by name; `meter.visible = False` honoured.
+   **Built 2026-09-16**, with the corpus: 13 links all resolve, reversing the
+   spectrum list changes nothing, renaming the sections fails the build.
 4. Entry from now playing shows no construction — measured, not asserted.
-5. Skin rotates per track, with the next track's skin composited ahead of time.
-6. Renderer change exits to now playing; idle timeout returns.
-7. Absent fields do not render their layer.
+   **Measured 2026-09-16, [Finding 025](findings/025-peppy-entry-has-no-visible-construction.md):**
+   10 rounds, the first observation after the raise always showed the finished
+   screen, and its background region was byte-identical to the settled frame.
+   Mechanism: `wlrctl toplevel minimize/focus` over labwc's
+   `wlr-foreign-toplevel-management`. The unit, the Gelo5 images and the button
+   followed (stage `05-peppy`, criterion 8).
+5. Skin rotates per track, with the next track's skin composited ahead of
+   time. **Built 2026-09-16**, in the driver: random without repeats until the
+   corpus is exhausted, driven by track changes read from the metadata file
+   the core already writes. The next skin's meter is built right after a
+   switch, so a track change loads no images. Three simulated changes gave
+   three skins and the spectrum kept animating across them
+   ([Finding 027](findings/027-one-process-for-meters-and-spectrum.md)).
+6. Renderer change exits to now playing; the unattended-playback timeout
+   returns (ADR-0036 renamed it — it is not ADR-0033's idle timer).
+   **Built 2026-09-16:** the daemon owns show/hide (`peppy.py`), driving labwc
+   through `wlrctl`; the UI reports touches (`POST /touch`) because a touch
+   lands in whichever window owns the screen. Show, hide and touch verified on
+   the panel. **George checked the renderer-change path on the panel**
+   (2026-09-16): a takeover takes the screen back to now playing.
+7. Absent fields do not render their layer. **Built 2026-09-16:** neither
+   vendored engine draws metadata, so the driver has its own layer
+   (`gexis_peppy_render.py`) over the skins' geometry — title, artist, album,
+   remaining time, artwork, and the renderer's badge from the UI's own icons.
+   A field with nothing behind it is not drawn and its area stays the skin's
+   background; sample rate never renders (ADR-0036). Artwork is drawn before
+   text, because some skins place text over it (`dash-spectrum`). 17 tests on
+   the device. **George checked metadata on the panel across all three
+   renderers**, and found text behind the artwork on `dash-spectrum`, text
+   running over artwork, and remaining time out of line. Fixed by following
+   the layout rules the skins were designed for (Volumio's wrapper): text
+   centred in its box beside the artwork, remaining time `MM:SS` in DSEG7,
+   badges with the renderer's name. **George checked the fixes** (2026-09-16).
+   Not reproduced: the spectrum once overlapping remaining time on
+   `dash-spectrum`.
 8. **Peppy screen entry button** on now playing, as the phase's last step.
    Moved here from Phase 6 criterion 4 (George, 2026-09-15): criterion 4
    above already measures entry from now playing, and the button is already
    rendered, marked `data-unwired="phase-5"`.
+   **Built 2026-09-16:** the button raises the screen, and a touch on it
+   hides it — the driver reports touches, since they land in the meter window
+   and PeppyMeter's loop discards them. **Both checked on the panel by
+   George.** The five-minute implicit entry **failed its first observation**
+   (2026-09-16: eight minutes of Spotify playback, no touch, never raised).
+   Cause: Spotify reports position only on events, so every natural track end
+   read as a skip and restarted the five minutes. Fixed by advancing the last
+   reported position while playing, as the UI's progress bar does; paused time
+   no longer counts either. **Unit-tested; not yet observed on hardware.**
+   **Entry is also implicit after five minutes of unattended playback**
+   ([ADR-0036](decisions/0036-peppy-entry-and-no-rate-or-codec.md), George
+   2026-09-16): touch, a forced track change and a renderer change restart the
+   five minutes; a volume change does not.
+9. **No sample rate and no codec render anywhere, this screen included**
+   (George). A skin carrying that field simply does not draw it, which is
+   criterion 7's existing rule rather than an exception. ADR-0019's
+   "Bluetooth shows the codec" is withdrawn.
 
 ### Phase 6 — Now playing, full
 

@@ -1,0 +1,19 @@
+[Unit]
+Description=Gexis visualisation service (ADR-0011, Phase 5)
+# The only reader of peppyalsa's two FIFOs: a FIFO splits its bytes between
+# readers, so the Peppy screen reads this service's passthrough pipes instead
+# of peppyalsa's. peppyalsa does not block without a reader (Finding 002), so
+# there is no ordering against the renderers.
+After=gexis-core.service
+
+[Service]
+Type=simple
+# pi, like the Peppy screen that reads the passthrough pipes this creates.
+User=pi
+Group=audio
+ExecStart=/opt/gexis-core/venv/bin/python -u -m gexis_core.meter_service
+Restart=on-failure
+RestartSec=2
+
+[Install]
+WantedBy=multi-user.target

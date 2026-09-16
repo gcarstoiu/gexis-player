@@ -1,0 +1,2994 @@
+[01G5_Accuphase]
+meter.type = circular
+channels = 2
+ui.refresh.period = 0.033
+bgr.filename = Accuphase_Hybrid_1280_vu.png
+fgr.filename = Accuphase_1280_frg.png
+indicator.filename = Accuphase_1280-needle.png
+steps.per.degree = 4
+start.angle = 54
+stop.angle = -54
+distance = 96
+left.origin.x = 354
+left.origin.y = 260
+right.origin.x = 913
+right.origin.y = 260
+meter.x = 0
+meter.y = 0
+screen.bgr = Accuphase_1280.jpg
+# --- volumio optional entries -------
+config.extend = True
+albumart.pos = 560,70
+albumart.dimension = 170,170
+playinfo.title.pos = 290,470,bold
+playinfo.artist.pos = 290,250,regular
+#playinfo.album.pos = 485,280,light
+playinfo.center = True
+playinfo.maxwidth = 700
+playinfo.type.pos = 610,550
+playinfo.type.color = 180,180,180
+playinfo.type.dimension = 50,50
+playinfo.samplerate.pos = 110,570,bold
+time.remaining.pos = 795,550
+time.remaining.color = 255,255,255
+font.size.digi = 26
+font.size.light = 20
+font.size.regular = 20
+font.size.bold = 20
+font.color = 180,180,180
+
+[02G5_Accuphase monoblock]
+meter.type = circular
+channels = 2
+ui.refresh.period = 0.033
+bgr.filename = Accuphase_monoblock_1280_bgr.png
+fgr.filename = Accuphase_monoblock_1280_fgr.png
+indicator.filename = Accuphase_monoblock_1280_needle.png
+steps.per.degree = 4
+start.angle = 65
+stop.angle = -58
+distance = 120
+left.origin.x = 310
+left.origin.y = 257
+right.origin.x = 950
+right.origin.y = 257
+meter.x = 0
+meter.y = 0
+screen.bgr = Accuphase_monoblock_1280.jpg
+# --- volumio optional entries -------
+config.extend = True
+albumart.pos = 100,518
+albumart.dimension = 182,182
+playinfo.title.pos = 290,730,bold
+playinfo.artist.pos = 290,440,regular
+#playinfo.album.pos = 485,280,light
+playinfo.center = True
+playinfo.maxwidth = 700
+playinfo.type.pos = 605,555
+playinfo.type.color = 210,20,27
+playinfo.type.dimension = 70,70
+playinfo.samplerate.pos = 125,575,light
+time.remaining.pos = 770,567
+time.remaining.color = 255,255,255
+font.size.digi = 36
+font.size.light = 24
+font.size.regular = 34
+font.size.bold = 40
+font.color = 0,0,0
+
+#-----------------------3 BERLANT-------------------------
+[03G5_Berlant]
+meter.type = circular
+channels = 2
+ui.refresh.period = 0.033
+bgr.filename = Berlant_1280_bgr.png
+fgr.filename = Berlant_1280_fgr.png
+indicator.filename = Berlant_1280_needle.png
+steps.per.degree = 4
+start.angle = 40
+stop.angle = -40
+distance = 250
+left.origin.x = 323
+left.origin.y = 500
+right.origin.x = 960
+right.origin.y = 500
+meter.x = 0
+meter.y = 0
+screen.bgr = Berlant_1280.jpg
+# --- volumio optional entries -------
+config.extend = True
+albumart.pos = 397,412
+albumart.dimension = 214,214
+
+playinfo.title.pos = 50,655,bold
+playinfo.artist.pos = 50,705,regular
+playinfo.album.pos = 50,745,light
+playinfo.center = True
+playinfo.maxwidth = 1180
+
+playinfo.type.pos = 650,520
+playinfo.type.color = 209,205,142
+playinfo.type.dimension = 90,90
+
+playinfo.samplerate.pos = 230,565,light
+
+time.remaining.pos = 653,440
+time.remaining.color = 209,205,142
+font.size.digi = 68
+font.size.light = 20
+font.size.regular = 33
+font.size.bold = 47
+font.color = 0,0,0
+
+
+#-----------------------04 BERLANT purple-------------------------
+[04G5_Berlant Purple]
+meter.type = circular
+channels = 2
+ui.refresh.period = 0.033
+bgr.filename = Berlant_Purple_bgr.png
+fgr.filename = Berlant_Purple_fgr.png
+indicator.filename = Berlant_Purple_needle.png
+steps.per.degree = 4
+start.angle = 40
+stop.angle = -40
+distance = 250
+left.origin.x = 323
+left.origin.y = 500
+right.origin.x = 960
+right.origin.y = 500
+meter.x = 0
+meter.y = 0
+screen.bgr = Berlant_Purple.jpg
+# --- volumio optional entries -------
+config.extend = True
+albumart.pos = 397,412
+albumart.dimension = 214,214
+
+playinfo.title.pos = 50,655,bold
+playinfo.artist.pos = 50,705,regular
+playinfo.album.pos = 50,745,light
+playinfo.center = True
+playinfo.maxwidth = 1180
+
+playinfo.type.pos = 650,520
+playinfo.type.color = 244,92,225
+playinfo.type.dimension = 90,90
+
+playinfo.samplerate.pos = 230,565,light
+
+time.remaining.pos = 653,440
+time.remaining.color = 244,92,225
+font.size.digi = 68
+font.size.light = 20
+font.size.regular = 33
+font.size.bold = 47
+font.color = 255,255,255
+
+
+#-----------------------05 Audio Research---------------------
+[05G5_Audio Research]
+meter.type = circular
+channels = 2
+ui.refresh.period = 0.033
+bgr.filename = AudioReserch_1280_bgr.png
+fgr.filename = AudioReserch_1280_fgr.png
+indicator.filename = AudioReserch_1280_needle.png
+steps.per.degree = 4
+start.angle = 56
+stop.angle = -54
+distance = 90
+left.origin.x = 380
+left.origin.y = 190
+right.origin.x = 904
+right.origin.y = 190
+meter.x = 0
+meter.y = 482
+screen.bgr = AudioReserch_1280.jpg
+# --- volumio optional entries -------
+config.extend = True
+albumart.pos = 530,160
+albumart.dimension = 219,219
+playinfo.title.pos = 130,432,bold
+playinfo.artist.pos = 130,42,bold
+playinfo.album.pos = 130,106,light
+playinfo.center = True
+playinfo.maxwidth = 1020
+playinfo.type.pos = 990,195
+playinfo.type.color = 180,180,180
+playinfo.type.dimension = 90,90
+playinfo.samplerate.pos = 520,290,regular
+time.remaining.pos = 190,188
+time.remaining.color = 180,180,180
+font.size.digi = 82
+font.size.light = 24
+font.size.regular = 16
+font.size.bold = 25
+font.color = 180,180,180
+
+
+#-----------------------06 McIntosh-----------------
+[06G5_McIntosh]
+meter.type = circular
+channels = 2
+ui.refresh.period = 0.033
+bgr.filename = Mcintosh_1280_vu.png
+fgr.filename = Mcintosh_1280_frg.png
+indicator.filename = Mcintosh_1280_needle.png
+steps.per.degree = 4
+start.angle = 50
+stop.angle = -50
+distance = 100
+left.origin.x = 290
+left.origin.y = 305
+right.origin.x = 985
+right.origin.y = 305
+meter.x = 0
+meter.y = 0
+screen.bgr = Mcintosh_1280.jpg
+# --- volumio optional entries -------
+config.extend = True
+albumart.pos = 490,48
+albumart.dimension = 300,300
+playinfo.title.pos = 140,555,regular
+playinfo.artist.pos = 140,510,bold
+#playinfo.album.pos = 200,640,light
+playinfo.center = True
+playinfo.maxwidth = 1000
+playinfo.type.pos = 715,650
+playinfo.type.color = 0,177,64
+playinfo.type.dimension = 50,50
+playinfo.samplerate.pos = 140,700,light
+time.remaining.pos = 600,645
+time.remaining.color = 67,194,139
+font.size.digi = 24
+font.size.light = 16
+font.size.regular = 40
+font.size.bold = 30
+font.color = 180,180,180
+
+
+#-----------------------07 Mcintosh mono ------------------
+[07G5_McIntosh monoblock]
+meter.type = circular
+channels = 2
+ui.refresh.period = 0.033
+bgr.filename = McIntosh_monoblock_1280_bgr.png
+fgr.filename = McIntosh_monoblock_1280_fgr.png
+indicator.filename = McIntosh_monoblock_1280_needle.png
+steps.per.degree = 4
+start.angle = 60
+stop.angle = -60
+distance = 100
+left.origin.x = 318
+left.origin.y = 265
+right.origin.x = 960
+right.origin.y = 265
+meter.x = 0
+meter.y = 0
+screen.bgr = McIntosh_monoblock_1280.jpg
+# --- volumio optional entries -------
+config.extend = True
+albumart.pos = 280,520
+albumart.dimension = 140,140
+playinfo.title.pos = 140,460,regular
+playinfo.artist.pos = 140,750,light
+#playinfo.album.pos = 200,640,light
+playinfo.center = True
+playinfo.maxwidth = 1000
+playinfo.type.pos = 875,550
+playinfo.type.color = 0,177,64
+playinfo.type.dimension = 100,100
+playinfo.samplerate.pos = 130,690,bold
+time.remaining.pos = 530,597
+time.remaining.color = 67,194,139
+font.size.digi = 56
+font.size.light = 24
+font.size.regular = 35
+font.size.bold = 22
+font.color = 67,194,139
+
+#-----------------------08 Mcintosh hybrid ------------------
+
+[08G5_McIntosh Hybrid]
+meter.type = circular
+channels = 2
+ui.refresh.period = 0.033
+bgr.filename = Mcintosh_Hybrid_1280_vu.png
+fgr.filename = Mcintosh_Hybrid_10280_frg.png
+indicator.filename = Mcintosh_Hybrid_1280_needle.png
+steps.per.degree = 4
+start.angle = 54
+stop.angle = -56
+distance = 135
+left.origin.x = 335
+left.origin.y = 362
+right.origin.x = 927
+right.origin.y = 362
+meter.x = 0
+meter.y = 0
+screen.bgr = Mcintosh_hybrid_1280.jpg
+# --- volumio optional entries -------
+config.extend = True
+albumart.pos = 55,528
+albumart.dimension = 195,195
+playinfo.title.pos = 140,570,regular
+playinfo.artist.pos = 140,530,light
+#playinfo.album.pos = 200,640,light
+playinfo.center = True
+playinfo.maxwidth = 1000
+playinfo.type.pos = 715,650
+playinfo.type.color = 0,177,64
+playinfo.type.dimension = 50,50
+playinfo.samplerate.pos = 140,700,bold
+time.remaining.pos = 600,645
+time.remaining.color = 67,194,139
+font.size.digi = 24
+font.size.light = 28
+font.size.regular = 26
+font.size.bold = 18
+font.color = 180,180,180
+
+#-----------------------09 Mcintosh Tube ------------------
+[09G5_McIntosh Tube]
+meter.type = circular
+channels = 2
+ui.refresh.period = 0.033
+bgr.filename = McIntosh_tube_1280_bgr.png
+fgr.filename = McIntosh_tube_1280_fgr.png
+indicator.filename = McIntosh_tube_1280_needle.png
+steps.per.degree = 4
+start.angle = 46
+stop.angle = -46
+distance = 145
+left.origin.x = 364
+left.origin.y = 235
+right.origin.x = 990
+right.origin.y = 235
+meter.x = 0
+meter.y = 595
+screen.bgr = McIntosh_tube_1280.jpg
+# --- volumio optional entries -------
+config.extend = True
+albumart.pos = 20,82
+albumart.dimension = 190,190
+albumart.border = 1
+playinfo.title.pos = 180,560,regular
+playinfo.artist.pos = 180,20,regular
+#playinfo.album.pos = 365,940,light
+playinfo.center = True
+playinfo.maxwidth = 1020
+playinfo.type.pos = 1180,100
+playinfo.type.color = 4,58,159
+playinfo.type.dimension = 80,80
+playinfo.samplerate.pos = 165,725,bold
+time.remaining.pos = 580,660
+time.remaining.color = 4,58,159
+font.size.digi = 55
+font.size.light = 24
+font.size.regular = 30
+font.size.bold = 22
+font.color = 255,255,255
+
+
+#-----------------------10 KENWOOD VER-------------------------
+[10G5_Kenwood Ver]
+meter.type = circular
+channels = 2
+ui.refresh.period = 0.033
+bgr.filename = Kenwood Ver_1280x800_bgr.png
+fgr.filename = Kenwood Ver_1280x800_fgr.png
+indicator.filename = Kenwood Ver1280_needle.png
+steps.per.degree = 2
+left.start.angle = -129
+left.stop.angle = -50
+right.start.angle = 129
+right.stop.angle = 50
+distance = 350
+left.origin.x = -118
+left.origin.y = 394
+right.origin.x = 1395
+right.origin.y = 394
+meter.x = 0
+meter.y = 0
+screen.bgr = Kenwood Ver_1280x800.jpg
+
+# --- volumio optional entries -------
+config.extend = True
+albumart.pos = 468,198
+albumart.dimension = 339,339
+#albumart.border = 1
+playinfo.title.pos = 445,585,regular
+playinfo.artist.pos = 445,550,bold
+#playinfo.album.pos = 650,800,bold
+playinfo.center = True
+playinfo.maxwidth = 410
+playinfo.type.pos = 750,647
+playinfo.type.color = 253,172,103
+playinfo.type.dimension = 90,90
+playinfo.samplerate.pos = 580,752,light
+time.remaining.pos = 540,85
+time.remaining.color = 253,172,103
+font.size.digi = 60
+font.size.light = 18
+font.size.regular = 30
+font.size.bold = 20
+font.color = 253,172,103
+
+#-----------------------11 KENWOOD REVERSE------------------------
+[11G5_Kenwood Rev]
+meter.type = circular
+channels = 2
+ui.refresh.period = 0.033
+bgr.filename = Kenwood Rev1280_bgr.png
+fgr.filename = Kenwood Rev1280_fgr.png
+indicator.filename = Kenwood Rev1280_needle.png
+steps.per.degree = 4
+start.angle = -218
+stop.angle = -142
+distance = 260
+left.origin.x = 320
+left.origin.y = 360
+right.origin.x = 969
+right.origin.y = 360
+meter.x = 0
+meter.y = 0
+screen.bgr = Kenwood Rev1280.jpg
+# --- volumio optional entries -------
+config.extend = True
+albumart.pos = 12,7
+albumart.dimension = 305,305
+#albumart.border = 1
+playinfo.title.pos = 350,200,regular
+playinfo.artist.pos = 350,50,regular
+playinfo.album.pos = 350,140,bold
+playinfo.center = True
+playinfo.maxwidth = 700
+playinfo.type.pos = 1190,395
+playinfo.type.color = 253,172,103
+playinfo.type.dimension = 70,70
+playinfo.samplerate.pos = 290,440,light
+time.remaining.pos = 550,375
+time.remaining.color = 253,172,103
+font.size.digi = 52
+font.size.light = 18
+font.size.regular = 62
+font.size.bold = 26
+font.color = 160,160,160
+
+
+#-----------------------12 VU Single Yellow-------------------------
+[12G5_VU Single Yellow]
+meter.type = linear
+channels = 2
+direction = bottom-top
+ui.refresh.period = 0.033
+bgr.filename = Vu_Yellow_bgr.png
+indicator.filename = Vu_Yellow_needle.png
+indicator.type = single
+left.x = 0
+left.y = 775
+right.x = 1031
+right.y = 775
+position.regular = 750
+step.width.regular = 1
+meter.x = 0
+meter.y = 0
+screen.bgr = Vu_Yellow.jpg
+# --- volumio optional entries -------
+config.extend = True
+albumart.pos = 372,15
+albumart.dimension = 533,533
+albumart.border = 1
+playinfo.title.pos = 370,730,regular
+playinfo.artist.pos = 370,650,bold
+playinfo.album.pos = 370,690,boldt
+playinfo.center = True
+playinfo.maxwidth = 533
+playinfo.type.pos = 390,560
+playinfo.type.color = 255,255,255
+playinfo.type.dimension = 80,80
+playinfo.samplerate.pos = 565,590,light
+time.remaining.pos = 538,570
+time.remaining.color = 255,255,255
+font.size.digi = 60
+font.size.light = 18
+font.size.regular = 40
+font.size.bold = 30
+font.color = 218,137,56
+
+
+#-----------------------13 NAD C3050 Purple------------------------
+[13G5_NAD C3050 Purple]
+meter.type = circular
+channels = 2
+ui.refresh.period = 0.033
+bgr.filename = NAD C3050_HD_Purple_bgr.png
+fgr.filename = NAD C3050_HD_Purple_fgr.png
+indicator.filename = NAD C3050_HD_Purple_needle.png
+steps.per.degree = 4
+start.angle = 40
+stop.angle = -41
+distance = 160
+left.origin.x = 288
+left.origin.y = 300
+right.origin.x = 1030
+right.origin.y = 300
+meter.x = 0
+meter.y = 0
+screen.bgr = NAD C3050_HD_Purple.jpg
+# --- volumio optional entries -------
+config.extend = True
+albumart.pos = 25,555
+albumart.dimension = 235,235
+playinfo.title.pos = 303,585,bold
+playinfo.artist.pos = 300,660,regular
+playinfo.album.pos = 300,710,regular
+playinfo.center = True
+playinfo.maxwidth = 960
+playinfo.type.pos = 593,200
+playinfo.type.color = 244,92,225
+playinfo.type.dimension = 72,72
+playinfo.samplerate.pos = 160,60,light
+time.remaining.pos = 550,120
+time.remaining.color = 255,255,255
+font.size.digi = 52
+font.size.light = 20
+font.size.regular = 34
+font.size.bold = 45
+font.color = 244,92,225
+
+
+
+#-----------------------14 NAD C3050 -------------------------
+[14G5_NAD C3050]
+meter.type = circular
+channels = 2
+ui.refresh.period = 0.033
+bgr.filename = NAD C3050_HD_1280_bgr.png
+fgr.filename = NAD C3050_HD_1280_fgr.png
+indicator.filename = NAD C3050_HD_1280_needle.png
+steps.per.degree = 4
+start.angle = 40
+stop.angle = -41
+distance = 160
+left.origin.x = 288
+left.origin.y = 300
+right.origin.x = 1030
+right.origin.y = 300
+meter.x = 0
+meter.y = 0
+screen.bgr = NAD C3050_HD_1280.jpg
+# --- volumio optional entries -------
+config.extend = True
+albumart.pos = 25,555
+albumart.dimension = 235,235
+playinfo.title.pos = 303,585,bold
+playinfo.artist.pos = 300,660,regular
+playinfo.album.pos = 300,710,regular
+playinfo.center = True
+playinfo.maxwidth = 960
+playinfo.type.pos = 593,200
+playinfo.type.color = 238,234,202
+playinfo.type.dimension = 72,72
+playinfo.samplerate.pos = 160,60,light
+time.remaining.pos = 550,120
+time.remaining.color = 0,0,0
+font.size.digi = 52
+font.size.light = 20
+font.size.regular = 34
+font.size.bold = 45
+font.color = 238,234,202
+
+#----------------------------15 Naim green---------------
+[15G5_Naim green]
+meter.type = circular
+channels = 2
+ui.refresh.period = 0.033
+bgr.filename = Naim_1280_bgr.png
+fgr.filename = Naim_1280_fgr.png
+indicator.filename = Naim_1280_needle.png
+steps.per.degree = 4
+start.angle = 46
+stop.angle = -46
+distance = 200
+left.origin.x = 373
+left.origin.y = 380
+right.origin.x = 898
+right.origin.y = 380
+meter.x = 0
+meter.y = 324
+screen.bgr = Naim_1280.jpg
+# --- volumio optional entries -------
+config.extend = True
+albumart.pos = 22,13
+albumart.dimension = 280,280
+#albumart.border = 1
+playinfo.title.pos = 360,200,regular
+playinfo.artist.pos = 360,245,light
+#playinfo.album.pos = 20,735,light
+playinfo.center = True
+playinfo.maxwidth = 825
+playinfo.type.pos = 413,95
+playinfo.type.color = 48,219,33
+playinfo.type.dimension = 55,55
+playinfo.samplerate.pos = 28,160,bold
+time.remaining.pos = 664,73
+time.remaining.color = 48,219,33
+font.size.digi = 62
+font.size.light = 26
+font.size.regular = 30
+font.size.bold = 18
+font.color = 48,219,33
+
+
+#----------------------------16 Naim green---------------
+[16G5_Naim 2]
+meter.type = circular
+channels = 2
+ui.refresh.period = 0.033
+bgr.filename = Naim2_1280_bgr.png
+fgr.filename = Naim2_1280_fgr.png
+indicator.filename = Naim2_1280_needle.png
+steps.per.degree = 4
+start.angle = 53
+stop.angle = -51
+distance = 165
+left.origin.x = 890
+left.origin.y = 335
+right.origin.x = 891
+right.origin.y = 670
+meter.x = 0
+meter.y = 0
+screen.bgr = Naim2_1280.jpg
+# --- volumio optional entries -------
+config.extend = True
+albumart.pos = 13,23
+albumart.dimension = 480,480
+#albumart.border = 1
+playinfo.title.pos = 540,690,regular
+playinfo.artist.pos = 540,740,light
+#playinfo.album.pos = 20,735,light
+playinfo.center = True
+playinfo.maxwidth = 710
+playinfo.type.pos = 400,600
+playinfo.type.color = 48,219,33
+playinfo.type.dimension = 55,55
+playinfo.samplerate.pos = 68,720,bold
+time.remaining.pos = 100,570
+time.remaining.color = 48,219,33
+font.size.digi = 62
+font.size.light = 26
+font.size.regular = 30
+font.size.bold = 18
+font.color = 48,219,33
+
+#-----------------------17 NAIM REVERSE------------------------
+[17G5_Naim Rev]
+meter.type = circular
+channels = 2
+ui.refresh.period = 0.033
+bgr.filename = Naim Rev_1280_bgr.png
+fgr.filename = Naim Rev_1280_fgr.png
+indicator.filename = Naim Rev_1280_needle.png
+steps.per.degree = 4
+start.angle = -220
+stop.angle = -140
+distance = 260
+left.origin.x = 322
+left.origin.y = -40
+right.origin.x = 961
+right.origin.y = -40
+meter.x = 0
+meter.y = 0
+screen.bgr = Naim Rev_1280.jpg
+# --- volumio optional entries -------
+config.extend = True
+albumart.pos = 7,451
+albumart.dimension = 330,330
+#albumart.border = 1
+playinfo.title.pos = 375,445,bold
+playinfo.artist.pos = 375,675,bold
+playinfo.album.pos = 375,730,regular
+playinfo.center = True
+playinfo.maxwidth = 850
+playinfo.type.pos = 380,540
+playinfo.type.color = 48,219,33
+playinfo.type.dimension = 80,80
+playinfo.samplerate.pos = 665,630,light
+time.remaining.pos = 605,550
+time.remaining.color = 48,219,33
+font.size.digi = 68
+font.size.light = 22
+font.size.regular = 28
+font.size.bold = 42
+font.color = 160,160,160
+
+
+#------------------------- 18 Sansui ---------------
+[18G5_Sansui]
+meter.type = linear
+channels = 2
+ui.refresh.period = 0.033
+bgr.filename = Sansui_1280_bgr.png
+indicator.filename = Sansui_1280_indicator.png
+left.x = 9
+left.y = 95
+right.x = 9
+right.y = 250       
+position.regular = 48
+position.overload = 8
+step.width.regular = 13
+step.width.overload = 13
+meter.x = 390
+meter.y = 0
+screen.bgr = Sansui_1280.jpg
+# --- volumio optional entries -------
+config.extend = True
+albumart.pos = 100,80
+albumart.dimension = 280,275
+playinfo.title.pos = 550,465,regular
+playinfo.artist.pos = 550,370,bold
+playinfo.album.pos = 550,415,light
+playinfo.center = True
+playinfo.maxwidth = 590
+playinfo.type.pos = 490,542
+playinfo.type.color = 230,230,230
+playinfo.type.dimension = 45,45
+playinfo.samplerate.pos = 65,660,regular 
+time.remaining.pos = 275,590
+time.remaining.color = 249,115,42
+font.size.digi = 50
+font.size.light = 23
+font.size.regular = 22
+font.size.bold = 23
+font.color = 230,230,230
+
+#-----------------------19 SANSUI VERTICAL ---------------------------
+[19G5_Sansui 2V]
+meter.type = linear
+channels = 2
+direction = bottom-top
+ui.refresh.period = 0.033
+bgr.filename = Sansui_vertical_bgr.png
+indicator.filename = Sansui_vertical_indicator.png
+left.x = 299
+left.y = 365
+right.x = 852
+right.y = 365       
+position.regular = 15
+step.width.regular = 13
+meter.x = 0
+meter.y = 0
+screen.bgr = Sansui_vertical.jpg
+
+# --- volumio optional entries -------
+config.extend = True
+albumart.pos = 561,354
+albumart.dimension = 159,159
+albumart.border = 1
+
+playinfo.title.pos = 16,730,bold
+playinfo.artist.pos = 16,265,bold
+playinfo.album.pos = 16,660,regular
+playinfo.center = True
+playinfo.maxwidth = 1250
+
+playinfo.type.pos = 560,520
+playinfo.type.color = 180,180,180
+playinfo.type.dimension = 50,50
+playinfo.samplerate.pos = 50,545,light 
+
+time.remaining.pos = 200,60
+time.remaining.color = 255,119,63
+font.size.digi = 66
+font.size.light = 13
+font.size.regular = 30
+font.size.bold = 40
+font.color = 160,160,160
+
+#-------------------------20 Brianworks
+[20G5_Brianworks]
+meter.type = circular
+channels = 2
+ui.refresh.period = 0.033
+bgr.filename = Brianworks_1280_bgr.png
+fgr.filename = Brianworks_1280_fgr.png
+indicator.filename = Brianworks_1280_needle.png
+steps.per.degree = 4
+start.angle = 45
+stop.angle = -43
+distance = 320
+left.origin.x = 332
+left.origin.y = 525
+right.origin.x = 968
+right.origin.y = 525
+meter.x = 0
+meter.y = 0
+screen.bgr = Brianworks_1280.jpg
+# --- volumio optional entries -------
+config.extend = True
+albumart.pos = 51,472
+albumart.dimension = 266,266
+playinfo.title.pos = 440,590,bold
+playinfo.artist.pos = 440,470,bold
+playinfo.album.pos = 440,540,regular
+playinfo.center = True
+playinfo.maxwidth = 778
+playinfo.type.pos = 603,10
+playinfo.type.color = 163,136,98
+playinfo.type.dimension = 80,80
+playinfo.samplerate.pos = -200,750,light
+time.remaining.pos = 567,685
+time.remaining.color = 255,255,255
+font.size.digi = 36
+font.size.light = 26
+font.size.regular = 30
+font.size.bold = 55
+font.color = 255,255,255
+
+#-----------------------21 BLACK BLUR-------------------------
+[21G5_BlackBlur]
+meter.type = circular
+channels = 2
+ui.refresh.period = 0.033
+bgr.filename = BlackBlur1280_bgr.png
+fgr.filename = BlackBlur1280_fgr.png
+indicator.filename = BlackBlur1280_needle.png
+steps.per.degree = 2
+left.start.angle = -130
+left.stop.angle = -50
+right.start.angle = 130
+right.stop.angle = 50
+distance = 350
+left.origin.x = -230
+left.origin.y = 406
+right.origin.x = 1520
+right.origin.y = 396
+meter.x = 0
+meter.y = 0
+screen.bgr = BlackBlur1280.jpg
+
+# --- volumio optional entries -------
+config.extend = True
+albumart.pos = 410,17
+albumart.dimension = 450,450
+playinfo.title.pos = 360,600,bold
+playinfo.artist.pos = 360,680,regular
+playinfo.album.pos = 360,735,regular
+playinfo.center = True
+playinfo.maxwidth = 540
+playinfo.type.pos = 720,470
+playinfo.type.color = 180,180,180
+playinfo.type.dimension = 80,80
+playinfo.samplerate.pos = 485,540,light 
+time.remaining.pos = 430,490
+time.remaining.color = 180,180,180
+font.size.digi = 65
+font.size.light = 20
+font.size.regular = 35
+font.size.bold = 45
+font.color = 180,180,180
+
+
+#-----------------------22 DARK SPOTIFY-------------------------
+[22G5_Dark Spotify]
+meter.type = circular
+channels = 2
+ui.refresh.period = 0.033
+bgr.filename = Dark_Spotify_1280_bgr.png
+fgr.filename = Dark_Spotify_1280_fgr.png
+indicator.filename = Dark_Spotify_1280_needle.png
+steps.per.degree = 4
+start.angle = 42
+stop.angle = -42
+distance = 180
+left.origin.x = 368
+left.origin.y = 365
+right.origin.x = 915
+right.origin.y = 365
+meter.x = 0
+meter.y = 0
+screen.bgr = Dark_Spotify_1280.jpg
+
+# --- volumio optional entries -------
+config.extend = True
+albumart.pos = 120,417
+albumart.dimension = 212,212
+playinfo.title.pos = 354,570,bold
+playinfo.artist.pos = 354,450,bold
+playinfo.album.pos = 354,520,regular
+playinfo.center = True
+playinfo.maxwidth = 594
+playinfo.type.pos = 1010,520
+playinfo.type.color = 43,239,20
+playinfo.type.dimension = 90,90
+playinfo.samplerate.pos = 320,680,light
+time.remaining.pos = 990,430
+time.remaining.color = 43,239,20
+font.size.digi = 42
+font.size.light = 25
+font.size.regular = 30
+font.size.bold = 50
+font.color = 43,239,20
+
+
+#-----------------------23 HITACHI HMA7500 BLACK-------------------------
+
+[23G5_Hitachi HMA7500 Black]
+meter.type = circular
+channels = 2
+ui.refresh.period = 0.033
+bgr.filename = Hitachi_HMA-7500_black_bgr.png
+fgr.filename = Hitachi_HMA-7500_black_fgr.png
+indicator.filename = Hitachi_HMA-7500_black_needl.png
+steps.per.degree = 4
+start.angle = 33
+stop.angle = -33
+distance = 230
+left.origin.x = 330
+left.origin.y = 460
+right.origin.x = 958
+right.origin.y = 460
+meter.x = 0
+meter.y = 0
+screen.bgr = Hitachi_HMA-7500_black.jpg
+
+# --- volumio optional entries -------
+config.extend = True
+albumart.pos = 83,548
+albumart.dimension = 224,224
+playinfo.title.pos = 128,405,bold
+playinfo.artist.pos = 126,462,regular
+#playinfo.album.pos = 365,940,light
+playinfo.center = True
+playinfo.maxwidth = 1032
+playinfo.type.pos = 520,678
+playinfo.type.color =  213,169,137
+playinfo.type.dimension = 60,60
+playinfo.samplerate.pos = 170,695,light
+time.remaining.pos = 535,570
+time.remaining.color = 213,169,137
+font.size.digi = 62
+font.size.light = 25
+font.size.regular = 24
+font.size.bold = 42
+font.color = 213,169,137
+
+#-----------------------24 HITACHI HCA7500 SILVER-------------------------
+
+[24G5_Hitachi HCA7500 Silver]
+meter.type = circular
+channels = 2
+ui.refresh.period = 0.033
+bgr.filename = HITACHI_Silver_bgr.png
+fgr.filename = HITACHI_Silver_fgr.png
+indicator.filename = HITACHI_Silver_needle.png
+steps.per.degree = 4
+start.angle = 32
+stop.angle = -31
+distance = 190
+left.origin.x = 488
+left.origin.y = 700
+right.origin.x = 952
+right.origin.y = 700
+meter.x = 0
+meter.y = 0
+screen.bgr = HITACHI_Silver.jpg
+
+
+# --- volumio optional entries -------
+config.extend = True
+albumart.pos = 269,205
+albumart.dimension = 132,132
+playinfo.title.pos = 285,360,bold
+playinfo.artist.pos = 285,718,bold
+playinfo.album.pos = 285,760,light
+playinfo.center = True
+playinfo.maxwidth = 855
+playinfo.type.pos = 860,215
+playinfo.type.color =  0,0,0
+playinfo.type.dimension = 80,80
+playinfo.samplerate.pos = 470,290,light
+time.remaining.pos = 643,630
+time.remaining.color = 0,0,0
+font.size.digi = 40
+font.size.light = 16
+font.size.regular = 35
+font.size.bold = 35
+font.color = 0,0,0
+
+#-------------------------25 Marantz SILVER----------
+
+[25G5_Marantz Silver]
+meter.type = circular
+channels = 2
+ui.refresh.period = 0.033
+bgr.filename = Marantz_1280_vu.png
+fgr.filename = Marantz_1280_frg.png
+indicator.filename = Marantz_1280_needle.png
+steps.per.degree = 4
+start.angle = 58
+stop.angle = -58
+distance = 80
+left.origin.x = 310
+left.origin.y = 205
+right.origin.x = 973
+right.origin.y = 205
+meter.x = 0
+meter.y = 590
+screen.bgr = Marantz_1280.jpg
+# --- volumio optional entries -------
+config.extend = True
+albumart.pos = 517,17
+albumart.dimension = 238,238
+playinfo.title.pos = 290,260,bold
+playinfo.artist.pos = 290,520,light
+#playinfo.album.pos = 200,640,light
+playinfo.center = True
+playinfo.maxwidth = 700
+playinfo.type.pos = 605,650
+playinfo.type.color = 255,255,255
+playinfo.type.dimension = 70,70
+playinfo.samplerate.pos = 170,370,regular
+time.remaining.pos = 715,360
+time.remaining.color = 180,180,180
+font.size.digi = 34
+font.size.light = 26
+font.size.regular = 20
+font.size.bold = 26
+font.color = 0,0,0
+
+#----------------------- 26 Marantz Blck-------------------
+[26G5_Marantz Black]
+meter.type = circular
+channels = 2
+ui.refresh.period = 0.033
+bgr.filename = Marantz_1280_vu_2.png
+fgr.filename = Marantz_1280_frg_2.png
+indicator.filename = Marantz_1280_needle_2.png
+steps.per.degree = 4
+start.angle = 58
+stop.angle = -58
+distance = 80
+left.origin.x = 315
+left.origin.y = 205
+right.origin.x = 977
+right.origin.y = 205
+meter.x = 0
+meter.y = 590
+screen.bgr = Marantz_1280_2.jpg
+# --- volumio optional entries -------
+config.extend = True
+albumart.pos = 517,17
+albumart.dimension = 238,238
+playinfo.title.pos = 290,260,bold
+playinfo.artist.pos = 290,530,bold
+#playinfo.album.pos = 200,640,light
+playinfo.center = True
+playinfo.maxwidth = 700
+playinfo.type.pos = 605,655
+playinfo.type.color = 255,255,255
+playinfo.type.dimension = 70,70
+playinfo.samplerate.pos = 170,360,regular
+time.remaining.pos = 715,360
+time.remaining.color = 180,180,180
+font.size.digi = 34
+font.size.light = 28
+font.size.regular = 20
+font.size.bold = 26
+font.color = 255,255,255
+
+
+#-------------------27 Marantz CD --------------------------
+[27G5_MarantzCD]
+meter.type = linear
+channels = 2
+ui.refresh.period = 0.033
+bgr.filename = MarantzCD_1280_bgr.png
+indicator.filename = MarantzCD_1280_indicator.png
+left.x = 61
+left.y = 92
+right.x = 61
+right.y = 311       
+position.regular = 182
+position.overload = 40
+step.width.regular = 6
+step.width.overload = 6
+meter.x = 0
+meter.y = 0
+screen.bgr = MarantzCD_1280.jpg
+# --- volumio optional entries -------
+config.extend = True
+albumart.pos = 83,514
+albumart.dimension = 179,179
+#albumart.border = 1
+playinfo.title.pos = 240,720,bold
+playinfo.artist.pos = 240,575,bold
+playinfo.album.pos = 240,623,light
+playinfo.center = True
+playinfo.maxwidth = 810
+playinfo.type.pos = 1060,560
+playinfo.type.color = 180,180,180
+playinfo.type.dimension = 85,85
+playinfo.samplerate.pos = 695,522,regular 
+time.remaining.pos = 1030,652
+time.remaining.color = 180,180,180
+font.size.digi = 40
+font.size.light = 20
+font.size.regular = 16
+font.size.bold = 27
+font.color = 230,230,230
+
+
+#----------------- 28 Technics black ------------------
+
+[28G5_Technisc_Black]
+meter.type = circular
+channels = 2
+ui.refresh.period = 0.033
+bgr.filename = Technics-l1600_1280_bgr.png
+fgr.filename = Technics-l1600_1280_fgr.png
+indicator.filename = Technics-l1600_1280_needle.png
+steps.per.degree = 4
+start.angle = 33
+stop.angle = -35
+distance = 140
+left.origin.x = 336
+left.origin.y = 340
+right.origin.x = 942
+right.origin.y = 340
+meter.x = 0
+meter.y = 268
+screen.bgr = Technics-l1600_1280.jpg
+# --- volumio optional entries -------
+config.extend = True
+albumart.pos = 551,290
+albumart.dimension = 174,174
+playinfo.title.pos = 22,735,bold
+playinfo.artist.pos = 22,680,bold
+#playinfo.album.pos = 428,345,regular
+playinfo.center = True
+playinfo.maxwidth = 1230
+playinfo.type.pos = 865,175
+playinfo.type.color = 255,255,255
+playinfo.type.dimension = 45,45
+playinfo.samplerate.pos = 370,187,light
+time.remaining.pos = 865,115
+time.remaining.color = 255,255,255
+font.size.digi = 55
+font.size.light = 18
+font.size.regular = 22
+font.size.bold = 35
+font.color = 255,255,255
+
+
+#----------------------29 Technics Silver --------------
+[29G5_Technisc_Silver]
+meter.type = circular
+channels = 2
+ui.refresh.period = 0.033
+bgr.filename = Technics-l1600_1280_Silver_bgr.png
+fgr.filename = Technics-l1600_1280_Silver_fgr.png
+indicator.filename = Technics-l1600_1280_Silver_needle.png
+steps.per.degree = 4
+start.angle = 33
+stop.angle = -35
+distance = 140
+left.origin.x = 336
+left.origin.y = 340
+right.origin.x = 942
+right.origin.y = 340
+meter.x = 0
+meter.y = 268
+screen.bgr = Technics-l1600_Silver_1280.jpg
+# --- volumio optional entries -------
+config.extend = True
+albumart.pos = 551,290
+albumart.dimension = 174,174
+playinfo.title.pos = 22,735,bold
+playinfo.artist.pos = 22,680,bold
+#playinfo.album.pos = 428,345,regular
+playinfo.center = True
+playinfo.maxwidth = 1230
+playinfo.type.pos = 865,170
+playinfo.type.color = 255,255,255
+playinfo.type.dimension = 45,45
+playinfo.samplerate.pos = 370,182,light
+time.remaining.pos = 865,115
+time.remaining.color = 255,255,255
+font.size.digi = 55
+font.size.light = 18
+font.size.regular = 22
+font.size.bold = 35
+font.color = 0,0,0
+
+#-----------------------30 ROUND YELLOW-------------------------
+[30G5_Round yellow]
+meter.type = circular
+channels = 2
+ui.refresh.period = 0.033
+bgr.filename = Round_yellow2_bgr.png
+fgr.filename = Round_yellow2_fgr.png
+indicator.filename = Round_yellow2_needle.png
+steps.per.degree = 4
+start.angle = 44
+stop.angle = -44
+distance = 150
+left.origin.x = 301
+left.origin.y = 480
+right.origin.x = 979
+right.origin.y = 480
+meter.x = 0
+meter.y = 0
+screen.bgr = Round_yellow2.jpg
+# --- volumio optional entries -------
+config.extend = True
+albumart.pos = 530,470
+albumart.dimension = 160,160
+albumart.border = 1
+playinfo.title.pos = 15,650,regular
+playinfo.artist.pos = 15,710,light
+#playinfo.album.pos = 365,940,light
+playinfo.center = True
+playinfo.maxwidth = 1230
+playinfo.type.pos = 570,130
+playinfo.type.color = 218,201,118
+playinfo.type.dimension = 70,70
+playinfo.samplerate.pos = 0,100,bold
+time.remaining.pos = 510,20
+time.remaining.color = 218,201,118
+font.size.digi = 62
+font.size.light = 42
+font.size.regular = 45
+font.size.bold = 20
+font.color = 218,201,118
+
+
+
+#-----------------------31 REHRINGER-------------------------
+[31G5_Rehringer]
+meter.type = circular
+channels = 2
+ui.refresh.period = 0.033
+bgr.filename = Rehringer1280_bgr.png
+fgr.filename = Rehringer1280_fgr.png
+indicator.filename = Rehringer1280_needle.png
+steps.per.degree = 4
+start.angle = 37
+stop.angle = -37
+distance = 200
+left.origin.x = 322
+left.origin.y = 450
+right.origin.x = 965
+right.origin.y = 450
+meter.x = 0
+meter.y = 0
+screen.bgr = Rehringer1280.jpg
+
+# --- volumio optional entries -------
+config.extend = True
+albumart.pos = 516,556
+albumart.dimension = 240,240
+
+playinfo.title.pos = 781,680,regular
+playinfo.artist.pos = 27,670,bold
+playinfo.album.pos = 27,715,bold
+playinfo.center = True
+playinfo.maxwidth = 473
+
+playinfo.type.pos = 770,528
+playinfo.type.color = 133,157,228
+playinfo.type.dimension = 100,100
+
+playinfo.samplerate.pos = 410,500,light
+
+time.remaining.pos = 350,555
+time.remaining.color = 133,157,228
+
+font.size.digi = 45
+font.size.light = 25
+font.size.regular = 50
+font.size.bold = 35
+font.color = 133,157,228
+
+
+#-----------------------32 AKAI REVERSE------------------------
+[32G5_Akai Reverse]
+meter.type = circular
+channels = 2
+ui.refresh.period = 0.033
+bgr.filename = Akai_1280_bgr.png
+fgr.filename = Akai_1280_fgr.png
+indicator.filename = Akai_1280_needle.png
+steps.per.degree = 4
+start.angle = -229
+stop.angle = -131
+distance = 230
+left.origin.x = 318
+left.origin.y = 465
+right.origin.x = 973
+right.origin.y = 465
+meter.x = 0
+meter.y = 0
+screen.bgr = Akai_1280.jpg
+
+# --- volumio optional entries -------
+config.extend = True
+albumart.pos = 413,403
+albumart.dimension = 152,152
+#albumart.border = 1
+
+playinfo.title.pos = 330,258,bold
+playinfo.artist.pos = 330,195,regular
+playinfo.album.pos = 330,225,regular
+playinfo.center = True
+playinfo.maxwidth = 620
+
+playinfo.type.pos = 760,460
+
+playinfo.type.color = 180,180,180
+playinfo.type.dimension = 60,60
+
+playinfo.samplerate.pos = 480,527,light
+
+time.remaining.pos = 723,412
+time.remaining.color = 255,255,255
+font.size.digi = 40
+font.size.light = 20
+font.size.regular = 22
+font.size.bold = 35
+font.color = 0,0,0
+
+#---------------------- 33 ClasseM--------------------
+[33G5_ClasseM]
+meter.type = circular
+channels = 2
+ui.refresh.period = 0.033
+bgr.filename = Classe_1280_bgr.png
+fgr.filename = Classe_1280_fgr.png
+indicator.filename = Classe_1280_needle.png
+steps.per.degree = 4
+start.angle = 42
+stop.angle = -44
+distance = 220
+left.origin.x = 323
+left.origin.y = 318
+right.origin.x = 963
+right.origin.y = 318
+meter.x = 0
+meter.y = 360
+screen.bgr = Classe_1280.jpg
+# --- volumio optional entries -------
+config.extend = True
+albumart.pos = 348,71
+albumart.dimension = 232,232
+playinfo.title.pos = 320,720,bold
+playinfo.artist.pos = 320,600,bold
+playinfo.album.pos = 320,658,regular
+playinfo.center = True
+playinfo.maxwidth = 640
+playinfo.type.pos = 770,70
+playinfo.type.color = 255,255,255
+playinfo.type.dimension = 75,75
+playinfo.samplerate.pos = 495,150,light
+time.remaining.pos = 720,230
+time.remaining.color = 255,255,255
+font.size.digi = 50
+font.size.light = 22
+font.size.regular = 30
+font.size.bold = 35
+font.color = 255,255,255
+
+
+#----------------------- 34 BMC ----------------------
+[34G5_BMC]
+meter.type = circular
+channels = 2
+ui.refresh.period = 0.033
+bgr.filename = BMC_1280_bgr.png
+fgr.filename = BMC_1280_fgr.png
+indicator.filename = BMC_1280_needle.png
+steps.per.degree = 4
+start.angle = 54
+stop.angle = -58
+distance = 100
+left.origin.x = 290
+left.origin.y = 379
+right.origin.x = 988
+right.origin.y = 379
+meter.x = 0
+meter.y = 0
+screen.bgr = BMC_1280.jpg
+# --- volumio optional entries -------
+config.extend = True
+albumart.pos = 37,581
+albumart.dimension = 180,180
+playinfo.title.pos = 245,690,bold
+playinfo.artist.pos = 245,590,bold
+playinfo.album.pos = 245,643,regular
+playinfo.center = True
+playinfo.maxwidth = 780
+playinfo.type.pos = 585,105
+playinfo.type.color = 255,255,255
+playinfo.type.dimension = 110,110
+playinfo.samplerate.pos = 250,447,light
+time.remaining.pos = 550,385
+time.remaining.color = 255,255,255
+font.size.digi = 50
+font.size.light = 22
+font.size.regular = 30
+font.size.bold = 40
+font.color = 255,255,255
+
+
+#-----------------------35 HARTMAN-------------------------
+[35G5_Hartman]
+meter.type = circular
+channels = 2
+ui.refresh.period = 0.033
+bgr.filename = Hartman_1280_bgr.png
+fgr.filename = Hartman_1280_fgr.png
+indicator.filename = Hartman_1280_needle.png
+steps.per.degree = 4
+start.angle = 41
+stop.angle = -43
+distance = 130
+left.origin.x = 297
+left.origin.y = 445
+right.origin.x = 988
+right.origin.y = 445
+meter.x = 0
+meter.y = 0
+screen.bgr = Hartman_1280.jpg
+
+# --- volumio optional entries -------
+config.extend = True
+albumart.pos = 503,518
+albumart.dimension = 276,276
+
+playinfo.title.pos = 790,680,regular
+playinfo.artist.pos = 10,660,regular
+playinfo.album.pos = 10,730,bold
+playinfo.center = True
+playinfo.maxwidth = 480
+
+playinfo.type.pos = 590,380
+playinfo.type.color = 255,232,176
+playinfo.type.dimension = 95,95
+
+playinfo.samplerate.pos = 400,476,light
+
+time.remaining.pos = 525,26
+time.remaining.color = 255,232,176
+font.size.digi = 70
+font.size.light = 20
+font.size.regular = 50
+font.size.bold = 30
+font.color = 255,232,176
+
+#--------------------- 36 Klenghelm ----------------
+[36G5_Klanghelm]
+meter.type = circular
+channels = 2
+ui.refresh.period = 0.033
+bgr.filename = Klanghelm_1280_VU.png
+fgr.filename = Klanghelm_1280_frg.png
+indicator.filename = Klanghelm-needle_1280.png
+steps.per.degree = 4
+start.angle = 53
+stop.angle = -53
+distance = 148
+left.origin.x = 333
+left.origin.y = 330
+right.origin.x = 947
+right.origin.y = 330
+meter.x = 0
+meter.y = 160
+screen.bgr = Klanghelm_1280.jpg
+# --- volumio optional entries -------
+config.extend = True
+albumart.pos = 500,495
+albumart.dimension = 280,280
+playinfo.title.pos = 540,50,bold
+playinfo.artist.pos = 50,650,bold
+playinfo.album.pos = 50,700,light
+playinfo.center = False
+playinfo.maxwidth = 440
+playinfo.type.pos = 900,650
+playinfo.type.color = 204,176,97
+playinfo.type.dimension = 80,80
+playinfo.samplerate.pos = 1070,680,regular
+time.remaining.pos = 1070,560
+time.remaining.color = 204,176,97
+font.size.digi = 40
+font.size.light = 30
+font.size.regular = 20
+font.size.bold = 30
+font.color = 204,176,97
+
+#-----------------------37 TURNTABLE GREEN METERS ---------------------------
+[37G5_TURN Vinyl Green]
+meter.type = circular
+channels = 2
+ui.refresh.period = 0.033
+bgr.filename = Turnable_Green_bgr.png
+fgr.filename = Turnable_Green_fgr.png
+indicator.filename = Turnable_Green_needle.png
+steps.per.degree = 2
+start.angle = 55
+stop.angle = -54
+distance = 140
+left.origin.x = 316
+left.origin.y = 800
+right.origin.x = 956
+right.origin.y = 800
+meter.x =0
+meter.y = 0
+screen.bgr = Turnable_Green.jpg
+
+# --- volumio optional entries -------
+config.extend = True
+albumart.pos = 27,28
+albumart.dimension = 432,432
+
+playinfo.title.pos = 830,205,bold
+playinfo.artist.pos = 830,40,bold
+playinfo.album.pos = 830,123,bold
+playinfo.center = False
+playinfo.maxwidth = 441
+
+playinfo.type.pos = 838,285
+playinfo.type.color = 204,176,97
+playinfo.type.dimension = 53,53
+
+playinfo.samplerate.pos = 1030,300,bold
+
+time.remaining.pos = 553,725
+time.remaining.color = 255,255,255
+font.size.digi = 45
+font.size.light = 25
+font.size.regular = 20
+font.size.bold = 25
+font.color = 255,255,255
+
+#-----------------------38 TURNTABLE GREEN 2 ---------------------------
+[38G5_TURN Vinyl Green 2]
+meter.type = circular
+channels = 2
+ui.refresh.period = 0.033
+bgr.filename = Turnable_Green2_bgr.png
+fgr.filename = Turnable_Green2_fgr.png
+indicator.filename = Turnable_Green2_needle.png
+steps.per.degree = 2
+start.angle = 44
+stop.angle = -44
+distance = 140
+left.origin.x = 227
+left.origin.y = 800
+right.origin.x = 1065
+right.origin.y = 800
+meter.x =0
+meter.y = 0
+screen.bgr = Turnable_Green2.jpg
+
+# --- volumio optional entries -------
+config.extend = True
+albumart.pos = 27,28
+albumart.dimension = 432,432
+
+playinfo.title.pos = 830,205,bold
+playinfo.artist.pos = 830,40,bold
+playinfo.album.pos = 830,123,bold
+playinfo.center = False
+playinfo.maxwidth = 441
+
+playinfo.type.pos = 838,285
+playinfo.type.color = 204,176,97
+playinfo.type.dimension = 53,53
+
+playinfo.samplerate.pos = 1030,300,bold
+
+time.remaining.pos = 553,665
+time.remaining.color = 255,255,255
+font.size.digi = 50
+font.size.light = 25
+font.size.regular = 20
+font.size.bold = 25
+font.color = 255,255,255
+
+
+
+#-----------------------39 TURNTABLE Siver ---------------------------
+[39G5_TURN Vinyl Silver]
+meter.type = circular
+channels = 2
+ui.refresh.period = 0.033
+bgr.filename = Turnable_Silver_bgr.png
+fgr.filename = Turnable_Silver_fgr.png
+indicator.filename = Turnable_Silver_needle.png
+steps.per.degree = 2
+start.angle = 51
+stop.angle = -51
+distance = 140
+left.origin.x = 313
+left.origin.y = 800
+right.origin.x = 973
+right.origin.y = 800
+meter.x = 0
+meter.y = 0
+screen.bgr = Turnable_Silver.jpg
+
+# --- volumio optional entries -------
+config.extend = True
+albumart.pos = 27,28
+albumart.dimension = 432,432
+
+playinfo.title.pos = 830,205,bold
+playinfo.artist.pos = 830,40,bold
+playinfo.album.pos = 830,123,bold
+playinfo.center = False
+playinfo.maxwidth = 441
+
+playinfo.type.pos = 838,285
+playinfo.type.color = 204,176,97
+playinfo.type.dimension = 53,53
+
+playinfo.samplerate.pos = 1030,300,bold
+
+time.remaining.pos = 585,665
+time.remaining.color = 255,255,255
+font.size.digi = 30
+font.size.light = 25
+font.size.regular = 20
+font.size.bold = 25
+font.color = 255,255,255
+
+#-----------------------40 TURNTABLE Black ---------------------------
+[40G5_TURN Vinyl Black]
+meter.type = circular
+channels = 2
+ui.refresh.period = 0.033
+bgr.filename = Turntable_black_bgr.png
+fgr.filename = Turntable_black_fgr.png
+indicator.filename = Turntable_black_needle.png
+steps.per.degree = 2
+start.angle = 51
+stop.angle = -51
+distance = 140
+left.origin.x = 313
+left.origin.y = 800
+right.origin.x = 973
+right.origin.y = 800
+meter.x = 0
+meter.y = 0
+screen.bgr = Turntable_black.jpg
+
+# --- volumio optional entries -------
+config.extend = True
+albumart.pos = 27,28
+albumart.dimension = 432,432
+
+playinfo.title.pos = 830,205,bold
+playinfo.artist.pos = 830,40,bold
+playinfo.album.pos = 830,123,bold
+playinfo.center = False
+playinfo.maxwidth = 441
+
+playinfo.type.pos = 838,285
+playinfo.type.color = 204,176,97
+playinfo.type.dimension = 53,53
+
+playinfo.samplerate.pos = 1030,300,bold
+
+time.remaining.pos = 585,665
+time.remaining.color = 255,255,255
+font.size.digi = 30
+font.size.light = 25
+font.size.regular = 20
+font.size.bold = 25
+font.color = 255,255,255
+
+
+#-----------------------41 YELLOW KIDNEY-------------------------
+[41G5_Yellowkidney]
+meter.type = circular
+channels = 2
+ui.refresh.period = 0.033
+bgr.filename = Yellowkidney1280_bgr.png
+fgr.filename = Yellowkidney1280_fgr.png
+indicator.filename = Yellowkidney1280_needle.png
+steps.per.degree = 4
+start.angle = 82
+stop.angle = -82
+distance = -9
+left.origin.x = 322
+left.origin.y = 330
+right.origin.x = 961
+right.origin.y = 330
+meter.x = 0
+meter.y = 0
+screen.bgr = Yellowkidney1280.jpg
+
+# --- volumio optional entries -------
+config.extend = True
+albumart.pos = 40,522
+albumart.dimension = 215,215
+
+playinfo.title.pos = 687,660,bold
+playinfo.artist.pos = 687,530,bold
+playinfo.album.pos = 687,605,regular
+playinfo.center = True
+playinfo.maxwidth = 550
+
+playinfo.type.pos = 340,654
+playinfo.type.color = 224,218,151
+playinfo.type.dimension = 60,60
+
+playinfo.samplerate.pos = 230,675,light
+
+time.remaining.pos = 360,520
+time.remaining.color = 224,218,151
+font.size.digi = 55
+font.size.light = 23
+font.size.regular = 30
+font.size.bold = 45
+font.color = 224,218,151
+
+#---------------------- 42 Old Meter
+[42G5_OLD Meter]
+meter.type = circular
+channels = 2
+ui.refresh.period = 0.033
+bgr.filename = Old_vu_1280_bgr.png
+fgr.filename = Old_vu_1280_fgr.png
+indicator.filename = Old_vu_1280_needle.png
+steps.per.degree = 4
+start.angle = 37
+stop.angle = -37
+distance = 230
+left.origin.x = 315
+left.origin.y = 508
+right.origin.x = 975
+right.origin.y = 508
+meter.x = 0
+meter.y = 100
+screen.bgr = Old_vu_1280.jpg
+# --- volumio optional entries -------
+config.extend = True
+albumart.pos = 560,25
+albumart.dimension = 180,180
+playinfo.title.pos = 60,600,regular
+playinfo.artist.pos = 60,678,bold
+#playinfo.album.pos = 50,440,light
+playinfo.center = True
+playinfo.maxwidth = 1140
+playinfo.type.pos = 750,15
+playinfo.type.color = 0,177,64
+playinfo.type.dimension = 100,100
+playinfo.samplerate.pos = -145,45,bold
+time.remaining.pos = 525,730
+time.remaining.color = 255,255,255
+font.size.digi = 55
+font.size.light = 20
+font.size.regular = 50
+font.size.bold = 30
+font.color = 255,255,255
+
+#--------------------- 43 Old Braun ---------------
+
+[43G5_Old2 braun]
+meter.type = circular
+channels = 2
+ui.refresh.period = 0.033
+bgr.filename = Old2_1280_bgr.png
+fgr.filename = Old2_1280_fgr.png
+indicator.filename = Old2_1280_needle.png
+steps.per.degree = 4
+start.angle = 42
+stop.angle = -44
+distance = 200
+left.origin.x = 329
+left.origin.y = 450
+right.origin.x = 960
+right.origin.y = 450
+meter.x = 0
+meter.y = 0
+screen.bgr = Old2_braun.jpg
+# --- volumio optional entries -------
+config.extend = True
+albumart.pos = 560,439
+albumart.dimension = 161,161
+albumart.border = 1
+playinfo.title.pos = 20,620,regular
+playinfo.artist.pos = 20,700,light
+playinfo.album.pos = 20,735,light
+playinfo.center = True
+playinfo.maxwidth = 1250
+playinfo.type.pos = 930,430
+playinfo.type.color = 218,201,118
+playinfo.type.dimension = 55,55
+playinfo.samplerate.pos = 328,480,bold
+time.remaining.pos = 250,455
+time.remaining.color = 218,201,118
+font.size.digi = 42
+font.size.light = 30
+font.size.regular = 48
+font.size.bold = 18
+font.color = 218,201,118
+
+
+#-----------------------44 T+A-------------------------
+[44G5_T+A]
+meter.type = circular
+channels = 2
+ui.refresh.period = 0.033
+bgr.filename = T+A_1280_bgr.png
+fgr.filename = T+A_1280_fgr.png
+indicator.filename = T+A_1280_needle.png
+steps.per.degree = 4
+start.angle = 36
+stop.angle = -37
+distance = 360
+left.origin.x = 356
+left.origin.y = 615
+right.origin.x = 961
+right.origin.y = 615
+meter.x = 0
+meter.y = 0
+screen.bgr = T+A_1280.jpg
+
+# --- volumio optional entries -------
+config.extend = True
+albumart.pos = 51,505
+albumart.dimension = 200,200
+
+playinfo.title.pos = 265,625,bold
+playinfo.artist.pos = 265,490,bold
+playinfo.album.pos = 265,570,regular
+playinfo.center = True
+playinfo.maxwidth = 750
+
+playinfo.type.pos = 1100,570
+playinfo.type.color = 255,232,176
+playinfo.type.dimension = 90,90
+playinfo.samplerate.pos = 755,670,light
+
+time.remaining.pos = 1040,505
+time.remaining.color = 255,232,176
+font.size.digi = 55
+font.size.light = 25
+font.size.regular = 30
+font.size.bold = 50
+font.color = 24,221,168
+
+#---------------------- 45 Triplett ------------
+[45G5_Triplett]
+meter.type = circular
+channels = 2
+ui.refresh.period = 0.033
+bgr.filename = Triplett_1280_bgr.png
+fgr.filename = Triplett_1280_fgr.png
+indicator.filename = Triplett_1280_needle.png
+steps.per.degree = 4
+start.angle = 45
+stop.angle = -45
+distance = 170
+left.origin.x = 315
+left.origin.y = 455
+right.origin.x = 956
+right.origin.y = 455
+meter.x = 0
+meter.y = 0
+screen.bgr = Triplett_1280.jpg
+# --- volumio optional entries -------
+config.extend = True
+albumart.pos = 17,513
+albumart.dimension = 268,268
+playinfo.title.pos = 350,725,regular
+playinfo.artist.pos = 350,545,regular
+playinfo.album.pos = 350,635,regular
+playinfo.center = False
+playinfo.maxwidth = 600
+playinfo.type.pos = 1010,600
+playinfo.type.color = 193,152,69
+playinfo.type.dimension = 140,140
+playinfo.samplerate.pos = 1010,735,bold
+time.remaining.pos = 955,535
+time.remaining.color = 193,152,69
+font.size.digi = 75
+font.size.light = 30
+font.size.regular = 30
+font.size.bold = 22
+font.color = 193,152,69
+
+#---------------------- 46 Leben -------------------
+[46G5_Leben]
+meter.type = circular
+channels = 2
+ui.refresh.period = 0.033
+bgr.filename = Leben_1280_bgr.png
+fgr.filename = Leben_1280_fgr.png
+indicator.filename = Leben_1280_needle.png
+steps.per.degree = 4
+start.angle = 33
+stop.angle = -33
+distance = 60
+left.origin.x = 144
+left.origin.y = 175
+right.origin.x = 364
+right.origin.y = 175
+meter.x = 0
+meter.y = 550
+screen.bgr = Leben_1280.jpg
+# --- volumio optional entries -------
+config.extend = True
+albumart.pos = 950,110
+albumart.dimension = 180,180
+playinfo.title.pos = 170,405,bold
+playinfo.artist.pos = 170,365,regular
+#playinfo.album.pos = 370,960,light
+playinfo.center = True
+playinfo.maxwidth = 955
+playinfo.type.pos = 215,540
+playinfo.type.color = 0,0,0
+playinfo.type.dimension = 60,60
+playinfo.samplerate.pos = 682,680,light
+time.remaining.pos = 1110,625
+time.remaining.color = 255,255,255
+font.size.digi = 32
+font.size.light = 24
+font.size.regular = 28
+font.size.bold = 28
+font.color = 255,255,255
+
+#-----------------------47 LUXMAN GOLD-------------------------
+[47G5_Luxman Gold]
+meter.type = circular
+channels = 2
+ui.refresh.period = 0.033
+bgr.filename = Luxman_1280_bgr.png
+fgr.filename = Luxman_1280_fgr.png
+indicator.filename = Luxman_1280_needle.png
+steps.per.degree = 4
+start.angle = 35
+stop.angle = -35
+distance = 200
+left.origin.x = 428
+left.origin.y = 700
+right.origin.x = 868
+right.origin.y = 700
+meter.x = 0
+meter.y = 0
+screen.bgr = Luxman_1280.jpg
+
+# --- volumio optional entries -------
+config.extend = True
+albumart.pos = 29,605
+albumart.dimension = 174,174
+
+playinfo.title.pos = 256,633,bold
+playinfo.artist.pos = 256,245,bold
+playinfo.album.pos = 256,300,bold
+playinfo.center = True
+playinfo.maxwidth = 787
+
+playinfo.type.pos = 608,472
+playinfo.type.color = 187,154,139
+playinfo.type.dimension = 85,85
+
+playinfo.samplerate.pos = 255,570,light
+
+time.remaining.pos = 1070,265
+time.remaining.color = 44,29,28
+font.size.digi = 48
+font.size.light = 15
+font.size.regular = 40
+font.size.bold = 28
+font.color = 187,154,139
+
+#----------------------- 48 Vertical --------------
+[48G5_Vertical blue]
+meter.type = circular
+channels = 2
+ui.refresh.period = 0.033
+bgr.filename = Vertical_blue_1280_bgr.png
+fgr.filename = Vertical_blue_1280_fgr.png
+indicator.filename = Vertical_blue_1280_needle.png
+steps.per.degree = 4
+start.angle = 57
+stop.angle = -55
+distance = 195
+left.origin.x = 411
+left.origin.y = 350
+right.origin.x = 411
+right.origin.y = 657
+meter.x = 0
+meter.y = 0
+screen.bgr = Vertical_blue_1280.jpg
+# --- volumio optional entries -------
+config.extend = True
+albumart.pos = 827,21
+albumart.dimension = 444,444
+albumart.border = 1
+playinfo.title.pos = 25,650,regular
+playinfo.artist.pos = 25,725,light
+#playinfo.album.pos = 365,940,light
+playinfo.center = True
+playinfo.maxwidth = 1220
+playinfo.type.pos = 1130,485
+playinfo.type.color = 1,47,124
+playinfo.type.dimension = 80,80
+playinfo.samplerate.pos = 565,565,bold
+time.remaining.pos = 835,505
+time.remaining.color = 1,47,124
+font.size.digi = 78
+font.size.light = 32
+font.size.regular = 46
+font.size.bold = 20
+font.color = 1,47,124
+
+#------------------- 49 Mark Lev -------------------
+[49G5_MarkLev]
+meter.type = circular
+channels = 2
+ui.refresh.period = 0.033
+bgr.filename = MarkLev_1280_bgr.png
+fgr.filename = MarkLev_1280_fgr.png
+indicator.filename = MarkLev_1280_needle.png
+steps.per.degree = 4
+start.angle = 35
+stop.angle = -36
+distance = 60
+left.origin.x = 190
+left.origin.y = 240
+right.origin.x = 1090
+right.origin.y = 240
+meter.x = 0
+meter.y = 273
+screen.bgr = MarkLev_1280.jpg
+# --- volumio optional entries -------
+config.extend = True
+albumart.pos = 486,313
+albumart.dimension = 306,306
+playinfo.title.pos = 150,710,regular
+playinfo.artist.pos = 150,60,bold
+playinfo.album.pos = 150,109,light
+playinfo.center = True
+playinfo.maxwidth = 1000
+playinfo.type.pos = 80,585
+playinfo.type.color = 0,0,0
+playinfo.type.dimension = 70,70
+playinfo.samplerate.pos = -250,613,light
+time.remaining.pos = 1005,590
+time.remaining.color = 0,0,0
+font.size.digi = 47
+font.size.light = 20
+font.size.regular = 40
+font.size.bold = 34
+font.color = 255,255,255
+
+#-------------------- 50 Cassette ----------------
+[50G5_Teac Cassette]
+meter.type = linear
+channels = 2
+ui.refresh.period = 0.033
+bgr.filename = Casette_bgr_1280.png
+indicator.filename = Cassette_indicator.png
+left.x = 55
+left.y = 12
+right.x = 55
+right.y = 48       
+position.regular = 9
+position.overload = 4
+step.width.regular = 90
+step.width.overload = 90
+meter.x = 0
+meter.y = 280
+screen.bgr = Casette_1280.jpg
+# --- volumio optional entries -------
+config.extend = True
+albumart.pos = 53,62
+albumart.dimension = 214,214
+albumart.border = 1
+playinfo.title.pos = 600,80,bold
+playinfo.artist.pos = 600,142,bold
+playinfo.album.pos = 600,210,regular
+playinfo.center = True
+playinfo.maxwidth = 620
+playinfo.type.pos = 180,670
+playinfo.type.color = 230,230,230
+playinfo.type.dimension = 60,60
+playinfo.samplerate.pos = -80,590,light
+time.remaining.pos = 700,430
+time.remaining.color = 37,161,195
+font.size.digi = 40
+font.size.light = 18
+font.size.regular = 30
+font.size.bold = 34
+font.color = 0,0,0
+
+#--------------------- 51 Optonica ----------------
+[51G5_Optonica]
+meter.type = circular
+channels = 2
+ui.refresh.period = 0.033
+bgr.filename = Optonica_1280_bgr.png
+fgr.filename = Optonica_1280_fgr.png
+indicator.filename = Optonica_needle_1280.png
+steps.per.degree = 4
+start.angle = 44
+stop.angle = -43
+distance = 70
+left.origin.x = 104
+left.origin.y = 160
+right.origin.x = 287
+right.origin.y = 160
+meter.x = 750
+meter.y = 60
+screen.bgr = Optonica_1280.jpg
+# --- volumio optional entries -------
+config.extend = True
+albumart.pos = 545,585
+albumart.dimension = 180,180
+playinfo.title.pos = 175,470,bold
+playinfo.artist.pos = 210,425,regular
+#playinfo.album.pos = 585,575,light
+playinfo.center = True
+playinfo.maxwidth = 910
+playinfo.type.pos = 50,200
+playinfo.type.color = 0,0,0
+playinfo.type.dimension = 70,70
+playinfo.samplerate.pos = -120,205,light
+time.remaining.pos = 570,93
+time.remaining.color = 0,0,0
+font.size.digi = 40
+font.size.light = 16
+font.size.regular = 26
+font.size.bold = 26
+font.color = 0,0,0
+
+#------------------------ 52 Pineer CT-----------------
+[52G5_PioneerCT]
+meter.type = linear
+channels = 2
+ui.refresh.period = 0.033
+bgr.filename = PioneerCT_1280.png
+indicator.filename = PioneerCT_1280_indicator.png
+left.x = 52
+left.y = 45
+right.x = 52
+right.y = 75       
+position.regular = 13
+position.overload = 4
+step.width.regular = 18
+step.width.overload = 18
+meter.x = 605
+meter.y = 70
+screen.bgr = PioneerCT_1280.jpg
+# --- volumio optional entries -------
+config.extend = True
+albumart.pos = 12,605
+albumart.dimension = 177,177
+playinfo.title.pos = 550,710,regular
+playinfo.artist.pos = 550,627,bold
+playinfo.album.pos = 550,667,light
+playinfo.center = True
+playinfo.maxwidth = 690
+playinfo.type.pos = 300,445
+playinfo.type.color = 0,0,0
+playinfo.type.dimension = 50,50
+playinfo.samplerate.pos = -30,400,regular 
+time.remaining.pos = 638,230
+time.remaining.color = 200,200,200
+font.size.digi = 26
+font.size.light = 30
+font.size.regular = 30
+font.size.bold = 30
+font.color = 230,230,230
+
+#----------------------- 53 Abrahamsen -----------
+[53G5_Abrahamsen]
+meter.type = linear
+channels = 2
+ui.refresh.period = 0.033
+bgr.filename = Abrahamsen_1280_bgr.png
+indicator.filename = Abrahamsen_1280_indicator.png
+left.x = 78
+left.y = 40
+right.x = 78
+right.y = 87       
+position.regular = 20
+position.overload = 5
+step.width.regular = 46
+step.width.overload = 46
+meter.x = 0
+meter.y = 640
+screen.bgr = Abrahamsen_1280.jpg
+# --- volumio optional entries -------
+config.extend = True
+albumart.pos = 540,370
+albumart.dimension = 190,190
+playinfo.title.pos = 365,328,regular
+playinfo.artist.pos = 365,235,bold
+playinfo.album.pos = 365,115,light
+playinfo.center = True
+playinfo.maxwidth = 560
+playinfo.type.pos = 790,400
+playinfo.type.color = 241,237,179
+playinfo.type.dimension = 120,120
+playinfo.samplerate.pos = -20,442,regular 
+time.remaining.pos = 125,110
+time.remaining.color = 3,132,216
+font.size.digi = 50
+font.size.light = 18
+font.size.regular = 26
+font.size.bold = 23
+font.color = 241,237,179
+
+#----------------------- 54 Dorrought -----------------
+[54G5_Dorrough]
+meter.type = linear
+channels = 2
+ui.refresh.period = 0.033
+bgr.filename = Doug_backround_1280.png
+indicator.filename = Doug_indicator_1280.png
+left.x = 90
+left.y = 97
+right.x = 90
+right.y = 376       
+position.regular = 30
+position.overload = 10
+step.width.regular = 15
+step.width.overload = 15
+meter.x = 540
+meter.y = 0
+screen.bgr = Doug_1280.jpg
+# --- volumio optional entries -------
+config.extend = True
+albumart.pos = 75,85
+albumart.dimension = 405,405
+playinfo.title.pos = 600,693,bold
+playinfo.artist.pos = 600,590,regular
+playinfo.album.pos = 600,650,light
+playinfo.center = True
+playinfo.maxwidth = 600
+playinfo.type.pos = 100,615
+playinfo.type.color = 230,230,230
+playinfo.type.dimension = 100,100
+playinfo.samplerate.pos = 90,703,light 
+time.remaining.pos = 250,610
+time.remaining.color = 200,200,200
+font.size.digi = 80
+font.size.light = 30
+font.size.regular = 40
+font.size.bold = 33
+font.color = 230,230,230
+
+#-----------------------55 DORROUGH VERTICAL-------------------------
+[55G5_Dorrough Vertical]
+meter.type = linear
+channels = 2
+direction = bottom-top
+ui.refresh.period = 0.033
+bgr.filename = Dorrought_ver_1280_bgr.png
+indicator.filename = Dorrought_ver_1280_indica.png
+left.x = 69
+left.y = 126
+right.x = 987
+right.y = 126       
+position.regular = 34
+position.overload = 5
+step.width.regular = 16
+step.width.overload = 16
+meter.x = 0
+meter.y = 0
+screen.bgr = Dorrought_ver_1280.jpg
+# --- volumio optional entries -------
+config.extend = True
+albumart.pos = 370,13
+albumart.dimension = 538,538
+albumart.border = 1
+
+playinfo.title.pos = 358,730,regular
+playinfo.artist.pos = 358,635,light
+playinfo.album.pos = 358,680,light
+playinfo.center = True
+playinfo.maxwidth = 568
+
+playinfo.type.pos = 610,560
+playinfo.type.color = 255,255,255
+playinfo.type.dimension = 80,80
+playinfo.samplerate.pos = 525,590,bold
+
+time.remaining.pos = 367,566
+time.remaining.color = 255,255,255
+font.size.digi = 60
+font.size.light = 35
+font.size.regular = 45
+font.size.bold = 25
+font.color = 255,255,255
+
+
+#-------------------- 56 Advenece  -------------
+[56G5_Advence]
+meter.type = circular
+channels = 2
+ui.refresh.period = 0.033
+bgr.filename = Advence_1280_bgr.png
+fgr.filename = Advence_1280_fgr.png
+indicator.filename = Advence_needle_1280.png
+steps.per.degree = 4
+start.angle = 47
+stop.angle = -47
+distance = 110
+left.origin.x = 195
+left.origin.y = 210
+right.origin.x = 558
+right.origin.y = 210
+meter.x = 90
+meter.y = 62
+screen.bgr = Advence_1280.jpg
+# --- volumio optional entries -------
+config.extend = True
+albumart.pos = 967,65
+albumart.dimension = 275,275
+playinfo.title.pos = 120,315,bold
+playinfo.artist.pos = 120,260,regular
+#playinfo.album.pos = 485,305,light
+playinfo.center = True
+playinfo.maxwidth = 700
+playinfo.type.pos = 1020,550
+playinfo.type.color = 241,237,179
+playinfo.type.dimension = 160,160
+playinfo.samplerate.pos = 13,480,light
+time.remaining.pos = 980,480
+time.remaining.color = 255,255,255
+font.size.digi = 72
+font.size.light = 30
+font.size.regular = 26
+font.size.bold = 26
+font.color = 241,237,179
+
+
+#------------------- 57 Unison -------------------
+[57G5_Unison Research]
+meter.type = linear
+channels = 2
+ui.refresh.period = 0.033
+bgr.filename = UnisonRes_1280_bgr.png
+indicator.filename = UnisonRes_1280_indicator.png
+left.x = 12
+left.y = 19
+right.x = 769
+right.y = 19       
+position.regular = 46
+position.overload = 7
+step.width.regular = 10
+step.width.overload = 10
+meter.x = 0
+meter.y = 722
+screen.bgr = UnisonRes_1280.jpg
+# --- volumio optional entries -------
+config.extend = True
+albumart.pos = 520,535
+albumart.dimension = 240,240
+albumart.border = 1
+playinfo.title.pos = 80,3,bold
+playinfo.artist.pos = 80,50,regular
+#playinfo.album.pos = 110,70,light
+playinfo.center = True
+playinfo.maxwidth = 1120
+playinfo.type.pos = 590,80
+playinfo.type.color = 180,180,180
+playinfo.type.dimension = 90,90
+playinfo.samplerate.pos = 70,160,light 
+time.remaining.pos = 545,375
+time.remaining.color = 180,180,180
+font.size.digi = 55
+font.size.light = 20
+font.size.regular = 25
+font.size.bold = 35
+font.color = 230,230,230
+
+
+#-----------------------58 TAPE ---------------------------
+[58G5_TAPE orange]
+meter.type = circular
+channels = 2
+ui.refresh.period = 0.033
+bgr.filename = Tape_1280_bgr.png
+fgr.filename = Tape_1280_fgr.png
+indicator.filename = Tape_1280_needle.png
+steps.per.degree = 2
+start.angle = 45
+stop.angle = -45
+distance = 140
+left.origin.x = 815
+left.origin.y = 800
+right.origin.x = 1118
+right.origin.y = 800
+meter.x =0
+meter.y = 0
+screen.bgr = Tape_1280.jpg
+
+# --- volumio optional entries -------
+config.extend = True
+albumart.pos = 205,61
+albumart.dimension = 340,340
+
+playinfo.title.pos = 760,245,bold
+playinfo.artist.pos = 760,80,bold
+playinfo.album.pos = 760,163,bold
+playinfo.center = False
+playinfo.maxwidth = 441
+
+playinfo.type.pos = 810,325
+playinfo.type.color = 204,176,97
+playinfo.type.dimension = 53,53
+
+playinfo.samplerate.pos = 1030,335,bold
+
+time.remaining.pos = 140,630
+time.remaining.color = 255,255,255
+font.size.digi = 55
+font.size.light = 25
+font.size.regular = 20
+font.size.bold = 25
+font.color = 255,255,255
+
+
+#-----------------------59 YAMAHA M85 -------------------------
+[59G5_Yamaha M85]
+meter.type = linear
+channels = 2
+direction = bottom-top
+ui.refresh.period = 0.033
+bgr.filename = Yamaha_M85_1_bgr.png
+indicator.filename = Yamaha_M85_1_indi.png
+left.x = 321
+left.y = 57
+right.x = 723
+right.y = 57       
+position.regular = 13
+position.overload = 3
+step.width.regular = 16
+step.width.overload = 16
+meter.x = 0
+meter.y = 0
+screen.bgr = Yamaha_M85_1.jpg
+
+# --- volumio optional entries -------
+config.extend = True
+albumart.pos = 491,494
+albumart.dimension = 300,300
+#albumart.border = 1
+
+playinfo.title.pos = 5,385,bold
+playinfo.artist.pos = 5,430,regular
+#playinfo.album.pos = 5,550,bold
+playinfo.center = True
+playinfo.maxwidth = 1266
+
+playinfo.type.pos = 1022,12
+playinfo.type.color = 255,255,255
+playinfo.type.dimension = 95,95
+
+playinfo.samplerate.pos = 560,60,light 
+
+time.remaining.pos = 30,23
+time.remaining.color = 255,255,255
+font.size.digi = 65
+font.size.light = 20
+font.size.regular = 26
+font.size.bold = 35
+font.color = 230,230,230
+
+
+#----------------------- 60 Sound90 ---------
+[60G5_Sound90]
+meter.type = circular
+channels = 2
+ui.refresh.period = 0.033
+bgr.filename = Sound90_1280_bgr.png
+fgr.filename = Sound90_1280_fgr.png
+indicator.filename = Sound90_1280_needle.png
+steps.per.degree = 4
+start.angle = 90
+stop.angle = -90
+distance = 0
+left.origin.x = 316
+left.origin.y = 316
+right.origin.x = 963
+right.origin.y = 316
+meter.x = 0
+meter.y = 0
+screen.bgr = Sound90_1280.jpg
+# --- volumio optional entries -------
+config.extend = True
+albumart.pos = 550,470
+albumart.dimension = 190,190
+albumart.border = 1
+playinfo.title.pos = 55,690,regular
+playinfo.artist.pos = 55,750,light
+#playinfo.album.pos = 365,940,light
+playinfo.center = True
+playinfo.maxwidth = 1160
+playinfo.type.pos = 600,90
+playinfo.type.color = 180,180,180
+playinfo.type.dimension = 80,80
+playinfo.samplerate.pos = 65,165,bold
+time.remaining.pos = 545,30
+time.remaining.color = 180,180,180
+font.size.digi = 60
+font.size.light = 28
+font.size.regular = 36
+font.size.bold = 16
+font.color = 255,255,255
+
+
+[61G5_Fire Rock]
+meter.type = linear
+channels = 2
+ui.refresh.period = 0.033
+bgr.filename = Fire_Rock_backround_1280.png
+indicator.filename = Fire_Rock_indicator_1280_2.png
+left.x = 30
+left.y = 52
+right.x = 30
+right.y = 310       
+position.regular = 21
+position.overload = 4
+step.width.regular = 26
+step.width.overload = 26
+meter.x = 595
+meter.y = 0
+screen.bgr = Fire_Rock_1280.jpg
+# --- volumio optional entries -------
+config.extend = True
+albumart.pos = 35,70
+albumart.dimension = 435,435
+playinfo.title.pos = 600,670,bold
+playinfo.artist.pos = 600,590,regular
+playinfo.album.pos = 600,630,light
+playinfo.center = True
+playinfo.maxwidth = 600
+playinfo.type.pos = 75,640
+playinfo.type.color = 230,230,230
+playinfo.type.dimension = 70,70
+playinfo.samplerate.pos = 70,650,regular 
+time.remaining.pos = 160,580
+time.remaining.color = 200,200,200
+font.size.digi = 50
+font.size.light = 30
+font.size.regular = 30
+font.size.bold = 33
+font.color = 230,230,230
+
+#--------------------- 62 Burmaster -------------
+
+[62G5_Burmaster]
+meter.type = linear
+channels = 2
+ui.refresh.period = 0.033
+bgr.filename = Burmaster_1280_bgr.png
+indicator.filename = Burmaster_1280_indicator.png
+left.x = 133
+left.y = 25
+right.x = 793
+right.y = 25      
+position.regular = 46
+position.overload = 5
+step.width.regular = 15
+step.width.overload = 15
+meter.x = 0
+meter.y = 520
+screen.bgr = Burmaster_1280.jpg
+# --- volumio optional entries -------
+config.extend = True
+albumart.pos = 55,155
+albumart.dimension = 205,205
+albumart.border = 1
+playinfo.title.pos = 190,425,bold
+playinfo.artist.pos = 190,395,regular
+playinfo.artist.color = 0,0,0
+#playinfo.album.pos = 510,550,light
+playinfo.center = True
+playinfo.maxwidth = 900
+playinfo.type.pos = 600,170
+playinfo.type.color = 255,255,255
+playinfo.type.dimension = 80,80
+playinfo.samplerate.pos = 20,195,regular 
+time.remaining.pos = 725,185
+time.remaining.color = 255,255,255
+font.size.digi = 50
+font.size.light = 36
+font.size.regular = 26
+font.size.bold = 36
+font.color = 255,255,255
+
+#------------------------ 63 Violin
+[63G5_Violin]
+meter.type = linear
+channels = 2
+ui.refresh.period = 0.033
+bgr.filename = Violin_1280_bgr.png
+indicator.filename = Violin_1280_indicator.png
+left.x = 50
+left.y = 45
+right.x = 50
+right.y = 375       
+position.regular = 34
+position.overload = 6
+step.width.regular = 22
+step.width.overload = 22
+meter.x = 590
+meter.y = 0
+screen.bgr = Violin_1280.jpg
+# --- volumio optional entries -------
+config.extend = True
+albumart.pos = 52,45
+albumart.dimension = 504,504
+albumart.border = 1
+playinfo.title.pos = 578,710,bold
+playinfo.artist.pos = 578,560,regular
+playinfo.album.pos = 578,650,light
+playinfo.center = True
+playinfo.maxwidth = 690
+playinfo.type.pos = 60,565
+playinfo.type.color = 180,180,180
+playinfo.type.dimension = 160,160
+playinfo.samplerate.pos = 60,710,light
+time.remaining.pos = 270,615
+time.remaining.color = 180,180,180
+font.size.digi = 80
+font.size.light = 30
+font.size.regular = 60
+font.size.bold = 30
+font.color = 230,230,230
+
+
+#---------------------- 64 Struder
+[64G5_Struder]
+meter.type = circular
+channels = 2
+ui.refresh.period = 0.033
+bgr.filename = Struder_1280_bgr.png
+fgr.filename = Struder_1280_fgr.png
+indicator.filename = Struder_1280-needle.png
+steps.per.degree = 4
+start.angle = 55
+stop.angle = -55
+distance = 50
+left.origin.x = 220
+left.origin.y = 178
+right.origin.x = 770
+right.origin.y = 178
+meter.x = 0
+meter.y = 0
+screen.bgr = Struder_1280.jpg
+# --- volumio optional entries -------
+config.extend = True
+albumart.pos = 535,380
+albumart.dimension = 185,185
+playinfo.title.pos = 140,755,regular
+playinfo.artist.pos = 140,730,light
+#playinfo.album.pos = 200,640,light
+playinfo.center = True
+playinfo.maxwidth = 1000
+playinfo.type.pos = 60,405
+playinfo.type.color = 253,202,119
+playinfo.type.dimension = 160,160
+playinfo.samplerate.pos = 665,485,bold
+time.remaining.pos = 1070,415
+time.remaining.color = 253,202,119
+font.size.digi = 56
+font.size.light = 24
+font.size.regular = 32
+font.size.bold = 22
+font.color = 253,202,119
+
+#------------------------ 65 Tape ---------------
+[65G5_J37 Tape]
+meter.type = circular
+channels = 2
+ui.refresh.period = 0.033
+bgr.filename = J37_Tape_1280_bgr.png
+fgr.filename = J37_Tape_1280_fgr.png
+indicator.filename = J37_1280_needle.png
+steps.per.degree = 4
+start.angle = 46
+stop.angle = -46
+distance = 90
+left.origin.x = 825
+left.origin.y = 185
+right.origin.x = 1138
+right.origin.y = 185
+meter.x = 0
+meter.y = 620
+screen.bgr = J37_Tape_1280.jpg
+# --- volumio optional entries -------
+config.extend = True
+albumart.pos = 953,16
+albumart.dimension = 319,319
+playinfo.title.pos = 140,573,bold
+playinfo.artist.pos = 140,375,regular
+#playinfo.album.pos = 200,640,light
+playinfo.center = True
+playinfo.maxwidth = 1000
+playinfo.type.pos = 933,450
+playinfo.type.color = 255,255,255
+playinfo.type.dimension = 70,70
+playinfo.samplerate.pos = 625,530,light
+time.remaining.pos = 1050,465
+time.remaining.color = 180,180,180
+font.size.digi = 40
+font.size.light = 22
+font.size.regular = 28
+font.size.bold = 28
+font.color = 225,255,255
+
+
+#-------------------- 66 Helix---------------
+[66G5_HelixOne]
+meter.type = linear
+channels = 2
+ui.refresh.period = 0.033
+bgr.filename = HelixOne_1280_bgr.png
+indicator.filename = HelixOne_1280_indicator.png
+left.x = 156
+left.y = 9
+right.x = 851
+right.y = 9      
+position.regular = 28
+position.overload = 4
+step.width.regular = 10
+step.width.overload = 10
+meter.x = 0
+meter.y = 304
+screen.bgr = HelixOne_1280.jpg
+# --- volumio optional entries -------
+config.extend = True
+albumart.pos = 1030,40
+albumart.dimension = 220,220
+albumart.border = 1
+playinfo.title.pos = 131,733,bold
+playinfo.artist.pos = 131,535,bold
+playinfo.artist.color = 0,0,0
+playinfo.album.pos = 131,637,light
+playinfo.center = True
+playinfo.maxwidth = 1020
+playinfo.type.pos = 40,40
+playinfo.type.color = 224,242,187
+playinfo.type.dimension = 120,120
+playinfo.samplerate.pos = 124,305,regular 
+time.remaining.pos = 530,405
+time.remaining.color = 224,242,187
+font.size.digi = 55
+font.size.light = 30
+font.size.regular = 25
+font.size.bold = 30
+font.color = 224,242,187
+
+#------------------ 67 DaGost--------------------
+[67G5_DAgostini]
+meter.type = circular
+channels = 2
+ui.refresh.period = 0.033
+bgr.filename = DAgostino_bgr.png
+fgr.filename = DAgostino_fgr.png
+indicator.filename = DAgostino_needle.png
+steps.per.degree = 4
+start.angle = 55
+stop.angle = -55
+distance = 100
+left.origin.x = 275
+left.origin.y = 330
+right.origin.x = 990
+right.origin.y = 330
+meter.x = 0
+meter.y = 84
+screen.bgr = DAgostino.jpg
+# --- volumio optional entries -------
+config.extend = True
+albumart.pos = 525,175
+albumart.dimension = 220,220
+playinfo.title.pos = 70,675,regular
+playinfo.artist.pos = 70,605,bold
+playinfo.album.pos = 70,738,light
+playinfo.center = True
+playinfo.maxwidth = 1100
+playinfo.type.pos = 510,480
+playinfo.type.color = 255,255,255
+playinfo.type.dimension = 80,80
+playinfo.samplerate.pos = 100,100,light
+time.remaining.pos = 670,505
+time.remaining.color = 252,250,147
+font.size.digi = 30
+font.size.light = 25
+font.size.regular = 25
+font.size.bold = 30
+font.color = 255,255,255
+
+
+#-----------------------68 REHER ---------------------------
+[68G5_Reher Tube]
+meter.type = linear
+channels = 2
+indicator.type = single
+ui.refresh.period = 0.033
+bgr.filename = REHER_1280_bgr.png
+fgr.filename = REHER_1280_fgr.png
+indicator.filename = REHER_1280_needle.png
+left.x = 185
+left.y = 610
+right.x = 733
+right.y = 610      
+position.regular = 170
+step.width.regular = 2
+screen.bgr = REHER_1280.jpg
+
+# --- volumio optional entries -------
+config.extend = True
+albumart.pos = 89,74
+albumart.dimension = 104,104
+#albumart.border = 1
+
+playinfo.title.pos = 313,127,bold
+playinfo.artist.pos = 313,75,regular
+playinfo.album.pos = 313,100,regular
+playinfo.center = True
+playinfo.maxwidth = 680
+
+playinfo.type.pos = 1105,81
+playinfo.type.color = 180,180,180
+playinfo.type.dimension = 70,70
+
+playinfo.samplerate.pos = 800,150,light 
+
+time.remaining.pos = 544,309
+time.remaining.color = 180,180,180
+font.size.digi = 56
+font.size.light = 12
+font.size.regular = 18
+font.size.bold = 35
+font.color = 230,230,230
+
+#---------------------------- 69 Boombox ---------------------------
+[69G5_Boombox]
+meter.type = linear
+channels = 2
+ui.refresh.period = 0.033
+bgr.filename = Boombox_1280_bgr.png
+indicator.filename = Boombox_1280_indic.png
+left.x = 125
+left.y = 126
+right.x = 125
+right.y = 229       
+position.regular = 9
+position.overload = 4
+step.width.regular = 25
+step.width.overload = 25
+meter.x = 0
+meter.y = 0
+screen.bgr = Boombox_1280.jpg
+
+
+# --- volumio optional entries -------
+config.extend = True
+albumart.pos = 488,105
+albumart.dimension = 302,302
+
+playinfo.title.pos = 811,240,bold
+playinfo.artist.pos = 811,115,bold
+playinfo.album.pos = 811,163,regular
+playinfo.center = True
+playinfo.maxwidth = 453
+
+playinfo.type.pos = 510,5
+playinfo.type.color = 230,230,230
+playinfo.type.dimension = 45,45
+
+playinfo.samplerate.pos = 420,15,light 
+
+time.remaining.pos = 565,650
+time.remaining.color = 249,115,42
+font.size.digi = 40
+font.size.light = 20
+font.size.regular = 20
+font.size.bold = 35
+font.color = 230,230,230
+
+
+
+#-----------------------70 NIXI ---------------------------
+[70G5_Nixi Pipe]
+meter.type = circular
+channels = 2
+ui.refresh.period = 0.033
+bgr.filename = Nixie_1280_bgr.png
+fgr.filename = Nixie_1280_fgr.png
+indicator.filename = Nixie_1280_needle.png
+steps.per.degree = 2
+start.angle = 45
+stop.angle = -45
+distance = 140
+left.origin.x = 269
+left.origin.y = 800
+right.origin.x = 1010
+right.origin.y = 800
+meter.x =0
+meter.y = 0
+screen.bgr = Nixie_1280.jpg
+
+# --- volumio optional entries -------
+config.extend = True
+albumart.pos = 516,513
+albumart.dimension = 237,237
+
+playinfo.title.pos = 5,345,bold
+playinfo.artist.pos = 785,320,bold
+playinfo.album.pos = 785,360,bold
+playinfo.center = True
+playinfo.maxwidth = 472
+
+playinfo.type.pos = 36,110
+playinfo.type.color = 204,176,97
+playinfo.type.dimension = 80,80
+
+playinfo.samplerate.pos = 400,465,bold
+
+time.remaining.pos = 520,350
+time.remaining.color = 0,0,0
+font.size.digi = 65
+font.size.light = 25
+font.size.regular = 20
+font.size.bold = 25
+font.color = 255,255,255
+
+
+#-----------------------71 Nixi Spectrum ---------------------------
+[71G5_Nixi Spectrum]
+meter.type = linear
+channels = 2
+direction = bottom-top
+ui.refresh.period = 0.033
+bgr.filename = Nixie_Spectrum.png
+indicator.filename = Nixie_Spectrum_needle.png
+left.x = 253
+left.y = 121
+right.x = 557
+right.y = 121       
+position.regular = 45
+step.width.regular = 6
+meter.x = 0
+meter.y = 0
+screen.bgr = Nixie_Spectrum.jpg
+
+# --- volumio optional entries -------
+config.extend = True
+albumart.pos = 1106,552
+albumart.dimension = 119,119
+albumart.border = 1
+
+playinfo.title.pos = 16,720,bold
+playinfo.artist.pos = 16,690,regular
+#playinfo.album.pos = 16,660,regular
+playinfo.center = True
+playinfo.maxwidth = 1250
+
+playinfo.type.pos = 1130,380
+playinfo.type.color = 255,119,63
+playinfo.type.dimension = 50,50
+
+playinfo.samplerate.pos = 525,276,light 
+
+time.remaining.pos = 1090,470
+time.remaining.color = 255,119,63
+font.size.digi = 40
+font.size.light = 15
+font.size.regular = 26
+font.size.bold = 40
+font.color = 255,119,63
+
+

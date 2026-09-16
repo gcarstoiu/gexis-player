@@ -32,7 +32,10 @@ pre-rendered and hidden, never constructed on demand.
 Two paths, both already in the display model:
 
 - **Explicit** — a button on the now-playing screen
-- **Implicit** — idle timeout while playing
+- **Implicit** — **amended 2026-09-16 by [0036](0036-peppy-entry-and-no-rate-or-codec.md):**
+  five minutes of *unattended playback*. Touch, a forced track change and a
+  renderer change restart it; a volume change does not. Not the same timer as
+  [0033](0033-idle-and-home.md)'s idle screen, which counts while nothing plays.
 
 It is never entered when nothing is playing. That state belongs to the idle
 screen.
@@ -107,6 +110,11 @@ at the moment of display, so that entering the Peppy screen mid-track shows the
 skin already prepared for that track.
 
 ### Bluetooth shows the codec, not a rate
+
+> **Withdrawn 2026-09-16 by [0036](0036-peppy-entry-and-no-rate-or-codec.md).**
+> Neither a sample rate nor a codec is displayed on any screen, so the field
+> this rule made honest no longer exists. The reasoning below stands; it has
+> nothing left to apply to.
 
 The sample rate field carries the codec name — "SBC", "AAC" — rather than the
 A2DP decode rate.

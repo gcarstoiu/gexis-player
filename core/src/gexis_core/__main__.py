@@ -21,6 +21,8 @@ from gexis_core.arbitration import Supervisor
 from gexis_core.config import Config
 from gexis_core.idle_page import probe as probe_idle_page
 from gexis_core.metadata_file import MetadataFileWriter
+from gexis_core.peppy import PeppyController, PeppyScreen, UnattendedPlayback
+from gexis_core.peppy_metadata import PeppyMetadataWriter
 from gexis_core.renderer_volume import RendererVolumeMemory
 from gexis_core.settings import SettingsStore
 from gexis_core.settings_registry import Settings
@@ -287,6 +289,32 @@ async def main() -> None:
         on_change=state_store.bump_settings_revision,
     )
 
+    # Phase 5 criteria 6 and 8 (ADR-0036). The meter process keeps running
+    # whether or not it is on screen; this only raises and lowers it.
+    peppy_timeout = float(settings.value("viz_timeout") or 300)
+    peppy = PeppyController(
+        PeppyScreen(
+            runtime_dir=config.peppy_runtime_dir,
+            wayland_display=config.peppy_wayland_display,
+        ),
+        UnattendedPlayback(peppy_timeout),
+    )
+
+    previous_active = state_store.state.active
+
+    def follow_playback(state) -> None:
+        nonlocal previous_active
+        if state.active != previous_active:
+            previous_active = state.active
+            peppy.on_active_change(state.active)
+        peppy.on_metadata(state.metadata)
+
+    state_store.subscribe(follow_playback)
+
+    # What the Peppy screen draws (criterion 7). A separate file from
+    # currentsong.txt, which is moOde's format for moOde's readers.
+    state_store.subscribe(PeppyMetadataWriter().write)
+
     state_server = StateServer(
         state_store,
         host=config.state_host,
@@ -296,6 +324,7 @@ async def main() -> None:
         set_mute=set_mute,
         idle_page=idle_page,
         settings=settings,
+        peppy=peppy,
         ui_dir=ui_dir,
     )
 
@@ -346,6 +375,7 @@ async def main() -> None:
         ),
         volume_bridge.run(),
         *(bridge.run() for bridge in dummy_mixer_bridges),
+        peppy.run(),
         state_server.run(),
     )
 
