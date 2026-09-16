@@ -788,7 +788,13 @@ validates, so the gate covers what ships. Verified inside
    Mechanism: `wlrctl toplevel minimize/focus` over labwc's
    `wlr-foreign-toplevel-management`. **Still to do:** a systemd unit, the
    Gelo5 images on the device, and wiring entry to the button.
-5. Skin rotates per track, with the next track's skin composited ahead of time.
+5. Skin rotates per track, with the next track's skin composited ahead of
+   time. **Built 2026-09-16**, in the driver: random without repeats until the
+   corpus is exhausted, driven by track changes read from the metadata file
+   the core already writes. The next skin's meter is built right after a
+   switch, so a track change loads no images. Three simulated changes gave
+   three skins and the spectrum kept animating across them
+   ([Finding 027](findings/027-one-process-for-meters-and-spectrum.md)).
 6. Renderer change exits to now playing; the unattended-playback timeout
    returns (ADR-0036 renamed it — it is not ADR-0033's idle timer).
 7. Absent fields do not render their layer.

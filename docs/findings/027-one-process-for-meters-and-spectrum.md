@@ -53,3 +53,29 @@ was drawn and never presented. The hook now presents its own region.
   meters-only. That is criterion 5's work.
 - **Cost with both**: 28 % of one core, one sample, alongside Chromium.
 - Not run from the systemd unit, and not from an installed image.
+
+
+## Follow-up: rotation per track (criterion 5), same day
+
+The driver now changes skin on every track change and prepares the next one
+immediately afterwards, while the new skin is already on screen — the moment
+with the most slack rather than the least.
+
+**Measured:** three simulated track changes produced three different skins
+(`gold`, `black-blue`, `black-white-spectrum`, then `emerald-spectrum` when
+the file was restored), each within the poll interval, and the spectrum kept
+animating after a switch onto a spectrum-linked skin. 25-30 % of one core
+throughout.
+
+**Track changes come from `/var/local/www/currentsong.txt`**, which the core
+daemon already writes (Phase 3 criterion 4) — cheaper than a second WebSocket
+client and needing no dependency this image lacks.
+
+**One spectrum instance, re-pointed.** Rebuilding per skin would leave a
+reader on the passthrough FIFO every time, because `Spectrum.stop()` does not
+close its pipe — and two readers split the bytes.
+
+**Not established:** switches were simulated by editing that file, not by
+real track changes; the skins were the stock corpus, not Gelo5's; and the
+"no visible construction" of criterion 4 has not been re-measured *at a
+switch*, only at entry.
