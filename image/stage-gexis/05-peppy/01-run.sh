@@ -92,12 +92,19 @@ cp -r "${WORK}/gelo5/template_spectrum/1280x800_Gelo5 Spec&Met_420/." \
 # ships: the fetched pack's config files have to match ours byte for byte,
 # or the validator proved nothing about what is installed.
 for pair in \
-	"/pi-gen/gexis-skins/templates/meters.txt:${PEPPY_DIR}/skins/gelo5/templates/meters.txt" \
-	"/pi-gen/gexis-skins/templates_spectrum/meters.txt:${PEPPY_DIR}/skins/gelo5/templates_spectrum/meters.txt" \
-	"/pi-gen/gexis-skins/templates_spectrum/spectrum.txt:${PEPPY_DIR}/skins/gelo5/templates_spectrum/spectrum.txt"
+	"/pi-gen/gexis-skins/templates/meters.txt:${PEPPY_DIR}/skins/gelo5/templates/1280x800/meters.txt" \
+	"/pi-gen/gexis-skins/templates_spectrum/meters.txt:${PEPPY_DIR}/skins/gelo5/templates_spectrum/1280x800/meters.txt" \
+	"/pi-gen/gexis-skins/templates_spectrum/spectrum.txt:${PEPPY_DIR}/skins/gelo5/templates_spectrum/1280x800/spectrum.txt"
 do
 	ours="${pair%%:*}"
 	theirs="${pair##*:}"
+	# cmp alone cannot tell "differs" from "missing": the first build after
+	# the 1280x800 level was added failed here on a path that no longer
+	# existed, reported as a difference (2026-09-16).
+	if [ ! -f "${theirs}" ]; then
+		echo "ERROR: ${theirs} was not installed" >&2
+		exit 1
+	fi
 	if ! cmp -s "${ours}" "${theirs}"; then
 		echo "ERROR: ${theirs} differs from the validated ${ours}" >&2
 		echo "       the pack changed, or the wrong folder was installed" >&2
