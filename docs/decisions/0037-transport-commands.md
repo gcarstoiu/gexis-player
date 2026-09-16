@@ -87,6 +87,15 @@ change follows when the renderer confirms it. A button that flipped on press
 and flipped back when the renderer disagreed would show a state the user
 cannot account for (ADR-0010, decisions/README.md).
 
+> **Amended 2026-09-16 for the play/pause icon (George).** Measured on the
+> panel: Bluetooth reports a pause about 4.5 s after the command (play
+> 0.2-0.5 s; Spotify and LMS well under a second). A button that seems not to
+> have heard reads as broken, so **the play/pause icon flips on press**. If
+> the renderer has not confirmed within 8 s, the icon returns to the reported
+> state, and a refused command returns it at once. Only the icon is ahead:
+> the progress bar and the source pill still show what the renderer reports.
+> Shuffle and Repeat are not covered by this amendment.
+
 ### 5. What each renderer declares is measured, not assumed
 
 `controls` for each built-in adapter is filled from a hardware finding, the

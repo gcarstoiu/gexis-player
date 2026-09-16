@@ -68,13 +68,41 @@
   };
 
 
-  // ADR-0037: shown when the renderer has the command, and the icon is
-  // whatever the renderer last reported. Pressing sends; it does not flip.
+  // ADR-0037: shown when the renderer has the command.
   const hasPlayPause = $derived(controls.includes('play') && controls.includes('pause'));
+
+  // The icon flips on press (George, 2026-09-16, amending ADR-0037 §4 for
+  // this button): Bluetooth reports a pause about 4.5 s late (measured), and
+  // a button that seems not to have heard reads as broken. Only the icon is
+  // ahead of the renderer - the progress bar and the source pill still show
+  // what it reports - and if it has not confirmed within CONFIRM_MS the icon
+  // goes back to the reported state.
+  const CONFIRM_MS = 8000;
+  let pressed = $state(null); // 'playing' | 'paused': what the last press asked for
+  let pressTimer;
+  const shows = $derived(pressed ?? (playing ? 'playing' : 'paused'));
+
+  function forgetPress() {
+    clearTimeout(pressTimer);
+    pressed = null;
+  }
+  $effect(() => {
+    if (pressed !== null && transport === pressed) untrack(forgetPress);
+  });
+  $effect(() => {
+    active;
+    untrack(forgetPress);
+  });
+
   async function togglePlay() {
+    const want = shows === 'playing' ? 'paused' : 'playing';
+    clearTimeout(pressTimer);
+    pressed = want;
+    pressTimer = setTimeout(forgetPress, CONFIRM_MS);
     try {
-      await sendTransport(playing ? 'pause' : 'play');
+      await sendTransport(want === 'playing' ? 'play' : 'pause');
     } catch (err) {
+      forgetPress();
       console.info('transport:', err.message);
     }
   }
@@ -181,7 +209,7 @@
             <span class="i-prev"></span>
           </button>
           {#if hasPlayPause}
-            <button class="btn btn--play" type="button" aria-label={playing ? 'Pause' : 'Play'} onclick={togglePlay}>
+            <button class="btn btn--play" type="button" data-shows={shows} aria-label={shows === 'playing' ? 'Pause' : 'Play'} onclick={togglePlay}>
               <span class="i-play"></span><span class="i-pause"></span>
             </button>
           {/if}
@@ -580,8 +608,8 @@
     height: 34px;
     background: linear-gradient(to right, currentColor 0 8px, transparent 8px 18px, currentColor 18px 26px);
   }
-  .screen[data-transport='playing'] .i-play,
-  .screen:not([data-transport='playing']) .i-pause { display: none; }
+  .btn--play[data-shows='playing'] .i-play,
+  .btn--play:not([data-shows='playing']) .i-pause { display: none; }
 
   .i-prev,
   .i-next { display: flex; align-items: center; }
