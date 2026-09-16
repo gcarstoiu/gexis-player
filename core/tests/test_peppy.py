@@ -267,3 +267,35 @@ def test_a_long_pause_gives_no_credit_on_resume():
     assert not timer.due()
     clock.advance(1)
     assert timer.due()
+
+
+def test_spotifys_stop_between_two_tracks_is_neither_a_skip_nor_a_restart():
+    """The exact sequence go-librespot sent at a natural track end, recorded
+    on the device 2026-09-16: "stopped" with position 0 on the old track, then
+    the new track, then "playing" - all within 10 ms."""
+    clock = FakeClock()
+    controller = PeppyController(FakeScreen(), UnattendedPlayback(300, now=clock))
+    controller.on_metadata(playing(title="Spider Silk", position=0.0, duration=386.267))
+    clock.advance(200)
+    controller.on_metadata(playing(title="Spider Silk", position=200.0, duration=386.267))
+    clock.advance(186.2)
+    controller.on_metadata(TrackMetadata(title="Spider Silk", position=0.002, duration=386.267, transport="stopped"))
+    controller.on_metadata(TrackMetadata(title="The Poet", position=0.0, duration=300.0, transport="stopped"))
+    clock.advance(0.01)
+    controller.on_metadata(playing(title="The Poet", position=0.011, duration=300.0))
+    clock.advance(113.8)  # 386.2 + 0.01 + 113.8 = five minutes of music
+    assert controller._timer.due()
+
+
+def test_a_short_stop_is_not_counted_and_not_reset():
+    clock = FakeClock()
+    timer = UnattendedPlayback(300, now=clock)
+    timer.set_playing(True)
+    clock.advance(200)
+    timer.set_playing(False)
+    clock.advance(5)
+    timer.set_playing(True)
+    clock.advance(99)
+    assert not timer.due()
+    clock.advance(1)
+    assert timer.due()

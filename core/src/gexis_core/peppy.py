@@ -33,6 +33,9 @@ WINDOW_TITLE = "pygame window"
 #: its duration - our own commands are detectable, a phone's skip is not
 #: (ADR-0036's open question, resolved this way by George).
 FORCED_TRACK_MARGIN_S = 5.0
+#: A stop shorter than this keeps the unattended-playback count (see
+#: `UnattendedPlayback.set_playing`).
+STOP_GRACE_S = 10.0
 #: The panel session's compositor socket. The kiosk runs as uid 1000.
 DEFAULT_RUNTIME_DIR = "/run/user/1000"
 DEFAULT_WAYLAND_DISPLAY = "wayland-0"
@@ -113,17 +116,30 @@ class UnattendedPlayback:
         self._now = now
         self._playing = False
         self._last_attention = now()
+        #: When playback last stopped or paused; None before it ever played.
+        self._stopped_at: float | None = None
 
     def attention(self) -> None:
         self._last_attention = self._now()
 
     def set_playing(self, playing: bool) -> None:
-        if playing != self._playing:
-            self._playing = playing
-            # Starting or stopping playback is not attention, but a stopped
-            # device must not accumulate credit towards entry while silent:
-            # the five minutes count from when playback (re)started.
+        """Starting or stopping playback is not attention, and silence earns
+        no credit towards entry. A gap of up to STOP_GRACE_S is not counted
+        but does not reset either: Spotify reports "stopped" for a few
+        milliseconds between two tracks (measured 2026-09-16), and resetting
+        there meant the screen never came up. A longer stop starts over."""
+        if playing == self._playing:
+            return
+        self._playing = playing
+        now = self._now()
+        if not playing:
+            self._stopped_at = now
+            return
+        gap = None if self._stopped_at is None else now - self._stopped_at
+        if gap is None or gap > STOP_GRACE_S:
             self.attention()
+        else:
+            self._last_attention += gap
 
     def due(self) -> bool:
         return self._playing and (self._now() - self._last_attention) >= self.timeout_s
@@ -193,8 +209,12 @@ class PeppyController:
         # volume-only ones included, and re-anchoring on those would stop the
         # clock. A transport change without a new position keeps what had
         # elapsed.
+        # A "stopped" report's position is not a place in the track: Spotify
+        # sends 0.0 between two tracks, which made every natural end look
+        # like a skip (measured 2026-09-16). Only the clock stops there.
         position, duration, was_playing, _ = self._anchor
-        if changed or metadata.position != position or metadata.duration != duration:
+        stopped = metadata.transport == "stopped"
+        if changed or (not stopped and (metadata.position != position or metadata.duration != duration)):
             self._anchor = (metadata.position, metadata.duration, playing, self._now())
         elif playing != was_playing:
             self._anchor = (self._position_now(), duration, playing, self._now())
