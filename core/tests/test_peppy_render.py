@@ -18,7 +18,13 @@ STAGE = Path(__file__).parents[2] / "image" / "stage-gexis" / "05-peppy" / "file
 sys.path.insert(0, str(STAGE))
 
 os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
-from gexis_peppy_render import MetadataLayer, parse_colour, parse_point, remaining_time  # noqa: E402
+from gexis_peppy_render import (  # noqa: E402
+    FINAL_SECONDS_COLOUR,
+    MetadataLayer,
+    parse_colour,
+    parse_point,
+    remaining_time,
+)
 
 SKIN = {
     "screen.bgr": "bgr.png",
@@ -133,10 +139,11 @@ def test_long_text_is_trimmed_to_the_skins_width(layer):
 @pytest.mark.parametrize(
     ("metadata", "expected"),
     [
-        ({"position": 30.0, "duration": 200.0, "transport": "paused", "written_at": 0}, "-2:50"),
+        ({"position": 30.0, "duration": 200.0, "transport": "paused", "written_at": 0}, "02:50"),
         ({"position": None, "duration": 200.0, "transport": "playing"}, None),
         ({"position": 30.0, "duration": None, "transport": "playing"}, None),
-        ({"position": 300.0, "duration": 200.0, "transport": "paused", "written_at": 0}, "-0:00"),
+        ({"position": 300.0, "duration": 200.0, "transport": "paused", "written_at": 0}, "00:00"),
+        ({"position": 0.0, "duration": 725.0, "transport": "paused", "written_at": 0}, "12:05"),
     ],
 )
 def test_remaining_time(metadata, expected):
@@ -155,9 +162,8 @@ def test_parsers():
 def test_artwork_is_drawn_before_the_text_over_it(layer):
     """dash-spectrum places title, artist and album inside its artwork well;
     the art has to go down first or it covers them (George, 2026-09-16)."""
-    art = pygame.Surface((170, 170))
     layer._artwork_url = "http://art/"
-    layer._artwork = art
+    layer._artwork_source = pygame.Surface((640, 640))
 
     layer.draw(full(artwork="http://art/"))
 
@@ -195,3 +201,63 @@ def test_the_badge_icons_are_the_uis_own():
     ui_assets = Path(__file__).parents[2] / "ui" / "src" / "assets"
     for name in ("icon-spotify.png", "icon-bluetooth.png", "icon-lyrion.svg"):
         assert (STAGE / "icons" / name).read_bytes() == (ui_assets / name).read_bytes(), name
+
+
+
+def test_centred_text_is_centred_inside_its_box_not_around_the_position(screen, tmp_path):
+    """The wrapper centres inside a box that STARTS at the position and is as
+    wide as the skin's maxwidth. Centring around the position slid the text
+    left by half its width, onto the artwork (George, dash-spectrum)."""
+    background = pygame.Surface((1280, 800))
+    pygame.image.save(background, str(tmp_path / "bgr.png"))
+    layer = MetadataLayer(screen, tmp_path)
+    layer.set_skin({**SKIN, "playinfo.title.pos": "770,100,bold", "playinfo.maxwidth": "480", "playinfo.center": "True"})
+
+    layer.draw(full(title="Alpenglow"))
+
+    title = layer._painted[1]  # after the badge
+    assert title.left >= 770, "never left of where the box starts"
+    assert abs((title.left - 770) - (770 + 480 - title.right)) <= 1, "equal space either side"
+
+
+def test_remaining_time_is_drawn_top_left_at_its_position(layer):
+    layer.draw(full(position=30.0, duration=200.0, transport="paused"))
+
+    time_rect = next(r for r in layer._painted if (r.x, r.y) == (900, 500))
+    assert time_rect is not None
+
+
+def test_remaining_time_turns_red_for_the_last_ten_seconds(layer):
+    fields = layer._fields(full(position=195.0, duration=200.0, transport="paused"))
+    remaining = next(f for f in fields if f[1][:2] == (900, 500))
+    assert remaining[2] == FINAL_SECONDS_COLOUR
+
+    fields = layer._fields(full(position=100.0, duration=200.0, transport="paused"))
+    remaining = next(f for f in fields if f[1][:2] == (900, 500))
+    assert remaining[2] != FINAL_SECONDS_COLOUR
+
+
+def test_the_badge_carries_the_renderers_name_beside_it(layer):
+    """George, 2026-09-16: Spotify, LMS, Bluetooth next to the mark."""
+    plain = layer._badge("spotify", (50, 50))
+    rect = layer._badge_rect("spotify")
+    assert rect.width > plain.get_width() + 20, "the label widens the badge area to its right"
+
+
+
+def test_the_same_artwork_is_rescaled_when_the_skin_changes(screen, tmp_path):
+    """Same track, new skin: the art must take the new skin's size, not keep
+    the previous one's (found on the panel after a rotation onto
+    dash-spectrum)."""
+    pygame.image.save(pygame.Surface((1280, 800)), str(tmp_path / "bgr.png"))
+    layer = MetadataLayer(screen, tmp_path)
+    layer._artwork_url = "http://art/"
+    layer._artwork_source = pygame.Surface((640, 640))
+
+    layer.set_skin({**SKIN, "albumart.pos": "560,70", "albumart.dimension": "170,170"})
+    layer.draw(full(artwork="http://art/"))
+    assert layer._painted[0].size == (170, 170)
+
+    layer.set_skin({**SKIN, "albumart.pos": "0,15", "albumart.dimension": "770,770"})
+    layer.draw(full(artwork="http://art/"))
+    assert layer._painted[0].size == (770, 770)

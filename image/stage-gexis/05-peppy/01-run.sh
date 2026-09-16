@@ -24,6 +24,12 @@ SCREENSAVER_SHA256="9513bc5e43d38cc5a04b06c166de161604847da449e8db1859b6b299cd6c
 GELO5_URL="https://github.com/project-owner/PeppyMeter.doc/releases/download/2024.03.02/Gelo5_1280x800.84skins.zip"
 GELO5_SHA256="3a0a99b1584915bc375bc6a2d137a22cbb29a45230ffb6e04a8ccb0bab466997"
 
+# The seven-segment face the skins lay remaining time out for (the wrapper's
+# "digi" font). Upstream's own release, OFL-1.1; measured identical to the
+# copy foonerd's wrapper bundles at the skins' sizes (2026-09-16).
+DSEG_URL="https://github.com/keshikan/DSEG/releases/download/v0.46/fonts-DSEG_v046.zip"
+DSEG_SHA256="a6c2f43520971ca8067262e78d49025e605f749bf716ec5394bad9a0ee1c238c"
+
 PEPPY_DIR="${ROOTFS_DIR}/opt/gexis-peppy"
 for tool in curl sha256sum bsdtar; do
 	command -v "${tool}" >/dev/null || { echo "ERROR: ${tool} is not in the build container" >&2; exit 1; }
@@ -44,6 +50,7 @@ fetch "https://codeload.github.com/foonerd/PeppySpectrum/tar.gz/${PEPPYSPECTRUM_
 fetch "https://codeload.github.com/foonerd/peppy_screensaver/tar.gz/${SCREENSAVER_COMMIT}" \
 	"${SCREENSAVER_SHA256}" "${WORK}/screensaver.tar.gz"
 fetch "${GELO5_URL}" "${GELO5_SHA256}" "${WORK}/gelo5.zip"
+fetch "${DSEG_URL}" "${DSEG_SHA256}" "${WORK}/dseg.zip"
 
 install -d -m 755 "${PEPPY_DIR}"
 rm -rf "${PEPPY_DIR}/peppymeter" "${PEPPY_DIR}/spectrum" "${PEPPY_DIR}/skins"
@@ -105,6 +112,11 @@ install -D -m 644 files/peppy-meter.txt "${PEPPY_DIR}/peppymeter/config.txt"
 install -D -m 644 files/peppy-spectrum.txt "${PEPPY_DIR}/spectrum/config.txt"
 install -D -m 755 files/gexis-peppy-driver.py "${PEPPY_DIR}/driver.py"
 install -D -m 644 files/gexis_peppy_render.py "${PEPPY_DIR}/gexis_peppy_render.py"
+mkdir -p "${WORK}/dseg"
+bsdtar -xf "${WORK}/dseg.zip" -C "${WORK}/dseg"
+install -d -m 755 "${PEPPY_DIR}/fonts"
+install -m 644 "${WORK}/dseg/fonts-DSEG_v046/DSEG7-Classic/DSEG7Classic-Italic.ttf" "${PEPPY_DIR}/fonts/"
+install -m 644 "${WORK}/dseg/fonts-DSEG_v046/DSEG-LICENSE.txt" "${PEPPY_DIR}/fonts/"
 install -d -m 755 "${PEPPY_DIR}/icons"
 install -m 644 files/icons/* "${PEPPY_DIR}/icons/"
 install -D -m 644 files/gexis-peppy.service \
