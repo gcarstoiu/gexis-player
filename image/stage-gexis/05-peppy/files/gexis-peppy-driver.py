@@ -156,11 +156,29 @@ class Rotation:
         screen — the moment with the most slack, not the least."""
         name = self.pick()
         from configfileparser import METER
+        from meterfactory import MeterFactory
 
+        # Built through the factory, not `vumeter.get_meter()`: that returns
+        # the *existing* meter unless the engine is in its own random mode, so
+        # asking it for the next skin hands back the current one - which drew
+        # each new skin with the previous skin's needles, and then no needles
+        # at all (George saw it on the panel, 2026-09-16).
+        vumeter = self.vumeter
         config = self.peppy.util.meter_config
         was, config[METER] = config[METER], name
         try:
-            meter = self.vumeter.get_meter()
+            factory = MeterFactory(
+                self.peppy.util,
+                config,
+                vumeter.data_source,
+                vumeter.mono_needle_cache,
+                vumeter.mono_rect_cache,
+                vumeter.left_needle_cache,
+                vumeter.left_rect_cache,
+                vumeter.right_needle_cache,
+                vumeter.right_rect_cache,
+            )
+            meter = factory.create_meter()
         finally:
             config[METER] = was
         self.prepared = (name, meter)

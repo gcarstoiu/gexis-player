@@ -79,3 +79,27 @@ close its pipe — and two readers split the bytes.
 real track changes; the skins were the stock corpus, not Gelo5's; and the
 "no visible construction" of criterion 4 has not been re-measured *at a
 switch*, only at entry.
+
+
+## Defect found on the panel, 2026-09-16 — rotation drew every skin with the previous skin's meter
+
+George, watching the panel: *"the vu meter isn't working. Spectrum seems
+fine, but vu is not"*. The spectrum was fine because it is re-pointed
+explicitly; the meters were not being rebuilt at all.
+
+**Cause:** rotation asked `Vumeter.get_meter()` for the next skin's meter.
+That method returns the *existing* meter unless the engine is in its own
+random or list mode (`vumeter.py:69`) — which ours is not, because the driver
+picks the skin. So every switch reused one meter object: backgrounds changed
+with the config, needles did not, and eventually no needle was drawn at all.
+
+**Fix:** build through `MeterFactory` directly, which reads `meter.type`,
+geometry and needle images for the skin named in the config.
+
+**Confirmed after the fix:** a forced switch onto `galaxy` showed both
+needles moving, frames one second apart differing.
+
+**Why the tests did not catch it:** everything here runs inside the vendored
+engines with a live display, and there is no test double for either. What the
+unit tests cover is the daemon's policy (`test_peppy.py`); the driver is
+covered by running it on the panel and looking — which is how this surfaced.
