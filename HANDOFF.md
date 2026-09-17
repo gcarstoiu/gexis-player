@@ -21,13 +21,17 @@ playlists only; LMS's filing and release types; add to any library playlist;
 no playlist creation (George is asking Claude Design to remove it). ADR-0038
 is still marked Proposed.
 
-**Next action: step 1a — resume only unchanged content** (George agreed
-2026-09-17). Finding 029 defect A: after a Spotify session, a fresh LMS
-`load` was seeked to the position the *radio* was released at
-(`lms.py:596-633`). Live on the current image for any LMS app. Start by
-measuring whether `playlist_timestamp` changes only on a load. George checks
-by repeating test 5 and a same-content resume. Then step 2 (radio title and
-artwork, defect B).
+**Step 1a is done** (2026-09-17): a takeover restores LMS's old position
+and play state only if `playlist_timestamp` is unchanged (George's rule A;
+ADR-0027 amended, Finding 029 addendum). George checked both directions on
+`gexis`. **Hand-installed on the device, not in an image:** `lms.py` copied
+into `/opt/gexis-core/venv/lib/python3.13/site-packages/gexis_core/adapters/`,
+previous core at `/opt/gexis-core.7-1a-backup`. A reflash loses it until the
+Phase 7 image.
+
+**Next action: step 2 — radio title and artwork from `remoteMeta`**
+(criterion 9, Finding 029 defect B). How the station name and the song title
+share the screen is a question for George before building.
 
 **Test data on George's LMS:** playlist folder `/playlist` (George set it;
 it triggered a full rescan that renumbered the library). Playlists

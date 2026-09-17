@@ -928,7 +928,7 @@ Plexamp app's audio stops at the tap.
 
 ### Phase 7 — Library browse
 
-**Status 2026-09-17: step 1 done (Finding 029); next is step 1a. ADR-0038 proposed.**
+**Status 2026-09-17: steps 1 and 1a done; next is step 2. ADR-0038 proposed.**
 Branch `phase-7-plan`. Criteria 1 and 6 amended, 10 and 11 added, by
 [ADR-0038](decisions/0038-library-and-radio-on-the-panel.md) (George's
 decisions, 2026-09-17).
@@ -1013,6 +1013,10 @@ checked on the panel before the next:
     pause, track change or add); otherwise compare track and queue length.
     Checked by repeating Finding 029's test 5, and the same-content resume
     from Finding 018.
+    **Done 2026-09-17; George checked both on `gexis` (hand-installed).**
+    Rule A (George): restore only if `playlist_timestamp` is unchanged; an
+    edit while away loses the position. ADR-0027 amended; Finding 029
+    addendum.
 2. **Radio title and artwork from `remoteMeta`** (criterion 9).
 3. **Library reads in the core**, tested against replies recorded in step 1.
 4. **Home as the library root**, the New Music strip, the mini strip, Back

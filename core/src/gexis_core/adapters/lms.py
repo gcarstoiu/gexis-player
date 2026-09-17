@@ -182,9 +182,12 @@ class LmsAdapter(Adapter):
         #: by `device_freed()`. `_resume_playing` False means "came back
         #: paused, send no play"; `_resume_position` is what the position is
         #: corrected back to if LMS restarted the track (see
-        #: RESUME_POSITION_TOLERANCE_S).
+        #: RESUME_POSITION_TOLERANCE_S). `_resume_timestamp` is the queue's
+        #: `playlist_timestamp` when they were recorded: both are put back
+        #: only if it is unchanged (Finding 029, defect A).
         self._resume_playing = False
         self._resume_position: float | None = None
+        self._resume_timestamp: float | None = None
         self._on_metadata: Callable[[TrackMetadata], None] | None = None
         self._on_availability: Callable[[bool], None] | None = None
         #: The last reported transport, so `play()` can pick its command.
@@ -450,6 +453,7 @@ class LmsAdapter(Adapter):
             return
         if isinstance(position, (int, float)):
             self._resume_position = float(position)
+            self._resume_timestamp = _as_float(status.get("result", {}).get("playlist_timestamp"))
             logger.info("lms: noted position %.1fs at deactivation", self._resume_position)
 
     async def _cometd_handshake(self, session: aiohttp.ClientSession) -> str:
@@ -566,6 +570,7 @@ class LmsAdapter(Adapter):
                 self._resume_position = (
                     float(position) if isinstance(position, (int, float)) else None
                 )
+                self._resume_timestamp = _as_float(result.get("playlist_timestamp"))
                 await self._rpc(session, self._player_id, ["pause", 1])
                 await self._rpc(session, self._player_id, ["power", 0])
                 logger.info(
@@ -592,11 +597,22 @@ class LmsAdapter(Adapter):
         user left, never something we impose). The position correction is
         separate and *not* conditional on that flag, because LMS's
         auto-power-on restarts from zero whichever state the player was in.
+
+        Neither is put back onto different content. LMS changes the queue's
+        `playlist_timestamp` on every load, and on an add or a shuffle, but
+        not on pause, skip, repeat or a power cycle (Finding 029). A load
+        made while another renderer held the device - which is also what
+        brings LMS back - was otherwise seeked to the old content's
+        position. An edit while away loses the position too; George chose
+        that over any chance of seeking into content just picked
+        (2026-09-17, rule A).
         """
         resume_playing = self._resume_playing
         resume_position = self._resume_position
+        resume_timestamp = self._resume_timestamp
         self._resume_playing = False
         self._resume_position = None
+        self._resume_timestamp = None
         if self._player_id is None:
             return
         if not resume_playing and resume_position is None:
@@ -605,6 +621,15 @@ class LmsAdapter(Adapter):
             try:
                 status = await self._rpc(session, self._player_id, ["status", "-", 1])
                 result = status.get("result", {})
+                timestamp = _as_float(result.get("playlist_timestamp"))
+                if timestamp != resume_timestamp:
+                    logger.info(
+                        "lms: queue changed since it was released (playlist_timestamp %s -> %s), "
+                        "not restoring the old position or play state",
+                        resume_timestamp,
+                        timestamp,
+                    )
+                    return
                 if resume_playing and result.get("mode") != "play":
                     await self._rpc(session, self._player_id, ["play"])
                     logger.info("lms: resumed playback the takeover interrupted")

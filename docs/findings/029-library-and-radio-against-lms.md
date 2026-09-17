@@ -184,6 +184,10 @@ the play state) whenever one was recorded, without checking that LMS still
 holds the same content. This is the ADR-0027 / Finding 018 resume, correct
 for returning to the same content and wrong for a fresh load.
 
+**Fixed 2026-09-17 (Phase 7 step 1a), rule A:** restore only if
+`playlist_timestamp` is unchanged. See the addendum below and ADR-0027's
+amendment.
+
 **It is not library-specific:** test 5 used the same JSON-RPC an LMS app
 uses, so starting anything from the Lyrion app after a Spotify or Bluetooth
 session hits it on the current image. Agreed with George, 2026-09-17: fixed
@@ -227,3 +231,44 @@ at LMS volume 22 for 45 s (core: `lms takes the device (was nobody)`, then
 renderer was active. It replaced George's LMS queue on `gexis` (10 tracks);
 George chose not to restore it. The mechanism is recorded in §6 because the
 radio browser must not repeat it.
+
+## Addendum, 2026-09-17 — step 1a: what changes `playlist_timestamp`
+
+Same system, same session, all commands from R2D2 to player `gexis`, each
+read 2.5 s after the command with `status`:
+
+| change | `playlist_timestamp` |
+|---|---|
+| pause, resume | unchanged |
+| next (`button jump_fwd`), previous (`button jump_rew`) | unchanged |
+| repeat all, repeat off | unchanged |
+| `pause` → `power 0` → `power 1` → `play` (the takeover cycle) | **unchanged** |
+| shuffle on; shuffle off | **changed, each time** |
+| `playlistcontrol cmd:add album_id:` | **changed** |
+| `cmd:load` of the album already loaded | **changed** |
+| `cmd:load` of a different album | **changed** |
+
+The field is in the untagged `status - 1` the adapter already makes, as a
+float. George chose rule A (restore only if unchanged) over "same current
+track" (which would seek into a reload that starts on the same track) and
+over both combined (no different outcome in these cases).
+
+**Checked on `gexis` after hand-installing the fix** (`lms.py` into the
+venv's site-packages; previous core at `/opt/gexis-core.7-1a-backup`):
+
+- **New content over Spotify:** LMS released at 202.9 s; album loaded while
+  Spotify played. Core: `queue changed since it was released
+  (playlist_timestamp 1789664149.74079 -> 1789664609.64016), not restoring the
+  old position or play state`. LMS at 1.75 s into track 1 seven seconds later.
+- **Same content after Spotify:** George played the album past 30 s, started
+  Spotify, then pressed play on `gexis` in the Lyrion app. LMS released at
+  73.3 s; on return: `position was 0.0s, seeked back to the 73.3s it was
+  released at`; 97 s at 19:05:30.
+
+George reported "test done" for both; what was heard was not itemised.
+
+**Seen on both takeovers, not investigated:** for about 4 s after LMS powers
+on while Spotify still holds the device, `status` reports `time` equal to the
+track's duration (216.5 s), then the real position. Probably LMS's value while
+squeezelite waits for the device. The panel's progress bar may show it
+briefly.

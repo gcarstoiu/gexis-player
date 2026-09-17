@@ -73,17 +73,23 @@ class FakeRpc:
 
     `mode`/`position` are what the *next* status query reports, so a test can
     change them between `release()` and `device_freed()` to model what LMS
-    did in between - restarting the track from zero, say."""
+    did in between - restarting the track from zero, say. `timestamp` is
+    the queue's `playlist_timestamp`; a test changes it to model a load or
+    an edit, and sets it to None for an LMS that does not report one."""
 
     def __init__(self, mode="play", position=60.0):
         self.mode = mode
         self.position = position
+        self.timestamp = 1789663581.32885
         self.commands = []
 
     async def __call__(self, session, player, command):
         self.commands.append(list(command))
         if command[0] == "status":
-            return {"result": {"mode": self.mode, "power": 1, "time": self.position}}
+            result = {"mode": self.mode, "power": 1, "time": self.position}
+            if self.timestamp is not None:
+                result["playlist_timestamp"] = self.timestamp
+            return {"result": result}
         return {"result": {}}
 
 
@@ -227,6 +233,120 @@ async def test_the_seek_fires_once_not_on_every_later_acquisition(monkeypatch):
     assert rpc.commands == []
 
 
+# --- Finding 029 defect A: never put the old queue's state onto a new one --
+
+
+@pytest.mark.asyncio
+async def test_a_load_while_away_is_not_seeked_to_the_old_position(monkeypatch):
+    """Measured 2026-09-17: a radio station released at 192.6s, then an album
+    loaded from an LMS app while Spotify played. Loading powers LMS on and
+    starts track 1 at zero - and the core seeked it to 192.6s. A load changes
+    `playlist_timestamp`, so nothing is restored."""
+    adapter, rpc = _adapter(monkeypatch, mode="play", position=192.6)
+    await adapter.release()
+    rpc.timestamp = 1789664147.20098  # a new load
+    rpc.position = 0.0
+    rpc.commands.clear()
+
+    await adapter.device_freed()
+
+    assert not any(c[0] == "time" for c in rpc.commands)
+    assert ["play"] not in rpc.commands
+
+
+@pytest.mark.asyncio
+async def test_reloading_the_same_content_is_still_a_new_load(monkeypatch):
+    """Loading the album that was already playing changes the timestamp too
+    (measured). The user asked for it from the start, so no seek."""
+    adapter, rpc = _adapter(monkeypatch, mode="play", position=80.0)
+    await adapter.release()
+    rpc.timestamp += 12.5
+    rpc.position = 2.4
+    rpc.commands.clear()
+
+    await adapter.device_freed()
+
+    assert not any(c[0] == "time" for c in rpc.commands)
+
+
+@pytest.mark.asyncio
+async def test_a_paused_player_given_new_content_gets_no_play(monkeypatch):
+    """Released while playing, then the queue replaced but left stopped:
+    playing it would start music the user did not ask for."""
+    adapter, rpc = _adapter(monkeypatch, mode="play", position=30.0)
+    await adapter.release()
+    rpc.mode = "stop"
+    rpc.timestamp += 40.0
+    rpc.commands.clear()
+
+    await adapter.device_freed()
+
+    assert ["play"] not in rpc.commands
+
+
+@pytest.mark.asyncio
+async def test_an_edit_while_away_loses_the_position(monkeypatch):
+    """George's rule A, 2026-09-17: an add or a shuffle also changes the
+    timestamp, and the position is then not restored. Accepted, because it
+    can never seek into content the user just chose."""
+    adapter, rpc = _adapter(monkeypatch, mode="play", position=60.0)
+    await adapter.release()
+    rpc.timestamp += 7.5  # cmd:add while another renderer held the device
+    rpc.position = 1.2
+    rpc.commands.clear()
+
+    await adapter.device_freed()
+
+    assert not any(c[0] == "time" for c in rpc.commands)
+
+
+@pytest.mark.asyncio
+async def test_a_skipped_restore_does_not_linger_for_a_later_acquisition(monkeypatch):
+    adapter, rpc = _adapter(monkeypatch, mode="play", position=60.0)
+    await adapter.release()
+    rpc.timestamp += 1.0
+    await adapter.device_freed()
+    rpc.timestamp -= 1.0  # even if the old value came back
+    rpc.position = 1.0
+    rpc.commands.clear()
+
+    await adapter.device_freed()
+
+    assert rpc.commands == []
+
+
+@pytest.mark.asyncio
+async def test_same_queue_still_resumes_after_a_takeover(monkeypatch):
+    """The ADR-0027 behaviour that must survive: pause, skip and the power
+    cycle leave the timestamp alone (measured), so returning to the same
+    queue is still put back."""
+    adapter, rpc = _adapter(monkeypatch, mode="play", position=60.0)
+    await adapter.release()
+    rpc.mode = "pause"
+    rpc.position = 1.2
+    rpc.commands.clear()
+
+    await adapter.device_freed()
+
+    assert ["time", "60.00"] in rpc.commands
+    assert ["play"] in rpc.commands
+
+
+@pytest.mark.asyncio
+async def test_an_lms_reporting_no_timestamp_behaves_as_before(monkeypatch):
+    """Nothing to compare means nothing to learn from it; the ADR-0027
+    restore stands rather than silently switching itself off."""
+    adapter, rpc = _adapter(monkeypatch, mode="play", position=60.0)
+    rpc.timestamp = None
+    await adapter.release()
+    rpc.position = 1.2
+    rpc.commands.clear()
+
+    await adapter.device_freed()
+
+    assert ["time", "60.00"] in rpc.commands
+
+
 # --- the user's own deactivation, not a takeover ---------------------------
 
 
@@ -367,6 +487,22 @@ async def test_deactivate_then_press_play_seeks_back(monkeypatch):
     await adapter.device_freed()
 
     assert ["time", "72.00"] in rpc.commands
+
+
+@pytest.mark.asyncio
+async def test_deactivate_then_load_something_else_does_not_seek(monkeypatch):
+    """The user's own deactivation records a position too; loading new content
+    afterwards must not be seeked to it either."""
+    adapter, rpc = _adapter(monkeypatch, mode="play", position=72.0)
+    await adapter._note_position_if_unset(session=None)
+
+    rpc.timestamp += 30.0
+    rpc.position = 0.4
+    rpc.commands.clear()
+
+    await adapter.device_freed()
+
+    assert not any(c[0] == "time" for c in rpc.commands)
 
 
 # --- ADR-0037: transport commands -----------------------------------------
