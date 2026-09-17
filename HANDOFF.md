@@ -1,66 +1,72 @@
 # Handoff
 
-Last updated: 2026-09-17 (sixteenth session, on R2D2 — **Phase 6 built on
-`phase-6-plan`; its first image build on R2D2 failed at the loop device and
-must be rerun before George's checks and the PR**)
+Last updated: 2026-09-17 (seventeenth session, on R2D2 — **the Phase 6 image
+is built and verified as a file; George is flashing it**)
 
 ## Start here
 
-**The device runs the 2026-09-16 image (`v0.2.1-179-g67193d5`, Phase 5) plus
-Phase 6 core and UI installed by hand.** There is **no Phase 6 image yet.**
-**Next action: rerun `make image` on R2D2, verify the image with
-`image/verify-image.sh`, hand it to George to flash and check, then the PR
-from `phase-6-plan` to `main`.**
+**The Phase 6 image exists:**
+`image/deploy/2026-09-17-gexis-player-v0.2.1-202-gf3674f3-dirty.img` (4.5 GB,
+built from `phase-6-plan` at `f3674f3`; `-dirty` is only the pi-gen submodule's
+deleted `stage2/EXPORT_IMAGE`). **Built in 467 s, `BUILD-EXIT=0`.**
+`image/verify-image.sh` passed every check on its first real run, output read
+line by line: 18 files byte-identical, six units enabled with the right link
+targets, `alsa-restore` masked, `default.target` not written, venv
+`gexis_core` = `core/src` (27 .py), `/opt/gexis-ui` = `ui/dist` (51 files),
+Peppy engines, font, icon, 267 Gelo5 and 42 stock skin images; `viz_timeout`
+not in the registry, daemon fallback 300 s. The script does not read the boot
+partition; checked separately with `mtype`: `cmdline.txt` still has
+`systemd.run=/boot/firstrun.sh`, `firstrun.sh` placeholders blank.
+
+**When this session closed, George was about to flash it** (R2D2 rebooted
+first). The device may still be on the 2026-09-16 image plus hand-installed
+Phase 6 — ask, or check `/etc/gexis` timestamps.
+
+**Next actions, in order:**
+
+1. George flashes and runs `make provision DEVICE=/dev/sdX`, boots.
+2. **Add C3PO's key to the device** (George, 2026-09-17: after first boot,
+   not in `provision.sh`). `image/provision.local.env` now carries **R2D2's**
+   key only (it had C3PO's, copied over with the file; both keys have the
+   comment `desktop-to-dietpi` — tell them apart by fingerprint: R2D2
+   `SHA256:UVfv…`, C3PO `SHA256:d/pT…`). C3PO's public key is saved at
+   `~/.ssh/c3po_id_ed25519.pub`. Append it with
+   `ssh pi@gexis.local 'cat >> ~/.ssh/authorized_keys' < ~/.ssh/c3po_id_ed25519.pub`
+   and confirm both fingerprints with `ssh-keygen -lf ~/.ssh/authorized_keys`
+   on the device. Repeat after every reflash. (A two-line `SSH_PUBKEY` would
+   work in `firstrun.sh` — `imager_custom add_ssh_keys` echoes the value, one
+   line per key — but `provision.sh`'s round-trip check greps one line and
+   would refuse it; George chose not to change it.)
+   `~/provision.local.env.bak-c3po-key` (holds the Wi-Fi password) can be
+   deleted once George is happy.
+3. Check LMS player `gexis` is on "adjust volume" (`digitalVolumeControl` 1).
+4. George's checks below, then the PR from `phase-6-plan` to `main`.
+
+**The loop-device question is still open — and this rerun did not settle
+it.** The first R2D2 build (2026-09-17 11:35, log
+`~/gexis-build-1-failed-loop.log`) failed at `export-image/prerun.sh` with
+`mknod: invalid minor device number '/dev/loop0 (lost)'`. The rerun
+(12:40, log `~/gexis-build.log`) attached `/dev/loop0` first time. The
+previous handoff said a passing rerun would show `image/README.md`'s root
+cause (module not loaded before the build) is incomplete — **that was wrong**:
+the rerun started with the module loaded *and* `/dev/loop0` present, so both
+explanations predicted a pass. What discriminates is **the first build after
+R2D2's reboot**: `loop` autoloads from `/etc/modules-load.d/loop.conf`, but
+with `CONFIG_BLK_DEV_LOOP_MIN_COUNT=0` no `/dev/loopN` exists. Before building,
+record `lsmod | grep -w loop` and `ls /dev/loop*`. A pass means the README is
+right; a `(lost)` failure means the missing node is the cause, and autoloading
+does not prevent it — then propose to George correcting the README and a
+durable fix (e.g. pre-creating a node before the build; needs `sudo`).
+
+**Docker group:** the closing session's process predated George's `docker`
+membership; the build ran via `newgrp docker` (no sudo), piping the detached
+command into it. After the reboot `id` should show `docker` directly — check.
+Run builds detached as before so the session's memory guard cannot kill them:
+`nohup setsid bash -c "make image > ~/gexis-build.log 2>&1; echo BUILD-EXIT=\$? >> ~/gexis-build.log" >/dev/null 2>&1 </dev/null &`.
+Move the previous log aside first. The submodule shows `m image/pi-gen`
+afterwards: expected, leave it.
 
 **Development moved to R2D2 on 2026-09-17** (see Machines).
-
-**The first Phase 6 build on R2D2 failed (2026-09-17, 11:35-11:55, 1224 s).**
-Every stage, including all of `stage-gexis`, finished; `export-image/prerun.sh`
-then failed six times with `mknod: invalid minor device number '/dev/loop0
-(lost)'`. No image came out (`image/deploy/` does not exist). Log:
-`~/gexis-build.log`.
-
-That is the failure `image/README.md` records under "Known issue (resolved)"
-from C3PO's first build (2026-09-05), which blames the `loop` module not being
-loaded before the build, fixed by `sudo modprobe -r loop && sudo modprobe loop`.
-What was measured on R2D2 fits that record, but also a second explanation, and
-**the rerun is what tells them apart:**
-
-- R2D2 booted at 11:12; `/etc/modules-load.d/loop.conf` was written at 11:29,
-  so it has not taken effect yet. The kernel logged `loop: module loaded` at
-  11:54:42 — loaded by the build itself, at the loop step. (Fits the README.)
-- This kernel has `CONFIG_BLK_DEV_LOOP_MIN_COUNT=0`: loading the module creates
-  no `/dev/loopN` nodes. A `--privileged` container's `/dev` is (assumed, not
-  checked) populated when the container starts, so a `/dev/loop0`
-  created mid-build would never appear inside it — "(lost)". If that is the
-  cause, autoloading at boot does **not** prevent it.
-- `/dev/loop0` now exists on the host (created 11:54:42, nothing attached).
-
-**So: do not reboot R2D2 and do not reload `loop` before the rerun** — both
-remove `/dev/loop0`. If a plain rerun gets past `export-image`, the README's
-root cause is incomplete: propose correcting it (and a durable fix, e.g.
-pre-creating a loop node before the build) to George. If it fails the same
-way, apply the README's fix — it needs `sudo`, so George runs it.
-
-**Docker access:** the session that found this had no `docker` group in its
-process (George is in the group; the process predated it) and `sudo` needs a
-password. Check `id` shows `docker` before starting. Run the build detached,
-as before, so the session's memory guard cannot kill it:
-`nohup setsid bash -c "make image > ~/gexis-build.log 2>&1; echo BUILD-EXIT=\$? >> ~/gexis-build.log" >/dev/null 2>&1 </dev/null &`.
-The submodule shows `m image/pi-gen` afterwards (`stage2/EXPORT_IMAGE` deleted
-by the Makefile): expected, leave it.
-
-**Verifying the image: `image/verify-image.sh image/deploy/<name>.img`** (new,
-2026-09-17). Reads the root partition with `debugfs` at its offset (no root,
-no loop device) and compares against the checkout: every unit, config and
-Peppy file byte for byte; the six units enabled and `alsa-restore` masked;
-`default.target` not written; venv `gexis_core` identical to `core/src`;
-`/opt/gexis-ui` identical to `ui/dist`; Peppy engines, font, icons and both
-skin corpora. Tested only against a synthetic ext4 image (every FAIL path and
-the symlink/dump mechanics) — **its first real run is this image**; read its
-output, don't just trust `RESULT`. Also check the version in the `.info`
-manifest matches the commit built. The Phase 5 image's own check was never
-written down step by step; this replaces it.
 
 **Checks for the flashed Phase 6 image:**
 
@@ -299,6 +305,12 @@ reverted, currently-flashed image predates this fix.
 ```
 
 ## Things that will bite if forgotten
+
+- **A reflashed card only has R2D2's SSH key.** `make provision` writes the
+  one key in `image/provision.local.env`; C3PO's
+  (`~/.ssh/c3po_id_ed25519.pub`) is appended by hand after first boot
+  (George, 2026-09-17). Both keys are commented `desktop-to-dietpi`; compare
+  fingerprints, not comments.
 
 - **Never `docker start pigen_work`.** It re-runs pi-gen's entrypoint and
   starts a build — done accidentally on 2026-09-13 while inspecting the
