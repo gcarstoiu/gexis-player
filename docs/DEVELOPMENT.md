@@ -1023,6 +1023,16 @@ text input is rendered at all.
 
 Purely additive. Cannot break playback.
 
+**Read first: [Finding 030](findings/030-free-enrichment-providers.md)**
+(2026-09-17) — free providers, field by field, with their terms. MusicBrainz
+is not enough on its own: biographies, similar artists, artist photos and
+lyrics each need another source. A key-free combination (MusicBrainz + Cover
+Art Archive, Wikipedia, ListenBrainz, LRCLIB) covers everything but artist
+photos; recommended as a starting point, **not decided**. The provider choice
+needs an ADR before implementation. API keys, where needed, are a per-user
+setting (George, 2026-09-17; ADR-0022). Criterion 1 assumes one provider;
+with several it becomes one limiter per provider.
+
 **Acceptance**
 
 1. Single shared token bucket; MusicBrainz never exceeds one request per second.

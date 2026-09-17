@@ -34,6 +34,12 @@ excluded by its `["podcast","items"]` command; `cover_300x300` is a 173 KB
 PNG where `cover_300x300_o.jpg` is a 25 KB JPEG (one album);
 `ignoredarticles` is "The El La Los Las Le Les".
 
+**Phase 8 research is recorded, ahead of time:**
+[Finding 030](docs/findings/030-free-enrichment-providers.md) compares free
+enrichment providers (George asked 2026-09-17). Nothing decided; the provider
+choice needs an ADR when Phase 8 starts. George: API keys are a per-user
+setting, so a key is not a blocker (ADR-0022 inventory row added).
+
 **The device** runs the Phase 6 image
 (`2026-09-17-gexis-player-v0.2.1-202-gf3674f3-dirty.img`), flashed and
 provisioned 2026-09-17. Both SSH keys authorized. **After every reflash**
