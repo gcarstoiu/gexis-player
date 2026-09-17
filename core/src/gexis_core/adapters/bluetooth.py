@@ -38,7 +38,7 @@ import asyncio
 import logging
 from typing import Callable
 
-from dbus_next import BusType
+from dbus_next import BusType, Variant
 from dbus_next.aio import MessageBus
 
 from gexis_core.adapters.base import Adapter, Capabilities, ReleaseAction, VolumeMechanism
@@ -94,6 +94,14 @@ def _unwrap(props: dict) -> dict:
     return {key: variant.value for key, variant in props.items()}
 
 
+#: MediaPlayer1's Shuffle ("off" / "alltracks" / "group") and Repeat ("off" /
+#: "singletrack" / "alltracks" / "group"), against ADR-0037's names. A group
+#: shuffle or repeat shows as on/all; the panel writes only the track-level
+#: values.
+REPEAT_FROM_BLUEZ = {"off": "off", "singletrack": "one", "alltracks": "all", "group": "all"}
+REPEAT_TO_BLUEZ = {"off": "off", "one": "singletrack", "all": "alltracks"}
+
+
 class BluetoothAdapter(Adapter):
     renderer_id = "bluetooth"
     release_action = ReleaseAction.DISCONNECT
@@ -118,7 +126,10 @@ class BluetoothAdapter(Adapter):
         volume_mechanism=VolumeMechanism.DUMMY_MIXER,
         dummy_mixer_card=DUMMY_CARD_BLUETOOTH,
         # ADR-0037, measured on one phone in Finding 028.
-        controls=frozenset({"play", "pause", "next", "previous"}),
+        # Shuffle and repeat: George, 2026-09-17, over the design's LMS-only
+        # rule. BlueZ exposes them only when the phone's app supports them,
+        # so they are disabled while the player has no such property.
+        controls=frozenset({"play", "pause", "next", "previous", "shuffle", "repeat"}),
     )
 
     def __init__(self) -> None:
@@ -136,6 +147,10 @@ class BluetoothAdapter(Adapter):
         self._last_position_ms: int | None = None
         #: MediaPlayer1.Status, normalised (Phase 4 criterion 3).
         self._last_transport: str | None = None
+        #: MediaPlayer1.Shuffle and .Repeat, raw; None while the player has
+        #: not exposed them, which disables the buttons (ADR-0037 §3).
+        self._last_shuffle: str | None = None
+        self._last_repeat: str | None = None
         #: MediaTransport1.Codec, resolved to a name (criterion 3 shows it
         #: where a sample rate would go). Kept separately from the track
         #: because it belongs to the *connection*, not the track, and
@@ -171,6 +186,13 @@ class BluetoothAdapter(Adapter):
                 source_type="bluetooth",
                 transport=self._last_transport,
                 codec=self._last_codec,
+                shuffle=None if self._last_shuffle is None else self._last_shuffle != "off",
+                repeat=REPEAT_FROM_BLUEZ.get(self._last_repeat),
+                unavailable=frozenset(
+                    name
+                    for name, value in (("shuffle", self._last_shuffle), ("repeat", self._last_repeat))
+                    if value is None
+                ),
             )
         )
 
@@ -246,6 +268,8 @@ class BluetoothAdapter(Adapter):
             self._last_track = {}
             self._last_position_ms = None
             self._last_transport = None
+            self._last_shuffle = None
+            self._last_repeat = None
             self._last_codec = None
             self._report_metadata()
             # George, 2026-09-12: found live via the state WebSocket - a
@@ -271,6 +295,8 @@ class BluetoothAdapter(Adapter):
             self._last_position_ms = props["Position"]
         if "Status" in props:
             self._last_transport = TRANSPORT_STATUS.get(props["Status"])
+        self._last_shuffle = props.get("Shuffle")
+        self._last_repeat = props.get("Repeat")
         self._report_metadata()
 
     def _seed_codec(self, transport_props: dict) -> None:
@@ -332,7 +358,11 @@ class BluetoothAdapter(Adapter):
                 self._last_position_ms = changed["Position"]
             if "Status" in changed:
                 self._last_transport = TRANSPORT_STATUS.get(changed["Status"])
-            if {"Track", "Position", "Status"} & changed.keys():
+            if "Shuffle" in changed:
+                self._last_shuffle = changed["Shuffle"]
+            if "Repeat" in changed:
+                self._last_repeat = changed["Repeat"]
+            if {"Track", "Position", "Status", "Shuffle", "Repeat"} & changed.keys():
                 self._report_metadata()
 
         props.on_properties_changed(on_properties_changed)
@@ -355,6 +385,30 @@ class BluetoothAdapter(Adapter):
 
     async def previous(self) -> bool:
         return await self._player_call("Previous")
+
+    async def shuffle(self, on: bool) -> bool:
+        return await self._player_set("Shuffle", "alltracks" if on else "off")
+
+    async def repeat(self, mode: str) -> bool:
+        return await self._player_set("Repeat", REPEAT_TO_BLUEZ[mode])
+
+    async def _player_set(self, prop: str, value: str) -> bool:
+        """A writable MediaPlayer1 property. The phone's app decides whether
+        it honours it; the result comes back as PropertiesChanged."""
+        if self._bus is None or self._player_path is None:
+            logger.warning("bluetooth: set %s with no known media player", prop)
+            return False
+        try:
+            introspection = await self._bus.introspect(BLUEZ_SERVICE, self._player_path)
+            props = self._bus.get_proxy_object(
+                BLUEZ_SERVICE, self._player_path, introspection
+            ).get_interface(PROPERTIES_IFACE)
+            await props.call_set(MEDIA_PLAYER_IFACE, prop, Variant("s", value))
+        except Exception as exc:  # noqa: BLE001 - a phone refusing is not our crash
+            logger.warning("bluetooth: MediaPlayer1.%s = %s failed: %s", prop, value, exc)
+            return False
+        logger.info("bluetooth: MediaPlayer1.%s = %s on request", prop, value)
+        return True
 
     async def _player_call(self, method: str) -> bool:
         """ADR-0037: an AVRCP command to the phone. The result comes back

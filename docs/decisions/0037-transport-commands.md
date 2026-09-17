@@ -113,6 +113,19 @@ The Finding 014 risk did not occur: `/player/resume` *within* a live Spotify
 session kept the phone connected (George watched). An LMS playlist has no end
 for Next: it wraps even with repeat off.
 
+> **Amended 2026-09-17 (George): Spotify and Bluetooth get shuffle and repeat
+> too**, overriding the design's LMS-only rule ("the other two renderers just
+> hand us a stream"): the APIs have them. go-librespot sets them with
+> `/player/shuffle_context`, `/player/repeat_context` and `/player/repeat_track`,
+> reports them in `/status`, and sends an event on each change. Spotify's
+> two repeat flags become three states: `repeat_track` is one,
+> `repeat_context` alone is all, neither is off. BlueZ exposes `Shuffle` and
+> `Repeat` as writable `MediaPlayer1` properties **only when the phone's app
+> supports them**, so on Bluetooth the buttons are declared (visible) and
+> disabled while the player has no such property (§3). **Not yet measured on
+> hardware** — George's panel check is the measurement, recorded in
+> Finding 028.
+
 A command that fails its measurement is not declared, and so is hidden — the
 first row of §3. A command that works in general but not in some state
 (a radio station on LMS) is declared and disabled in that state — the third.

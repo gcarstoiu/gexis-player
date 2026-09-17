@@ -157,6 +157,16 @@ signals and every `/state` change recorded next to the panel's commands:
   after 8 s when no confirmation arrives. That is the designed fallback
   (ADR-0037 §4 amendment), and it is what George saw as lag.
 
+## Addendum 3: repeat on LMS is slow to reach the Lyrion app
+
+2026-09-17. George: repeat changed from the panel took **6-8 s** to show in
+his phone app; shuffle showed promptly, and a repeat change from the phone
+reached the panel promptly. Measured from the device, three times: LMS had
+applied a panel repeat change **0.02 s** after the command, and the panel
+showed it at 0.5 s. **George confirmed it is the app:** the same change shows
+promptly in **Squeezer**, and slowly in the **Lyrion** app. Nothing on our
+side to change.
+
 ## What this settles for ADR-0037
 
 | renderer | declares | Next/Previous disabled when |

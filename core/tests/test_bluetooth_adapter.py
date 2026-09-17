@@ -53,6 +53,8 @@ def test_seed_metadata_reports_title_artist_album_and_position():
             position=5.0,
             duration=200.0,
             source_type="bluetooth",
+            # the phone's app exposed no Shuffle/Repeat: disabled, not hidden
+            unavailable=frozenset({"shuffle", "repeat"}),
         )
     ]
 
@@ -81,7 +83,7 @@ def test_seed_metadata_without_track_or_position_reports_blank():
 
     adapter._seed_metadata({})
 
-    assert received == [TrackMetadata(source_type="bluetooth")]
+    assert received == [TrackMetadata(source_type="bluetooth", unavailable=frozenset({"shuffle", "repeat"}))]
 
 
 def test_seed_metadata_is_a_noop_without_a_registered_callback():
@@ -239,7 +241,7 @@ def test_interfaces_removed_relinquishes_and_blanks_metadata():
     )
 
     assert released == [None]
-    assert received[-1] == TrackMetadata(source_type="bluetooth")
+    assert received[-1] == TrackMetadata(source_type="bluetooth", unavailable=frozenset({"shuffle", "repeat"}))
     assert adapter._connected_device_path is None
 
 
@@ -392,3 +394,22 @@ async def test_the_player_path_follows_the_media_player_in_and_out(monkeypatch):
 
     adapter._handle_interfaces_removed(path, {MEDIA_PLAYER_IFACE: {}}, lambda: None)
     assert adapter._player_path is None
+
+
+def test_shuffle_and_repeat_follow_the_players_properties():
+    adapter = BluetoothAdapter()
+    received = []
+    adapter.on_metadata_change(received.append)
+
+    adapter._seed_metadata({"Shuffle": Variant("s", "off"), "Repeat": Variant("s", "singletrack")})
+    assert (received[-1].shuffle, received[-1].repeat, received[-1].unavailable) == (False, "one", frozenset())
+
+    adapter._seed_metadata({"Shuffle": Variant("s", "group"), "Repeat": Variant("s", "group")})
+    assert (received[-1].shuffle, received[-1].repeat) == (True, "all")
+
+
+@pytest.mark.asyncio
+async def test_setting_shuffle_or_repeat_with_no_player_fails_rather_than_pretending():
+    adapter = BluetoothAdapter()
+    assert await adapter.shuffle(True) is False
+    assert await adapter.repeat("one") is False

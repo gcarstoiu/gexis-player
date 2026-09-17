@@ -78,6 +78,11 @@ TRANSPORT_EVENTS = {
 }
 
 
+#: go-librespot's shuffle and repeat events, each `{"value": bool}`
+#: (daemon/api_server.go, v0.9.0).
+FLAG_EVENTS = ("shuffle_context", "repeat_context", "repeat_track")
+
+
 class SpotifyAdapter(Adapter):
     renderer_id = "spotify"
     release_action = ReleaseAction.DISCONNECT
@@ -98,7 +103,10 @@ class SpotifyAdapter(Adapter):
         # ADR-0037, measured in Finding 028. /player/resume inside a live
         # session kept the phone connected; Finding 014's failure was a
         # resume after a takeover, which this is not.
-        controls=frozenset({"play", "pause", "next", "previous"}),
+        # Shuffle and repeat: George, 2026-09-17, over the design's LMS-only
+        # rule. go-librespot sets and reports both (api-spec, and events
+        # shuffle_context / repeat_context / repeat_track).
+        controls=frozenset({"play", "pause", "next", "previous", "shuffle", "repeat"}),
     )
 
     def __init__(self, host: str, port: int) -> None:
@@ -112,6 +120,11 @@ class SpotifyAdapter(Adapter):
         #: name/artist/album, so reporting it needs the rest of the last
         #: known metadata rather than emitting a mostly-blank update.
         self._last_metadata: TrackMetadata | None = None
+        #: go-librespot's three flags. None until reported: the session's
+        #: `/status` seeds them, events keep them current.
+        self._shuffle_context: bool | None = None
+        self._repeat_context: bool | None = None
+        self._repeat_track: bool | None = None
 
     def on_volume_change(self, callback: Callable[[int, int], None]) -> None:
         """Volume bridge hooks in here: callback(value, max) fires whenever
@@ -150,6 +163,7 @@ class SpotifyAdapter(Adapter):
                 logger.info("spotify: connected to %s/events", self._base)
                 if self._on_availability is not None:
                     self._on_availability(True)
+                await self._seed_flags(session)
                 async for msg in ws:
                     if msg.type != aiohttp.WSMsgType.TEXT:
                         continue
@@ -162,6 +176,7 @@ class SpotifyAdapter(Adapter):
                     if event_type == "active":
                         logger.info("spotify: device became active (acquisition)")
                         on_acquire()
+                        await self._seed_flags(session)
                     elif event_type == "will_play":
                         logger.info("spotify: will_play (acquisition, ahead of ALSA open)")
                         on_acquire()
@@ -186,6 +201,8 @@ class SpotifyAdapter(Adapter):
                         self._handle_metadata_event(frame.get("data") or {})
                     elif event_type == "seek":
                         self._handle_seek_event(frame.get("data") or {})
+                    elif event_type in FLAG_EVENTS:
+                        self._handle_flag_event(event_type, frame.get("data") or {})
                     elif event_type in TRANSPORT_EVENTS:
                         position_ms = await self._current_position_ms(session)
                         self._handle_transport_event(event_type, position_ms)
@@ -209,6 +226,8 @@ class SpotifyAdapter(Adapter):
             # the transport state on every track change and leave it blank
             # until the next play/pause edge happened to arrive.
             transport=self._last_metadata.transport if self._last_metadata else None,
+            shuffle=self._shuffle_context,
+            repeat=self._repeat(),
         )
         self._last_metadata = metadata
         self._on_metadata(metadata)
@@ -232,6 +251,49 @@ class SpotifyAdapter(Adapter):
         track = (body or {}).get("track") or {}
         position = track.get("position")
         return position if isinstance(position, int) else None
+
+    def _repeat(self) -> str | None:
+        if self._repeat_track is None and self._repeat_context is None:
+            return None
+        if self._repeat_track:
+            return "one"
+        return "all" if self._repeat_context else "off"
+
+    def _with_flags(self, metadata: TrackMetadata) -> TrackMetadata:
+        return replace(metadata, shuffle=self._shuffle_context, repeat=self._repeat())
+
+    async def _seed_flags(self, session: aiohttp.ClientSession) -> None:
+        """Shuffle and repeat as they stand, from `/status` - events only
+        report changes. No session (204) leaves them unknown."""
+        try:
+            async with session.get(
+                f"{self._base}/status", timeout=aiohttp.ClientTimeout(total=2)
+            ) as resp:
+                if resp.status != 200:
+                    return
+                body = await resp.json(content_type=None) or {}
+        except (aiohttp.ClientError, asyncio.TimeoutError, ValueError) as exc:
+            logger.debug("spotify: /status for shuffle/repeat failed: %s", exc)
+            return
+        for flag in FLAG_EVENTS:
+            if isinstance(body.get(flag), bool):
+                setattr(self, f"_{flag}", body[flag])
+        self._report_flags()
+
+    def _handle_flag_event(self, event_type: str, data: dict) -> None:
+        value = data.get("value")
+        if not isinstance(value, bool):
+            return
+        setattr(self, f"_{event_type}", value)
+        self._report_flags()
+
+    def _report_flags(self) -> None:
+        if self._on_metadata is None or self._last_metadata is None:
+            return
+        metadata = self._with_flags(self._last_metadata)
+        if metadata != self._last_metadata:
+            self._last_metadata = metadata
+            self._on_metadata(metadata)
 
     def _handle_transport_event(self, event_type: str, position_ms: int | None = None) -> None:
         """A play/pause/stop edge (Phase 4 criterion 3).
@@ -293,12 +355,24 @@ class SpotifyAdapter(Adapter):
         # Restart-or-go-back is go-librespot's own (Finding 028).
         return await self._post_player("prev")
 
-    async def _post_player(self, action: str) -> bool:
+    async def shuffle(self, on: bool) -> bool:
+        return await self._post_player("shuffle_context", {"shuffle_context": on})
+
+    async def repeat(self, mode: str) -> bool:
+        """Spotify has two flags where the panel has three states: one is
+        repeat_track, all is repeat_context without it, off is neither."""
+        if mode == "one":
+            return await self._post_player("repeat_track", {"repeat_track": True})
+        if not await self._post_player("repeat_track", {"repeat_track": False}):
+            return False
+        return await self._post_player("repeat_context", {"repeat_context": mode == "all"})
+
+    async def _post_player(self, action: str, body: dict | None = None) -> bool:
         """ADR-0037. The result arrives as go-librespot's own transport
         event, the same one a phone's command produces."""
         try:
             async with aiohttp.ClientSession() as session:
-                async with session.post(f"{self._base}/player/{action}") as resp:
+                async with session.post(f"{self._base}/player/{action}", json=body) as resp:
                     ok = resp.status < 300
         except aiohttp.ClientError as exc:
             logger.warning("spotify: /player/%s failed: %s", action, exc)

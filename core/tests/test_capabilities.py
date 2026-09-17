@@ -136,3 +136,9 @@ def test_dummy_mixer_cards_are_distinct_and_match_volume_py():
 
 def test_spotify_has_no_dummy_mixer_card():
     assert SpotifyAdapter.capabilities.dummy_mixer_card is None
+
+
+def test_all_three_declare_shuffle_and_repeat():
+    """George, 2026-09-17, over the design's LMS-only rule."""
+    for cls in (LmsAdapter, SpotifyAdapter, BluetoothAdapter):
+        assert {"shuffle", "repeat"} <= cls.capabilities.controls, cls.__name__
