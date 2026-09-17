@@ -46,10 +46,11 @@ UNIT_NAME = "squeezelite.service"
 #: Requested on every "status" query this adapter makes so pushed frames
 #: carry metadata, not just power (Phase 3 criterion 1). Letters per the
 #: CLI docs' songinfo tag table (LMS-CLI.md): a=artist, l=album, c=coverid,
-#: d=duration, T=samplerate. title/time/duration (top-level, the player's
-#: *current* values) come back regardless of tags - only the per-song
-#: fields need asking for.
-METADATA_TAGS = "aldcT"
+#: d=duration, T=samplerate, K=artwork_url (a remote item's own artwork,
+#: ADR-0038 §8a). title/time/duration (top-level, the player's *current*
+#: values) come back regardless of tags - only the per-song fields need
+#: asking for.
+METADATA_TAGS = "aldcTK"
 
 #: How far the player's position may drift from what `release()` recorded
 #: before `device_freed()` corrects it with a seek.
@@ -225,9 +226,12 @@ class LmsAdapter(Adapter):
         cross-reference against `playlist_cur_index`.
         """
         song = (result.get("playlist_loop") or [{}])[0]
-        remote = bool(result.get("remote"))
-        title = result.get("current_title") if remote else song.get("title")
-        coverid = song.get("coverid")
+        if result.get("remote"):
+            title, album, artwork = self._remote_fields(result, song)
+        else:
+            coverid = song.get("coverid")
+            title, album = song.get("title"), song.get("album")
+            artwork = f"{self._base}/music/{coverid}/cover.jpg" if coverid else None
         # LMS's `mode` is "play"/"pause"/"stop" (LMS-CLI.md's status query).
         # A powered-off player reports no mode at all, which is neither
         # playing nor paused - left as None rather than invented as
@@ -244,8 +248,8 @@ class LmsAdapter(Adapter):
             TrackMetadata(
                 title=title,
                 artist=song.get("artist"),
-                album=song.get("album"),
-                artwork=f"{self._base}/music/{coverid}/cover.jpg" if coverid else None,
+                album=album,
+                artwork=artwork,
                 # LMS-CLI.md's songinfo table documents tag T ("samplerate")
                 # as "in KHz", but its own worked example returns a raw Hz
                 # value (44100 for 44.1kHz content) - a known doc/reality
@@ -262,6 +266,33 @@ class LmsAdapter(Adapter):
                 repeat=REPEAT_FROM_LMS.get(_as_int(result.get("playlist repeat"))),
             )
         )
+
+    def _remote_fields(self, result: dict, song: dict) -> tuple[str | None, str | None, str | None]:
+        """Title, album line and artwork for a stream (ADR-0038 §8a, George
+        2026-09-17): the song is the title and the station the album line.
+
+        `current_title` is the station for TuneIn today, but has been blank
+        (KissFM, Phase 6) and "Artist - Title" (2026-09-08), so it is used
+        only where the song fields leave a gap. A Qobuz track through LMS is
+        `remote` too and carries a real album, which wins. The `coverid`
+        artwork of a stream is LMS's generic radio placeholder (Finding 029),
+        so without an `artwork_url` there is none, and the panel shows its
+        own pending glyph.
+        """
+        song_title = (song.get("title") or "").strip() or None
+        station = (result.get("current_title") or "").strip() or None
+        title = song_title or station
+        album = (song.get("album") or "").strip() or None
+        if album is None and station and song_title and song_title not in station:
+            album = station
+        artwork_url = (song.get("artwork_url") or "").strip()
+        if not artwork_url:
+            artwork = None
+        elif artwork_url.startswith(("http://", "https://")):
+            artwork = artwork_url
+        else:
+            artwork = f"{self._base}/{artwork_url.lstrip('/')}"
+        return title, album, artwork
 
     async def _rpc(self, session: aiohttp.ClientSession, player: str, command: list) -> dict:
         body = {"id": next(_id_counter), "method": "slim.request", "params": [player, command]}

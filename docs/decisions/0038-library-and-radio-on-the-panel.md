@@ -198,6 +198,34 @@ shows the design's pending glyph (data contract, empty states).
   resolved command, not from the key name `go`. Found by starting playback
   unintentionally (Finding 029).
 
+### 8a. A playing station on now playing (George, 2026-09-17)
+
+Criterion 9. For an LMS item reported `remote`:
+
+| Field | Source |
+|---|---|
+| **Title** | the song's title (`playlist_loop[0].title`, the same as `remoteMeta.title`); if there is none, the station name (`current_title`, trimmed) |
+| **Artist** | the song's artist |
+| **Album line** | the song's album if it has one (a Qobuz track through LMS is also `remote`); otherwise the station name, unless it is blank or already contains the song title |
+| **Artwork** | the song's `artwork_url` (tag `K`), resolved against the LMS base when relative; otherwise **none** — the panel shows "artwork pending" |
+
+George chose the song as the title (option A over the station as title) and
+"artwork pending" over LMS's grey radio-tower placeholder. Three shapes are on
+record and the rule has to survive all of them: the station name in
+`current_title` and the song in the song fields (Finding 029); a blank
+`current_title` with the station in the song fields (KissFM, Phase 6); and the
+song as "Artist - Title" in `current_title` (2026-09-08,
+`docs/HANDOFF-ARCHIVE.md`).
+
+**Built and checked 2026-09-17** (Phase 7 step 2): on TuneIn "Paradiso
+Berlin" the panel showed "CRAZY" / "SEAL" / "Paradiso Berlin" and the song's
+cover. The station-without-a-song case is covered by tests, not yet seen on
+hardware.
+
+**Phase 8** (George asked, 2026-09-17): a station that sends no artwork is a
+named case for the enrichment service, which has the artist and song title
+but no album or duration, so its confidence rule matters more there.
+
 ### 9. Settings (George confirmed 2026-09-17; appended to ADR-0022's inventory)
 
 | Setting | Mark |

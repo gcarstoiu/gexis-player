@@ -29,9 +29,16 @@ into `/opt/gexis-core/venv/lib/python3.13/site-packages/gexis_core/adapters/`,
 previous core at `/opt/gexis-core.7-1a-backup`. A reflash loses it until the
 Phase 7 image.
 
-**Next action: step 2 — radio title and artwork from `remoteMeta`**
-(criterion 9, Finding 029 defect B). How the station name and the song title
-share the screen is a question for George before building.
+**Step 2 is done** (2026-09-17): a playing station shows the song as title,
+its artist, the station as the album line, and the song's `artwork_url` or
+"artwork pending" (ADR-0038 §8a). George checked on `gexis`; also
+hand-installed (previous core, with step 1a, at `/opt/gexis-core.7-2-backup`).
+George asked for radio artwork via enrichment: Phase 8 criterion 7.
+
+**Next action: step 3 — library reads in the core.** Tests need recorded LMS
+replies; Finding 029's are on R2D2 at `~/gexis-findings/029-raw/` and hold
+George's library listing, so ask George before committing any as fixtures
+(or build anonymised ones).
 
 **Test data on George's LMS:** playlist folder `/playlist` (George set it;
 it triggered a full rescan that renumbered the library). Playlists

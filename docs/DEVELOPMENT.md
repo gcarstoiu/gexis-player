@@ -928,7 +928,7 @@ Plexamp app's audio stops at the tap.
 
 ### Phase 7 — Library browse
 
-**Status 2026-09-17: steps 1 and 1a done; next is step 2. ADR-0038 proposed.**
+**Status 2026-09-17: steps 1, 1a and 2 done; next is step 3. ADR-0038 proposed.**
 Branch `phase-7-plan`. Criteria 1 and 6 amended, 10 and 11 added, by
 [ADR-0038](decisions/0038-library-and-radio-on-the-panel.md) (George's
 decisions, 2026-09-17).
@@ -983,6 +983,9 @@ subtree of nine items.
    in `current_title` while `remoteMeta` carries the song; and the published
    artwork is LMS's grey placeholder, while `remoteMeta.artwork_url` has the
    song's art (George saw the placeholder on the panel).
+   **Decided 2026-09-17 (George), ADR-0038 §8a:** the song is the title, its
+   artist the artist, the station the album line; artwork is the song's
+   `artwork_url`, otherwise "artwork pending", not LMS's placeholder.
 10. **Queue rail on now playing** (LMS only), with the design's empty state
     offering a playlist chooser. Added 2026-09-17 (George).
 11. **Home and the mini strip:** Home is the library root, reached from
@@ -1017,7 +1020,11 @@ checked on the panel before the next:
     Rule A (George): restore only if `playlist_timestamp` is unchanged; an
     edit while away loses the position. ADR-0027 amended; Finding 029
     addendum.
-2. **Radio title and artwork from `remoteMeta`** (criterion 9).
+2. **Radio title and artwork from `remoteMeta`** (criterion 9). **Done 2026-09-17;
+   George checked on `gexis` (hand-installed):** TuneIn "Paradiso Berlin" showed
+   title "CRAZY", artist "SEAL", album line "Paradiso Berlin", and the song's
+   cover (a 427 KB PNG proxied from Last.fm). A station with no song was not
+   tried on hardware; tests only.
 3. **Library reads in the core**, tested against replies recorded in step 1.
 4. **Home as the library root**, the New Music strip, the mini strip, Back
    and Home navigation, now playing's Home button.
@@ -1062,6 +1069,11 @@ with several it becomes one limiter per provider.
 5. Now playing renders before enrichment returns, every time.
 6. **Artist and track info panels** — the Artist, Release and Lyrics tabs on
    now playing. Moved from Phase 6 criterion 3 (George, 2026-09-16).
+7. **Radio artwork from enrichment** (George, 2026-09-17): an LMS station that
+   sends no artwork gets it looked up from artist and song title. No album or
+   duration is available, so the confidence rule is tested for this case
+   specifically; stream text is not always a song ("KissFM Live!" as artist,
+   Phase 6). ADR-0038 §8a.
 
 ### Phase 9 — Settings wiring and UI polish
 

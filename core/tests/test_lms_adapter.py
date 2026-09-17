@@ -433,16 +433,100 @@ def test_report_metadata_maps_the_current_song():
     ]
 
 
-def test_report_metadata_uses_current_title_for_remote_streams():
+def _radio(song, **top):
+    """A stream's status result: only what LMS sends for one (no album,
+    duration or samplerate unless a test adds them)."""
+    adapter = LmsAdapter("192.168.178.188", 9000, "gexis")
+    received = []
+    adapter.on_metadata_change(received.append)
+    result = {"power": 1, "mode": "play", "time": 6.6, "remote": 1, "playlist_loop": [song]}
+    result.update(top)
+    adapter._report_metadata(result)
+    return received[0]
+
+
+def test_a_station_shows_the_song_as_title_and_the_station_as_album():
+    """Finding 029, measured 2026-09-17 on TuneIn "100% Deutsch": the core
+    published the station as the title and dropped the song. ADR-0038 §8a,
+    George's option A."""
+    meta = _radio(
+        {
+            "title": "Hand in Hand",
+            "artist": "Julian le Play",
+            "coverid": "-94298681189064",
+            "artwork_url": "/imageproxy/https%3A%2F%2Flastfm.freetls.fastly.net%2Fi%2Fu%2Fb97d5d1f.jpg/image.jpg",
+            "remote": 1,
+        },
+        current_title="SCHLAGERPLANET RADIO Deutsch",
+    )
+
+    assert meta.title == "Hand in Hand"
+    assert meta.artist == "Julian le Play"
+    assert meta.album == "SCHLAGERPLANET RADIO Deutsch"
+    assert meta.artwork == (
+        "http://192.168.178.188:9000/imageproxy/"
+        "https%3A%2F%2Flastfm.freetls.fastly.net%2Fi%2Fu%2Fb97d5d1f.jpg/image.jpg"
+    )
+
+
+def test_a_station_without_artwork_url_gets_no_artwork_not_the_placeholder():
+    """The stream's coverid URL is LMS's grey radio tower (George saw it on the
+    panel). None lets the panel show its own pending glyph."""
+    meta = _radio({"title": "Hand in Hand", "artist": "Julian le Play", "coverid": "-1"},
+                  current_title="SCHLAGERPLANET RADIO Deutsch")
+
+    assert meta.artwork is None
+
+
+def test_an_absolute_artwork_url_is_used_as_is():
+    meta = _radio({"title": "T", "artwork_url": "https://cdn.example/logo.png"},
+                  current_title="Station")
+
+    assert meta.artwork == "https://cdn.example/logo.png"
+
+
+def test_a_blank_current_title_keeps_the_song_fields():
+    """Phase 6's KissFM case: `current_title` a single space, the names only
+    in the song fields."""
+    meta = _radio({"title": "#1 Hit Radio", "artist": "KissFM  Live!"}, current_title=" ")
+
+    assert meta.title == "#1 Hit Radio"
+    assert meta.artist == "KissFM  Live!"
+    assert meta.album is None
+
+
+def test_a_station_with_no_song_shows_the_station_as_title():
+    meta = _radio({"title": "", "artist": None}, current_title="Talk Radio One")
+
+    assert meta.title == "Talk Radio One"
+    assert meta.album is None
+
+
+def test_a_current_title_that_repeats_the_song_is_not_the_album():
+    """2026-09-08: `current_title` was "Backstreet Boys - Anywhere for You"."""
+    meta = _radio({"title": "Anywhere for You", "artist": "Backstreet Boys"},
+                  current_title="Backstreet Boys - Anywhere for You")
+
+    assert meta.title == "Anywhere for You"
+    assert meta.album is None
+
+
+def test_a_remote_track_with_a_real_album_keeps_it():
+    """A Qobuz track through LMS is `remote` too, and has an album."""
+    meta = _radio({"title": "Bad Guy", "artist": "Billie Eilish", "album": "WHEN WE ALL FALL ASLEEP"},
+                  current_title="Bad Guy")
+
+    assert meta.album == "WHEN WE ALL FALL ASLEEP"
+
+
+def test_local_tracks_still_use_the_coverid():
     adapter = LmsAdapter("127.0.0.1", 9000, "gexis")
     received = []
     adapter.on_metadata_change(received.append)
 
-    adapter._report_metadata(
-        _status_result(remote=1, current_title="Radio Station: Now Playing")
-    )
+    adapter._report_metadata(_status_result(song={"artwork_url": "/ignored.png"}))
 
-    assert received[0].title == "Radio Station: Now Playing"
+    assert received[0].artwork == "http://127.0.0.1:9000/music/abc123/cover.jpg"
 
 
 def test_report_metadata_blanks_artwork_without_a_coverid():
