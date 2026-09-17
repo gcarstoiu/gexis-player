@@ -15,12 +15,30 @@ initials instead of artist photos and a discography-only artist page until
 Phase 8; the queue rail is in; Radio Now Playing stays; five settings
 appended to ADR-0022's inventory (George confirmed).
 
-**Next action: George reads ADR-0038.** Nothing else starts until George has.
-Then step 1, Finding 029: the read-only LMS measurements first, then the
-playback ones **with George present**, because they start music on George's
-system. ADR-0038's "Unverified" section is the list. One of its items needs
-George's call once measured: whether the design's "Artists" is All Artists
-(7,292) or Album Artists (916).
+**Step 1 is done: [Finding 029](docs/findings/029-library-and-radio-against-lms.md).**
+George's calls on it are in ADR-0038 (§1, §1a, §3): Album Artists; library
+playlists only; LMS's filing and release types; add to any library playlist;
+no playlist creation (George is asking Claude Design to remove it). ADR-0038
+is still marked Proposed.
+
+**Next action: step 1a — resume only unchanged content** (George agreed
+2026-09-17). Finding 029 defect A: after a Spotify session, a fresh LMS
+`load` was seeked to the position the *radio* was released at
+(`lms.py:596-633`). Live on the current image for any LMS app. Start by
+measuring whether `playlist_timestamp` changes only on a load. George checks
+by repeating test 5 and a same-content resume. Then step 2 (radio title and
+artwork, defect B).
+
+**Test data on George's LMS:** playlist folder `/playlist` (George set it;
+it triggered a full rescan that renumbered the library). Playlists
+`gexis-test-album` (122541), `gexis-test-mixed` (122543),
+`gexis-test-empty` (122544) — George removes them. Finding 029's raw replies
+are at `~/gexis-findings/029-raw/` on R2D2, deliberately not in the repo
+(library listing, playlist names, a TuneIn serial).
+
+**Probing SlimBrowse can start playback.** A radio walk that followed
+`base.actions.go` played a station for 45 s (Finding 029). Resolve the
+command and refuse anything ending in `play` or `add` before sending.
 
 **Corrected in this session, worth not repeating:** Claude raised "playing
 from the library must power LMS on" as an open decision. It was not: LMS's

@@ -119,8 +119,9 @@ from the library activates LMS as a side effect".
 ADR-0027's known cost of plain `play` — the position restarts from zero — does
 not apply: a `load` starts new content.
 
-**To verify in step 1**, not assumed: that `playlistcontrol cmd:load` takes the
-same auto-power-on path as `play` does.
+**Verified 2026-09-17** (Finding 029): a `load` on a powered-off player powers
+it on, over a playing Spotify session too. The core's resume after that
+takeover was wrong for new content; Phase 7 step 1a fixes it.
 
 ### 5. The panel talks to the core; the core talks to LMS
 
@@ -150,9 +151,10 @@ one action route, handles for radio, queue on `/state` — is the decision.
 ### 6. Lists are cached in memory
 
 List pages are cached in the core's memory (ADR-0020, "cached aggressively in
-RAM"). How long an entry is kept is a setting (§8). A library rescan
-invalidates the cache when LMS reports one. Whether the existing CometD
-subscription delivers that is measured in step 1.
+RAM"). How long an entry is kept is a setting (§9). **A full rescan renumbers
+every album and artist id** (Finding 029), so a change in `serverstatus`
+`lastscan` drops the cache, the radio handles and any remembered id. Whether
+CometD also pushes a rescan is not checked.
 
 ### 7. Artwork and icons come straight from LMS
 
