@@ -132,6 +132,7 @@ hardcoded as Phase 7 builds them.
 | Confidence threshold | [R] | ADR-0012: below it, show nothing. A confidently wrong artist biography is worse than a blank panel |
 | Lyrics on/off | [R] | |
 | Artwork lookup for renderers that supply none | [R] | George, 2026-09-12: Bluetooth's absent art is transient — artist/album/title are enough to find it later |
+| Enrichment provider API keys, one per provider that needs one | [N] | Confirmed as a setting by George, 2026-09-17: entered by each user, never shipped in the image or the repo, so a provider requiring a key is not ruled out by it. Which providers need one depends on the Phase 8 provider decision |
 
 ### System and maintenance
 
