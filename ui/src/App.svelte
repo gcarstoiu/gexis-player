@@ -10,6 +10,7 @@
   import HandoffScreen from './screens/HandoffScreen.svelte';
   import Settings from './screens/Settings.svelte';
   import { loadSettings, settingValues } from './lib/settings.js';
+  import { loadLibraryRoot } from './lib/library.js';
   import { reportTouch, showPeppy } from './lib/state.js';
 
   // ADR-0033: idle is "not playing and not touched", one timeout everywhere.
@@ -102,6 +103,12 @@
   // Settings is reached from the library root's card and nowhere else on the
   // panel (design/screens.md, Navigation); its Back closes it.
   let settingsOpen = $state(false);
+  // A reopen refreshes quietly: what is on screen stays until the new
+  // read, with its covers, is ready to replace it.
+  $effect(() => {
+    if (libraryOpen) untrack(() => loadLibraryRoot());
+  });
+
   function openSettings() {
     closeVolume();
     settingsOpen = true;
@@ -126,6 +133,8 @@
   onMount(() => {
     connect();
     loadSettings();
+    // Ahead of the first time Home opens (see lib/library.js).
+    loadLibraryRoot();
     fetch('/surface')
       .then((r) => r.json())
       .then((body) => (surface = body.surface))

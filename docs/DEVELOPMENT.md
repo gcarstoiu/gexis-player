@@ -1085,7 +1085,12 @@ checked on the panel before the next:
     (George, 2026-09-17): over a shared backdrop the screens are transparent,
     so every version of a fade - two-way, then incoming-only - showed the
     bare backdrop between them as a blink. The design's 260 ms slide-and-fade
-    is not used; the backdrop stays put, so the swap is the whole effect. The CPU governor was set to `performance` in the same
+    is not used; the backdrop stays put, so the swap is the whole effect.
+    **The root's data and its covers load when the panel starts, not when
+    Home opens** (George, 2026-09-17: the tiles arrived visibly after the
+    cards): `lib/library.js` reads the counts and New Music, waits for the
+    covers to decode, and publishes both together; opening Home reads what
+    is already there and refreshes quietly behind it. The CPU governor was set to `performance` in the same
     round and **reverted** once the backdrop fixed it
     ([ADR-0039](decisions/0039-cpu-governor-performance.md)).
 5. **Album page and Play all.**

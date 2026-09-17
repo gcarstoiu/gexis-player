@@ -15,8 +15,7 @@
   while the idle screen, which is removed when it closes, never did.
 -->
 <script>
-  import { onMount } from 'svelte';
-  import { libraryCounts, newMusic } from '../lib/library.js';
+  import { libraryRoot } from '../lib/library.js';
   import MiniStrip from './MiniStrip.svelte';
   import WaitingServices from './WaitingServices.svelte';
 
@@ -34,19 +33,10 @@
   // Where in the library the panel is; [] is the root.
   let path = $state([]);
 
-  let counts = $state(null);
-  let albums = $state([]);
-
-  // Read each time the library opens, so a count reflects what LMS holds
-  // now; the core caches, so this is cheap (ADR-0038 §6).
-  onMount(() => {
-    libraryCounts()
-      .then((c) => (counts = c))
-      .catch((err) => console.info('library:', err.message));
-    newMusic()
-      .then((a) => (albums = a))
-      .catch((err) => console.info('library:', err.message));
-  });
+  // Loaded once when the panel starts, covers and all (lib/library.js), so
+  // opening Home draws the cards and the strip together.
+  const counts = $derived($libraryRoot.counts);
+  const albums = $derived($libraryRoot.albums);
 
   let failed = $state(new Set());
   const markFailed = (url) => (failed = new Set(failed).add(url));

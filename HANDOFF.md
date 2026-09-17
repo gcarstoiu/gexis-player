@@ -75,7 +75,9 @@ its card. UI deployed by hand to `/opt/gexis-ui` (previous build at
   two transparent screens and read as a blink - worse with the incoming-only
   fade than with the two-way one. The design's 260 ms slide-and-fade, the
   mini strip's 104 px slide and Settings' fade are all gone; the drawer, idle
-  screen and handoff keep theirs.
+  screen and handoff keep theirs. **The root's covers are loaded and decoded
+  when the panel starts** (`ui/src/lib/library.js`), because without an
+  animation the New Music tiles were visibly a beat behind the cards.
 
 **Lesson candidate (2026-09-17), for George:** headless Chromium on the
 device was used to check the panel UI and answered a different question
