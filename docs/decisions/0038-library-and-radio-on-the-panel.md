@@ -148,6 +148,13 @@ an LMS command.
 Route names may move while the steps build them; the split — reads paged,
 one action route, handles for radio, queue on `/state` — is the decision.
 
+**Reads as built (step 3, 2026-09-17):** `GET /library/counts`, `/library/new`,
+`/library/artists?offset&limit`, `/library/artists/{id}/albums`,
+`/library/albums/{id}` (with its tracks), `/library/playlists` (with track
+counts), `/library/playlists/{id}?offset&limit`. 404 for an unknown id, 400
+for a non-numeric one, 502 when LMS is unreachable, 503 unwired. The root's
+"stations" count is not reported: it still has no source.
+
 ### 6. Lists are cached in memory
 
 List pages are cached in the core's memory (ADR-0020, "cached aggressively in

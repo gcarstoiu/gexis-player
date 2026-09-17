@@ -118,11 +118,11 @@ hardcoded as Phase 7 builds them.
 
 | Setting | Mark | Notes |
 |---|---|---|
-| Albums in the New Music strip | [H] | 10, per `design/screens.md` |
+| Albums in the New Music strip | [H] | 10, per `design/screens.md`; `NEW_MUSIC_COUNT` in `core/src/gexis_core/library.py` |
 | Podcasts excluded from Radio | [H] | ADR-0030; excluded by its `["podcast","items"]` command (ADR-0038 §8) |
 | Radio Now Playing shown | [H] | Shown — George, 2026-09-17, closing ADR-0030's open item |
-| How long cached library lists are kept | [N] | ADR-0038 §6; a rescan invalidates regardless |
-| Artwork size requested from LMS | [H] | `cover_<W>x<H>_o.jpg` (ADR-0038 §7) |
+| How long cached library lists are kept | [N] | ADR-0038 §6. Built 2026-09-17 as: until LMS's `lastscan` changes, checked at most every 60 s (`LASTSCAN_CHECK_S`); playlists never cached |
+| Artwork size requested from LMS | [H] | `cover_<W>x<H>_o.jpg` (ADR-0038 §7); 500 px for every screen, `ARTWORK_SIZE` in `library.py` |
 
 ### Enrichment and lyrics — Phase 8
 

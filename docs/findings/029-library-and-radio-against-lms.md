@@ -108,6 +108,11 @@ remembered queue origin — is invalid after a full rescan, and `lastscan` is
 the signal to drop them. The New Music strip reflects scan order after a full
 rescan, not what was recently added.
 
+**Artwork was lost too:** albums with an `artwork_track_id` went from 4,521 of
+4,554 before the rescan to 4,412 of 4,567 after (counted 19:14). El Mocambo
+1977 had one before and none after. Not investigated; the library routes
+return no artwork for those albums, which the panel shows as pending.
+
 ### 5. Artwork
 
 20 random albums, one request each:

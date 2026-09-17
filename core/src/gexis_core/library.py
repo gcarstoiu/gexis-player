@@ -1,0 +1,235 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+"""Library reads for the panel's designed screens (Phase 7 step 3,
+ADR-0038 §1, §5-7): typed LMS queries, not SlimBrowse (ADR-0030).
+
+The core runs the queries and returns the fields the screens need, never
+LMS's reply as such, so the panel sends no LMS command (ADR-0038 §5).
+
+What the queries return, and what they cost, was measured against George's
+server on 2026-09-17 (Finding 029): every read 5-26 ms; all 916 album
+artists in one 98 KB reply. So lists are paged only where the panel asks
+for a page, and nothing here batches or pre-fetches.
+
+**Cache.** Lists are kept in memory (ADR-0020) until LMS's `lastscan`
+changes: a full rescan renumbers every album and artist id (Finding 029
+§4), so nothing cached before one is valid after it. `lastscan` is read at
+most once per `LASTSCAN_CHECK_S`. Playlists are not cached: they change
+from any LMS app without a scan.
+"""
+from __future__ import annotations
+
+import itertools
+import logging
+import time
+
+import aiohttp
+
+logger = logging.getLogger("gexis_core.library")
+
+#: ADR-0022 inventory, "Albums in the New Music strip" [H]: the design's ten.
+NEW_MUSIC_COUNT = 10
+
+#: ADR-0022 inventory, "Artwork size requested from LMS" [H]. One size for
+#: every screen: `_o.jpg` is always a JPEG, median 52 KB at 500 px across 20
+#: albums, where the bare resize was a PNG for 5 of them (Finding 029 §5).
+ARTWORK_SIZE = 500
+
+#: ADR-0022 inventory, "How long cached library lists are kept" [N]: until
+#: a rescan, noticed within this many seconds.
+LASTSCAN_CHECK_S = 60.0
+
+#: Album fields: l=album, j=artwork_track_id, y=year, a=artist, S=artist_id,
+#: W=release_type (Finding 029 §2).
+ALBUM_TAGS = "ljyaSW"
+#: Track fields: t=tracknum, d=duration, a=artist, c=coverid, i=disc.
+TRACK_TAGS = "tdaci"
+
+_id_counter = itertools.count(1)
+
+
+class LibraryUnavailable(Exception):
+    """LMS could not be reached, or answered with an error."""
+
+
+class NotFound(Exception):
+    """No such album, artist or playlist - including one a rescan
+    renumbered away."""
+
+
+def _int(value) -> int | None:
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def _float(value) -> float | None:
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return None
+
+
+class LmsLibrary:
+    def __init__(self, host: str, port: int, *, clock=time.monotonic) -> None:
+        self._base = f"http://{host}:{port}"
+        self._clock = clock
+        self._cache: dict[tuple, dict] = {}
+        self._lastscan: str | None = None
+        self._lastscan_checked: float | None = None
+
+    # --- LMS ---------------------------------------------------------------
+
+    async def _rpc(self, command: list) -> dict:
+        body = {"id": next(_id_counter), "method": "slim.request", "params": ["", command]}
+        try:
+            async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=10)) as session:
+                async with session.post(f"{self._base}/jsonrpc.js", json=body) as resp:
+                    resp.raise_for_status()
+                    return (await resp.json()).get("result") or {}
+        except (aiohttp.ClientError, TimeoutError) as exc:
+            raise LibraryUnavailable(str(exc)) from exc
+
+    async def _check_lastscan(self) -> None:
+        now = self._clock()
+        if self._lastscan_checked is not None and now - self._lastscan_checked < LASTSCAN_CHECK_S:
+            return
+        status = await self._rpc(["serverstatus", 0, 0])
+        self._lastscan_checked = now
+        lastscan = status.get("lastscan")
+        # While a scan runs LMS reports `rescan` and no `lastscan` (seen
+        # 2026-09-17); ids are in flux, so nothing is kept until it settles.
+        if status.get("rescan") or lastscan != self._lastscan:
+            if self._cache:
+                logger.info("library: LMS rescanned (lastscan %s -> %s), dropping the cache",
+                            self._lastscan, lastscan)
+            self._cache.clear()
+            self._lastscan = None if status.get("rescan") else lastscan
+
+    async def _cached(self, command: list) -> dict:
+        await self._check_lastscan()
+        key = tuple(command)
+        if key not in self._cache:
+            result = await self._rpc(command)
+            if self._lastscan is not None:
+                self._cache[key] = result
+            return result
+        return self._cache[key]
+
+    def _artwork(self, track_id) -> str | None:
+        if not track_id:
+            return None
+        return f"{self._base}/music/{track_id}/cover_{ARTWORK_SIZE}x{ARTWORK_SIZE}_o.jpg"
+
+    # --- shapes ------------------------------------------------------------
+
+    def _album(self, raw: dict) -> dict:
+        return {
+            "id": _int(raw.get("id")),
+            "title": raw.get("album"),
+            "artist": raw.get("artist"),
+            "artist_id": _int(raw.get("artist_id")),
+            "year": _int(raw.get("year")) or None,
+            "release_type": raw.get("release_type"),
+            "artwork": self._artwork(raw.get("artwork_track_id")),
+        }
+
+    def _track(self, raw: dict) -> dict:
+        return {
+            "id": _int(raw.get("id")),
+            "title": raw.get("title"),
+            "artist": raw.get("artist"),
+            "tracknum": _int(raw.get("tracknum")),
+            "disc": _int(raw.get("disc")),
+            "duration": _float(raw.get("duration")),
+            "artwork": self._artwork(raw.get("coverid")),
+        }
+
+    # --- reads -------------------------------------------------------------
+
+    async def counts(self) -> dict:
+        """The library root's cards. "stations" has no source in the radio
+        tree (ADR-0038, still open), so it is not reported."""
+        albums = await self._cached(["albums", 0, 1])
+        artists = await self._cached(["artists", 0, 1, "role_id:ALBUMARTIST"])
+        playlists = await self._library_playlists()
+        return {
+            "albums": _int(albums.get("count")) or 0,
+            "artists": _int(artists.get("count")) or 0,
+            "playlists": len(playlists),
+        }
+
+    async def new_music(self) -> list[dict]:
+        result = await self._cached(["albums", 0, NEW_MUSIC_COUNT, "sort:new", f"tags:{ALBUM_TAGS}"])
+        return [self._album(a) for a in result.get("albums_loop", [])]
+
+    async def artists(self, offset: int = 0, limit: int = 1000) -> dict:
+        """Album artists (George, 2026-09-17), in LMS's order, each with
+        LMS's own letter (`textkey`) - ADR-0038 §1a: however LMS files, so do
+        we."""
+        result = await self._cached(["artists", offset, limit, "role_id:ALBUMARTIST", "tags:s"])
+        return {
+            "count": _int(result.get("count")) or 0,
+            "offset": offset,
+            "items": [
+                {"id": _int(a.get("id")), "name": a.get("artist"), "letter": a.get("textkey")}
+                for a in result.get("artists_loop", [])
+            ],
+        }
+
+    async def artist_albums(self, artist_id: int) -> list[dict]:
+        """The discography, in LMS's order, each album with LMS's own
+        `release_type` for grouping (ADR-0038 §1a)."""
+        result = await self._cached(
+            ["albums", 0, 1000, f"artist_id:{artist_id}", "role_id:ALBUMARTIST", f"tags:{ALBUM_TAGS}"]
+        )
+        # An unknown id and an artist with no albums both come back empty;
+        # LMS gives no way to tell them apart in this query.
+        return [self._album(a) for a in result.get("albums_loop", [])]
+
+    async def album(self, album_id: int) -> dict:
+        found = await self._cached(["albums", 0, 1, f"album_id:{album_id}", f"tags:{ALBUM_TAGS}"])
+        loop = found.get("albums_loop", [])
+        if not loop:
+            raise NotFound(f"album {album_id}")
+        tracks = await self._cached(
+            ["titles", 0, 1000, f"album_id:{album_id}", "sort:tracknum", f"tags:{TRACK_TAGS}"]
+        )
+        album = self._album(loop[0])
+        album["tracks"] = [self._track(t) for t in tracks.get("titles_loop", [])]
+        return album
+
+    async def _library_playlists(self) -> list[dict]:
+        """LMS library playlists only, never a plugin's (George,
+        2026-09-17). They are `file:` URLs; Qobuz's are `qobuz:`. LMS's own
+        `search:` does not filter playlists and `0 0` returns no count
+        (Finding 029 §3), so the whole list is read and filtered here."""
+        result = await self._rpc(["playlists", 0, 10000, "tags:su"])
+        return [
+            {"id": _int(p.get("id")), "name": p.get("playlist")}
+            for p in result.get("playlists_loop", [])
+            if str(p.get("url", "")).startswith("file:")
+        ]
+
+    async def playlists(self) -> list[dict]:
+        playlists = await self._library_playlists()
+        for playlist in playlists:
+            tracks = await self._rpc(["playlists", "tracks", 0, 1, f"playlist_id:{playlist['id']}"])
+            playlist["tracks"] = _int(tracks.get("count")) or 0
+        return playlists
+
+    async def playlist(self, playlist_id: int, offset: int = 0, limit: int = 1000) -> dict:
+        playlists = await self._library_playlists()
+        match = next((p for p in playlists if p["id"] == playlist_id), None)
+        if match is None:
+            raise NotFound(f"playlist {playlist_id}")
+        result = await self._rpc(
+            ["playlists", "tracks", offset, limit, f"playlist_id:{playlist_id}", f"tags:{TRACK_TAGS}"]
+        )
+        return {
+            "id": playlist_id,
+            "name": match["name"],
+            "count": _int(result.get("count")) or 0,
+            "offset": offset,
+            "items": [self._track(t) for t in result.get("playlisttracks_loop", [])],
+        }

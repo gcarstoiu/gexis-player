@@ -1,0 +1,352 @@
+"""Phase 7 step 3: library reads (ADR-0038 §1, §5-7).
+
+The LMS replies here are made up (George, 2026-09-17: no library data from
+George's server in this public repository). Their *shape* follows what Finding
+029 recorded against LMS 9.1.1: which loop each list arrives in, which
+fields are strings, that library playlists are `file:` URLs and plugin
+ones are not, that `release_type` comes as LMS's combined values.
+"""
+from __future__ import annotations
+
+import pytest
+from aiohttp.test_utils import TestClient, TestServer
+
+from gexis_core import library as library_module
+from gexis_core.library import LibraryUnavailable, LmsLibrary, NotFound
+from gexis_core.state import StateStore
+from gexis_core.wsserver import StateServer
+
+BASE = "http://lms.test:9000"
+
+ALBUMS = [
+    {"id": 101, "album": "First Light", "artist": "Aria Nova", "artist_id": 7, "year": 2019,
+     "artwork_track_id": "a1b2c3d4", "release_type": "ALBUM"},
+    {"id": 102, "album": "Live at the Harbour", "artist": "Aria Nova", "artist_id": 7, "year": 0,
+     "release_type": "ALBUM LIVE"},
+]
+ARTISTS = [
+    {"id": 1, "artist": "4 Winds", "textkey": "4"},
+    {"id": 7, "artist": "Aria Nova", "textkey": "N"},
+    {"id": 9, "artist": "Çelik Band", "textkey": "Ç"},
+]
+TRACKS = [
+    {"id": 5001, "title": "Opening", "tracknum": "1", "disc": "1", "duration": 201.5,
+     "artist": "Aria Nova", "coverid": "a1b2c3d4"},
+    {"id": 5002, "title": "Closing", "tracknum": "2", "duration": "180", "artist": "Aria Nova"},
+]
+PLAYLISTS = [
+    {"id": 900, "playlist": "Sunday", "url": "file:///playlist/Sunday.m3u"},
+    {"id": 901, "playlist": "Streaming Mix", "url": "qobuz://123.qbz"},
+    {"id": 902, "playlist": "Empty", "url": "file:///playlist/Empty.m3u"},
+]
+
+
+class FakeLms:
+    """Answers `LmsLibrary._rpc` from the made-up data and records every
+    command, so a test can tell a cached read from a fresh one."""
+
+    def __init__(self):
+        self.commands = []
+        self.lastscan = "1700000000"
+        self.rescan = False
+        self.unreachable = False
+
+    async def __call__(self, command):
+        self.commands.append(list(command))
+        if self.unreachable:
+            raise LibraryUnavailable("connection refused")
+        what = command[0]
+        args = [str(c) for c in command]
+        if what == "serverstatus":
+            return {"rescan": 1} if self.rescan else {"lastscan": self.lastscan}
+        if what == "albums":
+            if any(a.startswith("album_id:") for a in args):
+                wanted = int(next(a for a in args if a.startswith("album_id:")).split(":")[1])
+                loop = [a for a in ALBUMS if a["id"] == wanted]
+            else:
+                loop = ALBUMS[: int(command[2])]
+            return {"count": len(ALBUMS), "albums_loop": loop}
+        if what == "artists":
+            return {"count": len(ARTISTS), "artists_loop": ARTISTS[int(command[1]):int(command[1]) + int(command[2])]}
+        if what == "titles":
+            return {"count": len(TRACKS), "titles_loop": TRACKS}
+        if what == "playlists" and command[1] == "tracks":
+            pid = int(next(a for a in args if a.startswith("playlist_id:")).split(":")[1])
+            tracks = TRACKS if pid == 900 else []
+            return {"count": len(tracks), "playlisttracks_loop": tracks[: int(command[3])]}
+        if what == "playlists":
+            return {"count": len(PLAYLISTS), "playlists_loop": PLAYLISTS}
+        raise AssertionError(f"unexpected command {command}")
+
+    def reads(self):
+        return [c for c in self.commands if c[0] != "serverstatus"]
+
+
+@pytest.fixture
+def lms(monkeypatch):
+    fake = FakeLms()
+    monkeypatch.setattr(LmsLibrary, "_rpc", fake)
+    return fake
+
+
+class Clock:
+    def __init__(self):
+        self.now = 1000.0
+
+    def __call__(self):
+        return self.now
+
+
+def _lib(clock=None):
+    return LmsLibrary("lms.test", 9000, clock=clock or Clock())
+
+
+# --- the reads -------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_counts_are_album_artists_and_library_playlists_only(lms):
+    counts = await _lib().counts()
+
+    assert counts == {"albums": 2, "artists": 3, "playlists": 2}
+    assert ["artists", 0, 1, "role_id:ALBUMARTIST"] in lms.commands
+
+
+@pytest.mark.asyncio
+async def test_new_music_asks_for_ten_newest_and_maps_artwork_as_o_jpg(lms):
+    albums = await _lib().new_music()
+
+    assert lms.reads()[0][:4] == ["albums", 0, library_module.NEW_MUSIC_COUNT, "sort:new"]
+    assert albums[0] == {
+        "id": 101,
+        "title": "First Light",
+        "artist": "Aria Nova",
+        "artist_id": 7,
+        "year": 2019,
+        "release_type": "ALBUM",
+        "artwork": f"{BASE}/music/a1b2c3d4/cover_500x500_o.jpg",
+    }
+
+
+@pytest.mark.asyncio
+async def test_an_album_without_artwork_or_year_gets_none_for_both(lms):
+    albums = await _lib().new_music()
+
+    assert albums[1]["artwork"] is None
+    assert albums[1]["year"] is None
+
+
+@pytest.mark.asyncio
+async def test_artists_keep_lms_letters_exactly(lms):
+    """ADR-0038 §1a: however LMS files, so do we - digits and the unfolded
+    accented keys included (Finding 029 §2)."""
+    page = await _lib().artists()
+
+    assert [a["letter"] for a in page["items"]] == ["4", "N", "Ç"]
+    assert page["count"] == 3
+    assert "role_id:ALBUMARTIST" in lms.reads()[0]
+
+
+@pytest.mark.asyncio
+async def test_artists_page_passes_offset_and_limit(lms):
+    page = await _lib().artists(offset=1, limit=1)
+
+    assert page["offset"] == 1
+    assert [a["name"] for a in page["items"]] == ["Aria Nova"]
+
+
+@pytest.mark.asyncio
+async def test_discography_keeps_lms_release_types_and_order(lms):
+    albums = await _lib().artist_albums(7)
+
+    assert [a["release_type"] for a in albums] == ["ALBUM", "ALBUM LIVE"]
+    assert "artist_id:7" in lms.reads()[0]
+    assert "role_id:ALBUMARTIST" in lms.reads()[0]
+
+
+@pytest.mark.asyncio
+async def test_album_carries_its_tracks_with_numbers_and_durations(lms):
+    album = await _lib().album(101)
+
+    assert album["title"] == "First Light"
+    assert album["tracks"][0] == {
+        "id": 5001,
+        "title": "Opening",
+        "artist": "Aria Nova",
+        "tracknum": 1,
+        "disc": 1,
+        "duration": 201.5,
+        "artwork": f"{BASE}/music/a1b2c3d4/cover_500x500_o.jpg",
+    }
+    assert album["tracks"][1]["duration"] == 180.0
+    assert album["tracks"][1]["disc"] is None
+    assert "sort:tracknum" in lms.reads()[1]
+
+
+@pytest.mark.asyncio
+async def test_an_unknown_album_is_not_found(lms):
+    with pytest.raises(NotFound):
+        await _lib().album(999)
+
+
+@pytest.mark.asyncio
+async def test_playlists_are_library_ones_with_track_counts(lms):
+    """George, 2026-09-17: LMS library playlists only, not a plugin's."""
+    playlists = await _lib().playlists()
+
+    assert playlists == [
+        {"id": 900, "name": "Sunday", "tracks": 2},
+        {"id": 902, "name": "Empty", "tracks": 0},
+    ]
+
+
+@pytest.mark.asyncio
+async def test_a_plugin_playlist_cannot_be_opened_by_id(lms):
+    with pytest.raises(NotFound):
+        await _lib().playlist(901)
+
+
+@pytest.mark.asyncio
+async def test_a_playlist_page_has_its_tracks(lms):
+    page = await _lib().playlist(900, offset=0, limit=1)
+
+    assert page["name"] == "Sunday"
+    assert page["count"] == 2
+    assert [t["title"] for t in page["items"]] == ["Opening"]
+
+
+# --- the cache -------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_a_second_read_comes_from_the_cache(lms):
+    lib = _lib()
+    await lib.album(101)
+    before = len(lms.reads())
+
+    await lib.album(101)
+
+    assert len(lms.reads()) == before
+
+
+@pytest.mark.asyncio
+async def test_lastscan_is_not_asked_again_within_the_check_interval(lms):
+    clock = Clock()
+    lib = _lib(clock)
+    await lib.new_music()
+    clock.now += library_module.LASTSCAN_CHECK_S - 1
+
+    await lib.new_music()
+
+    assert [c[0] for c in lms.commands].count("serverstatus") == 1
+
+
+@pytest.mark.asyncio
+async def test_a_rescan_drops_the_cache(lms):
+    """A full rescan renumbers every id (Finding 029 §4)."""
+    clock = Clock()
+    lib = _lib(clock)
+    await lib.album(101)
+    lms.lastscan = "1700009999"
+    clock.now += library_module.LASTSCAN_CHECK_S
+    before = len(lms.reads())
+
+    await lib.album(101)
+
+    assert len(lms.reads()) > before
+
+
+@pytest.mark.asyncio
+async def test_nothing_is_cached_while_a_scan_runs(lms):
+    lms.rescan = True
+    clock = Clock()
+    lib = _lib(clock)
+    await lib.new_music()
+    clock.now += library_module.LASTSCAN_CHECK_S
+    before = len(lms.reads())
+
+    await lib.new_music()
+
+    assert len(lms.reads()) > before
+
+
+@pytest.mark.asyncio
+async def test_playlists_are_never_cached(lms):
+    """They change from any LMS app without a scan."""
+    lib = _lib()
+    await lib.playlists()
+    before = len(lms.reads())
+
+    await lib.playlists()
+
+    assert len(lms.reads()) > before
+
+
+# --- the routes ------------------------------------------------------------
+
+
+async def _get(path, library):
+    server = StateServer(StateStore({}), library=library)
+    async with TestClient(TestServer(server.make_app())) as client:
+        resp = await client.get(path)
+        return resp.status, await resp.json()
+
+
+@pytest.mark.asyncio
+async def test_routes_answer_503_when_the_library_is_not_wired():
+    status, body = await _get("/library/counts", None)
+
+    assert status == 503
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "path, expect",
+    [
+        ("/library/counts", lambda b: b["albums"] == 2),
+        ("/library/new", lambda b: b[0]["id"] == 101),
+        ("/library/artists?offset=2&limit=5", lambda b: b["offset"] == 2 and b["items"][0]["id"] == 9),
+        ("/library/artists/7/albums", lambda b: len(b) == 2),
+        ("/library/albums/101", lambda b: len(b["tracks"]) == 2),
+        ("/library/playlists", lambda b: len(b) == 2),
+        ("/library/playlists/900", lambda b: b["name"] == "Sunday"),
+    ],
+)
+async def test_each_read_has_a_route(lms, path, expect):
+    status, body = await _get(path, _lib())
+
+    assert status == 200
+    assert expect(body)
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("path", ["/library/radio", "/library/albums", "/library/albums/101/tracks"])
+async def test_an_unknown_read_is_404(lms, path):
+    status, _ = await _get(path, _lib())
+
+    assert status == 404
+
+
+@pytest.mark.asyncio
+async def test_a_missing_album_is_404(lms):
+    status, body = await _get("/library/albums/999", _lib())
+
+    assert status == 404
+    assert "not found" in body["error"]
+
+
+@pytest.mark.asyncio
+async def test_a_non_numeric_id_is_400(lms):
+    status, _ = await _get("/library/albums/abc", _lib())
+
+    assert status == 400
+
+
+@pytest.mark.asyncio
+async def test_lms_unreachable_is_502(lms):
+    lms.unreachable = True
+
+    status, body = await _get("/library/new", _lib())
+
+    assert status == 502
+    assert "LMS unreachable" in body["error"]

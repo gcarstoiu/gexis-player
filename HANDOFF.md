@@ -35,10 +35,13 @@ its artist, the station as the album line, and the song's `artwork_url` or
 hand-installed (previous core, with step 1a, at `/opt/gexis-core.7-2-backup`).
 George asked for radio artwork via enrichment: Phase 8 criterion 7.
 
-**Next action: step 3 — library reads in the core.** Tests need recorded LMS
-replies; Finding 029's are on R2D2 at `~/gexis-findings/029-raw/` and hold
-George's library listing, so ask George before committing any as fixtures
-(or build anonymised ones).
+**Step 3 is done** (2026-09-17): `core/src/gexis_core/library.py` and
+`GET /library/…` reads, tested against made-up LMS replies (George's call).
+Hand-installed on `gexis` too; previous core at `/opt/gexis-core.7-3-backup`.
+
+**Next action: step 4 — Home as the library root** (cards, New Music strip,
+mini strip, Back/Home navigation, now playing's Home button). First UI step;
+George checks on the panel.
 
 **Test data on George's LMS:** playlist folder `/playlist` (George set it;
 it triggered a full rescan that renumbered the library). Playlists

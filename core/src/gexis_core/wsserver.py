@@ -30,6 +30,7 @@ from pathlib import Path
 from aiohttp import web
 
 from gexis_core.adapters.base import TRANSPORT_COMMANDS
+from gexis_core.library import LibraryUnavailable, NotFound
 from gexis_core.model import PlaybackState
 from gexis_core.settings_registry import InvalidValue, NotSettable, NotWired, UnknownSetting
 from gexis_core.state import StateStore
@@ -54,6 +55,7 @@ class StateServer:
         idle_page=None,
         settings=None,
         peppy=None,
+        library=None,
         ui_dir: Path | None = None,
     ) -> None:
         """`activate(renderer_id) -> bool` and `set_volume(percent) -> bool`
@@ -78,6 +80,7 @@ class StateServer:
         self._idle_page = idle_page
         self._settings = settings
         self._peppy = peppy
+        self._library = library
         self._ui_dir = ui_dir
         self._clients: set[web.WebSocketResponse] = set()
         store.subscribe(self._broadcast)
@@ -217,6 +220,43 @@ class StateServer:
             return web.json_response({"error": "idle page is not wired up"}, status=503)
         return web.json_response(await self._idle_page())
 
+    async def _handle_library(self, request: web.Request) -> web.Response:
+        """ADR-0038 §5: reads only, for the designed screens. The panel asks
+        for what a screen shows and gets the fields it draws; it never sends
+        an LMS command. 502 when LMS cannot be reached (the renderer
+        routes' convention), 404 for an id that does not exist - which a
+        rescan makes of every id (Finding 029 §4)."""
+        if self._library is None:
+            return web.json_response({"error": "the library is not wired up"}, status=503)
+        what = request.match_info["what"]
+        item = request.match_info.get("id")
+        sub = request.match_info.get("sub")
+        try:
+            offset = max(0, int(request.query.get("offset", 0)))
+            limit = min(1000, max(1, int(request.query.get("limit", 1000))))
+            item_id = int(item) if item is not None else None
+        except ValueError:
+            return web.json_response({"error": "offset, limit and ids are integers"}, status=400)
+        library = self._library
+        reads = {
+            ("counts", False, None): lambda: library.counts(),
+            ("new", False, None): lambda: library.new_music(),
+            ("artists", False, None): lambda: library.artists(offset, limit),
+            ("artists", True, "albums"): lambda: library.artist_albums(item_id),
+            ("albums", True, None): lambda: library.album(item_id),
+            ("playlists", False, None): lambda: library.playlists(),
+            ("playlists", True, None): lambda: library.playlist(item_id, offset, limit),
+        }
+        read = reads.get((what, item_id is not None, sub))
+        if read is None:
+            return web.json_response({"error": f"no library read {request.path}"}, status=404)
+        try:
+            return web.json_response(await read())
+        except NotFound as exc:
+            return web.json_response({"error": f"{exc} not found"}, status=404)
+        except LibraryUnavailable as exc:
+            return web.json_response({"error": f"LMS unreachable: {exc}"}, status=502)
+
     async def _handle_surface(self, request: web.Request) -> web.Response:
         """ADR-0035 §6: the panel always arrives on loopback, a phone from the LAN."""
         panel = request.remote in ("127.0.0.1", "::1")
@@ -301,6 +341,9 @@ class StateServer:
         app.router.add_get("/settings", self._handle_settings)
         app.router.add_put("/settings/{key}", self._handle_setting_write)
         app.router.add_post("/settings/{key}", self._handle_setting_action)
+        app.router.add_get("/library/{what}", self._handle_library)
+        app.router.add_get("/library/{what}/{id}", self._handle_library)
+        app.router.add_get("/library/{what}/{id}/{sub}", self._handle_library)
         # The UI is registered *after* the API, so nothing it serves can
         # shadow `/state` or a command route - aiohttp resolves in
         # registration order. Two routes only, which is why vite is

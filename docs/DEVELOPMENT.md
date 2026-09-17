@@ -928,7 +928,7 @@ Plexamp app's audio stops at the tap.
 
 ### Phase 7 — Library browse
 
-**Status 2026-09-17: steps 1, 1a and 2 done; next is step 3. ADR-0038 proposed.**
+**Status 2026-09-17: steps 1, 1a, 2 and 3 done; next is step 4. ADR-0038 proposed.**
 Branch `phase-7-plan`. Criteria 1 and 6 amended, 10 and 11 added, by
 [ADR-0038](decisions/0038-library-and-radio-on-the-panel.md) (George's
 decisions, 2026-09-17).
@@ -1026,6 +1026,12 @@ checked on the panel before the next:
    cover (a 427 KB PNG proxied from Last.fm). A station with no song was not
    tried on hardware; tests only.
 3. **Library reads in the core**, tested against replies recorded in step 1.
+   **Done 2026-09-17.** Tested against **made-up** LMS replies in Finding
+   029's shapes (George: no library data in the public repo).
+   `core/src/gexis_core/library.py`; `GET /library/counts`, `/new`,
+   `/artists`, `/artists/{id}/albums`, `/albums/{id}`, `/playlists`,
+   `/playlists/{id}`. Checked by Claude on `gexis` (hand-installed): every
+   route 35–90 ms against George's LMS; no panel to check until step 4.
 4. **Home as the library root**, the New Music strip, the mini strip, Back
    and Home navigation, now playing's Home button.
 5. **Album page and Play all.**

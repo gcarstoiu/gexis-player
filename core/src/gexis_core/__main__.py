@@ -16,6 +16,7 @@ from gexis_core import alsa
 from gexis_core.adapters.base import VolumeMechanism
 from gexis_core.adapters.bluetooth import BluetoothAdapter
 from gexis_core.adapters.lms import LmsAdapter
+from gexis_core.library import LmsLibrary
 from gexis_core.adapters.spotify import SpotifyAdapter
 from gexis_core.arbitration import Supervisor
 from gexis_core.config import Config
@@ -336,6 +337,8 @@ async def main() -> None:
         idle_page=idle_page,
         settings=settings,
         peppy=peppy,
+        # Phase 7 (ADR-0038): the same server the renderer adapter talks to.
+        library=LmsLibrary(config.lms_host, config.lms_port),
         ui_dir=ui_dir,
     )
 
