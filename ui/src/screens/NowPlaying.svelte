@@ -680,9 +680,15 @@
     border-color: rgba(126, 214, 188, 0.42);
     --toggle-ink: #7ed6bc;
   }
-  .btn--toggle:not(:disabled):active {
-    background: rgba(233, 238, 242, 0.2);
+  /* Pressed by shrinking, like play (George, 2026-09-17: the design's grey
+     press fill read as a flash here too). The fill stays what the state is. */
+  .btn--toggle:not(:disabled):active,
+  .btn--lg:not(:disabled):active {
+    transform: scale(0.95);
   }
+  .btn--toggle:not(:disabled):active { background: rgba(233, 238, 242, 0.07); }
+  .btn--toggle.is-on:not(:disabled):active { background: rgba(126, 214, 188, 0.16); }
+  .btn--lg:not(:disabled):active { background: rgba(233, 238, 242, 0.09); }
   .btn--toggle .i-shuffle i,
   .btn--toggle .i-repeat i { background: var(--toggle-ink); }
   .btn--toggle .i-shuffle b { border-left-color: var(--toggle-ink); }
