@@ -136,3 +136,72 @@ def test_a_track_change_does_not_blank_the_transport_state():
 
     assert received[-1].title == "Next Song"
     assert received[-1].transport == "playing"
+
+
+def test_a_transport_event_takes_the_position_from_status_when_given():
+    """Finding 028: transport events carry no position, and without one the
+    published position stayed at the track's start through every pause, so
+    the panel's progress bar went back to 0:00."""
+    adapter = SpotifyAdapter("127.0.0.1", 3678)
+    received = []
+    adapter.on_metadata_change(received.append)
+    adapter._handle_metadata_event(_metadata_event(position=0))
+
+    adapter._handle_transport_event("paused", 41092)
+
+    assert received[-1].transport == "paused"
+    assert received[-1].position == 41.092
+    assert received[-1].title == "Song Title"
+
+
+def test_a_transport_event_keeps_the_last_position_when_status_gave_none():
+    adapter = SpotifyAdapter("127.0.0.1", 3678)
+    received = []
+    adapter.on_metadata_change(received.append)
+    adapter._handle_metadata_event(_metadata_event(position=5000))
+
+    adapter._handle_transport_event("paused", None)
+
+    assert received[-1].position == 5.0
+
+
+def test_shuffle_and_repeat_events_update_the_published_metadata():
+    """go-librespot's shuffle_context / repeat_context / repeat_track events,
+    each {"value": bool}; Spotify's two repeat flags become three states."""
+    adapter = SpotifyAdapter("127.0.0.1", 3678)
+    received = []
+    adapter.on_metadata_change(received.append)
+    adapter._handle_metadata_event(_metadata_event())
+
+    adapter._handle_flag_event("shuffle_context", {"value": True})
+    assert received[-1].shuffle is True
+
+    adapter._handle_flag_event("repeat_context", {"value": True})
+    assert received[-1].repeat == "all"
+    adapter._handle_flag_event("repeat_track", {"value": True})
+    assert received[-1].repeat == "one"
+    adapter._handle_flag_event("repeat_track", {"value": False})
+    adapter._handle_flag_event("repeat_context", {"value": False})
+    assert received[-1].repeat == "off"
+    assert received[-1].title == "Song Title"
+
+
+def test_flags_known_before_a_track_are_carried_onto_it():
+    adapter = SpotifyAdapter("127.0.0.1", 3678)
+    received = []
+    adapter.on_metadata_change(received.append)
+    adapter._handle_flag_event("shuffle_context", {"value": True})  # nothing to report yet
+    assert received == []
+
+    adapter._handle_metadata_event(_metadata_event())
+    assert received[-1].shuffle is True
+    assert received[-1].repeat is None  # never reported
+
+
+def test_a_malformed_flag_event_changes_nothing():
+    adapter = SpotifyAdapter("127.0.0.1", 3678)
+    received = []
+    adapter.on_metadata_change(received.append)
+    adapter._handle_metadata_event(_metadata_event())
+    adapter._handle_flag_event("shuffle_context", {"value": "yes"})
+    assert len(received) == 1

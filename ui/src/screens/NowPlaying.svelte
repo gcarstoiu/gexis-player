@@ -11,7 +11,9 @@
   import bluetoothMark from '../assets/icon-bluetooth.png';
   import VolumeIcon from '../lib/VolumeIcon.svelte';
 
-  let { active, metadata, volume, onvolume, onvisualisation } = $props();
+  import { sendTransport } from '../lib/state.js';
+
+  let { active, metadata, volume, controls = [], available = [], shuffle = null, repeat = null, onvolume, onvisualisation } = $props();
 
   const SOURCES = {
     lms: { label: 'LMS', mark: null },
@@ -66,8 +68,60 @@
   };
 
 
-  // Shuffle, repeat and queue are LMS-only in the design. Keyed on the id
-  // for now; Phase 6 renders controls from capability declarations instead.
+  // ADR-0037: shown when the renderer has the command.
+  const hasPlayPause = $derived(controls.includes('play') && controls.includes('pause'));
+
+  // The icon flips on press (George, 2026-09-16, amending ADR-0037 §4 for
+  // this button): Bluetooth reports a pause about 4.5 s late (measured), and
+  // a button that seems not to have heard reads as broken. Only the icon is
+  // ahead of the renderer - the progress bar and the source pill still show
+  // what it reports - and if it has not confirmed within CONFIRM_MS the icon
+  // goes back to the reported state.
+  const CONFIRM_MS = 8000;
+  let pressed = $state(null); // 'playing' | 'paused': what the last press asked for
+  let pressTimer;
+  const shows = $derived(pressed ?? (playing ? 'playing' : 'paused'));
+
+  function forgetPress() {
+    clearTimeout(pressTimer);
+    pressed = null;
+  }
+  $effect(() => {
+    if (pressed !== null && transport === pressed) untrack(forgetPress);
+  });
+  $effect(() => {
+    active;
+    untrack(forgetPress);
+  });
+
+  // Shuffle and repeat show what the renderer reports (LMS answers in about
+  // 0.5 s, Finding 028), so unlike play they do not flip on press. Repeat
+  // steps off -> all -> one, the design's order.
+  const NEXT_REPEAT = { off: 'all', all: 'one', one: 'off' };
+
+  async function skip(command, body) {
+    try {
+      await sendTransport(command, body);
+    } catch (err) {
+      console.info('transport:', err.message);
+    }
+  }
+
+  async function togglePlay() {
+    const want = shows === 'playing' ? 'paused' : 'playing';
+    clearTimeout(pressTimer);
+    pressed = want;
+    pressTimer = setTimeout(forgetPress, CONFIRM_MS);
+    try {
+      await sendTransport(want === 'playing' ? 'play' : 'pause');
+    } catch (err) {
+      forgetPress();
+      console.info('transport:', err.message);
+    }
+  }
+
+  // The queue is LMS-only in the design. Keyed on the id until Phase 7 wires
+  // it; shuffle and repeat follow the renderer's declaration (ADR-0037).
   const lmsOnly = $derived(active === 'lms');
 </script>
 
@@ -159,23 +213,30 @@
         </div>
 
         <div class="bar__mid">
-          {#if lmsOnly}
-            <button class="btn" type="button" aria-label="Shuffle" disabled data-unwired="phase-6">
+          {#if controls.includes('shuffle')}
+            <button class="btn btn--toggle" class:is-on={shuffle === true} type="button" aria-label="Shuffle" aria-pressed={shuffle === true} disabled={!available.includes('shuffle')} onclick={() => skip('shuffle', { on: shuffle !== true })}>
               <span class="i-shuffle"><i></i><i></i><i></i><i></i><b></b><b></b></span>
             </button>
           {/if}
-          <button class="btn btn--lg" type="button" aria-label="Previous" disabled data-unwired="phase-6">
-            <span class="i-prev"></span>
-          </button>
-          <button class="btn btn--play" type="button" aria-label={playing ? 'Pause' : 'Play'} disabled data-unwired="phase-6">
-            <span class="i-play"></span><span class="i-pause"></span>
-          </button>
-          <button class="btn btn--lg" type="button" aria-label="Next" disabled data-unwired="phase-6">
-            <span class="i-next"></span>
-          </button>
-          {#if lmsOnly}
-            <button class="btn" type="button" aria-label="Repeat" disabled data-unwired="phase-6">
-              <span class="i-repeat"><i></i><i></i><i></i><i></i><b></b><b></b></span>
+          {#if controls.includes('previous')}
+            <!-- ADR-0037 §3: has it but cannot work now - shown, disabled. -->
+            <button class="btn btn--lg" type="button" aria-label="Previous" disabled={!available.includes('previous')} onclick={() => skip('previous')}>
+              <span class="i-prev"></span>
+            </button>
+          {/if}
+          {#if hasPlayPause}
+            <button class="btn btn--play" type="button" data-shows={shows} aria-label={shows === 'playing' ? 'Pause' : 'Play'} onclick={togglePlay}>
+              <span class="i-play"></span><span class="i-pause"></span>
+            </button>
+          {/if}
+          {#if controls.includes('next')}
+            <button class="btn btn--lg" type="button" aria-label="Next" disabled={!available.includes('next')} onclick={() => skip('next')}>
+              <span class="i-next"></span>
+            </button>
+          {/if}
+          {#if controls.includes('repeat')}
+            <button class="btn btn--toggle" class:is-on={repeat === 'all' || repeat === 'one'} type="button" aria-label={`Repeat ${repeat ?? 'off'}`} disabled={!available.includes('repeat')} onclick={() => skip('repeat', { mode: NEXT_REPEAT[repeat ?? 'off'] })}>
+              <span class="i-repeat"><i></i><i></i><i></i><i></i><b></b><b></b>{#if repeat === 'one'}<span class="i-repeat__one">1</span>{/if}</span>
             </button>
           {/if}
         </div>
@@ -533,6 +594,11 @@
   .btn:not(:disabled):active {
     background: var(--ink-fill-press);
   }
+  /* Cannot work right now (ADR-0037 §3). The design dims an unavailable tab
+     to 0.4; the same here. Unwired scaffolding keeps its own look. */
+  .btn:disabled:not([data-unwired]) {
+    opacity: 0.4;
+  }
   .btn--lg {
     width: var(--ctl-lg);
     height: var(--ctl-lg);
@@ -544,6 +610,12 @@
     background: var(--play-fill);
     color: var(--ink-on-accent);
     box-shadow: 0 0 22px rgba(242, 164, 143, 0.22), 0 12px 30px rgba(242, 164, 143, 0.35);
+  }
+  /* The design presses play by shrinking it, not by the other buttons' grey
+     fill - which on this one read as a flash (George, 2026-09-16). */
+  .btn--play:not(:disabled):active {
+    background: var(--play-fill);
+    transform: scale(0.95);
   }
 
   .i-play {
@@ -559,8 +631,8 @@
     height: 34px;
     background: linear-gradient(to right, currentColor 0 8px, transparent 8px 18px, currentColor 18px 26px);
   }
-  .screen[data-transport='playing'] .i-play,
-  .screen:not([data-transport='playing']) .i-pause { display: none; }
+  .btn--play[data-shows='playing'] .i-play,
+  .btn--play:not([data-shows='playing']) .i-pause { display: none; }
 
   .i-prev,
   .i-next { display: flex; align-items: center; }
@@ -596,6 +668,43 @@
   .i-tiles i { border-radius: 3px; background: var(--ink-strong); }
   .i-meter { display: flex; align-items: flex-end; gap: 4px; height: 22px; }
   .i-meter i { width: 4px; border-radius: 2px; background: var(--ink-body); }
+
+  /* Shuffle and repeat, off and on - the design's values. */
+  .btn--toggle {
+    background: rgba(233, 238, 242, 0.07);
+    border: 1px solid rgba(233, 238, 242, 0.12);
+    --toggle-ink: rgba(233, 238, 242, 0.66);
+  }
+  .btn--toggle.is-on {
+    background: rgba(126, 214, 188, 0.16);
+    border-color: rgba(126, 214, 188, 0.42);
+    --toggle-ink: #7ed6bc;
+  }
+  /* Pressed by shrinking, like play (George, 2026-09-17: the design's grey
+     press fill read as a flash here too). The fill stays what the state is. */
+  .btn--toggle:not(:disabled):active,
+  .btn--lg:not(:disabled):active {
+    transform: scale(0.95);
+  }
+  .btn--toggle:not(:disabled):active { background: rgba(233, 238, 242, 0.07); }
+  .btn--toggle.is-on:not(:disabled):active { background: rgba(126, 214, 188, 0.16); }
+  .btn--lg:not(:disabled):active { background: rgba(233, 238, 242, 0.09); }
+  .btn--toggle .i-shuffle i,
+  .btn--toggle .i-repeat i { background: var(--toggle-ink); }
+  .btn--toggle .i-shuffle b { border-left-color: var(--toggle-ink); }
+  .btn--toggle .i-repeat b:nth-child(5) { border-top-color: var(--toggle-ink); }
+  .btn--toggle .i-repeat b:nth-child(6) { border-bottom-color: var(--toggle-ink); }
+  .i-repeat__one {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 1;
+    color: var(--toggle-ink);
+  }
 
   .i-shuffle { position: relative; width: 32px; height: 28px; display: block; }
   .i-shuffle i,

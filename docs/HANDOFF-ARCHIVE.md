@@ -2708,3 +2708,316 @@ Last updated: 2026-09-15 (twelfth session — **04-ui fixed and verified on
 hardware; ADR-0029 to 0032 decided; a new image is built and waiting to be
 flashed**)
 
+
+
+---
+
+# Session 15 close (2026-09-17) — superseded 'Start here' block, moved verbatim
+
+Last updated: 2026-09-16 (fifteenth session — **Phase 5 built: visualisation
+service, skin corpus and validator, both engines in one process, rotation,
+entry and exit, metadata layer; checked on the panel by George**)
+
+## Start here
+
+**The device runs the 2026-09-15 image plus hand-installed Phase 5 work.**
+`image/deploy/2026-09-15-gexis-player-v0.2.1-146-ge89d8bb-dirty.img` is what
+was flashed. On top of it, by hand and **not in that image**:
+
+- the Phase 5 daemon code in `/opt/gexis-core/venv` (Peppy control, metadata
+  file, settings seed);
+- the driver, engines and stock skins in `/tmp/spike/gx`, started by hand —
+  **gone on reboot**;
+- the meter service, started by hand — also gone on reboot;
+- packages `python3-pygame`, `python3-pil`, `wlrctl`, `grim` and
+  `python3-pytest` (the last two test-only).
+
+A new image carries all of it except the test-only packages
+(`stage-gexis/05-peppy`, `03-core/files/gexis-meter.service`), and the
+implicit-entry fix, which the device does **not** have. **Build it and reflash
+before trusting anything above as a product.**
+
+**Phase 5 status** — `docs/DEVELOPMENT.md` has each criterion's evidence:
+
+- 1 visualisation service: built; levels verified live; **HTTP push
+  untested**. Unit added 2026-09-16 — it had only ever run by hand.
+- 2, 3 skins: Gelo5's 84 in `skins/` (config only; images fetched at build),
+  validator gates `make image`.
+- 4 no visible construction: measured, Finding 025.
+- 5 rotation per track: built, Finding 027.
+- 6 renderer change exits: **George checked**.
+- 7 absent fields: our own metadata layer; **George checked** across all
+  three renderers, including the layout fixes (text in its box, MM:SS in
+  DSEG7, badges with names).
+- 8 button and touch-to-hide: **George checked**. Implicit five-minute entry
+  **failed on hardware** (every Spotify track end read as a skip), fixed and
+  unit-tested, **not yet observed** — the first thing to check on the new
+  image: play for six minutes without touching the panel.
+- 9 no sample rate or codec: nothing renders it, ADR-0036.
+
+**Follow-ups, not blocking:**
+
+- `viz_timeout` is read by the daemon but not wired in the settings registry,
+  so the phone cannot change it (ADR-0035 says wire it with its feature).
+- The stock skins are Volumio-branded; Gelo5's are the image default.
+- Titles too long for their box are cut with "…"; the wrapper scrolls them.
+- Fonts: DejaVu for text; DSEG7 (OFL) for time. PeppyFont not vendored.
+- George once saw the spectrum overlap remaining time on `dash-spectrum`;
+  not reproduced in 24 rotations or a direct start.
+- **Lesson candidate:** hand-started test processes multiplied because pid
+  files captured the wrong pid; George saw overlapping skins. Stop by looking
+  processes up, not by trusting a pid file.
+
+**Issues to look at later (Phase 6 hardware rounds, 2026-09-16):**
+
+- **Over Bluetooth, the Plexamp app reports pauses late or not at all** — about
+  6 s from its own button, 4.5 s or never for a panel command. The Spotify app
+  on the same phone reports in 0.2 s (Finding 028, addendum 2). A2DP's
+  stream-idle signal comes 3 s after the report, so it cannot help. With
+  Plexamp the panel's icon falls back after 8 s. Next step, with the speakers
+  on: does Plexamp's audio stop at the tap?
+- **LMS had player `gexis` on fixed volume (`digitalVolumeControl` 0), cause
+  unknown.** George found it as "phone volume does nothing while the panel is
+  muted, and LMS's volume bar is frozen". Measured 2026-09-16: with 0, LMS
+  moves its own number but always sends full level, so no LMS volume change
+  reaches the device, muted or not. Mute then became a trap, because the one
+  change that ends it never arrived. Set back to 1 with George's OK; re-tested
+  while playing: LMS volume reaches the DAC again, and a change while muted
+  ends mute (ADR-0034). **George never touched it,** and nothing in this repo
+  sets it; it worked on 2026-09-08 (Finding 008). **Check it after the next
+  reflash and LMS restart.** Nothing warns when it is 0; a candidate for
+  Phase 9.
+- **Pausing LMS moved the DAC slightly** (dummy −47 → −50 dB, DAC 152 → 150)
+  during the same test. Small, unexplained, not investigated.
+- **After a `gexis-core` restart, a phone already connected is not active.**
+  The Bluetooth adapter seeds metadata from a `MediaPlayer1` that is already
+  present but never calls `on_acquire`. Spotify has the same effect. It only
+  matters when the daemon restarts, not at boot.
+- **LMS once reported a position about 5 s ahead on resume**, then corrected
+  it at the next pause. Not reproduced on a second try; recheck with sound.
+
+**Still open from earlier:** `playlistcontrol cmd:load album_id:<id>` is
+unverified (ADR-0030); Claude Design owes drawn number/text editors and a
+corrected `design/README.md`.
+
+**Next phase: 6 — now playing, full**: transport controls only. The info
+panels moved to Phase 8, and a control that cannot work right now is
+disabled, never hidden (both George, 2026-09-16). The agreed plan is under
+Phase 6 in `docs/DEVELOPMENT.md`. **Before any of it:** flash
+`image/deploy/2026-09-16-gexis-player-v0.2.1-179-g67193d5-dirty.img` (built
+from `main` after PR #17; contents verified as a file) and check the
+five-minute Peppy entry on it.
+
+
+# Session 16 close (2026-09-17) — superseded 'Start here' block, moved verbatim
+
+Last updated: 2026-09-17 (sixteenth session, on R2D2 — **Phase 6 built on
+`phase-6-plan`; its first image build on R2D2 failed at the loop device and
+must be rerun before George's checks and the PR**)
+
+## Start here
+
+**The device runs the 2026-09-16 image (`v0.2.1-179-g67193d5`, Phase 5) plus
+Phase 6 core and UI installed by hand.** There is **no Phase 6 image yet.**
+**Next action: rerun `make image` on R2D2, verify the image with
+`image/verify-image.sh`, hand it to George to flash and check, then the PR
+from `phase-6-plan` to `main`.**
+
+**Development moved to R2D2 on 2026-09-17** (see Machines).
+
+**The first Phase 6 build on R2D2 failed (2026-09-17, 11:35-11:55, 1224 s).**
+Every stage, including all of `stage-gexis`, finished; `export-image/prerun.sh`
+then failed six times with `mknod: invalid minor device number '/dev/loop0
+(lost)'`. No image came out (`image/deploy/` does not exist). Log:
+`~/gexis-build.log`.
+
+That is the failure `image/README.md` records under "Known issue (resolved)"
+from C3PO's first build (2026-09-05), which blames the `loop` module not being
+loaded before the build, fixed by `sudo modprobe -r loop && sudo modprobe loop`.
+What was measured on R2D2 fits that record, but also a second explanation, and
+**the rerun is what tells them apart:**
+
+- R2D2 booted at 11:12; `/etc/modules-load.d/loop.conf` was written at 11:29,
+  so it has not taken effect yet. The kernel logged `loop: module loaded` at
+  11:54:42 — loaded by the build itself, at the loop step. (Fits the README.)
+- This kernel has `CONFIG_BLK_DEV_LOOP_MIN_COUNT=0`: loading the module creates
+  no `/dev/loopN` nodes. A `--privileged` container's `/dev` is (assumed, not
+  checked) populated when the container starts, so a `/dev/loop0`
+  created mid-build would never appear inside it — "(lost)". If that is the
+  cause, autoloading at boot does **not** prevent it.
+- `/dev/loop0` now exists on the host (created 11:54:42, nothing attached).
+
+**So: do not reboot R2D2 and do not reload `loop` before the rerun** — both
+remove `/dev/loop0`. If a plain rerun gets past `export-image`, the README's
+root cause is incomplete: propose correcting it (and a durable fix, e.g.
+pre-creating a loop node before the build) to George. If it fails the same
+way, apply the README's fix — it needs `sudo`, so George runs it.
+
+**Docker access:** the session that found this had no `docker` group in its
+process (George is in the group; the process predated it) and `sudo` needs a
+password. Check `id` shows `docker` before starting. Run the build detached,
+as before, so the session's memory guard cannot kill it:
+`nohup setsid bash -c "make image > ~/gexis-build.log 2>&1; echo BUILD-EXIT=\$? >> ~/gexis-build.log" >/dev/null 2>&1 </dev/null &`.
+The submodule shows `m image/pi-gen` afterwards (`stage2/EXPORT_IMAGE` deleted
+by the Makefile): expected, leave it.
+
+**Verifying the image: `image/verify-image.sh image/deploy/<name>.img`** (new,
+2026-09-17). Reads the root partition with `debugfs` at its offset (no root,
+no loop device) and compares against the checkout: every unit, config and
+Peppy file byte for byte; the six units enabled and `alsa-restore` masked;
+`default.target` not written; venv `gexis_core` identical to `core/src`;
+`/opt/gexis-ui` identical to `ui/dist`; Peppy engines, font, icons and both
+skin corpora. Tested only against a synthetic ext4 image (every FAIL path and
+the symlink/dump mechanics) — **its first real run is this image**; read its
+output, don't just trust `RESULT`. Also check the version in the `.info`
+manifest matches the commit built. The Phase 5 image's own check was never
+written down step by step; this replaces it.
+
+
+# Session 17 close (2026-09-17) — superseded 'Start here' block, moved verbatim
+
+Last updated: 2026-09-17 (seventeenth session, on R2D2 — **the Phase 6 image
+is built and verified as a file; George is flashing it**)
+
+## Start here
+
+**The Phase 6 image exists:**
+`image/deploy/2026-09-17-gexis-player-v0.2.1-202-gf3674f3-dirty.img` (4.5 GB,
+built from `phase-6-plan` at `f3674f3`; `-dirty` is only the pi-gen submodule's
+deleted `stage2/EXPORT_IMAGE`). **Built in 467 s, `BUILD-EXIT=0`.**
+`image/verify-image.sh` passed every check on its first real run, output read
+line by line: 18 files byte-identical, six units enabled with the right link
+targets, `alsa-restore` masked, `default.target` not written, venv
+`gexis_core` = `core/src` (27 .py), `/opt/gexis-ui` = `ui/dist` (51 files),
+Peppy engines, font, icon, 267 Gelo5 and 42 stock skin images; `viz_timeout`
+not in the registry, daemon fallback 300 s. The script does not read the boot
+partition; checked separately with `mtype`: `cmdline.txt` still has
+`systemd.run=/boot/firstrun.sh`, `firstrun.sh` placeholders blank.
+
+**When this session closed, George was about to flash it** (R2D2 rebooted
+first). The device may still be on the 2026-09-16 image plus hand-installed
+Phase 6 — ask, or check `/etc/gexis` timestamps.
+
+**Next actions, in order:**
+
+1. George flashes and runs `make provision DEVICE=/dev/sdX`, boots.
+2. **Add C3PO's key to the device** (George, 2026-09-17: after first boot,
+   not in `provision.sh`). `image/provision.local.env` now carries **R2D2's**
+   key only (it had C3PO's, copied over with the file; both keys have the
+   comment `desktop-to-dietpi` — tell them apart by fingerprint: R2D2
+   `SHA256:UVfv…`, C3PO `SHA256:d/pT…`). C3PO's public key is saved at
+   `~/.ssh/c3po_id_ed25519.pub`. Append it with
+   `ssh pi@gexis.local 'cat >> ~/.ssh/authorized_keys' < ~/.ssh/c3po_id_ed25519.pub`
+   and confirm both fingerprints with `ssh-keygen -lf ~/.ssh/authorized_keys`
+   on the device. Repeat after every reflash. (A two-line `SSH_PUBKEY` would
+   work in `firstrun.sh` — `imager_custom add_ssh_keys` echoes the value, one
+   line per key — but `provision.sh`'s round-trip check greps one line and
+   would refuse it; George chose not to change it.)
+   `~/provision.local.env.bak-c3po-key` (holds the Wi-Fi password) can be
+   deleted once George is happy.
+3. Check LMS player `gexis` is on "adjust volume" (`digitalVolumeControl` 1).
+4. George's checks below, then the PR from `phase-6-plan` to `main`.
+
+**The loop-device question is still open — and this rerun did not settle
+it.** The first R2D2 build (2026-09-17 11:35, log
+`~/gexis-build-1-failed-loop.log`) failed at `export-image/prerun.sh` with
+`mknod: invalid minor device number '/dev/loop0 (lost)'`. The rerun
+(12:40, log `~/gexis-build.log`) attached `/dev/loop0` first time. The
+previous handoff said a passing rerun would show `image/README.md`'s root
+cause (module not loaded before the build) is incomplete — **that was wrong**:
+the rerun started with the module loaded *and* `/dev/loop0` present, so both
+explanations predicted a pass. What discriminates is **the first build after
+R2D2's reboot**: `loop` autoloads from `/etc/modules-load.d/loop.conf`, but
+with `CONFIG_BLK_DEV_LOOP_MIN_COUNT=0` no `/dev/loopN` exists. Before building,
+record `lsmod | grep -w loop` and `ls /dev/loop*`. A pass means the README is
+right; a `(lost)` failure means the missing node is the cause, and autoloading
+does not prevent it — then propose to George correcting the README and a
+durable fix (e.g. pre-creating a node before the build; needs `sudo`).
+
+**Docker group:** the closing session's process predated George's `docker`
+membership; the build ran via `newgrp docker` (no sudo), piping the detached
+command into it. After the reboot `id` should show `docker` directly — check.
+Run builds detached as before so the session's memory guard cannot kill them:
+`nohup setsid bash -c "make image > ~/gexis-build.log 2>&1; echo BUILD-EXIT=\$? >> ~/gexis-build.log" >/dev/null 2>&1 </dev/null &`.
+Move the previous log aside first. The submodule shows `m image/pi-gen`
+afterwards: expected, leave it.
+
+**Development moved to R2D2 on 2026-09-17** (see Machines).
+
+**Checks for the flashed Phase 6 image:**
+
+1. **Peppy screen:** it comes up after 5 minutes of playback with no touch.
+   This was seen on the old image with a 1-minute test timeout; the timeout
+   is back to the default.
+2. **Transport on all three renderers:** play/pause (the icon flips on
+   press), next and previous. On LMS radio, Next, Previous, Shuffle and
+   Repeat are dimmed.
+3. **Not yet checked anywhere: shuffle and repeat on Spotify and Bluetooth**
+   (added 2026-09-17). Use the phone's Spotify app, then Bluetooth with the
+   Spotify app, then Bluetooth with Plexamp. On Bluetooth, the buttons may be
+   dimmed if the app exposes no shuffle or repeat.
+4. **With the speakers on:** radio resuming after a pause; the dropout when
+   LMS restarts a stream; the one-off LMS resume-position jump; whether
+   Plexamp's audio stops at the tap.
+5. **LMS volume:** check that player `gexis` is still on "adjust volume" after
+   the reflash (see issues below).
+
+**Phase 6** (DEVELOPMENT.md has the evidence): criteria 1 and 2 are built and
+checked on the panel, except item 3 above. Criterion 3 (info panels) moved to
+Phase 8; criterion 4 (the Peppy button) was done in Phase 5.
+[ADR-0037](docs/decisions/0037-transport-commands.md) covers transport, with
+two amendments by George: the play icon flips on press, and Spotify and
+Bluetooth get shuffle and repeat.
+[Finding 028](docs/findings/028-transport-commands-on-three-renderers.md) has
+the measurements.
+
+**Phases renumbered 2026-09-16:** 9 is settings wiring and UI polish (new);
+10 is the plugin contract; 11 Plexamp and 12 Qobuz Connect (new); 13 is first
+boot.
+
+**Issues to look at later (Phase 6 hardware rounds, 2026-09-16):**
+
+- **Over Bluetooth, the Plexamp app reports pauses late or not at all** — about
+  6 s from its own button, 4.5 s or never for a panel command. The Spotify app
+  on the same phone reports in 0.2 s (Finding 028, addendum 2). A2DP's
+  stream-idle signal comes 3 s after the report, so it cannot help. With
+  Plexamp the panel's icon falls back after 8 s. Next step, with the speakers
+  on: does Plexamp's audio stop at the tap?
+- **LMS had player `gexis` on fixed volume (`digitalVolumeControl` 0), cause
+  unknown.** George found it as "phone volume does nothing while the panel is
+  muted, and LMS's volume bar is frozen". Measured 2026-09-16: with 0, LMS
+  moves its own number but always sends full level, so no LMS volume change
+  reaches the device, muted or not. Mute then became a trap, because the one
+  change that ends it never arrived. Set back to 1 with George's OK; re-tested
+  while playing: LMS volume reaches the DAC again, and a change while muted
+  ends mute (ADR-0034). **George never touched it,** and nothing in this repo
+  sets it; it worked on 2026-09-08 (Finding 008). **Check it after the next
+  reflash and LMS restart.** Nothing warns when it is 0; a candidate for
+  Phase 9.
+- **Pausing LMS moved the DAC slightly** (dummy −47 → −50 dB, DAC 152 → 150)
+  during the same test. Small, unexplained, not investigated.
+- **After a `gexis-core` restart, a phone already connected is not active.**
+  The Bluetooth adapter seeds metadata from a `MediaPlayer1` that is already
+  present but never calls `on_acquire`. Spotify has the same effect. It only
+  matters when the daemon restarts, not at boot.
+- **LMS once reported a position about 5 s ahead on resume**, then corrected
+  it at the next pause. Not reproduced on a second try; recheck with sound.
+
+**Follow-ups, not blocking:**
+
+- `viz_timeout` is read by the daemon but not wired in the settings registry,
+  so the phone cannot change it (ADR-0035 says wire it with its feature).
+- The stock skins are Volumio-branded; Gelo5's are the image default.
+- Titles too long for their box are cut with "…"; the wrapper scrolls them.
+- Fonts: DejaVu for text; DSEG7 (OFL) for time. PeppyFont not vendored.
+- George once saw the spectrum overlap remaining time on `dash-spectrum`;
+  not reproduced in 24 rotations or a direct start.
+- **Lesson candidate:** hand-started test processes multiplied because pid
+  files captured the wrong pid; George saw overlapping skins. Stop by looking
+  processes up, not by trusting a pid file.
+
+**Still open from earlier:** `playlistcontrol cmd:load album_id:<id>` is
+unverified (ADR-0030); Claude Design owes drawn number/text editors and a
+corrected `design/README.md`.
+
+**Next phase after the Phase 6 PR: 7 — library browse.**

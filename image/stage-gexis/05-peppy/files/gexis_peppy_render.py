@@ -346,7 +346,7 @@ def remaining_seconds(metadata: dict, default: int | None = None) -> int | None:
     renderer reports one - the same interpolation the UI does."""
     position, duration = metadata.get("position"), metadata.get("duration")
     if position is None or duration is None:
-        return default  # Bluetooth publishes neither
+        return default  # a renderer that publishes neither
     if metadata.get("transport") == "playing":
         position += max(0.0, time.time() - metadata.get("written_at", time.time()))
     return max(0, int(duration - position))

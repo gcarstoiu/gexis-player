@@ -56,6 +56,7 @@ the question blocking it was answered.
 | [0034](0034-panel-volume-travel-and-mute.md) | Panel volume: slider over −45…0 dB, shown as slider position; mute restores the prior level | Accepted — amends Phase 4 criterion 8 |
 | [0035](0035-settings-api.md) | Settings: one registry in the daemon, a generic API, wired one setting at a time | Accepted — the API ADR-0032 deferred |
 | [0036](0036-peppy-entry-and-no-rate-or-codec.md) | Peppy screen entry: the button, or five minutes of unattended playback; no sample rate or codec anywhere | Accepted — amends [0019](0019-peppy-screen-lifecycle.md) |
+| [0037](0037-transport-commands.md) | Transport commands: one route to the active renderer; a control the renderer has is visible, disabled when it cannot work now | Accepted — amends [0020](0020-library-browse-tree.md)'s unusable-controls rule |
 
 ## Cross-cutting rules
 
@@ -68,6 +69,11 @@ Rules established in one record that bind the others.
 
 Volume in fixed output is hidden (0018). ADR-0014's "hidden or greyed" should be
 read through this rule.
+
+**Amended 2026-09-16 by [0037](0037-transport-commands.md)** (George): a third
+case. A control the renderer has, and that is operable here but **not right
+now** — Next on a radio station — stays **visible and disabled**, never
+hidden. Hiding is only for a capability that does not exist.
 
 **Amended 2026-09-13 by [0029](0029-text-entry-on-every-surface.md):** settings
 text fields are no longer part of the second branch — they are editable on the
@@ -92,7 +98,7 @@ transport row before Phase 6, a lyrics tab before Phase 8. That is
 development scaffolding, not a decision to ship dead controls, and it is
 validated hard before the product is shippable rather than at each step.
 
-**Resolved 2026-09-13: the gate is Phase 9 criterion 4**, "no unwired UI
+**Resolved 2026-09-13: the gate is Phase 9 criterion 2**, "no unwired UI
 remains, or each survivor is explicitly justified". It is the **backstop, not
 the mechanism** — removal is continuous, each phase clearing the markers for
 whatever it wires. Unwired UI is marked in the code so checking is a generated

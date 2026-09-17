@@ -1,45 +1,106 @@
 # Handoff
 
-Last updated: 2026-09-16 (fifteenth session — **Phase 5 built: visualisation
-service, skin corpus and validator, both engines in one process, rotation,
-entry and exit, metadata layer; checked on the panel by George**)
+Last updated: 2026-09-17 (eighteenth session, on R2D2 — **Phase 6 image
+flashed and signed off by George; PR from `phase-6-plan` to `main` open**)
 
 ## Start here
 
-**The device runs the 2026-09-15 image plus hand-installed Phase 5 work.**
-`image/deploy/2026-09-15-gexis-player-v0.2.1-146-ge89d8bb-dirty.img` is what
-was flashed. On top of it, by hand and **not in that image**:
+**Phase 6 is closed pending the PR merge.** The device runs
+`2026-09-17-gexis-player-v0.2.1-202-gf3674f3-dirty.img` (built from
+`f3674f3`; `/etc/gexis` files dated 12:43–12:48, matching the build).
+Provisioned with `make provision`; `firstrun.sh` consumed itself; no failed
+units; all renderer, core, kiosk, meter and Peppy units running.
 
-- the Phase 5 daemon code in `/opt/gexis-core/venv` (Peppy control, metadata
-  file, settings seed);
-- the driver, engines and stock skins in `/tmp/spike/gx`, started by hand —
-  **gone on reboot**;
-- the meter service, started by hand — also gone on reboot;
-- packages `python3-pygame`, `python3-pil`, `wlrctl`, `grim` and
-  `python3-pytest` (the last two test-only).
+**Done on the device this session (checked by Claude):**
 
-A new image carries all of it except the test-only packages
-(`stage-gexis/05-peppy`, `03-core/files/gexis-meter.service`), and the
-implicit-entry fix, which the device does **not** have. **Build it and reflash
-before trusting anything above as a product.**
+- C3PO's key appended; `ssh-keygen -lf ~/.ssh/authorized_keys` shows both,
+  R2D2 `SHA256:UVfvJQXw…ci4` and C3PO `SHA256:d/pT3AST…tok`. **Repeat after
+  every reflash** (`provision.local.env` carries R2D2's key only; George chose
+  not to change `provision.sh`):
+  `ssh pi@gexis.local 'cat >> ~/.ssh/authorized_keys' < ~/.ssh/c3po_id_ed25519.pub`.
+- LMS player `gexis` (`88:a2:9e:79:e1:32`): `digitalVolumeControl` **1**
+  after the reflash, read over JSON-RPC. LMS itself was not restarted, so the
+  "after an LMS restart" half of that check was not made.
+- Core tests on R2D2: 444 passed, 1 skipped (scratch venv, `core[test]`).
 
-**Phase 5 status** — `docs/DEVELOPMENT.md` has each criterion's evidence:
+**George's hardware checks of the image: George called them done
+(2026-09-17) and asked for the PR.** Results for the individual checks
+(Peppy entry at 5 min, transport on three renderers, shuffle/repeat on
+Spotify and Bluetooth, the speakers-on items) were not reported item by item
+in the session, so none of them is recorded here as observed. If one matters
+later, ask George rather than reading this as a pass.
 
-- 1 visualisation service: built; levels verified live; **HTTP push
-  untested**. Unit added 2026-09-16 — it had only ever run by hand.
-- 2, 3 skins: Gelo5's 84 in `skins/` (config only; images fetched at build),
-  validator gates `make image`.
-- 4 no visible construction: measured, Finding 025.
-- 5 rotation per track: built, Finding 027.
-- 6 renderer change exits: **George checked**.
-- 7 absent fields: our own metadata layer; **George checked** across all
-  three renderers, including the layout fixes (text in its box, MM:SS in
-  DSEG7, badges with names).
-- 8 button and touch-to-hide: **George checked**. Implicit five-minute entry
-  **failed on hardware** (every Spotify track end read as a skip), fixed and
-  unit-tested, **not yet observed** — the first thing to check on the new
-  image: play for six minutes without touching the panel.
-- 9 no sample rate or codec: nothing renders it, ADR-0036.
+**Next action:** George reviews and merges the Phase 6 PR. Then Phase 7 —
+library browse, starting with the unverified
+`playlistcontrol cmd:load album_id:<id>` (ADR-0030).
+
+**The loop-device question is still open, and the discriminating state is
+recorded.** Background: the first R2D2 build (2026-09-17 11:35, log
+`~/gexis-build-1-failed-loop.log`) failed at `export-image/prerun.sh` with
+`mknod: invalid minor device number '/dev/loop0 (lost)'`; the rerun (12:40,
+`~/gexis-build.log`) passed but started with `/dev/loop0` already present, so
+it discriminated nothing. **After R2D2's reboot, before any build (13:37,
+up 8 min):** `lsmod | grep -w loop` → `loop 45056 0` (autoloaded from
+`/etc/modules-load.d/loop.conf`); `ls -l /dev/loop*` → only
+`/dev/loop-control`, **no `/dev/loopN`**. No build has run since. **The next
+`make image` on R2D2 is the test**, provided R2D2 has not rebooted and nothing
+has created a loop node in between — re-record both before building. A pass
+means `image/README.md`'s root cause (module not loaded) is right; a `(lost)`
+failure means the missing node is the cause and autoloading does not prevent
+it — then propose to George correcting the README and a durable fix (e.g.
+pre-creating a node before the build; needs `sudo`).
+
+**Docker group:** after the reboot `id` shows `docker` (950) directly;
+`newgrp` is no longer needed. Run builds detached so the session's memory
+guard cannot kill them:
+`nohup setsid bash -c "make image > ~/gexis-build.log 2>&1; echo BUILD-EXIT=\$? >> ~/gexis-build.log" >/dev/null 2>&1 </dev/null &`.
+Move the previous log aside first. The submodule shows `m image/pi-gen`
+afterwards: expected, leave it.
+
+**Development moved to R2D2 on 2026-09-17** (see Machines).
+`~/provision.local.env.bak-c3po-key` (holds the Wi-Fi password) can be
+deleted once George is happy.
+
+**Phase 6** (DEVELOPMENT.md has the evidence): criteria 1 and 2 built and
+checked on the panel; criterion 3 (info panels) moved to Phase 8; criterion 4
+(the Peppy button) was done in Phase 5.
+[ADR-0037](docs/decisions/0037-transport-commands.md) covers transport, with
+two amendments by George: the play icon flips on press, and Spotify and
+Bluetooth get shuffle and repeat.
+[Finding 028](docs/findings/028-transport-commands-on-three-renderers.md) has
+the measurements.
+
+**Phases renumbered 2026-09-16:** 9 is settings wiring and UI polish (new);
+10 is the plugin contract; 11 Plexamp and 12 Qobuz Connect (new); 13 is first
+boot.
+
+**Issues to look at later (Phase 6 hardware rounds, 2026-09-16):**
+
+- **Over Bluetooth, the Plexamp app reports pauses late or not at all** — about
+  6 s from its own button, 4.5 s or never for a panel command. The Spotify app
+  on the same phone reports in 0.2 s (Finding 028, addendum 2). A2DP's
+  stream-idle signal comes 3 s after the report, so it cannot help. With
+  Plexamp the panel's icon falls back after 8 s. Next step, with the speakers
+  on: does Plexamp's audio stop at the tap?
+- **LMS had player `gexis` on fixed volume (`digitalVolumeControl` 0), cause
+  unknown.** George found it as "phone volume does nothing while the panel is
+  muted, and LMS's volume bar is frozen". Measured 2026-09-16: with 0, LMS
+  moves its own number but always sends full level, so no LMS volume change
+  reaches the device, muted or not. Mute then became a trap, because the one
+  change that ends it never arrived. Set back to 1 with George's OK; re-tested
+  while playing: LMS volume reaches the DAC again, and a change while muted
+  ends mute (ADR-0034). **George never touched it,** and nothing in this repo
+  sets it; it worked on 2026-09-08 (Finding 008). **Checked after the 2026-09-17 reflash: 1.**
+  Still unchecked after an LMS restart. Nothing warns when it is 0; a candidate for
+  Phase 9.
+- **Pausing LMS moved the DAC slightly** (dummy −47 → −50 dB, DAC 152 → 150)
+  during the same test. Small, unexplained, not investigated.
+- **After a `gexis-core` restart, a phone already connected is not active.**
+  The Bluetooth adapter seeds metadata from a `MediaPlayer1` that is already
+  present but never calls `on_acquire`. Spotify has the same effect. It only
+  matters when the daemon restarts, not at boot.
+- **LMS once reported a position about 5 s ahead on resume**, then corrected
+  it at the next pause. Not reproduced on a second try; recheck with sound.
 
 **Follow-ups, not blocking:**
 
@@ -57,9 +118,6 @@ before trusting anything above as a product.**
 **Still open from earlier:** `playlistcontrol cmd:load album_id:<id>` is
 unverified (ADR-0030); Claude Design owes drawn number/text editors and a
 corrected `design/README.md`.
-
-**Next phase: 6 — now playing, full** (transport controls from capability
-declarations, hidden when inoperable, artist and track info panels).
 
 ## Build environment (2026-09-13) — read this before the next build
 
@@ -134,7 +192,8 @@ commit, on `phase-3-core-daemon`.
 
 | Name | What it is | Notes |
 |---|---|---|
-| `C3PO` | dev machine | CachyOS, **fish shell** — no heredocs. Hand it script files to run with `bash`, not pasted multi-line commands. |
+| `R2D2` | **dev machine from 2026-09-17** | CachyOS, 12 cores, 31 GB RAM, **fish shell**. `192.168.178.134`. Replaced C3PO because builds kept being killed for low memory. Set up per `image/README.md`'s host prerequisites: Docker with `data-root` `/home/docker`, qemu-user-static-binfmt, `~/.local/bin/qemu-aarch64`, loop autoloaded via `/etc/modules-load.d/loop.conf`. Repo at `~/projects/gexis-player`, both `*.local.env` files and Claude's project memory copied from C3PO, its key authorized on `gexis`. UI builds, 444 core tests pass. |
+| `C3PO` | former dev machine | CachyOS, 8 cores, 14 GB, **fish shell** — no heredocs. Hand it script files to run with `bash`, not pasted multi-line commands. Retired for builds 2026-09-17 (out of memory). |
 | `rig` | Raspberry Pi 4, 4 GB | Raspberry Pi OS Lite 64-bit, Trixie. **Reference machine** — holds the environment Findings 002-004 were measured against. Not the build/test target. |
 | `gexis` | Raspberry Pi 4 | Flashed from this project's own `make image` output. User `pi`. Reachable as `pi@gexis.local` by SSH key. **The image-built target** — Phase 2 onward is built and measured here. |
 | SD card 2 | moOde | Reference install. Read-only recon source. Do not modify. |
@@ -219,6 +278,12 @@ reverted, currently-flashed image predates this fix.
 ```
 
 ## Things that will bite if forgotten
+
+- **A reflashed card only has R2D2's SSH key.** `make provision` writes the
+  one key in `image/provision.local.env`; C3PO's
+  (`~/.ssh/c3po_id_ed25519.pub`) is appended by hand after first boot
+  (George, 2026-09-17). Both keys are commented `desktop-to-dietpi`; compare
+  fingerprints, not comments.
 
 - **Never `docker start pigen_work`.** It re-runs pi-gen's entrypoint and
   starts a build — done accidentally on 2026-09-13 while inspecting the

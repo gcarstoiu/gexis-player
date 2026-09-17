@@ -367,3 +367,128 @@ async def test_deactivate_then_press_play_seeks_back(monkeypatch):
     await adapter.device_freed()
 
     assert ["time", "72.00"] in rpc.commands
+
+
+# --- ADR-0037: transport commands -----------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_pause_sends_pause_1(monkeypatch):
+    adapter, rpc = _adapter(monkeypatch, mode="play")
+
+    assert await adapter.pause() is True
+
+    assert rpc.commands == [["pause", 1]]
+
+
+@pytest.mark.asyncio
+async def test_play_resumes_a_paused_player_with_pause_0(monkeypatch):
+    """`play` on some LMS versions restarts the track; `pause 0` resumes
+    where it stopped (Finding 028)."""
+    adapter, rpc = _adapter(monkeypatch, mode="pause")
+    adapter._report_metadata({"mode": "pause", "time": 55.9})
+
+    assert await adapter.play() is True
+
+    assert rpc.commands == [["pause", 0]]
+
+
+@pytest.mark.asyncio
+async def test_play_starts_a_stopped_player_with_play(monkeypatch):
+    adapter, rpc = _adapter(monkeypatch, mode="stop")
+    adapter._report_metadata({"mode": "stop"})
+
+    assert await adapter.play() is True
+
+    assert rpc.commands == [["play"]]
+
+
+@pytest.mark.asyncio
+async def test_a_command_without_a_resolved_player_fails_rather_than_pretending(monkeypatch):
+    adapter, rpc = _adapter(monkeypatch, mode="play")
+    adapter._player_id = None
+
+    assert await adapter.pause() is False
+    assert rpc.commands == []
+
+
+@pytest.mark.asyncio
+async def test_next_and_previous_use_the_buttons_lms_apps_use(monkeypatch):
+    """Finding 028: `playlist index -1` always goes back a whole track;
+    `jump_rew` restarts the track unless it is near its start."""
+    adapter, rpc = _adapter(monkeypatch, mode="play")
+
+    assert await adapter.next() is True
+    assert await adapter.previous() is True
+
+    assert rpc.commands == [["button", "jump_fwd"], ["button", "jump_rew"]]
+
+
+@pytest.mark.parametrize(
+    ("result", "unavailable"),
+    [
+        # a radio station: one live item - nothing to skip, shuffle or repeat
+        ({"playlist_tracks": 1, "remote": 1}, {"next", "previous", "shuffle", "repeat"}),
+        ({"playlist_tracks": "1", "remote": "1"}, {"next", "previous", "shuffle", "repeat"}),
+        # one song: repeat-one loops it, so repeat stays
+        ({"playlist_tracks": 1, "duration": 227.6}, {"next", "previous", "shuffle"}),
+        # a playlist wraps, even with repeat off
+        ({"playlist_tracks": 12, "duration": 227.6}, set()),
+        # several stations: skipping and shuffling work, a live stream has no end
+        ({"playlist_tracks": 3, "remote": 1}, {"repeat"}),
+        # nothing reported: disable nothing
+        ({}, set()),
+    ],
+)
+def test_what_cannot_work_on_lms_right_now(result, unavailable):
+    adapter = LmsAdapter("127.0.0.1", 9000, "gexis")
+    received = []
+    adapter.on_metadata_change(received.append)
+
+    adapter._report_metadata({"mode": "play", "playlist_loop": [{"title": "x"}], **result})
+
+    assert received[-1].unavailable == frozenset(unavailable)
+
+
+@pytest.mark.parametrize(
+    ("lms_shuffle", "lms_repeat", "shuffle", "repeat"),
+    [
+        (0, 0, False, "off"),
+        (1, 2, True, "all"),
+        ("2", "1", True, "one"),   # by album shows as on; 1 is one song in LMS
+        (None, None, None, None),  # not reported
+    ],
+)
+def test_shuffle_and_repeat_map_from_lms_numbers(lms_shuffle, lms_repeat, shuffle, repeat):
+    """Finding 028: shuffle 0 off / 1 songs / 2 albums; repeat 0 off / 1 one
+    song / 2 all - not the design's off/all/one order."""
+    adapter = LmsAdapter("127.0.0.1", 9000, "gexis")
+    received = []
+    adapter.on_metadata_change(received.append)
+    result = {"mode": "play"}
+    if lms_shuffle is not None:
+        result["playlist shuffle"] = lms_shuffle
+    if lms_repeat is not None:
+        result["playlist repeat"] = lms_repeat
+
+    adapter._report_metadata(result)
+
+    assert (received[-1].shuffle, received[-1].repeat) == (shuffle, repeat)
+
+
+@pytest.mark.asyncio
+async def test_shuffle_and_repeat_commands_use_lms_numbers(monkeypatch):
+    adapter, rpc = _adapter(monkeypatch, mode="play")
+
+    await adapter.shuffle(True)
+    await adapter.shuffle(False)
+    for mode in ("off", "all", "one"):
+        await adapter.repeat(mode)
+
+    assert rpc.commands == [
+        ["playlist", "shuffle", 1],
+        ["playlist", "shuffle", 0],
+        ["playlist", "repeat", 0],
+        ["playlist", "repeat", 2],
+        ["playlist", "repeat", 1],
+    ]

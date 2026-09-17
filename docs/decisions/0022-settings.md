@@ -106,7 +106,7 @@ Phase 2 and ADR-0027.
 | Setting | Mark | Notes |
 |---|---|---|
 | Device name | [R] | One name → mDNS hostname, Spotify, Bluetooth. The sanitised hostname must be shown alongside what was typed, not silently substituted (see Q4) |
-| Wi-Fi configuration | [R] | Overlaps ADR-0021; the first-boot blocker this record raises (see Q2) — **answered 2026-09-14 by [ADR-0031](0031-first-boot-setup-access-point.md)**, entered on the user's phone over a setup access point, Phase 10 |
+| Wi-Fi configuration | [R] | Overlaps ADR-0021; the first-boot blocker this record raises (see Q2) — **answered 2026-09-14 by [ADR-0031](0031-first-boot-setup-access-point.md)**, entered on the user's phone over a setup access point, Phase 13 |
 | Time zone / NTP | [N] | Confirmed as a setting by George, 2026-09-15. The idle clock shows device time, and the image ships no time zone: `gexis` came up as Europe/London and was set to Europe/Berlin by hand on 2026-09-15 — **a reflash loses it** |
 | Restrict the API to loopback | [N] | ADR-0028 binds `0.0.0.0` and is unauthenticated by decision; a lock-down toggle is cheap and consistent with the accepted-risk framing below |
 
@@ -202,7 +202,7 @@ editable locally.
 > serves the setup page from `gexis-core`, and the typing happens **on the
 > user's phone**, which has a keyboard. The panel stays display-only, so this
 > closes the blocker without reopening the on-screen-keyboard question.
-> Scheduled as Phase 10. `firstrun.sh` pre-seeding remains the route for
+> Scheduled as Phase 13. `firstrun.sh` pre-seeding remains the route for
 > development and wins when present.
 
 **Wi-Fi credentials cannot be entered remotely, because without Wi-Fi there is

@@ -87,7 +87,7 @@ Three things keep that honest:
    the wiring backlog for Phases 6 and 8.
 2. **Removal is continuous.** The phase that wires a control clears its marker
    as part of that work — it is editing those components regardless. Phase 9
-   criterion 4 is only the backstop for whatever slipped through; a one-off
+   criterion 2 is only the backstop for whatever slipped through; a one-off
    audit there would be the largest-possible-batch change at the point of
    least appetite for churn.
 3. **Accuracy is checked against a picture, not a description.** For each
@@ -842,14 +842,89 @@ validates, so the gate covers what ships. Verified inside
 
 ### Phase 6 — Now playing, full
 
+**Status 2026-09-17: built, imaged and closed.** Everything is on branch
+`phase-6-plan`. The image (`v0.2.1-202-gf3674f3`) was built on R2D2 on the
+second attempt (the first failed at `export-image`, see HANDOFF), verified with
+`image/verify-image.sh`, flashed, and George called his checks of it done and
+asked for the PR. Individual results of those checks, including shuffle and
+repeat on Spotify and Bluetooth and the speakers-on items below, were not
+reported item by item, so they are not recorded as observed.
+
 **Acceptance**
 
 1. Transport controls rendered from adapter capability declarations.
+   **Built** ([ADR-0037](decisions/0037-transport-commands.md)):
+   `POST /transport/{command}` to the active renderer; the panel renders each
+   button from the renderer's `controls`. **George checked on the panel:**
+   play/pause, next and previous on all three renderers, and LMS shuffle and
+   repeat both ways. **Not yet checked:** shuffle and repeat on Spotify and
+   Bluetooth, added 2026-09-17 at George's request over the design's LMS-only
+   rule.
 2. Controls that would not work are hidden or non-editable per the cross-cutting
-   rule, never dead.
-3. Artist and track info panels.
+   rule, never dead. **Sharpened by George, 2026-09-16:** a control the
+   renderer has is **visible at all times**; when it cannot work *right now*
+   (next at the end of a queue or playlist) it is **disabled, not hidden**.
+   Measured case: Next and Previous on an LMS radio station; an LMS playlist
+   wraps, so it has no end (Finding 028).
+   Hiding is only for a control the renderer does not have at all.
+   **Built:** `/state` publishes `controls.available`. On LMS, a one-item
+   playlist disables Next, Previous and Shuffle, and a live stream disables
+   Repeat. On Bluetooth, Shuffle and Repeat are disabled while the phone's
+   app exposes no such property. **George checked the LMS radio case.**
+3. ~~Artist and track info panels.~~ **Moved to Phase 8 criterion 6** (George,
+   2026-09-16): their content (biography, tags, similar artists, label,
+   release notes) comes from enrichment, which no renderer supplies. The
+   design already places the Artist, Release and Lyrics tabs in Phase 8.
 4. ~~Peppy screen entry button.~~ **Moved to Phase 5 criterion 8** (George,
    2026-09-15).
+
+**Plan, agreed with George 2026-09-16** — one increment at a time, each
+checked on the panel before the next:
+
+0. **ADR-0037:** one command route, to the active renderer only; capability
+   in two layers, what a renderer can ever do (static, as today) and what it
+   can do now (live); controls show the renderer's reported state, never an
+   optimistic one.
+1. **Hardware finding, no product code:** every command on every renderer.
+   **Done 2026-09-16, [Finding 028](findings/028-transport-commands-on-three-renderers.md):**
+   everything works on all three; LMS previous is `button jump_rew`; Next and
+   Previous are disabled only for an LMS one-item playlist (radio). Speakers
+   were off — audible checks at PR validation.
+   LMS play/pause/next/previous/shuffle/repeat and whether each change is
+   reported back, previous mid-track, radio streams. Spotify through
+   go-librespot, including **Finding 014's risk** that its resume bypasses
+   the Connect handshake. Bluetooth AVRCP on George's phone.
+2. **Play/pause** end to end, all three renderers. **Done; George checked.**
+   The position defect below is fixed (go-librespot's `/status` is read on
+   every transport event; measured correct across pauses). **George's
+   amendment:** the icon flips on press and reverts after 8 s without
+   confirmation, because Bluetooth reported pauses 4.5 s late — later traced
+   to the Plexamp app (Finding 028 addenda). **Includes a defect found
+   in step 1** (2026-09-16, recorded at George's request): for Spotify the
+   core's `metadata.position` stays at the value from the start of the track
+   through pause and resume — go-librespot's `/status` had 35 s, 41 s and
+   49 s while the core published 0.0 — because the adapter takes a position
+   only from `metadata` and `seek` events. The UI's progress bar re-anchors
+   when play/pause changes, so a pause very likely sends it back to 0:00.
+   Unconfirmed on the panel; play/pause is not done until the bar is right
+   after a pause.
+3. **Previous and next.** **Done; George checked all three** (Bluetooth
+   re-measured with the Spotify and Plexamp apps).
+4. **Disabled when inoperable** — each "cannot work now" case from step 1
+   becomes a rule and a test. **Done; George checked on LMS radio.**
+5. **LMS shuffle and repeat** (three states), read back from the server.
+   **Done; George checked both ways.** Extended 2026-09-17 to Spotify and
+   Bluetooth (not yet checked). The repeat lag George saw in the Lyrion app is
+   the app's; Squeezer is prompt (Finding 028, addendum 3).
+6. Clear the `phase-6` unwired markers; DEVELOPMENT, HANDOFF, PR, image.
+   **Markers cleared; docs updated; image built and verified 2026-09-17 on the
+   second attempt (the first failed at the loop device, see HANDOFF); flashed;
+   George called the image checks done; PR opened.**
+
+**Deferred to George's check of the image, with the speakers on:** radio
+resuming after a pause (resume or jump to live?), the dropout when LMS
+restarts a stream, the one-off LMS resume-position jump, and whether the
+Plexamp app's audio stops at the tap.
 
 ### Phase 7 — Library browse
 
@@ -884,6 +959,11 @@ subtree of nine items.
 8. **Library and Radio are separate areas sharing one visual language** —
    server-supplied radio items render into our own components, per the
    provided designs.
+9. **A radio stream's title comes from the stream's own metadata.** Found
+   2026-09-16 during Phase 6's hardware round, on a TuneIn station: LMS sends
+   `current_title` as a single space and the real names in `remoteMeta`
+   (`title` "#1 Hit Radio", `artist` "KissFM  Live!"). The core publishes the
+   blank, so the panel shows no title. George: fix in Phase 7.
 
 *Superseded criteria, kept for history:* (1) Full SlimBrowse: My Music, Radio,
 plugin menus. (2) `base.actions` / `itemsParams` dispatch implemented.
@@ -905,17 +985,24 @@ Purely additive. Cannot break playback.
 3. Never overwrites renderer-supplied text.
 4. Confidence threshold; below it, nothing shown.
 5. Now playing renders before enrichment returns, every time.
+6. **Artist and track info panels** — the Artist, Release and Lyrics tabs on
+   now playing. Moved from Phase 6 criterion 3 (George, 2026-09-16).
 
-### Phase 9 — Plugin contract and themes
+### Phase 9 — Settings wiring and UI polish
+
+**Added 2026-09-16 (George):** dedicated time after Phase 8 for wiring settings
+and for general UI checks and small improvements. **Phases renumbered the same
+day:** the plugin contract moved from 9 to 10, first boot from 10 to 13, and
+Plexamp (11) and Qobuz Connect (12) were added between them. References in the
+ADRs were updated.
 
 **Acceptance**
 
-1. Contract documented and versioned.
-2. A fourth renderer built against it, in a separate repository, with no changes
-   to the core.
-3. Theme engine.
-4. **No unwired UI remains, or each survivor is explicitly justified.** Added
-   2026-09-13. From Phase 4 the UI is imported from complete designs while the
+1. **Every row in ADR-0022's settings inventory is wired end to end** (panel
+   and phone, ADR-0035), or marked out of scope with the reason.
+2. **No unwired UI remains, or each survivor is explicitly justified.** Added
+   2026-09-13; moved here from the plugin-contract phase 2026-09-16, where
+   the polish happens. From Phase 4 the UI is imported from complete designs while the
    backend is wired a phase at a time, so screens legitimately carry controls
    that do nothing yet (`decisions/README.md`'s scope note on unusable
    controls). This is the **backstop, not the mechanism** — removal is
@@ -927,8 +1014,59 @@ Purely additive. Cannot break playback.
    revisited — a control designed for a feature that was quietly dropped —
    and should ideally find nothing. Unwired UI is marked in code, so checking
    is a generated list rather than an audit.
+3. **A review pass on the panel with George:** every issue found is fixed or
+   explicitly deferred.
+4. **The handoff's "issues to look at later" are triaged:** fixed, scheduled,
+   or dropped.
 
-### Phase 10 — First boot without a network
+### Phase 10 — Plugin contract and themes
+
+**Acceptance**
+
+1. Contract documented and versioned.
+2. A fourth renderer built against it, in a separate repository, with no changes
+   to the core. **Qobuz Connect (Phase 12) is that renderer**
+   ([ADR-0016](decisions/0016-plugins-as-separate-processes.md): an optional
+   plugin in a private repository).
+3. Theme engine.
+
+### Phase 11 — Plexamp as a renderer
+
+**Added 2026-09-16 (George).** Same shape as Spotify and LMS. **The phase that
+moves Plexamp into Must**, which is
+[ADR-0008](decisions/0008-direct-alsa-over-pipewire.md)'s reversal condition:
+Plexamp headless is its named non-cooperative renderer. Hence criterion 1
+comes before anything is built.
+
+**Acceptance**
+
+1. **Hardware check first:** Plexamp headless on `gexis`, and whether it
+   releases the audio device on a takeover. If it does not, an ADR on
+   ADR-0008's reversal before anything else in this phase.
+2. Acquisition and release fit the arbitration model (ADR-0010); takeover gaps
+   measured against the other renderers.
+3. Metadata from Plexamp's local API: title, artist, album, artwork, position,
+   duration, transport.
+4. Volume mechanism derived and measured.
+5. Transport commands measured and declared (ADR-0037).
+6. Source pill, handoff screen, Peppy badge; design assets from Claude Design.
+
+### Phase 12 — Qobuz Connect as a renderer
+
+**Added 2026-09-16 (George).** Same shape as Spotify and LMS, delivered as a
+plugin ([ADR-0016](decisions/0016-plugins-as-separate-processes.md)).
+
+**Acceptance**
+
+1. **Client chosen, licence checked:** the open-source client ARCHITECTURE.md
+   §9 points at.
+2. **Delivered as an optional plugin from a separate repository, with no core
+   changes** — this is Phase 10 criterion 2.
+3. Acquisition ("device selected in the app"), release (disconnect), metadata,
+   volume and transport, as for Plexamp.
+4. Source pill, handoff screen, Peppy badge; design assets from Claude Design.
+
+### Phase 13 — First boot without a network
 
 Added 2026-09-14, George: give credentials a phase, *"with an initial hotspot
 creation upon the first boot for setting up the device — so basically not only
@@ -937,7 +1075,7 @@ the credentials but also things like hostname"*. Decided in
 blocker [ADR-0022](decisions/0022-settings.md) raised and
 [ADR-0021](decisions/0021-deployment-flashable-image.md) could not answer.
 
-**Why last, and when to pull it forward.** Nothing in Phases 0-9 needs it —
+**Why last, and when to pull it forward.** Nothing in Phases 0-12 needs it —
 development flashes cards and pre-seeds `firstrun.sh`. But no non-developer can
 set the device up without it, so it is a hard gate on anyone else owning one.
 **Pull it forward the moment a device goes to someone who did not build it.**

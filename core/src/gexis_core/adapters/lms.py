@@ -79,6 +79,49 @@ def _as_float(value) -> float | None:
     return float(value) if isinstance(value, (int, float)) else None
 
 
+#: LMS's `playlist repeat` numbers against ADR-0037's names. LMS's order is
+#: 0 off, 1 one song, 2 all (Finding 028) - not the design's off/all/one.
+REPEAT_FROM_LMS = {0: "off", 1: "one", 2: "all"}
+REPEAT_TO_LMS = {name: number for number, name in REPEAT_FROM_LMS.items()}
+
+
+def _as_int(value) -> int | None:
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def _shuffle(result: dict) -> bool | None:
+    """LMS has three states: 0 off, 1 by song, 2 by album (Finding 028). The
+    design's toggle has two, so both 1 and 2 show as on, and turning it on
+    from the panel means by song."""
+    value = _as_int(result.get("playlist shuffle"))
+    return None if value is None else value != 0
+
+
+def _unavailable_controls(result: dict) -> frozenset[str]:
+    """ADR-0037 §3: declared commands that cannot work right now.
+
+    - **A one-item playlist** (a radio station): `jump_fwd` and `jump_rew`
+      only restart the stream (Finding 028), and there is nothing to
+      shuffle. A longer playlist wraps at both ends, even with repeat off,
+      so it never runs out.
+    - **A live stream** (`remote` with no duration): it has no end to repeat
+      (George, 2026-09-16). A single *song* keeps repeat - looping it is a
+      real use.
+
+    Anything not reported disables nothing: a button that works is better
+    than one wrongly greyed."""
+    unavailable: set[str] = set()
+    tracks = _as_int(result.get("playlist_tracks"))
+    if tracks is not None and tracks <= 1:
+        unavailable |= {"next", "previous", "shuffle"}
+    if bool(_as_int(result.get("remote"))) and not _as_float(result.get("duration")):
+        unavailable.add("repeat")
+    return frozenset(unavailable)
+
+
 class LmsAdapter(Adapter):
     renderer_id = "lms"
     release_action = ReleaseAction.PAUSE
@@ -102,7 +145,7 @@ class LmsAdapter(Adapter):
         # could act on a user's command; `activate()` below now can, and
         # only for LMS - Spotify and Bluetooth are taken over by a phone
         # connecting, never by us asking.
-        controls=frozenset({"activate"}),
+        controls=frozenset({"activate", "play", "pause", "next", "previous", "shuffle", "repeat"}),
     )
 
     # ADR-0027, 2026-09-12: this adapter no longer fights squeezelite for
@@ -144,6 +187,8 @@ class LmsAdapter(Adapter):
         self._resume_position: float | None = None
         self._on_metadata: Callable[[TrackMetadata], None] | None = None
         self._on_availability: Callable[[bool], None] | None = None
+        #: The last reported transport, so `play()` can pick its command.
+        self._last_transport: str | None = None
 
     def on_metadata_change(self, callback: Callable[[TrackMetadata], None]) -> None:
         """state.py hooks in here (Phase 3 criterion 1). Fired on every
@@ -176,8 +221,6 @@ class LmsAdapter(Adapter):
         `playlist_loop` holds exactly the current song, so index 0 needs no
         cross-reference against `playlist_cur_index`.
         """
-        if self._on_metadata is None:
-            return
         song = (result.get("playlist_loop") or [{}])[0]
         remote = bool(result.get("remote"))
         title = result.get("current_title") if remote else song.get("title")
@@ -190,6 +233,10 @@ class LmsAdapter(Adapter):
         transport = {"play": "playing", "pause": "paused", "stop": "stopped"}.get(
             result.get("mode")
         )
+        # Recorded before the no-listener return: `play()` needs it either way.
+        self._last_transport = transport
+        if self._on_metadata is None:
+            return
         self._on_metadata(
             TrackMetadata(
                 title=title,
@@ -207,6 +254,9 @@ class LmsAdapter(Adapter):
                 duration=_as_float(result.get("duration")),
                 source_type="lms",
                 transport=transport,
+                unavailable=_unavailable_controls(result),
+                shuffle=_shuffle(result),
+                repeat=REPEAT_FROM_LMS.get(_as_int(result.get("playlist repeat"))),
             )
         )
 
@@ -451,6 +501,45 @@ class LmsAdapter(Adapter):
             except aiohttp.ClientError as exc:
                 logger.warning("lms: activate failed: %s", exc)
                 return False
+
+    async def play(self) -> bool:
+        """ADR-0037. `pause 0` resumes a paused player where it stopped; a
+        stopped one has nothing to resume and needs `play` (Finding 028)."""
+        return await self._command(["pause", 0] if self._last_transport == "paused" else ["play"])
+
+    async def pause(self) -> bool:
+        return await self._command(["pause", 1])
+
+    async def next(self) -> bool:
+        return await self._command(["button", "jump_fwd"])
+
+    async def shuffle(self, on: bool) -> bool:
+        return await self._command(["playlist", "shuffle", 1 if on else 0])
+
+    async def repeat(self, mode: str) -> bool:
+        return await self._command(["playlist", "repeat", REPEAT_TO_LMS[mode]])
+
+    async def previous(self) -> bool:
+        """`jump_rew`, not `playlist index -1`: the index always goes back a
+        whole track, while the button restarts the track unless it is near
+        its start - what LMS's own apps do (Finding 028)."""
+        return await self._command(["button", "jump_rew"])
+
+    async def _command(self, command: list) -> bool:
+        """A user's transport command. Like `activate()`, it reports nothing
+        itself: the CometD watch sees the result, so there is one path by
+        which state changes, whoever caused them."""
+        if self._player_id is None:
+            logger.warning("lms: %s with no resolved player id", command)
+            return False
+        async with aiohttp.ClientSession() as session:
+            try:
+                await self._rpc(session, self._player_id, command)
+            except aiohttp.ClientError as exc:
+                logger.warning("lms: %s failed: %s", command, exc)
+                return False
+        logger.info("lms: %s on request", command)
+        return True
 
     async def release(self) -> bool:
         """ADR-0027: record the transport state, pause, then power off.

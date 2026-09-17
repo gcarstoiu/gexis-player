@@ -43,7 +43,7 @@ without Wi-Fi there is no remote browser.
 > **Answered 2026-09-14 by
 > [ADR-0031](0031-first-boot-setup-access-point.md):** a temporary access
 > point on first boot, with the setup page served by `gexis-core` and the
-> typing done on the user's phone. Scheduled as Phase 10.
+> typing done on the user's phone. Scheduled as Phase 13.
 >
 > **This does not settle the distribution channel.** The analysis below —
 > that Imager cannot customise a custom image file, and that the supported
