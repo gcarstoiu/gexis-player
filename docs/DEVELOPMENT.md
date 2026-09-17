@@ -928,7 +928,7 @@ Plexamp app's audio stops at the tap.
 
 ### Phase 7 — Library browse
 
-**Status 2026-09-17: planned; ADR-0038 proposed and awaiting George's read.**
+**Status 2026-09-17: step 1 done (Finding 029); next is step 1a. ADR-0038 proposed.**
 Branch `phase-7-plan`. Criteria 1 and 6 amended, 10 and 11 added, by
 [ADR-0038](decisions/0038-library-and-radio-on-the-panel.md) (George's
 decisions, 2026-09-17).
@@ -948,15 +948,17 @@ subtree of nine items.
    Playlists (LMS library playlists only, not a plugin's). "Artists" is Album
    Artists; filing and discography grouping are LMS's own. Row actions: play
    now, add to queue, add to any library playlist; **creating playlists is
-   not supported** (George, 2026-09-17). ADR-0030's other lists (Album Artists,
+   not supported** (George, 2026-09-17). ADR-0030's other lists (All Artists,
    Composers, Genres, Years, Compilations, Songs, Music Folder) are out of
    scope. Counts and commands are in ADR-0030; screens in ADR-0038.
 2. **Playback from a typed id works** — `playlistcontrol cmd:load
    album_id:<id>` and its track/artist equivalents. **Verify first:** ADR-0030
    records this as the load-bearing assumption of the typed half and it has
    *not* been executed against a real player.
-3. **Pagination on lists of thousands** — 60974 titles and 7292 artists on
-   George's server, so this is not theoretical.
+3. **Pagination on lists of thousands.** Evidence updated 2026-09-17
+   (Finding 029): Songs is out of scope and all 916 album artists arrive in
+   one 98 KB request in 23 ms; the long lists that remain are albums (4,567),
+   Radio Now Playing (950) and Local Radio stations (194).
 4. **Artwork** via `artwork_track_id` → `/music/<id>/cover`.
 5. **Radio browses via SlimBrowse rooted at `["radios","menu:radio"]`**, never
    at `home`. `base.actions` / `itemsParams` dispatch, `nextWindow` precedence
@@ -977,6 +979,10 @@ subtree of nine items.
    `current_title` as a single space and the real names in `remoteMeta`
    (`title` "#1 Hit Radio", `artist` "KissFM  Live!"). The core publishes the
    blank, so the panel shows no title. George: fix in Phase 7.
+   **Second shape, 2026-09-17 (Finding 029):** a station can put its own name
+   in `current_title` while `remoteMeta` carries the song; and the published
+   artwork is LMS's grey placeholder, while `remoteMeta.artwork_url` has the
+   song's art (George saw the placeholder on the panel).
 10. **Queue rail on now playing** (LMS only), with the design's empty state
     offering a playlist chooser. Added 2026-09-17 (George).
 11. **Home and the mini strip:** Home is the library root, reached from
@@ -991,13 +997,23 @@ checked on the panel before the next:
    discography-only artist page; queue rail; routes, paging, RAM cache,
    radio handles; artwork direct as `cover_WxH_o.jpg`; Podcasts by command.
    ADR-0022 inventory rows appended. **Written; awaiting George's read.**
-1. **Hardware finding (029), no product code.** Read-only: page costs,
+1. **Hardware finding (029), no product code.** **Done 2026-09-17,
+   [Finding 029](findings/029-library-and-radio-against-lms.md).** Read-only: page costs,
    `textkey` folding, release types, track durations, the radio tree four
    levels down, `remoteMeta`, which artist list the design's "Artists" is,
    rescan over CometD. **With George present** (plays music): `load` by
    album, artist, track and playlist; add to queue; add to playlist; the
    queue read back; `load` on a powered-off LMS while Spotify plays.
-2. **Radio title from `remoteMeta`** (criterion 9).
+1a. **Resume only unchanged content** (added 2026-09-17, George agreed):
+    a takeover restores the recorded position and play state only if LMS
+    still holds the same content. Finding 029 defect A: a fresh load after a
+    Spotify session was seeked to the radio's old 192.6 s. Live on the
+    current image for any LMS app, so fixed before any Phase 7 code. First
+    measure whether `playlist_timestamp` changes only on a load (not on
+    pause, track change or add); otherwise compare track and queue length.
+    Checked by repeating Finding 029's test 5, and the same-content resume
+    from Finding 018.
+2. **Radio title and artwork from `remoteMeta`** (criterion 9).
 3. **Library reads in the core**, tested against replies recorded in step 1.
 4. **Home as the library root**, the New Music strip, the mini strip, Back
    and Home navigation, now playing's Home button.

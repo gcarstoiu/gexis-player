@@ -232,27 +232,35 @@ The [H] rows are hardcoded as they are built in this phase.
 - Adding a streaming service still means our own work (ADR-0030); nothing here
   changes that.
 
-## Unverified — measured in step 1 (Finding 029) before building on it
+## Measured in step 1 — [Finding 029](../findings/029-library-and-radio-against-lms.md)
 
-**Measured 2026-09-17 and folded in above:** Album Artists (§1), filing and
-release types (§1a), library playlists (§1), artwork (§7), inherited radio
-actions (§8). Page costs: every typed read took 5–26 ms; all 916 album artists
-arrive in one 98 KB reply in 23 ms, and an album page is two requests of about
-9 ms. The radio tree answered in 15 ms to 1.7 s per level.
+Everything this record listed as unverified was measured on 2026-09-17 except
+the two items at the end.
+
+- **§4 holds.** `playlistcontrol cmd:load` works by album, album artist, track
+  and playlist; `cmd:add` adds to the queue without interrupting. On a
+  powered-off player LMS powers itself on and the core takes it as an
+  ordinary acquisition, also over a playing Spotify session. **But** the
+  core then restored a stale position onto the new content (Finding 029
+  defect A), fixed as Phase 7 step 1a.
+- **Queue origin:** `status` carries `playlist_name`, `playlist_id` and
+  `playlist_modified` (0 as loaded, 1 once added to). Absent after an
+  album, artist or track load.
+- **Add to playlist:** one `playlists edit cmd:add url:<track url>` per
+  track; an album or artist is added as its tracks. Library playlists are
+  `file:` URLs.
+- **Rescan:** a full rescan renumbers every album and artist id; the core
+  drops its cache, handles and remembered ids when `serverstatus`
+  `lastscan` changes (§6).
+- **Radio (§5, §8):** station ids (`item_id`) change on every browse, so a
+  handle stores how to re-reach an item, not the id alone; the reply's shape
+  depends on the request parameters; station items rely on `base.actions`
+  through `goAction`.
+- **Criterion 9 has a second shape:** the station name in `current_title`,
+  the song in `remoteMeta`, and the song's art in `remoteMeta.artwork_url`
+  while the published artwork is LMS's placeholder.
 
 Still open:
 
-- `playlistcontrol cmd:load` by album, artist, track and playlist; `cmd:add`
-  for the queue; auto-power-on from a `load` while Spotify plays (§4). A radio
-  `playlist play` on a powered-off player did power it on and the core took it
-  as an ordinary acquisition (Finding 029), but that is not `load`.
-- **Add to playlist:** which command adds an album, artist or track to a
-  library playlist, and how a library playlist is told apart from a plugin's
-  (the `file:` URL scheme is the candidate). Needs a library playlist to
-  exist; this server has none.
-- **The root's counts:** the design's "stations" count has no obvious source
-  in the radio tree.
-- **The queue's "came from" playlist.**
-- **Rescan:** `serverstatus` carries `lastscan`; whether CometD pushes a
-  rescan is not checked.
-- **`remoteMeta`** on a playing station (criterion 9).
+- **The root's "stations" count** has no obvious source in the radio tree.
+- **Whether CometD pushes a rescan**; `lastscan` polling works regardless.
