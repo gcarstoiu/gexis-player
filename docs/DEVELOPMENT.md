@@ -942,7 +942,7 @@ Plexamp app's audio stops at the tap.
 
 ### Phase 7 — Library browse
 
-**Status 2026-09-17: steps 1, 1a, 2, 3, 4 and 4a done; next are 4b and 4c. ADR-0038 proposed.**
+**Status 2026-09-17: steps 1, 1a, 2, 3, 4, 4a, 4b and 4c (first two parts) done; next is step 5. ADR-0038 proposed.**
 Branch `phase-7-plan`. Criteria 1 and 6 amended, 10 and 11 added, by
 [ADR-0038](decisions/0038-library-and-radio-on-the-panel.md) (George's
 decisions, 2026-09-17).
@@ -1065,10 +1065,17 @@ checked on the panel before the next:
     measurements and the two attempts that failed first.
 4b. **Press feedback shrinks instead of flashing** on the mini strip,
     Settings' Back and now playing's Home (George, 2026-09-17), as the
-    transport buttons already do.
-4c. **Panel smoothness**, in George's order: New Music covers at the size
-    they are drawn, the strip's fade mask changed only when an edge gains
-    or loses it, and one shared blurred background behind every screen.
+    transport buttons already do. **Done 2026-09-17**, awaiting George's
+    check: those controls keep their resting fill and scale to 0.95; the
+    strip scales to 0.995 from its bottom edge.
+4c. **Panel smoothness**, in George's order. **First two done 2026-09-17**,
+    awaiting George's check: New Music covers are requested at 200 px for
+    their 176 px cards (and now playing's at 500 px, where the unsized
+    original could be 358 KB), and the strip's fade mask now changes only
+    when an edge gains or loses its fade, not on every scroll frame. **The
+    third is not done:** one shared blurred background behind every screen
+    would mean only one screen is mounted at a time, which changes how they
+    cross-fade, so it waits until George says the first two are not enough.
 5. **Album page and Play all.**
 6. **Artist grid with the jump rail, then the artist page.**
 7. **Three-pane Browse** with row actions.

@@ -43,6 +43,14 @@ logger = logging.getLogger("gexis_core.adapters.lms")
 
 UNIT_NAME = "squeezelite.service"
 
+#: The size asked of LMS for a track's artwork. The design's now playing
+#: well is 500x500 (`design/data-contract.md`) and the Peppy screen scales
+#: down from this too; `_o.jpg` is always a JPEG, where the bare resize was
+#: a PNG twice the original's size for 5 of 20 albums (Finding 029 §5).
+#: Unsized, LMS returns the original - up to 358 KB, blurred at 72px behind
+#: the screen, which cost frames on the panel (George, 2026-09-17).
+ARTWORK_SIZE = 500
+
 #: Requested on every "status" query this adapter makes so pushed frames
 #: carry metadata, not just power (Phase 3 criterion 1). Letters per the
 #: CLI docs' songinfo tag table (LMS-CLI.md): a=artist, l=album, c=coverid,
@@ -237,7 +245,11 @@ class LmsAdapter(Adapter):
         else:
             coverid = song.get("coverid")
             title, album = song.get("title"), song.get("album")
-            artwork = f"{self._base}/music/{coverid}/cover.jpg" if coverid else None
+            artwork = (
+                f"{self._base}/music/{coverid}/cover_{ARTWORK_SIZE}x{ARTWORK_SIZE}_o.jpg"
+                if coverid
+                else None
+            )
         # LMS's `mode` is "play"/"pause"/"stop" (LMS-CLI.md's status query).
         # A powered-off player reports no mode at all, which is neither
         # playing nor paused - left as None rather than invented as

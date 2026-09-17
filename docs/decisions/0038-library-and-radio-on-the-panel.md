@@ -177,6 +177,13 @@ The panel loads artwork from LMS directly (ADR-0020):
 | `cover_300x300.jpg` | PNG | 173,269 |
 | `cover_300x300_o.jpg` | JPEG | 25,474 |
 
+**Two sizes, each the size the panel draws** (2026-09-17): 500 px for a
+cover (the album page, now playing's well — the design's 500×500) and 200 px
+for a thumbnail (a New Music card is 176 px, a row's thumb smaller). Ten
+500 px covers in 176 px cards were part of what made the strip scroll
+unevenly on the panel, and now playing was blurring the *unsized* original —
+up to 358 KB — behind the screen.
+
 The bare resize returns a PNG twice the size of the original. **Repeated on
 20 random albums (step 1):** the bare `cover_300x300` was a PNG for 5 of 20,
 up to 245 KB; `cover_300x300_o.jpg` was a JPEG for all 20, median 22 KB,

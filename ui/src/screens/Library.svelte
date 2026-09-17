@@ -66,25 +66,28 @@
     path = path.slice(0, -1);
   }
 
-  // The New Music strip fades whichever edge has more to scroll to.
-  let scrollL = $state(0);
-  let scrollR = $state(0);
+  // The New Music strip fades whichever edge has more to scroll to. Only
+  // whether each edge is faded is kept, not how far it has scrolled: the
+  // mask then changes twice per traverse instead of on every frame, which
+  // is part of what made the strip scroll unevenly on the panel (George,
+  // 2026-09-17).
+  const EDGE = 8;
+  let fadeL = $state(false);
+  let fadeR = $state(false);
   function onScroll(e) {
     const el = e.currentTarget;
-    const l = el.scrollLeft;
-    const r = el.scrollWidth - el.clientWidth - l;
-    if (Math.abs(l - scrollL) > 4 || Math.abs(r - scrollR) > 4) {
-      scrollL = l;
-      scrollR = r;
-    }
+    const l = el.scrollLeft > EDGE;
+    const r = el.scrollWidth - el.clientWidth - el.scrollLeft > EDGE;
+    if (l !== fadeL) fadeL = l;
+    if (r !== fadeR) fadeR = r;
   }
   function measure(el) {
     onScroll({ currentTarget: el });
   }
   const mask = $derived(
     'linear-gradient(90deg,' +
-      (scrollL > 8 ? 'transparent 0,rgba(0,0,0,0.35) 22px,#000 88px,' : '#000 0,') +
-      (scrollR > 8 ? '#000 calc(100% - 88px),rgba(0,0,0,0.35) calc(100% - 22px),transparent 100%)' : '#000 100%)'),
+      (fadeL ? 'transparent 0,rgba(0,0,0,0.35) 22px,#000 88px,' : '#000 0,') +
+      (fadeR ? '#000 calc(100% - 88px),rgba(0,0,0,0.35) calc(100% - 22px),transparent 100%)' : '#000 100%)'),
   );
   let scroller = $state(null);
   $effect(() => {
@@ -273,8 +276,9 @@
     justify-content: center;
     flex-shrink: 0;
   }
+  /* Shrinks rather than filling grey - see now playing's buttons. */
   .round:active {
-    background: rgba(233, 238, 242, 0.2);
+    transform: scale(0.95);
   }
   .i-tiles {
     width: 22px;

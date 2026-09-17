@@ -56,13 +56,19 @@ its card. UI deployed by hand to `/opt/gexis-ui` (previous build at
   attempts failed on hardware because the pause reaches the core 0.51 s after
   the fade. Measured after the fix: the DAC holds its level across a pause,
   the panel stays at 48%, and an LMS-app change still lands, 0.8 s later.
-- **4b: press feedback flashes** on the mini strip, Settings' Back and now
-  playing's Home. George: shrink instead, as the play button already does.
-- **4c: choppiness**, in George's order: New Music covers are 500px images
-  in 176px slots (request the drawn size); the strip's fade mask is
-  recomputed while scrolling (change it only when an edge gains or loses its
-  fade); every screen carries its own two large blurred backgrounds (share
-  one behind all screens).
+- **4b: press feedback. Done 2026-09-17, awaiting George's check.** Now
+  playing's buttons, Settings' Back and the library's round buttons keep
+  their resting fill and shrink to 0.95 on press; the mini strip shrinks to
+  0.995 from its bottom edge. The design's grey press fill read as a flash,
+  as it already had on play and the transport buttons.
+- **4c: choppiness. First two parts done 2026-09-17, awaiting George's
+  check.** New Music covers are requested at 200 px for their 176 px cards,
+  now playing's artwork at 500 px (LMS returns the original otherwise, up to
+  358 KB, and it is blurred at 72 px behind the screen), and the strip's fade
+  mask changes only when an edge gains or loses its fade. **Part three, one
+  shared blurred background for every screen, is not done:** it would mean
+  only one screen is mounted at a time and would change how they cross-fade,
+  so it waits for George's verdict on the first two.
 
 **Lesson candidate (2026-09-17), for George:** headless Chromium on the
 device was used to check the panel UI and answered a different question

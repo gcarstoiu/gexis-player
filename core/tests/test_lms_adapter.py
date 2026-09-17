@@ -423,7 +423,7 @@ def test_report_metadata_maps_the_current_song():
             title="Song Title",
             artist="The Artist",
             album="The Album",
-            artwork="http://127.0.0.1:9000/music/abc123/cover.jpg",
+            artwork="http://127.0.0.1:9000/music/abc123/cover_500x500_o.jpg",
             sample_rate=44100,
             position=30.5,
             duration=200.0,
@@ -526,7 +526,7 @@ def test_local_tracks_still_use_the_coverid():
 
     adapter._report_metadata(_status_result(song={"artwork_url": "/ignored.png"}))
 
-    assert received[0].artwork == "http://127.0.0.1:9000/music/abc123/cover.jpg"
+    assert received[0].artwork == "http://127.0.0.1:9000/music/abc123/cover_500x500_o.jpg"
 
 
 def test_report_metadata_blanks_artwork_without_a_coverid():

@@ -369,8 +369,9 @@
     justify-content: center;
     flex-shrink: 0;
   }
+  /* Shrinks rather than filling grey - see now playing's buttons. */
   .back:active {
-    background: rgba(233, 238, 242, 0.2);
+    transform: scale(0.95);
   }
   .back span {
     width: 13px;

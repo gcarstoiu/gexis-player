@@ -523,8 +523,10 @@
     place-items: center;
     flex-shrink: 0;
   }
+  /* Pressed by shrinking, like play and the transport buttons (George,
+     2026-09-16/17: the design's grey press fill reads as a flash). */
   .btn:not(:disabled):active {
-    background: var(--ink-fill-press);
+    transform: scale(0.95);
   }
   /* Cannot work right now (ADR-0037 §3). The design dims an unavailable tab
      to 0.4; the same here. Unwired scaffolding keeps its own look. */

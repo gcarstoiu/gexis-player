@@ -122,7 +122,7 @@ hardcoded as Phase 7 builds them.
 | Podcasts excluded from Radio | [H] | ADR-0030; excluded by its `["podcast","items"]` command (ADR-0038 §8) |
 | Radio Now Playing shown | [H] | Shown — George, 2026-09-17, closing ADR-0030's open item |
 | How long cached library lists are kept | [N] | ADR-0038 §6. Built 2026-09-17 as: until LMS's `lastscan` changes, checked at most every 60 s (`LASTSCAN_CHECK_S`); playlists never cached |
-| Artwork size requested from LMS | [H] | `cover_<W>x<H>_o.jpg` (ADR-0038 §7); 500 px for every screen, `ARTWORK_SIZE` in `library.py` |
+| Artwork size requested from LMS | [H] | `cover_<W>x<H>_o.jpg` (ADR-0038 §7). Two sizes, each what the panel draws: `ARTWORK_COVER` 500 px and `ARTWORK_THUMB` 200 px in `library.py`, and 500 px for now playing (`ARTWORK_SIZE` in `adapters/lms.py`) |
 
 ### Enrichment and lyrics — Phase 8
 

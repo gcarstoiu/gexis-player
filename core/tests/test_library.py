@@ -114,6 +114,8 @@ async def test_counts_are_album_artists_and_library_playlists_only(lms):
 
 @pytest.mark.asyncio
 async def test_new_music_asks_for_ten_newest_and_maps_artwork_as_o_jpg(lms):
+    """Thumb-sized: the strip draws 176px cards, and ten 500px covers in
+    them made it scroll unevenly on the panel (George, 2026-09-17)."""
     albums = await _lib().new_music()
 
     assert lms.reads()[0][:4] == ["albums", 0, library_module.NEW_MUSIC_COUNT, "sort:new"]
@@ -124,7 +126,7 @@ async def test_new_music_asks_for_ten_newest_and_maps_artwork_as_o_jpg(lms):
         "artist_id": 7,
         "year": 2019,
         "release_type": "ALBUM",
-        "artwork": f"{BASE}/music/a1b2c3d4/cover_500x500_o.jpg",
+        "artwork": f"{BASE}/music/a1b2c3d4/cover_200x200_o.jpg",
     }
 
 
@@ -169,6 +171,7 @@ async def test_album_carries_its_tracks_with_numbers_and_durations(lms):
     album = await _lib().album(101)
 
     assert album["title"] == "First Light"
+    assert album["artwork"] == f"{BASE}/music/a1b2c3d4/cover_500x500_o.jpg"
     assert album["tracks"][0] == {
         "id": 5001,
         "title": "Opening",
@@ -176,7 +179,8 @@ async def test_album_carries_its_tracks_with_numbers_and_durations(lms):
         "tracknum": 1,
         "disc": 1,
         "duration": 201.5,
-        "artwork": f"{BASE}/music/a1b2c3d4/cover_500x500_o.jpg",
+        # A row's thumbnail, not the page's cover.
+        "artwork": f"{BASE}/music/a1b2c3d4/cover_200x200_o.jpg",
     }
     assert album["tracks"][1]["duration"] == 180.0
     assert album["tracks"][1]["disc"] is None

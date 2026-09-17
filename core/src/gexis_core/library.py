@@ -29,10 +29,14 @@ logger = logging.getLogger("gexis_core.library")
 #: ADR-0022 inventory, "Albums in the New Music strip" [H]: the design's ten.
 NEW_MUSIC_COUNT = 10
 
-#: ADR-0022 inventory, "Artwork size requested from LMS" [H]. One size for
-#: every screen: `_o.jpg` is always a JPEG, median 52 KB at 500 px across 20
-#: albums, where the bare resize was a PNG for 5 of them (Finding 029 §5).
-ARTWORK_SIZE = 500
+#: ADR-0022 inventory, "Artwork size requested from LMS" [H]. `_o.jpg` is
+#: always a JPEG; the bare resize was a PNG for 5 of 20 albums (Finding 029
+#: §5). Two sizes, each the size the panel draws: a cover fills the album
+#: page's art, a thumb fills a 176px New Music card or a row's thumbnail.
+#: Ten 500px covers in 176px cards were part of what made the strip scroll
+#: unevenly on the panel (George, 2026-09-17).
+ARTWORK_COVER = 500
+ARTWORK_THUMB = 200
 
 #: ADR-0022 inventory, "How long cached library lists are kept" [N]: until
 #: a rescan, noticed within this many seconds.
@@ -116,14 +120,14 @@ class LmsLibrary:
             return result
         return self._cache[key]
 
-    def _artwork(self, track_id) -> str | None:
+    def _artwork(self, track_id, size: int) -> str | None:
         if not track_id:
             return None
-        return f"{self._base}/music/{track_id}/cover_{ARTWORK_SIZE}x{ARTWORK_SIZE}_o.jpg"
+        return f"{self._base}/music/{track_id}/cover_{size}x{size}_o.jpg"
 
     # --- shapes ------------------------------------------------------------
 
-    def _album(self, raw: dict) -> dict:
+    def _album(self, raw: dict, size: int = ARTWORK_COVER) -> dict:
         return {
             "id": _int(raw.get("id")),
             "title": raw.get("album"),
@@ -131,10 +135,10 @@ class LmsLibrary:
             "artist_id": _int(raw.get("artist_id")),
             "year": _int(raw.get("year")) or None,
             "release_type": raw.get("release_type"),
-            "artwork": self._artwork(raw.get("artwork_track_id")),
+            "artwork": self._artwork(raw.get("artwork_track_id"), size),
         }
 
-    def _track(self, raw: dict) -> dict:
+    def _track(self, raw: dict, size: int = ARTWORK_THUMB) -> dict:
         return {
             "id": _int(raw.get("id")),
             "title": raw.get("title"),
@@ -142,7 +146,7 @@ class LmsLibrary:
             "tracknum": _int(raw.get("tracknum")),
             "disc": _int(raw.get("disc")),
             "duration": _float(raw.get("duration")),
-            "artwork": self._artwork(raw.get("coverid")),
+            "artwork": self._artwork(raw.get("coverid"), size),
         }
 
     # --- reads -------------------------------------------------------------
@@ -161,7 +165,7 @@ class LmsLibrary:
 
     async def new_music(self) -> list[dict]:
         result = await self._cached(["albums", 0, NEW_MUSIC_COUNT, "sort:new", f"tags:{ALBUM_TAGS}"])
-        return [self._album(a) for a in result.get("albums_loop", [])]
+        return [self._album(a, ARTWORK_THUMB) for a in result.get("albums_loop", [])]
 
     async def artists(self, offset: int = 0, limit: int = 1000) -> dict:
         """Album artists (George, 2026-09-17), in LMS's order, each with

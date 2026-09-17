@@ -115,9 +115,14 @@
     padding: 0 40px;
     color: var(--ink);
     user-select: none;
+    transform-origin: 50% 100%;
+    transition: transform 90ms ease;
   }
+  /* The design lightens the whole bar on press, which read as a flash on
+     the panel (George, 2026-09-17). It shrinks instead, like the buttons -
+     from its bottom edge, so the bar stays seated on it. */
   .mini.is-pressed {
-    background: rgba(36, 54, 66, 0.92);
+    transform: scale(0.995);
   }
 
   .hairline {
@@ -243,7 +248,7 @@
     background: var(--ink-fill);
   }
   .vol:active {
-    background: rgba(233, 238, 242, 0.2);
+    transform: scale(0.95);
   }
   .play {
     width: 64px;
