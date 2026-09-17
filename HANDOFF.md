@@ -47,14 +47,15 @@ its card. UI deployed by hand to `/opt/gexis-ui` (previous build at
 
 **Next actions: George's three findings from that check**, in his order:
 
-- **4a: volume drops to 0 when LMS pauses.** LMS fades the player out by
-  sending volume steps; squeezelite applies them to the dummy control the
-  core follows, so the core copies the fade to the DAC and publishes 0%
-  (measured 2026-09-17: dummy 22 -> 7 -> -6 -> -20 -> -50 in ~150 ms, while
-  LMS's own `mixer volume` stayed at 52 throughout). **Live in the shipped
-  image**, and it also means a takeover during a pause remembers the faded
-  level. George chose **option A**: ignore the dummy while LMS is not
-  playing, and re-read it once on resume. Amends ADR-0034/ADR-0018.
+- **4a: volume drops to 0 when LMS pauses. Done 2026-09-17, awaiting
+  George's listen.** LMS fades the player out by moving the renderer's mixer
+  control; the core mirrored that onto the DAC and published it
+  ([Finding 031](docs/findings/031-lms-pause-fade-and-push-latency.md);
+  ADR-0018 and ADR-0034 amended). Fixed by deciding only once the control has
+  settled for 0.8 s, and only while the renderer is playing - two earlier
+  attempts failed on hardware because the pause reaches the core 0.51 s after
+  the fade. Measured after the fix: the DAC holds its level across a pause,
+  the panel stays at 48%, and an LMS-app change still lands, 0.8 s later.
 - **4b: press feedback flashes** on the mini strip, Settings' Back and now
   playing's Home. George: shrink instead, as the play button already does.
 - **4c: choppiness**, in George's order: New Music covers are 500px images

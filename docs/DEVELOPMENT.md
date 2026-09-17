@@ -942,7 +942,7 @@ Plexamp app's audio stops at the tap.
 
 ### Phase 7 — Library browse
 
-**Status 2026-09-17: steps 1, 1a, 2, 3 and 4 done; next are 4a-4c (George's panel findings). ADR-0038 proposed.**
+**Status 2026-09-17: steps 1, 1a, 2, 3, 4 and 4a done; next are 4b and 4c. ADR-0038 proposed.**
 Branch `phase-7-plan`. Criteria 1 and 6 amended, 10 and 11 added, by
 [ADR-0038](decisions/0038-library-and-radio-on-the-panel.md) (George's
 decisions, 2026-09-17).
@@ -1048,7 +1048,7 @@ checked on the panel before the next:
    route 35–90 ms against George's LMS; no panel to check until step 4.
 4. **Home as the library root**, the New Music strip, the mini strip, Back
    and Home navigation, now playing's Home button. **Done 2026-09-17;
-   George checked on the panel.** `Library.svelte`, `MiniStrip.svelteexp`,
+   George checked on the panel.** `Library.svelte`, `MiniStrip.svelte`,
    `WaitingServices.svelte`, `SourceMark.svelte`, and the shared
    `playhead`/`playToggle` modules now playing uses too. The header's Back
    and Home are built but only reachable from step 5 on. **Defect found and
@@ -1057,6 +1057,18 @@ checked on the panel before the next:
    Chromium on the device, with or without GPU flags); the library and
    Settings are now mounted only while open, as the idle screen already was.
    George's three findings from the check are steps 4a-4c.
+4a. **LMS's pause fade must not move the DAC** (George's finding from the
+    step 4 check). **Done 2026-09-17**, awaiting George's listen: a dummy
+    control's change is decided once it has settled for 0.8 s and applied
+    only while its renderer is playing. ADR-0018 amended;
+    [Finding 031](findings/031-lms-pause-fade-and-push-latency.md) has the
+    measurements and the two attempts that failed first.
+4b. **Press feedback shrinks instead of flashing** on the mini strip,
+    Settings' Back and now playing's Home (George, 2026-09-17), as the
+    transport buttons already do.
+4c. **Panel smoothness**, in George's order: New Music covers at the size
+    they are drawn, the strip's fade mask changed only when an edge gains
+    or loses it, and one shared blurred background behind every screen.
 5. **Album page and Play all.**
 6. **Artist grid with the jump rail, then the artist page.**
 7. **Three-pane Browse** with row actions.

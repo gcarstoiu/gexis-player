@@ -194,6 +194,12 @@ class LmsAdapter(Adapter):
         #: The last reported transport, so `play()` can pick its command.
         self._last_transport: str | None = None
 
+    @property
+    def last_transport(self) -> str | None:
+        """The transport this adapter last reported: 'playing', 'paused',
+        'stopped', or None before the first report."""
+        return self._last_transport
+
     def on_metadata_change(self, callback: Callable[[TrackMetadata], None]) -> None:
         """state.py hooks in here (Phase 3 criterion 1). Fired on every
         subscribed status push, not just power changes - the "status"
@@ -240,7 +246,9 @@ class LmsAdapter(Adapter):
         transport = {"play": "playing", "pause": "paused", "stop": "stopped"}.get(
             result.get("mode")
         )
-        # Recorded before the no-listener return: `play()` needs it either way.
+        # Recorded before the no-listener return: `play()` needs it either
+        # way, and the volume bridge reads the transport (volume.py's
+        # DummyMixerBridge: LMS's pause fade must not be mirrored).
         self._last_transport = transport
         if self._on_metadata is None:
             return

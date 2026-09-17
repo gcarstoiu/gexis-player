@@ -368,18 +368,29 @@ async def main() -> None:
     # volume.py's module docstring. One instance per such renderer (LMS,
     # Bluetooth today), built from each adapter's own declared capability
     # rather than named by hand.
-    dummy_mixer_bridges = [
-        DummyMixerBridge(
+    dummy_mixer_bridges = {
+        renderer_id: DummyMixerBridge(
             renderer_id,
             adapter.capabilities.dummy_mixer_card,
             DUMMY_CONTROL,
             config.mixer_name,
             volume_memory=volume_memory,
             get_active_renderer=lambda: supervisor.active,
+            # LMS fades the player out on pause by sending volume steps;
+            # mirroring those published the user's volume as 0% and
+            # remembered the faded level (George, 2026-09-17 - see
+            # DummyMixerBridge, which waits for the control to settle
+            # before reading this). Bluetooth's volume does not fade, so it
+            # passes none and keeps its immediate mirroring.
+            is_playing=(
+                (lambda a=adapter: a.last_transport == "playing")
+                if hasattr(adapter, "last_transport")
+                else None
+            ),
         )
         for renderer_id, adapter in adapters.items()
         if adapter.capabilities.volume_mechanism is VolumeMechanism.DUMMY_MIXER
-    ]
+    }
 
     logger.info("gexis-core starting: adapters=%s", list(adapters))
     await asyncio.gather(
@@ -388,7 +399,7 @@ async def main() -> None:
             for rid, adapter in adapters.items()
         ),
         volume_bridge.run(),
-        *(bridge.run() for bridge in dummy_mixer_bridges),
+        *(bridge.run() for bridge in dummy_mixer_bridges.values()),
         peppy.run(),
         state_server.run(),
     )

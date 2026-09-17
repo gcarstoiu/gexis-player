@@ -122,6 +122,20 @@ one - the same "mirror when active, remember otherwise" shape
 `_on_spotify_volume` already used for Spotify, generalised to the two
 renderers that didn't have an equivalent private state of their own.
 
+> **Amended 2026-09-17 (George): a dummy control's change is mirrored only
+> once it has settled, and only while its renderer is playing.**
+> [Finding 031](../findings/031-lms-pause-fade-and-push-latency.md): LMS
+> fades the player out on pause by moving that control (dummy raw 22 to -50
+> in 150 ms), which the bridge was copying onto the DAC and publishing as
+> the user's volume - 0% for as long as the pause lasted, and remembered as
+> LMS's own level, so a takeover during a pause would bring LMS back at
+> -45 dB. LMS's own `mixer volume` never moves during the fade, and the
+> pause itself only reaches the core 0.51 s later, so the decision waits
+> `SETTLE_S` (0.8 s) for the control to stop moving and then reads the
+> transport. **Cost:** an LMS-app volume change reaches the DAC about a
+> second after the tap. **Bluetooth is unchanged** - its volume does not
+> fade, so its control is still mirrored as it moves.
+
 No software attenuation is introduced anywhere by this - the real DAC's
 hardware attenuator is still the only thing that ever changes what's
 audible, matching this record's "variable output" mode exactly as

@@ -358,3 +358,144 @@ class TestSpotifyFractionToHardwareRaw:
         # amixer write - not a fraction Spotify's own slider can express
         # a negative version of.
         assert hardware_raw_to_spotify_fraction(0) == 0.0
+
+
+def _async_return(value):
+    async def _get(*args, **kwargs):
+        return value
+
+    return _get
+
+
+def _record(sink):
+    async def _set(control, raw):
+        sink.append((control, raw))
+
+    return _set
+
+
+class TestDummyMixerBridgePauseFadeGate:
+    """George, 2026-09-17: LMS fades the player out when it pauses, by
+    sending volume steps that squeezelite applies to the dummy control this
+    bridge watches - measured 22 -> 7 -> -6 -> -20 -> -50 in ~150 ms.
+    Mirrored, the DAC went to its -45dB floor, the panel published 0%, and
+    the faded level was remembered as LMS's own.
+
+    The decision waits for the control to settle, because the transport is
+    only right by then: measured on hardware, LMS fades *before* it reports
+    the pause, and that report reaches the core 0.51 s later. Deciding per
+    step read "playing" and mirrored the whole fade."""
+
+    @staticmethod
+    def _bridge(monkeypatch, *, playing, active="lms", settled_raw=22):
+        writes = []
+        remembered = []
+        monkeypatch.setattr(volume_module, "SETTLE_S", 0)
+        monkeypatch.setattr(volume_module, "get_raw", _async_return(settled_raw))
+        monkeypatch.setattr(volume_module, "set_raw", _record(writes))
+
+        class Memory:
+            def remember(self, renderer_id, raw):
+                remembered.append((renderer_id, raw))
+
+        bridge = volume_module.DummyMixerBridge(
+            "lms",
+            "gexislmsvol",
+            "Master",
+            "DAC",
+            volume_memory=Memory(),
+            get_active_renderer=lambda: active,
+            is_playing=playing,
+        )
+        return bridge, writes, remembered
+
+    @staticmethod
+    async def _steps(bridge, *raws):
+        """Feed control steps, then let the settle task run."""
+        for raw in raws:
+            await bridge._on_dummy_change(raw)
+        if bridge._settling is not None:
+            await bridge._settling
+
+    @pytest.mark.asyncio
+    async def test_a_pause_fade_is_not_mirrored_or_remembered(self, monkeypatch):
+        """The measured fade. By the time it settles, the pause has been
+        reported, which is the whole point of settling."""
+        bridge, writes, remembered = self._bridge(
+            monkeypatch, playing=lambda: False, settled_raw=-50
+        )
+
+        await self._steps(bridge, 7, -6, -20, -50)
+
+        assert writes == []
+        assert remembered == []
+
+    @pytest.mark.asyncio
+    async def test_a_volume_change_while_playing_is_mirrored_once(self, monkeypatch):
+        """A drag sends many steps; one decision comes out of it."""
+        bridge, writes, remembered = self._bridge(
+            monkeypatch, playing=lambda: True, settled_raw=59
+        )
+
+        await self._steps(bridge, 30, 45, 59)
+
+        assert writes == [("DAC", 215)]  # -12.3dB, the measured 75% point
+        assert remembered == [("lms", 215)]
+
+    @pytest.mark.asyncio
+    async def test_a_late_transport_report_is_what_decides(self, monkeypatch):
+        """The transport can still say "playing" while the fade arrives; the
+        settled decision reads it after the report lands."""
+        playing = True
+        bridge, writes, _ = self._bridge(
+            monkeypatch, playing=lambda: playing, settled_raw=-50
+        )
+        for raw in (7, -6, -20, -50):
+            await bridge._on_dummy_change(raw)
+        playing = False  # the pause report lands 0.51 s later (measured)
+
+        await bridge._settling
+
+        assert writes == []
+
+    @pytest.mark.asyncio
+    async def test_a_renderer_without_a_gate_mirrors_every_step(self, monkeypatch):
+        """Bluetooth's volume does not fade, and its AVRCP updates during a
+        drag must not be swallowed (see DummyMixerBridge)."""
+        bridge, writes, _ = self._bridge(monkeypatch, playing=None)
+
+        await self._steps(bridge, -50, 0, 50)
+
+        # dummy -50/0/50 are -45/-30/-15dB (dummy_raw_to_db), i.e. 150/180/210.
+        assert writes == [("DAC", 150), ("DAC", 180), ("DAC", 210)]
+
+    @pytest.mark.asyncio
+    async def test_an_inactive_renderer_is_remembered_but_not_applied(self, monkeypatch):
+        bridge, writes, remembered = self._bridge(
+            monkeypatch, playing=lambda: True, settled_raw=59, active="spotify"
+        )
+
+        await self._steps(bridge, 59)
+
+        assert writes == []
+        assert remembered == [("lms", 215)]
+
+    @pytest.mark.asyncio
+    async def test_the_resume_fade_restores_nothing_the_pause_took_away(self, monkeypatch):
+        """Both halves are ignored, so the DAC never moves for a pause: the
+        asymmetry - mirroring one half - is what left it at -45dB on
+        hardware, 2026-09-17."""
+        playing = False
+        bridge, writes, _ = self._bridge(
+            monkeypatch, playing=lambda: playing, settled_raw=-50
+        )
+        await self._steps(bridge, 7, -50)
+        assert writes == []
+
+        monkeypatch.setattr(volume_module, "get_raw", _async_return(22))
+        playing = True
+        await self._steps(bridge, -20, 0, 22)
+
+        # Mirrored, but to the level the control already had before the
+        # fade - so nothing audible changed across the pause.
+        assert writes == [("DAC", 193)]

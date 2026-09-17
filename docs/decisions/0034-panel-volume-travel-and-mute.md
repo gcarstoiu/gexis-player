@@ -38,6 +38,12 @@ restore. The alternative — a muted flag that survives someone else turning
 the volume up — would show "muted" over audible music, which ADR-0010's
 accountability rule forbids.
 
+> **Amended 2026-09-17 (George).** The slider read 0 whenever LMS paused:
+> LMS's pause fade moved the renderer's mixer control and the core mirrored
+> it. [ADR-0018](0018-volume-and-output-modes.md)'s dummy-mixer section and
+> [Finding 031](../findings/031-lms-pause-fade-and-push-latency.md) carry
+> the decision and the measurements; the slider itself is unchanged.
+
 ## Not decided here
 
 - Whether mute propagates to the renderer's own app (a phone's slider). It
