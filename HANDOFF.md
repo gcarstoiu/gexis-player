@@ -78,6 +78,12 @@ its card. UI deployed by hand to `/opt/gexis-ui` (previous build at
   screen and handoff keep theirs. **The root's covers are loaded and decoded
   when the panel starts** (`ui/src/lib/library.js`), because without an
   animation the New Music tiles were visibly a beat behind the cards.
+  **Horizontal scrolling:** no scroll handler at all - the edge fades come
+  from two sentinels and an `IntersectionObserver`, the mask sits on a
+  wrapper that does not scroll, and the scroller is `contain: content`.
+  Reading `scrollLeft`/`scrollWidth` per frame forces a layout each time;
+  **apply the same three to the artist grid and Browse in steps 6-7**, and
+  virtualise there if that is not enough (917 artists, thousands of albums).
 
 **Lesson candidate (2026-09-17), for George:** headless Chromium on the
 device was used to check the panel UI and answered a different question

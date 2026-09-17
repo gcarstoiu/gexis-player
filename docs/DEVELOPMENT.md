@@ -1086,8 +1086,13 @@ checked on the panel before the next:
     so every version of a fade - two-way, then incoming-only - showed the
     bare backdrop between them as a blink. The design's 260 ms slide-and-fade
     is not used; the backdrop stays put, so the swap is the whole effect.
-    **The root's data and its covers load when the panel starts, not when
-    Home opens** (George, 2026-09-17: the tiles arrived visibly after the
+    **Nothing runs per scroll frame:** the edge fades come from two
+    sentinels watched by an `IntersectionObserver`, not a scroll handler
+    reading `scrollLeft`/`scrollWidth` (which lays the strip out again every
+    frame); the mask sits on a wrapper that does not scroll; the scroller
+    carries `contain: content`. **The same three apply to every long list in
+    steps 6 and 7.** **The root's data and its covers load when the panel
+    starts, not when Home opens** (George, 2026-09-17: the tiles arrived visibly after the
     cards): `lib/library.js` reads the counts and New Music, waits for the
     covers to decode, and publishes both together; opening Home reads what
     is already there and refreshes quietly behind it. The CPU governor was set to `performance` in the same

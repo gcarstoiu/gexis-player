@@ -54,35 +54,40 @@
     path = path.slice(0, -1);
   }
 
-  // The New Music strip fades whichever edge has more to scroll to. Only
-  // whether each edge is faded is kept, not how far it has scrolled: the
-  // mask then changes twice per traverse instead of on every frame, which
-  // is part of what made the strip scroll unevenly on the panel (George,
-  // 2026-09-17).
-  const EDGE = 8;
+  // The New Music strip fades whichever edge has more to scroll to. Which
+  // edge that is comes from two sentinels watched by an IntersectionObserver,
+  // not from a scroll handler: reading scrollLeft/scrollWidth as the strip
+  // moves forces the browser to lay it out again on every frame, and the
+  // strip scrolled unevenly on the panel (George, 2026-09-17). Nothing in
+  // this component now runs per scroll frame.
   let fadeL = $state(false);
   let fadeR = $state(false);
-  function onScroll(e) {
-    const el = e.currentTarget;
-    const l = el.scrollLeft > EDGE;
-    const r = el.scrollWidth - el.clientWidth - el.scrollLeft > EDGE;
-    if (l !== fadeL) fadeL = l;
-    if (r !== fadeR) fadeR = r;
-  }
-  function measure(el) {
-    onScroll({ currentTarget: el });
-  }
+  let scroller = $state(null);
+  let startMark = $state(null);
+  let endMark = $state(null);
+
+  $effect(() => {
+    const root = scroller;
+    const marks = [startMark, endMark].filter(Boolean);
+    if (!root || marks.length !== 2) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (entry.target === startMark) fadeL = !entry.isIntersecting;
+          else fadeR = !entry.isIntersecting;
+        }
+      },
+      { root, threshold: 0.99 },
+    );
+    for (const mark of marks) observer.observe(mark);
+    return () => observer.disconnect();
+  });
+
   const mask = $derived(
     'linear-gradient(90deg,' +
       (fadeL ? 'transparent 0,rgba(0,0,0,0.35) 22px,#000 88px,' : '#000 0,') +
       (fadeR ? '#000 calc(100% - 88px),rgba(0,0,0,0.35) calc(100% - 22px),transparent 100%)' : '#000 100%)'),
   );
-  let scroller = $state(null);
-  $effect(() => {
-    albums;
-    const el = scroller;
-    if (el) queueMicrotask(() => measure(el));
-  });
 
 </script>
 
@@ -166,13 +171,11 @@
             <span class="new__label">New Music</span>
             <span class="new__rule"></span>
           </div>
-          <div
-            class="new__scroll"
-            bind:this={scroller}
-            onscroll={onScroll}
-            style:mask-image={mask}
-            style:-webkit-mask-image={mask}
-          >
+          <!-- The mask sits on this wrapper, which does not scroll: on the
+               scroller itself it is re-applied to the moving content. -->
+          <div class="new__mask" style:mask-image={mask} style:-webkit-mask-image={mask}>
+          <div class="new__scroll" bind:this={scroller}>
+            <span class="mark" bind:this={startMark}></span>
             {#each albums as album (album.id)}
               <button class="album" type="button" disabled data-unwired="phase-7">
                 <span class="album__art">
@@ -184,6 +187,8 @@
                 <span class="album__artist">{album.artist ?? ''}</span>
               </button>
             {/each}
+            <span class="mark" bind:this={endMark}></span>
+          </div>
           </div>
         </div>
       </div>
@@ -503,6 +508,11 @@
     height: 1px;
     background: rgba(233, 238, 242, 0.12);
   }
+  .new__mask {
+    /* Its own layer, so the mask is rasterised once rather than with every
+       frame of the scroll underneath it. */
+    will-change: transform;
+  }
   .new__scroll {
     display: flex;
     gap: 20px;
@@ -510,6 +520,17 @@
     padding: 0 30px 4px;
     margin: 0 -30px;
     scrollbar-width: none;
+    /* Keep the strip's painting to itself, and let the compositor scroll it
+       without waiting on anything else on the screen. */
+    contain: content;
+    touch-action: pan-x;
+    overscroll-behavior-x: contain;
+  }
+  /* 1px sentinels at each end: visible means that end is reached, which is
+     what decides the fade (see the observer above). */
+  .mark {
+    flex: 0 0 1px;
+    align-self: stretch;
   }
   .new__scroll::-webkit-scrollbar {
     display: none;
