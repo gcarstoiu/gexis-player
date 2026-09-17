@@ -53,6 +53,35 @@ The seven undesigned lists are **out of scope**, not deferred to a later step
 of this phase. ADR-0030's verification of them stands as a record of what the
 server can do.
 
+**"Artists" means Album Artists** (George, 2026-09-17): `artists
+role_id:ALBUMARTIST`, 916 on this server, in the artist grid and Browse's
+artist pane.
+
+**Playlists are the LMS library's own, not a plugin's** (George, 2026-09-17:
+*"Playlists in general should only be from LMS library,"* not third-party
+add-ons). All 98 playlists LMS returned on 2026-09-17 were Qobuz playlists
+(`qobuz://` URLs); none was local. On this server, the Playlists screen and
+the queue rail's playlist chooser are therefore empty until a library playlist
+exists. ADR-0030 counted one playlist on 2026-09-14; what that one was is not
+recorded.
+
+### 1a. Filing and grouping follow LMS (George, 2026-09-17)
+
+*"Keep LMS behaviour. However it does it, we do it as well."*
+
+- **Artist order and letter headers are LMS's.** LMS files by its sort name:
+  174 of the 916 album artists sit under a letter other than their displayed
+  name's first (David Bowie under B, Louis Armstrong under A). It ignores
+  leading articles ("The Beatles" under B) and folds accents in the order.
+  This replaces `design/data-contract.md`'s own folding rule.
+- **The discography is grouped by LMS's `release_type`, as LMS gives it.**
+  Measured across all 4,554 albums: ALBUM 3,968, ALBUM COMPILATION 293,
+  ALBUM LIVE 95, ALBUM SOUNDTRACK 88, SINGLE 38, EP 34, and a tail of
+  combinations (EP LIVE, ALBUM COMPILATION DJ MIX, …).
+- **Left for step 6, to show George:** LMS's letter key (`textkey`) is not
+  folded for two artists, `Ç` and `Í`, although the order puts them inside C
+  and I. The design's rail is `#`, A–Z.
+
 Navigation is the design's: Back on every screen below the root, Home beside
 it below the first level, the mini strip back to now playing. Settings is
 reached from the root card. Home is the library root; ADR-0033 already put it
@@ -67,9 +96,12 @@ there for `active: null`, and now playing's Home button opens it too.
 
 ### 3. Row actions: play now, add to queue, add to playlist
 
-**Create playlist is not in Phase 7** (George, 2026-09-17). It needs a name
-typed on the panel, which ADR-0029 allows only with a USB keyboard, in a text
-sheet the design describes but does not draw. Add to playlist picks an
+**Creating playlists is not supported** (George, 2026-09-17), in Phase 7 or
+later. It needs a name typed on the panel, which ADR-0029 allows only with a
+USB keyboard. George is asking Claude Design to remove playlist creation from
+the design.
+
+**Add to playlist adds to any LMS library playlist** (§1). It picks an
 existing playlist and needs no typing.
 
 The queue rail's empty state offers a playlist chooser (data contract); that is
@@ -136,9 +168,11 @@ The panel loads artwork from LMS directly (ADR-0020):
 | `cover_300x300.jpg` | PNG | 173,269 |
 | `cover_300x300_o.jpg` | JPEG | 25,474 |
 
-The bare resize returns a PNG twice the size of the original. One album, one
-size. The strip's thumbnails will ask for more, so step 1 repeats this across
-albums.
+The bare resize returns a PNG twice the size of the original. **Repeated on
+20 random albums (step 1):** the bare `cover_300x300` was a PNG for 5 of 20,
+up to 245 KB; `cover_300x300_o.jpg` was a JPEG for all 20, median 22 KB,
+largest 53 KB (500 px: median 52 KB). 4,521 of 4,554 albums have an
+`artwork_track_id`.
 
 SlimBrowse icons arrive as server paths (`plugins/…` and `/plugins/…`, both
 forms seen) and are resolved against the LMS base. An image that fails to load
@@ -154,6 +188,13 @@ shows the design's pending glyph (data contract, empty states).
   item.
 - Text-input items are dropped wherever they appear (ADR-0030, unchanged).
   Search TuneIn carries an `input` block today.
+- **An item's action can be inherited, and the inherited action can be a
+  play.** Measured in step 1: station lists carry no `actions` on their items;
+  the list's `base.actions.go` applies, and there it is
+  `["radionowplaying","playlist","play"]` or `["local","playlist","play"]`,
+  with `nextWindow: nowPlaying`. The core decides open-or-play from the
+  resolved command, not from the key name `go`. Found by starting playback
+  unintentionally (Finding 029).
 
 ### 9. Settings (George confirmed 2026-09-17; appended to ADR-0022's inventory)
 
@@ -193,21 +234,25 @@ The [H] rows are hardcoded as they are built in this phase.
 
 ## Unverified — measured in step 1 (Finding 029) before building on it
 
+**Measured 2026-09-17 and folded in above:** Album Artists (§1), filing and
+release types (§1a), library playlists (§1), artwork (§7), inherited radio
+actions (§8). Page costs: every typed read took 5–26 ms; all 916 album artists
+arrive in one 98 KB reply in 23 ms, and an album page is two requests of about
+9 ms. The radio tree answered in 15 ms to 1.7 s per level.
+
+Still open:
+
 - `playlistcontrol cmd:load` by album, artist, track and playlist; `cmd:add`
-  for the queue; auto-power-on from a `load` while Spotify plays (§4).
-- **Add to playlist:** which command adds an album, artist or track to a saved
-  playlist.
-- **Which artists the grid and Browse list.** All Artists (7,292) or Album
-  Artists (916). The design says "Artists". Brought to George with the
-  measurement.
-- **Folded filing:** whether LMS's `textkey` already files "The Beatles" under
-  B and "Ándra" under A. `ignoredarticles` is "The El La Los Las Le Les".
-- **Release types** for the discography, and track durations for the album
-  page, and what each costs in round trips.
-- **Page costs:** a page of albums and a page deep into 7,292 artists.
-- **The root's counts:** albums, artists and playlists are typed counts. The
-  design's "stations" count has no obvious source in the radio tree.
-- **The radio tree below its first level:** item shapes, `nextWindow`, play
-  actions, four levels deep.
-- **The queue's "came from" playlist**, and whether a rescan arrives over
-  CometD.
+  for the queue; auto-power-on from a `load` while Spotify plays (§4). A radio
+  `playlist play` on a powered-off player did power it on and the core took it
+  as an ordinary acquisition (Finding 029), but that is not `load`.
+- **Add to playlist:** which command adds an album, artist or track to a
+  library playlist, and how a library playlist is told apart from a plugin's
+  (the `file:` URL scheme is the candidate). Needs a library playlist to
+  exist; this server has none.
+- **The root's counts:** the design's "stations" count has no obvious source
+  in the radio tree.
+- **The queue's "came from" playlist.**
+- **Rescan:** `serverstatus` carries `lastscan`; whether CometD pushes a
+  rescan is not checked.
+- **`remoteMeta`** on a playing station (criterion 9).

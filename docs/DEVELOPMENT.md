@@ -945,8 +945,10 @@ subtree of nine items.
    2026-09-17 (George): only what is designed** — the library root with the
    New Music strip, three-pane Browse, the artist grid, the artist page
    (discography only until Phase 8; initials, not photos), the album page, and
-   Playlists. Row actions: play now, add to queue, add to playlist; **create
-   playlist is not in Phase 7.** ADR-0030's other lists (Album Artists,
+   Playlists (LMS library playlists only, not a plugin's). "Artists" is Album
+   Artists; filing and discography grouping are LMS's own. Row actions: play
+   now, add to queue, add to any library playlist; **creating playlists is
+   not supported** (George, 2026-09-17). ADR-0030's other lists (Album Artists,
    Composers, Genres, Years, Compilations, Songs, Music Folder) are out of
    scope. Counts and commands are in ADR-0030; screens in ADR-0038.
 2. **Playback from a typed id works** — `playlistcontrol cmd:load
