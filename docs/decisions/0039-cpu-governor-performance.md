@@ -1,6 +1,8 @@
 # ADR-0039 — The CPU governor is `performance`, set by a unit in the image
 
-**Status:** Accepted
+**Status:** **Reverted the same day, 2026-09-17** — see "Reverted" at the
+end. Kept as the record of what was measured, and of what actually fixed
+the symptom it was reached for.
 **Date:** 2026-09-17
 **Raised by:** George, during the Phase 7 step 4 panel checks: *"in what CPU
 governor is the Raspberry Pi operating? If not performance, switch to
@@ -65,3 +67,33 @@ Measured immediately after the switch: all four cores at 1800 MHz, 67.2 °C.
   the switch (67.2 °C against 66.2 °C) is not a thermal result.
 - **Idle power draw.** Not measured; this device has no meter on it.
 - **Whether the audio path benefits at all.** Plausible, unmeasured.
+
+## Reverted, 2026-09-17 (George)
+
+**The panel got visibly smoother from something else** - one backdrop for
+the whole panel instead of two large blurred layers per screen (Phase 7 step
+4c). George: *"Clear improvement after the background change. Let's revert
+the governor change part and see that the improvement holds."*
+
+**What the governor cost, measured over 20 minutes with playback running:**
+
+| | `ondemand` | `performance` |
+|---|---|---|
+| SoC temperature | 66.2 °C | 74.0-78.4 °C, mean 76.3 |
+| clock | 600-1800 MHz | 1800 MHz throughout |
+| throttling | none | none seen; peak was 1.5 °C under the 80 °C cap |
+
+So it ran about 10 °C hotter for no improvement anyone could see, with the
+soft temperature limit already flagged as reached at some point before the
+change.
+
+**What was undone:** the unit is disabled and removed on `gexis`, the
+governor is back to `ondemand`, and `stage-gexis/03-core` and
+`verify-image.sh` no longer carry it. Nothing of it remains to reflash.
+
+**What stands.** The measurements above, and the conclusion they support:
+the panel's smoothness was not limited by CPU frequency. If a future
+symptom points at the governor again, this is the evidence to start from,
+including the ramp-time question that was never measured (`ondemand` jumps
+straight to maximum once its sampler notices; `schedutil` reacts on
+scheduler events but ramps its estimate) - see Unverified.

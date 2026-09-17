@@ -36,7 +36,6 @@ done <<'EOF'
 image/stage-gexis/03-core/files/core.toml /etc/gexis/core.toml
 image/stage-gexis/03-core/files/gexis-core.service /etc/systemd/system/gexis-core.service
 image/stage-gexis/03-core/files/gexis-boot-volume.service /etc/systemd/system/gexis-boot-volume.service
-image/stage-gexis/03-core/files/gexis-cpu-governor.service /etc/systemd/system/gexis-cpu-governor.service
 image/stage-gexis/03-core/files/gexis-bluetooth-trust.service /etc/systemd/system/gexis-bluetooth-trust.service
 image/stage-gexis/03-core/files/gexis-meter.service /etc/systemd/system/gexis-meter.service
 image/stage-gexis/04-ui/files/gexis-kiosk.service /etc/systemd/system/gexis-kiosk.service
@@ -55,7 +54,7 @@ skins/templates_spectrum/spectrum.txt /opt/gexis-peppy/skins/gelo5/templates_spe
 EOF
 
 echo "== units enabled (symlink targets)"
-for u in gexis-core gexis-boot-volume gexis-bluetooth-trust gexis-meter gexis-kiosk gexis-peppy gexis-cpu-governor; do
+for u in gexis-core gexis-boot-volume gexis-bluetooth-trust gexis-meter gexis-kiosk gexis-peppy; do
 	t=$(dfs "stat /etc/systemd/system/multi-user.target.wants/$u.service" | grep -o 'Fast link dest: ".*"')
 	[ "$t" = "Fast link dest: \"/etc/systemd/system/$u.service\"" ] && ok "$u -> $t" || bad "$u enablement: '${t:-missing}'"
 done

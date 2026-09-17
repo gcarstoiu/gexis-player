@@ -27,10 +27,6 @@ install -D -m 644 files/gexis-boot-volume.service \
 	"${ROOTFS_DIR}/etc/systemd/system/gexis-boot-volume.service"
 install -D -m 644 files/gexis-bluetooth-trust.service \
 	"${ROOTFS_DIR}/etc/systemd/system/gexis-bluetooth-trust.service"
-# ADR-0039: the panel's own smoothness, and the audio path's scheduling,
-# are worth more here than the idle wattage ondemand saves.
-install -D -m 644 files/gexis-cpu-governor.service \
-	"${ROOTFS_DIR}/etc/systemd/system/gexis-cpu-governor.service"
 install -D -m 644 files/gexis-meter.service \
 	"${ROOTFS_DIR}/etc/systemd/system/gexis-meter.service"
 

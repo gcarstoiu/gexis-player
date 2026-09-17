@@ -148,12 +148,16 @@
        at once. -->
   <PanelBackground artwork={$metadata?.artwork ?? null} />
 
+  <!-- `in:` only, deliberately. With a two-way transition the outgoing
+       screen fades out while the incoming one fades in, and since both are
+       transparent the bare backdrop shows through between them - which read
+       as a blink on the panel (George, 2026-09-17). -->
   {#if settingsOpen}
-    <div class="screen-layer" transition:fade={{ duration: 120 }}>
+    <div class="screen-layer" in:fade={{ duration: 120 }}>
       <Settings onback={() => (settingsOpen = false)} embedded />
     </div>
   {:else if libraryOpen}
-    <div class="screen-layer" transition:fade={{ duration: 120 }}>
+    <div class="screen-layer" in:fade={{ duration: 120 }}>
       <Library
         active={$active}
         metadata={$metadata}
@@ -166,7 +170,7 @@
       />
     </div>
   {:else if $active}
-    <div class="screen-layer" transition:fade={{ duration: 120 }}>
+    <div class="screen-layer" in:fade={{ duration: 120 }}>
       <NowPlaying active={$active} metadata={$metadata} volume={$volume} controls={$capabilities[$active]?.controls ?? []} available={$available} shuffle={$shuffle} repeat={$repeat} onvolume={openVolume} onvisualisation={showVisualisation} onhome={() => (libraryRequested = true)} />
     </div>
   {/if}

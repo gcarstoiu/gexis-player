@@ -61,25 +61,19 @@ its card. UI deployed by hand to `/opt/gexis-ui` (previous build at
   their resting fill and shrink to 0.95 on press; the mini strip shrinks to
   0.995 from its bottom edge. The design's grey press fill read as a flash,
   as it already had on play and the transport buttons.
-- **4c: choppiness. Four changes so far; the first two did not visibly
-  help (George, 2026-09-17).** The library's animation is now 140 ms rather
-  than the design's 260 ms (Settings 120 ms), and the **CPU governor is
-  `performance`** ([ADR-0039](docs/decisions/0039-cpu-governor-performance.md)):
-  it was `ondemand`, 600-1800 MHz, with the soft temperature limit already
-  reached at some point (66.2 °C before, 67.2 °C after). The governor is set
-  by `gexis-cpu-governor.service`, enabled on the device and shipped by
-  `stage-gexis/03-core`, so it survives a reboot and a reflash.
-  **Part three is now built too:** one backdrop for the whole panel
-  (`ui/src/screens/PanelBackground.svelte`) instead of two large blurred
-  layers per screen; screens keep their own veil, exactly one is mounted at a
-  time, and the incoming one fades in over 120 ms. Earlier in the same
-  step: New Music covers are requested at 200 px for their 176 px cards,
-  now playing's artwork at 500 px (LMS returns the original otherwise, up to
-  358 KB, and it is blurred at 72 px behind the screen), and the strip's fade
-  mask changes only when an edge gains or loses its fade. **Part three, one
-  shared blurred background for every screen, is not done:** it would mean
-  only one screen is mounted at a time and would change how they cross-fade,
-  so it waits for George's verdict on the first two.
+- **4c: choppiness. Fixed by one backdrop for the whole panel** (George,
+  2026-09-17: *"clear improvement"*). `ui/src/screens/PanelBackground.svelte`
+  draws the weave and the artwork's bleed once; each screen keeps only its
+  own veil, so exactly one screen is mounted at a time and the incoming one
+  fades in (120 ms). Also in this step: artwork requested at the size it is
+  drawn (200 px thumbs, 500 px covers), the strip's fade mask changed only
+  when an edge gains or loses it, and the library's animation halved to
+  140 ms. **The CPU governor was set to `performance` and reverted the same
+  day** ([ADR-0039](docs/decisions/0039-cpu-governor-performance.md)): ~10 °C
+  hotter (76.3 °C mean against 66.2) for no visible improvement. **Left for
+  George's next look:** a fraction-of-a-second blink between now playing and
+  Home, which the two-way fade caused by showing the bare backdrop between
+  the screens; the outgoing screen now leaves at once instead.
 
 **Lesson candidate (2026-09-17), for George:** headless Chromium on the
 device was used to check the panel UI and answered a different question
