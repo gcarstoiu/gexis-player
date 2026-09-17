@@ -99,8 +99,11 @@
   const artwork = $derived(metadata?.artwork ?? null);
 </script>
 
-<!-- The design: opacity 220ms, transform 10px over 260ms cubic-bezier(0.2,0.8,0.2,1). -->
-<div class="library" transition:fly={{ y: 10, duration: 260, easing: cubicOut }}>
+<!-- The design animates this over 260ms (opacity 220ms, transform 10px over
+     260ms). Halved to 140ms: on the panel, opening Home did not feel smooth,
+     and a shorter animation is less time spent rasterising this layer's
+     blurred backdrop (George, 2026-09-17). -->
+<div class="library" transition:fly={{ y: 10, duration: 140, easing: cubicOut }}>
   <div class="weave"></div>
   {#if artwork}
     <img class="bleed" src={artwork} alt="" />
@@ -205,7 +208,7 @@
   </div>
 
   {#if active}
-    <div class="strip" transition:fly|global={{ y: 104, duration: 260, easing: cubicOut }}>
+    <div class="strip" transition:fly|global={{ y: 104, duration: 140, easing: cubicOut }}>
       <MiniStrip {active} {metadata} {volume} {controls} onopen={onclose} {onvolume} />
     </div>
   {:else}

@@ -159,7 +159,7 @@
 
   <!-- Mounted only while open, like the library (see Library.svelte). -->
   {#if settingsOpen}
-    <div class="settings" transition:fade={{ duration: 180 }}>
+    <div class="settings" transition:fade={{ duration: 120 }}>
       <Settings onback={() => (settingsOpen = false)} />
     </div>
   {/if}

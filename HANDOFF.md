@@ -61,8 +61,15 @@ its card. UI deployed by hand to `/opt/gexis-ui` (previous build at
   their resting fill and shrink to 0.95 on press; the mini strip shrinks to
   0.995 from its bottom edge. The design's grey press fill read as a flash,
   as it already had on play and the transport buttons.
-- **4c: choppiness. First two parts done 2026-09-17, awaiting George's
-  check.** New Music covers are requested at 200 px for their 176 px cards,
+- **4c: choppiness. Four changes so far; the first two did not visibly
+  help (George, 2026-09-17).** The library's animation is now 140 ms rather
+  than the design's 260 ms (Settings 120 ms), and the **CPU governor is
+  `performance`** ([ADR-0039](docs/decisions/0039-cpu-governor-performance.md)):
+  it was `ondemand`, 600-1800 MHz, with the soft temperature limit already
+  reached at some point (66.2 °C before, 67.2 °C after). The governor is set
+  by `gexis-cpu-governor.service`, enabled on the device and shipped by
+  `stage-gexis/03-core`, so it survives a reboot and a reflash.
+  Earlier in the same step: New Music covers are requested at 200 px for their 176 px cards,
   now playing's artwork at 500 px (LMS returns the original otherwise, up to
   358 KB, and it is blurred at 72 px behind the screen), and the strip's fade
   mask changes only when an edge gains or loses its fade. **Part three, one
