@@ -146,6 +146,7 @@ Almost entirely new. That this group barely existed is itself worth noticing.
 | Log level / diagnostics | [N] | |
 | Show image version and build info | [R][?] | The build self-identification gap: nothing on a running device says which build it is, and `DEVELOPMENT.md`'s tier-3 rule expects the runner to assert against the manifest |
 | Reboot / shut down | [N] | LMS's own menu already offers "Turn Off gexis", so the panel carrying it is consistent rather than novel |
+| CPU governor | [H] | `performance` since 2026-09-17 ([ADR-0039](0039-cpu-governor-performance.md)), set by `gexis-cpu-governor.service`; was the OS default `ondemand`. Exposing it means exposing heat and idle power with it, neither measured yet |
 
 ### Four decisions this inventory is waiting on
 
