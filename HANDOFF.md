@@ -1,94 +1,69 @@
 # Handoff
 
-Last updated: 2026-09-17 (seventeenth session, on R2D2 — **the Phase 6 image
-is built and verified as a file; George is flashing it**)
+Last updated: 2026-09-17 (eighteenth session, on R2D2 — **Phase 6 image
+flashed and signed off by George; PR from `phase-6-plan` to `main` open**)
 
 ## Start here
 
-**The Phase 6 image exists:**
-`image/deploy/2026-09-17-gexis-player-v0.2.1-202-gf3674f3-dirty.img` (4.5 GB,
-built from `phase-6-plan` at `f3674f3`; `-dirty` is only the pi-gen submodule's
-deleted `stage2/EXPORT_IMAGE`). **Built in 467 s, `BUILD-EXIT=0`.**
-`image/verify-image.sh` passed every check on its first real run, output read
-line by line: 18 files byte-identical, six units enabled with the right link
-targets, `alsa-restore` masked, `default.target` not written, venv
-`gexis_core` = `core/src` (27 .py), `/opt/gexis-ui` = `ui/dist` (51 files),
-Peppy engines, font, icon, 267 Gelo5 and 42 stock skin images; `viz_timeout`
-not in the registry, daemon fallback 300 s. The script does not read the boot
-partition; checked separately with `mtype`: `cmdline.txt` still has
-`systemd.run=/boot/firstrun.sh`, `firstrun.sh` placeholders blank.
+**Phase 6 is closed pending the PR merge.** The device runs
+`2026-09-17-gexis-player-v0.2.1-202-gf3674f3-dirty.img` (built from
+`f3674f3`; `/etc/gexis` files dated 12:43–12:48, matching the build).
+Provisioned with `make provision`; `firstrun.sh` consumed itself; no failed
+units; all renderer, core, kiosk, meter and Peppy units running.
 
-**When this session closed, George was about to flash it** (R2D2 rebooted
-first). The device may still be on the 2026-09-16 image plus hand-installed
-Phase 6 — ask, or check `/etc/gexis` timestamps.
+**Done on the device this session (checked by Claude):**
 
-**Next actions, in order:**
+- C3PO's key appended; `ssh-keygen -lf ~/.ssh/authorized_keys` shows both,
+  R2D2 `SHA256:UVfvJQXw…ci4` and C3PO `SHA256:d/pT3AST…tok`. **Repeat after
+  every reflash** (`provision.local.env` carries R2D2's key only; George chose
+  not to change `provision.sh`):
+  `ssh pi@gexis.local 'cat >> ~/.ssh/authorized_keys' < ~/.ssh/c3po_id_ed25519.pub`.
+- LMS player `gexis` (`88:a2:9e:79:e1:32`): `digitalVolumeControl` **1**
+  after the reflash, read over JSON-RPC. LMS itself was not restarted, so the
+  "after an LMS restart" half of that check was not made.
+- Core tests on R2D2: 444 passed, 1 skipped (scratch venv, `core[test]`).
 
-1. George flashes and runs `make provision DEVICE=/dev/sdX`, boots.
-2. **Add C3PO's key to the device** (George, 2026-09-17: after first boot,
-   not in `provision.sh`). `image/provision.local.env` now carries **R2D2's**
-   key only (it had C3PO's, copied over with the file; both keys have the
-   comment `desktop-to-dietpi` — tell them apart by fingerprint: R2D2
-   `SHA256:UVfv…`, C3PO `SHA256:d/pT…`). C3PO's public key is saved at
-   `~/.ssh/c3po_id_ed25519.pub`. Append it with
-   `ssh pi@gexis.local 'cat >> ~/.ssh/authorized_keys' < ~/.ssh/c3po_id_ed25519.pub`
-   and confirm both fingerprints with `ssh-keygen -lf ~/.ssh/authorized_keys`
-   on the device. Repeat after every reflash. (A two-line `SSH_PUBKEY` would
-   work in `firstrun.sh` — `imager_custom add_ssh_keys` echoes the value, one
-   line per key — but `provision.sh`'s round-trip check greps one line and
-   would refuse it; George chose not to change it.)
-   `~/provision.local.env.bak-c3po-key` (holds the Wi-Fi password) can be
-   deleted once George is happy.
-3. Check LMS player `gexis` is on "adjust volume" (`digitalVolumeControl` 1).
-4. George's checks below, then the PR from `phase-6-plan` to `main`.
+**George's hardware checks of the image: George called them done
+(2026-09-17) and asked for the PR.** Results for the individual checks
+(Peppy entry at 5 min, transport on three renderers, shuffle/repeat on
+Spotify and Bluetooth, the speakers-on items) were not reported item by item
+in the session, so none of them is recorded here as observed. If one matters
+later, ask George rather than reading this as a pass.
 
-**The loop-device question is still open — and this rerun did not settle
-it.** The first R2D2 build (2026-09-17 11:35, log
+**Next action:** George reviews and merges the Phase 6 PR. Then Phase 7 —
+library browse, starting with the unverified
+`playlistcontrol cmd:load album_id:<id>` (ADR-0030).
+
+**The loop-device question is still open, and the discriminating state is
+recorded.** Background: the first R2D2 build (2026-09-17 11:35, log
 `~/gexis-build-1-failed-loop.log`) failed at `export-image/prerun.sh` with
-`mknod: invalid minor device number '/dev/loop0 (lost)'`. The rerun
-(12:40, log `~/gexis-build.log`) attached `/dev/loop0` first time. The
-previous handoff said a passing rerun would show `image/README.md`'s root
-cause (module not loaded before the build) is incomplete — **that was wrong**:
-the rerun started with the module loaded *and* `/dev/loop0` present, so both
-explanations predicted a pass. What discriminates is **the first build after
-R2D2's reboot**: `loop` autoloads from `/etc/modules-load.d/loop.conf`, but
-with `CONFIG_BLK_DEV_LOOP_MIN_COUNT=0` no `/dev/loopN` exists. Before building,
-record `lsmod | grep -w loop` and `ls /dev/loop*`. A pass means the README is
-right; a `(lost)` failure means the missing node is the cause, and autoloading
-does not prevent it — then propose to George correcting the README and a
-durable fix (e.g. pre-creating a node before the build; needs `sudo`).
+`mknod: invalid minor device number '/dev/loop0 (lost)'`; the rerun (12:40,
+`~/gexis-build.log`) passed but started with `/dev/loop0` already present, so
+it discriminated nothing. **After R2D2's reboot, before any build (13:37,
+up 8 min):** `lsmod | grep -w loop` → `loop 45056 0` (autoloaded from
+`/etc/modules-load.d/loop.conf`); `ls -l /dev/loop*` → only
+`/dev/loop-control`, **no `/dev/loopN`**. No build has run since. **The next
+`make image` on R2D2 is the test**, provided R2D2 has not rebooted and nothing
+has created a loop node in between — re-record both before building. A pass
+means `image/README.md`'s root cause (module not loaded) is right; a `(lost)`
+failure means the missing node is the cause and autoloading does not prevent
+it — then propose to George correcting the README and a durable fix (e.g.
+pre-creating a node before the build; needs `sudo`).
 
-**Docker group:** the closing session's process predated George's `docker`
-membership; the build ran via `newgrp docker` (no sudo), piping the detached
-command into it. After the reboot `id` should show `docker` directly — check.
-Run builds detached as before so the session's memory guard cannot kill them:
+**Docker group:** after the reboot `id` shows `docker` (950) directly;
+`newgrp` is no longer needed. Run builds detached so the session's memory
+guard cannot kill them:
 `nohup setsid bash -c "make image > ~/gexis-build.log 2>&1; echo BUILD-EXIT=\$? >> ~/gexis-build.log" >/dev/null 2>&1 </dev/null &`.
 Move the previous log aside first. The submodule shows `m image/pi-gen`
 afterwards: expected, leave it.
 
 **Development moved to R2D2 on 2026-09-17** (see Machines).
+`~/provision.local.env.bak-c3po-key` (holds the Wi-Fi password) can be
+deleted once George is happy.
 
-**Checks for the flashed Phase 6 image:**
-
-1. **Peppy screen:** it comes up after 5 minutes of playback with no touch.
-   This was seen on the old image with a 1-minute test timeout; the timeout
-   is back to the default.
-2. **Transport on all three renderers:** play/pause (the icon flips on
-   press), next and previous. On LMS radio, Next, Previous, Shuffle and
-   Repeat are dimmed.
-3. **Not yet checked anywhere: shuffle and repeat on Spotify and Bluetooth**
-   (added 2026-09-17). Use the phone's Spotify app, then Bluetooth with the
-   Spotify app, then Bluetooth with Plexamp. On Bluetooth, the buttons may be
-   dimmed if the app exposes no shuffle or repeat.
-4. **With the speakers on:** radio resuming after a pause; the dropout when
-   LMS restarts a stream; the one-off LMS resume-position jump; whether
-   Plexamp's audio stops at the tap.
-5. **LMS volume:** check that player `gexis` is still on "adjust volume" after
-   the reflash (see issues below).
-
-**Phase 6** (DEVELOPMENT.md has the evidence): criteria 1 and 2 are built and
-checked on the panel, except item 3 above. Criterion 3 (info panels) moved to
-Phase 8; criterion 4 (the Peppy button) was done in Phase 5.
+**Phase 6** (DEVELOPMENT.md has the evidence): criteria 1 and 2 built and
+checked on the panel; criterion 3 (info panels) moved to Phase 8; criterion 4
+(the Peppy button) was done in Phase 5.
 [ADR-0037](docs/decisions/0037-transport-commands.md) covers transport, with
 two amendments by George: the play icon flips on press, and Spotify and
 Bluetooth get shuffle and repeat.
@@ -115,8 +90,8 @@ boot.
   change that ends it never arrived. Set back to 1 with George's OK; re-tested
   while playing: LMS volume reaches the DAC again, and a change while muted
   ends mute (ADR-0034). **George never touched it,** and nothing in this repo
-  sets it; it worked on 2026-09-08 (Finding 008). **Check it after the next
-  reflash and LMS restart.** Nothing warns when it is 0; a candidate for
+  sets it; it worked on 2026-09-08 (Finding 008). **Checked after the 2026-09-17 reflash: 1.**
+  Still unchecked after an LMS restart. Nothing warns when it is 0; a candidate for
   Phase 9.
 - **Pausing LMS moved the DAC slightly** (dummy −47 → −50 dB, DAC 152 → 150)
   during the same test. Small, unexplained, not investigated.
@@ -143,8 +118,6 @@ boot.
 **Still open from earlier:** `playlistcontrol cmd:load album_id:<id>` is
 unverified (ADR-0030); Claude Design owes drawn number/text editors and a
 corrected `design/README.md`.
-
-**Next phase after the Phase 6 PR: 7 — library browse.**
 
 ## Build environment (2026-09-13) — read this before the next build
 

@@ -842,10 +842,13 @@ validates, so the gate covers what ships. Verified inside
 
 ### Phase 6 — Now playing, full
 
-**Status 2026-09-17: built; checked on the panel except shuffle and repeat on
-Spotify and Bluetooth.** Everything is on branch `phase-6-plan`. Its image is
-not built yet: the first build on R2D2 failed at `export-image` (see HANDOFF);
-George checks the flashed image before the PR.
+**Status 2026-09-17: built, imaged and closed.** Everything is on branch
+`phase-6-plan`. The image (`v0.2.1-202-gf3674f3`) was built on R2D2 on the
+second attempt (the first failed at `export-image`, see HANDOFF), verified with
+`image/verify-image.sh`, flashed, and George called his checks of it done and
+asked for the PR. Individual results of those checks, including shuffle and
+repeat on Spotify and Bluetooth and the speakers-on items below, were not
+reported item by item, so they are not recorded as observed.
 
 **Acceptance**
 
@@ -914,9 +917,9 @@ checked on the panel before the next:
    Bluetooth (not yet checked). The repeat lag George saw in the Lyrion app is
    the app's; Squeezer is prompt (Finding 028, addendum 3).
 6. Clear the `phase-6` unwired markers; DEVELOPMENT, HANDOFF, PR, image.
-   **Markers cleared; docs updated; image build failed 2026-09-17 (loop device,
-   see HANDOFF), to be rerun. PR after George
-   checks the flashed image.**
+   **Markers cleared; docs updated; image built and verified 2026-09-17 on the
+   second attempt (the first failed at the loop device, see HANDOFF); flashed;
+   George called the image checks done; PR opened.**
 
 **Deferred to George's check of the image, with the speakers on:** radio
 resuming after a pause (resume or jump to live?), the dropout when LMS
