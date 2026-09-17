@@ -1,24 +1,66 @@
 # Handoff
 
-Last updated: 2026-09-17 (fifteenth session, continued — **Phase 5 merged
-(PR #17) and flashed; Phase 6 built on `phase-6-plan`; image built, waiting
-for George's checks before the PR**)
+Last updated: 2026-09-17 (sixteenth session, on R2D2 — **Phase 6 built on
+`phase-6-plan`; its first image build on R2D2 failed at the loop device and
+must be rerun before George's checks and the PR**)
 
 ## Start here
 
 **The device runs the 2026-09-16 image (`v0.2.1-179-g67193d5`, Phase 5) plus
-Phase 6 core and UI installed by hand.** The Phase 6 image is built from
-`phase-6-plan` — see the Phase 6 section in `docs/DEVELOPMENT.md` for its name
-and verified contents. **Next action: George flashes it and checks, then the
-PR from `phase-6-plan` to `main`.**
+Phase 6 core and UI installed by hand.** There is **no Phase 6 image yet.**
+**Next action: rerun `make image` on R2D2, verify the image with
+`image/verify-image.sh`, hand it to George to flash and check, then the PR
+from `phase-6-plan` to `main`.**
 
-**Moved to R2D2 on 2026-09-17** (see Machines). The Phase 6 image build was
-started there, detached, at 11:35: log `~/gexis-build.log`, which ends with
-`BUILD-EXIT=<code>`. **Pull first** (`git pull` on `phase-6-plan`): R2D2's
-clone predates this note. If the build succeeded, verify the image the way the
-Phase 5 image was verified (debugfs on the root partition: units, peppy
-files, venv code identical to the repo), then hand it to George. A first
-build on R2D2 is cold, so expect it to take longer than 12 minutes.
+**Development moved to R2D2 on 2026-09-17** (see Machines).
+
+**The first Phase 6 build on R2D2 failed (2026-09-17, 11:35-11:55, 1224 s).**
+Every stage, including all of `stage-gexis`, finished; `export-image/prerun.sh`
+then failed six times with `mknod: invalid minor device number '/dev/loop0
+(lost)'`. No image came out (`image/deploy/` does not exist). Log:
+`~/gexis-build.log`.
+
+That is the failure `image/README.md` records under "Known issue (resolved)"
+from C3PO's first build (2026-09-05), which blames the `loop` module not being
+loaded before the build, fixed by `sudo modprobe -r loop && sudo modprobe loop`.
+What was measured on R2D2 fits that record, but also a second explanation, and
+**the rerun is what tells them apart:**
+
+- R2D2 booted at 11:12; `/etc/modules-load.d/loop.conf` was written at 11:29,
+  so it has not taken effect yet. The kernel logged `loop: module loaded` at
+  11:54:42 — loaded by the build itself, at the loop step. (Fits the README.)
+- This kernel has `CONFIG_BLK_DEV_LOOP_MIN_COUNT=0`: loading the module creates
+  no `/dev/loopN` nodes. A `--privileged` container's `/dev` is (assumed, not
+  checked) populated when the container starts, so a `/dev/loop0`
+  created mid-build would never appear inside it — "(lost)". If that is the
+  cause, autoloading at boot does **not** prevent it.
+- `/dev/loop0` now exists on the host (created 11:54:42, nothing attached).
+
+**So: do not reboot R2D2 and do not reload `loop` before the rerun** — both
+remove `/dev/loop0`. If a plain rerun gets past `export-image`, the README's
+root cause is incomplete: propose correcting it (and a durable fix, e.g.
+pre-creating a loop node before the build) to George. If it fails the same
+way, apply the README's fix — it needs `sudo`, so George runs it.
+
+**Docker access:** the session that found this had no `docker` group in its
+process (George is in the group; the process predated it) and `sudo` needs a
+password. Check `id` shows `docker` before starting. Run the build detached,
+as before, so the session's memory guard cannot kill it:
+`nohup setsid bash -c "make image > ~/gexis-build.log 2>&1; echo BUILD-EXIT=\$? >> ~/gexis-build.log" >/dev/null 2>&1 </dev/null &`.
+The submodule shows `m image/pi-gen` afterwards (`stage2/EXPORT_IMAGE` deleted
+by the Makefile): expected, leave it.
+
+**Verifying the image: `image/verify-image.sh image/deploy/<name>.img`** (new,
+2026-09-17). Reads the root partition with `debugfs` at its offset (no root,
+no loop device) and compares against the checkout: every unit, config and
+Peppy file byte for byte; the six units enabled and `alsa-restore` masked;
+`default.target` not written; venv `gexis_core` identical to `core/src`;
+`/opt/gexis-ui` identical to `ui/dist`; Peppy engines, font, icons and both
+skin corpora. Tested only against a synthetic ext4 image (every FAIL path and
+the symlink/dump mechanics) — **its first real run is this image**; read its
+output, don't just trust `RESULT`. Also check the version in the `.info`
+manifest matches the commit built. The Phase 5 image's own check was never
+written down step by step; this replaces it.
 
 **Checks for the flashed Phase 6 image:**
 

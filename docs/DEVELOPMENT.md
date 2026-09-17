@@ -843,8 +843,9 @@ validates, so the gate covers what ships. Verified inside
 ### Phase 6 — Now playing, full
 
 **Status 2026-09-17: built; checked on the panel except shuffle and repeat on
-Spotify and Bluetooth.** Everything is on branch `phase-6-plan`, and the image
-built from it is waiting for George's checks before the PR.
+Spotify and Bluetooth.** Everything is on branch `phase-6-plan`. Its image is
+not built yet: the first build on R2D2 failed at `export-image` (see HANDOFF);
+George checks the flashed image before the PR.
 
 **Acceptance**
 
@@ -913,7 +914,8 @@ checked on the panel before the next:
    Bluetooth (not yet checked). The repeat lag George saw in the Lyrion app is
    the app's; Squeezer is prompt (Finding 028, addendum 3).
 6. Clear the `phase-6` unwired markers; DEVELOPMENT, HANDOFF, PR, image.
-   **Markers cleared; docs updated; image built 2026-09-17. PR after George
+   **Markers cleared; docs updated; image build failed 2026-09-17 (loop device,
+   see HANDOFF), to be rerun. PR after George
    checks the flashed image.**
 
 **Deferred to George's check of the image, with the speakers on:** radio
