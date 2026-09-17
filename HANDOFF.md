@@ -1,58 +1,47 @@
 # Handoff
 
-Last updated: 2026-09-16 (fifteenth session — **Phase 5 built: visualisation
-service, skin corpus and validator, both engines in one process, rotation,
-entry and exit, metadata layer; checked on the panel by George**)
+Last updated: 2026-09-17 (fifteenth session, continued — **Phase 5 merged
+(PR #17) and flashed; Phase 6 built on `phase-6-plan`; image built, waiting
+for George's checks before the PR**)
 
 ## Start here
 
-**The device runs the 2026-09-15 image plus hand-installed Phase 5 work.**
-`image/deploy/2026-09-15-gexis-player-v0.2.1-146-ge89d8bb-dirty.img` is what
-was flashed. On top of it, by hand and **not in that image**:
+**The device runs the 2026-09-16 image (`v0.2.1-179-g67193d5`, Phase 5) plus
+Phase 6 core and UI installed by hand.** The Phase 6 image is built from
+`phase-6-plan` — see the Phase 6 section in `docs/DEVELOPMENT.md` for its name
+and verified contents. **Next action: George flashes it and checks, then the
+PR from `phase-6-plan` to `main`.**
 
-- the Phase 5 daemon code in `/opt/gexis-core/venv` (Peppy control, metadata
-  file, settings seed);
-- the driver, engines and stock skins in `/tmp/spike/gx`, started by hand —
-  **gone on reboot**;
-- the meter service, started by hand — also gone on reboot;
-- packages `python3-pygame`, `python3-pil`, `wlrctl`, `grim` and
-  `python3-pytest` (the last two test-only).
+**Checks for the flashed Phase 6 image:**
 
-A new image carries all of it except the test-only packages
-(`stage-gexis/05-peppy`, `03-core/files/gexis-meter.service`), and the
-implicit-entry fix, which the device does **not** have. **Build it and reflash
-before trusting anything above as a product.**
+1. **Peppy screen:** it comes up after 5 minutes of playback with no touch.
+   This was seen on the old image with a 1-minute test timeout; the timeout
+   is back to the default.
+2. **Transport on all three renderers:** play/pause (the icon flips on
+   press), next and previous. On LMS radio, Next, Previous, Shuffle and
+   Repeat are dimmed.
+3. **Not yet checked anywhere: shuffle and repeat on Spotify and Bluetooth**
+   (added 2026-09-17). Use the phone's Spotify app, then Bluetooth with the
+   Spotify app, then Bluetooth with Plexamp. On Bluetooth, the buttons may be
+   dimmed if the app exposes no shuffle or repeat.
+4. **With the speakers on:** radio resuming after a pause; the dropout when
+   LMS restarts a stream; the one-off LMS resume-position jump; whether
+   Plexamp's audio stops at the tap.
+5. **LMS volume:** check that player `gexis` is still on "adjust volume" after
+   the reflash (see issues below).
 
-**Phase 5 status** — `docs/DEVELOPMENT.md` has each criterion's evidence:
+**Phase 6** (DEVELOPMENT.md has the evidence): criteria 1 and 2 are built and
+checked on the panel, except item 3 above. Criterion 3 (info panels) moved to
+Phase 8; criterion 4 (the Peppy button) was done in Phase 5.
+[ADR-0037](docs/decisions/0037-transport-commands.md) covers transport, with
+two amendments by George: the play icon flips on press, and Spotify and
+Bluetooth get shuffle and repeat.
+[Finding 028](docs/findings/028-transport-commands-on-three-renderers.md) has
+the measurements.
 
-- 1 visualisation service: built; levels verified live; **HTTP push
-  untested**. Unit added 2026-09-16 — it had only ever run by hand.
-- 2, 3 skins: Gelo5's 84 in `skins/` (config only; images fetched at build),
-  validator gates `make image`.
-- 4 no visible construction: measured, Finding 025.
-- 5 rotation per track: built, Finding 027.
-- 6 renderer change exits: **George checked**.
-- 7 absent fields: our own metadata layer; **George checked** across all
-  three renderers, including the layout fixes (text in its box, MM:SS in
-  DSEG7, badges with names).
-- 8 button and touch-to-hide: **George checked**. Implicit five-minute entry
-  **failed on hardware** (every Spotify track end read as a skip), fixed and
-  unit-tested, **not yet observed** — the first thing to check on the new
-  image: play for six minutes without touching the panel.
-- 9 no sample rate or codec: nothing renders it, ADR-0036.
-
-**Follow-ups, not blocking:**
-
-- `viz_timeout` is read by the daemon but not wired in the settings registry,
-  so the phone cannot change it (ADR-0035 says wire it with its feature).
-- The stock skins are Volumio-branded; Gelo5's are the image default.
-- Titles too long for their box are cut with "…"; the wrapper scrolls them.
-- Fonts: DejaVu for text; DSEG7 (OFL) for time. PeppyFont not vendored.
-- George once saw the spectrum overlap remaining time on `dash-spectrum`;
-  not reproduced in 24 rotations or a direct start.
-- **Lesson candidate:** hand-started test processes multiplied because pid
-  files captured the wrong pid; George saw overlapping skins. Stop by looking
-  processes up, not by trusting a pid file.
+**Phases renumbered 2026-09-16:** 9 is settings wiring and UI polish (new);
+10 is the plugin contract; 11 Plexamp and 12 Qobuz Connect (new); 13 is first
+boot.
 
 **Issues to look at later (Phase 6 hardware rounds, 2026-09-16):**
 
@@ -82,17 +71,24 @@ before trusting anything above as a product.**
 - **LMS once reported a position about 5 s ahead on resume**, then corrected
   it at the next pause. Not reproduced on a second try; recheck with sound.
 
+**Follow-ups, not blocking:**
+
+- `viz_timeout` is read by the daemon but not wired in the settings registry,
+  so the phone cannot change it (ADR-0035 says wire it with its feature).
+- The stock skins are Volumio-branded; Gelo5's are the image default.
+- Titles too long for their box are cut with "…"; the wrapper scrolls them.
+- Fonts: DejaVu for text; DSEG7 (OFL) for time. PeppyFont not vendored.
+- George once saw the spectrum overlap remaining time on `dash-spectrum`;
+  not reproduced in 24 rotations or a direct start.
+- **Lesson candidate:** hand-started test processes multiplied because pid
+  files captured the wrong pid; George saw overlapping skins. Stop by looking
+  processes up, not by trusting a pid file.
+
 **Still open from earlier:** `playlistcontrol cmd:load album_id:<id>` is
 unverified (ADR-0030); Claude Design owes drawn number/text editors and a
 corrected `design/README.md`.
 
-**Next phase: 6 — now playing, full**: transport controls only. The info
-panels moved to Phase 8, and a control that cannot work right now is
-disabled, never hidden (both George, 2026-09-16). The agreed plan is under
-Phase 6 in `docs/DEVELOPMENT.md`. **Before any of it:** flash
-`image/deploy/2026-09-16-gexis-player-v0.2.1-179-g67193d5-dirty.img` (built
-from `main` after PR #17; contents verified as a file) and check the
-five-minute Peppy entry on it.
+**Next phase after the Phase 6 PR: 7 — library browse.**
 
 ## Build environment (2026-09-13) — read this before the next build
 

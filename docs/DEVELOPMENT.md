@@ -842,9 +842,20 @@ validates, so the gate covers what ships. Verified inside
 
 ### Phase 6 — Now playing, full
 
+**Status 2026-09-17: built; checked on the panel except shuffle and repeat on
+Spotify and Bluetooth.** Everything is on branch `phase-6-plan`, and the image
+built from it is waiting for George's checks before the PR.
+
 **Acceptance**
 
 1. Transport controls rendered from adapter capability declarations.
+   **Built** ([ADR-0037](decisions/0037-transport-commands.md)):
+   `POST /transport/{command}` to the active renderer; the panel renders each
+   button from the renderer's `controls`. **George checked on the panel:**
+   play/pause, next and previous on all three renderers, and LMS shuffle and
+   repeat both ways. **Not yet checked:** shuffle and repeat on Spotify and
+   Bluetooth, added 2026-09-17 at George's request over the design's LMS-only
+   rule.
 2. Controls that would not work are hidden or non-editable per the cross-cutting
    rule, never dead. **Sharpened by George, 2026-09-16:** a control the
    renderer has is **visible at all times**; when it cannot work *right now*
@@ -852,6 +863,10 @@ validates, so the gate covers what ships. Verified inside
    Measured case: Next and Previous on an LMS radio station; an LMS playlist
    wraps, so it has no end (Finding 028).
    Hiding is only for a control the renderer does not have at all.
+   **Built:** `/state` publishes `controls.available`. On LMS, a one-item
+   playlist disables Next, Previous and Shuffle, and a live stream disables
+   Repeat. On Bluetooth, Shuffle and Repeat are disabled while the phone's
+   app exposes no such property. **George checked the LMS radio case.**
 3. ~~Artist and track info panels.~~ **Moved to Phase 8 criterion 6** (George,
    2026-09-16): their content (biography, tags, similar artists, label,
    release notes) comes from enrichment, which no renderer supplies. The
@@ -875,7 +890,12 @@ checked on the panel before the next:
    reported back, previous mid-track, radio streams. Spotify through
    go-librespot, including **Finding 014's risk** that its resume bypasses
    the Connect handshake. Bluetooth AVRCP on George's phone.
-2. **Play/pause** end to end, all three renderers. **Includes a defect found
+2. **Play/pause** end to end, all three renderers. **Done; George checked.**
+   The position defect below is fixed (go-librespot's `/status` is read on
+   every transport event; measured correct across pauses). **George's
+   amendment:** the icon flips on press and reverts after 8 s without
+   confirmation, because Bluetooth reported pauses 4.5 s late — later traced
+   to the Plexamp app (Finding 028 addenda). **Includes a defect found
    in step 1** (2026-09-16, recorded at George's request): for Spotify the
    core's `metadata.position` stays at the value from the start of the track
    through pause and resume — go-librespot's `/status` had 35 s, 41 s and
@@ -884,11 +904,22 @@ checked on the panel before the next:
    when play/pause changes, so a pause very likely sends it back to 0:00.
    Unconfirmed on the panel; play/pause is not done until the bar is right
    after a pause.
-3. **Previous and next.**
+3. **Previous and next.** **Done; George checked all three** (Bluetooth
+   re-measured with the Spotify and Plexamp apps).
 4. **Disabled when inoperable** — each "cannot work now" case from step 1
-   becomes a rule and a test.
+   becomes a rule and a test. **Done; George checked on LMS radio.**
 5. **LMS shuffle and repeat** (three states), read back from the server.
+   **Done; George checked both ways.** Extended 2026-09-17 to Spotify and
+   Bluetooth (not yet checked). The repeat lag George saw in the Lyrion app is
+   the app's; Squeezer is prompt (Finding 028, addendum 3).
 6. Clear the `phase-6` unwired markers; DEVELOPMENT, HANDOFF, PR, image.
+   **Markers cleared; docs updated; image built 2026-09-17. PR after George
+   checks the flashed image.**
+
+**Deferred to George's check of the image, with the speakers on:** radio
+resuming after a pause (resume or jump to live?), the dropout when LMS
+restarts a stream, the one-off LMS resume-position jump, and whether the
+Plexamp app's audio stops at the tap.
 
 ### Phase 7 — Library browse
 

@@ -2708,3 +2708,103 @@ Last updated: 2026-09-15 (twelfth session — **04-ui fixed and verified on
 hardware; ADR-0029 to 0032 decided; a new image is built and waiting to be
 flashed**)
 
+
+
+---
+
+# Session 15 close (2026-09-17) — superseded 'Start here' block, moved verbatim
+
+Last updated: 2026-09-16 (fifteenth session — **Phase 5 built: visualisation
+service, skin corpus and validator, both engines in one process, rotation,
+entry and exit, metadata layer; checked on the panel by George**)
+
+## Start here
+
+**The device runs the 2026-09-15 image plus hand-installed Phase 5 work.**
+`image/deploy/2026-09-15-gexis-player-v0.2.1-146-ge89d8bb-dirty.img` is what
+was flashed. On top of it, by hand and **not in that image**:
+
+- the Phase 5 daemon code in `/opt/gexis-core/venv` (Peppy control, metadata
+  file, settings seed);
+- the driver, engines and stock skins in `/tmp/spike/gx`, started by hand —
+  **gone on reboot**;
+- the meter service, started by hand — also gone on reboot;
+- packages `python3-pygame`, `python3-pil`, `wlrctl`, `grim` and
+  `python3-pytest` (the last two test-only).
+
+A new image carries all of it except the test-only packages
+(`stage-gexis/05-peppy`, `03-core/files/gexis-meter.service`), and the
+implicit-entry fix, which the device does **not** have. **Build it and reflash
+before trusting anything above as a product.**
+
+**Phase 5 status** — `docs/DEVELOPMENT.md` has each criterion's evidence:
+
+- 1 visualisation service: built; levels verified live; **HTTP push
+  untested**. Unit added 2026-09-16 — it had only ever run by hand.
+- 2, 3 skins: Gelo5's 84 in `skins/` (config only; images fetched at build),
+  validator gates `make image`.
+- 4 no visible construction: measured, Finding 025.
+- 5 rotation per track: built, Finding 027.
+- 6 renderer change exits: **George checked**.
+- 7 absent fields: our own metadata layer; **George checked** across all
+  three renderers, including the layout fixes (text in its box, MM:SS in
+  DSEG7, badges with names).
+- 8 button and touch-to-hide: **George checked**. Implicit five-minute entry
+  **failed on hardware** (every Spotify track end read as a skip), fixed and
+  unit-tested, **not yet observed** — the first thing to check on the new
+  image: play for six minutes without touching the panel.
+- 9 no sample rate or codec: nothing renders it, ADR-0036.
+
+**Follow-ups, not blocking:**
+
+- `viz_timeout` is read by the daemon but not wired in the settings registry,
+  so the phone cannot change it (ADR-0035 says wire it with its feature).
+- The stock skins are Volumio-branded; Gelo5's are the image default.
+- Titles too long for their box are cut with "…"; the wrapper scrolls them.
+- Fonts: DejaVu for text; DSEG7 (OFL) for time. PeppyFont not vendored.
+- George once saw the spectrum overlap remaining time on `dash-spectrum`;
+  not reproduced in 24 rotations or a direct start.
+- **Lesson candidate:** hand-started test processes multiplied because pid
+  files captured the wrong pid; George saw overlapping skins. Stop by looking
+  processes up, not by trusting a pid file.
+
+**Issues to look at later (Phase 6 hardware rounds, 2026-09-16):**
+
+- **Over Bluetooth, the Plexamp app reports pauses late or not at all** — about
+  6 s from its own button, 4.5 s or never for a panel command. The Spotify app
+  on the same phone reports in 0.2 s (Finding 028, addendum 2). A2DP's
+  stream-idle signal comes 3 s after the report, so it cannot help. With
+  Plexamp the panel's icon falls back after 8 s. Next step, with the speakers
+  on: does Plexamp's audio stop at the tap?
+- **LMS had player `gexis` on fixed volume (`digitalVolumeControl` 0), cause
+  unknown.** George found it as "phone volume does nothing while the panel is
+  muted, and LMS's volume bar is frozen". Measured 2026-09-16: with 0, LMS
+  moves its own number but always sends full level, so no LMS volume change
+  reaches the device, muted or not. Mute then became a trap, because the one
+  change that ends it never arrived. Set back to 1 with George's OK; re-tested
+  while playing: LMS volume reaches the DAC again, and a change while muted
+  ends mute (ADR-0034). **George never touched it,** and nothing in this repo
+  sets it; it worked on 2026-09-08 (Finding 008). **Check it after the next
+  reflash and LMS restart.** Nothing warns when it is 0; a candidate for
+  Phase 9.
+- **Pausing LMS moved the DAC slightly** (dummy −47 → −50 dB, DAC 152 → 150)
+  during the same test. Small, unexplained, not investigated.
+- **After a `gexis-core` restart, a phone already connected is not active.**
+  The Bluetooth adapter seeds metadata from a `MediaPlayer1` that is already
+  present but never calls `on_acquire`. Spotify has the same effect. It only
+  matters when the daemon restarts, not at boot.
+- **LMS once reported a position about 5 s ahead on resume**, then corrected
+  it at the next pause. Not reproduced on a second try; recheck with sound.
+
+**Still open from earlier:** `playlistcontrol cmd:load album_id:<id>` is
+unverified (ADR-0030); Claude Design owes drawn number/text editors and a
+corrected `design/README.md`.
+
+**Next phase: 6 — now playing, full**: transport controls only. The info
+panels moved to Phase 8, and a control that cannot work right now is
+disabled, never hidden (both George, 2026-09-16). The agreed plan is under
+Phase 6 in `docs/DEVELOPMENT.md`. **Before any of it:** flash
+`image/deploy/2026-09-16-gexis-player-v0.2.1-179-g67193d5-dirty.img` (built
+from `main` after PR #17; contents verified as a file) and check the
+five-minute Peppy entry on it.
+
