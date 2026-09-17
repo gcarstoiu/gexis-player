@@ -1,7 +1,6 @@
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
 <script>
   import { onMount, untrack } from 'svelte';
-  import { fade } from 'svelte/transition';
   import { connect, active, metadata, volume, handoff, handoffExemptPairs, capabilities, available, availability, shuffle, repeat } from './lib/state.js';
   import NowPlaying from './screens/NowPlaying.svelte';
   import Library from './screens/Library.svelte';
@@ -143,21 +142,22 @@
 <div class="panel">
   <!-- One backdrop for the whole panel, so a screen change does not build
        two large blurred layers again (George, 2026-09-17). Exactly one
-       screen is mounted over it at a time and the incoming one fades in:
-       the screens are transparent now, so overlapping them would show both
-       at once. -->
+       screen is mounted over it at a time: the screens are transparent now,
+       so overlapping them would show both at once. -->
   <PanelBackground artwork={$metadata?.artwork ?? null} />
 
-  <!-- `in:` only, deliberately. With a two-way transition the outgoing
-       screen fades out while the incoming one fades in, and since both are
-       transparent the bare backdrop shows through between them - which read
-       as a blink on the panel (George, 2026-09-17). -->
+  <!-- No animation on a screen change at all (George, 2026-09-17). Over a
+       shared backdrop the screens are transparent, so anything that fades
+       one in or out shows the bare backdrop between them - which read as a
+       blink on the panel, in both the two-way and the fade-in-only form.
+       The backdrop does not move across a change, so the swap is the whole
+       effect. The drawer, idle screen and handoff keep their own. -->
   {#if settingsOpen}
-    <div class="screen-layer" in:fade={{ duration: 120 }}>
+    <div class="screen-layer">
       <Settings onback={() => (settingsOpen = false)} embedded />
     </div>
   {:else if libraryOpen}
-    <div class="screen-layer" in:fade={{ duration: 120 }}>
+    <div class="screen-layer">
       <Library
         active={$active}
         metadata={$metadata}
@@ -170,7 +170,7 @@
       />
     </div>
   {:else if $active}
-    <div class="screen-layer" in:fade={{ duration: 120 }}>
+    <div class="screen-layer">
       <NowPlaying active={$active} metadata={$metadata} volume={$volume} controls={$capabilities[$active]?.controls ?? []} available={$available} shuffle={$shuffle} repeat={$repeat} onvolume={openVolume} onvisualisation={showVisualisation} onhome={() => (libraryRequested = true)} />
     </div>
   {/if}

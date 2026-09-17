@@ -16,8 +16,6 @@
 -->
 <script>
   import { onMount } from 'svelte';
-  import { fly } from 'svelte/transition';
-  import { cubicOut } from 'svelte/easing';
   import { libraryCounts, newMusic } from '../lib/library.js';
   import MiniStrip from './MiniStrip.svelte';
   import WaitingServices from './WaitingServices.svelte';
@@ -98,11 +96,10 @@
 
 </script>
 
-<!-- The design animates this over 260ms (opacity 220ms, transform 10px over
-     260ms). Halved to 140ms: on the panel, opening Home did not feel smooth,
-     and a shorter animation is less time spent rasterising this layer's
-     blurred backdrop (George, 2026-09-17). -->
-<div class="library" transition:fly={{ y: 10, duration: 140, easing: cubicOut }}>
+<!-- The design animates this in over 260ms (opacity 220ms, transform 10px).
+     Not animated at all here: on the panel every version of it blinked, since
+     the screens are transparent over a shared backdrop (App.svelte). -->
+<div class="library">
   <!-- Weave and bleed are the panel's, drawn once (PanelBackground.svelte). -->
   <div class="veil"></div>
 
@@ -204,7 +201,7 @@
   </div>
 
   {#if active}
-    <div class="strip" transition:fly|global={{ y: 104, duration: 140, easing: cubicOut }}>
+    <div class="strip">
       <MiniStrip {active} {metadata} {volume} {controls} onopen={onclose} {onvolume} />
     </div>
   {:else}

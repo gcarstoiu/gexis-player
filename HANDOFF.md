@@ -70,10 +70,12 @@ its card. UI deployed by hand to `/opt/gexis-ui` (previous build at
   when an edge gains or loses it, and the library's animation halved to
   140 ms. **The CPU governor was set to `performance` and reverted the same
   day** ([ADR-0039](docs/decisions/0039-cpu-governor-performance.md)): ~10 °C
-  hotter (76.3 °C mean against 66.2) for no visible improvement. **Left for
-  George's next look:** a fraction-of-a-second blink between now playing and
-  Home, which the two-way fade caused by showing the bare backdrop between
-  the screens; the outgoing screen now leaves at once instead.
+  hotter (76.3 °C mean against 66.2) for no visible improvement. **Screen changes are not animated at all**
+  (George, 2026-09-17): a fade of any kind showed the bare backdrop between
+  two transparent screens and read as a blink - worse with the incoming-only
+  fade than with the two-way one. The design's 260 ms slide-and-fade, the
+  mini strip's 104 px slide and Settings' fade are all gone; the drawer, idle
+  screen and handoff keep theirs.
 
 **Lesson candidate (2026-09-17), for George:** headless Chromium on the
 device was used to check the panel UI and answered a different question

@@ -1081,10 +1081,11 @@ checked on the panel before the next:
     only its own veil - *"clear improvement"*. **Deviation:** exactly one
     screen is mounted at a time and the incoming one fades in over 120 ms,
     where the design layers the library over now playing; transparent screens
-    cannot overlap without showing both. The animation is also halved (260 ms
-    to 140 ms, Settings' fade 180 to 120), and the outgoing screen now leaves
-    at once rather than fading, which showed the bare backdrop between the
-    two as a blink. The CPU governor was set to `performance` in the same
+    cannot overlap without showing both. **A screen change is no longer animated at all**
+    (George, 2026-09-17): over a shared backdrop the screens are transparent,
+    so every version of a fade - two-way, then incoming-only - showed the
+    bare backdrop between them as a blink. The design's 260 ms slide-and-fade
+    is not used; the backdrop stays put, so the swap is the whole effect. The CPU governor was set to `performance` in the same
     round and **reverted** once the backdrop fixed it
     ([ADR-0039](decisions/0039-cpu-governor-performance.md)).
 5. **Album page and Play all.**
