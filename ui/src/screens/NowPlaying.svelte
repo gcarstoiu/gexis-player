@@ -64,10 +64,8 @@
   data-artwork={artwork ? 'ok' : 'none'}
   data-position={head.hasPosition ? 'ok' : 'none'}
 >
-  <div class="screen__weave"></div>
-  {#if artwork}
-    <img class="screen__bleed" src={artwork} alt="" />
-  {/if}
+  <!-- The weave and the artwork's bleed are drawn once for the whole panel
+       (PanelBackground.svelte); this screen keeps only its own veil. -->
   <div class="screen__veil"></div>
   <div class="screen__accent"></div>
 
@@ -194,32 +192,12 @@
     width: 1280px;
     height: 800px;
     overflow: hidden;
-    background: var(--bg-base);
     user-select: none;
   }
 
-  .screen__weave,
   .screen__veil {
     position: absolute;
     pointer-events: none;
-  }
-  .screen__weave {
-    inset: -90px;
-    background: repeating-linear-gradient(38deg, var(--bg-weave-a) 0 48px, var(--bg-weave-b) 48px 96px);
-    filter: blur(70px);
-    transform: scale(1.14);
-  }
-  .screen__bleed {
-    position: absolute;
-    inset: -120px;
-    width: calc(100% + 240px);
-    height: calc(100% + 240px);
-    object-fit: cover;
-    filter: blur(72px) saturate(1.7);
-    transform: scale(1.12);
-    pointer-events: none;
-  }
-  .screen__veil {
     inset: 0;
     background: radial-gradient(130% 105% at 20% 42%, rgba(22, 36, 46, 0.3), rgba(14, 23, 30, 0.86));
   }

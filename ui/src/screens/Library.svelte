@@ -96,7 +96,6 @@
     if (el) queueMicrotask(() => measure(el));
   });
 
-  const artwork = $derived(metadata?.artwork ?? null);
 </script>
 
 <!-- The design animates this over 260ms (opacity 220ms, transform 10px over
@@ -104,10 +103,7 @@
      and a shorter animation is less time spent rasterising this layer's
      blurred backdrop (George, 2026-09-17). -->
 <div class="library" transition:fly={{ y: 10, duration: 140, easing: cubicOut }}>
-  <div class="weave"></div>
-  {#if artwork}
-    <img class="bleed" src={artwork} alt="" />
-  {/if}
+  <!-- Weave and bleed are the panel's, drawn once (PanelBackground.svelte). -->
   <div class="veil"></div>
 
   {#if path.length}
@@ -221,7 +217,6 @@
     position: absolute;
     inset: 0;
     z-index: 10;
-    background: var(--bg-base);
     display: flex;
     flex-direction: column;
     overflow: hidden;
@@ -229,22 +224,6 @@
     user-select: none;
   }
 
-  .weave {
-    position: absolute;
-    inset: -90px;
-    background: repeating-linear-gradient(38deg, var(--bg-weave-a) 0 48px, var(--bg-weave-b) 48px 96px);
-    filter: blur(70px);
-    transform: scale(1.14);
-  }
-  .bleed {
-    position: absolute;
-    inset: -120px;
-    width: calc(100% + 240px);
-    height: calc(100% + 240px);
-    object-fit: cover;
-    filter: blur(72px) saturate(1.7);
-    transform: scale(1.12);
-  }
   .veil {
     position: absolute;
     inset: 0;

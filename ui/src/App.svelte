@@ -5,6 +5,7 @@
   import { connect, active, metadata, volume, handoff, handoffExemptPairs, capabilities, available, availability, shuffle, repeat } from './lib/state.js';
   import NowPlaying from './screens/NowPlaying.svelte';
   import Library from './screens/Library.svelte';
+  import PanelBackground from './screens/PanelBackground.svelte';
   import IdleScreen from './screens/IdleScreen.svelte';
   import VolumeDrawer from './screens/VolumeDrawer.svelte';
   import HandoffScreen from './screens/HandoffScreen.svelte';
@@ -140,27 +141,33 @@
 {:else if surface === 'panel'}
 
 <div class="panel">
-  {#if $active}
-    <NowPlaying active={$active} metadata={$metadata} volume={$volume} controls={$capabilities[$active]?.controls ?? []} available={$available} shuffle={$shuffle} repeat={$repeat} onvolume={openVolume} onvisualisation={showVisualisation} onhome={() => (libraryRequested = true)} />
-  {/if}
+  <!-- One backdrop for the whole panel, so a screen change does not build
+       two large blurred layers again (George, 2026-09-17). Exactly one
+       screen is mounted over it at a time and the incoming one fades in:
+       the screens are transparent now, so overlapping them would show both
+       at once. -->
+  <PanelBackground artwork={$metadata?.artwork ?? null} />
 
-  {#if libraryOpen}
-  <Library
-    active={$active}
-    metadata={$metadata}
-    volume={$volume}
-    controls={$active ? ($capabilities[$active]?.controls ?? []) : []}
-    availability={$availability}
-    onclose={() => (libraryRequested = false)}
-    onsettings={openSettings}
-    onvolume={openVolume}
-  />
-  {/if}
-
-  <!-- Mounted only while open, like the library (see Library.svelte). -->
   {#if settingsOpen}
-    <div class="settings" transition:fade={{ duration: 120 }}>
-      <Settings onback={() => (settingsOpen = false)} />
+    <div class="screen-layer" transition:fade={{ duration: 120 }}>
+      <Settings onback={() => (settingsOpen = false)} embedded />
+    </div>
+  {:else if libraryOpen}
+    <div class="screen-layer" transition:fade={{ duration: 120 }}>
+      <Library
+        active={$active}
+        metadata={$metadata}
+        volume={$volume}
+        controls={$active ? ($capabilities[$active]?.controls ?? []) : []}
+        availability={$availability}
+        onclose={() => (libraryRequested = false)}
+        onsettings={openSettings}
+        onvolume={openVolume}
+      />
+    </div>
+  {:else if $active}
+    <div class="screen-layer" transition:fade={{ duration: 120 }}>
+      <NowPlaying active={$active} metadata={$metadata} volume={$volume} controls={$capabilities[$active]?.controls ?? []} available={$available} shuffle={$shuffle} repeat={$repeat} onvolume={openVolume} onvisualisation={showVisualisation} onhome={() => (libraryRequested = true)} />
     </div>
   {/if}
 
@@ -215,12 +222,13 @@
     overflow: hidden;
   }
 
-  /* The design's 42 would cover the idle screen, which ADR-0033 puts over
-     every screen; above the library (10) and the volume drawer (12-13). */
-  .settings {
+  /* Above the panel's backdrop, below the volume drawer (12-13), the idle
+     screen (20) and the handoff (30). The design puts settings at 42, which
+     would cover the idle screen ADR-0033 puts over every screen. */
+  .screen-layer {
     position: absolute;
     inset: 0;
-    z-index: 15;
+    z-index: 5;
     overflow: hidden;
   }
 </style>

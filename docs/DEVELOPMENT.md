@@ -1076,11 +1076,16 @@ checked on the panel before the next:
     third is not done:** one shared blurred background behind every screen
     would mean only one screen is mounted at a time, which changes how they
     cross-fade, so it waits until George says the first two are not enough.
-    **Neither helped visibly (George, 2026-09-17).** Two more changes from
-    that round, both awaiting his check: the library's open/close animation
-    is halved, 260 ms to 140 ms (Settings' fade 180 to 120), and the CPU
-    governor is `performance` rather than `ondemand`
-    ([ADR-0039](decisions/0039-cpu-governor-performance.md)).
+    **Neither helped visibly (George, 2026-09-17).** Three more changes from
+    that round, all awaiting his check: the library's open/close animation is
+    halved, 260 ms to 140 ms (Settings' fade 180 to 120); the CPU governor is
+    `performance` rather than `ondemand`
+    ([ADR-0039](decisions/0039-cpu-governor-performance.md)); and the third
+    part is now built - **one backdrop for the whole panel**
+    (`PanelBackground.svelte`), with each screen drawing only its own veil.
+    **Deviation:** exactly one screen is mounted at a time and the incoming
+    one fades in over 120 ms, where the design layers the library over now
+    playing - transparent screens cannot overlap without showing both.
 5. **Album page and Play all.**
 6. **Artist grid with the jump rail, then the artist page.**
 7. **Three-pane Browse** with row actions.

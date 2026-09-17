@@ -12,7 +12,10 @@
   // On the panel, Settings is a layer over the library and Back closes it
   // (source/Now Playing.dc.html passes the design's onBack). A phone has
   // nothing to go back to, so it passes none.
-  let { onback = null } = $props();
+  //
+  // `embedded` is the panel too: there the weave is drawn once for the whole
+  // panel (PanelBackground.svelte). A phone gets its own, as before.
+  let { onback = null, embedded = false } = $props();
 
   const WIDE_MIN = 720;
 
@@ -136,8 +139,10 @@
   }
 </script>
 
-<div class="settings" bind:clientWidth={width}>
-  <div class="weave"></div>
+<div class="settings" class:is-embedded={embedded} bind:clientWidth={width}>
+  {#if !embedded}
+    <div class="weave"></div>
+  {/if}
   <div class="veil"></div>
 
   <div class="frame">
@@ -312,6 +317,9 @@
     color: var(--ink);
     background: var(--bg-base);
     -webkit-tap-highlight-color: transparent;
+  }
+  .settings.is-embedded {
+    background: none;
   }
   .weave {
     position: absolute;

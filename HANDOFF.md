@@ -69,7 +69,11 @@ its card. UI deployed by hand to `/opt/gexis-ui` (previous build at
   reached at some point (66.2 °C before, 67.2 °C after). The governor is set
   by `gexis-cpu-governor.service`, enabled on the device and shipped by
   `stage-gexis/03-core`, so it survives a reboot and a reflash.
-  Earlier in the same step: New Music covers are requested at 200 px for their 176 px cards,
+  **Part three is now built too:** one backdrop for the whole panel
+  (`ui/src/screens/PanelBackground.svelte`) instead of two large blurred
+  layers per screen; screens keep their own veil, exactly one is mounted at a
+  time, and the incoming one fades in over 120 ms. Earlier in the same
+  step: New Music covers are requested at 200 px for their 176 px cards,
   now playing's artwork at 500 px (LMS returns the original otherwise, up to
   358 KB, and it is blurred at 72 px behind the screen), and the strip's fade
   mask changes only when an edge gains or loses its fade. **Part three, one
