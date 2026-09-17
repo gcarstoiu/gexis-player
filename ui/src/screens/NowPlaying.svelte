@@ -6,14 +6,15 @@
   data-unwired="<phase>" until the phase that wires them.
 -->
 <script>
-  import { untrack } from 'svelte';
   import spotifyMark from '../assets/icon-spotify.png';
   import bluetoothMark from '../assets/icon-bluetooth.png';
   import VolumeIcon from '../lib/VolumeIcon.svelte';
 
   import { sendTransport } from '../lib/state.js';
+  import { playhead, mmss } from '../lib/playhead.svelte.js';
+  import { playToggle } from '../lib/playToggle.svelte.js';
 
-  let { active, metadata, volume, controls = [], available = [], shuffle = null, repeat = null, onvolume, onvisualisation } = $props();
+  let { active, metadata, volume, controls = [], available = [], shuffle = null, repeat = null, onvolume, onvisualisation, onhome } = $props();
 
   const SOURCES = {
     lms: { label: 'LMS', mark: null },
@@ -23,7 +24,6 @@
   const source = $derived(SOURCES[active] ?? { label: active, mark: null });
 
   const transport = $derived(metadata?.transport ?? null);
-  const playing = $derived(transport === 'playing');
 
   // An artwork URL that fails to load falls back to the pending glyph.
   let failedArtwork = $state(null);
@@ -31,68 +31,13 @@
     metadata?.artwork && metadata.artwork !== failedArtwork ? metadata.artwork : null,
   );
 
-  // Position is published at a rate that differs by source, so the bar
-  // advances locally and re-anchors only when the published values change —
-  // every broadcast repeats the last position, including volume-only ones.
-  let anchor = $state({ position: null, duration: null, playing: false, at: 0 });
-  let now = $state(performance.now());
-
-  $effect(() => {
-    const position = metadata?.position ?? null;
-    const duration = metadata?.duration ?? null;
-    const a = untrack(() => anchor);
-    if (position !== a.position || duration !== a.duration || playing !== a.playing) {
-      const at = performance.now();
-      anchor = { position, duration, playing, at };
-      now = at;
-    }
-  });
-
-  $effect(() => {
-    if (!anchor.playing || anchor.position === null) return;
-    const id = setInterval(() => (now = performance.now()), 500);
-    return () => clearInterval(id);
-  });
-
-  const hasPosition = $derived(anchor.position !== null && !!anchor.duration);
-  const elapsed = $derived.by(() => {
-    if (!hasPosition) return 0;
-    const moved = anchor.playing ? (now - anchor.at) / 1000 : 0;
-    return Math.min(anchor.position + moved, anchor.duration);
-  });
-  const percent = $derived(hasPosition ? (elapsed / anchor.duration) * 100 : 0);
-
-  const fmt = (s) => {
-    s = Math.max(0, Math.floor(s));
-    return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
-  };
-
+  const head = playhead(() => metadata);
 
   // ADR-0037: shown when the renderer has the command.
   const hasPlayPause = $derived(controls.includes('play') && controls.includes('pause'));
 
-  // The icon flips on press (George, 2026-09-16, amending ADR-0037 §4 for
-  // this button): Bluetooth reports a pause about 4.5 s late (measured), and
-  // a button that seems not to have heard reads as broken. Only the icon is
-  // ahead of the renderer - the progress bar and the source pill still show
-  // what it reports - and if it has not confirmed within CONFIRM_MS the icon
-  // goes back to the reported state.
-  const CONFIRM_MS = 8000;
-  let pressed = $state(null); // 'playing' | 'paused': what the last press asked for
-  let pressTimer;
-  const shows = $derived(pressed ?? (playing ? 'playing' : 'paused'));
-
-  function forgetPress() {
-    clearTimeout(pressTimer);
-    pressed = null;
-  }
-  $effect(() => {
-    if (pressed !== null && transport === pressed) untrack(forgetPress);
-  });
-  $effect(() => {
-    active;
-    untrack(forgetPress);
-  });
+  // The icon flips on press; see playToggle.svelte.js.
+  const toggle = playToggle(() => transport, () => active);
 
   // Shuffle and repeat show what the renderer reports (LMS answers in about
   // 0.5 s, Finding 028), so unlike play they do not flip on press. Repeat
@@ -107,19 +52,6 @@
     }
   }
 
-  async function togglePlay() {
-    const want = shows === 'playing' ? 'paused' : 'playing';
-    clearTimeout(pressTimer);
-    pressed = want;
-    pressTimer = setTimeout(forgetPress, CONFIRM_MS);
-    try {
-      await sendTransport(want === 'playing' ? 'play' : 'pause');
-    } catch (err) {
-      forgetPress();
-      console.info('transport:', err.message);
-    }
-  }
-
   // The queue is LMS-only in the design. Keyed on the id until Phase 7 wires
   // it; shuffle and repeat follow the renderer's declaration (ADR-0037).
   const lmsOnly = $derived(active === 'lms');
@@ -130,7 +62,7 @@
   style:--src-accent={`var(--accent-${active}, var(--accent-lms))`}
   data-transport={transport ?? 'none'}
   data-artwork={artwork ? 'ok' : 'none'}
-  data-position={hasPosition ? 'ok' : 'none'}
+  data-position={head.hasPosition ? 'ok' : 'none'}
 >
   <div class="screen__weave"></div>
   {#if artwork}
@@ -192,17 +124,17 @@
       <div class="progress">
         <div class="progress__rail">
           <div class="progress__track">
-            <div class="progress__fill" style:--pos={`${percent}%`}></div>
+            <div class="progress__fill" style:--pos={`${head.percent}%`}></div>
           </div>
         </div>
         <div class="progress__times">
-          <span>{fmt(elapsed)}</span><span>-{fmt((anchor.duration ?? 0) - elapsed)}</span>
+          <span>{mmss(head.elapsed)}</span><span>-{mmss((head.duration ?? 0) - head.elapsed)}</span>
         </div>
       </div>
 
       <div class="bar">
         <div class="bar__left">
-          <button class="btn" type="button" aria-label="Home" disabled data-unwired="phase-7">
+          <button class="btn" type="button" aria-label="Home" onclick={onhome}>
             <span class="i-tiles"><i></i><i></i><i></i><i></i></span>
           </button>
           <button class="btn" type="button" aria-label="Visualization" onclick={onvisualisation}>
@@ -225,7 +157,7 @@
             </button>
           {/if}
           {#if hasPlayPause}
-            <button class="btn btn--play" type="button" data-shows={shows} aria-label={shows === 'playing' ? 'Pause' : 'Play'} onclick={togglePlay}>
+            <button class="btn btn--play" type="button" data-shows={toggle.shows} aria-label={toggle.shows === 'playing' ? 'Pause' : 'Play'} onclick={toggle.toggle}>
               <span class="i-play"></span><span class="i-pause"></span>
             </button>
           {/if}

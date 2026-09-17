@@ -127,6 +127,20 @@ porting, until the design takes them in:
   phone's volume change opens the drawer, which closes 3 s after the last
   change. The panel's own changes and a takeover's restored level do not
   open it.
+- **Press feedback shrinks, it does not fill (2026-09-16/17, George).** The
+  design's grey press fill read as a flash on the play button, then on
+  prev/next/shuffle/repeat, then on now playing's Home, Settings' Back and
+  the mini strip. Those keep their resting fill and shrink instead.
+- **The library and Settings are mounted only while open (2026-09-17).** The
+  design leaves both in the page at opacity 0; on the panel the closed
+  library then covered now playing in black.
+- **Mini strip volume glyph (2026-09-17).** The strip draws the drawer's
+  30px glyph, for the same reason as now playing's button above, not the
+  design's 24px one.
+- **New Music artist names at 0.60 alpha (2026-09-17).** The design uses
+  0.55, under its own 4.5:1 floor for 15px text (`design/tokens.css`).
+- **Card counts are singular where they should be (2026-09-17):**
+  "1 playlist", not the design's "1 playlists".
 - **Settings inventory (2026-09-15).** `idle_grace` is not a row — ADR-0033
   merged it into `idle_timeout` (5 min); `travel_curve` is decided (ADR-0034,
   marks `RH`); `drawer_on_external` and `drawer_autohide` are added under
@@ -928,7 +942,7 @@ Plexamp app's audio stops at the tap.
 
 ### Phase 7 — Library browse
 
-**Status 2026-09-17: steps 1, 1a, 2 and 3 done; next is step 4. ADR-0038 proposed.**
+**Status 2026-09-17: steps 1, 1a, 2, 3 and 4 done; next are 4a-4c (George's panel findings). ADR-0038 proposed.**
 Branch `phase-7-plan`. Criteria 1 and 6 amended, 10 and 11 added, by
 [ADR-0038](decisions/0038-library-and-radio-on-the-panel.md) (George's
 decisions, 2026-09-17).
@@ -1033,7 +1047,16 @@ checked on the panel before the next:
    `/playlists/{id}`. Checked by Claude on `gexis` (hand-installed): every
    route 35–90 ms against George's LMS; no panel to check until step 4.
 4. **Home as the library root**, the New Music strip, the mini strip, Back
-   and Home navigation, now playing's Home button.
+   and Home navigation, now playing's Home button. **Done 2026-09-17;
+   George checked on the panel.** `Library.svelte`, `MiniStrip.svelteexp`,
+   `WaitingServices.svelte`, `SourceMark.svelte`, and the shared
+   `playhead`/`playToggle` modules now playing uses too. The header's Back
+   and Home are built but only reachable from step 5 on. **Defect found and
+   fixed during the check:** closed as an opacity-0 layer, the library kept
+   covering now playing in black on the panel (not reproducible in headless
+   Chromium on the device, with or without GPU flags); the library and
+   Settings are now mounted only while open, as the idle screen already was.
+   George's three findings from the check are steps 4a-4c.
 5. **Album page and Play all.**
 6. **Artist grid with the jump rail, then the artist page.**
 7. **Three-pane Browse** with row actions.

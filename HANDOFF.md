@@ -39,9 +39,36 @@ George asked for radio artwork via enrichment: Phase 8 criterion 7.
 `GET /library/…` reads, tested against made-up LMS replies (George's call).
 Hand-installed on `gexis` too; previous core at `/opt/gexis-core.7-3-backup`.
 
-**Next action: step 4 — Home as the library root** (cards, New Music strip,
-mini strip, Back/Home navigation, now playing's Home button). First UI step;
-George checks on the panel.
+**Step 4 is done** (2026-09-17, checked by George on the panel): Home is the
+library root — five cards with live counts, the New Music strip, the mini
+strip, the waiting services when no renderer is connected, and Settings from
+its card. UI deployed by hand to `/opt/gexis-ui` (previous build at
+`/opt/gexis-ui.7-4-backup`).
+
+**Next actions: George's three findings from that check**, in his order:
+
+- **4a: volume drops to 0 when LMS pauses.** LMS fades the player out by
+  sending volume steps; squeezelite applies them to the dummy control the
+  core follows, so the core copies the fade to the DAC and publishes 0%
+  (measured 2026-09-17: dummy 22 -> 7 -> -6 -> -20 -> -50 in ~150 ms, while
+  LMS's own `mixer volume` stayed at 52 throughout). **Live in the shipped
+  image**, and it also means a takeover during a pause remembers the faded
+  level. George chose **option A**: ignore the dummy while LMS is not
+  playing, and re-read it once on resume. Amends ADR-0034/ADR-0018.
+- **4b: press feedback flashes** on the mini strip, Settings' Back and now
+  playing's Home. George: shrink instead, as the play button already does.
+- **4c: choppiness**, in George's order: New Music covers are 500px images
+  in 176px slots (request the drawn size); the strip's fade mask is
+  recomputed while scrolling (change it only when an edge gains or loses its
+  fade); every screen carries its own two large blurred backgrounds (share
+  one behind all screens).
+
+**Lesson candidate (2026-09-17), for George:** headless Chromium on the
+device was used to check the panel UI and answered a different question
+twice — it did not reproduce the black-screen defect the panel showed, and
+its screenshots silently stopped updating after any animated transition, so
+a real defect first looked like a capture artefact. The panel is the only
+renderer that answers "does the panel draw this".
 
 **Test data on George's LMS:** playlist folder `/playlist` (George set it;
 it triggered a full rescan that renumbered the library). Playlists

@@ -9,6 +9,11 @@
   import { onMount } from 'svelte';
   import { settingsGroups, settingsError, loadSettings, writeSetting } from '../lib/settings.js';
 
+  // On the panel, Settings is a layer over the library and Back closes it
+  // (source/Now Playing.dc.html passes the design's onBack). A phone has
+  // nothing to go back to, so it passes none.
+  let { onback = null } = $props();
+
   const WIDE_MIN = 720;
 
   let width = $state(0);
@@ -123,7 +128,11 @@
   }
 
   function back() {
-    drilled = null;
+    if (!wide && drilled) {
+      drilled = null;
+      return;
+    }
+    onback?.();
   }
 </script>
 
@@ -133,7 +142,7 @@
 
   <div class="frame">
     <div class="head" class:head--wide={wide}>
-      {#if !wide && drilled}
+      {#if (wide && onback) || (!wide && drilled)}
         <button class="back" type="button" aria-label="Back" onclick={back}><span></span></button>
       {/if}
       <div class="head__text">

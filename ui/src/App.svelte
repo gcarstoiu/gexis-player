@@ -1,8 +1,10 @@
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
 <script>
   import { onMount, untrack } from 'svelte';
-  import { connect, active, metadata, volume, handoff, handoffExemptPairs, capabilities, available, shuffle, repeat } from './lib/state.js';
+  import { fade } from 'svelte/transition';
+  import { connect, active, metadata, volume, handoff, handoffExemptPairs, capabilities, available, availability, shuffle, repeat } from './lib/state.js';
   import NowPlaying from './screens/NowPlaying.svelte';
+  import Library from './screens/Library.svelte';
   import IdleScreen from './screens/IdleScreen.svelte';
   import VolumeDrawer from './screens/VolumeDrawer.svelte';
   import HandoffScreen from './screens/HandoffScreen.svelte';
@@ -83,6 +85,33 @@
     return () => clearTimeout(id);
   });
 
+  // The library is a layer over now playing (source/Now Playing.dc.html). It
+  // is Home, the no-renderer screen (ADR-0033), so it is always open while
+  // nothing is connected; otherwise now playing's Home button opens it and
+  // the mini strip closes it.
+  let libraryRequested = $state(false);
+  const libraryOpen = $derived(!$active || libraryRequested);
+  let previousActive = null;
+  $effect(() => {
+    const now = $active;
+    // A renderer arriving shows now playing (ADR-0033's assumption).
+    if (previousActive === null && now !== null) untrack(() => (libraryRequested = false));
+    previousActive = now;
+  });
+
+  // Settings is reached from the library root's card and nowhere else on the
+  // panel (design/screens.md, Navigation); its Back closes it.
+  let settingsOpen = $state(false);
+  function openSettings() {
+    closeVolume();
+    settingsOpen = true;
+  }
+
+  const openVolume = () => {
+    keepVolumeOpen();
+    volumeOpen = true;
+  };
+
   // ADR-0032: the panel renders everything; a remote browser only settings.
   let surface = $state(null);
   async function showVisualisation() {
@@ -112,10 +141,27 @@
 
 <div class="panel">
   {#if $active}
-    <NowPlaying active={$active} metadata={$metadata} volume={$volume} controls={$capabilities[$active]?.controls ?? []} available={$available} shuffle={$shuffle} repeat={$repeat} onvolume={() => { keepVolumeOpen(); volumeOpen = true; }} onvisualisation={showVisualisation} />
-  {:else}
-    <!-- Home (ADR-0033) is the no-renderer screen; its content is Phase 7. -->
-    <div class="placeholder" data-unwired="home">Nothing playing</div>
+    <NowPlaying active={$active} metadata={$metadata} volume={$volume} controls={$capabilities[$active]?.controls ?? []} available={$available} shuffle={$shuffle} repeat={$repeat} onvolume={openVolume} onvisualisation={showVisualisation} onhome={() => (libraryRequested = true)} />
+  {/if}
+
+  {#if libraryOpen}
+  <Library
+    active={$active}
+    metadata={$metadata}
+    volume={$volume}
+    controls={$active ? ($capabilities[$active]?.controls ?? []) : []}
+    availability={$availability}
+    onclose={() => (libraryRequested = false)}
+    onsettings={openSettings}
+    onvolume={openVolume}
+  />
+  {/if}
+
+  <!-- Mounted only while open, like the library (see Library.svelte). -->
+  {#if settingsOpen}
+    <div class="settings" transition:fade={{ duration: 180 }}>
+      <Settings onback={() => (settingsOpen = false)} />
+    </div>
   {/if}
 
   {#if $volume}
@@ -169,15 +215,12 @@
     overflow: hidden;
   }
 
-  .placeholder {
-    width: 1280px;
-    height: 800px;
-    display: grid;
-    place-items: center;
-    font-family: var(--font-mono);
-    font-size: var(--t-label);
-    letter-spacing: var(--track-label);
-    text-transform: uppercase;
-    color: var(--ink-quiet);
+  /* The design's 42 would cover the idle screen, which ADR-0033 puts over
+     every screen; above the library (10) and the volume drawer (12-13). */
+  .settings {
+    position: absolute;
+    inset: 0;
+    z-index: 15;
+    overflow: hidden;
   }
 </style>
