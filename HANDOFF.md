@@ -12,6 +12,14 @@ Phase 6 core and UI installed by hand.** The Phase 6 image is built from
 and verified contents. **Next action: George flashes it and checks, then the
 PR from `phase-6-plan` to `main`.**
 
+**Moved to R2D2 on 2026-09-17** (see Machines). The Phase 6 image build was
+started there, detached, at 11:35: log `~/gexis-build.log`, which ends with
+`BUILD-EXIT=<code>`. **Pull first** (`git pull` on `phase-6-plan`): R2D2's
+clone predates this note. If the build succeeded, verify the image the way the
+Phase 5 image was verified (debugfs on the root partition: units, peppy
+files, venv code identical to the repo), then hand it to George. A first
+build on R2D2 is cold, so expect it to take longer than 12 minutes.
+
 **Checks for the flashed Phase 6 image:**
 
 1. **Peppy screen:** it comes up after 5 minutes of playback with no touch.
@@ -163,7 +171,8 @@ commit, on `phase-3-core-daemon`.
 
 | Name | What it is | Notes |
 |---|---|---|
-| `C3PO` | dev machine | CachyOS, **fish shell** — no heredocs. Hand it script files to run with `bash`, not pasted multi-line commands. |
+| `R2D2` | **dev machine from 2026-09-17** | CachyOS, 12 cores, 31 GB RAM, **fish shell**. `192.168.178.134`. Replaced C3PO because builds kept being killed for low memory. Set up per `image/README.md`'s host prerequisites: Docker with `data-root` `/home/docker`, qemu-user-static-binfmt, `~/.local/bin/qemu-aarch64`, loop autoloaded via `/etc/modules-load.d/loop.conf`. Repo at `~/projects/gexis-player`, both `*.local.env` files and Claude's project memory copied from C3PO, its key authorized on `gexis`. UI builds, 444 core tests pass. |
+| `C3PO` | former dev machine | CachyOS, 8 cores, 14 GB, **fish shell** — no heredocs. Hand it script files to run with `bash`, not pasted multi-line commands. Retired for builds 2026-09-17 (out of memory). |
 | `rig` | Raspberry Pi 4, 4 GB | Raspberry Pi OS Lite 64-bit, Trixie. **Reference machine** — holds the environment Findings 002-004 were measured against. Not the build/test target. |
 | `gexis` | Raspberry Pi 4 | Flashed from this project's own `make image` output. User `pi`. Reachable as `pi@gexis.local` by SSH key. **The image-built target** — Phase 2 onward is built and measured here. |
 | SD card 2 | moOde | Reference install. Read-only recon source. Do not modify. |
