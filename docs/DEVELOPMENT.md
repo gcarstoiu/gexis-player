@@ -928,6 +928,11 @@ Plexamp app's audio stops at the tap.
 
 ### Phase 7 — Library browse
 
+**Status 2026-09-17: planned; ADR-0038 proposed and awaiting George's read.**
+Branch `phase-7-plan`. Criteria 1 and 6 amended, 10 and 11 added, by
+[ADR-0038](decisions/0038-library-and-radio-on-the-panel.md) (George's
+decisions, 2026-09-17).
+
 **Rewritten 2026-09-14 by [ADR-0030](decisions/0030-library-typed-radio-slimbrowse.md).**
 The previous criteria were sized for "Full SlimBrowse: My Music, Radio, plugin
 menus" and are recorded below. Phase 7 is now materially smaller: the library
@@ -936,10 +941,14 @@ subtree of nine items.
 
 **Acceptance**
 
-1. **Library screens over typed queries**, not SlimBrowse: Albums, All
-   Artists, Album Artists, Composers, Genres, Years, Compilations, New Music,
-   Songs, Playlists, Music Folder. Works when the library has any. Counts and
-   commands are in ADR-0030.
+1. **Library screens over typed queries**, not SlimBrowse. **Amended
+   2026-09-17 (George): only what is designed** — the library root with the
+   New Music strip, three-pane Browse, the artist grid, the artist page
+   (discography only until Phase 8; initials, not photos), the album page, and
+   Playlists. Row actions: play now, add to queue, add to playlist; **create
+   playlist is not in Phase 7.** ADR-0030's other lists (Album Artists,
+   Composers, Genres, Years, Compilations, Songs, Music Folder) are out of
+   scope. Counts and commands are in ADR-0030; screens in ADR-0038.
 2. **Playback from a typed id works** — `playlistcontrol cmd:load
    album_id:<id>` and its track/artist equivalents. **Verify first:** ADR-0030
    records this as the load-bearing assumption of the typed half and it has
@@ -950,7 +959,9 @@ subtree of nine items.
 5. **Radio browses via SlimBrowse rooted at `["radios","menu:radio"]`**, never
    at `home`. `base.actions` / `itemsParams` dispatch, `nextWindow` precedence
    and in-place refresh are still required — but only for this subtree.
-6. **Podcasts (`opmlpodcast`) excluded by id**; Radio Paradise and the rest of
+6. **Podcasts excluded by its command `["podcast","items"]`** (amended
+   2026-09-17: the reply carries no `opmlpodcast` id, ADR-0038 §8); Radio
+   Now Playing stays (George); Radio Paradise and the rest of
    `My Apps` are unreachable by construction, not filtered.
 7. **Text-input items dropped wherever they appear** — mechanically, from an
    `input` block or `__TAGGEDINPUT__` / `__INPUT__` in the action params. One
@@ -964,6 +975,38 @@ subtree of nine items.
    `current_title` as a single space and the real names in `remoteMeta`
    (`title` "#1 Hit Radio", `artist` "KissFM  Live!"). The core publishes the
    blank, so the panel shows no title. George: fix in Phase 7.
+10. **Queue rail on now playing** (LMS only), with the design's empty state
+    offering a playlist chooser. Added 2026-09-17 (George).
+11. **Home and the mini strip:** Home is the library root, reached from
+    `active: null` (ADR-0033) and from now playing's Home button; the mini
+    strip on every other screen, with play/pause through ADR-0037's route.
+    Added 2026-09-17 with the plan.
+
+**Plan, agreed with George 2026-09-17** — one increment at a time, each
+checked on the panel before the next:
+
+0. **ADR-0038:** designed screens only; row actions; initials and a
+   discography-only artist page; queue rail; routes, paging, RAM cache,
+   radio handles; artwork direct as `cover_WxH_o.jpg`; Podcasts by command.
+   ADR-0022 inventory rows appended. **Written; awaiting George's read.**
+1. **Hardware finding (029), no product code.** Read-only: page costs,
+   `textkey` folding, release types, track durations, the radio tree four
+   levels down, `remoteMeta`, which artist list the design's "Artists" is,
+   rescan over CometD. **With George present** (plays music): `load` by
+   album, artist, track and playlist; add to queue; add to playlist; the
+   queue read back; `load` on a powered-off LMS while Spotify plays.
+2. **Radio title from `remoteMeta`** (criterion 9).
+3. **Library reads in the core**, tested against replies recorded in step 1.
+4. **Home as the library root**, the New Music strip, the mini strip, Back
+   and Home navigation, now playing's Home button.
+5. **Album page and Play all.**
+6. **Artist grid with the jump rail, then the artist page.**
+7. **Three-pane Browse** with row actions.
+8. **Playlists.**
+9. **Radio.**
+10. **Queue rail.**
+11. Clear the `phase-7` markers; DEVELOPMENT, HANDOFF, image (also R2D2's
+    loop-device test, HANDOFF), PR.
 
 *Superseded criteria, kept for history:* (1) Full SlimBrowse: My Music, Radio,
 plugin menus. (2) `base.actions` / `itemsParams` dispatch implemented.

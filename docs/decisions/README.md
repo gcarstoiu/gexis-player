@@ -49,7 +49,7 @@ the question blocking it was answered.
 | [0027](0027-lms-power-as-arbitration-mechanism.md) | LMS power is the arbitration mechanism; no permanent base slot | Accepted — supersedes parts of [0010](0010-arbitration-slot-model.md) |
 | [0028](0028-ui-serving-and-command-channel.md) | The core daemon serves the UI; commands go over REST | Accepted — answers what [0023](0023-svelte-ui.md) left open |
 | [0029](0029-text-entry-on-every-surface.md) | Text fields are editable on the panel too; no on-screen keyboard | Accepted — supersedes [0022](0022-settings.md)'s remote-only rule, amends [0020](0020-library-browse-tree.md) |
-| [0030](0030-library-typed-radio-slimbrowse.md) | Library by typed query and our own screens; SlimBrowse only for radio, rooted at `radios` | Accepted — supersedes [0020](0020-library-browse-tree.md)'s pass-through decision |
+| [0030](0030-library-typed-radio-slimbrowse.md) | Library by typed query and our own screens; SlimBrowse only for radio, rooted at `radios` | Accepted — supersedes [0020](0020-library-browse-tree.md)'s pass-through decision; amended by [0038](0038-library-and-radio-on-the-panel.md) |
 | [0031](0031-first-boot-setup-access-point.md) | First boot with no network raises a setup access point; typing happens on the user's phone | Accepted — answers the blocker [0022](0022-settings.md) raised and [0021](0021-deployment-flashable-image.md) could not close |
 | [0032](0032-one-page-two-surfaces.md) | One page, two surfaces: the panel renders everything, a remote browser renders only settings | Accepted — only the settings screen is responsive; clarifies Phase 4 criterion 5 |
 | [0033](0033-idle-and-home.md) | Idle is "not playing and not touched"; Home is the no-renderer screen | Accepted — amends [0019](0019-peppy-screen-lifecycle.md) |
@@ -57,6 +57,7 @@ the question blocking it was answered.
 | [0035](0035-settings-api.md) | Settings: one registry in the daemon, a generic API, wired one setting at a time | Accepted — the API ADR-0032 deferred |
 | [0036](0036-peppy-entry-and-no-rate-or-codec.md) | Peppy screen entry: the button, or five minutes of unattended playback; no sample rate or codec anywhere | Accepted — amends [0019](0019-peppy-screen-lifecycle.md) |
 | [0037](0037-transport-commands.md) | Transport commands: one route to the active renderer; a control the renderer has is visible, disabled when it cannot work now | Accepted — amends [0020](0020-library-browse-tree.md)'s unusable-controls rule |
+| [0038](0038-library-and-radio-on-the-panel.md) | Library and radio on the panel: the designed screens only, read through the core, played on LMS | **Proposed** — amends [0030](0030-library-typed-radio-slimbrowse.md) (screen list, Podcasts exclusion, Radio Now Playing) |
 
 ## Cross-cutting rules
 

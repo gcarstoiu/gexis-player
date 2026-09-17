@@ -3021,3 +3021,125 @@ unverified (ADR-0030); Claude Design owes drawn number/text editors and a
 corrected `design/README.md`.
 
 **Next phase after the Phase 6 PR: 7 — library browse.**
+
+
+# Session 18, Phase 6 close (2026-09-17) — superseded 'Start here' block, moved verbatim
+
+Last updated: 2026-09-17 (eighteenth session, on R2D2 — **Phase 6 image
+flashed and signed off by George; PR from `phase-6-plan` to `main` open**)
+
+## Start here
+
+**Phase 6 is closed pending the PR merge.** The device runs
+`2026-09-17-gexis-player-v0.2.1-202-gf3674f3-dirty.img` (built from
+`f3674f3`; `/etc/gexis` files dated 12:43–12:48, matching the build).
+Provisioned with `make provision`; `firstrun.sh` consumed itself; no failed
+units; all renderer, core, kiosk, meter and Peppy units running.
+
+**Done on the device this session (checked by Claude):**
+
+- C3PO's key appended; `ssh-keygen -lf ~/.ssh/authorized_keys` shows both,
+  R2D2 `SHA256:UVfvJQXw…ci4` and C3PO `SHA256:d/pT3AST…tok`. **Repeat after
+  every reflash** (`provision.local.env` carries R2D2's key only; George chose
+  not to change `provision.sh`):
+  `ssh pi@gexis.local 'cat >> ~/.ssh/authorized_keys' < ~/.ssh/c3po_id_ed25519.pub`.
+- LMS player `gexis` (`88:a2:9e:79:e1:32`): `digitalVolumeControl` **1**
+  after the reflash, read over JSON-RPC. LMS itself was not restarted, so the
+  "after an LMS restart" half of that check was not made.
+- Core tests on R2D2: 444 passed, 1 skipped (scratch venv, `core[test]`).
+
+**George's hardware checks of the image: George called them done
+(2026-09-17) and asked for the PR.** Results for the individual checks
+(Peppy entry at 5 min, transport on three renderers, shuffle/repeat on
+Spotify and Bluetooth, the speakers-on items) were not reported item by item
+in the session, so none of them is recorded here as observed. If one matters
+later, ask George rather than reading this as a pass.
+
+**Next action:** George reviews and merges the Phase 6 PR. Then Phase 7 —
+library browse, starting with the unverified
+`playlistcontrol cmd:load album_id:<id>` (ADR-0030).
+
+**The loop-device question is still open, and the discriminating state is
+recorded.** Background: the first R2D2 build (2026-09-17 11:35, log
+`~/gexis-build-1-failed-loop.log`) failed at `export-image/prerun.sh` with
+`mknod: invalid minor device number '/dev/loop0 (lost)'`; the rerun (12:40,
+`~/gexis-build.log`) passed but started with `/dev/loop0` already present, so
+it discriminated nothing. **After R2D2's reboot, before any build (13:37,
+up 8 min):** `lsmod | grep -w loop` → `loop 45056 0` (autoloaded from
+`/etc/modules-load.d/loop.conf`); `ls -l /dev/loop*` → only
+`/dev/loop-control`, **no `/dev/loopN`**. No build has run since. **The next
+`make image` on R2D2 is the test**, provided R2D2 has not rebooted and nothing
+has created a loop node in between — re-record both before building. A pass
+means `image/README.md`'s root cause (module not loaded) is right; a `(lost)`
+failure means the missing node is the cause and autoloading does not prevent
+it — then propose to George correcting the README and a durable fix (e.g.
+pre-creating a node before the build; needs `sudo`).
+
+**Docker group:** after the reboot `id` shows `docker` (950) directly;
+`newgrp` is no longer needed. Run builds detached so the session's memory
+guard cannot kill them:
+`nohup setsid bash -c "make image > ~/gexis-build.log 2>&1; echo BUILD-EXIT=\$? >> ~/gexis-build.log" >/dev/null 2>&1 </dev/null &`.
+Move the previous log aside first. The submodule shows `m image/pi-gen`
+afterwards: expected, leave it.
+
+**Development moved to R2D2 on 2026-09-17** (see Machines).
+`~/provision.local.env.bak-c3po-key` (holds the Wi-Fi password) can be
+deleted once George is happy.
+
+**Phase 6** (DEVELOPMENT.md has the evidence): criteria 1 and 2 built and
+checked on the panel; criterion 3 (info panels) moved to Phase 8; criterion 4
+(the Peppy button) was done in Phase 5.
+[ADR-0037](docs/decisions/0037-transport-commands.md) covers transport, with
+two amendments by George: the play icon flips on press, and Spotify and
+Bluetooth get shuffle and repeat.
+[Finding 028](docs/findings/028-transport-commands-on-three-renderers.md) has
+the measurements.
+
+**Phases renumbered 2026-09-16:** 9 is settings wiring and UI polish (new);
+10 is the plugin contract; 11 Plexamp and 12 Qobuz Connect (new); 13 is first
+boot.
+
+**Issues to look at later (Phase 6 hardware rounds, 2026-09-16):**
+
+- **Over Bluetooth, the Plexamp app reports pauses late or not at all** — about
+  6 s from its own button, 4.5 s or never for a panel command. The Spotify app
+  on the same phone reports in 0.2 s (Finding 028, addendum 2). A2DP's
+  stream-idle signal comes 3 s after the report, so it cannot help. With
+  Plexamp the panel's icon falls back after 8 s. Next step, with the speakers
+  on: does Plexamp's audio stop at the tap?
+- **LMS had player `gexis` on fixed volume (`digitalVolumeControl` 0), cause
+  unknown.** George found it as "phone volume does nothing while the panel is
+  muted, and LMS's volume bar is frozen". Measured 2026-09-16: with 0, LMS
+  moves its own number but always sends full level, so no LMS volume change
+  reaches the device, muted or not. Mute then became a trap, because the one
+  change that ends it never arrived. Set back to 1 with George's OK; re-tested
+  while playing: LMS volume reaches the DAC again, and a change while muted
+  ends mute (ADR-0034). **George never touched it,** and nothing in this repo
+  sets it; it worked on 2026-09-08 (Finding 008). **Checked after the 2026-09-17 reflash: 1.**
+  Still unchecked after an LMS restart. Nothing warns when it is 0; a candidate for
+  Phase 9.
+- **Pausing LMS moved the DAC slightly** (dummy −47 → −50 dB, DAC 152 → 150)
+  during the same test. Small, unexplained, not investigated.
+- **After a `gexis-core` restart, a phone already connected is not active.**
+  The Bluetooth adapter seeds metadata from a `MediaPlayer1` that is already
+  present but never calls `on_acquire`. Spotify has the same effect. It only
+  matters when the daemon restarts, not at boot.
+- **LMS once reported a position about 5 s ahead on resume**, then corrected
+  it at the next pause. Not reproduced on a second try; recheck with sound.
+
+**Follow-ups, not blocking:**
+
+- `viz_timeout` is read by the daemon but not wired in the settings registry,
+  so the phone cannot change it (ADR-0035 says wire it with its feature).
+- The stock skins are Volumio-branded; Gelo5's are the image default.
+- Titles too long for their box are cut with "…"; the wrapper scrolls them.
+- Fonts: DejaVu for text; DSEG7 (OFL) for time. PeppyFont not vendored.
+- George once saw the spectrum overlap remaining time on `dash-spectrum`;
+  not reproduced in 24 rotations or a direct start.
+- **Lesson candidate:** hand-started test processes multiplied because pid
+  files captured the wrong pid; George saw overlapping skins. Stop by looking
+  processes up, not by trusting a pid file.
+
+**Still open from earlier:** `playlistcontrol cmd:load album_id:<id>` is
+unverified (ADR-0030); Claude Design owes drawn number/text editors and a
+corrected `design/README.md`.

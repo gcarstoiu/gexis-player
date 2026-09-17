@@ -110,6 +110,20 @@ Phase 2 and ADR-0027.
 | Time zone / NTP | [N] | Confirmed as a setting by George, 2026-09-15. The idle clock shows device time, and the image ships no time zone: `gexis` came up as Europe/London and was set to Europe/Berlin by hand on 2026-09-15 — **a reflash loses it** |
 | Restrict the API to loopback | [N] | ADR-0028 binds `0.0.0.0` and is unauthenticated by decision; a lock-down toggle is cheap and consistent with the accepted-risk framing below |
 
+### Library and radio — Phase 7
+
+Confirmed as settings by George, 2026-09-17, from
+[ADR-0038](0038-library-and-radio-on-the-panel.md) §9. The [H] rows are
+hardcoded as Phase 7 builds them.
+
+| Setting | Mark | Notes |
+|---|---|---|
+| Albums in the New Music strip | [H] | 10, per `design/screens.md` |
+| Podcasts excluded from Radio | [H] | ADR-0030; excluded by its `["podcast","items"]` command (ADR-0038 §8) |
+| Radio Now Playing shown | [H] | Shown — George, 2026-09-17, closing ADR-0030's open item |
+| How long cached library lists are kept | [N] | ADR-0038 §6; a rescan invalidates regardless |
+| Artwork size requested from LMS | [H] | `cover_<W>x<H>_o.jpg` (ADR-0038 §7) |
+
 ### Enrichment and lyrics — Phase 8
 
 | Setting | Mark | Notes |

@@ -1,38 +1,51 @@
 # Handoff
 
-Last updated: 2026-09-17 (eighteenth session, on R2D2 — **Phase 6 image
-flashed and signed off by George; PR from `phase-6-plan` to `main` open**)
+Last updated: 2026-09-17 (eighteenth session, on R2D2 — **Phase 6 merged
+(PR #18); Phase 7 planned, ADR-0038 written and awaiting George's read**)
 
 ## Start here
 
-**Phase 6 is closed pending the PR merge.** The device runs
-`2026-09-17-gexis-player-v0.2.1-202-gf3674f3-dirty.img` (built from
-`f3674f3`; `/etc/gexis` files dated 12:43–12:48, matching the build).
-Provisioned with `make provision`; `firstrun.sh` consumed itself; no failed
-units; all renderer, core, kiosk, meter and Peppy units running.
+**Phase 7 — library browse — is planned on branch `phase-7-plan`.** George
+agreed the plan and six decisions on 2026-09-17; they are in
+[ADR-0038](docs/decisions/0038-library-and-radio-on-the-panel.md) (status
+**Proposed**) and in `docs/DEVELOPMENT.md` Phase 7 (criteria 1 and 6 amended,
+10 and 11 added, the plan). In short: only the designed screens; row actions
+play now, add to queue, add to playlist (**no create playlist** in Phase 7);
+initials instead of artist photos and a discography-only artist page until
+Phase 8; the queue rail is in; Radio Now Playing stays; five settings
+appended to ADR-0022's inventory (George confirmed).
 
-**Done on the device this session (checked by Claude):**
+**Next action: George reads ADR-0038.** Nothing else starts until George has.
+Then step 1, Finding 029: the read-only LMS measurements first, then the
+playback ones **with George present**, because they start music on George's
+system. ADR-0038's "Unverified" section is the list. One of its items needs
+George's call once measured: whether the design's "Artists" is All Artists
+(7,292) or Album Artists (916).
 
-- C3PO's key appended; `ssh-keygen -lf ~/.ssh/authorized_keys` shows both,
-  R2D2 `SHA256:UVfvJQXw…ci4` and C3PO `SHA256:d/pT3AST…tok`. **Repeat after
-  every reflash** (`provision.local.env` carries R2D2's key only; George chose
-  not to change `provision.sh`):
-  `ssh pi@gexis.local 'cat >> ~/.ssh/authorized_keys' < ~/.ssh/c3po_id_ed25519.pub`.
-- LMS player `gexis` (`88:a2:9e:79:e1:32`): `digitalVolumeControl` **1**
-  after the reflash, read over JSON-RPC. LMS itself was not restarted, so the
-  "after an LMS restart" half of that check was not made.
-- Core tests on R2D2: 444 passed, 1 skipped (scratch venv, `core[test]`).
+**Corrected in this session, worth not repeating:** Claude raised "playing
+from the library must power LMS on" as an open decision. It was not: LMS's
+auto-power-on on play is recorded in ADR-0027 (hardware, 2026-09-12) and
+Finding 019. The repo was not searched first — `docs/LESSONS.md` case 4's
+corollary.
 
-**George's hardware checks of the image: George called them done
-(2026-09-17) and asked for the PR.** Results for the individual checks
-(Peppy entry at 5 min, transport on three renderers, shuffle/repeat on
-Spotify and Bluetooth, the speakers-on items) were not reported item by item
-in the session, so none of them is recorded here as observed. If one matters
-later, ask George rather than reading this as a pass.
+**Measured 2026-09-17 against George's LMS (read-only), now in ADR-0038:**
+the `radios menu:radio` reply has no `id` on any item, so Podcasts is
+excluded by its `["podcast","items"]` command; `cover_300x300` is a 173 KB
+PNG where `cover_300x300_o.jpg` is a 25 KB JPEG (one album);
+`ignoredarticles` is "The El La Los Las Le Les".
 
-**Next action:** George reviews and merges the Phase 6 PR. Then Phase 7 —
-library browse, starting with the unverified
-`playlistcontrol cmd:load album_id:<id>` (ADR-0030).
+**The device** runs the Phase 6 image
+(`2026-09-17-gexis-player-v0.2.1-202-gf3674f3-dirty.img`), flashed and
+provisioned 2026-09-17. Both SSH keys authorized. **After every reflash**
+append C3PO's key (`provision.local.env` carries R2D2's only; George chose
+not to change `provision.sh`):
+`ssh pi@gexis.local 'cat >> ~/.ssh/authorized_keys' < ~/.ssh/c3po_id_ed25519.pub`,
+then `ssh-keygen -lf ~/.ssh/authorized_keys` on the device shows R2D2
+`SHA256:UVfvJQXw…ci4` and C3PO `SHA256:d/pT3AST…tok`.
+
+**Phase 6 is merged** (PR #18, 2026-09-17). George called the image checks
+done without item-by-item results, so none is recorded as observed
+(`docs/DEVELOPMENT.md` Phase 6 status).
 
 **The loop-device question is still open, and the discriminating state is
 recorded.** Background: the first R2D2 build (2026-09-17 11:35, log
@@ -60,15 +73,6 @@ afterwards: expected, leave it.
 **Development moved to R2D2 on 2026-09-17** (see Machines).
 `~/provision.local.env.bak-c3po-key` (holds the Wi-Fi password) can be
 deleted once George is happy.
-
-**Phase 6** (DEVELOPMENT.md has the evidence): criteria 1 and 2 built and
-checked on the panel; criterion 3 (info panels) moved to Phase 8; criterion 4
-(the Peppy button) was done in Phase 5.
-[ADR-0037](docs/decisions/0037-transport-commands.md) covers transport, with
-two amendments by George: the play icon flips on press, and Spotify and
-Bluetooth get shuffle and repeat.
-[Finding 028](docs/findings/028-transport-commands-on-three-renderers.md) has
-the measurements.
 
 **Phases renumbered 2026-09-16:** 9 is settings wiring and UI polish (new);
 10 is the plugin contract; 11 Plexamp and 12 Qobuz Connect (new); 13 is first
@@ -115,8 +119,7 @@ boot.
   files captured the wrong pid; George saw overlapping skins. Stop by looking
   processes up, not by trusting a pid file.
 
-**Still open from earlier:** `playlistcontrol cmd:load album_id:<id>` is
-unverified (ADR-0030); Claude Design owes drawn number/text editors and a
+**Still open from earlier:** Claude Design owes drawn number/text editors and a
 corrected `design/README.md`.
 
 ## Build environment (2026-09-13) — read this before the next build
