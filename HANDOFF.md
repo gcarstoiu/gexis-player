@@ -1,11 +1,28 @@
 # Handoff
 
-Last updated: 2026-09-18 (nineteenth session, on R2D2 — **Phase 7 done and
-checked on the panel; ADR-0038 accepted; image built, PR open**)
+Last updated: 2026-09-18 (nineteenth session, on R2D2 — **Phase 7 merged
+(PR #19); Phase 7a agreed and started on `phase-7a-plan`**)
 
 ## Start here
 
-**Phase 7 — library browse — is done on branch `phase-7-plan`.** Every step
+**Phase 7a — panel responsiveness — is the current work**, on branch
+`phase-7a-plan`. Agreed with George 2026-09-18 and written up in
+`docs/DEVELOPMENT.md`: a short phase between 7 and 8, because Phase 8 puts
+more on the panel and attribution is already the hard part. Two steps.
+**Step 1: nothing asks for more than it draws** - the queue rail requests
+500 px covers for 42 px rows (`ARTWORK_SIZE` in `adapters/lms.py` serves both
+now playing's well and every queue row); split it and sweep for the same
+mismatch elsewhere. **Step 2: an instrument that survives its own scrutiny,
+and a baseline** - real input through `/dev/uinput` rather than synthesised
+touches, the trace's `cc` category, 20 runs per configuration over a fixed
+interaction set (Home, the New Music strip, the artist grid, opening and
+scrolling it, the queue rail). **George's target: under 2 % of frames
+dropped on every interaction, *and* his own go-ahead from seeing it work**
+- both, not either. The structural work (virtualisation, lighter cards,
+letter buckets) stays in Phase 9; a real outcome here is that it is never
+needed.
+
+**Phase 7 — library browse — is merged (PR #19, 2026-09-18).** Every step
 was built and checked by George on the panel; the last, the queue rail, on
 2026-09-18. [ADR-0038](docs/decisions/0038-library-and-radio-on-the-panel.md)
 is **Accepted**, `docs/DEVELOPMENT.md` Phase 7 records what each step
@@ -313,11 +330,15 @@ reverted, currently-flashed image predates this fix.
 4  UI shell + idle + display-only nowplay * merged
 5  visualisation service + Peppy screen   * merged
 6  now playing, full                      * merged (PR #18)
-7  library browse                         * done, PR open - typed queries + our
-                                            screens; SlimBrowse for radio only
-8  enrichment + lyrics                    <- next. Additive only, cannot break
-                                            playback. Needs an ADR choosing the
-                                            providers first (Finding 030)
+7  library browse                         * merged (PR #19) - typed queries +
+                                            our screens; SlimBrowse for radio
+7a panel responsiveness                   <- current. Artwork at the size
+                                            drawn; an instrument that survives
+                                            scrutiny; baseline under 2 %
+                                            dropped frames + George's check
+8  enrichment + lyrics                    additive only, cannot break playback.
+                                            Needs an ADR choosing the providers
+                                            first (Finding 030)
 9  settings wiring + UI polish            every ADR-0022 row wired or scoped out;
                                             the panel-slowness investigation
                                             lands here unless pulled forward

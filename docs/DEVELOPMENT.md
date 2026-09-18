@@ -1189,6 +1189,52 @@ on the panel; editable remotely — itself already amended 2026-09-13 by
 [ADR-0029](decisions/0029-text-entry-on-every-surface.md), and now moot: no
 text input is rendered at all.
 
+### Phase 7a — Panel responsiveness
+
+**Added 2026-09-18 (George).** Inserted between 7 and 8 rather than folded
+into Phase 9's polish slot, because Phase 8 puts more on the panel and
+attribution is already the hard part: Finding 032 could not separate the
+causes it had. Nothing renumbers.
+
+**What prompted it.** George, after the queue rail landed: *"Everything quite
+slow though."* Before that, from his own checks: the New Music strip scrolls
+unevenly, and the artist grid is slow to load, slow to open and slow to
+scroll.
+
+**What this phase is not.** It is not the structural work - virtualising long
+lists, lighter cards, letter buckets from the core. That stays in Phase 9,
+where a realistic load and this phase's baseline both exist. A real possible
+outcome here is that the panel is fast enough after criterion 1 and the
+structural work is never needed.
+
+**Acceptance**
+
+1. **Nothing asks for more than it draws.** The queue rail requests 500 px
+   covers for 42 px rows: `ARTWORK_SIZE` in `adapters/lms.py` serves both now
+   playing's 500 px well and every queue row. Split it, and sweep every other
+   artwork request and card for the same mismatch. This applies a standard
+   already recorded (ADR-0022's artwork row, ADR-0038 §7, Finding 029 §5); it
+   is not a new decision.
+2. **One instrument that survives its own scrutiny.** Finding 032 names the
+   three faults it must not repeat: `requestAnimationFrame` measured the main
+   thread while the strip scrolled off it; the trace reports no frames at all
+   without the `cc` category, and the verdict is in
+   `args.frame_reporter.state`; and touches synthesised over the DevTools
+   protocol bypass the browser's gesture pipeline, so the harness may produce
+   the stutter it measures. **Real input** - events written to `/dev/uinput`
+   on the device, through the kernel, libinput and the compositor - is what
+   answers the third.
+3. **A baseline as a distribution, not a number.** 20 runs per configuration
+   over a fixed interaction set: open Home, scroll New Music, open the artist
+   grid, scroll it, open the queue rail. Single-run comparisons have misled
+   this project twice (Findings 003/004, then 032's first pass). Recorded as a
+   finding.
+4. **Target: under 2 % of frames dropped** on every interaction in the set
+   (George, 2026-09-18) **and George's own go-ahead from seeing it work.**
+   Both, not either: the number is what stops a subjective improvement from
+   being claimed as a fix, and his check is what stops a good number from
+   being mistaken for a good panel.
+
 ### Phase 8 — Enrichment and lyrics
 
 Purely additive. Cannot break playback.
