@@ -1230,7 +1230,20 @@ structural work is never needed.
    the stutter it measures. **Real input** - events written to `/dev/uinput`
    on the device, through the kernel, libinput and the compositor - is what
    answers the third.
-3. **A baseline as a distribution, not a number.** 20 runs per configuration
+3. **Done 2026-09-18** - steps 2 and 3, in
+   [Finding 034](findings/034-what-the-panel-presents.md). The instrument is
+   `tools/panel-touch.py` (a finger through `/dev/uinput`) and
+   `tools/panel-frames.py`; the kiosk gained an off-by-default
+   `GEXIS_KIOSK_DEBUG_PORT` instead of a hand-edited launcher. **Baseline,
+   20 runs, LMS playing:** New Music 47.1 fps / 2.5 % dropped, artist grid
+   23.1 / 50.7, queue rail 13.9 / 75.2 - the same order George put them in
+   by feel. **The unexpected result: with music playing and nobody touching
+   the panel, 71 % of wanted frames are dropped**, where a paused panel is
+   barely asked for a frame at all. PeppyMeter, the obvious suspect at 13 %
+   CPU while minimised, was eliminated by stopping it (68.45 % against
+   71.25 %). Everything fails criterion 4, which is the point of having it.
+
+   **A baseline as a distribution, not a number.** 20 runs per configuration
    over a fixed interaction set: open Home, scroll New Music, open the artist
    grid, scroll it, open the queue rail **and scroll it** (George,
    2026-09-18: after step 1 the rail opens visibly faster and *"scrolling it
