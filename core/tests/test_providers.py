@@ -748,3 +748,113 @@ async def test_the_artist_page_takes_its_picture_from_fanart_and_its_words_from_
     found = body["enrichment"]
     assert found["artist_image"].endswith("/thumb.jpg")
     assert found["biography"] == "From the plugin."
+
+
+@pytest.mark.asyncio
+async def test_a_take_or_a_remaster_falls_back_to_the_plain_title():
+    """**Measured live over Bluetooth, 2026-09-18.** "Long Black Limousine
+    (Take 9)" found nothing at all on LRCLIB, while "Long Black Limousine"
+    returned twenty hits, every one of them Elvis Presley with synced
+    words. A take, a remaster or a live cut is the same song - and the
+    artist still has to match exactly, so what loosens is which recording is
+    accepted, not whose."""
+    from gexis_core.providers import LrclibLyrics
+
+    key = TrackKey.of(TrackMetadata(title="Long Black Limousine  (Take 9)",
+                                    artist="Elvis Presley", album="Christmas Peace"))
+    calls = []
+
+    class Searching(FakeHttp):
+        async def json(self, url, params=None):
+            calls.append((params or {}).get("track_name"))
+            if "search" not in url:
+                return {}
+            if (params or {}).get("track_name") == "long black limousine":
+                return [{"artistName": "Elvis Presley", "trackName": "Long Black Limousine",
+                         "plainLyrics": "the words", "syncedLyrics": "[00:01.00] the words"}]
+            return []
+
+    answer = await LrclibLyrics(Searching({})).fetch(key)
+
+    assert answer.outcome is Outcome.FOUND
+    assert answer.enrichment.lyrics == "the words"
+    assert answer.confidence == LrclibLyrics.BASE_TITLE_CONFIDENCE
+    assert calls[-1] == "long black limousine"
+
+
+@pytest.mark.asyncio
+async def test_the_plain_title_still_has_to_be_the_same_artist():
+    from gexis_core.providers import LrclibLyrics
+
+    key = TrackKey.of(TrackMetadata(title="Long Black Limousine (Take 9)",
+                                    artist="Elvis Presley"))
+
+    class Wrong(FakeHttp):
+        async def json(self, url, params=None):
+            if "search" not in url:
+                return {}
+            return [{"artistName": "A Covers Band", "trackName": "Long Black Limousine",
+                     "plainLyrics": "not his"}]
+
+    assert (await LrclibLyrics(Wrong({})).fetch(key)).outcome is Outcome.MISSING
+
+
+def test_a_title_with_no_qualifier_is_left_alone():
+    from gexis_core.providers import _without_qualifier
+
+    assert _without_qualifier("Blinding Lights") == "blinding lights"
+    assert _without_qualifier("Long Black Limousine  (Take 9)") == "long black limousine"
+    assert _without_qualifier("Stairway to Heaven - Remaster") == "stairway to heaven"
+    assert _without_qualifier("STAY (with Justin Bieber)") == "stay"
+
+
+# --- release facts without a library ---------------------------------------
+
+
+MB_RELEASE = {"releases": [{
+    "id": "rel-9", "score": 100, "title": "Christmas Peace", "date": "2003",
+    "track-count": 20,
+    "label-info": [{"label": {"name": "RCA Victor"}}],
+    "release-group": {"primary-type": "Album"},
+}]}
+
+
+@pytest.mark.asyncio
+async def test_a_release_can_be_described_without_lms():
+    """Spotify and Bluetooth had an empty Release tab with a perfectly good
+    album name on screen (George, 2026-09-18). One MusicBrainz search
+    answers all four fields."""
+    from gexis_core.providers import MusicBrainzRelease
+
+    key = TrackKey.of(TrackMetadata(title="Long Black Limousine", artist="Elvis Presley",
+                                    album="Christmas Peace"))
+    http = FakeHttp({"ws/2/release/": MB_RELEASE})
+
+    answer = await MusicBrainzRelease(http).fetch(key)
+
+    assert answer.outcome is Outcome.FOUND
+    assert answer.enrichment.label == "RCA Victor"
+    assert answer.enrichment.release_type == "Album"
+    assert answer.enrichment.track_count == 20
+    assert answer.enrichment.released == "2003"
+
+
+@pytest.mark.asyncio
+async def test_a_track_with_no_album_has_no_release_to_describe():
+    from gexis_core.providers import MusicBrainzRelease
+
+    http = FakeHttp({})
+    key = TrackKey.of(TrackMetadata(title="Something", artist="Somebody"))
+
+    assert (await MusicBrainzRelease(http).fetch(key)).outcome is Outcome.MISSING
+    assert http.asked == []
+
+
+@pytest.mark.asyncio
+async def test_a_busy_musicbrainz_leaves_the_release_unavailable():
+    from gexis_core.providers import MusicBrainzRelease
+
+    http = FakeHttp({"ws/2/release/": None})
+    key = TrackKey.of(TrackMetadata(title="x", artist="y", album="z"))
+
+    assert (await MusicBrainzRelease(http).fetch(key)).outcome is Outcome.UNAVAILABLE

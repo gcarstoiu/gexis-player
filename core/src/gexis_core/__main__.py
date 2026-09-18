@@ -35,6 +35,7 @@ from gexis_core.providers import (
     LmsArtistProvider,
     LrclibLyrics,
     LmsReleaseProvider,
+    MusicBrainzRelease,
     RecordingArtProvider,
     WikipediaBiography,
 )
@@ -382,6 +383,9 @@ async def main() -> None:
             # typed into Settings works without a restart.
             ListenBrainzPopular(http, identity,
                                 lambda: settings.value("listenbrainz_token")),
+            # Behind the LMS one, which answers from the library itself
+            # and wins the merge where it has anything.
+            MusicBrainzRelease(http),
             LrclibLyrics(http),
             CoverArtProvider(http),
             # Last: the radio case, where there is no album to match on

@@ -22,6 +22,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import re
 from urllib.parse import quote
 
 import aiohttp
@@ -388,6 +389,76 @@ class FanartArtistImage:
         return f"{self._proxy_base}/imageproxy/{url}/image_{self.SIZE}x{self.SIZE}_o.jpg"
 
 
+#: What a renderer adds to a title and a lyrics site does not: a take
+#: number, a remaster year, a live tag. Everything from the first bracket
+#: or " - " onwards.
+_QUALIFIER = re.compile(r"\s*(?:[\(\[].*|-\s+.*)$")
+
+
+def _without_qualifier(raw_title: str) -> str:
+    """"Long Black Limousine  (Take 9)" -> "long black limousine".
+
+    Reads the title as the renderer gave it, because the folded key has
+    already lost the brackets and the dash that say where the qualifier
+    begins - by then "take 9" is indistinguishable from part of the name.
+    """
+    return fold(_QUALIFIER.sub("", raw_title or ""))
+
+
+class MusicBrainzRelease:
+    """The release facts for a renderer with no library behind it
+    (ADR-0040 §2).
+
+    LMS answers all of this from the library it already holds, so this is
+    for Spotify and Bluetooth - which had an empty Release tab with a
+    perfectly good album name on screen (George, 2026-09-18).
+
+    One search does it: MusicBrainz's release query returns the label, the
+    date, the track count and the release group's type together, with its
+    own score for the match.
+    """
+
+    name = "mb-release"
+
+    def __init__(self, http: Http) -> None:
+        self._http = http
+
+    def serves(self, renderer) -> bool:
+        return True
+
+    async def fetch(self, key) -> Answer:
+        if not (key.artist and key.album):
+            return Answer(Outcome.MISSING)
+        found = await self._http.json(
+            "https://musicbrainz.org/ws/2/release/",
+            {"query": f'artist:"{key.artist}" AND release:"{key.album}"',
+             "fmt": "json", "limit": "1"},
+        )
+        if found is None:
+            return Answer(Outcome.UNAVAILABLE)
+        releases = found.get("releases") or []
+        if not releases:
+            return Answer(Outcome.MISSING)
+        release = releases[0]
+        score = int(release.get("score") or 0)
+        labels = [
+            (entry.get("label") or {}).get("name")
+            for entry in (release.get("label-info") or [])
+        ]
+        enrichment = Enrichment(
+            label=next((name for name in labels if name), None),
+            release_type=(release.get("release-group") or {}).get("primary-type"),
+            track_count=release.get("track-count"),
+            # MusicBrainz gives a year alone as often as a full date, and
+            # the panel shows whichever it is.
+            released=str(release["date"]) if release.get("date") else None,
+            sources=("mb-release",),
+        )
+        if enrichment.is_empty():
+            return Answer(Outcome.MISSING, confidence=score)
+        return Answer(Outcome.FOUND, enrichment, confidence=score)
+
+
 class LrclibLyrics:
     """Lyrics, plain and time-synced, from LRCLIB (ADR-0040 §3).
 
@@ -408,6 +479,10 @@ class LrclibLyrics:
     #: What a fold-exact search hit is worth. Above `CONFIDENCE_MIN`, but
     #: below a `/api/get` match, which LRCLIB made itself.
     SEARCH_CONFIDENCE = 95
+    #: And what a hit on the title *without its qualifier* is worth - still
+    #: above the threshold, because the artist has to match exactly and the
+    #: words of a take, a remaster or a live cut are the same words.
+    BASE_TITLE_CONFIDENCE = 92
 
     def __init__(self, http: Http) -> None:
         self._http = http
@@ -432,8 +507,24 @@ class LrclibLyrics:
         return await self._search(key)
 
     async def _search(self, key) -> Answer:
+        answer = await self._search_for(key.title, key, self.SEARCH_CONFIDENCE)
+        if answer.outcome is not Outcome.MISSING:
+            return answer
+        # **Then without the qualifier.** A renderer gives the title as the
+        # file has it: measured live over Bluetooth, "Long Black Limousine
+        # (Take 9)" found nothing at all while "Long Black Limousine"
+        # returned twenty hits, every one of them Elvis Presley with synced
+        # words (2026-09-18). A take, a remaster or a live cut is the same
+        # song; the artist still has to match exactly, so this loosens which
+        # *recording* is accepted and not whose.
+        base = _without_qualifier(key.raw_title)
+        if base and base != key.title:
+            return await self._search_for(base, key, self.BASE_TITLE_CONFIDENCE)
+        return answer
+
+    async def _search_for(self, title: str, key, confidence: int) -> Answer:
         hits = await self._http.json("https://lrclib.net/api/search", {
-            "artist_name": key.artist, "track_name": key.title,
+            "artist_name": key.artist, "track_name": title,
         })
         if hits is None:
             return Answer(Outcome.UNAVAILABLE)
@@ -442,13 +533,13 @@ class LrclibLyrics:
         exact = [
             hit for hit in hits
             if fold(hit.get("artistName")) == key.artist
-            and fold(hit.get("trackName")) == key.title
+            and fold(hit.get("trackName")) == title
         ]
         # A synced hit is worth more than an earlier plain one.
         exact.sort(key=lambda hit: bool(hit.get("syncedLyrics")), reverse=True)
         if not exact:
             return Answer(Outcome.MISSING)
-        return self._answer(exact[0], self.SEARCH_CONFIDENCE)
+        return self._answer(exact[0], confidence)
 
     def _answer(self, hit: dict, confidence: int) -> Answer:
         plain = (hit.get("plainLyrics") or "").strip() or None

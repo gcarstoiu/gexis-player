@@ -416,3 +416,38 @@ async def test_a_slow_provider_does_not_hold_the_answer_back():
 
     assert result.lyrics == "La la la"
     never.set()
+
+
+@pytest.mark.asyncio
+async def test_an_answer_says_when_it_is_not_the_whole_answer():
+    """The panel used to guess - "no biography yet, ask again" - which left
+    the Release tab empty, because its fields were not among the ones being
+    watched for (George, 2026-09-18)."""
+    never = asyncio.Event()
+
+    class Slow(FakeProvider):
+        async def fetch(self, key):
+            await never.wait()
+            return _found(label="Atlantic")
+
+    service = EnrichmentService(
+        [Slow("mb-release", []), FakeProvider("lrclib", [_found(lyrics="La la la")])],
+        _cache(),
+    )
+    pending = []
+
+    result = await service.for_track(KEY, pending=pending)
+
+    assert result.lyrics == "La la la"
+    assert pending == ["mb-release"]
+    never.set()
+
+
+@pytest.mark.asyncio
+async def test_nothing_pending_when_everyone_answered():
+    service = EnrichmentService([FakeProvider("lrclib", [_found(lyrics="La la la")])], _cache())
+    pending = []
+
+    await service.for_track(KEY, pending=pending)
+
+    assert pending == []

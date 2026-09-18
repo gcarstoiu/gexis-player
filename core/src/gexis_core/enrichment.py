@@ -112,6 +112,12 @@ class TrackKey:
     album: str = ""
     title: str = ""
     duration: int | None = None
+    #: The title as the renderer gave it, punctuation and all. Not part of
+    #: the key - two spellings of one track must not cache twice - but a
+    #: provider sometimes needs it: "(Take 9)" and "- Remastered 2011" are
+    #: invisible once folded, and they are exactly what has to come off a
+    #: title before a lyrics site will recognise it.
+    raw_title: str = field(default="", compare=False)
 
     @classmethod
     def of(cls, metadata) -> "TrackKey":
@@ -121,6 +127,7 @@ class TrackKey:
             album=fold(getattr(metadata, "album", None)),
             title=fold(getattr(metadata, "title", None)),
             duration=int(duration) if duration else None,
+            raw_title=str(getattr(metadata, "title", None) or ""),
         )
 
     def as_text(self) -> str:
@@ -388,9 +395,17 @@ class EnrichmentService:
         self._unavailable_until: dict[str, float] = {}
 
     async def for_track(self, key: TrackKey, *, renderer: str | None = None,
-                        only: tuple[str, ...] | None = None) -> Enrichment:
+                        only: tuple[str, ...] | None = None,
+                        pending: list | None = None) -> Enrichment:
         """`only` names the providers to ask; the rest are left for when
-        somebody actually looks (see `prefetch`)."""
+        somebody actually looks (see `prefetch`).
+
+        `pending` collects the names of providers that had not answered
+        within `WAIT_S`. A caller that hands one in learns that this answer
+        is not the whole answer, and can ask again once they have finished -
+        the panel's Release tab stayed empty otherwise, because its fields
+        were not among the ones it knew to wait for (George, 2026-09-18).
+        """
         if key.is_empty():
             return Enrichment()
         asked = [
@@ -420,6 +435,8 @@ class EnrichmentService:
         for provider, task in zip(asked, tasks):
             if not task.done():
                 logger.info("enrichment: %s is still going; answering without it", provider.name)
+                if pending is not None:
+                    pending.append(provider.name)
                 continue
             answer = task.result()
             if answer.outcome is not Outcome.FOUND:

@@ -449,8 +449,12 @@ class StateServer:
         key = TrackKey.of(state.metadata)
         if key.is_empty():
             return web.json_response({"track": None, "enrichment": Enrichment().to_json()})
-        found = await self._enrichment.for_track(key, renderer=state.active)
+        pending: list[str] = []
+        found = await self._enrichment.for_track(key, renderer=state.active, pending=pending)
         return web.json_response({
+            # True when a provider had not finished: the panel asks again
+            # rather than treating this as the final word.
+            "pending": bool(pending),
             # The panel checks this before drawing: by the time a lookup
             # returns, the track may have changed.
             "track": {"artist": key.artist, "title": key.title},
