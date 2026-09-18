@@ -48,9 +48,12 @@ FINAL_SECONDS_COLOUR = (242, 0, 0)
 #: The renderer's mark, from the UI's own assets (copied into the stage;
 #: test_peppy_render checks they have not drifted from ui/src/assets).
 ICON_DIR = Path(__file__).with_name("icons")
-#: George, 2026-09-16: the badge carries the renderer's name beside it.
-BADGE_LABELS = {"spotify": "Spotify", "lms": "LMS", "bluetooth": "Bluetooth"}
-BADGE_LABEL_GAP = 10
+#: The mark alone, no name beside it (George, 2026-09-18, reversing his own
+#: 2026-09-16 call). The name was the only thing drawn outside the square the
+#: skin reserves, with no bounds check: on 7 of the 71 Gelo5 skins "Bluetooth"
+#: ran off the 1280px screen - by 291px on Kenwood Rev - and on others it
+#: crossed the skin's own controls and text. Fitting the mark inside
+#: `playinfo.type.*` keeps every pixel inside space the skin author reserved.
 BADGES = {
     "spotify": ("icon-spotify.png", None),
     "bluetooth": ("icon-bluetooth.png", None),
@@ -273,18 +276,7 @@ class MetadataLayer:
         x = position[0] + (box[0] - badge.get_width()) // 2
         y = position[1] + (box[1] - badge.get_height()) // 2
         self._screen.blit(badge, (x, y))
-        rect = pygame.Rect(x, y, badge.get_width(), badge.get_height())
-
-        label = BADGE_LABELS.get(source)
-        if label:
-            size = int(self._skin.get("font.size.regular", 20) or 20)
-            colour = parse_colour(self._skin.get("playinfo.type.color"), parse_colour(self._skin.get("font.color")))
-            text = self.font("regular", size).render(label, True, colour)
-            tx = position[0] + box[0] + BADGE_LABEL_GAP
-            ty = position[1] + (box[1] - text.get_height()) // 2
-            self._screen.blit(text, (tx, ty))
-            rect = rect.union(pygame.Rect(tx, ty, text.get_width(), text.get_height()))
-        return rect
+        return pygame.Rect(x, y, badge.get_width(), badge.get_height())
 
     def _badge(self, source: str, box: tuple[int, int]) -> pygame.Surface | None:
         key = (source, box)
