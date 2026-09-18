@@ -186,7 +186,23 @@ change.
 Rebuilding is not guaranteed to reproduce the same package set — see
 `docs/DEVELOPMENT.md` criterion 7 and ADR-0021.
 
-## Known issue (resolved): loop device setup in export-image
+## Known issue: loop device setup in export-image
+
+**Corrected 2026-09-18 — read this before the section below, which is kept
+for its symptoms and its history.** The root cause named there, *"the `loop`
+kernel module was not loaded"*, is **wrong**. R2D2 now autoloads the module
+at boot, and the first build after a reboot failed identically with the
+module loaded (`loop 45056 0`, use count 0). What decides it is whether a
+**`/dev/loopN` node exists**: with only `/dev/loop-control` present,
+`losetup -f` answers `/dev/loop0 (lost)` - the kernel knows loop0 is free,
+but nothing can reach it. The failed build leaves a `/dev/loop0` behind,
+which is why the *rerun* always passes, and why reloading the module worked:
+it makes udev create the nodes.
+[Finding 033](../docs/findings/033-loop-device-before-a-build.md) has the
+recorded before-and-after state. **No durable fix is chosen yet** (it needs
+George and `sudo`); until one is, expect the first build after a reboot to
+fail in 210 s and the second to pass.
+
 
 First build attempt (2026-09-05, this host) reached `export-image/prerun.sh`
 and failed there — everything before it, including all of stage-gexis,

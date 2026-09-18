@@ -74,9 +74,14 @@ enrichment providers (George asked 2026-09-17). Nothing decided; the provider
 choice needs an ADR when Phase 8 starts. George: API keys are a per-user
 setting, so a key is not a blocker (ADR-0022 inventory row added).
 
-**The device** runs the Phase 6 image
-(`2026-09-17-gexis-player-v0.2.1-202-gf3674f3-dirty.img`), flashed and
-provisioned 2026-09-17. Both SSH keys authorized. **After every reflash**
+**The Phase 7 image is built and verified as a file, not flashed:**
+`image/deploy/2026-09-18-gexis-player-v0.2.1-232-g65d62e3-dirty.img`
+(464 s; `image/verify-image.sh` - all checks passed, including the venv and
+`/opt/gexis-ui` byte-identical to this checkout). **The device still runs the
+Phase 6 image** (`2026-09-17-gexis-player-v0.2.1-202-gf3674f3-dirty.img`)
+with Phase 7 hand-installed, so a reflash is what proves the image.
+
+**The device** was flashed and provisioned 2026-09-17. Both SSH keys authorized. **After every reflash**
 append C3PO's key (`provision.local.env` carries R2D2's only; George chose
 not to change `provision.sh`):
 `ssh pi@gexis.local 'cat >> ~/.ssh/authorized_keys' < ~/.ssh/c3po_id_ed25519.pub`,
@@ -87,21 +92,20 @@ then `ssh-keygen -lf ~/.ssh/authorized_keys` on the device shows R2D2
 done without item-by-item results, so none is recorded as observed
 (`docs/DEVELOPMENT.md` Phase 6 status).
 
-**The loop-device question is still open, and the discriminating state is
-recorded.** Background: the first R2D2 build (2026-09-17 11:35, log
-`~/gexis-build-1-failed-loop.log`) failed at `export-image/prerun.sh` with
-`mknod: invalid minor device number '/dev/loop0 (lost)'`; the rerun (12:40,
-`~/gexis-build.log`) passed but started with `/dev/loop0` already present, so
-it discriminated nothing. **After R2D2's reboot, before any build (13:37,
-up 8 min):** `lsmod | grep -w loop` → `loop 45056 0` (autoloaded from
-`/etc/modules-load.d/loop.conf`); `ls -l /dev/loop*` → only
-`/dev/loop-control`, **no `/dev/loopN`**. No build has run since. **The next
-`make image` on R2D2 is the test**, provided R2D2 has not rebooted and nothing
-has created a loop node in between — re-record both before building. A pass
-means `image/README.md`'s root cause (module not loaded) is right; a `(lost)`
-failure means the missing node is the cause and autoloading does not prevent
-it — then propose to George correcting the README and a durable fix (e.g.
-pre-creating a node before the build; needs `sudo`).
+**The loop-device question is answered
+([Finding 033](docs/findings/033-loop-device-before-a-build.md)).** The test
+HANDOFF set up was run on 2026-09-18: the state before the build was the
+module autoloaded (`loop 45056 0`) and **no `/dev/loopN`**, and the build
+failed at `export-image/prerun.sh` with the same
+`mknod: invalid minor device number '/dev/loop0 (lost)'` as ever, in 210 s.
+So **the module being loaded is not what decides it - the missing device
+node is**, and `image/README.md`'s recorded root cause was wrong (now
+corrected there). The failed build leaves a `/dev/loop0` behind, which is
+why every rerun passes. **No durable fix is chosen: it needs George, and
+`sudo`.** Candidates, none tried: create a node before the build; load the
+module with `max_loop=8` so udev makes `/dev/loop0-7` at boot; or put the
+reload in the build script rather than in someone's memory. Until then the
+first build after a reboot fails and the second passes.
 
 **Docker group:** after the reboot `id` shows `docker` (950) directly;
 `newgrp` is no longer needed. Run builds detached so the session's memory
@@ -302,23 +306,33 @@ reverted, currently-flashed image predates this fix.
 ## Phase order
 
 ```
-0  reproducible image                     ✓ merged — pi-gen, ADR-0021
-1  measurements                           absorbed into 2 — needs 2's own renderers
-2  audio layer + arbitration              ← in progress: renderers packaged and
-                                             hardware-verified (criteria 1,2,4,5,6);
-                                             Python core arrives here for 3-7; takeover gap
-3  core state daemon                      no UI; test with a WebSocket client
-4  UI shell + idle + display-only nowplay
-5  visualisation service + Peppy screen   capability-blind, proves the model
-6  now playing, full                      capability-driven controls
-7  library browse                         typed queries + our screens; SlimBrowse
-                                            for radio only (ADR-0030)
-8  enrichment + lyrics                    additive only, cannot break playback
-9  plugin contract hardening + themes     Qobuz is the fourth-renderer test
-10 first boot without a network           setup access point; pull forward the
+0  reproducible image                     * merged - pi-gen, ADR-0021
+1  measurements                           absorbed into 2 - needs 2's own renderers
+2  audio layer + arbitration              * merged
+3  core state daemon                      * merged
+4  UI shell + idle + display-only nowplay * merged
+5  visualisation service + Peppy screen   * merged
+6  now playing, full                      * merged (PR #18)
+7  library browse                         * done, PR open - typed queries + our
+                                            screens; SlimBrowse for radio only
+8  enrichment + lyrics                    <- next. Additive only, cannot break
+                                            playback. Needs an ADR choosing the
+                                            providers first (Finding 030)
+9  settings wiring + UI polish            every ADR-0022 row wired or scoped out;
+                                            the panel-slowness investigation
+                                            lands here unless pulled forward
+10 plugin contract + themes               Qobuz is the fourth-renderer test
+11 Plexamp as a renderer                  starts with the hardware check: does it
+                                            release the device? (ADR-0008's
+                                            reversal condition)
+12 Qobuz Connect as a renderer            the plugin that proves 10
+13 first boot without a network           setup access point; pull forward the
                                             moment a non-developer gets a device
                                             (ADR-0031)
 ```
+
+Phases 9-13 were renumbered on 2026-09-16 (George). `docs/DEVELOPMENT.md`
+holds each phase's acceptance criteria; this list is only the order.
 
 ## Things that will bite if forgotten
 
