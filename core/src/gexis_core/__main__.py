@@ -28,6 +28,7 @@ from gexis_core.enrichment import PREFETCH_AFTER_S, Cache, EnrichmentService, Tr
 from gexis_core.providers import (
     ArtistIdentity,
     CoverArtProvider,
+    FanartArtistImage,
     Http,
     ListenBrainzPopular,
     ListenBrainzSimilar,
@@ -318,7 +319,8 @@ async def main() -> None:
         # Wired = something reads it (ADR-0035). The token is read on every
         # Popular lookup, so it takes effect as soon as it is typed.
         wired={"idle_url": None, "idle_timeout": None, "drawer_on_external": None,
-               "drawer_autohide": None, "listenbrainz_token": None},
+               "drawer_autohide": None, "listenbrainz_token": None,
+               "fanart_key": None},
         on_change=state_store.bump_settings_revision,
     )
 
@@ -367,6 +369,11 @@ async def main() -> None:
         [
             LmsArtistProvider(artistinfo, lambda: lms.current_artist_id),
             LmsReleaseProvider(library, artistinfo, lambda: lms.current_album_id),
+            # Artist pictures, when a key is configured. Ordered after
+            # LMS's plugin until the speed check George asked for
+            # (2026-09-18) says which should come first.
+            FanartArtistImage(http, identity,
+                              lambda: settings.value("fanart_key")),
             WikipediaBiography(http, identity),
             ListenBrainzSimilar(http, identity),
             # ADR-0022's inventory: a per-user token, read fresh so one

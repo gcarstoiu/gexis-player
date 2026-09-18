@@ -474,6 +474,14 @@
     "marks": "N",
     "note": "Only for the artist page's Popular list: that endpoint began requiring one on 2026-09-18. Everything else works without a key.",
     "default": null
+   },
+   {
+    "key": "fanart_key",
+    "type": "text",
+    "label": "fanart.tv key",
+    "marks": "N",
+    "note": "Artist pictures. Without it they come from LMS's own plugin, where the server has one, and initials otherwise.",
+    "default": null
    }
   ]
  },

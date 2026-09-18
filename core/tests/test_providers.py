@@ -627,3 +627,71 @@ async def test_a_busy_musicbrainz_does_not_become_a_permanent_blank():
     http = FakeHttp({"ws/2/recording/": None})
 
     assert (await RecordingArtProvider(http).fetch(RADIO_KEY)).outcome is Outcome.UNAVAILABLE
+
+
+# --- artist pictures from fanart.tv ----------------------------------------
+
+
+FANART = {
+    "name": "AC/DC",
+    "artistthumb": [{"id": "1", "url": "https://assets.fanart.tv/fanart/music/acdc/thumb.jpg"}],
+    "artistbackground": [{"id": "2", "url": "https://assets.fanart.tv/fanart/music/acdc/bg.jpg"}],
+}
+
+
+@pytest.mark.asyncio
+async def test_fanart_is_not_asked_without_a_key():
+    """`ready()` rather than a failed request, so a key typed into Settings
+    works at once instead of after the service's backoff."""
+    from gexis_core.providers import FanartArtistImage
+
+    http = FakeHttp({})
+    provider = FanartArtistImage(http, ArtistIdentity(http), lambda: None)
+
+    assert not provider.ready()
+    assert (await provider.fetch(KEY)).outcome is Outcome.UNAVAILABLE
+    assert http.asked == []
+
+
+@pytest.mark.asyncio
+async def test_fanart_prefers_a_portrait_over_a_background():
+    from gexis_core.providers import FanartArtistImage
+
+    http = FakeHttp({"ws/2/artist/": MB_ARTIST, "webservice.fanart.tv": FANART})
+    provider = FanartArtistImage(http, ArtistIdentity(http), lambda: "a-key")
+
+    answer = await provider.fetch(KEY)
+
+    assert answer.outcome is Outcome.FOUND
+    assert answer.enrichment.artist_image.endswith("/thumb.jpg")
+
+
+@pytest.mark.asyncio
+async def test_fanart_falls_back_to_a_background_when_there_is_no_portrait():
+    from gexis_core.providers import FanartArtistImage
+
+    http = FakeHttp({"ws/2/artist/": MB_ARTIST,
+                     "webservice.fanart.tv": {"artistbackground": FANART["artistbackground"]}})
+    provider = FanartArtistImage(http, ArtistIdentity(http), lambda: "a-key")
+
+    assert (await provider.fetch(KEY)).enrichment.artist_image.endswith("/bg.jpg")
+
+
+@pytest.mark.asyncio
+async def test_an_artist_fanart_has_no_picture_for_is_missing():
+    from gexis_core.providers import FanartArtistImage
+
+    http = FakeHttp({"ws/2/artist/": MB_ARTIST, "webservice.fanart.tv": {"name": "AC/DC"}})
+    provider = FanartArtistImage(http, ArtistIdentity(http), lambda: "a-key")
+
+    assert (await provider.fetch(KEY)).outcome is Outcome.MISSING
+
+
+@pytest.mark.asyncio
+async def test_fanart_being_unreachable_is_unavailable():
+    from gexis_core.providers import FanartArtistImage
+
+    http = FakeHttp({"ws/2/artist/": MB_ARTIST, "webservice.fanart.tv": None})
+    provider = FanartArtistImage(http, ArtistIdentity(http), lambda: "a-key")
+
+    assert (await provider.fetch(KEY)).outcome is Outcome.UNAVAILABLE

@@ -43,8 +43,9 @@ def test_registry_keys_are_the_designs_keys_apart_from_recorded_deviations():
     #   listenbrainz_token - ListenBrainz began requiring a token for the
     #     artist page's Popular list on 2026-09-18 (George chose a per-user
     #     token over dropping the section; ADR-0022, ADR-0040 §2)
+    #   fanart_key - artist pictures (George, 2026-09-18)
     assert ours - design_keys == {
-        "drawer_on_external", "drawer_autohide", "listenbrainz_token",
+        "drawer_on_external", "drawer_autohide", "listenbrainz_token", "fanart_key",
     }
 
 

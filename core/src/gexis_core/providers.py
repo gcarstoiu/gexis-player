@@ -316,6 +316,61 @@ class ListenBrainzPopular:
                       confidence=score)
 
 
+class FanartArtistImage:
+    """Artist pictures from fanart.tv (George, 2026-09-18).
+
+    **Keyed on the MusicBrainz artist id**, which this daemon already
+    resolves and now remembers on disk - so the cost here is one fanart call
+    per artist, not a search as well.
+
+    Finding 030's notes still apply: a personal key sees an image about two
+    days after it is added where a project key waits seven, and fanart's own
+    guidance prefers one project key to a key per user. This reads whatever
+    key is in Settings and sends it as `api_key`; there is nothing to send
+    when it is empty, so the provider simply is not ready.
+    """
+
+    name = "fanart"
+    BASE = "https://webservice.fanart.tv/v3/music"
+    #: In the order the panel would rather have them: a portrait first,
+    #: then the wide background, then the logo-free thumb.
+    PREFERRED = ("artistthumb", "artistbackground", "musicbanner")
+
+    def __init__(self, http: Http, identity: ArtistIdentity, key=None) -> None:
+        self._http = http
+        self._identity = identity
+        self._key = key or (lambda: None)
+
+    def serves(self, renderer) -> bool:
+        return True
+
+    def ready(self) -> bool:
+        return bool(self._key())
+
+    async def fetch(self, key) -> Answer:
+        api_key = self._key()
+        if not api_key:
+            return Answer(Outcome.UNAVAILABLE)
+        if not key.artist:
+            return Answer(Outcome.MISSING)
+        who = await self._identity.resolve(key.artist)
+        if who is False:
+            return Answer(Outcome.UNAVAILABLE)
+        if who is None:
+            return Answer(Outcome.MISSING)
+        mbid, score = who
+        found = await self._http.json(f"{self.BASE}/{mbid}", {"api_key": api_key})
+        if found is None:
+            return Answer(Outcome.UNAVAILABLE, confidence=score)
+        for kind in self.PREFERRED:
+            images = found.get(kind) or []
+            url = next((i.get("url") for i in images if isinstance(i, dict) and i.get("url")), None)
+            if url:
+                return Answer(Outcome.FOUND, Enrichment(artist_image=url, sources=("fanart",)),
+                              confidence=score)
+        return Answer(Outcome.MISSING, confidence=score)
+
+
 class LrclibLyrics:
     """Lyrics, plain and time-synced, from LRCLIB (ADR-0040 §3).
 
