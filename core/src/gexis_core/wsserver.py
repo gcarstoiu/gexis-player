@@ -260,8 +260,9 @@ class StateServer:
     async def _handle_library_action(self, request: web.Request) -> web.Response:
         """ADR-0038 §5: one route for what the panel does to the library.
         `{"kind": "album"|"artist"|"track"|"playlist", "id": <int>,
-        "action": "play"|"add"}`. A `200` means the command was sent; what
-        happened is read from `/state`, as for transport (ADR-0037 §1)."""
+        "action": "play"|"add"|"playlist"}`, with `playlist_id` when adding
+        to one. A `200` means the command was sent; what happened is read
+        from `/state`, as for transport (ADR-0037 §1)."""
         if self._library is None:
             return web.json_response({"error": "the library is not wired up"}, status=503)
         try:
@@ -269,12 +270,16 @@ class StateServer:
             kind = str(body["kind"])
             action = str(body.get("action", "play"))
             item_id = int(body["id"])
+            target = body.get("playlist_id")
+            playlist_id = None if target is None else int(target)
         except (ValueError, KeyError, TypeError, json.JSONDecodeError):
             return web.json_response(
                 {"error": 'expected {"kind": ..., "id": <int>, "action": ...}'}, status=400
             )
         try:
-            return web.json_response(await self._library.act(kind, item_id, action))
+            return web.json_response(
+                await self._library.act(kind, item_id, action, playlist_id)
+            )
         except NotFound as exc:
             return web.json_response({"error": f"{exc} not found"}, status=404)
         except NoPlayer as exc:

@@ -116,8 +116,18 @@ and the artist page with its discography. George's calls, now in ADR-0038
 discography by year, newest first. He checked the navigation and found it
 **slow** - see below.
 
-**Next action: step 7 - three-pane Browse** with the row actions (play now,
-add to queue, add to any library playlist).
+**Step 7 is done** (2026-09-18): three-pane Browse with the row actions.
+George's calls from that check, now in ADR-0038 §3: **Play means in order**
+- the core turns LMS's shuffle off before a load, because with shuffle on a
+freshly loaded album starts at a random track and an artist mid-album - and
+album rows carry the year beside the title. Each pane also returns to the
+top when its contents change. **Adding to a playlist is one LMS call per
+track** (no bulk form): 87 tracks took 8 s after the core was changed to
+keep one HTTP connection instead of opening one per track; the panel says
+"Adding …" while it works.
+
+**Next action: step 8 - Playlists** (the screen, not the chooser): name,
+track count, and the tracks, with the same row actions.
 
 **Open, deferred by George: one investigation into lists,** once steps 6 and
 7 have put real ones on the panel - not piecemeal fixes before that. What it

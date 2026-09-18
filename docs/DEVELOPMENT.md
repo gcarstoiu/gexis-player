@@ -1129,7 +1129,16 @@ checked on the panel before the next:
    later frames did not converge. **George, 2026-09-18: loading the artists,
    opening the grid and scrolling it are all slow** - added to the deferred
    lists investigation below rather than fixed piecemeal.
-7. **Three-pane Browse** with row actions.
+7. **Three-pane Browse** with row actions. **Done 2026-09-18; George
+   checked the navigation on the panel.** Artist, that artist's albums
+   (newest first, year beside the title at his request) and the album's
+   tracks, with play now / add to queue / add to any library playlist
+   revealed on the active row, and the design's sheet at its pick step for
+   the playlist. **Three things came out of his check:** Play now turns
+   LMS's shuffle off first (§3 - with shuffle on, a load starts at a random
+   track), each pane returns to the top when its contents change, and the
+   core keeps one HTTP connection rather than opening one per track when
+   adding to a playlist (87 tracks, 8 s; LMS has no bulk form).
 8. **Playlists.**
 9. **Radio.**
 10. **Queue rail.**

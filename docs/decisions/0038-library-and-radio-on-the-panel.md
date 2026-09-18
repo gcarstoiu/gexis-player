@@ -107,7 +107,18 @@ USB keyboard. George is asking Claude Design to remove playlist creation from
 the design.
 
 **Add to playlist adds to any LMS library playlist** (§1). It picks an
-existing playlist and needs no typing.
+existing playlist and needs no typing. **It is one LMS call per track:**
+`playlists edit cmd:add` takes a single `url:` and ignores an `album_id`
+without an error (Finding 029 §3), so the core resolves the tracks first
+and adds them in order - 87 tracks measured at 8 s, which the panel says it
+is doing rather than appearing to ignore the tap.
+
+**Play means in order** (George, 2026-09-18). LMS's own shuffle is turned
+off before a load: with it on, a freshly loaded album starts at a random
+track and an artist starts mid-album, which is what George saw on the
+panel. The design gives shuffle its own button, so Play is the in-order
+one. **This knowingly changes a player setting that LMS's own apps show**;
+adding to the queue leaves it alone, because it starts nothing.
 
 The queue rail's empty state offers a playlist chooser (data contract); that is
 a play-now on a playlist, not a creation.
@@ -153,9 +164,9 @@ an LMS command.
 Route names may move while the steps build them; the split — reads paged,
 one action route, handles for radio, queue on `/state` — is the decision.
 
-**Actions as built (step 5, 2026-09-18):** `POST /library/action` with
-`{"kind": "album"|"artist"|"track"|"playlist", "id": <int>, "action":
-"play"|"add"}`. One `playlistcontrol` per action. 404 for an unknown kind,
+**Actions as built (steps 5 and 7, 2026-09-18):** `POST /library/action`
+with `{"kind": "album"|"artist"|"track"|"playlist", "id": <int>, "action":
+"play"|"add"|"playlist"}`, plus `playlist_id` when adding to one. One `playlistcontrol` per action. 404 for an unknown kind,
 action or id, 409 before the adapter has resolved the player, 502 when LMS
 is unreachable, 503 unwired. **Note:** LMS drops the connection rather than
 answering when asked to play an id that does not exist, so that case

@@ -34,8 +34,9 @@ ARTISTS = [
 ]
 TRACKS = [
     {"id": 5001, "title": "Opening", "tracknum": "1", "disc": "1", "duration": 201.5,
-     "artist": "Aria Nova", "coverid": "a1b2c3d4"},
-    {"id": 5002, "title": "Closing", "tracknum": "2", "duration": "180", "artist": "Aria Nova"},
+     "artist": "Aria Nova", "coverid": "a1b2c3d4", "url": "file:///music/opening.flac"},
+    {"id": 5002, "title": "Closing", "tracknum": "2", "duration": "180", "artist": "Aria Nova",
+     "url": "file:///music/closing.flac"},
 ]
 PLAYLISTS = [
     {"id": 900, "playlist": "Sunday", "url": "file:///playlist/Sunday.m3u"},
@@ -78,6 +79,10 @@ class FakeLms:
             return {"count": len(ARTISTS), "artists_loop": ARTISTS[int(command[1]):int(command[1]) + int(command[2])]}
         if what == "titles":
             return {"count": len(TRACKS), "titles_loop": TRACKS}
+        if what == "playlists" and command[1] == "edit":
+            return {}
+        if what == "playlist" and command[1] == "shuffle":
+            return {}
         if what == "playlists" and command[1] == "tracks":
             pid = int(next(a for a in args if a.startswith("playlist_id:")).split(":")[1])
             tracks = TRACKS if pid == 900 else []
@@ -324,6 +329,27 @@ async def test_each_kind_and_action_sends_one_playlistcontrol(lms, kind, item_id
 
 
 @pytest.mark.asyncio
+async def test_play_turns_shuffle_off_first(lms):
+    """George, 2026-09-18: Play means in order. With LMS's shuffle on, a
+    freshly loaded album starts at a random track and an artist mid-album."""
+    await _lib().act("album", 101, "play")
+
+    assert lms.commands[-2:] == [
+        ["playlist", "shuffle", 0],
+        ["playlistcontrol", "cmd:load", "album_id:101"],
+    ]
+
+
+@pytest.mark.asyncio
+async def test_adding_to_the_queue_leaves_shuffle_alone(lms):
+    """Adding does not start anything, so it has no business changing how
+    the player is set."""
+    await _lib().act("album", 101, "add")
+
+    assert not [c for c in lms.commands if c[:2] == ["playlist", "shuffle"]]
+
+
+@pytest.mark.asyncio
 async def test_an_action_goes_to_the_adapter_s_player(lms):
     """The library plays on the player the renderer adapter arbitrates for,
     never one named here."""
@@ -494,3 +520,58 @@ async def test_lms_unreachable_on_an_action_is_502(lms):
     status, _ = await _post("/library/action", _lib(), {"kind": "album", "id": 101})
 
     assert status == 502
+
+
+# --- adding to a playlist --------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_an_album_is_added_to_a_playlist_one_track_at_a_time(lms):
+    """LMS has no command that adds a whole album: `playlists edit cmd:add`
+    takes one url, and ignores album_id without an error (Finding 029 §3)."""
+    result = await _lib().act("album", 101, "playlist", playlist_id=900)
+
+    added = [c for c in lms.commands if c[:3] == ["playlists", "edit", "cmd:add"]]
+    assert [c[-1] for c in added] == [
+        "url:file:///music/opening.flac",
+        "url:file:///music/closing.flac",
+    ]
+    assert all(c[3] == "playlist_id:900" for c in added)
+    assert result == {"tracks": 2}
+
+
+@pytest.mark.asyncio
+async def test_an_albums_tracks_are_added_in_track_order(lms):
+    await _lib().act("album", 101, "playlist", playlist_id=900)
+
+    query = next(c for c in lms.commands if c[0] == "titles")
+    assert "sort:tracknum" in query
+    assert "album_id:101" in query
+
+
+@pytest.mark.asyncio
+async def test_a_plugin_playlist_cannot_be_added_to(lms):
+    """Only the LMS library's own playlists are ours to write to
+    (ADR-0038 §1); 901 is a Qobuz one."""
+    with pytest.raises(NotFound):
+        await _lib().act("track", 5001, "playlist", playlist_id=901)
+
+    assert not [c for c in lms.commands if c[:2] == ["playlists", "edit"]]
+
+
+@pytest.mark.asyncio
+async def test_adding_without_naming_a_playlist_is_not_found(lms):
+    with pytest.raises(NotFound):
+        await _lib().act("album", 101, "playlist")
+
+
+@pytest.mark.asyncio
+async def test_the_action_route_adds_to_a_playlist(lms):
+    status, body = await _post(
+        "/library/action",
+        _lib(),
+        {"kind": "album", "id": 101, "action": "playlist", "playlist_id": 900},
+    )
+
+    assert status == 200
+    assert body == {"tracks": 2}

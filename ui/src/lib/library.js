@@ -46,11 +46,11 @@ export async function loadAlbum(id) {
 
 /** Play something, or add it to the queue (ADR-0038 §3, §5). A 200 means
  *  the command was sent; the result arrives on /state. */
-export async function libraryAction(kind, id, action = 'play') {
+export async function libraryAction(kind, id, action = 'play', playlistId = null) {
   const response = await fetch('/library/action', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ kind, id, action }),
+    body: JSON.stringify({ kind, id, action, playlist_id: playlistId }),
   });
   const body = await response.json().catch(() => ({}));
   if (!response.ok) throw new Error(body.error ?? `HTTP ${response.status}`);
@@ -68,6 +68,12 @@ export async function loadArtistAlbums(id) {
   await Promise.all(albums.slice(0, 12).map((album) => decoded(album.artwork)));
   return albums;
 }
+
+/** The album's own record, with its tracks. */
+export const loadAlbumTracks = (id) => get(`albums/${id}`);
+
+/** The library's own playlists, with their track counts, for the chooser. */
+export const loadPlaylists = () => get('playlists');
 
 let inFlight = null;
 

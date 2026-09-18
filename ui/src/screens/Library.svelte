@@ -18,8 +18,10 @@
   import {
     libraryRoot,
     loadAlbum,
+    loadAlbumTracks,
     loadArtists,
     loadArtistAlbums,
+    loadPlaylists,
     libraryAction,
   } from '../lib/library.js';
   import MiniStrip from './MiniStrip.svelte';
@@ -89,6 +91,12 @@
   );
 
   let grid = $state(null);
+  // Each pane's scroller, so a new selection starts at the top of the next
+  // pane rather than wherever the previous list was left (George,
+  // 2026-09-18).
+  let albumPane = $state(null);
+  let trackPane = $state(null);
+  const toTop = (el) => el && (el.scrollTop = 0);
   function jumpTo(group) {
     const target = grid?.querySelector(`#${group.id}`);
     if (!target || !grid) return;
@@ -152,14 +160,110 @@
     }
   }
 
-  async function play(kind, id) {
+  // Browse's three panes: the artist chosen, its albums, and the album's
+  // tracks (design/screens.md §4).
+  let chosenArtist = $state(null);
+  let browseAlbums = $state([]);
+  let chosenAlbum = $state(null);
+  let browseTracks = $state([]);
+  //: Which row has its actions showing - one at a time, as the design has it.
+  let revealed = $state(null);
+
+  let playlists = $state([]);
+  let picker = $state(null); // { kind, id, label } while choosing a playlist
+  let toast = $state(null);
+  let toastTimer;
+
+  function flash(message) {
+    clearTimeout(toastTimer);
+    toast = message;
+    toastTimer = setTimeout(() => (toast = null), 2600);
+  }
+
+  async function openBrowse() {
+    busy = 'browse';
     try {
-      await libraryAction(kind, id, 'play');
+      if (!artists.length) artists = (await loadArtists()).items;
+      chosenArtist = null;
+      browseAlbums = [];
+      chosenAlbum = null;
+      browseTracks = [];
+      revealed = null;
+      path = [{ kind: 'browse', label: 'Browse' }];
     } catch (err) {
-      // LMS unreachable, or a rescan took the id away: the panel stays put
-      // rather than pretending something started.
+      console.info('library:', err.message);
+    } finally {
+      busy = null;
+    }
+  }
+
+  async function chooseArtist(entry) {
+    revealed = `artist-${entry.id}`;
+    chosenArtist = entry;
+    chosenAlbum = null;
+    browseTracks = [];
+    try {
+      browseAlbums = await loadArtistAlbums(entry.id);
+      toTop(albumPane);
+      toTop(trackPane);
+    } catch (err) {
       console.info('library:', err.message);
     }
+  }
+
+  async function chooseAlbum(entry) {
+    revealed = `album-${entry.id}`;
+    chosenAlbum = entry;
+    try {
+      browseTracks = (await loadAlbumTracks(entry.id)).tracks;
+      toTop(trackPane);
+    } catch (err) {
+      console.info('library:', err.message);
+    }
+  }
+
+  async function act(kind, id, action, label, playlistId = null) {
+    // Adding to a playlist is one LMS call per track - 87 tracks took 8 s
+    // (measured 2026-09-18), and LMS has no bulk form - so say it is
+    // working rather than letting the tap look ignored.
+    if (action === 'playlist') flash(`Adding ${label}…`);
+    try {
+      await libraryAction(kind, id, action, playlistId);
+      flash(
+        action === 'play'
+          ? `Playing ${label}`
+          : action === 'add'
+            ? `${label} added to the queue`
+            : `${label} added`,
+      );
+    } catch (err) {
+      // LMS unreachable, or a rescan took the id away: say so rather than
+      // leaving the tap looking like it worked.
+      flash(err.message);
+      console.info('library:', err.message);
+    }
+  }
+
+  const play = (kind, id, label = '') => act(kind, id, 'play', label);
+
+  async function openPicker(kind, id, label) {
+    picker = { kind, id, label };
+    try {
+      playlists = await loadPlaylists();
+    } catch (err) {
+      console.info('library:', err.message);
+    }
+  }
+
+  async function addToPlaylist(playlist) {
+    const target = picker;
+    picker = null;
+    if (!target) return;
+    await act(target.kind, target.id, 'playlist', `${target.label} → ${playlist.name}`, playlist.id);
+    // The chooser's counts are stale once something has been added.
+    loadPlaylists()
+      .then((rows) => (playlists = rows))
+      .catch(() => {});
   }
 
   // Loaded once when the panel starts, covers and all (lib/library.js), so
@@ -259,7 +363,7 @@
     {#if path.length === 0}
       <div class="root">
         <div class="cards">
-          <button class="card card--browse" type="button" disabled data-unwired="phase-7">
+          <button class="card card--browse" type="button" onclick={openBrowse}>
             <span class="glyph glyph--bars"><i style="height:26px"></i><i style="height:44px"></i><i style="height:32px"></i><i style="height:39px"></i></span>
             <span>
               <span class="card__name">Browse</span>
@@ -334,6 +438,91 @@
             {/each}
             <span class="mark" bind:this={endMark}></span>
           </div>
+          </div>
+        </div>
+      </div>
+    {:else if here?.kind === 'browse'}
+      <div class="browse">
+        <div class="browse__top">
+          <div class="pane">
+            <div class="pane__head">
+              <span class="pane__label">Artist</span>
+              <span class="pane__count">{artists.length}</span>
+            </div>
+            <div class="pane__list">
+              {#each artists as entry (entry.id)}
+                <div class="row" class:is-on={chosenArtist?.id === entry.id}>
+                  <button class="row__hit" type="button" onclick={() => chooseArtist(entry)}>
+                    <span class="row__label">{entry.name}</span>
+                  </button>
+                  {#if revealed === `artist-${entry.id}`}
+                    <span class="row__actions">
+                      <button class="act act--play" type="button" aria-label="Play now" onclick={() => play('artist', entry.id, entry.name)}><span class="act__play"></span></button>
+                      <button class="act" type="button" aria-label="Add to queue" onclick={() => act('artist', entry.id, 'add', entry.name)}><span class="act__queue"><i></i><i></i><i></i></span></button>
+                      <button class="act" type="button" aria-label="Add to playlist" onclick={() => openPicker('artist', entry.id, entry.name)}><span class="act__plus"></span></button>
+                    </span>
+                  {/if}
+                </div>
+              {/each}
+            </div>
+          </div>
+
+          <div class="pane">
+            <div class="pane__head">
+              <span class="pane__label">Album</span>
+              <span class="pane__count">{browseAlbums.length}</span>
+            </div>
+            <div class="pane__list" bind:this={albumPane}>
+              {#each browseAlbums as entry (entry.id)}
+                <div class="row" class:is-on={chosenAlbum?.id === entry.id}>
+                  <!-- Newest first, with the year beside the title, like
+                       the discography (George, 2026-09-18). -->
+                  <button class="row__hit" type="button" onclick={() => chooseAlbum(entry)}>
+                    <span class="row__label">
+                      {entry.title}{entry.year ? ` (${entry.year})` : ''}
+                    </span>
+                  </button>
+                  {#if revealed === `album-${entry.id}`}
+                    <span class="row__actions">
+                      <button class="act act--play" type="button" aria-label="Play now" onclick={() => play('album', entry.id, entry.title)}><span class="act__play"></span></button>
+                      <button class="act" type="button" aria-label="Add to queue" onclick={() => act('album', entry.id, 'add', entry.title)}><span class="act__queue"><i></i><i></i><i></i></span></button>
+                      <button class="act" type="button" aria-label="Add to playlist" onclick={() => openPicker('album', entry.id, entry.title)}><span class="act__plus"></span></button>
+                    </span>
+                  {/if}
+                </div>
+              {:else}
+                <div class="pane__empty">{chosenArtist ? 'No albums' : 'Pick an artist'}</div>
+              {/each}
+            </div>
+          </div>
+        </div>
+
+        <div class="pane">
+          <div class="pane__head">
+            <span class="pane__label">Tracks</span>
+            <span class="pane__count">{browseTracks.length}</span>
+          </div>
+          <div class="pane__list" bind:this={trackPane}>
+            {#each browseTracks as entry (entry.id)}
+              <div class="row">
+                <button class="row__hit" type="button" onclick={() => (revealed = revealed === `track-${entry.id}` ? null : `track-${entry.id}`)}>
+                  <span class="row__num">{entry.tracknum ?? ''}</span>
+                  <span class="row__label">{entry.title}</span>
+                  {#if revealed !== `track-${entry.id}`}
+                    <span class="row__meta">{entry.duration ? mmss(entry.duration) : ''}</span>
+                  {/if}
+                </button>
+                {#if revealed === `track-${entry.id}`}
+                  <span class="row__actions">
+                    <button class="act act--play" type="button" aria-label="Play now" onclick={() => play('track', entry.id, entry.title)}><span class="act__play"></span></button>
+                    <button class="act" type="button" aria-label="Add to queue" onclick={() => act('track', entry.id, 'add', entry.title)}><span class="act__queue"><i></i><i></i><i></i></span></button>
+                    <button class="act" type="button" aria-label="Add to playlist" onclick={() => openPicker('track', entry.id, entry.title)}><span class="act__plus"></span></button>
+                  </span>
+                {/if}
+              </div>
+            {:else}
+              <div class="pane__empty">{chosenAlbum ? 'No tracks' : 'Pick an album'}</div>
+            {/each}
           </div>
         </div>
       </div>
@@ -468,6 +657,32 @@
       </div>
     {/if}
   </div>
+
+  {#if picker}
+    <div class="sheet__scrim" role="presentation" onclick={() => (picker = null)}></div>
+    <div class="sheet">
+      <div class="sheet__head">
+        <div class="sheet__kicker">Add to playlist</div>
+        <div class="sheet__title">{picker.label}</div>
+      </div>
+      <div class="sheet__list">
+        <!-- Creating playlists is not supported (ADR-0038 §3), so the
+             design's "New playlist" row is not drawn. -->
+        {#each playlists as playlist (playlist.id)}
+          <button class="sheet__row" type="button" onclick={() => addToPlaylist(playlist)}>
+            <span class="sheet__name">{playlist.name}</span>
+            <span class="sheet__count">{playlist.tracks}</span>
+          </button>
+        {:else}
+          <div class="pane__empty">No playlists in the library</div>
+        {/each}
+      </div>
+    </div>
+  {/if}
+
+  {#if toast}
+    <div class="toast">{toast}</div>
+  {/if}
 
   {#if active}
     <div class="strip">
@@ -856,6 +1071,310 @@
 
   .album.is-busy {
     opacity: 0.6;
+  }
+
+  /* Browse: three panes, ported from the design's own block. */
+  .browse {
+    flex: 1;
+    min-width: 0;
+    min-height: 0;
+    display: grid;
+    grid-template-rows: 288px 1fr;
+    gap: 12px;
+    padding: 20px 30px 22px;
+    box-sizing: border-box;
+  }
+  .browse__top {
+    display: grid;
+    grid-template-columns: 1fr 1.25fr;
+    gap: 12px;
+    min-height: 0;
+  }
+  .pane {
+    border-radius: 18px;
+    background: rgba(255, 255, 255, 0.045);
+    border: 1px solid rgba(233, 238, 242, 0.09);
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    min-height: 0;
+    overflow: hidden;
+  }
+  .pane__head {
+    height: 36px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 0 16px;
+    border-bottom: 1px solid rgba(233, 238, 242, 0.08);
+  }
+  .pane__label,
+  .pane__count {
+    font-family: var(--font-mono);
+    font-size: var(--t-label-sm);
+  }
+  .pane__label {
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: rgba(233, 238, 242, 0.5);
+  }
+  .pane__count {
+    color: var(--ink-quiet);
+    margin-left: auto;
+  }
+  .pane__list {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    padding: 5px;
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    scrollbar-width: none;
+    /* Finding 032: nothing per scroll frame, painting kept inside. */
+    contain: content;
+    touch-action: pan-y;
+  }
+  .pane__list::-webkit-scrollbar {
+    display: none;
+  }
+  .pane__empty {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 18px;
+    font-family: var(--font-mono);
+    font-size: var(--t-label-sm);
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--ink-quiet);
+    text-align: center;
+  }
+
+  .row {
+    display: flex;
+    align-items: center;
+    height: 46px;
+    flex-shrink: 0;
+    border-radius: 10px;
+    padding-right: 10px;
+  }
+  .row.is-on {
+    background: rgba(159, 180, 232, 0.14);
+  }
+  .row__hit {
+    flex: 1;
+    min-width: 0;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 0 14px;
+    background: none;
+  }
+  .row__hit:active {
+    opacity: 0.62;
+  }
+  .row__num {
+    font-family: var(--font-mono);
+    font-size: 13px;
+    color: var(--ink-quiet);
+    width: 24px;
+    flex-shrink: 0;
+    text-align: left;
+  }
+  .row__label {
+    flex: 1;
+    min-width: 0;
+    font-size: var(--t-body-sm);
+    font-weight: 600;
+    color: var(--ink);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    text-align: left;
+  }
+  .row__meta {
+    font-family: var(--font-mono);
+    font-size: 13px;
+    color: var(--ink-quiet);
+    flex-shrink: 0;
+  }
+  /* The design reveals these on the active row only, one row at a time. */
+  .row__actions {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+  }
+  .act {
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+    background: rgba(233, 238, 242, 0.06);
+    border: 1px solid rgba(233, 238, 242, 0.14);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    box-sizing: border-box;
+  }
+  .act:active {
+    transform: scale(0.95);
+  }
+  .act--play {
+    background: rgba(126, 214, 188, 0.13);
+    border-color: rgba(126, 214, 188, 0.32);
+  }
+  .act__play {
+    width: 0;
+    height: 0;
+    border-left: 11px solid var(--accent-lms);
+    border-top: 7px solid transparent;
+    border-bottom: 7px solid transparent;
+    margin-left: 2px;
+  }
+  .act__queue {
+    width: 15px;
+    height: 12px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+  }
+  .act__queue i {
+    height: 2.5px;
+    border-radius: 2px;
+    background: rgba(233, 238, 242, 0.9);
+  }
+  .act__queue i:last-child {
+    width: 9px;
+  }
+  .act__plus {
+    width: 15px;
+    height: 15px;
+    position: relative;
+  }
+  .act__plus::before,
+  .act__plus::after {
+    content: '';
+    position: absolute;
+    border-radius: 2px;
+    background: rgba(233, 238, 242, 0.9);
+  }
+  .act__plus::before {
+    left: 0;
+    top: 6px;
+    width: 15px;
+    height: 2.5px;
+  }
+  .act__plus::after {
+    left: 6px;
+    top: 0;
+    width: 2.5px;
+    height: 15px;
+  }
+
+  /* The design's action sheet, at its "pick a playlist" step. */
+  .sheet__scrim {
+    position: absolute;
+    inset: 0;
+    z-index: 34;
+    background: var(--bg-scrim);
+  }
+  .sheet {
+    position: absolute;
+    z-index: 35;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    width: 640px;
+    background: var(--bg-panel);
+    border: 1px solid rgba(126, 214, 188, 0.22);
+    border-radius: 26px;
+    padding: 28px 32px 30px;
+    box-sizing: border-box;
+    box-shadow: 0 34px 90px rgba(0, 0, 0, 0.6);
+  }
+  .sheet__head {
+    margin-bottom: 22px;
+    min-width: 0;
+  }
+  .sheet__kicker {
+    font-family: var(--font-mono);
+    font-size: var(--t-label-sm);
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--ink-quiet);
+  }
+  .sheet__title {
+    font-size: 25px;
+    font-weight: 700;
+    color: var(--ink);
+    margin-top: 5px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .sheet__list {
+    max-height: 246px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    scrollbar-width: none;
+  }
+  .sheet__list::-webkit-scrollbar {
+    display: none;
+  }
+  .sheet__row {
+    height: 62px;
+    flex-shrink: 0;
+    border-radius: 14px;
+    background: rgba(233, 238, 242, 0.06);
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 0 22px;
+  }
+  .sheet__row:active {
+    background: rgba(233, 238, 242, 0.16);
+  }
+  .sheet__name {
+    flex: 1;
+    min-width: 0;
+    font-size: var(--t-body);
+    font-weight: 600;
+    color: var(--ink);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    text-align: left;
+  }
+  .sheet__count {
+    font-family: var(--font-mono);
+    font-size: 14px;
+    color: var(--ink-quiet);
+    flex-shrink: 0;
+  }
+
+  .toast {
+    position: absolute;
+    z-index: 33;
+    left: 50%;
+    bottom: 132px;
+    transform: translateX(-50%);
+    max-width: 700px;
+    padding: 12px 22px;
+    border-radius: var(--r-pill);
+    background: rgba(8, 12, 16, 0.86);
+    border: 1px solid var(--ink-line);
+    font-size: var(--t-body-sm);
+    color: var(--ink);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
   /* The artist grid, ported from the design's own block. */

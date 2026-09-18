@@ -72,6 +72,10 @@ class NoPlayer(Exception):
 TARGETS = {"album": "album_id", "artist": "artist_id", "track": "track_id",
            "playlist": "playlist_id"}
 ACTIONS = {"play": "cmd:load", "add": "cmd:add"}
+#: Adding to a saved playlist is not a `playlistcontrol` at all: LMS takes
+#: one track URL at a time, and ignores `album_id`/`track_id` there without
+#: an error (Finding 029 §3). So the tracks are resolved first.
+PLAYLIST_ACTION = "playlist"
 
 
 def _int(value) -> int | None:
@@ -113,18 +117,29 @@ class LmsLibrary:
         self._player_id = player_id or (lambda: None)
         self._clock = clock
         self._cache: dict[tuple, dict] = {}
+        self._http: aiohttp.ClientSession | None = None
         self._lastscan: str | None = None
         self._lastscan_checked: float | None = None
 
     # --- LMS ---------------------------------------------------------------
 
+    async def _session(self) -> aiohttp.ClientSession:
+        """One session for the life of the daemon, so a connection is kept
+        open. Adding an artist to a playlist is one request per track (LMS
+        takes no bulk form, Finding 029 §3), and a session per request meant
+        a new connection per track - slow enough for George to notice,
+        2026-09-18."""
+        if self._http is None or self._http.closed:
+            self._http = aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=10))
+        return self._http
+
     async def _rpc(self, command: list, player: str = "") -> dict:
         body = {"id": next(_id_counter), "method": "slim.request", "params": [player, command]}
         try:
-            async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=10)) as session:
-                async with session.post(f"{self._base}/jsonrpc.js", json=body) as resp:
-                    resp.raise_for_status()
-                    return (await resp.json()).get("result") or {}
+            session = await self._session()
+            async with session.post(f"{self._base}/jsonrpc.js", json=body) as resp:
+                resp.raise_for_status()
+                return (await resp.json()).get("result") or {}
         except (aiohttp.ClientError, TimeoutError) as exc:
             raise LibraryUnavailable(str(exc)) from exc
 
@@ -252,7 +267,9 @@ class LmsLibrary:
 
     # --- actions -----------------------------------------------------------
 
-    async def act(self, kind: str, item_id: int, action: str) -> dict:
+    async def act(
+        self, kind: str, item_id: int, action: str, playlist_id: int | None = None
+    ) -> dict:
         """Play something, or add it to the queue (ADR-0038 §3, §5).
 
         One `playlistcontrol` per action, as measured: a load replaces the
@@ -261,15 +278,26 @@ class LmsLibrary:
         itself, which is what makes the library able to start playback at
         all (ADR-0038 §4, ADR-0027).
 
+        **Play means in order** (George, 2026-09-18): LMS's own shuffle is
+        turned off first. With it on, a freshly loaded album starts at a
+        random track and an artist starts mid-album, which is what George
+        saw. The design gives shuffle its own button, so Play is the
+        in-order one; the panel is knowingly changing a player setting that
+        LMS's own apps show.
+
         Returns what LMS reported, which is the number of tracks it acted
         on; a `200` means the command was sent, and what happened is read
         from `/state` (ADR-0037 §1).
         """
-        if kind not in TARGETS or action not in ACTIONS:
+        if kind not in TARGETS or action not in {**ACTIONS, PLAYLIST_ACTION: ""}:
             raise NotFound(f"{action} {kind}")
+        if action == PLAYLIST_ACTION:
+            return await self._add_to_playlist(kind, item_id, playlist_id)
         player = self._player_id()
         if not player:
             raise NoPlayer("the LMS player has not been resolved yet")
+        if action == "play":
+            await self._rpc(["playlist", "shuffle", 0], player)
         result = await self._rpc(
             ["playlistcontrol", ACTIONS[action], f"{TARGETS[kind]}:{item_id}"], player
         )
@@ -279,6 +307,43 @@ class LmsLibrary:
             raise NotFound(f"{kind} {item_id}")
         logger.info("library: %s %s %s -> %s tracks", action, kind, item_id, count)
         return {"tracks": count}
+
+    async def _add_to_playlist(self, kind: str, item_id: int, playlist_id: int | None) -> dict:
+        """Add an album, artist, track or playlist's tracks to a library
+        playlist (ADR-0038 §3).
+
+        LMS has no command that adds a whole album: `playlists edit cmd:add`
+        takes one `url:` at a time, and silently ignores an `album_id` or
+        `track_id` given to it (Finding 029 §3). The tracks are resolved
+        first, then added in order.
+        """
+        if playlist_id is None:
+            raise NotFound("a playlist to add to")
+        if playlist_id not in {p["id"] for p in await self._library_playlists()}:
+            # A plugin's playlist is not ours to write to, and an unknown id
+            # is not a playlist at all (ADR-0038 §1).
+            raise NotFound(f"library playlist {playlist_id}")
+        if kind == "playlist":
+            tracks = await self._rpc(
+                ["playlists", "tracks", 0, 1000, f"playlist_id:{item_id}", "tags:u"]
+            )
+            urls = [t.get("url") for t in tracks.get("playlisttracks_loop", [])]
+        else:
+            query = ["titles", 0, 1000, f"{TARGETS[kind]}:{item_id}", "tags:u"]
+            if kind == "album":
+                query.append("sort:tracknum")
+            found = await self._rpc(query)
+            urls = [t.get("url") for t in found.get("titles_loop", [])]
+        urls = [u for u in urls if u]
+        if not urls:
+            raise NotFound(f"{kind} {item_id}")
+        for url in urls:
+            await self._rpc(["playlists", "edit", "cmd:add", f"playlist_id:{playlist_id}", f"url:{url}"])
+        logger.info(
+            "library: added %s tracks from %s %s to playlist %s",
+            len(urls), kind, item_id, playlist_id,
+        )
+        return {"tracks": len(urls)}
 
     # --- playlists ---------------------------------------------------------
 
