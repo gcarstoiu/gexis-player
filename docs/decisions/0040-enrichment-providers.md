@@ -1,6 +1,6 @@
 # ADR-0040 — Enrichment providers: LMS first where it can answer, a key-free set behind it
 
-**Status:** Proposed — awaiting George's read
+**Status:** Accepted — George read it and opened Phase 8, 2026-09-18
 **Date:** 2026-09-18
 **Raised by:** Phase 8 (enrichment and lyrics); decisions taken with George
 2026-09-18

@@ -59,7 +59,7 @@ the question blocking it was answered.
 | [0037](0037-transport-commands.md) | Transport commands: one route to the active renderer; a control the renderer has is visible, disabled when it cannot work now | Accepted — amends [0020](0020-library-browse-tree.md)'s unusable-controls rule |
 | [0038](0038-library-and-radio-on-the-panel.md) | Library and radio on the panel: the designed screens only, read through the core, played on LMS | Accepted — amends [0030](0030-library-typed-radio-slimbrowse.md) (screen list, Podcasts exclusion, Radio Now Playing); §7's artwork ladder corrected 2026-09-18 |
 | [0039](0039-cpu-governor-performance.md) | The CPU governor is `performance`, set by a unit in the image | **Reverted the same day** (George, 2026-09-17): ~10 °C hotter for no visible improvement; the panel's smoothness came from sharing one backdrop. Kept for the measurements |
-| [0040](0040-enrichment-providers.md) | Enrichment providers: LMS's artist-information plugin first where it answers, a key-free set (MusicBrainz, Cover Art Archive, Wikipedia, ListenBrainz, LRCLIB) behind it | **Proposed** — amends [0012](0012-enrichment-service.md)'s Sources and its single shared bucket |
+| [0040](0040-enrichment-providers.md) | Enrichment providers: LMS's artist-information plugin first where it answers, a key-free set (MusicBrainz, Cover Art Archive, Wikipedia, ListenBrainz, LRCLIB) behind it | Accepted — amends [0012](0012-enrichment-service.md)'s Sources and its single shared bucket |
 
 ## Cross-cutting rules
 

@@ -1279,7 +1279,7 @@ structural work is never needed.
 Purely additive. Cannot break playback.
 
 **Status 2026-09-18: [ADR-0040](decisions/0040-enrichment-providers.md)
-written and proposed, from George's decisions; no code yet.** The providers
+accepted; George opened the phase. Branch `phase-8-plan`.** The providers
 are settled: **LMS's Music & Artist Information plugin first where it
 answers** - it has artist photos *and* biographies on George's server
 ([Finding 035](findings/035-lms-artist-information-plugin.md)) - with a
@@ -1317,6 +1317,39 @@ with several it becomes one limiter per provider.
    duration is available, so the confidence rule is tested for this case
    specifically; stream text is not always a song ("KissFM Live!" as artist,
    Phase 6). ADR-0038 §8a.
+
+**Plan, 2026-09-18** — one increment at a time, each checked on the panel
+before the next, as Phase 7 ran.
+
+1. **Measure the key-free providers against real tracks, no product code.**
+   Read-only, from `gexis`, using albums and artists from George's own
+   library and one radio station: does MusicBrainz find them and what does
+   its score look like; does MusicBrainz → Wikidata → Wikipedia reach the
+   right article for an ambiguous name; does ListenBrainz answer without a
+   token; does LRCLIB match with a duration and what its search fallback
+   returns without one. Recorded as a finding, with what it could not
+   establish. **Why first:** ADR-0040 chose these providers from their
+   documentation and terms; nothing has asked them for a real track yet.
+2. **The enrichment service, tested against recorded replies.** One limiter
+   per provider (ADR-0040 §5), a persistent cache including negative
+   results, the confidence threshold, and the rule that renderer-supplied
+   text is never overwritten. No screen yet. Cache keyed on
+   (artist, album, title, duration), never on LMS ids.
+3. **LMS's plugin path, and artist photos on the panel.** `musicartistinfo`
+   detected at runtime; photos replace Phase 7's initials on the artist grid
+   and artist page where they exist, initials where they do not. This is the
+   step that proves ADR-0040 §1's "LMS first" without any external provider
+   being involved.
+4. **The Artist tab** on now playing: biography, with the attribution line
+   (§4) designed here since the designs carry none, and similar artists.
+5. **The Release tab**: label, release type, track count, album notes where
+   there are any.
+6. **Lyrics**: the Lyrics tab, plain and synced, with LRCLIB matched on
+   duration and the search fallback for Bluetooth, which often has none.
+7. **Radio artwork from enrichment** (criterion 7): a station that sends no
+   artwork gets it looked up from artist and title, with the confidence rule
+   tested for the case that has no album and no duration.
+8. Clear the `phase-8` markers; DEVELOPMENT, HANDOFF, image, PR.
 
 ### Phase 9 — Settings wiring and UI polish
 
