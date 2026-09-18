@@ -397,3 +397,61 @@ async def test_lrclib_being_unreachable_is_unavailable():
     http = FakeHttp({"lrclib.net/api/get": None})
 
     assert (await LrclibLyrics(http).fetch(KEY)).outcome is Outcome.UNAVAILABLE
+
+
+# --- cover art -------------------------------------------------------------
+
+
+CAA = {"images": [
+    {"front": False, "image": "http://caa/back.jpg", "thumbnails": {"500": "http://caa/back-500.jpg"}},
+    {"front": True, "image": "http://caa/front.jpg", "thumbnails": {"500": "http://caa/front-500.jpg"}},
+]}
+MB_GROUP = {"release-groups": [{"id": "rg-1", "title": "After Hours", "score": 100}]}
+
+
+@pytest.mark.asyncio
+async def test_cover_art_is_the_front_one_at_the_size_the_panel_draws():
+    """For a renderer that sends no artwork at all - Bluetooth often sends
+    none (George, 2026-09-18)."""
+    from gexis_core.providers import CoverArtProvider
+
+    http = FakeHttp({"release-group/?": MB_GROUP, "ws/2/release-group/": MB_GROUP,
+                     "coverartarchive.org": CAA})
+
+    answer = await CoverArtProvider(http).fetch(KEY)
+
+    assert answer.outcome is Outcome.FOUND
+    assert answer.enrichment.album_art == "http://caa/front-500.jpg"
+
+
+@pytest.mark.asyncio
+async def test_a_release_the_archive_has_no_art_for_is_missing():
+    """The archive answers 404, which is an answer: it has nothing."""
+    from gexis_core.providers import CoverArtProvider
+
+    http = FakeHttp({"ws/2/release-group/": MB_GROUP, "coverartarchive.org": {}})
+
+    assert (await CoverArtProvider(http).fetch(KEY)).outcome is Outcome.MISSING
+
+
+@pytest.mark.asyncio
+async def test_an_archive_that_cannot_be_reached_is_unavailable():
+    from gexis_core.providers import CoverArtProvider
+
+    http = FakeHttp({"ws/2/release-group/": MB_GROUP, "coverartarchive.org": None})
+
+    assert (await CoverArtProvider(http).fetch(KEY)).outcome is Outcome.UNAVAILABLE
+
+
+@pytest.mark.asyncio
+async def test_a_track_with_no_album_name_is_not_looked_up():
+    """AVRCP sometimes sends a title and nothing else; a release group cannot
+    be identified from that."""
+    from gexis_core.enrichment import TrackKey
+    from gexis_core.providers import CoverArtProvider
+
+    http = FakeHttp({})
+    key = TrackKey.of(TrackMetadata(title="Some Song", artist="Somebody"))
+
+    assert (await CoverArtProvider(http).fetch(key)).outcome is Outcome.MISSING
+    assert http.asked == []

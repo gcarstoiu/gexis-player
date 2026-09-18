@@ -27,6 +27,7 @@ from gexis_core.artistinfo import LmsArtistInfo
 from gexis_core.enrichment import PREFETCH_AFTER_S, Cache, EnrichmentService, TrackKey
 from gexis_core.providers import (
     ArtistIdentity,
+    CoverArtProvider,
     Http,
     ListenBrainzSimilar,
     LmsArtistProvider,
@@ -364,6 +365,7 @@ async def main() -> None:
             WikipediaBiography(http, identity),
             ListenBrainzSimilar(http, identity),
             LrclibLyrics(http),
+            CoverArtProvider(http),
         ],
         enrichment_cache,
     )

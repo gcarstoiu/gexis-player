@@ -291,6 +291,62 @@ class LrclibLyrics:
         ), confidence=confidence)
 
 
+class CoverArtProvider:
+    """Cover art for a release the renderer has none for (ADR-0040 §2).
+
+    **Who this is for.** LMS hands the panel its own artwork and Spotify
+    sends a URL; Bluetooth often sends neither, and a screen with no cover
+    is the poorest source the design is meant to degrade to rather than the
+    one it should stay at (George, 2026-09-18: no artwork over Bluetooth).
+
+    MusicBrainz identifies the release group, then the Cover Art Archive
+    serves the image. `release-group` rather than `release`, because AVRCP
+    gives an album name and nothing that says *which* pressing of it.
+    """
+
+    name = "coverart"
+    #: The archive resizes; 500 is now playing's well (ADR-0038 §7).
+    SIZE = 500
+
+    def __init__(self, http: Http) -> None:
+        self._http = http
+
+    def serves(self, renderer) -> bool:
+        return True
+
+    async def fetch(self, key) -> Answer:
+        if not (key.artist and key.album):
+            return Answer(Outcome.MISSING)
+        found = await self._http.json(
+            "https://musicbrainz.org/ws/2/release-group/",
+            {"query": f'artist:"{key.artist}" AND releasegroup:"{key.album}"',
+             "fmt": "json", "limit": "1"},
+        )
+        if found is None:
+            return Answer(Outcome.UNAVAILABLE)
+        groups = found.get("release-groups") or []
+        if not groups:
+            return Answer(Outcome.MISSING)
+        group = groups[0]
+        score = int(group.get("score") or 0)
+        # The archive answers 404 for a release group it has no art for,
+        # which `Http.json` turns into an empty body - an answer, not a
+        # failure.
+        art = await self._http.json(f"https://coverartarchive.org/release-group/{group['id']}")
+        if art is None:
+            return Answer(Outcome.UNAVAILABLE, confidence=score)
+        images = art.get("images") or []
+        front = next((i for i in images if i.get("front")), images[0] if images else None)
+        if not front:
+            return Answer(Outcome.MISSING, confidence=score)
+        thumbnails = front.get("thumbnails") or {}
+        url = thumbnails.get(str(self.SIZE)) or thumbnails.get("large") or front.get("image")
+        if not url:
+            return Answer(Outcome.MISSING, confidence=score)
+        return Answer(Outcome.FOUND, Enrichment(album_art=url, sources=("coverart",)),
+                      confidence=score)
+
+
 class WikipediaBiography:
     """A biography for any renderer, reached the long way round: MusicBrainz
     for the artist's id, its Wikidata relation for the article, then

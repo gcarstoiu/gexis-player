@@ -30,9 +30,16 @@
 
   // An artwork URL that fails to load falls back to the pending glyph.
   let failedArtwork = $state(null);
-  const artwork = $derived(
-    metadata?.artwork && metadata.artwork !== failedArtwork ? metadata.artwork : null,
-  );
+  //: What the renderer sent, and only then what enrichment found. ADR-0012
+  //: is additive-only: a cover looked up from a fuzzy AVRCP string must
+  //: never replace one the renderer supplied, it can only fill a hole
+  //: (George, 2026-09-18: no artwork at all over Bluetooth).
+  const artwork = $derived.by(() => {
+    const supplied = metadata?.artwork;
+    if (supplied && supplied !== failedArtwork) return supplied;
+    const found = artistInfo.enrichment?.album_art;
+    return found && found !== failedArtwork ? found : null;
+  });
 
   const head = playhead(() => metadata);
 
@@ -78,23 +85,31 @@
       .map((word) => word[0].toUpperCase())
       .join('') || '?';
 
+  // **What is being looked up is a track, not an artist.** Keying this on
+  // the artist meant an album played through reused the first track's
+  // answer for every track after it: no lyrics for the rest of the album,
+  // or - worse - the first track's words against a later one (George,
+  // 2026-09-18: synced lyrics rarely appear on Spotify).
+  const trackId = $derived(
+    [metadata?.artist ?? '', metadata?.title ?? '', metadata?.album ?? ''].join('\u0000'),
+  );
+
   async function loadArtistInfo(force = false) {
-    const who = metadata?.artist ?? '';
-    if (!who) return;
-    if (!force && artistInfo.for === who && artistInfo.state !== 'error') return;
-    artistInfo = { state: 'loading', for: who, enrichment: null };
+    const wanted = trackId;
+    if (!(metadata?.artist || metadata?.title)) return;
+    if (!force && artistInfo.for === wanted && artistInfo.state !== 'error') return;
+    artistInfo = { state: 'loading', for: wanted, enrichment: null };
     try {
       const response = await fetch('/enrichment');
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const body = await response.json();
-      // By the time a lookup returns the track may have changed; the reply
-      // says which artist it is about, so a late answer is dropped rather
-      // than shown against the wrong name.
-      if ((metadata?.artist ?? '') !== who) return;
-      artistInfo = { state: 'ready', for: who, enrichment: body.enrichment };
+      // By the time a lookup returns the track may have changed; a late
+      // answer is dropped rather than shown against the wrong track.
+      if (trackId !== wanted) return;
+      artistInfo = { state: 'ready', for: wanted, enrichment: body.enrichment };
     } catch (err) {
       console.info('enrichment:', err.message);
-      artistInfo = { state: 'error', for: who, enrichment: null };
+      artistInfo = { state: 'error', for: wanted, enrichment: null };
     }
   }
 
@@ -103,8 +118,8 @@
   // `panelIsMetaLyrics`), so the panel has to know before anyone asks.
   // One call to the daemon, which answers from its cache after the first.
   $effect(() => {
-    const who = metadata?.artist ?? '';
-    if (who) untrack(() => loadArtistInfo());
+    // Depends on the track, so a new one is looked up.
+    if (trackId.replace(/\u0000/g, '')) untrack(() => loadArtistInfo());
   });
 
   const info = $derived(artistInfo.enrichment);
