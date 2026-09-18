@@ -1055,7 +1055,7 @@
               {[album.artist, album.year].filter(Boolean).join('  \u00b7  ')}
             </div>
           </div>
-          <button class="playall" type="button" onclick={() => play('album', album.id)}>
+          <button class="playall" type="button" onclick={() => play('album', album.id, album.title)}>
             <span class="playall__glyph"></span>
             <span class="playall__label">Play album</span>
           </button>
