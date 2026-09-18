@@ -47,13 +47,21 @@ UNIT_NAME = "squeezelite.service"
 #: up, not a whole 500-track load.
 QUEUE_LIMIT = 100
 
-#: The size asked of LMS for a track's artwork. The design's now playing
-#: well is 500x500 (`design/data-contract.md`) and the Peppy screen scales
-#: down from this too; `_o.jpg` is always a JPEG, where the bare resize was
-#: a PNG twice the original's size for 5 of 20 albums (Finding 029 §5).
-#: Unsized, LMS returns the original - up to 358 KB, blurred at 72px behind
-#: the screen, which cost frames on the panel (George, 2026-09-17).
+#: The size asked of LMS for the *current* track's artwork. The design's now
+#: playing well is 500x500 (`design/data-contract.md`) and the Peppy screen
+#: scales down from this too; `_o.jpg` is always a JPEG, where the bare
+#: resize was a PNG twice the original's size for 5 of 20 albums (Finding
+#: 029 §5). Unsized, LMS returns the original - up to 358 KB, blurred at
+#: 72px behind the screen, which cost frames on the panel (George,
+#: 2026-09-17).
 ARTWORK_SIZE = 500
+
+#: The queue rail's rows are 42px, and there can be `QUEUE_LIMIT` of them.
+#: They were served the 500px cover above until Phase 7a step 1 - up to a
+#: hundred images at more than ten times the size drawn, fetched the moment
+#: the rail opens (George, 2026-09-18: everything on the panel is slow).
+#: Same ladder as `library.py`'s.
+ARTWORK_ROW = 100
 
 #: Requested on every "status" query this adapter makes so pushed frames
 #: carry metadata, not just power (Phase 3 criterion 1). Letters per the
@@ -252,7 +260,7 @@ class LmsAdapter(Adapter):
                 artist=song.get("artist"),
                 album=song.get("album"),
                 artwork=(
-                    f"{self._base}/music/{song['coverid']}/cover_{ARTWORK_SIZE}x{ARTWORK_SIZE}_o.jpg"
+                    f"{self._base}/music/{song['coverid']}/cover_{ARTWORK_ROW}x{ARTWORK_ROW}_o.jpg"
                     if song.get("coverid")
                     else None
                 ),

@@ -1189,6 +1189,91 @@ on the panel; editable remotely — itself already amended 2026-09-13 by
 [ADR-0029](decisions/0029-text-entry-on-every-surface.md), and now moot: no
 text input is rendered at all.
 
+### Phase 7a — Panel responsiveness
+
+**Added 2026-09-18 (George), and closed the same day.** Inserted between 7
+and 8 rather than folded into Phase 9's polish slot, because Phase 8 puts
+more on the panel and attribution is already the hard part: Finding 032
+could not separate the causes it had. Nothing renumbers.
+
+**Closed with criterion 4 unmet, deliberately.** Steps 1-3 are done: the
+artwork ladder landed and George checked it, and the panel now has an
+instrument and a baseline ([Finding 034](findings/034-what-the-panel-presents.md)).
+Making the panel *reach* the target is Phase 9 criterion 0 - this phase
+existed to make that work judgeable, not to do it.
+
+**What prompted it.** George, after the queue rail landed: *"Everything quite
+slow though."* Before that, from his own checks: the New Music strip scrolls
+unevenly, and the artist grid is slow to load, slow to open and slow to
+scroll.
+
+**What this phase is not.** It is not the structural work - virtualising long
+lists, lighter cards, letter buckets from the core. That stays in Phase 9,
+where a realistic load and this phase's baseline both exist. A real possible
+outcome here is that the panel is fast enough after criterion 1 and the
+structural work is never needed.
+
+**Acceptance**
+
+1. **Nothing asks for more than it draws.** The queue rail requests 500 px
+   covers for 42 px rows: `ARTWORK_SIZE` in `adapters/lms.py` serves both now
+   playing's 500 px well and every queue row. Split it, and sweep every other
+   artwork request and card for the same mismatch. This applies a standard
+   already recorded (ADR-0022's artwork row, ADR-0038 §7, Finding 029 §5); it
+   is not a new decision. **Done 2026-09-18; George checked on the panel:**
+   the ladder is 500 / 300 / 200 / 100, and three of the five places drew
+   smaller than they asked. Measured on one album on his server: 33.2 KB at
+   500 px, 23.8 at 300, 12.2 at 200, 3.8 at 100 - so a full queue rail
+   fetched about 3.3 MB of covers to draw them at 42 px, and now fetches
+   about 380 KB. He confirmed nothing looks soft and *"for sure the rail got
+   faster"*.
+2. **One instrument that survives its own scrutiny.** Finding 032 names the
+   three faults it must not repeat: `requestAnimationFrame` measured the main
+   thread while the strip scrolled off it; the trace reports no frames at all
+   without the `cc` category, and the verdict is in
+   `args.frame_reporter.state`; and touches synthesised over the DevTools
+   protocol bypass the browser's gesture pipeline, so the harness may produce
+   the stutter it measures. **Real input** - events written to `/dev/uinput`
+   on the device, through the kernel, libinput and the compositor - is what
+   answers the third.
+3. **Done 2026-09-18** - steps 2 and 3, in
+   [Finding 034](findings/034-what-the-panel-presents.md). The instrument is
+   `tools/panel-touch.py` (a finger through `/dev/uinput`) and
+   `tools/panel-frames.py`; the kiosk gained an off-by-default
+   `GEXIS_KIOSK_DEBUG_PORT` instead of a hand-edited launcher. **Baseline,
+   20 runs, LMS playing:** New Music 47.1 fps / 2.5 % dropped, artist grid
+   23.1 / 50.7, queue rail 13.9 / 75.2 - the same order George put them in
+   by feel. **The unexpected result: with music playing and nobody touching
+   the panel, 71 % of wanted frames are dropped**, where a paused panel is
+   barely asked for a frame at all. PeppyMeter, the obvious suspect at 13 %
+   CPU while minimised, was eliminated by stopping it (68.45 % against
+   71.25 %). Everything fails criterion 4, which is the point of having it.
+
+   **A baseline as a distribution, not a number.** 20 runs per configuration
+   over a fixed interaction set: open Home, scroll New Music, open the artist
+   grid, scroll it, open the queue rail **and scroll it** (George,
+   2026-09-18: after step 1 the rail opens visibly faster and *"scrolling it
+   is still choppy"*). Single-run comparisons have misled
+   this project twice (Findings 003/004, then 032's first pass). Recorded as a
+   finding.
+4. **Target: two numbers and a person** (George, 2026-09-18; he set 2 % and
+   then declined a single number once the measurement showed why one is not
+   enough).
+
+   - **Under 2 % of frames dropped** on every interaction in the set, and
+   - **no interaction below 55 fps** while the gesture is happening, and
+   - **George's own go-ahead from seeing it work.**
+
+   All three. **Why not the percentage alone:** its denominator is the
+   frames the compositor wanted, which moves with whatever else is
+   animating - now playing's progress bar alone changes it - so the same
+   panel scores differently depending on the screen it is on. Frames put on
+   the screen per second of gesture is the number that means what it says,
+   with 60 the ceiling this panel can reach. **Why not the rate alone:** a
+   rate can be met while frames are still being thrown away around the
+   interaction. **Why a person as well:** neither number knows what the
+   panel feels like in the hand.
+
 ### Phase 8 — Enrichment and lyrics
 
 Purely additive. Cannot break playback.
@@ -1227,6 +1312,34 @@ Plexamp (11) and Qobuz Connect (12) were added between them. References in the
 ADRs were updated.
 
 **Acceptance**
+
+0. **The panel meets Phase 7a's target**, which is where the panel-speed work
+   lives now that 7a has measured rather than guessed. Added 2026-09-18 when
+   Phase 7a closed.
+
+   - **Under 2 % of frames dropped, no interaction below 55 fps, and
+     George's own go-ahead** (Phase 7a criterion 4).
+   - **The baseline to beat**, from
+     [Finding 034](findings/034-what-the-panel-presents.md), 20 runs each
+     with music playing: New Music strip 47.1 fps / 2.5 % dropped, artist
+     grid 23.1 / 50.7, queue rail 13.9 / 75.2.
+   - **Start with the question 7a could not answer: why is a playing panel
+     never idle?** With music playing and nobody touching it, 71 % of the
+     frames the compositor wants are dropped and about 17 a second reach
+     the screen; paused, it is barely asked for a frame. Every interaction
+     above is measured on top of that, so this may be most of it.
+     **PeppyMeter is already eliminated** (stopping it: 68.45 % against
+     71.25 %, inside the spread). Untested candidates: now playing's own
+     per-frame work while the playhead runs, the shared blurred backdrop
+     re-rastering, and the compositor's own cost.
+   - **Then the lists**: rendering only what is on screen, lighter cards,
+     letter buckets from the core rather than one list of 917.
+     `content-visibility: auto` was tried in Phase 7 and removed - with
+     off-screen groups only estimated, the jump rail landed inside the
+     previous letter.
+   - **Measure with the same instrument** (`tools/panel-frames.py`,
+     `tools/panel-touch.py`) so the numbers are comparable, and read
+     Finding 034's six instrument faults before trusting a new one.
 
 1. **Every row in ADR-0022's settings inventory is wired end to end** (panel
    and phone, ADR-0035), or marked out of scope with the reason.

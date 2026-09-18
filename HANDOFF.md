@@ -1,11 +1,47 @@
 # Handoff
 
-Last updated: 2026-09-18 (nineteenth session, on R2D2 — **Phase 7 done and
-checked on the panel; ADR-0038 accepted; image built, PR open**)
+Last updated: 2026-09-18 (nineteenth session, on R2D2 — **Phase 7 merged
+(PR #19); Phase 7a done and closed; next is Phase 8**)
 
 ## Start here
 
-**Phase 7 — library browse — is done on branch `phase-7-plan`.** Every step
+**Phase 7a — panel responsiveness — is closed** (2026-09-18, branch
+`phase-7a-plan`). It existed to make the panel's speed judgeable rather than
+argued about, and it did: **step 1** put every artwork request on a ladder at
+or above the size drawn (the queue rail was asking for 500 px covers for
+42 px rows - about 3.3 MB a rail against 380 KB now), which George checked -
+*"for sure the rail got faster"*. **Steps 2 and 3** built an instrument that
+survives its own scrutiny and took a baseline:
+[Finding 034](docs/findings/034-what-the-panel-presents.md).
+
+**The baseline, 20 runs each with music playing** (ceiling 60 fps): New Music
+strip 47.1 fps / 2.5 % dropped, artist grid 23.1 / 50.7, queue rail 13.9 /
+75.2 - the same order George put them in by feel. **The target is three
+things** (his call after seeing why one number is not enough): under 2 %
+dropped, no interaction below 55 fps, and his own go-ahead. Everything fails
+it today, which is the point of having it.
+
+**The open question, now Phase 9 criterion 0: why is a playing panel never
+idle?** With music playing and nobody touching it, 71 % of wanted frames are
+dropped; paused, the panel is barely asked for a frame. Every interaction is
+measured on top of that. **PeppyMeter is eliminated** (stopping it changed
+68.45 % against 71.25 %, inside the spread). Nothing else was tested -
+attribution is Phase 9's, and it now has a number to be judged against.
+
+**Read Finding 034's six instrument faults before measuring anything here.**
+Each produced a confident, plausible number: partial frames counted as
+dropped (17.9 % on an untouched panel), fixed coordinates that scrolled
+nothing (25-31 %), playback uncontrolled (57.7 % where the same control had
+said 0.00 %), every frame counted twice (102 fps on a 60 Hz panel), a rail
+measured with nothing below the current track to scroll, and thin runs
+averaged in.
+
+**Next: Phase 8 - enrichment and lyrics.** It needs an ADR choosing the
+providers before any code;
+[Finding 030](docs/findings/030-free-enrichment-providers.md) compares the
+free ones and recommends a key-free combination without deciding it.
+
+**Phase 7 — library browse — is merged (PR #19, 2026-09-18).** Every step
 was built and checked by George on the panel; the last, the queue rail, on
 2026-09-18. [ADR-0038](docs/decisions/0038-library-and-radio-on-the-panel.md)
 is **Accepted**, `docs/DEVELOPMENT.md` Phase 7 records what each step
@@ -313,14 +349,20 @@ reverted, currently-flashed image predates this fix.
 4  UI shell + idle + display-only nowplay * merged
 5  visualisation service + Peppy screen   * merged
 6  now playing, full                      * merged (PR #18)
-7  library browse                         * done, PR open - typed queries + our
-                                            screens; SlimBrowse for radio only
+7  library browse                         * merged (PR #19) - typed queries +
+                                            our screens; SlimBrowse for radio
+7a panel responsiveness                   * done - artwork at the size drawn,
+                                            an instrument that survives its
+                                            own scrutiny, and a baseline
+                                            (Finding 034). Reaching the target
+                                            is Phase 9 criterion 0
 8  enrichment + lyrics                    <- next. Additive only, cannot break
-                                            playback. Needs an ADR choosing the
-                                            providers first (Finding 030)
-9  settings wiring + UI polish            every ADR-0022 row wired or scoped out;
-                                            the panel-slowness investigation
-                                            lands here unless pulled forward
+                                            playback.
+                                            Needs an ADR choosing the providers
+                                            first (Finding 030)
+9  settings wiring + UI polish            every ADR-0022 row wired or scoped
+                                            out; criterion 0 is the panel
+                                            reaching Phase 7a's target
 10 plugin contract + themes               Qobuz is the fourth-renderer test
 11 Plexamp as a renderer                  starts with the hardware check: does it
                                             release the device? (ADR-0008's

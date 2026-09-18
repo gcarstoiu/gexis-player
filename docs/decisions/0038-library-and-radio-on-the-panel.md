@@ -229,12 +229,25 @@ The panel loads artwork from LMS directly (ADR-0020):
 | `cover_300x300.jpg` | PNG | 173,269 |
 | `cover_300x300_o.jpg` | JPEG | 25,474 |
 
-**Two sizes, each the size the panel draws** (2026-09-17): 500 px for a
-cover (the album page, now playing's well — the design's 500×500) and 200 px
-for a thumbnail (a New Music card is 176 px, a row's thumb smaller). Ten
-500 px covers in 176 px cards were part of what made the strip scroll
-unevenly on the panel, and now playing was blurring the *unsized* original —
-up to 358 KB — behind the screen.
+**Each request is the size the panel draws** (2026-09-17). Ten 500 px covers
+in 176 px cards were part of what made the strip scroll unevenly on the
+panel, and now playing was blurring the *unsized* original — up to 358 KB —
+behind the screen.
+
+**Amended 2026-09-18 (Phase 7a step 1): a ladder of four, not two.** Two
+sizes had drifted from the rule they were written for: the album page draws
+264 px and asked for 500, the discography's 132 px cards asked for 500, and
+the queue rail's 42 px rows asked for 500 — up to a hundred of them the
+moment the rail opens. Each request is now the smallest step at or above
+what is drawn, which keeps LMS's cached variants bounded rather than one per
+element:
+
+| Step | Fills | Drawn |
+|---|---|---|
+| 500 | now playing's well, and Peppy scales from it | 500 |
+| 300 | the album page's cover | 264 |
+| 200 | a New Music card, a discography card | 176, 132 |
+| 100 | a queue row, and track rows if one ever draws artwork | 42 |
 
 The bare resize returns a PNG twice the size of the original. **Repeated on
 20 random albums (step 1):** the bare `cover_300x300` was a PNG for 5 of 20,
