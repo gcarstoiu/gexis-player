@@ -125,6 +125,10 @@
     return out.sort((a, b) => a.at - b.at);
   });
   const plainLines = $derived((info?.lyrics ?? '').split('\n'));
+  //: The design keeps the compact Track panel while the lookup is running,
+  //: so the screen does not jump from the tall block to the short one when
+  //: the words arrive.
+  const lyricsPending = $derived(artistInfo.state === 'loading');
 
   // Which synced line is current. The playhead interpolates between pushes
   // (playhead.svelte.js), so this follows the same clock the progress bar
@@ -209,23 +213,39 @@
         </div>
 
         <div class="panel">
-          {#if tab === 'track' && synced.length}
+          {#if tab === 'track' && (synced.length || lyricsPending)}
             <!-- With synced lyrics the Track tab becomes the design's
                  compact variant: a shorter track block, a rule, and the
                  words following the playhead underneath. -->
-            <div class="trackblock trackblock--lyrics">
-              <div class="title title--compact" class:is-empty={!metadata?.title}>{metadata?.title ?? ''}</div>
-              <div class="compactline">
-                <span class="artist artist--compact" class:is-empty={!metadata?.artist}>{metadata?.artist ?? ''}</span>
-                <span class="album album--compact" class:is-empty={!metadata?.album}>{metadata?.album ?? ''}</span>
+            <div class="metalyrics">
+              <div class="metalyrics__head">
+                <div class="title title--compact" class:is-empty={!metadata?.title}>{metadata?.title ?? ''}</div>
+                <div class="compactline">
+                  <span class="artist artist--compact" class:is-empty={!metadata?.artist}>{metadata?.artist ?? ''}</span>
+                  <span class="album album--compact" class:is-empty={!metadata?.album}>{metadata?.album ?? ''}</span>
+                </div>
               </div>
-              <div class="trackblock__rule"></div>
-              <div class="lyrics lyrics--synced lyrics--inline">
-                {#each window5 as line (line.n)}
-                  <div class="lyrics__line" class:is-now={line.distance === 0} data-distance={line.distance}>
-                    {line.text}
+              <div class="metalyrics__rule"></div>
+              <!-- The words take whatever height is left, and are centred in
+                   it: the design's compact lyric view is positioned against
+                   this box, not given a height of its own. -->
+              <div class="metalyrics__body">
+                {#if synced.length}
+                  <div class="lyrics lyrics--synced lyrics--fill">
+                    {#each window5 as line (line.n)}
+                      <div class="lyrics__line" class:is-now={line.distance === 0} data-distance={line.distance}>
+                        {line.text}
+                      </div>
+                    {/each}
                   </div>
-                {/each}
+                {:else}
+                  <div class="looking">
+                    <div class="looking__bar"></div>
+                    <div class="looking__bar"></div>
+                    <div class="looking__bar"></div>
+                    <div class="looking__label">Looking for lyrics</div>
+                  </div>
+                {/if}
               </div>
             </div>
           {:else if tab === 'track'}
@@ -755,15 +775,37 @@
     color: var(--accent-bluetooth);
   }
 
-  .trackblock--lyrics {
+  /* The design's compact Track panel fills the panel rather than sitting in
+     a box of its own: the title block keeps its height, the rule follows,
+     and the words take everything left over. Given a fixed height instead,
+     the five lines are squeezed into the gap (George, 2026-09-18). */
+  .metalyrics {
+    position: absolute;
+    inset: 0;
     display: flex;
     flex-direction: column;
-    min-height: 238px;
-    max-height: 238px;
+    min-height: 0;
+  }
+  .metalyrics__head {
+    flex-shrink: 0;
+  }
+  .metalyrics__rule {
+    height: 1px;
+    background: rgba(233, 238, 242, 0.12);
+    margin-top: 20px;
+    flex-shrink: 0;
+  }
+  .metalyrics__body {
+    flex: 1;
+    min-height: 0;
+    position: relative;
+    overflow: hidden;
   }
   .title--compact {
     font-size: 38px;
     line-height: 1.08;
+    /* The tall block reserves two lines at 58px; this one must not. */
+    min-height: 0;
     -webkit-line-clamp: 2;
     flex-shrink: 0;
   }
@@ -790,15 +832,44 @@
     overflow: hidden;
     text-overflow: ellipsis;
   }
-  .trackblock__rule {
-    height: 1px;
-    background: rgba(233, 238, 242, 0.12);
-    margin-top: 20px;
-    flex-shrink: 0;
+  .lyrics--fill {
+    position: absolute;
+    inset: 0;
   }
-  .lyrics--inline {
-    flex: 1;
-    min-height: 0;
+
+  .looking {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 16px;
+    padding-right: 40px;
+  }
+  .looking__bar {
+    height: 19px;
+    border-radius: 6px;
+    background: rgba(233, 238, 242, 0.09);
+    animation: npSkel 1800ms ease-in-out infinite;
+    width: 78%;
+  }
+  .looking__bar:nth-child(2) {
+    width: 62%;
+    background: rgba(233, 238, 242, 0.07);
+    animation-delay: 220ms;
+  }
+  .looking__bar:nth-child(3) {
+    width: 70%;
+    background: rgba(233, 238, 242, 0.05);
+    animation-delay: 440ms;
+  }
+  .looking__label {
+    font-family: var(--font-mono);
+    font-size: var(--t-label-sm);
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--ink-quiet);
+    margin-top: 8px;
   }
 
   .lyrics {
