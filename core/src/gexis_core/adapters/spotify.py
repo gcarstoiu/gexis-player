@@ -164,6 +164,7 @@ class SpotifyAdapter(Adapter):
                 if self._on_availability is not None:
                     self._on_availability(True)
                 await self._seed_flags(session)
+                await self._acquire_if_already_playing(session, on_acquire)
                 async for msg in ws:
                     if msg.type != aiohttp.WSMsgType.TEXT:
                         continue
@@ -231,6 +232,41 @@ class SpotifyAdapter(Adapter):
         )
         self._last_metadata = metadata
         self._on_metadata(metadata)
+
+    async def _acquire_if_already_playing(self, session, on_acquire) -> None:
+        """If Spotify is playing when this adapter starts watching, say so.
+
+        go-librespot announces acquisition with `active`/`will_play` events,
+        and those are *edges*: nothing is emitted for a stream that was
+        already running. So after a daemon restart the core believed nobody
+        held the device while sound was coming out of it - the panel showed
+        its "waiting for a service" block over a playing Spotify track
+        (George, 2026-09-18), and it stayed that way until the next track
+        change, measured at 66 s in one case.
+
+        The same shape as the LMS adapter's "player already powered on at
+        startup": read the state once rather than wait for an edge that has
+        already passed.
+        """
+        try:
+            async with session.get(
+                f"{self._base}/status", timeout=aiohttp.ClientTimeout(total=2)
+            ) as resp:
+                if resp.status != 200:
+                    return
+                body = await resp.json(content_type=None)
+        except (aiohttp.ClientError, asyncio.TimeoutError, ValueError) as exc:
+            logger.debug("spotify: /status at startup failed: %s", exc)
+            return
+        # `stopped` means no session at all; `paused` still holds the device
+        # (ADR-0027: holding it is the acquisition, playing is a separate
+        # question), but a paused session at startup is indistinguishable
+        # from one somebody left behind - so only a running one acquires.
+        if body.get("stopped") or body.get("paused") or not body.get("track"):
+            return
+        logger.info("spotify: already playing at startup (acquisition)")
+        on_acquire()
+        self._handle_metadata_event(body["track"])
 
     async def _current_position_ms(self, session: aiohttp.ClientSession) -> int | None:
         """Where the track is now, from `/status`. Transport events carry no

@@ -181,8 +181,15 @@ boot.
   during the same test. Small, unexplained, not investigated.
 - **After a `gexis-core` restart, a phone already connected is not active.**
   The Bluetooth adapter seeds metadata from a `MediaPlayer1` that is already
-  present but never calls `on_acquire`. Spotify has the same effect. It only
-  matters when the daemon restarts, not at boot.
+  present but never calls `on_acquire`. It only matters when the daemon
+  restarts, not at boot. **Spotify's half of this is fixed** (2026-09-18):
+  George saw the library's "waiting for a service" block over a playing
+  Spotify track, because go-librespot announces acquisition with events and
+  events are edges - nothing is emitted for a stream that was already
+  running. The adapter now reads `/status` when it connects and acquires if
+  something is playing, the same shape as the LMS adapter's "player already
+  powered on at startup". Measured before the fix: 66 s from connect to the
+  next `will_play`. **Bluetooth still has it.**
 - **LMS once reported a position about 5 s ahead on resume**, then corrected
   it at the next pause. Not reproduced on a second try; recheck with sound.
 
