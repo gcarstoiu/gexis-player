@@ -30,11 +30,23 @@ from pathlib import Path
 from aiohttp import web
 
 from gexis_core.adapters.base import TRANSPORT_COMMANDS
+from gexis_core.artistinfo import PHOTO_LARGE, PHOTO_THUMB
+from dataclasses import replace
+
+from gexis_core.enrichment import Enrichment, TrackKey, fold
 from gexis_core.library import LibraryUnavailable, NoPlayer, NotFound
 from gexis_core.radio import RadioUnavailable, UnknownHandle
 from gexis_core.model import PlaybackState
 from gexis_core.settings_registry import InvalidValue, NotSettable, NotWired, UnknownSetting
 from gexis_core.state import StateStore
+
+#: The most artists one request may ask photos for. A screen of
+#: cards is about 40; this is a bound on what a caller can make the
+#: daemon do in one go, not a page size.
+PHOTO_BATCH = 80
+
+#: How many Popular rows the artist page draws (the design's five).
+POPULAR_ROWS = 5
 
 logger = logging.getLogger("gexis_core.wsserver")
 
@@ -57,6 +69,8 @@ class StateServer:
         settings=None,
         peppy=None,
         library=None,
+        artistinfo=None,
+        enrichment=None,
         radio=None,
         ui_dir: Path | None = None,
     ) -> None:
@@ -83,6 +97,8 @@ class StateServer:
         self._settings = settings
         self._peppy = peppy
         self._library = library
+        self._artistinfo = artistinfo
+        self._enrichment = enrichment
         self._radio = radio
         self._ui_dir = ui_dir
         self._clients: set[web.WebSocketResponse] = set()
@@ -322,6 +338,129 @@ class StateServer:
         except RadioUnavailable as exc:
             return web.json_response({"error": f"LMS unreachable: {exc}"}, status=502)
 
+    async def _handle_artist_photos(self, request: web.Request) -> web.Response:
+        """`?ids=1,2,3[&size=200]` -> `{"<id>": url|null}`.
+
+        LMS's own plugin, when the server has it (ADR-0040 §1). Asked for the
+        artists the panel is about to draw rather than for the library: 40
+        took 212 ms against George's server, 917 would be neither necessary
+        nor kind (Finding 035).
+        """
+        if self._artistinfo is None:
+            return web.json_response({"error": "artist info is not wired up"}, status=503)
+        raw = request.query.get("ids", "")
+        try:
+            ids = [int(part) for part in raw.split(",") if part.strip()][:PHOTO_BATCH]
+            size = int(request.query.get("size", PHOTO_THUMB))
+        except ValueError:
+            return web.json_response({"error": "ids must be integers"}, status=400)
+        if not ids:
+            return web.json_response({})
+        if size not in (PHOTO_THUMB, PHOTO_LARGE):
+            return web.json_response({"error": f"unknown size {size}"}, status=400)
+        photos = await self._artistinfo.photos(ids, size)
+        return web.json_response({str(k): v for k, v in photos.items()})
+
+    async def _handle_artist_info(self, request: web.Request) -> web.Response:
+        """`?id=<lms artist id>&name=<artist>` -> what the artist page draws
+        below its discography (ADR-0038 §2, now that Phase 8 can fill it).
+
+        **The same order as everywhere else** (ADR-0040 §1): LMS's own plugin
+        answers first, from the id the library already has, and the key-free
+        providers fill what it leaves. They are keyed on the *name*, since
+        they know nothing about LMS ids.
+        """
+        if self._enrichment is None:
+            return web.json_response({"error": "enrichment is not wired up"}, status=503)
+        name = (request.query.get("name") or "").strip()
+        try:
+            artist_id = int(request.query["id"]) if request.query.get("id") else None
+        except ValueError:
+            return web.json_response({"error": "id is an integer"}, status=400)
+        if not name:
+            return web.json_response({"error": "name is required"}, status=400)
+
+        found = Enrichment()
+        if artist_id is not None and self._artistinfo is not None:
+            photos = await self._artistinfo.photos([artist_id], PHOTO_LARGE)
+            biography = await self._artistinfo.biography(artist_id)
+            found = Enrichment(
+                biography=biography,
+                biography_source="LMS" if biography else None,
+                artist_image=photos.get(artist_id),
+                sources=("lms",) if (biography or photos.get(artist_id)) else (),
+            )
+        rest = await self._enrichment.for_track(
+            TrackKey(artist=fold(name)),
+            only=("fanart", "wikipedia", "listenbrainz", "popular"),
+        )
+        found = found.merged_with(rest)
+        if rest.artist_image:
+            # **Pictures come from fanart first** (George, 2026-09-18): it
+            # has a portrait for artists LMS's plugin has nothing for. The
+            # text above is still LMS's where it has any - only the picture
+            # changes hands.
+            found = replace(found, artist_image=rest.artist_image)
+        return web.json_response({
+            "artist": name,
+            "enrichment": found.to_json(),
+            # Only what this device can actually play, in the order the
+            # wider world plays them (the design's own note on Popular).
+            "popular": await self._playable(artist_id, found.popular),
+        })
+
+    async def _playable(self, artist_id: int | None, popular) -> list[dict]:
+        """The popular recordings this library holds, as rows the page can
+        press. Matched on a folded title, because a chart and a tag rarely
+        agree on capitals or punctuation."""
+        if not popular or artist_id is None or self._library is None:
+            return []
+        try:
+            tracks = await self._library.artist_tracks(artist_id)
+        except Exception as exc:
+            logger.info("artist-info: could not read the artist's tracks (%s)", exc)
+            return []
+        here = {}
+        for track in tracks:
+            here.setdefault(fold(track.get("title")), track)
+        rows = []
+        for title in popular:
+            track = here.get(fold(title))
+            if track and not any(r["id"] == track["id"] for r in rows):
+                rows.append({"id": track["id"], "title": track["title"],
+                             "duration": track.get("duration")})
+            if len(rows) == POPULAR_ROWS:
+                break
+        return rows
+
+    async def _handle_enrichment(self, request: web.Request) -> web.Response:
+        """What is known about what is playing, beyond what the renderer said
+        (ADR-0012, ADR-0040).
+
+        **A route rather than part of `/state`.** Enrichment is wanted only
+        while a tab is open, it takes seconds, and now playing must render
+        without it. Putting it in the state payload would also push a new
+        payload at every panel on every lookup, on a panel that already drops
+        frames while music plays (Finding 034).
+        """
+        if self._enrichment is None:
+            return web.json_response({"error": "enrichment is not wired up"}, status=503)
+        state = self._store.state
+        key = TrackKey.of(state.metadata)
+        if key.is_empty():
+            return web.json_response({"track": None, "enrichment": Enrichment().to_json()})
+        pending: list[str] = []
+        found = await self._enrichment.for_track(key, renderer=state.active, pending=pending)
+        return web.json_response({
+            # True when a provider had not finished: the panel asks again
+            # rather than treating this as the final word.
+            "pending": bool(pending),
+            # The panel checks this before drawing: by the time a lookup
+            # returns, the track may have changed.
+            "track": {"artist": key.artist, "title": key.title},
+            "enrichment": found.to_json(),
+        })
+
     async def _handle_surface(self, request: web.Request) -> web.Response:
         """ADR-0035 §6: the panel always arrives on loopback, a phone from the LAN."""
         panel = request.remote in ("127.0.0.1", "::1")
@@ -408,6 +547,9 @@ class StateServer:
         app.router.add_post("/settings/{key}", self._handle_setting_action)
         app.router.add_get("/radio", self._handle_radio)
         app.router.add_post("/radio/play", self._handle_radio_play)
+        app.router.add_get("/library/artist-photos", self._handle_artist_photos)
+        app.router.add_get("/library/artist-info", self._handle_artist_info)
+        app.router.add_get("/enrichment", self._handle_enrichment)
         app.router.add_post("/library/action", self._handle_library_action)
         app.router.add_get("/library/{what}", self._handle_library)
         app.router.add_get("/library/{what}/{id}", self._handle_library)

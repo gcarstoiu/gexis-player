@@ -31,6 +31,10 @@
       reportTouch();
     }
   }
+  //: Set when now playing's artist line is tapped: the library opens
+  //: on that artist rather than at its root.
+  let libraryArtist = $state(null);
+
   let volumeOpen = $state(false);
 
   // Criterion 4: shown for the takeover itself unless the pair is measured
@@ -173,14 +177,16 @@
         volume={$volume}
         controls={$active ? ($capabilities[$active]?.controls ?? []) : []}
         availability={$availability}
-        onclose={() => (libraryRequested = false)}
+        openArtistNamed={libraryArtist}
+        onclose={() => { libraryRequested = false; libraryArtist = null; }}
         onsettings={openSettings}
         onvolume={openVolume}
       />
     </div>
   {:else if $active}
     <div class="screen-layer">
-      <NowPlaying active={$active} metadata={$metadata} volume={$volume} controls={$capabilities[$active]?.controls ?? []} available={$available} shuffle={$shuffle} repeat={$repeat} queue={$queue} onvolume={openVolume} onvisualisation={showVisualisation} onhome={() => (libraryRequested = true)} />
+      <NowPlaying active={$active} metadata={$metadata} volume={$volume} controls={$capabilities[$active]?.controls ?? []} available={$available} shuffle={$shuffle} repeat={$repeat} queue={$queue} onvolume={openVolume} onvisualisation={showVisualisation} onhome={() => (libraryRequested = true)}
+        onartist={(name) => { libraryArtist = name; libraryRequested = true; }} />
     </div>
   {/if}
 

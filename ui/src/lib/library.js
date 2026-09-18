@@ -21,6 +21,17 @@ async function get(path) {
 /** `{counts, albums}`, or nulls until the first load finishes. */
 export const libraryRoot = writable({ counts: null, albums: [] });
 
+/** Artist photo URLs the panel has already been told about, keyed by
+ *  `<id>` for the grid and `<id>@300` for the artist page.
+ *
+ *  **Module state, not component state.** The library screen is mounted only
+ *  while it is open (Phase 7's fix for the black screen it left behind), so
+ *  anything it holds is thrown away every time it closes - and every artist
+ *  was asked about again on the way back in (George, 2026-09-18). The
+ *  daemon answers those from its own cache, but the panel still waited on a
+ *  round trip per screenful before drawing a face it had already drawn. */
+export const artistPhotos = writable({});
+
 /** Waits for the image, but never on it: a cover that 404s or hangs must
  *  not hold up the rest of the strip. The screen falls back to an empty
  *  well for it, as it does for an album with no artwork at all. */
@@ -118,3 +129,76 @@ export function loadLibraryRoot() {
   })();
   return inFlight;
 }
+
+/** Artist photos from LMS's own plugin, for the artists about to be drawn
+ *  (ADR-0040 §1). Asked in batches rather than for the library: 40 took
+ *  212 ms against George's server, 917 would be neither necessary nor kind
+ *  (Finding 035). A server without the plugin answers null for every id,
+ *  which is not an error - the circle keeps its initials. */
+export async function loadArtistPhotos(ids, size = 200) {
+  if (!ids.length) return {};
+  try {
+    const response = await fetch(`/library/artist-photos?ids=${ids.join(',')}&size=${size}`);
+    if (!response.ok) return {};
+    const found = await response.json();
+    const suffix = size === 200 ? '' : `@${size}`;
+    artistPhotos.update((known) => {
+      const next = { ...known };
+      // Misses are remembered too, so a face that has none is not asked
+      // about on every pass of the observer.
+      for (const id of ids) next[`${id}${suffix}`] = found[id] ?? null;
+      return next;
+    });
+    return found;
+  } catch {
+    return {};
+  }
+}
+
+/** What the artist page draws below its discography: the biography with the
+ *  credit its licence requires, and similar artists (ADR-0038 §2, filled by
+ *  Phase 8). LMS's own plugin answers first where the server has it. */
+export async function loadArtistInfo(id, name) {
+  try {
+    const response = await fetch(
+      `/library/artist-info?id=${encodeURIComponent(id)}&name=${encodeURIComponent(name)}`,
+    );
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    return await response.json();
+  } catch (err) {
+    console.info('artist-info:', err.message);
+    return null;
+  }
+}
+
+/** Lists the panel has already been given, kept across the library screen
+ *  being closed and opened again.
+ *
+ *  Same reason as `artistPhotos`: the screen is mounted only while it is
+ *  open, so anything it holds is thrown away each time. The daemon answers
+ *  these from its own cache in milliseconds, but the panel still had to
+ *  wait for a round trip and rebuild 917 cards before drawing a grid it had
+ *  drawn a moment earlier.
+ *
+ *  **Shown at once, then refreshed behind.** LMS renumbers every id on a
+ *  full rescan (Finding 029 §4), so a remembered list is a head start and
+ *  never the last word: what comes back replaces it. */
+export const artistList = writable(null);
+export const playlistList = writable(null);
+
+async function stale(store, load) {
+  let shown = null;
+  store.subscribe((value) => (shown = value))();
+  const fresh = load().then((value) => {
+    store.set(value);
+    return value;
+  });
+  // Nothing remembered: the caller waits, as it always did.
+  return shown ?? (await fresh);
+}
+
+/** Album artists, from memory first if they are there. */
+export const artistsCached = () => stale(artistList, async () => (await loadArtists()).items);
+
+/** The library's playlists, from memory first if they are there. */
+export const playlistsCached = () => stale(playlistList, loadPlaylists);

@@ -149,21 +149,27 @@ class LmsLibrary:
             self._http = aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=10))
         return self._http
 
-    async def _rpc(self, command: list, player: str = "") -> dict:
+    async def _rpc(self, command: list, player: str = "", timeout: float | None = None) -> dict:
         body = {"id": next(_id_counter), "method": "slim.request", "params": [player, command]}
+        # `timeout` overrides the session's own for one call. The artist
+        # information plugin needs it: an artist it has not looked up before
+        # costs it 500-900 ms and sometimes more, because it goes to the
+        # network, and the session's 10 s was cutting those off (2026-09-18).
+        kwargs = {"timeout": aiohttp.ClientTimeout(total=timeout)} if timeout else {}
         try:
             session = await self._session()
-            async with session.post(f"{self._base}/jsonrpc.js", json=body) as resp:
+            async with session.post(f"{self._base}/jsonrpc.js", json=body, **kwargs) as resp:
                 resp.raise_for_status()
                 return (await resp.json()).get("result") or {}
         except (aiohttp.ClientError, TimeoutError) as exc:
             raise LibraryUnavailable(str(exc)) from exc
 
-    async def rpc(self, command: list, player: str = "") -> dict:
+    async def rpc(self, command: list, player: str = "", timeout: float | None = None) -> dict:
         """One JSON-RPC call on this library's session. Public because the
-        radio browser (radio.py) sends its own commands and there is no
-        reason for a second HTTP session to LMS."""
-        return await self._rpc(command, player)
+        radio browser (radio.py) and the artist-information plugin
+        (artistinfo.py) send their own commands and there is no reason for a
+        second HTTP session to LMS."""
+        return await self._rpc(command, player, timeout)
 
     async def _check_lastscan(self) -> None:
         now = self._clock()
@@ -255,6 +261,18 @@ class LmsLibrary:
                 for a in result.get("artists_loop", [])
             ],
         }
+
+    async def artist_tracks(self, artist_id: int, limit: int = 1000) -> list[dict]:
+        """Every track by this artist that is on the device.
+
+        The artist page's Popular list is what the wider world plays *and*
+        this library holds: a chart of tracks nobody here can play would be
+        an advertisement, not a feature (the design's own note).
+        """
+        result = await self._cached(
+            ["titles", 0, limit, f"artist_id:{artist_id}", f"tags:{TRACK_TAGS}"]
+        )
+        return [self._track(t) for t in result.get("titles_loop", [])]
 
     async def artist_albums(self, artist_id: int) -> list[dict]:
         """The discography, newest first (George, 2026-09-18), each album

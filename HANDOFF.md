@@ -1,32 +1,50 @@
 # Handoff
 
 Last updated: 2026-09-18 (nineteenth session, on R2D2 — **Phase 7 merged
-(PR #19); Phase 7a done and closed; next is Phase 8**)
+(PR #19); Phase 7a closed; Phase 8 done, image built, PR open**)
 
 ## Start here
 
-**Phase 7a — panel responsiveness — is closed** (2026-09-18, branch
-`phase-7a-plan`). It existed to make the panel's speed judgeable rather than
-argued about, and it did: **step 1** put every artwork request on a ladder at
-or above the size drawn (the queue rail was asking for 500 px covers for
-42 px rows - about 3.3 MB a rail against 380 KB now), which George checked -
-*"for sure the rail got faster"*. **Steps 2 and 3** built an instrument that
-survives its own scrutiny and took a baseline:
-[Finding 034](docs/findings/034-what-the-panel-presents.md).
+**Phase 8 — enrichment and lyrics — is done** (2026-09-18, branch
+`phase-8-plan`). Now playing's Artist, Release and Lyrics tabs are filled,
+synced lyrics follow the playhead on the Track tab, the artist page has its
+About, Popular and Similar, Bluetooth and Spotify get cover art they were
+never sent, and a radio stream gets artwork from the song rather than the
+station. [ADR-0040](docs/decisions/0040-enrichment-providers.md) records the
+providers and was twice amended by what the work measured.
 
-**The baseline, 20 runs each with music playing** (ceiling 60 fps): New Music
-strip 47.1 fps / 2.5 % dropped, artist grid 23.1 / 50.7, queue rail 13.9 /
-75.2 - the same order George put them in by feel. **The target is three
-things** (his call after seeing why one number is not enough): under 2 %
-dropped, no interaction below 55 fps, and his own go-ahead. Everything fails
-it today, which is the point of having it.
+**The idea to carry forward: "could not ask" is not "there is nothing
+there."** MusicBrainz's search answered 503 for 4 of 9 tries, LRCLIB has a
+busy-503 of its own, and LMS's plugin holds a socket for 75 s before
+dropping it - which is also what an *absent* plugin does, in milliseconds.
+Every one of those looks like an empty answer. Caching one would deny a
+track its enrichment permanently; reading one as "no plugin here" turned
+every artist photo off for ten minutes. The distinction is made in five
+places now and is the phase's single most load-bearing idea.
 
-**The open question, now Phase 9 criterion 0: why is a playing panel never
-idle?** With music playing and nobody touching it, 71 % of wanted frames are
-dropped; paused, the panel is barely asked for a frame. Every interaction is
-measured on top of that. **PeppyMeter is eliminated** (stopping it changed
-68.45 % against 71.25 %, inside the spread). Nothing else was tested -
-attribution is Phase 9's, and it now has a number to be judged against.
+**Two keys, both per-user settings George chose:** `listenbrainz_token` (its
+popularity endpoint began demanding one mid-phase, having answered 200 the
+same morning) and `fanart_key` for artist pictures. Nothing else needs one,
+and with neither set the panel simply shows less.
+
+**Fanart adds quality, not coverage** (measured on 14 random artists: 9 had
+a picture from both sources, 5 from LMS only, **0 from fanart only**). It
+goes first where it has one; LMS stays behind it. Its pictures go through
+LMS's image proxy - 705 KB became 32.8 KB at 300 px.
+
+**Parked by George: a background sweep for missing album art.** 155 of 4,567
+albums have none. The same sweep for artist pictures was rejected on the
+measurement above: 30-45 minutes of MusicBrainz's one-a-second allowance to
+improve pictures that already exist.
+
+**Phase 7a — panel responsiveness — is closed** (2026-09-18). Artwork at the
+size drawn, an instrument that survives its own scrutiny, and a baseline:
+[Finding 034](docs/findings/034-what-the-panel-presents.md). **The target is
+three things** (George): under 2 % of frames dropped, no interaction below
+55 fps, and his own go-ahead. Everything failed it when measured, which is
+the point of having it. **The open question, now Phase 9 criterion 0: why is
+a playing panel never idle?** 71 % of wanted frames dropped with nobody
+touching it; PeppyMeter is already eliminated.
 
 **Read Finding 034's six instrument faults before measuring anything here.**
 Each produced a confident, plausible number: partial frames counted as
@@ -110,7 +128,14 @@ enrichment providers (George asked 2026-09-17). Nothing decided; the provider
 choice needs an ADR when Phase 8 starts. George: API keys are a per-user
 setting, so a key is not a blocker (ADR-0022 inventory row added).
 
-**The Phase 7 image is built and verified as a file, not flashed:**
+**The Phase 8 image is built and verified as a file, not flashed:**
+`image/deploy/2026-09-18-gexis-player-v0.2.1-272-g10fbb44-dirty.img`
+(478 s, first attempt; `image/verify-image.sh` - all checks passed). **It
+did not test the loop-device fix:** R2D2 had not rebooted, so the nodes
+were still the ones `modprobe` made by hand (Finding 033). That test is
+still a reboot followed by a build.
+
+**The Phase 7 image:**
 `image/deploy/2026-09-18-gexis-player-v0.2.1-232-g65d62e3-dirty.img`
 (464 s; `image/verify-image.sh` - all checks passed, including the venv and
 `/opt/gexis-ui` byte-identical to this checkout). **The device still runs the
@@ -181,8 +206,21 @@ boot.
   during the same test. Small, unexplained, not investigated.
 - **After a `gexis-core` restart, a phone already connected is not active.**
   The Bluetooth adapter seeds metadata from a `MediaPlayer1` that is already
-  present but never calls `on_acquire`. Spotify has the same effect. It only
-  matters when the daemon restarts, not at boot.
+  present but never calls `on_acquire`. It only matters when the daemon
+  restarts, not at boot. **Both halves are fixed** (2026-09-18):
+  George saw the library's "waiting for a service" block over a playing
+  Spotify track, because go-librespot announces acquisition with events and
+  events are edges - nothing is emitted for a stream that was already
+  running. The adapter now reads `/status` when it connects and acquires if
+  something is playing, the same shape as the LMS adapter's "player already
+  powered on at startup". Measured before the fix: 66 s from connect to the
+  next `will_play`. **Bluetooth is the same shape and fixed the same way:**
+  acquisition there is driven by `InterfacesAdded`, and a `MediaPlayer1`
+  that was already present produces no such signal, so the startup scan now
+  acquires when its `Status` is playing. Neither adapter acquires for a
+  *paused* session: one left paused before the daemon started cannot be told
+  from one somebody abandoned, and claiming it would take the device from
+  whoever has it.
 - **LMS once reported a position about 5 s ahead on resume**, then corrected
   it at the next pause. Not reproduced on a second try; recheck with sound.
 
@@ -360,9 +398,9 @@ reverted, currently-flashed image predates this fix.
                                             playback.
                                             Needs an ADR choosing the providers
                                             first (Finding 030)
-9  settings wiring + UI polish            every ADR-0022 row wired or scoped
-                                            out; criterion 0 is the panel
-                                            reaching Phase 7a's target
+9  settings wiring + UI polish            <- next. Every ADR-0022 row wired or
+                                            scoped out; criterion 0 is the
+                                            panel reaching Phase 7a's target
 10 plugin contract + themes               Qobuz is the fourth-renderer test
 11 Plexamp as a renderer                  starts with the hardware check: does it
                                             release the device? (ADR-0008's

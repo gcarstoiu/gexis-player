@@ -6,6 +6,8 @@ against its source, not assumed).
 """
 from __future__ import annotations
 
+import pytest
+
 from gexis_core.adapters.spotify import SpotifyAdapter
 from gexis_core.model import TrackMetadata
 
@@ -205,3 +207,93 @@ def test_a_malformed_flag_event_changes_nothing():
     adapter._handle_metadata_event(_metadata_event())
     adapter._handle_flag_event("shuffle_context", {"value": "yes"})
     assert len(received) == 1
+
+
+# --- already playing when the daemon starts --------------------------------
+
+
+class FakeStatus:
+    """Stands in for go-librespot's `/status`, which is the only thing that
+    can say a stream was *already* running."""
+
+    def __init__(self, body, status=200):
+        self._body = body
+        self._status = status
+        self.asked = 0
+
+    def get(self, url, timeout=None):
+        self.asked += 1
+        outer = self
+
+        class Response:
+            status = outer._status
+
+            async def json(self, content_type=None):
+                return outer._body
+
+            async def __aenter__(self):
+                return self
+
+            async def __aexit__(self, *exc):
+                return False
+
+        return Response()
+
+
+PLAYING = {"paused": False, "stopped": False, "track": _metadata_event()}
+
+
+@pytest.mark.asyncio
+async def test_a_stream_already_running_at_startup_is_an_acquisition():
+    """**The defect this test exists for.** go-librespot announces
+    acquisition with events, and events are edges: nothing is emitted for a
+    stream that was already playing. After a daemon restart the core
+    believed nobody held the device while sound was coming out of it, and
+    the panel showed its "waiting for a service" block over a playing
+    Spotify track until the next track change - 66 s in the case George
+    saw (2026-09-18)."""
+    adapter = SpotifyAdapter("127.0.0.1", 3678)
+    seen = []
+    adapter.on_metadata_change(seen.append)
+    acquired = []
+
+    await adapter._acquire_if_already_playing(FakeStatus(PLAYING), lambda: acquired.append(True))
+
+    assert acquired == [True]
+    assert seen and seen[0].title == "Song Title"
+
+
+@pytest.mark.asyncio
+async def test_a_paused_session_at_startup_does_not_acquire():
+    """Holding the device is the acquisition (ADR-0027), but a session left
+    paused before the daemon started is indistinguishable from one somebody
+    abandoned - and claiming it would take the device from whoever has it."""
+    adapter = SpotifyAdapter("127.0.0.1", 3678)
+    acquired = []
+
+    await adapter._acquire_if_already_playing(
+        FakeStatus({**PLAYING, "paused": True}), lambda: acquired.append(True))
+
+    assert acquired == []
+
+
+@pytest.mark.asyncio
+async def test_nothing_playing_at_startup_acquires_nothing():
+    adapter = SpotifyAdapter("127.0.0.1", 3678)
+    acquired = []
+
+    await adapter._acquire_if_already_playing(
+        FakeStatus({"stopped": True, "paused": False}), lambda: acquired.append(True))
+
+    assert acquired == []
+
+
+@pytest.mark.asyncio
+async def test_a_status_that_cannot_be_read_acquires_nothing():
+    adapter = SpotifyAdapter("127.0.0.1", 3678)
+    acquired = []
+
+    await adapter._acquire_if_already_playing(
+        FakeStatus({}, status=500), lambda: acquired.append(True))
+
+    assert acquired == []

@@ -114,6 +114,12 @@ node a build leaves behind. `/etc/modules-load.d/loop.conf` (contents:
 `loop`) already loads the module at boot, and `/etc/modprobe.d` supplies
 options to *any* load of it, including that one.
 
+**Still not proved after the build of 2026-09-18 20:02** (the Phase 8
+image, 478 s, first attempt, no `(lost)` failure). R2D2 had not rebooted -
+`uptime` 1 day 6 hours - so `/dev/loop0-7` were still the ones `modprobe`
+made by hand that morning. The build exercised the working case and says
+nothing about the boot-time one.
+
 **Not proved:** that the nodes are there at boot, which is the only thing
 that matters. The one test is a **first build after a reboot** - this
 finding's own test, run in the other direction. Until that has happened,

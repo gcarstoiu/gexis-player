@@ -9,13 +9,14 @@
   import spotifyMark from '../assets/icon-spotify.png';
   import bluetoothMark from '../assets/icon-bluetooth.png';
   import VolumeIcon from '../lib/VolumeIcon.svelte';
+  import { retryEnrichment, trackEnrichment } from '../lib/enrichment.js';
   import QueueRail from './QueueRail.svelte';
 
   import { sendTransport } from '../lib/state.js';
   import { playhead, mmss } from '../lib/playhead.svelte.js';
   import { playToggle } from '../lib/playToggle.svelte.js';
 
-  let { active, metadata, volume, controls = [], available = [], shuffle = null, repeat = null, queue = null, onvolume, onvisualisation, onhome } = $props();
+  let { active, metadata, volume, controls = [], available = [], shuffle = null, repeat = null, queue = null, onvolume, onvisualisation, onhome, onartist } = $props();
 
   const SOURCES = {
     lms: { label: 'LMS', mark: null },
@@ -28,9 +29,16 @@
 
   // An artwork URL that fails to load falls back to the pending glyph.
   let failedArtwork = $state(null);
-  const artwork = $derived(
-    metadata?.artwork && metadata.artwork !== failedArtwork ? metadata.artwork : null,
-  );
+  //: What the renderer sent, and only then what enrichment found. ADR-0012
+  //: is additive-only: a cover looked up from a fuzzy AVRCP string must
+  //: never replace one the renderer supplied, it can only fill a hole
+  //: (George, 2026-09-18: no artwork at all over Bluetooth).
+  const artwork = $derived.by(() => {
+    const supplied = metadata?.artwork;
+    if (supplied && supplied !== failedArtwork) return supplied;
+    const found = artistInfo.enrichment?.album_art;
+    return found && found !== failedArtwork ? found : null;
+  });
 
   const head = playhead(() => metadata);
 
@@ -60,6 +68,87 @@
   // The badge counts what is still to come, not the track playing now -
   // the rail's own "Up next" (the design's `queueCount`).
   const upNext = $derived(Math.max(0, (queue?.items?.length ?? 0) - (queue?.index ?? 0) - 1));
+
+  // The Artist, Release and Lyrics tabs (ADR-0040). **The lookup itself
+  // lives in lib/enrichment.js**, because the mini strip needs the same
+  // answer while this screen is not mounted at all - the library is open
+  // exactly when the strip is on show (George, 2026-09-18: no cover on the
+  // strip for a Bluetooth track whose cover had been found).
+  let tab = $state('track');
+  const artistInfo = $derived($trackEnrichment);
+
+  const initialsOf = (name) =>
+    (name ?? '')
+      .split(/\s+/)
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((word) => word[0].toUpperCase())
+      .join('') || '?';
+
+  const info = $derived(artistInfo.enrichment);
+
+  //: Both sources hard-wrap their text and separate paragraphs with a blank
+  //: line. Rendered as one string the browser collapses every one of those
+  //: into a single blob (George, 2026-09-18).
+  const asParagraphs = (text) =>
+    (text ?? '')
+      .split(/\n\s*\n/)
+      .map((block) => block.replace(/\s*\n\s*/g, ' ').trim())
+      .filter(Boolean);
+  const bioParagraphs = $derived(asParagraphs(info?.biography));
+  const noteParagraphs = $derived(asParagraphs(info?.album_note));
+
+  // An LRC body is `[mm:ss.xx] text` per line. Lines without a stamp are
+  // kept - LRCLIB files carry `[ar:]`-style headers and blank beats - but
+  // only stamped ones can be followed.
+  const LRC = /^\[(\d+):(\d+(?:\.\d+)?)\]\s?(.*)$/;
+  const synced = $derived.by(() => {
+    const body = info?.lyrics_synced;
+    if (!body) return [];
+    const out = [];
+    for (const line of body.split('\n')) {
+      const match = LRC.exec(line.trim());
+      if (!match) continue;
+      out.push({ at: Number(match[1]) * 60 + Number(match[2]), text: match[3].trim() });
+    }
+    return out.sort((a, b) => a.at - b.at);
+  });
+  const plainLines = $derived((info?.lyrics ?? '').split('\n'));
+  //: The design keeps the compact Track panel while the lookup is running,
+  //: so the screen does not jump from the tall block to the short one when
+  //: the words arrive.
+  const lyricsPending = $derived(artistInfo.state === 'loading');
+
+  // Which synced line is current. The playhead interpolates between pushes
+  // (playhead.svelte.js), so this follows the same clock the progress bar
+  // does rather than a second one.
+  const activeLine = $derived.by(() => {
+    if (!synced.length) return -1;
+    const at = head.elapsed;
+    let index = -1;
+    for (let i = 0; i < synced.length; i += 1) {
+      if (synced[i].at <= at) index = i;
+      else break;
+    }
+    return index;
+  });
+  //: The design's compact synced view: five lines around the current one.
+  const window5 = $derived.by(() => {
+    if (!synced.length) return [];
+    const at = Math.max(0, activeLine);
+    return [at - 2, at - 1, at, at + 1, at + 2]
+      .filter((n) => n >= 0 && n < synced.length)
+      .map((n) => ({ ...synced[n], n, distance: Math.abs(n - at) }));
+  });
+  const specs = $derived.by(() => {
+    if (!info) return [];
+    const out = [];
+    if (info.released) out.push(['Released', info.released]);
+    if (info.track_count) out.push(['Tracks', String(info.track_count)]);
+    if (info.length_s) out.push(['Length', `${Math.round(info.length_s / 60)} min`]);
+    if (info.label) out.push(['Label', info.label]);
+    return out;
+  });
 
   let queueOpen = $state(false);
   // Leaving LMS takes the rail's subject with it.
@@ -105,24 +194,212 @@
       </div>
 
       <div class="meta">
-        <div class="tabs" role="tablist" aria-label="Track detail" data-unwired="phase-8">
-          <button class="tab" type="button" role="tab" aria-selected="true">Track</button>
-          <button class="tab" type="button" role="tab" aria-selected="false" aria-disabled="true" disabled>Lyrics</button>
-          <button class="tab" type="button" role="tab" aria-selected="false" aria-disabled="true" disabled>Artist</button>
-          <button class="tab" type="button" role="tab" aria-selected="false" aria-disabled="true" disabled>Release</button>
+        <div class="tabs" role="tablist" aria-label="Track detail">
+          <button class="tab" type="button" role="tab" aria-selected={tab === 'track'} onclick={() => (tab = 'track')}>Track</button>
+          <button class="tab" type="button" role="tab" aria-selected={tab === 'lyrics'} onclick={() => (tab = 'lyrics')}>Lyrics</button>
+          <button class="tab" type="button" role="tab" aria-selected={tab === 'artist'} onclick={() => (tab = 'artist')}>Artist</button>
+          <button class="tab" type="button" role="tab" aria-selected={tab === 'release'} onclick={() => (tab = 'release')}>Release</button>
         </div>
 
         <div class="panel">
-          <div class="trackblock">
-            <div class="title" class:is-empty={!metadata?.title}>{metadata?.title ?? ''}</div>
-            <div class="artistline">
-              <span class="artist" class:is-empty={!metadata?.artist}>{metadata?.artist ?? ''}</span>
+          {#if tab === 'track' && (synced.length || lyricsPending)}
+            <!-- With synced lyrics the Track tab becomes the design's
+                 compact variant: a shorter track block, a rule, and the
+                 words following the playhead underneath. -->
+            <div class="metalyrics">
+              <div class="metalyrics__head">
+                <div class="title title--compact" class:is-empty={!metadata?.title}>{metadata?.title ?? ''}</div>
+                <div class="compactline">
+                  <button
+                    class="artist artist--compact artist--link"
+                    class:is-empty={!metadata?.artist}
+                    type="button"
+                    disabled={!metadata?.artist}
+                    onclick={() => onartist?.(metadata.artist)}
+                  >{metadata?.artist ?? ''}</button>
+                  <span class="album album--compact" class:is-empty={!metadata?.album}>{metadata?.album ?? ''}</span>
+                </div>
+              </div>
+              <div class="metalyrics__rule"></div>
+              <!-- The words take whatever height is left, and are centred in
+                   it: the design's compact lyric view is positioned against
+                   this box, not given a height of its own. -->
+              <div class="metalyrics__body">
+                {#if synced.length}
+                  <div class="lyrics lyrics--synced lyrics--fill">
+                    {#each window5 as line (line.n)}
+                      <div class="lyrics__line" class:is-now={line.distance === 0} data-distance={line.distance}>
+                        {line.text}
+                      </div>
+                    {/each}
+                  </div>
+                {:else}
+                  <div class="looking">
+                    <div class="looking__bar"></div>
+                    <div class="looking__bar"></div>
+                    <div class="looking__bar"></div>
+                    <div class="looking__label">Looking for lyrics</div>
+                  </div>
+                {/if}
+              </div>
             </div>
-            <div class="albumline">
-              <span class="album" class:is-empty={!metadata?.album}>{metadata?.album ?? ''}</span>
-              <!-- Release year is not published yet (design/data-contract.md). -->
+          {:else if tab === 'track'}
+            <div class="trackblock">
+              <div class="title" class:is-empty={!metadata?.title}>{metadata?.title ?? ''}</div>
+              <div class="artistline">
+                <!-- The design links the artist line to that artist's page
+                     (`onNpArtist`). -->
+                <button
+                  class="artist artist--link"
+                  class:is-empty={!metadata?.artist}
+                  type="button"
+                  disabled={!metadata?.artist}
+                  onclick={() => onartist?.(metadata.artist)}
+                >{metadata?.artist ?? ''}</button>
+              </div>
+              <div class="albumline">
+                <span class="album" class:is-empty={!metadata?.album}>{metadata?.album ?? ''}</span>
+                <!-- Release year is not published yet (design/data-contract.md). -->
+              </div>
             </div>
-          </div>
+          {:else if tab === 'lyrics'}
+            <div class="artisttab">
+              <div class="sect">
+                <span class="sect__label">Lyrics</span>
+                <span class="sect__rule"></span>
+                {#if artistInfo.state === 'loading'}<span class="sect__note">Looking…</span>{/if}
+              </div>
+
+              {#if artistInfo.state === 'loading'}
+                <div class="skel"><span></span><span></span><span></span></div>
+              {:else if info?.instrumental}
+                <div class="lyrics__none">Instrumental</div>
+              {:else if synced.length}
+                <!-- The design's compact synced view: the current line
+                     accented, its neighbours fading out. -->
+                <div class="lyrics lyrics--synced">
+                  {#each window5 as line (line.n)}
+                    <div class="lyrics__line" class:is-now={line.distance === 0} data-distance={line.distance}>
+                      {line.text}
+                    </div>
+                  {/each}
+                </div>
+                <div class="credit">From {info.lyrics_source}</div>
+              {:else if info?.lyrics}
+                <div class="lyrics lyrics--plain">
+                  {#each plainLines as line, i (i)}
+                    <div class="lyrics__line">{line}</div>
+                  {/each}
+                </div>
+                <div class="credit">From {info.lyrics_source}</div>
+              {:else if artistInfo.state === 'error'}
+                <div class="offline">
+                  <span>Lyrics unavailable. Your library is unaffected.</span>
+                  <button class="offline__retry" type="button" onclick={retryEnrichment}>Retry</button>
+                </div>
+              {:else}
+                <div class="lyrics__none">No lyrics found for this track.</div>
+              {/if}
+            </div>
+          {:else if tab === 'release'}
+            <div class="artisttab">
+              <div class="artisttab__head">
+                <span class="reltab__art">
+                  {#if artwork}<img src={artwork} alt="" />{/if}
+                </span>
+                <span class="reltab__titles">
+                  <span class="reltab__name">{metadata?.album ?? 'No album'}</span>
+                  <span class="reltab__by">
+                    {metadata?.artist ?? ''}{info?.released ? `  ·  ${info.released}` : ''}
+                  </span>
+                  {#if info?.release_type}
+                    <span class="reltab__chips"><span class="reltab__chip">{info.release_type}</span></span>
+                  {/if}
+                </span>
+              </div>
+
+              <div class="sect">
+                <span class="sect__label">About this release</span>
+                <span class="sect__rule"></span>
+                {#if artistInfo.state === 'loading'}<span class="sect__note">Looking…</span>{/if}
+              </div>
+
+              {#if artistInfo.state === 'loading'}
+                <div class="skel"><span></span><span></span><span></span></div>
+              {:else if info?.album_note}
+                <div class="bio">
+                  {#each noteParagraphs as para, i (i)}<p class="bio__para">{para}</p>{/each}
+                </div>
+                <div class="credit">From {info.album_note_source}</div>
+              {:else if artistInfo.state === 'error'}
+                <div class="offline">
+                  <span>Release details unavailable. Your library is unaffected.</span>
+                  <button class="offline__retry" type="button" onclick={retryEnrichment}>Retry</button>
+                </div>
+              {:else}
+                <div class="sect__empty">No notes for this release.</div>
+              {/if}
+
+              {#if specs.length}
+                <div class="specs">
+                  {#each specs as [k, v] (k)}
+                    <div class="spec"><div class="spec__k">{k}</div><div class="spec__v">{v}</div></div>
+                  {/each}
+                </div>
+              {/if}
+            </div>
+          {:else}
+            <div class="artisttab">
+              <div class="artisttab__head">
+                <span class="artisttab__disc">
+                  {#if artistInfo.enrichment?.artist_image}
+                    <img src={artistInfo.enrichment.artist_image} alt="" />
+                  {:else}
+                    <span class="artisttab__initials">{initialsOf(metadata?.artist)}</span>
+                  {/if}
+                </span>
+                <span class="artisttab__name">{metadata?.artist ?? ''}</span>
+              </div>
+
+              <div class="sect">
+                <span class="sect__label">About</span>
+                <span class="sect__rule"></span>
+                {#if artistInfo.state === 'loading'}<span class="sect__note">Looking…</span>{/if}
+              </div>
+
+              {#if artistInfo.state === 'loading'}
+                <!-- The design's skeleton: the layout must not jump when the
+                     text arrives, so the space is held. -->
+                <div class="skel"><span></span><span></span><span></span></div>
+              {:else if artistInfo.enrichment?.biography}
+                <div class="bio">
+                  {#each bioParagraphs as para, i (i)}<p class="bio__para">{para}</p>{/each}
+                </div>
+                <!-- Wikipedia's CC BY-SA and MusicBrainz's CC BY-NC-SA both
+                     require the credit beside the text (ADR-0040 §4). -->
+                <div class="credit">From {artistInfo.enrichment.biography_source}</div>
+              {:else if artistInfo.state === 'error'}
+                <div class="offline">
+                  <span>Artist details unavailable. Your library is unaffected.</span>
+                  <button class="offline__retry" type="button" onclick={retryEnrichment}>Retry</button>
+                </div>
+              {:else}
+                <div class="sect__empty">Nothing found for this artist.</div>
+              {/if}
+
+              {#if artistInfo.enrichment?.similar?.length}
+                <div class="sect">
+                  <span class="sect__label">Similar artists</span>
+                  <span class="sect__rule"></span>
+                </div>
+                <div class="similar">
+                  {#each artistInfo.enrichment.similar as name (name)}
+                    <span class="similar__chip">{name}</span>
+                  {/each}
+                </div>
+              {/if}
+            </div>
+          {/if}
         </div>
       </div>
     </div>
@@ -399,6 +676,406 @@
   }
 
   .trackblock { min-height: 238px; }
+
+  /* The Artist tab (ADR-0040), ported from the design's About and Similar
+     blocks. It occupies the same box as the track block, so switching tabs
+     moves nothing else on the screen. */
+  .artisttab {
+    min-height: 238px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+  .artisttab__head {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex-shrink: 0;
+  }
+  .artisttab__disc {
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    overflow: hidden;
+    position: relative;
+    flex-shrink: 0;
+    background: var(--ink-fill);
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.14);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .artisttab__disc img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  .artisttab__initials {
+    font-family: var(--font-mono);
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--ink-muted);
+  }
+  .artisttab__name {
+    font-size: var(--t-artist);
+    font-weight: 700;
+    color: var(--accent-artist);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .reltab__art {
+    width: 64px;
+    height: 64px;
+    border-radius: 10px;
+    overflow: hidden;
+    position: relative;
+    flex-shrink: 0;
+    background: var(--bg-well);
+    box-shadow: inset 0 0 0 1px var(--ink-line);
+  }
+  .reltab__art img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  .reltab__titles {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+  }
+  .reltab__name {
+    font-size: var(--t-lead);
+    font-weight: 700;
+    color: var(--ink);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .reltab__by {
+    font-size: var(--t-body-sm);
+    color: var(--ink-quiet);
+  }
+  .reltab__chips {
+    display: flex;
+    gap: 7px;
+    margin-top: 3px;
+  }
+  .reltab__chip {
+    display: inline-flex;
+    align-items: center;
+    height: 26px;
+    padding: 0 10px;
+    border-radius: 8px;
+    background: rgba(159, 180, 232, 0.14);
+    border: 1px solid rgba(159, 180, 232, 0.3);
+    font-family: var(--font-mono);
+    font-size: var(--t-micro);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--accent-bluetooth);
+  }
+
+  /* The design's compact Track panel fills the panel rather than sitting in
+     a box of its own: the title block keeps its height, the rule follows,
+     and the words take everything left over. Given a fixed height instead,
+     the five lines are squeezed into the gap (George, 2026-09-18). */
+  .metalyrics {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+  }
+  .metalyrics__head {
+    flex-shrink: 0;
+  }
+  .metalyrics__rule {
+    height: 1px;
+    background: rgba(233, 238, 242, 0.12);
+    margin-top: 20px;
+    flex-shrink: 0;
+  }
+  .metalyrics__body {
+    flex: 1;
+    min-height: 0;
+    position: relative;
+    overflow: hidden;
+  }
+  .title--compact {
+    font-size: 38px;
+    line-height: 1.08;
+    /* The tall block reserves two lines at 58px; this one must not. */
+    min-height: 0;
+    -webkit-line-clamp: 2;
+    flex-shrink: 0;
+  }
+  .compactline {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+    margin-top: 10px;
+    min-width: 0;
+    flex-shrink: 0;
+  }
+  .artist--link {
+    font: inherit;
+    color: inherit;
+    border: none;
+    background: none;
+    padding: 9px 0;
+    margin: -9px 0;
+    text-align: left;
+    max-width: 100%;
+  }
+  .artist--link:active:not(:disabled) { color: #f8c4b4; }
+
+  .artist--compact {
+    font-size: 22px;
+    max-width: 60%;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    flex-shrink: 0;
+  }
+  .album--compact {
+    font-size: 17px;
+    color: rgba(233, 238, 242, 0.5);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .lyrics--fill {
+    position: absolute;
+    inset: 0;
+  }
+
+  .looking {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 16px;
+    padding-right: 40px;
+  }
+  .looking__bar {
+    height: 19px;
+    border-radius: 6px;
+    background: rgba(233, 238, 242, 0.09);
+    animation: npSkel 1800ms ease-in-out infinite;
+    width: 78%;
+  }
+  .looking__bar:nth-child(2) {
+    width: 62%;
+    background: rgba(233, 238, 242, 0.07);
+    animation-delay: 220ms;
+  }
+  .looking__bar:nth-child(3) {
+    width: 70%;
+    background: rgba(233, 238, 242, 0.05);
+    animation-delay: 440ms;
+  }
+  .looking__label {
+    font-family: var(--font-mono);
+    font-size: var(--t-label-sm);
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--ink-quiet);
+    margin-top: 8px;
+  }
+
+  .lyrics {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    text-wrap: pretty;
+  }
+  .lyrics--synced {
+    align-items: center;
+    justify-content: center;
+    gap: 14px;
+    text-align: center;
+  }
+  .lyrics--plain {
+    overflow-y: auto;
+    gap: 6px;
+    scrollbar-width: none;
+    touch-action: pan-y;
+  }
+  .lyrics--plain::-webkit-scrollbar { display: none; }
+  .lyrics__line {
+    font-size: 21px;
+    line-height: 1.35;
+    font-weight: 500;
+    color: var(--ink-strong);
+    transition: color 320ms ease, opacity 320ms ease;
+  }
+  .lyrics--synced .lyrics__line { font-size: 22px; }
+  .lyrics--synced .lyrics__line[data-distance='1'] { opacity: 0.42; }
+  .lyrics--synced .lyrics__line[data-distance='2'] { opacity: 0.16; }
+  .lyrics__line.is-now {
+    font-weight: 700;
+    color: var(--accent-artist);
+  }
+  .lyrics__none {
+    font-size: var(--t-body-sm);
+    color: var(--ink-quiet);
+  }
+
+  .specs {
+    display: flex;
+    gap: 26px;
+    flex-wrap: wrap;
+  }
+  .spec__k {
+    font-family: var(--font-mono);
+    font-size: var(--t-micro);
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--ink-quiet);
+  }
+  .spec__v {
+    font-size: var(--t-body-sm);
+    font-weight: 600;
+    color: var(--ink);
+    margin-top: 3px;
+  }
+
+  .sect {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+    flex-shrink: 0;
+  }
+  .sect__label {
+    font-family: var(--font-mono);
+    font-size: var(--t-label-sm);
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--ink-quiet);
+  }
+  .sect__rule {
+    flex: 1;
+    height: 1px;
+    background: var(--ink-line);
+  }
+  .sect__note {
+    font-family: var(--font-mono);
+    font-size: var(--t-micro);
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--ink-quiet);
+    flex-shrink: 0;
+  }
+  .sect__empty {
+    font-size: var(--t-body-sm);
+    color: var(--ink-quiet);
+  }
+
+  .skel {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .skel span {
+    display: block;
+    height: 13px;
+    border-radius: 4px;
+    background: rgba(233, 238, 242, 0.09);
+    animation: npSkel 1500ms ease-in-out infinite;
+  }
+  .skel span:nth-child(1) { width: 100%; }
+  .skel span:nth-child(2) { width: 96%; animation-delay: 90ms; }
+  .skel span:nth-child(3) { width: 58%; animation-delay: 180ms; }
+  @keyframes npSkel {
+    0%, 100% { opacity: 0.55; }
+    50% { opacity: 1; }
+  }
+
+  .bio {
+    max-height: 128px;
+    overflow-y: auto;
+    font-size: 17px;
+    line-height: 1.5;
+    color: var(--ink-body);
+    text-wrap: pretty;
+    scrollbar-width: none;
+    touch-action: pan-y;
+  }
+  .bio::-webkit-scrollbar { display: none; }
+  .bio__para {
+    margin: 0 0 10px;
+  }
+  .bio__para:last-child {
+    margin-bottom: 0;
+  }
+
+  .credit {
+    font-family: var(--font-mono);
+    font-size: var(--t-micro);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--ink-quiet);
+  }
+
+  .offline {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    height: 52px;
+    border-radius: 14px;
+    background: rgba(233, 238, 242, 0.05);
+    border: 1px solid rgba(233, 238, 242, 0.12);
+    padding: 0 18px;
+  }
+  .offline span {
+    flex: 1;
+    min-width: 0;
+    font-size: 16px;
+    color: var(--ink-muted);
+  }
+  .offline__retry {
+    display: inline-flex;
+    align-items: center;
+    height: 36px;
+    padding: 0 15px;
+    border-radius: 9px;
+    background: rgba(159, 180, 232, 0.16);
+    border: 1px solid rgba(159, 180, 232, 0.35);
+    font-family: var(--font-mono);
+    font-size: var(--t-label-sm);
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--accent-bluetooth);
+    flex-shrink: 0;
+  }
+  .offline__retry:active { background: rgba(159, 180, 232, 0.3); }
+
+  .similar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .similar__chip {
+    display: inline-flex;
+    align-items: center;
+    height: 30px;
+    padding: 0 12px;
+    border-radius: 9px;
+    background: rgba(159, 180, 232, 0.14);
+    border: 1px solid rgba(159, 180, 232, 0.3);
+    font-size: 15px;
+    color: var(--accent-bluetooth);
+    white-space: nowrap;
+  }
 
   .title {
     font-size: var(--t-title);

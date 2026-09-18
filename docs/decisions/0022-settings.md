@@ -134,6 +134,8 @@ hardcoded as Phase 7 builds them.
 | Lyrics on/off | [R] | |
 | Artwork lookup for renderers that supply none | [R] | George, 2026-09-12: Bluetooth's absent art is transient — artist/album/title are enough to find it later |
 | Enrichment provider API keys, one per provider that needs one | [N] | Confirmed as a setting by George, 2026-09-17: entered by each user, never shipped in the image or the repo, so a provider requiring a key is not ruled out by it. Which providers need one depends on the Phase 8 provider decision |
+| fanart.tv key | [N] | Artist pictures (George, 2026-09-18). Without it they come from LMS's own plugin where the server has one, and initials otherwise. A personal key sees a new image about two days after it is added where a project key waits seven (Finding 030) |
+| ListenBrainz token | [N] | For the artist page's Popular list only. That endpoint began answering `401 "you need to provide an Auth token"` on 2026-09-18, having answered 200 the same morning; George chose a per-user token over dropping the section. Everything else in ADR-0040 §2 still needs no key |
 
 ### System and maintenance
 

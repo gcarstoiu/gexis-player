@@ -22,7 +22,7 @@
     "type": "number",
     "label": "Boot volume",
     "marks": "RH",
-    "note": "A fixed safe level at every cold boot, never the last session’s.",
+    "note": "A fixed safe level at every cold boot, never the last session\u2019s.",
     "min": -90,
     "max": -20,
     "unit": "dB",
@@ -44,7 +44,7 @@
     "type": "number",
     "label": "Restore floor",
     "marks": "RH?",
-    "note": "Placeholder, never confirmed. Measured too quiet for Bluetooth’s unmanaged floor.",
+    "note": "Placeholder, never confirmed. Measured too quiet for Bluetooth\u2019s unmanaged floor.",
     "min": -60,
     "max": -10,
     "unit": "dB",
@@ -55,7 +55,7 @@
     "type": "choice",
     "label": "Boot default applies",
     "marks": "R?",
-    "note": "A renderer’s first use mid-session currently starts as quiet as a power-on.",
+    "note": "A renderer\u2019s first use mid-session currently starts as quiet as a power-on.",
     "options": [
      "Cold boot only",
      "Every renderer start"
@@ -83,7 +83,7 @@
     "type": "choice",
     "label": "Slider travel curve",
     "marks": "RH",
-    "note": "Decided: the slider spans −45 to 0 dB, even in dB, and shows its position.",
+    "note": "Decided: the slider spans \u221245 to 0 dB, even in dB, and shows its position.",
     "options": [
      "dB-linear",
      "Perceptual"
@@ -349,7 +349,7 @@
     "type": "toggle",
     "label": "Show volume when changed elsewhere",
     "marks": "N",
-    "note": "A phone’s volume change opens the drawer; the panel’s own changes do not.",
+    "note": "A phone\u2019s volume change opens the drawer; the panel\u2019s own changes do not.",
     "default": true
    },
    {
@@ -444,7 +444,7 @@
     "type": "number",
     "label": "Confidence threshold",
     "marks": "R",
-    "note": "Below it nothing is shown — a confidently wrong biography is worse than a blank panel.",
+    "note": "Below it nothing is shown \u2014 a confidently wrong biography is worse than a blank panel.",
     "min": 0,
     "max": 1,
     "unit": "",
@@ -465,6 +465,22 @@
     "label": "Look up missing artwork",
     "marks": "R",
     "note": "For renderers that supply none. Title and artist are enough to find it later.",
+    "default": null
+   },
+   {
+    "key": "listenbrainz_token",
+    "type": "text",
+    "label": "ListenBrainz token",
+    "marks": "N",
+    "note": "Only for the artist page's Popular list: that endpoint began requiring one on 2026-09-18. Everything else works without a key.",
+    "default": null
+   },
+   {
+    "key": "fanart_key",
+    "type": "text",
+    "label": "fanart.tv key",
+    "marks": "N",
+    "note": "Artist pictures. Without it they come from LMS's own plugin, where the server has one, and initials otherwise.",
     "default": null
    }
   ]

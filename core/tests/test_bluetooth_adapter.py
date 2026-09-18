@@ -413,3 +413,52 @@ async def test_setting_shuffle_or_repeat_with_no_player_fails_rather_than_preten
     adapter = BluetoothAdapter()
     assert await adapter.shuffle(True) is False
     assert await adapter.repeat("one") is False
+
+
+# --- a phone already playing when the daemon starts -------------------------
+
+
+def _player_props(status="playing"):
+    return {
+        "Status": Variant("s", status),
+        "Track": Variant("a{sv}", {"Title": Variant("s", "Song"),
+                                   "Artist": Variant("s", "Somebody")}),
+    }
+
+
+def test_a_phone_already_playing_at_startup_is_an_acquisition():
+    """**The defect this test exists for.** Acquisition is driven by objects
+    appearing, which is an edge: a MediaPlayer1 that was already there
+    produces none. So a phone playing through the device when the daemon
+    started held it while the core believed nobody did, and the panel showed
+    its "waiting for a service" block over a playing track. George saw
+    Spotify's half of this on 2026-09-18; this is the same defect one
+    adapter along."""
+    adapter = BluetoothAdapter()
+    acquired = []
+
+    adapter._acquire_if_already_playing(_player_props("playing"), lambda: acquired.append(True))
+
+    assert acquired == [True]
+
+
+def test_a_phone_paused_at_startup_does_not_acquire():
+    """One left paused overnight is indistinguishable from one somebody
+    abandoned, and claiming the device for it would take it from whoever
+    actually has it."""
+    adapter = BluetoothAdapter()
+    acquired = []
+
+    for status in ("paused", "stopped"):
+        adapter._acquire_if_already_playing(_player_props(status), lambda: acquired.append(True))
+
+    assert acquired == []
+
+
+def test_a_player_with_no_status_does_not_acquire():
+    adapter = BluetoothAdapter()
+    acquired = []
+
+    adapter._acquire_if_already_playing({}, lambda: acquired.append(True))
+
+    assert acquired == []

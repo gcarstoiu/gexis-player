@@ -1278,6 +1278,44 @@ structural work is never needed.
 
 Purely additive. Cannot break playback.
 
+**Status 2026-09-18: every step done and checked by George on the panel.
+[ADR-0040](decisions/0040-enrichment-providers.md) accepted and twice
+amended by what the work measured. Branch `phase-8-plan`.**
+
+**What the phase settled that its plan did not predict:**
+
+- **"Could not ask" is not "there is nothing there."** MusicBrainz's search
+  answered 503 for 4 of 9 tries, LRCLIB has a busy-503 of its own, and LMS's
+  plugin holds a socket for 75 s before dropping it. Every one of those
+  looked like an empty answer, and caching one would have denied a track its
+  enrichment permanently. The distinction is now made in five places and is
+  the single most load-bearing idea in the phase.
+- **Providers are asked at once, and the answer says when it is partial.**
+  Asked in order, the lyrics waited behind three providers that each begin
+  with the same MusicBrainz search; a busy MusicBrainz meant no words at
+  all. `for_track` now answers after `WAIT_S` with what has arrived and
+  reports what is still running, and the panel asks again on that rather
+  than guessing which fields to wait for.
+- **Two keys after all**, both per-user settings George chose: a ListenBrainz
+  token (its popularity endpoint began demanding one mid-phase) and a
+  fanart.tv key for artist pictures. Nothing else needs one.
+- **Fanart adds quality, not coverage.** Measured on 14 random artists: 9
+  had a picture from both, 5 from LMS only, **0 from fanart only**. So
+  fanart goes first where it has one and LMS stays behind it; replacing LMS
+  would lose about a third of the pictures. The providers
+are settled: **LMS's Music & Artist Information plugin first where it
+answers** - it has artist photos *and* biographies on George's server
+([Finding 035](findings/035-lms-artist-information-plugin.md)) - with a
+key-free set behind it (MusicBrainz, Cover Art Archive, Wikipedia via
+Wikidata, ListenBrainz, LRCLIB) for everything else and for Spotify and
+Bluetooth, which have no LMS ids. The plugin is a bonus when present, never
+a requirement. Synced lyrics ship, with LRCLIB's missing licence stated
+rather than buried. Attribution is a quiet line beside the text it credits.
+fanart.tv is not used; a missing photo keeps Phase 7's initials.
+
+**Criterion 1 is amended by ADR-0040 §5:** one token bucket *per provider*,
+not one shared - it was written when the phase assumed a single provider.
+
 **Read first: [Finding 030](findings/030-free-enrichment-providers.md)**
 (2026-09-17) — free providers, field by field, with their terms. MusicBrainz
 is not enough on its own: biographies, similar artists, artist photos and
@@ -1302,6 +1340,57 @@ with several it becomes one limiter per provider.
    duration is available, so the confidence rule is tested for this case
    specifically; stream text is not always a song ("KissFM Live!" as artist,
    Phase 6). ADR-0038 §8a.
+
+**Plan, 2026-09-18** — one increment at a time, each checked on the panel
+before the next, as Phase 7 ran.
+
+1. **Measure the key-free providers against real tracks, no product code.**
+   Read-only, from `gexis`, using albums and artists from George's own
+   library and one radio station. **Done 2026-09-18,
+   [Finding 036](findings/036-key-free-providers-against-real-tracks.md):**
+   all four answer. MusicBrainz scores the right release group and recording
+   at 100 - but its *search* answered 503 "currently busy" for 4 of 9 tries,
+   retries included, where lookups by MBID answered 4 of 4, **so a 503 must
+   never be cached as "nothing found"**. Cover Art Archive works and is slow
+   (0.9-1.9 s). Wikidata → Wikipedia reaches the right article (297 ms +
+   116 ms). ListenBrainz's metadata lookup needs a token (401), while its
+   Labs similar-artists works without one - with an `algorithm` enum that has
+   already changed under it. LRCLIB matched 3 of 4 real tracks with synced
+   lyrics in 55-350 ms, and its no-duration fallback returned 16-20 hits of
+   which 0-19 were synced, so the confidence rule is needed, not a
+   formality.
+2. **The enrichment service, tested against recorded replies.** One limiter
+   per provider (ADR-0040 §5), a persistent cache including negative
+   results, the confidence threshold, and the rule that renderer-supplied
+   text is never overwritten. No screen yet. Cache keyed on
+   (artist, album, title, duration), never on LMS ids.
+3. **LMS's plugin path, and artist photos on the panel.** `musicartistinfo`
+   detected at runtime; photos replace Phase 7's initials on the artist grid
+   and artist page where they exist, initials where they do not. This is the
+   step that proves ADR-0040 §1's "LMS first" without any external provider
+   being involved.
+4. **The Artist tab** on now playing: biography, with the attribution line
+   (§4) designed here since the designs carry none, and similar artists.
+5. **The Release tab**: label, release type, track count, album notes where
+   there are any.
+6. **Lyrics**: the Lyrics tab, plain and synced, with LRCLIB matched on
+   duration and the search fallback for Bluetooth, which often has none.
+7. **Radio artwork from enrichment** (criterion 7): a station that sends no
+   artwork gets it looked up from artist and title, with the confidence rule
+   tested for the case that has no album and no duration.
+8. Clear the `phase-8` markers; DEVELOPMENT, HANDOFF, image, PR.
+   **Done 2026-09-18.** No markers remained: every tab the design draws is
+   wired.
+
+**Parked by George (2026-09-18), for Phase 9 or later: a background sweep
+for missing album art.** 155 of the library's 4,567 albums have no
+`artwork_track_id` - live bootlegs, Japan mini-LPs, deluxe editions - and
+Cover Art Archive could fill them. It wants a Settings action, a job that
+survives a restart, and pacing so it does not starve foreground lookups of
+the one MusicBrainz request a second. **The same sweep for artist pictures
+was considered and rejected on measurement:** it would spend 30-45 minutes
+of that allowance to improve pictures that already exist and find no new
+ones.
 
 ### Phase 9 — Settings wiring and UI polish
 

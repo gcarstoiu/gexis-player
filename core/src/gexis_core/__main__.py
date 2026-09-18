@@ -23,6 +23,22 @@ from gexis_core.arbitration import Supervisor
 from gexis_core.config import Config
 from gexis_core.idle_page import probe as probe_idle_page
 from gexis_core.metadata_file import MetadataFileWriter
+from gexis_core.artistinfo import LmsArtistInfo
+from gexis_core.enrichment import PREFETCH_AFTER_S, Cache, EnrichmentService, TrackKey
+from gexis_core.providers import (
+    ArtistIdentity,
+    CoverArtProvider,
+    FanartArtistImage,
+    Http,
+    ListenBrainzPopular,
+    ListenBrainzSimilar,
+    LmsArtistProvider,
+    LrclibLyrics,
+    LmsReleaseProvider,
+    MusicBrainzRelease,
+    RecordingArtProvider,
+    WikipediaBiography,
+)
 from gexis_core.peppy import PeppyController, PeppyScreen, UnattendedPlayback
 from gexis_core.peppy_metadata import PeppyMetadataWriter
 from gexis_core.renderer_volume import RendererVolumeMemory
@@ -301,7 +317,11 @@ async def main() -> None:
             "device_name": socket.gethostname,
             "timezone": read_timezone,
         },
-        wired={"idle_url": None, "idle_timeout": None, "drawer_on_external": None, "drawer_autohide": None},
+        # Wired = something reads it (ADR-0035). The token is read on every
+        # Popular lookup, so it takes effect as soon as it is typed.
+        wired={"idle_url": None, "idle_timeout": None, "drawer_on_external": None,
+               "drawer_autohide": None, "listenbrainz_token": None,
+               "fanart_key": None},
         on_change=state_store.bump_settings_revision,
     )
 
@@ -327,6 +347,7 @@ async def main() -> None:
 
     state_store.subscribe(follow_playback)
 
+
     # What the Peppy screen draws (criterion 7). A separate file from
     # currentsong.txt, which is moOde's format for moOde's readers.
     state_store.subscribe(PeppyMetadataWriter().write)
@@ -334,6 +355,71 @@ async def main() -> None:
     # Phase 7 (ADR-0038): the same server, and the same player, the renderer
     # adapter talks to. Radio shares its HTTP session.
     library = LmsLibrary(config.lms_host, config.lms_port, player_id=lambda: lms.player_id)
+    # LMS's own artist photos and biographies, where the server has the
+    # plugin (ADR-0040 §1). Shares the library's HTTP session.
+    enrichment_cache = Cache()
+    artistinfo = LmsArtistInfo(library.rpc, f"http://{config.lms_host}:{config.lms_port}",
+                               store=enrichment_cache)
+    # ADR-0040 §1: LMS's own plugin first where it answers, the key-free
+    # providers behind it and for the renderers that have no LMS ids.
+    http = Http()
+    # One MusicBrainz lookup for the artist, shared: two providers needed the
+    # same id and each was searching for it (see ArtistIdentity).
+    identity = ArtistIdentity(http, store=enrichment_cache)
+    enrichment = EnrichmentService(
+        [
+            # **Pictures before LMS, text after it** (George, 2026-09-18,
+            # once the speed was measured). Fanart has a portrait for
+            # artists the plugin has nothing for, and this list merges
+            # field by field - fanart offers only a picture, so putting it
+            # first takes the picture and leaves the biography to LMS.
+            FanartArtistImage(http, identity, lambda: settings.value("fanart_key"),
+                              proxy_base=f"http://{config.lms_host}:{config.lms_port}"),
+            LmsArtistProvider(artistinfo, lambda: lms.current_artist_id),
+            LmsReleaseProvider(library, artistinfo, lambda: lms.current_album_id),
+            WikipediaBiography(http, identity),
+            ListenBrainzSimilar(http, identity),
+            # ADR-0022's inventory: a per-user token, read fresh so one
+            # typed into Settings works without a restart.
+            ListenBrainzPopular(http, identity,
+                                lambda: settings.value("listenbrainz_token")),
+            # Behind the LMS one, which answers from the library itself
+            # and wins the merge where it has anything.
+            MusicBrainzRelease(http),
+            LrclibLyrics(http),
+            CoverArtProvider(http),
+            # Last: the radio case, where there is no album to match on
+            # (Phase 8 criterion 7).
+            RecordingArtProvider(http),
+        ],
+        enrichment_cache,
+    )
+    # Warm the Artist tab while the track plays, so opening it shows
+    # something rather than a skeleton (George, 2026-09-18). Debounced,
+    # because skipping through an album would otherwise fire a lookup per
+    # track, and local-only: see EnrichmentService.prefetch for why the
+    # key-free providers are not warmed speculatively.
+    prefetch_task: asyncio.Task | None = None
+
+    def warm_enrichment(state) -> None:
+        nonlocal prefetch_task
+        key = TrackKey.of(state.metadata)
+        if key.is_empty() or state.metadata.transport != "playing":
+            return
+        if prefetch_task is not None and not prefetch_task.done():
+            if getattr(prefetch_task, "gexis_key", None) == key:
+                return
+            prefetch_task.cancel()
+
+        async def warm() -> None:
+            # Long enough that a skipped track never costs a lookup.
+            await asyncio.sleep(PREFETCH_AFTER_S)
+            await enrichment.prefetch(key, renderer=state.active)
+
+        prefetch_task = asyncio.ensure_future(warm())
+        prefetch_task.gexis_key = key
+
+    state_store.subscribe(warm_enrichment)
 
     state_server = StateServer(
         state_store,
@@ -349,6 +435,8 @@ async def main() -> None:
         # Phase 7 (ADR-0038): the same server, and the same player, the
         # renderer adapter talks to.
         library=library,
+        artistinfo=artistinfo,
+        enrichment=enrichment,
         # ADR-0038 §8: the one SlimBrowse subtree, browsed by handles the
         # core issues.
         radio=RadioBrowser(library.rpc, lambda: lms.player_id),

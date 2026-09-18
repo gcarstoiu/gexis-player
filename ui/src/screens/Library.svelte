@@ -13,12 +13,18 @@
   while the idle screen, which is removed when it closes, never did.
 -->
 <script>
+  import { untrack } from 'svelte';
+
   import {
     libraryRoot,
     loadAlbum,
     loadAlbumTracks,
-    loadArtists,
     loadArtistAlbums,
+    loadArtistPhotos,
+    loadArtistInfo,
+    artistPhotos,
+    artistsCached,
+    playlistsCached,
     loadPlaylists,
     loadPlaylist,
     browseRadio,
@@ -37,6 +43,11 @@
     onclose,
     onsettings,
     onvolume,
+    //: An artist name to open on arrival - now playing's artist line links
+    //: here (the design's `onNpArtist`). A name rather than an id, because
+    //: the panel holds no LMS ids and the artist list it already has can
+    //: resolve one.
+    openArtistNamed = null,
   } = $props();
 
   // Where in the library the panel is; [] is the root. Each entry is a
@@ -107,11 +118,118 @@
     grid.scrollTop = Math.max(0, grid.scrollTop + top - 10);
   }
 
+  // LMS's own artist photos, where the server has the plugin (ADR-0040 §1).
+  // Keyed by `<id>` for the grid and `<id>@300` for the page. A server
+  // without the plugin answers null for everything and the circles keep
+  // their initials, which is not a failure state.
+  //: Kept in `lib/library.js`, so closing the library does not throw away
+  //: every face it has already fetched (George, 2026-09-18).
+  const photos = $derived($artistPhotos);
+  //: What the artist page shows beside its discography.
+  let artistInfo = $state({ state: 'idle', for: null, found: null, popular: [] });
+  //: The biography is clamped until it is asked for, so the rest of the
+  //: page is not pushed off the screen by it.
+  let bioOpen = $state(false);
+
+  //: **Fanart first, then LMS's own plugin** (George, 2026-09-18). The data
+  //: already preferred fanart; the page was still reading only the plugin's
+  //: photo store, so an artist the plugin has nothing for - 2Pac - showed
+  //: initials next to a picture the daemon had already found.
+  const artistPicture = $derived(
+    artistInfo.found?.artist_image ?? photos[`${artist?.id}@300`] ?? null,
+  );
+
+  //: Hard-wrapped text with blank lines between paragraphs is what both
+  //: sources give; rendered as one string the browser collapses all of it
+  //: into a single blob (George, 2026-09-18).
+  //: LMS's plugin hands back the whole article for some artists - 56,573
+  //: characters for 2Pac. Opened in full that is a few hundred paragraphs
+  //: of DOM on a panel that already drops frames (Finding 034), and nobody
+  //: reads an encyclopaedia on a hi-fi. The opening is what is shown.
+  const BIO_PARAGRAPHS = 12;
+
+  //: **How much About is allowed** (George, 2026-09-18): as much as fits
+  //: while the first row of albums still shows a quarter of itself. A fixed
+  //: height was wrong in both directions - it hid the text on a short
+  //: biography and hid the discography on a long one.
+  const ALBUM_PEEK = 0.25;
+  //: Never so little that About is pointless.
+  const ABOUT_MIN = 64;
+
+  let aboutEl = $state(null);
+  let columnEl = $state(null);
+  let aboutMax = $state(ABOUT_MIN);
+
+  /** One measured correction: everything below About is a fixed height, so
+   *  the slack between where the first album row sits now and where it
+   *  should sit is exactly what About may grow or shrink by. */
+  function fitAbout() {
+    if (!aboutEl || !columnEl || bioOpen) return;
+    const card = columnEl.querySelector('.disc');
+    if (!card) return;
+    const column = columnEl.getBoundingClientRect();
+    const first = card.getBoundingClientRect();
+    const wanted = column.bottom - first.height * ALBUM_PEEK;
+    const slack = wanted - first.top;
+    const next = Math.max(ABOUT_MIN, Math.round(aboutEl.getBoundingClientRect().height + slack));
+    if (Math.abs(next - aboutMax) > 4) aboutMax = next;
+  }
+
+  $effect(() => {
+    // Re-measured when the page's contents change, never per frame
+    // (Finding 032: nothing runs per scroll frame).
+    void paragraphs;
+    void releases;
+    void artistInfo.popular;
+    if (bioOpen) return;
+    const frame = requestAnimationFrame(() => untrack(fitAbout));
+    return () => cancelAnimationFrame(frame);
+  });
+
+  const paragraphs = $derived.by(() => {
+    const text = artistInfo.found?.biography ?? '';
+    return text
+      .split(/\n\s*\n/)
+      .map((block) => block.replace(/\s*\n\s*/g, ' ').trim())
+      .filter(Boolean)
+      .slice(0, BIO_PARAGRAPHS);
+  });
+  let photoQueue = new Set();
+  let photoTimer = null;
+
+  function wantPhoto(id) {
+    if ($artistPhotos[id] !== undefined || photoQueue.has(id)) return;
+    photoQueue.add(id);
+    // Coalesced: a scroll reveals cards one at a time, and one request per
+    // card would be 917 of them.
+    clearTimeout(photoTimer);
+    photoTimer = setTimeout(async () => {
+      // Small batches on purpose: an artist the plugin has not looked up
+      // costs it 500-900 ms upstream (hardware, 2026-09-18), so 20 at a
+      // time appear in a few seconds where 80 would appear in forty.
+      const ids = [...photoQueue].slice(0, 20);
+      photoQueue = new Set([...photoQueue].slice(20));
+      await loadArtistPhotos(ids);
+      if (photoQueue.size) wantPhoto([...photoQueue][0]);
+    }, 120);
+  }
+
+  /** Asks for a card's photo once it is on screen (or nearly). */
+  function artistCard(node, id) {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((entry) => entry.isIntersecting)) wantPhoto(id);
+      },
+      { root: node.closest('.grid__scroll'), rootMargin: '300px' },
+    );
+    observer.observe(node);
+    return { destroy: () => observer.disconnect() };
+  }
+
   async function openArtists() {
     busy = 'artists';
     try {
-      const page = await loadArtists();
-      artists = page.items;
+      artists = await artistsCached();
       path = [{ kind: 'artists', label: 'Artists' }];
     } catch (err) {
       console.info('library:', err.message);
@@ -120,12 +238,57 @@
     }
   }
 
+  /** Opens the artist page for a name, if this library has that artist. */
+  async function openArtistByName(name) {
+    const wanted = folded(name);
+    if (!wanted) return;
+    try {
+      const all = await artistsCached();
+      artists = all;
+      const match = all.find((a) => folded(a.name) === wanted);
+      if (match) await openArtist(match);
+    } catch (err) {
+      console.info('library:', err.message);
+    }
+  }
+
+  const folded = (name) =>
+    (name ?? '')
+      .normalize('NFKD')
+      .replace(/[\u2018\u2019'`\u00b4]/g, '')
+      .replace(/[^a-zA-Z0-9]+/g, ' ')
+      .trim()
+      .toLowerCase();
+
+  $effect(() => {
+    const name = openArtistNamed;
+    if (name) untrack(() => openArtistByName(name));
+  });
+
   async function openArtist(entry) {
     busy = entry.id;
     try {
       discography = await loadArtistAlbums(entry.id);
       artist = entry;
       path = [...path, { kind: 'artist', id: entry.id, label: entry.name }];
+      // The page's disc is 262px, the grid's card 132px, so the page asks
+      // for its own size rather than stretching the grid's thumbnail.
+      if ($artistPhotos[`${entry.id}@300`] === undefined) loadArtistPhotos([entry.id], 300);
+      // About and Similar artists: ADR-0038 §2 left them undrawn "until
+      // Phase 8", and this is Phase 8. Fetched beside the discography
+      // rather than before it, so the page arrives without waiting on a
+      // biography that takes a second (Finding 035).
+      artistInfo = { state: 'loading', for: entry.id, found: null, popular: [] };
+      bioOpen = false;
+      loadArtistInfo(entry.id, entry.name).then((answer) => {
+        if (artistInfo.for !== entry.id) return;
+        artistInfo = {
+          state: answer ? 'ready' : 'error',
+          for: entry.id,
+          found: answer?.enrichment ?? null,
+          popular: answer?.popular ?? [],
+        };
+      });
     } catch (err) {
       console.info('library:', err.message);
     } finally {
@@ -218,7 +381,7 @@
   async function openPlaylists() {
     busy = 'playlists';
     try {
-      playlists = await loadPlaylists();
+      playlists = await playlistsCached();
       revealed = null;
       path = [{ kind: 'playlists', label: 'Playlists' }];
     } catch (err) {
@@ -253,7 +416,7 @@
   async function openBrowse() {
     busy = 'browse';
     try {
-      if (!artists.length) artists = (await loadArtists()).items;
+      if (!artists.length) artists = await artistsCached();
       chosenArtist = null;
       browseAlbums = [];
       chosenAlbum = null;
@@ -712,10 +875,22 @@
                     type="button"
                     onclick={() => openArtist(entry)}
                   >
-                    <!-- LMS has no artist photos; the initial stands in
-                         until Phase 8's enrichment (ADR-0038 §2). -->
-                    <span class="artist__disc" style:background={tintOf(entry.name)}>
-                      <span class="artist__initials">{initialsOf(entry.name)}</span>
+                    <!-- LMS's plugin has a photo for most artists on
+                         George's server; the initial stands in where it has
+                         none, or where a server has no plugin at all
+                         (ADR-0040 §1, amending ADR-0038 §2). -->
+                    <span class="artist__disc" style:background={tintOf(entry.name)} use:artistCard={entry.id}>
+                      {#if photos[entry.id] && !failed.has(photos[entry.id])}
+                        <img
+                          class="artist__photo"
+                          src={photos[entry.id]}
+                          alt=""
+                          loading="lazy"
+                          onerror={() => markFailed(photos[entry.id])}
+                        />
+                      {:else}
+                        <span class="artist__initials">{initialsOf(entry.name)}</span>
+                      {/if}
                     </span>
                     <span class="artist__name">{entry.name}</span>
                   </button>
@@ -740,7 +915,16 @@
       <div class="artistpage">
         <div class="artistpage__side">
           <span class="artist__disc artist__disc--big" style:background={tintOf(artist.name)}>
-            <span class="artist__initials artist__initials--big">{initialsOf(artist.name)}</span>
+            {#if artistPicture && !failed.has(artistPicture)}
+              <img
+                class="artist__photo"
+                src={artistPicture}
+                alt=""
+                onerror={() => markFailed(artistPicture)}
+              />
+            {:else}
+              <span class="artist__initials artist__initials--big">{initialsOf(artist.name)}</span>
+            {/if}
           </span>
           <div>
             <div class="artistpage__name">{artist.name}</div>
@@ -757,10 +941,63 @@
               <span class="i-shuffle"><i></i><i></i><b></b><b></b></span>
             </button>
           </div>
-          <!-- About, tags and similar artists are Phase 8 (ADR-0038 §2). -->
         </div>
 
-        <div class="releases">
+        <!-- The design's right column: About, Popular, the discography,
+             then Similar artists - all of it one scroller. -->
+        <div class="artistright" bind:this={columnEl}>
+            <div class="sect">
+              <span class="sect__label">About</span>
+              <span class="sect__rule"></span>
+            </div>
+            {#if artistInfo.state === 'loading'}
+              <div class="skel"><span></span><span></span><span></span></div>
+            {:else if artistInfo.found?.biography}
+              <!-- Clamped, so Popular and the discography are still on
+                   screen under it (George, 2026-09-18). Tapping opens the
+                   rest; not a nested scroller, which is what made the
+                   discography move under a finger meant for the column. -->
+              <div
+                class="artistmeta__bio"
+                class:is-clamped={!bioOpen}
+                style:max-height={bioOpen ? null : `${aboutMax}px`}
+                bind:this={aboutEl}
+              >
+                {#each paragraphs as para, i (i)}
+                  <p class="artistmeta__para">{para}</p>
+                {/each}
+              </div>
+              <!-- The credit is the licence's term, not decoration
+                   (ADR-0040 §4). -->
+              <div class="artistmeta__credit">
+                <span>From {artistInfo.found.biography_source}</span>
+                <button class="artistmeta__more" type="button" onclick={() => (bioOpen = !bioOpen)}>
+                  {bioOpen ? 'Less' : 'More'}
+                </button>
+              </div>
+            {:else}
+              <div class="artistmeta__none">Nothing found for this artist.</div>
+            {/if}
+
+
+          {#if artistInfo.popular.length}
+            <div class="sect">
+              <span class="sect__label">Popular</span>
+              <span class="sect__rule"></span>
+              <span class="sect__note">On this device</span>
+            </div>
+            <div class="popular">
+              {#each artistInfo.popular as track, i (track.id)}
+                <button class="poprow" type="button" onclick={() => play('track', track.id, track.title)}>
+                  <span class="poprow__n">{i + 1}</span>
+                  <span class="poprow__title">{track.title}</span>
+                  {#if track.duration}<span class="poprow__dur">{mmss(track.duration)}</span>{/if}
+                </button>
+              {/each}
+            </div>
+          {/if}
+
+          <div class="releases">
           {#each releases as group (group.label)}
             <div class="release">
               <div class="release__head">
@@ -788,6 +1025,19 @@
               </div>
             </div>
           {/each}
+          </div>
+
+          {#if artistInfo.found?.similar?.length}
+            <div class="sect">
+              <span class="sect__label">Similar artists</span>
+              <span class="sect__rule"></span>
+            </div>
+            <div class="artistmeta__similar">
+              {#each artistInfo.found.similar as name (name)}
+                <span class="artistmeta__chip">{name}</span>
+              {/each}
+            </div>
+          {/if}
         </div>
       </div>
     {:else if here?.kind === 'album' && album}
@@ -888,6 +1138,10 @@
     font: inherit;
     color: inherit;
     border: none;
+    /* Without this a button that sets no background of its own gets the
+       browser's - the Popular rows came out as white blocks (George,
+       2026-09-18). Every other button here happened to set one. */
+    background: none;
     padding: 0;
     text-align: left;
   }
@@ -1890,6 +2144,14 @@
     justify-content: center;
     flex-shrink: 0;
   }
+  .artist__photo {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
   .artist__initials {
     font-size: 40px;
     font-weight: 700;
@@ -1954,6 +2216,169 @@
     padding: 24px 40px 26px;
     box-sizing: border-box;
   }
+  /* What the artist page draws below the buttons: the design's About and
+     Similar artists blocks, filled by Phase 8's enrichment. */
+  /* The design's right column on the artist page: About, Popular, the
+     discography and Similar artists, scrolling together. */
+  .artistright {
+    flex: 1;
+    min-width: 0;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    overflow-y: auto;
+    scrollbar-width: none;
+    touch-action: pan-y;
+  }
+  .artistright::-webkit-scrollbar { display: none; }
+  /* Nothing in this column shrinks. It is a scroller, so an item that can
+     shrink will: About was the only one that could, and a long biography
+     with a full discography under it was squeezed to *zero* height - the
+     text was there, in a box no pixels tall (George, 2026-09-18). */
+  .artistright > * {
+    flex-shrink: 0;
+  }
+
+  .popular {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .poprow {
+    height: 46px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 0 12px;
+    border-radius: 10px;
+    flex-shrink: 0;
+  }
+  .poprow:active { background: var(--ink-fill-press); }
+  .poprow__n {
+    font-family: var(--font-mono);
+    font-size: 13px;
+    color: var(--ink-quiet);
+    width: 16px;
+    flex-shrink: 0;
+  }
+  .poprow__title {
+    flex: 1;
+    min-width: 0;
+    text-align: left;
+    font-size: var(--t-body-sm);
+    color: var(--ink);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .poprow__dur {
+    font-family: var(--font-mono);
+    font-size: 13px;
+    color: var(--ink-quiet);
+    flex-shrink: 0;
+  }
+  .sect {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+    flex-shrink: 0;
+  }
+  .sect__label {
+    font-family: var(--font-mono);
+    font-size: var(--t-label-sm);
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--ink-quiet);
+  }
+  .sect__rule {
+    flex: 1;
+    height: 1px;
+    background: var(--ink-line);
+  }
+  .skel {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .skel span {
+    display: block;
+    height: 13px;
+    border-radius: 4px;
+    background: rgba(233, 238, 242, 0.09);
+    animation: libSkel 1500ms ease-in-out infinite;
+  }
+  .skel span:nth-child(1) { width: 100%; }
+  .skel span:nth-child(2) { width: 94%; animation-delay: 90ms; }
+  .skel span:nth-child(3) { width: 56%; animation-delay: 180ms; }
+  @keyframes libSkel {
+    0%, 100% { opacity: 0.55; }
+    50% { opacity: 1; }
+  }
+  .artistmeta__bio {
+    font-size: 16px;
+    line-height: 1.5;
+    color: var(--ink-body);
+    text-wrap: pretty;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    width: 100%;
+  }
+  .artistmeta__para {
+    margin: 0;
+  }
+  /* A height, not a line clamp: `-webkit-line-clamp` needs
+     `display: -webkit-box`, which takes only one block of text - with
+     paragraphs inside it showed nothing at all. The fade says there is
+     more without pretending to count lines. */
+  .artistmeta__bio.is-clamped {
+    /* The height itself is measured: see fitAbout(). */
+    overflow: hidden;
+    -webkit-mask-image: linear-gradient(180deg, #000 58%, transparent 100%);
+    mask-image: linear-gradient(180deg, #000 58%, transparent 100%);
+  }
+  .artistmeta__more {
+    font-family: var(--font-mono);
+    font-size: var(--t-micro);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--accent-bluetooth);
+    padding: 6px 2px;
+    margin: -6px 0;
+  }
+  .artistmeta__credit {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    font-family: var(--font-mono);
+    font-size: var(--t-micro);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--ink-quiet);
+  }
+  .artistmeta__none {
+    font-size: var(--t-body-sm);
+    color: var(--ink-quiet);
+  }
+  .artistmeta__similar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 7px;
+  }
+  .artistmeta__chip {
+    display: inline-flex;
+    align-items: center;
+    height: 28px;
+    padding: 0 11px;
+    border-radius: 8px;
+    background: rgba(159, 180, 232, 0.14);
+    border: 1px solid rgba(159, 180, 232, 0.3);
+    font-size: 14px;
+    color: var(--accent-bluetooth);
+    white-space: nowrap;
+  }
+
   .artistpage__side {
     width: 262px;
     flex-shrink: 0;
@@ -1984,9 +2409,11 @@
   }
 
   .releases {
-    flex: 1;
+    /* Inside `.artistright` now, which does the scrolling: two nested
+       scrollers meant the discography moved under a finger meant for the
+       column. */
     min-width: 0;
-    overflow-y: auto;
+    flex-shrink: 0;
     display: flex;
     flex-direction: column;
     gap: 20px;
