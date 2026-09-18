@@ -57,6 +57,15 @@ RETRY_AFTER_S = 900.0
 #: where a wrong answer is unlikely rather than where matches are plentiful.
 CONFIDENCE_MIN = 90
 
+#: Warmed as soon as a track starts, because they are on this network and
+#: cost nothing anyone else pays for. Everything else waits until somebody
+#: opens the tab.
+PREFETCH_PROVIDERS = ("lms",)
+
+#: How long a track must have been playing before its enrichment is warmed.
+#: Skipping through an album would otherwise cost one lookup per track.
+PREFETCH_AFTER_S = 8.0
+
 
 class Outcome(str, Enum):
     FOUND = "found"
@@ -302,11 +311,16 @@ class EnrichmentService:
         self._confidence_min = confidence_min
         self._unavailable_until: dict[str, float] = {}
 
-    async def for_track(self, key: TrackKey, *, renderer: str | None = None) -> Enrichment:
+    async def for_track(self, key: TrackKey, *, renderer: str | None = None,
+                        only: tuple[str, ...] | None = None) -> Enrichment:
+        """`only` names the providers to ask; the rest are left for when
+        somebody actually looks (see `prefetch`)."""
         if key.is_empty():
             return Enrichment()
         found = Enrichment()
         for provider in self._providers:
+            if only is not None and provider.name not in only:
+                continue
             if not provider.serves(renderer):
                 continue
             answer = await self._ask(provider, key)
@@ -320,6 +334,23 @@ class EnrichmentService:
                 continue
             found = found.merged_with(answer.enrichment)
         return found
+
+    async def prefetch(self, key: TrackKey, *, renderer: str | None = None) -> None:
+        """Warm the cache for a track that has just started, so the Artist
+        tab is already filled when somebody opens it (George, 2026-09-18).
+
+        **Only the providers on the local network.** LMS's own plugin costs
+        386-1005 ms for a biography and needs no key and no rate limit
+        (Finding 035). The key-free providers are a different matter: one
+        biography is four requests, MusicBrainz allows one a second and
+        answered 503 to 4 of 9 searches (Finding 036), and its own guidance
+        discourages speculative polling. Fetching those for every track that
+        plays would spend most of that allowance on tabs nobody opens.
+        """
+        try:
+            await self.for_track(key, renderer=renderer, only=PREFETCH_PROVIDERS)
+        except Exception as exc:  # a warm cache is a convenience, never a duty
+            logger.info("enrichment: prefetch failed: %s", exc)
 
     async def _ask(self, provider, key: TrackKey) -> Answer:
         cached = self._cache.get(key, provider.name)

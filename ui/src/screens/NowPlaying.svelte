@@ -8,6 +8,8 @@
 <script>
   import spotifyMark from '../assets/icon-spotify.png';
   import bluetoothMark from '../assets/icon-bluetooth.png';
+  import { untrack } from 'svelte';
+
   import VolumeIcon from '../lib/VolumeIcon.svelte';
   import QueueRail from './QueueRail.svelte';
 
@@ -61,6 +63,46 @@
   // the rail's own "Up next" (the design's `queueCount`).
   const upNext = $derived(Math.max(0, (queue?.items?.length ?? 0) - (queue?.index ?? 0) - 1));
 
+  // The Artist tab (ADR-0040). Fetched when the tab is opened, never on the
+  // screen's path: a biography took 386-1005 ms from LMS's own plugin and
+  // seconds through MusicBrainz (Findings 035, 036), and now playing must
+  // render without it (ADR-0012).
+  let tab = $state('track');
+  let artistInfo = $state({ state: 'idle', for: null, enrichment: null });
+
+  const initialsOf = (name) =>
+    (name ?? '')
+      .split(/\s+/)
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((word) => word[0].toUpperCase())
+      .join('') || '?';
+
+  async function loadArtistInfo(force = false) {
+    const who = metadata?.artist ?? '';
+    if (!who) return;
+    if (!force && artistInfo.for === who && artistInfo.state !== 'error') return;
+    artistInfo = { state: 'loading', for: who, enrichment: null };
+    try {
+      const response = await fetch('/enrichment');
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const body = await response.json();
+      // By the time a lookup returns the track may have changed; the reply
+      // says which artist it is about, so a late answer is dropped rather
+      // than shown against the wrong name.
+      if ((metadata?.artist ?? '') !== who) return;
+      artistInfo = { state: 'ready', for: who, enrichment: body.enrichment };
+    } catch (err) {
+      console.info('enrichment:', err.message);
+      artistInfo = { state: 'error', for: who, enrichment: null };
+    }
+  }
+
+  $effect(() => {
+    const who = metadata?.artist ?? '';
+    if (tab === 'artist' && who) untrack(() => loadArtistInfo());
+  });
+
   let queueOpen = $state(false);
   // Leaving LMS takes the rail's subject with it.
   $effect(() => {
@@ -105,24 +147,75 @@
       </div>
 
       <div class="meta">
-        <div class="tabs" role="tablist" aria-label="Track detail" data-unwired="phase-8">
-          <button class="tab" type="button" role="tab" aria-selected="true">Track</button>
-          <button class="tab" type="button" role="tab" aria-selected="false" aria-disabled="true" disabled>Lyrics</button>
-          <button class="tab" type="button" role="tab" aria-selected="false" aria-disabled="true" disabled>Artist</button>
-          <button class="tab" type="button" role="tab" aria-selected="false" aria-disabled="true" disabled>Release</button>
+        <div class="tabs" role="tablist" aria-label="Track detail">
+          <button class="tab" type="button" role="tab" aria-selected={tab === 'track'} onclick={() => (tab = 'track')}>Track</button>
+          <button class="tab" type="button" role="tab" aria-selected="false" aria-disabled="true" disabled data-unwired="phase-8">Lyrics</button>
+          <button class="tab" type="button" role="tab" aria-selected={tab === 'artist'} onclick={() => (tab = 'artist')}>Artist</button>
+          <button class="tab" type="button" role="tab" aria-selected="false" aria-disabled="true" disabled data-unwired="phase-8">Release</button>
         </div>
 
         <div class="panel">
-          <div class="trackblock">
-            <div class="title" class:is-empty={!metadata?.title}>{metadata?.title ?? ''}</div>
-            <div class="artistline">
-              <span class="artist" class:is-empty={!metadata?.artist}>{metadata?.artist ?? ''}</span>
+          {#if tab === 'track'}
+            <div class="trackblock">
+              <div class="title" class:is-empty={!metadata?.title}>{metadata?.title ?? ''}</div>
+              <div class="artistline">
+                <span class="artist" class:is-empty={!metadata?.artist}>{metadata?.artist ?? ''}</span>
+              </div>
+              <div class="albumline">
+                <span class="album" class:is-empty={!metadata?.album}>{metadata?.album ?? ''}</span>
+                <!-- Release year is not published yet (design/data-contract.md). -->
+              </div>
             </div>
-            <div class="albumline">
-              <span class="album" class:is-empty={!metadata?.album}>{metadata?.album ?? ''}</span>
-              <!-- Release year is not published yet (design/data-contract.md). -->
+          {:else}
+            <div class="artisttab">
+              <div class="artisttab__head">
+                <span class="artisttab__disc">
+                  {#if artistInfo.enrichment?.artist_image}
+                    <img src={artistInfo.enrichment.artist_image} alt="" />
+                  {:else}
+                    <span class="artisttab__initials">{initialsOf(metadata?.artist)}</span>
+                  {/if}
+                </span>
+                <span class="artisttab__name">{metadata?.artist ?? ''}</span>
+              </div>
+
+              <div class="sect">
+                <span class="sect__label">About</span>
+                <span class="sect__rule"></span>
+                {#if artistInfo.state === 'loading'}<span class="sect__note">Looking…</span>{/if}
+              </div>
+
+              {#if artistInfo.state === 'loading'}
+                <!-- The design's skeleton: the layout must not jump when the
+                     text arrives, so the space is held. -->
+                <div class="skel"><span></span><span></span><span></span></div>
+              {:else if artistInfo.enrichment?.biography}
+                <div class="bio">{artistInfo.enrichment.biography}</div>
+                <!-- Wikipedia's CC BY-SA and MusicBrainz's CC BY-NC-SA both
+                     require the credit beside the text (ADR-0040 §4). -->
+                <div class="credit">From {artistInfo.enrichment.biography_source}</div>
+              {:else if artistInfo.state === 'error'}
+                <div class="offline">
+                  <span>Artist details unavailable. Your library is unaffected.</span>
+                  <button class="offline__retry" type="button" onclick={() => loadArtistInfo(true)}>Retry</button>
+                </div>
+              {:else}
+                <div class="sect__empty">Nothing found for this artist.</div>
+              {/if}
+
+              {#if artistInfo.enrichment?.similar?.length}
+                <div class="sect">
+                  <span class="sect__label">Similar artists</span>
+                  <span class="sect__rule"></span>
+                </div>
+                <div class="similar">
+                  {#each artistInfo.enrichment.similar as name (name)}
+                    <span class="similar__chip">{name}</span>
+                  {/each}
+                </div>
+              {/if}
             </div>
-          </div>
+          {/if}
         </div>
       </div>
     </div>
@@ -399,6 +492,178 @@
   }
 
   .trackblock { min-height: 238px; }
+
+  /* The Artist tab (ADR-0040), ported from the design's About and Similar
+     blocks. It occupies the same box as the track block, so switching tabs
+     moves nothing else on the screen. */
+  .artisttab {
+    min-height: 238px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+  .artisttab__head {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex-shrink: 0;
+  }
+  .artisttab__disc {
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    overflow: hidden;
+    position: relative;
+    flex-shrink: 0;
+    background: var(--ink-fill);
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.14);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .artisttab__disc img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  .artisttab__initials {
+    font-family: var(--font-mono);
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--ink-muted);
+  }
+  .artisttab__name {
+    font-size: var(--t-artist);
+    font-weight: 700;
+    color: var(--accent-artist);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .sect {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+    flex-shrink: 0;
+  }
+  .sect__label {
+    font-family: var(--font-mono);
+    font-size: var(--t-label-sm);
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--ink-quiet);
+  }
+  .sect__rule {
+    flex: 1;
+    height: 1px;
+    background: var(--ink-line);
+  }
+  .sect__note {
+    font-family: var(--font-mono);
+    font-size: var(--t-micro);
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--ink-quiet);
+    flex-shrink: 0;
+  }
+  .sect__empty {
+    font-size: var(--t-body-sm);
+    color: var(--ink-quiet);
+  }
+
+  .skel {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .skel span {
+    display: block;
+    height: 13px;
+    border-radius: 4px;
+    background: rgba(233, 238, 242, 0.09);
+    animation: npSkel 1500ms ease-in-out infinite;
+  }
+  .skel span:nth-child(1) { width: 100%; }
+  .skel span:nth-child(2) { width: 96%; animation-delay: 90ms; }
+  .skel span:nth-child(3) { width: 58%; animation-delay: 180ms; }
+  @keyframes npSkel {
+    0%, 100% { opacity: 0.55; }
+    50% { opacity: 1; }
+  }
+
+  .bio {
+    max-height: 128px;
+    overflow-y: auto;
+    font-size: 17px;
+    line-height: 1.5;
+    color: var(--ink-body);
+    text-wrap: pretty;
+    scrollbar-width: none;
+    touch-action: pan-y;
+  }
+  .bio::-webkit-scrollbar { display: none; }
+
+  .credit {
+    font-family: var(--font-mono);
+    font-size: var(--t-micro);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--ink-quiet);
+  }
+
+  .offline {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    height: 52px;
+    border-radius: 14px;
+    background: rgba(233, 238, 242, 0.05);
+    border: 1px solid rgba(233, 238, 242, 0.12);
+    padding: 0 18px;
+  }
+  .offline span {
+    flex: 1;
+    min-width: 0;
+    font-size: 16px;
+    color: var(--ink-muted);
+  }
+  .offline__retry {
+    display: inline-flex;
+    align-items: center;
+    height: 36px;
+    padding: 0 15px;
+    border-radius: 9px;
+    background: rgba(159, 180, 232, 0.16);
+    border: 1px solid rgba(159, 180, 232, 0.35);
+    font-family: var(--font-mono);
+    font-size: var(--t-label-sm);
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--accent-bluetooth);
+    flex-shrink: 0;
+  }
+  .offline__retry:active { background: rgba(159, 180, 232, 0.3); }
+
+  .similar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .similar__chip {
+    display: inline-flex;
+    align-items: center;
+    height: 30px;
+    padding: 0 12px;
+    border-radius: 9px;
+    background: rgba(159, 180, 232, 0.14);
+    border: 1px solid rgba(159, 180, 232, 0.3);
+    font-size: 15px;
+    color: var(--accent-bluetooth);
+    white-space: nowrap;
+  }
 
   .title {
     font-size: var(--t-title);

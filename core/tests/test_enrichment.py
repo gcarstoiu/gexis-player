@@ -292,3 +292,44 @@ def test_the_cache_answers_nothing_for_a_provider_it_has_not_been_asked_about():
     cache.put(KEY, "lrclib", _found(lyrics="La la la"))
 
     assert cache.get(KEY, "musicbrainz") is None
+
+
+# --- warming the tab before it is opened -----------------------------------
+
+
+@pytest.mark.asyncio
+async def test_prefetch_asks_only_the_providers_on_this_network():
+    """George, 2026-09-18: why not load it as soon as the artist is playing?
+    Because one biography from the key-free set is four requests, MusicBrainz
+    allows one a second and answered 503 to 4 of 9 searches, and its own
+    guidance discourages speculative polling (Finding 036). LMS's plugin is
+    on the LAN and costs nobody else anything, so that half is warmed and the
+    rest waits until somebody opens the tab."""
+    lms = FakeProvider("lms", [_found(biography="From the plugin")], serves={"lms"})
+    wiki = FakeProvider("wikipedia", [_found(biography="From Wikipedia")])
+    service = EnrichmentService([lms, wiki], _cache())
+
+    await service.prefetch(KEY, renderer="lms")
+
+    assert lms.calls == 1
+    assert wiki.calls == 0
+
+
+@pytest.mark.asyncio
+async def test_what_prefetch_warmed_is_there_when_the_tab_opens():
+    lms = FakeProvider("lms", [_found(biography="From the plugin")], serves={"lms"})
+    service = EnrichmentService([lms], _cache())
+
+    await service.prefetch(KEY, renderer="lms")
+    result = await service.for_track(KEY, renderer="lms")
+
+    assert result.biography == "From the plugin"
+    assert lms.calls == 1
+
+
+@pytest.mark.asyncio
+async def test_a_prefetch_that_fails_is_not_an_error_anyone_sees():
+    """A warm cache is a convenience, never a duty."""
+    service = EnrichmentService([FakeProvider("lms", [RuntimeError("boom")], serves={"lms"})], _cache())
+
+    await service.prefetch(KEY, renderer="lms")

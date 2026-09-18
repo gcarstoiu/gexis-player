@@ -842,3 +842,23 @@ async def test_a_push_re_reads_the_queue(monkeypatch):
 
     # One for the seed query, one for the push.
     assert rpc.queue_reads == 2
+
+
+@pytest.mark.asyncio
+async def test_the_current_artist_id_is_a_value_not_a_method(monkeypatch):
+    """**The defect this test exists for.** As a method it was truthy at the
+    call site, so the enrichment service asked LMS's plugin about a bound
+    method, got nothing, and quietly used Wikipedia instead for an artist the
+    plugin knew (hardware, 2026-09-18). ADR-0040 §1 is "LMS first", and a
+    fallback that silently wins looks exactly like one that was never
+    needed."""
+    adapter, _ = _adapter(monkeypatch, mode="play")
+
+    assert adapter.current_artist_id is None
+
+    adapter._report_metadata({
+        "mode": "play",
+        "playlist_loop": [{"title": "Maggie May", "artist": "Rod Stewart", "artist_id": 12316}],
+    })
+
+    assert adapter.current_artist_id == 12316

@@ -31,6 +31,7 @@ from aiohttp import web
 
 from gexis_core.adapters.base import TRANSPORT_COMMANDS
 from gexis_core.artistinfo import PHOTO_LARGE, PHOTO_THUMB
+from gexis_core.enrichment import Enrichment, TrackKey
 from gexis_core.library import LibraryUnavailable, NoPlayer, NotFound
 from gexis_core.radio import RadioUnavailable, UnknownHandle
 from gexis_core.model import PlaybackState
@@ -64,6 +65,7 @@ class StateServer:
         peppy=None,
         library=None,
         artistinfo=None,
+        enrichment=None,
         radio=None,
         ui_dir: Path | None = None,
     ) -> None:
@@ -91,6 +93,7 @@ class StateServer:
         self._peppy = peppy
         self._library = library
         self._artistinfo = artistinfo
+        self._enrichment = enrichment
         self._radio = radio
         self._ui_dir = ui_dir
         self._clients: set[web.WebSocketResponse] = set()
@@ -353,6 +356,30 @@ class StateServer:
         photos = await self._artistinfo.photos(ids, size)
         return web.json_response({str(k): v for k, v in photos.items()})
 
+    async def _handle_enrichment(self, request: web.Request) -> web.Response:
+        """What is known about what is playing, beyond what the renderer said
+        (ADR-0012, ADR-0040).
+
+        **A route rather than part of `/state`.** Enrichment is wanted only
+        while a tab is open, it takes seconds, and now playing must render
+        without it. Putting it in the state payload would also push a new
+        payload at every panel on every lookup, on a panel that already drops
+        frames while music plays (Finding 034).
+        """
+        if self._enrichment is None:
+            return web.json_response({"error": "enrichment is not wired up"}, status=503)
+        state = self._store.state
+        key = TrackKey.of(state.metadata)
+        if key.is_empty():
+            return web.json_response({"track": None, "enrichment": Enrichment().to_json()})
+        found = await self._enrichment.for_track(key, renderer=state.active)
+        return web.json_response({
+            # The panel checks this before drawing: by the time a lookup
+            # returns, the track may have changed.
+            "track": {"artist": key.artist, "title": key.title},
+            "enrichment": found.to_json(),
+        })
+
     async def _handle_surface(self, request: web.Request) -> web.Response:
         """ADR-0035 §6: the panel always arrives on loopback, a phone from the LAN."""
         panel = request.remote in ("127.0.0.1", "::1")
@@ -440,6 +467,7 @@ class StateServer:
         app.router.add_get("/radio", self._handle_radio)
         app.router.add_post("/radio/play", self._handle_radio_play)
         app.router.add_get("/library/artist-photos", self._handle_artist_photos)
+        app.router.add_get("/enrichment", self._handle_enrichment)
         app.router.add_post("/library/action", self._handle_library_action)
         app.router.add_get("/library/{what}", self._handle_library)
         app.router.add_get("/library/{what}/{id}", self._handle_library)

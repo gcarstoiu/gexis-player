@@ -24,6 +24,14 @@ from gexis_core.config import Config
 from gexis_core.idle_page import probe as probe_idle_page
 from gexis_core.metadata_file import MetadataFileWriter
 from gexis_core.artistinfo import LmsArtistInfo
+from gexis_core.enrichment import PREFETCH_AFTER_S, Cache, EnrichmentService, TrackKey
+from gexis_core.providers import (
+    ArtistIdentity,
+    Http,
+    ListenBrainzSimilar,
+    LmsArtistProvider,
+    WikipediaBiography,
+)
 from gexis_core.peppy import PeppyController, PeppyScreen, UnattendedPlayback
 from gexis_core.peppy_metadata import PeppyMetadataWriter
 from gexis_core.renderer_volume import RendererVolumeMemory
@@ -328,6 +336,7 @@ async def main() -> None:
 
     state_store.subscribe(follow_playback)
 
+
     # What the Peppy screen draws (criterion 7). A separate file from
     # currentsong.txt, which is moOde's format for moOde's readers.
     state_store.subscribe(PeppyMetadataWriter().write)
@@ -338,6 +347,46 @@ async def main() -> None:
     # LMS's own artist photos and biographies, where the server has the
     # plugin (ADR-0040 §1). Shares the library's HTTP session.
     artistinfo = LmsArtistInfo(library.rpc, f"http://{config.lms_host}:{config.lms_port}")
+    # ADR-0040 §1: LMS's own plugin first where it answers, the key-free
+    # providers behind it and for the renderers that have no LMS ids.
+    http = Http()
+    # One MusicBrainz lookup for the artist, shared: two providers needed the
+    # same id and each was searching for it (see ArtistIdentity).
+    identity = ArtistIdentity(http)
+    enrichment = EnrichmentService(
+        [
+            LmsArtistProvider(artistinfo, lambda: lms.current_artist_id),
+            WikipediaBiography(http, identity),
+            ListenBrainzSimilar(http, identity),
+        ],
+        Cache(),
+    )
+    # Warm the Artist tab while the track plays, so opening it shows
+    # something rather than a skeleton (George, 2026-09-18). Debounced,
+    # because skipping through an album would otherwise fire a lookup per
+    # track, and local-only: see EnrichmentService.prefetch for why the
+    # key-free providers are not warmed speculatively.
+    prefetch_task: asyncio.Task | None = None
+
+    def warm_enrichment(state) -> None:
+        nonlocal prefetch_task
+        key = TrackKey.of(state.metadata)
+        if key.is_empty() or state.metadata.transport != "playing":
+            return
+        if prefetch_task is not None and not prefetch_task.done():
+            if getattr(prefetch_task, "gexis_key", None) == key:
+                return
+            prefetch_task.cancel()
+
+        async def warm() -> None:
+            # Long enough that a skipped track never costs a lookup.
+            await asyncio.sleep(PREFETCH_AFTER_S)
+            await enrichment.prefetch(key, renderer=state.active)
+
+        prefetch_task = asyncio.ensure_future(warm())
+        prefetch_task.gexis_key = key
+
+    state_store.subscribe(warm_enrichment)
 
     state_server = StateServer(
         state_store,
@@ -354,6 +403,7 @@ async def main() -> None:
         # renderer adapter talks to.
         library=library,
         artistinfo=artistinfo,
+        enrichment=enrichment,
         # ADR-0038 §8: the one SlimBrowse subtree, browsed by handles the
         # core issues.
         radio=RadioBrowser(library.rpc, lambda: lms.player_id),

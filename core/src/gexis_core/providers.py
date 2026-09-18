@@ -1,0 +1,298 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+"""Who the enrichment service asks (ADR-0040 §1 and §2).
+
+Each provider answers one `Answer`: an outcome, what it found, and how sure
+it is. The service (`enrichment.py`) decides what to do with that; nothing
+here caches, retries or gives up on its own.
+
+**The outcome mapping is the part worth reading.** Finding 036 watched
+MusicBrainz answer `503 "the web server is currently busy"` to 4 of 9
+searches while lookups by id answered 4 of 4. So:
+
+- an answer with nothing in it is `MISSING` - the provider looked, and has
+  nothing;
+- a 503, a timeout, a connection error or an unparseable reply is
+  `UNAVAILABLE` - we could not ask, which is **not** the same thing and is
+  never cached.
+
+Getting that backwards means an album loses its biography permanently
+because a server was busy once.
+"""
+from __future__ import annotations
+
+import asyncio
+import logging
+from urllib.parse import quote
+
+import aiohttp
+
+from gexis_core.enrichment import Answer, Enrichment, Limiter, Outcome
+
+logger = logging.getLogger("gexis_core.providers")
+
+#: MusicBrainz requires a User-Agent that identifies the application and a
+#: way to contact whoever runs it; LRCLIB asks for the same. A generic one
+#: is what gets a client blocked.
+USER_AGENT = "gexis-player/0.2 ( https://github.com/gcarstoiu/gexis-player )"
+
+#: Per host, from Finding 030's reading of each provider's rules.
+RATES = {
+    "musicbrainz.org": 1.1,
+    "coverartarchive.org": 0.0,
+    "api.listenbrainz.org": 1.1,
+    "labs.api.listenbrainz.org": 1.1,
+    "www.wikidata.org": 0.3,
+    "en.wikipedia.org": 0.3,
+    "lrclib.net": 0.4,
+}
+
+#: Generous, because a MusicBrainz lookup took 5.3 s in Finding 036 and
+#: nothing here is on a screen's path.
+TIMEOUT_S = 15.0
+
+
+class Http:
+    """One session and one limiter per host, shared by every provider."""
+
+    def __init__(self, session_factory=None, *, rates=None) -> None:
+        self._session_factory = session_factory
+        self._session: aiohttp.ClientSession | None = None
+        self._limiters = {host: Limiter(gap) for host, gap in (rates or RATES).items()}
+
+    async def _ensure(self) -> aiohttp.ClientSession:
+        if self._session is None or self._session.closed:
+            if self._session_factory is not None:
+                self._session = self._session_factory()
+            else:
+                self._session = aiohttp.ClientSession(
+                    timeout=aiohttp.ClientTimeout(total=TIMEOUT_S),
+                    headers={"User-Agent": USER_AGENT},
+                )
+        return self._session
+
+    async def json(self, url: str, params: dict | None = None):
+        """The parsed body, or None when the provider could not be asked.
+
+        None means `UNAVAILABLE`, never "nothing found": a caller that cannot
+        tell those apart will cache a busy server's 503 forever.
+        """
+        host = url.split("/")[2]
+        limiter = self._limiters.get(host)
+        if limiter is not None:
+            await limiter.wait()
+        session = await self._ensure()
+        try:
+            async with session.get(url, params=params) as response:
+                if response.status == 404:
+                    # The provider answered: it has no such thing.
+                    return {}
+                if response.status >= 400:
+                    logger.info("providers: %s answered %s", host, response.status)
+                    return None
+                return await response.json(content_type=None)
+        except (aiohttp.ClientError, asyncio.TimeoutError, ValueError) as exc:
+            logger.info("providers: %s did not answer (%s)", host, exc)
+            return None
+
+    async def close(self) -> None:
+        if self._session is not None and not self._session.closed:
+            await self._session.close()
+
+
+class ArtistIdentity:
+    """Who this artist is on MusicBrainz, resolved once and shared.
+
+    Both the biography and the similar-artists providers need the same
+    artist MBID, and each was searching for it separately: two searches, two
+    1.1 s waits on the same limiter, against the one endpoint measured
+    answering `503 "currently busy"` for 4 of 9 tries (Finding 036). One
+    cold open of the Artist tab was seen taking 22 s that way.
+
+    The score comes back with the id, because it is MusicBrainz's own
+    opinion of the match and the confidence threshold reads it (ADR-0012).
+    """
+
+    def __init__(self, http: Http) -> None:
+        self._http = http
+        #: folded artist name -> (mbid, score), or None for "asked, nothing".
+        self._known: dict[str, tuple[str, int] | None] = {}
+
+    async def resolve(self, artist: str) -> tuple[str, int] | None | bool:
+        """`(mbid, score)`, `None` when MusicBrainz has no such artist, and
+        `False` when it could not be asked - the three outcomes again."""
+        if not artist:
+            return None
+        if artist in self._known:
+            return self._known[artist]
+        found = await self._http.json(
+            "https://musicbrainz.org/ws/2/artist/",
+            {"query": f'artist:"{artist}"', "fmt": "json", "limit": "1"},
+        )
+        if found is None:
+            return False
+        artists = found.get("artists") or []
+        identity = (artists[0]["id"], int(artists[0].get("score") or 0)) if artists else None
+        self._known[artist] = identity
+        return identity
+
+
+class LmsArtistProvider:
+    """LMS's own plugin, first in the order (ADR-0040 §1).
+
+    Serves LMS only: its answers are keyed on an LMS artist id, and a Spotify
+    or Bluetooth track has none.
+    """
+
+    name = "lms"
+
+    def __init__(self, artistinfo, current_artist_id) -> None:
+        self._info = artistinfo
+        self._current_artist_id = current_artist_id
+
+    def serves(self, renderer) -> bool:
+        return renderer == "lms"
+
+    async def fetch(self, key) -> Answer:
+        artist_id = self._current_artist_id()
+        if not artist_id:
+            return Answer(Outcome.MISSING)
+        photos = await self._info.photos([artist_id], size=300)
+        biography = await self._info.biography(artist_id)
+        if not biography and not photos.get(artist_id):
+            return Answer(Outcome.MISSING)
+        return Answer(Outcome.FOUND, Enrichment(
+            biography=biography,
+            # ADR-0040 §4: the line on the panel names whoever actually
+            # answered, and here that is the server, not us.
+            biography_source="LMS" if biography else None,
+            artist_image=photos.get(artist_id),
+            sources=("lms",),
+        ))
+
+
+class WikipediaBiography:
+    """A biography for any renderer, reached the long way round: MusicBrainz
+    for the artist's id, its Wikidata relation for the article, then
+    Wikipedia's REST summary (ADR-0040 §2).
+
+    **Why not search Wikipedia by name.** Artist names are ambiguous and
+    Wikipedia's search has no idea it is being asked about a musician;
+    MusicBrainz does, and scores its own match, which is what the confidence
+    threshold reads.
+    """
+
+    name = "wikipedia"
+
+    def __init__(self, http: Http, identity: ArtistIdentity) -> None:
+        self._http = http
+        self._identity = identity
+
+    def serves(self, renderer) -> bool:
+        return True
+
+    async def fetch(self, key) -> Answer:
+        if not key.artist:
+            return Answer(Outcome.MISSING)
+        who = await self._identity.resolve(key.artist)
+        if who is False:
+            return Answer(Outcome.UNAVAILABLE)
+        if who is None:
+            return Answer(Outcome.MISSING)
+        mbid, score = who
+
+        relations = await self._http.json(
+            f"https://musicbrainz.org/ws/2/artist/{mbid}",
+            {"fmt": "json", "inc": "url-rels"},
+        )
+        if relations is None:
+            return Answer(Outcome.UNAVAILABLE, confidence=score)
+        wikidata_id = _wikidata_id(relations)
+        if not wikidata_id:
+            return Answer(Outcome.MISSING, confidence=score)
+
+        entities = await self._http.json(
+            "https://www.wikidata.org/w/api.php",
+            {"action": "wbgetentities", "ids": wikidata_id, "props": "sitelinks",
+             "sitefilter": "enwiki", "format": "json"},
+        )
+        if entities is None:
+            return Answer(Outcome.UNAVAILABLE, confidence=score)
+        title = (((entities.get("entities") or {}).get(wikidata_id) or {})
+                 .get("sitelinks", {}).get("enwiki", {}) or {}).get("title")
+        if not title:
+            return Answer(Outcome.MISSING, confidence=score)
+
+        summary = await self._http.json(
+            f"https://en.wikipedia.org/api/rest_v1/page/summary/{quote(title.replace(' ', '_'), safe='')}"
+        )
+        if summary is None:
+            return Answer(Outcome.UNAVAILABLE, confidence=score)
+        extract = (summary.get("extract") or "").strip()
+        if not extract:
+            return Answer(Outcome.MISSING, confidence=score)
+        return Answer(Outcome.FOUND, Enrichment(
+            biography=extract,
+            # CC BY-SA: the credit and the link are the licence's terms, not
+            # decoration (ADR-0040 §4).
+            biography_source="Wikipedia, CC BY-SA",
+            biography_url=((summary.get("content_urls") or {}).get("desktop") or {}).get("page"),
+            sources=("wikipedia",),
+        ), confidence=score)
+
+
+def _wikidata_id(relations: dict) -> str | None:
+    for relation in relations.get("relations") or []:
+        if relation.get("type") != "wikidata":
+            continue
+        url = ((relation.get("url") or {}).get("resource") or "")
+        if "/wiki/" in url:
+            return url.rsplit("/wiki/", 1)[1]
+    return None
+
+
+class ListenBrainzSimilar:
+    """Similar artists, without a token (ADR-0040 §2).
+
+    **`algorithm` is an enum that has already changed under us.** The value
+    in ListenBrainz's own older examples is rejected today (Finding 036), and
+    the endpoint carries no stability promise. Every failure here is a
+    missing section, never an error on screen.
+    """
+
+    name = "listenbrainz"
+
+    #: Accepted 2026-09-18; the reply to a rejected one lists the current set,
+    #: which is how the next person finds a replacement.
+    ALGORITHM = "session_based_days_7500_session_300_contribution_5_threshold_10_limit_100_filter_True_skip_30"
+    LIMIT = 8
+
+    def __init__(self, http: Http, identity: ArtistIdentity) -> None:
+        self._http = http
+        self._identity = identity
+
+    def serves(self, renderer) -> bool:
+        return True
+
+    async def fetch(self, key) -> Answer:
+        if not key.artist:
+            return Answer(Outcome.MISSING)
+        who = await self._identity.resolve(key.artist)
+        if who is False:
+            return Answer(Outcome.UNAVAILABLE)
+        if who is None:
+            return Answer(Outcome.MISSING)
+        mbid, score = who
+        similar = await self._http.json(
+            "https://labs.api.listenbrainz.org/similar-artists/json",
+            {"artist_mbids": mbid, "algorithm": self.ALGORITHM},
+        )
+        if similar is None:
+            return Answer(Outcome.UNAVAILABLE, confidence=score)
+        names = tuple(
+            str(entry["name"]) for entry in similar
+            if isinstance(entry, dict) and entry.get("name")
+        )[: self.LIMIT]
+        if not names:
+            return Answer(Outcome.MISSING, confidence=score)
+        return Answer(Outcome.FOUND, Enrichment(similar=names, sources=("listenbrainz",)),
+                      confidence=score)

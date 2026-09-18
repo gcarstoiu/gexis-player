@@ -70,7 +70,7 @@ ARTWORK_ROW = 100
 #: ADR-0038 §8a). title/time/duration (top-level, the player's *current*
 #: values) come back regardless of tags - only the per-song fields need
 #: asking for.
-METADATA_TAGS = "aldcTK"
+METADATA_TAGS = "aldcTKs"
 
 #: How far the player's position may drift from what `release()` recorded
 #: before `device_freed()` corrects it with a seek.
@@ -213,9 +213,22 @@ class LmsAdapter(Adapter):
         self._on_queue = None
         #: (playlist_timestamp, current index) when the queue was last read.
         self._queue_stamp: tuple | None = None
+        self._artist_id: int | None = None
         self._on_availability: Callable[[bool], None] | None = None
         #: The last reported transport, so `play()` can pick its command.
         self._last_transport: str | None = None
+
+    @property
+    def current_artist_id(self) -> int | None:
+        """LMS's artist id for the track playing now, or None. Read by the
+        enrichment service's LMS provider.
+
+        A property, like `player_id` beside it: as a method it read as
+        truthy at the call site and the LMS provider asked the plugin about
+        a bound method, then fell through to Wikipedia without a word
+        (found on hardware, 2026-09-18).
+        """
+        return self._artist_id
 
     @property
     def player_id(self) -> str | None:
@@ -333,6 +346,12 @@ class LmsAdapter(Adapter):
         # way, and the volume bridge reads the transport (volume.py's
         # DummyMixerBridge: LMS's pause fade must not be mirrored).
         self._last_transport = transport
+        # The `s` tag: LMS's own id for this track's artist, which is what
+        # its artist-information plugin is keyed on (ADR-0040 §1). Kept here
+        # rather than published in `TrackMetadata`, because it means nothing
+        # to the other two renderers and nothing to the enrichment cache,
+        # which is keyed on what a track *is* (ADR-0012).
+        self._artist_id = _as_int(song.get("artist_id"))
         if self._on_metadata is None:
             return
         self._on_metadata(
