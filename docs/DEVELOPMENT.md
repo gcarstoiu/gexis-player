@@ -1091,7 +1091,13 @@ checked on the panel before the next:
     reading `scrollLeft`/`scrollWidth` (which lays the strip out again every
     frame); the mask sits on a wrapper that does not scroll; the scroller
     carries `contain: content`. **The same three apply to every long list in
-    steps 6 and 7.** **The root's data and its covers load when the panel
+    steps 6 and 7.** George: *"95% there"*.
+    [Finding 032](findings/032-panel-frame-times-during-a-scroll.md) measured
+    the rest on the panel and could **not** attribute it: 5-9 % of scrolling
+    frames drop, but the run-to-run spread is wider than any difference
+    between the mask, the covers, the backdrop or containment, and the
+    harness's synthetic touches may cause the stutter themselves. Revisit
+    with the long lists. **The root's data and its covers load when the panel
     starts, not when Home opens** (George, 2026-09-17: the tiles arrived visibly after the
     cards): `lib/library.js` reads the counts and New Music, waits for the
     covers to decode, and publishes both together; opening Home reads what

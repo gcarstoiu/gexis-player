@@ -84,6 +84,12 @@ its card. UI deployed by hand to `/opt/gexis-ui` (previous build at
   Reading `scrollLeft`/`scrollWidth` per frame forces a layout each time;
   **apply the same three to the artist grid and Browse in steps 6-7**, and
   virtualise there if that is not enough (917 artists, thousands of albums).
+  George calls the strip *"95% there"*;
+  [Finding 032](docs/findings/032-panel-frame-times-during-a-scroll.md)
+  measured frame times on the panel and could not attribute the rest - two
+  instruments answered a different question first, single-run comparisons
+  misled, and the harness's own synthetic touches may cause the drops.
+  **Revisit with the long lists, not before.**
 
 **Lesson candidate (2026-09-17), for George:** headless Chromium on the
 device was used to check the panel UI and answered a different question
