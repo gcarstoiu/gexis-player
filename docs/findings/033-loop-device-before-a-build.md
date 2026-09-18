@@ -93,11 +93,32 @@ Candidates, none tried:
   module option, so udev creates `/dev/loop0-7` at boot);
 - keep the reload, but in the build script rather than in a person's memory.
 
-**Proposed to George 2026-09-18**, the second of those:
-`options loop max_loop=8` in `/etc/modprobe.d/`, so udev creates
-`/dev/loop0-7` when the module loads at boot. **Unproven either way** - it is
-proved only by a first build after a reboot passing, which is this finding's
-own test run in the other direction.
+## Applied 2026-09-18, and what that does and does not prove
+
+George ran the second candidate:
+
+```
+$ cat /etc/modprobe.d/gexis-loop.conf
+options loop max_loop=8
+$ sudo modprobe -r loop && sudo modprobe loop
+$ ls -l /dev/loop*
+brw-rw---- 1 root disk 7, 0 … /dev/loop0
+   … through /dev/loop7 …
+$ cat /sys/module/loop/parameters/max_loop
+8
+```
+
+**Proved:** the option takes effect and the module creates eight nodes when
+it loads; udev settles them to `root:disk`, `brw-rw----`, the same as the
+node a build leaves behind. `/etc/modules-load.d/loop.conf` (contents:
+`loop`) already loads the module at boot, and `/etc/modprobe.d` supplies
+options to *any* load of it, including that one.
+
+**Not proved:** that the nodes are there at boot, which is the only thing
+that matters. The one test is a **first build after a reboot** - this
+finding's own test, run in the other direction. Until that has happened,
+this is a reasoned fix, not a measured one. **The next person to reboot R2D2
+should record `ls -l /dev/loop*` before building and note the result here.**
 
 Until one is chosen, **the first build after a reboot on R2D2 will fail and
 the second will pass.** That is a known, cheap failure - 210 s - but it must
