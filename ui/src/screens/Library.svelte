@@ -13,6 +13,8 @@
   while the idle screen, which is removed when it closes, never did.
 -->
 <script>
+  import { untrack } from 'svelte';
+
   import {
     libraryRoot,
     loadAlbum,
@@ -41,6 +43,11 @@
     onclose,
     onsettings,
     onvolume,
+    //: An artist name to open on arrival - now playing's artist line links
+    //: here (the design's `onNpArtist`). A name rather than an id, because
+    //: the panel holds no LMS ids and the artist list it already has can
+    //: resolve one.
+    openArtistNamed = null,
   } = $props();
 
   // Where in the library the panel is; [] is the root. Each entry is a
@@ -163,6 +170,33 @@
       busy = null;
     }
   }
+
+  /** Opens the artist page for a name, if this library has that artist. */
+  async function openArtistByName(name) {
+    const wanted = folded(name);
+    if (!wanted) return;
+    try {
+      const all = await artistsCached();
+      artists = all;
+      const match = all.find((a) => folded(a.name) === wanted);
+      if (match) await openArtist(match);
+    } catch (err) {
+      console.info('library:', err.message);
+    }
+  }
+
+  const folded = (name) =>
+    (name ?? '')
+      .normalize('NFKD')
+      .replace(/[\u2018\u2019'`\u00b4]/g, '')
+      .replace(/[^a-zA-Z0-9]+/g, ' ')
+      .trim()
+      .toLowerCase();
+
+  $effect(() => {
+    const name = openArtistNamed;
+    if (name) untrack(() => openArtistByName(name));
+  });
 
   async function openArtist(entry) {
     busy = entry.id;

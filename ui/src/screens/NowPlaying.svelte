@@ -17,7 +17,7 @@
   import { playhead, mmss } from '../lib/playhead.svelte.js';
   import { playToggle } from '../lib/playToggle.svelte.js';
 
-  let { active, metadata, volume, controls = [], available = [], shuffle = null, repeat = null, queue = null, onvolume, onvisualisation, onhome } = $props();
+  let { active, metadata, volume, controls = [], available = [], shuffle = null, repeat = null, queue = null, onvolume, onvisualisation, onhome, onartist } = $props();
 
   const SOURCES = {
     lms: { label: 'LMS', mark: null },
@@ -236,7 +236,13 @@
               <div class="metalyrics__head">
                 <div class="title title--compact" class:is-empty={!metadata?.title}>{metadata?.title ?? ''}</div>
                 <div class="compactline">
-                  <span class="artist artist--compact" class:is-empty={!metadata?.artist}>{metadata?.artist ?? ''}</span>
+                  <button
+                    class="artist artist--compact artist--link"
+                    class:is-empty={!metadata?.artist}
+                    type="button"
+                    disabled={!metadata?.artist}
+                    onclick={() => onartist?.(metadata.artist)}
+                  >{metadata?.artist ?? ''}</button>
                   <span class="album album--compact" class:is-empty={!metadata?.album}>{metadata?.album ?? ''}</span>
                 </div>
               </div>
@@ -267,7 +273,15 @@
             <div class="trackblock">
               <div class="title" class:is-empty={!metadata?.title}>{metadata?.title ?? ''}</div>
               <div class="artistline">
-                <span class="artist" class:is-empty={!metadata?.artist}>{metadata?.artist ?? ''}</span>
+                <!-- The design links the artist line to that artist's page
+                     (`onNpArtist`). -->
+                <button
+                  class="artist artist--link"
+                  class:is-empty={!metadata?.artist}
+                  type="button"
+                  disabled={!metadata?.artist}
+                  onclick={() => onartist?.(metadata.artist)}
+                >{metadata?.artist ?? ''}</button>
               </div>
               <div class="albumline">
                 <span class="album" class:is-empty={!metadata?.album}>{metadata?.album ?? ''}</span>
@@ -832,6 +846,18 @@
     min-width: 0;
     flex-shrink: 0;
   }
+  .artist--link {
+    font: inherit;
+    color: inherit;
+    border: none;
+    background: none;
+    padding: 9px 0;
+    margin: -9px 0;
+    text-align: left;
+    max-width: 100%;
+  }
+  .artist--link:active:not(:disabled) { color: #f8c4b4; }
+
   .artist--compact {
     font-size: 22px;
     max-width: 60%;
