@@ -171,6 +171,16 @@ class LmsArtistInfo:
         biography = result.get("biography")
         return str(biography).strip() or None if biography else None
 
+    async def album_note(self, album_id: int) -> str | None:
+        """The plugin's review of a release, or None. Measured on George's
+        server 2026-09-18: it answers one for albums it knows, in the same
+        shape as a biography."""
+        result = await self._ask(["musicartistinfo", "albumreview", 0, 1, f"album_id:{album_id}"])
+        if not result or result.get("error"):
+            return None
+        note = result.get("albumreview")
+        return str(note).strip() or None if note else None
+
     def forget(self) -> None:
         """Drop what is remembered - after a rescan, when every artist id may
         mean a different artist (Finding 029 §4)."""

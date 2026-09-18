@@ -30,6 +30,7 @@ from gexis_core.providers import (
     Http,
     ListenBrainzSimilar,
     LmsArtistProvider,
+    LmsReleaseProvider,
     WikipediaBiography,
 )
 from gexis_core.peppy import PeppyController, PeppyScreen, UnattendedPlayback
@@ -356,6 +357,7 @@ async def main() -> None:
     enrichment = EnrichmentService(
         [
             LmsArtistProvider(artistinfo, lambda: lms.current_artist_id),
+            LmsReleaseProvider(library, artistinfo, lambda: lms.current_album_id),
             WikipediaBiography(http, identity),
             ListenBrainzSimilar(http, identity),
         ],

@@ -200,3 +200,93 @@ async def test_similar_artists_are_capped():
     answer = await ListenBrainzSimilar(http, ArtistIdentity(http)).fetch(KEY)
 
     assert len(answer.enrichment.similar) == ListenBrainzSimilar.LIMIT
+
+
+# --- the release -----------------------------------------------------------
+
+
+class FakeLibrary:
+    def __init__(self, album=None, fails=False):
+        self._album = album
+        self._fails = fails
+        self.asked = []
+
+    async def album(self, album_id):
+        self.asked.append(album_id)
+        if self._fails:
+            raise RuntimeError("LMS unreachable")
+        return self._album
+
+
+class FakeAlbumInfo(FakeArtistInfo):
+    def __init__(self, note=None):
+        super().__init__()
+        self._note = note
+
+    async def album_note(self, album_id):
+        return self._note
+
+
+ALBUM = {
+    "id": 6044, "title": "Live at Montreux 2010", "artist": "Gary Moore",
+    "year": 2011, "release_type": "ALBUM",
+    "tracks": [{"title": "Over the Hills", "duration": 300.0},
+               {"title": "Oh Pretty Woman", "duration": 420.5}],
+}
+
+
+@pytest.mark.asyncio
+async def test_a_release_is_read_from_the_library_not_from_the_internet():
+    """The year, the type, the track count and the length are all in the
+    library the device is already reading (ADR-0038 §1); asking a provider
+    on the internet for them would be slower and no more true."""
+    from gexis_core.providers import LmsReleaseProvider
+
+    library = FakeLibrary(ALBUM)
+    provider = LmsReleaseProvider(library, FakeAlbumInfo(note="A live album."), lambda: 6044)
+
+    answer = await provider.fetch(KEY)
+
+    assert answer.outcome is Outcome.FOUND
+    assert answer.enrichment.release_type == "ALBUM"
+    assert answer.enrichment.track_count == 2
+    assert answer.enrichment.released == "2011"
+    assert answer.enrichment.length_s == pytest.approx(720.5)
+    assert answer.enrichment.album_note == "A live album."
+    assert answer.enrichment.album_note_source == "LMS"
+    assert library.asked == [6044]
+
+
+@pytest.mark.asyncio
+async def test_a_release_with_no_review_is_still_worth_having():
+    from gexis_core.providers import LmsReleaseProvider
+
+    provider = LmsReleaseProvider(FakeLibrary(ALBUM), FakeAlbumInfo(), lambda: 6044)
+
+    answer = await provider.fetch(KEY)
+
+    assert answer.enrichment.album_note is None
+    assert answer.enrichment.track_count == 2
+
+
+@pytest.mark.asyncio
+async def test_a_library_that_cannot_answer_is_unavailable_not_missing():
+    """Same rule as everywhere else in this phase: "could not ask" is never
+    cached as "nothing there"."""
+    from gexis_core.providers import LmsReleaseProvider
+
+    provider = LmsReleaseProvider(FakeLibrary(fails=True), FakeAlbumInfo(), lambda: 6044)
+
+    assert (await provider.fetch(KEY)).outcome is Outcome.UNAVAILABLE
+
+
+@pytest.mark.asyncio
+async def test_a_track_with_no_album_id_asks_the_library_nothing():
+    """A radio stream has none."""
+    from gexis_core.providers import LmsReleaseProvider
+
+    library = FakeLibrary(ALBUM)
+    provider = LmsReleaseProvider(library, FakeAlbumInfo(), lambda: None)
+
+    assert (await provider.fetch(KEY)).outcome is Outcome.MISSING
+    assert library.asked == []

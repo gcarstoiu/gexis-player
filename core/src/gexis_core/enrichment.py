@@ -60,7 +60,7 @@ CONFIDENCE_MIN = 90
 #: Warmed as soon as a track starts, because they are on this network and
 #: cost nothing anyone else pays for. Everything else waits until somebody
 #: opens the tab.
-PREFETCH_PROVIDERS = ("lms",)
+PREFETCH_PROVIDERS = ("lms", "lms-release")
 
 #: How long a track must have been playing before its enrichment is warmed.
 #: Skipping through an album would otherwise cost one lookup per track.
@@ -137,6 +137,12 @@ class Enrichment:
     label: str | None = None
     release_type: str | None = None
     track_count: int | None = None
+    #: The release's own note - LMS's plugin calls it an album review.
+    album_note: str | None = None
+    album_note_source: str | None = None
+    released: str | None = None
+    #: Total playing time of the release, in seconds.
+    length_s: float | None = None
     lyrics: str | None = None
     lyrics_synced: str | None = None
     lyrics_source: str | None = None
@@ -160,7 +166,8 @@ class Enrichment:
         return not any(
             getattr(self, name)
             for name in ("biography", "similar", "artist_image", "label",
-                         "release_type", "track_count", "lyrics", "lyrics_synced")
+                         "release_type", "track_count", "album_note", "released",
+                         "length_s", "lyrics", "lyrics_synced")
         )
 
     def to_json(self) -> dict:
@@ -173,6 +180,10 @@ class Enrichment:
             "label": self.label,
             "release_type": self.release_type,
             "track_count": self.track_count,
+            "album_note": self.album_note,
+            "album_note_source": self.album_note_source,
+            "released": self.released,
+            "length_s": self.length_s,
             "lyrics": self.lyrics,
             "lyrics_synced": self.lyrics_synced,
             "lyrics_source": self.lyrics_source,

@@ -170,6 +170,48 @@ class LmsArtistProvider:
         ))
 
 
+class LmsReleaseProvider:
+    """What LMS already knows about the release, plus its plugin's review.
+
+    Everything here but the note is in the library the device is already
+    reading: the album's year, its release type, how many tracks it has and
+    how long it runs (ADR-0038 §1). Asking a provider on the internet for
+    facts the server holds would be slower and no more true.
+    """
+
+    name = "lms-release"
+
+    def __init__(self, library, artistinfo, current_album_id) -> None:
+        self._library = library
+        self._info = artistinfo
+        self._current_album_id = current_album_id
+
+    def serves(self, renderer) -> bool:
+        return renderer == "lms"
+
+    async def fetch(self, key) -> Answer:
+        album_id = self._current_album_id()
+        if not album_id:
+            return Answer(Outcome.MISSING)
+        try:
+            album = await self._library.album(album_id)
+        except Exception as exc:
+            logger.info("providers: the library could not answer for album %s (%s)", album_id, exc)
+            return Answer(Outcome.UNAVAILABLE)
+        tracks = album.get("tracks") or []
+        note = await self._info.album_note(album_id)
+        length = sum(t.get("duration") or 0 for t in tracks) or None
+        return Answer(Outcome.FOUND, Enrichment(
+            release_type=album.get("release_type"),
+            track_count=len(tracks) or None,
+            released=str(album["year"]) if album.get("year") else None,
+            length_s=length,
+            album_note=note,
+            album_note_source="LMS" if note else None,
+            sources=("lms-release",),
+        ))
+
+
 class WikipediaBiography:
     """A biography for any renderer, reached the long way round: MusicBrainz
     for the artist's id, its Wikidata relation for the article, then

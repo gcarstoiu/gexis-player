@@ -70,7 +70,7 @@ ARTWORK_ROW = 100
 #: ADR-0038 §8a). title/time/duration (top-level, the player's *current*
 #: values) come back regardless of tags - only the per-song fields need
 #: asking for.
-METADATA_TAGS = "aldcTKs"
+METADATA_TAGS = "aldcTKse"
 
 #: How far the player's position may drift from what `release()` recorded
 #: before `device_freed()` corrects it with a seek.
@@ -214,6 +214,7 @@ class LmsAdapter(Adapter):
         #: (playlist_timestamp, current index) when the queue was last read.
         self._queue_stamp: tuple | None = None
         self._artist_id: int | None = None
+        self._album_id: int | None = None
         self._on_availability: Callable[[bool], None] | None = None
         #: The last reported transport, so `play()` can pick its command.
         self._last_transport: str | None = None
@@ -229,6 +230,12 @@ class LmsAdapter(Adapter):
         (found on hardware, 2026-09-18).
         """
         return self._artist_id
+
+    @property
+    def current_album_id(self) -> int | None:
+        """LMS's album id for the track playing now, or None. A property, for
+        the reason `current_artist_id` says."""
+        return self._album_id
 
     @property
     def player_id(self) -> str | None:
@@ -352,6 +359,7 @@ class LmsAdapter(Adapter):
         # to the other two renderers and nothing to the enrichment cache,
         # which is keyed on what a track *is* (ADR-0012).
         self._artist_id = _as_int(song.get("artist_id"))
+        self._album_id = _as_int(song.get("album_id"))
         if self._on_metadata is None:
             return
         self._on_metadata(

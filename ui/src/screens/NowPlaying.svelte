@@ -100,7 +100,18 @@
 
   $effect(() => {
     const who = metadata?.artist ?? '';
-    if (tab === 'artist' && who) untrack(() => loadArtistInfo());
+    if ((tab === 'artist' || tab === 'release') && who) untrack(() => loadArtistInfo());
+  });
+
+  const info = $derived(artistInfo.enrichment);
+  const specs = $derived.by(() => {
+    if (!info) return [];
+    const out = [];
+    if (info.released) out.push(['Released', info.released]);
+    if (info.track_count) out.push(['Tracks', String(info.track_count)]);
+    if (info.length_s) out.push(['Length', `${Math.round(info.length_s / 60)} min`]);
+    if (info.label) out.push(['Label', info.label]);
+    return out;
   });
 
   let queueOpen = $state(false);
@@ -151,7 +162,7 @@
           <button class="tab" type="button" role="tab" aria-selected={tab === 'track'} onclick={() => (tab = 'track')}>Track</button>
           <button class="tab" type="button" role="tab" aria-selected="false" aria-disabled="true" disabled data-unwired="phase-8">Lyrics</button>
           <button class="tab" type="button" role="tab" aria-selected={tab === 'artist'} onclick={() => (tab = 'artist')}>Artist</button>
-          <button class="tab" type="button" role="tab" aria-selected="false" aria-disabled="true" disabled data-unwired="phase-8">Release</button>
+          <button class="tab" type="button" role="tab" aria-selected={tab === 'release'} onclick={() => (tab = 'release')}>Release</button>
         </div>
 
         <div class="panel">
@@ -165,6 +176,51 @@
                 <span class="album" class:is-empty={!metadata?.album}>{metadata?.album ?? ''}</span>
                 <!-- Release year is not published yet (design/data-contract.md). -->
               </div>
+            </div>
+          {:else if tab === 'release'}
+            <div class="artisttab">
+              <div class="artisttab__head">
+                <span class="reltab__art">
+                  {#if artwork}<img src={artwork} alt="" />{/if}
+                </span>
+                <span class="reltab__titles">
+                  <span class="reltab__name">{metadata?.album ?? 'No album'}</span>
+                  <span class="reltab__by">
+                    {metadata?.artist ?? ''}{info?.released ? `  ·  ${info.released}` : ''}
+                  </span>
+                  {#if info?.release_type}
+                    <span class="reltab__chips"><span class="reltab__chip">{info.release_type}</span></span>
+                  {/if}
+                </span>
+              </div>
+
+              <div class="sect">
+                <span class="sect__label">About this release</span>
+                <span class="sect__rule"></span>
+                {#if artistInfo.state === 'loading'}<span class="sect__note">Looking…</span>{/if}
+              </div>
+
+              {#if artistInfo.state === 'loading'}
+                <div class="skel"><span></span><span></span><span></span></div>
+              {:else if info?.album_note}
+                <div class="bio">{info.album_note}</div>
+                <div class="credit">From {info.album_note_source}</div>
+              {:else if artistInfo.state === 'error'}
+                <div class="offline">
+                  <span>Release details unavailable. Your library is unaffected.</span>
+                  <button class="offline__retry" type="button" onclick={() => loadArtistInfo(true)}>Retry</button>
+                </div>
+              {:else}
+                <div class="sect__empty">No notes for this release.</div>
+              {/if}
+
+              {#if specs.length}
+                <div class="specs">
+                  {#each specs as [k, v] (k)}
+                    <div class="spec"><div class="spec__k">{k}</div><div class="spec__v">{v}</div></div>
+                  {/each}
+                </div>
+              {/if}
             </div>
           {:else}
             <div class="artisttab">
@@ -541,6 +597,80 @@
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+  }
+
+  .reltab__art {
+    width: 64px;
+    height: 64px;
+    border-radius: 10px;
+    overflow: hidden;
+    position: relative;
+    flex-shrink: 0;
+    background: var(--bg-well);
+    box-shadow: inset 0 0 0 1px var(--ink-line);
+  }
+  .reltab__art img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  .reltab__titles {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+  }
+  .reltab__name {
+    font-size: var(--t-lead);
+    font-weight: 700;
+    color: var(--ink);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .reltab__by {
+    font-size: var(--t-body-sm);
+    color: var(--ink-quiet);
+  }
+  .reltab__chips {
+    display: flex;
+    gap: 7px;
+    margin-top: 3px;
+  }
+  .reltab__chip {
+    display: inline-flex;
+    align-items: center;
+    height: 26px;
+    padding: 0 10px;
+    border-radius: 8px;
+    background: rgba(159, 180, 232, 0.14);
+    border: 1px solid rgba(159, 180, 232, 0.3);
+    font-family: var(--font-mono);
+    font-size: var(--t-micro);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--accent-bluetooth);
+  }
+
+  .specs {
+    display: flex;
+    gap: 26px;
+    flex-wrap: wrap;
+  }
+  .spec__k {
+    font-family: var(--font-mono);
+    font-size: var(--t-micro);
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--ink-quiet);
+  }
+  .spec__v {
+    font-size: var(--t-body-sm);
+    font-weight: 600;
+    color: var(--ink);
+    margin-top: 3px;
   }
 
   .sect {
