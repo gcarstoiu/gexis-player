@@ -1278,8 +1278,31 @@ structural work is never needed.
 
 Purely additive. Cannot break playback.
 
-**Status 2026-09-18: [ADR-0040](decisions/0040-enrichment-providers.md)
-accepted; George opened the phase. Branch `phase-8-plan`.** The providers
+**Status 2026-09-18: every step done and checked by George on the panel.
+[ADR-0040](decisions/0040-enrichment-providers.md) accepted and twice
+amended by what the work measured. Branch `phase-8-plan`.**
+
+**What the phase settled that its plan did not predict:**
+
+- **"Could not ask" is not "there is nothing there."** MusicBrainz's search
+  answered 503 for 4 of 9 tries, LRCLIB has a busy-503 of its own, and LMS's
+  plugin holds a socket for 75 s before dropping it. Every one of those
+  looked like an empty answer, and caching one would have denied a track its
+  enrichment permanently. The distinction is now made in five places and is
+  the single most load-bearing idea in the phase.
+- **Providers are asked at once, and the answer says when it is partial.**
+  Asked in order, the lyrics waited behind three providers that each begin
+  with the same MusicBrainz search; a busy MusicBrainz meant no words at
+  all. `for_track` now answers after `WAIT_S` with what has arrived and
+  reports what is still running, and the panel asks again on that rather
+  than guessing which fields to wait for.
+- **Two keys after all**, both per-user settings George chose: a ListenBrainz
+  token (its popularity endpoint began demanding one mid-phase) and a
+  fanart.tv key for artist pictures. Nothing else needs one.
+- **Fanart adds quality, not coverage.** Measured on 14 random artists: 9
+  had a picture from both, 5 from LMS only, **0 from fanart only**. So
+  fanart goes first where it has one and LMS stays behind it; replacing LMS
+  would lose about a third of the pictures. The providers
 are settled: **LMS's Music & Artist Information plugin first where it
 answers** - it has artist photos *and* biographies on George's server
 ([Finding 035](findings/035-lms-artist-information-plugin.md)) - with a
@@ -1356,6 +1379,18 @@ before the next, as Phase 7 ran.
    artwork gets it looked up from artist and title, with the confidence rule
    tested for the case that has no album and no duration.
 8. Clear the `phase-8` markers; DEVELOPMENT, HANDOFF, image, PR.
+   **Done 2026-09-18.** No markers remained: every tab the design draws is
+   wired.
+
+**Parked by George (2026-09-18), for Phase 9 or later: a background sweep
+for missing album art.** 155 of the library's 4,567 albums have no
+`artwork_track_id` - live bootlegs, Japan mini-LPs, deluxe editions - and
+Cover Art Archive could fill them. It wants a Settings action, a job that
+survives a restart, and pacing so it does not starve foreground lookups of
+the one MusicBrainz request a second. **The same sweep for artist pictures
+was considered and rejected on measurement:** it would spend 30-45 minutes
+of that allowance to improve pictures that already exist and find no new
+ones.
 
 ### Phase 9 — Settings wiring and UI polish
 

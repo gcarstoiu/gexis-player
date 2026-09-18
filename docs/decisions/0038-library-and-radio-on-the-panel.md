@@ -100,6 +100,16 @@ there for `active: null`, and now playing's Home button opens it too.
 - **Artist page:** name and discography only. About, Popular and Similar are
   Phase 8 enrichment (ADR-0012); their blocks are not drawn until then.
 
+**Filled in Phase 8 (2026-09-18).** "LMS has no artist photos" turned out to
+be wrong: its Music & Artist Information plugin has them, and fanart.tv has
+better ones for the artists it knows (ADR-0040 §1). The grid shows the
+plugin's photo where there is one, the artist page prefers fanart's, and an
+initial stands in where neither has anything. About and Similar are drawn
+from enrichment; **Popular needs a ListenBrainz token** and is simply absent
+without one. **How much About is shown is measured, not fixed:** as much as
+fits while the first row of albums still shows a quarter of itself (George,
+2026-09-18).
+
 ### 3. Row actions: play now, add to queue, add to playlist
 
 **Creating playlists is not supported** (George, 2026-09-17), in Phase 7 or
