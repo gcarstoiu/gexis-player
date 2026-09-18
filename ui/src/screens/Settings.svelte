@@ -693,7 +693,9 @@
     position: absolute;
     inset: 0;
     background: rgba(8, 12, 16, 0.62);
-    backdrop-filter: blur(3px);
+    /* No `backdrop-filter`: ADR-0041. A live blur of the screen behind a
+       sheet costs this panel two thirds of its frames, whatever its radius
+       and however small the sheet (Finding 037). The dimming is free. */
     transition: opacity 180ms ease;
     opacity: 0;
     pointer-events: none;

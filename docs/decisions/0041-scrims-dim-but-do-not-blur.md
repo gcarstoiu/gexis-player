@@ -40,10 +40,10 @@ the CPU under 1 % either way. The panel is not computing; it is waiting.
   removing its blur bought nothing (36.3 fps against 35.1, inside the
   spread), so sheets keep their dark layer and still read as sheets.
 
-**Done 2026-09-18 for the queue rail and the volume drawer**, which is what
-George checked and kept. Settings and the rail's source sheet still carry
-the property and are left for the Phase 9 sweep; they are opened rarely and
-never while something is scrolling underneath.
+**Done 2026-09-18 for every sheet the panel has** - the queue rail, its
+source sheet, the volume drawer and Settings. George checked the first two
+on the panel, kept them, and asked for the rest. There is no
+`backdrop-filter` left in the UI.
 
 ## Consequences
 
