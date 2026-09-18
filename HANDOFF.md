@@ -1,54 +1,111 @@
 # Handoff
 
-Last updated: 2026-09-17 (eighteenth session, on R2D2 — **Phase 6 image
-flashed and signed off by George; PR from `phase-6-plan` to `main` open**)
+Last updated: 2026-09-18 (nineteenth session, on R2D2 — **Phase 7 done and
+checked on the panel; ADR-0038 accepted; image built, PR open**)
 
 ## Start here
 
-**Phase 6 is closed pending the PR merge.** The device runs
-`2026-09-17-gexis-player-v0.2.1-202-gf3674f3-dirty.img` (built from
-`f3674f3`; `/etc/gexis` files dated 12:43–12:48, matching the build).
-Provisioned with `make provision`; `firstrun.sh` consumed itself; no failed
-units; all renderer, core, kiosk, meter and Peppy units running.
+**Phase 7 — library browse — is done on branch `phase-7-plan`.** Every step
+was built and checked by George on the panel; the last, the queue rail, on
+2026-09-18. [ADR-0038](docs/decisions/0038-library-and-radio-on-the-panel.md)
+is **Accepted**, `docs/DEVELOPMENT.md` Phase 7 records what each step
+settled, and the step-by-step narrative is in
+[the archive](docs/HANDOFF-ARCHIVE.md). What the panel has now: Home as the
+library root with New Music, the album page, the artist grid and artist
+page, three-pane Browse with row actions, playlists, radio, and the queue
+rail with Clear and a playlist chooser. Play means in order; Shuffle all is
+its own button.
 
-**Done on the device this session (checked by Claude):**
+**Open, deferred by George: one investigation into what makes the panel
+slow.** It started as the lists (the New Music strip scrolls unevenly, the
+artist grid is slow to load, open and scroll - 917 artists in one pass) and
+George widened it after step 10: *with the rail built, everything is "quite
+slow"*. [Finding 032](docs/findings/032-panel-frame-times-during-a-scroll.md)
+says what is and is not established, and warns that the instruments lie
+before they help. **One candidate is already named rather than guessed:**
+the queue rail asks LMS for 500 px covers and draws them at 42 px
+(`ARTWORK_SIZE` in `adapters/lms.py` serves both now playing's well and
+every queue row), where the library reads already ask for the size drawn.
+Candidates for the lists: rendering only what is on screen, lighter cards,
+letter buckets from the core. `content-visibility: auto` was tried on the
+artist grid and removed - off-screen groups are only estimated, so the jump
+rail landed inside the previous letter.
 
-- C3PO's key appended; `ssh-keygen -lf ~/.ssh/authorized_keys` shows both,
-  R2D2 `SHA256:UVfvJQXw…ci4` and C3PO `SHA256:d/pT3AST…tok`. **Repeat after
-  every reflash** (`provision.local.env` carries R2D2's key only; George chose
-  not to change `provision.sh`):
-  `ssh pi@gexis.local 'cat >> ~/.ssh/authorized_keys' < ~/.ssh/c3po_id_ed25519.pub`.
-- LMS player `gexis` (`88:a2:9e:79:e1:32`): `digitalVolumeControl` **1**
-  after the reflash, read over JSON-RPC. LMS itself was not restarted, so the
-  "after an LMS restart" half of that check was not made.
-- Core tests on R2D2: 444 passed, 1 skipped (scratch venv, `core[test]`).
+**Two defects from the step 10 check are worth carrying forward as
+patterns**, both fixed with a test that fails without the fix:
 
-**George's hardware checks of the image: George called them done
-(2026-09-17) and asked for the PR.** Results for the individual checks
-(Peppy entry at 5 min, transport on three renderers, shuffle/repeat on
-Spotify and Bluetooth, the speakers-on items) were not reported item by item
-in the session, so none of them is recorded here as observed. If one matters
-later, ask George rather than reading this as a pass.
+- **A queue that could never grow.** It was read only by the *seed* status
+  query at subscribe time, and every later change arrives as a CometD push.
+  All three tests over it passed, because each called the reader itself and
+  none drove the push loop. *A test that exercises a function is not a test
+  that anything calls it* (`docs/LESSONS.md`).
+- **A Peppy screen that could not be dismissed by touch.** Whether it is up
+  was known only in memory, so a daemon started *while it is on screen*
+  believed it was hidden and ignored every touch, stranding the panel behind
+  the meter. Any state held about something outside the process has to be
+  reconciled at startup, not assumed.
 
-**Next action:** George reviews and merges the Phase 6 PR. Then Phase 7 —
-library browse, starting with the unverified
-`playlistcontrol cmd:load album_id:<id>` (ADR-0030).
+**Test data on George's LMS:** playlist folder `/playlist` (George set it;
+it triggered a full rescan that renumbered the library). Playlists
+`gexis-test-album` (122541), `gexis-test-mixed` (122543),
+`gexis-test-empty` (122544) — George removes them. Finding 029's raw replies
+are at `~/gexis-findings/029-raw/` on R2D2, deliberately not in the repo
+(library listing, playlist names, a TuneIn serial).
 
-**The loop-device question is still open, and the discriminating state is
-recorded.** Background: the first R2D2 build (2026-09-17 11:35, log
-`~/gexis-build-1-failed-loop.log`) failed at `export-image/prerun.sh` with
-`mknod: invalid minor device number '/dev/loop0 (lost)'`; the rerun (12:40,
-`~/gexis-build.log`) passed but started with `/dev/loop0` already present, so
-it discriminated nothing. **After R2D2's reboot, before any build (13:37,
-up 8 min):** `lsmod | grep -w loop` → `loop 45056 0` (autoloaded from
-`/etc/modules-load.d/loop.conf`); `ls -l /dev/loop*` → only
-`/dev/loop-control`, **no `/dev/loopN`**. No build has run since. **The next
-`make image` on R2D2 is the test**, provided R2D2 has not rebooted and nothing
-has created a loop node in between — re-record both before building. A pass
-means `image/README.md`'s root cause (module not loaded) is right; a `(lost)`
-failure means the missing node is the cause and autoloading does not prevent
-it — then propose to George correcting the README and a durable fix (e.g.
-pre-creating a node before the build; needs `sudo`).
+**Probing SlimBrowse can start playback.** A radio walk that followed
+`base.actions.go` played a station for 45 s (Finding 029). Resolve the
+command and refuse anything ending in `play` or `add` before sending.
+
+**Corrected in this session, worth not repeating:** Claude raised "playing
+from the library must power LMS on" as an open decision. It was not: LMS's
+auto-power-on on play is recorded in ADR-0027 (hardware, 2026-09-12) and
+Finding 019. The repo was not searched first — `docs/LESSONS.md` case 4's
+corollary.
+
+**Measured 2026-09-17 against George's LMS (read-only), now in ADR-0038:**
+the `radios menu:radio` reply has no `id` on any item, so Podcasts is
+excluded by its `["podcast","items"]` command; `cover_300x300` is a 173 KB
+PNG where `cover_300x300_o.jpg` is a 25 KB JPEG (one album);
+`ignoredarticles` is "The El La Los Las Le Les".
+
+**Phase 8 research is recorded, ahead of time:**
+[Finding 030](docs/findings/030-free-enrichment-providers.md) compares free
+enrichment providers (George asked 2026-09-17). Nothing decided; the provider
+choice needs an ADR when Phase 8 starts. George: API keys are a per-user
+setting, so a key is not a blocker (ADR-0022 inventory row added).
+
+**The Phase 7 image is built and verified as a file, not flashed:**
+`image/deploy/2026-09-18-gexis-player-v0.2.1-232-g65d62e3-dirty.img`
+(464 s; `image/verify-image.sh` - all checks passed, including the venv and
+`/opt/gexis-ui` byte-identical to this checkout). **The device still runs the
+Phase 6 image** (`2026-09-17-gexis-player-v0.2.1-202-gf3674f3-dirty.img`)
+with Phase 7 hand-installed, so a reflash is what proves the image.
+
+**The device** was flashed and provisioned 2026-09-17. Both SSH keys authorized. **After every reflash**
+append C3PO's key (`provision.local.env` carries R2D2's only; George chose
+not to change `provision.sh`):
+`ssh pi@gexis.local 'cat >> ~/.ssh/authorized_keys' < ~/.ssh/c3po_id_ed25519.pub`,
+then `ssh-keygen -lf ~/.ssh/authorized_keys` on the device shows R2D2
+`SHA256:UVfvJQXw…ci4` and C3PO `SHA256:d/pT3AST…tok`.
+
+**Phase 6 is merged** (PR #18, 2026-09-17). George called the image checks
+done without item-by-item results, so none is recorded as observed
+(`docs/DEVELOPMENT.md` Phase 6 status).
+
+**The loop-device question is answered
+([Finding 033](docs/findings/033-loop-device-before-a-build.md)).** The test
+HANDOFF set up was run on 2026-09-18: the state before the build was the
+module autoloaded (`loop 45056 0`) and **no `/dev/loopN`**, and the build
+failed at `export-image/prerun.sh` with the same
+`mknod: invalid minor device number '/dev/loop0 (lost)'` as ever, in 210 s.
+So **the module being loaded is not what decides it - the missing device
+node is**, and `image/README.md`'s recorded root cause was wrong (now
+corrected there). The failed build leaves a `/dev/loop0` behind, which is
+why every rerun passes. **No durable fix is chosen: it needs George, and
+`sudo`.** Candidates, none tried: create a node before the build; load the
+module with `max_loop=8` so udev makes `/dev/loop0-7` at boot; or put the
+reload in the build script rather than in someone's memory. Until then the
+first build after a reboot fails and the second passes.
 
 **Docker group:** after the reboot `id` shows `docker` (950) directly;
 `newgrp` is no longer needed. Run builds detached so the session's memory
@@ -60,15 +117,6 @@ afterwards: expected, leave it.
 **Development moved to R2D2 on 2026-09-17** (see Machines).
 `~/provision.local.env.bak-c3po-key` (holds the Wi-Fi password) can be
 deleted once George is happy.
-
-**Phase 6** (DEVELOPMENT.md has the evidence): criteria 1 and 2 built and
-checked on the panel; criterion 3 (info panels) moved to Phase 8; criterion 4
-(the Peppy button) was done in Phase 5.
-[ADR-0037](docs/decisions/0037-transport-commands.md) covers transport, with
-two amendments by George: the play icon flips on press, and Spotify and
-Bluetooth get shuffle and repeat.
-[Finding 028](docs/findings/028-transport-commands-on-three-renderers.md) has
-the measurements.
 
 **Phases renumbered 2026-09-16:** 9 is settings wiring and UI polish (new);
 10 is the plugin contract; 11 Plexamp and 12 Qobuz Connect (new); 13 is first
@@ -115,8 +163,7 @@ boot.
   files captured the wrong pid; George saw overlapping skins. Stop by looking
   processes up, not by trusting a pid file.
 
-**Still open from earlier:** `playlistcontrol cmd:load album_id:<id>` is
-unverified (ADR-0030); Claude Design owes drawn number/text editors and a
+**Still open from earlier:** Claude Design owes drawn number/text editors and a
 corrected `design/README.md`.
 
 ## Build environment (2026-09-13) — read this before the next build
@@ -259,23 +306,33 @@ reverted, currently-flashed image predates this fix.
 ## Phase order
 
 ```
-0  reproducible image                     ✓ merged — pi-gen, ADR-0021
-1  measurements                           absorbed into 2 — needs 2's own renderers
-2  audio layer + arbitration              ← in progress: renderers packaged and
-                                             hardware-verified (criteria 1,2,4,5,6);
-                                             Python core arrives here for 3-7; takeover gap
-3  core state daemon                      no UI; test with a WebSocket client
-4  UI shell + idle + display-only nowplay
-5  visualisation service + Peppy screen   capability-blind, proves the model
-6  now playing, full                      capability-driven controls
-7  library browse                         typed queries + our screens; SlimBrowse
-                                            for radio only (ADR-0030)
-8  enrichment + lyrics                    additive only, cannot break playback
-9  plugin contract hardening + themes     Qobuz is the fourth-renderer test
-10 first boot without a network           setup access point; pull forward the
+0  reproducible image                     * merged - pi-gen, ADR-0021
+1  measurements                           absorbed into 2 - needs 2's own renderers
+2  audio layer + arbitration              * merged
+3  core state daemon                      * merged
+4  UI shell + idle + display-only nowplay * merged
+5  visualisation service + Peppy screen   * merged
+6  now playing, full                      * merged (PR #18)
+7  library browse                         * done, PR open - typed queries + our
+                                            screens; SlimBrowse for radio only
+8  enrichment + lyrics                    <- next. Additive only, cannot break
+                                            playback. Needs an ADR choosing the
+                                            providers first (Finding 030)
+9  settings wiring + UI polish            every ADR-0022 row wired or scoped out;
+                                            the panel-slowness investigation
+                                            lands here unless pulled forward
+10 plugin contract + themes               Qobuz is the fourth-renderer test
+11 Plexamp as a renderer                  starts with the hardware check: does it
+                                            release the device? (ADR-0008's
+                                            reversal condition)
+12 Qobuz Connect as a renderer            the plugin that proves 10
+13 first boot without a network           setup access point; pull forward the
                                             moment a non-developer gets a device
                                             (ADR-0031)
 ```
+
+Phases 9-13 were renumbered on 2026-09-16 (George). `docs/DEVELOPMENT.md`
+holds each phase's acceptance criteria; this list is only the order.
 
 ## Things that will bite if forgotten
 

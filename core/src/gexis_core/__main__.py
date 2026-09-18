@@ -16,6 +16,8 @@ from gexis_core import alsa
 from gexis_core.adapters.base import VolumeMechanism
 from gexis_core.adapters.bluetooth import BluetoothAdapter
 from gexis_core.adapters.lms import LmsAdapter
+from gexis_core.library import LmsLibrary
+from gexis_core.radio import RadioBrowser
 from gexis_core.adapters.spotify import SpotifyAdapter
 from gexis_core.arbitration import Supervisor
 from gexis_core.config import Config
@@ -222,6 +224,10 @@ async def main() -> None:
 
     for renderer_id, adapter in adapters.items():
         adapter.on_metadata_change(lambda metadata, rid=renderer_id: state_store.set_metadata(rid, metadata))
+        # Only LMS has a queue to report (ADR-0038 §5); the others hand us
+        # a stream.
+        if hasattr(adapter, "on_queue_change"):
+            adapter.on_queue_change(lambda queue, rid=renderer_id: state_store.set_queue(rid, queue))
         adapter.on_availability_change(
             lambda available, rid=renderer_id: state_store.set_available(rid, available)
         )
@@ -325,6 +331,10 @@ async def main() -> None:
     # currentsong.txt, which is moOde's format for moOde's readers.
     state_store.subscribe(PeppyMetadataWriter().write)
 
+    # Phase 7 (ADR-0038): the same server, and the same player, the renderer
+    # adapter talks to. Radio shares its HTTP session.
+    library = LmsLibrary(config.lms_host, config.lms_port, player_id=lambda: lms.player_id)
+
     state_server = StateServer(
         state_store,
         host=config.state_host,
@@ -336,6 +346,12 @@ async def main() -> None:
         idle_page=idle_page,
         settings=settings,
         peppy=peppy,
+        # Phase 7 (ADR-0038): the same server, and the same player, the
+        # renderer adapter talks to.
+        library=library,
+        # ADR-0038 §8: the one SlimBrowse subtree, browsed by handles the
+        # core issues.
+        radio=RadioBrowser(library.rpc, lambda: lms.player_id),
         ui_dir=ui_dir,
     )
 
@@ -365,18 +381,29 @@ async def main() -> None:
     # volume.py's module docstring. One instance per such renderer (LMS,
     # Bluetooth today), built from each adapter's own declared capability
     # rather than named by hand.
-    dummy_mixer_bridges = [
-        DummyMixerBridge(
+    dummy_mixer_bridges = {
+        renderer_id: DummyMixerBridge(
             renderer_id,
             adapter.capabilities.dummy_mixer_card,
             DUMMY_CONTROL,
             config.mixer_name,
             volume_memory=volume_memory,
             get_active_renderer=lambda: supervisor.active,
+            # LMS fades the player out on pause by sending volume steps;
+            # mirroring those published the user's volume as 0% and
+            # remembered the faded level (George, 2026-09-17 - see
+            # DummyMixerBridge, which waits for the control to settle
+            # before reading this). Bluetooth's volume does not fade, so it
+            # passes none and keeps its immediate mirroring.
+            is_playing=(
+                (lambda a=adapter: a.last_transport == "playing")
+                if hasattr(adapter, "last_transport")
+                else None
+            ),
         )
         for renderer_id, adapter in adapters.items()
         if adapter.capabilities.volume_mechanism is VolumeMechanism.DUMMY_MIXER
-    ]
+    }
 
     logger.info("gexis-core starting: adapters=%s", list(adapters))
     await asyncio.gather(
@@ -385,7 +412,7 @@ async def main() -> None:
             for rid, adapter in adapters.items()
         ),
         volume_bridge.run(),
-        *(bridge.run() for bridge in dummy_mixer_bridges),
+        *(bridge.run() for bridge in dummy_mixer_bridges.values()),
         peppy.run(),
         state_server.run(),
     )

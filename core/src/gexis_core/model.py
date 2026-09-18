@@ -135,6 +135,35 @@ class VolumeState:
 
 
 @dataclass(frozen=True)
+class Queue:
+    """What the active renderer has queued up, for the queue rail on now
+    playing (ADR-0038 §1, design/data-contract.md).
+
+    LMS only: the other two renderers hand us a stream and have no queue
+    (`design/README.md`'s source table). `name`/`id` are the playlist it was
+    loaded from, when it was - LMS reports them until the queue is changed,
+    and `modified` says it has been (Finding 029 §7), which is what lets the
+    rail say "from this playlist" honestly.
+    """
+
+    items: tuple[TrackMetadata, ...] = ()
+    #: Which of `items` is playing.
+    index: int = 0
+    name: str | None = None
+    id: int | None = None
+    modified: bool = False
+
+    def to_json(self) -> dict:
+        return {
+            "items": [item.to_json() for item in self.items],
+            "index": self.index,
+            "name": self.name,
+            "id": self.id,
+            "modified": self.modified,
+        }
+
+
+@dataclass(frozen=True)
 class PlaybackState:
     """The whole payload published over the state WebSocket."""
 
@@ -169,6 +198,8 @@ class PlaybackState:
     #: Bumped on every settings write (ADR-0035); a client refetches
     #: `GET /settings` when it moves.
     settings_revision: int = 0
+    #: The active renderer's queue, or None where it has no such thing.
+    queue: Queue | None = None
 
     @property
     def controls(self) -> dict | None:
@@ -205,4 +236,5 @@ class PlaybackState:
             "handoff_exempt_pairs": [list(pair) for pair in self.handoff_exempt_pairs],
             "settings_revision": self.settings_revision,
             "controls": self.controls,
+            "queue": self.queue.to_json() if self.queue else None,
         }

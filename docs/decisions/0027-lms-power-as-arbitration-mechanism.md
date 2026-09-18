@@ -102,6 +102,22 @@ restored to `paused` has nothing to play:
 So the play we send is the same one LMS would have sent itself; the difference
 is only that ours lands *after* the device is free instead of 460ms before it.
 
+> **Amended 2026-09-17 (George, rule A; [Finding 029](../findings/029-library-and-radio-against-lms.md)
+> defect A).** The recorded play state and position are restored **only if
+> the queue is unchanged**, judged by LMS's `playlist_timestamp`. Measured: it
+> changes on every load (the same album reloaded included), on an add and on
+> a shuffle toggle; it does not change on pause, resume, next, previous,
+> repeat, or the `pause` / `power 0` / `power 1` cycle. Without this, a load
+> made while another renderer held the device — itself what brings LMS back
+> — was seeked to the old content's position (a radio station's 192.6 s,
+> applied to a new album's first track). **Accepted cost:** editing LMS's
+> queue while away (an add, a shuffle) also skips the restore, so that
+> position is lost; George chose that over any chance of seeking into
+> content just chosen. An LMS that reports no timestamp keeps the previous
+> behaviour. Checked on `gexis` 2026-09-17: a load over Spotify started at
+> 0:00 with nothing restored; play pressed on the same queue after Spotify
+> was seeked back to the 73.3 s it was released at.
+
 ### Deactivation persists
 
 **A deactivated player stays deactivated until the user activates it again.**

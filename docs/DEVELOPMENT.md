@@ -127,6 +127,20 @@ porting, until the design takes them in:
   phone's volume change opens the drawer, which closes 3 s after the last
   change. The panel's own changes and a takeover's restored level do not
   open it.
+- **Press feedback shrinks, it does not fill (2026-09-16/17, George).** The
+  design's grey press fill read as a flash on the play button, then on
+  prev/next/shuffle/repeat, then on now playing's Home, Settings' Back and
+  the mini strip. Those keep their resting fill and shrink instead.
+- **The library and Settings are mounted only while open (2026-09-17).** The
+  design leaves both in the page at opacity 0; on the panel the closed
+  library then covered now playing in black.
+- **Mini strip volume glyph (2026-09-17).** The strip draws the drawer's
+  30px glyph, for the same reason as now playing's button above, not the
+  design's 24px one.
+- **New Music artist names at 0.60 alpha (2026-09-17).** The design uses
+  0.55, under its own 4.5:1 floor for 15px text (`design/tokens.css`).
+- **Card counts are singular where they should be (2026-09-17):**
+  "1 playlist", not the design's "1 playlists".
 - **Settings inventory (2026-09-15).** `idle_grace` is not a row — ADR-0033
   merged it into `idle_timeout` (5 min); `travel_curve` is decided (ADR-0034,
   marks `RH`); `drawer_on_external` and `drawer_autohide` are added under
@@ -928,6 +942,12 @@ Plexamp app's audio stops at the tap.
 
 ### Phase 7 — Library browse
 
+**Status 2026-09-18: every step done; ADR-0038 accepted. What is left of the
+phase is the image build and the PR.**
+Branch `phase-7-plan`. Criteria 1 and 6 amended, 10 and 11 added, by
+[ADR-0038](decisions/0038-library-and-radio-on-the-panel.md) (George's
+decisions, 2026-09-17).
+
 **Rewritten 2026-09-14 by [ADR-0030](decisions/0030-library-typed-radio-slimbrowse.md).**
 The previous criteria were sized for "Full SlimBrowse: My Music, Radio, plugin
 menus" and are recorded below. Phase 7 is now materially smaller: the library
@@ -936,21 +956,31 @@ subtree of nine items.
 
 **Acceptance**
 
-1. **Library screens over typed queries**, not SlimBrowse: Albums, All
-   Artists, Album Artists, Composers, Genres, Years, Compilations, New Music,
-   Songs, Playlists, Music Folder. Works when the library has any. Counts and
-   commands are in ADR-0030.
+1. **Library screens over typed queries**, not SlimBrowse. **Amended
+   2026-09-17 (George): only what is designed** — the library root with the
+   New Music strip, three-pane Browse, the artist grid, the artist page
+   (discography only until Phase 8; initials, not photos), the album page, and
+   Playlists (LMS library playlists only, not a plugin's). "Artists" is Album
+   Artists; filing and discography grouping are LMS's own. Row actions: play
+   now, add to queue, add to any library playlist; **creating playlists is
+   not supported** (George, 2026-09-17). ADR-0030's other lists (All Artists,
+   Composers, Genres, Years, Compilations, Songs, Music Folder) are out of
+   scope. Counts and commands are in ADR-0030; screens in ADR-0038.
 2. **Playback from a typed id works** — `playlistcontrol cmd:load
    album_id:<id>` and its track/artist equivalents. **Verify first:** ADR-0030
    records this as the load-bearing assumption of the typed half and it has
    *not* been executed against a real player.
-3. **Pagination on lists of thousands** — 60974 titles and 7292 artists on
-   George's server, so this is not theoretical.
+3. **Pagination on lists of thousands.** Evidence updated 2026-09-17
+   (Finding 029): Songs is out of scope and all 916 album artists arrive in
+   one 98 KB request in 23 ms; the long lists that remain are albums (4,567),
+   Radio Now Playing (950) and Local Radio stations (194).
 4. **Artwork** via `artwork_track_id` → `/music/<id>/cover`.
 5. **Radio browses via SlimBrowse rooted at `["radios","menu:radio"]`**, never
    at `home`. `base.actions` / `itemsParams` dispatch, `nextWindow` precedence
    and in-place refresh are still required — but only for this subtree.
-6. **Podcasts (`opmlpodcast`) excluded by id**; Radio Paradise and the rest of
+6. **Podcasts excluded by its command `["podcast","items"]`** (amended
+   2026-09-17: the reply carries no `opmlpodcast` id, ADR-0038 §8); Radio
+   Now Playing stays (George); Radio Paradise and the rest of
    `My Apps` are unreachable by construction, not filtered.
 7. **Text-input items dropped wherever they appear** — mechanically, from an
    `input` block or `__TAGGEDINPUT__` / `__INPUT__` in the action params. One
@@ -964,6 +994,191 @@ subtree of nine items.
    `current_title` as a single space and the real names in `remoteMeta`
    (`title` "#1 Hit Radio", `artist` "KissFM  Live!"). The core publishes the
    blank, so the panel shows no title. George: fix in Phase 7.
+   **Second shape, 2026-09-17 (Finding 029):** a station can put its own name
+   in `current_title` while `remoteMeta` carries the song; and the published
+   artwork is LMS's grey placeholder, while `remoteMeta.artwork_url` has the
+   song's art (George saw the placeholder on the panel).
+   **Decided 2026-09-17 (George), ADR-0038 §8a:** the song is the title, its
+   artist the artist, the station the album line; artwork is the song's
+   `artwork_url`, otherwise "artwork pending", not LMS's placeholder.
+10. **Queue rail on now playing** (LMS only), with the design's empty state
+    offering a playlist chooser. Added 2026-09-17 (George).
+11. **Home and the mini strip:** Home is the library root, reached from
+    `active: null` (ADR-0033) and from now playing's Home button; the mini
+    strip on every other screen, with play/pause through ADR-0037's route.
+    Added 2026-09-17 with the plan.
+
+**Plan, agreed with George 2026-09-17** — one increment at a time, each
+checked on the panel before the next:
+
+0. **ADR-0038:** designed screens only; row actions; initials and a
+   discography-only artist page; queue rail; routes, paging, RAM cache,
+   radio handles; artwork direct as `cover_WxH_o.jpg`; Podcasts by command.
+   ADR-0022 inventory rows appended. **Written; awaiting George's read.**
+1. **Hardware finding (029), no product code.** **Done 2026-09-17,
+   [Finding 029](findings/029-library-and-radio-against-lms.md).** Read-only: page costs,
+   `textkey` folding, release types, track durations, the radio tree four
+   levels down, `remoteMeta`, which artist list the design's "Artists" is,
+   rescan over CometD. **With George present** (plays music): `load` by
+   album, artist, track and playlist; add to queue; add to playlist; the
+   queue read back; `load` on a powered-off LMS while Spotify plays.
+1a. **Resume only unchanged content** (added 2026-09-17, George agreed):
+    a takeover restores the recorded position and play state only if LMS
+    still holds the same content. Finding 029 defect A: a fresh load after a
+    Spotify session was seeked to the radio's old 192.6 s. Live on the
+    current image for any LMS app, so fixed before any Phase 7 code. First
+    measure whether `playlist_timestamp` changes only on a load (not on
+    pause, track change or add); otherwise compare track and queue length.
+    Checked by repeating Finding 029's test 5, and the same-content resume
+    from Finding 018.
+    **Done 2026-09-17; George checked both on `gexis` (hand-installed).**
+    Rule A (George): restore only if `playlist_timestamp` is unchanged; an
+    edit while away loses the position. ADR-0027 amended; Finding 029
+    addendum.
+2. **Radio title and artwork from `remoteMeta`** (criterion 9). **Done 2026-09-17;
+   George checked on `gexis` (hand-installed):** TuneIn "Paradiso Berlin" showed
+   title "CRAZY", artist "SEAL", album line "Paradiso Berlin", and the song's
+   cover (a 427 KB PNG proxied from Last.fm). A station with no song was not
+   tried on hardware; tests only.
+3. **Library reads in the core**, tested against replies recorded in step 1.
+   **Done 2026-09-17.** Tested against **made-up** LMS replies in Finding
+   029's shapes (George: no library data in the public repo).
+   `core/src/gexis_core/library.py`; `GET /library/counts`, `/new`,
+   `/artists`, `/artists/{id}/albums`, `/albums/{id}`, `/playlists`,
+   `/playlists/{id}`. Checked by Claude on `gexis` (hand-installed): every
+   route 35–90 ms against George's LMS; no panel to check until step 4.
+4. **Home as the library root**, the New Music strip, the mini strip, Back
+   and Home navigation, now playing's Home button. **Done 2026-09-17;
+   George checked on the panel.** `Library.svelte`, `MiniStrip.svelte`,
+   `WaitingServices.svelte`, `SourceMark.svelte`, and the shared
+   `playhead`/`playToggle` modules now playing uses too. The header's Back
+   and Home are built but only reachable from step 5 on. **Defect found and
+   fixed during the check:** closed as an opacity-0 layer, the library kept
+   covering now playing in black on the panel (not reproducible in headless
+   Chromium on the device, with or without GPU flags); the library and
+   Settings are now mounted only while open, as the idle screen already was.
+   George's three findings from the check are steps 4a-4c.
+4a. **LMS's pause fade must not move the DAC** (George's finding from the
+    step 4 check). **Done 2026-09-17**, awaiting George's listen: a dummy
+    control's change is decided once it has settled for 0.8 s and applied
+    only while its renderer is playing. ADR-0018 amended;
+    [Finding 031](findings/031-lms-pause-fade-and-push-latency.md) has the
+    measurements and the two attempts that failed first.
+4b. **Press feedback shrinks instead of flashing** on the mini strip,
+    Settings' Back and now playing's Home (George, 2026-09-17), as the
+    transport buttons already do. **Done 2026-09-17**, awaiting George's
+    check: those controls keep their resting fill and scale to 0.95; the
+    strip scales to 0.995 from its bottom edge.
+4c. **Panel smoothness**, in George's order. **First two done 2026-09-17**,
+    awaiting George's check: New Music covers are requested at 200 px for
+    their 176 px cards (and now playing's at 500 px, where the unsized
+    original could be 358 KB), and the strip's fade mask now changes only
+    when an edge gains or loses its fade, not on every scroll frame. **The
+    third is not done:** one shared blurred background behind every screen
+    would mean only one screen is mounted at a time, which changes how they
+    cross-fade, so it waits until George says the first two are not enough.
+    **Neither helped visibly (George, 2026-09-17).** What did: **one backdrop
+    for the whole panel** (`PanelBackground.svelte`), with each screen drawing
+    only its own veil - *"clear improvement"*. **Deviation:** exactly one
+    screen is mounted at a time and the incoming one fades in over 120 ms,
+    where the design layers the library over now playing; transparent screens
+    cannot overlap without showing both. **A screen change is no longer animated at all**
+    (George, 2026-09-17): over a shared backdrop the screens are transparent,
+    so every version of a fade - two-way, then incoming-only - showed the
+    bare backdrop between them as a blink. The design's 260 ms slide-and-fade
+    is not used; the backdrop stays put, so the swap is the whole effect.
+    **Nothing runs per scroll frame:** the edge fades come from two
+    sentinels watched by an `IntersectionObserver`, not a scroll handler
+    reading `scrollLeft`/`scrollWidth` (which lays the strip out again every
+    frame); the mask sits on a wrapper that does not scroll; the scroller
+    carries `contain: content`. **The same three apply to every long list in
+    steps 6 and 7.** George: *"95% there"*.
+    [Finding 032](findings/032-panel-frame-times-during-a-scroll.md) measured
+    the rest on the panel and could **not** attribute it: 5-9 % of scrolling
+    frames drop, but the run-to-run spread is wider than any difference
+    between the mask, the covers, the backdrop or containment, and the
+    harness's synthetic touches may cause the stutter themselves. Revisit
+    with the long lists. **The root's data and its covers load when the panel
+    starts, not when Home opens** (George, 2026-09-17: the tiles arrived visibly after the
+    cards): `lib/library.js` reads the counts and New Music, waits for the
+    covers to decode, and publishes both together; opening Home reads what
+    is already there and refreshes quietly behind it. The CPU governor was set to `performance` in the same
+    round and **reverted** once the backdrop fixed it
+    ([ADR-0039](decisions/0039-cpu-governor-performance.md)).
+5. **Album page and Play all. Done 2026-09-18; George checked on the
+   panel.** `POST /library/action` (ADR-0038 §5) and the album page ported
+   from the design: 264 px cover, title, artist and year, the track list
+   with durations, and Play album. Track row actions stay for step 7.
+   **A defect found during the check:** the core served `index.html` with no
+   cache directive, so the kiosk restarted onto the *previous* bundle and
+   404'd its assets - a deployed change simply was not there, and the tiles
+   looked dead because in that build they were. It is now `no-store`.
+   **Open, deferred by George: one investigation into lists**, once steps 6
+   and 7 have put real ones on the panel. What it has to cover, from his
+   checks: scrolling the New Music strip (Finding 032 says what is and is
+   not established), and the artist grid being slow to load, slow to open
+   and slow to scroll - 917 artists arrive as one 98 KB read and become 917
+   cards in one pass. Candidates to measure then: rendering only the rows on
+   screen, lighter cards, and letting the core hand over letter buckets
+   rather than one list. **Widened by George after step 10 (2026-09-18):**
+   with the queue rail built, everything on the panel is "quite slow", so
+   this is not only about long lists. One candidate is already named rather
+   than guessed: the rail asks LMS for 500 px covers and draws them at 42 px
+   (`ARTWORK_SIZE` serves both now playing's well and every queue row),
+   where the library reads already request artwork at the size drawn.
+6. **Artist grid with the jump rail, then the artist page. Done 2026-09-18;
+   George checked the navigation on the panel.** Rail letters folded, the
+   discography newest first (both his calls, ADR-0038 §1a); initials instead
+   of photos and no Phase 8 blocks (§2). **`content-visibility: auto` on the
+   letter groups was tried and removed:** with off-screen groups only
+   estimated, the rail landed inside the previous letter and correcting over
+   later frames did not converge. **George, 2026-09-18: loading the artists,
+   opening the grid and scrolling it are all slow** - added to the deferred
+   lists investigation below rather than fixed piecemeal.
+7. **Three-pane Browse** with row actions. **Done 2026-09-18; George
+   checked the navigation on the panel.** Artist, that artist's albums
+   (newest first, year beside the title at his request) and the album's
+   tracks, with play now / add to queue / add to any library playlist
+   revealed on the active row, and the design's sheet at its pick step for
+   the playlist. **Three things came out of his check:** Play now turns
+   LMS's shuffle off first (§3 - with shuffle on, a load starts at a random
+   track), each pane returns to the top when its contents change, and the
+   core keeps one HTTP connection rather than opening one per track when
+   adding to a playlist (87 tracks, 8 s; LMS has no bulk form).
+8. **Playlists. Done 2026-09-18.** The library's playlists with their track
+   counts, each with the row actions; a playlist opens to Play all, its
+   total, and its tracks. **Shuffle all is not drawn** - the design has it
+   beside Play all, it is not built, and ADR-0020's rule is not to render a
+   control that does nothing. **George asked for it (2026-09-18) and it
+   landed with step 10:** the same load with LMS's shuffle turned on instead
+   of off, beside Play all here and on the artist page.
+9. **Radio. Done 2026-09-18.** `radio.py` walks the subtree and issues a
+   handle per item; the panel browses and plays by handle only (ADR-0038
+   §5, §8). Checked against the live tree: the root is the nine items
+   ADR-0030 predicted, with Podcasts and Search TuneIn dropped; a folder
+   opens and a station plays, and **browsing the tree played nothing** -
+   the defect Finding 029 caused. 13 tests, against replies shaped like the
+   ones that finding recorded.
+10. **Queue rail. Done 2026-09-18; George checked it on the panel.** LMS
+    only. The core publishes the queue on `/state`, re-reading it from LMS
+    only when `playlist_timestamp` or the current index moves (Finding 029,
+    step 1a); the rail draws the design's header with **Clear**, the source
+    row that both names the playlist a queue came from and is the way to
+    pick another, rows that jump and remove by position, and the count badge
+    on the queue button. **Two defects came out of the check, both of a kind
+    worth naming:** the queue was read only by the *seed* status query, so it
+    could never grow - two albums added, LMS holding 27 tracks, the panel
+    still showing 1 - and all three tests over it passed because each called
+    the reader itself and none drove the push loop
+    (`docs/LESSONS.md`); and the Peppy screen **could not be dismissed by
+    touch** after a daemon restart, because whether it is up is held in
+    memory and `on_touch` only hides what it believes is visible, which
+    strands the panel behind the meter. Each fix has a test that fails
+    without it. **George, 2026-09-18: with the rail built, everything on the
+    panel is "quite slow"** - added to the lists investigation below, which
+    is therefore no longer only about long lists.
+11. Clear the `phase-7` markers; DEVELOPMENT, HANDOFF, image (also R2D2's
+    loop-device test, HANDOFF), PR.
 
 *Superseded criteria, kept for history:* (1) Full SlimBrowse: My Music, Radio,
 plugin menus. (2) `base.actions` / `itemsParams` dispatch implemented.
@@ -978,6 +1193,16 @@ text input is rendered at all.
 
 Purely additive. Cannot break playback.
 
+**Read first: [Finding 030](findings/030-free-enrichment-providers.md)**
+(2026-09-17) — free providers, field by field, with their terms. MusicBrainz
+is not enough on its own: biographies, similar artists, artist photos and
+lyrics each need another source. A key-free combination (MusicBrainz + Cover
+Art Archive, Wikipedia, ListenBrainz, LRCLIB) covers everything but artist
+photos; recommended as a starting point, **not decided**. The provider choice
+needs an ADR before implementation. API keys, where needed, are a per-user
+setting (George, 2026-09-17; ADR-0022). Criterion 1 assumes one provider;
+with several it becomes one limiter per provider.
+
 **Acceptance**
 
 1. Single shared token bucket; MusicBrainz never exceeds one request per second.
@@ -987,6 +1212,11 @@ Purely additive. Cannot break playback.
 5. Now playing renders before enrichment returns, every time.
 6. **Artist and track info panels** — the Artist, Release and Lyrics tabs on
    now playing. Moved from Phase 6 criterion 3 (George, 2026-09-16).
+7. **Radio artwork from enrichment** (George, 2026-09-17): an LMS station that
+   sends no artwork gets it looked up from artist and song title. No album or
+   duration is available, so the confidence rule is tested for this case
+   specifically; stream text is not always a song ("KissFM Live!" as artist,
+   Phase 6). ADR-0038 §8a.
 
 ### Phase 9 — Settings wiring and UI polish
 

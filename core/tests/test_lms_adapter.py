@@ -19,10 +19,17 @@ hardware sessions instead (see adapters/lms.py's own module docstring).
 """
 from __future__ import annotations
 
+import asyncio
+
 import pytest
 
 from gexis_core.adapters.lms import LmsAdapter
 from gexis_core.model import TrackMetadata
+
+
+async def _done(value):
+    """A coroutine that just answers, for stubbing an awaited method."""
+    return value
 
 
 @pytest.mark.asyncio
@@ -73,17 +80,23 @@ class FakeRpc:
 
     `mode`/`position` are what the *next* status query reports, so a test can
     change them between `release()` and `device_freed()` to model what LMS
-    did in between - restarting the track from zero, say."""
+    did in between - restarting the track from zero, say. `timestamp` is
+    the queue's `playlist_timestamp`; a test changes it to model a load or
+    an edit, and sets it to None for an LMS that does not report one."""
 
     def __init__(self, mode="play", position=60.0):
         self.mode = mode
         self.position = position
+        self.timestamp = 1789663581.32885
         self.commands = []
 
     async def __call__(self, session, player, command):
         self.commands.append(list(command))
         if command[0] == "status":
-            return {"result": {"mode": self.mode, "power": 1, "time": self.position}}
+            result = {"mode": self.mode, "power": 1, "time": self.position}
+            if self.timestamp is not None:
+                result["playlist_timestamp"] = self.timestamp
+            return {"result": result}
         return {"result": {}}
 
 
@@ -227,6 +240,120 @@ async def test_the_seek_fires_once_not_on_every_later_acquisition(monkeypatch):
     assert rpc.commands == []
 
 
+# --- Finding 029 defect A: never put the old queue's state onto a new one --
+
+
+@pytest.mark.asyncio
+async def test_a_load_while_away_is_not_seeked_to_the_old_position(monkeypatch):
+    """Measured 2026-09-17: a radio station released at 192.6s, then an album
+    loaded from an LMS app while Spotify played. Loading powers LMS on and
+    starts track 1 at zero - and the core seeked it to 192.6s. A load changes
+    `playlist_timestamp`, so nothing is restored."""
+    adapter, rpc = _adapter(monkeypatch, mode="play", position=192.6)
+    await adapter.release()
+    rpc.timestamp = 1789664147.20098  # a new load
+    rpc.position = 0.0
+    rpc.commands.clear()
+
+    await adapter.device_freed()
+
+    assert not any(c[0] == "time" for c in rpc.commands)
+    assert ["play"] not in rpc.commands
+
+
+@pytest.mark.asyncio
+async def test_reloading_the_same_content_is_still_a_new_load(monkeypatch):
+    """Loading the album that was already playing changes the timestamp too
+    (measured). The user asked for it from the start, so no seek."""
+    adapter, rpc = _adapter(monkeypatch, mode="play", position=80.0)
+    await adapter.release()
+    rpc.timestamp += 12.5
+    rpc.position = 2.4
+    rpc.commands.clear()
+
+    await adapter.device_freed()
+
+    assert not any(c[0] == "time" for c in rpc.commands)
+
+
+@pytest.mark.asyncio
+async def test_a_paused_player_given_new_content_gets_no_play(monkeypatch):
+    """Released while playing, then the queue replaced but left stopped:
+    playing it would start music the user did not ask for."""
+    adapter, rpc = _adapter(monkeypatch, mode="play", position=30.0)
+    await adapter.release()
+    rpc.mode = "stop"
+    rpc.timestamp += 40.0
+    rpc.commands.clear()
+
+    await adapter.device_freed()
+
+    assert ["play"] not in rpc.commands
+
+
+@pytest.mark.asyncio
+async def test_an_edit_while_away_loses_the_position(monkeypatch):
+    """George's rule A, 2026-09-17: an add or a shuffle also changes the
+    timestamp, and the position is then not restored. Accepted, because it
+    can never seek into content the user just chose."""
+    adapter, rpc = _adapter(monkeypatch, mode="play", position=60.0)
+    await adapter.release()
+    rpc.timestamp += 7.5  # cmd:add while another renderer held the device
+    rpc.position = 1.2
+    rpc.commands.clear()
+
+    await adapter.device_freed()
+
+    assert not any(c[0] == "time" for c in rpc.commands)
+
+
+@pytest.mark.asyncio
+async def test_a_skipped_restore_does_not_linger_for_a_later_acquisition(monkeypatch):
+    adapter, rpc = _adapter(monkeypatch, mode="play", position=60.0)
+    await adapter.release()
+    rpc.timestamp += 1.0
+    await adapter.device_freed()
+    rpc.timestamp -= 1.0  # even if the old value came back
+    rpc.position = 1.0
+    rpc.commands.clear()
+
+    await adapter.device_freed()
+
+    assert rpc.commands == []
+
+
+@pytest.mark.asyncio
+async def test_same_queue_still_resumes_after_a_takeover(monkeypatch):
+    """The ADR-0027 behaviour that must survive: pause, skip and the power
+    cycle leave the timestamp alone (measured), so returning to the same
+    queue is still put back."""
+    adapter, rpc = _adapter(monkeypatch, mode="play", position=60.0)
+    await adapter.release()
+    rpc.mode = "pause"
+    rpc.position = 1.2
+    rpc.commands.clear()
+
+    await adapter.device_freed()
+
+    assert ["time", "60.00"] in rpc.commands
+    assert ["play"] in rpc.commands
+
+
+@pytest.mark.asyncio
+async def test_an_lms_reporting_no_timestamp_behaves_as_before(monkeypatch):
+    """Nothing to compare means nothing to learn from it; the ADR-0027
+    restore stands rather than silently switching itself off."""
+    adapter, rpc = _adapter(monkeypatch, mode="play", position=60.0)
+    rpc.timestamp = None
+    await adapter.release()
+    rpc.position = 1.2
+    rpc.commands.clear()
+
+    await adapter.device_freed()
+
+    assert ["time", "60.00"] in rpc.commands
+
+
 # --- the user's own deactivation, not a takeover ---------------------------
 
 
@@ -303,7 +430,7 @@ def test_report_metadata_maps_the_current_song():
             title="Song Title",
             artist="The Artist",
             album="The Album",
-            artwork="http://127.0.0.1:9000/music/abc123/cover.jpg",
+            artwork="http://127.0.0.1:9000/music/abc123/cover_500x500_o.jpg",
             sample_rate=44100,
             position=30.5,
             duration=200.0,
@@ -313,16 +440,100 @@ def test_report_metadata_maps_the_current_song():
     ]
 
 
-def test_report_metadata_uses_current_title_for_remote_streams():
+def _radio(song, **top):
+    """A stream's status result: only what LMS sends for one (no album,
+    duration or samplerate unless a test adds them)."""
+    adapter = LmsAdapter("192.168.178.188", 9000, "gexis")
+    received = []
+    adapter.on_metadata_change(received.append)
+    result = {"power": 1, "mode": "play", "time": 6.6, "remote": 1, "playlist_loop": [song]}
+    result.update(top)
+    adapter._report_metadata(result)
+    return received[0]
+
+
+def test_a_station_shows_the_song_as_title_and_the_station_as_album():
+    """Finding 029, measured 2026-09-17 on TuneIn "100% Deutsch": the core
+    published the station as the title and dropped the song. ADR-0038 §8a,
+    George's option A."""
+    meta = _radio(
+        {
+            "title": "Hand in Hand",
+            "artist": "Julian le Play",
+            "coverid": "-94298681189064",
+            "artwork_url": "/imageproxy/https%3A%2F%2Flastfm.freetls.fastly.net%2Fi%2Fu%2Fb97d5d1f.jpg/image.jpg",
+            "remote": 1,
+        },
+        current_title="SCHLAGERPLANET RADIO Deutsch",
+    )
+
+    assert meta.title == "Hand in Hand"
+    assert meta.artist == "Julian le Play"
+    assert meta.album == "SCHLAGERPLANET RADIO Deutsch"
+    assert meta.artwork == (
+        "http://192.168.178.188:9000/imageproxy/"
+        "https%3A%2F%2Flastfm.freetls.fastly.net%2Fi%2Fu%2Fb97d5d1f.jpg/image.jpg"
+    )
+
+
+def test_a_station_without_artwork_url_gets_no_artwork_not_the_placeholder():
+    """The stream's coverid URL is LMS's grey radio tower (George saw it on the
+    panel). None lets the panel show its own pending glyph."""
+    meta = _radio({"title": "Hand in Hand", "artist": "Julian le Play", "coverid": "-1"},
+                  current_title="SCHLAGERPLANET RADIO Deutsch")
+
+    assert meta.artwork is None
+
+
+def test_an_absolute_artwork_url_is_used_as_is():
+    meta = _radio({"title": "T", "artwork_url": "https://cdn.example/logo.png"},
+                  current_title="Station")
+
+    assert meta.artwork == "https://cdn.example/logo.png"
+
+
+def test_a_blank_current_title_keeps_the_song_fields():
+    """Phase 6's KissFM case: `current_title` a single space, the names only
+    in the song fields."""
+    meta = _radio({"title": "#1 Hit Radio", "artist": "KissFM  Live!"}, current_title=" ")
+
+    assert meta.title == "#1 Hit Radio"
+    assert meta.artist == "KissFM  Live!"
+    assert meta.album is None
+
+
+def test_a_station_with_no_song_shows_the_station_as_title():
+    meta = _radio({"title": "", "artist": None}, current_title="Talk Radio One")
+
+    assert meta.title == "Talk Radio One"
+    assert meta.album is None
+
+
+def test_a_current_title_that_repeats_the_song_is_not_the_album():
+    """2026-09-08: `current_title` was "Backstreet Boys - Anywhere for You"."""
+    meta = _radio({"title": "Anywhere for You", "artist": "Backstreet Boys"},
+                  current_title="Backstreet Boys - Anywhere for You")
+
+    assert meta.title == "Anywhere for You"
+    assert meta.album is None
+
+
+def test_a_remote_track_with_a_real_album_keeps_it():
+    """A Qobuz track through LMS is `remote` too, and has an album."""
+    meta = _radio({"title": "Bad Guy", "artist": "Billie Eilish", "album": "WHEN WE ALL FALL ASLEEP"},
+                  current_title="Bad Guy")
+
+    assert meta.album == "WHEN WE ALL FALL ASLEEP"
+
+
+def test_local_tracks_still_use_the_coverid():
     adapter = LmsAdapter("127.0.0.1", 9000, "gexis")
     received = []
     adapter.on_metadata_change(received.append)
 
-    adapter._report_metadata(
-        _status_result(remote=1, current_title="Radio Station: Now Playing")
-    )
+    adapter._report_metadata(_status_result(song={"artwork_url": "/ignored.png"}))
 
-    assert received[0].title == "Radio Station: Now Playing"
+    assert received[0].artwork == "http://127.0.0.1:9000/music/abc123/cover_500x500_o.jpg"
 
 
 def test_report_metadata_blanks_artwork_without_a_coverid():
@@ -367,6 +578,22 @@ async def test_deactivate_then_press_play_seeks_back(monkeypatch):
     await adapter.device_freed()
 
     assert ["time", "72.00"] in rpc.commands
+
+
+@pytest.mark.asyncio
+async def test_deactivate_then_load_something_else_does_not_seek(monkeypatch):
+    """The user's own deactivation records a position too; loading new content
+    afterwards must not be seeked to it either."""
+    adapter, rpc = _adapter(monkeypatch, mode="play", position=72.0)
+    await adapter._note_position_if_unset(session=None)
+
+    rpc.timestamp += 30.0
+    rpc.position = 0.4
+    rpc.commands.clear()
+
+    await adapter.device_freed()
+
+    assert not any(c[0] == "time" for c in rpc.commands)
 
 
 # --- ADR-0037: transport commands -----------------------------------------
@@ -492,3 +719,124 @@ async def test_shuffle_and_repeat_commands_use_lms_numbers(monkeypatch):
         ["playlist", "repeat", 2],
         ["playlist", "repeat", 1],
     ]
+
+
+# --- ADR-0038 §1: the queue rail's contents --------------------------------
+
+
+class QueueRpc(FakeRpc):
+    """Answers the metadata query and the queue query differently, the way
+    LMS does: `start="-"` is the current song, `start=0` the whole queue."""
+
+    def __init__(self, timestamp=1.0, index=1):
+        super().__init__()
+        self.timestamp = timestamp
+        self.index = index
+        self.queue_reads = 0
+
+    async def __call__(self, session, player, command):
+        self.commands.append(list(command))
+        if command[0] == "status" and command[1] == 0:
+            self.queue_reads += 1
+            return {
+                "result": {
+                    "playlist_cur_index": self.index,
+                    "playlist_name": "Sunday",
+                    "playlist_id": 900,
+                    "playlist_modified": 0,
+                    "playlist_loop": [
+                        {"title": "Opening", "artist": "Aria Nova", "coverid": "abc", "duration": 201.5},
+                        {"title": "Closing", "artist": "Aria Nova"},
+                    ],
+                }
+            }
+        return {"result": {"mode": "play", "power": 1, "time": 1.0,
+                           "playlist_timestamp": self.timestamp,
+                           "playlist_cur_index": self.index}}
+
+
+@pytest.mark.asyncio
+async def test_the_queue_is_read_and_reported(monkeypatch):
+    adapter, _ = _adapter(monkeypatch, mode="play")
+    rpc = QueueRpc()
+    monkeypatch.setattr(LmsAdapter, "_rpc", rpc)
+    seen = []
+    adapter.on_queue_change(seen.append)
+
+    await adapter._report_queue_if_changed(None, {"playlist_timestamp": 1.0, "playlist_cur_index": 1})
+
+    assert rpc.queue_reads == 1
+    queue = seen[0]
+    assert [item.title for item in queue.items] == ["Opening", "Closing"]
+    assert queue.index == 1
+    assert (queue.name, queue.id, queue.modified) == ("Sunday", 900, False)
+    assert queue.items[0].artwork.endswith("/music/abc/cover_500x500_o.jpg")
+
+
+@pytest.mark.asyncio
+async def test_the_queue_is_not_re_read_on_every_push(monkeypatch):
+    """A status push arrives for every state change; the queue is only
+    worth re-reading when LMS says it moved (Finding 029, step 1a)."""
+    adapter, _ = _adapter(monkeypatch, mode="play")
+    rpc = QueueRpc()
+    monkeypatch.setattr(LmsAdapter, "_rpc", rpc)
+    adapter.on_queue_change(lambda queue: None)
+    same = {"playlist_timestamp": 1.0, "playlist_cur_index": 1}
+
+    await adapter._report_queue_if_changed(None, same)
+    await adapter._report_queue_if_changed(None, same)
+
+    assert rpc.queue_reads == 1
+
+
+@pytest.mark.asyncio
+async def test_a_new_track_re_reads_the_queue(monkeypatch):
+    """The rail shows what is coming up, so which track is playing moves it
+    even when the queue itself has not changed."""
+    adapter, _ = _adapter(monkeypatch, mode="play")
+    rpc = QueueRpc()
+    monkeypatch.setattr(LmsAdapter, "_rpc", rpc)
+    adapter.on_queue_change(lambda queue: None)
+
+    await adapter._report_queue_if_changed(None, {"playlist_timestamp": 1.0, "playlist_cur_index": 1})
+    await adapter._report_queue_if_changed(None, {"playlist_timestamp": 1.0, "playlist_cur_index": 2})
+
+    assert rpc.queue_reads == 2
+
+
+@pytest.mark.asyncio
+async def test_a_push_re_reads_the_queue(monkeypatch):
+    """**The defect this test exists for.** The queue was read only by the
+    seed status query at subscribe time, so a queue that changed afterwards
+    never reached the panel: George added two albums on 2026-09-18, LMS held
+    27 tracks, and the rail still showed the one it had at startup. The
+    three tests above all passed, because they call
+    `_report_queue_if_changed` themselves - nothing asserted that the push
+    loop does (docs/LESSONS.md)."""
+    adapter, _ = _adapter(monkeypatch, mode="play")
+    rpc = QueueRpc()
+    monkeypatch.setattr(LmsAdapter, "_rpc", rpc)
+    adapter.on_queue_change(lambda queue: None)
+
+    channel = "/cid/slim/playerstatus/aa:bb:cc:dd:ee:ff"
+    frames = [
+        # The queue changed while the player kept playing: no power edge,
+        # only a new timestamp.
+        [{"channel": channel, "data": {"power": 1, "playlist_timestamp": 2.0, "playlist_cur_index": 1}}],
+    ]
+
+    async def fake_post(self, session, message, timeout=None):
+        if message["channel"] != "/meta/connect":
+            return []
+        if not frames:
+            raise asyncio.CancelledError
+        return frames.pop(0)
+
+    monkeypatch.setattr(LmsAdapter, "_cometd_handshake", lambda self, session: _done("cid"))
+    monkeypatch.setattr(LmsAdapter, "_cometd_post", fake_post)
+
+    with pytest.raises(asyncio.CancelledError):
+        await adapter._watch(lambda: None, lambda: None)
+
+    # One for the seed query, one for the push.
+    assert rpc.queue_reads == 2

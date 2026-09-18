@@ -76,6 +76,9 @@ export const available = derived(playback, ($s) => $s?.controls?.available ?? []
 /** The active renderer's own shuffle (bool) and repeat ('off'|'all'|'one'). */
 export const shuffle = derived(playback, ($s) => $s?.controls?.shuffle ?? null);
 export const repeat = derived(playback, ($s) => $s?.controls?.repeat ?? null);
+/** What LMS has queued, for the rail on now playing; null for the renderers
+ *  that have no queue (ADR-0038 §1). */
+export const queue = derived(playback, ($s) => $s?.queue ?? null);
 
 /**
  * Commands go over REST, never the socket (ADR-0028). Returns the parsed

@@ -110,6 +110,21 @@ Phase 2 and ADR-0027.
 | Time zone / NTP | [N] | Confirmed as a setting by George, 2026-09-15. The idle clock shows device time, and the image ships no time zone: `gexis` came up as Europe/London and was set to Europe/Berlin by hand on 2026-09-15 — **a reflash loses it** |
 | Restrict the API to loopback | [N] | ADR-0028 binds `0.0.0.0` and is unauthenticated by decision; a lock-down toggle is cheap and consistent with the accepted-risk framing below |
 
+### Library and radio — Phase 7
+
+Confirmed as settings by George, 2026-09-17, from
+[ADR-0038](0038-library-and-radio-on-the-panel.md) §9. The [H] rows are
+hardcoded as Phase 7 builds them.
+
+| Setting | Mark | Notes |
+|---|---|---|
+| Albums in the New Music strip | [H] | 10, per `design/screens.md`; `NEW_MUSIC_COUNT` in `core/src/gexis_core/library.py` |
+| Podcasts excluded from Radio | [H] | ADR-0030; excluded by its `["podcast","items"]` command (ADR-0038 §8) |
+| Radio Now Playing shown | [H] | Shown — George, 2026-09-17, closing ADR-0030's open item |
+| How long cached library lists are kept | [N] | ADR-0038 §6. Built 2026-09-17 as: until LMS's `lastscan` changes, checked at most every 60 s (`LASTSCAN_CHECK_S`); playlists never cached |
+| How many queued tracks the rail reads | [H] | 100, `QUEUE_LIMIT` in `core/src/gexis_core/adapters/lms.py`. The rail lists them from the track playing now; LMS is asked for no more, so a longer queue is truncated rather than paged (George confirmed the row, 2026-09-18) |
+| Artwork size requested from LMS | [H] | `cover_<W>x<H>_o.jpg` (ADR-0038 §7). Two sizes, each what the panel draws: `ARTWORK_COVER` 500 px and `ARTWORK_THUMB` 200 px in `library.py`, and 500 px for now playing (`ARTWORK_SIZE` in `adapters/lms.py`) |
+
 ### Enrichment and lyrics — Phase 8
 
 | Setting | Mark | Notes |
@@ -118,6 +133,7 @@ Phase 2 and ADR-0027.
 | Confidence threshold | [R] | ADR-0012: below it, show nothing. A confidently wrong artist biography is worse than a blank panel |
 | Lyrics on/off | [R] | |
 | Artwork lookup for renderers that supply none | [R] | George, 2026-09-12: Bluetooth's absent art is transient — artist/album/title are enough to find it later |
+| Enrichment provider API keys, one per provider that needs one | [N] | Confirmed as a setting by George, 2026-09-17: entered by each user, never shipped in the image or the repo, so a provider requiring a key is not ruled out by it. Which providers need one depends on the Phase 8 provider decision |
 
 ### System and maintenance
 
@@ -131,6 +147,7 @@ Almost entirely new. That this group barely existed is itself worth noticing.
 | Log level / diagnostics | [N] | |
 | Show image version and build info | [R][?] | The build self-identification gap: nothing on a running device says which build it is, and `DEVELOPMENT.md`'s tier-3 rule expects the runner to assert against the manifest |
 | Reboot / shut down | [N] | LMS's own menu already offers "Turn Off gexis", so the panel carrying it is consistent rather than novel |
+| CPU governor | [H] | The OS default `ondemand`. `performance` was tried and reverted on 2026-09-17 ([ADR-0039](0039-cpu-governor-performance.md)): ~10 °C hotter, no visible improvement. Exposing it means exposing heat and idle power with it |
 
 ### Four decisions this inventory is waiting on
 

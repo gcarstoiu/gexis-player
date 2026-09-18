@@ -50,6 +50,7 @@ class StateStore:
         self._handoff_exempt_pairs = tuple(tuple(p) for p in handoff_exempt_pairs)
         self._available: dict[str, bool] = {rid: False for rid in capabilities}
         self._metadata: dict[str, TrackMetadata] = {}
+        self._queues: dict[str, object] = {}
         self._active: str | None = None
         self._handoff: Handoff | None = None
         self._volume: VolumeState | None = None
@@ -69,6 +70,7 @@ class StateStore:
         metadata = self._metadata.get(self._active, BLANK_METADATA) if self._active else BLANK_METADATA
         return PlaybackState(
             active=self._active,
+            queue=self._queues.get(self._active) if self._active else None,
             available=dict(self._available),
             metadata=metadata,
             capabilities=dict(self._capabilities),
@@ -97,6 +99,15 @@ class StateStore:
         logger.info("state: %s availability -> %s", renderer_id, available)
         self._available[renderer_id] = available
         self._notify()
+
+    def set_queue(self, renderer_id: str, queue) -> None:
+        """Recorded per renderer like metadata, and published only for
+        whoever is active. Only LMS reports one (ADR-0038 §5)."""
+        if self._queues.get(renderer_id) == queue:
+            return
+        self._queues[renderer_id] = queue
+        if renderer_id == self._active:
+            self._notify()
 
     def set_metadata(self, renderer_id: str, metadata: TrackMetadata) -> None:
         """Recorded for every renderer regardless of whether it is active -

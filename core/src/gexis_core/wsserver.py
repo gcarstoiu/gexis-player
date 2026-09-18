@@ -30,6 +30,8 @@ from pathlib import Path
 from aiohttp import web
 
 from gexis_core.adapters.base import TRANSPORT_COMMANDS
+from gexis_core.library import LibraryUnavailable, NoPlayer, NotFound
+from gexis_core.radio import RadioUnavailable, UnknownHandle
 from gexis_core.model import PlaybackState
 from gexis_core.settings_registry import InvalidValue, NotSettable, NotWired, UnknownSetting
 from gexis_core.state import StateStore
@@ -54,6 +56,8 @@ class StateServer:
         idle_page=None,
         settings=None,
         peppy=None,
+        library=None,
+        radio=None,
         ui_dir: Path | None = None,
     ) -> None:
         """`activate(renderer_id) -> bool` and `set_volume(percent) -> bool`
@@ -78,6 +82,8 @@ class StateServer:
         self._idle_page = idle_page
         self._settings = settings
         self._peppy = peppy
+        self._library = library
+        self._radio = radio
         self._ui_dir = ui_dir
         self._clients: set[web.WebSocketResponse] = set()
         store.subscribe(self._broadcast)
@@ -217,6 +223,105 @@ class StateServer:
             return web.json_response({"error": "idle page is not wired up"}, status=503)
         return web.json_response(await self._idle_page())
 
+    async def _handle_library(self, request: web.Request) -> web.Response:
+        """ADR-0038 §5: reads only, for the designed screens. The panel asks
+        for what a screen shows and gets the fields it draws; it never sends
+        an LMS command. 502 when LMS cannot be reached (the renderer
+        routes' convention), 404 for an id that does not exist - which a
+        rescan makes of every id (Finding 029 §4)."""
+        if self._library is None:
+            return web.json_response({"error": "the library is not wired up"}, status=503)
+        what = request.match_info["what"]
+        item = request.match_info.get("id")
+        sub = request.match_info.get("sub")
+        try:
+            offset = max(0, int(request.query.get("offset", 0)))
+            limit = min(1000, max(1, int(request.query.get("limit", 1000))))
+            item_id = int(item) if item is not None else None
+        except ValueError:
+            return web.json_response({"error": "offset, limit and ids are integers"}, status=400)
+        library = self._library
+        reads = {
+            ("counts", False, None): lambda: library.counts(),
+            ("new", False, None): lambda: library.new_music(),
+            ("artists", False, None): lambda: library.artists(offset, limit),
+            ("artists", True, "albums"): lambda: library.artist_albums(item_id),
+            ("albums", True, None): lambda: library.album(item_id),
+            ("playlists", False, None): lambda: library.playlists(),
+            ("playlists", True, None): lambda: library.playlist(item_id, offset, limit),
+        }
+        read = reads.get((what, item_id is not None, sub))
+        if read is None:
+            return web.json_response({"error": f"no library read {request.path}"}, status=404)
+        try:
+            return web.json_response(await read())
+        except NotFound as exc:
+            return web.json_response({"error": f"{exc} not found"}, status=404)
+        except LibraryUnavailable as exc:
+            return web.json_response({"error": f"LMS unreachable: {exc}"}, status=502)
+
+    async def _handle_library_action(self, request: web.Request) -> web.Response:
+        """ADR-0038 §5: one route for what the panel does to the library.
+        `{"kind": "album"|"artist"|"track"|"playlist", "id": <int>,
+        "action": "play"|"add"|"playlist"}`, with `playlist_id` when adding
+        to one. A `200` means the command was sent; what happened is read
+        from `/state`, as for transport (ADR-0037 §1)."""
+        if self._library is None:
+            return web.json_response({"error": "the library is not wired up"}, status=503)
+        try:
+            body = await request.json()
+            kind = str(body["kind"])
+            action = str(body.get("action", "play"))
+            item_id = int(body["id"])
+            target = body.get("playlist_id")
+            playlist_id = None if target is None else int(target)
+        except (ValueError, KeyError, TypeError, json.JSONDecodeError):
+            return web.json_response(
+                {"error": 'expected {"kind": ..., "id": <int>, "action": ...}'}, status=400
+            )
+        try:
+            return web.json_response(
+                await self._library.act(kind, item_id, action, playlist_id)
+            )
+        except NotFound as exc:
+            return web.json_response({"error": f"{exc} not found"}, status=404)
+        except NoPlayer as exc:
+            return web.json_response({"error": str(exc)}, status=409)
+        except LibraryUnavailable as exc:
+            return web.json_response({"error": f"LMS unreachable: {exc}"}, status=502)
+
+    async def _handle_radio(self, request: web.Request) -> web.Response:
+        """ADR-0038 §5: the panel browses by handle, never by command. No
+        handle is the root, `["radios","menu:radio"]`."""
+        if self._radio is None:
+            return web.json_response({"error": "radio is not wired up"}, status=503)
+        try:
+            return web.json_response(await self._radio.browse(request.query.get("at")))
+        except UnknownHandle as exc:
+            return web.json_response({"error": f"unknown handle: {exc}"}, status=404)
+        except RadioUnavailable as exc:
+            return web.json_response({"error": f"LMS unreachable: {exc}"}, status=502)
+
+    async def _handle_radio_play(self, request: web.Request) -> web.Response:
+        """`{"handle": ..., "action": "play"|"add"}` - and only a handle
+        this core issued for a station does anything (ADR-0038 §5)."""
+        if self._radio is None:
+            return web.json_response({"error": "radio is not wired up"}, status=503)
+        try:
+            body = await request.json()
+            handle = str(body["handle"])
+            action = str(body.get("action", "play"))
+        except (ValueError, KeyError, TypeError, json.JSONDecodeError):
+            return web.json_response({"error": 'expected {"handle": ..., "action": ...}'}, status=400)
+        if action not in ("play", "add"):
+            return web.json_response({"error": f"unknown action {action}"}, status=404)
+        try:
+            return web.json_response(await self._radio.play(handle, action))
+        except UnknownHandle as exc:
+            return web.json_response({"error": f"unknown handle: {exc}"}, status=404)
+        except RadioUnavailable as exc:
+            return web.json_response({"error": f"LMS unreachable: {exc}"}, status=502)
+
     async def _handle_surface(self, request: web.Request) -> web.Response:
         """ADR-0035 §6: the panel always arrives on loopback, a phone from the LAN."""
         panel = request.remote in ("127.0.0.1", "::1")
@@ -301,6 +406,12 @@ class StateServer:
         app.router.add_get("/settings", self._handle_settings)
         app.router.add_put("/settings/{key}", self._handle_setting_write)
         app.router.add_post("/settings/{key}", self._handle_setting_action)
+        app.router.add_get("/radio", self._handle_radio)
+        app.router.add_post("/radio/play", self._handle_radio_play)
+        app.router.add_post("/library/action", self._handle_library_action)
+        app.router.add_get("/library/{what}", self._handle_library)
+        app.router.add_get("/library/{what}/{id}", self._handle_library)
+        app.router.add_get("/library/{what}/{id}/{sub}", self._handle_library)
         # The UI is registered *after* the API, so nothing it serves can
         # shadow `/state` or a command route - aiohttp resolves in
         # registration order. Two routes only, which is why vite is
@@ -313,7 +424,15 @@ class StateServer:
         return app
 
     async def _handle_index(self, request: web.Request) -> web.FileResponse:
-        return web.FileResponse(self._ui_dir / "index.html")
+        # Never cached. Everything it references is content-hashed, so the
+        # assets can be; this file is the only thing that names them, and a
+        # cached copy pins the panel to a build that no longer exists on
+        # disk - which is exactly what happened on 2026-09-18: the kiosk
+        # restarted onto the previous bundle and 404'd the assets it asked
+        # for, so a deployed change simply was not there.
+        return web.FileResponse(
+            self._ui_dir / "index.html", headers={"Cache-Control": "no-store"}
+        )
 
     async def run(self) -> None:
         runner = web.AppRunner(self.make_app())

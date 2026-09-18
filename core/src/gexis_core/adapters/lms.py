@@ -35,7 +35,7 @@ from typing import Callable
 import aiohttp
 
 from gexis_core.adapters.base import Adapter, Capabilities, ReleaseAction, VolumeMechanism
-from gexis_core.model import TrackMetadata
+from gexis_core.model import Queue, TrackMetadata
 from gexis_core.systemd import kill_unit
 from gexis_core.volume import DUMMY_CARD_LMS
 
@@ -43,13 +43,26 @@ logger = logging.getLogger("gexis_core.adapters.lms")
 
 UNIT_NAME = "squeezelite.service"
 
+#: How much of the queue the rail reads. The design shows what is coming
+#: up, not a whole 500-track load.
+QUEUE_LIMIT = 100
+
+#: The size asked of LMS for a track's artwork. The design's now playing
+#: well is 500x500 (`design/data-contract.md`) and the Peppy screen scales
+#: down from this too; `_o.jpg` is always a JPEG, where the bare resize was
+#: a PNG twice the original's size for 5 of 20 albums (Finding 029 §5).
+#: Unsized, LMS returns the original - up to 358 KB, blurred at 72px behind
+#: the screen, which cost frames on the panel (George, 2026-09-17).
+ARTWORK_SIZE = 500
+
 #: Requested on every "status" query this adapter makes so pushed frames
 #: carry metadata, not just power (Phase 3 criterion 1). Letters per the
 #: CLI docs' songinfo tag table (LMS-CLI.md): a=artist, l=album, c=coverid,
-#: d=duration, T=samplerate. title/time/duration (top-level, the player's
-#: *current* values) come back regardless of tags - only the per-song
-#: fields need asking for.
-METADATA_TAGS = "aldcT"
+#: d=duration, T=samplerate, K=artwork_url (a remote item's own artwork,
+#: ADR-0038 §8a). title/time/duration (top-level, the player's *current*
+#: values) come back regardless of tags - only the per-song fields need
+#: asking for.
+METADATA_TAGS = "aldcTK"
 
 #: How far the player's position may drift from what `release()` recorded
 #: before `device_freed()` corrects it with a seek.
@@ -182,13 +195,81 @@ class LmsAdapter(Adapter):
         #: by `device_freed()`. `_resume_playing` False means "came back
         #: paused, send no play"; `_resume_position` is what the position is
         #: corrected back to if LMS restarted the track (see
-        #: RESUME_POSITION_TOLERANCE_S).
+        #: RESUME_POSITION_TOLERANCE_S). `_resume_timestamp` is the queue's
+        #: `playlist_timestamp` when they were recorded: both are put back
+        #: only if it is unchanged (Finding 029, defect A).
         self._resume_playing = False
         self._resume_position: float | None = None
+        self._resume_timestamp: float | None = None
         self._on_metadata: Callable[[TrackMetadata], None] | None = None
+        self._on_queue = None
+        #: (playlist_timestamp, current index) when the queue was last read.
+        self._queue_stamp: tuple | None = None
         self._on_availability: Callable[[bool], None] | None = None
         #: The last reported transport, so `play()` can pick its command.
         self._last_transport: str | None = None
+
+    @property
+    def player_id(self) -> str | None:
+        """This player's id on the server, resolved from its name at
+        startup - `None` until then. The library plays on the same player
+        this adapter arbitrates for (ADR-0038 §5)."""
+        return self._player_id
+
+    @property
+    def last_transport(self) -> str | None:
+        """The transport this adapter last reported: 'playing', 'paused',
+        'stopped', or None before the first report."""
+        return self._last_transport
+
+    def on_queue_change(self, callback) -> None:
+        """The queue rail's contents (ADR-0038 §1). Read only when LMS says
+        the queue changed, not on every status push."""
+        self._on_queue = callback
+
+    async def _report_queue_if_changed(self, session, result: dict) -> None:
+        """LMS's `playlist_timestamp` moves on a load, an add and a shuffle,
+        and not on pause, skip or a power cycle (Finding 029, step 1a), so
+        it says exactly when the queue is worth re-reading - a second query,
+        because the metadata one asks for the current song alone."""
+        if self._on_queue is None or self._player_id is None:
+            return
+        stamp = (_as_float(result.get("playlist_timestamp")), _as_int(result.get("playlist_cur_index")))
+        if stamp == self._queue_stamp:
+            return
+        self._queue_stamp = stamp
+        try:
+            queued = await self._rpc(
+                session, self._player_id, ["status", 0, QUEUE_LIMIT, f"tags:{METADATA_TAGS}"]
+            )
+        except aiohttp.ClientError as exc:
+            logger.warning("lms: could not read the queue: %s", exc)
+            return
+        queue = queued.get("result", {})
+        items = tuple(
+            TrackMetadata(
+                title=song.get("title"),
+                artist=song.get("artist"),
+                album=song.get("album"),
+                artwork=(
+                    f"{self._base}/music/{song['coverid']}/cover_{ARTWORK_SIZE}x{ARTWORK_SIZE}_o.jpg"
+                    if song.get("coverid")
+                    else None
+                ),
+                duration=_as_float(song.get("duration")),
+                source_type="lms",
+            )
+            for song in queue.get("playlist_loop", [])
+        )
+        self._on_queue(
+            Queue(
+                items=items,
+                index=_as_int(queue.get("playlist_cur_index")) or 0,
+                name=queue.get("playlist_name"),
+                id=_as_int(queue.get("playlist_id")),
+                modified=bool(_as_int(queue.get("playlist_modified"))),
+            )
+        )
 
     def on_metadata_change(self, callback: Callable[[TrackMetadata], None]) -> None:
         """state.py hooks in here (Phase 3 criterion 1). Fired on every
@@ -222,9 +303,16 @@ class LmsAdapter(Adapter):
         cross-reference against `playlist_cur_index`.
         """
         song = (result.get("playlist_loop") or [{}])[0]
-        remote = bool(result.get("remote"))
-        title = result.get("current_title") if remote else song.get("title")
-        coverid = song.get("coverid")
+        if result.get("remote"):
+            title, album, artwork = self._remote_fields(result, song)
+        else:
+            coverid = song.get("coverid")
+            title, album = song.get("title"), song.get("album")
+            artwork = (
+                f"{self._base}/music/{coverid}/cover_{ARTWORK_SIZE}x{ARTWORK_SIZE}_o.jpg"
+                if coverid
+                else None
+            )
         # LMS's `mode` is "play"/"pause"/"stop" (LMS-CLI.md's status query).
         # A powered-off player reports no mode at all, which is neither
         # playing nor paused - left as None rather than invented as
@@ -233,7 +321,9 @@ class LmsAdapter(Adapter):
         transport = {"play": "playing", "pause": "paused", "stop": "stopped"}.get(
             result.get("mode")
         )
-        # Recorded before the no-listener return: `play()` needs it either way.
+        # Recorded before the no-listener return: `play()` needs it either
+        # way, and the volume bridge reads the transport (volume.py's
+        # DummyMixerBridge: LMS's pause fade must not be mirrored).
         self._last_transport = transport
         if self._on_metadata is None:
             return
@@ -241,8 +331,8 @@ class LmsAdapter(Adapter):
             TrackMetadata(
                 title=title,
                 artist=song.get("artist"),
-                album=song.get("album"),
-                artwork=f"{self._base}/music/{coverid}/cover.jpg" if coverid else None,
+                album=album,
+                artwork=artwork,
                 # LMS-CLI.md's songinfo table documents tag T ("samplerate")
                 # as "in KHz", but its own worked example returns a raw Hz
                 # value (44100 for 44.1kHz content) - a known doc/reality
@@ -259,6 +349,33 @@ class LmsAdapter(Adapter):
                 repeat=REPEAT_FROM_LMS.get(_as_int(result.get("playlist repeat"))),
             )
         )
+
+    def _remote_fields(self, result: dict, song: dict) -> tuple[str | None, str | None, str | None]:
+        """Title, album line and artwork for a stream (ADR-0038 §8a, George
+        2026-09-17): the song is the title and the station the album line.
+
+        `current_title` is the station for TuneIn today, but has been blank
+        (KissFM, Phase 6) and "Artist - Title" (2026-09-08), so it is used
+        only where the song fields leave a gap. A Qobuz track through LMS is
+        `remote` too and carries a real album, which wins. The `coverid`
+        artwork of a stream is LMS's generic radio placeholder (Finding 029),
+        so without an `artwork_url` there is none, and the panel shows its
+        own pending glyph.
+        """
+        song_title = (song.get("title") or "").strip() or None
+        station = (result.get("current_title") or "").strip() or None
+        title = song_title or station
+        album = (song.get("album") or "").strip() or None
+        if album is None and station and song_title and song_title not in station:
+            album = station
+        artwork_url = (song.get("artwork_url") or "").strip()
+        if not artwork_url:
+            artwork = None
+        elif artwork_url.startswith(("http://", "https://")):
+            artwork = artwork_url
+        else:
+            artwork = f"{self._base}/{artwork_url.lstrip('/')}"
+        return title, album, artwork
 
     async def _rpc(self, session: aiohttp.ClientSession, player: str, command: list) -> dict:
         body = {"id": next(_id_counter), "method": "slim.request", "params": [player, command]}
@@ -366,6 +483,7 @@ class LmsAdapter(Adapter):
             result = status.get("result", {})
             last_power = result.get("power")
             self._report_metadata(result)
+            await self._report_queue_if_changed(session, result)
 
             # If the player is *already* on when we start watching, it has
             # already met this adapter's acquisition condition - so say so,
@@ -400,6 +518,14 @@ class LmsAdapter(Adapter):
                     # query above), so this is the edge criterion 6 will
                     # measure later - not just power changes.
                     self._report_metadata(data)
+                    # The queue changes far more often than power does, and
+                    # every one of those changes arrives here rather than at
+                    # the seed query above: a queue read only at subscribe
+                    # time showed the rail a queue that could never grow
+                    # (George, 2026-09-18 - two albums added, LMS had 27
+                    # tracks, the panel still showed 1). The timestamp gate
+                    # inside keeps this to one extra RPC per actual change.
+                    await self._report_queue_if_changed(session, data)
                     power = data.get("power")
                     if power is None:
                         continue
@@ -450,6 +576,7 @@ class LmsAdapter(Adapter):
             return
         if isinstance(position, (int, float)):
             self._resume_position = float(position)
+            self._resume_timestamp = _as_float(status.get("result", {}).get("playlist_timestamp"))
             logger.info("lms: noted position %.1fs at deactivation", self._resume_position)
 
     async def _cometd_handshake(self, session: aiohttp.ClientSession) -> str:
@@ -566,6 +693,7 @@ class LmsAdapter(Adapter):
                 self._resume_position = (
                     float(position) if isinstance(position, (int, float)) else None
                 )
+                self._resume_timestamp = _as_float(result.get("playlist_timestamp"))
                 await self._rpc(session, self._player_id, ["pause", 1])
                 await self._rpc(session, self._player_id, ["power", 0])
                 logger.info(
@@ -592,11 +720,22 @@ class LmsAdapter(Adapter):
         user left, never something we impose). The position correction is
         separate and *not* conditional on that flag, because LMS's
         auto-power-on restarts from zero whichever state the player was in.
+
+        Neither is put back onto different content. LMS changes the queue's
+        `playlist_timestamp` on every load, and on an add or a shuffle, but
+        not on pause, skip, repeat or a power cycle (Finding 029). A load
+        made while another renderer held the device - which is also what
+        brings LMS back - was otherwise seeked to the old content's
+        position. An edit while away loses the position too; George chose
+        that over any chance of seeking into content just picked
+        (2026-09-17, rule A).
         """
         resume_playing = self._resume_playing
         resume_position = self._resume_position
+        resume_timestamp = self._resume_timestamp
         self._resume_playing = False
         self._resume_position = None
+        self._resume_timestamp = None
         if self._player_id is None:
             return
         if not resume_playing and resume_position is None:
@@ -605,6 +744,15 @@ class LmsAdapter(Adapter):
             try:
                 status = await self._rpc(session, self._player_id, ["status", "-", 1])
                 result = status.get("result", {})
+                timestamp = _as_float(result.get("playlist_timestamp"))
+                if timestamp != resume_timestamp:
+                    logger.info(
+                        "lms: queue changed since it was released (playlist_timestamp %s -> %s), "
+                        "not restoring the old position or play state",
+                        resume_timestamp,
+                        timestamp,
+                    )
+                    return
                 if resume_playing and result.get("mode") != "play":
                     await self._rpc(session, self._player_id, ["play"])
                     logger.info("lms: resumed playback the takeover interrupted")

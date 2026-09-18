@@ -528,6 +528,16 @@ class VolumeBridge:
             await self._adapter.set_volume(value)
 
 
+#: How long the control must stop moving before a gated renderer's change
+#: is mirrored, and therefore how long before the transport is read.
+#: Measured on hardware 2026-09-17: LMS's pause fade takes ~150 ms end to
+#: end, a slider drag sends steps ~35-50 ms apart, and the core learns of
+#: a pause or a new volume 0.51 s after the fact (CometD push). 0.8 s
+#: clears that report; it is also how long an LMS app's volume change
+#: takes to reach the DAC, which is the price of telling the two apart.
+SETTLE_S = 0.8
+
+
 class DummyMixerBridge:
     """Mirrors one renderer's private dummy mixer control onto the real
     hardware DAC, only while that renderer is active (B2, George's
@@ -560,6 +570,32 @@ class DummyMixerBridge:
     `raw == last_raw` below already dedupes multiple monitor lines from
     one underlying change - the only case an echo window would have
     covered.
+
+    **`renderer_volume` gates the mirror** (George, 2026-09-17: ignore the
+    fade; amends ADR-0034/ADR-0018). LMS fades the player out when it
+    pauses by sending volume steps, which squeezelite applies to this dummy
+    control: measured 22 -> 7 -> -6 -> -20 -> -50 in ~150 ms. Mirrored,
+    that put the DAC at its -45 dB floor, published the user's volume as 0%
+    for as long as the pause lasted, and remembered the faded level as the
+    renderer's - so a takeover during a pause brought LMS back nearly
+    silent.
+
+    So a gated renderer's change is decided **once the control has stopped
+    moving for `SETTLE_S`**, and then only mirrored if `is_playing()`. The
+    waiting is what makes the gate work: measured 2026-09-17, LMS fades
+    *before* it reports the pause, and the core learns of that pause 0.51 s
+    later, so deciding as each step arrives read the transport as "playing"
+    and let every fade step through. One fade, or one slider drag, produces
+    one decision.
+
+    A change made from an LMS app while the player is paused is therefore
+    not applied while it is paused; the next resume settles and applies
+    whatever the control holds then.
+
+    A renderer whose volume never fades (Bluetooth) passes no `is_playing`
+    and mirrors every change as it arrives - unchanged behaviour, and its
+    AVRCP updates during a slider drag are exactly the rapid stream an
+    earlier echo window was found to swallow (above).
     """
 
     def __init__(
@@ -571,6 +607,7 @@ class DummyMixerBridge:
         *,
         volume_memory,
         get_active_renderer,
+        is_playing=None,
     ) -> None:
         self._renderer_id = renderer_id
         self._dummy_card = dummy_card
@@ -578,6 +615,71 @@ class DummyMixerBridge:
         self._hardware_control = hardware_control
         self._volume_memory = volume_memory
         self._get_active_renderer = get_active_renderer
+        self._is_playing = is_playing
+        #: The last reading, to absorb the repeated monitor lines one
+        #: change produces.
+        self._last_seen: int | None = None
+        self._settling: asyncio.Task | None = None
+
+    async def _mirror(self, raw: int, *, why: str = "") -> None:
+        hardware_raw = dummy_raw_to_hardware_raw(raw)
+        # remember() no-ops for renderers outside MANAGED_RENDERERS
+        # (renderer_volume.py) - currently just Bluetooth, per Finding
+        # 006. Calling it unconditionally keeps this class the same
+        # for both renderers rather than needing a persist flag.
+        self._volume_memory.remember(self._renderer_id, hardware_raw)
+        if self._get_active_renderer() != self._renderer_id:
+            logger.debug(
+                "volume: %s's dummy control changed to %s while inactive, "
+                "remembered but not applied",
+                self._renderer_id,
+                raw,
+            )
+            return
+        logger.info(
+            "volume: %s -> hardware (dummy %s -> %s/240)%s",
+            self._renderer_id,
+            raw,
+            hardware_raw,
+            why,
+        )
+        await set_raw(self._hardware_control, hardware_raw)
+
+    async def _on_dummy_change(self, raw: int | None) -> None:
+        """One reading of the dummy control: dedupe, then the pause-fade
+        gate, then mirror. Split out of `run()` so it is testable without
+        an `alsactl monitor` subprocess."""
+        if raw is None or raw == self._last_seen:
+            return
+        self._last_seen = raw
+        if self._is_playing is None:
+            await self._mirror(raw)
+            return
+        # Gated renderers settle first (see the class docstring). Each new
+        # step restarts the wait, so one fade or one drag produces one
+        # decision.
+        if self._settling is not None and not self._settling.done():
+            self._settling.cancel()
+        self._settling = asyncio.create_task(self._settle_then_mirror())
+
+    async def _settle_then_mirror(self) -> None:
+        """Wait for the control to stop moving, then mirror what it settled
+        on - unless the renderer is not playing, which makes it a fade (see
+        the class docstring)."""
+        await asyncio.sleep(SETTLE_S)
+        raw = await get_raw(self._dummy_control, device=f"hw:{self._dummy_card}")
+        if raw is None:
+            return
+        self._last_seen = raw
+        if not self._is_playing():
+            logger.info(
+                "volume: %s's control settled at %s while it is not playing"
+                " - a pause fade, not a volume change; ignored",
+                self._renderer_id,
+                raw,
+            )
+            return
+        await self._mirror(raw)
 
     async def run(self) -> None:
         proc = await asyncio.create_subprocess_exec(
@@ -587,7 +689,6 @@ class DummyMixerBridge:
             stdout=asyncio.subprocess.PIPE,
         )
         assert proc.stdout is not None
-        last_raw: int | None = None
         while True:
             line = await proc.stdout.readline()
             if not line:
@@ -596,28 +697,6 @@ class DummyMixerBridge:
                 )
                 await asyncio.sleep(5)
                 return await self.run()
-            raw = await get_raw(self._dummy_control, device=f"hw:{self._dummy_card}")
-            if raw is None or raw == last_raw:
-                continue
-            last_raw = raw
-            hardware_raw = dummy_raw_to_hardware_raw(raw)
-            # remember() no-ops for renderers outside MANAGED_RENDERERS
-            # (renderer_volume.py) - currently just Bluetooth, per Finding
-            # 006. Calling it unconditionally keeps this class the same
-            # for both renderers rather than needing a persist flag.
-            self._volume_memory.remember(self._renderer_id, hardware_raw)
-            if self._get_active_renderer() != self._renderer_id:
-                logger.debug(
-                    "volume: %s's dummy control changed to %s while inactive, "
-                    "remembered but not applied",
-                    self._renderer_id,
-                    raw,
-                )
-                continue
-            logger.info(
-                "volume: %s -> hardware (dummy %s -> %s/240)",
-                self._renderer_id,
-                raw,
-                hardware_raw,
+            await self._on_dummy_change(
+                await get_raw(self._dummy_control, device=f"hw:{self._dummy_card}")
             )
-            await set_raw(self._hardware_control, hardware_raw)

@@ -8,6 +8,14 @@ based on LMS capabilities so that we are in control of what we display?"*
 internal browse protocol — adopted as-is, pass-through"
 **Amends:** `docs/DEVELOPMENT.md` Phase 7 acceptance criteria
 
+> **Amended 2026-09-17 by [ADR-0038](0038-library-and-radio-on-the-panel.md)**
+> (proposed; the decisions are George's). Only the designed screens are built. Album Artists, Composers,
+> Genres, Years, Compilations, Songs and Music Folder are out of scope; the
+> table below stays as a record of what the server can do. **Podcasts is
+> excluded by its command `["podcast","items"]`**: on 2026-09-17 the
+> `radios menu:radio` reply carried no `id` on any item, so `opmlpodcast`
+> cannot be matched. **Radio Now Playing stays** in the list.
+
 ## What ADR-0020 did not consider
 
 ADR-0020 took the architecture's premise — *"the browse tree is data rather

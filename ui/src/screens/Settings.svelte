@@ -9,6 +9,14 @@
   import { onMount } from 'svelte';
   import { settingsGroups, settingsError, loadSettings, writeSetting } from '../lib/settings.js';
 
+  // On the panel, Settings is a layer over the library and Back closes it
+  // (source/Now Playing.dc.html passes the design's onBack). A phone has
+  // nothing to go back to, so it passes none.
+  //
+  // `embedded` is the panel too: there the weave is drawn once for the whole
+  // panel (PanelBackground.svelte). A phone gets its own, as before.
+  let { onback = null, embedded = false } = $props();
+
   const WIDE_MIN = 720;
 
   let width = $state(0);
@@ -123,17 +131,23 @@
   }
 
   function back() {
-    drilled = null;
+    if (!wide && drilled) {
+      drilled = null;
+      return;
+    }
+    onback?.();
   }
 </script>
 
-<div class="settings" bind:clientWidth={width}>
-  <div class="weave"></div>
+<div class="settings" class:is-embedded={embedded} bind:clientWidth={width}>
+  {#if !embedded}
+    <div class="weave"></div>
+  {/if}
   <div class="veil"></div>
 
   <div class="frame">
     <div class="head" class:head--wide={wide}>
-      {#if !wide && drilled}
+      {#if (wide && onback) || (!wide && drilled)}
         <button class="back" type="button" aria-label="Back" onclick={back}><span></span></button>
       {/if}
       <div class="head__text">
@@ -304,6 +318,9 @@
     background: var(--bg-base);
     -webkit-tap-highlight-color: transparent;
   }
+  .settings.is-embedded {
+    background: none;
+  }
   .weave {
     position: absolute;
     inset: -90px;
@@ -360,8 +377,9 @@
     justify-content: center;
     flex-shrink: 0;
   }
+  /* Shrinks rather than filling grey - see now playing's buttons. */
   .back:active {
-    background: rgba(233, 238, 242, 0.2);
+    transform: scale(0.95);
   }
   .back span {
     width: 13px;

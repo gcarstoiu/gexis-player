@@ -186,7 +186,32 @@ change.
 Rebuilding is not guaranteed to reproduce the same package set — see
 `docs/DEVELOPMENT.md` criterion 7 and ADR-0021.
 
-## Known issue (resolved): loop device setup in export-image
+## Known issue: loop device setup in export-image
+
+**Corrected 2026-09-18 — read this before the section below, which is kept
+for its symptoms and its history.** The root cause named there, *"the `loop`
+kernel module was not loaded"*, is **wrong**. R2D2 now autoloads the module
+at boot, and the first build after a reboot failed identically with the
+module loaded (`loop 45056 0`, use count 0). What decides it is whether a
+**`/dev/loopN` node exists**: with only `/dev/loop-control` present,
+`losetup -f` answers `/dev/loop0 (lost)` - the kernel knows loop0 is free,
+but nothing can reach it. The failed build leaves a `/dev/loop0` behind,
+which is why the *rerun* always passes, and why reloading the module worked:
+it makes udev create the nodes.
+[Finding 033](../docs/findings/033-loop-device-before-a-build.md) has the
+recorded before-and-after state.
+
+**Fix applied on R2D2, 2026-09-18:** `/etc/modprobe.d/gexis-loop.conf`
+containing `options loop max_loop=8`, so the module creates `/dev/loop0-7`
+whenever it loads - including the boot-time load that
+`/etc/modules-load.d/loop.conf` already performs. Verified in effect
+(`/sys/module/loop/parameters/max_loop` is 8, the eight nodes exist as
+`root:disk`). **Not yet verified at boot:** only a first build after a
+reboot proves that, and until then expect nothing - check
+`ls -l /dev/loop*` before the build and record what you find. If the nodes
+are missing, the first build still fails in 210 s and the second still
+passes.
+
 
 First build attempt (2026-09-05, this host) reached `export-image/prerun.sh`
 and failed there — everything before it, including all of stage-gexis,

@@ -1,13 +1,16 @@
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
 <script>
   import { onMount, untrack } from 'svelte';
-  import { connect, active, metadata, volume, handoff, handoffExemptPairs, capabilities, available, shuffle, repeat } from './lib/state.js';
+  import { connect, active, metadata, volume, handoff, handoffExemptPairs, capabilities, available, availability, shuffle, repeat, queue } from './lib/state.js';
   import NowPlaying from './screens/NowPlaying.svelte';
+  import Library from './screens/Library.svelte';
+  import PanelBackground from './screens/PanelBackground.svelte';
   import IdleScreen from './screens/IdleScreen.svelte';
   import VolumeDrawer from './screens/VolumeDrawer.svelte';
   import HandoffScreen from './screens/HandoffScreen.svelte';
   import Settings from './screens/Settings.svelte';
   import { loadSettings, settingValues } from './lib/settings.js';
+  import { loadLibraryRoot } from './lib/library.js';
   import { reportTouch, showPeppy } from './lib/state.js';
 
   // ADR-0033: idle is "not playing and not touched", one timeout everywhere.
@@ -83,6 +86,39 @@
     return () => clearTimeout(id);
   });
 
+  // The library is a layer over now playing (source/Now Playing.dc.html). It
+  // is Home, the no-renderer screen (ADR-0033), so it is always open while
+  // nothing is connected; otherwise now playing's Home button opens it and
+  // the mini strip closes it.
+  let libraryRequested = $state(false);
+  const libraryOpen = $derived(!$active || libraryRequested);
+  let previousActive = null;
+  $effect(() => {
+    const now = $active;
+    // A renderer arriving shows now playing (ADR-0033's assumption).
+    if (previousActive === null && now !== null) untrack(() => (libraryRequested = false));
+    previousActive = now;
+  });
+
+  // Settings is reached from the library root's card and nowhere else on the
+  // panel (design/screens.md, Navigation); its Back closes it.
+  let settingsOpen = $state(false);
+  // A reopen refreshes quietly: what is on screen stays until the new
+  // read, with its covers, is ready to replace it.
+  $effect(() => {
+    if (libraryOpen) untrack(() => loadLibraryRoot());
+  });
+
+  function openSettings() {
+    closeVolume();
+    settingsOpen = true;
+  }
+
+  const openVolume = () => {
+    keepVolumeOpen();
+    volumeOpen = true;
+  };
+
   // ADR-0032: the panel renders everything; a remote browser only settings.
   let surface = $state(null);
   async function showVisualisation() {
@@ -97,6 +133,8 @@
   onMount(() => {
     connect();
     loadSettings();
+    // Ahead of the first time Home opens (see lib/library.js).
+    loadLibraryRoot();
     fetch('/surface')
       .then((r) => r.json())
       .then((body) => (surface = body.surface))
@@ -111,11 +149,39 @@
 {:else if surface === 'panel'}
 
 <div class="panel">
-  {#if $active}
-    <NowPlaying active={$active} metadata={$metadata} volume={$volume} controls={$capabilities[$active]?.controls ?? []} available={$available} shuffle={$shuffle} repeat={$repeat} onvolume={() => { keepVolumeOpen(); volumeOpen = true; }} onvisualisation={showVisualisation} />
-  {:else}
-    <!-- Home (ADR-0033) is the no-renderer screen; its content is Phase 7. -->
-    <div class="placeholder" data-unwired="home">Nothing playing</div>
+  <!-- One backdrop for the whole panel, so a screen change does not build
+       two large blurred layers again (George, 2026-09-17). Exactly one
+       screen is mounted over it at a time: the screens are transparent now,
+       so overlapping them would show both at once. -->
+  <PanelBackground artwork={$metadata?.artwork ?? null} />
+
+  <!-- No animation on a screen change at all (George, 2026-09-17). Over a
+       shared backdrop the screens are transparent, so anything that fades
+       one in or out shows the bare backdrop between them - which read as a
+       blink on the panel, in both the two-way and the fade-in-only form.
+       The backdrop does not move across a change, so the swap is the whole
+       effect. The drawer, idle screen and handoff keep their own. -->
+  {#if settingsOpen}
+    <div class="screen-layer">
+      <Settings onback={() => (settingsOpen = false)} embedded />
+    </div>
+  {:else if libraryOpen}
+    <div class="screen-layer">
+      <Library
+        active={$active}
+        metadata={$metadata}
+        volume={$volume}
+        controls={$active ? ($capabilities[$active]?.controls ?? []) : []}
+        availability={$availability}
+        onclose={() => (libraryRequested = false)}
+        onsettings={openSettings}
+        onvolume={openVolume}
+      />
+    </div>
+  {:else if $active}
+    <div class="screen-layer">
+      <NowPlaying active={$active} metadata={$metadata} volume={$volume} controls={$capabilities[$active]?.controls ?? []} available={$available} shuffle={$shuffle} repeat={$repeat} queue={$queue} onvolume={openVolume} onvisualisation={showVisualisation} onhome={() => (libraryRequested = true)} />
+    </div>
   {/if}
 
   {#if $volume}
@@ -169,15 +235,13 @@
     overflow: hidden;
   }
 
-  .placeholder {
-    width: 1280px;
-    height: 800px;
-    display: grid;
-    place-items: center;
-    font-family: var(--font-mono);
-    font-size: var(--t-label);
-    letter-spacing: var(--track-label);
-    text-transform: uppercase;
-    color: var(--ink-quiet);
+  /* Above the panel's backdrop, below the volume drawer (12-13), the idle
+     screen (20) and the handoff (30). The design puts settings at 42, which
+     would cover the idle screen ADR-0033 puts over every screen. */
+  .screen-layer {
+    position: absolute;
+    inset: 0;
+    z-index: 5;
+    overflow: hidden;
   }
 </style>
