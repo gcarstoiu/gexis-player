@@ -181,7 +181,13 @@
     position: absolute;
     inset: 0;
     background: var(--bg-scrim);
-    backdrop-filter: blur(3px);
+    /* **No `backdrop-filter` here, on purpose.** A live blur of what is
+       behind a sheet costs this panel two thirds of its frames: the
+       compositor has to draw the backdrop into its own texture and read it
+       back every frame, which is the one thing a tile-based GPU cannot
+       absorb (Finding 037). Measured on the rail: 15 fps with it, 36
+       without. The dimming itself is free - removing the scrim as well
+       bought nothing. */
     opacity: 0;
     pointer-events: none;
     /* Hidden, not merely transparent, once the close has played: a layer
@@ -196,7 +202,6 @@
   .sw-scrim {
     z-index: 38;
     background: rgba(8, 12, 16, 0.66);
-    backdrop-filter: blur(4px);
   }
   .scrim.is-open,
   .sw-scrim.is-open {

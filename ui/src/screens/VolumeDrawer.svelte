@@ -155,7 +155,10 @@
     inset: 0;
     z-index: 12;
     background: rgba(8, 12, 16, 0.6);
-    backdrop-filter: blur(3px);
+    /* No `backdrop-filter`: with it, this drawer drops 71 % of the
+       panel's frames while nothing is even happening, against 9 % without
+       (Finding 037). It is also the sheet this device opens most - every
+       volume change from a phone raises it, over whatever is on screen. */
     transition: opacity 220ms ease;
     opacity: 0;
     pointer-events: none;
