@@ -66,6 +66,7 @@ registration, a key, or a per-user setting.
 | Album and track artwork | Cover Art Archive | No published limit; needs an MBID first |
 | Biography | Wikipedia REST summary, reached through MusicBrainz → Wikidata | 200/min with a compliant User-Agent |
 | Similar artists | ListenBrainz Labs `similar-artists` | 1 call/s |
+| What an artist is played for | ListenBrainz `popularity/top-recordings-for-artist` | 1 call/s, **and a token since 2026-09-18** |
 | Lyrics, plain and synced | LRCLIB | None published; serial, honour `Retry-After` |
 
 **Rejected:** Last.fm (per-user key, non-commercial only, written approval
@@ -97,6 +98,17 @@ Phase 8 step 1), three things that change how these are used:
 - **LRCLIB's search fallback needs the confidence rule to be real.** Of 16-20
   hits per track, the synced ones were 0, 8, 16 and 19 - the top hit is not
   automatically right.
+
+**Amended 2026-09-18: one key after all.** ListenBrainz's popularity
+endpoint - the artist page's *Popular* list - answered `200` with 878
+recordings in the morning and `401 "Due to bad actors and AI scrapers
+causing undue traffic on our sites, you need to provide an Auth token for
+this endpoint"` in the afternoon. George chose a **per-user token**
+(ADR-0022's inventory, `listenbrainz_token`) over dropping the section or
+redefining it as local play counts, which LMS cannot supply without a
+statistics plugin. **Nothing else here needs a key**, and with no token the
+section simply does not draw: a missing token is `UNAVAILABLE`, never
+"this artist has no popular tracks".
 
 ### 3. Lyrics: synced, from LRCLIB, with the licence question stated
 

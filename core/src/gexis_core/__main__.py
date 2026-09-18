@@ -314,7 +314,10 @@ async def main() -> None:
             "device_name": socket.gethostname,
             "timezone": read_timezone,
         },
-        wired={"idle_url": None, "idle_timeout": None, "drawer_on_external": None, "drawer_autohide": None},
+        # Wired = something reads it (ADR-0035). The token is read on every
+        # Popular lookup, so it takes effect as soon as it is typed.
+        wired={"idle_url": None, "idle_timeout": None, "drawer_on_external": None,
+               "drawer_autohide": None, "listenbrainz_token": None},
         on_change=state_store.bump_settings_revision,
     )
 
@@ -365,7 +368,10 @@ async def main() -> None:
             LmsReleaseProvider(library, artistinfo, lambda: lms.current_album_id),
             WikipediaBiography(http, identity),
             ListenBrainzSimilar(http, identity),
-            ListenBrainzPopular(http, identity),
+            # ADR-0022's inventory: a per-user token, read fresh so one
+            # typed into Settings works without a restart.
+            ListenBrainzPopular(http, identity,
+                                lambda: settings.value("listenbrainz_token")),
             LrclibLyrics(http),
             CoverArtProvider(http),
         ],

@@ -70,7 +70,8 @@ class Http:
                 )
         return self._session
 
-    async def json(self, url: str, params: dict | None = None):
+    async def json(self, url: str, params: dict | None = None,
+                   headers: dict | None = None):
         """The parsed body, or None when the provider could not be asked.
 
         None means `UNAVAILABLE`, never "nothing found": a caller that cannot
@@ -82,7 +83,7 @@ class Http:
             await limiter.wait()
         session = await self._ensure()
         try:
-            async with session.get(url, params=params) as response:
+            async with session.get(url, params=params, headers=headers) as response:
                 if response.status == 404:
                     # The provider answered: it has no such thing.
                     return {}
@@ -232,14 +233,21 @@ class ListenBrainzPopular:
     #: 401 is `UNAVAILABLE`, the section simply does not draw - and because
     #: the decision about what to do instead is George's.
 
-    def __init__(self, http: Http, identity: ArtistIdentity) -> None:
+    def __init__(self, http: Http, identity: ArtistIdentity, token=None) -> None:
         self._http = http
         self._identity = identity
+        #: Read on every call rather than held: a token typed into Settings
+        #: has to work without restarting the daemon.
+        self._token = token or (lambda: None)
 
     def serves(self, renderer) -> bool:
         return True
 
     async def fetch(self, key) -> Answer:
+        token = self._token()
+        if not token:
+            # Not "nothing found": the list exists and we may not have it.
+            return Answer(Outcome.UNAVAILABLE)
         if not key.artist:
             return Answer(Outcome.MISSING)
         who = await self._identity.resolve(key.artist)
@@ -249,7 +257,8 @@ class ListenBrainzPopular:
             return Answer(Outcome.MISSING)
         mbid, score = who
         found = await self._http.json(
-            f"https://api.listenbrainz.org/1/popularity/top-recordings-for-artist/{mbid}"
+            f"https://api.listenbrainz.org/1/popularity/top-recordings-for-artist/{mbid}",
+            headers={"Authorization": f"Token {token}"},
         )
         if found is None:
             return Answer(Outcome.UNAVAILABLE, confidence=score)
