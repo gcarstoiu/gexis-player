@@ -148,6 +148,44 @@
   //: reads an encyclopaedia on a hi-fi. The opening is what is shown.
   const BIO_PARAGRAPHS = 12;
 
+  //: **How much About is allowed** (George, 2026-09-18): as much as fits
+  //: while the first row of albums still shows a quarter of itself. A fixed
+  //: height was wrong in both directions - it hid the text on a short
+  //: biography and hid the discography on a long one.
+  const ALBUM_PEEK = 0.25;
+  //: Never so little that About is pointless.
+  const ABOUT_MIN = 64;
+
+  let aboutEl = $state(null);
+  let columnEl = $state(null);
+  let aboutMax = $state(ABOUT_MIN);
+
+  /** One measured correction: everything below About is a fixed height, so
+   *  the slack between where the first album row sits now and where it
+   *  should sit is exactly what About may grow or shrink by. */
+  function fitAbout() {
+    if (!aboutEl || !columnEl || bioOpen) return;
+    const card = columnEl.querySelector('.disc');
+    if (!card) return;
+    const column = columnEl.getBoundingClientRect();
+    const first = card.getBoundingClientRect();
+    const wanted = column.bottom - first.height * ALBUM_PEEK;
+    const slack = wanted - first.top;
+    const next = Math.max(ABOUT_MIN, Math.round(aboutEl.getBoundingClientRect().height + slack));
+    if (Math.abs(next - aboutMax) > 4) aboutMax = next;
+  }
+
+  $effect(() => {
+    // Re-measured when the page's contents change, never per frame
+    // (Finding 032: nothing runs per scroll frame).
+    void paragraphs;
+    void releases;
+    void artistInfo.popular;
+    if (bioOpen) return;
+    const frame = requestAnimationFrame(() => untrack(fitAbout));
+    return () => cancelAnimationFrame(frame);
+  });
+
   const paragraphs = $derived.by(() => {
     const text = artistInfo.found?.biography ?? '';
     return text
@@ -907,7 +945,7 @@
 
         <!-- The design's right column: About, Popular, the discography,
              then Similar artists - all of it one scroller. -->
-        <div class="artistright">
+        <div class="artistright" bind:this={columnEl}>
             <div class="sect">
               <span class="sect__label">About</span>
               <span class="sect__rule"></span>
@@ -919,7 +957,12 @@
                    screen under it (George, 2026-09-18). Tapping opens the
                    rest; not a nested scroller, which is what made the
                    discography move under a finger meant for the column. -->
-              <div class="artistmeta__bio" class:is-clamped={!bioOpen}>
+              <div
+                class="artistmeta__bio"
+                class:is-clamped={!bioOpen}
+                style:max-height={bioOpen ? null : `${aboutMax}px`}
+                bind:this={aboutEl}
+              >
                 {#each paragraphs as para, i (i)}
                   <p class="artistmeta__para">{para}</p>
                 {/each}
@@ -2283,7 +2326,7 @@
      paragraphs inside it showed nothing at all. The fade says there is
      more without pretending to count lines. */
   .artistmeta__bio.is-clamped {
-    max-height: 102px;
+    /* The height itself is measured: see fitAbout(). */
     overflow: hidden;
     -webkit-mask-image: linear-gradient(180deg, #000 58%, transparent 100%);
     mask-image: linear-gradient(180deg, #000 58%, transparent 100%);
