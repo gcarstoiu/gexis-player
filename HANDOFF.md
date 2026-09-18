@@ -128,7 +128,14 @@ enrichment providers (George asked 2026-09-17). Nothing decided; the provider
 choice needs an ADR when Phase 8 starts. George: API keys are a per-user
 setting, so a key is not a blocker (ADR-0022 inventory row added).
 
-**The Phase 7 image is built and verified as a file, not flashed:**
+**The Phase 8 image is built and verified as a file, not flashed:**
+`image/deploy/2026-09-18-gexis-player-v0.2.1-272-g10fbb44-dirty.img`
+(478 s, first attempt; `image/verify-image.sh` - all checks passed). **It
+did not test the loop-device fix:** R2D2 had not rebooted, so the nodes
+were still the ones `modprobe` made by hand (Finding 033). That test is
+still a reboot followed by a build.
+
+**The Phase 7 image:**
 `image/deploy/2026-09-18-gexis-player-v0.2.1-232-g65d62e3-dirty.img`
 (464 s; `image/verify-image.sh` - all checks passed, including the venv and
 `/opt/gexis-ui` byte-identical to this checkout). **The device still runs the
