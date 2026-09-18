@@ -22,6 +22,9 @@
     loadArtists,
     loadArtistAlbums,
     loadPlaylists,
+    loadPlaylist,
+    browseRadio,
+    radioPlay,
     libraryAction,
   } from '../lib/library.js';
   import MiniStrip from './MiniStrip.svelte';
@@ -180,6 +183,75 @@
     toastTimer = setTimeout(() => (toast = null), 2600);
   }
 
+  let playlist = $state(null);
+
+  // Radio: the panel holds handles the core issued and nothing else
+  // (ADR-0038 §5). A folder pushes a level; a station plays.
+  let radio = $state(null);
+
+  async function openRadio(handle = null, label = 'Radio', push = true) {
+    busy = handle ?? 'radio';
+    try {
+      const page = await browseRadio(handle);
+      radio = page;
+      revealed = null;
+      if (!push) return;
+      path = handle
+        ? [...path, { kind: 'radio', handle, label }]
+        : [{ kind: 'radio', handle: null, label: 'Radio' }];
+    } catch (err) {
+      flash(err.message);
+      console.info('radio:', err.message);
+    } finally {
+      busy = null;
+    }
+  }
+
+  async function playStation(row, action = 'play') {
+    try {
+      await radioPlay(row.handle, action);
+      flash(action === 'play' ? `Playing ${row.label}` : `${row.label} added to the queue`);
+    } catch (err) {
+      flash(err.message);
+      console.info('radio:', err.message);
+    }
+  }
+
+  async function openPlaylists() {
+    busy = 'playlists';
+    try {
+      playlists = await loadPlaylists();
+      revealed = null;
+      path = [{ kind: 'playlists', label: 'Playlists' }];
+    } catch (err) {
+      console.info('library:', err.message);
+    } finally {
+      busy = null;
+    }
+  }
+
+  async function openPlaylist(entry) {
+    busy = entry.id;
+    try {
+      playlist = await loadPlaylist(entry.id);
+      revealed = null;
+      path = [...path, { kind: 'playlist', id: entry.id, label: entry.name }];
+    } catch (err) {
+      console.info('library:', err.message);
+    } finally {
+      busy = null;
+    }
+  }
+
+  const playlistMeta = $derived.by(() => {
+    if (!playlist) return '';
+    const minutes = Math.round(
+      (playlist.items ?? []).reduce((total, t) => total + (t.duration ?? 0), 0) / 60,
+    );
+    const tracks = `${playlist.count} ${playlist.count === 1 ? 'track' : 'tracks'}`;
+    return minutes ? `${tracks}  ·  ${minutes} min` : tracks;
+  });
+
   async function openBrowse() {
     busy = 'browse';
     try {
@@ -290,7 +362,15 @@
       return;
     }
     path = path.slice(0, -1);
-    if (!path.length) album = null;
+    if (!path.length) {
+      album = null;
+      radio = null;
+      return;
+    }
+    // Radio holds one level at a time, so stepping back re-reads the level
+    // above from the handle that opened it.
+    const top = path[path.length - 1];
+    if (top.kind === 'radio') openRadio(top.handle, top.label, false);
   }
 
   const mmss = (s) => {
@@ -379,7 +459,7 @@
             </span>
           </button>
 
-          <button class="card card--playlists" type="button" disabled data-unwired="phase-7">
+          <button class="card card--playlists" type="button" onclick={openPlaylists}>
             <span class="glyph glyph--list">
               <span><i></i><b style="width:44px"></b></span>
               <span><i></i><b style="width:32px"></b></span>
@@ -391,7 +471,7 @@
             </span>
           </button>
 
-          <button class="card card--radio" type="button" disabled data-unwired="phase-7">
+          <button class="card card--radio" type="button" onclick={() => openRadio()}>
             <span class="glyph glyph--waves"><i></i><b></b><b></b></span>
             <span>
               <span class="card__name">Radio</span>
@@ -440,6 +520,95 @@
           </div>
           </div>
         </div>
+      </div>
+    {:else if here?.kind === 'radio' && radio}
+      <div class="lists">
+        {#each radio.items as row (row.handle)}
+          <div class="plrow" class:is-busy={busy === row.handle}>
+            <button
+              class="plrow__hit"
+              type="button"
+              onclick={() => (row.kind === 'folder' ? openRadio(row.handle, row.label) : playStation(row))}
+            >
+              <!-- The design draws a category glyph in CSS: waves for a
+                   folder, a tower for a station. -->
+              <span class="plrow__glyph plrow__glyph--radio" class:is-station={row.kind === 'station'}>
+                {#if row.kind === 'station'}
+                  <span class="i-tower"></span>
+                {:else}
+                  <span class="i-waves"><i></i><b></b><b></b></span>
+                {/if}
+              </span>
+              <span class="plrow__text">
+                <span class="plrow__name">{row.label}</span>
+                {#if row.subtitle}
+                  <span class="plrow__meta">{row.subtitle}</span>
+                {/if}
+              </span>
+            </button>
+            {#if row.kind === 'station'}
+              <span class="row__actions">
+                <button class="act act--play" type="button" aria-label="Play now" onclick={() => playStation(row)}><span class="act__play"></span></button>
+                <button class="act" type="button" aria-label="Add to queue" onclick={() => playStation(row, 'add')}><span class="act__queue"><i></i><i></i><i></i></span></button>
+              </span>
+            {/if}
+          </div>
+        {:else}
+          <div class="pane__empty">Nothing here</div>
+        {/each}
+      </div>
+    {:else if here?.kind === 'playlists'}
+      <div class="lists">
+        {#each playlists as entry (entry.id)}
+          <div class="plrow" class:is-busy={busy === entry.id}>
+            <button class="plrow__hit" type="button" onclick={() => openPlaylist(entry)}>
+              <span class="plrow__glyph"><i></i><i></i><i></i></span>
+              <span class="plrow__text">
+                <span class="plrow__name">{entry.name}</span>
+                <span class="plrow__meta">{entry.tracks} {entry.tracks === 1 ? 'track' : 'tracks'}</span>
+              </span>
+            </button>
+            <span class="row__actions">
+              <button class="act act--play" type="button" aria-label="Play now" onclick={() => play('playlist', entry.id, entry.name)}><span class="act__play"></span></button>
+              <button class="act" type="button" aria-label="Add to queue" onclick={() => act('playlist', entry.id, 'add', entry.name)}><span class="act__queue"><i></i><i></i><i></i></span></button>
+              <button class="act" type="button" aria-label="Add to playlist" onclick={() => openPicker('playlist', entry.id, entry.name)}><span class="act__plus"></span></button>
+            </span>
+          </div>
+        {:else}
+          <div class="pane__empty">No playlists in the library</div>
+        {/each}
+      </div>
+    {:else if here?.kind === 'playlist' && playlist}
+      <div class="lists">
+        <div class="playall__bar">
+          <button class="playall playall--wide" type="button" onclick={() => play('playlist', playlist.id, playlist.name)}>
+            <span class="playall__glyph"></span>
+            <span class="playall__label">Play all</span>
+          </button>
+          <!-- The design also has Shuffle all here; not built (ADR-0038 §3),
+               so it is not drawn rather than drawn dead (ADR-0020's rule). -->
+          <span class="group__rule"></span>
+          <span class="playall__meta">{playlistMeta}</span>
+        </div>
+        {#each playlist.items as entry, index (entry.id)}
+          <div class="row row--wide">
+            <button class="row__hit" type="button" onclick={() => (revealed = revealed === `pltrack-${index}` ? null : `pltrack-${index}`)}>
+              <span class="row__num">{index + 1}</span>
+              <span class="row__label">{entry.title}</span>
+              <span class="row__artist">{entry.artist ?? ''}</span>
+              {#if revealed !== `pltrack-${index}`}
+                <span class="row__meta">{entry.duration ? mmss(entry.duration) : ''}</span>
+              {/if}
+            </button>
+            {#if revealed === `pltrack-${index}`}
+              <span class="row__actions">
+                <button class="act act--play" type="button" aria-label="Play now" onclick={() => play('track', entry.id, entry.title)}><span class="act__play"></span></button>
+                <button class="act" type="button" aria-label="Add to queue" onclick={() => act('track', entry.id, 'add', entry.title)}><span class="act__queue"><i></i><i></i><i></i></span></button>
+                <button class="act" type="button" aria-label="Add to playlist" onclick={() => openPicker('track', entry.id, entry.title)}><span class="act__plus"></span></button>
+              </span>
+            {/if}
+          </div>
+        {/each}
       </div>
     {:else if here?.kind === 'browse'}
       <div class="browse">
@@ -1071,6 +1240,195 @@
 
   .album.is-busy {
     opacity: 0.6;
+  }
+
+  /* Playlists, and one playlist's tracks: the design's list view. */
+  .lists {
+    flex: 1;
+    min-width: 0;
+    overflow-y: auto;
+    padding: 28px 40px;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    scrollbar-width: none;
+    contain: content;
+    touch-action: pan-y;
+  }
+  .lists::-webkit-scrollbar {
+    display: none;
+  }
+  .plrow {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-shrink: 0;
+    border-radius: 14px;
+    padding-right: 12px;
+  }
+  .plrow.is-busy {
+    opacity: 0.6;
+  }
+  .plrow__hit {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 12px 14px;
+    background: none;
+  }
+  .plrow__hit:active {
+    opacity: 0.62;
+  }
+  .plrow__glyph {
+    width: 54px;
+    height: 54px;
+    border-radius: 11px;
+    background: rgba(242, 164, 143, 0.14);
+    border: 1px solid rgba(242, 164, 143, 0.3);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 5px;
+    padding: 0 12px;
+    box-sizing: border-box;
+    flex-shrink: 0;
+  }
+  .plrow__glyph--radio {
+    background: rgba(233, 238, 242, 0.055);
+    border-color: rgba(233, 238, 242, 0.16);
+    align-items: center;
+    padding: 0;
+  }
+  .plrow__glyph--radio.is-station {
+    background: rgba(126, 214, 188, 0.12);
+    border-color: rgba(126, 214, 188, 0.3);
+  }
+  .i-waves {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .i-waves i {
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    background: rgba(233, 238, 242, 0.85);
+    flex-shrink: 0;
+  }
+  .i-waves b {
+    width: 9px;
+    height: 17px;
+    border-right: 2.5px solid rgba(233, 238, 242, 0.6);
+    border-radius: 0 17px 17px 0;
+    flex-shrink: 0;
+    box-sizing: content-box;
+  }
+  .i-waves b:last-child {
+    height: 25px;
+    border-right-color: rgba(233, 238, 242, 0.34);
+    border-radius: 0 25px 25px 0;
+    margin-left: -2px;
+  }
+  /* A mast with two arcs over it - the design's tower. */
+  .i-tower {
+    position: relative;
+    width: 24px;
+    height: 26px;
+    display: block;
+  }
+  .i-tower::before {
+    content: '';
+    position: absolute;
+    left: 10px;
+    top: 8px;
+    width: 4px;
+    height: 18px;
+    border-radius: 1px;
+    background: var(--accent-lms);
+  }
+  .i-tower::after {
+    content: '';
+    position: absolute;
+    left: 6px;
+    top: 0;
+    width: 12px;
+    height: 12px;
+    border: 2.5px solid var(--accent-lms);
+    border-bottom-color: transparent;
+    border-radius: 50%;
+    box-sizing: border-box;
+  }
+
+  .plrow__glyph i {
+    height: 3px;
+    border-radius: 2px;
+    background: var(--accent-artist);
+  }
+  .plrow__glyph i:nth-child(2) {
+    background: rgba(242, 164, 143, 0.7);
+    width: 70%;
+  }
+  .plrow__glyph i:nth-child(3) {
+    background: rgba(242, 164, 143, 0.45);
+    width: 85%;
+  }
+  .plrow__text {
+    flex: 1;
+    min-width: 0;
+    text-align: left;
+  }
+  .plrow__name {
+    display: block;
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--ink);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .plrow__meta {
+    display: block;
+    font-family: var(--font-mono);
+    font-size: 13px;
+    color: var(--ink-quiet);
+    margin-top: 4px;
+  }
+
+  .playall__bar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-shrink: 0;
+    margin-bottom: 14px;
+  }
+  .playall--wide {
+    height: 56px;
+    padding: 0 26px;
+    border-radius: 15px;
+    flex-shrink: 0;
+  }
+  .row--wide {
+    height: 52px;
+  }
+  .row__artist {
+    font-size: 14px;
+    color: var(--ink-quiet);
+    flex-shrink: 0;
+    max-width: 320px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .playall__meta {
+    font-family: var(--font-mono);
+    font-size: 13px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--ink-quiet);
+    flex-shrink: 0;
   }
 
   /* Browse: three panes, ported from the design's own block. */

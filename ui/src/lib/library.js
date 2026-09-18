@@ -75,6 +75,30 @@ export const loadAlbumTracks = (id) => get(`albums/${id}`);
 /** The library's own playlists, with their track counts, for the chooser. */
 export const loadPlaylists = () => get('playlists');
 
+/** One playlist with its tracks. */
+export const loadPlaylist = (id) => get(`playlists/${id}`);
+
+/** One level of the radio tree. The panel holds handles the core issued,
+ *  never an LMS command (ADR-0038 §5). */
+export async function browseRadio(handle = null) {
+  const response = await fetch(`/radio${handle ? `?at=${encodeURIComponent(handle)}` : ''}`);
+  const body = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(body.error ?? `HTTP ${response.status}`);
+  return body;
+}
+
+/** Play a station, or add it to the queue, by its handle. */
+export async function radioPlay(handle, action = 'play') {
+  const response = await fetch('/radio/play', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ handle, action }),
+  });
+  const body = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(body.error ?? `HTTP ${response.status}`);
+  return body;
+}
+
 let inFlight = null;
 
 /** Read the root's counts and New Music, decode the covers, then publish

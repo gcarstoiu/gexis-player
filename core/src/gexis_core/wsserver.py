@@ -31,6 +31,7 @@ from aiohttp import web
 
 from gexis_core.adapters.base import TRANSPORT_COMMANDS
 from gexis_core.library import LibraryUnavailable, NoPlayer, NotFound
+from gexis_core.radio import RadioUnavailable, UnknownHandle
 from gexis_core.model import PlaybackState
 from gexis_core.settings_registry import InvalidValue, NotSettable, NotWired, UnknownSetting
 from gexis_core.state import StateStore
@@ -56,6 +57,7 @@ class StateServer:
         settings=None,
         peppy=None,
         library=None,
+        radio=None,
         ui_dir: Path | None = None,
     ) -> None:
         """`activate(renderer_id) -> bool` and `set_volume(percent) -> bool`
@@ -81,6 +83,7 @@ class StateServer:
         self._settings = settings
         self._peppy = peppy
         self._library = library
+        self._radio = radio
         self._ui_dir = ui_dir
         self._clients: set[web.WebSocketResponse] = set()
         store.subscribe(self._broadcast)
@@ -287,6 +290,38 @@ class StateServer:
         except LibraryUnavailable as exc:
             return web.json_response({"error": f"LMS unreachable: {exc}"}, status=502)
 
+    async def _handle_radio(self, request: web.Request) -> web.Response:
+        """ADR-0038 §5: the panel browses by handle, never by command. No
+        handle is the root, `["radios","menu:radio"]`."""
+        if self._radio is None:
+            return web.json_response({"error": "radio is not wired up"}, status=503)
+        try:
+            return web.json_response(await self._radio.browse(request.query.get("at")))
+        except UnknownHandle as exc:
+            return web.json_response({"error": f"unknown handle: {exc}"}, status=404)
+        except RadioUnavailable as exc:
+            return web.json_response({"error": f"LMS unreachable: {exc}"}, status=502)
+
+    async def _handle_radio_play(self, request: web.Request) -> web.Response:
+        """`{"handle": ..., "action": "play"|"add"}` - and only a handle
+        this core issued for a station does anything (ADR-0038 §5)."""
+        if self._radio is None:
+            return web.json_response({"error": "radio is not wired up"}, status=503)
+        try:
+            body = await request.json()
+            handle = str(body["handle"])
+            action = str(body.get("action", "play"))
+        except (ValueError, KeyError, TypeError, json.JSONDecodeError):
+            return web.json_response({"error": 'expected {"handle": ..., "action": ...}'}, status=400)
+        if action not in ("play", "add"):
+            return web.json_response({"error": f"unknown action {action}"}, status=404)
+        try:
+            return web.json_response(await self._radio.play(handle, action))
+        except UnknownHandle as exc:
+            return web.json_response({"error": f"unknown handle: {exc}"}, status=404)
+        except RadioUnavailable as exc:
+            return web.json_response({"error": f"LMS unreachable: {exc}"}, status=502)
+
     async def _handle_surface(self, request: web.Request) -> web.Response:
         """ADR-0035 §6: the panel always arrives on loopback, a phone from the LAN."""
         panel = request.remote in ("127.0.0.1", "::1")
@@ -371,6 +406,8 @@ class StateServer:
         app.router.add_get("/settings", self._handle_settings)
         app.router.add_put("/settings/{key}", self._handle_setting_write)
         app.router.add_post("/settings/{key}", self._handle_setting_action)
+        app.router.add_get("/radio", self._handle_radio)
+        app.router.add_post("/radio/play", self._handle_radio_play)
         app.router.add_post("/library/action", self._handle_library_action)
         app.router.add_get("/library/{what}", self._handle_library)
         app.router.add_get("/library/{what}/{id}", self._handle_library)

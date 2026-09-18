@@ -126,8 +126,21 @@ track** (no bulk form): 87 tracks took 8 s after the core was changed to
 keep one HTTP connection instead of opening one per track; the panel says
 "Adding …" while it works.
 
-**Next action: step 8 - Playlists** (the screen, not the chooser): name,
-track count, and the tracks, with the same row actions.
+**Steps 8 and 9 are done** (2026-09-18). Playlists: the library's playlists
+with their counts, and a playlist's Play all, total and tracks. Radio:
+`core/src/gexis_core/radio.py` walks the `radios` subtree and issues an
+opaque handle per item, and the panel browses and plays by handle only
+(ADR-0038 §5, §8) - checked against the live tree, where the root is the
+nine items ADR-0030 predicted and **browsing plays nothing**, which is the
+defect Finding 029 caused by following an inherited action.
+
+**Open for George: Shuffle all.** The design puts it beside Play all on a
+playlist; it is not built, so it is not drawn (ADR-0020: do not render a
+control that does nothing). It is now cheap - Play already sets LMS's
+shuffle off, so Shuffle would set it on and load.
+
+**Next action: step 10 - the queue rail** on now playing (LMS only), with
+the design's empty state offering a playlist to choose.
 
 **Open, deferred by George: one investigation into lists,** once steps 6 and
 7 have put real ones on the panel - not piecemeal fixes before that. What it

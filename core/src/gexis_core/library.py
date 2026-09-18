@@ -143,6 +143,12 @@ class LmsLibrary:
         except (aiohttp.ClientError, TimeoutError) as exc:
             raise LibraryUnavailable(str(exc)) from exc
 
+    async def rpc(self, command: list, player: str = "") -> dict:
+        """One JSON-RPC call on this library's session. Public because the
+        radio browser (radio.py) sends its own commands and there is no
+        reason for a second HTTP session to LMS."""
+        return await self._rpc(command, player)
+
     async def _check_lastscan(self) -> None:
         now = self._clock()
         if self._lastscan_checked is not None and now - self._lastscan_checked < LASTSCAN_CHECK_S:

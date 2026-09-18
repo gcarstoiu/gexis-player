@@ -228,6 +228,18 @@ shows the design's pending glyph (data contract, empty states).
   item.
 - Text-input items are dropped wherever they appear (ADR-0030, unchanged).
   Search TuneIn carries an `input` block today.
+**As built (step 9, 2026-09-18).** `GET /radio` is the root and
+`GET /radio?at=<handle>` a level below it; `POST /radio/play` takes a
+handle and `play` or `add`. A handle is opaque, issued only from this
+subtree, and the browser refuses to open a station or to play a folder. An
+item is a **station** when LMS types it `audio`, or when its resolved
+command ends in play/add/insert/load; anything else is a folder. `menu:1`
+is sent *beside* the action's own `menu`, never over it: replacing it makes
+a station list answer with a context-menu action instead of its play
+(measured against the live tree). A station that carries its own
+`favorites_url` is played with one `playlist play <url>`, which needs no
+menu session.
+
 - **An item's action can be inherited, and the inherited action can be a
   play.** Measured in step 1: station lists carry no `actions` on their items;
   the list's `base.actions.go` applies, and there it is

@@ -17,6 +17,7 @@ from gexis_core.adapters.base import VolumeMechanism
 from gexis_core.adapters.bluetooth import BluetoothAdapter
 from gexis_core.adapters.lms import LmsAdapter
 from gexis_core.library import LmsLibrary
+from gexis_core.radio import RadioBrowser
 from gexis_core.adapters.spotify import SpotifyAdapter
 from gexis_core.arbitration import Supervisor
 from gexis_core.config import Config
@@ -326,6 +327,10 @@ async def main() -> None:
     # currentsong.txt, which is moOde's format for moOde's readers.
     state_store.subscribe(PeppyMetadataWriter().write)
 
+    # Phase 7 (ADR-0038): the same server, and the same player, the renderer
+    # adapter talks to. Radio shares its HTTP session.
+    library = LmsLibrary(config.lms_host, config.lms_port, player_id=lambda: lms.player_id)
+
     state_server = StateServer(
         state_store,
         host=config.state_host,
@@ -339,7 +344,10 @@ async def main() -> None:
         peppy=peppy,
         # Phase 7 (ADR-0038): the same server, and the same player, the
         # renderer adapter talks to.
-        library=LmsLibrary(config.lms_host, config.lms_port, player_id=lambda: lms.player_id),
+        library=library,
+        # ADR-0038 §8: the one SlimBrowse subtree, browsed by handles the
+        # core issues.
+        radio=RadioBrowser(library.rpc, lambda: lms.player_id),
         ui_dir=ui_dir,
     )
 

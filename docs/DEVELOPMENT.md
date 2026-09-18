@@ -1139,8 +1139,18 @@ checked on the panel before the next:
    track), each pane returns to the top when its contents change, and the
    core keeps one HTTP connection rather than opening one per track when
    adding to a playlist (87 tracks, 8 s; LMS has no bulk form).
-8. **Playlists.**
-9. **Radio.**
+8. **Playlists. Done 2026-09-18.** The library's playlists with their track
+   counts, each with the row actions; a playlist opens to Play all, its
+   total, and its tracks. **Shuffle all is not drawn** - the design has it
+   beside Play all, it is not built, and ADR-0020's rule is not to render a
+   control that does nothing. **Open for George:** whether he wants it.
+9. **Radio. Done 2026-09-18.** `radio.py` walks the subtree and issues a
+   handle per item; the panel browses and plays by handle only (ADR-0038
+   §5, §8). Checked against the live tree: the root is the nine items
+   ADR-0030 predicted, with Podcasts and Search TuneIn dropped; a folder
+   opens and a station plays, and **browsing the tree played nothing** -
+   the defect Finding 029 caused. 13 tests, against replies shaped like the
+   ones that finding recorded.
 10. **Queue rail.**
 11. Clear the `phase-7` markers; DEVELOPMENT, HANDOFF, image (also R2D2's
     loop-device test, HANDOFF), PR.
