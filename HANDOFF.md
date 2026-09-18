@@ -37,6 +37,28 @@ albums have none. The same sweep for artist pictures was rejected on the
 measurement above: 30-45 minutes of MusicBrainz's one-a-second allowance to
 improve pictures that already exist.
 
+**Phase 9 step 1 is done, and its question had a wrong premise.** "Why is a
+playing panel never idle?" came from Finding 034's idle control, which was
+measuring a queue rail left open by the run before it - the rail's blurred
+scrim costs 71 % of the frames on its own. An idle panel is idle.
+
+**What the chase found instead is worth more:
+[ADR-0041](docs/decisions/0041-scrims-dim-but-do-not-blur.md) - scrims dim
+but do not blur.** `backdrop-filter` costs 24.5 ms a frame in draw-and-submit
+against a 16.7 ms budget, with the CPU idle: the compositor draws the
+backdrop into its own texture and reads it back every frame, which is a
+tile-based GPU's worst case
+([Finding 037](docs/findings/037-why-a-blurred-scrim-costs-the-panel.md)).
+Not the radius, not the area, and Vulkan is worse. **It is off the queue
+rail and the volume drawer**, which George checked and kept; Settings and
+the rail's source sheet are left for the sweep. **The rule for the design:
+depth is affordable, live readback is not** - a static blurred image costs
+almost nothing and the artwork backdrop stays exactly as it is.
+
+**It does not reach the target on its own:** the rail goes from ~15 fps to
+~36 against a 55 fps floor, and its own list is the rest - the same work the
+artist grid needs.
+
 **Next: Phase 9, in the order George agreed on 2026-09-18** - the idle
 question first, then the UI sweep, then the performance work, then the
 settings and the triage. The reason for that order is in
