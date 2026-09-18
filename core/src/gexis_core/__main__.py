@@ -224,6 +224,10 @@ async def main() -> None:
 
     for renderer_id, adapter in adapters.items():
         adapter.on_metadata_change(lambda metadata, rid=renderer_id: state_store.set_metadata(rid, metadata))
+        # Only LMS has a queue to report (ADR-0038 §5); the others hand us
+        # a stream.
+        if hasattr(adapter, "on_queue_change"):
+            adapter.on_queue_change(lambda queue, rid=renderer_id: state_store.set_queue(rid, queue))
         adapter.on_availability_change(
             lambda available, rid=renderer_id: state_store.set_available(rid, available)
         )

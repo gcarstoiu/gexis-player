@@ -35,13 +35,17 @@ from typing import Callable
 import aiohttp
 
 from gexis_core.adapters.base import Adapter, Capabilities, ReleaseAction, VolumeMechanism
-from gexis_core.model import TrackMetadata
+from gexis_core.model import Queue, TrackMetadata
 from gexis_core.systemd import kill_unit
 from gexis_core.volume import DUMMY_CARD_LMS
 
 logger = logging.getLogger("gexis_core.adapters.lms")
 
 UNIT_NAME = "squeezelite.service"
+
+#: How much of the queue the rail reads. The design shows what is coming
+#: up, not a whole 500-track load.
+QUEUE_LIMIT = 100
 
 #: The size asked of LMS for a track's artwork. The design's now playing
 #: well is 500x500 (`design/data-contract.md`) and the Peppy screen scales
@@ -198,6 +202,9 @@ class LmsAdapter(Adapter):
         self._resume_position: float | None = None
         self._resume_timestamp: float | None = None
         self._on_metadata: Callable[[TrackMetadata], None] | None = None
+        self._on_queue = None
+        #: (playlist_timestamp, current index) when the queue was last read.
+        self._queue_stamp: tuple | None = None
         self._on_availability: Callable[[bool], None] | None = None
         #: The last reported transport, so `play()` can pick its command.
         self._last_transport: str | None = None
@@ -214,6 +221,55 @@ class LmsAdapter(Adapter):
         """The transport this adapter last reported: 'playing', 'paused',
         'stopped', or None before the first report."""
         return self._last_transport
+
+    def on_queue_change(self, callback) -> None:
+        """The queue rail's contents (ADR-0038 §1). Read only when LMS says
+        the queue changed, not on every status push."""
+        self._on_queue = callback
+
+    async def _report_queue_if_changed(self, session, result: dict) -> None:
+        """LMS's `playlist_timestamp` moves on a load, an add and a shuffle,
+        and not on pause, skip or a power cycle (Finding 029, step 1a), so
+        it says exactly when the queue is worth re-reading - a second query,
+        because the metadata one asks for the current song alone."""
+        if self._on_queue is None or self._player_id is None:
+            return
+        stamp = (_as_float(result.get("playlist_timestamp")), _as_int(result.get("playlist_cur_index")))
+        if stamp == self._queue_stamp:
+            return
+        self._queue_stamp = stamp
+        try:
+            queued = await self._rpc(
+                session, self._player_id, ["status", 0, QUEUE_LIMIT, f"tags:{METADATA_TAGS}"]
+            )
+        except aiohttp.ClientError as exc:
+            logger.warning("lms: could not read the queue: %s", exc)
+            return
+        queue = queued.get("result", {})
+        items = tuple(
+            TrackMetadata(
+                title=song.get("title"),
+                artist=song.get("artist"),
+                album=song.get("album"),
+                artwork=(
+                    f"{self._base}/music/{song['coverid']}/cover_{ARTWORK_SIZE}x{ARTWORK_SIZE}_o.jpg"
+                    if song.get("coverid")
+                    else None
+                ),
+                duration=_as_float(song.get("duration")),
+                source_type="lms",
+            )
+            for song in queue.get("playlist_loop", [])
+        )
+        self._on_queue(
+            Queue(
+                items=items,
+                index=_as_int(queue.get("playlist_cur_index")) or 0,
+                name=queue.get("playlist_name"),
+                id=_as_int(queue.get("playlist_id")),
+                modified=bool(_as_int(queue.get("playlist_modified"))),
+            )
+        )
 
     def on_metadata_change(self, callback: Callable[[TrackMetadata], None]) -> None:
         """state.py hooks in here (Phase 3 criterion 1). Fired on every
@@ -427,6 +483,7 @@ class LmsAdapter(Adapter):
             result = status.get("result", {})
             last_power = result.get("power")
             self._report_metadata(result)
+            await self._report_queue_if_changed(session, result)
 
             # If the player is *already* on when we start watching, it has
             # already met this adapter's acquisition condition - so say so,
@@ -461,6 +518,14 @@ class LmsAdapter(Adapter):
                     # query above), so this is the edge criterion 6 will
                     # measure later - not just power changes.
                     self._report_metadata(data)
+                    # The queue changes far more often than power does, and
+                    # every one of those changes arrives here rather than at
+                    # the seed query above: a queue read only at subscribe
+                    # time showed the rail a queue that could never grow
+                    # (George, 2026-09-18 - two albums added, LMS had 27
+                    # tracks, the panel still showed 1). The timestamp gate
+                    # inside keeps this to one extra RPC per actual change.
+                    await self._report_queue_if_changed(session, data)
                     power = data.get("power")
                     if power is None:
                         continue

@@ -81,7 +81,7 @@ class FakeLms:
             return {"count": len(TRACKS), "titles_loop": TRACKS}
         if what == "playlists" and command[1] == "edit":
             return {}
-        if what == "playlist" and command[1] == "shuffle":
+        if what == "playlist" and command[1] in ("shuffle", "index", "delete", "clear"):
             return {}
         if what == "playlists" and command[1] == "tracks":
             pid = int(next(a for a in args if a.startswith("playlist_id:")).split(":")[1])
@@ -341,6 +341,18 @@ async def test_play_turns_shuffle_off_first(lms):
 
 
 @pytest.mark.asyncio
+async def test_shuffle_turns_it_on_and_loads(lms):
+    """The design's Shuffle all: the same load, with LMS's shuffle the other
+    way round (George, 2026-09-18)."""
+    await _lib().act("playlist", 900, "shuffle")
+
+    assert lms.commands[-2:] == [
+        ["playlist", "shuffle", 1],
+        ["playlistcontrol", "cmd:load", "playlist_id:900"],
+    ]
+
+
+@pytest.mark.asyncio
 async def test_adding_to_the_queue_leaves_shuffle_alone(lms):
     """Adding does not start anything, so it has no business changing how
     the player is set."""
@@ -575,3 +587,39 @@ async def test_the_action_route_adds_to_a_playlist(lms):
 
     assert status == 200
     assert body == {"tracks": 2}
+
+
+# --- the queue rail --------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_the_rail_jumps_to_a_position(lms):
+    """The rail addresses the queue by position, which is what LMS's own
+    commands take and what the rail shows."""
+    result = await _lib().act("queue", 4, "play")
+
+    assert lms.commands[-1] == ["playlist", "index", 4]
+    assert result == {"index": 4}
+
+
+@pytest.mark.asyncio
+async def test_the_rail_removes_a_position(lms):
+    await _lib().act("queue", 2, "remove")
+
+    assert lms.commands[-1] == ["playlist", "delete", 2]
+
+
+@pytest.mark.asyncio
+async def test_the_rail_clears_the_whole_queue(lms):
+    """The design's Clear button. It empties the queue where the rows act on
+    one track each, so it is the one queue action that carries no position -
+    `playlist clear 0` would be a different command."""
+    await _lib().act("queue", 0, "clear")
+
+    assert lms.commands[-1] == ["playlist", "clear"]
+
+
+@pytest.mark.asyncio
+async def test_an_unknown_queue_action_is_not_found(lms):
+    with pytest.raises(NotFound):
+        await _lib().act("queue", 1, "shuffle")

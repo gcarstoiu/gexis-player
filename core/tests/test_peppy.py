@@ -299,3 +299,23 @@ def test_a_short_stop_is_not_counted_and_not_reset():
     assert not timer.due()
     clock.advance(1)
     assert timer.due()
+
+
+@pytest.mark.asyncio
+async def test_the_screen_is_minimised_at_startup_so_a_touch_can_dismiss_it():
+    """**The defect this test exists for.** Whether the meter is up is held
+    in memory, so a daemon started while it is on screen believed it was
+    hidden - and `on_touch` only hides what it thinks is visible. George,
+    2026-09-18: the meter could not be dismissed by touch at all after the
+    daemon restarted under it, and the panel was unreachable behind it.
+    Reconciling once at startup is what makes the two agree."""
+    import asyncio
+
+    screen = FakeScreen(visible=False)
+    controller = PeppyController(screen, UnattendedPlayback(300), tick_s=0.01)
+
+    task = asyncio.ensure_future(controller.run())
+    await asyncio.sleep(0)
+    task.cancel()
+
+    assert screen.calls == ["hide"]

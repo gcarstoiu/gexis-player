@@ -134,13 +134,37 @@ opaque handle per item, and the panel browses and plays by handle only
 nine items ADR-0030 predicted and **browsing plays nothing**, which is the
 defect Finding 029 caused by following an inherited action.
 
-**Open for George: Shuffle all.** The design puts it beside Play all on a
-playlist; it is not built, so it is not drawn (ADR-0020: do not render a
-control that does nothing). It is now cheap - Play already sets LMS's
-shuffle off, so Shuffle would set it on and load.
+**Step 10 is done** (2026-09-18, checked by George on the panel): the queue
+rail on now playing, LMS only - the design's header with **Clear**, the
+source row as the way to pick a playlist, rows that jump and remove, and the
+count badge on the queue button. Shuffle all landed with it, beside Play all
+on a playlist and on an artist page.
 
-**Next action: step 10 - the queue rail** on now playing (LMS only), with
-the design's empty state offering a playlist to choose.
+**Two defects found during that check, both fixed and both worth knowing:**
+
+- **The queue could not grow.** It was read only by the seed status query at
+  subscribe time, so every later change - which arrives as a CometD push -
+  was never read. Two albums added, LMS holding 27 tracks, the panel still
+  showing 1. The three tests over it all passed because they called
+  `_report_queue_if_changed` themselves; nothing asserted the push loop does
+  (`docs/LESSONS.md`). There is now a test that drives `_watch`.
+- **The Peppy screen could not be dismissed by touch.** Whether it is up is
+  held in memory, so a daemon started *while it is on screen* believes it is
+  hidden - and `on_touch` only hides what it thinks is visible. The panel is
+  then stranded behind the meter with no way back. A restart mid-session did
+  it here; systemd would do the same after a crash on a device in a living
+  room. `PeppyController.run()` now minimises once at startup so the two
+  agree.
+
+**Also worth not repeating:** the rail was first built from notes rather
+than from `design/source/Now Playing.dc.html`, and lost the Clear button,
+the source switcher and the count badge; and its own `button` reset was
+missing, so every row drew the browser's default button chrome. **The styles
+are scoped per component: each screen carries its own reset.**
+
+**Next action: step 11 - the closing step.** Clear the `phase-7` markers,
+update the docs, build the image (R2D2's loop-device test comes with it),
+open the PR.
 
 **Open, deferred by George: one investigation into lists,** once steps 6 and
 7 have put real ones on the panel - not piecemeal fixes before that. What it
@@ -152,6 +176,17 @@ become 917 cards in a single pass, with `content-visibility` already tried
 and removed because it broke the jump rail. Candidates to measure: rendering
 only the rows on screen, lighter cards, and letter buckets from the core
 rather than one list.
+
+**George added the queue rail to it (2026-09-18):** with the rail built,
+*everything* on the panel is "quite slow" in his words - so the
+investigation is not only about long lists. One candidate is already
+named rather than guessed: **the queue rail asks LMS for 500px covers and
+draws them at 42px** (`ARTWORK_SIZE` in `adapters/lms.py` serves both now
+playing's 500px well and every queue row). Artwork at the size drawn is what
+the library reads already do - `ARTWORK_THUMB` exists for exactly this - and
+oversized covers were part of what made the New Music strip scroll unevenly
+(Finding 029 §5). Not changed yet: George deferred it to the one
+investigation rather than fixing piecemeal.
 
 **Test data on George's LMS:** playlist folder `/playlist` (George set it;
 it triggered a full rescan that renumbered the library). Playlists

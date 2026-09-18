@@ -19,10 +19,17 @@ hardware sessions instead (see adapters/lms.py's own module docstring).
 """
 from __future__ import annotations
 
+import asyncio
+
 import pytest
 
 from gexis_core.adapters.lms import LmsAdapter
 from gexis_core.model import TrackMetadata
+
+
+async def _done(value):
+    """A coroutine that just answers, for stubbing an awaited method."""
+    return value
 
 
 @pytest.mark.asyncio
@@ -712,3 +719,124 @@ async def test_shuffle_and_repeat_commands_use_lms_numbers(monkeypatch):
         ["playlist", "repeat", 2],
         ["playlist", "repeat", 1],
     ]
+
+
+# --- ADR-0038 §1: the queue rail's contents --------------------------------
+
+
+class QueueRpc(FakeRpc):
+    """Answers the metadata query and the queue query differently, the way
+    LMS does: `start="-"` is the current song, `start=0` the whole queue."""
+
+    def __init__(self, timestamp=1.0, index=1):
+        super().__init__()
+        self.timestamp = timestamp
+        self.index = index
+        self.queue_reads = 0
+
+    async def __call__(self, session, player, command):
+        self.commands.append(list(command))
+        if command[0] == "status" and command[1] == 0:
+            self.queue_reads += 1
+            return {
+                "result": {
+                    "playlist_cur_index": self.index,
+                    "playlist_name": "Sunday",
+                    "playlist_id": 900,
+                    "playlist_modified": 0,
+                    "playlist_loop": [
+                        {"title": "Opening", "artist": "Aria Nova", "coverid": "abc", "duration": 201.5},
+                        {"title": "Closing", "artist": "Aria Nova"},
+                    ],
+                }
+            }
+        return {"result": {"mode": "play", "power": 1, "time": 1.0,
+                           "playlist_timestamp": self.timestamp,
+                           "playlist_cur_index": self.index}}
+
+
+@pytest.mark.asyncio
+async def test_the_queue_is_read_and_reported(monkeypatch):
+    adapter, _ = _adapter(monkeypatch, mode="play")
+    rpc = QueueRpc()
+    monkeypatch.setattr(LmsAdapter, "_rpc", rpc)
+    seen = []
+    adapter.on_queue_change(seen.append)
+
+    await adapter._report_queue_if_changed(None, {"playlist_timestamp": 1.0, "playlist_cur_index": 1})
+
+    assert rpc.queue_reads == 1
+    queue = seen[0]
+    assert [item.title for item in queue.items] == ["Opening", "Closing"]
+    assert queue.index == 1
+    assert (queue.name, queue.id, queue.modified) == ("Sunday", 900, False)
+    assert queue.items[0].artwork.endswith("/music/abc/cover_500x500_o.jpg")
+
+
+@pytest.mark.asyncio
+async def test_the_queue_is_not_re_read_on_every_push(monkeypatch):
+    """A status push arrives for every state change; the queue is only
+    worth re-reading when LMS says it moved (Finding 029, step 1a)."""
+    adapter, _ = _adapter(monkeypatch, mode="play")
+    rpc = QueueRpc()
+    monkeypatch.setattr(LmsAdapter, "_rpc", rpc)
+    adapter.on_queue_change(lambda queue: None)
+    same = {"playlist_timestamp": 1.0, "playlist_cur_index": 1}
+
+    await adapter._report_queue_if_changed(None, same)
+    await adapter._report_queue_if_changed(None, same)
+
+    assert rpc.queue_reads == 1
+
+
+@pytest.mark.asyncio
+async def test_a_new_track_re_reads_the_queue(monkeypatch):
+    """The rail shows what is coming up, so which track is playing moves it
+    even when the queue itself has not changed."""
+    adapter, _ = _adapter(monkeypatch, mode="play")
+    rpc = QueueRpc()
+    monkeypatch.setattr(LmsAdapter, "_rpc", rpc)
+    adapter.on_queue_change(lambda queue: None)
+
+    await adapter._report_queue_if_changed(None, {"playlist_timestamp": 1.0, "playlist_cur_index": 1})
+    await adapter._report_queue_if_changed(None, {"playlist_timestamp": 1.0, "playlist_cur_index": 2})
+
+    assert rpc.queue_reads == 2
+
+
+@pytest.mark.asyncio
+async def test_a_push_re_reads_the_queue(monkeypatch):
+    """**The defect this test exists for.** The queue was read only by the
+    seed status query at subscribe time, so a queue that changed afterwards
+    never reached the panel: George added two albums on 2026-09-18, LMS held
+    27 tracks, and the rail still showed the one it had at startup. The
+    three tests above all passed, because they call
+    `_report_queue_if_changed` themselves - nothing asserted that the push
+    loop does (docs/LESSONS.md)."""
+    adapter, _ = _adapter(monkeypatch, mode="play")
+    rpc = QueueRpc()
+    monkeypatch.setattr(LmsAdapter, "_rpc", rpc)
+    adapter.on_queue_change(lambda queue: None)
+
+    channel = "/cid/slim/playerstatus/aa:bb:cc:dd:ee:ff"
+    frames = [
+        # The queue changed while the player kept playing: no power edge,
+        # only a new timestamp.
+        [{"channel": channel, "data": {"power": 1, "playlist_timestamp": 2.0, "playlist_cur_index": 1}}],
+    ]
+
+    async def fake_post(self, session, message, timeout=None):
+        if message["channel"] != "/meta/connect":
+            return []
+        if not frames:
+            raise asyncio.CancelledError
+        return frames.pop(0)
+
+    monkeypatch.setattr(LmsAdapter, "_cometd_handshake", lambda self, session: _done("cid"))
+    monkeypatch.setattr(LmsAdapter, "_cometd_post", fake_post)
+
+    with pytest.raises(asyncio.CancelledError):
+        await adapter._watch(lambda: None, lambda: None)
+
+    # One for the seed query, one for the push.
+    assert rpc.queue_reads == 2

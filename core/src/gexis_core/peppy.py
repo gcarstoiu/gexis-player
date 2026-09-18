@@ -225,6 +225,15 @@ class PeppyController:
         return self._screen.show() if action == "show" else self._screen.hide()
 
     async def run(self) -> None:
+        # Whether the meter is up is held in memory, so a daemon that starts
+        # while it is on screen believes it is not - and then ignores every
+        # touch, because `on_touch` only hides what it thinks is visible.
+        # That strands the panel behind the meter with no way back
+        # (George, 2026-09-18, after a restart mid-session; systemd would do
+        # the same on its own after a crash). Minimising once at startup
+        # makes the two agree: the device comes up on now playing, and the
+        # timer raises the meter again in its own time.
+        self._screen.hide()
         while True:
             await asyncio.sleep(self._tick_s)
             if self._timer.due() and not self._screen.visible:

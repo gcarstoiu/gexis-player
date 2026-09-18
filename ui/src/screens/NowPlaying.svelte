@@ -9,12 +9,13 @@
   import spotifyMark from '../assets/icon-spotify.png';
   import bluetoothMark from '../assets/icon-bluetooth.png';
   import VolumeIcon from '../lib/VolumeIcon.svelte';
+  import QueueRail from './QueueRail.svelte';
 
   import { sendTransport } from '../lib/state.js';
   import { playhead, mmss } from '../lib/playhead.svelte.js';
   import { playToggle } from '../lib/playToggle.svelte.js';
 
-  let { active, metadata, volume, controls = [], available = [], shuffle = null, repeat = null, onvolume, onvisualisation, onhome } = $props();
+  let { active, metadata, volume, controls = [], available = [], shuffle = null, repeat = null, queue = null, onvolume, onvisualisation, onhome } = $props();
 
   const SOURCES = {
     lms: { label: 'LMS', mark: null },
@@ -52,9 +53,19 @@
     }
   }
 
-  // The queue is LMS-only in the design. Keyed on the id until Phase 7 wires
-  // it; shuffle and repeat follow the renderer's declaration (ADR-0037).
+  // The queue is LMS-only in the design; shuffle and repeat follow the
+  // renderer's declaration (ADR-0037).
   const lmsOnly = $derived(active === 'lms');
+
+  // The badge counts what is still to come, not the track playing now -
+  // the rail's own "Up next" (the design's `queueCount`).
+  const upNext = $derived(Math.max(0, (queue?.items?.length ?? 0) - (queue?.index ?? 0) - 1));
+
+  let queueOpen = $state(false);
+  // Leaving LMS takes the rail's subject with it.
+  $effect(() => {
+    if (!lmsOnly) queueOpen = false;
+  });
 </script>
 
 <div
@@ -176,14 +187,19 @@
             <VolumeIcon percent={volume?.percent ?? null} muted={!!volume?.muted} />
           </button>
           {#if lmsOnly}
-            <button class="btn btn--queue" type="button" aria-label="Queue" disabled data-unwired="phase-7">
+            <button class="btn btn--queue" type="button" aria-label="Queue" onclick={() => (queueOpen = true)}>
               <i></i><i></i><i></i>
+              {#if upNext}<span class="btn__badge">{upNext}</span>{/if}
             </button>
           {/if}
         </div>
       </div>
     </div>
   </div>
+
+  {#if lmsOnly}
+    <QueueRail open={queueOpen} {queue} onclose={() => (queueOpen = false)} />
+  {/if}
 </div>
 
 <style>
@@ -657,6 +673,24 @@
     justify-content: center;
     gap: 5px;
     position: relative;
+  }
+  .btn__badge {
+    position: absolute;
+    top: -3px;
+    right: -3px;
+    min-width: 24px;
+    height: 24px;
+    padding: 0 6px;
+    border-radius: 999px;
+    background: var(--accent-bluetooth);
+    color: var(--ink-on-accent);
+    font-family: var(--font-mono);
+    font-size: var(--t-label);
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
   }
   .btn--queue i { width: 26px; height: 3px; border-radius: 2px; background: var(--accent-bluetooth); }
   .btn--queue i:last-of-type { width: 15px; }

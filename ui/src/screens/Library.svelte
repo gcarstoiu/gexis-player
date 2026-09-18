@@ -585,8 +585,9 @@
             <span class="playall__glyph"></span>
             <span class="playall__label">Play all</span>
           </button>
-          <!-- The design also has Shuffle all here; not built (ADR-0038 §3),
-               so it is not drawn rather than drawn dead (ADR-0020's rule). -->
+          <button class="shuffle" type="button" aria-label="Shuffle all" onclick={() => act('playlist', playlist.id, 'shuffle', playlist.name)}>
+            <span class="i-shuffle"><i></i><i></i><b></b><b></b></span>
+          </button>
           <span class="group__rule"></span>
           <span class="playall__meta">{playlistMeta}</span>
         </div>
@@ -749,10 +750,15 @@
               {discography.length} {discography.length === 1 ? 'album' : 'albums'}
             </div>
           </div>
-          <button class="playall" type="button" onclick={() => play('artist', artist.id)}>
-            <span class="playall__glyph"></span>
-            <span class="playall__label">Play</span>
-          </button>
+          <div class="artistpage__buttons">
+            <button class="playall playall--grow" type="button" onclick={() => play('artist', artist.id, artist.name)}>
+              <span class="playall__glyph"></span>
+              <span class="playall__label">Play</span>
+            </button>
+            <button class="shuffle" type="button" aria-label="Shuffle" onclick={() => act('artist', artist.id, 'shuffle', artist.name)}>
+              <span class="i-shuffle"><i></i><i></i><b></b><b></b></span>
+            </button>
+          </div>
           <!-- About, tags and similar artists are Phase 8 (ADR-0038 §2). -->
         </div>
 
@@ -1422,6 +1428,69 @@
     overflow: hidden;
     text-overflow: ellipsis;
   }
+  /* Shuffle, beside Play: the design's crossed arrows. */
+  .shuffle {
+    width: 62px;
+    height: 56px;
+    border-radius: 15px;
+    background: rgba(233, 238, 242, 0.06);
+    border: 1px solid rgba(233, 238, 242, 0.14);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+  .shuffle:active {
+    transform: scale(0.95);
+  }
+  .i-shuffle {
+    position: relative;
+    width: 24px;
+    height: 21px;
+    display: block;
+  }
+  .i-shuffle i {
+    position: absolute;
+    left: 0;
+    width: 24px;
+    height: 2.5px;
+    border-radius: 2px;
+    background: rgba(233, 238, 242, 0.9);
+  }
+  .i-shuffle i:nth-child(1) {
+    top: 3px;
+    transform: rotate(25deg);
+  }
+  .i-shuffle i:nth-child(2) {
+    bottom: 3px;
+    transform: rotate(-25deg);
+  }
+  .i-shuffle b {
+    position: absolute;
+    right: 0;
+    width: 7px;
+    height: 7px;
+    border-right: 2.5px solid rgba(233, 238, 242, 0.9);
+  }
+  .i-shuffle b:nth-of-type(1) {
+    top: 0;
+    border-top: 2.5px solid rgba(233, 238, 242, 0.9);
+    transform: rotate(45deg);
+  }
+  .i-shuffle b:nth-of-type(2) {
+    bottom: 0;
+    border-bottom: 2.5px solid rgba(233, 238, 242, 0.9);
+    transform: rotate(-45deg);
+  }
+  .artistpage__buttons {
+    display: flex;
+    gap: 9px;
+    flex-shrink: 0;
+  }
+  .playall--grow {
+    flex: 1;
+  }
+
   .playall__meta {
     font-family: var(--font-mono);
     font-size: 13px;

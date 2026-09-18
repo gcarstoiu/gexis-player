@@ -71,11 +71,19 @@ class NoPlayer(Exception):
 #: powered-off player makes LMS power it on itself (ADR-0038 §4).
 TARGETS = {"album": "album_id", "artist": "artist_id", "track": "track_id",
            "playlist": "playlist_id"}
-ACTIONS = {"play": "cmd:load", "add": "cmd:add"}
+#: `shuffle` is `play` with LMS's shuffle turned on instead of off - the
+#: design's Shuffle all beside Play all (George, 2026-09-18).
+ACTIONS = {"play": "cmd:load", "add": "cmd:add", "shuffle": "cmd:load"}
 #: Adding to a saved playlist is not a `playlistcontrol` at all: LMS takes
 #: one track URL at a time, and ignores `album_id`/`track_id` there without
 #: an error (Finding 029 §3). So the tracks are resolved first.
 PLAYLIST_ACTION = "playlist"
+
+#: The queue rail acts on a position in the queue, not on a library id:
+#: jump to it, or drop it (design/data-contract.md's queue rail).
+#: `clear` takes no position, unlike the other two - the rail's Clear
+#: button empties the queue where the rows address one track each.
+QUEUE_ACTIONS = {"play": ["playlist", "index"], "remove": ["playlist", "delete"], "clear": ["playlist", "clear"]}
 
 
 def _int(value) -> int | None:
@@ -295,6 +303,8 @@ class LmsLibrary:
         on; a `200` means the command was sent, and what happened is read
         from `/state` (ADR-0037 §1).
         """
+        if kind == "queue":
+            return await self._queue_action(item_id, action)
         if kind not in TARGETS or action not in {**ACTIONS, PLAYLIST_ACTION: ""}:
             raise NotFound(f"{action} {kind}")
         if action == PLAYLIST_ACTION:
@@ -302,8 +312,8 @@ class LmsLibrary:
         player = self._player_id()
         if not player:
             raise NoPlayer("the LMS player has not been resolved yet")
-        if action == "play":
-            await self._rpc(["playlist", "shuffle", 0], player)
+        if action in ("play", "shuffle"):
+            await self._rpc(["playlist", "shuffle", 1 if action == "shuffle" else 0], player)
         result = await self._rpc(
             ["playlistcontrol", ACTIONS[action], f"{TARGETS[kind]}:{item_id}"], player
         )
@@ -313,6 +323,20 @@ class LmsLibrary:
             raise NotFound(f"{kind} {item_id}")
         logger.info("library: %s %s %s -> %s tracks", action, kind, item_id, count)
         return {"tracks": count}
+
+    async def _queue_action(self, index: int, action: str) -> dict:
+        """Jump to a position in the queue, or drop it. The rail addresses
+        the queue by position because that is what LMS's own commands take
+        and what the rail shows."""
+        command = QUEUE_ACTIONS.get(action)
+        if command is None:
+            raise NotFound(f"{action} on the queue")
+        player = self._player_id()
+        if not player:
+            raise NoPlayer("the LMS player has not been resolved yet")
+        await self._rpc(command if action == "clear" else [*command, index], player)
+        logger.info("library: queue %s %s", action, "" if action == "clear" else index)
+        return {"index": index}
 
     async def _add_to_playlist(self, kind: str, item_id: int, playlist_id: int | None) -> dict:
         """Add an album, artist, track or playlist's tracks to a library
