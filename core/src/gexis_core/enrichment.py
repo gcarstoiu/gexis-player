@@ -57,10 +57,13 @@ RETRY_AFTER_S = 900.0
 #: where a wrong answer is unlikely rather than where matches are plentiful.
 CONFIDENCE_MIN = 90
 
-#: Warmed as soon as a track starts, because they are on this network and
-#: cost nothing anyone else pays for. Everything else waits until somebody
-#: opens the tab.
-PREFETCH_PROVIDERS = ("lms", "lms-release")
+#: Warmed as soon as a track starts. The two LMS providers because they are
+#: on this network and cost nothing anyone else pays for - and LRCLIB
+#: because the Track tab itself shows synced lyrics when a track has them
+#: (George, 2026-09-18), so they are not a tab nobody opened: they are what
+#: the main screen draws. LRCLIB publishes no rate limit and asks only for
+#: serial requests and a real User-Agent, both of which `Http` does.
+PREFETCH_PROVIDERS = ("lms", "lms-release", "lrclib")
 
 #: How long a track must have been playing before its enrichment is warmed.
 #: Skipping through an album would otherwise cost one lookup per track.

@@ -98,9 +98,13 @@
     }
   }
 
+  // Loaded for every track, not only when a tab is opened: the Track tab
+  // itself shows synced lyrics when there are any (the design's
+  // `panelIsMetaLyrics`), so the panel has to know before anyone asks.
+  // One call to the daemon, which answers from its cache after the first.
   $effect(() => {
     const who = metadata?.artist ?? '';
-    if (tab !== 'track' && who) untrack(() => loadArtistInfo());
+    if (who) untrack(() => loadArtistInfo());
   });
 
   const info = $derived(artistInfo.enrichment);
@@ -205,7 +209,26 @@
         </div>
 
         <div class="panel">
-          {#if tab === 'track'}
+          {#if tab === 'track' && synced.length}
+            <!-- With synced lyrics the Track tab becomes the design's
+                 compact variant: a shorter track block, a rule, and the
+                 words following the playhead underneath. -->
+            <div class="trackblock trackblock--lyrics">
+              <div class="title title--compact" class:is-empty={!metadata?.title}>{metadata?.title ?? ''}</div>
+              <div class="compactline">
+                <span class="artist artist--compact" class:is-empty={!metadata?.artist}>{metadata?.artist ?? ''}</span>
+                <span class="album album--compact" class:is-empty={!metadata?.album}>{metadata?.album ?? ''}</span>
+              </div>
+              <div class="trackblock__rule"></div>
+              <div class="lyrics lyrics--synced lyrics--inline">
+                {#each window5 as line (line.n)}
+                  <div class="lyrics__line" class:is-now={line.distance === 0} data-distance={line.distance}>
+                    {line.text}
+                  </div>
+                {/each}
+              </div>
+            </div>
+          {:else if tab === 'track'}
             <div class="trackblock">
               <div class="title" class:is-empty={!metadata?.title}>{metadata?.title ?? ''}</div>
               <div class="artistline">
@@ -730,6 +753,52 @@
     letter-spacing: 0.12em;
     text-transform: uppercase;
     color: var(--accent-bluetooth);
+  }
+
+  .trackblock--lyrics {
+    display: flex;
+    flex-direction: column;
+    min-height: 238px;
+    max-height: 238px;
+  }
+  .title--compact {
+    font-size: 38px;
+    line-height: 1.08;
+    -webkit-line-clamp: 2;
+    flex-shrink: 0;
+  }
+  .compactline {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+    margin-top: 10px;
+    min-width: 0;
+    flex-shrink: 0;
+  }
+  .artist--compact {
+    font-size: 22px;
+    max-width: 60%;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    flex-shrink: 0;
+  }
+  .album--compact {
+    font-size: 17px;
+    color: rgba(233, 238, 242, 0.5);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .trackblock__rule {
+    height: 1px;
+    background: rgba(233, 238, 242, 0.12);
+    margin-top: 20px;
+    flex-shrink: 0;
+  }
+  .lyrics--inline {
+    flex: 1;
+    min-height: 0;
   }
 
   .lyrics {
