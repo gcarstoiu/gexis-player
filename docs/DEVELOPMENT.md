@@ -1451,6 +1451,40 @@ ADRs were updated.
 4. **The handoff's "issues to look at later" are triaged:** fixed, scheduled,
    or dropped.
 
+**Plan, agreed with George 2026-09-18** — in this order, and the order is
+the point:
+
+1. **Why is a playing panel never idle?** With music playing and nobody
+   touching it, 71 % of the frames the compositor wants are dropped
+   ([Finding 034](findings/034-what-the-panel-presents.md)); paused, it is
+   barely asked for a frame. That is not a property of any screen but a
+   continuous cost underneath all of them, and PeppyMeter is already
+   eliminated. **First, because the sweep below is a judgement call and
+   every judgement made on a frame-starved panel is contaminated** - a
+   screen that "feels sluggish" cannot be told from the floor it is standing
+   on (Claude's argument, George agreed).
+2. **The UI sweep with George.** Criterion 3's review pass, expected to be a
+   large one with new topics of its own. Done before the performance work
+   so the work is done on something closer to final, rather than tuning
+   screens that are about to change (George's argument).
+3. **Reach the target** (criterion 0), against a baseline taken *after* the
+   sweep, since the old one describes screens that no longer exist. The
+   list work belongs here: rendering only what is on screen, lighter cards,
+   letter buckets from the core.
+4. **The rest:** every ADR-0022 row wired or scoped out (criterion 1), no
+   unwired UI without a justification (2), and the "issues to look at
+   later" triaged (4) - including the parked album-art sweep.
+
+**Where the settings stand as of 2026-09-18:** 54 rows, **6 wired**
+(`idle_url`, `idle_timeout`, `drawer_on_external`, `drawer_autohide`,
+`listenbrainz_token`, `fanart_key`). **Eight still owe a decision** -
+`max_ceiling`, `restore_floor`, `boot_default_scope`, `bt_pairing`,
+`seek_reanchor`, `handoff_threshold`, `version`, `image_build`. **Four are
+implemented but not settable**, which is the awkward category:
+`viz_timeout` is read by the daemon with no way to change it, and
+`lms_server`, `lms_player` and `bt_autotrust` are hardcoded values the
+registry advertises.
+
 ### Phase 10 — Plugin contract and themes
 
 **Acceptance**

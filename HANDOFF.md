@@ -37,6 +37,13 @@ albums have none. The same sweep for artist pictures was rejected on the
 measurement above: 30-45 minutes of MusicBrainz's one-a-second allowance to
 improve pictures that already exist.
 
+**Next: Phase 9, in the order George agreed on 2026-09-18** - the idle
+question first, then the UI sweep, then the performance work, then the
+settings and the triage. The reason for that order is in
+`docs/DEVELOPMENT.md`: the sweep is a judgement call, and a judgement made
+on a panel that drops 71 % of its frames before anyone touches it cannot be
+told from the floor it is standing on.
+
 **Phase 7a — panel responsiveness — is closed** (2026-09-18). Artwork at the
 size drawn, an instrument that survives its own scrutiny, and a baseline:
 [Finding 034](docs/findings/034-what-the-panel-presents.md). **The target is
