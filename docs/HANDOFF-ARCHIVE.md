@@ -3143,3 +3143,194 @@ boot.
 **Still open from earlier:** `playlistcontrol cmd:load album_id:<id>` is
 unverified (ADR-0030); Claude Design owes drawn number/text editors and a
 corrected `design/README.md`.
+
+## Phase 7, step by step (moved 2026-09-18, nineteenth session)
+
+Verbatim from `HANDOFF.md`'s "Start here" when Phase 7 closed. The
+durable half is elsewhere: [ADR-0038](decisions/0038-library-and-radio-on-the-panel.md)
+for the decisions, `docs/DEVELOPMENT.md` Phase 7 for the plan and what each
+step settled, Findings 029-032 for the measurements.
+
+
+**Phase 7 — library browse — is planned on branch `phase-7-plan`.** George
+agreed the plan and six decisions on 2026-09-17; they are in
+[ADR-0038](docs/decisions/0038-library-and-radio-on-the-panel.md) (status
+**Proposed**) and in `docs/DEVELOPMENT.md` Phase 7 (criteria 1 and 6 amended,
+10 and 11 added, the plan). In short: only the designed screens; row actions
+play now, add to queue, add to playlist (**no create playlist** in Phase 7);
+initials instead of artist photos and a discography-only artist page until
+Phase 8; the queue rail is in; Radio Now Playing stays; five settings
+appended to ADR-0022's inventory (George confirmed).
+
+**Step 1 is done: [Finding 029](docs/findings/029-library-and-radio-against-lms.md).**
+George's calls on it are in ADR-0038 (§1, §1a, §3): Album Artists; library
+playlists only; LMS's filing and release types; add to any library playlist;
+no playlist creation (George is asking Claude Design to remove it). ADR-0038
+is still marked Proposed.
+
+**Step 1a is done** (2026-09-17): a takeover restores LMS's old position
+and play state only if `playlist_timestamp` is unchanged (George's rule A;
+ADR-0027 amended, Finding 029 addendum). George checked both directions on
+`gexis`. **Hand-installed on the device, not in an image:** `lms.py` copied
+into `/opt/gexis-core/venv/lib/python3.13/site-packages/gexis_core/adapters/`,
+previous core at `/opt/gexis-core.7-1a-backup`. A reflash loses it until the
+Phase 7 image.
+
+**Step 2 is done** (2026-09-17): a playing station shows the song as title,
+its artist, the station as the album line, and the song's `artwork_url` or
+"artwork pending" (ADR-0038 §8a). George checked on `gexis`; also
+hand-installed (previous core, with step 1a, at `/opt/gexis-core.7-2-backup`).
+George asked for radio artwork via enrichment: Phase 8 criterion 7.
+
+**Step 3 is done** (2026-09-17): `core/src/gexis_core/library.py` and
+`GET /library/…` reads, tested against made-up LMS replies (George's call).
+Hand-installed on `gexis` too; previous core at `/opt/gexis-core.7-3-backup`.
+
+**Step 4 is done** (2026-09-17, checked by George on the panel): Home is the
+library root — five cards with live counts, the New Music strip, the mini
+strip, the waiting services when no renderer is connected, and Settings from
+its card. UI deployed by hand to `/opt/gexis-ui` (previous build at
+`/opt/gexis-ui.7-4-backup`).
+
+**Next actions: George's three findings from that check**, in his order:
+
+- **4a: volume drops to 0 when LMS pauses. Done 2026-09-17, awaiting
+  George's listen.** LMS fades the player out by moving the renderer's mixer
+  control; the core mirrored that onto the DAC and published it
+  ([Finding 031](docs/findings/031-lms-pause-fade-and-push-latency.md);
+  ADR-0018 and ADR-0034 amended). Fixed by deciding only once the control has
+  settled for 0.8 s, and only while the renderer is playing - two earlier
+  attempts failed on hardware because the pause reaches the core 0.51 s after
+  the fade. Measured after the fix: the DAC holds its level across a pause,
+  the panel stays at 48%, and an LMS-app change still lands, 0.8 s later.
+- **4b: press feedback. Done 2026-09-17, awaiting George's check.** Now
+  playing's buttons, Settings' Back and the library's round buttons keep
+  their resting fill and shrink to 0.95 on press; the mini strip shrinks to
+  0.995 from its bottom edge. The design's grey press fill read as a flash,
+  as it already had on play and the transport buttons.
+- **4c: choppiness. Fixed by one backdrop for the whole panel** (George,
+  2026-09-17: *"clear improvement"*). `ui/src/screens/PanelBackground.svelte`
+  draws the weave and the artwork's bleed once; each screen keeps only its
+  own veil, so exactly one screen is mounted at a time and the incoming one
+  fades in (120 ms). Also in this step: artwork requested at the size it is
+  drawn (200 px thumbs, 500 px covers), the strip's fade mask changed only
+  when an edge gains or loses it, and the library's animation halved to
+  140 ms. **The CPU governor was set to `performance` and reverted the same
+  day** ([ADR-0039](docs/decisions/0039-cpu-governor-performance.md)): ~10 °C
+  hotter (76.3 °C mean against 66.2) for no visible improvement. **Screen changes are not animated at all**
+  (George, 2026-09-17): a fade of any kind showed the bare backdrop between
+  two transparent screens and read as a blink - worse with the incoming-only
+  fade than with the two-way one. The design's 260 ms slide-and-fade, the
+  mini strip's 104 px slide and Settings' fade are all gone; the drawer, idle
+  screen and handoff keep theirs. **The root's covers are loaded and decoded
+  when the panel starts** (`ui/src/lib/library.js`), because without an
+  animation the New Music tiles were visibly a beat behind the cards.
+  **Horizontal scrolling:** no scroll handler at all - the edge fades come
+  from two sentinels and an `IntersectionObserver`, the mask sits on a
+  wrapper that does not scroll, and the scroller is `contain: content`.
+  Reading `scrollLeft`/`scrollWidth` per frame forces a layout each time;
+  **apply the same three to the artist grid and Browse in steps 6-7**, and
+  virtualise there if that is not enough (917 artists, thousands of albums).
+  George calls the strip *"95% there"*;
+  [Finding 032](docs/findings/032-panel-frame-times-during-a-scroll.md)
+  measured frame times on the panel and could not attribute the rest - two
+  instruments answered a different question first, single-run comparisons
+  misled, and the harness's own synthetic touches may cause the drops.
+  **Revisit with the long lists, not before.**
+
+**Lesson candidate (2026-09-17), for George:** headless Chromium on the
+device was used to check the panel UI and answered a different question
+twice — it did not reproduce the black-screen defect the panel showed, and
+its screenshots silently stopped updating after any animated transition, so
+a real defect first looked like a capture artefact. The panel is the only
+renderer that answers "does the panel draw this".
+
+**Step 5 is done** (2026-09-18, checked by George on the panel): the album
+page and Play album, over `POST /library/action` (ADR-0038 §5). Track row
+actions are step 7.
+
+**A deployment defect found during that check, worth knowing about:** the
+core served `index.html` with no cache directive, so restarting the kiosk
+could bring back a *cached* page - the panel ran the previous bundle and
+404'd the assets it named, and a deployed change was simply not there. Now
+`Cache-Control: no-store` (assets are content-hashed and stay cacheable).
+**If the panel ever seems not to have a change, check which bundle it has**
+before believing the change did nothing.
+
+**Step 6 is done** (2026-09-18): the artist grid with the `#`/A-Z jump rail
+and the artist page with its discography. George's calls, now in ADR-0038
+§1a: rail letters folded (`Ç` into C, `Í` into I, digits into `#`), and the
+discography by year, newest first. He checked the navigation and found it
+**slow** - see below.
+
+**Step 7 is done** (2026-09-18): three-pane Browse with the row actions.
+George's calls from that check, now in ADR-0038 §3: **Play means in order**
+- the core turns LMS's shuffle off before a load, because with shuffle on a
+freshly loaded album starts at a random track and an artist mid-album - and
+album rows carry the year beside the title. Each pane also returns to the
+top when its contents change. **Adding to a playlist is one LMS call per
+track** (no bulk form): 87 tracks took 8 s after the core was changed to
+keep one HTTP connection instead of opening one per track; the panel says
+"Adding …" while it works.
+
+**Steps 8 and 9 are done** (2026-09-18). Playlists: the library's playlists
+with their counts, and a playlist's Play all, total and tracks. Radio:
+`core/src/gexis_core/radio.py` walks the `radios` subtree and issues an
+opaque handle per item, and the panel browses and plays by handle only
+(ADR-0038 §5, §8) - checked against the live tree, where the root is the
+nine items ADR-0030 predicted and **browsing plays nothing**, which is the
+defect Finding 029 caused by following an inherited action.
+
+**Step 10 is done** (2026-09-18, checked by George on the panel): the queue
+rail on now playing, LMS only - the design's header with **Clear**, the
+source row as the way to pick a playlist, rows that jump and remove, and the
+count badge on the queue button. Shuffle all landed with it, beside Play all
+on a playlist and on an artist page.
+
+**Two defects found during that check, both fixed and both worth knowing:**
+
+- **The queue could not grow.** It was read only by the seed status query at
+  subscribe time, so every later change - which arrives as a CometD push -
+  was never read. Two albums added, LMS holding 27 tracks, the panel still
+  showing 1. The three tests over it all passed because they called
+  `_report_queue_if_changed` themselves; nothing asserted the push loop does
+  (`docs/LESSONS.md`). There is now a test that drives `_watch`.
+- **The Peppy screen could not be dismissed by touch.** Whether it is up is
+  held in memory, so a daemon started *while it is on screen* believes it is
+  hidden - and `on_touch` only hides what it thinks is visible. The panel is
+  then stranded behind the meter with no way back. A restart mid-session did
+  it here; systemd would do the same after a crash on a device in a living
+  room. `PeppyController.run()` now minimises once at startup so the two
+  agree.
+
+**Also worth not repeating:** the rail was first built from notes rather
+than from `design/source/Now Playing.dc.html`, and lost the Clear button,
+the source switcher and the count badge; and its own `button` reset was
+missing, so every row drew the browser's default button chrome. **The styles
+are scoped per component: each screen carries its own reset.**
+
+**Next action: step 11 - the closing step.** Clear the `phase-7` markers,
+update the docs, build the image (R2D2's loop-device test comes with it),
+open the PR.
+
+**Open, deferred by George: one investigation into lists,** once steps 6 and
+7 have put real ones on the panel - not piecemeal fixes before that. What it
+must cover, from his checks (2026-09-18): the New Music strip still scrolls
+unevenly ([Finding 032](docs/findings/032-panel-frame-times-during-a-scroll.md)
+says what is and is not established), and the artist grid is **slow to load,
+slow to open and slow to scroll** - 917 artists come as one 98 KB read and
+become 917 cards in a single pass, with `content-visibility` already tried
+and removed because it broke the jump rail. Candidates to measure: rendering
+only the rows on screen, lighter cards, and letter buckets from the core
+rather than one list.
+
+**George added the queue rail to it (2026-09-18):** with the rail built,
+*everything* on the panel is "quite slow" in his words - so the
+investigation is not only about long lists. One candidate is already
+named rather than guessed: **the queue rail asks LMS for 500px covers and
+draws them at 42px** (`ARTWORK_SIZE` in `adapters/lms.py` serves both now
+playing's 500px well and every queue row). Artwork at the size drawn is what
+the library reads already do - `ARTWORK_THUMB` exists for exactly this - and
+oversized covers were part of what made the New Music strip scroll unevenly
+(Finding 029 §5). Not changed yet: George deferred it to the one
+investigation rather than fixing piecemeal.
