@@ -1191,10 +1191,16 @@ text input is rendered at all.
 
 ### Phase 7a — Panel responsiveness
 
-**Added 2026-09-18 (George).** Inserted between 7 and 8 rather than folded
-into Phase 9's polish slot, because Phase 8 puts more on the panel and
-attribution is already the hard part: Finding 032 could not separate the
-causes it had. Nothing renumbers.
+**Added 2026-09-18 (George), and closed the same day.** Inserted between 7
+and 8 rather than folded into Phase 9's polish slot, because Phase 8 puts
+more on the panel and attribution is already the hard part: Finding 032
+could not separate the causes it had. Nothing renumbers.
+
+**Closed with criterion 4 unmet, deliberately.** Steps 1-3 are done: the
+artwork ladder landed and George checked it, and the panel now has an
+instrument and a baseline ([Finding 034](findings/034-what-the-panel-presents.md)).
+Making the panel *reach* the target is Phase 9 criterion 0 - this phase
+existed to make that work judgeable, not to do it.
 
 **What prompted it.** George, after the queue rail landed: *"Everything quite
 slow though."* Before that, from his own checks: the New Music strip scrolls
@@ -1306,6 +1312,34 @@ Plexamp (11) and Qobuz Connect (12) were added between them. References in the
 ADRs were updated.
 
 **Acceptance**
+
+0. **The panel meets Phase 7a's target**, which is where the panel-speed work
+   lives now that 7a has measured rather than guessed. Added 2026-09-18 when
+   Phase 7a closed.
+
+   - **Under 2 % of frames dropped, no interaction below 55 fps, and
+     George's own go-ahead** (Phase 7a criterion 4).
+   - **The baseline to beat**, from
+     [Finding 034](findings/034-what-the-panel-presents.md), 20 runs each
+     with music playing: New Music strip 47.1 fps / 2.5 % dropped, artist
+     grid 23.1 / 50.7, queue rail 13.9 / 75.2.
+   - **Start with the question 7a could not answer: why is a playing panel
+     never idle?** With music playing and nobody touching it, 71 % of the
+     frames the compositor wants are dropped and about 17 a second reach
+     the screen; paused, it is barely asked for a frame. Every interaction
+     above is measured on top of that, so this may be most of it.
+     **PeppyMeter is already eliminated** (stopping it: 68.45 % against
+     71.25 %, inside the spread). Untested candidates: now playing's own
+     per-frame work while the playhead runs, the shared blurred backdrop
+     re-rastering, and the compositor's own cost.
+   - **Then the lists**: rendering only what is on screen, lighter cards,
+     letter buckets from the core rather than one list of 917.
+     `content-visibility: auto` was tried in Phase 7 and removed - with
+     off-screen groups only estimated, the jump rail landed inside the
+     previous letter.
+   - **Measure with the same instrument** (`tools/panel-frames.py`,
+     `tools/panel-touch.py`) so the numbers are comparable, and read
+     Finding 034's six instrument faults before trusting a new one.
 
 1. **Every row in ADR-0022's settings inventory is wired end to end** (panel
    and phone, ADR-0035), or marked out of scope with the reason.
