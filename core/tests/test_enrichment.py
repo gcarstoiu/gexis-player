@@ -333,3 +333,86 @@ async def test_a_prefetch_that_fails_is_not_an_error_anyone_sees():
     service = EnrichmentService([FakeProvider("lms", [RuntimeError("boom")], serves={"lms"})], _cache())
 
     await service.prefetch(KEY, renderer="lms")
+
+
+@pytest.mark.asyncio
+async def test_a_provider_that_is_not_configured_does_not_start_the_backoff():
+    """**The defect this test exists for.** A missing token made the provider
+    answer UNAVAILABLE, which put it in the fifteen-minute backoff meant for
+    servers that are down - so a token typed into Settings did nothing for a
+    quarter of an hour (George, 2026-09-18)."""
+    class NeedsToken(FakeProvider):
+        def __init__(self):
+            super().__init__("popular", [_found(similar=("Queen",))])
+            self.token = None
+
+        def ready(self):
+            return bool(self.token)
+
+    provider = NeedsToken()
+    service = EnrichmentService([provider], _cache())
+
+    assert (await service.for_track(KEY)).is_empty()
+    provider.token = "typed just now"
+
+    assert (await service.for_track(KEY)).similar == ("Queen",)
+
+
+@pytest.mark.asyncio
+async def test_providers_are_asked_at_once_not_one_after_another():
+    """**The defect this test exists for.** Asked in order, the lyrics
+    waited behind three providers that each start with the same MusicBrainz
+    search, so a busy MusicBrainz meant no words on screen at all (George,
+    2026-09-18). The merge order is still the providers' own, which is what
+    keeps "LMS first" true."""
+    started = []
+    release = asyncio.Event()
+
+    class Slow(FakeProvider):
+        async def fetch(self, key):
+            started.append(self.name)
+            await release.wait()
+            return await super().fetch(key)
+
+    slow = Slow("wikipedia", [_found(biography="Late")])
+    quick = Slow("lrclib", [_found(lyrics="La la la")])
+    service = EnrichmentService([slow, quick], _cache())
+
+    task = asyncio.ensure_future(service.for_track(KEY))
+    await asyncio.sleep(0)
+    await asyncio.sleep(0)
+    # Both are in flight before either has answered.
+    assert set(started) == {"wikipedia", "lrclib"}
+    release.set()
+    result = await task
+
+    assert result.biography == "Late" and result.lyrics == "La la la"
+
+
+@pytest.mark.asyncio
+async def test_a_slow_provider_does_not_hold_the_answer_back():
+    """MusicBrainz retrying a 503 for ten seconds must not keep the lyrics
+    off the screen when they arrived in one (George, 2026-09-18). The slow
+    one keeps going and its answer is there next time."""
+    from gexis_core.enrichment import WAIT_S
+
+    never = asyncio.Event()
+
+    class Slow(FakeProvider):
+        async def fetch(self, key):
+            await never.wait()
+            return _found(biography="Eventually")
+
+    quick = FakeProvider("lrclib", [_found(lyrics="La la la")])
+    service = EnrichmentService([Slow("wikipedia", []), quick], _cache())
+
+    async def finish_early():
+        await asyncio.sleep(0)
+        never.set()
+
+    # The wait is real, so the test drives the clock by finishing the slow
+    # provider just after the bounded wait would have expired.
+    result = await asyncio.wait_for(service.for_track(KEY), timeout=WAIT_S + 2)
+
+    assert result.lyrics == "La la la"
+    never.set()

@@ -362,7 +362,7 @@ async def main() -> None:
     http = Http()
     # One MusicBrainz lookup for the artist, shared: two providers needed the
     # same id and each was searching for it (see ArtistIdentity).
-    identity = ArtistIdentity(http)
+    identity = ArtistIdentity(http, store=enrichment_cache)
     enrichment = EnrichmentService(
         [
             LmsArtistProvider(artistinfo, lambda: lms.current_artist_id),

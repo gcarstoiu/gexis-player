@@ -76,6 +76,7 @@
   // render without it (ADR-0012).
   let tab = $state('track');
   let artistInfo = $state({ state: 'idle', for: null, enrichment: null });
+  let retryTimer = null;
 
   const initialsOf = (name) =>
     (name ?? '')
@@ -107,6 +108,16 @@
       // answer is dropped rather than shown against the wrong track.
       if (trackId !== wanted) return;
       artistInfo = { state: 'ready', for: wanted, enrichment: body.enrichment };
+      // The daemon answers with what it has after a few seconds and lets
+      // the slow providers finish behind it, so one look back picks up
+      // whatever was still arriving (a busy MusicBrainz, typically).
+      const missing = !body.enrichment?.biography || !body.enrichment?.lyrics_synced;
+      if (missing && !force) {
+        clearTimeout(retryTimer);
+        retryTimer = setTimeout(() => {
+          if (trackId === wanted) loadArtistInfo(true);
+        }, 6000);
+      }
     } catch (err) {
       console.info('enrichment:', err.message);
       artistInfo = { state: 'error', for: wanted, enrichment: null };

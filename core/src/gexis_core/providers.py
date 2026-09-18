@@ -50,6 +50,14 @@ RATES = {
 #: nothing here is on a screen's path.
 TIMEOUT_S = 15.0
 
+#: MusicBrainz answers `503 "the web server is currently busy"` often enough
+#: to matter - 4 of 9 searches in Finding 036 - and **four providers depend
+#: on the same search**: the biography, similar artists, the popularity list
+#: and a stream's artwork. It is transient, so it is retried rather than
+#: reported, with the host's own limiter still between attempts.
+RETRY_ON = (500, 502, 503, 504)
+RETRIES = 2
+
 
 class Http:
     """One session and one limiter per host, shared by every provider."""
@@ -78,22 +86,31 @@ class Http:
         tell those apart will cache a busy server's 503 forever.
         """
         host = url.split("/")[2]
-        limiter = self._limiters.get(host)
-        if limiter is not None:
-            await limiter.wait()
-        session = await self._ensure()
-        try:
-            async with session.get(url, params=params, headers=headers) as response:
-                if response.status == 404:
-                    # The provider answered: it has no such thing.
-                    return {}
-                if response.status >= 400:
-                    logger.info("providers: %s answered %s", host, response.status)
-                    return None
-                return await response.json(content_type=None)
-        except (aiohttp.ClientError, asyncio.TimeoutError, ValueError) as exc:
-            logger.info("providers: %s did not answer (%s)", host, exc)
-            return None
+        for attempt in range(RETRIES + 1):
+            limiter = self._limiters.get(host)
+            if limiter is not None:
+                await limiter.wait()
+            session = await self._ensure()
+            try:
+                async with session.get(url, params=params, headers=headers) as response:
+                    if response.status == 404:
+                        # The provider answered: it has no such thing.
+                        return {}
+                    if response.status in RETRY_ON and attempt < RETRIES:
+                        logger.info("providers: %s answered %s, retrying", host, response.status)
+                        await asyncio.sleep(1.5 * (attempt + 1))
+                        continue
+                    if response.status >= 400:
+                        logger.info("providers: %s answered %s", host, response.status)
+                        return None
+                    return await response.json(content_type=None)
+            except (aiohttp.ClientError, asyncio.TimeoutError, ValueError) as exc:
+                if attempt < RETRIES:
+                    await asyncio.sleep(1.5 * (attempt + 1))
+                    continue
+                logger.info("providers: %s did not answer (%s)", host, exc)
+                return None
+        return None
 
     async def close(self) -> None:
         if self._session is not None and not self._session.closed:
@@ -113,10 +130,17 @@ class ArtistIdentity:
     opinion of the match and the confidence threshold reads it (ADR-0012).
     """
 
-    def __init__(self, http: Http) -> None:
+    #: Where resolved ids are kept between restarts.
+    NAMESPACE = "mb-artist"
+
+    def __init__(self, http: Http, store=None) -> None:
         self._http = http
         #: folded artist name -> (mbid, score), or None for "asked, nothing".
         self._known: dict[str, tuple[str, int] | None] = {}
+        #: Persistent, when given. An artist's MusicBrainz id does not change
+        #: because the daemon restarted, and every lookup of it is a search
+        #: against the one endpoint that answers 503 most often.
+        self._store = store
 
     async def resolve(self, artist: str) -> tuple[str, int] | None | bool:
         """`(mbid, score)`, `None` when MusicBrainz has no such artist, and
@@ -125,6 +149,15 @@ class ArtistIdentity:
             return None
         if artist in self._known:
             return self._known[artist]
+        if self._store is not None:
+            try:
+                remembered = self._store.recall(self.NAMESPACE, artist)
+                self._known[artist] = tuple(remembered) if remembered else None
+                return self._known[artist]
+            except KeyError:
+                pass
+            except Exception as exc:
+                logger.info("providers: could not read a stored artist id (%s)", exc)
         found = await self._http.json(
             "https://musicbrainz.org/ws/2/artist/",
             {"query": f'artist:"{artist}"', "fmt": "json", "limit": "1"},
@@ -134,6 +167,11 @@ class ArtistIdentity:
         artists = found.get("artists") or []
         identity = (artists[0]["id"], int(artists[0].get("score") or 0)) if artists else None
         self._known[artist] = identity
+        if self._store is not None:
+            try:
+                self._store.remember(self.NAMESPACE, artist, list(identity) if identity else None)
+            except Exception as exc:
+                logger.info("providers: could not store an artist id (%s)", exc)
         return identity
 
 
@@ -242,6 +280,12 @@ class ListenBrainzPopular:
 
     def serves(self, renderer) -> bool:
         return True
+
+    def ready(self) -> bool:
+        """No token, nothing to ask. Answered here rather than by failing a
+        request, so that typing one into Settings works at once instead of
+        after the service's backoff expires."""
+        return bool(self._token())
 
     async def fetch(self, key) -> Answer:
         token = self._token()

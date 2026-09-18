@@ -69,6 +69,13 @@ PREFETCH_PROVIDERS = ("lms", "lms-release", "lrclib")
 #: Skipping through an album would otherwise cost one lookup per track.
 PREFETCH_AFTER_S = 8.0
 
+#: How long `for_track` waits for the slow half before answering with what
+#: it has. A provider that is still going keeps going, and what it finds
+#: lands in the cache for the next ask - so nothing is wasted, and a screen
+#: is not held by MusicBrainz retrying a 503 for ten seconds while the
+#: lyrics have been sitting there for one (George, 2026-09-18).
+WAIT_S = 4.0
+
 
 class Outcome(str, Enum):
     FOUND = "found"
@@ -361,6 +368,10 @@ def _rehydrate(raw: dict) -> dict:
     return out
 
 
+def _always_ready() -> bool:
+    return True
+
+
 class EnrichmentService:
     """Asks the providers in order, remembers what they said, and publishes
     once. Never on a screen's path: `for_track` is awaited by whatever is
@@ -382,13 +393,35 @@ class EnrichmentService:
         somebody actually looks (see `prefetch`)."""
         if key.is_empty():
             return Enrichment()
+        asked = [
+            provider for provider in self._providers
+            if (only is None or provider.name in only)
+            and provider.serves(renderer)
+            # A provider that is not configured has not failed, so it must
+            # not start the backoff in `_ask`: a token typed into Settings
+            # took up to fifteen minutes to take effect that way (George,
+            # 2026-09-18).
+            and getattr(provider, "ready", _always_ready)()
+        ]
+        # **All at once, merged in order.** Asked one after another, the
+        # lyrics waited behind three providers that each begin with the same
+        # MusicBrainz search - the one endpoint that answers 503 most often -
+        # so a busy MusicBrainz meant no words on screen at all (George,
+        # 2026-09-18: still not seeing lyrics on Spotify). Each host still
+        # has its own limiter, so this changes what waits for what, not how
+        # often anyone is asked.
+        if not asked:
+            return Enrichment()
+        tasks = [asyncio.ensure_future(self._ask(provider, key)) for provider in asked]
+        # Bounded: whatever has not answered keeps going in the background
+        # and its result is cached for the next ask.
+        await asyncio.wait(tasks, timeout=WAIT_S)
         found = Enrichment()
-        for provider in self._providers:
-            if only is not None and provider.name not in only:
+        for provider, task in zip(asked, tasks):
+            if not task.done():
+                logger.info("enrichment: %s is still going; answering without it", provider.name)
                 continue
-            if not provider.serves(renderer):
-                continue
-            answer = await self._ask(provider, key)
+            answer = task.result()
             if answer.outcome is not Outcome.FOUND:
                 continue
             if answer.confidence < self._confidence_min:
