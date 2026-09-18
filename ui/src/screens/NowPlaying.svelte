@@ -135,6 +135,17 @@
 
   const info = $derived(artistInfo.enrichment);
 
+  //: Both sources hard-wrap their text and separate paragraphs with a blank
+  //: line. Rendered as one string the browser collapses every one of those
+  //: into a single blob (George, 2026-09-18).
+  const asParagraphs = (text) =>
+    (text ?? '')
+      .split(/\n\s*\n/)
+      .map((block) => block.replace(/\s*\n\s*/g, ' ').trim())
+      .filter(Boolean);
+  const bioParagraphs = $derived(asParagraphs(info?.biography));
+  const noteParagraphs = $derived(asParagraphs(info?.album_note));
+
   // An LRC body is `[mm:ss.xx] text` per line. Lines without a stamp are
   // kept - LRCLIB files carry `[ar:]`-style headers and blank beats - but
   // only stamped ones can be followed.
@@ -364,7 +375,9 @@
               {#if artistInfo.state === 'loading'}
                 <div class="skel"><span></span><span></span><span></span></div>
               {:else if info?.album_note}
-                <div class="bio">{info.album_note}</div>
+                <div class="bio">
+                  {#each noteParagraphs as para, i (i)}<p class="bio__para">{para}</p>{/each}
+                </div>
                 <div class="credit">From {info.album_note_source}</div>
               {:else if artistInfo.state === 'error'}
                 <div class="offline">
@@ -407,7 +420,9 @@
                      text arrives, so the space is held. -->
                 <div class="skel"><span></span><span></span><span></span></div>
               {:else if artistInfo.enrichment?.biography}
-                <div class="bio">{artistInfo.enrichment.biography}</div>
+                <div class="bio">
+                  {#each bioParagraphs as para, i (i)}<p class="bio__para">{para}</p>{/each}
+                </div>
                 <!-- Wikipedia's CC BY-SA and MusicBrainz's CC BY-NC-SA both
                      require the credit beside the text (ADR-0040 §4). -->
                 <div class="credit">From {artistInfo.enrichment.biography_source}</div>
@@ -1044,6 +1059,12 @@
     touch-action: pan-y;
   }
   .bio::-webkit-scrollbar { display: none; }
+  .bio__para {
+    margin: 0 0 10px;
+  }
+  .bio__para:last-child {
+    margin-bottom: 0;
+  }
 
   .credit {
     font-family: var(--font-mono);

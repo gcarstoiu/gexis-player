@@ -130,6 +130,32 @@
   //: The biography is clamped until it is asked for, so the rest of the
   //: page is not pushed off the screen by it.
   let bioOpen = $state(false);
+
+  //: **Fanart first, then LMS's own plugin** (George, 2026-09-18). The data
+  //: already preferred fanart; the page was still reading only the plugin's
+  //: photo store, so an artist the plugin has nothing for - 2Pac - showed
+  //: initials next to a picture the daemon had already found.
+  const artistPicture = $derived(
+    artistInfo.found?.artist_image ?? photos[`${artist?.id}@300`] ?? null,
+  );
+
+  //: Hard-wrapped text with blank lines between paragraphs is what both
+  //: sources give; rendered as one string the browser collapses all of it
+  //: into a single blob (George, 2026-09-18).
+  //: LMS's plugin hands back the whole article for some artists - 56,573
+  //: characters for 2Pac. Opened in full that is a few hundred paragraphs
+  //: of DOM on a panel that already drops frames (Finding 034), and nobody
+  //: reads an encyclopaedia on a hi-fi. The opening is what is shown.
+  const BIO_PARAGRAPHS = 12;
+
+  const paragraphs = $derived.by(() => {
+    const text = artistInfo.found?.biography ?? '';
+    return text
+      .split(/\n\s*\n/)
+      .map((block) => block.replace(/\s*\n\s*/g, ' ').trim())
+      .filter(Boolean)
+      .slice(0, BIO_PARAGRAPHS);
+  });
   let photoQueue = new Set();
   let photoTimer = null;
 
@@ -851,12 +877,12 @@
       <div class="artistpage">
         <div class="artistpage__side">
           <span class="artist__disc artist__disc--big" style:background={tintOf(artist.name)}>
-            {#if photos[`${artist.id}@300`] && !failed.has(photos[`${artist.id}@300`])}
+            {#if artistPicture && !failed.has(artistPicture)}
               <img
                 class="artist__photo"
-                src={photos[`${artist.id}@300`]}
+                src={artistPicture}
                 alt=""
-                onerror={() => markFailed(photos[`${artist.id}@300`])}
+                onerror={() => markFailed(artistPicture)}
               />
             {:else}
               <span class="artist__initials artist__initials--big">{initialsOf(artist.name)}</span>
@@ -893,12 +919,11 @@
                    screen under it (George, 2026-09-18). Tapping opens the
                    rest; not a nested scroller, which is what made the
                    discography move under a finger meant for the column. -->
-              <button
-                class="artistmeta__bio"
-                class:is-clamped={!bioOpen}
-                type="button"
-                onclick={() => (bioOpen = !bioOpen)}
-              >{artistInfo.found.biography}</button>
+              <div class="artistmeta__bio" class:is-clamped={!bioOpen}>
+                {#each paragraphs as para, i (i)}
+                  <p class="artistmeta__para">{para}</p>
+                {/each}
+              </div>
               <!-- The credit is the licence's term, not decoration
                    (ADR-0040 §4). -->
               <div class="artistmeta__credit">
@@ -2245,14 +2270,23 @@
     line-height: 1.5;
     color: var(--ink-body);
     text-wrap: pretty;
-    display: block;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
     width: 100%;
   }
+  .artistmeta__para {
+    margin: 0;
+  }
+  /* A height, not a line clamp: `-webkit-line-clamp` needs
+     `display: -webkit-box`, which takes only one block of text - with
+     paragraphs inside it showed nothing at all. The fade says there is
+     more without pretending to count lines. */
   .artistmeta__bio.is-clamped {
-    display: -webkit-box;
-    -webkit-line-clamp: 4;
-    -webkit-box-orient: vertical;
+    max-height: 102px;
     overflow: hidden;
+    -webkit-mask-image: linear-gradient(180deg, #000 58%, transparent 100%);
+    mask-image: linear-gradient(180deg, #000 58%, transparent 100%);
   }
   .artistmeta__more {
     font-family: var(--font-mono);
