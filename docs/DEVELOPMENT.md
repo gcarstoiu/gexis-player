@@ -157,6 +157,24 @@ decided since, sorted by whether it was hardware, a UX call or scope
   `main` when its acceptance criteria pass.
 - Commits are small and describe *why*, not *what*.
 
+### The build's downloads are cached locally
+
+`make image` vendors five third-party artefacts — Gelo5's skins (143 MB),
+the two Peppy engines and the screensaver templates, the DSEG font, and
+go-librespot. Each is pinned by sha256 and, since
+[ADR-0042](decisions/0042-a-local-cache-for-vendored-downloads.md), read from
+a content-addressed cache before the network.
+
+- The cache lives at `$HOME/.cache/gexis-player/downloads`, or wherever
+  `GEXIS_BUILD_CACHE` points, and is bind-mounted into pi-gen's container.
+- Entries are named by their checksum, so a hit verifies itself and a changed
+  pin is a different file rather than a stale one.
+- **It is optional.** Delete it and the next build refetches. A build with no
+  cache mounted behaves exactly as it did before.
+
+**It is not a backup.** It protects the machine holding it, not a fresh
+clone. A mirror we control is the thing that would, and is deferred.
+
 ### Model split
 
 Sonnet in Claude Code for implementation. Escalate to Opus after two failed
