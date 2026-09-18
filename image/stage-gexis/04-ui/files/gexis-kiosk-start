@@ -31,7 +31,18 @@
 #   --autoplay-policy         nothing autoplays today, but the UI will own
 #                             sound cues later and a user-gesture
 #                             requirement has no user to gesture.
+# Empty unless /etc/gexis/kiosk.env sets it; see the comment there. An
+# unset variable must add no flag at all, so it is built as an array rather
+# than interpolated - an empty string in the argument list is an empty URL
+# argument to Chromium, not nothing.
+debug=()
+if [ -n "${GEXIS_KIOSK_DEBUG_PORT:-}" ]; then
+	debug=(--remote-debugging-port="${GEXIS_KIOSK_DEBUG_PORT}")
+	echo "gexis-kiosk: DevTools protocol on port ${GEXIS_KIOSK_DEBUG_PORT}" >&2
+fi
+
 exec chromium \
+	"${debug[@]}" \
 	--ozone-platform=wayland \
 	--kiosk \
 	--noerrdialogs \

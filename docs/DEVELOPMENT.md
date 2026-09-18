@@ -1237,11 +1237,23 @@ structural work is never needed.
    is still choppy"*). Single-run comparisons have misled
    this project twice (Findings 003/004, then 032's first pass). Recorded as a
    finding.
-4. **Target: under 2 % of frames dropped** on every interaction in the set
-   (George, 2026-09-18) **and George's own go-ahead from seeing it work.**
-   Both, not either: the number is what stops a subjective improvement from
-   being claimed as a fix, and his check is what stops a good number from
-   being mistaken for a good panel.
+4. **Target: two numbers and a person** (George, 2026-09-18; he set 2 % and
+   then declined a single number once the measurement showed why one is not
+   enough).
+
+   - **Under 2 % of frames dropped** on every interaction in the set, and
+   - **no interaction below 55 fps** while the gesture is happening, and
+   - **George's own go-ahead from seeing it work.**
+
+   All three. **Why not the percentage alone:** its denominator is the
+   frames the compositor wanted, which moves with whatever else is
+   animating - now playing's progress bar alone changes it - so the same
+   panel scores differently depending on the screen it is on. Frames put on
+   the screen per second of gesture is the number that means what it says,
+   with 60 the ceiling this panel can reach. **Why not the rate alone:** a
+   rate can be met while frames are still being thrown away around the
+   interaction. **Why a person as well:** neither number knows what the
+   panel feels like in the hand.
 
 ### Phase 8 — Enrichment and lyrics
 
