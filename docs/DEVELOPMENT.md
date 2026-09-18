@@ -1278,6 +1278,21 @@ structural work is never needed.
 
 Purely additive. Cannot break playback.
 
+**Status 2026-09-18: [ADR-0040](decisions/0040-enrichment-providers.md)
+written and proposed, from George's decisions; no code yet.** The providers
+are settled: **LMS's Music & Artist Information plugin first where it
+answers** - it has artist photos *and* biographies on George's server
+([Finding 035](findings/035-lms-artist-information-plugin.md)) - with a
+key-free set behind it (MusicBrainz, Cover Art Archive, Wikipedia via
+Wikidata, ListenBrainz, LRCLIB) for everything else and for Spotify and
+Bluetooth, which have no LMS ids. The plugin is a bonus when present, never
+a requirement. Synced lyrics ship, with LRCLIB's missing licence stated
+rather than buried. Attribution is a quiet line beside the text it credits.
+fanart.tv is not used; a missing photo keeps Phase 7's initials.
+
+**Criterion 1 is amended by ADR-0040 §5:** one token bucket *per provider*,
+not one shared - it was written when the phase assumed a single provider.
+
 **Read first: [Finding 030](findings/030-free-enrichment-providers.md)**
 (2026-09-17) — free providers, field by field, with their terms. MusicBrainz
 is not enough on its own: biographies, similar artists, artist photos and
