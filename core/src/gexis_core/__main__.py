@@ -30,6 +30,7 @@ from gexis_core.providers import (
     Http,
     ListenBrainzSimilar,
     LmsArtistProvider,
+    LrclibLyrics,
     LmsReleaseProvider,
     WikipediaBiography,
 )
@@ -360,6 +361,7 @@ async def main() -> None:
             LmsReleaseProvider(library, artistinfo, lambda: lms.current_album_id),
             WikipediaBiography(http, identity),
             ListenBrainzSimilar(http, identity),
+            LrclibLyrics(http),
         ],
         Cache(),
     )

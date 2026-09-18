@@ -26,7 +26,7 @@ from urllib.parse import quote
 
 import aiohttp
 
-from gexis_core.enrichment import Answer, Enrichment, Limiter, Outcome
+from gexis_core.enrichment import Answer, Enrichment, Limiter, Outcome, _fold
 
 logger = logging.getLogger("gexis_core.providers")
 
@@ -210,6 +210,85 @@ class LmsReleaseProvider:
             album_note_source="LMS" if note else None,
             sources=("lms-release",),
         ))
+
+
+class LrclibLyrics:
+    """Lyrics, plain and time-synced, from LRCLIB (ADR-0040 §3).
+
+    **Two ways in, and they are not equally trustworthy.** `/api/get` wants
+    artist, track, album *and* a duration within ±2 s, and when it answers it
+    has matched the recording. `/api/search` needs no duration - which is how
+    Bluetooth has to ask, since it often reports none - but returns up to 20
+    unpaged results, and Finding 036 measured 0, 8, 16 and 19 of them
+    carrying synced lyrics for four real tracks. **The top hit is not
+    automatically the right one**, so a search result has to match the artist
+    and title exactly, after folding, or it is not used at all.
+
+    ADR-0040 §3 records what is being accepted here: LRCLIB states no licence
+    for the lyrics themselves.
+    """
+
+    name = "lrclib"
+    #: What a fold-exact search hit is worth. Above `CONFIDENCE_MIN`, but
+    #: below a `/api/get` match, which LRCLIB made itself.
+    SEARCH_CONFIDENCE = 95
+
+    def __init__(self, http: Http) -> None:
+        self._http = http
+
+    def serves(self, renderer) -> bool:
+        return True
+
+    async def fetch(self, key) -> Answer:
+        if not (key.artist and key.title):
+            return Answer(Outcome.MISSING)
+        if key.duration:
+            found = await self._http.json("https://lrclib.net/api/get", {
+                "artist_name": key.artist,
+                "track_name": key.title,
+                "album_name": key.album or key.title,
+                "duration": str(key.duration),
+            })
+            if found is None:
+                return Answer(Outcome.UNAVAILABLE)
+            if found:
+                return self._answer(found, 100)
+        return await self._search(key)
+
+    async def _search(self, key) -> Answer:
+        hits = await self._http.json("https://lrclib.net/api/search", {
+            "artist_name": key.artist, "track_name": key.title,
+        })
+        if hits is None:
+            return Answer(Outcome.UNAVAILABLE)
+        if not isinstance(hits, list):
+            return Answer(Outcome.MISSING)
+        exact = [
+            hit for hit in hits
+            if _fold(hit.get("artistName")) == key.artist
+            and _fold(hit.get("trackName")) == key.title
+        ]
+        # A synced hit is worth more than an earlier plain one.
+        exact.sort(key=lambda hit: bool(hit.get("syncedLyrics")), reverse=True)
+        if not exact:
+            return Answer(Outcome.MISSING)
+        return self._answer(exact[0], self.SEARCH_CONFIDENCE)
+
+    def _answer(self, hit: dict, confidence: int) -> Answer:
+        plain = (hit.get("plainLyrics") or "").strip() or None
+        synced = (hit.get("syncedLyrics") or "").strip() or None
+        if hit.get("instrumental"):
+            # An answer, and a useful one: the tab says so rather than
+            # looking broken.
+            return Answer(Outcome.FOUND, Enrichment(
+                instrumental=True, lyrics_source="LRCLIB", sources=("lrclib",),
+            ), confidence=confidence)
+        if not plain and not synced:
+            return Answer(Outcome.MISSING)
+        return Answer(Outcome.FOUND, Enrichment(
+            lyrics=plain, lyrics_synced=synced, lyrics_source="LRCLIB",
+            sources=("lrclib",),
+        ), confidence=confidence)
 
 
 class WikipediaBiography:

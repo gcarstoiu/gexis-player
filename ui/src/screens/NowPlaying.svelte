@@ -100,10 +100,49 @@
 
   $effect(() => {
     const who = metadata?.artist ?? '';
-    if ((tab === 'artist' || tab === 'release') && who) untrack(() => loadArtistInfo());
+    if (tab !== 'track' && who) untrack(() => loadArtistInfo());
   });
 
   const info = $derived(artistInfo.enrichment);
+
+  // An LRC body is `[mm:ss.xx] text` per line. Lines without a stamp are
+  // kept - LRCLIB files carry `[ar:]`-style headers and blank beats - but
+  // only stamped ones can be followed.
+  const LRC = /^\[(\d+):(\d+(?:\.\d+)?)\]\s?(.*)$/;
+  const synced = $derived.by(() => {
+    const body = info?.lyrics_synced;
+    if (!body) return [];
+    const out = [];
+    for (const line of body.split('\n')) {
+      const match = LRC.exec(line.trim());
+      if (!match) continue;
+      out.push({ at: Number(match[1]) * 60 + Number(match[2]), text: match[3].trim() });
+    }
+    return out.sort((a, b) => a.at - b.at);
+  });
+  const plainLines = $derived((info?.lyrics ?? '').split('\n'));
+
+  // Which synced line is current. The playhead interpolates between pushes
+  // (playhead.svelte.js), so this follows the same clock the progress bar
+  // does rather than a second one.
+  const activeLine = $derived.by(() => {
+    if (!synced.length) return -1;
+    const at = head.elapsed;
+    let index = -1;
+    for (let i = 0; i < synced.length; i += 1) {
+      if (synced[i].at <= at) index = i;
+      else break;
+    }
+    return index;
+  });
+  //: The design's compact synced view: five lines around the current one.
+  const window5 = $derived.by(() => {
+    if (!synced.length) return [];
+    const at = Math.max(0, activeLine);
+    return [at - 2, at - 1, at, at + 1, at + 2]
+      .filter((n) => n >= 0 && n < synced.length)
+      .map((n) => ({ ...synced[n], n, distance: Math.abs(n - at) }));
+  });
   const specs = $derived.by(() => {
     if (!info) return [];
     const out = [];
@@ -160,7 +199,7 @@
       <div class="meta">
         <div class="tabs" role="tablist" aria-label="Track detail">
           <button class="tab" type="button" role="tab" aria-selected={tab === 'track'} onclick={() => (tab = 'track')}>Track</button>
-          <button class="tab" type="button" role="tab" aria-selected="false" aria-disabled="true" disabled data-unwired="phase-8">Lyrics</button>
+          <button class="tab" type="button" role="tab" aria-selected={tab === 'lyrics'} onclick={() => (tab = 'lyrics')}>Lyrics</button>
           <button class="tab" type="button" role="tab" aria-selected={tab === 'artist'} onclick={() => (tab = 'artist')}>Artist</button>
           <button class="tab" type="button" role="tab" aria-selected={tab === 'release'} onclick={() => (tab = 'release')}>Release</button>
         </div>
@@ -176,6 +215,45 @@
                 <span class="album" class:is-empty={!metadata?.album}>{metadata?.album ?? ''}</span>
                 <!-- Release year is not published yet (design/data-contract.md). -->
               </div>
+            </div>
+          {:else if tab === 'lyrics'}
+            <div class="artisttab">
+              <div class="sect">
+                <span class="sect__label">Lyrics</span>
+                <span class="sect__rule"></span>
+                {#if artistInfo.state === 'loading'}<span class="sect__note">Looking…</span>{/if}
+              </div>
+
+              {#if artistInfo.state === 'loading'}
+                <div class="skel"><span></span><span></span><span></span></div>
+              {:else if info?.instrumental}
+                <div class="lyrics__none">Instrumental</div>
+              {:else if synced.length}
+                <!-- The design's compact synced view: the current line
+                     accented, its neighbours fading out. -->
+                <div class="lyrics lyrics--synced">
+                  {#each window5 as line (line.n)}
+                    <div class="lyrics__line" class:is-now={line.distance === 0} data-distance={line.distance}>
+                      {line.text}
+                    </div>
+                  {/each}
+                </div>
+                <div class="credit">From {info.lyrics_source}</div>
+              {:else if info?.lyrics}
+                <div class="lyrics lyrics--plain">
+                  {#each plainLines as line, i (i)}
+                    <div class="lyrics__line">{line}</div>
+                  {/each}
+                </div>
+                <div class="credit">From {info.lyrics_source}</div>
+              {:else if artistInfo.state === 'error'}
+                <div class="offline">
+                  <span>Lyrics unavailable. Your library is unaffected.</span>
+                  <button class="offline__retry" type="button" onclick={() => loadArtistInfo(true)}>Retry</button>
+                </div>
+              {:else}
+                <div class="lyrics__none">No lyrics found for this track.</div>
+              {/if}
             </div>
           {:else if tab === 'release'}
             <div class="artisttab">
@@ -652,6 +730,45 @@
     letter-spacing: 0.12em;
     text-transform: uppercase;
     color: var(--accent-bluetooth);
+  }
+
+  .lyrics {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    text-wrap: pretty;
+  }
+  .lyrics--synced {
+    align-items: center;
+    justify-content: center;
+    gap: 14px;
+    text-align: center;
+  }
+  .lyrics--plain {
+    overflow-y: auto;
+    gap: 6px;
+    scrollbar-width: none;
+    touch-action: pan-y;
+  }
+  .lyrics--plain::-webkit-scrollbar { display: none; }
+  .lyrics__line {
+    font-size: 21px;
+    line-height: 1.35;
+    font-weight: 500;
+    color: var(--ink-strong);
+    transition: color 320ms ease, opacity 320ms ease;
+  }
+  .lyrics--synced .lyrics__line { font-size: 22px; }
+  .lyrics--synced .lyrics__line[data-distance='1'] { opacity: 0.42; }
+  .lyrics--synced .lyrics__line[data-distance='2'] { opacity: 0.16; }
+  .lyrics__line.is-now {
+    font-weight: 700;
+    color: var(--accent-artist);
+  }
+  .lyrics__none {
+    font-size: var(--t-body-sm);
+    color: var(--ink-quiet);
   }
 
   .specs {

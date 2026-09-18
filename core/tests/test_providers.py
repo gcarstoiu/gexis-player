@@ -290,3 +290,110 @@ async def test_a_track_with_no_album_id_asks_the_library_nothing():
 
     assert (await provider.fetch(KEY)).outcome is Outcome.MISSING
     assert library.asked == []
+
+
+# --- lyrics ----------------------------------------------------------------
+
+
+GET_HIT = {"trackName": "All Out", "artistName": "2Pac", "instrumental": False,
+           "plainLyrics": "Line one\nLine two",
+           "syncedLyrics": "[00:12.00] Line one\n[00:18.50] Line two"}
+
+
+@pytest.mark.asyncio
+async def test_lyrics_with_a_duration_are_taken_as_matched():
+    """`/api/get` wants artist, track, album and a duration within ±2 s; when
+    it answers, LRCLIB has matched the recording itself."""
+    from gexis_core.providers import LrclibLyrics
+
+    http = FakeHttp({"lrclib.net/api/get": GET_HIT})
+
+    answer = await LrclibLyrics(http).fetch(KEY)
+
+    assert answer.outcome is Outcome.FOUND and answer.confidence == 100
+    assert answer.enrichment.lyrics_synced.startswith("[00:12.00]")
+    assert answer.enrichment.lyrics_source == "LRCLIB"
+
+
+@pytest.mark.asyncio
+async def test_without_a_duration_only_an_exact_match_is_used():
+    """**The rule Finding 036 forced.** The no-duration fallback returned
+    16-20 hits per track, of which 0-19 carried synced lyrics: the top hit is
+    not automatically the right one."""
+    from gexis_core.enrichment import TrackKey
+    from gexis_core.providers import LrclibLyrics
+
+    no_duration = TrackKey.of(TrackMetadata(title="All Out", artist="2Pac"))
+    http = FakeHttp({"lrclib.net/api/search": [
+        {"trackName": "All Out (Live)", "artistName": "2Pac", "plainLyrics": "wrong"},
+        {"trackName": "All Out", "artistName": "Somebody Else", "plainLyrics": "wrong"},
+        {"trackName": "All Out", "artistName": "2Pac", "plainLyrics": "right",
+         "syncedLyrics": "[00:10.00] right"},
+    ]})
+
+    answer = await LrclibLyrics(http).fetch(no_duration)
+
+    assert answer.enrichment.lyrics == "right"
+    assert answer.confidence == LrclibLyrics.SEARCH_CONFIDENCE
+
+
+@pytest.mark.asyncio
+async def test_no_exact_match_shows_nothing_rather_than_the_first_hit():
+    from gexis_core.enrichment import TrackKey
+    from gexis_core.providers import LrclibLyrics
+
+    no_duration = TrackKey.of(TrackMetadata(title="All Out", artist="2Pac"))
+    http = FakeHttp({"lrclib.net/api/search": [
+        {"trackName": "All Out (Live)", "artistName": "2Pac", "plainLyrics": "wrong"},
+    ]})
+
+    assert (await LrclibLyrics(http).fetch(no_duration)).outcome is Outcome.MISSING
+
+
+@pytest.mark.asyncio
+async def test_a_synced_hit_wins_over_an_earlier_plain_one():
+    from gexis_core.enrichment import TrackKey
+    from gexis_core.providers import LrclibLyrics
+
+    no_duration = TrackKey.of(TrackMetadata(title="All Out", artist="2Pac"))
+    http = FakeHttp({"lrclib.net/api/search": [
+        {"trackName": "All Out", "artistName": "2Pac", "plainLyrics": "plain only"},
+        {"trackName": "All Out", "artistName": "2Pac", "plainLyrics": "both",
+         "syncedLyrics": "[00:01.00] both"},
+    ]})
+
+    assert (await LrclibLyrics(http).fetch(no_duration)).enrichment.lyrics == "both"
+
+
+@pytest.mark.asyncio
+async def test_an_instrumental_is_an_answer_not_a_blank():
+    """The tab says so rather than looking broken."""
+    from gexis_core.providers import LrclibLyrics
+
+    http = FakeHttp({"lrclib.net/api/get": {"instrumental": True, "plainLyrics": None,
+                                            "syncedLyrics": None}})
+
+    answer = await LrclibLyrics(http).fetch(KEY)
+
+    assert answer.outcome is Outcome.FOUND and answer.enrichment.instrumental
+
+
+@pytest.mark.asyncio
+async def test_a_track_lrclib_does_not_have_falls_through_to_search():
+    """404 means "no such recording", not "cannot ask" - so the search is
+    still worth trying."""
+    from gexis_core.providers import LrclibLyrics
+
+    http = FakeHttp({"lrclib.net/api/get": {}, "lrclib.net/api/search": []})
+
+    assert (await LrclibLyrics(http).fetch(KEY)).outcome is Outcome.MISSING
+    assert any("search" in url for url in http.asked)
+
+
+@pytest.mark.asyncio
+async def test_lrclib_being_unreachable_is_unavailable():
+    from gexis_core.providers import LrclibLyrics
+
+    http = FakeHttp({"lrclib.net/api/get": None})
+
+    assert (await LrclibLyrics(http).fetch(KEY)).outcome is Outcome.UNAVAILABLE
