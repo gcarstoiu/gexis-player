@@ -1214,7 +1214,13 @@ structural work is never needed.
    playing's 500 px well and every queue row. Split it, and sweep every other
    artwork request and card for the same mismatch. This applies a standard
    already recorded (ADR-0022's artwork row, ADR-0038 §7, Finding 029 §5); it
-   is not a new decision.
+   is not a new decision. **Done 2026-09-18; George checked on the panel:**
+   the ladder is 500 / 300 / 200 / 100, and three of the five places drew
+   smaller than they asked. Measured on one album on his server: 33.2 KB at
+   500 px, 23.8 at 300, 12.2 at 200, 3.8 at 100 - so a full queue rail
+   fetched about 3.3 MB of covers to draw them at 42 px, and now fetches
+   about 380 KB. He confirmed nothing looks soft and *"for sure the rail got
+   faster"*.
 2. **One instrument that survives its own scrutiny.** Finding 032 names the
    three faults it must not repeat: `requestAnimationFrame` measured the main
    thread while the strip scrolled off it; the trace reports no frames at all
@@ -1226,7 +1232,9 @@ structural work is never needed.
    answers the third.
 3. **A baseline as a distribution, not a number.** 20 runs per configuration
    over a fixed interaction set: open Home, scroll New Music, open the artist
-   grid, scroll it, open the queue rail. Single-run comparisons have misled
+   grid, scroll it, open the queue rail **and scroll it** (George,
+   2026-09-18: after step 1 the rail opens visibly faster and *"scrolling it
+   is still choppy"*). Single-run comparisons have misled
    this project twice (Findings 003/004, then 032's first pass). Recorded as a
    finding.
 4. **Target: under 2 % of frames dropped** on every interaction in the set

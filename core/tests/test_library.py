@@ -191,7 +191,9 @@ async def test_album_carries_its_tracks_with_numbers_and_durations(lms):
     album = await _lib().album(101)
 
     assert album["title"] == "First Light"
-    assert album["artwork"] == f"{BASE}/music/a1b2c3d4/cover_500x500_o.jpg"
+    # The page draws 264px, so it asks for the 300 step - not the 500 the
+    # now playing well needs (Phase 7a step 1).
+    assert album["artwork"] == f"{BASE}/music/a1b2c3d4/cover_300x300_o.jpg"
     assert album["tracks"][0] == {
         "id": 5001,
         "title": "Opening",
@@ -200,7 +202,7 @@ async def test_album_carries_its_tracks_with_numbers_and_durations(lms):
         "disc": 1,
         "duration": 201.5,
         # A row's thumbnail, not the page's cover.
-        "artwork": f"{BASE}/music/a1b2c3d4/cover_200x200_o.jpg",
+        "artwork": f"{BASE}/music/a1b2c3d4/cover_100x100_o.jpg",
     }
     assert album["tracks"][1]["duration"] == 180.0
     assert album["tracks"][1]["disc"] is None

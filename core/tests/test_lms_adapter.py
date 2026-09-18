@@ -770,7 +770,9 @@ async def test_the_queue_is_read_and_reported(monkeypatch):
     assert [item.title for item in queue.items] == ["Opening", "Closing"]
     assert queue.index == 1
     assert (queue.name, queue.id, queue.modified) == ("Sunday", 900, False)
-    assert queue.items[0].artwork.endswith("/music/abc/cover_500x500_o.jpg")
+    # A queue row is 42px: it gets the row step, not now playing's 500
+    # (Phase 7a step 1 - up to a hundred of them open at once).
+    assert queue.items[0].artwork.endswith("/music/abc/cover_100x100_o.jpg")
 
 
 @pytest.mark.asyncio

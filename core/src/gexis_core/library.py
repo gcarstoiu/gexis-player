@@ -32,12 +32,20 @@ NEW_MUSIC_COUNT = 10
 
 #: ADR-0022 inventory, "Artwork size requested from LMS" [H]. `_o.jpg` is
 #: always a JPEG; the bare resize was a PNG for 5 of 20 albums (Finding 029
-#: §5). Two sizes, each the size the panel draws: a cover fills the album
-#: page's art, a thumb fills a 176px New Music card or a row's thumbnail.
-#: Ten 500px covers in 176px cards were part of what made the strip scroll
-#: unevenly on the panel (George, 2026-09-17).
-ARTWORK_COVER = 500
+#: §5). Ten 500px covers in 176px cards were part of what made the New Music
+#: strip scroll unevenly on the panel (George, 2026-09-17).
+#:
+#: **A ladder, not one size per element** (Phase 7a step 1, 2026-09-18).
+#: Each request is the smallest step at or above what the panel actually
+#: draws, so no cover is bigger than the box it fills and LMS still keeps a
+#: bounded number of resized variants to cache. What the panel draws:
+#: now playing's well 500, the album page 264, a New Music card 176, a
+#: discography card 132, a queue row 42.
+ARTWORK_COVER = 300
 ARTWORK_THUMB = 200
+#: Rows: the queue rail's 42px thumbnails, and track rows if one ever draws
+#: artwork (none does today).
+ARTWORK_ROW = 100
 
 #: ADR-0022 inventory, "How long cached library lists are kept" [N]: until
 #: a rescan, noticed within this many seconds.
@@ -201,7 +209,7 @@ class LmsLibrary:
             "artwork": self._artwork(raw.get("artwork_track_id"), size),
         }
 
-    def _track(self, raw: dict, size: int = ARTWORK_THUMB) -> dict:
+    def _track(self, raw: dict, size: int = ARTWORK_ROW) -> dict:
         return {
             "id": _int(raw.get("id")),
             "title": raw.get("title"),
@@ -261,7 +269,9 @@ class LmsLibrary:
         )
         # An unknown id and an artist with no albums both come back empty;
         # LMS gives no way to tell them apart in this query.
-        albums = [self._album(a) for a in result.get("albums_loop", [])]
+        # The discography draws 132px cards, on the artist page and in
+        # Browse's middle pane.
+        albums = [self._album(a, ARTWORK_THUMB) for a in result.get("albums_loop", [])]
         # Undated albums last rather than first, and same-year albums by
         # title, so the order is stable between reads.
         albums.sort(key=lambda a: (-(a["year"] or 0), (a["title"] or "").casefold()))
