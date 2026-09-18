@@ -1,6 +1,7 @@
 # ADR-0038 — Library and radio on the panel: the designed screens only, read through the core, played on LMS
 
-**Status:** Proposed — awaiting George's read
+**Status:** Accepted — every screen it designs was built and checked by
+George on the panel, Phase 7 steps 4-10 (2026-09-18)
 **Date:** 2026-09-17
 **Raised by:** Phase 7 (library browse), plan agreed with George 2026-09-17
 **Amends:** [0030](0030-library-typed-radio-slimbrowse.md) — narrows its typed
@@ -120,8 +121,35 @@ panel. The design gives shuffle its own button, so Play is the in-order
 one. **This knowingly changes a player setting that LMS's own apps show**;
 adding to the queue leaves it alone, because it starts nothing.
 
-The queue rail's empty state offers a playlist chooser (data contract); that is
-a play-now on a playlist, not a creation.
+**Shuffle all** is that same load with LMS's shuffle turned *on* instead of
+off (George, 2026-09-18). It sits beside Play all on a playlist and on an
+artist page, as the design draws it.
+
+### 3a. The queue rail acts on positions, not on library ids
+
+Built at step 10 and checked on the panel. The rail addresses the queue the
+way LMS's own commands do - `playlist index <n>` to jump, `playlist delete
+<n>` to drop - because a position is what the rail shows and what LMS takes.
+**Clear** is the one action with no position (`playlist clear`), and it
+leaves the rail open so the emptied queue and the way to refill it are both
+still in front of you.
+
+The source row names the playlist the queue was loaded from while LMS still
+reports one, and is also the way to choose another: with nothing queued it
+stops claiming a source and reads "Play from / Choose a playlist" (the
+design's own wording). Picking one is a play-now on a playlist, not a
+creation.
+
+**The rail lists the queue from the track playing now**, as the design does:
+it answers "what is next", and tracks already played stay behind it in LMS
+rather than being drawn. Positions sent to the core stay absolute.
+
+**LMS says when the queue changed, so it is read only then.** Its
+`playlist_timestamp` moves on a load, an add and a shuffle and not on pause,
+skip or a power cycle (Finding 029, step 1a), so that value and the current
+index together gate a second query for the queue's contents. Every status
+push is checked against them - not only the first one, which was the defect
+that made the rail's queue unable to grow (2026-09-18).
 
 ### 4. Playing from the library is how LMS takes the device
 

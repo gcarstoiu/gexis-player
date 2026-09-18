@@ -942,7 +942,8 @@ Plexamp app's audio stops at the tap.
 
 ### Phase 7 — Library browse
 
-**Status 2026-09-17: steps 1, 1a, 2, 3, 4, 4a, 4b and 4c (first two parts) done; next is step 5. ADR-0038 proposed.**
+**Status 2026-09-18: every step done; ADR-0038 accepted. What is left of the
+phase is the image build and the PR.**
 Branch `phase-7-plan`. Criteria 1 and 6 amended, 10 and 11 added, by
 [ADR-0038](decisions/0038-library-and-radio-on-the-panel.md) (George's
 decisions, 2026-09-17).
@@ -1119,7 +1120,12 @@ checked on the panel before the next:
    and slow to scroll - 917 artists arrive as one 98 KB read and become 917
    cards in one pass. Candidates to measure then: rendering only the rows on
    screen, lighter cards, and letting the core hand over letter buckets
-   rather than one list.
+   rather than one list. **Widened by George after step 10 (2026-09-18):**
+   with the queue rail built, everything on the panel is "quite slow", so
+   this is not only about long lists. One candidate is already named rather
+   than guessed: the rail asks LMS for 500 px covers and draws them at 42 px
+   (`ARTWORK_SIZE` serves both now playing's well and every queue row),
+   where the library reads already request artwork at the size drawn.
 6. **Artist grid with the jump rail, then the artist page. Done 2026-09-18;
    George checked the navigation on the panel.** Rail letters folded, the
    discography newest first (both his calls, ADR-0038 §1a); initials instead
@@ -1143,7 +1149,9 @@ checked on the panel before the next:
    counts, each with the row actions; a playlist opens to Play all, its
    total, and its tracks. **Shuffle all is not drawn** - the design has it
    beside Play all, it is not built, and ADR-0020's rule is not to render a
-   control that does nothing. **Open for George:** whether he wants it.
+   control that does nothing. **George asked for it (2026-09-18) and it
+   landed with step 10:** the same load with LMS's shuffle turned on instead
+   of off, beside Play all here and on the artist page.
 9. **Radio. Done 2026-09-18.** `radio.py` walks the subtree and issues a
    handle per item; the panel browses and plays by handle only (ADR-0038
    §5, §8). Checked against the live tree: the root is the nine items
@@ -1151,7 +1159,24 @@ checked on the panel before the next:
    opens and a station plays, and **browsing the tree played nothing** -
    the defect Finding 029 caused. 13 tests, against replies shaped like the
    ones that finding recorded.
-10. **Queue rail.**
+10. **Queue rail. Done 2026-09-18; George checked it on the panel.** LMS
+    only. The core publishes the queue on `/state`, re-reading it from LMS
+    only when `playlist_timestamp` or the current index moves (Finding 029,
+    step 1a); the rail draws the design's header with **Clear**, the source
+    row that both names the playlist a queue came from and is the way to
+    pick another, rows that jump and remove by position, and the count badge
+    on the queue button. **Two defects came out of the check, both of a kind
+    worth naming:** the queue was read only by the *seed* status query, so it
+    could never grow - two albums added, LMS holding 27 tracks, the panel
+    still showing 1 - and all three tests over it passed because each called
+    the reader itself and none drove the push loop
+    (`docs/LESSONS.md`); and the Peppy screen **could not be dismissed by
+    touch** after a daemon restart, because whether it is up is held in
+    memory and `on_touch` only hides what it believes is visible, which
+    strands the panel behind the meter. Each fix has a test that fails
+    without it. **George, 2026-09-18: with the rail built, everything on the
+    panel is "quite slow"** - added to the lists investigation below, which
+    is therefore no longer only about long lists.
 11. Clear the `phase-7` markers; DEVELOPMENT, HANDOFF, image (also R2D2's
     loop-device test, HANDOFF), PR.
 

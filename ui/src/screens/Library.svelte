@@ -1,13 +1,11 @@
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
 <!--
-  The library (ADR-0038), Phase 7 step 4: the root. Ported from
-  source/Now Playing.dc.html, where the library is a layer over now playing:
-  the root's five cards and the New Music strip, the header with Back and Home
-  below the root, the mini strip while a renderer is active, and the waiting
-  services while none is (ADR-0033: Home is the no-renderer screen).
-
-  Screens below the root arrive in later steps; until then their cards carry
-  data-unwired="phase-7" and do nothing.
+  The library (ADR-0038). Ported from source/Now Playing.dc.html, where the
+  library is a layer over now playing: the root's five cards and the New
+  Music strip, the header with Back and Home below the root, the mini strip
+  while a renderer is active, and the waiting services while none is
+  (ADR-0033: Home is the no-renderer screen), then the screens below the
+  root - albums, artists, Browse, playlists and radio.
 
   Mounted only while open, and animated in and out by Svelte rather than
   left in the page at opacity 0: on the panel, the closed layer with its
