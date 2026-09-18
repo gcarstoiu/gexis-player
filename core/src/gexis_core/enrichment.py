@@ -288,6 +288,51 @@ class Cache:
         )
         self._conn.commit()
 
+    # --- small persistent notes -------------------------------------------
+    #
+    # Not every answer worth keeping is about a track. Artist photo URLs are
+    # about an artist, and were held in memory only: after a daemon restart
+    # the first scroll through the grid paid LMS's uncached 500-900 ms per
+    # artist all over again (George asked what is cached, 2026-09-18).
+
+    _KV_SCHEMA = """
+    CREATE TABLE IF NOT EXISTS notes (
+        namespace TEXT NOT NULL,
+        key TEXT NOT NULL,
+        value TEXT NOT NULL,
+        stored_at REAL NOT NULL,
+        PRIMARY KEY (namespace, key)
+    )
+    """
+
+    def recall(self, namespace: str, key: str):
+        """The stored value, or `KeyError` - because `None` is itself a value
+        worth storing here: "this artist has no photo" is an answer."""
+        self._conn.execute(self._KV_SCHEMA)
+        row = self._conn.execute(
+            "SELECT value FROM notes WHERE namespace = ? AND key = ?",
+            (namespace, str(key)),
+        ).fetchone()
+        if row is None:
+            raise KeyError(key)
+        return json.loads(row[0])
+
+    def remember(self, namespace: str, key: str, value) -> None:
+        self._conn.execute(self._KV_SCHEMA)
+        self._conn.execute(
+            "INSERT INTO notes (namespace, key, value, stored_at) VALUES (?, ?, ?, ?) "
+            "ON CONFLICT(namespace, key) DO UPDATE SET value = excluded.value, "
+            "stored_at = excluded.stored_at",
+            (namespace, str(key), json.dumps(value), self._clock()),
+        )
+        self._conn.commit()
+
+    def forget_namespace(self, namespace: str) -> None:
+        """After an LMS rescan, when every id may mean something else."""
+        self._conn.execute(self._KV_SCHEMA)
+        self._conn.execute("DELETE FROM notes WHERE namespace = ?", (namespace,))
+        self._conn.commit()
+
     def forget(self, key: TrackKey, provider: str) -> None:
         self._conn.execute(
             "DELETE FROM enrichment WHERE key = ? AND provider = ?",

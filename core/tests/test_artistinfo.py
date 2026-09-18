@@ -9,6 +9,7 @@ all.
 from __future__ import annotations
 
 import asyncio
+from pathlib import Path
 
 import pytest
 
@@ -26,9 +27,11 @@ class FakeLms:
         self._biographies = biographies or {}
         self.absent = absent
         self.commands = []
+        self.timeouts = []
 
-    async def __call__(self, command, player=""):
+    async def __call__(self, command, player="", timeout=None):
         self.commands.append(list(command))
+        self.timeouts.append(timeout)
         if self.absent:
             # LMS closes the socket on an unknown command rather than
             # answering an error (measured 2026-09-18).
@@ -262,7 +265,7 @@ class SlowLms(FakeLms):
     library wraps the timeout in its own exception `from` the original, which
     is how this is told apart from a dropped connection."""
 
-    async def __call__(self, command, player=""):
+    async def __call__(self, command, player="", timeout=None):
         self.commands.append(list(command))
         try:
             raise TimeoutError()
@@ -296,3 +299,134 @@ async def test_a_timed_out_artist_is_asked_again_rather_than_remembered():
 
     assert (await info.photos([7452]))[7452] is None
     assert len(lms.commands) == 2
+
+
+# --- kept between restarts -------------------------------------------------
+
+
+def _store():
+    from gexis_core.enrichment import Cache
+
+    return Cache(Path(":memory:"))
+
+
+@pytest.mark.asyncio
+async def test_a_photo_survives_a_restart():
+    """**The gap George asked about (2026-09-18).** Photo URLs were held in
+    memory only, so the first scroll through 917 artists after a daemon
+    restart paid LMS's uncached 500-900 ms per artist all over again."""
+    import tempfile
+
+    with tempfile.TemporaryDirectory() as folder:
+        from gexis_core.enrichment import Cache
+
+        path = Path(folder) / "enrichment.db"
+        lms = FakeLms(photos={7452: "imageproxy/mai/artist/7452/image.png"})
+        store = Cache(path)
+        await LmsArtistInfo(lms, BASE, store=store).photos([7452])
+        store.close()
+
+        restarted = FakeLms()  # the plugin would answer "nothing" now
+        photos = await LmsArtistInfo(restarted, BASE, store=Cache(path)).photos([7452])
+
+    assert photos[7452].endswith("image_200x200_o.jpg")
+    assert restarted.commands == []
+
+
+@pytest.mark.asyncio
+async def test_an_artist_with_no_photo_is_remembered_as_having_none():
+    """Otherwise every restart re-asks about every artist that has none,
+    which on this library is most of the slow half."""
+    lms = FakeLms(photos={})
+    store = _store()
+
+    await LmsArtistInfo(lms, BASE, store=store).photos([7452])
+    again = FakeLms(photos={})
+    photos = await LmsArtistInfo(again, BASE, store=store).photos([7452])
+
+    assert photos == {7452: None}
+    assert again.commands == []
+
+
+@pytest.mark.asyncio
+async def test_a_rescan_drops_the_stored_photos_too():
+    """A rescan renumbers every artist id (Finding 029 §4), so a stored URL
+    may belong to somebody else afterwards."""
+    lms = FakeLms(photos={7452: "imageproxy/mai/artist/7452/image.png"})
+    store = _store()
+    info = LmsArtistInfo(lms, BASE, store=store)
+    await info.photos([7452])
+
+    info.forget()
+    await LmsArtistInfo(lms, BASE, store=store).photos([7452])
+
+    assert len(lms.commands) == 2
+
+
+@pytest.mark.asyncio
+async def test_a_store_that_fails_is_not_fatal():
+    """A cold or broken cache means slow, not broken."""
+    class Broken:
+        def recall(self, namespace, key):
+            raise RuntimeError("disk gone")
+
+        def remember(self, namespace, key, value):
+            raise RuntimeError("disk gone")
+
+    lms = FakeLms(photos={7452: "imageproxy/mai/artist/7452/image.png"})
+
+    photos = await LmsArtistInfo(lms, BASE, store=Broken()).photos([7452])
+
+    assert photos[7452].endswith("image_200x200_o.jpg")
+
+
+# --- the plugin answers in two shapes --------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_a_photo_the_server_holds_is_served_by_path():
+    lms = FakeLms(photos={7452: "imageproxy/mai/artist/7452/image.png"})
+
+    photos = await _info(lms).photos([7452])
+
+    assert photos[7452] == f"{BASE}/imageproxy/mai/artist/7452/image_200x200_o.jpg"
+
+
+@pytest.mark.asyncio
+async def test_a_photo_that_lives_elsewhere_goes_through_the_image_proxy():
+    """**The defect this test exists for.** For some artists the plugin
+    answers with an absolute URL at the other end - a Discogs CDN on
+    George's server - and splicing that into the local shape produced
+    `http://lms:9000/https://i.discogs.com/…`, which is nothing at all
+    (2026-09-18)."""
+    remote = "https://i.discogs.com/abc/rs:fit/g:sm/q:90/h:230/w:300/xyz.jpeg"
+    lms = FakeLms(photos={7700: remote})
+
+    photos = await _info(lms).photos([7700])
+
+    assert photos[7700] == f"{BASE}/imageproxy/{remote}/image_200x200_o.jpg"
+    assert "9000/https://" not in photos[7700]
+
+
+@pytest.mark.asyncio
+async def test_a_remote_photo_can_still_be_asked_for_at_page_size():
+    remote = "https://i.discogs.com/abc/xyz.jpeg"
+    info = _info(FakeLms(photos={7700: remote}))
+
+    large = await info.photos([7700], PHOTO_LARGE)
+
+    assert large[7700].endswith("image_300x300_o.jpg")
+
+
+@pytest.mark.asyncio
+async def test_the_plugin_is_given_longer_than_the_library_allows_itself():
+    """An artist it has not looked up goes to the network on its behalf, and
+    the library's 10 s was cutting those off - the panel then showed initials
+    for an artist whose picture exists (2026-09-18)."""
+    from gexis_core.artistinfo import CALL_TIMEOUT_S
+
+    lms = FakeLms(photos={7452: "imageproxy/mai/artist/7452/image.png"})
+
+    await _info(lms).photos([7452])
+
+    assert lms.timeouts == [CALL_TIMEOUT_S]

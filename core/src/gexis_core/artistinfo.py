@@ -56,6 +56,13 @@ CONCURRENCY = 4
 #: again. A dropped connection is also what a restarting server looks like.
 RECHECK_S = 600.0
 
+#: How long one plugin call may take. Longer than the library's own, because
+#: an artist the plugin has not looked up goes to the network on its behalf:
+#: the library's 10 s was cutting those off, and the panel then showed
+#: initials for an artist whose picture exists (2026-09-18). Nothing here is
+#: on a render path, so patience costs nothing anyone sees.
+CALL_TIMEOUT_S = 30.0
+
 
 def _is_absent(exc: BaseException) -> bool:
     """Does this failure mean "no such command", or just "not yet"?
@@ -84,11 +91,19 @@ class LmsArtistInfo:
     """One per daemon. Holds what the plugin has answered, and whether it is
     there at all."""
 
-    def __init__(self, rpc, base_url: str, *, clock=time.monotonic) -> None:
+    #: Where photo URLs are kept between restarts.
+    NAMESPACE = "artist-photo"
+
+    def __init__(self, rpc, base_url: str, *, clock=time.monotonic, store=None) -> None:
         #: The library's `rpc`, so this shares the daemon's one HTTP session.
         self._rpc = rpc
         self._base = base_url.rstrip("/")
         self._clock = clock
+        #: Persistent, when one is given: an artist's photo does not change
+        #: because the daemon restarted, and the first scroll through the
+        #: grid otherwise pays LMS's uncached 500-900 ms per artist again
+        #: (George, 2026-09-18).
+        self._store = store
         self._photos: dict[int, str | None] = {}
         self._absent_until: float | None = None
         self._semaphore = asyncio.Semaphore(CONCURRENCY)
@@ -104,7 +119,7 @@ class LmsArtistInfo:
             return None
         async with self._semaphore:
             try:
-                result = await self._rpc(command)
+                result = await self._rpc(command, timeout=CALL_TIMEOUT_S)
             except Exception as exc:
                 if _is_absent(exc):
                     # An unknown command closes the socket, which is what a
@@ -125,12 +140,23 @@ class LmsArtistInfo:
     def _url(self, result: dict | None, size: int) -> str | None:
         """The plugin's URL, at the size the panel draws.
 
-        Its `url` is the unsized `image.png`; the sized form is the same path
-        with `image_<W>x<H>_o.jpg`, which is a fifth of the bytes.
+        **It answers in two shapes**, which cost an afternoon to notice
+        (2026-09-18). For an artist whose picture the server holds it is a
+        path of its own - `imageproxy/mai/artist/<id>/image.png` - and the
+        sized form is that path with `image_<W>x<H>_o.jpg`, a fifth of the
+        bytes. For an artist whose picture lives elsewhere it is an
+        **absolute URL** at the other end (a Discogs CDN, on George's
+        server), and splicing that into the first shape produces
+        `http://lms:9000/https://i.discogs.com/…`, which is nothing at all.
+        A remote URL goes through LMS's own image proxy instead, which is
+        what resizes it and what keeps the panel talking to one host.
         """
         if not result or result.get("error") or not result.get("url"):
             return None
-        path = str(result["url"]).strip("/")
+        url = str(result["url"]).strip()
+        if url.startswith(("http://", "https://")):
+            return f"{self._base}/imageproxy/{url}/image_{size}x{size}_o.jpg"
+        path = url.strip("/")
         base, _, _ = path.rpartition("/")
         return f"{self._base}/{base}/image_{size}x{size}_o.jpg"
 
@@ -139,6 +165,15 @@ class LmsArtistInfo:
     async def photos(self, artist_ids, size: int = PHOTO_THUMB) -> dict[int, str | None]:
         """A photo URL per artist, or None where the plugin has none. Asked
         concurrently; already-known artists cost nothing."""
+        for artist_id in dict.fromkeys(artist_ids):
+            if artist_id in self._photos or self._store is None:
+                continue
+            try:
+                self._photos[artist_id] = self._store.recall(self.NAMESPACE, artist_id)
+            except KeyError:
+                pass
+            except Exception as exc:  # a cold cache is not a failure
+                logger.info("artistinfo: could not read the stored photo (%s)", exc)
         wanted = [i for i in dict.fromkeys(artist_ids) if i not in self._photos]
         if wanted and not self._believed_absent():
             results = await asyncio.gather(*(
@@ -151,7 +186,15 @@ class LmsArtistInfo:
                 # enrichment.py draws between MISSING and UNAVAILABLE).
                 if result is None:
                     continue
-                self._photos[artist_id] = self._url(result, PHOTO_THUMB)
+                url = self._url(result, PHOTO_THUMB)
+                self._photos[artist_id] = url
+                if self._store is not None:
+                    try:
+                        # `None` is stored too: "this artist has no photo" is
+                        # an answer, and re-asking costs the same as asking.
+                        self._store.remember(self.NAMESPACE, artist_id, url)
+                    except Exception as exc:
+                        logger.info("artistinfo: could not store the photo (%s)", exc)
         out = {}
         for artist_id in dict.fromkeys(artist_ids):
             url = self._photos.get(artist_id)
@@ -185,3 +228,5 @@ class LmsArtistInfo:
         """Drop what is remembered - after a rescan, when every artist id may
         mean a different artist (Finding 029 §4)."""
         self._photos.clear()
+        if self._store is not None:
+            self._store.forget_namespace(self.NAMESPACE)

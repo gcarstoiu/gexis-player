@@ -149,21 +149,27 @@ class LmsLibrary:
             self._http = aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=10))
         return self._http
 
-    async def _rpc(self, command: list, player: str = "") -> dict:
+    async def _rpc(self, command: list, player: str = "", timeout: float | None = None) -> dict:
         body = {"id": next(_id_counter), "method": "slim.request", "params": [player, command]}
+        # `timeout` overrides the session's own for one call. The artist
+        # information plugin needs it: an artist it has not looked up before
+        # costs it 500-900 ms and sometimes more, because it goes to the
+        # network, and the session's 10 s was cutting those off (2026-09-18).
+        kwargs = {"timeout": aiohttp.ClientTimeout(total=timeout)} if timeout else {}
         try:
             session = await self._session()
-            async with session.post(f"{self._base}/jsonrpc.js", json=body) as resp:
+            async with session.post(f"{self._base}/jsonrpc.js", json=body, **kwargs) as resp:
                 resp.raise_for_status()
                 return (await resp.json()).get("result") or {}
         except (aiohttp.ClientError, TimeoutError) as exc:
             raise LibraryUnavailable(str(exc)) from exc
 
-    async def rpc(self, command: list, player: str = "") -> dict:
+    async def rpc(self, command: list, player: str = "", timeout: float | None = None) -> dict:
         """One JSON-RPC call on this library's session. Public because the
-        radio browser (radio.py) sends its own commands and there is no
-        reason for a second HTTP session to LMS."""
-        return await self._rpc(command, player)
+        radio browser (radio.py) and the artist-information plugin
+        (artistinfo.py) send their own commands and there is no reason for a
+        second HTTP session to LMS."""
+        return await self._rpc(command, player, timeout)
 
     async def _check_lastscan(self) -> None:
         now = self._clock()

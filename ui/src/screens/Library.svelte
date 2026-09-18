@@ -763,8 +763,14 @@
                          none, or where a server has no plugin at all
                          (ADR-0040 §1, amending ADR-0038 §2). -->
                     <span class="artist__disc" style:background={tintOf(entry.name)} use:artistCard={entry.id}>
-                      {#if photos[entry.id]}
-                        <img class="artist__photo" src={photos[entry.id]} alt="" loading="lazy" />
+                      {#if photos[entry.id] && !failed.has(photos[entry.id])}
+                        <img
+                          class="artist__photo"
+                          src={photos[entry.id]}
+                          alt=""
+                          loading="lazy"
+                          onerror={() => markFailed(photos[entry.id])}
+                        />
                       {:else}
                         <span class="artist__initials">{initialsOf(entry.name)}</span>
                       {/if}
@@ -792,8 +798,13 @@
       <div class="artistpage">
         <div class="artistpage__side">
           <span class="artist__disc artist__disc--big" style:background={tintOf(artist.name)}>
-            {#if photos[`${artist.id}@300`]}
-              <img class="artist__photo" src={photos[`${artist.id}@300`]} alt="" />
+            {#if photos[`${artist.id}@300`] && !failed.has(photos[`${artist.id}@300`])}
+              <img
+                class="artist__photo"
+                src={photos[`${artist.id}@300`]}
+                alt=""
+                onerror={() => markFailed(photos[`${artist.id}@300`])}
+              />
             {:else}
               <span class="artist__initials artist__initials--big">{initialsOf(artist.name)}</span>
             {/if}

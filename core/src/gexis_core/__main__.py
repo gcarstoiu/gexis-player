@@ -348,7 +348,9 @@ async def main() -> None:
     library = LmsLibrary(config.lms_host, config.lms_port, player_id=lambda: lms.player_id)
     # LMS's own artist photos and biographies, where the server has the
     # plugin (ADR-0040 §1). Shares the library's HTTP session.
-    artistinfo = LmsArtistInfo(library.rpc, f"http://{config.lms_host}:{config.lms_port}")
+    enrichment_cache = Cache()
+    artistinfo = LmsArtistInfo(library.rpc, f"http://{config.lms_host}:{config.lms_port}",
+                               store=enrichment_cache)
     # ADR-0040 §1: LMS's own plugin first where it answers, the key-free
     # providers behind it and for the renderers that have no LMS ids.
     http = Http()
@@ -363,7 +365,7 @@ async def main() -> None:
             ListenBrainzSimilar(http, identity),
             LrclibLyrics(http),
         ],
-        Cache(),
+        enrichment_cache,
     )
     # Warm the Artist tab while the track plays, so opening it shows
     # something rather than a skeleton (George, 2026-09-18). Debounced,
