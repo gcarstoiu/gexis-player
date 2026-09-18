@@ -34,6 +34,7 @@ from gexis_core.providers import (
     LmsArtistProvider,
     LrclibLyrics,
     LmsReleaseProvider,
+    RecordingArtProvider,
     WikipediaBiography,
 )
 from gexis_core.peppy import PeppyController, PeppyScreen, UnattendedPlayback
@@ -374,6 +375,9 @@ async def main() -> None:
                                 lambda: settings.value("listenbrainz_token")),
             LrclibLyrics(http),
             CoverArtProvider(http),
+            # Last: the radio case, where there is no album to match on
+            # (Phase 8 criterion 7).
+            RecordingArtProvider(http),
         ],
         enrichment_cache,
     )

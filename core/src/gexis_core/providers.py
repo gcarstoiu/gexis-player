@@ -407,6 +407,79 @@ class CoverArtProvider:
                       confidence=score)
 
 
+class RecordingArtProvider:
+    """Cover art for a track with no album to look one up by (Phase 8
+    criterion 7, ADR-0038 §8a).
+
+    **This is the radio case.** A station's metadata carries the song and
+    its artist, and the *station's* name where an album would be (§8a), so
+    the album-based lookup above cannot help: it would be searching for a
+    release called "Paradiso Berlin". This one matches on the recording
+    instead, which is all a stream gives.
+
+    **And it is the weakest evidence in the phase.** No album and no
+    duration to corroborate the match, and stream text is not always a song
+    at all - Phase 6 saw "KissFM  Live!" arrive as an artist. So the
+    provider asks for two things before it believes a hit: MusicBrainz's own
+    score, which the service then holds to `CONFIDENCE_MIN`, and the artist
+    credit folding to the one we asked about. A wrong cover on a screen
+    nobody can correct is worse than the design's pending glyph.
+    """
+
+    name = "recording-art"
+    SIZE = 500
+
+    def __init__(self, http: Http) -> None:
+        self._http = http
+
+    def serves(self, renderer) -> bool:
+        return True
+
+    async def fetch(self, key) -> Answer:
+        if not (key.artist and key.title):
+            return Answer(Outcome.MISSING)
+        found = await self._http.json(
+            "https://musicbrainz.org/ws/2/recording/",
+            {"query": f'recording:"{key.title}" AND artist:"{key.artist}"',
+             "fmt": "json", "limit": "3"},
+        )
+        if found is None:
+            return Answer(Outcome.UNAVAILABLE)
+        recordings = found.get("recordings") or []
+        if not recordings:
+            return Answer(Outcome.MISSING)
+        top = recordings[0]
+        score = int(top.get("score") or 0)
+        credited = " ".join(
+            str((c.get("artist") or {}).get("name") or c.get("name") or "")
+            for c in (top.get("artist-credit") or [])
+        )
+        if fold(credited) != key.artist:
+            # A high score on somebody else is exactly how a station name
+            # would get a cover put against it.
+            return Answer(Outcome.MISSING, confidence=score)
+        release = (top.get("releases") or [{}])[0]
+        group = (release.get("release-group") or {}).get("id")
+        where = (f"https://coverartarchive.org/release-group/{group}" if group
+                 else f"https://coverartarchive.org/release/{release['id']}"
+                 if release.get("id") else None)
+        if where is None:
+            return Answer(Outcome.MISSING, confidence=score)
+        art = await self._http.json(where)
+        if art is None:
+            return Answer(Outcome.UNAVAILABLE, confidence=score)
+        images = art.get("images") or []
+        front = next((i for i in images if i.get("front")), images[0] if images else None)
+        if not front:
+            return Answer(Outcome.MISSING, confidence=score)
+        thumbnails = front.get("thumbnails") or {}
+        url = thumbnails.get(str(self.SIZE)) or thumbnails.get("large") or front.get("image")
+        if not url:
+            return Answer(Outcome.MISSING, confidence=score)
+        return Answer(Outcome.FOUND, Enrichment(album_art=url, sources=("recording-art",)),
+                      confidence=score)
+
+
 class WikipediaBiography:
     """A biography for any renderer, reached the long way round: MusicBrainz
     for the artist's id, its Wikidata relation for the article, then

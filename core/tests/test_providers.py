@@ -546,3 +546,84 @@ async def test_the_artist_page_needs_a_name():
 
     async with TestClient(TestServer(server.make_app())) as client:
         assert (await client.get("/library/artist-info?id=7452")).status == 400
+
+
+# --- artwork for a stream, which has no album ------------------------------
+
+
+MB_RECORDING = {"recordings": [{
+    "id": "rec-1", "title": "Blinding Lights", "score": 100,
+    "artist-credit": [{"artist": {"name": "The Weeknd"}}],
+    "releases": [{"id": "rel-1", "release-group": {"id": "rg-1"}}],
+}]}
+RADIO_KEY = TrackKey.of(TrackMetadata(title="Blinding Lights", artist="The Weeknd",
+                                      album="Paradiso Berlin"))
+
+
+@pytest.mark.asyncio
+async def test_a_stream_gets_art_from_its_recording():
+    """Phase 8 criterion 7. A station puts its own name where an album would
+    be (ADR-0038 §8a), so the album-based lookup would be searching for a
+    release called "Paradiso Berlin"."""
+    from gexis_core.providers import RecordingArtProvider
+
+    http = FakeHttp({"ws/2/recording/": MB_RECORDING, "coverartarchive.org": CAA})
+
+    answer = await RecordingArtProvider(http).fetch(RADIO_KEY)
+
+    assert answer.outcome is Outcome.FOUND
+    assert answer.enrichment.album_art == "http://caa/front-500.jpg"
+    assert answer.confidence == 100
+
+
+@pytest.mark.asyncio
+async def test_a_hit_credited_to_somebody_else_is_refused():
+    """**The guard this provider exists for.** Stream text is not always a
+    song: Phase 6 saw "KissFM  Live!" arrive as an artist. A high score on
+    the wrong artist is exactly how a station name gets a cover put against
+    it, and there is no album or duration here to catch it."""
+    from gexis_core.providers import RecordingArtProvider
+
+    other = {"recordings": [{
+        "id": "rec-2", "title": "Blinding Lights", "score": 100,
+        "artist-credit": [{"artist": {"name": "A Tribute Band"}}],
+        "releases": [{"id": "rel-2", "release-group": {"id": "rg-2"}}],
+    }]}
+    http = FakeHttp({"ws/2/recording/": other, "coverartarchive.org": CAA})
+
+    answer = await RecordingArtProvider(http).fetch(RADIO_KEY)
+
+    assert answer.outcome is Outcome.MISSING
+    assert not any("coverartarchive" in url for url in http.asked)
+
+
+@pytest.mark.asyncio
+async def test_a_recording_with_no_release_has_nowhere_to_get_art_from():
+    from gexis_core.providers import RecordingArtProvider
+
+    bare = {"recordings": [{"id": "rec-3", "title": "Blinding Lights", "score": 100,
+                            "artist-credit": [{"artist": {"name": "The Weeknd"}}]}]}
+    http = FakeHttp({"ws/2/recording/": bare})
+
+    assert (await RecordingArtProvider(http).fetch(RADIO_KEY)).outcome is Outcome.MISSING
+
+
+@pytest.mark.asyncio
+async def test_a_stream_with_no_song_text_is_not_looked_up():
+    """`current_title` is a single space on some stations (Finding 029 §8a)."""
+    from gexis_core.providers import RecordingArtProvider
+
+    http = FakeHttp({})
+    key = TrackKey.of(TrackMetadata(title=" ", artist=" ", album="Paradiso Berlin"))
+
+    assert (await RecordingArtProvider(http).fetch(key)).outcome is Outcome.MISSING
+    assert http.asked == []
+
+
+@pytest.mark.asyncio
+async def test_a_busy_musicbrainz_does_not_become_a_permanent_blank():
+    from gexis_core.providers import RecordingArtProvider
+
+    http = FakeHttp({"ws/2/recording/": None})
+
+    assert (await RecordingArtProvider(http).fetch(RADIO_KEY)).outcome is Outcome.UNAVAILABLE
