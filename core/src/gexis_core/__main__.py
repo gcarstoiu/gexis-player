@@ -23,6 +23,7 @@ from gexis_core.arbitration import Supervisor
 from gexis_core.config import Config
 from gexis_core.idle_page import probe as probe_idle_page
 from gexis_core.metadata_file import MetadataFileWriter
+from gexis_core.artistinfo import LmsArtistInfo
 from gexis_core.peppy import PeppyController, PeppyScreen, UnattendedPlayback
 from gexis_core.peppy_metadata import PeppyMetadataWriter
 from gexis_core.renderer_volume import RendererVolumeMemory
@@ -334,6 +335,9 @@ async def main() -> None:
     # Phase 7 (ADR-0038): the same server, and the same player, the renderer
     # adapter talks to. Radio shares its HTTP session.
     library = LmsLibrary(config.lms_host, config.lms_port, player_id=lambda: lms.player_id)
+    # LMS's own artist photos and biographies, where the server has the
+    # plugin (ADR-0040 §1). Shares the library's HTTP session.
+    artistinfo = LmsArtistInfo(library.rpc, f"http://{config.lms_host}:{config.lms_port}")
 
     state_server = StateServer(
         state_store,
@@ -349,6 +353,7 @@ async def main() -> None:
         # Phase 7 (ADR-0038): the same server, and the same player, the
         # renderer adapter talks to.
         library=library,
+        artistinfo=artistinfo,
         # ADR-0038 §8: the one SlimBrowse subtree, browsed by handles the
         # core issues.
         radio=RadioBrowser(library.rpc, lambda: lms.player_id),

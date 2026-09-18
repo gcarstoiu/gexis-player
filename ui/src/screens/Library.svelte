@@ -19,6 +19,7 @@
     loadAlbumTracks,
     loadArtists,
     loadArtistAlbums,
+    loadArtistPhotos,
     loadPlaylists,
     loadPlaylist,
     browseRadio,
@@ -107,6 +108,46 @@
     grid.scrollTop = Math.max(0, grid.scrollTop + top - 10);
   }
 
+  // LMS's own artist photos, where the server has the plugin (ADR-0040 §1).
+  // Keyed by `<id>` for the grid and `<id>@300` for the page. A server
+  // without the plugin answers null for everything and the circles keep
+  // their initials, which is not a failure state.
+  let photos = $state({});
+  let photoQueue = new Set();
+  let photoTimer = null;
+
+  function wantPhoto(id) {
+    if (photos[id] !== undefined || photoQueue.has(id)) return;
+    photoQueue.add(id);
+    // Coalesced: a scroll reveals cards one at a time, and one request per
+    // card would be 917 of them.
+    clearTimeout(photoTimer);
+    photoTimer = setTimeout(async () => {
+      // Small batches on purpose: an artist the plugin has not looked up
+      // costs it 500-900 ms upstream (hardware, 2026-09-18), so 20 at a
+      // time appear in a few seconds where 80 would appear in forty.
+      const ids = [...photoQueue].slice(0, 20);
+      photoQueue = new Set([...photoQueue].slice(20));
+      const found = await loadArtistPhotos(ids);
+      // Remember the misses too, so a card that has no photo is asked
+      // about once rather than on every pass of the observer.
+      photos = { ...photos, ...Object.fromEntries(ids.map((i) => [i, found[i] ?? null])) };
+      if (photoQueue.size) wantPhoto([...photoQueue][0]);
+    }, 120);
+  }
+
+  /** Asks for a card's photo once it is on screen (or nearly). */
+  function artistCard(node, id) {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((entry) => entry.isIntersecting)) wantPhoto(id);
+      },
+      { root: node.closest('.grid__scroll'), rootMargin: '300px' },
+    );
+    observer.observe(node);
+    return { destroy: () => observer.disconnect() };
+  }
+
   async function openArtists() {
     busy = 'artists';
     try {
@@ -126,6 +167,11 @@
       discography = await loadArtistAlbums(entry.id);
       artist = entry;
       path = [...path, { kind: 'artist', id: entry.id, label: entry.name }];
+      // The page's disc is 262px, the grid's card 132px, so the page asks
+      // for its own size rather than stretching the grid's thumbnail.
+      loadArtistPhotos([entry.id], 300).then((found) => {
+        if (found[entry.id]) photos = { ...photos, [`${entry.id}@300`]: found[entry.id] };
+      });
     } catch (err) {
       console.info('library:', err.message);
     } finally {
@@ -712,10 +758,16 @@
                     type="button"
                     onclick={() => openArtist(entry)}
                   >
-                    <!-- LMS has no artist photos; the initial stands in
-                         until Phase 8's enrichment (ADR-0038 §2). -->
-                    <span class="artist__disc" style:background={tintOf(entry.name)}>
-                      <span class="artist__initials">{initialsOf(entry.name)}</span>
+                    <!-- LMS's plugin has a photo for most artists on
+                         George's server; the initial stands in where it has
+                         none, or where a server has no plugin at all
+                         (ADR-0040 §1, amending ADR-0038 §2). -->
+                    <span class="artist__disc" style:background={tintOf(entry.name)} use:artistCard={entry.id}>
+                      {#if photos[entry.id]}
+                        <img class="artist__photo" src={photos[entry.id]} alt="" loading="lazy" />
+                      {:else}
+                        <span class="artist__initials">{initialsOf(entry.name)}</span>
+                      {/if}
                     </span>
                     <span class="artist__name">{entry.name}</span>
                   </button>
@@ -740,7 +792,11 @@
       <div class="artistpage">
         <div class="artistpage__side">
           <span class="artist__disc artist__disc--big" style:background={tintOf(artist.name)}>
-            <span class="artist__initials artist__initials--big">{initialsOf(artist.name)}</span>
+            {#if photos[`${artist.id}@300`]}
+              <img class="artist__photo" src={photos[`${artist.id}@300`]} alt="" />
+            {:else}
+              <span class="artist__initials artist__initials--big">{initialsOf(artist.name)}</span>
+            {/if}
           </span>
           <div>
             <div class="artistpage__name">{artist.name}</div>
@@ -1890,6 +1946,14 @@
     justify-content: center;
     flex-shrink: 0;
   }
+  .artist__photo {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
   .artist__initials {
     font-size: 40px;
     font-weight: 700;

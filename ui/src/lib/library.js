@@ -118,3 +118,19 @@ export function loadLibraryRoot() {
   })();
   return inFlight;
 }
+
+/** Artist photos from LMS's own plugin, for the artists about to be drawn
+ *  (ADR-0040 §1). Asked in batches rather than for the library: 40 took
+ *  212 ms against George's server, 917 would be neither necessary nor kind
+ *  (Finding 035). A server without the plugin answers null for every id,
+ *  which is not an error - the circle keeps its initials. */
+export async function loadArtistPhotos(ids, size = 200) {
+  if (!ids.length) return {};
+  try {
+    const response = await fetch(`/library/artist-photos?ids=${ids.join(',')}&size=${size}`);
+    if (!response.ok) return {};
+    return await response.json();
+  } catch {
+    return {};
+  }
+}

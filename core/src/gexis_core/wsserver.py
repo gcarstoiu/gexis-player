@@ -30,11 +30,17 @@ from pathlib import Path
 from aiohttp import web
 
 from gexis_core.adapters.base import TRANSPORT_COMMANDS
+from gexis_core.artistinfo import PHOTO_LARGE, PHOTO_THUMB
 from gexis_core.library import LibraryUnavailable, NoPlayer, NotFound
 from gexis_core.radio import RadioUnavailable, UnknownHandle
 from gexis_core.model import PlaybackState
 from gexis_core.settings_registry import InvalidValue, NotSettable, NotWired, UnknownSetting
 from gexis_core.state import StateStore
+
+#: The most artists one request may ask photos for. A screen of
+#: cards is about 40; this is a bound on what a caller can make the
+#: daemon do in one go, not a page size.
+PHOTO_BATCH = 80
 
 logger = logging.getLogger("gexis_core.wsserver")
 
@@ -57,6 +63,7 @@ class StateServer:
         settings=None,
         peppy=None,
         library=None,
+        artistinfo=None,
         radio=None,
         ui_dir: Path | None = None,
     ) -> None:
@@ -83,6 +90,7 @@ class StateServer:
         self._settings = settings
         self._peppy = peppy
         self._library = library
+        self._artistinfo = artistinfo
         self._radio = radio
         self._ui_dir = ui_dir
         self._clients: set[web.WebSocketResponse] = set()
@@ -322,6 +330,29 @@ class StateServer:
         except RadioUnavailable as exc:
             return web.json_response({"error": f"LMS unreachable: {exc}"}, status=502)
 
+    async def _handle_artist_photos(self, request: web.Request) -> web.Response:
+        """`?ids=1,2,3[&size=200]` -> `{"<id>": url|null}`.
+
+        LMS's own plugin, when the server has it (ADR-0040 §1). Asked for the
+        artists the panel is about to draw rather than for the library: 40
+        took 212 ms against George's server, 917 would be neither necessary
+        nor kind (Finding 035).
+        """
+        if self._artistinfo is None:
+            return web.json_response({"error": "artist info is not wired up"}, status=503)
+        raw = request.query.get("ids", "")
+        try:
+            ids = [int(part) for part in raw.split(",") if part.strip()][:PHOTO_BATCH]
+            size = int(request.query.get("size", PHOTO_THUMB))
+        except ValueError:
+            return web.json_response({"error": "ids must be integers"}, status=400)
+        if not ids:
+            return web.json_response({})
+        if size not in (PHOTO_THUMB, PHOTO_LARGE):
+            return web.json_response({"error": f"unknown size {size}"}, status=400)
+        photos = await self._artistinfo.photos(ids, size)
+        return web.json_response({str(k): v for k, v in photos.items()})
+
     async def _handle_surface(self, request: web.Request) -> web.Response:
         """ADR-0035 §6: the panel always arrives on loopback, a phone from the LAN."""
         panel = request.remote in ("127.0.0.1", "::1")
@@ -408,6 +439,7 @@ class StateServer:
         app.router.add_post("/settings/{key}", self._handle_setting_action)
         app.router.add_get("/radio", self._handle_radio)
         app.router.add_post("/radio/play", self._handle_radio_play)
+        app.router.add_get("/library/artist-photos", self._handle_artist_photos)
         app.router.add_post("/library/action", self._handle_library_action)
         app.router.add_get("/library/{what}", self._handle_library)
         app.router.add_get("/library/{what}/{id}", self._handle_library)
