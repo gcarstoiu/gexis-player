@@ -65,7 +65,7 @@ registration, a key, or a per-user setting.
 | Identity, label, release type, track count | MusicBrainz | **1 request/s per IP**; above it *every* request gets 503 |
 | Album and track artwork | Cover Art Archive | No published limit; needs an MBID first |
 | Biography | Wikipedia REST summary, reached through MusicBrainz → Wikidata | 200/min with a compliant User-Agent |
-| Similar artists | ListenBrainz | 1 call/s |
+| Similar artists | ListenBrainz Labs `similar-artists` | 1 call/s |
 | Lyrics, plain and synced | LRCLIB | None published; serial, honour `Retry-After` |
 
 **Rejected:** Last.fm (per-user key, non-commercial only, written approval
@@ -78,6 +78,25 @@ disqualifier is in Finding 030.
 artist photos, and §1 removes the need: where LMS answers we use it, and
 where it does not the artist page keeps its initials (George chose this over
 a per-user key).
+
+**Measured against real tracks afterwards**
+([Finding 036](../findings/036-key-free-providers-against-real-tracks.md),
+Phase 8 step 1), three things that change how these are used:
+
+- **A 503 is not "nothing found".** MusicBrainz's *search* answered
+  `{"error": "The MusicBrainz web server is currently busy…"}` for 4 of 9
+  searches, retries included, while lookups by MBID answered 4 of 4. ADR-0012
+  caches negative results; a busy server's 503 landing in that cache would
+  deny an album its enrichment permanently. **"Not found" and "could not
+  ask" are different states, and only the first is cached.**
+- **ListenBrainz's name → MBID lookup needs a token** (401), so MBIDs come
+  from MusicBrainz. Its Labs `similar-artists` endpoint works without one,
+  but `algorithm` is an enum that has already changed: the value in
+  ListenBrainz's own older examples is rejected today. **No similar artists
+  is a missing section, never an error on screen.**
+- **LRCLIB's search fallback needs the confidence rule to be real.** Of 16-20
+  hits per track, the synced ones were 0, 8, 16 and 19 - the top hit is not
+  automatically right.
 
 ### 3. Lyrics: synced, from LRCLIB, with the licence question stated
 

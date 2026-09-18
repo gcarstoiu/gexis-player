@@ -1323,13 +1323,19 @@ before the next, as Phase 7 ran.
 
 1. **Measure the key-free providers against real tracks, no product code.**
    Read-only, from `gexis`, using albums and artists from George's own
-   library and one radio station: does MusicBrainz find them and what does
-   its score look like; does MusicBrainz → Wikidata → Wikipedia reach the
-   right article for an ambiguous name; does ListenBrainz answer without a
-   token; does LRCLIB match with a duration and what its search fallback
-   returns without one. Recorded as a finding, with what it could not
-   establish. **Why first:** ADR-0040 chose these providers from their
-   documentation and terms; nothing has asked them for a real track yet.
+   library and one radio station. **Done 2026-09-18,
+   [Finding 036](findings/036-key-free-providers-against-real-tracks.md):**
+   all four answer. MusicBrainz scores the right release group and recording
+   at 100 - but its *search* answered 503 "currently busy" for 4 of 9 tries,
+   retries included, where lookups by MBID answered 4 of 4, **so a 503 must
+   never be cached as "nothing found"**. Cover Art Archive works and is slow
+   (0.9-1.9 s). Wikidata → Wikipedia reaches the right article (297 ms +
+   116 ms). ListenBrainz's metadata lookup needs a token (401), while its
+   Labs similar-artists works without one - with an `algorithm` enum that has
+   already changed under it. LRCLIB matched 3 of 4 real tracks with synced
+   lyrics in 55-350 ms, and its no-duration fallback returned 16-20 hits of
+   which 0-19 were synced, so the confidence rule is needed, not a
+   formality.
 2. **The enrichment service, tested against recorded replies.** One limiter
    per provider (ADR-0040 §5), a persistent cache including negative
    results, the confidence threshold, and the rule that renderer-supplied
