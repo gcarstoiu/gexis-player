@@ -136,6 +136,8 @@ class Enrichment:
     biography_source: str | None = None
     biography_url: str | None = None
     similar: tuple[str, ...] = ()
+    #: Recording names the wider world plays most, most first.
+    popular: tuple[str, ...] = ()
     artist_image: str | None = None
     #: Cover art for the release, when the renderer supplies none.
     album_art: str | None = None
@@ -170,7 +172,7 @@ class Enrichment:
     def is_empty(self) -> bool:
         return not any(
             getattr(self, name)
-            for name in ("biography", "similar", "artist_image", "album_art", "label",
+            for name in ("biography", "similar", "popular", "artist_image", "album_art", "label",
                          "release_type", "track_count", "album_note", "released",
                          "length_s", "lyrics", "lyrics_synced")
         )
@@ -181,6 +183,7 @@ class Enrichment:
             "biography_source": self.biography_source,
             "biography_url": self.biography_url,
             "similar": list(self.similar),
+            "popular": list(self.popular),
             "artist_image": self.artist_image,
             "album_art": self.album_art,
             "label": self.label,

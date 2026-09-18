@@ -43,6 +43,9 @@ from gexis_core.state import StateStore
 #: daemon do in one go, not a page size.
 PHOTO_BATCH = 80
 
+#: How many Popular rows the artist page draws (the design's five).
+POPULAR_ROWS = 5
+
 logger = logging.getLogger("gexis_core.wsserver")
 
 DEFAULT_HOST = "0.0.0.0"
@@ -386,9 +389,40 @@ class StateServer:
                 sources=("lms",) if (biography or photos.get(artist_id)) else (),
             )
         rest = await self._enrichment.for_track(
-            TrackKey(artist=fold(name)), only=("wikipedia", "listenbrainz"),
+            TrackKey(artist=fold(name)), only=("wikipedia", "listenbrainz", "popular"),
         )
-        return web.json_response({"artist": name, "enrichment": found.merged_with(rest).to_json()})
+        found = found.merged_with(rest)
+        return web.json_response({
+            "artist": name,
+            "enrichment": found.to_json(),
+            # Only what this device can actually play, in the order the
+            # wider world plays them (the design's own note on Popular).
+            "popular": await self._playable(artist_id, found.popular),
+        })
+
+    async def _playable(self, artist_id: int | None, popular) -> list[dict]:
+        """The popular recordings this library holds, as rows the page can
+        press. Matched on a folded title, because a chart and a tag rarely
+        agree on capitals or punctuation."""
+        if not popular or artist_id is None or self._library is None:
+            return []
+        try:
+            tracks = await self._library.artist_tracks(artist_id)
+        except Exception as exc:
+            logger.info("artist-info: could not read the artist's tracks (%s)", exc)
+            return []
+        here = {}
+        for track in tracks:
+            here.setdefault(fold(track.get("title")), track)
+        rows = []
+        for title in popular:
+            track = here.get(fold(title))
+            if track and not any(r["id"] == track["id"] for r in rows):
+                rows.append({"id": track["id"], "title": track["title"],
+                             "duration": track.get("duration")})
+            if len(rows) == POPULAR_ROWS:
+                break
+        return rows
 
     async def _handle_enrichment(self, request: web.Request) -> web.Response:
         """What is known about what is playing, beyond what the renderer said

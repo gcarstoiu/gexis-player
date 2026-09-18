@@ -21,6 +21,17 @@ async function get(path) {
 /** `{counts, albums}`, or nulls until the first load finishes. */
 export const libraryRoot = writable({ counts: null, albums: [] });
 
+/** Artist photo URLs the panel has already been told about, keyed by
+ *  `<id>` for the grid and `<id>@300` for the artist page.
+ *
+ *  **Module state, not component state.** The library screen is mounted only
+ *  while it is open (Phase 7's fix for the black screen it left behind), so
+ *  anything it holds is thrown away every time it closes - and every artist
+ *  was asked about again on the way back in (George, 2026-09-18). The
+ *  daemon answers those from its own cache, but the panel still waited on a
+ *  round trip per screenful before drawing a face it had already drawn. */
+export const artistPhotos = writable({});
+
 /** Waits for the image, but never on it: a cover that 404s or hangs must
  *  not hold up the rest of the strip. The screen falls back to an empty
  *  well for it, as it does for an album with no artwork at all. */
@@ -129,7 +140,16 @@ export async function loadArtistPhotos(ids, size = 200) {
   try {
     const response = await fetch(`/library/artist-photos?ids=${ids.join(',')}&size=${size}`);
     if (!response.ok) return {};
-    return await response.json();
+    const found = await response.json();
+    const suffix = size === 200 ? '' : `@${size}`;
+    artistPhotos.update((known) => {
+      const next = { ...known };
+      // Misses are remembered too, so a face that has none is not asked
+      // about on every pass of the observer.
+      for (const id of ids) next[`${id}${suffix}`] = found[id] ?? null;
+      return next;
+    });
+    return found;
   } catch {
     return {};
   }
@@ -144,7 +164,7 @@ export async function loadArtistInfo(id, name) {
       `/library/artist-info?id=${encodeURIComponent(id)}&name=${encodeURIComponent(name)}`,
     );
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    return (await response.json()).enrichment;
+    return await response.json();
   } catch (err) {
     console.info('artist-info:', err.message);
     return null;

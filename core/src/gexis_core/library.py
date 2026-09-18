@@ -262,6 +262,18 @@ class LmsLibrary:
             ],
         }
 
+    async def artist_tracks(self, artist_id: int, limit: int = 1000) -> list[dict]:
+        """Every track by this artist that is on the device.
+
+        The artist page's Popular list is what the wider world plays *and*
+        this library holds: a chart of tracks nobody here can play would be
+        an advertisement, not a feature (the design's own note).
+        """
+        result = await self._cached(
+            ["titles", 0, limit, f"artist_id:{artist_id}", f"tags:{TRACK_TAGS}"]
+        )
+        return [self._track(t) for t in result.get("titles_loop", [])]
+
     async def artist_albums(self, artist_id: int) -> list[dict]:
         """The discography, newest first (George, 2026-09-18), each album
         with LMS's own `release_type` for grouping (ADR-0038 §1a).

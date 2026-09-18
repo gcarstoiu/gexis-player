@@ -21,6 +21,7 @@
     loadArtistAlbums,
     loadArtistPhotos,
     loadArtistInfo,
+    artistPhotos,
     loadPlaylists,
     loadPlaylist,
     browseRadio,
@@ -113,14 +114,16 @@
   // Keyed by `<id>` for the grid and `<id>@300` for the page. A server
   // without the plugin answers null for everything and the circles keep
   // their initials, which is not a failure state.
-  let photos = $state({});
-  //: What the artist page shows below its discography.
-  let artistInfo = $state({ state: 'idle', for: null, found: null });
+  //: Kept in `lib/library.js`, so closing the library does not throw away
+  //: every face it has already fetched (George, 2026-09-18).
+  const photos = $derived($artistPhotos);
+  //: What the artist page shows beside its discography.
+  let artistInfo = $state({ state: 'idle', for: null, found: null, popular: [] });
   let photoQueue = new Set();
   let photoTimer = null;
 
   function wantPhoto(id) {
-    if (photos[id] !== undefined || photoQueue.has(id)) return;
+    if ($artistPhotos[id] !== undefined || photoQueue.has(id)) return;
     photoQueue.add(id);
     // Coalesced: a scroll reveals cards one at a time, and one request per
     // card would be 917 of them.
@@ -131,10 +134,7 @@
       // time appear in a few seconds where 80 would appear in forty.
       const ids = [...photoQueue].slice(0, 20);
       photoQueue = new Set([...photoQueue].slice(20));
-      const found = await loadArtistPhotos(ids);
-      // Remember the misses too, so a card that has no photo is asked
-      // about once rather than on every pass of the observer.
-      photos = { ...photos, ...Object.fromEntries(ids.map((i) => [i, found[i] ?? null])) };
+      await loadArtistPhotos(ids);
       if (photoQueue.size) wantPhoto([...photoQueue][0]);
     }, 120);
   }
@@ -172,17 +172,20 @@
       path = [...path, { kind: 'artist', id: entry.id, label: entry.name }];
       // The page's disc is 262px, the grid's card 132px, so the page asks
       // for its own size rather than stretching the grid's thumbnail.
-      loadArtistPhotos([entry.id], 300).then((found) => {
-        if (found[entry.id]) photos = { ...photos, [`${entry.id}@300`]: found[entry.id] };
-      });
+      if ($artistPhotos[`${entry.id}@300`] === undefined) loadArtistPhotos([entry.id], 300);
       // About and Similar artists: ADR-0038 §2 left them undrawn "until
       // Phase 8", and this is Phase 8. Fetched beside the discography
       // rather than before it, so the page arrives without waiting on a
       // biography that takes a second (Finding 035).
-      artistInfo = { state: 'loading', for: entry.id, found: null };
-      loadArtistInfo(entry.id, entry.name).then((found) => {
+      artistInfo = { state: 'loading', for: entry.id, found: null, popular: [] };
+      loadArtistInfo(entry.id, entry.name).then((answer) => {
         if (artistInfo.for !== entry.id) return;
-        artistInfo = { state: found ? 'ready' : 'error', for: entry.id, found };
+        artistInfo = {
+          state: answer ? 'ready' : 'error',
+          for: entry.id,
+          found: answer?.enrichment ?? null,
+          popular: answer?.popular ?? [],
+        };
       });
     } catch (err) {
       console.info('library:', err.message);
@@ -836,7 +839,11 @@
               <span class="i-shuffle"><i></i><i></i><b></b><b></b></span>
             </button>
           </div>
-          <div class="artistmeta">
+        </div>
+
+        <!-- The design's right column: About, Popular, the discography,
+             then Similar artists - all of it one scroller. -->
+        <div class="artistright">
             <div class="sect">
               <span class="sect__label">About</span>
               <span class="sect__rule"></span>
@@ -852,21 +859,25 @@
               <div class="artistmeta__none">Nothing found for this artist.</div>
             {/if}
 
-            {#if artistInfo.found?.similar?.length}
-              <div class="sect">
-                <span class="sect__label">Similar artists</span>
-                <span class="sect__rule"></span>
-              </div>
-              <div class="artistmeta__similar">
-                {#each artistInfo.found.similar as name (name)}
-                  <span class="artistmeta__chip">{name}</span>
-                {/each}
-              </div>
-            {/if}
-          </div>
-        </div>
 
-        <div class="releases">
+          {#if artistInfo.popular.length}
+            <div class="sect">
+              <span class="sect__label">Popular</span>
+              <span class="sect__rule"></span>
+              <span class="sect__note">On this device</span>
+            </div>
+            <div class="popular">
+              {#each artistInfo.popular as track, i (track.id)}
+                <button class="poprow" type="button" onclick={() => play('track', track.id, track.title)}>
+                  <span class="poprow__n">{i + 1}</span>
+                  <span class="poprow__title">{track.title}</span>
+                  {#if track.duration}<span class="poprow__dur">{mmss(track.duration)}</span>{/if}
+                </button>
+              {/each}
+            </div>
+          {/if}
+
+          <div class="releases">
           {#each releases as group (group.label)}
             <div class="release">
               <div class="release__head">
@@ -894,6 +905,19 @@
               </div>
             </div>
           {/each}
+          </div>
+
+          {#if artistInfo.found?.similar?.length}
+            <div class="sect">
+              <span class="sect__label">Similar artists</span>
+              <span class="sect__rule"></span>
+            </div>
+            <div class="artistmeta__similar">
+              {#each artistInfo.found.similar as name (name)}
+                <span class="artistmeta__chip">{name}</span>
+              {/each}
+            </div>
+          {/if}
         </div>
       </div>
     {:else if here?.kind === 'album' && album}
@@ -2070,16 +2094,59 @@
   }
   /* What the artist page draws below the buttons: the design's About and
      Similar artists blocks, filled by Phase 8's enrichment. */
-  .artistmeta {
+  /* The design's right column on the artist page: About, Popular, the
+     discography and Similar artists, scrolling together. */
+  .artistright {
+    flex: 1;
+    min-width: 0;
+    min-height: 0;
     display: flex;
     flex-direction: column;
-    gap: 12px;
-    min-height: 0;
+    gap: 14px;
     overflow-y: auto;
     scrollbar-width: none;
     touch-action: pan-y;
   }
-  .artistmeta::-webkit-scrollbar { display: none; }
+  .artistright::-webkit-scrollbar { display: none; }
+
+  .popular {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .poprow {
+    height: 46px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 0 12px;
+    border-radius: 10px;
+    flex-shrink: 0;
+  }
+  .poprow:active { background: var(--ink-fill-press); }
+  .poprow__n {
+    font-family: var(--font-mono);
+    font-size: 13px;
+    color: var(--ink-quiet);
+    width: 16px;
+    flex-shrink: 0;
+  }
+  .poprow__title {
+    flex: 1;
+    min-width: 0;
+    text-align: left;
+    font-size: var(--t-body-sm);
+    color: var(--ink);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .poprow__dur {
+    font-family: var(--font-mono);
+    font-size: 13px;
+    color: var(--ink-quiet);
+    flex-shrink: 0;
+  }
   .sect {
     display: flex;
     align-items: baseline;
@@ -2182,9 +2249,11 @@
   }
 
   .releases {
-    flex: 1;
+    /* Inside `.artistright` now, which does the scrolling: two nested
+       scrollers meant the discography moved under a finger meant for the
+       column. */
     min-width: 0;
-    overflow-y: auto;
+    flex-shrink: 0;
     display: flex;
     flex-direction: column;
     gap: 20px;

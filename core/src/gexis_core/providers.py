@@ -212,6 +212,57 @@ class LmsReleaseProvider:
         ))
 
 
+class ListenBrainzPopular:
+    """What the wider world plays most by this artist (ADR-0040 §2).
+
+    The panel keeps only the ones this library holds, so the list is
+    something to press rather than something to want: a chart of tracks
+    nobody here can play would be an advertisement.
+    """
+
+    name = "popular"
+    LIMIT = 30
+
+    #: **Blocked, 2026-09-18.** This endpoint answered 200 with 878
+    #: recordings in the morning and `401 "Due to bad actors and AI scrapers
+    #: causing undue traffic on our sites, you need to provide an Auth token
+    #: for this endpoint"` in the afternoon. A token is a per-user setting,
+    #: which ADR-0040 chose this provider set specifically to avoid. The
+    #: provider is left in place because it costs nothing when it fails -
+    #: 401 is `UNAVAILABLE`, the section simply does not draw - and because
+    #: the decision about what to do instead is George's.
+
+    def __init__(self, http: Http, identity: ArtistIdentity) -> None:
+        self._http = http
+        self._identity = identity
+
+    def serves(self, renderer) -> bool:
+        return True
+
+    async def fetch(self, key) -> Answer:
+        if not key.artist:
+            return Answer(Outcome.MISSING)
+        who = await self._identity.resolve(key.artist)
+        if who is False:
+            return Answer(Outcome.UNAVAILABLE)
+        if who is None:
+            return Answer(Outcome.MISSING)
+        mbid, score = who
+        found = await self._http.json(
+            f"https://api.listenbrainz.org/1/popularity/top-recordings-for-artist/{mbid}"
+        )
+        if found is None:
+            return Answer(Outcome.UNAVAILABLE, confidence=score)
+        names = tuple(
+            str(entry["recording_name"]) for entry in (found or [])
+            if isinstance(entry, dict) and entry.get("recording_name")
+        )[: self.LIMIT]
+        if not names:
+            return Answer(Outcome.MISSING, confidence=score)
+        return Answer(Outcome.FOUND, Enrichment(popular=names, sources=("popular",)),
+                      confidence=score)
+
+
 class LrclibLyrics:
     """Lyrics, plain and time-synced, from LRCLIB (ADR-0040 §3).
 
