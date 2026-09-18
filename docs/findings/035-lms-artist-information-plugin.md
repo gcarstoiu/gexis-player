@@ -72,6 +72,48 @@ radio tower George saw in Phase 7 (ADR-0038 §8a): a placeholder served with
 `200` reads as success, and an image that is "there" for an artist that does
 not exist is the only tell.
 
+## After the restart (2026-09-18, same day)
+
+The first measurements were taken while the server still reported
+`Restart Required (Music and Artist Information)`. George restarted LMS;
+`serverstatus` then reported `needsrestart` and `newplugins` both absent.
+Repeated on **six artists drawn at random from his 917 album artists**,
+including obscure ones:
+
+| artist | photo | photo ms | biography | bio ms |
+|---|---|---|---|---|
+| Dizzy Gillespie and Stan Getz | yes | 23 | yes | 1005 |
+| Carmen McRae | yes | 10 | yes | 386 |
+| James McCawley | yes | 15 | yes | 520 |
+| PinkPantheress | yes | 13 | yes | 475 |
+| THE ANXIETY | yes | 14 | yes | 941 |
+| Klaus Badelt | yes | 9 | yes | 470 |
+
+**It says "no" when it means no.** For `artist_id:999999`, both commands
+answer
+
+```
+{"error": "I'm sorry, didn't find any relevant information."}
+```
+
+— not a placeholder URL. So **a returned `url` is evidence of a photo**,
+which the earlier round could not establish and which ADR-0040 had listed as
+a consequence to keep honest. The `/music/artist_<id>/cover` placeholder
+above remains the trap; the plugin's own commands do not have it.
+
+**The photos are real and cheap.** Fetching
+`image_200x200_o.jpg` for five of the six: five distinct md5s, 9,824–18,944
+bytes, 32–76 ms each.
+
+**Biographies are the slow half**: 386–1005 ms against 9–23 ms for a photo
+URL. Well within ADR-0012's rule that now playing renders before enrichment
+returns, but not something to block a screen on.
+
+**Still not measured:** what the plugin does for an artist it has never
+looked up before — every artist tried answered immediately, so these may all
+be cached on his server. A first, uncached lookup could be much slower, and
+Phase 8 should treat any of these calls as slow until measured otherwise.
+
 ## What this does not say
 
 - **Nothing about servers without the plugin.** It is optional; a device

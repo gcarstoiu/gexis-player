@@ -126,10 +126,17 @@ duration), which survives one.
 - **Two paths to keep honest.** The panel must look the same whether LMS's
   plugin or our own providers answered, and the attribution line must name
   whichever actually did.
-- **A plugin that is "there" can still answer nothing.** Finding 035 did not
-  establish whether `artistphoto` can say "no photo" distinctly or returns a
-  placeholder URL regardless. Until that is measured, a returned URL is not
-  evidence of a photo — the same trap as `/music/artist_<id>/cover`.
+- **A returned URL is evidence of a photo** — measured after George
+  restarted LMS (Finding 035): for an id that does not exist, both commands
+  answer `{"error": "I'm sorry, didn't find any relevant information."}`
+  rather than a placeholder URL. Six random artists all answered with real,
+  distinct images, 10–19 KB as JPEG at 200 px, 32–76 ms. The
+  `/music/artist_<id>/cover` placeholder remains the trap; the plugin's own
+  commands do not have it.
+- **Biographies are the slow half**, 386–1005 ms against 9–23 ms for a photo
+  URL, and every artist tried may already have been cached on that server. A
+  first lookup is unmeasured, so Phase 8 treats all of these as slow: fetch
+  off the screen's path, never block a render.
 - **Spotify and Bluetooth get the longer route**, so their enrichment is
   slower and subject to the rate limits. Now playing renders first
   regardless (ADR-0012).
