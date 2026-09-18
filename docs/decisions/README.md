@@ -62,6 +62,7 @@ the question blocking it was answered.
 | [0040](0040-enrichment-providers.md) | Enrichment providers: LMS's artist-information plugin first where it answers, a key-free set (MusicBrainz, Cover Art Archive, Wikipedia, ListenBrainz, LRCLIB) behind it | Accepted — amends [0012](0012-enrichment-service.md)'s Sources and its single shared bucket |
 | [0041](0041-scrims-dim-but-do-not-blur.md) | Scrims dim but do not blur: no `backdrop-filter` anywhere in the panel | Accepted — amends the designs, which draw every sheet over a blurred backdrop. [Finding 037](../findings/037-why-a-blurred-scrim-costs-the-panel.md) has the mechanism |
 | [0042](0042-a-local-cache-for-vendored-downloads.md) | A content-addressed local cache for the build's vendored downloads, network only on a miss | Accepted — a sha256 protects integrity, not availability. **Explicitly not the backup it was asked for**: a mirror we control is deferred |
+| [0043](0043-boot-animation-and-a-silent-boot.md) | A boot animation over a silent boot: every source of text quieted, Plymouth from the initramfs, torn down when the UI paints | **Proposed** — awaiting George. [Finding 038](../findings/038-what-the-panel-shows-while-it-boots.md) has the budget: 19.7s, kiosk at 18.26s |
 
 ## Cross-cutting rules
 
