@@ -8,9 +8,8 @@
 <script>
   import spotifyMark from '../assets/icon-spotify.png';
   import bluetoothMark from '../assets/icon-bluetooth.png';
-  import { untrack } from 'svelte';
-
   import VolumeIcon from '../lib/VolumeIcon.svelte';
+  import { retryEnrichment, trackEnrichment } from '../lib/enrichment.js';
   import QueueRail from './QueueRail.svelte';
 
   import { sendTransport } from '../lib/state.js';
@@ -70,13 +69,13 @@
   // the rail's own "Up next" (the design's `queueCount`).
   const upNext = $derived(Math.max(0, (queue?.items?.length ?? 0) - (queue?.index ?? 0) - 1));
 
-  // The Artist tab (ADR-0040). Fetched when the tab is opened, never on the
-  // screen's path: a biography took 386-1005 ms from LMS's own plugin and
-  // seconds through MusicBrainz (Findings 035, 036), and now playing must
-  // render without it (ADR-0012).
+  // The Artist, Release and Lyrics tabs (ADR-0040). **The lookup itself
+  // lives in lib/enrichment.js**, because the mini strip needs the same
+  // answer while this screen is not mounted at all - the library is open
+  // exactly when the strip is on show (George, 2026-09-18: no cover on the
+  // strip for a Bluetooth track whose cover had been found).
   let tab = $state('track');
-  let artistInfo = $state({ state: 'idle', for: null, enrichment: null });
-  let retryTimer = null;
+  const artistInfo = $derived($trackEnrichment);
 
   const initialsOf = (name) =>
     (name ?? '')
@@ -85,53 +84,6 @@
       .slice(0, 2)
       .map((word) => word[0].toUpperCase())
       .join('') || '?';
-
-  // **What is being looked up is a track, not an artist.** Keying this on
-  // the artist meant an album played through reused the first track's
-  // answer for every track after it: no lyrics for the rest of the album,
-  // or - worse - the first track's words against a later one (George,
-  // 2026-09-18: synced lyrics rarely appear on Spotify).
-  const trackId = $derived(
-    [metadata?.artist ?? '', metadata?.title ?? '', metadata?.album ?? ''].join('\u0000'),
-  );
-
-  async function loadArtistInfo(force = false) {
-    const wanted = trackId;
-    if (!(metadata?.artist || metadata?.title)) return;
-    if (!force && artistInfo.for === wanted && artistInfo.state !== 'error') return;
-    artistInfo = { state: 'loading', for: wanted, enrichment: null };
-    try {
-      const response = await fetch('/enrichment');
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
-      const body = await response.json();
-      // By the time a lookup returns the track may have changed; a late
-      // answer is dropped rather than shown against the wrong track.
-      if (trackId !== wanted) return;
-      artistInfo = { state: 'ready', for: wanted, enrichment: body.enrichment };
-      // The daemon answers with what it has after a few seconds and lets
-      // the slow providers finish behind it, so one look back picks up
-      // whatever was still arriving (a busy MusicBrainz, typically).
-      const missing = !body.enrichment?.biography || !body.enrichment?.lyrics_synced;
-      if (missing && !force) {
-        clearTimeout(retryTimer);
-        retryTimer = setTimeout(() => {
-          if (trackId === wanted) loadArtistInfo(true);
-        }, 6000);
-      }
-    } catch (err) {
-      console.info('enrichment:', err.message);
-      artistInfo = { state: 'error', for: wanted, enrichment: null };
-    }
-  }
-
-  // Loaded for every track, not only when a tab is opened: the Track tab
-  // itself shows synced lyrics when there are any (the design's
-  // `panelIsMetaLyrics`), so the panel has to know before anyone asks.
-  // One call to the daemon, which answers from its cache after the first.
-  $effect(() => {
-    // Depends on the track, so a new one is looked up.
-    if (trackId.replace(/\u0000/g, '')) untrack(() => loadArtistInfo());
-  });
 
   const info = $derived(artistInfo.enrichment);
 
@@ -343,7 +295,7 @@
               {:else if artistInfo.state === 'error'}
                 <div class="offline">
                   <span>Lyrics unavailable. Your library is unaffected.</span>
-                  <button class="offline__retry" type="button" onclick={() => loadArtistInfo(true)}>Retry</button>
+                  <button class="offline__retry" type="button" onclick={retryEnrichment}>Retry</button>
                 </div>
               {:else}
                 <div class="lyrics__none">No lyrics found for this track.</div>
@@ -382,7 +334,7 @@
               {:else if artistInfo.state === 'error'}
                 <div class="offline">
                   <span>Release details unavailable. Your library is unaffected.</span>
-                  <button class="offline__retry" type="button" onclick={() => loadArtistInfo(true)}>Retry</button>
+                  <button class="offline__retry" type="button" onclick={retryEnrichment}>Retry</button>
                 </div>
               {:else}
                 <div class="sect__empty">No notes for this release.</div>
@@ -429,7 +381,7 @@
               {:else if artistInfo.state === 'error'}
                 <div class="offline">
                   <span>Artist details unavailable. Your library is unaffected.</span>
-                  <button class="offline__retry" type="button" onclick={() => loadArtistInfo(true)}>Retry</button>
+                  <button class="offline__retry" type="button" onclick={retryEnrichment}>Retry</button>
                 </div>
               {:else}
                 <div class="sect__empty">Nothing found for this artist.</div>

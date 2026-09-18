@@ -5,6 +5,7 @@
   Tapping it opens now playing; its own play/pause and volume do not.
 -->
 <script>
+  import { enrichedArtwork } from '../lib/enrichment.js';
   import VolumeIcon from '../lib/VolumeIcon.svelte';
   import SourceMark from '../lib/SourceMark.svelte';
   import { playhead, mmss } from '../lib/playhead.svelte.js';
@@ -20,9 +21,15 @@
   const hasPlayPause = $derived(controls.includes('play') && controls.includes('pause'));
 
   let failedArtwork = $state(null);
-  const artwork = $derived(
-    metadata?.artwork && metadata.artwork !== failedArtwork ? metadata.artwork : null,
-  );
+  //: What the renderer sent, and only then what enrichment found - the
+  //: same rule as now playing (ADR-0012 is additive-only). Bluetooth often
+  //: sends no cover at all, and the strip showed nothing while the cover
+  //: had already been looked up (George, 2026-09-18).
+  const artwork = $derived.by(() => {
+    const supplied = metadata?.artwork;
+    if (supplied && supplied !== failedArtwork) return supplied;
+    return $enrichedArtwork && $enrichedArtwork !== failedArtwork ? $enrichedArtwork : null;
+  });
 
   let pressed = $state(false);
   // The strip's press feedback covers everything but its own buttons.
