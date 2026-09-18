@@ -78,6 +78,16 @@ scrolling frames at all.
 
 **So these numbers do not establish what a finger sees.**
 
+## Caveat found afterwards, 2026-09-18
+
+**The panel may have been running a stale bundle while these numbers were
+taken.** The core served `index.html` with no cache directive, so a kiosk
+restart could bring back a cached page (found the next day, when a deployed
+change was not on the panel at all; fixed with `Cache-Control: no-store`).
+The variants here were toggled live on whatever page was loaded, so what
+they say about the mask, the backdrop and `will-change` still holds for
+that page - but "baseline" cannot be assumed to be the code as committed.
+
 ## What was done about it
 
 Nothing further. The changes already in (artwork at the size drawn, no

@@ -148,6 +148,14 @@ an LMS command.
 Route names may move while the steps build them; the split — reads paged,
 one action route, handles for radio, queue on `/state` — is the decision.
 
+**Actions as built (step 5, 2026-09-18):** `POST /library/action` with
+`{"kind": "album"|"artist"|"track"|"playlist", "id": <int>, "action":
+"play"|"add"}`. One `playlistcontrol` per action. 404 for an unknown kind,
+action or id, 409 before the adapter has resolved the player, 502 when LMS
+is unreachable, 503 unwired. **Note:** LMS drops the connection rather than
+answering when asked to play an id that does not exist, so that case
+surfaces as 502, not 404.
+
 **Reads as built (step 3, 2026-09-17):** `GET /library/counts`, `/library/new`,
 `/library/artists?offset&limit`, `/library/artists/{id}/albums`,
 `/library/albums/{id}` (with its tracks), `/library/playlists` (with track

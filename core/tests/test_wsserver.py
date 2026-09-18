@@ -481,3 +481,19 @@ async def test_shuffle_and_repeat_carry_their_setting_to_the_renderer():
     assert (ok1.status, ok2.status) == (200, 200)
     assert (bad1.status, bad2.status, bad3.status) == (400, 400, 400)
     assert sent == [("shuffle", True), ("repeat", "all")]
+
+
+@pytest.mark.asyncio
+async def test_the_index_is_never_cached(tmp_path):
+    """A cached index.html pins the panel to a build whose hashed assets
+    have been deleted: the kiosk came back on the previous bundle and 404'd
+    (2026-09-18)."""
+    (tmp_path / "assets").mkdir()
+    (tmp_path / "index.html").write_text("<!doctype html><title>gexis</title>")
+    server = StateServer(StateStore({}), ui_dir=tmp_path)
+
+    async with TestClient(TestServer(server.make_app())) as client:
+        resp = await client.get("/")
+
+        assert resp.status == 200
+        assert resp.headers["Cache-Control"] == "no-store"

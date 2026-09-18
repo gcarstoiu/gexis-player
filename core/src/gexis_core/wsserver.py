@@ -30,7 +30,7 @@ from pathlib import Path
 from aiohttp import web
 
 from gexis_core.adapters.base import TRANSPORT_COMMANDS
-from gexis_core.library import LibraryUnavailable, NotFound
+from gexis_core.library import LibraryUnavailable, NoPlayer, NotFound
 from gexis_core.model import PlaybackState
 from gexis_core.settings_registry import InvalidValue, NotSettable, NotWired, UnknownSetting
 from gexis_core.state import StateStore
@@ -257,6 +257,31 @@ class StateServer:
         except LibraryUnavailable as exc:
             return web.json_response({"error": f"LMS unreachable: {exc}"}, status=502)
 
+    async def _handle_library_action(self, request: web.Request) -> web.Response:
+        """ADR-0038 §5: one route for what the panel does to the library.
+        `{"kind": "album"|"artist"|"track"|"playlist", "id": <int>,
+        "action": "play"|"add"}`. A `200` means the command was sent; what
+        happened is read from `/state`, as for transport (ADR-0037 §1)."""
+        if self._library is None:
+            return web.json_response({"error": "the library is not wired up"}, status=503)
+        try:
+            body = await request.json()
+            kind = str(body["kind"])
+            action = str(body.get("action", "play"))
+            item_id = int(body["id"])
+        except (ValueError, KeyError, TypeError, json.JSONDecodeError):
+            return web.json_response(
+                {"error": 'expected {"kind": ..., "id": <int>, "action": ...}'}, status=400
+            )
+        try:
+            return web.json_response(await self._library.act(kind, item_id, action))
+        except NotFound as exc:
+            return web.json_response({"error": f"{exc} not found"}, status=404)
+        except NoPlayer as exc:
+            return web.json_response({"error": str(exc)}, status=409)
+        except LibraryUnavailable as exc:
+            return web.json_response({"error": f"LMS unreachable: {exc}"}, status=502)
+
     async def _handle_surface(self, request: web.Request) -> web.Response:
         """ADR-0035 §6: the panel always arrives on loopback, a phone from the LAN."""
         panel = request.remote in ("127.0.0.1", "::1")
@@ -341,6 +366,7 @@ class StateServer:
         app.router.add_get("/settings", self._handle_settings)
         app.router.add_put("/settings/{key}", self._handle_setting_write)
         app.router.add_post("/settings/{key}", self._handle_setting_action)
+        app.router.add_post("/library/action", self._handle_library_action)
         app.router.add_get("/library/{what}", self._handle_library)
         app.router.add_get("/library/{what}/{id}", self._handle_library)
         app.router.add_get("/library/{what}/{id}/{sub}", self._handle_library)
@@ -356,7 +382,15 @@ class StateServer:
         return app
 
     async def _handle_index(self, request: web.Request) -> web.FileResponse:
-        return web.FileResponse(self._ui_dir / "index.html")
+        # Never cached. Everything it references is content-hashed, so the
+        # assets can be; this file is the only thing that names them, and a
+        # cached copy pins the panel to a build that no longer exists on
+        # disk - which is exactly what happened on 2026-09-18: the kiosk
+        # restarted onto the previous bundle and 404'd the assets it asked
+        # for, so a deployed change simply was not there.
+        return web.FileResponse(
+            self._ui_dir / "index.html", headers={"Cache-Control": "no-store"}
+        )
 
     async def run(self) -> None:
         runner = web.AppRunner(self.make_app())

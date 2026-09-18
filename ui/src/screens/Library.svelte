@@ -15,7 +15,7 @@
   while the idle screen, which is removed when it closes, never did.
 -->
 <script>
-  import { libraryRoot } from '../lib/library.js';
+  import { libraryRoot, loadAlbum, libraryAction } from '../lib/library.js';
   import MiniStrip from './MiniStrip.svelte';
   import WaitingServices from './WaitingServices.svelte';
 
@@ -30,8 +30,35 @@
     onvolume,
   } = $props();
 
-  // Where in the library the panel is; [] is the root.
+  // Where in the library the panel is; [] is the root. Each entry is a
+  // screen below it: `{ kind: 'album', id, label }` today.
   let path = $state([]);
+  let album = $state(null);
+  let busy = $state(null);
+
+  async function openAlbum(id, label) {
+    busy = id;
+    try {
+      // Fetched and decoded before the screen changes, so the album page
+      // arrives whole rather than filling in (George, 2026-09-17).
+      album = await loadAlbum(id);
+      path = [{ kind: 'album', id, label }];
+    } catch (err) {
+      console.info('library:', err.message);
+    } finally {
+      busy = null;
+    }
+  }
+
+  async function play(kind, id) {
+    try {
+      await libraryAction(kind, id, 'play');
+    } catch (err) {
+      // LMS unreachable, or a rescan took the id away: the panel stays put
+      // rather than pretending something started.
+      console.info('library:', err.message);
+    }
+  }
 
   // Loaded once when the panel starts, covers and all (lib/library.js), so
   // opening Home draws the cards and the strip together.
@@ -43,8 +70,13 @@
 
   const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
 
-  const title = $derived(path.length ? path[path.length - 1] : 'Library');
-  const crumb = $derived(path.length > 1 ? path.slice(0, -1).join('  /  ') : '');
+  const here = $derived(path.length ? path[path.length - 1] : null);
+  const title = $derived(here ? (album?.title ?? here.label) : 'Library');
+  // The design puts the album's artist where a deeper path would put its
+  // parents.
+  const crumb = $derived(
+    here?.kind === 'album' ? (album?.artist ?? '') : path.slice(0, -1).map((p) => p.label).join('  /  '),
+  );
 
   function back() {
     if (!path.length) {
@@ -52,7 +84,13 @@
       return;
     }
     path = path.slice(0, -1);
+    if (!path.length) album = null;
   }
+
+  const mmss = (s) => {
+    const whole = Math.max(0, Math.round(s ?? 0));
+    return `${Math.floor(whole / 60)}:${String(whole % 60).padStart(2, '0')}`;
+  };
 
   // The New Music strip fades whichever edge has more to scroll to. Which
   // edge that is comes from two sentinels watched by an IntersectionObserver,
@@ -176,19 +214,62 @@
           <div class="new__mask" style:mask-image={mask} style:-webkit-mask-image={mask}>
           <div class="new__scroll" bind:this={scroller}>
             <span class="mark" bind:this={startMark}></span>
-            {#each albums as album (album.id)}
-              <button class="album" type="button" disabled data-unwired="phase-7">
+            {#each albums as tile (tile.id)}
+              <button
+                class="album"
+                class:is-busy={busy === tile.id}
+                type="button"
+                onclick={() => openAlbum(tile.id, tile.title)}
+              >
                 <span class="album__art">
-                  {#if album.artwork && !failed.has(album.artwork)}
-                    <img src={album.artwork} alt="" onerror={() => markFailed(album.artwork)} />
+                  {#if tile.artwork && !failed.has(tile.artwork)}
+                    <img src={tile.artwork} alt="" onerror={() => markFailed(tile.artwork)} />
                   {/if}
                 </span>
-                <span class="album__title">{album.title ?? ''}</span>
-                <span class="album__artist">{album.artist ?? ''}</span>
+                <span class="album__title">{tile.title ?? ''}</span>
+                <span class="album__artist">{tile.artist ?? ''}</span>
               </button>
             {/each}
             <span class="mark" bind:this={endMark}></span>
           </div>
+          </div>
+        </div>
+      </div>
+    {:else if here?.kind === 'album' && album}
+      <div class="albumpage">
+        <div class="albumpage__side">
+          <div class="albumpage__art">
+            {#if album.artwork && !failed.has(album.artwork)}
+              <img src={album.artwork} alt="" onerror={() => markFailed(album.artwork)} />
+            {/if}
+          </div>
+          <div>
+            <div class="albumpage__title">{album.title ?? ''}</div>
+            <div class="albumpage__meta">
+              {[album.artist, album.year].filter(Boolean).join('  \u00b7  ')}
+            </div>
+          </div>
+          <button class="playall" type="button" onclick={() => play('album', album.id)}>
+            <span class="playall__glyph"></span>
+            <span class="playall__label">Play album</span>
+          </button>
+        </div>
+
+        <div class="tracks">
+          <div class="tracks__head">
+            <span class="tracks__label">Tracks</span>
+            <span class="tracks__count">{album.tracks.length}</span>
+          </div>
+          <div class="tracks__list">
+            <!-- Row actions (play now, add to queue, add to playlist) are
+                 step 7; a row is display-only until then. -->
+            {#each album.tracks as track (track.id)}
+              <div class="track">
+                <span class="track__num">{track.tracknum ?? ''}</span>
+                <span class="track__title">{track.title ?? ''}</span>
+                <span class="track__time">{track.duration ? mmss(track.duration) : ''}</span>
+              </div>
+            {/each}
           </div>
         </div>
       </div>
@@ -578,6 +659,164 @@
        (tokens.css); --ink-quiet is that floor. */
     color: var(--ink-quiet);
     margin-top: 3px;
+  }
+
+  .album.is-busy {
+    opacity: 0.6;
+  }
+
+  /* The album page, ported from the design's own block. */
+  .albumpage {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    min-height: 0;
+    gap: 34px;
+    padding: 26px 40px 30px;
+    box-sizing: border-box;
+  }
+  .albumpage__side {
+    width: 264px;
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+  }
+  .albumpage__art {
+    width: 264px;
+    height: 264px;
+    border-radius: var(--r-lg);
+    overflow: hidden;
+    position: relative;
+    background: var(--bg-well);
+    border: 1px solid var(--ink-line);
+    flex-shrink: 0;
+  }
+  .albumpage__art img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  .albumpage__title {
+    font-size: 24px;
+    font-weight: 700;
+    color: var(--ink);
+    line-height: 1.2;
+    text-wrap: pretty;
+  }
+  .albumpage__meta {
+    font-family: var(--font-mono);
+    font-size: var(--t-meta);
+    color: rgba(233, 238, 242, 0.62);
+    margin-top: 8px;
+  }
+  .playall {
+    height: 58px;
+    border-radius: var(--r-lg);
+    background: rgba(126, 214, 188, 0.14);
+    border: 1px solid rgba(126, 214, 188, 0.36);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 14px;
+    flex-shrink: 0;
+  }
+  .playall:active {
+    transform: scale(0.97);
+  }
+  .playall__glyph {
+    width: 0;
+    height: 0;
+    border-left: 14px solid var(--accent-lms);
+    border-top: 9px solid transparent;
+    border-bottom: 9px solid transparent;
+    flex-shrink: 0;
+  }
+  .playall__label {
+    font-size: var(--t-body);
+    font-weight: 700;
+    color: var(--ink);
+  }
+
+  .tracks {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+  }
+  .tracks__head {
+    height: 36px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    border-bottom: 1px solid rgba(233, 238, 242, 0.08);
+    margin-bottom: 8px;
+  }
+  .tracks__label,
+  .tracks__count {
+    font-family: var(--font-mono);
+    font-size: var(--t-label-sm);
+  }
+  .tracks__label {
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: rgba(233, 238, 242, 0.5);
+  }
+  .tracks__count {
+    color: rgba(233, 238, 242, 0.62);
+    margin-left: auto;
+  }
+  .tracks__list {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    scrollbar-width: none;
+    /* As on the New Music strip: keep the list's painting to itself and
+       nothing per scroll frame (Finding 032). */
+    contain: content;
+    touch-action: pan-y;
+  }
+  .tracks__list::-webkit-scrollbar {
+    display: none;
+  }
+  .track {
+    height: 52px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    padding: 0 16px;
+    border-radius: 10px;
+  }
+  .track__num {
+    font-family: var(--font-mono);
+    font-size: var(--t-meta);
+    color: rgba(233, 238, 242, 0.62);
+    width: 26px;
+    flex-shrink: 0;
+  }
+  .track__title {
+    flex: 1;
+    min-width: 0;
+    font-size: var(--t-body);
+    font-weight: 600;
+    color: var(--ink);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .track__time {
+    font-family: var(--font-mono);
+    font-size: 16px;
+    color: rgba(233, 238, 242, 0.62);
+    flex-shrink: 0;
   }
 
   .strip {

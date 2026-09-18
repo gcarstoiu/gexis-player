@@ -36,6 +36,27 @@ function decoded(url, timeoutMs = 4000) {
   });
 }
 
+/** One album with its tracks, covers decoded first so the page arrives
+ *  whole rather than filling in (ADR-0038 §1). */
+export async function loadAlbum(id) {
+  const album = await get(`albums/${id}`);
+  await decoded(album.artwork);
+  return album;
+}
+
+/** Play something, or add it to the queue (ADR-0038 §3, §5). A 200 means
+ *  the command was sent; the result arrives on /state. */
+export async function libraryAction(kind, id, action = 'play') {
+  const response = await fetch('/library/action', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ kind, id, action }),
+  });
+  const body = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(body.error ?? `HTTP ${response.status}`);
+  return body;
+}
+
 let inFlight = null;
 
 /** Read the root's counts and New Music, decode the covers, then publish

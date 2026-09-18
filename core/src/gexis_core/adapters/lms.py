@@ -203,6 +203,13 @@ class LmsAdapter(Adapter):
         self._last_transport: str | None = None
 
     @property
+    def player_id(self) -> str | None:
+        """This player's id on the server, resolved from its name at
+        startup - `None` until then. The library plays on the same player
+        this adapter arbitrates for (ADR-0038 §5)."""
+        return self._player_id
+
+    @property
     def last_transport(self) -> str | None:
         """The transport this adapter last reported: 'playing', 'paused',
         'stopped', or None before the first report."""

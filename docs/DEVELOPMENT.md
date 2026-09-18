@@ -1104,7 +1104,16 @@ checked on the panel before the next:
     is already there and refreshes quietly behind it. The CPU governor was set to `performance` in the same
     round and **reverted** once the backdrop fixed it
     ([ADR-0039](decisions/0039-cpu-governor-performance.md)).
-5. **Album page and Play all.**
+5. **Album page and Play all. Done 2026-09-18; George checked on the
+   panel.** `POST /library/action` (ADR-0038 §5) and the album page ported
+   from the design: 264 px cover, title, artist and year, the track list
+   with durations, and Play album. Track row actions stay for step 7.
+   **A defect found during the check:** the core served `index.html` with no
+   cache directive, so the kiosk restarted onto the *previous* bundle and
+   404'd its assets - a deployed change simply was not there, and the tiles
+   looked dead because in that build they were. It is now `no-store`.
+   **Open, deferred by George:** scrolling lists is still laggy; investigate
+   once steps 6 and 7 have put real lists on the panel (Finding 032).
 6. **Artist grid with the jump rail, then the artist page.**
 7. **Three-pane Browse** with row actions.
 8. **Playlists.**

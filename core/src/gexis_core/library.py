@@ -60,6 +60,19 @@ class NotFound(Exception):
     renumbered away."""
 
 
+class NoPlayer(Exception):
+    """The player has not been found on the server yet, so there is
+    nothing to play on."""
+
+
+#: What the panel asks for, and the LMS command it becomes. Measured against
+#: George's server in Finding 029: every kind loads and adds, and a load on a
+#: powered-off player makes LMS power it on itself (ADR-0038 §4).
+TARGETS = {"album": "album_id", "artist": "artist_id", "track": "track_id",
+           "playlist": "playlist_id"}
+ACTIONS = {"play": "cmd:load", "add": "cmd:add"}
+
+
 def _int(value) -> int | None:
     try:
         return int(value)
@@ -75,8 +88,13 @@ def _float(value) -> float | None:
 
 
 class LmsLibrary:
-    def __init__(self, host: str, port: int, *, clock=time.monotonic) -> None:
+    def __init__(self, host: str, port: int, *, player_id=None, clock=time.monotonic) -> None:
         self._base = f"http://{host}:{port}"
+        #: Reads the renderer adapter's own resolved player id: the library
+        #: plays on the same player the adapter arbitrates for, and never
+        #: hardcodes one (the project's rule for anything that differs per
+        #: machine).
+        self._player_id = player_id or (lambda: None)
         self._clock = clock
         self._cache: dict[tuple, dict] = {}
         self._lastscan: str | None = None
@@ -84,8 +102,8 @@ class LmsLibrary:
 
     # --- LMS ---------------------------------------------------------------
 
-    async def _rpc(self, command: list) -> dict:
-        body = {"id": next(_id_counter), "method": "slim.request", "params": ["", command]}
+    async def _rpc(self, command: list, player: str = "") -> dict:
+        body = {"id": next(_id_counter), "method": "slim.request", "params": [player, command]}
         try:
             async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=10)) as session:
                 async with session.post(f"{self._base}/jsonrpc.js", json=body) as resp:
@@ -202,6 +220,38 @@ class LmsLibrary:
         album = self._album(loop[0])
         album["tracks"] = [self._track(t) for t in tracks.get("titles_loop", [])]
         return album
+
+    # --- actions -----------------------------------------------------------
+
+    async def act(self, kind: str, item_id: int, action: str) -> dict:
+        """Play something, or add it to the queue (ADR-0038 §3, §5).
+
+        One `playlistcontrol` per action, as measured: a load replaces the
+        queue and starts playing, an add appends without interrupting
+        (Finding 029 §7). Nothing here powers the player on - LMS does that
+        itself, which is what makes the library able to start playback at
+        all (ADR-0038 §4, ADR-0027).
+
+        Returns what LMS reported, which is the number of tracks it acted
+        on; a `200` means the command was sent, and what happened is read
+        from `/state` (ADR-0037 §1).
+        """
+        if kind not in TARGETS or action not in ACTIONS:
+            raise NotFound(f"{action} {kind}")
+        player = self._player_id()
+        if not player:
+            raise NoPlayer("the LMS player has not been resolved yet")
+        result = await self._rpc(
+            ["playlistcontrol", ACTIONS[action], f"{TARGETS[kind]}:{item_id}"], player
+        )
+        count = _int(result.get("count"))
+        if not count:
+            # LMS answers an unknown id with no count rather than an error.
+            raise NotFound(f"{kind} {item_id}")
+        logger.info("library: %s %s %s -> %s tracks", action, kind, item_id, count)
+        return {"tracks": count}
+
+    # --- playlists ---------------------------------------------------------
 
     async def _library_playlists(self) -> list[dict]:
         """LMS library playlists only, never a plugin's (George,

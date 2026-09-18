@@ -98,6 +98,29 @@ its screenshots silently stopped updating after any animated transition, so
 a real defect first looked like a capture artefact. The panel is the only
 renderer that answers "does the panel draw this".
 
+**Step 5 is done** (2026-09-18, checked by George on the panel): the album
+page and Play album, over `POST /library/action` (ADR-0038 §5). Track row
+actions are step 7.
+
+**A deployment defect found during that check, worth knowing about:** the
+core served `index.html` with no cache directive, so restarting the kiosk
+could bring back a *cached* page - the panel ran the previous bundle and
+404'd the assets it named, and a deployed change was simply not there. Now
+`Cache-Control: no-store` (assets are content-hashed and stay cacheable).
+**If the panel ever seems not to have a change, check which bundle it has**
+before believing the change did nothing.
+
+**Next action: step 6 - the artist grid and the artist page.** Two questions
+for George there: what to do with the two artists whose LMS letter is `Ç` and
+`Í` when the rail is `#` and A-Z, and whether the discography keeps LMS's own
+order (alphabetical) or runs by year.
+
+**Open, deferred by George (2026-09-18):** scrolling lists is still laggy.
+He asked for one general investigation once steps 6 and 7 have put real
+lists on the panel, rather than more work on the ten-tile strip
+([Finding 032](docs/findings/032-panel-frame-times-during-a-scroll.md) says
+what has and has not been established).
+
 **Test data on George's LMS:** playlist folder `/playlist` (George set it;
 it triggered a full rescan that renumbered the library). Playlists
 `gexis-test-album` (122541), `gexis-test-mixed` (122543),

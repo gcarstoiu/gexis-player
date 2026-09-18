@@ -337,8 +337,9 @@ async def main() -> None:
         idle_page=idle_page,
         settings=settings,
         peppy=peppy,
-        # Phase 7 (ADR-0038): the same server the renderer adapter talks to.
-        library=LmsLibrary(config.lms_host, config.lms_port),
+        # Phase 7 (ADR-0038): the same server, and the same player, the
+        # renderer adapter talks to.
+        library=LmsLibrary(config.lms_host, config.lms_port, player_id=lambda: lms.player_id),
         ui_dir=ui_dir,
     )
 

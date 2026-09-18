@@ -12,7 +12,7 @@ import pytest
 from aiohttp.test_utils import TestClient, TestServer
 
 from gexis_core import library as library_module
-from gexis_core.library import LibraryUnavailable, LmsLibrary, NotFound
+from gexis_core.library import LibraryUnavailable, LmsLibrary, NoPlayer, NotFound
 from gexis_core.state import StateStore
 from gexis_core.wsserver import StateServer
 
@@ -47,16 +47,21 @@ class FakeLms:
 
     def __init__(self):
         self.commands = []
+        self.players = []
         self.lastscan = "1700000000"
         self.rescan = False
         self.unreachable = False
+        self.control_count = 12
 
-    async def __call__(self, command):
+    async def __call__(self, command, player=""):
         self.commands.append(list(command))
+        self.players.append(player)
         if self.unreachable:
             raise LibraryUnavailable("connection refused")
         what = command[0]
         args = [str(c) for c in command]
+        if what == "playlistcontrol":
+            return {"count": self.control_count} if self.control_count else {}
         if what == "serverstatus":
             return {"rescan": 1} if self.rescan else {"lastscan": self.lastscan}
         if what == "albums":
@@ -98,7 +103,9 @@ class Clock:
 
 
 def _lib(clock=None):
-    return LmsLibrary("lms.test", 9000, clock=clock or Clock())
+    return LmsLibrary(
+        "lms.test", 9000, player_id=lambda: "aa:bb:cc:dd:ee:ff", clock=clock or Clock()
+    )
 
 
 # --- the reads -------------------------------------------------------------
@@ -286,6 +293,64 @@ async def test_playlists_are_never_cached(lms):
     assert len(lms.reads()) > before
 
 
+# --- actions ---------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "kind, item_id, action, expected",
+    [
+        ("album", 101, "play", ["playlistcontrol", "cmd:load", "album_id:101"]),
+        ("artist", 7, "play", ["playlistcontrol", "cmd:load", "artist_id:7"]),
+        ("track", 5001, "play", ["playlistcontrol", "cmd:load", "track_id:5001"]),
+        ("playlist", 900, "play", ["playlistcontrol", "cmd:load", "playlist_id:900"]),
+        ("album", 101, "add", ["playlistcontrol", "cmd:add", "album_id:101"]),
+    ],
+)
+async def test_each_kind_and_action_sends_one_playlistcontrol(lms, kind, item_id, action, expected):
+    """Finding 029 §7 measured all of these on the real player."""
+    result = await _lib().act(kind, item_id, action)
+
+    assert lms.commands[-1] == expected
+    assert result == {"tracks": 12}
+
+
+@pytest.mark.asyncio
+async def test_an_action_goes_to_the_adapter_s_player(lms):
+    """The library plays on the player the renderer adapter arbitrates for,
+    never one named here."""
+    await _lib().act("album", 101, "play")
+
+    assert lms.players[-1] == "aa:bb:cc:dd:ee:ff"
+
+
+@pytest.mark.asyncio
+async def test_an_unknown_kind_or_action_is_not_found(lms):
+    for kind, action in (("genre", "play"), ("album", "delete")):
+        with pytest.raises(NotFound):
+            await _lib().act(kind, 1, action)
+    assert not [c for c in lms.commands if c[0] == "playlistcontrol"]
+
+
+@pytest.mark.asyncio
+async def test_an_id_lms_acts_on_nothing_for_is_not_found(lms):
+    """LMS answers an unknown id with no count rather than an error."""
+    lms.control_count = 0
+
+    with pytest.raises(NotFound):
+        await _lib().act("album", 999, "play")
+
+
+@pytest.mark.asyncio
+async def test_nothing_is_sent_before_the_player_is_resolved():
+    """The adapter resolves the player from its name at startup; until then
+    there is nothing to play on."""
+    library = LmsLibrary("lms.test", 9000, player_id=lambda: None, clock=Clock())
+
+    with pytest.raises(NoPlayer):
+        await library.act("album", 101, "play")
+
+
 # --- the routes ------------------------------------------------------------
 
 
@@ -293,6 +358,13 @@ async def _get(path, library):
     server = StateServer(StateStore({}), library=library)
     async with TestClient(TestServer(server.make_app())) as client:
         resp = await client.get(path)
+        return resp.status, await resp.json()
+
+
+async def _post(path, library, body):
+    server = StateServer(StateStore({}), library=library)
+    async with TestClient(TestServer(server.make_app())) as client:
+        resp = await client.post(path, json=body)
         return resp.status, await resp.json()
 
 
@@ -354,3 +426,63 @@ async def test_lms_unreachable_is_502(lms):
 
     assert status == 502
     assert "LMS unreachable" in body["error"]
+
+
+@pytest.mark.asyncio
+async def test_the_action_route_answers_503_when_the_library_is_not_wired():
+    status, _ = await _post("/library/action", None, {"kind": "album", "id": 1})
+
+    assert status == 503
+
+
+@pytest.mark.asyncio
+async def test_the_action_route_plays_an_album(lms):
+    status, body = await _post("/library/action", _lib(), {"kind": "album", "id": 101, "action": "play"})
+
+    assert status == 200
+    assert body == {"tracks": 12}
+    assert lms.commands[-1] == ["playlistcontrol", "cmd:load", "album_id:101"]
+
+
+@pytest.mark.asyncio
+async def test_the_action_route_defaults_to_playing(lms):
+    status, _ = await _post("/library/action", _lib(), {"kind": "album", "id": 101})
+
+    assert status == 200
+    assert lms.commands[-1][1] == "cmd:load"
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "body", [{"kind": "album"}, {"id": 1}, {"kind": "album", "id": "abc"}, {}]
+)
+async def test_a_malformed_action_is_400(lms, body):
+    status, _ = await _post("/library/action", _lib(), body)
+
+    assert status == 400
+
+
+@pytest.mark.asyncio
+async def test_an_unknown_kind_is_404(lms):
+    status, _ = await _post("/library/action", _lib(), {"kind": "genre", "id": 1})
+
+    assert status == 404
+
+
+@pytest.mark.asyncio
+async def test_no_player_yet_is_409(lms):
+    library = LmsLibrary("lms.test", 9000, player_id=lambda: None, clock=Clock())
+
+    status, body = await _post("/library/action", library, {"kind": "album", "id": 101})
+
+    assert status == 409
+    assert "player" in body["error"]
+
+
+@pytest.mark.asyncio
+async def test_lms_unreachable_on_an_action_is_502(lms):
+    lms.unreachable = True
+
+    status, _ = await _post("/library/action", _lib(), {"kind": "album", "id": 101})
+
+    assert status == 502
