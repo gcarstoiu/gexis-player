@@ -430,7 +430,10 @@ reverted, currently-flashed image predates this fix.
 9  settings wiring + UI polish            <- next. Every ADR-0022 row wired or
                                             scoped out; criterion 0 is the
                                             panel reaching Phase 7a's target
-10 plugin contract + themes               Qobuz is the fourth-renderer test
+10 plugin contract + themes               Qobuz is the fourth-renderer test;
+                                            a Beszel agent is the test that
+                                            the contract carries a non-renderer
+                                            (George, 2026-09-18)
 11 Plexamp as a renderer                  starts with the hardware check: does it
                                             release the device? (ADR-0008's
                                             reversal condition)

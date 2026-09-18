@@ -1498,7 +1498,31 @@ registry advertises.
    to the core. **Qobuz Connect (Phase 12) is that renderer**
    ([ADR-0016](decisions/0016-plugins-as-separate-processes.md): an optional
    plugin in a private repository).
-3. Theme engine.
+3. **A second plugin that is not a renderer: a Beszel agent** (George,
+   2026-09-18). Qobuz alone tests the contract with the thing it was drawn
+   for; a monitoring agent tests whether the contract can carry anything
+   else - something with no metadata, no transport and no claim on the audio
+   device, that only wants to be installed, started, kept running and
+   switched off again. If the contract cannot express that, it is a renderer
+   API wearing a plugin's name.
+
+   **It also earns its place on the device.** George asked on 2026-09-18
+   whether there was a log of when the Pi throttled, for how long, and what
+   the CPU and GPU were doing at the time. There is not: `vcgencmd
+   get_throttled` keeps sticky bits with no timestamps, the kernel logs only
+   voltage transitions, and nothing samples load at all. An agent recording
+   temperature, clocks, throttle state and load would make every future
+   performance measurement interpretable - and Phase 9's work is measured
+   against a 55 fps target on a machine whose clock history is currently
+   invisible.
+
+   **To decide when it is built, not now:** where the hub lives (Beszel is
+   hub plus agent, and the hub is not this device's job), what the agent
+   listens on and whether ADR-0028's "unauthenticated on the LAN" stance
+   extends to it, whether it ships in the image or installs on demand, and
+   what it costs in memory and CPU on a Pi 4 that is already frame-limited.
+   None of that is settled by adding it to this list.
+4. Theme engine.
 
 ### Phase 11 — Plexamp as a renderer
 
