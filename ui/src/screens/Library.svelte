@@ -2232,6 +2232,13 @@
     touch-action: pan-y;
   }
   .artistright::-webkit-scrollbar { display: none; }
+  /* Nothing in this column shrinks. It is a scroller, so an item that can
+     shrink will: About was the only one that could, and a long biography
+     with a full discography under it was squeezed to *zero* height - the
+     text was there, in a box no pixels tall (George, 2026-09-18). */
+  .artistright > * {
+    flex-shrink: 0;
+  }
 
   .popular {
     display: flex;
