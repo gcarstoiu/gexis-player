@@ -118,7 +118,11 @@ George copies each export into `design/`. So history is kept by commit:
 
 **Deviations the port keeps across exports.** Claude Design does not know
 about these, so a new export will not contain them. Re-apply them when
-porting, until the design takes them in:
+porting, until the design takes them in.
+**[design/IMPLEMENTED-DIFFERENTLY.md](../design/IMPLEMENTED-DIFFERENTLY.md)
+collects all of them for Claude Design** - the list below plus everything
+decided since, sorted by whether it was hardware, a UX call or scope
+(written for the Phase 9 sweep, 2026-09-18):
 
 - **Volume glyph (2026-09-15, George).** The now playing volume button draws
   the drawer's 30px glyph (`ui/src/lib/VolumeIcon.svelte`), not the design's
