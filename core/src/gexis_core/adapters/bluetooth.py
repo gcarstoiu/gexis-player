@@ -223,6 +223,7 @@ class BluetoothAdapter(Adapter):
                 logger.info("bluetooth: MediaPlayer1 already present at %s on startup", path)
                 self._seed_metadata(ifaces[MEDIA_PLAYER_IFACE])
                 asyncio.create_task(self._attach_media_player(path))
+                self._acquire_if_already_playing(ifaces[MEDIA_PLAYER_IFACE], on_acquire)
             if MEDIA_TRANSPORT_IFACE in ifaces:
                 # A phone already connected when the daemon started - its
                 # codec is readable right now and would otherwise not be
@@ -284,6 +285,27 @@ class BluetoothAdapter(Adapter):
             # own takeover-driven Device1.Disconnect() (which also removes
             # MediaPlayer1) is a no-op.
             on_release()
+
+    def _acquire_if_already_playing(self, player_props: dict, on_acquire) -> None:
+        """A phone that was already playing when this daemon started holds
+        the device, and nothing is going to say so.
+
+        Acquisition is driven by objects *appearing* (`InterfacesAdded`),
+        which is an edge: a `MediaPlayer1` that was already there produces
+        none. So the core believed nobody held the device while a phone was
+        playing through it - the panel showed its "waiting for a service"
+        block over a playing track (George saw Spotify's half of this on
+        2026-09-18; this is the same defect one adapter along).
+
+        Only a *playing* status acquires. A paused phone left connected
+        overnight is indistinguishable from one somebody abandoned, and
+        claiming the device for it would take it from whoever has it.
+        """
+        props = _unwrap(player_props)
+        if TRANSPORT_STATUS.get(props.get("Status")) != "playing":
+            return
+        logger.info("bluetooth: already playing at startup (acquisition)")
+        on_acquire()
 
     def _seed_metadata(self, player_props: dict) -> None:
         """`player_props` is straight from ObjectManager (Variant-valued) -

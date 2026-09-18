@@ -127,6 +127,9 @@
   const photos = $derived($artistPhotos);
   //: What the artist page shows beside its discography.
   let artistInfo = $state({ state: 'idle', for: null, found: null, popular: [] });
+  //: The biography is clamped until it is asked for, so the rest of the
+  //: page is not pushed off the screen by it.
+  let bioOpen = $state(false);
   let photoQueue = new Set();
   let photoTimer = null;
 
@@ -212,6 +215,7 @@
       // rather than before it, so the page arrives without waiting on a
       // biography that takes a second (Finding 035).
       artistInfo = { state: 'loading', for: entry.id, found: null, popular: [] };
+      bioOpen = false;
       loadArtistInfo(entry.id, entry.name).then((answer) => {
         if (artistInfo.for !== entry.id) return;
         artistInfo = {
@@ -885,10 +889,24 @@
             {#if artistInfo.state === 'loading'}
               <div class="skel"><span></span><span></span><span></span></div>
             {:else if artistInfo.found?.biography}
-              <div class="artistmeta__bio">{artistInfo.found.biography}</div>
+              <!-- Clamped, so Popular and the discography are still on
+                   screen under it (George, 2026-09-18). Tapping opens the
+                   rest; not a nested scroller, which is what made the
+                   discography move under a finger meant for the column. -->
+              <button
+                class="artistmeta__bio"
+                class:is-clamped={!bioOpen}
+                type="button"
+                onclick={() => (bioOpen = !bioOpen)}
+              >{artistInfo.found.biography}</button>
               <!-- The credit is the licence's term, not decoration
                    (ADR-0040 §4). -->
-              <div class="artistmeta__credit">From {artistInfo.found.biography_source}</div>
+              <div class="artistmeta__credit">
+                <span>From {artistInfo.found.biography_source}</span>
+                <button class="artistmeta__more" type="button" onclick={() => (bioOpen = !bioOpen)}>
+                  {bioOpen ? 'Less' : 'More'}
+                </button>
+              </div>
             {:else}
               <div class="artistmeta__none">Nothing found for this artist.</div>
             {/if}
@@ -1052,6 +1070,10 @@
     font: inherit;
     color: inherit;
     border: none;
+    /* Without this a button that sets no background of its own gets the
+       browser's - the Popular rows came out as white blocks (George,
+       2026-09-18). Every other button here happened to set one. */
+    background: none;
     padding: 0;
     text-align: left;
   }
@@ -2223,8 +2245,28 @@
     line-height: 1.5;
     color: var(--ink-body);
     text-wrap: pretty;
+    display: block;
+    width: 100%;
+  }
+  .artistmeta__bio.is-clamped {
+    display: -webkit-box;
+    -webkit-line-clamp: 4;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .artistmeta__more {
+    font-family: var(--font-mono);
+    font-size: var(--t-micro);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--accent-bluetooth);
+    padding: 6px 2px;
+    margin: -6px 0;
   }
   .artistmeta__credit {
+    display: flex;
+    align-items: center;
+    gap: 14px;
     font-family: var(--font-mono);
     font-size: var(--t-micro);
     letter-spacing: 0.12em;
