@@ -1112,9 +1112,23 @@ checked on the panel before the next:
    cache directive, so the kiosk restarted onto the *previous* bundle and
    404'd its assets - a deployed change simply was not there, and the tiles
    looked dead because in that build they were. It is now `no-store`.
-   **Open, deferred by George:** scrolling lists is still laggy; investigate
-   once steps 6 and 7 have put real lists on the panel (Finding 032).
-6. **Artist grid with the jump rail, then the artist page.**
+   **Open, deferred by George: one investigation into lists**, once steps 6
+   and 7 have put real ones on the panel. What it has to cover, from his
+   checks: scrolling the New Music strip (Finding 032 says what is and is
+   not established), and the artist grid being slow to load, slow to open
+   and slow to scroll - 917 artists arrive as one 98 KB read and become 917
+   cards in one pass. Candidates to measure then: rendering only the rows on
+   screen, lighter cards, and letting the core hand over letter buckets
+   rather than one list.
+6. **Artist grid with the jump rail, then the artist page. Done 2026-09-18;
+   George checked the navigation on the panel.** Rail letters folded, the
+   discography newest first (both his calls, ADR-0038 §1a); initials instead
+   of photos and no Phase 8 blocks (§2). **`content-visibility: auto` on the
+   letter groups was tried and removed:** with off-screen groups only
+   estimated, the rail landed inside the previous letter and correcting over
+   later frames did not converge. **George, 2026-09-18: loading the artists,
+   opening the grid and scrolling it are all slow** - added to the deferred
+   lists investigation below rather than fixed piecemeal.
 7. **Three-pane Browse** with row actions.
 8. **Playlists.**
 9. **Radio.**

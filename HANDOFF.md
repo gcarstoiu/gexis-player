@@ -110,16 +110,25 @@ could bring back a *cached* page - the panel ran the previous bundle and
 **If the panel ever seems not to have a change, check which bundle it has**
 before believing the change did nothing.
 
-**Next action: step 6 - the artist grid and the artist page.** Two questions
-for George there: what to do with the two artists whose LMS letter is `Ç` and
-`Í` when the rail is `#` and A-Z, and whether the discography keeps LMS's own
-order (alphabetical) or runs by year.
+**Step 6 is done** (2026-09-18): the artist grid with the `#`/A-Z jump rail
+and the artist page with its discography. George's calls, now in ADR-0038
+§1a: rail letters folded (`Ç` into C, `Í` into I, digits into `#`), and the
+discography by year, newest first. He checked the navigation and found it
+**slow** - see below.
 
-**Open, deferred by George (2026-09-18):** scrolling lists is still laggy.
-He asked for one general investigation once steps 6 and 7 have put real
-lists on the panel, rather than more work on the ten-tile strip
-([Finding 032](docs/findings/032-panel-frame-times-during-a-scroll.md) says
-what has and has not been established).
+**Next action: step 7 - three-pane Browse** with the row actions (play now,
+add to queue, add to any library playlist).
+
+**Open, deferred by George: one investigation into lists,** once steps 6 and
+7 have put real ones on the panel - not piecemeal fixes before that. What it
+must cover, from his checks (2026-09-18): the New Music strip still scrolls
+unevenly ([Finding 032](docs/findings/032-panel-frame-times-during-a-scroll.md)
+says what is and is not established), and the artist grid is **slow to load,
+slow to open and slow to scroll** - 917 artists come as one 98 KB read and
+become 917 cards in a single pass, with `content-visibility` already tried
+and removed because it broke the jump rail. Candidates to measure: rendering
+only the rows on screen, lighter cards, and letter buckets from the core
+rather than one list.
 
 **Test data on George's LMS:** playlist folder `/playlist` (George set it;
 it triggered a full rescan that renumbered the library). Playlists

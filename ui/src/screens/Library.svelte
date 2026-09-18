@@ -15,7 +15,13 @@
   while the idle screen, which is removed when it closes, never did.
 -->
 <script>
-  import { libraryRoot, loadAlbum, libraryAction } from '../lib/library.js';
+  import {
+    libraryRoot,
+    loadAlbum,
+    loadArtists,
+    loadArtistAlbums,
+    libraryAction,
+  } from '../lib/library.js';
   import MiniStrip from './MiniStrip.svelte';
   import WaitingServices from './WaitingServices.svelte';
 
@@ -34,15 +40,111 @@
   // screen below it: `{ kind: 'album', id, label }` today.
   let path = $state([]);
   let album = $state(null);
+  let artists = $state([]);
+  let artist = $state(null);
+  let discography = $state([]);
   let busy = $state(null);
 
-  async function openAlbum(id, label) {
+  // The design's own: initials from the first two words, and one of four
+  // tints chosen by a hash of the name, so an artist keeps the same colour.
+  const TINTS = [
+    'rgba(126, 214, 188, 0.16)',
+    'rgba(159, 180, 232, 0.18)',
+    'rgba(242, 164, 143, 0.16)',
+    'rgba(233, 238, 242, 0.08)',
+  ];
+  function initialsOf(name) {
+    return (name ?? '')
+      .split(/[\s\u2019']+/)
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((word) => word[0])
+      .join('')
+      .toUpperCase();
+  }
+  function tintOf(name) {
+    let h = 0;
+    for (let i = 0; i < (name ?? '').length; i++) h = (h * 31 + name.charCodeAt(i)) % 997;
+    return TINTS[h % TINTS.length];
+  }
+
+  const RAIL = ['#', ...'ABCDEFGHIJKLMNOPQRSTUVWXYZ'];
+  // Grouped by the letter the core folded for us (ADR-0038 §1a), keeping
+  // LMS's own order within each group.
+  const groups = $derived.by(() => {
+    const buckets = new Map();
+    for (const a of artists) {
+      const letter = a.letter ?? '#';
+      if (!buckets.has(letter)) buckets.set(letter, []);
+      buckets.get(letter).push(a);
+    }
+    return RAIL.filter((l) => buckets.has(l)).map((letter) => ({
+      letter,
+      id: `letter-${letter === '#' ? 'num' : letter}`,
+      items: buckets.get(letter),
+    }));
+  });
+  const railLetters = $derived(
+    RAIL.map((ch) => ({ ch, group: groups.find((g) => g.letter === ch) ?? null })),
+  );
+
+  let grid = $state(null);
+  function jumpTo(group) {
+    const target = grid?.querySelector(`#${group.id}`);
+    if (!target || !grid) return;
+    // Measured against the scroller rather than by offsetTop, which the
+    // group's own containment would make relative to the group.
+    const top = target.getBoundingClientRect().top - grid.getBoundingClientRect().top;
+    grid.scrollTop = Math.max(0, grid.scrollTop + top - 10);
+  }
+
+  async function openArtists() {
+    busy = 'artists';
+    try {
+      const page = await loadArtists();
+      artists = page.items;
+      path = [{ kind: 'artists', label: 'Artists' }];
+    } catch (err) {
+      console.info('library:', err.message);
+    } finally {
+      busy = null;
+    }
+  }
+
+  async function openArtist(entry) {
+    busy = entry.id;
+    try {
+      discography = await loadArtistAlbums(entry.id);
+      artist = entry;
+      path = [...path, { kind: 'artist', id: entry.id, label: entry.name }];
+    } catch (err) {
+      console.info('library:', err.message);
+    } finally {
+      busy = null;
+    }
+  }
+
+  // The design groups a discography by release type; LMS's own values are
+  // kept as they come (ADR-0038 §1a), and the albums are newest first, so
+  // the groups follow the newest album in each.
+  const releases = $derived.by(() => {
+    const out = [];
+    for (const album of discography) {
+      const label = album.release_type ?? 'Other';
+      let group = out.find((g) => g.label === label);
+      if (!group) out.push((group = { label, items: [] }));
+      group.items.push(album);
+    }
+    return out;
+  });
+
+  async function openAlbum(id, label, from = null) {
     busy = id;
     try {
       // Fetched and decoded before the screen changes, so the album page
       // arrives whole rather than filling in (George, 2026-09-17).
       album = await loadAlbum(id);
-      path = [{ kind: 'album', id, label }];
+      path = [...(from ?? []), { kind: 'album', id, label }];
     } catch (err) {
       console.info('library:', err.message);
     } finally {
@@ -165,7 +267,7 @@
             </span>
           </button>
 
-          <button class="card card--artists" type="button" disabled data-unwired="phase-7">
+          <button class="card card--artists" type="button" onclick={openArtists}>
             <span class="glyph glyph--dots"><i></i><i></i><i></i></span>
             <span>
               <span class="card__name">Artists</span>
@@ -219,7 +321,7 @@
                 class="album"
                 class:is-busy={busy === tile.id}
                 type="button"
-                onclick={() => openAlbum(tile.id, tile.title)}
+                onclick={() => openAlbum(tile.id, tile.title, [])}
               >
                 <span class="album__art">
                   {#if tile.artwork && !failed.has(tile.artwork)}
@@ -233,6 +335,97 @@
             <span class="mark" bind:this={endMark}></span>
           </div>
           </div>
+        </div>
+      </div>
+    {:else if here?.kind === 'artists'}
+      <div class="grid">
+        <div class="grid__scroll" bind:this={grid}>
+          {#each groups as group (group.letter)}
+            <div class="group">
+              <div class="group__head" id={group.id}>
+                <span class="group__letter">{group.letter}</span>
+                <span class="group__rule"></span>
+                <span class="group__count">{group.items.length}</span>
+              </div>
+              <div class="group__cards">
+                {#each group.items as entry (entry.id)}
+                  <button
+                    class="artist"
+                    class:is-busy={busy === entry.id}
+                    type="button"
+                    onclick={() => openArtist(entry)}
+                  >
+                    <!-- LMS has no artist photos; the initial stands in
+                         until Phase 8's enrichment (ADR-0038 §2). -->
+                    <span class="artist__disc" style:background={tintOf(entry.name)}>
+                      <span class="artist__initials">{initialsOf(entry.name)}</span>
+                    </span>
+                    <span class="artist__name">{entry.name}</span>
+                  </button>
+                {/each}
+              </div>
+            </div>
+          {/each}
+        </div>
+        <div class="rail">
+          {#each railLetters as letter (letter.ch)}
+            <button
+              class="rail__key"
+              class:is-empty={!letter.group}
+              type="button"
+              disabled={!letter.group}
+              onclick={() => letter.group && jumpTo(letter.group)}
+            >{letter.ch}</button>
+          {/each}
+        </div>
+      </div>
+    {:else if here?.kind === 'artist' && artist}
+      <div class="artistpage">
+        <div class="artistpage__side">
+          <span class="artist__disc artist__disc--big" style:background={tintOf(artist.name)}>
+            <span class="artist__initials artist__initials--big">{initialsOf(artist.name)}</span>
+          </span>
+          <div>
+            <div class="artistpage__name">{artist.name}</div>
+            <div class="artistpage__meta">
+              {discography.length} {discography.length === 1 ? 'album' : 'albums'}
+            </div>
+          </div>
+          <button class="playall" type="button" onclick={() => play('artist', artist.id)}>
+            <span class="playall__glyph"></span>
+            <span class="playall__label">Play</span>
+          </button>
+          <!-- About, tags and similar artists are Phase 8 (ADR-0038 §2). -->
+        </div>
+
+        <div class="releases">
+          {#each releases as group (group.label)}
+            <div class="release">
+              <div class="release__head">
+                <span class="release__label">{group.label}</span>
+                <span class="group__rule"></span>
+                <span class="release__count">{group.items.length}</span>
+              </div>
+              <div class="release__row">
+                {#each group.items as entry (entry.id)}
+                  <button
+                    class="disc"
+                    class:is-busy={busy === entry.id}
+                    type="button"
+                    onclick={() => openAlbum(entry.id, entry.title, path)}
+                  >
+                    <span class="disc__art">
+                      {#if entry.artwork && !failed.has(entry.artwork)}
+                        <img src={entry.artwork} alt="" onerror={() => markFailed(entry.artwork)} />
+                      {/if}
+                    </span>
+                    <span class="disc__title">{entry.title ?? ''}</span>
+                    <span class="disc__year">{entry.year ?? ''}</span>
+                  </button>
+                {/each}
+              </div>
+            </div>
+          {/each}
         </div>
       </div>
     {:else if here?.kind === 'album' && album}
@@ -663,6 +856,287 @@
 
   .album.is-busy {
     opacity: 0.6;
+  }
+
+  /* The artist grid, ported from the design's own block. */
+  .grid {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    min-height: 0;
+  }
+  .grid__scroll {
+    flex: 1;
+    min-width: 0;
+    overflow-y: auto;
+    position: relative;
+    padding: 24px 22px 30px 40px;
+    box-sizing: border-box;
+    scrollbar-width: none;
+    /* Finding 032: keep the list's painting to itself, nothing per frame. */
+    contain: content;
+    touch-action: pan-y;
+  }
+  .grid__scroll::-webkit-scrollbar {
+    display: none;
+  }
+  /* `content-visibility: auto` was tried here and taken out again: with
+     the off-screen groups only estimated, the jump rail landed inside the
+     previous letter, and correcting over the next frames did not converge
+     (measured on the device, 2026-09-18). All 917 cards are laid out; if
+     that proves too slow, the answer is rendering only the rows on screen,
+     which is the deferred scrolling investigation. */
+  .group__head {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding-bottom: 13px;
+  }
+  .group + .group .group__head {
+    padding-top: 26px;
+  }
+  .group__letter {
+    font-family: var(--font-mono);
+    font-size: 14px;
+    font-weight: 700;
+    letter-spacing: 0.18em;
+    color: var(--accent-bluetooth);
+    flex-shrink: 0;
+  }
+  .group__rule {
+    flex: 1;
+    height: 1px;
+    background: var(--ink-line);
+  }
+  .group__count {
+    font-family: var(--font-mono);
+    font-size: var(--t-label-sm);
+    letter-spacing: 0.1em;
+    color: var(--ink-quiet);
+    flex-shrink: 0;
+  }
+  .group__cards {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 26px 20px;
+  }
+  .artist {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 11px;
+    min-width: 0;
+    background: none;
+  }
+  .artist:active {
+    opacity: 0.62;
+  }
+  .artist.is-busy {
+    opacity: 0.62;
+  }
+  .artist__disc {
+    width: 100%;
+    aspect-ratio: 1;
+    border-radius: 50%;
+    overflow: hidden;
+    position: relative;
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.14);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+  .artist__initials {
+    font-size: 40px;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    color: var(--ink-quiet);
+  }
+  .artist__name {
+    width: 100%;
+    min-width: 0;
+    text-align: center;
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--ink);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .rail {
+    width: 58px;
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 0;
+    box-sizing: border-box;
+    overflow: hidden;
+    border-left: 1px solid rgba(233, 238, 242, 0.07);
+  }
+  .rail__key {
+    width: 44px;
+    flex: 1 1 0;
+    min-height: 0;
+    max-height: 26px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 7px;
+    background: none;
+    font-family: var(--font-mono);
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    color: rgba(233, 238, 242, 0.9);
+  }
+  .rail__key:active {
+    background: rgba(159, 180, 232, 0.24);
+  }
+  /* A letter with no artists stays visible but inert (design/screens.md). */
+  .rail__key.is-empty {
+    color: rgba(233, 238, 242, 0.22);
+  }
+
+  /* The artist page: name and discography only until Phase 8. */
+  .artistpage {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    min-height: 0;
+    gap: 30px;
+    padding: 24px 40px 26px;
+    box-sizing: border-box;
+  }
+  .artistpage__side {
+    width: 262px;
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+  .artist__disc--big {
+    width: 262px;
+    height: 262px;
+  }
+  .artist__initials--big {
+    font-size: 76px;
+  }
+  .artistpage__name {
+    font-size: var(--t-h3);
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    color: var(--ink);
+    line-height: 1.15;
+    text-wrap: pretty;
+  }
+  .artistpage__meta {
+    font-family: var(--font-mono);
+    font-size: 14px;
+    color: var(--ink-quiet);
+    margin-top: 7px;
+  }
+
+  .releases {
+    flex: 1;
+    min-width: 0;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    scrollbar-width: none;
+    contain: content;
+    touch-action: pan-y;
+  }
+  .releases::-webkit-scrollbar,
+  .release__row::-webkit-scrollbar {
+    display: none;
+  }
+  .release {
+    display: flex;
+    flex-direction: column;
+    gap: 11px;
+    flex-shrink: 0;
+  }
+  .release__head {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+    flex-shrink: 0;
+  }
+  .release__label,
+  .release__count {
+    font-family: var(--font-mono);
+    font-size: var(--t-label-sm);
+    text-transform: uppercase;
+    flex-shrink: 0;
+  }
+  .release__label {
+    letter-spacing: 0.22em;
+    color: var(--ink-quiet);
+  }
+  .release__count {
+    font-size: var(--t-micro);
+    letter-spacing: 0.14em;
+    color: rgba(126, 214, 188, 0.78);
+  }
+  .release__row {
+    display: flex;
+    gap: 16px;
+    overflow-x: auto;
+    padding-bottom: 2px;
+    scrollbar-width: none;
+    contain: content;
+    touch-action: pan-x;
+  }
+  .disc {
+    width: 132px;
+    flex-shrink: 0;
+    background: none;
+    display: block;
+  }
+  .disc:active,
+  .disc.is-busy {
+    opacity: 0.6;
+  }
+  .disc__art {
+    display: block;
+    width: 132px;
+    height: 132px;
+    border-radius: 11px;
+    overflow: hidden;
+    position: relative;
+    background: var(--bg-well);
+    border: 1px solid var(--ink-line);
+    box-sizing: border-box;
+  }
+  .disc__art img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  .disc__title,
+  .disc__year {
+    display: block;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .disc__title {
+    font-size: var(--t-meta);
+    font-weight: 600;
+    color: var(--ink);
+    margin-top: 9px;
+  }
+  .disc__year {
+    font-family: var(--font-mono);
+    font-size: var(--t-label-sm);
+    color: var(--ink-quiet);
+    margin-top: 2px;
   }
 
   /* The album page, ported from the design's own block. */

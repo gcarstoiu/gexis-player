@@ -57,6 +57,18 @@ export async function libraryAction(kind, id, action = 'play') {
   return body;
 }
 
+/** Every album artist in one read: 917 of them come back in a single
+ *  98 KB reply in about 23 ms (Finding 029 §1), so there is nothing to page. */
+export const loadArtists = () => get('artists');
+
+/** An artist's discography, newest first, covers decoded first so the page
+ *  arrives whole. */
+export async function loadArtistAlbums(id) {
+  const albums = await get(`artists/${id}/albums`);
+  await Promise.all(albums.slice(0, 12).map((album) => decoded(album.artwork)));
+  return albums;
+}
+
 let inFlight = null;
 
 /** Read the root's counts and New Music, decode the covers, then publish

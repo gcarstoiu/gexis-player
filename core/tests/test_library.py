@@ -23,11 +23,14 @@ ALBUMS = [
      "artwork_track_id": "a1b2c3d4", "release_type": "ALBUM"},
     {"id": 102, "album": "Live at the Harbour", "artist": "Aria Nova", "artist_id": 7, "year": 0,
      "release_type": "ALBUM LIVE"},
+    {"id": 103, "album": "Second Light", "artist": "Aria Nova", "artist_id": 7, "year": 2024,
+     "release_type": "EP"},
 ]
 ARTISTS = [
     {"id": 1, "artist": "4 Winds", "textkey": "4"},
     {"id": 7, "artist": "Aria Nova", "textkey": "N"},
     {"id": 9, "artist": "Çelik Band", "textkey": "Ç"},
+    {"id": 11, "artist": "Íñigo Vega", "textkey": "Í"},
 ]
 TRACKS = [
     {"id": 5001, "title": "Opening", "tracknum": "1", "disc": "1", "duration": 201.5,
@@ -115,7 +118,7 @@ def _lib(clock=None):
 async def test_counts_are_album_artists_and_library_playlists_only(lms):
     counts = await _lib().counts()
 
-    assert counts == {"albums": 2, "artists": 3, "playlists": 2}
+    assert counts == {"albums": 3, "artists": 4, "playlists": 2}
     assert ["artists", 0, 1, "role_id:ALBUMARTIST"] in lms.commands
 
 
@@ -146,13 +149,15 @@ async def test_an_album_without_artwork_or_year_gets_none_for_both(lms):
 
 
 @pytest.mark.asyncio
-async def test_artists_keep_lms_letters_exactly(lms):
-    """ADR-0038 §1a: however LMS files, so do we - digits and the unfolded
-    accented keys included (Finding 029 §2)."""
+async def test_the_jump_rail_letter_folds_accents_and_digits(lms):
+    """George, 2026-09-18: fold LMS's `Ç` and `Í` into C and I. The design's
+    rail is `#` then A-Z, and LMS hands back an accented key for two artists
+    on his server and a digit for each numeric name (Finding 029 §2). The
+    order stays LMS's own (ADR-0038 §1a); only the rail letter is folded."""
     page = await _lib().artists()
 
-    assert [a["letter"] for a in page["items"]] == ["4", "N", "Ç"]
-    assert page["count"] == 3
+    assert [a["letter"] for a in page["items"]] == ["#", "N", "C", "I"]
+    assert page["count"] == 4
     assert "role_id:ALBUMARTIST" in lms.reads()[0]
 
 
@@ -165,10 +170,13 @@ async def test_artists_page_passes_offset_and_limit(lms):
 
 
 @pytest.mark.asyncio
-async def test_discography_keeps_lms_release_types_and_order(lms):
+async def test_the_discography_is_newest_first_with_undated_albums_last(lms):
+    """George, 2026-09-18: by year, newest on top. LMS returns them
+    alphabetically; its release types are still taken as given."""
     albums = await _lib().artist_albums(7)
 
-    assert [a["release_type"] for a in albums] == ["ALBUM", "ALBUM LIVE"]
+    assert [a["title"] for a in albums] == ["Second Light", "First Light", "Live at the Harbour"]
+    assert [a["release_type"] for a in albums] == ["EP", "ALBUM", "ALBUM LIVE"]
     assert "artist_id:7" in lms.reads()[0]
     assert "role_id:ALBUMARTIST" in lms.reads()[0]
 
@@ -379,10 +387,10 @@ async def test_routes_answer_503_when_the_library_is_not_wired():
 @pytest.mark.parametrize(
     "path, expect",
     [
-        ("/library/counts", lambda b: b["albums"] == 2),
+        ("/library/counts", lambda b: b["albums"] == 3),
         ("/library/new", lambda b: b[0]["id"] == 101),
         ("/library/artists?offset=2&limit=5", lambda b: b["offset"] == 2 and b["items"][0]["id"] == 9),
-        ("/library/artists/7/albums", lambda b: len(b) == 2),
+        ("/library/artists/7/albums", lambda b: len(b) == 3),
         ("/library/albums/101", lambda b: len(b["tracks"]) == 2),
         ("/library/playlists", lambda b: len(b) == 2),
         ("/library/playlists/900", lambda b: b["name"] == "Sunday"),

@@ -21,6 +21,7 @@ from __future__ import annotations
 import itertools
 import logging
 import time
+import unicodedata
 
 import aiohttp
 
@@ -78,6 +79,21 @@ def _int(value) -> int | None:
         return int(value)
     except (TypeError, ValueError):
         return None
+
+
+def _letter(textkey) -> str:
+    """The jump rail's letter for an artist (George, 2026-09-18).
+
+    LMS's own key is kept for the order (ADR-0038 §1a) but not for the rail:
+    it hands back `Ç` and `Í` for two artists on George's server and a digit
+    for each numeric name, where the design's rail is `#` then A-Z. Accents
+    fold onto their base letter - `Ç` into C, `Í` into I - and anything that
+    is not a letter files under `#`.
+    """
+    if not textkey:
+        return "#"
+    first = unicodedata.normalize("NFKD", str(textkey))[:1].upper()
+    return first if first.isalpha() and first.isascii() else "#"
 
 
 def _float(value) -> float | None:
@@ -194,20 +210,33 @@ class LmsLibrary:
             "count": _int(result.get("count")) or 0,
             "offset": offset,
             "items": [
-                {"id": _int(a.get("id")), "name": a.get("artist"), "letter": a.get("textkey")}
+                {
+                    "id": _int(a.get("id")),
+                    "name": a.get("artist"),
+                    "letter": _letter(a.get("textkey")),
+                }
                 for a in result.get("artists_loop", [])
             ],
         }
 
     async def artist_albums(self, artist_id: int) -> list[dict]:
-        """The discography, in LMS's order, each album with LMS's own
-        `release_type` for grouping (ADR-0038 §1a)."""
+        """The discography, newest first (George, 2026-09-18), each album
+        with LMS's own `release_type` for grouping (ADR-0038 §1a).
+
+        LMS returns these alphabetically. Its `release_type` is still taken
+        exactly as given; only the order is ours, because a discography
+        reads by year.
+        """
         result = await self._cached(
             ["albums", 0, 1000, f"artist_id:{artist_id}", "role_id:ALBUMARTIST", f"tags:{ALBUM_TAGS}"]
         )
         # An unknown id and an artist with no albums both come back empty;
         # LMS gives no way to tell them apart in this query.
-        return [self._album(a) for a in result.get("albums_loop", [])]
+        albums = [self._album(a) for a in result.get("albums_loop", [])]
+        # Undated albums last rather than first, and same-year albums by
+        # title, so the order is stable between reads.
+        albums.sort(key=lambda a: (-(a["year"] or 0), (a["title"] or "").casefold()))
+        return albums
 
     async def album(self, album_id: int) -> dict:
         found = await self._cached(["albums", 0, 1, f"album_id:{album_id}", f"tags:{ALBUM_TAGS}"])

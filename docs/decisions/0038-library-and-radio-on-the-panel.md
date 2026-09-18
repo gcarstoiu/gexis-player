@@ -78,9 +78,14 @@ recorded.
   Measured across all 4,554 albums: ALBUM 3,968, ALBUM COMPILATION 293,
   ALBUM LIVE 95, ALBUM SOUNDTRACK 88, SINGLE 38, EP 34, and a tail of
   combinations (EP LIVE, ALBUM COMPILATION DJ MIX, …).
-- **Left for step 6, to show George:** LMS's letter key (`textkey`) is not
-  folded for two artists, `Ç` and `Í`, although the order puts them inside C
-  and I. The design's rail is `#`, A–Z.
+- **The rail's letter is folded** (George, 2026-09-18): `Ç` into C, `Í` into
+  I, digits and anything else into `#`, so the rail is the design's `#` and
+  A–Z. Only the letter is folded — the order stays LMS's own. Against
+  George's library that yields exactly `#` and A–Z, with 8 artists under `#`.
+- **The discography runs by year, newest first** (George, 2026-09-18),
+  undated albums last and same-year albums by title. LMS returns them
+  alphabetically; this is the one place the order is ours rather than its.
+  The `release_type` values themselves are still taken exactly as given.
 
 Navigation is the design's: Back on every screen below the root, Home beside
 it below the first level, the mini strip back to now playing. Settings is
