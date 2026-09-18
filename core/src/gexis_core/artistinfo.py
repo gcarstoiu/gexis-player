@@ -63,14 +63,34 @@ RECHECK_S = 600.0
 #: on a render path, so patience costs nothing anyone sees.
 CALL_TIMEOUT_S = 30.0
 
+#: How long an artist whose lookup did not come back is left alone.
+#: Measured 2026-09-18: most artists answer in 7-900 ms, but one whose
+#: picture the plugin has to fetch from elsewhere ran past **four minutes**.
+#: Without this, every scroll past that artist starts another 30 s call and
+#: holds one of `CONCURRENCY`'s four slots, starving the artists that would
+#: have answered at once. It is a cooldown, not an answer: nothing is
+#: remembered as "no photo" (see `_believed_absent` for the same
+#: distinction at the level of the whole plugin).
+SLOW_COOLDOWN_S = 300.0
+
+#: A dropped connection means "no such command" only if it happens at once.
+#: Measured 2026-09-18: LMS refuses an unknown command in milliseconds, but
+#: an artist whose picture it must fetch from elsewhere holds the socket for
+#: about **75 seconds** and *then* drops it. Both arrive as the same
+#: exception, and reading the second as the first turned every artist photo
+#: off for ten minutes whenever one of those artists was scrolled past.
+ABSENT_WITHIN_S = 2.0
+
 
 def _is_absent(exc: BaseException) -> bool:
-    """Does this failure mean "no such command", or just "not yet"?
+    """Could this failure mean "no such command"?
 
     The library wraps every RPC failure in its own exception with
     `from exc`, so the original is on `__cause__`. A dropped connection is
-    LMS refusing a command it does not know; a timeout is a plugin that went
-    to the network and took longer than the RPC would wait.
+    LMS refusing a command it does not know - **but only when it comes back
+    at once**: a plugin that is fetching a picture from elsewhere drops the
+    same way after a minute or more. The caller checks how long it took
+    (`ABSENT_WITHIN_S`); this only says what kind of failure it was.
     """
     seen = []
     while exc is not None and exc not in seen:
@@ -105,6 +125,9 @@ class LmsArtistInfo:
         #: (George, 2026-09-18).
         self._store = store
         self._photos: dict[int, str | None] = {}
+        #: artist id -> when it may be asked about again, after a call that
+        #: did not come back.
+        self._slow_until: dict[int, float] = {}
         self._absent_until: float | None = None
         self._semaphore = asyncio.Semaphore(CONCURRENCY)
 
@@ -113,15 +136,21 @@ class LmsArtistInfo:
     def _believed_absent(self) -> bool:
         return self._absent_until is not None and self._clock() < self._absent_until
 
+    def _believed_slow(self, artist_id: int) -> bool:
+        until = self._slow_until.get(artist_id)
+        return until is not None and self._clock() < until
+
     async def _ask(self, command: list) -> dict | None:
         """One plugin call, or None if the plugin is not answering."""
         if self._believed_absent():
             return None
         async with self._semaphore:
+            started = self._clock()
             try:
                 result = await self._rpc(command, timeout=CALL_TIMEOUT_S)
             except Exception as exc:
-                if _is_absent(exc):
+                quickly = self._clock() - started < ABSENT_WITHIN_S
+                if quickly and _is_absent(exc):
                     # An unknown command closes the socket, which is what a
                     # server without the plugin looks like.
                     if self._absent_until is None:
@@ -132,7 +161,7 @@ class LmsArtistInfo:
                     # Slow, not missing. Nothing is remembered and nothing is
                     # turned off: this artist simply keeps its initials for
                     # now (found on hardware, 2026-09-18).
-                    logger.debug("artistinfo: %s timed out", command)
+                    logger.debug("artistinfo: %s did not come back (%r)", command, exc)
                 return None
         self._absent_until = None
         return result or {}
@@ -174,7 +203,10 @@ class LmsArtistInfo:
                 pass
             except Exception as exc:  # a cold cache is not a failure
                 logger.info("artistinfo: could not read the stored photo (%s)", exc)
-        wanted = [i for i in dict.fromkeys(artist_ids) if i not in self._photos]
+        wanted = [
+            i for i in dict.fromkeys(artist_ids)
+            if i not in self._photos and not self._believed_slow(i)
+        ]
         if wanted and not self._believed_absent():
             results = await asyncio.gather(*(
                 self._ask(["musicartistinfo", "artistphoto", 0, 1, f"artist_id:{artist_id}"])
@@ -185,7 +217,11 @@ class LmsArtistInfo:
                 # it is not remembered as "no photo" (the same distinction
                 # enrichment.py draws between MISSING and UNAVAILABLE).
                 if result is None:
+                    # Not an answer: left out of `_photos` so it is asked
+                    # again later, but not again immediately.
+                    self._slow_until[artist_id] = self._clock() + SLOW_COOLDOWN_S
                     continue
+                self._slow_until.pop(artist_id, None)
                 url = self._url(result, PHOTO_THUMB)
                 self._photos[artist_id] = url
                 if self._store is not None:

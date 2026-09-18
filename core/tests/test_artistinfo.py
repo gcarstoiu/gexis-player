@@ -13,7 +13,13 @@ from pathlib import Path
 
 import pytest
 
-from gexis_core.artistinfo import PHOTO_LARGE, PHOTO_THUMB, RECHECK_S, LmsArtistInfo
+from gexis_core.artistinfo import (
+    PHOTO_LARGE,
+    PHOTO_THUMB,
+    RECHECK_S,
+    SLOW_COOLDOWN_S,
+    LmsArtistInfo,
+)
 
 BASE = "http://192.168.178.188:9000"
 NOTHING = {"error": "I'm sorry, didn't find any relevant information."}
@@ -261,15 +267,28 @@ async def test_the_route_refuses_a_size_the_panel_does_not_draw():
 
 
 class SlowLms(FakeLms):
-    """A plugin that goes to the network for an artist it has not seen. The
-    library wraps the timeout in its own exception `from` the original, which
-    is how this is told apart from a dropped connection."""
+    """A plugin that goes to the network for an artist it has not seen.
+
+    On George's server such a call holds the socket for about 75 s and then
+    **drops it** - the same exception an unknown command produces
+    instantly. `clock` lets a test make that time pass.
+    """
+
+    def __init__(self, clock=None, elapsed=75.0, drop=True):
+        super().__init__()
+        self._clock = clock
+        self._elapsed = elapsed
+        self._drop = drop
 
     async def __call__(self, command, player="", timeout=None):
         self.commands.append(list(command))
+        self.timeouts.append(timeout)
+        if self._clock is not None:
+            self._clock.advance(self._elapsed)
+        original = ConnectionResetError("Server disconnected") if self._drop else TimeoutError()
         try:
-            raise TimeoutError()
-        except TimeoutError as exc:
+            raise original
+        except Exception as exc:
             from gexis_core.library import LibraryUnavailable
             raise LibraryUnavailable(str(exc)) from exc
 
@@ -281,8 +300,9 @@ async def test_a_slow_plugin_is_not_mistaken_for_a_missing_one():
     past the library's 10 s RPC timeout, and a timeout read as "no plugin
     here" turned photos off for ten minutes - on a server that has one
     (hardware, 2026-09-18)."""
-    lms = SlowLms()
-    info = _info(lms)
+    clock = FakeClock()
+    lms = SlowLms(clock)
+    info = _info(lms, clock=clock)
 
     await info.photos([1, 2, 3])
     await info.photos([4, 5, 6])
@@ -293,10 +313,17 @@ async def test_a_slow_plugin_is_not_mistaken_for_a_missing_one():
 
 @pytest.mark.asyncio
 async def test_a_timed_out_artist_is_asked_again_rather_than_remembered():
-    lms = SlowLms()
-    info = _info(lms)
+    """It is not remembered as having no photo - but it is left alone for a
+    while first, or it starves the batch (see the cooldown test below)."""
+    from gexis_core.artistinfo import SLOW_COOLDOWN_S
+
+    clock = FakeClock()
+    lms = SlowLms(clock)
+    info = _info(lms, clock=clock)
     await info.photos([7452])
 
+    assert (await info.photos([7452]))[7452] is None
+    clock.advance(SLOW_COOLDOWN_S + 1)
     assert (await info.photos([7452]))[7452] is None
     assert len(lms.commands) == 2
 
@@ -430,3 +457,70 @@ async def test_the_plugin_is_given_longer_than_the_library_allows_itself():
     await _info(lms).photos([7452])
 
     assert lms.timeouts == [CALL_TIMEOUT_S]
+
+
+@pytest.mark.asyncio
+async def test_an_artist_whose_lookup_hangs_is_not_asked_again_at_once():
+    """**Measured 2026-09-18:** most artists answer in 7-900 ms, but one
+    whose picture the plugin fetches from elsewhere ran past four minutes.
+    Without a cooldown every scroll past that artist starts another 30 s
+    call and holds one of the four concurrency slots, starving the artists
+    that would have answered immediately."""
+    from gexis_core.artistinfo import SLOW_COOLDOWN_S
+
+    clock = FakeClock()
+    lms = SlowLms(clock)
+    info = _info(lms, clock=clock)
+
+    await info.photos([7452])
+    await info.photos([7452])
+    asked_while_cooling = len(lms.commands)
+    clock.advance(SLOW_COOLDOWN_S + 1)
+    await info.photos([7452])
+
+    assert asked_while_cooling == 1
+    assert len(lms.commands) == 2
+
+
+@pytest.mark.asyncio
+async def test_a_slow_artist_does_not_stop_the_others_being_asked():
+    clock = FakeClock()
+    lms = SlowLms(clock)
+    info = _info(lms, clock=clock)
+
+    await info.photos([1])
+    await info.photos([1, 2, 3])
+
+    # The slow one is skipped the second time; the other two are asked.
+    assert [c[-1] for c in lms.commands] == ["artist_id:1", "artist_id:2", "artist_id:3"]
+
+
+@pytest.mark.asyncio
+async def test_a_connection_dropped_after_a_minute_is_slow_not_missing():
+    """**The defect this test exists for.** LMS refuses an unknown command in
+    milliseconds; an artist whose picture the plugin fetches from elsewhere
+    holds the socket for about 75 s and then drops it the same way. Read as
+    "no plugin here", that turned every artist photo off for ten minutes
+    whenever such an artist was scrolled past (hardware, 2026-09-18)."""
+    clock = FakeClock()
+    lms = SlowLms(clock)
+    info = _info(lms, clock=clock)
+
+    await info.photos([1])
+    clock.advance(SLOW_COOLDOWN_S + 1)
+    await info.photos([2])
+
+    # Not switched off: the second artist was still asked about.
+    assert len(lms.commands) == 2
+
+
+@pytest.mark.asyncio
+async def test_a_connection_dropped_at_once_still_means_no_plugin():
+    clock = FakeClock()
+    lms = SlowLms(clock, elapsed=0.0)
+    info = _info(lms, clock=clock)
+
+    await info.photos([1])
+    await info.photos([2])
+
+    assert len(lms.commands) == 1
