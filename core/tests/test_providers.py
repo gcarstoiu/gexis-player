@@ -695,3 +695,56 @@ async def test_fanart_being_unreachable_is_unavailable():
     provider = FanartArtistImage(http, ArtistIdentity(http), lambda: "a-key")
 
     assert (await provider.fetch(KEY)).outcome is Outcome.UNAVAILABLE
+
+
+@pytest.mark.asyncio
+async def test_a_fanart_picture_is_sized_by_lms_rather_than_served_whole():
+    """Measured 2026-09-18: fanart serves the original, 246-826 KB for five
+    artists, for circles 132px and 64px across. Phase 7a's whole first step
+    was about not doing that."""
+    from gexis_core.providers import FanartArtistImage
+
+    http = FakeHttp({"ws/2/artist/": MB_ARTIST, "webservice.fanart.tv": FANART})
+    provider = FanartArtistImage(http, ArtistIdentity(http), lambda: "a-key",
+                                 proxy_base="http://lms:9000")
+
+    answer = await provider.fetch(KEY)
+
+    assert answer.enrichment.artist_image == (
+        "http://lms:9000/imageproxy/"
+        "https://assets.fanart.tv/fanart/music/acdc/thumb.jpg/image_300x300_o.jpg"
+    )
+
+
+@pytest.mark.asyncio
+async def test_the_artist_page_takes_its_picture_from_fanart_and_its_words_from_lms():
+    """George, 2026-09-18: pictures from fanart, once its speed was
+    measured. Only the picture changes hands."""
+    from aiohttp.test_utils import TestClient, TestServer
+    from pathlib import Path as _P
+
+    from gexis_core.enrichment import Cache, EnrichmentService
+    from gexis_core.providers import FanartArtistImage
+    from gexis_core.state import StateStore
+    from gexis_core.wsserver import StateServer
+
+    class Plugin:
+        async def photos(self, ids, size=200):
+            return {ids[0]: "http://lms/its-own-photo.jpg"}
+
+        async def biography(self, artist_id):
+            return "From the plugin."
+
+    http = FakeHttp({"ws/2/artist/": MB_ARTIST, "webservice.fanart.tv": FANART})
+    service = EnrichmentService(
+        [FanartArtistImage(http, ArtistIdentity(http), lambda: "a-key")],
+        Cache(_P(":memory:")),
+    )
+    server = StateServer(StateStore({}), artistinfo=Plugin(), enrichment=service)
+
+    async with TestClient(TestServer(server.make_app())) as client:
+        body = await (await client.get("/library/artist-info?id=7452&name=AC%2FDC")).json()
+
+    found = body["enrichment"]
+    assert found["artist_image"].endswith("/thumb.jpg")
+    assert found["biography"] == "From the plugin."

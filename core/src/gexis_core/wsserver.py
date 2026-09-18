@@ -31,6 +31,8 @@ from aiohttp import web
 
 from gexis_core.adapters.base import TRANSPORT_COMMANDS
 from gexis_core.artistinfo import PHOTO_LARGE, PHOTO_THUMB
+from dataclasses import replace
+
 from gexis_core.enrichment import Enrichment, TrackKey, fold
 from gexis_core.library import LibraryUnavailable, NoPlayer, NotFound
 from gexis_core.radio import RadioUnavailable, UnknownHandle
@@ -389,9 +391,16 @@ class StateServer:
                 sources=("lms",) if (biography or photos.get(artist_id)) else (),
             )
         rest = await self._enrichment.for_track(
-            TrackKey(artist=fold(name)), only=("wikipedia", "listenbrainz", "popular"),
+            TrackKey(artist=fold(name)),
+            only=("fanart", "wikipedia", "listenbrainz", "popular"),
         )
         found = found.merged_with(rest)
+        if rest.artist_image:
+            # **Pictures come from fanart first** (George, 2026-09-18): it
+            # has a portrait for artists LMS's plugin has nothing for. The
+            # text above is still LMS's where it has any - only the picture
+            # changes hands.
+            found = replace(found, artist_image=rest.artist_image)
         return web.json_response({
             "artist": name,
             "enrichment": found.to_json(),

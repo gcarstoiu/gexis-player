@@ -75,10 +75,34 @@ with ADR-0012's persistent cache), Spotify (development mode needs Premium
 from February 2026), Genius, Musixmatch, TheAudioDB, iTunes, AcoustID. Each
 disqualifier is in Finding 030.
 
-**fanart.tv is not used.** It was the only good key-free-ish source for
-artist photos, and §1 removes the need: where LMS answers we use it, and
-where it does not the artist page keeps its initials (George chose this over
-a per-user key).
+**fanart.tv is used after all, for pictures only** (George, 2026-09-18,
+reversing his earlier choice once LMS's plugin was in and he could see what
+it looked like). A per-user key, `fanart_key` in ADR-0022's inventory; with
+none the provider is not *ready* and nothing changes.
+
+**Pictures before LMS, text after it.** The speed was measured first, at
+George's instruction, and it qualifies the approach rather than simply
+endorsing it:
+
+| artist | fanart | LMS's plugin (warm) | fanart's image |
+|---|---|---|---|
+| Rod Stewart | 614 ms | 18 ms | 705 KB |
+| 2 Unlimited | 169 ms | 9 ms | 247 KB |
+| Gary Moore | 1,065 ms | 12 ms | 353 KB |
+| Red Hot Chili Peppers | 721 ms | 13 ms | 246 KB |
+| Andreas Bourani | 751 ms | 14 ms | 826 KB |
+
+Fanart had a picture for all five, which is the case for using it. It is
+also **13-80× slower** and serves the **original**, which is the case for
+two limits on where it is used:
+
+- **Its pictures go through LMS's image proxy**, the same route the
+  plugin's own remote pictures take: 705 KB became 32.8 KB at 300px on
+  hardware. Phase 7a step 1 existed to stop exactly the first number.
+- **The artist grid still asks LMS by id.** 917 artists at 9-18 ms each and
+  no MusicBrainz involved; through fanart each one would need an MBID
+  resolved first, against the endpoint that answers 503 most often. Fanart
+  is for the screens with one artist on them.
 
 **Measured against real tracks afterwards**
 ([Finding 036](../findings/036-key-free-providers-against-real-tracks.md),

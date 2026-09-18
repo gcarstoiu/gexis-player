@@ -367,13 +367,15 @@ async def main() -> None:
     identity = ArtistIdentity(http, store=enrichment_cache)
     enrichment = EnrichmentService(
         [
+            # **Pictures before LMS, text after it** (George, 2026-09-18,
+            # once the speed was measured). Fanart has a portrait for
+            # artists the plugin has nothing for, and this list merges
+            # field by field - fanart offers only a picture, so putting it
+            # first takes the picture and leaves the biography to LMS.
+            FanartArtistImage(http, identity, lambda: settings.value("fanart_key"),
+                              proxy_base=f"http://{config.lms_host}:{config.lms_port}"),
             LmsArtistProvider(artistinfo, lambda: lms.current_artist_id),
             LmsReleaseProvider(library, artistinfo, lambda: lms.current_album_id),
-            # Artist pictures, when a key is configured. Ordered after
-            # LMS's plugin until the speed check George asked for
-            # (2026-09-18) says which should come first.
-            FanartArtistImage(http, identity,
-                              lambda: settings.value("fanart_key")),
             WikipediaBiography(http, identity),
             ListenBrainzSimilar(http, identity),
             # ADR-0022's inventory: a per-user token, read fresh so one

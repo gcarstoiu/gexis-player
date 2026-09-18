@@ -336,10 +336,21 @@ class FanartArtistImage:
     #: then the wide background, then the logo-free thumb.
     PREFERRED = ("artistthumb", "artistbackground", "musicbanner")
 
-    def __init__(self, http: Http, identity: ArtistIdentity, key=None) -> None:
+    #: What the panel draws an artist picture at: 262px on the artist page,
+    #: 64px on now playing's Artist tab. ADR-0038 §7's ladder.
+    SIZE = 300
+
+    def __init__(self, http: Http, identity: ArtistIdentity, key=None,
+                 proxy_base: str | None = None) -> None:
         self._http = http
         self._identity = identity
         self._key = key or (lambda: None)
+        #: fanart serves the original: measured 2026-09-18 at 246-826 KB for
+        #: five artists, for circles 132px and 64px across. LMS's image
+        #: proxy resizes anything remote (the same route the artist plugin's
+        #: own remote pictures take), so the panel is handed a sized JPEG
+        #: rather than most of a megabyte.
+        self._proxy_base = (proxy_base or "").rstrip("/")
 
     def serves(self, renderer) -> bool:
         return True
@@ -366,9 +377,15 @@ class FanartArtistImage:
             images = found.get(kind) or []
             url = next((i.get("url") for i in images if isinstance(i, dict) and i.get("url")), None)
             if url:
-                return Answer(Outcome.FOUND, Enrichment(artist_image=url, sources=("fanart",)),
+                return Answer(Outcome.FOUND,
+                              Enrichment(artist_image=self._sized(url), sources=("fanart",)),
                               confidence=score)
         return Answer(Outcome.MISSING, confidence=score)
+
+    def _sized(self, url: str) -> str:
+        if not self._proxy_base:
+            return url
+        return f"{self._proxy_base}/imageproxy/{url}/image_{self.SIZE}x{self.SIZE}_o.jpg"
 
 
 class LrclibLyrics:
