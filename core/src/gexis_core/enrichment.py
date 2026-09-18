@@ -85,7 +85,7 @@ class Outcome(str, Enum):
 _APOSTROPHES = str.maketrans("", "", "'‘’ʼ´`")
 
 
-def _fold(text: str | None) -> str:
+def fold(text: str | None) -> str:
     """One spelling for a cache key. Case, accents and punctuation must not
     split the cache."""
     if not text:
@@ -110,9 +110,9 @@ class TrackKey:
     def of(cls, metadata) -> "TrackKey":
         duration = getattr(metadata, "duration", None)
         return cls(
-            artist=_fold(getattr(metadata, "artist", None)),
-            album=_fold(getattr(metadata, "album", None)),
-            title=_fold(getattr(metadata, "title", None)),
+            artist=fold(getattr(metadata, "artist", None)),
+            album=fold(getattr(metadata, "album", None)),
+            title=fold(getattr(metadata, "title", None)),
             duration=int(duration) if duration else None,
         )
 

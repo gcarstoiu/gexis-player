@@ -26,7 +26,7 @@ from urllib.parse import quote
 
 import aiohttp
 
-from gexis_core.enrichment import Answer, Enrichment, Limiter, Outcome, _fold
+from gexis_core.enrichment import Answer, Enrichment, Limiter, Outcome, fold
 
 logger = logging.getLogger("gexis_core.providers")
 
@@ -265,8 +265,8 @@ class LrclibLyrics:
             return Answer(Outcome.MISSING)
         exact = [
             hit for hit in hits
-            if _fold(hit.get("artistName")) == key.artist
-            and _fold(hit.get("trackName")) == key.title
+            if fold(hit.get("artistName")) == key.artist
+            and fold(hit.get("trackName")) == key.title
         ]
         # A synced hit is worth more than an earlier plain one.
         exact.sort(key=lambda hit: bool(hit.get("syncedLyrics")), reverse=True)

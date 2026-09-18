@@ -455,3 +455,94 @@ async def test_a_track_with_no_album_name_is_not_looked_up():
 
     assert (await CoverArtProvider(http).fetch(key)).outcome is Outcome.MISSING
     assert http.asked == []
+
+
+# --- the artist page's own lookup ------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_the_artist_page_asks_lms_first_then_the_rest():
+    """ADR-0038 §2 left About and Similar undrawn "until Phase 8"; this is
+    Phase 8. The order is ADR-0040 §1's, from the id the library already has,
+    with the key-free providers keyed on the name."""
+    from aiohttp.test_utils import TestClient, TestServer
+
+    from gexis_core.enrichment import Cache, EnrichmentService
+    from gexis_core.state import StateStore
+    from gexis_core.wsserver import StateServer
+    from pathlib import Path as _P
+
+    class Info:
+        async def photos(self, ids, size=200):
+            return {ids[0]: "http://lms/photo.jpg"}
+
+        async def biography(self, artist_id):
+            return "From the plugin."
+
+    http = FakeHttp({"ws/2/artist/": MB_ARTIST, "ws/2/artist/66c": MB_RELATIONS,
+                     "wikidata.org/w/api.php": WIKIDATA, "page/summary": SUMMARY,
+                     "similar-artists": SIMILAR})
+    identity = ArtistIdentity(http)
+    service = EnrichmentService(
+        [WikipediaBiography(http, identity), ListenBrainzSimilar(http, identity)],
+        Cache(_P(":memory:")),
+    )
+    server = StateServer(StateStore({}), artistinfo=Info(), enrichment=service)
+
+    async with TestClient(TestServer(server.make_app())) as client:
+        body = await (await client.get("/library/artist-info?id=7452&name=AC%2FDC")).json()
+
+    found = body["enrichment"]
+    # LMS wins the biography; ListenBrainz fills what it has nothing for.
+    assert found["biography"] == "From the plugin."
+    assert found["biography_source"] == "LMS"
+    assert found["artist_image"] == "http://lms/photo.jpg"
+    assert found["similar"] == ["Queen", "Led Zeppelin"]
+
+
+@pytest.mark.asyncio
+async def test_the_artist_page_falls_back_when_lms_has_nothing():
+    from aiohttp.test_utils import TestClient, TestServer
+
+    from gexis_core.enrichment import Cache, EnrichmentService
+    from gexis_core.state import StateStore
+    from gexis_core.wsserver import StateServer
+    from pathlib import Path as _P
+
+    class Empty:
+        async def photos(self, ids, size=200):
+            return {ids[0]: None}
+
+        async def biography(self, artist_id):
+            return None
+
+    http = FakeHttp({"ws/2/artist/": MB_ARTIST, "ws/2/artist/66c": MB_RELATIONS,
+                     "wikidata.org/w/api.php": WIKIDATA, "page/summary": SUMMARY,
+                     "similar-artists": SIMILAR})
+    identity = ArtistIdentity(http)
+    service = EnrichmentService(
+        [WikipediaBiography(http, identity), ListenBrainzSimilar(http, identity)],
+        Cache(_P(":memory:")),
+    )
+    server = StateServer(StateStore({}), artistinfo=Empty(), enrichment=service)
+
+    async with TestClient(TestServer(server.make_app())) as client:
+        body = await (await client.get("/library/artist-info?id=7452&name=AC%2FDC")).json()
+
+    assert body["enrichment"]["biography_source"] == "Wikipedia, CC BY-SA"
+
+
+@pytest.mark.asyncio
+async def test_the_artist_page_needs_a_name():
+    from aiohttp.test_utils import TestClient, TestServer
+
+    from gexis_core.enrichment import Cache, EnrichmentService
+    from gexis_core.state import StateStore
+    from gexis_core.wsserver import StateServer
+    from pathlib import Path as _P
+
+    server = StateServer(StateStore({}),
+                         enrichment=EnrichmentService([], Cache(_P(":memory:"))))
+
+    async with TestClient(TestServer(server.make_app())) as client:
+        assert (await client.get("/library/artist-info?id=7452")).status == 400

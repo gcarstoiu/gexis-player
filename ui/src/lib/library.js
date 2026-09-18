@@ -134,3 +134,19 @@ export async function loadArtistPhotos(ids, size = 200) {
     return {};
   }
 }
+
+/** What the artist page draws below its discography: the biography with the
+ *  credit its licence requires, and similar artists (ADR-0038 §2, filled by
+ *  Phase 8). LMS's own plugin answers first where the server has it. */
+export async function loadArtistInfo(id, name) {
+  try {
+    const response = await fetch(
+      `/library/artist-info?id=${encodeURIComponent(id)}&name=${encodeURIComponent(name)}`,
+    );
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    return (await response.json()).enrichment;
+  } catch (err) {
+    console.info('artist-info:', err.message);
+    return null;
+  }
+}

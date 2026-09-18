@@ -20,6 +20,7 @@
     loadArtists,
     loadArtistAlbums,
     loadArtistPhotos,
+    loadArtistInfo,
     loadPlaylists,
     loadPlaylist,
     browseRadio,
@@ -113,6 +114,8 @@
   // without the plugin answers null for everything and the circles keep
   // their initials, which is not a failure state.
   let photos = $state({});
+  //: What the artist page shows below its discography.
+  let artistInfo = $state({ state: 'idle', for: null, found: null });
   let photoQueue = new Set();
   let photoTimer = null;
 
@@ -171,6 +174,15 @@
       // for its own size rather than stretching the grid's thumbnail.
       loadArtistPhotos([entry.id], 300).then((found) => {
         if (found[entry.id]) photos = { ...photos, [`${entry.id}@300`]: found[entry.id] };
+      });
+      // About and Similar artists: ADR-0038 §2 left them undrawn "until
+      // Phase 8", and this is Phase 8. Fetched beside the discography
+      // rather than before it, so the page arrives without waiting on a
+      // biography that takes a second (Finding 035).
+      artistInfo = { state: 'loading', for: entry.id, found: null };
+      loadArtistInfo(entry.id, entry.name).then((found) => {
+        if (artistInfo.for !== entry.id) return;
+        artistInfo = { state: found ? 'ready' : 'error', for: entry.id, found };
       });
     } catch (err) {
       console.info('library:', err.message);
@@ -824,7 +836,34 @@
               <span class="i-shuffle"><i></i><i></i><b></b><b></b></span>
             </button>
           </div>
-          <!-- About, tags and similar artists are Phase 8 (ADR-0038 §2). -->
+          <div class="artistmeta">
+            <div class="sect">
+              <span class="sect__label">About</span>
+              <span class="sect__rule"></span>
+            </div>
+            {#if artistInfo.state === 'loading'}
+              <div class="skel"><span></span><span></span><span></span></div>
+            {:else if artistInfo.found?.biography}
+              <div class="artistmeta__bio">{artistInfo.found.biography}</div>
+              <!-- The credit is the licence's term, not decoration
+                   (ADR-0040 §4). -->
+              <div class="artistmeta__credit">From {artistInfo.found.biography_source}</div>
+            {:else}
+              <div class="artistmeta__none">Nothing found for this artist.</div>
+            {/if}
+
+            {#if artistInfo.found?.similar?.length}
+              <div class="sect">
+                <span class="sect__label">Similar artists</span>
+                <span class="sect__rule"></span>
+              </div>
+              <div class="artistmeta__similar">
+                {#each artistInfo.found.similar as name (name)}
+                  <span class="artistmeta__chip">{name}</span>
+                {/each}
+              </div>
+            {/if}
+          </div>
         </div>
 
         <div class="releases">
@@ -2029,6 +2068,90 @@
     padding: 24px 40px 26px;
     box-sizing: border-box;
   }
+  /* What the artist page draws below the buttons: the design's About and
+     Similar artists blocks, filled by Phase 8's enrichment. */
+  .artistmeta {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    min-height: 0;
+    overflow-y: auto;
+    scrollbar-width: none;
+    touch-action: pan-y;
+  }
+  .artistmeta::-webkit-scrollbar { display: none; }
+  .sect {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+    flex-shrink: 0;
+  }
+  .sect__label {
+    font-family: var(--font-mono);
+    font-size: var(--t-label-sm);
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--ink-quiet);
+  }
+  .sect__rule {
+    flex: 1;
+    height: 1px;
+    background: var(--ink-line);
+  }
+  .skel {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .skel span {
+    display: block;
+    height: 13px;
+    border-radius: 4px;
+    background: rgba(233, 238, 242, 0.09);
+    animation: libSkel 1500ms ease-in-out infinite;
+  }
+  .skel span:nth-child(1) { width: 100%; }
+  .skel span:nth-child(2) { width: 94%; animation-delay: 90ms; }
+  .skel span:nth-child(3) { width: 56%; animation-delay: 180ms; }
+  @keyframes libSkel {
+    0%, 100% { opacity: 0.55; }
+    50% { opacity: 1; }
+  }
+  .artistmeta__bio {
+    font-size: 16px;
+    line-height: 1.5;
+    color: var(--ink-body);
+    text-wrap: pretty;
+  }
+  .artistmeta__credit {
+    font-family: var(--font-mono);
+    font-size: var(--t-micro);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--ink-quiet);
+  }
+  .artistmeta__none {
+    font-size: var(--t-body-sm);
+    color: var(--ink-quiet);
+  }
+  .artistmeta__similar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 7px;
+  }
+  .artistmeta__chip {
+    display: inline-flex;
+    align-items: center;
+    height: 28px;
+    padding: 0 11px;
+    border-radius: 8px;
+    background: rgba(159, 180, 232, 0.14);
+    border: 1px solid rgba(159, 180, 232, 0.3);
+    font-size: 14px;
+    color: var(--accent-bluetooth);
+    white-space: nowrap;
+  }
+
   .artistpage__side {
     width: 262px;
     flex-shrink: 0;

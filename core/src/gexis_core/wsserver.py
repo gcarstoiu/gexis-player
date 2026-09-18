@@ -31,7 +31,7 @@ from aiohttp import web
 
 from gexis_core.adapters.base import TRANSPORT_COMMANDS
 from gexis_core.artistinfo import PHOTO_LARGE, PHOTO_THUMB
-from gexis_core.enrichment import Enrichment, TrackKey
+from gexis_core.enrichment import Enrichment, TrackKey, fold
 from gexis_core.library import LibraryUnavailable, NoPlayer, NotFound
 from gexis_core.radio import RadioUnavailable, UnknownHandle
 from gexis_core.model import PlaybackState
@@ -356,6 +356,40 @@ class StateServer:
         photos = await self._artistinfo.photos(ids, size)
         return web.json_response({str(k): v for k, v in photos.items()})
 
+    async def _handle_artist_info(self, request: web.Request) -> web.Response:
+        """`?id=<lms artist id>&name=<artist>` -> what the artist page draws
+        below its discography (ADR-0038 §2, now that Phase 8 can fill it).
+
+        **The same order as everywhere else** (ADR-0040 §1): LMS's own plugin
+        answers first, from the id the library already has, and the key-free
+        providers fill what it leaves. They are keyed on the *name*, since
+        they know nothing about LMS ids.
+        """
+        if self._enrichment is None:
+            return web.json_response({"error": "enrichment is not wired up"}, status=503)
+        name = (request.query.get("name") or "").strip()
+        try:
+            artist_id = int(request.query["id"]) if request.query.get("id") else None
+        except ValueError:
+            return web.json_response({"error": "id is an integer"}, status=400)
+        if not name:
+            return web.json_response({"error": "name is required"}, status=400)
+
+        found = Enrichment()
+        if artist_id is not None and self._artistinfo is not None:
+            photos = await self._artistinfo.photos([artist_id], PHOTO_LARGE)
+            biography = await self._artistinfo.biography(artist_id)
+            found = Enrichment(
+                biography=biography,
+                biography_source="LMS" if biography else None,
+                artist_image=photos.get(artist_id),
+                sources=("lms",) if (biography or photos.get(artist_id)) else (),
+            )
+        rest = await self._enrichment.for_track(
+            TrackKey(artist=fold(name)), only=("wikipedia", "listenbrainz"),
+        )
+        return web.json_response({"artist": name, "enrichment": found.merged_with(rest).to_json()})
+
     async def _handle_enrichment(self, request: web.Request) -> web.Response:
         """What is known about what is playing, beyond what the renderer said
         (ADR-0012, ADR-0040).
@@ -467,6 +501,7 @@ class StateServer:
         app.router.add_get("/radio", self._handle_radio)
         app.router.add_post("/radio/play", self._handle_radio_play)
         app.router.add_get("/library/artist-photos", self._handle_artist_photos)
+        app.router.add_get("/library/artist-info", self._handle_artist_info)
         app.router.add_get("/enrichment", self._handle_enrichment)
         app.router.add_post("/library/action", self._handle_library_action)
         app.router.add_get("/library/{what}", self._handle_library)
