@@ -17,11 +17,12 @@
     libraryRoot,
     loadAlbum,
     loadAlbumTracks,
-    loadArtists,
     loadArtistAlbums,
     loadArtistPhotos,
     loadArtistInfo,
     artistPhotos,
+    artistsCached,
+    playlistsCached,
     loadPlaylists,
     loadPlaylist,
     browseRadio,
@@ -154,8 +155,7 @@
   async function openArtists() {
     busy = 'artists';
     try {
-      const page = await loadArtists();
-      artists = page.items;
+      artists = await artistsCached();
       path = [{ kind: 'artists', label: 'Artists' }];
     } catch (err) {
       console.info('library:', err.message);
@@ -279,7 +279,7 @@
   async function openPlaylists() {
     busy = 'playlists';
     try {
-      playlists = await loadPlaylists();
+      playlists = await playlistsCached();
       revealed = null;
       path = [{ kind: 'playlists', label: 'Playlists' }];
     } catch (err) {
@@ -314,7 +314,7 @@
   async function openBrowse() {
     busy = 'browse';
     try {
-      if (!artists.length) artists = (await loadArtists()).items;
+      if (!artists.length) artists = await artistsCached();
       chosenArtist = null;
       browseAlbums = [];
       chosenAlbum = null;

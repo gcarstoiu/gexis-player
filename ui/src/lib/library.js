@@ -170,3 +170,35 @@ export async function loadArtistInfo(id, name) {
     return null;
   }
 }
+
+/** Lists the panel has already been given, kept across the library screen
+ *  being closed and opened again.
+ *
+ *  Same reason as `artistPhotos`: the screen is mounted only while it is
+ *  open, so anything it holds is thrown away each time. The daemon answers
+ *  these from its own cache in milliseconds, but the panel still had to
+ *  wait for a round trip and rebuild 917 cards before drawing a grid it had
+ *  drawn a moment earlier.
+ *
+ *  **Shown at once, then refreshed behind.** LMS renumbers every id on a
+ *  full rescan (Finding 029 §4), so a remembered list is a head start and
+ *  never the last word: what comes back replaces it. */
+export const artistList = writable(null);
+export const playlistList = writable(null);
+
+async function stale(store, load) {
+  let shown = null;
+  store.subscribe((value) => (shown = value))();
+  const fresh = load().then((value) => {
+    store.set(value);
+    return value;
+  });
+  // Nothing remembered: the caller waits, as it always did.
+  return shown ?? (await fresh);
+}
+
+/** Album artists, from memory first if they are there. */
+export const artistsCached = () => stale(artistList, async () => (await loadArtists()).items);
+
+/** The library's playlists, from memory first if they are there. */
+export const playlistsCached = () => stale(playlistList, loadPlaylists);
