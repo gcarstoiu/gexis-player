@@ -53,12 +53,31 @@ than after the root mount at ~3.97s.
 frames; it does not play video, and this is the format the artwork has to
 arrive in.
 
-### 3. It ends when the UI has painted, not when a unit has started
+### 3. It ends before the compositor starts
 
-`plymouth quit --retain-splash` leaves the last frame on screen and the
-kiosk draws over it. **The teardown is driven by the panel actually
-painting**, not by `gexis-kiosk.service` reaching active at 18.26s — the gap
-between those two is exactly where a flash of black would show.
+> **Corrected 2026-09-19, on the first device that ever booted this.** This
+> section originally said the splash is torn down "when the UI has painted,
+> not when a unit has started", and argued that was the careful choice. **It
+> cannot work.** Plymouth is DRM master for as long as it runs, so labwc
+> cannot open the GPU while the splash is up, so the panel can never paint.
+> Each waits for the other. Measured on `gexis`: `Could not take device:
+> Device or resource busy`, `Found 0 GPUs, cannot create backend`, labwc
+> exits 1 at 24s, and with `Restart=no` the panel stays black until somebody
+> connects over SSH.
+
+`gexis-kiosk.service` runs `plymouth quit --retain-splash` as `ExecStartPre`,
+before labwc. That ends plymouth — releasing the device — and leaves the last
+frame in the framebuffer for the compositor to draw over.
+
+**`--retain-splash` does not survive labwc's modeset on this hardware**
+(George, 2026-09-19: the screen went straight to black, nothing froze). So
+there is a real gap between the splash ending and Chromium's first paint,
+rather than the seam this section originally worried about. Covering it is an
+open question below.
+
+The panel still reports its first painted frame to `POST /panel/painted`, and
+the daemon still answers by quitting any splash that is somehow still up. It
+is a backstop now, not the mechanism.
 
 ### 4. The getty stays enabled
 
@@ -115,6 +134,15 @@ has run it. In particular:
   was never measured, only reasoned about.
 
 ## Open
+
+- **What covers the gap between the splash ending and the panel painting.**
+  Options not yet weighed: a wallpaper behind the compositor showing the last
+  frame, or accepting a short black gap. Nothing measured.
+- **Whether `Restart=no` on `gexis-kiosk.service` is still right.** Phase 4
+  criterion 1 chose it deliberately - "a compositor that respawns in a loop
+  after a real failure hides the failure behind a flicker" - and this failure
+  is the argument on the other side: one lost race at boot left a black panel
+  that only SSH could recover. George's call, not amended here.
 
 - **Whether to shorten the boot at all**, given that ~6s of it is waiting
   for a network the panel does not need to draw its first screen.

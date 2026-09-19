@@ -37,6 +37,23 @@ StandardInput=tty-fail
 StandardOutput=journal
 StandardError=journal
 EnvironmentFile=/etc/gexis/kiosk.env
+# ADR-0043, corrected 2026-09-19 on the first device that ever booted it.
+#
+# Plymouth is DRM master for as long as it runs. The original design held
+# the splash until the panel reported a painted frame - which cannot work,
+# because labwc cannot open /dev/dri/card1 while plymouth has it, so the
+# panel can never paint. Measured: "Could not take device: Device or
+# resource busy", "Found 0 GPUs, cannot create backend", labwc exits 1 at
+# 24s, and with Restart=no below the panel stays black until someone SSHes
+# in.
+#
+# `quit --retain-splash` is the way out: it ends plymouth, releasing the
+# device, and leaves the last frame in the framebuffer. It has to happen
+# before labwc, not after Chromium paints.
+#
+# `-` prefixed: an image without plymouth, or a boot that never showed a
+# splash, must not stop the panel starting.
+ExecStartPre=-/bin/plymouth quit --retain-splash
 ExecStart=/usr/bin/labwc -s /usr/local/bin/gexis-kiosk-start
 
 # Phase 4 criterion 1: "starting on boot, never restarting". Restart=no is
