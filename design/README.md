@@ -15,7 +15,7 @@ are all final unless a row below says otherwise. Recreate them exactly.
 | Path | What it is |
 |---|---|
 | `tokens.css` | Every design value as a CSS variable. Start here. |
-| `fonts.css` | `@font-face` declarations. **The woff2 files are not in this package — see Fonts.** |
+| `fonts.css` | `@font-face` declarations, resolving against `fonts/` — see Fonts. |
 | `now-playing.html` + `.css` + `.js` | **First slice.** Six states of the Now Playing screen, plain HTML/CSS. |
 | `data-contract.md` | Every field each screen needs, mapped to `/state`. Fields the backend does not publish yet are marked NEW. |
 | `settings.md` | Settings row-type vocabulary and the full row inventory. Provisional. |
@@ -40,18 +40,32 @@ are all final unless a row below says otherwise. Recreate them exactly.
 The design uses **Nunito Sans** (300–800, variable) and **IBM Plex Mono**
 (400/600/700). Both are SIL Open Font License and safe to vendor.
 
-I cannot produce binary font files, so `fonts.css` declares the faces and
-points at `design/fonts/`, which is empty. **Someone must add four files**
-before the panel is offline-correct:
+**The four files are here as of 2026-09-19**, in `design/fonts/`, with both
+licences beside them:
 
-    fonts/NunitoSans-Variable.woff2
-    fonts/IBMPlexMono-Regular.woff2
-    fonts/IBMPlexMono-SemiBold.woff2
-    fonts/IBMPlexMono-Bold.woff2
+    fonts/NunitoSans-Variable.woff2     Nunito Sans, variable wght 200-1000
+    fonts/IBMPlexMono-Regular.woff2     400
+    fonts/IBMPlexMono-SemiBold.woff2    600
+    fonts/IBMPlexMono-Bold.woff2        700
 
-Until then the CSS falls back to `system-ui` and `Courier New`, which changes
-metrics: mono columns lose their alignment and the 58px title wraps
-differently. Do not judge spacing before the real faces are in place.
+They are not lookalikes from a font site: they are the exact files the
+shipped panel renders with, taken from the `@fontsource` packages `ui/`
+builds against, so this package and the device draw the same outlines.
+
+**They are the latin subsets**, which is also what the panel bundles.
+Accented and Cyrillic text falls back; the UI's bundle carries latin-ext and
+cyrillic if a mockup ever needs them.
+
+One naming detail, harmless but worth knowing: `ui/src/styles/tokens.css`
+asks for `'Nunito Sans Variable'` first - fontsource's own name for the
+variable face - then `'Nunito Sans'`, while `fonts.css` here declares plain
+`'Nunito Sans'` over 300-800. The file covers 200-1000, so both resolve to
+the same outlines.
+
+Before this, the CSS fell back to `system-ui` and `Courier New`, which
+changes metrics: mono columns lose their alignment and the 58px title wraps
+differently. That warning no longer applies to anyone using this package as
+it stands.
 
 No icon font exists. Every glyph is either CSS geometry or a file in
 `assets/` — nothing to vendor.
