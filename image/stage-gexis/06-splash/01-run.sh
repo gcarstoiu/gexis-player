@@ -69,10 +69,11 @@ install -D -m 644 files/gexis-splash-backstop.service \
 # to black on 2026-09-19 - so something has to be behind the compositor or
 # the gap is black.
 #
-# A frame from the held section rather than the first or last: it is what
-# the animation rests on, so the wallpaper continues the picture instead of
-# cutting to a different moment of it.
-STILL=boot-0060.png
+# The pulse's rest state (its last frame, which is pixel-identical to its
+# first): that is what is on screen for almost all of a boot, so the
+# wallpaper continues the picture rather than cutting to a different moment
+# of it.
+STILL=boot-0100.png
 install -D -m 644 "files/theme/${STILL}" \
 	"${ROOTFS_DIR}/usr/share/gexis/panel-background.png"
 

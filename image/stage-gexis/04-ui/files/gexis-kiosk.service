@@ -51,9 +51,13 @@ EnvironmentFile=/etc/gexis/kiosk.env
 # device, and leaves the last frame in the framebuffer. It has to happen
 # before labwc, not after Chromium paints.
 #
-# `-` prefixed: an image without plymouth, or a boot that never showed a
+# `+` is load-bearing, and its absence cost a second black boot on
+# 2026-09-19: this unit runs as User=pi, ExecStartPre inherits that, and the
+# plymouth client needs root to command plymouthd. Without it the quit is
+# refused silently, plymouthd keeps DRM, and labwc fails exactly as before.
+# `-` as well: an image without plymouth, or a boot that never showed a
 # splash, must not stop the panel starting.
-ExecStartPre=-/bin/plymouth quit --retain-splash
+ExecStartPre=-+/bin/plymouth quit --retain-splash
 ExecStart=/usr/bin/labwc -s /usr/local/bin/gexis-kiosk-start
 
 # Phase 4 criterion 1: "starting on boot, never restarting". Restart=no is

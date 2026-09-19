@@ -11,6 +11,14 @@
 // animation. Leaving them undefined is not enough: Plymouth falls back to
 // its own rendering when a theme does not take the callback.
 
+// Two ranges, not one loop (George, 2026-09-19): the intro plays once and
+// the pulse repeats until the handover. A boot is ~20s and variable, so a
+// whole sequence repeating five times draws attention to how long it is
+// taking, where a settled pulse reads as "working".
+INTRO_FIRST = 1;
+INTRO_LAST = 50;
+PULSE_FIRST = 51;
+PULSE_LAST = 100;
 FRAMES = 100;
 FPS = 25;
 
@@ -42,7 +50,7 @@ sprite.SetY(0);
 sprite.SetZ(0);
 sprite.SetImage(images[1]);
 
-index = 1;
+index = INTRO_FIRST;
 tick = 0;
 
 fun refresh_callback() {
@@ -50,8 +58,12 @@ fun refresh_callback() {
     if (tick >= TICKS_PER_FRAME) {
         tick = 0;
         index++;
-        if (index > FRAMES)
-            index = 1;
+        // Past the end of the pulse, back to its start - never back to the
+        // intro. The wrap is pixel-identical (measured 0.0000 mean, worst
+        // channel 0), because the pulse is a beat followed by a genuine
+        // rest and frame PULSE_LAST is frame PULSE_FIRST.
+        if (index > PULSE_LAST)
+            index = PULSE_FIRST;
         sprite.SetImage(images[index]);
     }
 }
