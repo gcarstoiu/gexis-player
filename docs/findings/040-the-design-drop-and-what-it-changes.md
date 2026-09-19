@@ -201,3 +201,147 @@ For Claude Design, and already with George:
   those decisions live; this record is the survey, not the decision.
 - **No screen was compared on hardware.** Every claim about the shipped UI is
   from the source, which is how item 11 came to be disputed.
+
+---
+
+# Appendix — the diff itself
+
+**Why this is here.** Everything above is a conclusion. This is the evidence
+it was drawn from, recorded because the next session has to compare a
+*revised* drop against this one, and re-deriving 2,461 lines of diff to do
+that would be a day's work repeated.
+
+Sizes, for scale: `Now Playing.dc.html` 2614 → 2967 lines (1585 diff lines);
+`Settings.dc.html` 422 → 886 (876); `settings.md` 96 → 258 (236);
+`data-contract.md` (95); `README.md` (126); `now-playing.css` (93);
+`screens.md` (73); `now-playing.html` (20); `tokens.css` (18).
+`now-playing.js`, `geometry.json`, `fonts.css`, `source/support.js` and every
+asset are **byte-identical**.
+
+## A. Settings — every key that moved
+
+Counted from the files, not from the prose. **51 → 50 keyed rows.**
+
+**Removed (21):** `api_loopback`, `backup`, `boot_default_scope`,
+`brightness`, `confidence`, `factory_reset`, `idle_close`, `idle_grace`,
+`image_build`, `lms_player`, `log_level`, `plugins`, `power`,
+`release_ladder`, `restore_floor`, `seek_reanchor`, `spotify_name`, `theme`,
+`time_display`, `updates`, `volume_managed`.
+
+**Added (19, plus one synthetic):** `drawer_autohide`, `drawer_on_external`,
+`fanart_key`, `handoff_duration`, `home_strip`, `home_strip_count`,
+`idle_background`, `idle_days`, `idle_icons`, `idle_minmax`, `idle_screen`,
+`idle_weather`, `listenbrainz_token`, `reboot`, `skin`, `viz_stop`,
+`wallpaper_key`, `weather_key`, `weather_location`. (`wifi_pass_<ssid>` is
+synthesised at runtime by the Wi-Fi join flow, not a registry row.)
+
+**The `system` category is gone**; `version` and the new `reboot` move into
+Device. Group separators 6 → 7: a new **Home screen** group in Display.
+
+**Type changes — three rows become `list`:** `lms_server` (was `text`, gains
+`kind: 'server'`, `discover`, `manual`), `bt_trusted` (was `action`),
+`wifi` (was `action`, gains signal bars and the join flow).
+
+**Value, unit and range changes:**
+
+| key | was | now |
+|---|---|---|
+| `boot_volume` | −90 dB, −90…−20 | **60%**, 0…100 |
+| `max_ceiling` | Not set, dB, −60…0, `R?` | **100%**, 0…100, `R` |
+| `travel_curve` | default dB-linear, `N?` | **Perceptual**, `N` |
+| `handoff_threshold` | 0…5 | 0.5…4, step 0.5, `onlyWhen show_transition` |
+| `viz_timeout` | 30 s, 0…300 s | **10 min**, 1…60 min |
+| `bt_pairing` | PIN-free | **Confirmation required** (options reordered) |
+| `bt_discoverable` | 3 min after boot | **Always** |
+| `timezone` | 3 literal options | two-step picker, 7 regions / 43 zones |
+| `idle_url` | always shown | `onlyWhen idle_screen = External URL` |
+| `show_transition` | Display › Panel | **moved to Handoff** |
+
+**11 rows carry `onlyWhen`.** At shipped defaults 7 of the 21 Display rows
+are hidden.
+
+## B. The five new mechanics, concretely
+
+- **`list`** — 66px item rows. Wi-Fi items: 4 signal bars (6/10/14/18px),
+  a lock glyph when secured, a `Forget` button (44px, amber
+  `rgba(224,167,88,0.14)`), joined items tinted `rgba(126,214,188,0.12)`.
+  Empty state is a 58px dashed circle plus copy. `discover: true` shows a
+  searching spinner for 2200ms and **withholds the empty state while
+  scanning** — "no servers found" is not true while still looking.
+- **Wi-Fi join** — a state machine (`connecting`/`ok`/`error`), 1800ms to
+  resolve then 1400ms before auto-close, a 64px status disc, and **Give up /
+  Try again** on failure with the password retained. Mock rule: under 8
+  characters fails, so both outcomes are reachable.
+- **`warn`** — amber block above the options list, shown only when the
+  warning's option is the selected one. One use: `output_mode.Fixed`.
+- **`optionsFrom`** — `skin.optionsFrom = 'skin_corpus'` → 71 or 84 entries
+  parsed from the real corpus. Stored value is the full section name
+  (`06G5_McIntosh`); only the display splits the ordinal.
+- **`picker`** — full-screen layer, four-across grid, 16:10 tiles, ordinal
+  badge and a check badge on the current one. Thumbnails are placeholders.
+
+**Bounded numbers gain a live slider** (38px mono readout, 14px rail, 34px
+knob, pointer capture, quantised to `step`), replacing the read-only value
+block. **`readonly` rows take no tap and draw no chevron.** **Amber dots are
+removed from all four sites** and `marks` no longer renders anywhere, though
+it stays in the data.
+
+## C. Now Playing — per area
+
+- **Source indicator**: pill ground, padding, border and radius all removed;
+  `top` 38 → 44px, gap 9 → 11px; mark `18×18` → `height:21px`, with a new
+  `--bt` modifier at 24px; Lyrion bars 9/17/12 → 11/21/15.
+- **Tabs**: row gap 26 → 34px; unselected ink 0.60 → **0.50 alpha**;
+  selected underline `var(--src-accent)` → `var(--ink)` in CSS, while the
+  `.dc` source keeps per-tab accents — **the two representations disagree**.
+- **Track tab**: the no-lyrics branch is rebuilt to match the with-lyrics one
+  — `position:absolute; inset:0`, one 38px title, then artist/album/year on a
+  single baseline row. The 58px treatment and the 238px block are gone.
+- **Artist tab**: bio switches from scroll-to-read (`max-height:128px;
+  overflow-y:auto`) to measure-and-expand (`overflow:hidden`, 132px collapsed).
+- **Release tab**: `relLabelDisplay` hides the chip for LMS; `relSpecs`
+  filters out any value that is `—`; `ALBUM_FALLBACK` loses its placeholder
+  specs entirely.
+- **Transport**: no geometry, colour or icon change at all. Only the press
+  state.
+- **Progress and artwork**: byte-identical.
+- **Library**: list container becomes a grid (`libCols`, `libGap`); row
+  height **66 → 60px** for every non-Radio list, 96px on Radio root; Radio
+  gets a border and a 54px icon.
+- **Idle**: rebuilt around a photographic background with
+  `-webkit-text-stroke` contour, a date line, and a weather band. Clock drift
+  box narrowed (`y` 24+52 → 17+38) to clear it.
+
+## D. The gaps, with lines
+
+| # | gap | design | code |
+|---|---|---|---|
+| 1 | fixed output mode absent | `dc.html:1032`, `:1051-1061`, `:257-262`, `:969-974` | `VolumeDrawer.svelte:118-146`, `NowPlaying.svelte:463`, `MiniStrip.svelte:86` |
+| 2 | no long-press | `dc.html:1598-1634`, wired at `:624` | zero handlers in `Library.svelte` |
+| 3 | artist page offline + Retry | `dc.html:705-710`, `:753-755`, `:807-809` | `Library.svelte:286` computes `error`, `:954-981` never branches |
+| 4 | similar artists inert | `dc.html:794-806` | `Library.svelte:1036-1040`, `NowPlaying.svelte:395-399` |
+| 5 | genre/tag chips | `dc.html:674-684`, `:127-131` | absent; no field in `enrichment.py:140-170` |
+| 6 | Lyrics tab = Track tab | `dc.html:1869-1918` (full song) | `NowPlaying.svelte:230` and `:281`, both `window5` |
+| 7 | radio glyphs | `dc.html:1289-1301` (10 tinted) | `Library.svelte:695-703` (2, untinted) |
+| 8 | radio station count | `dc.html:365` | `Library.svelte:640-643` empty span |
+| 9 | artist album counts | `dc.html:422`, `:629-632` | `Library.svelte:785-789`, `:872-897` |
+| 10 | Popular/Similar skeletons | `dc.html:720-728`, `:787-792` | `Library.svelte:984`, `:1031` render only when data exists |
+| 11 | Popular row actions | `dc.html:733-748` | `Library.svelte:990-998` plays immediately |
+| 12 | Back from New Music | `dc.html:2582-2588` | `Library.svelte:670` empty path — **disputed, see above** |
+| 13 | album year on Track panel | `dc.html:77-80`, `:88-92` | `NowPlaying.svelte:260-263` comment, now stale |
+| 14 | Release format chip | `dc.html:156-158` | `NowPlaying.svelte:315-317` type only |
+
+**Needs a core field before it can be built at all:** artist album count,
+tags, radio category, station artwork, format, fixed-vs-variable output,
+station count.
+
+## E. What to diff next time
+
+1. `diff -u` both `.dc.html` files **and read all of it** — `wc -l` the diff
+   first so you know what you are committing to. The prose files describe
+   maybe a fifth of what changes.
+2. Check `backdrop-filter` is still absent (ADR-0041) and that the Motion
+   table no longer specifies the library cross-fade.
+3. Re-run the key delta in section A against
+   `core/src/gexis_core/settings_registry.json`.
+4. Check `design/fonts/` and `IMPLEMENTED-DIFFERENTLY.md` survive the merge.
