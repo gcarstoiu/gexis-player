@@ -51,13 +51,30 @@ if ! grep -q '^disable_splash=1' "${CONFIG}"; then
 		>> "${CONFIG}"
 fi
 
-# Plymouth normally tears itself down when multi-user.target is reached. It
-# must not: the panel is still ~2s from painting at that point, and the gap
-# is exactly where a flash of black would show. gexis-core drops the splash
-# when the UI reports its first frame (ADR-0043 §3), with a backstop timer
-# in case it never does.
+# Plymouth normally tears itself down when multi-user.target is reached,
+# which is ~2s before the panel has anything to show. It is masked in the
+# chroot half, and gexis-kiosk.service quits it itself with
+# `--retain-splash` just before labwc starts (ADR-0043 §3, corrected
+# 2026-09-19: plymouth is DRM master, so holding it any longer than that
+# stops the compositor opening the GPU at all).
+#
+# The backstop unit stays for the case where the kiosk never starts: without
+# it the animation would loop forever on a device with no keyboard.
 install -D -m 644 files/gexis-splash-backstop.service \
 	"${ROOTFS_DIR}/etc/systemd/system/gexis-splash-backstop.service"
+
+# The compositor's wallpaper, for the gap between the splash ending and
+# Chromium's first paint (ADR-0043's Open). `--retain-splash` does not
+# survive labwc's modeset on this hardware - George watched it go straight
+# to black on 2026-09-19 - so something has to be behind the compositor or
+# the gap is black.
+#
+# A frame from the held section rather than the first or last: it is what
+# the animation rests on, so the wallpaper continues the picture instead of
+# cutting to a different moment of it.
+STILL=boot-0060.png
+install -D -m 644 "files/theme/${STILL}" \
+	"${ROOTFS_DIR}/usr/share/gexis/panel-background.png"
 
 # Build-time assertions. A boot that shows text is a defect nobody will
 # report as one - they will just see it - so fail here instead.

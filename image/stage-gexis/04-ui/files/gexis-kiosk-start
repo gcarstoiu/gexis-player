@@ -41,6 +41,20 @@ if [ -n "${GEXIS_KIOSK_DEBUG_PORT:-}" ]; then
 	echo "gexis-kiosk: DevTools protocol on port ${GEXIS_KIOSK_DEBUG_PORT}" >&2
 fi
 
+# The wallpaper behind Chromium, so the seconds between labwc taking the
+# screen and the UI's first paint show the boot artwork rather than black
+# (ADR-0043). Backgrounded deliberately: this script's exit is labwc's
+# exit, so nothing here may block, and swaybg dies with the session.
+#
+# Failure is not fatal. A missing image or a missing swaybg costs a black
+# gap, which is what we had before - it must never cost the panel.
+BACKGROUND=/usr/share/gexis/panel-background.png
+if [ -r "${BACKGROUND}" ] && command -v swaybg >/dev/null; then
+	swaybg --mode fill --image "${BACKGROUND}" &
+else
+	echo "gexis-kiosk: no wallpaper (${BACKGROUND}); the handover will be black" >&2
+fi
+
 exec chromium \
 	"${debug[@]}" \
 	--ozone-platform=wayland \

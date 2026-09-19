@@ -135,9 +135,13 @@ has run it. In particular:
 
 ## Open
 
-- **What covers the gap between the splash ending and the panel painting.**
-  Options not yet weighed: a wallpaper behind the compositor showing the last
-  frame, or accepting a short black gap. Nothing measured.
+- ~~What covers the gap between the splash ending and the panel painting.~~
+  **Answered 2026-09-19 (George: "i want it").** Two different gaps, and they
+  needed different answers. The compositor's own emptiness is covered by
+  `swaybg` showing a frame from the animation's held section, started by the
+  kiosk session before Chromium. Chromium's first paint was separately white,
+  because `index.html` set no background at all until a stylesheet loaded;
+  it now carries the ground colour inline. **Neither is measured yet.**
 - **Whether `Restart=no` on `gexis-kiosk.service` is still right.** Phase 4
   criterion 1 chose it deliberately - "a compositor that respawns in a loop
   after a real failure hides the failure behind a flicker" - and this failure
