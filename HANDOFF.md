@@ -1,70 +1,83 @@
 # Handoff
 
-Last updated: 2026-09-18 (nineteenth session, on R2D2 — **Phase 7 merged
-(PR #19); Phase 7a closed; Phase 8 done, image built, PR open**)
+Last updated: 2026-09-19 (twentieth session, on R2D2 — **PR #22 merged;
+Phase 9 part done; an image built but never booted**)
 
 ## Start here
 
-**Phase 8 — enrichment and lyrics — is done** (2026-09-18, branch
-`phase-8-plan`). Now playing's Artist, Release and Lyrics tabs are filled,
-synced lyrics follow the playhead on the Track tab, the artist page has its
-About, Popular and Similar, Bluetooth and Spotify get cover art they were
-never sent, and a radio stream gets artwork from the song rather than the
-station. [ADR-0040](docs/decisions/0040-enrichment-providers.md) records the
-providers and was twice amended by what the work measured.
+**Phase 9 is in progress and is not finished.** Step 1 (the idle question)
+is closed, the UI sweep (step 2) is George's and has not happened, and the
+performance target (step 3) is unmet. PR #22 merged an intermediate slice on
+2026-09-19 at George's request.
 
-**The idea to carry forward: "could not ask" is not "there is nothing
-there."** MusicBrainz's search answered 503 for 4 of 9 tries, LRCLIB has a
-busy-503 of its own, and LMS's plugin holds a socket for 75 s before
-dropping it - which is also what an *absent* plugin does, in milliseconds.
-Every one of those looks like an empty answer. Caching one would deny a
-track its enrichment permanently; reading one as "no plugin here" turned
-every artist photo off for ten minutes. The distinction is made in five
-places now and is the phase's single most load-bearing idea.
+**The one thing waiting on hardware: an image with a boot animation that has
+never been booted.** `2026-09-19-gexis-player-v0.2.1-287-ge59654c-dirty.img`.
+George is flashing it to a *different* SD card, keeping the Phase 8 card as
+the fallback — the right call, because the change touches the initramfs and
+a wrong one does not reach a state where SSH can help.
 
-**Two keys, both per-user settings George chose:** `listenbrainz_token` (its
-popularity endpoint began demanding one mid-phase, having answered 200 the
-same morning) and `fanart_key` for artist pictures. Nothing else needs one,
-and with neither set the panel simply shows less.
+**What to check on that first boot**, in order, because each answers a
+different unknown in [ADR-0043](docs/decisions/0043-boot-animation-and-a-silent-boot.md):
 
-**Fanart adds quality, not coverage** (measured on 14 random artists: 9 had
-a picture from both sources, 5 from LMS only, **0 from fanart only**). It
-goes first where it has one; LMS stays behind it. Its pictures go through
-LMS's image proxy - 705 KB became 32.8 KB at 300 px.
+1. **Does it boot at all?** The initramfs is rebuilt by
+   `06-splash/02-run-chroot.sh`. If it does not, the fallback is the other
+   card, not a fix on this one.
+2. **Does the animation appear, and how early?** It should start a second or
+   two after power, from the initramfs. Late (~4 s) means plymouth is
+   starting after the root mount instead.
+3. **Is there any text at all?** Six sources were quieted; any survivor is a
+   defect and worth naming precisely.
+4. **Is the handover clean?** The splash is held until the panel reports its
+   first painted frame. A flash of black between animation and UI means the
+   signal is not arriving.
+5. **What did it cost?** `free -m` early on. Plymouth may hold all 100 frames
+   in memory, ~400 MB if so. 36 of the 100 are exact duplicates, so there is
+   cheap headroom if it matters.
 
-**Parked by George: a background sweep for missing album art.** 155 of 4,567
-albums have none. The same sweep for artist pictures was rejected on the
-measurement above: 30-45 minutes of MusicBrainz's one-a-second allowance to
-improve pictures that already exist.
+**The failure that is worth remembering from this session.** The first build
+of the splash stage failed on its *own assertion*: plymouth was not in the
+initramfs. The rebuild had reported no error — Raspberry Pi OS ships
+`update_initramfs=no`, so `update-initramfs` prints "Not updating initramfs."
+and does nothing. Without that assertion the build would have succeeded and
+produced a card whose animation starts late, which looks like a design choice
+rather than a defect. Same shape as everything in `docs/LESSONS.md`.
 
-**Phase 9 step 1 is done, and its question had a wrong premise.** "Why is a
-playing panel never idle?" came from Finding 034's idle control, which was
-measuring a queue rail left open by the run before it - the rail's blurred
-scrim costs 71 % of the frames on its own. An idle panel is idle.
+**Also in this image, and not on the card George is looking at today:** the
+Peppy source badge is now the mark alone (the renderer's name was the only
+thing drawn outside the square each skin reserves, and on 7 of the 71 skins
+"Bluetooth" left the screen), the album page's track rows are actionable, and
+no `backdrop-filter` remains anywhere in the panel.
 
-**What the chase found instead is worth more:
-[ADR-0041](docs/decisions/0041-scrims-dim-but-do-not-blur.md) - scrims dim
-but do not blur.** `backdrop-filter` costs 24.5 ms a frame in draw-and-submit
-against a 16.7 ms budget, with the CPU idle: the compositor draws the
-backdrop into its own texture and reads it back every frame, which is a
-tile-based GPU's worst case
-([Finding 037](docs/findings/037-why-a-blurred-scrim-costs-the-panel.md)).
-Not the radius, not the area, and Vulkan is worse. **It is off the queue
-rail and the volume drawer**, which George checked and kept; Settings and
-the rail's source sheet are left for the sweep. **The rule for the design:
-depth is affordable, live readback is not** - a static blurred image costs
-almost nothing and the artwork backdrop stays exactly as it is.
+**ADR-0041 — scrims dim but do not blur** is the substantial result of step 1.
+`backdrop-filter` costs 24.5 ms a frame in draw-and-submit against a 16.7 ms
+budget with the CPU idle; the compositor reads the live screen back every
+frame, which is a tile-based GPU's worst case
+([Finding 037](docs/findings/037-why-a-blurred-scrim-costs-the-panel.md)). Not
+the radius, not the area, and Vulkan is worse. **It does not reach the target
+on its own:** the rail goes from ~15 fps to ~36 against a 55 fps floor.
 
-**It does not reach the target on its own:** the rail goes from ~15 fps to
-~36 against a 55 fps floor, and its own list is the rest - the same work the
-artist grid needs.
+**The build now caches its downloads** ([ADR-0042](docs/decisions/0042-a-local-cache-for-vendored-downloads.md)):
+six artefacts, ~308 MB, content-addressed in `~/.cache/gexis-player/downloads`,
+proven on the second build — zero bytes fetched. **It is explicitly not a
+backup**: it protects this machine, not a fresh clone. A mirror we control is
+deferred and is the only thing that answers George's actual question.
 
-**Next: Phase 9, in the order George agreed on 2026-09-18** - the idle
-question first, then the UI sweep, then the performance work, then the
-settings and the triage. The reason for that order is in
-`docs/DEVELOPMENT.md`: the sweep is a judgement call, and a judgement made
-on a panel that drops 71 % of its frames before anyone touches it cannot be
-told from the floor it is standing on.
+**Two pieces of Phase 9 groundwork are done and unused**, both off-device and
+both waiting for the sweep:
+
+- **The unwired-UI audit** (criterion 2). All 66 interactive elements traced.
+  One real dead control, now fixed; a latent trap remains — `Settings.svelte`'s
+  `confirmSheet()` has no path for a wired `action` row, so the first one
+  wired gets a silently dead button, and `lib/settings.js` never sends `POST`.
+- **The settings wiring map** (criterion 1). Of 48 unwired rows: 14 are a read
+  away, 19 need a branch, 4 need the feature built, 11 need a route or a
+  sub-screen. `viz_timeout` is read by the daemon but missing from `wired`, so
+  the phone cannot change a setting something actually consults.
+
+**Next, in the order George agreed:** the UI sweep (his, with
+`design/IMPLEMENTED-DIFFERENTLY.md` in Claude Design's hands), then the
+performance work against a baseline retaken *after* the sweep, then settings
+and triage.
 
 **Phase 7a — panel responsiveness — is closed** (2026-09-18). Artwork at the
 size drawn, an instrument that survives its own scrutiny, and a baseline:

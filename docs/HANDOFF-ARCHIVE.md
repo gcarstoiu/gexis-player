@@ -3334,3 +3334,74 @@ the library reads already do - `ARTWORK_THUMB` exists for exactly this - and
 oversized covers were part of what made the New Music strip scroll unevenly
 (Finding 029 §5). Not changed yet: George deferred it to the one
 investigation rather than fixing piecemeal.
+
+---
+
+## From HANDOFF.md, 2026-09-19 (was the nineteenth session's "Start here")
+
+Moved verbatim when the twentieth session replaced it. Phase 8 and Phase 9
+step 1 are finished; what follows is how they read while they were current.
+
+
+## Start here
+
+**Phase 8 — enrichment and lyrics — is done** (2026-09-18, branch
+`phase-8-plan`). Now playing's Artist, Release and Lyrics tabs are filled,
+synced lyrics follow the playhead on the Track tab, the artist page has its
+About, Popular and Similar, Bluetooth and Spotify get cover art they were
+never sent, and a radio stream gets artwork from the song rather than the
+station. [ADR-0040](docs/decisions/0040-enrichment-providers.md) records the
+providers and was twice amended by what the work measured.
+
+**The idea to carry forward: "could not ask" is not "there is nothing
+there."** MusicBrainz's search answered 503 for 4 of 9 tries, LRCLIB has a
+busy-503 of its own, and LMS's plugin holds a socket for 75 s before
+dropping it - which is also what an *absent* plugin does, in milliseconds.
+Every one of those looks like an empty answer. Caching one would deny a
+track its enrichment permanently; reading one as "no plugin here" turned
+every artist photo off for ten minutes. The distinction is made in five
+places now and is the phase's single most load-bearing idea.
+
+**Two keys, both per-user settings George chose:** `listenbrainz_token` (its
+popularity endpoint began demanding one mid-phase, having answered 200 the
+same morning) and `fanart_key` for artist pictures. Nothing else needs one,
+and with neither set the panel simply shows less.
+
+**Fanart adds quality, not coverage** (measured on 14 random artists: 9 had
+a picture from both sources, 5 from LMS only, **0 from fanart only**). It
+goes first where it has one; LMS stays behind it. Its pictures go through
+LMS's image proxy - 705 KB became 32.8 KB at 300 px.
+
+**Parked by George: a background sweep for missing album art.** 155 of 4,567
+albums have none. The same sweep for artist pictures was rejected on the
+measurement above: 30-45 minutes of MusicBrainz's one-a-second allowance to
+improve pictures that already exist.
+
+**Phase 9 step 1 is done, and its question had a wrong premise.** "Why is a
+playing panel never idle?" came from Finding 034's idle control, which was
+measuring a queue rail left open by the run before it - the rail's blurred
+scrim costs 71 % of the frames on its own. An idle panel is idle.
+
+**What the chase found instead is worth more:
+[ADR-0041](docs/decisions/0041-scrims-dim-but-do-not-blur.md) - scrims dim
+but do not blur.** `backdrop-filter` costs 24.5 ms a frame in draw-and-submit
+against a 16.7 ms budget, with the CPU idle: the compositor draws the
+backdrop into its own texture and reads it back every frame, which is a
+tile-based GPU's worst case
+([Finding 037](docs/findings/037-why-a-blurred-scrim-costs-the-panel.md)).
+Not the radius, not the area, and Vulkan is worse. **It is off the queue
+rail and the volume drawer**, which George checked and kept; Settings and
+the rail's source sheet are left for the sweep. **The rule for the design:
+depth is affordable, live readback is not** - a static blurred image costs
+almost nothing and the artwork backdrop stays exactly as it is.
+
+**It does not reach the target on its own:** the rail goes from ~15 fps to
+~36 against a 55 fps floor, and its own list is the rest - the same work the
+artist grid needs.
+
+**Next: Phase 9, in the order George agreed on 2026-09-18** - the idle
+question first, then the UI sweep, then the performance work, then the
+settings and the triage. The reason for that order is in
+`docs/DEVELOPMENT.md`: the sweep is a judgement call, and a judgement made
+on a panel that drops 71 % of its frames before anyone touches it cannot be
+told from the floor it is standing on.
