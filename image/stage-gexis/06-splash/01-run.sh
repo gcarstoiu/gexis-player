@@ -62,6 +62,8 @@ fi
 # it the animation would loop forever on a device with no keyboard.
 install -D -m 644 files/gexis-splash-backstop.service \
 	"${ROOTFS_DIR}/etc/systemd/system/gexis-splash-backstop.service"
+install -D -m 644 files/gexis-splash-backstop.timer \
+	"${ROOTFS_DIR}/etc/systemd/system/gexis-splash-backstop.timer"
 
 # The compositor's wallpaper, for the gap between the splash ending and
 # Chromium's first paint (ADR-0043's Open). `--retain-splash` does not

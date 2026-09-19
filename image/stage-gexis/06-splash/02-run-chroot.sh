@@ -21,12 +21,13 @@ if [ "${selected}" != "gexis" ]; then
 fi
 
 # Plymouth ships units that quit the splash as soon as the system is up.
-# They must not run: the panel is still painting. gexis-core drops it when
-# the UI reports its first frame, and gexis-splash-backstop.service is the
-# safety net if that never arrives.
+# They must not run: the panel is still ~2s from painting then, and plymouth
+# has to be ended in a controlled place - gexis-kiosk.service does it, just
+# before labwc, because plymouth holds DRM until it goes. The backstop timer
+# is the net for a kiosk that never starts at all.
 systemctl mask plymouth-quit.service
 systemctl mask plymouth-quit-wait.service
-systemctl enable gexis-splash-backstop.service
+systemctl enable gexis-splash-backstop.timer
 
 # Rebuild every initramfs so the plymouth hook is in it. -k all rather than a
 # version we guessed: this image carries two kernels, `+rpt-rpi-v8` for the
