@@ -74,6 +74,26 @@ both waiting for the sweep:
   sub-screen. `viz_timeout` is read by the daemon but missing from `wired`, so
   the phone cannot change a setting something actually consults.
 
+**The design drop is reviewed and nothing is built.**
+[Finding 040](docs/findings/040-the-design-drop-and-what-it-changes.md) is the
+survey, with George's corrections inline and authoritative; ADR-0044
+(settings vocabulary), ADR-0045 (pairing confirmation) and ADR-0046 (fixed
+output) are Proposed. `design/` in this repository is **still the previous
+package** - the new one has not been landed, and landing it must preserve
+`design/fonts/` and `IMPLEMENTED-DIFFERENTLY.md`, both of which the drop
+reverts or does not know about.
+
+**The next session's first job is a second comparison**: Claude Design is
+adjusting the designs against the feedback in Finding 040's last two
+sections, so the package on disk, the package they send back, and the
+shipped UI all need diffing again. Finding 040 records how to do it - the
+two `.dc.html` files carry 2,461 lines of diff and hold every screen except
+Settings, and a skim of the prose misses nearly all of it.
+
+**Three things in Finding 040 want a panel, not a repository:** whether Back
+from a New Music album reaches the artist (the code says root, George says
+artist), and the two reboot-dependent boot items below.
+
 **Next, in the order George agreed:** the UI sweep (his, with
 `design/IMPLEMENTED-DIFFERENTLY.md` in Claude Design's hands), then the
 performance work against a baseline retaken *after* the sweep, then settings
