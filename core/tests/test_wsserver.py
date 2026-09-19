@@ -497,3 +497,44 @@ async def test_the_index_is_never_cached(tmp_path):
 
         assert resp.status == 200
         assert resp.headers["Cache-Control"] == "no-store"
+
+
+@pytest.mark.asyncio
+async def test_the_panel_reporting_a_first_frame_drops_the_splash():
+    """ADR-0043. The route exists so the boot animation outlives
+    multi-user.target and ends on a painted pixel instead."""
+
+    class FakeSplash:
+        def __init__(self):
+            self.drops = 0
+
+        def drop(self):
+            self.drops += 1
+            return self.drops == 1
+
+    splash = FakeSplash()
+    server = StateServer(StateStore(_caps("lms")), splash=splash)
+
+    async with TestClient(TestServer(server.make_app())) as client:
+        first = await client.post("/panel/painted")
+        assert first.status == 200
+        assert await first.json() == {"painted": True, "splash_dropped": True}
+
+        # A panel that reloads reports again; the daemon says so honestly
+        # rather than pretending it dropped a splash twice.
+        second = await client.post("/panel/painted")
+        assert (await second.json())["splash_dropped"] is False
+
+    assert splash.drops == 2
+
+
+@pytest.mark.asyncio
+async def test_a_daemon_with_no_splash_still_answers_the_panel():
+    """Every deployment before this phase, and every development run: the
+    panel must not see an error for reporting something true."""
+    server = StateServer(StateStore(_caps("lms")))
+
+    async with TestClient(TestServer(server.make_app())) as client:
+        response = await client.post("/panel/painted")
+
+    assert response.status == 200

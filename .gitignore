@@ -21,3 +21,9 @@ build/
 # real Spotify API credentials (client ID, refresh token) for the Phase 2c
 # test harness - tools/phase-2c/spotify.env.example documents the shape
 /tools/phase-2c/spotify.local.env
+
+# Claude session links, kept out of the public history (George, 2026-09-18):
+# the commits reference sessions in his own Claude account, and whether those
+# are readable by anyone else was never established. The mapping lives here
+# instead - see docs/SESSIONS.local.md's own header.
+/docs/SESSIONS.local.md

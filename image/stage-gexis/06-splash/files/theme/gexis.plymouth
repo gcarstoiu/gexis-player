@@ -1,0 +1,8 @@
+[Plymouth Theme]
+Name=gexis
+Description=The gexis boot animation: four tiles, no text (ADR-0043)
+ModuleName=script
+
+[script]
+ImageDir=/usr/share/plymouth/themes/gexis
+ScriptFile=/usr/share/plymouth/themes/gexis/gexis.script

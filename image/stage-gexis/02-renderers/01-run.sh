@@ -16,9 +16,13 @@ GO_LIBRESPOT_SHA256="79b80bb3723b7973165d2d94c428676b8582780aeca7c54694589206ab7
 WORK="$(mktemp -d)"
 trap 'rm -rf "${WORK}"' EXIT
 
-curl -fsSL -o "${WORK}/${GO_LIBRESPOT_ASSET}" "${GO_LIBRESPOT_URL}"
+# Content-addressed cache first, network on a miss (ADR-0042). Still
+# verified either way; the cache is optional and absent by default.
+# shellcheck source=../fetch-cached.sh
+. /pi-gen/stage-gexis/fetch-cached.sh
 
-echo "${GO_LIBRESPOT_SHA256}  ${WORK}/${GO_LIBRESPOT_ASSET}" | sha256sum -c -
+fetch_cached "${GO_LIBRESPOT_URL}" "${GO_LIBRESPOT_SHA256}" \
+	"${WORK}/${GO_LIBRESPOT_ASSET}"
 
 tar -xzf "${WORK}/${GO_LIBRESPOT_ASSET}" -C "${WORK}" go-librespot
 

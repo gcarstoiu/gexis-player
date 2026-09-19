@@ -26,6 +26,12 @@ Claude handles implementation, tooling, tests, commits.
 
 ## Rules
 
+- **No session links in commits or pull requests** (George, 2026-09-18). The
+  repository is public and those links point into his own Claude account;
+  whether anyone else can read them was never established. `Co-Authored-By`
+  stays. The mapping from sessions to commits lives in
+  `docs/SESSIONS.local.md`, which is not committed.
+
 - Every architectural decision becomes a numbered ADR before implementation.
 - Findings state their scope: what was tested, under what conditions, what was not.
 - Do not characterise size, difficulty or risk without naming the evidence.

@@ -114,3 +114,14 @@ export const showPeppy = () => post('/peppy/show');
 export function reportTouch() {
   fetch('/touch', { method: 'POST' }).catch(() => {});
 }
+
+/** ADR-0043: the boot animation is held until the panel has actually drawn
+ *  something, rather than being dropped when the kiosk unit goes active -
+ *  the panel is still a second or two from its first frame at that point,
+ *  and that gap is where a flash of black would show.
+ *
+ *  Fire and forget, and safe to call again: a reload reports a first frame
+ *  a second time and the daemon treats that as a no-op. */
+export function reportPainted() {
+  fetch('/panel/painted', { method: 'POST' }).catch(() => {});
+}

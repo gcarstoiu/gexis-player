@@ -44,6 +44,7 @@ from gexis_core.peppy_metadata import PeppyMetadataWriter
 from gexis_core.renderer_volume import RendererVolumeMemory
 from gexis_core.settings import SettingsStore
 from gexis_core.settings_registry import Settings
+from gexis_core.splash import Splash
 from gexis_core.state import StateStore
 from gexis_core.volume import (
     DUMMY_CONTROL,
@@ -440,6 +441,9 @@ async def main() -> None:
         # ADR-0038 §8: the one SlimBrowse subtree, browsed by handles the
         # core issues.
         radio=RadioBrowser(library.rpc, lambda: lms.player_id),
+        # ADR-0043: the panel reports its first painted frame and the boot
+        # animation ends there, not when the kiosk unit goes active.
+        splash=Splash(),
         ui_dir=ui_dir,
     )
 

@@ -38,9 +38,14 @@ done
 WORK="$(mktemp -d)"
 trap 'rm -rf "${WORK}"' EXIT
 
+# Content-addressed cache first, network on a miss (ADR-0042). The cache is
+# optional: with nothing mounted at CACHE_DIR this is the plain fetch-and-
+# verify it replaced.
+# shellcheck source=../fetch-cached.sh
+. /pi-gen/stage-gexis/fetch-cached.sh
+
 fetch() {  # url sha256 dest
-	curl -fsSL -o "$3" "$1"
-	echo "$2  $3" | sha256sum -c -
+	fetch_cached "$1" "$2" "$3"
 }
 
 fetch "https://codeload.github.com/foonerd/PeppyMeter/tar.gz/${PEPPYMETER_COMMIT}" \

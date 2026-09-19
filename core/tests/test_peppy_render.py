@@ -23,8 +23,26 @@ from gexis_peppy_render import (  # noqa: E402
     MetadataLayer,
     parse_colour,
     parse_point,
+    parse_size,
     remaining_time,
 )
+
+#: The shipped corpus: its config files are in this repository even though its
+#: 82MB of images are fetched at build time, so the geometry is checkable here.
+CORPUS_DIR = Path(__file__).parents[2] / "skins" / "templates"
+
+
+def corpus_skins() -> list[dict]:
+    skins, current = [], None
+    for line in (CORPUS_DIR / "meters.txt").read_text().splitlines():
+        line = line.strip()
+        if line.startswith("[") and line.endswith("]"):
+            current = {"name": line[1:-1]}
+            skins.append(current)
+        elif "=" in line and current is not None:
+            key, value = line.split("=", 1)
+            current[key.strip()] = value.strip()
+    return skins
 
 SKIN = {
     "screen.bgr": "bgr.png",
@@ -237,11 +255,37 @@ def test_remaining_time_turns_red_for_the_last_ten_seconds(layer):
     assert remaining[2] != FINAL_SECONDS_COLOUR
 
 
-def test_the_badge_carries_the_renderers_name_beside_it(layer):
-    """George, 2026-09-16: Spotify, LMS, Bluetooth next to the mark."""
+def test_the_badge_is_the_mark_alone(layer):
+    """George, 2026-09-18, reversing his 2026-09-16 call: no name beside it.
+    The name was the only thing drawn outside the square the skin reserves."""
     plain = layer._badge("spotify", (50, 50))
     rect = layer._badge_rect("spotify")
-    assert rect.width > plain.get_width() + 20, "the label widens the badge area to its right"
+    assert rect.size == plain.get_size(), "the badge is the mark and nothing else"
+
+
+@pytest.mark.parametrize("source", ["lms", "spotify", "bluetooth"])
+def test_no_skin_draws_the_source_outside_the_box_it_reserved(screen, source):
+    """Tier 4, against the real 71 skins rather than a fixture: every pixel of
+    the source mark sits inside `playinfo.type.pos`/`.dimension`, which is the
+    skin author\'s own reservation, and therefore on screen.
+
+    This is the check that made the label untenable: it was placed beside the
+    box with no bounds test, and on 7 skins it left the 1280px screen."""
+    layer = MetadataLayer(screen, CORPUS_DIR)
+    offenders = []
+    for skin in corpus_skins():
+        position = parse_size(skin.get("playinfo.type.pos"))
+        if position is None:
+            continue
+        box = parse_size(skin.get("playinfo.type.dimension")) or (50, 50)
+        layer._skin = skin
+        rect = layer._badge_rect(source)
+        if rect is None:
+            continue
+        reserved = pygame.Rect(position[0], position[1], box[0], box[1])
+        if not reserved.contains(rect) or not screen.get_rect().contains(rect):
+            offenders.append((skin["name"], tuple(rect), tuple(reserved)))
+    assert not offenders, f"{len(offenders)} skins draw the source outside their box: {offenders[:5]}"
 
 
 

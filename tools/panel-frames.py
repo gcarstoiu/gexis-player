@@ -208,6 +208,9 @@ NEW_MUSIC = ".new__scroll"
 ARTIST_GRID = ".grid__scroll"
 RAIL_LIST = ".rail__list"
 RAIL_OPEN = ".rail.is-open"
+#: Any sheet's dimming layer. Used to assert that nothing is covering the
+#: panel before a measurement that assumes nothing is.
+SCRIM = ".scrim, .sw-scrim"
 
 RECT = """(() => {{ const e = document.querySelector({selector!r});
   if (!e) return null; const r = e.getBoundingClientRect();
@@ -274,10 +277,27 @@ class Screen:
         await self.must_be(ARTIST_GRID, "the artist grid")
 
     async def go_queue_rail(self) -> None:
+        await self.close_sheets()
         await self.go_now_playing()
         if not await self.has(RAIL_OPEN):
             await self.tap(QUEUE_BUTTON)
         await self.must_be(RAIL_OPEN, "the queue rail")
+
+    async def close_sheets(self) -> None:
+        """Dismiss anything with a scrim.
+
+        A sheet left open is measured by whatever runs next: Finding 034's
+        idle control reported 71 % of frames dropped on an "untouched" panel
+        because a previous run had left the queue rail open behind it, and
+        its blurred scrim costs that much on its own (Finding 037). A sheet
+        left open also swallows the next tap.
+        """
+        for _ in range(3):
+            if not await self.has(SCRIM):
+                return
+            # The far left is scrim in every sheet this panel has.
+            self._finger.tap(60, 400)
+            await asyncio.sleep(0.9)
 
 
 async def state(session) -> dict:
@@ -323,8 +343,17 @@ async def measure(port: int, runs: int, only: str | None, playback: str | None) 
             async def idle():
                 await asyncio.sleep(0.5)
 
+            async def arrive_idle():
+                """Nothing open, nothing covering the panel - the state this
+                control believes it is measuring (Finding 037)."""
+                await screen.close_sheets()
+                await screen.go_now_playing()
+                if await screen.has(SCRIM):
+                    raise RuntimeError("something is still covering the panel; "
+                                       "an idle measurement would be of that")
+
             steps = {
-                "idle-control": (lambda: screen.go_now_playing(), idle),
+                "idle-control": (arrive_idle, idle),
                 "home-open": (lambda: screen.go_now_playing(),
                               lambda: screen.tap(HOME_BUTTON, settle=0.2)),
                 "new-music-scroll": (lambda: screen.go_home(),

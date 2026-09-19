@@ -316,6 +316,7 @@
       // Fetched and decoded before the screen changes, so the album page
       // arrives whole rather than filling in (George, 2026-09-17).
       album = await loadAlbum(id);
+      revealed = null;
       path = [...(from ?? []), { kind: 'album', id, label }];
     } catch (err) {
       console.info('library:', err.message);
@@ -1054,7 +1055,7 @@
               {[album.artist, album.year].filter(Boolean).join('  \u00b7  ')}
             </div>
           </div>
-          <button class="playall" type="button" onclick={() => play('album', album.id)}>
+          <button class="playall" type="button" onclick={() => play('album', album.id, album.title)}>
             <span class="playall__glyph"></span>
             <span class="playall__label">Play album</span>
           </button>
@@ -1066,13 +1067,22 @@
             <span class="tracks__count">{album.tracks.length}</span>
           </div>
           <div class="tracks__list">
-            <!-- Row actions (play now, add to queue, add to playlist) are
-                 step 7; a row is display-only until then. -->
             {#each album.tracks as track (track.id)}
               <div class="track">
-                <span class="track__num">{track.tracknum ?? ''}</span>
-                <span class="track__title">{track.title ?? ''}</span>
-                <span class="track__time">{track.duration ? mmss(track.duration) : ''}</span>
+                <button class="track__hit" type="button" onclick={() => (revealed = revealed === `albumtrack-${track.id}` ? null : `albumtrack-${track.id}`)}>
+                  <span class="track__num">{track.tracknum ?? ''}</span>
+                  <span class="track__title">{track.title ?? ''}</span>
+                  {#if revealed !== `albumtrack-${track.id}`}
+                    <span class="track__time">{track.duration ? mmss(track.duration) : ''}</span>
+                  {/if}
+                </button>
+                {#if revealed === `albumtrack-${track.id}`}
+                  <span class="row__actions">
+                    <button class="act act--play" type="button" aria-label="Play now" onclick={() => play('track', track.id, track.title)}><span class="act__play"></span></button>
+                    <button class="act" type="button" aria-label="Add to queue" onclick={() => act('track', track.id, 'add', track.title)}><span class="act__queue"><i></i><i></i><i></i></span></button>
+                    <button class="act" type="button" aria-label="Add to playlist" onclick={() => openPicker('track', track.id, track.title)}><span class="act__plus"></span></button>
+                  </span>
+                {/if}
               </div>
             {/each}
           </div>
@@ -2636,9 +2646,23 @@
     flex-shrink: 0;
     display: flex;
     align-items: center;
+    padding-right: 10px;
+    border-radius: 10px;
+  }
+  /* The row is the hit target; the actions sit beside it when revealed, as
+     on every other track list. */
+  .track__hit {
+    flex: 1;
+    min-width: 0;
+    height: 100%;
+    display: flex;
+    align-items: center;
     gap: 18px;
     padding: 0 16px;
-    border-radius: 10px;
+    background: none;
+  }
+  .track__hit:active {
+    opacity: 0.62;
   }
   .track__num {
     font-family: var(--font-mono);
@@ -2646,6 +2670,7 @@
     color: rgba(233, 238, 242, 0.62);
     width: 26px;
     flex-shrink: 0;
+    text-align: left;
   }
   .track__title {
     flex: 1;
@@ -2656,6 +2681,7 @@
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    text-align: left;
   }
   .track__time {
     font-family: var(--font-mono);

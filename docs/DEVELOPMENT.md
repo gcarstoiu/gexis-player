@@ -118,7 +118,11 @@ George copies each export into `design/`. So history is kept by commit:
 
 **Deviations the port keeps across exports.** Claude Design does not know
 about these, so a new export will not contain them. Re-apply them when
-porting, until the design takes them in:
+porting, until the design takes them in.
+**[design/IMPLEMENTED-DIFFERENTLY.md](../design/IMPLEMENTED-DIFFERENTLY.md)
+collects all of them for Claude Design** - the list below plus everything
+decided since, sorted by whether it was hardware, a UX call or scope
+(written for the Phase 9 sweep, 2026-09-18):
 
 - **Volume glyph (2026-09-15, George).** The now playing volume button draws
   the drawer's 30px glyph (`ui/src/lib/VolumeIcon.svelte`), not the design's
@@ -152,6 +156,24 @@ porting, until the design takes them in:
 - Sub-PRs into the phase branch where a phase is large. Phase branch merges to
   `main` when its acceptance criteria pass.
 - Commits are small and describe *why*, not *what*.
+
+### The build's downloads are cached locally
+
+`make image` vendors five third-party artefacts — Gelo5's skins (143 MB),
+the two Peppy engines and the screensaver templates, the DSEG font, and
+go-librespot. Each is pinned by sha256 and, since
+[ADR-0042](decisions/0042-a-local-cache-for-vendored-downloads.md), read from
+a content-addressed cache before the network.
+
+- The cache lives at `$HOME/.cache/gexis-player/downloads`, or wherever
+  `GEXIS_BUILD_CACHE` points, and is bind-mounted into pi-gen's container.
+- Entries are named by their checksum, so a hit verifies itself and a changed
+  pin is a different file rather than a stale one.
+- **It is optional.** Delete it and the next build refetches. A build with no
+  cache mounted behaves exactly as it did before.
+
+**It is not a backup.** It protects the machine holding it, not a fresh
+clone. A mirror we control is the thing that would, and is deferred.
 
 ### Model split
 
@@ -1451,6 +1473,40 @@ ADRs were updated.
 4. **The handoff's "issues to look at later" are triaged:** fixed, scheduled,
    or dropped.
 
+**Plan, agreed with George 2026-09-18** — in this order, and the order is
+the point:
+
+1. **Why is a playing panel never idle?** With music playing and nobody
+   touching it, 71 % of the frames the compositor wants are dropped
+   ([Finding 034](findings/034-what-the-panel-presents.md)); paused, it is
+   barely asked for a frame. That is not a property of any screen but a
+   continuous cost underneath all of them, and PeppyMeter is already
+   eliminated. **First, because the sweep below is a judgement call and
+   every judgement made on a frame-starved panel is contaminated** - a
+   screen that "feels sluggish" cannot be told from the floor it is standing
+   on (Claude's argument, George agreed).
+2. **The UI sweep with George.** Criterion 3's review pass, expected to be a
+   large one with new topics of its own. Done before the performance work
+   so the work is done on something closer to final, rather than tuning
+   screens that are about to change (George's argument).
+3. **Reach the target** (criterion 0), against a baseline taken *after* the
+   sweep, since the old one describes screens that no longer exist. The
+   list work belongs here: rendering only what is on screen, lighter cards,
+   letter buckets from the core.
+4. **The rest:** every ADR-0022 row wired or scoped out (criterion 1), no
+   unwired UI without a justification (2), and the "issues to look at
+   later" triaged (4) - including the parked album-art sweep.
+
+**Where the settings stand as of 2026-09-18:** 54 rows, **6 wired**
+(`idle_url`, `idle_timeout`, `drawer_on_external`, `drawer_autohide`,
+`listenbrainz_token`, `fanart_key`). **Eight still owe a decision** -
+`max_ceiling`, `restore_floor`, `boot_default_scope`, `bt_pairing`,
+`seek_reanchor`, `handoff_threshold`, `version`, `image_build`. **Four are
+implemented but not settable**, which is the awkward category:
+`viz_timeout` is read by the daemon with no way to change it, and
+`lms_server`, `lms_player` and `bt_autotrust` are hardcoded values the
+registry advertises.
+
 ### Phase 10 — Plugin contract and themes
 
 **Acceptance**
@@ -1460,7 +1516,31 @@ ADRs were updated.
    to the core. **Qobuz Connect (Phase 12) is that renderer**
    ([ADR-0016](decisions/0016-plugins-as-separate-processes.md): an optional
    plugin in a private repository).
-3. Theme engine.
+3. **A second plugin that is not a renderer: a Beszel agent** (George,
+   2026-09-18). Qobuz alone tests the contract with the thing it was drawn
+   for; a monitoring agent tests whether the contract can carry anything
+   else - something with no metadata, no transport and no claim on the audio
+   device, that only wants to be installed, started, kept running and
+   switched off again. If the contract cannot express that, it is a renderer
+   API wearing a plugin's name.
+
+   **It also earns its place on the device.** George asked on 2026-09-18
+   whether there was a log of when the Pi throttled, for how long, and what
+   the CPU and GPU were doing at the time. There is not: `vcgencmd
+   get_throttled` keeps sticky bits with no timestamps, the kernel logs only
+   voltage transitions, and nothing samples load at all. An agent recording
+   temperature, clocks, throttle state and load would make every future
+   performance measurement interpretable - and Phase 9's work is measured
+   against a 55 fps target on a machine whose clock history is currently
+   invisible.
+
+   **To decide when it is built, not now:** where the hub lives (Beszel is
+   hub plus agent, and the hub is not this device's job), what the agent
+   listens on and whether ADR-0028's "unauthenticated on the LAN" stance
+   extends to it, whether it ships in the image or installs on demand, and
+   what it costs in memory and CPU on a Pi 4 that is already frame-limited.
+   None of that is settled by adding it to this list.
+4. Theme engine.
 
 ### Phase 11 — Plexamp as a renderer
 
