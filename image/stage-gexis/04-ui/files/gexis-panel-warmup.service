@@ -1,0 +1,37 @@
+[Unit]
+Description=Read the panel's binaries into the page cache before the kiosk needs them
+Documentation=file:///usr/local/bin/gexis-panel-warmup
+
+# As early as the filesystem allows, and explicitly NOT after the network:
+# the whole point is to use the ~17s the boot spends waiting on
+# NetworkManager-wait-online, during which the disk is idle and the kiosk
+# cannot start yet (measured 2026-09-19).
+After=local-fs.target
+DefaultDependencies=no
+Conflicts=shutdown.target
+Before=shutdown.target
+
+# If the kiosk has already started, warming is pointless - it is reading the
+# pages Chromium is reading anyway, and competing with it.
+Before=gexis-kiosk.service
+
+[Service]
+# Type=simple, NOT oneshot, and that is load-bearing: a oneshot unit in the
+# boot transaction keeps the transaction open until it exits, which is
+# exactly how the splash backstop silently broke boot measurement
+# (Finding 039 section 3). simple is active as soon as it forks, so nothing
+# waits for it.
+Type=simple
+# Idle on both, so every read yields to real boot work. A warm-up that slows
+# the boot it is meant to help would be worse than nothing.
+Nice=19
+IOSchedulingClass=idle
+ExecStart=/usr/local/bin/gexis-panel-warmup
+# A stuck read must not leave this running into the session it was meant to
+# speed up.
+TimeoutStartSec=60
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

@@ -47,7 +47,9 @@ for f in \
 	"${ROOTFS_DIR}/etc/gexis/kiosk.env" \
 	"${ROOTFS_DIR}/usr/local/bin/gexis-kiosk-start" \
 	"${ROOTFS_DIR}/etc/systemd/system/gexis-kiosk.service" \
-	"${ROOTFS_DIR}/home/pi/.config/labwc/rc.xml"
+	"${ROOTFS_DIR}/home/pi/.config/labwc/rc.xml" \
+	"${ROOTFS_DIR}/usr/local/bin/gexis-panel-warmup" \
+	"${ROOTFS_DIR}/etc/systemd/system/gexis-panel-warmup.service"
 do
 	if [ ! -e "${f}" ]; then
 		echo "ERROR: ${f} missing after install" >&2

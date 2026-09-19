@@ -48,12 +48,20 @@ fi
 #
 # Failure is not fatal. A missing image or a missing swaybg costs a black
 # gap, which is what we had before - it must never cost the panel.
+# Timestamps into the journal, so the gap between the splash ending and the
+# panel painting can be attributed rather than guessed at. labwc runs this
+# script once the compositor is up, so the first line dates labwc's own
+# start-up and the second dates chromium's exec.
+echo "gexis-kiosk: compositor ready, session script running" >&2
+
 BACKGROUND=/usr/share/gexis/panel-background.png
 if [ -r "${BACKGROUND}" ] && command -v swaybg >/dev/null; then
 	swaybg --mode fill --image "${BACKGROUND}" &
 else
 	echo "gexis-kiosk: no wallpaper (${BACKGROUND}); the handover will be black" >&2
 fi
+
+echo "gexis-kiosk: exec chromium" >&2
 
 exec chromium \
 	"${debug[@]}" \

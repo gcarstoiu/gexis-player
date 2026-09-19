@@ -24,12 +24,20 @@ if [ "${frames}" -ne 100 ]; then
 	exit 1
 fi
 
-# The text has six sources and each needs its own switch; see ADR-0043's
-# table. `splash` is what tells plymouth to show a theme at all.
+# The kernel console moves off the VT the panel owns. This is the fix that
+# actually works, found 2026-09-19 after clearing tty1 did not: the image
+# ships `console=tty1`, so the kernel - and anything inheriting the console -
+# writes to the very screen plymouth and labwc are using. George saw daemon
+# output ("comet", from the LMS CometD connection) appear the moment the
+# splash released the screen. Clearing tty1 cannot help, because whatever
+# writes next lands straight back on it.
 #
-# console=tty1 is deliberately left alone: the serial and VT consoles stay
-# for diagnosis over SSH and a cable. What changes is that nothing writes to
-# the panel while it boots.
+# tty3 is a VT nothing ever displays. `console=serial0` stays first, so a
+# serial cable remains the real diagnostic path.
+sed -i 's/\bconsole=tty1\b/console=tty3/' "${CMDLINE}"
+
+# The rest of the text has its own switch each; see ADR-0043's table.
+# `splash` is what tells plymouth to show a theme at all.
 for option in \
 	quiet \
 	loglevel=0 \
@@ -81,6 +89,15 @@ install -D -m 644 "files/theme/${STILL}" \
 
 # Build-time assertions. A boot that shows text is a defect nobody will
 # report as one - they will just see it - so fail here instead.
+grep -q 'console=tty3' "${CMDLINE}" || {
+	echo "ERROR: the kernel console is still on the panel's VT" >&2
+	exit 1
+}
+grep -q 'console=tty1' "${CMDLINE}" && {
+	echo "ERROR: console=tty1 survived; the panel would show kernel output" >&2
+	exit 1
+}
+
 for option in quiet splash logo.nologo; do
 	grep -qw -- "${option}" "${CMDLINE}" || {
 		echo "ERROR: ${option} missing from cmdline.txt" >&2
