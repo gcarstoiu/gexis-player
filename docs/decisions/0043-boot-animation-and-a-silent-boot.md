@@ -1,6 +1,7 @@
 # ADR-0043 — A boot animation, and no text at any point
 
-**Status:** Proposed — awaiting George
+**Status:** Accepted — George, 2026-09-19. Built the same day; never
+booted (see Unverified)
 **Date:** 2026-09-19
 **Raised by:** George, 2026-09-19: *"I don't want to see any text during
 booting, only the animation I would provide."*
@@ -77,6 +78,41 @@ keeps the getty and keeps its output off the panel.
   Shortening the boot is a separate decision; if it is ever taken, the
   animation's loop length is unaffected because it loops.
 - **A first boot plays it twice.** `firstrun.sh` runs and reboots.
+
+## Built
+
+`image/stage-gexis/06-splash`, 2026-09-19. The theme is 100 frames at 25 fps
+(a 4.0 s loop) drawn by a Plymouth script theme whose every text callback is
+deliberately empty — an undefined callback is not enough, because Plymouth
+falls back to its own rendering for one a theme does not take.
+
+The handover is `POST /panel/painted`, reported by the panel from a double
+`requestAnimationFrame` in `App.svelte`'s `onMount` — the earliest point at
+which a pixel of the app has actually been presented. `gexis_core/splash.py`
+answers it with `plymouth quit --retain-splash`, once, and treats "there is
+no plymouth" as normal rather than as an error. Plymouth's own
+`plymouth-quit` units are masked, or they would end the animation at
+`multi-user.target` while the panel is still ~2 s from drawing.
+
+`gexis-splash-backstop.service` drops the splash 90 s in regardless. Without
+it, a panel that never paints would loop the animation forever on a device
+with no keyboard, hiding the failure somebody needs to see.
+
+## Unverified
+
+**Nothing here has been booted.** The stage is written and its build-time
+assertions are in place, but no image has been built from it and no device
+has run it. In particular:
+
+- **The initramfs rebuild is the part that can stop a device booting.** It
+  is asserted after the fact (something was written, it is not empty, it
+  contains the plymouth hook) but assertions in a build are not a boot.
+- **Whether Plymouth holds all 100 frames in memory** — roughly 400 MB
+  decompressed if it does, regardless of the 6.5 MB on disk. 36 of the 100
+  frames are exact duplicates, so there is cheap headroom if this turns out
+  to matter.
+- **Whether the handover is actually seamless.** The gap it exists to close
+  was never measured, only reasoned about.
 
 ## Open
 

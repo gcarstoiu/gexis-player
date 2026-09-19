@@ -11,7 +11,7 @@
   import Settings from './screens/Settings.svelte';
   import { loadSettings, settingValues } from './lib/settings.js';
   import { loadLibraryRoot } from './lib/library.js';
-  import { reportTouch, showPeppy } from './lib/state.js';
+  import { reportTouch, showPeppy, reportPainted } from './lib/state.js';
 
   // ADR-0033: idle is "not playing and not touched", one timeout everywhere.
   // From settings (idle_timeout, minutes); `?idle_seconds=` overrides it for testing.
@@ -143,6 +143,12 @@
       .then((r) => r.json())
       .then((body) => (surface = body.surface))
       .catch(() => (surface = 'panel'));
+
+    // ADR-0043: end the boot animation only once something is actually on
+    // the glass. onMount runs before the browser has painted, so this waits
+    // for the frame after the one being composed now - two rAFs, which is
+    // the earliest point at which a pixel of this app has been presented.
+    requestAnimationFrame(() => requestAnimationFrame(reportPainted));
   });
 </script>
 

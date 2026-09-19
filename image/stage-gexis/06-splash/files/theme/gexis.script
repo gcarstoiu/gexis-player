@@ -1,0 +1,86 @@
+// gexis boot splash (ADR-0043).
+//
+// 100 frames, 25 fps, a 4 s loop that closes on itself - the artwork has no
+// beginning and no end, so Plymouth can hand over on any frame and the
+// screen is already the panel's own ground colour (#101a21) with a small
+// mark on it.
+//
+// Every text callback below is deliberately empty. George's requirement is
+// that nothing textual appears during boot, and Plymouth would otherwise
+// draw fsck progress, password prompts and update messages over the
+// animation. Leaving them undefined is not enough: Plymouth falls back to
+// its own rendering when a theme does not take the callback.
+
+FRAMES = 100;
+FPS = 25;
+
+// Plymouth calls the refresh function at 50 Hz, so every second tick
+// advances a frame. Counting ticks rather than reading a clock keeps the
+// animation honest on a machine whose CPU is busy booting.
+TICKS_PER_FRAME = 2;
+
+Window.SetBackgroundTopColor(0.063, 0.102, 0.129);     // #101a21
+Window.SetBackgroundBottomColor(0.063, 0.102, 0.129);
+
+// Frame files are boot-0001.png .. boot-0100.png. Plymouth script has no
+// printf, so the padding is built by hand.
+fun frame_name(n) {
+    if (n < 10)   return "boot-000" + n + ".png";
+    if (n < 100)  return "boot-00" + n + ".png";
+    return "boot-0" + n + ".png";
+}
+
+images = [];
+for (i = 1; i <= FRAMES; i++)
+    images[i] = Image(frame_name(i));
+
+// The images are full-bleed 1280x800, so the sprite sits at the origin and
+// the screen is drawn edge to edge whatever the mode turns out to be.
+sprite = Sprite();
+sprite.SetX(0);
+sprite.SetY(0);
+sprite.SetZ(0);
+sprite.SetImage(images[1]);
+
+index = 1;
+tick = 0;
+
+fun refresh_callback() {
+    tick++;
+    if (tick >= TICKS_PER_FRAME) {
+        tick = 0;
+        index++;
+        if (index > FRAMES)
+            index = 1;
+        sprite.SetImage(images[index]);
+    }
+}
+
+Plymouth.SetRefreshFunction(refresh_callback);
+
+// --- everything below draws nothing, on purpose -----------------------
+//
+// A boot that fails now shows the animation rather than a reason. That is
+// the accepted cost in ADR-0043, and SSH is the diagnostic path.
+
+fun quiet() { }
+
+Plymouth.SetBootProgressFunction(quiet);
+Plymouth.SetRootMountedFunction(quiet);
+Plymouth.SetSystemInitializedFunction(quiet);
+Plymouth.SetUpdateStatusFunction(quiet);
+Plymouth.SetDisplayNormalFunction(quiet);
+Plymouth.SetDisplayPasswordFunction(quiet);
+Plymouth.SetDisplayQuestionFunction(quiet);
+Plymouth.SetMessageFunction(quiet);
+Plymouth.SetHideMessageFunction(quiet);
+Plymouth.SetDisplayCapsLockWarningFunction(quiet);
+
+// On quit the last frame is left on screen: gexis-core drops the splash
+// only once the panel has actually painted, so this is what sits under the
+// UI's first frame rather than a flash of black.
+fun quit_callback() {
+    sprite.SetOpacity(1);
+}
+
+Plymouth.SetQuitFunction(quit_callback);

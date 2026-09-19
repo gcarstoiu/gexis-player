@@ -72,6 +72,7 @@ class StateServer:
         artistinfo=None,
         enrichment=None,
         radio=None,
+        splash=None,
         ui_dir: Path | None = None,
     ) -> None:
         """`activate(renderer_id) -> bool` and `set_volume(percent) -> bool`
@@ -100,6 +101,7 @@ class StateServer:
         self._artistinfo = artistinfo
         self._enrichment = enrichment
         self._radio = radio
+        self._splash = splash
         self._ui_dir = ui_dir
         self._clients: set[web.WebSocketResponse] = set()
         store.subscribe(self._broadcast)
@@ -473,6 +475,21 @@ class StateServer:
             self._peppy.on_touch()
         return web.json_response({"touched": True})
 
+    async def _handle_painted(self, request: web.Request) -> web.Response:
+        """The panel reporting its first painted frame, which is what ends
+        the boot animation (ADR-0043 §3).
+
+        Deliberately not tied to `gexis-kiosk.service` going active: that
+        happens at 18.26s (Finding 038) and the panel is still a second or
+        two from drawing anything. The gap between the two is where a flash
+        of black would show.
+
+        Answers 200 whether or not there was a splash to drop - a panel that
+        reloads reports a first frame again, and a development machine has
+        no plymouth at all. Neither is the panel's problem."""
+        dropped = self._splash.drop() if self._splash is not None else False
+        return web.json_response({"painted": True, "splash_dropped": dropped})
+
     async def _handle_peppy(self, request: web.Request) -> web.Response:
         action = request.match_info["action"]
         if self._peppy is None:
@@ -541,6 +558,7 @@ class StateServer:
         app.router.add_get("/idle", self._handle_idle)
         app.router.add_get("/surface", self._handle_surface)
         app.router.add_post("/touch", self._handle_touch)
+        app.router.add_post("/panel/painted", self._handle_painted)
         app.router.add_post("/peppy/{action}", self._handle_peppy)
         app.router.add_get("/settings", self._handle_settings)
         app.router.add_put("/settings/{key}", self._handle_setting_write)
