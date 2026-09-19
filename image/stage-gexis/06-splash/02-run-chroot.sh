@@ -28,15 +28,31 @@ systemctl mask plymouth-quit.service
 systemctl mask plymouth-quit-wait.service
 systemctl enable gexis-splash-backstop.service
 
-# Rebuild every initramfs so the plymouth hook and the theme are in it.
-# -k all rather than a version we guessed: this image is built for more than
-# one Pi and carries more than one kernel.
+# Rebuild every initramfs so the plymouth hook is in it. -k all rather than a
+# version we guessed: this image carries two kernels, `+rpt-rpi-v8` for the
+# Pi 4 and `+rpt-rpi-2712` for the Pi 5, and the raspi-firmware post-update
+# hook copies each to /boot/firmware/initramfs8 and initramfs_2712.
 #
-# -u updates an existing initramfs and fails when there is none; -c creates
-# one and fails when there is. Which applies depends on whether stage2's
-# kernel postinst already ran here, so try the update and fall back rather
-# than assuming either.
-update-initramfs -u -k all || update-initramfs -c -k all
+# **Raspberry Pi OS ships `update_initramfs=no`**, so update-initramfs prints
+# "Not updating initramfs." and does nothing at all. Found on 2026-09-19 by
+# this stage's own assertion, on the first build after it was written: the
+# rebuild appeared to succeed and the initramfs was still the one stage2
+# produced, without plymouth in it.
+#
+# The setting is deliberate upstream - it stops an apt kernel upgrade
+# rebuilding the initramfs behind the raspi-firmware hook's back - so it is
+# turned on for this one rebuild and put back exactly as it was found.
+CONF=/etc/initramfs-tools/update-initramfs.conf
+ORIGINAL="$(grep '^update_initramfs=' "${CONF}" || echo 'update_initramfs=no')"
+
+sed -i 's/^update_initramfs=.*/update_initramfs=all/' "${CONF}"
+update-initramfs -u -k all
+sed -i "s/^update_initramfs=.*/${ORIGINAL}/" "${CONF}"
+
+grep -q "^${ORIGINAL}\$" "${CONF}" || {
+	echo "ERROR: failed to restore ${CONF} to '${ORIGINAL}'" >&2
+	exit 1
+}
 
 # An initramfs that is missing, empty or missing its plymouth hook does not
 # fail the build on its own - it produces a device that shows no animation,
