@@ -6,7 +6,10 @@ booted (see Unverified)
 **Raised by:** George, 2026-09-19: *"I don't want to see any text during
 booting, only the animation I would provide."*
 **Evidence:**
-[Finding 038](../findings/038-what-the-panel-shows-while-it-boots.md)
+[Finding 038](../findings/038-what-the-panel-shows-while-it-boots.md) (the
+boot budget),
+[Finding 039](../findings/039-what-only-a-real-boot-found.md) (the five
+defects booting it found, four of which the build asserted nothing about)
 **Relates to:** [Finding 022](../findings/022-kiosk-never-started-target-and-tty.md)
 (the panel showing an IP address and boot messages — the same complaint,
 answered differently), [ADR-0021](0021-deployment-flashable-image.md) (the
@@ -119,6 +122,16 @@ with no keyboard, hiding the failure somebody needs to see.
 
 ## Unverified
 
+> **Booted 2026-09-19, four times.** Five defects, in
+> [Finding 039](../findings/039-what-only-a-real-boot-found.md): the splash
+> and the compositor waiting for each other, a quit refused for want of
+> root, a backstop that held the boot transaction open for 90s, the console
+> revealed when the splash went, and a ~1s white flash that is **parked**.
+> All are fixed on the device except the flash; **none has been re-verified
+> from an image**, because every fix was installed over SSH.
+>
+> What remains unverified below was written before any of that.
+
 **Nothing here has been booted.** The stage is written and its build-time
 assertions are in place, but no image has been built from it and no device
 has run it. In particular:
@@ -142,6 +155,14 @@ has run it. In particular:
   kiosk session before Chromium. Chromium's first paint was separately white,
   because `index.html` set no background at all until a stylesheet loaded;
   it now carries the ground colour inline. **Neither is measured yet.**
+- **What to do about the ~1s white flash.** Parked by George on
+  2026-09-19 with the fix understood: an overlay above Chromium's window,
+  removed on `POST /panel/painted`. Four moving parts, and it introduces
+  something that covers the panel and must be told to go away.
+- **Why Chromium takes 12.8s** from `gexis-kiosk.service` starting to
+  requesting the page. The panel is not usable until ~35.6s on a machine
+  that reaches `multi-user.target` at 16.7s. The animation hides it; nobody
+  has looked at it.
 - **Whether `Restart=no` on `gexis-kiosk.service` is still right.** Phase 4
   criterion 1 chose it deliberately - "a compositor that respawns in a loop
   after a real failure hides the failure behind a flicker" - and this failure

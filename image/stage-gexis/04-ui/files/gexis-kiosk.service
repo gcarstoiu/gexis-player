@@ -57,6 +57,11 @@ EnvironmentFile=/etc/gexis/kiosk.env
 # refused silently, plymouthd keeps DRM, and labwc fails exactly as before.
 # `-` as well: an image without plymouth, or a boot that never showed a
 # splash, must not stop the panel starting.
+# Clear the VT *before* the splash goes. getty's login prompt is still in
+# tty1's framebuffer, and the moment plymouth quits there is nothing over it
+# until labwc draws - George saw the console appear between the animation
+# and the panel, 2026-09-19. `\033c` is a full terminal reset.
+ExecStartPre=-+/bin/sh -c 'printf "\033c" > /dev/tty1'
 ExecStartPre=-+/bin/plymouth quit --retain-splash
 ExecStart=/usr/bin/labwc -s /usr/local/bin/gexis-kiosk-start
 

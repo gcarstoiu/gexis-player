@@ -58,7 +58,6 @@ fi
 exec chromium \
 	"${debug[@]}" \
 	--ozone-platform=wayland \
-	--default-background-color=FF101A21 \
 	--kiosk \
 	--noerrdialogs \
 	--disable-infobars \
