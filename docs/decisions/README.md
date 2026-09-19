@@ -63,6 +63,9 @@ the question blocking it was answered.
 | [0041](0041-scrims-dim-but-do-not-blur.md) | Scrims dim but do not blur: no `backdrop-filter` anywhere in the panel | Accepted — amends the designs, which draw every sheet over a blurred backdrop. [Finding 037](../findings/037-why-a-blurred-scrim-costs-the-panel.md) has the mechanism |
 | [0042](0042-a-local-cache-for-vendored-downloads.md) | A content-addressed local cache for the build's vendored downloads, network only on a miss | Accepted — a sha256 protects integrity, not availability. **Explicitly not the backup it was asked for**: a mirror we control is deferred |
 | [0043](0043-boot-animation-and-a-silent-boot.md) | A boot animation over a silent boot: every source of text quieted, Plymouth from the initramfs, torn down when the UI paints | Accepted (George, 2026-09-19) and built the same day — **never booted**. [Finding 038](../findings/038-what-the-panel-shows-while-it-boots.md) has the budget: 19.7s, kiosk at 18.26s |
+| [0044](0044-settings-row-vocabulary.md) | The settings row vocabulary grows five mechanics: `list`, `warn`, `onlyWhen`, `optionsFrom`, `picker` — and text rows take real input on both surfaces | **Proposed** — amends [0035](0035-settings-api.md); settles [0029](0029-text-entry-on-every-surface.md)'s keyboard question: there is never an on-screen one |
+| [0045](0045-bluetooth-pairing-confirmation.md) | Bluetooth pairing is confirmed on the panel, on a device's first pair only | **Proposed** — reverses [0024](0024-bluetooth-pairing-no-pin.md); the screen its open question was waiting for now exists |
+| [0046](0046-fixed-output-hides-the-slider.md) | Fixed output hides the volume control everywhere, with a padlock and a reason, rather than disabling it | **Proposed** — implements [0018](0018-volume-and-output-modes.md)'s unbuilt half; the one place the code contradicts the design outright |
 
 ## Cross-cutting rules
 
