@@ -70,10 +70,26 @@ export async function libraryAction(kind, id, action = 'play', playlistId = null
 
 /** Every album artist in one read: 917 of them come back in a single
  *  98 KB reply in about 23 ms (Finding 029 §1), so there is nothing to page. */
+/** Two spellings of one artist name, compared. Curly quotes, accents and
+ *  punctuation all differ between what a renderer reports and what the
+ *  library holds; none of them mean a different artist. */
+export const foldedName = (name) =>
+  (name ?? '')
+    .normalize('NFKD')
+    .replace(/[\u2018\u2019'`\u00b4]/g, '')
+    .replace(/[^a-zA-Z0-9]+/g, ' ')
+    .trim()
+    .toLowerCase();
+
 export const loadArtists = () => get('artists');
 
 /** An artist's discography, newest first, covers decoded first so the page
  *  arrives whole. */
+/** The artist's genres, for the tag pills under their name. LMS answers this
+ *  from its own tables, so it needs no provider and no network lookup - and
+ *  an artist with none simply has no pills. */
+export const loadArtistGenres = (id) => get(`artists/${id}/genres`);
+
 export async function loadArtistAlbums(id) {
   const albums = await get(`artists/${id}/albums`);
   await Promise.all(albums.slice(0, 12).map((album) => decoded(album.artwork)));

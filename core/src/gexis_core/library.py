@@ -274,6 +274,26 @@ class LmsLibrary:
         )
         return [self._track(t) for t in result.get("titles_loop", [])]
 
+    async def artist_genres(self, artist_id: int) -> list[str]:
+        """The artist's genres, for the tag pills under their name.
+
+        LMS answers this directly - `genres 0 N artist_id:<id>` - so no
+        provider and no network lookup is involved: this is the library's own
+        record, like the year. The enrichment service publishes no tags at
+        all, which is why the pills were never drawn.
+
+        "No Genre" is LMS's placeholder for tracks that carry none. It is a
+        real row in its genre table and would render as a pill reading "No
+        Genre", which says less than nothing, so it is dropped here rather
+        than in the panel - every surface that asks wants the same answer.
+        """
+        result = await self._cached(["genres", 0, 50, f"artist_id:{artist_id}"])
+        names = [
+            (g.get("genre") or "").strip()
+            for g in result.get("genres_loop", [])
+        ]
+        return [n for n in names if n and n.casefold() != "no genre"]
+
     async def artist_albums(self, artist_id: int) -> list[dict]:
         """The discography, newest first (George, 2026-09-18), each album
         with LMS's own `release_type` for grouping (ADR-0038 §1a).

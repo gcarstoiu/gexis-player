@@ -16,10 +16,12 @@
   import { untrack } from 'svelte';
 
   import {
+    foldedName,
     libraryRoot,
     loadAlbum,
     loadAlbumTracks,
     loadArtistAlbums,
+    loadArtistGenres,
     loadArtistPhotos,
     loadArtistInfo,
     artistPhotos,
@@ -56,6 +58,7 @@
   let album = $state(null);
   let artists = $state([]);
   let artist = $state(null);
+  let genres = $state([]);
   let discography = $state([]);
   let busy = $state(null);
 
@@ -160,6 +163,16 @@
   let columnEl = $state(null);
   let aboutMax = $state(ABOUT_MIN);
 
+  //: Tapping the text folds and unfolds it, which is what a finger reaches
+  //: for; More/Less stays, because nothing else says the text is foldable.
+  //: The block answers the keyboard too - panel and phone take the same
+  //: input (George, 2026-09-20).
+  function foldKey(event, toggle) {
+    if (event.key !== 'Enter' && event.key !== ' ') return;
+    event.preventDefault();
+    toggle();
+  }
+
   /** One measured correction: everything below About is a fixed height, so
    *  the slack between where the first album row sits now and where it
    *  should sit is exactly what About may grow or shrink by. */
@@ -169,8 +182,16 @@
     if (!card) return;
     const column = columnEl.getBoundingClientRect();
     const first = card.getBoundingClientRect();
-    const wanted = column.bottom - first.height * ALBUM_PEEK;
-    const slack = wanted - first.top;
+    // **Measured in the column's own content, not on screen.** Unfolding the
+    // biography makes the column taller and it can be scrolled; folding it
+    // back then measured the first album row from wherever the scroll had
+    // left it, so the answer came out wrong and About never returned to the
+    // height it had (George, on the panel, 2026-09-20). Adding the scroll
+    // offset back makes the sum the same at any scroll position.
+    const scrolled = columnEl.scrollTop;
+    const firstTop = first.top - column.top + scrolled;
+    const wanted = columnEl.clientHeight - first.height * ALBUM_PEEK;
+    const slack = wanted - firstTop;
     const next = Math.max(ABOUT_MIN, Math.round(aboutEl.getBoundingClientRect().height + slack));
     if (Math.abs(next - aboutMax) > 4) aboutMax = next;
   }
@@ -238,38 +259,99 @@
     }
   }
 
+  //: Arriving from Now Playing's artist name, the page is two fetches away -
+  //: the artist list, then the discography. Without this the home grid paints
+  //: for that whole second and the panel looks like it went to the wrong
+  //: screen and corrected itself. Initialised from the prop rather than set
+  //: in the effect, because an effect runs after the first paint.
+  let resolvingArtist = $state(!!openArtistNamed);
+
   /** Opens the artist page for a name, if this library has that artist. */
   async function openArtistByName(name) {
-    const wanted = folded(name);
-    if (!wanted) return;
+    const wanted = foldedName(name);
+    if (!wanted) {
+      resolvingArtist = false;
+      return;
+    }
+    resolvingArtist = true;
     try {
       const all = await artistsCached();
       artists = all;
-      const match = all.find((a) => folded(a.name) === wanted);
+      const match = all.find((a) => foldedName(a.name) === wanted);
       if (match) await openArtist(match);
     } catch (err) {
       console.info('library:', err.message);
+    } finally {
+      resolvingArtist = false;
     }
   }
-
-  const folded = (name) =>
-    (name ?? '')
-      .normalize('NFKD')
-      .replace(/[\u2018\u2019'`\u00b4]/g, '')
-      .replace(/[^a-zA-Z0-9]+/g, ' ')
-      .trim()
-      .toLowerCase();
 
   $effect(() => {
     const name = openArtistNamed;
     if (name) untrack(() => openArtistByName(name));
   });
 
+  //: Radio categories are read by colour and silhouette before they are read
+  //: by word (design/screens.md §8), so each carries its own shape and tint.
+  //: Anything LMS reports that is not here - and every station row - falls
+  //: back to arcs in #8fc4d8.
+  const RADIO_LOOK = {
+    'Radio Now Playing': ['arcs', '#7ed6bc'],
+    'My Presets': ['star', '#e0a758'],
+    'Local Radio': ['pin', '#9fb4e8'],
+    Music: ['note', '#f2a48f'],
+    Sports: ['ball', '#7ed6bc'],
+    News: ['lines', '#b0bcc4'],
+    Talk: ['mic', '#c8a2d8'],
+    'By Location': ['globe', '#8fc4d8'],
+    'By Language': ['speech', '#9fb4e8'],
+    // The design lists Rss among its shapes and assigns it no tint, so it
+    // takes the fallback's - inventing one would be a colour nothing chose.
+    Rss: ['rss', '#8fc4d8'],
+  };
+  const RADIO_FALLBACK = ['arcs', '#8fc4d8'];
+  const radioLook = (label) => RADIO_LOOK[label] ?? RADIO_FALLBACK;
+
+  /** Re-request the artist's network half. The discography is not touched:
+   *  it came off the disk and an error never takes the local half away
+   *  (design/screens.md §6). */
+  function retryArtistInfo() {
+    const entry = artist;
+    if (!entry) return;
+    artistInfo = { state: 'loading', for: entry.id, found: null, popular: [] };
+    bioOpen = false;
+    loadArtistInfo(entry.id, entry.name).then((answer) => {
+      if (artistInfo.for !== entry.id) return;
+      artistInfo = {
+        state: answer ? 'ready' : 'error',
+        for: entry.id,
+        found: answer?.enrichment ?? null,
+        popular: answer?.popular ?? [],
+      };
+    });
+  }
+
+  /** What the New Music strip leaves behind an album so Back reaches the
+   *  artist, which is where the design says it goes from either route.
+   *
+   *  A tile carries the artist's *name*, not an id - the strip is a list of
+   *  albums - so the entry records the name and `back()` resolves it. Opening
+   *  the artist eagerly here would load a discography, a biography and a
+   *  photo for a page nobody may visit. */
+  const artistPath = (name) => (name ? [{ kind: 'artist', byName: name, label: name }] : []);
+
   async function openArtist(entry) {
     busy = entry.id;
     try {
       discography = await loadArtistAlbums(entry.id);
       artist = entry;
+      // Genres come off the library, not the network, so they arrive with the
+      // page rather than with the biography. An artist with none simply has
+      // no pills - nothing is reserved for them.
+      genres = [];
+      loadArtistGenres(entry.id)
+        .then((found) => { if (artist?.id === entry.id) genres = found ?? []; })
+        .catch(() => {});
       path = [...path, { kind: 'artist', id: entry.id, label: entry.name }];
       // The page's disc is 262px, the grid's card 132px, so the page asks
       // for its own size rather than stretching the grid's thumbnail.
@@ -533,6 +615,14 @@
     // above from the handle that opened it.
     const top = path[path.length - 1];
     if (top.kind === 'radio') openRadio(top.handle, top.label, false);
+    // An artist entry `artistPath` synthesised: the page behind it was never
+    // opened, so there is nothing to fall back to. Resolve the name now.
+    // `openArtistByName` pushes its own entry, so drop this placeholder.
+    else if (top.kind === 'artist' && top.byName) {
+      path = path.slice(0, -1);
+      album = null;
+      openArtistByName(top.byName);
+    }
   }
 
   const mmss = (s) => {
@@ -602,7 +692,24 @@
   {/if}
 
   <div class="content">
-    {#if path.length === 0}
+    {#if path.length === 0 && resolvingArtist}
+      <!-- The artist page on its way. Its own head, so the screen that
+           appears is the one that was asked for. -->
+      <div class="artistpage">
+        <div class="artistpage__side">
+          <span class="artist__disc artist__disc--big" style:background={tintOf(openArtistNamed ?? '')}>
+            <span class="artist__initials artist__initials--big">{initialsOf(openArtistNamed ?? '')}</span>
+          </span>
+          <div>
+            <div class="artistpage__name">{openArtistNamed ?? ''}</div>
+            <div class="artistpage__meta">Opening…</div>
+          </div>
+        </div>
+        <div class="artistright">
+          <div class="skel"><span></span><span></span><span></span></div>
+        </div>
+      </div>
+    {:else if path.length === 0}
       <div class="root">
         <div class="cards">
           <button class="card card--browse" type="button" onclick={openBrowse}>
@@ -667,7 +774,7 @@
                 class="album"
                 class:is-busy={busy === tile.id}
                 type="button"
-                onclick={() => openAlbum(tile.id, tile.title, [])}
+                onclick={() => openAlbum(tile.id, tile.title, artistPath(tile.artist))}
               >
                 <span class="album__art">
                   {#if tile.artwork && !failed.has(tile.artwork)}
@@ -683,23 +790,53 @@
           </div>
         </div>
       </div>
+    {:else if here?.kind === 'radio' && radio && here.handle === null}
+      <!-- The nine top-level categories are a three-up card grid; every level
+           below is the same dense single column as the rest of the library,
+           because station and track lists run long (design/screens.md §8). -->
+      <div class="rgrid">
+        {#each radio.items as row (row.handle)}
+          {@const look = radioLook(row.label)}
+          <button
+            class="rcard"
+            class:is-busy={busy === row.handle}
+            type="button"
+            style:--tint={look[1]}
+            onclick={() => (row.kind === 'folder' ? openRadio(row.handle, row.label) : playStation(row))}
+          >
+            <span class="rdisc rdisc--card">
+              <span class="rglyph rglyph--{look[0]}"><i></i><i></i><i></i></span>
+            </span>
+            <span class="rcard__text">
+              <span class="rcard__name">{row.label}</span>
+              {#if row.subtitle}
+                <span class="rcard__meta">{row.subtitle}</span>
+              {/if}
+            </span>
+          </button>
+        {:else}
+          <div class="pane__empty">Nothing here</div>
+        {/each}
+      </div>
     {:else if here?.kind === 'radio' && radio}
       <div class="lists">
         {#each radio.items as row (row.handle)}
+          {@const look = row.kind === 'station' ? RADIO_FALLBACK : radioLook(row.label)}
           <div class="plrow" class:is-busy={busy === row.handle}>
             <button
               class="plrow__hit"
               type="button"
               onclick={() => (row.kind === 'folder' ? openRadio(row.handle, row.label) : playStation(row))}
             >
-              <!-- The design draws a category glyph in CSS: waves for a
-                   folder, a tower for a station. -->
-              <span class="plrow__glyph plrow__glyph--radio" class:is-station={row.kind === 'station'}>
-                {#if row.kind === 'station'}
-                  <span class="i-tower"></span>
-                {:else}
-                  <span class="i-waves"><i></i><b></b><b></b></span>
-                {/if}
+              <!-- A tinted disc carrying the category's own shape, drawn in
+                   CSS - no icon font, no SVG. The rows below the top level
+                   get one too, at 46px; only their tint is the fallback when
+                   LMS reports a category this table does not name. -->
+              <span
+                class="rdisc"
+                style:--tint={look[1]}
+              >
+                <span class="rglyph rglyph--{look[0]}"><i></i><i></i><i></i></span>
               </span>
               <span class="plrow__text">
                 <span class="plrow__name">{row.label}</span>
@@ -929,6 +1066,13 @@
           </span>
           <div>
             <div class="artistpage__name">{artist.name}</div>
+            {#if genres.length}
+              <div class="artistpage__tags">
+                {#each genres as g (g)}
+                  <span class="gtag">{g}</span>
+                {/each}
+              </div>
+            {/if}
             <div class="artistpage__meta">
               {discography.length} {discography.length === 1 ? 'album' : 'albums'}
             </div>
@@ -950,6 +1094,11 @@
             <div class="sect">
               <span class="sect__label">About</span>
               <span class="sect__rule"></span>
+              {#if artistInfo.state === 'loading'}
+                <span class="sect__note">Loading…</span>
+              {:else if artistInfo.state === 'error'}
+                <span class="sect__note sect__note--offline">Offline</span>
+              {/if}
             </div>
             {#if artistInfo.state === 'loading'}
               <div class="skel"><span></span><span></span><span></span></div>
@@ -962,7 +1111,12 @@
                 class="artistmeta__bio"
                 class:is-clamped={!bioOpen}
                 style:max-height={bioOpen ? null : `${aboutMax}px`}
+                role="button"
+                tabindex="0"
+                aria-expanded={bioOpen}
                 bind:this={aboutEl}
+                onclick={() => (bioOpen = !bioOpen)}
+                onkeydown={(e) => foldKey(e, () => (bioOpen = !bioOpen))}
               >
                 {#each paragraphs as para, i (i)}
                   <p class="artistmeta__para">{para}</p>
@@ -975,6 +1129,15 @@
                 <button class="artistmeta__more" type="button" onclick={() => (bioOpen = !bioOpen)}>
                   {bioOpen ? 'Less' : 'More'}
                 </button>
+              </div>
+            {:else if artistInfo.state === 'error'}
+              <!-- The state was already computed and never branched on, so an
+                   offline artist read "Nothing found for this artist." - which
+                   says the library is empty rather than that the network is.
+                   design/screens.md §6 names this as the frequent slip. -->
+              <div class="offline">
+                <span class="offline__text">Artist details unavailable offline. Your library is unaffected.</span>
+                <button class="offline__retry" type="button" onclick={retryArtistInfo}>Retry</button>
               </div>
             {:else}
               <div class="artistmeta__none">Nothing found for this artist.</div>
@@ -1028,16 +1191,23 @@
           {/each}
           </div>
 
-          {#if artistInfo.found?.similar?.length}
+          {#if artistInfo.found?.similar?.length || artistInfo.state === 'error'}
             <div class="sect">
               <span class="sect__label">Similar artists</span>
               <span class="sect__rule"></span>
+              {#if artistInfo.state === 'error'}
+                <span class="sect__note sect__note--offline">Offline</span>
+              {/if}
             </div>
-            <div class="artistmeta__similar">
-              {#each artistInfo.found.similar as name (name)}
-                <span class="artistmeta__chip">{name}</span>
-              {/each}
-            </div>
+            {#if artistInfo.state === 'error'}
+              <div class="artistmeta__none">Not available offline.</div>
+            {:else}
+              <div class="artistmeta__similar">
+                {#each artistInfo.found.similar as name (name)}
+                  <span class="artistmeta__chip">{name}</span>
+                {/each}
+              </div>
+            {/if}
           {/if}
         </div>
       </div>
@@ -1058,6 +1228,14 @@
           <button class="playall" type="button" onclick={() => play('album', album.id, album.title)}>
             <span class="playall__glyph"></span>
             <span class="playall__label">Play album</span>
+          </button>
+          <!-- The design stacks two actions full-width here; only Play album
+               was built. Everywhere else in the library an album can be
+               queued from its row, so the album's own page was the one place
+               you could open it and not be able to. -->
+          <button class="playall playall--queue" type="button" onclick={() => act('album', album.id, 'add', album.title)}>
+            <span class="act__queue"><i></i><i></i><i></i></span>
+            <span class="playall__label">Add to queue</span>
           </button>
         </div>
 
@@ -1585,20 +1763,6 @@
     border-radius: 50%;
     background: rgba(233, 238, 242, 0.85);
     flex-shrink: 0;
-  }
-  .i-waves b {
-    width: 9px;
-    height: 17px;
-    border-right: 2.5px solid rgba(233, 238, 242, 0.6);
-    border-radius: 0 17px 17px 0;
-    flex-shrink: 0;
-    box-sizing: content-box;
-  }
-  .i-waves b:last-child {
-    height: 25px;
-    border-right-color: rgba(233, 238, 242, 0.34);
-    border-radius: 0 25px 25px 0;
-    margin-left: -2px;
   }
   /* A mast with two arcs over it - the design's tower. */
   .i-tower {
@@ -2431,10 +2595,7 @@
     contain: content;
     touch-action: pan-y;
   }
-  .releases::-webkit-scrollbar,
-  .release__row::-webkit-scrollbar {
-    display: none;
-  }
+  .releases::-webkit-scrollbar { display: none; }
   .release {
     display: flex;
     flex-direction: column;
@@ -2463,18 +2624,21 @@
     letter-spacing: 0.14em;
     color: rgba(126, 214, 188, 0.78);
   }
+  /* A wrapping grid, not a sideways scroller. The design is
+     `repeat(auto-fill, minmax(132px, 1fr))` with an 18px/16px gap: every
+     release in a group is on screen at once and the column scrolls as a
+     whole, where a per-group horizontal scroller hid albums behind an edge
+     and put a second scroll direction inside a vertical list. */
   .release__row {
-    display: flex;
-    gap: 16px;
-    overflow-x: auto;
-    padding-bottom: 2px;
-    scrollbar-width: none;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(132px, 1fr));
+    gap: 18px 16px;
     contain: content;
-    touch-action: pan-x;
   }
+  /* The grid track sizes the tile now (min 132px, stretching to fill), so a
+     fixed width would leave a ragged right edge on a 1fr column. */
   .disc {
-    width: 132px;
-    flex-shrink: 0;
+    min-width: 0;
     background: none;
     display: block;
   }
@@ -2484,8 +2648,8 @@
   }
   .disc__art {
     display: block;
-    width: 132px;
-    height: 132px;
+    width: 100%;
+    aspect-ratio: 1;
     border-radius: 11px;
     overflow: hidden;
     position: relative;
@@ -2589,6 +2753,258 @@
     border-bottom: 9px solid transparent;
     flex-shrink: 0;
   }
+  /* The album page's second action. Quieter than Play album - it is the
+     alternative, not the primary - so it takes the neutral ground the
+     design gives a secondary button rather than the LMS accent. */
+  .playall--queue {
+    background: var(--ink-fill);
+    border-color: var(--ink-line);
+    margin-top: 10px;
+  }
+  .playall--queue .act__queue {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    flex-shrink: 0;
+  }
+  .playall--queue .act__queue i {
+    display: block;
+    width: 18px;
+    height: 2px;
+    border-radius: 1px;
+    background: var(--accent-bluetooth);
+  }
+  .playall--queue .act__queue i:last-child { width: 11px; }
+
+  /* The artist page's network-error row (design/screens.md §6). The local
+     half - the discography - keeps its own kicker and its albums, because
+     those came off the disk: the region blanks, never the screen. */
+  .offline {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    height: 52px;
+    border-radius: 14px;
+    background: rgba(233, 238, 242, 0.05);
+    border: 1px solid rgba(233, 238, 242, 0.12);
+    padding: 0 18px;
+    flex-shrink: 0;
+  }
+  .offline__text {
+    flex: 1;
+    min-width: 0;
+    font-size: 16px;
+    color: var(--ink-muted);
+  }
+  .offline__retry {
+    display: inline-flex;
+    align-items: center;
+    height: 36px;
+    padding: 0 15px;
+    border: 1px solid rgba(159, 180, 232, 0.35);
+    border-radius: 9px;
+    background: rgba(159, 180, 232, 0.16);
+    font-family: var(--font-mono);
+    font-size: var(--t-label-sm);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--accent-bluetooth);
+    flex-shrink: 0;
+  }
+  .offline__retry:active { transform: scale(0.95); }
+  /* Coral, so a section that failed is legible as failed at a glance rather
+     than reading as one that happens to be empty. */
+  .sect__note--offline { color: var(--accent-artist); }
+
+  /* Genre pills under the artist's name. The design wraps them at 8px and
+     tints them with the LMS accent, because they come off the library rather
+     than from a lookup. */
+  .artistpage__tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 14px;
+  }
+  .gtag {
+    font-size: var(--t-label);
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    padding: 6px 13px;
+    border-radius: var(--r-pill);
+    background: rgba(126, 214, 188, 0.14);
+    border: 1px solid rgba(126, 214, 188, 0.3);
+    color: var(--accent-lms);
+  }
+
+
+  /* ── radio: ten shapes, each in a tinted disc ──────────────────────────
+     The grid is read by colour and silhouette before it is read by word
+     (design/screens.md §8), so every category carries its own glyph and its
+     own tint. All ten are CSS geometry - this panel has no icon font, and the
+     SVG mark smears below ~40px. `--tint` comes from the markup. */
+  .rgrid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 14px;
+    align-content: start;
+    overflow-y: auto;
+    scrollbar-width: none;
+    touch-action: pan-y;
+  }
+  .rgrid::-webkit-scrollbar { display: none; }
+  .rcard {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    height: 96px;
+    padding: 0 20px;
+    border-radius: 18px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--ink-line);
+    text-align: left;
+    min-width: 0;
+  }
+  .rcard:active { transform: scale(0.97); }
+  .rcard.is-busy { opacity: 0.6; }
+  .rcard__text { min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+  .rcard__name {
+    font-size: var(--t-body);
+    font-weight: 600;
+    color: var(--ink);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .rcard__meta {
+    font-family: var(--font-mono);
+    font-size: var(--t-label-sm);
+    color: var(--ink-quiet);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  /* Ground at 14% of the tint, border at 30%, glyph at full strength. */
+  /* A rounded square on a row, a circle on a card - the design's
+     `icoRadius: rs === 'card' ? '50%' : '13px'`. */
+  .rdisc {
+    width: 46px;
+    height: 46px;
+    border-radius: 13px;
+    background: color-mix(in srgb, var(--tint) 14%, transparent);
+    border: 1px solid color-mix(in srgb, var(--tint) 30%, transparent);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+  .rdisc--card { width: 54px; height: 54px; border-radius: var(--r-circle); }
+
+  .rglyph { display: block; position: relative; color: var(--tint); }
+  .rglyph i { display: block; position: absolute; background: currentColor; }
+
+  /* arcs - the fallback, and Radio Now Playing */
+  .rglyph--arcs { width: 20px; height: 20px; }
+  .rglyph--arcs i {
+    left: 50%; bottom: 1px; background: none;
+    border: 2px solid currentColor; border-bottom-color: transparent;
+    border-left-color: transparent; border-right-color: transparent;
+    border-radius: 50%; transform: translateX(-50%);
+  }
+  .rglyph--arcs i:nth-child(1) { width: 8px; height: 8px; }
+  .rglyph--arcs i:nth-child(2) { width: 15px; height: 15px; }
+  .rglyph--arcs i:nth-child(3) { width: 22px; height: 22px; }
+
+  /* star */
+  .rglyph--star { width: 20px; height: 20px; }
+  .rglyph--star i:nth-child(1) {
+    inset: 0; background: currentColor;
+    clip-path: polygon(50% 0, 61% 35%, 98% 35%, 68% 57%, 79% 92%, 50% 70%, 21% 92%, 32% 57%, 2% 35%, 39% 35%);
+  }
+  .rglyph--star i:nth-child(2), .rglyph--star i:nth-child(3) { display: none; }
+
+  /* pin */
+  .rglyph--pin { width: 16px; height: 21px; }
+  .rglyph--pin i:nth-child(1) {
+    inset: 0 0 5px 0; border-radius: 50% 50% 50% 50% / 55% 55% 45% 45%;
+  }
+  .rglyph--pin i:nth-child(2) {
+    left: 50%; top: 13px; width: 2px; height: 8px; transform: translateX(-50%);
+  }
+  .rglyph--pin i:nth-child(3) {
+    left: 50%; top: 5px; width: 6px; height: 6px; border-radius: 50%;
+    transform: translateX(-50%); background: var(--bg-base);
+  }
+
+  /* note */
+  .rglyph--note { width: 18px; height: 20px; }
+  .rglyph--note i:nth-child(1) { left: 0; bottom: 0; width: 9px; height: 7px; border-radius: 50%; }
+  .rglyph--note i:nth-child(2) { left: 7px; top: 0; width: 2px; height: 16px; }
+  .rglyph--note i:nth-child(3) { left: 7px; top: 0; width: 11px; height: 2px; transform: skewY(14deg); transform-origin: left; }
+
+  /* ball */
+  .rglyph--ball { width: 20px; height: 20px; }
+  .rglyph--ball i:nth-child(1) {
+    inset: 0; background: none; border: 2px solid currentColor; border-radius: 50%;
+  }
+  .rglyph--ball i:nth-child(2) { left: 50%; top: 1px; width: 2px; height: 18px; transform: translateX(-50%); }
+  .rglyph--ball i:nth-child(3) { top: 50%; left: 1px; height: 2px; width: 18px; transform: translateY(-50%); }
+
+  /* lines */
+  .rglyph--lines { width: 20px; height: 16px; }
+  .rglyph--lines i { left: 0; height: 2px; border-radius: 1px; }
+  .rglyph--lines i:nth-child(1) { top: 0; width: 20px; }
+  .rglyph--lines i:nth-child(2) { top: 7px; width: 20px; }
+  .rglyph--lines i:nth-child(3) { top: 14px; width: 12px; }
+
+  /* mic */
+  .rglyph--mic { width: 16px; height: 21px; }
+  .rglyph--mic i:nth-child(1) { left: 4px; top: 0; width: 8px; height: 12px; border-radius: 4px; }
+  .rglyph--mic i:nth-child(2) {
+    left: 1px; top: 9px; width: 14px; height: 7px; background: none;
+    border: 2px solid currentColor; border-top-color: transparent;
+    border-radius: 0 0 8px 8px;
+  }
+  .rglyph--mic i:nth-child(3) { left: 50%; bottom: 0; width: 2px; height: 4px; transform: translateX(-50%); }
+
+  /* globe */
+  .rglyph--globe { width: 20px; height: 20px; }
+  .rglyph--globe i:nth-child(1) { inset: 0; background: none; border: 2px solid currentColor; border-radius: 50%; }
+  .rglyph--globe i:nth-child(2) { top: 50%; left: 0; width: 20px; height: 2px; transform: translateY(-50%); }
+  .rglyph--globe i:nth-child(3) {
+    left: 50%; top: 0; width: 10px; height: 20px; background: none;
+    border: 2px solid currentColor; border-radius: 50%; transform: translateX(-50%);
+  }
+
+  /* speech */
+  .rglyph--speech { width: 20px; height: 18px; }
+  .rglyph--speech i:nth-child(1) {
+    left: 0; top: 0; width: 20px; height: 14px; background: none;
+    border: 2px solid currentColor; border-radius: 6px;
+  }
+  .rglyph--speech i:nth-child(2) {
+    left: 4px; bottom: 0; width: 6px; height: 6px;
+    clip-path: polygon(0 0, 100% 0, 0 100%);
+  }
+  .rglyph--speech i:nth-child(3) { display: none; }
+
+  /* rss - for the feed categories LMS may report */
+  .rglyph--rss { width: 18px; height: 18px; }
+  .rglyph--rss i:nth-child(1) { left: 0; bottom: 0; width: 5px; height: 5px; border-radius: 50%; }
+  .rglyph--rss i:nth-child(2) {
+    left: 0; bottom: 0; width: 11px; height: 11px; background: none;
+    border: 2px solid currentColor; border-radius: 0 0 0 100%;
+    border-top-color: transparent; border-right-color: transparent;
+    transform: rotate(-90deg); transform-origin: left bottom;
+  }
+  .rglyph--rss i:nth-child(3) {
+    left: 0; bottom: 0; width: 17px; height: 17px; background: none;
+    border: 2px solid currentColor; border-radius: 0 0 0 100%;
+    border-top-color: transparent; border-right-color: transparent;
+    transform: rotate(-90deg); transform-origin: left bottom;
+  }
+
   .playall__label {
     font-size: var(--t-body);
     font-weight: 700;
