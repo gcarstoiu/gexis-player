@@ -1,8 +1,7 @@
 # Handoff
 
-Last updated: 2026-09-20 (twenty-first session, on R2D2 — **the boot screen
-is a still; two of three flashes accounted for, one unexplained; paused by
-George**)
+Last updated: 2026-09-20 (twenty-first session, on R2D2 — **Phase 9's design
+sweep planned in nine subphases, volume last; starting at 9a**)
 
 ## Start here
 
@@ -11,67 +10,65 @@ is closed, the UI sweep (step 2) is George's and has not happened, and the
 performance target (step 3) is unmet. PR #22 merged an intermediate slice on
 2026-09-19 at George's request.
 
-**The boot screen is a still; two of three flashes are accounted for and one
-is not.** George stopped the session here: *"This is taking too much effort.
-Let's keep it as is ... record the findings and come back to it later."*
-[Finding 041](docs/findings/041-the-ten-seconds-with-no-animation.md) §§8–10.
+**Phase 9's design sweep has a plan and it is agreed** (George, 2026-09-20):
+nine subphases in `docs/DEVELOPMENT.md`, each landing on its own and checked
+on the panel before the next. **The volume work is last, by George's
+instruction** — the only subphase with a physical consequence, carrying the
+one number still undecided, and nothing depends on it.
 
-```
-0 → 2.6s     black        firmware, kernel, initramfs
-2.6 → 25.9   boot screen  plymouth, from the initramfs
-25.9         handover     10ms uncovered (was 480ms)
-25.9 → 28.3  boot screen  the framebuffer paint
-28.3 → 28.4  BLACK        F2, 0.15s, labwc's modeset
-28.4 → 32.8  boot screen  swaybg, the same file
-32.8 → 34.2  BLACK        F3, ~1.4s, Chromium
-34.2         the player
-```
+**The diff it is built on is
+[Finding 042](docs/findings/042-the-device-against-the-new-design.md).**
+Ground truth is the device, not the docs: `npm run build` on `ui/` at HEAD
+reproduces `/opt/gexis-ui`'s bundle **byte-identically**, so the source is a
+proven map rather than an assumed one; settings came from live `/settings`,
+state from a real `/state` frame, enrichment from `/enrichment`, and the
+design's inventory from evaluating its own `INV` literal rather than its
+prose — which matters, because the two disagree.
 
-**PICK THIS UP FIRST: George reports three flashes, two are accounted for.**
-A diagnostic was prepared and not run — one boot with `swaybg` showing plain
-red instead of the boot screen, which makes every transition unambiguous and
-places the missing flash relative to the compositor's first draw in one look.
-Cheap, and it needs George's eyes because nothing on the device can see the
-panel (`/dev/fb0` reads black whenever a DRM master holds the device).
+**Start at 9a: decisions, no code.** ADR-0044, 0045 and 0046 have been
+Proposed since 2026-09-20 and George has now ruled on all three in substance.
+9a also amends ADR-0022 for the catalogue/surfaced split, opens an idle-screen
+ADR, and lands the design drop **preserving `design/fonts/` and
+`IMPLEMENTED-DIFFERENTLY.md`** — the drop carries neither, and unpacking it
+over the tree deletes four woff2 files and two licences.
 
-**F3, ~1.4s, is the only large one left.** Finding 039 §5's parked overlay is
-the fix and is simpler for a still: a layer-shell surface above Chromium,
-removed on `POST /panel/painted`. **Needs George** — it adds something that
-covers the panel and must be told to go away. **F2, 0.15s, may be
-irreducible**: nothing can draw between labwc attaching an empty buffer and
-its first client committing a frame, because no client exists yet.
+**Three settings rows report behaviour the code does not have**, each found
+by measuring rather than reading: `travel_curve` names a curve 34 dB quieter
+at mid-travel than ADR-0034's slider; `bt_discoverable` reports "3 min after
+boot" that nothing chose (BlueZ's 180 s default reverting an untimed
+`discoverable on` — the trap `docs/LESSONS.md` already records); and
+`max_ceiling` is `None`, so no ceiling is enforced.
 
-**Two corrections that matter more than the fixes**, both now in
-`docs/LESSONS.md` (cases 6–8):
+**`device_name` is refused** — `HTTP 409 "not wired yet"`. The four service
+names agree only because each was set to the same literal at build time.
+Nothing propagates. That is 9e.
 
-- **F2 was reported at 3.9s, then 2.1s. It is 0.15s.** It was bracketed from
-  labwc's `Initializing DRM backend`, on the assumption that the screen
-  blanks when labwc takes the GPU. It does not — labwc runs for ~1.4s with
-  the previous image still up, and blanks only at `Attaching empty buffer to
-  output for modeset`. Wrong by ~8×, in the direction that made it look
-  unfixable. The log line naming the blank was always there; the grep was
-  written from the hypothesis.
-- **The framebuffer approach was authorised by a test with no DRM master.**
-  The kiosk was stopped for it, so fbdev *was* the scanout. At boot plymouth
-  holds DRM, so the paint-before-quit wrote where nobody was looking and
-  removed none of the flashes it was written for.
+**Finding 042 §8 says what it did not cover, and George closed the gap-hunt
+on cost.** Now Playing and Settings were compared element by element; Library,
+WaitingServices, Handoff and Idle were sampled, and sampling missed real
+items — George named six in one breath. Two are confirmed in the finding;
+three are unchecked and are expected to surface during 9c, where he judges
+them on the panel. **The unused instrument:** the drop ships `verify.html`
+(38 checks) and `geometry.json` (landmarks at 1280×800, 3 px tolerance) —
+Now Playing only, cheap to run, not yet run.
 
-**`reuseOutputMode` was tried and reverted.** `labwc-config(5)` calls it
-"flicker free boot", but A/B on the device says it does not prevent the
-modeset: 0.271s with, 0.150s without, and both log `Modesetting with
-1280x800 @ 59.493 Hz`.
+**The boot-screen work from earlier in this session is done and paused.** The
+still is on the device, the handover is 10 ms, two of three flashes are
+accounted for and one is unexplained; a red-`swaybg` diagnostic is prepared
+and not run. [Finding 041](docs/findings/041-the-ten-seconds-with-no-animation.md) §§8–10.
 
-**Still the largest available win, and not a flash: `cloud-init` costs ~6s**
-on `critical-chain` ahead of `gexis-core` and so of the kiosk, on an image
-whose `image/config` sets `ENABLE_CLOUD_INIT=0` — pi-gen's stage only skips
-its boot-partition templates, not the package.
+**Three build-side hazards found by the survey, none fixed:**
+`49b79c6` changed `systemctl enable gexis-splash-backstop.service` → `.timer`
+without a `disable` or an `rm`, and `01-run.sh` still installs the service
+unit, so a warm build can keep the old symlink and quit the splash at
+`multi-user.target`; `01-firstboot/files/firstrun.sh:67`'s
+`sed -i 's| systemd.run.*||g'` is greedy and would strip **every** quieting
+option and `splash` itself — inert today only because it targets a placeholder
+path, so the obvious-looking fix is the one change that silently kills the
+animation; and `02-run-chroot.sh` asserts nothing about the systemd wiring it
+creates.
 
-**The device runs what is committed, all of it hand-installed. All
-diagnostics were removed** (the `labwc -d` drop-in, the red wallpaper,
-`reuseOutputMode`), and the wallpaper was verified byte-identical to the
-splash still again.
-
-**Three build-side hazards found by the survey, none fixed:****Three build-side hazards found by the survey, none fixed:****Three build-side hazards found by the survey, none fixed:****ADR-0041 — scrims dim but do not blur** is the substantial result of step 1.
+**ADR-0041 — scrims dim but do not blur** is the substantial result of step 1.
 `backdrop-filter` costs 24.5 ms a frame in draw-and-submit against a 16.7 ms
 budget with the CPU idle; the compositor reads the live screen back every
 frame, which is a tile-based GPU's worst case

@@ -1497,6 +1497,93 @@ the point:
    unwired UI without a justification (2), and the "issues to look at
    later" triaged (4) - including the parked album-art sweep.
 
+**Plan revised 2026-09-20 (George), after the second design drop was diffed
+against the device** ([Finding 042](findings/042-the-device-against-the-new-design.md)).
+The 2026-09-18 order above stands for the performance work; what follows is
+the design sweep, which is most of criterion 3 and much of criterion 1.
+
+**Nine subphases, in this order. Each one lands on its own and is checked on
+the panel before the next** - George runs the regression pass, and a batch he
+cannot attribute is a batch he cannot judge.
+
+**The volume work is last, by George's instruction (2026-09-20).** It is the
+only subphase with a physical consequence, it carries the one number still
+undecided, and nothing else depends on it.
+
+1. **9a - Decisions, no code.** Settle [ADR-0044](decisions/0044-settings-row-vocabulary.md),
+   [ADR-0045](decisions/0045-bluetooth-pairing-confirmation.md) and
+   [ADR-0046](decisions/0046-fixed-output-hides-the-slider.md), all Proposed
+   since 2026-09-20. Amend [ADR-0022](decisions/0022-settings.md) for the
+   catalogue/surfaced split and the design as point of truth. A new ADR for
+   the idle screen. Land the design drop into `design/`, **preserving
+   `design/fonts/` and `IMPLEMENTED-DIFFERENTLY.md`** - the drop carries
+   neither, and unpacking it over the tree deletes four woff2 files and two
+   licences.
+   *Gate: reading. Nothing reaches the panel.*
+
+2. **9b - Now Playing restyle.** One Track header whether or not lyrics are
+   present; artist 25 and album 19; the album year; the source mark (mono
+   17px, no ground, 2.4s pulse); lyrics 25 in Track and 31 in the Lyrics tab;
+   meta tabs 17px with per-tab underline colours; `--track-wide` and
+   `--ink-tab-off`. Finding 042 §3.
+   *One component. Gate: the panel, with and without synced lyrics.*
+
+3. **9c - Library mechanical fixes.** The album page's missing **Add to
+   queue**; **Back to the artist** from the New Music strip (a one-route
+   defect, not a design change); the artist page's genre/tag pills, album
+   wrapping and Retry treatment; `WaitingServices` icon sizes; the radio
+   restyle - a grid at the top level and ten tinted glyphs, styling only;
+   `readonly` rows taking no tap and drawing no chevron; press feedback at
+   0.95; the build stamp out of the Settings header.
+   *Gate: the panel, screen by screen. **This is where the items Finding 042
+   §8 admits it missed will surface**, and George judges them there.*
+
+4. **9d - The settings vocabulary** (ADR-0044). `list`, `warn`, `onlyWhen`,
+   `optionsFrom`, `picker`, and the flag that keeps a row inventoried but not
+   surfaced. Registry and panel together.
+   *Gates 9e, 9f, 9g and the skin picker. Nothing new is visible; the check
+   is that the existing rows still render.*
+
+5. **9e - The device name is the only name.** Wire `device_name` - refused
+   today with `HTTP 409 "not wired yet"` - and push it to squeezelite's `-n`,
+   go-librespot's `config.yml`, the BlueZ alias and the hostname, with the
+   sanitiser. Header reads `name - hostname - IP`. **Restart-gated**, so no
+   renderer restarts mid-session.
+   *Gate: rename, restart, confirm all four advertise it.*
+
+6. **9f - Bluetooth pairing** (ADR-0045). Our own `Agent1` replacing
+   `bt-agent --capability=NoInputNoOutput`; the request surfaced to the
+   panel; accept and reject; a countdown that is the agent's, not the
+   panel's; first pair only; the confirmation screen. **And
+   `bt_discoverable` actually implemented** - all three options, with
+   `DiscoverableTimeout=0` for Always, which is the "3 minutes" defect.
+   *Mostly daemon. Gate: pair a phone that has never paired.*
+
+7. **9g - The idle screen.** Four background sources, the weather stack, two
+   third-party services and their keys. Needs its own ADR and the provider
+   choice, the same shape as Finding 030's enrichment question.
+   *Self-contained. Gate: leave it idle.*
+
+8. **9h - Home strip, skin picker, `viz_stop`.** Two LMS queries and the
+   three strip variants; the skin picker's thumbnails rendered at image build
+   (71 meter and 13 spectrum skins, so an image-build job rather than a UI
+   one); and `viz_stop` wired, without which the visualiser sits under the
+   idle screen until the renderer closes or somebody taps.
+   *Gate: the panel plus an image build.*
+
+9. **9i - The volume setup.** Fixed output (ADR-0046): the per-option
+   warning, the locked row, and never a disabled slider - **never built, and
+   found by Finding 040 rather than by anything the code said**. Percent as
+   the only user-facing unit. `max_ceiling`, which is `None` today.
+   `travel_curve`, whose value names a curve the code does not implement
+   (Finding 042 §2). `restore_floor`, `boot_default_scope` and
+   `volume_managed`.
+   **And the one number nobody has chosen:** the device boots at raw 60/240 =
+   -90 dB = 0%, the design's default is 60% = -18 dB, **a 72 dB difference at
+   every cold boot**, on a DAC feeding an amplifier at whatever gain it was
+   left at. ADR-0018 calls the current level "a fixed safe level".
+   *Gate: hardware, with the amplifier turned down first.*
+
 **Where the settings stand as of 2026-09-18:** 54 rows, **6 wired**
 (`idle_url`, `idle_timeout`, `drawer_on_external`, `drawer_autohide`,
 `listenbrainz_token`, `fanart_key`). **Eight still owe a decision** -
