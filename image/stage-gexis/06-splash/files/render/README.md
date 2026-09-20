@@ -20,19 +20,44 @@ delivered set is usable, and the frames in `../theme/` are rendered here from
 `frame.js` — Claude Design's own renderer, which arrived in that package —
 with one constant changed.
 
-## The one constant
+## The three constants
 
-`frame.js` lines 35 and 37, `PL.w1s` and `PL.w2s`, are the wavefronts' radius
-as a multiple of `ringD/2` = 211 px. They started at `0.52` → **110 px**,
-inside a mark whose tile diamond reaches `D/2` = **182 px**, so each ring was
-born behind the mark and drawn as arcs cut by the tiles for the first quarter
-of its travel. That is what George reported as "small lines in the pictogram
-with each pulse".
+All three exist because the mark grew at `2d446d5` (tile edge 28 → 115 design
+px) and the wavefronts were never re-fitted to it. **If the mark is ever
+resized again, all three move with it.**
 
-`render.mjs` rewrites both to **0.93** → **196 px**, which clears the tiles by
-14 px. The defect came back in the first place because the mark grew (tile
-edge 28 → 115 design px at `2d446d5`) and the ring radii did not grow with it:
-**if the mark is ever resized, this number moves with it.**
+**1. Where a ring is born.** `PL.w1s` / `PL.w2s` are the radius as a multiple
+of `ringD/2` = 211 px. They started at `0.52` → **110 px**, inside a mark
+reaching **168.8 px**, so each ring was drawn behind the tiles and cut into
+arcs for the first quarter of its travel — George: "small lines in the
+pictogram with each pulse". Now **0.93** → **196.3 px**, clearing by 27.5 px.
+
+> 168.8 px, not `DIA/2` = 181.5 px. The tiles are *rounded* squares, so their
+> corners fall short of the ideal diamond's points:
+> `(T+G)/2·√2 + ((T/2−R)·√2 + R)` = 100.2 + 68.6. 181.5 is the safe
+> over-estimate; 168.8 is the truth.
+
+**2 and 3. Where a ring stops being visible.** `PL.w1o` / `PL.w2o`. The mark
+centre is **297.8 px** from the top of the screen — it sits high so the
+wordmark and `SOUND` fit beneath — while the rings ran to **401 px**. So 20 of
+the 50 pulse frames had an arc sliced flat by the top edge. George saw it on
+the panel, 2026-09-20: *"the rings were slightly clipped"*.
+
+**Fixing 1 made this worse and it was not noticed**: pushing every ring 86 px
+further out took the top-edge clipping from 16 frames to 20. The two were
+traded, and only the one being fixed was measured.
+
+Each opacity track's zero-crossing now lands at the frame where the ring is at
+293 px — the top edge less half the 8.2 px stroke — so the wave dissipates
+before it reaches the edge rather than being cut by it: `74 → 41.3` and
+`86 → 54.3`. George chose this over capping the travel, which would have kept
+the rings visible as long but made the ripple tighter.
+
+**The cost, and it is real:** the rings now fade out by 54% of the pulse
+instead of 86%, so the loop ends in **0.88 s of complete stillness** and 41 of
+the 100 frames are exact duplicates, up from 26. The pulse reads calmer. It
+also means a *frozen* frame is harder to tell from the animation — which
+helps ADR-0043's amendment and hurts nothing, but is worth knowing.
 
 ## Running it
 
@@ -44,7 +69,7 @@ curl -sSLO 'https://raw.githubusercontent.com/google/fonts/main/ofl/bricolagegro
 mv 'BricolageGrotesque[opsz,wdth,wght].ttf' BricolageGrotesque.ttf
 curl -sSLO 'https://raw.githubusercontent.com/google/fonts/main/ofl/dmmono/DMMono-Medium.ttf'
 cd ..
-node render.mjs 0.93 ../theme
+node render.mjs ../theme
 python3 finish.py ../theme
 ```
 
@@ -91,7 +116,13 @@ assume — that is how both wrong sets got through:
   reported as "the mark" was the wordmark
 - **the ring unbroken**: bin the moving pixels by angle and require all 36
   ten-degree sectors to carry ring, on every pulse frame. A clipped ring
-  scores 12/36 and 24/36 on the frames where it is worst
+  scores 12/36 and 24/36 on the frames where it is worst. **Restrict the bin
+  to radii outside the mark** — run over the whole canvas it counts the glow
+  and scores 36/36 through a clip
+- **the ring inside the canvas**: no moving pixel in row 0, row 799, column 0
+  or column 1279, on any pulse frame. This is the check that was missing, and
+  its absence is why a set that clipped 20 frames against the top of the
+  screen was measured as clean and shipped to the device
 
 `DESIGN-CHANGELOG.md` is Claude Design's, kept verbatim as the record of what
 they believed they sent. It describes the redelivery as a correction; it is
