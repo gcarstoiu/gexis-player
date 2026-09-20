@@ -1,7 +1,7 @@
 # Handoff
 
-Last updated: 2026-09-20 (twenty-first session, on R2D2 — **boot frames
-re-rendered and landed; the handover measured and an ADR amendment Proposed**)
+Last updated: 2026-09-20 (twenty-first session, on R2D2 — **the boot screen
+is a still; kernel phase halved; D1 is the only gap left and needs George**)
 
 ## Start here
 
@@ -10,94 +10,53 @@ is closed, the UI sweep (step 2) is George's and has not happened, and the
 performance target (step 3) is unmet. PR #22 merged an intermediate slice on
 2026-09-19 at George's request.
 
-**The boot animation is the live thread, and it needs George twice.**
-Two things landed on 2026-09-20 and one question is blocking.
+**The boot screen is a still, and D1 is the only thing left.** George,
+2026-09-20: *"lets remove the animation and have a still instead ... no rings
+but the faded hallow in the background"*, and *"it seems that this is making
+things complicated"*. Done and on the device (`bfc932f`). The still is the
+pulse's rest frame, and it is **the same file** as `swaybg`'s wallpaper, so
+the splash and what sits behind the compositor cannot be two pictures.
 
-**Landed (`5c63d8c`): the frames are rendered here now, not imported.**
-Neither delivered set was right, in opposite directions, and measurement said
-so rather than either changelog: `c77d4e3` — the set on the device — has clean
-wavefronts and the *wordmark larger than the mark*, which is what George
-rejected at `2d446d5`; and the package Claude Design sent on 2026-09-20 as
-the correction is **pixel-identical, frame for frame, to `2d446d5`**, whose
-rings are clipped by the tiles. `c77d4e3`'s commit message measured the union
-bounding box of all non-ground pixels and read the 311 px it found as the
-mark — 311 px is the wordmark band. `files/_generator.js` is gone; it carried
-the old small-mark constants and misled two rounds.
-`06-splash/files/render/` now holds Claude Design's actual renderer, a
-harness, the recompression step and a README of what must be re-verified.
-**The documented pipeline reproduces the committed frames byte-identically,
-100/100, from a clean directory.** Not on the device, not in an image.
+**It halved the kernel phase.** Four boots that afternoon, differing only in
+what the theme holds: kernel 5.3 s → **2.6 s**, UI usable 35.3 s → **31.7 s**.
+The initramfs shrank only 7%, so that is not the cause — plymouth runs *in*
+the initramfs and was decompressing all 100 PNGs at start-up.
+[Finding 041 §8](docs/findings/041-the-ten-seconds-with-no-animation.md).
+That is ADR-0043's open ~400 MB question showing up as time, in the phase
+before PID 1 that Finding 038's budget never covered. **Not isolated** — four
+boots, no control, and the experiment that would separate "loading the
+images" from "having them present" can no longer be run.
 
-**Landed (`5dab6f1`): [Finding 041](docs/findings/041-the-ten-seconds-with-no-animation.md)
-and a Proposed amendment to [ADR-0043](docs/decisions/0043-boot-animation-and-a-silent-boot.md).**
-The animation ends at 25.64 s and the UI paints at 35.79 s — **5.93 s with
-nothing drawing, 3.21 s of a frozen frame, then the parked 1.01 s of white.**
-The first interval is structural: plymouth is DRM master until it exits, so
-it must exit before labwc opens the GPU, and labwc then takes ~5.9 s. An
-animation cannot run across that; the best it can be is a held frame short
-enough not to read as one. The amendment's target — **D1 ≤ 2.0 s**, one pulse
-period, because a held rest frame is indistinguishable from the animation
-between beats — **is Proposed and needs George before anything is built.**
+**D1 is the whole remaining problem: 5.0 s of black**, 21.78 → 26.81 s on the
+still boot. Plymouth must release DRM before labwc can open it, and labwc
+needs ~5 s from there. D2 has stopped being a discontinuity now that the
+splash and the wallpaper are one file. D3 (0.85 s of white) stays parked.
 
-**BLOCKING, and it needs George's eyes, not a log: where on the screen was
-the console?** `console=tty3` was already live on the boot he complained
-about, `getty@tty1` never started, the VT clear ran and exited 0, and no VT
-switch occurred. Finding 041 §4 ranks three candidates and establishes none.
-Two lines of gibberish at the very bottom → escape-reply glyphs in tty1. A
-full screen of `[ OK ]` lines → an earlier boot, before the 23:02 edit.
-Nothing, just black → the gap itself. Twenty seconds of phone video settles
-it.
+**The console is INTERMITTENT and D1 is where it lives.** George saw
+*"something containing 160R"* on a manual reboot — `^[[50;160R`, the
+escape-reply text, confirming Finding 041 §4's first candidate twice over —
+while `/dev/vcs1` read empty after two instrumented boots. So something
+echoing those replies races `gexis-kiosk.service`'s VT clear and wins
+sometimes. **A fix that covers D1 with an image makes the race irrelevant; a
+fix that only clears harder does not.**
 
-**Two traps found on the way, both recorded in Finding 041.** `/dev/fb0` is
-not the scanout under vc4 KMS — it read uniformly black across 45 samples
-*including while the UI was up*, so it cannot tell "the panel is black" from
-"fb0 is blind". And our own capture script restarted `gexis-kiosk.service`,
-which re-ran the VT clear and destroyed the evidence for the strongest
-console candidate.
+**AWAITING GEORGE — the proposed D1 fix and its cost.** Put tty1 into
+`KD_GRAPHICS` before quitting plymouth and paint the still into the
+framebuffer. Graphics mode stops the console being drawn at all, which kills
+the `160R` text outright rather than racing it, and the framebuffer write
+covers the gap until labwc modesets. Needs a small helper (the mode switch is
+an ioctl) and a pre-converted raw copy of the still at build time. **The
+cost: a failed boot would show the still with no console behind it.**
+ADR-0043 already accepts a silent failed boot, and `Restart=no` means one
+lost race leaves it there — so this narrows the diagnostics further and is
+George's call, not a detail.
 
-**The logger George asked about is plymouth's own `/var/log/boot.log`** —
-nothing in this repository knows it exists. It matters because **journald on
-this image is volatile** (`40-rpi-volatile-storage.conf` sets
-`Storage=volatile`; `/var/log/journal` exists and is empty), so `boot.log`'s
-six sections are the only cross-boot record the device keeps.
+**The warmup fix (`6ea718d`) is committed and still NOT deployed.** It warms
+the compositor's ~196 MB of dlopen'd Mesa/LLVM/z3 before Chromium's 482 MB,
+where the old list warmed `/usr/bin/labwc` (515 KB) last. Whether it shrinks
+D1 is unmeasured.
 
-**Still true and still the shape of the problem:** none of ADR-0043's fixes
-exists in a bootable image. Every splash commit post-dates
-`2026-09-19-…-287-ge59654c-dirty.img`, `console=tty3` and
-`systemd.show_status=false` live only as a hand edit to the card's
-`cmdline.txt`, and `initramfs8` was rebuilt on the device. `image/verify-image.sh`
-has **no splash coverage at all**. Finding 039's "none has been re-verified
-from an image" is more true than when it was written.
-
-**The frames are on the device (2026-09-20), not in an image.** 100 frames
-installed, `panel-background.png` updated, both initramfs images rebuilt and
-verified to contain all 100 with matching checksums; the previous one is kept
-at `/boot/firmware/initramfs8.pre-20260920`. **George reboots to check them.**
-The warmup fix (`6ea718d`) is committed and deliberately **not** deployed —
-frames first, one change at a time.
-
-**A claim in `06-splash/02-run-chroot.sh` was withdrawn on 2026-09-20.** It
-asserted "Raspberry Pi OS ships `update_initramfs=no`". The device reads
-`yes`, its md5 is byte-identical to the conffile `initramfs-tools` shipped,
-and `dpkg.log` records no upgrade since the flash — so it has never been
-edited. **Why the 2026-09-19 build saw a rebuild that did nothing is
-unexplained again.** Claude read the comment as fact, asked George to
-approve "restoring" the device to `no` on that basis, made the change and
-reverted it once the conffile md5 was checked. The device is back to the
-shipped state.
-
-**Three build-side hazards found by the survey, none fixed:**
-`49b79c6` changed `systemctl enable gexis-splash-backstop.service` → `.timer`
-without a `disable` or an `rm`, and `01-run.sh` still installs the service
-unit, so a warm build can keep the old symlink and quit the splash at
-`multi-user.target`; `01-firstboot/files/firstrun.sh:67`'s
-`sed -i 's| systemd.run.*||g'` is greedy and would strip **every** quieting
-option and `splash` itself — inert today only because it targets a placeholder
-path, so the obvious-looking fix is the one change that silently kills the
-animation; and `02-run-chroot.sh` asserts nothing about the systemd wiring it
-creates.
-
-**ADR-0041 — scrims dim but do not blur** is the substantial result of step 1.
+**Three build-side hazards found by the survey, none fixed:****ADR-0041 — scrims dim but do not blur** is the substantial result of step 1.
 `backdrop-filter` costs 24.5 ms a frame in draw-and-submit against a 16.7 ms
 budget with the CPU idle; the compositor reads the live screen back every
 frame, which is a tile-based GPU's worst case
