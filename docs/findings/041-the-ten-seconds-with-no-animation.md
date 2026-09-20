@@ -375,3 +375,101 @@ boots. **So it does not happen every boot** — whatever echoes those replies
 races the VT clear in `gexis-kiosk.service`'s first `ExecStartPre`, and wins
 sometimes. A fix that covers D1 with an image makes the race invisible
 regardless of who wins it; a fix that only clears harder does not.
+
+---
+
+## 9. Addendum — the three flashes, located and two of them closed
+
+**2026-09-20.** George, watching the still boot: *"There were 3 black screen
+flashes during the entire period. The white flash is gone. No console text."*
+Locating them needed `labwc -d`, added as a drop-in override for two boots
+and removed afterwards.
+
+### Where they were
+
+| | window | cause |
+|---|---|---|
+| **F1** | plymouth quits → the still is written | `gexis-splash-fb` spending 490 ms starting Python before it wrote a byte |
+| **F2** | labwc takes DRM master → `swaybg` draws | labwc scanning out its own empty buffer |
+| **F3** | Chromium's window maps → the UI paints | where the white flash used to be |
+
+### F1: caused by the fix for it
+
+The first attempt painted before *and* after `plymouth quit`, reasoning that
+whichever side worked would cover the gap. Neither did, for a reason that
+invalidates the whole belt-and-braces idea:
+
+**Plymouth renders through DRM/KMS, not fbdev.** It holds DRM master and
+scans out its own buffer, so a `/dev/fb0` write while plymouth is up lands in
+the fbdev buffer, which is not the scanout, and achieves nothing. Only the
+write *after* the quit was ever visible — and it arrived 480 ms late, because
+that is how long this helper takes to import PIL and numpy.
+
+> **The live test that authorised this approach had no DRM master at all.**
+> The kiosk was stopped, so fbdev *was* the scanout and the image appeared.
+> That condition does not hold at boot. `docs/LESSONS.md`'s shape again: the
+> check ran against a plausible substitute — an idle device for a booting
+> one — and the difference was invisible in the result.
+
+**Fixed** by doing the whole sequence in one process, in the order that
+matters: `KD_GRAPHICS`, decode the image *while plymouth is still drawing*,
+quit plymouth, write. Measured on the clean boot of 11:32:
+
+```
+[24.742516] Received SIGRTMIN+21 from PID 181 (plymouthd)
+[24.751951] gexis-splash-fb: plymouth quit returned
+[24.753299] gexis-splash-fb: painted 2048000 bytes
+```
+
+**1.3 ms uncovered**, from 480 ms.
+
+### F2: halved, and the warmup is what did it
+
+Between the two traced boots, with `gexis-panel-warmup`'s reordering deployed
+in between:
+
+| | 11:19 (old warmup) | 11:29 (new warmup) |
+|---|---|---|
+| `Initializing DRM backend` → first EGL line | **1.88 s** | **0.24 s** |
+| DRM backend → `swaybg` draws | **3.86 s** | **2.13 s** |
+
+**This is the measurement that attributes the warmup change**, and it does
+what the whole-boot timings could not: it is bracketed by two labwc log lines,
+so variance in `cloud-init` or `NetworkManager-wait-online` cannot reach it.
+Section 7's claim — that ~196 MB of `dlopen`'d Mesa/LLVM/z3 was being read
+cold at exactly the moment labwc started — is confirmed.
+
+**The residual 1.8 s is labwc between EGL being ready and its session script
+running**, and nothing has looked inside it.
+
+**F2 cannot be covered, only shortened.** Once labwc holds DRM master nothing
+else can put pixels on that screen — not the framebuffer, not plymouth — and
+labwc 0.20.1 has no root-colour or background option (`--help` and the theme
+were both checked). The boot screen necessarily disappears at the instant the
+compositor takes the GPU.
+
+### F3: untouched
+
+Chromium's window at 32.41 s, the UI painting at 33.88 s: **1.47 s**. Finding
+039 §5's parked overlay applies directly and is simpler now that it is a
+still rather than an animation — a layer-shell surface showing the same image
+above Chromium's window, removed on `POST /panel/painted`. Not built; it
+needs George, because it introduces something that covers the panel and must
+be told to go away.
+
+### The boot as it stands
+
+```
+0 → 2.6s     black      firmware, kernel, initramfs
+2.6 → 24.7   the still  plymouth, from the initramfs
+24.7         handover   1.3ms uncovered
+24.9 → 27.5  BLACK      labwc holds DRM, nothing drawn yet   (F2, 2.1s)
+27.5 → 32.4  the still  swaybg, the same file
+32.4 → 33.9  BLACK      Chromium mapped, not yet painted     (F3, 1.5s)
+33.9         the player
+```
+
+**`cloud-init` is the largest single item left and is not a flash.** 6.0 s,
+directly on `critical-chain` ahead of `gexis-core` and therefore of
+everything, on an image whose `image/config` sets `ENABLE_CLOUD_INIT=0` —
+pi-gen's stage only skips its boot-partition templates, not the package.

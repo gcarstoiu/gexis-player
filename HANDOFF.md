@@ -10,53 +10,50 @@ is closed, the UI sweep (step 2) is George's and has not happened, and the
 performance target (step 3) is unmet. PR #22 merged an intermediate slice on
 2026-09-19 at George's request.
 
-**The boot screen is a still, and D1 is the only thing left.** George,
-2026-09-20: *"lets remove the animation and have a still instead ... no rings
-but the faded hallow in the background"*, and *"it seems that this is making
-things complicated"*. Done and on the device (`bfc932f`). The still is the
-pulse's rest frame, and it is **the same file** as `swaybg`'s wallpaper, so
-the splash and what sits behind the compositor cannot be two pictures.
+**The boot screen is a still and the handover is closed; two flashes remain,
+both compositor start-up.** George, 2026-09-20, watching a boot: *"There were
+3 black screen flashes ... The white flash is gone. No console text."*
+[Finding 041 §9](docs/findings/041-the-ten-seconds-with-no-animation.md)
+locates all three and closes one.
 
-**It halved the kernel phase.** Four boots that afternoon, differing only in
-what the theme holds: kernel 5.3 s → **2.6 s**, UI usable 35.3 s → **31.7 s**.
-The initramfs shrank only 7%, so that is not the cause — plymouth runs *in*
-the initramfs and was decompressing all 100 PNGs at start-up.
-[Finding 041 §8](docs/findings/041-the-ten-seconds-with-no-animation.md).
-That is ADR-0043's open ~400 MB question showing up as time, in the phase
-before PID 1 that Finding 038's budget never covered. **Not isolated** — four
-boots, no control, and the experiment that would separate "loading the
-images" from "having them present" can no longer be run.
+```
+0 → 2.6s     black      firmware, kernel, initramfs
+2.6 → 24.7   the still  plymouth, from the initramfs
+24.7         handover   1.3ms uncovered (was 480ms)
+24.9 → 27.5  BLACK      labwc holds DRM, nothing drawn yet   (F2, 2.1s)
+27.5 → 32.4  the still  swaybg, the same file
+32.4 → 33.9  BLACK      Chromium mapped, not yet painted     (F3, 1.5s)
+33.9         the player
+```
 
-**D1 is the whole remaining problem: 5.0 s of black**, 21.78 → 26.81 s on the
-still boot. Plymouth must release DRM before labwc can open it, and labwc
-needs ~5 s from there. D2 has stopped being a discontinuity now that the
-splash and the wallpaper are one file. D3 (0.85 s of white) stays parked.
+**The still halved the kernel phase** (5.3 s → 2.6 s): plymouth runs in the
+initramfs and was decompressing 100 PNGs at start-up. ADR-0043's ~400 MB
+open question, surfacing as time.
 
-**The console is INTERMITTENT and D1 is where it lives.** George saw
-*"something containing 160R"* on a manual reboot — `^[[50;160R`, the
-escape-reply text, confirming Finding 041 §4's first candidate twice over —
-while `/dev/vcs1` read empty after two instrumented boots. So something
-echoing those replies races `gexis-kiosk.service`'s VT clear and wins
-sometimes. **A fix that covers D1 with an image makes the race irrelevant; a
-fix that only clears harder does not.**
+**`gexis-splash-fb` closes the plymouth handover.** `KD_GRAPHICS` (which kills
+the `160R` console text outright rather than racing a VT clear), decode while
+plymouth still draws, quit, write — one process. **Plymouth renders through
+DRM, not fbdev**, so a framebuffer write before the quit does nothing; the
+live test that authorised the approach had no DRM master and so answered a
+different question.
 
-**AWAITING GEORGE — the proposed D1 fix and its cost.** Put tty1 into
-`KD_GRAPHICS` before quitting plymouth and paint the still into the
-framebuffer. Graphics mode stops the console being drawn at all, which kills
-the `160R` text outright rather than racing it, and the framebuffer write
-covers the gap until labwc modesets. Needs a small helper (the mode switch is
-an ioctl) and a pre-converted raw copy of the still at build time. **The
-cost: a failed boot would show the still with no console behind it.**
-ADR-0043 already accepts a silent failed boot, and `Restart=no` means one
-lost race leaves it there — so this narrows the diagnostics further and is
-George's call, not a detail.
+**The warmup reorder is confirmed by measurement, not inferred.** Bracketed
+inside labwc's own log lines, so boot variance cannot reach it: Mesa's load
+**1.88 s → 0.24 s**, which took F2 from 3.9 s to 2.1 s.
 
-**The warmup fix (`6ea718d`) is committed and still NOT deployed.** It warms
-the compositor's ~196 MB of dlopen'd Mesa/LLVM/z3 before Chromium's 482 MB,
-where the old list warmed `/usr/bin/labwc` (515 KB) last. Whether it shrinks
-D1 is unmeasured.
+**F2 cannot be covered, only shortened.** Once labwc holds DRM master nothing
+else reaches that screen, and labwc 0.20.1 has no root-colour option. The
+residual 1.8 s is labwc between EGL being ready and its session script; nobody
+has looked inside it. **F3 needs George** — Finding 039 §5's parked overlay
+applies directly and is simpler for a still, but it introduces something that
+covers the panel and must be told to go away.
 
-**Three build-side hazards found by the survey, none fixed:****ADR-0041 — scrims dim but do not blur** is the substantial result of step 1.
+**AWAITING GEORGE, and bigger than either flash: `cloud-init` costs 6.0 s**
+directly on `critical-chain` ahead of `gexis-core` and therefore of the
+kiosk, on an image whose `image/config` sets `ENABLE_CLOUD_INIT=0`. pi-gen's
+stage only skips its boot-partition templates, not the package.
+
+**Three build-side hazards found by the survey, none fixed:****Three build-side hazards found by the survey, none fixed:****ADR-0041 — scrims dim but do not blur** is the substantial result of step 1.
 `backdrop-filter` costs 24.5 ms a frame in draw-and-submit against a 16.7 ms
 budget with the CPU idle; the compositor reads the live screen back every
 frame, which is a tile-based GPU's worst case
