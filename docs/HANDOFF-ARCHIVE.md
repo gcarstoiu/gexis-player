@@ -3405,3 +3405,46 @@ settings and the triage. The reason for that order is in
 `docs/DEVELOPMENT.md`: the sweep is a judgement call, and a judgement made
 on a panel that drops 71 % of its frames before anyone touches it cannot be
 told from the floor it is standing on.
+
+## From HANDOFF, 2026-09-19 (twentieth session) — the image that had never been booted
+
+Superseded 2026-09-20: it was booted, four times on the 19th and once on the
+20th. Finding 039 and Finding 041 record what that found. Moved here verbatim.
+
+**The one thing waiting on hardware: an image with a boot animation that has
+never been booted.** `2026-09-19-gexis-player-v0.2.1-287-ge59654c-dirty.img`.
+George is flashing it to a *different* SD card, keeping the Phase 8 card as
+the fallback — the right call, because the change touches the initramfs and
+a wrong one does not reach a state where SSH can help.
+
+**What to check on that first boot**, in order, because each answers a
+different unknown in [ADR-0043](docs/decisions/0043-boot-animation-and-a-silent-boot.md):
+
+1. **Does it boot at all?** The initramfs is rebuilt by
+   `06-splash/02-run-chroot.sh`. If it does not, the fallback is the other
+   card, not a fix on this one.
+2. **Does the animation appear, and how early?** It should start a second or
+   two after power, from the initramfs. Late (~4 s) means plymouth is
+   starting after the root mount instead.
+3. **Is there any text at all?** Six sources were quieted; any survivor is a
+   defect and worth naming precisely.
+4. **Is the handover clean?** The splash is held until the panel reports its
+   first painted frame. A flash of black between animation and UI means the
+   signal is not arriving.
+5. **What did it cost?** `free -m` early on. Plymouth may hold all 100 frames
+   in memory, ~400 MB if so. 36 of the 100 are exact duplicates, so there is
+   cheap headroom if it matters.
+
+**The failure that is worth remembering from this session.** The first build
+of the splash stage failed on its *own assertion*: plymouth was not in the
+initramfs. The rebuild had reported no error — Raspberry Pi OS ships
+`update_initramfs=no`, so `update-initramfs` prints "Not updating initramfs."
+and does nothing. Without that assertion the build would have succeeded and
+produced a card whose animation starts late, which looks like a design choice
+rather than a defect. Same shape as everything in `docs/LESSONS.md`.
+
+**Also in this image, and not on the card George is looking at today:** the
+Peppy source badge is now the mark alone (the renderer's name was the only
+thing drawn outside the square each skin reserves, and on 7 of the 71 skins
+"Bluetooth" left the screen), the album page's track rows are actionable, and
+no `backdrop-filter` remains anywhere in the panel.
