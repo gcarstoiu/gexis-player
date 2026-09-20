@@ -1,79 +1,44 @@
-// gexis boot splash (ADR-0043).
+// gexis boot splash (ADR-0043, amended 2026-09-20).
 //
-// 100 frames, 25 fps, a 4 s loop that closes on itself - the artwork has no
-// beginning and no end, so Plymouth can hand over on any frame and the
-// screen is already the panel's own ground colour (#101a21) with a small
-// mark on it.
+// A single still, not an animation. George, 2026-09-20, after three boots of
+// the 100-frame sequence: "lets remove the animation and have a still
+// instead ... no rings but the faded hallow in the background". The frame is
+// the pulse's rest state - the mark, the wordmark, SOUND and the faded halo,
+// nothing in motion - which is also what swaybg shows behind the compositor,
+// so the splash and the wallpaper are now literally the same file.
 //
-// Every text callback below is deliberately empty. George's requirement is
-// that nothing textual appears during boot, and Plymouth would otherwise
-// draw fsck progress, password prompts and update messages over the
-// animation. Leaving them undefined is not enough: Plymouth falls back to
-// its own rendering when a theme does not take the callback.
-
-// Two ranges, not one loop (George, 2026-09-19): the intro plays once and
-// the pulse repeats until the handover. A boot is ~20s and variable, so a
-// whole sequence repeating five times draws attention to how long it is
-// taking, where a settled pulse reads as "working".
-INTRO_FIRST = 1;
-INTRO_LAST = 50;
-PULSE_FIRST = 51;
-PULSE_LAST = 100;
-FRAMES = 100;
-FPS = 25;
-
-// Plymouth calls the refresh function at 50 Hz, so every second tick
-// advances a frame. Counting ticks rather than reading a clock keeps the
-// animation honest on a machine whose CPU is busy booting.
-TICKS_PER_FRAME = 2;
+// What this bought, beyond it being what was asked for: the initramfs drops
+// from ~20MB to ~1MB, plymouth holds one image rather than a hundred (which
+// retires ADR-0043's open question about ~400MB of decompressed frames), and
+// there is no longer a loop whose wrap has to be pixel-identical or a join
+// that has to be invisible.
+//
+// The animation is still renderable from files/render/ and is not built.
 
 Window.SetBackgroundTopColor(0.063, 0.102, 0.129);     // #101a21
 Window.SetBackgroundBottomColor(0.063, 0.102, 0.129);
 
-// Frame files are boot-0001.png .. boot-0100.png. Plymouth script has no
-// printf, so the padding is built by hand.
-fun frame_name(n) {
-    if (n < 10)   return "boot-000" + n + ".png";
-    if (n < 100)  return "boot-00" + n + ".png";
-    return "boot-0" + n + ".png";
-}
-
-images = [];
-for (i = 1; i <= FRAMES; i++)
-    images[i] = Image(frame_name(i));
-
-// The images are full-bleed 1280x800, so the sprite sits at the origin and
-// the screen is drawn edge to edge whatever the mode turns out to be.
+// Full-bleed 1280x800, so the sprite sits at the origin and the screen is
+// covered edge to edge whatever mode the panel comes up in.
+still = Image("still.png");
 sprite = Sprite();
 sprite.SetX(0);
 sprite.SetY(0);
 sprite.SetZ(0);
-sprite.SetImage(images[1]);
+sprite.SetImage(still);
 
-index = INTRO_FIRST;
-tick = 0;
-
-fun refresh_callback() {
-    tick++;
-    if (tick >= TICKS_PER_FRAME) {
-        tick = 0;
-        index++;
-        // Past the end of the pulse, back to its start - never back to the
-        // intro. The wrap is pixel-identical (measured 0.0000 mean, worst
-        // channel 0), because the pulse is a beat followed by a genuine
-        // rest and frame PULSE_LAST is frame PULSE_FIRST.
-        if (index > PULSE_LAST)
-            index = PULSE_FIRST;
-        sprite.SetImage(images[index]);
-    }
-}
-
-Plymouth.SetRefreshFunction(refresh_callback);
+// No refresh function. There is nothing to advance, and plymouth is happy
+// without one - the sprite is drawn once and stays.
 
 // --- everything below draws nothing, on purpose -----------------------
 //
-// A boot that fails now shows the animation rather than a reason. That is
-// the accepted cost in ADR-0043, and SSH is the diagnostic path.
+// Leaving these undefined is NOT enough: plymouth falls back to its own
+// rendering for any callback a theme does not take, and would draw fsck
+// progress, password prompts and update messages over the still. George's
+// requirement is that nothing textual appears during boot (ADR-0043).
+//
+// The cost is accepted knowingly: a boot that fails now shows the still
+// rather than a reason, and SSH is the diagnostic path.
 
 fun quiet() { }
 
@@ -88,9 +53,9 @@ Plymouth.SetMessageFunction(quiet);
 Plymouth.SetHideMessageFunction(quiet);
 Plymouth.SetDisplayCapsLockWarningFunction(quiet);
 
-// On quit the last frame is left on screen: gexis-core drops the splash
-// only once the panel has actually painted, so this is what sits under the
-// UI's first frame rather than a flash of black.
+// On quit, leave the still fully opaque rather than fading it out: whatever
+// is on screen at that moment is what the compositor has to draw over, and
+// the closer it is to swaybg's own wallpaper the smaller the seam.
 fun quit_callback() {
     sprite.SetOpacity(1);
 }

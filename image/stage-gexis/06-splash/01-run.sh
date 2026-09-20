@@ -16,11 +16,23 @@ CONFIG="${ROOTFS_DIR}/boot/firmware/config.txt"
 install -d -m 755 "${THEME_DIR}"
 install -m 644 files/theme/gexis.plymouth "${THEME_DIR}/"
 install -m 644 files/theme/gexis.script "${THEME_DIR}/"
-install -m 644 files/theme/boot-*.png "${THEME_DIR}/"
+install -m 644 files/theme/still.png "${THEME_DIR}/"
 
-frames="$(find "${THEME_DIR}" -name 'boot-*.png' | wc -l)"
-if [ "${frames}" -ne 100 ]; then
-	echo "ERROR: expected 100 animation frames, installed ${frames}" >&2
+# A still, not an animation (George, 2026-09-20). The 100-frame sequence and
+# the assertion that exactly 100 of them landed are both gone; what has to be
+# true now is smaller and is checked here rather than discovered on a panel.
+if [ ! -s "${THEME_DIR}/still.png" ]; then
+	echo "ERROR: the splash still is missing or empty" >&2
+	exit 1
+fi
+
+# 1280x800 exactly, or plymouth letterboxes it and the seam with swaybg's
+# wallpaper - the same file - becomes visible. Read from the PNG's IHDR
+# rather than trusting the filename: bytes 16-23 are width and height, big
+# endian. `od` is on the Lite image; `xxd` is not (see HANDOFF).
+dims="$(od -An -tu4 -j16 -N8 --endian=big "${THEME_DIR}/still.png" | tr -s ' ')"
+if [ "${dims}" != " 1280 800" ]; then
+	echo "ERROR: the splash still is${dims} px, expected 1280 800" >&2
 	exit 1
 fi
 
@@ -79,13 +91,22 @@ install -D -m 644 files/gexis-splash-backstop.timer \
 # to black on 2026-09-19 - so something has to be behind the compositor or
 # the gap is black.
 #
-# The pulse's rest state (its last frame, which is pixel-identical to its
-# first): that is what is on screen for almost all of a boot, so the
-# wallpaper continues the picture rather than cutting to a different moment
-# of it.
-STILL=boot-0100.png
-install -D -m 644 "files/theme/${STILL}" \
+# **It is the same file as the splash.** Before 2026-09-20 the splash was a
+# 100-frame animation and this was its rest frame, chosen because it was what
+# the screen showed for most of a boot. Now that the splash is a still, the
+# wallpaper and the splash are one image, and the handover cannot show a cut
+# between two different pictures - only, still, a gap where neither is drawn.
+install -D -m 644 files/theme/still.png \
 	"${ROOTFS_DIR}/usr/share/gexis/panel-background.png"
+
+# The two must not drift apart. They are installed from one source file, so
+# this can only fail if somebody edits one of the destinations - which is
+# exactly the kind of thing that gets done on a device and then forgotten.
+if ! cmp -s "${THEME_DIR}/still.png" \
+	"${ROOTFS_DIR}/usr/share/gexis/panel-background.png"; then
+	echo "ERROR: the splash still and the panel wallpaper differ" >&2
+	exit 1
+fi
 
 # Build-time assertions. A boot that shows text is a defect nobody will
 # report as one - they will just see it - so fail here instead.

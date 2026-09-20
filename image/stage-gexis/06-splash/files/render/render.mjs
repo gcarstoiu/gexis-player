@@ -50,8 +50,23 @@ const START = 0.93
 const FADE1 = 41.3   // was 74, w1s runs 12 -> 74
 const FADE2 = 54.3   // was 86, w2s runs 26 -> 86
 
+// Two outputs, and which one you get depends on the path.
+//
+//   node render.mjs ../theme/still.png   the single still the boot shows today
+//   node render.mjs ../theme             all 100 frames of the animation
+//
+// The still is frame 100, which is pixel-identical to frame 51: the pulse's
+// rest state, so it carries the mark, the wordmark, SOUND and the faded halo
+// and no wavefronts. That is the frame George asked for on 2026-09-20 when
+// he replaced the animation with a still, and it is also what `swaybg` has
+// always shown, so the splash and the wallpaper are now the same file.
+//
+// The animation is kept renderable on purpose. It is not built today, but
+// removing the ability to make it again would make going back a re-import,
+// and re-importing is what produced two wrong sets.
 const OUT = process.argv[2] ?? '../theme'
-const FRAMES = process.argv[3] ? process.argv[3].split(',').map(Number) : null
+const STILL = OUT.endsWith('.png')
+const FRAMES = STILL ? [100] : (process.argv[3] ? process.argv[3].split(',').map(Number) : null)
 
 let src = fs.readFileSync('frame.js', 'utf8')
 const edits = [
@@ -72,11 +87,17 @@ for (const [pattern, replacement] of edits) {
 }
 
 const mod = new Function(src + '\n;return { renderFrame };')()
-fs.mkdirSync(OUT, { recursive: true })
+// For a still, create the containing directory if the path names one - and
+// nothing at all if it does not, or `still.png` becomes a directory.
+const dir = STILL ? (OUT.includes('/') ? OUT.replace(/\/[^/]*$/, '') : null) : OUT
+if (dir) fs.mkdirSync(dir, { recursive: true })
 for (const n of (FRAMES ?? Array.from({ length: 100 }, (_, i) => i + 1))) {
   const c = mod.renderFrame(n, (w, h) => createCanvas(w, h))
-  fs.writeFileSync(`${OUT}/boot-${String(n).padStart(4, '0')}.png`, c.encodeSync('png'))
+  const path = STILL ? OUT : `${OUT}/boot-${String(n).padStart(4, '0')}.png`
+  fs.writeFileSync(path, c.encodeSync('png'))
 }
-console.log(`rendered ${(FRAMES ?? { length: 100 }).length} frames to ${OUT}/`)
+console.log(STILL
+  ? `rendered the still (frame 100) to ${OUT}`
+  : `rendered ${(FRAMES ?? { length: 100 }).length} frames to ${OUT}/`)
 console.log(`  wave start ${START} (${(211.1 * START).toFixed(1)}px, tiles reach 168.8px)`)
 console.log(`  fade out at ${FADE1} / ${FADE2} (top edge is 297.8px from the mark centre)`)

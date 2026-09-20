@@ -1,7 +1,49 @@
-# Re-rendering the boot frames
+# Re-rendering the boot screen
 
-`../theme/boot-0001.png` … `boot-0100.png` are produced here, not imported.
-This directory exists because importing them twice produced two wrong sets.
+`../theme/still.png` is produced here, not imported. This directory exists
+because importing the artwork twice produced two wrong sets.
+
+## The boot screen is a still
+
+**George, 2026-09-20**, after three boots of the 100-frame animation:
+*"lets remove the animation and have a still instead ... no rings but the
+faded hallow in the background"*.
+
+```sh
+node render.mjs ../theme/still.png     # the still that ships
+node render.mjs ../theme               # all 100 frames, if the animation ever returns
+```
+
+The still is **frame 100**, pixel-identical to frame 51: the pulse's rest
+state, so it carries the mark, the wordmark, `SOUND` and the faded halo and no
+wavefronts. `01-run.sh` installs that one file as both the plymouth theme's
+image **and** `/usr/share/gexis/panel-background.png`, the compositor's
+wallpaper, and asserts they are identical — so the splash and what is behind
+the compositor cannot be two different pictures.
+
+What it bought beyond being what was asked for: plymouth holds one image
+instead of a hundred, which retires ADR-0043's open question about ~400 MB of
+decompressed frames rather than answering it, and there is no longer a loop
+whose wrap must be pixel-identical or a join that must be invisible.
+
+**Not** a dramatically smaller initramfs, though it was claimed as one before
+it was measured. Across the four rebuilds of 2026-09-20:
+
+| theme directory | `initramfs8` |
+|---|---|
+| 4.1 MB, the `c77d4e3` frames | 21,671,242 |
+| 3.3 MB, re-rendered frames | 20,905,271 |
+| 2.8 MB, wavefronts faded | 20,018,347 |
+| **40 KB, the still** | **18,507,411** |
+
+2.8 MB off an 18.5 MB image whose bulk is kernel modules — worth having, not
+worth citing as a reason.
+
+**The animation is still renderable and is not built.** Everything below
+describes it, and the three constants still matter to the still because the
+still is one of its frames — but the wavefront numbers now only affect frames
+that nothing ships. Deleting the ability to rebuild the sequence would make
+going back an import, and importing is what produced two wrong sets.
 
 ## Why this is not an import
 
