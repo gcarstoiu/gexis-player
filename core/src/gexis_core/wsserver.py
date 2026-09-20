@@ -29,6 +29,7 @@ from pathlib import Path
 
 from aiohttp import web
 
+from gexis_core import discovery, wifi
 from gexis_core.adapters.base import TRANSPORT_COMMANDS
 from gexis_core.artistinfo import PHOTO_LARGE, PHOTO_THUMB
 from dataclasses import replace
@@ -264,6 +265,7 @@ class StateServer:
             ("new", False, None): lambda: library.new_music(),
             ("artists", False, None): lambda: library.artists(offset, limit),
             ("artists", True, "albums"): lambda: library.artist_albums(item_id),
+            ("artists", True, "genres"): lambda: library.artist_genres(item_id),
             ("albums", True, None): lambda: library.album(item_id),
             ("playlists", False, None): lambda: library.playlists(),
             ("playlists", True, None): lambda: library.playlist(item_id, offset, limit),
@@ -528,6 +530,77 @@ class StateServer:
 
         return self._settings_call(run)
 
+    #: Where a `list` row's items come from (ADR-0044 §1's first open
+    #: question, answered for two of the three in 9d). Bluetooth's trusted
+    #: devices join this table in 9f; until then that row has no source and
+    #: says so through its own empty state rather than through an error.
+    LIST_SOURCES = ("wifi", "lms_server")
+
+    async def _list_row(self, request: web.Request):
+        """The `list` row named in the path, or a response explaining why
+        there is none."""
+        if self._settings is None:
+            return None, web.json_response({"error": "settings are not wired up"}, status=503)
+        key = request.match_info["key"]
+        try:
+            row = self._settings.row(key)
+        except UnknownSetting:
+            return None, web.json_response({"error": f"unknown setting {key}"}, status=404)
+        if row["type"] != "list":
+            return None, web.json_response({"error": f"{key} is not a list"}, status=405)
+        if key not in self.LIST_SOURCES:
+            # A real list with nothing behind it yet. Empty, not broken.
+            return None, web.json_response({"items": []})
+        return key, None
+
+    async def _handle_list_items(self, request: web.Request) -> web.Response:
+        key, refusal = await self._list_row(request)
+        if refusal is not None:
+            return refusal
+        if key == "wifi":
+            if not wifi.available():
+                return web.json_response({"items": [], "error": "NetworkManager is not available"})
+            return web.json_response({"items": await wifi.scan()})
+        # A discovered server is named by its address, because that is what
+        # the setting stores; the human name is the line underneath.
+        current = str(self._settings.value("lms_server") or "")
+        items = []
+        for server in await discovery.find_servers():
+            meta = " · ".join(part for part in (server["name"], server["version"]) if part)
+            items.append(
+                {
+                    "name": server["address"],
+                    "meta": meta or "Lyrion server",
+                    "bars": None,
+                    "state": "current" if server["address"] == current else "found",
+                }
+            )
+        return web.json_response({"items": items})
+
+    async def _handle_list_action(self, request: web.Request) -> web.Response:
+        key, refusal = await self._list_row(request)
+        if refusal is not None:
+            return refusal
+        try:
+            body = await request.json()
+            name = body["name"]
+            action = body.get("action", "join")
+        except (ValueError, KeyError, TypeError):
+            return web.json_response({"error": 'body must be {"name": ..., "action": ...}'}, status=400)
+        if key != "wifi":
+            return web.json_response({"error": f"{key} has no per-item action"}, status=405)
+        if not wifi.available():
+            return web.json_response({"error": "NetworkManager is not available"}, status=503)
+        if action == "forget":
+            ok, error = await wifi.forget(name)
+        elif action == "join":
+            ok, error = await wifi.join(name, body.get("password") or None)
+        else:
+            return web.json_response({"error": f"unknown action {action}"}, status=400)
+        # A refused password is not a broken request: the answer is 200 with
+        # the reason, because the sheet shows it and offers to try again.
+        return web.json_response({"ok": ok, "error": error})
+
     @staticmethod
     def _settings_call(call) -> web.Response:
         try:
@@ -563,6 +636,8 @@ class StateServer:
         app.router.add_get("/settings", self._handle_settings)
         app.router.add_put("/settings/{key}", self._handle_setting_write)
         app.router.add_post("/settings/{key}", self._handle_setting_action)
+        app.router.add_get("/settings/{key}/items", self._handle_list_items)
+        app.router.add_post("/settings/{key}/items", self._handle_list_action)
         app.router.add_get("/radio", self._handle_radio)
         app.router.add_post("/radio/play", self._handle_radio_play)
         app.router.add_get("/library/artist-photos", self._handle_artist_photos)

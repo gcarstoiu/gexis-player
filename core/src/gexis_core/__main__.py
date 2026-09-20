@@ -12,7 +12,7 @@ from pathlib import Path
 
 import aiohttp
 
-from gexis_core import alsa
+from gexis_core import alsa, wifi
 from gexis_core.adapters.base import VolumeMechanism
 from gexis_core.adapters.bluetooth import BluetoothAdapter
 from gexis_core.adapters.lms import LmsAdapter
@@ -20,6 +20,8 @@ from gexis_core.library import LmsLibrary
 from gexis_core.radio import RadioBrowser
 from gexis_core.adapters.spotify import SpotifyAdapter
 from gexis_core.arbitration import Supervisor
+from dataclasses import replace
+
 from gexis_core.config import Config
 from gexis_core.idle_page import probe as probe_idle_page
 from gexis_core.metadata_file import MetadataFileWriter
@@ -133,6 +135,45 @@ def make_restore_volume(config: Config, volume_memory: RendererVolumeMemory, vol
     return restore_volume
 
 
+def _chosen_server(config: Config, store: SettingsStore) -> Config:
+    """`config`, with `lms_server` applied if one was chosen and is usable.
+
+    A stored value that cannot be read as host:port is ignored with a log
+    line rather than taking the daemon down on the next boot - the settings
+    DB is user-writable and a bad value there must not brick the player.
+    """
+    chosen = store.get("lms_server")
+    if not chosen:
+        return config
+    host, _, port = str(chosen).rpartition(":")
+    try:
+        config = replace(config, lms_host=host or str(chosen), lms_port=int(port))
+    except ValueError:
+        logger.warning("settings: ignoring lms_server %r: not host:port", chosen)
+        return config
+    logger.info("settings: lms_server chosen, using %s:%s", config.lms_host, config.lms_port)
+    return config
+
+
+async def _set_timezone(zone: str) -> None:
+    """`timedatectl`, which moves /etc/localtime and tells the clock. The
+    daemon is root on this image, so there is no polkit prompt to answer."""
+    process = await asyncio.create_subprocess_exec(
+        "timedatectl", "set-timezone", zone,
+        stdout=asyncio.subprocess.DEVNULL, stderr=asyncio.subprocess.PIPE,
+    )
+    _, err = await process.communicate()
+    if process.returncode:
+        logger.warning("timezone: %s", err.decode("utf-8", "replace").strip())
+    else:
+        logger.info("timezone: set to %s", zone)
+
+
+async def _reboot() -> None:
+    logger.info("reboot: requested from settings")
+    await asyncio.create_subprocess_exec("systemctl", "reboot")
+
+
 def read_timezone(localtime: Path = Path("/etc/localtime")) -> str | None:
     # The /etc/localtime link is what the clock uses; /etc/timezone can be
     # stale (timedatectl updates only the link).
@@ -152,6 +193,15 @@ async def main() -> None:
     # proves the DB file and schema actually come up clean on the image.
     settings_store = SettingsStore()
     logger.info("settings: store ready at %s", settings_store.path)
+
+    # A server chosen from the Settings sheet (ADR-0044 §1's `kind: server`)
+    # wins over the deployment's own address - but only from here, at
+    # startup. Moving a running daemon to another server means dropping a
+    # CometD subscription, re-resolving the player and re-arbitrating; that
+    # is its own piece of work and its own record. **So the write is stored
+    # and the switch happens on the next start**, which is what the panel
+    # says when a server is picked.
+    config = _chosen_server(config, settings_store)
 
     lms = LmsAdapter(config.lms_host, config.lms_port, config.lms_player_name)
     spotify = SpotifyAdapter(config.go_librespot_host, config.go_librespot_port)
@@ -317,12 +367,18 @@ async def main() -> None:
             "idle_url": lambda: config.idle_url or None,
             "device_name": socket.gethostname,
             "timezone": read_timezone,
+            "wifi": wifi.connected_ssid,
         },
         # Wired = something reads it (ADR-0035). The token is read on every
         # Popular lookup, so it takes effect as soon as it is typed.
+        # Wired = something reads it, or something happens. `lms_server` is
+        # read at the next start (see `_chosen_server`); `timezone` and
+        # `reboot` act at once.
         wired={"idle_url": None, "idle_timeout": None, "drawer_on_external": None,
                "drawer_autohide": None, "listenbrainz_token": None,
-               "fanart_key": None},
+               "fanart_key": None, "lms_server": None,
+               "timezone": lambda zone: asyncio.ensure_future(_set_timezone(zone)),
+               "reboot": lambda _: asyncio.ensure_future(_reboot())},
         on_change=state_store.bump_settings_revision,
     )
 

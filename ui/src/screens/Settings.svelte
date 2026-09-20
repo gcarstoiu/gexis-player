@@ -7,7 +7,15 @@
 -->
 <script>
   import { onMount } from 'svelte';
-  import { settingsGroups, settingsError, loadSettings, writeSetting } from '../lib/settings.js';
+  import {
+    settingsGroups,
+    settingsError,
+    listAction,
+    listItems,
+    loadSettings,
+    runSetting,
+    writeSetting,
+  } from '../lib/settings.js';
 
   // On the panel, Settings is a layer over the library and Back closes it
   // (source/Now Playing.dc.html passes the design's onBack). A phone has
@@ -23,17 +31,100 @@
   let cat = $state(null);
   let drilled = $state(null);
   let sheetKey = $state(null);
+  // A full-screen chooser instead of a sheet, for a choice too large for
+  // 560px (ADR-0044 §5). Holds the row's key, like `sheetKey`.
+  let pickerKey = $state(null);
+  // A list's labelled escape into typing (ADR-0044 §1's `manual`).
+  let manual = $state(false);
+  // A warned option that has been selected and not yet committed
+  // (ADR-0044 §2). Null whenever nothing is being held back.
+  let choicePending = $state(null);
+  // A list's items, and whether they have been looked for yet (ADR-0044 §1).
+  // A Wi-Fi scan and an LMS broadcast both take seconds, so `searching` is a
+  // real state rather than a courtesy: showing "nothing found" before the
+  // search has finished would be a different claim from the true one.
+  let items = $state([]);
+  let searching = $state(false);
+  let listError = $state(null);
+  // The network being joined, and how that is going.
+  let joinItem = $state(null);
+  let join = $state(null);
+  let joinError = $state(null);
+  // The first level of a grouped choice - the time zone's region.
+  let region = $state(null);
   let toast = $state(null);
   let toastTimer;
 
+  // Every group the API serves, filtered by nothing: `rowOf` and `valueOf`
+  // read the whole inventory, including rows the screen never draws.
   const groups = $derived($settingsGroups);
   const loadError = $derived($settingsError);
   const wide = $derived((width || 1280) >= WIDE_MIN);
-  const current = $derived(groups.find((g) => g.id === (wide ? (cat ?? groups[0]?.id) : drilled)) ?? null);
+  // What the screen has: each group's drawable rows, and no group left
+  // holding none of them. Every System row is `surfaced: false` after
+  // George parked that category on 2026-09-20, so the design's six
+  // categories are what remains of the registry's seven.
+  const categories = $derived(
+    groups
+      .map((g) => ({ ...g, rows: drawable(g.rows) }))
+      .filter((g) => g.rows.some((r) => r.type !== 'group'))
+  );
+  const current = $derived(
+    categories.find((g) => g.id === (wide ? (cat ?? categories[0]?.id) : drilled)) ?? null
+  );
   const rows = $derived(current?.rows ?? []);
   const deviceName = $derived(valueOf('device_name') ?? 'gexis');
-  const build = $derived(valueOf('image_build'));
-  const sheet = $derived(sheetKey ? rowOf(sheetKey) : null);
+  const sheet = $derived(sheetKey ? asSheet(rowOf(sheetKey)) : null);
+  const picker = $derived(pickerKey ? rowOf(pickerKey) : null);
+
+  // ADR-0044 §3 and §6: the API publishes every row and says of each whether
+  // it belongs on the screen - `surfaced: false` permanently, `onlyWhen`
+  // conditionally, and the second is transitive. The rule lives in the
+  // registry, where it is tested once; here the panel only obeys it.
+  //
+  // A subhead whose whole section went with it goes too: a separator over
+  // nothing announces a section that is not there.
+  function drawable(all) {
+    const kept = all.filter((r) => r.type === 'group' || r.visible !== false);
+    return kept.filter((r, i) => r.type !== 'group' || (kept[i + 1] !== undefined && kept[i + 1].type !== 'group'));
+  }
+
+  // Typing an address is the same sheet a text row gets, on the same key -
+  // not a second setting. A network's password is the same again: one sheet
+  // pattern for every piece of text this screen takes.
+  function asSheet(row) {
+    if (!row) return row;
+    if (joinItem) {
+      return {
+        ...row,
+        type: 'text',
+        label: joinItem.name,
+        note: 'Enter the network password.',
+        placeholder: 'Network password',
+        secret: true,
+        confirm: 'Join',
+        wired: true,
+      };
+    }
+    if (!manual) return row;
+    return {
+      ...row,
+      type: 'text',
+      note: 'Host and port, for a server discovery cannot reach.',
+      placeholder: '192.168.1.10:9000',
+      confirm: 'Save',
+    };
+  }
+
+  // A grouped choice is two short lists rather than one long one: the zone
+  // list is every zone this system knows, and `Europe/Berlin` splits at the
+  // slash. Level one is the regions, level two the places in one of them.
+  const grouped = $derived(sheet?.grouped ? (sheet.options ?? []) : []);
+  const regions = $derived([...new Set(grouped.map((o) => o.split('/')[0]))].sort());
+  const places = $derived(
+    region === null ? [] : grouped.filter((o) => o.split('/')[0] === region)
+  );
+  const placeLabel = (option) => option.split('/').slice(1).join('/').replace(/_/g, ' ');
 
   function rowOf(key) {
     for (const g of groups) for (const r of g.rows) if (r.key === key) return r;
@@ -65,15 +156,42 @@
   }
 
   const MINUS = '−';
+  const BULLETS = '••••••••••';
+
+  // One formatter for the row and the sheet, so a threshold does not read
+  // "1.00 s" on one and "1 s" on the other: decimals follow the step, and a
+  // word unit is spaced where % is not.
+  function numeral(value, step) {
+    const s = step ?? 1;
+    if (s >= 1) return String(Math.round(value));
+    // Snapping to the step in floating point leaves 0.30000000000000004
+    // where 0.3 was meant; two places is past every step the registry has.
+    return String(Number((Math.round(value / s) * s).toFixed(2)));
+  }
+  function withUnit(text, unit) {
+    if (!unit) return text;
+    return unit === '%' ? `${text}${unit}` : `${text} ${unit}`;
+  }
   function shown(row) {
     const v = row.value;
     if (row.type === 'toggle') return '';
+    // "Not set" is derived from an empty value, never stored as one, so it
+    // can never be pre-filled into the field and saved as the real thing. A
+    // secret that is set reports only that, never the value (ADR-0044).
+    if (row.type === 'text') return !v ? 'Not set' : row.secret ? BULLETS : String(v);
+    if (row.type === 'list') {
+      // A server list reads out which one is in use; a device list counts
+      // what it holds. The design takes the count in both cases, which loses
+      // the connected network's name on the Wi-Fi row - recorded in
+      // docs/findings/042 §7 as one more place its prose and its literal
+      // disagree.
+      if (v) return String(v);
+      const n = (row.items ?? []).length;
+      return n ? `${n} paired` : 'None';
+    }
     if (v === null || v === undefined) return row.type === 'action' ? '' : '—';
     if (row.type === 'number') {
-      const n = row.step && row.step < 1 ? Number(v).toFixed(2) : String(v);
-      const text = n.replace('-', MINUS);
-      if (!row.unit) return text;
-      return row.unit === '%' ? `${text}%` : `${text} ${row.unit}`;
+      return withUnit(numeral(Number(v), row.step).replace('-', MINUS), row.unit);
     }
     return String(v);
   }
@@ -92,13 +210,36 @@
 
   function tap(row) {
     if (row.type === 'toggle') write(row, !row.value);
+    // 84 visual things cannot be chosen from a 560px list, so a `picker` row
+    // opens full screen instead of a sheet (ADR-0044 §5).
+    else if (row.picker) pickerKey = row.key;
     else openSheet(row);
+  }
+
+  async function chooseRegion(name) {
+    region = name;
   }
 
   async function choose(option) {
     const row = sheet;
+    if (String(row.value) === option) {
+      // Back to what is stored. With something held back that is a change of
+      // mind, not a choice, so the sheet stays open and lets go of it.
+      if (choicePending !== null) {
+        choicePending = null;
+        return;
+      }
+      sheetKey = null;
+      return;
+    }
+    // ADR-0044 §2: a warned option is selected first and committed second.
+    // The warning is the whole point of the mechanic and "turn your
+    // amplifier down before confirming" cannot be said after the write.
+    if (row.warn?.[option]) {
+      choicePending = option;
+      return;
+    }
     sheetKey = null;
-    if (String(row.value) === option) return;
     if (await write(row, option)) flash(`${row.label}: ${option}`);
   }
 
@@ -106,7 +247,114 @@
 
   function openSheet(row) {
     sheetKey = row.key;
+    manual = false;
+    choicePending = null;
+    joinItem = null;
+    join = null;
+    joinError = null;
+    items = [];
+    listError = null;
+    // A grouped choice opens on the region the current value is in, so the
+    // zone in use is one tap away rather than two.
+    region = row.grouped ? String(row.value ?? '').split('/')[0] || null : null;
+    if (region !== null && !String(row.value ?? '').includes('/')) region = null;
     draft = row.type === 'text' ? (row.value ?? '') : row.type === 'number' ? (row.value ?? row.min) : null;
+    if (row.type === 'list') openList(row.key);
+  }
+
+  //: Fetched per opening, never cached: a scan is a picture of the room now.
+  //: The key is captured so a slow answer cannot land in a sheet that has
+  //: since been closed or replaced.
+  async function openList(key) {
+    searching = true;
+    listError = null;
+    const answer = await listItems(key);
+    if (sheetKey !== key) return;
+    items = answer.items;
+    listError = answer.error;
+    searching = false;
+  }
+
+  async function command(body, done) {
+    const key = sheetKey;
+    const answer = await listAction(key, body);
+    if (sheetKey !== key) return answer;
+    done(answer);
+    return answer;
+  }
+
+  async function doJoin(name, password) {
+    join = 'connecting';
+    joinError = null;
+    await command({ name, action: 'join', password: password ?? null }, (answer) => {
+      if (!answer.ok) {
+        join = 'error';
+        joinError = answer.error;
+        return;
+      }
+      join = 'ok';
+      setTimeout(() => {
+        if (join !== 'ok') return;
+        closeSheet();
+        flash(`Joined ${name}`);
+      }, 1300);
+    });
+  }
+
+  async function doForget(item) {
+    const key = sheetKey;
+    await command({ name: item.name, action: 'forget' }, (answer) => {
+      flash(answer.ok ? `${item.name} forgotten` : (answer.error ?? 'Could not forget it'));
+      if (answer.ok) openList(key);
+    });
+  }
+
+  function enterManual() {
+    manual = true;
+    draft = String(rowOf(sheetKey)?.value ?? '');
+  }
+
+  async function chooseItem(item) {
+    const row = rowOf(sheetKey);
+    if (!row) return;
+    // Choosing a server is a write; joining a network is a command. The row
+    // that stores a value and the row that performs one are the same type,
+    // and `kind` is what tells them apart (ADR-0044 §1).
+    if (row.kind === 'server') {
+      closeSheet();
+      // Tapping the server already in use says "that one", so the sheet
+      // closes and nothing is written.
+      if (String(row.value ?? '') === item.name) return;
+      // The daemon reads this at the next start: moving a running player to
+      // another server means dropping its subscription, re-resolving the
+      // player and re-arbitrating. Said plainly rather than left to be
+      // discovered.
+      if (await write(row, item.name)) flash(`${row.label} set — restart to use it`);
+      return;
+    }
+    if (item.state === 'connected') return;
+    if (item.state === 'locked') {
+      joinItem = item;
+      draft = '';
+      return;
+    }
+    doJoin(item.name, null);
+  }
+
+  // '06G5_McIntosh' reads as 06 / McIntosh: the ordinal is how the corpus is
+  // organised and the only way to scan a list that long. The stored value
+  // stays the whole section name (ADR-0044 §4).
+  const ORDINAL = /^(\d+)G5_(.*)$/;
+  function parts(name) {
+    const m = ORDINAL.exec(String(name));
+    return m ? { ord: m[1], label: m[2] } : { ord: '', label: String(name) };
+  }
+
+  async function pick(name) {
+    const row = picker;
+    pickerKey = null;
+    if (String(row.value) === name) return;
+    if (await write(row, name)) flash(`${row.label}: ${parts(name).label}`);
   }
 
   async function saveNumber() {
@@ -117,9 +365,39 @@
 
   async function confirmSheet() {
     const row = sheet;
+    // A failed attempt returns to the field with the password still in it.
+    if (join === 'error') {
+      join = null;
+      joinError = null;
+      return;
+    }
+    if (joinItem) {
+      doJoin(joinItem.name, draft);
+      return;
+    }
+    // The escape out of a discovery list: type the address. It changes what
+    // the sheet is, so it happens before anything is written.
+    if (row.type === 'list' && row.manual) {
+      enterManual();
+      return;
+    }
+    // A warned option waited for this tap, and it is a write like any other.
+    if (choicePending !== null) {
+      const option = choicePending;
+      choicePending = null;
+      sheetKey = null;
+      if (await write(row, option)) flash(`${row.label}: ${option}`);
+      return;
+    }
     if (!row.wired) {
       sheetKey = null;
       flash(`${row.label} — not wired yet`);
+      return;
+    }
+    if (row.type === 'action') {
+      sheetKey = null;
+      const result = await runSetting(row.key);
+      if (!result.ok) flash(`${row.label}: ${result.error ?? `HTTP ${result.status}`}`);
       return;
     }
     if (row.type === 'text') {
@@ -128,6 +406,27 @@
         flash(`${row.label} saved`);
       }
     }
+  }
+
+  function closeSheet() {
+    // Inside a level, the same button steps back before it closes.
+    if (joinItem && join !== 'connecting') {
+      joinItem = null;
+      join = null;
+      joinError = null;
+      draft = null;
+      return;
+    }
+    if (region !== null && sheet?.grouped) {
+      region = null;
+      return;
+    }
+    sheetKey = null;
+    choicePending = null;
+    manual = false;
+    joinItem = null;
+    join = null;
+    region = null;
   }
 
   function back() {
@@ -156,9 +455,6 @@
           <div class="subtitle">{deviceName} &nbsp;·&nbsp; {hostOf(deviceName)}</div>
         {/if}
       </div>
-      {#if wide && build}
-        <span class="build">{build}</span>
-      {/if}
     </div>
 
     {#if loadError}
@@ -167,7 +463,7 @@
       <div class="body">
         {#if wide}
           <div class="rail" data-noscrollbar>
-            {#each groups as g (g.id)}
+            {#each categories as g (g.id)}
               <button
                 class="cat"
                 class:is-active={g.id === current?.id}
@@ -184,7 +480,7 @@
 
         {#if !wide && !drilled}
           <div class="list" class:list--wide={wide} data-noscrollbar>
-            {#each groups as g (g.id)}
+            {#each categories as g (g.id)}
               <button class="card" type="button" onclick={() => (drilled = g.id)}>
                 <span class="bar bar--tall" style:background={g.accent}></span>
                 <span class="card__text">
@@ -208,10 +504,17 @@
                   <span class="subhead__rule"></span>
                 </div>
               {:else}
+                <!-- A readonly row takes no tap and draws no chevron: there
+                     is nothing to change, and a chevron promises a sheet that
+                     only repeats the value already on the row. `disabled`
+                     rather than a different element, so the row keeps its
+                     layout and its 44px height. -->
                 <button
                   class="row"
                   class:row--danger={r.danger}
+                  class:row--readonly={r.type === 'readonly'}
                   type="button"
+                  disabled={r.type === 'readonly'}
                   data-unwired={r.wired ? undefined : 'settings'}
                   onclick={() => tap(r)}
                 >
@@ -228,7 +531,7 @@
                     {/if}
                     {#if r.type === 'toggle'}
                       <span class="toggle" class:is-on={!!r.value}><span></span></span>
-                    {:else}
+                    {:else if r.type !== 'readonly'}
                       <span class="chev"></span>
                     {/if}
                   </span>
@@ -241,45 +544,234 @@
     {/if}
   </div>
 
-  <div class="scrim" class:is-open={sheet} role="presentation" onclick={() => (sheetKey = null)}></div>
+  <!-- ADR-0044 §5: a chooser too large for a 560px sheet takes the screen.
+       Tiles are placeholders until skin previews exist. -->
+  {#if picker}
+    <div class="picker">
+      <!-- Its own ground, embedded or not: it covers the rows, so the
+           panel's weave behind the app cannot reach it. -->
+      <div class="weave"></div>
+      <div class="veil"></div>
+      <div class="picker__head" class:head--wide={wide}>
+        <button class="back" type="button" aria-label="Back" onclick={() => (pickerKey = null)}><span></span></button>
+        <div class="head__text">
+          <div class="title" class:title--wide={wide}>{picker.label}</div>
+          <div class="subtitle">{(picker.options ?? []).length} to choose from</div>
+        </div>
+      </div>
+      <div class="tiles" class:tiles--wide={wide} data-noscrollbar>
+        {#each picker.options ?? [] as option (option)}
+          {@const p = parts(option)}
+          {@const chosen = String(picker.value) === option}
+          <button class="tile" class:is-chosen={chosen} type="button" onclick={() => pick(option)}>
+            <span class="tile__art">
+              <span class="tile__dial"></span>
+              <span class="tile__ord">{p.ord}</span>
+              {#if chosen}<span class="tile__check"><span></span></span>{/if}
+            </span>
+            <span class="tile__label">{p.label}</span>
+          </button>
+        {/each}
+      </div>
+    </div>
+  {/if}
+
+  <div class="scrim" class:is-open={sheet} role="presentation" onclick={closeSheet}></div>
 
   {#if sheet}
     <div class="sheet" role="dialog" aria-label={sheet.label}>
       <div class="sheet__head">
-        <div class="sheet__title">{sheet.label}</div>
-        {#if sheet.note}<div class="sheet__note">{sheet.note}</div>{/if}
+        <div class="sheet__title">{sheet.grouped && region !== null ? region : sheet.label}</div>
+        {#if sheet.note && !joinItem}<div class="sheet__note">{sheet.note}</div>{/if}
+        {#if joinItem && sheet.note}<div class="sheet__note">{sheet.note}</div>{/if}
       </div>
 
-      {#if sheet.type === 'choice'}
+      <!-- ADR-0044 §2: a per-option warning, shown once that option is
+           selected and before it is committed. -->
+      {#if choicePending !== null && sheet.warn?.[choicePending]}
+        <div class="warn">
+          <span class="warn__mark">!</span>
+          <span class="warn__text">{sheet.warn[choicePending]}</span>
+        </div>
+      {/if}
+
+      <!-- A grouped choice, level one: the regions. ADR-0044 §4 - two short
+           lists rather than one of several hundred. -->
+      {#if sheet.grouped && region === null}
         <div class="options" data-noscrollbar>
-          {#each sheet.options as option (option)}
+          {#each regions as name (name)}
+            {@const selected = String(sheet.value ?? '').split('/')[0] === name}
+            <button class="option" class:is-selected={selected} type="button" onclick={() => chooseRegion(name)}>
+              <span class="radio"><span></span></span>
+              <span class="option__label">{name.replace(/_/g, ' ')}</span>
+              <span class="chev"></span>
+            </button>
+          {/each}
+        </div>
+      {:else if sheet.grouped}
+        <div class="options" data-noscrollbar>
+          {#each places as option (option)}
             {@const selected = String(sheet.value) === option}
             <button class="option" class:is-selected={selected} type="button" onclick={() => choose(option)}>
               <span class="radio"><span></span></span>
-              <span class="option__label">{option}</span>
+              <span class="option__label">{placeLabel(option)}</span>
+            </button>
+          {/each}
+        </div>
+      {:else if sheet.type === 'choice'}
+        <div class="options" data-noscrollbar>
+          {#each sheet.options ?? [] as option (option)}
+            {@const selected = choicePending !== null ? choicePending === option : String(sheet.value) === option}
+            {@const p = sheet.optionsFrom ? parts(option) : { ord: '', label: option }}
+            <button class="option" class:is-selected={selected} type="button" onclick={() => choose(option)}>
+              <span class="radio"><span></span></span>
+              {#if p.ord}<span class="option__ord">{p.ord}</span>{/if}
+              <span class="option__label">{p.label}</span>
             </button>
           {/each}
         </div>
       {/if}
 
-      {#if sheet.wired && sheet.type === 'number'}
+      <!-- A list is navigation, not a value (ADR-0044 §1): items with a
+           per-item action, and a plain sentence when there are none. Nothing
+           publishes items yet - Wi-Fi needs a scan, Bluetooth a device list,
+           LMS discovery - so today every list opens on its empty state. -->
+      {#if sheet.type === 'list' && searching}
+        <!-- "Nothing found" is only true once the search has finished. -->
+        <div class="scan">
+          <div class="scan__spin"></div>
+          <div>
+            <div class="scan__title">{sheet.kind === 'server' ? 'Searching the network' : 'Looking for networks'}</div>
+            <div class="scan__note">
+              {sheet.kind === 'server'
+                ? 'Servers answer within a few seconds.'
+                : 'The adapter sweeps every channel.'}
+            </div>
+          </div>
+        </div>
+      {:else if sheet.type === 'list'}
+        {#if items.length}
+          <div class="items" data-noscrollbar>
+            {#each items as item (item.name)}
+              {@const joined = item.state === 'connected' || item.state === 'current'}
+              <!-- Only the network in use takes no tap: there is nothing to
+                   join. The server in use still does - tapping the one you
+                   are on is how the sheet is dismissed, and refusing it
+                   leaves the sheet looking stuck (George, on the panel,
+                   2026-09-20). -->
+              {@const inert = item.state === 'connected'}
+              <button
+                class="item"
+                class:is-joined={joined}
+                class:item--static={inert}
+                type="button"
+                disabled={inert}
+                onclick={() => chooseItem(item)}
+              >
+                {#if item.bars}
+                  <span class="bars" class:is-joined={joined}>
+                    {#each [1, 2, 3, 4] as n (n)}
+                      <span class="bars__b" class:is-on={item.bars >= n} style:--i={n}></span>
+                    {/each}
+                  </span>
+                {/if}
+                <span class="item__text">
+                  <span class="item__title">
+                    <span class="item__name">{item.name}</span>
+                    {#if item.state === 'locked'}<span class="lock"><span></span><span></span></span>{/if}
+                  </span>
+                  {#if item.meta}<span class="item__meta" class:is-joined={joined}>{item.meta}</span>{/if}
+                </span>
+                {#if item.state === 'saved'}
+                  <!-- **Saved only, never the network in use.** Forgetting
+                       the one the device is reachable over drops the daemon
+                       with it, from a screen that may itself be the phone on
+                       that network. The row for the connected network is
+                       also `disabled`, and a browser suppresses clicks
+                       inside a disabled button - so a Forget drawn there
+                       would look live and do nothing.
+
+                       A `span`, not a `button`: a button inside a button is
+                       invalid and the inner one never gets the tap. -->
+                  <span
+                    class="forget"
+                    role="button"
+                    tabindex="0"
+                    onclick={(e) => { e.stopPropagation(); doForget(item); }}
+                    onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); doForget(item); } }}
+                  >Forget</span>
+                {:else if item.state === 'locked'}
+                  <span class="item__need">Password needed</span>
+                {/if}
+              </button>
+            {/each}
+            {#if sheet.hint}<div class="items__hint">{sheet.hint}</div>{/if}
+          </div>
+        {:else}
+          <div class="empty">
+            <span class="empty__ring"></span>
+            <span class="empty__text">{listError ?? sheet.empty ?? 'Nothing here yet.'}</span>
+          </div>
+        {/if}
+      {/if}
+
+      <!-- Joining takes real seconds and can fail, so the sheet reports the
+           attempt rather than closing and leaving the outcome unsaid. -->
+      {#if join}
+        <div class="joining">
+          <div class="joining__mark" data-state={join}>
+            {#if join === 'connecting'}<span class="joining__spin"></span>{/if}
+            {#if join === 'ok'}<span class="joining__tick"></span>{/if}
+            {#if join === 'error'}<span class="joining__bang"></span>{/if}
+          </div>
+          <div class="joining__text">
+            <div class="joining__title" data-state={join}>
+              {join === 'connecting' ? `Joining ${joinItem?.name ?? ''}` : join === 'ok' ? 'Connected' : 'Could not join'}
+            </div>
+            <div class="joining__note">
+              {join === 'connecting'
+                ? 'Checking the password and getting an address.'
+                : join === 'ok'
+                  ? 'This network is saved and will reconnect on its own.'
+                  : (joinError ?? 'The password was not accepted.')}
+            </div>
+          </div>
+        </div>
+      {/if}
+
+      {#if join === 'connecting' || join === 'ok'}
+        <!-- Nothing to type into while the attempt is running. -->
+      {:else if sheet.wired && sheet.type === 'number'}
+        {@const pct = ((Number(draft) - sheet.min) / (sheet.max - sheet.min)) * 100}
         <div class="editor">
+          <div class="editor__read">
+            <span class="editor__n">{numeral(Number(draft), sheet.step).replace('-', MINUS)}</span>
+            {#if sheet.unit}<span class="editor__unit">{sheet.unit}</span>{/if}
+          </div>
           <input
             class="range"
             type="range"
             min={sheet.min}
             max={sheet.max}
             step={sheet.step ?? 1}
+            style:--pct="{Math.min(100, Math.max(0, pct))}%"
             bind:value={draft}
             onchange={saveNumber}
             aria-label={sheet.label}
           />
-          <span class="editor__value">{shown({ ...sheet, value: Number(draft) })}</span>
+          <div class="editor__ends">
+            <span>{withUnit(String(sheet.min).replace('-', MINUS), sheet.unit)}</span>
+            <span>{withUnit(String(sheet.max).replace('-', MINUS), sheet.unit)}</span>
+          </div>
         </div>
       {:else if sheet.wired && sheet.type === 'text'}
+        <!-- The panel and the phone take the same input; a panel without a
+             keyboard attached reads every setting and changes every one that
+             is not text (ADR-0044). -->
         <input
           class="field"
-          type="text"
+          type={sheet.secret ? 'password' : 'text'}
+          placeholder={sheet.placeholder ?? ''}
           bind:value={draft}
           autocomplete="off"
           autocapitalize="off"
@@ -290,16 +782,41 @@
         <div class="sheet__value">{shown(sheet)}</div>
       {/if}
 
+      {#if join !== 'connecting' && join !== 'ok'}
       <div class="sheet__actions">
-        <button class="btn" type="button" onclick={() => (sheetKey = null)}>
-          {sheet.type === 'choice' || (sheet.wired && sheet.type === 'number') ? 'Close' : 'Cancel'}
+        <button class="btn" type="button" onclick={closeSheet}>
+          {#if join === 'error'}
+            Give up
+          {:else if joinItem || (sheet.grouped && region !== null)}
+            Back
+          {:else if choicePending === null && (sheet.type === 'choice' || sheet.grouped || (sheet.wired && sheet.type === 'number'))}
+            Close
+          {:else}
+            Cancel
+          {/if}
         </button>
-        {#if sheet.type === 'action' || sheet.type === 'text' || (sheet.type === 'number' && !sheet.wired)}
-          <button class="btn btn--confirm" class:btn--danger={sheet.danger} type="button" onclick={confirmSheet}>
-            {sheet.confirm ?? (sheet.type === 'action' ? 'Continue' : sheet.wired ? 'Save' : 'Edit')}
+        {#if join === 'error' || joinItem || choicePending !== null || sheet.type === 'action' || sheet.type === 'text' || (sheet.type === 'number' && !sheet.wired) || (sheet.type === 'list' && sheet.manual && !searching)}
+          <button
+            class="btn btn--confirm"
+            class:btn--danger={sheet.danger || choicePending !== null}
+            type="button"
+            onclick={confirmSheet}
+          >
+            {#if join === 'error'}
+              Try again
+            {:else if joinItem}
+              Join
+            {:else if choicePending !== null}
+              {sheet.confirm ?? 'Confirm'}
+            {:else if sheet.type === 'list'}
+              {sheet.manual}
+            {:else}
+              {sheet.confirm ?? (sheet.type === 'action' ? 'Continue' : sheet.wired ? 'Save' : 'Edit')}
+            {/if}
           </button>
         {/if}
       </div>
+      {/if}
     </div>
   {/if}
 
@@ -413,14 +930,6 @@
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-  }
-  .build {
-    font-family: var(--font-mono);
-    font-size: 12px;
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
-    color: rgba(233, 238, 242, 0.6);
-    flex-shrink: 0;
   }
 
   .error {
@@ -549,6 +1058,11 @@
     color: rgba(233, 238, 242, 0.55);
     margin-top: 6px;
   }
+  /* Not dimmed: the value is the point of the row and stays fully legible.
+     Only the affordance goes. */
+  .row--readonly { opacity: 1; }
+  .row--readonly:active { transform: none; }
+
   .chev {
     width: 11px;
     height: 11px;
@@ -810,37 +1324,501 @@
     color: rgba(233, 238, 242, 0.9);
     word-break: break-all;
   }
-  /* Not in the design yet: number and text editing (design/settings.md
-     describes them, Settings.dc.html does not draw them). */
+  /* The 2026-09-20 drop draws both, where the one before it only described
+     them: a reading above the travel, not beside it. The track is a real
+     range input rather than the design's pointer maths - same geometry,
+     and it keeps the keyboard and the accessible name. */
   .editor {
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+  }
+  .editor__read {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+  }
+  .editor__n {
+    font-family: var(--font-mono);
+    font-size: 38px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    line-height: 1;
+  }
+  .editor__unit {
+    font-family: var(--font-mono);
+    font-size: 17px;
+    color: rgba(233, 238, 242, 0.6);
+  }
+  .range {
+    width: 100%;
+    height: 56px;
+    margin: 0;
+    background: none;
+    -webkit-appearance: none;
+    appearance: none;
+    touch-action: none;
+  }
+  .range::-webkit-slider-runnable-track {
+    height: 14px;
+    border-radius: 999px;
+    background: linear-gradient(
+      to right,
+      var(--accent-lms) 0 var(--pct),
+      rgba(233, 238, 242, 0.13) var(--pct) 100%
+    );
+  }
+  .range::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 34px;
+    height: 34px;
+    margin-top: -10px;
+    border-radius: 50%;
+    background: var(--ink);
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.45);
+  }
+  .editor__ends {
+    display: flex;
+    justify-content: space-between;
+    font-family: var(--font-mono);
+    font-size: 13px;
+    letter-spacing: 0.1em;
+    color: rgba(233, 238, 242, 0.6);
+  }
+  /* ADR-0044 §2 - a warning the choice holds back until the option is
+     chosen, in the same amber the danger rows use. */
+  .warn {
+    flex-shrink: 0;
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    padding: 16px 18px;
+    border-radius: 14px;
+    background: rgba(224, 167, 88, 0.12);
+    border: 1px solid rgba(224, 167, 88, 0.42);
+  }
+  .warn__mark {
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    background: var(--accent-warn);
+    color: var(--bg-panel);
+    font-weight: 700;
+    font-size: 17px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+  .warn__text {
+    flex: 1;
+    min-width: 0;
+    font-size: 15px;
+    line-height: 1.45;
+    text-wrap: pretty;
+  }
+  .option__ord {
+    flex-shrink: 0;
+    width: 34px;
+    font-family: var(--font-mono);
+    font-size: 14px;
+    letter-spacing: 0.06em;
+    color: rgba(233, 238, 242, 0.5);
+  }
+
+  /* ADR-0044 §1 - a list's items. */
+  .items {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .item {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    min-height: 66px;
+    padding: 12px 18px;
+    border-radius: 14px;
+    background: rgba(255, 255, 255, 0.045);
+    border: 1px solid rgba(233, 238, 242, 0.1);
+  }
+  .item:active {
+    transform: scale(0.95);
+  }
+  .item.is-joined {
+    background: rgba(126, 214, 188, 0.12);
+    border-color: rgba(126, 214, 188, 0.34);
+  }
+  /* A list whose items have no command behind them yet reads and does not
+     act, so it takes no tap and gives no press feedback either. */
+  .item--static:active {
+    transform: none;
+  }
+  .bars {
+    width: 26px;
+    height: 20px;
+    display: flex;
+    align-items: flex-end;
+    gap: 3px;
+    flex-shrink: 0;
+  }
+  .bars__b {
+    width: 4px;
+    height: calc(2px + var(--i) * 4px);
+    border-radius: 1px;
+    background: rgba(233, 238, 242, 0.2);
+  }
+  .bars__b.is-on {
+    background: rgba(233, 238, 242, 0.82);
+  }
+  .bars.is-joined .bars__b.is-on {
+    background: var(--accent-lms);
+  }
+  .item__text {
+    flex: 1;
+    min-width: 0;
+  }
+  .item__title {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+  }
+  .item__name {
+    font-size: 17px;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .lock {
+    width: 13px;
+    height: 15px;
+    position: relative;
+    flex-shrink: 0;
+  }
+  .lock span:first-child {
+    position: absolute;
+    left: 0;
+    bottom: 0;
+    width: 13px;
+    height: 9px;
+    border-radius: 2px;
+    background: rgba(233, 238, 242, 0.6);
+  }
+  .lock span:last-child {
+    position: absolute;
+    left: 3px;
+    top: 0;
+    width: 7px;
+    height: 8px;
+    border: 2px solid rgba(233, 238, 242, 0.6);
+    border-bottom: none;
+    border-radius: 4px 4px 0 0;
+  }
+  .item__meta {
+    display: block;
+    font-family: var(--font-mono);
+    font-size: 13px;
+    letter-spacing: 0.04em;
+    margin-top: 4px;
+    color: rgba(233, 238, 242, 0.6);
+  }
+  .item__meta.is-joined {
+    color: var(--accent-lms);
+  }
+  .items__hint {
+    flex-shrink: 0;
+    font-family: var(--font-mono);
+    font-size: 13px;
+    line-height: 1.5;
+    letter-spacing: 0.02em;
+    color: rgba(233, 238, 242, 0.6);
+    padding: 14px 4px 2px;
+    text-wrap: pretty;
+  }
+  .forget {
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    height: 44px;
+    padding: 0 18px;
+    border-radius: 12px;
+    background: rgba(224, 167, 88, 0.14);
+    border: 1px solid rgba(224, 167, 88, 0.4);
+    font-family: var(--font-mono);
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--accent-warn);
+  }
+  .forget:active {
+    transform: scale(0.95);
+  }
+  .item__need {
+    flex-shrink: 0;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: rgba(233, 238, 242, 0.6);
+    max-width: 150px;
+    text-align: right;
+    text-wrap: pretty;
+  }
+
+  /* The search, while it is running. */
+  .scan {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 14px 4px;
+  }
+  .scan__spin,
+  .joining__spin {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    box-sizing: border-box;
+    border: 3px solid rgba(233, 238, 242, 0.14);
+    border-top-color: var(--accent-lms);
+    animation: setSpin 900ms linear infinite;
+    flex-shrink: 0;
+  }
+  @keyframes setSpin {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+  .scan__title {
+    font-size: 17px;
+    font-weight: 600;
+  }
+  .scan__note {
+    font-size: 14px;
+    color: rgba(233, 238, 242, 0.6);
+    margin-top: 4px;
+    text-wrap: pretty;
+  }
+
+  /* The attempt: running, joined, refused. */
+  .joining {
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 18px;
+    padding: 12px 0 4px;
+  }
+  .joining__mark {
+    width: 64px;
+    height: 64px;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .joining__mark[data-state='ok'] {
+    background: rgba(126, 214, 188, 0.16);
+    border: 1px solid rgba(126, 214, 188, 0.45);
+  }
+  .joining__mark[data-state='error'] {
+    background: rgba(224, 167, 88, 0.16);
+    border: 1px solid rgba(224, 167, 88, 0.45);
+  }
+  .joining__spin {
+    width: 64px;
+    height: 64px;
+  }
+  .joining__tick {
+    width: 22px;
+    height: 12px;
+    border-left: 3px solid var(--accent-lms);
+    border-bottom: 3px solid var(--accent-lms);
+    transform: rotate(-45deg);
+    margin-top: -4px;
+  }
+  .joining__bang {
+    width: 4px;
+    height: 30px;
+    border-radius: 2px;
+    background: var(--accent-warn);
+  }
+  .joining__text {
+    text-align: center;
+  }
+  .joining__title {
+    font-size: 19px;
+    font-weight: 700;
+  }
+  .joining__title[data-state='ok'] {
+    color: var(--accent-lms);
+  }
+  .joining__title[data-state='error'] {
+    color: var(--accent-warn);
+  }
+  .joining__note {
+    font-size: 15px;
+    line-height: 1.4;
+    color: rgba(233, 238, 242, 0.6);
+    margin-top: 7px;
+    text-wrap: pretty;
+  }
+
+  .empty {
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+    padding: 34px 20px;
+  }
+  .empty__ring {
+    width: 58px;
+    height: 58px;
+    border-radius: 50%;
+    border: 2px dashed rgba(233, 238, 242, 0.28);
+  }
+  .empty__text {
+    font-size: 16px;
+    line-height: 1.45;
+    color: rgba(233, 238, 242, 0.62);
+    text-align: center;
+    text-wrap: pretty;
+    max-width: 36ch;
+  }
+
+  /* ADR-0044 §5 - the full-screen picker. */
+  .picker {
+    position: absolute;
+    inset: 0;
+    z-index: 30;
+    background: var(--bg-base);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  .picker__head {
+    position: relative;
     flex-shrink: 0;
     display: flex;
     align-items: center;
     gap: 18px;
+    padding: 14px 18px;
+    min-height: 78px;
+    border-bottom: 1px solid rgba(233, 238, 242, 0.09);
   }
-  .range {
+  .picker__head.head--wide {
+    padding: 0 36px;
+    min-height: 92px;
+  }
+  .tiles {
+    position: relative;
     flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    padding: 14px 16px 30px;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 20px 16px;
+    align-content: start;
+  }
+  .tiles--wide {
+    padding: 26px 36px 36px;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 20px;
+  }
+  .tile {
     min-width: 0;
-    height: 44px;
-    accent-color: var(--accent-lms);
+    display: block;
+    text-align: left;
   }
-  .editor__value {
+  .tile:active {
+    opacity: 0.7;
+  }
+  .tile__art {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    aspect-ratio: 16 / 10;
+    border-radius: 14px;
+    overflow: hidden;
+    background: #17242d;
+    border: 2px solid rgba(233, 238, 242, 0.14);
+    background-image: radial-gradient(120% 120% at 30% 20%, rgba(233, 238, 242, 0.08), transparent 70%);
+  }
+  .tile.is-chosen .tile__art {
+    border-color: var(--accent-lms);
+  }
+  .tile__dial {
+    height: 56%;
+    aspect-ratio: 1;
+    border-radius: 50%;
+    border: 2px solid rgba(233, 238, 242, 0.22);
+  }
+  .tile__ord {
+    position: absolute;
+    top: 8px;
+    left: 10px;
     font-family: var(--font-mono);
-    font-size: 20px;
-    font-weight: 600;
-    min-width: 80px;
-    text-align: right;
+    font-size: 12px;
+    letter-spacing: 0.1em;
+    color: rgba(233, 238, 242, 0.5);
   }
+  .tile__check {
+    position: absolute;
+    bottom: 8px;
+    right: 10px;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: var(--accent-lms);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .tile__check span {
+    width: 7px;
+    height: 4px;
+    border-left: 2.5px solid #0d151c;
+    border-bottom: 2.5px solid #0d151c;
+    transform: rotate(-45deg);
+    margin-top: -2px;
+  }
+  .tile__label {
+    display: block;
+    font-size: 15px;
+    font-weight: 600;
+    margin-top: 9px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .tile.is-chosen .tile__label {
+    color: var(--accent-lms);
+  }
+
   .field {
     flex-shrink: 0;
     width: 100%;
-    min-height: 56px;
+    height: 62px;
     border-radius: 14px;
-    background: rgba(8, 12, 16, 0.5);
-    border: 1px solid rgba(126, 214, 188, 0.4);
-    padding: 14px 18px;
+    background: rgba(8, 12, 16, 0.6);
+    border: 1px solid rgba(126, 214, 188, 0.45);
+    padding: 0 18px;
     font-family: var(--font-mono);
-    font-size: 16px;
+    font-size: 17px;
+    letter-spacing: 0.02em;
     color: var(--ink);
     outline: none;
   }
