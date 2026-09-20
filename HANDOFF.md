@@ -69,6 +69,23 @@ exists in a bootable image. Every splash commit post-dates
 has **no splash coverage at all**. Finding 039's "none has been re-verified
 from an image" is more true than when it was written.
 
+**The frames are on the device (2026-09-20), not in an image.** 100 frames
+installed, `panel-background.png` updated, both initramfs images rebuilt and
+verified to contain all 100 with matching checksums; the previous one is kept
+at `/boot/firmware/initramfs8.pre-20260920`. **George reboots to check them.**
+The warmup fix (`6ea718d`) is committed and deliberately **not** deployed —
+frames first, one change at a time.
+
+**A claim in `06-splash/02-run-chroot.sh` was withdrawn on 2026-09-20.** It
+asserted "Raspberry Pi OS ships `update_initramfs=no`". The device reads
+`yes`, its md5 is byte-identical to the conffile `initramfs-tools` shipped,
+and `dpkg.log` records no upgrade since the flash — so it has never been
+edited. **Why the 2026-09-19 build saw a rebuild that did nothing is
+unexplained again.** Claude read the comment as fact, asked George to
+approve "restoring" the device to `no` on that basis, made the change and
+reverted it once the conffile md5 was checked. The device is back to the
+shipped state.
+
 **Three build-side hazards found by the survey, none fixed:**
 `49b79c6` changed `systemctl enable gexis-splash-backstop.service` → `.timer`
 without a `disable` or an `rm`, and `01-run.sh` still installs the service
