@@ -132,7 +132,24 @@ edit) with the 07:58 section: **the captured text is identical and ends in
 the same place.** The console change altered where console text would land,
 not what is produced.
 
-## 4. The console — not answered
+## 4. The console — answered by George, not by the logs
+
+> **Resolved 2026-09-20.** Asked where on the screen it was, George: **"a
+> couple of lines at the bottom"**. That is candidate 1 below — the echoed
+> cursor-position replies sitting in tty1's buffer — and it rules out
+> candidates 2 and 3. **It is not systemd output, not a getty, and not an
+> earlier boot.** The section below is left as written, because the reasoning
+> that narrowed it to three is what made one observation sufficient, and
+> because it records that the logs alone could not have got there.
+>
+> **What it means for the fix.** The text is revealed for the whole of D1 and
+> is covered the moment anything draws. So ADR-0043's amendment part 1 (the
+> rest frame surviving the handover) removes it, and part 3 (D1 ≤ 2.0 s)
+> shortens it — **neither needs the emitter identified**. What still wants
+> finding, separately and at leisure, is what writes `ESC[6n` to tty1 after
+> the clear; the likeliest source is systemd's own terminal handling for
+> `TTYPath=/dev/tty1` with `TTYReset=yes`, `TTYVHangup=yes` and
+> `PAMName=login` on `gexis-kiosk.service`.
 
 **`console=tty3` was already in effect on the boot George is complaining
 about.** The previous boot was 22:27; `cmdline.txt`'s hand edit is timestamped
@@ -187,12 +204,9 @@ restart rather than a boot.
 
 ## 5. What else the boot says
 
-- **`gexis-panel-warmup` ran straight through D1.** 10.70 → 33.06 s: 7.4 s
-  after labwc was exec'd and 1.5 s after Chromium. Its own comment says
-  warming after the kiosk starts is pointless and competing.
-  `Before=gexis-kiosk.service` with `Type=simple` orders the *start*, not the
-  *finish*. **Whether it causes any of labwc's 3.9 s of silence is not
-  established** — one boot, no control run.
+- **`gexis-panel-warmup` warms the wrong things, in the wrong order** — see
+  §7, measured after the rest of this finding was written. It is the
+  strongest explanation D1 has.
 - **Everything is gated behind a network the panel does not need.**
   `gexis-kiosk` → `gexis-core` → `network-online.target` →
   `NetworkManager-wait-online`, 5.996 s, directly on `critical-chain`.
@@ -220,3 +234,82 @@ restart rather than a boot.
 - **Nothing here was re-verified from an image.** Finding 039's statement
   still holds, and the device is now further from the newest artefact than it
   was: `cmdline.txt` and `initramfs8` were both changed by hand after it.
+
+---
+
+## 7. Addendum, same day — what labwc spends D1 on
+
+**Added 2026-09-20 after George accepted the amendment and chose to start by
+shrinking D1.** Same device, same boot's logs, plus `/proc/PID/maps` read
+from the labwc that is running now.
+
+### Two hypotheses died first, and they are worth recording
+
+1. **"The warmup is reading Chromium and starving labwc's libraries."**
+   Plausible and wrong as stated: `ldd /usr/bin/labwc` is 83 shared objects
+   totalling **4 MB**, which at the warmup's own measured 21.6 MB/s is 0.2 s.
+   Nowhere near 3.6 s.
+2. **"`gexis-meter` is spamming the journal through D1."** It logs
+   `cannot open /tmp/peppymeter` in a tight cluster at 27.0 s, which looked
+   like ~30 Hz. Counted: **10 lines in the entire boot.** Not a factor.
+
+Both were checked before being reported, and both would have been confident
+wrong answers.
+
+### What labwc actually maps
+
+`ldd` is the wrong instrument, and that is the whole point: Mesa is
+**`dlopen`'d**, so it does not appear in the binary's link-time
+dependencies. From the running compositor's own address space:
+
+| mapped by labwc | size | in the warmup's list? |
+|---|---|---|
+| `libLLVM.so.19.1` | **117 MB** | no |
+| `libgallium-26.2.2-…so` | **49 MB** | no |
+| `libz3.so.4` | **25 MB** | no |
+| `librsvg-2.so.2.60.0` | 5 MB | no |
+| `/usr/bin/labwc` | 0.5 MB | yes |
+
+`vc4_dri.so` and `v3d_dri.so` are both symlinks into `libdril_dri.so`, and
+Gallium pulls in LLVM as its shader compiler, which pulls in z3. **~196 MB,
+none of it warmed**, read off the SD card at exactly the moment labwc starts
+— while the warmup is concurrently reading Chromium's 482 MB through the
+same card at idle I/O priority.
+
+### And the order was backwards
+
+```
+WARM=( /usr/lib/chromium  /usr/bin/labwc  /usr/bin/swaybg )
+```
+
+Chromium is 482 MB and came **first**. The warmup ran 10.70 → 33.06 s and
+logged one line, `warmed 483MB`, so essentially the whole window went on
+Chromium; `/usr/bin/labwc` was read at the very end, **7.4 s after labwc had
+started and 1.5 s after Chromium had**. The compositor is needed at ~25 s and
+Chromium at ~32 s, and the list had them the other way round.
+
+`Before=gexis-kiosk.service` with `Type=simple` orders the warmup's *start*,
+not its *finish*, so nothing prevented the overlap.
+
+### What was changed
+
+`gexis-panel-warmup` now warms the compositor's set first — labwc, swaybg,
+the Mesa/LLVM/z3 libraries above by glob, and `dri/` — then Chromium. Budget
+raised 600 → 700 MB because 198 + 482 = 681 and truncating either set is
+worse than 100 MB of page cache. Verified on the device: every glob matches,
+and unmatched globs stay literal and are skipped by the existing `-e` test.
+
+It also now logs one line per target, so **the next boot's journal states
+whether the compositor's set finished before `gexis-kiosk` started** instead
+of leaving it to be inferred, which is what this finding had to do.
+
+### What this still does not establish
+
+**Nothing here has been booted.** ~196 MB of cold reads at a contended
+21.6 MB/s is ~9 s of I/O if every page were touched, and these are
+demand-paged mappings so not every page is — which means this explains
+labwc's 3.6 s comfortably but does not predict what D1 becomes. **The claim
+is "the warmup was warming the wrong things in the wrong order", which is
+measured. The claim "fixing it shrinks D1" is not, until a boot says so.**
+One boot, no control run, and D1's length also tracks
+`NetworkManager-wait-online`, which is not held constant between reboots.

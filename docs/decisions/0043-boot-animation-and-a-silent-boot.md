@@ -195,7 +195,8 @@ has run it. In particular:
 
 ## Amendment, 2026-09-20 — the handover is ten seconds, not a seam
 
-**Status: Proposed.** Needs George. Nothing below is implemented.
+**Status: Accepted — George, 2026-09-20**, who also chose the order: start
+by shrinking D1. Parts 1 and 2 are not implemented.
 **Raised by:** George, 2026-09-20: *"The main aim is to have a continuous
 animation until the player takes over (the white flash is fine for now)."*
 **Evidence:** [Finding 041](../findings/041-the-ten-seconds-with-no-animation.md)
@@ -258,14 +259,19 @@ beats. This turns "continuous" into something measurable.
 Getting there means taking ~4 s off labwc's start-up. Three candidates, none
 yet established as a cause:
 
-- **`gexis-panel-warmup` runs straight through D1** — 10.70 → 33.06 s, which
-  is 7.4 s after labwc was exec'd, reading 483 MB off the same SD card labwc
-  is reading. `Before=gexis-kiosk.service` with `Type=simple` orders the
-  *start*, not the *finish*. Its own comment says warming after the kiosk
-  starts is pointless and competing.
+- ~~**`gexis-panel-warmup` runs straight through D1.**~~ **Measured
+  2026-09-20 and changed** (Finding 041 §7). It warmed Chromium's 482 MB
+  first and `/usr/bin/labwc` last, 7.4 s after labwc had started — and
+  `/usr/bin/labwc` is 515 KB, while what labwc actually reads is `dlopen`'d
+  and so invisible to `ldd`: `libLLVM` 117 MB, `libgallium` 49 MB, `libz3`
+  25 MB, ~196 MB in all, none of it warmed. The list now warms the
+  compositor's set first and logs one line per target. **Whether that
+  shrinks D1 is unmeasured until a boot says so.**
 - **3.6 s of D1 produces no log output from anything at all** (27.91 →
-  31.50 s). Nobody has looked at what labwc is doing there.
+  31.50 s). The ~196 MB above is the candidate explanation and is not yet
+  confirmed as the whole of it.
 - **~2.0 s before labwc's first line** is PAM, logind and the user manager.
+  Untouched.
 
 **If D1 ≤ 2.0 s turns out to be unreachable, the fallback is to say so and
 accept a held frame**, rather than to add machinery that hides it.
@@ -305,12 +311,16 @@ re-read rather than patched.
 
 ### Still open after this
 
-- **The console George reported is not explained.** `console=tty3` was
-  already live on the boot he is complaining about. Finding 041 §4 ranks
-  three candidates and records that the evidence for the strongest of them
-  was destroyed during the session. **It needs George: where on the screen
-  was it, or twenty seconds of phone video.** This amendment does not assume
-  the answer, and parts 1 and 2 are worth doing whichever it turns out to be.
+- ~~**The console George reported is not explained.**~~ **Answered
+  2026-09-20**, by George looking at it rather than by any log: *"a couple of
+  lines at the bottom"*. It is the echoed cursor-position replies
+  (`^[[1;1R^[[50;160R`) sitting in tty1's buffer, revealed for the whole of
+  D1 — not systemd output, not a getty, not an earlier boot (Finding 041 §4).
+  **Part 1 removes it and part 3 shortens it, neither of which needs the
+  emitter identified.** What writes `ESC[6n` to tty1 after the clear is a
+  separate and unhurried question; the likeliest source is systemd's own
+  terminal handling for `TTYPath=/dev/tty1` with `TTYReset=yes`,
+  `TTYVHangup=yes` and `PAMName=login`.
 - **Whether `systemd.show_status=false` should stay.** It is overridden every
   boot by plymouthd's `SIGRTMIN+20`, so it is doing nothing; what keeps that
   text off the panel is plymouth's interception and `console=tty3`
