@@ -235,19 +235,48 @@ animation resume the instant a compositor exists.
 
 ### Decision, in three parts
 
-**1. D1 shows the animation's rest frame, not black and not a console.**
-`quit --retain-splash` is supposed to do this and the evidence says it does
-not: no `plymouthd-fd-escrow` process existed on the 2026-09-20 boot although
-the binary ships at `/usr/libexec/plymouth/plymouthd-fd-escrow`, and George
-watched the screen go straight to black on 2026-09-19. Either escrow is made
-to work, or `gexis-kiosk.service` writes the rest frame to the display itself
-before quitting plymouth. **Which of the two is not decided here** — it needs
-the escrow failure diagnosed first, and diagnosing it is cheap.
+**1. D1 shows the boot screen, not black and not a console. BUILT
+2026-09-20.** `quit --retain-splash` was supposed to do this and does not.
+Rather than diagnose the escrow, `gexis-kiosk.service` writes the image
+itself, via `gexis-splash-fb`:
 
-**2. D2 animates.** `swaybg` showing `boot-0100.png` is replaced by a client
-that plays the pulse loop (frames 51–100) from the moment labwc is up until
-`POST /panel/painted`, then exits. The pulse is a closed loop whose wrap is
-pixel-identical, so it can start on any frame and stop on any frame.
+| step | what | why in this order |
+|---|---|---|
+| `ExecStartPre` | `printf "\033c" > /dev/tty1` | kept as the fallback if the helper is missing |
+| `ExecStartPre` | `gexis-splash-fb graphics` | `KD_GRAPHICS` stops the console being drawn **at all** |
+| `ExecStartPre` | `plymouth quit --retain-splash` | plymouth is DRM master and must go before labwc |
+| `ExecStartPre` | `gexis-splash-fb paint …` | the boot screen into the framebuffer |
+| `ExecStopPost` | `gexis-splash-fb text` | so a **failed** boot looks failed |
+
+**This also answers the console**, and differently from every previous
+attempt: `KD_GRAPHICS` removes the possibility of console output rather than
+racing to clear what is already there. The `\033c` clear loses that race
+about half the time, which is why George saw `160R` on some boots and not
+others.
+
+**Three things were measured on the device first**, because each would have
+sunk it:
+
+- **The framebuffer is the scanout when no DRM master holds the device.** A
+  2,048,000-byte write to `/dev/fb0` reads back byte-identical and George
+  confirmed the image reaches the panel. An earlier `/dev/fb0` capture read
+  black 45 times out of 45 and was discarded as a blind instrument — it was
+  blind only because labwc held the device throughout.
+- **tty1 is already `KD_GRAPHICS` for the whole uptime**, put there by labwc.
+  This moves the start of that state ~5 s earlier; it does not introduce it.
+- **A `KD_GRAPHICS` set with no compositor persists indefinitely.** Nothing
+  reclaims it, which is why `ExecStopPost` exists rather than trusting
+  systemd's `TTYReset=yes`.
+
+**What it does not do: cover all of D1.** The painted image holds until labwc
+modesets, and where that falls inside labwc's ~5 s start-up is unmeasured.
+
+**2. ~~D2 animates.~~ Overtaken 2026-09-20 — D2 is no longer a
+discontinuity.** This said `swaybg`'s still should be replaced by a client
+playing the pulse loop. George then removed the animation entirely, so the
+splash and the wallpaper are one file and D2 shows the same image as D1.
+There is nothing left to animate and no seam to hide. The layer-shell client
+this proposed is not built and is not wanted.
 
 **3. The target is D1 ≤ 2.0 s, and the reason is the artwork, not the
 clock.** The pulse is a beat followed by a genuine rest, 2.0 s long. A held
