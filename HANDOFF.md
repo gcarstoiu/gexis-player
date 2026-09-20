@@ -1,7 +1,8 @@
 # Handoff
 
 Last updated: 2026-09-20 (twenty-first session, on R2D2 — **the boot screen
-is a still; kernel phase halved; D1 is the only gap left and needs George**)
+is a still; two of three flashes accounted for, one unexplained; paused by
+George**)
 
 ## Start here
 
@@ -10,50 +11,67 @@ is closed, the UI sweep (step 2) is George's and has not happened, and the
 performance target (step 3) is unmet. PR #22 merged an intermediate slice on
 2026-09-19 at George's request.
 
-**The boot screen is a still and the handover is closed; two flashes remain,
-both compositor start-up.** George, 2026-09-20, watching a boot: *"There were
-3 black screen flashes ... The white flash is gone. No console text."*
-[Finding 041 §9](docs/findings/041-the-ten-seconds-with-no-animation.md)
-locates all three and closes one.
+**The boot screen is a still; two of three flashes are accounted for and one
+is not.** George stopped the session here: *"This is taking too much effort.
+Let's keep it as is ... record the findings and come back to it later."*
+[Finding 041](docs/findings/041-the-ten-seconds-with-no-animation.md) §§8–10.
 
 ```
-0 → 2.6s     black      firmware, kernel, initramfs
-2.6 → 24.7   the still  plymouth, from the initramfs
-24.7         handover   1.3ms uncovered (was 480ms)
-24.9 → 27.5  BLACK      labwc holds DRM, nothing drawn yet   (F2, 2.1s)
-27.5 → 32.4  the still  swaybg, the same file
-32.4 → 33.9  BLACK      Chromium mapped, not yet painted     (F3, 1.5s)
-33.9         the player
+0 → 2.6s     black        firmware, kernel, initramfs
+2.6 → 25.9   boot screen  plymouth, from the initramfs
+25.9         handover     10ms uncovered (was 480ms)
+25.9 → 28.3  boot screen  the framebuffer paint
+28.3 → 28.4  BLACK        F2, 0.15s, labwc's modeset
+28.4 → 32.8  boot screen  swaybg, the same file
+32.8 → 34.2  BLACK        F3, ~1.4s, Chromium
+34.2         the player
 ```
 
-**The still halved the kernel phase** (5.3 s → 2.6 s): plymouth runs in the
-initramfs and was decompressing 100 PNGs at start-up. ADR-0043's ~400 MB
-open question, surfacing as time.
+**PICK THIS UP FIRST: George reports three flashes, two are accounted for.**
+A diagnostic was prepared and not run — one boot with `swaybg` showing plain
+red instead of the boot screen, which makes every transition unambiguous and
+places the missing flash relative to the compositor's first draw in one look.
+Cheap, and it needs George's eyes because nothing on the device can see the
+panel (`/dev/fb0` reads black whenever a DRM master holds the device).
 
-**`gexis-splash-fb` closes the plymouth handover.** `KD_GRAPHICS` (which kills
-the `160R` console text outright rather than racing a VT clear), decode while
-plymouth still draws, quit, write — one process. **Plymouth renders through
-DRM, not fbdev**, so a framebuffer write before the quit does nothing; the
-live test that authorised the approach had no DRM master and so answered a
-different question.
+**F3, ~1.4s, is the only large one left.** Finding 039 §5's parked overlay is
+the fix and is simpler for a still: a layer-shell surface above Chromium,
+removed on `POST /panel/painted`. **Needs George** — it adds something that
+covers the panel and must be told to go away. **F2, 0.15s, may be
+irreducible**: nothing can draw between labwc attaching an empty buffer and
+its first client committing a frame, because no client exists yet.
 
-**The warmup reorder is confirmed by measurement, not inferred.** Bracketed
-inside labwc's own log lines, so boot variance cannot reach it: Mesa's load
-**1.88 s → 0.24 s**, which took F2 from 3.9 s to 2.1 s.
+**Two corrections that matter more than the fixes**, both now in
+`docs/LESSONS.md` (cases 6–8):
 
-**F2 cannot be covered, only shortened.** Once labwc holds DRM master nothing
-else reaches that screen, and labwc 0.20.1 has no root-colour option. The
-residual 1.8 s is labwc between EGL being ready and its session script; nobody
-has looked inside it. **F3 needs George** — Finding 039 §5's parked overlay
-applies directly and is simpler for a still, but it introduces something that
-covers the panel and must be told to go away.
+- **F2 was reported at 3.9s, then 2.1s. It is 0.15s.** It was bracketed from
+  labwc's `Initializing DRM backend`, on the assumption that the screen
+  blanks when labwc takes the GPU. It does not — labwc runs for ~1.4s with
+  the previous image still up, and blanks only at `Attaching empty buffer to
+  output for modeset`. Wrong by ~8×, in the direction that made it look
+  unfixable. The log line naming the blank was always there; the grep was
+  written from the hypothesis.
+- **The framebuffer approach was authorised by a test with no DRM master.**
+  The kiosk was stopped for it, so fbdev *was* the scanout. At boot plymouth
+  holds DRM, so the paint-before-quit wrote where nobody was looking and
+  removed none of the flashes it was written for.
 
-**AWAITING GEORGE, and bigger than either flash: `cloud-init` costs 6.0 s**
-directly on `critical-chain` ahead of `gexis-core` and therefore of the
-kiosk, on an image whose `image/config` sets `ENABLE_CLOUD_INIT=0`. pi-gen's
-stage only skips its boot-partition templates, not the package.
+**`reuseOutputMode` was tried and reverted.** `labwc-config(5)` calls it
+"flicker free boot", but A/B on the device says it does not prevent the
+modeset: 0.271s with, 0.150s without, and both log `Modesetting with
+1280x800 @ 59.493 Hz`.
 
-**Three build-side hazards found by the survey, none fixed:****Three build-side hazards found by the survey, none fixed:****ADR-0041 — scrims dim but do not blur** is the substantial result of step 1.
+**Still the largest available win, and not a flash: `cloud-init` costs ~6s**
+on `critical-chain` ahead of `gexis-core` and so of the kiosk, on an image
+whose `image/config` sets `ENABLE_CLOUD_INIT=0` — pi-gen's stage only skips
+its boot-partition templates, not the package.
+
+**The device runs what is committed, all of it hand-installed. All
+diagnostics were removed** (the `labwc -d` drop-in, the red wallpaper,
+`reuseOutputMode`), and the wallpaper was verified byte-identical to the
+splash still again.
+
+**Three build-side hazards found by the survey, none fixed:****Three build-side hazards found by the survey, none fixed:****Three build-side hazards found by the survey, none fixed:****ADR-0041 — scrims dim but do not blur** is the substantial result of step 1.
 `backdrop-filter` costs 24.5 ms a frame in draw-and-submit against a 16.7 ms
 budget with the CPU idle; the compositor reads the live screen back every
 frame, which is a tile-based GPU's worst case

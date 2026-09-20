@@ -7,7 +7,7 @@ recognised faster next time, rather than rediscovered as a surprise.
 
 ## The check ran against the wrong reality
 
-Three instances so far, same shape each time: the check ran against
+Eight instances so far, same shape each time: the check ran against
 something that *resembled* the thing being tested, closely enough that
 the difference was invisible in the result. Not a broken check — a check
 answering a different question than the one asked, confidently.
@@ -76,11 +76,61 @@ now include what must be true of the *running* system** — the `Conflicts=`
 line must be present, `default.target` must not be written — expressed as
 checks the build *can* make about a property it cannot observe.
 
+**6. A live test run with the contended resource free** (boot splash,
+2026-09-20). The plan was to hold the boot screen across the gap between
+plymouth releasing the GPU and labwc drawing, by writing the image into
+`/dev/fb0`. Before building it, the write was tested on the device and George
+confirmed the image reached the panel — so the approach was authorised on
+evidence.
+
+The test stopped `gexis-kiosk` first, so **nothing held DRM master**. That is
+the one condition under which fbdev *is* the scanout. At boot plymouth holds
+DRM master, and a write to `/dev/fb0` then lands in a buffer nobody is
+scanning out. The resulting "paint before the quit as well as after" removed
+zero of the three flashes it was written to remove, and George had to report
+that before anyone looked again.
+
+The check answered *"does writing the framebuffer work on an idle device"*.
+The question was *"does it work on a booting one"*. An idle device was a
+plausible substitute and the difference was invisible in the result.
+
+**7. Measuring an interval from the wrong end of it** (same session). The
+black gap after plymouth was reported to George as 3.9s, then 2.1s, bracketed
+from labwc's `Initializing DRM backend` to `swaybg` drawing — on the reasoning
+that the screen must go black the moment labwc takes the GPU. It does not.
+labwc holds the device for ~1.6s doing EGL and output setup **while the
+previous image is still on the panel**, and only blanks it at
+`Attaching empty buffer to output for modeset`, 0.15s before `swaybg` draws.
+
+The number was wrong by about 8x, in the direction that made the problem look
+structural and unfixable, and an optimisation (the page-cache warm-up) was
+justified partly by shortening a window that was not black. **The event that
+bounds an interval has to be observed, not inferred from what ought to cause
+it** — the log line naming the blank existed the whole time and was never
+grepped for, because the grep was written from the hypothesis.
+
+**8. A comment in this repository standing in for the device** (same
+session). `06-splash/02-run-chroot.sh` asserted "Raspberry Pi OS ships
+`update_initramfs=no`". The device reads `yes`, and its md5 is byte-identical
+to the conffile `initramfs-tools` shipped, so it had never been edited.
+The comment was read as fact, presented to George as *device drift*, and he
+approved "restoring" a value that was never lost — so the change introduced
+drift rather than removing it. It was reverted when the conffile checksum was
+finally compared, which is one command
+(`dpkg-query -W -f='${Conffiles}' initramfs-tools`).
+
+Two things generalise. **A claim in our own documentation is not evidence
+about the device**, however confidently it is written and however recently.
+And **asking George to approve an action on a premise he cannot check makes
+him a rubber stamp**: the premise has to be verified before the question is
+put, not after he says yes.
+
 ## Common shape
 
 Every case had a *plausible* substitute for the real target — the build
 host's filesystem for the booted one, one run for the distribution, a
-local ref for the remote, the kernel's OOM killer for any killer — and the
+local ref for the remote, the kernel's OOM killer for any killer, an idle
+device for a booting one, a comment for the machine it describes — and the
 check quietly accepted the substitute. None of these failed loudly. Each
 produced an answer that looked like a normal result, not an error.
 

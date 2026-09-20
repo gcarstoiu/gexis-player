@@ -268,8 +268,12 @@ sunk it:
   reclaims it, which is why `ExecStopPost` exists rather than trusting
   systemd's `TTYReset=yes`.
 
-**What it does not do: cover all of D1.** The painted image holds until labwc
-modesets, and where that falls inside labwc's ~5 s start-up is unmeasured.
+**What it does not do: cover all of D1** — but far less is left than this
+record said. **Corrected 2026-09-20 (Finding 041 §10):** the painted image
+holds until labwc *modesets*, which is ~1.4 s after labwc takes DRM master,
+not at the moment it takes it. The residual black is **0.15 s**, not the
+2.1 s reported here earlier and not the 3.9 s before that. `handover`
+measures 10 ms uncovered.
 
 **2. ~~D2 animates.~~ Overtaken 2026-09-20 — D2 is no longer a
 discontinuity.** This said `swaybg`'s still should be replaced by a client
@@ -278,8 +282,20 @@ splash and the wallpaper are one file and D2 shows the same image as D1.
 There is nothing left to animate and no seam to hide. The layer-shell client
 this proposed is not built and is not wanted.
 
-**3. The target is D1 ≤ 2.0 s, and the reason is the artwork, not the
-clock.** The pulse is a beat followed by a genuine rest, 2.0 s long. A held
+**3. ~~The target is D1 ≤ 2.0 s.~~ Met, and by measurement rather than by
+work — 2026-09-20.** D1 turned out to be 0.15 s once it was bracketed from
+the event that actually blanks the screen rather than from labwc acquiring
+the GPU (Finding 041 §10). The target is satisfied and the reasoning below is
+kept because it is still the right way to think about a *held* frame.
+
+**What remains is not D1.** George reports three black flashes; two are
+accounted for (0.15 s at labwc's modeset, ~1.4 s at Chromium's first paint)
+and the third is unexplained. `reuseOutputMode`, which labwc's own manual
+calls "flicker free boot", was A/B'd and reverted: it does not prevent the
+modeset.
+
+**3 (original reasoning). The target is D1 ≤ 2.0 s, and the reason is the
+artwork, not the clock.** The pulse is a beat followed by a genuine rest, 2.0 s long. A held
 rest frame is *indistinguishable from the animation between beats* — until
 the beat that should have come does not. So a gap shorter than one pulse
 period is not perceptible as a stop at all, and one of 5.93 s is three missed

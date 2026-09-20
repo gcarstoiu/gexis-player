@@ -473,3 +473,107 @@ be told to go away.
 directly on `critical-chain` ahead of `gexis-core` and therefore of
 everything, on an image whose `image/config` sets `ENABLE_CLOUD_INIT=0` —
 pi-gen's stage only skips its boot-partition templates, not the package.
+
+---
+
+## 10. Addendum — F2 was measured from the wrong end, and `reuseOutputMode` does nothing
+
+**2026-09-20, closing the session.** George: *"I am still seeing 3 black
+flashes, especially a fraction of a second one in the middle which shows the
+boot screen briefly and then goes black."*
+
+### The correction
+
+§9 put F2 at 2.13 s, bracketed from labwc's `Initializing DRM backend` to
+`swaybg` drawing, on the reasoning that the screen must go black the moment
+labwc takes DRM master. **It does not.** Tracing for the modeset itself —
+a log line that was there all along and was never grepped for, because the
+grep was written from the hypothesis:
+
+```
+26.864  Initializing DRM backend for /dev/dri/card1 (vc4)   <- boot screen STILL UP
+28.272  connector HDMI-A-1: Requesting modeset
+28.272  Attaching empty buffer to output for modeset        <- black starts HERE
+28.305  Modesetting with 1280x800 @ 59.493 Hz
+28.422  gexis-kiosk: compositor ready, swaybg draws         <- black ends
+```
+
+**F2 is 0.150 s, not 2.13 s.** labwc holds the device for ~1.4 s doing EGL
+and output setup *while the framebuffer image is still on the panel*, and
+blanks it only when it attaches an empty buffer.
+
+The error was ~8× and in the direction that made the problem look structural
+and unfixable — "once labwc holds DRM master nothing else can reach the
+screen" is true but irrelevant, because labwc does not blank on acquisition.
+It is now `docs/LESSONS.md` case 7.
+
+**It also weakens §9's attribution of the warm-up.** Mesa's load going
+1.88 s → 0.24 s is measured and real, but it sits *inside* the window where
+the boot screen is still displayed, so it shortened the boot rather than
+shortening a black gap. The warm-up is worth keeping on boot-time grounds;
+it is not a flash fix and §9 implied it was.
+
+### `reuseOutputMode`: tried, measured, reverted
+
+`labwc-config(5)` documents `<core><reuseOutputMode>` as *"may prevent
+unnecessary screenblank delays when starting labwc (also known as flicker
+free boot)"*, which reads like exactly this problem. A/B on the device, one
+boot each:
+
+| | modeset → `swaybg` draws |
+|---|---|
+| `reuseOutputMode=yes` | 0.271 s |
+| `reuseOutputMode=no` (default, control) | **0.150 s** |
+
+**It does not prevent the modeset.** Both boots log `Requesting modeset`,
+`Attaching empty buffer` and `Modesetting with 1280x800 @ 59.493 Hz`. It
+reuses the *mode*, which was already the one plymouth had set, so there was
+nothing to save. Reverted rather than left in the stage as an unjustified
+setting — one boot each is not a distribution, and the difference is the
+wrong sign anyway.
+
+### What is accounted for, and what is not
+
+| | window | measured |
+|---|---|---|
+| plymouth quits → boot screen written | `handover` | **0.010 s** |
+| labwc's modeset → `swaybg` draws | F2 | **0.150 s** |
+| Chromium's scope starts → UI paints | F3 | **1.15–1.46 s** |
+
+**Two flashes are accounted for and George reports three.** The third was not
+found, and inventing a cause for it would be worse than leaving it open. A
+diagnostic was prepared and abandoned when George called the session: one
+boot with `swaybg` showing plain red instead of the boot screen, which makes
+every transition unambiguous and would place the missing flash relative to
+the compositor's first draw in a single look. It is cheap and it is the first
+thing to do when this is picked up again.
+
+### Where it stands
+
+```
+0 → 2.6s     black      firmware, kernel, initramfs
+2.6 → 25.9   boot screen  plymouth, from the initramfs
+25.9         handover     10ms uncovered
+25.9 → 28.3  boot screen  the framebuffer paint - labwc is starting THROUGH this
+28.3 → 28.4  BLACK        F2, 0.15s, labwc's modeset
+28.4 → 32.8  boot screen  swaybg, the same file
+32.8 → 34.2  BLACK        F3, ~1.4s, Chromium
+34.2         the player
+```
+
+**F3 is the only large one left**, and Finding 039 §5's parked overlay is the
+fix — a layer-shell surface showing the same still above Chromium's window,
+removed on `POST /panel/painted`. Not built; it needs George, because it adds
+something that covers the panel and must be told to go away.
+
+**F2 may be irreducible.** Nothing can draw between labwc attaching an empty
+buffer and its first client committing a frame, because no client exists yet.
+0.15 s is roughly nine frames at 59.5 Hz.
+
+### Device state at the end of the session
+
+All diagnostics removed: the `labwc -d` drop-in, the red `swaybg` wallpaper
+(restored, and verified byte-identical to the splash still again), and
+`reuseOutputMode`. The device runs what is committed, installed by hand.
+**Still true and still the largest risk: none of it has ever been built into
+an image**, and `image/verify-image.sh` has no splash coverage at all.
