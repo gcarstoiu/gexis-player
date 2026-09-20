@@ -18,7 +18,7 @@ The 2026-09-20 package is pixel-identical to `2d446d5`, frame for frame,
 despite a changelog describing it as the correction for it. So neither
 delivered set is usable, and the frames in `../theme/` are rendered here from
 `frame.js` — Claude Design's own renderer, which arrived in that package —
-with one constant changed.
+with three constants changed.
 
 ## The three constants
 
