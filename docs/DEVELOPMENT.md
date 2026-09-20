@@ -1538,11 +1538,30 @@ undecided, and nothing else depends on it.
    *Gate: the panel, screen by screen. **This is where the items Finding 042
    §8 admits it missed will surface**, and George judges them there.*
 
-4. **9d - The settings vocabulary** (ADR-0044). `list`, `warn`, `onlyWhen`,
-   `optionsFrom`, `picker`, and the flag that keeps a row inventoried but not
-   surfaced. Registry and panel together.
-   *Gates 9e, 9f, 9g and the skin picker. Nothing new is visible; the check
-   is that the existing rows still render.*
+4. **9d - The settings vocabulary, and the Settings screen's appearance**
+   (ADR-0044). `list`, `warn`, `onlyWhen`, `optionsFrom`, `picker`, and
+   `surfaced` - the flag that keeps a row inventoried but not shown. Registry
+   and panel together.
+
+   **The restyle belongs here, added 2026-09-20 at George's question** - the
+   plan had no home for it, and "on the go" is how a screen ends up 80%
+   ported with nobody able to say which 20% is missing. Most of it is
+   inseparable from the mechanics anyway: a `list` row cannot be styled
+   before `list` exists, `onlyWhen` rows cannot be laid out before they can
+   hide, and there is no picker to draw until there is a picker.
+
+   **Run the Settings visual diff before starting.** Finding 042 compared the
+   *inventory* key by key and only three of the screen's visual items;
+   layout, spacing, the two-pane geometry, the sheet and the category cards
+   are unmeasured. One component (908 lines) against one `.dc.html` at two
+   widths - far more bounded than the Library sweep declined on cost. What is
+   known: the type scales already overlap at 12/13/14/15/16/17/18/19/22/25px,
+   the device carries a 20px and a 23px the design does not, and the design a
+   38px the device does not. The gap is probably small, and "probably" is the
+   reason to measure it rather than the reason not to.
+
+   *Gates 9e, 9f, 9g and the skin picker. Acceptance: the existing rows still
+   render, **and the screen matches `Settings.dc.html` at both widths**.*
 
 5. **9e - The device name is the only name.** Wire `device_name` - refused
    today with `HTTP 409 "not wired yet"` - and push it to squeezelite's `-n`,
