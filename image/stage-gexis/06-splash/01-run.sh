@@ -85,6 +85,24 @@ install -D -m 644 files/gexis-splash-backstop.service \
 install -D -m 644 files/gexis-splash-backstop.timer \
 	"${ROOTFS_DIR}/etc/systemd/system/gexis-splash-backstop.timer"
 
+# The helper that holds the boot screen across the gap between plymouth
+# releasing the GPU and labwc drawing (ADR-0043's amendment, part 1). It sets
+# the VT's graphics mode and paints the still into the framebuffer;
+# gexis-kiosk.service calls it from ExecStartPre and puts the console back
+# from ExecStopPost.
+install -D -m 755 files/gexis-splash-fb \
+	"${ROOTFS_DIR}/usr/local/bin/gexis-splash-fb"
+
+# It is Python and it runs in the boot path, so a syntax error would show up
+# as a silently missing boot screen. Compile it here instead.
+if command -v python3 >/dev/null; then
+	python3 -m py_compile "${ROOTFS_DIR}/usr/local/bin/gexis-splash-fb" || {
+		echo "ERROR: gexis-splash-fb does not compile" >&2
+		exit 1
+	}
+	rm -rf "${ROOTFS_DIR}/usr/local/bin/__pycache__"
+fi
+
 # The compositor's wallpaper, for the gap between the splash ending and
 # Chromium's first paint (ADR-0043's Open). `--retain-splash` does not
 # survive labwc's modeset on this hardware - George watched it go straight

@@ -57,13 +57,42 @@ EnvironmentFile=/etc/gexis/kiosk.env
 # refused silently, plymouthd keeps DRM, and labwc fails exactly as before.
 # `-` as well: an image without plymouth, or a boot that never showed a
 # splash, must not stop the panel starting.
-# Clear the VT *before* the splash goes. getty's login prompt is still in
-# tty1's framebuffer, and the moment plymouth quits there is nothing over it
-# until labwc draws - George saw the console appear between the animation
-# and the panel, 2026-09-19. `\033c` is a full terminal reset.
+# The four lines below are ordered, and the order is the whole point. From
+# plymouth releasing the GPU to labwc drawing is 5.0s (Finding 041 section 8),
+# and in that window no compositor exists, so the panel shows the text
+# console - black, and intermittently the echoed cursor-position replies
+# George reported as "something containing 160R".
+#
+# 1. Clear the VT. Kept as the fallback for an image where the helper below
+#    is missing or its ioctl fails; `\033c` is a full terminal reset. On its
+#    own it is a race it loses about half the time, because it clears what is
+#    already there and cannot stop what is written next.
 ExecStartPre=-+/bin/sh -c 'printf "\033c" > /dev/tty1'
+# 2. Stop the console being drawn at all. KD_GRAPHICS removes the
+#    possibility of console output rather than racing it. tty1 is in this
+#    mode for the whole of the rest of the uptime anyway - labwc puts it
+#    there - so this only moves the start of that state ~5s earlier.
+ExecStartPre=-+/usr/local/bin/gexis-splash-fb graphics
+# 3. End plymouth, which is DRM master and must go before labwc can open the
+#    GPU (section 3 above, corrected 2026-09-19). `+` is load-bearing: this
+#    unit runs as User=pi and the plymouth client needs root, and without it
+#    the quit is refused silently and labwc fails exactly as it did before.
 ExecStartPre=-+/bin/plymouth quit --retain-splash
+# 4. Put the boot screen in the framebuffer. This is the same file plymouth
+#    was showing and the same file swaybg shows afterwards, so the handover
+#    is one image throughout rather than two with a hole between them.
+#    Verified on this hardware before it was written: the write reads back
+#    byte-identical and George confirmed it reaches the panel. It holds until
+#    labwc modesets; how much of the 5.0s that covers is not yet measured.
+ExecStartPre=-+/usr/local/bin/gexis-splash-fb paint /usr/share/gexis/panel-background.png
 ExecStart=/usr/bin/labwc -s /usr/local/bin/gexis-kiosk-start
+
+# Put the console back when this unit stops - including when it FAILS.
+# Without it a failed boot sits on the boot screen looking exactly like a
+# slow one, which is a worse failure than a black panel: it hides that
+# anything is wrong. Measured 2026-09-20: a KD_GRAPHICS set with no
+# compositor running persists indefinitely, so nothing reclaims it on its own.
+ExecStopPost=-+/usr/local/bin/gexis-splash-fb text
 
 # Phase 4 criterion 1: "starting on boot, never restarting". Restart=no is
 # the literal reading and the right one - a compositor that respawns in a
