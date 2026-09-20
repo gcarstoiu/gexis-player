@@ -1,6 +1,6 @@
 {
-  "_note": "Landmark geometry measured from source/Now Playing.dc.html at 1280x800. Baseline for verify.html. Re-measure with the procedure in README > Verifying an export whenever the design changes; never edit these numbers to make a check pass. Re-measured after the paused label and artwork veil were removed; the screen grid was unaffected because the label sat inside the meta column.",
-  "_measured": "2026-09-15",
+  "_note": "Landmark geometry measured from source/Now Playing.dc.html at 1280x800. Baseline for verify.html. Re-measure with the procedure in README > Verifying an export whenever the design changes; never edit these numbers to make a check pass. Re-measured 2026-09-20 after the meta tabs went from 13px to 17px, which took the tab row from 44px to 49px. The screen grid, artwork, rail and play control were re-measured at the same time and had not moved. The Track panel header changed too but sits inside the meta column and is not a landmark.",
+  "_measured": "2026-09-20",
   "_tolerance_px": 3,
   "canvas": {
     "w": 1280,
@@ -57,7 +57,7 @@
     ".tabs .tab": {
       "x": 604,
       "y": 28,
-      "h": 44
+      "h": 49
     },
     ".progress__rail": {
       "x": 56,

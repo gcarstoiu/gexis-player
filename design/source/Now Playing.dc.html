@@ -20,6 +20,10 @@
   @keyframes npRise{from{opacity:0;transform:translateY(14px);}to{opacity:1;transform:translateY(0);}}
   @keyframes npSkel{0%,100%{opacity:0.5;}50%{opacity:1;}}
   @keyframes npCaret{0%,49%{opacity:1;}50%,100%{opacity:0;}}
+  @keyframes wxSpin{to{transform:rotate(360deg);}}
+  @keyframes wxDrift{0%,100%{transform:translateX(-3px);}50%{transform:translateX(3px);}}
+  @keyframes wxFall{0%{transform:translateY(-4px);opacity:0;}30%{opacity:1;}100%{transform:translateY(12px);opacity:0;}}
+  @keyframes wxPulse{0%,100%{opacity:0.55;}50%{opacity:1;}}
   @keyframes npRing{0%{transform:scale(0.82);opacity:0.55;}100%{transform:scale(1.75);opacity:0;}}
   @keyframes npFlow{from{background-position:0 0;}to{background-position:22px 0;}}
 </style>
@@ -33,8 +37,8 @@
   <div style="position:absolute;inset:0;background:radial-gradient(130% 105% at 20% 42%,rgba(22,36,46,0.3),rgba(14,23,30,0.86));"></div>
   <div style="position:absolute;left:0;right:0;top:0;height:3px;background:{{ accentBar }}"></div>
 
-  <div style="position:absolute;top:38px;right:56px;z-index:6;display:flex;align-items:center;">
-    <span style="display:inline-flex;align-items:center;gap:9px;background:{{ badgeBg }};border:1px solid {{ badgeBorder }};color:{{ accent }};font-size:13px;font-weight:700;letter-spacing:0.2em;text-transform:uppercase;padding:8px 15px;border-radius:999px;white-space:nowrap;">
+  <div style="position:absolute;top:44px;right:56px;z-index:6;display:flex;align-items:center;">
+    <span style="display:inline-flex;align-items:center;gap:11px;font-family:'IBM Plex Mono','Courier New',monospace;color:{{ accent }};font-size:17px;font-weight:600;letter-spacing:0.16em;text-transform:uppercase;white-space:nowrap;">
       <span style="display:flex;align-items:center;animation:{{ dotAnim }};">{{ badgeIcon }}</span>{{ sourceLabel }}
     </span>
   </div>
@@ -61,22 +65,24 @@
 
       <div style="display:flex;flex-direction:column;min-width:0;">
 
-        <div style="display:flex;align-items:center;gap:26px;flex-shrink:0;align-self:flex-start;margin-bottom:18px;border-bottom:1px solid rgba(233,238,242,0.12);">
-          <span onClick="{{ onMetaPanel }}" style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:13px;font-weight:600;letter-spacing:0.16em;text-transform:uppercase;white-space:nowrap;box-sizing:border-box;padding:16px 2px 9px;margin-top:-16px;border-radius:0;border-bottom:3px solid {{ tabMetaBar }};color:{{ tabMetaInk }};background:{{ tabMetaBg }};" style-active="background:rgba(233,238,242,0.16)">Track</span>
-          <span onClick="{{ onLyrics }}" style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:13px;font-weight:600;letter-spacing:0.16em;text-transform:uppercase;white-space:nowrap;box-sizing:border-box;opacity:{{ lyricsOpacity }};padding:16px 2px 9px;margin-top:-16px;border-radius:0;border-bottom:3px solid {{ tabLyricsBar }};color:{{ tabLyricsInk }};background:{{ tabLyricsBg }};" style-active="background:rgba(233,238,242,0.16)">Lyrics</span>
-          <span onClick="{{ onArtistInfo }}" style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:13px;font-weight:600;letter-spacing:0.16em;text-transform:uppercase;white-space:nowrap;box-sizing:border-box;padding:16px 2px 9px;margin-top:-16px;border-radius:0;border-bottom:3px solid {{ tabArtistBar }};color:{{ tabArtistInk }};background:{{ tabArtistBg }};" style-active="background:rgba(233,238,242,0.16)">Artist</span>
-          <span onClick="{{ onRelease }}" style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:13px;font-weight:600;letter-spacing:0.16em;text-transform:uppercase;white-space:nowrap;box-sizing:border-box;padding:16px 2px 9px;margin-top:-16px;border-radius:0;border-bottom:3px solid {{ tabRelBar }};color:{{ tabRelInk }};background:{{ tabRelBg }};" style-active="background:rgba(233,238,242,0.16)">Release</span>
+        <div style="display:flex;align-items:center;gap:34px;flex-shrink:0;align-self:flex-start;margin-bottom:18px;border-bottom:1px solid rgba(233,238,242,0.12);">
+          <span onClick="{{ onMetaPanel }}" style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:17px;font-weight:600;letter-spacing:0.16em;text-transform:uppercase;white-space:nowrap;box-sizing:border-box;padding:16px 2px 9px;margin-top:-16px;border-radius:0;border-bottom:3px solid {{ tabMetaBar }};color:{{ tabMetaInk }};background:{{ tabMetaBg }};" style-active="transform:scale(0.95)">Track</span>
+          <span onClick="{{ onLyrics }}" style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:17px;font-weight:600;letter-spacing:0.16em;text-transform:uppercase;white-space:nowrap;box-sizing:border-box;opacity:{{ lyricsOpacity }};padding:16px 2px 9px;margin-top:-16px;border-radius:0;border-bottom:3px solid {{ tabLyricsBar }};color:{{ tabLyricsInk }};background:{{ tabLyricsBg }};" style-active="transform:scale(0.95)">Lyrics</span>
+          <span onClick="{{ onArtistInfo }}" style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:17px;font-weight:600;letter-spacing:0.16em;text-transform:uppercase;white-space:nowrap;box-sizing:border-box;padding:16px 2px 9px;margin-top:-16px;border-radius:0;border-bottom:3px solid {{ tabArtistBar }};color:{{ tabArtistInk }};background:{{ tabArtistBg }};" style-active="transform:scale(0.95)">Artist</span>
+          <span onClick="{{ onRelease }}" style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:17px;font-weight:600;letter-spacing:0.16em;text-transform:uppercase;white-space:nowrap;box-sizing:border-box;padding:16px 2px 9px;margin-top:-16px;border-radius:0;border-bottom:3px solid {{ tabRelBar }};color:{{ tabRelInk }};background:{{ tabRelBg }};" style-active="transform:scale(0.95)">Release</span>
         </div>
 
         <div style="margin-top:36px;flex:1;min-height:0;position:relative;">
 
           <sc-if value="{{ panelIsMetaOnly }}" hint-placeholder-val="{{ false }}">
-            <div style="min-height:238px;">
-              <div style="font-size:58px;line-height:1.06;font-weight:700;letter-spacing:-0.015em;text-wrap:pretty;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;min-height:124px;">{{ title }}</div>
-              <div style="margin-top:16px;min-height:38px;"><span onClick="{{ onNpArtist }}" style="font-size:29px;line-height:1.3;font-weight:600;display:inline-block;max-width:100%;padding:7px 0;margin:-7px 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;vertical-align:top;color:#f2a48f;" style-active="color:#f8c4b4">{{ artist }}</span></div>
-              <div style="display:flex;align-items:baseline;gap:12px;margin-top:8px;min-height:26px;">
-                <span style="font-size:19px;line-height:1.35;color:rgba(233,238,242,0.55);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ album }}</span>
-                <span style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:16px;color:rgba(233,238,242,0.42);white-space:nowrap;flex-shrink:0;visibility:{{ yearVisibility }};">{{ year }}</span>
+            <div style="position:absolute;inset:0;display:flex;flex-direction:column;min-height:0;">
+              <div style="flex-shrink:0;">
+                <div style="font-size:38px;line-height:1.08;font-weight:700;letter-spacing:-0.015em;text-wrap:pretty;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;">{{ title }}</div>
+                <div style="display:flex;align-items:baseline;gap:12px;margin-top:10px;min-width:0;">
+                  <span onClick="{{ onNpArtist }}" style="font-size:25px;font-weight:600;padding:9px 0;margin:-9px 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex-shrink:0;max-width:60%;color:#f2a48f;" style-active="color:#f8c4b4">{{ artist }}</span>
+                  <span style="font-size:22px;color:rgba(233,238,242,0.6);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ album }}</span>
+                  <span style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:19px;color:rgba(233,238,242,0.6);white-space:nowrap;flex-shrink:0;visibility:{{ yearVisibility }};">{{ year }}</span>
+                </div>
               </div>
             </div>
           </sc-if>
@@ -86,9 +92,9 @@
               <div style="flex-shrink:0;">
                 <div style="font-size:38px;line-height:1.08;font-weight:700;letter-spacing:-0.015em;text-wrap:pretty;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;">{{ title }}</div>
                 <div style="display:flex;align-items:baseline;gap:12px;margin-top:10px;min-width:0;">
-                  <span onClick="{{ onNpArtist }}" style="font-size:22px;font-weight:600;padding:9px 0;margin:-9px 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex-shrink:0;max-width:60%;color:#f2a48f;" style-active="color:#f8c4b4">{{ artist }}</span>
-                  <span style="font-size:17px;color:rgba(233,238,242,0.5);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ album }}</span>
-                  <span style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:15px;color:rgba(233,238,242,0.6);white-space:nowrap;flex-shrink:0;visibility:{{ yearVisibility }};">{{ year }}</span>
+                  <span onClick="{{ onNpArtist }}" style="font-size:25px;font-weight:600;padding:9px 0;margin:-9px 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex-shrink:0;max-width:60%;color:#f2a48f;" style-active="color:#f8c4b4">{{ artist }}</span>
+                  <span style="font-size:22px;color:rgba(233,238,242,0.6);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ album }}</span>
+                  <span style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:19px;color:rgba(233,238,242,0.6);white-space:nowrap;flex-shrink:0;visibility:{{ yearVisibility }};">{{ year }}</span>
                 </div>
               </div>
               <div style="height:1px;background:rgba(233,238,242,0.12);margin:20px 0 0;flex-shrink:0;"></div>
@@ -113,6 +119,7 @@
               <div style="flex:1;min-height:0;position:relative;overflow:hidden;">
                 {{ lyricsBody }}
               </div>
+              <div style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:12px;letter-spacing:0.1em;color:rgba(233,238,242,0.6);flex-shrink:0;margin-top:14px;text-align:center;">{{ lyricsCredit }}</div>
             </div>
           </sc-if>
 
@@ -155,7 +162,7 @@
                   <div style="display:flex;gap:9px;margin-top:13px;flex-wrap:wrap;">
                     <span style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:13px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;padding:6px 13px;border-radius:999px;background:rgba(126,214,188,0.14);border:1px solid rgba(126,214,188,0.3);color:rgb(126,214,188);white-space:nowrap;">{{ relType }}</span>
                     <span style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:13px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;padding:6px 13px;border-radius:999px;background:rgba(159,180,232,0.14);border:1px solid rgba(159,180,232,0.3);color:rgb(159,180,232);white-space:nowrap;">{{ relFormat }}</span>
-                    <span style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:13px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;padding:6px 13px;border-radius:999px;background:rgba(242,164,143,0.14);border:1px solid rgba(242,164,143,0.3);color:rgb(242,164,143);white-space:nowrap;">{{ relLabel }}</span>
+                    <span style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:13px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;padding:6px 13px;border-radius:999px;background:rgba(242,164,143,0.14);border:1px solid rgba(242,164,143,0.3);color:rgb(242,164,143);white-space:nowrap;display:{{ relLabelDisplay }};">{{ relLabel }}</span>
                   </div>
                 </div>
               </div>
@@ -190,7 +197,7 @@
 
       <div style="display:grid;align-items:center;margin-top:26px;grid-template-columns:1fr auto 1fr;">
         <div style="display:flex;align-items:center;gap:14px;justify-self:start;flex-shrink:0;">
-        <div onClick="{{ onBrowse }}" style="width:64px;height:64px;display:flex;align-items:center;justify-content:center;border-radius:50%;background:rgba(233,238,242,0.07);flex-shrink:0;" style-active="background:rgba(233,238,242,0.18)">
+        <div onClick="{{ onBrowse }}" style="width:64px;height:64px;display:flex;align-items:center;justify-content:center;border-radius:50%;background:rgba(233,238,242,0.07);flex-shrink:0;" style-active="transform:scale(0.95)">
           <div style="width:26px;height:26px;position:relative;flex-shrink:0;">
             <div style="position:absolute;inset:1px;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:4px;display:grid;">
               <div style="border-radius:3px;background:rgba(233,238,242,0.85);"></div>
@@ -200,7 +207,7 @@
             </div>
           </div>
         </div>
-        <div onClick="{{ onViz }}" style="width:60px;height:60px;border-radius:50%;background:rgba(233,238,242,0.07);display:flex;align-items:flex-end;justify-content:center;gap:4px;padding-bottom:20px;box-sizing:border-box;flex-shrink:0;" style-active="background:rgba(233,238,242,0.18)">
+        <div onClick="{{ onViz }}" style="width:60px;height:60px;border-radius:50%;background:rgba(233,238,242,0.07);display:flex;align-items:flex-end;justify-content:center;gap:4px;padding-bottom:20px;box-sizing:border-box;flex-shrink:0;" style-active="transform:scale(0.95)">
           <span style="width:4px;height:12px;border-radius:2px;background:rgba(233,238,242,0.82);display:block;"></span>
           <span style="width:4px;height:22px;border-radius:2px;background:rgba(233,238,242,0.82);display:block;"></span>
           <span style="width:4px;height:16px;border-radius:2px;background:rgba(233,238,242,0.82);display:block;"></span>
@@ -209,7 +216,7 @@
         </div>
 
         <div style="display:flex;align-items:center;justify-self:center;justify-content:center;gap:22px;">
-          <div onClick="{{ onShuffle }}" style="width:60px;height:60px;border-radius:50%;display:{{ srDisplay }};align-items:center;justify-content:center;flex-shrink:0;background:{{ shufBg }};border:1px solid {{ shufBorder }};" style-active="background:rgba(233,238,242,0.2)">
+          <div onClick="{{ onShuffle }}" style="width:60px;height:60px;border-radius:50%;display:{{ srDisplay }};align-items:center;justify-content:center;flex-shrink:0;background:{{ shufBg }};border:1px solid {{ shufBorder }};" style-active="transform:scale(0.95)">
             <span style="position:relative;width:32px;height:28px;display:block;">
               <span style="position:absolute;left:0.5px;top:13.5px;width:17px;height:3px;border-radius:2px;transform:rotate(-54.5deg);display:block;background:{{ shufInk }};"></span>
               <span style="position:absolute;left:0.5px;top:13.5px;width:17px;height:3px;border-radius:2px;transform:rotate(54.5deg);display:block;background:{{ shufInk }};"></span>
@@ -219,7 +226,7 @@
               <span style="position:absolute;left:24px;top:17px;width:0;height:0;display:block;border-left:8px solid {{ shufInk }};border-top:5px solid transparent;border-bottom:5px solid transparent;"></span>
             </span>
           </div>
-          <div onClick="{{ onPrev }}" style="width:68px;height:68px;border-radius:50%;background:rgba(233,238,242,0.09);display:flex;align-items:center;justify-content:center;" style-active="background:rgba(233,238,242,0.2)">
+          <div onClick="{{ onPrev }}" style="width:68px;height:68px;border-radius:50%;background:rgba(233,238,242,0.09);display:flex;align-items:center;justify-content:center;" style-active="transform:scale(0.95)">
             <div style="width:3px;height:19px;background:#e9eef2;border-radius:2px;"></div>
             <div style="width:0;height:0;border-right:13px solid #e9eef2;border-top:10px solid transparent;border-bottom:10px solid transparent;margin-left:3px;"></div>
           </div>
@@ -234,11 +241,11 @@
               <div style="width:0;height:0;border-left:28px solid #16232c;border-top:18px solid transparent;border-bottom:18px solid transparent;margin-left:7px;"></div>
             </sc-if>
           </div>
-          <div onClick="{{ onNext }}" style="width:68px;height:68px;border-radius:50%;background:rgba(233,238,242,0.09);display:flex;align-items:center;justify-content:center;" style-active="background:rgba(233,238,242,0.2)">
+          <div onClick="{{ onNext }}" style="width:68px;height:68px;border-radius:50%;background:rgba(233,238,242,0.09);display:flex;align-items:center;justify-content:center;" style-active="transform:scale(0.95)">
             <div style="width:0;height:0;border-left:13px solid #e9eef2;border-top:10px solid transparent;border-bottom:10px solid transparent;margin-right:3px;"></div>
             <div style="width:3px;height:19px;background:#e9eef2;border-radius:2px;"></div>
           </div>
-          <div onClick="{{ onRepeat }}" style="width:60px;height:60px;border-radius:50%;display:{{ srDisplay }};align-items:center;justify-content:center;flex-shrink:0;position:relative;background:{{ repBg }};border:1px solid {{ repBorder }};" style-active="background:rgba(233,238,242,0.2)">
+          <div onClick="{{ onRepeat }}" style="width:60px;height:60px;border-radius:50%;display:{{ srDisplay }};align-items:center;justify-content:center;flex-shrink:0;position:relative;background:{{ repBg }};border:1px solid {{ repBorder }};" style-active="transform:scale(0.95)">
             <span style="position:relative;width:26px;height:26px;display:block;">
               <span style="position:absolute;inset:0;display:block;">
                 <span style="position:absolute;left:3px;top:3px;width:15px;height:3px;border-radius:1px;background:{{ repInk }};display:block;"></span>
@@ -253,7 +260,7 @@
           </div>
         </div>
         <div style="display:flex;align-items:center;gap:14px;justify-self:end;flex-shrink:0;">
-          <div onClick="{{ onVolTrigger }}" style="width:60px;height:60px;border-radius:50%;background:rgba(233,238,242,0.07);align-items:center;justify-content:center;position:relative;display:{{ volTriggerDisplay }};" style-active="background:rgba(233,238,242,0.18)">
+          <div onClick="{{ onVolTrigger }}" style="width:60px;height:60px;border-radius:50%;background:rgba(233,238,242,0.07);align-items:center;justify-content:center;position:relative;display:{{ volTriggerDisplay }};" style-active="transform:scale(0.95)">
             <span style="position:absolute;right:6px;bottom:6px;width:19px;height:19px;border-radius:50%;background:#16232c;box-shadow:0 0 0 2px rgba(22,35,44,0.9);align-items:center;justify-content:center;display:{{ lockBadgeDisplay }};">
               <span style="position:relative;width:11px;height:12px;display:block;">
                 <span style="position:absolute;left:2px;top:0;width:7px;height:6px;border:2px solid #e0a758;border-bottom:none;border-radius:4px 4px 0 0;box-sizing:border-box;display:block;"></span>
@@ -268,7 +275,7 @@
               <span style="position:absolute;left:1px;top:50%;width:24px;height:2.5px;border-radius:2px;transform:translateY(-50%) rotate(-38deg);transform-origin:center;background:#e0a758;display:{{ vtSlashDisplay }};"></span>
             </span>
           </div>
-          <div onClick="{{ onQueueOpen }}" style="width:60px;height:60px;border-radius:50%;background:rgba(159,180,232,0.12);border:1px solid rgba(159,180,232,0.3);display:{{ queueBtnDisplay }};flex-direction:column;align-items:center;justify-content:center;gap:5px;position:relative;" style-active="background:rgba(159,180,232,0.28)">
+          <div onClick="{{ onQueueOpen }}" style="width:60px;height:60px;border-radius:50%;background:rgba(159,180,232,0.12);border:1px solid rgba(159,180,232,0.3);display:{{ queueBtnDisplay }};flex-direction:column;align-items:center;justify-content:center;gap:5px;position:relative;" style-active="transform:scale(0.95)">
             <div style="width:26px;height:3px;border-radius:2px;background:#9fb4e8;"></div>
             <div style="width:26px;height:3px;border-radius:2px;background:#9fb4e8;"></div>
             <div style="width:15px;height:3px;border-radius:2px;background:#9fb4e8;"></div>
@@ -279,7 +286,7 @@
     </div>
   </div>
 
-  <div style="position:absolute;inset:0;z-index:10;background:#101a21;display:flex;flex-direction:column;overflow:hidden;transition:opacity 220ms ease,transform 260ms cubic-bezier(0.2,0.8,0.2,1);opacity:{{ libOpacity }};transform:{{ libTransform }};pointer-events:{{ libPointer }};">
+  <div style="position:absolute;inset:0;z-index:10;background:#101a21;display:flex;flex-direction:column;overflow:hidden;opacity:{{ libOpacity }};pointer-events:{{ libPointer }};">
     <div style="position:absolute;inset:-90px;background:repeating-linear-gradient(38deg,#3f5a6d 0 48px,#2e4453 48px 96px);filter:blur(70px);transform:scale(1.14);"></div>
     <sc-if value="{{ hasArtwork }}" hint-placeholder-val="{{ true }}">
       <img src="album-art.webp" alt="" style="position:absolute;inset:-120px;width:calc(100% + 240px);height:calc(100% + 240px);object-fit:cover;filter:blur(72px) saturate(1.7);transform:scale(1.12);" />
@@ -287,7 +294,7 @@
     <div style="position:absolute;inset:0;background:radial-gradient(130% 105% at 20% 42%,rgba(20,33,42,0.62),rgba(13,21,28,0.93));"></div>
 
     <div style="position:relative;height:96px;flex-shrink:0;display:{{ libHeaderDisplay }};align-items:center;gap:20px;padding:0 40px;border-bottom:1px solid rgba(233,238,242,0.09);">
-      <div onClick="{{ onLibHome }}" style="width:60px;height:60px;border-radius:50%;background:rgba(233,238,242,0.07);display:{{ homeBtnDisplay }};align-items:center;justify-content:center;flex-shrink:0;" style-active="background:rgba(233,238,242,0.2)">
+      <div onClick="{{ onLibHome }}" style="width:60px;height:60px;border-radius:50%;background:rgba(233,238,242,0.07);display:{{ homeBtnDisplay }};align-items:center;justify-content:center;flex-shrink:0;" style-active="transform:scale(0.95)">
         <span style="width:22px;height:22px;display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:3.5px;flex-shrink:0;">
           <span style="border-radius:2px;background:rgba(233,238,242,0.88);display:block;"></span>
           <span style="border-radius:2px;background:rgba(233,238,242,0.88);display:block;"></span>
@@ -295,14 +302,14 @@
           <span style="border-radius:2px;background:rgba(233,238,242,0.88);display:block;"></span>
         </span>
       </div>
-      <div onClick="{{ onLibBack }}" style="width:60px;height:60px;border-radius:50%;background:rgba(233,238,242,0.07);display:flex;align-items:center;justify-content:center;flex-shrink:0;" style-active="background:rgba(233,238,242,0.2)">
+      <div onClick="{{ onLibBack }}" style="width:60px;height:60px;border-radius:50%;background:rgba(233,238,242,0.07);display:flex;align-items:center;justify-content:center;flex-shrink:0;" style-active="transform:scale(0.95)">
         <div style="width:14px;height:14px;border-left:3px solid #e9eef2;border-bottom:3px solid #e9eef2;transform:rotate(45deg);margin-left:11px;"></div>
       </div>
       <div style="flex:1;min-width:0;display:flex;align-items:baseline;gap:12px;">
         <span style="font-size:26px;font-weight:700;letter-spacing:-0.01em;color:#e9eef2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ libTitle }}</span>
         <span style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:15px;letter-spacing:0.08em;color:rgba(233,238,242,0.6);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ libCrumb }}</span>
       </div>
-      <div onClick="{{ onLibClose }}" style="height:60px;display:{{ headerBtnDisplay }};align-items:center;gap:14px;padding:0 22px 0 14px;border-radius:999px;background:rgba(126,214,188,0.12);border:1px solid rgba(126,214,188,0.32);flex-shrink:0;" style-active="background:rgba(126,214,188,0.26)">
+      <div onClick="{{ onLibClose }}" style="height:60px;display:{{ headerBtnDisplay }};align-items:center;gap:14px;padding:0 22px 0 14px;border-radius:999px;background:rgba(126,214,188,0.12);border:1px solid rgba(126,214,188,0.32);flex-shrink:0;" style-active="transform:scale(0.95)">
         <div style="width:38px;height:38px;border-radius:8px;overflow:hidden;position:relative;flex-shrink:0;background:#17242d;">
           <img src="album-art.webp" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;" />
         </div>
@@ -315,7 +322,7 @@
       <sc-if value="{{ libTopCards }}" hint-placeholder-val="{{ true }}">
         <div style="flex:1;min-width:0;display:flex;flex-direction:column;justify-content:center;gap:30px;box-sizing:border-box;position:relative;padding:{{ topPad }};">
         <div style="display:grid;gap:26px;flex-shrink:0;grid-template-columns:repeat(5,minmax(0,1fr));">
-          <div onClick="{{ onOpenMusic }}" style="border-radius:24px;background:rgba(126,214,188,0.1);border:1px solid rgba(126,214,188,0.3);display:flex;flex-direction:column;justify-content:space-between;padding:26px 24px;box-sizing:border-box;height:{{ topCardH }};" style-active="background:rgbaa(126,214,188,0.85,0.24)">
+          <div onClick="{{ onOpenMusic }}" style="border-radius:24px;background:rgba(126,214,188,0.1);border:1px solid rgba(126,214,188,0.3);display:flex;flex-direction:column;justify-content:space-between;padding:26px 24px;box-sizing:border-box;height:{{ topCardH }};" style-active="transform:scale(0.95)">
             <div style="height:44px;display:flex;align-items:flex-end;gap:7px;">
               <div style="width:8px;height:26px;border-radius:3px;background:#7ed6bc;"></div>
               <div style="width:8px;height:44px;border-radius:3px;background:#7ed6bc;"></div>
@@ -328,7 +335,7 @@
             </div>
           </div>
 
-          <div onClick="{{ onOpenArtists }}" style="border-radius:24px;background:rgba(159,180,232,0.1);border:1px solid rgba(159,180,232,0.3);display:flex;flex-direction:column;justify-content:space-between;padding:26px 24px;box-sizing:border-box;height:{{ topCardH }};" style-active="background:rgbaa(159,180,232,0.9,0.24)">
+          <div onClick="{{ onOpenArtists }}" style="border-radius:24px;background:rgba(159,180,232,0.1);border:1px solid rgba(159,180,232,0.3);display:flex;flex-direction:column;justify-content:space-between;padding:26px 24px;box-sizing:border-box;height:{{ topCardH }};" style-active="transform:scale(0.95)">
             <div style="height:44px;display:flex;align-items:center;gap:0;">
               <div style="width:34px;height:34px;border-radius:50%;background:rgba(159,180,232,0.95);flex-shrink:0;"></div>
               <div style="width:34px;height:34px;border-radius:50%;background:rgba(159,180,232,0.6);flex-shrink:0;margin-left:-11px;"></div>
@@ -340,7 +347,7 @@
             </div>
           </div>
 
-          <div onClick="{{ onOpenPlaylists }}" style="border-radius:24px;background:rgba(242,164,143,0.1);border:1px solid rgba(242,164,143,0.3);display:flex;flex-direction:column;justify-content:space-between;padding:26px 24px;box-sizing:border-box;height:{{ topCardH }};" style-active="background:rgbaa(242,164,143,0.9,0.24)">
+          <div onClick="{{ onOpenPlaylists }}" style="border-radius:24px;background:rgba(242,164,143,0.1);border:1px solid rgba(242,164,143,0.3);display:flex;flex-direction:column;justify-content:space-between;padding:26px 24px;box-sizing:border-box;height:{{ topCardH }};" style-active="transform:scale(0.95)">
             <div style="height:44px;display:flex;align-items:center;gap:10px;">
               <div style="display:flex;flex-direction:column;gap:6px;">
                 <div style="display:flex;align-items:center;gap:8px;"><div style="width:6px;height:6px;border-radius:50%;background:#f2a48f;"></div><div style="width:44px;height:4px;border-radius:2px;background:#f2a48f;"></div></div>
@@ -354,7 +361,7 @@
             </div>
           </div>
 
-          <div onClick="{{ onOpenRadio }}" style="border-radius:24px;background:rgba(233,238,242,0.055);border:1px solid rgba(233,238,242,0.16);display:flex;flex-direction:column;justify-content:space-between;padding:26px 24px;box-sizing:border-box;height:{{ topCardH }};" style-active="background:rgbaa(233,238,242,0.72,0.24)">
+          <div onClick="{{ onOpenRadio }}" style="border-radius:24px;background:rgba(233,238,242,0.055);border:1px solid rgba(233,238,242,0.16);display:flex;flex-direction:column;justify-content:space-between;padding:26px 24px;box-sizing:border-box;height:{{ topCardH }};" style-active="transform:scale(0.95)">
             <div style="height:44px;display:flex;align-items:center;gap:7px;">
               <div style="width:14px;height:14px;border-radius:50%;background:rgba(233,238,242,0.85);flex-shrink:0;"></div>
               <div style="width:14px;height:26px;border-right:3px solid rgba(233,238,242,0.6);border-radius:0 26px 26px 0;flex-shrink:0;"></div>
@@ -362,11 +369,11 @@
             </div>
             <div>
               <div style="font-size:30px;font-weight:700;letter-spacing:-0.015em;color:#e9eef2;">Radio</div>
-              <div style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:14px;letter-spacing:0.06em;color:rgba(233,238,242,0.72);margin-top:8px;white-space:nowrap;">950 stations</div>
+              <div aria-hidden="true" style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:14px;letter-spacing:0.06em;margin-top:8px;white-space:nowrap;visibility:hidden;">&#8203;</div>
             </div>
           </div>
 
-          <div onClick="{{ onSettingsOpen }}" style="border-radius:24px;background:rgba(233,238,242,0.04);border:1px solid rgba(233,238,242,0.12);display:flex;flex-direction:column;justify-content:space-between;padding:26px 24px;box-sizing:border-box;height:{{ topCardH }};" style-active="background:rgba(233,238,242,0.16)">
+          <div onClick="{{ onSettingsOpen }}" style="border-radius:24px;background:rgba(233,238,242,0.04);border:1px solid rgba(233,238,242,0.12);display:flex;flex-direction:column;justify-content:space-between;padding:26px 24px;box-sizing:border-box;height:{{ topCardH }};" style-active="transform:scale(0.95)">
             <div style="height:44px;display:flex;align-items:center;">
               <span style="width:30px;height:30px;position:relative;flex-shrink:0;display:block;">
                 <span style="position:absolute;left:0;right:0;top:7px;height:3px;border-radius:2px;background:rgba(233,238,242,0.38);display:block;"></span>
@@ -382,7 +389,49 @@
           </div>
         </div>
 
-          <div style="flex-shrink:0;">
+          <div style="flex-shrink:0;display:{{ stripArtistsDisplay }};flex-direction:column;">
+            <div style="display:flex;align-items:center;gap:12px;margin-bottom:15px;">
+              <span style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:13px;letter-spacing:0.22em;text-transform:uppercase;color:rgba(233,238,242,0.62);">Most played artists</span>
+              <span style="flex:1;height:1px;background:rgba(233,238,242,0.12);"></span>
+            </div>
+            <div style="position:relative;">
+              <div data-noscrollbar onScroll="{{ onNewScroll }}" style="display:flex;gap:26px;overflow-x:auto;padding:0 30px 4px;margin:0 -30px;mask-image:{{ newMask }};-webkit-mask-image:{{ newMask }};">
+                <sc-for list="{{ popularArtists }}" as="p" hint-placeholder-count="6">
+                  <div onClick="{{ p.onClick }}" style="width:176px;flex-shrink:0;text-align:center;" style-active="opacity:0.6">
+                    <div style="width:176px;height:176px;border-radius:50%;overflow:hidden;position:relative;display:flex;align-items:center;justify-content:center;background:{{ p.tint }};box-shadow:inset 0 0 0 1px rgba(255,255,255,0.14);">
+                      <img src="artist-photo.webp" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:{{ p.photoDisplay }};" />
+                      <span style="font-size:52px;font-weight:700;color:rgba(233,238,242,0.62);display:{{ p.monoDisplay }};">{{ p.initials }}</span>
+                    </div>
+                    <div style="font-size:17px;font-weight:600;color:#e9eef2;margin-top:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ p.name }}</div>
+                    <div style="font-size:15px;color:rgba(233,238,242,0.6);margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ p.meta }}</div>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+          </div>
+
+          <div style="flex-shrink:0;display:{{ stripRecentDisplay }};flex-direction:column;">
+            <div style="display:flex;align-items:center;gap:12px;margin-bottom:15px;">
+              <span style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:13px;letter-spacing:0.22em;text-transform:uppercase;color:rgba(233,238,242,0.62);">Recently played artists</span>
+              <span style="flex:1;height:1px;background:rgba(233,238,242,0.12);"></span>
+            </div>
+            <div style="position:relative;">
+              <div data-noscrollbar onScroll="{{ onNewScroll }}" style="display:flex;gap:26px;overflow-x:auto;padding:0 30px 4px;margin:0 -30px;mask-image:{{ newMask }};-webkit-mask-image:{{ newMask }};">
+                <sc-for list="{{ recentArtists }}" as="p" hint-placeholder-count="6">
+                  <div onClick="{{ p.onClick }}" style="width:176px;flex-shrink:0;text-align:center;" style-active="opacity:0.6">
+                    <div style="width:176px;height:176px;border-radius:50%;overflow:hidden;position:relative;display:flex;align-items:center;justify-content:center;background:{{ p.tint }};box-shadow:inset 0 0 0 1px rgba(255,255,255,0.14);">
+                      <img src="artist-photo.webp" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:{{ p.photoDisplay }};" />
+                      <span style="font-size:52px;font-weight:700;color:rgba(233,238,242,0.62);display:{{ p.monoDisplay }};">{{ p.initials }}</span>
+                    </div>
+                    <div style="font-size:17px;font-weight:600;color:#e9eef2;margin-top:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ p.name }}</div>
+                    <div style="font-size:15px;color:rgba(233,238,242,0.6);margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ p.meta }}</div>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+          </div>
+
+          <div style="flex-shrink:0;display:{{ stripNewDisplay }};flex-direction:column;">
             <div style="display:flex;align-items:center;gap:12px;margin-bottom:15px;">
               <span style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:13px;letter-spacing:0.22em;text-transform:uppercase;color:rgba(233,238,242,0.62);">New Music</span>
               <span style="flex:1;height:1px;background:rgba(233,238,242,0.12);"></span>
@@ -395,7 +444,7 @@
                       <img src="album-art.webp" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;" />
                     </div>
                     <div style="font-size:17px;font-weight:600;color:#e9eef2;margin-top:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ a.title }}</div>
-                    <div style="font-size:15px;color:rgba(233,238,242,0.55);margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ a.artist }}</div>
+                    <div style="font-size:15px;color:rgba(233,238,242,0.6);margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ a.artist }}</div>
                   </div>
                 </sc-for>
               </div>
@@ -417,17 +466,17 @@
           </div>
           <div data-noscrollbar style="flex:1;min-height:0;overflow-y:auto;padding:5px;display:flex;flex-direction:column;gap:1px;">
             <sc-for list="{{ browseArtists }}" as="row" hint-placeholder-count="8">
-              <div onClick="{{ row.onRowClick }}" onPointerDown="{{ row.onHoldStart }}" onPointerMove="{{ row.onHoldMove }}" onPointerUp="{{ row.onHoldEnd }}" onPointerLeave="{{ row.onHoldEnd }}" onPointerCancel="{{ row.onHoldEnd }}" style="height:42px;flex-shrink:0;display:flex;align-items:center;gap:12px;padding:0 13px;border-radius:8px;background:{{ row.bg }};" style-active="background:rgba(233,238,242,0.14)">
+              <div onClick="{{ row.onRowClick }}" style="height:42px;flex-shrink:0;display:flex;align-items:center;gap:12px;padding:0 13px;border-radius:8px;background:{{ row.bg }};">
                 <span style="flex:1;min-width:0;font-size:17px;font-weight:600;color:{{ row.ink }};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ row.label }}</span>
                 <span style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:13px;color:rgba(233,238,242,0.62);flex-shrink:0;display:{{ row.metaDisplay }};">{{ row.meta }}</span>
                 <span style="display:{{ row.actionsDisplay }};align-items:center;gap:6px;flex-shrink:0;margin-right:-4px;">
-                  <span onClick="{{ row.onPlay }}" style="width:40px;height:40px;border-radius:12px;background:rgba(126,214,188,0.13);border:1px solid rgba(126,214,188,0.32);display:flex;align-items:center;justify-content:center;flex-shrink:0;box-sizing:border-box;" style-active="background:rgba(126,214,188,0.3)"><span style="width:0;height:0;border-left:11px solid #7ed6bc;border-top:7px solid transparent;border-bottom:7px solid transparent;margin-left:2px;display:block;"></span></span>
-                  <span onClick="{{ row.onQueue }}" style="width:40px;height:40px;border-radius:12px;background:rgba(233,238,242,0.06);border:1px solid rgba(233,238,242,0.14);display:flex;align-items:center;justify-content:center;flex-shrink:0;box-sizing:border-box;" style-active="background:rgba(233,238,242,0.2)"><span style="width:15px;height:12px;display:flex;flex-direction:column;justify-content:space-between;">
+                  <span onClick="{{ row.onPlay }}" style="width:40px;height:40px;border-radius:12px;background:rgba(126,214,188,0.13);border:1px solid rgba(126,214,188,0.32);display:flex;align-items:center;justify-content:center;flex-shrink:0;box-sizing:border-box;" style-active="transform:scale(0.95)"><span style="width:0;height:0;border-left:11px solid #7ed6bc;border-top:7px solid transparent;border-bottom:7px solid transparent;margin-left:2px;display:block;"></span></span>
+                  <span onClick="{{ row.onQueue }}" style="width:40px;height:40px;border-radius:12px;background:rgba(233,238,242,0.06);border:1px solid rgba(233,238,242,0.14);display:flex;align-items:center;justify-content:center;flex-shrink:0;box-sizing:border-box;" style-active="transform:scale(0.95)"><span style="width:15px;height:12px;display:flex;flex-direction:column;justify-content:space-between;">
                       <span style="height:2.5px;border-radius:2px;background:rgba(233,238,242,0.9);display:block;"></span>
                       <span style="height:2.5px;border-radius:2px;background:rgba(233,238,242,0.9);display:block;"></span>
                       <span style="height:2.5px;border-radius:2px;background:rgba(233,238,242,0.9);width:9px;display:block;"></span>
                     </span></span>
-                  <span onClick="{{ row.onPlus }}" style="width:40px;height:40px;border-radius:12px;background:rgba(233,238,242,0.06);border:1px solid rgba(233,238,242,0.14);display:flex;align-items:center;justify-content:center;flex-shrink:0;box-sizing:border-box;" style-active="background:rgba(233,238,242,0.2)"><span style="width:15px;height:15px;position:relative;display:block;">
+                  <span onClick="{{ row.onPlus }}" style="width:40px;height:40px;border-radius:12px;background:rgba(233,238,242,0.06);border:1px solid rgba(233,238,242,0.14);display:flex;align-items:center;justify-content:center;flex-shrink:0;box-sizing:border-box;" style-active="transform:scale(0.95)"><span style="width:15px;height:15px;position:relative;display:block;">
                       <span style="position:absolute;left:0;top:6px;width:15px;height:2.5px;border-radius:2px;background:rgba(233,238,242,0.9);display:block;"></span>
                       <span style="position:absolute;left:6px;top:0;width:2.5px;height:15px;border-radius:2px;background:rgba(233,238,242,0.9);display:block;"></span>
                     </span></span>
@@ -448,17 +497,17 @@
           </div>
           <div data-noscrollbar style="flex:1;min-height:0;overflow-y:auto;padding:5px;display:flex;flex-direction:column;gap:1px;">
             <sc-for list="{{ browseAlbums }}" as="row" hint-placeholder-count="8">
-              <div onClick="{{ row.onRowClick }}" onPointerDown="{{ row.onHoldStart }}" onPointerMove="{{ row.onHoldMove }}" onPointerUp="{{ row.onHoldEnd }}" onPointerLeave="{{ row.onHoldEnd }}" onPointerCancel="{{ row.onHoldEnd }}" style="height:42px;flex-shrink:0;display:flex;align-items:center;gap:12px;padding:0 13px;border-radius:8px;background:{{ row.bg }};" style-active="background:rgba(233,238,242,0.14)">
+              <div onClick="{{ row.onRowClick }}" style="height:42px;flex-shrink:0;display:flex;align-items:center;gap:12px;padding:0 13px;border-radius:8px;background:{{ row.bg }};">
                 <span style="flex:1;min-width:0;font-size:17px;font-weight:600;color:{{ row.ink }};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ row.label }}</span>
                 <span style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:13px;color:rgba(233,238,242,0.62);flex-shrink:0;display:{{ row.metaDisplay }};">{{ row.meta }}</span>
                 <span style="display:{{ row.actionsDisplay }};align-items:center;gap:6px;flex-shrink:0;margin-right:-4px;">
-                  <span onClick="{{ row.onPlay }}" style="width:40px;height:40px;border-radius:12px;background:rgba(126,214,188,0.13);border:1px solid rgba(126,214,188,0.32);display:flex;align-items:center;justify-content:center;flex-shrink:0;box-sizing:border-box;" style-active="background:rgba(126,214,188,0.3)"><span style="width:0;height:0;border-left:11px solid #7ed6bc;border-top:7px solid transparent;border-bottom:7px solid transparent;margin-left:2px;display:block;"></span></span>
-                  <span onClick="{{ row.onQueue }}" style="width:40px;height:40px;border-radius:12px;background:rgba(233,238,242,0.06);border:1px solid rgba(233,238,242,0.14);display:flex;align-items:center;justify-content:center;flex-shrink:0;box-sizing:border-box;" style-active="background:rgba(233,238,242,0.2)"><span style="width:15px;height:12px;display:flex;flex-direction:column;justify-content:space-between;">
+                  <span onClick="{{ row.onPlay }}" style="width:40px;height:40px;border-radius:12px;background:rgba(126,214,188,0.13);border:1px solid rgba(126,214,188,0.32);display:flex;align-items:center;justify-content:center;flex-shrink:0;box-sizing:border-box;" style-active="transform:scale(0.95)"><span style="width:0;height:0;border-left:11px solid #7ed6bc;border-top:7px solid transparent;border-bottom:7px solid transparent;margin-left:2px;display:block;"></span></span>
+                  <span onClick="{{ row.onQueue }}" style="width:40px;height:40px;border-radius:12px;background:rgba(233,238,242,0.06);border:1px solid rgba(233,238,242,0.14);display:flex;align-items:center;justify-content:center;flex-shrink:0;box-sizing:border-box;" style-active="transform:scale(0.95)"><span style="width:15px;height:12px;display:flex;flex-direction:column;justify-content:space-between;">
                       <span style="height:2.5px;border-radius:2px;background:rgba(233,238,242,0.9);display:block;"></span>
                       <span style="height:2.5px;border-radius:2px;background:rgba(233,238,242,0.9);display:block;"></span>
                       <span style="height:2.5px;border-radius:2px;background:rgba(233,238,242,0.9);width:9px;display:block;"></span>
                     </span></span>
-                  <span onClick="{{ row.onPlus }}" style="width:40px;height:40px;border-radius:12px;background:rgba(233,238,242,0.06);border:1px solid rgba(233,238,242,0.14);display:flex;align-items:center;justify-content:center;flex-shrink:0;box-sizing:border-box;" style-active="background:rgba(233,238,242,0.2)"><span style="width:15px;height:15px;position:relative;display:block;">
+                  <span onClick="{{ row.onPlus }}" style="width:40px;height:40px;border-radius:12px;background:rgba(233,238,242,0.06);border:1px solid rgba(233,238,242,0.14);display:flex;align-items:center;justify-content:center;flex-shrink:0;box-sizing:border-box;" style-active="transform:scale(0.95)"><span style="width:15px;height:15px;position:relative;display:block;">
                       <span style="position:absolute;left:0;top:6px;width:15px;height:2.5px;border-radius:2px;background:rgba(233,238,242,0.9);display:block;"></span>
                       <span style="position:absolute;left:6px;top:0;width:2.5px;height:15px;border-radius:2px;background:rgba(233,238,242,0.9);display:block;"></span>
                     </span></span>
@@ -481,19 +530,19 @@
           </div>
           <div data-noscrollbar style="flex:1;min-height:0;overflow-y:auto;padding:5px;display:flex;flex-direction:column;gap:1px;">
             <sc-for list="{{ browseTracks }}" as="row" hint-placeholder-count="6">
-              <div onClick="{{ row.onRowClick }}" onPointerDown="{{ row.onHoldStart }}" onPointerMove="{{ row.onHoldMove }}" onPointerUp="{{ row.onHoldEnd }}" onPointerLeave="{{ row.onHoldEnd }}" onPointerCancel="{{ row.onHoldEnd }}" style="height:42px;flex-shrink:0;display:flex;align-items:center;gap:16px;padding:0 14px;border-radius:8px;background:{{ row.bg }};" style-active="background:rgba(233,238,242,0.14)">
+              <div onClick="{{ row.onRowClick }}" style="height:42px;flex-shrink:0;display:flex;align-items:center;gap:16px;padding:0 14px;border-radius:8px;background:{{ row.bg }};">
                 <span style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:13px;color:rgba(233,238,242,0.62);width:24px;flex-shrink:0;">{{ row.num }}</span>
                 <span style="flex:1;min-width:0;font-size:17px;font-weight:600;color:{{ row.ink }};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ row.label }}</span>
                 <span style="font-size:14px;color:rgba(233,238,242,0.62);flex-shrink:0;">{{ row.sub }}</span>
                 <span style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:14px;color:rgba(233,238,242,0.62);flex-shrink:0;display:{{ row.metaDisplay }};">{{ row.meta }}</span>
                 <span style="display:{{ row.actionsDisplay }};align-items:center;gap:6px;flex-shrink:0;margin-right:-4px;">
-                  <span onClick="{{ row.onPlay }}" style="width:40px;height:40px;border-radius:12px;background:rgba(126,214,188,0.13);border:1px solid rgba(126,214,188,0.32);display:flex;align-items:center;justify-content:center;flex-shrink:0;box-sizing:border-box;" style-active="background:rgba(126,214,188,0.3)"><span style="width:0;height:0;border-left:11px solid #7ed6bc;border-top:7px solid transparent;border-bottom:7px solid transparent;margin-left:2px;display:block;"></span></span>
-                  <span onClick="{{ row.onQueue }}" style="width:40px;height:40px;border-radius:12px;background:rgba(233,238,242,0.06);border:1px solid rgba(233,238,242,0.14);display:flex;align-items:center;justify-content:center;flex-shrink:0;box-sizing:border-box;" style-active="background:rgba(233,238,242,0.2)"><span style="width:15px;height:12px;display:flex;flex-direction:column;justify-content:space-between;">
+                  <span onClick="{{ row.onPlay }}" style="width:40px;height:40px;border-radius:12px;background:rgba(126,214,188,0.13);border:1px solid rgba(126,214,188,0.32);display:flex;align-items:center;justify-content:center;flex-shrink:0;box-sizing:border-box;" style-active="transform:scale(0.95)"><span style="width:0;height:0;border-left:11px solid #7ed6bc;border-top:7px solid transparent;border-bottom:7px solid transparent;margin-left:2px;display:block;"></span></span>
+                  <span onClick="{{ row.onQueue }}" style="width:40px;height:40px;border-radius:12px;background:rgba(233,238,242,0.06);border:1px solid rgba(233,238,242,0.14);display:flex;align-items:center;justify-content:center;flex-shrink:0;box-sizing:border-box;" style-active="transform:scale(0.95)"><span style="width:15px;height:12px;display:flex;flex-direction:column;justify-content:space-between;">
                       <span style="height:2.5px;border-radius:2px;background:rgba(233,238,242,0.9);display:block;"></span>
                       <span style="height:2.5px;border-radius:2px;background:rgba(233,238,242,0.9);display:block;"></span>
                       <span style="height:2.5px;border-radius:2px;background:rgba(233,238,242,0.9);width:9px;display:block;"></span>
                     </span></span>
-                  <span onClick="{{ row.onPlus }}" style="width:40px;height:40px;border-radius:12px;background:rgba(233,238,242,0.06);border:1px solid rgba(233,238,242,0.14);display:flex;align-items:center;justify-content:center;flex-shrink:0;box-sizing:border-box;" style-active="background:rgba(233,238,242,0.2)"><span style="width:15px;height:15px;position:relative;display:block;">
+                  <span onClick="{{ row.onPlus }}" style="width:40px;height:40px;border-radius:12px;background:rgba(233,238,242,0.06);border:1px solid rgba(233,238,242,0.14);display:flex;align-items:center;justify-content:center;flex-shrink:0;box-sizing:border-box;" style-active="transform:scale(0.95)"><span style="width:15px;height:15px;position:relative;display:block;">
                       <span style="position:absolute;left:0;top:6px;width:15px;height:2.5px;border-radius:2px;background:rgba(233,238,242,0.9);display:block;"></span>
                       <span style="position:absolute;left:6px;top:0;width:2.5px;height:15px;border-radius:2px;background:rgba(233,238,242,0.9);display:block;"></span>
                     </span></span>
@@ -512,14 +561,14 @@
       </sc-if>
 
       <sc-if value="{{ libListVisible }}" hint-placeholder-val="{{ false }}">
-        <div data-noscrollbar style="flex:1;min-width:0;overflow-y:auto;padding:28px 40px;box-sizing:border-box;display:flex;flex-direction:column;gap:3px;">
+        <div data-noscrollbar style="flex:1;min-width:0;overflow-y:auto;padding:28px 40px;box-sizing:border-box;display:grid;align-content:start;grid-template-columns:{{ libCols }};gap:{{ libGap }};">
           <sc-if value="{{ playAllVisible }}" hint-placeholder-val="{{ false }}">
-            <div style="display:flex;align-items:center;gap:12px;flex-shrink:0;margin-bottom:14px;">
-              <div onClick="{{ onPlayAll }}" style="height:56px;padding:0 26px;border-radius:15px;background:rgba(126,214,188,0.14);border:1px solid rgba(126,214,188,0.36);display:flex;align-items:center;gap:13px;" style-active="background:rgba(126,214,188,0.28)">
+            <div style="display:flex;align-items:center;gap:12px;flex-shrink:0;margin-bottom:14px;grid-column:1 / -1;">
+              <div onClick="{{ onPlayAll }}" style="height:56px;padding:0 26px;border-radius:15px;background:rgba(126,214,188,0.14);border:1px solid rgba(126,214,188,0.36);display:flex;align-items:center;gap:13px;" style-active="transform:scale(0.95)">
                 <span style="width:0;height:0;border-left:14px solid #7ed6bc;border-top:9px solid transparent;border-bottom:9px solid transparent;flex-shrink:0;display:block;"></span>
                 <span style="font-size:19px;font-weight:700;color:#e9eef2;">Play all</span>
               </div>
-              <div onClick="{{ onShuffleAll }}" style="width:62px;height:56px;border-radius:15px;background:rgba(233,238,242,0.06);border:1px solid rgba(233,238,242,0.14);display:flex;align-items:center;justify-content:center;flex-shrink:0;" style-active="background:rgba(233,238,242,0.2)">
+              <div onClick="{{ onShuffleAll }}" style="width:62px;height:56px;border-radius:15px;background:rgba(233,238,242,0.06);border:1px solid rgba(233,238,242,0.14);display:flex;align-items:center;justify-content:center;flex-shrink:0;" style-active="transform:scale(0.95)">
                 <span style="position:relative;width:24px;height:21px;display:block;">
                   <span style="position:absolute;top:3px;left:0;width:24px;height:2.5px;border-radius:2px;background:rgba(233,238,242,0.9);transform:rotate(25deg);display:block;"></span>
                   <span style="position:absolute;bottom:3px;left:0;width:24px;height:2.5px;border-radius:2px;background:rgba(233,238,242,0.9);transform:rotate(-25deg);display:block;"></span>
@@ -532,7 +581,7 @@
             </div>
           </sc-if>
           <sc-for list="{{ libRows }}" as="row" hint-placeholder-count="9">
-            <div onClick="{{ row.onRowClick }}" onPointerDown="{{ row.onHoldStart }}" onPointerMove="{{ row.onHoldMove }}" onPointerUp="{{ row.onHoldEnd }}" onPointerLeave="{{ row.onHoldEnd }}" onPointerCancel="{{ row.onHoldEnd }}" style="height:66px;flex-shrink:0;display:flex;align-items:center;gap:18px;padding:0 22px;border-radius:14px;background:{{ row.bg }};" style-active="background:rgba(233,238,242,0.16)">
+            <div onClick="{{ row.onRowClick }}" style="min-width:0;flex-shrink:0;display:flex;align-items:center;gap:18px;box-sizing:border-box;border-radius:{{ row.radius }};height:{{ row.h }};padding:{{ row.pad }};background:{{ row.bg }};border:1px solid {{ row.border }};">
               <span style="width:{{ row.icoSize }};height:{{ row.icoSize }};border-radius:{{ row.icoRadius }};flex-shrink:0;display:{{ row.icoDisplay }};align-items:center;justify-content:center;box-sizing:border-box;margin-left:-8px;background:{{ row.icoBg }};border:1px solid {{ row.icoBorder }};">
               <span style="position:relative;width:26px;height:26px;flex-shrink:0;display:block;">
                 <span style="position:absolute;inset:0;display:{{ row.icoArcs }};">
@@ -589,17 +638,17 @@
               <span style="flex:1;min-width:0;font-size:22px;font-weight:600;color:#e9eef2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ row.label }}</span>
               <span style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:16px;color:rgba(233,238,242,0.62);flex-shrink:0;display:{{ row.metaDisplay }};">{{ row.meta }}</span>
                 <span style="display:{{ row.actionsDisplay }};align-items:center;gap:6px;flex-shrink:0;margin-right:-4px;">
-                  <span onClick="{{ row.onPlay }}" style="width:40px;height:40px;border-radius:12px;background:rgba(126,214,188,0.13);border:1px solid rgba(126,214,188,0.32);display:flex;align-items:center;justify-content:center;flex-shrink:0;box-sizing:border-box;" style-active="background:rgba(126,214,188,0.3)"><span style="width:0;height:0;border-left:11px solid #7ed6bc;border-top:7px solid transparent;border-bottom:7px solid transparent;margin-left:2px;display:block;"></span></span>
-                  <span onClick="{{ row.onQueue }}" style="width:40px;height:40px;border-radius:12px;background:rgba(233,238,242,0.06);border:1px solid rgba(233,238,242,0.14);display:flex;align-items:center;justify-content:center;flex-shrink:0;box-sizing:border-box;" style-active="background:rgba(233,238,242,0.2)"><span style="width:15px;height:12px;display:flex;flex-direction:column;justify-content:space-between;">
+                  <span onClick="{{ row.onPlay }}" style="width:40px;height:40px;border-radius:12px;background:rgba(126,214,188,0.13);border:1px solid rgba(126,214,188,0.32);display:flex;align-items:center;justify-content:center;flex-shrink:0;box-sizing:border-box;" style-active="transform:scale(0.95)"><span style="width:0;height:0;border-left:11px solid #7ed6bc;border-top:7px solid transparent;border-bottom:7px solid transparent;margin-left:2px;display:block;"></span></span>
+                  <span onClick="{{ row.onQueue }}" style="width:40px;height:40px;border-radius:12px;background:rgba(233,238,242,0.06);border:1px solid rgba(233,238,242,0.14);display:flex;align-items:center;justify-content:center;flex-shrink:0;box-sizing:border-box;" style-active="transform:scale(0.95)"><span style="width:15px;height:12px;display:flex;flex-direction:column;justify-content:space-between;">
                       <span style="height:2.5px;border-radius:2px;background:rgba(233,238,242,0.9);display:block;"></span>
                       <span style="height:2.5px;border-radius:2px;background:rgba(233,238,242,0.9);display:block;"></span>
                       <span style="height:2.5px;border-radius:2px;background:rgba(233,238,242,0.9);width:9px;display:block;"></span>
                     </span></span>
-                  <span onClick="{{ row.onPlus }}" style="width:40px;height:40px;border-radius:12px;background:rgba(233,238,242,0.06);border:1px solid rgba(233,238,242,0.14);display:flex;align-items:center;justify-content:center;flex-shrink:0;box-sizing:border-box;" style-active="background:rgba(233,238,242,0.2)"><span style="width:15px;height:15px;position:relative;display:block;">
+                  <span onClick="{{ row.onPlus }}" style="width:40px;height:40px;border-radius:12px;background:rgba(233,238,242,0.06);border:1px solid rgba(233,238,242,0.14);display:flex;align-items:center;justify-content:center;flex-shrink:0;box-sizing:border-box;" style-active="transform:scale(0.95)"><span style="width:15px;height:15px;position:relative;display:block;">
                       <span style="position:absolute;left:0;top:6px;width:15px;height:2.5px;border-radius:2px;background:rgba(233,238,242,0.9);display:block;"></span>
                       <span style="position:absolute;left:6px;top:0;width:2.5px;height:15px;border-radius:2px;background:rgba(233,238,242,0.9);display:block;"></span>
                     </span></span>
-                  <span onClick="{{ row.onArtist }}" style="width:40px;height:40px;border-radius:12px;background:rgba(159,180,232,0.12);border:1px solid rgba(159,180,232,0.32);display:{{ row.artistDisplay }};align-items:center;justify-content:center;flex-shrink:0;box-sizing:border-box;" style-active="background:rgba(159,180,232,0.3)"><span style="width:17px;height:17px;position:relative;display:block;">
+                  <span onClick="{{ row.onArtist }}" style="width:40px;height:40px;border-radius:12px;background:rgba(159,180,232,0.12);border:1px solid rgba(159,180,232,0.32);display:{{ row.artistDisplay }};align-items:center;justify-content:center;flex-shrink:0;box-sizing:border-box;" style-active="transform:scale(0.95)"><span style="width:17px;height:17px;position:relative;display:block;">
                       <span style="position:absolute;top:0;left:4.5px;width:8px;height:8px;border-radius:50%;background:#9fb4e8;display:block;"></span>
                       <span style="position:absolute;bottom:0;left:0.5px;width:16px;height:7px;border-radius:8px 8px 0 0;background:#9fb4e8;display:block;"></span>
                     </span></span>
@@ -621,7 +670,7 @@
                 </div>
                 <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:26px 20px;">
                   <sc-for list="{{ g.cards }}" as="a" hint-placeholder-count="6">
-                <div onClick="{{ a.onRowClick }}" onPointerDown="{{ a.onHoldStart }}" onPointerMove="{{ a.onHoldMove }}" onPointerUp="{{ a.onHoldEnd }}" onPointerLeave="{{ a.onHoldEnd }}" onPointerCancel="{{ a.onHoldEnd }}" style="display:flex;flex-direction:column;align-items:center;gap:11px;min-width:0;" style-active="opacity:0.62">
+                <div onClick="{{ a.onRowClick }}" style="display:flex;flex-direction:column;align-items:center;gap:11px;min-width:0;" style-active="opacity:0.62">
                   <div style="width:100%;aspect-ratio:1;border-radius:50%;overflow:hidden;position:relative;background:{{ a.tint }};box-shadow:inset 0 0 0 1px rgba(255,255,255,0.14);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
                     <img src="artist-photo.webp" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:{{ a.photoDisplay }};" />
                     <span style="font-size:40px;font-weight:700;letter-spacing:0.02em;color:rgba(233,238,242,0.62);display:{{ a.monoDisplay }};">{{ a.initials }}</span>
@@ -639,7 +688,7 @@
 
           <div style="width:58px;flex-shrink:0;display:flex;flex-direction:column;align-items:center;justify-content:space-between;gap:0;padding:10px 0;box-sizing:border-box;overflow:hidden;border-left:1px solid rgba(233,238,242,0.07);">
             <sc-for list="{{ artistIndex }}" as="l" hint-placeholder-count="27">
-              <span onClick="{{ l.onTap }}" style="width:44px;flex:1 1 0;min-height:0;max-height:26px;display:flex;align-items:center;justify-content:center;border-radius:7px;font-family:'IBM Plex Mono','Courier New',monospace;font-size:13px;font-weight:700;letter-spacing:0.04em;color:{{ l.ink }};" style-active="background:rgba(159,180,232,0.24)">{{ l.ch }}</span>
+              <span onClick="{{ l.onTap }}" style="width:44px;flex:1 1 0;min-height:0;max-height:26px;display:flex;align-items:center;justify-content:center;border-radius:7px;font-family:'IBM Plex Mono','Courier New',monospace;font-size:13px;font-weight:700;letter-spacing:0.04em;color:{{ l.ink }};" style-active="transform:scale(0.95)">{{ l.ch }}</span>
             </sc-for>
           </div>
         </div>
@@ -658,11 +707,11 @@
               <div style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:14px;color:rgba(233,238,242,0.62);margin-top:7px;">{{ artistLocalMeta }}</div>
             </div>
             <div style="display:flex;gap:9px;flex-shrink:0;">
-              <div onClick="{{ onArtistPlay }}" style="flex:1;height:54px;border-radius:14px;background:rgba(126,214,188,0.14);border:1px solid rgba(126,214,188,0.36);display:flex;align-items:center;justify-content:center;gap:11px;" style-active="background:rgba(126,214,188,0.28)">
+              <div onClick="{{ onArtistPlay }}" style="flex:1;height:54px;border-radius:14px;background:rgba(126,214,188,0.14);border:1px solid rgba(126,214,188,0.36);display:flex;align-items:center;justify-content:center;gap:11px;" style-active="transform:scale(0.95)">
                 <span style="width:0;height:0;border-left:13px solid #7ed6bc;border-top:8px solid transparent;border-bottom:8px solid transparent;flex-shrink:0;display:block;"></span>
                 <span style="font-size:17px;font-weight:700;color:#e9eef2;">Play</span>
               </div>
-              <div onClick="{{ onArtistShuffle }}" style="width:60px;height:54px;border-radius:14px;background:rgba(233,238,242,0.06);border:1px solid rgba(233,238,242,0.14);display:flex;align-items:center;justify-content:center;flex-shrink:0;" style-active="background:rgba(233,238,242,0.2)">
+              <div onClick="{{ onArtistShuffle }}" style="width:60px;height:54px;border-radius:14px;background:rgba(233,238,242,0.06);border:1px solid rgba(233,238,242,0.14);display:flex;align-items:center;justify-content:center;flex-shrink:0;" style-active="transform:scale(0.95)">
                 <span style="position:relative;width:22px;height:20px;display:block;">
                   <span style="position:absolute;top:3px;left:0;width:22px;height:2.5px;border-radius:2px;background:rgba(233,238,242,0.9);transform:rotate(26deg);display:block;"></span>
                   <span style="position:absolute;bottom:3px;left:0;width:22px;height:2.5px;border-radius:2px;background:rgba(233,238,242,0.9);transform:rotate(-26deg);display:block;"></span>
@@ -700,12 +749,14 @@
                 </div>
               </sc-if>
               <sc-if value="{{ netReady }}" hint-placeholder-val="{{ false }}">
-                <div data-noscrollbar ref="{{ fadeRef }}" style="max-height:128px;overflow-y:auto;padding-bottom:14px;font-size:17px;line-height:1.5;color:rgba(233,238,242,0.82);text-wrap:pretty;-webkit-overflow-scrolling:touch;">{{ artistBio }}</div>
+                <div ref="{{ bioRef }}" style="overflow:hidden;font-size:17px;line-height:1.5;color:rgba(233,238,242,0.82);text-wrap:pretty;max-height:{{ bioMax }};">{{ artistBio }}</div>
+                <div onClick="{{ onBioToggle }}" style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:13px;font-weight:600;letter-spacing:0.16em;text-transform:uppercase;color:#9fb4e8;margin-top:10px;padding:10px 0;display:{{ bioToggleDisplay }};" style-active="transform:scale(0.95)">{{ bioToggleLabel }}</div>
+                <div style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:12px;letter-spacing:0.1em;color:rgba(233,238,242,0.6);margin-top:12px;">{{ bioCredit }}</div>
               </sc-if>
               <sc-if value="{{ netError }}" hint-placeholder-val="{{ false }}">
                 <div style="display:flex;align-items:center;gap:14px;height:52px;border-radius:14px;background:rgba(233,238,242,0.05);border:1px solid rgba(233,238,242,0.12);padding:0 18px;">
                   <span style="flex:1;min-width:0;font-size:16px;color:rgba(233,238,242,0.72);">Artist details unavailable offline. Your library is unaffected.</span>
-                  <span onClick="{{ onNetRetry }}" style="display:inline-flex;align-items:center;height:36px;padding:0 15px;border-radius:9px;background:rgba(159,180,232,0.16);border:1px solid rgba(159,180,232,0.35);font-family:'IBM Plex Mono','Courier New',monospace;font-size:12px;letter-spacing:0.14em;text-transform:uppercase;color:#9fb4e8;flex-shrink:0;" style-active="background:rgba(159,180,232,0.3)">Retry</span>
+                  <span onClick="{{ onNetRetry }}" style="display:inline-flex;align-items:center;height:36px;padding:0 15px;border-radius:9px;background:rgba(159,180,232,0.16);border:1px solid rgba(159,180,232,0.35);font-family:'IBM Plex Mono','Courier New',monospace;font-size:12px;letter-spacing:0.14em;text-transform:uppercase;color:#9fb4e8;flex-shrink:0;" style-active="transform:scale(0.95)">Retry</span>
                 </div>
               </sc-if>
             </div>
@@ -730,18 +781,18 @@
               <sc-if value="{{ netReady }}" hint-placeholder-val="{{ false }}">
                 <div style="display:flex;flex-direction:column;gap:3px;">
                   <sc-for list="{{ artistTop }}" as="row" hint-placeholder-count="5">
-                    <div onClick="{{ row.onRowClick }}" onPointerDown="{{ row.onHoldStart }}" onPointerMove="{{ row.onHoldMove }}" onPointerUp="{{ row.onHoldEnd }}" onPointerLeave="{{ row.onHoldEnd }}" onPointerCancel="{{ row.onHoldEnd }}" style="height:46px;flex-shrink:0;display:flex;align-items:center;gap:16px;padding:0 14px;border-radius:9px;background:{{ row.bg }};" style-active="background:rgba(233,238,242,0.14)">
+                    <div onClick="{{ row.onRowClick }}" style="height:46px;flex-shrink:0;display:flex;align-items:center;gap:16px;padding:0 14px;border-radius:9px;background:{{ row.bg }};">
                       <span style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:14px;color:rgba(233,238,242,0.62);width:20px;flex-shrink:0;">{{ row.num }}</span>
                       <span style="flex:1;min-width:0;font-size:18px;font-weight:600;color:{{ row.ink }};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ row.label }}</span>
                       <span style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:13px;color:rgba(233,238,242,0.62);flex-shrink:0;display:{{ row.metaDisplay }};">{{ row.meta }}</span>
                       <span style="display:{{ row.actionsDisplay }};align-items:center;gap:6px;flex-shrink:0;margin-right:-4px;">
-                        <span onClick="{{ row.onPlay }}" style="width:40px;height:40px;border-radius:12px;background:rgba(126,214,188,0.13);border:1px solid rgba(126,214,188,0.32);display:flex;align-items:center;justify-content:center;flex-shrink:0;box-sizing:border-box;" style-active="background:rgba(126,214,188,0.3)"><span style="width:0;height:0;border-left:11px solid #7ed6bc;border-top:7px solid transparent;border-bottom:7px solid transparent;margin-left:2px;display:block;"></span></span>
-                        <span onClick="{{ row.onQueue }}" style="width:40px;height:40px;border-radius:12px;background:rgba(233,238,242,0.06);border:1px solid rgba(233,238,242,0.14);display:flex;align-items:center;justify-content:center;flex-shrink:0;box-sizing:border-box;" style-active="background:rgba(233,238,242,0.2)"><span style="width:15px;height:12px;display:flex;flex-direction:column;justify-content:space-between;">
+                        <span onClick="{{ row.onPlay }}" style="width:40px;height:40px;border-radius:12px;background:rgba(126,214,188,0.13);border:1px solid rgba(126,214,188,0.32);display:flex;align-items:center;justify-content:center;flex-shrink:0;box-sizing:border-box;" style-active="transform:scale(0.95)"><span style="width:0;height:0;border-left:11px solid #7ed6bc;border-top:7px solid transparent;border-bottom:7px solid transparent;margin-left:2px;display:block;"></span></span>
+                        <span onClick="{{ row.onQueue }}" style="width:40px;height:40px;border-radius:12px;background:rgba(233,238,242,0.06);border:1px solid rgba(233,238,242,0.14);display:flex;align-items:center;justify-content:center;flex-shrink:0;box-sizing:border-box;" style-active="transform:scale(0.95)"><span style="width:15px;height:12px;display:flex;flex-direction:column;justify-content:space-between;">
                           <span style="height:2.5px;border-radius:2px;background:rgba(233,238,242,0.9);display:block;"></span>
                           <span style="height:2.5px;border-radius:2px;background:rgba(233,238,242,0.9);display:block;"></span>
                           <span style="height:2.5px;border-radius:2px;background:rgba(233,238,242,0.9);width:9px;display:block;"></span>
                         </span></span>
-                        <span onClick="{{ row.onPlus }}" style="width:40px;height:40px;border-radius:12px;background:rgba(233,238,242,0.06);border:1px solid rgba(233,238,242,0.14);display:flex;align-items:center;justify-content:center;flex-shrink:0;box-sizing:border-box;" style-active="background:rgba(233,238,242,0.2)"><span style="width:15px;height:15px;position:relative;display:block;">
+                        <span onClick="{{ row.onPlus }}" style="width:40px;height:40px;border-radius:12px;background:rgba(233,238,242,0.06);border:1px solid rgba(233,238,242,0.14);display:flex;align-items:center;justify-content:center;flex-shrink:0;box-sizing:border-box;" style-active="transform:scale(0.95)"><span style="width:15px;height:15px;position:relative;display:block;">
                           <span style="position:absolute;left:0;top:6px;width:15px;height:2.5px;border-radius:2px;background:rgba(233,238,242,0.9);display:block;"></span>
                           <span style="position:absolute;left:6px;top:0;width:2.5px;height:15px;border-radius:2px;background:rgba(233,238,242,0.9);display:block;"></span>
                         </span></span>
@@ -764,10 +815,10 @@
                   <span style="flex:1;height:1px;background:rgba(233,238,242,0.1);"></span>
                   <span style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:11px;letter-spacing:0.14em;text-transform:uppercase;color:rgba(126,214,188,0.78);flex-shrink:0;">On this device</span>
                 </div>
-                <div data-noscrollbar style="display:flex;gap:16px;overflow-x:auto;padding-bottom:2px;">
+                <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(132px,1fr));gap:18px 16px;">
                   <sc-for list="{{ g.items }}" as="d" hint-placeholder-count="4">
-                    <div onClick="{{ d.onClick }}" style="width:132px;flex-shrink:0;" style-active="opacity:0.6">
-                      <div style="width:132px;height:132px;border-radius:11px;overflow:hidden;position:relative;background:#17242d;border:1px solid rgba(233,238,242,0.1);">
+                    <div onClick="{{ d.onClick }}" style="min-width:0;" style-active="opacity:0.6">
+                      <div style="width:100%;aspect-ratio:1;border-radius:11px;overflow:hidden;position:relative;background:#17242d;border:1px solid rgba(233,238,242,0.1);">
                         <img src="album-art.webp" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;" />
                       </div>
                       <div style="font-size:15px;font-weight:600;color:#e9eef2;margin-top:9px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ d.title }}</div>
@@ -814,16 +865,9 @@
 
       <sc-if value="{{ libPlaylistsView }}" hint-placeholder-val="{{ false }}">
         <div style="flex:1;min-width:0;display:flex;flex-direction:column;min-height:0;padding:24px 40px 28px;box-sizing:border-box;gap:12px;">
-          <div onClick="{{ onNewPlaylistTop }}" style="height:62px;flex-shrink:0;border-radius:16px;background:rgba(126,214,188,0.12);border:1px dashed rgba(126,214,188,0.45);display:flex;align-items:center;gap:16px;padding:0 22px;" style-active="background:rgba(126,214,188,0.26)">
-            <span style="width:20px;height:20px;position:relative;flex-shrink:0;display:block;">
-              <span style="position:absolute;left:0;top:8px;width:20px;height:3px;border-radius:2px;background:rgba(233,238,242,0.85);display:block;"></span>
-              <span style="position:absolute;left:8px;top:0;width:3px;height:20px;border-radius:2px;background:rgba(233,238,242,0.85);display:block;"></span>
-            </span>
-            <span style="font-size:19px;font-weight:700;color:#e9eef2;">New playlist</span>
-          </div>
           <div data-noscrollbar style="flex:1;min-height:0;overflow-y:auto;display:flex;flex-direction:column;gap:8px;">
             <sc-for list="{{ playlistCards }}" as="row" hint-placeholder-count="3">
-              <div onClick="{{ row.onRowClick }}" onPointerDown="{{ row.onHoldStart }}" onPointerMove="{{ row.onHoldMove }}" onPointerUp="{{ row.onHoldEnd }}" onPointerLeave="{{ row.onHoldEnd }}" onPointerCancel="{{ row.onHoldEnd }}" style="height:82px;flex-shrink:0;border-radius:16px;background:rgba(255,255,255,0.045);border:1px solid rgba(233,238,242,0.09);display:flex;align-items:center;gap:20px;padding:0 20px;background:{{ row.bg }};" style-active="background:rgba(233,238,242,0.12)">
+              <div onClick="{{ row.onRowClick }}" style="height:82px;flex-shrink:0;border-radius:16px;background:rgba(255,255,255,0.045);border:1px solid rgba(233,238,242,0.09);display:flex;align-items:center;gap:20px;padding:0 20px;background:{{ row.bg }};">
                 <div style="width:54px;height:54px;border-radius:11px;background:rgba(242,164,143,0.14);border:1px solid rgba(242,164,143,0.3);display:flex;flex-direction:column;justify-content:center;gap:5px;padding:0 12px;box-sizing:border-box;flex-shrink:0;">
                   <span style="height:3px;border-radius:2px;background:#f2a48f;display:block;"></span>
                   <span style="height:3px;border-radius:2px;background:rgba(242,164,143,0.7);display:block;width:70%;"></span>
@@ -834,13 +878,13 @@
                   <div style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:13px;color:rgba(233,238,242,0.62);margin-top:4px;">{{ row.meta }}</div>
                 </div>
                 <span style="display:{{ row.actionsDisplay }};align-items:center;gap:6px;flex-shrink:0;margin-right:-4px;">
-                  <span onClick="{{ row.onPlay }}" style="width:40px;height:40px;border-radius:12px;background:rgba(126,214,188,0.13);border:1px solid rgba(126,214,188,0.32);display:flex;align-items:center;justify-content:center;flex-shrink:0;box-sizing:border-box;" style-active="background:rgba(126,214,188,0.3)"><span style="width:0;height:0;border-left:11px solid #7ed6bc;border-top:7px solid transparent;border-bottom:7px solid transparent;margin-left:2px;display:block;"></span></span>
-                  <span onClick="{{ row.onQueue }}" style="width:40px;height:40px;border-radius:12px;background:rgba(233,238,242,0.06);border:1px solid rgba(233,238,242,0.14);display:flex;align-items:center;justify-content:center;flex-shrink:0;box-sizing:border-box;" style-active="background:rgba(233,238,242,0.2)"><span style="width:15px;height:12px;display:flex;flex-direction:column;justify-content:space-between;">
+                  <span onClick="{{ row.onPlay }}" style="width:40px;height:40px;border-radius:12px;background:rgba(126,214,188,0.13);border:1px solid rgba(126,214,188,0.32);display:flex;align-items:center;justify-content:center;flex-shrink:0;box-sizing:border-box;" style-active="transform:scale(0.95)"><span style="width:0;height:0;border-left:11px solid #7ed6bc;border-top:7px solid transparent;border-bottom:7px solid transparent;margin-left:2px;display:block;"></span></span>
+                  <span onClick="{{ row.onQueue }}" style="width:40px;height:40px;border-radius:12px;background:rgba(233,238,242,0.06);border:1px solid rgba(233,238,242,0.14);display:flex;align-items:center;justify-content:center;flex-shrink:0;box-sizing:border-box;" style-active="transform:scale(0.95)"><span style="width:15px;height:12px;display:flex;flex-direction:column;justify-content:space-between;">
                     <span style="height:2.5px;border-radius:2px;background:rgba(233,238,242,0.9);display:block;"></span>
                     <span style="height:2.5px;border-radius:2px;background:rgba(233,238,242,0.9);display:block;"></span>
                     <span style="height:2.5px;border-radius:2px;background:rgba(233,238,242,0.9);width:9px;display:block;"></span>
                   </span></span>
-                  <span onClick="{{ row.onPlus }}" style="width:40px;height:40px;border-radius:12px;background:rgba(233,238,242,0.06);border:1px solid rgba(233,238,242,0.14);display:flex;align-items:center;justify-content:center;flex-shrink:0;box-sizing:border-box;" style-active="background:rgba(233,238,242,0.2)"><span style="width:15px;height:15px;position:relative;display:block;">
+                  <span onClick="{{ row.onPlus }}" style="width:40px;height:40px;border-radius:12px;background:rgba(233,238,242,0.06);border:1px solid rgba(233,238,242,0.14);display:flex;align-items:center;justify-content:center;flex-shrink:0;box-sizing:border-box;" style-active="transform:scale(0.95)"><span style="width:15px;height:15px;position:relative;display:block;">
                     <span style="position:absolute;left:0;top:6px;width:15px;height:2.5px;border-radius:2px;background:rgba(233,238,242,0.9);display:block;"></span>
                     <span style="position:absolute;left:6px;top:0;width:2.5px;height:15px;border-radius:2px;background:rgba(233,238,242,0.9);display:block;"></span>
                   </span></span>
@@ -861,9 +905,16 @@
               <div style="font-size:24px;font-weight:700;color:#e9eef2;line-height:1.2;text-wrap:pretty;">{{ libAlbumTitle }}</div>
               <div style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:15px;color:rgba(233,238,242,0.62);margin-top:8px;">{{ libAlbumMeta }}</div>
             </div>
-            <div onClick="{{ onPlayAlbum }}" style="height:58px;border-radius:16px;background:rgba(126,214,188,0.14);border:1px solid rgba(126,214,188,0.36);display:flex;align-items:center;justify-content:center;gap:14px;flex-shrink:0;" style-active="background:rgba(126,214,188,0.28)">
+            <div onClick="{{ onPlayAlbum }}" style="height:58px;border-radius:16px;background:rgba(126,214,188,0.14);border:1px solid rgba(126,214,188,0.36);display:flex;align-items:center;justify-content:center;gap:14px;flex-shrink:0;" style-active="transform:scale(0.95)">
               <span style="width:0;height:0;border-left:14px solid #7ed6bc;border-top:9px solid transparent;border-bottom:9px solid transparent;flex-shrink:0;display:block;"></span>
               <span style="font-size:19px;font-weight:700;color:#e9eef2;">Play album</span>
+            </div>
+            <div onClick="{{ onQueueAlbum }}" style="height:58px;border-radius:16px;background:rgba(233,238,242,0.06);border:1px solid rgba(233,238,242,0.16);display:flex;align-items:center;justify-content:center;gap:14px;flex-shrink:0;" style-active="transform:scale(0.95)">
+              <span style="width:17px;height:17px;position:relative;flex-shrink:0;display:block;">
+                <span style="position:absolute;left:0;top:7px;width:17px;height:3px;border-radius:2px;background:rgba(233,238,242,0.9);display:block;"></span>
+                <span style="position:absolute;left:7px;top:0;width:3px;height:17px;border-radius:2px;background:rgba(233,238,242,0.9);display:block;"></span>
+              </span>
+              <span style="font-size:19px;font-weight:700;color:#e9eef2;">Add to queue</span>
             </div>
           </div>
 
@@ -874,18 +925,18 @@
             </div>
             <div data-noscrollbar style="flex:1;min-height:0;overflow-y:auto;display:flex;flex-direction:column;gap:2px;">
               <sc-for list="{{ libTracks }}" as="row" hint-placeholder-count="8">
-                <div onClick="{{ row.onRowClick }}" onPointerDown="{{ row.onHoldStart }}" onPointerMove="{{ row.onHoldMove }}" onPointerUp="{{ row.onHoldEnd }}" onPointerLeave="{{ row.onHoldEnd }}" onPointerCancel="{{ row.onHoldEnd }}" style="height:52px;flex-shrink:0;display:flex;align-items:center;gap:18px;padding:0 16px;border-radius:10px;background:{{ row.bg }};" style-active="background:rgba(233,238,242,0.14)">
+                <div onClick="{{ row.onRowClick }}" style="height:52px;flex-shrink:0;display:flex;align-items:center;gap:18px;padding:0 16px;border-radius:10px;background:{{ row.bg }};">
                   <span style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:15px;color:rgba(233,238,242,0.62);width:26px;flex-shrink:0;">{{ row.num }}</span>
                   <span style="flex:1;min-width:0;font-size:19px;font-weight:600;color:{{ row.ink }};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ row.label }}</span>
                   <span style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:16px;color:rgba(233,238,242,0.62);flex-shrink:0;display:{{ row.metaDisplay }};">{{ row.meta }}</span>
                   <span style="display:{{ row.actionsDisplay }};align-items:center;gap:6px;flex-shrink:0;margin-right:-4px;">
-                    <span onClick="{{ row.onPlay }}" style="width:40px;height:40px;border-radius:12px;background:rgba(126,214,188,0.13);border:1px solid rgba(126,214,188,0.32);display:flex;align-items:center;justify-content:center;flex-shrink:0;box-sizing:border-box;" style-active="background:rgba(126,214,188,0.3)"><span style="width:0;height:0;border-left:11px solid #7ed6bc;border-top:7px solid transparent;border-bottom:7px solid transparent;margin-left:2px;display:block;"></span></span>
-                    <span onClick="{{ row.onQueue }}" style="width:40px;height:40px;border-radius:12px;background:rgba(233,238,242,0.06);border:1px solid rgba(233,238,242,0.14);display:flex;align-items:center;justify-content:center;flex-shrink:0;box-sizing:border-box;" style-active="background:rgba(233,238,242,0.2)"><span style="width:15px;height:12px;display:flex;flex-direction:column;justify-content:space-between;">
+                    <span onClick="{{ row.onPlay }}" style="width:40px;height:40px;border-radius:12px;background:rgba(126,214,188,0.13);border:1px solid rgba(126,214,188,0.32);display:flex;align-items:center;justify-content:center;flex-shrink:0;box-sizing:border-box;" style-active="transform:scale(0.95)"><span style="width:0;height:0;border-left:11px solid #7ed6bc;border-top:7px solid transparent;border-bottom:7px solid transparent;margin-left:2px;display:block;"></span></span>
+                    <span onClick="{{ row.onQueue }}" style="width:40px;height:40px;border-radius:12px;background:rgba(233,238,242,0.06);border:1px solid rgba(233,238,242,0.14);display:flex;align-items:center;justify-content:center;flex-shrink:0;box-sizing:border-box;" style-active="transform:scale(0.95)"><span style="width:15px;height:12px;display:flex;flex-direction:column;justify-content:space-between;">
                       <span style="height:2.5px;border-radius:2px;background:rgba(233,238,242,0.9);display:block;"></span>
                       <span style="height:2.5px;border-radius:2px;background:rgba(233,238,242,0.9);display:block;"></span>
                       <span style="height:2.5px;border-radius:2px;background:rgba(233,238,242,0.9);width:9px;display:block;"></span>
                     </span></span>
-                    <span onClick="{{ row.onPlus }}" style="width:40px;height:40px;border-radius:12px;background:rgba(233,238,242,0.06);border:1px solid rgba(233,238,242,0.14);display:flex;align-items:center;justify-content:center;flex-shrink:0;box-sizing:border-box;" style-active="background:rgba(233,238,242,0.2)"><span style="width:15px;height:15px;position:relative;display:block;">
+                    <span onClick="{{ row.onPlus }}" style="width:40px;height:40px;border-radius:12px;background:rgba(233,238,242,0.06);border:1px solid rgba(233,238,242,0.14);display:flex;align-items:center;justify-content:center;flex-shrink:0;box-sizing:border-box;" style-active="transform:scale(0.95)"><span style="width:15px;height:15px;position:relative;display:block;">
                       <span style="position:absolute;left:0;top:6px;width:15px;height:2.5px;border-radius:2px;background:rgba(233,238,242,0.9);display:block;"></span>
                       <span style="position:absolute;left:6px;top:0;width:2.5px;height:15px;border-radius:2px;background:rgba(233,238,242,0.9);display:block;"></span>
                     </span></span>
@@ -906,45 +957,32 @@
     </div>
 
     <div style="position:relative;height:186px;flex-shrink:0;border-top:1px solid rgba(159,180,232,0.24);background:rgba(20,31,40,0.78);display:{{ noticeFooterDisplay }};align-items:center;justify-content:center;padding:0 40px;box-sizing:border-box;">
-
-        <div style="display:flex;align-items:center;justify-content:center;gap:30px;">
-        <div style="width:172px;display:flex;flex-direction:column;align-items:center;gap:13px;">
-          <div style="position:relative;width:72px;height:72px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-            <div style="position:absolute;width:72px;height:72px;border-radius:50%;border:2px solid #7ed6bc;animation:npRing 2800ms ease-out 0ms infinite;"></div>
-            <div style="position:absolute;width:72px;height:72px;border-radius:50%;border:2px solid #7ed6bc;animation:npRing 2800ms ease-out 1400ms infinite;"></div>
-            <div style="width:58px;height:58px;border-radius:50%;background:rgba(126,214,188,0.14);border:1px solid rgba(126,214,188,0.4);display:flex;align-items:center;justify-content:center;">{{ waitIconLmsLg }}</div>
-          </div>
-          <div style="text-align:center;">
-            <div style="font-size:16px;font-weight:700;color:#e9eef2;white-space:nowrap;">Lyrion</div>
-            <div style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:11px;letter-spacing:0.16em;text-transform:uppercase;color:#7ed6bc;margin-top:4px;white-space:nowrap;">Starts on play</div>
+      <div style="display:flex;align-items:center;justify-content:center;gap:30px;">
+        <div style="width:172px;display:flex;align-items:center;justify-content:center;">
+          <div style="position:relative;width:100px;height:100px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+            <div style="position:absolute;width:100px;height:100px;border-radius:50%;border:2px solid #7ed6bc;animation:npRing 2800ms ease-out 0ms infinite;"></div>
+            <div style="position:absolute;width:100px;height:100px;border-radius:50%;border:2px solid #7ed6bc;animation:npRing 2800ms ease-out 1400ms infinite;"></div>
+            <div style="width:90px;height:90px;border-radius:50%;background:rgba(126,214,188,0.14);border:1px solid rgba(126,214,188,0.4);display:flex;align-items:center;justify-content:center;">{{ waitIconLmsLg }}</div>
           </div>
         </div>
-        <div style="width:172px;display:flex;flex-direction:column;align-items:center;gap:13px;">
-          <div style="position:relative;width:72px;height:72px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-            <div style="position:absolute;width:72px;height:72px;border-radius:50%;border:2px solid rgba(233,238,242,0.6);animation:npRing 2800ms ease-out 900ms infinite;"></div>
-            <div style="position:absolute;width:72px;height:72px;border-radius:50%;border:2px solid rgba(233,238,242,0.6);animation:npRing 2800ms ease-out 2300ms infinite;"></div>
-            <div style="width:58px;height:58px;border-radius:50%;background:rgba(233,238,242,0.07);border:1px solid rgba(233,238,242,0.16);display:flex;align-items:center;justify-content:center;">{{ waitIconSpotifyLg }}</div>
-          </div>
-          <div style="text-align:center;">
-            <div style="font-size:16px;font-weight:700;color:#e9eef2;white-space:nowrap;">Spotify</div>
-            <div style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:11px;letter-spacing:0.16em;text-transform:uppercase;color:rgba(233,238,242,0.6);margin-top:4px;white-space:nowrap;">Listening</div>
+        <div style="width:172px;display:flex;align-items:center;justify-content:center;">
+          <div style="position:relative;width:100px;height:100px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+            <div style="position:absolute;width:100px;height:100px;border-radius:50%;border:2px solid rgba(233,238,242,0.6);animation:npRing 2800ms ease-out 900ms infinite;"></div>
+            <div style="position:absolute;width:100px;height:100px;border-radius:50%;border:2px solid rgba(233,238,242,0.6);animation:npRing 2800ms ease-out 2300ms infinite;"></div>
+            <div style="width:90px;height:90px;border-radius:50%;background:rgba(233,238,242,0.07);border:1px solid rgba(233,238,242,0.16);display:flex;align-items:center;justify-content:center;">{{ waitIconSpotifyLg }}</div>
           </div>
         </div>
-        <div style="width:172px;display:flex;flex-direction:column;align-items:center;gap:13px;">
-          <div style="position:relative;width:72px;height:72px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-            <div style="position:absolute;width:72px;height:72px;border-radius:50%;border:2px solid rgba(233,238,242,0.6);animation:npRing 2800ms ease-out 1800ms infinite;"></div>
-            <div style="position:absolute;width:72px;height:72px;border-radius:50%;border:2px solid rgba(233,238,242,0.6);animation:npRing 2800ms ease-out 400ms infinite;"></div>
-            <div style="width:58px;height:58px;border-radius:50%;background:rgba(233,238,242,0.07);border:1px solid rgba(233,238,242,0.16);display:flex;align-items:center;justify-content:center;">{{ waitIconBtLg }}</div>
-          </div>
-          <div style="text-align:center;">
-            <div style="font-size:16px;font-weight:700;color:#e9eef2;white-space:nowrap;">Bluetooth</div>
-            <div style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:11px;letter-spacing:0.16em;text-transform:uppercase;color:rgba(233,238,242,0.6);margin-top:4px;white-space:nowrap;">Pairable</div>
+        <div style="width:172px;display:flex;align-items:center;justify-content:center;">
+          <div style="position:relative;width:100px;height:100px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+            <div style="position:absolute;width:100px;height:100px;border-radius:50%;border:2px solid rgba(233,238,242,0.6);animation:npRing 2800ms ease-out 1800ms infinite;"></div>
+            <div style="position:absolute;width:100px;height:100px;border-radius:50%;border:2px solid rgba(233,238,242,0.6);animation:npRing 2800ms ease-out 400ms infinite;"></div>
+            <div style="width:90px;height:90px;border-radius:50%;background:rgba(233,238,242,0.07);border:1px solid rgba(233,238,242,0.16);display:flex;align-items:center;justify-content:center;">{{ waitIconBtLg }}</div>
           </div>
         </div>
-        </div>
+      </div>
     </div>
 
-    <div onClick="{{ onLibClose }}" onPointerDown="{{ onMiniDown }}" onPointerUp="{{ onMiniUp }}" onPointerLeave="{{ onMiniUp }}" onPointerCancel="{{ onMiniUp }}" style="position:relative;height:104px;flex-shrink:0;border-top:1px solid rgba(233,238,242,0.09);background:{{ miniBg }};display:{{ miniDisplay }};grid-template-columns:1fr auto 1fr;align-items:center;gap:20px;padding:0 40px;transition:transform 260ms cubic-bezier(0.2,0.8,0.2,1),opacity 180ms ease;transform:{{ miniTransform }};opacity:{{ miniOpacity }};">
+    <div onClick="{{ onLibClose }}" onPointerDown="{{ onMiniDown }}" onPointerUp="{{ onMiniUp }}" onPointerLeave="{{ onMiniUp }}" onPointerCancel="{{ onMiniUp }}" style="position:relative;height:104px;flex-shrink:0;border-top:1px solid rgba(233,238,242,0.09);background:{{ miniBg }};display:{{ miniDisplay }};grid-template-columns:1fr auto 1fr;align-items:center;gap:20px;padding:0 40px;opacity:{{ miniOpacity }};">
       <div style="position:absolute;left:0;right:0;top:0;height:2px;background:rgba(233,238,242,0.08);visibility:{{ barVisibility }};">
         <div style="position:absolute;left:0;top:0;bottom:0;background:{{ accent }};opacity:0.6;width:{{ progressPct }};transition:width 400ms linear;"></div>
       </div>
@@ -959,13 +997,13 @@
         </div>
       </div>
 
-      <span style="display:inline-flex;align-items:center;gap:9px;background:{{ badgeBg }};border:1px solid {{ badgeBorder }};color:{{ accent }};font-size:12px;font-weight:700;letter-spacing:0.18em;text-transform:uppercase;padding:7px 13px;border-radius:999px;white-space:nowrap;flex-shrink:0;">
+      <span style="display:inline-flex;align-items:center;gap:13px;font-family:'IBM Plex Mono','Courier New',monospace;color:{{ accent }};font-size:21px;font-weight:600;letter-spacing:0.16em;text-transform:uppercase;white-space:nowrap;flex-shrink:0;">
         <span style="display:flex;align-items:center;animation:{{ dotAnim }};">{{ miniBadgeIcon }}</span>{{ sourceLabel }}
       </span>
 
       <div style="display:flex;align-items:center;gap:20px;justify-self:end;flex-shrink:0;">
       <div style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:16px;color:rgba(233,238,242,0.5);flex-shrink:0;visibility:{{ barVisibility }};">{{ elapsed }}</div>
-      <div onClick="{{ onMiniVol }}" onPointerDown="{{ onMiniBtnDown }}" style="width:56px;height:56px;border-radius:50%;background:rgba(233,238,242,0.07);align-items:center;justify-content:center;flex-shrink:0;position:relative;display:{{ volTriggerDisplay }};" style-active="background:rgba(233,238,242,0.2)">
+      <div onClick="{{ onMiniVol }}" onPointerDown="{{ onMiniBtnDown }}" style="width:56px;height:56px;border-radius:50%;background:rgba(233,238,242,0.07);align-items:center;justify-content:center;flex-shrink:0;position:relative;display:{{ volTriggerDisplay }};" style-active="transform:scale(0.95)">
         <span style="position:absolute;right:5px;bottom:5px;width:16px;height:16px;border-radius:50%;background:#101a21;box-shadow:0 0 0 2px rgba(16,26,33,0.9);align-items:center;justify-content:center;display:{{ lockBadgeDisplay }};">
           <span style="position:relative;width:9px;height:10px;display:block;">
             <span style="position:absolute;left:1.5px;top:0;width:6px;height:5px;border:1.5px solid #e0a758;border-bottom:none;border-radius:3px 3px 0 0;box-sizing:border-box;display:block;"></span>
@@ -1018,19 +1056,164 @@
     </div>
   </div>
 
-  <div onClick="{{ onIdleDismiss }}" style="position:absolute;inset:0;z-index:20;background:rgba(11,18,24,0.93);transition:opacity 520ms ease;opacity:{{ idleOpacity }};pointer-events:{{ idlePointer }};">
-    <div style="position:absolute;display:flex;align-items:baseline;gap:14px;font-family:'IBM Plex Mono','Courier New',monospace;font-weight:300;letter-spacing:-0.02em;white-space:nowrap;transform:translate(-50%,-50%);transition:left 1400ms cubic-bezier(0.4,0,0.2,1),top 1400ms cubic-bezier(0.4,0,0.2,1);left:{{ clockX }};top:{{ clockY }};">
-      <span style="font-size:132px;line-height:1;color:rgba(233,238,242,0.82);">{{ clockHM }}</span>
-      <span style="font-size:58px;line-height:1;color:rgba(126,214,188,0.55);">{{ clockS }}</span>
+  <div style="position:absolute;inset:0;z-index:32;background:rgba(13,21,27,0.95);flex-direction:column;align-items:center;justify-content:center;gap:40px;transition:opacity 220ms ease;opacity:{{ pairInlineOpacity }};pointer-events:{{ pairPointer }};display:{{ pairInlineDisplay }};">
+    <div style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:15px;letter-spacing:0.34em;text-transform:uppercase;color:rgba(233,238,242,0.5);">Pairing request</div>
+    <div style="display:flex;flex-direction:column;align-items:center;gap:22px;">
+      <div style="position:relative;width:132px;height:132px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+        <div style="position:absolute;width:132px;height:132px;border-radius:50%;border:2px solid #9fb4e8;animation:npRing 2800ms ease-out 0ms infinite;"></div>
+        <div style="position:absolute;width:132px;height:132px;border-radius:50%;border:2px solid #9fb4e8;animation:npRing 2800ms ease-out 1400ms infinite;"></div>
+        <div style="width:132px;height:132px;border-radius:50%;border:2px solid #9fb4e8;background:rgba(159,180,232,0.14);display:flex;align-items:center;justify-content:center;box-shadow:0 0 46px rgba(159,180,232,0.2);">{{ pairIcon }}</div>
+      </div>
+      <span style="font-size:30px;font-weight:700;color:#e9eef2;white-space:nowrap;">{{ pairDevice }}</span>
+    </div>
+    <div style="flex-direction:column;align-items:center;gap:12px;display:{{ pairAskDisplay }};">
+      <span style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:14px;letter-spacing:0.22em;text-transform:uppercase;color:rgba(233,238,242,0.6);">Code on your phone</span>
+      <span style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:72px;font-weight:700;letter-spacing:0.16em;color:#9fb4e8;line-height:1;">{{ pairCode }}</span>
+    </div>
+
+    <div style="flex-direction:column;align-items:center;gap:18px;display:{{ pairDoneDisplay }};">
+      <span style="width:84px;height:84px;border-radius:50%;position:relative;display:{{ pairTickDisplay }};background:rgba(159,180,232,0.18);border:2px solid #9fb4e8;">
+        <span style="position:absolute;left:26px;top:38px;width:16px;height:3px;border-radius:2px;background:#9fb4e8;transform:rotate(45deg);transform-origin:left center;display:block;"></span>
+        <span style="position:absolute;left:37px;top:49px;width:28px;height:3px;border-radius:2px;background:#9fb4e8;transform:rotate(-50deg);transform-origin:left center;display:block;"></span>
+      </span>
+      <span style="width:84px;height:84px;border-radius:50%;position:relative;display:{{ pairCrossDisplay }};background:rgba(233,238,242,0.08);border:2px solid rgba(233,238,242,0.4);">
+        <span style="position:absolute;left:26px;top:40.5px;width:32px;height:3px;border-radius:2px;background:rgba(233,238,242,0.82);transform:rotate(45deg);display:block;"></span>
+        <span style="position:absolute;left:26px;top:40.5px;width:32px;height:3px;border-radius:2px;background:rgba(233,238,242,0.82);transform:rotate(-45deg);display:block;"></span>
+      </span>
+      <span style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:17px;letter-spacing:0.2em;text-transform:uppercase;color:{{ pairDoneInk }};">{{ pairDoneLabel }}</span>
+    </div>
+
+    <div style="align-items:center;gap:20px;display:{{ pairAskDisplay }};">
+      <div onClick="{{ onPairReject }}" style="height:74px;padding:0 44px;border-radius:18px;background:rgba(233,238,242,0.07);border:1px solid rgba(233,238,242,0.16);display:flex;align-items:center;font-size:21px;font-weight:700;color:#e9eef2;" style-active="transform:scale(0.95)">Reject</div>
+      <div onClick="{{ onPairAccept }}" style="height:74px;padding:0 44px;border-radius:18px;background:rgba(159,180,232,0.2);border:1px solid rgba(159,180,232,0.5);display:flex;align-items:center;font-size:21px;font-weight:700;color:#9fb4e8;" style-active="transform:scale(0.95)">Accept</div>
+    </div>
+    <div style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:13px;letter-spacing:0.16em;text-transform:uppercase;color:rgba(233,238,242,0.6);display:{{ pairAskDisplay }};">{{ pairCountdown }}</div>
+  </div>
+
+  <div onClick="{{ onIdleDismiss }}" style="position:absolute;inset:0;z-index:20;overflow:hidden;background:#0b1218;transition:opacity 520ms ease;opacity:{{ idleOpacity }};pointer-events:{{ idlePointer }};">
+    <img src="artist-photo.webp" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;filter:brightness({{ idleBright }}) saturate(0.9);display:{{ idleArtistBg }};" />
+    <img src="album-art.webp" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;filter:brightness({{ idleBright }}) saturate(0.9);display:{{ idleWallpaperBg }};" />
+    <div style="position:absolute;inset:0;background:{{ idleScrim }};"></div>
+
+    <div style="position:absolute;transform:translate(-50%,-50%);transition:left 1400ms cubic-bezier(0.4,0,0.2,1),top 1400ms cubic-bezier(0.4,0,0.2,1);left:{{ clockX }};top:{{ clockY }};display:flex;flex-direction:column;align-items:flex-start;gap:16px;">
+      <div style="display:flex;align-items:baseline;gap:14px;font-family:'IBM Plex Mono','Courier New',monospace;font-weight:300;letter-spacing:-0.02em;white-space:nowrap;">
+        <span style="font-size:132px;line-height:1;color:#e9eef2;paint-order:stroke fill;-webkit-text-stroke:{{ idleStroke }};text-shadow:0 2px 10px rgba(7,11,15,0.55);">{{ clockHM }}</span>
+        <span style="font-size:58px;line-height:1;color:#7ed6bc;paint-order:stroke fill;-webkit-text-stroke:{{ idleStroke }};text-shadow:0 2px 10px rgba(7,11,15,0.55);">{{ clockS }}</span>
+      </div>
+      <div style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:21px;letter-spacing:0.2em;text-transform:uppercase;color:#e9eef2;white-space:nowrap;paint-order:stroke fill;-webkit-text-stroke:{{ idleStroke }};text-shadow:0 2px 10px rgba(7,11,15,0.55);">{{ clockDate }}</div>
+    </div>
+
+    <div style="position:absolute;left:0;right:0;bottom:0;padding:24px 56px 28px;box-sizing:border-box;display:flex;align-items:center;gap:52px;">
+      <div style="display:flex;align-items:center;gap:24px;flex-shrink:0;">
+        <span style="position:relative;width:124px;height:124px;flex-shrink:0;display:block;">
+          <span style="position:absolute;inset:0;display:{{ wxSolid }};">
+              <span style="position:absolute;left:50%;top:50%;width:124px;height:124px;margin:-62px 0 0 -62px;animation:wxSpin 18s linear infinite;display:{{ wxNow.sunDisplay }};">
+                <span style="position:absolute;left:50%;top:0;width:6px;height:21.080000000000002px;margin-left:-3px;border-radius:2px;background:#f2c14f;display:block;"></span>
+                <span style="position:absolute;left:50%;bottom:0;width:6px;height:21.080000000000002px;margin-left:-3px;border-radius:2px;background:#f2c14f;display:block;"></span>
+                <span style="position:absolute;top:50%;left:0;width:21.080000000000002px;height:6px;margin-top:-3px;border-radius:2px;background:#f2c14f;display:block;"></span>
+                <span style="position:absolute;top:50%;right:0;width:21.080000000000002px;height:6px;margin-top:-3px;border-radius:2px;background:#f2c14f;display:block;"></span>
+              </span>
+              <span style="position:absolute;left:50%;top:50%;width:62px;height:62px;margin:-31px 0 0 -31px;border-radius:50%;background:#f2c14f;box-shadow:0 0 37.199999999999996px rgba(242,193,79,0.6);display:{{ wxNow.sunDisplay }};"></span>
+              <span style="position:absolute;left:0;top:37.199999999999996px;width:124px;height:52.08px;animation:wxDrift 5s ease-in-out infinite;display:{{ wxNow.cloudDisplay }};">
+                <span style="position:absolute;left:0;bottom:0;width:124px;height:32.24px;border-radius:124px;background:#eef3f7;display:block;"></span>
+                <span style="position:absolute;left:19.84px;top:0;width:52.08px;height:52.08px;border-radius:50%;background:#eef3f7;display:block;"></span>
+                <span style="position:absolute;right:14.879999999999999px;top:12.4px;width:39.68px;height:39.68px;border-radius:50%;background:#eef3f7;display:block;"></span>
+              </span>
+              <span style="position:absolute;left:27.28px;bottom:0;width:7px;height:24.8px;border-radius:2px;background:#8fc4e8;animation:wxFall 1.1s linear infinite;display:{{ wxNow.rainDisplay }};"></span>
+              <span style="position:absolute;left:59.519999999999996px;bottom:0;width:7px;height:24.8px;border-radius:2px;background:#8fc4e8;animation:wxFall 1.1s linear 0.35s infinite;display:{{ wxNow.rainDisplay }};"></span>
+              <span style="position:absolute;left:91.76px;bottom:0;width:7px;height:24.8px;border-radius:2px;background:#8fc4e8;animation:wxFall 1.1s linear 0.7s infinite;display:{{ wxNow.rainDisplay }};"></span>
+            </span>
+          <span style="position:absolute;inset:0;display:{{ wxDuo }};">
+              <span style="position:absolute;left:50%;top:50%;width:64.48px;height:64.48px;margin:-29.759999999999998px 0 0 -27.28px;border-radius:50%;background:#b8862f;display:{{ wxNow.sunDisplay }};"></span>
+              <span style="position:absolute;left:50%;top:50%;width:64.48px;height:64.48px;margin:-32.24px 0 0 -32.24px;border-radius:50%;background:#f7d777;animation:wxPulse 4s ease-in-out infinite;display:{{ wxNow.sunDisplay }};"></span>
+              <span style="position:absolute;left:0;top:39.68px;width:124px;height:54.56px;animation:wxDrift 5.5s ease-in-out infinite;display:{{ wxNow.cloudDisplay }};">
+                <span style="position:absolute;left:4.96px;bottom:-3.7199999999999998px;width:119.03999999999999px;height:34.720000000000006px;border-radius:124px;background:#8b98a6;display:block;"></span>
+                <span style="position:absolute;left:0;bottom:0;width:114.08px;height:32.24px;border-radius:124px;background:#f4f8fb;display:block;"></span>
+                <span style="position:absolute;left:17.360000000000003px;top:0;width:54.56px;height:54.56px;border-radius:50%;background:#f4f8fb;display:block;"></span>
+              </span>
+              <span style="position:absolute;left:32.24px;bottom:0;width:11.16px;height:11.16px;border-radius:50% 50% 50% 0;transform:rotate(45deg);background:#7fc0ea;animation:wxFall 1.2s linear infinite;display:{{ wxNow.rainDisplay }};"></span>
+              <span style="position:absolute;left:64.48px;bottom:0;width:11.16px;height:11.16px;border-radius:50% 50% 50% 0;transform:rotate(45deg);background:#7fc0ea;animation:wxFall 1.2s linear 0.4s infinite;display:{{ wxNow.rainDisplay }};"></span>
+              <span style="position:absolute;left:94.24px;bottom:0;width:11.16px;height:11.16px;border-radius:50% 50% 50% 0;transform:rotate(45deg);background:#7fc0ea;animation:wxFall 1.2s linear 0.8s infinite;display:{{ wxNow.rainDisplay }};"></span>
+            </span>
+          <span style="position:absolute;inset:0;display:{{ wxNeon }};">
+              <span style="position:absolute;left:50%;top:50%;width:62px;height:62px;margin:-31px 0 0 -31px;border-radius:50%;box-sizing:border-box;border:6px solid #ffd766;box-shadow:0 0 22.32px rgba(255,215,102,0.9),inset 0 0 12.4px rgba(255,215,102,0.6);animation:wxPulse 2.8s ease-in-out infinite;display:{{ wxNow.sunDisplay }};"></span>
+              <span style="position:absolute;left:0;top:39.68px;width:124px;height:52.08px;animation:wxDrift 6s ease-in-out infinite;display:{{ wxNow.cloudDisplay }};">
+                <span style="position:absolute;left:0;bottom:0;width:124px;height:37.199999999999996px;border-radius:124px;box-sizing:border-box;border:6px solid #9fe6ff;box-shadow:0 0 17.360000000000003px rgba(159,230,255,0.8);display:block;"></span>
+                <span style="position:absolute;left:22.32px;top:0;width:52.08px;height:52.08px;border-radius:50%;box-sizing:border-box;border:6px solid #9fe6ff;box-shadow:0 0 17.360000000000003px rgba(159,230,255,0.8);display:block;"></span>
+              </span>
+              <span style="position:absolute;left:32.24px;bottom:0;width:6px;height:27.28px;border-radius:6px;background:#7fe4ff;box-shadow:0 0 12.4px rgba(127,228,255,0.9);animation:wxFall 1.1s linear infinite;display:{{ wxNow.rainDisplay }};"></span>
+              <span style="position:absolute;left:64.48px;bottom:0;width:6px;height:27.28px;border-radius:6px;background:#7fe4ff;box-shadow:0 0 12.4px rgba(127,228,255,0.9);animation:wxFall 1.1s linear 0.4s infinite;display:{{ wxNow.rainDisplay }};"></span>
+            </span>
+          </span>
+        <div style="min-width:0;">
+          <div style="display:flex;align-items:baseline;gap:16px;">
+            <span style="font-size:104px;font-weight:300;letter-spacing:-0.03em;line-height:0.94;color:#e9eef2;paint-order:stroke fill;-webkit-text-stroke:{{ idleStroke }};text-shadow:0 2px 10px rgba(7,11,15,0.55);">{{ wxTemp }}</span>
+            <span style="white-space:nowrap;align-items:baseline;gap:9px;display:{{ wxMinMaxDisplay }};paint-order:stroke fill;-webkit-text-stroke:{{ idleStroke }};text-shadow:0 2px 10px rgba(7,11,15,0.55);"><span style="font-size:36px;font-weight:700;color:#f2a48f;">{{ wxMax }}</span><span style="font-size:26px;color:#9fb4e8;">{{ wxMin }}</span></span>
+          </div>
+          <div style="font-size:26px;font-weight:600;color:#7ed6bc;margin-top:6px;white-space:nowrap;paint-order:stroke fill;-webkit-text-stroke:{{ idleStroke }};text-shadow:0 2px 10px rgba(7,11,15,0.55);">{{ wxNow.label }}</div>
+        </div>
+      </div>
+      <span style="flex:1;min-width:0;"></span>
+      <div style="display:flex;align-items:flex-start;gap:32px;flex-shrink:0;">
+        <sc-for list="{{ wxDays }}" as="d" hint-placeholder-count="4">
+          <span style="display:flex;flex-direction:column;align-items:center;gap:10px;flex-shrink:0;min-width:104px;">
+            <span style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:21px;letter-spacing:0.16em;text-transform:uppercase;color:#e9eef2;display:block;paint-order:stroke fill;-webkit-text-stroke:{{ idleStroke }};text-shadow:0 2px 10px rgba(7,11,15,0.55);">{{ d.name }}</span>
+            <span style="position:relative;width:80px;height:80px;flex-shrink:0;display:block;">
+          <span style="position:absolute;inset:0;display:{{ wxSolid }};">
+              <span style="position:absolute;left:50%;top:50%;width:80px;height:80px;margin:-40px 0 0 -40px;animation:wxSpin 18s linear infinite;display:{{ d.sunDisplay }};">
+                <span style="position:absolute;left:50%;top:0;width:4px;height:13.600000000000001px;margin-left:-2px;border-radius:2px;background:#f2c14f;display:block;"></span>
+                <span style="position:absolute;left:50%;bottom:0;width:4px;height:13.600000000000001px;margin-left:-2px;border-radius:2px;background:#f2c14f;display:block;"></span>
+                <span style="position:absolute;top:50%;left:0;width:13.600000000000001px;height:4px;margin-top:-2px;border-radius:2px;background:#f2c14f;display:block;"></span>
+                <span style="position:absolute;top:50%;right:0;width:13.600000000000001px;height:4px;margin-top:-2px;border-radius:2px;background:#f2c14f;display:block;"></span>
+              </span>
+              <span style="position:absolute;left:50%;top:50%;width:40px;height:40px;margin:-20px 0 0 -20px;border-radius:50%;background:#f2c14f;box-shadow:0 0 24px rgba(242,193,79,0.6);display:{{ d.sunDisplay }};"></span>
+              <span style="position:absolute;left:0;top:24px;width:80px;height:33.6px;animation:wxDrift 5s ease-in-out infinite;display:{{ d.cloudDisplay }};">
+                <span style="position:absolute;left:0;bottom:0;width:80px;height:20.8px;border-radius:80px;background:#eef3f7;display:block;"></span>
+                <span style="position:absolute;left:12.8px;top:0;width:33.6px;height:33.6px;border-radius:50%;background:#eef3f7;display:block;"></span>
+                <span style="position:absolute;right:9.6px;top:8px;width:25.6px;height:25.6px;border-radius:50%;background:#eef3f7;display:block;"></span>
+              </span>
+              <span style="position:absolute;left:17.6px;bottom:0;width:4px;height:16px;border-radius:2px;background:#8fc4e8;animation:wxFall 1.1s linear infinite;display:{{ d.rainDisplay }};"></span>
+              <span style="position:absolute;left:38.4px;bottom:0;width:4px;height:16px;border-radius:2px;background:#8fc4e8;animation:wxFall 1.1s linear 0.35s infinite;display:{{ d.rainDisplay }};"></span>
+              <span style="position:absolute;left:59.2px;bottom:0;width:4px;height:16px;border-radius:2px;background:#8fc4e8;animation:wxFall 1.1s linear 0.7s infinite;display:{{ d.rainDisplay }};"></span>
+            </span>
+          <span style="position:absolute;inset:0;display:{{ wxDuo }};">
+              <span style="position:absolute;left:50%;top:50%;width:41.6px;height:41.6px;margin:-19.2px 0 0 -17.6px;border-radius:50%;background:#b8862f;display:{{ d.sunDisplay }};"></span>
+              <span style="position:absolute;left:50%;top:50%;width:41.6px;height:41.6px;margin:-20.8px 0 0 -20.8px;border-radius:50%;background:#f7d777;animation:wxPulse 4s ease-in-out infinite;display:{{ d.sunDisplay }};"></span>
+              <span style="position:absolute;left:0;top:25.6px;width:80px;height:35.2px;animation:wxDrift 5.5s ease-in-out infinite;display:{{ d.cloudDisplay }};">
+                <span style="position:absolute;left:3.2px;bottom:-2.4px;width:76.8px;height:22.400000000000002px;border-radius:80px;background:#8b98a6;display:block;"></span>
+                <span style="position:absolute;left:0;bottom:0;width:73.60000000000001px;height:20.8px;border-radius:80px;background:#f4f8fb;display:block;"></span>
+                <span style="position:absolute;left:11.200000000000001px;top:0;width:35.2px;height:35.2px;border-radius:50%;background:#f4f8fb;display:block;"></span>
+              </span>
+              <span style="position:absolute;left:20.8px;bottom:0;width:7.199999999999999px;height:7.199999999999999px;border-radius:50% 50% 50% 0;transform:rotate(45deg);background:#7fc0ea;animation:wxFall 1.2s linear infinite;display:{{ d.rainDisplay }};"></span>
+              <span style="position:absolute;left:41.6px;bottom:0;width:7.199999999999999px;height:7.199999999999999px;border-radius:50% 50% 50% 0;transform:rotate(45deg);background:#7fc0ea;animation:wxFall 1.2s linear 0.4s infinite;display:{{ d.rainDisplay }};"></span>
+              <span style="position:absolute;left:60.8px;bottom:0;width:7.199999999999999px;height:7.199999999999999px;border-radius:50% 50% 50% 0;transform:rotate(45deg);background:#7fc0ea;animation:wxFall 1.2s linear 0.8s infinite;display:{{ d.rainDisplay }};"></span>
+            </span>
+          <span style="position:absolute;inset:0;display:{{ wxNeon }};">
+              <span style="position:absolute;left:50%;top:50%;width:40px;height:40px;margin:-20px 0 0 -20px;border-radius:50%;box-sizing:border-box;border:4px solid #ffd766;box-shadow:0 0 14.399999999999999px rgba(255,215,102,0.9),inset 0 0 8px rgba(255,215,102,0.6);animation:wxPulse 2.8s ease-in-out infinite;display:{{ d.sunDisplay }};"></span>
+              <span style="position:absolute;left:0;top:25.6px;width:80px;height:33.6px;animation:wxDrift 6s ease-in-out infinite;display:{{ d.cloudDisplay }};">
+                <span style="position:absolute;left:0;bottom:0;width:80px;height:24px;border-radius:80px;box-sizing:border-box;border:4px solid #9fe6ff;box-shadow:0 0 11.200000000000001px rgba(159,230,255,0.8);display:block;"></span>
+                <span style="position:absolute;left:14.399999999999999px;top:0;width:33.6px;height:33.6px;border-radius:50%;box-sizing:border-box;border:4px solid #9fe6ff;box-shadow:0 0 11.200000000000001px rgba(159,230,255,0.8);display:block;"></span>
+              </span>
+              <span style="position:absolute;left:20.8px;bottom:0;width:4px;height:17.6px;border-radius:4px;background:#7fe4ff;box-shadow:0 0 8px rgba(127,228,255,0.9);animation:wxFall 1.1s linear infinite;display:{{ d.rainDisplay }};"></span>
+              <span style="position:absolute;left:41.6px;bottom:0;width:4px;height:17.6px;border-radius:4px;background:#7fe4ff;box-shadow:0 0 8px rgba(127,228,255,0.9);animation:wxFall 1.1s linear 0.4s infinite;display:{{ d.rainDisplay }};"></span>
+            </span>
+          </span>
+            <span style="display:flex;align-items:baseline;gap:9px;">
+              <span style="font-size:36px;font-weight:700;color:#f2a48f;paint-order:stroke fill;-webkit-text-stroke:{{ idleStroke }};text-shadow:0 2px 10px rgba(7,11,15,0.55);">{{ d.max }}</span>
+              <span style="font-size:26px;color:#9fb4e8;paint-order:stroke fill;-webkit-text-stroke:{{ idleStroke }};text-shadow:0 2px 10px rgba(7,11,15,0.55);">{{ d.min }}</span>
+            </span>
+          </span>
+        </sc-for>
+      </div>
     </div>
   </div>
 
-  <div onClick="{{ onDrawerClose }}" style="position:absolute;inset:0;z-index:12;background:rgba(8,12,16,0.6);backdrop-filter:blur(3px);transition:opacity 220ms ease;opacity:{{ drawerScrimOpacity }};pointer-events:{{ drawerPointer }};"></div>
+  <div onClick="{{ onDrawerClose }}" style="position:absolute;inset:0;z-index:12;background:rgba(8,12,16,0.6);transition:opacity 220ms ease;opacity:{{ drawerScrimOpacity }};pointer-events:{{ drawerPointer }};"></div>
 
   <div style="position:absolute;left:50%;top:50%;z-index:13;width:820px;background:#16232c;border:1px solid rgba(126,214,188,0.22);border-radius:28px;padding:34px 40px 36px;box-sizing:border-box;box-shadow:0 34px 90px rgba(0,0,0,0.6);transition:transform 240ms cubic-bezier(0.2,0.8,0.2,1),opacity 200ms ease;transform:{{ drawerTransform }};opacity:{{ drawerOpacity }};pointer-events:{{ drawerPointer }};">
     <div style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:12px;letter-spacing:0.2em;text-transform:uppercase;color:rgba(233,238,242,0.6);margin-bottom:22px;">Controls</div>
     <div style="align-items:center;gap:22px;display:{{ volRowDisplay }};">
-      <div onClick="{{ onMute }}" style="width:58px;height:58px;border-radius:15px;flex-shrink:0;display:flex;align-items:center;justify-content:center;background:{{ muteBg }};border:1px solid {{ muteBorder }};box-sizing:border-box;" style-active="background:rgba(233,238,242,0.2)">
+      <div onClick="{{ onMute }}" style="width:58px;height:58px;border-radius:15px;flex-shrink:0;display:flex;align-items:center;justify-content:center;background:{{ muteBg }};border:1px solid {{ muteBorder }};box-sizing:border-box;" style-active="transform:scale(0.95)">
         <span style="position:relative;width:30px;height:30px;display:block;">
           <span style="position:absolute;left:0;top:50%;transform:translateY(-50%);width:15px;height:26px;background:{{ volIconInk }};clip-path:polygon(0 27%,42% 27%,100% 0,100% 100%,42% 73%,0 73%);display:block;"></span>
           <span style="position:absolute;left:5px;top:50%;width:16px;height:16px;margin-top:-8px;border-radius:50%;box-sizing:border-box;border:2.5px solid {{ arc1Ink }};clip-path:polygon(50% 10%,100% 0,100% 100%,50% 90%);display:{{ arc1Display }};"></span>
@@ -1068,7 +1251,7 @@
     <dc-import name="Settings" mode="wide" on-back="{{ onSetBack }}" hint-size="100%,100%" style="position:absolute;inset:0;width:100%;height:100%;"></dc-import>
   </div>
 
-  <div onClick="{{ onQueueClose }}" style="position:absolute;inset:0;z-index:36;background:rgba(8,12,16,0.62);backdrop-filter:blur(3px);transition:opacity 200ms ease;opacity:{{ queueScrim }};pointer-events:{{ queuePointer }};"></div>
+  <div onClick="{{ onQueueClose }}" style="position:absolute;inset:0;z-index:36;background:rgba(8,12,16,0.62);transition:opacity 200ms ease;opacity:{{ queueScrim }};pointer-events:{{ queuePointer }};"></div>
 
   <div style="position:absolute;z-index:37;top:0;bottom:0;right:0;width:470px;background:#16232c;border-left:1px solid rgba(159,180,232,0.22);padding:26px 26px 28px;box-sizing:border-box;box-shadow:-30px 0 80px rgba(0,0,0,0.5);display:flex;flex-direction:column;transition:transform 240ms cubic-bezier(0.2,0.8,0.2,1);transform:{{ railTransform }};pointer-events:{{ railPointer }};">
     <div style="display:flex;align-items:center;gap:12px;margin-bottom:18px;flex-shrink:0;">
@@ -1076,9 +1259,9 @@
         <div style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:12px;letter-spacing:0.2em;text-transform:uppercase;color:rgba(233,238,242,0.62);">Up next</div>
         <div style="font-size:22px;font-weight:700;color:#e9eef2;margin-top:4px;">{{ queueMeta }}</div>
       </div>
-        <span onClick="{{ onClear }}" style="display:{{ clearIdleDisplay }};align-items:center;height:44px;padding:0 18px;border-radius:11px;background:rgba(233,238,242,0.06);border:1px solid rgba(233,238,242,0.16);font-family:'IBM Plex Mono','Courier New',monospace;font-size:13px;letter-spacing:0.14em;text-transform:uppercase;color:rgba(233,238,242,0.78);flex-shrink:0;" style-active="background:rgba(233,238,242,0.2)">Clear</span>
+        <span onClick="{{ onClear }}" style="display:{{ clearIdleDisplay }};align-items:center;height:44px;padding:0 18px;border-radius:11px;background:rgba(233,238,242,0.06);border:1px solid rgba(233,238,242,0.16);font-family:'IBM Plex Mono','Courier New',monospace;font-size:13px;letter-spacing:0.14em;text-transform:uppercase;color:rgba(233,238,242,0.78);flex-shrink:0;" style-active="transform:scale(0.95)">Clear</span>
     </div>
-      <div onClick="{{ onSwitcher }}" style="flex-shrink:0;height:66px;border-radius:15px;background:rgba(159,180,232,0.1);border:1px solid rgba(159,180,232,0.28);display:flex;align-items:center;gap:16px;padding:0 20px;margin-bottom:16px;" style-active="background:rgba(159,180,232,0.24)">
+      <div onClick="{{ onSwitcher }}" style="flex-shrink:0;height:66px;border-radius:15px;background:rgba(159,180,232,0.1);border:1px solid rgba(159,180,232,0.28);display:flex;align-items:center;gap:16px;padding:0 20px;margin-bottom:16px;" style-active="transform:scale(0.95)">
         <span style="width:40px;height:40px;border-radius:9px;background:rgba(242,164,143,0.14);border:1px solid rgba(242,164,143,0.3);display:flex;flex-direction:column;justify-content:center;gap:4px;padding:0 9px;box-sizing:border-box;flex-shrink:0;">
           <span style="height:2.5px;border-radius:2px;background:#f2a48f;display:block;"></span>
           <span style="height:2.5px;border-radius:2px;background:rgba(242,164,143,0.7);display:block;width:70%;"></span>
@@ -1092,7 +1275,7 @@
       </div>
     <div data-noscrollbar style="flex:1;min-height:0;overflow-y:auto;display:flex;flex-direction:column;gap:3px;">
         <sc-for list="{{ queueItems }}" as="q" hint-placeholder-count="8">
-          <div onClick="{{ q.onPlay }}" style="height:60px;flex-shrink:0;display:flex;align-items:center;gap:15px;padding:0 14px;border-radius:12px;background:{{ q.bg }};" style-active="background:rgba(233,238,242,0.14)">
+          <div onClick="{{ q.onPlay }}" style="height:60px;flex-shrink:0;display:flex;align-items:center;gap:15px;padding:0 14px;border-radius:12px;background:{{ q.bg }};" style-active="transform:scale(0.95)">
             <span style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:14px;color:{{ q.numInk }};width:24px;flex-shrink:0;">{{ q.num }}</span>
             <span style="width:42px;height:42px;border-radius:8px;overflow:hidden;position:relative;flex-shrink:0;background:#17242d;box-shadow:inset 0 0 0 1px rgba(233,238,242,0.1);display:block;">
               <img src="album-art.webp" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;" />
@@ -1103,7 +1286,7 @@
             </span>
             <span style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:12px;letter-spacing:0.14em;text-transform:uppercase;color:#7ed6bc;flex-shrink:0;display:{{ q.nowDisplay }};">Playing</span>
             <span style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:14px;color:rgba(233,238,242,0.5);flex-shrink:0;display:{{ q.durDisplay }};">{{ q.dur }}</span>
-            <span onClick="{{ q.onRemove }}" style="width:44px;height:44px;border-radius:12px;background:rgba(233,238,242,0.06);border:1px solid rgba(233,238,242,0.14);display:flex;align-items:center;justify-content:center;flex-shrink:0;position:relative;" style-active="background:rgba(242,164,143,0.26)">
+            <span onClick="{{ q.onRemove }}" style="width:44px;height:44px;border-radius:12px;background:rgba(233,238,242,0.06);border:1px solid rgba(233,238,242,0.14);display:flex;align-items:center;justify-content:center;flex-shrink:0;position:relative;" style-active="transform:scale(0.95)">
               <span style="position:absolute;width:15px;height:2.5px;border-radius:2px;background:rgba(233,238,242,0.75);transform:rotate(45deg);display:block;"></span>
               <span style="position:absolute;width:15px;height:2.5px;border-radius:2px;background:rgba(233,238,242,0.75);transform:rotate(-45deg);display:block;"></span>
             </span>
@@ -1123,14 +1306,14 @@
     </div>
   </div>
 
-  <div onClick="{{ onSwitcherClose }}" style="position:absolute;inset:0;z-index:38;background:rgba(8,12,16,0.66);backdrop-filter:blur(4px);transition:opacity 190ms ease;opacity:{{ swScrim }};pointer-events:{{ swPointer }};"></div>
+  <div onClick="{{ onSwitcherClose }}" style="position:absolute;inset:0;z-index:38;background:rgba(8,12,16,0.66);transition:opacity 190ms ease;opacity:{{ swScrim }};pointer-events:{{ swPointer }};"></div>
 
   <div style="position:absolute;z-index:39;left:50%;top:50%;width:660px;max-height:80%;background:#16232c;border:1px solid rgba(126,214,188,0.22);border-radius:26px;padding:28px 30px 30px;box-sizing:border-box;box-shadow:0 34px 90px rgba(0,0,0,0.6);display:flex;flex-direction:column;transition:transform 220ms cubic-bezier(0.2,0.8,0.2,1),opacity 180ms ease;transform:{{ swTransform }};opacity:{{ swOpacity }};pointer-events:{{ swPointer }};">
     <div style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:12px;letter-spacing:0.2em;text-transform:uppercase;color:rgba(233,238,242,0.62);flex-shrink:0;">Play from</div>
     <div style="font-size:25px;font-weight:700;color:#e9eef2;margin-top:5px;margin-bottom:20px;flex-shrink:0;">Choose a source</div>
     <div data-noscrollbar style="flex:1;min-height:0;overflow-y:auto;display:flex;flex-direction:column;gap:9px;">
       <sc-for list="{{ switcherItems }}" as="p" hint-placeholder-count="3">
-        <div onClick="{{ p.onPick }}" style="height:72px;flex-shrink:0;border-radius:16px;background:{{ p.bg }};border:1px solid {{ p.border }};display:flex;align-items:center;gap:17px;padding:0 20px;" style-active="background:rgba(233,238,242,0.16)">
+        <div onClick="{{ p.onPick }}" style="height:72px;flex-shrink:0;border-radius:16px;background:{{ p.bg }};border:1px solid {{ p.border }};display:flex;align-items:center;gap:17px;padding:0 20px;" style-active="transform:scale(0.95)">
           <span style="width:42px;height:42px;border-radius:9px;background:rgba(242,164,143,0.14);border:1px solid rgba(242,164,143,0.3);display:flex;flex-direction:column;justify-content:center;gap:4px;padding:0 10px;box-sizing:border-box;flex-shrink:0;">
             <span style="height:2.5px;border-radius:2px;background:#f2a48f;display:block;"></span>
             <span style="height:2.5px;border-radius:2px;background:rgba(242,164,143,0.7);display:block;width:70%;"></span>
@@ -1146,12 +1329,12 @@
     </div>
   </div>
 
-  <div onClick="{{ onActClose }}" style="position:absolute;inset:0;z-index:34;background:rgba(8,12,16,0.62);backdrop-filter:blur(3px);transition:opacity 200ms ease;opacity:{{ actScrim }};pointer-events:{{ actPointer }};"></div>
+  <div onClick="{{ onActClose }}" style="position:absolute;inset:0;z-index:34;background:rgba(8,12,16,0.62);transition:opacity 200ms ease;opacity:{{ actScrim }};pointer-events:{{ actPointer }};"></div>
 
   <div style="position:absolute;z-index:35;left:50%;top:50%;width:640px;background:#16232c;border:1px solid rgba(126,214,188,0.22);border-radius:26px;padding:28px 32px 30px;box-sizing:border-box;box-shadow:0 34px 90px rgba(0,0,0,0.6);transition:transform 220ms cubic-bezier(0.2,0.8,0.2,1),opacity 180ms ease;transform:{{ actTransform }};opacity:{{ actOpacity }};pointer-events:{{ actPointer }};">
 
     <div style="display:flex;align-items:center;gap:14px;margin-bottom:22px;">
-      <span onClick="{{ onActBack }}" style="width:44px;height:44px;border-radius:11px;display:{{ actBackDisplay }};align-items:center;justify-content:center;flex-shrink:0;margin-left:-6px;" style-active="background:rgba(233,238,242,0.16)">
+      <span onClick="{{ onActBack }}" style="width:44px;height:44px;border-radius:11px;display:{{ actBackDisplay }};align-items:center;justify-content:center;flex-shrink:0;margin-left:-6px;" style-active="transform:scale(0.95)">
         <span style="width:11px;height:11px;border-left:2.5px solid rgba(233,238,242,0.8);border-bottom:2.5px solid rgba(233,238,242,0.8);transform:rotate(45deg);display:block;"></span>
       </span>
       <div style="min-width:0;">
@@ -1162,11 +1345,11 @@
 
     <sc-if value="{{ actStepMenu }}" hint-placeholder-val="{{ true }}">
       <div style="display:flex;flex-direction:column;gap:10px;">
-        <div onClick="{{ onPlayNow }}" style="height:68px;border-radius:16px;background:rgba(126,214,188,0.14);border:1px solid rgba(126,214,188,0.36);display:flex;align-items:center;gap:18px;padding:0 24px;" style-active="background:rgba(126,214,188,0.26)">
+        <div onClick="{{ onPlayNow }}" style="height:68px;border-radius:16px;background:rgba(126,214,188,0.14);border:1px solid rgba(126,214,188,0.36);display:flex;align-items:center;gap:18px;padding:0 24px;" style-active="transform:scale(0.95)">
           <span style="width:0;height:0;border-left:16px solid #7ed6bc;border-top:10px solid transparent;border-bottom:10px solid transparent;flex-shrink:0;display:block;"></span>
           <span style="font-size:20px;font-weight:700;color:#e9eef2;">Play now</span>
         </div>
-        <div onClick="{{ onAddQueue }}" style="height:68px;border-radius:16px;background:rgba(233,238,242,0.06);border:1px solid rgba(233,238,242,0.14);display:flex;align-items:center;gap:18px;padding:0 24px;" style-active="background:rgba(233,238,242,0.18)">
+        <div onClick="{{ onAddQueue }}" style="height:68px;border-radius:16px;background:rgba(233,238,242,0.06);border:1px solid rgba(233,238,242,0.14);display:flex;align-items:center;gap:18px;padding:0 24px;" style-active="transform:scale(0.95)">
           <span style="width:22px;height:16px;display:flex;flex-direction:column;justify-content:space-between;flex-shrink:0;">
             <span style="height:3px;border-radius:2px;background:rgba(233,238,242,0.85);display:block;"></span>
             <span style="height:3px;border-radius:2px;background:rgba(233,238,242,0.85);display:block;"></span>
@@ -1174,7 +1357,7 @@
           </span>
           <span style="font-size:20px;font-weight:700;color:#e9eef2;">Add to queue</span>
         </div>
-        <div onClick="{{ onAddPlaylist }}" style="height:68px;border-radius:16px;background:rgba(233,238,242,0.06);border:1px solid rgba(233,238,242,0.14);display:flex;align-items:center;gap:18px;padding:0 24px;" style-active="background:rgba(233,238,242,0.18)">
+        <div onClick="{{ onAddPlaylist }}" style="height:68px;border-radius:16px;background:rgba(233,238,242,0.06);border:1px solid rgba(233,238,242,0.14);display:flex;align-items:center;gap:18px;padding:0 24px;" style-active="transform:scale(0.95)">
           <span style="width:22px;height:22px;position:relative;flex-shrink:0;display:block;">
             <span style="position:absolute;left:0;top:9px;width:22px;height:3px;border-radius:2px;background:rgba(233,238,242,0.85);display:block;"></span>
             <span style="position:absolute;left:9px;top:0;width:3px;height:22px;border-radius:2px;background:rgba(233,238,242,0.85);display:block;"></span>
@@ -1187,16 +1370,9 @@
 
     <sc-if value="{{ actStepPick }}" hint-placeholder-val="{{ false }}">
       <div style="display:flex;flex-direction:column;gap:8px;">
-        <div onClick="{{ onNewPlaylist }}" style="height:62px;border-radius:14px;background:rgba(126,214,188,0.13);border:1px dashed rgba(126,214,188,0.45);display:flex;align-items:center;gap:16px;padding:0 22px;flex-shrink:0;" style-active="background:rgba(126,214,188,0.26)">
-          <span style="width:20px;height:20px;position:relative;flex-shrink:0;display:block;">
-            <span style="position:absolute;left:0;top:8px;width:20px;height:3px;border-radius:2px;background:rgba(233,238,242,0.85);display:block;"></span>
-            <span style="position:absolute;left:8px;top:0;width:3px;height:20px;border-radius:2px;background:rgba(233,238,242,0.85);display:block;"></span>
-          </span>
-          <span style="font-size:19px;font-weight:700;color:#e9eef2;">New playlist</span>
-        </div>
         <div data-noscrollbar style="max-height:246px;overflow-y:auto;display:flex;flex-direction:column;gap:6px;">
           <sc-for list="{{ playlistRows }}" as="p" hint-placeholder-count="3">
-            <div onClick="{{ p.onClick }}" style="height:62px;flex-shrink:0;border-radius:14px;background:rgba(233,238,242,0.06);display:flex;align-items:center;gap:16px;padding:0 22px;" style-active="background:rgba(233,238,242,0.18)">
+            <div onClick="{{ p.onClick }}" style="height:62px;flex-shrink:0;border-radius:14px;background:rgba(233,238,242,0.06);display:flex;align-items:center;gap:16px;padding:0 22px;" style-active="transform:scale(0.95)">
               <span style="flex:1;min-width:0;font-size:19px;font-weight:600;color:#e9eef2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ p.name }}</span>
               <span style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:14px;color:rgba(233,238,242,0.62);flex-shrink:0;">{{ p.count }}</span>
             </div>
@@ -1205,28 +1381,6 @@
       </div>
     </sc-if>
 
-    <sc-if value="{{ actStepName }}" hint-placeholder-val="{{ false }}">
-      <div style="display:flex;flex-direction:column;gap:16px;">
-        <div style="height:64px;border-radius:14px;background:rgba(8,12,16,0.5);border:1px solid rgba(126,214,188,0.4);display:flex;align-items:center;padding:0 20px;flex-shrink:0;">
-          <span style="font-size:22px;font-weight:600;color:#e9eef2;white-space:nowrap;overflow:hidden;">{{ draftName }}</span>
-          <span style="width:2px;height:26px;background:#7ed6bc;margin-left:3px;flex-shrink:0;animation:npCaret 1s steps(1) infinite;display:block;"></span>
-        </div>
-        <div style="display:flex;flex-direction:column;gap:7px;">
-          <sc-for list="{{ keyRows }}" as="r" hint-placeholder-count="3">
-            <div style="display:flex;gap:7px;justify-content:center;">
-              <sc-for list="{{ r.keys }}" as="k" hint-placeholder-count="10">
-                <span onClick="{{ k.onClick }}" style="width:52px;height:54px;border-radius:10px;background:rgba(233,238,242,0.08);display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:600;color:#e9eef2;flex-shrink:0;" style-active="background:rgba(233,238,242,0.24)">{{ k.ch }}</span>
-              </sc-for>
-            </div>
-          </sc-for>
-          <div style="display:flex;gap:7px;justify-content:center;">
-            <span onClick="{{ onKeySpace }}" style="width:224px;height:54px;border-radius:10px;background:rgba(233,238,242,0.08);display:flex;align-items:center;justify-content:center;font-family:'IBM Plex Mono','Courier New',monospace;font-size:13px;letter-spacing:0.16em;text-transform:uppercase;color:rgba(233,238,242,0.7);" style-active="background:rgba(233,238,242,0.24)">Space</span>
-            <span onClick="{{ onKeyDel }}" style="width:112px;height:54px;border-radius:10px;background:rgba(233,238,242,0.08);display:flex;align-items:center;justify-content:center;font-family:'IBM Plex Mono','Courier New',monospace;font-size:13px;letter-spacing:0.16em;text-transform:uppercase;color:rgba(233,238,242,0.7);" style-active="background:rgba(233,238,242,0.24)">Del</span>
-            <span onClick="{{ onCreatePlaylist }}" style="width:166px;height:54px;border-radius:10px;background:{{ createBg }};display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:700;color:{{ createInk }};" style-active="opacity:0.75">Create</span>
-          </div>
-        </div>
-      </div>
-    </sc-if>
   </div>
 
   <div style="position:absolute;z-index:36;left:50%;bottom:132px;transform:translateX(-50%) translateY({{ toastY }});background:rgba(22,35,44,0.97);border:1px solid rgba(126,214,188,0.3);border-radius:14px;padding:16px 26px;box-shadow:0 18px 50px rgba(0,0,0,0.5);transition:opacity 220ms ease,transform 220ms ease;opacity:{{ toastOpacity }};pointer-events:none;white-space:nowrap;">
@@ -1236,7 +1390,8 @@
 
 
 </x-dc>
-<script type="text/x-dc" data-dc-script data-props="{&quot;volumeState&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;normal&quot;,&quot;muted&quot;,&quot;fixed&quot;],&quot;default&quot;:&quot;normal&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Volume&quot;},&quot;artistNetwork&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;auto&quot;,&quot;pending&quot;,&quot;ready&quot;,&quot;error&quot;],&quot;default&quot;:&quot;auto&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Library&quot;},&quot;handoffPreview&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Layout&quot;},&quot;idlePreview&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Layout&quot;},&quot;source&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;lms&quot;,&quot;spotify&quot;,&quot;bluetooth&quot;,&quot;none&quot;],&quot;default&quot;:&quot;lms&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Variant&quot;},&quot;transport&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;playing&quot;,&quot;paused&quot;,&quot;stopped&quot;],&quot;default&quot;:&quot;playing&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Variant&quot;},&quot;content&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;normal&quot;,&quot;long&quot;,&quot;radio&quot;],&quot;default&quot;:&quot;normal&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Variant&quot;},&quot;artwork&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Variant&quot;},&quot;lyrics&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;synced&quot;,&quot;unsynced&quot;,&quot;loading&quot;,&quot;none&quot;],&quot;default&quot;:&quot;synced&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Variant&quot;}}">
+<script type="text/x-dc" data-dc-script data-props="{&quot;wxIcons&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;solid&quot;,&quot;duotone&quot;,&quot;neon&quot;],&quot;default&quot;:&quot;solid&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Idle&quot;},&quot;idleBackground&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;artist&quot;,&quot;wallpaper&quot;,&quot;black&quot;],&quot;default&quot;:&quot;artist&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Idle&quot;},&quot;idleDays&quot;:{&quot;editor&quot;:&quot;int&quot;,&quot;default&quot;:4,&quot;min&quot;:3,&quot;max&quot;:5,&quot;tsType&quot;:&quot;number&quot;,&quot;section&quot;:&quot;Idle&quot;},&quot;pairing&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Variant&quot;},&quot;homeStrip&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;new-music&quot;,&quot;most-played&quot;,&quot;recent-artists&quot;],&quot;default&quot;:&quot;new-music&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Library&quot;},&quot;homeStripCount&quot;:{&quot;editor&quot;:&quot;int&quot;,&quot;default&quot;:10,&quot;min&quot;:4,&quot;max&quot;:20,&quot;tsType&quot;:&quot;number&quot;,&quot;section&quot;:&quot;Library&quot;},&quot;volumeState&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;normal&quot;,&quot;muted&quot;,&quot;fixed&quot;],&quot;default&quot;:&quot;normal&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Volume&quot;},&quot;artistNetwork&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;auto&quot;,&quot;pending&quot;,&quot;ready&quot;,&quot;error&quot;],&quot;default&quot;:&quot;auto&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Library&quot;},&quot;handoffPreview&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Layout&quot;},&quot;idlePreview&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Layout&quot;},&quot;source&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;lms&quot;,&quot;spotify&quot;,&quot;bluetooth&quot;,&quot;none&quot;],&quot;default&quot;:&quot;lms&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Variant&quot;},&quot;transport&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;playing&quot;,&quot;paused&quot;,&quot;stopped&quot;],&quot;default&quot;:&quot;playing&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Variant&quot;},&quot;content&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;normal&quot;,&quot;long&quot;,&quot;radio&quot;],&quot;default&quot;:&quot;normal&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Variant&quot;},&quot;artwork&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Variant&quot;},&quot;lyrics&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;synced&quot;,&quot;unsynced&quot;,&quot;loading&quot;,&quot;none&quot;],&quot;default&quot;:&quot;synced&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Variant&quot;}}">
+const RECENT_AGO = ["2 hours ago","Today","Today","Yesterday","Yesterday","2 days ago","3 days ago","4 days ago","Last week","Last week","2 weeks ago","2 weeks ago","3 weeks ago","Last month","Last month","Last month","Last month","2 months ago","2 months ago","3 months ago"];
 const SRC = {
   lms:       { label: 'LMS',       accent: '#7ed6bc' },
   spotify:   { label: 'Spotify',   accent: '#8fd9a8' },
@@ -1295,8 +1450,7 @@ const RADIO_ICONS = {
   'News': ['Lines', '176,188,196'],
   'Talk': ['Mic', '200,162,216'],
   'By Location': ['Globe', '143,196,216'],
-  'By Language': ['Speech', '159,180,232'],
-  'Podcasts': ['Rss', '232,160,180']
+  'By Language': ['Speech', '159,180,232']
 };
 const RADIO_SHAPES = ['Arcs', 'Star', 'Pin', 'Note', 'Ball', 'Lines', 'Mic', 'Globe', 'Speech', 'Rss'];
 
@@ -1309,15 +1463,14 @@ const ALBUM_INFO = {
   }
 };
 const ALBUM_FALLBACK = {
-  type: 'Album', format: 'Digital', label: 'Unknown label',
+  type: 'Album', format: 'Digital', label: null,
   note: 'No release notes cached for this album yet. The metadata service is queried on first play and the result is kept locally.',
-  specs: [['Released', '\u2014'], ['Tracks', '\u2014'], ['Length', '\u2014'], ['Recorded', '\u2014']]
+  specs: []
 };
 
 const RADIO = [
-  ['Radio Now Playing', 950], ['My Presets', 1], ['Local Radio', 2], ['Music', 25],
-  ['Sports', 16], ['News', 4], ['Talk', 45], ['By Location', 7], ['By Language', 93],
-  ['Podcasts', 3]
+  ['Radio Now Playing'], ['My Presets'], ['Local Radio'], ['Music'],
+  ['Sports'], ['News'], ['Talk'], ['By Location'], ['By Language']
 ];
 
 const ALBUMS = [
@@ -1412,7 +1565,9 @@ const PLAYLIST_TRACKS = {
 // release type drives the discography grouping on an artist page
 const RELEASE_TYPE = {
   'Cantece Pentru Copii': 'ep', 'Vine Vine Primavara': 'ep', 'Bime Sessions': 'ep',
-  'Hai La Joc': 'compilation', 'Colinde': 'compilation', 'Zurli Mania': 'compilation'
+  'Zurli Mini': 'ep', 'Doua Cantece': 'ep',
+  'Hai La Joc': 'compilation', 'Colinde': 'compilation', 'Zurli Mania': 'compilation',
+  'Cele Mai Frumoase': 'compilation', 'Zurli Best Of': 'compilation', 'Iarna Zurli': 'compilation'
 };
 
 // everything here except the discography arrives from the metadata service, so
@@ -1469,6 +1624,21 @@ const ALBUM_DATA = [
   { title: 'Atat De Simplu',        artist: 'Andra',             composer: 'Andra',          year: '2025', genre: 'Pop' },
   { title: 'Zunea Zunea',           artist: 'Cleopatra Stratan', composer: 'Pavel Stratan',  year: '2025', genre: 'Pop' },
   { title: 'Podul De Piatra',       artist: 'Cantece Mici',      composer: 'Traditional',    year: '2025', genre: 'Folk' },
+  { title: 'Zurli La Mare',         artist: 'Gasca Zurli',       composer: 'Mirela Retegan', year: '2020', genre: "Children's" },
+  { title: 'Trenuletul Vesel',      artist: 'Gasca Zurli',       composer: 'Mirela Retegan', year: '2021', genre: "Children's" },
+  { title: 'Alfabetul Cantat',      artist: 'Gasca Zurli',       composer: 'Mirela Retegan', year: '2019', genre: "Children's" },
+  { title: 'Hai La Dans',           artist: 'Gasca Zurli',       composer: 'Mirela Retegan', year: '2017', genre: 'Pop' },
+  { title: 'Povesti Cantate',       artist: 'Gasca Zurli',       composer: 'Mirela Retegan', year: '2015', genre: "Children's" },
+  { title: 'Zurli In Padure',       artist: 'Gasca Zurli',       composer: 'Mirela Retegan', year: '2013', genre: 'Folk' },
+  { title: 'Primii Pasi',           artist: 'Gasca Zurli',       composer: 'Mirela Retegan', year: '2011', genre: "Children's" },
+  { title: 'Cantece De Craciun',    artist: 'Gasca Zurli',       composer: 'Traditional',    year: '2022', genre: 'Holiday' },
+  { title: 'Zurli Aniversare',      artist: 'Gasca Zurli',       composer: 'Mirela Retegan', year: '2023', genre: 'Pop' },
+  { title: 'Ursuletul Somnoros',    artist: 'Gasca Zurli',       composer: 'Mirela Retegan', year: '2024', genre: "Children's" },
+  { title: 'Zurli Mini',            artist: 'Gasca Zurli',       composer: 'Mirela Retegan', year: '2021', genre: "Children's" },
+  { title: 'Doua Cantece',          artist: 'Gasca Zurli',       composer: 'Mirela Retegan', year: '2019', genre: "Children's" },
+  { title: 'Iarna Zurli',           artist: 'Gasca Zurli',       composer: 'Traditional',    year: '2016', genre: 'Holiday' },
+  { title: 'Cele Mai Frumoase',     artist: 'Gasca Zurli',       composer: 'Mirela Retegan', year: '2020', genre: 'Pop' },
+  { title: 'Zurli Best Of',         artist: 'Gasca Zurli',       composer: 'Mirela Retegan', year: '2024', genre: 'Pop' },
   { title: 'Atentiune, Acceleram!', artist: 'Gasca Zurli',       composer: 'Mirela Retegan', year: '2014', genre: "Children's" },
   { title: 'Cantece Pentru Copii',  artist: 'Gasca Zurli',       composer: 'Mirela Retegan', year: '2012', genre: "Children's" },
   { title: 'Zurli Mania',           artist: 'Gasca Zurli',       composer: 'Mirela Retegan', year: '2016', genre: 'Pop' },
@@ -1500,14 +1670,14 @@ function mmss(s) {
 class Component extends DCLogic {
   state = {
     drawer: false, position: 6.97, volume: 62, transportOverride: null, panel: 'meta',
-    now: new Date(), pausedFor: 0, idle: false, clockPos: { x: 50, y: 46 },
+    now: new Date(), pausedFor: 0, idle: false, clockPos: null,
     // the library root is where the device lands
     handoff: null, sourceOverride: null, library: true, libPath: [], noticeDismissed: false, miniPressed: false,
     bArtist: null, bAlbum: null, bTrack: null, bRow: null,
     // selection drives the panes; this single key decides which row shows its
     // actions, so the three panes can never reveal at once
     bReveal: null,
-    act: null, actStep: 'menu', draftName: '', toast: null, netState: 'pending',
+    act: null, actStep: 'menu', toast: null, netState: 'pending', bioOpen: false, bioClipped: false,
     queueOpen: false, switcherOpen: false,
     queueSource: 'Evening', queueIndex: 3, removed: [], cleared: false,
     playlists: Object.keys(PLAYLIST_TRACKS).map(n => ({ name: n, count: PLAYLIST_TRACKS[n].length })),
@@ -1578,28 +1748,23 @@ class Component extends DCLogic {
     this._toast = setTimeout(() => this.setState({ toast: null }), 2200);
   }
 
-  typeKey(ch) {
-    this.setState(s => ({ draftName: (s.draftName + ch).slice(0, 28) }));
-  }
-
-  addToPlaylist(name, isNew) {
+  addToPlaylist(name) {
     const label = this.state.act ? this.state.act.label : '';
     this.setState(s => ({
       act: null,
       playlists: s.playlists.map(p => p.name === name ? { name: p.name, count: p.count + 1 } : p)
     }));
-    this.flash(isNew ? 'Created \u201c' + name + '\u201d with ' + label : label + ' added to ' + name);
+    this.flash(label + ' added to ' + name);
   }
 
-  openActions(kind, label) {
-    this.setState({ act: { kind, label }, actStep: 'menu', draftName: '' });
-  }
-
-  // shared per-row action affordances: `dots` shows a button on every row,
-  // `reveal` shows icons only on the active row, `hold` shows nothing until long-press
+  // Per-row actions are revealed by selection and nothing else. There is no
+  // long press anywhere on the panel: a hold is invisible, undiscoverable on
+  // a touch panel, and it made every row's tap wait on a timer. Rows with no
+  // selected state — the Artists grid, the Playlists list, the browse artist
+  // column — therefore carry no actions at all; you queue from inside an
+  // artist or a playlist, which is one tap further and always visible.
   rowActions(kind, label, isActive, onActivate, artist) {
     const revealed = isActive;
-    const open = (e) => { if (e) e.stopPropagation(); this.openActions(kind, label); };
     return {
       metaDisplay: revealed ? 'none' : 'block',
       actionsDisplay: revealed ? 'flex' : 'none',
@@ -1612,24 +1777,8 @@ class Component extends DCLogic {
         this.flash('Playing ' + label);
       },
       onQueue: (e) => { e.stopPropagation(); this.flash(label + ' added to queue'); },
-      onPlus: (e) => { e.stopPropagation(); this.setState({ act: { kind, label }, actStep: 'pick', draftName: '' }); },
-      // long-press is the universal fallback: branch rows navigate on tap and
-      // have no selected state, so it is their only route to these actions
-      onHoldStart: (e) => {
-        this._holdXY = { x: e.clientX, y: e.clientY };
-        clearTimeout(this._hold);
-        this._hold = setTimeout(() => { this._holdFired = true; open(null); }, 480);
-      },
-      onHoldMove: (e) => {
-        const o = this._holdXY;
-        if (!o) return;
-        if (Math.abs(e.clientX - o.x) > 10 || Math.abs(e.clientY - o.y) > 10) clearTimeout(this._hold);
-      },
-      onHoldEnd: () => { clearTimeout(this._hold); },
-      onRowClick: (e) => {
-        if (this._holdFired) { this._holdFired = false; return; }
-        onActivate(e);
-      }
+      onPlus: (e) => { e.stopPropagation(); this.setState({ act: { kind, label }, actStep: 'pick' }); },
+      onRowClick: (e) => onActivate(e)
     };
   }
 
@@ -1684,6 +1833,7 @@ class Component extends DCLogic {
       // glyph is mounted, not which glyph a category gets
       const rs = 'card';
       const isRadio = path[0] === 'Radio';
+      const isRadioTop = isRadio && path.length === 1;
       const ic = isRadio ? (RADIO_ICONS[it[0]] || ['Arcs', '143,196,216']) : null;
       const shapes = {};
       RADIO_SHAPES.forEach(s => { shapes['ico' + s] = ic && ic[0] === s ? 'block' : 'none'; });
@@ -1694,8 +1844,14 @@ class Component extends DCLogic {
         num: pad(i + 1),
         kind,
         thumbDisplay: path[0] === 'Playlists' && path.length === 2 ? 'block' : 'none',
+        // radio categories are a three-up card grid; every other list stays a
+        // single dense column, since station and track lists run long
+        h: isRadioTop ? '96px' : '60px',
+        pad: isRadioTop ? '0 26px' : '0 22px',
+        radius: isRadioTop ? '18px' : '14px',
+        border: isRadioTop ? 'rgba(233,238,242,0.1)' : 'transparent',
         icoDisplay: ic ? 'flex' : 'none',
-        icoSize: rs === 'mono' ? '30px' : '46px',
+        icoSize: isRadioTop ? '54px' : '46px',
         icoRadius: rs === 'card' ? '50%' : '13px',
         icoBg: !ic || rs === 'mono' ? 'transparent' : 'rgba(' + ic[1] + ',0.14)',
         icoBorder: !ic || rs === 'mono' ? 'transparent' : 'rgba(' + ic[1] + ',0.3)',
@@ -1761,16 +1917,81 @@ class Component extends DCLogic {
     );
   }
 
+  // The idle screen: a background, the clock, and the weather. Text sits on a
+  // photo, so every layer carries its own scrim and the type is full-opacity
+  // white with a shadow rather than tinted down.
+  idleVals(n) {
+    const bg = this.props.idleBackground || 'artist';
+    const days = Math.max(3, Math.min(5, this.props.idleDays || 4));
+    const cond = (c) => ({
+      sunDisplay: c === 'sun' || c === 'part' ? 'block' : 'none',
+      cloudDisplay: c === 'part' || c === 'cloud' || c === 'rain' ? 'block' : 'none',
+      rainDisplay: c === 'rain' ? 'block' : 'none'
+    });
+    const FC = [
+      ['Fri', 'part', '18\u00b0', '9\u00b0'], ['Sat', 'sun', '21\u00b0', '11\u00b0'],
+      ['Sun', 'rain', '16\u00b0', '10\u00b0'], ['Mon', 'cloud', '15\u00b0', '8\u00b0'],
+      ['Tue', 'sun', '19\u00b0', '9\u00b0']
+    ];
+    const DAY = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    const MON = ['January', 'February', 'March', 'April', 'May', 'June', 'July',
+      'August', 'September', 'October', 'November', 'December'];
+    return {
+      idleArtistBg: bg === 'artist' ? 'block' : 'none',
+      idleWallpaperBg: bg === 'wallpaper' ? 'block' : 'none',
+      // No plate behind the text. At brightness 0.55 a pure-white region
+      // reaches 140, where ink-on-field is only 2.9:1 — so legibility comes
+      // from a dark contour on the glyphs instead, which holds 16.9:1 against
+      // the ink whatever the picture does. A deliberate trade for a brighter
+      // photo: the field ratio is below 4.5:1 and the outline carries it.
+      ...(() => {
+        const s = this.props.wxIcons || 'solid';
+        const on = (k) => s === k ? 'block' : 'none';
+        return {
+          wxSolid: on('solid'), wxDuo: on('duotone'), wxNeon: on('neon')
+        };
+      })(),
+      // At brightness 0.62 a pure-white region reaches 158, where ink-on-field
+      // is ~2.6:1 — legibility comes from the contour instead. Slate rather
+      // than black: it still holds 10.1:1 against the ink and 4.4:1 against
+      // the brightest field, where a true mid-grey would drop to 2.1:1 there
+      // and stop separating at all.
+      idleBright: bg === 'black' ? '1' : '0.62',
+      idleStroke: bg === 'black' ? '0' : '4px rgba(46,57,66,0.92)',
+      idleScrim: bg === 'black' ? 'rgba(11,18,24,0.93)' : 'rgba(7,11,15,0.06)',
+      clockDate: DAY[n.getDay()] + ' \u00b7 ' + n.getDate() + ' ' + MON[n.getMonth()],
+      wxTemp: '17\u00b0',
+      wxNow: Object.assign({ label: 'Partly cloudy' }, cond('part')),
+      // split so the two can carry different accents: cool for the low, white
+      // for the high
+      wxMin: '9\u00b0',
+      wxMax: '18\u00b0',
+      wxMinMaxDisplay: 'flex',
+      wxDays: FC.slice(0, days).map(d => Object.assign({ name: d[0], max: d[2], min: d[3] }, cond(d[1])))
+    };
+  }
+
   showHandoff(from, to) {
     clearTimeout(this.handoffTimer);
     this.setState({ handoff: { from, to }, idle: false, pausedFor: 0, drawer: false });
     this.handoffTimer = setTimeout(() => this.setState({ handoff: null }), 2700);
   }
 
+  // The live position, seeded from the drift box rather than a constant, so
+  // the first render can never sit outside the box later hops use.
+  clockAt() {
+    if (this.state.clockPos) return this.state.clockPos;
+    if (!this._seed) this._seed = this.randClockPos();
+    return this._seed;
+  }
+
+  // The clock drifts to spread wear across the panel. Its group is roughly
+  // 640×226 and the weather band takes the bottom ~210px, so the centre stays
+  // clear of both the edges and the band.
   randClockPos() {
     return {
       x: Math.round(29 + Math.random() * 42),
-      y: Math.round(24 + Math.random() * 52)
+      y: Math.round(17 + Math.random() * 38)
     };
   }
 
@@ -1840,7 +2061,7 @@ class Component extends DCLogic {
   }
 
   lyricsBody(synced, pos, compact) {
-    const LINE = compact ? 46 : 62;
+    const LINE = compact ? 54 : 70;
     const active = this.activeIndex(pos);
 
     if (compact && synced) {
@@ -1855,7 +2076,8 @@ class Component extends DCLogic {
       }, slice.map(n => React.createElement('div', {
         key: n,
         style: {
-          fontSize: '22px',
+          // the Track tab's 5-line slice; 305px of container allows ~30px
+          fontSize: '28px',
           lineHeight: 1.3,
           fontWeight: n === i ? 700 : 500,
           color: n === i ? '#f2a48f' : 'rgba(233,238,242,0.85)',
@@ -1874,7 +2096,7 @@ class Component extends DCLogic {
         alignItems: 'center',
         justifyContent: 'center',
         textAlign: 'center',
-        fontSize: compact ? '21px' : synced ? '27px' : '21px',
+        fontSize: compact ? '25px' : synced ? '31px' : '24px',
         lineHeight: 1.35,
         fontWeight: synced && i === active ? 700 : 500,
         color: !synced ? 'rgba(233,238,242,0.8)'
@@ -1943,7 +2165,7 @@ class Component extends DCLogic {
           }
         }
         const hopDue = preview ? now.getSeconds() % 10 === 0 : now.getSeconds() === 0;
-        if (eff && hopDue) next.clockPos = this.randClockPos();
+        if (eff && hopDue) { next.clockPos = this.randClockPos(); }
         return next;
       });
     }, 1000);
@@ -1958,10 +2180,29 @@ class Component extends DCLogic {
       if (prev !== 'none' && next !== 'none') this.showHandoff(prev, next);
     }
   }
-  componentWillUnmount() { clearInterval(this.timer); clearTimeout(this.handoffTimer); }
+  componentWillUnmount() { clearInterval(this.timer); clearTimeout(this.handoffTimer); clearTimeout(this._pairTimer); clearTimeout(this._pairExpiry); }
 
   source()    { return this.state.sourceOverride || this.props.source || 'lms'; }
   content()   { return this.props.content || 'normal'; }
+
+  // the track on screen IS the queue's current entry, so tapping a row in the
+  // rail changes what is playing rather than only reordering the list. The
+  // content tweak and the non-LMS sources still drive it directly.
+  nowTrack() {
+    const base = CONTENT[this.content()] || CONTENT.normal;
+    const q = (PLAYLIST_TRACKS[this.state.queueSource] || [])
+      .filter(t => this.state.removed.indexOf(t[0]) < 0);
+    if (this.state.cleared || !q.length || this.content() !== 'normal' || this.source() !== 'lms') return base;
+    const t = q[this.state.queueIndex % q.length];
+    // album and year must come from the track too: playlists cross artists, so
+    // holding the static album would put this title on someone else's record
+    const rel = ALBUM_DATA.find(a => a.artist === t[1]);
+    return {
+      title: t[0], artist: t[1],
+      album: rel ? rel.title : base.album,
+      year: rel ? rel.year : base.year
+    };
+  }
   transport() { return this.state.transportOverride || this.props.transport || 'playing'; }
   duration()  { return this.source() === 'bluetooth' ? null : 115.304; }
   durationLabel() {
@@ -1972,7 +2213,7 @@ class Component extends DCLogic {
 
   renderVals() {
     const src = SRC[this.source()] || SRC.lms;
-    const c = CONTENT[this.content()] || CONTENT.normal;
+    const c = this.nowTrack();
     const bt = this.source() === 'bluetooth';
     const playing = this.transport() === 'playing';
     const dur = this.duration();
@@ -1988,17 +2229,6 @@ class Component extends DCLogic {
     const fullTransport = this.source() === 'lms';
 
     const noRenderer = this.source() === 'none';
-    const fmtStyle = this.props.formatStyle || 'tier';
-    const TIERS = {
-      lossy:    { codec: 'AAC',  rate: '320 kbps', spec: '320 kbps', tier: 'Lossy',    ink: 'rgba(233,238,242,0.68)', fill: '34%' },
-      lossless: { codec: 'FLAC', rate: '44.1 kHz', spec: '16/44.1',  tier: 'Lossless', ink: '#7ed6bc',                fill: '67%' },
-      hires:    { codec: 'FLAC', rate: '96 kHz',   spec: '24/96',    tier: 'Hi-Res',   ink: '#f2a48f',                fill: '100%' }
-    };
-    const fmt = this.source() === 'bluetooth'
-      ? Object.assign({}, TIERS.lossy, { codec: 'AAC', rate: 'AAC', spec: '44.1 kHz' })
-      : this.source() === 'spotify'
-        ? TIERS.lossy
-        : (TIERS[this.props.quality] || TIERS.lossless);
     const libOpen = this.state.library || noRenderer;
     const lp = this.state.libPath;
     const albumNode = this.state.library && this.isAlbumNode(lp);
@@ -2014,9 +2244,8 @@ class Component extends DCLogic {
       .filter(t => this.state.removed.indexOf(t[0]) < 0);
     // the head of the queue IS the track on screen; what follows comes from the
     // source playlist, so the two can never disagree
-    const queueRest = this.state.cleared
-      ? []
-      : queueAll.slice(this.state.queueIndex % (queueAll.length || 1));
+    const qi = queueAll.length ? this.state.queueIndex % queueAll.length : 0;
+    const queueRest = this.state.cleared ? [] : queueAll.slice(qi + 1);
     const queueList = this.state.cleared
       ? []
       : [[c.title, c.artist, this.durationLabel()]].concat(queueRest);
@@ -2036,8 +2265,6 @@ class Component extends DCLogic {
     return {
       accent: src.accent,
       accentBar: 'linear-gradient(90deg,' + src.accent + ',#f2a48f)',
-      badgeBg: 'rgba(255,255,255,0.08)',
-      badgeBorder: src.accent + '66',
       sourceLabel: src.label,
       dotAnim: playing ? 'npPulse 2.4s ease-in-out infinite' : 'none',
 
@@ -2152,15 +2379,36 @@ class Component extends DCLogic {
         return {
           relTitle: c.album || 'No album',
           relBy: c.artist + (c.year ? '  \u00b7  ' + c.year : ''),
-          relType: info.type, relFormat: info.format, relLabel: info.label,
+          relType: info.type, relFormat: info.format,
+          // LMS holds no label, so for an LMS track the row simply has fewer
+          // chips; Spotify and Bluetooth get theirs from MusicBrainz
+          relLabel: info.label || '',
+          relLabelDisplay: info.label && this.source() !== 'lms' ? 'inline-block' : 'none',
           relNote: info.note,
-          relSpecs: info.specs.map(s => ({ k: s[0], v: s[1] }))
+          // a value that is not known is not a row
+          relSpecs: (info.specs || []).filter(s => s[1] && s[1] !== '\u2014').map(s => ({ k: s[0], v: s[1] }))
         };
       })(),
       lyricsReady: !pending,
       lyricsPending: pending,
       lyricsBody: this.lyricsBody(lyrics === 'synced', pos, panel === 'meta'),
       artistBio: BIO,
+      // ADR-0040 §4: Wikipedia text is CC BY-SA and MusicBrainz tags are
+      // CC BY-NC-SA, so the credit is a licence term rather than decoration
+      bioCredit: 'From Wikipedia, CC BY-SA',
+      lyricsCredit: 'From LMS',
+      // measured, not fixed: a fixed height hid the text on a short biography
+      // and the discography on a long one. The toggle is measured too — it
+      // only appears once the text actually exceeds the cap.
+      bioMax: this.state.bioOpen ? 'none' : '132px',
+      bioToggleLabel: this.state.bioOpen ? 'Less' : 'More',
+      bioToggleDisplay: this.state.bioClipped ? 'inline-block' : 'none',
+      bioRef: (el) => {
+        if (!el) return;
+        const clipped = el.scrollHeight > 134;
+        if (clipped !== this.state.bioClipped) this.setState({ bioClipped: clipped });
+      },
+      onBioToggle: () => this.setState(s => ({ bioOpen: !s.bioOpen })),
 
       // the tabs carry the panel choice; the treatments differ in how the
       // active one is marked and where the row sits
@@ -2192,26 +2440,90 @@ class Component extends DCLogic {
       drawerScrimOpacity: this.state.drawer ? 1 : 0,
       drawerPointer: this.state.drawer ? 'auto' : 'none',
 
+      // pairing is a security decision with a timeout, so it blocks; where it
+      // blocks is the question these three answer
+      // Pairing confirmation happens once per device, ever: after this the
+      // device is trusted and every later connection runs the plain handoff.
+      // Accepting is the takeover: the frame confirms the pair and then hands
+      // straight into the handoff, whether or not audio has started yet.
+      ...(() => {
+        const st = this.state.pairStage || (this.props.pairing ? 'ask' : 'off');
+        const on = st !== 'off';
+        // the request really does lapse, so the countdown is driven by a clock
+        // rather than printed: the phone gives up at the same moment the panel
+        // stops offering the choice
+        if (st === 'ask') {
+          if (!this._pairStart) {
+            this._pairStart = Date.now();
+            clearTimeout(this._pairExpiry);
+            this._pairExpiry = setTimeout(() => {
+              this.setState({ pairStage: 'expired' });
+              clearTimeout(this._pairTimer);
+              this._pairTimer = setTimeout(() => this.setState({ pairStage: 'off' }), 1800);
+            }, 30000);
+          }
+        } else {
+          this._pairStart = null;
+          clearTimeout(this._pairExpiry);
+        }
+        const left = Math.max(0, 30 - Math.floor((Date.now() - (this._pairStart || Date.now())) / 1000));
+        return {
+          pairDevice: 'George\u2019s iPhone',
+          pairCode: '418 205',
+          pairIcon: this.sourceIcon('bluetooth', '#9fb4e8', 52, 1),
+          pairCountdown: 'Expires in ' + left + 's',
+          pairPointer: on ? 'auto' : 'none',
+          pairInlineDisplay: on ? 'flex' : 'none',
+          pairInlineOpacity: on ? 1 : 0,
+          pairAskDisplay: st === 'ask' ? 'flex' : 'none',
+          pairDoneDisplay: st === 'done' || st === 'rejected' || st === 'expired' ? 'flex' : 'none',
+          pairTickDisplay: st === 'done' ? 'block' : 'none',
+          pairCrossDisplay: st === 'rejected' || st === 'expired' ? 'block' : 'none',
+          pairDoneLabel: st === 'expired' ? 'Request expired' : (st === 'rejected' ? 'Not paired' : 'Paired'),
+          pairDoneInk: st === 'done' ? '#9fb4e8' : 'rgba(233,238,242,0.72)',
+          onPairAccept: () => {
+            clearTimeout(this._pairExpiry);
+            this.setState({ pairStage: 'done' });
+            // the pair is confirmed here, and the same frame hands into the
+            // handoff 1.4s later — confirming the pair is what takes the device
+            clearTimeout(this._pairTimer);
+            this._pairTimer = setTimeout(() => {
+              // the handoff sits a layer below the pairing frame, so it is
+              // raised first and allowed to reach full opacity; dropping the
+              // frame any earlier uncovers the screen for a frame
+              this.showHandoff('lms', 'bluetooth');
+              this._pairTimer = setTimeout(() => this.setState({ pairStage: 'off' }), 320);
+            }, 1400);
+          },
+          onPairReject: () => {
+            clearTimeout(this._pairExpiry);
+            this.setState({ pairStage: 'rejected' });
+            clearTimeout(this._pairTimer);
+            this._pairTimer = setTimeout(() => this.setState({ pairStage: 'off' }), 1200);
+          }
+        };
+      })(),
       handoffOpacity: ho ? 1 : 0,
       handoffPointer: ho ? 'auto' : 'none',
       handoffFromLabel: (SRC[ho ? ho.from : 'lms'] || SRC.lms).label,
       handoffToLabel: (SRC[ho ? ho.to : 'bluetooth'] || SRC.lms).label,
       noticeFooterDisplay: noRenderer ? 'flex' : 'none',
-      waitIconLmsLg: this.sourceIcon('lms', '#7ed6bc', 24, 1),
-      waitIconSpotifyLg: this.sourceIcon('spotify', '#e9eef2', 24, 0.72),
-      waitIconBtLg: this.sourceIcon('bluetooth', '#e9eef2', 26, 0.72),
+      waitIconLmsLg: this.sourceIcon('lms', '#7ed6bc', 38, 1),
+      waitIconSpotifyLg: this.sourceIcon('spotify', '#e9eef2', 38, 0.72),
+      waitIconBtLg: this.sourceIcon('bluetooth', '#e9eef2', 41, 0.72),
 
       handoffFromIcon: this.sourceIcon(ho ? ho.from : 'lms', '#e9eef2', 44, 0.42),
       handoffToIcon: this.sourceIcon(ho ? ho.to : 'lms', hoAccent, 50, 1),
-      badgeIcon: this.sourceIcon(this.source(), src.accent, 17, 1),
-      miniBadgeIcon: this.sourceIcon(this.source(), src.accent, 15, 1),
+      badgeIcon: this.sourceIcon(this.source(), src.accent, 21, 1),
+      miniBadgeIcon: this.sourceIcon(this.source(), src.accent, 28, 1),
       handoffToAccent: hoAccent,
       handoffToGlow: hoAccent + '26',
 
+      ...this.idleVals(n),
       clockHM: pad(n.getHours()) + ':' + pad(n.getMinutes()),
       clockS: pad(n.getSeconds()),
-      clockX: this.state.clockPos.x + '%',
-      clockY: this.state.clockPos.y + '%',
+      clockX: this.clockAt().x + '%',
+      clockY: this.clockAt().y + '%',
       idleOpacity: idle ? 1 : 0,
       idlePointer: idle ? 'auto' : 'none',
       onIdleDismiss: () => this.setState({ idle: false, pausedFor: 0 }),
@@ -2222,23 +2534,16 @@ class Component extends DCLogic {
       actTransform: act ? 'translate(-50%,-50%) scale(1)' : 'translate(-50%,-50%) scale(0.94)',
       actStepMenu: act && this.state.actStep === 'menu',
       actStepPick: act && this.state.actStep === 'pick',
-      actStepName: act && this.state.actStep === 'name',
       actBackDisplay: this.state.actStep === 'menu' ? 'none' : 'flex',
       actKicker: this.state.actStep === 'menu'
         ? (act ? act.kind : '')
-        : this.state.actStep === 'pick' ? 'Add to playlist' : 'New playlist',
-      actTitle: this.state.actStep === 'name' ? 'Name it' : (act ? act.label : ''),
+        : 'Add to playlist',
+      actTitle: act ? act.label : '',
       playlistRows: this.state.playlists.map(p => ({
         name: p.name,
         count: p.count + (p.count === 1 ? ' track' : ' tracks'),
         onClick: () => this.addToPlaylist(p.name)
       })),
-      draftName: this.state.draftName,
-      keyRows: [['Q','W','E','R','T','Y','U','I','O','P'], ['A','S','D','F','G','H','J','K','L'], ['Z','X','C','V','B','N','M','-','1','2']].map(row => ({
-        keys: row.map(ch => ({ ch, onClick: () => this.typeKey(ch) }))
-      })),
-      createBg: this.state.draftName.trim() ? '#7ed6bc' : 'rgba(233,238,242,0.1)',
-      createInk: this.state.draftName.trim() ? '#16232c' : 'rgba(233,238,242,0.35)',
       toastOpacity: this.state.toast ? 1 : 0,
       toastY: this.state.toast ? '0px' : '12px',
       toastText: this.state.toast || '',
@@ -2250,15 +2555,6 @@ class Component extends DCLogic {
       },
       onAddQueue: () => { this.setState({ act: null }); this.flash(act.label + ' added to queue'); },
       onAddPlaylist: () => this.setState({ actStep: 'pick' }),
-      onNewPlaylist: () => this.setState({ actStep: 'name', draftName: '' }),
-      onKeySpace: () => this.typeKey(' '),
-      onKeyDel: () => this.setState(s => ({ draftName: s.draftName.slice(0, -1) })),
-      onCreatePlaylist: () => {
-        const name = this.state.draftName.trim();
-        if (!name) return;
-        this.setState(s => ({ playlists: s.playlists.concat([{ name, count: 0 }]) }));
-        this.addToPlaylist(name, true);
-      },
       queueCount: String(queueRest.length),
       queueMeta: queueRest.length
         ? queueRest.length + (queueRest.length === 1 ? ' track' : ' tracks') + '  \u00b7  ' + queueMin + ' min left'
@@ -2279,7 +2575,7 @@ class Component extends DCLogic {
           nowDisplay: isNow ? 'inline' : 'none',
           durDisplay: isNow ? 'none' : 'inline',
 
-          onPlay: () => { if (i > 0) this.setState({ queueIndex: this.state.queueIndex + i, position: 0, transportOverride: 'playing' }); },
+          onPlay: () => { if (i > 0) this.setState({ queueIndex: qi + i, position: 0, transportOverride: 'playing' }); },
           onRemove: (e) => {
             e.stopPropagation();
             this.setState(s => ({ removed: s.removed.concat([t[0]]) }));
@@ -2312,7 +2608,7 @@ class Component extends DCLogic {
       switcherItems: Object.keys(PLAYLIST_TRACKS).map(name => {
         const cur = name === this.state.queueSource && !this.state.cleared;
         return {
-          name, meta: PLAYLIST_TRACKS[name].length + ' tracks',
+          name, meta: PLAYLIST_TRACKS[name].length + (PLAYLIST_TRACKS[name].length === 1 ? ' track' : ' tracks'),
           bg: cur ? 'rgba(126,214,188,0.12)' : 'rgba(255,255,255,0.045)',
           border: cur ? 'rgba(126,214,188,0.34)' : 'rgba(233,238,242,0.09)',
           ink: cur ? '#7ed6bc' : '#e9eef2',
@@ -2343,10 +2639,10 @@ class Component extends DCLogic {
       onPrev: () => this.setState(s => ({ position: 0, queueIndex: Math.max(0, s.queueIndex - 1) })),
       onNext: () => this.setState(s => ({ position: 0, queueIndex: s.queueIndex + 1 })),
       libOpacity: libOpen ? 1 : 0,
-      // both directions are transform + opacity only: the strip rides down out
-      // of frame as Now Playing takes over, and the screen settles a few pixels
-      libTransform: libOpen ? 'translateY(0)' : 'translateY(10px)',
-      miniTransform: libOpen ? 'translateY(0)' : 'translateY(104px)',
+      // ADR-0041: one screen is mounted at a time and the swap is not
+      // animated. Over a shared backdrop every cross-fade showed the bare
+      // backdrop as a blink, so the backdrop stays put and the swap is the
+      // whole effect.
       miniOpacity: libOpen ? '1' : '0',
       libPointer: libOpen ? 'auto' : 'none',
       libTitle: lp.length ? lp[lp.length - 1] : 'Library',
@@ -2358,7 +2654,7 @@ class Component extends DCLogic {
       libArtistGrid: artistGrid,
       libArtistPage: artistPage,
       libPlaylistsView: playlistsView,
-      playlistCount: this.state.playlists.length + ' playlists',
+      playlistCount: this.state.playlists.length + (this.state.playlists.length === 1 ? ' playlist' : ' playlists'),
       // grouped by initial so the index rail has something to jump to; letters
       // with no artists stay in the rail but dimmed and inert
       ...(() => {
@@ -2458,7 +2754,6 @@ class Component extends DCLogic {
         bg: 'rgba(255,255,255,0.045)', ink: '#e9eef2'
       }, this.rowActions('Playlist', p.name, false,
         () => this.setState({ libPath: ['Playlists', p.name] })))),
-      onNewPlaylistTop: () => this.setState({ act: { kind: 'Playlist', label: 'New playlist' }, actStep: 'name', draftName: '' }),
       artistEmpty: bd.artists.length === 0,
       albumEmpty: bd.albums.length === 0,
       trackEmpty: !bd.selAlbum,
@@ -2503,9 +2798,36 @@ class Component extends DCLogic {
       libTopCards: lp.length === 0,
 
       topCardH: '200px',
+      // the wrap centres its content, so the padding is plain breathing room —
+      // a fixed top offset here would be added on top of the centring
       topPad: '30px 60px',
-      // the strip is capped at the ten most recent additions
-      newAlbums: RECENT.slice(0, 10).map(a => ({
+
+      // the home strip is one thing or the other, never both
+      stripNewDisplay: (this.props.homeStrip || 'new-music') === 'new-music' ? 'flex' : 'none',
+      stripArtistsDisplay: (this.props.homeStrip || 'new-music') === 'most-played' ? 'flex' : 'none',
+      stripRecentDisplay: (this.props.homeStrip || 'new-music') === 'recent-artists' ? 'flex' : 'none',
+      // recently played is the same card, ordered by last play instead of count
+      recentArtists: uniq(ALBUM_DATA.map(a => a.artist)).slice().reverse().slice(0, this.props.homeStripCount || 10).map((name, i) => {
+        const m = this.artistMeta(name);
+        return {
+          name, meta: RECENT_AGO[i % RECENT_AGO.length],
+          initials: m.initials, tint: m.tint,
+          photoDisplay: m.photoDisplay, monoDisplay: m.monoDisplay,
+          onClick: () => this.openArtist(name)
+        };
+      }),
+      popularArtists: uniq(ALBUM_DATA.map(a => a.artist)).slice(0, this.props.homeStripCount || 10).map(name => {
+        const m = this.artistMeta(name);
+        const n = ALBUM_DATA.filter(a => a.artist === name).length;
+        return {
+          name, meta: n + (n === 1 ? ' album' : ' albums'),
+          initials: m.initials, tint: m.tint,
+          photoDisplay: m.photoDisplay, monoDisplay: m.monoDisplay,
+          onClick: () => this.openArtist(name)
+        };
+      }),
+      // the strip's length is a setting, not a constant
+      newAlbums: RECENT.slice(0, this.props.homeStripCount || 10).map(a => ({
         title: a.title, artist: a.artist,
         onClick: () => this.goLib(['Albums', a.title])
       })),
@@ -2531,6 +2853,8 @@ class Component extends DCLogic {
       libAlbumVisible: albumNode,
       ...this.settingsVals(),
       libRows: this.libRowsFor(lp, null),
+      libCols: lp[0] === 'Radio' && lp.length === 1 ? 'repeat(3,minmax(0,1fr))' : '1fr',
+      libGap: lp[0] === 'Radio' && lp.length === 1 ? '16px' : '3px',
       playAllVisible: lp.length === 2 && lp[0] === 'Playlists',
       playAllMeta: (() => {
         const t = (PLAYLIST_TRACKS[lp[1]] || []);
@@ -2559,6 +2883,7 @@ class Component extends DCLogic {
       miniDisplay: noRenderer ? 'none' : 'grid',
       headerBtnDisplay: 'none',
       onPlayAlbum: () => this.startLms(),
+      onQueueAlbum: () => this.flash(this.state.libPath[this.state.libPath.length - 1] + ' added to queue'),
       onLibClose: () => { if (!noRenderer) this.setState({ library: false }); },
       miniBg: this.state.miniPressed ? 'rgba(36,54,66,0.92)' : 'rgba(18,29,37,0.82)',
       onMiniDown: () => this.setState({ miniPressed: true }),

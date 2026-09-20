@@ -61,27 +61,28 @@ body {
   background: linear-gradient(90deg, var(--src-accent), var(--accent-artist));
 }
 
-/* Source pill: absolutely placed top-right, above the grid. */
+/* Source mark: absolutely placed top-right, above the grid. Mark and word
+   only — the pill ground and border were removed from the design. */
 .srcpill {
   position: absolute;
-  top: 38px;
+  top: 44px;
   right: 56px;
   z-index: 6;
   display: inline-flex;
   align-items: center;
-  gap: 9px;
-  padding: 8px 15px;
-  border-radius: var(--r-pill);
+  gap: 11px;
   white-space: nowrap;
-  font-size: var(--t-label);
-  font-weight: 700;
-  letter-spacing: var(--track-label);
+  font-family: var(--font-mono);
+  font-size: var(--t-body-sm);
+  font-weight: 600;
+  letter-spacing: var(--track-wide);
   text-transform: uppercase;
   color: var(--src-accent);
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid color-mix(in oklab, var(--src-accent) 40%, transparent);
 }
-.srcpill__mark { width: 18px; height: 18px; flex-shrink: 0; display: block; }
+/* the raster marks are sized by height; Bluetooth's glyph is drawn smaller
+   inside its own box, so it carries a 1.12 correction */
+.srcpill__mark { height: 21px; width: auto; flex-shrink: 0; display: block; }
+.srcpill__mark--bt { height: 24px; }
 .srcpill__mark--img { object-fit: contain; }
 
 /* The Lyrion mark is a ten-bar figure that antialiases to a smear below about
@@ -91,13 +92,13 @@ body {
   display: flex;
   align-items: center;
   gap: 2px;
-  height: 17px;
+  height: 21px;
   flex-shrink: 0;
 }
 .i-lyrion i { width: 3px; border-radius: 2px; background: currentColor; flex-shrink: 0; }
-.i-lyrion i:nth-child(1) { height: 9px; }
-.i-lyrion i:nth-child(2) { height: 17px; }
-.i-lyrion i:nth-child(3) { height: 12px; }
+.i-lyrion i:nth-child(1) { height: 11px; }
+.i-lyrion i:nth-child(2) { height: 21px; }
+.i-lyrion i:nth-child(3) { height: 15px; }
 .i-lyrion i:nth-child(4) { height: 15px; }
 
 .i-lyrion--lg {
@@ -191,7 +192,7 @@ body {
 .tabs {
   display: flex;
   align-items: center;
-  gap: 26px;
+  gap: 34px;
   align-self: flex-start;
   flex-shrink: 0;
   margin-bottom: 18px;
@@ -199,12 +200,12 @@ body {
 }
 .tab {
   font-family: var(--font-mono);
-  font-size: var(--t-label);
+  font-size: var(--t-body-sm);
   font-weight: 600;
-  letter-spacing: 0.16em;
+  letter-spacing: var(--track-wide);
   text-transform: uppercase;
   white-space: nowrap;
-  color: var(--ink-quiet);
+  color: var(--ink-tab-off);
   /* grown upward to clear 44px without moving the text or the underline.
      line-height is pinned so the 44px target does not depend on font metrics
      — on the fallback face this row measured 42px. */
@@ -215,50 +216,49 @@ body {
   background: none;
   border-left: 0; border-right: 0; border-top: 0;
 }
-.tab[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--src-accent); }
+.tab[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--ink); }
 .tab[aria-disabled="true"] { opacity: 0.4; }
 
 /* Transport state, in words. */
 .panel { margin-top: 36px; flex: 1; min-height: 0; position: relative; }
 
-/* Reserved height keeps the row stable between one- and two-line titles
-   and across null fields. */
-.trackblock { min-height: 238px; }
+/* One header, whether or not lyrics are there: title, then artist · album ·
+   year on a single baseline row, pinned to the top of the panel. There is no
+   reserved block height — the row is one line and cannot reflow. */
+.trackblock { position: absolute; inset: 0; display: flex; flex-direction: column; min-height: 0; }
 
 .title {
   font-size: var(--t-title);
-  line-height: 1.06;
+  line-height: 1.08;
   font-weight: 700;
   letter-spacing: var(--track-tight);
   text-wrap: pretty;
   margin: 0;
-  min-height: 124px;
+  flex-shrink: 0;
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
-.artistline { margin-top: 16px; min-height: 38px; }
 .artist {
   font-size: var(--t-artist);
-  line-height: 1.3;
   font-weight: 600;
   color: var(--accent-artist);
-  display: inline-block;
-  max-width: 100%;
-  padding: 7px 0;
-  margin: -7px 0;
-  vertical-align: top;
+  padding: 9px 0;
+  margin: -9px 0;
+  flex-shrink: 0;
+  max-width: 60%;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.albumline {
+.metaline {
   display: flex;
   align-items: baseline;
   gap: 12px;
-  margin-top: 8px;
-  min-height: 26px;
+  margin-top: 10px;
+  min-width: 0;
+  flex-shrink: 0;
 }
 .album {
   font-size: var(--t-body);
