@@ -140,9 +140,13 @@ has run it. In particular:
   is asserted after the fact (something was written, it is not empty, it
   contains the plymouth hook) but assertions in a build are not a boot.
 - **Whether Plymouth holds all 100 frames in memory** — roughly 400 MB
-  decompressed if it does, regardless of the 6.5 MB on disk. 36 of the 100
-  frames are exact duplicates, so there is cheap headroom if this turns out
-  to matter.
+  decompressed if it does, regardless of the 3.2 MB on disk. **26** of the
+  100 frames are exact duplicates, so there is cheap headroom if this turns
+  out to matter.
+  > Both numbers were stale and are corrected here, 2026-09-20. "6.5 MB" and
+  > "36 duplicates" described the `b33da2e` set and survived two re-renders
+  > unexamined; `HANDOFF.md` still carries them. Measured on the set
+  > committed today: 3.2 MB, 74 distinct frames, 26 exact duplicates.
 - **Whether the handover is actually seamless.** The gap it exists to close
   was never measured, only reasoned about.
 
@@ -186,3 +190,135 @@ has run it. In particular:
   watching to see whether the thing turned on.
 - **Letting the kiosk draw its own splash** — cannot work: Chromium is the
   thing we are waiting for.
+
+---
+
+## Amendment, 2026-09-20 — the handover is ten seconds, not a seam
+
+**Status: Proposed.** Needs George. Nothing below is implemented.
+**Raised by:** George, 2026-09-20: *"The main aim is to have a continuous
+animation until the player takes over (the white flash is fine for now)."*
+**Evidence:** [Finding 041](../findings/041-the-ten-seconds-with-no-animation.md)
+
+### What this record got wrong
+
+§3 above, and Finding 039, both treat the end of the animation as a *seam* —
+a moment to be joined cleanly. Measured on the 2026-09-20 boot, it is not a
+moment:
+
+| | from → to | length | what is drawn |
+|---|---|---|---|
+| **D1** | 25.64 → 31.55 s | **5.93 s** | nothing this project controls |
+| **D2** | 31.55 → 34.76 s | **3.21 s** | a frozen frame (`swaybg`) |
+| **D3** | 34.76 → 35.79 s | 1.01 s | white — parked |
+
+**10.15 s with no animation**, on a boot whose animation only runs for about
+twenty. Neither D1 nor D2 is named anywhere in this record or in Finding 039.
+The open question above — *"what covers the gap between the splash ending and
+the panel painting"* — was answered with `swaybg`, and `swaybg` cannot start
+until labwc exists, so it covers the far side of a gap it cannot reach across.
+
+### The constraint, stated plainly
+
+Plymouth is DRM master until it exits, so it must exit before labwc opens the
+GPU. labwc then needs its own start-up — ~2.0 s of PAM, logind and the user
+manager, then ~3.9 s of labwc itself. **During that start-up the display is
+owned by nothing that is drawing, and no amount of care in the handover
+changes that.** D1 is the compositor's start-up time. It is also not
+fixed-length: it tracks `NetworkManager-wait-online`, which moved it from
+21.9 s (Finding 039) to 25.44 s here.
+
+**So an animation cannot run across D1.** The best D1 can be is a held frame.
+This amendment is about making that true, making it short, and making the
+animation resume the instant a compositor exists.
+
+### Decision, in three parts
+
+**1. D1 shows the animation's rest frame, not black and not a console.**
+`quit --retain-splash` is supposed to do this and the evidence says it does
+not: no `plymouthd-fd-escrow` process existed on the 2026-09-20 boot although
+the binary ships at `/usr/libexec/plymouth/plymouthd-fd-escrow`, and George
+watched the screen go straight to black on 2026-09-19. Either escrow is made
+to work, or `gexis-kiosk.service` writes the rest frame to the display itself
+before quitting plymouth. **Which of the two is not decided here** — it needs
+the escrow failure diagnosed first, and diagnosing it is cheap.
+
+**2. D2 animates.** `swaybg` showing `boot-0100.png` is replaced by a client
+that plays the pulse loop (frames 51–100) from the moment labwc is up until
+`POST /panel/painted`, then exits. The pulse is a closed loop whose wrap is
+pixel-identical, so it can start on any frame and stop on any frame.
+
+**3. The target is D1 ≤ 2.0 s, and the reason is the artwork, not the
+clock.** The pulse is a beat followed by a genuine rest, 2.0 s long. A held
+rest frame is *indistinguishable from the animation between beats* — until
+the beat that should have come does not. So a gap shorter than one pulse
+period is not perceptible as a stop at all, and one of 5.93 s is three missed
+beats. This turns "continuous" into something measurable.
+
+Getting there means taking ~4 s off labwc's start-up. Three candidates, none
+yet established as a cause:
+
+- **`gexis-panel-warmup` runs straight through D1** — 10.70 → 33.06 s, which
+  is 7.4 s after labwc was exec'd, reading 483 MB off the same SD card labwc
+  is reading. `Before=gexis-kiosk.service` with `Type=simple` orders the
+  *start*, not the *finish*. Its own comment says warming after the kiosk
+  starts is pointless and competing.
+- **3.6 s of D1 produces no log output from anything at all** (27.91 →
+  31.50 s). Nobody has looked at what labwc is doing there.
+- **~2.0 s before labwc's first line** is PAM, logind and the user manager.
+
+**If D1 ≤ 2.0 s turns out to be unreachable, the fallback is to say so and
+accept a held frame**, rather than to add machinery that hides it.
+
+### What this does not propose
+
+- **Removing the network from the panel's critical path.** `gexis-kiosk` →
+  `gexis-core` → `network-online.target` → `NetworkManager-wait-online`,
+  5.996 s, is the single largest cost on `critical-chain` and the panel does
+  not need a network to draw its first screen. It would make the whole boot
+  shorter without making D1 shorter, and it is a separate decision about what
+  `gexis-core` may start without. Named here so it is not re-derived.
+- **Anything about D3.** Parked by George, 2026-09-19, unchanged.
+
+### Rejected alternatives
+
+- **A second KMS animator taking over from plymouth for D1.** It would have
+  the identical problem: it is DRM master, so it must release before labwc
+  starts, and the gap is exactly as long. It adds a process and moves nothing.
+- **Holding plymouth until the panel paints.** This is what §3 above already
+  corrected. It deadlocks: plymouth holds DRM, labwc cannot open the GPU, the
+  panel never paints.
+- **A longer animation, or a slower one, so the rest state is longer.** It
+  would hide D1 by making the artwork worse, and it fails the moment D1 grows
+  — which it already did, by 3.5 s, between two boots.
+- **`--retain-splash` alone, without part 2.** It makes D1 and D2 both a
+  frozen frame: 9.14 s of one image, more than four missed beats. It removes
+  the console without meeting the requirement.
+
+### Reversal condition
+
+If the compositor ever draws its first frame fast enough that D1 falls below
+one pulse period on its own, part 2 is still wanted but part 3 stops being
+work. If labwc is ever replaced by something that can take DRM master from a
+running plymouth, the whole shape of this changes and the amendment should be
+re-read rather than patched.
+
+### Still open after this
+
+- **The console George reported is not explained.** `console=tty3` was
+  already live on the boot he is complaining about. Finding 041 §4 ranks
+  three candidates and records that the evidence for the strongest of them
+  was destroyed during the session. **It needs George: where on the screen
+  was it, or twenty seconds of phone video.** This amendment does not assume
+  the answer, and parts 1 and 2 are worth doing whichever it turns out to be.
+- **Whether `systemd.show_status=false` should stay.** It is overridden every
+  boot by plymouthd's `SIGRTMIN+20`, so it is doing nothing; what keeps that
+  text off the panel is plymouth's interception and `console=tty3`
+  (Finding 041 §3).
+- **The unverified intro restart at ~9.1 s** —
+  `plymouth-start.service`'s `ExecStartPost=-/usr/bin/plymouth show-splash`
+  fires against the already-running initramfs daemon. If it resets the theme
+  script, the intro replays seven seconds in. Not determinable from logs.
+- **Whether any of this is a setting.** Unchanged: hardcoded as proposed, and
+  a row goes into [ADR-0022](0022-settings-inventory.md)'s inventory only if
+  George says so.

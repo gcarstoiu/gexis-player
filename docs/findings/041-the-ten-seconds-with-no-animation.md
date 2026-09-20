@@ -1,0 +1,222 @@
+# Finding 041 — The boot animation stops 10.2 s before the panel appears
+
+**Date:** 2026-09-20
+**Question:** George, 2026-09-20: *"the console is still shown"*, and *"the
+main aim is to have a continuous animation until the player takes over"*.
+ADR-0043's fixes were all installed by hand on 2026-09-19 and this is the
+first boot with them. What did that boot actually do?
+**System:** `gexis`, booted 2026-09-20 07:58:31 CEST, boot id
+`8c55018e…1f885`, Pi 4B Rev 1.5, serial `10000000c1653df6`. Kernel
+6.18.50+rpt-rpi-v8, Chromium 153.0.8010.47, labwc on Wayland.
+**Scope:** **one boot, one device, read from its logs after the fact.**
+Nothing here was seen on the panel — there is no photograph and no video, and
+§4 is explicit about which claims that limits. Times are kernel-monotonic;
+PID 1 starts at 5.913 s, which is the offset reconciling `systemd-analyze`
+with the journal.
+**Relates to:** [ADR-0043](../decisions/0043-boot-animation-and-a-silent-boot.md),
+[Finding 038](038-what-the-panel-shows-while-it-boots.md) (the budget),
+[Finding 039](039-what-only-a-real-boot-found.md) (the five defects this boot
+was meant to have fixed)
+
+## The point
+
+**The animation ends at 25.64 s and the UI paints at 35.79 s.** For 10.15 s
+of every boot nothing this project controls is drawing an animation, and for
+5.93 s of that nothing is drawing at all. ADR-0043 names neither interval.
+It treated the handover as a seam to be closed and it is not a seam; it is
+ten seconds, and it is most of what somebody watching the device actually
+sees after the logo settles.
+
+The console complaint is a separate question and **this finding does not
+answer it** — see §4.
+
+## 1. The timeline
+
+| t (s) | what happens | on the panel | evidence |
+|---|---|---|---|
+| — | firmware, **duration unmeasured** — there is no clock before the kernel | black (`disable_splash=1`) | `config.txt:57` |
+| 0.00 | kernel | black | `printk: legacy console [tty3] enabled` |
+| **~1.8 – 4.0** | **plymouth starts, from the initramfs** | ▶ **animation** | see §2 |
+| 5.91 | PID 1 | animation | `UserspaceTimestampMonotonic=5913195` |
+| 10.71 | plymouthd tells systemd to print status | animation | `Received SIGRTMIN+20 from PID 180 (plymouthd)` |
+| 10.70 → 33.06 | `gexis-panel-warmup` reads 483 MB | animation | `gexis-panel-warmup: warmed 483MB` |
+| 19.42 → 25.31 | `NetworkManager-wait-online` — **5.996 s** | animation | `systemd-analyze blame` |
+| 25.44 | `gexis-kiosk.service` starts; VT clear runs, exits 0 | animation | `printf "\033c" > /dev/tty1`, pid 2318 status=0 |
+| **25.64** | **plymouth quits — animation ends** | ■ **gap opens** | `Received SIGRTMIN+21 from PID 180` |
+| 25.65 | labwc exec'd | gap | `ExecMainStartTimestampMonotonic=25648513` |
+| 26.28 | PAM session opens | gap | `pam_unix(login:session): session opened for user pi` |
+| 27.91 → 31.50 | **3.6 s with no log output from anything** | gap | journal gap |
+| **31.55** | compositor ready; `swaybg` draws `boot-0100.png` | ▣ **frozen still** | `gexis-kiosk: compositor ready` |
+| 31.56 | chromium exec'd | still | `gexis-kiosk: exec chromium` |
+| 34.76 | Chromium's window appears | ◻ white | `Started app-org.chromium.Chromium-2408.scope` |
+| **35.79** | **UI paints** | ◆ UI | `POST /panel/painted HTTP/1.1 200 201` |
+| 94.13 | backstop timer fires, quit returns 1, unit succeeds | no effect | Finding 039 §3's fix, working |
+
+### The three intervals
+
+| | from → to | length | what is drawn |
+|---|---|---|---|
+| **D1** | 25.64 → 31.55 | **5.93 s** | nothing under this project's control |
+| **D2** | 31.55 → 34.76 | **3.21 s** | a frozen frame (`swaybg`) |
+| **D3** | 34.76 → 35.79 | **1.01 s** | white — Finding 039 §5, parked by George |
+
+**D1 is structural, not a bug.** Plymouth is DRM master for as long as it
+runs, so it must die before labwc can open the GPU (ADR-0043 §3, corrected).
+labwc then needs its own start-up time, during which the device it was handed
+is held by nobody drawing. D1 is that start-up: ~2.0 s of PAM, logind and the
+user manager, then ~3.9 s of labwc itself.
+
+**D1 also grew.** Finding 039 measured `gexis-kiosk.service` starting at
+21.9 s; here it is 25.44 s, because `NetworkManager-wait-online` took
+5.996 s rather than its previous cost. The gap tracks the compositor's
+start-up, so it is not fixed-length and cannot be covered by a fixed-length
+asset.
+
+## 2. Plymouth does start from the initramfs
+
+ADR-0043 §2 claimed this and Finding 038 corrected an earlier denial of it.
+It is now positively evidenced, two ways:
+
+- **`plymouthd` is PID 180.** `systemd-journald` is 332 and `systemd-udevd`
+  is 384, both with `NRestarts=0`. `plymouth-start.service` is ordered
+  `After=systemd-udevd`, so a daemon it forked could not hold a PID below
+  384. 180 predates the root filesystem's systemd.
+- **`/var/log/boot.log` opens with the initramfs's own `e2fsck` output**
+  (`rootfs: recovering journal`, orphan-inode clearing) before any systemd
+  line. Plymouth captured it, so plymouth was running then.
+
+What is **not** established: the exact moment the first frame is drawn. The
+1.8 s lower bound is `vc4drmfb`'s registration; the 4.0 s upper bound is the
+first timestamp in `/run/initramfs/fsck.log`.
+
+## 3. The logger
+
+**It is Plymouth's own `/var/log/boot.log`** — not something this project
+added. `dpkg -S /etc/logrotate.d/bootlog` → `plymouth`, and
+`strings /usr/sbin/plymouthd` carries `/var/log/boot.log` and
+`plymouth.boot-log=`. **Nothing in this repository knows it exists.**
+
+It matters because **journald on this image is volatile**, not persistent:
+`/usr/lib/systemd/journald.conf.d/40-rpi-volatile-storage.conf` sets
+`Storage=volatile`, `/var/log/journal` exists but is empty, and
+`journalctl --list-boots` returns exactly one boot. `boot.log` is the only
+cross-boot record the device keeps, and it holds six sections, one per boot,
+back to 2026-09-19 16:12:59.
+
+> **Corrected here:** Claude told George earlier in this session that journald
+> was persistent, from the presence of `/var/log/journal`. The directory
+> exists and is empty; the drop-in overrides it. The check answered "does the
+> directory exist", not "does anything survive a reboot" —
+> `docs/LESSONS.md`'s shape exactly.
+
+### What it shows, and the switch that is doing nothing
+
+`systemd.show_status=false` is on the kernel command line **and is overridden
+at runtime by plymouthd**:
+
+```
+[   10.709584] systemd[1]: Received SIGRTMIN+20 from PID 180 (plymouthd).
+[   25.640238] systemd[1]: Received SIGRTMIN+21 from PID 180 (plymouthd).
+```
+
+`SIGRTMIN+20` enables console status messages; `+21` disables them. So for
+14.9 s of every boot systemd writes its full status list to `/dev/console`,
+because plymouth turns it on in order to display it, and turns it off when it
+quits. `boot.log` holds all ninety-odd lines of it. **The quieting ADR-0043
+attributes to `systemd.show_status=false` is in fact being done by plymouth's
+interception**, which is why that text lands in a log file rather than on a
+screen. The option can be removed or kept, but it is not what is working.
+
+Comparing the 22:27 section (the boot before the `console=tty1` → `tty3`
+edit) with the 07:58 section: **the captured text is identical and ends in
+the same place.** The console change altered where console text would land,
+not what is produced.
+
+## 4. The console — not answered
+
+**`console=tty3` was already in effect on the boot George is complaining
+about.** The previous boot was 22:27; `cmdline.txt`'s hand edit is timestamped
+23:02:42 and the initramfs rebuild 23:19:26. `/proc/consoles` → `tty3` alone,
+and the card's own `cmdline.txt.bak` still reads `console=tty1`. So the fix
+from commit `6bde2bd` was live and did not remove what he saw.
+
+Every other text source was checked and **none reproduces the complaint**:
+`getty@tty1` never started this boot (`InactiveExitTimestampMonotonic=0`,
+zero `getty@` lines in the journal — `Conflicts=` drops its job), the VT clear
+ran and exited 0, no VT switch occurred (`fgconsole` → 1, session `VTNr=1
+Type=wayland Active=yes`).
+
+Three candidates survive, and **nothing here discriminates between them**:
+
+1. **tty1 held renderable escape-reply glyphs during D1.** Read at 08:45,
+   before any interference, `/dev/vcs1`'s last rows carried the literal text
+   `^[[1;1R^[[50;160R` — ANSI cursor-position *replies* (50 rows × 160 cols =
+   1280×800 at an 8×16 font), echoed because nothing was reading the tty, and
+   written *after* the `\033c` clear succeeded. tty1 is the foreground VT.
+   **Established:** the buffer held it. **Not established:** that anything
+   painted it.
+2. **D1 is simply black**, and an animation stopping dead for six seconds is
+   what George is describing. No `plymouthd-fd-escrow` process existed, so
+   `--retain-splash` probably retained nothing — consistent with Finding 039
+   §4's record of the screen going straight to black.
+3. **An earlier boot.** Every boot before 23:02 had `console=tty1`, where
+   cloud-final's `Completed socket interaction for boot stage final` at
+   26.36 s lands on the foreground VT 0.7 s into D1. `/dev/vcs3` still holds
+   exactly that line.
+
+**What would discriminate:** where on the screen it was. Two lines of
+gibberish at the very bottom → 1. A full screen of `[ OK ]` lines → 3, and an
+earlier boot. Nothing, just black → 2. Twenty seconds of phone video settles
+it outright.
+
+> **The evidence for candidate 1 was destroyed during this session, by us.**
+> A capture script restarted `gexis-kiosk.service` at 09:02:19, which re-ran
+> the VT clear; `/dev/vcs1` has read blank since. The restart was authorised;
+> the cost to the evidence was not anticipated.
+
+### The framebuffer capture proves nothing
+
+45 samples of `/dev/fb0` were taken across a kiosk restart. **Every one is
+uniformly black, a single 16-bit value** — including samples that must
+postdate labwc's own surface being up. Under vc4 KMS, fbdev emulation is not
+the scanout buffer while a DRM master holds the device, so the instrument
+reads black whether or not anything is on screen. **It cannot distinguish
+"the panel is black" from "fb0 is blind",** and it is recorded here only so
+nobody runs it again expecting an answer. It also simulated D1 with a warm
+restart rather than a boot.
+
+## 5. What else the boot says
+
+- **`gexis-panel-warmup` ran straight through D1.** 10.70 → 33.06 s: 7.4 s
+  after labwc was exec'd and 1.5 s after Chromium. Its own comment says
+  warming after the kiosk starts is pointless and competing.
+  `Before=gexis-kiosk.service` with `Type=simple` orders the *start*, not the
+  *finish*. **Whether it causes any of labwc's 3.9 s of silence is not
+  established** — one boot, no control run.
+- **Everything is gated behind a network the panel does not need.**
+  `gexis-kiosk` → `gexis-core` → `network-online.target` →
+  `NetworkManager-wait-online`, 5.996 s, directly on `critical-chain`.
+- **cloud-init runs on every boot despite `ENABLE_CLOUD_INIT=0`**
+  (`image/config:24`). All five of its units are
+  `StandardOutput=journal+console` and it costs 4.172 s.
+- **An unverified intro restart at ~9.1 s.** `plymouth-start.service` carries
+  `ExecStartPost=-/usr/bin/plymouth show-splash`, fired against the
+  already-running initramfs daemon. If that resets the theme script's state
+  the intro replays seven seconds in, which would be a discontinuity *inside*
+  the animation. **Not determinable from logs.**
+
+## 6. What this does not say
+
+- **Nobody has seen the panel.** Every claim about what is *visible* is
+  inferred from logs and mechanism, not observed.
+- **One boot.** D1's length depends on `NetworkManager-wait-online` and on
+  labwc's start-up, and both varied between Finding 039's boot and this one.
+  No distribution was measured.
+- **Whether `--retain-splash` leaves anything on screen here** is still
+  inferred, from the absence of an escrow process, never observed — while
+  three places in the tree still rely on it.
+- **Plymouth's memory cost** — ADR-0043's open question — is untouched. The
+  process is gone and the journal is volatile.
+- **Nothing here was re-verified from an image.** Finding 039's statement
+  still holds, and the device is now further from the newest artefact than it
+  was: `cmdline.txt` and `initramfs8` were both changed by hand after it.
