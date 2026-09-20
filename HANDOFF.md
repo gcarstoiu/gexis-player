@@ -1,36 +1,67 @@
 # Handoff
 
 Last updated: 2026-09-20 (twenty-first session, on R2D2 — **Phase 9's design
-sweep planned in nine subphases, volume last; starting at 9a**)
+sweep: 9a through 9d are done, checked on the panel and committed; 9e next**)
 
 ## Start here
 
-**Phase 9 is in progress and is not finished.** Step 1 (the idle question)
-is closed, the UI sweep (step 2) is George's and has not happened, and the
-performance target (step 3) is unmet. PR #22 merged an intermediate slice on
-2026-09-19 at George's request.
+**Phase 9's design sweep is four subphases in.** Nine were planned
+(`docs/DEVELOPMENT.md`), volume last; **9a, 9b, 9c and 9d are done, checked
+by George on the panel and committed**. 9e is next and nothing blocks it.
 
-**Phase 9's design sweep has a plan and it is agreed** (George, 2026-09-20):
-nine subphases in `docs/DEVELOPMENT.md`, each landing on its own and checked
-on the panel before the next. **The volume work is last, by George's
-instruction** — the only subphase with a physical consequence, carrying the
-one number still undecided, and nothing depends on it.
+- **9a** — the decisions: ADR-0044, 0045, 0046 Accepted, ADR-0022 amended
+  for the catalogue/surfaced split, ADR-0047 opened for the idle screen.
+- **9b** — Now Playing: one header instead of two, the album year from LMS
+  first, the source mark de-pilled, and the synced lyrics fixed after the
+  panel check.
+- **9c** — the Library sweep: Add to queue, the artist route out of a New
+  Music album, radio as a tinted grid, genre pills, the About error branch.
+- **9d** — the settings vocabulary and the Settings screen, **appended on
+  George's instruction** to cover Wi-Fi and LMS discovery: see below.
 
-**The diff it is built on is
-[Finding 042](docs/findings/042-the-device-against-the-new-design.md).**
-Ground truth is the device, not the docs: `npm run build` on `ui/` at HEAD
-reproduces `/opt/gexis-ui`'s bundle **byte-identically**, so the source is a
-proven map rather than an assumed one; settings came from live `/settings`,
-state from a real `/state` frame, enrichment from `/enrichment`, and the
-design's inventory from evaluating its own `INV` literal rather than its
-prose — which matters, because the two disagree.
+**The diff it is all built on is
+[Finding 042](docs/findings/042-the-device-against-the-new-design.md)**, and
+its §9 records the five panel-check findings and what each turned out to be.
+Ground truth is the device: `npm run build` on `ui/` reproduced
+`/opt/gexis-ui`'s bundle byte-identically, settings came from live
+`/settings`, state from a real `/state` frame, and the design's inventory
+from evaluating its own `INV` literal rather than its prose — which matters,
+because the two disagree.
 
-**Start at 9a: decisions, no code.** ADR-0044, 0045 and 0046 have been
-Proposed since 2026-09-20 and George has now ruled on all three in substance.
-9a also amends ADR-0022 for the catalogue/surfaced split, opens an idle-screen
-ADR, and lands the design drop **preserving `design/fonts/` and
-`IMPLEMENTED-DIFFERENTLY.md`** — the drop carries neither, and unpacking it
-over the tree deletes four woff2 files and two licences.
+**9d is the one to read about before touching Settings.** ADR-0044 now
+carries **seven** mechanics, not six: `grouped` was counted as a fixture of
+the drop's demo and is a mechanic. `visible` is computed in the registry and
+published per row — the panel filters and does nothing else. A `list` with
+`kind: "server"` stores a value and every other list does not. 54 rows became
+56; 36 are surfaced.
+
+**Where a list's items come from is answered for two of three.**
+`core/src/gexis_core/wifi.py` (NetworkManager through `nmcli`, daemon is
+root so there is no polkit agent) and `discovery.py` (UDP broadcast on 3483,
+protocol verified against the real server — `IPAD` comes back absent, so the
+address is the datagram's source). Generic routes `GET`/`POST
+/settings/{key}/items`. **Bluetooth's trusted devices are still 9f's** and
+that row opens on its own empty state.
+
+**Two traps in `nmcli` that fail quietly**, both now tested: `-t` output
+escapes colons inside values, so `split(":")` cuts a network called `2:1` in
+half; and a saved connection is not named after its network — this image's is
+`preconfigured` — so SSIDs are matched through `802-11-wireless.ssid`.
+
+**What 9d taught about the plan itself.** George found four things on the
+panel that no subphase owned. Two were scheduled nowhere at all (Wi-Fi, LMS
+discovery); `handoff_duration` and `reboot` were design keys owed to nobody;
+and `grouped` was a mechanic nobody had counted. **The list of design keys
+the registry lacks is now written out in the test by its owing subphase** —
+nine to 9g, four to 9h — so the next omission fails a test rather than
+waiting to be found on hardware.
+
+**9e is next:** wire `device_name`, which is refused today with `HTTP 409
+"not wired yet"`, and push it to squeezelite's `-n`, go-librespot's
+`config.yml`, the BlueZ alias and the hostname. The four names agree today
+only because each was set to the same literal at build time; **nothing
+propagates**. Restart-gated, so no renderer restarts mid-session. The header
+gains the IP. **Design Claude is owed the restart warning text.**
 
 **Three settings rows report behaviour the code does not have**, each found
 by measuring rather than reading: `travel_curve` names a curve 34 dB quieter
@@ -86,38 +117,23 @@ deferred and is the only thing that answers George's actual question.
 both waiting for the sweep:
 
 - **The unwired-UI audit** (criterion 2). All 66 interactive elements traced.
-  One real dead control, now fixed; a latent trap remains — `Settings.svelte`'s
-  `confirmSheet()` has no path for a wired `action` row, so the first one
-  wired gets a silently dead button, and `lib/settings.js` never sends `POST`.
+  One real dead control, fixed then; **the latent trap it named was real and
+  is now closed** — `confirmSheet()` had no path for a wired `action` row and
+  `lib/settings.js` never sent `POST`, so the first action ever wired would
+  have had a silently dead button. `reboot` was that first action, in 9d,
+  and `runSetting` is the missing call. The audit predicted this exactly.
 - **The settings wiring map** (criterion 1). Of 48 unwired rows: 14 are a read
   away, 19 need a branch, 4 need the feature built, 11 need a route or a
   sub-screen. `viz_timeout` is read by the daemon but missing from `wired`, so
   the phone cannot change a setting something actually consults.
 
-**The design drop is reviewed and nothing is built.**
-[Finding 040](docs/findings/040-the-design-drop-and-what-it-changes.md) is the
-survey, with George's corrections inline and authoritative; ADR-0044
-(settings vocabulary), ADR-0045 (pairing confirmation) and ADR-0046 (fixed
-output) are Proposed. `design/` in this repository is **still the previous
-package** - the new one has not been landed, and landing it must preserve
-`design/fonts/` and `IMPLEMENTED-DIFFERENTLY.md`, both of which the drop
-reverts or does not know about.
 
-**The next session's first job is a second comparison**: Claude Design is
-adjusting the designs against the feedback in Finding 040's last two
-sections, so the package on disk, the package they send back, and the
-shipped UI all need diffing again. Finding 040 records how to do it - the
-two `.dc.html` files carry 2,461 lines of diff and hold every screen except
-Settings, and a skim of the prose misses nearly all of it.
 
-**Three things in Finding 040 want a panel, not a repository:** whether Back
-from a New Music album reaches the artist (the code says root, George says
-artist), and the two reboot-dependent boot items below.
 
-**Next, in the order George agreed:** the UI sweep (his, with
-`design/IMPLEMENTED-DIFFERENTLY.md` in Claude Design's hands), then the
-performance work against a baseline retaken *after* the sweep, then settings
-and triage.
+
+
+
+
 
 **Phase 7a — panel responsiveness — is closed** (2026-09-18). Artwork at the
 size drawn, an instrument that survives its own scrutiny, and a baseline:

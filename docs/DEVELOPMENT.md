@@ -1563,6 +1563,47 @@ undecided, and nothing else depends on it.
    *Gates 9e, 9f, 9g and the skin picker. Acceptance: the existing rows still
    render, **and the screen matches `Settings.dc.html` at both widths**.*
 
+   **Appended 2026-09-20, on George's instruction** — *"or we append 9d and
+   do both now"* — after he checked the screen and found four things that no
+   subphase owned. Three were mine to have caught:
+
+   - **Wi-Fi and LMS discovery were scheduled nowhere.** ADR-0044 recorded
+     "where a list's items come from... none exists" as open, and no subphase
+     was ever given it; the only mention of either in this document was
+     Phase 13's setup *page*. Both are built here, daemon and panel.
+   - **`handoff_duration` and `reboot` were owed to nobody.** Thirteen of the
+     fifteen design keys the registry lacked are covered by 9g's and 9h's
+     prose; these two were named nowhere. Neither has a feature behind it, so
+     both belonged in 9d. The registry test now lists the remaining thirteen
+     *by their owing subphase*, so the next omission fails a test.
+   - **`grouped` is a seventh mechanic, counted as six.** The drop's time
+     zone picker takes its choice in two steps and that was read as a fixture
+     of its demo. The row shipped with three hardcoded options and no effect.
+
+   **Done 2026-09-20, on the device, awaiting George's check.** All six
+   mechanics, the registry's `visible` per row (34 of 54 surfaced, System
+   gone entirely), `secret`/`placeholder` on the two API keys, and the
+   restyle: the number sheet's 38 px readout, 14 px track and 34 px knob, and
+   the 62 px field - the two things the new drop draws that the one before it
+   only described. The visual diff the entry asks for was run first and found
+   the rest already matching: head, back, rail, cards, rows, sheet and the
+   type scale, which now agree at every size. **Four elements are
+   deliberately unbuilt** because nothing can make them true yet - the
+   discovery spinner, the Wi-Fi join flow, per-item `Forget`, "password
+   needed" - and `optionsFrom`/`picker` wait on 9h for their one row. All in
+   [ADR-0044](decisions/0044-settings-row-vocabulary.md), which also closes
+   its `warn` question: the confirm is gated.
+
+   **And the appended half**: `wifi.py` (NetworkManager through `nmcli`,
+   running as root so there is no polkit agent), `discovery.py` (the UDP
+   broadcast on 3483, protocol verified against the real server), one generic
+   pair of routes - `GET`/`POST /settings/{key}/items` - so a `list` gets a
+   source without the panel learning where it lives, and the panel's
+   searching state, join flow with its failure, `Forget`, grouped picker and
+   the `action` POST that nothing had ever needed. `timezone` and `reboot`
+   are wired; `lms_server` is stored and applied at the next start.
+   *Gate: scan, join a network, forget it, pick a server, set a zone.*
+
 5. **9e - The device name is the only name.** Wire `device_name` - refused
    today with `HTTP 409 "not wired yet"` - and push it to squeezelite's `-n`,
    go-librespot's `config.yml`, the BlueZ alias and the hostname, with the

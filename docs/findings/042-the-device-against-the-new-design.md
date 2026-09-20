@@ -219,3 +219,55 @@ not run here.
 **Also not established:** whether the design's spacing beyond the landmarks
 matches, anything about the two `.dc.html` files' interaction states, and any
 screen's behaviour under null metadata.
+
+## 9. The panel check, 2026-09-20 — five findings and what was decided
+
+George, on the device, against 9b and 9c. Each was reproduced in the source
+before it was changed; the cause is stated because four of the five were not
+what the symptom suggested.
+
+1. **The home screen flashed before the artist page.** Tapping the artist
+   name opens the Library, and the Library opens at its root while two
+   fetches run - the artist list, then the discography. Not a navigation bug:
+   the right screen was always coming, a second late, behind the wrong one.
+   **Fixed by not drawing the root while an artist is being resolved**, and
+   by taking the flag from the prop rather than from an effect, which runs
+   after the first paint.
+
+2. **The Lyrics tab looked empty and nothing was highlighted.** Two causes.
+   `.lyrics--synced` centres its five lines and is written after
+   `.lyrics--scroll`, so at equal specificity it won there too: the whole
+   song was centred *and* translated, putting the sung line off the top.
+   And **a stamped LRC line with no words is timing, not a lyric** - the
+   run-in, an instrumental break, the outro - so through a gap the panel
+   followed the clock onto a blank line and drew nothing. **Words are now
+   kept apart from timing**: the line shown is the last one sung, and it is
+   highlighted only while it is actually being sung. George: *"when the song
+   doesn't have any lyrics left ... the last lyric should be shown (not
+   highlighted of course)."* The full-song view also drops the five-line
+   distance fade, which is the window's, for the design's flat unsung ink.
+
+3. **Artist and Release cut their text with no fade and no control.**
+   **Decided: clamp, fade, More/Less, and the whole block is the tap
+   target** - George, who asked for the artist page's treatment and for
+   tapping the text to work there too. **This departs from the drop**, which
+   scrolls both texts inside the panel with a bottom mask
+   (`fadeWhenScrollable`). A scroller inside a panel that also scrolls takes
+   the finger meant for the panel, which is the reason the artist page
+   clamps in the first place. More/Less appears only when the text is
+   actually cut.
+
+4. **The artist page's biography did not come back to its measured height.**
+   `fitAbout` measured the first album row on screen, and unfolding makes the
+   column scrollable - so folding back measured from wherever the scroll had
+   left it. **Now measured in the column's own content**, scroll included,
+   which gives the same answer at any position.
+
+5. **The artist tab had no genres.** Added, from the same LMS query the
+   artist page uses (`genres artist_id:`), resolved through the cached artist
+   list because a renderer reports a name and LMS answers by id. Fetched when
+   the tab is opened, not per track. An artist this library does not hold -
+   anything over Bluetooth or Spotify - simply has no pills. The design gives
+   these pills three accents in rotation where the library's artist page uses
+   one; both are kept as their own screen draws them.
+

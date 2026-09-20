@@ -1,4 +1,4 @@
-# ADR-0044 — The settings row vocabulary grows six mechanics
+# ADR-0044 — The settings row vocabulary grows seven mechanics
 
 **Status:** Accepted — George, 2026-09-20, reviewing the second design drop
 against the device: *"You should consider the list coming from the updated
@@ -27,7 +27,7 @@ time behind the features that want them.
 
 ## Decision
 
-**Six additions to the row vocabulary. Nothing else about ADR-0035 changes:
+**Seven additions to the row vocabulary. Nothing else about ADR-0035 changes:
 one registry, one generic API, and a row is still wired only when something
 reads it.**
 
@@ -40,6 +40,15 @@ shapes today, distinguished by `kind`:
   value. Carries `discover: true` (a searching state while it looks) and
   `manual` (a labelled escape into a text sheet for an address discovery
   cannot reach).
+
+  **A server list therefore stores, and the other shapes do not** - decided
+  while building 9d, because the two sentences above are in tension with
+  "a `list` is navigation, not a value" three paragraphs down. `validate`
+  draws the line inside the type: a `list` with `kind: "server"` takes a
+  non-empty address like a `text` row, and any other `list` raises
+  `NotSettable`. The alternative - a separate route for choosing a server -
+  would have made the one row whose whole purpose is to hold an address the
+  only list that cannot.
 - **no `kind`** — Wi-Fi networks and Bluetooth devices: name, meta, and a
   `Forget` action per item. Wi-Fi items add signal bars and a locked state
   that opens a password sheet.
@@ -86,6 +95,25 @@ is the choice.
 For a choice too large for a 560px sheet. One use: 84 skins in a four-across
 grid of tiles. Thumbnails are placeholders until skin previews exist.
 
+### 5a. `grouped` — a choice taken in two steps
+
+**Added 2026-09-20, after George found the time zone row unusable on the
+panel.** It was missed when this record was written: the drop's `tz: true`
+was read as a fixture of its demo rather than as a mechanic, and six were
+counted where there are seven.
+
+A choice whose options are `Region/Place` is offered a region at a time. The
+sheet's title becomes the region, Cancel becomes Back, and the second tap
+sets the value — the drop's own two short lists instead of one long one.
+
+**And the list is the system's, not a curated one.** The drop names about
+thirty-five zones; `zoneinfo.available_timezones()` gives 486 on this image,
+and a user outside a curated list cannot set their clock at all. `grouped` is
+what makes the full set navigable, which is the whole reason to prefer it.
+
+`timezone` is wired here too: `timedatectl set-timezone`, which moves
+`/etc/localtime`. The row had three options and no effect before.
+
 ### 6. `surfaced` — inventoried but not shown
 
 **Added 2026-09-20, from George's ruling on the 20 rows the drop drops.**
@@ -99,11 +127,23 @@ when it is catalogued but not offered.
 
 **The registry cannot express this today.** Its rows carry `accent, confirm,
 danger, default, key, label, marks, max, min, navigation, note, options, step,
-type, unit` — nothing about visibility — and `Settings.svelte` renders
+type, unit` - nothing about visibility - and `Settings.svelte` renders
 `current?.rows` without filtering. This is the same mechanism `onlyWhen` needs,
 and the same rule applies: **the API still publishes the row, the panel
 filters.** The difference is only that `surfaced` is permanent and `onlyWhen`
 is conditional.
+
+**Where the rule runs, settled in 9d.** Both tests are transitive and one of
+them is cycle-sensitive, so writing the recursion twice - once in Python for
+the phone's sake and once in JavaScript - would mean two chances to get it
+wrong and one place to test it. `Settings.to_json` computes it and publishes
+`visible` on every row; the panel filters on that and does nothing else. The
+row still travels in full, which is what ADR-0022's catalogue needs, and a
+client that wants the whole inventory still has it.
+
+**A category with no visible row is not drawn either.** All six System rows
+are `surfaced: false`, so the registry's seven groups become the design's six
+without the group list being touched.
 
 Rejected: **omitting them from the registry entirely.** The registry is the
 executable form of ADR-0022's inventory, and an inventory that silently drops
@@ -149,11 +189,50 @@ every setting and change every one that is not text.
 
 ## Open
 
-- **Where a `list`'s items come from.** Wi-Fi needs a scan route, Bluetooth a
-  device list and a forget command, LMS a discovery mechanism. None exists.
-- **Whether `warn` should also gate the confirm button** rather than only
-  colouring the sheet.
-- **What `optionsFrom` sources exist** beyond `skin_corpus`.
+- ~~**Where a `list`'s items come from.**~~ **Closed for two of the three,
+  2026-09-20**, after George found the lists empty on the panel and no
+  subphase owning them: *"or we append 9d and do both now."*
+  - **Wi-Fi** is NetworkManager through `nmcli` (`wifi.py`). The daemon is
+    root on this image, so there is no polkit agent to answer. A scan names
+    each network connected / saved / secured / open, and joining, failing and
+    forgetting are real. **`-t` output is escaped, not split-able** — a
+    network called `2:1` would be cut in half by `split(":")` — and **a saved
+    connection is not named after its network**: this image's is called
+    `preconfigured`, so SSIDs are matched through
+    `802-11-wireless.ssid`, not through the connection's name.
+  - **Lyrion servers** answer a UDP broadcast on 3483 (`discovery.py`). The
+    protocol was verified against the real server rather than read: the reply
+    carries `NAME`, `JSON`, `VERS`, `UUID` as tag + length + value, and
+    **`IPAD` comes back absent, so the address is the datagram's source** —
+    which is the interface that can reach us, and the one worth connecting
+    to. Choosing one stores it; **the switch happens at the next start**,
+    because moving a running daemon means dropping a CometD subscription,
+    re-resolving the player and re-arbitrating. The panel says so.
+  - **Bluetooth's trusted devices are still 9f's.** That row opens on its own
+    empty state, which is true, rather than on an error.
+  - **`Forget` is drawn for a saved network and never for the one in use.**
+    Forgetting the network the device is reachable over drops the daemon with
+    it, quite possibly from the phone on that same network. The design draws
+    it on both.
+- **`optionsFrom` and `picker` have no row until 9h.** Both are implemented
+  on the panel and validated in the registry, and the only row that uses them
+  is `skin`, which needs the corpus path and the thumbnails that are 9h's
+  work. Until then they are exercised by tests and by nothing on screen.
+- ~~**Whether `warn` should also gate the confirm button** rather than only
+  colouring the sheet.~~ **Closed 2026-09-20, in 9d: it gates.** §2 above
+  already says the warning is shown *"before it is confirmed"*, and the
+  design's own comment says the same - but the drop's code writes the value
+  on the tap and closes, so the warning can only ever appear on a later
+  visit, after the amplifier is already at 100%. A warning that arrives after
+  the consequence is decoration. **Tapping a warned option now selects it
+  without writing**, the warning appears, and a Confirm commits it; tapping
+  the stored option again lets go of the selection. Every unwarned option
+  still writes on the tap, as before. Recorded here rather than assumed:
+  George has not ruled on it, and reverting it is one branch in `choose()`.
+- **What `optionsFrom` sources exist** beyond `skin_corpus` and `timezones`.
+  Both resolve in `Settings.to_json`, so the panel never learns where a
+  corpus lives; `skin_corpus` resolves to an empty list until 9h gives it
+  one, which draws the row and offers nothing rather than pretending.
 - ~~**Whether the panel needs an on-screen keyboard.**~~ **Closed
   2026-09-20**, and it was closed before — George: *"mentioned several times
   that there is no difference for input between the panel and the phone ... We
