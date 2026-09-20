@@ -313,3 +313,65 @@ is "the warmup was warming the wrong things in the wrong order", which is
 measured. The claim "fixing it shrinks D1" is not, until a boot says so.**
 One boot, no control run, and D1's length also tracks
 `NetworkManager-wait-online`, which is not held constant between reboots.
+
+---
+
+## 8. Addendum — the still halved the kernel phase
+
+**2026-09-20.** George replaced the animation with a still (§7's frames were
+the last animated set). Four boots of the same device that afternoon, the
+only difference between them being what the plymouth theme holds:
+
+| boot | theme | kernel phase | total | plymouth quits | UI paints |
+|---|---|---|---|---|---|
+| 07:58 | 100 frames, 4.1 MB | 5.91 s | 27.35 s | 25.64 s | 35.79 s |
+| 09:42 | 100 frames, 3.3 MB | 5.32 s | 25.78 s | 25.58 s | 35.44 s |
+| 09:57 | 100 frames, 2.8 MB | 5.29 s | 25.58 s | 25.58 s | 35.29 s |
+| **10:36** | **1 still, 40 KB** | **2.64 s** | **22.14 s** | **21.78 s** | **31.74 s** |
+
+**The kernel phase halved and the panel is usable 3.6 s sooner.**
+
+`systemd-analyze`'s "kernel" figure covers everything before PID 1, which on
+this image includes the initramfs — and plymouth runs *in* the initramfs
+(§2). The initramfs itself only shrank 20,018,347 → 18,507,411 bytes, 7%,
+which cannot account for a 50% drop. What can: **plymouth was decompressing
+and loading all 100 PNGs at start-up**, and now loads one.
+
+That is ADR-0043's open question — *"whether Plymouth holds all 100 frames in
+memory, roughly 400 MB decompressed"* — finally showing itself, as time
+rather than as bytes. The memory was never measured and now cannot be, since
+nothing loads a hundred frames any more. **The cost was real and it was paid
+on every boot, in the phase nobody was looking at**, because Finding 038's
+budget started at `multi-user.target` and this sits before PID 1.
+
+**What this does not establish.** Four boots, one device, no control run and
+no repetition — `NetworkManager-wait-online` alone moved 3.5 s between two of
+them. The frame-loading explanation is the only one offered that fits a 50%
+drop, but it was not isolated: nothing was measured inside the initramfs, and
+a build with 100 frames and a no-op theme script would have separated
+"loading the images" from "having the images present". That experiment was
+not run and the frames are gone.
+
+### The gaps, on the still boot
+
+| | from → to | length | on the panel |
+|---|---|---|---|
+| **D1** | 21.78 → 26.81 | **5.02 s** | nothing drawn — black, sometimes with escape-reply text |
+| **D2** | 26.81 → 30.89 | 4.08 s | the still, via `swaybg` |
+| **D3** | 30.89 → 31.74 | 0.85 s | white — parked |
+
+**D2 is no longer a discontinuity.** The splash and the wallpaper are the
+same file now, so 21.78 → 30.89 would be one continuous image if D1 were
+covered. **D1 is the whole remaining problem**, and it is also where the
+console text appears.
+
+### The console is intermittent, and that is now established
+
+George, on a manual reboot between the 09:57 and 10:36 boots: *"i saw the
+console again — something containing 160R"*. `^[[50;160R` is the
+escape-reply text of §4's candidate 1, so that candidate is confirmed twice
+over. But `/dev/vcs1` read empty immediately after both the 09:42 and 10:36
+boots. **So it does not happen every boot** — whatever echoes those replies
+races the VT clear in `gexis-kiosk.service`'s first `ExecStartPre`, and wins
+sometimes. A fix that covers D1 with an image makes the race invisible
+regardless of who wins it; a fix that only clears harder does not.
