@@ -10,6 +10,7 @@ def test_blank_metadata_is_all_none():
         "title": None,
         "artist": None,
         "album": None,
+        "year": None,
         "artwork": None,
         "sample_rate": None,
         "codec": None,
@@ -62,3 +63,11 @@ def test_playback_state_available_is_copied_not_aliased():
     state = PlaybackState(active=None, available=available)
     available["lms"] = False
     assert state.available == {"lms": True}
+
+
+def test_year_is_published_for_the_album_line():
+    """The design puts the release year beside the album name, and LMS is the
+    source it prefers - `_as_year` in the LMS adapter turns LMS's 0-for-absent
+    into None so the panel blanks the slot rather than printing a zero."""
+    assert TrackMetadata(year="1996").to_json()["year"] == "1996"
+    assert TrackMetadata().to_json()["year"] is None

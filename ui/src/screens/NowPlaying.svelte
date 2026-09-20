@@ -10,6 +10,7 @@
   import bluetoothMark from '../assets/icon-bluetooth.png';
   import VolumeIcon from '../lib/VolumeIcon.svelte';
   import { retryEnrichment, trackEnrichment } from '../lib/enrichment.js';
+  import { artistsCached, foldedName, loadArtistGenres } from '../lib/library.js';
   import QueueRail from './QueueRail.svelte';
 
   import { sendTransport } from '../lib/state.js';
@@ -98,6 +99,85 @@
   const bioParagraphs = $derived(asParagraphs(info?.biography));
   const noteParagraphs = $derived(asParagraphs(info?.album_note));
 
+  //: **Clamped with a fade, not scrolled.** The panel already scrolls, and a
+  //: second scroller inside it takes the finger meant for the first - the
+  //: same reason the artist page clamps its biography. Cut off with no fade
+  //: and no control, the text just looked truncated (George, on the panel,
+  //: 2026-09-20). The whole block is the tap target; More/Less says in words
+  //: what the tap does, for anyone who does not try it.
+  const FOLD_MAX = 128;
+  let bioOpen = $state(false);
+  let noteOpen = $state(false);
+  let bioEl = $state(null);
+  let noteEl = $state(null);
+  let bioClipped = $state(false);
+  let noteClipped = $state(false);
+  //: `scrollHeight` is the content's height whether or not the clamp is on,
+  //: so one test serves both states. Measured after a frame, because the
+  //: paragraphs have only just been written into the element.
+  //: The block is a tap target, so it answers the keyboard too - the panel
+  //: and a phone take the same input, and a keyboard is one of them.
+  function foldKey(event, toggle) {
+    if (event.key !== 'Enter' && event.key !== ' ') return;
+    event.preventDefault();
+    toggle();
+  }
+  function clipCheck(el, set) {
+    if (!el) {
+      set(false);
+      return;
+    }
+    const frame = requestAnimationFrame(() => set(el.scrollHeight > FOLD_MAX + 2));
+    return () => cancelAnimationFrame(frame);
+  }
+  $effect(() => {
+    void bioParagraphs, tab;
+    return clipCheck(bioEl, (v) => (bioClipped = v));
+  });
+  $effect(() => {
+    void noteParagraphs, tab;
+    return clipCheck(noteEl, (v) => (noteClipped = v));
+  });
+  //: The artist page carries the library's own genres for an artist (9c) and
+  //: the design puts the same pills in this tab. LMS answers them by artist
+  //: id, so the name a renderer reports has to be resolved through the
+  //: library's cached artist list first - usually already in hand, and one
+  //: small request when it is not. Fetched when the tab is opened rather
+  //: than for every track, because most tracks are never looked at here.
+  //:
+  //: Nothing found means no pills. **The region blanks, never the screen**
+  //: (ADR-0014): a renderer whose artist is not in this library - anything
+  //: over Bluetooth or Spotify - simply has none.
+  let genres = $state([]);
+  $effect(() => {
+    const name = metadata?.artist ?? null;
+    const open = tab === 'artist';
+    genres = [];
+    if (!name || !open) return;
+    let dropped = false;
+    (async () => {
+      try {
+        const wanted = foldedName(name);
+        const match = (await artistsCached()).find((a) => foldedName(a.name) === wanted);
+        if (!match) return;
+        const found = await loadArtistGenres(match.id);
+        if (!dropped) genres = found ?? [];
+      } catch (err) {
+        console.info('genres:', err.message);
+      }
+    })();
+    return () => {
+      dropped = true;
+    };
+  });
+
+  //: A new track is a new text; neither fold survives it.
+  $effect(() => {
+    void info;
+    bioOpen = false;
+    noteOpen = false;
+  });
+
   // An LRC body is `[mm:ss.xx] text` per line. Lines without a stamp are
   // kept - LRCLIB files carry `[ar:]`-style headers and blank beats - but
   // only stamped ones can be followed.
@@ -113,6 +193,14 @@
     }
     return out.sort((a, b) => a.at - b.at);
   });
+  //: **A stamped line with no words is timing, not a lyric.** LRC bodies use
+  //: them for the run-in, for instrumental breaks and for the outro, and
+  //: following them literally leaves the panel blank in the middle of a song
+  //: and again at the end - which reads as a fault rather than as silence
+  //: (George, on the panel, 2026-09-20). So the words are kept apart from the
+  //: timing: these are the lines that have any, each remembering where it sat
+  //: so the clock can still be followed.
+  const sungLines = $derived(synced.map((line, i) => ({ ...line, src: i })).filter((l) => l.text));
   const plainLines = $derived((info?.lyrics ?? '').split('\n'));
   //: The design keeps the compact Track panel while the lookup is running,
   //: so the screen does not jump from the tall block to the short one when
@@ -132,14 +220,48 @@
     }
     return index;
   });
+  //: Which line the panel rests on: the last one that was sung. Through a
+  //: gap - or after the final word - it stays there rather than emptying,
+  //: and `singing` is false, so it is shown without the highlight.
+  const anchor = $derived.by(() => {
+    if (!sungLines.length) return -1;
+    let n = 0;
+    for (let i = 0; i < sungLines.length; i += 1) {
+      if (sungLines[i].src <= activeLine) n = i;
+      else break;
+    }
+    return n;
+  });
+  const singing = $derived(anchor >= 0 && sungLines[anchor]?.src === activeLine);
+
   //: The design's compact synced view: five lines around the current one.
   const window5 = $derived.by(() => {
-    if (!synced.length) return [];
-    const at = Math.max(0, activeLine);
+    if (!sungLines.length) return [];
+    const at = Math.max(0, anchor);
     return [at - 2, at - 1, at, at + 1, at + 2]
-      .filter((n) => n >= 0 && n < synced.length)
-      .map((n) => ({ ...synced[n], n, distance: Math.abs(n - at) }));
+      .filter((n) => n >= 0 && n < sungLines.length)
+      .map((n) => ({ ...sungLines[n], n, distance: Math.abs(n - at) }));
   });
+  //: The Lyrics tab shows the whole song, not a five-line window, and keeps
+  //: the current line in view by translating the list - the design's own
+  //: mechanism (`translateY(-(child.offsetTop - lead))`). Measured rather
+  //: than computed from a line height, because a long line wraps and stops
+  //: being one box tall.
+  let lyricsBox = $state(null);
+  let lineEls = $state([]);
+  let lyricsShift = $state(0);
+  $effect(() => {
+    // Re-measure when the line changes, when the words change, and when the
+    // tab is opened - lyricsBox is null until then.
+    const i = anchor, box = lyricsBox, el = lineEls[i];
+    if (!box || !el || i < 0) { lyricsShift = 0; return; }
+    const lead = box.clientHeight / 2 - el.offsetHeight / 2;
+    lyricsShift = Math.min(0, lead - el.offsetTop);
+  });
+
+  //: LMS first, enrichment second. See the markup for why the two differ.
+  const year = $derived(metadata?.year ?? info?.released ?? null);
+
   const specs = $derived.by(() => {
     if (!info) return [];
     const out = [];
@@ -160,6 +282,7 @@
 <div
   class="screen"
   style:--src-accent={`var(--accent-${active}, var(--accent-lms))`}
+  data-source={active ?? 'lms'}
   data-transport={transport ?? 'none'}
   data-artwork={artwork ? 'ok' : 'none'}
   data-position={head.hasPosition ? 'ok' : 'none'}
@@ -195,58 +318,26 @@
 
       <div class="meta">
         <div class="tabs" role="tablist" aria-label="Track detail">
-          <button class="tab" type="button" role="tab" aria-selected={tab === 'track'} onclick={() => (tab = 'track')}>Track</button>
-          <button class="tab" type="button" role="tab" aria-selected={tab === 'lyrics'} onclick={() => (tab = 'lyrics')}>Lyrics</button>
-          <button class="tab" type="button" role="tab" aria-selected={tab === 'artist'} onclick={() => (tab = 'artist')}>Artist</button>
-          <button class="tab" type="button" role="tab" aria-selected={tab === 'release'} onclick={() => (tab = 'release')}>Release</button>
+          <button class="tab" data-tab="track" type="button" role="tab" aria-selected={tab === 'track'} onclick={() => (tab = 'track')}>Track</button>
+          <button class="tab" data-tab="lyrics" type="button" role="tab" aria-selected={tab === 'lyrics'} onclick={() => (tab = 'lyrics')}>Lyrics</button>
+          <button class="tab" data-tab="artist" type="button" role="tab" aria-selected={tab === 'artist'} onclick={() => (tab = 'artist')}>Artist</button>
+          <button class="tab" data-tab="release" type="button" role="tab" aria-selected={tab === 'release'} onclick={() => (tab = 'release')}>Release</button>
         </div>
 
         <div class="panel">
-          {#if tab === 'track' && (synced.length || lyricsPending)}
-            <!-- With synced lyrics the Track tab becomes the design's
-                 compact variant: a shorter track block, a rule, and the
-                 words following the playhead underneath. -->
-            <div class="metalyrics">
-              <div class="metalyrics__head">
-                <div class="title title--compact" class:is-empty={!metadata?.title}>{metadata?.title ?? ''}</div>
-                <div class="compactline">
-                  <button
-                    class="artist artist--compact artist--link"
-                    class:is-empty={!metadata?.artist}
-                    type="button"
-                    disabled={!metadata?.artist}
-                    onclick={() => onartist?.(metadata.artist)}
-                  >{metadata?.artist ?? ''}</button>
-                  <span class="album album--compact" class:is-empty={!metadata?.album}>{metadata?.album ?? ''}</span>
-                </div>
-              </div>
-              <div class="metalyrics__rule"></div>
-              <!-- The words take whatever height is left, and are centred in
-                   it: the design's compact lyric view is positioned against
-                   this box, not given a height of its own. -->
-              <div class="metalyrics__body">
-                {#if synced.length}
-                  <div class="lyrics lyrics--synced lyrics--fill">
-                    {#each window5 as line (line.n)}
-                      <div class="lyrics__line" class:is-now={line.distance === 0} data-distance={line.distance}>
-                        {line.text}
-                      </div>
-                    {/each}
-                  </div>
-                {:else}
-                  <div class="looking">
-                    <div class="looking__bar"></div>
-                    <div class="looking__bar"></div>
-                    <div class="looking__bar"></div>
-                    <div class="looking__label">Looking for lyrics</div>
-                  </div>
-                {/if}
-              </div>
-            </div>
-          {:else if tab === 'track'}
+          {#if tab === 'track'}
+            <!-- One header, whether or not lyrics are there (design/screens.md
+                 §1, and design/now-playing.css says it in as many words).
+                 Until 2026-09-20 this branched: a 58px title when there were
+                 no synced lyrics and a 38px "compact" variant when there
+                 were, so the title jumped the moment lyrics arrived. The
+                 design deletes the large variant rather than shrinking it -
+                 the block is pinned to the top of the panel and the words,
+                 when they exist, sit under a hairline below it. -->
             <div class="trackblock">
               <div class="title" class:is-empty={!metadata?.title}>{metadata?.title ?? ''}</div>
-              <div class="artistline">
+              <!-- Artist, album and year share one baseline row. -->
+              <div class="metaline">
                 <!-- The design links the artist line to that artist's page
                      (`onNpArtist`). -->
                 <button
@@ -256,11 +347,44 @@
                   disabled={!metadata?.artist}
                   onclick={() => onartist?.(metadata.artist)}
                 >{metadata?.artist ?? ''}</button>
-              </div>
-              <div class="albumline">
                 <span class="album" class:is-empty={!metadata?.album}>{metadata?.album ?? ''}</span>
-                <!-- Release year is not published yet (design/data-contract.md). -->
+                <!-- The release year. LMS first: it carries one per track
+                     (songinfo tag `y`) and it is the library's own record.
+                     Enrichment's `released` is the fallback - it describes
+                     the *release* a lookup matched, so a 1996 track on a 2025
+                     compilation reports 2025 there and 1996 here - and it is
+                     the only source Spotify and Bluetooth have.
+                     Rendered only when there is one, rather than holding an
+                     empty slot open. -->
+                {#if year}
+                  <span class="year">{year}</span>
+                {/if}
               </div>
+
+              {#if sungLines.length || lyricsPending}
+                <div class="trackblock__rule"></div>
+                <!-- The words take whatever height is left and are centred in
+                     it: the design positions the compact lyric view against
+                     this box rather than giving it a height of its own. -->
+                <div class="trackblock__body">
+                  {#if sungLines.length}
+                    <div class="lyrics lyrics--synced lyrics--fill">
+                      {#each window5 as line (line.n)}
+                        <div class="lyrics__line" class:is-now={line.distance === 0 && singing} data-distance={line.distance}>
+                          {line.text}
+                        </div>
+                      {/each}
+                    </div>
+                  {:else}
+                    <div class="looking">
+                      <div class="looking__bar"></div>
+                      <div class="looking__bar"></div>
+                      <div class="looking__bar"></div>
+                      <div class="looking__label">Looking for lyrics</div>
+                    </div>
+                  {/if}
+                </div>
+              {/if}
             </div>
           {:else if tab === 'lyrics'}
             <div class="artisttab">
@@ -274,15 +398,22 @@
                 <div class="skel"><span></span><span></span><span></span></div>
               {:else if info?.instrumental}
                 <div class="lyrics__none">Instrumental</div>
-              {:else if synced.length}
-                <!-- The design's compact synced view: the current line
-                     accented, its neighbours fading out. -->
-                <div class="lyrics lyrics--synced">
-                  {#each window5 as line (line.n)}
-                    <div class="lyrics__line" class:is-now={line.distance === 0} data-distance={line.distance}>
-                      {line.text}
-                    </div>
-                  {/each}
+              {:else if sungLines.length}
+                <!-- The whole song, scrolled to the current line. The Track
+                     tab shows five lines because it shares the panel with the
+                     header; this tab has the panel to itself, so every line
+                     is drawn at a flat weight with only the sung one lit -
+                     the five-line fade belongs to the window, not here. -->
+                <div class="lyrics lyrics--synced lyrics--scroll" bind:this={lyricsBox}>
+                  <div class="lyrics__scroller" style:transform={`translateY(${lyricsShift}px)`}>
+                    {#each sungLines as line, i (i)}
+                      <div
+                        class="lyrics__line"
+                        class:is-now={i === anchor && singing}
+                        bind:this={lineEls[i]}
+                      >{line.text}</div>
+                    {/each}
+                  </div>
                 </div>
                 <div class="credit">From {info.lyrics_source}</div>
               {:else if info?.lyrics}
@@ -327,10 +458,27 @@
               {#if artistInfo.state === 'loading'}
                 <div class="skel"><span></span><span></span><span></span></div>
               {:else if info?.album_note}
-                <div class="bio">
+                <div
+                  class="bio"
+                  class:is-clamped={!noteOpen}
+                  style:max-height={noteOpen ? null : `${FOLD_MAX}px`}
+                  role="button"
+                  tabindex="0"
+                  aria-expanded={noteOpen}
+                  bind:this={noteEl}
+                  onclick={() => (noteOpen = !noteOpen)}
+                  onkeydown={(e) => foldKey(e, () => (noteOpen = !noteOpen))}
+                >
                   {#each noteParagraphs as para, i (i)}<p class="bio__para">{para}</p>{/each}
                 </div>
-                <div class="credit">From {info.album_note_source}</div>
+                <div class="credit">
+                  <span>From {info.album_note_source}</span>
+                  {#if noteClipped}
+                    <button class="fold" type="button" onclick={() => (noteOpen = !noteOpen)}>
+                      {noteOpen ? 'Less' : 'More'}
+                    </button>
+                  {/if}
+                </div>
               {:else if artistInfo.state === 'error'}
                 <div class="offline">
                   <span>Release details unavailable. Your library is unaffected.</span>
@@ -358,7 +506,16 @@
                     <span class="artisttab__initials">{initialsOf(metadata?.artist)}</span>
                   {/if}
                 </span>
-                <span class="artisttab__name">{metadata?.artist ?? ''}</span>
+                <span class="artisttab__titles">
+                  <span class="artisttab__name">{metadata?.artist ?? ''}</span>
+                  {#if genres.length}
+                    <span class="artisttab__tags">
+                      {#each genres as g, i (g)}
+                        <span class="gtag gtag--{i % 3}">{g}</span>
+                      {/each}
+                    </span>
+                  {/if}
+                </span>
               </div>
 
               <div class="sect">
@@ -372,12 +529,29 @@
                      text arrives, so the space is held. -->
                 <div class="skel"><span></span><span></span><span></span></div>
               {:else if artistInfo.enrichment?.biography}
-                <div class="bio">
+                <div
+                  class="bio"
+                  class:is-clamped={!bioOpen}
+                  style:max-height={bioOpen ? null : `${FOLD_MAX}px`}
+                  role="button"
+                  tabindex="0"
+                  aria-expanded={bioOpen}
+                  bind:this={bioEl}
+                  onclick={() => (bioOpen = !bioOpen)}
+                  onkeydown={(e) => foldKey(e, () => (bioOpen = !bioOpen))}
+                >
                   {#each bioParagraphs as para, i (i)}<p class="bio__para">{para}</p>{/each}
                 </div>
                 <!-- Wikipedia's CC BY-SA and MusicBrainz's CC BY-NC-SA both
                      require the credit beside the text (ADR-0040 §4). -->
-                <div class="credit">From {artistInfo.enrichment.biography_source}</div>
+                <div class="credit">
+                  <span>From {artistInfo.enrichment.biography_source}</span>
+                  {#if bioClipped}
+                    <button class="fold" type="button" onclick={() => (bioOpen = !bioOpen)}>
+                      {bioOpen ? 'Less' : 'More'}
+                    </button>
+                  {/if}
+                </div>
               {:else if artistInfo.state === 'error'}
                 <div class="offline">
                   <span>Artist details unavailable. Your library is unaffected.</span>
@@ -502,24 +676,24 @@
     background: linear-gradient(90deg, var(--src-accent), var(--accent-artist));
   }
 
+  /* Mark and word only. The pill ground, border and radius were removed from
+     the design on 2026-09-19 - the class keeps its name because everything
+     that refers to it does, but there is no pill left. */
   .srcpill {
     position: absolute;
-    top: 38px;
+    top: 44px;
     right: 56px;
     z-index: 6;
     display: inline-flex;
     align-items: center;
-    gap: 9px;
-    padding: 8px 15px;
-    border-radius: var(--r-pill);
+    gap: 11px;
     white-space: nowrap;
-    font-size: var(--t-label);
-    font-weight: 700;
-    letter-spacing: var(--track-label);
+    font-family: var(--font-mono);
+    font-size: var(--t-body-sm);
+    font-weight: 600;
+    letter-spacing: var(--track-wide);
     text-transform: uppercase;
     color: var(--src-accent);
-    background: rgba(255, 255, 255, 0.08);
-    border: 1px solid color-mix(in oklab, var(--src-accent) 40%, transparent);
   }
   .srcpill__icon {
     display: flex;
@@ -533,13 +707,16 @@
     100% { opacity: 1; }
     50% { opacity: 0.35; }
   }
+  /* The raster marks are sized by height, not boxed: Bluetooth's glyph is
+     taller than it is wide and a square box crops it. */
   .srcpill__mark {
-    width: 18px;
-    height: 18px;
+    height: 21px;
+    width: auto;
     flex-shrink: 0;
     display: block;
     object-fit: contain;
   }
+  .screen[data-source='bluetooth'] .srcpill__mark { height: 24px; }
 
   /* Four-bar reduction of the Lyrion mark; the SVG smears below ~40px. */
   .i-lyrion {
@@ -641,7 +818,7 @@
   .tabs {
     display: flex;
     align-items: center;
-    gap: 26px;
+    gap: 34px;
     align-self: flex-start;
     flex-shrink: 0;
     margin-bottom: 18px;
@@ -649,12 +826,12 @@
   }
   .tab {
     font-family: var(--font-mono);
-    font-size: var(--t-label);
+    font-size: var(--t-body-sm);
     font-weight: 600;
-    letter-spacing: 0.16em;
+    letter-spacing: var(--track-wide);
     text-transform: uppercase;
     white-space: nowrap;
-    color: var(--ink-quiet);
+    color: var(--ink-tab-off);
     min-height: var(--touch-min);
     padding: 16px 2px 9px;
     margin-top: -16px;
@@ -662,11 +839,16 @@
     border-bottom: 3px solid transparent;
     background: none;
   }
-  .tab[aria-selected='true'] {
-    color: var(--ink);
-    border-bottom-color: var(--src-accent);
-  }
-  .tab[aria-disabled='true'] { opacity: 0.4; }
+  /* Each tab's selected ink and underline are ITS OWN fixed colour, never
+     the source accent (design/README.md, "Changed 2026-09-19"). The source
+     accent already carries the 3px rule along the top edge and the mark; a
+     tab row that also tracked it would say the same thing three times and
+     would recolour when the renderer changed, which the tab did not. */
+  .tab[aria-selected='true'] { color: var(--ink); }
+  .tab[data-tab='track'][aria-selected='true']   { border-bottom-color: var(--ink); }
+  .tab[data-tab='lyrics'][aria-selected='true']  { border-bottom-color: var(--accent-artist); }
+  .tab[data-tab='artist'][aria-selected='true']  { border-bottom-color: var(--accent-bluetooth); }
+  .tab[data-tab='release'][aria-selected='true'] { border-bottom-color: var(--accent-lms); }
 
   .panel {
     margin-top: 36px;
@@ -675,20 +857,60 @@
     position: relative;
   }
 
-  .trackblock { min-height: 238px; }
+  /* Pinned to the panel, so the header sits at the top whether or not the
+     words are under it. `.metalyrics` and its modifiers are gone with the
+     second layout they belonged to. */
+  .trackblock {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+  }
+  .trackblock__rule {
+    height: 1px;
+    background: rgba(233, 238, 242, 0.12);
+    margin-top: 20px;
+    flex-shrink: 0;
+  }
+  .trackblock__body {
+    flex: 1;
+    min-height: 0;
+    position: relative;
+    overflow: hidden;
+  }
 
   /* The Artist tab (ADR-0040), ported from the design's About and Similar
      blocks. It occupies the same box as the track block, so switching tabs
      moves nothing else on the screen. */
+  /* The Artist, Lyrics and Release tabs occupy the same box as .trackblock,
+     so switching tabs moves nothing else on the screen.
+
+     **It is pinned and it scrolls**, which it was not before 2026-09-20.
+     `min-height: 238px` with no maximum and no overflow meant long content
+     simply grew out of the panel and drew over the transport and the progress
+     bar underneath it - George saw it on a track whose lyrics are not synced,
+     where the whole song renders as one block. The same fault kept the artist
+     biography from scrolling: it was not that the text happened to fit, it
+     was that anything longer overflowed silently. */
   .artisttab {
-    min-height: 238px;
+    position: absolute;
+    inset: 0;
     display: flex;
     flex-direction: column;
     gap: 14px;
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-width: none;
+    touch-action: pan-y;
   }
+  .artisttab::-webkit-scrollbar { display: none; }
   .artisttab__head {
     display: flex;
-    align-items: center;
+    /* Top-aligned, so the disc stays beside the name when genre pills push
+       the column taller - the design's own alignment. */
+    align-items: flex-start;
     gap: 16px;
     flex-shrink: 0;
   }
@@ -718,13 +940,52 @@
     font-weight: 700;
     color: var(--ink-muted);
   }
+  .artisttab__titles {
+    flex: 1;
+    min-width: 0;
+  }
   .artisttab__name {
+    display: block;
     font-size: var(--t-artist);
     font-weight: 700;
     color: var(--accent-artist);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+  }
+  .artisttab__tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 14px;
+  }
+  /* The design gives this panel's pills three accents in rotation rather
+     than the one the library's artist page uses - a row of them is the only
+     colour in the panel, and three reads as a set where one reads as a
+     status. */
+  .gtag {
+    font-size: var(--t-label);
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    padding: 6px 13px;
+    border-radius: var(--r-pill);
+    white-space: nowrap;
+  }
+  .gtag--0 {
+    background: rgba(126, 214, 188, 0.14);
+    border: 1px solid rgba(126, 214, 188, 0.3);
+    color: var(--accent-lms);
+  }
+  .gtag--1 {
+    background: rgba(242, 164, 143, 0.14);
+    border: 1px solid rgba(242, 164, 143, 0.3);
+    color: var(--accent-artist);
+  }
+  .gtag--2 {
+    background: rgba(159, 180, 232, 0.14);
+    border: 1px solid rgba(159, 180, 232, 0.3);
+    color: var(--accent-bluetooth);
   }
 
   .reltab__art {
@@ -786,44 +1047,6 @@
      a box of its own: the title block keeps its height, the rule follows,
      and the words take everything left over. Given a fixed height instead,
      the five lines are squeezed into the gap (George, 2026-09-18). */
-  .metalyrics {
-    position: absolute;
-    inset: 0;
-    display: flex;
-    flex-direction: column;
-    min-height: 0;
-  }
-  .metalyrics__head {
-    flex-shrink: 0;
-  }
-  .metalyrics__rule {
-    height: 1px;
-    background: rgba(233, 238, 242, 0.12);
-    margin-top: 20px;
-    flex-shrink: 0;
-  }
-  .metalyrics__body {
-    flex: 1;
-    min-height: 0;
-    position: relative;
-    overflow: hidden;
-  }
-  .title--compact {
-    font-size: 38px;
-    line-height: 1.08;
-    /* The tall block reserves two lines at 58px; this one must not. */
-    min-height: 0;
-    -webkit-line-clamp: 2;
-    flex-shrink: 0;
-  }
-  .compactline {
-    display: flex;
-    align-items: baseline;
-    gap: 12px;
-    margin-top: 10px;
-    min-width: 0;
-    flex-shrink: 0;
-  }
   .artist--link {
     font: inherit;
     color: inherit;
@@ -836,21 +1059,6 @@
   }
   .artist--link:active:not(:disabled) { color: #f8c4b4; }
 
-  .artist--compact {
-    font-size: 22px;
-    max-width: 60%;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    flex-shrink: 0;
-  }
-  .album--compact {
-    font-size: 17px;
-    color: rgba(233, 238, 242, 0.5);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
   .lyrics--fill {
     position: absolute;
     inset: 0;
@@ -898,19 +1106,45 @@
     flex-direction: column;
     text-wrap: pretty;
   }
+  /* The scrolled full-song view: a fixed window with the list translated
+     inside it, so the tab itself does not scroll and the current line stays
+     put. `.lyrics--synced` alone (the Track tab) still centres five lines. */
+  /* Specificity on purpose: `.lyrics--synced` centres its five lines and is
+     written after this rule, so at equal weight it would win here too - and
+     a list taller than its box, centred *and* translated, leaves the sung
+     line off the top of the screen. That is what made the Lyrics tab look
+     empty (George, on the panel, 2026-09-20). */
+  .lyrics--synced.lyrics--scroll {
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+    justify-content: flex-start;
+  }
+  .lyrics--scroll .lyrics__line {
+    color: var(--ink-lyric-off);
+  }
+  .lyrics__scroller {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+    transition: transform 320ms ease;
+    will-change: transform;
+  }
   .lyrics--synced {
     align-items: center;
     justify-content: center;
-    gap: 14px;
+    /* No gap: the per-line boxes above carry the spacing, and a gap on top
+       of them would stack with it. */
+    gap: 0;
     text-align: center;
   }
+  /* Plain lyrics are the whole song in one block; the tab scrolls them. */
   .lyrics--plain {
-    overflow-y: auto;
     gap: 6px;
-    scrollbar-width: none;
-    touch-action: pan-y;
+    flex: 0 0 auto;
   }
-  .lyrics--plain::-webkit-scrollbar { display: none; }
+
   .lyrics__line {
     font-size: 21px;
     line-height: 1.35;
@@ -918,7 +1152,22 @@
     color: var(--ink-strong);
     transition: color 320ms ease, opacity 320ms ease;
   }
-  .lyrics--synced .lyrics__line { font-size: 22px; }
+  /* Each line gets a fixed box and is centred in it, rather than being sized
+     by its own text. The design does this so the window does not jitter as
+     lines of different length scroll through it: `minHeight: LINE`, flex,
+     centred. 70px in the Lyrics tab, 54px in the Track tab. */
+  .lyrics--synced .lyrics__line {
+    font-size: 31px;
+    font-weight: 500;
+    min-height: 70px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  /* Inside the Track tab the same five lines are smaller, because they share
+     the panel with the header above them. 25px against 31px, and the line box
+     54px against 70px (design's `lyricsBody`: `compact ? 54 : 70`). */
+  .lyrics--fill .lyrics__line { font-size: 25px; min-height: 54px; }
   .lyrics--synced .lyrics__line[data-distance='1'] { opacity: 0.42; }
   .lyrics--synced .lyrics__line[data-distance='2'] { opacity: 0.16; }
   .lyrics__line.is-now {
@@ -1001,16 +1250,20 @@
   }
 
   .bio {
-    max-height: 128px;
-    overflow-y: auto;
     font-size: 17px;
     line-height: 1.5;
     color: var(--ink-body);
     text-wrap: pretty;
-    scrollbar-width: none;
-    touch-action: pan-y;
   }
-  .bio::-webkit-scrollbar { display: none; }
+  /* A height with a fade, not a scroller and not `-webkit-line-clamp` -
+     which needs `display: -webkit-box` and then shows one paragraph of
+     several. The mask says there is more without pretending to count
+     lines; the artist page's biography does the same. */
+  .bio.is-clamped {
+    overflow: hidden;
+    -webkit-mask-image: linear-gradient(180deg, #000 58%, transparent 100%);
+    mask-image: linear-gradient(180deg, #000 58%, transparent 100%);
+  }
   .bio__para {
     margin: 0 0 10px;
   }
@@ -1019,11 +1272,30 @@
   }
 
   .credit {
+    display: flex;
+    align-items: center;
+    gap: 14px;
     font-family: var(--font-mono);
     font-size: var(--t-micro);
     letter-spacing: 0.12em;
     text-transform: uppercase;
     color: var(--ink-quiet);
+  }
+  /* Only drawn when the text is actually cut. The design's own toggle is
+     this size and this colour. */
+  .fold {
+    font-family: var(--font-mono);
+    font-size: var(--t-micro);
+    font-weight: 600;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--accent-bluetooth);
+    padding: 8px 2px;
+    margin: -8px 0;
+    flex-shrink: 0;
+  }
+  .fold:active {
+    transform: scale(0.95);
   }
 
   .offline {
@@ -1079,41 +1351,45 @@
 
   .title {
     font-size: var(--t-title);
-    line-height: 1.06;
+    line-height: 1.08;
     font-weight: 700;
     letter-spacing: var(--track-tight);
     text-wrap: pretty;
     margin: 0;
-    min-height: 124px;
+    /* No reserved two-line box. The old 58px title held 124px open so the
+       lines below it never moved; at 38px, in a block that is pinned to the
+       top of the panel and followed by a rule only when there are lyrics,
+       there is nothing below it to hold still. */
     display: -webkit-box;
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
     overflow: hidden;
+    flex-shrink: 0;
   }
-  .artistline {
-    margin-top: 16px;
-    min-height: 38px;
-  }
-  .artist {
-    font-size: var(--t-artist);
-    line-height: 1.3;
-    font-weight: 600;
-    color: var(--accent-artist);
-    display: inline-block;
-    max-width: 100%;
-    padding: 7px 0;
-    margin: -7px 0;
-    vertical-align: top;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-  .albumline {
+  /* Artist, album and year on one baseline row. Replaces .artistline and
+     .albumline, which stacked them. */
+  .metaline {
     display: flex;
     align-items: baseline;
     gap: 12px;
-    margin-top: 8px;
-    min-height: 26px;
+    margin-top: 10px;
+    min-width: 0;
+    flex-shrink: 0;
+  }
+  /* A flex item on .metaline now, not an inline-block on its own line. The
+     padding/negative-margin pair keeps the 44px touch target without adding
+     height to the row (design/README.md's "Canvas" note). */
+  .artist {
+    font-size: var(--t-artist);
+    font-weight: 600;
+    color: var(--accent-artist);
+    padding: 9px 0;
+    margin: -9px 0;
+    flex-shrink: 0;
+    max-width: 60%;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
   .album {
     font-size: var(--t-body);
@@ -1122,6 +1398,14 @@
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+  }
+  /* The release year, mono so it reads as a number rather than a word. */
+  .year {
+    font-family: var(--font-mono);
+    font-size: 16px;
+    color: var(--ink-quiet);
+    white-space: nowrap;
+    flex-shrink: 0;
   }
 
   .is-empty { visibility: hidden; }

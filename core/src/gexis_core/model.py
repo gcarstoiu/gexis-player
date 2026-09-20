@@ -36,6 +36,13 @@ class TrackMetadata:
     title: str | None = None
     artist: str | None = None
     album: str | None = None
+    #: The album's release year, as the library reports it. LMS carries one
+    #: per track (songinfo tag `y`) and it is the library's own answer, so it
+    #: is preferred over enrichment's `released` - which describes the
+    #: *release* a lookup matched and can differ: a 1996 track on a 2025
+    #: compilation reports 2025 there and 1996 here. Spotify and Bluetooth
+    #: publish nothing, so the panel falls back to enrichment for those.
+    year: str | None = None
     artwork: str | None = None
     sample_rate: int | None = None  # Hz
     position: float | None = None  # seconds
@@ -84,6 +91,7 @@ class TrackMetadata:
             "title": self.title,
             "artist": self.artist,
             "album": self.album,
+            "year": self.year,
             "artwork": self.artwork,
             "sample_rate": self.sample_rate,
             "codec": self.codec,

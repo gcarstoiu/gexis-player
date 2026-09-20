@@ -67,10 +67,14 @@ ARTWORK_ROW = 100
 #: carry metadata, not just power (Phase 3 criterion 1). Letters per the
 #: CLI docs' songinfo tag table (LMS-CLI.md): a=artist, l=album, c=coverid,
 #: d=duration, T=samplerate, K=artwork_url (a remote item's own artwork,
-#: ADR-0038 §8a). title/time/duration (top-level, the player's *current*
-#: values) come back regardless of tags - only the per-song fields need
-#: asking for.
-METADATA_TAGS = "aldcTKse"
+#: ADR-0038 §8a), y=year. title/time/duration (top-level, the player's
+#: *current* values) come back regardless of tags - only the per-song fields
+#: need asking for.
+#:
+#: `y` added 2026-09-20 for the album year the design puts beside the album
+#: name. It was reaching the panel from enrichment, which answers about the
+#: *release* a lookup matched rather than about the library's own record.
+METADATA_TAGS = "aldcTKsey"
 
 #: How far the player's position may drift from what `release()` recorded
 #: before `device_freed()` corrects it with a seek.
@@ -111,6 +115,17 @@ def _as_int(value) -> int | None:
         return int(value)
     except (TypeError, ValueError):
         return None
+
+
+def _as_year(value) -> str | None:
+    """LMS's `year` for a track with no year is 0, not absent.
+
+    Published as a string because it is a label, not a quantity - nothing
+    computes with it - and because enrichment's `released` is already a
+    string, so the panel's fallback does not have to reconcile two types.
+    """
+    year = _as_int(value)
+    return str(year) if year else None
 
 
 def _shuffle(result: dict) -> bool | None:
@@ -367,6 +382,7 @@ class LmsAdapter(Adapter):
                 title=title,
                 artist=song.get("artist"),
                 album=album,
+                year=_as_year(song.get("year")),
                 artwork=artwork,
                 # LMS-CLI.md's songinfo table documents tag T ("samplerate")
                 # as "in KHz", but its own worked example returns a raw Hz
