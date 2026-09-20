@@ -1,13 +1,21 @@
 # ADR-0046 — Fixed output hides the volume control everywhere
 
-**Status:** Proposed — awaiting George
+**Status:** Accepted — George, 2026-09-20: *"this is something that was
+completely missed in the implementation until now and needs to be handled.
+Should be bundled with the topic above"* — the topic being the whole volume
+setup. Scheduled as Phase 9 subphase **9i, deliberately last**: it is the only
+subphase with a physical consequence and nothing depends on it.
 **Date:** 2026-09-20
 **Raised by:** [Finding 040](../findings/040-the-design-drop-and-what-it-changes.md),
 which found it never built
 **Implements:** [ADR-0018](0018-volume-and-output-modes.md)'s fixed mode, open
 since it was written
 **Relates to:** [ADR-0034](0034-panel-volume-travel-and-mute.md) (panel volume
-travel), and George's 2026-09-20 ruling that volume is a percentage everywhere
+travel), and George's 2026-09-20 ruling on units: *"For the user the same will
+be shown everywhere which is percent. How we handle it in the background is
+not transparent to the user except for the sound curves where we will map dB
+to percentage."* — so the presentation change is settled and costs nothing;
+what is not settled is the boot level (see Open)
 
 ## Context
 
@@ -76,8 +84,26 @@ reason is visible where the control used to be.**
 
 ## Open
 
-- **Whether fixed mode is reachable at all before ADR-0044 lands**, since the
-  warning depends on it.
+- ~~**Whether fixed mode is reachable at all before ADR-0044 lands.**~~
+  **Closed by sequencing:** ADR-0044 is 9d and this is 9i, so `warn` exists
+  before it is needed.
+- **The boot level, which is the number nobody has chosen.** Measured
+  2026-09-20 with the daemon's own functions: the device boots at raw 60/240
+  = **−90.0 dB = 0%** (`gexis-boot-volume.service`: *"setting 'DAC' to 60/240
+  (fixed safe level, not restored)"*), and the design's `boot_volume` default
+  is **60% = −18.0 dB**. That is **+72 dB at every cold boot**, into an
+  amplifier at whatever gain it was left at. ADR-0018 calls the present level
+  "a fixed safe level". 20% is −36 dB and 40% is −27 dB; there is a great deal
+  of room between the two. **George's call, inside 9i.**
+- **`travel_curve` names a curve the code does not implement.** The row
+  reports `dB-linear`, which the design defines as travel straight to dB —
+  *"55% is already −54 dB"*, exact across the hardware's −120…0 range. The
+  slider is ADR-0034's −45…0 window, where 55% is **−20.25 dB**. It is
+  unwired, so nothing acts on it; wiring it as written would make every
+  renderer's slider 34 dB quieter at mid-travel, since `SPOTIFY_DB_MIN` uses
+  the same span. Whether ADR-0034's window *is* "Perceptual" is the real
+  question.
+- **`max_ceiling` is `None`** — no ceiling is enforced at all today.
 - **What a renderer that manages its own volume does in fixed mode** — see
   `volume_managed` above.
 - **Whether the mode is per-device or per-renderer.** ADR-0018 assumes the

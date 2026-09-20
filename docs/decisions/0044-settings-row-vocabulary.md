@@ -1,6 +1,9 @@
-# ADR-0044 — The settings row vocabulary grows five mechanics
+# ADR-0044 — The settings row vocabulary grows six mechanics
 
-**Status:** Proposed — awaiting George
+**Status:** Accepted — George, 2026-09-20, reviewing the second design drop
+against the device: *"You should consider the list coming from the updated
+design as the point of truth as of now. What is not there is a future
+possibility not a must at this point."*
 **Date:** 2026-09-20
 **Raised by:** the 2026-09-19 design drop, reviewed in
 [Finding 040](../findings/040-the-design-drop-and-what-it-changes.md)
@@ -24,7 +27,7 @@ time behind the features that want them.
 
 ## Decision
 
-**Five additions to the row vocabulary. Nothing else about ADR-0035 changes:
+**Six additions to the row vocabulary. Nothing else about ADR-0035 changes:
 one registry, one generic API, and a row is still wired only when something
 reads it.**
 
@@ -83,6 +86,29 @@ is the choice.
 For a choice too large for a 560px sheet. One use: 84 skins in a four-across
 grid of tiles. Thumbnails are placeholders until skin previews exist.
 
+### 6. `surfaced` — inventoried but not shown
+
+**Added 2026-09-20, from George's ruling on the 20 rows the drop drops.**
+Asked whether their absence was a decision or an omission, George: *"decisions.
+They should still be kept on a list, but not used at this point in the
+settings screen."*
+
+So ADR-0022's inventory does not shrink from 54 rows to 49. It keeps all of
+them and the *screen* shows the design's 49. A row carries `surfaced: false`
+when it is catalogued but not offered.
+
+**The registry cannot express this today.** Its rows carry `accent, confirm,
+danger, default, key, label, marks, max, min, navigation, note, options, step,
+type, unit` — nothing about visibility — and `Settings.svelte` renders
+`current?.rows` without filtering. This is the same mechanism `onlyWhen` needs,
+and the same rule applies: **the API still publishes the row, the panel
+filters.** The difference is only that `surfaced` is permanent and `onlyWhen`
+is conditional.
+
+Rejected: **omitting them from the registry entirely.** The registry is the
+executable form of ADR-0022's inventory, and an inventory that silently drops
+what it decided not to build stops being a record of the decisions.
+
 ### And text rows take real input
 
 **There is no difference between the panel and the phone.** A text row renders
@@ -128,3 +154,10 @@ every setting and change every one that is not text.
 - **Whether `warn` should also gate the confirm button** rather than only
   colouring the sheet.
 - **What `optionsFrom` sources exist** beyond `skin_corpus`.
+- ~~**Whether the panel needs an on-screen keyboard.**~~ **Closed
+  2026-09-20**, and it was closed before — George: *"mentioned several times
+  that there is no difference for input between the panel and the phone ... We
+  assume the user can connect a keyboard to the panel if the desire is to
+  change things there, otherwise the phone is the way."* It is not to be
+  raised again as a usability concern; the design's own preference for
+  avoiding input fields is a separate and welcome argument.

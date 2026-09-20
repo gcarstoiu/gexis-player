@@ -305,3 +305,82 @@ a disruptive operation rather than an ordinary setting.
 - Whether go-librespot and bluez-alsa accept a device-name change at runtime or
   require a restart of the renderer. If a restart is needed, renaming while
   playing would interrupt playback.
+
+---
+
+## Amendment, 2026-09-20 — the inventory is a catalogue, and the design says what is shown
+
+**Status: Accepted — George, 2026-09-20**, reviewing the second design drop
+against the device ([Finding 042](../findings/042-the-device-against-the-new-design.md)).
+
+### 1. This record's list is possibilities, not commitments
+
+> *"The current list of possible settings from the ADR is just that, a list of
+> possible settings that can be linked, not a written in stone must for all.
+> You should consider the list coming from the updated design as the point of
+> truth as of now. What is not there is a future possibility, not a must at
+> this point."* — George
+
+So the design's **49 settable rows under 7 separators across 6 categories**
+are what the panel offers, and this inventory stays the wider catalogue it has
+always been. **The 20 rows the design does not carry are not deleted** — asked
+directly whether their absence was a decision or an omission, George:
+*"decisions. They should still be kept on a list, but not used at this point
+in the settings screen."*
+
+[ADR-0044](0044-settings-row-vocabulary.md) §6 adds the `surfaced` flag that
+makes the distinction expressible; the registry has no way to say it today.
+
+**What this changes in practice:** a row's presence here stops implying it
+will be built, and a row's absence from the design stops implying it was
+rejected. Both were being read as stronger than they were — the 2026-09-20
+review initially reported the design as *removing* factory reset, backups and
+update control, which was never true of a catalogue.
+
+### 2. One name, for every renderer
+
+`device_name` feeds mDNS, the LMS player name, Spotify's advertised name,
+Bluetooth's adapter alias **and future renderers**. George, 2026-09-20: *"the
+device name will also be the name used for Spotify, LMS and Bluetooth and
+probably future renderers."*
+
+**There are no per-service name rows.** `lms_player` and `spotify_name` leave
+the screen, and no Bluetooth equivalent is added. This settles a contradiction
+the drop carries with itself: `settings.md` says the three become `readonly`
+"Advertised name" rows, while its own `INV` has no name rows at all. The
+literal is right.
+
+### 3. Renaming requires a restart — the Unverified section above is closed
+
+Both questions it raises are answered, one by ruling and one by measurement.
+
+**By ruling** (George, 2026-09-20): *"Changing device name will require a
+restart. We need to make it clear in the design. Maybe under the form of a
+text warning."* So a rename is explicitly a disruptive operation, and the
+design owes the warning text.
+
+**By measurement**, and it is worse than the section feared — nothing
+propagates at all:
+
+| what | where its name actually lives |
+|---|---|
+| LMS player | `squeezelite.service` — `-n gexis` **inside `ExecStart`** |
+| Spotify | `/var/lib/go-librespot/config.yml` — `device_name: gexis` |
+| Bluetooth | the BlueZ adapter alias, inherited from the hostname |
+| mDNS | the system hostname |
+
+All four read `gexis` because each was set to the same literal at build time.
+The daemon's only reference is `__main__.py`'s `"device_name":
+socket.gethostname` under `defaults` — **a reader**. And the row is refused:
+`PUT /settings/device_name` returns `HTTP 409 {"error": "device_name is not
+wired yet"}`.
+
+So the concern that renaming might interrupt playback does not arise in the
+form it was written — renaming is restart-gated, so no renderer is restarted
+mid-session. It arises instead as **four writes that must all land before the
+restart**, which is Phase 9 subphase 9e.
+
+The sanitiser the design specifies (fold accents, lowercase, illegal
+characters to hyphens, trim, cap at 63) applies to the hostname only; the
+header shows the name **as typed**, then the sanitised hostname, then the
+device's address.

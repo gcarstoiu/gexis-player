@@ -1,6 +1,8 @@
 # ADR-0045 — Bluetooth pairing is confirmed on the panel
 
-**Status:** Proposed — awaiting George
+**Status:** Accepted — George, 2026-09-20: *"yes, but it is secure. If the
+user is serious about connecting by phone then he needs to accept the
+connection on the [panel]"*. Scheduled as Phase 9 subphase 9f.
 **Date:** 2026-09-20
 **Raised by:** the 2026-09-19 design drop, reviewed in
 [Finding 040](../findings/040-the-design-drop-and-what-it-changes.md)
@@ -83,11 +85,32 @@ longer exists.
   countdown above. Two timers disagreeing is how a frame comes to be offering
   something it cannot deliver.
 
+## And `bt_discoverable` is not implemented either
+
+**Found 2026-09-20 while scoping this.** The row offers Always / 3 min after
+boot / Off and reports "3 min after boot". **Nothing chose three minutes.**
+`bluetooth-setup.sh` runs `bluetoothctl discoverable on` and never touches
+`DiscoverableTimeout`, so BlueZ's 180 s default silently reverts it — the
+device reads `Discoverable: no`, `DiscoverableTimeout: 0x000000b4 (180)`.
+
+`docs/LESSONS.md` already records this exact trap, which cost 1h36m and a
+blocker, and the script still hits it. **None of the three options works**,
+and "Always" needs `DiscoverableTimeout=0` before `discoverable on`, not
+just the latter. George, 2026-09-20: *"It was a pain with the discoverable
+for 3 minutes."* It belongs in this subphase because a device nobody can
+discover cannot be paired with, confirmed or otherwise.
+
 ## Open
 
-- **What the agent actually is.** `bt-agent --capability=DisplayYesNo` is the
-  obvious move, but whether it can be driven from `gexis-core` or needs
-  replacing with our own agent on D-Bus is not established.
+- ~~**What the agent actually is.**~~ **Established 2026-09-20 on the
+  device: it has to be ours.** `gexis-bt-agent.service` runs
+  `/usr/bin/bt-agent --capability=NoInputNoOutput` — the `bluez-tools`
+  binary, which answers on its own console and has no route to the panel —
+  and **`gexis_core` contains no agent code at all** (no match for
+  `RequestConfirmation`, `DisplayYesNo` or `Capability` anywhere in the
+  installed package). So this is not a capability flag: it is a BlueZ
+  `Agent1` registered on D-Bus from the daemon, implementing
+  `RequestConfirmation`, `AuthorizeService` and `Cancel`.
 - **Whether `bt_autotrust` survives**, and if so what it means once a human is
   being asked.
 - **What happens to a request that arrives while the Peppy screen or the idle
