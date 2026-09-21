@@ -438,6 +438,7 @@ async def main() -> None:
                "idle_weather": None,
                "weather_location": None, "idle_days": None,
                "idle_minmax": None, "idle_icons": None,
+               "viz_timeout": None, "viz_stop": None,
                "device_name": apply_device_name,
                "bt_discoverable": lambda mode: asyncio.ensure_future(
                    _apply_discoverable(mode)
@@ -502,13 +503,26 @@ async def main() -> None:
 
     # Phase 5 criteria 6 and 8 (ADR-0036). The meter process keeps running
     # whether or not it is on screen; this only raises and lowers it.
-    peppy_timeout = float(settings.value("viz_timeout") or 300)
+    # **Minutes, and read per tick** (9h). The row is in minutes because the
+    # design draws it that way and because a number nobody can see the unit
+    # of is a number nobody can set; reading it through a callable means a
+    # change from the phone lands on the next tick rather than the next
+    # restart.
+    def minutes(key: str, fallback: float):
+        def read() -> float:
+            value = settings.value(key)
+            return float(value) * 60 if value else fallback
+        return read
+
     peppy = PeppyController(
         PeppyScreen(
             runtime_dir=config.peppy_runtime_dir,
             wayland_display=config.peppy_wayland_display,
         ),
-        UnattendedPlayback(peppy_timeout),
+        UnattendedPlayback(
+            minutes("viz_timeout", 600),
+            stop_after_s=minutes("viz_stop", 300),
+        ),
     )
 
     previous_active = state_store.state.active

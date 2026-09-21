@@ -52,8 +52,9 @@ def test_the_shipped_registry_loads_and_every_number_is_bounded():
 #:
 #: **This list only shrinks.**
 DESIGN_KEYS_NOT_YET_IN_THE_REGISTRY = {
-    # 9h - home strip, skin picker, viz_stop
-    "home_strip", "home_strip_count", "skin", "viz_stop",
+    # 9h - the home strip, and the skin picker whose drawing George is
+    # redoing (2026-09-21): a list, with a preview shown only on a tap.
+    "home_strip", "home_strip_count", "skin",
 }
 
 
@@ -424,9 +425,9 @@ def test_the_shipped_registry_hides_twenty_rows_and_shows_the_rest():
     # idle-screen keys minus `weather_key`, which a key-free provider leaves
     # gating nothing (ADR-0047 §2a), plus `wallpaper_topics`,
     # `background_interval` and `background_brightness`, all asked for by
-    # George on 2026-09-21.
-    assert len(rows) == 67
-    assert len(rows) - len(kept) == 47
+    # George on 2026-09-21. Then 9h's first: `viz_stop`.
+    assert len(rows) == 68
+    assert len(rows) - len(kept) == 48
 
 
 def test_every_picture_background_carries_the_same_two_rows():

@@ -111,8 +111,24 @@ class UnattendedPlayback:
     playing music reaches the Peppy screen, never the idle screen.
     """
 
-    def __init__(self, timeout_s: float = 300.0, *, now=time.monotonic) -> None:
-        self.timeout_s = timeout_s
+    def __init__(
+        self,
+        timeout_s: float = 300.0,
+        *,
+        stop_after_s=None,
+        now=time.monotonic,
+    ) -> None:
+        #: Both read through a callable where `__main__` passes one, so a
+        #: number typed into Settings applies to the next tick rather than
+        #: to the next restart.
+        self._timeout_s = timeout_s
+        #: `viz_stop`: how long silence lasts before the meter comes down.
+        #: **The counterpart to the timer above, not a variant of it.** That
+        #: one asks "has this been playing untouched long enough to show";
+        #: this asks "has it been quiet long enough to stop showing". Without
+        #: it the meter sits over the idle screen until a renderer closes or
+        #: somebody taps the glass.
+        self._stop_after_s = stop_after_s
         self._now = now
         self._playing = False
         self._last_attention = now()
@@ -141,8 +157,29 @@ class UnattendedPlayback:
         else:
             self._last_attention += gap
 
+    @property
+    def timeout_s(self) -> float:
+        return float(self._timeout_s() if callable(self._timeout_s) else self._timeout_s)
+
+    @property
+    def stop_after_s(self) -> float | None:
+        value = self._stop_after_s() if callable(self._stop_after_s) else self._stop_after_s
+        return None if value is None else float(value)
+
     def due(self) -> bool:
         return self._playing and (self._now() - self._last_attention) >= self.timeout_s
+
+    def stop_due(self) -> bool:
+        """Has nothing been playing for long enough to take the screen back?
+
+        **Silence, not idleness.** A paused track and a stopped one count the
+        same, and a touch does not: touching already hides the meter, and a
+        device nobody is touching is exactly the one this is for.
+        """
+        after = self.stop_after_s
+        if after is None or self._playing or self._stopped_at is None:
+            return False
+        return (self._now() - self._stopped_at) >= after
 
 
 def is_forced_track_change(previous_position: float | None, previous_duration: float | None) -> bool:
@@ -238,3 +275,10 @@ class PeppyController:
             await asyncio.sleep(self._tick_s)
             if self._timer.due() and not self._screen.visible:
                 self._screen.show()
+            # `viz_stop`. Checked after the raise and only while the meter is
+            # up, so the two rules cannot argue: one of them needs playback
+            # and the other needs silence.
+            elif self._screen.visible and self._timer.stop_due():
+                logger.info("peppy: nothing playing for %.0fs, exiting to the panel",
+                            self._timer.stop_after_s or 0)
+                self._screen.hide()

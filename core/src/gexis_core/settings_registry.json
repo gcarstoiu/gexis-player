@@ -624,11 +624,22 @@
         "type": "number",
         "label": "Timeout",
         "marks": "R",
-        "note": null,
-        "min": 0,
-        "max": 300,
-        "unit": "s",
-        "default": null
+        "note": "How long music plays untouched before the visualiser takes the screen.",
+        "min": 1,
+        "max": 60,
+        "unit": "min",
+        "default": 10
+      },
+      {
+        "key": "viz_stop",
+        "type": "number",
+        "label": "Stop when nothing is playing",
+        "marks": "N",
+        "note": "How long silence lasts before the visualiser gives the screen back. Without it the meter sits over the idle screen until somebody taps it.",
+        "min": 1,
+        "max": 60,
+        "unit": "min",
+        "default": 5
       },
       {
         "key": "skin_corpus",

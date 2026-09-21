@@ -319,3 +319,80 @@ async def test_the_screen_is_minimised_at_startup_so_a_touch_can_dismiss_it():
     task.cancel()
 
     assert screen.calls == ["hide"]
+
+# ── viz_stop: the meter gives the screen back (9h) ───────────────────────
+
+
+def test_silence_takes_the_screen_back_and_playback_does_not():
+    """`viz_stop`. Without it the meter sits over the idle screen until a
+    renderer closes or somebody taps the glass - and an idle screen nobody
+    can see is an idle screen that does not exist.
+
+    **Silence, not idleness**: the raise rule needs playback and this one
+    needs its absence, so the two can never argue.
+    """
+    clock = [1000.0]
+    timer = UnattendedPlayback(60, stop_after_s=120, now=lambda: clock[0])
+    timer.set_playing(True)
+    clock[0] += 3600
+    assert not timer.stop_due(), "playing is never a reason to stop"
+
+    timer.set_playing(False)
+    clock[0] += 119
+    assert not timer.stop_due()
+    clock[0] += 2
+    assert timer.stop_due()
+
+    # And it starts over when the music does.
+    timer.set_playing(True)
+    assert not timer.stop_due()
+
+
+def test_without_the_setting_nothing_stops():
+    """The rule is a number or it is absent; absent is what the device did
+    before 9h and must remain possible."""
+    clock = [0.0]
+    timer = UnattendedPlayback(60, now=lambda: clock[0])
+    timer.set_playing(True)
+    timer.set_playing(False)
+    clock[0] += 100000
+    assert not timer.stop_due()
+
+
+def test_both_numbers_are_read_when_they_are_asked_for():
+    """They come from Settings through a callable, so a change from the
+    phone lands on the next tick rather than the next restart."""
+    minutes = {"timeout": 10, "stop": 5}
+    clock = [0.0]
+    timer = UnattendedPlayback(
+        lambda: minutes["timeout"] * 60,
+        stop_after_s=lambda: minutes["stop"] * 60,
+        now=lambda: clock[0],
+    )
+    assert (timer.timeout_s, timer.stop_after_s) == (600, 300)
+    minutes["timeout"], minutes["stop"] = 1, 2
+    assert (timer.timeout_s, timer.stop_after_s) == (60, 120)
+
+
+async def test_the_controller_raises_the_meter_then_gives_the_screen_back():
+    """The two rules in one run: playback raises it, silence takes it
+    down, and neither can undo the other in the same tick."""
+    import asyncio
+
+    screen = FakeScreen(visible=False)
+    clock = [0.0]
+    timer = UnattendedPlayback(60, stop_after_s=120, now=lambda: clock[0])
+    controller = PeppyController(screen, timer, tick_s=0.01)
+
+    task = asyncio.ensure_future(controller.run())
+    timer.set_playing(True)
+    clock[0] += 61
+    await asyncio.sleep(0.05)
+    assert screen.visible, "playing and untouched should have raised it"
+
+    timer.set_playing(False)
+    clock[0] += 121
+    await asyncio.sleep(0.05)
+    task.cancel()
+    assert not screen.visible
+    assert screen.calls == ["hide", "show", "hide"]
