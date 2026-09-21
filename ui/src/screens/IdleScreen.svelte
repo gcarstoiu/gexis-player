@@ -53,7 +53,9 @@
   // The design's own two values, and the reasoning is in the header: the
   // stroke is what makes white type survive a photograph, so a screen with
   // no photograph does not want it.
-  const stroke = $derived(black ? '0' : '4px rgba(46, 57, 66, 0.92)');
+  // The contour's colour; its *width* is per element, below. Transparent
+  // rather than zero so the widths stay harmless when there is no picture.
+  const stroke = $derived(black ? 'transparent' : 'rgba(46, 57, 66, 0.92)');
   const scrim = $derived(black ? 'rgba(11, 18, 24, 0.93)' : 'rgba(7, 11, 15, 0.06)');
   // `idle_brightness`, George's row: the design's 0.62 is the default and
   // the number is his to move. **The contour does not move with it** - it
@@ -291,12 +293,33 @@
   }
 
   /* **The contour is what makes the type legible**, not a plate. Painted
-     under the fill so the glyph keeps its own weight. */
+     under the fill so the glyph keeps its own weight.
+
+     **Its width is a proportion of the type, not the design's one number.**
+     The drop puts 4px on every span that carries it, which is a rim on a
+     132px numeral and most of a 21px letter - measured on the panel, the
+     clock's ink came out 80% white and the day names 38%, which is why
+     George saw them as grey. The stroke tapers with the size now, and the
+     sizes the design did its contrast arithmetic for keep its 4px. */
   .ink {
     color: var(--ink);
     paint-order: stroke fill;
-    -webkit-text-stroke: var(--stroke);
+    -webkit-text-stroke: var(--stroke-w, 4px) var(--stroke);
     text-shadow: 0 2px 10px rgba(7, 11, 15, 0.55);
+  }
+  .date,
+  .day__name {
+    --stroke-w: 1.5px;
+  }
+  .wx__label,
+  .wx__max,
+  .wx__min,
+  .day__max,
+  .day__min {
+    --stroke-w: 2px;
+  }
+  .credits {
+    --stroke-w: 1px;
   }
 
   .clockblock {

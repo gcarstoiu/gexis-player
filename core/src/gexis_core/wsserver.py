@@ -40,6 +40,11 @@ from gexis_core.artistinfo import PHOTO_BACKGROUND, PHOTO_LARGE, PHOTO_THUMB
 #: asks the photo plugin about at once (ADR-0047 §1).
 ARTIST_POOL = 1000
 ARTIST_BATCH = 12
+#: How many of them fanart is asked about before falling back to LMS. Each
+#: unknown name costs a MusicBrainz resolution at one a second, so this is
+#: the number that decides how long a refresh can take: three, measured at
+#: 9 of 12 of George's artists resolving at all.
+ARTIST_FANART_TRIES = 3
 from dataclasses import replace
 
 from gexis_core.enrichment import Enrichment, TrackKey, fold
@@ -311,12 +316,19 @@ class StateServer:
         return web.json_response(answer)
 
     async def _artist_picture(self) -> dict:
-        """One artist photo from the library, at random.
+        """One artist picture from the library, at random.
 
-        **Asked for in a batch and filtered here**, because the plugin has a
-        photo for some artists and not others and there is no way to ask for
-        "one that has one". A handful of ids costs one request (Finding 035:
-        40 took 212 ms) and the whole library would be neither necessary nor
+        **fanart first, LMS second** (George, 2026-09-21: *"would be good to
+        have Lms as a fallback and use fanart as their pictures are of
+        better quality"*), which is the same order the artist page has had
+        since 2026-09-18. fanart publishes `artistbackground` at 1920x1080
+        for exactly this use; LMS's plugin returns whatever it found online,
+        which is sometimes a soundtrack cover rather than a photograph.
+
+        **Asked for in a batch and filtered here**, because neither source
+        has a picture for every artist and there is no way to ask for "one
+        that has one". A handful of ids costs one request (Finding 035: 40
+        took 212 ms) and the whole library would be neither necessary nor
         kind.
         """
         if self._library is None or self._artistinfo is None:
@@ -330,16 +342,47 @@ class StateServer:
         if not items:
             return {"error": "No artists in the library yet."}
         picked = random.sample(items, min(ARTIST_BATCH, len(items)))
+
+        # **fanart is asked about one artist, not the batch.** Each name
+        # costs a MusicBrainz resolution the first time (rate-limited to one
+        # a second, then remembered on disk), so asking about twelve to
+        # throw eleven away would spend eleven seconds to no purpose. The
+        # batch stays for LMS, whose answers are cheap and concurrent.
+        shuffled = list(picked)
+        random.shuffle(shuffled)
+        for artist in shuffled[:ARTIST_FANART_TRIES]:
+            url = await self._fanart_background(artist.get("name") or "")
+            if url:
+                return {"url": url, "by": artist.get("name") or "", "page": "",
+                        "credit": None, "source": "fanart", "error": None}
+
         photos = await self._artistinfo.photos([a["id"] for a in picked], PHOTO_BACKGROUND)
-        with_photos = [(a, photos.get(a["id"])) for a in picked]
-        with_photos = [(a, url) for a, url in with_photos if url]
+        with_photos = [(a, photos.get(a["id"])) for a in picked if photos.get(a["id"])]
         if not with_photos:
             return {"error": "No artist pictures for these artists."}
         artist, url = random.choice(with_photos)
-        # The credit is the artist's name rather than a licence line: this
-        # picture came from the owner's own server.
+        # The credit is the artist's name rather than a licence line: both
+        # sources come through the owner's own server.
         return {"url": url, "by": artist.get("name") or "", "page": "",
-                "credit": None, "error": None}
+                "credit": None, "source": "lms", "error": None}
+
+    async def _fanart_background(self, name: str) -> str | None:
+        """fanart's wide picture for this artist, or None.
+
+        None covers every way this can come to nothing - no key, no
+        MusicBrainz id, no image for that id - because the caller does the
+        same thing in all of them: try another artist, then fall back.
+        """
+        if not name or self._enrichment is None:
+            return None
+        try:
+            found = await self._enrichment.for_track(
+                TrackKey(artist=fold(name)), only=("fanart-bg",)
+            )
+        except Exception as exc:
+            logger.info("idle: fanart unavailable for %r: %s", name, exc)
+            return None
+        return found.artist_image or None
 
     async def _handle_local_wallpaper(self, request: web.Request) -> web.StreamResponse:
         """One picture somebody put on this device. Same rule as below: a

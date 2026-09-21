@@ -390,6 +390,93 @@ async def test_one_route_answers_for_whichever_background_is_chosen(tmp_path):
     assert not session.calls
 
 
+class FakeLibrary:
+    def __init__(self, names):
+        self._names = names
+
+    async def artists(self, limit=0):
+        return {"items": [{"id": i + 1, "name": n} for i, n in enumerate(self._names)]}
+
+
+class FakeArtistInfo:
+    """LMS's plugin: a picture for some artists and not others."""
+
+    def __init__(self, photos):
+        self._photos = photos
+        self.asked = []
+
+    async def photos(self, ids, size=None):
+        self.asked.append((tuple(ids), size))
+        return {i: self._photos.get(i) for i in ids}
+
+
+class FakeEnrichment:
+    """Stands in for the provider stack. Records what was asked of it, so
+    the test can assert the *background* provider was the one used."""
+
+    def __init__(self, images):
+        self._images = images
+        self.asked = []
+
+    async def for_track(self, key, only=()):
+        self.asked.append((key.artist, tuple(only)))
+        from gexis_core.enrichment import Enrichment
+
+        return Enrichment(artist_image=self._images.get(key.artist))
+
+
+async def test_an_artist_background_comes_from_fanart_before_lms(tmp_path):
+    """George, 2026-09-21: *"would be good to have Lms as a fallback and use
+    fanart as their pictures are of better quality"* - the same order the
+    artist page has had since 2026-09-18."""
+    library = FakeLibrary(["Carmen McRae"])
+    lms_photos = FakeArtistInfo({1: "http://lms/imageproxy/mai/artist/1/image_1280x1280_o.jpg"})
+    fanart = FakeEnrichment({"carmen mcrae": "http://lms/imageproxy/fanart/bg.jpg"})
+    settings, client = client_for(
+        tmp_path, wallpapers=Wallpapers(FakeSession(pixabay({})), tmp_path / "p"),
+        library=library, artistinfo=lms_photos, enrichment=fanart,
+    )
+    async with client:
+        settings.set("idle_background", "Artist pictures")
+        body = await (await client.get("/idle/wallpaper")).json()
+        assert body["source"] == "fanart"
+        assert body["url"] == "http://lms/imageproxy/fanart/bg.jpg"
+        assert body["by"] == "Carmen McRae"
+    # The *background* provider, not the artist page's portrait one.
+    assert fanart.asked[0][1] == ("fanart-bg",)
+    # And LMS was not asked at all, because it did not have to be.
+    assert not lms_photos.asked
+
+
+async def test_lms_carries_it_when_fanart_has_nothing(tmp_path):
+    library = FakeLibrary(["Someone Obscure"])
+    lms_photos = FakeArtistInfo({1: "http://lms/imageproxy/mai/artist/1/image_1280x1280_o.jpg"})
+    settings, client = client_for(
+        tmp_path, wallpapers=Wallpapers(FakeSession(pixabay({})), tmp_path / "p"),
+        library=library, artistinfo=lms_photos, enrichment=FakeEnrichment({}),
+    )
+    async with client:
+        settings.set("idle_background", "Artist pictures")
+        body = await (await client.get("/idle/wallpaper")).json()
+        assert body["source"] == "lms"
+        assert body["by"] == "Someone Obscure"
+    # At the size it is drawn, which is the panel's width (Finding 035's
+    # rule, and the defect this route had before it).
+    assert lms_photos.asked[0][1] == 1280
+
+
+async def test_neither_source_having_a_picture_is_said(tmp_path):
+    settings, client = client_for(
+        tmp_path, wallpapers=Wallpapers(FakeSession(pixabay({})), tmp_path / "p"),
+        library=FakeLibrary(["Nobody"]), artistinfo=FakeArtistInfo({}),
+        enrichment=FakeEnrichment({}),
+    )
+    async with client:
+        settings.set("idle_background", "Artist pictures")
+        body = await (await client.get("/idle/wallpaper")).json()
+        assert body["error"] == "No artist pictures for these artists."
+
+
 async def test_an_empty_picture_directory_is_said_rather_than_shown(tmp_path):
     source = Wallpapers(FakeSession(pixabay({})), tmp_path / "pics", local_dir=tmp_path / "empty")
     settings, client = client_for(tmp_path, wallpapers=source)

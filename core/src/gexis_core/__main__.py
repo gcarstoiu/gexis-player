@@ -31,6 +31,7 @@ from gexis_core.metadata_file import MetadataFileWriter
 from gexis_core.artistinfo import LmsArtistInfo
 from gexis_core.enrichment import PREFETCH_AFTER_S, Cache, EnrichmentService, TrackKey
 from gexis_core.providers import (
+    FANART_BACKGROUND,
     ArtistIdentity,
     CoverArtProvider,
     FanartArtistImage,
@@ -549,6 +550,12 @@ async def main() -> None:
             # first takes the picture and leaves the biography to LMS.
             FanartArtistImage(http, identity, lambda: settings.value("fanart_key"),
                               proxy_base=f"http://{config.lms_host}:{config.lms_port}"),
+            # The same source, asked for the other shape: the idle screen's
+            # background (ADR-0047 §1b). Only the idle route asks for it by
+            # name, so no other screen pays for it.
+            FanartArtistImage(http, identity, lambda: settings.value("fanart_key"),
+                              proxy_base=f"http://{config.lms_host}:{config.lms_port}",
+                              **FANART_BACKGROUND),
             LmsArtistProvider(artistinfo, lambda: lms.current_artist_id),
             LmsReleaseProvider(library, artistinfo, lambda: lms.current_album_id),
             WikipediaBiography(http, identity),

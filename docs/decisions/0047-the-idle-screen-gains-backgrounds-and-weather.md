@@ -45,6 +45,41 @@ clock.**
 **`idle_screen: External URL` replaces all of it** with that page — which is
 ADR-0033's resolution, kept, demoted from the answer to one option.
 
+### 1b. Artist pictures come from fanart, and LMS is the fallback
+
+**Decided 2026-09-21**, George: *"for artist background would be good to
+have Lms as a fallback and use fanart as their pictures are of better
+quality"* — after seeing a Call of Duty soundtrack cover full-screen, which
+is what LMS's plugin had for that artist.
+
+It is the same order the artist page has had since 2026-09-18, and the same
+provider: `FanartArtistImage`, keyed on a MusicBrainz id that
+`ArtistIdentity` resolves once and keeps on disk. **What is new is the
+shape.** The artist page draws a 262px disc and wants `artistthumb`, a
+portrait; a 1280×800 background wants `artistbackground`, which fanart
+publishes at 1920×1080 for exactly this. So there are two instances of one
+provider under two names, and the idle route asks for `fanart-bg`.
+
+**Three at a time, then LMS.** Each unknown name costs a MusicBrainz
+resolution at one a second, so asking about a batch of twelve to use one
+would spend eleven seconds for nothing. Three tries, then the LMS batch,
+which is cheap and concurrent.
+
+**Measured on George's library, 2026-09-21:** six refreshes, six fanart
+pictures, 0.26–3.5 s each, at 1280px through LMS's image proxy. And of a
+random twelve of his 917 artists, nine resolve to a MusicBrainz id at all —
+the two that did not are collaboration names LMS stores as one artist
+(*"Louis Armstrong & Duke Ellington"*), which MusicBrainz has no single
+entity for. Those fall to LMS, which is the point of the fallback.
+
+**A short tag resolves to a famous artist, and that is the fuzzy match
+working as designed.** His library has an artist called `Bennett`;
+MusicBrainz answers Tony Bennett with a score of 100, so the screen shows
+Tony Bennett's photograph captioned `Bennett`. The caption is the library's
+own name on purpose: it is what this device knows, and a caption that
+claimed the matched name would hide a mis-tag rather than show it.
+ADR-0012's confidence floor (90) is what governs this, unchanged.
+
 ### 2. Weather is off unless a key exists
 
 `idle_weather` turns it on; `weather_key` is what makes it work. The four rows
