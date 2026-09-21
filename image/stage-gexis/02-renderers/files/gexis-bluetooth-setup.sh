@@ -27,5 +27,21 @@ done
 # yet to trigger "enter pairing mode" on demand). gexis-bt-agent.service
 # is ordered before this unit so the agent answering pairing requests is
 # already registered before discoverable mode turns on.
-bluetoothctl pairable on
-bluetoothctl discoverable on
+# **Discoverability is the daemon's, not this script's** (ADR-0045).
+#
+# This script ran `bluetoothctl pairable on; bluetoothctl discoverable on`
+# here, and the second has never worked: `discoverable on` is not a state,
+# it is a state with a timer attached, and `DiscoverableTimeout` has to be
+# set *first*. BlueZ's 180 s default reverted it every time, so the device
+# settled at `Discoverable: no` while the settings row claimed "3 min after
+# boot" - which nothing had chosen either. Measured on the device
+# 2026-09-21, hours after a boot: `Discoverable: no`,
+# `DiscoverableTimeout: 0x000000b4 (180)`.
+#
+# `gexis_core.bluetooth_adapter_state` sets the timeout and the switch
+# together, from the stored setting, and applies a change without a reboot.
+# Leaving a second writer here would mean two things racing for one property
+# at boot, with the loser silent - which is how this defect hid for so long.
+#
+# Powering the adapter above stays here: the daemon needs one on the bus
+# before it can set anything on it.

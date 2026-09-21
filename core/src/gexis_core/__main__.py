@@ -10,8 +10,10 @@ import logging
 from pathlib import Path
 
 import aiohttp
+from dbus_next import BusType
+from dbus_next.aio import MessageBus
 
-from gexis_core import alsa, device_name, wifi
+from gexis_core import alsa, bluetooth_adapter_state, device_name, wifi
 from gexis_core.adapters.base import VolumeMechanism
 from gexis_core.adapters.bluetooth import BluetoothAdapter
 from gexis_core.adapters.lms import LmsAdapter
@@ -152,6 +154,29 @@ def _chosen_server(config: Config, store: SettingsStore) -> Config:
         return config
     logger.info("settings: lms_server chosen, using %s:%s", config.lms_host, config.lms_port)
     return config
+
+
+async def _apply_discoverable(mode: str, attempts: int = 1) -> bool:
+    """`bt_discoverable`, on the adapter. Live: discoverability is not
+    audible and nothing about it is mid-session, so unlike a rename there
+    is nothing to defer.
+
+    `attempts` is for the one at startup. `gexis-bluetooth-setup.service`
+    powers the adapter and nothing orders this after it, so the adapter can
+    still be absent from the bus when the daemon comes up - and a setting
+    that silently did not apply at boot is the defect this replaces, not one
+    to reintroduce.
+    """
+    bus = await MessageBus(bus_type=BusType.SYSTEM).connect()
+    try:
+        for attempt in range(attempts):
+            if await bluetooth_adapter_state.apply_discoverable(bus, mode):
+                return True
+            if attempt + 1 < attempts:
+                await asyncio.sleep(2)
+        return False
+    finally:
+        bus.disconnect()
 
 
 def apply_device_name(name: str) -> None:
@@ -390,9 +415,18 @@ async def main() -> None:
                "drawer_autohide": None, "listenbrainz_token": None,
                "fanart_key": None, "lms_server": None,
                "device_name": apply_device_name,
+               "bt_discoverable": lambda mode: asyncio.ensure_future(
+                   _apply_discoverable(mode)
+               ),
                "timezone": lambda zone: asyncio.ensure_future(_set_timezone(zone)),
                "reboot": lambda _: asyncio.ensure_future(_reboot())},
         on_change=state_store.bump_settings_revision,
+    )
+
+    # ADR-0045: the adapter's own switches, applied from the stored setting
+    # rather than left to a shell script that could not express them.
+    asyncio.ensure_future(
+        _apply_discoverable(settings.value("bt_discoverable") or "3 min after boot", attempts=10)
     )
 
     # Phase 5 criteria 6 and 8 (ADR-0036). The meter process keeps running
