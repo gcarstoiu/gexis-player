@@ -98,10 +98,20 @@
   //: dismissed, so the panel does not drop straight back to idle the moment
   //: the frame closes: after pairing, the thing you just connected is the
   //: thing you want to look at.
+  //:
+  //: **`untrack` is load-bearing.** `touches += 1` *reads* `touches` to
+  //: increment it, so without this the effect depends on what it writes and
+  //: re-triggers itself - Svelte raises `effect_update_depth_exceeded` and
+  //: the whole tree stops updating. It only fires when a request arrives,
+  //: so it survived every other deploy and showed up as a pairing frame
+  //: with a frozen countdown whose buttons appeared dead (George, on the
+  //: panel, 2026-09-21). The answers were landing; nothing was re-rendering.
   $effect(() => {
     if (!$pairing) return;
-    idle = false;
-    touches += 1;
+    untrack(() => {
+      idle = false;
+      touches += 1;
+    });
   });
 
   // The library is a layer over now playing (source/Now Playing.dc.html). It

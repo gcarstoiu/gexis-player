@@ -10,7 +10,7 @@ import asyncio
 
 import pytest
 
-from gexis_core import discovery, wifi
+from gexis_core import bluetooth_devices, discovery, wifi
 
 
 # ── Lyrion discovery ──────────────────────────────────────────────────────
@@ -223,12 +223,48 @@ def client_for(tmp_path):
 
 @pytest.mark.asyncio
 async def test_a_list_with_no_source_yet_is_empty_rather_than_an_error(tmp_path, monkeypatch):
-    """Bluetooth's trusted devices are 9f's. Until then the row opens on its
-    own empty state, which is true, instead of on a 404 or a 500."""
+    """All three rows have a source now, so this is about the rule rather
+    than about any of them: a `list` nothing serves opens on its own empty
+    state, which is true, instead of on a 404 or a 500. The next one added
+    to the registry lands here."""
+    monkeypatch.setattr(StateServer, "LIST_SOURCES", ("wifi", "lms_server"))
     async with client_for(tmp_path) as client:
         response = await client.get("/settings/bt_trusted/items")
         assert response.status == 200
         assert await response.json() == {"items": []}
+
+
+@pytest.mark.asyncio
+async def test_bluetooth_devices_are_listed_and_forgotten(tmp_path, monkeypatch):
+    calls = []
+
+    async def known(bus):
+        return [{"name": "Pixel 10 Pro", "meta": "Connected", "state": "connected"}]
+
+    async def forget(bus, name):
+        calls.append(name)
+        return True, None
+
+    monkeypatch.setattr(bluetooth_devices, "known", known)
+    monkeypatch.setattr(bluetooth_devices, "forget", forget)
+
+    async def run(call, *args):
+        return await call(None, *args)
+
+    monkeypatch.setattr(StateServer, "_bluetooth", staticmethod(run))
+    async with client_for(tmp_path) as client:
+        body = await (await client.get("/settings/bt_trusted/items")).json()
+        assert body["items"][0]["name"] == "Pixel 10 Pro"
+        answer = await client.post(
+            "/settings/bt_trusted/items", json={"name": "Pixel 10 Pro", "action": "forget"}
+        )
+        assert await answer.json() == {"ok": True, "error": None}
+        # Joining is Wi-Fi's word. A device list forgets and nothing else.
+        bad = await client.post(
+            "/settings/bt_trusted/items", json={"name": "Pixel 10 Pro", "action": "join"}
+        )
+        assert bad.status == 400
+    assert calls == ["Pixel 10 Pro"]
 
 
 @pytest.mark.asyncio

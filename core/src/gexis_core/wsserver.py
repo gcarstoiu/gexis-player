@@ -28,8 +28,10 @@ import logging
 from pathlib import Path
 
 from aiohttp import web
+from dbus_next import BusType
+from dbus_next.aio import MessageBus
 
-from gexis_core import device_name, discovery, wifi
+from gexis_core import bluetooth_devices, device_name, discovery, wifi
 from gexis_core.adapters.base import TRANSPORT_COMMANDS
 from gexis_core.artistinfo import PHOTO_LARGE, PHOTO_THUMB
 from dataclasses import replace
@@ -542,6 +544,24 @@ class StateServer:
             return web.json_response({"error": "nothing is being asked"}, status=409)
         return web.json_response({"answer": answer})
 
+    @staticmethod
+    async def _bluetooth(call, *args):
+        """Run one BlueZ call on a connection of its own.
+
+        A short-lived bus rather than the daemon's: the adapter's own
+        connection is driving A2DP and the agent, and a settings sheet
+        reaching into it to enumerate devices would couple the two for no
+        gain. Opening a system bus is cheap and a sheet is rare.
+        """
+        bus = await MessageBus(bus_type=BusType.SYSTEM).connect()
+        try:
+            return await call(bus, *args)
+        except Exception as exc:
+            logger.warning("bluetooth: %s failed: %s", getattr(call, "__name__", call), exc)
+            return [] if not args else (False, "Bluetooth is unavailable.")
+        finally:
+            bus.disconnect()
+
     def _setting_or_none(self, key: str):
         try:
             return self._settings.value(key)
@@ -570,11 +590,9 @@ class StateServer:
 
         return self._settings_call(run)
 
-    #: Where a `list` row's items come from (ADR-0044 §1's first open
-    #: question, answered for two of the three in 9d). Bluetooth's trusted
-    #: devices join this table in 9f; until then that row has no source and
-    #: says so through its own empty state rather than through an error.
-    LIST_SOURCES = ("wifi", "lms_server")
+    #: Where a `list` row's items come from - ADR-0044 §1's first open
+    #: question, now answered for all three.
+    LIST_SOURCES = ("wifi", "lms_server", "bt_trusted")
 
     async def _list_row(self, request: web.Request):
         """The `list` row named in the path, or a response explaining why
@@ -601,6 +619,8 @@ class StateServer:
             if not wifi.available():
                 return web.json_response({"items": [], "error": "NetworkManager is not available"})
             return web.json_response({"items": await wifi.scan()})
+        if key == "bt_trusted":
+            return web.json_response({"items": await self._bluetooth(bluetooth_devices.known)})
         # A discovered server is named by its address, because that is what
         # the setting stores; the human name is the line underneath.
         current = str(self._settings.value("lms_server") or "")
@@ -627,6 +647,11 @@ class StateServer:
             action = body.get("action", "join")
         except (ValueError, KeyError, TypeError):
             return web.json_response({"error": 'body must be {"name": ..., "action": ...}'}, status=400)
+        if key == "bt_trusted":
+            if action != "forget":
+                return web.json_response({"error": f"unknown action {action}"}, status=400)
+            ok, error = await self._bluetooth(bluetooth_devices.forget, name)
+            return web.json_response({"ok": ok, "error": error})
         if key != "wifi":
             return web.json_response({"error": f"{key} has no per-item action"}, status=405)
         if not wifi.available():

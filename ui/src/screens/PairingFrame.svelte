@@ -67,7 +67,13 @@
     try {
       await answerPairing(accept);
     } catch (err) {
+      // A refused answer is not a dead button: the window may have closed
+      // while the finger was moving, and the frame is about to be taken
+      // away by `pairing` changing under it. Without the `finally` a single
+      // failure disabled both buttons for the rest of the request.
       console.info('pairing:', err.message);
+    } finally {
+      answering = false;
     }
   }
   $effect(() => {

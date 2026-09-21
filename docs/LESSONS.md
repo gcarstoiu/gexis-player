@@ -7,7 +7,7 @@ recognised faster next time, rather than rediscovered as a surprise.
 
 ## The check ran against the wrong reality
 
-Ten instances so far, same shape each time: the check ran against
+Eleven instances so far, same shape each time: the check ran against
 something that *resembled* the thing being tested, closely enough that
 the difference was invisible in the result. Not a broken check — a check
 answering a different question than the one asked, confidently.
@@ -177,6 +177,33 @@ Eight scripts were stored `644` in the repository and installed `755` by the
 build, so every hand-deploy of one silently stripped its executable bit.
 They are executable in git now, which makes `rsync -a` correct by
 construction.
+
+**11. Every server-side check passing while the screen was frozen**
+(2026-09-21, Phase 9 subphase 9f). George: *"the countdown is not counting
+down and pressing reject does nothing."* The daemon's log said otherwise -
+`POST /bluetooth/pairing/reject` returned 200, the agent answered BlueZ
+`org.bluez.Error.Rejected`, and `/state` read `pairing: null`. A second
+WebSocket client, driven from a script, received all three transitions in
+order. Every check available on the device said the feature worked.
+
+**It did work. Nothing was re-rendering.** An `$effect` I had added the same
+hour did `touches += 1`, which *reads* `touches` to increment it - so the
+effect depended on what it wrote, re-triggered itself, and Svelte raised
+`effect_update_depth_exceeded`, which stops updating that whole tree. The
+frame drew once on mount and then froze: a countdown that never moved and
+buttons whose answers landed perfectly and changed nothing on screen.
+
+**The panel is a client, and a client's own console is the only place some
+failures exist.** Checking the daemon proves the daemon. Here the two
+disagreed and the daemon was right, which is the most misleading way for
+them to disagree - every instinct says believe the instrument that is
+answering. The kiosk's Chromium console is not in the journal, so there was
+nothing to find without the debug port.
+
+Also worth keeping: **it only fired when a pairing request arrived**, so it
+survived its own deploy, the panel-load check, and every earlier test. A
+reactive cycle reachable from one rare state is invisible until that state
+happens - and the state that triggered it was the one being demonstrated.
 
 ## Common shape
 

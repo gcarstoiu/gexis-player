@@ -240,3 +240,117 @@ def test_only_an_open_question_takes_the_screen():
         publish(ba.PairingRequest(device=state, code="1", state=state))
     publish(None)
     assert taken == ["asking"]
+
+
+# ── the remembered devices (`bt_trusted`) ────────────────────────────────
+
+class _Variant:
+    """ObjectManager hands back `Variant`s and the code reads `.value`.
+
+    A real `dbus_next.Variant` validates its signature against the value,
+    so building one per type here would be a test about dbus_next. This is
+    the only thing the code under test touches."""
+
+    def __init__(self, value):
+        self.value = value
+
+
+def _Props(**kw):
+    return {k: _Variant(v) for k, v in kw.items()}
+
+
+class _Tree:
+    def __init__(self, objects):
+        self._objects = objects
+
+    async def call_get_managed_objects(self):
+        return self._objects
+
+
+class _Obj:
+    def __init__(self, iface, impl):
+        self._ifaces = {iface: impl}
+
+    def get_interface(self, name):
+        return self._ifaces[name]
+
+
+class _Remover:
+    def __init__(self):
+        self.removed = []
+
+    async def call_remove_device(self, path):
+        self.removed.append(path)
+
+
+class _Bus:
+    def __init__(self, objects, remover=None):
+        self._objects = objects
+        self.remover = remover or _Remover()
+
+    async def introspect(self, service, path):
+        return None
+
+    def get_proxy_object(self, service, path, introspection):
+        from gexis_core import bluetooth_adapter_state as bas
+
+        if path == "/":
+            return _Obj(bas.OBJECT_MANAGER_IFACE, _Tree(self._objects))
+        return _Obj(bas.ADAPTER_IFACE, self.remover)
+
+    def disconnect(self):
+        pass
+
+
+def _tree():
+    from gexis_core import bluetooth_adapter_state as bas
+    from gexis_core.bluetooth_devices import DEVICE_IFACE
+
+    return {
+        "/org/bluez/hci0": {bas.ADAPTER_IFACE: {}},
+        "/org/bluez/hci0/dev_A": {
+            DEVICE_IFACE: _Props(Paired=True, Trusted=True, Connected=True, Alias="Pixel 10 Pro", Address="64:9D:38:E3:E5:2A")
+        },
+        "/org/bluez/hci0/dev_B": {
+            DEVICE_IFACE: _Props(Paired=True, Trusted=False, Connected=False, Alias="Kitchen Echo", Address="AA:BB:CC:DD:EE:FF")
+        },
+        # Seen while discoverable and never paired: a stranger who walked
+        # past with Bluetooth on.
+        "/org/bluez/hci0/dev_C": {
+            DEVICE_IFACE: _Props(Paired=False, Trusted=False, Connected=False, Alias="Someone's Laptop", Address="11:22:33:44:55:66")
+        },
+    }
+
+
+@pytest.mark.asyncio
+async def test_only_paired_devices_are_listed():
+    """BlueZ's tree also carries every phone and laptop that walked past
+    while the adapter was discoverable. A list of strangers under "Trusted
+    devices" would be things the user never chose and cannot act on."""
+    from gexis_core import bluetooth_devices as bd
+
+    items = await bd.known(_Bus(_tree()))
+    assert [i["name"] for i in items] == ["Pixel 10 Pro", "Kitchen Echo"]
+    assert items[0]["state"] == "connected" and items[0]["meta"] == "Connected"
+    assert items[1]["state"] == "saved" and items[1]["meta"] == "Paired"
+
+
+@pytest.mark.asyncio
+async def test_forgetting_removes_the_bond_not_just_the_trust_flag():
+    """`Trusted = false` leaves the bond: the phone still holds its key, the
+    device still answers to it, and it reconnects. The row's note promises
+    that forgetting "breaks its automatic reconnection"."""
+    from gexis_core import bluetooth_devices as bd
+
+    bus = _Bus(_tree())
+    assert await bd.forget(bus, "Pixel 10 Pro") == (True, None)
+    assert bus.remover.removed == ["/org/bluez/hci0/dev_A"]
+
+
+@pytest.mark.asyncio
+async def test_forgetting_something_that_is_not_paired_says_so():
+    from gexis_core import bluetooth_devices as bd
+
+    bus = _Bus(_tree())
+    assert await bd.forget(bus, "Someone's Laptop") == (False, "That device is not paired.")
+    assert bus.remover.removed == []
