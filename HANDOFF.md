@@ -19,17 +19,28 @@ same method as Finding 030 — terms read, live calls made **from the
 device**, recommendation without a decision. Three things in it change the
 subphase rather than just informing it:
 
-- **Unsplash and Pexels are out in their own words** — both name wallpaper
-  applications as forbidden. The two obvious answers to "Wallpapers online"
-  cannot be used. Pixabay permits it with a key, a 24 h cache and no
-  hotlinking; the key-free alternative is CC0 museum art (Art Institute of
-  Chicago, 60 req/min anonymous).
+- **Every wallpaper service that matters permits this use** — corrected the
+  same day, after George asked for a thorough check on Unsplash. The first
+  pass ruled out Unsplash and Pexels on one line of each provider's
+  guidelines; both have a page dedicated to the question that says
+  otherwise. Unsplash's test is whether the app *"offers more value than
+  simply the Unsplash integration"* and its approved example is **Trello's
+  board backgrounds**; Pexels says a platform serving a different purpose is
+  *"absolutely welcome"* to include a background feature, and names
+  automatically served backgrounds and screensavers as an accepted case.
+  **[LESSONS](docs/LESSONS.md) case 12.** What separates them now is the
+  credential: Unsplash forbids shipping a key in publicly distributed code
+  and requires dynamic client registration, **arranged by email**; Pexels
+  and Pixabay take a per-owner key, which is what `wallpaper_key` already
+  is; CC0 museum art needs no key at all.
 - **Weather has a key-free answer that also solves `weather_location`:**
   Open-Meteo, 748 B for exactly the rows the design draws (0.12–0.14 s from
   the device), with geocoding from the same provider. MET Norway returns
   40,722 B for the same forecast and has no geocoder.
 - **So `weather_key` may have nothing to gate**, and ADR-0047 §2 hangs four
   rows off it. That is a decision owed before any of them is built.
+  `wallpaper_key` is the opposite: under any stock service it is exactly the
+  row the design drew.
 
 **Two measured traps recorded there:** the Art Institute's IIIF image server
 403s without an `AIC-User-Agent` header (with a browser User-Agent too — the

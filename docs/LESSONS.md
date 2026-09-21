@@ -7,7 +7,7 @@ recognised faster next time, rather than rediscovered as a surprise.
 
 ## The check ran against the wrong reality
 
-Eleven instances so far, same shape each time: the check ran against
+Twelve instances so far, same shape each time: the check ran against
 something that *resembled* the thing being tested, closely enough that
 the difference was invisible in the result. Not a broken check — a check
 answering a different question than the one asked, confidently.
@@ -205,13 +205,48 @@ survived its own deploy, the panel-load check, and every earlier test. A
 reactive cycle reachable from one rare state is invisible until that state
 happens - and the state that triggered it was the one being demonstrated.
 
+**12. A summary line read as the rule** (2026-09-21, Phase 9 subphase 9g's
+provider research). Finding 043 ruled out Unsplash *and* Pexels as sources
+for the idle screen's wallpapers, on one line from each provider's
+guidelines - Unsplash's *"You cannot replicate the core user experience of
+Unsplash (unofficial clients, wallpaper applications, etc.)"* and Pexels'
+*"You may not copy or replicate core functionality of Pexels (including
+making Pexels content available as a wallpaper app)"*. Both quotes are
+accurate. Both were quoted in the recommendation. **Both providers permit
+this use**, and each says so on a page written to answer this exact
+question.
+
+Unsplash's *Guideline: Replicating Unsplash* gives the test - does the
+application *"offer more value than simply the Unsplash integration"* - and
+its approved example is **Trello showing Unsplash images as board
+backgrounds**. Pexels' *Can I use the API as a wallpaper app?* says a
+platform that serves a different purpose is *"absolutely welcome"* to
+include a background feature, and names backgrounds and screensavers served
+automatically as an accepted case with its own attribution rule.
+
+George caught it in one line: *"Are you sure unsplash is not viable? Please
+do a thorough check."*
+
+**The search answered "is the word forbidden" and was read as answering "is
+this forbidden".** A guidelines page lists rules; the article behind a rule
+says what it covers, and a rule with a named exception is not a rule you can
+apply from its title. The tell was there in the source that *was* read: the
+API Terms name *"setting an Image as background wallpaper"* as an event to
+be tracked, which is a strange thing to specify about something banned.
+
+**It is also the first case here that cost a recommendation rather than a
+measurement.** The check was research, the substitute was a summary for the
+rule, and the output was a confident "ruled out by their own terms" - which
+reads exactly like a finished answer.
+
 ## Common shape
 
 Every case had a *plausible* substitute for the real target — the build
 host's filesystem for the booted one, one run for the distribution, a
 local ref for the remote, the kernel's OOM killer for any killer, an idle
-device for a booting one, a comment for the machine it describes — and the
-check quietly accepted the substitute. None of these failed loudly. Each
+device for a booting one, a comment for the machine it describes, a
+summary line for the rule it summarises — and the check quietly accepted
+the substitute. None of these failed loudly. Each
 produced an answer that looked like a normal result, not an error.
 
 **What to check before trusting a verification result:** not just "does
