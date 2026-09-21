@@ -33,10 +33,22 @@ subphase rather than just informing it:
   and requires dynamic client registration, **arranged by email**; Pexels
   and Pixabay take a per-owner key, which is what `wallpaper_key` already
   is; CC0 museum art needs no key at all.
-- **Weather has a key-free answer that also solves `weather_location`:**
-  Open-Meteo, 748 B for exactly the rows the design draws (0.12–0.14 s from
-  the device), with geocoding from the same provider. MET Norway returns
-  40,722 B for the same forecast and has no geocoder.
+- **Wallpapers: decided — Pixabay** (George, 2026-09-21, on the pictures).
+  It wants rows the design does not have: **which topics to serve**, and
+  two of the four George named (*space*, *landscape*) are **not** Pixabay
+  categories but search terms, so a topic is our vocabulary mapping to
+  either `category` or `q`. A multi-select is a mechanic ADR-0044 does not
+  have. **Proposed to George, not yet appended to ADR-0022's inventory.**
+- **Weather is still open, and the re-check moved it.** Asked for the same
+  challenge, three of the first pass's arguments did not survive:
+  geocoding happens once and does not lock the provider; 40 KB every ten to
+  thirty minutes is tidiness, not cost; and the daily aggregation MET
+  Norway needs is a loop over 91 entries (measured — it publishes no daily
+  aggregate at all). **What is left is a product question:** Open-Meteo's
+  free tier forbids *"integrating our service into commercial products"*
+  and names *"personal home automation"* as qualifying, so a Gexis given
+  away fits and a Gexis sold does not. MET Norway — an institute, not one
+  person — has no such clause, and ships an MIT icon set.
 - **So `weather_key` may have nothing to gate**, and ADR-0047 §2 hangs four
   rows off it. That is a decision owed before any of them is built.
   `wallpaper_key` is the opposite: under any stock service it is exactly the

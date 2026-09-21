@@ -179,16 +179,102 @@ spend.
   geocoding. A good second opinion for this device, a poor default for the
   product.
 
+## The weather re-check, asked for the same day
+
+George applied the same challenge to the weather half: *"Before deciding for
+weather — same challenge. Do a thorough check again."* Three of the things
+the first pass leaned on do not survive it.
+
+**`weather_location` does not lock the choice.** The first pass called
+Open-Meteo's geocoder *"the one that settles it"*. It does not: geocoding
+happens **once**, when someone types a place, and the coordinates are what
+gets stored. Open-Meteo's geocoding API can be called on its own, with any
+forecast provider behind it — so this is a convenience, not a dependency.
+The alternatives are worse but exist: Nominatim's policy caps regular use at
+*"4 requests per minute"* and asks that results be cached; Komoot's Photon
+is *"reasonable use only"* with no availability guarantee.
+
+**The payload difference is real and small.** Measured: compact 40,224 B,
+complete 62,906 B, against Open-Meteo's 748 B. But `Expires` on the same
+response was **nine minutes ahead of the request** (and about thirty ahead
+of `last-modified`), so this is one fetch every ten to thirty minutes on a
+device that streams music all day. It is tidiness, not cost.
+
+**The aggregation is confirmed and is not much.** Measured: 91 timeseries
+entries, fields `instant`, `next_1_hours`, `next_6_hours`, `next_12_hours`,
+**and no daily aggregate of any kind** — `idle_minmax` has to be computed
+from the hourly values. That is a loop, not a project.
+
+**What actually separates them, once those three are set aside:**
+
+| | Open-Meteo | MET Norway |
+|---|---|---|
+| free tier | **non-commercial only** | no commercial restriction |
+| who runs it | one person, GitHub-sponsor funded; **AGPL and self-hostable**, data mirrored on AWS Open Data | a national meteorological institute with a public mandate |
+| obligations | CC BY 4.0 attribution link | CC BY 4.0, identifying User-Agent, honour `Expires` |
+| icons | WMO codes, ours to draw | `symbol_code` **plus an MIT-licensed icon set** (`metno/weathericons`) |
+
+**So the decision is a product question, not a technical one:** Open-Meteo's
+terms permit *"personal home automation purposes"* and forbid *"integrating
+our service into commercial products"*. A Gexis given away fits; a Gexis
+sold does not, and it would not be one device breaching the terms but every
+unit shipped. MET Norway carries no such clause.
+
+**Everything else was re-checked and stays out.**
+
+- **wttr.in** — key-free, but measured at **three days** of forecast, 39 KB,
+  and it is one person's service with no terms page. `idle_days` alone rules
+  it out.
+- **OpenWeatherMap One Call 3.0** — the claim that a payment card is
+  required could not be confirmed in the provider's own words; what *can* be
+  said from its own pages is that the One Call subscription page is a
+  billing form quoting a per-call price. That is a caution, not a finding.
+- **Bright Sky, Pirate Weather, WeatherAPI, Tomorrow.io, Visual Crossing** —
+  unchanged, and for WeatherAPI a further point: its free tier is documented
+  as non-commercial too, so it trades Open-Meteo's restriction for a key
+  without removing the restriction.
+
+## Pixabay, chosen 2026-09-21
+
+George, having looked at the pictures: *"Based on this and the pictures I am
+seeing on their website we will go with pixabay."* What the API imposes on
+the rows that have to be designed around it:
+
+- **Twenty categories, and one per request.** `backgrounds, fashion, nature,
+  science, education, feelings, health, people, religion, places, animals,
+  industry, computer, food, sports, transportation, travel, buildings,
+  business, music`. The parameter takes a single value, so "nature and
+  space" is two requests, or one request per refresh with the topic chosen
+  from those selected — the second, given 100 requests per 60 seconds and a
+  24-hour caching rule.
+- **Two of the four topics George named are not categories.** *Nature* and
+  *animals* are; **space** and **landscape** are not — they are search
+  terms. So a topic in our settings is **our vocabulary, not Pixabay's**,
+  and each one maps to either a `category` or a `q`. That mapping is a
+  decision, and it belongs in the ADR rather than in the code that happens
+  to implement it.
+- **`largeImageURL` is the usable one.** `fullHDURL` and `imageURL` are
+  *"only available if your account has been approved for full API access"*,
+  which a per-owner key will not be.
+- **The device is the cache.** No permanent hotlinking, URLs expire in 24
+  hours, requests must be cached for 24 hours — so the picture is fetched to
+  disk and the sheet's own rules decide when it is replaced.
+- Useful parameters the rows can set or hardcode: `image_type=photo`,
+  `orientation=horizontal`, `min_width`/`min_height` for a 1280×800 panel,
+  `safesearch`, `editors_choice`, `order=popular|latest`, `per_page` 3–200.
+
 ## Recommended, not decided
 
-- **Weather: Open-Meteo.** Key-free, so it works on a device out of the box
-  with nothing for the owner to register; 748 B for exactly the fields the
-  design draws; geocoding for `weather_location` from the same provider;
-  WMO codes for `idle_icons`. **MET Norway is the alternative** if the
-  non-commercial clause ever matters — it permits commercial use — at the
-  cost of 40 KB per refresh, our own daily aggregation, and a second
-  provider for geocoding.
-- **Wallpapers online: the question is the key, not the licence.** All
+- **Weather: one question decides it — is a Gexis ever sold?** If no,
+  **Open-Meteo**: key-free, 748 B for exactly the fields the design draws,
+  geocoding in the same house, and its terms name personal home automation
+  as a qualifying use. If yes, or if that is to stay open, **MET Norway**:
+  an institute rather than one person, no commercial restriction, an
+  MIT-licensed icon set, at the cost of a daily aggregation loop, an
+  identifying User-Agent, honouring `Expires`, and a geocoder fetched from
+  somewhere else — Open-Meteo's own, which works standalone.
+- **Wallpapers online: decided — Pixabay** (George, 2026-09-21, on the
+  pictures). The rest of this bullet is what the alternatives were: All
   three stock services permit this use; what separates them is what a
   publicly distributed appliance has to do to hold a credential.
   **Pexels** is the cleanest of them — it names the background/screensaver
@@ -257,7 +343,8 @@ spend.
   help.pexels.com **"Can I use the API as a wallpaper app?"** — 403 to both
   machines, read in full through a reader proxy from the device, the same
   route Finding 030 used for Discogs
-- **Pixabay:** pixabay.com/api/docs (read directly)
+- **Pixabay:** pixabay.com/api/docs (read directly, twice — the second time
+  for the category list and the image URL fields)
 - **Wallhaven:** wallhaven.cc/help/api (via search result, unverified)
 - **NASA:** api.nasa.gov; live APOD call from the device
 - **Art Institute of Chicago:** api.artic.edu/docs (read from the device),
@@ -265,5 +352,11 @@ spend.
   artic.edu/open-access/public-api returned 403 to both machines
 - **The Met:** metmuseum.org open-access pages (via search result); live
   object and image calls from the device
+- **Weather re-check (2026-09-21):** api.met.no locationforecast
+  documentation, github.com/metno/weathericons (MIT),
+  operations.osmfoundation.org Nominatim usage policy, open-meteo.com/en/terms
+  re-read in full, github.com/open-meteo/open-meteo (AGPL, self-hosting),
+  openweathermap.org One Call pages (the free-tier wording could **not** be
+  confirmed), live wttr.in and met.no compact/complete calls from the device
 - **Wikimedia:** mediawiki.org/wiki/Wikimedia_APIs/Rate_limits (via search
   result); one live feed call from the device
