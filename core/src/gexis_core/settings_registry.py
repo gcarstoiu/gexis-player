@@ -25,7 +25,7 @@ SEED_PATH = Path("/etc/gexis/settings-seed.json")
 #: from the store (ADR-0044 §1). It is therefore in TYPES and not in SETTABLE
 #: - except for `kind: "server"`, which `validate` admits on its own; see
 #: there for why one shape of list stores a value and the others do not.
-SETTABLE = {"toggle", "choice", "number", "text"}
+SETTABLE = {"toggle", "choice", "number", "text", "multi"}
 TYPES = SETTABLE | {"readonly", "action", "group", "list"}
 TEXT_MAX = 500
 
@@ -135,9 +135,9 @@ def visible(row: dict, rows: dict[str, dict], values: dict[str, Any]) -> bool:
     **The test is transitive.** A row whose dependency is itself hidden is
     hidden too: a condition on something nobody can see cannot be satisfied on
     purpose, and showing the dependant would offer a setting whose reason for
-    existing is invisible. `weather_location` depends on `weather_key`, which
-    depends on `idle_weather` - turning the toggle off has to take all four
-    weather rows with it, not just the one naming it.
+    existing is invisible. Every weather row depends on `idle_weather`, which
+    depends on `idle_screen` being the built-in one - choosing an external URL
+    has to take all five weather rows with it, not just the toggle.
 
     A cycle would otherwise recurse forever; `seen` makes one resolve to
     hidden rather than crashing the daemon, and the load-time check cannot
@@ -191,6 +191,22 @@ def validate(row: dict, value: Any) -> Any:
             raise InvalidValue(
                 f"expected one of {options}" if len(options) < 12 else "not an available option"
             )
+    elif kind == "multi":
+        # ADR-0044 §7. A set, with three rules the row would otherwise have
+        # to trust the panel for: known options only, **never empty** -
+        # no category means no picture, which is a broken screen rather
+        # than a weaker selection - and stored in the registry's order so
+        # the readout is stable whatever order they were tapped in.
+        if not isinstance(value, list) or not all(isinstance(v, str) for v in value):
+            raise InvalidValue("expected a list of options")
+        options = row["options"]
+        unknown = [v for v in value if v not in options]
+        if unknown:
+            raise InvalidValue(f"not an option: {unknown[0]}")
+        chosen = [o for o in options if o in value]
+        if not chosen:
+            raise InvalidValue("at least one has to stay selected")
+        return chosen
     elif kind == "number":
         if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value):
             raise InvalidValue("expected a number")

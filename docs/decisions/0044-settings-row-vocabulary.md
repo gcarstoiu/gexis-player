@@ -1,4 +1,4 @@
-# ADR-0044 — The settings row vocabulary grows seven mechanics
+# ADR-0044 — The settings row vocabulary grows seven mechanics, then an eighth
 
 **Status:** Accepted — George, 2026-09-20, reviewing the second design drop
 against the device: *"You should consider the list coming from the updated
@@ -179,6 +179,39 @@ Rejected: **omitting them from the registry entirely.** The registry is the
 executable form of ADR-0022's inventory, and an inventory that silently drops
 what it decided not to build stops being a record of the decisions.
 
+### 7. `multi` — a choice that takes more than one
+
+**Added 2026-09-21, in 9g**, for `wallpaper_topics`: which Pixabay categories
+the idle screen draws its wallpapers from. George: *"the photos should come
+randomly from all the categories, not be stuck in only one of the many"* —
+which needs a row that holds a **set**, and nothing in this vocabulary held
+one. `choice` holds exactly one; a row per category would be twenty toggles
+in a screen that is already long.
+
+**It is `choice` with the radio replaced.** Same sheet, same option rows,
+same selection background, one behavioural difference: tapping toggles rather
+than replaces, and the sheet stays open because there is no single answer
+that ends it. The row reads out the names it holds — `Nature, Animals +2` —
+because a count alone ("4 topics") hides the thing the row exists to show.
+
+**The rules, all of which the validator enforces:**
+
+- the value is a **list of strings**, every one of them in `options`;
+- **stored in the registry's option order, not tap order**, so the readout is
+  stable and two devices with the same selection say the same thing;
+- **no duplicates**;
+- **never empty.** An empty set is not a weaker selection, it is a broken
+  screen: no category means no picture. The last selected item cannot be
+  turned off, which the sheet shows by refusing the tap rather than by
+  accepting it and failing on the write.
+
+**Rejected: a `list` row with selectable items.** A `list` is navigation with
+a per-item *action* (ADR-0044 §1) and its items come from the world — a scan,
+a discovery, a bus. A `multi`'s options are a fixed literal in the registry,
+known before anything is asked. Reusing `list` would have meant one type
+whose items sometimes mean "go here" and sometimes mean "this is the value",
+which is the confusion §1 already had to settle once for `kind: "server"`.
+
 ### And text rows take real input
 
 **There is no difference between the panel and the phone.** A text row renders
@@ -193,9 +226,10 @@ every setting and change every one that is not text.
 
 ## Consequences
 
-- **`settings_registry.py` grows a type and three row-level modifiers**, and
-  its validator has to reject a `list` given a scalar, an `onlyWhen` naming a
-  key that does not exist, and an `optionsFrom` naming an unknown source.
+- **`settings_registry.py` grows two types and three row-level modifiers**,
+  and its validator has to reject a `list` given a scalar, a `multi` given
+  anything but a non-empty list of known options, an `onlyWhen` naming a key
+  that does not exist, and an `optionsFrom` naming an unknown source.
 - **`navigation: true` disappears** along with the `NotWired` branch that
   served it. `plugins` is removed by the drop; `bt_trusted` and `wifi` become
   lists.

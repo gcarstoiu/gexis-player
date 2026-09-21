@@ -72,6 +72,11 @@ class Config:
     # and answers the API only, which is what every deployment before
     # Phase 4b did and what a core-only development install still does.
     ui_dir: str = "/opt/gexis-ui"
+    # ADR-0047 §2a: Pixabay forbids permanent hotlinking, so the wallpapers
+    # on screen are files on this device. Beside the settings database -
+    # they are what the idle screen shows when the network is not there, so
+    # /tmp would empty them at exactly the wrong moment.
+    wallpaper_dir: str = "/var/lib/gexis-core/wallpapers"
 
     # Phase 5 criterion 1: the visualisation service (ADR-0011). The two
     # peppyalsa pipes are read by that service alone - a FIFO splits its

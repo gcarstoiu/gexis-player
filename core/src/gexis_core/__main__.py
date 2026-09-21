@@ -25,6 +25,8 @@ from dataclasses import replace
 
 from gexis_core.config import Config
 from gexis_core.idle_page import probe as probe_idle_page
+from gexis_core.wallpapers import Wallpapers
+from gexis_core.weather import Weather
 from gexis_core.metadata_file import MetadataFileWriter
 from gexis_core.artistinfo import LmsArtistInfo
 from gexis_core.enrichment import PREFETCH_AFTER_S, Cache, EnrichmentService, TrackKey
@@ -391,6 +393,15 @@ async def main() -> None:
     async def idle_page() -> dict:
         return await probe_idle_page(settings.value("idle_url") or "", idle_session)
 
+    # ADR-0047 §2a. Both share the idle screen's session: one screen, three
+    # things it asks for, and a fourth connection pool would be a pool for
+    # something that runs once every fifteen minutes.
+    forecast = Weather(idle_session)
+    # Beside the settings database rather than in /tmp: the pictures are
+    # what the screen shows when the network is down, so they have to
+    # survive a reboot (ADR-0047 §2a - the device is the cache).
+    wallpapers = Wallpapers(idle_session, config.wallpaper_dir)
+
     # ADR-0035. Defaults are what is true of this deployment today. A wired
     # row is read where it is used - the idle page probe here, the rest by
     # the UI - so none needs a callback.
@@ -411,9 +422,18 @@ async def main() -> None:
         # Wired = something reads it, or something happens. `lms_server` is
         # read at the next start (see `_chosen_server`); `timezone` and
         # `reboot` act at once.
+        # ADR-0047's rows are read where they are used: the two routes above
+        # read the weather and wallpaper rows on every request, and the panel
+        # reads the rest as it draws. None of them needs a callback, and all
+        # of them are wired, because something reads every one.
         wired={"idle_url": None, "idle_timeout": None, "drawer_on_external": None,
                "drawer_autohide": None, "listenbrainz_token": None,
                "fanart_key": None, "lms_server": None,
+               "idle_screen": None, "idle_background": None,
+               "wallpaper_key": None, "wallpaper_topics": None,
+               "wallpaper_interval": None, "idle_weather": None,
+               "weather_location": None, "idle_days": None,
+               "idle_minmax": None, "idle_icons": None,
                "device_name": apply_device_name,
                "bt_discoverable": lambda mode: asyncio.ensure_future(
                    _apply_discoverable(mode)
@@ -597,6 +617,9 @@ async def main() -> None:
         # ADR-0043: the panel reports its first painted frame and the boot
         # animation ends there, not when the kiosk unit goes active.
         splash=Splash(),
+        # ADR-0047: the idle screen's two providers.
+        weather=forecast,
+        wallpapers=wallpapers,
         ui_dir=ui_dir,
     )
 

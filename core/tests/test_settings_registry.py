@@ -51,13 +51,21 @@ def test_the_shipped_registry_loads_and_every_number_is_bounded():
 #:
 #: **This list only shrinks.**
 DESIGN_KEYS_NOT_YET_IN_THE_REGISTRY = {
-    # 9g - the idle screen
-    "idle_background", "idle_days", "idle_icons", "idle_minmax",
-    "idle_screen", "idle_weather", "wallpaper_key", "weather_key",
-    "weather_location",
     # 9h - home strip, skin picker, viz_stop
     "home_strip", "home_strip_count", "skin", "viz_stop",
 }
+
+
+#: A design key the registry **deliberately** does not have, which is a
+#: different statement from "not yet" and has to be said out loud: ADR-0022's
+#: amendment makes the drop the point of truth, so a row we decline is a
+#: decision, not a gap.
+#:
+#: `weather_key` gates four rows in the drop on the assumption that a weather
+#: provider needs a key. **Open-Meteo does not** (ADR-0047 §2a, Finding 043),
+#: so the row would store nothing and gate on nothing. The four rows hang off
+#: `idle_weather` instead. **This set only grows with George's agreement.**
+DESIGN_KEYS_WE_DECLINED = {"weather_key"}
 
 
 #: Not a row. The Wi-Fi password sheet builds its key at runtime from the
@@ -73,7 +81,7 @@ def test_registry_keys_are_the_designs_keys_apart_from_recorded_deviations():
     ours = {r["key"] for r in _rows()}
     # `idle_grace` was merged into `idle_timeout` (ADR-0033) and is gone
     # from the drop, so every outstanding gap belongs to 9g or 9h.
-    assert design_keys - ours == DESIGN_KEYS_NOT_YET_IN_THE_REGISTRY
+    assert design_keys - ours == DESIGN_KEYS_NOT_YET_IN_THE_REGISTRY | DESIGN_KEYS_WE_DECLINED
     # Every row below is one the 2026-09-20 drop stopped surfacing.
     # ADR-0022's amendment keeps them inventoried - George: "decisions. They
     # should still be kept on a list, but not used at this point in the
@@ -83,12 +91,18 @@ def test_registry_keys_are_the_designs_keys_apart_from_recorded_deviations():
     # The four rows that used to be listed here as ours-only -
     # drawer_on_external, drawer_autohide, listenbrainz_token and fanart_key -
     # are in the design now; the drop adopted them.
+    #
+    # `wallpaper_topics` and `wallpaper_interval` are 9g's, appended to
+    # ADR-0022's inventory on George's confirmation (2026-09-21): Pixabay
+    # takes one category per request and the drop has no row for which ones,
+    # nor for how often the picture changes.
     assert ours - design_keys == {
         "api_loopback", "backup", "boot_default_scope", "brightness",
         "confidence", "factory_reset", "idle_close", "image_build",
         "lms_player", "log_level", "plugins", "power", "release_ladder",
         "restore_floor", "seek_reanchor", "spotify_name", "theme",
         "time_display", "updates", "volume_managed",
+        "wallpaper_interval", "wallpaper_topics",
     }
 
 
@@ -404,9 +418,63 @@ def test_the_shipped_registry_hides_twenty_rows_and_shows_the_rest():
     # Every one of them is still served by the API.
     assert all(r.get("key") for r in kept)
     # 54 at the start of 9d, plus the two rows the design has and the plan
-    # had given to nobody.
-    assert len(rows) == 56
-    assert len(rows) - len(kept) == 36
+    # had given to nobody (56), plus 9g's ten: the design's nine idle-screen
+    # keys minus `weather_key`, which a key-free provider leaves gating
+    # nothing (ADR-0047 §2a), plus `wallpaper_topics` and
+    # `wallpaper_interval`, which George confirmed on 2026-09-21.
+    assert len(rows) == 66
+    assert len(rows) - len(kept) == 46
+
+
+def test_a_multi_holds_a_set_and_never_an_empty_one():
+    """ADR-0044 §7. Three rules the panel must not be trusted with, because
+    the phone reaches the same route: known options only, no duplicates, and
+    **never empty** - no category means no picture, which is a broken screen
+    rather than a weaker selection."""
+    row = {"key": "m", "type": "multi", "options": ["Nature", "Animals", "Music"]}
+    assert validate(row, ["Nature"]) == ["Nature"]
+    # Stored in the registry's order, not the order they were tapped, so two
+    # devices holding the same set read out the same words.
+    assert validate(row, ["Music", "Nature"]) == ["Nature", "Music"]
+    assert validate(row, ["Nature", "Nature"]) == ["Nature"]
+    for bad in ([], ["Nope"], "Nature", [1], None, {}):
+        with pytest.raises(InvalidValue):
+            validate(row, bad)
+
+
+def test_the_wallpaper_topics_row_offers_pixabays_own_categories():
+    """ADR-0047 §2a: George chose categories over search terms - *"We start
+    with categories and see later if we need to add queries too"* - so the
+    options are Pixabay's twenty and nothing of ours. A word here that
+    Pixabay does not have is a request that returns nothing, and the failure
+    would look like an empty sky rather than like a typo."""
+    pixabay = {
+        "backgrounds", "fashion", "nature", "science", "education", "feelings",
+        "health", "people", "religion", "places", "animals", "industry",
+        "computer", "food", "sports", "transportation", "travel", "buildings",
+        "business", "music",
+    }
+    row = next(r for r in _rows() if r["key"] == "wallpaper_topics")
+    assert row["type"] == "multi"
+    assert {o.lower() for o in row["options"]} == pixabay
+    # A default that is empty would be a row the validator itself refuses.
+    assert row["default"] == ["Nature"]
+
+
+def test_every_weather_row_hangs_off_the_toggle_now_that_there_is_no_key():
+    """ADR-0047 §2a: Open-Meteo needs no key, so `weather_key` is not in the
+    registry and the four rows the design hung off it hang off `idle_weather`
+    - which itself hangs off the built-in screen."""
+    rows = {r["key"]: r for r in _rows()}
+    assert "weather_key" not in rows
+    for key in ("weather_location", "idle_days", "idle_minmax", "idle_icons"):
+        assert rows[key]["onlyWhen"] == ["idle_weather", True], key
+    assert rows["idle_weather"]["onlyWhen"] == ["idle_screen", "Built in"]
+    # Transitively: an external URL hides all five, not just the toggle.
+    values = {k: rows[k].get("default") for k in rows}
+    values["idle_screen"] = "External URL"
+    for key in ("idle_weather", "weather_location", "idle_days", "idle_minmax", "idle_icons"):
+        assert not visible(rows[key], rows, values), key
 
 
 def test_a_server_list_stores_an_address_and_every_other_list_does_not():

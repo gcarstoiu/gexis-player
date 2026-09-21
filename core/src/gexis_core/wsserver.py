@@ -77,6 +77,8 @@ class StateServer:
         radio=None,
         pairing_answer=None,
         splash=None,
+        weather=None,
+        wallpapers=None,
         ui_dir: Path | None = None,
     ) -> None:
         """`activate(renderer_id) -> bool` and `set_volume(percent) -> bool`
@@ -107,6 +109,8 @@ class StateServer:
         self._radio = radio
         self._pairing_answer = pairing_answer
         self._splash = splash
+        self._weather = weather
+        self._wallpapers = wallpapers
         self._ui_dir = ui_dir
         self._clients: set[web.WebSocketResponse] = set()
         store.subscribe(self._broadcast)
@@ -245,6 +249,58 @@ class StateServer:
         if self._idle_page is None:
             return web.json_response({"error": "idle page is not wired up"}, status=503)
         return web.json_response(await self._idle_page())
+
+    async def _handle_idle_weather(self, request: web.Request) -> web.Response:
+        """The forecast the idle screen draws (ADR-0047 §2).
+
+        Asked by the panel rather than pushed: the idle screen is the only
+        thing that wants it, it is up for hours, and `Weather` decides how
+        often that becomes a call (fifteen minutes) - so a redraw costs
+        nothing and a setting change is picked up on the next one.
+
+        **A refusal is a 200 with a reason.** "That place could not be
+        found" is an answer the user can act on; a 502 is a blank region and
+        a journal line nobody reads.
+        """
+        if self._settings is None or self._weather is None:
+            return web.json_response({"error": "weather is not wired up"}, status=503)
+        if not self._settings.value("idle_weather"):
+            return web.json_response({"error": None, "off": True})
+        place = str(self._settings.value("weather_location") or "").strip()
+        if not place:
+            return web.json_response({"error": "No location set yet."})
+        days = self._settings.value("idle_days") or 4
+        return web.json_response(await self._weather.forecast(place, int(days)))
+
+    async def _handle_idle_wallpaper(self, request: web.Request) -> web.Response:
+        """The next wallpaper, as a file name the panel then fetches.
+
+        One picture per request, chosen at random across the chosen topics
+        (ADR-0047 §2a), so *when* the picture changes is the panel counting
+        `wallpaper_interval` rather than anything here holding a timer.
+        """
+        if self._settings is None or self._wallpapers is None:
+            return web.json_response({"error": "wallpapers are not wired up"}, status=503)
+        key = str(self._settings.value("wallpaper_key") or "").strip()
+        topics = self._settings.value("wallpaper_topics") or []
+        answer = await self._wallpapers.next(key, list(topics))
+        if answer.get("file"):
+            answer = {**answer, "url": f"/idle/wallpaper/{answer['file']}"}
+        return web.json_response(answer)
+
+    async def _handle_wallpaper_file(self, request: web.Request) -> web.StreamResponse:
+        """One downloaded picture. **Name only, never a path**: this route
+        is reachable from the LAN (ADR-0028) and a file name that can climb
+        out of its directory would serve the disk."""
+        if self._wallpapers is None:
+            return web.json_response({"error": "wallpapers are not wired up"}, status=503)
+        name = request.match_info["name"]
+        if name != Path(name).name or not name.endswith(".jpg"):
+            return web.json_response({"error": "no such picture"}, status=404)
+        path = self._wallpapers.path_of(name)
+        if path is None:
+            return web.json_response({"error": "no such picture"}, status=404)
+        return web.FileResponse(path)
 
     async def _handle_library(self, request: web.Request) -> web.Response:
         """ADR-0038 §5: reads only, for the designed screens. The panel asks
@@ -734,6 +790,9 @@ class StateServer:
         app.router.add_post("/volume", self._handle_set_volume)
         app.router.add_post("/volume/mute", self._handle_set_mute)
         app.router.add_get("/idle", self._handle_idle)
+        app.router.add_get("/idle/weather", self._handle_idle_weather)
+        app.router.add_get("/idle/wallpaper", self._handle_idle_wallpaper)
+        app.router.add_get("/idle/wallpaper/{name}", self._handle_wallpaper_file)
         app.router.add_get("/surface", self._handle_surface)
         app.router.add_post("/touch", self._handle_touch)
         app.router.add_post("/panel/painted", self._handle_painted)

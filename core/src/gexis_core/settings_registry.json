@@ -408,12 +408,28 @@
         "accent": "#c8a2d8"
       },
       {
+        "key": "idle_screen",
+        "type": "choice",
+        "label": "Screen",
+        "marks": "R",
+        "note": "The built-in screen shows the clock and weather. An external page replaces it entirely.",
+        "options": [
+          "Built in",
+          "External URL"
+        ],
+        "default": "Built in"
+      },
+      {
         "key": "idle_url",
         "type": "text",
         "label": "URL",
         "marks": "R",
-        "note": "External and lazy loaded. Falls back to the clock when unreachable or unconfigured.",
-        "default": null
+        "note": "External and lazy loaded. Falls back to the built-in screen when unreachable, unconfigured, or refusing to be framed.",
+        "default": null,
+        "onlyWhen": [
+          "idle_screen",
+          "External URL"
+        ]
       },
       {
         "key": "idle_timeout",
@@ -425,6 +441,158 @@
         "max": 60,
         "unit": "min",
         "default": 5
+      },
+      {
+        "key": "idle_background",
+        "type": "choice",
+        "label": "Background",
+        "marks": "N",
+        "note": "Artist pictures come from the library. Online wallpapers come from Pixabay and need a key; on-device wallpapers are read from local storage.",
+        "options": [
+          "Artist pictures",
+          "Wallpapers online",
+          "Wallpapers on device",
+          "Black"
+        ],
+        "default": "Artist pictures",
+        "onlyWhen": [
+          "idle_screen",
+          "Built in"
+        ]
+      },
+      {
+        "key": "wallpaper_key",
+        "type": "text",
+        "label": "Wallpaper API key",
+        "marks": "N",
+        "note": "A free Pixabay key, one per device. Pixabay allows a background feature inside a product like this one, but not a key shipped with it.",
+        "secret": true,
+        "placeholder": "Pixabay API key",
+        "default": null,
+        "onlyWhen": [
+          "idle_background",
+          "Wallpapers online"
+        ]
+      },
+      {
+        "key": "wallpaper_topics",
+        "type": "multi",
+        "label": "Wallpaper topics",
+        "marks": "N",
+        "note": "Pixabay's own categories. Each new picture is drawn from one of the chosen ones at random, so several stay mixed rather than taking turns.",
+        "options": [
+          "Backgrounds",
+          "Fashion",
+          "Nature",
+          "Science",
+          "Education",
+          "Feelings",
+          "Health",
+          "People",
+          "Religion",
+          "Places",
+          "Animals",
+          "Industry",
+          "Computer",
+          "Food",
+          "Sports",
+          "Transportation",
+          "Travel",
+          "Buildings",
+          "Business",
+          "Music"
+        ],
+        "default": [
+          "Nature"
+        ],
+        "onlyWhen": [
+          "idle_background",
+          "Wallpapers online"
+        ]
+      },
+      {
+        "key": "wallpaper_interval",
+        "type": "number",
+        "label": "Change the picture every",
+        "marks": "N",
+        "note": null,
+        "min": 1,
+        "max": 60,
+        "unit": "min",
+        "default": 15,
+        "onlyWhen": [
+          "idle_background",
+          "Wallpapers online"
+        ]
+      },
+      {
+        "key": "idle_weather",
+        "type": "toggle",
+        "label": "Weather",
+        "marks": "N",
+        "note": "Forecasts come from Open-Meteo, which needs no key and no account.",
+        "default": true,
+        "onlyWhen": [
+          "idle_screen",
+          "Built in"
+        ]
+      },
+      {
+        "key": "weather_location",
+        "type": "text",
+        "label": "Location",
+        "marks": "N",
+        "note": "A place name, looked up once. The device stores where it is, not what was typed.",
+        "placeholder": "City, country",
+        "default": null,
+        "onlyWhen": [
+          "idle_weather",
+          true
+        ]
+      },
+      {
+        "key": "idle_days",
+        "type": "number",
+        "label": "Forecast days",
+        "marks": "N",
+        "note": null,
+        "min": 3,
+        "max": 5,
+        "unit": "",
+        "default": 4,
+        "onlyWhen": [
+          "idle_weather",
+          true
+        ]
+      },
+      {
+        "key": "idle_minmax",
+        "type": "toggle",
+        "label": "Show min and max",
+        "marks": "N",
+        "note": null,
+        "default": true,
+        "onlyWhen": [
+          "idle_weather",
+          true
+        ]
+      },
+      {
+        "key": "idle_icons",
+        "type": "choice",
+        "label": "Weather icons",
+        "marks": "N",
+        "note": null,
+        "options": [
+          "Solid",
+          "Duotone",
+          "Neon"
+        ],
+        "default": "Solid",
+        "onlyWhen": [
+          "idle_weather",
+          true
+        ]
       },
       {
         "type": "group",

@@ -201,6 +201,15 @@
     // can never be pre-filled into the field and saved as the real thing. A
     // secret that is set reports only that, never the value (ADR-0044).
     if (row.type === 'text') return !v ? 'Not set' : row.secret ? BULLETS : String(v);
+    // ADR-0044 §7: a `multi` reads out what it holds, not how much. "4
+    // topics" hides the thing the row exists to show; two names and a count
+    // fits the row and still says which kind of pictures to expect.
+    if (row.type === 'multi') {
+      const held = Array.isArray(v) ? v : [];
+      if (!held.length) return 'None';
+      const shownNames = held.slice(0, 2).join(', ');
+      return held.length > 2 ? `${shownNames} +${held.length - 2}` : shownNames;
+    }
     if (row.type === 'list') {
       // A server list reads out which one is in use; a device list counts
       // what it holds. The design takes the count in both cases, which loses
@@ -268,6 +277,26 @@
     }
     sheetKey = null;
     if (await write(row, option)) flash(`${row.label}: ${option}`);
+  }
+
+  //: ADR-0044 §7. Each tap is a write, because nothing on this screen has
+  //: an unsaved state and a sheet that collected changes would be the first.
+  //: **The last one cannot be turned off**: the daemon refuses an empty set
+  //: and the sheet says so rather than sending a write it knows will fail.
+  async function toggleOne(option) {
+    const row = sheet;
+    const held = Array.isArray(row.value) ? row.value : [];
+    const on = held.includes(option);
+    if (on && held.length === 1) {
+      flash('At least one has to stay selected');
+      return;
+    }
+    // Sent in the registry's order so the readout is stable; the daemon
+    // sorts it the same way and the two agreeing is worth the sort here.
+    const wanted = (row.options ?? []).filter((o) =>
+      o === option ? !on : held.includes(o)
+    );
+    await write(row, wanted);
   }
 
   let draft = $state(null);
@@ -668,6 +697,25 @@
             </button>
           {/each}
         </div>
+      {:else if sheet.type === 'multi'}
+        <!-- The choice sheet with the radio replaced: tapping toggles, and
+             nothing closes the sheet because there is no single answer that
+             ends it (ADR-0044 §7). -->
+        <div class="options" data-noscrollbar>
+          {#each sheet.options ?? [] as option (option)}
+            {@const selected = (sheet.value ?? []).includes(option)}
+            <button
+              class="option"
+              class:is-selected={selected}
+              type="button"
+              disabled={saving}
+              onclick={() => toggleOne(option)}
+            >
+              <span class="radio radio--box"><span></span></span>
+              <span class="option__label">{option}</span>
+            </button>
+          {/each}
+        </div>
       {:else if sheet.type === 'choice'}
         <div class="options" data-noscrollbar>
           {#each sheet.options ?? [] as option (option)}
@@ -836,7 +884,7 @@
             Give up
           {:else if joinItem || (sheet.grouped && region !== null)}
             Back
-          {:else if choicePending === null && (sheet.type === 'choice' || sheet.grouped || (sheet.wired && sheet.type === 'number'))}
+          {:else if choicePending === null && (sheet.type === 'choice' || sheet.type === 'multi' || sheet.grouped || (sheet.wired && sheet.type === 'number'))}
             Close
           {:else}
             Cancel
@@ -1350,6 +1398,17 @@
   }
   .option.is-selected .radio span {
     display: block;
+  }
+  /* A checkbox is the radio with corners: same size, same border, same
+     accent, so a sheet that takes several answers is recognisably the one
+     that takes one. */
+  .radio--box {
+    border-radius: 7px;
+  }
+  .radio--box span {
+    border-radius: 2px;
+    width: 12px;
+    height: 12px;
   }
   .option__label {
     flex: 1;
