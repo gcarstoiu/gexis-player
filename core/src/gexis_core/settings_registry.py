@@ -35,6 +35,18 @@ TEXT_MAX = 500
 #: symbol and a bare `true` would be indistinguishable from a toggle's value.
 ONLY_WHEN_ANY = "*any*"
 
+#: `onlyWhen: [key, {"not": value}]` - shown unless the key holds *that*
+#: value (ADR-0044 §3, amended 2026-09-21 for `idle_brightness`, which
+#: George asked to apply to *"all background types except black"*).
+#:
+#: **A negation rather than a list of the three that do apply.** The list
+#: would be right today and wrong the day a fifth background is added, and
+#: wrong silently - the new background would simply have no brightness
+#: control and nothing would say why. An object rather than another string
+#: sentinel because a setting's value is always a scalar, so this cannot be
+#: mistaken for one.
+ONLY_WHEN_NOT = "not"
+
 #: Sources a `choice` may draw its options from instead of a literal list
 #: (ADR-0044 §4). Adding one is a code change, not a registry edit, which is
 #: the point: an unknown name is a typo and must fail the load.
@@ -112,6 +124,11 @@ def load_registry(path: Path = REGISTRY_PATH) -> list[dict]:
             only = row.get("onlyWhen")
             if only is not None and (not isinstance(only, list) or len(only) != 2):
                 raise ValueError(f"{key}: onlyWhen is [key, value]")
+            if only is not None and isinstance(only[1], dict) and set(only[1]) != {ONLY_WHEN_NOT}:
+                # A typo in the one key this form has would otherwise read as
+                # "not equal to nothing", which is every value, which is a row
+                # that never hides and never says why.
+                raise ValueError(f"{key}: onlyWhen's object form is {{\"not\": value}}")
 
     # Deferred to a second pass: a row may depend on one declared after it.
     keys = {r["key"] for g in groups for r in g["rows"] if r["type"] != "group"}
@@ -162,6 +179,8 @@ def _visible(row: dict, rows: dict[str, dict], values: dict[str, Any], seen: set
     held = values.get(key)
     if wanted == ONLY_WHEN_ANY:
         return held not in (None, "", False)
+    if isinstance(wanted, dict):
+        return held != wanted[ONLY_WHEN_NOT]
     return held == wanted
 
 

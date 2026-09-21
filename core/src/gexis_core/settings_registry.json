@@ -461,6 +461,24 @@
         ]
       },
       {
+        "key": "idle_brightness",
+        "type": "number",
+        "label": "Background brightness",
+        "marks": "N",
+        "note": "How bright the picture behind the clock is. The design's own value is 62%, which is what keeps white type readable over a photograph.",
+        "min": 20,
+        "max": 100,
+        "step": 5,
+        "unit": "%",
+        "default": 62,
+        "onlyWhen": [
+          "idle_background",
+          {
+            "not": "Black"
+          }
+        ]
+      },
+      {
         "key": "wallpaper_key",
         "type": "text",
         "label": "Wallpaper API key",

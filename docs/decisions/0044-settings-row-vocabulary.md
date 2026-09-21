@@ -107,6 +107,22 @@ list, not disabled** — a disabled row invites a tap that cannot work.
 The test is transitive: a row whose dependency is itself hidden is hidden too.
 At the drop's defaults, 7 of the 21 Display rows are hidden.
 
+**Amended 2026-09-21, in 9g: `onlyWhen: [key, {"not": value}]`.** George,
+asking for background brightness: *"a setting for background brightness that
+can apply to all background types except black"*. Three of the four
+backgrounds is not a value a row can be equal to.
+
+**A negation rather than a list of the three that do apply.** The list is
+right today and silently wrong the day a fifth background is added - the new
+background would have no brightness control and nothing would say why. The
+negation says the thing that is actually true: everything except black,
+because black is not a picture.
+
+An object rather than another string sentinel, because a setting's value is
+always a scalar and so cannot be mistaken for one. The load rejects an
+object with any other key: a typo in `not` would read as "not equal to
+nothing", which is every value, which is a row that never hides.
+
 ### 4. `optionsFrom` — options derived from real data
 
 A choice whose options come from a named source rather than a literal list.

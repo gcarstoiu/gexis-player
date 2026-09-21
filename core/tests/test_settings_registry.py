@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import json
 import re
+import tempfile
 from pathlib import Path
 
 import pytest
@@ -101,7 +102,7 @@ def test_registry_keys_are_the_designs_keys_apart_from_recorded_deviations():
         "confidence", "factory_reset", "idle_close", "image_build",
         "lms_player", "log_level", "plugins", "power", "release_ladder",
         "restore_floor", "seek_reanchor", "spotify_name", "theme",
-        "time_display", "updates", "volume_managed",
+        "idle_brightness", "time_display", "updates", "volume_managed",
         "wallpaper_interval", "wallpaper_topics",
     }
 
@@ -418,12 +419,67 @@ def test_the_shipped_registry_hides_twenty_rows_and_shows_the_rest():
     # Every one of them is still served by the API.
     assert all(r.get("key") for r in kept)
     # 54 at the start of 9d, plus the two rows the design has and the plan
-    # had given to nobody (56), plus 9g's ten: the design's nine idle-screen
-    # keys minus `weather_key`, which a key-free provider leaves gating
-    # nothing (ADR-0047 §2a), plus `wallpaper_topics` and
-    # `wallpaper_interval`, which George confirmed on 2026-09-21.
-    assert len(rows) == 66
-    assert len(rows) - len(kept) == 46
+    # had given to nobody (56), plus 9g's eleven: the design's nine
+    # idle-screen keys minus `weather_key`, which a key-free provider leaves
+    # gating nothing (ADR-0047 §2a), plus `wallpaper_topics`,
+    # `wallpaper_interval` and `idle_brightness`, all three asked for by
+    # George on 2026-09-21.
+    assert len(rows) == 67
+    assert len(rows) - len(kept) == 47
+
+
+def test_a_row_can_be_shown_for_everything_but_one_value():
+    """ADR-0044 §3, amended: `onlyWhen: [key, {"not": value}]`.
+
+    George asked for background brightness *"that can apply to all background
+    types except black"*. A list of the three that do apply would be right
+    today and silently wrong the day a fifth background is added - the new
+    one would have no brightness control and nothing would say why.
+    """
+    rows = {r["key"]: r for r in _rows()}
+    brightness = rows["idle_brightness"]
+    assert brightness["onlyWhen"] == ["idle_background", {"not": "Black"}]
+    values = {k: rows[k].get("default") for k in rows}
+    for background in ("Artist pictures", "Wallpapers online", "Wallpapers on device"):
+        values["idle_background"] = background
+        assert visible(brightness, rows, values), background
+    values["idle_background"] = "Black"
+    assert not visible(brightness, rows, values)
+    # And it is still transitive: an external screen hides the background
+    # row, which hides this one whatever the background happens to hold.
+    values["idle_background"] = "Wallpapers online"
+    values["idle_screen"] = "External URL"
+    assert not visible(brightness, rows, values)
+
+
+def test_a_malformed_negation_fails_the_load():
+    """A typo in the one key this form has would read as "not equal to
+    nothing", which is every value - a row that never hides and never says
+    why."""
+    good = [{"id": "g", "label": "G", "rows": [
+        {"key": "a", "type": "toggle", "default": True},
+        {"key": "b", "type": "toggle", "default": True, "onlyWhen": ["a", {"not": False}]},
+    ]}]
+    bad = json.loads(json.dumps(good))
+    bad[0]["rows"][1]["onlyWhen"] = ["a", {"nto": False}]
+    with tempfile.TemporaryDirectory() as tmp:
+        for registry, ok in ((good, True), (bad, False)):
+            path = Path(tmp) / "r.json"
+            path.write_text(json.dumps(registry))
+            if ok:
+                load_registry(path)
+            else:
+                with pytest.raises(ValueError):
+                    load_registry(path)
+
+
+def test_the_brightness_row_carries_the_designs_own_value():
+    """0.62 is what the design dims a background to, and what its own
+    comment does the contrast arithmetic for. The row starts there rather
+    than at something rounder."""
+    row = next(r for r in _rows() if r["key"] == "idle_brightness")
+    assert (row["type"], row["unit"], row["default"]) == ("number", "%", 62)
+    assert (row["min"], row["max"]) == (20, 100)
 
 
 def test_a_multi_holds_a_set_and_never_an_empty_one():

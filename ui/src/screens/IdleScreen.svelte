@@ -55,6 +55,11 @@
   // no photograph does not want it.
   const stroke = $derived(black ? '0' : '4px rgba(46, 57, 66, 0.92)');
   const scrim = $derived(black ? 'rgba(11, 18, 24, 0.93)' : 'rgba(7, 11, 15, 0.06)');
+  // `idle_brightness`, George's row: the design's 0.62 is the default and
+  // the number is his to move. **The contour does not move with it** - it
+  // is what carries the type at *any* brightness, and it matters most at
+  // the top of this range where the picture is brightest.
+  const brightness = $derived(Math.max(20, Math.min(100, Number(settings.idle_brightness ?? 62))) / 100);
 
   // Kept clear of the forecast bar below and the credits above.
   function randomSpot() {
@@ -176,7 +181,13 @@
 <div class="idle" transition:fade={{ duration: 520 }} style:--stroke={stroke}>
   {#if shown && !external}
     {#key shown}
-      <img class="bg" src={shown} alt="" in:fade={{ duration: 900 }} />
+      <img
+        class="bg"
+        src={shown}
+        alt=""
+        style:filter={`brightness(${brightness}) saturate(0.9)`}
+        in:fade={{ duration: 900 }}
+      />
     {/key}
   {/if}
   {#if !external}
@@ -261,14 +272,15 @@
   }
 
   /* The design's own treatment: the picture is dimmed and slightly
-     desaturated in the image itself, not under a dark sheet. */
+     desaturated in the image itself, not under a dark sheet. The amount is
+     `idle_brightness` and arrives as an inline style; 0.62 is the design's
+     value and the row's default. */
   .bg {
     position: absolute;
     inset: 0;
     width: 100%;
     height: 100%;
     object-fit: cover;
-    filter: brightness(0.62) saturate(0.9);
   }
   .scrim {
     position: absolute;

@@ -166,6 +166,16 @@ Both confirmed by George, 2026-09-21, and appended to ADR-0022's inventory.
   the mechanic [ADR-0044](0044-settings-row-vocabulary.md) §7 adds for it.
 - **`wallpaper_interval`** — how often the picture changes. Nothing in the
   drop says, and a wallpaper that never changes is a wallpaper nobody chose.
+- **`idle_brightness`** — how bright the picture behind the clock is, asked
+  for by George on 2026-09-21 and **defaulting to the design's own 62%**,
+  which is the number its contrast reasoning is built on (§1a). 20% to 100%
+  in steps of 5. It applies to every background that *is* a picture and is
+  hidden for Black, through the negated `onlyWhen`
+  [ADR-0044](0044-settings-row-vocabulary.md) §3 gained for it.
+
+  **The contour does not move with it.** The stroke is what carries the type
+  at any brightness and it matters most at the top of the range, so the
+  brightness row changes the picture and nothing else.
 
 ### 2c. Attribution is a requirement, not a courtesy
 

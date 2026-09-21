@@ -432,6 +432,7 @@ async def main() -> None:
                "drawer_autohide": None, "listenbrainz_token": None,
                "fanart_key": None, "lms_server": None,
                "idle_screen": None, "idle_background": None,
+               "idle_brightness": None,
                "wallpaper_key": None, "wallpaper_topics": None,
                "wallpaper_interval": None, "idle_weather": None,
                "weather_location": None, "idle_days": None,
