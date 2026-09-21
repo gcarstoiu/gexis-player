@@ -7,7 +7,7 @@ recognised faster next time, rather than rediscovered as a surprise.
 
 ## The check ran against the wrong reality
 
-Eight instances so far, same shape each time: the check ran against
+Nine instances so far, same shape each time: the check ran against
 something that *resembled* the thing being tested, closely enough that
 the difference was invisible in the result. Not a broken check — a check
 answering a different question than the one asked, confidently.
@@ -124,6 +124,35 @@ about the device**, however confidently it is written and however recently.
 And **asking George to approve an action on a premise he cannot check makes
 him a rubber stamp**: the premise has to be verified before the question is
 put, not after he says yes.
+
+**9. A build check that the substitution happened, not that it did
+anything** (2026-09-21, Phase 9 subphase 9e's gate). `02-renderers/01-run.sh`
+set BlueZ's adapter name with `sed -i 's/^#Name = BlueZ$/Name = gexis/'` on
+`/etc/bluetooth/main.conf`, then asserted `grep -q "^Name = gexis$"` on the
+result. The assertion passed on every build for months. **The setting does
+nothing.** BlueZ's `hostname` plugin overrides it, and the vendor file says
+so *two lines above the line being edited*: "The plugin 'hostname' is loaded
+by default and overides the Name set here so consider modifying
+/etc/machine-info with variable PRETTY_HOSTNAME=<NewName> instead."
+
+It went unnoticed because **the hostname was `gexis` too**, so the adapter
+reported the right string for the wrong reason. It surfaced the first time
+the two could differ: renaming the device to `SofaPi` wrote `Name = SofaPi`
+into main.conf, and the adapter still reported `sofapi` — the sanitised
+hostname. Setting `PRETTY_HOSTNAME=SofaPi` and restarting bluetoothd gave
+`Name: SofaPi`.
+
+**A check on the file you wrote is a check on your own sed.** It confirms
+the edit landed and says nothing about whether the program reads that
+setting, and there is no amount of care in writing the assertion that
+changes this — only checking the *effect* does. The replacement asserts a
+value in the file the software actually reads, which is weaker than
+observing the adapter but is what a build can see.
+
+**Two identical names hid it.** Where a mechanism and its fallback produce
+the same string, the check cannot tell which one answered. Worth making them
+differ deliberately when the fallback is plausible — which is what the gate
+"rename, restart, confirm all four" did, by accident of being a rename.
 
 ## Common shape
 

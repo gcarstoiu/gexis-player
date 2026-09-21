@@ -64,16 +64,20 @@ install -D -m 644 files/bluealsa-aplay-override.conf \
 install -D -m 644 files/bluealsa-override.conf \
 	"${ROOTFS_DIR}/etc/systemd/system/bluealsa.service.d/override.conf"
 
-# BlueZ's adapter name defaults to the system hostname (already "gexis"
-# via firstrun.sh) unless main.conf's Name= is set - but relying on that
-# implicitly is exactly the kind of thing ADR-0022 wants made explicit
-# everywhere a device name shows up (mDNS, Spotify, Bluetooth). Set
-# explicitly here rather than trusted as an implicit side effect.
-# Targeted sed on the vendor-shipped file, not a full replacement - it's
-# ~250 lines of reference documentation for settings this project
-# doesn't otherwise touch, and replacing it wholesale would bury that
-# for no gain here.
-sed -i 's/^#Name = BlueZ$/Name = gexis/' "${ROOTFS_DIR}/etc/bluetooth/main.conf"
+# BlueZ's adapter name comes from /etc/machine-info's PRETTY_HOSTNAME,
+# which is where the settings screen writes it (ADR-0048 §4a).
+#
+# **main.conf's `Name =` does nothing**, and this stage set it for months.
+# The shipped file says so two lines above the setting itself - "The plugin
+# 'hostname' is loaded by default and overides the Name set here so consider
+# modifying /etc/machine-info with variable PRETTY_HOSTNAME=<NewName>
+# instead" - and the check below asserted only that the sed had matched,
+# which it always had. It looked right because the hostname was the same
+# string. Verified on the device 2026-09-21: with `Name = SofaPi` in
+# main.conf and no PRETTY_HOSTNAME, the adapter reported `sofapi`; with
+# PRETTY_HOSTNAME it reported `SofaPi`. See docs/LESSONS.md.
+install -d -m 755 "${ROOTFS_DIR}/etc"
+printf 'PRETTY_HOSTNAME=gexis\n' > "${ROOTFS_DIR}/etc/machine-info"
 
 # Bluetooth pairing setup (ADR-0024): unblock the rfkill soft-block
 # main.conf can't override on its own, power on, and register a
@@ -117,10 +121,6 @@ do
 		exit 1
 	fi
 done
-# The sed above must have actually matched - a missed pattern (e.g. if
-# the vendor file's default comment text ever changes upstream) fails
-# silently otherwise, leaving the adapter name on whatever bluetoothd's
-# hostname-derived fallback happens to be.
 # ADR-0048 §1: the name lives in the env file, and a unit that stopped
 # reading it would silently pin every device to one name again - visible
 # only as "the rename did nothing", which is the hardest kind to trace.
@@ -135,8 +135,11 @@ if ! grep -q -- '-n \${GEXIS_DEVICE_NAME}' \
 	exit 1
 fi
 
-if ! grep -q "^Name = gexis$" "${ROOTFS_DIR}/etc/bluetooth/main.conf"; then
-	echo "ERROR: main.conf's Name= substitution did not take - pattern may have changed upstream" >&2
+# The name BlueZ will actually use. Checked as a value, not as a
+# substitution: the line this replaced asserted that main.conf said
+# `Name = gexis`, which was true and meant nothing (docs/LESSONS.md).
+if ! grep -q "^PRETTY_HOSTNAME=gexis$" "${ROOTFS_DIR}/etc/machine-info"; then
+	echo "ERROR: /etc/machine-info does not carry the device name" >&2
 	exit 1
 fi
 # These two are symlinks to an absolute path (/etc/systemd/system/...)

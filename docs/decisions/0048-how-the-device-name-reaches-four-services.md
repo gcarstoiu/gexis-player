@@ -22,7 +22,7 @@ at build time.
 |---|---|
 | LMS player | `squeezelite.service` — `-n gexis` **inside `ExecStart`** |
 | Spotify | `/var/lib/go-librespot/config.yml` — `device_name: gexis` |
-| Bluetooth | `/etc/bluetooth/main.conf` — `Name = gexis`, and the adapter alias |
+| Bluetooth | **`/etc/machine-info` — `PRETTY_HOSTNAME`**, not `main.conf` (§4a) |
 | mDNS | the system hostname |
 
 Three of the four are files this image already owns. The fourth is an
@@ -86,6 +86,33 @@ a partial result names the ones that did not. The alternative — a single
 boolean — leaves a device half-renamed with nothing on screen to say so, and
 the failure only surfaces at the restart, when the cause is hours behind.
 
+### 4a. Bluetooth's name is `PRETTY_HOSTNAME`, and `main.conf`'s `Name` does nothing
+
+**Added 2026-09-21, by the gate.** Renaming the device to `SofaPi` moved
+three of four; Bluetooth reported `sofapi` — the sanitised hostname.
+
+`main.conf`'s `Name =` is overridden by BlueZ's `hostname` plugin. The
+vendor file says so two lines above the setting: *"The plugin 'hostname' is
+loaded by default and overides the Name set here so consider modifying
+/etc/machine-info with variable PRETTY_HOSTNAME=<NewName> instead."* This
+image had been setting `Name` since Phase 2 and it had never had an effect;
+it looked correct because the hostname was the same string. Recorded as
+[LESSONS](../LESSONS.md) case 9 — the build asserted that the substitution
+happened, which is a check on our own `sed`.
+
+Measured on the device: `Name = SofaPi` with no `PRETTY_HOSTNAME` gave
+`sofapi`; adding `PRETTY_HOSTNAME=SofaPi` and restarting bluetoothd gave
+`Name: SofaPi` and `Alias: SofaPi`.
+
+`PRETTY_HOSTNAME` exists for a human-readable name, which is what the three
+display names are, and bluetoothd reads it at start — so it lands at the
+restart like the rest rather than half-renaming a running device.
+
+Rejected: **`bluetoothctl system-alias`.** It works and it is BlueZ's own
+interface, but it applies immediately, which is the one thing §2 rules out.
+Rejected: **writing BlueZ's own `/var/lib/bluetooth/<adapter>/settings`.**
+bluetoothd owns that file and rewrites it.
+
 ### 4. The hostname is sanitised; the three display names are verbatim
 
 The sanitiser is the one the design specifies and the panel already carries:
@@ -115,7 +142,9 @@ answers `127.0.1.1` on a Debian-derived image, which is true and useless.
 
 - **The gate needs a restart to pass**, by construction: rename, restart,
   then confirm all four advertise it. Nothing can be checked before the
-  restart except that the four files changed.
+  restart except that the four files changed. **It earned its keep on the
+  first run**: three of four moved and Bluetooth did not, which no amount
+  of reading the code would have shown (§4a).
 - **Renaming to something that sanitises to nothing** (`"***"`) gives the
   hostname `gexis` while the display names keep the string. That is the
   design's fallback, and the header shows both, so it is visible rather than

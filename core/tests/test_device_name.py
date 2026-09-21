@@ -54,7 +54,7 @@ def paths(tmp_path, monkeypatch):
         "HOSTS_PATH": tmp_path / "hosts",
         "ENV_PATH": tmp_path / "gexis" / "device-name.env",
         "LIBRESPOT_PATH": tmp_path / "config.yml",
-        "BLUETOOTH_PATH": tmp_path / "main.conf",
+        "MACHINE_INFO_PATH": tmp_path / "machine-info",
     }
     for attr, path in files.items():
         monkeypatch.setattr(device_name, attr, path)
@@ -63,7 +63,7 @@ def paths(tmp_path, monkeypatch):
     files["LIBRESPOT_PATH"].write_text(
         "# a comment\ndevice_name: gexis\naudio_backend: alsa\n"
     )
-    files["BLUETOOTH_PATH"].write_text("[General]\nName = gexis\nClass = 0x20041C\n")
+    files["MACHINE_INFO_PATH"].write_text("PRETTY_HOSTNAME=gexis\nICON_NAME=audio-card\n")
     return files
 
 
@@ -74,7 +74,7 @@ def test_a_rename_writes_all_four(paths):
     assert "GEXIS_DEVICE_NAME=Gexis Living Room\n" == paths["ENV_PATH"].read_text()
     # The three display names are verbatim; only the hostname is sanitised.
     assert "device_name: Gexis Living Room\n" in paths["LIBRESPOT_PATH"].read_text()
-    assert "Name = Gexis Living Room\n" in paths["BLUETOOTH_PATH"].read_text()
+    assert "PRETTY_HOSTNAME=Gexis Living Room\n" in paths["MACHINE_INFO_PATH"].read_text()
 
 
 def test_the_hosts_entry_carries_the_new_name_and_the_running_one(paths, monkeypatch):
@@ -105,15 +105,20 @@ def test_the_surrounding_config_is_left_alone(paths):
     device_name.apply("Studio")
     yaml = paths["LIBRESPOT_PATH"].read_text()
     assert yaml.startswith("# a comment\n") and "audio_backend: alsa\n" in yaml
-    assert "Class = 0x20041C\n" in paths["BLUETOOTH_PATH"].read_text()
+    assert "ICON_NAME=audio-card\n" in paths["MACHINE_INFO_PATH"].read_text()
 
 
-def test_a_bluetooth_config_that_still_has_the_shipped_comment_takes_the_name(paths):
-    """The package ships `#Name = BlueZ`. A config nobody has touched has to
-    take the name too, or a fresh install renames three of four."""
-    paths["BLUETOOTH_PATH"].write_text("[General]\n#Name = BlueZ\n")
+def test_bluetooth_takes_the_name_from_machine_info_not_main_conf(paths):
+    """**main.conf's `Name =` does nothing.** BlueZ's hostname plugin
+    overrides it - the shipped file says so two lines above the setting -
+    and both this module and the image wrote it for months. It looked right
+    only because the hostname was the same string. Measured on the device
+    2026-09-21: `Name = SofaPi` with no PRETTY_HOSTNAME reported `sofapi`.
+    """
+    paths["MACHINE_INFO_PATH"].unlink()
     device_name.apply("Studio")
-    assert "Name = Studio\n" in paths["BLUETOOTH_PATH"].read_text()
+    assert paths["MACHINE_INFO_PATH"].read_text() == "PRETTY_HOSTNAME=Studio\n"
+    assert not hasattr(device_name, "BLUETOOTH_PATH"), "main.conf is not a target"
 
 
 def test_a_missing_key_is_appended_rather_than_dropped(paths):
@@ -136,7 +141,7 @@ def test_a_target_that_refuses_is_named_and_the_others_still_land(paths, monkeyp
     # Everything else still happened - one refusal is not a reason to leave
     # the rest on the old name.
     assert paths["HOSTNAME_PATH"].read_text() == "studio\n"
-    assert "Name = Studio\n" in paths["BLUETOOTH_PATH"].read_text()
+    assert "PRETTY_HOSTNAME=Studio\n" in paths["MACHINE_INFO_PATH"].read_text()
 
 
 def test_the_env_directory_is_created_if_it_is_not_there(paths):
@@ -151,7 +156,7 @@ def test_renaming_twice_replaces_rather_than_accumulates(paths, monkeypatch):
     device_name.apply("Second")
     yaml = paths["LIBRESPOT_PATH"].read_text()
     assert yaml.count("device_name:") == 1 and "device_name: Second" in yaml
-    assert paths["BLUETOOTH_PATH"].read_text().count("Name =") == 1
+    assert paths["MACHINE_INFO_PATH"].read_text().count("PRETTY_HOSTNAME=") == 1
     assert paths["HOSTS_PATH"].read_text().count("127.0.1.1") == 1
 
 

@@ -40,7 +40,16 @@ HOSTS_PATH = Path("/etc/hosts")
 ENV_PATH = Path("/etc/gexis/device-name.env")
 ENV_KEY = "GEXIS_DEVICE_NAME"
 LIBRESPOT_PATH = Path("/var/lib/go-librespot/config.yml")
-BLUETOOTH_PATH = Path("/etc/bluetooth/main.conf")
+#: BlueZ's adapter name. **Not `/etc/bluetooth/main.conf`'s `Name =`**,
+#: which this wrote first and which does nothing: the shipped file says so
+#: two lines above the setting - *"The plugin 'hostname' is loaded by
+#: default and overides the Name set here so consider modifying
+#: /etc/machine-info with variable PRETTY_HOSTNAME=<NewName> instead"* -
+#: and the image had been setting it for months. It looked right only
+#: because the hostname was the same string. Verified on the device
+#: 2026-09-21: `Name = SofaPi` with no PRETTY_HOSTNAME gave `sofapi`;
+#: PRETTY_HOSTNAME gave `SofaPi`.
+MACHINE_INFO_PATH = Path("/etc/machine-info")
 
 
 def sanitise(name: str) -> str:
@@ -111,9 +120,15 @@ def _write_librespot(name: str) -> None:
 
 
 def _write_bluetooth(name: str) -> None:
-    # The commented-out `#Name = BlueZ` the package ships is matched too, so
-    # a config that has never been touched still takes the name.
-    _replace_line(BLUETOOTH_PATH, r"^#?\s*Name\s*=.*$", f"Name = {name}")
+    # Verbatim, spaces and capitals and all: PRETTY_HOSTNAME exists for a
+    # human-readable name, which is exactly what the three display names
+    # are. Read by bluetoothd at start, so it lands at the restart like the
+    # other three rather than half-renaming a running device.
+    MACHINE_INFO_PATH.parent.mkdir(parents=True, exist_ok=True)
+    if not MACHINE_INFO_PATH.exists():
+        MACHINE_INFO_PATH.write_text(f"PRETTY_HOSTNAME={name}\n")
+        return
+    _replace_line(MACHINE_INFO_PATH, r"^PRETTY_HOSTNAME=.*$", f"PRETTY_HOSTNAME={name}")
 
 
 #: The four, by the name the user would recognise.

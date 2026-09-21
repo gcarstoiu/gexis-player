@@ -61,6 +61,21 @@ else
 	echo "gexis-kiosk: no wallpaper (${BACKGROUND}); the handover will be black" >&2
 fi
 
+# Chromium's profile lock is a symlink named `<hostname>-<pid>`, and on
+# start it compares that hostname with this machine's. After a rename they
+# differ, so it decides the profile is "in use by another Chromium process
+# on another computer" and puts a dialog on the panel instead of the UI -
+# on an appliance with no keyboard, with two buttons nobody can reach.
+# George hit exactly this renaming the device to SofaPi (2026-09-21).
+#
+# Removing the three is safe here because **this unit is the only thing on
+# the device that runs Chromium**, it is `Restart=no`, and systemd has
+# already stopped the previous instance before this runs. There is no
+# second browser whose lock this could be stealing.
+rm -f "${GEXIS_KIOSK_PROFILE}/SingletonLock" \
+	"${GEXIS_KIOSK_PROFILE}/SingletonCookie" \
+	"${GEXIS_KIOSK_PROFILE}/SingletonSocket"
+
 echo "gexis-kiosk: exec chromium" >&2
 
 exec chromium \
