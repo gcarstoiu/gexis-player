@@ -166,6 +166,9 @@
   };
 
   const forecastDays = $derived((weather?.days ?? []).slice(0, Math.max(3, Math.min(5, days))));
+  // **One line, along the bottom** (George, 2026-09-21). Two stacked lines
+  // in a corner read as a block of small print; joined with the separator
+  // this panel already uses between facts, they read as a footer.
   const credits = $derived(
     [
       shown && picture?.credit
@@ -174,7 +177,9 @@
           ? picture.by
           : null,
       wantsWeather && weather?.credit && !weather.off ? weather.credit.text : null,
-    ].filter(Boolean)
+    ]
+      .filter(Boolean)
+      .join(' · ')
   );
 </script>
 
@@ -236,10 +241,8 @@
       <div class="wx wx--said"><span class="ink">{weather.error}</span></div>
     {/if}
 
-    {#if credits.length}
-      <div class="credits ink">
-        {#each credits as line (line)}<span>{line}</span>{/each}
-      </div>
+    {#if credits}
+      <div class="credits ink">{credits}</div>
     {/if}
   {/if}
 
@@ -422,21 +425,26 @@
   }
 
   /* Ours, not the design's. Mono and uppercase is how this panel already
-     draws an attribution (now playing's, under a biography). Top right,
-     clear of the clock's drift and of the forecast bar. */
+     draws an attribution (now playing's, under a biography).
+
+     **In the band the forecast bar leaves free.** That bar's padding ends
+     its content 28px above the edge, so an 11px line sitting 7px up clears
+     it without a measurement anyone has to remember - and when the weather
+     is off, the footer is simply the only thing down there. */
   .credits {
     position: absolute;
-    top: 24px;
+    left: 56px;
     right: 56px;
-    display: flex;
-    flex-direction: column;
-    align-items: flex-end;
-    gap: 4px;
+    bottom: 7px;
     font-family: var(--font-mono);
-    font-size: var(--t-label-sm);
+    font-size: var(--t-micro);
+    line-height: 14px;
     letter-spacing: var(--track-wide);
     text-transform: uppercase;
-    text-align: right;
+    text-align: center;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
   .page {
