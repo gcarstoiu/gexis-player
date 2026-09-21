@@ -72,7 +72,7 @@
 
   <span class="badge">
     <span class="badge__icon" class:is-playing={transport === 'playing'}>
-      <SourceMark source={active} size={15} color="var(--src-accent)" />
+      <SourceMark source={active} size={28} color="var(--src-accent)" />
     </span>
     {LABELS[active] ?? active}
   </span>
@@ -194,19 +194,20 @@
     margin-top: 4px;
   }
 
+  /* Mark and word only. The pill ground, border and padding were removed
+     on 2026-09-21, the same change Now Playing's source mark took in 9b -
+     the design draws neither as a pill, and two different treatments of one
+     renderer on two surfaces is the kind of thing only a diff notices. */
   .badge {
     display: inline-flex;
     align-items: center;
-    gap: 9px;
-    background: rgba(255, 255, 255, 0.08);
-    border: 1px solid color-mix(in oklab, var(--src-accent) 40%, transparent);
+    gap: 13px;
     color: var(--src-accent);
-    font-size: var(--t-label-sm);
-    font-weight: 700;
-    letter-spacing: 0.18em;
+    font-family: var(--font-mono);
+    font-size: 21px;
+    font-weight: 600;
+    letter-spacing: 0.16em;
     text-transform: uppercase;
-    padding: 7px 13px;
-    border-radius: var(--r-pill);
     white-space: nowrap;
     flex-shrink: 0;
   }

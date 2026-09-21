@@ -294,3 +294,45 @@ what the symptom suggested.
    artist page now measure whether anything is under the fold and draw the
    mask only then.
 
+**Three more, 2026-09-21 — and two of them had one cause:**
+
+8. **Press feedback on a list row was wrong twice over.** The design gives a
+   row none — only the action buttons inside one carry `style-active` — and
+   adding it produced both of the symptoms George reported separately.
+
+   *The track title flashed on tap.* `.track__hit:active { opacity: 0.62 }`
+   dims the whole row, title included, on the way to revealing the actions.
+
+   *Tapping a radio category lit a different one.* The list is replaced under
+   the finger, and the browser keeps `:active` on whatever element is there
+   now — so the row that took the tapped one's place stayed highlighted for
+   as long as the finger was down. Removed from the four rows that are
+   replaced or revealed **in place**: browse rows, playlist and radio rows,
+   album tracks, radio cards. The buttons keep theirs.
+
+   **Not what it looked like.** The first guess was that `openRadio` set the
+   page before it pushed the path; it does not — both land in one batch. The
+   second was a daemon fault: a sub-level fetch appeared to return the root.
+   It did not. **The route's query parameter is `at`, and the test used
+   `handle`** — `docs/LESSONS.md`'s standing point about instruments, on a
+   two-minute scale.
+
+9. **The radio cards were not the design's.** The grid carried no padding, so
+   the cards ran to the screen edge while every list below them sat 40 px in.
+   Card padding 20→26 px, gap 16→18, grid gap 14→16, the disc pulled back
+   8 px, and **the label and the count share a line** — the design puts the
+   label at `flex:1` with the meta beside it, where the port stacked them.
+   Label 19→22 px, meta 13→16 px mono.
+
+10. **Every list now opens at the top.** A scroller keeps its offset when its
+    contents are replaced, so walking into a radio category landed halfway
+    down a list nobody had seen. One action on every scroller, resetting on
+    the page's identity; the two hand-written `toTop` calls the browse panes
+    had are gone, so there is one mechanism rather than two.
+
+11. **The mini strip's renderer is no longer a pill** — mark and word only,
+    mono 21 px/600 at 0.16 em with the mark at 28 px, which is what the
+    design draws. 9b did this to Now Playing's source mark and stopped
+    there; one renderer wearing two different treatments on two surfaces is
+    the kind of thing only a diff notices.
+

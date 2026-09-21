@@ -109,9 +109,6 @@
   // Each pane's scroller, so a new selection starts at the top of the next
   // pane rather than wherever the previous list was left (George,
   // 2026-09-18).
-  let albumPane = $state(null);
-  let trackPane = $state(null);
-  const toTop = (el) => el && (el.scrollTop = 0);
   function jumpTo(group) {
     const target = grid?.querySelector(`#${group.id}`);
     if (!target || !grid) return;
@@ -270,6 +267,29 @@
   //: screen and corrected itself. Initialised from the prop rather than set
   //: in the effect, because an effect runs after the first paint.
   let resolvingArtist = $state(!!openArtistNamed);
+
+  //: **Every list opens at the top.** A scroller keeps its offset when its
+  //: contents are replaced, so walking into a radio category landed halfway
+  //: down a list nobody had seen, and stepping back landed somewhere else
+  //: again (George, on the panel, 2026-09-21). The token is whatever
+  //: identifies the page; the action resets when it changes.
+  //:
+  //: Reset twice - now, and after the next frame - because the rows are
+  //: often still arriving when the token moves, and a scroller with no
+  //: content yet has nothing to scroll.
+  function fromTop(node, _token) {
+    let frame;
+    const reset = () => {
+      node.scrollTop = 0;
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(() => (node.scrollTop = 0));
+    };
+    reset();
+    return { update: reset, destroy: () => cancelAnimationFrame(frame) };
+  }
+
+  //: What "a different page" means for the scrollers above.
+  const where = $derived(path.map((p) => `${p.kind}:${p.id ?? p.handle ?? p.label}`).join('/'));
 
   //: The home grid is on screen - not merely "no page has been opened",
   //: which is also true while an artist page is on its way.
@@ -529,8 +549,6 @@
     browseTracks = [];
     try {
       browseAlbums = await loadArtistAlbums(entry.id);
-      toTop(albumPane);
-      toTop(trackPane);
     } catch (err) {
       console.info('library:', err.message);
     }
@@ -541,7 +559,6 @@
     chosenAlbum = entry;
     try {
       browseTracks = (await loadAlbumTracks(entry.id)).tracks;
-      toTop(trackPane);
     } catch (err) {
       console.info('library:', err.message);
     }
@@ -803,7 +820,7 @@
       <!-- The nine top-level categories are a three-up card grid; every level
            below is the same dense single column as the rest of the library,
            because station and track lists run long (design/screens.md §8). -->
-      <div class="rgrid">
+      <div class="rgrid" use:fromTop={where}>
         {#each radio.items as row (row.handle)}
           {@const look = radioLook(row.label)}
           <button
@@ -816,19 +833,20 @@
             <span class="rdisc rdisc--card">
               <span class="rglyph rglyph--{look[0]}"><i></i><i></i><i></i></span>
             </span>
-            <span class="rcard__text">
-              <span class="rcard__name">{row.label}</span>
-              {#if row.subtitle}
-                <span class="rcard__meta">{row.subtitle}</span>
-              {/if}
-            </span>
+            <!-- Name and count sit on one line, not stacked: the design puts
+                 the label at `flex:1` and the meta beside it, right-aligned
+                 (George, on the panel, 2026-09-21). -->
+            <span class="rcard__name">{row.label}</span>
+            {#if row.subtitle}
+              <span class="rcard__meta">{row.subtitle}</span>
+            {/if}
           </button>
         {:else}
           <div class="pane__empty">Nothing here</div>
         {/each}
       </div>
     {:else if here?.kind === 'radio' && radio}
-      <div class="lists">
+      <div class="lists" use:fromTop={where}>
         {#each radio.items as row (row.handle)}
           {@const look = row.kind === 'station' ? RADIO_FALLBACK : radioLook(row.label)}
           <div class="plrow" class:is-busy={busy === row.handle}>
@@ -927,7 +945,7 @@
               <span class="pane__label">Artist</span>
               <span class="pane__count">{artists.length}</span>
             </div>
-            <div class="pane__list">
+            <div class="pane__list" use:fromTop={where}>
               {#each artists as entry (entry.id)}
                 <div class="row" class:is-on={chosenArtist?.id === entry.id}>
                   <button class="row__hit" type="button" onclick={() => chooseArtist(entry)}>
@@ -950,7 +968,7 @@
               <span class="pane__label">Album</span>
               <span class="pane__count">{browseAlbums.length}</span>
             </div>
-            <div class="pane__list" bind:this={albumPane}>
+            <div class="pane__list" use:fromTop={chosenArtist?.id ?? where}>
               {#each browseAlbums as entry (entry.id)}
                 <div class="row" class:is-on={chosenAlbum?.id === entry.id}>
                   <!-- Newest first, with the year beside the title, like
@@ -980,7 +998,7 @@
             <span class="pane__label">Tracks</span>
             <span class="pane__count">{browseTracks.length}</span>
           </div>
-          <div class="pane__list" bind:this={trackPane}>
+          <div class="pane__list" use:fromTop={chosenAlbum?.id ?? where}>
             {#each browseTracks as entry (entry.id)}
               <div class="row">
                 <button class="row__hit" type="button" onclick={() => (revealed = revealed === `track-${entry.id}` ? null : `track-${entry.id}`)}>
@@ -1006,7 +1024,7 @@
       </div>
     {:else if here?.kind === 'artists'}
       <div class="grid">
-        <div class="grid__scroll" bind:this={grid}>
+        <div class="grid__scroll" bind:this={grid} use:fromTop={where}>
           {#each groups as group (group.letter)}
             <div class="group">
               <div class="group__head" id={group.id}>
@@ -1099,7 +1117,7 @@
 
         <!-- The design's right column: About, Popular, the discography,
              then Similar artists - all of it one scroller. -->
-        <div class="artistright" bind:this={columnEl}>
+        <div class="artistright" bind:this={columnEl} use:fromTop={where}>
             <div class="sect">
               <span class="sect__label">About</span>
               <span class="sect__rule"></span>
@@ -1254,7 +1272,7 @@
             <span class="tracks__label">Tracks</span>
             <span class="tracks__count">{album.tracks.length}</span>
           </div>
-          <div class="tracks__list">
+          <div class="tracks__list" use:fromTop={where}>
             {#each album.tracks as track (track.id)}
               <div class="track">
                 <button class="track__hit" type="button" onclick={() => (revealed = revealed === `albumtrack-${track.id}` ? null : `albumtrack-${track.id}`)}>
@@ -1739,9 +1757,6 @@
     padding: 12px 14px;
     background: none;
   }
-  .plrow__hit:active {
-    opacity: 0.62;
-  }
   .plrow__glyph {
     width: 54px;
     height: 54px;
@@ -2040,9 +2055,6 @@
     gap: 14px;
     padding: 0 14px;
     background: none;
-  }
-  .row__hit:active {
-    opacity: 0.62;
   }
   .row__num {
     font-family: var(--font-mono);
@@ -2850,31 +2862,45 @@
      SVG mark smears below ~40px. `--tint` comes from the markup. */
   .rgrid {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 14px;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 16px;
     align-content: start;
     overflow-y: auto;
+    /* The same inset every other list has. Without it the cards ran to the
+       screen edge while the level below them sat 40px in, which is what
+       "the layout is broken" looked like. */
+    padding: 28px 40px;
+    box-sizing: border-box;
     scrollbar-width: none;
     touch-action: pan-y;
   }
   .rgrid::-webkit-scrollbar { display: none; }
+  /* **No press feedback on a row.** The design gives none - only the
+     action buttons inside one carry `style-active` - and two faults came
+     of adding it (George, on the panel, 2026-09-21). A row that reveals
+     its actions dimmed its own title on the way, which read as the title
+     flashing. And a row that replaces the list under the finger leaves the
+     *next* list's row sitting in `:active`, so tapping one radio category
+     lit up a different one for as long as the finger stayed down. The
+     reveal, or the new list, is the feedback. */
   .rcard {
     display: flex;
     align-items: center;
-    gap: 16px;
+    gap: 18px;
     height: 96px;
-    padding: 0 20px;
+    padding: 0 26px;
     border-radius: 18px;
     background: rgba(255, 255, 255, 0.05);
     border: 1px solid var(--ink-line);
     text-align: left;
     min-width: 0;
   }
-  .rcard:active { transform: scale(0.97); }
   .rcard.is-busy { opacity: 0.6; }
-  .rcard__text { min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+  .rcard .rdisc--card { margin-left: -8px; }
   .rcard__name {
-    font-size: var(--t-body);
+    flex: 1;
+    min-width: 0;
+    font-size: 22px;
     font-weight: 600;
     color: var(--ink);
     white-space: nowrap;
@@ -2883,11 +2909,9 @@
   }
   .rcard__meta {
     font-family: var(--font-mono);
-    font-size: var(--t-label-sm);
-    color: var(--ink-quiet);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    font-size: 16px;
+    color: rgba(233, 238, 242, 0.62);
+    flex-shrink: 0;
   }
 
   /* Ground at 14% of the tint, border at 30%, glyph at full strength. */
@@ -3081,9 +3105,6 @@
     gap: 18px;
     padding: 0 16px;
     background: none;
-  }
-  .track__hit:active {
-    opacity: 0.62;
   }
   .track__num {
     font-family: var(--font-mono);
