@@ -1,13 +1,15 @@
 # Handoff
 
-Last updated: 2026-09-21 (twenty-first session, on R2D2 — **Phase 9's design
-sweep: 9a through 9e are done, checked on the panel and committed; 9f next**)
+Last updated: 2026-09-21 (twenty-second session, on R2D2 — **Phase 9's
+design sweep: 9a through 9e are done and committed; 9f is built and on the
+device, waiting for George to retry a pair**)
 
 ## Start here
 
-**Phase 9's design sweep is five subphases in.** Nine were planned
-(`docs/DEVELOPMENT.md`), volume last; **9a through 9e are done, checked by
-George on the panel and committed**. 9f is next and nothing blocks it.
+**Phase 9's design sweep is five subphases in, and 9f is built.** Nine were
+planned (`docs/DEVELOPMENT.md`), volume last; **9a through 9e are done,
+checked by George on the panel and committed**. 9f's code is written,
+committed and deployed; what it still needs is George's own pair.
 
 - **9a** — the decisions: ADR-0044, 0045, 0046 Accepted, ADR-0022 amended
   for the catalogue/surfaced split, ADR-0047 opened for the idle screen.
@@ -84,23 +86,47 @@ true unless Chromium started, loaded and reached the daemon, and names the
 build on screen. The eight scripts installed `755` are executable in git
 now. **[LESSONS](docs/LESSONS.md) case 10.**
 
-**9f is next:** Bluetooth pairing ([ADR-0045](docs/decisions/0045-bluetooth-pairing-confirmation.md))
-— our own `Agent1` replacing `bt-agent --capability=NoInputNoOutput`, the
-request surfaced to the panel, accept and reject, a countdown that is the
-agent's rather than the panel's, first pair only. **And `bt_discoverable`
-actually implemented**, all three options, with `DiscoverableTimeout=0` for
-Always — the "3 minutes" defect. It also owes `bt_trusted` its item list and
-`Forget`, which 9d left to it: that row is the one `list` with no source.
+**9f — Bluetooth pairing ([ADR-0045](docs/decisions/0045-bluetooth-pairing-confirmation.md))
+— is built and on the device.** Our own `Agent1` replaced `bt-agent
+--capability=NoInputNoOutput`, the request reaches the panel, accept and
+reject work, and the countdown is the agent's rather than the panel's.
+`bt_discoverable` is implemented for real, all three options, with
+`DiscoverableTimeout=0` for Always — the "3 minutes" defect. `bt_trusted`
+has its item list and `Forget`, which 9d left to it: it was the one `list`
+with no source. Devices come from BlueZ's object tree, **paired only** (the
+tree also carries everything the adapter has merely seen while
+discoverable), and Forget is `Adapter1.RemoveDevice`, not `Trusted = false`
+— clearing the flag leaves the bond and the phone reconnects.
+
+**What 9f still needs is George's own pair.** His Pixel has to be forgotten
+on its side first, because it keeps its half of a bond this end has
+dropped. After a successful pair, Settings › Sources › Trusted devices
+lists it with a Forget, which is how the reject and expiry paths get driven
+from the panel from now on.
+
+**Two panel defects found after that code was written, both fixed.** The
+pairing frame froze — countdown still, Reject doing nothing — while every
+server-side check passed, because an `$effect` read what it wrote and Svelte
+stopped updating the whole tree ([LESSONS](docs/LESSONS.md) case 11); and a
+failed answer left both buttons disabled, a `try/catch` with no `finally`.
+**And the `bt_trusted` row read "None" with a phone paired** (George, on the
+panel, 2026-09-21): the row's value is a count, the panel counted `row.items`
+as the design does, and the design carries its items inline where ours are
+fetched when the sheet opens — so the row could only ever read the empty
+answer. The count is published on the row now, from the same BlueZ read the
+sheet uses. **The row and the sheet are two surfaces and the sheet working
+says nothing about the row.**
 
 **Design Claude is owed the `device_name` restart warning text.** The note
 shipped in 9e says the true thing plainly as a placeholder.
 
-**Three settings rows report behaviour the code does not have**, each found
-by measuring rather than reading: `travel_curve` names a curve 34 dB quieter
-at mid-travel than ADR-0034's slider; `bt_discoverable` reports "3 min after
-boot" that nothing chose (BlueZ's 180 s default reverting an untimed
-`discoverable on` — the trap `docs/LESSONS.md` already records); and
-`max_ceiling` is `None`, so no ceiling is enforced.
+**Two settings rows still report behaviour the code does not have**, each
+found by measuring rather than reading: `travel_curve` names a curve 34 dB
+quieter at mid-travel than ADR-0034's slider, and `max_ceiling` is `None`,
+so no ceiling is enforced. The third was `bt_discoverable`, which reported
+"3 min after boot" that nothing chose (BlueZ's 180 s default reverting an
+untimed `discoverable on`) — **9f implemented it**, and Always now sets
+`DiscoverableTimeout=0`.
 
 **`device_name` is refused** — `HTTP 409 "not wired yet"`. The four service
 names agree only because each was set to the same literal at build time.

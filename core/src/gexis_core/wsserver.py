@@ -510,13 +510,15 @@ class StateServer:
     async def _handle_settings(self, request: web.Request) -> web.Response:
         if self._settings is None:
             return web.json_response({"error": "settings are not wired up"}, status=503)
+        groups = self._settings.to_json()
+        await self._count_paired(groups)
         # ADR-0048 §5: the header reads name - hostname - address, and the
         # last two are the system's own. After a rename the stored name and
         # the live hostname disagree, and that disagreement is exactly what
         # the user needs to see.
         return web.json_response(
             {
-                "groups": self._settings.to_json(),
+                "groups": groups,
                 "device": {
                     # A registry without the row is not a broken request: the
                     # header simply has one fewer fact to show.
@@ -526,6 +528,36 @@ class StateServer:
                 },
             }
         )
+
+    async def _count_paired(self, groups: list[dict]) -> None:
+        """How many devices `bt_trusted` holds, for the row to read out.
+
+        **A `list` row's value is not always its stored value.** A server
+        list reads out the server in use and Wi-Fi the network it is on,
+        both of which are values; a device list reads out a count, which is
+        not stored anywhere and has to be counted. The design's own rule is
+        the same - `n ? n + ' paired' : 'None'` - and it counts the items
+        it has inline. **We do not have them inline:** items are fetched
+        when the sheet opens, so a row that counted those would read "None"
+        until it was opened, which is what it did on the device with a
+        phone paired (George, 2026-09-21).
+
+        Counted per request rather than cached: `/settings` is fetched when
+        the screen mounts and when a write moves the revision, which is
+        exactly when the row is drawn, and a count that is a bus round-trip
+        old is a count that can be wrong in the one direction that matters
+        - a device forgotten elsewhere still listed here.
+        """
+        row = next(
+            (r for g in groups for r in g["rows"] if r.get("key") == "bt_trusted"),
+            None,
+        )
+        if row is None:
+            return
+        # `_bluetooth` answers [] for an adapter that is not there, so an
+        # unavailable BlueZ reads "None" - which is what the row's own empty
+        # state says - rather than failing the whole settings payload.
+        row["count"] = len(await self._bluetooth(bluetooth_devices.known))
 
     async def _handle_pairing_answer(self, request: web.Request) -> web.Response:
         """Accept or reject the open pairing request (ADR-0045).

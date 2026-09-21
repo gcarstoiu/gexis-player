@@ -213,7 +213,14 @@ def test_wiring_an_unknown_key_fails_at_startup(store):
         Settings(store, registry=REGISTRY, wired={"nope": None})
 
 
-async def test_settings_routes(store):
+async def test_settings_routes(store, monkeypatch):
+    # `/settings` counts `bt_trusted`'s devices on the way out. Nothing here
+    # is about BlueZ, and a test that reaches the system bus to find that
+    # out is a test about the machine it runs on.
+    async def no_bluetooth(call, *args):
+        return []
+
+    monkeypatch.setattr(StateServer, "_bluetooth", staticmethod(no_bluetooth))
     state = StateStore({})
     settings = Settings(
         store, registry=REGISTRY, wired={"idle_timeout": None}, on_change=state.bump_settings_revision

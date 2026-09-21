@@ -208,7 +208,11 @@
       // docs/findings/042 §7 as one more place its prose and its literal
       // disagree.
       if (v) return String(v);
-      const n = (row.items ?? []).length;
+      // The count comes from the daemon, on the row. The design counts the
+      // items it carries inline; ours are fetched when the sheet opens, so
+      // a row counting those reads "None" until someone opens it - which is
+      // what it did with a phone paired (George, on the panel, 2026-09-21).
+      const n = row.count ?? 0;
       return n ? `${n} paired` : 'None';
     }
     if (v === null || v === undefined) return row.type === 'action' ? '' : '—';
@@ -658,9 +662,10 @@
       {/if}
 
       <!-- A list is navigation, not a value (ADR-0044 §1): items with a
-           per-item action, and a plain sentence when there are none. Nothing
-           publishes items yet - Wi-Fi needs a scan, Bluetooth a device list,
-           LMS discovery - so today every list opens on its empty state. -->
+           per-item action, and a plain sentence when there are none. All
+           three sources are built now - a Wi-Fi scan, LMS discovery and
+           BlueZ's paired devices - and the items arrive when the sheet
+           opens, which is why the row cannot count them. -->
       {#if sheet.type === 'list' && searching}
         <!-- "Nothing found" is only true once the search has finished. -->
         <div class="scan">

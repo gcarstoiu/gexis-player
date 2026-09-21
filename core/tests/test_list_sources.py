@@ -268,6 +268,54 @@ async def test_bluetooth_devices_are_listed_and_forgotten(tmp_path, monkeypatch)
 
 
 @pytest.mark.asyncio
+async def test_the_trusted_row_reads_out_how_many_are_paired(tmp_path, monkeypatch):
+    """The row's value is a count, and it comes with the row.
+
+    On the device, with a phone paired and listed by the sheet, the row
+    still read "None" (George, on the panel, 2026-09-21): the panel counted
+    `row.items`, which the settings payload has never carried - items are
+    fetched when the sheet opens. A row has to read correctly before anyone
+    opens it, so the count is published on the row.
+    """
+
+    async def known(bus):
+        return [
+            {"name": "Pixel 10 Pro", "meta": "Trusted", "state": "saved"},
+            {"name": "Kitchen Echo", "meta": "Paired", "state": "saved"},
+        ]
+
+    async def run(call, *args):
+        return await call(None, *args)
+
+    monkeypatch.setattr(bluetooth_devices, "known", known)
+    monkeypatch.setattr(StateServer, "_bluetooth", staticmethod(run))
+    async with client_for(tmp_path) as client:
+        body = await (await client.get("/settings")).json()
+        row = next(r for g in body["groups"] for r in g["rows"] if r.get("key") == "bt_trusted")
+        assert row["count"] == 2
+        # Still not a stored value: counting it does not make it settable.
+        assert row["value"] is None
+
+
+@pytest.mark.asyncio
+async def test_a_bluetooth_that_cannot_be_read_leaves_the_row_at_none(tmp_path, monkeypatch):
+    """An adapter that is not there must cost the settings payload nothing.
+    `_bluetooth` answers [] for anything that fails, and the row reads
+    "None" - which is what its own empty state says - rather than 500."""
+
+    async def run(call, *args):
+        return []
+
+    monkeypatch.setattr(StateServer, "_bluetooth", staticmethod(run))
+    async with client_for(tmp_path) as client:
+        response = await client.get("/settings")
+        assert response.status == 200
+        body = await response.json()
+        row = next(r for g in body["groups"] for r in g["rows"] if r.get("key") == "bt_trusted")
+        assert row["count"] == 0
+
+
+@pytest.mark.asyncio
 async def test_items_are_only_for_lists(tmp_path):
     async with client_for(tmp_path) as client:
         assert (await client.get("/settings/idle_timeout/items")).status == 405
