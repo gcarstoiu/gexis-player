@@ -12,9 +12,30 @@ George on the panel and committed**. **9g is next** and it starts with a
 decision, not with code: [ADR-0047](docs/decisions/0047-the-idle-screen-gains-backgrounds-and-weather.md)
 is Proposed, and two third-party providers — the weather service and the
 online wallpaper service — are unchosen. That is the substance of it.
-Finding 030 answered exactly this shape of question for enrichment by
-comparing the free providers and recommending without deciding; the same
-method applies and the work is not done.
+
+**The comparison is done and George has not chosen yet:
+[Finding 043](docs/findings/043-the-idle-screens-two-providers.md)**, the
+same method as Finding 030 — terms read, live calls made **from the
+device**, recommendation without a decision. Three things in it change the
+subphase rather than just informing it:
+
+- **Unsplash and Pexels are out in their own words** — both name wallpaper
+  applications as forbidden. The two obvious answers to "Wallpapers online"
+  cannot be used. Pixabay permits it with a key, a 24 h cache and no
+  hotlinking; the key-free alternative is CC0 museum art (Art Institute of
+  Chicago, 60 req/min anonymous).
+- **Weather has a key-free answer that also solves `weather_location`:**
+  Open-Meteo, 748 B for exactly the rows the design draws (0.12–0.14 s from
+  the device), with geocoding from the same provider. MET Norway returns
+  40,722 B for the same forecast and has no geocoder.
+- **So `weather_key` may have nothing to gate**, and ADR-0047 §2 hangs four
+  rows off it. That is a decision owed before any of them is built.
+
+**Two measured traps recorded there:** the Art Institute's IIIF image server
+403s without an `AIC-User-Agent` header (with a browser User-Agent too — the
+JSON API answers fine without it, so it fails only when an image is
+fetched), and NASA's APOD carries a `copyright` field naming a photographer
+on most days, so it is not the public-domain source it is assumed to be.
 
 - **9a** — the decisions: ADR-0044, 0045, 0046 Accepted, ADR-0022 amended
   for the catalogue/surfaced split, ADR-0047 opened for the idle screen.
