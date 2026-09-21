@@ -73,6 +73,7 @@ class StateServer:
         artistinfo=None,
         enrichment=None,
         radio=None,
+        pairing_answer=None,
         splash=None,
         ui_dir: Path | None = None,
     ) -> None:
@@ -102,6 +103,7 @@ class StateServer:
         self._artistinfo = artistinfo
         self._enrichment = enrichment
         self._radio = radio
+        self._pairing_answer = pairing_answer
         self._splash = splash
         self._ui_dir = ui_dir
         self._clients: set[web.WebSocketResponse] = set()
@@ -523,6 +525,23 @@ class StateServer:
             }
         )
 
+    async def _handle_pairing_answer(self, request: web.Request) -> web.Response:
+        """Accept or reject the open pairing request (ADR-0045).
+
+        409 when nothing is being asked, which is the answer to a tap that
+        arrived after the agent's window closed - **it must not land on the
+        next request**, and the panel needs to hear that rather than assume
+        it worked.
+        """
+        if self._pairing_answer is None:
+            return web.json_response({"error": "no pairing agent"}, status=503)
+        answer = request.match_info["answer"]
+        if answer not in ("accept", "reject"):
+            return web.json_response({"error": f"unknown answer {answer}"}, status=400)
+        if not self._pairing_answer(answer == "accept"):
+            return web.json_response({"error": "nothing is being asked"}, status=409)
+        return web.json_response({"answer": answer})
+
     def _setting_or_none(self, key: str):
         try:
             return self._settings.value(key)
@@ -659,6 +678,7 @@ class StateServer:
         app.router.add_post("/settings/{key}", self._handle_setting_action)
         app.router.add_get("/settings/{key}/items", self._handle_list_items)
         app.router.add_post("/settings/{key}/items", self._handle_list_action)
+        app.router.add_post("/bluetooth/pairing/{answer}", self._handle_pairing_answer)
         app.router.add_get("/radio", self._handle_radio)
         app.router.add_post("/radio/play", self._handle_radio_play)
         app.router.add_get("/library/artist-photos", self._handle_artist_photos)

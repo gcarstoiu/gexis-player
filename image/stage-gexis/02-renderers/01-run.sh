@@ -86,8 +86,12 @@ install -D -m 755 files/gexis-bluetooth-setup.sh \
 	"${ROOTFS_DIR}/usr/local/lib/gexis/bluetooth-setup.sh"
 install -D -m 644 files/gexis-bluetooth-setup.service \
 	"${ROOTFS_DIR}/etc/systemd/system/gexis-bluetooth-setup.service"
-install -D -m 644 files/gexis-bt-agent.service \
-	"${ROOTFS_DIR}/etc/systemd/system/gexis-bt-agent.service"
+# `gexis-bt-agent.service` is gone (ADR-0045). It ran `bt-agent
+# --capability=NoInputNoOutput` from bluez-tools, which answers the pairing
+# handshake on its own console and has no route to a screen - so pairing
+# could never be confirmed by anyone. `gexis_core.bluetooth_agent` registers
+# an `org.bluez.Agent1` of our own with `DisplayYesNo`, which is what makes
+# BlueZ produce a six-digit code at all.
 
 # Enable our own units. Symlinked directly rather than via systemctl -
 # there is no running systemd inside this chroot to talk to.
@@ -98,8 +102,6 @@ ln -sf /etc/systemd/system/squeezelite.service \
 	"${ROOTFS_DIR}/etc/systemd/system/multi-user.target.wants/squeezelite.service"
 ln -sf /etc/systemd/system/gexis-bluetooth-setup.service \
 	"${ROOTFS_DIR}/etc/systemd/system/multi-user.target.wants/gexis-bluetooth-setup.service"
-ln -sf /etc/systemd/system/gexis-bt-agent.service \
-	"${ROOTFS_DIR}/etc/systemd/system/multi-user.target.wants/gexis-bt-agent.service"
 
 # Build-time assertion: every file this stage installs actually landed
 # where the systemd units expect it, and pi owns what it needs to own.
@@ -113,7 +115,6 @@ for f in \
 	"${ROOTFS_DIR}/etc/systemd/system/bluealsa.service.d/override.conf" \
 	"${ROOTFS_DIR}/usr/local/lib/gexis/bluetooth-setup.sh" \
 	"${ROOTFS_DIR}/etc/systemd/system/gexis-bluetooth-setup.service" \
-	"${ROOTFS_DIR}/etc/systemd/system/gexis-bt-agent.service" \
 	"${ROOTFS_DIR}/etc/gexis/device-name.env"
 do
 	if [ ! -e "${f}" ]; then
@@ -156,8 +157,7 @@ fi
 for f in \
 	"${ROOTFS_DIR}/etc/systemd/system/multi-user.target.wants/go-librespot.service" \
 	"${ROOTFS_DIR}/etc/systemd/system/multi-user.target.wants/squeezelite.service" \
-	"${ROOTFS_DIR}/etc/systemd/system/multi-user.target.wants/gexis-bluetooth-setup.service" \
-	"${ROOTFS_DIR}/etc/systemd/system/multi-user.target.wants/gexis-bt-agent.service"
+	"${ROOTFS_DIR}/etc/systemd/system/multi-user.target.wants/gexis-bluetooth-setup.service"
 do
 	if [ ! -L "${f}" ]; then
 		echo "ERROR: ${f} missing after install" >&2

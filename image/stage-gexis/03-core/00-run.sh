@@ -25,8 +25,12 @@ install -D -m 644 files/gexis-core.service \
 	"${ROOTFS_DIR}/etc/systemd/system/gexis-core.service"
 install -D -m 644 files/gexis-boot-volume.service \
 	"${ROOTFS_DIR}/etc/systemd/system/gexis-boot-volume.service"
-install -D -m 644 files/gexis-bluetooth-trust.service \
-	"${ROOTFS_DIR}/etc/systemd/system/gexis-bluetooth-trust.service"
+# `gexis-bluetooth-trust.service` is gone (ADR-0045). It polled every two
+# seconds and trusted *every* paired-but-untrusted device, which would grant
+# exactly what a human had just been asked about and might have refused -
+# the confirmation would have decided nothing. The agent trusts what it was
+# told to, and `bt_autotrust` became a real switch rather than a description
+# of something that happened regardless.
 install -D -m 644 files/gexis-meter.service \
 	"${ROOTFS_DIR}/etc/systemd/system/gexis-meter.service"
 

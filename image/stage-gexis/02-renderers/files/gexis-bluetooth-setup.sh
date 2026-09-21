@@ -24,7 +24,7 @@ done
 
 # ADR-0024: pair without a PIN, at this installation - persistently
 # discoverable/pairable is part of that same decision (there is no UI
-# yet to trigger "enter pairing mode" on demand). gexis-bt-agent.service
+# yet to trigger "enter pairing mode" on demand). gexis-core's own Agent1 (ADR-0045)
 # is ordered before this unit so the agent answering pairing requests is
 # already registered before discoverable mode turns on.
 # **Discoverability is the daemon's, not this script's** (ADR-0045).

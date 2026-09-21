@@ -208,6 +208,13 @@ class PlaybackState:
     settings_revision: int = 0
     #: The active renderer's queue, or None where it has no such thing.
     queue: Queue | None = None
+    #: A Bluetooth pairing request waiting for an answer, or None
+    #: (ADR-0045). Published here rather than on a channel of its own
+    #: because the panel already subscribes to this and a request has to
+    #: reach it within the agent's thirty seconds - and because the frame
+    #: is dismissed by this going away, not by the panel's own countdown
+    #: reaching zero.
+    pairing: dict | None = None
 
     @property
     def controls(self) -> dict | None:
@@ -245,4 +252,5 @@ class PlaybackState:
             "settings_revision": self.settings_revision,
             "controls": self.controls,
             "queue": self.queue.to_json() if self.queue else None,
+            "pairing": self.pairing,
         }

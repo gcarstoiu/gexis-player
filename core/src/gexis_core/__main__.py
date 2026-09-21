@@ -13,7 +13,7 @@ import aiohttp
 from dbus_next import BusType
 from dbus_next.aio import MessageBus
 
-from gexis_core import alsa, bluetooth_adapter_state, device_name, wifi
+from gexis_core import alsa, bluetooth_adapter_state, bluetooth_agent, device_name, wifi
 from gexis_core.adapters.base import VolumeMechanism
 from gexis_core.adapters.bluetooth import BluetoothAdapter
 from gexis_core.adapters.lms import LmsAdapter
@@ -424,10 +424,32 @@ async def main() -> None:
     )
 
     # ADR-0045: the adapter's own switches, applied from the stored setting
-    # rather than left to a shell script that could not express them.
-    asyncio.ensure_future(
-        _apply_discoverable(settings.value("bt_discoverable") or "3 min after boot", attempts=10)
+    # rather than left to a shell script that could not express them, and
+    # our own Agent1 so the question can reach the panel at all.
+    pairing_agent = bluetooth_agent.Agent(
+        publish=state_store.set_pairing,
+        # Read per request, not captured: changing either takes effect on
+        # the next pair rather than on the next boot.
+        confirm_required=lambda: settings.value("bt_pairing") != "PIN-free",
+        should_trust=lambda: settings.value("bt_autotrust") is not False,
     )
+
+    async def _bluetooth_setup() -> None:
+        await _apply_discoverable(
+            settings.value("bt_discoverable") or "3 min after boot", attempts=10
+        )
+        bus = await MessageBus(bus_type=BusType.SYSTEM).connect()
+        await bluetooth_agent.register(
+            bus,
+            pairing_agent,
+            bluetooth_agent.capability_for(settings.value("bt_pairing")),
+        )
+        # The bus stays open for the process: an agent whose connection
+        # closes is unregistered by BlueZ, silently, and pairing goes back
+        # to whatever answered before.
+        await bus.wait_for_disconnect()
+
+    asyncio.ensure_future(_bluetooth_setup())
 
     # Phase 5 criteria 6 and 8 (ADR-0036). The meter process keeps running
     # whether or not it is on screen; this only raises and lowers it.
@@ -544,6 +566,9 @@ async def main() -> None:
         # ADR-0038 §8: the one SlimBrowse subtree, browsed by handles the
         # core issues.
         radio=RadioBrowser(library.rpc, lambda: lms.player_id),
+        # ADR-0045: the panel's answer, back to the agent that is holding
+        # BlueZ's handshake open waiting for it.
+        pairing_answer=pairing_agent.answer,
         # ADR-0043: the panel reports its first painted frame and the boot
         # animation ends there, not when the kiosk unit goes active.
         splash=Splash(),

@@ -7,8 +7,6 @@ ln -sf /etc/systemd/system/gexis-core.service \
 	"${ROOTFS_DIR}/etc/systemd/system/multi-user.target.wants/gexis-core.service"
 ln -sf /etc/systemd/system/gexis-boot-volume.service \
 	"${ROOTFS_DIR}/etc/systemd/system/multi-user.target.wants/gexis-boot-volume.service"
-ln -sf /etc/systemd/system/gexis-bluetooth-trust.service \
-	"${ROOTFS_DIR}/etc/systemd/system/multi-user.target.wants/gexis-bluetooth-trust.service"
 # Phase 5: without this the Peppy screen gets no levels on a fresh image -
 # until 2026-09-16 it had only ever been started by hand.
 ln -sf /etc/systemd/system/gexis-meter.service \
@@ -29,8 +27,7 @@ for f in \
 	"${ROOTFS_DIR}/opt/gexis-core/venv/bin/pip" \
 	"${ROOTFS_DIR}/etc/gexis/core.toml" \
 	"${ROOTFS_DIR}/etc/systemd/system/gexis-core.service" \
-	"${ROOTFS_DIR}/etc/systemd/system/gexis-boot-volume.service" \
-	"${ROOTFS_DIR}/etc/systemd/system/gexis-bluetooth-trust.service"
+	"${ROOTFS_DIR}/etc/systemd/system/gexis-boot-volume.service"
 do
 	if [ ! -e "${f}" ]; then
 		echo "ERROR: ${f} missing after install" >&2

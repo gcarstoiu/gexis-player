@@ -1,6 +1,6 @@
 [Unit]
 Description=Gexis Bluetooth setup: unblock rfkill, power on, pairable/discoverable
-After=bluetooth.service gexis-bt-agent.service
+After=bluetooth.service
 Before=bluealsa.service bluealsa-aplay.service
 
 [Service]

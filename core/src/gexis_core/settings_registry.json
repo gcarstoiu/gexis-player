@@ -186,13 +186,13 @@
         "key": "bt_pairing",
         "type": "choice",
         "label": "Pairing",
-        "marks": "R?",
-        "note": "Needs this screen before it can be anything but hardcoded.",
+        "marks": "R",
+        "note": "Confirmation shows a six-digit code on the panel and waits for it to be accepted. PIN-free pairs anything in range without asking.",
         "options": [
-          "PIN-free",
-          "Confirmation required"
+          "Confirmation required",
+          "PIN-free"
         ],
-        "default": "PIN-free"
+        "default": "Confirmation required"
       },
       {
         "key": "bt_discoverable",
@@ -221,7 +221,7 @@
         "type": "toggle",
         "label": "Auto-trust on pair",
         "marks": "H",
-        "note": null,
+        "note": "Remembers a device once its pairing is confirmed, so it reconnects on its own. Off means every connection is a fresh pair.",
         "default": true
       }
     ]
