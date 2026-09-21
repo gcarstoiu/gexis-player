@@ -214,7 +214,8 @@
         "marks": "R",
         "note": "View and forget remembered devices. Clearing breaks automatic reconnection.",
         "default": null,
-        "empty": "No devices paired yet. Put this device in pairing mode from your phone."
+        "empty": "No devices paired yet. Put this device in pairing mode from your phone.",
+        "kind": "device"
       },
       {
         "key": "bt_autotrust",
@@ -552,7 +553,9 @@
         "note": null,
         "default": null,
         "empty": "No networks found. Check the adapter is enabled, or move closer to the router.",
-        "hint": "A secured network needs its password the first time. Saved networks join in one tap."
+        "hint": "A secured network needs its password the first time. Saved networks join in one tap.",
+        "kind": "network",
+        "discover": true
       },
       {
         "key": "timezone",

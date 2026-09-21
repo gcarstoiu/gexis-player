@@ -109,13 +109,35 @@ pairing frame froze — countdown still, Reject doing nothing — while every
 server-side check passed, because an `$effect` read what it wrote and Svelte
 stopped updating the whole tree ([LESSONS](docs/LESSONS.md) case 11); and a
 failed answer left both buttons disabled, a `try/catch` with no `finally`.
+
 **And the `bt_trusted` row read "None" with a phone paired** (George, on the
 panel, 2026-09-21): the row's value is a count, the panel counted `row.items`
-as the design does, and the design carries its items inline where ours are
+as the design does, and the design carries its items inline where ours were
 fetched when the sheet opens — so the row could only ever read the empty
-answer. The count is published on the row now, from the same BlueZ read the
-sheet uses. **The row and the sheet are two surfaces and the sheet working
-says nothing about the row.**
+answer. **The row and the sheet are two surfaces, and the sheet working says
+nothing about the row.**
+
+**[ADR-0044](docs/decisions/0044-settings-row-vocabulary.md) §1 is amended
+for what that turned out to be about: when a `list`'s items arrive.** George,
+seeing the sheet still flash as it opened: *"Isn't the list static? It should
+be instant."* It was not static — the sheet refetched on every open and began
+in its searching state whatever the answer cost. Measured on the panel frame
+by frame: **spinner from 27 ms to 36 ms, devices at 56 ms**, over a BlueZ read
+of 22–29 ms. So:
+
+- **`discover: true`** — LMS discovery (2.5 s) and a Wi-Fi scan (seconds) go
+  looking when the sheet opens and say so while they look. `wifi` carries the
+  flag now; it always searched and only the server row said so.
+- **no `discover`** — `bt_trusted`'s items are one `GetManagedObjects`, so
+  they arrive **with the row** in `/settings` and the sheet opens drawn, the
+  refresh running behind it. The same read gives the row its count.
+
+Re-measured after the change: **the searching block never enters the DOM at
+all** (a MutationObserver over the whole body for 600 ms), and the Wi-Fi sheet
+still shows its own, with its own words. The three kinds are `server`,
+`network` and `device` now — the two-way branch had `device` falling through
+to Wi-Fi's side of it, so the Bluetooth sheet said it was *"looking for
+networks"* and *"sweeping every channel"*.
 
 **Design Claude is owed the `device_name` restart warning text.** The note
 shipped in 9e says the true thing plainly as a placeholder.

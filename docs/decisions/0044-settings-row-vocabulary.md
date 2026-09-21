@@ -33,8 +33,8 @@ reads it.**
 
 ### 1. `list` — an eighth type, seventh settable
 
-A row whose sheet lists items, each with an optional per-item action. Two
-shapes today, distinguished by `kind`:
+A row whose sheet lists items, each with an optional per-item action. Three
+shapes, distinguished by `kind`:
 
 - **`kind: "server"`** — LMS servers found by discovery. Tapping one sets the
   value. Carries `discover: true` (a searching state while it looks) and
@@ -49,9 +49,39 @@ shapes today, distinguished by `kind`:
   `NotSettable`. The alternative - a separate route for choosing a server -
   would have made the one row whose whole purpose is to hold an address the
   only list that cannot.
-- **no `kind`** — Wi-Fi networks and Bluetooth devices: name, meta, and a
-  `Forget` action per item. Wi-Fi items add signal bars and a locked state
-  that opens a password sheet.
+- **`kind: "network"`** — Wi-Fi: name, meta, a `Forget` per item, signal
+  bars, and a locked state that opens a password sheet.
+- **`kind: "device"`** — Bluetooth: name, meta, and a `Forget` per item.
+
+  **Named 2026-09-21, in 9f.** Both were "no `kind`" until then, which
+  worked for `validate` — it asks only whether a row is a server — and not
+  for anything that has to say something about the shape in front of it.
+  The searching state fell through to Wi-Fi's words, so the Bluetooth sheet
+  said *"Looking for networks / The adapter sweeps every channel"*. A
+  branch with no case for what it is given is a branch that answers wrongly
+  rather than not at all.
+
+**Amended 2026-09-21, in 9f: `discover` decides whether the sheet waits.**
+The three shapes above say what a list *is*; this says when its items
+arrive, which is the part that is visible on the panel.
+
+- **`discover: true`** — the items are looked for when the sheet opens, and
+  the sheet says so while it looks. LMS discovery listens for 2.5 s and a
+  Wi-Fi scan takes seconds; a sheet that sat blank that long would read as
+  broken. **`wifi` carries the flag now**: it always searched, and only the
+  server row said so.
+- **no `discover`** — the items are one cheap local read, so they arrive
+  **with the row** in `/settings` and the sheet opens already drawn.
+  `bt_trusted`'s are a single BlueZ `GetManagedObjects`: 22–29 ms measured
+  on the device over five runs, which was never a wait and was still three
+  frames of spinner, because the sheet began in its searching state whatever
+  the answer cost. The sheet refreshes behind the drawn list, so a device
+  forgotten from the phone does not linger.
+
+  **The row needs the items anyway.** A device list's value is a count of
+  them, and a row that counted only what the *sheet* fetches reads "None"
+  until someone opens it — which is what it did on the device with a phone
+  paired (George, 2026-09-21).
 
 **A `list` is navigation, not a value**, which is what `action` rows with
 `navigation: true` were standing in for. Those rows can never be "wired" under

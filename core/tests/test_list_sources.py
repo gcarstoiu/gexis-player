@@ -194,7 +194,7 @@ async def test_a_missing_nmcli_is_not_a_crash(monkeypatch):
 from aiohttp.test_utils import TestClient, TestServer  # noqa: E402
 
 from gexis_core.settings import SettingsStore  # noqa: E402
-from gexis_core.settings_registry import Settings  # noqa: E402
+from gexis_core.settings_registry import Settings, load_registry  # noqa: E402
 from gexis_core.state import StateStore  # noqa: E402
 from gexis_core.wsserver import StateServer  # noqa: E402
 
@@ -267,15 +267,22 @@ async def test_bluetooth_devices_are_listed_and_forgotten(tmp_path, monkeypatch)
     assert calls == ["Pixel 10 Pro"]
 
 
-@pytest.mark.asyncio
-async def test_the_trusted_row_reads_out_how_many_are_paired(tmp_path, monkeypatch):
-    """The row's value is a count, and it comes with the row.
+def _row(body, key):
+    return next(r for g in body["groups"] for r in g["rows"] if r.get("key") == key)
 
-    On the device, with a phone paired and listed by the sheet, the row
-    still read "None" (George, on the panel, 2026-09-21): the panel counted
-    `row.items`, which the settings payload has never carried - items are
-    fetched when the sheet opens. A row has to read correctly before anyone
-    opens it, so the count is published on the row.
+
+@pytest.mark.asyncio
+async def test_a_list_that_does_not_go_looking_arrives_with_its_items(tmp_path, monkeypatch):
+    """ADR-0044 §1, amended: the row carries them, and two things need that.
+
+    The row's own value is a count of them - on the device, with a phone
+    paired and listed by the sheet, the row still read "None" (George, on
+    the panel, 2026-09-21), because the panel counted `row.items` and the
+    payload had never carried any. And the sheet opens drawn instead of
+    showing a searching state for the three frames a 25 ms read takes.
+
+    **Only the rows that do not go looking.** `wifi` and `lms_server` carry
+    `discover: true`, take real seconds, and must not be waited for here.
     """
 
     async def known(bus):
@@ -291,16 +298,31 @@ async def test_the_trusted_row_reads_out_how_many_are_paired(tmp_path, monkeypat
     monkeypatch.setattr(StateServer, "_bluetooth", staticmethod(run))
     async with client_for(tmp_path) as client:
         body = await (await client.get("/settings")).json()
-        row = next(r for g in body["groups"] for r in g["rows"] if r.get("key") == "bt_trusted")
-        assert row["count"] == 2
-        # Still not a stored value: counting it does not make it settable.
+        row = _row(body, "bt_trusted")
+        assert [i["name"] for i in row["items"]] == ["Pixel 10 Pro", "Kitchen Echo"]
+        # Still not a stored value: carrying items does not make it settable.
         assert row["value"] is None
+        assert "items" not in _row(body, "wifi")
+        assert "items" not in _row(body, "lms_server")
+
+
+def test_a_seeded_list_never_also_goes_looking():
+    """The two are the same question answered twice, and the panel reads
+    `discover` to decide whether to draw a searching state. A row that is
+    both would open on a spinner over items it already had."""
+    rows = {r["key"]: r for g in load_registry() for r in g["rows"] if r["type"] != "group"}
+    for key in StateServer.SEEDED_LISTS:
+        assert rows[key]["type"] == "list"
+        assert not rows[key].get("discover")
+    for key, row in rows.items():
+        if row["type"] == "list" and key not in StateServer.SEEDED_LISTS:
+            assert row.get("discover"), f"{key} neither arrives with its items nor looks for them"
 
 
 @pytest.mark.asyncio
-async def test_a_bluetooth_that_cannot_be_read_leaves_the_row_at_none(tmp_path, monkeypatch):
+async def test_a_bluetooth_that_cannot_be_read_leaves_the_row_empty(tmp_path, monkeypatch):
     """An adapter that is not there must cost the settings payload nothing.
-    `_bluetooth` answers [] for anything that fails, and the row reads
+    `_bluetooth` answers [] for anything that fails, so the row reads
     "None" - which is what its own empty state says - rather than 500."""
 
     async def run(call, *args):
@@ -310,9 +332,7 @@ async def test_a_bluetooth_that_cannot_be_read_leaves_the_row_at_none(tmp_path, 
     async with client_for(tmp_path) as client:
         response = await client.get("/settings")
         assert response.status == 200
-        body = await response.json()
-        row = next(r for g in body["groups"] for r in g["rows"] if r.get("key") == "bt_trusted")
-        assert row["count"] == 0
+        assert _row(await response.json(), "bt_trusted")["items"] == []
 
 
 @pytest.mark.asyncio

@@ -511,7 +511,7 @@ class StateServer:
         if self._settings is None:
             return web.json_response({"error": "settings are not wired up"}, status=503)
         groups = self._settings.to_json()
-        await self._count_paired(groups)
+        await self._seed_lists(groups)
         # ADR-0048 §5: the header reads name - hostname - address, and the
         # last two are the system's own. After a rename the stored name and
         # the live hostname disagree, and that disagreement is exactly what
@@ -529,35 +529,43 @@ class StateServer:
             }
         )
 
-    async def _count_paired(self, groups: list[dict]) -> None:
-        """How many devices `bt_trusted` holds, for the row to read out.
+    #: A `list` whose items are one cheap local read arrives **with the
+    #: row** (ADR-0044 §1, amended 2026-09-21). The others carry
+    #: `discover: true` and go looking when their sheet opens, which is
+    #: what the sheet's searching state is for: LMS discovery listens for
+    #: 2.5 s and a Wi-Fi scan takes seconds, where BlueZ answers in 22-29 ms.
+    #: Module and attribute rather than the function itself, so the name is
+    #: resolved when it is called - the same late binding every other call
+    #: here has, and what lets a test stand in for BlueZ.
+    SEEDED_LISTS = {"bt_trusted": (bluetooth_devices, "known")}
 
-        **A `list` row's value is not always its stored value.** A server
-        list reads out the server in use and Wi-Fi the network it is on,
-        both of which are values; a device list reads out a count, which is
-        not stored anywhere and has to be counted. The design's own rule is
-        the same - `n ? n + ' paired' : 'None'` - and it counts the items
-        it has inline. **We do not have them inline:** items are fetched
-        when the sheet opens, so a row that counted those would read "None"
-        until it was opened, which is what it did on the device with a
-        phone paired (George, 2026-09-21).
+    async def _seed_lists(self, groups: list[dict]) -> None:
+        """Give the rows that do not have to go looking their items.
 
-        Counted per request rather than cached: `/settings` is fetched when
+        **Two things need them, and the row needs them first.** A device
+        list's value is a count of its items, so a row counting only what
+        the *sheet* fetches reads "None" until someone opens it - which is
+        what it did on the device with a phone paired (George,
+        2026-09-21). And a sheet whose items are already in the panel's
+        hands opens drawn, instead of showing a searching state for the
+        three frames a 25 ms read takes.
+
+        Read per request rather than cached: `/settings` is fetched when
         the screen mounts and when a write moves the revision, which is
-        exactly when the row is drawn, and a count that is a bus round-trip
-        old is a count that can be wrong in the one direction that matters
-        - a device forgotten elsewhere still listed here.
+        exactly when the row is drawn. A list that is a bus round-trip old
+        is wrong in the direction that matters - a device forgotten
+        elsewhere still listed here.
         """
-        row = next(
-            (r for g in groups for r in g["rows"] if r.get("key") == "bt_trusted"),
-            None,
-        )
-        if row is None:
-            return
-        # `_bluetooth` answers [] for an adapter that is not there, so an
-        # unavailable BlueZ reads "None" - which is what the row's own empty
-        # state says - rather than failing the whole settings payload.
-        row["count"] = len(await self._bluetooth(bluetooth_devices.known))
+        for group in groups:
+            for row in group["rows"]:
+                source = self.SEEDED_LISTS.get(row.get("key"))
+                if source is None or row["type"] != "list":
+                    continue
+                module, name = source
+                # `_bluetooth` answers [] for an adapter that is not there,
+                # so an unavailable BlueZ reads as the row's own empty state
+                # rather than failing the whole settings payload.
+                row["items"] = await self._bluetooth(getattr(module, name))
 
     async def _handle_pairing_answer(self, request: web.Request) -> web.Response:
         """Accept or reject the open pairing request (ADR-0045).

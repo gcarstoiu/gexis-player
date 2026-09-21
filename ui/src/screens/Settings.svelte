@@ -208,11 +208,12 @@
       // docs/findings/042 §7 as one more place its prose and its literal
       // disagree.
       if (v) return String(v);
-      // The count comes from the daemon, on the row. The design counts the
-      // items it carries inline; ours are fetched when the sheet opens, so
-      // a row counting those reads "None" until someone opens it - which is
-      // what it did with a phone paired (George, on the panel, 2026-09-21).
-      const n = row.count ?? 0;
+      // The items are on the row because the daemon seeds a list that does
+      // not have to go looking (ADR-0044 §1, amended). A row counting only
+      // what the *sheet* fetches reads "None" until someone opens it -
+      // which is what it did with a phone paired (George, on the panel,
+      // 2026-09-21).
+      const n = (row.items ?? []).length;
       return n ? `${n} paired` : 'None';
     }
     if (v === null || v === undefined) return row.type === 'action' ? '' : '—';
@@ -278,21 +279,29 @@
     joinItem = null;
     join = null;
     joinError = null;
-    items = [];
     listError = null;
     // A grouped choice opens on the region the current value is in, so the
     // zone in use is one tap away rather than two.
     region = row.grouped ? String(row.value ?? '').split('/')[0] || null : null;
     if (region !== null && !String(row.value ?? '').includes('/')) region = null;
     draft = row.type === 'text' ? (row.value ?? '') : row.type === 'number' ? (row.value ?? row.min) : null;
+    // A seeded list is drawn from the row itself, so the sheet opens with
+    // its devices on it rather than with a spinner for the 25 ms the read
+    // takes (ADR-0044 §1, amended 2026-09-21).
+    items = row.items ?? [];
     if (row.type === 'list') openList(row.key);
   }
 
   //: Fetched per opening, never cached: a scan is a picture of the room now.
   //: The key is captured so a slow answer cannot land in a sheet that has
   //: since been closed or replaced.
+  //:
+  //: **Only a list that has to go looking says it is looking** (ADR-0044 §1,
+  //: amended). A seeded one is already drawn from the row and this refreshes
+  //: behind it; a searching state there is three frames of spinner over a
+  //: list that is right in front of you.
   async function openList(key) {
-    searching = true;
+    searching = !!rowOf(key)?.discover;
     listError = null;
     const answer = await listItems(key);
     if (sheetKey !== key) return;
@@ -370,6 +379,18 @@
   // '06G5_McIntosh' reads as 06 / McIntosh: the ordinal is how the corpus is
   // organised and the only way to scan a list that long. The stored value
   // stays the whole section name (ADR-0044 §4).
+  //: What a `list` says while it is looking, per `kind` (ADR-0044 §1).
+  //: A table rather than a ternary because a two-way branch has to send
+  //: some kind somewhere it does not belong: `device` fell through to
+  //: Wi-Fi's side of `kind === 'server'`, so the Bluetooth sheet said it
+  //: was looking for networks and sweeping every channel. Only `discover`
+  //: rows reach this now, and it is still theirs to get right.
+  const SCAN = {
+    server: { title: 'Searching the network', note: 'Servers answer within a few seconds.' },
+    network: { title: 'Looking for networks', note: 'The adapter sweeps every channel.' },
+    device: { title: 'Looking for devices', note: 'Paired devices answer straight away.' },
+  };
+
   const ORDINAL = /^(\d+)G5_(.*)$/;
   function parts(name) {
     const m = ORDINAL.exec(String(name));
@@ -664,19 +685,15 @@
       <!-- A list is navigation, not a value (ADR-0044 §1): items with a
            per-item action, and a plain sentence when there are none. All
            three sources are built now - a Wi-Fi scan, LMS discovery and
-           BlueZ's paired devices - and the items arrive when the sheet
-           opens, which is why the row cannot count them. -->
+           BlueZ's paired devices - and only the two that go looking open
+           on the searching state below. -->
       {#if sheet.type === 'list' && searching}
         <!-- "Nothing found" is only true once the search has finished. -->
         <div class="scan">
           <div class="scan__spin"></div>
           <div>
-            <div class="scan__title">{sheet.kind === 'server' ? 'Searching the network' : 'Looking for networks'}</div>
-            <div class="scan__note">
-              {sheet.kind === 'server'
-                ? 'Servers answer within a few seconds.'
-                : 'The adapter sweeps every channel.'}
-            </div>
+            <div class="scan__title">{SCAN[sheet.kind]?.title ?? 'Looking'}</div>
+            <div class="scan__note">{SCAN[sheet.kind]?.note ?? ''}</div>
           </div>
         </div>
       {:else if sheet.type === 'list'}
