@@ -59,6 +59,48 @@ This is why the subphase cannot precede ADR-0044: **every row here is
 conditional**, and building them against a registry with no `onlyWhen` would
 mean building them twice.
 
+### 1a. What the design actually draws, found 2026-09-21
+
+**The drop draws this screen**, in `design/source/Now Playing.dc.html`
+(lines 1093-1210) rather than in a file of its own — `screens.md` says in
+its first paragraph that every screen but Settings lives in that file. The
+first build of this screen missed it and invented a layout;
+`docs/LESSONS.md` case 13 records how. What the design specifies, and what
+the screen now does:
+
+- **The background is the picture, dimmed in itself**:
+  `filter: brightness(0.62) saturate(0.9)`, `object-fit: cover`, over
+  `#0b1218`, under a scrim of `rgba(7,11,15,0.06)` — which is a sixteenth of
+  the dimming an unaided reading would reach for.
+- **No plate behind the type, ever.** The design's own comment does the
+  arithmetic: at that brightness a white region of a photograph reaches 158
+  and ink-on-field is ~2.6:1, so **legibility is a contour on the glyphs** —
+  `paint-order: stroke fill` with a 4px `rgba(46,57,66,0.92)` stroke, which
+  holds 10.1:1 against the ink and 4.4:1 against the brightest field. Slate
+  rather than black, because a true mid-grey drops to 2.1:1 on a bright
+  field and stops separating.
+- **Black is the exception**: no stroke, and a `rgba(11,18,24,0.93)` scrim.
+- **The clock and the date drift; nothing else does.** 132px mono over 58px
+  seconds in `--accent-lms`, then `MONDAY · 21 SEPTEMBER` in mono 21px at
+  0.2em. The block moves on `left`/`top` over 1400ms.
+- **The forecast is a bar across the bottom**, `24px 56px 28px`, current
+  conditions left and the days right: a 124px icon, the temperature at 104px
+  weight 300, the day's high at 36px in `--accent-artist` and its low at
+  26px in `--accent-bluetooth`, the condition in words at 26px in
+  `--accent-lms`. Each forecast column is 104px wide: a mono 21px name, an
+  80px icon, then the same two temperatures.
+- **The icons are DOM shapes in three palettes, and they move** — a sun that
+  spins on an 18s loop, a cloud that drifts, rain that falls on a 1.1s
+  stagger. Solid, Duotone and Neon are three palettes over one construction.
+
+**Two extensions to the drawn language**, because a mock and a forecast are
+not the same thing. The design draws four conditions (sun, part, cloud,
+rain) where Open-Meteo returns nineteen, so **snow, fog, and thunder are
+built from the same primitives in the same palettes**; and the credits
+ADR-0047 §2c requires have no element in the design, so they take the mono
+uppercase treatment this panel already uses for an attribution, in the
+corner the clock's drift does not reach.
+
 ### 2a. The providers, chosen 2026-09-21
 
 **Wallpapers online is Pixabay.** Of the three stock services whose terms

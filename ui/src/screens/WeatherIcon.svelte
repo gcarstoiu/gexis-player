@@ -1,191 +1,403 @@
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
 <!--
-  A weather glyph, in one of the three sets `idle_icons` offers (ADR-0047 §1).
+  The idle screen's weather glyph, in the set `idle_icons` names.
 
-  **One geometry, three ways of painting it.** Nineteen conditions drawn
-  three times over would be fifty-seven drawings to keep in agreement; this
-  is nineteen compositions of six primitives - sun, cloud, drops, flakes,
-  bolt, fog bars - and a set that decides how those primitives are painted:
+  **Built from the design, not from an idea about icons.** The drop draws
+  these in `source/Now Playing.dc.html` (the idle screen lives in that file,
+  not in a file of its own) and they are DOM shapes, not line art: a yellow
+  disc with four spinning rays, a white cloud that drifts, blue bars that
+  fall. Three sets, each with its own palette and its own animation:
 
-  - **Solid** — filled, one ink. What a forecast looks like at a glance.
-  - **Duotone** — the cloud dimmed, what falls out of it in the accent.
-    Two tones is the whole idea, so the sun behind a cloud is accent too.
-  - **Neon** — stroked, nothing filled, with a glow. It is the set that
-    needs a dark background, which is what this screen is.
+  - **Solid** — flat colour. Sun `#f2c14f` with a glow, cloud `#eef3f7`,
+    rain `#8fc4e8`.
+  - **Duotone** — a shadow shape offset behind each light one, and the sun
+    pulsing rather than spinning.
+  - **Neon** — nothing filled: rings and bars in `#9fe6ff` / `#ffd766` with
+    their own glow.
 
-  The panel has no icon font (`design/screens.md`), so these are inline SVG
-  like every other glyph here: they inherit `currentColor` and scale with
-  their box rather than with a font size.
+  **Every measurement is a ratio of the box**, taken from the design's two
+  sizes (124px beside the current conditions, 80px in a forecast column).
+  Both sets of numbers reduce to the same fractions, so one component draws
+  either without a second table.
+
+  **Four conditions are drawn in the design and a forecast has more.** Sun,
+  part, cloud and rain are the mock's whole vocabulary; snow, storm and fog
+  are built here from the same primitives, in the same palette, because a
+  real week needs them and inventing a second visual language for them would
+  be worse than extending this one.
 -->
 <script>
-  let { condition = 'unknown', set = 'Solid', size = 44 } = $props();
+  let { condition = 'unknown', set = 'Solid', size = 80 } = $props();
 
-  // What each condition is made of. Nothing here is a special case: a
-  // condition names its parts, and the parts are drawn below.
+  // Which primitives each condition is made of. The design's own `cond()`
+  // maps sun/part/cloud/rain; the rest extend it.
   const PARTS = {
-    'clear': { sun: 'full' },
-    'mostly-clear': { sun: 'full', cloud: 'small' },
-    'partly-cloudy': { sun: 'peek', cloud: 'big' },
-    'overcast': { cloud: 'double' },
-    'fog': { cloud: 'big', fog: true },
-    'drizzle': { cloud: 'big', fall: 'drizzle' },
-    'freezing-drizzle': { cloud: 'big', fall: 'drizzle', freezing: true },
-    'rain': { cloud: 'big', fall: 'rain' },
-    'heavy-rain': { cloud: 'big', fall: 'heavy' },
-    'freezing-rain': { cloud: 'big', fall: 'rain', freezing: true },
-    'showers': { sun: 'peek', cloud: 'big', fall: 'rain' },
-    'heavy-showers': { sun: 'peek', cloud: 'big', fall: 'heavy' },
-    'snow': { cloud: 'big', fall: 'snow' },
-    'heavy-snow': { cloud: 'double', fall: 'snow' },
-    'snow-grains': { cloud: 'big', fall: 'grains' },
-    'snow-showers': { sun: 'peek', cloud: 'big', fall: 'snow' },
-    'thunderstorm': { cloud: 'big', bolt: true },
-    'thunderstorm-hail': { cloud: 'big', bolt: true, fall: 'grains' },
-    'unknown': { cloud: 'big', query: true },
+    'clear': { sun: true },
+    'mostly-clear': { sun: true, cloud: true },
+    'partly-cloudy': { sun: true, cloud: true },
+    'overcast': { cloud: true },
+    'fog': { cloud: true, fog: true },
+    'drizzle': { cloud: true, rain: 'light' },
+    'freezing-drizzle': { cloud: true, rain: 'light' },
+    'rain': { cloud: true, rain: true },
+    'heavy-rain': { cloud: true, rain: true },
+    'freezing-rain': { cloud: true, rain: true },
+    'showers': { sun: true, cloud: true, rain: true },
+    'heavy-showers': { sun: true, cloud: true, rain: true },
+    'snow': { cloud: true, snow: true },
+    'heavy-snow': { cloud: true, snow: true },
+    'snow-grains': { cloud: true, snow: true },
+    'snow-showers': { sun: true, cloud: true, snow: true },
+    'thunderstorm': { cloud: true, bolt: true },
+    'thunderstorm-hail': { cloud: true, bolt: true, snow: true },
+    'unknown': { cloud: true },
   };
 
   const parts = $derived(PARTS[condition] ?? PARTS.unknown);
-  const neon = $derived(set === 'Neon');
-  const duo = $derived(set === 'Duotone');
-
-  // Solid paints everything in the ink it inherits; duotone drops the cloud
-  // back so what falls out of it reads first; neon draws nothing filled.
-  const cloudFill = $derived(neon ? 'none' : duo ? 'rgba(233,238,242,0.38)' : 'currentColor');
-  const markFill = $derived(neon ? 'none' : duo ? 'var(--accent)' : 'currentColor');
-  const stroke = $derived(neon ? 'currentColor' : 'none');
-  const markStroke = $derived(neon ? 'var(--accent)' : 'none');
+  const kind = $derived(String(set).toLowerCase());
+  const px = (ratio) => `${(size * ratio).toFixed(2)}px`;
+  // The rain bars sit at these three fractions across the box; a light
+  // shower drops the middle one rather than shrinking them all.
+  const wet = $derived(parts.rain === 'light' ? [0.22, 0.74] : [0.22, 0.48, 0.74]);
 </script>
 
-<svg
-  class="wicon"
-  class:wicon--neon={neon}
-  width={size}
-  height={size}
-  viewBox="0 0 64 64"
+<span
+  class="wx wx--{kind}"
+  style:width={`${size}px`}
+  style:height={`${size}px`}
+  style:--s={`${size}px`}
   role="img"
   aria-label={condition.replace(/-/g, ' ')}
-  fill="none"
 >
-  {#if parts.sun === 'full'}
-    <circle cx="32" cy="30" r="13" fill={markFill} stroke={markStroke} stroke-width="3" />
-    {#each [0, 45, 90, 135, 180, 225, 270, 315] as angle (angle)}
-      <line
-        x1="32" y1="9" x2="32" y2="14"
-        stroke={neon ? 'var(--accent)' : duo ? 'var(--accent)' : 'currentColor'}
-        stroke-width="3.5"
-        stroke-linecap="round"
-        transform={`rotate(${angle} 32 30)`}
-      />
-    {/each}
-  {:else if parts.sun === 'peek'}
-    <!-- Behind the cloud and to the left, so the cloud reads as in front
-         rather than as a second shape beside it. -->
-    <circle cx="23" cy="22" r="10" fill={markFill} stroke={markStroke} stroke-width="3" />
-    {#each [200, 245, 290] as angle (angle)}
-      <line
-        x1="23" y1="6" x2="23" y2="10"
-        stroke={duo || neon ? 'var(--accent)' : 'currentColor'}
-        stroke-width="3.5"
-        stroke-linecap="round"
-        transform={`rotate(${angle} 23 22)`}
-      />
-    {/each}
+  {#if parts.sun}
+    <span class="sun">
+      <span class="sun__rays">
+        <span></span><span></span><span></span><span></span>
+      </span>
+      <span class="sun__disc"></span>
+      <span class="sun__glow"></span>
+    </span>
   {/if}
 
-  {#if parts.cloud === 'double'}
-    <path
-      d="M20 24a9 9 0 0 1 17-3 8 8 0 0 1 10 10H23a7 7 0 0 1-3-7z"
-      fill={neon ? 'none' : 'rgba(233,238,242,0.28)'}
-      stroke={stroke}
-      stroke-width="3"
-      stroke-linejoin="round"
-    />
-  {/if}
   {#if parts.cloud}
-    {@const y = parts.cloud === 'small' ? 6 : 0}
-    <path
-      d={parts.cloud === 'small'
-        ? `M36 40a6 6 0 0 1 11-2 5.5 5.5 0 0 1 1 11H38a5 5 0 0 1-2-9z`
-        : `M18 44a10 10 0 0 1 3-19 13 13 0 0 1 24-2 9 9 0 0 1 1 21H21a9 9 0 0 1-3-1z`}
-      transform={`translate(0 ${y})`}
-      fill={cloudFill}
-      stroke={stroke}
-      stroke-width="3"
-      stroke-linejoin="round"
-    />
+    <span class="cloud">
+      <span class="cloud__shadow"></span>
+      <span class="cloud__base"></span>
+      <span class="cloud__big"></span>
+      <span class="cloud__small"></span>
+    </span>
   {/if}
 
-  {#if parts.fall === 'drizzle' || parts.fall === 'rain' || parts.fall === 'heavy'}
-    {@const drops = parts.fall === 'heavy' ? [20, 30, 40, 50] : parts.fall === 'rain' ? [24, 34, 44] : [27, 40]}
-    {#each drops as x (x)}
-      <line
-        x1={x} y1="48" x2={x - 3} y2={parts.fall === 'drizzle' ? 55 : 59}
-        stroke={markStroke === 'none' ? markFill : markStroke}
-        stroke-width={parts.fall === 'drizzle' ? 3 : 4}
-        stroke-linecap="round"
-      />
-    {/each}
-  {:else if parts.fall === 'snow' || parts.fall === 'grains'}
-    {@const flakes = parts.fall === 'snow' ? [[24, 52], [34, 57], [44, 52]] : [[26, 53], [38, 53]]}
-    {#each flakes as [x, y] (x)}
-      <circle
-        cx={x} cy={y} r={parts.fall === 'snow' ? 3.4 : 2.6}
-        fill={markFill}
-        stroke={markStroke}
-        stroke-width="2"
-      />
+  {#if parts.rain}
+    {#each wet as x, i (x)}
+      <span class="drop" style:left={px(x)} style:animation-delay={`${i * 0.35}s`}></span>
     {/each}
   {/if}
 
-  {#if parts.freezing}
-    <!-- What tells freezing rain from rain: the line it lands on. -->
-    <line x1="16" y1="60" x2="48" y2="60" stroke={markStroke === 'none' ? markFill : markStroke} stroke-width="3" stroke-linecap="round" />
+  {#if parts.snow}
+    {#each [0.24, 0.5, 0.76] as x, i (x)}
+      <span class="flake" style:left={px(x)} style:animation-delay={`${i * 0.4}s`}></span>
+    {/each}
   {/if}
 
   {#if parts.fog}
-    {#each [50, 56, 62] as y, i (y)}
-      <line
-        x1={16 + i * 3} y1={y} x2={48 - i * 2} y2={y}
-        stroke={neon || duo ? 'var(--accent)' : 'currentColor'}
-        stroke-width="3.5"
-        stroke-linecap="round"
-        opacity={1 - i * 0.22}
-      />
+    {#each [0.78, 0.9] as y, i (y)}
+      <span class="fog" style:top={px(y)} style:width={px(0.84 - i * 0.18)}></span>
     {/each}
   {/if}
 
   {#if parts.bolt}
-    <path
-      d="M34 44l-9 13h7l-3 10 12-15h-8l4-8z"
-      fill={markFill}
-      stroke={markStroke}
-      stroke-width="2.5"
-      stroke-linejoin="round"
-    />
+    <span class="bolt"></span>
   {/if}
-
-  {#if parts.query}
-    <text
-      x="32" y="60" text-anchor="middle"
-      font-size="18" font-weight="700"
-      fill={neon ? 'none' : 'currentColor'}
-      stroke={neon ? 'currentColor' : 'none'}
-      stroke-width="1"
-    >?</text>
-  {/if}
-</svg>
+</span>
 
 <style>
-  .wicon {
+  /* The design's four animations, verbatim. */
+  @keyframes wxSpin {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+  @keyframes wxDrift {
+    0%,
+    100% {
+      transform: translateX(-3px);
+    }
+    50% {
+      transform: translateX(3px);
+    }
+  }
+  @keyframes wxFall {
+    0% {
+      transform: translateY(-4px);
+      opacity: 0;
+    }
+    30% {
+      opacity: 1;
+    }
+    100% {
+      transform: translateY(12px);
+      opacity: 0;
+    }
+  }
+  @keyframes wxPulse {
+    0%,
+    100% {
+      opacity: 0.55;
+    }
+    50% {
+      opacity: 1;
+    }
+  }
+
+  .wx {
+    position: relative;
     display: block;
     flex-shrink: 0;
-    /* The accent the two painted sets use. Kept here rather than on each
-       shape so a set is a paint change and never a geometry change. */
-    --accent: #7ed6bc;
   }
-  /* Neon is the one set that is not just a fill: a stroke this thin needs
-     the glow to read as deliberate rather than as a hairline. */
-  .wicon--neon {
-    filter: drop-shadow(0 0 4px rgba(126, 214, 188, 0.55));
+  .wx span {
+    position: absolute;
+    display: block;
+  }
+
+  /* ---- sun ------------------------------------------------------------ */
+  .sun,
+  .cloud {
+    inset: 0;
+  }
+  .sun__rays {
+    left: 50%;
+    top: 50%;
+    width: var(--s);
+    height: var(--s);
+    margin: calc(var(--s) / -2) 0 0 calc(var(--s) / -2);
+    animation: wxSpin 18s linear infinite;
+  }
+  .sun__rays span {
+    border-radius: 2px;
+    background: #f2c14f;
+  }
+  .sun__rays span:nth-child(1) {
+    left: 50%;
+    top: 0;
+    width: calc(var(--s) * 0.048);
+    height: calc(var(--s) * 0.17);
+    margin-left: calc(var(--s) * -0.024);
+  }
+  .sun__rays span:nth-child(2) {
+    left: 50%;
+    bottom: 0;
+    width: calc(var(--s) * 0.048);
+    height: calc(var(--s) * 0.17);
+    margin-left: calc(var(--s) * -0.024);
+  }
+  .sun__rays span:nth-child(3) {
+    top: 50%;
+    left: 0;
+    width: calc(var(--s) * 0.17);
+    height: calc(var(--s) * 0.048);
+    margin-top: calc(var(--s) * -0.024);
+  }
+  .sun__rays span:nth-child(4) {
+    top: 50%;
+    right: 0;
+    width: calc(var(--s) * 0.17);
+    height: calc(var(--s) * 0.048);
+    margin-top: calc(var(--s) * -0.024);
+  }
+  .sun__disc {
+    left: 50%;
+    top: 50%;
+    width: calc(var(--s) * 0.5);
+    height: calc(var(--s) * 0.5);
+    margin: calc(var(--s) * -0.25) 0 0 calc(var(--s) * -0.25);
+    border-radius: 50%;
+    background: #f2c14f;
+    box-shadow: 0 0 calc(var(--s) * 0.3) rgba(242, 193, 79, 0.6);
+  }
+  .sun__glow {
+    display: none;
+  }
+
+  /* ---- cloud ---------------------------------------------------------- */
+  .cloud {
+    top: calc(var(--s) * 0.3);
+    height: calc(var(--s) * 0.42);
+    animation: wxDrift 5s ease-in-out infinite;
+  }
+  .cloud__shadow {
+    display: none;
+  }
+  .cloud__base {
+    left: 0;
+    bottom: 0;
+    width: 100%;
+    height: calc(var(--s) * 0.26);
+    border-radius: var(--s);
+    background: #eef3f7;
+  }
+  .cloud__big {
+    left: calc(var(--s) * 0.16);
+    top: 0;
+    width: calc(var(--s) * 0.42);
+    height: calc(var(--s) * 0.42);
+    border-radius: 50%;
+    background: #eef3f7;
+  }
+  .cloud__small {
+    right: calc(var(--s) * 0.12);
+    top: calc(var(--s) * 0.1);
+    width: calc(var(--s) * 0.32);
+    height: calc(var(--s) * 0.32);
+    border-radius: 50%;
+    background: #eef3f7;
+  }
+
+  /* ---- what falls ----------------------------------------------------- */
+  .drop {
+    bottom: 0;
+    width: calc(var(--s) * 0.056);
+    height: calc(var(--s) * 0.2);
+    border-radius: 2px;
+    background: #8fc4e8;
+    animation: wxFall 1.1s linear infinite;
+  }
+  .flake {
+    bottom: calc(var(--s) * 0.04);
+    width: calc(var(--s) * 0.09);
+    height: calc(var(--s) * 0.09);
+    border-radius: 50%;
+    background: #dceaf6;
+    animation: wxFall 1.6s linear infinite;
+  }
+  .fog {
+    left: calc(var(--s) * 0.08);
+    height: calc(var(--s) * 0.05);
+    border-radius: var(--s);
+    background: #cfdae4;
+    opacity: 0.85;
+    animation: wxDrift 6s ease-in-out infinite;
+  }
+  .bolt {
+    left: 50%;
+    bottom: 0;
+    width: calc(var(--s) * 0.16);
+    height: calc(var(--s) * 0.3);
+    margin-left: calc(var(--s) * -0.08);
+    background: #f2c14f;
+    clip-path: polygon(58% 0, 8% 58%, 42% 58%, 30% 100%, 92% 38%, 52% 38%);
+    animation: wxPulse 2.4s ease-in-out infinite;
+  }
+
+  /* ---- duotone: a shadow shape behind every light one ------------------ */
+  .wx--duotone .sun__rays {
+    display: none;
+  }
+  .wx--duotone .sun__disc {
+    width: calc(var(--s) * 0.52);
+    height: calc(var(--s) * 0.52);
+    margin: calc(var(--s) * -0.24) 0 0 calc(var(--s) * -0.22);
+    background: #b8862f;
+    box-shadow: none;
+  }
+  .wx--duotone .sun__glow {
+    display: block;
+    left: 50%;
+    top: 50%;
+    width: calc(var(--s) * 0.52);
+    height: calc(var(--s) * 0.52);
+    margin: calc(var(--s) * -0.26) 0 0 calc(var(--s) * -0.26);
+    border-radius: 50%;
+    background: #f7d777;
+    animation: wxPulse 4s ease-in-out infinite;
+  }
+  .wx--duotone .cloud {
+    animation-duration: 5.5s;
+  }
+  .wx--duotone .cloud__shadow {
+    display: block;
+    left: calc(var(--s) * 0.04);
+    bottom: calc(var(--s) * -0.03);
+    width: calc(var(--s) * 0.96);
+    height: calc(var(--s) * 0.28);
+    border-radius: var(--s);
+    background: #8b98a6;
+  }
+  .wx--duotone .cloud__base {
+    width: calc(var(--s) * 0.92);
+    background: #f4f8fb;
+  }
+  .wx--duotone .cloud__big {
+    left: calc(var(--s) * 0.14);
+    width: calc(var(--s) * 0.44);
+    height: calc(var(--s) * 0.44);
+    background: #f4f8fb;
+  }
+  .wx--duotone .cloud__small {
+    display: none;
+  }
+  .wx--duotone .drop {
+    width: calc(var(--s) * 0.09);
+    height: calc(var(--s) * 0.09);
+    border-radius: 50% 50% 50% 0;
+    transform: rotate(45deg);
+    background: #7fc0ea;
+    animation-duration: 1.2s;
+  }
+  .wx--duotone .flake {
+    background: #cfe3f2;
+  }
+
+  /* ---- neon: nothing filled ------------------------------------------- */
+  .wx--neon .sun__rays {
+    display: none;
+  }
+  .wx--neon .sun__disc {
+    background: none;
+    box-sizing: border-box;
+    border: calc(var(--s) * 0.048) solid #ffd766;
+    box-shadow:
+      0 0 calc(var(--s) * 0.18) rgba(255, 215, 102, 0.9),
+      inset 0 0 calc(var(--s) * 0.1) rgba(255, 215, 102, 0.6);
+    animation: wxPulse 2.8s ease-in-out infinite;
+  }
+  .wx--neon .cloud {
+    animation-duration: 6s;
+  }
+  .wx--neon .cloud__base {
+    background: none;
+    height: calc(var(--s) * 0.3);
+    box-sizing: border-box;
+    border: calc(var(--s) * 0.048) solid #9fe6ff;
+    box-shadow: 0 0 calc(var(--s) * 0.14) rgba(159, 230, 255, 0.8);
+  }
+  .wx--neon .cloud__big {
+    background: none;
+    left: calc(var(--s) * 0.18);
+    box-sizing: border-box;
+    border: calc(var(--s) * 0.048) solid #9fe6ff;
+    box-shadow: 0 0 calc(var(--s) * 0.14) rgba(159, 230, 255, 0.8);
+  }
+  .wx--neon .cloud__small {
+    display: none;
+  }
+  .wx--neon .drop {
+    width: calc(var(--s) * 0.048);
+    height: calc(var(--s) * 0.22);
+    border-radius: var(--s);
+    background: #7fe4ff;
+    box-shadow: 0 0 calc(var(--s) * 0.1) rgba(127, 228, 255, 0.9);
+  }
+  .wx--neon .flake {
+    background: #7fe4ff;
+    box-shadow: 0 0 calc(var(--s) * 0.1) rgba(127, 228, 255, 0.9);
+  }
+  .wx--neon .fog {
+    background: #7fe4ff;
+    box-shadow: 0 0 calc(var(--s) * 0.08) rgba(127, 228, 255, 0.8);
+  }
+  .wx--neon .bolt {
+    background: #ffd766;
+    box-shadow: 0 0 calc(var(--s) * 0.12) rgba(255, 215, 102, 0.9);
   }
 </style>

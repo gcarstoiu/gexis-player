@@ -7,7 +7,7 @@ recognised faster next time, rather than rediscovered as a surprise.
 
 ## The check ran against the wrong reality
 
-Twelve instances so far, same shape each time: the check ran against
+Thirteen instances so far, same shape each time: the check ran against
 something that *resembled* the thing being tested, closely enough that
 the difference was invisible in the result. Not a broken check — a check
 answering a different question than the one asked, confidently.
@@ -239,14 +239,49 @@ measurement.** The check was research, the substitute was a summary for the
 rule, and the output was a confident "ruled out by their own terms" - which
 reads exactly like a finished answer.
 
+**13. Looking for a design file instead of looking for the design**
+(2026-09-21, Phase 9 subphase 9g). The idle screen was built against
+`design/screens.md` §9 - eight lines of prose - after checking
+`design/source/` and finding `Now Playing.dc.html` and `Settings.dc.html`
+and concluding the drop did not draw this screen. `design/README.md` agreed
+in so many words: *"Not in this package's first slice at all: the idle
+screen…"*
+
+**The drop draws it in full.** Background, scrim, clock, date line, a
+weather bar across the bottom, three icon sets, every colour and every
+size - in `Now Playing.dc.html`, lines 1093-1210. And `screens.md` says so
+in its **first paragraph**, two pages above the section that was read:
+*"the rest are described here so the shape is known, and are all in
+`source/Now Playing.dc.html` except Settings."*
+
+So the screen shipped with a layout nobody designed: the weather inside the
+drifting clock block rather than pinned across the bottom, no date line at
+all, a dark scrim plate under the type where the design **rejects a plate in
+a comment and says why** (at `brightness(0.62)` a white field is ~2.6:1, so
+legibility comes from a 4px contour on the glyphs instead), invented type
+sizes where the design gives 104px / 36px / 26px / 21px, and grey monochrome
+icons where the design has a spinning sun, a drifting cloud and falling rain
+in three palettes. George, seeing it: *"Design was not followed."*
+
+**The check asked "is there a file named after this screen".** The question
+was "does the design draw this screen". A directory listing answered the
+first confidently, and a README sentence about the *first slice* confirmed
+what the listing seemed to show - while the file that contained the answer
+was the one already open for every other screen.
+
+**This is case 12's shape, one day later**: a summary read in place of the
+source. Twice now the summary was accurate and the conclusion drawn from it
+was wrong, so the rule is not "read more carefully" - it is **when a summary
+implies something is absent, go and look at the source that would hold it.**
+
 ## Common shape
 
 Every case had a *plausible* substitute for the real target — the build
 host's filesystem for the booted one, one run for the distribution, a
 local ref for the remote, the kernel's OOM killer for any killer, an idle
 device for a booting one, a comment for the machine it describes, a
-summary line for the rule it summarises — and the check quietly accepted
-the substitute. None of these failed loudly. Each
+summary line for the rule it summarises, a directory listing for the design
+itself — and the check quietly accepted the substitute. None of these failed loudly. Each
 produced an answer that looked like a normal result, not an error.
 
 **What to check before trusting a verification result:** not just "does
