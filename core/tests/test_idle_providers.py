@@ -295,6 +295,61 @@ def test_a_name_cannot_climb_out_of_the_cache_directory(tmp_path):
     assert source.path_of("nope.jpg") is None
 
 
+def test_pictures_in_folders_are_found_and_links_out_are_not(tmp_path):
+    """George asked, 2026-09-21: *"Does it matter if pictures are in
+    folders?"* It did - the first version read the top level only, so a
+    picture inside `Holidays/` was on the disk and invisible.
+
+    And the directory is writable by anyone on the LAN (ADR-0049), so a
+    symlink is the one thing in it that can name a file somewhere else.
+    """
+    pictures = tmp_path / "pictures"
+    (pictures / "Holidays" / "deep").mkdir(parents=True)
+    (pictures / "loose.png").write_bytes(b"x")
+    (pictures / "Holidays" / "beach.jpg").write_bytes(b"x")
+    (pictures / "Holidays" / "deep" / "a b.webp").write_bytes(b"x")
+    (pictures / "notes.txt").write_text("not a picture")
+    (pictures / "sneaky.png").symlink_to("/etc/shadow")
+
+    source = Wallpapers(FakeSession(pixabay({})), tmp_path / "cache", local_dir=pictures)
+    assert source.local_names() == ["Holidays/beach.jpg", "Holidays/deep/a b.webp", "loose.png"]
+    assert source.local_path("Holidays/beach.jpg") is not None
+    assert source.local_path("Holidays/deep/a b.webp") is not None
+    # Neither the link nor a name that climbs out resolves to anything.
+    assert source.local_path("sneaky.png") is None
+    assert source.local_path("../../etc/shadow") is None
+    assert source.local_path("Holidays/../../../etc/shadow") is None
+
+
+async def test_the_picture_on_screen_is_not_the_next_one(tmp_path):
+    """A folder of four on a fifteen-minute rotation would repeat about one
+    change in four, which reads as the screen being stuck rather than as
+    chance."""
+    pictures = tmp_path / "pictures"
+    pictures.mkdir()
+    for name in ("a.png", "b.png"):
+        (pictures / name).write_bytes(b"x")
+    source = Wallpapers(FakeSession(pixabay({})), tmp_path / "cache", local_dir=pictures)
+    settings, client = client_for(tmp_path, wallpapers=source)
+    async with client:
+        settings.set("idle_background", "Wallpapers on device")
+        seen = []
+        for _ in range(6):
+            body = await (await client.get("/idle/wallpaper")).json()
+            seen.append(body["url"])
+        assert all(a != b for a, b in zip(seen, seen[1:])), seen
+
+    # One picture is the exception: there is nothing else to show.
+    (pictures / "b.png").unlink()
+    settings, client = client_for(tmp_path, wallpapers=Wallpapers(
+        FakeSession(pixabay({})), tmp_path / "cache2", local_dir=pictures))
+    async with client:
+        settings.set("idle_background", "Wallpapers on device")
+        first = await (await client.get("/idle/wallpaper")).json()
+        again = await (await client.get("/idle/wallpaper")).json()
+        assert first["url"] == again["url"] == "/idle/wallpaper/local/a.png"
+
+
 # ── the routes ────────────────────────────────────────────────────────────
 
 

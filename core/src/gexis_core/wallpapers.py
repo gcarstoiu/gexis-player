@@ -82,14 +82,40 @@ LOCAL_SUFFIXES = (".jpg", ".jpeg", ".png", ".webp")
 
 
 def local(directory: Path) -> list[str]:
-    """The pictures somebody put on this device, newest first."""
+    """Every picture under this directory, **folders and all**.
+
+    A share invites folders - the first thing anyone copying from a
+    computer does is drag one in - and the first version of this looked
+    only at the top level, so a picture inside `Holidays/` was on the disk
+    and invisible to the screen (George asked, 2026-09-21).
+
+    Names come back relative to the directory and with forward slashes, so
+    `Holidays/beach.png` is what the route is later asked for.
+
+    **A symlink pointing out of the folder is skipped**, not followed: this
+    directory is writable by anyone on the LAN (ADR-0049), and a link is
+    the one thing in it that can name a file somewhere else. `rglob` does
+    not descend through symlinked directories, and the check below catches
+    a symlinked file.
+    """
+    root = Path(directory)
     try:
-        return sorted(
-            (p.name for p in Path(directory).iterdir()
-             if p.is_file() and p.suffix.lower() in LOCAL_SUFFIXES),
-        )
+        resolved_root = root.resolve()
     except OSError:
         return []
+    found = []
+    try:
+        for path in root.rglob("*"):
+            if path.suffix.lower() not in LOCAL_SUFFIXES or not path.is_file():
+                continue
+            try:
+                relative = path.resolve().relative_to(resolved_root)
+            except (OSError, ValueError):
+                continue
+            found.append(relative.as_posix())
+    except OSError:
+        return []
+    return sorted(found)
 
 
 class Wallpapers:
@@ -158,7 +184,7 @@ class Wallpapers:
 
     # ── the picture on screen ───────────────────────────────────────────
 
-    async def next(self, key: str, topics: list[str]) -> dict:
+    async def next(self, key: str, topics: list[str], avoid: str | None = None) -> dict:
         """One picture, ready to draw, or an `error` saying why not.
 
         `file` is a name inside the cache directory rather than a URL: what
@@ -179,7 +205,9 @@ class Wallpapers:
                 hits = await self._page(key, category)
                 if not hits:
                     continue
-                hit = random.choice(hits)
+                # Not the one already on screen, when there is another.
+                choices = [h for h in hits if f"{h.get('id')}.jpg" != avoid] or hits
+                hit = random.choice(choices)
                 name = await self._download(hit)
                 if name is None:
                     continue
@@ -235,10 +263,25 @@ class Wallpapers:
         return local(self._local_dir)
 
     def local_path(self, name: str) -> Path | None:
-        if name != Path(name).name or Path(name).suffix.lower() not in LOCAL_SUFFIXES:
+        """The file behind a name `local()` handed out, or None.
+
+        **The name may now contain folders**, so "one path segment" is no
+        longer the check. What replaces it is stronger: resolve the whole
+        thing and require the result to still be inside the directory. That
+        refuses `../../etc/shadow` and a symlink to it alike, which matters
+        because this route is reachable from the LAN and the folder behind
+        it is writable by anyone on it.
+        """
+        if Path(name).suffix.lower() not in LOCAL_SUFFIXES:
             return None
-        path = self._local_dir / name
-        return path if path.is_file() else None
+        try:
+            root = self._local_dir.resolve()
+            path = (self._local_dir / name).resolve()
+        except OSError:
+            return None
+        if not path.is_relative_to(root) or not path.is_file():
+            return None
+        return path
 
     def path_of(self, name: str) -> Path | None:
         """The file behind a name this class handed out, or None.

@@ -26,6 +26,7 @@ import asyncio
 import json
 import logging
 import random
+from urllib.parse import quote
 from pathlib import Path
 
 from aiohttp import web
@@ -122,6 +123,10 @@ class StateServer:
         self._splash = splash
         self._weather = weather
         self._wallpapers = wallpapers
+        #: What the idle screen is showing, so the next change is a change.
+        #: One value for three sources, because only one of them is on
+        #: screen at a time: a file name, a Pixabay id, or an artist.
+        self._last_background: str | None = None
         self._ui_dir = ui_dir
         self._clients: set[web.WebSocketResponse] = set()
         store.subscribe(self._broadcast)
@@ -303,15 +308,23 @@ class StateServer:
             names = self._wallpapers.local_names()
             if not names:
                 return web.json_response({"error": "No pictures on this device yet."})
-            name = random.choice(names)
+            # Not the one already on screen, when there is another. A folder
+            # of four and a fifteen-minute rotation would otherwise repeat
+            # about one change in four, which reads as the screen being stuck.
+            choices = [n for n in names if n != self._last_background] or names
+            name = random.choice(choices)
+            self._last_background = name
+            # **Quoted**: a name can now carry folders, spaces and anything
+            # else a person types, and it travels as a URL.
             return web.json_response(
-                {"url": f"/idle/wallpaper/local/{name}", "by": "", "page": "",
+                {"url": f"/idle/wallpaper/local/{quote(name)}", "by": "", "page": "",
                  "credit": None, "error": None}
             )
         key = str(self._settings.value("wallpaper_key") or "").strip()
         topics = self._settings.value("wallpaper_topics") or []
-        answer = await self._wallpapers.next(key, list(topics))
+        answer = await self._wallpapers.next(key, list(topics), avoid=self._last_background)
         if answer.get("file"):
+            self._last_background = answer["file"]
             answer = {**answer, "url": f"/idle/wallpaper/{answer['file']}"}
         return web.json_response(answer)
 
@@ -341,6 +354,8 @@ class StateServer:
         items = [a for a in listing.get("items") or [] if a.get("id")]
         if not items:
             return {"error": "No artists in the library yet."}
+        # Not the artist already on screen, when there is another.
+        items = [a for a in items if a.get("name") != self._last_background] or items
         picked = random.sample(items, min(ARTIST_BATCH, len(items)))
 
         # **fanart is asked about one artist, not the batch.** Each name
@@ -353,6 +368,7 @@ class StateServer:
         for artist in shuffled[:ARTIST_FANART_TRIES]:
             url = await self._fanart_background(artist.get("name") or "")
             if url:
+                self._last_background = artist.get("name") or ""
                 return {"url": url, "by": artist.get("name") or "", "page": "",
                         "credit": None, "source": "fanart", "error": None}
 
@@ -361,6 +377,7 @@ class StateServer:
         if not with_photos:
             return {"error": "No artist pictures for these artists."}
         artist, url = random.choice(with_photos)
+        self._last_background = artist.get("name") or ""
         # The credit is the artist's name rather than a licence line: both
         # sources come through the owner's own server.
         return {"url": url, "by": artist.get("name") or "", "page": "",
@@ -899,7 +916,9 @@ class StateServer:
         app.router.add_get("/idle", self._handle_idle)
         app.router.add_get("/idle/weather", self._handle_idle_weather)
         app.router.add_get("/idle/wallpaper", self._handle_idle_wallpaper)
-        app.router.add_get("/idle/wallpaper/local/{name}", self._handle_local_wallpaper)
+        # `{name:.*}` because a picture may be in a folder; `local_path`
+        # is what refuses anything that resolves outside the directory.
+        app.router.add_get("/idle/wallpaper/local/{name:.*}", self._handle_local_wallpaper)
         app.router.add_get("/idle/wallpaper/{name}", self._handle_wallpaper_file)
         app.router.add_get("/surface", self._handle_surface)
         app.router.add_post("/touch", self._handle_touch)

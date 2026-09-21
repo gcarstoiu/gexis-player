@@ -70,6 +70,20 @@ sidebar and in Windows' network view. **`nmbd` stays disabled**: NetBIOS
 name service is a second discovery protocol, from 1987, broadcasting on a
 LAN that already has one that works.
 
+### 4a. Folders inside it are pictures too
+
+**Organise them however you like.** George asked whether it matters,
+2026-09-21, and at that moment it did: the reader looked at the top level
+only, so a picture inside `Holidays/` was on the disk and invisible to the
+screen. It walks the tree now, and a name travels as its path relative to
+the share - `Holidays/beach.png`.
+
+**A symlink is the one thing in that folder that can name a file somewhere
+else**, and the folder is writable by anyone on the LAN. Links out are
+skipped when the tree is read, and the route that serves a picture resolves
+the whole name and requires the result to still be inside the directory - so
+`../../etc/shadow` and a link to it are refused the same way.
+
 ### 5. It is not the only way in, and nothing assumes it is
 
 The daemon reads a directory. SSH still works, a USB copy would work, and if
