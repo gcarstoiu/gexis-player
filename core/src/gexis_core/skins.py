@@ -23,6 +23,33 @@ from pathlib import Path
 
 SECTION = re.compile(r"^\[(?P<name>.+?)\]\s*$")
 
+#: What a skin shows. Measured over the shipped corpus on 2026-09-21:
+#: **77 meters, 9 spectrum, 13 both** - 99 skins across four files.
+METERS = "meters"
+SPECTRUM = "spectrum"
+BOTH = "both"
+
+#: The `skin_corpus` setting's words, and the kinds each one draws from.
+#: George, 2026-09-21: *"There should be 3 types of skins instead of just
+#: two as they are now. One spectrum only, one vu meters only, and another
+#: vu meters with spectrum"* - plus one that takes any of them.
+#:
+#: **`Random` is not `skin_rotate`.** This says which pool a skin comes
+#: from; that says whether the skin changes with the track.
+CORPUS = {
+    "VU meters": (METERS,),
+    "Spectrum": (SPECTRUM,),
+    "VU meters + spectrum": (BOTH,),
+    "Random": (METERS, SPECTRUM, BOTH),
+}
+
+
+def in_corpus(skins, corpus: str):
+    """The skins a `skin_corpus` choice selects, in corpus order."""
+    wanted = CORPUS.get(corpus) or CORPUS["Random"]
+    return [skin for skin in skins if skin.kind in wanted]
+
+
 CIRCULAR = "circular"
 LINEAR = "linear"
 METER_TYPES = {CIRCULAR, LINEAR}
@@ -81,6 +108,30 @@ class Skin:
         """`meter.visible = False` is honoured (criterion 3): a spectrum-only
         skin keeps its meter geometry but draws no meter."""
         return self.options.get("meter.visible", "True").strip().lower() != "false"
+
+    @property
+    def spectrum_visible(self) -> bool:
+        """**Absent means no spectrum**, where an absent `meter.visible`
+        means a meter. The asymmetry is the corpus's own, measured
+        2026-09-21: 77 of its 99 skins declare neither key and every one of
+        them is a VU face, while every skin that has a spectrum says so.
+        """
+        return self.options.get("spectrum.visible", "False").strip().lower() == "true"
+
+    @property
+    def kind(self) -> str:
+        """What this skin actually shows - `meters`, `spectrum` or `both`.
+
+        **Not which directory it lives in**, which is what the setting used
+        to offer. `templates/` is not the meter corpus: the stock pack's
+        copy of it holds six spectrum-only skins and three that show both
+        (measured on the device, 2026-09-21), so a "Meter only" option built
+        on the directory would hand a spectrum to someone who asked for a
+        needle.
+        """
+        if self.spectrum_visible:
+            return BOTH if self.visible else SPECTRUM
+        return METERS
 
     @property
     def spectrum_name(self) -> str | None:

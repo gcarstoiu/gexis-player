@@ -633,14 +633,16 @@
       {
         "key": "skin_corpus",
         "type": "choice",
-        "label": "Skin corpus",
+        "label": "Skins",
         "marks": "R",
-        "note": null,
+        "note": "What the visualiser draws from: needles, bars, or both together. Random takes any of the three. Which skin, and whether it changes with the track, is the row below.",
         "options": [
-          "Meter only",
-          "Meter + spectrum"
+          "VU meters",
+          "Spectrum",
+          "VU meters + spectrum",
+          "Random"
         ],
-        "default": null
+        "default": "VU meters"
       },
       {
         "key": "skin_rotate",

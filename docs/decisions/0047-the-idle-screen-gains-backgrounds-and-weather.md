@@ -321,11 +321,13 @@ The design states it explicitly and merges the old separate grace period into
   falls. They are built from that, at the design's own ratios. The only
   extension is the conditions a real forecast has and a mock does not: snow,
   fog and thunder, from the same primitives (§1a).
-- **Whether artist pictures on the idle screen should avoid the artist
-  currently playing**, or prefer them. Not asked by the design, and still
-  George's to answer: the screen picks at random from the whole library and
-  does not know what is playing. It only excludes the artist it showed
-  *last*, so the same face does not appear twice running.
+- ~~**Whether artist pictures on the idle screen should avoid the artist
+  currently playing**, or prefer them.~~ **Closed 2026-09-21 — the question
+  cannot arise.** George: *"if it's playing then the idle screen is not
+  shown and the question becomes invalid."* ADR-0033 defines idle as **not
+  playing and not touched**, so there is no currently-playing artist while
+  this screen is up. The screen still excludes the artist it showed *last*,
+  which is a different thing and the one that matters.
 
 ## Alternatives considered
 

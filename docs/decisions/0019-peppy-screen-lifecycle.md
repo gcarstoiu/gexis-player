@@ -94,6 +94,20 @@ A new skin is selected on each track change.
 The user chooses **which corpus** to draw from — meter-only, or meter+spectrum —
 as a setting. Within the chosen corpus, selection rotates.
 
+> **Amended 2026-09-21 (9h): there are three kinds, not two, and a corpus is
+> not a directory.** George: *"There should be 3 types of skins instead of
+> just two as they are now. One spectrum only, one vu meters only, and
+> another vu meters with spectrum"*, plus a fourth choice that takes any of
+> them. Counted over the shipped corpus that day — 99 skins across four
+> files — **77 show meters only, 9 show a spectrum only, and 13 show both**,
+> and a skin says which it is with `meter.visible` and `spectrum.visible`.
+>
+> **The two options this record described were directories**, and one of
+> them is mislabelled by its own contents: the stock pack's `templates/`
+> holds six spectrum-only skins and three that show both, so "Meter only"
+> would hand a spectrum to someone who asked for a needle. Selection is by
+> what a skin declares now, not by where it lives.
+
 #### Consequence: pre-rendering is not a one-time cost
 
 ADR-0014 and the no-render-delay requirement assumed a pre-composited layer
