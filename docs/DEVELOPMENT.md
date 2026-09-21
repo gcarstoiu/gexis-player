@@ -1663,6 +1663,16 @@ undecided, and nothing else depends on it.
    `DiscoverableTimeout=0` for Always, which is the "3 minutes" defect.
    *Mostly daemon. Gate: pair a phone that has never paired.*
 
+   **Done 2026-09-21.** All three parts landed, plus `bt_trusted`'s item
+   list and `Forget`, which 9d left here. Two panel defects came out of the
+   gate rather than out of any test: the frame froze on a reactive cycle
+   while every server-side check passed (`docs/LESSONS.md` case 11), and the
+   Trusted devices row read "None" with a phone paired, because a `list`'s
+   items reached the sheet and never the row. ADR-0044 §1 is amended for
+   what that turned out to be about - **when a list's items arrive** - and a
+   list that does not have to go looking now ships with the row and opens
+   drawn. George on the panel: *"Works fine."*
+
 7. **9g - The idle screen.** Four background sources, the weather stack, two
    third-party services and their keys. Needs its own ADR and the provider
    choice, the same shape as Finding 030's enrichment question.

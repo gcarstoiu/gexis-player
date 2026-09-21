@@ -1,15 +1,20 @@
 # Handoff
 
 Last updated: 2026-09-21 (twenty-second session, on R2D2 — **Phase 9's
-design sweep: 9a through 9e are done and committed; 9f is built and on the
-device, waiting for George to retry a pair**)
+design sweep: 9a through 9f are done and committed; 9g next, and it opens
+with two provider choices rather than with code**)
 
 ## Start here
 
-**Phase 9's design sweep is five subphases in, and 9f is built.** Nine were
-planned (`docs/DEVELOPMENT.md`), volume last; **9a through 9e are done,
-checked by George on the panel and committed**. 9f's code is written,
-committed and deployed; what it still needs is George's own pair.
+**Phase 9's design sweep is six subphases in.** Nine were planned
+(`docs/DEVELOPMENT.md`), volume last; **9a through 9f are done, checked by
+George on the panel and committed**. **9g is next** and it starts with a
+decision, not with code: [ADR-0047](docs/decisions/0047-the-idle-screen-gains-backgrounds-and-weather.md)
+is Proposed, and two third-party providers — the weather service and the
+online wallpaper service — are unchosen. That is the substance of it.
+Finding 030 answered exactly this shape of question for enrichment by
+comparing the free providers and recommending without deciding; the same
+method applies and the work is not done.
 
 - **9a** — the decisions: ADR-0044, 0045, 0046 Accepted, ADR-0022 amended
   for the catalogue/surfaced split, ADR-0047 opened for the idle screen.
@@ -98,11 +103,12 @@ tree also carries everything the adapter has merely seen while
 discoverable), and Forget is `Adapter1.RemoveDevice`, not `Trusted = false`
 — clearing the flag leaves the bond and the phone reconnects.
 
-**What 9f still needs is George's own pair.** His Pixel has to be forgotten
-on its side first, because it keeps its half of a bond this end has
-dropped. After a successful pair, Settings › Sources › Trusted devices
-lists it with a Forget, which is how the reject and expiry paths get driven
-from the panel from now on.
+**Checked on the panel, 2026-09-21** (George: *"Works fine"*): his Pixel is
+paired and trusted, Settings › Sources › Trusted devices lists it with a
+Forget, and the sheet opens instantly. **The reject and expiry paths have
+not been driven since the freeze was fixed** — accept has, by the pair that
+is on the device. Forgetting the phone from both ends is what sets up
+driving them.
 
 **Two panel defects found after that code was written, both fixed.** The
 pairing frame froze — countdown still, Reject doing nothing — while every
