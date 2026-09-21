@@ -103,8 +103,14 @@
   //: second scroller inside it takes the finger meant for the first - the
   //: same reason the artist page clamps its biography. Cut off with no fade
   //: and no control, the text just looked truncated (George, on the panel,
-  //: 2026-09-20). The whole block is the tap target; More/Less says in words
-  //: what the tap does, for anyone who does not try it.
+  //: 2026-09-20).
+  //:
+  //: **The whole block is the tap target and there is no More/Less.** George
+  //: took the control away the next day - *"tapping in the text works
+  //: perfectly as a toggle and the bottom fade indicates that there is more
+  //: to be read"* - which makes the fade the only signal, so it is drawn
+  //: only when something is actually under it. A fade over a note that is
+  //: already whole would be the lie the control used to cover for.
   const FOLD_MAX = 128;
   let bioOpen = $state(false);
   let noteOpen = $state(false);
@@ -460,8 +466,8 @@
               {:else if info?.album_note}
                 <div
                   class="bio"
-                  class:is-clamped={!noteOpen}
-                  style:max-height={noteOpen ? null : `${FOLD_MAX}px`}
+                  class:is-clamped={!noteOpen && noteClipped}
+                  style:max-height={noteOpen || !noteClipped ? null : `${FOLD_MAX}px`}
                   role="button"
                   tabindex="0"
                   aria-expanded={noteOpen}
@@ -473,11 +479,6 @@
                 </div>
                 <div class="credit">
                   <span>From {info.album_note_source}</span>
-                  {#if noteClipped}
-                    <button class="fold" type="button" onclick={() => (noteOpen = !noteOpen)}>
-                      {noteOpen ? 'Less' : 'More'}
-                    </button>
-                  {/if}
                 </div>
               {:else if artistInfo.state === 'error'}
                 <div class="offline">
@@ -531,8 +532,8 @@
               {:else if artistInfo.enrichment?.biography}
                 <div
                   class="bio"
-                  class:is-clamped={!bioOpen}
-                  style:max-height={bioOpen ? null : `${FOLD_MAX}px`}
+                  class:is-clamped={!bioOpen && bioClipped}
+                  style:max-height={bioOpen || !bioClipped ? null : `${FOLD_MAX}px`}
                   role="button"
                   tabindex="0"
                   aria-expanded={bioOpen}
@@ -546,11 +547,6 @@
                      require the credit beside the text (ADR-0040 §4). -->
                 <div class="credit">
                   <span>From {artistInfo.enrichment.biography_source}</span>
-                  {#if bioClipped}
-                    <button class="fold" type="button" onclick={() => (bioOpen = !bioOpen)}>
-                      {bioOpen ? 'Less' : 'More'}
-                    </button>
-                  {/if}
                 </div>
               {:else if artistInfo.state === 'error'}
                 <div class="offline">
@@ -1283,20 +1279,6 @@
   }
   /* Only drawn when the text is actually cut. The design's own toggle is
      this size and this colour. */
-  .fold {
-    font-family: var(--font-mono);
-    font-size: var(--t-micro);
-    font-weight: 600;
-    letter-spacing: 0.16em;
-    text-transform: uppercase;
-    color: var(--accent-bluetooth);
-    padding: 8px 2px;
-    margin: -8px 0;
-    flex-shrink: 0;
-  }
-  .fold:active {
-    transform: scale(0.95);
-  }
 
   .offline {
     display: flex;

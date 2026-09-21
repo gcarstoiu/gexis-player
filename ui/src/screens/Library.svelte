@@ -162,11 +162,15 @@
   let aboutEl = $state(null);
   let columnEl = $state(null);
   let aboutMax = $state(ABOUT_MIN);
+  //: Whether there is anything under the fold. Measured in `fitAbout`.
+  let bioClipped = $state(false);
 
   //: Tapping the text folds and unfolds it, which is what a finger reaches
-  //: for; More/Less stays, because nothing else says the text is foldable.
-  //: The block answers the keyboard too - panel and phone take the same
-  //: input (George, 2026-09-20).
+  //: for. More/Less went the next day - George: *"tapping in the text works
+  //: perfectly as a toggle and the bottom fade indicates that there is more
+  //: to be read"* - so the fade is the only signal and is drawn only when
+  //: there is something under it. The block answers the keyboard too: panel
+  //: and phone take the same input.
   function foldKey(event, toggle) {
     if (event.key !== 'Enter' && event.key !== ' ') return;
     event.preventDefault();
@@ -194,6 +198,7 @@
     const slack = wanted - firstTop;
     const next = Math.max(ABOUT_MIN, Math.round(aboutEl.getBoundingClientRect().height + slack));
     if (Math.abs(next - aboutMax) > 4) aboutMax = next;
+    bioClipped = aboutEl.scrollHeight > next + 2;
   }
 
   $effect(() => {
@@ -265,6 +270,10 @@
   //: screen and corrected itself. Initialised from the prop rather than set
   //: in the effect, because an effect runs after the first paint.
   let resolvingArtist = $state(!!openArtistNamed);
+
+  //: The home grid is on screen - not merely "no page has been opened",
+  //: which is also true while an artist page is on its way.
+  const atHome = $derived(path.length === 0 && !resolvingArtist);
 
   /** Opens the artist page for a name, if this library has that artist. */
   async function openArtistByName(name) {
@@ -692,7 +701,7 @@
   {/if}
 
   <div class="content">
-    {#if path.length === 0 && resolvingArtist}
+    {#if resolvingArtist && path.length === 0}
       <!-- The artist page on its way. Its own head, so the screen that
            appears is the one that was asked for. -->
       <div class="artistpage">
@@ -709,7 +718,7 @@
           <div class="skel"><span></span><span></span><span></span></div>
         </div>
       </div>
-    {:else if path.length === 0}
+    {:else if atHome}
       <div class="root">
         <div class="cards">
           <button class="card card--browse" type="button" onclick={openBrowse}>
@@ -1107,10 +1116,14 @@
                    screen under it (George, 2026-09-18). Tapping opens the
                    rest; not a nested scroller, which is what made the
                    discography move under a finger meant for the column. -->
+              <!-- No More/Less: tapping the text is the control, and the
+                   fade says there is more (George, 2026-09-21). Which means
+                   the fade must not appear over a biography that is already
+                   whole - `bioClipped` is what keeps it honest. -->
               <div
                 class="artistmeta__bio"
-                class:is-clamped={!bioOpen}
-                style:max-height={bioOpen ? null : `${aboutMax}px`}
+                class:is-clamped={!bioOpen && bioClipped}
+                style:max-height={bioOpen || !bioClipped ? null : `${aboutMax}px`}
                 role="button"
                 tabindex="0"
                 aria-expanded={bioOpen}
@@ -1126,9 +1139,6 @@
                    (ADR-0040 §4). -->
               <div class="artistmeta__credit">
                 <span>From {artistInfo.found.biography_source}</span>
-                <button class="artistmeta__more" type="button" onclick={() => (bioOpen = !bioOpen)}>
-                  {bioOpen ? 'Less' : 'More'}
-                </button>
               </div>
             {:else if artistInfo.state === 'error'}
               <!-- The state was already computed and never branched on, so an
@@ -1299,7 +1309,11 @@
     <div class="strip">
       <MiniStrip {active} {metadata} {volume} {controls} onopen={onclose} {onvolume} />
     </div>
-  {:else}
+  {:else if atHome}
+    <!-- The three renderers belong to the home screen, where "nothing is
+         playing and here is what could be" is the whole message. Under a
+         discography or a playlist it is a footer about something else
+         (George, on the panel, 2026-09-21). -->
     <WaitingServices {availability} />
   {/if}
 </div>
@@ -2511,15 +2525,6 @@
     overflow: hidden;
     -webkit-mask-image: linear-gradient(180deg, #000 58%, transparent 100%);
     mask-image: linear-gradient(180deg, #000 58%, transparent 100%);
-  }
-  .artistmeta__more {
-    font-family: var(--font-mono);
-    font-size: var(--t-micro);
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    color: var(--accent-bluetooth);
-    padding: 6px 2px;
-    margin: -6px 0;
   }
   .artistmeta__credit {
     display: flex;

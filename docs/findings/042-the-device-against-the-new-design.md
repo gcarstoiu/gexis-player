@@ -271,3 +271,26 @@ what the symptom suggested.
    these pills three accents in rotation where the library's artist page uses
    one; both are kept as their own screen draws them.
 
+**Two more from the 2026-09-21 pass**, both removals:
+
+6. **The three-renderer bar belonged to the home screen only.** It was drawn
+   wherever the Library was and nothing was playing, so a discography or a
+   playlist carried a footer about something else. On the home screen
+   "nothing is playing and here is what could be" is the whole message;
+   anywhere else it is furniture. Now gated on the home grid actually being
+   on screen, which is not the same test as "no page has been opened" - an
+   artist page on its way from Now Playing satisfies the second and not the
+   first.
+
+7. **More/Less went.** George: *"tapping in the text works perfectly as a
+   toggle and the bottom fade indicates that there is more to be read."*
+   Removed from the artist page's biography and from Now Playing's Artist
+   and Release panels.
+
+   **This makes the fade the only signal, so it had to stop lying.** The mask
+   was applied whenever the text was folded, including over a note short
+   enough to be whole - which the control used to cover for, because a
+   "More" that was absent said as much as the fade did. Both panels and the
+   artist page now measure whether anything is under the fold and draw the
+   mask only then.
+
