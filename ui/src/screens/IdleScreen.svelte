@@ -41,6 +41,10 @@
   let weather = $state(null);
   let picture = $state(null);
   let shown = $state(null);
+  //: The shape of what is on screen, measured when it loads rather than
+  //: asked of the source - a wallpaper service, a photo plugin and a folder
+  //: somebody filled have nothing in common except the pixels.
+  let ratio = $state(null);
 
   const external = $derived(settings.idle_screen === 'External URL');
   const wantsWeather = $derived(settings.idle_weather !== false && !external);
@@ -55,6 +59,26 @@
   // no photograph does not want it.
   // The contour's colour; its *width* is per element, below. Transparent
   // rather than zero so the widths stay harmless when there is no picture.
+  //: **Fill, unless filling would cost too much of the picture.**
+  //: `cover` crops whatever does not match 1280x800, which is right for a
+  //: photograph taken in landscape and brutal for one taken in portrait: a
+  //: phone picture loses about two thirds of its height, centred, and the
+  //: screen gives no sign that anything is missing.
+  //:
+  //: So: work out what `cover` would cost, and if it is more than a
+  //: quarter of the picture, show the whole thing instead and fill the rest
+  //: with a blurred copy of itself. **A quarter** because that is where the
+  //: two common landscape shapes fall on the safe side - 3:2 loses 6%, 16:9
+  //: 10%, 4:3 17% - while a square (38%) and anything portrait (65%+) fall
+  //: on the other. The shapes that were composed to be looked at wide stay
+  //: edge to edge.
+  const PANEL_RATIO = 1280 / 800;
+  const CROP_LIMIT = 0.25;
+  const cropped = $derived(
+    ratio === null ? 0 : 1 - (ratio < PANEL_RATIO ? ratio / PANEL_RATIO : PANEL_RATIO / ratio)
+  );
+  const fit = $derived(cropped > CROP_LIMIT);
+
   const stroke = $derived(black ? 'transparent' : 'rgba(46, 57, 66, 0.92)');
   const scrim = $derived(black ? 'rgba(11, 18, 24, 0.93)' : 'rgba(7, 11, 15, 0.06)');
   // `background_brightness`, George's row: the design's 0.62 is the default and
@@ -97,6 +121,7 @@
     image.onload = () => {
       picture = answer;
       shown = answer.url;
+      ratio = image.naturalHeight ? image.naturalWidth / image.naturalHeight : null;
     };
     image.onerror = () => (picture = { error: 'That picture could not be loaded.' });
     image.src = answer.url;
@@ -188,13 +213,29 @@
 <div class="idle" transition:fade={{ duration: 520 }} style:--stroke={stroke}>
   {#if shown && !external}
     {#key shown}
-      <img
-        class="bg"
-        src={shown}
-        alt=""
-        style:filter={`brightness(${brightness}) saturate(0.9)`}
-        in:fade={{ duration: 900 }}
-      />
+      <div class="picture" in:fade={{ duration: 900 }}>
+        {#if fit}
+          <!-- The same picture, out of focus and filling the screen, so a
+               tall one sits on its own colour rather than on black bars.
+               **Static**, not a backdrop filter: ADR-0041 bans live
+               readback (24.5 ms a frame), and this rasterises once per
+               picture and then only composites. Scaled up because a blur
+               fades out at the edges of what it is blurring. -->
+          <img
+            class="bg bg--halo"
+            src={shown}
+            alt=""
+            style:filter={`blur(38px) brightness(${(brightness * 0.75).toFixed(2)}) saturate(0.9)`}
+          />
+        {/if}
+        <img
+          class="bg"
+          class:bg--fit={fit}
+          src={shown}
+          alt=""
+          style:filter={`brightness(${brightness}) saturate(0.9)`}
+        />
+      </div>
     {/key}
   {/if}
   {#if !external}
@@ -280,12 +321,23 @@
      desaturated in the image itself, not under a dark sheet. The amount is
      `background_brightness` and arrives as an inline style; 0.62 is the design's
      value and the row's default. */
+  .picture {
+    position: absolute;
+    inset: 0;
+  }
   .bg {
     position: absolute;
     inset: 0;
     width: 100%;
     height: 100%;
     object-fit: cover;
+  }
+  /* The whole picture, on top of its own halo. */
+  .bg--fit {
+    object-fit: contain;
+  }
+  .bg--halo {
+    transform: scale(1.12);
   }
   .scrim {
     position: absolute;

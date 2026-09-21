@@ -45,6 +45,41 @@ clock.**
 **`idle_screen: External URL` replaces all of it** with that page — which is
 ADR-0033's resolution, kept, demoted from the answer to one option.
 
+### 1c. A picture that would be butchered is shown whole, on its own halo
+
+**Decided 2026-09-21**, George agreeing to it after being shown what the
+screen does with shapes that are not 1280×800.
+
+`object-fit: cover` fills the panel and crops whatever does not fit, which
+is right for a photograph composed in landscape and brutal for one taken in
+portrait — **measured: a 1080×1920 picture keeps 35% of its height**,
+centred, and the screen gives no sign that anything is missing.
+
+So the rule is **fill unless filling would cost more than a quarter of the
+picture**, and when it would, show the whole thing over a blurred, dimmed
+copy of itself. A quarter is where the shapes people photograph in fall on
+either side — measured on the panel:
+
+| shape | cover would lose | what it does |
+|---|---|---|
+| 16:10, 16:9, 3:2 | 0–10% | fills, edge to edge |
+| 4:3 | 17% | fills |
+| square | 38% | whole picture, on its halo |
+| 3:1 panorama | 47% | whole picture, on its halo |
+| 9:16 portrait | 65% | whole picture, on its halo |
+
+**The halo is affordable and a backdrop filter would not be.** ADR-0041
+bans live readback — 24.5 ms a frame against a 16.7 ms budget — and
+`IMPLEMENTED-DIFFERENTLY.md` states the line it drew: *"depth is
+affordable, live readback is not."* This is a static image with a filter on
+it; it rasterises once per picture and then only composites. Measured on the
+panel with the weather icons animating: **median 16.8 ms a frame with the
+halo and 16.8 ms without it, and no frame over 20 ms either way.**
+
+It is scaled 1.12× because a blur fades out at the edges of what it is
+blurring, and dimmed to three quarters of the picture's own brightness so
+the picture is what the eye lands on.
+
 ### 1b. Artist pictures come from fanart, and LMS is the fallback
 
 **Decided 2026-09-21**, George: *"for artist background would be good to
