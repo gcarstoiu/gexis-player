@@ -313,11 +313,19 @@ The design states it explicitly and merges the old separate grace period into
   chose the share from four options on simplicity. The daemon reads a
   directory and does not know how a file got there, so SSH, a USB copy and
   a phone upload all still write to the same place.
-- **What the three icon sets are** (`idle_icons`: solid, duotone, neon) and
-  whether they are drawn in CSS like every other glyph on this panel, which
-  has no icon font.
+- ~~**What the three icon sets are** (`idle_icons`: solid, duotone, neon) and
+  whether they are drawn in CSS like every other glyph on this panel.~~
+  **Closed 2026-09-21: the design draws all three**, in
+  `source/Now Playing.dc.html` — DOM shapes in three palettes over one
+  construction, with a sun that spins, a cloud that drifts and rain that
+  falls. They are built from that, at the design's own ratios. The only
+  extension is the conditions a real forecast has and a mock does not: snow,
+  fog and thunder, from the same primitives (§1a).
 - **Whether artist pictures on the idle screen should avoid the artist
-  currently playing**, or prefer them. Not asked by the design.
+  currently playing**, or prefer them. Not asked by the design, and still
+  George's to answer: the screen picks at random from the whole library and
+  does not know what is playing. It only excludes the artist it showed
+  *last*, so the same face does not appear twice running.
 
 ## Alternatives considered
 

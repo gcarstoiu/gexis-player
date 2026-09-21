@@ -1678,6 +1678,32 @@ undecided, and nothing else depends on it.
    choice, the same shape as Finding 030's enrichment question.
    *Self-contained. Gate: leave it idle.*
 
+   **Done 2026-09-21.** The providers were chosen the way Finding 030 chose
+   the enrichment ones - terms read, calls made from the device,
+   recommendation, George deciding: **Pixabay** and **Open-Meteo**
+   ([Finding 043](findings/043-the-idle-screens-two-providers.md),
+   [ADR-0047](decisions/0047-the-idle-screen-gains-backgrounds-and-weather.md)).
+   `weather_key` left the registry because a key-free provider leaves it
+   gating nothing - the first deliberate deviation from the design drop
+   since it became the point of truth.
+
+   **Three things the subphase found that no test would have.** The design
+   draws this screen and the first build did not look for it, because it is
+   in `Now Playing.dc.html` rather than a file of its own (`docs/LESSONS.md`
+   case 13, which is case 12's shape one day later). A flat 4px contour is a
+   rim on a 132px numeral and most of a 21px letter, so the small type read
+   grey - measured, then tapered. And `object-fit: cover` keeps 35% of a
+   portrait photograph's height, which is now where the blurred-halo fit
+   comes from.
+
+   **Four rows the design does not have**, each confirmed by George:
+   `wallpaper_topics`, `background_interval`, `background_brightness`, and
+   an SMB share to put a picture on the device at all
+   ([ADR-0049](decisions/0049-the-pictures-folder-is-a-share.md)). **That
+   share's image stage has never been through a build** - it is installed
+   and verified on the device, and the next rebuild is what proves the
+   stage.
+
 8. **9h - Home strip, skin picker, `viz_stop`.** Two LMS queries and the
    three strip variants; the skin picker's thumbnails rendered at image build
    (71 meter and 13 spectrum skins, so an image-build job rather than a UI
