@@ -60,10 +60,25 @@ Open-Meteo answers with nothing, where `Berlin` alone returns five places.
 The daemon splits it now: the first part searches, the rest rank the results,
 and an unmatched qualifier is ignored rather than fatal.
 
-**Still open, and owed to George rather than to code:** ADR-0047's remaining
-questions — **how pictures reach "Wallpapers on device"** (the directory is
-`/var/lib/gexis-core/pictures` and today they arrive over SSH), and whether
-artist pictures should avoid the artist currently playing.
+**"Wallpapers on device" has an answer: it is an SMB share**
+([ADR-0049](docs/decisions/0049-the-pictures-folder-is-a-share.md), George
+choosing from four options on simplicity). `smb://gexis.local/pictures`,
+guest-writable, one directory and nothing else — **Debian's stock
+`smb.conf` shares three more things and our include turns all of them off**,
+which the build asserts through `testparm` rather than through a grep on
+its own edit. Installed and verified on the device; **the image stage is
+written but has not been through a build**, so the next rebuild is what
+proves it.
+
+**Also landed in 9g after the first panel check:** the credits are one line
+along the bottom; the contour tapers with the type (the design's flat 4px
+made 21px labels read grey — measured, 62% contour against the clock's
+35%); artist backgrounds come from **fanart** with LMS behind them, six for
+six on George's library; and brightness and rotation are `background_*`
+rows shared by every background that is a picture.
+
+**Still open, and owed to George rather than to code:** whether artist
+pictures should avoid the artist currently playing.
 
 **Two measured traps recorded there:** the Art Institute's IIIF image server
 403s without an `AIC-User-Agent` header (with a browser User-Agent too — the
