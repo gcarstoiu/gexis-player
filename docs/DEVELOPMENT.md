@@ -1611,8 +1611,30 @@ undecided, and nothing else depends on it.
    renderer restarts mid-session.
    *Gate: rename, restart, confirm all four advertise it.*
 
-   **Built 2026-09-20, awaiting the gate** - which needs a restart by
-   construction, so George's reboot is the check.
+   **Done 2026-09-21. The gate passed on the second run and found two
+   defects on the first**, neither visible from the code:
+
+   - **BlueZ never read `main.conf`'s `Name =`.** Its `hostname` plugin
+     overrides it, and the vendor file says so two lines above the setting.
+     The image had set it since Phase 2 and the build asserted its own sed
+     had matched - a check that passed every time and meant nothing, because
+     the hostname was the same string. `/etc/machine-info`'s
+     `PRETTY_HOSTNAME` is the real mechanism. [LESSONS](LESSONS.md) case 9.
+   - **A rename locked the panel out of its own browser.** Chromium's
+     profile lock is `<hostname>-<pid>` and it refuses to start when that
+     hostname is not the machine's, with a two-button dialog on an appliance
+     that has no keyboard. `gexis-kiosk-start` clears the three Singleton
+     entries before launching.
+
+   Then a third, in the deploy rather than the work: `rsync -a` put the
+   repository's 644 over the 755 the image installs, so Chromium never
+   started while `systemctl is-active` still said `active`.
+   [LESSONS](LESSONS.md) case 10; the eight affected scripts are executable
+   in git now.
+
+   **Gate, run end to end:** renamed to `SofaPi`, rebooted, all four
+   advertised it; renamed back to `gexis`, rebooted, all four advertised
+   that, and the kiosk started clean through both.
    [ADR-0048](decisions/0048-how-the-device-name-reaches-four-services.md)
    holds the mechanism and the one decision inside it: **nothing is applied
    while the device is running**, not even the hostname, which can be. ADR-0022
