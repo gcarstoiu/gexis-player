@@ -1,8 +1,8 @@
 # Handoff
 
 Last updated: 2026-09-21 (twenty-second session, on R2D2 — **Phase 9's
-design sweep: 9a through 9f are done and committed; 9g next, and it opens
-with two provider choices rather than with code**)
+design sweep: 9a through 9f are done; 9g's decisions are taken and its
+settings half is built — the idle screen itself is what remains**)
 
 ## Start here
 
@@ -13,46 +13,43 @@ decision, not with code: [ADR-0047](docs/decisions/0047-the-idle-screen-gains-ba
 is Proposed, and two third-party providers — the weather service and the
 online wallpaper service — are unchosen. That is the substance of it.
 
-**The comparison is done and George has not chosen yet:
-[Finding 043](docs/findings/043-the-idle-screens-two-providers.md)**, the
-same method as Finding 030 — terms read, live calls made **from the
-device**, recommendation without a decision. Three things in it change the
-subphase rather than just informing it:
+**9g's decisions are taken** (George, 2026-09-21, on
+[Finding 043](docs/findings/043-the-idle-screens-two-providers.md)):
+**Pixabay** for wallpapers, chosen on the pictures, and **Open-Meteo** for
+weather, on his answer to the one question that decided it — **a Gexis is
+not sold**, so a non-commercial free tier is what the appliance may use.
+[ADR-0047](docs/decisions/0047-the-idle-screen-gains-backgrounds-and-weather.md)
+is **Accepted**.
 
-- **Every wallpaper service that matters permits this use** — corrected the
-  same day, after George asked for a thorough check on Unsplash. The first
-  pass ruled out Unsplash and Pexels on one line of each provider's
-  guidelines; both have a page dedicated to the question that says
-  otherwise. Unsplash's test is whether the app *"offers more value than
-  simply the Unsplash integration"* and its approved example is **Trello's
-  board backgrounds**; Pexels says a platform serving a different purpose is
-  *"absolutely welcome"* to include a background feature, and names
-  automatically served backgrounds and screensavers as an accepted case.
-  **[LESSONS](docs/LESSONS.md) case 12.** What separates them now is the
-  credential: Unsplash forbids shipping a key in publicly distributed code
-  and requires dynamic client registration, **arranged by email**; Pexels
-  and Pixabay take a per-owner key, which is what `wallpaper_key` already
-  is; CC0 museum art needs no key at all.
-- **Wallpapers: decided — Pixabay** (George, 2026-09-21, on the pictures).
-  It wants rows the design does not have: **which topics to serve**, and
-  two of the four George named (*space*, *landscape*) are **not** Pixabay
-  categories but search terms, so a topic is our vocabulary mapping to
-  either `category` or `q`. A multi-select is a mechanic ADR-0044 does not
-  have. **Proposed to George, not yet appended to ADR-0022's inventory.**
-- **Weather is still open, and the re-check moved it.** Asked for the same
-  challenge, three of the first pass's arguments did not survive:
-  geocoding happens once and does not lock the provider; 40 KB every ten to
-  thirty minutes is tidiness, not cost; and the daily aggregation MET
-  Norway needs is a loop over 91 entries (measured — it publishes no daily
-  aggregate at all). **What is left is a product question:** Open-Meteo's
-  free tier forbids *"integrating our service into commercial products"*
-  and names *"personal home automation"* as qualifying, so a Gexis given
-  away fits and a Gexis sold does not. MET Norway — an institute, not one
-  person — has no such clause, and ships an MIT icon set.
-- **So `weather_key` may have nothing to gate**, and ADR-0047 §2 hangs four
-  rows off it. That is a decision owed before any of them is built.
-  `wallpaper_key` is the opposite: under any stock service it is exactly the
-  row the design drew.
+**The settings half is built, deployed and checked on the panel.** Eleven
+rows, the mechanic one of them needed, and both clients behind them:
+
+- **`multi` is ADR-0044 §7**, added for `wallpaper_topics`: the choice sheet
+  with the radio replaced, a readout of names (`Nature, Animals +1`) rather
+  than a count, and a validator that refuses an empty set — no category means
+  no picture.
+- **`weather_key` is gone from the registry**, the first deliberate deviation
+  from the design drop since it became the point of truth. Open-Meteo needs
+  no key, so the row would gate nothing; the four rows hang off `idle_weather`
+  now. The test calls it declined, not missing.
+- **Topics are Pixabay's own twenty categories**, no vocabulary of ours
+  (George: *"We start with categories and see later if we need to add
+  queries"*), and a test stops the row and the client drifting apart.
+- **Random across the chosen categories per refresh**, shuffled so a category
+  that answers with nothing falls through instead of blanking the screen.
+- **Pixabay's terms are most of `wallpapers.py`**: downloaded rather than
+  hotlinked, responses cached 24 h, `largeImageURL`, and the cache beside the
+  settings database because it is what the screen shows with no network.
+
+**What 9g still needs** is the idle screen itself: `IdleScreen.svelte` draws
+a clock and an external page today and nothing of the four backgrounds, the
+forecast, or the three icon sets. **And a Pixabay key** — the wallpaper path
+has never run against the real API, because a key is per owner and George has
+to make one (free, instant, pixabay.com). Everything else was checked on the
+device: Hamburg, four days, 0.3 s, credit in the payload.
+
+**`weather_location` on the device is set to `Hamburg`**, by the probe that
+proved the route. It is a real setting and George should change it.
 
 **Two measured traps recorded there:** the Art Institute's IIIF image server
 403s without an `AIC-User-Agent` header (with a browser User-Agent too — the
