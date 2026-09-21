@@ -41,15 +41,29 @@ rows, the mechanic one of them needed, and both clients behind them:
   hotlinked, responses cached 24 h, `largeImageURL`, and the cache beside the
   settings database because it is what the screen shows with no network.
 
-**What 9g still needs** is the idle screen itself: `IdleScreen.svelte` draws
-a clock and an external page today and nothing of the four backgrounds, the
-forecast, or the three icon sets. **And a Pixabay key** — the wallpaper path
-has never run against the real API, because a key is per owner and George has
-to make one (free, instant, pixabay.com). Everything else was checked on the
-device: Hamburg, four days, 0.3 s, credit in the payload.
+**The screen is built and drawing, with George's own key and location.**
+Four backgrounds through one route, the forecast, three icon sets, and the
+credits both providers require — every one of them screenshotted on the
+panel. **9g's remaining work is George's judgement of it**, which is what
+the gate is: leave the panel alone and look.
 
-**`weather_location` on the device is set to `Hamburg`**, by the probe that
-proved the route. It is a real setting and George should change it.
+**Four defects the panel found that no test would have**, all fixed: a fixed
+scrim cannot keep a moving clock legible; a radial gradient still opaque at
+its box's edge draws a rectangle over the picture; artist pictures were
+asked for at 300 px and drawn at 1280 (**Finding 035's defect upside down**,
+and `PHOTO_BACKGROUND` is the fix); and a face on a music player's idle
+screen with no name under it is a question the screen could answer.
+
+**And the geocoder does not accept what the row asks for.** `weather_location`
+says "City, country" and the design's example is `Berlin, DE` — which
+Open-Meteo answers with nothing, where `Berlin` alone returns five places.
+The daemon splits it now: the first part searches, the rest rank the results,
+and an unmatched qualifier is ignored rather than fatal.
+
+**Still open, and owed to George rather than to code:** ADR-0047's remaining
+questions — **how pictures reach "Wallpapers on device"** (the directory is
+`/var/lib/gexis-core/pictures` and today they arrive over SSH), and whether
+artist pictures should avoid the artist currently playing.
 
 **Two measured traps recorded there:** the Art Institute's IIIF image server
 403s without an `AIC-User-Agent` header (with a browser User-Agent too — the
