@@ -7,7 +7,7 @@ recognised faster next time, rather than rediscovered as a surprise.
 
 ## The check ran against the wrong reality
 
-Nine instances so far, same shape each time: the check ran against
+Ten instances so far, same shape each time: the check ran against
 something that *resembled* the thing being tested, closely enough that
 the difference was invisible in the result. Not a broken check — a check
 answering a different question than the one asked, confidently.
@@ -153,6 +153,30 @@ observing the adapter but is what a build can see.
 the same string, the check cannot tell which one answered. Worth making them
 differ deliberately when the fallback is plausible — which is what the gate
 "rename, restart, confirm all four" did, by accident of being a rename.
+
+**10. `systemctl is-active` standing in for "the panel works"** (2026-09-21,
+same subphase). A script was deployed to the device with `rsync -a`, which
+copied the repository's `644` over the `755` the image installs with
+`install -D -m 755`. labwc could no longer execute it, so **Chromium never
+started** - and `systemctl is-active gexis-kiosk` still answered `active`,
+because the unit is labwc and labwc was fine. The panel sat on a background
+with no UI on it, and the deploy had been reported as good.
+
+The check was not wrong about anything it claimed. `gexis-kiosk` *was*
+active. It simply is not the question: the unit is the compositor, and the
+browser inside it is a child that can be absent without the unit noticing.
+
+**The check that works is the one that asks the far end.** After a kiosk
+restart, `journalctl -u gexis-core | grep 'GET /assets/index-'` shows the
+panel fetching the bundle it was given - which cannot be true unless
+Chromium started, loaded, and reached the daemon. It is also how the
+content-hashed filename confirms *which* build is on screen.
+
+**And the deploy itself had a trap worth removing rather than remembering.**
+Eight scripts were stored `644` in the repository and installed `755` by the
+build, so every hand-deploy of one silently stripped its executable bit.
+They are executable in git now, which makes `rsync -a` correct by
+construction.
 
 ## Common shape
 
