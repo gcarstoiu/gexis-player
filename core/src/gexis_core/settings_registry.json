@@ -461,7 +461,7 @@
         ]
       },
       {
-        "key": "idle_brightness",
+        "key": "background_brightness",
         "type": "number",
         "label": "Background brightness",
         "marks": "N",
@@ -471,6 +471,23 @@
         "step": 5,
         "unit": "%",
         "default": 62,
+        "onlyWhen": [
+          "idle_background",
+          {
+            "not": "Black"
+          }
+        ]
+      },
+      {
+        "key": "background_interval",
+        "type": "number",
+        "label": "Change the picture every",
+        "marks": "N",
+        "note": "How often the background changes — artist pictures, online wallpapers and the device's own, all of them.",
+        "min": 1,
+        "max": 60,
+        "unit": "min",
+        "default": 15,
         "onlyWhen": [
           "idle_background",
           {
@@ -523,21 +540,6 @@
         "default": [
           "Nature"
         ],
-        "onlyWhen": [
-          "idle_background",
-          "Wallpapers online"
-        ]
-      },
-      {
-        "key": "wallpaper_interval",
-        "type": "number",
-        "label": "Change the picture every",
-        "marks": "N",
-        "note": null,
-        "min": 1,
-        "max": 60,
-        "unit": "min",
-        "default": 15,
         "onlyWhen": [
           "idle_background",
           "Wallpapers online"

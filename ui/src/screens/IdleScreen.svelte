@@ -57,11 +57,11 @@
   // rather than zero so the widths stay harmless when there is no picture.
   const stroke = $derived(black ? 'transparent' : 'rgba(46, 57, 66, 0.92)');
   const scrim = $derived(black ? 'rgba(11, 18, 24, 0.93)' : 'rgba(7, 11, 15, 0.06)');
-  // `idle_brightness`, George's row: the design's 0.62 is the default and
+  // `background_brightness`, George's row: the design's 0.62 is the default and
   // the number is his to move. **The contour does not move with it** - it
   // is what carries the type at *any* brightness, and it matters most at
   // the top of this range where the picture is brightest.
-  const brightness = $derived(Math.max(20, Math.min(100, Number(settings.idle_brightness ?? 62))) / 100);
+  const brightness = $derived(Math.max(20, Math.min(100, Number(settings.background_brightness ?? 62))) / 100);
 
   // Kept clear of the forecast bar below and the credits above.
   function randomSpot() {
@@ -116,7 +116,7 @@
       if (now.getSeconds() === 0) spot = randomSpot();
     }, 1000);
     const forecast = setInterval(loadWeather, 15 * 60 * 1000);
-    const every = Math.max(1, Number(settings.wallpaper_interval ?? 15)) * 60 * 1000;
+    const every = Math.max(1, Number(settings.background_interval ?? 15)) * 60 * 1000;
     const pictures = setInterval(loadPicture, every);
     return () => {
       clearInterval(tick);
@@ -278,7 +278,7 @@
 
   /* The design's own treatment: the picture is dimmed and slightly
      desaturated in the image itself, not under a dark sheet. The amount is
-     `idle_brightness` and arrives as an inline style; 0.62 is the design's
+     `background_brightness` and arrives as an inline style; 0.62 is the design's
      value and the row's default. */
   .bg {
     position: absolute;

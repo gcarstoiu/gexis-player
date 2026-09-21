@@ -36,7 +36,7 @@ TEXT_MAX = 500
 ONLY_WHEN_ANY = "*any*"
 
 #: `onlyWhen: [key, {"not": value}]` - shown unless the key holds *that*
-#: value (ADR-0044 §3, amended 2026-09-21 for `idle_brightness`, which
+#: value (ADR-0044 §3, amended 2026-09-21 for `background_brightness`, which
 #: George asked to apply to *"all background types except black"*).
 #:
 #: **A negation rather than a list of the three that do apply.** The list

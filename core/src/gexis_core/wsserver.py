@@ -290,7 +290,7 @@ class StateServer:
         picture" and does not carry a branch per setting: the setting is the
         daemon's to read, and three of the four answers are things only the
         daemon can reach anyway. *When* the picture changes is the panel
-        counting `wallpaper_interval`; nothing here holds a timer.
+        counting `background_interval`; nothing here holds a timer.
         """
         if self._settings is None or self._wallpapers is None:
             return web.json_response({"error": "wallpapers are not wired up"}, status=503)

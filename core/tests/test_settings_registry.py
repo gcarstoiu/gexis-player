@@ -93,17 +93,18 @@ def test_registry_keys_are_the_designs_keys_apart_from_recorded_deviations():
     # drawer_on_external, drawer_autohide, listenbrainz_token and fanart_key -
     # are in the design now; the drop adopted them.
     #
-    # `wallpaper_topics` and `wallpaper_interval` are 9g's, appended to
-    # ADR-0022's inventory on George's confirmation (2026-09-21): Pixabay
-    # takes one category per request and the drop has no row for which ones,
-    # nor for how often the picture changes.
+    # `wallpaper_topics`, `background_interval` and `background_brightness`
+    # are 9g's, appended to ADR-0022's inventory on George's confirmation
+    # (2026-09-21): Pixabay takes one category per request and the drop has
+    # no row for which ones, for how often the picture changes, or for how
+    # bright it is.
     assert ours - design_keys == {
         "api_loopback", "backup", "boot_default_scope", "brightness",
         "confidence", "factory_reset", "idle_close", "image_build",
         "lms_player", "log_level", "plugins", "power", "release_ladder",
         "restore_floor", "seek_reanchor", "spotify_name", "theme",
-        "idle_brightness", "time_display", "updates", "volume_managed",
-        "wallpaper_interval", "wallpaper_topics",
+        "background_brightness", "background_interval", "time_display",
+        "updates", "volume_managed", "wallpaper_topics",
     }
 
 
@@ -422,10 +423,32 @@ def test_the_shipped_registry_hides_twenty_rows_and_shows_the_rest():
     # had given to nobody (56), plus 9g's eleven: the design's nine
     # idle-screen keys minus `weather_key`, which a key-free provider leaves
     # gating nothing (ADR-0047 §2a), plus `wallpaper_topics`,
-    # `wallpaper_interval` and `idle_brightness`, all three asked for by
+    # `background_interval` and `background_brightness`, all asked for by
     # George on 2026-09-21.
     assert len(rows) == 67
     assert len(rows) - len(kept) == 47
+
+
+def test_every_picture_background_carries_the_same_two_rows():
+    """George, 2026-09-21: *"The picture rotation is not available for music
+    library option. It should be common for all types that have a
+    background: artists, online, or local media."*
+
+    Brightness and rotation belong to *a picture*, and three of the four
+    backgrounds are one. The Pixabay rows stay Pixabay's.
+    """
+    rows = {r["key"]: r for r in _rows()}
+    values = {k: rows[k].get("default") for k in rows}
+    for key in ("background_brightness", "background_interval"):
+        assert rows[key]["onlyWhen"] == ["idle_background", {"not": "Black"}], key
+        for background in ("Artist pictures", "Wallpapers online", "Wallpapers on device"):
+            values["idle_background"] = background
+            assert visible(rows[key], rows, values), f"{key} under {background}"
+        values["idle_background"] = "Black"
+        assert not visible(rows[key], rows, values), key
+    # A key and a topic list are about the service, not about the picture.
+    for key in ("wallpaper_key", "wallpaper_topics"):
+        assert rows[key]["onlyWhen"] == ["idle_background", "Wallpapers online"], key
 
 
 def test_a_row_can_be_shown_for_everything_but_one_value():
@@ -437,7 +460,7 @@ def test_a_row_can_be_shown_for_everything_but_one_value():
     one would have no brightness control and nothing would say why.
     """
     rows = {r["key"]: r for r in _rows()}
-    brightness = rows["idle_brightness"]
+    brightness = rows["background_brightness"]
     assert brightness["onlyWhen"] == ["idle_background", {"not": "Black"}]
     values = {k: rows[k].get("default") for k in rows}
     for background in ("Artist pictures", "Wallpapers online", "Wallpapers on device"):
@@ -477,7 +500,7 @@ def test_the_brightness_row_carries_the_designs_own_value():
     """0.62 is what the design dims a background to, and what its own
     comment does the contrast arithmetic for. The row starts there rather
     than at something rounder."""
-    row = next(r for r in _rows() if r["key"] == "idle_brightness")
+    row = next(r for r in _rows() if r["key"] == "background_brightness")
     assert (row["type"], row["unit"], row["default"]) == ("number", "%", 62)
     assert (row["min"], row["max"]) == (20, 100)
 

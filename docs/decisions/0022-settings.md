@@ -91,8 +91,12 @@ Phase 2 and ADR-0027.
 | Idle background: artist pictures / wallpapers online / wallpapers on device / black | [N] | ADR-0047 §1 |
 | Wallpaper API key | [N] | **Pixabay**, chosen by George on 2026-09-21 ([Finding 043](../findings/043-the-idle-screens-two-providers.md)). A key per owner: its guidelines allow this use but not a shipped credential |
 | Wallpaper topics | [N] | **Appended 2026-09-21 on George's confirmation.** Pixabay's own twenty categories, more than one at a time — the `multi` mechanic [ADR-0044](0044-settings-row-vocabulary.md) §7 exists for this row. Not in the design drop |
-| Wallpaper interval | [N] | **Appended 2026-09-21 on George's confirmation.** How often the picture changes. Not in the design drop, and without it the rotation is a hardcoded number nobody chose |
-| Idle background brightness | [N] | **Appended 2026-09-21, asked for by George.** The design dims a background to 62% and that is this row's default; 20–100%. Applies to every background that is a picture, which is the negated `onlyWhen` [ADR-0044](0044-settings-row-vocabulary.md) §3 gained for it |
+| Background interval | [N] | **Appended 2026-09-21 on George's confirmation.** How often the picture changes. Not in the design drop, and without it the rotation is a hardcoded number nobody chose. Named `wallpaper_interval` until he pointed out it was hidden for artist pictures: it belongs to a picture, not to a wallpaper service |
+| Background brightness | [N] | **Appended 2026-09-21, asked for by George.** The design dims a background to 62% and that is this row's default; 20–100% |
+
+Both carry `onlyWhen: ["idle_background", {"not": "Black"}]` — every
+background that is a picture — which is the negated form
+[ADR-0044](0044-settings-row-vocabulary.md) §3 gained for them.
 | Weather on the idle screen | [N] | ADR-0047 §2. **Open-Meteo**, key-free, so this toggle alone gates the four rows below — the drop's `weather_key` is removed rather than kept as a row that stores nothing |
 | Weather location | [N] | Typed as a place, geocoded once through Open-Meteo's key-free geocoder, stored as coordinates |
 | Forecast days, show min and max, weather icons | [N] | ADR-0047 §2, all three `onlyWhen: ['idle_weather', true]` |
@@ -172,7 +176,7 @@ maximum volume ceiling, and build self-identification.
 Two rows in the Display table above are **not in the design drop** and are
 here because George confirmed them, which is the rule this inventory now
 runs under (the 2026-09-20 amendment): `wallpaper_topics`,
-`wallpaper_interval` and `idle_brightness`. One row **in** the drop is
+`background_interval` and `background_brightness`. One row **in** the drop is
 deliberately not built:
 `weather_key`, which a key-free provider leaves gating nothing.
 

@@ -199,10 +199,11 @@ Both confirmed by George, 2026-09-21, and appended to ADR-0022's inventory.
 
 - **`wallpaper_topics`** — which Pixabay categories to draw from. A `multi`,
   the mechanic [ADR-0044](0044-settings-row-vocabulary.md) §7 adds for it.
-- **`wallpaper_interval`** — how often the picture changes. Nothing in the
-  drop says, and a wallpaper that never changes is a wallpaper nobody chose.
-- **`idle_brightness`** — how bright the picture behind the clock is, asked
-  for by George on 2026-09-21 and **defaulting to the design's own 62%**,
+- **`background_interval`** — how often the picture changes. Nothing in the
+  drop says, and a background that never changes is a background nobody
+  chose.
+- **`background_brightness`** — how bright the picture behind the clock is,
+  asked for by George on 2026-09-21 and **defaulting to the design's own 62%**,
   which is the number its contrast reasoning is built on (§1a). 20% to 100%
   in steps of 5. It applies to every background that *is* a picture and is
   hidden for Black, through the negated `onlyWhen`
@@ -211,6 +212,20 @@ Both confirmed by George, 2026-09-21, and appended to ADR-0022's inventory.
   **The contour does not move with it.** The stroke is what carries the type
   at any brightness and it matters most at the top of the range, so the
   brightness row changes the picture and nothing else.
+
+**Both belong to a picture, not to a wallpaper service.** George, 2026-09-21:
+*"The picture rotation is not available for music library option. It should
+be common for all types that have a background: artists, online, or local
+media."* He is right, and the row was named `wallpaper_interval` after the
+first source it was built for. Three of the four backgrounds are a picture,
+so both rows carry the same negated `onlyWhen` as each other and are named
+for what they govern. `wallpaper_key` and `wallpaper_topics` stay where they
+are: a key and a topic list are about **the service**, not about the picture.
+
+The behaviour was already common - the route answers for whatever
+`idle_background` names, so a new artist, a new wallpaper and a new local
+file all arrive the same way. Only the row was hidden, which is the worst
+kind of gap: the feature works and nothing offers it.
 
 ### 2c. Attribution is a requirement, not a courtesy
 
