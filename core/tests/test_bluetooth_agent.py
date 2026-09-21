@@ -224,3 +224,19 @@ def test_the_store_refuses_the_agents_object():
 
     with pytest.raises(TypeError):
         StateStore({}).set_pairing(ba.PairingRequest(device="x", code="1"))
+
+
+def test_only_an_open_question_takes_the_screen():
+    """The outcome states and the clear are published like any other, but
+    they must not lower the visualiser again: by then the request has been
+    answered and whatever was on screen should come back on its own."""
+    taken = []
+
+    def publish(request):
+        if request is not None and request.state == "asking":
+            taken.append(request.device)
+
+    for state in ("asking", "accepted", "rejected", "expired"):
+        publish(ba.PairingRequest(device=state, code="1", state=state))
+    publish(None)
+    assert taken == ["asking"]

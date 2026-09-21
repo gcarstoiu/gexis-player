@@ -91,6 +91,19 @@
     return () => clearTimeout(id);
   });
 
+  //: **A pairing request wakes the panel.** It lapses in thirty seconds and
+  //: a question nobody can see cannot be answered - and the frame is only
+  //: 95% opaque, so over the idle screen the clock reads through it
+  //: (George, on the panel, 2026-09-21). Counted as attention as well as
+  //: dismissed, so the panel does not drop straight back to idle the moment
+  //: the frame closes: after pairing, the thing you just connected is the
+  //: thing you want to look at.
+  $effect(() => {
+    if (!$pairing) return;
+    idle = false;
+    touches += 1;
+  });
+
   // The library is a layer over now playing (source/Now Playing.dc.html). It
   // is Home, the no-renderer screen (ADR-0033), so it is always open while
   // nothing is connected; otherwise now playing's Home button opens it and

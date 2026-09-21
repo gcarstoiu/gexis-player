@@ -432,14 +432,32 @@ async def main() -> None:
         # dataclass straight through made `json.dumps` raise inside the
         # broadcast, which took **every** state update with it for as long
         # as a request was open - not just the pairing field.
-        publish=lambda request: state_store.set_pairing(
-            request.to_json() if request is not None else None
-        ),
+        publish=lambda request: _publish_pairing(request),
         # Read per request, not captured: changing either takes effect on
         # the next pair rather than on the next boot.
         confirm_required=lambda: settings.value("bt_pairing") != "PIN-free",
         should_trust=lambda: settings.value("bt_autotrust") is not False,
     )
+
+    def _publish_pairing(request) -> None:
+        """The request, and the screen it needs.
+
+        **The visualiser is a separate process window, not a layer.** The
+        panel can draw the pairing frame over its own idle screen because
+        that is a div; it cannot draw over PeppyMeter, which is another
+        X client entirely. A request arriving while the meter is up would
+        be invisible for its whole thirty seconds and then lapse, with
+        nothing on screen to explain it - ADR-0045's open question about
+        what a request takes the screen from, answered: it takes it, and
+        here is the half the panel cannot do for itself.
+
+        `peppy` is assigned further down `main()`; a lambda would resolve
+        it at call time and so does this, which is why the reference is
+        safe despite reading like it is out of order.
+        """
+        state_store.set_pairing(request.to_json() if request is not None else None)
+        if request is not None and request.state == "asking":
+            peppy.request("hide")
 
     async def _bluetooth_setup() -> None:
         await _apply_discoverable(
