@@ -439,6 +439,7 @@ async def main() -> None:
                "weather_location": None, "idle_days": None,
                "idle_minmax": None, "idle_icons": None,
                "viz_timeout": None, "viz_stop": None,
+               "home_strip": None, "home_strip_count": None,
                "device_name": apply_device_name,
                "bt_discoverable": lambda mode: asyncio.ensure_future(
                    _apply_discoverable(mode)

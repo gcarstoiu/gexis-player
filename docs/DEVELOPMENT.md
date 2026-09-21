@@ -1721,6 +1721,20 @@ undecided, and nothing else depends on it.
    77 meters, 9 spectrum, 13 both. The old two options were *directories*,
    and `templates/` is not the meter corpus (ADR-0019 as amended).
 
+   **The home strip is built**, all three shapes, and George's correction is
+   why: *"have a proper look at lms as I am seeing both popular artists and
+   recently played built in the interface, so you should also be able to see
+   them."* [Finding 044](findings/044-what-lms-knows-about-what-was-played.md)
+   had concluded the server held neither, from measurements that were
+   accurate and a question that was wrong - play counts and last-played
+   times are **sorts** through `browselibrary`, not fields or tags
+   (`docs/LESSONS.md` case 14). Neither needs a plugin. The one thing that
+   really is missing is the *when* caption, so the recently-played card
+   carries the album count like its neighbour.
+
+   **`viz_stop` is wired**, and `viz_timeout` was in seconds where the
+   design draws minutes. Both are minutes now and both are read per tick.
+
    **The picker's drawing is blocked on George**, 2026-09-21: *"The picker
    as is now designed will put some strain on the rendering. I would change
    the design in a way that we have a list of skins and only when one is

@@ -10,6 +10,7 @@
 // 2026-09-17). Reopening Home then costs nothing, and a later reload only
 // replaces what is already on screen.
 import { writable } from 'svelte/store';
+import { playback } from './state.js';
 
 async function get(path) {
   const response = await fetch(`/library/${path}`);
@@ -19,7 +20,7 @@ async function get(path) {
 }
 
 /** `{counts, albums}`, or nulls until the first load finishes. */
-export const libraryRoot = writable({ counts: null, albums: [] });
+export const libraryRoot = writable({ counts: null, albums: [], strip: null });
 
 /** Artist photo URLs the panel has already been told about, keyed by
  *  `<id>` for the grid and `<id>@300` for the artist page.
@@ -128,15 +129,34 @@ export async function radioPlay(handle, action = 'play') {
 
 let inFlight = null;
 
-/** Read the root's counts and New Music, decode the covers, then publish
- *  both together. Concurrent calls share one read. */
+//: Same signal `lib/settings.js` refetches on: the daemon bumps it on every
+//: write, and the strip is a read of two settings.
+let seenRevision;
+playback.subscribe(($state) => {
+  const revision = $state?.settings_revision;
+  if (revision === undefined || revision === seenRevision) return;
+  const first = seenRevision === undefined;
+  seenRevision = revision;
+  if (!first) reloadStrip();
+});
+
+/** Read the root's counts and its strip, decode any covers, then publish
+ *  both together. Concurrent calls share one read.
+ *
+ *  **The strip is whichever shape `home_strip` names** (9h): the daemon
+ *  reads the setting and answers with one of three, because two of them
+ *  cost an LMS browse plus a count per artist and nobody sees the other
+ *  two. Albums arrive with artwork to decode; artists arrive with a name
+ *  and an album count, and their pictures follow the same route the artist
+ *  grid uses. */
 export function loadLibraryRoot() {
   if (inFlight) return inFlight;
   inFlight = (async () => {
     try {
-      const [counts, albums] = await Promise.all([get('counts'), get('new')]);
+      const [counts, strip] = await Promise.all([get('counts'), get('strip')]);
+      const albums = strip.albums ?? [];
       await Promise.all(albums.map((album) => decoded(album.artwork)));
-      libraryRoot.set({ counts, albums });
+      libraryRoot.set({ counts, albums, strip });
     } catch (err) {
       console.info('library:', err.message);
     } finally {
@@ -144,6 +164,25 @@ export function loadLibraryRoot() {
     }
   })();
   return inFlight;
+}
+
+/** Read the strip again, for when `home_strip` or `home_strip_count`
+ *  changes. The counts have not moved, so they are not re-read.
+ *
+ *  **Driven by `settings_revision`, not by a component effect.** The first
+ *  attempt watched the settings store from inside `Library.svelte` and
+ *  never re-ran: the panel refetched `/settings` and left the strip alone,
+ *  which looked exactly like the daemon being wrong (it was not - it was
+ *  already serving the new shape). This is the mechanism `settings.js`
+ *  itself uses, and it is one the device has proven. */
+export async function reloadStrip() {
+  try {
+    const strip = await get('strip');
+    await Promise.all((strip.albums ?? []).map((album) => decoded(album.artwork)));
+    libraryRoot.update((root) => ({ ...root, albums: strip.albums ?? [], strip }));
+  } catch (err) {
+    console.info('library:', err.message);
+  }
 }
 
 /** Artist photos from LMS's own plugin, for the artists about to be drawn

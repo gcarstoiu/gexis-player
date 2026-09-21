@@ -404,6 +404,35 @@
       },
       {
         "type": "group",
+        "label": "Home screen",
+        "accent": "#c8a2d8"
+      },
+      {
+        "key": "home_strip",
+        "type": "choice",
+        "label": "Strip below the tiles",
+        "marks": "N",
+        "note": "What the library root shows under its five cards.",
+        "options": [
+          "New music",
+          "Most played artists",
+          "Recently played artists"
+        ],
+        "default": "New music"
+      },
+      {
+        "key": "home_strip_count",
+        "type": "number",
+        "label": "Items in the strip",
+        "marks": "N",
+        "note": null,
+        "min": 4,
+        "max": 20,
+        "unit": "",
+        "default": 10
+      },
+      {
+        "type": "group",
         "label": "Idle screen",
         "accent": "#c8a2d8"
       },

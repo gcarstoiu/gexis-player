@@ -333,6 +333,23 @@ class StateServer:
             answer = {**answer, "url": f"/idle/wallpaper/{answer['file']}"}
         return web.json_response(answer)
 
+    async def _home_strip(self, limit: int) -> dict:
+        """What the library root draws under its cards.
+
+        One shape at a time, named by `home_strip`, `home_strip_count` long.
+        **The two artist shapes are one LMS order and one count per artist**
+        (Finding 044); the pictures the panel puts on them come from the
+        route it already uses for the artist grid.
+        """
+        shape = str(self._setting_or_none("home_strip") or "New music")
+        count = int(self._setting_or_none("home_strip_count") or limit or 10)
+        count = max(4, min(count, 20))
+        if shape == "Most played artists":
+            return {"shape": shape, "artists": await self._library.played_artists("popular", count)}
+        if shape == "Recently played artists":
+            return {"shape": shape, "artists": await self._library.played_artists("recent", count)}
+        return {"shape": "New music", "albums": await self._library.new_music(count)}
+
     async def _artist_picture(self) -> dict:
         """One artist picture from the library, at random.
 
@@ -496,6 +513,11 @@ class StateServer:
         library = self._library
         reads = {
             ("counts", False, None): lambda: library.counts(),
+            # The home strip, whichever shape `home_strip` names (9h). The
+            # panel asks for the one it is about to draw rather than for all
+            # three: two of them cost a browselibrary call plus one count
+            # per artist, and nobody sees the other two.
+            ("strip", False, None): lambda: self._home_strip(limit),
             ("new", False, None): lambda: library.new_music(),
             ("artists", False, None): lambda: library.artists(offset, limit),
             ("artists", True, "albums"): lambda: library.artist_albums(item_id),

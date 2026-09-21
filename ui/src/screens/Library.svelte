@@ -612,7 +612,17 @@
   // opening Home draws the cards and the strip together.
   const counts = $derived($libraryRoot.counts);
   const albums = $derived($libraryRoot.albums);
-
+  //: The strip under the cards, whichever of the three `home_strip` names
+  //: (9h). The daemon picks the shape; this draws it.
+  const strip = $derived($libraryRoot.strip);
+  const stripArtists = $derived(strip?.artists ?? []);
+  const stripLabel = $derived(
+    strip?.shape === 'Most played artists'
+      ? 'Most played'
+      : strip?.shape === 'Recently played artists'
+        ? 'Recently played'
+        : 'New Music'
+  );
   let failed = $state(new Set());
   const markFailed = (url) => (failed = new Set(failed).add(url));
 
@@ -796,7 +806,7 @@
 
         <div class="new">
           <div class="new__head">
-            <span class="new__label">New Music</span>
+            <span class="new__label">{stripLabel}</span>
             <span class="new__rule"></span>
           </div>
           <!-- The mask sits on this wrapper, which does not scroll: on the
@@ -804,6 +814,34 @@
           <div class="new__mask" style:mask-image={mask} style:-webkit-mask-image={mask}>
           <div class="new__scroll" bind:this={scroller}>
             <span class="mark" bind:this={startMark}></span>
+            <!-- The same strip in two shapes: albums as large thumbnails,
+                 artists as the round disc the grid already draws, captioned
+                 with how many albums they have. **Not with when they last
+                 played**, which the design asks for and LMS does not hold
+                 (Finding 044). -->
+            {#each stripArtists as who (who.id)}
+              <button
+                class="face"
+                class:is-busy={busy === `artist-${who.id}`}
+                type="button"
+                onclick={() => openArtist(who)}
+              >
+                <span class="artist__disc face__disc" style:background={tintOf(who.name)} use:artistCard={who.id}>
+                  {#if photos[who.id] && !failed.has(photos[who.id])}
+                    <img
+                      class="artist__photo"
+                      src={photos[who.id]}
+                      alt=""
+                      onerror={() => markFailed(photos[who.id])}
+                    />
+                  {:else}
+                    <span class="artist__initials">{initialsOf(who.name)}</span>
+                  {/if}
+                </span>
+                <span class="album__title">{who.name}</span>
+                <span class="album__artist">{plural(who.albums ?? 0, 'album', 'albums')}</span>
+              </button>
+            {/each}
             {#each albums as tile (tile.id)}
               <button
                 class="album"
@@ -1693,6 +1731,29 @@
     flex-shrink: 0;
     background: none;
     display: block;
+  }
+  /* The artist shape of the strip: the grid's own disc at the album tile's
+     width, so the two shapes leave the row exactly the same height. */
+  .face {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    flex-shrink: 0;
+    width: 168px;
+    background: none;
+    border: 0;
+    padding: 0;
+    color: inherit;
+    text-align: center;
+    transition: transform var(--dur-fast) var(--ease);
+  }
+  .face:active {
+    transform: scale(0.95);
+  }
+  .face__disc {
+    width: 168px;
+    height: 168px;
   }
   .album__art {
     display: block;

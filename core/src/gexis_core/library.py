@@ -18,6 +18,8 @@ from any LMS app without a scan.
 """
 from __future__ import annotations
 
+import asyncio
+
 import itertools
 import logging
 import time
@@ -240,9 +242,48 @@ class LmsLibrary:
             "playlists": len(playlists),
         }
 
-    async def new_music(self) -> list[dict]:
-        result = await self._cached(["albums", 0, NEW_MUSIC_COUNT, "sort:new", f"tags:{ALBUM_TAGS}"])
+    async def new_music(self, limit: int = NEW_MUSIC_COUNT) -> list[dict]:
+        result = await self._cached(["albums", 0, limit, "sort:new", f"tags:{ALBUM_TAGS}"])
         return [self._album(a, ARTWORK_THUMB) for a in result.get("albums_loop", [])]
+
+    #: The two orders the home strip's other shapes need, and **the reason
+    #: they go through `browselibrary`** (Finding 044): play counts and
+    #: last-played times live in `tracks_persistent`, which the flat commands
+    #: never hand over. They are not fields and not tags - they are sorts.
+    #: Neither needs a plugin; Material Skin is only where they were found.
+    STRIP_SORTS = {"popular": "sort:popular", "recent": "sort:recentlyplayed"}
+
+    async def played_artists(self, order: str, limit: int = NEW_MUSIC_COUNT) -> list[dict]:
+        """Album artists by plays or by when they were last played.
+
+        **The caption is the album count, for both.** The design asks the
+        recently-played card to say *when* - "2 hours ago", "Last week" -
+        and that number is not reachable: `browselibrary` gives the ordering
+        without the value, and no tag or field on any flat command carries
+        it (Finding 044). Same card, same caption, different order.
+        """
+        sort = self.STRIP_SORTS.get(order)
+        if sort is None:
+            return []
+        result = await self._cached(
+            ["browselibrary", "items", 0, limit, "menu:1", "mode:artists",
+             sort, "role_id:ALBUMARTIST"]
+        )
+        artists = []
+        for item in result.get("item_loop", []):
+            name = (item.get("text") or "").strip()
+            artist_id = _int((item.get("commonParams") or {}).get("artist_id"))
+            if name and artist_id:
+                artists.append({"id": artist_id, "name": name})
+        # One count each, concurrently: `albums 0 0 artist_id:X` answers with
+        # a count and no rows, which is the cheapest question LMS takes.
+        counts = await asyncio.gather(
+            *(self._cached(["albums", 0, 0, f"artist_id:{a['id']}"]) for a in artists),
+            return_exceptions=True,
+        )
+        for artist, count in zip(artists, counts):
+            artist["albums"] = 0 if isinstance(count, BaseException) else (_int(count.get("count")) or 0)
+        return artists
 
     async def artists(self, offset: int = 0, limit: int = 1000) -> dict:
         """Album artists (George, 2026-09-17), in LMS's order, each with

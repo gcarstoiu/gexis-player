@@ -7,7 +7,7 @@ recognised faster next time, rather than rediscovered as a surprise.
 
 ## The check ran against the wrong reality
 
-Thirteen instances so far, same shape each time: the check ran against
+Fourteen instances so far, same shape each time: the check ran against
 something that *resembled* the thing being tested, closely enough that
 the difference was invisible in the result. Not a broken check — a check
 answering a different question than the one asked, confidently.
@@ -273,6 +273,38 @@ was the one already open for every other screen.
 source. Twice now the summary was accurate and the conclusion drawn from it
 was wrong, so the rule is not "read more carefully" - it is **when a summary
 implies something is absent, go and look at the source that would hold it.**
+
+**14. Asking what the API returns instead of what the server knows**
+(2026-09-21, Phase 9 subphase 9h). The home strip needs "most played
+artists" and "recently played artists". Finding 044 established that LMS
+had neither: `songinfo`'s whole field list has no last-played, `titles`
+carries no play count under any of 33 tag letters, `sort:playcount` on
+albums is not ordered by plays (its second album had 251 where its first
+had 201), and no statistics plugin is installed. Every one of those
+measurements is correct. The finding recommended building a play log on the
+device, which George would have paid for in code and in a feature that
+starts empty.
+
+**The server has both, and its own interface shows them.** George:
+*"have a proper look at lms as I am seeing both popular artists and
+recently played built in the interface, so you should also be able to see
+them."* They are not fields and not tags: they are **sorts** — `sort:popular`
+and `sort:recentlyplayed` through `browselibrary` — over
+`tracks_persistent`, a table the flat commands never hand over. Two calls,
+no plugin, and both verified on his server within minutes of being told to
+look again.
+
+**The check asked "what does this API expose" and was read as answering
+"what does this server hold".** Those differ whenever data is reachable
+through one door and not another, which is most of the time in an interface
+this old. The tell was available and ignored: **the product's own UI was
+doing the thing I had just declared impossible.** Nothing about a screen
+George can see should ever be concluded from an API probe alone.
+
+**Cheapest correction available:** when a server's own interface shows a
+thing, find the call *it* makes before concluding the data is absent — here,
+one request to `material-skin browsemodes` listed `myMusicTopArtists` and
+`myMusicRecentlyPlayedArtists` with their exact parameters.
 
 ## Common shape
 
