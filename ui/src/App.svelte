@@ -1,13 +1,14 @@
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
 <script>
   import { onMount, untrack } from 'svelte';
-  import { connect, active, metadata, volume, handoff, handoffExemptPairs, capabilities, available, availability, shuffle, repeat, queue } from './lib/state.js';
+  import { connect, active, metadata, volume, handoff, handoffExemptPairs, capabilities, available, availability, shuffle, repeat, queue, pairing } from './lib/state.js';
   import NowPlaying from './screens/NowPlaying.svelte';
   import Library from './screens/Library.svelte';
   import PanelBackground from './screens/PanelBackground.svelte';
   import IdleScreen from './screens/IdleScreen.svelte';
   import VolumeDrawer from './screens/VolumeDrawer.svelte';
   import HandoffScreen from './screens/HandoffScreen.svelte';
+  import PairingFrame from './screens/PairingFrame.svelte';
   import Settings from './screens/Settings.svelte';
   import { loadSettings, settingValues } from './lib/settings.js';
   import { loadLibraryRoot } from './lib/library.js';
@@ -213,6 +214,15 @@
 
   {#if shownHandoff}
     <HandoffScreen from={shownHandoff.from} to={shownHandoff.to} />
+  {/if}
+
+  <!-- Last, and above everything (ADR-0045). A request that cannot be seen
+       cannot be answered, and it lapses in thirty seconds either way - so it
+       takes the screen from the visualiser or the idle screen rather than
+       waiting politely behind them. It is also the only layer here with no
+       dismiss of its own: the agent takes it away. -->
+  {#if $pairing}
+    <PairingFrame request={$pairing} />
   {/if}
 </div>
 {/if}

@@ -79,6 +79,10 @@ export const repeat = derived(playback, ($s) => $s?.controls?.repeat ?? null);
 /** What LMS has queued, for the rail on now playing; null for the renderers
  *  that have no queue (ADR-0038 §1). */
 export const queue = derived(playback, ($s) => $s?.queue ?? null);
+/** A Bluetooth pairing request waiting for an answer (ADR-0045), or null.
+ *  **The frame lives and dies by this**, not by its own countdown: the agent
+ *  is holding BlueZ's handshake open and it is the one that lets go. */
+export const pairing = derived(playback, ($s) => $s?.pairing ?? null);
 
 /**
  * Commands go over REST, never the socket (ADR-0028). Returns the parsed
@@ -107,6 +111,11 @@ export const sendTransport = (command, body) => post(`/transport/${command}`, bo
 
 /** Phase 5 criterion 8: the Visualization button raises the Peppy screen. */
 export const showPeppy = () => post('/peppy/show');
+
+/** Accept or reject the open pairing request. A 409 means the window closed
+ *  while the finger was moving - the answer did not land, and the frame has
+ *  already been told so by `pairing` changing under it. */
+export const answerPairing = (accept) => post(`/bluetooth/pairing/${accept ? 'accept' : 'reject'}`);
 
 /** The daemon cannot see touches - they land in whichever window owns the
  *  screen - so the panel tells it, to restart the unattended-playback timer

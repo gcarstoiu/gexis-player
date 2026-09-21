@@ -169,6 +169,11 @@ class StateStore:
         (ADR-0045). **Published the moment the agent asks**: the agent is
         holding BlueZ's handshake open while this travels, and the panel has
         the agent's whole window to be told, not a share of it."""
+        # **A dict, not the agent's own object.** This goes straight into
+        # `json.dumps` in the broadcast, where a dataclass raises and takes
+        # every other state update with it until the request closes.
+        if pairing is not None and not isinstance(pairing, dict):
+            raise TypeError(f"pairing must be a dict, got {type(pairing).__name__}")
         if pairing == self._pairing:
             return
         self._pairing = pairing

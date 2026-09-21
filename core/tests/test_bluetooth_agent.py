@@ -189,3 +189,38 @@ async def test_bt_autotrust_off_means_the_confirmation_does_not_trust():
     await asyncio.sleep(0.02)
     agent.answer(True)
     await task  # no bus, so this only has to not raise
+
+
+# ── what actually goes on the wire ────────────────────────────────────────
+
+def test_the_published_state_survives_json():
+    """**The whole path, in one assertion.** The agent publishes its own
+    object; the store holds what goes over the socket. Passing the dataclass
+    straight through made `json.dumps` raise *inside the broadcast*, which
+    took every other state update with it for as long as a request was open
+    - the panel saw no pairing, and no volume, and no metadata either.
+
+    Unit tests all passed: each side was right on its own. Only driving the
+    agent over the real bus showed it (2026-09-21)."""
+    import json
+
+    from gexis_core.state import StateStore
+
+    store = StateStore({})
+    request = ba.PairingRequest(device="George's iPhone", code="001234")
+    store.set_pairing(request.to_json())
+    payload = json.loads(json.dumps(store.state.to_json()))
+    assert payload["pairing"] == {
+        "device": "George's iPhone",
+        "code": "001234",
+        "window": ba.WINDOW_S,
+        "state": "asking",
+    }
+
+
+def test_the_store_refuses_the_agents_object():
+    """So the next caller finds out here rather than in the broadcast."""
+    from gexis_core.state import StateStore
+
+    with pytest.raises(TypeError):
+        StateStore({}).set_pairing(ba.PairingRequest(device="x", code="1"))

@@ -427,7 +427,14 @@ async def main() -> None:
     # rather than left to a shell script that could not express them, and
     # our own Agent1 so the question can reach the panel at all.
     pairing_agent = bluetooth_agent.Agent(
-        publish=state_store.set_pairing,
+        # `to_json` here, not in the store: the agent publishes its own
+        # object and the store holds what goes on the wire. Passing the
+        # dataclass straight through made `json.dumps` raise inside the
+        # broadcast, which took **every** state update with it for as long
+        # as a request was open - not just the pairing field.
+        publish=lambda request: state_store.set_pairing(
+            request.to_json() if request is not None else None
+        ),
         # Read per request, not captured: changing either takes effect on
         # the next pair rather than on the next boot.
         confirm_required=lambda: settings.value("bt_pairing") != "PIN-free",
