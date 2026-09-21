@@ -336,3 +336,33 @@ what the symptom suggested.
     there; one renderer wearing two different treatments on two surfaces is
     the kind of thing only a diff notices.
 
+**12. The radio cards again, and the same attribute a third time**
+(2026-09-21). George: *"Still seeing wrong sized cards. Check the design
+properly."*
+
+The design's list container is one inline style: `flex:1; min-width:0;
+overflow-y:auto; padding:28px 40px; box-sizing:border-box; display:grid;
+align-content:start; grid-template-columns:{{ libCols }}; gap:{{ libGap }}`.
+I had read that line twice — once for `libCols`, once for `libGap` — and
+ported neither `padding` (finding 9) nor **`flex: 1`**. A grid with
+`flex: 0 1 auto` inside `.content`'s flex row sizes its three columns to
+their text rather than to the screen, which is what the wrong cards were.
+
+Also missing: `box-sizing: border-box` on the row and the disc. There is no
+global reset in this UI, so the 1px border made the card 98px where the
+design says 96 and the disc 56 where it says 54.
+
+**What stopped it recurring a fourth time** was extracting the design's
+style attributes and comparing them property by property instead of reading
+them. Every declaration on the container, the row and the icon is now
+accounted for. Reading a line for the one value you came for is not reading
+the line.
+
+**13. Going back flashed the level being left.** Forward, the path is pushed
+after the fetch, so the level on screen stays its own until the new one
+arrives. Backward, `back()` pops the path first and `openRadio(..., false)`
+re-reads — so for the length of that fetch the items left behind were drawn
+against the level above them, and returning to the nine categories rendered
+the previous level as cards. The items are now cleared with the path, and
+the gap draws a skeleton.
+

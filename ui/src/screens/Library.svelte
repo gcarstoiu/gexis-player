@@ -640,7 +640,16 @@
     // Radio holds one level at a time, so stepping back re-reads the level
     // above from the handle that opened it.
     const top = path[path.length - 1];
-    if (top.kind === 'radio') openRadio(top.handle, top.label, false);
+    if (top.kind === 'radio') {
+      // **The items go with the path, not after it.** Going forward the
+      // path is pushed last, so the level on screen stays its own until
+      // the new one arrives. Going back the path moves first, and the
+      // items left behind are drawn against it - coming back to the nine
+      // categories, the level just left rendered as cards for the length
+      // of a fetch (George, on the panel, 2026-09-21).
+      radio = null;
+      openRadio(top.handle, top.label, false);
+    }
     // An artist entry `artistPath` synthesised: the page behind it was never
     // opened, so there is nothing to fall back to. Resolve the name now.
     // `openArtistByName` pushes its own entry, so drop this placeholder.
@@ -843,6 +852,14 @@
           </button>
         {:else}
           <div class="pane__empty">Nothing here</div>
+        {/each}
+      </div>
+    {:else if here?.kind === 'radio' && !radio}
+      <!-- Between levels: the one being left is gone, the one being
+           returned to has not arrived. -->
+      <div class="lists">
+        {#each [1, 2, 3, 4, 5, 6] as n (n)}
+          <div class="skelrow"></div>
         {/each}
       </div>
     {:else if here?.kind === 'radio' && radio}
@@ -2860,7 +2877,16 @@
      (design/screens.md §8), so every category carries its own glyph and its
      own tint. All ten are CSS geometry - this panel has no icon font, and the
      SVG mark smears below ~40px. `--tint` comes from the markup. */
+  /* The design's own container, line for line: `flex:1; min-width:0;
+     overflow-y:auto; padding:28px 40px; box-sizing:border-box; display:grid;
+     align-content:start`. **`flex: 1` is what was missing** - a grid with
+     `flex: 0 1 auto` inside `.content`'s flex row sizes its three columns to
+     their text instead of to the screen, which is what the wrong cards were.
+     The padding was missing before that, out of the same attribute I had
+     already read twice. */
   .rgrid {
+    flex: 1;
+    min-width: 0;
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 16px;
@@ -2875,6 +2901,18 @@
     touch-action: pan-y;
   }
   .rgrid::-webkit-scrollbar { display: none; }
+  .skelrow {
+    flex-shrink: 0;
+    height: 60px;
+    border-radius: 14px;
+    background: rgba(233, 238, 242, 0.05);
+    animation: libSkel 1500ms ease-in-out infinite;
+  }
+  .skelrow:nth-child(2) { animation-delay: 90ms; }
+  .skelrow:nth-child(3) { animation-delay: 180ms; }
+  .skelrow:nth-child(4) { animation-delay: 270ms; }
+  .skelrow:nth-child(5) { animation-delay: 360ms; }
+  .skelrow:nth-child(6) { animation-delay: 450ms; }
   /* **No press feedback on a row.** The design gives none - only the
      action buttons inside one carry `style-active` - and two faults came
      of adding it (George, on the panel, 2026-09-21). A row that reveals
@@ -2887,6 +2925,10 @@
     display: flex;
     align-items: center;
     gap: 18px;
+    /* The design declares it on the row and on the disc, and there is no
+       global reset here - without it the 1px border puts the card at 98px
+       and the disc at 56px. */
+    box-sizing: border-box;
     height: 96px;
     padding: 0 26px;
     border-radius: 18px;
@@ -2918,6 +2960,7 @@
   /* A rounded square on a row, a circle on a card - the design's
      `icoRadius: rs === 'card' ? '50%' : '13px'`. */
   .rdisc {
+    box-sizing: border-box;
     width: 46px;
     height: 46px;
     border-radius: 13px;
