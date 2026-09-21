@@ -1,13 +1,13 @@
 # Handoff
 
-Last updated: 2026-09-20 (twenty-first session, on R2D2 — **Phase 9's design
-sweep: 9a through 9d are done, checked on the panel and committed; 9e next**)
+Last updated: 2026-09-21 (twenty-first session, on R2D2 — **Phase 9's design
+sweep: 9a through 9e are done, checked on the panel and committed; 9f next**)
 
 ## Start here
 
-**Phase 9's design sweep is four subphases in.** Nine were planned
-(`docs/DEVELOPMENT.md`), volume last; **9a, 9b, 9c and 9d are done, checked
-by George on the panel and committed**. 9e is next and nothing blocks it.
+**Phase 9's design sweep is five subphases in.** Nine were planned
+(`docs/DEVELOPMENT.md`), volume last; **9a through 9e are done, checked by
+George on the panel and committed**. 9f is next and nothing blocks it.
 
 - **9a** — the decisions: ADR-0044, 0045, 0046 Accepted, ADR-0022 amended
   for the catalogue/surfaced split, ADR-0047 opened for the idle screen.
@@ -56,12 +56,44 @@ the registry lacks is now written out in the test by its owing subphase** —
 nine to 9g, four to 9h — so the next omission fails a test rather than
 waiting to be found on hardware.
 
-**9e is next:** wire `device_name`, which is refused today with `HTTP 409
-"not wired yet"`, and push it to squeezelite's `-n`, go-librespot's
-`config.yml`, the BlueZ alias and the hostname. The four names agree today
-only because each was set to the same literal at build time; **nothing
-propagates**. Restart-gated, so no renderer restarts mid-session. The header
-gains the IP. **Design Claude is owed the restart warning text.**
+- **9e** — one `device_name`, written to all four and applied at the next
+  restart ([ADR-0048](docs/decisions/0048-how-the-device-name-reaches-four-services.md)).
+  Gate run end to end: renamed to `SofaPi`, rebooted, all four advertised
+  it; renamed back, rebooted, all four followed.
+
+**9e's gate found two defects no amount of reading would have**, and that is
+the argument for having it:
+
+- **BlueZ never read `main.conf`'s `Name =`.** Its `hostname` plugin
+  overrides it — the vendor file says so two lines above the setting — and
+  this image had been setting it since Phase 2. The build asserted its own
+  `sed` had matched, which passed every time and meant nothing, because the
+  hostname was the same string. `/etc/machine-info`'s `PRETTY_HOSTNAME` is
+  the real mechanism. **[LESSONS](docs/LESSONS.md) case 9.**
+- **A rename locked the panel out of its own browser.** Chromium's profile
+  lock is `<hostname>-<pid>` and it refuses to start when that hostname is
+  not the machine's — a two-button dialog on an appliance with no keyboard.
+  `gexis-kiosk-start` clears the three Singleton entries before launching.
+
+**And one in the deploy, worth knowing before the next one.** `rsync -a` put
+the repository's `644` over the `755` the image installs, so Chromium never
+started while `systemctl is-active gexis-kiosk` still said `active` — the
+unit is labwc, and labwc was fine. **After any kiosk restart, check
+`journalctl -u gexis-core | grep 'GET /assets/index-'`**, which cannot be
+true unless Chromium started, loaded and reached the daemon, and names the
+build on screen. The eight scripts installed `755` are executable in git
+now. **[LESSONS](docs/LESSONS.md) case 10.**
+
+**9f is next:** Bluetooth pairing ([ADR-0045](docs/decisions/0045-bluetooth-pairing-confirmation.md))
+— our own `Agent1` replacing `bt-agent --capability=NoInputNoOutput`, the
+request surfaced to the panel, accept and reject, a countdown that is the
+agent's rather than the panel's, first pair only. **And `bt_discoverable`
+actually implemented**, all three options, with `DiscoverableTimeout=0` for
+Always — the "3 minutes" defect. It also owes `bt_trusted` its item list and
+`Forget`, which 9d left to it: that row is the one `list` with no source.
+
+**Design Claude is owed the `device_name` restart warning text.** The note
+shipped in 9e says the true thing plainly as a placeholder.
 
 **Three settings rows report behaviour the code does not have**, each found
 by measuring rather than reading: `travel_curve` names a curve 34 dB quieter
