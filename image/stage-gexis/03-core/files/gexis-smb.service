@@ -1,0 +1,18 @@
+<?xml version="1.0" standalone='no'?>
+<!DOCTYPE service-group SYSTEM "avahi-service.dtd">
+<!-- ADR-0049 §4: avahi is already running here - it is how gexis.local
+     resolves - so this is what puts the share in Finder's sidebar and in
+     Windows' network view without nmbd, a second discovery protocol from
+     1987 broadcasting on a LAN that already has one that works. -->
+<service-group>
+  <name replace-wildcards="yes">%h</name>
+  <service>
+    <type>_smb._tcp</type>
+    <port>445</port>
+  </service>
+  <service>
+    <type>_device-info._tcp</type>
+    <port>0</port>
+    <txt-record>model=RackMac</txt-record>
+  </service>
+</service-group>

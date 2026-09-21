@@ -272,7 +272,12 @@ The design states it explicitly and merges the old separate grace period into
   Unsplash and Pexels on a summary line and was wrong about both
   (`docs/LESSONS.md` case 12), and the weather re-check George then asked for
   retired three of its own arguments.
-- **Where on-device wallpapers live**, and how they get there.
+- ~~**Where on-device wallpapers live**, and how they get there.~~
+  **Closed 2026-09-21: [ADR-0049](0049-the-pictures-folder-is-a-share.md).**
+  `/var/lib/gexis-core/pictures`, served over SMB as `pictures` - George
+  chose the share from four options on simplicity. The daemon reads a
+  directory and does not know how a file got there, so SSH, a USB copy and
+  a phone upload all still write to the same place.
 - **What the three icon sets are** (`idle_icons`: solid, duotone, neon) and
   whether they are drawn in CSS like every other glyph on this panel, which
   has no icon font.

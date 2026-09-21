@@ -47,3 +47,37 @@ install -D -m 644 files/gexis-meter.service \
 # alsactl from persisting a level on shutdown at all.
 mkdir -p "${ROOTFS_DIR}/etc/systemd/system"
 ln -sf /dev/null "${ROOTFS_DIR}/etc/systemd/system/alsa-restore.service"
+
+# ADR-0049: the idle screen's own pictures arrive over SMB, because nothing
+# else on this appliance can put a file on it. **One directory**: not the
+# home directory, not /var/lib/gexis-core - which holds the settings
+# database, the enrichment cache and the downloaded wallpaper cache - and
+# not a parent of either.
+#
+# The directory has to exist before the share does, owned by the user the
+# share forces writes to. An absent path makes samba answer "connection
+# refused" for a reason nobody can see from a phone.
+install -d -o 1000 -g 1000 -m 2775 "${ROOTFS_DIR}/var/lib/gexis-core/pictures"
+install -D -m 644 files/gexis-pictures.conf \
+	"${ROOTFS_DIR}/etc/samba/smb.conf.d/gexis-pictures.conf"
+# Debian ships one monolithic smb.conf. Appending an include leaves their
+# file to be theirs, so a package upgrade that rewrites it takes our share
+# with it rather than fighting a conffile prompt - and the chroot step
+# below asserts samba still reads the share afterwards.
+if ! grep -q "smb.conf.d/gexis-pictures.conf" "${ROOTFS_DIR}/etc/samba/smb.conf"; then
+	printf '\n# ADR-0049: the idle screen pictures share.\ninclude = /etc/samba/smb.conf.d/gexis-pictures.conf\n' \
+		>> "${ROOTFS_DIR}/etc/samba/smb.conf"
+fi
+
+# ADR-0049 §4: avahi already runs here - it is how gexis.local resolves - so
+# this is what puts the share in Finder's sidebar without nmbd.
+install -D -m 644 files/gexis-smb.service \
+	"${ROOTFS_DIR}/etc/avahi/services/gexis-smb.service"
+
+# **Two of samba's three services are not wanted.** `nmbd` is NetBIOS name
+# service, a second discovery protocol broadcasting on a LAN that already
+# has one; `samba-ad-dc` is a domain controller, which the package enables
+# by default and which this is not. Masked rather than disabled, so an
+# upgrade cannot quietly re-enable them.
+ln -sf /dev/null "${ROOTFS_DIR}/etc/systemd/system/nmbd.service"
+ln -sf /dev/null "${ROOTFS_DIR}/etc/systemd/system/samba-ad-dc.service"
