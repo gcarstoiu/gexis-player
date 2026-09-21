@@ -400,7 +400,9 @@ async def main() -> None:
     # Beside the settings database rather than in /tmp: the pictures are
     # what the screen shows when the network is down, so they have to
     # survive a reboot (ADR-0047 §2a - the device is the cache).
-    wallpapers = Wallpapers(idle_session, config.wallpaper_dir)
+    wallpapers = Wallpapers(
+        idle_session, config.wallpaper_dir, local_dir=Path(config.pictures_dir)
+    )
 
     # ADR-0035. Defaults are what is true of this deployment today. A wired
     # row is read where it is used - the idle page probe here, the rest by

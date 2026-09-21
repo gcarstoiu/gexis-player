@@ -45,6 +45,13 @@ logger = logging.getLogger("gexis_core.artistinfo")
 #: bytes against 17,999 for the same 200px picture (Finding 035).
 PHOTO_THUMB = 200
 PHOTO_LARGE = 300
+#: The idle screen's background fills the panel, so it asks for the panel's
+#: width (ADR-0047 §1). **Finding 035's rule, the other way round:** the
+#: queue rail's defect was asking for 500 px and drawing 42; asking for 300
+#: and drawing 1280 is the same mistake upside down, and it looks like it.
+#: Measured on George's server: 300 px is 18 KB, 1280 px is ~127 KB at
+#: 1000 - the plugin resizes to whatever is asked for.
+PHOTO_BACKGROUND = 1280
 
 #: At most this many plugin calls in flight. Measured 2026-09-18: an artist
 #: the plugin has already looked up costs 7 ms, one it has not costs

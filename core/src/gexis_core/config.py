@@ -77,6 +77,10 @@ class Config:
     # they are what the idle screen shows when the network is not there, so
     # /tmp would empty them at exactly the wrong moment.
     wallpaper_dir: str = "/var/lib/gexis-core/wallpapers"
+    # "Wallpapers on device". **How pictures get here is ADR-0047's open
+    # question** - today SSH or a card - and whatever answers it writes into
+    # this directory rather than changing any of the code that reads it.
+    pictures_dir: str = "/var/lib/gexis-core/pictures"
 
     # Phase 5 criterion 1: the visualisation service (ADR-0011). The two
     # peppyalsa pipes are read by that service alone - a FIFO splits its

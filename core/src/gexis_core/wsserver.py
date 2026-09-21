@@ -25,6 +25,7 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+import random
 from pathlib import Path
 
 from aiohttp import web
@@ -33,7 +34,12 @@ from dbus_next.aio import MessageBus
 
 from gexis_core import bluetooth_devices, device_name, discovery, wifi
 from gexis_core.adapters.base import TRANSPORT_COMMANDS
-from gexis_core.artistinfo import PHOTO_LARGE, PHOTO_THUMB
+from gexis_core.artistinfo import PHOTO_BACKGROUND, PHOTO_LARGE, PHOTO_THUMB
+
+#: How many artists the idle screen draws from, and how many of those it
+#: asks the photo plugin about at once (ADR-0047 §1).
+ARTIST_POOL = 1000
+ARTIST_BATCH = 12
 from dataclasses import replace
 
 from gexis_core.enrichment import Enrichment, TrackKey, fold
@@ -273,20 +279,78 @@ class StateServer:
         return web.json_response(await self._weather.forecast(place, int(days)))
 
     async def _handle_idle_wallpaper(self, request: web.Request) -> web.Response:
-        """The next wallpaper, as a file name the panel then fetches.
+        """The next background, whatever `idle_background` says it is.
 
-        One picture per request, chosen at random across the chosen topics
-        (ADR-0047 §2a), so *when* the picture changes is the panel counting
-        `wallpaper_interval` rather than anything here holding a timer.
+        **One route for four sources**, so the panel asks for "the next
+        picture" and does not carry a branch per setting: the setting is the
+        daemon's to read, and three of the four answers are things only the
+        daemon can reach anyway. *When* the picture changes is the panel
+        counting `wallpaper_interval`; nothing here holds a timer.
         """
         if self._settings is None or self._wallpapers is None:
             return web.json_response({"error": "wallpapers are not wired up"}, status=503)
+        background = self._settings.value("idle_background") or "Artist pictures"
+        if background == "Black":
+            return web.json_response({"off": True, "error": None})
+        if background == "Artist pictures":
+            return web.json_response(await self._artist_picture())
+        if background == "Wallpapers on device":
+            names = self._wallpapers.local_names()
+            if not names:
+                return web.json_response({"error": "No pictures on this device yet."})
+            name = random.choice(names)
+            return web.json_response(
+                {"url": f"/idle/wallpaper/local/{name}", "by": "", "page": "",
+                 "credit": None, "error": None}
+            )
         key = str(self._settings.value("wallpaper_key") or "").strip()
         topics = self._settings.value("wallpaper_topics") or []
         answer = await self._wallpapers.next(key, list(topics))
         if answer.get("file"):
             answer = {**answer, "url": f"/idle/wallpaper/{answer['file']}"}
         return web.json_response(answer)
+
+    async def _artist_picture(self) -> dict:
+        """One artist photo from the library, at random.
+
+        **Asked for in a batch and filtered here**, because the plugin has a
+        photo for some artists and not others and there is no way to ask for
+        "one that has one". A handful of ids costs one request (Finding 035:
+        40 took 212 ms) and the whole library would be neither necessary nor
+        kind.
+        """
+        if self._library is None or self._artistinfo is None:
+            return {"error": "The library is not available."}
+        try:
+            listing = await self._library.artists(limit=ARTIST_POOL)
+        except Exception as exc:  # the library has its own failure modes
+            logger.info("idle: artists unavailable: %s", exc)
+            return {"error": "The library is not available."}
+        items = [a for a in listing.get("items") or [] if a.get("id")]
+        if not items:
+            return {"error": "No artists in the library yet."}
+        picked = random.sample(items, min(ARTIST_BATCH, len(items)))
+        photos = await self._artistinfo.photos([a["id"] for a in picked], PHOTO_BACKGROUND)
+        with_photos = [(a, photos.get(a["id"])) for a in picked]
+        with_photos = [(a, url) for a, url in with_photos if url]
+        if not with_photos:
+            return {"error": "No artist pictures for these artists."}
+        artist, url = random.choice(with_photos)
+        # The credit is the artist's name rather than a licence line: this
+        # picture came from the owner's own server.
+        return {"url": url, "by": artist.get("name") or "", "page": "",
+                "credit": None, "error": None}
+
+    async def _handle_local_wallpaper(self, request: web.Request) -> web.StreamResponse:
+        """One picture somebody put on this device. Same rule as below: a
+        name, never a path."""
+        if self._wallpapers is None:
+            return web.json_response({"error": "wallpapers are not wired up"}, status=503)
+        name = request.match_info["name"]
+        path = self._wallpapers.local_path(name)
+        if path is None:
+            return web.json_response({"error": "no such picture"}, status=404)
+        return web.FileResponse(path)
 
     async def _handle_wallpaper_file(self, request: web.Request) -> web.StreamResponse:
         """One downloaded picture. **Name only, never a path**: this route
@@ -792,6 +856,7 @@ class StateServer:
         app.router.add_get("/idle", self._handle_idle)
         app.router.add_get("/idle/weather", self._handle_idle_weather)
         app.router.add_get("/idle/wallpaper", self._handle_idle_wallpaper)
+        app.router.add_get("/idle/wallpaper/local/{name}", self._handle_local_wallpaper)
         app.router.add_get("/idle/wallpaper/{name}", self._handle_wallpaper_file)
         app.router.add_get("/surface", self._handle_surface)
         app.router.add_post("/touch", self._handle_touch)

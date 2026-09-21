@@ -74,6 +74,23 @@ KEEP = 40
 
 CREDIT_NOTE = "Photos from Pixabay"
 
+#: What "Wallpapers on device" reads. **How files get here is ADR-0047's
+#: open question** and this does not answer it: today they arrive over SSH
+#: or on a card, and whatever is decided - a USB import, a share, an action
+#: row - writes into this directory rather than changing this code.
+LOCAL_SUFFIXES = (".jpg", ".jpeg", ".png", ".webp")
+
+
+def local(directory: Path) -> list[str]:
+    """The pictures somebody put on this device, newest first."""
+    try:
+        return sorted(
+            (p.name for p in Path(directory).iterdir()
+             if p.is_file() and p.suffix.lower() in LOCAL_SUFFIXES),
+        )
+    except OSError:
+        return []
+
 
 class Wallpapers:
     """One device's wallpaper source: a cached page per category, a
@@ -84,10 +101,15 @@ class Wallpapers:
         session: aiohttp.ClientSession,
         cache_dir: Path,
         *,
+        local_dir: Path | None = None,
         keep: int = KEEP,
     ) -> None:
         self._session = session
         self._dir = Path(cache_dir)
+        #: Kept apart from the downloaded cache on purpose: this one is
+        #: somebody's own pictures and **nothing here ever deletes from
+        #: it**, where the cache above evicts as it fills.
+        self._local_dir = Path(local_dir) if local_dir else Path(cache_dir).parent / "pictures"
         self._keep = keep
         self._pages: dict[str, tuple[float, list[dict]]] = {}
         self._lock = asyncio.Lock()
@@ -207,6 +229,16 @@ class Wallpapers:
             return None
         self._evict()
         return name
+
+    def local_names(self) -> list[str]:
+        """The pictures on this device, for "Wallpapers on device"."""
+        return local(self._local_dir)
+
+    def local_path(self, name: str) -> Path | None:
+        if name != Path(name).name or Path(name).suffix.lower() not in LOCAL_SUFFIXES:
+            return None
+        path = self._local_dir / name
+        return path if path.is_file() else None
 
     def path_of(self, name: str) -> Path | None:
         """The file behind a name this class handed out, or None.

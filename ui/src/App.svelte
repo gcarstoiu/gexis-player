@@ -232,7 +232,10 @@
   {/if}
 
   {#if idle}
-    <IdleScreen ondismiss={() => (idle = false)} />
+    <!-- ADR-0047: the screen reads eight rows, so it takes the values
+         rather than fetching /settings for itself - one loader, one place
+         a revision bump lands. -->
+    <IdleScreen ondismiss={() => (idle = false)} settings={$settingValues} />
   {/if}
 
   {#if shownHandoff}

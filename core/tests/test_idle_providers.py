@@ -136,6 +136,46 @@ async def test_an_unreachable_provider_says_so():
     assert answer["error"] == "The forecast is unavailable."
 
 
+BERLINS = {
+    "results": [
+        {"name": "Berlin", "country": "United States", "country_code": "US",
+         "admin1": "New Hampshire", "latitude": 44.46, "longitude": -71.18,
+         "timezone": "America/New_York", "postcodes": ["03570"]},
+        {"name": "Berlin", "country": "Germany", "country_code": "DE",
+         "admin1": "Brandenburg", "latitude": 52.52, "longitude": 13.41,
+         "timezone": "Europe/Berlin"},
+    ]
+}
+
+
+async def test_a_typed_place_is_split_before_it_is_looked_up():
+    """The row asks for "City, country" and Open-Meteo takes a name.
+    Measured on the device: `Berlin` returns five places and **`Berlin, DE`
+    returns none** - and `Berlin, DE` is the design's own example value. So
+    the first part searches and the rest choose."""
+    session = FakeSession(lambda url, params: (200, BERLINS) if "geocoding" in url else (200, FORECAST))
+    found = await Weather(session).geocode("Berlin, DE")
+    assert (found["country"], found["latitude"]) == ("DE", 52.52)
+    # What was actually asked for is the name alone.
+    assert session.calls[0][1]["name"] == "Berlin"
+
+
+async def test_the_qualifiers_rank_rather_than_filter():
+    """An unmatched qualifier is ignored, not fatal. A postcode is the
+    reason: the provider carries them for some places and not others, and a
+    place it knows must not become unfindable because the user also typed a
+    number it does not hold."""
+    session = FakeSession(lambda url, params: (200, BERLINS) if "geocoding" in url else (200, FORECAST))
+    weather = Weather(session)
+    # Everything matches but the postcode, and the German one still wins.
+    found = await weather.geocode("Berlin, 10967, Brandenburg, Germany")
+    assert found["country"] == "DE"
+    # Nothing to choose by: the provider's own first answer stands.
+    assert (await weather.geocode("Berlin"))["country"] == "US"
+    # And a qualifier that picks the other one picks the other one.
+    assert (await weather.geocode("Berlin, New Hampshire"))["country"] == "US"
+
+
 def test_every_wmo_code_has_a_name_and_an_unknown_one_is_not_guessed():
     assert condition(0) == "clear"
     assert condition(95) == "thunderstorm"
@@ -262,7 +302,7 @@ def client_for(tmp_path, **kwargs):
     store = SettingsStore(tmp_path / "s.db")
     settings = Settings(store, wired={k: None for k in (
         "idle_weather", "weather_location", "idle_days", "wallpaper_key",
-        "wallpaper_topics",
+        "wallpaper_topics", "idle_background",
     )})
     server = StateServer(StateStore({}), settings=settings, **kwargs)
     return settings, TestClient(TestServer(server.make_app()))
@@ -301,6 +341,7 @@ async def test_the_wallpaper_route_serves_the_file_it_named(tmp_path):
     source = Wallpapers(session, tmp_path / "pics")
     settings, client = client_for(tmp_path, wallpapers=source)
     async with client:
+        settings.set("idle_background", "Wallpapers online")
         settings.set("wallpaper_key", "key")
         settings.set("wallpaper_topics", ["Nature"])
         body = await (await client.get("/idle/wallpaper")).json()
@@ -311,6 +352,51 @@ async def test_the_wallpaper_route_serves_the_file_it_named(tmp_path):
         # A name that is a path is not a picture.
         assert (await client.get("/idle/wallpaper/..%2F..%2Fetc%2Fshadow")).status == 404
         assert (await client.get("/idle/wallpaper/nope.jpg")).status == 404
+
+
+async def test_one_route_answers_for_whichever_background_is_chosen(tmp_path):
+    """ADR-0047 §1: four backgrounds, one route. The panel asks for the next
+    picture and the daemon reads the setting - three of the four answers are
+    things only it can reach, and a branch per setting on the panel would be
+    the same decision written twice."""
+    session = FakeSession(pixabay({"nature": [hit(1, "nature")]}))
+    pictures = tmp_path / "mine"
+    pictures.mkdir()
+    (pictures / "sunset.jpg").write_bytes(b"\xff\xd8local")
+    source = Wallpapers(session, tmp_path / "pics", local_dir=pictures)
+    settings, client = client_for(tmp_path, wallpapers=source)
+    async with client:
+        # Black asks for nothing at all.
+        settings.set("idle_background", "Black")
+        assert await (await client.get("/idle/wallpaper")).json() == {
+            "off": True,
+            "error": None,
+        }
+
+        settings.set("idle_background", "Wallpapers on device")
+        body = await (await client.get("/idle/wallpaper")).json()
+        assert body["url"] == "/idle/wallpaper/local/sunset.jpg"
+        # Somebody's own picture carries no licence line; a stock photo does.
+        assert body["credit"] is None
+        served = await client.get(body["url"])
+        assert await served.read() == b"\xff\xd8local"
+        assert (await client.get("/idle/wallpaper/local/../../etc/shadow")).status == 404
+
+        # Artist pictures need the library, and saying so is better than an
+        # empty screen with nothing to explain it.
+        settings.set("idle_background", "Artist pictures")
+        body = await (await client.get("/idle/wallpaper")).json()
+        assert body["error"] == "The library is not available."
+    assert not session.calls
+
+
+async def test_an_empty_picture_directory_is_said_rather_than_shown(tmp_path):
+    source = Wallpapers(FakeSession(pixabay({})), tmp_path / "pics", local_dir=tmp_path / "empty")
+    settings, client = client_for(tmp_path, wallpapers=source)
+    async with client:
+        settings.set("idle_background", "Wallpapers on device")
+        body = await (await client.get("/idle/wallpaper")).json()
+        assert body["error"] == "No pictures on this device yet."
 
 
 async def test_the_routes_answer_503_rather_than_404_when_nothing_is_wired(tmp_path):

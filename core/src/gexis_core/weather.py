@@ -33,6 +33,10 @@ GEOCODE_URL = "https://geocoding-api.open-meteo.com/v1/search"
 FORECAST_URL = "https://api.open-meteo.com/v1/forecast"
 TIMEOUT_S = 8.0
 
+#: How many candidates a name is allowed to return before the qualifiers
+#: choose between them. Five is what `Berlin` alone comes back with.
+CANDIDATES = 10
+
 #: A lookup that could not be made, as distinct from one that came back
 #: empty. The difference is the whole of what the user is told.
 UNREACHABLE = object()
@@ -76,6 +80,25 @@ def condition(code) -> str:
         return "unknown"
 
 
+def _matches(result: dict, qualifiers: list[str]) -> int:
+    """How many of the typed qualifiers this candidate satisfies.
+
+    **An unmatched qualifier is ignored, not fatal.** A postcode is the
+    reason: Open-Meteo carries them for some places and not for others, and
+    a place it *does* know must not become unfindable because the user also
+    typed a number it does not hold. Ranking rather than filtering keeps
+    "Berlin, DE" pointing at the German one - which is the case that matters,
+    since the first `Berlin` a bare search returns is not always it.
+    """
+    haystack = {
+        str(result.get(field, "")).strip().lower()
+        for field in ("country", "country_code", "admin1", "admin2", "admin3", "admin4")
+        if result.get(field)
+    }
+    haystack |= {str(code).strip().lower() for code in (result.get("postcodes") or [])}
+    return sum(1 for q in qualifiers if q and q.lower() in haystack)
+
+
 class Weather:
     """Forecasts for one device, cached in memory.
 
@@ -113,30 +136,44 @@ class Weather:
         **Those last two must not share a message.** "That place could not
         be found" tells the user to type something else; saying it when the
         network is down sends them to fix a row that was already right.
+
+        **The row asks for "City, country" and the provider takes a name.**
+        Measured on the device, 2026-09-21: `Berlin` returns five places,
+        `Berlin, DE` — *the design's own example value* — returns **none**,
+        and so does a full postal address. So the splitting is ours: the
+        first part looks the place up, the rest choose between the answers.
+        Without this the row's placeholder describes an input that fails.
         """
         key = place.strip().lower()
         if not key:
             return None
         if key in self._places:
             return self._places[key]
+        name, *qualifiers = [part.strip() for part in place.split(",")]
+        if not name:
+            return None
         body = await self._json(
-            GEOCODE_URL, {"name": place.strip(), "count": 1, "format": "json"}
+            GEOCODE_URL, {"name": name, "count": CANDIDATES, "format": "json"}
         )
         if body is None:
             return UNREACHABLE
         results = body.get("results") or []
         if not results:
-            logger.info("weather: no place called %r", place)
+            logger.info("weather: no place called %r", name)
             return None
-        first = results[0]
+        best = max(results, key=lambda r: _matches(r, qualifiers))
         found = {
-            "name": first.get("name") or place.strip(),
-            "country": first.get("country_code") or "",
-            "latitude": first["latitude"],
-            "longitude": first["longitude"],
-            "timezone": first.get("timezone") or "auto",
+            "name": best.get("name") or name,
+            "country": best.get("country_code") or "",
+            "latitude": best["latitude"],
+            "longitude": best["longitude"],
+            "timezone": best.get("timezone") or "auto",
         }
         self._places[key] = found
+        logger.info(
+            "weather: %r is %s, %s (%.4f, %.4f)",
+            place, found["name"], found["country"], found["latitude"], found["longitude"],
+        )
         return found
 
     async def forecast(self, place: str, days: int) -> dict:
