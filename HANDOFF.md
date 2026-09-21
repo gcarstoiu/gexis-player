@@ -1,84 +1,76 @@
 # Handoff
 
 Last updated: 2026-09-21 (twenty-second session, on R2D2 — **Phase 9's
-design sweep: 9a through 9f are done; 9g's decisions are taken and its
-settings half is built — the idle screen itself is what remains**)
+design sweep: 9a through 9g are done and committed; 9h next. One thing from
+9g is unproven: ADR-0049's image stage has never been through a build**)
 
 ## Start here
 
-**Phase 9's design sweep is six subphases in.** Nine were planned
-(`docs/DEVELOPMENT.md`), volume last; **9a through 9f are done, checked by
-George on the panel and committed**. **9g is next** and it starts with a
-decision, not with code: [ADR-0047](docs/decisions/0047-the-idle-screen-gains-backgrounds-and-weather.md)
-is Proposed, and two third-party providers — the weather service and the
-online wallpaper service — are unchosen. That is the substance of it.
+**Phase 9's design sweep is seven subphases in.** Nine were planned
+(`docs/DEVELOPMENT.md`), volume last; **9a through 9g are done, checked by
+George on the panel and committed**. **9h is next** — the home strip, the
+skin picker and `viz_stop` — and it owes the registry the four design keys
+the test names (`home_strip`, `home_strip_count`, `skin`, `viz_stop`).
+Its skin thumbnails are an **image-build** job, not a UI one: 71 meter and
+13 spectrum skins rendered at build time.
 
-**9g's decisions are taken** (George, 2026-09-21, on
-[Finding 043](docs/findings/043-the-idle-screens-two-providers.md)):
-**Pixabay** for wallpapers, chosen on the pictures, and **Open-Meteo** for
-weather, on his answer to the one question that decided it — **a Gexis is
-not sold**, so a non-commercial free tier is what the appliance may use.
+**9g — the idle screen — is done.** Both providers chosen the way Finding
+030 chose the enrichment ones ([Finding 043](docs/findings/043-the-idle-screens-two-providers.md)):
+**Pixabay** on the pictures, **Open-Meteo** on George's answer to the
+question that decided it — *a Gexis is not sold*, so a non-commercial free
+tier is one this appliance may use.
 [ADR-0047](docs/decisions/0047-the-idle-screen-gains-backgrounds-and-weather.md)
-is **Accepted**.
+is **Accepted** and has one open question left, which is George's: whether
+artist pictures should avoid the artist currently playing.
 
-**The settings half is built, deployed and checked on the panel.** Eleven
-rows, the mechanic one of them needed, and both clients behind them:
+**What the panel shows now:** a drifting clock and date over one of four
+backgrounds, a forecast bar across the bottom in three icon sets, and the
+credits both providers require on one line along the bottom. Artist
+pictures come from **fanart** with LMS behind them (six for six on George's
+library); wallpapers come from Pixabay, random across the chosen categories;
+on-device pictures come from an SMB share; and a picture that `cover` would
+cost more than a quarter of is shown whole over a blurred copy of itself.
 
-- **`multi` is ADR-0044 §7**, added for `wallpaper_topics`: the choice sheet
-  with the radio replaced, a readout of names (`Nature, Animals +1`) rather
-  than a count, and a validator that refuses an empty set — no category means
-  no picture.
-- **`weather_key` is gone from the registry**, the first deliberate deviation
-  from the design drop since it became the point of truth. Open-Meteo needs
-  no key, so the row would gate nothing; the four rows hang off `idle_weather`
-  now. The test calls it declined, not missing.
-- **Topics are Pixabay's own twenty categories**, no vocabulary of ours
-  (George: *"We start with categories and see later if we need to add
-  queries"*), and a test stops the row and the client drifting apart.
-- **Random across the chosen categories per refresh**, shuffled so a category
-  that answers with nothing falls through instead of blanking the screen.
-- **Pixabay's terms are most of `wallpapers.py`**: downloaded rather than
-  hotlinked, responses cached 24 h, `largeImageURL`, and the cache beside the
-  settings database because it is what the screen shows with no network.
+**The one thing not proven: [ADR-0049](docs/decisions/0049-the-pictures-folder-is-a-share.md)'s
+image stage has never been through a build.** samba is installed and the
+share verified on the device — a picture written to it over SMB was drawn
+on the panel — and the stage that bakes it is written with `testparm`
+assertions that pass against that device. **The next rebuild is what proves
+the stage**, and it is the first thing on this image that is neither ours
+nor a renderer.
 
-**The screen is built and drawing, with George's own key and location.**
-Four backgrounds through one route, the forecast, three icon sets, and the
-credits both providers require — every one of them screenshotted on the
-panel. **9g's remaining work is George's judgement of it**, which is what
-the gate is: leave the panel alone and look.
+**Nine things the panel found that no test would have**, which is the
+argument for the gate:
 
-**Four defects the panel found that no test would have**, all fixed: a fixed
-scrim cannot keep a moving clock legible; a radial gradient still opaque at
-its box's edge draws a rectangle over the picture; artist pictures were
-asked for at 300 px and drawn at 1280 (**Finding 035's defect upside down**,
-and `PHOTO_BACKGROUND` is the fix); and a face on a music player's idle
-screen with no name under it is a question the screen could answer.
+- **The design draws this screen and the first build did not look for it** —
+  it is in `source/Now Playing.dc.html`, not a file of its own, and
+  `screens.md` says so in its first paragraph.
+  **[LESSONS](docs/LESSONS.md) case 13**, one day after case 12 and the same
+  shape: a summary read in place of the source. The screen was rebuilt to the
+  drawing.
+- **A flat 4px contour reads grey at 21px** — 62% of the ink against the
+  clock's 35%, measured over a controlled field. It tapers with the type now.
+- **`object-fit: cover` keeps 35% of a portrait's height**, which is where
+  the blurred-halo fit came from. The halo costs nothing: 16.8 ms a frame
+  with it and without.
+- A fixed scrim cannot keep a moving clock legible, and a radial gradient
+  still opaque at its box's edge draws a rectangle over the picture.
+- **Artist pictures were asked for at 300 px and drawn at 1280** — Finding
+  035's defect upside down.
+- **The geocoder does not take what the row asks for**: `Berlin, DE` — the
+  design's own example — returns nothing from Open-Meteo, where `Berlin`
+  returns five. The daemon splits the string now and ranks the answers.
+- **An unreachable geocoder was reported as a place that does not exist**,
+  which sends the user to fix a row that was already right.
+- **Rotation was hidden for every background but Pixabay**, though the
+  behaviour was common — the worst kind of gap: the feature works and
+  nothing offers it.
+- **Pictures in folders were invisible**, and the path guard that assumed one
+  segment had to become one that resolves and checks containment.
 
-**And the geocoder does not accept what the row asks for.** `weather_location`
-says "City, country" and the design's example is `Berlin, DE` — which
-Open-Meteo answers with nothing, where `Berlin` alone returns five places.
-The daemon splits it now: the first part searches, the rest rank the results,
-and an unmatched qualifier is ignored rather than fatal.
-
-**"Wallpapers on device" has an answer: it is an SMB share**
-([ADR-0049](docs/decisions/0049-the-pictures-folder-is-a-share.md), George
-choosing from four options on simplicity). `smb://gexis.local/pictures`,
-guest-writable, one directory and nothing else — **Debian's stock
-`smb.conf` shares three more things and our include turns all of them off**,
-which the build asserts through `testparm` rather than through a grep on
-its own edit. Installed and verified on the device; **the image stage is
-written but has not been through a build**, so the next rebuild is what
-proves it.
-
-**Also landed in 9g after the first panel check:** the credits are one line
-along the bottom; the contour tapers with the type (the design's flat 4px
-made 21px labels read grey — measured, 62% contour against the clock's
-35%); artist backgrounds come from **fanart** with LMS behind them, six for
-six on George's library; and brightness and rotation are `background_*`
-rows shared by every background that is a picture.
-
-**Still open, and owed to George rather than to code:** whether artist
-pictures should avoid the artist currently playing.
+**Known and deliberate:** an empty on-device folder shows the clock on black
+with no explanation *on the idle screen* — the region blanks, never the
+screen — and the settings row is where it says why.
 
 **Two measured traps recorded there:** the Art Institute's IIIF image server
 403s without an `AIC-User-Agent` header (with a browser User-Agent too — the
