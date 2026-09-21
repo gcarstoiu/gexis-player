@@ -33,7 +33,7 @@ from aiohttp import web
 from dbus_next import BusType
 from dbus_next.aio import MessageBus
 
-from gexis_core import bluetooth_devices, device_name, discovery, wifi
+from gexis_core import bluetooth_devices, device_name, discovery, skins, wifi
 from gexis_core.adapters.base import TRANSPORT_COMMANDS
 from gexis_core.artistinfo import PHOTO_BACKGROUND, PHOTO_LARGE, PHOTO_THUMB
 
@@ -91,6 +91,7 @@ class StateServer:
         splash=None,
         weather=None,
         wallpapers=None,
+        skins_dir: Path | None = None,
         ui_dir: Path | None = None,
     ) -> None:
         """`activate(renderer_id) -> bool` and `set_volume(percent) -> bool`
@@ -123,6 +124,10 @@ class StateServer:
         self._splash = splash
         self._weather = weather
         self._wallpapers = wallpapers
+        #: Where the skin packs live (ADR-0050). Read per request rather
+        #: than at start: a pack could be added under a running daemon, and
+        #: parsing 99 sections costs less than the request that asked.
+        self._skins_dir = Path(skins_dir) if skins_dir else None
         #: What the idle screen is showing, so the next change is a change.
         #: One value for three sources, because only one of them is on
         #: screen at a time: a file name, a Pixabay id, or an artist.
@@ -425,6 +430,51 @@ class StateServer:
         if path is None:
             return web.json_response({"error": "no such picture"}, status=404)
         return web.FileResponse(path)
+
+    def _skins(self) -> list[tuple]:
+        return skins.installed(self._skins_dir) if self._skins_dir else []
+
+    async def _handle_skins(self, request: web.Request) -> web.Response:
+        """Every skin the device has, with what it shows (ADR-0050).
+
+        **What it shows, not where it lives** (ADR-0019 as amended): a skin
+        declares `meter.visible` and `spectrum.visible`, and 77 of the 99 on
+        this device declare neither - which means a meter.
+        """
+        if self._skins_dir is None:
+            return web.json_response({"error": "skins are not wired up"}, status=503)
+        chosen = str(self._setting_or_none("skin_corpus") or "Random")
+        wanted = skins.CORPUS.get(chosen) or skins.CORPUS["Random"]
+        items = [
+            {
+                "name": skin.name,
+                "kind": skin.kind,
+                "in_corpus": skin.kind in wanted,
+                "preview": f"/skins/{quote(skin.name)}/preview",
+            }
+            for skin, _ in self._skins()
+        ]
+        return web.json_response({"skins": items, "corpus": chosen})
+
+    async def _handle_skin_preview(self, request: web.Request) -> web.StreamResponse:
+        """A skin's own picture - its `screen.bgr` - and nothing generated.
+
+        **The name in the URL never reaches the filesystem.** It is matched
+        against the parsed corpus, and the file served is the one that skin
+        declares, beside that skin's own `meters.txt`. A name that is a path
+        is simply not a skin.
+        """
+        if self._skins_dir is None:
+            return web.json_response({"error": "skins are not wired up"}, status=503)
+        wanted = request.match_info["name"]
+        for skin, directory in self._skins():
+            if skin.name != wanted:
+                continue
+            picture = skins.preview_of(skin, directory)
+            if picture is None:
+                return web.json_response({"error": "that skin has no picture"}, status=404)
+            return web.FileResponse(picture)
+        return web.json_response({"error": "no such skin"}, status=404)
 
     async def _handle_library(self, request: web.Request) -> web.Response:
         """ADR-0038 §5: reads only, for the designed screens. The panel asks
@@ -930,6 +980,10 @@ class StateServer:
         app.router.add_get("/settings/{key}/items", self._handle_list_items)
         app.router.add_post("/settings/{key}/items", self._handle_list_action)
         app.router.add_post("/bluetooth/pairing/{answer}", self._handle_pairing_answer)
+        # ADR-0050. `{name:.*}` because a skin's name is a section heading
+        # somebody typed, spaces and punctuation included.
+        app.router.add_get("/skins", self._handle_skins)
+        app.router.add_get("/skins/{name:.*}/preview", self._handle_skin_preview)
         app.router.add_get("/radio", self._handle_radio)
         app.router.add_post("/radio/play", self._handle_radio_play)
         app.router.add_get("/library/artist-photos", self._handle_artist_photos)

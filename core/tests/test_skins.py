@@ -18,8 +18,10 @@ from gexis_core.skins import (
     Skin,
     SkinError,
     in_corpus,
+    installed,
     load,
     parse,
+    preview_of,
     validate,
 )
 from gexis_core.skins import CORPUS as CHOICES
@@ -169,3 +171,53 @@ def test_the_registry_offers_exactly_those_four():
     row = next(r for g in load_registry() for r in g["rows"] if r.get("key") == "skin_corpus")
     assert row["options"] == list(CHOICES)
     assert row["default"] == "VU meters"
+
+
+# ── what the picker asks for (ADR-0050) ──────────────────────────────────
+
+
+def _pack(root, templates, text, pictures=()):
+    directory = root / templates / "1280x800"
+    directory.mkdir(parents=True)
+    (directory / "meters.txt").write_text(text)
+    for name in pictures:
+        (directory / name).write_bytes(b"\xff\xd8not really a jpeg")
+    return directory
+
+
+def test_every_pack_on_the_device_is_found_and_the_first_name_wins(tmp_path):
+    """The device carries more than one pack, each with its own directories
+    and its own files - so a skin is found *with* the directory its
+    `screen.bgr` sits in, and a name two packs share resolves to the one
+    that would be selected."""
+    _pack(tmp_path / "gelo5", "templates", "[one]\nscreen.bgr = a.jpg\n", ["a.jpg"])
+    _pack(tmp_path / "stock", "templates", "[one]\nscreen.bgr = b.jpg\n[two]\nscreen.bgr = c.jpg\n",
+          ["b.jpg", "c.jpg"])
+    found = installed(tmp_path)
+    assert [skin.name for skin, _ in found] == ["one", "two"]
+    first, directory = found[0]
+    assert preview_of(first, directory).name == "a.jpg"
+
+
+def test_a_preview_is_the_file_the_skin_names_and_nothing_else(tmp_path):
+    """ADR-0050: nothing is rendered, so a preview is a lookup - and a skin
+    that names a path rather than a file names nothing."""
+    directory = _pack(tmp_path / "pack", "templates",
+                      "[good]\nscreen.bgr = ok.jpg\n"
+                      "[missing]\nscreen.bgr = gone.jpg\n"
+                      "[sneaky]\nscreen.bgr = ../../../etc/shadow\n"
+                      "[silent]\nmeter.type = circular\n",
+                      ["ok.jpg"])
+    by_name = {skin.name: skin for skin, _ in installed(tmp_path)}
+    assert preview_of(by_name["good"], directory).name == "ok.jpg"
+    assert preview_of(by_name["missing"], directory) is None
+    assert preview_of(by_name["sneaky"], directory) is None
+    assert preview_of(by_name["silent"], directory) is None
+
+
+def test_every_committed_skin_has_a_picture_to_show(corpus):
+    """**This is what replaces a build step.** ADR-0050 removes the render
+    and the cache, so the only thing that can make the picker empty is a
+    skin that names no background - and every one of the 84 does."""
+    meters, _ = corpus
+    assert all((skin.options.get("screen.bgr") or "").strip() for skin in meters)

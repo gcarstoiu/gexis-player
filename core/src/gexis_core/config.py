@@ -99,6 +99,10 @@ class Config:
 
     # Phase 5: where the panel's compositor socket lives, for raising and
     # hiding the Peppy screen. The daemon runs as root with no session.
+    # ADR-0050: the picker's previews are the skins' own pictures, read from
+    # where the image installs them. Several packs live under this, each with
+    # its own templates directories.
+    peppy_skins_dir: str = "/opt/gexis-peppy/skins"
     peppy_runtime_dir: str = "/run/user/1000"
     peppy_wayland_display: str = "wayland-0"
 

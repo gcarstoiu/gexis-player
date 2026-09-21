@@ -630,6 +630,8 @@ async def main() -> None:
         # ADR-0047: the idle screen's two providers.
         weather=forecast,
         wallpapers=wallpapers,
+        # ADR-0050: the picker's previews are the skins' own pictures.
+        skins_dir=Path(config.peppy_skins_dir),
         ui_dir=ui_dir,
     )
 

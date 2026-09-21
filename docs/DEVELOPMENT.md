@@ -1705,11 +1705,28 @@ undecided, and nothing else depends on it.
    stage.
 
 8. **9h - Home strip, skin picker, `viz_stop`.** Two LMS queries and the
-   three strip variants; the skin picker's thumbnails rendered at image build
-   (71 meter and 13 spectrum skins, so an image-build job rather than a UI
-   one); and `viz_stop` wired, without which the visualiser sits under the
-   idle screen until the renderer closes or somebody taps.
-   *Gate: the panel plus an image build.*
+   three strip variants; the skin picker; and `viz_stop` wired, without
+   which the visualiser sits under the idle screen until the renderer
+   closes or somebody taps.
+   *Gate: the panel.*
+
+   **No image build after all** ([ADR-0050](decisions/0050-skin-previews-are-the-skins-own-picture.md),
+   George: *"Let's keep it simple and use what we have instead of generating
+   thumbnails and cache and more logic"*). The thumbnails were to be
+   rendered at build time; every skin already ships a 1280x800 picture of
+   itself as its `screen.bgr`, so a preview is that file. No render, no
+   cache, and nothing to notice when a pack changes.
+
+   **Three kinds of skin, not two**, counted over the corpus on the device:
+   77 meters, 9 spectrum, 13 both. The old two options were *directories*,
+   and `templates/` is not the meter corpus (ADR-0019 as amended).
+
+   **The picker's drawing is blocked on George**, 2026-09-21: *"The picker
+   as is now designed will put some strain on the rendering. I would change
+   the design in a way that we have a list of skins and only when one is
+   tapped then the thumbnail is shown. I'll redesign it with design Claude
+   and give it back."* The daemon offers `/skins` and
+   `/skins/{name}/preview`, which any drawing of it needs.
 
 9. **9i - The volume setup.** Fixed output (ADR-0046): the per-option
    warning, the locked row, and never a disabled slider - **never built, and

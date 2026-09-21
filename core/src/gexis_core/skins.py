@@ -17,9 +17,12 @@ day one over a rename.
 """
 from __future__ import annotations
 
+import logging
 import re
 from dataclasses import dataclass
 from pathlib import Path
+
+logger = logging.getLogger("gexis_core.skins")
 
 SECTION = re.compile(r"^\[(?P<name>.+?)\]\s*$")
 
@@ -202,6 +205,57 @@ def load(directory: Path) -> tuple[list[Skin], list[Skin]]:
     meters += parse((spectrum_dir / "meters.txt").read_text())
     spectrum = parse((spectrum_dir / "spectrum.txt").read_text())
     return meters, spectrum
+
+
+#: Where a pack keeps the files its sections name. The corpus on the device
+#: is several packs, each with the same two directories under it.
+RESOLUTION = "1280x800"
+
+
+def installed(root: Path) -> list[tuple[Skin, Path]]:
+    """Every skin under `root`, with the directory its files live in.
+
+    **A pack at a time** - `<root>/<pack>/templates{,_spectrum}/1280x800` -
+    because the device carries more than one and a skin's `screen.bgr` is
+    named relative to its own. Order is the corpus's; a pack that does not
+    parse is skipped rather than fatal, since a screen with most of its
+    skins beats a daemon that will not start (ADR-0015's permissiveness,
+    which the build-time gate is the counterweight to).
+    """
+    found: list[tuple[Skin, Path]] = []
+    seen: set[str] = set()
+    for pack in sorted(p for p in root.iterdir() if p.is_dir()) if root.is_dir() else []:
+        for templates in ("templates", "templates_spectrum"):
+            meters = pack / templates / RESOLUTION / "meters.txt"
+            if not meters.is_file():
+                continue
+            try:
+                parsed = parse(meters.read_text(errors="replace"))
+            except OSError as exc:
+                logger.info("skins: %s could not be read: %s", meters, exc)
+                continue
+            for skin in parsed:
+                # Two packs can name a skin the same thing; the first one
+                # wins, so what is listed is what would be selected.
+                if skin.name in seen:
+                    continue
+                seen.add(skin.name)
+                found.append((skin, meters.parent))
+    return found
+
+
+def preview_of(skin: Skin, directory: Path) -> Path | None:
+    """The picture this skin already is (ADR-0050): its `screen.bgr`.
+
+    **Nothing is rendered and nothing is cached.** The file is on the device
+    because the skin is, so a preview is a file lookup and a new pack brings
+    its own by existing.
+    """
+    name = (skin.options.get("screen.bgr") or "").strip()
+    if not name or name != Path(name).name:
+        return None
+    path = directory / name
+    return path if path.is_file() else None
 
 
 def main(argv: list[str] | None = None) -> int:
