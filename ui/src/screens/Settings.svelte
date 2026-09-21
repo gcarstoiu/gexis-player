@@ -9,6 +9,7 @@
   import { onMount } from 'svelte';
   import {
     settingsGroups,
+    settingsDevice,
     settingsError,
     listAction,
     listItems,
@@ -52,6 +53,12 @@
   let joinError = $state(null);
   // The first level of a grouped choice - the time zone's region.
   let region = $state(null);
+  //: A write in flight. Even a fast one deserves saying so, and this one
+  //: is not always fast: a rename writes four files and the refetch behind
+  //: it took three seconds while the Wi-Fi read still sat on the request
+  //: path. The sheet stayed open with nothing to show for it (George,
+  //: 2026-09-21), which reads as a tap that did not land.
+  let saving = $state(false);
   let toast = $state(null);
   let toastTimer;
 
@@ -73,7 +80,17 @@
     categories.find((g) => g.id === (wide ? (cat ?? categories[0]?.id) : drilled)) ?? null
   );
   const rows = $derived(current?.rows ?? []);
-  const deviceName = $derived(valueOf('device_name') ?? 'gexis');
+  //: From the daemon, not derived here. The hostname is the system's own,
+  //: so after a rename it still reads the old one until the restart - which
+  //: is the truth, and the whole reason the sanitised host is shown beside
+  //: the typed name (ADR-0022, ADR-0048 §5).
+  const device = $derived($settingsDevice);
+  const deviceName = $derived(device.name ?? valueOf('device_name') ?? 'gexis');
+  const subtitle = $derived(
+    [deviceName, device.hostname ? `${device.hostname}.local` : hostOf(deviceName), device.address]
+      .filter(Boolean)
+      .join('  \u00b7  ')
+  );
   const sheet = $derived(sheetKey ? asSheet(rowOf(sheetKey)) : null);
   const picker = $derived(pickerKey ? rowOf(pickerKey) : null);
 
@@ -145,10 +162,15 @@
   }
 
   async function write(row, value) {
-    const result = await writeSetting(row.key, value);
-    if (result.status === 409) flash(`${row.label} — not wired yet`);
-    else if (!result.ok) flash(`${row.label}: ${result.error ?? `HTTP ${result.status}`}`);
-    return result.ok;
+    saving = true;
+    try {
+      const result = await writeSetting(row.key, value);
+      if (result.status === 409) flash(`${row.label} — not wired yet`);
+      else if (!result.ok) flash(`${row.label}: ${result.error ?? `HTTP ${result.status}`}`);
+      return result.ok;
+    } finally {
+      saving = false;
+    }
   }
 
   function pending(row) {
@@ -403,7 +425,10 @@
     if (row.type === 'text') {
       if (await write(row, draft)) {
         sheetKey = null;
-        flash(`${row.label} saved`);
+        // A row whose effect is deferred says so. "Saved" on its own reads
+        // as "done", and the device is still advertising the old name
+        // (ADR-0048 §2).
+        flash(row.restart ? `${row.label} saved — restart to use it` : `${row.label} saved`);
       }
     }
   }
@@ -451,9 +476,9 @@
       {/if}
       <div class="head__text">
         <div class="title" class:title--wide={wide}>{!wide && current ? current.label : 'Settings'}</div>
-        {#if !wide}
-          <div class="subtitle">{deviceName} &nbsp;·&nbsp; {hostOf(deviceName)}</div>
-        {/if}
+        <!-- Shown at both widths: the panel is where someone types the
+             name, so it is where the resolved host has to sit beside it. -->
+        <div class="subtitle">{subtitle}</div>
       </div>
     </div>
 
@@ -784,7 +809,7 @@
 
       {#if join !== 'connecting' && join !== 'ok'}
       <div class="sheet__actions">
-        <button class="btn" type="button" onclick={closeSheet}>
+        <button class="btn" type="button" disabled={saving} onclick={closeSheet}>
           {#if join === 'error'}
             Give up
           {:else if joinItem || (sheet.grouped && region !== null)}
@@ -800,9 +825,12 @@
             class="btn btn--confirm"
             class:btn--danger={sheet.danger || choicePending !== null}
             type="button"
+            disabled={saving}
             onclick={confirmSheet}
           >
-            {#if join === 'error'}
+            {#if saving}
+              <span class="btn__spin"></span>Saving
+            {:else if join === 'error'}
               Try again
             {:else if joinItem}
               Join
@@ -1846,6 +1874,20 @@
   }
   .btn:active {
     background: rgba(233, 238, 242, 0.2);
+  }
+  .btn:disabled {
+    opacity: 0.7;
+  }
+  .btn__spin {
+    width: 18px;
+    height: 18px;
+    margin-right: 10px;
+    border-radius: 50%;
+    box-sizing: border-box;
+    border: 2px solid rgba(233, 238, 242, 0.2);
+    border-top-color: currentColor;
+    animation: setSpin 900ms linear infinite;
+    flex-shrink: 0;
   }
   .btn--confirm {
     font-weight: 700;

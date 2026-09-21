@@ -29,7 +29,7 @@ from pathlib import Path
 
 from aiohttp import web
 
-from gexis_core import discovery, wifi
+from gexis_core import device_name, discovery, wifi
 from gexis_core.adapters.base import TRANSPORT_COMMANDS
 from gexis_core.artistinfo import PHOTO_LARGE, PHOTO_THUMB
 from dataclasses import replace
@@ -506,7 +506,28 @@ class StateServer:
     async def _handle_settings(self, request: web.Request) -> web.Response:
         if self._settings is None:
             return web.json_response({"error": "settings are not wired up"}, status=503)
-        return web.json_response({"groups": self._settings.to_json()})
+        # ADR-0048 §5: the header reads name - hostname - address, and the
+        # last two are the system's own. After a rename the stored name and
+        # the live hostname disagree, and that disagreement is exactly what
+        # the user needs to see.
+        return web.json_response(
+            {
+                "groups": self._settings.to_json(),
+                "device": {
+                    # A registry without the row is not a broken request: the
+                    # header simply has one fewer fact to show.
+                    "name": self._setting_or_none("device_name"),
+                    "hostname": device_name.hostname(),
+                    "address": device_name.address(),
+                },
+            }
+        )
+
+    def _setting_or_none(self, key: str):
+        try:
+            return self._settings.value(key)
+        except UnknownSetting:
+            return None
 
     async def _handle_setting_write(self, request: web.Request) -> web.Response:
         if self._settings is None:

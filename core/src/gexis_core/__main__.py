@@ -7,12 +7,11 @@ from __future__ import annotations
 
 import asyncio
 import logging
-import socket
 from pathlib import Path
 
 import aiohttp
 
-from gexis_core import alsa, wifi
+from gexis_core import alsa, device_name, wifi
 from gexis_core.adapters.base import VolumeMechanism
 from gexis_core.adapters.bluetooth import BluetoothAdapter
 from gexis_core.adapters.lms import LmsAdapter
@@ -153,6 +152,19 @@ def _chosen_server(config: Config, store: SettingsStore) -> Config:
         return config
     logger.info("settings: lms_server chosen, using %s:%s", config.lms_host, config.lms_port)
     return config
+
+
+def apply_device_name(name: str) -> None:
+    """One name to four services (ADR-0048). Nothing restarts: the rename is
+    restart-gated, and the panel says so. A target that refuses is logged
+    here and reported to whoever asked - a half-renamed device with nothing
+    on screen to say so only surfaces at the restart, hours after the cause.
+    """
+    written = device_name.apply(name)
+    if written.ok:
+        logger.info("device name: %r written, hostname %s", name, written.hostname)
+    else:
+        logger.warning("device name: %r not taken by %s", name, ", ".join(written.failed))
 
 
 async def _set_timezone(zone: str) -> None:
@@ -365,7 +377,7 @@ async def main() -> None:
             "lms_server": lambda: f"{config.lms_host}:{config.lms_port}",
             "lms_player": lambda: config.lms_player_name,
             "idle_url": lambda: config.idle_url or None,
-            "device_name": socket.gethostname,
+            "device_name": device_name.hostname,
             "timezone": read_timezone,
             "wifi": wifi.connected_ssid,
         },
@@ -377,6 +389,7 @@ async def main() -> None:
         wired={"idle_url": None, "idle_timeout": None, "drawer_on_external": None,
                "drawer_autohide": None, "listenbrainz_token": None,
                "fanart_key": None, "lms_server": None,
+               "device_name": apply_device_name,
                "timezone": lambda zone: asyncio.ensure_future(_set_timezone(zone)),
                "reboot": lambda _: asyncio.ensure_future(_reboot())},
         on_change=state_store.bump_settings_revision,
@@ -562,6 +575,9 @@ async def main() -> None:
         volume_bridge.run(),
         *(bridge.run() for bridge in dummy_mixer_bridges.values()),
         peppy.run(),
+        # The `wifi` row's value, kept current from here rather than read on
+        # the request path - where it measured 3.2 s and blocked everything.
+        wifi.watch_connected(),
         state_server.run(),
     )
 

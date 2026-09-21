@@ -6,12 +6,19 @@ import { playback } from './state.js';
 
 export const settingsGroups = writable([]);
 export const settingsError = writable(null);
+/** The header's three facts (ADR-0048 §5): the stored name, the system's own
+ *  hostname, and the address. After a rename the first two disagree until
+ *  the restart, and that disagreement is the point - the panel must not
+ *  guess the hostname from the name. */
+export const settingsDevice = writable({ name: null, hostname: null, address: null });
 
 export async function loadSettings() {
   try {
     const response = await fetch('/settings');
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    settingsGroups.set((await response.json()).groups);
+    const body = await response.json();
+    settingsGroups.set(body.groups);
+    if (body.device) settingsDevice.set(body.device);
     settingsError.set(null);
   } catch (err) {
     settingsError.set(err.message);

@@ -11,6 +11,7 @@ from __future__ import annotations
 import json
 import logging
 import math
+from functools import lru_cache
 from pathlib import Path
 from typing import Any, Callable
 
@@ -40,22 +41,27 @@ ONLY_WHEN_ANY = "*any*"
 OPTION_SOURCES = {"skin_corpus", "timezones"}
 
 
-def _timezones() -> list[str]:
+@lru_cache(maxsize=1)
+def _timezones() -> tuple[str, ...]:
     """Every zone this system knows, which is the honest list. The design
     curates about thirty-five and a user outside them cannot set their
-    clock; `grouped` is what makes the full set navigable instead."""
+    clock; `grouped` is what makes the full set navigable instead.
+
+    Cached: it is a scan of the tzdata directory and it is read on every
+    `GET /settings`, where nothing on the request path should be doing
+    filesystem work it could have done once."""
     try:
         from zoneinfo import available_timezones
     except ImportError:  # pragma: no cover - stdlib since 3.9
-        return []
-    return sorted(available_timezones())
+        return ()
+    return tuple(sorted(available_timezones()))
 
 
 #: What each source resolves to, called when the payload is built. A source
 #: with nothing behind it yet resolves to an empty list: the row is drawn,
 #: has nothing to offer, and says so - the same shape as a `list` with no
 #: items (ADR-0044 §4). `skin_corpus` gets its corpus in 9h.
-OPTION_RESOLVERS = {"timezones": _timezones, "skin_corpus": lambda: []}
+OPTION_RESOLVERS = {"timezones": _timezones, "skin_corpus": tuple}
 
 logger = logging.getLogger("gexis_core.settings_registry")
 
@@ -292,7 +298,7 @@ class Settings:
                 public = {k: v for k, v in row.items() if k != "default"}
                 source = row.get("optionsFrom")
                 if source is not None:
-                    public["options"] = OPTION_RESOLVERS[source]()
+                    public["options"] = list(OPTION_RESOLVERS[source]())
                 public["value"] = self.value(row["key"])
                 public["wired"] = row["key"] in self._wired
                 public["visible"] = visible(row, self._rows, values)

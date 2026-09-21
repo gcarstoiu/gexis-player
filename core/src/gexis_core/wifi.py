@@ -21,19 +21,18 @@ from __future__ import annotations
 import asyncio
 import logging
 import shutil
-import subprocess
-import time
-from collections.abc import Callable
 
 logger = logging.getLogger(__name__)
 
 NMCLI = "nmcli"
-#: How long the connected network's name is trusted without asking again.
-#: `/settings` is built synchronously and is fetched on load and after every
-#: write, so reading it per request would put a subprocess in the way of the
-#: settings screen; it changes when someone joins a network, and that path
-#: clears this itself.
-CONNECTED_TTL_S = 10.0
+#: How often the connected network's name is re-read, in the background.
+#: **Not a lazy TTL.** It was one, and the accessor read `nmcli` itself when
+#: the window expired - which measured **3.2 s inside the request handler**
+#: on the device, blocking the whole daemon and leaving the settings sheet
+#: sitting there with nothing to show for it (George, 2026-09-21). Bounding
+#: how *often* that happened was never the point; it had to not happen at
+#: all on the request path.
+CONNECTED_EVERY_S = 20.0
 #: A rescan takes seconds and the sheet waits on it. Longer than the scan
 #: itself so a slow adapter is not reported as an empty network.
 SCAN_TIMEOUT_S = 20.0
@@ -47,48 +46,49 @@ def available() -> bool:
     return shutil.which(NMCLI) is not None
 
 
-_connected: tuple[float, str | None] = (0.0, None)
+_connected: str | None = None
 
 
-def forget_connected() -> None:
-    """Drop the cached name. Called where the connection itself changes."""
-    global _connected
-    _connected = (0.0, None)
-
-
-def connected_ssid(now: Callable[[], float] = time.monotonic) -> str | None:
+def connected_ssid() -> str | None:
     """The network this device is on, or None.
 
-    **Synchronous on purpose.** It is the `wifi` row's value, and the
-    settings payload is built without a running loop to await in. The TTL is
-    what keeps that honest: one short `nmcli` call every ten seconds at
-    worst, and the join path clears it so a change is never stale.
+    **A pure read of what was last seen.** It is the `wifi` row's value and
+    the settings payload is built synchronously, so this may not do any
+    work: `watch_connected` keeps it current from its own task, where being
+    slow costs nobody a response.
+
+    None before the first read has finished, which is a second at boot. The
+    row shows no network for that second rather than the wrong one.
     """
+    return _connected
+
+
+async def refresh_connected() -> str | None:
+    """Re-read the connected network. Async, so the subprocess is awaited
+    rather than blocking whatever is running."""
     global _connected
-    when, cached = _connected
-    moment = now()
-    if cached is not None and moment - when < CONNECTED_TTL_S:
-        return cached
     if not available():
         return None
-    try:
-        result = subprocess.run(
-            [NMCLI, "-t", "-f", "ACTIVE,SSID", "device", "wifi"],
-            capture_output=True,
-            timeout=SHORT_TIMEOUT_S,
-            check=False,
-        )
-    except (OSError, subprocess.SubprocessError) as exc:
-        logger.info("wifi: cannot read the connection: %s", exc)
-        return cached
-    ssid = None
-    for line in result.stdout.decode("utf-8", "replace").splitlines():
+    rc, out, _ = await _run("-t", "-f", "ACTIVE,SSID", "device", "wifi")
+    if rc != 0:
+        return _connected
+    for line in out.splitlines():
         parts = _fields(line)
         if len(parts) >= 2 and parts[0] == "yes" and parts[1]:
-            ssid = parts[1]
-            break
-    _connected = (moment, ssid)
-    return ssid
+            _connected = parts[1]
+            return _connected
+    _connected = None
+    return None
+
+
+async def watch_connected(every: float = CONNECTED_EVERY_S) -> None:
+    """Keep `connected_ssid` current for as long as the daemon runs."""
+    while True:
+        try:
+            await refresh_connected()
+        except Exception:  # pragma: no cover - a watcher must not die
+            logger.exception("wifi: connection read failed")
+        await asyncio.sleep(every)
 
 
 async def _run(*args: str, timeout: float = SHORT_TIMEOUT_S) -> tuple[int, str, str]:
@@ -253,7 +253,7 @@ async def join(ssid: str, password: str | None = None) -> tuple[bool, str | None
     if password:
         args += ["password", password]
     rc, _, err = await _run(*args, timeout=JOIN_TIMEOUT_S)
-    forget_connected()
+    await refresh_connected()
     if rc == 0:
         return True, None
     if rc == 124:
@@ -268,7 +268,7 @@ async def forget(ssid: str) -> tuple[bool, str | None]:
     if name is None:
         return False, "That network is not saved."
     rc, _, err = await _run("connection", "delete", name)
-    forget_connected()
+    await refresh_connected()
     if rc == 0:
         return True, None
     return False, (err.splitlines()[-1] if err else "Could not forget that network.")

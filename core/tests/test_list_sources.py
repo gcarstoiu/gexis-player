@@ -138,10 +138,12 @@ async def test_joining_reports_what_network_manager_said(monkeypatch):
         ("device", "wifi", "connect"): (0, ""),
     })
     assert await wifi.join("Studio", "hunter2hunter2") == (True, None)
-    assert seen[-1] == ("device", "wifi", "connect", "Studio", "password", "hunter2hunter2")
+    # Not `seen[-1]`: a join re-reads the connected network afterwards, so
+    # the last call is that read rather than the join.
+    assert ("device", "wifi", "connect", "Studio", "password", "hunter2hunter2") in seen
     # A saved network is brought up without one.
     await wifi.join("Studio")
-    assert seen[-1] == ("device", "wifi", "connect", "Studio")
+    assert ("device", "wifi", "connect", "Studio") in seen
 
 
 @pytest.mark.asyncio
@@ -178,7 +180,7 @@ async def test_forgetting_deletes_the_connection_that_carries_the_ssid(monkeypat
         ("connection", "delete"): (0, ""),
     })
     assert await wifi.forget("H@l") == (True, None)
-    assert seen[-1] == ("connection", "delete", "preconfigured")
+    assert ("connection", "delete", "preconfigured") in seen
 
 
 @pytest.mark.asyncio
@@ -312,49 +314,46 @@ async def test_joining_and_forgetting_go_through_the_item_route(tmp_path, monkey
 @pytest.mark.asyncio
 async def test_the_connected_network_is_the_rows_own_value(monkeypatch):
     """George, on the panel: the Wi-Fi row said "None" while the device was
-    connected. The row's value is the network it is on, read synchronously
-    because the settings payload is built without a loop to await in."""
-    calls = []
-
-    class Result:
-        stdout = b"no:L0c@lh0st\nyes:H@l\nno:H@l\n"
-
-    def run(argv, **kwargs):
-        calls.append(argv)
-        return Result()
-
+    connected."""
     monkeypatch.setattr(wifi, "available", lambda: True)
-    monkeypatch.setattr(wifi.subprocess, "run", run)
-    wifi.forget_connected()
-    clock = [100.0]
-    assert wifi.connected_ssid(now=lambda: clock[0]) == "H@l"
-    # Inside the TTL the answer is reused: /settings is fetched on load and
-    # after every write, and a subprocess per request would sit in front of
-    # the settings screen.
-    clock[0] += wifi.CONNECTED_TTL_S / 2
-    assert wifi.connected_ssid(now=lambda: clock[0]) == "H@l"
-    assert len(calls) == 1
-    clock[0] += wifi.CONNECTED_TTL_S
-    assert wifi.connected_ssid(now=lambda: clock[0]) == "H@l"
-    assert len(calls) == 2
+    _fake_nmcli(monkeypatch, {
+        ("-t", "-f", "ACTIVE,SSID"): (0, "no:L0c@lh0st\nyes:H@l\nno:H@l\n"),
+    })
+    wifi._connected = None
+    assert await wifi.refresh_connected() == "H@l"
+    assert wifi.connected_ssid() == "H@l"
+
+
+def test_reading_the_row_never_runs_a_subprocess(monkeypatch):
+    """**The whole point of the rewrite.** It used to read `nmcli` itself
+    when a TTL expired, which measured 3.2 s inside the request handler and
+    blocked the daemon while the settings sheet sat there (George,
+    2026-09-21). The accessor is now a pure read of what the watcher saw."""
+    def explode(*_a, **_k):
+        raise AssertionError("connected_ssid must not run anything")
+
+    monkeypatch.setattr(wifi.shutil, "which", explode)
+    wifi._connected = "H@l"
+    assert wifi.connected_ssid() == "H@l"
 
 
 @pytest.mark.asyncio
-async def test_joining_drops_the_cached_name(monkeypatch):
-    """Otherwise the row reports the old network for up to the TTL, which is
-    exactly the moment someone is looking at it."""
+async def test_joining_re_reads_rather_than_leaving_the_old_name(monkeypatch):
+    """Otherwise the row reports the network just left, at exactly the
+    moment someone is looking at it."""
     monkeypatch.setattr(wifi, "available", lambda: True)
-    monkeypatch.setattr(wifi, "_run", lambda *a, **k: _ok())
-    wifi._connected = (999.0, "Old")
+    _fake_nmcli(monkeypatch, {
+        ("device", "wifi", "connect"): (0, ""),
+        ("-t", "-f", "ACTIVE,SSID"): (0, "yes:New\n"),
+    })
+    wifi._connected = "Old"
     await wifi.join("New")
-    assert wifi._connected == (0.0, None)
+    assert wifi._connected == "New"
 
 
-async def _ok():
-    return 0, "", ""
-
-
-def test_a_device_with_no_wifi_at_all_reports_nothing(monkeypatch):
+@pytest.mark.asyncio
+async def test_a_device_with_no_wifi_at_all_reports_nothing(monkeypatch):
     monkeypatch.setattr(wifi, "available", lambda: False)
-    wifi.forget_connected()
+    wifi._connected = None
+    assert await wifi.refresh_connected() is None
     assert wifi.connected_ssid() is None

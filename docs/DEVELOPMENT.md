@@ -1611,6 +1611,28 @@ undecided, and nothing else depends on it.
    renderer restarts mid-session.
    *Gate: rename, restart, confirm all four advertise it.*
 
+   **Built 2026-09-20, awaiting the gate** - which needs a restart by
+   construction, so George's reboot is the check.
+   [ADR-0048](decisions/0048-how-the-device-name-reaches-four-services.md)
+   holds the mechanism and the one decision inside it: **nothing is applied
+   while the device is running**, not even the hostname, which can be. ADR-0022
+   worried that renaming from a remote browser might disconnect the browser;
+   setting the hostname live does exactly that, and applying two of four
+   immediately would leave the device advertising one name over Bluetooth and
+   another over LMS until the restart.
+
+   `squeezelite.service` now reads `-n ${GEXIS_DEVICE_NAME}` from
+   `/etc/gexis/device-name.env` rather than carrying the name inside
+   `ExecStart`, where only a drop-in restating the whole command line could
+   reach it; `01-run.sh` ships the file and asserts the unit still reads it.
+
+   Exercised end to end on the device with an accented name: `Gexis Café
+   Münster` gave the hostname `gexis-cafe-munster` while all three display
+   names kept the accents, and the device stayed reachable throughout.
+   **`/etc/hosts` carries the new name and the running one while they
+   differ** - a rename takes effect at the restart, so naming only the new
+   one would leave the *current* hostname unresolvable for that whole window.
+
 6. **9f - Bluetooth pairing** (ADR-0045). Our own `Agent1` replacing
    `bt-agent --capability=NoInputNoOutput`; the request surfaced to the
    panel; accept and reject; a countdown that is the agent's, not the

@@ -67,6 +67,7 @@ the question blocking it was answered.
 | [0045](0045-bluetooth-pairing-confirmation.md) | Bluetooth pairing is confirmed on the panel, on a device's first pair only | Accepted (George, 2026-09-20) — reverses [0024](0024-bluetooth-pairing-no-pin.md). Needs **our own** BlueZ `Agent1`: `bt-agent` answers on a console and `gexis_core` has no agent code. Phase 9 **9f** |
 | [0046](0046-fixed-output-hides-the-slider.md) | Fixed output hides the volume control everywhere, with a padlock and a reason, rather than disabling it | Accepted (George, 2026-09-20) — implements [0018](0018-volume-and-output-modes.md)'s unbuilt half. Phase 9 **9i, last**: it carries the undecided boot level, **+72 dB** from today's |
 | [0047](0047-the-idle-screen-gains-backgrounds-and-weather.md) | The idle screen gains four backgrounds and a weather stack, both keyed and both optional | **Proposed** — amends [0033](0033-idle-and-home.md), whose "the external page" becomes one option of several. **Two providers unchosen**, the shape [Finding 030](../findings/030-free-enrichment-providers.md) already answered once. Phase 9 **9g** |
+| [0048](0048-how-the-device-name-reaches-four-services.md) | How the one device name reaches squeezelite, go-librespot, BlueZ and the hostname | **Proposed** — implements [0022](0022-settings.md) §2 and §3. **Nothing is applied while the device is running**, not even the hostname, which can be: a live change is how the phone that typed the name loses its way back. Phase 9 **9e** |
 
 ## Cross-cutting rules
 

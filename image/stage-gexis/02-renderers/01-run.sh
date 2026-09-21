@@ -42,6 +42,13 @@ install -D -m 644 files/go-librespot.service \
 # criterion 2's ExecStartPre guard needs a real one, written from scratch.
 install -D -m 644 files/squeezelite.service \
 	"${ROOTFS_DIR}/etc/systemd/system/squeezelite.service"
+
+# The unit reads the player's name from here (ADR-0048 §1). Shipped with the
+# build-time name rather than left to the unit's fallback, so the file the
+# settings screen rewrites always exists and one place holds the answer.
+install -d -m 755 "${ROOTFS_DIR}/etc/gexis"
+printf 'GEXIS_DEVICE_NAME=gexis\n' \
+	> "${ROOTFS_DIR}/etc/gexis/device-name.env"
 install -D -m 755 files/squeezelite-mixer-check.sh \
 	"${ROOTFS_DIR}/usr/local/lib/gexis/squeezelite-mixer-check.sh"
 
@@ -102,7 +109,8 @@ for f in \
 	"${ROOTFS_DIR}/etc/systemd/system/bluealsa.service.d/override.conf" \
 	"${ROOTFS_DIR}/usr/local/lib/gexis/bluetooth-setup.sh" \
 	"${ROOTFS_DIR}/etc/systemd/system/gexis-bluetooth-setup.service" \
-	"${ROOTFS_DIR}/etc/systemd/system/gexis-bt-agent.service"
+	"${ROOTFS_DIR}/etc/systemd/system/gexis-bt-agent.service" \
+	"${ROOTFS_DIR}/etc/gexis/device-name.env"
 do
 	if [ ! -e "${f}" ]; then
 		echo "ERROR: ${f} missing after install" >&2
@@ -113,6 +121,20 @@ done
 # the vendor file's default comment text ever changes upstream) fails
 # silently otherwise, leaving the adapter name on whatever bluetoothd's
 # hostname-derived fallback happens to be.
+# ADR-0048 §1: the name lives in the env file, and a unit that stopped
+# reading it would silently pin every device to one name again - visible
+# only as "the rename did nothing", which is the hardest kind to trace.
+if ! grep -q 'EnvironmentFile=-/etc/gexis/device-name.env' \
+	"${ROOTFS_DIR}/etc/systemd/system/squeezelite.service"; then
+	echo "ERROR: squeezelite.service no longer reads /etc/gexis/device-name.env" >&2
+	exit 1
+fi
+if ! grep -q -- '-n \${GEXIS_DEVICE_NAME}' \
+	"${ROOTFS_DIR}/etc/systemd/system/squeezelite.service"; then
+	echo "ERROR: squeezelite.service's -n is not the device name variable" >&2
+	exit 1
+fi
+
 if ! grep -q "^Name = gexis$" "${ROOTFS_DIR}/etc/bluetooth/main.conf"; then
 	echo "ERROR: main.conf's Name= substitution did not take - pattern may have changed upstream" >&2
 	exit 1
