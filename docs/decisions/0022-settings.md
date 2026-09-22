@@ -97,6 +97,7 @@ Phase 2 and ADR-0027.
 Both carry `onlyWhen: ["idle_background", {"not": "Black"}]` — every
 background that is a picture — which is the negated form
 [ADR-0044](0044-settings-row-vocabulary.md) §3 gained for them.
+| Idle clock and date | [N] | **Appended 2026-09-22, asked for by George**: with it off, and the weather off, the panel is a picture frame. Not in the design drop, which draws the clock as the screen's reason for existing |
 | Weather on the idle screen | [N] | ADR-0047 §2. **Open-Meteo**, key-free, so this toggle alone gates the four rows below — the drop's `weather_key` is removed rather than kept as a row that stores nothing |
 | Weather location | [N] | Typed as a place, geocoded once through Open-Meteo's key-free geocoder, stored as coordinates |
 | Forecast days, show min and max, weather icons | [N] | ADR-0047 §2, all three `onlyWhen: ['idle_weather', true]` |

@@ -575,6 +575,18 @@
         ]
       },
       {
+        "key": "idle_clock",
+        "type": "toggle",
+        "label": "Clock",
+        "marks": "N",
+        "note": "The time and the date, over the background. Turn it off and the panel is a picture frame.",
+        "default": true,
+        "onlyWhen": [
+          "idle_screen",
+          "Built in"
+        ]
+      },
+      {
         "key": "idle_weather",
         "type": "toggle",
         "label": "Weather",

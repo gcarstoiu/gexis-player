@@ -51,6 +51,10 @@
   const days = $derived(Number(settings.idle_days ?? 4));
   const minmax = $derived(settings.idle_minmax !== false);
   const iconSet = $derived(settings.idle_icons ?? 'Solid');
+  //: `idle_clock`, George's row (2026-09-22): *"this way a user can
+  //: actually use the panel as a photo frame only"*. The date goes with
+  //: it - they are one block and one thought.
+  const wantsClock = $derived(settings.idle_clock !== false && !external);
   const background = $derived(settings.idle_background ?? 'Artist pictures');
   const black = $derived(background === 'Black' || !shown);
 
@@ -241,13 +245,15 @@
   {#if !external}
     <div class="scrim" style:background={scrim}></div>
 
-    <div class="clockblock" style:left={`${spot.x}%`} style:top={`${spot.y}%`}>
-      <div class="clock">
-        <span class="clock__hm ink">{pad(now.getHours())}:{pad(now.getMinutes())}</span>
-        <span class="clock__s ink">{pad(now.getSeconds())}</span>
+    {#if wantsClock}
+      <div class="clockblock" style:left={`${spot.x}%`} style:top={`${spot.y}%`}>
+        <div class="clock">
+          <span class="clock__hm ink">{pad(now.getHours())}:{pad(now.getMinutes())}</span>
+          <span class="clock__s ink">{pad(now.getSeconds())}</span>
+        </div>
+        <div class="date ink">{date}</div>
       </div>
-      <div class="date ink">{date}</div>
-    </div>
+    {/if}
 
     {#if wantsWeather && weather && !weather.off && !weather.error && weather.now}
       <div class="wx">

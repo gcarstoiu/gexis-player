@@ -262,6 +262,24 @@ The behaviour was already common - the route answers for whatever
 file all arrive the same way. Only the row was hidden, which is the worst
 kind of gap: the feature works and nothing offers it.
 
+### 2d. The clock can be turned off, and then it is a picture frame
+
+**Added 2026-09-22**, George: *"another entry for disabling the clock (with
+current day) on the idle screen. this way a user can actually use the panel
+as a photo frame only."*
+
+`idle_clock` is a toggle beside `idle_weather`, hanging off the same
+built-in screen, because a picture frame is **this screen with one thing
+turned off** rather than a fourth kind of screen. The date goes with the
+clock: they are one block and one thought.
+
+**What is left when both it and the weather are off** is the picture, its
+change interval, its brightness, and the credit line — which stays, because
+Pixabay's terms require it and an artist picture's caption is the only thing
+saying who is on the screen. **Nothing else remains**, and the burn-in
+argument goes with it: the clock drifted because it was the one fixed bright
+thing, and a picture that changes every few minutes is its own defence.
+
 ### 2c. Attribution is a requirement, not a courtesy
 
 Open-Meteo's licence asks for `Weather data by Open-Meteo.com` as a link

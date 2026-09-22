@@ -105,8 +105,8 @@ def test_registry_keys_are_the_designs_keys_apart_from_recorded_deviations():
         "confidence", "factory_reset", "idle_close", "image_build",
         "lms_player", "log_level", "plugins", "power", "release_ladder",
         "restore_floor", "seek_reanchor", "spotify_name", "theme",
-        "background_brightness", "background_interval", "time_display",
-        "updates", "volume_managed", "wallpaper_topics",
+        "background_brightness", "background_interval", "idle_clock",
+        "time_display", "updates", "volume_managed", "wallpaper_topics",
     }
 
 
@@ -427,9 +427,28 @@ def test_the_shipped_registry_hides_twenty_rows_and_shows_the_rest():
     # gating nothing (ADR-0047 §2a), plus `wallpaper_topics`,
     # `background_interval` and `background_brightness`, all asked for by
     # George on 2026-09-21. Then 9h's three: `viz_stop`, `home_strip` and
-    # `home_strip_count`.
-    assert len(rows) == 70
-    assert len(rows) - len(kept) == 50
+    # `home_strip_count`. Then `idle_clock`, asked for on 2026-09-22.
+    assert len(rows) == 71
+    assert len(rows) - len(kept) == 51
+
+
+def test_the_clock_can_be_turned_off_without_taking_the_screen_with_it():
+    """George, 2026-09-22: *"another entry for disabling the clock (with
+    current day) on the idle screen. this way a user can actually use the
+    panel as a photo frame only."*
+
+    So it hangs off the built-in screen like the background and the weather,
+    and off nothing else: a picture frame is this screen with one thing
+    turned off, not a fourth kind of screen.
+    """
+    rows = {r["key"]: r for r in _rows()}
+    clock = rows["idle_clock"]
+    assert (clock["type"], clock["default"]) == ("toggle", True)
+    assert clock["onlyWhen"] == ["idle_screen", "Built in"]
+    values = {k: rows[k].get("default") for k in rows}
+    assert visible(clock, rows, values)
+    values["idle_screen"] = "External URL"
+    assert not visible(clock, rows, values), "an external page replaces all of it"
 
 
 def test_every_picture_background_carries_the_same_two_rows():
