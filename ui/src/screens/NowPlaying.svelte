@@ -6,8 +6,7 @@
   data-unwired="<phase>" until the phase that wires them.
 -->
 <script>
-  import spotifyMark from '../assets/icon-spotify.png';
-  import bluetoothMark from '../assets/icon-bluetooth.png';
+  import SourceMark from '../lib/SourceMark.svelte';
   import VolumeIcon from '../lib/VolumeIcon.svelte';
   import { retryEnrichment, trackEnrichment } from '../lib/enrichment.js';
   import { artistsCached, foldedName, loadArtistGenres } from '../lib/library.js';
@@ -18,13 +17,6 @@
   import { playToggle } from '../lib/playToggle.svelte.js';
 
   let { active, metadata, volume, controls = [], available = [], shuffle = null, repeat = null, queue = null, onvolume, onvisualisation, onhome, onartist } = $props();
-
-  const SOURCES = {
-    lms: { label: 'LMS', mark: null },
-    spotify: { label: 'Spotify', mark: spotifyMark },
-    bluetooth: { label: 'Bluetooth', mark: bluetoothMark },
-  };
-  const source = $derived(SOURCES[active] ?? { label: active, mark: null });
 
   const transport = $derived(metadata?.transport ?? null);
 
@@ -301,15 +293,12 @@
   <div class="screen__veil"></div>
   <div class="screen__accent"></div>
 
-  <span class="srcpill">
-    <span class="srcpill__icon">
-      {#if source.mark}
-        <img class="srcpill__mark" src={source.mark} alt="" />
-      {:else}
-        <span class="i-lyrion"><i></i><i></i><i></i><i></i></span>
-      {/if}
-    </span>
-    {source.label}
+  <!-- **The mark alone, at 32px** (design, 2026-09-22). The word beside it
+       went: the accent rule along the top edge and the mark itself already
+       say which renderer this is, and a third statement in words was the
+       one taking the most room. -->
+  <span class="srcpill" class:is-playing={transport === 'playing'}>
+    <SourceMark source={active} size={32} color="var(--src-accent)" />
   </span>
 
   <div class="screen__body">
@@ -685,20 +674,9 @@
     z-index: 6;
     display: inline-flex;
     align-items: center;
-    gap: 11px;
-    white-space: nowrap;
-    font-family: var(--font-mono);
-    font-size: var(--t-body-sm);
-    font-weight: 600;
-    letter-spacing: var(--track-wide);
-    text-transform: uppercase;
     color: var(--src-accent);
   }
-  .srcpill__icon {
-    display: flex;
-    align-items: center;
-  }
-  .screen[data-transport='playing'] .srcpill__icon {
+  .srcpill.is-playing {
     animation: pulse 2.4s ease-in-out infinite;
   }
   @keyframes pulse {
@@ -706,36 +684,6 @@
     100% { opacity: 1; }
     50% { opacity: 0.35; }
   }
-  /* The raster marks are sized by height, not boxed: Bluetooth's glyph is
-     taller than it is wide and a square box crops it. */
-  .srcpill__mark {
-    height: 21px;
-    width: auto;
-    flex-shrink: 0;
-    display: block;
-    object-fit: contain;
-  }
-  .screen[data-source='bluetooth'] .srcpill__mark { height: 24px; }
-
-  /* Four-bar reduction of the Lyrion mark; the SVG smears below ~40px. */
-  .i-lyrion {
-    display: flex;
-    align-items: center;
-    gap: 2px;
-    height: 17px;
-    flex-shrink: 0;
-  }
-  .i-lyrion i {
-    width: 3px;
-    border-radius: 2px;
-    background: currentColor;
-    flex-shrink: 0;
-  }
-  .i-lyrion i:nth-child(1) { height: 9px; }
-  .i-lyrion i:nth-child(2) { height: 17px; }
-  .i-lyrion i:nth-child(3) { height: 12px; }
-  .i-lyrion i:nth-child(4) { height: 15px; }
-
   .screen__body {
     position: absolute;
     inset: 0;

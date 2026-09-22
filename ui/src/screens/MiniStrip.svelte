@@ -13,7 +13,6 @@
 
   let { active, metadata, volume, controls = [], onopen, onvolume } = $props();
 
-  const LABELS = { lms: 'LMS', spotify: 'Spotify', bluetooth: 'Bluetooth' };
 
   const transport = $derived(metadata?.transport ?? null);
   const head = playhead(() => metadata);
@@ -70,11 +69,10 @@
     </div>
   </div>
 
-  <span class="badge">
-    <span class="badge__icon" class:is-playing={transport === 'playing'}>
-      <SourceMark source={active} size={28} color="var(--src-accent)" />
-    </span>
-    {LABELS[active] ?? active}
+  <!-- The mark alone at 38px, as on the screen above it: the word went in
+       the same change (design, 2026-09-22). -->
+  <span class="badge" class:is-playing={transport === 'playing'}>
+    <SourceMark source={active} size={38} color="var(--src-accent)" />
   </span>
 
   <div class="right">
@@ -201,21 +199,10 @@
   .badge {
     display: inline-flex;
     align-items: center;
-    gap: 13px;
     color: var(--src-accent);
-    font-family: var(--font-mono);
-    font-size: 21px;
-    font-weight: 600;
-    letter-spacing: 0.16em;
-    text-transform: uppercase;
-    white-space: nowrap;
     flex-shrink: 0;
   }
-  .badge__icon {
-    display: flex;
-    align-items: center;
-  }
-  .badge__icon.is-playing {
+  .badge.is-playing {
     animation: pulse 2.4s ease-in-out infinite;
   }
   @keyframes pulse {
