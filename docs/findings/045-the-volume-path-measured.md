@@ -187,13 +187,44 @@ DAC two writers; `disable_volume` would take the phone's slider away.
 **It will make Spotify louder at the same setting**, by up to 21 dB.
 Changing it belongs at 9i's gate, with the amplifier turned down first.
 
+## 8. Bluetooth: the meter sees nothing, and nothing mirrors its volume
+
+George connected a phone over Bluetooth and started playing. What is
+certain, measured while it ran:
+
+- **Audio is flowing.** `/proc/asound/card5/pcm0p/sub0/status` reads
+  `state: RUNNING` with `hw_ptr` advancing, and BlueZ's
+  `MediaTransport1.State` is `active`, codec SBC.
+- **The phone is at AVRCP 16 of 127** (≈12%), and bluealsa reports
+  `SoftVolume: false` — so bluealsa is not attenuating; it delegates to the
+  mixer it was given, which is the dummy `hw:gexisbtvol`.
+- **Nothing mirrored that to the DAC.** The daemon logged no `restoring
+  bluetooth`, the DAC sat at **0.00 dB** where Spotify had left it, and the
+  dummy reads **0** — which our own mapping calls −30 dB. The mirror is
+  change-driven (§4) and the dummy has not changed all session, so this may
+  be "no event yet" rather than "not wired"; moving the phone's volume would
+  tell them apart.
+- **The meter produced nothing at all.** Not "low" — *nothing*: zeros on the
+  service's WebSocket for 15 s, and **zero bytes** read directly from
+  `/tmp/peppymeter` for 3 s with the service stopped. Unchanged after
+  restarting `bluealsa-aplay` cleanly with the reader running. Yet
+  `libpeppyalsa.so` **is** mapped into its process (4 entries in
+  `/proc/<pid>/maps`), so the scope is loaded and in the chain.
+
+**If that holds, the visualiser is blind on Bluetooth** — flat needles and
+no bars while music plays — which nothing in Phase 5 would have caught,
+because the meter was proved against LMS.
+
+**What it cannot be concluded from here** is whether the stream carries
+audible content at all: a phone that sends near-silence and a meter that
+cannot see the stream look identical from this side. That takes one ear and
+one phone: is it audible, and does moving the phone's volume move the DAC?
+
 ## What is left, and what it needs
 
 **Silent, but needs a phone connected** — no listening, just a stream:
 
-1. **Bluetooth's delivered level**, the way Spotify's was measured in §7 —
-   and there the phone's own volume is in series with ours as well, which
-   LMS has no equivalent of.
+1. **Whether §8's silence is the phone or the meter** — one ear, one phone.
 2. **Whether Spotify's or Bluetooth's remembered level overrides the boot
    level** the way LMS's does. Spotify's restore is already known to be
    240/240 on acquisition, which is the loudest the device can be.
