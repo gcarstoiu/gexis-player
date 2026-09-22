@@ -1735,12 +1735,22 @@ undecided, and nothing else depends on it.
    **`viz_stop` is wired**, and `viz_timeout` was in seconds where the
    design draws minutes. Both are minutes now and both are read per tick.
 
-   **The picker's drawing is blocked on George**, 2026-09-21: *"The picker
-   as is now designed will put some strain on the rendering. I would change
-   the design in a way that we have a list of skins and only when one is
-   tapped then the thumbnail is shown. I'll redesign it with design Claude
-   and give it back."* The daemon offers `/skins` and
-   `/skins/{name}/preview`, which any drawing of it needs.
+   **The picker is built** — his redrawing arrived on 2026-09-22 and is what
+   9h ends on: a 380px list with a preview pane beside it, where tapping a
+   row previews and only the button writes. *"The picker as is now designed
+   will put some strain on the rendering"* is answered by fetching one
+   1280x800 picture per tap instead of 84 at once.
+
+   **And the hole 9h did not know it had:** `skin_corpus` and `skin_rotate`
+   had been in the registry since 9d with **nothing reading them**, so a
+   write was refused and a picker would have had nothing to write to.
+   [ADR-0051](decisions/0051-the-visualiser-reads-its-selection-from-a-file.md)
+   gives the renderer a file to poll beside the one it already reads, and
+   the corpus becomes the pack rather than one directory — measured, the
+   directory the engine loads holds 71 meters and not one spectrum, so two
+   of the four corpus words would have offered nothing at all. The fourth
+   word is **All**; it was `Random` until George renamed it (*"since it
+   makes more sense"* — `skin_rotate` is the one that is random).
 
 9. **9i - The volume setup.** Fixed output (ADR-0046): the per-option
    warning, the locked row, and never a disabled slider - **never built, and
