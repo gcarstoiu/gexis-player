@@ -1,10 +1,10 @@
 # ADR-0053 — The panel is a remote control for what is playing, not a second volume
 
-**Status:** **Proposed** — George asked for the model in principle (*"For
-sure the remote way. That's how it should be."*, 2026-09-22) and for numbers
-before implementation is approved. The numbers are
-[Finding 046](../findings/046-the-remote-control-path-measured.md). **Not
-started.**
+**Status:** **Accepted** — George, 2026-09-22, on
+[Finding 046](../findings/046-the-remote-control-path-measured.md)'s
+numbers: *"Go"*. He agreed the model in principle the same day (*"For sure
+the remote way. That's how it should be."*) and asked for the cost before
+approving the build.
 **Date:** 2026-09-22
 **Raised by:** George, on the built panel: *"The volume bar in the panel
 still has a weird behaviour. If LMS is at 25 I expect the volume on the
@@ -113,13 +113,26 @@ Finding 045 §12: AVRCP's 128 values against the dummy's 151 meant a value
 went out and came back different, every drift was a fresh change, and the
 loop only settled by luck — until bluealsa died of it.
 
-The same shape is possible here: panel percent → renderer value → dummy →
-DAC raw → published percent. If that chain is not idempotent, a drag feeds a
-ratchet. §3's scales are chosen so that it is (0–100 and 0–127 both
-round-trip exactly), and the echo machinery already exists
-(`_expected_adapter_value`, `_written`), but **an idempotence test across all
-three chains is a precondition of building this, not a thing to verify
-afterwards.**
+The same shape is possible here. **The test was written first, and it found
+the fault rather than clearing it:**
+
+- **The direction the model uses is exact.** A panel position sent to a
+  renderer and read back is the same integer, at all 101 positions, on all
+  four scales in play — LMS's and Spotify's 0–100, Bluetooth's 0–127, and
+  go-librespot's 0–65535 fallback. Drag to 37 and 37 comes back.
+- **The opposite direction is not, and cannot be.** A value arriving *from*
+  Bluetooth, shown as a percentage and pushed back out, lands somewhere else
+  for **27 of AVRCP's 128 values**: 101 positions cannot name 128 without
+  collisions. Raw 101 shows as 80%, and 80% sends 102. That is Finding 045
+  §12's ratchet, one integer at a time.
+
+**So the invariant is not "make the round trip exact", which is impossible
+at these scales. It is that a renderer's own value is never sent back to
+it.** The panel's percentage is a *view* of what the renderer reported;
+only a change whose origin is the panel travels outward. `test_volume.py`'s
+`TestTheRemoteRoundTripDoesNotRatchet` pins both halves, including the 27
+drifting values, so that nobody later "fixes" the asymmetry by closing the
+loop.
 
 ## What this does not do
 

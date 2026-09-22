@@ -28,6 +28,8 @@ from gexis_core.volume import (
     hardware_raw_to_spotify_fraction,
     raw_to_db,
     raw_to_slider_percent,
+    renderer_percent_to_value,
+    renderer_value_to_percent,
     slider_percent_to_raw,
     spotify_fraction_to_hardware_raw,
     spotify_fraction_to_hardware_raw,
@@ -664,3 +666,74 @@ class TestTheCeilingIsTheTopOfEveryScale:
 
         volume_module.set_ceiling_reader(lambda: "not a number")
         assert volume_module.ceiling_db() == 0.0
+
+
+class TestTheRemoteRoundTripDoesNotRatchet:
+    """ADR-0053's precondition, written before the model was built.
+
+    This makes a *second* two-way volume sync, and the first one ratcheted:
+    AVRCP's 128 values against the dummy's 151 meant a value went out and a
+    different one came back, every drift was a fresh change, and bluealsa
+    died retrying the push (Finding 045 §12). The same shape is available
+    here, so it is pinned before anything can grow into it.
+    """
+
+    SCALES = {
+        "lms": 100,
+        "spotify": 100,
+        "spotify-fallback": 65535,
+        "bluetooth": 127,
+    }
+
+    def test_a_panel_position_survives_the_trip_to_every_renderer(self):
+        """Drag to 37 and 37 comes back, on all three scales. This is the
+        direction the model actually uses."""
+        for name, steps in self.SCALES.items():
+            for percent in range(101):
+                value = renderer_percent_to_value(percent, steps)
+                assert renderer_value_to_percent(value, steps) == percent, (
+                    f"{name}: {percent}% -> {value} -> "
+                    f"{renderer_value_to_percent(value, steps)}%"
+                )
+
+    def test_a_renderers_own_value_does_not_survive_being_sent_back(self):
+        """**The reason for the invariant, asserted rather than assumed.**
+
+        101 positions cannot name 128 values, so a phone's level shown as a
+        percentage and pushed back out lands somewhere else for 27 of them -
+        raw 101 shows as 80%, and 80% sends 102. Nothing in the daemon may
+        ever close that loop; the panel's number is a view of what the
+        renderer reported, and only a panel-originated change goes outward.
+        """
+        steps = self.SCALES["bluetooth"]
+        drifting = [
+            value
+            for value in range(steps + 1)
+            if renderer_percent_to_value(renderer_value_to_percent(value, steps), steps)
+            != value
+        ]
+
+        assert len(drifting) == 27
+        assert 101 in drifting
+        assert renderer_value_to_percent(101, steps) == 80
+        assert renderer_percent_to_value(80, steps) == 102
+
+    def test_the_scales_that_are_the_panels_own_are_safe_in_both_directions(self):
+        """LMS and Spotify are 0-100, the panel's own, so for them the loop
+        would be harmless. The invariant still holds for all three, because
+        a rule that is true of two renderers out of three is not a rule."""
+        for steps in (100,):
+            for value in range(steps + 1):
+                assert renderer_percent_to_value(
+                    renderer_value_to_percent(value, steps), steps
+                ) == value
+
+    def test_out_of_range_input_cannot_move_a_renderer_off_its_own_scale(self):
+        for steps in self.SCALES.values():
+            assert renderer_percent_to_value(-5, steps) == 0
+            assert renderer_percent_to_value(140, steps) == steps
+        assert renderer_value_to_percent(200, 127) == 100
+        assert renderer_value_to_percent(-3, 127) == 0
+
+    def test_a_renderer_that_reports_no_scale_reads_as_zero_not_as_a_crash(self):
+        assert renderer_value_to_percent(50, 0) == 0

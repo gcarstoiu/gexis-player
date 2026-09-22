@@ -259,6 +259,42 @@ def dummy_raw_to_hardware_raw(raw: int) -> int:
     return db_to_raw(dummy_raw_to_db(raw))
 
 
+#: **ADR-0053's arithmetic, and the invariant that keeps it safe.**
+#:
+#: In the remote-control model the panel's number *is* the active
+#: renderer's, shown on the panel's own 0-100. Two maps do the whole of it:
+#: a panel position onto the renderer's scale, and a renderer's value back
+#: onto the panel's.
+#:
+#: **The panel's own round trip is exact at every scale in play** - checked
+#: for all 101 positions against LMS's and Spotify's 0-100, Bluetooth's
+#: 0-127 and go-librespot's fallback 0-65535. Drag the panel to 37 and 37 is
+#: what comes back.
+#:
+#: **The other direction is not, and must never be taken.** A value arriving
+#: *from* Bluetooth, rendered as a percentage and sent back out, lands
+#: somewhere else for **27 of AVRCP's 128 values**: 101 positions cannot
+#: name 128 without collisions. Raw 101 shows as 80% and 80% sends 102. That
+#: is the shape of the ratchet Finding 045 §12 measured, where 107 went out
+#: and 108 came back until bluealsa died of it.
+#:
+#: So the invariant is not "make the round trip exact", which is impossible
+#: here. It is **a renderer's own value is never sent back to it**: the
+#: panel's percentage is a *view* of what the renderer reported, and only a
+#: change whose origin is the panel is ever pushed outward.
+def renderer_percent_to_value(percent: float, steps: int) -> int:
+    """A panel position on a renderer's own scale."""
+    return round(max(0.0, min(100.0, percent)) / 100 * steps)
+
+
+def renderer_value_to_percent(value: int, steps: int) -> int:
+    """A renderer's own value as the panel's number. `steps` is the
+    renderer's maximum, so the scale has `steps + 1` positions."""
+    if steps <= 0:
+        return 0
+    return max(0, min(100, round(value / steps * 100)))
+
+
 def raw_to_db(raw: int) -> float:
     """Raw ALSA step (0-240) to dB, per ADR-0018's documented scale.
 
