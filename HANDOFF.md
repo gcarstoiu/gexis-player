@@ -1,31 +1,67 @@
 # Handoff
 
 Last updated: 2026-09-22 (twenty-second session, on R2D2 — **Phase 9's
-design sweep: 9a through 9g are done; 9h is built except its picker.
-Two things wait on George's designs, and one on a build**)
+design sweep: 9a through 9h are done and the 2026-09-22 drop is applied.
+9i — volume setup — is what is left; three things want George's word, and
+one wants a build**)
 
 ## Start here
 
-**Phase 9's design sweep is seven subphases in and the eighth is mostly
-built.** Nine were planned (`docs/DEVELOPMENT.md`), volume last; **9a
-through 9g are done, checked by George on the panel and committed**, and
-**9h is built except the picker**.
+**Phase 9's design sweep is done bar the last subphase.** Nine were planned
+(`docs/DEVELOPMENT.md`), volume last: **9a through 9h are built, checked on
+the panel and committed**, and **9i — volume setup — is what is left**.
 
-**Two things wait on George's designs** (2026-09-22: *"Will provide soon the
-designs"*):
+**The 2026-09-22 design drop is applied, all four parts of it.** George:
+*"Please be thorough and check the designs I import — do not guess or
+inferr."* The drop is vendored whole at `design/` and is the point of truth
+for what it draws; **the panel stays the point of truth where the two
+differ**, which the vendoring commit lists.
 
-- **The skin picker.** He is redrawing it — a list of skins, with the
-  preview shown only when a row is tapped, because the drop's grid *"will
-  put some strain on the rendering"*. **The daemon side is built and
-  waiting**: `GET /skins` (name, kind, whether the corpus takes it) and
-  `GET /skins/{name}/preview`.
-- **The weather bar's other fields.** Open-Meteo returns them in the request
-  the screen already makes — feels-like, humidity, wind with gusts and
-  direction, cloud cover, pressure, sunrise and sunset, UV, chance of rain,
-  daily wind maxima; 3.4 KB against the 748 B now fetched, no extra call.
-  **The design's bar is full**, so anything added is a layout change.
+- **Now Playing's meta column grew** — tabs 19, title 54 at 1.06 clamped to
+  two lines, artist 35, album 30, year 25 mono. **The Track tab's synced
+  strip is three lines, not five**: 32px, the neighbours at 0.42, and a
+  30%/70% mask on the window so they are ghosted rather than merely dimmer.
+- **The idle screen has two forecast layouts**, `3 days` and `None`, and
+  carries feels-like, wind, sunrise and sunset.
+- **The visualisation picker is built** — a list of 380px with a preview
+  pane beside it. Tapping a row previews; the 60px button writes.
+- **`device_name` carries a warning**, and `warn` now has a second form: a
+  string is about the row and is up the whole time the sheet is open.
 
-**What 9h has landed:**
+**Three things George has to rule on:**
+
+- **`skin` is a new settings row and needs his word for ADR-0022's
+  inventory** ([N]). It is the picker's own row: a `choice` with
+  `picker: true`, `optionsFrom: skin_corpus`, shown only while
+  `skin_rotate` is off.
+- **The `device_name` warning is not worded as the drop writes it.** The
+  drop says saving restarts the services and stops playback;
+  [ADR-0048](docs/decisions/0048-how-the-device-name-reaches-four-services.md)
+  writes all four and applies none until the next restart, so on this device
+  nothing stops. Ours says that instead. ADR-0044 §2 records the deviation.
+- **Two type sizes are pinned rather than grown.** `--t-title`, `--t-artist`
+  and `--t-lead` moved for the Track header, and two other places used them:
+  the Artist tab's name and the Release tab's title. The drop does not touch
+  either panel, so both keep the size they had (25px and 22px) as literals.
+  Say the word and they follow.
+
+**9h is finished, and the last of it closed a hole that had been open since
+9d.** `skin_corpus` and `skin_rotate` were in the registry with nothing
+behind them — unwired, so a write was refused.
+[ADR-0051](docs/decisions/0051-the-visualiser-reads-its-selection-from-a-file.md)
+gives the renderer a file to read: `/run/gexis/visualisation.json`, written
+by the daemon and polled in the driver's frame hook beside
+`nowplaying.json`. No restart, no new channel.
+
+**The corpus is the pack, not the directory.** The engine reads one
+`meters.txt` — `gelo5/templates`, which is 71 skins and, measured, **not one
+spectrum** — so two of the four corpus words would have offered nothing at
+all. The driver loads both of the pack's template directories and swaps
+`base.path` around the factory, the same way it already swaps `meter`. The
+`stock` pack stays installed and stays out: the spectrum engine is pointed
+at Gelo5's sections.
+
+**What 9h landed before that:**
 
 - **Three kinds of skin, not two** — 77 meters, 9 spectrum, 13 both, counted
   on the device. The old two options were *directories*, and `templates/` is
@@ -33,7 +69,7 @@ designs"*):
   meters + spectrum / Random.
 - **[ADR-0050](docs/decisions/0050-skin-previews-are-the-skins-own-picture.md):
   a preview is the skin's own `screen.bgr`** — no render, no cache, no
-  change detection, and **9h no longer needs an image build**.
+  change detection, and **9h needs no image build**.
 - **The home strip, all three shapes**, after George corrected a finding
   that said two of them were impossible (`docs/LESSONS.md` case 14). They
   are `browselibrary` **sorts**, not fields or tags, and need no plugin.
@@ -41,11 +77,11 @@ designs"*):
   the design draws. Both read per tick.
 - **`idle_clock`**, so the panel can be a picture frame (2026-09-22).
 
-**What 9h still owes besides the picker: the visualiser does not honour the
-Skins choice.** Our own `driver.py` loads one corpus directory and the kinds
-cut across directories, so "Random" needs a composed directory of symlinks.
-It is a change to the screen George watches, so it wants his eyes with music
-playing.
+**The device is carrying deployed files, not a built image.** The daemon,
+the panel and **`driver.py`** were rsynced to it for this work. The driver
+is the new one: `image/stage-gexis/05-peppy/files/gexis-peppy-driver.py` is
+what a build would install, and until that build the device and the image
+differ.
 
 **9g — the idle screen — is done.** Both providers chosen the way Finding
 030 chose the enrichment ones ([Finding 043](docs/findings/043-the-idle-screens-two-providers.md)):
@@ -64,8 +100,9 @@ library); wallpapers come from Pixabay, random across the chosen categories;
 on-device pictures come from an SMB share; and a picture that `cover` would
 cost more than a quarter of is shown whole over a blurred copy of itself.
 
-**The one thing not proven: [ADR-0049](docs/decisions/0049-the-pictures-folder-is-a-share.md)'s
-image stage has never been through a build.** samba is installed and the
+**One of the two things a build still owes: [ADR-0049](docs/decisions/0049-the-pictures-folder-is-a-share.md)'s
+image stage has never been through one** (the other is the new `driver.py`,
+above). samba is installed and the
 share verified on the device — a picture written to it over SMB was drawn
 on the panel — and the stage that bakes it is written with `testparm`
 assertions that pass against that device. **The next rebuild is what proves
