@@ -240,11 +240,14 @@
   });
   const singing = $derived(anchor >= 0 && sungLines[anchor]?.src === activeLine);
 
-  //: The design's compact synced view: five lines around the current one.
-  const window5 = $derived.by(() => {
+  //: The design's compact synced view: **three** lines, one either side of
+  //: the current one (2026-09-22, was five). Three at 32px need ~157px, and
+  //: the rest of the column goes to the title block above rather than to
+  //: more lyric context.
+  const window3 = $derived.by(() => {
     if (!sungLines.length) return [];
     const at = Math.max(0, anchor);
-    return [at - 2, at - 1, at, at + 1, at + 2]
+    return [at - 1, at, at + 1]
       .filter((n) => n >= 0 && n < sungLines.length)
       .map((n) => ({ ...sungLines[n], n, distance: Math.abs(n - at) }));
   });
@@ -375,7 +378,7 @@
                 <div class="trackblock__body">
                   {#if sungLines.length}
                     <div class="lyrics lyrics--synced lyrics--fill">
-                      {#each window5 as line (line.n)}
+                      {#each window3 as line (line.n)}
                         <div class="lyrics__line" class:is-now={line.distance === 0 && singing} data-distance={line.distance}>
                           {line.text}
                         </div>
@@ -406,10 +409,10 @@
                 <div class="lyrics__none">Instrumental</div>
               {:else if sungLines.length}
                 <!-- The whole song, scrolled to the current line. The Track
-                     tab shows five lines because it shares the panel with the
-                     header; this tab has the panel to itself, so every line
-                     is drawn at a flat weight with only the sung one lit -
-                     the five-line fade belongs to the window, not here. -->
+                     tab shows three lines because it shares the panel with
+                     the header; this tab has the panel to itself, so every
+                     line is drawn at a flat weight with only the sung one
+                     lit - the fade belongs to the window, not here. -->
                 <div class="lyrics lyrics--synced lyrics--scroll" bind:this={lyricsBox}>
                   <div class="lyrics__scroller" style:transform={`translateY(${lyricsShift}px)`}>
                     {#each sungLines as line, i (i)}
@@ -822,7 +825,10 @@
   }
   .tab {
     font-family: var(--font-mono);
-    font-size: var(--t-body-sm);
+    /* 19px, up from 17 (design, 2026-09-22): the whole meta column grew and
+       the tab row grew with it. The 44px target is unchanged - it comes from
+       the padding/negative-margin pair, not from the font. */
+    font-size: var(--t-body);
     font-weight: 600;
     letter-spacing: var(--track-wide);
     text-transform: uppercase;
@@ -874,6 +880,12 @@
     min-height: 0;
     position: relative;
     overflow: hidden;
+    /* The strip is ghosted at both ends, not merely dimmer: transparent to
+       opaque over the first 30% and back over the last 30% (design,
+       2026-09-22, which widened it from 9%/91%). A static mask, not a
+       filter - ADR-0041. */
+    -webkit-mask-image: linear-gradient(180deg, transparent 0, #000 30%, #000 70%, transparent 100%);
+    mask-image: linear-gradient(180deg, transparent 0, #000 30%, #000 70%, transparent 100%);
   }
 
   /* The Artist tab (ADR-0040), ported from the design's About and Similar
@@ -942,7 +954,10 @@
   }
   .artisttab__name {
     display: block;
-    font-size: var(--t-artist);
+    /* 25px, pinned. This used `--t-artist`, which the 2026-09-22 drop moved
+       25 -> 35 for the *Track* header; that drop does not change this panel,
+       so the shared token is not allowed to carry it along. */
+    font-size: 25px;
     font-weight: 700;
     color: var(--accent-artist);
     white-space: nowrap;
@@ -1008,7 +1023,9 @@
     gap: 3px;
   }
   .reltab__name {
-    font-size: var(--t-lead);
+    /* 22px, pinned - see `.artisttab__name`. `--t-lead` went 22 -> 25 for the
+       Track header's year and this panel did not change. */
+    font-size: 22px;
     font-weight: 700;
     color: var(--ink);
     white-space: nowrap;
@@ -1104,8 +1121,8 @@
   }
   /* The scrolled full-song view: a fixed window with the list translated
      inside it, so the tab itself does not scroll and the current line stays
-     put. `.lyrics--synced` alone (the Track tab) still centres five lines. */
-  /* Specificity on purpose: `.lyrics--synced` centres its five lines and is
+     put. `.lyrics--synced` alone (the Track tab) still centres its lines. */
+  /* Specificity on purpose: `.lyrics--synced` centres its three lines and is
      written after this rule, so at equal weight it would win here too - and
      a list taller than its box, centred *and* translated, leaves the sung
      line off the top of the screen. That is what made the Lyrics tab look
@@ -1115,6 +1132,11 @@
     min-height: 0;
     overflow: hidden;
     justify-content: flex-start;
+    /* The same 30%/70% ramp the Track strip carries: the design puts it on
+       both lyric windows (2026-09-22). The sung line is held at the centre
+       of the box, so it is never the one being faded. */
+    -webkit-mask-image: linear-gradient(180deg, transparent 0, #000 30%, #000 70%, transparent 100%);
+    mask-image: linear-gradient(180deg, transparent 0, #000 30%, #000 70%, transparent 100%);
   }
   .lyrics--scroll .lyrics__line {
     color: var(--ink-lyric-off);
@@ -1148,10 +1170,10 @@
     color: var(--ink-strong);
     transition: color 320ms ease, opacity 320ms ease;
   }
-  /* Each line gets a fixed box and is centred in it, rather than being sized
-     by its own text. The design does this so the window does not jitter as
-     lines of different length scroll through it: `minHeight: LINE`, flex,
-     centred. 70px in the Lyrics tab, 54px in the Track tab. */
+  /* In the Lyrics tab each line gets a fixed 70px box and is centred in it
+     rather than being sized by its own text, so the window does not jitter
+     as lines of different length scroll through it (`minHeight: LINE`). The
+     Track tab's strip overrides this below. */
   .lyrics--synced .lyrics__line {
     font-size: 31px;
     font-weight: 500;
@@ -1160,12 +1182,20 @@
     align-items: center;
     justify-content: center;
   }
-  /* Inside the Track tab the same five lines are smaller, because they share
-     the panel with the header above them. 25px against 31px, and the line box
-     54px against 70px (design's `lyricsBody`: `compact ? 54 : 70`). */
-  .lyrics--fill .lyrics__line { font-size: 25px; min-height: 54px; }
+  /* Inside the Track tab it is three lines at 32px, spaced by a gap rather
+     than by a line box: the strip is centred in what the header leaves and
+     each line is its own height (design, 2026-09-22). */
+  .lyrics--fill {
+    gap: 16px;
+  }
+  .lyrics--fill .lyrics__line {
+    font-size: 32px;
+    line-height: 1.3;
+    min-height: 0;
+    display: block;
+    text-wrap: pretty;
+  }
   .lyrics--synced .lyrics__line[data-distance='1'] { opacity: 0.42; }
-  .lyrics--synced .lyrics__line[data-distance='2'] { opacity: 0.16; }
   .lyrics__line.is-now {
     font-weight: 700;
     color: var(--accent-artist);
@@ -1333,15 +1363,15 @@
 
   .title {
     font-size: var(--t-title);
-    line-height: 1.08;
+    line-height: 1.06;
     font-weight: 700;
     letter-spacing: var(--track-tight);
     text-wrap: pretty;
     margin: 0;
-    /* No reserved two-line box. The old 58px title held 124px open so the
-       lines below it never moved; at 38px, in a block that is pinned to the
-       top of the panel and followed by a rule only when there are lyrics,
-       there is nothing below it to hold still. */
+    /* No reserved two-line box: the block is pinned to the top of the
+       panel and followed by a rule only when there are lyrics, so there is
+       nothing below it to hold still. Clamped to two lines at 54px
+       (design, 2026-09-22 - it was 38). */
     display: -webkit-box;
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
@@ -1354,7 +1384,7 @@
     display: flex;
     align-items: baseline;
     gap: 12px;
-    margin-top: 10px;
+    margin-top: 12px;
     min-width: 0;
     flex-shrink: 0;
   }
@@ -1374,7 +1404,7 @@
     text-overflow: ellipsis;
   }
   .album {
-    font-size: var(--t-body);
+    font-size: var(--t-h2);
     line-height: 1.35;
     color: rgba(233, 238, 242, 0.6);
     white-space: nowrap;
@@ -1384,7 +1414,7 @@
   /* The release year, mono so it reads as a number rather than a word. */
   .year {
     font-family: var(--font-mono);
-    font-size: 16px;
+    font-size: var(--t-lead);
     color: var(--ink-quiet);
     white-space: nowrap;
     flex-shrink: 0;
