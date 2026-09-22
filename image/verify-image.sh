@@ -53,6 +53,14 @@ skins/templates_spectrum/meters.txt /opt/gexis-peppy/skins/gelo5/templates_spect
 skins/templates_spectrum/spectrum.txt /opt/gexis-peppy/skins/gelo5/templates_spectrum/1280x800/spectrum.txt
 EOF
 
+echo "== files the services must be able to write"
+# The driver rewrites the spectrum engine's config to choose a section - the
+# engine has no other way to be told - and the unit runs as pi (uid 1000).
+# Shipped root-owned, that write raised PermissionError after the display
+# existed and left a black window on the panel (ADR-0051 §3).
+own=$(dfs "stat /opt/gexis-peppy/spectrum/config.txt" | grep -o 'User: *[0-9]*' | tr -s ' ')
+[ "$own" = "User: 1000" ] && ok "spectrum config owned by uid 1000" || bad "spectrum config ownership: '${own:-missing}'"
+
 echo "== units enabled (symlink targets)"
 for u in gexis-core gexis-boot-volume gexis-bluetooth-trust gexis-meter gexis-kiosk gexis-peppy; do
 	t=$(dfs "stat /etc/systemd/system/multi-user.target.wants/$u.service" | grep -o 'Fast link dest: ".*"')
