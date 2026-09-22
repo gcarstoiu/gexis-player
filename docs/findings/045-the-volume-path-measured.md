@@ -267,6 +267,61 @@ one module instance, so LMS's range moves with it and `volume.py`'s
 `DUMMY_MIN_RAW`, `DUMMY_MAX_RAW` and `DUMMY_DB_STEP` have to move with that
 — which is 9i work, not a change to make while a phone is connected.
 
+## 10. What the oscillation actually was: bluealsa melting down, and crashing
+
+§9's A/B ran and **came back clean** — both phases tracked the finger
+smoothly, 125 changes in twelve seconds with the mirror running and 89 with
+`gexis-core` stopped, all of them monotone sweeps. It proved nothing about
+the fault, because **the fault was already over**: the logs say why.
+
+From bluealsa's side, starting **18:05:39**:
+
+```
+ba-transport-pcm.c:679: Couldn't set BT device volume:
+  GDBus.Error:org.bluez.Error.Failed: Internal error No such file or directory (-2)
+```
+
+and from BlueZ's, the other end of the same call:
+
+```
+profiles/audio/transport.c:set_volume() Unable to set volume: No such file or directory (-2)
+```
+
+**bluealsa retried it without backoff: 104,780 log lines between 18:05:39
+and 18:07:58** — about **750 a second** — burning 1 min 28 s of CPU, until
+the process died:
+
+```
+bluealsa.service: Main process exited, code=killed, status=7/BUS
+bluealsa.service: Scheduled restart job, restart counter is at 1
+```
+
+systemd restarted it, the A2DP endpoints re-registered, and the phone's
+volume behaved normally again — which is exactly why the A/B twenty minutes
+later saw nothing wrong.
+
+**So the phone's dancing bar was bluealsa hammering a volume push that BlueZ
+could not deliver.** The AVRCP control channel was unusable (ENOENT from
+BlueZ) while A2DP audio kept playing — the two are separate, and a phone
+dropping the control channel mid-stream is ordinary.
+
+**Our part in it is real but secondary.** The daemon's `DummyMixerBridge`
+faithfully mirrored every one of those thrashing dummy values onto the DAC,
+about forty a second — it did not cause the storm and did not sustain it,
+but it did convert it into hardware writes at 16 ms each. A rate limit there
+is cheap and belongs in 9i whatever else is decided.
+
+**And the mixer→AVRCP direction is there because we asked for it.**
+`--volume=mixer` forces `SoftVolume=false` (Finding 012, and it fixed a real
+frozen ceiling), and the same flag is what makes bluealsa push the mixer's
+value back out to the phone. That outbound push is the path that melts down.
+
+**What this does not yet say** is what made the control channel fail at
+18:05:39. Nothing of ours writes AVRCP; the candidates are the phone itself
+and the `bluealsa-aplay` restart I ran at 17:50 to test §8's meter, fifteen
+minutes earlier. A reproduction would need the control channel to fail
+again, which is not something this side can arrange.
+
 ## What is left, and what it needs
 
 **Silent, but needs a phone connected** — no listening, just a stream:
