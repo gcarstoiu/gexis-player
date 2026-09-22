@@ -528,6 +528,13 @@ class VolumeBridge:
         #: The ramp in flight, cancelled when a newer target arrives.
         self._ramp: asyncio.Task | None = None
         self._last_written: int | None = None
+        #: **Every value we write, not only the target** (ADR-0052 §4). A
+        #: ramp writes a dozen intermediate values and `alsactl monitor`
+        #: reports each one; matching only the target made every step look
+        #: like somebody turning the knob - which republished the level a
+        #: dozen times (the volume drawer then never auto-hid, George,
+        #: 2026-09-22) and echoed each step out to Spotify.
+        self._written: dict[int, float] = {}
         adapter.on_volume_change(self._on_adapter_volume)
 
     def _capped(self, raw: int) -> int:
@@ -538,6 +545,19 @@ class VolumeBridge:
         if ceiling is None:
             return raw
         return min(raw, db_to_raw(float(ceiling)))
+
+    def _note_written(self, raw: int) -> None:
+        now = time.monotonic()
+        self._written = {
+            value: at for value, at in self._written.items() if now - at < ECHO_WINDOW_S
+        }
+        self._written[raw] = now
+
+    def _was_ours(self, raw: int) -> bool:
+        """True if we wrote this value ourselves within the echo window -
+        the ramp's own steps coming back through the monitor."""
+        at = self._written.get(raw)
+        return at is not None and time.monotonic() - at < ECHO_WINDOW_S
 
     @staticmethod
     def _consume(expected: tuple[int, float] | None, value: int) -> bool:
@@ -605,6 +625,7 @@ class VolumeBridge:
                 value = start
                 while (step > 0 and value + step < target) or (step < 0 and value + step > target):
                     value += step
+                    self._note_written(value)
                     await set_raw(self._mixer_name, value)
                     self._last_written = value
             # **The target is always written, and written last.** A ramp
@@ -612,6 +633,7 @@ class VolumeBridge:
             # ("blocker 4": a fast drag to maximum landing below full
             # scale), so it is unconditional and outside the cancellable
             # walk above.
+            self._note_written(target)
             await set_raw(self._mixer_name, target)
             self._last_written = target
         except asyncio.CancelledError:
@@ -681,7 +703,7 @@ class VolumeBridge:
                 # single write can produce - they all read back the same
                 # value, so only the first reaches anything below.
                 continue
-            if self._consume(self._expected_hw_raw, raw):
+            if self._consume(self._expected_hw_raw, raw) or self._was_ours(raw):
                 # Our own write coming back at us, not somebody turning
                 # the knob. Record it as the new baseline so the next
                 # genuine change still registers as a change.

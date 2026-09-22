@@ -541,3 +541,23 @@ class TestDummyMixerBridgePauseFadeGate:
         # Mirrored, but to the level the control already had before the
         # fade - so nothing audible changed across the pause.
         assert writes == [("DAC", 193)]
+
+
+@pytest.mark.asyncio
+async def test_a_ramps_own_steps_are_not_read_back_as_someone_turning_the_knob(fake_set_raw):
+    """George, 2026-09-22: the volume drawer stayed on screen with nothing
+    playing and nobody touching it.
+
+    `alsactl monitor` reports every write, and the echo window matched only
+    the *target* - so each of a ramp's dozen intermediate values looked like
+    an external change, republished the level, and reset the drawer's
+    auto-hide. Every value we write is ours."""
+    bridge, _ = make_bridge()
+    bridge._last_written = 120
+
+    await bridge.write_hardware(160)
+
+    written = [raw for _, raw in fake_set_raw]
+    assert len(written) > 3, "this move should have ramped"
+    for raw in written:
+        assert bridge._was_ours(raw), f"{raw} would read back as an external change"
