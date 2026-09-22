@@ -3,7 +3,8 @@
 Last updated: 2026-09-22 (twenty-second session, on R2D2 — **Phase 9's
 design sweep: 9a through 9h are done, the 2026-09-22 drop is applied, and
 the image is built and verified. The volume work is split in two: 9i the
-level, 9j where it goes**)
+level, 9j where it goes. 9i's path is built; its rows are not, and
+ADR-0053 is on George's desk**)
 
 ## Start here
 
@@ -11,42 +12,46 @@ level, 9j where it goes**)
 built, checked on the panel and committed.** What is left is now **two**
 subphases, split on George's agreement (2026-09-22):
 
-- **9i — the volume path, measured, then the rows.** Eight rows in Audio and
-  not one of them wired, ADR-0046's fixed output never built — and **three
-  symptoms George found on the built panel**: the level does not move
-  smoothly, it hops after a cold boot, and the maximum feels different
-  between renderers. **[Finding 045](docs/findings/045-the-volume-path-measured.md)
-  is the first half**, done 2026-09-22, everything that needed nobody at the
-  speakers:
-  - **The jumps are the drag's sampling.** A 200 ms drag delivers 6 of 12
-    finger positions to the DAC, in **4 dB steps**; a 2 s drag delivers all
-    60, in 0.45 dB steps. The panel sends one request at a time and keeps
-    only the latest, so the hardware hears a staircase.
-  - **A write costs 16.4 ms and two thirds of that is ours** — the `amixer`
-    subprocess. libasound directly is 5.7 ms, of which 5.7 is the DAC's own
-    I²C; the dummies take 0.021 ms. So the daemon could **ramp**: 4 dB is
-    eight steps and 46 ms.
-  - **The boot hop is 53 dB, at thirteen seconds.** The boot service sets
-    −90 dB, squeezelite starts, LMS pushes its remembered 25%, and the
-    daemon mirrors it: −37 dB. At LMS 100% that would be **+90 dB**.
-    **`boot_volume` does not survive the first renderer**, which changes the
-    question George owes an answer to.
-  - **The meter is a pre-attenuation tap**, so "does one renderer deliver a
-    quieter stream" can be answered **with the room silent**.
-  - **Spotify's volume is applied twice** (§7, measured the same day with
-    George's phone connected): go-librespot attenuates the stream *and* the
-    daemon attenuates the DAC. At its 25 the stream is down 21 dB and the
-    DAC is at −34, about −55 dB where a quarter was asked for; the same
-    quarter on LMS is −37 and nothing else. **The maxima are not what
-    differ** — both deliver full scale at 100% — everything below it does.
-    `external_volume: true` in go-librespot's config is the fix, our config
-    sets no volume keys at all, and **it makes Spotify louder at the same
-    setting**, so it belongs at the gate.
-  - **Connecting Spotify put the DAC at 0.00 dB by itself**, restoring
-    240/240 — the loudest the device has, from the same restore-on-acquire
-    that causes the boot hop.
-  - **Bluetooth is the one renderer left to measure**, and it needs a phone
-    connected and nothing else.
+- **9i — the volume path. Built and on the device; the rows are not.**
+  [ADR-0052](docs/decisions/0052-the-volume-path.md) on
+  [Finding 045](docs/findings/045-the-volume-path-measured.md) decided it
+  and all of it has landed: direct libasound writes (5.7 ms against 16.4), a
+  **ramp** to each new target, the mirror rate-limited to one hardware write
+  per 40 ms, `travel_curve` renamed to `Perceptual`, and
+  `external_volume: true` so Spotify stops attenuating the stream on top of
+  the DAC. Since then, three more things:
+  - **The dummy controls now speak AVRCP's own 128 steps.** Bluetooth
+    ratcheted: bluealsa's log shows 107 pushed to the phone and 108 coming
+    back, 102 out and 101 back. AVRCP is 0–127 and the dummy was −50…100, so
+    the two-way sync `--volume=mixer` makes was lossy by construction — a
+    tap settles, a drag never does, and every drift is another AVRCP write
+    on a channel that has to stumble once to start Finding 045 §10's retry
+    storm. `mixer_volume_level_min=0 mixer_volume_level_max=127` on
+    snd-dummy makes it exact; the 6.90 dB of top end that costs is taken
+    back in `volume.py` as a constant shift (`DUMMY_DB_MIN = -38.1`).
+    **Whether the storm is gone needs his phone and a drag.**
+  - **`restore_ceiling` was built, objected to and withdrawn the same day.**
+    It clamped the hardware on a restore and told nobody, so the first nudge
+    of any slider released the whole 20 dB. George: *"We are taking away the
+    decision from the user and creating what looks like an error because the
+    sound jumps up or down with the first move of the volume."* **In its
+    place `max_ceiling` is redefined as the top of every scale** — set it to
+    −10 dB and the panel's 100%, LMS's 100 and a phone's 100 all mean −10 dB
+    — applied as a *shift* on every position-to-dB map so every step keeps
+    its size. ADR-0052 has an Amendment section; §1 and §3 are marked where
+    they are contradicted rather than rewritten.
+  - **[ADR-0053](docs/decisions/0053-the-panel-is-a-remote-control.md) is
+    Proposed and waiting on George**, with
+    [Finding 046](docs/findings/046-the-remote-control-path-measured.md)'s
+    numbers behind it. He asked for them before approving. Short version:
+    going through the renderer costs **+6 ms on Bluetooth, +10 on Spotify,
+    +22–33 on LMS**; **squeezelite will not carry a mixer change back to
+    LMS** (ten seconds, no change), so LMS's channel has to be the server's
+    RPC; and the risk is that this is a *second* two-way sync and the first
+    one ratcheted.
+
+  **Still unbuilt in 9i:** the eight Audio rows, and ADR-0046's fixed
+  output.
 - **9j — which output.** The device has four cards and the user has never
   been offered the choice. All three renderers already play to one PCM, so
   the switch is two lines of `/etc/alsa/conf.d/output.conf` and the meter
@@ -89,17 +94,9 @@ window rather than to the surface, so **a tap on a phone ended the
 visualisation on a device in another room**. `/surface` already knew the
 difference (ADR-0035 §6); the report is the panel's alone now.
 
-**Two things George has to rule on:**
-
-- **`skin` is a new settings row and needs his word for ADR-0022's
-  inventory** ([N]). It is the picker's own row: a `choice` with
-  `picker: true`, `optionsFrom: skin_corpus`, shown only while
-  `skin_rotate` is off.
-- **Two type sizes are pinned rather than grown.** `--t-title`, `--t-artist`
-  and `--t-lead` moved for the Track header, and two other places used them:
-  the Artist tab's name and the Release tab's title. The drop does not touch
-  either panel, so both keep the size they had (25px and 22px) as literals.
-  Say the word and they follow.
+**Both of those rulings came back the same day:** `skin` went into
+ADR-0022's inventory as [N] (*"Record as N"*), and the Artist tab's name and
+the Release tab's title follow the grown tokens (*"Grow both"*).
 
 **9h is finished, and the last of it closed a hole that had been open since
 9d.** `skin_corpus` and `skin_rotate` were in the registry with nothing

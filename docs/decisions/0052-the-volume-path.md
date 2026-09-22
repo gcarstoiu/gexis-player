@@ -164,6 +164,28 @@ there the whole point is that there is one number and it is true.
    percentage is republished either way, because the scale moved even when
    the level did not.
 
+### Verified on hardware, 2026-09-22
+
+Panel percentage in, DAC dB out, on the device, with nothing playing:
+
+| panel | ceiling unset | ceiling −10 dB | ceiling −20 dB |
+| --- | --- | --- | --- |
+| 100% | 0.00 dB | **−10.00 dB** | **−20.00 dB** |
+| 75% | −11.00 dB | −21.00 dB | −31.00 dB |
+| 50% | −22.50 dB | −32.50 dB | −42.50 dB |
+| 0% | silence | silence | silence |
+
+100% is the ceiling in every column, and 75%→50% is 11.5 dB in every
+column — the window moved, its steps did not change size.
+
+**One rough edge found doing it:** a number row with a `null` default cannot
+be written back to `null` through the API (`{"value": null}` is rejected as
+"expected a number"), so a ceiling cannot be *cleared* from the settings
+screen once set. For this row it is cosmetic — `0` dB is the DAC's own
+maximum and behaves identically to unset, and `ceiling_db()` treats any
+value at or above 0 as no ceiling. It is noted here because the next
+nullable number row may not be so lucky.
+
 ### What this does not do
 
 It does not make the panel's number equal the renderer's. That is a
