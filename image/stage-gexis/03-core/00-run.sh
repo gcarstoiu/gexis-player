@@ -31,6 +31,15 @@ install -D -m 644 files/gexis-boot-volume.service \
 # the confirmation would have decided nothing. The agent trusts what it was
 # told to, and `bt_autotrust` became a real switch rather than a description
 # of something that happened regardless.
+#
+# **Deleted here, not merely un-installed.** Builds are warm - the stage
+# rootfs is preserved between them (`CONTINUE=1`), so a file an earlier
+# build wrote stays until something removes it. Not removing it shipped an
+# enabled unit whose module no longer exists: it would have failed at every
+# boot and retried every two seconds for ever. Found by
+# `image/verify-image.sh` against the built artefact, 2026-09-22.
+rm -f "${ROOTFS_DIR}/etc/systemd/system/gexis-bluetooth-trust.service" \
+	"${ROOTFS_DIR}/etc/systemd/system/multi-user.target.wants/gexis-bluetooth-trust.service"
 install -D -m 644 files/gexis-meter.service \
 	"${ROOTFS_DIR}/etc/systemd/system/gexis-meter.service"
 

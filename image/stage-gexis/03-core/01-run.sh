@@ -42,11 +42,22 @@ fi
 # see 02-renderers/01-run.sh's comment on why this is -L, not -e.
 for f in \
 	"${ROOTFS_DIR}/etc/systemd/system/multi-user.target.wants/gexis-core.service" \
-	"${ROOTFS_DIR}/etc/systemd/system/multi-user.target.wants/gexis-boot-volume.service" \
-	"${ROOTFS_DIR}/etc/systemd/system/multi-user.target.wants/gexis-bluetooth-trust.service"
+	"${ROOTFS_DIR}/etc/systemd/system/multi-user.target.wants/gexis-boot-volume.service"
 do
 	if [ ! -L "${f}" ]; then
 		echo "ERROR: ${f} missing after install" >&2
+		exit 1
+	fi
+done
+
+# And the one that must NOT be there: ADR-0045 removed it, and a warm build
+# keeps whatever an earlier one wrote until it is deleted.
+for f in \
+	"${ROOTFS_DIR}/etc/systemd/system/gexis-bluetooth-trust.service" \
+	"${ROOTFS_DIR}/etc/systemd/system/multi-user.target.wants/gexis-bluetooth-trust.service"
+do
+	if [ -e "${f}" ] || [ -L "${f}" ]; then
+		echo "ERROR: ${f} still present; ADR-0045 removed it" >&2
 		exit 1
 	fi
 done
