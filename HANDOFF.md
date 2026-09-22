@@ -88,6 +88,20 @@ spectrum-only skin with no engine draws nothing at all; and the engine's own
 process's account of itself, and on a screen only pixels are evidence.**
 `grim` on the device takes the capture, and Claude can read the PNG.
 
+**Two more he found after that, and only one of them was new.**
+
+- **The needles shook, and had been shaking since Phase 5.** The engine's
+  pipe drain reports *zero level* when a poll finds no new frame, and 47 of
+  117 reads in five seconds found none while music played — each zero going
+  into a four-deep smoothing buffer. The drain now holds the last frame,
+  which is what our own `FifoSource` has always done with the same pipes.
+  Measured before and after, frame by frame; the pre-9h driver paces the
+  same, so nothing this week caused it.
+- **The picker's preview was cropped on a laptop.** A 16:10 box at the full
+  width of the pane, with the picture `cover`ed into it: on a wide, short
+  window `max-height` beat `aspect-ratio` and the skin lost its edges. The
+  picture keeps its own shape now, at four viewports checked.
+
 **What 9h landed before that:**
 
 - **Three kinds of skin, not two** — 77 meters, 9 spectrum, 13 both, counted
