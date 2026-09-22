@@ -801,6 +801,7 @@
         "note": "One name for everything: the mDNS hostname, the LMS player, the Spotify Connect device and the Bluetooth name. There is no per-service override. Changing it takes effect at the next restart.",
         "default": null,
         "restart": true,
+        "warn": "Saving writes the name to all four services. Nothing on the network changes until the device restarts \u2014 anything playing keeps playing.",
         "placeholder": "Device name"
       },
       {

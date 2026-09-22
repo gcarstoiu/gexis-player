@@ -98,6 +98,21 @@ at 100% before the user commits.
 **A choice can now hold back a consequence until it is chosen.** That is worth
 having exactly where a wrong tap is loud and irreversible, and nowhere else.
 
+**Amended 2026-09-22: `warn` is also a plain string, and then it is about
+the row.** The drop gives `device_name` one. The difference is when it is
+shown: an object waits for its option, a string is up the whole time the
+sheet is open, because what it describes happens whatever is typed. A string
+is only allowed on a row that takes a value, since a row with no sheet has
+nowhere to show it.
+
+**The `device_name` warning is worded for this device, not as the drop
+writes it.** The drop says *"Saving restarts the services that carry the
+name. Anything playing stops."* On this device it does not:
+[ADR-0048](0048-how-the-device-name-reaches-four-services.md) writes all four
+and applies none until the next restart, deliberately, so a device that is
+playing keeps playing. The mechanic is the design's; the sentence has to
+match what happens, or the warning is the thing that is wrong.
+
 ### 3. `onlyWhen` — conditional visibility
 
 `onlyWhen: [key, value]` hides a row unless that key holds that value, with an

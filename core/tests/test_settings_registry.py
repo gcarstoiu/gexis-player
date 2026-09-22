@@ -392,9 +392,13 @@ def test_the_loader_rejects_a_vocabulary_that_cannot_work(tmp_path):
         load_registry(write(rows(
             {"key": "a", "type": "choice", "options": ["x"], "warn": {"y": "boom"}}
         )))
-    # warn on something that is not a choice
+    # a per-option warn on something that is not a choice
     with pytest.raises(ValueError, match="only for a choice"):
         load_registry(write(rows({"key": "a", "type": "toggle", "warn": {"x": "boom"}})))
+    # a row-level warn on a row that takes no value: there is no sheet to
+    # show it in (ADR-0044 §2, amended 2026-09-22)
+    with pytest.raises(ValueError, match="takes a value"):
+        load_registry(write(rows({"key": "a", "type": "readonly", "warn": "boom"})))
     # optionsFrom naming a source nothing provides
     with pytest.raises(ValueError, match="unknown optionsFrom"):
         load_registry(write(rows({"key": "a", "type": "choice", "optionsFrom": "nope"})))
@@ -407,7 +411,22 @@ def test_the_loader_rejects_a_vocabulary_that_cannot_work(tmp_path):
         {"key": "b", "type": "choice", "optionsFrom": "skin_corpus"},
         {"key": "c", "type": "list", "empty": "Nothing found."},
         {"key": "d", "type": "toggle", "onlyWhen": ["a", "x"]},
+        # the string form: about the row, not about one of its values
+        {"key": "e", "type": "text", "warn": "This one bites."},
     )))
+
+
+def test_the_device_name_warning_says_what_this_device_does():
+    """The 2026-09-22 drop gives `device_name` a warning that says saving
+    *restarts the services*. **It does not**: ADR-0048 writes all four and
+    applies none of them until the next restart, on purpose, so the drop's
+    sentence would describe a device that does not exist. The mechanic is
+    the design's; the wording is this device's."""
+    row = next(r for r in _rows() if r["key"] == "device_name")
+    assert isinstance(row["warn"], str)
+    assert row["restart"] is True
+    assert "until the device restarts" in row["warn"]
+    assert "restarts the services" not in row["warn"]
 
 
 def test_the_shipped_registry_hides_twenty_rows_and_shows_the_rest():

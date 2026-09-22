@@ -121,12 +121,23 @@ def load_registry(path: Path = REGISTRY_PATH) -> list[dict]:
             source = row.get("optionsFrom")
             if source is not None and source not in OPTION_SOURCES:
                 raise ValueError(f"{key}: unknown optionsFrom {source!r}")
-            if row.get("warn") is not None:
-                if kind != "choice":
-                    raise ValueError(f"{key}: warn is only for a choice row")
-                unknown = set(row["warn"]) - set(row.get("options") or ())
-                if unknown:
-                    raise ValueError(f"{key}: warn names options that do not exist: {sorted(unknown)}")
+            warn = row.get("warn")
+            if warn is not None:
+                # ADR-0044 §2, amended 2026-09-22 for `device_name`: **two
+                # forms**. A string warns about the row - it is shown
+                # whenever the sheet is open, because what it describes
+                # happens whatever is typed. An object warns about one
+                # option and appears when that option is picked, which only
+                # a choice has.
+                if isinstance(warn, str):
+                    if kind not in SETTABLE:
+                        raise ValueError(f"{key}: warn is for a row that takes a value")
+                elif kind != "choice":
+                    raise ValueError(f"{key}: a per-option warn is only for a choice row")
+                else:
+                    unknown = set(warn) - set(row.get("options") or ())
+                    if unknown:
+                        raise ValueError(f"{key}: warn names options that do not exist: {sorted(unknown)}")
             only = row.get("onlyWhen")
             if only is not None and (not isinstance(only, list) or len(only) != 2):
                 raise ValueError(f"{key}: onlyWhen is [key, value]")

@@ -721,9 +721,16 @@
         {#if joinItem && sheet.note}<div class="sheet__note">{sheet.note}</div>{/if}
       </div>
 
-      <!-- ADR-0044 §2: a per-option warning, shown once that option is
-           selected and before it is committed. -->
-      {#if choicePending !== null && sheet.warn?.[choicePending]}
+      <!-- ADR-0044 §2, both forms. A **string** warns about the row and is
+           shown the whole time the sheet is open, because what it describes
+           happens whatever is typed (`device_name`); an **object** warns
+           about one option and waits until that option is picked. -->
+      {#if typeof sheet.warn === 'string'}
+        <div class="warn">
+          <span class="warn__mark">!</span>
+          <span class="warn__text">{sheet.warn}</span>
+        </div>
+      {:else if choicePending !== null && sheet.warn?.[choicePending]}
         <div class="warn">
           <span class="warn__mark">!</span>
           <span class="warn__text">{sheet.warn[choicePending]}</span>
