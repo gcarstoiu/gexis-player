@@ -15,8 +15,26 @@ subphases, split on George's agreement (2026-09-22):
   not one of them wired, ADR-0046's fixed output never built — and **three
   symptoms George found on the built panel**: the level does not move
   smoothly, it hops after a cold boot, and the maximum feels different
-  between renderers. The subphase **opens with a finding**, because the boot
-  level and the travel curve are decisions to make *from* those numbers.
+  between renderers. **[Finding 045](docs/findings/045-the-volume-path-measured.md)
+  is the first half**, done 2026-09-22, everything that needed nobody at the
+  speakers:
+  - **The jumps are the drag's sampling.** A 200 ms drag delivers 6 of 12
+    finger positions to the DAC, in **4 dB steps**; a 2 s drag delivers all
+    60, in 0.45 dB steps. The panel sends one request at a time and keeps
+    only the latest, so the hardware hears a staircase.
+  - **A write costs 16.4 ms and two thirds of that is ours** — the `amixer`
+    subprocess. libasound directly is 5.7 ms, of which 5.7 is the DAC's own
+    I²C; the dummies take 0.021 ms. So the daemon could **ramp**: 4 dB is
+    eight steps and 46 ms.
+  - **The boot hop is 53 dB, at thirteen seconds.** The boot service sets
+    −90 dB, squeezelite starts, LMS pushes its remembered 25%, and the
+    daemon mirrors it: −37 dB. At LMS 100% that would be **+90 dB**.
+    **`boot_volume` does not survive the first renderer**, which changes the
+    question George owes an answer to.
+  - **The meter is a pre-attenuation tap**, so "does one renderer deliver a
+    quieter stream" can be answered **with the room silent**. LMS delivers
+    full scale at any slider position; Spotify and Bluetooth need a phone
+    connected, and nothing else.
 - **9j — which output.** The device has four cards and the user has never
   been offered the choice. All three renderers already play to one PCM, so
   the switch is two lines of `/etc/alsa/conf.d/output.conf` and the meter
