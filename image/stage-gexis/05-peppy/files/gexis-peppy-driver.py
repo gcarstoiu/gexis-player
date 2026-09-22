@@ -579,6 +579,49 @@ class SpectrumState:
             os.chdir(here)
 
 
+def hold_the_last_frame(data_source) -> None:
+    """**"No frame this tick" is not "silence".**
+
+    The engine's `get_latest_pipe_data` starts each call with `[0, 0, 0, 0]`
+    and overwrites it only if a read returns bytes - so a poll that finds the
+    pipe empty reports *zero level*. It polls every 43 ms while the daemon
+    writes every 33, and measured on the device **40% of its reads find
+    nothing**: 47 of 117 over five seconds, with music playing. Each of those
+    zeros then goes into a four-deep smoothing buffer, so the needle spends
+    its life averaging real levels with invented silence - it was reading
+    21, 20, 12, 12, 19, 13, 12, 19 for a steady passage. That is the shake
+    George saw, on meters and spectrum alike.
+
+    This replaces the drain with one that holds the last frame when the pipe
+    has nothing new, which is what `gexis_core.meters.FifoSource` already
+    does on our side of the same pipes and for the same reason. A *real*
+    silent frame still reads as silence: it arrives as bytes.
+
+    Patched on the instance, not in the engine: the same composition point as
+    the touch reporter below, and ADR-0026 keeps the vendored engines
+    unmodified.
+    """
+    last = [0, 0, 0, 0]
+
+    def latest():
+        nonlocal last
+        frame = None
+        while True:
+            try:
+                data = os.read(data_source.pipe, 4)
+            except (BlockingIOError, OSError):
+                break
+            if len(data) != 4:
+                break
+            frame = data
+        if frame is not None:
+            last = [frame[0], frame[1], frame[2], frame[3]]
+        return last
+
+    if getattr(data_source, "pipe", None) is not None:
+        data_source.get_latest_pipe_data = latest
+
+
 def current_track(path: Path = Path("/var/local/www/currentsong.txt")) -> str | None:
     """Which track is playing, from the file the core daemon already writes
     (Phase 3 criterion 4). Cheaper than a second WebSocket client, and it
@@ -802,6 +845,7 @@ def main() -> int:
         rects = [r for r in getattr(spectrum, "_dirty_rects", []) if r]
         pygame.display.update(rects or [util.screen_rect])
 
+    hold_the_last_frame(peppy.meter.data_source)
     report_touches_to_the_daemon()
     peppy.dependent = per_frame
     peppy.start_display_output()

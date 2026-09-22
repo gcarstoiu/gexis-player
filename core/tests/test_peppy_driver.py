@@ -197,3 +197,58 @@ def test_a_pack_with_one_directory_is_still_a_corpus(tmp_path):
     meters = _pack(tmp_path, "templates", "[01G5_Needle]\nmeter.type = circular\n")
     skins, _ = driver.load_corpus(meters.parent, "1280x800")
     assert list(skins) == ["01G5_Needle"]
+
+
+# ── the needle's data (ADR-0051, after the shake) ────────────────────────
+
+
+class _Source:
+    """Just enough of the engine's data source: a real pipe and the attribute
+    the drain reads it from."""
+
+    def __init__(self, fd):
+        self.pipe = fd
+        self.get_latest_pipe_data = lambda: [0, 0, 0, 0]
+
+
+def test_a_tick_with_no_frame_holds_the_last_one(tmp_path):
+    """**"No frame this tick" is not "silence".** The engine's own drain
+    starts from `[0, 0, 0, 0]` and returns that when the pipe is empty, which
+    on the device happened to 40% of its reads - and each zero went into a
+    four-deep smoothing buffer, so the needle shook. Ours holds."""
+    import os
+
+    read_fd, write_fd = os.pipe()
+    os.set_blocking(read_fd, False)
+    source = _Source(read_fd)
+    driver.hold_the_last_frame(source)
+    latest = source.get_latest_pipe_data
+    try:
+        # nothing written yet: zero, because nothing has ever been true
+        assert latest() == [0, 0, 0, 0]
+
+        os.write(write_fd, bytes([60, 0, 61, 0]))
+        assert latest() == [60, 0, 61, 0]
+        # the pipe is empty now, and the level is still what it was
+        assert latest() == [60, 0, 61, 0]
+        assert latest() == [60, 0, 61, 0]
+
+        # **a real silent frame is still silence**: it arrives as bytes
+        os.write(write_fd, bytes([0, 0, 0, 0]))
+        assert latest() == [0, 0, 0, 0]
+
+        # several frames queued: the newest wins, the older ones are stale
+        os.write(write_fd, bytes([10, 0, 10, 0]) + bytes([20, 0, 20, 0]))
+        assert latest() == [20, 0, 20, 0]
+    finally:
+        os.close(read_fd)
+        os.close(write_fd)
+
+
+def test_a_source_with_no_pipe_is_left_alone():
+    """A data source that is not the pipe kind - the constant and noise
+    generators upstream ships - has nothing to hold."""
+    source = _Source(None)
+    original = source.get_latest_pipe_data
+    driver.hold_the_last_frame(source)
+    assert source.get_latest_pipe_data is original
