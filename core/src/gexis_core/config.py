@@ -86,10 +86,17 @@ class Config:
     # peppyalsa pipes are read by that service alone - a FIFO splits its
     # bytes between readers - and it republishes on the passthrough pair,
     # which is what our vendored PeppyMeter is pointed at.
-    meter_fifo: str = "/tmp/peppymeter"
-    spectrum_fifo: str = "/tmp/peppyspectrum"
-    meter_passthrough: str = "/tmp/gexis-peppymeter"
-    spectrum_passthrough: str = "/tmp/gexis-peppyspectrum"
+    # **In /run, not /tmp** (ADR-0011, amended 2026-09-22). `bluealsa-aplay`
+    # ships with `PrivateTmp=yes`, so peppyalsa loaded inside it opened
+    # `/tmp/peppymeter` in a *private* /tmp - a different file with no
+    # reader - and got ENXIO on every period, for ever. The visualiser was
+    # blind for the whole of Bluetooth and nothing said so. /run/gexis is
+    # where this device's runtime files already live and no sandbox hides
+    # it.
+    meter_fifo: str = "/run/gexis/meter.fifo"
+    spectrum_fifo: str = "/run/gexis/spectrum.fifo"
+    meter_passthrough: str = "/run/gexis/meter-peppy.fifo"
+    spectrum_passthrough: str = "/run/gexis/spectrum-peppy.fifo"
     spectrum_bands: int = 30  # peppyalsa's spectrum_size, output.conf
     meter_frame_rate: int = 30  # the skins' own ui.refresh.period, ADR-0015
     meter_port: int = 8091

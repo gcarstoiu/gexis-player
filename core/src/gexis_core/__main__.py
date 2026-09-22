@@ -13,7 +13,7 @@ import aiohttp
 from dbus_next import BusType
 from dbus_next.aio import MessageBus
 
-from gexis_core import alsa, bluetooth_adapter_state, bluetooth_agent, device_name, skins, wifi
+from gexis_core import alsa, bluetooth_adapter_state, bluetooth_agent, device_name, meters, skins, wifi
 from gexis_core.adapters.base import VolumeMechanism
 from gexis_core.adapters.bluetooth import BluetoothAdapter
 from gexis_core.adapters.lms import LmsAdapter
@@ -520,6 +520,20 @@ async def main() -> None:
     # holding a value its own row no longer offers.
     if settings.value("skin_corpus") == "Random":
         settings.set("skin_corpus", skins.ALL)
+
+    # **The visualiser's four pipes, made by the one process that can.**
+    # peppyalsa (inside each renderer) and the meter service open them; this
+    # daemon is root and owns /run/gexis, so it creates them. Until
+    # 2026-09-22 they lived in /tmp, where `bluealsa-aplay`'s `PrivateTmp=yes`
+    # hid ours from it and the visualiser was blind for the whole of
+    # Bluetooth (ADR-0011, amended).
+    for fifo in (
+        config.meter_fifo,
+        config.spectrum_fifo,
+        config.meter_passthrough,
+        config.spectrum_passthrough,
+    ):
+        meters.ensure_fifo(fifo)
 
     # The driver starts with whatever this says, so it is written once here
     # rather than only on a change: a device that has never touched the three

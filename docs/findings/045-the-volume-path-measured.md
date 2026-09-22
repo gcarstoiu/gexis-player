@@ -322,14 +322,58 @@ and the `bluealsa-aplay` restart I ran at 17:50 to test §8's meter, fifteen
 minutes earlier. A reproduction would need the control channel to fail
 again, which is not something this side can arrange.
 
+## 11. The blind meter, found: `PrivateTmp`
+
+§8 left two readings open — a phone sending near-silence, or a meter that
+cannot see the stream. With the DAC free, everything that could plausibly
+differ between `bluealsa-aplay` and a plain player was tested, and a 1 kHz
+tone through the same `pcm.output` read a steady **85** in every one:
+
+| | meter |
+|---|---|
+| as `pi`, normal transfer | 85 |
+| as **root** (what bluealsa-aplay is) | 85 |
+| **mmap** transfer, and root + mmap | 85 |
+| **non-blocking** open | 85 |
+| tiny periods (256 / 1024) | 85 |
+| through `plug:` | 85 |
+
+Restarting our reader mid-playback did not break it either: the meter
+recovered at once.
+
+**The answer came from the process's own open files.** A healthy player
+holds `/tmp/peppymeter` and `/tmp/peppyspectrum`; `bluealsa-aplay`'s worker
+held only `/dev/snd/controlC3` and `/dev/snd/pcmC5D0p` — no FIFOs — while
+`libpeppyalsa.so` *was* mapped into it. So the scope was loaded and its
+pipes were not open. `strace` then gave the reason in the kernel's own
+words, repeated every period:
+
+```
+openat("/tmp/peppymeter", O_WRONLY|O_NONBLOCK) = -1 ENXIO (No such device or address)
+openat("/tmp/peppyspectrum", O_WRONLY|O_NONBLOCK) = -1 ENXIO
+```
+
+`ENXIO` on a FIFO opened write-only means **no reader** — while our service
+held one open, on the same inode by every check we could make from outside.
+
+**`bluealsa-aplay.service` ships with `PrivateTmp=yes`.** It has its own
+`/tmp`, so it was creating and writing a different file of the same name,
+which nothing reads. `squeezelite` and `go-librespot` have `PrivateTmp=no`,
+which is why LMS and Spotify metered correctly and why Phase 5's proving
+never caught it.
+
+**Fixed by moving the four pipes to `/run/gexis`** (ADR-0011, amended), with
+the daemon creating them. Verified end to end while George's phone played:
+the worker now holds `/run/gexis/meter.fifo` and `/run/gexis/spectrum.fifo`,
+the meter reads a live signal, and a screenshot of the panel shows the VU
+needles moving with the Bluetooth mark under them.
+
 ## What is left, and what it needs
 
 **Silent, but needs a phone connected** — no listening, just a stream:
 
-1. **Whether §8's silence is the phone or the meter** — one ear, one phone.
-   George has since confirmed the audio *is* audible, so the meter being
-   blind (§8) stands as the likelier of the two readings and wants the same
-   A/B as §9.
+1. ~~**Whether §8's silence is the phone or the meter**~~ — **answered in
+   §11: the meter, and `PrivateTmp` is why.**
 2. **Whether Spotify's or Bluetooth's remembered level overrides the boot
    level** the way LMS's does. Spotify's restore is already known to be
    240/240 on acquisition, which is the loudest the device can be.

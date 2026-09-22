@@ -16,7 +16,9 @@ from __future__ import annotations
 import errno
 import logging
 import os
+import stat
 import struct
+from pathlib import Path
 from dataclasses import dataclass
 
 logger = logging.getLogger("gexis_core.meters")
@@ -50,6 +52,35 @@ def parse_meter(frame: bytes) -> tuple[int, int]:
 
 def parse_spectrum(frame: bytes) -> tuple[int, ...]:
     return struct.unpack(f"<{len(frame) // 4}I", frame)
+
+
+def ensure_fifo(path: str) -> bool:
+    """Create the FIFO if it is missing, writable by anyone.
+
+    **Every writer is a different process under a different user** -
+    peppyalsa loaded inside each renderer, this daemon for the passthrough
+    pair - and the renderers are not ours to run as a chosen user. A FIFO in
+    `/run/gexis` carries levels and nothing else, so the mode is permissive
+    and the directory is what limits reach.
+
+    Created here, by the daemon that runs as root, rather than left to
+    whoever opens first: peppyalsa creates one itself if it can, and a
+    renderer that cannot write the directory would simply go blind (ADR-0011,
+    amended 2026-09-22).
+    """
+    try:
+        Path(path).parent.mkdir(parents=True, exist_ok=True)
+        try:
+            os.mkfifo(path, 0o666)
+        except FileExistsError:
+            if not stat.S_ISFIFO(os.stat(path).st_mode):
+                logger.warning("meters: %s exists and is not a FIFO", path)
+                return False
+        os.chmod(path, 0o666)  # mkfifo's mode is masked by umask
+        return True
+    except OSError as exc:
+        logger.warning("meters: cannot create %s: %s", path, exc)
+        return False
 
 
 def open_fifo(path: str) -> int | None:
