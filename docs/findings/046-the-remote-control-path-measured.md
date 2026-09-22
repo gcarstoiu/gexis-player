@@ -158,6 +158,61 @@ than a nicety — the panel was already delivering a *sample* of a drag
 the ear hears depends on the ramp filling it in, which is measured to take
 46 ms for a 4 dB gap.
 
+## 8. LMS pushes a status frame when only the volume changes — after half a second
+
+The cheap way to learn LMS's number is the CometD subscription the adapter
+already holds. It does carry it: every status result has `mixer volume`, and
+LMS pushes a fresh one on a volume change and nothing else.
+
+| set to | frames pushed | value | first frame after |
+| --- | --- | --- | --- |
+| 30 | 1 | 30 | **526 ms** |
+| 60 | 1 | 60 | 523 ms |
+| 45 | 1 | 45 | 527 ms |
+
+**Half a second is fast enough to follow somebody else's remote and far too
+slow to drag against**, which is why the panel's own position is displayed
+as it is sent rather than when LMS agrees. It costs no extra request: the
+subscription is already open, and our own tag set already fetches the field.
+
+## 9. The seam at release, in numbers
+
+With nothing active the panel has no renderer to be a remote for, so it
+falls back to the hardware's own percentage over ADR-0034's −45…0 dB window
+(ADR-0053 §4). The renderer's window is −38.1…0. **They are different
+scales, so the number moves at the moment the renderer lets go, while the
+level does not.**
+
+Measured on the device (2026-09-22): LMS powered on at 55 read **55%** on
+the panel; a second after `power 0` the same level read **16%** — though
+that run had the pause-fade gate holding the DAC at −38 dB, so 16% is the
+floor rather than a typical seam.
+
+The seam under playback, from the measured dB of each control position:
+
+| Bluetooth | renderer's number | fallback, −45 window | fallback, −38.1 window |
+| --- | --- | --- | --- |
+| dummy 32 | 25% | 37% | **25%** |
+| dummy 64 | 50% | 58% | **50%** |
+| dummy 96 | 76% | 79% | **76%** |
+
+| LMS | renderer's number | fallback, −45 | fallback, −38.1 |
+| --- | --- | --- | --- |
+| dummy 27 | 25 | 33% | 21% |
+| dummy 59 | 45 | 55% | 46% |
+| dummy 77 | 55 | 67% | 61% |
+
+**The panel's window is the whole seam for Bluetooth.** Move it from −45 to
+−38.1 — the window the renderers actually span — and Bluetooth's two numbers
+are the same number at every position, because both are then the same linear
+map of the same dB. LMS keeps a smaller seam whatever is done, because
+squeezelite's curve is its own and LMS 10 and LMS 0 both land on the
+control's floor.
+
+**Not proposed here, because it changes what every existing percentage
+means** — ADR-0034 chose −45…0 deliberately — and it is George's to decide.
+Stated because the seam is real and this is its size.
+
 ## What is left, and what it needs
 
 **Needs George's phone:**
@@ -173,5 +228,8 @@ the ear hears depends on the ramp filling it in, which is measured to take
 
 **Needs playback**, which needs him at the amplifier: every number here is a
 transport cost with the DAC deliberately out of the loop. The full
-panel-to-sound latency has not been measured end to end in the remote model,
-because the model does not exist yet.
+panel-to-sound latency has not been measured end to end in the remote model.
+
+**Decided, not measured:** whether the panel's own window should become
+−38.1…0 to close §9's seam. It is a behaviour change to every percentage on
+the device.

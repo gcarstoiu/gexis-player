@@ -76,6 +76,14 @@ people touch while listening, but a level set at idle will not be the same
 percentage once a renderer takes over — the same event that already
 overrides it today (Finding 045 §5).
 
+**Its size is measured** (Finding 046 §9). The panel's fallback window is
+ADR-0034's −45…0 dB and the renderers span −38.1…0, so at mid-travel
+Bluetooth's 50% reads as 58% the moment it lets go. **Almost all of that is
+the panel's window, not the model**: at −38.1…0 the two numbers are
+identical at every Bluetooth position, and LMS's seam shrinks from 10 points
+to 1–6. Changing it would change what every percentage on the device means,
+so it is left as a question for George rather than taken here.
+
 ### 5. `max_ceiling` still means what ADR-0052's amendment says
 
 The renderer's value reaches the DAC through the same map, which carries the
@@ -146,9 +154,12 @@ loop.
 
 ## Open, for George
 
-1. **The seam in §4** — the number meaning "the device" at idle and "the
-   renderer" while playing. The alternative is no slider at all when nothing
-   is active, which is worse.
+1. **The seam in §4, and the cheap way to almost close it.** Moving the
+   panel's own window from −45…0 dB to −38.1…0 — the window the renderers
+   actually span — makes Bluetooth's two numbers identical at every
+   position and shrinks LMS's seam from 10 points to 1–6 (Finding 046 §9).
+   It also changes what every existing percentage on the device means, and
+   ADR-0034 chose −45 deliberately, so it is not taken here.
 2. **Whether §6 is right**: mute local, not sent onward.
 3. **Bluetooth's outbound leg is inference until a phone shows it.** If it
    turns out a phone will not follow our push, Bluetooth keeps two numbers
