@@ -2023,25 +2023,34 @@
     text-transform: uppercase;
     color: var(--ink-quiet);
   }
+  /* **The picture is the frame, and it is never cropped.** The box was a
+     16:10 rectangle at the full width of the pane with the picture `cover`ed
+     into it, which is right on the panel and wrong everywhere else: on a
+     laptop the pane is wide and short, `max-height` won the argument with
+     `aspect-ratio`, and the box ended up wider than the skin - so the skin
+     was cut and only its middle was shown (George, 2026-09-22). Now the box
+     only says how much room there is; the picture takes what it needs of it
+     and keeps its own shape, whatever the viewport. */
   .pane__art {
-    position: relative;
-    flex-shrink: 0;
-    width: 100%;
-    aspect-ratio: 16 / 10;
+    flex: 0 1 auto;
+    min-height: 0;
     max-height: 58%;
-    border-radius: var(--r-lg);
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     overflow: hidden;
-    background: var(--bg-well);
-    border: 1px solid rgba(233, 238, 242, 0.14);
   }
   .pane__art img {
-    position: absolute;
-    inset: 0;
-    width: 100%;
-    height: 100%;
-    /* The skin's own 1280x800 picture in a 16:10 box, so `cover` crops
-       nothing; it is here for a pack whose pictures are shaped otherwise. */
-    object-fit: cover;
+    max-width: 100%;
+    max-height: 100%;
+    width: auto;
+    height: auto;
+    object-fit: contain;
+    border-radius: var(--r-lg);
+    background: var(--bg-well);
+    border: 1px solid rgba(233, 238, 242, 0.14);
+    box-sizing: border-box;
   }
   .pane__text {
     flex: 1;
