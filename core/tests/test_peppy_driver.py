@@ -85,7 +85,7 @@ def test_a_selection_is_read_once_per_change(tmp_path):
     selection = driver.Selection(path)
     # Nothing there yet: the defaults stand and nothing has changed.
     assert selection.reload() is False
-    assert (selection.corpus, selection.skin, selection.rotate) == ("Random", None, True)
+    assert (selection.corpus, selection.skin, selection.rotate) == ("All", None, True)
 
     _write(path, corpus="Spectrum", skin="101G5_Bars", rotate=False)
     assert selection.reload() is True
@@ -124,6 +124,8 @@ def test_the_corpus_word_decides_the_pool():
         ("VU meters", ["01G5_Needle"]),
         ("Spectrum", ["101G5_Bars"]),
         ("VU meters + spectrum", ["102G5_Both"]),
+        ("All", list(SKINS)),
+        # still understood, for a file written before the 2026-09-22 rename
         ("Random", list(SKINS)),
     ]:
         selection.corpus = word

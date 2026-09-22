@@ -628,18 +628,6 @@
         ]
       },
       {
-        "key": "idle_minmax",
-        "type": "toggle",
-        "label": "Show min and max",
-        "marks": "N",
-        "note": null,
-        "default": true,
-        "onlyWhen": [
-          "idle_weather",
-          true
-        ]
-      },
-      {
         "key": "idle_icons",
         "type": "choice",
         "label": "Weather icons",
@@ -688,12 +676,12 @@
         "type": "choice",
         "label": "Skins",
         "marks": "R",
-        "note": "What the visualiser draws from: needles, bars, or both together. Random takes any of the three. Which skin, and whether it changes with the track, is the row below.",
+        "note": "What the visualiser draws from: needles, bars, or both together. All takes any of the three. Which skin, and whether it changes with the track, is the row below.",
         "options": [
           "VU meters",
           "Spectrum",
           "VU meters + spectrum",
-          "Random"
+          "All"
         ],
         "default": "VU meters"
       },
@@ -801,7 +789,7 @@
         "note": "One name for everything: the mDNS hostname, the LMS player, the Spotify Connect device and the Bluetooth name. There is no per-service override. Changing it takes effect at the next restart.",
         "default": null,
         "restart": true,
-        "warn": "Saving writes the name to all four services. Nothing on the network changes until the device restarts \u2014 anything playing keeps playing.",
+        "warn": "Change only takes place after a restart of the device.",
         "placeholder": "Device name"
       },
       {

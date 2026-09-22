@@ -138,7 +138,7 @@ def test_a_skin_says_what_it_shows_and_absence_means_a_meter():
     }
 
 
-def test_the_setting_selects_by_kind_and_random_takes_all():
+def test_the_setting_selects_by_kind_and_all_takes_everything():
     """George, 2026-09-21: three kinds where the setting offered two, plus
     one that takes any of them. **The two it offered were directories** -
     and `templates/` is not the meter corpus: the stock pack's copy of it
@@ -149,6 +149,10 @@ def test_the_setting_selects_by_kind_and_random_takes_all():
     assert picked("VU meters") == ["01G5_Accuphase"]
     assert picked("Spectrum") == ["103G5_Marschal Spectrum"]
     assert picked("VU meters + spectrum") == ["101G5_Free S+M"]
+    assert len(picked("All")) == 3
+    # `All` was called `Random` until 2026-09-22 and a device may still hold
+    # the old word (George: *"rename Random to All since it makes more
+    # sense"* - `skin_rotate` is the one that is random).
     assert len(picked("Random")) == 3
     # An unknown choice is every skin rather than none: a screen with
     # nothing to draw is worse than one drawing from the wrong pool.
@@ -166,11 +170,14 @@ def test_the_shipped_corpus_has_all_three_kinds(corpus):
 
 
 def test_the_registry_offers_exactly_those_four():
+    """Four words, and `Random` is not one of them any more - it survives in
+    `CORPUS` only so a value stored before the rename still resolves."""
     from gexis_core.settings_registry import load_registry
 
     row = next(r for g in load_registry() for r in g["rows"] if r.get("key") == "skin_corpus")
-    assert row["options"] == list(CHOICES)
+    assert row["options"] == ["VU meters", "Spectrum", "VU meters + spectrum", "All"]
     assert row["default"] == "VU meters"
+    assert set(row["options"]) < set(CHOICES)
 
 
 # ── what the picker asks for (ADR-0050) ──────────────────────────────────

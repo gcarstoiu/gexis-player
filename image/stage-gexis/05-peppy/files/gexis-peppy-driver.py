@@ -53,10 +53,13 @@ METERS, SPECTRUM, BOTH = "meters", "spectrum", "both"
 #: The `skin_corpus` words and the kinds each one draws from. The same table
 #: as `gexis_core.skins.CORPUS`; the two processes share no code, so they
 #: share the words instead.
+ALL = "All"
 CORPUS = {
     "VU meters": (METERS,),
     "Spectrum": (SPECTRUM,),
     "VU meters + spectrum": (BOTH,),
+    ALL: (METERS, SPECTRUM, BOTH),
+    # Understood, for a selection written before the 2026-09-22 rename.
     "Random": (METERS, SPECTRUM, BOTH),
 }
 
@@ -81,7 +84,7 @@ class Selection:
 
     def __init__(self, path: Path = SELECTION_PATH) -> None:
         self.path = path
-        self.corpus = "Random"
+        self.corpus = ALL
         self.skin: str | None = None
         self.rotate = True
         self._stamp: int | None = None
@@ -101,7 +104,7 @@ class Selection:
             print(f"peppy: {self.path} unreadable: {exc}", file=sys.stderr)
             return False
         was = (self.corpus, self.skin, self.rotate)
-        self.corpus = str(data.get("corpus") or "Random")
+        self.corpus = str(data.get("corpus") or ALL)
         skin = data.get("skin")
         self.skin = str(skin) if skin else None
         self.rotate = data.get("rotate") is not False
@@ -111,7 +114,7 @@ class Selection:
         """The names this corpus offers. An empty pool is not a corpus: a
         word we do not know, or one that selects nothing on this pack, falls
         back to everything rather than to a blank screen."""
-        wanted = CORPUS.get(self.corpus) or CORPUS["Random"]
+        wanted = CORPUS.get(self.corpus) or CORPUS[ALL]
         chosen = [name for name, skin in skins.items() if kind_of(skin) in wanted]
         return chosen or list(skins)
 

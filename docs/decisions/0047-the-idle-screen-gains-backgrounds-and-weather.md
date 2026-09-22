@@ -213,6 +213,11 @@ stores nothing is worse than no row**, so:
   `weather_location`, `idle_days`, `idle_minmax`, `idle_icons` — **hang off
   `idle_weather` instead**, which is what the design meant by them: weather
   is on, so the things that shape it are visible.
+  **`idle_minmax` is gone since 2026-09-22** (George: *"the min and max
+  option in settings you can remove as it is not needed"*). The design draws
+  the day's high and low in both forecast layouts, so the row was a switch
+  for turning off something nobody would; the three that are left still hang
+  off `idle_weather`.
 - **`weather_location` is geocoded once**, through Open-Meteo's own key-free
   geocoding API, and the answer is held for as long as the daemon runs. It is
   **not** stored beside the setting: a coordinate in the database is state the

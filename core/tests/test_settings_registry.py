@@ -61,9 +61,17 @@ DESIGN_KEYS_NOT_YET_IN_THE_REGISTRY: set[str] = set()
 #:
 #: `weather_key` gates four rows in the drop on the assumption that a weather
 #: provider needs a key. **Open-Meteo does not** (ADR-0047 §2a, Finding 043),
-#: so the row would store nothing and gate on nothing. The four rows hang off
-#: `idle_weather` instead. **This set only grows with George's agreement.**
-DESIGN_KEYS_WE_DECLINED = {"weather_key"}
+#: so the row would store nothing and gate on nothing. The three rows left
+#: hang off `idle_weather` instead.
+#:
+#: `idle_minmax` hid the day's high and low. George, 2026-09-22: *"the min
+#: and max option in settings you can remove as it is not needed"* - the
+#: design draws both numbers in both forecast layouts, so the row existed to
+#: turn off something nobody would.
+#:
+#: **This set only grows with George's agreement**, and both of these are
+#: his.
+DESIGN_KEYS_WE_DECLINED = {"weather_key", "idle_minmax"}
 
 
 #: Not a row. The Wi-Fi password sheet builds its key at runtime from the
@@ -425,8 +433,8 @@ def test_the_device_name_warning_says_what_this_device_does():
     row = next(r for r in _rows() if r["key"] == "device_name")
     assert isinstance(row["warn"], str)
     assert row["restart"] is True
-    assert "until the device restarts" in row["warn"]
-    assert "restarts the services" not in row["warn"]
+    # George's own sentence, 2026-09-22.
+    assert row["warn"] == "Change only takes place after a restart of the device."
 
 
 def test_the_shipped_registry_hides_twenty_rows_and_shows_the_rest():
@@ -443,9 +451,9 @@ def test_the_shipped_registry_hides_twenty_rows_and_shows_the_rest():
     # George on 2026-09-21. Then 9h's three: `viz_stop`, `home_strip` and
     # `home_strip_count`. Then `idle_clock`, asked for on 2026-09-22, and
     # `skin`, the picker's own row, which the same day's drop drew
-    # (ADR-0051 §4).
-    assert len(rows) == 72
-    assert len(rows) - len(kept) == 52
+    # (ADR-0051 §4). Less `idle_minmax`, which George removed the same day.
+    assert len(rows) == 71
+    assert len(rows) - len(kept) == 51
 
 
 def test_the_clock_can_be_turned_off_without_taking_the_screen_with_it():
@@ -584,13 +592,13 @@ def test_every_weather_row_hangs_off_the_toggle_now_that_there_is_no_key():
     - which itself hangs off the built-in screen."""
     rows = {r["key"]: r for r in _rows()}
     assert "weather_key" not in rows
-    for key in ("weather_location", "idle_forecast", "idle_minmax", "idle_icons"):
+    for key in ("weather_location", "idle_forecast", "idle_icons"):
         assert rows[key]["onlyWhen"] == ["idle_weather", True], key
     assert rows["idle_weather"]["onlyWhen"] == ["idle_screen", "Built in"]
     # Transitively: an external URL hides all five, not just the toggle.
     values = {k: rows[k].get("default") for k in rows}
     values["idle_screen"] = "External URL"
-    for key in ("idle_weather", "weather_location", "idle_forecast", "idle_minmax", "idle_icons"):
+    for key in ("idle_weather", "weather_location", "idle_forecast", "idle_icons"):
         assert not visible(rows[key], rows, values), key
 
 

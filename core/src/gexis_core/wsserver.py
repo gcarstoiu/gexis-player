@@ -466,8 +466,8 @@ class StateServer:
         """
         if self._skins_dir is None:
             return web.json_response({"error": "skins are not wired up"}, status=503)
-        chosen = str(self._setting_or_none("skin_corpus") or "Random")
-        wanted = skins.CORPUS.get(chosen) or skins.CORPUS["Random"]
+        chosen = str(self._setting_or_none("skin_corpus") or skins.ALL)
+        wanted = skins.CORPUS.get(chosen) or skins.CORPUS[skins.ALL]
         items = [
             {
                 "name": skin.name,

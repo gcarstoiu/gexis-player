@@ -37,19 +37,25 @@ BOTH = "both"
 #: two as they are now. One spectrum only, one vu meters only, and another
 #: vu meters with spectrum"* - plus one that takes any of them.
 #:
-#: **`Random` is not `skin_rotate`.** This says which pool a skin comes
-#: from; that says whether the skin changes with the track.
+#: **The fourth word is `All`, and was `Random` until 2026-09-22.** George:
+#: *"Maybe we also rename Random to All since it makes more sense."* It
+#: does: this says which pool a skin comes from and `skin_rotate` says
+#: whether the skin changes with the track, so two rows reading "random"
+#: described one behaviour between them. `Random` is still understood, for
+#: a value stored before the rename.
+ALL = "All"
 CORPUS = {
     "VU meters": (METERS,),
     "Spectrum": (SPECTRUM,),
     "VU meters + spectrum": (BOTH,),
+    ALL: (METERS, SPECTRUM, BOTH),
     "Random": (METERS, SPECTRUM, BOTH),
 }
 
 
 def in_corpus(skins, corpus: str):
     """The skins a `skin_corpus` choice selects, in corpus order."""
-    wanted = CORPUS.get(corpus) or CORPUS["Random"]
+    wanted = CORPUS.get(corpus) or CORPUS[ALL]
     return [skin for skin in skins if skin.kind in wanted]
 
 

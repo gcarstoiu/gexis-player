@@ -53,7 +53,6 @@
   //: the upper area; **None** drops the band and brings the current
   //: conditions up under the clock, which then centres over them.
   const threeDays = $derived((settings.idle_forecast ?? '3 days') !== 'None');
-  const minmax = $derived(settings.idle_minmax !== false);
   const iconSet = $derived(settings.idle_icons ?? 'Solid');
   //: `idle_clock`, George's row (2026-09-22): *"this way a user can
   //: actually use the panel as a photo frame only"*. The date goes with
@@ -319,7 +318,7 @@
             <div class="now__text">
               <div class="now__line">
                 <span class="now__temp">{degrees(weather.now.temperature)}</span>
-                {#if minmax && today}
+                {#if today}
                   <span class="now__mm">
                     <span class="now__max">{degrees(today.max)}</span>
                     <span class="now__min">{degrees(today.min)}</span>
@@ -342,7 +341,7 @@
           <div class="now__text">
             <div class="now__line">
               <span class="now__temp">{degrees(weather.now.temperature)}</span>
-              {#if minmax && today}
+              {#if today}
                 <span class="now__mm">
                   <span class="now__max">{degrees(today.max)}</span>
                   <span class="now__min">{degrees(today.min)}</span>
@@ -364,7 +363,7 @@
               <WeatherIcon condition={day.condition} set={iconSet} size={100} />
               <span class="day__mm ink">
                 <span class="day__max">{degrees(day.max)}</span>
-                {#if minmax}<span class="day__min">{degrees(day.min)}</span>{/if}
+                <span class="day__min">{degrees(day.min)}</span>
               </span>
             </span>
           {/each}

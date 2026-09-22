@@ -413,7 +413,7 @@ async def main() -> None:
     skins_root = Path(config.peppy_skins_dir)
 
     def skins_offered() -> list[str]:
-        return skins.names(skins_root, str(settings.value("skin_corpus") or "Random"))
+        return skins.names(skins_root, str(settings.value("skin_corpus") or skins.ALL))
 
     def first_skin() -> str | None:
         offered = skins_offered()
@@ -421,7 +421,7 @@ async def main() -> None:
 
     def publish_visualisation(_value: object = None) -> None:
         skins.write_selection(
-            str(settings.value("skin_corpus") or "Random"),
+            str(settings.value("skin_corpus") or skins.ALL),
             settings.value("skin"),
             settings.value("skin_rotate") is not False,
         )
@@ -481,7 +481,7 @@ async def main() -> None:
                "wallpaper_key": None, "wallpaper_topics": None,
                "idle_weather": None,
                "weather_location": None, "idle_forecast": None,
-               "idle_minmax": None, "idle_icons": None,
+               "idle_icons": None,
                "viz_timeout": None, "viz_stop": None,
                # ADR-0051: read by the driver, through the file these write.
                "skin": publish_visualisation,
@@ -497,6 +497,12 @@ async def main() -> None:
                "reboot": lambda _: asyncio.ensure_future(_reboot())},
         on_change=state_store.bump_settings_revision,
     )
+
+    # The fourth corpus word was `Random` until 2026-09-22 and is `All`
+    # now; a device that stored the old one is moved over rather than left
+    # holding a value its own row no longer offers.
+    if settings.value("skin_corpus") == "Random":
+        settings.set("skin_corpus", skins.ALL)
 
     # The driver starts with whatever this says, so it is written once here
     # rather than only on a change: a device that has never touched the three
