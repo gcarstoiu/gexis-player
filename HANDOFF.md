@@ -67,13 +67,26 @@ gives the renderer a file to read: `/run/gexis/visualisation.json`, written
 by the daemon and polled in the driver's frame hook beside
 `nowplaying.json`. No restart, no new channel.
 
-**The corpus is the pack, not the directory.** The engine reads one
-`meters.txt` — `gelo5/templates`, which is 71 skins and, measured, **not one
-spectrum** — so two of the four corpus words would have offered nothing at
-all. The driver loads both of the pack's template directories and swaps
-`base.path` around the factory, the same way it already swaps `meter`. The
-`stock` pack stays installed and stays out: the spectrum engine is pointed
-at Gelo5's sections.
+**The corpus is every pack — 99 skins, 77 meters, 9 spectrum, 13 both.** The
+engine reads one `meters.txt` (`gelo5/templates`, 71 skins and not one
+spectrum), so two of the four corpus words would have offered nothing; the
+driver loads all four template directories and swaps `base.path` around the
+factory, as it already swaps `meter`. **It said 84 for a few hours** — the
+stock pack was excluded on the grounds that the spectrum engine was pointed
+at Gelo5's sections, which described one hardcoded line rather than the
+device. George: *"there were 99 skins in total — why are you telling me now
+that there are only 84?"* The engine follows the skin's pack now.
+
+**And the visualiser was black when he tapped the button** — three faults in
+a row, all introduced the same day, all fixed and this time **verified as
+pixels**: the spectrum config ships root-owned while the unit runs as `pi`,
+so the write that chooses a section killed `main()` after the display
+existed and left a window with no loop behind it, owning every touch; a
+spectrum-only skin with no engine draws nothing at all; and the engine's own
+`meter = random` overwrote the chosen skin on the first frame.
+`docs/LESSONS.md` case 15 is the reason it got that far: **a log line is the
+process's account of itself, and on a screen only pixels are evidence.**
+`grim` on the device takes the capture, and Claude can read the PNG.
 
 **What 9h landed before that:**
 
