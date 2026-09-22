@@ -26,19 +26,33 @@ differ**, which the vendoring commit lists.
 - **The visualisation picker is built** — a list of 380px with a preview
   pane beside it. Tapping a row previews; the 60px button writes.
 - **`device_name` carries a warning**, and `warn` now has a second form: a
-  string is about the row and is up the whole time the sheet is open.
+  string is about the row and is up the whole time the sheet is open. The
+  drop's sentence says saving restarts the services and stops playback;
+  [ADR-0048](docs/decisions/0048-how-the-device-name-reaches-four-services.md)
+  applies the name at the next restart and stops nothing, so the row reads
+  George's own line instead (ADR-0044 §2 records the deviation).
 
-**Three things George has to rule on:**
+**George's five findings on the drop are in** (2026-09-22, after the first
+pass): the renderer's mark stands alone at 32px with no word beside it; a
+phone's taps no longer end the visualisation; the picker follows the corpus
+and the fourth word is **All**, not Random; the `device_name` warning is his
+sentence; and `idle_minmax` is gone, so the registry is 71 rows.
+
+**The one that was not a design change:** *"Changing skin during playback
+while being in visualization mode, stops showing the visualisation."* The
+cause was the touch report. ADR-0036 counts a touch as attention and
+attention takes the meter down — and the panel tells the daemon about
+touches, because the daemon cannot see them. That report was wired to the
+window rather than to the surface, so **a tap on a phone ended the
+visualisation on a device in another room**. `/surface` already knew the
+difference (ADR-0035 §6); the report is the panel's alone now.
+
+**Two things George has to rule on:**
 
 - **`skin` is a new settings row and needs his word for ADR-0022's
   inventory** ([N]). It is the picker's own row: a `choice` with
   `picker: true`, `optionsFrom: skin_corpus`, shown only while
   `skin_rotate` is off.
-- **The `device_name` warning is not worded as the drop writes it.** The
-  drop says saving restarts the services and stops playback;
-  [ADR-0048](docs/decisions/0048-how-the-device-name-reaches-four-services.md)
-  writes all four and applies none until the next restart, so on this device
-  nothing stops. Ours says that instead. ADR-0044 §2 records the deviation.
 - **Two type sizes are pinned rather than grown.** `--t-title`, `--t-artist`
   and `--t-lead` moved for the Track header, and two other places used them:
   the Artist tab's name and the Release tab's title. The drop does not touch
