@@ -220,11 +220,61 @@ audible content at all: a phone that sends near-silence and a meter that
 cannot see the stream look identical from this side. That takes one ear and
 one phone: is it audible, and does moving the phone's volume move the DAC?
 
+## 9. Bluetooth's volume oscillates when the phone's slider is dragged
+
+George, minutes after §8: *"when trying to put the Audio up or down on my
+phone the volume bar on my phone goes up and down continuously and I can't
+control it anymore... Maybe you left some measuring tools on?"*
+
+**Nothing of mine was running** — checked for every script, loop and reader
+this session had used, on the device and on the build host, before looking
+any further.
+
+**What it is.** 1280 volume events in three minutes, about **40 a second**,
+with the dummy control thrashing: `48 → 20 → 9 → 13 → 37 → 35 → 70 → 56 →
+68 → 61 → 32 → 3`. It is **not self-sustaining** — zero events in the thirty
+seconds after he stopped touching the phone — so it runs only while the
+slider is moved.
+
+**Our daemon is downstream of it.** `volume.py` only ever *reads* the dummy
+controls (`get_raw` on `hw:<dummy>`) and only ever *writes* the real DAC.
+Nothing of ours writes `gexisbtvol`, so those values are bluealsa-aplay's,
+carrying the phone's AVRCP updates. The mirror faithfully copies each one to
+the hardware, which is what it is for.
+
+**Where the loop closes, most likely.** `--volume=mixer` was added on
+2026-09-10 (Finding 012) to fix a frozen Bluetooth ceiling, and it makes
+bluealsa-aplay sync the ALSA mixer **both ways**: AVRCP in, and mixer
+changes back out to the phone. The two scales do not round-trip — **AVRCP is
+0–127 and the dummy is −50…100**, 128 steps against 150 — so a value that
+goes out and comes back need not land where it started. That is the same
+shape as the Spotify ratchet this module's own docstring describes ("two
+scales ... cannot round-trip exactly"), which was solved there with an echo
+window.
+
+**Why it has not been seen before:** it needs a *drag*. Single steps settle;
+rapid updates cross with the outgoing ones.
+
+**What would prove it** is an A/B that needs the phone: stop `gexis-core`,
+so our mirror is out of the picture entirely, and drag the slider. Still
+oscillating means the loop is bluealsa↔phone and ours only inherits it.
+
+**A candidate fix we already have the lever for:** `snd-dummy` exposes
+`mixer_volume_level_min` / `mixer_volume_level_max` as module parameters
+(currently the defaults, −50 and 100). Setting the Bluetooth dummy's range
+to **0…127** makes the AVRCP round trip exact. Both dummy cards come from
+one module instance, so LMS's range moves with it and `volume.py`'s
+`DUMMY_MIN_RAW`, `DUMMY_MAX_RAW` and `DUMMY_DB_STEP` have to move with that
+— which is 9i work, not a change to make while a phone is connected.
+
 ## What is left, and what it needs
 
 **Silent, but needs a phone connected** — no listening, just a stream:
 
 1. **Whether §8's silence is the phone or the meter** — one ear, one phone.
+   George has since confirmed the audio *is* audible, so the meter being
+   blind (§8) stands as the likelier of the two readings and wants the same
+   A/B as §9.
 2. **Whether Spotify's or Bluetooth's remembered level overrides the boot
    level** the way LMS's does. Spotify's restore is already known to be
    240/240 on acquisition, which is the loudest the device can be.
