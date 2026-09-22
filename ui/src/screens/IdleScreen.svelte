@@ -48,7 +48,11 @@
 
   const external = $derived(settings.idle_screen === 'External URL');
   const wantsWeather = $derived(settings.idle_weather !== false && !external);
-  const days = $derived(Number(settings.idle_days ?? 4));
+  //: `idle_forecast` is two layouts, not a count (design, 2026-09-22):
+  //: **3 days** puts a band across the bottom and lets the clock drift in
+  //: the upper area; **None** drops the band and brings the current
+  //: conditions up under the clock, which then centres over them.
+  const threeDays = $derived((settings.idle_forecast ?? '3 days') !== 'None');
   const minmax = $derived(settings.idle_minmax !== false);
   const iconSet = $derived(settings.idle_icons ?? 'Solid');
   //: `idle_clock`, George's row (2026-09-22): *"this way a user can
@@ -91,9 +95,15 @@
   // the top of this range where the picture is brightest.
   const brightness = $derived(Math.max(20, Math.min(100, Number(settings.background_brightness ?? 62))) / 100);
 
-  // Kept clear of the forecast bar below and the credits above.
+  //: The design's own two drift boxes. With the band below, the clock group
+  //: is about 640x226 and roams widely; with the weather riding along it is
+  //: about 1180x400, so the box tightens to keep that off the edges.
   function randomSpot() {
-    return { x: Math.round(30 + Math.random() * 40), y: Math.round(26 + Math.random() * 22) };
+    const wide = (settings.idle_forecast ?? '3 days') !== 'None';
+    return {
+      x: Math.round(wide ? 29 + Math.random() * 42 : 41 + Math.random() * 14),
+      y: Math.round(wide ? 17 + Math.random() * 38 : 36 + Math.random() * 20),
+    };
   }
 
   async function loadWeather() {
@@ -196,7 +206,17 @@
     'unknown': '',
   };
 
-  const forecastDays = $derived((weather?.days ?? []).slice(0, Math.max(3, Math.min(5, days))));
+  const forecastDays = $derived(threeDays ? (weather?.days ?? []).slice(0, 3) : []);
+  //: Today's high and low ride with the current conditions in both layouts.
+  const today = $derived((weather?.days ?? [])[0] ?? null);
+  const drawsWeather = $derived(
+    wantsWeather && weather && !weather.off && !weather.error && weather.now
+  );
+  const wind = $derived(
+    weather?.now?.wind === null || weather?.now?.wind === undefined
+      ? null
+      : `${Math.round(weather.now.wind)} ${weather.wind_unit ?? 'km/h'}`
+  );
   // **One line, along the bottom** (George, 2026-09-21). Two stacked lines
   // in a corner read as a block of small print; joined with the separator
   // this panel already uses between facts, they read as a footer.
@@ -213,6 +233,36 @@
       .join(' · ')
   );
 </script>
+
+<!-- The same three facts in both layouts: feels-like, wind, and the sun
+     pair. **Feels-like is always drawn**, even when it equals the reading
+     (design, 2026-09-22). Sunrise and sunset carry a mark rather than a
+     label - a half sun with rays above the horizon, and a sun below it. -->
+{#snippet facts()}
+  <div class="facts ink">
+    <span class="facts__one">{degrees(weather?.now?.feels_like)}</span>
+    <span class="facts__one">{wind ?? '—'}</span>
+    <span class="facts__sun">
+      <span class="sunline">
+        <span class="sunmark sunmark--rise">
+          <span class="sunmark__horizon"></span>
+          <span class="sunmark__window"><span class="sunmark__disc"></span></span>
+          <span class="sunmark__ray sunmark__ray--up"></span>
+          <span class="sunmark__ray sunmark__ray--left"></span>
+          <span class="sunmark__ray sunmark__ray--right"></span>
+        </span>
+        <span class="sunline__t sunline__t--rise">{weather?.sun?.rise ?? '—'}</span>
+      </span>
+      <span class="sunline">
+        <span class="sunmark sunmark--set">
+          <span class="sunmark__horizon"></span>
+          <span class="sunmark__window"><span class="sunmark__disc"></span></span>
+        </span>
+        <span class="sunline__t sunline__t--set">{weather?.sun?.sets ?? '—'}</span>
+      </span>
+    </span>
+  </div>
+{/snippet}
 
 <div class="idle" transition:fade={{ duration: 520 }} style:--stroke={stroke}>
   {#if shown && !external}
@@ -245,39 +295,73 @@
   {#if !external}
     <div class="scrim" style:background={scrim}></div>
 
-    {#if wantsClock}
-      <div class="clockblock" style:left={`${spot.x}%`} style:top={`${spot.y}%`}>
-        <div class="clock">
-          <span class="clock__hm ink">{pad(now.getHours())}:{pad(now.getMinutes())}</span>
-          <span class="clock__s ink">{pad(now.getSeconds())}</span>
-        </div>
-        <div class="date ink">{date}</div>
+    {#if wantsClock || (!threeDays && drawsWeather)}
+      <div
+        class="clockblock"
+        class:clockblock--centred={!threeDays}
+        style:left={`${spot.x}%`}
+        style:top={`${spot.y}%`}
+      >
+        {#if wantsClock}
+          <div class="clock">
+            <span class="clock__hm ink">{pad(now.getHours())}:{pad(now.getMinutes())}</span>
+            <span class="clock__s ink">{pad(now.getSeconds())}</span>
+          </div>
+          <div class="date ink">{date}</div>
+        {/if}
+
+        <!-- **The None layout**: no band, and the current conditions ride
+             with the clock, which centres over them. -->
+        {#if !threeDays && drawsWeather}
+          {#if wantsClock}<div class="rule"></div>{/if}
+          <div class="now now--big ink">
+            <WeatherIcon condition={weather.now.condition} set={iconSet} size={150} />
+            <div class="now__text">
+              <div class="now__line">
+                <span class="now__temp">{degrees(weather.now.temperature)}</span>
+                {#if minmax && today}
+                  <span class="now__mm">
+                    <span class="now__max">{degrees(today.max)}</span>
+                    <span class="now__min">{degrees(today.min)}</span>
+                  </span>
+                {/if}
+              </div>
+              <div class="now__label">{WORDS[weather.now.condition] ?? ''}</div>
+            </div>
+            <span class="rule rule--tall"></span>
+            {@render facts()}
+          </div>
+        {/if}
       </div>
     {/if}
 
-    {#if wantsWeather && weather && !weather.off && !weather.error && weather.now}
-      <div class="wx">
-        <div class="wx__now">
-          <WeatherIcon condition={weather.now.condition} set={iconSet} size={124} />
-          <div class="wx__text">
-            <div class="wx__line">
-              <span class="wx__temp ink">{degrees(weather.now.temperature)}</span>
-              {#if minmax && forecastDays[0]}
-                <span class="wx__mm ink">
-                  <span class="wx__max">{degrees(forecastDays[0].max)}</span>
-                  <span class="wx__min">{degrees(forecastDays[0].min)}</span>
+    {#if threeDays && drawsWeather}
+      <div class="band">
+        <div class="now ink">
+          <WeatherIcon condition={weather.now.condition} set={iconSet} size={132} />
+          <div class="now__text">
+            <div class="now__line">
+              <span class="now__temp">{degrees(weather.now.temperature)}</span>
+              {#if minmax && today}
+                <span class="now__mm">
+                  <span class="now__max">{degrees(today.max)}</span>
+                  <span class="now__min">{degrees(today.min)}</span>
                 </span>
               {/if}
             </div>
-            <div class="wx__label ink">{WORDS[weather.now.condition] ?? ''}</div>
+            <div class="now__label">{WORDS[weather.now.condition] ?? ''}</div>
           </div>
         </div>
-        <span class="wx__gap"></span>
-        <div class="wx__days">
+        <span class="rule rule--stretch"></span>
+        {@render facts()}
+        <!-- A flexing spacer with a floor, so the three days always read as
+             their own group however wide the left side gets. -->
+        <span class="band__gap"></span>
+        <div class="band__days">
           {#each forecastDays as day (day.date)}
             <span class="day">
               <span class="day__name ink">{short(day.date)}</span>
-              <WeatherIcon condition={day.condition} set={iconSet} size={80} />
+              <WeatherIcon condition={day.condition} set={iconSet} size={100} />
               <span class="day__mm ink">
                 <span class="day__max">{degrees(day.max)}</span>
                 {#if minmax}<span class="day__min">{degrees(day.min)}</span>{/if}
@@ -287,7 +371,7 @@
         </div>
       </div>
     {:else if wantsWeather && weather?.error}
-      <div class="wx wx--said"><span class="ink">{weather.error}</span></div>
+      <div class="band band--said"><span class="ink">{weather.error}</span></div>
     {/if}
 
     {#if credits}
@@ -382,6 +466,9 @@
 
   .clockblock {
     position: absolute;
+    /* `max-content`, so the group is never squeezed by how near the right
+       edge its drift takes it. */
+    width: max-content;
     transform: translate(-50%, -50%);
     display: flex;
     flex-direction: column;
@@ -409,100 +496,276 @@
     line-height: 1;
     color: var(--accent-lms);
   }
+  .clockblock--centred {
+    align-items: center;
+  }
   .date {
     font-family: var(--font-mono);
-    font-size: 21px;
+    font-size: 26px;
     letter-spacing: 0.2em;
     text-transform: uppercase;
     white-space: nowrap;
   }
 
-  /* The forecast is a bar across the bottom, and it does not drift. */
-  .wx {
+  /* The forecast band, in the `3 days` layout only. It does not drift.
+     Named `band`, not `wx`: `WeatherIcon`'s own root carries `wx`, and one
+     name for two things read as the band still being there when it was an
+     icon that had matched. */
+  .band {
     position: absolute;
     left: 0;
     right: 0;
     bottom: 0;
-    padding: 24px 56px 28px;
+    padding: 22px 28px 26px;
     box-sizing: border-box;
     display: flex;
     align-items: center;
-    gap: 52px;
+    gap: 20px;
   }
-  .wx--said {
+  .band--said {
     justify-content: center;
     font-size: var(--t-body);
   }
-  .wx__now {
+  .band__gap {
+    flex: 1;
+    min-width: 64px;
+  }
+
+  /* Current conditions: the same block in both layouts, larger in `None`
+     where it is the screen's subject rather than a band's left end. */
+  .now {
     display: flex;
     align-items: center;
-    gap: 24px;
+    gap: 28px;
     flex-shrink: 0;
   }
-  .wx__text {
+  .now--big {
+    gap: 38px;
+    margin-top: 24px;
+  }
+  .now__text {
     min-width: 0;
   }
-  .wx__line {
+  .now__line {
     display: flex;
-    align-items: baseline;
+    align-items: center;
     gap: 16px;
   }
-  .wx__temp {
-    font-size: 104px;
+  .now__temp {
+    font-size: 100px;
     font-weight: 300;
     letter-spacing: -0.03em;
     line-height: 0.94;
   }
-  .wx__mm,
-  .day__mm {
+  .now--big .now__line {
+    gap: 18px;
+  }
+  .now--big .now__temp {
+    font-size: 116px;
+  }
+  /* Stacked, not side by side: the high over the low, left-aligned against
+     the temperature. */
+  .now__mm {
     display: flex;
-    align-items: baseline;
-    gap: 9px;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
     white-space: nowrap;
   }
-  /* The high carries the warm accent and the low the cool one, which is how
-     the design tells them apart without a label. */
-  .wx__max,
-  .day__max {
-    font-size: 36px;
+  .now__max {
+    font-size: 40px;
     font-weight: 700;
     color: var(--accent-artist);
   }
-  .wx__min,
-  .day__min {
-    font-size: 26px;
+  .now__min {
+    font-size: 30px;
     color: var(--accent-bluetooth);
   }
-  .wx__label {
-    font-size: 26px;
+  .now--big .now__max {
+    font-size: 42px;
+  }
+  .now--big .now__min {
+    font-size: 32px;
+  }
+  .now__label {
+    font-size: 30px;
     font-weight: 600;
     color: var(--accent-lms);
-    margin-top: 6px;
+    margin-top: 8px;
     white-space: nowrap;
   }
-  .wx__gap {
-    flex: 1;
+  .now--big .now__label {
+    font-size: 32px;
+  }
+
+  /* Hairlines: stretched in the band, a fixed 150px upright in `None`, and
+     full-width under the date. */
+  .rule {
+    width: 100%;
+    height: 1px;
+    background: rgba(233, 238, 242, 0.32);
+    margin-top: 24px;
+  }
+  .rule--stretch {
+    width: 1px;
+    height: auto;
+    align-self: stretch;
+    background: rgba(233, 238, 242, 0.26);
+    margin-top: 0;
+    flex-shrink: 0;
+  }
+  .rule--tall {
+    width: 1px;
+    height: 150px;
+    background: rgba(233, 238, 242, 0.3);
+    margin-top: 0;
+    flex-shrink: 0;
+  }
+
+  /* Feels-like, wind, and the sun pair - one column, both layouts. */
+  .facts {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 12px;
+    flex-shrink: 0;
+  }
+  .facts__one {
+    font-size: 30px;
+    font-weight: 700;
+    white-space: nowrap;
+    align-self: center;
+  }
+  .facts__sun {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-top: 4px;
     min-width: 0;
   }
-  .wx__days {
+  .sunline {
+    display: flex;
+    align-items: center;
+    gap: 11px;
+    min-width: 0;
+  }
+  .sunline__t {
+    font-size: 30px;
+    font-weight: 700;
+    white-space: nowrap;
+  }
+  .sunline__t--rise {
+    color: #f2c14f;
+  }
+  .sunline__t--set {
+    color: var(--accent-artist);
+  }
+
+  /* The marks: a half sun with three rays standing on the horizon, and the
+     same sun fallen below it. A label would say the same thing in two
+     words and take four times the room. */
+  .sunmark {
+    position: relative;
+    width: 36px;
+    height: 36px;
+    flex-shrink: 0;
+    display: block;
+  }
+  .sunmark__horizon {
+    position: absolute;
+    left: 0;
+    width: 36px;
+    height: 3px;
+    border-radius: 2px;
+    background: var(--ink);
+  }
+  .sunmark--rise .sunmark__horizon {
+    bottom: 7px;
+  }
+  .sunmark--set .sunmark__horizon {
+    bottom: 16px;
+  }
+  /* A window the disc is drawn inside, so half of it shows and no arc has
+     to be drawn. */
+  .sunmark__window {
+    position: absolute;
+    left: 6px;
+    width: 24px;
+    height: 12px;
+    overflow: hidden;
+  }
+  .sunmark--rise .sunmark__window {
+    bottom: 10px;
+  }
+  .sunmark--set .sunmark__window {
+    bottom: 2px;
+  }
+  .sunmark__disc {
+    display: block;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+  }
+  .sunmark--rise .sunmark__disc {
+    background: #f2c14f;
+  }
+  .sunmark--set .sunmark__disc {
+    background: var(--accent-artist);
+    margin-top: -12px;
+  }
+  .sunmark__ray {
+    position: absolute;
+    top: 5px;
+    width: 3px;
+    height: 8px;
+    border-radius: 2px;
+    background: #f2c14f;
+  }
+  .sunmark__ray--up {
+    left: 17px;
+    top: 1px;
+  }
+  .sunmark__ray--left {
+    left: 4px;
+    transform: rotate(-42deg);
+  }
+  .sunmark__ray--right {
+    right: 4px;
+    transform: rotate(42deg);
+  }
+
+  .band__days {
     display: flex;
     align-items: flex-start;
-    gap: 32px;
+    gap: 40px;
     flex-shrink: 0;
   }
   .day {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 10px;
+    gap: 12px;
     flex-shrink: 0;
-    min-width: 104px;
+    min-width: 106px;
   }
   .day__name {
     font-family: var(--font-mono);
-    font-size: 21px;
+    font-size: 26px;
     letter-spacing: 0.16em;
     text-transform: uppercase;
+  }
+  .day__mm {
+    display: flex;
+    align-items: baseline;
+    gap: 9px;
+  }
+  .day__max {
+    font-size: 44px;
+    font-weight: 700;
+    color: var(--accent-artist);
+  }
+  .day__min {
+    font-size: 34px;
+    color: var(--accent-bluetooth);
   }
 
   /* Ours, not the design's. Mono and uppercase is how this panel already

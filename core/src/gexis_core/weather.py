@@ -99,6 +99,15 @@ def _matches(result: dict, qualifiers: list[str]) -> int:
     return sum(1 for q in qualifiers if q and q.lower() in haystack)
 
 
+def _clock(iso: str | None) -> str | None:
+    """`2026-09-22T06:52` -> `06:52`. The provider answers in the timezone it
+    was asked for, so this is a slice rather than a conversion - and a slice
+    cannot get the day wrong the way a reparse can."""
+    if not iso or "T" not in str(iso):
+        return None
+    return str(iso).split("T", 1)[1][:5]
+
+
 class Weather:
     """Forecasts for one device, cached in memory.
 
@@ -208,8 +217,12 @@ class Weather:
                     "longitude": found["longitude"],
                     "timezone": found["timezone"],
                     "forecast_days": days,
-                    "current": "temperature_2m,weather_code",
-                    "daily": "weather_code,temperature_2m_max,temperature_2m_min",
+                    # The screen draws all of these (design, 2026-09-22), and
+                    # they arrive in the one request the forecast already
+                    # costs - 3.4 KB against 748 B, no second call and no key.
+                    "current": "temperature_2m,apparent_temperature,weather_code,wind_speed_10m",
+                    "daily": ("weather_code,temperature_2m_max,temperature_2m_min,"
+                              "sunrise,sunset"),
                 },
             )
             if body is None:
@@ -222,7 +235,18 @@ class Weather:
                 "country": found["country"],
                 "now": {
                     "temperature": now.get("temperature_2m"),
+                    # **Always sent, even when it equals the reading** - the
+                    # design shows it unconditionally, because a feels-like
+                    # that appears only when it differs is a number whose
+                    # absence has to be interpreted.
+                    "feels_like": now.get("apparent_temperature"),
+                    "wind": now.get("wind_speed_10m"),
                     "condition": condition(now.get("weather_code")),
+                },
+                #: Today's, and only today's: the screen shows one pair.
+                "sun": {
+                    "rise": _clock((daily.get("sunrise") or [None])[0]),
+                    "sets": _clock((daily.get("sunset") or [None])[0]),
                 },
                 "days": [
                     {
@@ -234,6 +258,7 @@ class Weather:
                     for i in range(len(times))
                 ],
                 "unit": (body.get("current_units") or {}).get("temperature_2m", "°C"),
+                "wind_unit": (body.get("current_units") or {}).get("wind_speed_10m", "km/h"),
                 "credit": CREDIT,
                 "error": None,
             }

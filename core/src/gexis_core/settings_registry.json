@@ -612,15 +612,16 @@
         ]
       },
       {
-        "key": "idle_days",
-        "type": "number",
-        "label": "Forecast days",
+        "key": "idle_forecast",
+        "type": "choice",
+        "label": "Forecast",
         "marks": "N",
-        "note": null,
-        "min": 3,
-        "max": 5,
-        "unit": "",
-        "default": 4,
+        "note": "Three days beside the clock, or today's conditions alone. They are two layouts, not one with a row hidden.",
+        "options": [
+          "3 days",
+          "None"
+        ],
+        "default": "3 days",
         "onlyWhen": [
           "idle_weather",
           true

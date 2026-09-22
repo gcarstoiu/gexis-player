@@ -568,13 +568,13 @@ def test_every_weather_row_hangs_off_the_toggle_now_that_there_is_no_key():
     - which itself hangs off the built-in screen."""
     rows = {r["key"]: r for r in _rows()}
     assert "weather_key" not in rows
-    for key in ("weather_location", "idle_days", "idle_minmax", "idle_icons"):
+    for key in ("weather_location", "idle_forecast", "idle_minmax", "idle_icons"):
         assert rows[key]["onlyWhen"] == ["idle_weather", True], key
     assert rows["idle_weather"]["onlyWhen"] == ["idle_screen", "Built in"]
     # Transitively: an external URL hides all five, not just the toggle.
     values = {k: rows[k].get("default") for k in rows}
     values["idle_screen"] = "External URL"
-    for key in ("idle_weather", "weather_location", "idle_days", "idle_minmax", "idle_icons"):
+    for key in ("idle_weather", "weather_location", "idle_forecast", "idle_minmax", "idle_icons"):
         assert not visible(rows[key], rows, values), key
 
 

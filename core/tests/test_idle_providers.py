@@ -9,6 +9,8 @@ stuck in one category.
 """
 from __future__ import annotations
 
+import json
+
 import pytest
 from aiohttp.test_utils import TestClient, TestServer
 
@@ -35,13 +37,20 @@ GEOCODED = {
 }
 
 FORECAST = {
-    "current_units": {"temperature_2m": "°C"},
-    "current": {"temperature_2m": 17.4, "weather_code": 3},
+    "current_units": {"temperature_2m": "°C", "wind_speed_10m": "km/h"},
+    "current": {
+        "temperature_2m": 17.4,
+        "apparent_temperature": 15.2,
+        "wind_speed_10m": 12.0,
+        "weather_code": 3,
+    },
     "daily": {
         "time": ["2026-09-21", "2026-09-22", "2026-09-23"],
         "weather_code": [3, 61, 0],
         "temperature_2m_max": [18.1, 16.0, 19.9],
         "temperature_2m_min": [11.2, 10.4, 9.8],
+        "sunrise": ["2026-09-21T06:52", "2026-09-22T06:54", "2026-09-23T06:56"],
+        "sunset": ["2026-09-21T19:24", "2026-09-22T19:21", "2026-09-23T19:19"],
     },
 }
 
@@ -92,7 +101,16 @@ async def test_a_place_becomes_a_forecast_the_screen_can_draw():
     session = FakeSession(open_meteo)
     answer = await Weather(session).forecast("Hamburg", 3)
     assert answer["place"] == "Hamburg"
-    assert answer["now"] == {"temperature": 17.4, "condition": "overcast"}
+    assert answer["now"] == {
+        "temperature": 17.4,
+        "feels_like": 15.2,
+        "wind": 12.0,
+        "condition": "overcast",
+    }
+    # Today's pair only, as HH:MM in the place's own timezone - sliced from
+    # the provider's string rather than reparsed, so the day cannot shift.
+    assert answer["sun"] == {"rise": "06:52", "sets": "19:24"}
+    assert answer["wind_unit"] == "km/h"
     assert [d["condition"] for d in answer["days"]] == ["overcast", "rain", "clear"]
     assert answer["days"][0] == {
         "date": "2026-09-21",
@@ -174,6 +192,30 @@ async def test_the_qualifiers_rank_rather_than_filter():
     assert (await weather.geocode("Berlin"))["country"] == "US"
     # And a qualifier that picks the other one picks the other one.
     assert (await weather.geocode("Berlin, New Hampshire"))["country"] == "US"
+
+
+async def test_feels_like_is_sent_even_when_it_equals_the_reading():
+    """The design shows it unconditionally (2026-09-22). A number that
+    appears only when it differs is one whose absence has to be
+    interpreted, and on a glanceable screen nobody interprets."""
+    same = json.loads(json.dumps(FORECAST))
+    same["current"]["apparent_temperature"] = same["current"]["temperature_2m"]
+    session = FakeSession(lambda url, params: (200, GEOCODED) if "geocoding" in url else (200, same))
+    answer = await Weather(session).forecast("Hamburg", 3)
+    assert answer["now"]["feels_like"] == answer["now"]["temperature"] == 17.4
+
+
+async def test_a_provider_that_omits_the_new_fields_is_not_a_failure():
+    """Only the temperature and the code are load-bearing. Everything added
+    in this pass is drawn if it is there."""
+    bare = {"current": {"temperature_2m": 9.0, "weather_code": 0},
+            "daily": {"time": ["2026-09-21"], "weather_code": [0],
+                      "temperature_2m_max": [10.0], "temperature_2m_min": [2.0]}}
+    session = FakeSession(lambda url, params: (200, GEOCODED) if "geocoding" in url else (200, bare))
+    answer = await Weather(session).forecast("Hamburg", 1)
+    assert answer["error"] is None
+    assert answer["now"]["feels_like"] is None and answer["now"]["wind"] is None
+    assert answer["sun"] == {"rise": None, "sets": None}
 
 
 def test_every_wmo_code_has_a_name_and_an_unknown_one_is_not_guessed():
@@ -356,7 +398,7 @@ async def test_the_picture_on_screen_is_not_the_next_one(tmp_path):
 def client_for(tmp_path, **kwargs):
     store = SettingsStore(tmp_path / "s.db")
     settings = Settings(store, wired={k: None for k in (
-        "idle_weather", "weather_location", "idle_days", "wallpaper_key",
+        "idle_weather", "weather_location", "idle_forecast", "wallpaper_key",
         "wallpaper_topics", "idle_background",
     )})
     server = StateServer(StateStore({}), settings=settings, **kwargs)
@@ -369,10 +411,22 @@ async def test_the_weather_route_reads_the_rows(tmp_path):
     async with client:
         settings.set("idle_weather", True)
         settings.set("weather_location", "Hamburg")
-        settings.set("idle_days", 3)
+        settings.set("idle_forecast", "3 days")
         body = await (await client.get("/idle/weather")).json()
         assert body["place"] == "Hamburg"
         assert len(body["days"]) == 3
+        # The screen draws two layouts from this one field (design,
+        # 2026-09-22), so the payload names which.
+        assert body["forecast"] == "3 days"
+
+        # **"None" still fetches today.** That layout drops the three-day
+        # band and keeps the current conditions, which carry today's high
+        # and low - a day count of zero would empty the screen it is meant
+        # to simplify.
+        settings.set("idle_forecast", "None")
+        body = await (await client.get("/idle/weather")).json()
+        assert body["forecast"] == "None"
+        assert body["now"]["temperature"] == 17.4 and body["days"]
         # Off is not an error, and not an empty forecast either.
         settings.set("idle_weather", False)
         assert await (await client.get("/idle/weather")).json() == {

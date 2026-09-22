@@ -290,8 +290,14 @@ class StateServer:
         place = str(self._settings.value("weather_location") or "").strip()
         if not place:
             return web.json_response({"error": "No location set yet."})
-        days = self._settings.value("idle_days") or 4
-        return web.json_response(await self._weather.forecast(place, int(days)))
+        # `idle_forecast` is two layouts, not a count (design, 2026-09-22).
+        # **Both need today**: the None layout still draws the current
+        # conditions with today's high and low, so the fetch is one day
+        # rather than none.
+        forecast = str(self._settings.value("idle_forecast") or "3 days")
+        days = 3 if forecast == "3 days" else 1
+        answer = await self._weather.forecast(place, days)
+        return web.json_response({**answer, "forecast": forecast})
 
     async def _handle_idle_wallpaper(self, request: web.Request) -> web.Response:
         """The next background, whatever `idle_background` says it is.

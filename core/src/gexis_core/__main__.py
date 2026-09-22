@@ -436,7 +436,7 @@ async def main() -> None:
                "background_brightness": None, "background_interval": None,
                "wallpaper_key": None, "wallpaper_topics": None,
                "idle_weather": None,
-               "weather_location": None, "idle_days": None,
+               "weather_location": None, "idle_forecast": None,
                "idle_minmax": None, "idle_icons": None,
                "viz_timeout": None, "viz_stop": None,
                "home_strip": None, "home_strip_count": None,
