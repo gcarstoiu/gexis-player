@@ -167,3 +167,40 @@ These are open, and Phase 9's sweep is where George settles them:
   is gone.
 - How the attribution line should look.
 - How the two API-key rows should present.
+
+---
+
+## Changed against the 2026-09-22 drop
+
+**The drop is built, and four things in it are deliberately not as drawn.**
+The panel is the point of truth where the two differ (George, 2026-09-22:
+*"unless directly told so, do not change the designs from the panel with
+whatever comes from the design output zip file"*), so these are what the
+next drawing should carry rather than defects to fix back.
+
+**[S] `weather_key` is not a row.** The drop gates four weather rows on a
+provider key. Open-Meteo needs none (ADR-0047 §2a, Finding 043), so the row
+would store nothing and gate on nothing; the rows hang off `idle_weather`.
+
+**[U] `idle_minmax` is gone.** George, 2026-09-22: *"the min and max option
+in settings you can remove as it is not needed."* Both forecast layouts draw
+the day's high and low unconditionally now.
+
+**[U] `skin_corpus` is four words about what a skin shows**, not two about
+which directory it lives in: VU meters / Spectrum / VU meters + spectrum /
+**All**. Counted on the device, `templates/` is 71 meters and no spectrum at
+all, so a directory-shaped option would have handed a spectrum to someone
+who asked for a needle — and two of the four words would have offered
+nothing (ADR-0019 as amended, ADR-0051). The fourth word was `Random` until
+George renamed it: `skin_rotate` is the one that is random.
+
+**[U] The `device_name` warning is a different sentence.** The drop says
+saving *"restarts the services that carry the name. Anything playing
+stops."* ADR-0048 writes all four services and applies none of them until
+the next restart, so on this device nothing stops. The row reads *"Change
+only takes place after a restart of the device."*
+
+**Two type sizes are pinned rather than grown**, pending George: the drop
+moves `--t-artist` 25 → 35 and `--t-lead` 22 → 25 for the Track header, and
+the Artist tab's name and the Release tab's title used those tokens. The
+drop changes neither panel, so both keep the size they had.
