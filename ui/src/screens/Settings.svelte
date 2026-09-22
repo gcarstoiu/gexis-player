@@ -35,6 +35,12 @@
   // A full-screen chooser instead of a sheet, for a choice too large for
   // 560px (ADR-0044 §5). Holds the row's key, like `sheetKey`.
   let pickerKey = $state(null);
+  //: Which row the pane is showing. **Not the value**: tapping a row in the
+  //: picker previews it and nothing else, and the write happens on the
+  //: button under the preview (design, 2026-09-22). On a wide screen the
+  //: pane opens on the value in use; below 720px it opens on nothing,
+  //: because there the pane covers the list.
+  let pickerView = $state(null);
   // A list's labelled escape into typing (ADR-0044 §1's `manual`).
   let manual = $state(false);
   // A warned option that has been selected and not yet committed
@@ -248,7 +254,10 @@
     if (row.type === 'toggle') write(row, !row.value);
     // 84 visual things cannot be chosen from a 560px list, so a `picker` row
     // opens full screen instead of a sheet (ADR-0044 §5).
-    else if (row.picker) pickerKey = row.key;
+    else if (row.picker) {
+      pickerKey = row.key;
+      pickerView = null;
+    }
     else openSheet(row);
   }
 
@@ -426,10 +435,12 @@
     return m ? { ord: m[1], label: m[2] } : { ord: '', label: String(name) };
   }
 
+  //: The one write the picker makes, from the button under the preview.
   async function pick(name) {
     const row = picker;
+    if (!name || String(row.value) === name) return;
     pickerKey = null;
-    if (String(row.value) === name) return;
+    pickerView = null;
     if (await write(row, name)) flash(`${row.label}: ${parts(name).label}`);
   }
 
@@ -624,8 +635,14 @@
   </div>
 
   <!-- ADR-0044 §5: a chooser too large for a 560px sheet takes the screen.
-       Tiles are placeholders until skin previews exist. -->
+       **A list with a preview beside it** (design, 2026-09-22) - the
+       four-across grid it replaces made 84 tiles too small to judge and too
+       large to scan, and drew every preview at once. Here one is fetched,
+       when a row is tapped. -->
   {#if picker}
+    {@const options = picker.options ?? []}
+    {@const inUse = picker.value == null ? null : String(picker.value)}
+    {@const viewing = pickerView ?? (wide ? inUse : null)}
     <div class="picker">
       <!-- Its own ground, embedded or not: it covers the rows, so the
            panel's weave behind the app cannot reach it. -->
@@ -635,22 +652,61 @@
         <button class="back" type="button" aria-label="Back" onclick={() => (pickerKey = null)}><span></span></button>
         <div class="head__text">
           <div class="title" class:title--wide={wide}>{picker.label}</div>
-          <div class="subtitle">{(picker.options ?? []).length} to choose from</div>
+          <div class="subtitle">{options.length} skins</div>
         </div>
       </div>
-      <div class="tiles" class:tiles--wide={wide} data-noscrollbar>
-        {#each picker.options ?? [] as option (option)}
-          {@const p = parts(option)}
-          {@const chosen = String(picker.value) === option}
-          <button class="tile" class:is-chosen={chosen} type="button" onclick={() => pick(option)}>
-            <span class="tile__art">
-              <span class="tile__dial"></span>
-              <span class="tile__ord">{p.ord}</span>
-              {#if chosen}<span class="tile__check"><span></span></span>{/if}
-            </span>
-            <span class="tile__label">{p.label}</span>
-          </button>
-        {/each}
+
+      <div class="picker__body">
+        <div class="skins" class:skins--wide={wide} data-noscrollbar>
+          {#each options as option (option)}
+            {@const p = parts(option)}
+            <button
+              class="skin"
+              class:is-viewing={option === viewing}
+              class:is-inuse={option === inUse}
+              type="button"
+              aria-current={option === inUse ? 'true' : undefined}
+              onclick={() => (pickerView = option)}
+            >
+              <span class="skin__ord">{p.ord}</span>
+              <span class="skin__label">{p.label}</span>
+              {#if option === inUse}<span class="skin__check"><span></span></span>{/if}
+            </button>
+          {/each}
+          {#if !options.length}
+            <div class="skins__empty">No skins are installed.</div>
+          {/if}
+        </div>
+
+        {#if viewing}
+          {@const p = parts(viewing)}
+          {@const isCurrent = viewing === inUse}
+          <div class="pane" class:pane--over={!wide}>
+            {#if !wide}
+              <div class="pane__back">
+                <button class="back back--small" type="button" aria-label="Back to list" onclick={() => (pickerView = null)}><span></span></button>
+                <span class="pane__backlabel">Back to list</span>
+              </div>
+            {/if}
+            <!-- ADR-0050: the preview is the skin's own `screen.bgr`, served
+                 from where the image installed it. Nothing is rendered and
+                 nothing is cached, so this is one file per tap. -->
+            <div class="pane__art">
+              <img src={`/skins/${encodeURIComponent(viewing)}/preview`} alt="" />
+            </div>
+            <div class="pane__text">
+              <div class="pane__name">{p.label}</div>
+              <div class="pane__meta">{viewing} &nbsp;·&nbsp; {isCurrent ? 'IN USE' : 'NOT IN USE'}</div>
+            </div>
+            <button
+              class="pane__use"
+              class:is-inert={isCurrent}
+              type="button"
+              disabled={isCurrent}
+              onclick={() => pick(viewing)}
+            >{isCurrent ? 'In use' : 'Use this skin'}</button>
+          </div>
+        {/if}
       </div>
     </div>
   {/if}
@@ -1830,64 +1886,73 @@
     padding: 0 36px;
     min-height: 92px;
   }
-  .tiles {
+  /* The list and the pane beside it (design, 2026-09-22). */
+  .picker__body {
     position: relative;
     flex: 1;
     min-height: 0;
+    display: flex;
+  }
+  .skins {
+    flex-shrink: 0;
+    width: 100%;
+    min-height: 0;
     overflow-y: auto;
-    padding: 14px 16px 30px;
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 20px 16px;
-    align-content: start;
+    overscroll-behavior: contain;
+    padding: 10px 0 24px;
+    box-sizing: border-box;
   }
-  .tiles--wide {
-    padding: 26px 36px 36px;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 20px;
+  .skins--wide {
+    width: 380px;
+    border-right: 1px solid rgba(233, 238, 242, 0.09);
   }
-  .tile {
-    min-width: 0;
-    display: block;
-    text-align: left;
-  }
-  .tile:active {
-    opacity: 0.7;
-  }
-  .tile__art {
-    position: relative;
+  .skin {
     display: flex;
     align-items: center;
-    justify-content: center;
-    aspect-ratio: 16 / 10;
-    border-radius: 14px;
-    overflow: hidden;
-    background: #17242d;
-    border: 2px solid rgba(233, 238, 242, 0.14);
-    background-image: radial-gradient(120% 120% at 30% 20%, rgba(233, 238, 242, 0.08), transparent 70%);
+    gap: 14px;
+    width: 100%;
+    min-height: 62px;
+    padding: 0 26px;
+    box-sizing: border-box;
+    background: none;
+    border: 0;
+    /* The rail is always there and usually transparent, so a tap does not
+       move the row by three pixels. */
+    border-left: 3px solid transparent;
+    text-align: left;
+    color: var(--ink);
   }
-  .tile.is-chosen .tile__art {
-    border-color: var(--accent-lms);
+  .skin:active {
+    background: rgba(233, 238, 242, 0.1);
   }
-  .tile__dial {
-    height: 56%;
-    aspect-ratio: 1;
-    border-radius: 50%;
-    border: 2px solid rgba(233, 238, 242, 0.22);
+  /* Being previewed is the Display group's own accent; being in use is the
+     affirm accent, which is what the check is too. One row can be both. */
+  .skin.is-viewing {
+    background: rgba(200, 162, 216, 0.14);
+    border-left-color: var(--accent-display);
   }
-  .tile__ord {
-    position: absolute;
-    top: 8px;
-    left: 10px;
+  .skin.is-inuse .skin__label {
+    color: var(--accent-lms);
+  }
+  .skin__ord {
+    flex-shrink: 0;
+    width: 32px;
     font-family: var(--font-mono);
-    font-size: 12px;
-    letter-spacing: 0.1em;
-    color: rgba(233, 238, 242, 0.5);
+    font-size: var(--t-label);
+    letter-spacing: 0.08em;
+    color: rgba(233, 238, 242, 0.45);
   }
-  .tile__check {
-    position: absolute;
-    bottom: 8px;
-    right: 10px;
+  .skin__label {
+    flex: 1;
+    min-width: 0;
+    font-size: var(--t-body-sm);
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .skin__check {
+    flex-shrink: 0;
     width: 20px;
     height: 20px;
     border-radius: 50%;
@@ -1896,25 +1961,121 @@
     align-items: center;
     justify-content: center;
   }
-  .tile__check span {
+  .skin__check span {
     width: 7px;
     height: 4px;
-    border-left: 2.5px solid #0d151c;
-    border-bottom: 2.5px solid #0d151c;
+    border-left: 2.5px solid var(--ink-on-accent);
+    border-bottom: 2.5px solid var(--ink-on-accent);
     transform: rotate(-45deg);
     margin-top: -2px;
   }
-  .tile__label {
-    display: block;
-    font-size: 15px;
-    font-weight: 600;
-    margin-top: 9px;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+  .skins__empty {
+    padding: 18px 26px;
+    font-size: var(--t-body-sm);
+    color: var(--ink-quiet);
   }
-  .tile.is-chosen .tile__label {
-    color: var(--accent-lms);
+
+  .pane {
+    flex: 1;
+    min-width: 0;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    padding: 26px 28px 28px;
+    box-sizing: border-box;
+  }
+  /* Below 720px there is no room for both, so the pane covers the list and
+     carries its own way back to it. */
+  .pane--over {
+    position: absolute;
+    inset: 0;
+    background: var(--bg-base);
+  }
+  .pane__back {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+  .back--small {
+    width: 46px;
+    height: 46px;
+  }
+  .back--small span {
+    width: 11px;
+    height: 11px;
+    border-left-width: 2.5px;
+    border-bottom-width: 2.5px;
+    margin-left: 8px;
+  }
+  .pane__backlabel {
+    font-family: var(--font-mono);
+    font-size: var(--t-label);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink-quiet);
+  }
+  .pane__art {
+    position: relative;
+    flex-shrink: 0;
+    width: 100%;
+    aspect-ratio: 16 / 10;
+    max-height: 58%;
+    border-radius: var(--r-lg);
+    overflow: hidden;
+    background: var(--bg-well);
+    border: 1px solid rgba(233, 238, 242, 0.14);
+  }
+  .pane__art img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    /* The skin's own 1280x800 picture in a 16:10 box, so `cover` crops
+       nothing; it is here for a pack whose pictures are shaped otherwise. */
+    object-fit: cover;
+  }
+  .pane__text {
+    flex: 1;
+    min-height: 0;
+  }
+  .pane__name {
+    font-size: var(--t-h3);
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    text-wrap: pretty;
+  }
+  .pane__meta {
+    font-family: var(--font-mono);
+    font-size: var(--t-label);
+    letter-spacing: 0.06em;
+    color: rgba(233, 238, 242, 0.55);
+    margin-top: 8px;
+    word-break: break-word;
+  }
+  .pane__use {
+    flex-shrink: 0;
+    min-height: 60px;
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    font-weight: 600;
+    background: var(--accent-lms);
+    color: var(--ink-on-accent);
+    border: 1px solid var(--accent-lms);
+  }
+  .pane__use:active {
+    opacity: 0.75;
+  }
+  /* The skin in use has no action left: an outline that says so rather than
+     a button that would write what is already there. */
+  .pane__use.is-inert {
+    background: transparent;
+    color: rgba(233, 238, 242, 0.5);
+    border-color: rgba(233, 238, 242, 0.18);
   }
 
   .field {
