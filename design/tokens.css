@@ -45,12 +45,12 @@
      and mono labels below that are chrome only. */
   --t-hero:     132px;  /* idle clock                                      */
   --t-display:   76px;  /* artist-page initials, when there is no photo     */
-  --t-title:     38px;  /* now playing track title                         */
+  --t-title:     54px;  /* now playing track title                         */
   --t-h1:        34px;
   --t-h2:        30px;
-  --t-artist:    25px;  /* now playing artist line                         */
+  --t-artist:    35px;  /* now playing artist line                         */
   --t-h3:        26px;
-  --t-lead:      22px;
+  --t-lead:      25px;  /* now playing year                                */
   --t-body:      19px;
   --t-body-sm:   17px;
   --t-meta:      15px;

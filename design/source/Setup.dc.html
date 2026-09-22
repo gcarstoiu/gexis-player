@@ -1,0 +1,773 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Nunito+Sans:ital,opsz,wght@0,6..12,300..800&family=IBM+Plex+Mono:wght@400;600;700&display=swap" rel="stylesheet" />
+<link href="./design/tokens.css" rel="stylesheet" />
+<link href="./brand/tokens/fonts-brand.css" rel="stylesheet" />
+<link href="./brand/tokens/brand.css" rel="stylesheet" />
+<style>
+  html,body{margin:0;padding:0;background:#0c1014;}
+  a{color:#7ed6bc;}a:hover{color:#a8e5d3;}
+  [data-noscrollbar]::-webkit-scrollbar{display:none;}
+  @keyframes setSpin{to{transform:rotate(360deg);}}
+  @keyframes setFade{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:none;}}
+  input::placeholder{color:rgba(233,238,242,0.38);}
+</style>
+</helmet>
+<div ref="{{ rootRef }}" style="width:100%;min-height:100%;position:relative;box-sizing:border-box;overflow:hidden;font-family:'Nunito Sans','Avenir Next','Segoe UI',system-ui,sans-serif;color:#e9eef2;background:#101a21;-webkit-tap-highlight-color:transparent;">
+  <div style="position:absolute;inset:-90px;background:repeating-linear-gradient(38deg,#3f5a6d 0 48px,#2e4453 48px 96px);filter:blur(70px);transform:scale(1.14);pointer-events:none;"></div>
+  <div style="position:absolute;inset:0;background:radial-gradient(130% 105% at 20% 42%,rgba(20,33,42,0.72),rgba(13,21,28,0.96));pointer-events:none;"></div>
+
+  <div style="position:relative;width:100%;margin:0 auto;box-sizing:border-box;max-width:{{ shellMax }};padding:{{ shellPad }};">
+
+    <div style="display:flex;align-items:center;gap:16px;min-width:0;">
+      <x-import component="Logo" from="./brand/display/Logo.jsx" size="{{ markSize }}" lead="s" hint-size="38px,38px"></x-import>
+      <div style="flex:1;min-width:0;font-family:'IBM Plex Mono','Courier New',monospace;font-size:12px;letter-spacing:0.2em;text-transform:uppercase;color:rgba(233,238,242,0.6);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ crumb }}</div>
+      <div style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:12px;letter-spacing:0.14em;text-transform:uppercase;color:rgba(233,238,242,0.5);flex-shrink:0;white-space:nowrap;display:{{ apDisplay }};">{{ apLine }}</div>
+    </div>
+
+    <div style="height:3px;border-radius:2px;background:rgba(233,238,242,0.1);margin-top:22px;overflow:hidden;display:{{ progDisplay }};">
+      <div style="height:100%;border-radius:2px;transition:width 260ms cubic-bezier(0.32,0.72,0,1);background:{{ stepAccent }};width:{{ progPct }};"></div>
+    </div>
+
+    <div style="margin-top:26px;display:grid;align-items:start;gap:34px;grid-template-columns:{{ gridCols }};">
+
+      <div style="flex-direction:column;gap:2px;position:sticky;top:34px;display:{{ railDisplay }};">
+        <sc-for list="{{ rail }}" as="s" hint-placeholder-count="7">
+          <div onClick="{{ s.onTap }}" style="display:flex;align-items:center;gap:15px;min-height:56px;padding:0 15px;border-radius:13px;box-sizing:border-box;background:{{ s.bg }};">
+            <span style="width:4px;height:30px;border-radius:2px;flex-shrink:0;display:block;background:{{ s.bar }};opacity:{{ s.barOpacity }};"></span>
+            <span style="flex:1;min-width:0;font-size:16px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:{{ s.ink }};">{{ s.label }}</span>
+            <span style="width:13px;height:7px;border-left:2.5px solid #7ed6bc;border-bottom:2.5px solid #7ed6bc;transform:rotate(-45deg);flex-shrink:0;margin-top:-3px;display:{{ s.doneDisplay }};"></span>
+          </div>
+        </sc-for>
+      </div>
+
+      <div style="min-width:0;">
+
+        <div style="align-items:center;gap:11px;margin-bottom:20px;display:{{ eyebrowDisplay }};">
+          <span style="width:9px;height:9px;border-radius:50%;flex-shrink:0;display:block;background:{{ stepAccent }};"></span>
+          <span style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:13px;letter-spacing:0.2em;text-transform:uppercase;flex-shrink:0;color:{{ stepAccent }};">{{ stepName }}</span>
+          <span style="flex:1;height:1px;background:rgba(233,238,242,0.1);display:block;"></span>
+        </div>
+
+        <div style="flex-direction:column;gap:26px;animation:setFade 260ms cubic-bezier(0.32,0.72,0,1);display:{{ sWelcome }};">
+          <div>
+            <div style="font-weight:800;letter-spacing:-0.02em;line-height:1.1;text-wrap:pretty;font-size:{{ heroSize }};">Set up <span style="font-family:var(--logo-face);font-weight:600;">gexis</span></div>
+            <div style="font-size:17px;line-height:1.55;color:rgba(233,238,242,0.72);margin-top:16px;max-width:52ch;text-wrap:pretty;">You are connected to the player's own Wi-Fi. Nothing here leaves the room: the device is the only thing this page is talking to.</div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:10px;">
+            <div style="display:flex;align-items:flex-start;gap:14px;padding:16px 18px;border-radius:16px;background:rgba(255,255,255,0.05);border:1px solid rgba(233,238,242,0.1);box-sizing:border-box;">
+              <span style="width:4px;align-self:stretch;border-radius:2px;background:#8fc4d8;flex-shrink:0;display:block;"></span>
+              <span style="flex:1;min-width:0;"><span style="display:block;font-size:17px;font-weight:600;">About two minutes</span><span style="display:block;font-size:15px;line-height:1.45;color:rgba(233,238,242,0.62);margin-top:5px;text-wrap:pretty;">Six questions. Every one of them can be changed later in Settings.</span></span>
+            </div>
+            <div style="display:flex;align-items:flex-start;gap:14px;padding:16px 18px;border-radius:16px;background:rgba(255,255,255,0.05);border:1px solid rgba(233,238,242,0.1);box-sizing:border-box;">
+              <span style="width:4px;align-self:stretch;border-radius:2px;background:#7ed6bc;flex-shrink:0;display:block;"></span>
+              <span style="flex:1;min-width:0;"><span style="display:block;font-size:17px;font-weight:600;">Keep this phone handy</span><span style="display:block;font-size:15px;line-height:1.45;color:rgba(233,238,242,0.62);margin-top:5px;text-wrap:pretty;">When setup finishes, the player leaves its own Wi-Fi for yours and this page stops working. That is by design, not a fault.</span></span>
+            </div>
+          </div>
+        </div>
+
+        <div style="flex-direction:column;gap:22px;animation:setFade 260ms cubic-bezier(0.32,0.72,0,1);display:{{ sWifi }};">
+          <div>
+            <div style="font-weight:800;letter-spacing:-0.015em;line-height:1.15;font-size:{{ h1Size }};">Join your network</div>
+            <div style="font-size:16px;line-height:1.5;color:rgba(233,238,242,0.66);margin-top:10px;max-width:50ch;text-wrap:pretty;">The player has one radio, so it can host this page or use your network, never both.</div>
+          </div>
+
+          <div style="align-items:center;gap:16px;padding:20px 4px;display:{{ wifiScanDisplay }};">
+            <div style="width:30px;height:30px;border-radius:50%;box-sizing:border-box;border:3px solid rgba(233,238,242,0.14);border-top-color:#8fc4d8;animation:setSpin 900ms linear infinite;flex-shrink:0;"></div>
+            <div style="flex:1;min-width:0;font-size:17px;font-weight:600;">Looking for networks</div>
+          </div>
+
+          <div style="flex-direction:column;gap:6px;display:{{ wifiListDisplay }};">
+            <sc-for list="{{ nets }}" as="n" hint-placeholder-count="5">
+              <div onClick="{{ n.onTap }}" style="display:flex;align-items:center;gap:16px;min-height:66px;padding:12px 18px;border-radius:14px;box-sizing:border-box;background:rgba(255,255,255,0.05);border:1px solid rgba(233,238,242,0.1);" style-active="transform:scale(0.99);background:rgba(233,238,242,0.1)">
+                <span style="width:26px;height:20px;align-items:flex-end;gap:3px;flex-shrink:0;display:flex;">
+                  <span style="width:4px;height:6px;border-radius:1px;display:block;background:{{ n.bar1 }};"></span>
+                  <span style="width:4px;height:10px;border-radius:1px;display:block;background:{{ n.bar2 }};"></span>
+                  <span style="width:4px;height:14px;border-radius:1px;display:block;background:{{ n.bar3 }};"></span>
+                  <span style="width:4px;height:18px;border-radius:1px;display:block;background:{{ n.bar4 }};"></span>
+                </span>
+                <span style="flex:1;min-width:0;display:block;">
+                  <span style="display:flex;align-items:center;gap:9px;">
+                    <span style="font-size:17px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ n.name }}</span>
+                    <span style="width:13px;height:15px;position:relative;flex-shrink:0;display:{{ n.lockDisplay }};">
+                      <span style="position:absolute;left:0;bottom:0;width:13px;height:9px;border-radius:2px;background:rgba(233,238,242,0.6);display:block;"></span>
+                      <span style="position:absolute;left:3px;top:0;width:7px;height:8px;border:2px solid rgba(233,238,242,0.6);border-bottom:none;border-radius:4px 4px 0 0;box-sizing:border-box;display:block;"></span>
+                    </span>
+                  </span>
+                  <span style="display:block;font-family:'IBM Plex Mono','Courier New',monospace;font-size:13px;letter-spacing:0.04em;margin-top:4px;color:rgba(233,238,242,0.6);">{{ n.meta }}</span>
+                </span>
+                <span style="width:11px;height:11px;border-right:2.5px solid rgba(233,238,242,0.42);border-top:2.5px solid rgba(233,238,242,0.42);transform:rotate(45deg);flex-shrink:0;display:block;"></span>
+              </div>
+            </sc-for>
+            <div onClick="{{ onRescan }}" style="align-self:flex-start;margin-top:8px;min-height:44px;padding:0 20px;border-radius:12px;background:rgba(233,238,242,0.07);border:1px solid rgba(233,238,242,0.14);display:flex;align-items:center;font-family:'IBM Plex Mono','Courier New',monospace;font-size:13px;font-weight:600;letter-spacing:0.14em;text-transform:uppercase;box-sizing:border-box;" style-active="transform:scale(0.96)">Scan again</div>
+          </div>
+
+          <div style="flex-direction:column;gap:18px;display:{{ wifiFormDisplay }};">
+            <div style="display:flex;align-items:center;gap:14px;padding:16px 18px;border-radius:16px;background:rgba(143,196,216,0.1);border:1px solid rgba(143,196,216,0.38);box-sizing:border-box;">
+              <span style="flex:1;min-width:0;"><span style="display:block;font-size:17px;font-weight:700;">{{ pickedName }}</span><span style="display:block;font-family:'IBM Plex Mono','Courier New',monospace;font-size:13px;letter-spacing:0.04em;color:rgba(233,238,242,0.66);margin-top:4px;">{{ pickedMeta }}</span></span>
+              <span onClick="{{ onUnpick }}" style="flex-shrink:0;min-height:44px;padding:0 16px;border-radius:12px;background:rgba(233,238,242,0.07);border:1px solid rgba(233,238,242,0.16);display:flex;align-items:center;font-family:'IBM Plex Mono','Courier New',monospace;font-size:12px;font-weight:600;letter-spacing:0.14em;text-transform:uppercase;box-sizing:border-box;" style-active="transform:scale(0.95)">Change</span>
+            </div>
+
+            <label style="flex-direction:column;gap:9px;display:{{ manualSsidDisplay }};">
+              <span style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:12px;letter-spacing:0.2em;text-transform:uppercase;color:rgba(233,238,242,0.62);">Network name</span>
+              <input type="text" value="{{ manualSsid }}" onInput="{{ onManualSsid }}" placeholder="Exactly as your router spells it" autoComplete="off" spellCheck="{{ false }}" style="width:100%;box-sizing:border-box;height:58px;border-radius:14px;background:rgba(8,12,16,0.6);border:1px solid rgba(233,238,242,0.18);padding:0 18px;font-family:'IBM Plex Mono','Courier New',monospace;font-size:16px;color:#e9eef2;outline:none;" style-focus="border-color:#8fc4d8" />
+            </label>
+
+            <label style="flex-direction:column;gap:9px;display:{{ pwDisplay }};">
+              <span style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:12px;letter-spacing:0.2em;text-transform:uppercase;color:rgba(233,238,242,0.62);">Password</span>
+              <span style="position:relative;display:block;">
+                <input type="{{ pwType }}" value="{{ pw }}" onInput="{{ onPw }}" placeholder="Network password" autoComplete="off" spellCheck="{{ false }}" style="width:100%;box-sizing:border-box;height:58px;border-radius:14px;background:rgba(8,12,16,0.6);border:1px solid rgba(233,238,242,0.18);padding:0 96px 0 18px;font-family:'IBM Plex Mono','Courier New',monospace;font-size:16px;color:#e9eef2;outline:none;" style-focus="border-color:#8fc4d8" />
+                <span onClick="{{ onPwToggle }}" style="position:absolute;right:8px;top:8px;height:42px;padding:0 14px;border-radius:10px;background:rgba(233,238,242,0.08);display:flex;align-items:center;font-family:'IBM Plex Mono','Courier New',monospace;font-size:12px;font-weight:600;letter-spacing:0.12em;text-transform:uppercase;color:rgba(233,238,242,0.8);box-sizing:border-box;" style-active="transform:scale(0.95)">{{ pwToggleLabel }}</span>
+              </span>
+              <span style="font-size:14px;line-height:1.45;color:{{ pwHintInk }};text-wrap:pretty;">{{ pwHint }}</span>
+            </label>
+
+            <div style="align-items:center;gap:16px;padding:6px 2px;display:{{ joiningDisplay }};">
+              <div style="width:30px;height:30px;border-radius:50%;box-sizing:border-box;border:3px solid rgba(233,238,242,0.14);border-top-color:#8fc4d8;animation:setSpin 900ms linear infinite;flex-shrink:0;"></div>
+              <div style="flex:1;min-width:0;font-size:17px;font-weight:600;">{{ joinTitle }}</div>
+            </div>
+
+            <div style="align-items:flex-start;gap:14px;padding:16px 18px;border-radius:14px;background:rgba(224,167,88,0.12);border:1px solid rgba(224,167,88,0.42);box-sizing:border-box;display:{{ joinErrDisplay }};">
+              <span style="width:26px;height:26px;border-radius:50%;background:#e0a758;color:#16232c;font-weight:700;font-size:17px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">!</span>
+              <span style="flex:1;min-width:0;font-size:15px;line-height:1.45;text-wrap:pretty;">Could not join. The password was not accepted — it is kept above so you can correct it.</span>
+            </div>
+
+            <div onClick="{{ onJoin }}" style="min-height:56px;border-radius:15px;box-sizing:border-box;display:{{ joinBtnDisplay }};align-items:center;justify-content:center;font-size:17px;font-weight:700;background:rgba(126,214,188,0.16);border:1px solid rgba(126,214,188,0.4);color:#7ed6bc;opacity:{{ joinBtnOpacity }};pointer-events:{{ joinBtnPointer }};" style-active="transform:scale(0.98)">{{ joinBtnLabel }}</div>
+          </div>
+
+          <div style="align-items:center;gap:16px;padding:18px;border-radius:16px;background:rgba(126,214,188,0.1);border:1px solid rgba(126,214,188,0.4);box-sizing:border-box;display:{{ joinOkDisplay }};">
+            <span style="width:44px;height:44px;border-radius:50%;background:rgba(126,214,188,0.18);display:flex;align-items:center;justify-content:center;flex-shrink:0;"><span style="width:17px;height:9px;border-left:3px solid #7ed6bc;border-bottom:3px solid #7ed6bc;transform:rotate(-45deg);margin-top:-4px;display:block;"></span></span>
+            <span style="flex:1;min-width:0;"><span style="display:block;font-size:18px;font-weight:700;">Credentials accepted</span><span style="display:block;font-size:15px;line-height:1.45;color:rgba(233,238,242,0.66);margin-top:4px;text-wrap:pretty;">Saved for {{ pickedName }}. The player joins it at the end of setup.</span></span>
+            <span onClick="{{ onUnpick }}" style="flex-shrink:0;min-height:44px;padding:0 16px;border-radius:12px;background:rgba(233,238,242,0.07);border:1px solid rgba(233,238,242,0.16);display:flex;align-items:center;font-family:'IBM Plex Mono','Courier New',monospace;font-size:12px;font-weight:600;letter-spacing:0.14em;text-transform:uppercase;box-sizing:border-box;" style-active="transform:scale(0.95)">Change</span>
+          </div>
+        </div>
+
+        <div style="flex-direction:column;gap:22px;animation:setFade 260ms cubic-bezier(0.32,0.72,0,1);display:{{ sName }};">
+          <div>
+            <div style="font-weight:800;letter-spacing:-0.015em;line-height:1.15;font-size:{{ h1Size }};">Name the player</div>
+            <div style="font-size:16px;line-height:1.5;color:rgba(233,238,242,0.66);margin-top:10px;max-width:50ch;text-wrap:pretty;">One name for everything. There is no per-service override, so pick one you will recognise in a list of speakers.</div>
+          </div>
+          <label style="display:flex;flex-direction:column;gap:9px;">
+            <span style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:12px;letter-spacing:0.2em;text-transform:uppercase;color:rgba(233,238,242,0.62);">Device name</span>
+            <input type="text" value="{{ name }}" onInput="{{ onName }}" placeholder="Living room" autoComplete="off" spellCheck="{{ false }}" style="width:100%;box-sizing:border-box;height:64px;border-radius:14px;background:rgba(8,12,16,0.6);border:1px solid {{ nameBorder }};padding:0 18px;font-size:20px;font-weight:600;color:#e9eef2;outline:none;" style-focus="border-color:#e8a0b4" />
+            <span style="font-size:14px;line-height:1.45;color:{{ nameHintInk }};text-wrap:pretty;">{{ nameHint }}</span>
+          </label>
+          <div style="display:flex;flex-direction:column;gap:1px;border-radius:16px;overflow:hidden;border:1px solid rgba(233,238,242,0.1);">
+            <div style="padding:13px 18px;background:rgba(255,255,255,0.05);font-family:'IBM Plex Mono','Courier New',monospace;font-size:12px;letter-spacing:0.2em;text-transform:uppercase;color:rgba(233,238,242,0.62);">Becomes</div>
+            <sc-for list="{{ namePreview }}" as="p" hint-placeholder-count="4">
+              <div style="display:flex;align-items:center;gap:16px;padding:14px 18px;background:rgba(255,255,255,0.03);min-height:34px;">
+                <span style="flex-shrink:0;width:132px;font-size:15px;color:rgba(233,238,242,0.62);">{{ p.what }}</span>
+                <span style="flex:1;min-width:0;font-family:'IBM Plex Mono','Courier New',monospace;font-size:15px;font-weight:600;color:#e9eef2;word-break:break-all;">{{ p.value }}</span>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+
+        <div style="flex-direction:column;gap:22px;animation:setFade 260ms cubic-bezier(0.32,0.72,0,1);display:{{ sTz }};">
+          <div>
+            <div style="font-weight:800;letter-spacing:-0.015em;line-height:1.15;font-size:{{ h1Size }};">Set the clock</div>
+            <div style="font-size:16px;line-height:1.5;color:rgba(233,238,242,0.66);margin-top:10px;max-width:50ch;text-wrap:pretty;">The idle screen is mostly a clock, so this is worth getting right.</div>
+          </div>
+          <div style="flex-direction:column;gap:14px;display:{{ tzAutoDisplay }};">
+            <div style="display:flex;align-items:center;gap:18px;padding:22px;border-radius:18px;background:rgba(200,162,216,0.1);border:1px solid rgba(200,162,216,0.38);box-sizing:border-box;flex-wrap:wrap;">
+              <div style="flex:1;min-width:180px;">
+                <div style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:12px;letter-spacing:0.2em;text-transform:uppercase;color:rgba(233,238,242,0.62);">Read from this phone</div>
+                <div style="font-size:22px;font-weight:700;margin-top:8px;word-break:break-word;">{{ tzLabel }}</div>
+              </div>
+              <div style="font-family:'IBM Plex Mono','Courier New',monospace;font-weight:700;letter-spacing:-0.01em;flex-shrink:0;font-size:{{ clockSize }};">{{ clock }}</div>
+            </div>
+            <div onClick="{{ onTzPick }}" style="align-self:flex-start;min-height:44px;padding:0 20px;border-radius:12px;background:rgba(233,238,242,0.07);border:1px solid rgba(233,238,242,0.14);display:flex;align-items:center;font-family:'IBM Plex Mono','Courier New',monospace;font-size:13px;font-weight:600;letter-spacing:0.14em;text-transform:uppercase;box-sizing:border-box;" style-active="transform:scale(0.96)">Choose by hand</div>
+          </div>
+
+          <div style="flex-direction:column;gap:6px;display:{{ tzRegionDisplay }};">
+            <div style="display:flex;align-items:center;gap:14px;padding:0 2px 6px;">
+              <span onClick="{{ onRegionBack }}" style="width:44px;height:44px;border-radius:50%;background:rgba(233,238,242,0.07);display:flex;align-items:center;justify-content:center;flex-shrink:0;" style-active="background:rgba(233,238,242,0.18)"><span style="width:11px;height:11px;border-left:2.5px solid #e9eef2;border-bottom:2.5px solid #e9eef2;transform:rotate(45deg);margin-left:8px;display:block;"></span></span>
+              <span style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:12px;letter-spacing:0.2em;text-transform:uppercase;color:rgba(233,238,242,0.62);">Region</span>
+            </div>
+            <sc-for list="{{ tzRegions }}" as="r" hint-placeholder-count="8">
+              <div onClick="{{ r.onTap }}" style="display:flex;align-items:center;gap:16px;min-height:58px;padding:10px 18px;border-radius:14px;box-sizing:border-box;background:rgba(255,255,255,0.05);border:1px solid rgba(233,238,242,0.1);" style-active="background:rgba(233,238,242,0.1)">
+                <span style="flex:1;min-width:0;font-size:17px;font-weight:600;">{{ r.label }}</span>
+                <span style="width:11px;height:11px;border-right:2.5px solid rgba(233,238,242,0.42);border-top:2.5px solid rgba(233,238,242,0.42);transform:rotate(45deg);flex-shrink:0;display:block;"></span>
+              </div>
+            </sc-for>
+          </div>
+
+          <div style="flex-direction:column;gap:6px;display:{{ tzCityDisplay }};">
+            <div style="display:flex;align-items:center;gap:14px;padding:0 2px 6px;">
+              <span onClick="{{ onTzBack }}" style="width:44px;height:44px;border-radius:50%;background:rgba(233,238,242,0.07);display:flex;align-items:center;justify-content:center;flex-shrink:0;" style-active="background:rgba(233,238,242,0.18)"><span style="width:11px;height:11px;border-left:2.5px solid #e9eef2;border-bottom:2.5px solid #e9eef2;transform:rotate(45deg);margin-left:8px;display:block;"></span></span>
+              <span style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:12px;letter-spacing:0.2em;text-transform:uppercase;color:rgba(233,238,242,0.62);">{{ tzRegionLabel }}</span>
+            </div>
+            <sc-for list="{{ tzCities }}" as="c" hint-placeholder-count="10">
+              <div onClick="{{ c.onTap }}" style="display:flex;align-items:center;gap:16px;min-height:58px;padding:10px 18px;border-radius:14px;box-sizing:border-box;background:{{ c.bg }};border:1px solid {{ c.border }};" style-active="background:rgba(233,238,242,0.1)">
+                <span style="flex:1;min-width:0;font-size:17px;font-weight:600;">{{ c.label }}</span>
+                <span style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:14px;color:rgba(233,238,242,0.6);flex-shrink:0;">{{ c.time }}</span>
+              </div>
+            </sc-for>
+          </div>
+
+          <div style="display:flex;align-items:center;gap:16px;padding:16px 18px;border-radius:16px;background:rgba(255,255,255,0.05);border:1px solid rgba(233,238,242,0.1);box-sizing:border-box;flex-wrap:wrap;">
+            <span style="flex:1;min-width:160px;font-size:17px;font-weight:600;">Clock format</span>
+            <span style="display:flex;gap:6px;flex-shrink:0;">
+              <span onClick="{{ on24 }}" style="min-height:44px;padding:0 20px;border-radius:12px;display:flex;align-items:center;font-family:'IBM Plex Mono','Courier New',monospace;font-size:14px;font-weight:600;box-sizing:border-box;background:{{ h24Bg }};border:1px solid {{ h24Border }};color:{{ h24Ink }};" style-active="transform:scale(0.96)">24 h</span>
+              <span onClick="{{ on12 }}" style="min-height:44px;padding:0 20px;border-radius:12px;display:flex;align-items:center;font-family:'IBM Plex Mono','Courier New',monospace;font-size:14px;font-weight:600;box-sizing:border-box;background:{{ h12Bg }};border:1px solid {{ h12Border }};color:{{ h12Ink }};" style-active="transform:scale(0.96)">12 h</span>
+            </span>
+          </div>
+        </div>
+
+        <div style="flex-direction:column;gap:22px;animation:setFade 260ms cubic-bezier(0.32,0.72,0,1);display:{{ sOut }};">
+          <div>
+            <div style="font-weight:800;letter-spacing:-0.015em;line-height:1.15;font-size:{{ h1Size }};">Choose the output</div>
+            <div style="font-size:16px;line-height:1.5;color:rgba(233,238,242,0.66);margin-top:10px;max-width:50ch;text-wrap:pretty;">What the player should send audio to. Stored by name, because card numbers move between boots.</div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:6px;">
+            <sc-for list="{{ outs }}" as="o" hint-placeholder-count="4">
+              <div onClick="{{ o.onTap }}" style="display:flex;align-items:center;gap:16px;min-height:74px;padding:14px 18px;border-radius:15px;box-sizing:border-box;background:{{ o.bg }};border:1px solid {{ o.border }};" style-active="transform:scale(0.99)">
+                <span style="width:22px;height:22px;border-radius:50%;flex-shrink:0;box-sizing:border-box;display:flex;align-items:center;justify-content:center;border:2px solid {{ o.ring }};">
+                  <span style="width:11px;height:11px;border-radius:50%;background:#7ed6bc;display:{{ o.dotDisplay }};"></span>
+                </span>
+                <span style="flex:1;min-width:0;display:block;">
+                  <span style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+                    <span style="font-size:17px;font-weight:600;">{{ o.label }}</span>
+                    <span style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:11px;font-weight:600;letter-spacing:0.14em;text-transform:uppercase;color:#7ed6bc;border:1px solid rgba(126,214,188,0.45);border-radius:999px;padding:3px 9px;display:{{ o.tagDisplay }};">Detected</span>
+                  </span>
+                  <span style="display:block;font-family:'IBM Plex Mono','Courier New',monospace;font-size:13px;letter-spacing:0.04em;color:rgba(233,238,242,0.6);margin-top:5px;">{{ o.meta }}</span>
+                </span>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+
+        <div style="flex-direction:column;gap:22px;animation:setFade 260ms cubic-bezier(0.32,0.72,0,1);display:{{ sMusic }};">
+          <div>
+            <div style="font-weight:800;letter-spacing:-0.015em;line-height:1.15;font-size:{{ h1Size }};">Find your library</div>
+            <div style="font-size:16px;line-height:1.5;color:rgba(233,238,242,0.66);margin-top:10px;max-width:50ch;text-wrap:pretty;">Servers announce themselves on the network. Typing an address is the fallback, not the route.</div>
+          </div>
+
+          <div style="align-items:center;gap:16px;padding:20px 4px;display:{{ lmsScanDisplay }};">
+            <div style="width:30px;height:30px;border-radius:50%;box-sizing:border-box;border:3px solid rgba(233,238,242,0.14);border-top-color:#9fb4e8;animation:setSpin 900ms linear infinite;flex-shrink:0;"></div>
+            <div style="flex:1;min-width:0;"><div style="font-size:17px;font-weight:600;">Searching the network</div><div style="font-size:14px;color:rgba(233,238,242,0.6);margin-top:4px;">Servers answer within a few seconds.</div></div>
+          </div>
+
+          <div style="flex-direction:column;gap:6px;display:{{ lmsListDisplay }};">
+            <sc-for list="{{ servers }}" as="s" hint-placeholder-count="2">
+              <div onClick="{{ s.onTap }}" style="display:flex;align-items:center;gap:16px;min-height:72px;padding:12px 18px;border-radius:15px;box-sizing:border-box;background:{{ s.bg }};border:1px solid {{ s.border }};" style-active="transform:scale(0.99)">
+                <span style="width:24px;height:22px;align-items:flex-end;gap:3px;flex-shrink:0;display:flex;">
+                  <span style="width:4px;height:9px;border-radius:1px;background:#7ed6bc;display:block;"></span>
+                  <span style="width:4px;height:18px;border-radius:1px;background:#7ed6bc;display:block;"></span>
+                  <span style="width:4px;height:13px;border-radius:1px;background:#7ed6bc;display:block;"></span>
+                  <span style="width:4px;height:21px;border-radius:1px;background:#7ed6bc;display:block;"></span>
+                </span>
+                <span style="flex:1;min-width:0;display:block;">
+                  <span style="display:block;font-size:17px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ s.name }}</span>
+                  <span style="display:block;font-family:'IBM Plex Mono','Courier New',monospace;font-size:13px;letter-spacing:0.04em;color:rgba(233,238,242,0.6);margin-top:4px;">{{ s.meta }}</span>
+                </span>
+                <span style="width:22px;height:22px;border-radius:50%;flex-shrink:0;box-sizing:border-box;display:flex;align-items:center;justify-content:center;border:2px solid {{ s.ring }};"><span style="width:11px;height:11px;border-radius:50%;background:#7ed6bc;display:{{ s.dotDisplay }};"></span></span>
+              </div>
+            </sc-for>
+
+            <label style="display:flex;flex-direction:column;gap:9px;margin-top:12px;">
+              <span style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:12px;letter-spacing:0.2em;text-transform:uppercase;color:rgba(233,238,242,0.62);">Or type an address</span>
+              <input type="text" value="{{ lmsManual }}" onInput="{{ onLmsManual }}" placeholder="192.168.1.10:9000" autoComplete="off" spellCheck="{{ false }}" style="width:100%;box-sizing:border-box;height:58px;border-radius:14px;background:rgba(8,12,16,0.6);border:1px solid rgba(233,238,242,0.18);padding:0 18px;font-family:'IBM Plex Mono','Courier New',monospace;font-size:16px;color:#e9eef2;outline:none;" style-focus="border-color:#9fb4e8" />
+            </label>
+            <div style="font-size:14px;line-height:1.45;color:rgba(233,238,242,0.6);padding:4px 2px;text-wrap:pretty;">No server yet? Leave this alone. Spotify Connect and Bluetooth work without one.</div>
+          </div>
+
+          <div style="flex-direction:column;gap:6px;display:{{ servicesDisplay }};">
+            <div style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:12px;letter-spacing:0.2em;text-transform:uppercase;color:rgba(233,238,242,0.62);padding:14px 2px 6px;">Also switch on</div>
+            <sc-for list="{{ services }}" as="v" hint-placeholder-count="2">
+              <div onClick="{{ v.onTap }}" style="display:flex;align-items:center;gap:16px;min-height:70px;padding:12px 18px;border-radius:15px;box-sizing:border-box;background:rgba(255,255,255,0.05);border:1px solid rgba(233,238,242,0.1);">
+                <span style="flex:1;min-width:0;display:block;">
+                  <span style="display:block;font-size:17px;font-weight:600;">{{ v.label }}</span>
+                  <span style="display:block;font-size:14px;line-height:1.4;color:rgba(233,238,242,0.6);margin-top:5px;text-wrap:pretty;">{{ v.note }}</span>
+                </span>
+                <span style="width:60px;height:34px;border-radius:17px;flex-shrink:0;position:relative;box-sizing:border-box;transition:background 140ms ease;display:block;background:{{ v.togBg }};border:1px solid {{ v.togBorder }};">
+                  <span style="position:absolute;top:3px;width:26px;height:26px;border-radius:50%;transition:left 140ms ease;display:block;left:{{ v.knobLeft }};background:{{ v.knobBg }};"></span>
+                </span>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+
+        <div style="flex-direction:column;gap:22px;animation:setFade 260ms cubic-bezier(0.32,0.72,0,1);display:{{ sDisp }};">
+          <div>
+            <div style="font-weight:800;letter-spacing:-0.015em;line-height:1.15;font-size:{{ h1Size }};">Is a screen attached?</div>
+            <div style="font-size:16px;line-height:1.5;color:rgba(233,238,242,0.66);margin-top:10px;max-width:50ch;text-wrap:pretty;">The panel is the player's own display. Without one, everything runs from a phone or a browser.</div>
+          </div>
+          <div style="display:grid;gap:12px;grid-template-columns:{{ dispCols }};">
+            <div onClick="{{ onPanelMode }}" style="padding:22px;border-radius:18px;box-sizing:border-box;background:{{ panelBg }};border:1px solid {{ panelBorder }};" style-active="transform:scale(0.99)">
+              <div style="width:100%;aspect-ratio:16/10;border-radius:10px;background:rgba(8,12,16,0.5);border:2px solid {{ panelArtInk }};box-sizing:border-box;display:flex;align-items:center;justify-content:center;">
+                <span style="width:42%;height:6px;border-radius:3px;background:{{ panelArtInk }};display:block;"></span>
+              </div>
+              <div style="font-size:19px;font-weight:700;margin-top:18px;">Panel attached</div>
+              <div style="font-size:15px;line-height:1.45;color:rgba(233,238,242,0.66);margin-top:7px;text-wrap:pretty;">Now Playing, browse and settings run on the device's own screen.</div>
+            </div>
+            <div onClick="{{ onHeadless }}" style="padding:22px;border-radius:18px;box-sizing:border-box;background:{{ headBg }};border:1px solid {{ headBorder }};" style-active="transform:scale(0.99)">
+              <div style="width:100%;aspect-ratio:16/10;border-radius:10px;background:rgba(8,12,16,0.5);border:2px dashed {{ headArtInk }};box-sizing:border-box;display:flex;align-items:center;justify-content:center;">
+                <span style="width:34px;height:2px;border-radius:2px;background:{{ headArtInk }};transform:rotate(-38deg);display:block;"></span>
+              </div>
+              <div style="font-size:19px;font-weight:700;margin-top:18px;">Headless</div>
+              <div style="font-size:15px;line-height:1.45;color:rgba(233,238,242,0.66);margin-top:7px;text-wrap:pretty;">No local screen. The display stays off and nothing is drawn.</div>
+            </div>
+          </div>
+          <div style="align-items:flex-start;gap:14px;padding:16px 18px;border-radius:14px;background:rgba(224,167,88,0.12);border:1px solid rgba(224,167,88,0.42);box-sizing:border-box;display:{{ headWarnDisplay }};">
+            <span style="width:26px;height:26px;border-radius:50%;background:#e0a758;color:#16232c;font-weight:700;font-size:17px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">!</span>
+            <span style="flex:1;min-width:0;font-size:15px;line-height:1.45;text-wrap:pretty;">The panel is where the player shows its own address if it ever loses the network. Headless, that fallback is gone — write down the address on the last page.</span>
+          </div>
+        </div>
+
+        <div style="flex-direction:column;gap:22px;animation:setFade 260ms cubic-bezier(0.32,0.72,0,1);display:{{ sReview }};">
+          <div>
+            <div style="font-weight:800;letter-spacing:-0.015em;line-height:1.15;font-size:{{ h1Size }};">Check it over</div>
+            <div style="font-size:16px;line-height:1.5;color:rgba(233,238,242,0.66);margin-top:10px;max-width:50ch;text-wrap:pretty;">Finishing writes all of this to the player and restarts its network.</div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:1px;border-radius:18px;overflow:hidden;border:1px solid rgba(233,238,242,0.12);">
+            <sc-for list="{{ review }}" as="r" hint-placeholder-count="6">
+              <div style="display:flex;align-items:center;gap:16px;padding:17px 18px;background:rgba(255,255,255,0.05);min-height:34px;flex-wrap:wrap;">
+                <span style="flex-shrink:0;width:106px;font-family:'IBM Plex Mono','Courier New',monospace;font-size:12px;letter-spacing:0.16em;text-transform:uppercase;color:rgba(233,238,242,0.62);">{{ r.what }}</span>
+                <span style="flex:1;min-width:120px;font-size:17px;font-weight:600;word-break:break-word;text-wrap:pretty;">{{ r.value }}</span>
+                <span onClick="{{ r.onTap }}" style="flex-shrink:0;min-height:44px;padding:0 16px;border-radius:12px;background:rgba(233,238,242,0.07);border:1px solid rgba(233,238,242,0.16);display:flex;align-items:center;font-family:'IBM Plex Mono','Courier New',monospace;font-size:12px;font-weight:600;letter-spacing:0.14em;text-transform:uppercase;box-sizing:border-box;" style-active="transform:scale(0.95)">Change</span>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+
+        <div style="flex-direction:column;gap:26px;animation:setFade 260ms cubic-bezier(0.32,0.72,0,1);display:{{ sFinish }};">
+          <div style="flex-direction:column;gap:18px;display:{{ finProgDisplay }};">
+            <div style="font-weight:800;letter-spacing:-0.015em;line-height:1.15;font-size:{{ h1Size }};">Handing over</div>
+            <sc-for list="{{ finSteps }}" as="f" hint-placeholder-count="3">
+              <div style="display:flex;align-items:center;gap:16px;min-height:60px;padding:12px 18px;border-radius:15px;box-sizing:border-box;background:rgba(255,255,255,0.05);border:1px solid rgba(233,238,242,0.1);">
+                <span style="width:30px;height:30px;flex-shrink:0;position:relative;display:block;">
+                  <span style="position:absolute;inset:0;border-radius:50%;box-sizing:border-box;border:3px solid rgba(233,238,242,0.14);border-top-color:#7ed6bc;animation:setSpin 900ms linear infinite;display:{{ f.spinDisplay }};"></span>
+                  <span style="position:absolute;inset:0;border-radius:50%;background:rgba(126,214,188,0.18);align-items:center;justify-content:center;display:{{ f.okDisplay }};"><span style="width:13px;height:7px;border-left:2.5px solid #7ed6bc;border-bottom:2.5px solid #7ed6bc;transform:rotate(-45deg);margin-top:-3px;display:block;"></span></span>
+                  <span style="position:absolute;inset:0;border-radius:50%;border:2px solid rgba(233,238,242,0.14);box-sizing:border-box;display:{{ f.waitDisplay }};"></span>
+                </span>
+                <span style="flex:1;min-width:0;font-size:17px;font-weight:600;color:{{ f.ink }};">{{ f.label }}</span>
+              </div>
+            </sc-for>
+          </div>
+
+          <div style="flex-direction:column;gap:22px;display:{{ finDoneDisplay }};">
+            <div>
+              <div style="font-weight:800;letter-spacing:-0.02em;line-height:1.1;text-wrap:pretty;font-size:{{ heroSize }};">{{ doneTitle }}</div>
+              <div style="font-size:17px;line-height:1.55;color:rgba(233,238,242,0.72);margin-top:16px;max-width:52ch;text-wrap:pretty;">This page is served by the player over its own Wi-Fi, so it stops here. Reconnect this phone to {{ joinedSsid }}, then open the address below.</div>
+            </div>
+            <div style="padding:26px 22px;border-radius:18px;background:rgba(126,214,188,0.1);border:1px solid rgba(126,214,188,0.4);box-sizing:border-box;">
+              <div style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:12px;letter-spacing:0.2em;text-transform:uppercase;color:rgba(233,238,242,0.62);">Open in any browser</div>
+              <div style="font-family:'IBM Plex Mono','Courier New',monospace;font-weight:700;color:#7ed6bc;margin-top:12px;word-break:break-all;letter-spacing:-0.01em;font-size:{{ addrSize }};">{{ doneAddr }}</div>
+            </div>
+            <div style="display:flex;align-items:flex-start;gap:14px;padding:16px 18px;border-radius:14px;background:rgba(255,255,255,0.05);border:1px solid rgba(233,238,242,0.1);box-sizing:border-box;">
+              <span style="width:4px;align-self:stretch;border-radius:2px;background:{{ doneNoteAccent }};flex-shrink:0;display:block;"></span>
+              <span style="flex:1;min-width:0;font-size:15px;line-height:1.5;color:rgba(233,238,242,0.72);text-wrap:pretty;">{{ doneNote }}</span>
+            </div>
+          </div>
+        </div>
+
+        <div style="align-items:center;gap:12px;margin-top:30px;display:{{ footDisplay }};">
+          <div onClick="{{ onBack }}" style="min-height:56px;padding:0 24px;border-radius:15px;background:rgba(233,238,242,0.07);border:1px solid rgba(233,238,242,0.14);align-items:center;justify-content:center;font-size:17px;font-weight:600;box-sizing:border-box;flex-shrink:0;display:{{ backDisplay }};" style-active="transform:scale(0.96)">Back</div>
+          <div onClick="{{ onNext }}" style="flex:1;min-height:56px;border-radius:15px;box-sizing:border-box;display:flex;align-items:center;justify-content:center;font-size:17px;font-weight:700;background:rgba(126,214,188,0.16);border:1px solid rgba(126,214,188,0.4);color:#7ed6bc;opacity:{{ nextOpacity }};pointer-events:{{ nextPointer }};" style-active="transform:scale(0.98)">{{ nextLabel }}</div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:412,&quot;height&quot;:915},&quot;mode&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;auto&quot;,&quot;wide&quot;,&quot;narrow&quot;],&quot;default&quot;:&quot;auto&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Layout&quot;},&quot;startAt&quot;:{&quot;editor&quot;:&quot;int&quot;,&quot;default&quot;:0,&quot;min&quot;:0,&quot;max&quot;:8,&quot;tsType&quot;:&quot;number&quot;,&quot;section&quot;:&quot;Layout&quot;},&quot;apSsid&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;gexis-setup&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Content&quot;},&quot;askOutput&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Steps&quot;},&quot;askServices&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Steps&quot;}}">
+const NETS = [
+  ['Studio 5G', '5 GHz · WPA2', 4, true],
+  ['Studio', '2.4 GHz · WPA2', 4, true],
+  ['FRITZ!Box 7590 UO', '2.4 GHz · WPA2', 3, true],
+  ['Neighbour-24', '2.4 GHz · WPA2', 2, true],
+  ['Hotel Guest', '2.4 GHz · Open', 1, false],
+  ['Other network', 'Hidden or out of range', 0, true]
+];
+
+const OUTS = [
+  ['hifiberry', 'HiFiBerry DAC2 HD', 'I2S HAT · up to 24-bit / 192 kHz', true],
+  ['usb', 'Topping E30 II', 'USB audio · up to 32-bit / 384 kHz', true],
+  ['hdmi', 'HDMI', 'Whatever the screen or amp accepts', true],
+  ['jack', 'Headphone jack', 'Onboard · 3.5 mm', false]
+];
+
+const SERVERS = [
+  ['gexis-lms', '192.168.178.188:9000 · 41,208 tracks'],
+  ['attic-server', '192.168.178.42:9000 · 3,904 tracks']
+];
+
+// Region -> IANA city list. Enough of the corpus to make the two-step pick
+// feel real; the device ships the full tzdata set.
+const TZ = {
+  Africa: ['Cairo', 'Johannesburg', 'Lagos', 'Nairobi'],
+  America: ['Chicago', 'Denver', 'Halifax', 'Los_Angeles', 'Mexico_City', 'New_York', 'Phoenix', 'Sao_Paulo', 'Toronto', 'Vancouver'],
+  Asia: ['Bangkok', 'Dubai', 'Hong_Kong', 'Jerusalem', 'Kolkata', 'Seoul', 'Shanghai', 'Singapore', 'Tokyo'],
+  Australia: ['Adelaide', 'Brisbane', 'Melbourne', 'Perth', 'Sydney'],
+  Europe: ['Amsterdam', 'Berlin', 'Brussels', 'Bucharest', 'Dublin', 'Lisbon', 'London', 'Madrid', 'Paris', 'Prague', 'Rome', 'Stockholm', 'Vienna', 'Warsaw', 'Zurich'],
+  Pacific: ['Auckland', 'Honolulu'],
+  UTC: ['UTC']
+};
+
+class Component extends DCLogic {
+  state = {
+    w: 0, step: -1,
+    scan: 'scanning', ssid: null, manualSsid: '', pw: '', showPw: false, join: null,
+    name: 'gexis',
+    tz: null, tzMode: 'auto', tzRegion: null, clock24: true, tick: new Date(),
+    out: 'hifiberry',
+    lscan: 'idle', lms: SERVERS[0][0], lmsManual: '', spotify: true, bt: true,
+    headless: false,
+    fin: 0
+  };
+
+  componentDidMount() {
+    let tz = null;
+    try { tz = Intl.DateTimeFormat().resolvedOptions().timeZone || null; } catch (e) { tz = null; }
+    const start = Math.max(0, Math.min(8, this.props.startAt == null ? 0 : this.props.startAt)) - 1;
+    this.setState({ tz, tzMode: tz ? 'auto' : 'region', step: start });
+    this._clock = setInterval(() => this.setState({ tick: new Date() }), 1000);
+    this._scan = setTimeout(() => this.setState({ scan: 'done' }), 1700);
+    if (start >= 0) this.enter(start);
+  }
+
+  componentWillUnmount() {
+    if (this.ro) this.ro.disconnect();
+    clearInterval(this._clock);
+    clearTimeout(this._scan); clearTimeout(this._lscan); clearTimeout(this._join); clearTimeout(this._fin);
+  }
+
+  observe(el) {
+    if (!el || el === this._root) return;
+    this._root = el;
+    if (this.ro) this.ro.disconnect();
+    const read = () => {
+      const w = el.clientWidth || 0;
+      if (w && Math.abs(w - this.state.w) > 1) this.setState({ w });
+    };
+    if (window.ResizeObserver) { this.ro = new ResizeObserver(read); this.ro.observe(el); }
+    read();
+  }
+
+  wide() {
+    const m = this.props.mode || 'auto';
+    if (m === 'wide') return true;
+    if (m === 'narrow') return false;
+    return (this.state.w || 900) >= 720;
+  }
+
+  // the Output step is a suggestion rather than a requirement of ADR-0031, so
+  // it can be dropped without renumbering anything
+  tint(hex, a) {
+    const n = parseInt(hex.slice(1), 16);
+    return 'rgba(' + ((n >> 16) & 255) + ',' + ((n >> 8) & 255) + ',' + (n & 255) + ',' + a + ')';
+  }
+
+  // one accent per step, all seven from the panel's own set, so the rail
+  // carries the same spread of colour the Settings category list does
+  steps() {
+    const s = [
+      ['wifi', 'Network', '#8fc4d8'],
+      ['name', 'Name', '#e8a0b4'],
+      ['tz', 'Time', '#c8a2d8'],
+      ['out', 'Output', '#7ed6bc'],
+      ['music', 'Music', '#9fb4e8'],
+      ['display', 'Display', '#8fd9a8'],
+      ['review', 'Review', '#f2a48f']
+    ];
+    return this.props.askOutput === false ? s.filter(x => x[0] !== 'out') : s;
+  }
+
+  at() { const s = this.steps(); return this.state.step >= 0 && this.state.step < s.length ? s[this.state.step][0] : null; }
+
+  // entering a step is what starts its scan, so a step revisited by Change
+  // does not sit on a stale list
+  enter(i) {
+    const s = this.steps();
+    const id = i >= 0 && i < s.length ? s[i][0] : null;
+    if (id === 'music' && this.state.lscan === 'idle') {
+      this.setState({ lscan: 'scanning' });
+      clearTimeout(this._lscan);
+      this._lscan = setTimeout(() => this.setState({ lscan: 'done' }), 1900);
+    }
+  }
+
+  go(i) { this.setState({ step: i }); this.enter(i); }
+
+  slug() {
+    const s = (this.state.name || '').trim().toLowerCase().replace(/[^a-z0-9-]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 32);
+    return s;
+  }
+
+  net() {
+    const k = this.state.ssid;
+    if (!k) return null;
+    if (k === 'Other network') return [this.state.manualSsid || 'Other network', 'Hidden network · WPA2', 0, true];
+    return NETS.find(n => n[0] === k) || null;
+  }
+
+  ssidLabel() { const n = this.net(); return n ? n[0] : ''; }
+
+  fmtTime(d, tz) {
+    try {
+      return new Intl.DateTimeFormat('en-GB', { hour: '2-digit', minute: '2-digit', hour12: !this.state.clock24, timeZone: tz }).format(d);
+    } catch (e) { return '--:--'; }
+  }
+
+  valid() {
+    switch (this.at()) {
+      case 'wifi': return this.state.join === 'ok';
+      case 'name': return this.slug().length > 1;
+      case 'tz': return !!this.state.tz;
+      default: return true;
+    }
+  }
+
+  join() {
+    const n = this.net();
+    if (!n) return;
+    const needsPw = n[3];
+    this.setState({ join: 'connecting' });
+    clearTimeout(this._join);
+    this._join = setTimeout(() => {
+      // WPA2 is 8 characters minimum, so a short key is a real failure the
+      // device can report before it ever leaves the access point
+      const ok = !needsPw || this.state.pw.length >= 8;
+      this.setState({ join: ok ? 'ok' : 'error' });
+    }, 1800);
+  }
+
+  finish() {
+    this.setState({ step: this.steps().length, fin: 1 });
+    const run = (n, ms) => { this._fin = setTimeout(() => { this.setState({ fin: n }); if (n < 4) run(n + 1, n === 3 ? 1600 : 1300); }, ms); };
+    run(2, 1300);
+  }
+
+  renderVals() {
+    const st = this.state, wide = this.wide(), steps = this.steps();
+    const i = st.step, id = this.at(), last = steps.length;
+    const accent = i >= 0 && i < last ? steps[i][2] : '#7ed6bc';
+    const on = k => id === k ? 'flex' : 'none';
+    const dim = 'rgba(233,238,242,0.42)';
+    const name = (st.name || '').trim() || 'gexis';
+    const slug = this.slug() || 'gexis';
+    const netIsOpen = this.net() ? !this.net()[3] : false;
+    const bars = (lvl, colour) => {
+      const c = n => n <= lvl ? colour : 'rgba(233,238,242,0.22)';
+      return { bar1: c(1), bar2: c(2), bar3: c(3), bar4: c(4) };
+    };
+    const toggle = v => ({
+      togBg: v ? '#7ed6bc' : 'rgba(233,238,242,0.07)',
+      togBorder: v ? '#7ed6bc' : 'rgba(233,238,242,0.18)',
+      knobLeft: v ? '31px' : '3px',
+      knobBg: v ? '#0d151c' : 'rgba(233,238,242,0.55)'
+    });
+
+    const finLabels = ['Saving your answers', 'Leaving the setup network', 'Joining ' + this.ssidLabel()];
+    const tzCity = st.tz ? st.tz.split('/').slice(-1)[0].replace(/_/g, ' ') : '';
+    const tzRegion = st.tz && st.tz.indexOf('/') > 0 ? st.tz.split('/')[0] : (st.tz || '');
+
+    return {
+      rootRef: el => this.observe(el),
+
+      shellMax: wide ? '1000px' : '100%',
+      shellPad: wide ? '46px 40px 64px' : '28px 20px 44px',
+      // a hidden rail generates no grid item, so the track list has to drop
+      // with it or the content column lands in the 220px track
+      gridCols: wide && i >= 0 && i < last ? '220px minmax(0,1fr)' : 'minmax(0,1fr)',
+      railDisplay: wide && i >= 0 && i < last ? 'flex' : 'none',
+      dispCols: wide ? 'repeat(2,minmax(0,1fr))' : 'minmax(0,1fr)',
+      markSize: wide ? 38 : 34,
+      heroSize: wide ? '40px' : '30px',
+      h1Size: wide ? '32px' : '26px',
+      clockSize: wide ? '34px' : '28px',
+      addrSize: wide ? '30px' : '23px',
+      stepAccent: accent,
+
+      crumb: i < 0 ? 'First-time setup' : i >= last ? 'Almost done' : 'Step ' + (i + 1) + ' of ' + last + ' · ' + steps[i][1],
+      apLine: 'Over ' + (this.props.apSsid || 'gexis-setup'),
+      apDisplay: wide && i < last ? 'block' : 'none',
+      progDisplay: i >= 0 && i < last ? 'block' : 'none',
+      progPct: Math.round(((i + (this.valid() ? 1 : 0.35)) / last) * 100) + '%',
+
+      rail: steps.map((s, n) => {
+        const cur = n === i, done = n < i;
+        return {
+          label: s[1],
+          onTap: () => { if (n <= i) this.go(n); },
+          bar: s[2],
+          barOpacity: cur || done ? 1 : 0.45,
+          doneDisplay: done ? 'block' : 'none',
+          bg: cur ? 'rgba(233,238,242,0.08)' : 'transparent',
+          ink: cur ? '#e9eef2' : done ? 'rgba(233,238,242,0.72)' : 'rgba(233,238,242,0.6)'
+        };
+      }),
+
+      eyebrowDisplay: i >= 0 && i < last ? 'flex' : 'none',
+      stepName: i >= 0 && i < last ? steps[i][1] : '',
+
+      sWelcome: i < 0 ? 'flex' : 'none',
+      sWifi: on('wifi'), sName: on('name'), sTz: on('tz'), sOut: on('out'),
+      sMusic: on('music'), sDisp: on('display'), sReview: on('review'),
+      sFinish: i >= last ? 'flex' : 'none',
+
+      wifiScanDisplay: st.scan === 'scanning' ? 'flex' : 'none',
+      wifiListDisplay: st.scan === 'done' && !st.ssid ? 'flex' : 'none',
+      wifiFormDisplay: st.ssid && st.join !== 'ok' ? 'flex' : 'none',
+      joinOkDisplay: st.join === 'ok' ? 'flex' : 'none',
+      nets: NETS.map(n => Object.assign({
+        name: n[0], meta: n[1],
+        lockDisplay: n[3] && n[2] > 0 ? 'block' : 'none',
+        onTap: () => this.setState({ ssid: n[0], pw: '', join: null, manualSsid: '' })
+      }, bars(n[2], '#8fc4d8'))),
+      onRescan: () => { this.setState({ scan: 'scanning' }); clearTimeout(this._scan); this._scan = setTimeout(() => this.setState({ scan: 'done' }), 1700); },
+      onUnpick: () => this.setState({ ssid: null, pw: '', join: null }),
+      pickedName: this.ssidLabel(),
+      pickedMeta: this.net() ? this.net()[1] : '',
+      manualSsidDisplay: st.ssid === 'Other network' ? 'flex' : 'none',
+      manualSsid: st.manualSsid,
+      onManualSsid: e => this.setState({ manualSsid: e.target.value, join: null }),
+      pwDisplay: st.ssid && !netIsOpen ? 'flex' : 'none',
+      pw: st.pw,
+      pwType: st.showPw ? 'text' : 'password',
+      pwToggleLabel: st.showPw ? 'Hide' : 'Show',
+      onPwToggle: () => this.setState({ showPw: !st.showPw }),
+      onPw: e => this.setState({ pw: e.target.value, join: st.join === 'error' ? null : st.join }),
+      pwHint: netIsOpen ? 'This network is open — no password needed.' : 'At least 8 characters.',
+      pwHintInk: 'rgba(233,238,242,0.6)',
+      joiningDisplay: st.join === 'connecting' ? 'flex' : 'none',
+      joinTitle: 'Joining ' + this.ssidLabel(),
+      joinErrDisplay: st.join === 'error' ? 'flex' : 'none',
+      joinBtnDisplay: st.join === 'connecting' ? 'none' : 'flex',
+      joinBtnLabel: st.join === 'error' ? 'Try again' : 'Join network',
+      joinBtnOpacity: (netIsOpen || st.pw.length > 0) && (st.ssid !== 'Other network' || st.manualSsid.trim()) ? 1 : 0.4,
+      joinBtnPointer: (netIsOpen || st.pw.length > 0) && (st.ssid !== 'Other network' || st.manualSsid.trim()) ? 'auto' : 'none',
+      onJoin: () => this.join(),
+
+      name: st.name,
+      onName: e => this.setState({ name: e.target.value }),
+      nameBorder: this.slug().length > 1 ? 'rgba(233,238,242,0.18)' : 'rgba(224,167,88,0.55)',
+      nameHint: this.slug().length > 1 ? 'Letters, numbers and hyphens become the address; the name keeps its capitals everywhere else.' : 'Needs at least two letters or numbers.',
+      nameHintInk: this.slug().length > 1 ? 'rgba(233,238,242,0.6)' : '#e0a758',
+      namePreview: [
+        { what: 'Address', value: 'http://' + slug + '.local' },
+        { what: 'LMS player', value: name },
+        { what: 'Spotify Connect', value: name },
+        { what: 'Bluetooth', value: name }
+      ],
+
+      tzAutoDisplay: st.tzMode === 'auto' ? 'flex' : 'none',
+      tzRegionDisplay: st.tzMode === 'region' ? 'flex' : 'none',
+      tzCityDisplay: st.tzMode === 'city' ? 'flex' : 'none',
+      tzLabel: st.tz ? tzCity + ' · ' + tzRegion : 'Not detected',
+      clock: this.fmtTime(st.tick, st.tz || 'UTC'),
+      onTzPick: () => this.setState({ tzMode: 'region', tzRegion: null }),
+      onRegionBack: () => this.setState({ tzMode: 'auto' }),
+      tzRegions: Object.keys(TZ).map(r => ({ label: r, onTap: () => this.setState({ tzMode: 'city', tzRegion: r }) })),
+      tzRegionLabel: st.tzRegion || '',
+      onTzBack: () => this.setState({ tzMode: 'region' }),
+      tzCities: (TZ[st.tzRegion] || []).map(c => {
+        const zone = st.tzRegion === 'UTC' ? 'UTC' : st.tzRegion + '/' + c;
+        return {
+          label: c.replace(/_/g, ' '),
+          time: this.fmtTime(st.tick, zone),
+          bg: st.tz === zone ? 'rgba(200,162,216,0.14)' : 'rgba(255,255,255,0.05)',
+          border: st.tz === zone ? 'rgba(200,162,216,0.45)' : 'rgba(233,238,242,0.1)',
+          onTap: () => this.setState({ tz: zone, tzMode: 'auto' })
+        };
+      }),
+      on24: () => this.setState({ clock24: true }),
+      on12: () => this.setState({ clock24: false }),
+      h24Bg: st.clock24 ? '#c8a2d8' : 'rgba(233,238,242,0.07)',
+      h24Border: st.clock24 ? '#c8a2d8' : 'rgba(233,238,242,0.16)',
+      h24Ink: st.clock24 ? '#0d151c' : '#e9eef2',
+      h12Bg: st.clock24 ? 'rgba(233,238,242,0.07)' : '#c8a2d8',
+      h12Border: st.clock24 ? 'rgba(233,238,242,0.16)' : '#c8a2d8',
+      h12Ink: st.clock24 ? '#e9eef2' : '#0d151c',
+
+      outs: OUTS.map(o => ({
+        label: o[1], meta: o[2],
+        tagDisplay: o[3] ? 'inline-flex' : 'none',
+        bg: st.out === o[0] ? 'rgba(126,214,188,0.1)' : 'rgba(255,255,255,0.05)',
+        border: st.out === o[0] ? 'rgba(126,214,188,0.45)' : 'rgba(233,238,242,0.1)',
+        ring: st.out === o[0] ? '#7ed6bc' : dim,
+        dotDisplay: st.out === o[0] ? 'block' : 'none',
+        onTap: () => this.setState({ out: o[0] })
+      })),
+
+      lmsScanDisplay: st.lscan === 'scanning' ? 'flex' : 'none',
+      lmsListDisplay: st.lscan === 'done' ? 'flex' : 'none',
+      servers: SERVERS.map(s => ({
+        name: s[0], meta: s[1],
+        bg: st.lms === s[0] ? 'rgba(126,214,188,0.1)' : 'rgba(255,255,255,0.05)',
+        border: st.lms === s[0] ? 'rgba(126,214,188,0.45)' : 'rgba(233,238,242,0.1)',
+        ring: st.lms === s[0] ? '#7ed6bc' : dim,
+        dotDisplay: st.lms === s[0] ? 'block' : 'none',
+        onTap: () => this.setState({ lms: st.lms === s[0] ? null : s[0], lmsManual: '' })
+      })),
+      lmsManual: st.lmsManual,
+      onLmsManual: e => this.setState({ lmsManual: e.target.value, lms: null }),
+      servicesDisplay: this.props.askServices === false ? 'none' : (st.lscan === 'done' ? 'flex' : 'none'),
+      services: [
+        Object.assign({ label: 'Spotify Connect', note: 'The player appears in Spotify as ' + name + '.', onTap: () => this.setState({ spotify: !st.spotify }) }, toggle(st.spotify)),
+        Object.assign({ label: 'Bluetooth', note: 'Phones can pair and send audio directly.', onTap: () => this.setState({ bt: !st.bt }) }, toggle(st.bt))
+      ],
+
+      onPanelMode: () => this.setState({ headless: false }),
+      onHeadless: () => this.setState({ headless: true }),
+      panelBg: st.headless ? 'rgba(255,255,255,0.05)' : this.tint('#8fd9a8', 0.12),
+      panelBorder: st.headless ? 'rgba(233,238,242,0.1)' : this.tint('#8fd9a8', 0.5),
+      panelArtInk: st.headless ? 'rgba(233,238,242,0.22)' : '#8fd9a8',
+      headBg: st.headless ? this.tint('#8fd9a8', 0.12) : 'rgba(255,255,255,0.05)',
+      headBorder: st.headless ? this.tint('#8fd9a8', 0.5) : 'rgba(233,238,242,0.1)',
+      headArtInk: st.headless ? '#8fd9a8' : 'rgba(233,238,242,0.22)',
+      headWarnDisplay: st.headless ? 'flex' : 'none',
+
+      review: [
+        { what: 'Network', value: this.ssidLabel() || 'Not set', onTap: () => this.go(steps.findIndex(s => s[0] === 'wifi')) },
+        { what: 'Name', value: name + ' · ' + slug + '.local', onTap: () => this.go(steps.findIndex(s => s[0] === 'name')) },
+        { what: 'Time zone', value: (st.tz || 'Not set') + ' · ' + (st.clock24 ? '24 h' : '12 h'), onTap: () => this.go(steps.findIndex(s => s[0] === 'tz')) }
+      ].concat(this.props.askOutput === false ? [] : [
+        { what: 'Output', value: (OUTS.find(o => o[0] === st.out) || [, 'Not set'])[1], onTap: () => this.go(steps.findIndex(s => s[0] === 'out')) }
+      ]).concat([
+        { what: 'Library', value: st.lms ? (SERVERS.find(s => s[0] === st.lms) || [, ''])[1].split(' · ')[0] + ' · ' + st.lms : (st.lmsManual.trim() || 'Discovery only'), onTap: () => this.go(steps.findIndex(s => s[0] === 'music')) },
+        { what: 'Services', value: [st.spotify ? 'Spotify Connect' : null, st.bt ? 'Bluetooth' : null].filter(Boolean).join(' · ') || 'LMS only', onTap: () => this.go(steps.findIndex(s => s[0] === 'music')) },
+        { what: 'Display', value: st.headless ? 'Headless' : 'Panel attached', onTap: () => this.go(steps.findIndex(s => s[0] === 'display')) }
+      ]),
+
+      finProgDisplay: st.fin > 0 && st.fin < 4 ? 'flex' : 'none',
+      finDoneDisplay: st.fin >= 4 ? 'flex' : 'none',
+      finSteps: finLabels.map((l, n) => ({
+        label: l,
+        spinDisplay: st.fin === n + 1 ? 'block' : 'none',
+        okDisplay: st.fin > n + 1 ? 'flex' : 'none',
+        waitDisplay: st.fin < n + 1 ? 'block' : 'none',
+        ink: st.fin >= n + 1 ? '#e9eef2' : 'rgba(233,238,242,0.5)'
+      })),
+      doneTitle: name + ' is on your network',
+      joinedSsid: this.ssidLabel(),
+      doneAddr: 'http://' + slug + '.local',
+      doneNote: st.headless
+        ? 'Nothing is drawn on the device, so this address is the only way in. Write it down before you close the page.'
+        : 'The panel shows the same address whenever it cannot reach the network, so you are never locked out.',
+      doneNoteAccent: st.headless ? '#e0a758' : '#7ed6bc',
+
+      footDisplay: st.fin > 0 && st.fin < 4 ? 'none' : 'flex',
+      backDisplay: i > 0 && i < last ? 'flex' : 'none',
+      nextLabel: i < 0 ? 'Start' : id === 'review' ? 'Finish and connect' : st.fin >= 4 ? 'Done' : 'Continue',
+      nextOpacity: this.valid() ? 1 : 0.4,
+      nextPointer: this.valid() ? 'auto' : 'none',
+      onBack: () => this.go(Math.max(-1, i - 1)),
+      onNext: () => { if (i >= last) return; if (id === 'review') this.finish(); else this.go(i + 1); }
+    };
+  }
+}
+</script>
+</body>
+</html>

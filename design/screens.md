@@ -12,25 +12,32 @@ All are fixed 1280×800 except Settings.
 
 Artwork 500×500 left, metadata right, progress and transport below. Four meta
 tabs above the title switch the right column between Track, Lyrics, Artist and
-Release without leaving the screen. Source mark and word top-right — the mark
-alone, no pill ground — and a 3px accent rule along the top edge.
+Release without leaving the screen. Source mark top-right — the mark alone, no
+ground, no border and no word: 32px, 44px from the top, 56px from the right,
+in the source accent, pulsing at 2.4s while playing. A 3px accent rule runs
+along the top edge.
 
-The Track panel's header is one layout whether or not lyrics are there: 38px
-title, then artist · album · year on one baseline row, pinned to the top of
-the panel. Lyrics, when they exist, sit under a hairline below it.
+The Track panel's header is one layout whether or not lyrics are there: 54px
+title at 1.06, clamped to two lines, then artist 35px, album 30px and year
+25px mono on one baseline row 12px below it, pinned to the top of the panel.
+Lyrics, when they exist, sit under a hairline below it.
 
 Bottom bar, three groups: Home and Visualization left, transport centred,
 volume and queue right. Play control 92px, prev/next 68px, Home 64px, every
 other control 60px.
 
-When synced lyrics exist, the Track panel shows five lines with the current
-one centred and its neighbours fading — no zoom on the active line.
+When synced lyrics exist, the Track panel shows three lines — one either side
+of the current one, which is centred, with the neighbours fading. The fade is
+a mask, transparent to opaque over the first 30% and back over the last 30%,
+so the outer lines are visibly ghosted rather than merely dimmer. No zoom on
+the active line. The Lyrics tab still shows the whole scrolling text.
 
 ## 2. Mini strip — not a screen, but everywhere
 
 104px bar at the bottom of every screen except Now Playing. A hairline
-progress line along its top edge, then artwork thumb, title, artist,
-connected renderer, elapsed, volume trigger, and play/pause. Tapping the strip opens Now Playing; tapping
+progress line along its top edge, then artwork thumb, title, artist, the
+source mark at 38px (mark only, no word), elapsed, volume trigger, and
+play/pause. Tapping the strip opens Now Playing; tapping
 play/pause toggles transport without navigating. Press feedback covers the
 whole strip **except** the play/pause button.
 
@@ -150,14 +157,55 @@ simplification of this, it is a different screen.
 ## 9. Idle screen (ADR-0019)
 
 Appears after `idle_timeout`, counted from when playback stopped. Dismissed
-by local touch only, never reachable from a button.
+by local touch only, never reachable from a button. `idle_screen: External
+URL` replaces all of it with that page.
 
-A clock that moves position periodically so the panel does not burn in, over
-the background `idle_background` names — artist pictures from the library,
-an online or on-device wallpaper, or black. With `idle_weather` on and a key
-present it also carries the current conditions, `idle_days` of forecast, and
-optional min/max, with the icon set `idle_icons` chooses (solid, duotone or
-neon). `idle_screen: External URL` replaces all of it with that page.
+The background is what `idle_background` names — artist pictures from the
+library, an online or on-device wallpaper, or black. On a photo the image
+carries `brightness(0.62) saturate(0.9)` and a 6% scrim; on black, full
+brightness and a 93% scrim. **There is no plate behind any text.** Every
+string is full-opacity ink with a 4px `rgba(46,57,66,0.92)` stroke under
+`paint-order: stroke fill` and a `0 2px 10px rgba(7,11,15,0.55)` shadow.
+On black the stroke is dropped.
+
+The clock group moves position every minute so the panel does not burn in,
+transitioning left and top over 1400ms. It is `width: max-content` so it
+never gets squeezed by the distance to the right edge.
+
+- **Clock** 132px mono 300, seconds 58px in `--accent-lms`, 14px apart.
+- **Date** 26px mono, 0.2em, uppercase, 16px below.
+
+Weather appears when `idle_weather` is on **and** `weather_key` is set;
+without a key the screen is the clock alone. `idle_icons` chooses the icon
+set (solid, duotone, neon). `idle_forecast` has two states and they are
+different layouts, not the same layout with a row hidden:
+
+**`3 days`** — a band across the bottom, 22px/28px/26px padding, items 20px
+apart, and the clock group drifts in the upper area:
+
+1. Current conditions: 132px icon, 28px, then 100px temperature with today's
+   high (40px, coral) over its low (30px, `--accent-bluetooth`) centred
+   against it.
+2. Condition in words, 30px 600, `--accent-lms`.
+3. A stretched 1px hairline, then one column: feels-like 30px, wind 30px, and
+   the sunrise and sunset pair under them.
+4. A flexing spacer with a 64px floor, so the three days always read as their
+   own group.
+5. Three days, 40px apart: name 26px mono 0.16em, icon 100px, then high 44px
+   over low 34px. No chance of rain here.
+
+**`None`** — the band is gone and the current conditions ride with the clock,
+which centres over them. Under the date: a full-width 1px hairline at 32%,
+then the 150px icon, 116px temperature with its high (42px) and low (32px),
+the condition, a 150px vertical hairline, and the same single column of
+feels-like, wind, sunrise and sunset. The drift box tightens to keep the
+wider group off the edges.
+
+Values in both states: **feels-like is always shown**, even when it equals
+the reading. Wind is km/h. Sunrise and sunset carry a mark rather than a
+label — a half sun with three rays sitting on a 36px horizon for sunrise, the
+sun below the line for sunset — and sit 6px apart so they read as a pair.
+Chance of rain was removed from both.
 
 ## 10. Pairing confirmation
 
@@ -188,6 +236,42 @@ travelling between them, directionally. Skipped for pairs in
 ## 12. Settings
 
 The only responsive screen; the only one the phone sees. See `settings.md`.
+
+## 13. First-run setup
+
+Runs once, on a device that has never been configured. The device brings up
+its own access point and serves this; the phone joins that AP to reach it, so
+**setup is a phone screen first and a panel screen second** — single column
+below 720px, a step rail beside a card above it.
+
+Seven steps, each with its own accent from the panel's set, in the order the
+rail shows them:
+
+| id | Rail label | Accent | What it collects |
+|---|---|---|---|
+| `wifi` | Network | `#8fc4d8` | SSID from a scan or typed manually, password with show/hide, Join with connecting and error states |
+| `name` | Name | `#e8a0b4` | Device name, with the `.local` address previewed live underneath |
+| `tz` | Time | `#c8a2d8` | Time zone: auto-detected from the network, overridable through region then city, each city showing its current time |
+| `out` | Output | `#7ed6bc` | Audio output, with a tag on the recommended one. Droppable — `askOutput: false` removes the step and the rail entry |
+| `music` | Music | `#9fb4e8` | LMS discovery, then optional Spotify Connect and Bluetooth toggles |
+| `display` | Display | `#8fd9a8` | Headless mode, and the panel's own display options |
+| `review` | Review | `#f2a48f` | Everything above, editable by tapping back to its step |
+
+The rail is tappable backwards only: a step that has not been reached does
+nothing. The footer's action reads Start on the welcome pane, Continue
+through the steps, **Finish and connect** on Review, and Done at the end; it
+sits at 40% opacity and ignores taps until the step validates.
+
+Finishing runs four labelled tasks with a spinner and a tick each, then lands
+on "<name> is on your network" with the joined SSID and the `http://<slug>
+.local` address. The access point comes down at that point, which is why the
+address is on screen rather than only in the documentation.
+
+The gexis mark sits in the header at 38px (34px on a phone) beside the step
+counter. The welcome headline is "Set up gexis" in Bricolage Grotesque 600.
+
+**No on-screen keyboard.** Text entry is native to the device the page is
+open on.
 
 ---
 

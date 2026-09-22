@@ -110,20 +110,42 @@
       </div>
     </div>
 
-    <div data-noscrollbar style="position:relative;flex:1;min-height:0;overflow-y:auto;padding:26px 36px 36px;box-sizing:border-box;grid-template-columns:repeat(4,minmax(0,1fr));gap:20px;align-content:start;display:{{ pickerGridDisplay }};">
-      <sc-for list="{{ pickerTiles }}" as="t" hint-placeholder-count="12">
-        <div onClick="{{ t.onTap }}" style="min-width:0;" style-active="opacity:0.7">
-          <div style="position:relative;aspect-ratio:16/10;border-radius:14px;overflow:hidden;background:#17242d;box-sizing:border-box;border:2px solid {{ t.border }};display:flex;align-items:center;justify-content:center;">
-            <span style="position:absolute;inset:0;background:radial-gradient(120% 120% at 30% 20%,rgba(233,238,242,0.08),transparent 70%);display:block;"></span>
-            <span style="height:56%;aspect-ratio:1;border-radius:50%;border:2px solid rgba(233,238,242,0.22);display:block;"></span>
-            <span style="position:absolute;top:8px;left:10px;font-family:'IBM Plex Mono','Courier New',monospace;font-size:12px;letter-spacing:0.1em;color:rgba(233,238,242,0.5);">{{ t.ord }}</span>
-            <span style="position:absolute;bottom:8px;right:10px;width:20px;height:20px;border-radius:50%;background:#7ed6bc;align-items:center;justify-content:center;display:{{ t.checkDisplay }};">
+    <div style="position:relative;flex:1;min-height:0;display:flex;">
+
+      <div data-noscrollbar style="flex-shrink:0;min-height:0;overflow-y:auto;border-right:1px solid rgba(233,238,242,0.09);padding:10px 0 24px;box-sizing:border-box;width:{{ pickerListWidth }};">
+        <sc-for list="{{ pickerTiles }}" as="t" hint-placeholder-count="14">
+          <div onClick="{{ t.onTap }}" style="display:flex;align-items:center;gap:14px;padding:0 26px;min-height:62px;box-sizing:border-box;background:{{ t.bg }};border-left:3px solid {{ t.rail }};" style-active="background:rgba(233,238,242,0.1)">
+            <span style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:13px;letter-spacing:0.08em;color:rgba(233,238,242,0.45);flex-shrink:0;width:32px;">{{ t.ord }}</span>
+            <span style="flex:1;min-width:0;font-size:17px;font-weight:600;color:{{ t.ink }};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ t.label }}</span>
+            <span style="width:20px;height:20px;border-radius:50%;background:#7ed6bc;align-items:center;justify-content:center;flex-shrink:0;display:{{ t.checkDisplay }};">
               <span style="width:7px;height:4px;border-left:2.5px solid #0d151c;border-bottom:2.5px solid #0d151c;transform:rotate(-45deg);margin-top:-2px;display:block;"></span>
             </span>
           </div>
-          <div style="font-size:15px;font-weight:600;color:{{ t.ink }};margin-top:9px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ t.label }}</div>
+        </sc-for>
+      </div>
+
+      <div style="position:{{ pickerPaneMode }};inset:0;flex:1;min-width:0;min-height:0;background:{{ pickerPaneBg }};flex-direction:column;padding:26px 28px 28px;box-sizing:border-box;gap:20px;display:{{ pickerPaneDisplay }};">
+        <div style="flex-shrink:0;align-items:center;gap:14px;display:{{ pickerPaneBackDisplay }};">
+          <div onClick="{{ onPickerViewBack }}" style="width:46px;height:46px;border-radius:50%;background:rgba(233,238,242,0.07);display:flex;align-items:center;justify-content:center;flex-shrink:0;" style-active="background:rgba(233,238,242,0.2)">
+            <div style="width:11px;height:11px;border-left:2.5px solid #e9eef2;border-bottom:2.5px solid #e9eef2;transform:rotate(45deg);margin-left:8px;"></div>
+          </div>
+          <span style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:13px;letter-spacing:0.08em;color:rgba(233,238,242,0.6);">BACK TO LIST</span>
         </div>
-      </sc-for>
+
+        <div style="position:relative;width:100%;aspect-ratio:16/10;max-height:58%;border-radius:16px;overflow:hidden;background:#17242d;border:1px solid rgba(233,238,242,0.14);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+          <span style="position:absolute;inset:0;background:radial-gradient(120% 120% at 30% 20%,rgba(233,238,242,0.08),transparent 70%);display:block;"></span>
+          <span style="height:62%;aspect-ratio:1;border-radius:50%;border:2px solid rgba(233,238,242,0.22);display:block;"></span>
+          <span style="position:absolute;bottom:14px;left:16px;font-family:'IBM Plex Mono','Courier New',monospace;font-size:12px;letter-spacing:0.1em;color:rgba(233,238,242,0.4);">PREVIEW PLACEHOLDER</span>
+        </div>
+
+        <div style="flex:1;min-height:0;">
+          <div style="font-size:26px;font-weight:700;letter-spacing:-0.01em;color:#e9eef2;text-wrap:pretty;">{{ pickerViewLabel }}</div>
+          <div style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:13px;letter-spacing:0.06em;color:rgba(233,238,242,0.55);margin-top:8px;word-break:break-word;">{{ pickerViewMeta }}</div>
+        </div>
+
+        <div onClick="{{ onPickerUse }}" style="flex-shrink:0;min-height:60px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:600;background:{{ pickerUseBg }};color:{{ pickerUseInk }};border:1px solid {{ pickerUseBorder }};" style-active="opacity:0.75">{{ pickerUseText }}</div>
+      </div>
+
     </div>
 
   </div>
@@ -355,7 +377,8 @@ const INV = [
     { k: 'weather_location', type: 'text', label: 'Location', value: 'Berlin, DE', marks: 'N',
       placeholder: 'City, country',
       onlyWhen: ['weather_key', ANY] },
-    { k: 'idle_days', type: 'number', label: 'Forecast days', value: '4', marks: 'N', unit: '', min: 3, max: 5,
+    { k: 'idle_forecast', type: 'choice', label: 'Forecast', value: '3 days', marks: 'N',
+      options: ['3 days', 'None'],
       onlyWhen: ['weather_key', ANY] },
     { k: 'idle_minmax', type: 'toggle', label: 'Show min and max', value: true, marks: 'N',
       onlyWhen: ['weather_key', ANY] },
@@ -385,6 +408,7 @@ const INV = [
   ]],
   ['device', 'Device', 'Identity and network', '#8fc4d8', [
     { k: 'device_name', type: 'text', label: 'Device name', value: 'gexis', marks: 'R',
+      warn: 'Saving restarts the services that carry the name. Anything playing stops and any connected renderer is dropped.',
       note: 'One name for everything: the mDNS hostname, the LMS player, the Spotify Connect device and the Bluetooth name. There is no per-service override.' },
     { k: 'wifi', type: 'list', label: 'Wi-Fi', value: 'Studio 5G', marks: 'R',
       empty: 'No networks in range.',
@@ -414,7 +438,7 @@ const hostOf = (name) => (String(name || '')
   .slice(0, 63) || 'gexis') + '.local';
 
 class Component extends DCLogic {
-  state = { w: 0, cat: 'audio', drilled: null, vals: {}, sheet: null, toast: null, forgotten: [], draft: null, picker: null, join: null, scan: null };
+  state = { w: 0, cat: 'audio', drilled: null, vals: {}, sheet: null, toast: null, forgotten: [], draft: null, picker: null, pickerView: null, join: null, scan: null };
 
   componentWillUnmount() { if (this.ro) this.ro.disconnect(); clearTimeout(this._toast); clearTimeout(this._join); clearTimeout(this._scan); }
 
@@ -449,9 +473,13 @@ class Component extends DCLogic {
   METER_SKINS = ['01G5_Accuphase', '02G5_Accuphase monoblock', '03G5_Berlant', '04G5_Berlant Purple', '05G5_Audio Research', '06G5_McIntosh', '07G5_McIntosh monoblock', '08G5_McIntosh Hybrid', '09G5_McIntosh Tube', '10G5_Kenwood Ver', '11G5_Kenwood Rev', '12G5_VU Single Yellow', '13G5_NAD C3050 Purple', '14G5_NAD C3050', '15G5_Naim green', '16G5_Naim 2', '17G5_Naim Rev', '18G5_Sansui', '19G5_Sansui 2V', '20G5_Brianworks', '21G5_BlackBlur', '22G5_Dark Spotify', '23G5_Hitachi HMA7500 Black', '24G5_Hitachi HCA7500 Silver', '25G5_Marantz Silver', '26G5_Marantz Black', '27G5_MarantzCD', '28G5_Technisc_Black', '29G5_Technisc_Silver', '30G5_Round yellow', '31G5_Rehringer', '32G5_Akai Reverse', '33G5_ClasseM', '34G5_BMC', '35G5_Hartman', '36G5_Klanghelm', '37G5_TURN Vinyl Green', '38G5_TURN Vinyl Green 2', '39G5_TURN Vinyl Silver', '40G5_TURN Vinyl Black', '41G5_Yellowkidney', '42G5_OLD Meter', '43G5_Old2 braun', '44G5_T+A', '45G5_Triplett', '46G5_Leben', '47G5_Luxman Gold', '48G5_Vertical blue', '49G5_MarkLev', '50G5_Teac Cassette', '51G5_Optonica', '52G5_PioneerCT', '53G5_Abrahamsen', '54G5_Dorrough', '55G5_Dorrough Vertical', '56G5_Advence', '57G5_Unison Research', '58G5_TAPE orange', '59G5_Yamaha M85', '60G5_Sound90', '61G5_Fire Rock', '62G5_Burmaster', '63G5_Violin', '64G5_Struder', '65G5_J37 Tape', '66G5_HelixOne', '67G5_DAgostini', '68G5_Reher Tube', '69G5_Boombox', '70G5_Nixi Pipe', '71G5_Nixi Spectrum'];
   SPECTRUM_SKINS = ['101G5_Free S+M', '102G5_Naim S+M', '103G5_Marschal Spectrum', '104G5_Lyngdorf S+M', '105G5_Kenwood Spectrum', '106G5_OldPipe Spectrum', '107G5_Marantz S+M', '108G5_Kenwood Rev S+M', '109G5_475A Oscil S+M', '110G5_PeppyP S+M', '111G5_Teletronix S+M', '112G5_KeySlight S+M', '113G5_Old Spectrum S+M'];
 
-  // Choosing among 84 visual skins. No preview renders exist in the repo —
-  // skins/ holds only INI files — so every tile is a placeholder until the
-  // image build supplies one.
+  // Choosing among 84 visual skins: a list on the left, the preview of the
+  // tapped entry on the right. Below 720px the preview covers the list and
+  // steps back to it. Tapping a row previews only; the value is written by
+  // the button under the preview.
+  //
+  // No preview renders exist in the repo — skins/ holds only INI files — so
+  // every preview is a placeholder until the image build supplies one.
   //
   // Grouping by make was tried and dropped: the section names carry no brand
   // field, and tokenising them yields 63 groups for 84 skins with 51 holding
@@ -460,33 +488,57 @@ class Component extends DCLogic {
     const p = this.state.picker;
     if (!p) {
       return {
-        pickerDisplay: 'none', pickerGridDisplay: 'none',
-        pickerTitle: '', pickerCount: '', pickerTiles: [], onPickerBack: null
+        pickerDisplay: 'none', pickerPaneDisplay: 'none', pickerPaneBackDisplay: 'none',
+        pickerTitle: '', pickerCount: '', pickerTiles: [], onPickerBack: null,
+        pickerListWidth: '100%', pickerPaneMode: 'relative', pickerPaneBg: 'transparent',
+        pickerViewLabel: '', pickerViewMeta: '', pickerUseText: '',
+        pickerUseBg: 'transparent', pickerUseInk: '#e9eef2', pickerUseBorder: 'transparent',
+        onPickerViewBack: null, onPickerUse: null
       };
     }
+    const wide = this.wide();
     const all = this.optionsFor(p);
     const current = String(this.val(p));
-    const pick = (name) => {
-      this.setState(s => ({ vals: Object.assign({}, s.vals, { [p.k]: name }), picker: null }));
-      this.flash(this.skinParts(name).label);
-    };
+    // tapping a row only previews it; the choice is not written until the
+    // button below the preview is used
+    const viewing = this.state.pickerView || (wide ? current : null);
+    const q = viewing ? this.skinParts(viewing) : { ord: '', label: '' };
+    const isCurrent = viewing === current;
     const tile = (name) => {
-      const q = this.skinParts(name);
+      const t = this.skinParts(name);
+      const sel = name === viewing;
       return {
-        ord: q.ord, label: q.label,
-        border: name === current ? '#7ed6bc' : 'rgba(233,238,242,0.14)',
+        ord: t.ord, label: t.label,
+        bg: sel ? 'rgba(200,162,216,0.14)' : 'transparent',
+        rail: sel ? '#c8a2d8' : 'transparent',
         ink: name === current ? '#7ed6bc' : '#e9eef2',
         checkDisplay: name === current ? 'flex' : 'none',
-        onTap: () => pick(name)
+        onTap: () => this.setState({ pickerView: name })
       };
     };
     return {
       pickerDisplay: 'flex',
-      pickerGridDisplay: 'grid',
       pickerTitle: p.label,
       pickerCount: all.length + ' skins',
       pickerTiles: all.map(tile),
-      onPickerBack: () => this.setState({ picker: null })
+      pickerListWidth: wide ? '380px' : '100%',
+      pickerPaneMode: wide ? 'relative' : 'absolute',
+      pickerPaneBg: wide ? 'transparent' : '#101a21',
+      pickerPaneDisplay: viewing ? 'flex' : 'none',
+      pickerPaneBackDisplay: wide ? 'none' : 'flex',
+      pickerViewLabel: q.label,
+      pickerViewMeta: viewing ? viewing + '  \u00b7  ' + (isCurrent ? 'IN USE' : 'NOT IN USE') : '',
+      pickerUseText: isCurrent ? 'In use' : 'Use this skin',
+      pickerUseBg: isCurrent ? 'transparent' : '#7ed6bc',
+      pickerUseInk: isCurrent ? 'rgba(233,238,242,0.5)' : '#0d151c',
+      pickerUseBorder: isCurrent ? 'rgba(233,238,242,0.18)' : '#7ed6bc',
+      onPickerViewBack: () => this.setState({ pickerView: null }),
+      onPickerUse: () => {
+        if (!viewing || isCurrent) return;
+        this.setState(s => ({ vals: Object.assign({}, s.vals, { [p.k]: viewing }), picker: null, pickerView: null }));
+        this.flash(this.skinParts(viewing).label);
+      },
+      onPickerBack: () => this.setState({ picker: null, pickerView: null })
     };
   }
 
@@ -571,7 +623,7 @@ class Component extends DCLogic {
         if (isTog) this.setState(s => ({ vals: Object.assign({}, s.vals, { [r.k]: !on }) }));
         // 84 visual things cannot be chosen from a 560px list, so the skin
         // row opens a full-width picker instead of the sheet
-        else if (r.picker) this.setState({ picker: r });
+        else if (r.picker) this.setState({ picker: r, pickerView: null });
         // a discovery list searches when it opens; the results are not
         // instant and pretending otherwise misrepresents the wait
         else if (r.discover) {
@@ -750,10 +802,10 @@ class Component extends DCLogic {
           }
         };
       }),
-      // a choice can carry a per-option warning; it appears once that option
-      // is selected and before the sheet is closed
-      sheetWarn: sheet && sheet.warn ? (sheet.warn[String(this.val(sheet))] || '') : '',
-      sheetWarnDisplay: sheet && sheet.warn && sheet.warn[String(this.val(sheet))] ? 'flex' : 'none',
+      // a choice carries a per-option warning, keyed by the option; a row whose
+      // side effect does not depend on the value carries one plain string
+      sheetWarn: sheet && sheet.warn ? (typeof sheet.warn === 'string' ? sheet.warn : (sheet.warn[String(this.val(sheet))] || '')) : '',
+      sheetWarnDisplay: sheet && sheet.warn && (typeof sheet.warn === 'string' || sheet.warn[String(this.val(sheet))]) ? 'flex' : 'none',
       // a bounded number is set on a slider; only unbounded values fall back
       // to the plain readout
       ...(() => {

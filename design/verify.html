@@ -276,7 +276,7 @@ document.getElementById('f').addEventListener('load', async () => {
     // type: the properties that carry the design's voice
     const type = ['fontSize', 'fontWeight', 'letterSpacing', 'lineHeight', 'color', 'textTransform'];
     const dTab = all('span').find(el => el.textContent.trim() === 'Track'
-      && parseFloat(getComputedStyle(el).fontSize) === 17);
+      && parseFloat(getComputedStyle(el).fontSize) === 19);
     x += cmp('tab type', dTab, screen.querySelector('.tab'), type);
 
     const dTimes = all('div').find(el => {

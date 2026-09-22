@@ -55,12 +55,25 @@ prefix: `06G5_McIntosh` shows as `06` / McIntosh.
 
 `skin` carries `picker: true`, so it opens a **full-width picker** rather
 than the 560px sheet — 84 visual things cannot be chosen from a narrow list.
-A 4-across thumbnail grid: ordinal on each tile, a check on the current one,
-everything reachable in one scroll. A one-at-a-time carousel was built and
-rejected — it showed a bigger preview but took too many taps to reach the far
-end of 84.
 
-**The thumbnails are placeholders.** `skins/` holds only the three INI files,
+**A list on the left, the preview of the tapped entry on the right.** The
+list is 380px, rows 62px: ordinal in 32px of mono, name, and a check on the
+row that is in use. The tapped row takes a `--accent-visualization` left rail
+and tinted ground; the row in use is inked in `--accent-lms`. The pane holds
+a 16:10 preview capped at 58% of its height, the name at 26px, the full
+section name and in-use state in mono, and one 60px button — "Use this skin",
+or "In use" as an inert outline when it is already the value. **Tapping a row
+previews only.** The write happens on that button, so reaching a skin costs
+no commitment.
+
+Below 720px the pane covers the list and carries a "back to list" step; above
+it they sit side by side and the pane opens on the current value.
+
+A 4-across thumbnail grid was built first and replaced: at 84 entries the
+tiles were too small to judge and too large to scan. A one-at-a-time carousel
+was rejected earlier for taking too many taps to reach the far end.
+
+**The previews are placeholders.** `skins/` holds only the three INI files,
 so no preview render exists for any skin. Real previews must come from the
 image build; until they do it is the previews, not the layout, that decide
 whether this control works.
@@ -154,9 +167,13 @@ proposals:
 - **Three Audio rows removed**: `restore_floor`, `boot_default_scope` and
   `volume_managed`.
 - **`boot_volume` is in percent**, defaulting to 60%.
-- **`output_mode` carries a per-option warning**: choosing Fixed warns that
-  the signal goes out at 100% before it is confirmed. New `warn` field on
-  `choice`, keyed by option.
+- **Two rows carry a `warn`**, shown as an amber block in the sheet above
+  Save. The field takes two forms: an object keyed by option, which appears
+  only while that option is selected — `output_mode`, where choosing Fixed
+  warns that the signal goes out at 100% — or a plain string, always shown,
+  for a row whose side effect does not depend on the value. `device_name`
+  uses the string form: saving restarts the services that carry the name,
+  which stops playback and drops any connected renderer.
 - **`bt_trusted` is a `list`** — a seventh settable row type: items with a
   per-item action, plus an empty state.
 - **`plugins` removed**; the three per-service name rows are all `readonly`
@@ -188,7 +205,7 @@ proposals:
 - **`time_display` removed.** Now Playing shows elapsed and remaining
   together, so there was nothing to choose.
 - **Weather rows reordered.** `weather_key` sits directly under the
-  `idle_weather` toggle, and Location, Forecast days, Show min and max and
+  `idle_weather` toggle, and Location, Forecast, Show min and max and
   Weather icons are all `onlyWhen: ['weather_key', ANY]` — visible only once
   a key exists. Without a key the idle screen shows the clock alone, so the
   rows that shape a forecast have nothing to shape.
@@ -217,6 +234,11 @@ beside it, and the device's address after that — `gexis · gexis.local ·
 192.168.178.51`. Never substitute silently. The sanitiser
 folds accents, lowercases, replaces illegal characters with hyphens, trims
 them from the ends, and caps at 63 characters.
+
+Its sheet carries a string `warn`: saving restarts the services that carry
+the name, so playback stops and any connected renderer is dropped. The
+warning is unconditional — it does not wait for the text to change — because
+the sheet cannot know whether Save will be pressed on an edited value.
 
 **Fixed output mode.** When `output_mode` is Fixed there is no volume to
 set, and the design says so in words rather than disabling a control. The

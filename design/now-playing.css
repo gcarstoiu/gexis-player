@@ -61,8 +61,9 @@ body {
   background: linear-gradient(90deg, var(--src-accent), var(--accent-artist));
 }
 
-/* Source mark: absolutely placed top-right, above the grid. Mark and word
-   only — the pill ground and border were removed from the design. */
+/* Source mark: absolutely placed top-right, above the grid. The mark alone —
+   the pill ground, the border and the source word have all been removed from
+   the design. 32px tall, 44px from the top, 56px from the right. */
 .srcpill {
   position: absolute;
   top: 44px;
@@ -70,36 +71,32 @@ body {
   z-index: 6;
   display: inline-flex;
   align-items: center;
-  gap: 11px;
-  white-space: nowrap;
-  font-family: var(--font-mono);
-  font-size: var(--t-body-sm);
-  font-weight: 600;
-  letter-spacing: var(--track-wide);
-  text-transform: uppercase;
   color: var(--src-accent);
 }
 /* the raster marks are sized by height; Bluetooth's glyph is drawn smaller
    inside its own box, so it carries a 1.12 correction */
-.srcpill__mark { height: 21px; width: auto; flex-shrink: 0; display: block; }
-.srcpill__mark--bt { height: 24px; }
+.srcpill__mark { height: 32px; width: auto; flex-shrink: 0; display: block; }
+.srcpill__mark--bt { height: 35.84px; }
 .srcpill__mark--img { object-fit: contain; }
 
 /* The Lyrion mark is a ten-bar figure that antialiases to a smear below about
    40px, so at pill size the design substitutes a four-bar reduction. Use the
    SVG (via --src-mark, tinted as a mask) only at 40px and above. */
+/* Bars are 0.5 / 1 / 0.72 / 0.88 of the mark's height, 0.15 wide, 0.11 apart,
+   rounded — the design derives them from one size value, so at the 32px mark
+   that is 16 / 32 / 23 / 28, 5px wide, 4px apart. */
 .i-lyrion {
   display: flex;
   align-items: center;
-  gap: 2px;
-  height: 21px;
+  gap: 4px;
+  height: 32px;
   flex-shrink: 0;
 }
-.i-lyrion i { width: 3px; border-radius: 2px; background: currentColor; flex-shrink: 0; }
-.i-lyrion i:nth-child(1) { height: 11px; }
-.i-lyrion i:nth-child(2) { height: 21px; }
-.i-lyrion i:nth-child(3) { height: 15px; }
-.i-lyrion i:nth-child(4) { height: 15px; }
+.i-lyrion i { width: 5px; border-radius: 2px; background: currentColor; flex-shrink: 0; }
+.i-lyrion i:nth-child(1) { height: 16px; }
+.i-lyrion i:nth-child(2) { height: 32px; }
+.i-lyrion i:nth-child(3) { height: 23px; }
+.i-lyrion i:nth-child(4) { height: 28px; }
 
 .i-lyrion--lg {
   display: block;
@@ -200,7 +197,7 @@ body {
 }
 .tab {
   font-family: var(--font-mono);
-  font-size: var(--t-body-sm);
+  font-size: var(--t-body);
   font-weight: 600;
   letter-spacing: var(--track-wide);
   text-transform: uppercase;
@@ -229,7 +226,7 @@ body {
 
 .title {
   font-size: var(--t-title);
-  line-height: 1.08;
+  line-height: 1.06;
   font-weight: 700;
   letter-spacing: var(--track-tight);
   text-wrap: pretty;
@@ -261,7 +258,7 @@ body {
   flex-shrink: 0;
 }
 .album {
-  font-size: var(--t-body);
+  font-size: var(--t-h2);
   line-height: 1.35;
   color: rgba(233, 238, 242, 0.6);
   white-space: nowrap;
@@ -270,7 +267,7 @@ body {
 }
 .year {
   font-family: var(--font-mono);
-  font-size: 16px;
+  font-size: var(--t-lead);
   color: var(--ink-quiet);
   white-space: nowrap;
   flex-shrink: 0;

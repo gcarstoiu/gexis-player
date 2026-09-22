@@ -1,0 +1,30 @@
+/* Bricolage Grotesque — the brand face, third family.
+
+   Vendored, like the other two: the panel has no network at runtime, so
+   nothing may be fetched. One variable file covers every weight the mark
+   uses, which is why it costs 399 KB rather than two or three static cuts.
+
+     axis   range      used
+     wght   200 – 800  600 (wordmark), 800 (tiles)
+     opsz    12 – 96    96 (default — display sizes)
+     wdth    75 – 100  100 (default)
+
+   Copyright 2022 The Bricolage Grotesque Project Authors
+   (github.com/ateliertriay/bricolage). SIL Open Font Licence 1.1 —
+   assets/fonts/OFL.txt. Redistribution is permitted; keep the licence file
+   alongside the font.
+
+   The .ttf is the upstream variable font. If your build step can produce
+   woff2, do — it is roughly a third of the size and the panel is the one
+   place where boot-time reads matter. Nothing else changes; the family name
+   stays the same. */
+
+@font-face {
+  font-family: 'Bricolage Grotesque';
+  src: url('../assets/fonts/BricolageGrotesque[opsz,wdth,wght].ttf')
+       format('truetype-variations');
+  font-weight: 200 800;
+  font-style: normal;
+  font-display: block;   /* block, not swap — the mark must never flash a
+                            fallback letterform mid-boot */
+}

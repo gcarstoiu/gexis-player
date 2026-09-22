@@ -1,0 +1,76 @@
+/* Brand patterns — the boot sequence.
+
+   These belong beside gx-pulse and gx-rise in tokens/patterns.css: they
+   cannot be custom properties. Kept separate so adding the brand is one
+   import rather than an edit to a file that reads as locked.
+
+   TRANSFORM AND OPACITY ONLY, per tokens/motion.css. Each tile is two
+   stacked layers — an unlit base and a lit overlay — and the sequence
+   animates the overlay's opacity. Nothing animates background or color, so
+   no tile ever repaints.
+
+   ── TWO RANGES, NOT ONE LOOP ─────────────────────────────────────────────
+   The sequence is an intro that plays ONCE and then a pulse that loops
+   until something else takes the screen:
+
+     intro   2 s   animation-iteration-count: 1, animation-fill-mode: forwards
+     pulse   2 s   animation-iteration-count: infinite, animation-delay: 2s
+
+   An earlier version ran one 10 s loop, so the travel replayed every ten
+   seconds. It should not: the travel is an opening, and once the mark has
+   settled the only thing still moving is the pulse.
+
+   This narrows the exception to motion.css's one-indefinite-animation rule
+   rather than widening it. The indefinite part is now a 2 s pulse on a
+   handful of elements, and boot is still not a running screen — it is gone
+   before any panel surface mounts.
+
+   ── THE INTRO RULES ARE SLOTS, NOT LETTERS ───────────────────────────────
+   iv-1 … iv-4 are TIME SLOTS: 10 %, 22 %, 34 %, 46 % of the intro.
+   Tile g always takes slot 1, e slot 2, i slot 3, s slot 4 — so the travel
+   reads g e i s on every property's screen.
+
+   The LANDING tile swaps its slot rule for the matching -h variant, which
+   holds at opacity 1 instead of fading out. Everything else fades.
+
+   Name them by slot and this is obvious; name them by letter and it is not.
+   A previous pass named them by letter, and three of the four screens ended
+   up travelling in the wrong order because each one swapped which tile got
+   the holding rule — which also swapped when that tile lit. */
+
+/* the four slots — fade */
+@keyframes iv-1{0%,4%{opacity:0}10%{opacity:1}16%,100%{opacity:0}}
+@keyframes iv-2{0%,16%{opacity:0}22%{opacity:1}28%,100%{opacity:0}}
+@keyframes iv-3{0%,28%{opacity:0}34%{opacity:1}40%,100%{opacity:0}}
+@keyframes iv-4{0%,40%{opacity:0}46%{opacity:1}52%,100%{opacity:0}}
+
+/* the same four slots — hold. One per landing letter. */
+@keyframes iv-1h{0%,4%{opacity:0}10%,100%{opacity:1}}
+@keyframes iv-2h{0%,16%{opacity:0}22%,100%{opacity:1}}
+@keyframes iv-3h{0%,28%{opacity:0}34%,100%{opacity:1}}
+@keyframes iv-4h{0%,40%{opacity:0}46%,100%{opacity:1}}
+
+/* the lockup, also intro-once */
+@keyframes iv-word{0%,55%{opacity:0;transform:translateY(6px)}75%,100%{opacity:1;transform:none}}
+@keyframes iv-sub {0%,68%{opacity:0}86%,100%{opacity:1}}
+@keyframes iv-fx  {0%,74%{opacity:0}100%{opacity:1}}
+
+/* ── the pulse ───────────────────────────────────────────────────────────
+   A lub-dub and then a rest: a strong beat at 12 %, a softer one at 26 %,
+   everything back to rest by about 55 %, still until the wrap.
+
+   The rest matters. It is what lets the raster version of this sequence
+   wrap pixel-identically (measured 0/255) instead of merely seamlessly —
+   a continuously breathing loop cannot do better than an ordinary step,
+   because a seamless wrap in continuous motion IS an ordinary step. */
+
+@keyframes pl-halo {0%,8%{opacity:.5}18%{opacity:1}28%{opacity:.68}36%{opacity:.86}50%,100%{opacity:.5}}
+@keyframes pl-w1   {0%,12%{transform:scale(.52);opacity:0}20%{opacity:.48}74%,100%{transform:scale(1.9);opacity:0}}
+@keyframes pl-w2   {0%,26%{transform:scale(.52);opacity:0}34%{opacity:.3}86%,100%{transform:scale(1.9);opacity:0}}
+
+/* property flourishes, each on its own loop inside the pulse */
+@keyframes pl-caret{0%,49%{opacity:1}50%,99%{opacity:0}}
+@keyframes pl-led1 {0%,14%{opacity:1}22%,100%{opacity:.18}}
+@keyframes pl-led2 {0%,24%{opacity:.18}32%,44%{opacity:1}52%,100%{opacity:.18}}
+@keyframes pl-led3 {0%,54%{opacity:.18}62%,74%{opacity:1}82%,100%{opacity:.18}}
+@keyframes pl-badge{0%,10%{transform:scale(1)}20%{transform:scale(1.16)}34%,100%{transform:scale(1)}}

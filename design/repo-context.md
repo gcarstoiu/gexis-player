@@ -30,6 +30,8 @@ date: 2026-09-18T20:41:29Z
 | Settings (`Settings.dc.html`) | `core/src/gexis_core/settings_registry.json` (row inventory), `core/src/gexis_core/skins.py` + `skins/templates*/meters.txt` (skin corpus) |
 | Design tokens (`design/tokens.css`) | none yet — `App.svelte` carries its own throwaway styles |
 | Data contract (`design/data-contract.md`) | `ui/src/lib/state.js`, `ui/vite.config.js` |
+| Setup (`Setup.dc.html`) | none yet — the repo has no first-run flow. The AP bring-up and `.local` handoff are core-side work, not in `ui/`. |
+| Brand package (`brand/`) | none yet — the Plymouth boot frames in the image build predate the lettered mark |
 
 ## Open for the sweep
 

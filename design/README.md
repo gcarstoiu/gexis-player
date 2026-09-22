@@ -15,12 +15,12 @@ are all final unless a row below says otherwise. Recreate them exactly.
 | Path | What it is |
 |---|---|
 | `tokens.css` | Every design value as a CSS variable. Start here. |
-| `fonts.css` | `@font-face` declarations. **The woff2 files are not in this package — see Fonts.** |
+| `fonts.css` + `fonts/` | `@font-face` declarations and the four woff2 files. |
 | `now-playing.html` + `.css` + `.js` | **First slice.** Six states of the Now Playing screen, plain HTML/CSS. |
 | `data-contract.md` | Every field each screen needs, mapped to `/state`. Fields the backend does not publish yet are marked NEW. |
 | `settings.md` | Settings row-type vocabulary and the full row inventory. Provisional. |
 | `screens.md` | The other ten screens and the mini strip, described for later phases. |
-| `source/*.dc.html` | The full interactive design. Open in a browser. |
+| `source/*.dc.html` | The full interactive design — Now Playing, Settings and Setup. Open in a browser. |
 | `assets/` | Service marks and the two sample images. |
 
 ---
@@ -40,18 +40,17 @@ are all final unless a row below says otherwise. Recreate them exactly.
 The design uses **Nunito Sans** (300–800, variable) and **IBM Plex Mono**
 (400/600/700). Both are SIL Open Font License and safe to vendor.
 
-I cannot produce binary font files, so `fonts.css` declares the faces and
-points at `design/fonts/`, which is empty. **Someone must add four files**
-before the panel is offline-correct:
+All four woff2 files are in `design/fonts/` and `fonts.css` declares them:
 
     fonts/NunitoSans-Variable.woff2
     fonts/IBMPlexMono-Regular.woff2
     fonts/IBMPlexMono-SemiBold.woff2
     fonts/IBMPlexMono-Bold.woff2
 
-Until then the CSS falls back to `system-ui` and `Courier New`, which changes
-metrics: mono columns lose their alignment and the 38px title wraps
-differently. Do not judge spacing before the real faces are in place.
+The fallback behind them is `system-ui` and `Courier New`, which changes
+metrics: mono columns lose their alignment and the 54px title wraps
+differently. If spacing looks wrong, check the faces are loading before
+changing a value.
 
 No icon font exists. Every glyph is either CSS geometry or a file in
 `assets/` — nothing to vendor.
@@ -254,7 +253,7 @@ export:
   source accent, 11px between mark and word. No ground, no border, no radius.
   The LMS four-bar mark is 21px tall (bars 11 / 21 / 15 / 18, 3px wide, 2px
   apart) and pulses at 2.4s while playing.
-- **Meta tabs are 17px**, not 13px, and the selected tab's 3px underline and
+- **Meta tabs are 19px** and the selected tab's 3px underline and
   ink are its own fixed colour — Track `--ink`, Lyrics `--accent-artist`,
   Artist `--accent-bluetooth`, Release `--accent-lms` — never the source
   accent. Unselected tabs are `--ink-tab-off` (50%). The row's gap is 34px.
@@ -282,7 +281,58 @@ export:
 Two new tokens came out of this: `--track-wide` (0.16em) and
 `--ink-tab-off`.
 
-`fonts/` ships with its own README naming the four missing woff2 files.
+`fonts/` ships with its own README covering the four vendored woff2 files.
+
+---
+
+## Changed 2026-09-22
+
+All already in `source/`, and in the export except where a line says
+otherwise.
+
+**Now Playing — meta column enlarged.** Tabs 19px (the tab landmark grew
+49px → 51px; `geometry.json` is re-baselined and `_measured` moved to
+2026-09-22). Title **54px** at 1.06, clamped to two lines. Artist **35px**,
+album **30px**, year **25px** mono. Three tokens moved with it: `--t-title`
+46 → 54, `--t-artist` 30 → 35, `--t-lead` 22 → 25, and the album now reads
+`--t-h2` instead of `--t-h3`.
+
+**The source word is gone.** The mark stands alone — no ground, no border, no
+word — at **32px**, still 44px from the top and 56px from the right, in the
+source accent, pulsing at 2.4s while playing. The mini strip's mark is 38px.
+The LMS four-bar reduction is derived from one size value (bars at 0.5 / 1 /
+0.72 / 0.88 of it, 0.15 wide, 0.11 apart, rounded), so at 32px it is
+**16 / 32 / 23 / 28, 5px wide, 4px apart**. The export had bar 4 at the same
+height as bar 3; that was drift and is fixed.
+
+**Lyric strip fade is stronger.** The three-line strip's mask ramps
+transparent → opaque over the first 30% and back over the last 30% (was 9%
+and 91%), so the outer lines read as ghosted rather than merely dimmer.
+
+**The idle screen was rebuilt.** Full description in `screens.md` §9. In
+short: `idle_days` (a 0–5 number) is replaced by **`idle_forecast`**, which
+is either `3 days` or `None`, and the two are different layouts rather than
+one layout with a row hidden. Feels-like, wind, sunrise and sunset were
+added; feels-like is **always** shown, even when it equals the reading.
+Sunrise and sunset carry a mark instead of a label. Chance of rain was added
+and then removed. The clock group is `width: max-content` and centres over
+the weather in the `None` state.
+
+**The skin picker is a list with a preview**, not a thumbnail grid, and
+tapping a row previews without writing the value — see `settings.md`.
+
+**Setup is documented** as `screens.md` §13 and its source is in `source/`.
+It is the second screen the phone sees, and the first thing a new device
+shows at all.
+
+Not in the export: the idle screen, Settings and Setup have no plain
+HTML/CSS slice. `now-playing.html` is still the only one, and still display
+only. Everything else is the `.dc.html` source plus these documents.
+
+**`verify.html` has not been run against this revision** — it needs a local
+HTTP server, which is yours to start. Group 1's baseline is updated for the
+tab row; group 6 compares against `source/` live, so it picks up the type
+and source-mark changes on its own.
 
 ---
 
