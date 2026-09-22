@@ -1502,9 +1502,14 @@ against the device** ([Finding 042](findings/042-the-device-against-the-new-desi
 The 2026-09-18 order above stands for the performance work; what follows is
 the design sweep, which is most of criterion 3 and much of criterion 1.
 
-**Nine subphases, in this order. Each one lands on its own and is checked on
+**Ten subphases, in this order. Each one lands on its own and is checked on
 the panel before the next** - George runs the regression pass, and a batch he
 cannot attribute is a batch he cannot judge.
+
+**Nine until 2026-09-22**, when the volume work was split in two on George's
+agreement: the audio card is not the only output this device has, and
+choosing between them is a decision about the same thing volume is. 9i is the
+level, 9j is where it goes.
 
 **The volume work is last, by George's instruction (2026-09-20).** It is the
 only subphase with a physical consequence, it carries the one number still
@@ -1752,18 +1757,73 @@ undecided, and nothing else depends on it.
    word is **All**; it was `Random` until George renamed it (*"since it
    makes more sense"* — `skin_rotate` is the one that is random).
 
-9. **9i - The volume setup.** Fixed output (ADR-0046): the per-option
-   warning, the locked row, and never a disabled slider - **never built, and
-   found by Finding 040 rather than by anything the code said**. Percent as
-   the only user-facing unit. `max_ceiling`, which is `None` today.
-   `travel_curve`, whose value names a curve the code does not implement
-   (Finding 042 §2). `restore_floor`, `boot_default_scope` and
-   `volume_managed`.
-   **And the one number nobody has chosen:** the device boots at raw 60/240 =
-   -90 dB = 0%, the design's default is 60% = -18 dB, **a 72 dB difference at
-   every cold boot**, on a DAC feeding an amplifier at whatever gain it was
-   left at. ADR-0018 calls the current level "a fixed safe level".
+9. **9i - The volume path, measured, then the rows.** **Eight rows in the
+   Audio group and not one of them is wired**: `output_mode`, `boot_volume`,
+   `max_ceiling`, `restore_floor`, `boot_default_scope`,
+   `per_renderer_volume`, `volume_managed`, `travel_curve`. Fixed output
+   (ADR-0046) - the per-option warning, the absent slider, the padlock, the
+   drawer's replacement row, and `/state` publishing the mode - was **never
+   built, and found by Finding 040 rather than by anything the code said**.
+   Percent is the only user-facing unit (George, 2026-09-20).
+
+   **It opens with a finding, not with code** (George, 2026-09-22, on the
+   built panel): *"the volume is not increased or decreased smoothly, there
+   is this delay we introduce a while back"*; *"there are the occasional hops
+   in volume (especially after a first boot)"*; and *"sometimes it feels like
+   the max volume is different between renderers (song quality
+   independent)"*. Three symptoms, three first hypotheses, all measurable:
+
+   - **The delay.** `VolumeDrawer.svelte` sends one request at a time and
+     queues only the latest; each is a round trip, and what the slider
+     settles to is what the *renderer* reports, not what the finger did.
+     Two suppression windows sit in the same file - `OWN_WINDOW_MS = 1500`
+     and 3 s after a renderer change. Measure finger-to-echo per renderer.
+   - **The hops.** Three levels race at startup: `gexis-boot-volume` sets the
+     DAC to 60/240, each renderer's dummy control starts where it starts, and
+     `per_renderer_volume` restores a remembered level on first activation.
+     Log all three through a cold boot and see which moves last.
+   - **The maximum.** Each renderer has **its own dummy mixer** that the
+     daemon observes - `hw:gexislmsvol`, `hw:gexisbtvol`, Spotify's event
+     stream - each mapped into the DAC's -120...0 dB by a separate constant,
+     all -45 today (`SLIDER_DB_MIN`, `DUMMY_DB_MIN`, `SPOTIFY_DB_MIN`). If a
+     renderer applies its own curve first - Spotify sends 0-1, AVRCP is
+     0-127 - then 100% is a different attenuation on each. Play one track at
+     100% on all three and read the raw DAC value.
+
+   **Then the decisions the numbers inform**, all George's: the boot level
+   (raw 60/240 = **-90 dB = 0%** today against the design's 60% = -18 dB, **a
+   72 dB difference at every cold boot** into an amplifier at whatever gain
+   it was left at; 20% is -36 dB, 40% is -27 dB); whether ADR-0034's -45...0
+   window *is* "Perceptual", since `travel_curve` names a curve the code does
+   not implement (Finding 042 §2); where `max_ceiling` is enforced, being
+   `None` today; what a self-managing renderer does in fixed mode; and
+   whether the mode is per-device or per-renderer.
    *Gate: hardware, with the amplifier turned down first.*
+
+10. **9j - Which output.** The device has **four cards** - the HiFiBerry
+   DAC+ HD, HDMI 0, HDMI 1 and the 3.5 mm jack - and the user has never been
+   offered the choice (George, 2026-09-22: *"The card holds now 3 outputs but
+   only one we've dealt with"*).
+
+   **One file decides it.** All three renderers already play to one PCM:
+   squeezelite `-o output`, go-librespot `audio_device: output`,
+   bluealsa-aplay `--pcm=output`, defined in `/etc/alsa/conf.d/output.conf`
+   as a `meter` PCM whose slave is `hw:sndrpihifiberry` and whose scope is
+   peppyalsa. Switching output is `slave.pcm` and `ctl.output` - and because
+   the meter sits above the slave, **the VU meter and spectrum follow the
+   audio wherever it goes**.
+
+   **The alternatives are not equivalent, which is the design question.**
+   The HiFiBerry has `DAC` (0-240 = -120...0 dB) and the jack has `PCM`;
+   **HDMI has no mixer control at all** - measured on the device, `amixer -c
+   vc4hdmi0 scontrols` is empty. So choosing HDMI *is* fixed output, and the
+   proposal is that it sets `output_mode` to Fixed and says so, rather than
+   leaving a slider that cannot work. ADR-0046 already describes that panel.
+
+   Wants its own ADR before implementation: the switch is a file the image
+   ships, the three renderers restart to follow it (ADR-0048's shape), and
+   the two mixer-check scripts and three dummy controls have to move with it.
+   *Gate: hardware - play on each output, and check the meter still moves.*
 
 **Where the settings stand as of 2026-09-18:** 54 rows, **6 wired**
 (`idle_url`, `idle_timeout`, `drawer_on_external`, `drawer_autohide`,

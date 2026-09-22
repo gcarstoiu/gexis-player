@@ -1,15 +1,27 @@
 # Handoff
 
 Last updated: 2026-09-22 (twenty-second session, on R2D2 — **Phase 9's
-design sweep: 9a through 9h are done and the 2026-09-22 drop is applied.
-9i — volume setup — is what is left; three things want George's word, and
-one wants a build**)
+design sweep: 9a through 9h are done, the 2026-09-22 drop is applied, and
+the image is built and verified. The volume work is split in two: 9i the
+level, 9j where it goes**)
 
 ## Start here
 
-**Phase 9's design sweep is done bar the last subphase.** Nine were planned
-(`docs/DEVELOPMENT.md`), volume last: **9a through 9h are built, checked on
-the panel and committed**, and **9i — volume setup — is what is left**.
+**Phase 9's design sweep is done bar the volume work.** **9a through 9h are
+built, checked on the panel and committed.** What is left is now **two**
+subphases, split on George's agreement (2026-09-22):
+
+- **9i — the volume path, measured, then the rows.** Eight rows in Audio and
+  not one of them wired, ADR-0046's fixed output never built — and **three
+  symptoms George found on the built panel**: the level does not move
+  smoothly, it hops after a cold boot, and the maximum feels different
+  between renderers. The subphase **opens with a finding**, because the boot
+  level and the travel curve are decisions to make *from* those numbers.
+- **9j — which output.** The device has four cards and the user has never
+  been offered the choice. All three renderers already play to one PCM, so
+  the switch is two lines of `/etc/alsa/conf.d/output.conf` and the meter
+  follows the audio — but **HDMI has no mixer control at all**, so choosing
+  it *is* fixed output. Wants an ADR before implementation.
 
 **The 2026-09-22 design drop is applied, all four parts of it.** George:
 *"Please be thorough and check the designs I import — do not guess or
