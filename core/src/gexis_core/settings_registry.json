@@ -43,6 +43,18 @@
         "default": null
       },
       {
+        "key": "restore_ceiling",
+        "type": "number",
+        "label": "Loudest a renderer may restore",
+        "marks": "N",
+        "note": "When a renderer becomes active it puts back the level it last had. This is as far up as it may go on its own \u2014 measured on this device, a boot raised the level 53 dB without anyone touching it.",
+        "min": -45,
+        "max": 0,
+        "unit": "dB",
+        "default": -20,
+        "surfaced": false
+      },
+      {
         "key": "restore_floor",
         "type": "number",
         "label": "Restore floor",
@@ -89,12 +101,12 @@
         "type": "choice",
         "label": "Slider travel curve",
         "marks": "RH",
-        "note": "Decided: the slider spans −45 to 0 dB, even in dB, and shows its position.",
+        "note": "Perceptual is the slider as it is: −45 to 0 dB, even in dB, showing its position. dB-linear would spread travel across the hardware's whole −120 dB and is not implemented.",
         "options": [
-          "dB-linear",
-          "Perceptual"
+          "Perceptual",
+          "dB-linear"
         ],
-        "default": "dB-linear"
+        "default": "Perceptual"
       }
     ]
   },

@@ -7,7 +7,7 @@ recognised faster next time, rather than rediscovered as a surprise.
 
 ## The check ran against the wrong reality
 
-Fifteen instances so far, same shape each time: the check ran against
+Sixteen instances so far, same shape each time: the check ran against
 something that *resembled* the thing being tested, closely enough that
 the difference was invisible in the result. Not a broken check — a check
 answering a different question than the one asked, confidently.
@@ -334,6 +334,29 @@ verification is an image.**
 removes it and the next session has to install it again. Whether it belongs
 in the build is George's call; the argument for it is this page.
 
+**16. A probe that ran the same code in a context where the bug is
+invisible** (2026-09-22, Phase 9 subphase 9i). ADR-0052 §4 replaces the
+`amixer` subprocess with libasound through `ctypes`. The approach was
+proved first in a standalone probe on the device - it opened the mixer,
+read the ranges and wrote values, and reported the timings this record is
+built on. The same code inside the daemon **took it down with SIGSEGV, five
+times in fifteen seconds**.
+
+`ctypes` assumes a return type of `int` for any function it has not been
+told about, which truncates a 64-bit pointer to 32. `snd_mixer_find_selem`
+returns a pointer. Whether the truncation matters depends on where the
+allocator happened to put the element that run - the probe's fitted, the
+daemon's did not. **The probe did not test the code; it tested one draw
+from a distribution**, and the draw that mattered was the one on the other
+side of the deploy.
+
+The tell was available: the probe never declared a single `restype` or
+`argtypes`, which is the first thing to check in any ctypes binding.
+**A probe that cannot fail for the reason the real thing will is not a
+rehearsal of it.** Signatures are declared now, and the mixer handle is
+pinned to one thread, which was the second thing the probe could not have
+shown.
+
 **Cheapest correction available:** when a server's own interface shows a
 thing, find the call *it* makes before concluding the data is absent — here,
 one request to `material-skin browsemodes` listed `myMusicTopArtists` and
@@ -346,8 +369,9 @@ host's filesystem for the booted one, one run for the distribution, a
 local ref for the remote, the kernel's OOM killer for any killer, an idle
 device for a booting one, a comment for the machine it describes, a
 summary line for the rule it summarises, a directory listing for the design
-itself, a log line for the screen it describes — and the check quietly
-accepted the substitute. None of these failed loudly. Each
+itself, a log line for the screen it describes, a lucky memory layout for
+the one the daemon would get — and the check quietly accepted the
+substitute. None of these failed loudly. Each
 produced an answer that looked like a normal result, not an error.
 
 **What to check before trusting a verification result:** not just "does

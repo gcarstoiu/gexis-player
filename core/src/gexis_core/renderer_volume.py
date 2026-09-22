@@ -46,7 +46,12 @@ class RendererVolumeMemory:
         self._levels: dict[str, int] = self._load()
 
     def resolve_restore(
-        self, renderer_id: str, *, boot_default: int, floor_db: float
+        self,
+        renderer_id: str,
+        *,
+        boot_default: int,
+        floor_db: float,
+        ceiling_db: float | None = None,
     ) -> int | None:
         """The raw value to write to the hardware mixer when
         `renderer_id` becomes active, or None if this renderer's volume
@@ -68,6 +73,14 @@ class RendererVolumeMemory:
             return boot_default
         if raw_to_db(raw) < floor_db:
             return db_to_raw(floor_db)
+        # **And a ceiling** (ADR-0052 §1). Measured on the device: the level
+        # rose 53 dB thirteen seconds after a boot, untouched, because the
+        # first renderer to connect restored what it remembered - and
+        # connecting Spotify put the DAC at 0.00 dB the same way (Finding
+        # 045 §5, §7). A renderer may not make the device that loud on its
+        # own; above this the user has to ask.
+        if ceiling_db is not None and raw_to_db(raw) > ceiling_db:
+            return db_to_raw(ceiling_db)
         return raw
 
     def _load(self) -> dict[str, int]:

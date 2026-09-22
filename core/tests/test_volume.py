@@ -59,6 +59,14 @@ class FakeVolumeMemory:
         return None
 
 
+async def settle():
+    """Let a write finish. Since ADR-0052 §4 a level change is a *ramp* -
+    `write_hardware` awaits an inner task - so one loop turn no longer
+    drains it."""
+    for _ in range(20):
+        await asyncio.sleep(0)
+
+
 @pytest.fixture(autouse=True)
 def fake_set_raw(monkeypatch):
     calls = []
@@ -86,7 +94,7 @@ async def test_spotify_echo_of_our_own_value_is_ignored(fake_set_raw):
     bridge._expected_adapter_value = (71, time_module.monotonic())
 
     bridge._on_adapter_volume(71, 100)
-    await asyncio.sleep(0)  # let any scheduled task run
+    await settle()
 
     assert fake_set_raw == []
 
@@ -104,7 +112,7 @@ async def test_a_different_value_arriving_immediately_is_still_applied(fake_set_
     bridge._expected_adapter_value = (71, time_module.monotonic())
 
     bridge._on_adapter_volume(72, 100)  # one step away, immediately after
-    await asyncio.sleep(0)
+    await settle()
 
     assert fake_set_raw == [("DAC", spotify_fraction_to_hardware_raw(0.72))]
 
@@ -117,12 +125,19 @@ async def test_fast_ramp_to_max_reaches_full_scale(fake_set_raw):
 
     for value in (40, 55, 70, 85, 100):
         bridge._on_adapter_volume(value, 100)
-        await asyncio.sleep(0)
+        await settle()
 
-    assert [raw for _, raw in fake_set_raw] == [
-        spotify_fraction_to_hardware_raw(v / 100) for v in (40, 55, 70, 85, 100)
-    ]
+    # Since ADR-0052 §4 the hardware is *walked* between targets, so the
+    # call list carries the steps in between as well. What blocker 4 was
+    # about is unchanged and is what is asserted: **every target lands, in
+    # order, and the last one is full scale** - not somewhere short of it.
+    written = [raw for _, raw in fake_set_raw]
+    targets = [spotify_fraction_to_hardware_raw(v / 100) for v in (40, 55, 70, 85, 100)]
+    at = -1
+    for target in targets:
+        at = written.index(target, at + 1)  # raises if a target never landed
     assert fake_set_raw[-1] == ("DAC", 240)  # 100% is 0dB, full scale
+    assert written == sorted(written)  # a ramp only ever moves one way here
 
 
 @pytest.mark.asyncio
@@ -134,7 +149,7 @@ async def test_a_stale_expectation_does_not_suppress_a_genuine_change(fake_set_r
     bridge._expected_adapter_value = (50, time_module.monotonic() - ECHO_WINDOW_S - 1)
 
     bridge._on_adapter_volume(50, 100)
-    await asyncio.sleep(0)
+    await settle()
 
     assert fake_set_raw == [("DAC", 195)]
 
@@ -145,7 +160,7 @@ async def test_genuine_spotify_change_outside_window_is_applied(fake_set_raw):
     bridge._expected_adapter_value = None
 
     bridge._on_adapter_volume(50, 100)
-    await asyncio.sleep(0)
+    await settle()
 
     # dB-linear (spotify_fraction_to_hardware_raw), not raw-linear: 50%
     # is -22.5dB on the -45..0dB curve Spotify shares with LMS/Bluetooth
@@ -186,7 +201,7 @@ async def test_spotify_volume_while_inactive_is_remembered_not_applied(fake_set_
     bridge._expected_adapter_value = None
 
     bridge._on_adapter_volume(50, 100)
-    await asyncio.sleep(0)
+    await settle()
 
     assert fake_set_raw == []  # not applied to the live mixer
     assert memory.remembered == [("spotify", 195)]  # but remembered
@@ -459,15 +474,42 @@ class TestDummyMixerBridgePauseFadeGate:
         assert writes == []
 
     @pytest.mark.asyncio
-    async def test_a_renderer_without_a_gate_mirrors_every_step(self, monkeypatch):
+    async def test_a_renderer_without_a_gate_never_ends_on_a_stale_level(self, monkeypatch):
         """Bluetooth's volume does not fade, and its AVRCP updates during a
-        drag must not be swallowed (see DummyMixerBridge)."""
+        drag must not be swallowed (see DummyMixerBridge).
+
+        **Since ADR-0052 §5 "not swallowed" means the latest value always
+        lands, not that every step is written.** The mirror writes at most
+        once per 40 ms and keeps the newest of whatever arrived in between -
+        a finger never produces that rate, and a bluealsa meltdown produced
+        750 changes a second (Finding 045 §10), every one of which used to
+        become a 16 ms hardware write. What the old contract protected
+        against was a *stale* level, and that is asserted here.
+        """
         bridge, writes, _ = self._bridge(monkeypatch, playing=None)
 
         await self._steps(bridge, -50, 0, 50)
+        if bridge._mirror_soon is not None:
+            await bridge._mirror_soon
 
         # dummy -50/0/50 are -45/-30/-15dB (dummy_raw_to_db), i.e. 150/180/210.
-        assert writes == [("DAC", 150), ("DAC", 180), ("DAC", 210)]
+        assert writes[0] == ("DAC", 150)  # the first is immediate
+        assert writes[-1] == ("DAC", 210)  # and the last value is where it ends
+        assert len(writes) <= 3
+
+    @pytest.mark.asyncio
+    async def test_a_storm_of_changes_becomes_a_handful_of_writes(self, monkeypatch):
+        """Finding 045 §10, in a test: bluealsa wrote the dummy ~750 times a
+        second while it melted down. The mirror must not turn that into 750
+        hardware writes - and must still end on the last value."""
+        bridge, writes, _ = self._bridge(monkeypatch, playing=None)
+
+        await self._steps(bridge, *range(-50, 50))
+        if bridge._mirror_soon is not None:
+            await bridge._mirror_soon
+
+        assert len(writes) <= 3, writes
+        assert writes[-1][1] == dummy_raw_to_hardware_raw(49)
 
     @pytest.mark.asyncio
     async def test_an_inactive_renderer_is_remembered_but_not_applied(self, monkeypatch):

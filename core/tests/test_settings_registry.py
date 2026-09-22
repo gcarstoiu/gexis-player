@@ -53,7 +53,6 @@ def test_the_shipped_registry_loads_and_every_number_is_bounded():
 #: (ADR-0051 §4).
 DESIGN_KEYS_NOT_YET_IN_THE_REGISTRY: set[str] = set()
 
-
 #: A design key the registry **deliberately** does not have, which is a
 #: different statement from "not yet" and has to be said out loud: ADR-0022's
 #: amendment makes the drop the point of truth, so a row we decline is a
@@ -108,6 +107,9 @@ def test_registry_keys_are_the_designs_keys_apart_from_recorded_deviations():
         "confidence", "factory_reset", "idle_close", "image_build",
         "lms_player", "log_level", "plugins", "power", "release_ladder",
         "restore_floor", "seek_reanchor", "spotify_name", "theme",
+        # ADR-0052 §1, earned by measurement: the level rose 53 dB thirteen
+        # seconds after a boot with nobody touching it (Finding 045 §5).
+        "restore_ceiling",
         "background_brightness", "background_interval", "idle_clock",
         "time_display", "updates", "volume_managed", "wallpaper_topics",
     }
@@ -440,7 +442,9 @@ def test_the_device_name_warning_says_what_this_device_does():
 def test_the_shipped_registry_hides_twenty_rows_and_shows_the_rest():
     rows = _rows()
     kept = [r for r in rows if r.get("surfaced") is False]
-    assert len(kept) == 20, "ADR-0022's amendment: inventoried, not surfaced"
+    # 21 since `restore_ceiling` (ADR-0052 §1) - inventoried like its
+    # neighbour `restore_floor`, and not a row anyone should have to find.
+    assert len(kept) == 21, "ADR-0022's amendment: inventoried, not surfaced"
     # Every one of them is still served by the API.
     assert all(r.get("key") for r in kept)
     # 54 at the start of 9d, plus the two rows the design has and the plan
@@ -452,7 +456,9 @@ def test_the_shipped_registry_hides_twenty_rows_and_shows_the_rest():
     # `home_strip_count`. Then `idle_clock`, asked for on 2026-09-22, and
     # `skin`, the picker's own row, which the same day's drop drew
     # (ADR-0051 §4). Less `idle_minmax`, which George removed the same day.
-    assert len(rows) == 71
+    # Plus `restore_ceiling`, which Finding 045 §5 earned: the level rose
+    # 53 dB after a boot with nobody touching it (ADR-0052 §1).
+    assert len(rows) == 72
     assert len(rows) - len(kept) == 51
 
 

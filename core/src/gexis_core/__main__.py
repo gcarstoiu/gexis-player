@@ -91,7 +91,12 @@ def unmanaged_floor_raw(current: int | None, floor_db: float) -> int | None:
     return db_to_raw(floor_db)
 
 
-def make_restore_volume(config: Config, volume_memory: RendererVolumeMemory, volume_bridge: VolumeBridge):
+def make_restore_volume(
+    config: Config,
+    volume_memory: RendererVolumeMemory,
+    volume_bridge: VolumeBridge,
+    ceiling_db=None,
+):
     async def restore_volume(renderer_id: str) -> None:
         # George's decision, 2026-09-07: each renderer keeps its own
         # volume, restored when it becomes active - not reset to the
@@ -109,6 +114,10 @@ def make_restore_volume(config: Config, volume_memory: RendererVolumeMemory, vol
             renderer_id,
             boot_default=config.boot_volume_steps,
             floor_db=config.restore_volume_floor_db,
+            # ADR-0052 §1: a renderer may not put the device above this on
+            # its own. Read per restore through the callable, so a change
+            # applies to the next one rather than the next restart.
+            ceiling_db=ceiling_db() if ceiling_db else None,
         )
         if raw is not None:
             logger.info("volume: restoring %s to %s/240", renderer_id, raw)
@@ -307,8 +316,14 @@ async def main() -> None:
         volume_memory=volume_memory,
         get_active_renderer=lambda: supervisor.active,
         on_hardware_level=lambda raw: publish_volume(raw),
+        # ADR-0052 §3: `max_ceiling` clamps every level that reaches the
+        # DAC, from any source. `_number` is defined further down `main()`
+        # and resolved when this is called, not now.
+        ceiling_db=lambda: _number("max_ceiling"),
     )
-    restore_volume = make_restore_volume(config, volume_memory, volume_bridge)
+    restore_volume = make_restore_volume(
+        config, volume_memory, volume_bridge, lambda: _number("restore_ceiling")
+    )
 
     # ADR-0034. Observes every level before it is published, so a change
     # from anywhere else ends mute in the same broadcast that shows it.
@@ -483,6 +498,8 @@ async def main() -> None:
                "weather_location": None, "idle_forecast": None,
                "idle_icons": None,
                "viz_timeout": None, "viz_stop": None,
+               # ADR-0052: read on every write and every restore.
+               "max_ceiling": None, "restore_ceiling": None,
                # ADR-0051: read by the driver, through the file these write.
                "skin": publish_visualisation,
                "skin_rotate": publish_visualisation,
@@ -569,6 +586,15 @@ async def main() -> None:
     # of is a number nobody can set; reading it through a callable means a
     # change from the phone lands on the next tick rather than the next
     # restart.
+    def _number(key: str) -> float | None:
+        """A number row's value, or None when it is unset - the shape
+        `max_ceiling` and `restore_ceiling` both want (ADR-0052 §1, §3)."""
+        try:
+            value = settings.value(key)
+        except Exception:  # noqa: BLE001 - a row that is not there is None
+            return None
+        return None if value is None else float(value)
+
     def minutes(key: str, fallback: float):
         def read() -> float:
             value = settings.value(key)
