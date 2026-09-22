@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pytest
+
 from gexis_core.renderer_volume import RendererVolumeMemory
 from gexis_core.volume import db_to_raw
 
@@ -95,12 +97,23 @@ def test_managed_renderers_is_declared_not_hardcoded(tmp_path: Path):
     assert memory.resolve_restore("lms", boot_default=60, floor_db=-40.0) is None
 
 
-class TestRestoreCeiling:
-    """ADR-0052 §1. Measured on the device: thirteen seconds after a boot,
-    untouched, the level rose 53 dB because the first renderer to connect
-    restored what it remembered - and connecting Spotify put the DAC at
-    0.00 dB the same way (Finding 045 §5, §7). A renderer may not make the
-    device that loud on its own."""
+class TestNoRestoreCeiling:
+    """ADR-0052 §1 built a `restore_ceiling` and the amendment withdrew it
+    the same day, before it was ever surfaced.
+
+    It clamped the hardware on a restore and told nobody: LMS reconnects at
+    100, the DAC goes to -20 dB, and every number in sight still reads 100 -
+    so the first nudge of a slider, which is not a restore and so not
+    clamped, delivered the whole 20 dB at once. George: *"what looks like an
+    error because the sound jumps up or down with the first move of the
+    volume."*
+
+    These tests pin the absence, because the hazard §1 aimed at is real and
+    measured (53 dB thirteen seconds after a boot, untouched - Finding 045
+    §5) and somebody reading that will be tempted to put the clamp back. The
+    answer to it is §4's ramp and `max_ceiling`, neither of which lies about
+    where the level is.
+    """
 
     @staticmethod
     def _memory(tmp_path, remembered):
@@ -109,38 +122,19 @@ class TestRestoreCeiling:
             memory.remember(renderer_id, raw)
         return memory
 
-    def test_a_remembered_level_above_the_ceiling_is_clamped(self, tmp_path):
+    def test_a_remembered_level_at_full_scale_is_restored_untouched(self, tmp_path):
         memory = self._memory(tmp_path, {"spotify": 240})  # 0 dB, full scale
-        raw = memory.resolve_restore(
-            "spotify", boot_default=60, floor_db=-40.0, ceiling_db=-20.0
-        )
-        assert raw == db_to_raw(-20.0) == 200
-
-    def test_a_level_below_the_ceiling_is_restored_untouched(self, tmp_path):
-        memory = self._memory(tmp_path, {"spotify": 180})  # -30 dB
-        raw = memory.resolve_restore(
-            "spotify", boot_default=60, floor_db=-40.0, ceiling_db=-20.0
-        )
-        assert raw == 180
-
-    def test_the_floor_still_wins_for_something_too_quiet(self, tmp_path):
-        """Both guards apply, and they cannot argue: the floor is below the
-        ceiling by construction."""
-        memory = self._memory(tmp_path, {"spotify": 100})  # -70 dB
-        raw = memory.resolve_restore(
-            "spotify", boot_default=60, floor_db=-40.0, ceiling_db=-20.0
-        )
-        assert raw == db_to_raw(-40.0)
-
-    def test_no_ceiling_is_the_old_behaviour(self, tmp_path):
-        memory = self._memory(tmp_path, {"spotify": 240})
         assert memory.resolve_restore("spotify", boot_default=60, floor_db=-40.0) == 240
 
-    def test_the_boot_default_is_not_subject_to_the_ceiling(self, tmp_path):
-        """A renderer that has never been used gets the boot level, which is
-        already a confirmed-quiet number, not one this guard is about."""
-        memory = self._memory(tmp_path, {})
-        raw = memory.resolve_restore(
-            "spotify", boot_default=60, floor_db=-40.0, ceiling_db=-20.0
-        )
-        assert raw == 60
+    def test_the_floor_still_guards_a_level_too_quiet_to_be_meant(self, tmp_path):
+        memory = self._memory(tmp_path, {"spotify": 100})  # -70 dB
+        raw = memory.resolve_restore("spotify", boot_default=60, floor_db=-40.0)
+        assert raw == db_to_raw(-40.0)
+
+    def test_resolve_restore_takes_no_ceiling_argument(self, tmp_path):
+        """The signature is the contract: there is nowhere to pass one."""
+        memory = self._memory(tmp_path, {"spotify": 240})
+        with pytest.raises(TypeError):
+            memory.resolve_restore(
+                "spotify", boot_default=60, floor_db=-40.0, ceiling_db=-20.0
+            )

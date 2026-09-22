@@ -59,6 +59,7 @@ from gexis_core.volume import (
     db_to_raw,
     get_raw,
     Mute,
+    set_ceiling_reader,
     slider_percent_to_raw,
     raw_to_db,
 )
@@ -95,7 +96,6 @@ def make_restore_volume(
     config: Config,
     volume_memory: RendererVolumeMemory,
     volume_bridge: VolumeBridge,
-    ceiling_db=None,
 ):
     async def restore_volume(renderer_id: str) -> None:
         # George's decision, 2026-09-07: each renderer keeps its own
@@ -114,10 +114,6 @@ def make_restore_volume(
             renderer_id,
             boot_default=config.boot_volume_steps,
             floor_db=config.restore_volume_floor_db,
-            # ADR-0052 §1: a renderer may not put the device above this on
-            # its own. Read per restore through the callable, so a change
-            # applies to the next one rather than the next restart.
-            ceiling_db=ceiling_db() if ceiling_db else None,
         )
         if raw is not None:
             logger.info("volume: restoring %s to %s/240", renderer_id, raw)
@@ -316,14 +312,13 @@ async def main() -> None:
         volume_memory=volume_memory,
         get_active_renderer=lambda: supervisor.active,
         on_hardware_level=lambda raw: publish_volume(raw),
-        # ADR-0052 §3: `max_ceiling` clamps every level that reaches the
-        # DAC, from any source. `_number` is defined further down `main()`
-        # and resolved when this is called, not now.
+        # ADR-0052 §3: the backstop for an absolute level that was never a
+        # slider position - see `_capped`. The ceiling proper is the shift
+        # installed by `set_ceiling_reader` below. `_number` is defined
+        # further down `main()` and resolved when this is called, not now.
         ceiling_db=lambda: _number("max_ceiling"),
     )
-    restore_volume = make_restore_volume(
-        config, volume_memory, volume_bridge, lambda: _number("restore_ceiling")
-    )
+    restore_volume = make_restore_volume(config, volume_memory, volume_bridge)
 
     # ADR-0034. Observes every level before it is published, so a change
     # from anywhere else ends mute in the same broadcast that shows it.
@@ -335,6 +330,27 @@ async def main() -> None:
     def publish_volume(raw: int) -> None:
         mute.observe(raw)
         state_store.set_volume_raw(raw, muted=mute.muted)
+
+    # ADR-0052 §3, amended: the ceiling is the top of every scale, so the
+    # row has to be readable from inside `volume.py`'s pure mapping
+    # functions - a reader rather than a value, resolved per map.
+    set_ceiling_reader(lambda: _number("max_ceiling"))
+
+    def _apply_ceiling() -> None:
+        """Re-write the level the device is already at when the ceiling
+        moves.
+
+        Two things happen at once and both need it. If the level is now
+        *above* the ceiling it has to come down, and through the bridge so
+        it ramps rather than drops. And whether or not it moves, the
+        percentage that describes it has changed - the scale did - so it
+        must be republished or the panel keeps showing a number from the
+        old scale until something else touches the volume.
+        """
+        volume = state_store.state.volume
+        if volume is None:
+            return
+        asyncio.ensure_future(volume_bridge.write_hardware(volume.raw))
 
     supervisor = Supervisor(
         adapters,
@@ -498,8 +514,10 @@ async def main() -> None:
                "weather_location": None, "idle_forecast": None,
                "idle_icons": None,
                "viz_timeout": None, "viz_stop": None,
-               # ADR-0052: read on every write and every restore.
-               "max_ceiling": None, "restore_ceiling": None,
+               # ADR-0052 §3: read on every map between a position and a
+               # level, and re-applied here when it changes so the level
+               # comes down at once if it is now above the ceiling.
+               "max_ceiling": lambda _value=None: _apply_ceiling(),
                # ADR-0051: read by the driver, through the file these write.
                "skin": publish_visualisation,
                "skin_rotate": publish_visualisation,
@@ -602,7 +620,7 @@ async def main() -> None:
     # restart.
     def _number(key: str) -> float | None:
         """A number row's value, or None when it is unset - the shape
-        `max_ceiling` and `restore_ceiling` both want (ADR-0052 §1, §3)."""
+        `max_ceiling` wants (ADR-0052 §3)."""
         try:
             value = settings.value(key)
         except Exception:  # noqa: BLE001 - a row that is not there is None

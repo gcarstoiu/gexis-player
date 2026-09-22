@@ -27,6 +27,9 @@ from gexis_core.volume import (
     get_raw,
     hardware_raw_to_spotify_fraction,
     raw_to_db,
+    raw_to_slider_percent,
+    slider_percent_to_raw,
+    spotify_fraction_to_hardware_raw,
     spotify_fraction_to_hardware_raw,
 )
 
@@ -566,3 +569,98 @@ async def test_a_ramps_own_steps_are_not_read_back_as_someone_turning_the_knob(f
     assert len(written) > 3, "this move should have ramped"
     for raw in written:
         assert bridge._was_ours(raw), f"{raw} would read back as an external change"
+
+
+class TestTheCeilingIsTheTopOfEveryScale:
+    """ADR-0052 §3 as amended, 2026-09-22.
+
+    The first version clamped the hardware and told nobody: every control
+    still displayed the number the renderer asked for, and the first move of
+    any slider released the difference. George: *"We are taking away the
+    decision from the user and creating what looks like an error because the
+    sound jumps up or down with the first move of the volume."*
+
+    So the ceiling is now where the top of each scale *sits*. What these
+    pin is that claim, in the three places a position becomes a level.
+    """
+
+    @pytest.fixture(autouse=True)
+    def _no_ceiling_afterwards(self):
+        yield
+        volume_module.set_ceiling_reader(lambda: None)
+
+    @staticmethod
+    def _at(db):
+        volume_module.set_ceiling_reader(lambda: db)
+
+    def test_unset_is_the_dac_s_own_maximum(self):
+        assert volume_module.ceiling_db() == 0.0
+        assert slider_percent_to_raw(100) == db_to_raw(0.0)
+        assert dummy_raw_to_hardware_raw(DUMMY_MAX_RAW) == db_to_raw(0.0)
+        assert spotify_fraction_to_hardware_raw(1.0) == db_to_raw(0.0)
+
+    def test_every_scale_tops_out_at_the_ceiling(self):
+        """One level, three controls, and none of them can ask for more."""
+        self._at(-10.0)
+
+        assert slider_percent_to_raw(100) == db_to_raw(-10.0)
+        assert dummy_raw_to_hardware_raw(DUMMY_MAX_RAW) == db_to_raw(-10.0)
+        assert spotify_fraction_to_hardware_raw(1.0) == db_to_raw(-10.0)
+
+    def test_the_panel_never_reads_louder_than_what_comes_out(self):
+        """The inverse has to move with the map, or the number lies in the
+        other direction - which is the whole complaint."""
+        self._at(-10.0)
+
+        assert raw_to_slider_percent(db_to_raw(-10.0)) == 100
+        assert hardware_raw_to_spotify_fraction(db_to_raw(-10.0)) == 1.0
+        # Within a point, which is the DAC's own resolution and not the
+        # ceiling's doing: 100 slider positions of 0.45 dB onto 0.5 dB raw
+        # steps never round-trips exactly, with or without a ceiling.
+        for percent in (0, 1, 25, 50, 75, 99, 100):
+            assert abs(raw_to_slider_percent(slider_percent_to_raw(percent)) - percent) <= 1
+
+    def test_a_step_keeps_its_size(self):
+        """A shift, not a compression (ADR-0052's amendment §3). If the
+        ceiling squeezed the window instead, a dummy step would shrink with
+        the setting - the dummy's 128 values would stop landing on distinct
+        DAC steps, and the gentle renderer curve recovered on 2026-09-08
+        would be re-stretched."""
+        def spans():
+            return [
+                dummy_raw_to_hardware_raw(raw + 1) - dummy_raw_to_hardware_raw(raw)
+                for raw in range(DUMMY_MIN_RAW, DUMMY_MAX_RAW)
+            ]
+
+        loose = spans()
+        self._at(-12.0)
+        assert spans() == loose
+
+    def test_the_whole_window_moves_down_together(self):
+        """Not just the top: the same sound is the same position on the
+        slider only if the floor moves too."""
+        self._at(-12.0)
+
+        assert raw_to_db(slider_percent_to_raw(100)) == pytest.approx(-12.0, abs=0.5)
+        assert raw_to_db(slider_percent_to_raw(50)) == pytest.approx(-34.5, abs=0.5)
+        assert raw_to_db(dummy_raw_to_hardware_raw(DUMMY_MIN_RAW)) == pytest.approx(
+            -50.1, abs=0.5
+        )
+
+    def test_a_ceiling_above_zero_is_not_one(self):
+        """A row can hold anything. Nothing may make the device louder than
+        the DAC's own maximum."""
+        self._at(6.0)
+        assert volume_module.ceiling_db() == 0.0
+
+    def test_an_unreadable_row_fails_open(self):
+        """Open is a loud device and closed is a silent one; a setting that
+        cannot be read must not mute the player."""
+        def boom():
+            raise RuntimeError("no settings store yet")
+
+        volume_module.set_ceiling_reader(boom)
+        assert volume_module.ceiling_db() == 0.0
+
+        volume_module.set_ceiling_reader(lambda: "not a number")
+        assert volume_module.ceiling_db() == 0.0

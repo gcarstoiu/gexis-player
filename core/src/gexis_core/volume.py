@@ -117,6 +117,7 @@ import concurrent.futures
 import logging
 import re
 import time
+from collections.abc import Callable
 
 from gexis_core import alsa
 
@@ -174,8 +175,57 @@ DUMMY_CARD_BLUETOOTH = "gexisbtvol"
 DUMMY_CONTROL = "Master"
 
 
+#: **ADR-0052 §3, amended 2026-09-22.** `max_ceiling` is not a clip laid on
+#: top of a fixed scale - it *is* where the top of every scale sits. George,
+#: on the clipping version: *"We are taking away the decision from the user
+#: and creating what looks like an error because the sound jumps up or down
+#: with the first move of the volume."* He is right about the mechanism: a
+#: clip holds the hardware down while every number in sight - the panel's,
+#: LMS's, the phone's - still reads 100, and the first move of any slider
+#: releases the whole difference at once.
+#:
+#: **It is applied as a shift, not a compression.** Every position-to-dB map
+#: in this module (the panel slider, the dummy controls, Spotify's fraction)
+#: adds `ceiling_db()`, which is <= 0. So 100% means the ceiling, 0% means
+#: the ceiling minus the same span as before, and *every step keeps its
+#: size*: 0.30 dB on a dummy, 0.45 dB on the panel. Compressing the window
+#: instead would change step sizes with the setting, make the dummy's 128
+#: values no longer land on distinct DAC steps, and re-stretch the gentle
+#: renderer curve that 2026-09-08 was spent recovering (see
+#: `dummy_raw_to_hardware_raw`). The cost of shifting is that the bottom of
+#: travel goes quieter than -45 dB, which is inaudible either way.
+_ceiling_reader: Callable[[], float | None] = lambda: None
+
+
+def set_ceiling_reader(reader) -> None:
+    """The daemon installs the settings row here. A reader rather than a
+    value, so a change from the phone applies to the next map rather than
+    the next restart - the same shape the rest of ADR-0052's rows use."""
+    global _ceiling_reader
+    _ceiling_reader = reader
+
+
+def ceiling_db() -> float:
+    """How far below the DAC's own maximum the top of every scale sits.
+
+    `0.0` - no ceiling - is the default and what an unset, unreadable or
+    nonsensical row gives, because a ceiling that fails open is a quiet
+    device and a ceiling that fails closed is a silent one.
+    """
+    try:
+        value = _ceiling_reader()
+    except Exception:  # noqa: BLE001 - a missing row is no ceiling
+        return 0.0
+    if value is None:
+        return 0.0
+    try:
+        return min(0.0, float(value))
+    except (TypeError, ValueError):
+        return 0.0
+
+
 def dummy_raw_to_db(raw: int) -> float:
-    return DUMMY_DB_MIN + (raw - DUMMY_MIN_RAW) * DUMMY_DB_STEP
+    return DUMMY_DB_MIN + ceiling_db() + (raw - DUMMY_MIN_RAW) * DUMMY_DB_STEP
 
 
 def dummy_raw_to_hardware_raw(raw: int) -> int:
@@ -248,14 +298,16 @@ RAMP_MIN_STEPS = 3
 def slider_percent_to_raw(percent: float) -> int:
     if percent <= 0:
         return 0
-    return db_to_raw(SLIDER_DB_MIN + min(percent, 100) / 100 * -SLIDER_DB_MIN)
+    floor = SLIDER_DB_MIN + ceiling_db()
+    return db_to_raw(floor + min(percent, 100) / 100 * -SLIDER_DB_MIN)
 
 
 def raw_to_slider_percent(raw: int) -> int:
     """Quieter than the slider's floor but not silent reads as 0%."""
     if raw <= 0:
         return 0
-    percent = (raw_to_db(raw) - SLIDER_DB_MIN) / -SLIDER_DB_MIN * 100
+    floor = SLIDER_DB_MIN + ceiling_db()
+    percent = (raw_to_db(raw) - floor) / -SLIDER_DB_MIN * 100
     return max(0, min(100, round(percent)))
 
 
@@ -312,7 +364,7 @@ SPOTIFY_DB_MIN = -45.0
 
 
 def spotify_fraction_to_hardware_raw(fraction: float) -> int:
-    db = SPOTIFY_DB_MIN + fraction * (0.0 - SPOTIFY_DB_MIN)
+    db = SPOTIFY_DB_MIN + ceiling_db() + fraction * -SPOTIFY_DB_MIN
     return db_to_raw(db)
 
 
@@ -325,7 +377,7 @@ def hardware_raw_to_spotify_fraction(raw: int) -> float:
     fraction below 0% to express - report 0%, not a negative one.
     """
     db = raw_to_db(raw)
-    frac = (db - SPOTIFY_DB_MIN) / (0.0 - SPOTIFY_DB_MIN)
+    frac = (db - SPOTIFY_DB_MIN - ceiling_db()) / -SPOTIFY_DB_MIN
     return max(0.0, min(1.0, frac))
 
 
@@ -548,7 +600,15 @@ class VolumeBridge:
     def _capped(self, raw: int) -> int:
         """Every level reaches the DAC through here, so the ceiling is
         enforced in one place (ADR-0052 §3) - panel, mirror and restore
-        alike."""
+        alike.
+
+        **Since the amendment this is a backstop, not the mechanism.** The
+        ceiling is a shift on every position-to-dB map (`ceiling_db`), so
+        nothing a slider or a renderer asks for lands above it in the first
+        place. What still can is an *absolute* raw: a level remembered
+        before the ceiling was set, or somebody's `amixer`. Those are
+        clamped, and a clamp is the right answer for them - there is no
+        position to reinterpret."""
         ceiling = self._ceiling_db()
         if ceiling is None:
             return raw

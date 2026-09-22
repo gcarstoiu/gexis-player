@@ -2,6 +2,12 @@
 
 **Status:** Accepted — George, 2026-09-22, on the five proposals below:
 *"Go for it including the visualiser fix inside 9i."*
+**Amended:** 2026-09-22, same day, on his objection to §1 as built:
+*"I tend not to like introducing differences between the panel and the phone
+or controlling device. We are taking away the decision from the user and
+creating what looks like an error because the sound jumps up or down with
+the first move of the volume."* **§1 is withdrawn and §3 is redefined** —
+see "Amendment" below. Nothing else in this record changes.
 **Date:** 2026-09-22
 **Raised by:** Phase 9 subphase 9i and
 [Finding 045](../findings/045-the-volume-path-measured.md), which measured
@@ -46,6 +52,10 @@ the device louder than that on its own. Above it, the user has to ask.
 the hazard. An unattended jump is, and it arrives from a renderer, at boot
 and on every acquisition.
 
+> **Withdrawn the same day — see the Amendment.** The paragraph above is
+> kept as written because the amendment is an argument against it, and an
+> argument against something deleted is unreadable.
+
 ### 2. `travel_curve` is renamed to describe what it does
 
 The row offers `dB-linear` and `Perceptual`, defaults to `dB-linear`, and is
@@ -63,6 +73,10 @@ word, no behaviour change, and the row stops describing something untrue.
 In `VolumeBridge.write_hardware`, the one place a level reaches the DAC.
 `None` stays the default — no ceiling — and any value clamps every source:
 the panel, a renderer's mirror, and a restore alike.
+
+> **Redefined the same day — see the Amendment.** It is still enforced
+> there, but as a backstop; the ceiling proper is now a shift on every
+> scale rather than a clamp on top of one.
 
 ### 4. The write is direct, and a change of more than a step is a ramp
 
@@ -100,11 +114,68 @@ with the rest of 9i and is tested with the amplifier turned down.
 - **The mode is per-device**, as ADR-0018 assumed. Nothing measured argues
   otherwise.
 
+
+## Amendment, 2026-09-22 — a ceiling that shifts the scale instead of clipping it
+
+### What was wrong with §1
+
+`restore_ceiling` clamped the **hardware** on a restore and told nobody.
+LMS reconnects at 100, the DAC goes to −20 dB, and LMS still says 100, the
+panel says 100, the phone says 100. Then the first nudge of any slider is
+not a restore, so the clamp does not apply, and **20 dB arrives in one
+move**. That is not a side effect of the design, it is the design; George
+named it before it reached him on hardware.
+
+Under a remote-control model (the next record) it is worse still, because
+there the whole point is that there is one number and it is true.
+
+### What replaces it
+
+1. **`restore_ceiling` is withdrawn.** §1's hazard is real and measured — 53
+   dB thirteen seconds after a boot, untouched (Finding 045 §5). It is
+   answered instead by **§4's ramp**, which makes that restore a move rather
+   than an event, and by the level being the user's own remembered one. A
+   silent clamp that springs later is not a safety feature.
+
+2. **`max_ceiling` becomes the top of every scale rather than a limit above
+   one.** With it set to −10 dB, the panel's 100%, LMS's 100 and a phone's
+   100 all mean −10 dB. No control anywhere displays a number louder than
+   what comes out, and no first move can uncover held-back level.
+
+3. **It is applied as a shift, not a compression.** Every position-to-dB map
+   in `volume.py` — `slider_percent_to_raw`, `dummy_raw_to_db`,
+   `spotify_fraction_to_hardware_raw`, and their inverses — adds
+   `ceiling_db()`. The window slides down; its span does not change.
+
+   **Why shift rather than compress.** Compressing the window to fit under
+   the ceiling would change the size of a step with the setting: the dummy's
+   128 values would stop landing on distinct DAC steps, the panel's travel
+   would change feel, and the gentle renderer curve recovered on 2026-09-08
+   would be re-stretched — the exact mistake that record names. Shifting
+   costs only that the bottom of travel goes below −45 dB, which is
+   inaudible either way.
+
+4. **The clamp stays as a backstop**, for levels that are not positions: a
+   raw value remembered before the ceiling was set, or somebody's `amixer`.
+   There is no position to reinterpret in those, so clamping is right.
+
+5. **Changing the row re-applies at once.** If the current level is now
+   above the ceiling it comes down through the bridge, so it ramps; and the
+   percentage is republished either way, because the scale moved even when
+   the level did not.
+
+### What this does not do
+
+It does not make the panel's number equal the renderer's. That is a
+different defect — measured in Finding 045 §12's table, LMS at 25 shows 33
+on the panel — and it needs the remote-control model, not a ceiling.
+
 ## Consequences
 
-- **Two new rows**: `restore_ceiling` and nothing else — `travel_curve` is
-  reworded rather than added. `restore_ceiling` goes to ADR-0022's inventory
-  as `[N]`, pending George.
+- **No new rows.** `restore_ceiling` was built, objected to and withdrawn
+  within the day, before it was ever surfaced in the UI or appended to
+  ADR-0022's inventory; `travel_curve` is reworded rather than added; and
+  `max_ceiling` was already inventoried, now as `[R]` rather than `[R][?]`.
 - **The daemon gains a ctypes dependency on libasound**, present on the
   image by construction (the renderers need it).
 - **A ramp means a level change is no longer atomic.** Anything reading the

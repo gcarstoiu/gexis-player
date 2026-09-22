@@ -47,7 +47,7 @@ Each row is marked:
 |---|---|---|
 | Output mode: fixed / variable | [R] | ADR-0018. Only variable is built and hardware-verified; fixed is design-complete but unimplemented. Confirmation required; applies on next track or after stop. In fixed mode the volume slider **disappears everywhere**, settings included |
 | Boot volume level | [R][H] | ADR-0018; `boot_volume_steps`, raw 60 = −90 dB, confirmed 2026-09-06. Fixed safe level, never restored from the last session |
-| Maximum volume ceiling | [R][?] | ADR-0018 listed it "to be recorded"; still undecided |
+| Maximum volume ceiling | [R] | **Decided 2026-09-22 by [ADR-0052](0052-the-volume-path.md) §3, amended.** `max_ceiling`, unset by default. It is the *top of every scale*, not a limit above one: 100% on the panel, 100 in LMS and 100 on a connected phone all mean this level. Applied as a shift on every position-to-dB map, so every step keeps its size and no control shows a number louder than what comes out |
 | Restore floor for a *remembered* level | [R][H][?] | `restore_volume_floor_db`, −40 dB — a **placeholder never confirmed**, and Finding 011 §4 measured it as too quiet for Bluetooth's unmanaged floor bump. Never applies to the boot default, on purpose |
 | Boot default mid-session, or only at true cold boot? | [R][?] | Finding 011 §3 — a renderer's first use mid-session currently lands as quiet as a power-on |
 | Per-renderer volume memory on/off | [R][H] | George's decision 2026-09-07, currently unconditional |

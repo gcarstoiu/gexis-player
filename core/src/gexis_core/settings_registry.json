@@ -35,24 +35,12 @@
         "key": "max_ceiling",
         "type": "number",
         "label": "Maximum ceiling",
-        "marks": "R?",
-        "note": null,
+        "marks": "R",
+        "note": "The loudest the device will go, on any input. It is the top of every scale, not a limit above it — 100% on the panel, in LMS and on a connected phone all mean this level, so no control shows a number louder than what comes out.",
         "min": -60,
         "max": 0,
         "unit": "dB",
         "default": null
-      },
-      {
-        "key": "restore_ceiling",
-        "type": "number",
-        "label": "Loudest a renderer may restore",
-        "marks": "N",
-        "note": "When a renderer becomes active it puts back the level it last had. This is as far up as it may go on its own \u2014 measured on this device, a boot raised the level 53 dB without anyone touching it.",
-        "min": -45,
-        "max": 0,
-        "unit": "dB",
-        "default": -20,
-        "surfaced": false
       },
       {
         "key": "restore_floor",
