@@ -157,9 +157,17 @@ _VALUE_RE = re.compile(rb"Front Left: (?:Playback )?(-?\d+) \[")
 # `amixer -D hw:<dummy> sget Master`: raw -50..100, dBscale-min -45.00dB,
 # step 0.30dB. Confirmed against the formula below (raw=0 -> -30.00dB,
 # raw=59 -> -12.30dB, both matched a live reading exactly).
-DUMMY_MIN_RAW = -50
-DUMMY_MAX_RAW = 100
-DUMMY_DB_MIN = -45.0
+# **0..127 since 2026-09-22**, so AVRCP's 128 steps round-trip through this
+# control exactly (see the modprobe config for the ratchet this ends).
+# snd-dummy's dB scale is fixed - -45 dB at the control's minimum, 0.30 dB
+# a step - so the declared range is now -45.00..-6.90 dB, measured on the
+# device. **The 6.9 dB is taken back here**, as a constant shift rather than
+# a rescale: every step stays 0.30 dB and the curve keeps its shape, which
+# is what the 2026-09-08 rejection of fractional rescaling was about. The
+# window a renderer's own slider spans becomes -38.1..0 dB.
+DUMMY_MIN_RAW = 0
+DUMMY_MAX_RAW = 127
+DUMMY_DB_MIN = -38.1
 DUMMY_DB_STEP = 0.30
 DUMMY_CARD_LMS = "gexislmsvol"
 DUMMY_CARD_BLUETOOTH = "gexisbtvol"

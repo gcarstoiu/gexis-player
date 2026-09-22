@@ -18,6 +18,8 @@ import pytest
 
 from gexis_core import volume as volume_module
 from gexis_core.volume import (
+    DUMMY_MAX_RAW,
+    DUMMY_MIN_RAW,
     ECHO_WINDOW_S,
     VolumeBridge,
     db_to_raw,
@@ -308,33 +310,36 @@ class TestDummyRawToHardwareRaw:
     the last quarter" compression the dummy's narrower range had
     incidentally fixed. See dummy_raw_to_hardware_raw's own docstring."""
 
-    def test_endpoint_dont_reach_true_mute(self):
-        # The dummy's floor (-45dB) is the quietest LMS/Bluetooth can
-        # reach via this path - short of the DAC's true mute (-120dB),
-        # accepted: silence is pause/mute's job, not the volume slider's.
-        assert dummy_raw_to_hardware_raw(-50) == 150  # -45dB
-        assert dummy_raw_to_hardware_raw(100) == 240  # 0dB, unattenuated
+    def test_the_endpoints_reach_zero_but_not_true_mute(self):
+        # **The top reaches 0 dB and the floor does not reach silence.**
+        # Since the range became 0..127 (to match AVRCP exactly) the
+        # control's own scale tops out at -6.90 dB, and the 6.9 is taken
+        # back by the shift - so the renderer's window is -38.1..0 dB.
+        # Measured on the device, 2026-09-22: LMS at 100% lands the DAC at
+        # 0.00 dB and at 10% on -38.00.
+        assert dummy_raw_to_hardware_raw(0) == 164  # -38.1dB, the floor
+        assert dummy_raw_to_hardware_raw(127) == 240  # 0dB, unattenuated
 
     def test_dont_rescale_by_fractional_position(self):
-        # Dummy raw 25 is -22.5dB ((-45 + 75*0.30)). A direct copy lands
-        # the DAC at the *same* -22.5dB (raw 195) - not at 50% of the
-        # DAC's own -120..0dB span (which the old, wrong formula computed
-        # as -60dB / raw 120).
-        assert dummy_raw_to_hardware_raw(25) == 195
+        # Dummy raw 64 is -19.05 dB on the shifted window. A direct copy
+        # lands the DAC at the *same* dB - not at half of the DAC's own
+        # -120..0 span, which is what the old, wrong formula computed.
+        assert dummy_raw_to_hardware_raw(64) == db_to_raw(-38.1 + 64 * 0.30)
+        assert dummy_raw_to_hardware_raw(64) != 120  # the fractional answer
 
-    def test_measured_hardware_point(self):
-        # Live reading, 2026-09-08: dummy raw 59 measured as -12.30dB.
-        # Copied directly: raw 215 on the DAC (-12.5dB, nearest 0.5dB step).
-        assert dummy_raw_to_hardware_raw(59) == 215
+    def test_measured_lms_percent_curve(self):
+        # Live, 2026-09-22, LMS set by its own RPC with the new range:
+        # 25/50/75/100% measured as dummy raw 27/68/109/127.
+        assert dummy_raw_to_hardware_raw(27) == 180  # LMS 25%, -30.0dB
+        assert dummy_raw_to_hardware_raw(68) == 205  # LMS 50%, -17.5dB
+        assert dummy_raw_to_hardware_raw(109) == 229  # LMS 75%, -5.5dB
+        assert dummy_raw_to_hardware_raw(127) == 240  # LMS 100%, 0dB
 
-    def test_measured_lms_percent_curve_stays_audible_below_75_percent(self):
-        # Regression coverage for the actual reported symptom: LMS set to
-        # 25/50/75% via its own RPC measured as dummy raw -23/18/59
-        # (2026-09-08, live). None of these should land near the DAC's
-        # silent end.
-        assert dummy_raw_to_hardware_raw(-23) == 166  # LMS ~25%, -36.9dB
-        assert dummy_raw_to_hardware_raw(18) == 191  # LMS ~50%, -24.6dB
-        assert dummy_raw_to_hardware_raw(59) == 215  # LMS ~75%, -12.3dB
+    def test_the_range_is_avrcps_own(self):
+        """128 values against AVRCP's 128, so a Bluetooth volume that goes
+        out and comes back lands where it started - the drift that drove
+        the ratchet (Finding 045 §12) cannot happen."""
+        assert DUMMY_MAX_RAW - DUMMY_MIN_RAW + 1 == 128
 
 
 class TestSpotifyFractionToHardwareRaw:
@@ -437,10 +442,10 @@ class TestDummyMixerBridgePauseFadeGate:
         """The measured fade. By the time it settles, the pause has been
         reported, which is the whole point of settling."""
         bridge, writes, remembered = self._bridge(
-            monkeypatch, playing=lambda: False, settled_raw=-50
+            monkeypatch, playing=lambda: False, settled_raw=DUMMY_MIN_RAW
         )
 
-        await self._steps(bridge, 7, -6, -20, -50)
+        await self._steps(bridge, 109, 82, 41, DUMMY_MIN_RAW)
 
         assert writes == []
         assert remembered == []
@@ -449,13 +454,13 @@ class TestDummyMixerBridgePauseFadeGate:
     async def test_a_volume_change_while_playing_is_mirrored_once(self, monkeypatch):
         """A drag sends many steps; one decision comes out of it."""
         bridge, writes, remembered = self._bridge(
-            monkeypatch, playing=lambda: True, settled_raw=59
+            monkeypatch, playing=lambda: True, settled_raw=109
         )
 
-        await self._steps(bridge, 30, 45, 59)
+        await self._steps(bridge, 80, 95, 109)
 
-        assert writes == [("DAC", 215)]  # -12.3dB, the measured 75% point
-        assert remembered == [("lms", 215)]
+        assert writes == [("DAC", 229)]  # -5.5dB, the measured 75% point
+        assert remembered == [("lms", 229)]
 
     @pytest.mark.asyncio
     async def test_a_late_transport_report_is_what_decides(self, monkeypatch):
@@ -463,9 +468,9 @@ class TestDummyMixerBridgePauseFadeGate:
         settled decision reads it after the report lands."""
         playing = True
         bridge, writes, _ = self._bridge(
-            monkeypatch, playing=lambda: playing, settled_raw=-50
+            monkeypatch, playing=lambda: playing, settled_raw=DUMMY_MIN_RAW
         )
-        for raw in (7, -6, -20, -50):
+        for raw in (109, 82, 41, DUMMY_MIN_RAW):
             await bridge._on_dummy_change(raw)
         playing = False  # the pause report lands 0.51 s later (measured)
 
@@ -488,13 +493,13 @@ class TestDummyMixerBridgePauseFadeGate:
         """
         bridge, writes, _ = self._bridge(monkeypatch, playing=None)
 
-        await self._steps(bridge, -50, 0, 50)
+        await self._steps(bridge, 0, 64, 127)
         if bridge._mirror_soon is not None:
             await bridge._mirror_soon
 
-        # dummy -50/0/50 are -45/-30/-15dB (dummy_raw_to_db), i.e. 150/180/210.
-        assert writes[0] == ("DAC", 150)  # the first is immediate
-        assert writes[-1] == ("DAC", 210)  # and the last value is where it ends
+        # dummy 0/64/127 are -38.1/-18.9/0dB on the shifted window.
+        assert writes[0] == ("DAC", 164)  # the first is immediate
+        assert writes[-1] == ("DAC", 240)  # and the last value is where it ends
         assert len(writes) <= 3
 
     @pytest.mark.asyncio
@@ -504,23 +509,23 @@ class TestDummyMixerBridgePauseFadeGate:
         hardware writes - and must still end on the last value."""
         bridge, writes, _ = self._bridge(monkeypatch, playing=None)
 
-        await self._steps(bridge, *range(-50, 50))
+        await self._steps(bridge, *range(0, 100))
         if bridge._mirror_soon is not None:
             await bridge._mirror_soon
 
         assert len(writes) <= 3, writes
-        assert writes[-1][1] == dummy_raw_to_hardware_raw(49)
+        assert writes[-1][1] == dummy_raw_to_hardware_raw(99)
 
     @pytest.mark.asyncio
     async def test_an_inactive_renderer_is_remembered_but_not_applied(self, monkeypatch):
         bridge, writes, remembered = self._bridge(
-            monkeypatch, playing=lambda: True, settled_raw=59, active="spotify"
+            monkeypatch, playing=lambda: True, settled_raw=109, active="spotify"
         )
 
-        await self._steps(bridge, 59)
+        await self._steps(bridge, 109)
 
         assert writes == []
-        assert remembered == [("lms", 215)]
+        assert remembered == [("lms", 229)]
 
     @pytest.mark.asyncio
     async def test_the_resume_fade_restores_nothing_the_pause_took_away(self, monkeypatch):
@@ -529,18 +534,18 @@ class TestDummyMixerBridgePauseFadeGate:
         hardware, 2026-09-17."""
         playing = False
         bridge, writes, _ = self._bridge(
-            monkeypatch, playing=lambda: playing, settled_raw=-50
+            monkeypatch, playing=lambda: playing, settled_raw=DUMMY_MIN_RAW
         )
-        await self._steps(bridge, 7, -50)
+        await self._steps(bridge, 64, DUMMY_MIN_RAW)
         assert writes == []
 
-        monkeypatch.setattr(volume_module, "get_raw", _async_return(22))
+        monkeypatch.setattr(volume_module, "get_raw", _async_return(109))
         playing = True
-        await self._steps(bridge, -20, 0, 22)
+        await self._steps(bridge, 27, 68, 109)
 
         # Mirrored, but to the level the control already had before the
         # fade - so nothing audible changed across the pause.
-        assert writes == [("DAC", 193)]
+        assert writes == [("DAC", 229)]
 
 
 @pytest.mark.asyncio
