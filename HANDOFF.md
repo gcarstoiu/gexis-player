@@ -1,18 +1,51 @@
 # Handoff
 
-Last updated: 2026-09-21 (twenty-second session, on R2D2 — **Phase 9's
-design sweep: 9a through 9g are done and committed; 9h next. One thing from
-9g is unproven: ADR-0049's image stage has never been through a build**)
+Last updated: 2026-09-22 (twenty-second session, on R2D2 — **Phase 9's
+design sweep: 9a through 9g are done; 9h is built except its picker.
+Two things wait on George's designs, and one on a build**)
 
 ## Start here
 
-**Phase 9's design sweep is seven subphases in.** Nine were planned
-(`docs/DEVELOPMENT.md`), volume last; **9a through 9g are done, checked by
-George on the panel and committed**. **9h is next** — the home strip, the
-skin picker and `viz_stop` — and it owes the registry the four design keys
-the test names (`home_strip`, `home_strip_count`, `skin`, `viz_stop`).
-Its skin thumbnails are an **image-build** job, not a UI one: 71 meter and
-13 spectrum skins rendered at build time.
+**Phase 9's design sweep is seven subphases in and the eighth is mostly
+built.** Nine were planned (`docs/DEVELOPMENT.md`), volume last; **9a
+through 9g are done, checked by George on the panel and committed**, and
+**9h is built except the picker**.
+
+**Two things wait on George's designs** (2026-09-22: *"Will provide soon the
+designs"*):
+
+- **The skin picker.** He is redrawing it — a list of skins, with the
+  preview shown only when a row is tapped, because the drop's grid *"will
+  put some strain on the rendering"*. **The daemon side is built and
+  waiting**: `GET /skins` (name, kind, whether the corpus takes it) and
+  `GET /skins/{name}/preview`.
+- **The weather bar's other fields.** Open-Meteo returns them in the request
+  the screen already makes — feels-like, humidity, wind with gusts and
+  direction, cloud cover, pressure, sunrise and sunset, UV, chance of rain,
+  daily wind maxima; 3.4 KB against the 748 B now fetched, no extra call.
+  **The design's bar is full**, so anything added is a layout change.
+
+**What 9h has landed:**
+
+- **Three kinds of skin, not two** — 77 meters, 9 spectrum, 13 both, counted
+  on the device. The old two options were *directories*, and `templates/` is
+  not the meter corpus. The row is **Skins**: VU meters / Spectrum / VU
+  meters + spectrum / Random.
+- **[ADR-0050](docs/decisions/0050-skin-previews-are-the-skins-own-picture.md):
+  a preview is the skin's own `screen.bgr`** — no render, no cache, no
+  change detection, and **9h no longer needs an image build**.
+- **The home strip, all three shapes**, after George corrected a finding
+  that said two of them were impossible (`docs/LESSONS.md` case 14). They
+  are `browselibrary` **sorts**, not fields or tags, and need no plugin.
+- **`viz_stop` wired**, and `viz_timeout` moved from seconds to the minutes
+  the design draws. Both read per tick.
+- **`idle_clock`**, so the panel can be a picture frame (2026-09-22).
+
+**What 9h still owes besides the picker: the visualiser does not honour the
+Skins choice.** Our own `driver.py` loads one corpus directory and the kinds
+cut across directories, so "Random" needs a composed directory of symlinks.
+It is a change to the screen George watches, so it wants his eyes with music
+playing.
 
 **9g — the idle screen — is done.** Both providers chosen the way Finding
 030 chose the enrichment ones ([Finding 043](docs/findings/043-the-idle-screens-two-providers.md)):
