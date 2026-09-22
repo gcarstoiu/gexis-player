@@ -32,9 +32,21 @@ subphases, split on George's agreement (2026-09-22):
     **`boot_volume` does not survive the first renderer**, which changes the
     question George owes an answer to.
   - **The meter is a pre-attenuation tap**, so "does one renderer deliver a
-    quieter stream" can be answered **with the room silent**. LMS delivers
-    full scale at any slider position; Spotify and Bluetooth need a phone
-    connected, and nothing else.
+    quieter stream" can be answered **with the room silent**.
+  - **Spotify's volume is applied twice** (§7, measured the same day with
+    George's phone connected): go-librespot attenuates the stream *and* the
+    daemon attenuates the DAC. At its 25 the stream is down 21 dB and the
+    DAC is at −34, about −55 dB where a quarter was asked for; the same
+    quarter on LMS is −37 and nothing else. **The maxima are not what
+    differ** — both deliver full scale at 100% — everything below it does.
+    `external_volume: true` in go-librespot's config is the fix, our config
+    sets no volume keys at all, and **it makes Spotify louder at the same
+    setting**, so it belongs at the gate.
+  - **Connecting Spotify put the DAC at 0.00 dB by itself**, restoring
+    240/240 — the loudest the device has, from the same restore-on-acquire
+    that causes the boot hop.
+  - **Bluetooth is the one renderer left to measure**, and it needs a phone
+    connected and nothing else.
 - **9j — which output.** The device has four cards and the user has never
   been offered the choice. All three renderers already play to one PCM, so
   the switch is two lines of `/etc/alsa/conf.d/output.conf` and the meter
