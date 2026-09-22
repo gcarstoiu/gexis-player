@@ -329,6 +329,11 @@ verified anyway. `grim` takes a screenshot of that panel in one command and
 Claude can read the PNG. **When the deliverable is something drawn, the
 verification is an image.**
 
+`grim` was installed by hand on the device to close this out
+(`apt-get install grim`, 14.8 kB) and is **not in the image**, so a reflash
+removes it and the next session has to install it again. Whether it belongs
+in the build is George's call; the argument for it is this page.
+
 **Cheapest correction available:** when a server's own interface shows a
 thing, find the call *it* makes before concluding the data is absent — here,
 one request to `material-skin browsemodes` listed `myMusicTopArtists` and
