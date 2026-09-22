@@ -123,6 +123,21 @@ class Capabilities:
     #: DUMMY_CARD_BLUETOOTH are the same values, referenced here so the
     #: two never drift apart).
     dummy_mixer_card: str | None = None
+    #: **ADR-0053.** Only meaningful with DUMMY_MIXER: whether that control
+    #: holds the renderer's *own* number, so the panel can show it and write
+    #: it as a remote.
+    #:
+    #: True for Bluetooth - since 2026-09-22 the control is AVRCP's own
+    #: 0-127 exactly, and `bluealsa-aplay --volume=mixer` syncs it with the
+    #: phone both ways, so the control is the phone's slider.
+    #:
+    #: False for LMS, and this is not a detail: squeezelite puts LMS's 0-100
+    #: through its own curve on the way to the control, so LMS 25 lands on
+    #: 27 and both LMS 10 and LMS 0 land on 0 (Finding 046 §1). The control
+    #: cannot say what LMS says, and squeezelite carries nothing back the
+    #: other way (§3), so LMS's number and LMS's remote are both the
+    #: server's.
+    dummy_mixer_is_renderer_scale: bool = False
     #: Transport commands accepted through our own control channel right
     #: now - deliberately empty on all three built-ins today. No adapter
     #: currently exposes a way to send play/pause/seek/etc on a user's

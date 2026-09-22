@@ -152,13 +152,28 @@ class StateStore:
         self._handoff = handoff
         self._notify()
 
-    def set_volume_raw(self, raw: int, *, muted: bool = False) -> None:
+    def set_volume_raw(
+        self, raw: int, *, muted: bool = False, percent: int | None = None
+    ) -> None:
         """The shared hardware mixer moved (Phase 4 criterion 8). Takes the
         raw 0-240 value - the only unit the hardware actually has - and
         derives dB and slider percent (ADR-0034) here, so no caller has to
         know either scale to report a level.
+
+        **`percent` overrides the derivation** (ADR-0053). While a renderer
+        holds the device the number shown is *its* number, not one derived
+        from the DAC: measured, LMS at 25 puts the DAC at -30 dB, which
+        derives as 33, and George asked for 25 because 25 is what every
+        other control showing that player says. `raw` and `db` stay the
+        hardware's own throughout - they are facts about the DAC, and the
+        drawer's dB readout is not a renderer's opinion.
         """
-        volume = VolumeState(raw=raw, db=raw_to_db(raw), percent=raw_to_slider_percent(raw), muted=muted)
+        volume = VolumeState(
+            raw=raw,
+            db=raw_to_db(raw),
+            percent=raw_to_slider_percent(raw) if percent is None else percent,
+            muted=muted,
+        )
         if volume == self._volume:
             return
         self._volume = volume

@@ -539,9 +539,22 @@ _MIXER_THREAD = concurrent.futures.ThreadPoolExecutor(
 )
 
 
-async def set_raw(mixer_name: str, value: int) -> None:
-    value = max(0, min(HARDWARE_MAX, value))
-    key = (MIXER_DEVICE, mixer_name)
+async def set_raw(
+    mixer_name: str,
+    value: int,
+    device: str = MIXER_DEVICE,
+    maximum: int = HARDWARE_MAX,
+) -> None:
+    """Write a raw value to a mixer control.
+
+    `device` and `maximum` default to the real DAC's, which is every caller
+    but one: ADR-0053 makes the panel write **Bluetooth's own dummy
+    control**, because that control is what `bluealsa-aplay --volume=mixer`
+    pushes out to the phone over AVRCP. Its scale is 0-127, not 0-240, so
+    the clamp has to travel with the device.
+    """
+    value = max(0, min(maximum, value))
+    key = (device, mixer_name)
     mixer = _MIXERS.get(key)
     if mixer is None:
         mixer = _MIXERS[key] = _Mixer(*key)
@@ -554,7 +567,7 @@ async def set_raw(mixer_name: str, value: int) -> None:
     proc = await asyncio.create_subprocess_exec(
         "amixer",
         "-D",
-        MIXER_DEVICE,
+        device,
         "sset",
         mixer_name,
         f"{value}",
@@ -588,6 +601,7 @@ class VolumeBridge:
         volume_memory,
         get_active_renderer,
         on_hardware_level=None,
+        on_renderer_value=None,
         ceiling_db=None,
     ) -> None:
         """`adapter` is any `VolumeMechanism.SOFTWARE_API` renderer
@@ -612,6 +626,11 @@ class VolumeBridge:
         self._volume_memory = volume_memory
         self._get_active_renderer = get_active_renderer
         self._on_hardware_level = on_hardware_level
+        #: ADR-0053. What Spotify says its own volume is, passed on so the
+        #: panel can show Spotify's number rather than a second one derived
+        #: from the DAC. Reported before attribution and before the echo
+        #: check below, because the number is true whoever caused it.
+        self._on_renderer_value = on_renderer_value
         # Each is (value, armed_at) or None - the exact value we wrote in
         # that direction, awaiting its own echo back. See the module
         # docstring on why this is value-matched rather than a time window.
@@ -756,6 +775,8 @@ class VolumeBridge:
         if max_ <= 0:
             logger.warning("volume: %s reported max=%r, ignoring", renderer_id, max_)
             return
+        if self._on_renderer_value is not None:
+            self._on_renderer_value(renderer_id, value, max_)
         if self._consume(self._expected_adapter_value, value):
             self._expected_adapter_value = None
             logger.debug("volume: ignoring %s's echo of our own %s", renderer_id, value)
@@ -925,6 +946,7 @@ class DummyMixerBridge:
         volume_memory,
         get_active_renderer,
         is_playing=None,
+        on_renderer_value=None,
     ) -> None:
         self._renderer_id = renderer_id
         self._dummy_card = dummy_card
@@ -937,6 +959,13 @@ class DummyMixerBridge:
         self._volume_memory = volume_memory
         self._get_active_renderer = get_active_renderer
         self._is_playing = is_playing
+        #: ADR-0053. Bluetooth's control *is* its own scale - AVRCP's 0-127,
+        #: exactly, since this morning - so what it holds is the number to
+        #: show. **Not wired for LMS**: squeezelite puts LMS's 0-100 through
+        #: its own curve on the way here (LMS 25 lands on 27, LMS 10 and
+        #: LMS 0 both on 0), so this control cannot say what LMS says. LMS
+        #: reports its own, from the server.
+        self._on_renderer_value = on_renderer_value
         #: The last reading, to absorb the repeated monitor lines one
         #: change produces.
         self._last_seen: int | None = None
@@ -1005,6 +1034,11 @@ class DummyMixerBridge:
         if raw is None or raw == self._last_seen:
             return
         self._last_seen = raw
+        if self._on_renderer_value is not None:
+            # Before the pause-fade gate, on purpose: a gated renderer does
+            # not report here at all, and an ungated one's number should
+            # follow the control immediately - it is the phone's own slider.
+            self._on_renderer_value(self._renderer_id, raw, DUMMY_MAX_RAW)
         if self._is_playing is None:
             await self._mirror(raw)
             return

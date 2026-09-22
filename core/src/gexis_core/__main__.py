@@ -52,14 +52,17 @@ from gexis_core.settings import SettingsStore
 from gexis_core.settings_registry import Settings
 from gexis_core.splash import Splash
 from gexis_core.state import StateStore
+from gexis_core.remote_volume import RemoteVolume
 from gexis_core.volume import (
     DUMMY_CONTROL,
+    DUMMY_MAX_RAW,
     DummyMixerBridge,
     VolumeBridge,
     db_to_raw,
     get_raw,
     Mute,
     set_ceiling_reader,
+    set_raw,
     slider_percent_to_raw,
     raw_to_db,
 )
@@ -312,6 +315,11 @@ async def main() -> None:
         volume_memory=volume_memory,
         get_active_renderer=lambda: supervisor.active,
         on_hardware_level=lambda raw: publish_volume(raw),
+        # ADR-0053: Spotify says where its own volume is, and the panel
+        # shows that rather than a second number derived from the DAC.
+        on_renderer_value=lambda rid, value, steps: report_renderer_volume(
+            rid, value, steps
+        ),
         # ADR-0052 §3: the backstop for an absolute level that was never a
         # slider position - see `_capped`. The ceiling proper is the shift
         # installed by `set_ceiling_reader` below. `_number` is defined
@@ -327,9 +335,38 @@ async def main() -> None:
         lambda: state_store.state.volume.raw if state_store.state.volume else None,
     )
 
-    def publish_volume(raw: int) -> None:
+    #: ADR-0053. The panel's volume control is the active renderer's, so
+    #: what the panel shows is the renderer's own number and what the panel
+    #: sends goes to the renderer. `remote.percent()` is None when there is
+    #: nothing to be a remote for, and then the hardware's own percentage is
+    #: published exactly as before.
+    remote = RemoteVolume(
+        get_active_renderer=lambda: supervisor.active,
+        on_change=lambda: publish_volume(),
+    )
+
+    def publish_volume(raw: int | None = None) -> None:
+        """One place builds the published level.
+
+        `raw` is the hardware's, and `None` means "the same level as before,
+        but something about how it should be *described* changed" - a
+        renderer reported its own number, the active renderer changed, or
+        the ceiling moved the scale.
+        """
+        if raw is None:
+            volume = state_store.state.volume
+            if volume is None:
+                return
+            raw = volume.raw
         mute.observe(raw)
-        state_store.set_volume_raw(raw, muted=mute.muted)
+        state_store.set_volume_raw(raw, muted=mute.muted, percent=remote.percent())
+
+    def report_renderer_volume(renderer_id: str, value: int, steps: int) -> None:
+        """Inbound only, and it must stay that way: `RemoteVolume.report`
+        never sends, because 101 panel positions cannot name AVRCP's 128
+        values and closing that loop rebuilds Finding 045 §12's ratchet."""
+        remote.set_steps(renderer_id, steps)
+        remote.report(renderer_id, value)
 
     # ADR-0052 §3, amended: the ceiling is the top of every scale, so the
     # row has to be readable from inside `volume.py`'s pure mapping
@@ -352,13 +389,54 @@ async def main() -> None:
             return
         asyncio.ensure_future(volume_bridge.write_hardware(volume.raw))
 
+    def on_active_change(renderer_id: str | None) -> None:
+        state_store.set_active(renderer_id)
+        # ADR-0053: the number on the panel belongs to whoever holds the
+        # device, so a takeover changes what it means - from one renderer's
+        # scale to another's, or to the hardware's own with nobody active.
+        publish_volume()
+
     supervisor = Supervisor(
         adapters,
         device_busy=lambda renderer_id: alsa.device_held_by(adapters[renderer_id].unit_name),
         restore_volume=restore_volume,
-        on_active_change=state_store.set_active,
+        on_active_change=lambda renderer_id: on_active_change(renderer_id),
         on_handoff_change=state_store.set_handoff,
     )
+
+    # ADR-0053's three channels. A renderer with a `set_volume` is driven
+    # through it; Bluetooth has no API of its own and is driven through the
+    # control `bluealsa-aplay` pushes out over AVRCP; a renderer with
+    # neither would still show its number and keep the panel's own slider.
+    for renderer_id, adapter in adapters.items():
+        capabilities = adapter.capabilities
+        if hasattr(adapter, "set_volume"):
+            remote.register(
+                renderer_id,
+                steps=getattr(adapter, "VOLUME_STEPS", 100),
+                send=adapter.set_volume,
+            )
+        elif capabilities.dummy_mixer_is_renderer_scale:
+            remote.register(
+                renderer_id,
+                steps=DUMMY_MAX_RAW,
+                send=lambda value, card=capabilities.dummy_mixer_card: set_raw(
+                    DUMMY_CONTROL, value, device=f"hw:{card}", maximum=DUMMY_MAX_RAW
+                ),
+            )
+        if (
+            hasattr(adapter, "on_volume_change")
+            and capabilities.volume_mechanism is not VolumeMechanism.SOFTWARE_API
+        ):
+            # A SOFTWARE_API renderer's reports already reach
+            # `report_renderer_volume` through VolumeBridge, which holds
+            # this same callback and would be unsubscribed by a second
+            # registration - `on_volume_change` keeps one, not a list.
+            adapter.on_volume_change(
+                lambda value, steps, rid=renderer_id: report_renderer_volume(
+                    rid, value, steps
+                )
+            )
 
     for renderer_id, adapter in adapters.items():
         adapter.on_metadata_change(lambda metadata, rid=renderer_id: state_store.set_metadata(rid, metadata))
@@ -394,6 +472,13 @@ async def main() -> None:
         return await (method() if argument is None else method(argument))
 
     async def set_volume(percent: float) -> bool:
+        # **ADR-0053: the panel is a remote first.** With something playing,
+        # the position goes to that renderer's own control and reaches the
+        # DAC the way its changes always have. `send` returns False only
+        # when there is nothing to be a remote for, and then this is the
+        # panel's own slider exactly as before.
+        if await remote.send(percent):
+            return True
         raw = slider_percent_to_raw(percent)
         logger.info("command: volume -> %.0f%% (raw %s/240)", percent, raw)
         # Through the bridge, never set_raw() directly - the echo window is
@@ -811,6 +896,14 @@ async def main() -> None:
             is_playing=(
                 (lambda a=adapter: a.last_transport == "playing")
                 if hasattr(adapter, "last_transport")
+                else None
+            ),
+            # ADR-0053: only where the control holds the renderer's own
+            # number, which each adapter declares. Bluetooth's does; LMS's
+            # is squeezelite's curve of it.
+            on_renderer_value=(
+                report_renderer_volume
+                if adapter.capabilities.dummy_mixer_is_renderer_scale
                 else None
             ),
         )

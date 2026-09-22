@@ -76,6 +76,11 @@ ARTWORK_ROW = 100
 #: *release* a lookup matched rather than about the library's own record.
 METADATA_TAGS = "aldcTKsey"
 
+#: ADR-0053. LMS's volume is 0-100, which is the panel's own scale exactly,
+#: so a position makes the round trip without being renamed (Finding 046
+#: §6). `mixer volume` in a status result is this scale.
+VOLUME_STEPS = 100
+
 #: How far the player's position may drift from what `release()` recorded
 #: before `device_freed()` corrects it with a seek.
 #:
@@ -210,6 +215,10 @@ class LmsAdapter(Adapter):
     # churn) - see ADR-0010's implementation note and Finding 013 §1
     # before proposing a third.
 
+    #: ADR-0053: LMS's own scale, read by the wiring that registers this
+    #: adapter as a remote-control channel.
+    VOLUME_STEPS = VOLUME_STEPS
+
     def __init__(self, host: str, port: int, player_name: str) -> None:
         self._base = f"http://{host}:{port}"
         self._player_name = player_name
@@ -231,6 +240,10 @@ class LmsAdapter(Adapter):
         self._artist_id: int | None = None
         self._album_id: int | None = None
         self._on_availability: Callable[[bool], None] | None = None
+        #: ADR-0053. LMS's own 0-100, as the status push reports it. Kept so
+        #: a push that repeats it is not republished as a change.
+        self._on_volume: Callable[[int, int], None] | None = None
+        self._volume: int | None = None
         #: The last reported transport, so `play()` can pick its command.
         self._last_transport: str | None = None
 
@@ -322,6 +335,49 @@ class LmsAdapter(Adapter):
         which is exactly the edge criterion 6 needs to measure later.
         """
         self._on_metadata = callback
+
+    def on_volume_change(self, callback: Callable[[int, int], None]) -> None:
+        """ADR-0053: LMS's own volume, so the panel can show LMS's number
+        rather than a second one derived from the DAC.
+
+        **Not the dummy control.** squeezelite maps LMS's 0-100 onto that
+        control through its own curve - measured, LMS 25 lands on dummy 27
+        and LMS 10 and LMS 0 both land on 0 (Finding 046 §1) - so the
+        control cannot say what LMS says. This does.
+        """
+        self._on_volume = callback
+
+    def _report_volume(self, result: dict) -> None:
+        """Every status push carries `mixer volume`, and LMS pushes one
+        when the volume changes and nothing else does - measured at
+        523-527 ms after the change (Finding 046 §8).
+
+        That half-second is why `RemoteVolume.send` records what it sent
+        rather than waiting for this: it is fast enough to follow somebody
+        else's remote and far too slow to drag against.
+        """
+        value = _as_int(result.get("mixer volume"))
+        if value is None or self._on_volume is None:
+            return
+        # LMS reports a *negative* volume while the player is muted, which
+        # is its way of remembering the level to come back to. The sign is
+        # not a level.
+        value = abs(value)
+        if value == self._volume:
+            return
+        self._volume = value
+        self._on_volume(value, VOLUME_STEPS)
+
+    async def set_volume(self, value: int) -> bool:
+        """ADR-0053: the panel's position, on LMS's own scale.
+
+        Through the server, not the mixer control: squeezelite's `-V` makes
+        LMS's commands *reach* the control, and implements nothing in the
+        other direction - measured, ten seconds and no change (Finding 046
+        §3). Writing the control would leave LMS showing one number and the
+        device at another, which is the defect this is here to remove.
+        """
+        return await self._command(["mixer", "volume", str(int(value))])
 
     def on_availability_change(self, callback: Callable[[bool], None]) -> None:
         """George's decision, 2026-09-12: "available" means the backend is
@@ -534,6 +590,7 @@ class LmsAdapter(Adapter):
             result = status.get("result", {})
             last_power = result.get("power")
             self._report_metadata(result)
+            self._report_volume(result)
             await self._report_queue_if_changed(session, result)
 
             # If the player is *already* on when we start watching, it has
@@ -569,6 +626,7 @@ class LmsAdapter(Adapter):
                     # query above), so this is the edge criterion 6 will
                     # measure later - not just power changes.
                     self._report_metadata(data)
+                    self._report_volume(data)
                     # The queue changes far more often than power does, and
                     # every one of those changes arrives here rather than at
                     # the seed query above: a queue read only at subscribe
