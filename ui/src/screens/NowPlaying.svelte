@@ -902,10 +902,11 @@
   }
   .artisttab__name {
     display: block;
-    /* 25px, pinned. This used `--t-artist`, which the 2026-09-22 drop moved
-       25 -> 35 for the *Track* header; that drop does not change this panel,
-       so the shared token is not allowed to carry it along. */
-    font-size: 25px;
+    /* Rides `--t-artist` with the Track header, 25 -> 35 (George, 2026-09-22:
+       *"Grow both"*). The drop does not redraw this panel, but its own
+       artist page draws this name at 34px - so the token's new value is
+       within a pixel of what the design asks for here anyway. */
+    font-size: var(--t-artist);
     font-weight: 700;
     color: var(--accent-artist);
     white-space: nowrap;
@@ -971,9 +972,8 @@
     gap: 3px;
   }
   .reltab__name {
-    /* 22px, pinned - see `.artisttab__name`. `--t-lead` went 22 -> 25 for the
-       Track header's year and this panel did not change. */
-    font-size: 22px;
+    /* Rides `--t-lead`, 22 -> 25 - see `.artisttab__name`. */
+    font-size: var(--t-lead);
     font-weight: 700;
     color: var(--ink);
     white-space: nowrap;
