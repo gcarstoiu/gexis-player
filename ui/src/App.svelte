@@ -23,9 +23,18 @@
 
   // Reported to the daemon at most once a second: it only needs to know the
   // panel was touched, not how often (ADR-0036).
+  //
+  // **Only from the panel.** A touch is what ADR-0036 counts as attention,
+  // and attention takes the visualiser down - so a tap on a phone's settings
+  // screen was ending the visualisation on a device in another room, which
+  // is exactly the case the phone exists for (George, 2026-09-22: changing
+  // the skin *"stops showing the visualisation. It should stay on"*). The
+  // daemon cannot see the glass, which is why the panel reports at all; a
+  // remote browser is not the glass.
   let lastReported = 0;
   function onPointerDown() {
     touches++;
+    if (surface !== 'panel') return;
     const now = Date.now();
     if (now - lastReported > 1000) {
       lastReported = now;
