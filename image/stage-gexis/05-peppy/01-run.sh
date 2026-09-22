@@ -121,7 +121,14 @@ done
 # working directory (configfileparser.py:174-176), so the file goes in the
 # engine's own folder and the launcher cds there.
 install -D -m 644 files/peppy-meter.txt "${PEPPY_DIR}/peppymeter/config.txt"
-install -D -m 644 files/peppy-spectrum.txt "${PEPPY_DIR}/spectrum/config.txt"
+# **Owned by the service user, because the driver rewrites it.** The
+# spectrum engine has no API for choosing a section: the driver points it at
+# one by editing this file and letting the engine's own parser read it back
+# (ADR-0051 §3). Installed root-owned, that write raised PermissionError
+# *after* the display existed and left a black window on the panel with no
+# loop behind it. uid 1000 numerically, not `pi`: this runs on the host
+# against the mounted rootfs, where that name means someone else.
+install -D -m 644 -o 1000 -g 1000 files/peppy-spectrum.txt "${PEPPY_DIR}/spectrum/config.txt"
 install -D -m 755 files/gexis-peppy-driver.py "${PEPPY_DIR}/driver.py"
 install -D -m 644 files/gexis_peppy_render.py "${PEPPY_DIR}/gexis_peppy_render.py"
 mkdir -p "${WORK}/dseg"

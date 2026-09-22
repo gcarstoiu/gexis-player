@@ -164,6 +164,27 @@ def test_both_template_directories_are_loaded_with_where_each_skin_lives(tmp_pat
     assert homes == {"01G5_Needle": meters, "101G5_Bars": spectra}
 
 
+def test_every_pack_is_loaded_and_the_configured_one_comes_first(tmp_path):
+    """99 skins on this device, not one pack's 84 (ADR-0051 §2, amended
+    2026-09-22). The configured pack is first so a fresh device still starts
+    on the skin it has always started on."""
+    gelo = _pack(tmp_path, "templates", "[01G5_Needle]\nmeter.type = circular\n")
+    stock = (tmp_path / "stock" / "templates" / "1280x800")
+    stock.mkdir(parents=True)
+    (stock / "meters.txt").write_text("[s.one]\nmeter.type = linear\n")
+
+    skins, homes = driver.load_corpus(gelo.parent, "1280x800")
+    assert list(skins) == ["01G5_Needle", "s.one"]
+    assert homes["s.one"] == stock
+
+
+def test_a_skins_spectrum_sections_come_from_its_own_pack(tmp_path):
+    """The stock pack's skins name `s.1`…`s.9`, which Gelo5 has never heard
+    of: the engine has to be pointed at the pack the skin belongs to."""
+    home = tmp_path / "skins" / "stock" / "templates" / "1280x800"
+    assert driver.spectrum_base(home) == tmp_path / "skins" / "stock" / "templates_spectrum"
+
+
 def test_a_name_in_both_directories_resolves_to_the_first(tmp_path):
     meters = _pack(tmp_path, "templates", "[same]\nmeter.type = circular\n")
     _pack(tmp_path, "templates_spectrum", "[same]\nmeter.type = linear\n")

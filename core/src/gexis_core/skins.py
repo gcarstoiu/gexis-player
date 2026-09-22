@@ -218,14 +218,7 @@ def load(directory: Path) -> tuple[list[Skin], list[Skin]]:
 RESOLUTION = "1280x800"
 
 
-#: The pack the renderer draws from (ADR-0051 §2). Gelo5's 84 skins are the
-#: corpus ADR-0015 is written against and `make skins` validates; `stock` is
-#: installed beside it and is **not** offered, because the spectrum engine is
-#: pointed at Gelo5's sections and a stock spectrum skin would draw none.
-PACK = "gelo5"
-
-
-def installed(root: Path, pack: str | None = PACK) -> list[tuple[Skin, Path]]:
+def installed(root: Path, pack: str | None = None) -> list[tuple[Skin, Path]]:
     """Every skin under `root`, with the directory its files live in.
 
     **A pack at a time** - `<root>/<pack>/templates{,_spectrum}/1280x800` -
@@ -235,8 +228,16 @@ def installed(root: Path, pack: str | None = PACK) -> list[tuple[Skin, Path]]:
     skins beats a daemon that will not start (ADR-0015's permissiveness,
     which the build-time gate is the counterweight to).
 
-    `pack` names the one pack to read, and `None` reads them all. The default
-    is the renderer's (ADR-0051 §2): what is listed is what can be drawn.
+    **Every pack, which is 99 skins on this device** - 84 in Gelo5 and 15 in
+    the stock pack. `pack` narrows it to one, for a caller that wants that.
+
+    This defaulted to Gelo5 alone for a few hours on 2026-09-22, on the
+    argument that the spectrum engine was pointed at Gelo5's sections so a
+    stock spectrum skin would draw none. That was a description of a
+    hardcoded path, not a limit of the device: the driver points the engine
+    at the pack the skin belongs to now, and George asked the obvious
+    question - *"there were 99 skins in total - why are you telling me now
+    that there are only 84?"*
     """
     packs = [root / pack] if pack else sorted(p for p in root.iterdir() if p.is_dir()) if root.is_dir() else []
     found: list[tuple[Skin, Path]] = []
@@ -268,7 +269,7 @@ def installed(root: Path, pack: str | None = PACK) -> list[tuple[Skin, Path]]:
 SELECTION_PATH = Path("/run/gexis/visualisation.json")
 
 
-def names(root: Path, corpus: str, pack: str | None = PACK) -> list[str]:
+def names(root: Path, corpus: str, pack: str | None = None) -> list[str]:
     """The skin names a `skin_corpus` word offers, in corpus order - what the
     `skin` row's picker lists (ADR-0051 §4)."""
     return [skin.name for skin in in_corpus((s for s, _ in installed(root, pack)), corpus)]

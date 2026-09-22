@@ -120,26 +120,34 @@ class Selection:
 
 
 def load_corpus(base_folder: Path, meter_folder: str) -> tuple[dict, dict]:
-    """Both of the pack's template directories, and where each skin lives.
+    """**Every skin the device has**, and where each one lives.
 
-    **The corpus is the pack, not the directory** (ADR-0051 §2). The engine
-    is configured with one of the two - `templates`, which on this device is
-    71 skins and not one spectrum - so a corpus word naming a spectrum would
-    have nothing to offer if this read only what the engine reads.
+    Four directories on this image, two per pack: the engine is configured
+    with one of them - `gelo5/templates`, which is 71 skins and not one
+    spectrum - so reading only what the engine reads would leave a corpus
+    word naming a spectrum with nothing to offer (ADR-0051 §2).
+
+    The configured pack comes first, so the skin a fresh device starts on is
+    the one it has always started on; the rest follow in name order. A name
+    two packs share resolves to the first, which is the one that would be
+    selected.
     """
     pack = base_folder.parent
+    root = pack.parent
+    others = sorted(p for p in root.iterdir() if p.is_dir() and p != pack) if root.is_dir() else []
     skins: dict[str, dict[str, str]] = {}
     homes: dict[str, Path] = {}
-    for templates in ("templates", "templates_spectrum"):
-        directory = pack / templates / meter_folder
-        path = directory / "meters.txt"
-        if not path.is_file():
-            continue
-        for name, options in meter_sections(path).items():
-            if name in skins:
+    for where in [pack, *others]:
+        for templates in ("templates", "templates_spectrum"):
+            directory = where / templates / meter_folder
+            path = directory / "meters.txt"
+            if not path.is_file():
                 continue
-            skins[name] = options
-            homes[name] = directory
+            for name, options in meter_sections(path).items():
+                if name in skins:
+                    continue
+                skins[name] = options
+                homes[name] = directory
     return skins, homes
 
 
@@ -194,16 +202,39 @@ def spectrum_for(skin: dict[str, str]) -> tuple[str, int, int] | None:
     return name, width, height
 
 
-def select_spectrum_section(name: str) -> None:
+def select_spectrum_section(name: str, base_folder: Path | None = None) -> None:
     """Point the spectrum engine's own config at one section. Rewritten in
     place: configparser fails hard on a duplicate key, and an appended one
-    would stop the process starting."""
+    would stop the process starting.
+
+    **`base_folder` is the pack's, not the build's** (ADR-0051 §2, amended
+    2026-09-22). Each pack keeps its own `spectrum.txt`, and a section name
+    only means something inside one of them - the stock pack's skins name
+    `s.1`…`s.9`, which Gelo5 has never heard of. Leaving this pinned to one
+    pack is what made the other pack's spectrum skins unusable, and that is
+    what the corpus was narrowed for.
+    """
     path = SPECTRUM_DIR / "config.txt"
     parser = configparser.ConfigParser()
     parser.read(path)
     parser["current"]["spectrum"] = name
+    if base_folder is not None:
+        parser["current"]["base.folder"] = str(base_folder)
+    # The engine reads this file; the daemon never does. It is rewritten on
+    # every skin change, which is why the image installs it writable by the
+    # user the unit runs as.
     with path.open("w") as handle:
         parser.write(handle)
+
+
+def spectrum_base(home: Path) -> Path:
+    """Where the pack that owns `home` keeps its spectrum sections.
+
+    `<root>/<pack>/<templates…>/<resolution>` -> `<root>/<pack>/templates_spectrum`,
+    which is what the spectrum engine wants as its `base.folder`: it joins
+    that with its own `spectrum.folder`.
+    """
+    return home.parent.parent / "templates_spectrum"
 
 
 def install_screensaver_shim(name: str, width: int, height: int) -> None:
@@ -338,9 +369,24 @@ class Rotation:
         self.unseen: list[str] = []
         self.current: str | None = None
         self.prepared: tuple[str, object] | None = None
+        #: False when the spectrum engine could not be built. A spectrum-only
+        #: skin then draws **nothing at all** - `meter.visible = False` is
+        #: honoured and there is no spectrum to take its place - which is a
+        #: black screen the panel cannot be got back from (George, on the
+        #: panel, 2026-09-22). Such a skin is not a choice, so it leaves the
+        #: pool rather than reaching the glass.
+        self.spectrum_ready = True
 
     def pool(self) -> list[str]:
-        return self.selection.pool(self.skins)
+        chosen = self.selection.pool(self.skins)
+        if self.spectrum_ready:
+            return chosen
+        drawable = [n for n in chosen if kind_of(self.skins[n]) != SPECTRUM]
+        if drawable:
+            return drawable
+        # The whole corpus word is unusable without a spectrum: anything that
+        # draws beats a black screen.
+        return [n for n, skin in self.skins.items() if kind_of(skin) != SPECTRUM] or chosen
 
     def pick(self) -> str:
         pool = self.pool()
@@ -451,7 +497,7 @@ class Rotation:
         self.current = name
         print(f"peppy: skin -> {name}")
         skin = self.skins.get(name, {})
-        self.spectrum.follow(skin)
+        self.spectrum.follow(skin, self.homes.get(name))
         if self.layer is not None:
             self.layer.set_skin(skin, self.homes.get(name))
         pygame.display.update()
@@ -472,7 +518,7 @@ class SpectrumState:
         self.util = None
         self.active = False
 
-    def follow(self, skin: dict[str, str]) -> None:
+    def follow(self, skin: dict[str, str], home: Path | None = None) -> None:
         wanted = spectrum_for(skin)
         if wanted is None or self.spectrum is None:
             self.active = False
@@ -480,6 +526,7 @@ class SpectrumState:
         name, width, height = wanted
         from spectrumconfigparser import (
             AVAILABLE_SPECTRUM_NAMES,
+            BASE_FOLDER,
             SCREEN_HEIGHT,
             SCREEN_WIDTH,
             SPECTRUM_X,
@@ -489,11 +536,18 @@ class SpectrumState:
         here = Path.cwd()
         os.chdir(SPECTRUM_DIR)
         try:
-            select_spectrum_section(name)
+            select_spectrum_section(name, spectrum_base(home) if home else None)
             spectrum = self.spectrum
             spectrum.config[SCREEN_WIDTH] = width
             spectrum.config[SCREEN_HEIGHT] = height
             spectrum.config[AVAILABLE_SPECTRUM_NAMES] = [name]
+            # **In memory as well as in the file.** The parser read
+            # `base.folder` once, at startup, and `get_spectrum_configs`
+            # answers from what it holds - so rewriting only the file left
+            # the stock pack's `s.3` "missing from the corpus" while the
+            # engine looked for it in Gelo5's.
+            if home is not None:
+                spectrum.config[BASE_FOLDER] = str(spectrum_base(home))
             spectrum.spectrum_configs = spectrum.config_parser.get_spectrum_configs()
             if not spectrum.spectrum_configs:
                 print(f"peppy: spectrum {name!r} missing from the corpus; meters only", file=sys.stderr)
@@ -518,6 +572,9 @@ class SpectrumState:
             spectrum.init_variables()
             spectrum._dirty_rects = []
             self.active = True
+        except Exception as exc:  # noqa: BLE001 - one skin, not the screen
+            print(f"peppy: spectrum {name!r} would not load: {exc}", file=sys.stderr)
+            self.active = False
         finally:
             os.chdir(here)
 
@@ -551,8 +608,8 @@ def main() -> int:
     base_folder = Path(current.get("base.folder", ""))
     meter_folder = current.get("meter.folder", "")
     corpus = base_folder / meter_folder
-    # Both of the pack's template directories, not the one the engine is
-    # configured with (ADR-0051 §2).
+    # Every pack, not the one directory the engine is configured with
+    # (ADR-0051 §2).
     skins, homes = load_corpus(base_folder, meter_folder)
     if not skins:
         print(f"ERROR: no skins in {corpus}/meters.txt", file=sys.stderr)
@@ -595,57 +652,102 @@ def main() -> int:
     # not once meters and spectra share a pool: the skin chosen an hour later
     # would have had no engine to draw with. Bootstrapped against the first
     # section the corpus offers and re-pointed by `follow`.
-    wanted = spectrum_for(skins[first]) or next(
+    #
+    # **And it must not be able to take the screen with it.** This is the
+    # only place that writes to the spectrum engine's config, and when that
+    # file was not writable by the user the unit runs as, the exception
+    # killed `main()` *after* the display existed - leaving a black pygame
+    # window with no loop behind it, swallowing every touch (George, on the
+    # panel, 2026-09-22). A device with no spectrum is a device with meters.
+    bootstrap = spectrum_for(skins[first]) or next(
         (found for name in pool if (found := spectrum_for(skins[name])) is not None), None
     )
-    if wanted is not None:
-        name, width, height = wanted
-        from spectrumutil import SpectrumUtil
+    spectrum_home = homes.get(first)
+    if bootstrap is not None and spectrum_for(skins[first]) is None:
+        # Bootstrapping against another skin's section: point the config at
+        # *that* skin's pack, not at the one we happen to start on.
+        spectrum_home = next(
+            (homes.get(n) for n in pool if spectrum_for(skins[n]) == bootstrap), spectrum_home
+        )
+    wanted = None
+    try:
+        wanted = bootstrap
+        if wanted is not None:
+            name, width, height = wanted
+            from spectrumutil import SpectrumUtil
 
-        # What PeppySpectrum expects of a util object, which PeppyMeter's does
-        # not carry: the shared surface and an image helper.
-        util.spectrum_size = (width, height, name)
-        util.pygame_screen = util.PYGAME_SCREEN
-        util.image_util = SpectrumUtil()
+            # What PeppySpectrum expects of a util object, which PeppyMeter's
+            # does not carry: the shared surface and an image helper.
+            util.spectrum_size = (width, height, name)
+            util.pygame_screen = util.PYGAME_SCREEN
+            util.image_util = SpectrumUtil()
 
-        select_spectrum_section(name)
-        os.chdir(SPECTRUM_DIR)  # its config parser reads ./config.txt too
-        install_screensaver_shim(name, width, height)
-        # `spectrum`, not `spectrum.spectrum`: the engine's own directory is on
-        # sys.path, so its modules are top-level. The Volumio wrapper's spelling
-        # reflects its own nesting, not ours.
-        from spectrum import Spectrum
-        from spectrumconfigparser import AVAILABLE_SPECTRUM_NAMES, SCREEN_HEIGHT, SCREEN_WIDTH
+            select_spectrum_section(name, spectrum_base(spectrum_home) if spectrum_home else None)
+            os.chdir(SPECTRUM_DIR)  # its config parser reads ./config.txt too
+            install_screensaver_shim(name, width, height)
+            # `spectrum`, not `spectrum.spectrum`: the engine's own directory
+            # is on sys.path, so its modules are top-level. The Volumio
+            # wrapper's spelling reflects its own nesting, not ours.
+            from spectrum import Spectrum
+            from spectrumconfigparser import (
+                AVAILABLE_SPECTRUM_NAMES,
+                SCREEN_HEIGHT,
+                SCREEN_WIDTH,
+            )
 
-        spectrum = Spectrum(util, standalone=False)
-        spectrum.config[SCREEN_WIDTH] = width
-        spectrum.config[SCREEN_HEIGHT] = height
-        spectrum.config[AVAILABLE_SPECTRUM_NAMES] = [name]
-        spectrum.spectrum_configs = spectrum.config_parser.get_spectrum_configs()
-        spectrum.init_spectrums()
-        # Setting callback_start takes the place of the engine's own refresh
-        # thread (spectrum.py:371): that thread calls pygame.display.update()
-        # itself, and a second thread touching the surface fails outright
-        # under Wayland - "Unable to make EGL context current", because the
-        # GL context belongs to the thread that made it. PeppyMeter's loop
-        # does the drawing instead, through `dependent` below.
-        spectrum.callback_start = lambda _spectrum: None
-        spectrum.start()
+            spectrum = Spectrum(util, standalone=False)
+            spectrum.config[SCREEN_WIDTH] = width
+            spectrum.config[SCREEN_HEIGHT] = height
+            spectrum.config[AVAILABLE_SPECTRUM_NAMES] = [name]
+            spectrum.spectrum_configs = spectrum.config_parser.get_spectrum_configs()
+            spectrum.init_spectrums()
+            # Setting callback_start takes the place of the engine's own
+            # refresh thread (spectrum.py:371): that thread calls
+            # pygame.display.update() itself, and a second thread touching the
+            # surface fails outright under Wayland - "Unable to make EGL
+            # context current", because the GL context belongs to the thread
+            # that made it. PeppyMeter's loop does the drawing instead,
+            # through `dependent` below.
+            spectrum.callback_start = lambda _spectrum: None
+            spectrum.start()
+            spectrum_state.spectrum = spectrum
+            # Only if the skin on screen is the one it was built against;
+            # otherwise it waits, built, for the first skin that wants it.
+            spectrum_state.active = spectrum_for(skins[first]) is not None
+    except Exception as exc:  # noqa: BLE001 - the meter is the screen
+        print(f"peppy: no spectrum engine ({exc!r}); meters only", file=sys.stderr)
+        spectrum_state.spectrum = None
+        spectrum_state.active = False
+        wanted = None
+    finally:
         os.chdir(METER_DIR)
-        spectrum_state.spectrum = spectrum
-        # Only if the skin on screen is the one it was built against;
-        # otherwise it waits, built, for the first skin that wants it.
-        spectrum_state.active = spectrum_for(skins[first]) is not None
 
     from gexis_peppy_render import MetadataLayer, read_metadata
 
-    layer = MetadataLayer(util.PYGAME_SCREEN, homes.get(first, corpus))
+    rotation = Rotation(peppy, skins, spectrum_state, None, homes, selection)
+    rotation.spectrum_ready = spectrum_state.spectrum is not None
+    # Settled *after* the spectrum engine is known: without one, a
+    # spectrum-only skin draws nothing at all, so it is not in the pool and
+    # cannot be the skin this starts on.
+    startable = rotation.pool()
+    if first not in startable:
+        first = startable[0]
 
-    rotation = Rotation(peppy, skins, spectrum_state, layer, homes, selection)
+    layer = MetadataLayer(util.PYGAME_SCREEN, homes.get(first, corpus))
+    rotation.layer = layer
     rotation.current = first
     peppy.util.meter_config[METER] = first
     if first in homes:
         peppy.util.meter_config[BASE_PATH] = str(homes[first].parent)
+    # **The engine's own random mode is off, because the driver owns the
+    # choice** (ADR-0051). `config.txt` says `meter = random`, which makes
+    # `VUMeter.get_meter()` pick a skin of its own at `start()` and overwrite
+    # `meter_config[METER]` on the way past - so the first frame drew
+    # something nobody had asked for and the picker's answer only took effect
+    # at the next track change. George, 2026-09-22, having chosen McIntosh
+    # and been given an Electrocompaniet.
+    peppy.meter.random_meter = False
+    peppy.meter.list_meter = False
     layer.set_skin(skins[first], homes.get(first))
     rotation.prepare_next()
     print(
@@ -706,5 +808,29 @@ def main() -> int:
     return 0
 
 
+def run() -> int:
+    """**A window with no loop behind it is worse than no window.**
+
+    pygame's display outlives `main()` - its threads keep the process up, so
+    an exception after `init_display()` left a black surface on the panel
+    that owned every touch and could not be dismissed (George, 2026-09-22).
+    Anything that gets out of `main()` now takes the window with it, and
+    systemd restarts a process that exited rather than nursing one that is
+    only half alive.
+    """
+    try:
+        return main()
+    except Exception:
+        import traceback
+
+        traceback.print_exc()
+        return 1
+    finally:
+        try:
+            pygame.quit()
+        except Exception:  # noqa: BLE001 - we are already on the way out
+            pass
+
+
 if __name__ == "__main__":
-    raise SystemExit(main())
+    raise SystemExit(run())

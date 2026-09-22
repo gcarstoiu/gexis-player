@@ -64,24 +64,34 @@ A missing or unreadable file is not an error: the driver keeps what it has,
 which is the corpus it loaded and rotation on. The settings database is the
 record; this file is a projection of it.
 
-### 2. The pool is what a skin shows, across the pack's two directories
+### 2. The pool is what a skin shows, across every pack
 
-The driver loads **both** template directories of the pack it is configured
-for, keeps each skin's own directory beside it, and swaps `base.path` around
-the factory call. `skin_corpus` then filters by kind — `meter.visible` and
+The driver loads **all four** template directories — two per pack — keeps
+each skin's own directory beside it, and swaps `base.path` around the
+factory call. `skin_corpus` then filters by kind — `meter.visible` and
 `spectrum.visible`, the same derivation `skins.py` makes for the daemon, and
 not the directory (ADR-0019 as amended: `templates/` is not "the meter
-corpus").
+corpus"). **99 skins: 77 meters, 9 spectrum, 13 both**, which is the count
+this device has always had.
 
-**One pack, not every pack.** The corpus is the pack peppy's own
-`base.folder` names — Gelo5's 84, which is the corpus ADR-0015 is written
-against and `make skins` validates. The `stock` pack stays installed and
-stays out: its spectrum sections are not the ones the spectrum engine is
-pointed at, so a stock spectrum skin would draw no spectrum, and that is a
-separate piece of work rather than a silent half-feature. `GET /skins` is
-narrowed to the same pack, so the picker offers what the renderer can draw.
+The configured pack is read first, so a device still starts on the skin it
+has always started on, and a name two packs share resolves to the first.
 
-### 3. The spectrum engine is created whatever the first skin is
+> **Amended 2026-09-22, hours after this record was written.** It said *one*
+> pack — Gelo5's 84 — because the stock pack's spectrum sections *"are not
+> the ones the spectrum engine is pointed at"*. That described a hardcoded
+> path, not the device: the pointing is one line in the driver, and the
+> right answer was to point it at the pack the skin belongs to rather than
+> to drop fifteen skins. George: *"there were 99 skins in total — why are
+> you telling me now that there are only 84?"*
+>
+> **The spectrum engine follows the skin's pack**, in the file it reads and
+> in the parser that already read it: `select_spectrum_section` rewrites
+> `base.folder`, and `follow` sets `config[BASE_FOLDER]` too, because
+> `get_spectrum_configs()` answers from what the parser holds. Setting only
+> the file left the stock pack's `s.3` "missing from the corpus".
+
+### 3. The spectrum engine is created whatever the first skin is — and cannot take the screen
 
 It is built once per run and re-pointed per skin (`SpectrumState.follow`),
 but until now it was only built **if the starting skin had a spectrum** —
@@ -89,6 +99,31 @@ true when the corpus was one spectrum directory, false for a mixed corpus
 that starts on a needle. It is now created against the first section the
 corpus offers and immediately re-pointed, so a spectrum skin chosen an hour
 later has an engine to draw with.
+
+**Three rules keep it from taking the screen with it**, all three written
+after it did (George, 2026-09-22: *"tapping on the button in now playing
+displays a black screen that I cannot exit by tapping"*).
+
+- **Building it is not fatal.** It is the only code that writes to the
+  spectrum engine's config, and that file shipped root-owned while the unit
+  runs as `pi`: the `PermissionError` killed `main()` *after* the display
+  existed. pygame's threads then kept the process alive, so the panel was
+  left behind a black surface that owned every touch. A device with no
+  spectrum engine is a device with meters.
+- **The config is installed writable by the service user.** The driver
+  rewrites it by design — the engine has no other way to be told which
+  section to draw — so the image installs it `-o 1000 -g 1000`.
+- **A skin that would draw nothing is not in the pool.** Without an engine,
+  a spectrum-only skin honours `meter.visible = False` and paints nothing at
+  all. Those skins leave the pool rather than reach the glass.
+
+**And the engine's own random mode is off.** `config.txt` says
+`meter = random`, which makes `VUMeter.get_meter()` choose a skin at
+`start()` and overwrite `meter_config[METER]` on the way past. The driver
+owns the choice (§1), so this is now cleared on the instance: before it was,
+the first frame drew a skin nobody had asked for and the picker's answer
+only took hold at the next track change — George chose McIntosh and got an
+Electrocompaniet.
 
 ### 4. `skin` is a row with a picker
 
@@ -115,7 +150,11 @@ skin's own `screen.bgr`.
 - **The driver gains a second file to read** and a per-skin directory. Its
   failure mode is visible: a skin that cannot be built raises where the log
   can be read, and the run loop keeps the skin it has.
-- **84 skins instead of 71**, and for the first time the spectrum-bearing
-  ones are reachable without editing `config.txt` by hand.
-- **The image must ship the new driver.** Until the next build, the device
-  carries it by deployment, which is how it was verified.
+- **99 skins instead of 71**, and for the first time the spectrum-bearing
+  ones draw their spectrum without editing `config.txt` by hand.
+- **The image must ship the new driver** *and* the spectrum config's new
+  ownership. Until the next build, the device carries both by deployment.
+- **Verification means looking at the screen.** Every claim in this record
+  about what is drawn is a `grim` capture of the panel, not a line in the
+  driver's log: the log said `skin -> 103G5_Marschal Spectrum` while the
+  screen was black (`docs/LESSONS.md` case 15).

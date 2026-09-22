@@ -192,27 +192,26 @@ def _pack(root, templates, text, pictures=()):
     return directory
 
 
-def test_the_corpus_is_one_pack_and_a_skin_carries_its_own_directory(tmp_path):
+def test_every_pack_on_the_device_is_found_and_the_first_name_wins(tmp_path):
     """The device carries more than one pack, each with its own directories
     and its own files - so a skin is found *with* the directory its
-    `screen.bgr` sits in.
+    `screen.bgr` sits in, and a name two packs share resolves to the one
+    that would be selected.
 
-    **Only the renderer's pack is offered** (ADR-0051 §2): `stock` is
-    installed beside Gelo5 and the spectrum engine is not pointed at it, so
-    listing it would offer skins that cannot draw what they promise. Asking
-    for every pack is still possible, and then a name two packs share
-    resolves to the one that would be selected."""
+    **All of them, which is 99 on this device.** For a few hours on
+    2026-09-22 this listed Gelo5's 84 alone, on the argument that the
+    spectrum engine was pointed at Gelo5's sections - which described a
+    hardcoded path rather than the device (ADR-0051 §2, amended). Narrowing
+    to one pack is still possible and is nobody's default."""
     _pack(tmp_path / "gelo5", "templates", "[one]\nscreen.bgr = a.jpg\n", ["a.jpg"])
     _pack(tmp_path / "stock", "templates", "[one]\nscreen.bgr = b.jpg\n[two]\nscreen.bgr = c.jpg\n",
           ["b.jpg", "c.jpg"])
     found = installed(tmp_path)
-    assert [skin.name for skin, _ in found] == ["one"]
+    assert [skin.name for skin, _ in found] == ["one", "two"]
     first, directory = found[0]
     assert preview_of(first, directory).name == "a.jpg"
 
-    every = installed(tmp_path, pack=None)
-    assert [skin.name for skin, _ in every] == ["one", "two"]
-    assert preview_of(*every[0]).name == "a.jpg"
+    assert [s.name for s, _ in installed(tmp_path, pack="stock")] == ["one", "two"]
 
 
 def test_a_preview_is_the_file_the_skin_names_and_nothing_else(tmp_path):

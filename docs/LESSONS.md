@@ -7,7 +7,7 @@ recognised faster next time, rather than rediscovered as a surprise.
 
 ## The check ran against the wrong reality
 
-Fourteen instances so far, same shape each time: the check ran against
+Fifteen instances so far, same shape each time: the check ran against
 something that *resembled* the thing being tested, closely enough that
 the difference was invisible in the result. Not a broken check — a check
 answering a different question than the one asked, confidently.
@@ -301,6 +301,34 @@ this old. The tell was available and ignored: **the product's own UI was
 doing the thing I had just declared impossible.** Nothing about a screen
 George can see should ever be concluded from an API probe alone.
 
+**15. Reading the log instead of looking at the screen** (2026-09-22, Phase
+9 subphase 9h). The visualiser's selection was declared verified on this
+evidence: *"rotation off plus 'Spectrum' moved the screen to
+`103G5_Marschal Spectrum` without a restart"*. That sentence is a quotation
+from the driver's log. The driver prints `peppy: skin -> <name>` when it
+**decides**, and the decision was right — but the spectrum engine had never
+been built on this device, so a spectrum-only skin honoured
+`meter.visible = False` and drew **nothing at all**. The screen was black
+while the log was correct.
+
+Two other things travelled in the same sentence. The engine's own random
+mode overwrote the chosen skin at startup, so the first frame drew someone
+else's skin — invisible in a log that only reports our own decisions. And
+the spectrum engine's config was root-owned while the unit runs as `pi`, so
+the write that selects a section raised `PermissionError` *after* the
+display existed, leaving a black pygame window with no loop behind it,
+owning every touch. George found all three in one tap: *"tapping on the
+button in now playing displays a black screen that I cannot exit by
+tapping."*
+
+**The substitute was the process's own account of itself.** A log line is a
+statement of intent by the code under test; on a screen, only pixels are
+evidence. There was no capture tool on the device and the gap was noted out
+loud — *"I can't visually confirm"* — and then the work was reported as
+verified anyway. `grim` takes a screenshot of that panel in one command and
+Claude can read the PNG. **When the deliverable is something drawn, the
+verification is an image.**
+
 **Cheapest correction available:** when a server's own interface shows a
 thing, find the call *it* makes before concluding the data is absent — here,
 one request to `material-skin browsemodes` listed `myMusicTopArtists` and
@@ -313,7 +341,8 @@ host's filesystem for the booted one, one run for the distribution, a
 local ref for the remote, the kernel's OOM killer for any killer, an idle
 device for a booting one, a comment for the machine it describes, a
 summary line for the rule it summarises, a directory listing for the design
-itself — and the check quietly accepted the substitute. None of these failed loudly. Each
+itself, a log line for the screen it describes — and the check quietly
+accepted the substitute. None of these failed loudly. Each
 produced an answer that looked like a normal result, not an error.
 
 **What to check before trusting a verification result:** not just "does
