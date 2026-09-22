@@ -7,9 +7,9 @@ smoothly, there is this delay we introduce a while back"*; *"there are the
 occasional hops in volume (especially after a first boot)"*; and *"sometimes
 it feels like the max volume is different between renderers (song quality
 independent)."* What is actually happening?
-**Status:** first half. The tests that need nobody at the speakers are done;
-three that need a phone connected are listed at the end and are **also
-silent**.
+**Status:** LMS and Spotify measured. Bluetooth is the one renderer left,
+and it needs a phone connected and nothing else. **§7 is the answer to the
+third symptom, and it is a defect, not a scale difference.**
 
 **Scope, stated up front:**
 
@@ -18,12 +18,12 @@ silent**.
   against any other DAC.
 - **What was measured:** the cost of one volume write three ways; what a
   drag on the panel delivers to the hardware at three speeds; the HTTP round
-  trip behind each step; LMS's own scale end to end; whether the meter tap
-  is before or after the hardware volume; and the level through two cold
-  boots.
-- **Not measured:** Spotify's and Bluetooth's delivered levels (both need a
-  phone), anything about how a ramp *sounds*, and any renderer's behaviour
-  under fixed output, which does not exist yet.
+  trip behind each step; LMS's and Spotify's scales end to end; whether the
+  meter tap is before or after the hardware volume; and the level through
+  two cold boots.
+- **Not measured:** Bluetooth's delivered level (needs a phone paired and
+  connected), anything about how a ramp *sounds*, and any renderer's
+  behaviour under fixed output, which does not exist yet.
 - **One instrument was wrong and was caught**: see §6.
 
 ## 1. A volume write costs 5.7 ms, and 10.7 ms of the present 16.4 are ours
@@ -148,18 +148,55 @@ never at 0. Caught by checking the claim against a direct read before
 reporting it; `docs/LESSONS.md`'s shape exactly, and the reason the boot
 numbers above come from a second run.
 
+## 7. Spotify attenuates the stream *and* we attenuate the hardware
+
+George connected Spotify and started playing. Two things were true before
+anything was measured: go-librespot reported **volume 100 of 100**, and the
+DAC was at **0.00 dB** — the daemon had put it there on acquisition
+(`volume: restoring spotify to 240/240`), up from the −37 dB LMS had left.
+
+Stepping go-librespot's own volume through its API, watching the DAC and the
+meter — the meter being pre-attenuation, so it reports what the *stream*
+carries:
+
+| go-librespot volume | DAC | stream (median / p90 / max) |
+|---|---|---|
+| 100 | **0.00 dB** | 35 / 64 / 68 |
+| 25 | **−34.00 dB** | **2 / 5 / 6** |
+
+**Both are applied.** At 25 the stream itself is down by a factor of about
+eleven — **−21 dB** — *and* the DAC is at −34 dB. Together that is roughly
+**−55 dB where the user asked for a quarter**. The same quarter on LMS is
+−37 dB and nothing else, because squeezelite delivers full scale (§4).
+
+**That is the third symptom.** It is not that the renderers' maxima differ —
+at 100% both deliver full scale into a 0 dB DAC. It is that **everything
+below maximum is attenuated twice on Spotify and once on LMS**, so the two
+diverge by up to 21 dB as you come down, and the same panel percentage means
+two different loudnesses.
+
+**The fix is a config key, and it has a physical consequence.** This build of
+go-librespot supports `external_volume`, `disable_volume`, `mixer_device`,
+`mixer_control`, `volume_steps` and `initial_volume`; our config sets **none
+of them**, so it runs its default software volume. `external_volume: true`
+keeps the phone's slider working and the events flowing — which is what the
+daemon mirrors to the DAC — while stopping go-librespot touching the stream.
+`mixer_device` would make it write the hardware itself, which would give the
+DAC two writers; `disable_volume` would take the phone's slider away.
+
+**It will make Spotify louder at the same setting**, by up to 21 dB.
+Changing it belongs at 9i's gate, with the amplifier turned down first.
+
 ## What is left, and what it needs
 
 **Silent, but needs a phone connected** — no listening, just a stream:
 
-1. **Spotify's delivered level.** Same measurement as §4's second half: with
-   the DAC at zero, does go-librespot's stream sit below LMS's, and does its
-   own volume change the digital level? If it does, "100%" means two
-   different things and that is the answer to the third symptom.
-2. **Bluetooth's delivered level**, the same way — and the phone's own volume
-   is in series with ours, which LMS has no equivalent of.
-3. **Whether either renderer's remembered level overrides the boot level**
-   the way LMS's does.
+1. **Bluetooth's delivered level**, the way Spotify's was measured in §7 —
+   and there the phone's own volume is in series with ours as well, which
+   LMS has no equivalent of.
+2. **Whether Spotify's or Bluetooth's remembered level overrides the boot
+   level** the way LMS's does. Spotify's restore is already known to be
+   240/240 on acquisition, which is the loudest the device can be.
 
 **Needs the amplifier, and George at it:** how a ramp sounds, and the boot
 level itself.
