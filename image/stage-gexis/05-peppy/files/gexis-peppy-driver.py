@@ -20,6 +20,7 @@ both configs, and the deliberate chdir below.
 from __future__ import annotations
 
 import configparser
+import json
 import os
 import random
 import sys
@@ -41,6 +42,138 @@ def meter_sections(path: Path) -> dict[str, dict[str, str]]:
     parser.optionxform = str
     parser.read(path)
     return {name: dict(parser[name]) for name in parser.sections()}
+
+
+#: What the daemon publishes and this reads (ADR-0051 §1). Polled on the
+#: same hook as the metadata: a stat, and a read only when it has moved.
+SELECTION_PATH = Path("/run/gexis/visualisation.json")
+
+METERS, SPECTRUM, BOTH = "meters", "spectrum", "both"
+
+#: The `skin_corpus` words and the kinds each one draws from. The same table
+#: as `gexis_core.skins.CORPUS`; the two processes share no code, so they
+#: share the words instead.
+CORPUS = {
+    "VU meters": (METERS,),
+    "Spectrum": (SPECTRUM,),
+    "VU meters + spectrum": (BOTH,),
+    "Random": (METERS, SPECTRUM, BOTH),
+}
+
+
+def kind_of(skin: dict[str, str]) -> str:
+    """What a skin shows, from what it declares - never from which directory
+    it lives in (ADR-0019 as amended). An absent `spectrum.visible` means no
+    spectrum; an absent `meter.visible` means a meter."""
+    spectrum = skin.get("spectrum.visible", "False").strip().lower() == "true"
+    if not spectrum:
+        return METERS
+    return BOTH if skin.get("meter.visible", "True").strip().lower() != "false" else SPECTRUM
+
+
+class Selection:
+    """The three settings, as the daemon last published them.
+
+    A missing or unreadable file leaves what we have: the settings database
+    is the record and this is a projection of it, so a screen drawing the
+    previous skin is the right answer to a file that is not there yet.
+    """
+
+    def __init__(self, path: Path = SELECTION_PATH) -> None:
+        self.path = path
+        self.corpus = "Random"
+        self.skin: str | None = None
+        self.rotate = True
+        self._stamp: int | None = None
+
+    def reload(self) -> bool:
+        """True when something changed, so the caller can act on it."""
+        try:
+            stamp = self.path.stat().st_mtime_ns
+        except OSError:
+            return False
+        if stamp == self._stamp:
+            return False
+        self._stamp = stamp
+        try:
+            data = json.loads(self.path.read_text())
+        except (OSError, ValueError) as exc:
+            print(f"peppy: {self.path} unreadable: {exc}", file=sys.stderr)
+            return False
+        was = (self.corpus, self.skin, self.rotate)
+        self.corpus = str(data.get("corpus") or "Random")
+        skin = data.get("skin")
+        self.skin = str(skin) if skin else None
+        self.rotate = data.get("rotate") is not False
+        return was != (self.corpus, self.skin, self.rotate)
+
+    def pool(self, skins: dict[str, dict[str, str]]) -> list[str]:
+        """The names this corpus offers. An empty pool is not a corpus: a
+        word we do not know, or one that selects nothing on this pack, falls
+        back to everything rather than to a blank screen."""
+        wanted = CORPUS.get(self.corpus) or CORPUS["Random"]
+        chosen = [name for name, skin in skins.items() if kind_of(skin) in wanted]
+        return chosen or list(skins)
+
+
+def load_corpus(base_folder: Path, meter_folder: str) -> tuple[dict, dict]:
+    """Both of the pack's template directories, and where each skin lives.
+
+    **The corpus is the pack, not the directory** (ADR-0051 §2). The engine
+    is configured with one of the two - `templates`, which on this device is
+    71 skins and not one spectrum - so a corpus word naming a spectrum would
+    have nothing to offer if this read only what the engine reads.
+    """
+    pack = base_folder.parent
+    skins: dict[str, dict[str, str]] = {}
+    homes: dict[str, Path] = {}
+    for templates in ("templates", "templates_spectrum"):
+        directory = pack / templates / meter_folder
+        path = directory / "meters.txt"
+        if not path.is_file():
+            continue
+        for name, options in meter_sections(path).items():
+            if name in skins:
+                continue
+            skins[name] = options
+            homes[name] = directory
+    return skins, homes
+
+
+def adopt_sections(meter_config, directory: Path) -> list[str]:
+    """Put a directory's sections into the engine's parsed config, in the
+    engine's own shapes, and answer which names were added.
+
+    The engine parses exactly one `meters.txt` at start. Its two section
+    builders take a `ConfigParser` and return a dictionary, and reach for
+    `self` only for helpers - so the second directory is parsed by the code
+    that parsed the first, rather than by a second implementation of it that
+    would drift the first time upstream added a key.
+
+    A section that will not parse is skipped with a line in the log: one
+    unbuildable skin is not a reason to lose the other eighty-three.
+    """
+    from configfileparser import ConfigFileParser, METER_TYPE, TYPE_LINEAR
+
+    parser = configparser.ConfigParser(strict=False)
+    parser.read(directory / "meters.txt")
+    builder = ConfigFileParser()
+    added: list[str] = []
+    for name in parser.sections():
+        if name in meter_config:
+            continue
+        try:
+            meter_type = parser.get(name, METER_TYPE)
+            meter_config[name] = (
+                builder.get_linear_section(parser, name, meter_type)
+                if meter_type == TYPE_LINEAR
+                else builder.get_circular_section(parser, name, meter_type)
+            )
+        except Exception as exc:  # noqa: BLE001 - one skin, not the corpus
+            print(f"peppy: {name} in {directory} will not parse: {exc}", file=sys.stderr)
+            continue
+        added.append(name)
+    return added
 
 
 def spectrum_for(skin: dict[str, str]) -> tuple[str, int, int] | None:
@@ -174,32 +307,84 @@ class Rotation:
     """Phase 5 criterion 5: a new skin per track, with the next one built
     before it is needed.
 
-    Random without repeats until the corpus is exhausted, which is what
+    Random without repeats until the pool is exhausted, which is what
     PeppyMeter's own random mode does — but driven by track changes rather
     than a timer, so the skin belongs to the track.
+
+    **The pool is the selection's, not the corpus's** (ADR-0051): which
+    skins it draws from is `skin_corpus`, and whether it draws a new one at
+    all is `skin_rotate`.
     """
 
-    def __init__(self, peppy, skins: dict[str, dict[str, str]], spectrum_state, layer=None) -> None:
+    def __init__(
+        self,
+        peppy,
+        skins: dict[str, dict[str, str]],
+        spectrum_state,
+        layer=None,
+        homes: dict[str, Path] | None = None,
+        selection: Selection | None = None,
+    ) -> None:
         self.peppy = peppy
         self.vumeter = peppy.meter
         self.skins = skins
+        self.homes = homes or {}
+        self.selection = selection or Selection()
         self.spectrum = spectrum_state
         self.layer = layer
         self.unseen: list[str] = []
         self.current: str | None = None
         self.prepared: tuple[str, object] | None = None
 
+    def pool(self) -> list[str]:
+        return self.selection.pool(self.skins)
+
     def pick(self) -> str:
+        pool = self.pool()
+        if not self.rotating:
+            # Not rotating: the next skin is the chosen one, and preparing it
+            # costs nothing because it is the one already on screen.
+            return self.chosen() or self.current or pool[0]
+        self.unseen = [name for name in self.unseen if name in pool]
         if not self.unseen:
-            self.unseen = [name for name in self.skins if name != self.current] or list(self.skins)
+            self.unseen = [name for name in pool if name != self.current] or list(pool)
         return self.unseen.pop(random.randrange(len(self.unseen)))
 
-    def prepare_next(self) -> None:
+    @property
+    def rotating(self) -> bool:
+        return self.selection.rotate
+
+    def chosen(self) -> str | None:
+        """The skin the selection names, if this pack has it and the corpus
+        still offers it. A name we do not have is not an error: the daemon
+        and the driver can disagree for as long as it takes a settings write
+        to reach the file."""
+        name = self.selection.skin
+        return name if name in self.pool() else None
+
+    def follow_selection(self) -> None:
+        """Apply a change the daemon published. Rotation off moves to the
+        named skin; rotation on leaves the screen alone until the track
+        changes, unless what is on it has fallen out of the corpus."""
+        pool = self.pool()
+        wanted = self.chosen() if not self.rotating else None
+        if wanted is None and self.current in pool:
+            self.prepared = None
+            return
+        if wanted is None:
+            wanted = pool[0]
+        if wanted == self.current:
+            self.prepared = None
+            return
+        self.prepared = None
+        self.switch(wanted)
+
+    def prepare_next(self, name: str | None = None) -> None:
         """Build the next skin's meter now, so a track change costs no image
         loading. Done right after a switch, while the new skin is already on
         screen — the moment with the most slack, not the least."""
-        name = self.pick()
-        from configfileparser import METER
+        name = name or self.pick()
+        from configfileparser import BASE_PATH, METER
         from meterfactory import MeterFactory
 
         # Built through the factory, not `vumeter.get_meter()`: that returns
@@ -210,6 +395,16 @@ class Rotation:
         vumeter = self.vumeter
         config = self.peppy.util.meter_config
         was, config[METER] = config[METER], name
+        # Every image this skin names is loaded here, from `base.path` +
+        # `meter.folder` - so a skin that lives in the pack's other template
+        # directory is built by pointing `base.path` at it and putting it
+        # back afterwards, exactly as `meter` is swapped (ADR-0051 §2).
+        was_base = config.get(BASE_PATH)
+        home = self.homes.get(name)
+        if home is not None:
+            # `base.path` is the directory *above* the resolution folder:
+            # the engine joins it with `meter.folder` and the file name.
+            config[BASE_PATH] = str(home.parent)
         try:
             factory = MeterFactory(
                 self.peppy.util,
@@ -225,19 +420,28 @@ class Rotation:
             meter = factory.create_meter()
         finally:
             config[METER] = was
+            if was_base is not None:
+                config[BASE_PATH] = was_base
         self.prepared = (name, meter)
 
-    def switch(self) -> None:
+    def switch(self, to: str | None = None) -> None:
+        if to is not None and (self.prepared is None or self.prepared[0] != to):
+            self.prepare_next(to)
         if self.prepared is None:
             self.prepare_next()
         name, meter = self.prepared
         self.prepared = None
 
-        from configfileparser import METER
+        from configfileparser import BASE_PATH, METER
 
         if self.vumeter.meter is not None:
             self.vumeter.meter.stop()
         self.peppy.util.meter_config[METER] = name
+        # Left pointing at the skin on screen, so anything the engine loads
+        # later finds the right directory.
+        home = self.homes.get(name)
+        if home is not None:
+            self.peppy.util.meter_config[BASE_PATH] = str(home.parent)
         self.vumeter.meter = meter
         meter.set_volume(self.vumeter.current_volume)
         meter.start()
@@ -246,7 +450,7 @@ class Rotation:
         skin = self.skins.get(name, {})
         self.spectrum.follow(skin)
         if self.layer is not None:
-            self.layer.set_skin(skin)
+            self.layer.set_skin(skin, self.homes.get(name))
         pygame.display.update()
         self.prepare_next()
 
@@ -341,13 +545,17 @@ def main() -> int:
     meter_config = configparser.ConfigParser()
     meter_config.read(METER_DIR / "config.txt")
     current = meter_config["current"]
-    corpus = Path(current.get("base.folder", "")) / current.get("meter.folder", "")
-    skins = meter_sections(corpus / "meters.txt")
+    base_folder = Path(current.get("base.folder", ""))
+    meter_folder = current.get("meter.folder", "")
+    corpus = base_folder / meter_folder
+    # Both of the pack's template directories, not the one the engine is
+    # configured with (ADR-0051 §2).
+    skins, homes = load_corpus(base_folder, meter_folder)
     if not skins:
         print(f"ERROR: no skins in {corpus}/meters.txt", file=sys.stderr)
         return 1
 
-    from configfileparser import FRAME_RATE, METER
+    from configfileparser import BASE_PATH, FRAME_RATE, METER
     from peppymeter import Peppymeter
 
     peppy = Peppymeter(standalone=True, timer_controlled_random_meter=False, quit_pygame_on_stop=False)
@@ -357,14 +565,36 @@ def main() -> int:
     peppy.init_display()
     util = peppy.util
 
+    # The engine parsed its own directory; the other one is adopted into the
+    # same config so the factory can build from either.
+    for directory in {home for home in homes.values()} - {corpus}:
+        adopted = adopt_sections(util.meter_config, directory)
+        print(f"peppy: {len(adopted)} more skins from {directory}")
+
     spectrum_state = SpectrumState()
     spectrum_state.util = util
 
-    # One spectrum for the whole run, built against whichever skin starts.
-    first = peppy.util.meter_config[METER]
-    if first not in skins:
-        first = next(iter(skins))
-    wanted = spectrum_for(skins[first])
+    selection = Selection()
+    selection.reload()
+
+    # Which skin is on screen first: the chosen one when the skin is not
+    # rotating, otherwise anything the corpus offers.
+    pool = selection.pool(skins)
+    first = selection.skin if (not selection.rotate and selection.skin in pool) else None
+    if first is None:
+        first = peppy.util.meter_config[METER]
+    if first not in pool:
+        first = pool[0]
+
+    # **One spectrum for the whole run, whatever the first skin is**
+    # (ADR-0051 §3). It used to be built only when the starting skin had one,
+    # which was safe while the corpus was a single spectrum directory and is
+    # not once meters and spectra share a pool: the skin chosen an hour later
+    # would have had no engine to draw with. Bootstrapped against the first
+    # section the corpus offers and re-pointed by `follow`.
+    wanted = spectrum_for(skins[first]) or next(
+        (found for name in pool if (found := spectrum_for(skins[name])) is not None), None
+    )
     if wanted is not None:
         name, width, height = wanted
         from spectrumutil import SpectrumUtil
@@ -400,18 +630,25 @@ def main() -> int:
         spectrum.start()
         os.chdir(METER_DIR)
         spectrum_state.spectrum = spectrum
-        spectrum_state.active = True
+        # Only if the skin on screen is the one it was built against;
+        # otherwise it waits, built, for the first skin that wants it.
+        spectrum_state.active = spectrum_for(skins[first]) is not None
 
     from gexis_peppy_render import MetadataLayer, read_metadata
 
-    layer = MetadataLayer(util.PYGAME_SCREEN, corpus)
+    layer = MetadataLayer(util.PYGAME_SCREEN, homes.get(first, corpus))
 
-    rotation = Rotation(peppy, skins, spectrum_state, layer)
+    rotation = Rotation(peppy, skins, spectrum_state, layer, homes, selection)
     rotation.current = first
     peppy.util.meter_config[METER] = first
-    layer.set_skin(skins[first])
+    if first in homes:
+        peppy.util.meter_config[BASE_PATH] = str(homes[first].parent)
+    layer.set_skin(skins[first], homes.get(first))
     rotation.prepare_next()
-    print(f"peppy: {len(skins)} skins, starting on {first}")
+    print(
+        f"peppy: {len(skins)} skins, {len(pool)} in {selection.corpus!r}, "
+        f"starting on {first}, rotation {'on' if selection.rotate else 'off'}"
+    )
 
     track = current_track()
     # Polled rather than watched: at a tenth of a second the check is a stat
@@ -423,10 +660,19 @@ def main() -> int:
         nonlocal track, frames
         frames += 1
         if frames % poll_every == 0:
+            # The same poll carries both files: which track is playing, and
+            # what the panel last asked for (ADR-0051 §1).
+            if selection.reload():
+                print(
+                    f"peppy: selection -> {selection.corpus!r}, "
+                    f"{selection.skin!r}, rotation {'on' if selection.rotate else 'off'}"
+                )
+                rotation.follow_selection()
             playing = current_track()
             if playing is not None and playing != track:
                 track = playing
-                rotation.switch()
+                if rotation.rotating:
+                    rotation.switch()
             dirty = layer.draw(read_metadata())
             if dirty:
                 pygame.display.update(dirty)

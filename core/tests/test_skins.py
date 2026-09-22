@@ -185,18 +185,27 @@ def _pack(root, templates, text, pictures=()):
     return directory
 
 
-def test_every_pack_on_the_device_is_found_and_the_first_name_wins(tmp_path):
+def test_the_corpus_is_one_pack_and_a_skin_carries_its_own_directory(tmp_path):
     """The device carries more than one pack, each with its own directories
     and its own files - so a skin is found *with* the directory its
-    `screen.bgr` sits in, and a name two packs share resolves to the one
-    that would be selected."""
+    `screen.bgr` sits in.
+
+    **Only the renderer's pack is offered** (ADR-0051 §2): `stock` is
+    installed beside Gelo5 and the spectrum engine is not pointed at it, so
+    listing it would offer skins that cannot draw what they promise. Asking
+    for every pack is still possible, and then a name two packs share
+    resolves to the one that would be selected."""
     _pack(tmp_path / "gelo5", "templates", "[one]\nscreen.bgr = a.jpg\n", ["a.jpg"])
     _pack(tmp_path / "stock", "templates", "[one]\nscreen.bgr = b.jpg\n[two]\nscreen.bgr = c.jpg\n",
           ["b.jpg", "c.jpg"])
     found = installed(tmp_path)
-    assert [skin.name for skin, _ in found] == ["one", "two"]
+    assert [skin.name for skin, _ in found] == ["one"]
     first, directory = found[0]
     assert preview_of(first, directory).name == "a.jpg"
+
+    every = installed(tmp_path, pack=None)
+    assert [skin.name for skin, _ in every] == ["one", "two"]
+    assert preview_of(*every[0]).name == "a.jpg"
 
 
 def test_a_preview_is_the_file_the_skin_names_and_nothing_else(tmp_path):
@@ -208,7 +217,7 @@ def test_a_preview_is_the_file_the_skin_names_and_nothing_else(tmp_path):
                       "[sneaky]\nscreen.bgr = ../../../etc/shadow\n"
                       "[silent]\nmeter.type = circular\n",
                       ["ok.jpg"])
-    by_name = {skin.name: skin for skin, _ in installed(tmp_path)}
+    by_name = {skin.name: skin for skin, _ in installed(tmp_path, pack="pack")}
     assert preview_of(by_name["good"], directory).name == "ok.jpg"
     assert preview_of(by_name["missing"], directory) is None
     assert preview_of(by_name["sneaky"], directory) is None
@@ -221,3 +230,56 @@ def test_every_committed_skin_has_a_picture_to_show(corpus):
     skin that names no background - and every one of the 84 does."""
     meters, _ = corpus
     assert all((skin.options.get("screen.bgr") or "").strip() for skin in meters)
+
+
+# ── what the renderer is told (ADR-0051) ─────────────────────────────────
+
+
+def test_the_corpus_word_decides_which_names_the_picker_offers(tmp_path):
+    """The pool is what a skin *shows*, and it spans both of the pack's
+    template directories - which is the whole point: the directory the
+    engine loads holds 71 meters and no spectrum at all, so "Spectrum"
+    against one directory is an empty picker."""
+    _pack(tmp_path / "gelo5", "templates",
+          "[01G5_Needle]\nscreen.bgr = a.jpg\n")
+    _pack(tmp_path / "gelo5", "templates_spectrum",
+          "[101G5_Bars]\nspectrum.visible = True\nmeter.visible = False\n"
+          "[102G5_Both]\nspectrum.visible = True\n")
+
+    from gexis_core.skins import names
+
+    assert names(tmp_path, "VU meters") == ["01G5_Needle"]
+    assert names(tmp_path, "Spectrum") == ["101G5_Bars"]
+    assert names(tmp_path, "VU meters + spectrum") == ["102G5_Both"]
+    assert names(tmp_path, "Random") == ["01G5_Needle", "101G5_Bars", "102G5_Both"]
+    # An unknown word is every skin rather than none: a screen drawing the
+    # wrong pool beats a screen drawing nothing.
+    assert names(tmp_path, "nonsense") == names(tmp_path, "Random")
+
+
+def test_the_selection_is_published_whole_or_not_at_all(tmp_path):
+    """The driver reads this inside a frame hook, so it must never see half
+    a file (ADR-0051 §1): written to a temporary name and renamed."""
+    from gexis_core.skins import write_selection
+    import json
+
+    path = tmp_path / "run" / "visualisation.json"
+    assert write_selection("Spectrum", "101G5_Bars", False, path) is True
+    assert json.loads(path.read_text()) == {
+        "corpus": "Spectrum", "skin": "101G5_Bars", "rotate": False
+    }
+    assert not list(path.parent.glob("*.tmp"))
+
+    # A second write replaces it, and nothing else is left behind.
+    assert write_selection("Random", None, True, path) is True
+    assert json.loads(path.read_text())["skin"] is None
+
+
+def test_a_selection_that_cannot_be_written_is_not_fatal(tmp_path):
+    """The setting is stored either way. A screen still drawing the previous
+    skin beats a daemon that fell over publishing a preference."""
+    from gexis_core.skins import write_selection
+
+    blocked = tmp_path / "file"
+    blocked.write_text("not a directory")
+    assert write_selection("Random", None, True, blocked / "visualisation.json") is False

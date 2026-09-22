@@ -118,9 +118,15 @@ class MetadataLayer:
 
     # ---- skin ----------------------------------------------------------
 
-    def set_skin(self, skin: dict[str, str]) -> None:
+    def set_skin(self, skin: dict[str, str], directory=None) -> None:
         """A clean copy of the skin's own background, so a field that
-        disappears can be erased back to it rather than smeared."""
+        disappears can be erased back to it rather than smeared.
+
+        `directory` is the skin's own, for a corpus that spans more than one
+        (ADR-0051 §2); without it the one this layer was built with stands.
+        """
+        if directory is not None:
+            self._corpus = directory
         self._skin = skin
         self._painted = []
         self._last_drawn = None

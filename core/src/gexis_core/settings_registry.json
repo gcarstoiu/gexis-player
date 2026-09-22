@@ -704,6 +704,21 @@
         "marks": "N",
         "note": null,
         "default": true
+      },
+      {
+        "key": "skin",
+        "type": "choice",
+        "label": "Skin",
+        "marks": "N",
+        "note": "Which one the visualiser draws. Tapping a skin shows it; nothing changes until Use this skin.",
+        "options": [],
+        "optionsFrom": "skin_corpus",
+        "picker": true,
+        "onlyWhen": [
+          "skin_rotate",
+          false
+        ],
+        "default": null
       }
     ]
   },

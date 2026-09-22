@@ -212,7 +212,14 @@ def load(directory: Path) -> tuple[list[Skin], list[Skin]]:
 RESOLUTION = "1280x800"
 
 
-def installed(root: Path) -> list[tuple[Skin, Path]]:
+#: The pack the renderer draws from (ADR-0051 §2). Gelo5's 84 skins are the
+#: corpus ADR-0015 is written against and `make skins` validates; `stock` is
+#: installed beside it and is **not** offered, because the spectrum engine is
+#: pointed at Gelo5's sections and a stock spectrum skin would draw none.
+PACK = "gelo5"
+
+
+def installed(root: Path, pack: str | None = PACK) -> list[tuple[Skin, Path]]:
     """Every skin under `root`, with the directory its files live in.
 
     **A pack at a time** - `<root>/<pack>/templates{,_spectrum}/1280x800` -
@@ -221,12 +228,16 @@ def installed(root: Path) -> list[tuple[Skin, Path]]:
     parse is skipped rather than fatal, since a screen with most of its
     skins beats a daemon that will not start (ADR-0015's permissiveness,
     which the build-time gate is the counterweight to).
+
+    `pack` names the one pack to read, and `None` reads them all. The default
+    is the renderer's (ADR-0051 §2): what is listed is what can be drawn.
     """
+    packs = [root / pack] if pack else sorted(p for p in root.iterdir() if p.is_dir()) if root.is_dir() else []
     found: list[tuple[Skin, Path]] = []
     seen: set[str] = set()
-    for pack in sorted(p for p in root.iterdir() if p.is_dir()) if root.is_dir() else []:
+    for pack_dir in (p for p in packs if p.is_dir()):
         for templates in ("templates", "templates_spectrum"):
-            meters = pack / templates / RESOLUTION / "meters.txt"
+            meters = pack_dir / templates / RESOLUTION / "meters.txt"
             if not meters.is_file():
                 continue
             try:
@@ -242,6 +253,45 @@ def installed(root: Path) -> list[tuple[Skin, Path]]:
                 seen.add(skin.name)
                 found.append((skin, meters.parent))
     return found
+
+
+#: ADR-0051 §1. The daemon writes it, the driver polls it beside
+#: `nowplaying.json`, and neither one restarts for a change. It is a
+#: projection of three settings, not a record: the database is the record,
+#: and a missing file means the driver keeps what it already has.
+SELECTION_PATH = Path("/run/gexis/visualisation.json")
+
+
+def names(root: Path, corpus: str, pack: str | None = PACK) -> list[str]:
+    """The skin names a `skin_corpus` word offers, in corpus order - what the
+    `skin` row's picker lists (ADR-0051 §4)."""
+    return [skin.name for skin in in_corpus((s for s, _ in installed(root, pack)), corpus)]
+
+
+def write_selection(
+    corpus: str, skin: str | None, rotate: bool, path: Path = SELECTION_PATH
+) -> bool:
+    """Publish the selection for the renderer. Written through a temporary
+    file and renamed, like the metadata file: the driver reads this on a
+    frame hook and must never see half of it.
+
+    A failure is logged and swallowed - the panel has stored the setting
+    either way, and a screen drawing the previous skin beats a daemon that
+    fell over publishing a preference.
+    """
+    import json
+
+    payload = json.dumps({"corpus": corpus, "skin": skin, "rotate": bool(rotate)})
+    tmp = path.with_name(path.name + ".tmp")
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        tmp.write_text(payload)
+        tmp.rename(path)
+        path.chmod(0o644)
+    except OSError as exc:
+        logger.warning("skins: could not write %s: %s", path, exc)
+        return False
+    return True
 
 
 def preview_of(skin: Skin, directory: Path) -> Path | None:

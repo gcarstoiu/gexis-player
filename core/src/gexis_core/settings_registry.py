@@ -72,7 +72,13 @@ def _timezones() -> tuple[str, ...]:
 #: What each source resolves to, called when the payload is built. A source
 #: with nothing behind it yet resolves to an empty list: the row is drawn,
 #: has nothing to offer, and says so - the same shape as a `list` with no
-#: items (ADR-0044 §4). `skin_corpus` gets its corpus in 9h.
+#: items (ADR-0044 §4).
+#:
+#: **`skin_corpus` has no default resolver on purpose.** The skins it offers
+#: depend on where the corpus is installed *and* on another row's current
+#: value, neither of which this module knows; the daemon injects it
+#: (`Settings(options=...)`, ADR-0051 §4) and a Settings built without one
+#: offers nothing, which is what a device with no skins has.
 OPTION_RESOLVERS = {"timezones": _timezones, "skin_corpus": tuple}
 
 logger = logging.getLogger("gexis_core.settings_registry")
@@ -184,7 +190,7 @@ def _visible(row: dict, rows: dict[str, dict], values: dict[str, Any], seen: set
     return held == wanted
 
 
-def validate(row: dict, value: Any) -> Any:
+def validate(row: dict, value: Any, *, options: Any = None) -> Any:
     kind = row["type"]
     if kind == "list":
         # ADR-0044 §1 draws the line inside the type: a Wi-Fi or Bluetooth
@@ -205,7 +211,8 @@ def validate(row: dict, value: Any) -> Any:
         # A derived choice is checked against what the source offers now,
         # not against the empty literal the registry carries (ADR-0044 §4).
         source = row.get("optionsFrom")
-        options = OPTION_RESOLVERS[source]() if source else row["options"]
+        if options is None:
+            options = OPTION_RESOLVERS[source]() if source else row["options"]
         if value not in options:
             raise InvalidValue(
                 f"expected one of {options}" if len(options) < 12 else "not an available option"
@@ -282,6 +289,7 @@ class Settings:
         defaults: dict[str, Callable[[], Any]] | None = None,
         wired: dict[str, Callable[[Any], None] | None] | None = None,
         on_change: Callable[[], None] | None = None,
+        options: dict[str, Callable[[], Any]] | None = None,
         seed_path: Path = SEED_PATH,
     ) -> None:
         self._store = store
@@ -289,6 +297,13 @@ class Settings:
         self._rows = {r["key"]: r for g in self._groups for r in g["rows"] if r["type"] != "group"}
         self._defaults = defaults or {}
         self._wired = wired or {}
+        # An injected resolver wins over the module's, because only the
+        # daemon knows where the corpus is and what the other row holds
+        # (ADR-0051 §4).
+        self._options = {**OPTION_RESOLVERS, **(options or {})}
+        unknown_sources = set(options or ()) - OPTION_SOURCES
+        if unknown_sources:
+            raise ValueError(f"not an option source: {sorted(unknown_sources)}")
         self._on_change = on_change
         self._seed = load_seed(self._rows, seed_path)
         unknown = (set(self._defaults) | set(self._wired)) - set(self._rows)
@@ -333,7 +348,7 @@ class Settings:
                 public = {k: v for k, v in row.items() if k != "default"}
                 source = row.get("optionsFrom")
                 if source is not None:
-                    public["options"] = list(OPTION_RESOLVERS[source]())
+                    public["options"] = list(self._options[source]())
                 public["value"] = self.value(row["key"])
                 public["wired"] = row["key"] in self._wired
                 public["visible"] = visible(row, self._rows, values)
@@ -351,7 +366,8 @@ class Settings:
             raise NotSettable(f"{key} is a list and takes no value")
         if key not in self._wired:
             raise NotWired(f"{key} is not wired yet")
-        value = validate(row, value)
+        source = row.get("optionsFrom")
+        value = validate(row, value, options=list(self._options[source]()) if source else None)
         if value == "" and row["type"] == "text":
             # Clearing a text value falls back to deployment config (ADR-0035 §4).
             self._store.delete(key)

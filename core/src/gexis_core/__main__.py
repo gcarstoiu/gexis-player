@@ -13,7 +13,7 @@ import aiohttp
 from dbus_next import BusType
 from dbus_next.aio import MessageBus
 
-from gexis_core import alsa, bluetooth_adapter_state, bluetooth_agent, device_name, wifi
+from gexis_core import alsa, bluetooth_adapter_state, bluetooth_agent, device_name, skins, wifi
 from gexis_core.adapters.base import VolumeMechanism
 from gexis_core.adapters.bluetooth import BluetoothAdapter
 from gexis_core.adapters.lms import LmsAdapter
@@ -405,6 +405,43 @@ async def main() -> None:
         idle_session, config.wallpaper_dir, local_dir=Path(config.pictures_dir)
     )
 
+    # ADR-0051. The three visualisation rows describe what the renderer
+    # draws, and the renderer is another process: it learns of a change by
+    # re-reading one small file, on the same poll that already carries the
+    # track. `settings` is assigned by this very statement and read only when
+    # one of these is called, which is after it exists.
+    skins_root = Path(config.peppy_skins_dir)
+
+    def skins_offered() -> list[str]:
+        return skins.names(skins_root, str(settings.value("skin_corpus") or "Random"))
+
+    def first_skin() -> str | None:
+        offered = skins_offered()
+        return offered[0] if offered else None
+
+    def publish_visualisation(_value: object = None) -> None:
+        skins.write_selection(
+            str(settings.value("skin_corpus") or "Random"),
+            settings.value("skin"),
+            settings.value("skin_rotate") is not False,
+        )
+
+    def apply_corpus(word: object) -> None:
+        """A narrower corpus takes the skin in use with it (ADR-0051 §4).
+
+        **A write, not a substitution.** If the stored skin is not in the new
+        corpus the first one that is gets stored, so the row, the picker and
+        the screen all say the same thing; `set` publishes on its way out.
+        """
+        offered = skins_offered()
+        if settings.value("skin") in offered:
+            publish_visualisation()
+            return
+        if offered:
+            settings.set("skin", offered[0])
+        else:
+            publish_visualisation()
+
     # ADR-0035. Defaults are what is true of this deployment today. A wired
     # row is read where it is used - the idle page probe here, the rest by
     # the UI - so none needs a callback.
@@ -419,7 +456,14 @@ async def main() -> None:
             "device_name": device_name.hostname,
             "timezone": read_timezone,
             "wifi": wifi.connected_ssid,
+            # Nothing stored means the first skin the corpus offers, so the
+            # picker opens on something rather than on nothing.
+            "skin": first_skin,
         },
+        # ADR-0051 §4: which skins there are depends on where they are
+        # installed and on what `skin_corpus` holds, neither of which the
+        # registry module can know.
+        options={"skin_corpus": skins_offered},
         # Wired = something reads it (ADR-0035). The token is read on every
         # Popular lookup, so it takes effect as soon as it is typed.
         # Wired = something reads it, or something happens. `lms_server` is
@@ -439,6 +483,10 @@ async def main() -> None:
                "weather_location": None, "idle_forecast": None,
                "idle_minmax": None, "idle_icons": None,
                "viz_timeout": None, "viz_stop": None,
+               # ADR-0051: read by the driver, through the file these write.
+               "skin": publish_visualisation,
+               "skin_rotate": publish_visualisation,
+               "skin_corpus": apply_corpus,
                "home_strip": None, "home_strip_count": None,
                "idle_clock": None,
                "device_name": apply_device_name,
@@ -449,6 +497,11 @@ async def main() -> None:
                "reboot": lambda _: asyncio.ensure_future(_reboot())},
         on_change=state_store.bump_settings_revision,
     )
+
+    # The driver starts with whatever this says, so it is written once here
+    # rather than only on a change: a device that has never touched the three
+    # rows still has to tell the renderer what they hold (ADR-0051 §1).
+    publish_visualisation()
 
     # ADR-0045: the adapter's own switches, applied from the stored setting
     # rather than left to a shell script that could not express them, and

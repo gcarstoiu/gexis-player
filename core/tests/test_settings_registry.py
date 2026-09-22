@@ -38,11 +38,9 @@ def test_the_shipped_registry_loads_and_every_number_is_bounded():
     assert all("min" in r and "max" in r for r in rows if r["type"] == "number")
 
 
-#: Thirteen design keys the registry does not have yet, **each owed to a
-#: named subphase**: nine to 9g (the idle screen's backgrounds and the
-#: weather stack) and four to 9h (the home strip, the skin picker and
-#: `viz_stop`). A key not owed to one of them is a key nobody planned for,
-#: which is what this assertion catches.
+#: Design keys the registry does not have yet, **each owed to a named
+#: subphase**. A key not owed to one is a key nobody planned for, which is
+#: what this assertion catches.
 #:
 #: `handoff_duration` and `reboot` were on this list until 2026-09-20 and
 #: were owed to nobody - George found both missing on the panel. Neither has
@@ -50,13 +48,10 @@ def test_the_shipped_registry_loads_and_every_number_is_bounded():
 #: the list against the plan is the step that was skipped**; it is written
 #: out here so the next omission is a test failure rather than a discovery.
 #:
-#: **This list only shrinks.**
-DESIGN_KEYS_NOT_YET_IN_THE_REGISTRY = {
-    # 9h's last: the skin picker, whose drawing George is redoing
-    # (2026-09-21) - a list, with a preview shown only on a tap. **This set
-    # only shrinks**, and this is the last thing in it.
-    "skin",
-}
+#: **It is empty now, and it can only shrink.** `skin` was the last entry:
+#: the picker arrived in the 2026-09-22 drop and the row with it
+#: (ADR-0051 §4).
+DESIGN_KEYS_NOT_YET_IN_THE_REGISTRY: set[str] = set()
 
 
 #: A design key the registry **deliberately** does not have, which is a
@@ -427,9 +422,11 @@ def test_the_shipped_registry_hides_twenty_rows_and_shows_the_rest():
     # gating nothing (ADR-0047 §2a), plus `wallpaper_topics`,
     # `background_interval` and `background_brightness`, all asked for by
     # George on 2026-09-21. Then 9h's three: `viz_stop`, `home_strip` and
-    # `home_strip_count`. Then `idle_clock`, asked for on 2026-09-22.
-    assert len(rows) == 71
-    assert len(rows) - len(kept) == 51
+    # `home_strip_count`. Then `idle_clock`, asked for on 2026-09-22, and
+    # `skin`, the picker's own row, which the same day's drop drew
+    # (ADR-0051 §4).
+    assert len(rows) == 72
+    assert len(rows) - len(kept) == 52
 
 
 def test_the_clock_can_be_turned_off_without_taking_the_screen_with_it():
@@ -610,3 +607,50 @@ def test_the_payload_carries_visibility_per_row(store):
     # Conditional: show_transition defaults on, so its dependant is drawn.
     assert by["show_transition"]["value"] is True
     assert by["handoff_threshold"]["visible"] is True
+
+
+# ── the derived options the picker lists (ADR-0051 §4) ───────────────────
+
+
+def _skin_settings(store, offered, **kwargs):
+    """The shipped registry, with the `skin` row's options coming from a
+    stand-in for the installed corpus - which is what the daemon injects."""
+    return Settings(store, options={"skin_corpus": lambda: list(offered)}, **kwargs)
+
+
+def test_the_skin_row_offers_what_the_corpus_resolver_gives_it(store):
+    settings = _skin_settings(store, ["01G5_Accuphase", "06G5_McIntosh"])
+    row = next(
+        r
+        for g in settings.to_json()
+        for r in g["rows"]
+        if r.get("key") == "skin"
+    )
+    assert row["options"] == ["01G5_Accuphase", "06G5_McIntosh"]
+    assert row["picker"] is True
+    # The picker is for choosing *one* skin, so it is offered only when the
+    # skin is not changing by itself.
+    assert row["onlyWhen"] == ["skin_rotate", False]
+    assert row["visible"] is False  # skin_rotate defaults to true
+
+
+def test_a_skin_is_checked_against_the_corpus_and_not_against_the_registry(store):
+    """The registry carries `"options": []` for this row - a literal check
+    would refuse every skin there is."""
+    settings = _skin_settings(store, ["01G5_Accuphase"], wired={"skin": None})
+    assert settings.set("skin", "01G5_Accuphase") == "01G5_Accuphase"
+    with pytest.raises(InvalidValue):
+        settings.set("skin", "99G5_Not installed")
+
+
+def test_a_settings_with_no_corpus_resolver_offers_no_skins(store):
+    """A device whose corpus cannot be read has an empty picker, not a
+    crash: the same shape as a `list` with no items (ADR-0044 §4)."""
+    settings = Settings(store)
+    row = next(r for g in settings.to_json() for r in g["rows"] if r.get("key") == "skin")
+    assert row["options"] == []
+
+
+def test_an_injected_resolver_has_to_name_a_source_that_exists(store):
+    with pytest.raises(ValueError):
+        Settings(store, options={"skin_korpus": list})
