@@ -582,7 +582,7 @@
 
       <div class="bar">
         <div class="bar__left">
-          <button class="btn" type="button" aria-label="Home" onclick={onhome}>
+          <button class="btn btn--home" type="button" aria-label="Home" onclick={onhome}>
             <span class="i-tiles"><i></i><i></i><i></i><i></i></span>
           </button>
           <button class="btn" type="button" aria-label="Visualization" onclick={onvisualisation}>
@@ -1447,6 +1447,13 @@
      to 0.4; the same here. Unwired scaffolding keeps its own look. */
   .btn:disabled:not([data-unwired]) {
     opacity: 0.4;
+  }
+  /* The one small control the design draws larger: 64px where the rest are
+     60 (`onBrowse`, in both drops). Ours took `--ctl` with its neighbours
+     and was 4px short - found re-reading the drawing on 2026-09-22. */
+  .btn--home {
+    width: 64px;
+    height: 64px;
   }
   .btn--lg {
     width: var(--ctl-lg);
