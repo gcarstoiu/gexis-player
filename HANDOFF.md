@@ -41,17 +41,41 @@ subphases, split on George's agreement (2026-09-22):
     its size. ADR-0052 has an Amendment section; §1 and §3 are marked where
     they are contradicted rather than rewritten.
   - **[ADR-0053](docs/decisions/0053-the-panel-is-a-remote-control.md) is
-    Proposed and waiting on George**, with
+    accepted and built** — *"Go"*, on
     [Finding 046](docs/findings/046-the-remote-control-path-measured.md)'s
-    numbers behind it. He asked for them before approving. Short version:
-    going through the renderer costs **+6 ms on Bluetooth, +10 on Spotify,
-    +22–33 on LMS**; **squeezelite will not carry a mixer change back to
-    LMS** (ten seconds, no change), so LMS's channel has to be the server's
-    RPC; and the risk is that this is a *second* two-way sync and the first
-    one ratcheted.
+    numbers. While a renderer holds the device the panel has no volume of
+    its own: a position goes to that renderer's own control and the number
+    shown is the renderer's own. LMS through the server's RPC (squeezelite
+    carries nothing back from its control, and puts LMS's 0-100 through its
+    own curve on the way in), Spotify through go-librespot's API, Bluetooth
+    through its own control. Costs **+6 ms on Bluetooth, +10 on Spotify,
+    +22–33 on LMS**.
+    - **The idempotence test came first and found the fault rather than
+      clearing it.** The direction the model uses is exact at every
+      position on every scale; the opposite direction cannot be, because
+      101 panel positions cannot name AVRCP's 128 values — 27 of them land
+      somewhere else. So the invariant is **a renderer's own value is never
+      sent back to it**, and `TestTheRemoteRoundTripDoesNotRatchet` pins the
+      27 so nobody later closes the loop.
+    - **Verified with the room silent**, using LMS's power-on acquisition
+      rather than playback: LMS 25/70/45 published as 25/70/45, panel
+      30/85/55 set LMS to 30/85/55, and with nothing active the panel still
+      writes the DAC.
+    - **The seam is measured and left to George** (Finding 046 §9): the
+      panel's fallback window is −45…0 and the renderers span −38.1…0, so
+      at release Bluetooth's 50% reads 58%. Moving the panel's window to
+      −38.1 makes Bluetooth's two numbers identical everywhere and shrinks
+      LMS's seam from 10 points to 1–6 — and changes what every percentage
+      on the device means, so it is a question, not a change.
 
   **Still unbuilt in 9i:** the eight Audio rows, and ADR-0046's fixed
   output.
+
+  **Needs George, and nothing else will do:** whether the AVRCP storm is
+  gone (his phone, and a drag); whether a phone's slider follows the
+  panel's, which is the one leg of ADR-0053 that is inference; Spotify's
+  number path with a real session; and how any of it sounds under
+  playback.
 - **9j — which output.** The device has four cards and the user has never
   been offered the choice. All three renderers already play to one PCM, so
   the switch is two lines of `/etc/alsa/conf.d/output.conf` and the meter
