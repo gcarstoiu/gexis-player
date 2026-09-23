@@ -103,10 +103,10 @@ def test_registry_keys_are_the_designs_keys_apart_from_recorded_deviations():
     # no row for which ones, for how often the picture changes, or for how
     # bright it is.
     assert ours - design_keys == {
-        "api_loopback", "backup", "boot_default_scope", "brightness",
+        "api_loopback", "backup", "brightness",
         "confidence", "factory_reset", "idle_close", "image_build",
         "lms_player", "log_level", "plugins", "power", "release_ladder",
-        "restore_floor", "seek_reanchor", "spotify_name", "theme",
+        "seek_reanchor", "spotify_name", "theme",
         "background_brightness", "background_interval", "idle_clock",
         "time_display", "updates", "volume_managed", "wallpaper_topics",
     }
@@ -439,7 +439,7 @@ def test_the_device_name_warning_says_what_this_device_does():
 def test_the_shipped_registry_hides_twenty_rows_and_shows_the_rest():
     rows = _rows()
     kept = [r for r in rows if r.get("surfaced") is False]
-    assert len(kept) == 20, "ADR-0022's amendment: inventoried, not surfaced"
+    assert len(kept) == 18, "ADR-0022's amendment: inventoried, not surfaced"
     # Every one of them is still served by the API.
     assert all(r.get("key") for r in kept)
     # 54 at the start of 9d, plus the two rows the design has and the plan
@@ -453,7 +453,11 @@ def test_the_shipped_registry_hides_twenty_rows_and_shows_the_rest():
     # (ADR-0051 §4). Less `idle_minmax`, which George removed the same day.
     # `restore_ceiling` was added and withdrawn the same day without ever
     # being surfaced (ADR-0052's amendment), so it leaves no trace here.
-    assert len(rows) == 71
+    # Less `restore_floor` and `boot_default_scope`, which George ruled out
+    # of scope on 2026-09-23 ("The other 2 you flagged - not needed"):
+    # both were [?] rows, decisions owed rather than behaviour missing, and
+    # the behaviour behind them stays hardcoded.
+    assert len(rows) == 69
     assert len(rows) - len(kept) == 51
 
 

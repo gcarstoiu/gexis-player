@@ -209,6 +209,14 @@ def set_ceiling_reader(reader) -> None:
 def ceiling_db() -> float:
     """How far below the DAC's own maximum the top of every scale sits.
 
+    **The row is a percentage, not decibels** (George, 2026-09-23: *"While
+    expressing everything in dB makes sense, everything must be in
+    percentage. For example the maximum ceiling - if we say 80% then the
+    max output can only be 80% of the max volume."*). So 80 means "as loud
+    as the slider at 80 makes it", and the answer comes from the same curve
+    everything else uses - which also means the ceiling follows the curve
+    when the curve changes, since 80% of the travel is what it says.
+
     `0.0` - no ceiling - is the default and what an unset, unreadable or
     nonsensical row gives, because a ceiling that fails open is a quiet
     device and a ceiling that fails closed is a silent one.
@@ -220,9 +228,18 @@ def ceiling_db() -> float:
     if value is None:
         return 0.0
     try:
-        return min(0.0, float(value))
+        percent = float(value)
     except (TypeError, ValueError):
         return 0.0
+    if percent < 0:
+        # A value left behind from when this row was in dB. Treated as
+        # unset rather than as 0%, which would be silence - a migration
+        # must not be able to mute the device.
+        logger.warning("volume: max_ceiling is %r, which is not a percentage; ignoring", value)
+        return 0.0
+    if percent >= 100:
+        return 0.0
+    return _curve_db(percent / 100.0)
 
 
 def dummy_raw_to_db(raw: int) -> float:
@@ -357,6 +374,22 @@ def curve() -> str:
     return CURVE_LINEAR if value == CURVE_LINEAR else CURVE_CUBIC
 
 
+def _curve_db(fraction: float) -> float:
+    """How far below the top a position sits, **before any ceiling**.
+
+    Split out so `ceiling_db` can ask the same question of the same curve:
+    a ceiling expressed as a percentage is exactly "the level this position
+    produces", and computing it any other way would let the two drift.
+    """
+    if fraction <= 0.0:
+        return -math.inf
+    fraction = min(1.0, fraction)
+    if curve() == CURVE_LINEAR:
+        return -(1.0 - fraction) * RENDERER_DB_SPAN
+    floor = _taper_floor()
+    return 20.0 * math.log10((fraction * (1.0 - floor) + floor) ** 3)
+
+
 def renderer_value_to_hardware_raw(value: int, steps: int) -> int:
     """A renderer's own value, on its own scale, as a DAC level.
 
@@ -374,12 +407,7 @@ def renderer_value_to_hardware_raw(value: int, steps: int) -> int:
     """
     if steps <= 0 or value <= 0:
         return 0
-    fraction = min(1.0, value / steps)
-    if curve() == CURVE_LINEAR:
-        return db_to_raw(ceiling_db() - (1.0 - fraction) * RENDERER_DB_SPAN)
-    floor = _taper_floor()
-    ratio = (fraction * (1.0 - floor) + floor) ** 3
-    return db_to_raw(ceiling_db() + 20.0 * math.log10(ratio))
+    return db_to_raw(ceiling_db() + _curve_db(value / steps))
 
 
 def hardware_raw_to_renderer_value(raw: int, steps: int) -> int:

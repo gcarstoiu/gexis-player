@@ -142,6 +142,15 @@ there the whole point is that there is one number and it is true.
    100 all mean −10 dB. No control anywhere displays a number louder than
    what comes out, and no first move can uncover held-back level.
 
+   > **The row is a percentage from 2026-09-23**, not decibels — George:
+   > *"everything must be in percentage. For example the maximum ceiling —
+   > if we say 80% then the max output can only be 80% of the max volume."*
+   > So the ceiling is a *position*, and its level is whatever the curve
+   > makes of that position, which also means it follows the curve when the
+   > curve changes. A negative value left over from the decibel row is
+   > treated as unset rather than as 0%, because a migration must not be
+   > able to mute the device.
+
 3. **It is applied as a shift, not a compression.** Every position-to-dB map
    in `volume.py` — `slider_percent_to_raw`, `dummy_raw_to_db`,
    `spotify_fraction_to_hardware_raw`, and their inverses — adds

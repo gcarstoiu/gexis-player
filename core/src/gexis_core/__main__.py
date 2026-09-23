@@ -689,7 +689,6 @@ async def main() -> None:
         settings_store,
         defaults={
             "boot_volume": lambda: raw_to_db(config.boot_volume_steps),
-            "restore_floor": lambda: config.restore_volume_floor_db,
             "lms_server": lambda: f"{config.lms_host}:{config.lms_port}",
             "lms_player": lambda: config.lms_player_name,
             "idle_url": lambda: config.idle_url or None,

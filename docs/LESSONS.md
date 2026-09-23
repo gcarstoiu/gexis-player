@@ -396,6 +396,18 @@ repository and there is a correct parser in `volume.py`.** The probe
 scripts should use it; where a shell one-liner is unavoidable, anchor it to
 `Front Left:` rather than to the word `Playback`.
 
+**19. The tests never ran the daemon's own wiring** (2026-09-23). A
+settings row was removed from the registry and its entry in `__main__`'s
+`defaults` dictionary was left behind. `Settings.__init__` **already checks
+exactly this** and raises `not in the registry: [...]` - but nothing in the
+suite constructs it with the daemon's real dictionaries, so the check only
+ever ran on the device. 894 tests passed and `gexis-core` would not start.
+
+**A validation that only runs in production is a deployment step, not a
+test.** `test_registry_wiring.py` now reads the two dictionaries out of the
+source with `ast` and checks them against the registry, and it asserts it
+found the call at all - otherwise it would pass by finding nothing.
+
 ## Common shape
 
 Every case had a *plausible* substitute for the real target — the build

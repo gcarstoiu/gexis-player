@@ -34,38 +34,13 @@
       {
         "key": "max_ceiling",
         "type": "number",
-        "label": "Maximum ceiling",
+        "label": "Maximum volume",
         "marks": "R",
-        "note": "The loudest the device will go, on any input. It is the top of every scale, not a limit above it — 100% on the panel, in LMS and on a connected phone all mean this level, so no control shows a number louder than what comes out.",
-        "min": -60,
-        "max": 0,
-        "unit": "dB",
+        "note": "The loudest the device will go, on any input. Set it to 80 and the device is never louder than the slider at 80 — and 100% on the panel, in LMS and on a connected phone all mean that level, so no control shows a number louder than what comes out.",
+        "min": 10,
+        "max": 100,
+        "unit": "%",
         "default": null
-      },
-      {
-        "key": "restore_floor",
-        "type": "number",
-        "label": "Restore floor",
-        "marks": "RH?",
-        "note": "Placeholder, never confirmed. Measured too quiet for Bluetooth’s unmanaged floor.",
-        "min": -60,
-        "max": -10,
-        "unit": "dB",
-        "default": -40,
-        "surfaced": false
-      },
-      {
-        "key": "boot_default_scope",
-        "type": "choice",
-        "label": "Boot default applies",
-        "marks": "R?",
-        "note": "A renderer’s first use mid-session currently starts as quiet as a power-on.",
-        "options": [
-          "Cold boot only",
-          "Every renderer start"
-        ],
-        "default": "Cold boot only",
-        "surfaced": false
       },
       {
         "key": "per_renderer_volume",

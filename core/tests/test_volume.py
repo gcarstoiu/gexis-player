@@ -636,8 +636,10 @@ class TestTheCeilingIsTheTopOfEveryScale:
         volume_module.set_ceiling_reader(lambda: None)
 
     @staticmethod
-    def _at(db):
-        volume_module.set_ceiling_reader(lambda: db)
+    def _at(percent):
+        """**A percentage since 2026-09-23**, not decibels. George: *"if we
+        say 80% then the max output can only be 80% of the max volume."*"""
+        volume_module.set_ceiling_reader(lambda: percent)
 
     def test_unset_is_the_dac_s_own_maximum(self):
         assert volume_module.ceiling_db() == 0.0
@@ -646,20 +648,25 @@ class TestTheCeilingIsTheTopOfEveryScale:
         assert spotify_fraction_to_hardware_raw(1.0) == db_to_raw(0.0)
 
     def test_every_scale_tops_out_at_the_ceiling(self):
-        """One level, three controls, and none of them can ask for more."""
-        self._at(-10.0)
+        """One level, three controls, and none of them can ask for more.
 
-        assert slider_percent_to_raw(100) == db_to_raw(-10.0)
-        assert dummy_raw_to_hardware_raw(DUMMY_MAX_RAW) == db_to_raw(-10.0)
-        assert spotify_fraction_to_hardware_raw(1.0) == db_to_raw(-10.0)
+        The ceiling is a *position*, so its level is whatever the curve
+        makes of it - 80% of travel, here."""
+        loudest = renderer_value_to_hardware_raw(80, 100)
+        self._at(80)
+
+        assert slider_percent_to_raw(100) == loudest
+        assert spotify_fraction_to_hardware_raw(1.0) == loudest
+        assert renderer_value_to_hardware_raw(127, 127) == loudest
 
     def test_the_panel_never_reads_louder_than_what_comes_out(self):
         """The inverse has to move with the map, or the number lies in the
         other direction - which is the whole complaint."""
-        self._at(-10.0)
+        self._at(80)
+        loudest = slider_percent_to_raw(100)
 
-        assert raw_to_slider_percent(db_to_raw(-10.0)) == 100
-        assert hardware_raw_to_spotify_fraction(db_to_raw(-10.0)) == 1.0
+        assert raw_to_slider_percent(loudest) == 100
+        assert hardware_raw_to_spotify_fraction(loudest) == 1.0
         # Within a point, which is the DAC's own resolution and not the
         # ceiling's doing: 100 slider positions of 0.45 dB onto 0.5 dB raw
         # steps never round-trips exactly, with or without a ceiling.
@@ -685,18 +692,33 @@ class TestTheCeilingIsTheTopOfEveryScale:
     def test_the_whole_window_moves_down_together(self):
         """Not just the top: the same sound is the same position on the
         slider only if the floor moves too."""
-        self._at(-12.0)
+        loose_50 = raw_to_db(renderer_value_to_hardware_raw(50, 100))
+        loose_1 = raw_to_db(renderer_value_to_hardware_raw(1, 100))
+        self._at(50)
+        shift = raw_to_db(slider_percent_to_raw(100))
 
-        assert raw_to_db(slider_percent_to_raw(100)) == pytest.approx(-12.0, abs=0.5)
-        assert raw_to_db(slider_percent_to_raw(50)) == pytest.approx(-27.5, abs=0.5)
+        assert shift == pytest.approx(-15.5, abs=0.5)  # what 50% makes
+        assert raw_to_db(slider_percent_to_raw(50)) == pytest.approx(
+            loose_50 + shift, abs=0.5
+        )
         assert raw_to_db(renderer_value_to_hardware_raw(1, 100)) == pytest.approx(
-            -70.0, abs=0.5
+            loose_1 + shift, abs=0.5
         )
 
-    def test_a_ceiling_above_zero_is_not_one(self):
+    def test_a_ceiling_of_a_hundred_or_more_is_not_one(self):
         """A row can hold anything. Nothing may make the device louder than
         the DAC's own maximum."""
-        self._at(6.0)
+        self._at(100)
+        assert volume_module.ceiling_db() == 0.0
+        self._at(140)
+        assert volume_module.ceiling_db() == 0.0
+
+    def test_a_value_left_over_from_when_this_row_was_decibels_is_ignored(self):
+        """**A migration must not be able to mute the device.** The row was
+        -60..0 dB until 2026-09-23; read as a percentage, a stored -10
+        would clamp to 0% - silence - so a negative value is treated as
+        unset instead."""
+        self._at(-10)
         assert volume_module.ceiling_db() == 0.0
 
     def test_an_unreadable_row_fails_open(self):
@@ -810,8 +832,12 @@ class TestTheOneCurve:
     def test_maximum_is_the_ceiling(self):
         assert renderer_value_to_hardware_raw(100, 100) == 240  # 0 dB
         assert renderer_value_to_hardware_raw(127, 127) == 240
-        volume_module.set_ceiling_reader(lambda: -10.0)
-        assert raw_to_db(renderer_value_to_hardware_raw(100, 100)) == -10.0
+        loudest = renderer_value_to_hardware_raw(80, 100)
+        volume_module.set_ceiling_reader(lambda: 80)
+        try:
+            assert renderer_value_to_hardware_raw(100, 100) == loudest
+        finally:
+            volume_module.set_ceiling_reader(lambda: None)
 
     def test_the_span_is_sixty_decibels(self):
         """librespot's `softvol` default, and what George found works on the
