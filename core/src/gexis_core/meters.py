@@ -16,6 +16,7 @@ from __future__ import annotations
 import configparser
 import errno
 import logging
+import math
 import os
 import stat
 import struct
@@ -154,6 +155,52 @@ class FifoSource:
             if fd is not None:
                 os.close(fd)
         self._meter_fd = self._spectrum_fd = None
+
+
+#: **100 meter units of spectrum are this many dB.** peppyalsa's spectrum is
+#: logarithmic (`logarithmic_amplitude 1`): it sends
+#: `100 * log10(magnitude) / 4.82`, and a magnitude of 65535 is 96.3 dB above
+#: one. So a unit is 0.963 dB, and attenuating the *spectrum* is a subtraction
+#: where attenuating the linear VU level is a multiplication. Reading the two
+#: as the same kind of number would put the bars in the wrong place at every
+#: volume but full.
+SPECTRUM_DB_FULL_SCALE = 20 * math.log10(65535)
+
+
+def read_attenuation(path: Path) -> float:
+    """The dB the device is cutting right now, from the file `volume.py`
+    leaves it in. 0 when there is none, or when it cannot be read: a meter
+    that shows the source is what this did before ADR-0057."""
+    try:
+        value = float(path.read_text().strip())
+    except (OSError, ValueError):
+        return 0.0
+    return value if value > 0 else 0.0
+
+
+def attenuate(levels: Levels, db: float) -> Levels:
+    """`levels` as they would be after the device's own volume control.
+
+    **The meter tap is upstream of it.** `pcm.output` is a `type meter` over
+    the card, and the DAC attenuates in hardware afterwards, so the needles
+    and the bars show the recording rather than what is coming out of the
+    speakers ([ADR-0057](../../../docs/decisions/0057-the-meters-follow-the-volume.md)).
+    George, 2026-09-23: *"Shouldn't the vu meters and spectrum amplitude be
+    based on volume?"*
+
+    **Nothing to do at 0 dB**, which is also what fixed output looks like -
+    there the device is not attenuating, so the meters show the source and
+    no special case is needed to arrange it.
+    """
+    if db <= 0:
+        return levels
+    gain = 10 ** (-db / 20)
+    shift = db * 100 / SPECTRUM_DB_FULL_SCALE
+    return Levels(
+        max(0, round(levels.left * gain)),
+        max(0, round(levels.right * gain)),
+        tuple(max(0, round(b - shift)) for b in levels.bands),
+    )
 
 
 def read_declared_size(path: str) -> int | None:

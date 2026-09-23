@@ -119,6 +119,7 @@ import math
 import re
 import time
 from collections.abc import Callable
+from pathlib import Path
 
 from gexis_core import alsa
 
@@ -133,6 +134,14 @@ MIXER_DEVICE = "output"
 HARDWARE_MAX = 240  # ADR-0018: 240 steps, 0=mute, 240=0dB
 DB_MIN = -120.0  # raw 0
 DB_STEP = 0.5  # dB per raw step (ADR-0018, confirmed against amixer's own dBscale readout)
+
+#: **Where the current attenuation is left for the meter service to read**
+#: ([ADR-0057](../../../docs/decisions/0057-the-meters-follow-the-volume.md)).
+#: The meter tap is `pcm.output`, which sits *before* the DAC attenuates, so
+#: nothing the volume does reaches the needles unless this number does. One
+#: line, the dB the device is currently cutting, 0 for none - a separate
+#: process reads it and the daemon is the only writer.
+ATTENUATION_PATH = Path("/run/gexis/attenuation")
 # The real DAC's control ("Front Left: Playback 216 [90%]...") and a
 # snd-dummy control's ("Front Left: 30 [53%]... Capture [off]") format
 # this differently - amixer only prints "Playback" when a control has
@@ -479,6 +488,24 @@ def raw_to_db(raw: int) -> float:
 def db_to_raw(db: float) -> int:
     raw = round((db - DB_MIN) / DB_STEP)
     return max(0, min(HARDWARE_MAX, raw))
+
+
+def publish_attenuation(raw: int, path: Path = ATTENUATION_PATH) -> None:
+    """Leave the dB this device is currently cutting where the meter service
+    can find it.
+
+    **A positive number of dB, 0 for none.** In fixed output the DAC is at
+    full scale, so this is 0 and the meters show the source level - which is
+    what ADR-0057 wants there, with no special case to get wrong.
+
+    Best effort: a meter that cannot read this falls back to showing the
+    source, which is what it did before it existed.
+    """
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(f"{-raw_to_db(raw):.2f}\n")
+    except OSError as exc:
+        logger.debug("volume: cannot publish the attenuation: %s", exc)
 
 
 # ADR-0034: the panel slider spans -45..0dB, linear in dB, with the bottom
@@ -976,6 +1003,10 @@ class VolumeBridge:
             return
 
     def _report_hardware_level(self, raw: int) -> None:
+        # The one funnel for "the DAC is now here" - our own writes and the
+        # changes the monitor sees - so it is where the meters are told too
+        # (ADR-0057).
+        publish_attenuation(raw)
         if self._on_hardware_level is not None:
             self._on_hardware_level(raw)
 

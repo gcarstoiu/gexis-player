@@ -87,6 +87,11 @@ class Config:
     # different band from one refresh to the next (Finding 051). The
     # passthrough follows what the consumer declares rather than guessing.
     spectrum_consumer_config: str = "/opt/gexis-peppy/spectrum/config.txt"
+    # **Where the daemon leaves the dB it is currently cutting** (ADR-0057).
+    # `volume.ATTENUATION_PATH` is the writer's copy of this and the two
+    # are pinned together by a test - a meter reading a path nobody writes
+    # would show the source level and say nothing about it.
+    attenuation_path: str = "/run/gexis/attenuation"
     meter_frame_rate: int = 30  # the skins' own ui.refresh.period, ADR-0015
     meter_port: int = 8091
     # Empty by default: pushing to a PeppyMeter web server elsewhere is for a

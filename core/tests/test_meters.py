@@ -184,3 +184,84 @@ class TestTheSpectrumFrameMatchesTheReader:
         conf.write_text("[current]\nspectrum = Free\nsize = 22\nframe.rate = 30\n")
         assert read_declared_size(str(conf)) == 22
         assert read_declared_size(str(tmp_path / "nope.txt")) is None
+
+
+class TestTheMetersFollowTheVolume:
+    """**The meter tap is upstream of the DAC's attenuator** (ADR-0057).
+
+    `pcm.output` is a `type meter` over the card and the hardware volume is
+    applied afterwards, so nothing the volume control does reaches the
+    needles or the bars unless it is applied here. George, 2026-09-23:
+    *"Shouldn't the vu meters and spectrum amplitude be based on volume?
+    And only on fixed volume be like it is now?"*
+    """
+
+    def test_no_attenuation_changes_nothing(self):
+        from gexis_core.meters import Levels, attenuate
+
+        levels = Levels(80, 70, (50,) * 30)
+        assert attenuate(levels, 0) is levels
+        assert attenuate(levels, -3) is levels
+
+    def test_the_vu_level_is_linear_so_it_is_scaled(self):
+        from gexis_core.meters import Levels, attenuate
+
+        # -6 dB is half the amplitude, -20 dB is a tenth
+        assert attenuate(Levels(100, 50, ()), 6.02).left == 50
+        assert attenuate(Levels(100, 50, ()), 20).left == 10
+        assert attenuate(Levels(100, 50, ()), 20).right == 5
+
+    def test_the_spectrum_is_logarithmic_so_it_is_shifted(self):
+        from gexis_core.meters import SPECTRUM_DB_FULL_SCALE, Levels, attenuate
+
+        # one unit is 96.3/100 dB, so 20 dB is about 21 units off every bar
+        out = attenuate(Levels(0, 0, (90, 60, 30)), 20).bands
+        shift = round(20 * 100 / SPECTRUM_DB_FULL_SCALE)
+        assert out == (90 - shift, 60 - shift, 30 - shift)
+
+    def test_nothing_goes_below_silence(self):
+        from gexis_core.meters import Levels, attenuate
+
+        out = attenuate(Levels(5, 5, (10, 2)), 60)
+        assert out.left == 0 and out.right == 0
+        assert out.bands == (0, 0)
+
+    def test_fixed_output_needs_no_special_case(self):
+        """In fixed output the DAC sits at full scale, so the attenuation
+        the daemon publishes is 0 and the meters show the source - which is
+        what George asked for there, without a branch to get wrong."""
+        from gexis_core.meters import Levels, attenuate
+
+        levels = Levels(80, 70, (50,) * 22)
+        assert attenuate(levels, 0.0) is levels
+
+    def test_the_writer_and_the_reader_name_the_same_file(self):
+        """A meter reading a path nobody writes would show the source level
+        and say nothing about it (LESSONS case 20)."""
+        from gexis_core.config import Config
+        from gexis_core.volume import ATTENUATION_PATH
+
+        assert Config().attenuation_path == str(ATTENUATION_PATH)
+
+    def test_an_unreadable_file_means_no_attenuation(self, tmp_path):
+        from gexis_core.meters import read_attenuation
+
+        assert read_attenuation(tmp_path / "nope") == 0.0
+        bad = tmp_path / "bad"
+        bad.write_text("not a number")
+        assert read_attenuation(bad) == 0.0
+        good = tmp_path / "good"
+        good.write_text("18.50\n")
+        assert read_attenuation(good) == 18.5
+
+    def test_the_daemon_publishes_the_dB_it_is_cutting(self, tmp_path):
+        from gexis_core.meters import read_attenuation
+        from gexis_core.volume import publish_attenuation
+
+        path = tmp_path / "attenuation"
+        publish_attenuation(240, path)          # full scale
+        assert read_attenuation(path) == 0.0
+        publish_attenuation(200, path)          # 40 steps of 0.5 dB
+        assert read_attenuation(path) == 20.0
+        publish_attenuation(0, path)            # silence
+        assert read_attenuation(path) == 120.0
