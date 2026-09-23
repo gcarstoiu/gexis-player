@@ -290,3 +290,17 @@ def test_fixed_output_clears_the_level_and_keeps_it_clear():
 
     store.set_volume_raw(200)  # a mirror or the monitor, still running
     assert store.state.volume is None
+
+
+def test_meters_say_whether_the_visualiser_can_have_levels():
+    """**ADR-0055 §6**, George 2026-09-23: *"hide the button in now playing
+    if the capability is not there anymore for this output."*
+
+    Published for the same reason `fixed_output` is: the panel cannot tell
+    "no levels yet" from "no levels ever"."""
+    store = StateStore(_caps("lms"))
+    assert store.state.to_json()["meters"] is True
+
+    store.set_meters(False)
+
+    assert store.state.to_json()["meters"] is False

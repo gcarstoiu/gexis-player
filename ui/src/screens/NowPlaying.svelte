@@ -13,7 +13,7 @@
   import { artistsCached, foldedName, loadArtistGenres } from '../lib/library.js';
   import QueueRail from './QueueRail.svelte';
 
-  import { sendTransport, fixedOutput } from '../lib/state.js';
+  import { sendTransport, fixedOutput, meters } from '../lib/state.js';
   import { playhead, mmss } from '../lib/playhead.svelte.js';
   import { playToggle } from '../lib/playToggle.svelte.js';
 
@@ -586,11 +586,17 @@
           <button class="btn btn--home" type="button" aria-label="Home" onclick={onhome}>
             <span class="i-tiles"><i></i><i></i><i></i><i></i></span>
           </button>
-          <button class="btn" type="button" aria-label="Visualization" onclick={onvisualisation}>
-            <span class="i-meter">
-              <i style="height:12px"></i><i style="height:22px"></i><i style="height:16px"></i><i style="height:8px"></i>
-            </span>
-          </button>
+          {#if $meters}
+            <!-- ADR-0055 §6: gone, not disabled, on an output that cannot
+                 feed it - the same rule ADR-0046 sets for the volume
+                 slider. A button that opens a dead screen is worse than no
+                 button. -->
+            <button class="btn" type="button" aria-label="Visualization" onclick={onvisualisation}>
+              <span class="i-meter">
+                <i style="height:12px"></i><i style="height:22px"></i><i style="height:16px"></i><i style="height:8px"></i>
+              </span>
+            </button>
+          {/if}
         </div>
 
         <div class="bar__mid">

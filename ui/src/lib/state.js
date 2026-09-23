@@ -71,6 +71,9 @@ export const volume = derived(playback, ($s) => $s?.volume ?? null);
 // its level yet looks exactly like fixed output from here, which is why
 // `!volume` was the wrong test and drew a disabled slider for both.
 export const fixedOutput = derived(playback, ($s) => $s?.fixed_output === true);
+// ADR-0055 §6: whether this output's chain can feed the visualiser at all.
+// Absent (an older core) means yes, which is what every output but HDMI is.
+export const meters = derived(playback, ($s) => $s?.meters !== false);
 export const handoff = derived(playback, ($s) => $s?.handoff ?? null);
 export const handoffExemptPairs = derived(playback, ($s) => $s?.handoff_exempt_pairs ?? []);
 /** What each renderer has (ADR-0037 §2's static layer), by renderer id. */

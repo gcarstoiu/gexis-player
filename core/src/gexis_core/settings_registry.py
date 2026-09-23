@@ -289,6 +289,21 @@ def load_seed(settings_rows: dict[str, dict], path: Path = SEED_PATH) -> dict[st
     return checked
 
 
+#: **ADR-0044 §8, added 2026-09-23.** A row whose value is not the user's
+#: to choose *right now*, because the hardware has taken the choice away.
+#: It is drawn, it shows the value in force, and it will not accept a
+#: write. George: *"you need to move the output to fixed and not allow a
+#: change."*
+#:
+#: **Distinct from `surfaced: false`** (inventoried but not shown) and from
+#: `onlyWhen` (shown only when another row makes it relevant). This one is
+#: shown, relevant, and locked - and says why, because a control that
+#: refuses without explaining is the thing ADR-0046 spent a record
+#: avoiding.
+class Locked(Exception):
+    pass
+
+
 class Settings:
     """`defaults` maps a key to a callable giving its value from deployment
     config or the running system. Precedence, highest first (ADR-0035 §4): a
@@ -315,6 +330,10 @@ class Settings:
         # daemon knows where the corpus is and what the other row holds
         # (ADR-0051 §4).
         self._options = {**OPTION_RESOLVERS, **(options or {})}
+        #: key -> (value in force, why), for rows the hardware has taken
+        #: over. Injected by the daemon, because only it knows what the
+        #: sound card can do.
+        self._locks: dict[str, tuple[Any, str]] = {}
         unknown_sources = set(options or ()) - OPTION_SOURCES
         if unknown_sources:
             raise ValueError(f"not an option source: {sorted(unknown_sources)}")
@@ -330,8 +349,24 @@ class Settings:
         except KeyError:
             raise UnknownSetting(key) from None
 
+    def lock(self, key: str, value: Any, why: str) -> None:
+        """Take a row over, or hand it back with `unlock`."""
+        self.row(key)
+        self._locks[key] = (value, why)
+
+    def unlock(self, key: str) -> None:
+        """**The user's own choice comes back**, because a lock never
+        overwrote it: `value()` reads the lock first and the store
+        underneath is untouched. George: *"When changing back to dac set
+        the previously selected option. If there is no previous selection
+        default to variable."* - which is the row's own default."""
+        self._locks.pop(key, None)
+
     def value(self, key: str) -> Any:
         row = self.row(key)
+        locked = self._locks.get(key)
+        if locked is not None:
+            return locked[0]
         stored = self._store.get(key, _MISSING)
         if stored is not _MISSING:
             return stored
@@ -365,6 +400,9 @@ class Settings:
                     public["options"] = list(self._options.get(source, tuple)())
                 public["value"] = self.value(row["key"])
                 public["wired"] = row["key"] in self._wired
+                locked = self._locks.get(row["key"])
+                if locked is not None:
+                    public["locked"] = locked[1]
                 public["visible"] = visible(row, self._rows, values)
                 rows.append(public)
             groups.append({**group, "rows": rows})
@@ -380,6 +418,9 @@ class Settings:
             raise NotSettable(f"{key} is a list and takes no value")
         if key not in self._wired:
             raise NotWired(f"{key} is not wired yet")
+        locked = self._locks.get(key)
+        if locked is not None:
+            raise Locked(locked[1])
         source = row.get("optionsFrom")
         value = validate(row, value, options=list(self._options[source]()) if source else None)
         if value == "" and row["type"] == "text":

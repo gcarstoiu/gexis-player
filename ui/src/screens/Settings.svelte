@@ -171,7 +171,7 @@
     saving = true;
     try {
       const result = await writeSetting(row.key, value);
-      if (result.status === 409) flash(`${row.label} — not wired yet`);
+      if (result.status === 409) flash(result.error || `${row.label} — not wired yet`);
       else if (!result.ok) flash(`${row.label}: ${result.error ?? `HTTP ${result.status}`}`);
       return result.ok;
     } finally {
@@ -476,6 +476,11 @@
       if (await write(row, option)) flash(`${row.label}: ${option}`);
       return;
     }
+    if (row.locked) {
+      sheetKey = null;
+      flash(row.locked);
+      return;
+    }
     if (!row.wired) {
       sheetKey = null;
       flash(`${row.label} — not wired yet`);
@@ -602,7 +607,7 @@
                 <button
                   class="row"
                   class:row--danger={r.danger}
-                  class:row--readonly={r.type === 'readonly'}
+                  class:row--readonly={r.type === 'readonly' || r.locked}
                   type="button"
                   disabled={r.type === 'readonly'}
                   data-unwired={r.wired ? undefined : 'settings'}
@@ -614,14 +619,22 @@
                         <span class="row__name">{r.label}</span>
                         {#if pending(r)}<span class="dot dot--sm"></span>{/if}
                       </span>
-                      {#if r.note}<span class="row__note">{r.note}</span>{/if}
+                      {#if r.locked}
+                        <!-- ADR-0055 §5: the hardware has taken the choice
+                             away, so the row shows the value in force and
+                             says why instead of offering one that cannot
+                             be honoured. -->
+                        <span class="row__note">{r.locked}</span>
+                      {:else if r.note}
+                        <span class="row__note">{r.note}</span>
+                      {/if}
                     </span>
                     {#if r.type !== 'toggle' && shown(r)}
                       <span class="row__value" class:is-pending={pending(r)}>{shown(r)}</span>
                     {/if}
                     {#if r.type === 'toggle'}
                       <span class="toggle" class:is-on={!!r.value}><span></span></span>
-                    {:else if r.type !== 'readonly'}
+                    {:else if r.type !== 'readonly' && !r.locked}
                       <span class="chev"></span>
                     {/if}
                   </span>

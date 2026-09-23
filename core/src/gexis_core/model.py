@@ -217,6 +217,15 @@ class PlaybackState:
     #: cases, which the design named as the one outcome to avoid -
     #: "indistinguishable from a bug".
     fixed_output: bool = False
+    #: **ADR-0055 §6: whether the visualiser can have levels at all.**
+    #:
+    #: False on an output whose chain carries no meter - both HDMI, where
+    #: ALSA's `type meter` and the peppyalsa scope come apart over a
+    #: conversion layer. Published for the same reason `fixed_output` is:
+    #: the panel cannot tell "no levels yet" from "no levels ever", and a
+    #: visualisation button that opens a dead screen is the shape ADR-0046
+    #: spent a record arguing against.
+    meters: bool = True
     #: A Bluetooth pairing request waiting for an answer, or None
     #: (ADR-0045). Published here rather than on a channel of its own
     #: because the panel already subscribes to this and a request has to
@@ -258,6 +267,7 @@ class PlaybackState:
             "handoff": self.handoff.to_json() if self.handoff else None,
             "volume": self.volume.to_json() if self.volume else None,
             "fixed_output": self.fixed_output,
+            "meters": self.meters,
             "handoff_exempt_pairs": [list(pair) for pair in self.handoff_exempt_pairs],
             "settings_revision": self.settings_revision,
             "controls": self.controls,

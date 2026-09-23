@@ -52,7 +52,13 @@ from gexis_core.enrichment import Enrichment, TrackKey, fold
 from gexis_core.library import LibraryUnavailable, NoPlayer, NotFound
 from gexis_core.radio import RadioUnavailable, UnknownHandle
 from gexis_core.model import PlaybackState
-from gexis_core.settings_registry import InvalidValue, NotSettable, NotWired, UnknownSetting
+from gexis_core.settings_registry import (
+    InvalidValue,
+    Locked,
+    NotSettable,
+    NotWired,
+    UnknownSetting,
+)
 from gexis_core.state import StateStore
 
 #: The most artists one request may ask photos for. A screen of
@@ -973,6 +979,10 @@ class StateServer:
         except NotSettable as exc:
             return web.json_response({"error": str(exc)}, status=405)
         except NotWired as exc:
+            return web.json_response({"error": str(exc)}, status=409)
+        except Locked as exc:
+            # 409 as well: the row exists and is settable in general, but
+            # not while the hardware has taken the choice away (ADR-0055).
             return web.json_response({"error": str(exc)}, status=409)
         except InvalidValue as exc:
             return web.json_response({"error": str(exc)}, status=400)

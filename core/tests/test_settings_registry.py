@@ -11,6 +11,7 @@ from aiohttp.test_utils import TestClient, TestServer
 
 from gexis_core.settings import SettingsStore
 from gexis_core.settings_registry import (
+    Locked,
     ONLY_WHEN_ANY,
     SETTABLE,
     InvalidValue,
@@ -705,3 +706,49 @@ def test_a_settings_with_no_corpus_resolver_offers_no_skins(store):
 def test_an_injected_resolver_has_to_name_a_source_that_exists(store):
     with pytest.raises(ValueError):
         Settings(store, options={"skin_korpus": list})
+
+
+def test_a_locked_row_shows_the_value_in_force_and_refuses_a_write(store):
+    """**ADR-0055 §5**, George 2026-09-23: *"in settings, you need to move
+    the output to fixed and not allow a change."*"""
+    settings = Settings(store, wired={"output_mode": None})
+    settings.set("output_mode", "Variable")
+
+    settings.lock("output_mode", "Fixed", "HDMI 1 has no volume control.")
+
+    assert settings.value("output_mode") == "Fixed"
+    row = next(r for g in settings.to_json() for r in g["rows"] if r.get("key") == "output_mode")
+    assert row["value"] == "Fixed"
+    assert row["locked"] == "HDMI 1 has no volume control."
+    with pytest.raises(Locked):
+        settings.set("output_mode", "Variable")
+
+
+def test_unlocking_gives_back_the_choice_that_was_there_before(store):
+    """*"When changing back to dac set the previously selected option."*
+    The lock sits **over** the stored value and never replaces it, so
+    handing the row back is one line and cannot lose anything."""
+    settings = Settings(store, wired={"output_mode": None})
+    settings.set("output_mode", "Fixed")
+    settings.lock("output_mode", "Fixed", "no volume control here")
+
+    settings.unlock("output_mode")
+
+    assert settings.value("output_mode") == "Fixed"  # what the user chose
+
+
+def test_with_no_previous_choice_unlocking_falls_back_to_the_default(store):
+    """*"If there is no previous selection default to variable."* - which
+    is the row's own default, so nothing special is needed for it."""
+    settings = Settings(store, wired={"output_mode": None})
+    settings.lock("output_mode", "Fixed", "no volume control here")
+
+    settings.unlock("output_mode")
+
+    assert settings.value("output_mode") == "Variable"
+
+
+def test_a_row_that_is_not_locked_carries_no_lock_field(store):
+    settings = Settings(store, wired={"output_mode": None})
+    row = next(r for g in settings.to_json() for r in g["rows"] if r.get("key") == "output_mode")
+    assert "locked" not in row

@@ -335,3 +335,26 @@ every setting and change every one that is not text.
   change things there, otherwise the phone is the way."* It is not to be
   raised again as a usability concern; the design's own preference for
   avoiding input fields is a separate and welcome argument.
+
+## Amendment, 2026-09-23 — `locked`
+
+A row that is **shown, relevant, and not the user's to set right now**,
+because the hardware has taken the choice away. It carries the value in
+force and a sentence saying why; a write is refused with 409.
+
+Added for [ADR-0055](0055-which-output-the-device-plays-to.md) §5: an
+output with no volume control of its own makes `output_mode` a question
+with one answer, and George's instruction was to *"move the output to fixed
+and not allow a change"* rather than leave a choice that cannot be
+honoured.
+
+**Distinct from the two neighbours it would otherwise be confused with.**
+`surfaced: false` is inventoried but never drawn; `onlyWhen` is drawn only
+when another *row* makes it relevant. `locked` is drawn, is relevant, and
+is decided elsewhere — and it is dynamic, set by the daemon rather than
+written in the registry, because only the daemon knows what the sound card
+can do.
+
+**It never overwrites the stored value.** The lock is read in front of the
+store, so releasing it hands back whatever the user had chosen, and the
+row's own default answers when they had chosen nothing.

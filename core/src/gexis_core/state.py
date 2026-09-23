@@ -55,6 +55,7 @@ class StateStore:
         self._handoff: Handoff | None = None
         self._volume: VolumeState | None = None
         self._fixed_output = False
+        self._meters = True
         self._settings_revision = 0
         self._pairing: dict | None = None
         self._subscribers: list[Callable[[PlaybackState], None]] = []
@@ -79,6 +80,7 @@ class StateStore:
             handoff=self._handoff,
             volume=self._volume,
             fixed_output=self._fixed_output,
+            meters=self._meters,
             handoff_exempt_pairs=self._handoff_exempt_pairs,
             settings_revision=self._settings_revision,
             pairing=self._pairing,
@@ -197,6 +199,15 @@ class StateStore:
         self._fixed_output = fixed
         if fixed:
             self._volume = None
+        self._notify()
+
+    def set_meters(self, available: bool) -> None:
+        """ADR-0055 §6: whether this output's chain can feed the
+        visualiser."""
+        if available == self._meters:
+            return
+        logger.info("state: visualiser levels %s", "available" if available else "unavailable")
+        self._meters = available
         self._notify()
 
     def set_pairing(self, pairing: dict | None) -> None:

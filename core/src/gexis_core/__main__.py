@@ -209,6 +209,9 @@ async def main() -> None:
             chosen_output.card,
             chosen_output.control or "none - fixed output",
         )
+        # ADR-0055 §6: a converted chain carries no meter, so the
+        # visualiser has nothing to draw and its button is not offered.
+        meters_available = outputs.needs_plug(chosen_output.card) is not True
 
     lms = LmsAdapter(config.lms_host, config.lms_port, config.lms_player_name)
     spotify = SpotifyAdapter(config.go_librespot_host, config.go_librespot_port)
@@ -909,11 +912,24 @@ async def main() -> None:
             minutes("viz_timeout", 600),
             stop_after_s=minutes("viz_stop", 300),
         ),
+        # ADR-0055 §6: nothing raises a screen this output cannot feed.
+        has_levels=lambda: state_store.state.meters,
     )
 
-    # The forced case has to be put into force at startup like any other.
+    # **ADR-0055 §5.** An output with no volume control takes the choice
+    # away, so the row says Fixed and refuses a write rather than offering
+    # one that cannot be honoured. The user's own choice is never
+    # overwritten - the lock sits *over* the stored value - so switching
+    # back to an output that can attenuate hands it straight back.
     if forced_fixed:
+        settings.lock(
+            "output_mode",
+            "Fixed",
+            f"{chosen_output.label} has no volume control, so the output is fixed.",
+        )
         asyncio.ensure_future(_apply_output_mode())
+
+    state_store.set_meters(meters_available)
 
     previous_active = state_store.state.active
 

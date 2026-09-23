@@ -120,6 +120,48 @@ The same deploy also put `snd_rpi_hifiberry_dacplushd` in the picker:
 card's is the driver's module name. The device's is what the board calls
 itself.
 
+### 5. An output with no volume control locks `output_mode` to Fixed
+
+**George, 2026-09-23:** *"in settings, you need to move the output to fixed
+and not allow a change. When changing back to dac set the previously
+selected option. If there is no previous selection default to variable."*
+
+So the row **shows `Fixed`, says why, and refuses a write** (HTTP 409) while
+the chosen output cannot attenuate. It is not greyed with no explanation —
+the same rule ADR-0046 sets for the slider.
+
+**The lock sits over the stored value and never replaces it**, which is
+what makes handing the row back free: switching to an output that *can*
+attenuate simply does not apply the lock, and the user's own choice is
+still underneath. With no previous choice the row's own default answers,
+and that default is `Variable`.
+
+This adds `locked` to ADR-0044's row vocabulary — a row that is shown and
+relevant but not the user's to set right now. Distinct from
+`surfaced: false` (inventoried, not shown) and from `onlyWhen` (shown only
+when another row makes it relevant).
+
+### 6. An output with no meter hides the visualiser, everywhere
+
+**George, 2026-09-23, on being told HDMI loses the meters:** *"For it stays
+so."* — and *"hide the button in now playing if the capability is not there
+anymore for this output."*
+
+**This was a product decision and it should have been put to him as one**
+rather than as a paragraph of a longer report; his note on that is recorded
+in the working memory, not here.
+
+- `state.meters` is published, for the same reason `fixed_output` is: the
+  panel cannot tell *no levels yet* from *no levels ever*.
+- **Now Playing's visualisation button is absent**, not disabled.
+- **Nothing raises the screen either** — not the button, not ADR-0036's
+  unattended-playback timer. A hidden button does not stop a timer, and a
+  meter that comes up on its own with nothing to draw is the
+  black-screen-that-owns-every-touch shape of `LESSONS` case 15.
+
+**Measured, so the cost is scoped:** only HDMI. The headphone jack takes
+`S16_LE` natively, needs no conversion layer, and keeps its meter.
+
 ## Open — answered 2026-09-23
 
 1. **Which outputs should be offered at all?** All four is honest but two of

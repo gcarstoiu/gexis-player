@@ -200,10 +200,25 @@ class PeppyController:
     """Wires the rules to the screen. Held by `__main__`, fed by the state
     store's own callbacks so nothing here polls playback."""
 
-    def __init__(self, screen: PeppyScreen, timer: UnattendedPlayback, *, tick_s: float = 5.0) -> None:
+    def __init__(
+        self,
+        screen: PeppyScreen,
+        timer: UnattendedPlayback,
+        *,
+        tick_s: float = 5.0,
+        has_levels=None,
+    ) -> None:
         self._screen = screen
         self._timer = timer
         self._tick_s = tick_s
+        #: **ADR-0055 §6.** On an output whose chain carries no meter the
+        #: visualiser has nothing to draw, so it is never raised - by the
+        #: timer or by a request. The panel hides its button for the same
+        #: reason, and this is the half a hidden button cannot do: unattended
+        #: playback would otherwise put a dead screen up on its own after
+        #: five minutes, which is the black-screen-that-owns-every-touch
+        #: shape of LESSONS case 15.
+        self._has_levels = has_levels or (lambda: True)
         self._track: tuple | None = None
         self._now = timer._now
         # (position, duration, playing, when): the last position a renderer
@@ -259,6 +274,9 @@ class PeppyController:
     def request(self, action: str) -> bool:
         """The UI's own button (criterion 8) and anything else that asks."""
         self._timer.attention()
+        if action == "show" and not self._has_levels():
+            logger.info("peppy: not showing - this output feeds it no levels")
+            return False
         return self._screen.show() if action == "show" else self._screen.hide()
 
     async def run(self) -> None:
@@ -273,7 +291,7 @@ class PeppyController:
         self._screen.hide()
         while True:
             await asyncio.sleep(self._tick_s)
-            if self._timer.due() and not self._screen.visible:
+            if self._timer.due() and not self._screen.visible and self._has_levels():
                 self._screen.show()
             # `viz_stop`. Checked after the raise and only while the meter is
             # up, so the two rules cannot argue: one of them needs playback
