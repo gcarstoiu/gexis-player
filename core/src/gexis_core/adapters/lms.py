@@ -368,6 +368,27 @@ class LmsAdapter(Adapter):
         self._volume = value
         self._on_volume(value, VOLUME_STEPS)
 
+    async def get_volume(self) -> int | None:
+        """LMS's own volume, now, on its own 0-100.
+
+        **The fast path** (ADR-0054 §2). squeezelite's write to the dummy
+        control is the quickest signal that this player's volume moved - it
+        arrives in 0.1 ms - but the value it writes is squeezelite's curve
+        of LMS's number, not LMS's number. So the write is the event and
+        this is the answer: one RPC, measured at 11.6-15.9 ms (Finding 046
+        §2), against the 525 ms the status push takes (§8).
+        """
+        if self._player_id is None:
+            return None
+        try:
+            async with aiohttp.ClientSession() as session:
+                result = await self._rpc(session, self._player_id, ["mixer", "volume", "?"])
+        except (aiohttp.ClientError, asyncio.TimeoutError) as exc:
+            logger.warning("lms: volume read failed: %s", exc)
+            return None
+        value = _as_int((result.get("result") or {}).get("_volume"))
+        return None if value is None else abs(value)
+
     async def set_volume(self, value: int) -> bool:
         """ADR-0053: the panel's position, on LMS's own scale.
 

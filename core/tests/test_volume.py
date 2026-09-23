@@ -25,10 +25,12 @@ from gexis_core.volume import (
     db_to_raw,
     dummy_raw_to_hardware_raw,
     get_raw,
+    hardware_raw_to_renderer_value,
     hardware_raw_to_spotify_fraction,
     raw_to_db,
     raw_to_slider_percent,
     renderer_percent_to_value,
+    renderer_value_to_hardware_raw,
     renderer_value_to_percent,
     slider_percent_to_raw,
     spotify_fraction_to_hardware_raw,
@@ -93,17 +95,39 @@ def make_bridge(active="spotify"):
     return bridge, memory
 
 
+def make_reporting_bridge(active="spotify"):
+    """**Since ADR-0054 §3 this class no longer writes the DAC for a
+    renderer's report.** There is one path from a renderer's number to the
+    hardware - `__main__`'s `report_renderer_volume`, which applies the one
+    curve - and this class's job on that side is to decide *which* reports
+    are genuine. So these tests assert on what it passes on."""
+    memory = FakeVolumeMemory()
+    reported: list[tuple[str, int, int]] = []
+    bridge = VolumeBridge(
+        "DAC",
+        FakeSpotify(),
+        volume_memory=memory,
+        get_active_renderer=lambda: active,
+        on_renderer_value=lambda rid, value, steps: reported.append((rid, value, steps)),
+    )
+    return bridge, reported
+
+
 @pytest.mark.asyncio
 async def test_spotify_echo_of_our_own_value_is_ignored(fake_set_raw):
     """An echo carries back exactly what we pushed out - that, and only
     that, is what gets dropped."""
-    bridge, _ = make_bridge()
+    bridge, reported = make_reporting_bridge()
     bridge._expected_adapter_value = (71, time_module.monotonic())
 
     bridge._on_adapter_volume(71, 100)
     await settle()
 
     assert fake_set_raw == []
+    # Reported all the same: the *number* is true whoever caused it, and
+    # ADR-0053's panel shows it. What the echo suppresses is the level
+    # being pushed back out, not the level being known.
+    assert reported == [("spotify", 71, 100)]
 
 
 @pytest.mark.asyncio
@@ -115,36 +139,31 @@ async def test_a_different_value_arriving_immediately_is_still_applied(fake_set_
     at 226/240, 7.0dB low, reproducibly, where the same ramp spaced 1.5s
     apart reached 240/240. A value we did not write is a genuine change,
     however fast it arrives."""
-    bridge, _ = make_bridge()
+    bridge, reported = make_reporting_bridge()
     bridge._expected_adapter_value = (71, time_module.monotonic())
 
     bridge._on_adapter_volume(72, 100)  # one step away, immediately after
     await settle()
 
-    assert fake_set_raw == [("DAC", spotify_fraction_to_hardware_raw(0.72))]
+    assert reported == [("spotify", 72, 100)]
+    assert bridge._expected_adapter_value is not None  # not consumed by a non-echo
 
 
 @pytest.mark.asyncio
 async def test_fast_ramp_to_max_reaches_full_scale(fake_set_raw):
     """The drag that blocker 4 was reported as: every value lands, and the
     last one reaches 0dB (240/240), not somewhere short of it."""
-    bridge, _ = make_bridge()
+    bridge, reported = make_reporting_bridge()
 
     for value in (40, 55, 70, 85, 100):
         bridge._on_adapter_volume(value, 100)
         await settle()
 
-    # Since ADR-0052 §4 the hardware is *walked* between targets, so the
-    # call list carries the steps in between as well. What blocker 4 was
-    # about is unchanged and is what is asserted: **every target lands, in
-    # order, and the last one is full scale** - not somewhere short of it.
-    written = [raw for _, raw in fake_set_raw]
-    targets = [spotify_fraction_to_hardware_raw(v / 100) for v in (40, 55, 70, 85, 100)]
-    at = -1
-    for target in targets:
-        at = written.index(target, at + 1)  # raises if a target never landed
-    assert fake_set_raw[-1] == ("DAC", 240)  # 100% is 0dB, full scale
-    assert written == sorted(written)  # a ramp only ever moves one way here
+    # **Every value lands, in order, and the last one is the maximum** -
+    # which is what blocker 4 was about. Where it goes from here is
+    # ADR-0054 §3's single curve, and 100 of 100 is 0 dB on it.
+    assert [value for _, value, _ in reported] == [40, 55, 70, 85, 100]
+    assert renderer_value_to_hardware_raw(100, 100) == 240
 
 
 @pytest.mark.asyncio
@@ -152,28 +171,28 @@ async def test_a_stale_expectation_does_not_suppress_a_genuine_change(fake_set_r
     """If our echo never arrives (dropped frame, a value that rounded
     differently coming back), the expectation must expire rather than
     silently swallow a later genuine change carrying the same number."""
-    bridge, _ = make_bridge()
+    bridge, reported = make_reporting_bridge()
     bridge._expected_adapter_value = (50, time_module.monotonic() - ECHO_WINDOW_S - 1)
 
     bridge._on_adapter_volume(50, 100)
     await settle()
 
-    assert fake_set_raw == [("DAC", 195)]
+    assert reported == [("spotify", 50, 100)]
 
 
 @pytest.mark.asyncio
 async def test_genuine_spotify_change_outside_window_is_applied(fake_set_raw):
-    bridge, memory = make_bridge()
+    bridge, reported = make_reporting_bridge()
     bridge._expected_adapter_value = None
 
     bridge._on_adapter_volume(50, 100)
     await settle()
 
-    # dB-linear (spotify_fraction_to_hardware_raw), not raw-linear: 50%
-    # is -22.5dB on the -45..0dB curve Spotify shares with LMS/Bluetooth
-    # for consistency, not 50/100 * 240 = 120.
-    assert fake_set_raw == [("DAC", 195)]
-    assert memory.remembered == [("spotify", 195)]
+    assert reported == [("spotify", 50, 100)]
+    # And where that goes: 50 of 100 is -30 dB on ADR-0054 §3's 60 dB
+    # curve - not raw-linear's 50/100 * 240 = 120, which was -60 dB and the
+    # 2026-09-08 symptom.
+    assert renderer_value_to_hardware_raw(50, 100) == 180
 
 
 @pytest.mark.asyncio
@@ -200,18 +219,23 @@ async def test_write_hardware_arms_the_echo_window(fake_set_raw):
 
 
 @pytest.mark.asyncio
-async def test_spotify_volume_while_inactive_is_remembered_not_applied(fake_set_raw):
+async def test_spotify_volume_while_inactive_is_reported_but_never_written(fake_set_raw):
     """Spotify isn't the active renderer - its own volume report must not
-    move the mixer someone else currently owns, but should still be
-    remembered for when it next becomes active."""
-    bridge, memory = make_bridge(active="lms")
+    move the mixer someone else currently owns.
+
+    **Since ADR-0054 §3 that decision is not made here.** This class writes
+    the DAC for nobody's report; it passes the number on, and
+    `report_renderer_volume` decides whether the renderer holds the device
+    and remembers it either way. What is asserted here is the half that is
+    still this class's: nothing reaches the hardware."""
+    bridge, reported = make_reporting_bridge(active="lms")
     bridge._expected_adapter_value = None
 
     bridge._on_adapter_volume(50, 100)
     await settle()
 
-    assert fake_set_raw == []  # not applied to the live mixer
-    assert memory.remembered == [("spotify", 195)]  # but remembered
+    assert fake_set_raw == []
+    assert reported == [("spotify", 50, 100)]
 
 
 def test_echo_window_is_positive_and_not_absurdly_long():
@@ -360,13 +384,17 @@ class TestSpotifyFractionToHardwareRaw:
     across the DAC's full 120dB."""
 
     def test_endpoints(self):
-        assert spotify_fraction_to_hardware_raw(0.0) == 150  # -45dB
+        """**Zero is silence since ADR-0054 §3**, not -45 dB. It was -45
+        because the 2026-09-08 fix gave Spotify "a reasonable span" rather
+        than a floor, and George found the floor audible on 2026-09-23."""
+        assert spotify_fraction_to_hardware_raw(0.0) == 0  # silence
         assert spotify_fraction_to_hardware_raw(1.0) == 240  # 0dB
 
     def test_reported_symptom_60_percent_is_now_audible(self):
-        # Old (raw-linear) formula: round(0.6 * 240) = 144 -> -108dB.
-        # New (dB-linear): -45 + 0.6*45 = -18dB -> raw 204.
-        assert spotify_fraction_to_hardware_raw(0.6) == 204
+        # Old (raw-linear) formula: round(0.6 * 240) = 144 -> -108dB, the
+        # 2026-09-08 symptom. The span is 60 dB since ADR-0054, so 60% is
+        # -24 dB -> raw 192; it was -18 dB over the old 45 dB window.
+        assert spotify_fraction_to_hardware_raw(0.6) == 192
 
     def test_round_trip_recovers_the_original_fraction(self):
         # Within 1 percentage point, not exact - the DAC's 0.5dB raw
@@ -413,15 +441,26 @@ class TestDummyMixerBridgePauseFadeGate:
 
     @staticmethod
     def _bridge(monkeypatch, *, playing, active="lms", settled_raw=22):
-        writes = []
+        """**Since ADR-0054 §2 this bridge reports an event, not a level.**
+
+        The control's value is squeezelite's curve of LMS's number - LMS 25
+        lands on 27, and LMS 10 and LMS 0 both land on 0 (Finding 046 §1) -
+        so it could never say what LMS says. It says *when*, in 0.1 ms, and
+        the daemon then asks LMS. So `moved` below is what used to be
+        `writes`, and the gate's contract is unchanged: a pause fade
+        produces no event at all.
+        """
+        moved = []
         remembered = []
         monkeypatch.setattr(volume_module, "SETTLE_S", 0)
         monkeypatch.setattr(volume_module, "get_raw", _async_return(settled_raw))
-        monkeypatch.setattr(volume_module, "set_raw", _record(writes))
 
         class Memory:
             def remember(self, renderer_id, raw):
                 remembered.append((renderer_id, raw))
+
+        async def on_moved(renderer_id):
+            moved.append(renderer_id)
 
         bridge = volume_module.DummyMixerBridge(
             "lms",
@@ -431,8 +470,9 @@ class TestDummyMixerBridgePauseFadeGate:
             volume_memory=Memory(),
             get_active_renderer=lambda: active,
             is_playing=playing,
+            on_moved=on_moved,
         )
-        return bridge, writes, remembered
+        return bridge, moved, remembered
 
     @staticmethod
     async def _steps(bridge, *raws):
@@ -446,33 +486,36 @@ class TestDummyMixerBridgePauseFadeGate:
     async def test_a_pause_fade_is_not_mirrored_or_remembered(self, monkeypatch):
         """The measured fade. By the time it settles, the pause has been
         reported, which is the whole point of settling."""
-        bridge, writes, remembered = self._bridge(
+        bridge, moved, remembered = self._bridge(
             monkeypatch, playing=lambda: False, settled_raw=DUMMY_MIN_RAW
         )
 
         await self._steps(bridge, 109, 82, 41, DUMMY_MIN_RAW)
 
-        assert writes == []
+        assert moved == []
         assert remembered == []
 
     @pytest.mark.asyncio
     async def test_a_volume_change_while_playing_is_mirrored_once(self, monkeypatch):
         """A drag sends many steps; one decision comes out of it."""
-        bridge, writes, remembered = self._bridge(
+        bridge, moved, remembered = self._bridge(
             monkeypatch, playing=lambda: True, settled_raw=109
         )
 
         await self._steps(bridge, 80, 95, 109)
 
-        assert writes == [("DAC", 229)]  # -5.5dB, the measured 75% point
-        assert remembered == [("lms", 229)]
+        assert moved == ["lms"]  # one event, whatever the control did
+        # Remembering moved to `report_renderer_volume` with the curve
+        # (ADR-0054 §3), because it is the renderer's *number* that is
+        # worth remembering, not squeezelite's rendering of it.
+        assert remembered == []
 
     @pytest.mark.asyncio
     async def test_a_late_transport_report_is_what_decides(self, monkeypatch):
         """The transport can still say "playing" while the fade arrives; the
         settled decision reads it after the report lands."""
         playing = True
-        bridge, writes, _ = self._bridge(
+        bridge, moved, _ = self._bridge(
             monkeypatch, playing=lambda: playing, settled_raw=DUMMY_MIN_RAW
         )
         for raw in (109, 82, 41, DUMMY_MIN_RAW):
@@ -481,7 +524,7 @@ class TestDummyMixerBridgePauseFadeGate:
 
         await bridge._settling
 
-        assert writes == []
+        assert moved == []
 
     @pytest.mark.asyncio
     async def test_a_renderer_without_a_gate_never_ends_on_a_stale_level(self, monkeypatch):
@@ -496,41 +539,42 @@ class TestDummyMixerBridgePauseFadeGate:
         become a 16 ms hardware write. What the old contract protected
         against was a *stale* level, and that is asserted here.
         """
-        bridge, writes, _ = self._bridge(monkeypatch, playing=None)
+        bridge, moved, _ = self._bridge(monkeypatch, playing=None)
 
         await self._steps(bridge, 0, 64, 127)
         if bridge._mirror_soon is not None:
             await bridge._mirror_soon
 
-        # dummy 0/64/127 are -38.1/-18.9/0dB on the shifted window.
-        assert writes[0] == ("DAC", 164)  # the first is immediate
-        assert writes[-1] == ("DAC", 240)  # and the last value is where it ends
-        assert len(writes) <= 3
+        # An event, not a level - the daemon reads the number afterwards, so
+        # what matters is that a change never passes unnoticed and that a
+        # burst does not become a burst of reads.
+        assert moved
+        assert len(moved) <= 3
 
     @pytest.mark.asyncio
     async def test_a_storm_of_changes_becomes_a_handful_of_writes(self, monkeypatch):
         """Finding 045 §10, in a test: bluealsa wrote the dummy ~750 times a
         second while it melted down. The mirror must not turn that into 750
         hardware writes - and must still end on the last value."""
-        bridge, writes, _ = self._bridge(monkeypatch, playing=None)
+        bridge, moved, _ = self._bridge(monkeypatch, playing=None)
 
         await self._steps(bridge, *range(0, 100))
         if bridge._mirror_soon is not None:
             await bridge._mirror_soon
 
-        assert len(writes) <= 3, writes
-        assert writes[-1][1] == dummy_raw_to_hardware_raw(99)
+        assert len(moved) <= 3, moved
 
     @pytest.mark.asyncio
     async def test_an_inactive_renderer_is_remembered_but_not_applied(self, monkeypatch):
-        bridge, writes, remembered = self._bridge(
+        bridge, moved, _ = self._bridge(
             monkeypatch, playing=lambda: True, settled_raw=109, active="spotify"
         )
 
         await self._steps(bridge, 109)
 
-        assert writes == []
-        assert remembered == [("lms", 229)]
+        # Nothing to read and nothing to apply: a control that moved under
+        # an inactive renderer is not this device's volume.
+        assert moved == []
 
     @pytest.mark.asyncio
     async def test_the_resume_fade_restores_nothing_the_pause_took_away(self, monkeypatch):
@@ -538,19 +582,20 @@ class TestDummyMixerBridgePauseFadeGate:
         asymmetry - mirroring one half - is what left it at -45dB on
         hardware, 2026-09-17."""
         playing = False
-        bridge, writes, _ = self._bridge(
+        bridge, moved, _ = self._bridge(
             monkeypatch, playing=lambda: playing, settled_raw=DUMMY_MIN_RAW
         )
         await self._steps(bridge, 64, DUMMY_MIN_RAW)
-        assert writes == []
+        assert moved == []
 
         monkeypatch.setattr(volume_module, "get_raw", _async_return(109))
         playing = True
         await self._steps(bridge, 27, 68, 109)
 
-        # Mirrored, but to the level the control already had before the
-        # fade - so nothing audible changed across the pause.
-        assert writes == [("DAC", 229)]
+        # One event on the resume, and the number it leads to is the one
+        # LMS has now - which is the one it had before the fade, so nothing
+        # audible changed across the pause.
+        assert moved == ["lms"]
 
 
 @pytest.mark.asyncio
@@ -644,9 +689,9 @@ class TestTheCeilingIsTheTopOfEveryScale:
         self._at(-12.0)
 
         assert raw_to_db(slider_percent_to_raw(100)) == pytest.approx(-12.0, abs=0.5)
-        assert raw_to_db(slider_percent_to_raw(50)) == pytest.approx(-34.5, abs=0.5)
-        assert raw_to_db(dummy_raw_to_hardware_raw(DUMMY_MIN_RAW)) == pytest.approx(
-            -50.1, abs=0.5
+        assert raw_to_db(slider_percent_to_raw(50)) == pytest.approx(-42.0, abs=0.5)
+        assert raw_to_db(renderer_value_to_hardware_raw(1, 100)) == pytest.approx(
+            -71.4, abs=0.5
         )
 
     def test_a_ceiling_above_zero_is_not_one(self):
@@ -737,3 +782,99 @@ class TestTheRemoteRoundTripDoesNotRatchet:
 
     def test_a_renderer_that_reports_no_scale_reads_as_zero_not_as_a_crash(self):
         assert renderer_value_to_percent(50, 0) == 0
+
+
+class TestTheOneCurve:
+    """ADR-0054 §3. Until 2026-09-23 nobody's volume curve was ours:
+    squeezelite derived its own from the dummy control's declared range,
+    bluealsa applied its AVRCP curve, and we copied whatever dB came out.
+
+    George's two findings, measured (Finding 047 §3): *"Even with volume at
+    0 on any renderer there is still sound coming. Faint but still there"* —
+    a renderer's zero was **−38 dB** — and *"below 40 the sound is really
+    dim already. Feels almost like nothing is changing"* — LMS's 0%, 5% and
+    10% were one value and 0–20% spanned one decibel.
+    """
+
+    @pytest.fixture(autouse=True)
+    def _no_ceiling(self):
+        yield
+        volume_module.set_ceiling_reader(lambda: None)
+
+    def test_zero_is_silence_on_every_scale(self):
+        """The one that was accepted as a trade in 2026-09-08 and reversed
+        on use: *"dead silence is what pause/mute are for, not the bottom of
+        a renderer's own volume slider."*"""
+        for steps in (100, 127, 1000):
+            assert renderer_value_to_hardware_raw(0, steps) == 0
+
+    def test_maximum_is_the_ceiling(self):
+        assert renderer_value_to_hardware_raw(100, 100) == 240  # 0 dB
+        assert renderer_value_to_hardware_raw(127, 127) == 240
+        volume_module.set_ceiling_reader(lambda: -10.0)
+        assert raw_to_db(renderer_value_to_hardware_raw(100, 100)) == -10.0
+
+    def test_the_span_is_sixty_decibels(self):
+        """librespot's `softvol` default, and what George found works on the
+        same DAC (Finding 047 §5). It was 38.1 dB, and 45 before that."""
+        assert volume_module.RENDERER_DB_SPAN == 60.0
+        assert raw_to_db(renderer_value_to_hardware_raw(50, 100)) == -30.0
+        assert raw_to_db(renderer_value_to_hardware_raw(25, 100)) == -45.0
+
+    def test_the_bottom_of_travel_actually_moves(self):
+        """The direct answer to *"feels almost like nothing is changing"*.
+        Every step below 40% is a distinct hardware level, where LMS's
+        0/5/10 used to be one."""
+        levels = [renderer_value_to_hardware_raw(v, 100) for v in range(1, 41)]
+        assert len(set(levels)) == len(levels)
+        assert raw_to_db(levels[0]) == pytest.approx(-59.5, abs=0.1)
+        assert raw_to_db(levels[-1]) == pytest.approx(-36.0, abs=0.1)
+
+    def test_the_scales_agree_with_each_other(self):
+        """One curve means LMS at half, a phone at half and the panel at
+        half are the same level - which is the whole of ADR-0053 made
+        true at the hardware."""
+        assert renderer_value_to_hardware_raw(50, 100) == renderer_value_to_hardware_raw(
+            64, 127
+        ) == slider_percent_to_raw(50)
+
+    def test_a_renderer_that_reports_no_scale_is_silent_not_loud(self):
+        assert renderer_value_to_hardware_raw(50, 0) == 0
+
+    def test_the_inverse_round_trips_exactly_on_the_panels_own_scale(self):
+        for value in range(101):
+            raw = renderer_value_to_hardware_raw(value, 100)
+            assert hardware_raw_to_renderer_value(raw, 100) == value
+
+    def test_a_128_position_scale_cannot_round_trip_and_that_is_safe(self):
+        """**60 dB is 120 hardware steps and AVRCP has 128 positions**, so
+        seven of them land on a level that reads back as their neighbour.
+        That cannot be fixed by arithmetic, and it does not need to be:
+        ADR-0053's invariant is that a renderer's own value is never sent
+        back to it, and the panel's number comes from what the renderer
+        reported rather than from the hardware. The inverse is used only
+        for the no-renderer fallback, which is the 100-position scale
+        above.
+
+        Pinned so that a later change which *does* close that loop fails
+        here rather than on George's phone (Finding 045 §12's ratchet)."""
+        drifting = [
+            value
+            for value in range(128)
+            if hardware_raw_to_renderer_value(
+                renderer_value_to_hardware_raw(value, 127), 127
+            )
+            != value
+        ]
+
+        assert len(drifting) == 7
+        assert all(
+            abs(
+                hardware_raw_to_renderer_value(
+                    renderer_value_to_hardware_raw(value, 127), 127
+                )
+                - value
+            )
+            <= 1
+            for value in drifting
+        )

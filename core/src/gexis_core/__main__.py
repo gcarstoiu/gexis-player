@@ -61,6 +61,7 @@ from gexis_core.volume import (
     db_to_raw,
     get_raw,
     Mute,
+    renderer_value_to_hardware_raw,
     set_ceiling_reader,
     set_raw,
     slider_percent_to_raw,
@@ -343,6 +344,11 @@ async def main() -> None:
     remote = RemoteVolume(
         get_active_renderer=lambda: supervisor.active,
         on_change=lambda: publish_volume(),
+        # ADR-0054 §6: the hardware hears the panel at once rather than
+        # after the trip through the renderer and back.
+        on_level=lambda value, steps: asyncio.ensure_future(
+            volume_bridge.write_hardware(renderer_value_to_hardware_raw(value, steps))
+        ),
     )
 
     def publish_volume(raw: int | None = None) -> None:
@@ -362,11 +368,79 @@ async def main() -> None:
         state_store.set_volume_raw(raw, muted=mute.muted, percent=remote.percent())
 
     def report_renderer_volume(renderer_id: str, value: int, steps: int) -> None:
-        """Inbound only, and it must stay that way: `RemoteVolume.report`
-        never sends, because 101 panel positions cannot name AVRCP's 128
-        values and closing that loop rebuilds Finding 045 §12's ratchet."""
+        """**The one path from a renderer's number to the DAC** (ADR-0054 §3).
+
+        Inbound only, and it must stay that way: `RemoteVolume.report` never
+        sends, because 101 panel positions cannot name AVRCP's 128 values
+        and closing that loop rebuilds Finding 045 §12's ratchet.
+
+        Until 2026-09-23 there were three paths and three curves - Spotify's
+        through `VolumeBridge`, LMS's and Bluetooth's through their dummy
+        controls' declared dB, each derived by the renderer rather than by
+        us. Now there is one, and the curve is
+        `renderer_value_to_hardware_raw`.
+        """
         remote.set_steps(renderer_id, steps)
         remote.report(renderer_id, value)
+        raw = renderer_value_to_hardware_raw(value, steps)
+        # Remembered whoever is active: `remember()` no-ops for renderers
+        # outside MANAGED_RENDERERS, and since ADR-0054 §5 a remembered
+        # level is the fallback for a renderer that will not say where it
+        # is, not the normal path.
+        volume_memory.remember(renderer_id, raw)
+        if supervisor.active != renderer_id:
+            logger.debug(
+                "volume: %s reported %s/%s while inactive, remembered but not applied",
+                renderer_id, value, steps,
+            )
+            return
+        logger.info(
+            "volume: %s -> hardware (%s/%s -> %s/240)", renderer_id, value, steps, raw
+        )
+        asyncio.ensure_future(volume_bridge.write_hardware(raw))
+
+    async def renderer_volume_moved(renderer_id: str) -> None:
+        """A renderer's control moved; ask the renderer what it means.
+
+        ADR-0054 §2: squeezelite's write to its dummy control is the fastest
+        signal that LMS's volume changed (0.1 ms), but the value is
+        squeezelite's curve of LMS's number, not the number. One RPC, ~13 ms,
+        answers it; the status push that would also answer takes 525 ms.
+        """
+        adapter = adapters.get(renderer_id)
+        getter = getattr(adapter, "get_volume", None)
+        if getter is None:
+            return
+        value = await getter()
+        if value is None:
+            return
+        report_renderer_volume(
+            renderer_id, value, getattr(adapter, "VOLUME_STEPS", 100)
+        )
+
+    async def acquire_volume(renderer_id: str) -> bool:
+        """ADR-0054 §5: a renderer is *asked* where it is when it takes the
+        device, rather than having a remembered level written under it.
+
+        George, 2026-09-23: *"when first connecting the volume was low even
+        though on the phone it was at max... doesn't the bluetooth protocol
+        pass along as well the volume upon connection so the phone and panel
+        show the same thing?"* It does, and so do the other two - this is
+        where we start listening to it. Returns False when the renderer has
+        nothing to say, and the remembered level is used instead.
+        """
+        adapter = adapters.get(renderer_id)
+        getter = getattr(adapter, "get_volume", None)
+        if getter is None:
+            return False
+        value = await getter()
+        if value is None:
+            return False
+        logger.info("volume: %s says it is at %s on acquisition", renderer_id, value)
+        report_renderer_volume(
+            renderer_id, value, getattr(adapter, "VOLUME_STEPS", 100)
+        )
+        return True
 
     # ADR-0052 §3, amended: the ceiling is the top of every scale, so the
     # row has to be readable from inside `volume.py`'s pure mapping
@@ -905,6 +979,14 @@ async def main() -> None:
                 report_renderer_volume
                 if adapter.capabilities.dummy_mixer_is_renderer_scale
                 else None
+            ),
+            # ADR-0054 §2: where the control is *not* the renderer's own
+            # scale, its movement is an event and the number is read back
+            # from the renderer itself.
+            on_moved=(
+                None
+                if adapter.capabilities.dummy_mixer_is_renderer_scale
+                else renderer_volume_moved
             ),
         )
         for renderer_id, adapter in adapters.items()

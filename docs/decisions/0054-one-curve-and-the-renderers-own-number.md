@@ -119,8 +119,33 @@ the remembered level is used only when the renderer has none to give.
 This is George's first finding in its general form, and it is what makes
 every control agree at the moment of connection rather than a second later.
 
+### 6. The panel's own change does not wait for the round trip
+
+**Added during implementation, on a measurement.** Routing a panel change
+through the renderer and back took **560 ms** to reach the DAC, against
+160 ms writing it directly — and *"the volume is not increased or decreased
+smoothly, there is this delay we introduce a while back"* is the symptom
+that opened 9i. The remote model may not reintroduce it.
+
+So when the panel originates a change, the target is known the moment it is
+decided: **the hardware is told at once, then the renderer.** The renderer's
+own report arrives later carrying the same value and moves nothing. Measured
+after the change: **72–96 ms** with a renderer active, which is no slower
+than writing the DAC directly.
+
+**This does not weaken §1's invariant.** What is forbidden is sending a
+*renderer's own reported value* back to it; this is the panel's value, going
+outward, which is the direction the model is for.
+
 ## Consequences
 
+- **Verified on the device, with the room silent** (LMS's acquisition is
+  power-on, not play): panel 100/50/25/10/5/0% put the DAC at
+  0.00/−30.00/−45.00/−54.00/−57.00 dB and **silence**, with LMS reading the
+  same number as the panel at every point, and identical levels whether or
+  not LMS held the device — **Finding 046 §9's seam is closed**, measured at
+  release as 30% before and 30% after. What is *not* verified is Bluetooth's
+  half and how any of it sounds.
 - **No new settings rows.** `travel_curve` still describes §3 and is still
   unwired; `max_ceiling` is unchanged.
 - **`renderer_volume.py`'s remembered levels become a fallback**, not the

@@ -444,6 +444,20 @@ class SpotifyAdapter(Adapter):
             logger.warning("spotify: /status volume_steps read failed (%s), assuming 65535", exc)
             return 65535
 
+    async def get_volume(self) -> int | None:
+        """go-librespot's own volume, now (ADR-0054 §5: a renderer is asked
+        where it is on acquisition, not restored from memory)."""
+        try:
+            async with aiohttp.ClientSession() as session:
+                async with session.get(
+                    f"{self._base}/status", timeout=aiohttp.ClientTimeout(total=2)
+                ) as resp:
+                    data = await resp.json()
+            return int(data["volume"])
+        except Exception as exc:  # noqa: BLE001 - a renderer that is not there
+            logger.warning("spotify: volume read failed: %s", exc)
+            return None
+
     async def set_volume(self, value: int) -> None:
         try:
             async with aiohttp.ClientSession() as session:

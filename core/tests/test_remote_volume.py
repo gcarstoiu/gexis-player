@@ -208,3 +208,65 @@ class TestWhenThePanelKeepsItsOwnSlider:
 
         assert await remote.send(30) is True
         assert remote.percent() == 30
+
+
+class TestThePanelDoesNotWaitForTheRoundTrip:
+    """ADR-0054 §6. Measured on the device 2026-09-23: routing a panel
+    change through LMS and back took **560 ms** to reach the DAC, against
+    160 ms writing it directly.
+
+    *"the volume is not increased or decreased smoothly, there is this delay
+    we introduce a while back"* is the symptom that opened 9i, so the remote
+    model may not reintroduce it. The target is known the moment it is
+    decided.
+    """
+
+    @pytest.mark.asyncio
+    async def test_the_level_is_emitted_before_the_renderer_is_told(self):
+        order = []
+        state = {"active": "lms"}
+
+        async def slow_renderer(value):
+            order.append(("renderer", value))
+
+        remote = RemoteVolume(
+            get_active_renderer=lambda: state["active"],
+            on_change=lambda: None,
+            on_level=lambda value, steps: order.append(("hardware", value)),
+        )
+        remote.register("lms", steps=100, send=slow_renderer)
+
+        await remote.send(62)
+
+        assert order == [("hardware", 62), ("renderer", 62)]
+
+    @pytest.mark.asyncio
+    async def test_a_reported_echo_does_not_produce_a_second_level(self):
+        """The renderer answers with what we sent; nothing moves twice."""
+        levels = []
+        state = {"active": "bluetooth"}
+        remote = RemoteVolume(
+            get_active_renderer=lambda: state["active"],
+            on_change=lambda: None,
+            on_level=lambda value, steps: levels.append(value),
+        )
+        remote.register("bluetooth", steps=127, send=Recorder().send)
+
+        await remote.send(80)
+        remote.report("bluetooth", 102)
+
+        assert levels == [102]
+
+    @pytest.mark.asyncio
+    async def test_nothing_is_emitted_when_there_is_no_renderer_to_send_to(self):
+        """The caller writes the hardware itself in that case, so emitting
+        here would write it twice."""
+        levels = []
+        remote = RemoteVolume(
+            get_active_renderer=lambda: None,
+            on_change=lambda: None,
+            on_level=lambda value, steps: levels.append(value),
+        )
+
+        assert await remote.send(40) is False
+        assert levels == []

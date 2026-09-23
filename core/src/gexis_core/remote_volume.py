@@ -63,9 +63,19 @@ class RemoteVolume:
         self,
         get_active_renderer: Callable[[], str | None],
         on_change: Callable[[], None],
+        on_level: Callable[[int, int], None] | None = None,
     ) -> None:
         self._get_active_renderer = get_active_renderer
         self._on_change = on_change
+        #: **The panel's own change does not wait for the round trip**
+        #: (ADR-0054 §6). Measured on the device, 2026-09-23: routing a
+        #: panel change through LMS and back took **560 ms** to reach the
+        #: DAC against 160 ms writing it directly - and "there is this delay
+        #: we introduce a while back" is the symptom that opened 9i, so the
+        #: remote model may not reintroduce it. We know the target the
+        #: moment we decide to send it, so the hardware is told at once and
+        #: the renderer's own report, when it arrives, agrees.
+        self._on_level = on_level
         self._channels: dict[str, _Channel] = {}
 
     def register(self, renderer_id: str, *, steps: int, send=None) -> None:
@@ -129,6 +139,8 @@ class RemoteVolume:
         value = renderer_percent_to_value(percent, channel.steps)
         channel.value = value
         self._on_change()
+        if self._on_level is not None:
+            self._on_level(value, channel.steps)
         logger.info(
             "volume: %.0f%% -> %s's own control (%s/%s)",
             percent,
