@@ -202,6 +202,72 @@ def spectrum_for(skin: dict[str, str]) -> tuple[str, int, int] | None:
     return name, width, height
 
 
+def spectrum_steps(name: str, base_folder: Path | None, folder: str) -> int | None:
+    """**How many bars this spectrum skin was drawn for.**
+
+    [ADR-0015](../../../../docs/decisions/0015-skin-renderer-peppymeter-format.md)
+    records it — `steps  bar count - 15, 20, 25 or 30` — and the engine
+    ignores it: `spectrum.py` draws `config[SIZE]` bars, one number from
+    `config.txt` for every skin alike. That number was 30, so a skin drawn
+    for twelve bars got thirty and they ran off the end of its artwork
+    (George, 2026-09-23: *"the spectrum bars are actually falling slightly
+    outside their designated area in the right"*). Every one of the 22
+    spectrum skins overflows at 30; their own counts are 12, 15, 16, 20,
+    25 and 30.
+
+    **The pipe is not touched.** peppyalsa keeps sending 30 bands
+    (ADR-0011) — narrowing *that* would cost every skin its resolution,
+    including the ones drawn for thirty. Only what is drawn changes.
+
+    **And the skin's own number is clamped to what its own artwork holds**,
+    because twelve of the twenty-two ask for more than they have room for:
+    `Kenwood Big` wants 30 bars in 850 pixels and needs 1262. Clamped at
+    load rather than corrected in the files, so a pack nobody has seen yet
+    gets the same treatment - and the stock pack's sections are not ours to
+    edit.
+
+    **The count comes down, never the bar width.** The bar is a picture the
+    skin's author drew at a fixed size; narrowing it would scale their
+    artwork.
+    """
+    if base_folder is None or not folder:
+        return None
+    try:
+        parser = configparser.ConfigParser(strict=False)
+        parser.read(base_folder / folder / "spectrum.txt")
+        section = parser[name]
+        steps = int(section["steps"])
+    except (KeyError, ValueError, OSError):
+        return None
+    try:
+        width = int(section["bar.width"])
+        gap = int(section["bar.gap"])
+        origin = int(section["origin.x"])
+        background = base_folder / folder / section["bgr.filename"]
+        area = png_width(background)
+        if area:
+            room = (area - origin + gap) // (width + gap)
+            if 0 < room < steps:
+                print(f"{name}: drawn for {steps} bars, {area}px holds {room}", flush=True)
+                return room
+    except (KeyError, ValueError, OSError, ZeroDivisionError):
+        pass
+    return steps
+
+
+def png_width(path: Path) -> int | None:
+    """A PNG's width, without pulling in an image library. The spectrum
+    backgrounds are all PNG; anything else answers None and the skin keeps
+    its own count."""
+    try:
+        header = path.read_bytes()[:24]
+    except OSError:
+        return None
+    if header[:8] != b"\x89PNG\r\n\x1a\n":
+        return None
+    return int.from_bytes(header[16:20], "big")
+
+
 def select_spectrum_section(name: str, base_folder: Path | None = None) -> None:
     """Point the spectrum engine's own config at one section. Rewritten in
     place: configparser fails hard on a duplicate key, and an appended one
@@ -220,6 +286,11 @@ def select_spectrum_section(name: str, base_folder: Path | None = None) -> None:
     parser["current"]["spectrum"] = name
     if base_folder is not None:
         parser["current"]["base.folder"] = str(base_folder)
+    # The engine resolves its sections under `base.folder/spectrum.folder`,
+    # so the step count is read from the same place it will read the rest.
+    steps = spectrum_steps(name, base_folder, parser["current"].get("spectrum.folder", ""))
+    if steps:
+        parser["current"]["size"] = str(steps)
     # The engine reads this file; the daemon never does. It is rewritten on
     # every skin change, which is why the image installs it writable by the
     # user the unit runs as.

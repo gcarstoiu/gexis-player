@@ -130,7 +130,9 @@ reflection.filename         usually a second bar sprite
 reflection.gap
 topping.height              peak-hold cap height
 topping.step
-steps                       bar count — 15, 20, 25 or 30
+steps                       bar count — 15, 20, 25 or 30; the engine
+                            ignores it, the driver applies it
+                            ([Finding 049](../findings/049-the-spectrum-draws-more-bars-than-it-has-room-for.md))
 fgr.filename                overlay (only 1 of 13 uses it)
 ```
 
