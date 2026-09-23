@@ -923,3 +923,32 @@ class TestTheOneCurve:
             <= 1
             for value in drifting
         )
+
+
+def test_the_two_curves_the_registry_offers_are_the_two_that_exist():
+    """ADR-0022's inventory, recorded 2026-09-23 on George's instruction:
+    *"record the linear and cubic curves as settings for the next step."*
+
+    The row is not wired yet, so this pins the arithmetic behind each name
+    rather than a behaviour - so that whoever wires it has the numbers, and
+    so that renaming one without the other fails here."""
+    import json
+    from pathlib import Path
+
+    registry = json.loads(
+        (Path(volume_module.__file__).parent / "settings_registry.json").read_text()
+    )
+    row = next(
+        r
+        for group in registry
+        for r in group.get("rows", [])
+        if r.get("key") == "travel_curve"
+    )
+    assert row["options"] == ["Cubic", "Linear (dB)"]
+    assert row["default"] == "Cubic"
+
+    # What each name means, at half travel, over the shared 60 dB span.
+    cubic = raw_to_db(renderer_value_to_hardware_raw(50, 100))
+    linear = -(1 - 0.5) * volume_module.RENDERER_DB_SPAN
+    assert cubic == -15.5
+    assert linear == -30.0

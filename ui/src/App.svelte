@@ -68,20 +68,28 @@
     });
   });
 
-  // Opened by a change from elsewhere, the drawer closes itself once volume
-  // activity stops; opened by the panel's own button, it stays until closed.
+  // **The drawer closes itself 3 s after volume activity stops, however it
+  // was opened** (ADR-0022's row, as George found it should behave on
+  // 2026-09-23). It is pinned only while a finger is actually on it.
   const AUTO_HIDE_MS = $derived(($settingValues.drawer_autohide ?? 3) * 1000);
   let autoHide = null;
   function openFromExternal() {
     if ($settingValues.drawer_on_external === false) return;
-    if (volumeOpen && autoHide === null) return;
     volumeOpen = true;
-    clearTimeout(autoHide);
-    autoHide = setTimeout(closeVolume, AUTO_HIDE_MS);
+    armAutoHide();
   }
+  // Held open only while a finger is on it. It used to be held open by the
+  // *first* touch and never released, so a drag on the panel's own slider
+  // left the drawer up indefinitely and no later change from elsewhere
+  // could arm the timer either - `openFromExternal` returned early for a
+  // drawer in that state (George, 2026-09-23).
   function keepVolumeOpen() {
     clearTimeout(autoHide);
     autoHide = null;
+  }
+  function armAutoHide() {
+    clearTimeout(autoHide);
+    autoHide = setTimeout(closeVolume, AUTO_HIDE_MS);
   }
   function closeVolume() {
     keepVolumeOpen();
@@ -152,7 +160,7 @@
   }
 
   const openVolume = () => {
-    keepVolumeOpen();
+    armAutoHide();
     volumeOpen = true;
   };
 
@@ -237,6 +245,7 @@
       onclose={closeVolume}
       onexternal={openFromExternal}
       onactivity={keepVolumeOpen}
+      onsettled={armAutoHide}
     />
   {/if}
 

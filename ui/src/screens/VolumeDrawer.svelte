@@ -8,7 +8,7 @@
   import { setVolume, setMute } from '../lib/state.js';
   import VolumeIcon from '../lib/VolumeIcon.svelte';
 
-  let { open, volume, active, onclose, onexternal, onactivity } = $props();
+  let { open, volume, active, onclose, onexternal, onactivity, onsettled } = $props();
 
   let dragging = $state(false);
   let settling = $state(false);
@@ -98,6 +98,13 @@
   function up() {
     dragging = false;
     if (!inFlight && queued === null) settling = false;
+    // **The drawer stops being held open when the finger leaves it**
+    // (George, 2026-09-23: "the volume modal is not going away after the
+    // 3s"). `onactivity` pins it on pointerdown so a drag is never cut off
+    // mid-gesture; without a matching release the pin was permanent, so a
+    // drag on the panel's own slider left the drawer up until somebody
+    // tapped it away.
+    onsettled?.();
   }
 
   async function toggleMute() {
@@ -115,7 +122,9 @@
 
 <div class="scrim" class:is-open={open} role="presentation" onclick={onclose}></div>
 
-<div class="drawer" class:is-open={open} role="presentation" onpointerdown={onactivity}>
+<div class="drawer" class:is-open={open} role="presentation"
+     onpointerdown={onactivity} onpointerup={onsettled}
+     onpointercancel={onsettled} onpointerleave={onsettled}>
   <div class="drawer__title">Controls</div>
   <div class="row">
     <button class="mute" class:is-muted={muted} type="button" aria-label={muted ? 'Unmute' : 'Mute'} onclick={toggleMute}>

@@ -174,8 +174,13 @@ outward, which is the direction the model is for.
   not LMS held the device — **Finding 046 §9's seam is closed**, measured at
   release as 30% before and 30% after. What is *not* verified is Bluetooth's
   half and how any of it sounds.
-- **No new settings rows.** `travel_curve` still describes §3 and is still
-  unwired; `max_ceiling` is unchanged.
+- **One row changes meaning, on George's instruction 2026-09-23**
+  (*"record the linear and cubic curves as settings for the next step"*):
+  `travel_curve` becomes **Volume curve**, offering **Cubic** (shipping)
+  and **Linear (dB)** (what §3 replaced). It described a *window* before —
+  `Perceptual` / `dB-linear` — which was never a curve. **Recorded, not
+  wired**: ADR-0022's inventory carries it as `[R][H]`, and wiring it is
+  the next step. `max_ceiling` is unchanged.
 - **`renderer_volume.py`'s remembered levels become a fallback**, not the
   normal path. The store stays.
 - **The image changes**: the `bluealsa-aplay` unit loses its mixer options.

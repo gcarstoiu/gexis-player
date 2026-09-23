@@ -96,8 +96,30 @@ subphases, split on George's agreement (2026-09-22):
       through the renderer took **560 ms** to reach the DAC. §6 writes the
       hardware at once — **72–96 ms**, no slower than before ADR-0053.
 
-  **Still unbuilt in 9i:** the eight Audio rows, and ADR-0046's fixed
-  output.
+  - **George's pass on 2026-09-23: *"Works. Everything as expected all
+    throughout."*** Three findings came out of it, all closed:
+    - **Bluetooth did nothing at all** — the PCM filter said `Mode ==
+      "sink"` where a client-read PCM's Mode is `"source"`, and the module
+      logged nothing when it matched nothing, so a total failure looked
+      like a phone not being connected ([LESSONS](docs/LESSONS.md) case 17).
+    - **The 5%/4% steps are not ours.** The panel's own slider moves in 1%
+      steps, measured; the coarseness is LMS's and Spotify's own apps.
+    - **The taper is cubic**, not linear in dB. His remedy — a wider span —
+      goes the wrong way, and the record carries the table that shows it.
+    - **The volume drawer never closed.** A touch pinned it open and
+      nothing un-pinned it, so a drag on the panel's own slider left it up
+      until somebody tapped it away — and while pinned, no change from
+      elsewhere could arm the timer either. It is now held open only while
+      a finger is on it. Verified on the panel through CDP: held 5 s stays,
+      4 s after lifting it is gone, and an external change opens and closes
+      it at 3 s.
+
+  **Recorded for the next step, on his instruction:** the registry's
+  `travel_curve` row becomes **Volume curve**, offering **Cubic** and
+  **Linear (dB)** — the two that now exist. **Recorded, not wired.**
+
+  **Still unbuilt in 9i:** the eight Audio rows (one of which is now this
+  curve), and ADR-0046's fixed output.
 
   **Needs George, and nothing else will do:**
   - **Bluetooth, on the new path, with the amplifier turned down first.**
