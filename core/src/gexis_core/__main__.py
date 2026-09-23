@@ -47,7 +47,6 @@ from gexis_core.providers import (
 )
 from gexis_core.peppy import PeppyController, PeppyScreen, UnattendedPlayback
 from gexis_core.peppy_metadata import PeppyMetadataWriter
-from gexis_core.renderer_volume import RendererVolumeMemory
 from gexis_core.settings import SettingsStore
 from gexis_core.settings_registry import Settings
 from gexis_core.splash import Splash
@@ -78,92 +77,6 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(levelname
 #: name capitalised, which today is LMS alone.
 RENDERER_LABELS = {"lms": "LMS"}
 logger = logging.getLogger("gexis_core")
-
-
-def unmanaged_floor_raw(current: int | None, floor_db: float) -> int | None:
-    """The raw value to bump an *unmanaged* renderer's shared mixer to,
-    or None if it's already fine as-is.
-
-    Not volume-managed (e.g. Bluetooth, Finding 006) means "not
-    remembered or restored" - it does NOT mean "the mixer can be left at
-    whatever the previous renderer happened to set." Found on hardware,
-    2026-09-08: George reported Bluetooth "silent even at max" - AVRCP
-    volume updates were confirmed reaching the hardware mixer correctly
-    once the phone's slider was actively moved (bluealsa's own log:
-    "Updating A2DP volume: ... [-4.80 dB]"), but nothing set a starting
-    level on acquire, so a quiet level left by whichever renderer was
-    active before carried straight over until the user happened to nudge
-    their phone's slider. One-directional: bump up to the floor if
-    below it, never push down or fight a level that's already
-    reasonable - not "managing" the renderer's volume, just refusing to
-    hand it an inaudible starting point.
-    """
-    if current is None or raw_to_db(current) >= floor_db:
-        return None
-    return db_to_raw(floor_db)
-
-
-def make_restore_volume(
-    config: Config,
-    volume_memory: RendererVolumeMemory,
-    volume_bridge: VolumeBridge,
-    acquire_volume=None,
-):
-    async def restore_volume(renderer_id: str) -> None:
-        # George's decision, 2026-09-07: each renderer keeps its own
-        # volume, restored when it becomes active - not reset to the
-        # boot-safe level on every takeover. A renderer with no
-        # remembered level (never used yet) gets that same safe level as
-        # its starting point.
-        #
-        # Writes go through volume_bridge.write_hardware(), not set_raw()
-        # directly, so this doesn't arrive on `alsactl monitor` looking
-        # like an external change - found on hardware, 2026-09-08 (see
-        # write_hardware's own docstring): a direct set_raw() here was
-        # getting echoed straight back out to Spotify on every
-        # acquisition, racing go-librespot's own volume report.
-        # ADR-0054 §5: ask the renderer where it is before reaching for a
-        # remembered level. Only if it will not say does the memory answer.
-        #
-        # George, 2026-09-23, on a phone that connected quiet while showing
-        # maximum: *"doesn't the bluetooth protocol pass along as well the
-        # volume upon connection so the phone and panel show the same
-        # thing? Same question for all renderers in the end."* It does, and
-        # this is the line that listens.
-        if acquire_volume is not None and await acquire_volume(renderer_id):
-            return
-        raw = volume_memory.resolve_restore(
-            renderer_id,
-            boot_default=config.boot_volume_steps,
-            floor_db=config.restore_volume_floor_db,
-        )
-        if raw is not None:
-            logger.info("volume: restoring %s to %s/240", renderer_id, raw)
-            await volume_bridge.write_hardware(raw)
-            return
-
-        # Not volume-managed (None above) - genuinely not remembered or
-        # restored, not the boot-safe-default bug fixed 2026-09-08
-        # (every Bluetooth acquisition silently muted to -90dB
-        # regardless of the phone's own volume). Bluetooth's own volume
-        # path isn't understood well enough yet to manage here at all
-        # (Finding 006) - but see unmanaged_floor_raw for why "not
-        # managed" still isn't "leave it at whatever's there."
-        current = await get_raw(config.mixer_name)
-        floor_raw = unmanaged_floor_raw(current, config.restore_volume_floor_db)
-        if floor_raw is None:
-            logger.debug("volume: %s is not volume-managed, leaving mixer as-is", renderer_id)
-            return
-        logger.info(
-            "volume: %s is not volume-managed, but the mixer was left at "
-            "%.1fdB - bumping to the %.1fdB floor rather than starting silent",
-            renderer_id,
-            raw_to_db(current),
-            config.restore_volume_floor_db,
-        )
-        await volume_bridge.write_hardware(floor_raw)
-
-    return restore_volume
 
 
 def _chosen_server(config: Config, store: SettingsStore) -> Config:
@@ -275,15 +188,6 @@ async def main() -> None:
     bluetooth = BluetoothAdapter()
     adapters = {"lms": lms, "spotify": spotify, "bluetooth": bluetooth}
 
-    # Criterion 3, 2026-09-12: which renderers are volume-managed is a
-    # declared capability (adapters/base.py), not a name hardcoded here -
-    # this used to be renderer_volume.py's own MANAGED_RENDERERS tuple.
-    volume_memory = RendererVolumeMemory(
-        enabled=lambda: settings.value("per_renderer_volume") is not False,
-        managed_renderers=frozenset(
-            rid for rid, adapter in adapters.items() if adapter.capabilities.volume_managed
-        )
-    )
 
     # Phase 3 criteria 1-2: the normalised playback model plus each
     # adapter's declared capabilities, published over the state WebSocket.
@@ -332,7 +236,6 @@ async def main() -> None:
     volume_bridge = VolumeBridge(
         config.mixer_name,
         software_api_adapters[0],
-        volume_memory=volume_memory,
         get_active_renderer=lambda: supervisor.active,
         on_hardware_level=lambda raw: publish_volume(raw),
         # ADR-0053: Spotify says where its own volume is, and the panel
@@ -346,12 +249,28 @@ async def main() -> None:
         # further down `main()` and resolved when this is called, not now.
         ceiling_db=lambda: _number("max_ceiling"),
     )
-    restore_volume = make_restore_volume(
-        config,
-        volume_memory,
-        volume_bridge,
-        acquire_volume=lambda renderer_id: acquire_volume(renderer_id),
-    )
+    async def restore_volume(renderer_id: str) -> None:
+        """**ADR-0054 §5, and since 2026-09-23 there is nothing behind it.**
+
+        The renderer is asked where it is and that is the answer. There is
+        no remembered level to fall back to any more: the renderer's own
+        memory is the real one - LMS keeps it per player, Spotify per
+        device, a phone per device - and ours was a second, worse copy of
+        it. Measured before deleting it: 12 acquisitions after §5 landed,
+        12 answers, **0 fallbacks**.
+
+        **A renderer that does not answer is left alone, deliberately.**
+        Every one of them has an inbound path that will correct it within a
+        second - bluealsa's PCM appearing, LMS's status push, Spotify's
+        volume event - so the level self-corrects, and guessing at one
+        meanwhile can only be wrong in a way nobody asked for.
+        """
+        if not await acquire_volume(renderer_id):
+            logger.info(
+                "volume: %s did not say where it is; leaving the level alone "
+                "until it does",
+                renderer_id,
+            )
 
     # ADR-0034. Observes every level before it is published, so a change
     # from anywhere else ends mute in the same broadcast that shows it.
@@ -407,14 +326,9 @@ async def main() -> None:
         remote.set_steps(renderer_id, steps)
         remote.report(renderer_id, value)
         raw = renderer_value_to_hardware_raw(value, steps)
-        # Remembered whoever is active: `remember()` no-ops for renderers
-        # outside MANAGED_RENDERERS, and since ADR-0054 §5 a remembered
-        # level is the fallback for a renderer that will not say where it
-        # is, not the normal path.
-        volume_memory.remember(renderer_id, raw)
         if supervisor.active != renderer_id:
             logger.debug(
-                "volume: %s reported %s/%s while inactive, remembered but not applied",
+                "volume: %s reported %s/%s while inactive, not applied",
                 renderer_id, value, steps,
             )
             return
@@ -749,9 +663,6 @@ async def main() -> None:
                # the next boot rather than now - which is what a *boot*
                # volume means.
                "boot_volume": None,
-               # Wired where it is used - `RendererVolumeMemory` reads it
-               # on every remember and every restore.
-               "per_renderer_volume": None,
                # ADR-0051: read by the driver, through the file these write.
                "skin": publish_visualisation,
                "skin_rotate": publish_visualisation,
@@ -1034,7 +945,6 @@ async def main() -> None:
             adapter.capabilities.dummy_mixer_card,
             DUMMY_CONTROL,
             config.mixer_name,
-            volume_memory=volume_memory,
             get_active_renderer=lambda: supervisor.active,
             # LMS fades the player out on pause by sending volume steps;
             # mirroring those published the user's volume as 0% and

@@ -54,20 +54,6 @@ class FakeSpotify:
         pass
 
 
-class FakeVolumeMemory:
-    def __init__(self):
-        self.remembered: list[tuple[str, int]] = []
-
-    def remember(self, renderer_id, raw):
-        self.remembered.append((renderer_id, raw))
-
-    def get(self, renderer_id):
-        for rid, raw in reversed(self.remembered):
-            if rid == renderer_id:
-                return raw
-        return None
-
-
 async def settle():
     """Let a write finish. Since ADR-0052 §4 a level change is a *ramp* -
     `write_hardware` awaits an inner task - so one loop turn no longer
@@ -88,11 +74,7 @@ def fake_set_raw(monkeypatch):
 
 
 def make_bridge(active="spotify"):
-    memory = FakeVolumeMemory()
-    bridge = VolumeBridge(
-        "DAC", FakeSpotify(), volume_memory=memory, get_active_renderer=lambda: active
-    )
-    return bridge, memory
+    return VolumeBridge("DAC", FakeSpotify(), get_active_renderer=lambda: active), None
 
 
 def make_reporting_bridge(active="spotify"):
@@ -101,12 +83,10 @@ def make_reporting_bridge(active="spotify"):
     hardware - `__main__`'s `report_renderer_volume`, which applies the one
     curve - and this class's job on that side is to decide *which* reports
     are genuine. So these tests assert on what it passes on."""
-    memory = FakeVolumeMemory()
     reported: list[tuple[str, int, int]] = []
     bridge = VolumeBridge(
         "DAC",
         FakeSpotify(),
-        volume_memory=memory,
         get_active_renderer=lambda: active,
         on_renderer_value=lambda rid, value, steps: reported.append((rid, value, steps)),
     )
@@ -450,13 +430,8 @@ class TestDummyMixerBridgePauseFadeGate:
         produces no event at all.
         """
         moved = []
-        remembered = []
         monkeypatch.setattr(volume_module, "SETTLE_S", 0)
         monkeypatch.setattr(volume_module, "get_raw", _async_return(settled_raw))
-
-        class Memory:
-            def remember(self, renderer_id, raw):
-                remembered.append((renderer_id, raw))
 
         async def on_moved(renderer_id):
             moved.append(renderer_id)
@@ -466,12 +441,11 @@ class TestDummyMixerBridgePauseFadeGate:
             "gexislmsvol",
             "Master",
             "DAC",
-            volume_memory=Memory(),
             get_active_renderer=lambda: active,
             is_playing=playing,
             on_moved=on_moved,
         )
-        return bridge, moved, remembered
+        return bridge, moved
 
     @staticmethod
     async def _steps(bridge, *raws):
@@ -485,36 +459,31 @@ class TestDummyMixerBridgePauseFadeGate:
     async def test_a_pause_fade_is_not_mirrored_or_remembered(self, monkeypatch):
         """The measured fade. By the time it settles, the pause has been
         reported, which is the whole point of settling."""
-        bridge, moved, remembered = self._bridge(
+        bridge, moved = self._bridge(
             monkeypatch, playing=lambda: False, settled_raw=DUMMY_MIN_RAW
         )
 
         await self._steps(bridge, 109, 82, 41, DUMMY_MIN_RAW)
 
         assert moved == []
-        assert remembered == []
 
     @pytest.mark.asyncio
     async def test_a_volume_change_while_playing_is_mirrored_once(self, monkeypatch):
         """A drag sends many steps; one decision comes out of it."""
-        bridge, moved, remembered = self._bridge(
+        bridge, moved = self._bridge(
             monkeypatch, playing=lambda: True, settled_raw=109
         )
 
         await self._steps(bridge, 80, 95, 109)
 
         assert moved == ["lms"]  # one event, whatever the control did
-        # Remembering moved to `report_renderer_volume` with the curve
-        # (ADR-0054 §3), because it is the renderer's *number* that is
-        # worth remembering, not squeezelite's rendering of it.
-        assert remembered == []
 
     @pytest.mark.asyncio
     async def test_a_late_transport_report_is_what_decides(self, monkeypatch):
         """The transport can still say "playing" while the fade arrives; the
         settled decision reads it after the report lands."""
         playing = True
-        bridge, moved, _ = self._bridge(
+        bridge, moved = self._bridge(
             monkeypatch, playing=lambda: playing, settled_raw=DUMMY_MIN_RAW
         )
         for raw in (109, 82, 41, DUMMY_MIN_RAW):
@@ -538,7 +507,7 @@ class TestDummyMixerBridgePauseFadeGate:
         become a 16 ms hardware write. What the old contract protected
         against was a *stale* level, and that is asserted here.
         """
-        bridge, moved, _ = self._bridge(monkeypatch, playing=None)
+        bridge, moved = self._bridge(monkeypatch, playing=None)
 
         await self._steps(bridge, 0, 64, 127)
         if bridge._mirror_soon is not None:
@@ -555,7 +524,7 @@ class TestDummyMixerBridgePauseFadeGate:
         """Finding 045 §10, in a test: bluealsa wrote the dummy ~750 times a
         second while it melted down. The mirror must not turn that into 750
         hardware writes - and must still end on the last value."""
-        bridge, moved, _ = self._bridge(monkeypatch, playing=None)
+        bridge, moved = self._bridge(monkeypatch, playing=None)
 
         await self._steps(bridge, *range(0, 100))
         if bridge._mirror_soon is not None:
@@ -565,7 +534,7 @@ class TestDummyMixerBridgePauseFadeGate:
 
     @pytest.mark.asyncio
     async def test_an_inactive_renderer_is_remembered_but_not_applied(self, monkeypatch):
-        bridge, moved, _ = self._bridge(
+        bridge, moved = self._bridge(
             monkeypatch, playing=lambda: True, settled_raw=109, active="spotify"
         )
 
@@ -581,7 +550,7 @@ class TestDummyMixerBridgePauseFadeGate:
         asymmetry - mirroring one half - is what left it at -45dB on
         hardware, 2026-09-17."""
         playing = False
-        bridge, moved, _ = self._bridge(
+        bridge, moved = self._bridge(
             monkeypatch, playing=lambda: playing, settled_raw=DUMMY_MIN_RAW
         )
         await self._steps(bridge, 64, DUMMY_MIN_RAW)

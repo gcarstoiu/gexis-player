@@ -719,10 +719,13 @@ async def set_raw(
 
 
 class VolumeBridge:
-    """Bridges the hardware mixer with go-librespot's own volume, and
-    feeds every genuine hardware change to `volume_memory` (renderer_
-    volume.py) so it can be restored the next time that renderer becomes
-    active - George's decision, 2026-09-07.
+    """Bridges the hardware mixer with go-librespot's own volume.
+
+    **It used to feed every hardware change to a per-renderer memory**
+    (George's decision 2026-09-07, `renderer_volume.py`). That memory was
+    deleted on 2026-09-23: since ADR-0054 §5 a renderer is *asked* where it
+    is when it takes the device, and the renderer's own memory is the real
+    one - ours was a second, worse copy of it.
 
     `get_active_renderer` is a zero-arg callable (typically
     `lambda: supervisor.active`) - who a hardware change gets attributed
@@ -739,7 +742,6 @@ class VolumeBridge:
         mixer_name: str,
         adapter,
         *,
-        volume_memory,
         get_active_renderer,
         on_hardware_level=None,
         on_renderer_value=None,
@@ -764,7 +766,6 @@ class VolumeBridge:
         """
         self._mixer_name = mixer_name
         self._adapter = adapter
-        self._volume_memory = volume_memory
         self._get_active_renderer = get_active_renderer
         self._on_hardware_level = on_hardware_level
         #: ADR-0053. What Spotify says its own volume is, passed on so the
@@ -1080,7 +1081,6 @@ class DummyMixerBridge:
         dummy_control: str,
         hardware_control: str,
         *,
-        volume_memory,
         get_active_renderer,
         is_playing=None,
         on_moved=None,
@@ -1093,7 +1093,6 @@ class DummyMixerBridge:
         self._mirror_soon: asyncio.Task | None = None
         self._dummy_control = dummy_control
         self._hardware_control = hardware_control
-        self._volume_memory = volume_memory
         self._get_active_renderer = get_active_renderer
         self._is_playing = is_playing
         #: ADR-0054 §2: what to do when this renderer's control moves. The

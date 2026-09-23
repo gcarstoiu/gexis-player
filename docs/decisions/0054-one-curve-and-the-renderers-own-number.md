@@ -144,6 +144,19 @@ LMS's from the server, Spotify's from `/status`, Bluetooth's from the
 `Volume` property. **So acquisition reads it and applies §3's curve**, and
 the remembered level is used only when the renderer has none to give.
 
+> **Amended 2026-09-23: there is no remembered level any more.** George:
+> *"Don't we ask each renderer the volume when they take over? If so what
+> is the purpose of the remember level per renderer."* None, once this
+> section shipped — **12 acquisitions, 12 answers, 0 fallbacks**, measured
+> before deleting it. `RendererVolumeMemory`, `volume.json`,
+> `restore_volume_floor_db` and the `per_renderer_volume` row are gone.
+>
+> **A renderer that does not answer is left alone**, deliberately. Every
+> one has an inbound path that corrects the level within a second —
+> bluealsa's PCM appearing, LMS's status push, Spotify's volume event — so
+> it self-corrects, and guessing meanwhile can only be wrong in a way
+> nobody asked for.
+
 This is George's first finding in its general form, and it is what makes
 every control agree at the moment of connection rather than a second later.
 
@@ -181,8 +194,8 @@ outward, which is the direction the model is for.
   `Perceptual` / `dB-linear` — which was never a curve. **Recorded, not
   wired**: ADR-0022's inventory carries it as `[R][H]`, and wiring it is
   the next step. `max_ceiling` is unchanged.
-- **`renderer_volume.py`'s remembered levels become a fallback**, not the
-  normal path. The store stays.
+- **`renderer_volume.py` is deleted** (2026-09-23). It became a fallback
+  that never fired, and then it became nothing.
 - **The image changes**: the `bluealsa-aplay` unit loses its mixer options.
   A device must be rebuilt or the unit hand-edited for §1.
 - **Bluetooth's half cannot be verified without George's phone.** The D-Bus

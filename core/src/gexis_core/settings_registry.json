@@ -43,14 +43,6 @@
         "default": null
       },
       {
-        "key": "per_renderer_volume",
-        "type": "toggle",
-        "label": "Remember level per renderer",
-        "marks": "R",
-        "note": null,
-        "default": true
-      },
-      {
         "key": "volume_managed",
         "type": "readonly",
         "label": "Volume-managed renderers",

@@ -70,7 +70,12 @@ DESIGN_KEYS_NOT_YET_IN_THE_REGISTRY: set[str] = set()
 #:
 #: **This set only grows with George's agreement**, and both of these are
 #: his.
-DESIGN_KEYS_WE_DECLINED = {"weather_key", "idle_minmax"}
+#: `per_renderer_volume` joined them on 2026-09-23, with the machinery
+#: behind it: since ADR-0054 §5 a renderer is *asked* where it is when it
+#: takes the device, so a second copy of what the renderer already
+#: remembers decides nothing. Measured before deleting: 12 acquisitions,
+#: 12 answers, 0 fallbacks. George: "delete them".
+DESIGN_KEYS_WE_DECLINED = {"weather_key", "idle_minmax", "per_renderer_volume"}
 
 
 #: Not a row. The Wi-Fi password sheet builds its key at runtime from the
@@ -456,9 +461,10 @@ def test_the_shipped_registry_hides_twenty_rows_and_shows_the_rest():
     # Less `restore_floor` and `boot_default_scope`, which George ruled out
     # of scope on 2026-09-23 ("The other 2 you flagged - not needed"):
     # both were [?] rows, decisions owed rather than behaviour missing, and
-    # the behaviour behind them stays hardcoded.
-    assert len(rows) == 69
-    assert len(rows) - len(kept) == 51
+    # the behaviour behind them stays hardcoded. Less `per_renderer_volume`
+    # too, deleted with the memory it switched on and off.
+    assert len(rows) == 68
+    assert len(rows) - len(kept) == 50
 
 
 def test_the_clock_can_be_turned_off_without_taking_the_screen_with_it():
