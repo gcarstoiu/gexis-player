@@ -118,8 +118,27 @@ subphases, split on George's agreement (2026-09-22):
   `travel_curve` row becomes **Volume curve**, offering **Cubic** and
   **Linear (dB)** — the two that now exist. **Recorded, not wired.**
 
-  **Still unbuilt in 9i:** the eight Audio rows (one of which is now this
-  curve), and ADR-0046's fixed output.
+  - **Four of the eight Audio rows are wired** (2026-09-23), each
+    exercised through the API the panel and the phone use:
+    **Volume curve** (Cubic / Linear (dB) — changing it moves the level
+    under an untouched slider, −15.50 ↔ −30.00 dB at half travel);
+    **Boot volume** (read by the boot unit, so it applies at the next boot,
+    with `core.toml` as the fallback for any failure to read it);
+    **Remember level per renderer** (read per acquisition; off means
+    everyone starts from the boot level, and what is stored is kept);
+    **Volume-managed renderers** (readonly, now reporting what the adapters
+    declare). All four drop `[H]` in ADR-0022's inventory.
+
+  **Still unbuilt in 9i:** `output_mode` — ADR-0046's fixed output, which
+  is the same decision as 9j because HDMI has no mixer control at all.
+
+  **Two rows are waiting on George, not on code**, both marked `[?]`:
+  - **`restore_floor`** — −40 dB, a placeholder never confirmed, and
+    Finding 011 §4 measured it as too quiet for Bluetooth's unmanaged
+    floor.
+  - **`boot_default_scope`** — cold boot only, or a renderer's first use
+    mid-session too? Finding 011 §3: a renderer's first use mid-session
+    currently lands as quiet as a power-on.
 
   **Needs George, and nothing else will do:**
   - **Bluetooth, on the new path, with the amplifier turned down first.**
