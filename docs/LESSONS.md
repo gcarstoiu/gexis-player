@@ -468,6 +468,27 @@ wrong.** Before excluding something on a number, ask what would have to be
 true for the number to be right — and check that a capture is of a live
 screen, not a frozen one.
 
+**23. The repository's own record was the wrong answer** (2026-09-23).
+George asked me to go back to an earlier investigation and redo the
+spectrum fix from what it found. I did, and ADR-0015 said `steps` was
+*"bar count — 15, 20, 25 or 30"*. It is not: `spectrum.py` sets
+`step = bar area height / steps`, the height of one vertical segment of a
+bar. The bar count is the global `size`.
+
+**It shipped, and it looked right.** The number was then clamped to what
+the artwork holds, so nothing overflowed and the screen was correct. What
+it cost was invisible on the screen: ten of the twenty-two skins drew
+fewer bars than they had room for — `s.1` twelve where twenty fit — which
+is the exact loss of resolution the instruction was about. It was found an
+hour later, while measuring something else.
+
+**Searching this repository first is the rule here, and it is right.** But
+the rule guards against contradicting a decision already taken, not
+against a measurement being wrong. A record of *what a value means in
+someone else's code* is a reading, not a decision, and a reading can be
+checked against the code in a minute. Take a decision from the record;
+take a fact about a dependency from the dependency.
+
 ## Common shape
 
 Every case had a *plausible* substitute for the real target — the build

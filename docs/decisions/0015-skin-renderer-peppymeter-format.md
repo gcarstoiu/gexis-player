@@ -130,9 +130,13 @@ reflection.filename         usually a second bar sprite
 reflection.gap
 topping.height              peak-hold cap height
 topping.step
-steps                       bar count — 15, 20, 25 or 30; the engine
-                            ignores it, the driver applies it
-                            ([Finding 049](../findings/049-the-spectrum-draws-more-bars-than-it-has-room-for.md))
+steps                       **vertical** quantisation, 12-30: spectrum.py
+                            sets `step = bar height / steps`, the height of
+                            one segment of a bar. Recorded here as the bar
+                            count until 2026-09-23, which it is not
+                            ([Finding 049](../findings/049-the-spectrum-draws-more-bars-than-it-has-room-for.md)).
+                            The bar count is the global `size`, which the
+                            driver sets per skin from what the artwork holds
 fgr.filename                overlay (only 1 of 13 uses it)
 ```
 

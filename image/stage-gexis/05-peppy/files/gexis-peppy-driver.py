@@ -34,6 +34,13 @@ PEPPY = Path(os.environ.get("GEXIS_PEPPY_DIR", "/opt/gexis-peppy"))
 METER_DIR = PEPPY / "peppymeter"
 SPECTRUM_DIR = PEPPY / "spectrum"
 
+#: How many bands peppyalsa puts in the spectrum pipe
+#: ([ADR-0011](../../../../docs/decisions/0011-meter-data-three-transports.md),
+#: `spectrum_size` in `/etc/alsa/conf.d/output.conf`). The cap on how many
+#: bars a skin may draw: more bars than measurements would invent data, and
+#: fewer is only ever the skin's own artwork running out of room.
+SPECTRUM_BANDS = 30
+
 
 def meter_sections(path: Path) -> dict[str, dict[str, str]]:
     """The skin file, read with the same tolerance the engines use: unknown
@@ -202,29 +209,34 @@ def spectrum_for(skin: dict[str, str]) -> tuple[str, int, int] | None:
     return name, width, height
 
 
-def spectrum_steps(name: str, base_folder: Path | None, folder: str) -> int | None:
-    """**How many bars this spectrum skin was drawn for.**
+def spectrum_bars(name: str, base_folder: Path | None, folder: str, bands: int) -> int | None:
+    """**How many bars fit inside this spectrum skin's own artwork.**
 
+    The engine draws `config[SIZE]` bars from the global `config.txt` and
+    that one number applied to every skin alike. It was 30, and no skin in
+    either pack has room for 30: they hold 20 to 22 (George, 2026-09-23:
+    *"the spectrum bars are actually falling slightly outside their
+    designated area in the right"*).
+
+    **What fits is arithmetic on the skin's own numbers** - the width of
+    its background picture, where the first bar starts, and how wide a bar
+    and a gap are:
+
+        room = (background width - origin.x + bar.gap) // (bar.width + bar.gap)
+
+    **Not the section's `steps`.** That was the first version of this and it
+    was wrong: `steps` is the *vertical* quantisation - `spectrum.py` sets
+    `step = bar area height / steps`, the height of one segment of a bar -
+    and it has nothing to do with how many bars there are. It happened to
+    produce numbers that fit, because they were then clamped to `room`
+    anyway, and it cost ten skins resolution they had room for: `s.1` drew
+    12 bars in a frame that holds 20.
     [ADR-0015](../../../../docs/decisions/0015-skin-renderer-peppymeter-format.md)
-    records it — `steps  bar count - 15, 20, 25 or 30` — and the engine
-    ignores it: `spectrum.py` draws `config[SIZE]` bars, one number from
-    `config.txt` for every skin alike. That number was 30, so a skin drawn
-    for twelve bars got thirty and they ran off the end of its artwork
-    (George, 2026-09-23: *"the spectrum bars are actually falling slightly
-    outside their designated area in the right"*). Every one of the 22
-    spectrum skins overflows at 30; their own counts are 12, 15, 16, 20,
-    25 and 30.
+    recorded `steps` as the bar count; that line is corrected.
 
-    **The pipe is not touched.** peppyalsa keeps sending 30 bands
-    (ADR-0011) — narrowing *that* would cost every skin its resolution,
-    including the ones drawn for thirty. Only what is drawn changes.
-
-    **And the skin's own number is clamped to what its own artwork holds**,
-    because twelve of the twenty-two ask for more than they have room for:
-    `Kenwood Big` wants 30 bars in 850 pixels and needs 1262. Clamped at
-    load rather than corrected in the files, so a pack nobody has seen yet
-    gets the same treatment - and the stock pack's sections are not ours to
-    edit.
+    **The pipe is not touched.** peppyalsa keeps sending `bands` bands
+    (ADR-0011); `room` is capped at that, never the other way round, so
+    narrowing what is drawn never narrows what is measured.
 
     **The count comes down, never the bar width.** The bar is a picture the
     skin's author drew at a fixed size; narrowing it would scale their
@@ -236,23 +248,21 @@ def spectrum_steps(name: str, base_folder: Path | None, folder: str) -> int | No
         parser = configparser.ConfigParser(strict=False)
         parser.read(base_folder / folder / "spectrum.txt")
         section = parser[name]
-        steps = int(section["steps"])
-    except (KeyError, ValueError, OSError):
-        return None
-    try:
         width = int(section["bar.width"])
         gap = int(section["bar.gap"])
         origin = int(section["origin.x"])
         background = base_folder / folder / section["bgr.filename"]
-        area = png_width(background)
-        if area:
-            room = (area - origin + gap) // (width + gap)
-            if 0 < room < steps:
-                print(f"{name}: drawn for {steps} bars, {area}px holds {room}", flush=True)
-                return room
-    except (KeyError, ValueError, OSError, ZeroDivisionError):
-        pass
-    return steps
+    except (KeyError, ValueError, OSError):
+        return None
+    area = png_width(background)
+    if not area:
+        return None
+    room = (area - origin + gap) // (width + gap)
+    if room < 1:
+        return None
+    bars = min(room, bands)
+    print(f"{name}: {area}px holds {room} bars, drawing {bars}", flush=True)
+    return bars
 
 
 def png_width(path: Path) -> int | None:
@@ -287,10 +297,14 @@ def select_spectrum_section(name: str, base_folder: Path | None = None) -> None:
     if base_folder is not None:
         parser["current"]["base.folder"] = str(base_folder)
     # The engine resolves its sections under `base.folder/spectrum.folder`,
-    # so the step count is read from the same place it will read the rest.
-    steps = spectrum_steps(name, base_folder, parser["current"].get("spectrum.folder", ""))
-    if steps:
-        parser["current"]["size"] = str(steps)
+    # so the bar count is read from the same place it will read the rest.
+    # The cap is what the *pipe* carries, which is the band count peppyalsa
+    # was configured with - never more bars than there are measurements.
+    bars = spectrum_bars(
+        name, base_folder, parser["current"].get("spectrum.folder", ""), SPECTRUM_BANDS
+    )
+    if bars:
+        parser["current"]["size"] = str(bars)
     # The engine reads this file; the daemon never does. It is rewritten on
     # every skin change, which is why the image installs it writable by the
     # user the unit runs as.
