@@ -328,6 +328,35 @@ def _taper_floor() -> float:
     return 10.0 ** (-RENDERER_DB_SPAN / 60.0)
 
 
+#: **The curve is a setting** (ADR-0022's inventory, on George's
+#: instruction 2026-09-23). Two names, and they are the two that exist:
+#: `Cubic` is what ships and `Linear (dB)` is the even-decibels curve it
+#: replaced, kept because it is a legitimate taste and because somebody
+#: driving this from a phone at arm's length may want the bottom of the
+#: slider to be genuinely quiet.
+CURVE_CUBIC = "Cubic"
+CURVE_LINEAR = "Linear (dB)"
+_curve_reader: Callable[[], str | None] = lambda: None
+
+
+def set_curve_reader(reader) -> None:
+    """A reader, not a value, so a change from the phone applies to the
+    next map rather than the next restart - as `set_ceiling_reader`."""
+    global _curve_reader
+    _curve_reader = reader
+
+
+def curve() -> str:
+    """`Cubic` unless the row says otherwise, including when the row cannot
+    be read: a device that cannot reach its settings should sound the way
+    it shipped."""
+    try:
+        value = _curve_reader()
+    except Exception:  # noqa: BLE001 - a missing row is the default curve
+        return CURVE_CUBIC
+    return CURVE_LINEAR if value == CURVE_LINEAR else CURVE_CUBIC
+
+
 def renderer_value_to_hardware_raw(value: int, steps: int) -> int:
     """A renderer's own value, on its own scale, as a DAC level.
 
@@ -346,6 +375,8 @@ def renderer_value_to_hardware_raw(value: int, steps: int) -> int:
     if steps <= 0 or value <= 0:
         return 0
     fraction = min(1.0, value / steps)
+    if curve() == CURVE_LINEAR:
+        return db_to_raw(ceiling_db() - (1.0 - fraction) * RENDERER_DB_SPAN)
     floor = _taper_floor()
     ratio = (fraction * (1.0 - floor) + floor) ** 3
     return db_to_raw(ceiling_db() + 20.0 * math.log10(ratio))
@@ -356,9 +387,13 @@ def hardware_raw_to_renderer_value(raw: int, steps: int) -> int:
     *hardware* has to a renderer that did not set it."""
     if steps <= 0 or raw <= 0:
         return 0
-    floor = _taper_floor()
-    ratio = 10.0 ** ((raw_to_db(raw) - ceiling_db()) / 20.0)
-    fraction = (ratio ** (1.0 / 3.0) - floor) / (1.0 - floor)
+    short = ceiling_db() - raw_to_db(raw)
+    if curve() == CURVE_LINEAR:
+        fraction = 1.0 - short / RENDERER_DB_SPAN
+    else:
+        floor = _taper_floor()
+        ratio = 10.0 ** (-short / 20.0)
+        fraction = (ratio ** (1.0 / 3.0) - floor) / (1.0 - floor)
     return max(0, min(steps, round(fraction * steps)))
 
 

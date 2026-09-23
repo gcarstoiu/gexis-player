@@ -40,9 +40,26 @@ DEFAULT_STATE_PATH = Path("/var/lib/gexis-core/volume.json")
 
 
 class RendererVolumeMemory:
-    def __init__(self, path: Path = DEFAULT_STATE_PATH, *, managed_renderers: frozenset[str]) -> None:
+    def __init__(
+        self,
+        path: Path = DEFAULT_STATE_PATH,
+        *,
+        managed_renderers: frozenset[str],
+        enabled=None,
+    ) -> None:
         self._path = path
         self._managed_renderers = frozenset(managed_renderers)
+        #: ADR-0022's `per_renderer_volume` row, wired 2026-09-23. George's
+        #: decision of 2026-09-07 made this behaviour unconditional; the row
+        #: has been inventoried as `[R][H]` since, and turning it off means
+        #: every renderer starts from the boot level instead of from
+        #: wherever it was left.
+        #:
+        #: **Read on every call, not captured**, so a change from the phone
+        #: applies to the next acquisition rather than the next restart -
+        #: and so that turning it off does not throw away what is already
+        #: stored, in case it is turned back on.
+        self._enabled = enabled or (lambda: True)
         self._levels: dict[str, int] = self._load()
 
     def resolve_restore(
@@ -67,6 +84,11 @@ class RendererVolumeMemory:
         """
         if renderer_id not in self._managed_renderers:
             return None
+        if not self._enabled():
+            # Off: every renderer starts from the same safe level, which is
+            # what the row means. Not `None` - that is "this renderer's
+            # volume is not ours to touch at all", a different thing.
+            return boot_default
         raw = self.get(renderer_id)
         if raw is None:
             return boot_default
@@ -96,7 +118,7 @@ class RendererVolumeMemory:
             return {}
 
     def remember(self, renderer_id: str, raw: int) -> None:
-        if renderer_id not in self._managed_renderers:
+        if renderer_id not in self._managed_renderers or not self._enabled():
             return
         if self._levels.get(renderer_id) == raw:
             return

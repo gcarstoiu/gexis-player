@@ -138,3 +138,59 @@ class TestNoRestoreCeiling:
             memory.resolve_restore(
                 "spotify", boot_default=60, floor_db=-40.0, ceiling_db=-20.0
             )
+
+
+class TestThePerRendererRow:
+    """ADR-0022's `per_renderer_volume`, wired 2026-09-23. George's decision
+    of 2026-09-07 made the behaviour unconditional; the row has been
+    inventoried as `[R][H]` since."""
+
+    @staticmethod
+    def _memory(tmp_path, enabled):
+        memory = RendererVolumeMemory(
+            tmp_path / "volumes.json",
+            managed_renderers=MANAGED,
+            enabled=lambda: enabled[0],
+        )
+        return memory
+
+    def test_off_means_every_renderer_starts_from_the_boot_level(self, tmp_path):
+        enabled = [True]
+        memory = self._memory(tmp_path, enabled)
+        memory.remember("spotify", 200)
+
+        enabled[0] = False
+
+        assert memory.resolve_restore("spotify", boot_default=60, floor_db=-40.0) == 60
+
+    def test_off_does_not_throw_away_what_is_already_stored(self, tmp_path):
+        """So that turning it back on returns the device to where it was,
+        rather than to silence."""
+        enabled = [True]
+        memory = self._memory(tmp_path, enabled)
+        memory.remember("spotify", 200)
+
+        enabled[0] = False
+        memory.remember("spotify", 111)  # ignored
+        enabled[0] = True
+
+        assert memory.resolve_restore("spotify", boot_default=60, floor_db=-40.0) == 200
+
+    def test_an_unmanaged_renderer_is_still_untouched_either_way(self, tmp_path):
+        """`None` is "not ours to touch at all", which is a different thing
+        from "start from the boot level"."""
+        enabled = [False]
+        memory = self._memory(tmp_path, enabled)
+
+        assert memory.resolve_restore("bluetooth", boot_default=60, floor_db=-40.0) is None
+
+    def test_the_row_is_read_per_call_not_captured(self, tmp_path):
+        """A change from the phone applies to the next acquisition rather
+        than the next restart."""
+        enabled = [True]
+        memory = self._memory(tmp_path, enabled)
+        memory.remember("spotify", 200)
+        assert memory.resolve_restore("spotify", boot_default=60, floor_db=-40.0) == 200
+
+        enabled[0] = False
+        assert memory.resolve_restore("spotify", boot_default=60, floor_db=-40.0) == 60

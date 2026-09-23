@@ -952,3 +952,47 @@ def test_the_two_curves_the_registry_offers_are_the_two_that_exist():
     linear = -(1 - 0.5) * volume_module.RENDERER_DB_SPAN
     assert cubic == -15.5
     assert linear == -30.0
+
+
+class TestTheVolumeCurveRow:
+    """ADR-0022's inventory, wired 2026-09-23. Two names, and they are the
+    two curves that exist (ADR-0054 §3)."""
+
+    @pytest.fixture(autouse=True)
+    def _back_to_default(self):
+        yield
+        volume_module.set_curve_reader(lambda: None)
+
+    def test_cubic_is_what_ships(self):
+        assert volume_module.curve() == volume_module.CURVE_CUBIC
+        assert raw_to_db(renderer_value_to_hardware_raw(50, 100)) == -15.5
+
+    def test_linear_spreads_the_decibels_evenly(self):
+        volume_module.set_curve_reader(lambda: volume_module.CURVE_LINEAR)
+
+        assert raw_to_db(renderer_value_to_hardware_raw(50, 100)) == -30.0
+        assert raw_to_db(renderer_value_to_hardware_raw(25, 100)) == -45.0
+
+    def test_both_curves_keep_zero_as_silence_and_full_as_the_ceiling(self):
+        for name in (volume_module.CURVE_CUBIC, volume_module.CURVE_LINEAR):
+            volume_module.set_curve_reader(lambda n=name: n)
+            assert renderer_value_to_hardware_raw(0, 100) == 0
+            assert raw_to_db(renderer_value_to_hardware_raw(100, 100)) == 0.0
+
+    def test_the_inverse_follows_the_curve(self):
+        """Or the panel would read a position the slider is not at."""
+        for name in (volume_module.CURVE_CUBIC, volume_module.CURVE_LINEAR):
+            volume_module.set_curve_reader(lambda n=name: n)
+            for value in range(101):
+                raw = renderer_value_to_hardware_raw(value, 100)
+                assert abs(hardware_raw_to_renderer_value(raw, 100) - value) <= 1
+
+    def test_an_unreadable_or_unknown_row_sounds_like_the_shipped_device(self):
+        def boom():
+            raise RuntimeError("no settings store yet")
+
+        volume_module.set_curve_reader(boom)
+        assert volume_module.curve() == volume_module.CURVE_CUBIC
+
+        volume_module.set_curve_reader(lambda: "Bezier")
+        assert volume_module.curve() == volume_module.CURVE_CUBIC

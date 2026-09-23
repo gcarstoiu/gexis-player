@@ -24,7 +24,7 @@
         "key": "boot_volume",
         "type": "number",
         "label": "Boot volume",
-        "marks": "RH",
+        "marks": "R",
         "note": "A fixed safe level at every cold boot, never the last session’s.",
         "min": -90,
         "max": -20,
@@ -71,7 +71,7 @@
         "key": "per_renderer_volume",
         "type": "toggle",
         "label": "Remember level per renderer",
-        "marks": "RH",
+        "marks": "R",
         "note": null,
         "default": true
       },
@@ -79,7 +79,7 @@
         "key": "volume_managed",
         "type": "readonly",
         "label": "Volume-managed renderers",
-        "marks": "RH",
+        "marks": "R",
         "note": "Bluetooth excluded pending Finding 006.",
         "default": "LMS, Spotify",
         "surfaced": false
@@ -88,7 +88,7 @@
         "key": "travel_curve",
         "type": "choice",
         "label": "Volume curve",
-        "marks": "RH",
+        "marks": "R",
         "note": "How the slider's travel maps to loudness, over 60 dB either way. Cubic is the shape a volume control usually has — half travel is −15.5 dB. Linear spreads the decibels evenly instead, which puts half travel at −30 dB and makes the bottom of the slider very quiet.",
         "options": [
           "Cubic",

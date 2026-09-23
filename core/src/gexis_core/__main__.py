@@ -65,6 +65,7 @@ from gexis_core.volume import (
     Mute,
     renderer_value_to_hardware_raw,
     set_ceiling_reader,
+    set_curve_reader,
     set_raw,
     slider_percent_to_raw,
     raw_to_db,
@@ -72,6 +73,10 @@ from gexis_core.volume import (
 from gexis_core.wsserver import StateServer
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(levelname)s %(message)s")
+
+#: How a renderer is named to a person. Only where the id is not simply its
+#: name capitalised, which today is LMS alone.
+RENDERER_LABELS = {"lms": "LMS"}
 logger = logging.getLogger("gexis_core")
 
 
@@ -274,6 +279,7 @@ async def main() -> None:
     # declared capability (adapters/base.py), not a name hardcoded here -
     # this used to be renderer_volume.py's own MANAGED_RENDERERS tuple.
     volume_memory = RendererVolumeMemory(
+        enabled=lambda: settings.value("per_renderer_volume") is not False,
         managed_renderers=frozenset(
             rid for rid, adapter in adapters.items() if adapter.capabilities.volume_managed
         )
@@ -473,22 +479,33 @@ async def main() -> None:
     # row has to be readable from inside `volume.py`'s pure mapping
     # functions - a reader rather than a value, resolved per map.
     set_ceiling_reader(lambda: _number("max_ceiling"))
+    # ADR-0022's inventory, wired 2026-09-23: which of the two curves maps
+    # the slider's travel onto loudness (ADR-0054 §3).
+    set_curve_reader(lambda: settings.value("travel_curve"))
 
-    def _apply_ceiling() -> None:
-        """Re-write the level the device is already at when the ceiling
-        moves.
+    def _reapply_level() -> None:
+        """Put the level back where the *position* now says it belongs.
 
-        Two things happen at once and both need it. If the level is now
-        *above* the ceiling it has to come down, and through the bridge so
-        it ramps rather than drops. And whether or not it moves, the
-        percentage that describes it has changed - the scale did - so it
-        must be republished or the panel keeps showing a number from the
-        old scale until something else touches the volume.
+        Both `max_ceiling` and the volume curve change what a position
+        means without anybody touching the volume, so the hardware has to
+        be re-derived from the position rather than left where it is -
+        otherwise a ceiling that came down leaves the device too loud, and
+        a curve change leaves the slider pointing at the wrong level.
+
+        Through the bridge, so it ramps rather than drops, and so the panel
+        is republished: the number may not have moved but what it describes
+        has.
         """
-        volume = state_store.state.volume
-        if volume is None:
-            return
-        asyncio.ensure_future(volume_bridge.write_hardware(volume.raw))
+        level = remote.level()
+        if level is not None:
+            value, steps = level
+            raw = renderer_value_to_hardware_raw(value, steps)
+        else:
+            volume = state_store.state.volume
+            if volume is None:
+                return
+            raw = slider_percent_to_raw(volume.percent)
+        asyncio.ensure_future(volume_bridge.write_hardware(raw))
 
     def on_active_change(renderer_id: str | None) -> None:
         state_store.set_active(renderer_id)
@@ -682,6 +699,17 @@ async def main() -> None:
             # Nothing stored means the first skin the corpus offers, so the
             # picker opens on something rather than on nothing.
             "skin": first_skin,
+            # ADR-0022's inventory: readonly, and it now reports what the
+            # adapters actually declare rather than a literal that could
+            # drift from them (`capabilities.volume_managed`).
+            "volume_managed": lambda: ", ".join(
+                sorted(
+                    RENDERER_LABELS.get(renderer_id, renderer_id.capitalize())
+                    for renderer_id, adapter in adapters.items()
+                    if adapter.capabilities.volume_managed
+                )
+            )
+            or "None",
         },
         # ADR-0051 §4: which skins there are depends on where they are
         # installed and on what `skin_corpus` holds, neither of which the
@@ -709,7 +737,22 @@ async def main() -> None:
                # ADR-0052 §3: read on every map between a position and a
                # level, and re-applied here when it changes so the level
                # comes down at once if it is now above the ceiling.
-               "max_ceiling": lambda _value=None: _apply_ceiling(),
+               "max_ceiling": lambda _value=None: _reapply_level(),
+               # ADR-0054 §3's two curves, wired 2026-09-23. A change moves
+               # the level under a slider that has not been touched, so it
+               # is re-applied rather than waiting for the next change.
+               "travel_curve": lambda _value=None: _reapply_level(),
+               # Readonly: nothing to do on a write, and the value is the
+               # live one below rather than the registry's literal.
+               "volume_managed": None,
+               # Read by `gexis_core.boot_volume`, which runs as its own
+               # unit before any renderer can play, so this takes effect at
+               # the next boot rather than now - which is what a *boot*
+               # volume means.
+               "boot_volume": None,
+               # Wired where it is used - `RendererVolumeMemory` reads it
+               # on every remember and every restore.
+               "per_renderer_volume": None,
                # ADR-0051: read by the driver, through the file these write.
                "skin": publish_visualisation,
                "skin_rotate": publish_visualisation,

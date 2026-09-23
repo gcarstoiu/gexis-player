@@ -119,6 +119,20 @@ class RemoteVolume:
             return None
         return renderer_value_to_percent(channel.value, channel.steps)
 
+    def level(self) -> tuple[int, int] | None:
+        """The active renderer's own value and scale, or None when there is
+        no renderer to be a remote for.
+
+        Distinct from `percent()`, which rounds to the panel's hundred: this
+        is what the hardware is derived from, so a setting that changes what
+        a *position* means (`max_ceiling`, the volume curve) can put the
+        level back without going through the panel's rounding first.
+        """
+        channel = self._active()
+        if channel is None or channel.value is None:
+            return None
+        return channel.value, channel.steps
+
     async def send(self, percent: float) -> bool:
         """Put the panel's position on the active renderer's control.
 
