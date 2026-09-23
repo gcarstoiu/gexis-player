@@ -1433,16 +1433,42 @@ ADRs were updated.
    - **The baseline to beat**, from
      [Finding 034](findings/034-what-the-panel-presents.md), 20 runs each
      with music playing: New Music strip 47.1 fps / 2.5 % dropped, artist
-     grid 23.1 / 50.7, queue rail 13.9 / 75.2.
-   - **Start with the question 7a could not answer: why is a playing panel
-     never idle?** With music playing and nobody touching it, 71 % of the
-     frames the compositor wants are dropped and about 17 a second reach
-     the screen; paused, it is barely asked for a frame. Every interaction
-     above is measured on top of that, so this may be most of it.
-     **PeppyMeter is already eliminated** (stopping it: 68.45 % against
-     71.25 %, inside the spread). Untested candidates: now playing's own
-     per-frame work while the playhead runs, the shared blurred backdrop
-     re-rastering, and the compositor's own cost.
+     grid 23.1 / 50.7, queue rail 13.9 / 75.2. **Its idle control is void
+     and the screens have since been rebuilt - see the last bullet.**
+   - ~~**Start with the question 7a could not answer: why is a playing panel
+     never idle?**~~ **Answered 2026-09-18, and the question had a false
+     premise.** Finding 034's idle control was measuring a **queue rail
+     left open by the run before it**, and that rail's blurred scrim costs
+     71 % of the frames on its own. **An idle panel is idle.** There is no
+     continuous cost underneath every screen, and the candidates listed
+     here — now playing's per-frame work, the artwork backdrop, the
+     compositor — were never the explanation.
+
+     **What the chase produced is worth more than the question was:**
+     [ADR-0041](decisions/0041-scrims-dim-but-do-not-blur.md), scrims dim
+     but do not blur, on
+     [Finding 037](findings/037-why-a-blurred-scrim-costs-the-panel.md).
+     `backdrop-filter` costs **24.5 ms a frame** in draw-and-submit against
+     a 16.7 ms budget with the CPU idle: the compositor draws the backdrop
+     into its own texture and reads it back every frame, which is a
+     tile-based GPU's worst case. Not the radius, not the area, and Vulkan
+     is worse. **The rule for the design: depth is affordable, live
+     readback is not** — a static blurred image costs almost nothing, so
+     the artwork bleed behind every screen stays as it is.
+
+     George checked it on the panel and kept it the same day. **Carried
+     through everywhere since:** no `backdrop-filter` remains in the UI —
+     the queue rail, the volume drawer, the source-switcher sheet and
+     Settings each carry the rule by name (verified 2026-09-23).
+
+     **This does not reach the target on its own.** The rail goes from
+     ~15 fps to ~36 against a 55 fps floor; its own list is the rest, and
+     that is the same work the artist grid needs.
+
+   - **The baseline has to be retaken before anything is judged against
+     it.** Finding 034's table is suspect twice over: its idle control was
+     contaminated as above, and the design sweep (9a–9j) has since
+     rebuilt most of the screens it measured.
    - **Then the lists**: rendering only what is on screen, lighter cards,
      letter buckets from the core rather than one list of 917.
      `content-visibility: auto` was tried in Phase 7 and removed - with
@@ -1476,15 +1502,14 @@ ADRs were updated.
 **Plan, agreed with George 2026-09-18** — in this order, and the order is
 the point:
 
-1. **Why is a playing panel never idle?** With music playing and nobody
-   touching it, 71 % of the frames the compositor wants are dropped
-   ([Finding 034](findings/034-what-the-panel-presents.md)); paused, it is
-   barely asked for a frame. That is not a property of any screen but a
-   continuous cost underneath all of them, and PeppyMeter is already
-   eliminated. **First, because the sweep below is a judgement call and
-   every judgement made on a frame-starved panel is contaminated** - a
-   screen that "feels sluggish" cannot be told from the floor it is standing
-   on (Claude's argument, George agreed).
+1. ~~**Why is a playing panel never idle?**~~ **Done 2026-09-18, and the
+   premise was false.** The control was measuring a queue rail left open by
+   the run before it; an idle panel is idle, and there is no floor under the
+   other screens (Finding 034's amendment). The reason for putting it first
+   - that a judgement made on a frame-starved panel is contaminated - was
+   sound and is now moot. **It produced
+   [ADR-0041](decisions/0041-scrims-dim-but-do-not-blur.md) instead**, which
+   is carried through every sheet in the UI.
 2. **The UI sweep with George.** Criterion 3's review pass, expected to be a
    large one with new topics of its own. Done before the performance work
    so the work is done on something closer to final, rather than tuning

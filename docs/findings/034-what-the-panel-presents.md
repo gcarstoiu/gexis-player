@@ -13,6 +13,15 @@ governor `ondemand`, LMS playing throughout unless stated.
 **Tools:** `tools/panel-touch.py`, `tools/panel-frames.py`, both in this
 repository.
 
+**Amended 2026-09-18 — there was a fifth fault, and it is the one that
+mattered most.** The idle control below was measuring **a queue rail left
+open by the run before it**, whose blurred scrim costs 71 % of the frames on
+its own. The "why is a playing panel never idle?" question this finding
+handed to Phase 9 had a false premise: **an idle panel is idle.** See the
+amendment at the end, and
+[ADR-0041](../decisions/0041-scrims-dim-but-do-not-blur.md), which the chase
+produced.
+
 **Scope:** one device, one session, one bundle. The numbers below are for
 **this** build; they are a baseline to compare against, not a claim about
 Chromium, Wayland or the Pi 4 in general. Nothing here attributes a cause —
@@ -79,7 +88,7 @@ in. `fps` is frames put on the screen per second *of the gesture*, ceiling
 
 | interaction | fps (median) | dropped (median, min-max) | frames/run |
 |---|---|---|---|
-| idle control (no input) | — | **71.25 %** (69.88-73.49) | 84 |
+| idle control (no input) — **void, see the amendment** | — | ~~71.25 %~~ (69.88-73.49) | 84 |
 | home-open | 45.1 | 5.67 % (4.23-52.17) | 71 |
 | new-music-scroll | 47.1 | 2.51 % (0.00-9.88) | 78 |
 | artist-grid-open | 19.0 | 11.94 % (3.08-22.22) | 34 |
@@ -135,3 +144,36 @@ No other candidate was tested. That is Phase 9's work.
   cause of what it measured - and with the player paused it does exactly
   that, producing almost no frames at all. With music playing it turned into
   the most interesting result in this finding instead.
+
+## Amendment, 2026-09-18 — the fifth fault: the idle control was not idle
+
+Phase 9's first step was the question this finding raised — *why is a playing
+panel never idle?* — and the answer is that it was not idle.
+
+**The control ran with a queue rail still open**, left there by the run
+before it, and the rail draws a full-screen `backdrop-filter` scrim. That
+scrim alone accounts for the 71 %. With nothing on screen but the screen, an
+idle panel drops almost nothing.
+
+**So every number in the table above stands, and the control does not.** The
+interaction rows were each measured on their own screen and are unaffected;
+what is void is the claim that they sit on top of a continuous 71 % floor.
+They do not. There is no floor.
+
+**Why it got past four rounds of instrument scrutiny:** the control was the
+one measurement with no gesture, so the harness had nothing to assert about
+which screen it was on — fault 2 above fixed exactly this for gestures and
+left the control uncovered, because a control appears to need no screen. It
+needs one more than anything else does.
+
+**What the chase produced:**
+[ADR-0041](../decisions/0041-scrims-dim-but-do-not-blur.md) and
+[Finding 037](037-why-a-blurred-scrim-costs-the-panel.md) —
+`backdrop-filter` costs 24.5 ms a frame in draw-and-submit against a 16.7 ms
+budget, with the CPU idle, because the compositor draws the backdrop into
+its own texture and reads it back every frame. Removing it takes the rail
+from ~15 fps to ~36 against a 55 fps floor; the rest is the list work.
+
+**This baseline is now stale for a second reason**, unrelated to the fault:
+Phase 9's design sweep rebuilt most of the screens it measures. **It has to
+be retaken before Phase 9 criterion 0 can be judged**, not merely corrected.
