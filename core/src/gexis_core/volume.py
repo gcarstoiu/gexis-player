@@ -809,6 +809,9 @@ class VolumeBridge:
         #: The ramp in flight, cancelled when a newer target arrives.
         self._ramp: asyncio.Task | None = None
         self._last_written: int | None = None
+        #: The `alsactl monitor` subprocess, so it can be moved to another
+        #: card when the output changes (ADR-0055).
+        self._monitor = None
         #: **Every value we write, not only the target** (ADR-0052 §4). A
         #: ramp writes a dozen intermediate values and `alsactl monitor`
         #: reports each one; matching only the target made every step look
@@ -817,6 +820,20 @@ class VolumeBridge:
         #: 2026-09-22) and echoed each step out to Spotify.
         self._written: dict[int, float] = {}
         adapter.on_volume_change(self._on_adapter_volume)
+
+    def restart_monitor(self) -> None:
+        """End the `alsactl monitor` so `run()` starts a new one.
+
+        It is spawned for one card and the output can move under it. The
+        loop already restarts the monitor when it exits - that path was
+        written for the monitor dying on its own - so ending it here is the
+        whole of the move.
+        """
+        proc = getattr(self, "_monitor", None)
+        if proc is None or proc.returncode is not None:
+            return
+        logger.info("volume: moving the mixer monitor to %s", alsa.card())
+        proc.terminate()
 
     def set_mixer_name(self, mixer_name: str) -> None:
         """**The control's name follows the chosen output** (ADR-0055 §3):
@@ -995,9 +1012,13 @@ class VolumeBridge:
         proc = await asyncio.create_subprocess_exec(
             "alsactl",
             "monitor",
-            f"hw:{alsa.CARD_ID}",
+            # **The card the device is playing to** (ADR-0055), not the one
+            # it shipped with: an `amixer` from elsewhere is only worth
+            # noticing on the control we are actually writing.
+            f"hw:{alsa.card()}",
             stdout=asyncio.subprocess.PIPE,
         )
+        self._monitor = proc
         assert proc.stdout is not None
         last_raw: int | None = None
         while True:

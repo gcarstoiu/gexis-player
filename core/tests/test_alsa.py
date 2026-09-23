@@ -107,3 +107,54 @@ def test_device_held_by_false_when_node_missing(tmp_path, monkeypatch):
         alsa, "playback_pcm_node", lambda card_id=alsa.CARD_ID: tmp_path / "nope"
     )
     assert alsa.device_held_by("go-librespot.service") is False
+
+
+class TestArbitrationFollowsTheOutput:
+    """**George, 2026-09-23: *"Any output holding the device follows the
+    same arbitration as the DAC. Needs to be fixed."***
+
+    Measured before the fix (Finding 048 §5): with the output on the
+    headphone jack and something holding it, `device_busy()` answered
+    `False`, because every function here defaulted to the card the device
+    shipped with. The release ladder would have read "already released" the
+    instant a polite stop was sent.
+    """
+
+    def setup_method(self):
+        alsa.set_card(alsa.CARD_ID)
+
+    def teardown_method(self):
+        alsa.set_card(alsa.CARD_ID)
+
+    def test_it_starts_on_the_card_the_device_ships_with(self):
+        assert alsa.card() == alsa.CARD_ID
+
+    def test_the_default_follows_the_chosen_output(self, tmp_path):
+        cards = tmp_path / "cards"
+        cards.write_text(
+            " 4 [Headphones     ]: bcm2835_headpho - bcm2835 Headphones\n"
+            " 5 [sndrpihifiberry]: HifiberryDacplu - snd_rpi_hifiberry_dacplushd\n"
+        )
+        assert alsa.resolve_card_number(cards_file=cards) == 5
+
+        alsa.set_card("Headphones")
+
+        assert alsa.resolve_card_number(cards_file=cards) == 4
+
+    def test_an_explicit_card_still_wins(self, tmp_path):
+        """The functions keep their argument, so a caller that genuinely
+        means one card can still say so."""
+        cards = tmp_path / "cards"
+        cards.write_text(
+            " 4 [Headphones     ]: bcm2835_headpho - bcm2835 Headphones\n"
+            " 5 [sndrpihifiberry]: HifiberryDacplu - snd_rpi_hifiberry_dacplushd\n"
+        )
+        alsa.set_card("Headphones")
+
+        assert alsa.resolve_card_number("sndrpihifiberry", cards_file=cards) == 5
+
+    def test_an_empty_card_is_ignored_rather_than_believed(self):
+        """A discovery that came back with nothing must not point
+        arbitration at a card called ''."""
+        alsa.set_card("")
+        assert alsa.card() == alsa.CARD_ID

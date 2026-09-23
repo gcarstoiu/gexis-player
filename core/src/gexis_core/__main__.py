@@ -201,6 +201,9 @@ async def main() -> None:
                 "renderers pick it up on their next open",
                 chosen_output.label,
             )
+        # ADR-0055: arbitration asks about the output the device is
+        # playing to, not about the card it shipped with (Finding 048 §5).
+        alsa.set_card(chosen_output.card)
         if chosen_output.control:
             config = replace(config, mixer_name=chosen_output.control)
         logger.info(
@@ -510,8 +513,12 @@ async def main() -> None:
         # chosen*, which is already known.
         nonlocal forced_fixed
         forced_fixed = chosen.control is None
+        alsa.set_card(chosen.card)
         _restrict_output_mode(chosen)
         volume_bridge.set_mixer_name(chosen.control or config.mixer_name)
+        # The monitor watches one card and was spawned for the old one; its
+        # own loop restarts it, so ending it is enough to move it.
+        volume_bridge.restart_monitor()
         state_store.set_meters(outputs.needs_plug(chosen.card) is not True)
         _choose_output_mode()
         state_store.bump_settings_revision()

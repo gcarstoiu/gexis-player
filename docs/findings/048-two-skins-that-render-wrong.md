@@ -27,7 +27,16 @@ which have no needles at all, and by the other `S+M` skins not being
 examined. "Two packs name a skin the same thing and one overwrites the
 other" is contradicted by the count: 99 sections, 99 unique names.
 
-## 2. Teletronix: the needle pins are not on the dial
+## 2. Teletronix: what it looks like, and why
+
+**George described it from the panel** and his description is the better
+one, because it is what a person sees:
+
+> *"the arrows of the vu meters were trailing some shadows behind and in
+> the left, there was an overlay on top of the actual meter."*
+
+**Both symptoms come from one cause, and the first version of this finding
+gave the cause without connecting it to either symptom.**
 
 ```
 bgr.filename  ->  672 x 302      meter.x = 0, meter.y = 0
@@ -37,9 +46,20 @@ right.origin  ->  (963, 350)
 
 The dial face is drawn as a 672×302 picture at the top-left corner, so it
 occupies `(0,0)–(672,302)`. **Both needle pins are outside it** — one below
-it, one below *and* to the right of it. The needles are drawn correctly
-around pins that are not on any dial, which is why one meter shows a face
-with a needle hanging off it and the other shows a needle with no face.
+it, one below *and* to the right of it.
+
+- **The overlay on the left** is that 672×302 picture. It lands over the
+  left dial rather than on it, so the printed scale is covered by a blank
+  face.
+- **The trailing shadows** are the same rectangle seen from the other side.
+  `meter.py`'s `reset_bgr_fgr` sets the restore area to
+  `comp.content[1].get_rect()` — **the background image's own rectangle**.
+  Every frame repaints only inside it. A needle sweeping outside it moves
+  across pixels nobody ever repaints, so each position it leaves behind
+  stays on the screen. That is the smear.
+
+Read from the engine, not inferred: the restore is bounded by the image,
+and the needles are outside the image.
 
 **Sub-screen artwork is not itself the fault.** The stock pack is full of
 it — `gold` is 1280×290, `galaxy` is 480×170 — and those skins place it
@@ -103,9 +123,24 @@ sent, and hand the device over while the outgoing renderer still had it.
 ADR-0055 is what made a second output reachable, so it is now possible to
 get into this state from the settings screen.
 
-**Not fixed here.** The fix is to thread the chosen output's card through
-`alsa`'s three functions and the supervisor, which is a change to
-arbitration's contract and wants its own record.
+**Fixed the same day**, on George's *"Any output holding the device follows
+the same arbitration as the DAC. Needs to be fixed."*
+
+`alsa` gains a current card — `set_card()` / `card()` — and every function
+defaults to it instead of to `CARD_ID`, which stays as the card the device
+ships with. `__main__` points it at the chosen output at startup and on
+every switch, and the `alsactl monitor` is moved with it by ending it: its
+own loop already restarts it, and that path was written for the monitor
+dying on its own.
+
+**Verified from the daemon's own log**, not from a probe — a separate
+process imports a fresh module and would have reported the default
+whatever the daemon believed:
+
+```
+gexis_core.alsa   INFO alsa: arbitration now watches Headphones
+gexis_core.volume INFO volume: moving the mixer monitor to Headphones
+```
 
 ## What is left, and what it needs
 

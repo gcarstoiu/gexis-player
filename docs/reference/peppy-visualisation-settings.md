@@ -140,16 +140,64 @@ sees them, so they change the picture just as much.
 
 ---
 
-## The short answer, if you only want a few
+## The ten with direct visual impact
 
-If any of this becomes settings, these are the ones a listener would
-actually notice, in order:
+**George, 2026-09-23:** *"surface the top 10 with direct visual impact for
+the user and explain them."* In order of how much a listener would notice.
 
-1. **`volume.gain.db`** — whether the needles use the whole dial or hover
-   near the bottom. Everything else is cosmetic next to this.
-2. **`decay_ms`** — how a needle falls back. The difference between a real
-   VU and a bar chart.
-3. **`smooth.buffer.size`** — how jumpy the needle is.
-4. **`update.period`** — how long a random skin stays before the next.
-5. **`ui.refresh.period` / `frame.rate`** — smoothness against what the
-   panel can afford, which matters for Phase 9 criterion 0.
+**1. `volume.gain.db` — how much of the dial the needles actually use.**
+Everything else on this list is cosmetic next to it. Too low and the
+needles hover near the left stop all evening and the meter looks dead; too
+high and they sit pinned in the red and stop telling you anything. This is
+the one knob that decides whether the visualiser *means* something.
+
+**2. `decay_ms` (our ALSA tap) — how slowly a needle falls back.** The
+single biggest difference between something that feels like a real VU
+meter and something that feels like a twitching bar chart. A real meter has
+weight: it rises fast and settles slowly. Ours is 400 ms. Shorter is
+nervous; much longer and it stops following the music.
+
+**3. `smooth.buffer.size` — how jumpy the needle is on the way up.**
+Averages the last few readings before moving. Bigger is calmer and lags
+behind the beat; smaller reacts to every transient and can look like it is
+vibrating. Works with `decay_ms`: one shapes the rise, the other the fall.
+
+**4. `update.period` — how long a skin stays before the next one.** Only
+matters with rotation on. Short enough and the changing skin becomes the
+thing you look at rather than the music; long enough and you forget it
+rotates at all.
+
+**5. `max.value` (spectrum) — how tall a bar has to be to reach the top.**
+The spectrum's version of gain. Set wrong, the bars either barely leave the
+floor or spend the whole track slammed against the ceiling.
+
+**6. `smoothing_factor` (our ALSA tap) — how much neighbouring bars are
+averaged.** Low gives a spiky, comb-like shape that moves a lot; high gives
+a smooth rolling hill. Changes the character of the spectrum more than
+anything else on it.
+
+**7. `logarithmic_amplitude` (our ALSA tap) — whether bar height follows
+decibels or raw amplitude.** On, the quiet parts of the music are visible.
+Off, almost everything sits near the bottom and only the loudest moments
+move, because hearing is logarithmic and raw amplitude is not.
+
+**8. `logarithmic_frequency` (our ALSA tap) — whether the bars are spaced
+by octaves or evenly by frequency.** On, bass and treble get comparable
+space and the display looks like music. Off, nearly every bar is treble,
+because the top octave is half the frequency range.
+
+**9. `ui.refresh.period` / `frame.rate` — how smooth the movement is.**
+Thirty times a second looks fluid; ten looks like a slideshow. **This is
+also a cost**: it is the visualiser competing with the panel for the same
+GPU, which is Phase 9 criterion 0's subject.
+
+**10. `mono.algorithm` / `stereo.algorithm` — what a needle is showing.**
+For a one-needle skin, whether it shows the average of both channels or
+whichever is louder. Average is calmer and more honest about level; peak
+catches things the average hides. On a two-needle skin, the same choice
+applied per side.
+
+**Not on the list, deliberately:** everything in §6. Those are the skin's
+own drawing instructions, and getting one wrong is how a skin ends up on
+[Finding 048](../findings/048-two-skins-that-render-wrong.md) rather than
+how a user tunes anything.
