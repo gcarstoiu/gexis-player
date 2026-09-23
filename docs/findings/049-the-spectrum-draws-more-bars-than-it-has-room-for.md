@@ -89,7 +89,34 @@ choosing its own number.
 
 **This is not the cut George ruled out.** The *pipe* keeps all 30 bands and
 the measurement keeps its resolution; what changes is only how many of them
-a given skin has room to draw, which is a property of the artwork.
+a skin has room to draw, which is a property of the artwork.
+
+### One number for the corpus, not one per skin
+
+**The engine reads `size` once.** `Spectrum` is constructed at startup and
+`config[SIZE]` keeps the value it read then; a skin change re-points the
+section, the base folder and the screen size, and never touches it. The
+meter relay, meanwhile, follows the same file and *does* re-read it
+([ADR-0056](../decisions/0056-the-spectrum-frame-follows-its-reader.md)).
+
+So a per-skin count made the two disagree from the second skin onwards, and
+a FIFO has no message boundaries — the reader then takes its frames across
+record boundaries and every bar shows a different band each refresh, which
+is Finding 051 all over again. George saw it as flashing in the low bars,
+and the device's own log had it in plain sight:
+
+```
+20:05:24 peppy:  Marantz: 406px inset 12 holds 20 bars, drawing 20
+20:05:24 meters: the spectrum engine declares 20 bars
+```
+
+— while the engine that was drawing them had been on 19 since startup.
+
+**The spread is one bar**, 19 against 20, so the minimum over the whole
+installed corpus costs nothing and removes the disagreement entirely. The
+number is computed from every pack's sections at startup, written once, and
+does not change while the engine runs. Verified across four skin changes:
+`size` stayed 19 and the relay re-read 19 every time.
 
 ### The first version used the wrong number
 

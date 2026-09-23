@@ -489,6 +489,26 @@ someone else's code* is a reading, not a decision, and a reading can be
 checked against the code in a minute. Take a decision from the record;
 take a fact about a dependency from the dependency.
 
+**24. Fixed once, in one of the two places that had to agree**
+(2026-09-23). Finding 051: PeppySpectrum reads `4 x size` bytes and the
+relay wrote 30 bands, so the frames were taken across record boundaries and
+every bar showed a different band each refresh. I made the relay follow the
+number the engine declares, measured it, and it was right.
+
+**It was right for one skin.** The engine reads that number once, when it is
+constructed; a skin change re-points everything else and leaves it. The
+relay re-reads the file. So from the second skin onwards they disagreed
+again, and the same scramble came back - reported an hour later as *"still
+seeing some flashing at the lower part of the frequency"*.
+
+The device's own log had said so at the time: `drawing 20` from the driver
+and `declares 20` from the relay, while the engine drawing them had been on
+19 since startup. I had read both lines as confirmation.
+
+**When two processes have to agree on a number, ask how each one learns it,
+not just what each one holds.** The fix was to stop the number changing at
+all - one count for the whole corpus, since the spread was a single bar.
+
 ## Common shape
 
 Every case had a *plausible* substitute for the real target — the build

@@ -69,6 +69,15 @@ learns that size from the reader's own configuration.**
   test that feeds one band at a time, because the obvious wrong
   implementation — draw the first N and drop the rest — looks identical on
   a still screen.
+- **The reader only reads it once.** `Spectrum` takes `config[SIZE]` when it
+  is constructed and a skin change never updates it, while the relay
+  re-reads the file on every change. A *per-skin* count therefore made them
+  disagree from the second skin onwards and brought the scramble straight
+  back. **The driver now writes one number for the whole installed corpus**
+  — the minimum any section has room for, which is 19 against a maximum of
+  20 — so the file does not change while the engine runs and the two cannot
+  drift apart (Finding 049).
+
 - **The relay now depends on a file the driver writes**, across two
   services. It degrades to "change nothing" if the file is missing or
   unreadable, which is the old behaviour, so a broken read cannot make the
