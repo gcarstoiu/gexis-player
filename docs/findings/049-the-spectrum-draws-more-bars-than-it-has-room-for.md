@@ -54,20 +54,42 @@ starts, **the number of bars the selected section's own artwork has room
 for**:
 
 ```
-room = (background width − origin.x + bar.gap) // (bar.width + bar.gap)
+room = (background width − 2 × origin.x + bar.gap) // (bar.width + bar.gap)
 ```
 
 capped at the 30 bands peppyalsa puts in the pipe — never more bars than
 there are measurements.
 
-**Measured over all 22 sections: every one holds 20, 21 or 22.** None holds
-30, which is why every one of them overflowed.
+**Measured over all 22 sections: every one holds 19 or 20.**
+
+### `origin.x` twice, because the picture has a frame
+
+The first version of this used the background's own width as the right-hand
+limit, and that put the last bar on the bezel. Measured on `Free`: the
+panel picture is 933px wide and is drawn at x 342, so it ends at 1275 — but
+its *drawn interior*, read off a capture, ends at **1250**. Twenty-two bars
+reach exactly 1275. The last one overhung by 25 of its 30 pixels.
+
+George, 2026-09-23: *"the bars for spectrum are also out of the bounds of
+the space they should sit in, by half a bar in general for all skins."*
+
+**The inset is not in the config**, and it is not the same as the bottom
+margin either — `Naim` leaves 125px below its bars and `Old` leaves 5, so
+mirroring that vertical margin gives 14 bars for one and 22 for the other.
+What *is* in the config is `origin.x`, the author's own left-hand margin.
+**Ending as far from the right edge as the bars begin from the left is a
+layout that cannot overhang**, and across all 22 sections it gives 19 or 20
+— consistent enough to read as deliberate rather than as each skin
+choosing its own number.
 
 | room | sections |
 | --- | --- |
-| 20 | `Marschal`, `Lyng`, `Kenwood Big`, `Kenwoo`, `475A`, `KeyS`, `s.1`, `s.5`, `s.7` |
-| 21 | `OPipe`, `Marantz`, `Peppy`, `Teletronix`, `s.4`, `s.8` |
-| 22 | `Free`, `Naim`, `Old`, `s.2`, `s.3`, `s.6`, `s.9` |
+| 19 | `Free`, `Lyng`, `Kenwood Big`, `OPipe`, `Kenwoo`, `Teletronix`, `Old`, `s.2`, `s.3`, `s.4` |
+| 20 | `Naim`, `Marschal`, `Marantz`, `475A`, `Peppy`, `KeyS`, `s.1`, `s.5`, `s.6`, `s.7`, `s.8`, `s.9` |
+
+**This is not the cut George ruled out.** The *pipe* keeps all 30 bands and
+the measurement keeps its resolution; what changes is only how many of them
+a given skin has room to draw, which is a property of the artwork.
 
 ### The first version used the wrong number
 
@@ -115,11 +137,11 @@ Re-measured across all 22: **none overflows**, and each draws the most its
 own artwork allows. The log says so at selection:
 
 ```
-Free: 933px holds 22 bars, drawing 22
+Free: 933px inset 84 holds 19 bars, drawing 19
 ```
 
-Photographed on the panel with LMS playing: the bars sit inside the frame,
-clear of the right-hand screw.
+Photographed on the panel with LMS playing, twice: at the first version the
+bars reached the frame; at this one they stop clear of it.
 
 ## What is left
 

@@ -178,7 +178,29 @@ def read_attenuation(path: Path) -> float:
     return value if value > 0 else 0.0
 
 
-def attenuate(levels: Levels, db: float) -> Levels:
+#: **The dB a VU dial is marked for.** The faces in both packs run from −20
+#: to about +3, and 0 VU sits around three quarters along the arc. Twenty dB
+#: below that is the bottom stop.
+VU_SCALE_DB = 20.0
+
+#: **How much of the volume's travel the meters follow.**
+#:
+#: The volume curve spans 60 dB ([ADR-0054](../../../docs/decisions/0054-one-curve-and-the-renderers-own-number.md)),
+#: and George has ruled that out of scope for changing: *"For sure we will
+#: not narrow the volume curve though - that stays in place as is."* Applied
+#: to the needle one-for-one, that travel is three times the dial's own, so
+#: the needles reach the bottom stop at about 40% on the slider and the rest
+#: of the range shows nothing - *"a bit quiet on the bottom part"*.
+#:
+#: **So the volume's full travel is mapped onto the dial's full travel**
+#: rather than onto three of them. The meters still fall as the volume comes
+#: down, by a third of the dB, which keeps the needle alive across the whole
+#: slider. This is the one number that decides how far they fall; it is a
+#: candidate for ADR-0022's inventory and is not on it.
+METER_VOLUME_TRACKING = VU_SCALE_DB / 60.0
+
+
+def attenuate(levels: Levels, db: float, tracking: float = METER_VOLUME_TRACKING) -> Levels:
     """`levels` as they would be after the device's own volume control.
 
     **The meter tap is upstream of it.** `pcm.output` is a `type meter` over
@@ -188,10 +210,22 @@ def attenuate(levels: Levels, db: float) -> Levels:
     George, 2026-09-23: *"Shouldn't the vu meters and spectrum amplitude be
     based on volume?"*
 
+    **`tracking` scales the dB before it is applied**, because the volume's
+    60 dB is three times what a VU dial is drawn for. See
+    `METER_VOLUME_TRACKING`. At 1.0 this is the physically exact thing and
+    the needles are at a tenth of scale by 40% on the slider.
+
+    **The two scales are different kinds of number.** peppyalsa's meter
+    level is linear amplitude, so this is a multiplication. Its spectrum is
+    logarithmic - `100·log10(magnitude)/4.82`, a unit being 0.963 dB - so it
+    is a subtraction. Treating them alike would put the bars in the wrong
+    place at every volume but full.
+
     **Nothing to do at 0 dB**, which is also what fixed output looks like -
     there the device is not attenuating, so the meters show the source and
     no special case is needed to arrange it.
     """
+    db = db * tracking
     if db <= 0:
         return levels
     gain = 10 ** (-db / 20)

@@ -222,7 +222,19 @@ def spectrum_bars(name: str, base_folder: Path | None, folder: str, bands: int) 
     its background picture, where the first bar starts, and how wide a bar
     and a gap are:
 
-        room = (background width - origin.x + bar.gap) // (bar.width + bar.gap)
+        room = (background width - 2*origin.x + bar.gap) // (bar.width + bar.gap)
+
+    **`origin.x` twice, because the picture has a frame.** Filling to the
+    picture's own right-hand edge puts the last bar on the bezel: measured
+    on `Free`, whose panel is 933px wide and whose drawn interior ends 25px
+    short of it, so the 22nd bar overhung by most of its width (George,
+    2026-09-23: *"the bars for spectrum are also out of the bounds of the
+    space they should sit in, by half a bar in general for all skins"*).
+    The inset is not in the config, but `origin.x` is the author's own
+    left-hand margin, and ending as far from the right edge as the bars
+    begin from the left is a layout that cannot overhang. Across all 22
+    sections it gives 19 or 20 bars, which is also why it reads as
+    deliberate rather than as each skin choosing its own number.
 
     **Not the section's `steps`.** That was the first version of this and it
     was wrong: `steps` is the *vertical* quantisation - `spectrum.py` sets
@@ -257,11 +269,11 @@ def spectrum_bars(name: str, base_folder: Path | None, folder: str, bands: int) 
     area = png_width(background)
     if not area:
         return None
-    room = (area - origin + gap) // (width + gap)
+    room = (area - 2 * origin + gap) // (width + gap)
     if room < 1:
         return None
     bars = min(room, bands)
-    print(f"{name}: {area}px holds {room} bars, drawing {bars}", flush=True)
+    print(f"{name}: {area}px inset {origin} holds {room} bars, drawing {bars}", flush=True)
     return bars
 
 

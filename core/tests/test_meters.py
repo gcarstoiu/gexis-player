@@ -206,25 +206,51 @@ class TestTheMetersFollowTheVolume:
     def test_the_vu_level_is_linear_so_it_is_scaled(self):
         from gexis_core.meters import Levels, attenuate
 
-        # -6 dB is half the amplitude, -20 dB is a tenth
-        assert attenuate(Levels(100, 50, ()), 6.02).left == 50
-        assert attenuate(Levels(100, 50, ()), 20).left == 10
-        assert attenuate(Levels(100, 50, ()), 20).right == 5
+        # tracking=1 is the physically exact case: -6 dB is half the
+        # amplitude, -20 dB is a tenth
+        assert attenuate(Levels(100, 50, ()), 6.02, tracking=1).left == 50
+        assert attenuate(Levels(100, 50, ()), 20, tracking=1).left == 10
+        assert attenuate(Levels(100, 50, ()), 20, tracking=1).right == 5
 
     def test_the_spectrum_is_logarithmic_so_it_is_shifted(self):
         from gexis_core.meters import SPECTRUM_DB_FULL_SCALE, Levels, attenuate
 
         # one unit is 96.3/100 dB, so 20 dB is about 21 units off every bar
-        out = attenuate(Levels(0, 0, (90, 60, 30)), 20).bands
+        out = attenuate(Levels(0, 0, (90, 60, 30)), 20, tracking=1).bands
         shift = round(20 * 100 / SPECTRUM_DB_FULL_SCALE)
         assert out == (90 - shift, 60 - shift, 30 - shift)
 
     def test_nothing_goes_below_silence(self):
         from gexis_core.meters import Levels, attenuate
 
-        out = attenuate(Levels(5, 5, (10, 2)), 60)
+        out = attenuate(Levels(5, 5, (10, 2)), 60, tracking=1)
         assert out.left == 0 and out.right == 0
         assert out.bands == (0, 0)
+
+    def test_the_needle_stays_alive_across_the_whole_slider(self):
+        """**60 dB of volume onto a dial drawn for 20** puts the needle at
+        the bottom stop from about 40% down, which George saw as *"a bit
+        quiet on the bottom part"*. The volume curve is not up for changing
+        (his call, 2026-09-23), so the meters follow a third of it.
+        """
+        from gexis_core.meters import Levels, attenuate
+
+        full = Levels(100, 100, (60,) * 22)
+        # the dB the 60 dB cubic curve cuts at each slider position
+        reads = {percent: attenuate(full, db).left
+                 for percent, db in ((100, 0.0), (60, 11.6), (40, 20.2), (20, 33.2), (10, 43.3))}
+        assert reads[100] == 100
+        # every position below full is lower than the one above it
+        assert list(reads.values()) == sorted(reads.values(), reverse=True)
+        # and none of them is at the stop - the needle still moves at 10%
+        assert reads[10] > 15, reads
+        assert reads[40] > 40, reads
+
+    def test_the_bars_stay_visible_too(self):
+        from gexis_core.meters import Levels, attenuate
+
+        full = Levels(0, 0, (60,) * 22)
+        assert min(attenuate(full, 54.0).bands) > 30
 
     def test_fixed_output_needs_no_special_case(self):
         """In fixed output the DAC sits at full scale, so the attenuation

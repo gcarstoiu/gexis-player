@@ -54,25 +54,31 @@ currently cutting, before anything is published.**
   | 20 dB | 5.1 | 10 | 29.4 | 48 |
   | 54 dB | 0.0 | 0 | 0.7 | 12 |
 
-- **The needles die well before the slider does, and that is the thing to
-  look at.** The volume curve spans 60 dB
-  ([ADR-0054](0054-one-curve-and-the-renderers-own-number.md)), so the
-  panel's percentage costs the VU a great deal very quickly:
+- **The needles die well before the slider does, so they follow a third of
+  it.** The volume curve spans 60 dB
+  ([ADR-0054](0054-one-curve-and-the-renderers-own-number.md)) and George
+  has ruled that out of scope: *"For sure we will not narrow the volume
+  curve though - that stays in place as is."* Applied one-for-one, 60 dB is
+  three times what a VU dial is drawn for — the faces in both packs run
+  from −20 to about +3 — so the needle reaches the bottom stop at about 40%
+  on the slider and the rest of the travel shows nothing. George saw it:
+  *"The vu meters are a bit quiet on the bottom part."*
 
-  | panel | cutting | needle reads |
-  | --- | --- | --- |
-  | 100% | 0 dB | full scale |
-  | 80% | 5.2 dB | 55% |
-  | 60% | 11.6 dB | 26% |
-  | 50% | 15.5 dB | 17% |
-  | 40% | 20.2 dB | 10% |
-  | 30% | 25.9 dB | 5% |
-  | 20% | 33.2 dB | 2% |
+  **`METER_VOLUME_TRACKING` maps the volume's full travel onto the dial's
+  full travel** rather than onto three of them: 20 dB of dial over 60 dB of
+  volume, so the meters fall by a third of the dB.
 
-  This is what an output meter does, and it is also how a real VU dial is
-  marked — 0 VU sits at about three quarters of the arc and −20 near the
-  left stop. Whether it is what George wants to look at is his, and is the
-  Open below.
+  | panel | cutting | needle, 1:1 | needle, a third | bar (from 60) |
+  | --- | --- | --- | --- | --- |
+  | 100% | 0 dB | 100% | 100% | 60 |
+  | 80% | 5.2 dB | 55% | 82% | 58 |
+  | 60% | 11.6 dB | 26% | 64% | 56 |
+  | 40% | 20.2 dB | 10% | 46% | 53 |
+  | 20% | 33.2 dB | 2% | 28% | 49 |
+  | 10% | 43.3 dB | 0.7% | 19% | 45 |
+
+  It is the one number that decides how far they fall. **A candidate for
+  ADR-0022's inventory, and not on it** — George's call.
 
 - **The spectrum falls far more slowly than the VU**, because it is
   logarithmic: 20 dB costs the bars 21 of 100 units and the needle 90% of
@@ -101,7 +107,14 @@ currently cutting, before anything is published.**
 
 ## Open
 
-- **Whether 60 dB of travel is too much for a meter to follow honestly.**
-  At 40% on the panel the needles are at a tenth of scale. If that reads as
-  broken rather than quiet, the remedy is not in this record — it is either
-  a shallower law for the meters alone, or a narrower volume curve.
+- ~~**Whether 60 dB of travel is too much for a meter to follow honestly.**~~
+  **Answered 2026-09-23: it is.** George ruled out narrowing the volume
+  curve, so the meters take the shallower law — a third of the dB, which is
+  the dial's own 20 dB over the volume's 60. Whether a third is the right
+  third is what he is looking at now.
+- **Whether the spectrum should follow the same fraction as the VU.** It
+  does today, for one law rather than two. Its scale is logarithmic and four
+  times as wide, so the same fraction moves the bars far less than the
+  needle — at 20 dB of cut the needle loses a fifth of its travel and the
+  bars a tenth of their height. They will not look like they are doing the
+  same thing.
