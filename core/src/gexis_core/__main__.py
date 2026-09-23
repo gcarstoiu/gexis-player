@@ -482,12 +482,24 @@ async def main() -> None:
         if chosen is None:
             logger.error("outputs: nothing to switch to")
             return
-        if not outputs.write(chosen):
-            logger.info("outputs: %s is already the output", chosen.label)
-            return
         # Long enough for the settings write to have been answered.
         await asyncio.sleep(0.5)
-        logger.info("outputs: restarting the renderers and myself for %s", chosen.label)
+        # **Stopped before the file is written, not after.** The config is
+        # rewritten under whoever holds the old card otherwise - and worse,
+        # `needs_plug` has to *open* the new card to ask what it takes, so
+        # a renderer still holding it makes the question unanswerable. That
+        # is how HDMI was written back with no conversion layer at all on
+        # 2026-09-23: the card was busy, the query returned nothing, and
+        # nothing was taken for "needs nothing".
+        logger.info("outputs: stopping the renderers to switch to %s", chosen.label)
+        stop = await asyncio.create_subprocess_exec(
+            "systemctl", "stop", "squeezelite.service", "go-librespot.service",
+            "bluealsa-aplay.service",
+        )
+        await stop.wait()
+        if not outputs.write(chosen):
+            logger.info("outputs: %s is already the output", chosen.label)
+        logger.info("outputs: starting them again, and myself, for %s", chosen.label)
         await asyncio.create_subprocess_exec(
             "systemctl", "restart", "squeezelite.service", "go-librespot.service",
             "bluealsa-aplay.service", "gexis-core.service",

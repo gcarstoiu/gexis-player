@@ -427,6 +427,23 @@ comparing them.** `test_registry_wiring.py` now reads the daemon's
 shipped `core.toml` against `Config`'s fields. Both assert they found
 something first, so they cannot pass by looking at nothing.
 
+**21. "No answer" folded into an answer** (2026-09-23). Choosing an output
+has to know whether the card can accept PCM, and asking means *opening* it.
+A card a renderer is still holding answers nothing — and `needs_plug`
+returned `False` for that nothing, which reads as "needs no conversion".
+
+**It wrote a working config into a broken one, twice, and the second time
+after I had already fixed the caching.** The first version cached the
+false answer, so one busy moment decided the card for ever. The second
+stopped caching it and still *returned* it, so the startup reconciliation
+rewrote HDMI's config with no conversion layer — the exact failure George
+had reported ten minutes earlier.
+
+**A value that means "I could not tell" must not be the same value as "I
+checked, and no".** It is now `None`, and a config that cannot be computed
+is not written at all. The switch also stops the renderers *before* it
+writes, so the question is answerable when it is asked.
+
 ## Common shape
 
 Every case had a *plausible* substitute for the real target — the build

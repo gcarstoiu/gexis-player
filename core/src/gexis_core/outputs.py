@@ -64,7 +64,7 @@ PCM_FORMATS = frozenset(
 _needs_plug: dict[str, bool] = {}
 
 
-def needs_plug(card: str) -> bool:
+def needs_plug(card: str) -> bool | None:
     """Whether this card has to be written through a conversion layer.
 
     **Measured, not assumed** (2026-09-23, after George switched to HDMI 1
@@ -94,14 +94,22 @@ def needs_plug(card: str) -> bool:
             capture_output=True, text=True, timeout=8,
         ).stderr
     except (OSError, subprocess.SubprocessError) as exc:
-        logger.warning("outputs: could not ask %s what it takes (%s); keeping hw:", card, exc)
-        return False
+        logger.warning("outputs: could not ask %s what it takes: %s", card, exc)
+        return None
     formats: set[str] = set()
     for line in dump.splitlines():
         if line.startswith("FORMAT:"):
             formats = set(line.split(":", 1)[1].split())
             break
-    answer = bool(formats) and not (formats & PCM_FORMATS)
+    if not formats:
+        # **A busy card answers nothing, and nothing is not an answer.**
+        # Caching it turned a transient "the old renderer still has this
+        # open" into a permanent "this card needs no conversion", which is
+        # how HDMI got written back into the config with no plug and no
+        # hope (2026-09-23). Not cached, so the next ask is a real one.
+        logger.warning("outputs: %s will not say what it takes while it is busy", card)
+        return None
+    answer = not (formats & PCM_FORMATS)
     _needs_plug[card] = answer
     if answer:
         logger.info("outputs: %s takes only %s; it needs a conversion layer",
@@ -235,19 +243,42 @@ def resolve(
     return available[0]
 
 
-def render(output: Output) -> str:
+def render(output: Output, plug: bool) -> str:
     """`output.conf`, with this output's card in the two places it goes.
 
     The rest is verbatim from what the image ships - the comment earns its
     keep and `test_outputs.py` checks that this template and the image's
     file have not drifted apart.
+
+    `plug` is passed in rather than asked for here, because asking means
+    *opening the card*, and a caller that has not freed it first would get
+    no answer and render something wrong. See `write`.
     """
-    slave = f"plug:'hw:{output.card}'" if needs_plug(output.card) else f"hw:{output.card}"
-    return f'''pcm.output {{
+    if plug:
+        # **No meter on a converted chain** (2026-09-23). With `plug` under
+        # it, ALSA's `type meter` and the peppyalsa scope come apart:
+        # go-librespot dies on `pcm_meter.c:1222: snd_pcm_scope_s16_get_
+        # channel_buffer: Assertion 's16->buf_areas' failed` - which is a
+        # crash, not the "Spotify disconnects" it looks like from outside -
+        # and squeezelite logs `_write_frames:615 mmap_commit error` ten
+        # times a second and plays silence. Neither happens with the meter
+        # straight over `hw:`, which is every other output.
+        #
+        # **The cost is the visualiser's levels on this output**, which is
+        # stated rather than discovered: an output that already forfeits
+        # the volume control and bit-perfect also forfeits the meters.
+        # Cheaper than shipping a renderer that aborts.
+        head = f'''pcm.output {{
+    type plug
+    slave.pcm "hw:{output.card}"
+}}'''
+    else:
+        head = f'''pcm.output {{
     type meter
-    slave.pcm "{slave}"
+    slave.pcm "hw:{output.card}"
     scopes.0 peppyalsa
-}}
+}}'''
+    return f'''{head}
 
 # squeezelite's mixer resolution (-V <name>) goes through the ctl device
 # matching the PCM name it was given (-O defaults to -o's value), not
@@ -288,7 +319,19 @@ def write(output: Output, path: Path = CONF_PATH) -> bool:
     for a renderer that already has one - which is why the caller restarts
     them (ADR-0055 §2, George: a switch may interrupt playback).
     """
-    wanted = render(output)
+    plug = needs_plug(output.card)
+    if plug is None:
+        # **Unknown is not False.** Asking means opening the card, and a
+        # card someone else is holding answers nothing - which on
+        # 2026-09-23 wrote HDMI back into the config with no conversion
+        # layer, twice, because "no answer" had been folded into "needs
+        # nothing". A config that cannot be computed is not written.
+        logger.error(
+            "outputs: leaving %s alone - cannot tell what hw:%s takes while it is in use",
+            path, output.card,
+        )
+        return False
+    wanted = render(output, plug)
     try:
         if path.read_text() == wanted:
             return False

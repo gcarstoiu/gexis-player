@@ -45,14 +45,14 @@ class TestTheConfigItWrites:
             Path(__file__).resolve().parents[2]
             / "image" / "stage-gexis" / "00-alsa" / "files" / "output.conf"
         )
-        assert outputs.render(HIFIBERRY).rstrip() == shipped.read_text().rstrip()
+        assert outputs.render(HIFIBERRY, plug=False).rstrip() == shipped.read_text().rstrip()
 
     def test_the_card_lands_in_both_places(self):
         """The PCM's slave *and* the ctl's card. Missing the second is the
         bug ADR-0009's own comment in this file is about: squeezelite would
         resolve its mixer against nothing and fall back to software
         volume."""
-        rendered = outputs.render(JACK)
+        rendered = outputs.render(JACK, plug=False)
         assert 'slave.pcm "hw:Headphones"' in rendered
         assert "card Headphones" in rendered
 
@@ -60,10 +60,27 @@ class TestTheConfigItWrites:
         """ADR-0011: the visualiser taps whatever the slave becomes,
         because the scope wraps it. If a switch dropped the scope the
         meters would go dead on every output but the first."""
-        for output in ALL:
-            rendered = outputs.render(output)
+        for output in (HIFIBERRY, JACK):
+            rendered = outputs.render(output, plug=outputs._needs_plug[output.card])
             assert "scopes.0 peppyalsa" in rendered
             assert "/run/gexis/meter.fifo" in rendered
+
+    def test_a_converted_chain_carries_no_meter(self):
+        """**George, 2026-09-23: "Spotify disconnects immediately when I get
+        to play something via hdmi 1. Lms plays but I am not hearing
+        anything."** Neither was what it looked like. go-librespot was
+        *aborting* - `pcm_meter.c:1222: snd_pcm_scope_s16_get_channel_
+        buffer: Assertion 's16->buf_areas' failed` - and squeezelite was
+        logging `_write_frames:615 mmap_commit error` ten times a second
+        and playing silence. ALSA's `type meter` and the peppyalsa scope
+        come apart when there is a `plug` under them.
+
+        **The cost is the visualiser's levels on that output**, which is
+        cheaper than a renderer that aborts, and is stated in the row."""
+        for output in (HDMI1, HDMI2):
+            rendered = outputs.render(output, plug=True)
+            assert "type meter" not in rendered
+            assert "scopes.0 peppyalsa" not in rendered
 
     def test_writing_the_same_config_twice_is_not_a_change(self, tmp_path):
         """The caller restarts every renderer on a change, so 'changed' has
@@ -168,18 +185,20 @@ class TestTheConversionLayer:
     """
 
     def test_hdmi_gets_a_conversion_layer(self):
-        assert 'slave.pcm "plug:\'hw:vc4hdmi0\'"' in outputs.render(HDMI1)
+        rendered = outputs.render(HDMI1, plug=True)
+        assert "type plug" in rendered
+        assert 'slave.pcm "hw:vc4hdmi0"' in rendered
 
     def test_the_dac_does_not(self):
         """**ADR-0009: `type plug` must not appear in this chain** - it
         converts silently and would defeat the bit-perfect claim without
         any error. The prohibition is kept where it means something."""
-        rendered = outputs.render(HIFIBERRY)
+        rendered = outputs.render(HIFIBERRY, plug=False)
         assert 'slave.pcm "hw:sndrpihifiberry"' in rendered
         assert "plug" not in rendered
 
     def test_the_headphone_jack_does_not_either(self):
-        assert "plug" not in outputs.render(JACK)
+        assert "plug" not in outputs.render(JACK, plug=False)
 
     def test_a_card_that_cannot_be_asked_keeps_hw(self, monkeypatch):
         """ADR-0009 would rather fail loudly than convert quietly, so an
@@ -190,7 +209,7 @@ class TestTheConversionLayer:
             raise OSError("no aplay here")
 
         monkeypatch.setattr(outputs.subprocess, "run", boom)
-        assert outputs.needs_plug("whatever") is False
+        assert outputs.needs_plug("whatever") is None
 
     def test_the_answer_is_asked_for_once(self, monkeypatch):
         outputs._needs_plug.clear()
@@ -203,3 +222,49 @@ class TestTheConversionLayer:
         assert outputs.needs_plug("vc4hdmi9") is True
         assert outputs.needs_plug("vc4hdmi9") is True
         assert len(calls) == 1
+
+
+class TestAnUnanswerableCard:
+    """**"No answer" had been folded into "needs nothing", and it wrote
+    HDMI back into the config with no conversion layer twice** (2026-09-23).
+
+    Asking a card what formats it takes means *opening* it, and a card a
+    renderer is still holding answers nothing. The first version cached
+    that nothing as False; the second stopped caching it but still
+    returned False, so the startup reconciliation rewrote a working config
+    into a broken one.
+    """
+
+    def test_unknown_is_none_not_false(self, monkeypatch):
+        outputs._needs_plug.clear()
+
+        class Busy:
+            stderr = "aplay: main:850: audio open error: Device or resource busy\n"
+
+        monkeypatch.setattr(outputs.subprocess, "run", lambda *a, **k: Busy())
+        assert outputs.needs_plug("vc4hdmi0") is None
+
+    def test_unknown_is_not_remembered(self, monkeypatch):
+        """Or one busy moment decides the card for ever."""
+        outputs._needs_plug.clear()
+
+        class Busy:
+            stderr = ""
+
+        monkeypatch.setattr(outputs.subprocess, "run", lambda *a, **k: Busy())
+        outputs.needs_plug("vc4hdmi0")
+        assert "vc4hdmi0" not in outputs._needs_plug
+
+    def test_a_config_that_cannot_be_computed_is_not_written(self, tmp_path, monkeypatch):
+        """The one that matters: a working file is left working."""
+        outputs._needs_plug.clear()
+        path = tmp_path / "output.conf"
+        path.write_text("something that works\n")
+
+        class Busy:
+            stderr = ""
+
+        monkeypatch.setattr(outputs.subprocess, "run", lambda *a, **k: Busy())
+
+        assert outputs.write(HDMI1, path) is False
+        assert path.read_text() == "something that works\n"
