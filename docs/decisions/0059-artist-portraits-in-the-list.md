@@ -21,17 +21,25 @@ artist pictures on 2026-09-18, and the artist *page* has done it since. This
 record is only about the **list** — the two grids in Library — which still
 draws LMS's own photo.
 
-Three measured facts shape it (Finding 054):
+Four measured facts shape it (Finding 054):
 
 - **LMS cannot tell us who the artist is on MusicBrainz.** His files carry
   no MusicBrainz tags, so the columns LMS has for it are empty. The id has
   to come from MusicBrainz's *search*, by name.
-- **A cold artist costs 1.5–5.3 s**, almost all of it MusicBrainz's one
-  request per second and its 503s. **822 of 7,296** are already resolved
-  from ordinary browsing; **6,474 are not**, which is **three to nine hours**
-  of wall clock however the work is arranged.
+- **The list holds *album* artists, and there are 917.** George corrected
+  the question after the first version of this record: *"I said artist when
+  I should have said album artist which we actually have in the list."*
+  **781 are already resolved; 89 are not.**
+- **A cold artist costs 1.5–5.3 s**, of which about 3.4 s is the MusicBrainz
+  search. So the remaining **89 artists are two to eight minutes**, not the
+  three to nine hours the first version of this record computed for all
+  7,296 contributors.
 - **The pictures cost nothing to keep.** Only the URL is stored; LMS's image
   proxy fetches, resizes and caches the file.
+
+**Which changes the answer.** The options below were written for a job
+measured in hours. At eight minutes the scheduling question mostly
+evaporates.
 
 ## The options
 
@@ -67,10 +75,14 @@ to change.
 
 ## Recommendation
 
-**C, ordered by D.** On-screen artists resolve first; a background sweep
-works through the rest **most-played first**, so the list improves where he
-looks before it improves everywhere. One shared rate limiter with the screen
-having priority.
+**A — one background sweep — now that it is 89 artists.** It runs once,
+takes minutes, needs no queue, no cancellation on scroll and no priority
+scheme, and afterwards the list is simply right. New album artists are a
+handful at a time and can ride the same job after a library rescan.
+
+C and D were written for a job measured in hours and are no longer worth
+their complexity. **B is still wrong** on its own: a 1.5–5.3 s wait per tile
+is the one thing a navigation list must not have.
 
 **And, whichever is chosen: LMS's picture draws immediately and fanart
 replaces it when it arrives.** Never an empty tile, never a spinner — the
@@ -78,9 +90,26 @@ list is a navigation surface and must not wait on the network. That is
 [ADR-0012](0012-enrichment-additive-only.md)'s additive rule applied to a
 picture.
 
+## Album artwork
+
+George, in the same message: *"Can we also get album artwork? What would
+that cost."* It is a different question with a different price, because
+album art is keyed on a MusicBrainz **release group** and needs its own
+search per album.
+
+- **LMS already has a cover for 4,412 of 4,567 albums.** 155 have none —
+  3.4%, mostly editions and live bootlegs.
+- **Filling those 155: about nine minutes.** `providers.CoverArtProvider`
+  already does it, so this is scheduling, not building.
+- **Replacing all 4,567 with fanart's or the Cover Art Archive's: four to
+  seven hours**, and nothing measured says the covers LMS has are worse.
+
+**Recommended: fill the 155, leave the rest.** The same background sweep can
+carry it.
+
 ## Open
 
-- **Which option.** George's.
+- **Which option**, and whether album art is the 155 or all 4,567. George's.
 - **What "no picture anywhere" looks like.** LMS has *something* for most
   artists; the grid's existing `failed` set already handles a broken URL.
 - **Whether the sweep is a setting or a button.** A row that says how many

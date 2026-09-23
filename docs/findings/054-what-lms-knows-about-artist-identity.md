@@ -7,11 +7,14 @@ fall back. I think we checked this in the past and the problem was getting
 the link for musicbrainz to link back to the artist in fanart. I think LMS
 might have that. Can you check?"*
 **Scope:** George's own LMS 9.1.1 at `192.168.178.188:9000` — **7,296
-artists, 4,567 albums, 61,225 songs** — and the daemon on `gexis`, 2026-09-23.
-Ten tracks sampled for MusicBrainz tags, four artists fetched cold through
-the daemon's own `/library/artist-info`. **Not tested:** whether any part of
-the library is Picard-tagged (ten tracks is a sample, not a census), and
-fanart's coverage beyond four artists.
+contributors, 917 album artists, 4,567 albums, 61,225 songs** — and the
+daemon on `gexis`, 2026-09-23. Ten tracks sampled for MusicBrainz tags, four
+artists fetched cold through the daemon's own `/library/artist-info`, every
+album counted for artwork, every album artist checked against the resolved
+store. **Not tested:** whether any part of the library is Picard-tagged (ten
+tracks is a sample, not a census); fanart's coverage beyond four artists;
+whether LMS's existing album covers are any good; and whether MusicBrainz's
+search picked the *right* artist where it scored 100.
 
 ## 1. LMS has no MusicBrainz id to give us — not for this library
 
@@ -74,12 +77,89 @@ So a full sweep of 7,296 artists is **metadata, not gigabytes** — which is
 the difference between Finding 030's worry about 246–826 KB per image and
 what this would actually hold.
 
-## 5. What that makes the sweep cost
+## 5. The list holds *album* artists, and there are 917 of them
 
-6,474 artists still unresolved, at the measured 1.5–5.3 s each, is
-**three to nine hours** of wall clock, whatever shape the work takes. That
-number is the whole of the design question, and it is
-[ADR-0059](../decisions/0059-artist-portraits-in-the-list.md)'s.
+George, correcting the question: *"I said artist when I should have said
+album artist which we actually have in the list."* It changes the size of
+the job by two orders of magnitude.
+
+| | |
+| --- | --- |
+| contributors in the library | **7,296** |
+| **album artists** (`role_id:ALBUMARTIST`) | **917** (870 once folded) |
+| already asked about | **781** |
+| **left to ask about** | **89** |
+
+So the sweep is **89 artists**, which at the measured 1.5–5.3 s each is
+**two to eight minutes**, not hours. The three-to-nine-hour figure was for
+every contributor and never applied to what the list draws.
+
+**Of the 822 stored, 688 came back with an id and 134 did not** — 16% that
+MusicBrainz's name search cannot place. `Headstrong feat. Tiff Lacey` is
+one of them, and its shape says why.
+
+## 6. The MusicBrainz search is 3.3 to 3.8 s of the 5
+
+The four timings above split cleanly once the store is read back. Isaac
+Hayes was already resolved before the test; the other three were resolved
+*during* it, and their rows carry today's timestamp.
+
+| artist | id known first? | time |
+| --- | --- | --- |
+| Isaac Hayes | yes | **1,513 ms** |
+| Head | no, resolved in the call | 5,317 ms |
+| Headgirl | no | 4,824 ms |
+| Headstrong feat. Tiff Lacey | no, and none found | 5,018 ms |
+
+**So knowing the id is worth about 3.4 seconds an artist**, and it is the
+part that can 503. What is left is the fanart call and the rest of the
+enrichment.
+
+## 7. Album artwork: LMS already has it for 96.6%
+
+| | |
+| --- | --- |
+| albums | **4,567** |
+| with artwork LMS can serve | **4,412** |
+| **without any** | **155 (3.4%)** |
+
+The missing ones are mostly editions and live bootlegs — *"12 x 5 (2006,
+Japan Mini LP)"*, *"2001-09-28: Higher Ground, Winooski, VT, USA"*.
+
+`providers.CoverArtProvider` already covers this: it searches MusicBrainz
+for a **release group** and asks the Cover Art Archive. That is a *second*
+kind of search, per album, on the same one-per-second limiter — and Finding
+036 measured CAA itself at 949–1,851 ms on top.
+
+- **The 155 gaps:** about **9 minutes**.
+- **Every album, to replace what LMS has:** 4,567 searches plus 4,567 CAA
+  fetches, **four to seven hours**.
+
+Nothing here says LMS's existing covers are poor; George did not say so.
+
+## 8. If the files carried MusicBrainz ids
+
+Every number above changes:
+
+- **The 3.4 s search disappears**, and with it the 503s and the 1/s limit.
+  An artist costs one fanart call.
+- **The 134 unplaceable artists mostly stop being unplaceable** — a
+  `feat.` suffix defeats a name search and not an id.
+- **Ambiguous names stop being a risk.** `Head` resolved with a score of
+  100; whether it is the *right* Head is not something the score can say.
+- **Album art becomes cheap too**, if the release-group id is tagged: the
+  four-to-seven hours becomes the CAA fetches alone.
+
+**No LMS plugin writes them.** LMS *reads* MusicBrainz tags — its scanner
+is being changed to prefer `MUSICBRAINZ_RELEASETRACKID` over
+`MUSICBRAINZ_TRACKID`, which stopped being unique — but putting them in the
+files is a tagging job done outside it: **Picard**, which can fingerprint
+untagged files with AcoustID, then an LMS rescan. beets' `mbsync` refreshes
+files that already have ids and cannot add them.
+
+**The catch, and it is the reason not to do it casually:** those taggers
+rewrite the whole tag set, not just the MusicBrainz fields. On a 61,225-file
+library that somebody has curated, that is the risk, not the effort.
 
 ## What this does not settle
 
