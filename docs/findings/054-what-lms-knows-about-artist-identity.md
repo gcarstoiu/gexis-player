@@ -90,13 +90,48 @@ the job by two orders of magnitude.
 | already asked about | **781** |
 | **left to ask about** | **89** |
 
-So the sweep is **89 artists**, which at the measured 1.5–5.3 s each is
-**two to eight minutes**, not hours. The three-to-nine-hour figure was for
-every contributor and never applied to what the list draws.
-
 **Of the 822 stored, 688 came back with an id and 134 did not** — 16% that
 MusicBrainz's name search cannot place. `Headstrong feat. Tiff Lacey` is
 one of them, and its shape says why.
+
+### "Resolved" is one of two steps, and the second has never run
+
+George asked what the word meant, which was the right question — the first
+version of this section used it to describe the whole job.
+
+**It means only that the daemon has asked MusicBrainz who this artist is,
+and written the answer down.** `enrichment.db`'s `notes` table, namespace
+`mb-artist`, keyed on the folded name. 688 answers are an id and a score,
+134 are a definite "no such artist". Nothing about a picture.
+
+**The picture is a separate call, and for the list it has been made zero
+times.** The other namespace, `artist-photo`, holds 630 rows — but they are
+keyed on *LMS's* artist id and every value is an `imageproxy/mai/artist/…`
+URL, which is LMS's own plugin. That is the cache behind the pictures the
+list draws today. Checked against the 870 album artists: **0 of them have
+any fanart answer cached**, because nothing has ever asked for one on their
+behalf. The 86 fanart rows in the `enrichment` table are keyed per *track*
+and come from the artist page and now playing.
+
+### So the real cost of a first pass
+
+A bare fanart call, timed on the device against three known ids:
+**0.37 s, 0.46 s, 0.36 s**, all 200.
+
+| step | count | each | total |
+| --- | --- | --- | --- |
+| MusicBrainz search, for the 89 never asked | 89 | ~3.4 s | **~5 min** |
+| fanart, for every album artist | 870 | ~0.4 s | **~6 min** |
+
+**Ten to fifteen minutes**, not the "two to eight" the first version said.
+Still minutes rather than hours, so the recommendation does not change —
+but it is two steps, not one.
+
+**And fanart does not have a portrait for everyone.** One of those three
+ids — `Headgirl`, which resolved with a score of 100 — came back with
+**zero** `artistthumb` entries. Two of four in §3 and two of three here;
+small samples, and enough to say the LMS fallback will be carrying a real
+share of the list rather than covering an edge case.
 
 ## 6. The MusicBrainz search is 3.3 to 3.8 s of the 5
 

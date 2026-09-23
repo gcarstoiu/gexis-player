@@ -30,10 +30,16 @@ Four measured facts shape it (Finding 054):
   the question after the first version of this record: *"I said artist when
   I should have said album artist which we actually have in the list."*
   **781 are already resolved; 89 are not.**
-- **A cold artist costs 1.5–5.3 s**, of which about 3.4 s is the MusicBrainz
-  search. So the remaining **89 artists are two to eight minutes**, not the
-  three to nine hours the first version of this record computed for all
-  7,296 contributors.
+- **A first pass is two steps, and only the first has ever run.** 781 album
+  artists have had their MusicBrainz id looked up; **none of the 870 has
+  ever had a fanart call made for it**, because nothing in the list asks.
+  89 searches at ~3.4 s plus 870 fanart calls at ~0.4 s is **ten to fifteen
+  minutes** — not the three to nine hours this record first computed for all
+  7,296 contributors, and not the "two to eight minutes" that followed it,
+  which counted the searches alone.
+- **fanart does not have a portrait for every artist.** Of three ids tried
+  directly, one came back with none. The LMS fallback carries a real share
+  of the list, not an edge case.
 - **The pictures cost nothing to keep.** Only the URL is stored; LMS's image
   proxy fetches, resizes and caches the file.
 
