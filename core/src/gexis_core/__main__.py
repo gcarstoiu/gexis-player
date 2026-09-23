@@ -52,6 +52,8 @@ from gexis_core.settings import SettingsStore
 from gexis_core.settings_registry import Settings
 from gexis_core.splash import Splash
 from gexis_core.state import StateStore
+from gexis_core import bluealsa_volume
+from gexis_core.bluealsa_volume import BluealsaVolume
 from gexis_core.remote_volume import RemoteVolume
 from gexis_core.volume import (
     DUMMY_CONTROL,
@@ -100,6 +102,7 @@ def make_restore_volume(
     config: Config,
     volume_memory: RendererVolumeMemory,
     volume_bridge: VolumeBridge,
+    acquire_volume=None,
 ):
     async def restore_volume(renderer_id: str) -> None:
         # George's decision, 2026-09-07: each renderer keeps its own
@@ -114,6 +117,16 @@ def make_restore_volume(
         # write_hardware's own docstring): a direct set_raw() here was
         # getting echoed straight back out to Spotify on every
         # acquisition, racing go-librespot's own volume report.
+        # ADR-0054 §5: ask the renderer where it is before reaching for a
+        # remembered level. Only if it will not say does the memory answer.
+        #
+        # George, 2026-09-23, on a phone that connected quiet while showing
+        # maximum: *"doesn't the bluetooth protocol pass along as well the
+        # volume upon connection so the phone and panel show the same
+        # thing? Same question for all renderers in the end."* It does, and
+        # this is the line that listens.
+        if acquire_volume is not None and await acquire_volume(renderer_id):
+            return
         raw = volume_memory.resolve_restore(
             renderer_id,
             boot_default=config.boot_volume_steps,
@@ -327,7 +340,12 @@ async def main() -> None:
         # further down `main()` and resolved when this is called, not now.
         ceiling_db=lambda: _number("max_ceiling"),
     )
-    restore_volume = make_restore_volume(config, volume_memory, volume_bridge)
+    restore_volume = make_restore_volume(
+        config,
+        volume_memory,
+        volume_bridge,
+        acquire_volume=lambda renderer_id: acquire_volume(renderer_id),
+    )
 
     # ADR-0034. Observes every level before it is published, so a change
     # from anywhere else ends mute in the same broadcast that shows it.
@@ -430,6 +448,15 @@ async def main() -> None:
         nothing to say, and the remembered level is used instead.
         """
         adapter = adapters.get(renderer_id)
+        if adapter is not None and adapter.capabilities.volume_over_bluealsa:
+            # The phone announced its level when it connected; bluealsa has
+            # been holding it since (ADR-0054 §1).
+            value, steps = bluetooth_volume.level, bluealsa_volume.STEPS
+            if value is None:
+                return False
+            logger.info("volume: bluetooth says it is at %s on acquisition", value)
+            report_renderer_volume(renderer_id, value, steps)
+            return True
         getter = getattr(adapter, "get_volume", None)
         if getter is None:
             return False
@@ -470,6 +497,13 @@ async def main() -> None:
         # scale to another's, or to the hardware's own with nobody active.
         publish_volume()
 
+    # ADR-0054 §1. Constructed before the supervisor because
+    # `restore_volume` reaches it through `acquire_volume`; its own watch is
+    # started with the rest of the long-running tasks below.
+    bluetooth_volume = BluealsaVolume(
+        on_value=lambda level, steps: report_renderer_volume("bluetooth", level, steps)
+    )
+
     supervisor = Supervisor(
         adapters,
         device_busy=lambda renderer_id: alsa.device_held_by(adapters[renderer_id].unit_name),
@@ -490,13 +524,12 @@ async def main() -> None:
                 steps=getattr(adapter, "VOLUME_STEPS", 100),
                 send=adapter.set_volume,
             )
-        elif capabilities.dummy_mixer_is_renderer_scale:
+        elif capabilities.volume_over_bluealsa:
+            # ADR-0054 §1. Not the mixer: `--volume=mixer` made a loop that
+            # was measured wrong one time in three, and pushed a stale mixer
+            # value at the phone whenever a stream started (Finding 047 §2).
             remote.register(
-                renderer_id,
-                steps=DUMMY_MAX_RAW,
-                send=lambda value, card=capabilities.dummy_mixer_card: set_raw(
-                    DUMMY_CONTROL, value, device=f"hw:{card}", maximum=DUMMY_MAX_RAW
-                ),
+                renderer_id, steps=bluealsa_volume.STEPS, send=bluetooth_volume.set
             )
         if (
             hasattr(adapter, "on_volume_change")
@@ -975,22 +1008,15 @@ async def main() -> None:
             # ADR-0053: only where the control holds the renderer's own
             # number, which each adapter declares. Bluetooth's does; LMS's
             # is squeezelite's curve of it.
-            on_renderer_value=(
-                report_renderer_volume
-                if adapter.capabilities.dummy_mixer_is_renderer_scale
-                else None
-            ),
-            # ADR-0054 §2: where the control is *not* the renderer's own
-            # scale, its movement is an event and the number is read back
-            # from the renderer itself.
-            on_moved=(
-                None
-                if adapter.capabilities.dummy_mixer_is_renderer_scale
-                else renderer_volume_moved
-            ),
+            # ADR-0054 §2: the control's movement is an event, and the
+            # number is read back from the renderer itself.
+            on_moved=renderer_volume_moved,
         )
         for renderer_id, adapter in adapters.items()
         if adapter.capabilities.volume_mechanism is VolumeMechanism.DUMMY_MIXER
+        # ADR-0054 §1: Bluetooth's control is nobody's any more - nothing
+        # writes it and nothing reads it - so it gets no watcher.
+        and not adapter.capabilities.volume_over_bluealsa
     }
 
     logger.info("gexis-core starting: adapters=%s", list(adapters))
@@ -1000,6 +1026,7 @@ async def main() -> None:
             for rid, adapter in adapters.items()
         ),
         volume_bridge.run(),
+        bluetooth_volume.run(),
         *(bridge.run() for bridge in dummy_mixer_bridges.values()),
         peppy.run(),
         # The `wifi` row's value, kept current from here rather than read on

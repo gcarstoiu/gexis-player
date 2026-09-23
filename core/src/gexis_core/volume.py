@@ -988,7 +988,6 @@ class DummyMixerBridge:
         volume_memory,
         get_active_renderer,
         is_playing=None,
-        on_renderer_value=None,
         on_moved=None,
     ) -> None:
         self._renderer_id = renderer_id
@@ -1002,13 +1001,6 @@ class DummyMixerBridge:
         self._volume_memory = volume_memory
         self._get_active_renderer = get_active_renderer
         self._is_playing = is_playing
-        #: ADR-0053. Bluetooth's control *is* its own scale - AVRCP's 0-127,
-        #: exactly, since this morning - so what it holds is the number to
-        #: show. **Not wired for LMS**: squeezelite puts LMS's 0-100 through
-        #: its own curve on the way here (LMS 25 lands on 27, LMS 10 and
-        #: LMS 0 both on 0), so this control cannot say what LMS says. LMS
-        #: reports its own, from the server.
-        self._on_renderer_value = on_renderer_value
         #: ADR-0054 §2: what to do when this renderer's control moves. The
         #: daemon asks the renderer where it is and puts *that* on the DAC.
         self._on_moved = on_moved or (lambda _renderer_id: _noop())
@@ -1071,11 +1063,6 @@ class DummyMixerBridge:
         if raw is None or raw == self._last_seen:
             return
         self._last_seen = raw
-        if self._on_renderer_value is not None:
-            # Before the pause-fade gate, on purpose: a gated renderer does
-            # not report here at all, and an ungated one's number should
-            # follow the control immediately - it is the phone's own slider.
-            self._on_renderer_value(self._renderer_id, raw, DUMMY_MAX_RAW)
         if self._is_playing is None:
             await self._mirror(raw)
             return

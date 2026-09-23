@@ -124,9 +124,9 @@ class BluetoothAdapter(Adapter):
         # is unrelated and already correctly wired.
         volume_managed=False,
         volume_mechanism=VolumeMechanism.DUMMY_MIXER,
-        # ADR-0053: this control is AVRCP's 0-127 and bluealsa-aplay keeps
-        # it and the phone in step both ways, so it *is* the phone's slider.
-        dummy_mixer_is_renderer_scale=True,
+        # ADR-0054 §1: the phone's level comes from bluealsa itself, not
+        # from an ALSA control it was being echoed through.
+        volume_over_bluealsa=True,
         dummy_mixer_card=DUMMY_CARD_BLUETOOTH,
         # ADR-0037, measured on one phone in Finding 028.
         # Shuffle and repeat: George, 2026-09-17, over the design's LMS-only
