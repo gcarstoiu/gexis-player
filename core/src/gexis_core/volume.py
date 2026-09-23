@@ -115,6 +115,7 @@ from __future__ import annotations
 import asyncio
 import concurrent.futures
 import logging
+import math
 import re
 import time
 from collections.abc import Callable
@@ -295,9 +296,36 @@ def dummy_raw_to_hardware_raw(raw: int) -> int:
 #: **60 dB**, because that is what librespot's `softvol` uses and what
 #: George found works on the same DAC in the device he compared against
 #: (Finding 047 §5). A constant, so changing it is a one-line experiment.
-#: The DAC moves in 0.5 dB steps, so 60 dB is 120 hardware positions -
-#: more than any renderer's 101 or 128 needs.
 RENDERER_DB_SPAN = 60.0
+
+#: **The taper, changed 2026-09-23 from linear-in-dB to cubic.**
+#:
+#: George, on the first build: *"60db might not be enough. The bottom half
+#: of the volume range is quite quiet."* The symptom is right and the
+#: remedy he reached for goes the wrong way - a *wider* span makes the
+#: bottom quieter, not louder (at 80 dB, half travel is -40 dB against
+#: -30). What was actually wrong is the shape.
+#:
+#: Linear in dB spends half its decibels on the bottom half of the slider,
+#: so half travel was -30 dB - about a twentieth of the loudness at the
+#: top. **Cubic is how a volume control is normally tapered** and is what
+#: librespot offers beside its `log`; both it and the dr-lex article
+#: librespot's own source cites describe the same curve. Half travel
+#: becomes **-15.6 dB**, a quarter -29.3, and the bottom still reaches
+#: -60 dB before the cliff to silence.
+#:
+#: **What it costs, stated because it is the same shape of complaint moved
+#: elsewhere:** the curve is finer than the DAC's 0.5 dB steps above about
+#: 44%, so 101 slider positions land on 81 distinct levels and some pairs
+#: of percentages sound identical. Those pairs are 0.23 dB apart, which is
+#: inaudible; the bottom-end collapse it replaces was ten positions on one
+#: value across a usable range.
+#:
+#: **Note that librespot's `log` is *not* an alternative here**: read from
+#: its own source, `ratio = exp(ln(db_ratio)*x) / db_ratio`, which for
+#: 60 dB is 1000^(x-1) - exactly linear in dB, the curve being replaced.
+def _taper_floor() -> float:
+    return 10.0 ** (-RENDERER_DB_SPAN / 60.0)
 
 
 def renderer_value_to_hardware_raw(value: int, steps: int) -> int:
@@ -318,7 +346,9 @@ def renderer_value_to_hardware_raw(value: int, steps: int) -> int:
     if steps <= 0 or value <= 0:
         return 0
     fraction = min(1.0, value / steps)
-    return db_to_raw(ceiling_db() - (1.0 - fraction) * RENDERER_DB_SPAN)
+    floor = _taper_floor()
+    ratio = (fraction * (1.0 - floor) + floor) ** 3
+    return db_to_raw(ceiling_db() + 20.0 * math.log10(ratio))
 
 
 def hardware_raw_to_renderer_value(raw: int, steps: int) -> int:
@@ -326,8 +356,10 @@ def hardware_raw_to_renderer_value(raw: int, steps: int) -> int:
     *hardware* has to a renderer that did not set it."""
     if steps <= 0 or raw <= 0:
         return 0
-    short = ceiling_db() - raw_to_db(raw)
-    return max(0, min(steps, round((1.0 - short / RENDERER_DB_SPAN) * steps)))
+    floor = _taper_floor()
+    ratio = 10.0 ** ((raw_to_db(raw) - ceiling_db()) / 20.0)
+    fraction = (ratio ** (1.0 / 3.0) - floor) / (1.0 - floor)
+    return max(0, min(steps, round(fraction * steps)))
 
 
 def renderer_percent_to_value(percent: float, steps: int) -> int:

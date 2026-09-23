@@ -213,17 +213,17 @@ def test_volume_is_published_as_percent_raw_db_and_muted():
     assert store.state.volume.to_json() == {"percent": 100, "raw": 240, "db": 0.0, "muted": False}
 
 
-def test_volume_percent_is_the_slider_position_over_sixty_db():
+def test_volume_percent_is_the_slider_position_on_the_shared_curve():
     """ADR-0034 as amended by ADR-0054 §3: the number shown is slider
-    position over a 60 dB window, so half travel is -30 dB - not the
-    hardware control's own travel, where half was -60."""
+    position on the one curve - cubic over 60 dB - so half travel is
+    -15.5 dB, not the hardware control's own travel, where half was -60."""
     store = StateStore(_caps("lms"))
 
-    store.set_volume_raw(180)
+    store.set_volume_raw(209)
 
     published = store.state.volume.to_json()
     assert published["percent"] == 50
-    assert published["db"] == -30.0
+    assert published["db"] == -15.5
 
 
 def test_a_renderers_own_number_overrides_the_derivation():
@@ -231,11 +231,11 @@ def test_a_renderers_own_number_overrides_the_derivation():
     number. `raw` and `db` stay the hardware's own."""
     store = StateStore(_caps("lms"))
 
-    store.set_volume_raw(180, percent=25)
+    store.set_volume_raw(209, percent=25)
 
     published = store.state.volume.to_json()
     assert published["percent"] == 25
-    assert published["db"] == -30.0
+    assert published["db"] == -15.5
 
 
 def test_muted_is_published():

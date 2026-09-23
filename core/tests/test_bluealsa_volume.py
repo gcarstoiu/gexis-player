@@ -88,3 +88,37 @@ class TestWithNothingConnected:
         volume._forget()
 
         assert volume.level is None
+
+
+class TestWhichPcmIsOurs:
+    """**The bug that made the first version do nothing at all.**
+
+    `bluealsa -p a2dp-sink` makes this device the A2DP sink, so the
+    transport is `A2DP-sink` - but a PCM's `Mode` is the direction from the
+    *client's* side, and a client reads this one, so its Mode is "source".
+    The first version filtered on `Mode == "sink"`, matched nothing, and
+    logged nothing when it matched nothing, so a total failure looked
+    exactly like a phone not being connected (George, 2026-09-23: *"The
+    volume bar moves on the phone but nothing happens on the panel"*).
+    """
+
+    @staticmethod
+    def _props(**kwargs):
+        from dbus_next import Variant
+
+        return {key: Variant("s", value) for key, value in kwargs.items()}
+
+    def test_the_phones_stream_to_us_is_ours(self):
+        assert BluealsaVolume._is_ours(self._props(Transport="A2DP-sink", Mode="source"))
+
+    def test_a_stream_we_would_send_out_is_not(self):
+        assert not BluealsaVolume._is_ours(
+            self._props(Transport="A2DP-source", Mode="sink")
+        )
+
+    def test_a_headset_profile_is_not(self):
+        for transport in ("HFP-AG", "HFP-HF", "HSP-AG", "HSP-HS"):
+            assert not BluealsaVolume._is_ours(self._props(Transport=transport, Mode="source"))
+
+    def test_a_pcm_with_no_properties_at_all_is_not_adopted_by_accident(self):
+        assert not BluealsaVolume._is_ours({})

@@ -114,25 +114,43 @@ class BluealsaVolume:
         manager.on_interfaces_added(added)
         manager.on_interfaces_removed(removed)
 
-        for path, interfaces in (await manager.call_get_managed_objects()).items():
-            if PCM_INTERFACE in interfaces:
-                await self._adopt(path, interfaces[PCM_INTERFACE])
+        objects = await manager.call_get_managed_objects()
+        pcms = [p for p, i in objects.items() if PCM_INTERFACE in i]
+        logger.info("bluealsa: watching %s, %d PCM(s) present", ROOT, len(pcms))
+        for path in pcms:
+            await self._adopt(path, objects[path][PCM_INTERFACE])
 
         await self._bus.wait_for_disconnect()
 
     @staticmethod
-    def _is_sink(properties: dict) -> bool:
-        """The stream coming *from* the phone. bluealsa exports a PCM per
-        direction, and a phone that can also receive audio would otherwise
-        give us two."""
-        def value(key, default=""):
-            variant = properties.get(key)
-            return variant.value if isinstance(variant, Variant) else default
+    def _value(properties: dict, key: str, default=""):
+        variant = properties.get(key)
+        return variant.value if isinstance(variant, Variant) else default
 
-        return value("Mode") == "sink" and value("Transport").startswith("A2DP")
+    @classmethod
+    def _is_ours(cls, properties: dict) -> bool:
+        """The stream coming *from* the phone.
+
+        **`Transport`, not `Mode`** - and getting that wrong is what made
+        the first version of this module do nothing at all, silently, on
+        2026-09-23. `bluealsa -p a2dp-sink` makes *us* the A2DP sink, so
+        the transport is `A2DP-sink`; the PCM's `Mode` is the direction
+        from the *client's* side, and a client reads this one, so its Mode
+        is **"source"**. Filtering on `Mode == "sink"` matched nothing, and
+        because nothing was logged when nothing matched, a total failure
+        looked exactly like a phone not being connected.
+        """
+        return cls._value(properties, "Transport") == "A2DP-sink"
 
     async def _adopt(self, path: str, properties: dict) -> None:
-        if not self._is_sink(properties):
+        if not self._is_ours(properties):
+            # **Logged, not passed over in silence.** See `_is_ours`.
+            logger.info(
+                "bluealsa: ignoring %s (Transport=%r Mode=%r)",
+                path,
+                self._value(properties, "Transport"),
+                self._value(properties, "Mode"),
+            )
             return
         if self._bus is None:
             return

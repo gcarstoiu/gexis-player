@@ -77,21 +77,49 @@ server (~13 ms, Finding 046 §2).
 **`gexisbtvol` becomes unused** and is kept only so the module's two-card
 configuration is unchanged.
 
-### 3. One curve, ours: linear in dB over 60 dB, with zero as silence
+### 3. One curve, ours: **cubic** over 60 dB, with zero as silence
 
 ```
-value == 0            ->  DAC raw 0, silence
-value in 1..steps     ->  ceiling - (1 - value/steps) * 60 dB
+value == 0          ->  DAC raw 0, silence
+value in 1..steps   ->  ceiling + 20*log10((x*(1-f) + f)^3),  x = value/steps
+                        f = 10^(-60/60) = 0.1
 ```
+
+**The taper was linear in dB until George heard it** (2026-09-23): *"60db
+might not be enough. The bottom half of the volume range is quite quiet."*
+The symptom was right; the remedy he reached for goes the wrong way, and
+the arithmetic is the argument — a *wider* span moves the bottom **down**:
+
+| position | linear, 60 dB | linear, 80 dB | **cubic, 60 dB** |
+| --- | --- | --- | --- |
+| 75% | −15.0 dB | −20.0 dB | **−6.5 dB** |
+| 50% | −30.0 dB | −40.0 dB | **−15.5 dB** |
+| 25% | −45.0 dB | −60.0 dB | **−29.5 dB** |
+| 1% | −59.4 dB | −79.2 dB | −58.0 dB |
+
+Linear in dB spends half its decibels on the bottom half of the slider.
+**Cubic is how a volume control is normally tapered**, and it is what
+librespot offers beside its `log`; the dr-lex article librespot's own
+source cites describes the same curve.
+
+**And `log` is not an alternative.** Read from librespot's source,
+`ratio = exp(ln(db_ratio)·x) / db_ratio`, which for 60 dB is `1000^(x−1)` —
+**exactly linear in dB**. So Spotify on the comparison device has the same
+curve this is replacing, and what George is comparing against for LMS is
+squeezelite's software volume applying LMS's own server-side gain.
+
+**What the taper costs, recorded because it is the same complaint moved:**
+above about 44% the curve is finer than the DAC's 0.5 dB steps, so 101
+slider positions land on 81 distinct levels and some neighbouring
+percentages sound identical. Those pairs are **0.23 dB** apart, which is
+inaudible; the bottom-end collapse they replace was ten positions on one
+value across a usable range.
 
 - **Zero is silence**, for every renderer and for the panel. This is the
   2026-09-08 note — *"dead silence is what pause/mute are for, not the
   bottom of a renderer's own volume slider"* — reversed on use.
-- **60 dB**, because that is what librespot chose for `softvol` and what
-  George has found works on the same hardware. It is a first candidate, and
-  it is a constant so that changing it is a one-line experiment.
-- **Linear in dB**, which is ADR-0034's `Perceptual` and within a decibel or
-  so of librespot's `log` over most of the travel.
+- **60 dB**, because that is what librespot chose for `softvol`. It is a
+  constant so that changing it is a one-line experiment.
 - **`max_ceiling` still shifts the whole window** (ADR-0052 amended), so the
   top of every scale remains the user's.
 

@@ -362,6 +362,40 @@ thing, find the call *it* makes before concluding the data is absent — here,
 one request to `material-skin browsemodes` listed `myMusicTopArtists` and
 `myMusicRecentlyPlayedArtists` with their exact parameters.
 
+**17. A client that logged nothing when it matched nothing** (2026-09-23,
+Phase 9 subphase 9i). `bluealsa_volume.py` was written to follow the A2DP
+PCM's `Volume` property over D-Bus. It filtered on `Mode == "sink"` — the
+right word for the wrong end. `bluealsa -p a2dp-sink` makes *this device*
+the sink, so the transport is `A2DP-sink`, but a PCM's `Mode` is the
+direction from the **client's** side, and a client reads this one: its Mode
+is `"source"`. The filter matched nothing, ever.
+
+**What made it cost a whole test round with George** is not the filter, it
+is that the module logged only on success and on failure of the *bus
+connection*. A total mismatch produced exactly the same output as a phone
+not being connected: none. He reported *"the volume bar moves on the phone
+but nothing happens on the panel"*, and the daemon's log for the whole
+session had not one line from the module responsible.
+
+**A component that can do nothing must say so.** It now logs what it is
+watching and how many objects it found on startup, and logs every object it
+declines with the properties it declined it on. The next failure of the
+same kind is one `journalctl` away instead of a round trip through somebody
+else's evening.
+
+**18. The same `amixer` grep, a second time** (2026-09-23). Finding 045 §6
+records `grep -oE "Playback [0-9]+"` matching `Limits: Playback 0 - 240`
+and reporting the control's *floor* as its value. Verifying ADR-0054's
+curve on the device, the same one-liner was written again and reported
+**silence at every slider position**, on a device whose DAC was tracking
+perfectly. It was caught because the result was absurd rather than merely
+wrong — which is luck, not method.
+
+**Reading a mixer with a regular expression is a known trap in this
+repository and there is a correct parser in `volume.py`.** The probe
+scripts should use it; where a shell one-liner is unavoidable, anchor it to
+`Front Left:` rather than to the word `Playback`.
+
 ## Common shape
 
 Every case had a *plausible* substitute for the real target — the build
@@ -373,6 +407,13 @@ itself, a log line for the screen it describes, a lucky memory layout for
 the one the daemon would get — and the check quietly accepted the
 substitute. None of these failed loudly. Each
 produced an answer that looked like a normal result, not an error.
+
+**And a third corollary, from cases 17 and 18.** Silence is not evidence of
+absence *unless the thing was built to break its silence* — a check that
+cannot report "I found nothing to look at" is indistinguishable from one
+that found nothing wrong. And a trap this page already records will be
+walked into again: case 18 is case 6's own instrument, rewritten from
+memory nine days later.
 
 **What to check before trusting a verification result:** not just "does
 this check look right," but "is the thing I just checked actually the

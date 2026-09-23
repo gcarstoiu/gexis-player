@@ -189,10 +189,10 @@ async def test_genuine_spotify_change_outside_window_is_applied(fake_set_raw):
     await settle()
 
     assert reported == [("spotify", 50, 100)]
-    # And where that goes: 50 of 100 is -30 dB on ADR-0054 §3's 60 dB
-    # curve - not raw-linear's 50/100 * 240 = 120, which was -60 dB and the
+    # And where that goes: 50 of 100 is -15.5 dB on ADR-0054 §3's curve -
+    # not raw-linear's 50/100 * 240 = 120, which was -60 dB and the
     # 2026-09-08 symptom.
-    assert renderer_value_to_hardware_raw(50, 100) == 180
+    assert renderer_value_to_hardware_raw(50, 100) == 209
 
 
 @pytest.mark.asyncio
@@ -392,9 +392,8 @@ class TestSpotifyFractionToHardwareRaw:
 
     def test_reported_symptom_60_percent_is_now_audible(self):
         # Old (raw-linear) formula: round(0.6 * 240) = 144 -> -108dB, the
-        # 2026-09-08 symptom. The span is 60 dB since ADR-0054, so 60% is
-        # -24 dB -> raw 192; it was -18 dB over the old 45 dB window.
-        assert spotify_fraction_to_hardware_raw(0.6) == 192
+        # 2026-09-08 symptom. On ADR-0054's cubic taper 60% is -11.5 dB.
+        assert spotify_fraction_to_hardware_raw(0.6) == 217
 
     def test_round_trip_recovers_the_original_fraction(self):
         # Within 1 percentage point, not exact - the DAC's 0.5dB raw
@@ -689,9 +688,9 @@ class TestTheCeilingIsTheTopOfEveryScale:
         self._at(-12.0)
 
         assert raw_to_db(slider_percent_to_raw(100)) == pytest.approx(-12.0, abs=0.5)
-        assert raw_to_db(slider_percent_to_raw(50)) == pytest.approx(-42.0, abs=0.5)
+        assert raw_to_db(slider_percent_to_raw(50)) == pytest.approx(-27.5, abs=0.5)
         assert raw_to_db(renderer_value_to_hardware_raw(1, 100)) == pytest.approx(
-            -71.4, abs=0.5
+            -70.0, abs=0.5
         )
 
     def test_a_ceiling_above_zero_is_not_one(self):
@@ -818,8 +817,33 @@ class TestTheOneCurve:
         """librespot's `softvol` default, and what George found works on the
         same DAC (Finding 047 §5). It was 38.1 dB, and 45 before that."""
         assert volume_module.RENDERER_DB_SPAN == 60.0
-        assert raw_to_db(renderer_value_to_hardware_raw(50, 100)) == -30.0
-        assert raw_to_db(renderer_value_to_hardware_raw(25, 100)) == -45.0
+
+    def test_the_taper_is_cubic_so_the_bottom_half_is_usable(self):
+        """George, 2026-09-23: *"The bottom half of the volume range is
+        quite quiet."* Linear in dB spent half its decibels on the bottom
+        half of the slider - half travel was **-30 dB**, a twentieth of the
+        loudness at the top.
+
+        Cubic is how a volume control is normally tapered. Half travel is
+        now -15.5 dB and a quarter -29.5, and the bottom still reaches
+        -58 dB before the cliff to silence.
+        """
+        assert raw_to_db(renderer_value_to_hardware_raw(75, 100)) == -6.5
+        assert raw_to_db(renderer_value_to_hardware_raw(50, 100)) == -15.5
+        assert raw_to_db(renderer_value_to_hardware_raw(25, 100)) == -29.5
+        assert raw_to_db(renderer_value_to_hardware_raw(1, 100)) == -58.0
+
+    def test_a_wider_span_would_have_made_the_bottom_quieter_not_louder(self):
+        """Pinned because it is the thing that is easy to get backwards, and
+        was: the change asked for was *"60db might not be enough... let's
+        increase it"*, and increasing it moves the bottom down."""
+        at_sixty = raw_to_db(renderer_value_to_hardware_raw(50, 100))
+        volume_module.RENDERER_DB_SPAN = 80.0
+        try:
+            at_eighty = raw_to_db(renderer_value_to_hardware_raw(50, 100))
+        finally:
+            volume_module.RENDERER_DB_SPAN = 60.0
+        assert at_eighty < at_sixty
 
     def test_the_bottom_of_travel_actually_moves(self):
         """The direct answer to *"feels almost like nothing is changing"*.
@@ -827,8 +851,22 @@ class TestTheOneCurve:
         0/5/10 used to be one."""
         levels = [renderer_value_to_hardware_raw(v, 100) for v in range(1, 41)]
         assert len(set(levels)) == len(levels)
-        assert raw_to_db(levels[0]) == pytest.approx(-59.5, abs=0.1)
-        assert raw_to_db(levels[-1]) == pytest.approx(-36.0, abs=0.1)
+        assert raw_to_db(levels[0]) == pytest.approx(-58.0, abs=0.1)
+        assert raw_to_db(levels[-1]) == pytest.approx(-20.0, abs=0.1)
+
+    def test_the_cost_of_the_taper_is_at_the_top_and_is_inaudible(self):
+        """**Stated rather than hidden**: above about 44% the curve is finer
+        than the DAC's 0.5 dB steps, so 101 positions land on 81 levels and
+        some pairs of percentages sound identical.
+
+        That is the same shape of complaint moved elsewhere, and it is
+        accepted because the pairs are 0.23 dB apart - inaudible - where the
+        bottom-end collapse it replaces was ten positions on one value
+        across a usable range."""
+        levels = [renderer_value_to_hardware_raw(v, 100) for v in range(101)]
+        assert len(set(levels)) == 81
+        shared = [v for v in range(1, 101) if levels[v] == levels[v - 1]]
+        assert min(shared) > 40
 
     def test_the_scales_agree_with_each_other(self):
         """One curve means LMS at half, a phone at half and the panel at
@@ -841,10 +879,14 @@ class TestTheOneCurve:
     def test_a_renderer_that_reports_no_scale_is_silent_not_loud(self):
         assert renderer_value_to_hardware_raw(50, 0) == 0
 
-    def test_the_inverse_round_trips_exactly_on_the_panels_own_scale(self):
+    def test_the_inverse_round_trips_within_a_point(self):
+        """Exact until the taper became cubic; the DAC's 0.5 dB steps are
+        coarser than the curve near the top, so a position can come back one
+        off. It is used only for the no-renderer fallback display - while a
+        renderer holds the device the number is its own, not derived."""
         for value in range(101):
             raw = renderer_value_to_hardware_raw(value, 100)
-            assert hardware_raw_to_renderer_value(raw, 100) == value
+            assert abs(hardware_raw_to_renderer_value(raw, 100) - value) <= 1
 
     def test_a_128_position_scale_cannot_round_trip_and_that_is_safe(self):
         """**60 dB is 120 hardware steps and AVRCP has 128 positions**, so
@@ -867,7 +909,10 @@ class TestTheOneCurve:
             != value
         ]
 
-        assert len(drifting) == 7
+        # 37 since the taper became cubic, from 7 - the curve is finer than
+        # the DAC's steps over more of its length. Still never by more than
+        # one, and still harmless for the same reason.
+        assert len(drifting) == 37
         assert all(
             abs(
                 hardware_raw_to_renderer_value(
