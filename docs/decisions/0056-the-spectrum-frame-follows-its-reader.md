@@ -111,5 +111,7 @@ learns that size from the reader's own configuration.**
 ## Open
 
 - **How fast the spectrum should feel.** `smoothing_factor` is 90 today
-  (about 110 ms, against the 17 ms that shipped). A guess at a middle, and
+  (a time constant of about 200 ms, against 30 ms as shipped - measured,
+  and corrected from the first figures given, see Finding 051). A guess at
+  a middle, and
   George has not yet seen a correctly framed spectrum at any other value.

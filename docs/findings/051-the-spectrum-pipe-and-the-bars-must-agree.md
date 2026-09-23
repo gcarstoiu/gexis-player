@@ -68,8 +68,24 @@ the aligned figure.
 ## What this does not settle
 
 - **How fast the spectrum should feel.** `smoothing_factor` is left at
-  **90** (a time constant of about 110 ms against the 17 ms it shipped
-  with), which is a guess at a middle. George has now seen 50 aligned, and
+  **90**, which is a guess at a middle.
+
+  **The time constants first given here were wrong by about a factor of
+  two**, and are corrected: they assumed peppyalsa emits a frame per
+  512-sample FFT, 11.6 ms at 44.1 kHz. It emits one per ALSA period, and
+  `spectrum.c` `break`s out of the sample loop after the first FFT of each,
+  discarding the rest. **Counted on the device: 48.6 frames a second, one
+  every 20.6 ms.** The filter keeps `f` percent of each band's previous
+  value per block, so:
+
+  | `smoothing_factor` | time constant |
+  | --- | --- |
+  | 50, as shipped | 30 ms |
+  | 90, today | 200 ms |
+  | 97 | 0.7 s |
+  | 99 | 2 s |
+
+  Which is why 97 read as over-smoothed and 99 was nearly frozen. George has now seen 50 aligned, and
   90 and 97 scrambled, so he has not yet seen a correctly framed spectrum
   at any setting but the original.
 - **The vertical staircase.** A bar's height is quantised into the
