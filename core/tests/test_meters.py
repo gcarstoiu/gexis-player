@@ -127,3 +127,60 @@ async def test_the_websocket_publishes_levels(tmp_path):
 
     assert message == {"left": 60, "right": 63, "mono": 62, "bands": list(range(30))}
     source.close()
+
+
+class TestTheSpectrumFrameMatchesTheReader:
+    """**A FIFO carries bytes, not messages** (Finding 051).
+
+    PeppySpectrum reads `4 * size` bytes at a time, where `size` is the bar
+    count the driver writes per skin. peppyalsa measures 30 bands. When the
+    two differ, the reader takes 88 bytes out of a stream of 120-byte
+    records and every bar shows a different band from one refresh to the
+    next - which on the panel is a flashing spectrum, and is immune to any
+    amount of smoothing upstream.
+    """
+
+    def test_a_matching_count_is_passed_through_untouched(self):
+        from gexis_core.meters import resample
+
+        bands = tuple(range(30))
+        assert resample(bands, 30) is bands
+
+    def test_no_declared_count_changes_nothing(self):
+        from gexis_core.meters import resample
+
+        bands = tuple(range(30))
+        assert resample(bands, None) is bands
+        assert resample(bands, 0) is bands
+
+    def test_thirty_bands_fold_into_the_bars_a_skin_draws(self):
+        from gexis_core.meters import resample
+
+        bands = tuple(range(30))
+        for want in (20, 21, 22):
+            out = resample(bands, want)
+            assert len(out) == want, want
+            # every measurement is accounted for, and none is invented
+            assert max(out) == max(bands)
+            assert min(out) <= min(bands) + 1
+
+    def test_a_group_reports_its_peak_not_its_mean(self):
+        from gexis_core.meters import resample
+
+        # 30 -> 15 is two bands per bar; the loud one must survive
+        bands = tuple(100 if i % 2 else 0 for i in range(30))
+        assert set(resample(bands, 15)) == {100}
+
+    def test_it_never_invents_bands(self):
+        from gexis_core.meters import resample
+
+        bands = tuple(range(10))
+        assert resample(bands, 30) is bands
+
+    def test_the_declared_size_is_read_from_the_engines_own_config(self, tmp_path):
+        from gexis_core.meters import read_declared_size
+
+        conf = tmp_path / "config.txt"
+        conf.write_text("[current]\nspectrum = Free\nsize = 22\nframe.rate = 30\n")
+        assert read_declared_size(str(conf)) == 22
+        assert read_declared_size(str(tmp_path / "nope.txt")) is None

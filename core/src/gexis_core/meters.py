@@ -13,6 +13,7 @@ in 0-100 already, so nothing is rescaled here.
 """
 from __future__ import annotations
 
+import configparser
 import errno
 import logging
 import os
@@ -155,6 +156,43 @@ class FifoSource:
         self._meter_fd = self._spectrum_fd = None
 
 
+def read_declared_size(path: str) -> int | None:
+    """`size` from the spectrum engine's `[current]` section, or None."""
+    try:
+        parser = configparser.ConfigParser(strict=False)
+        parser.read(path)
+        return parser.getint("current", "size")
+    except (configparser.Error, ValueError, OSError):
+        return None
+
+
+def resample(bands: tuple[int, ...], want: int | None) -> tuple[int, ...]:
+    """`bands` folded down to `want` values, by taking each group's peak.
+
+    **Why this exists at all.** peppyalsa measures 30 bands; a skin draws as
+    many bars as its artwork has room for, which is 20 to 22
+    ([Finding 049](../../../docs/findings/049-the-spectrum-draws-more-bars-than-it-has-room-for.md)).
+    A FIFO carries bytes, not messages, and PeppySpectrum reads `4 * size`
+    of them at a time - so a 120-byte record read 88 bytes at a time makes
+    every bar show a different band from one refresh to the next
+    ([Finding 051](../../../docs/findings/051-the-spectrum-pipe-and-the-bars-must-agree.md)).
+    The frame that goes down the pipe has to be the frame the reader expects.
+
+    **The peak of each group, not the mean.** A bar on a spectrum display
+    stands for the loudest thing in its range; averaging would pull every
+    doubled band down and make the display quieter than the music.
+
+    **Never upward.** Asked for more values than there are measurements this
+    returns what it has: the pipe would then disagree with the reader again,
+    which is bad, but inventing bands is worse and it cannot happen - the
+    count is capped at the band count where it is computed.
+    """
+    have = len(bands)
+    if not want or want == have or want > have or want < 1:
+        return bands
+    return tuple(max(bands[(i * have) // want : ((i + 1) * have) // want]) for i in range(want))
+
+
 class FifoPassthrough:
     """ADR-0011's compatibility transport, and how our own PeppyMeter is fed:
     its `data.source type = pipe` points here, not at peppyalsa.
@@ -163,9 +201,17 @@ class FifoPassthrough:
     non-blocking and simply has nowhere to write until PeppyMeter starts.
     """
 
-    def __init__(self, meter_path: str, spectrum_path: str) -> None:
+    def __init__(
+        self,
+        meter_path: str,
+        spectrum_path: str,
+        spectrum_consumer_config: str | None = None,
+    ) -> None:
         self._paths = {"meter": meter_path, "spectrum": spectrum_path}
         self._fds: dict[str, int | None] = {"meter": None, "spectrum": None}
+        self._consumer_config = spectrum_consumer_config
+        self._config_seen: tuple[int, int] | None = None
+        self._declared: int | None = None
         for path in self._paths.values():
             self._make(path)
 
@@ -186,9 +232,27 @@ class FifoPassthrough:
                 return None  # no reader yet; normal
         return self._fds[which]
 
+    def declared_bands(self) -> int | None:
+        """How many bars the spectrum engine is about to draw, from its own
+        config file. Re-read only when the file changes - the driver rewrites
+        it on every skin change, and this is polled at the frame rate."""
+        if not self._consumer_config:
+            return None
+        try:
+            stat = os.stat(self._consumer_config)
+        except OSError:
+            return None
+        key = (stat.st_mtime_ns, stat.st_size)
+        if key != self._config_seen:
+            self._config_seen = key
+            self._declared = read_declared_size(self._consumer_config)
+            logger.info("meters: the spectrum engine declares %s bars", self._declared)
+        return self._declared
+
     def publish(self, levels: Levels) -> None:
         self._write("meter", struct.pack("<HH", levels.left, levels.right))
-        self._write("spectrum", struct.pack(f"<{len(levels.bands)}I", *levels.bands))
+        bands = resample(levels.bands, self.declared_bands())
+        self._write("spectrum", struct.pack(f"<{len(bands)}I", *bands))
 
     def _write(self, which: str, payload: bytes) -> None:
         fd = self._fd(which)

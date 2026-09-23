@@ -91,7 +91,11 @@ async def main() -> None:
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
     config = Config.load()
     source = FifoSource(config.meter_fifo, config.spectrum_fifo, bands=config.spectrum_bands)
-    passthrough = FifoPassthrough(config.meter_passthrough, config.spectrum_passthrough)
+    passthrough = FifoPassthrough(
+        config.meter_passthrough,
+        config.spectrum_passthrough,
+        spectrum_consumer_config=config.spectrum_consumer_config,
+    )
     server = MeterServer(
         source,
         passthrough=passthrough,

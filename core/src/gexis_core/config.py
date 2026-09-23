@@ -80,6 +80,13 @@ class Config:
     meter_passthrough: str = "/run/gexis/meter-peppy.fifo"
     spectrum_passthrough: str = "/run/gexis/spectrum-peppy.fifo"
     spectrum_bands: int = 30  # peppyalsa's spectrum_size, output.conf
+    # **The spectrum engine's own config, read to find out how many bars it
+    # is about to draw.** A pipe has no message boundaries: PeppySpectrum
+    # reads `4 * size` bytes at a time, so a frame of any other length
+    # leaves it reading across record boundaries and every bar shows a
+    # different band from one refresh to the next (Finding 051). The
+    # passthrough follows what the consumer declares rather than guessing.
+    spectrum_consumer_config: str = "/opt/gexis-peppy/spectrum/config.txt"
     meter_frame_rate: int = 30  # the skins' own ui.refresh.period, ADR-0015
     meter_port: int = 8091
     # Empty by default: pushing to a PeppyMeter web server elsewhere is for a
