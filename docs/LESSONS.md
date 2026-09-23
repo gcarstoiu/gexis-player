@@ -444,6 +444,30 @@ checked, and no".** It is now `None`, and a config that cannot be computed
 is not written at all. The switch also stops the renderers *before* it
 writes, so the question is answerable when it is asked.
 
+**22. The arithmetic was right and the cause was wrong** (2026-09-23).
+Teletronix's needle pins are at (317, 350) and (963, 350); its dial
+picture is 672×302 at the origin. Both pins are outside it. That is true,
+it was measured from the engine's own source, and I excluded the skin for
+it.
+
+**The picture was the wrong file.** `bgr.filename` named the *spectrum's*
+blank panel — the same filename `spectrum.txt` uses — instead of the dial
+artwork, which is 1280×800 and holds both pins comfortably. The
+measurement described the symptom exactly and pointed at the skin's
+geometry, which was never wrong.
+
+I also excluded a second skin on a model alone, and it renders correctly:
+the capture it rested on was taken with nothing playing, so it was a held
+last frame, not a rendering. Six models of "which skins are broken" were
+built in two days; the one that held was "is this file also a spectrum
+background", which is a question about *what a value names*, not about
+where it points.
+
+**A quantity being out of range tells you where to look, not what is
+wrong.** Before excluding something on a number, ask what would have to be
+true for the number to be right — and check that a capture is of a live
+screen, not a frozen one.
+
 ## Common shape
 
 Every case had a *plausible* substitute for the real target — the build

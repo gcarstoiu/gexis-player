@@ -1,5 +1,11 @@
 # Finding 048 — Two skins that render wrong, and what arbitration watches
 
+> **Superseded in part, 2026-09-23, by
+> [Finding 050](050-two-skins-name-the-wrong-background.md).** §2's
+> arithmetic holds but names the wrong cause; §3 is wrong outright — that
+> skin renders correctly; §4's exclusions are withdrawn, both skins are
+> offered again and `skins.BROKEN` is empty. §1 and §5 stand.
+
 **Date:** 2026-09-23
 **Question:** George photographed the panel: *"a visualisation with broken
 vu meters. Please check and fix."* And separately: *"Measure it"*, on the
@@ -28,6 +34,14 @@ examined. "Two packs name a skin the same thing and one overwrites the
 other" is contradicted by the count: 99 sections, 99 unique names.
 
 ## 2. Teletronix: what it looks like, and why
+
+> **The cause given below is not the cause.** Both pins are indeed outside
+> the 672×302 rectangle, and the restore is indeed bounded by it — but the
+> reason that rectangle is 672×302 is that `bgr.filename` names the
+> *spectrum's* panel rather than the dial artwork. With the right picture
+> the pins are inside it and the skin draws correctly.
+> [Finding 050](050-two-skins-name-the-wrong-background.md) has the
+> measurement and the fix.
 
 **George described it from the panel** and his description is the better
 one, because it is what a person sees:
@@ -68,6 +82,13 @@ the pins elsewhere.
 
 ## 3. Kenwood Rev: the needles sweep a quadrant the scale does not occupy
 
+> **Wrong. This skin renders correctly.** −227° is a *reverse* dial: the
+> needles hang from a pin at the top of each face and swing down, which is
+> what the artwork draws. The capture this section rests on was taken with
+> nothing playing, so it was a held last frame. Photographed again with
+> music playing, the needles sit on the scale.
+> [Finding 050](050-two-skins-name-the-wrong-background.md).
+
 ```
 start.angle = -227      stop.angle = -133      distance = 190
 left.origin = (319, 435)
@@ -82,6 +103,13 @@ shows it. **The configuration is what does not match the artwork**, whose
 dials are in the lower half of the screen with their pins near y ≈ 490.
 
 ## 4. What was done
+
+> **Withdrawn 2026-09-23.** Neither skin is excluded now; `skins.BROKEN` is
+> empty and the corpus is 99 again. Teletronix is corrected in the image,
+> and so is `107G5_Marantz S+M`, which had the same defect and was not
+> noticed here. The "not a validator" paragraph is also wrong: one of the
+> two faults *was* checkable, mechanically and over the whole corpus, once
+> it was understood. [Finding 050](050-two-skins-name-the-wrong-background.md).
 
 Both are excluded from the corpus (`skins.BROKEN`), each with the
 measurement as its reason. **Not a validator**: the two faults have
@@ -144,7 +172,9 @@ gexis_core.volume INFO volume: moving the mixer monitor to Headphones
 
 ## What is left, and what it needs
 
-- **Seven `S+M` skins unexamined**, above.
+- ~~**Seven `S+M` skins unexamined**~~ **Closed 2026-09-23:** all 99 were
+  checked for the file-level defect and four photographed
+  ([Finding 050](050-two-skins-name-the-wrong-background.md)).
 - **Arbitration's card**, above — needs a decision on whether the card
   follows the output or arbitration is scoped to the DAC by definition.
 - **Nothing here was heard.** Every judgement is from pixels and from

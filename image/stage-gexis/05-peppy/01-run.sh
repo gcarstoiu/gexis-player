@@ -117,6 +117,56 @@ do
 	fi
 done
 
+# Two sections name the *spectrum* panel as their *meter* background, so
+# PeppyMeter stamps a blank panel over the dial and repaints under the
+# needle from the wrong picture - trails behind the needle and an overlay
+# on top of the face (Finding 050; George saw it on 111G5_Teletronix S+M).
+# The dial artwork is the section's own `screen.bgr`, so that is what the
+# meter background has to be. Corrected here rather than in skins/, because
+# the comparison above has to keep seeing the pack exactly as upstream
+# ships it.
+sm="${PEPPY_DIR}/skins/gelo5/templates_spectrum/1280x800/meters.txt"
+# No ^...$ anchors: the pack's files are CRLF, so `$` would never match.
+# The address limits each substitution to its own section, where the panel
+# is named exactly once.
+sed -i \
+	-e '/\[111G5_Teletronix S+M\]/,/\[112G5/ s/Teletronix_bgr\.png/Teletronix.jpg/' \
+	-e '/\[107G5_Marantz S+M\]/,/\[108G5/ s/Marantz_bgr\.png/Marantz.jpg/' \
+	"${sm}"
+for want in "bgr.filename = Teletronix.jpg" "bgr.filename = Marantz.jpg"; do
+	if ! grep -qF "${want}" "${sm}"; then
+		echo "ERROR: the meter background correction did not apply (${want})" >&2
+		echo "       the pack renamed a file or a section - see Finding 050" >&2
+		exit 1
+	fi
+done
+# The spectrum sections still use those panels as their own backgrounds, and
+# must keep doing so.
+for want in "Teletronix_bgr.png" "Marantz_bgr.png"; do
+	if ! grep -qF "${want}" "${PEPPY_DIR}/skins/gelo5/templates_spectrum/1280x800/spectrum.txt"; then
+		echo "ERROR: ${want} is no longer a spectrum background - see Finding 050" >&2
+		exit 1
+	fi
+done
+
+# And no *other* section may have the same defect - in this pack today or in
+# whatever a future one ships. awk, not python3: the build container has
+# neither python3 nor unzip (found the hard way, 2026-09-16).
+# Every meters.txt in a pack against every spectrum.txt in the same pack:
+# the two live in different folders in the stock pack and the same one in
+# gelo5, and a section can name a panel from either.
+for pack in gelo5 stock; do
+	specs=$(find "${PEPPY_DIR}/skins/${pack}" -name spectrum.txt)
+	[ -n "${specs}" ] || continue
+	for meters in $(find "${PEPPY_DIR}/skins/${pack}" -name meters.txt); do
+		# shellcheck disable=SC2086
+		if ! awk -f files/meter-background-check.awk ${specs} "${meters}"; then
+			echo "       ${meters}: a meter draws a spectrum panel - see Finding 050" >&2
+			exit 1
+		fi
+	done
+done
+
 # PeppyMeter has no --config option: it reads ./config.txt relative to the
 # working directory (configfileparser.py:174-176), so the file goes in the
 # engine's own folder and the launcher cds there.

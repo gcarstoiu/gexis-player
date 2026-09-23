@@ -89,8 +89,11 @@ into the red. They are the ones most worth having.
 ## 6. Skin geometry — how one skin is drawn
 
 **These live in the skin, not in a settings screen.** They are here because
-they are what goes wrong when a skin renders badly, and two of ours do
-([Finding 048](../findings/048-two-skins-that-render-wrong.md)).
+they are what goes wrong when a skin renders badly, and two of ours did:
+both named the *spectrum's* blank panel as the dial face
+([Finding 050](../findings/050-two-skins-name-the-wrong-background.md)).
+The image corrects those two, and a build check now refuses any skin that
+makes the same mistake.
 
 | setting | in plain words |
 | --- | --- |
@@ -100,7 +103,7 @@ they are what goes wrong when a skin renders badly, and two of ours do
 | `indicator.filename` | The needle itself. |
 | `screen.bgr` | The whole backdrop the meter sits on. |
 | `meter.x` / `meter.y` | Where on screen the dial face is placed. |
-| `left.origin.x/y`, `right.origin.x/y`, `mono.origin.x/y` | **The pin the needle swings around.** If this is not on the dial, the needle hangs in space — which is exactly the Teletronix fault. |
+| `left.origin.x/y`, `right.origin.x/y`, `mono.origin.x/y` | **The pin the needle swings around.** If this is not on the dial, the needle hangs in space. Teletronix looked like that and was not: its dial picture was the wrong file ([Finding 050](../findings/050-two-skins-name-the-wrong-background.md)). |
 | `start.angle` / `stop.angle` | The angles for silence and for full scale. If these do not match the printed scale, the needle sweeps the wrong part of the dial — the Kenwood fault. |
 | `left.start.angle` etc. | The same, per channel, when the two dials differ. |
 | `distance` | How far the needle's tip reaches from its pin. |
@@ -198,6 +201,6 @@ catches things the average hides. On a two-needle skin, the same choice
 applied per side.
 
 **Not on the list, deliberately:** everything in §6. Those are the skin's
-own drawing instructions, and getting one wrong is how a skin ends up on
-[Finding 048](../findings/048-two-skins-that-render-wrong.md) rather than
-how a user tunes anything.
+own drawing instructions, and getting one wrong is how a skin ends up in
+[Finding 050](../findings/050-two-skins-name-the-wrong-background.md)
+rather than how a user tunes anything.
