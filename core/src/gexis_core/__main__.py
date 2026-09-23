@@ -602,7 +602,6 @@ async def main() -> None:
     settings = Settings(
         settings_store,
         defaults={
-            "boot_volume": lambda: raw_to_db(config.boot_volume_steps),
             "lms_server": lambda: f"{config.lms_host}:{config.lms_port}",
             "lms_player": lambda: config.lms_player_name,
             "idle_url": lambda: config.idle_url or None,
@@ -658,11 +657,6 @@ async def main() -> None:
                # Readonly: nothing to do on a write, and the value is the
                # live one below rather than the registry's literal.
                "volume_managed": None,
-               # Read by `gexis_core.boot_volume`, which runs as its own
-               # unit before any renderer can play, so this takes effect at
-               # the next boot rather than now - which is what a *boot*
-               # volume means.
-               "boot_volume": None,
                # ADR-0051: read by the driver, through the file these write.
                "skin": publish_visualisation,
                "skin_rotate": publish_visualisation,

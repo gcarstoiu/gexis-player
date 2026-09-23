@@ -61,3 +61,28 @@ def test_every_declared_key_exists_in_the_registry():
     for where, keys in _declared_keys().items():
         missing = sorted(keys - registry)
         assert not missing, f"{where} names rows the registry does not have: {missing}"
+
+
+def test_the_shipped_core_toml_only_names_fields_config_has():
+    """`Config.load` rejects an unknown key, which is right - a typo in a
+    deployment file should not be silently ignored. But it only ever fired
+    on the device: on 2026-09-23 `boot_volume_steps` was removed from the
+    dataclass and left in the shipped `core.toml`, and the daemon would not
+    start while 867 tests passed.
+
+    The second time in one afternoon that a removal left a dangling
+    reference nothing tested (see the registry check above), which is what
+    earned this file."""
+    import dataclasses
+    import tomllib
+
+    from gexis_core.config import Config
+
+    shipped = (
+        Path(__file__).resolve().parents[2]
+        / "image" / "stage-gexis" / "03-core" / "files" / "core.toml"
+    )
+    keys = set(tomllib.loads(shipped.read_text()))
+    fields = {f.name for f in dataclasses.fields(Config)}
+
+    assert not keys - fields, f"core.toml names fields Config does not have: {sorted(keys - fields)}"

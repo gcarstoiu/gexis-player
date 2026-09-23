@@ -75,7 +75,14 @@ DESIGN_KEYS_NOT_YET_IN_THE_REGISTRY: set[str] = set()
 #: takes the device, so a second copy of what the renderer already
 #: remembers decides nothing. Measured before deleting: 12 acquisitions,
 #: 12 answers, 0 fallbacks. George: "delete them".
-DESIGN_KEYS_WE_DECLINED = {"weather_key", "idle_minmax", "per_renderer_volume"}
+#: `boot_volume` joined them the same day, with the unit behind it.
+#: Measured over two boots: the converter comes up at -20 dB of its own
+#: accord, nothing carries a level across a boot, and nothing plays before
+#: a renderer acquires - at which point ADR-0054 §5 sets the level from the
+#: renderer itself (Finding 047 §10). ADR-0018's boot level is amended out.
+DESIGN_KEYS_WE_DECLINED = {
+    "weather_key", "idle_minmax", "per_renderer_volume", "boot_volume",
+}
 
 
 #: Not a row. The Wi-Fi password sheet builds its key at runtime from the
@@ -462,9 +469,10 @@ def test_the_shipped_registry_hides_twenty_rows_and_shows_the_rest():
     # of scope on 2026-09-23 ("The other 2 you flagged - not needed"):
     # both were [?] rows, decisions owed rather than behaviour missing, and
     # the behaviour behind them stays hardcoded. Less `per_renderer_volume`
-    # too, deleted with the memory it switched on and off.
-    assert len(rows) == 68
-    assert len(rows) - len(kept) == 50
+    # too, deleted with the memory it switched on and off, and
+    # `boot_volume`, deleted with the unit that read it.
+    assert len(rows) == 67
+    assert len(rows) - len(kept) == 49
 
 
 def test_the_clock_can_be_turned_off_without_taking_the_screen_with_it():

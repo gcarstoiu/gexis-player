@@ -408,6 +408,25 @@ test.** `test_registry_wiring.py` now reads the two dictionaries out of the
 source with `ast` and checks them against the registry, and it asserts it
 found the call at all - otherwise it would pass by finding nothing.
 
+**20. Removing a thing leaves references that only production checks**
+(2026-09-23, twice in one afternoon). A settings row was deleted and its
+entry in `__main__`'s `defaults` stayed; then `boot_volume_steps` was
+deleted from `Config` and stayed in the shipped `core.toml`. Both have a
+correct, deliberate validation — `Settings.__init__` raises `not in the
+registry`, `Config.load` raises `unknown config key(s)` — and **both
+validations only ever ran on the device.** The suite was green each time
+and the daemon would not start.
+
+The second one also hit systemd's restart rate limit, so the service ended
+`failed` and needed `reset-failed` rather than another `restart` — a
+deployment that is *wrong* looks different from one that is merely broken.
+
+**A declaration and the thing it declares are two files, and nothing was
+comparing them.** `test_registry_wiring.py` now reads the daemon's
+`defaults`/`wired`/`options` keys out of the source with `ast` and the
+shipped `core.toml` against `Config`'s fields. Both assert they found
+something first, so they cannot pass by looking at nothing.
+
 ## Common shape
 
 Every case had a *plausible* substitute for the real target — the build

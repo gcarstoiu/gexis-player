@@ -21,17 +21,6 @@
         }
       },
       {
-        "key": "boot_volume",
-        "type": "number",
-        "label": "Boot volume",
-        "marks": "R",
-        "note": "A fixed safe level at every cold boot, never the last session’s.",
-        "min": -90,
-        "max": -20,
-        "unit": "dB",
-        "default": -90
-      },
-      {
         "key": "max_ceiling",
         "type": "number",
         "label": "Maximum volume",

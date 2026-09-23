@@ -23,8 +23,6 @@ find "${ROOTFS_DIR}/opt/gexis-core/src" -name "__pycache__" -exec rm -rf {} +
 install -D -m 644 files/core.toml "${ROOTFS_DIR}/etc/gexis/core.toml"
 install -D -m 644 files/gexis-core.service \
 	"${ROOTFS_DIR}/etc/systemd/system/gexis-core.service"
-install -D -m 644 files/gexis-boot-volume.service \
-	"${ROOTFS_DIR}/etc/systemd/system/gexis-boot-volume.service"
 # `gexis-bluetooth-trust.service` is gone (ADR-0045). It polled every two
 # seconds and trusted *every* paired-but-untrusted device, which would grant
 # exactly what a human had just been asked about and might have refused -
@@ -40,6 +38,15 @@ install -D -m 644 files/gexis-boot-volume.service \
 # `image/verify-image.sh` against the built artefact, 2026-09-22.
 rm -f "${ROOTFS_DIR}/etc/systemd/system/gexis-bluetooth-trust.service" \
 	"${ROOTFS_DIR}/etc/systemd/system/multi-user.target.wants/gexis-bluetooth-trust.service"
+# `gexis-boot-volume.service` is gone too (2026-09-23, ADR-0018 amended).
+# Measured: the converter comes up at -20 dB of its own accord, nothing
+# restores a level across a boot (alsa-restore masked below, no
+# asound.state, and the udev rule's own attempt fails with code 99), and
+# nothing plays before a renderer acquires - at which point ADR-0054 §5
+# sets the level from the renderer itself. **Same warm-build reasoning as
+# above**: not installing it is not enough, it has to be removed.
+rm -f "${ROOTFS_DIR}/etc/systemd/system/gexis-boot-volume.service" \
+	"${ROOTFS_DIR}/etc/systemd/system/multi-user.target.wants/gexis-boot-volume.service"
 install -D -m 644 files/gexis-meter.service \
 	"${ROOTFS_DIR}/etc/systemd/system/gexis-meter.service"
 
@@ -48,12 +55,13 @@ install -D -m 644 files/gexis-meter.service \
 # ExecStop=alsactl store) enabled by default, which does exactly the
 # restoring that record forbids - found on hardware, 2026-09-06: the
 # mixer was stuck at 0% because some earlier session's level got stored
-# on a clean shutdown and restored on every boot since, with
-# gexis-boot-volume.service's own explicit set racing it with no
-# guaranteed order (both only declare `After=sound.target`). Masking is
-# more correct than winning the race: it makes "never restored" actually
-# true rather than "restored, then immediately overwritten," and stops
-# alsactl from persisting a level on shutdown at all.
+# on a clean shutdown and restored on every boot since.
+#
+# **This mask outlived `gexis-boot-volume` and is the load-bearing half.**
+# With the boot unit gone (2026-09-23), it is the only thing standing
+# between a level stored on shutdown and a device that boots into it, and
+# Finding 047 §10 rests on it: "nothing carries a level across a boot" is
+# true *because* of this line.
 mkdir -p "${ROOTFS_DIR}/etc/systemd/system"
 ln -sf /dev/null "${ROOTFS_DIR}/etc/systemd/system/alsa-restore.service"
 

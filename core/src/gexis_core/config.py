@@ -20,13 +20,6 @@ DEFAULT_CONFIG_PATH = Path("/etc/gexis/core.toml")
 
 @dataclass(frozen=True)
 class Config:
-    # ALSA mixer steps, 0-240 (ADR-0018: 240 steps of 0.5dB, 0=mute,
-    # 240=0dB). Confirmed by George, 2026-09-06 (HANDOFF.md) - -90dB,
-    # deliberately quiet. The *boot* level only, and the fallback for the
-    # `boot_volume` settings row; nothing else reads it since the
-    # per-renderer memory was deleted on 2026-09-23.
-    boot_volume_steps: int = 60
-
     mixer_name: str = "DAC"
 
     # LMS runs on its own machine, not on gexis - there is no sane

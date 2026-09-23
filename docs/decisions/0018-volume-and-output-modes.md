@@ -8,6 +8,10 @@ below has to be ours. See "squeezelite must be told".
 **Amended:** 2026-09-08 — squeezelite and bluealsa-aplay no longer engage
 the real hardware mixer directly (B2, George's decision). See "Dummy
 mixer controls" below.
+**Amended:** 2026-09-23 — **"Boot volume is a fixed safe level" is
+withdrawn**, on measurement and George's decision. The unit, the setting
+and `boot_volume_steps` are deleted. See the section, which is kept with
+its reasoning so the amendment has something to argue with.
 
 ## Context
 
@@ -238,6 +242,34 @@ cannot produce a sudden jump in loudness as a side effect. Consistency here is
 also a safety property, not only a convenience.
 
 ### Boot volume is a fixed safe level
+
+> **Withdrawn 2026-09-23.** `gexis-boot-volume.service`, the `boot_volume`
+> row and `config.boot_volume_steps` are deleted. **The second sentence
+> below survives and is now the whole of it:** `alsactl` state is not used
+> to restore volume across boots, which the image enforces by masking
+> `alsa-restore.service`. That mask is the load-bearing half and stays.
+>
+> **Why the level itself went** ([Finding 047](../findings/047-where-the-volume-actually-goes.md) §10,
+> two boots):
+> - **The converter comes up at −20 dB of its own accord** — measured
+>   twice, the second time with the stored level deliberately different so
+>   the reading could not be a leftover. The device does not boot loud.
+> - **Nothing carries a level across a boot**: `alsa-restore` masked, no
+>   `asound.state`, and the udev rule's own attempt in the boot log failing
+>   with exit code 99. **The hazard named below cannot happen on this
+>   image.**
+> - **Nothing plays before a renderer acquires**, and acquisition sets the
+>   level from the renderer itself
+>   ([ADR-0054](0054-one-curve-and-the-renderers-own-number.md) §5). The
+>   unit was writing a number into a window in which the device is silent.
+> - And since the per-renderer memory was deleted the same day, a renderer
+>   that fails to answer is left at whatever the level already is — so the
+>   unit had become **the thing that could turn a missed answer into a
+>   silent device** rather than a quiet one.
+>
+> [ADR-0052](0052-the-volume-path.md) §1 had already found that the boot
+> number is not the hazard and that whatever it wrote was overridden
+> seconds later; it kept the unit anyway. This finishes that thought.
 
 Not restored from the previous session. `alsactl` state is not used to restore
 volume across boots.
