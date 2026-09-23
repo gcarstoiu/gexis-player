@@ -10,7 +10,7 @@
         "type": "choice",
         "label": "Output",
         "marks": "R",
-        "note": "Where the sound goes. An output with no volume control of its own — both HDMI sockets — forces fixed output, so the panel can no longer set the level.",
+        "note": "Where the sound goes. Either HDMI has no volume control of its own, so choosing one forces fixed output — and the Pi carries HDMI audio in a format the player has to convert to, so it is no longer bit-perfect either.",
         "optionsFrom": "output_device",
         "default": null,
         "warn": "Changing the output stops whatever is playing while the sound card is reopened. An output with no volume control of its own — either HDMI — also takes the volume control off the panel."

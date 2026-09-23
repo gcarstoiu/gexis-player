@@ -55,6 +55,60 @@ CONNECTORS = {"vc4hdmi0": "HDMI-A-1", "vc4hdmi1": "HDMI-A-2"}
 UNPLUGGED = " — nothing connected"
 
 
+#: Formats a renderer actually produces. A card offering none of them
+#: cannot be written to without conversion.
+PCM_FORMATS = frozenset(
+    {"S16_LE", "S16_BE", "S24_LE", "S24_BE", "S24_3LE", "S32_LE", "S32_BE", "U8"}
+)
+
+_needs_plug: dict[str, bool] = {}
+
+
+def needs_plug(card: str) -> bool:
+    """Whether this card has to be written through a conversion layer.
+
+    **Measured, not assumed** (2026-09-23, after George switched to HDMI 1
+    and both renderers refused to play). `hw:vc4hdmi0` offers exactly one
+    format — `IEC958_SUBFRAME_LE` — because the Pi's HDMI audio is carried
+    as an IEC958 subframe. Every renderer sends `S16_LE` or wider, so
+    `hw:` can never open it: *"unable to open audio device with any
+    supported format"*, five seconds apart, for ever. The DAC offers
+    `S16_LE S24_LE S32_LE` at 44100–192000 and needs nothing.
+
+    **[ADR-0009](../../../docs/decisions/0009-logical-output-device.md)
+    forbids `plug` in this chain** — *"it converts silently when formats do
+    not match, which would defeat the bit-perfect claim without any
+    error"* — and that prohibition is kept where it means something. An
+    output that cannot accept PCM at all makes no bit-perfect claim to
+    defeat: the choice there is conversion or silence.
+
+    **A card we cannot ask keeps `hw:`.** ADR-0009 would rather fail
+    loudly than convert quietly, so an unanswered question is not a licence
+    to insert a converter.
+    """
+    if card in _needs_plug:
+        return _needs_plug[card]
+    try:
+        dump = subprocess.run(
+            ["aplay", "--dump-hw-params", "-D", f"hw:{card}", "/dev/zero"],
+            capture_output=True, text=True, timeout=8,
+        ).stderr
+    except (OSError, subprocess.SubprocessError) as exc:
+        logger.warning("outputs: could not ask %s what it takes (%s); keeping hw:", card, exc)
+        return False
+    formats: set[str] = set()
+    for line in dump.splitlines():
+        if line.startswith("FORMAT:"):
+            formats = set(line.split(":", 1)[1].split())
+            break
+    answer = bool(formats) and not (formats & PCM_FORMATS)
+    _needs_plug[card] = answer
+    if answer:
+        logger.info("outputs: %s takes only %s; it needs a conversion layer",
+                    card, " ".join(sorted(formats)))
+    return answer
+
+
 @dataclass(frozen=True)
 class Output:
     card: str
@@ -188,9 +242,10 @@ def render(output: Output) -> str:
     keep and `test_outputs.py` checks that this template and the image's
     file have not drifted apart.
     """
+    slave = f"plug:'hw:{output.card}'" if needs_plug(output.card) else f"hw:{output.card}"
     return f'''pcm.output {{
     type meter
-    slave.pcm "hw:{output.card}"
+    slave.pcm "{slave}"
     scopes.0 peppyalsa
 }}
 

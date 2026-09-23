@@ -91,3 +91,29 @@ formats do not match, which would defeat the bit-perfect claim without any
 visible symptom. Renderers are configured to match the hardware format instead.
 moOde's chain has `plug` at the top and is not bit-perfect as configured; ours
 deliberately does not.
+
+> **Amended 2026-09-23 by [ADR-0055](0055-which-output-the-device-plays-to.md),
+> and the prohibition above is kept where it means something.**
+>
+> George switched the output to HDMI 1 and both renderers refused to play:
+> squeezelite said *"unable to open audio device with any supported
+> format"* every five seconds, and go-librespot said *"Device or resource
+> busy"* — which was the first one's retry loop holding the card, not a
+> fault of its own.
+>
+> **Measured:** `hw:vc4hdmi0` offers exactly one format,
+> `IEC958_SUBFRAME_LE`, because the Pi carries HDMI audio as an IEC958
+> subframe. Renderers send `S16_LE` or wider, so `hw:` can never open it.
+> `hw:sndrpihifiberry` offers `S16_LE S24_LE S32_LE` at 44100–192000 and
+> needs nothing. Confirmed both ways with `aplay` and `/dev/zero`.
+>
+> **So a conversion layer is inserted for a card that cannot accept PCM at
+> all, and for no other.** Such an output makes no bit-perfect claim to
+> defeat: the choice there is conversion or silence. The DAC's chain is
+> unchanged and still `hw:`, which is what this Note is for. The output
+> row says that choosing HDMI costs both the volume control and
+> bit-perfect.
+>
+> **A card that cannot be asked keeps `hw:`** — this record would rather
+> fail loudly than convert quietly, so an unanswered question is not a
+> licence to insert a converter.

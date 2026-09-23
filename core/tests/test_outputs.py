@@ -10,8 +10,22 @@ from pathlib import Path
 
 import pytest
 
+import pytest
+
 from gexis_core import outputs
 from gexis_core.outputs import Output
+
+
+@pytest.fixture(autouse=True)
+def _known_cards():
+    """What each card takes, measured on `gexis` 2026-09-23, so the tests
+    do not shell out to `aplay`."""
+    outputs._needs_plug.clear()
+    outputs._needs_plug.update(
+        {"sndrpihifiberry": False, "Headphones": False, "vc4hdmi0": True, "vc4hdmi1": True}
+    )
+    yield
+    outputs._needs_plug.clear()
 
 HIFIBERRY = Output(card="sndrpihifiberry", label="HiFiBerry DAC+ HD", control="DAC")
 JACK = Output(card="Headphones", label="Headphones (3.5 mm)", control="PCM")
@@ -140,3 +154,52 @@ class TestNothingStoredChangesNothing:
         path = tmp_path / "output.conf"
         outputs.write(JACK, path)
         assert outputs.configured(path) == "Headphones"
+
+
+class TestTheConversionLayer:
+    """**George switched to HDMI 1 and both renderers refused to play**
+    (2026-09-23). squeezelite: *"unable to open audio device with any
+    supported format"*, every five seconds; go-librespot: *"Device or
+    resource busy"*, which was the first one's retry loop holding the card.
+
+    `hw:vc4hdmi0` offers exactly one format, `IEC958_SUBFRAME_LE`, because
+    the Pi carries HDMI audio as an IEC958 subframe. Renderers send
+    `S16_LE` or wider. `hw:` can never open it.
+    """
+
+    def test_hdmi_gets_a_conversion_layer(self):
+        assert 'slave.pcm "plug:\'hw:vc4hdmi0\'"' in outputs.render(HDMI1)
+
+    def test_the_dac_does_not(self):
+        """**ADR-0009: `type plug` must not appear in this chain** - it
+        converts silently and would defeat the bit-perfect claim without
+        any error. The prohibition is kept where it means something."""
+        rendered = outputs.render(HIFIBERRY)
+        assert 'slave.pcm "hw:sndrpihifiberry"' in rendered
+        assert "plug" not in rendered
+
+    def test_the_headphone_jack_does_not_either(self):
+        assert "plug" not in outputs.render(JACK)
+
+    def test_a_card_that_cannot_be_asked_keeps_hw(self, monkeypatch):
+        """ADR-0009 would rather fail loudly than convert quietly, so an
+        unanswered question is not a licence to insert a converter."""
+        outputs._needs_plug.clear()
+
+        def boom(*a, **k):
+            raise OSError("no aplay here")
+
+        monkeypatch.setattr(outputs.subprocess, "run", boom)
+        assert outputs.needs_plug("whatever") is False
+
+    def test_the_answer_is_asked_for_once(self, monkeypatch):
+        outputs._needs_plug.clear()
+        calls = []
+
+        class Result:
+            stderr = "FORMAT:  IEC958_SUBFRAME_LE\n"
+
+        monkeypatch.setattr(outputs.subprocess, "run", lambda *a, **k: (calls.append(a), Result())[1])
+        assert outputs.needs_plug("vc4hdmi9") is True
+        assert outputs.needs_plug("vc4hdmi9") is True
+        assert len(calls) == 1
