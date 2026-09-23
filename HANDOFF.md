@@ -1,6 +1,6 @@
 # Handoff
 
-Last updated: 2026-09-22 (twenty-second session, on R2D2 — **Phase 9's
+Last updated: 2026-09-23 (twenty-second session, on R2D2 — **Phase 9's
 design sweep: 9a through 9h are done, the 2026-09-22 drop is applied, and
 the image is built and verified. The volume work is split in two: 9i the
 level, 9j where it goes. 9i's path is built; its rows are not, and
@@ -68,14 +68,53 @@ subphases, split on George's agreement (2026-09-22):
       LMS's seam from 10 points to 1–6 — and changes what every percentage
       on the device means, so it is a question, not a change.
 
+  - **[ADR-0054](docs/decisions/0054-one-curve-and-the-renderers-own-number.md)
+    — one curve, ours, on each renderer's own number.** George's four
+    findings on 2026-09-23, measured in
+    [Finding 047](docs/findings/047-where-the-volume-actually-goes.md),
+    had one cause: **nobody's volume curve was ours.** squeezelite derived
+    its own from the dummy control's declared range, bluealsa applied its
+    AVRCP curve, and we copied whatever dB came out. So a renderer's zero
+    was −38 dB rather than silence and LMS's 0/5/10% were one value.
+    - **The dummy control is a trigger now, not a scale.** Its write still
+      says *when* in 0.1 ms; the number is read from the renderer (~13 ms).
+    - **One curve: linear in dB over 60 dB, zero is silence.** 60 dB
+      because that is librespot's `softvol` default and what George found
+      works on the same DAC. Verified with the room silent: panel
+      100/50/25/10/5/0% → 0.00/−30.00/−45.00/−54.00/−57.00 dB and silence,
+      LMS reading the same number as the panel throughout.
+    - **Finding 046 §9's seam is closed** — the panel uses the same curve,
+      so the number no longer moves when a renderer lets go.
+    - **Bluetooth's level left the ALSA mixer** (`--volume=none` plus
+      `bluealsa_volume.py` on `org.bluealsa.PCM1`'s `Volume`). The mixer
+      round trip was wrong one in three and pushed a stale value at the
+      phone on every stream start, which is why a phone at maximum
+      connected quiet.
+    - **Acquisition asks a renderer where it is** rather than writing a
+      remembered level under it.
+    - **A regression caught during the work:** routing a panel change
+      through the renderer took **560 ms** to reach the DAC. §6 writes the
+      hardware at once — **72–96 ms**, no slower than before ADR-0053.
+
   **Still unbuilt in 9i:** the eight Audio rows, and ADR-0046's fixed
   output.
 
-  **Needs George, and nothing else will do:** whether the AVRCP storm is
-  gone (his phone, and a drag); whether a phone's slider follows the
-  panel's, which is the one leg of ADR-0053 that is inference; Spotify's
-  number path with a real session; and how any of it sounds under
-  playback.
+  **Needs George, and nothing else will do:**
+  - **Bluetooth, on the new path, with the amplifier turned down first.**
+    Nothing has been through `bluealsa_volume.py` but unit tests. And the
+    failure mode is *loud*: `--volume=none` means bluealsa no longer
+    attenuates anything, so if the daemon does not apply the phone's level,
+    the stream arrives at full scale.
+  - Whether a phone's slider follows the panel's — the one leg of ADR-0053
+    that is still inference.
+  - Spotify's number path with a real session.
+  - **How 60 dB sounds.** It is a measured starting point, not a measured
+    answer; `RENDERER_DB_SPAN` in `volume.py` is one line.
+  - Whether the 0.8 s `SETTLE_S` gate is still needed for LMS. It exists
+    because LMS fades the control on pause — but the number now comes from
+    the server, and LMS's *reported* volume may not move during a fade at
+    all. If it does not, a change made in an LMS app would reach the DAC in
+    ~15 ms instead of ~400. **Needs playback to test.**
 - **9j — which output.** The device has four cards and the user has never
   been offered the choice. All three renderers already play to one PCM, so
   the switch is two lines of `/etc/alsa/conf.d/output.conf` and the meter
