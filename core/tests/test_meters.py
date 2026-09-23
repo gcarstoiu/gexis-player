@@ -291,3 +291,50 @@ class TestTheMetersFollowTheVolume:
         assert read_attenuation(path) == 20.0
         publish_attenuation(0, path)            # silence
         assert read_attenuation(path) == 120.0
+
+
+class TestFoldingKeepsTheWholeSpectrum:
+    """**George, 2026-09-23:** *"Does that mean that for certain skins the
+    upper frequencies represented by the outer right bars will not be
+    shown?"*
+
+    No: the fold merges, it does not truncate. Pinned here because the
+    obvious wrong implementation - draw the first N bands and drop the rest
+    - looks identical on a still screen and silently loses the top of the
+    spectrum.
+    """
+
+    def test_every_band_lands_in_exactly_one_bar(self):
+        """One band at a time, so the answer cannot come from repeating the
+        implementation's own arithmetic."""
+        from gexis_core.meters import resample
+
+        for want in range(15, 30):
+            for band in range(30):
+                one_hot = tuple(100 if i == band else 0 for i in range(30))
+                out = resample(one_hot, want)
+                assert len(out) == want, want
+                lit = [i for i, v in enumerate(out) if v]
+                assert lit == [min(want - 1, band * want // 30)] or len(lit) == 1, (
+                    f"band {band} of 30 into {want} bars lit {lit}"
+                )
+                assert sum(out) == 100, f"band {band} of 30 into {want} bars was dropped"
+
+    def test_the_top_of_the_spectrum_is_the_rightmost_bar(self):
+        from gexis_core.meters import resample
+
+        for want in range(15, 30):
+            top = tuple(0 for _ in range(29)) + (100,)
+            assert resample(top, want)[-1] == 100, want
+            bottom = (100,) + tuple(0 for _ in range(29))
+            assert resample(bottom, want)[0] == 100, want
+
+    def test_the_doubling_is_spread_rather_than_bunched(self):
+        from gexis_core.meters import resample
+
+        bands = tuple(range(30))
+        out = resample(bands, 19)
+        widths = [b - a for a, b in zip((-1,) + out[:-1], out)]
+        assert set(widths) == {1, 2}
+        # no run of three consecutive doubled groups
+        assert "2, 2, 2" not in ", ".join(str(w) for w in widths)

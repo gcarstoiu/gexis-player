@@ -52,9 +52,23 @@ learns that size from the reader's own configuration.**
 - **peppyalsa stays at 30 bands.** No skin change touches ALSA, nothing
   reopens the PCM, and the measurement keeps its resolution whatever a skin
   chooses to draw.
-- **A skin that draws 22 bars shows 22 peaks of 30 bands** — eight bars
-  cover two bands each and fourteen cover one. That unevenness is inherent
-  to any non-integer ratio and is not visible on a bar display.
+- **Nothing is cut off the top.** George asked: *"Does that mean that for
+  certain skins the upper frequencies represented by the outer right bars
+  will not be shown?"* No — the fold merges, it does not truncate. At 19
+  bars the groups are
+
+  ```
+  0  1+2  3  4+5  6  7+8  9+10  11  12+13  14  15+16  17  18+19  20+21  22  23+24  25  26+27  28+29
+  ```
+
+  every band appears exactly once, the doubled groups are spread across the
+  range rather than bunched at one end, and the rightmost bar is the two
+  highest bands. What a skin with fewer bars loses is resolution, not range:
+  11 of its 19 bars are a slightly wider slice, and each shows its group's
+  peak, so a loud upper band still reaches the top of its bar. Pinned by a
+  test that feeds one band at a time, because the obvious wrong
+  implementation — draw the first N and drop the rest — looks identical on
+  a still screen.
 - **The relay now depends on a file the driver writes**, across two
   services. It degrades to "change nothing" if the file is missing or
   unreadable, which is the old behaviour, so a broken read cannot make the
