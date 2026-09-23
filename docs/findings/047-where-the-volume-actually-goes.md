@@ -195,6 +195,52 @@ zero, and something happening across the whole bottom half — needs about
 **60 dB and a curve**, and that our 38.1 dB with squeezelite's derived curve
 does not have it.
 
+## 10. The DAC comes up at −20 dB, and nothing carries a level across a boot
+
+**Added 2026-09-23** on George's *"reboot and check and then we decide"*,
+about whether `gexis-boot-volume` still has a job.
+
+**The instrument:** a oneshot unit ordered *before* `gexis-boot-volume`
+(so the boot unit still ran and the device was never less safe for being
+measured), reading the DAC and writing it to a log. Two boots.
+
+| boot | probe read | what `gexis-boot-volume` then wrote |
+| --- | --- | --- |
+| 12:48 | **raw 200, −20.00 dB** | raw 200, −20 dB (from settings) |
+| 12:51 | **raw 200, −20.00 dB** | raw 60, −90 dB (from settings) |
+
+**The first run was ambiguous and was not reported as an answer**: the
+probe's reading and the boot unit's write were the same number, so the
+reading could have been a leftover rather than the hardware. The second
+run changed the stored `boot_volume` to −90 first; the probe still read
+200. **−20 dB is the converter's own power-on value.**
+
+**And nothing restores a previous session's level.** `alsa-restore` is
+masked, there is no `/var/lib/alsa/asound.state`, and the udev rule's own
+attempt is in the boot log failing:
+
+```
+(udev-worker): controlC2: Process '/usr/sbin/alsactl ... restore 2'
+  failed with exit code 99
+```
+
+**So ADR-0018's hazard — "a device that was left loud and boots into
+playback" — cannot happen on this image**, and the device does not come up
+loud either.
+
+**What this leaves the boot unit doing**, and it is the decision George
+asked for: it lowers −20 dB to −90 dB for the window between boot and the
+first renderer acquiring — during which nothing plays, because acquisition
+*is* a renderer taking the device, and acquisition sets the level from the
+renderer itself (ADR-0054 §5).
+
+**One argument against it that only appeared today.** Since the
+per-renderer memory was deleted, a renderer that fails to answer on
+acquisition is **left alone** — at whatever the level already is. If that
+is the boot unit's −90 dB, the device is silent and looks broken; if it is
+the converter's own −20 dB, it is quiet but plainly working. The boot unit
+is now the thing that could turn a missed answer into a "no sound" report.
+
 ## What this says the answer is
 
 Not software attenuation: the project's reason for refusing it is unchanged,
