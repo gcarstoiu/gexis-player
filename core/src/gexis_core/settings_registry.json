@@ -6,6 +6,16 @@
     "accent": "#7ed6bc",
     "rows": [
       {
+        "key": "output_device",
+        "type": "choice",
+        "label": "Output",
+        "marks": "R",
+        "note": "Where the sound goes. An output with no volume control of its own — both HDMI sockets — forces fixed output, so the panel can no longer set the level.",
+        "optionsFrom": "output_device",
+        "default": null,
+        "warn": "Changing the output stops whatever is playing while the sound card is reopened. An output with no volume control of its own — either HDMI — also takes the volume control off the panel."
+      },
+      {
         "key": "output_mode",
         "type": "choice",
         "label": "Output mode",

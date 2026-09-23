@@ -1,6 +1,10 @@
 # ADR-0055 — Which output the device plays to
 
-**Status:** **Proposed** — Phase 9 subphase **9j**, split from 9i on
+**Status:** **Accepted and built, 2026-09-23** — George answered the three
+Open questions below (*"Offer all, but maybe it clears that the one that is
+not connected looks disabled or has a note saying that nothing is
+connected"*; a switch may interrupt playback; and the fallback as proposed)
+and then *"Go ahead."* Phase 9 subphase **9j**, split from 9i on
 George's agreement 2026-09-22: *"Let's add to this output audio selection
 as it is directly related to volume as well. The card holds now 3 outputs
 but only one we've dealt with. We need to give the user the choice of
@@ -83,7 +87,40 @@ be honoured.
 
 **This is why 9j and fixed output were one conversation.**
 
-## Open — George's, and the reason this is Proposed
+## How it was built, and what it cost
+
+**Measured on the device**, switching between all three kinds:
+
+| chosen | `output.conf` | control | `fixed_output` |
+| --- | --- | --- | --- |
+| HiFiBerry DAC+ HD | `hw:sndrpihifiberry` | `DAC` | false |
+| Headphones (3.5 mm) | `hw:Headphones` | `PCM` | false |
+| **HDMI 1** | `hw:vc4hdmi0` | **none** | **true** |
+
+The picker offers all four, and the one with nothing plugged into it says
+so: **`HDMI 2 — nothing connected`**. The suffix is display only — a stored
+choice is matched on what comes before it, so plugging a cable in does not
+orphan it.
+
+### The bug this found in itself, within seconds of deploying
+
+The first version resolved "nothing stored" straight through to *the first
+output with a volume control*. On this device that is **the Pi's own
+headphone jack** — `aplay -l` lists card 4 before the HiFiBerry's card 5 —
+so a daemon restart silently moved the device off the HAT and wrote a log
+line about it afterwards.
+
+**A rule for recovering from missing hardware must not fire when no
+hardware is missing.** The order is now stored, then *what `output.conf`
+already says*, then the audible fallback. Nothing stored means change
+nothing.
+
+The same deploy also put `snd_rpi_hifiberry_dacplushd` in the picker:
+`aplay -l` gives a card description and a device description, and the
+card's is the driver's module name. The device's is what the board calls
+itself.
+
+## Open — answered 2026-09-23
 
 1. **Which outputs should be offered at all?** All four is honest but two of
    them are traps:
@@ -95,19 +132,21 @@ be honoured.
      device exists to avoid — but it is a real, working output and somebody
      debugging without the HAT would want it.
 
-   **My recommendation: offer what is usable and say why the rest is not** —
-   the HiFiBerry, the headphone jack, and an HDMI entry only while something
-   is plugged into it (`/sys/class/drm/…/status`). Offering a dead socket is
-   how a user concludes the device is broken.
+   **My recommendation was to hide what is not usable. George's answer was
+   better:** *"Offer all, but maybe it clears that the one that is not
+   connected looks disabled or has a note saying that nothing is
+   connected."* An absent option explains nothing; a present one that says
+   *nothing connected* tells the user what to do about it.
 
-2. **Should a switch be allowed to interrupt playback**, or only offered
-   while idle? §2 restarts the renderers. Stopping first is safer and
-   slower.
+2. ~~**Should a switch be allowed to interrupt playback?**~~ **Yes**
+   (George: *"Yes, it should"*). The renderers are restarted, and so is the
+   daemon — which is how the new card's control name is picked up, one path
+   instead of three mutable ones threaded through the bridges.
 
-3. **What happens to a remembered choice when the hardware changes?** Pull
-   the HAT and `sndrpihifiberry` is gone; the stored value names a card that
-   does not exist. **Proposed: fall back to the first output that has a
-   volume control, and say so in the log** — never to a silent one.
+3. ~~**What happens to a remembered choice when the hardware changes?**~~
+   **As proposed** (George: *"Agreed"*) — the first output that has a
+   volume control, never a silent one, with a log line. See the bug above
+   for the half of this that was wrong.
 
 ## Consequences
 

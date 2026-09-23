@@ -51,7 +51,7 @@ from gexis_core.settings import SettingsStore
 from gexis_core.settings_registry import Settings
 from gexis_core.splash import Splash
 from gexis_core.state import StateStore
-from gexis_core import bluealsa_volume
+from gexis_core import bluealsa_volume, outputs
 from gexis_core.bluealsa_volume import BluealsaVolume
 from gexis_core.remote_volume import RemoteVolume
 from gexis_core.volume import (
@@ -184,6 +184,31 @@ async def main() -> None:
     # and the switch happens on the next start**, which is what the panel
     # says when a server is picked.
     config = _chosen_server(config, settings_store)
+
+    # **ADR-0055: the output decides the mixer control's name.** `DAC` on
+    # this HAT, `PCM` on the Pi's own jack, none at all on HDMI - and the
+    # card is discovered from its EEPROM, so the name is a property of
+    # whatever board is fitted rather than of this project. Read from the
+    # store directly, like `lms_server` above, because it has to be settled
+    # before the volume bridges are built.
+    chosen_output = outputs.resolve(settings_store.get("output_device"))
+    if chosen_output is None:
+        logger.error("outputs: no playback output found at all")
+    else:
+        if outputs.write(chosen_output):
+            logger.warning(
+                "outputs: output.conf did not match %s and was rewritten; "
+                "renderers pick it up on their next open",
+                chosen_output.label,
+            )
+        if chosen_output.control:
+            config = replace(config, mixer_name=chosen_output.control)
+        logger.info(
+            "outputs: playing to %s (hw:%s, control %s)",
+            chosen_output.label,
+            chosen_output.card,
+            chosen_output.control or "none - fixed output",
+        )
 
     lms = LmsAdapter(config.lms_host, config.lms_port, config.lms_player_name)
     spotify = SpotifyAdapter(config.go_librespot_host, config.go_librespot_port)
@@ -400,7 +425,12 @@ async def main() -> None:
     set_curve_reader(lambda: settings.value("travel_curve"))
     # ADR-0046. `output_mode` is what the *user* has chosen; `_fixed_now`
     # is what is in force, which lags it while something is playing.
-    fixed_wanted = {"value": False}
+    # **An output with no volume control forces fixed output** (ADR-0055
+    # §4). Not a side effect: the device cannot attenuate, so ADR-0046's
+    # behaviour is the only honest one, and the row below cannot override
+    # it.
+    forced_fixed = chosen_output is not None and chosen_output.control is None
+    fixed_wanted = {"value": forced_fixed}
     fixed_now = {"value": False}
     set_fixed_output_reader(lambda: fixed_now["value"])
 
@@ -434,8 +464,39 @@ async def main() -> None:
             logger.info("output: variable - the device attenuates again")
             _reapply_level()
 
+    async def _switch_output() -> None:
+        """Put the chosen output into `output.conf` and reopen everything.
+
+        **ADR-0055 §2, George: a switch may interrupt playback.** ALSA reads
+        this file when a PCM is *opened*, so a renderer already playing
+        would carry on to the old card indefinitely; restarting them is
+        what makes the change mean something.
+
+        **This daemon restarts with them**, and that is deliberate rather
+        than lazy: the chosen card brings its own volume control name -
+        `DAC` here, `PCM` on the headphone jack, none at all on HDMI - and
+        rediscovering it at startup is one path instead of three mutable
+        ones threaded through the bridges.
+        """
+        chosen = outputs.resolve(settings.value("output_device"))
+        if chosen is None:
+            logger.error("outputs: nothing to switch to")
+            return
+        if not outputs.write(chosen):
+            logger.info("outputs: %s is already the output", chosen.label)
+            return
+        # Long enough for the settings write to have been answered.
+        await asyncio.sleep(0.5)
+        logger.info("outputs: restarting the renderers and myself for %s", chosen.label)
+        await asyncio.create_subprocess_exec(
+            "systemctl", "restart", "squeezelite.service", "go-librespot.service",
+            "bluealsa-aplay.service", "gexis-core.service",
+        )
+
     def _choose_output_mode(value=None) -> None:
-        fixed_wanted["value"] = (value or settings.value("output_mode")) == "Fixed"
+        fixed_wanted["value"] = forced_fixed or (
+            value or settings.value("output_mode")
+        ) == "Fixed"
         asyncio.ensure_future(_apply_output_mode())
 
     def _reapply_level() -> None:
@@ -667,7 +728,13 @@ async def main() -> None:
         # ADR-0051 §4: which skins there are depends on where they are
         # installed and on what `skin_corpus` holds, neither of which the
         # registry module can know.
-        options={"skin_corpus": skins_offered},
+        options={
+            "skin_corpus": skins_offered,
+            # ADR-0055 §1: discovered, not written down. Re-read on every
+            # `/settings`, so plugging an HDMI cable in changes the list
+            # without a restart.
+            "output_device": lambda: [o.option for o in outputs.discover()],
+        },
         # Wired = something reads it (ADR-0035). The token is read on every
         # Popular lookup, so it takes effect as soon as it is typed.
         # Wired = something reads it, or something happens. `lms_server` is
@@ -697,6 +764,12 @@ async def main() -> None:
                "travel_curve": lambda _value=None: _reapply_level(),
                # ADR-0046: chosen now, in force at the next legal moment.
                "output_mode": _choose_output_mode,
+               # ADR-0055: rewrites output.conf, then restarts everything
+               # that holds a PCM - including this daemon, which is how the
+               # new card's control name gets picked up.
+               "output_device": lambda _value=None: asyncio.ensure_future(
+                   _switch_output()
+               ),
                # Readonly: nothing to do on a write, and the value is the
                # live one below rather than the registry's literal.
                "volume_managed": None,
@@ -825,6 +898,10 @@ async def main() -> None:
             stop_after_s=minutes("viz_stop", 300),
         ),
     )
+
+    # The forced case has to be put into force at startup like any other.
+    if forced_fixed:
+        asyncio.ensure_future(_apply_output_mode())
 
     previous_active = state_store.state.active
 

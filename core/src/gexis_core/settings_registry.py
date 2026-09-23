@@ -50,7 +50,7 @@ ONLY_WHEN_NOT = "not"
 #: Sources a `choice` may draw its options from instead of a literal list
 #: (ADR-0044 §4). Adding one is a code change, not a registry edit, which is
 #: the point: an unknown name is a typo and must fail the load.
-OPTION_SOURCES = {"skin_corpus", "timezones"}
+OPTION_SOURCES = {"skin_corpus", "timezones", "output_device"}
 
 
 @lru_cache(maxsize=1)
@@ -79,7 +79,10 @@ def _timezones() -> tuple[str, ...]:
 #: value, neither of which this module knows; the daemon injects it
 #: (`Settings(options=...)`, ADR-0051 §4) and a Settings built without one
 #: offers nothing, which is what a device with no skins has.
-OPTION_RESOLVERS = {"timezones": _timezones, "skin_corpus": tuple}
+#: `tuple` is "nothing, until the daemon injects a real resolver" - a
+#: device that cannot read its corpus or its sound cards gets an empty
+#: picker rather than a crash (ADR-0044 §4).
+OPTION_RESOLVERS = {"timezones": _timezones, "skin_corpus": tuple, "output_device": tuple}
 
 logger = logging.getLogger("gexis_core.settings_registry")
 
@@ -359,7 +362,7 @@ class Settings:
                 public = {k: v for k, v in row.items() if k != "default"}
                 source = row.get("optionsFrom")
                 if source is not None:
-                    public["options"] = list(self._options[source]())
+                    public["options"] = list(self._options.get(source, tuple)())
                 public["value"] = self.value(row["key"])
                 public["wired"] = row["key"] in self._wired
                 public["visible"] = visible(row, self._rows, values)

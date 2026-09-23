@@ -119,6 +119,10 @@ def test_registry_keys_are_the_designs_keys_apart_from_recorded_deviations():
         "confidence", "factory_reset", "idle_close", "image_build",
         "lms_player", "log_level", "plugins", "power", "release_ladder",
         "seek_reanchor", "spotify_name", "theme",
+        # ADR-0055, 2026-09-23: the design has no output picker, because
+        # the design did not know the device has four playback outputs and
+        # that two of them cannot be turned down.
+        "output_device",
         "background_brightness", "background_interval", "idle_clock",
         "time_display", "updates", "volume_managed", "wallpaper_topics",
     }
@@ -470,9 +474,10 @@ def test_the_shipped_registry_hides_twenty_rows_and_shows_the_rest():
     # both were [?] rows, decisions owed rather than behaviour missing, and
     # the behaviour behind them stays hardcoded. Less `per_renderer_volume`
     # too, deleted with the memory it switched on and off, and
-    # `boot_volume`, deleted with the unit that read it.
-    assert len(rows) == 67
-    assert len(rows) - len(kept) == 49
+    # `boot_volume`, deleted with the unit that read it. Plus
+    # `output_device`, ADR-0055's own.
+    assert len(rows) == 68
+    assert len(rows) - len(kept) == 50
 
 
 def test_the_clock_can_be_turned_off_without_taking_the_screen_with_it():

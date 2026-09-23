@@ -180,11 +180,31 @@ subphases, split on George's agreement (2026-09-22):
     the server, and LMS's *reported* volume may not move during a fade at
     all. If it does not, a change made in an LMS app would reach the DAC in
     ~15 ms instead of ~400. **Needs playback to test.**
-- **9j — which output.** The device has four cards and the user has never
-  been offered the choice. All three renderers already play to one PCM, so
-  the switch is two lines of `/etc/alsa/conf.d/output.conf` and the meter
-  follows the audio — but **HDMI has no mixer control at all**, so choosing
-  it *is* fixed output. Wants an ADR before implementation.
+- **9j — which output. Built 2026-09-23**
+  ([ADR-0055](docs/decisions/0055-which-output-the-device-plays-to.md)).
+  Four playback outputs, measured, and **two of them have no volume control
+  at all** — so choosing one *is* ADR-0046's fixed output, which is why 9i
+  and 9j were one conversation.
+
+  | chosen | `output.conf` | control | `fixed_output` |
+  | --- | --- | --- | --- |
+  | HiFiBerry DAC+ HD | `hw:sndrpihifiberry` | `DAC` | false |
+  | Headphones (3.5 mm) | `hw:Headphones` | `PCM` | false |
+  | **HDMI 1** | `hw:vc4hdmi0` | **none** | **true** |
+
+  - **Discovered, not written down.** There is no `dtoverlay=hifiberry-…`
+    in `config.txt` — the HAT's EEPROM is read at boot — so the card name
+    *and* its control's name belong to whatever board is fitted.
+  - **All four are offered** and the empty socket says **`HDMI 2 — nothing
+    connected`** (George: an absent option explains nothing). The suffix is
+    display only, so plugging a cable in does not orphan a stored choice.
+  - A switch rewrites `output.conf` and restarts the renderers **and the
+    daemon** — which is how the new card's control name is picked up.
+  - **A bug it found in itself, seconds after deploying:** "nothing stored"
+    fell through to *the first output with a volume control*, which here is
+    the Pi's own headphone jack (`aplay -l` lists card 4 before card 5), so
+    a restart silently moved the device off the HAT. Nothing stored now
+    means change nothing.
 
 **The 2026-09-22 design drop is applied, all four parts of it.** George:
 *"Please be thorough and check the designs I import — do not guess or
