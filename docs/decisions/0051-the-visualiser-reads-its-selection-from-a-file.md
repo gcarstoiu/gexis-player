@@ -71,7 +71,7 @@ each skin's own directory beside it, and swaps `base.path` around the
 factory call. `skin_corpus` then filters by kind — `meter.visible` and
 `spectrum.visible`, the same derivation `skins.py` makes for the daemon, and
 not the directory (ADR-0019 as amended: `templates/` is not "the meter
-corpus"). **99 skins: 77 meters, 9 spectrum, 13 both**, which is the count
+corpus"). **99 skins (**97 offered** since 2026-09-23 — two render wrong and are excluded, [Finding 048](../findings/048-two-skins-that-render-wrong.md)): 77 meters, 9 spectrum, 13 both**, which is the count
 this device has always had.
 
 The configured pack is read first, so a device still starts on the skin it

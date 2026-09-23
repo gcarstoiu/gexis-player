@@ -227,4 +227,14 @@ in the working memory, not here.
   are all expressed against `pcm.output`/`ctl.output`, which is the point of
   ADR-0009.
 - **Not measured: audio out of any output but the HiFiBerry.** Selecting one
-  is untested end to end until somebody plugs something in.
+  is untested end to end until somebody plugs something in. *(HDMI 1 was
+  heard on 2026-09-23 — George: "It works. I have sound on hdmi.")*
+- **Arbitration still watches one card, whatever the output is.** Measured
+  in [Finding 048](../findings/048-two-skins-that-render-wrong.md) §5:
+  `alsa.CARD_ID` is a constant, so with the output on the headphone jack
+  and something holding it, `device_busy()` answers `False`. The release
+  ladder would hand the device over while the outgoing renderer still had
+  it. **It predates this record** — the constant is from Phase 2 — but this
+  record is what makes a second output reachable. Wants its own decision:
+  does the card follow the output, or is arbitration scoped to the DAC by
+  definition?

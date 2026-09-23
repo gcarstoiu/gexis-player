@@ -289,3 +289,35 @@ def test_a_selection_that_cannot_be_written_is_not_fatal(tmp_path):
     blocked = tmp_path / "file"
     blocked.write_text("not a directory")
     assert write_selection("Random", None, True, blocked / "visualisation.json") is False
+
+
+def test_skins_that_render_wrong_are_not_offered(tmp_path):
+    """**George photographed one on the panel**, 2026-09-23: *"a
+    visualisation with broken vu meters."*
+
+    Both entries in `BROKEN` were looked at as pixels, captured with
+    `grim` and compared against a skin that works. The list is short on
+    purpose: the other seven `S+M` skins in that pack have not been
+    looked at, and a validator that guessed would exclude good skins and
+    miss bad ones."""
+    from gexis_core import skins
+
+    pack = tmp_path / "gelo5" / "templates_spectrum" / skins.RESOLUTION
+    pack.mkdir(parents=True)
+    (pack / "meters.txt").write_text(
+        "[111G5_Teletronix S+M]\nmeter.type = circular\n\n"
+        "[a good one]\nmeter.type = circular\n"
+    )
+
+    offered = [s.name for s, _ in skins.installed(tmp_path)]
+
+    assert "a good one" in offered
+    assert "111G5_Teletronix S+M" not in offered
+
+
+def test_the_broken_list_says_why_for_each(tmp_path):
+    """A name with no reason is a name nobody can ever remove again."""
+    from gexis_core import skins
+
+    assert skins.BROKEN
+    assert all(len(why) > 20 for why in skins.BROKEN.values())

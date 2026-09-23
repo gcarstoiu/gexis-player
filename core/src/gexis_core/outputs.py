@@ -90,7 +90,16 @@ def needs_plug(card: str) -> bool | None:
         return _needs_plug[card]
     try:
         dump = subprocess.run(
-            ["aplay", "--dump-hw-params", "-D", f"hw:{card}", "/dev/zero"],
+            # **`-d 1`, and it is load-bearing.** `--dump-hw-params` is
+            # meant to dump and exit, and on the HiFiBerry it does - but on
+            # the Pi's own `bcm2835` card it went on to *play* the infinite
+            # zeroes, timed out at eight seconds, and the switch then
+            # refused to write a config it could not compute. `/dev/null`
+            # instead of `/dev/zero` fixed the hang and broke the dump:
+            # an empty file exits before the card is asked anything.
+            # Bounding the playback keeps both (measured on all three
+            # cards, 2026-09-23).
+            ["aplay", "--dump-hw-params", "-D", f"hw:{card}", "-d", "1", "/dev/zero"],
             capture_output=True, text=True, timeout=8,
         ).stderr
     except (OSError, subprocess.SubprocessError) as exc:
@@ -334,6 +343,7 @@ def write(output: Output, path: Path = CONF_PATH) -> bool:
     wanted = render(output, plug)
     try:
         if path.read_text() == wanted:
+            logger.info("outputs: %s is already the output", output.label)
             return False
     except OSError:
         pass

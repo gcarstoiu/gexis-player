@@ -44,6 +44,32 @@ BOTH = "both"
 #: described one behaviour between them. `Random` is still understood, for
 #: a value stored before the rename.
 ALL = "All"
+#: **Skins that render wrong and are not offered** (2026-09-23, after
+#: George photographed one on the panel: *"a visualisation with broken vu
+#: meters"*).
+#:
+#: Both were looked at as pixels - captured off the panel with `grim` and
+#: compared against a skin that works - not inferred from their
+#: configuration, and the reason each one is here is the measurement:
+#:
+#: - **`111G5_Teletronix S+M`** draws a 672x302 meter face at (0, 0) and
+#:   then puts its needle origins at (317, 350) and (963, 350). Both are
+#:   outside the face it just drew, so the needles hang in the panel's
+#:   background with one meter left blank.
+#: - **`108G5_Kenwood Rev S+M`** is the only skin of all 99 with
+#:   `start.angle = -227`; every other one is between 0 and 65. Its
+#:   needles sweep a quadrant the scale does not occupy and cross the
+#:   whole face diagonally.
+#:
+#: **The other seven `S+M` skins in that pack have not been looked at**,
+#: and this list says nothing about them. A validator that guessed would
+#: exclude good skins and miss bad ones - both faults have a different
+#: shape, and neither is visible from the numbers alone.
+BROKEN = {
+    "111G5_Teletronix S+M": "its needle origins fall outside the meter face it draws",
+    "108G5_Kenwood Rev S+M": "its needles sweep a quadrant its scale does not occupy",
+}
+
 CORPUS = {
     "VU meters": (METERS,),
     "Spectrum": (SPECTRUM,),
@@ -256,6 +282,9 @@ def installed(root: Path, pack: str | None = None) -> list[tuple[Skin, Path]]:
                 # Two packs can name a skin the same thing; the first one
                 # wins, so what is listed is what would be selected.
                 if skin.name in seen:
+                    continue
+                if skin.name in BROKEN:
+                    logger.info("skins: not offering %s - %s", skin.name, BROKEN[skin.name])
                     continue
                 seen.add(skin.name)
                 found.append((skin, meters.parent))

@@ -531,8 +531,7 @@ async def main() -> None:
             "bluealsa-aplay.service",
         )
         await stop.wait()
-        if not outputs.write(chosen):
-            logger.info("outputs: %s is already the output", chosen.label)
+        outputs.write(chosen)
         # **This daemon is not restarted any more.** It was, to pick up the
         # new card's control name; that name is now settable in place
         # (`VolumeBridge.set_mixer_name`), and the restart was most of what
