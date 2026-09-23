@@ -129,16 +129,40 @@ subphases, split on George's agreement (2026-09-22):
     **Volume-managed renderers** (readonly, now reporting what the adapters
     declare). All four drop `[H]` in ADR-0022's inventory.
 
-  **Still unbuilt in 9i:** `output_mode` — ADR-0046's fixed output, which
-  is the same decision as 9j because HDMI has no mixer control at all.
+  - **Audio is fully wired** (2026-09-23), and half of it by deletion.
+    George's four questions on the rows produced three removals and one
+    change of unit:
+    - **The per-renderer memory is gone** — `renderer_volume.py`,
+      `volume.json`, `restore_volume_floor_db`, the `per_renderer_volume`
+      row. *"Don't we ask each renderer the volume when they take over?"*
+      We do: **12 acquisitions since ADR-0054 §5, 12 answers, 0
+      fallbacks**, and the renderer's own memory is the real one. A
+      renderer that does not answer is now left alone.
+    - **The boot volume is gone** — the unit, the row and
+      `config.boot_volume_steps`. Measured over two boots (Finding 047
+      §10): the converter comes up at **−20 dB of its own accord**,
+      nothing carries a level across a boot, and nothing plays before a
+      renderer acquires. ADR-0018's "fixed safe level" is amended out;
+      **the `alsa-restore` mask is the half that survives and is now
+      load-bearing.**
+    - **`restore_floor` and `boot_default_scope` are out of scope**, his
+      call — `[?]` rows, decisions owed rather than behaviour missing.
+    - **Maximum volume is a percentage.** *"if we say 80% then the max
+      output can only be 80% of the max volume"* — measured: with no
+      ceiling the panel at 80% gives −5.00 dB, and with the ceiling at 80%
+      the panel at 100% gives −5.00 dB.
+    - **Volume curve** is the one addition: Cubic (shipping) and Linear
+      (dB), the two that exist.
+  - **[ADR-0046](docs/decisions/0046-fixed-output-hides-the-slider.md) is
+    built** — the oldest unbuilt decision in the project. The slider is
+    *absent*, not disabled; both triggers carry a padlock; the drawer
+    still opens onto its sentence; `state.fixed_output` is published
+    rather than inferred; and the change waits for playback to stop.
+    Verified on the device and on the panel over CDP. **Four of its Opens
+    close on the same day's work**, and the one that stays is named: a
+    phone's own slider still moves and now changes nothing.
 
-  **Two rows are waiting on George, not on code**, both marked `[?]`:
-  - **`restore_floor`** — −40 dB, a placeholder never confirmed, and
-    Finding 011 §4 measured it as too quiet for Bluetooth's unmanaged
-    floor.
-  - **`boot_default_scope`** — cold boot only, or a renderer's first use
-    mid-session too? Finding 011 §3: a renderer's first use mid-session
-    currently lands as quiet as a power-on.
+  **9i is built.** What is left of it is George's regression pass.
 
   **Needs George, and nothing else will do:**
   - **Bluetooth, on the new path, with the amplifier turned down first.**
