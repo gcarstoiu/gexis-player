@@ -527,6 +527,22 @@ When a symptom survives a fix that demonstrably worked, the honest reading
 is that there was more than one cause, not that the fix failed - and the
 next question is what the fix just made visible.
 
+**26. The check I ran to confirm a detail found the feature broken**
+(2026-09-23). I told George how the meters behave in fixed output and
+flagged one link as read from the code rather than watched. He said *"Check
+it to make sure."* Fixed output did not work at all: the DAC never moved and
+the daemon exited 1 three seconds later, on a call to an object deleted
+earlier the same day (Finding 053).
+
+**The orphaned line sat on the one path that only fixed output takes.**
+Entering the mode writes the mixer *around* `write_hardware`, so the monitor
+saw an external change, and the next line called the deleted thing. The
+action that makes the mode work is the action that killed the process.
+
+**Say which parts of an explanation are measured, and then measure those
+too when asked.** Flagging the gap was right; it was not a substitute for
+closing it, and the gap turned out not to be a detail.
+
 ## Common shape
 
 Every case had a *plausible* substitute for the real target — the build

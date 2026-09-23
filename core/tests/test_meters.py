@@ -287,6 +287,7 @@ class TestTheMetersFollowTheVolume:
         path = tmp_path / "attenuation"
         publish_attenuation(240, path)          # full scale
         assert read_attenuation(path) == 0.0
+        assert path.read_text().strip() == "0.00", "full scale must not read -0.00"
         publish_attenuation(200, path)          # 40 steps of 0.5 dB
         assert read_attenuation(path) == 20.0
         publish_attenuation(0, path)            # silence

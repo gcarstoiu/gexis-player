@@ -1041,3 +1041,71 @@ class TestFixedOutput:
         await settle()
 
         assert ("DAC", 180) in fake_set_raw
+
+
+class TestAnUnexpectedHardwareChangeWithARendererActive:
+    """**The path that crashed the daemon** (Finding 053).
+
+    `run()`'s monitor skips our own writes, so almost everything reaches it
+    already accounted for. A write that did *not* go through
+    `write_hardware` looks external - and entering fixed output is exactly
+    that, `set_raw` straight to full scale. With a renderer active, the next
+    line called a method on an object deleted on 2026-09-23, and the daemon
+    exited 1.
+
+    The test drives the monitor with a fake `alsactl` and a fake mixer read,
+    because the crash was three lines past anything the other tests reach.
+    """
+
+    async def test_it_reaches_the_adapter_instead_of_raising(self, monkeypatch):
+        import asyncio
+
+        from gexis_core import volume as vol
+
+        class Adapter:
+            renderer_id = "spotify"
+            def __init__(self):
+                self.set_to = None
+            def on_volume_change(self, _callback):
+                pass
+            async def get_volume_steps(self):
+                return 100
+            async def set_volume(self, value):
+                self.set_to = value
+
+        class Stdout:
+            def __init__(self, lines):
+                self._lines = list(lines)
+            async def readline(self):
+                return self._lines.pop(0) if self._lines else b""
+
+        class Proc:
+            def __init__(self, lines):
+                self.stdout = Stdout(lines)
+
+        adapter = Adapter()
+        bridge = vol.VolumeBridge(
+            "DAC", adapter, get_active_renderer=lambda: "spotify"
+        )
+
+        async def fake_exec(*args, **kwargs):
+            return Proc([b"node hw:0\n"])
+
+        async def fake_get_raw(*_a, **_k):
+            return vol.HARDWARE_MAX
+
+        async def stop_instead_of_sleeping(_seconds):
+            # the loop sleeps 5s and recurses once the fake monitor is out
+            # of lines; end the test there rather than wait for it
+            raise StopAsyncIteration
+
+        monkeypatch.setattr(asyncio, "create_subprocess_exec", fake_exec)
+        monkeypatch.setattr(vol, "get_raw", fake_get_raw)
+        monkeypatch.setattr(vol.asyncio, "sleep", stop_instead_of_sleeping)
+
+        try:
+            await bridge.run()
+        except StopAsyncIteration:
+            pass
+
+        assert adapter.set_to == 100, "the external change never reached the adapter"

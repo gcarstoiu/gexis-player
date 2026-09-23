@@ -311,7 +311,7 @@ pcm_scope.peppyalsa {{
     spectrum_size 30
     logarithmic_frequency 1
     logarithmic_amplitude 1
-    smoothing_factor 50
+    smoothing_factor 90
     window 3
 }}
 

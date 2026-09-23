@@ -503,7 +503,9 @@ def publish_attenuation(raw: int, path: Path = ATTENUATION_PATH) -> None:
     """
     try:
         path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(f"{-raw_to_db(raw):.2f}\n")
+        # max(), not just the negation: at full scale that is -0.0, which
+        # formats as "-0.00" and reads like an attenuation of the wrong sign.
+        path.write_text(f"{max(0.0, -raw_to_db(raw)):.2f}\n")
     except OSError as exc:
         logger.debug("volume: cannot publish the attenuation: %s", exc)
 
@@ -782,10 +784,11 @@ class VolumeBridge:
     `lambda: supervisor.active`) - who a hardware change gets attributed
     to, and whether an incoming Spotify volume report should actually
     touch the live mixer, both depend on who currently owns the device.
-    Reporting into `volume_memory` while a renderer is *not* active is
-    still correct (e.g. go-librespot firing a stale event) - it updates
-    what will be restored later without touching the mixer someone else
-    currently owns.
+
+    **The deletion left one call to the deleted object behind**, and it
+    crashed the daemon the first time a write reached the mixer without
+    going through `write_hardware` - which is what entering fixed output
+    does. Removed 2026-09-23 (Finding 053).
     """
 
     def __init__(
@@ -1089,7 +1092,6 @@ class VolumeBridge:
                     raw,
                 )
                 continue
-            self._volume_memory.remember(active, raw)
             if active != self._adapter.renderer_id:
                 continue
             steps = await self._adapter.get_volume_steps()
