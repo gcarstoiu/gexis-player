@@ -438,6 +438,15 @@ it makes steps of unequal size and the round trip inexact again.)
 | 25% | 27 | −30.00 dB |
 | 10% | 0 | −38.00 dB |
 
+> **Corrected 2026-09-23 by
+> [Finding 047](047-where-the-volume-actually-goes.md) §2.** The storm *is*
+> gone — 7 retries and 929 log lines against 104,780 — but **the ratchet is
+> not**, and the reasoning above was wrong about why. 128 values against 128
+> does not make the round trip exact, because the two scales are different
+> *shapes*: bluealsa's AVRCP curve is ~10 dB per doubling and this control is
+> linear in dB. One in three round trips still drifts, and five in six
+> minutes jumped to 127. Matching the step counts addressed a symptom.
+
 **What this does not prove:** that the storm is gone. That needs George's
 phone and a drag, and the ratchet is only the *trigger* this side can
 remove — §10's retry-without-backoff on a failed push is still bluealsa's,
