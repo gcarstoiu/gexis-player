@@ -15,12 +15,12 @@ are all final unless a row below says otherwise. Recreate them exactly.
 | Path | What it is |
 |---|---|
 | `tokens.css` | Every design value as a CSS variable. Start here. |
-| `fonts.css` | `@font-face` declarations. **The woff2 files are not in this package — see Fonts.** |
+| `fonts.css` + `fonts/` | `@font-face` declarations and the four woff2 files. |
 | `now-playing.html` + `.css` + `.js` | **First slice.** Six states of the Now Playing screen, plain HTML/CSS. |
 | `data-contract.md` | Every field each screen needs, mapped to `/state`. Fields the backend does not publish yet are marked NEW. |
 | `settings.md` | Settings row-type vocabulary and the full row inventory. Provisional. |
-| `screens.md` | The other eight screens, described for later phases. |
-| `source/*.dc.html` | The full interactive design. Open in a browser. |
+| `screens.md` | The other ten screens and the mini strip, described for later phases. |
+| `source/*.dc.html` | The full interactive design — Now Playing, Settings and Setup. Open in a browser. |
 | `assets/` | Service marks and the two sample images. |
 
 ---
@@ -40,18 +40,17 @@ are all final unless a row below says otherwise. Recreate them exactly.
 The design uses **Nunito Sans** (300–800, variable) and **IBM Plex Mono**
 (400/600/700). Both are SIL Open Font License and safe to vendor.
 
-I cannot produce binary font files, so `fonts.css` declares the faces and
-points at `design/fonts/`, which is empty. **Someone must add four files**
-before the panel is offline-correct:
+All four woff2 files are in `design/fonts/` and `fonts.css` declares them:
 
     fonts/NunitoSans-Variable.woff2
     fonts/IBMPlexMono-Regular.woff2
     fonts/IBMPlexMono-SemiBold.woff2
     fonts/IBMPlexMono-Bold.woff2
 
-Until then the CSS falls back to `system-ui` and `Courier New`, which changes
-metrics: mono columns lose their alignment and the 58px title wraps
-differently. Do not judge spacing before the real faces are in place.
+The fallback behind them is `system-ui` and `Courier New`, which changes
+metrics: mono columns lose their alignment and the 54px title wraps
+differently. If spacing looks wrong, check the faces are loading before
+changing a value.
 
 No icon font exists. Every glyph is either CSS geometry or a file in
 `assets/` — nothing to vendor.
@@ -60,15 +59,13 @@ No icon font exists. Every glyph is either CSS geometry or a file in
 
 ## Two things to reconcile before building
 
-**1. `sample_rate` and `codec` are displayed.** The brief says they were
-dropped from the design. They were not: the Now Playing screen carries a
-format tier badge built from both — `FLAC · 16/44.1 · Lossless`, with three
-tiers (Lossy / Lossless / Hi-Res) and a four-segment quality meter. Colour
-follows tier: Hi-Res uses `--accent-artist`, Lossless `--accent-lms`, Lossy
-stays neutral.
-
-It is **not** in the first slice, so nothing is blocked. But the fields are
-needed eventually. See `data-contract.md`, Now Playing.
+**1. `sample_rate` and `codec` are not displayed.** An earlier revision of
+this file claimed the screen carried a format tier badge built from them. It
+does not, and it never shipped in the design: the badge was explored, the
+logic for it sat unused in the source, and both are now removed. Nothing on
+Now Playing reports codec, sample rate or a quality tier. If you want that
+information on the panel it is a new design decision, not an implementation
+detail.
 
 **2. Volume is shown in percent, never dB.** `volume.percent` is the only
 volume field any screen reads. `raw` and `db` are unused. Settings shows dB
@@ -99,8 +96,10 @@ never the screen.**
 - `active` null — nothing holds the device. **This is normal.** The panel shows
   the library root, and the mini strip is absent. See `screens.md`.
 
-The Now Playing metadata block reserves 238px, so a two-line title, a
-one-line title and an entirely empty block are all the same height.
+The Now Playing header is pinned to the top of the meta column and its one
+metadata row cannot reflow, so a two-line title, a one-line title and an
+entirely empty block all leave the rest of the screen exactly where it is.
+(It used to reserve 238px with a 58px title; that block is gone.)
 
 ---
 
@@ -160,7 +159,7 @@ over HTTP and open it — `file://` blocks the iframe read:
     cd design && python3 -m http.server 8080
     # then open http://localhost:8080/verify.html
 
-Thirty-seven checks in six groups:
+Thirty-eight checks in six groups:
 
 1. **Geometry vs baseline** — landmark positions and sizes, and the screen
    grid's row heights, against `geometry.json`, which was measured from
@@ -185,6 +184,15 @@ Thirty-seven checks in six groups:
    exactly like drift. If it cannot hydrate within 8s the group reports
    **could not run** rather than passing — re-run instead of trusting it.
 
+This harness is written against `docs/LESSONS.md` — specifically its "the
+check ran against the wrong reality" shape. Group 6 exists because my earlier
+checks did exactly that: asserting that a mask URL was *present* while the
+icon it drew was invisible on screen. Present is not the same question as
+visible, and the check accepted the substitute.
+
+Group 6 refusing to pass when the design has not hydrated is the same lesson
+applied: an empty comparison is not a clean one.
+
 **A failure means the export drifted from the design, not that the design
 changed.** Fix the export. If the design genuinely moved, re-baseline:
 
@@ -206,8 +214,9 @@ All real, all invisible to review:
   font metrics and the real faces are not vendored yet.
 - The play control was wired to the source accent. It is fixed coral in the
   design, and its shadow is a specific two-layer value.
-- The source pill's ground is neutral white at 8%; only its border carries
-  the accent.
+- The source pill's ground was neutral white at 8%, with only its border
+  carrying the accent. *(The design has since dropped the ground and border
+  entirely — see Changed 2026-09-19.)*
 - The top hairline is a gradient from the source accent into coral, not a
   flat accent.
 - The LMS mark was being drawn from the SVG at 18px, where the ten-bar figure
@@ -234,6 +243,99 @@ cannot reach you again: extract, then diff against the source, then hand over.
 
 ---
 
+## Changed 2026-09-19
+
+Design changes since the first handover, all already in `source/` and in the
+export:
+
+- **The source pill is no longer a pill.** Mark and word only, at 44px from
+  the top and 56px from the right: 17px mono, 600, 0.16em, uppercase, in the
+  source accent, 11px between mark and word. No ground, no border, no radius.
+  The LMS four-bar mark is 21px tall (bars 11 / 21 / 15 / 18, 3px wide, 2px
+  apart) and pulses at 2.4s while playing.
+- **Meta tabs are 19px** and the selected tab's 3px underline and
+  ink are its own fixed colour — Track `--ink`, Lyrics `--accent-artist`,
+  Artist `--accent-bluetooth`, Release `--accent-lms` — never the source
+  accent. Unselected tabs are `--ink-tab-off` (50%). The row's gap is 34px.
+- **The Track panel header is one layout** whether or not lyrics are present
+  — see `screens.md`.
+- **Pairing expiry is real** — 30s counted down, then "Request expired".
+- **The home strip has a third option**, Recently played artists.
+- **Settings**: see the "Changed 2026-09-19" section of `settings.md` for the
+  eight row-level changes, including the two-step time zone picker and the
+  weather rows' dependency on a key.
+
+- **No long press anywhere.** Row actions are revealed by selection only; the
+  Artists grid, the Playlists list and the browse artist column carry no row
+  actions at all. See "Row actions" in `screens.md`.
+- **The artist page's three network states are documented as a table** in
+  `screens.md` — pending, ready and **error**, with Retry. All three are in
+  the design; branch on all three.
+- **`travel_curve`'s note** describes both options rather than only
+  dB-linear.
+- **`homeStripCount`** is a declared prop (int, 4–20, default 10).
+- `settings.md` reports the row count measured from the file: **49 settable
+  rows under 7 group headers, 6 wired**, and its undecided table no longer
+  lists rows that were removed.
+
+Two new tokens came out of this: `--track-wide` (0.16em) and
+`--ink-tab-off`.
+
+`fonts/` ships with its own README covering the four vendored woff2 files.
+
+---
+
+## Changed 2026-09-22
+
+All already in `source/`, and in the export except where a line says
+otherwise.
+
+**Now Playing — meta column enlarged.** Tabs 19px (the tab landmark grew
+49px → 51px; `geometry.json` is re-baselined and `_measured` moved to
+2026-09-22). Title **54px** at 1.06, clamped to two lines. Artist **35px**,
+album **30px**, year **25px** mono. Three tokens moved with it: `--t-title`
+46 → 54, `--t-artist` 30 → 35, `--t-lead` 22 → 25, and the album now reads
+`--t-h2` instead of `--t-h3`.
+
+**The source word is gone.** The mark stands alone — no ground, no border, no
+word — at **32px**, still 44px from the top and 56px from the right, in the
+source accent, pulsing at 2.4s while playing. The mini strip's mark is 38px.
+The LMS four-bar reduction is derived from one size value (bars at 0.5 / 1 /
+0.72 / 0.88 of it, 0.15 wide, 0.11 apart, rounded), so at 32px it is
+**16 / 32 / 23 / 28, 5px wide, 4px apart**. The export had bar 4 at the same
+height as bar 3; that was drift and is fixed.
+
+**Lyric strip fade is stronger.** The three-line strip's mask ramps
+transparent → opaque over the first 30% and back over the last 30% (was 9%
+and 91%), so the outer lines read as ghosted rather than merely dimmer.
+
+**The idle screen was rebuilt.** Full description in `screens.md` §9. In
+short: `idle_days` (a 0–5 number) is replaced by **`idle_forecast`**, which
+is either `3 days` or `None`, and the two are different layouts rather than
+one layout with a row hidden. Feels-like, wind, sunrise and sunset were
+added; feels-like is **always** shown, even when it equals the reading.
+Sunrise and sunset carry a mark instead of a label. Chance of rain was added
+and then removed. The clock group is `width: max-content` and centres over
+the weather in the `None` state.
+
+**The skin picker is a list with a preview**, not a thumbnail grid, and
+tapping a row previews without writing the value — see `settings.md`.
+
+**Setup is documented** as `screens.md` §13 and its source is in `source/`.
+It is the second screen the phone sees, and the first thing a new device
+shows at all.
+
+Not in the export: the idle screen, Settings and Setup have no plain
+HTML/CSS slice. `now-playing.html` is still the only one, and still display
+only. Everything else is the `.dc.html` source plus these documents.
+
+**`verify.html` has not been run against this revision** — it needs a local
+HTTP server, which is yours to start. Group 1's baseline is updated for the
+tab row; group 6 compares against `source/` live, so it picks up the type
+and source-mark changes on its own.
+
+---
+
 ## Canvas
 
 Every screen except Settings is a fixed **1280×800** artboard. Touch only, no
@@ -243,7 +345,7 @@ Do not make these responsive.
 Settings is the sole exception: two-pane at ≥720px, drill-down below. It is
 the phone's only screen.
 
-All 93 interactive elements on the panel measure at least 44px in both
-directions. This was audited, not estimated — several controls get their size
-from padding plus a negative margin so the target grows without moving the
-ink. If you restructure a control, re-measure it.
+Every interactive element on the panel measures at least 44px in both
+directions; `verify.html` group 2 asserts it for the first slice. Several
+controls get their size from padding plus a negative margin so the target
+grows without moving the ink — if you restructure one, re-measure it.

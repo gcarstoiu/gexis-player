@@ -73,7 +73,7 @@ http.port = 8001
 [data.source]
 type = pipe
 polling.interval = 0.04
-pipe.name = /tmp/gexis-peppymeter
+pipe.name = /run/gexis/meter-peppy.fifo
 volume.constant = 80.0
 volume.min = 0.0
 volume.max = 100.0

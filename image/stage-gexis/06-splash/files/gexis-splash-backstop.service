@@ -1,28 +1,17 @@
 [Unit]
-# ADR-0043's safety net.
+# Fired by gexis-splash-backstop.timer, which has the reasoning. This unit
+# does the work and nothing else - no sleeping, so nothing it does can hold
+# the boot transaction open.
 #
-# The splash is normally dropped by gexis-core, the moment the panel reports
-# that it has painted its first frame. If the panel never paints - a broken
-# UI, a Chromium that will not start, a daemon that is down - the animation
-# would otherwise loop forever on a device with no keyboard, hiding the very
-# failure somebody needs to see.
-#
-# 90s is well past the 19.7s this image takes to reach multi-user.target
-# (Finding 038) plus the time Chromium needs after it, so this should never
-# fire on a healthy boot. If it does, something is wrong and the console is
-# the right thing to be looking at.
-Description=Drop the boot splash if the panel never reports a first frame
-After=multi-user.target
+# Without this net a panel that never paints would loop the animation
+# forever on a device with no keyboard, hiding the failure somebody needs to
+# see. gexis-kiosk.service normally ends the splash itself, before labwc.
+Description=Drop the boot splash if the panel never reported a first frame
 ConditionPathExists=/bin/plymouth
 
 [Service]
 Type=oneshot
-ExecStartPre=/bin/sleep 90
-# --retain-splash leaves the last frame up rather than clearing to black:
-# if the panel does paint late, it paints over the animation, not over a
-# blank screen.
+# --retain-splash leaves the last frame up rather than clearing to black: if
+# the panel does paint late, it paints over the animation, not over a blank
+# screen. `-` because a splash that has already gone is the normal case.
 ExecStart=-/bin/plymouth quit --retain-splash
-RemainAfterExit=yes
-
-[Install]
-WantedBy=multi-user.target

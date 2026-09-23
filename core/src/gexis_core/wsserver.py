@@ -25,12 +25,27 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+import random
+from urllib.parse import quote
 from pathlib import Path
 
 from aiohttp import web
+from dbus_next import BusType
+from dbus_next.aio import MessageBus
 
+from gexis_core import bluetooth_devices, device_name, discovery, skins, wifi
 from gexis_core.adapters.base import TRANSPORT_COMMANDS
-from gexis_core.artistinfo import PHOTO_LARGE, PHOTO_THUMB
+from gexis_core.artistinfo import PHOTO_BACKGROUND, PHOTO_LARGE, PHOTO_THUMB
+
+#: How many artists the idle screen draws from, and how many of those it
+#: asks the photo plugin about at once (ADR-0047 §1).
+ARTIST_POOL = 1000
+ARTIST_BATCH = 12
+#: How many of them fanart is asked about before falling back to LMS. Each
+#: unknown name costs a MusicBrainz resolution at one a second, so this is
+#: the number that decides how long a refresh can take: three, measured at
+#: 9 of 12 of George's artists resolving at all.
+ARTIST_FANART_TRIES = 3
 from dataclasses import replace
 
 from gexis_core.enrichment import Enrichment, TrackKey, fold
@@ -72,7 +87,11 @@ class StateServer:
         artistinfo=None,
         enrichment=None,
         radio=None,
+        pairing_answer=None,
         splash=None,
+        weather=None,
+        wallpapers=None,
+        skins_dir: Path | None = None,
         ui_dir: Path | None = None,
     ) -> None:
         """`activate(renderer_id) -> bool` and `set_volume(percent) -> bool`
@@ -101,7 +120,18 @@ class StateServer:
         self._artistinfo = artistinfo
         self._enrichment = enrichment
         self._radio = radio
+        self._pairing_answer = pairing_answer
         self._splash = splash
+        self._weather = weather
+        self._wallpapers = wallpapers
+        #: Where the skin packs live (ADR-0050). Read per request rather
+        #: than at start: a pack could be added under a running daemon, and
+        #: parsing 99 sections costs less than the request that asked.
+        self._skins_dir = Path(skins_dir) if skins_dir else None
+        #: What the idle screen is showing, so the next change is a change.
+        #: One value for three sources, because only one of them is on
+        #: screen at a time: a file name, a Pixabay id, or an artist.
+        self._last_background: str | None = None
         self._ui_dir = ui_dir
         self._clients: set[web.WebSocketResponse] = set()
         store.subscribe(self._broadcast)
@@ -241,6 +271,234 @@ class StateServer:
             return web.json_response({"error": "idle page is not wired up"}, status=503)
         return web.json_response(await self._idle_page())
 
+    async def _handle_idle_weather(self, request: web.Request) -> web.Response:
+        """The forecast the idle screen draws (ADR-0047 §2).
+
+        Asked by the panel rather than pushed: the idle screen is the only
+        thing that wants it, it is up for hours, and `Weather` decides how
+        often that becomes a call (fifteen minutes) - so a redraw costs
+        nothing and a setting change is picked up on the next one.
+
+        **A refusal is a 200 with a reason.** "That place could not be
+        found" is an answer the user can act on; a 502 is a blank region and
+        a journal line nobody reads.
+        """
+        if self._settings is None or self._weather is None:
+            return web.json_response({"error": "weather is not wired up"}, status=503)
+        if not self._settings.value("idle_weather"):
+            return web.json_response({"error": None, "off": True})
+        place = str(self._settings.value("weather_location") or "").strip()
+        if not place:
+            return web.json_response({"error": "No location set yet."})
+        # `idle_forecast` is two layouts, not a count (design, 2026-09-22).
+        # **Both need today**: the None layout still draws the current
+        # conditions with today's high and low, so the fetch is one day
+        # rather than none.
+        forecast = str(self._settings.value("idle_forecast") or "3 days")
+        days = 3 if forecast == "3 days" else 1
+        answer = await self._weather.forecast(place, days)
+        return web.json_response({**answer, "forecast": forecast})
+
+    async def _handle_idle_wallpaper(self, request: web.Request) -> web.Response:
+        """The next background, whatever `idle_background` says it is.
+
+        **One route for four sources**, so the panel asks for "the next
+        picture" and does not carry a branch per setting: the setting is the
+        daemon's to read, and three of the four answers are things only the
+        daemon can reach anyway. *When* the picture changes is the panel
+        counting `background_interval`; nothing here holds a timer.
+        """
+        if self._settings is None or self._wallpapers is None:
+            return web.json_response({"error": "wallpapers are not wired up"}, status=503)
+        background = self._settings.value("idle_background") or "Artist pictures"
+        if background == "Black":
+            return web.json_response({"off": True, "error": None})
+        if background == "Artist pictures":
+            return web.json_response(await self._artist_picture())
+        if background == "Wallpapers on device":
+            names = self._wallpapers.local_names()
+            if not names:
+                return web.json_response({"error": "No pictures on this device yet."})
+            # Not the one already on screen, when there is another. A folder
+            # of four and a fifteen-minute rotation would otherwise repeat
+            # about one change in four, which reads as the screen being stuck.
+            choices = [n for n in names if n != self._last_background] or names
+            name = random.choice(choices)
+            self._last_background = name
+            # **Quoted**: a name can now carry folders, spaces and anything
+            # else a person types, and it travels as a URL.
+            return web.json_response(
+                {"url": f"/idle/wallpaper/local/{quote(name)}", "by": "", "page": "",
+                 "credit": None, "error": None}
+            )
+        key = str(self._settings.value("wallpaper_key") or "").strip()
+        topics = self._settings.value("wallpaper_topics") or []
+        answer = await self._wallpapers.next(key, list(topics), avoid=self._last_background)
+        if answer.get("file"):
+            self._last_background = answer["file"]
+            answer = {**answer, "url": f"/idle/wallpaper/{answer['file']}"}
+        return web.json_response(answer)
+
+    async def _home_strip(self, limit: int) -> dict:
+        """What the library root draws under its cards.
+
+        One shape at a time, named by `home_strip`, `home_strip_count` long.
+        **The two artist shapes are one LMS order and one count per artist**
+        (Finding 044); the pictures the panel puts on them come from the
+        route it already uses for the artist grid.
+        """
+        shape = str(self._setting_or_none("home_strip") or "New music")
+        count = int(self._setting_or_none("home_strip_count") or limit or 10)
+        count = max(4, min(count, 20))
+        if shape == "Most played artists":
+            return {"shape": shape, "artists": await self._library.played_artists("popular", count)}
+        if shape == "Recently played artists":
+            return {"shape": shape, "artists": await self._library.played_artists("recent", count)}
+        return {"shape": "New music", "albums": await self._library.new_music(count)}
+
+    async def _artist_picture(self) -> dict:
+        """One artist picture from the library, at random.
+
+        **fanart first, LMS second** (George, 2026-09-21: *"would be good to
+        have Lms as a fallback and use fanart as their pictures are of
+        better quality"*), which is the same order the artist page has had
+        since 2026-09-18. fanart publishes `artistbackground` at 1920x1080
+        for exactly this use; LMS's plugin returns whatever it found online,
+        which is sometimes a soundtrack cover rather than a photograph.
+
+        **Asked for in a batch and filtered here**, because neither source
+        has a picture for every artist and there is no way to ask for "one
+        that has one". A handful of ids costs one request (Finding 035: 40
+        took 212 ms) and the whole library would be neither necessary nor
+        kind.
+        """
+        if self._library is None or self._artistinfo is None:
+            return {"error": "The library is not available."}
+        try:
+            listing = await self._library.artists(limit=ARTIST_POOL)
+        except Exception as exc:  # the library has its own failure modes
+            logger.info("idle: artists unavailable: %s", exc)
+            return {"error": "The library is not available."}
+        items = [a for a in listing.get("items") or [] if a.get("id")]
+        if not items:
+            return {"error": "No artists in the library yet."}
+        # Not the artist already on screen, when there is another.
+        items = [a for a in items if a.get("name") != self._last_background] or items
+        picked = random.sample(items, min(ARTIST_BATCH, len(items)))
+
+        # **fanart is asked about one artist, not the batch.** Each name
+        # costs a MusicBrainz resolution the first time (rate-limited to one
+        # a second, then remembered on disk), so asking about twelve to
+        # throw eleven away would spend eleven seconds to no purpose. The
+        # batch stays for LMS, whose answers are cheap and concurrent.
+        shuffled = list(picked)
+        random.shuffle(shuffled)
+        for artist in shuffled[:ARTIST_FANART_TRIES]:
+            url = await self._fanart_background(artist.get("name") or "")
+            if url:
+                self._last_background = artist.get("name") or ""
+                return {"url": url, "by": artist.get("name") or "", "page": "",
+                        "credit": None, "source": "fanart", "error": None}
+
+        photos = await self._artistinfo.photos([a["id"] for a in picked], PHOTO_BACKGROUND)
+        with_photos = [(a, photos.get(a["id"])) for a in picked if photos.get(a["id"])]
+        if not with_photos:
+            return {"error": "No artist pictures for these artists."}
+        artist, url = random.choice(with_photos)
+        self._last_background = artist.get("name") or ""
+        # The credit is the artist's name rather than a licence line: both
+        # sources come through the owner's own server.
+        return {"url": url, "by": artist.get("name") or "", "page": "",
+                "credit": None, "source": "lms", "error": None}
+
+    async def _fanart_background(self, name: str) -> str | None:
+        """fanart's wide picture for this artist, or None.
+
+        None covers every way this can come to nothing - no key, no
+        MusicBrainz id, no image for that id - because the caller does the
+        same thing in all of them: try another artist, then fall back.
+        """
+        if not name or self._enrichment is None:
+            return None
+        try:
+            found = await self._enrichment.for_track(
+                TrackKey(artist=fold(name)), only=("fanart-bg",)
+            )
+        except Exception as exc:
+            logger.info("idle: fanart unavailable for %r: %s", name, exc)
+            return None
+        return found.artist_image or None
+
+    async def _handle_local_wallpaper(self, request: web.Request) -> web.StreamResponse:
+        """One picture somebody put on this device. Same rule as below: a
+        name, never a path."""
+        if self._wallpapers is None:
+            return web.json_response({"error": "wallpapers are not wired up"}, status=503)
+        name = request.match_info["name"]
+        path = self._wallpapers.local_path(name)
+        if path is None:
+            return web.json_response({"error": "no such picture"}, status=404)
+        return web.FileResponse(path)
+
+    async def _handle_wallpaper_file(self, request: web.Request) -> web.StreamResponse:
+        """One downloaded picture. **Name only, never a path**: this route
+        is reachable from the LAN (ADR-0028) and a file name that can climb
+        out of its directory would serve the disk."""
+        if self._wallpapers is None:
+            return web.json_response({"error": "wallpapers are not wired up"}, status=503)
+        name = request.match_info["name"]
+        if name != Path(name).name or not name.endswith(".jpg"):
+            return web.json_response({"error": "no such picture"}, status=404)
+        path = self._wallpapers.path_of(name)
+        if path is None:
+            return web.json_response({"error": "no such picture"}, status=404)
+        return web.FileResponse(path)
+
+    def _skins(self) -> list[tuple]:
+        return skins.installed(self._skins_dir) if self._skins_dir else []
+
+    async def _handle_skins(self, request: web.Request) -> web.Response:
+        """Every skin the device has, with what it shows (ADR-0050).
+
+        **What it shows, not where it lives** (ADR-0019 as amended): a skin
+        declares `meter.visible` and `spectrum.visible`, and 77 of the 99 on
+        this device declare neither - which means a meter.
+        """
+        if self._skins_dir is None:
+            return web.json_response({"error": "skins are not wired up"}, status=503)
+        chosen = str(self._setting_or_none("skin_corpus") or skins.ALL)
+        wanted = skins.CORPUS.get(chosen) or skins.CORPUS[skins.ALL]
+        items = [
+            {
+                "name": skin.name,
+                "kind": skin.kind,
+                "in_corpus": skin.kind in wanted,
+                "preview": f"/skins/{quote(skin.name)}/preview",
+            }
+            for skin, _ in self._skins()
+        ]
+        return web.json_response({"skins": items, "corpus": chosen})
+
+    async def _handle_skin_preview(self, request: web.Request) -> web.StreamResponse:
+        """A skin's own picture - its `screen.bgr` - and nothing generated.
+
+        **The name in the URL never reaches the filesystem.** It is matched
+        against the parsed corpus, and the file served is the one that skin
+        declares, beside that skin's own `meters.txt`. A name that is a path
+        is simply not a skin.
+        """
+        if self._skins_dir is None:
+            return web.json_response({"error": "skins are not wired up"}, status=503)
+        wanted = request.match_info["name"]
+        for skin, directory in self._skins():
+            if skin.name != wanted:
+                continue
+            picture = skins.preview_of(skin, directory)
+            if picture is None:
+                return web.json_response({"error": "that skin has no picture"}, status=404)
+            return web.FileResponse(picture)
+        return web.json_response({"error": "no such skin"}, status=404)
+
     async def _handle_library(self, request: web.Request) -> web.Response:
         """ADR-0038 §5: reads only, for the designed screens. The panel asks
         for what a screen shows and gets the fields it draws; it never sends
@@ -261,9 +519,15 @@ class StateServer:
         library = self._library
         reads = {
             ("counts", False, None): lambda: library.counts(),
+            # The home strip, whichever shape `home_strip` names (9h). The
+            # panel asks for the one it is about to draw rather than for all
+            # three: two of them cost a browselibrary call plus one count
+            # per artist, and nobody sees the other two.
+            ("strip", False, None): lambda: self._home_strip(limit),
             ("new", False, None): lambda: library.new_music(),
             ("artists", False, None): lambda: library.artists(offset, limit),
             ("artists", True, "albums"): lambda: library.artist_albums(item_id),
+            ("artists", True, "genres"): lambda: library.artist_genres(item_id),
             ("albums", True, None): lambda: library.album(item_id),
             ("playlists", False, None): lambda: library.playlists(),
             ("playlists", True, None): lambda: library.playlist(item_id, offset, limit),
@@ -504,7 +768,103 @@ class StateServer:
     async def _handle_settings(self, request: web.Request) -> web.Response:
         if self._settings is None:
             return web.json_response({"error": "settings are not wired up"}, status=503)
-        return web.json_response({"groups": self._settings.to_json()})
+        groups = self._settings.to_json()
+        await self._seed_lists(groups)
+        # ADR-0048 §5: the header reads name - hostname - address, and the
+        # last two are the system's own. After a rename the stored name and
+        # the live hostname disagree, and that disagreement is exactly what
+        # the user needs to see.
+        return web.json_response(
+            {
+                "groups": groups,
+                "device": {
+                    # A registry without the row is not a broken request: the
+                    # header simply has one fewer fact to show.
+                    "name": self._setting_or_none("device_name"),
+                    "hostname": device_name.hostname(),
+                    "address": device_name.address(),
+                },
+            }
+        )
+
+    #: A `list` whose items are one cheap local read arrives **with the
+    #: row** (ADR-0044 §1, amended 2026-09-21). The others carry
+    #: `discover: true` and go looking when their sheet opens, which is
+    #: what the sheet's searching state is for: LMS discovery listens for
+    #: 2.5 s and a Wi-Fi scan takes seconds, where BlueZ answers in 22-29 ms.
+    #: Module and attribute rather than the function itself, so the name is
+    #: resolved when it is called - the same late binding every other call
+    #: here has, and what lets a test stand in for BlueZ.
+    SEEDED_LISTS = {"bt_trusted": (bluetooth_devices, "known")}
+
+    async def _seed_lists(self, groups: list[dict]) -> None:
+        """Give the rows that do not have to go looking their items.
+
+        **Two things need them, and the row needs them first.** A device
+        list's value is a count of its items, so a row counting only what
+        the *sheet* fetches reads "None" until someone opens it - which is
+        what it did on the device with a phone paired (George,
+        2026-09-21). And a sheet whose items are already in the panel's
+        hands opens drawn, instead of showing a searching state for the
+        three frames a 25 ms read takes.
+
+        Read per request rather than cached: `/settings` is fetched when
+        the screen mounts and when a write moves the revision, which is
+        exactly when the row is drawn. A list that is a bus round-trip old
+        is wrong in the direction that matters - a device forgotten
+        elsewhere still listed here.
+        """
+        for group in groups:
+            for row in group["rows"]:
+                source = self.SEEDED_LISTS.get(row.get("key"))
+                if source is None or row["type"] != "list":
+                    continue
+                module, name = source
+                # `_bluetooth` answers [] for an adapter that is not there,
+                # so an unavailable BlueZ reads as the row's own empty state
+                # rather than failing the whole settings payload.
+                row["items"] = await self._bluetooth(getattr(module, name))
+
+    async def _handle_pairing_answer(self, request: web.Request) -> web.Response:
+        """Accept or reject the open pairing request (ADR-0045).
+
+        409 when nothing is being asked, which is the answer to a tap that
+        arrived after the agent's window closed - **it must not land on the
+        next request**, and the panel needs to hear that rather than assume
+        it worked.
+        """
+        if self._pairing_answer is None:
+            return web.json_response({"error": "no pairing agent"}, status=503)
+        answer = request.match_info["answer"]
+        if answer not in ("accept", "reject"):
+            return web.json_response({"error": f"unknown answer {answer}"}, status=400)
+        if not self._pairing_answer(answer == "accept"):
+            return web.json_response({"error": "nothing is being asked"}, status=409)
+        return web.json_response({"answer": answer})
+
+    @staticmethod
+    async def _bluetooth(call, *args):
+        """Run one BlueZ call on a connection of its own.
+
+        A short-lived bus rather than the daemon's: the adapter's own
+        connection is driving A2DP and the agent, and a settings sheet
+        reaching into it to enumerate devices would couple the two for no
+        gain. Opening a system bus is cheap and a sheet is rare.
+        """
+        bus = await MessageBus(bus_type=BusType.SYSTEM).connect()
+        try:
+            return await call(bus, *args)
+        except Exception as exc:
+            logger.warning("bluetooth: %s failed: %s", getattr(call, "__name__", call), exc)
+            return [] if not args else (False, "Bluetooth is unavailable.")
+        finally:
+            bus.disconnect()
+
+    def _setting_or_none(self, key: str):
+        try:
+            return self._settings.value(key)
+        except UnknownSetting:
+            return None
 
     async def _handle_setting_write(self, request: web.Request) -> web.Response:
         if self._settings is None:
@@ -527,6 +887,82 @@ class StateServer:
             return {"key": key}
 
         return self._settings_call(run)
+
+    #: Where a `list` row's items come from - ADR-0044 §1's first open
+    #: question, now answered for all three.
+    LIST_SOURCES = ("wifi", "lms_server", "bt_trusted")
+
+    async def _list_row(self, request: web.Request):
+        """The `list` row named in the path, or a response explaining why
+        there is none."""
+        if self._settings is None:
+            return None, web.json_response({"error": "settings are not wired up"}, status=503)
+        key = request.match_info["key"]
+        try:
+            row = self._settings.row(key)
+        except UnknownSetting:
+            return None, web.json_response({"error": f"unknown setting {key}"}, status=404)
+        if row["type"] != "list":
+            return None, web.json_response({"error": f"{key} is not a list"}, status=405)
+        if key not in self.LIST_SOURCES:
+            # A real list with nothing behind it yet. Empty, not broken.
+            return None, web.json_response({"items": []})
+        return key, None
+
+    async def _handle_list_items(self, request: web.Request) -> web.Response:
+        key, refusal = await self._list_row(request)
+        if refusal is not None:
+            return refusal
+        if key == "wifi":
+            if not wifi.available():
+                return web.json_response({"items": [], "error": "NetworkManager is not available"})
+            return web.json_response({"items": await wifi.scan()})
+        if key == "bt_trusted":
+            return web.json_response({"items": await self._bluetooth(bluetooth_devices.known)})
+        # A discovered server is named by its address, because that is what
+        # the setting stores; the human name is the line underneath.
+        current = str(self._settings.value("lms_server") or "")
+        items = []
+        for server in await discovery.find_servers():
+            meta = " · ".join(part for part in (server["name"], server["version"]) if part)
+            items.append(
+                {
+                    "name": server["address"],
+                    "meta": meta or "Lyrion server",
+                    "bars": None,
+                    "state": "current" if server["address"] == current else "found",
+                }
+            )
+        return web.json_response({"items": items})
+
+    async def _handle_list_action(self, request: web.Request) -> web.Response:
+        key, refusal = await self._list_row(request)
+        if refusal is not None:
+            return refusal
+        try:
+            body = await request.json()
+            name = body["name"]
+            action = body.get("action", "join")
+        except (ValueError, KeyError, TypeError):
+            return web.json_response({"error": 'body must be {"name": ..., "action": ...}'}, status=400)
+        if key == "bt_trusted":
+            if action != "forget":
+                return web.json_response({"error": f"unknown action {action}"}, status=400)
+            ok, error = await self._bluetooth(bluetooth_devices.forget, name)
+            return web.json_response({"ok": ok, "error": error})
+        if key != "wifi":
+            return web.json_response({"error": f"{key} has no per-item action"}, status=405)
+        if not wifi.available():
+            return web.json_response({"error": "NetworkManager is not available"}, status=503)
+        if action == "forget":
+            ok, error = await wifi.forget(name)
+        elif action == "join":
+            ok, error = await wifi.join(name, body.get("password") or None)
+        else:
+            return web.json_response({"error": f"unknown action {action}"}, status=400)
+        # A refused password is not a broken request: the answer is 200 with
+        # the reason, because the sheet shows it and offers to try again.
+        return web.json_response({"ok": ok, "error": error})
 
     @staticmethod
     def _settings_call(call) -> web.Response:
@@ -556,6 +992,12 @@ class StateServer:
         app.router.add_post("/volume", self._handle_set_volume)
         app.router.add_post("/volume/mute", self._handle_set_mute)
         app.router.add_get("/idle", self._handle_idle)
+        app.router.add_get("/idle/weather", self._handle_idle_weather)
+        app.router.add_get("/idle/wallpaper", self._handle_idle_wallpaper)
+        # `{name:.*}` because a picture may be in a folder; `local_path`
+        # is what refuses anything that resolves outside the directory.
+        app.router.add_get("/idle/wallpaper/local/{name:.*}", self._handle_local_wallpaper)
+        app.router.add_get("/idle/wallpaper/{name}", self._handle_wallpaper_file)
         app.router.add_get("/surface", self._handle_surface)
         app.router.add_post("/touch", self._handle_touch)
         app.router.add_post("/panel/painted", self._handle_painted)
@@ -563,6 +1005,13 @@ class StateServer:
         app.router.add_get("/settings", self._handle_settings)
         app.router.add_put("/settings/{key}", self._handle_setting_write)
         app.router.add_post("/settings/{key}", self._handle_setting_action)
+        app.router.add_get("/settings/{key}/items", self._handle_list_items)
+        app.router.add_post("/settings/{key}/items", self._handle_list_action)
+        app.router.add_post("/bluetooth/pairing/{answer}", self._handle_pairing_answer)
+        # ADR-0050. `{name:.*}` because a skin's name is a section heading
+        # somebody typed, spaces and punctuation included.
+        app.router.add_get("/skins", self._handle_skins)
+        app.router.add_get("/skins/{name:.*}/preview", self._handle_skin_preview)
         app.router.add_get("/radio", self._handle_radio)
         app.router.add_post("/radio/play", self._handle_radio_play)
         app.router.add_get("/library/artist-photos", self._handle_artist_photos)

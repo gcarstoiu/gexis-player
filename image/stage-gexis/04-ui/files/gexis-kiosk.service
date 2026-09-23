@@ -37,7 +37,59 @@ StandardInput=tty-fail
 StandardOutput=journal
 StandardError=journal
 EnvironmentFile=/etc/gexis/kiosk.env
+# ADR-0043, corrected 2026-09-19 on the first device that ever booted it.
+#
+# Plymouth is DRM master for as long as it runs. The original design held
+# the splash until the panel reported a painted frame - which cannot work,
+# because labwc cannot open /dev/dri/card1 while plymouth has it, so the
+# panel can never paint. Measured: "Could not take device: Device or
+# resource busy", "Found 0 GPUs, cannot create backend", labwc exits 1 at
+# 24s, and with Restart=no below the panel stays black until someone SSHes
+# in.
+#
+# `quit --retain-splash` is the way out: it ends plymouth, releasing the
+# device, and leaves the last frame in the framebuffer. It has to happen
+# before labwc, not after Chromium paints.
+#
+# `+` is load-bearing, and its absence cost a second black boot on
+# 2026-09-19: this unit runs as User=pi, ExecStartPre inherits that, and the
+# plymouth client needs root to command plymouthd. Without it the quit is
+# refused silently, plymouthd keeps DRM, and labwc fails exactly as before.
+# `-` as well: an image without plymouth, or a boot that never showed a
+# splash, must not stop the panel starting.
+# The handover from plymouth to labwc, in one process. From plymouth
+# releasing the GPU to labwc drawing there is a window in which no compositor
+# exists, and the panel shows the text console - black, and intermittently
+# the echoed cursor-position replies George reported as "160R".
+#
+# This was four ExecStartPre lines and George could still see a black flash
+# where the boot screen should be. Two reasons, both measured 2026-09-20:
+# plymouth renders through DRM, so a /dev/fb0 write before the quit goes to a
+# buffer that is not the scanout and does nothing; and the helper costs
+# ~490ms to start, 356ms of it importing PIL, which after the quit is 490ms
+# of uncovered screen.
+#
+# `handover` does KD_GRAPHICS, then decodes the image while plymouth is still
+# drawing and the cost is free, then quits plymouth, then writes. The gap is
+# one write rather than a Python interpreter starting.
+#
+# `+` is load-bearing: this unit runs as User=pi and the plymouth client
+# needs root. Its absence cost a black boot on 2026-09-19. `-` as well - an
+# image without plymouth must not stop the panel starting.
+#
+# The `\033c` clear stays in front as the fallback for an image where the
+# helper is missing entirely. On its own it is a race it loses about half the
+# time, which is why the console text was intermittent.
+ExecStartPre=-+/bin/sh -c 'printf "\033c" > /dev/tty1'
+ExecStartPre=-+/usr/local/bin/gexis-splash-fb handover /usr/share/gexis/panel-background.png
 ExecStart=/usr/bin/labwc -s /usr/local/bin/gexis-kiosk-start
+
+# Put the console back when this unit stops - including when it FAILS.
+# Without it a failed boot sits on the boot screen looking exactly like a
+# slow one, which is a worse failure than a black panel: it hides that
+# anything is wrong. Measured 2026-09-20: a KD_GRAPHICS set with no
+# compositor running persists indefinitely, so nothing reclaims it on its own.
+ExecStopPost=-+/usr/local/bin/gexis-splash-fb text
 
 # Phase 4 criterion 1: "starting on boot, never restarting". Restart=no is
 # the literal reading and the right one - a compositor that respawns in a

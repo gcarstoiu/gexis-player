@@ -1,13 +1,14 @@
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
 <script>
   import { onMount, untrack } from 'svelte';
-  import { connect, active, metadata, volume, handoff, handoffExemptPairs, capabilities, available, availability, shuffle, repeat, queue } from './lib/state.js';
+  import { connect, active, metadata, volume, handoff, handoffExemptPairs, capabilities, available, availability, shuffle, repeat, queue, pairing } from './lib/state.js';
   import NowPlaying from './screens/NowPlaying.svelte';
   import Library from './screens/Library.svelte';
   import PanelBackground from './screens/PanelBackground.svelte';
   import IdleScreen from './screens/IdleScreen.svelte';
   import VolumeDrawer from './screens/VolumeDrawer.svelte';
   import HandoffScreen from './screens/HandoffScreen.svelte';
+  import PairingFrame from './screens/PairingFrame.svelte';
   import Settings from './screens/Settings.svelte';
   import { loadSettings, settingValues } from './lib/settings.js';
   import { loadLibraryRoot } from './lib/library.js';
@@ -22,9 +23,18 @@
 
   // Reported to the daemon at most once a second: it only needs to know the
   // panel was touched, not how often (ADR-0036).
+  //
+  // **Only from the panel.** A touch is what ADR-0036 counts as attention,
+  // and attention takes the visualiser down - so a tap on a phone's settings
+  // screen was ending the visualisation on a device in another room, which
+  // is exactly the case the phone exists for (George, 2026-09-22: changing
+  // the skin *"stops showing the visualisation. It should stay on"*). The
+  // daemon cannot see the glass, which is why the panel reports at all; a
+  // remote browser is not the glass.
   let lastReported = 0;
   function onPointerDown() {
     touches++;
+    if (surface !== 'panel') return;
     const now = Date.now();
     if (now - lastReported > 1000) {
       lastReported = now;
@@ -88,6 +98,29 @@
     }
     const id = setTimeout(() => (idle = true), IDLE_MS);
     return () => clearTimeout(id);
+  });
+
+  //: **A pairing request wakes the panel.** It lapses in thirty seconds and
+  //: a question nobody can see cannot be answered - and the frame is only
+  //: 95% opaque, so over the idle screen the clock reads through it
+  //: (George, on the panel, 2026-09-21). Counted as attention as well as
+  //: dismissed, so the panel does not drop straight back to idle the moment
+  //: the frame closes: after pairing, the thing you just connected is the
+  //: thing you want to look at.
+  //:
+  //: **`untrack` is load-bearing.** `touches += 1` *reads* `touches` to
+  //: increment it, so without this the effect depends on what it writes and
+  //: re-triggers itself - Svelte raises `effect_update_depth_exceeded` and
+  //: the whole tree stops updating. It only fires when a request arrives,
+  //: so it survived every other deploy and showed up as a pairing frame
+  //: with a frozen countdown whose buttons appeared dead (George, on the
+  //: panel, 2026-09-21). The answers were landing; nothing was re-rendering.
+  $effect(() => {
+    if (!$pairing) return;
+    untrack(() => {
+      idle = false;
+      touches += 1;
+    });
   });
 
   // The library is a layer over now playing (source/Now Playing.dc.html). It
@@ -208,11 +241,23 @@
   {/if}
 
   {#if idle}
-    <IdleScreen ondismiss={() => (idle = false)} />
+    <!-- ADR-0047: the screen reads eight rows, so it takes the values
+         rather than fetching /settings for itself - one loader, one place
+         a revision bump lands. -->
+    <IdleScreen ondismiss={() => (idle = false)} settings={$settingValues} />
   {/if}
 
   {#if shownHandoff}
     <HandoffScreen from={shownHandoff.from} to={shownHandoff.to} />
+  {/if}
+
+  <!-- Last, and above everything (ADR-0045). A request that cannot be seen
+       cannot be answered, and it lapses in thirty seconds either way - so it
+       takes the screen from the visualiser or the idle screen rather than
+       waiting politely behind them. It is also the only layer here with no
+       dismiss of its own: the agent takes it away. -->
+  {#if $pairing}
+    <PairingFrame request={$pairing} />
   {/if}
 </div>
 {/if}

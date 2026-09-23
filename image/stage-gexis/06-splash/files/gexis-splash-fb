@@ -1,0 +1,233 @@
+#!/usr/bin/python3
+# SPDX-License-Identifier: GPL-3.0-or-later
+"""Hold the boot screen across the gap where nothing owns the display.
+
+Between plymouth releasing the GPU and labwc drawing its first frame there is
+a window - 5.0s on the 2026-09-20 boot - in which no compositor exists and the
+panel shows the text console: black, and intermittently the echoed
+cursor-position replies George reported as "something containing 160R"
+(Finding 041 sections 4 and 8).
+
+Two ioctls and a write close it:
+
+  handover   the whole sequence in ONE process: set KD_GRAPHICS, decode the
+             image, end plymouth, then write. The order matters and so does
+             it being one process - see below.
+  graphics   set KD_GRAPHICS alone. This is what kills the escape-reply text:
+             it removes the possibility of console output rather than racing
+             to clear it, which is what the `printf "\\033c"` before it does
+             and loses about half the time.
+  paint      write the still into the framebuffer.
+  text       put the VT back. Runs from ExecStopPost, so a kiosk that FAILS
+             drops to a text console and looks broken, rather than sitting on
+             the boot screen looking like it is still starting.
+
+**Why `handover` exists, measured 2026-09-20.** The first attempt ran
+graphics, paint, `plymouth quit`, paint as four ExecStartPre lines. It left a
+black flash George could see, for two compounding reasons:
+
+* **Plymouth renders through DRM/KMS, not fbdev.** It holds DRM master and
+  scans out its own buffer, so a write to /dev/fb0 *while plymouth is up*
+  goes to the fbdev buffer, which is not the scanout, and achieves nothing.
+  Only a write after the quit is visible. Painting before the quit was
+  useless rather than belt-and-braces.
+* **This program costs ~490ms to start**, 356ms of which is importing PIL and
+  numpy. Run after the quit, that is 490ms of uncovered screen.
+
+`handover` decodes first, while plymouth is still drawing and the cost is
+invisible, and only then quits and writes. The gap becomes the duration of
+one write rather than of a Python interpreter starting.
+
+Verified on `gexis` before this was written: a 2,048,000-byte write to
+/dev/fb0 reads back byte-identical and George confirmed the image reaches the
+panel. fbdev is only blind while a DRM master holds the device, which is why
+an earlier capture of /dev/fb0 read black 45 times out of 45 and was discarded.
+
+Everything here is best-effort. Every entry point returns 0 whatever happens,
+because a boot screen is an optimisation and the panel starting is not.
+"""
+import array
+import fcntl
+import os
+import subprocess
+import sys
+
+KDSETMODE = 0x4B3A
+KD_TEXT = 0x00
+KD_GRAPHICS = 0x01
+
+VT = "/dev/tty1"
+FB = "/dev/fb0"
+SYSFS = "/sys/class/graphics/fb0"
+GROUND = (16, 26, 33)  # #101a21, the ground the artwork is drawn on
+
+
+def log(message: str) -> None:
+    print(f"gexis-splash-fb: {message}", file=sys.stderr)
+
+
+def set_mode(mode: int, name: str) -> int:
+    try:
+        fd = os.open(VT, os.O_RDWR)
+    except OSError as exc:
+        log(f"cannot open {VT} ({exc}); leaving the console as it is")
+        return 0
+    try:
+        fcntl.ioctl(fd, KDSETMODE, mode)
+        log(f"{VT} -> {name}")
+    except OSError as exc:
+        log(f"KDSETMODE {name} failed ({exc}); leaving the console as it is")
+    finally:
+        os.close(fd)
+    return 0
+
+
+def fb_geometry():
+    """Width, height, bits per pixel and stride, from the device itself.
+
+    Read rather than assumed: this panel is 1280x800 at 16bpp today, and a
+    hardcoded format would paint garbage on any other rather than doing
+    nothing, which is the worse failure.
+    """
+    try:
+        with open(f"{SYSFS}/virtual_size") as handle:
+            width, height = (int(v) for v in handle.read().strip().split(","))
+        with open(f"{SYSFS}/bits_per_pixel") as handle:
+            bpp = int(handle.read().strip())
+        with open(f"{SYSFS}/stride") as handle:
+            stride = int(handle.read().strip())
+    except (OSError, ValueError) as exc:
+        log(f"cannot read the framebuffer geometry ({exc}); not painting")
+        return None
+    return width, height, bpp, stride
+
+
+def prepare(png_path: str):
+    """Decode the still into exactly the bytes the framebuffer wants.
+
+    Split from the write so `handover` can pay this cost while plymouth is
+    still on screen, rather than in the window where nothing is.
+    """
+    geometry = fb_geometry()
+    if geometry is None:
+        return None
+    width, height, bpp, stride = geometry
+
+    if bpp not in (16, 32):
+        log(f"framebuffer is {bpp}bpp, which this does not know how to write; not painting")
+        return None
+
+    try:
+        from PIL import Image
+        import numpy as np
+    except ImportError as exc:
+        log(f"PIL/numpy unavailable ({exc}); not painting")
+        return None
+
+    try:
+        image = Image.open(png_path).convert("RGB")
+    except OSError as exc:
+        log(f"cannot read {png_path} ({exc}); not painting")
+        return None
+
+    # Centre on the ground colour rather than stretching. The build asserts
+    # the still is exactly panel-sized, so this only matters on a panel this
+    # image was not built for - where a letterboxed mark beats a distorted one.
+    if image.size != (width, height):
+        log(f"still is {image.size}, panel is {(width, height)}; centring it")
+        canvas = Image.new("RGB", (width, height), GROUND)
+        canvas.paste(image, ((width - image.width) // 2, (height - image.height) // 2))
+        image = canvas
+
+    pixels = np.asarray(image).astype(np.uint16)
+    if bpp == 16:  # RGB565
+        packed = (
+            ((pixels[..., 0] >> 3) << 11)
+            | ((pixels[..., 1] >> 2) << 5)
+            | (pixels[..., 2] >> 3)
+        ).astype("<u2")
+    else:  # 32bpp XRGB8888
+        rgb = np.asarray(image).astype(np.uint32)
+        packed = (
+            (rgb[..., 0] << 16) | (rgb[..., 1] << 8) | rgb[..., 2]
+        ).astype("<u4")
+
+    row_bytes = packed.shape[1] * packed.itemsize
+    if stride < row_bytes:
+        log(f"stride {stride} is shorter than a {row_bytes}-byte row; not painting")
+        return None
+
+    # Honour the stride: rows are padded to it, and writing a tight buffer
+    # into a padded framebuffer shears the image diagonally.
+    if stride == row_bytes:
+        payload = packed.tobytes()
+    else:
+        pad = b"\x00" * (stride - row_bytes)
+        payload = b"".join(packed[row].tobytes() + pad for row in range(height))
+
+    return payload, (width, height, bpp, stride)
+
+
+def write_fb(prepared) -> int:
+    """The only part that has to happen inside the uncovered window."""
+    if prepared is None:
+        return 0
+    payload, (width, height, bpp, stride) = prepared
+    try:
+        with open(FB, "wb", buffering=0) as handle:
+            handle.write(payload)
+    except OSError as exc:
+        log(f"cannot write {FB} ({exc}); the gap will be black")
+        return 0
+    log(f"painted {len(payload)} bytes ({width}x{height}, {bpp}bpp, stride {stride})")
+    return 0
+
+
+def paint(png_path: str) -> int:
+    return write_fb(prepare(png_path))
+
+
+def handover(png_path: str) -> int:
+    """Graphics mode, decode, end plymouth, write - in that order."""
+    set_mode(KD_GRAPHICS, "KD_GRAPHICS")
+    prepared = prepare(png_path)          # paid while plymouth is still drawing
+    try:
+        subprocess.run(
+            ["/bin/plymouth", "quit", "--retain-splash"],
+            timeout=20, check=False,
+            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+        )
+        log("plymouth quit returned")
+    except (OSError, subprocess.SubprocessError) as exc:
+        # No plymouth, or it never came up. Neither stops the panel starting,
+        # and the write below is still worth doing.
+        log(f"plymouth quit did not run ({exc})")
+    return write_fb(prepared)
+
+
+def main(argv: list[str]) -> int:
+    if len(argv) < 2:
+        log("usage: gexis-splash-fb handover <png>|graphics|text|paint <png>")
+        return 0
+    command = argv[1]
+    if command == "graphics":
+        return set_mode(KD_GRAPHICS, "KD_GRAPHICS")
+    if command == "text":
+        return set_mode(KD_TEXT, "KD_TEXT")
+    if command in ("paint", "handover"):
+        if len(argv) < 3:
+            log(f"{command} needs a path")
+            return 0
+        return (paint if command == "paint" else handover)(argv[2])
+    log(f"unknown command {command!r}")
+    return 0
+
+
+if __name__ == "__main__":
+    # Never propagate a failure: this runs as ExecStartPre for the unit that
+    # starts the panel, and nothing here is worth not having a panel for.
+    try:
+        raise SystemExit(main(sys.argv))
+    except Exception as exc:  # noqa: BLE001 - deliberately total
+        log(f"unhandled {type(exc).__name__}: {exc}")
+        raise SystemExit(0)

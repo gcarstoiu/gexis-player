@@ -79,14 +79,29 @@ Phase 2 and ADR-0027.
 | Panel home URL | [H] | `GEXIS_KIOSK_URL` in `/etc/gexis/kiosk.env`, hardcoded to `http://127.0.0.1:8090/`. Proven changeable with no rebuild and no code change (2026-09-14: the panel rendered an arbitrary third-party page correctly at 1280x800). George, 2026-09-14: **keep it hardcoded, we will need it later** — recorded because it is a setting in fact, not because it should be exposed. A panel that can be pointed away from our own UI has no route back except SSH |
 | Unattended-playback timeout, to the Peppy screen | [R] | [ADR-0036](0036-peppy-entry-and-no-rate-or-codec.md): five minutes of playback with no touch, forced track change or renderer change; volume does not count. Was "idle timeout before the Peppy screen" |
 | Idle timeout — to the idle screen | [R] | ADR-0019's "grace period after playback stops", generalised by [ADR-0033](0033-idle-and-home.md): one timeout on every screen, counted while not playing and not touched. Hardcoded to 5 minutes in `ui/src/App.svelte` since Phase 4d (confirmed as a setting by George, 2026-09-15) |
-| Skin corpus: meter-only / meter+spectrum | [R] | ADR-0019 |
+| Skins: VU meters / spectrum / both / all | [R] | ADR-0019, **amended 2026-09-21 on George's ask**: three kinds rather than two, plus one that takes any. The old two were directories, and `templates/` is not the meter corpus — measured, it holds spectrum skins too. The fourth word was `Random` until 2026-09-22, when George renamed it **All**: this row says which pool a skin comes from and the row below says whether it changes with the track, so two rows were reading "random" for one behaviour |
 | Skin rotation per track on/off | [N] | Rotation is unconditional in ADR-0019 |
+| Which skin | [N] | **Appended 2026-09-22 on George's confirmation.** The picker's own row, and the reason the 2026-09-22 drop needed one: with rotation off, something has to say *which* of the 99 the visualiser draws. `skin`, a `choice` with `picker: true` whose options are the corpus the row above selects, and `onlyWhen: ['skin_rotate', false]` - a chooser is meaningless while the skin changes with the track ([ADR-0051](0051-the-visualiser-reads-its-selection-from-a-file.md) §4) |
 | `steps.per.degree` override | [R] | ADR-0015, deferred to a spike; may not survive as a user setting |
 | Theme | [R] | Should tier |
 | Headless — disable the local screen | [R] | Must |
 | Screen brightness | [N] | The panel never sleeps by decision (ADR-0019); brightness is a separate question that record does not answer |
 | Elapsed vs remaining time | [N] | Both are published |
 | Show the transition screen at all | [N] | |
+| Idle screen: built-in or external URL | [R] | [ADR-0047](0047-the-idle-screen-gains-backgrounds-and-weather.md). ADR-0033's external page, demoted from *the* answer to one of two |
+| Idle background: artist pictures / wallpapers online / wallpapers on device / black | [N] | ADR-0047 §1 |
+| Wallpaper API key | [N] | **Pixabay**, chosen by George on 2026-09-21 ([Finding 043](../findings/043-the-idle-screens-two-providers.md)). A key per owner: its guidelines allow this use but not a shipped credential |
+| Wallpaper topics | [N] | **Appended 2026-09-21 on George's confirmation.** Pixabay's own twenty categories, more than one at a time — the `multi` mechanic [ADR-0044](0044-settings-row-vocabulary.md) §7 exists for this row. Not in the design drop |
+| Background interval | [N] | **Appended 2026-09-21 on George's confirmation.** How often the picture changes. Not in the design drop, and without it the rotation is a hardcoded number nobody chose. Named `wallpaper_interval` until he pointed out it was hidden for artist pictures: it belongs to a picture, not to a wallpaper service |
+| Background brightness | [N] | **Appended 2026-09-21, asked for by George.** The design dims a background to 62% and that is this row's default; 20–100% |
+
+Both carry `onlyWhen: ["idle_background", {"not": "Black"}]` — every
+background that is a picture — which is the negated form
+[ADR-0044](0044-settings-row-vocabulary.md) §3 gained for them.
+| Idle clock and date | [N] | **Appended 2026-09-22, asked for by George**: with it off, and the weather off, the panel is a picture frame. Not in the design drop, which draws the clock as the screen's reason for existing |
+| Weather on the idle screen | [N] | ADR-0047 §2. **Open-Meteo**, key-free, so this toggle alone gates the four rows below — the drop's `weather_key` is removed rather than kept as a row that stores nothing |
+| Weather location | [N] | Typed as a place, geocoded once through Open-Meteo's key-free geocoder, stored as coordinates |
+| Forecast days, show min and max, weather icons | [N] | ADR-0047 §2, all three `onlyWhen: ['idle_weather', true]` |
 
 ### Renderers and sources
 
@@ -157,6 +172,18 @@ Marked **[?]** above, gathered here because a settings screen built before
 they are answered will encode the placeholders as if they were choices:
 `restore_volume_floor_db`, the boot-default-mid-session question, the
 maximum volume ceiling, and build self-identification.
+
+### Appended 2026-09-21 — the idle screen's rows
+
+Two rows in the Display table above are **not in the design drop** and are
+here because George confirmed them, which is the rule this inventory now
+runs under (the 2026-09-20 amendment): `wallpaper_topics`,
+`background_interval` and `background_brightness`. One row **in** the drop is
+deliberately not built:
+`weather_key`, which a key-free provider leaves gating nothing.
+
+Both directions are deviations from the point of truth, so both are written
+down here rather than discovered later in the registry.
 
 ## Settled by prior records
 
@@ -305,3 +332,82 @@ a disruptive operation rather than an ordinary setting.
 - Whether go-librespot and bluez-alsa accept a device-name change at runtime or
   require a restart of the renderer. If a restart is needed, renaming while
   playing would interrupt playback.
+
+---
+
+## Amendment, 2026-09-20 — the inventory is a catalogue, and the design says what is shown
+
+**Status: Accepted — George, 2026-09-20**, reviewing the second design drop
+against the device ([Finding 042](../findings/042-the-device-against-the-new-design.md)).
+
+### 1. This record's list is possibilities, not commitments
+
+> *"The current list of possible settings from the ADR is just that, a list of
+> possible settings that can be linked, not a written in stone must for all.
+> You should consider the list coming from the updated design as the point of
+> truth as of now. What is not there is a future possibility, not a must at
+> this point."* — George
+
+So the design's **49 settable rows under 7 separators across 6 categories**
+are what the panel offers, and this inventory stays the wider catalogue it has
+always been. **The 20 rows the design does not carry are not deleted** — asked
+directly whether their absence was a decision or an omission, George:
+*"decisions. They should still be kept on a list, but not used at this point
+in the settings screen."*
+
+[ADR-0044](0044-settings-row-vocabulary.md) §6 adds the `surfaced` flag that
+makes the distinction expressible; the registry has no way to say it today.
+
+**What this changes in practice:** a row's presence here stops implying it
+will be built, and a row's absence from the design stops implying it was
+rejected. Both were being read as stronger than they were — the 2026-09-20
+review initially reported the design as *removing* factory reset, backups and
+update control, which was never true of a catalogue.
+
+### 2. One name, for every renderer
+
+`device_name` feeds mDNS, the LMS player name, Spotify's advertised name,
+Bluetooth's adapter alias **and future renderers**. George, 2026-09-20: *"the
+device name will also be the name used for Spotify, LMS and Bluetooth and
+probably future renderers."*
+
+**There are no per-service name rows.** `lms_player` and `spotify_name` leave
+the screen, and no Bluetooth equivalent is added. This settles a contradiction
+the drop carries with itself: `settings.md` says the three become `readonly`
+"Advertised name" rows, while its own `INV` has no name rows at all. The
+literal is right.
+
+### 3. Renaming requires a restart — the Unverified section above is closed
+
+Both questions it raises are answered, one by ruling and one by measurement.
+
+**By ruling** (George, 2026-09-20): *"Changing device name will require a
+restart. We need to make it clear in the design. Maybe under the form of a
+text warning."* So a rename is explicitly a disruptive operation, and the
+design owes the warning text.
+
+**By measurement**, and it is worse than the section feared — nothing
+propagates at all:
+
+| what | where its name actually lives |
+|---|---|
+| LMS player | `squeezelite.service` — `-n gexis` **inside `ExecStart`** |
+| Spotify | `/var/lib/go-librespot/config.yml` — `device_name: gexis` |
+| Bluetooth | the BlueZ adapter alias, inherited from the hostname |
+| mDNS | the system hostname |
+
+All four read `gexis` because each was set to the same literal at build time.
+The daemon's only reference is `__main__.py`'s `"device_name":
+socket.gethostname` under `defaults` — **a reader**. And the row is refused:
+`PUT /settings/device_name` returns `HTTP 409 {"error": "device_name is not
+wired yet"}`.
+
+So the concern that renaming might interrupt playback does not arise in the
+form it was written — renaming is restart-gated, so no renderer is restarted
+mid-session. It arises instead as **four writes that must all land before the
+restart**, which is Phase 9 subphase 9e.
+
+The sanitiser the design specifies (fold accents, lowercase, illegal
+characters to hyphens, trim, cap at 63) applies to the hostname only; the
+header shows the name **as typed**, then the sanitised hostname, then the
+device's address.

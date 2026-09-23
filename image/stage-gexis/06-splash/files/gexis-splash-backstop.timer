@@ -1,0 +1,24 @@
+[Unit]
+# ADR-0043's safety net, as a timer rather than a sleeping service.
+#
+# It was a Type=oneshot unit with ExecStartPre=/bin/sleep 90, and that is
+# wrong in a way that only showed on a real boot (2026-09-19): a oneshot
+# unit wanted by multi-user.target keeps the boot transaction open until it
+# finishes, so systemd considered the boot unfinished for 90s after the
+# panel was already up, and `systemd-analyze` refused to report at all.
+#
+# That matters beyond tidiness: Phase 9 tunes the panel against measured
+# boot and frame numbers, and an instrument that cannot answer for the first
+# 90 seconds of every boot is worse than no instrument.
+Description=Drop the boot splash if the panel never reports a first frame
+ConditionPathExists=/bin/plymouth
+
+[Timer]
+# Well past the ~22s this image takes to start the kiosk, so it never fires
+# on a healthy boot. If it does, something is wrong and the console is the
+# right thing to be looking at.
+OnBootSec=90
+AccuracySec=5s
+
+[Install]
+WantedBy=timers.target

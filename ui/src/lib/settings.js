@@ -6,12 +6,19 @@ import { playback } from './state.js';
 
 export const settingsGroups = writable([]);
 export const settingsError = writable(null);
+/** The header's three facts (ADR-0048 §5): the stored name, the system's own
+ *  hostname, and the address. After a rename the first two disagree until
+ *  the restart, and that disagreement is the point - the panel must not
+ *  guess the hostname from the name. */
+export const settingsDevice = writable({ name: null, hostname: null, address: null });
 
 export async function loadSettings() {
   try {
     const response = await fetch('/settings');
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    settingsGroups.set((await response.json()).groups);
+    const body = await response.json();
+    settingsGroups.set(body.groups);
+    if (body.device) settingsDevice.set(body.device);
     settingsError.set(null);
   } catch (err) {
     settingsError.set(err.message);
@@ -32,6 +39,39 @@ export const settingValues = derived(settingsGroups, ($groups) => {
   for (const g of $groups) for (const r of g.rows) if (r.key) values[r.key] = r.value;
   return values;
 });
+
+/** A `list` row's items, fetched when its sheet opens (ADR-0044 §1). A Wi-Fi
+ *  scan takes seconds and LMS discovery listens for 2.5 s, so this is slow on
+ *  purpose and the sheet shows that it is searching. */
+export async function listItems(key) {
+  const response = await fetch(`/settings/${key}/items`);
+  const body = await response.json().catch(() => ({}));
+  if (!response.ok) return { items: [], error: body.error ?? `HTTP ${response.status}` };
+  return { items: body.items ?? [], error: body.error ?? null };
+}
+
+/** A per-item command: joining a network, forgetting one. A refusal comes
+ *  back as `{ok: false, error}` with a 200, because "that password was not
+ *  accepted" is an answer, not a broken request. */
+export async function listAction(key, body) {
+  const response = await fetch(`/settings/${key}/items`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  const answer = await response.json().catch(() => ({}));
+  if (!response.ok) return { ok: false, error: answer.error ?? `HTTP ${response.status}` };
+  if (answer.ok) await loadSettings();
+  return { ok: !!answer.ok, error: answer.error ?? null };
+}
+
+/** An `action` row. Nothing called this before `reboot` was wired: `power`
+ *  has never been, so the panel's only answer was the 409 flash. */
+export async function runSetting(key) {
+  const response = await fetch(`/settings/${key}`, { method: 'POST' });
+  const body = await response.json().catch(() => ({}));
+  return { ok: response.ok, status: response.status, error: body.error };
+}
 
 export async function writeSetting(key, value) {
   const response = await fetch(`/settings/${key}`, {

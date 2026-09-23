@@ -1,0 +1,85 @@
+/* Brand — the gexis mark.
+
+   ADDED, not extracted. The two locked panel designs contain no logo, and
+   readme.md said so ("There is no gexis logo… Do not draw one"). That held
+   because nothing had been designed. A mark now exists, approved outside the
+   panel designs, and the panel rule is unchanged: Now Playing and Settings
+   still set the device name in plain type. This file describes the mark for
+   the surfaces that need one — boot, favicon, avatar, print, the website.
+
+   ON COLOUR. The four tiles reuse four existing accents — no new hues. But
+   the mark does add six values the system did not have, and they are listed
+   honestly below rather than hidden behind a "no new colours" claim:
+
+     · one unlit tile fill and its glyph ink
+     · four glyph inks, one per lit tile
+
+   The four glyph inks are the reason. --ink-on-accent is a single cold
+   near-black, correct for a chip of accent inside a panel surface. At
+   120 px, filling a rotated square, a cold black on coral reads as a hole
+   punched in the tile. Each letter therefore gets an ink mixed from its own
+   accent: same hue, taken far enough down to clear 4.5:1. They are inks, not
+   fills — they appear nowhere except inside a lit tile. */
+
+:root {
+  /* ── the four letters ──────────────────────────────────────────────────
+     g e i s, clockwise from the top of the diamond. Each letter carries the
+     property whose name starts with it:
+
+       g  gazette      writing, topical
+       e  engine room  homelab, infrastructure
+       i  inbox        mail
+       s  sound        the player — this device
+
+     x is not a tile. It is the diagonal gap between them. */
+  --logo-g: var(--accent-lms);        /* #7ed6bc teal       */
+  --logo-e: var(--accent-warn);       /* #e0a758 amber      */
+  --logo-i: var(--accent-bluetooth);  /* #9fb4e8 periwinkle */
+  --logo-s: var(--accent-artist);     /* #f2a48f coral      */
+
+  /* Glyph ink inside a lit tile — one per accent, same hue as its tile.
+     Measured contrast against the tile it sits on:
+       g 8.81 : 1   e 7.33 : 1   i 7.71 : 1   s 8.00 : 1 */
+  --logo-ink-g: #0d2b24;
+  --logo-ink-e: #341f02;
+  --logo-ink-i: #16213d;
+  --logo-ink-s: #3d1509;
+
+  /* ── the unlit tile ────────────────────────────────────────────────────
+     The cycle's resting state, and the three tiles that drop back in a
+     single-property lockup. This is the most-seen colour in the whole
+     animation — all four tiles sit in it for the entire travel — so it is
+     pinned here as a literal and must not drift.
+
+     It is --weave-a taken 60 % of the way toward --bg-base: --weave-a alone
+     is too light against the ground and the unlit mark reads as present
+     rather than waiting. */
+  --logo-unlit:     #2c404f;  /* color-mix(in srgb, var(--weave-a) 60%, var(--bg-base)) */
+
+  /* The unlit glyph. Quiet by design — the letter is waiting, not saying
+     anything yet — but it is still a letterform at 64 px, so it is held at
+     3.21 : 1 against its tile: above the 3 : 1 large-text floor, below
+     anything that would make the resting mark look switched on. */
+  --logo-unlit-ink: #7690a0;
+
+  /* ── geometry ──────────────────────────────────────────────────────────
+     One tile edge drives everything. Four squares on a 2×2 grid rotated
+     45deg; the gap becomes the x. Ratios are fixed:
+       gap = edge × 0.235   radius = edge × 0.265   glyph = edge × 0.53 */
+  --logo-tile:   34px;
+  --logo-gap:     8px;
+  --logo-radius:  9px;
+
+  /* Letters are dropped below this. Four colours still read at favicon size;
+     four letterforms do not. */
+  --logo-letters-min: 28px;
+
+  /* ── face ──────────────────────────────────────────────────────────────
+     A third family, vendored in assets/fonts/ — see fonts-brand.css. The
+     mark was approved in Bricolage Grotesque: at tile size its shorter
+     extenders and wider apertures hold where Nunito Sans 700 goes soft, and
+     the single-storey g fills a rotated square more evenly. */
+  --logo-face:   'Bricolage Grotesque', var(--font-ui);
+  --logo-weight: 800;  /* @kind font — tiles    */
+  --word-weight: 600;  /* @kind font — wordmark */
+}

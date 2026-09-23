@@ -25,9 +25,11 @@
 </head>
 <body>
 <h1>Export verification</h1>
-<p>Checks <code>now-playing.html</code> against the geometry baseline measured from
-the design, plus the four audits that caught real bugs during design: landmark
-position, touch-target size, small-text contrast, and token discipline.
+<p>Checks <code>now-playing.html</code> against the design in six groups: geometry
+against the measured baseline, touch-target size, small-text contrast, token and
+asset discipline, state coverage, and a live computed-style diff against
+<code>source/Now&nbsp;Playing.dc.html</code> itself. A failure means the export
+drifted from the design — fix the export, not the design.
 Serve this directory over HTTP — <code>file://</code> blocks the iframe read.</p>
 
 <div id="sum">running…</div>
@@ -254,11 +256,11 @@ document.getElementById('f').addEventListener('load', async () => {
     const dTrk  = dRail && [...dRail.children]
       .find(el => getComputedStyle(el).borderRadius === '999px'
         && getComputedStyle(el).backgroundColor !== 'rgba(0, 0, 0, 0)');
+    // the source mark carries no ground of its own: find it by its word
     const dPill = all('span').find(el => {
       const cs = getComputedStyle(el);
-      return cs.borderRadius === '999px' && parseFloat(cs.fontSize) === 13
-        && cs.backgroundColor !== 'rgba(0, 0, 0, 0)'
-        && el.offsetWidth > 80 && el.offsetHeight < 50;
+      return /^(LMS|Spotify|Bluetooth)$/.test(el.textContent.trim())
+        && parseFloat(cs.fontSize) === 17 && cs.textTransform === 'uppercase';
     });
 
     const screen = doc.querySelector('.screen[data-source="lms"][data-position="ok"]');
@@ -274,7 +276,7 @@ document.getElementById('f').addEventListener('load', async () => {
     // type: the properties that carry the design's voice
     const type = ['fontSize', 'fontWeight', 'letterSpacing', 'lineHeight', 'color', 'textTransform'];
     const dTab = all('span').find(el => el.textContent.trim() === 'Track'
-      && parseFloat(getComputedStyle(el).fontSize) === 13);
+      && parseFloat(getComputedStyle(el).fontSize) === 19);
     x += cmp('tab type', dTab, screen.querySelector('.tab'), type);
 
     const dTimes = all('div').find(el => {

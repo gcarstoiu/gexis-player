@@ -10,11 +10,18 @@
 
   let { availability = {} } = $props();
 
-  // Order, colours, labels and ring delays are the design's.
+  // Order, colours, labels, sizes and ring delays are the design's.
+  //
+  // The marks are 38/38/41, not the 24/24/26 shipped until 2026-09-20: the
+  // design calls them `waitIcon…Lg` and sizes them
+  // `sourceIcon('lms', '#7ed6bc', 38, 1)`, `('spotify', '#e9eef2', 38, 0.72)`
+  // and `('bluetooth', '#e9eef2', 41, 0.72)`. Bluetooth is the odd one
+  // because its glyph is taller than it is wide, so matching it by height
+  // would leave it visibly smaller than the other two.
   const SERVICES = [
-    { id: 'lms', name: 'Lyrion', status: 'Starts on play', size: 24, lead: true, delays: [0, 1400] },
-    { id: 'spotify', name: 'Spotify', status: 'Listening', size: 24, lead: false, delays: [900, 2300] },
-    { id: 'bluetooth', name: 'Bluetooth', status: 'Pairable', size: 26, lead: false, delays: [1800, 400] },
+    { id: 'lms', name: 'Lyrion', status: 'Starts on play', size: 38, lead: true, delays: [0, 1400] },
+    { id: 'spotify', name: 'Spotify', status: 'Listening', size: 38, lead: false, delays: [900, 2300] },
+    { id: 'bluetooth', name: 'Bluetooth', status: 'Pairable', size: 41, lead: false, delays: [1800, 400] },
   ];
   const shown = $derived(SERVICES.filter((s) => availability[s.id]));
 </script>
@@ -71,10 +78,13 @@
     align-items: center;
     gap: 13px;
   }
+  /* 100px rings around a 90px disc, per the design's notice footer. The
+     whole cluster shipped undersized - 72px rings around a 58px disc - which
+     is what made the marks inside look small (George, 2026-09-20). */
   .rings {
     position: relative;
-    width: 72px;
-    height: 72px;
+    width: 100px;
+    height: 100px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -82,8 +92,8 @@
   }
   .ring {
     position: absolute;
-    width: 72px;
-    height: 72px;
+    width: 100px;
+    height: 100px;
     border-radius: 50%;
     border: 2px solid rgba(233, 238, 242, 0.6);
     animation: ring 2800ms ease-out infinite;
@@ -97,8 +107,8 @@
     100% { transform: scale(1.75); opacity: 0; }
   }
   .disc {
-    width: 58px;
-    height: 58px;
+    width: 90px;
+    height: 90px;
     border-radius: 50%;
     background: var(--ink-fill);
     border: 1px solid rgba(233, 238, 242, 0.16);

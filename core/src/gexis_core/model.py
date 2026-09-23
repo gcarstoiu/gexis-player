@@ -36,6 +36,13 @@ class TrackMetadata:
     title: str | None = None
     artist: str | None = None
     album: str | None = None
+    #: The album's release year, as the library reports it. LMS carries one
+    #: per track (songinfo tag `y`) and it is the library's own answer, so it
+    #: is preferred over enrichment's `released` - which describes the
+    #: *release* a lookup matched and can differ: a 1996 track on a 2025
+    #: compilation reports 2025 there and 1996 here. Spotify and Bluetooth
+    #: publish nothing, so the panel falls back to enrichment for those.
+    year: str | None = None
     artwork: str | None = None
     sample_rate: int | None = None  # Hz
     position: float | None = None  # seconds
@@ -84,6 +91,7 @@ class TrackMetadata:
             "title": self.title,
             "artist": self.artist,
             "album": self.album,
+            "year": self.year,
             "artwork": self.artwork,
             "sample_rate": self.sample_rate,
             "codec": self.codec,
@@ -200,6 +208,13 @@ class PlaybackState:
     settings_revision: int = 0
     #: The active renderer's queue, or None where it has no such thing.
     queue: Queue | None = None
+    #: A Bluetooth pairing request waiting for an answer, or None
+    #: (ADR-0045). Published here rather than on a channel of its own
+    #: because the panel already subscribes to this and a request has to
+    #: reach it within the agent's thirty seconds - and because the frame
+    #: is dismissed by this going away, not by the panel's own countdown
+    #: reaching zero.
+    pairing: dict | None = None
 
     @property
     def controls(self) -> dict | None:
@@ -237,4 +252,5 @@ class PlaybackState:
             "settings_revision": self.settings_revision,
             "controls": self.controls,
             "queue": self.queue.to_json() if self.queue else None,
+            "pairing": self.pairing,
         }

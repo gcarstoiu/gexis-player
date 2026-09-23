@@ -1,70 +1,440 @@
 # Handoff
 
-Last updated: 2026-09-18 (nineteenth session, on R2D2 — **Phase 7 merged
-(PR #19); Phase 7a closed; Phase 8 done, image built, PR open**)
+Last updated: 2026-09-22 (twenty-second session, on R2D2 — **Phase 9's
+design sweep: 9a through 9h are done, the 2026-09-22 drop is applied, and
+the image is built and verified. The volume work is split in two: 9i the
+level, 9j where it goes**)
 
 ## Start here
 
-**Phase 8 — enrichment and lyrics — is done** (2026-09-18, branch
-`phase-8-plan`). Now playing's Artist, Release and Lyrics tabs are filled,
-synced lyrics follow the playhead on the Track tab, the artist page has its
-About, Popular and Similar, Bluetooth and Spotify get cover art they were
-never sent, and a radio stream gets artwork from the song rather than the
-station. [ADR-0040](docs/decisions/0040-enrichment-providers.md) records the
-providers and was twice amended by what the work measured.
+**Phase 9's design sweep is done bar the volume work.** **9a through 9h are
+built, checked on the panel and committed.** What is left is now **two**
+subphases, split on George's agreement (2026-09-22):
 
-**The idea to carry forward: "could not ask" is not "there is nothing
-there."** MusicBrainz's search answered 503 for 4 of 9 tries, LRCLIB has a
-busy-503 of its own, and LMS's plugin holds a socket for 75 s before
-dropping it - which is also what an *absent* plugin does, in milliseconds.
-Every one of those looks like an empty answer. Caching one would deny a
-track its enrichment permanently; reading one as "no plugin here" turned
-every artist photo off for ten minutes. The distinction is made in five
-places now and is the phase's single most load-bearing idea.
+- **9i — the volume path, measured, then the rows.** Eight rows in Audio and
+  not one of them wired, ADR-0046's fixed output never built — and **three
+  symptoms George found on the built panel**: the level does not move
+  smoothly, it hops after a cold boot, and the maximum feels different
+  between renderers. **[Finding 045](docs/findings/045-the-volume-path-measured.md)
+  is the first half**, done 2026-09-22, everything that needed nobody at the
+  speakers:
+  - **The jumps are the drag's sampling.** A 200 ms drag delivers 6 of 12
+    finger positions to the DAC, in **4 dB steps**; a 2 s drag delivers all
+    60, in 0.45 dB steps. The panel sends one request at a time and keeps
+    only the latest, so the hardware hears a staircase.
+  - **A write costs 16.4 ms and two thirds of that is ours** — the `amixer`
+    subprocess. libasound directly is 5.7 ms, of which 5.7 is the DAC's own
+    I²C; the dummies take 0.021 ms. So the daemon could **ramp**: 4 dB is
+    eight steps and 46 ms.
+  - **The boot hop is 53 dB, at thirteen seconds.** The boot service sets
+    −90 dB, squeezelite starts, LMS pushes its remembered 25%, and the
+    daemon mirrors it: −37 dB. At LMS 100% that would be **+90 dB**.
+    **`boot_volume` does not survive the first renderer**, which changes the
+    question George owes an answer to.
+  - **The meter is a pre-attenuation tap**, so "does one renderer deliver a
+    quieter stream" can be answered **with the room silent**.
+  - **Spotify's volume is applied twice** (§7, measured the same day with
+    George's phone connected): go-librespot attenuates the stream *and* the
+    daemon attenuates the DAC. At its 25 the stream is down 21 dB and the
+    DAC is at −34, about −55 dB where a quarter was asked for; the same
+    quarter on LMS is −37 and nothing else. **The maxima are not what
+    differ** — both deliver full scale at 100% — everything below it does.
+    `external_volume: true` in go-librespot's config is the fix, our config
+    sets no volume keys at all, and **it makes Spotify louder at the same
+    setting**, so it belongs at the gate.
+  - **Connecting Spotify put the DAC at 0.00 dB by itself**, restoring
+    240/240 — the loudest the device has, from the same restore-on-acquire
+    that causes the boot hop.
+  - **Bluetooth is the one renderer left to measure**, and it needs a phone
+    connected and nothing else.
+- **9j — which output.** The device has four cards and the user has never
+  been offered the choice. All three renderers already play to one PCM, so
+  the switch is two lines of `/etc/alsa/conf.d/output.conf` and the meter
+  follows the audio — but **HDMI has no mixer control at all**, so choosing
+  it *is* fixed output. Wants an ADR before implementation.
 
-**Two keys, both per-user settings George chose:** `listenbrainz_token` (its
-popularity endpoint began demanding one mid-phase, having answered 200 the
-same morning) and `fanart_key` for artist pictures. Nothing else needs one,
-and with neither set the panel simply shows less.
+**The 2026-09-22 design drop is applied, all four parts of it.** George:
+*"Please be thorough and check the designs I import — do not guess or
+inferr."* The drop is vendored whole at `design/` and is the point of truth
+for what it draws; **the panel stays the point of truth where the two
+differ**, which the vendoring commit lists.
 
-**Fanart adds quality, not coverage** (measured on 14 random artists: 9 had
-a picture from both sources, 5 from LMS only, **0 from fanart only**). It
-goes first where it has one; LMS stays behind it. Its pictures go through
-LMS's image proxy - 705 KB became 32.8 KB at 300 px.
+- **Now Playing's meta column grew** — tabs 19, title 54 at 1.06 clamped to
+  two lines, artist 35, album 30, year 25 mono. **The Track tab's synced
+  strip is three lines, not five**: 32px, the neighbours at 0.42, and a
+  30%/70% mask on the window so they are ghosted rather than merely dimmer.
+- **The idle screen has two forecast layouts**, `3 days` and `None`, and
+  carries feels-like, wind, sunrise and sunset.
+- **The visualisation picker is built** — a list of 380px with a preview
+  pane beside it. Tapping a row previews; the 60px button writes.
+- **`device_name` carries a warning**, and `warn` now has a second form: a
+  string is about the row and is up the whole time the sheet is open. The
+  drop's sentence says saving restarts the services and stops playback;
+  [ADR-0048](docs/decisions/0048-how-the-device-name-reaches-four-services.md)
+  applies the name at the next restart and stops nothing, so the row reads
+  George's own line instead (ADR-0044 §2 records the deviation).
 
-**Parked by George: a background sweep for missing album art.** 155 of 4,567
-albums have none. The same sweep for artist pictures was rejected on the
-measurement above: 30-45 minutes of MusicBrainz's one-a-second allowance to
-improve pictures that already exist.
+**George's five findings on the drop are in** (2026-09-22, after the first
+pass): the renderer's mark stands alone at 32px with no word beside it; a
+phone's taps no longer end the visualisation; the picker follows the corpus
+and the fourth word is **All**, not Random; the `device_name` warning is his
+sentence; and `idle_minmax` is gone, so the registry is 71 rows.
 
-**Phase 9 step 1 is done, and its question had a wrong premise.** "Why is a
-playing panel never idle?" came from Finding 034's idle control, which was
-measuring a queue rail left open by the run before it - the rail's blurred
-scrim costs 71 % of the frames on its own. An idle panel is idle.
+**The one that was not a design change:** *"Changing skin during playback
+while being in visualization mode, stops showing the visualisation."* The
+cause was the touch report. ADR-0036 counts a touch as attention and
+attention takes the meter down — and the panel tells the daemon about
+touches, because the daemon cannot see them. That report was wired to the
+window rather than to the surface, so **a tap on a phone ended the
+visualisation on a device in another room**. `/surface` already knew the
+difference (ADR-0035 §6); the report is the panel's alone now.
 
-**What the chase found instead is worth more:
-[ADR-0041](docs/decisions/0041-scrims-dim-but-do-not-blur.md) - scrims dim
-but do not blur.** `backdrop-filter` costs 24.5 ms a frame in draw-and-submit
-against a 16.7 ms budget, with the CPU idle: the compositor draws the
-backdrop into its own texture and reads it back every frame, which is a
-tile-based GPU's worst case
-([Finding 037](docs/findings/037-why-a-blurred-scrim-costs-the-panel.md)).
-Not the radius, not the area, and Vulkan is worse. **It is off the queue
-rail and the volume drawer**, which George checked and kept; Settings and
-the rail's source sheet are left for the sweep. **The rule for the design:
-depth is affordable, live readback is not** - a static blurred image costs
-almost nothing and the artwork backdrop stays exactly as it is.
+**Two things George has to rule on:**
 
-**It does not reach the target on its own:** the rail goes from ~15 fps to
-~36 against a 55 fps floor, and its own list is the rest - the same work the
-artist grid needs.
+- **`skin` is a new settings row and needs his word for ADR-0022's
+  inventory** ([N]). It is the picker's own row: a `choice` with
+  `picker: true`, `optionsFrom: skin_corpus`, shown only while
+  `skin_rotate` is off.
+- **Two type sizes are pinned rather than grown.** `--t-title`, `--t-artist`
+  and `--t-lead` moved for the Track header, and two other places used them:
+  the Artist tab's name and the Release tab's title. The drop does not touch
+  either panel, so both keep the size they had (25px and 22px) as literals.
+  Say the word and they follow.
 
-**Next: Phase 9, in the order George agreed on 2026-09-18** - the idle
-question first, then the UI sweep, then the performance work, then the
-settings and the triage. The reason for that order is in
-`docs/DEVELOPMENT.md`: the sweep is a judgement call, and a judgement made
-on a panel that drops 71 % of its frames before anyone touches it cannot be
-told from the floor it is standing on.
+**9h is finished, and the last of it closed a hole that had been open since
+9d.** `skin_corpus` and `skin_rotate` were in the registry with nothing
+behind them — unwired, so a write was refused.
+[ADR-0051](docs/decisions/0051-the-visualiser-reads-its-selection-from-a-file.md)
+gives the renderer a file to read: `/run/gexis/visualisation.json`, written
+by the daemon and polled in the driver's frame hook beside
+`nowplaying.json`. No restart, no new channel.
+
+**The corpus is every pack — 99 skins, 77 meters, 9 spectrum, 13 both.** The
+engine reads one `meters.txt` (`gelo5/templates`, 71 skins and not one
+spectrum), so two of the four corpus words would have offered nothing; the
+driver loads all four template directories and swaps `base.path` around the
+factory, as it already swaps `meter`. **It said 84 for a few hours** — the
+stock pack was excluded on the grounds that the spectrum engine was pointed
+at Gelo5's sections, which described one hardcoded line rather than the
+device. George: *"there were 99 skins in total — why are you telling me now
+that there are only 84?"* The engine follows the skin's pack now.
+
+**And the visualiser was black when he tapped the button** — three faults in
+a row, all introduced the same day, all fixed and this time **verified as
+pixels**: the spectrum config ships root-owned while the unit runs as `pi`,
+so the write that chooses a section killed `main()` after the display
+existed and left a window with no loop behind it, owning every touch; a
+spectrum-only skin with no engine draws nothing at all; and the engine's own
+`meter = random` overwrote the chosen skin on the first frame.
+`docs/LESSONS.md` case 15 is the reason it got that far: **a log line is the
+process's account of itself, and on a screen only pixels are evidence.**
+`grim` on the device takes the capture, and Claude can read the PNG.
+
+**Two more he found after that, and only one of them was new.**
+
+- **The needles shook, and had been shaking since Phase 5.** The engine's
+  pipe drain reports *zero level* when a poll finds no new frame, and 47 of
+  117 reads in five seconds found none while music played — each zero going
+  into a four-deep smoothing buffer. The drain now holds the last frame,
+  which is what our own `FifoSource` has always done with the same pipes.
+  Measured before and after, frame by frame; the pre-9h driver paces the
+  same, so nothing this week caused it.
+- **The picker's preview was cropped on a laptop.** A 16:10 box at the full
+  width of the pane, with the picture `cover`ed into it: on a wide, short
+  window `max-height` beat `aspect-ratio` and the skin lost its edges. The
+  picture keeps its own shape now, at four viewports checked.
+
+**What 9h landed before that:**
+
+- **Three kinds of skin, not two** — 77 meters, 9 spectrum, 13 both, counted
+  on the device. The old two options were *directories*, and `templates/` is
+  not the meter corpus. The row is **Skins**: VU meters / Spectrum / VU
+  meters + spectrum / Random.
+- **[ADR-0050](docs/decisions/0050-skin-previews-are-the-skins-own-picture.md):
+  a preview is the skin's own `screen.bgr`** — no render, no cache, no
+  change detection, and **9h needs no image build**.
+- **The home strip, all three shapes**, after George corrected a finding
+  that said two of them were impossible (`docs/LESSONS.md` case 14). They
+  are `browselibrary` **sorts**, not fields or tags, and need no plugin.
+- **`viz_stop` wired**, and `viz_timeout` moved from seconds to the minutes
+  the design draws. Both read per tick.
+- **`idle_clock`**, so the panel can be a picture frame (2026-09-22).
+
+**The device is carrying deployed files, not a built image.** The daemon,
+the panel and **`driver.py`** were rsynced to it for this work. The driver
+is the new one: `image/stage-gexis/05-peppy/files/gexis-peppy-driver.py` is
+what a build would install, and until that build the device and the image
+differ.
+
+**9g — the idle screen — is done.** Both providers chosen the way Finding
+030 chose the enrichment ones ([Finding 043](docs/findings/043-the-idle-screens-two-providers.md)):
+**Pixabay** on the pictures, **Open-Meteo** on George's answer to the
+question that decided it — *a Gexis is not sold*, so a non-commercial free
+tier is one this appliance may use.
+[ADR-0047](docs/decisions/0047-the-idle-screen-gains-backgrounds-and-weather.md)
+is **Accepted** and has one open question left, which is George's: whether
+artist pictures should avoid the artist currently playing.
+
+**What the panel shows now:** a drifting clock and date over one of four
+backgrounds, a forecast bar across the bottom in three icon sets, and the
+credits both providers require on one line along the bottom. Artist
+pictures come from **fanart** with LMS behind them (six for six on George's
+library); wallpapers come from Pixabay, random across the chosen categories;
+on-device pictures come from an SMB share; and a picture that `cover` would
+cost more than a quarter of is shown whole over a blurred copy of itself.
+
+**One of the two things a build still owes: [ADR-0049](docs/decisions/0049-the-pictures-folder-is-a-share.md)'s
+image stage has never been through one** (the other is the new `driver.py`,
+above). samba is installed and the
+share verified on the device — a picture written to it over SMB was drawn
+on the panel — and the stage that bakes it is written with `testparm`
+assertions that pass against that device. **The next rebuild is what proves
+the stage**, and it is the first thing on this image that is neither ours
+nor a renderer.
+
+**Nine things the panel found that no test would have**, which is the
+argument for the gate:
+
+- **The design draws this screen and the first build did not look for it** —
+  it is in `source/Now Playing.dc.html`, not a file of its own, and
+  `screens.md` says so in its first paragraph.
+  **[LESSONS](docs/LESSONS.md) case 13**, one day after case 12 and the same
+  shape: a summary read in place of the source. The screen was rebuilt to the
+  drawing.
+- **A flat 4px contour reads grey at 21px** — 62% of the ink against the
+  clock's 35%, measured over a controlled field. It tapers with the type now.
+- **`object-fit: cover` keeps 35% of a portrait's height**, which is where
+  the blurred-halo fit came from. The halo costs nothing: 16.8 ms a frame
+  with it and without.
+- A fixed scrim cannot keep a moving clock legible, and a radial gradient
+  still opaque at its box's edge draws a rectangle over the picture.
+- **Artist pictures were asked for at 300 px and drawn at 1280** — Finding
+  035's defect upside down.
+- **The geocoder does not take what the row asks for**: `Berlin, DE` — the
+  design's own example — returns nothing from Open-Meteo, where `Berlin`
+  returns five. The daemon splits the string now and ranks the answers.
+- **An unreachable geocoder was reported as a place that does not exist**,
+  which sends the user to fix a row that was already right.
+- **Rotation was hidden for every background but Pixabay**, though the
+  behaviour was common — the worst kind of gap: the feature works and
+  nothing offers it.
+- **Pictures in folders were invisible**, and the path guard that assumed one
+  segment had to become one that resolves and checks containment.
+
+**Known and deliberate:** an empty on-device folder shows the clock on black
+with no explanation *on the idle screen* — the region blanks, never the
+screen — and the settings row is where it says why.
+
+**Two measured traps recorded there:** the Art Institute's IIIF image server
+403s without an `AIC-User-Agent` header (with a browser User-Agent too — the
+JSON API answers fine without it, so it fails only when an image is
+fetched), and NASA's APOD carries a `copyright` field naming a photographer
+on most days, so it is not the public-domain source it is assumed to be.
+
+- **9a** — the decisions: ADR-0044, 0045, 0046 Accepted, ADR-0022 amended
+  for the catalogue/surfaced split, ADR-0047 opened for the idle screen.
+- **9b** — Now Playing: one header instead of two, the album year from LMS
+  first, the source mark de-pilled, and the synced lyrics fixed after the
+  panel check.
+- **9c** — the Library sweep: Add to queue, the artist route out of a New
+  Music album, radio as a tinted grid, genre pills, the About error branch.
+- **9d** — the settings vocabulary and the Settings screen, **appended on
+  George's instruction** to cover Wi-Fi and LMS discovery: see below.
+
+**The diff it is all built on is
+[Finding 042](docs/findings/042-the-device-against-the-new-design.md)**, and
+its §9 records the five panel-check findings and what each turned out to be.
+Ground truth is the device: `npm run build` on `ui/` reproduced
+`/opt/gexis-ui`'s bundle byte-identically, settings came from live
+`/settings`, state from a real `/state` frame, and the design's inventory
+from evaluating its own `INV` literal rather than its prose — which matters,
+because the two disagree.
+
+**9d is the one to read about before touching Settings.** ADR-0044 now
+carries **seven** mechanics, not six: `grouped` was counted as a fixture of
+the drop's demo and is a mechanic. `visible` is computed in the registry and
+published per row — the panel filters and does nothing else. A `list` with
+`kind: "server"` stores a value and every other list does not. 54 rows became
+56; 36 are surfaced.
+
+**Where a list's items come from is answered for two of three.**
+`core/src/gexis_core/wifi.py` (NetworkManager through `nmcli`, daemon is
+root so there is no polkit agent) and `discovery.py` (UDP broadcast on 3483,
+protocol verified against the real server — `IPAD` comes back absent, so the
+address is the datagram's source). Generic routes `GET`/`POST
+/settings/{key}/items`. **Bluetooth's trusted devices are still 9f's** and
+that row opens on its own empty state.
+
+**Two traps in `nmcli` that fail quietly**, both now tested: `-t` output
+escapes colons inside values, so `split(":")` cuts a network called `2:1` in
+half; and a saved connection is not named after its network — this image's is
+`preconfigured` — so SSIDs are matched through `802-11-wireless.ssid`.
+
+**What 9d taught about the plan itself.** George found four things on the
+panel that no subphase owned. Two were scheduled nowhere at all (Wi-Fi, LMS
+discovery); `handoff_duration` and `reboot` were design keys owed to nobody;
+and `grouped` was a mechanic nobody had counted. **The list of design keys
+the registry lacks is now written out in the test by its owing subphase** —
+nine to 9g, four to 9h — so the next omission fails a test rather than
+waiting to be found on hardware.
+
+- **9e** — one `device_name`, written to all four and applied at the next
+  restart ([ADR-0048](docs/decisions/0048-how-the-device-name-reaches-four-services.md)).
+  Gate run end to end: renamed to `SofaPi`, rebooted, all four advertised
+  it; renamed back, rebooted, all four followed.
+
+**9e's gate found two defects no amount of reading would have**, and that is
+the argument for having it:
+
+- **BlueZ never read `main.conf`'s `Name =`.** Its `hostname` plugin
+  overrides it — the vendor file says so two lines above the setting — and
+  this image had been setting it since Phase 2. The build asserted its own
+  `sed` had matched, which passed every time and meant nothing, because the
+  hostname was the same string. `/etc/machine-info`'s `PRETTY_HOSTNAME` is
+  the real mechanism. **[LESSONS](docs/LESSONS.md) case 9.**
+- **A rename locked the panel out of its own browser.** Chromium's profile
+  lock is `<hostname>-<pid>` and it refuses to start when that hostname is
+  not the machine's — a two-button dialog on an appliance with no keyboard.
+  `gexis-kiosk-start` clears the three Singleton entries before launching.
+
+**And one in the deploy, worth knowing before the next one.** `rsync -a` put
+the repository's `644` over the `755` the image installs, so Chromium never
+started while `systemctl is-active gexis-kiosk` still said `active` — the
+unit is labwc, and labwc was fine. **After any kiosk restart, check
+`journalctl -u gexis-core | grep 'GET /assets/index-'`**, which cannot be
+true unless Chromium started, loaded and reached the daemon, and names the
+build on screen. The eight scripts installed `755` are executable in git
+now. **[LESSONS](docs/LESSONS.md) case 10.**
+
+**9f — Bluetooth pairing ([ADR-0045](docs/decisions/0045-bluetooth-pairing-confirmation.md))
+— is built and on the device.** Our own `Agent1` replaced `bt-agent
+--capability=NoInputNoOutput`, the request reaches the panel, accept and
+reject work, and the countdown is the agent's rather than the panel's.
+`bt_discoverable` is implemented for real, all three options, with
+`DiscoverableTimeout=0` for Always — the "3 minutes" defect. `bt_trusted`
+has its item list and `Forget`, which 9d left to it: it was the one `list`
+with no source. Devices come from BlueZ's object tree, **paired only** (the
+tree also carries everything the adapter has merely seen while
+discoverable), and Forget is `Adapter1.RemoveDevice`, not `Trusted = false`
+— clearing the flag leaves the bond and the phone reconnects.
+
+**Checked on the panel, 2026-09-21** (George: *"Works fine"*): his Pixel is
+paired and trusted, Settings › Sources › Trusted devices lists it with a
+Forget, and the sheet opens instantly. **The reject and expiry paths have
+not been driven since the freeze was fixed** — accept has, by the pair that
+is on the device. Forgetting the phone from both ends is what sets up
+driving them.
+
+**Two panel defects found after that code was written, both fixed.** The
+pairing frame froze — countdown still, Reject doing nothing — while every
+server-side check passed, because an `$effect` read what it wrote and Svelte
+stopped updating the whole tree ([LESSONS](docs/LESSONS.md) case 11); and a
+failed answer left both buttons disabled, a `try/catch` with no `finally`.
+
+**And the `bt_trusted` row read "None" with a phone paired** (George, on the
+panel, 2026-09-21): the row's value is a count, the panel counted `row.items`
+as the design does, and the design carries its items inline where ours were
+fetched when the sheet opens — so the row could only ever read the empty
+answer. **The row and the sheet are two surfaces, and the sheet working says
+nothing about the row.**
+
+**[ADR-0044](docs/decisions/0044-settings-row-vocabulary.md) §1 is amended
+for what that turned out to be about: when a `list`'s items arrive.** George,
+seeing the sheet still flash as it opened: *"Isn't the list static? It should
+be instant."* It was not static — the sheet refetched on every open and began
+in its searching state whatever the answer cost. Measured on the panel frame
+by frame: **spinner from 27 ms to 36 ms, devices at 56 ms**, over a BlueZ read
+of 22–29 ms. So:
+
+- **`discover: true`** — LMS discovery (2.5 s) and a Wi-Fi scan (seconds) go
+  looking when the sheet opens and say so while they look. `wifi` carries the
+  flag now; it always searched and only the server row said so.
+- **no `discover`** — `bt_trusted`'s items are one `GetManagedObjects`, so
+  they arrive **with the row** in `/settings` and the sheet opens drawn, the
+  refresh running behind it. The same read gives the row its count.
+
+Re-measured after the change: **the searching block never enters the DOM at
+all** (a MutationObserver over the whole body for 600 ms), and the Wi-Fi sheet
+still shows its own, with its own words. The three kinds are `server`,
+`network` and `device` now — the two-way branch had `device` falling through
+to Wi-Fi's side of it, so the Bluetooth sheet said it was *"looking for
+networks"* and *"sweeping every channel"*.
+
+**Design Claude is owed the `device_name` restart warning text.** The note
+shipped in 9e says the true thing plainly as a placeholder.
+
+**Two settings rows still report behaviour the code does not have**, each
+found by measuring rather than reading: `travel_curve` names a curve 34 dB
+quieter at mid-travel than ADR-0034's slider, and `max_ceiling` is `None`,
+so no ceiling is enforced. The third was `bt_discoverable`, which reported
+"3 min after boot" that nothing chose (BlueZ's 180 s default reverting an
+untimed `discoverable on`) — **9f implemented it**, and Always now sets
+`DiscoverableTimeout=0`.
+
+**`device_name` is refused** — `HTTP 409 "not wired yet"`. The four service
+names agree only because each was set to the same literal at build time.
+Nothing propagates. That is 9e.
+
+**Finding 042 §8 says what it did not cover, and George closed the gap-hunt
+on cost.** Now Playing and Settings were compared element by element; Library,
+WaitingServices, Handoff and Idle were sampled, and sampling missed real
+items — George named six in one breath. Two are confirmed in the finding;
+three are unchecked and are expected to surface during 9c, where he judges
+them on the panel. **The unused instrument:** the drop ships `verify.html`
+(38 checks) and `geometry.json` (landmarks at 1280×800, 3 px tolerance) —
+Now Playing only, cheap to run, not yet run.
+
+**The boot-screen work from earlier in this session is done and paused.** The
+still is on the device, the handover is 10 ms, two of three flashes are
+accounted for and one is unexplained; a red-`swaybg` diagnostic is prepared
+and not run. [Finding 041](docs/findings/041-the-ten-seconds-with-no-animation.md) §§8–10.
+
+**Three build-side hazards found by the survey, none fixed:**
+`49b79c6` changed `systemctl enable gexis-splash-backstop.service` → `.timer`
+without a `disable` or an `rm`, and `01-run.sh` still installs the service
+unit, so a warm build can keep the old symlink and quit the splash at
+`multi-user.target`; `01-firstboot/files/firstrun.sh:67`'s
+`sed -i 's| systemd.run.*||g'` is greedy and would strip **every** quieting
+option and `splash` itself — inert today only because it targets a placeholder
+path, so the obvious-looking fix is the one change that silently kills the
+animation; and `02-run-chroot.sh` asserts nothing about the systemd wiring it
+creates.
+
+**ADR-0041 — scrims dim but do not blur** is the substantial result of step 1.
+`backdrop-filter` costs 24.5 ms a frame in draw-and-submit against a 16.7 ms
+budget with the CPU idle; the compositor reads the live screen back every
+frame, which is a tile-based GPU's worst case
+([Finding 037](docs/findings/037-why-a-blurred-scrim-costs-the-panel.md)). Not
+the radius, not the area, and Vulkan is worse. **It does not reach the target
+on its own:** the rail goes from ~15 fps to ~36 against a 55 fps floor.
+
+**The build now caches its downloads** ([ADR-0042](docs/decisions/0042-a-local-cache-for-vendored-downloads.md)):
+six artefacts, ~308 MB, content-addressed in `~/.cache/gexis-player/downloads`,
+proven on the second build — zero bytes fetched. **It is explicitly not a
+backup**: it protects this machine, not a fresh clone. A mirror we control is
+deferred and is the only thing that answers George's actual question.
+
+**Two pieces of Phase 9 groundwork are done and unused**, both off-device and
+both waiting for the sweep:
+
+- **The unwired-UI audit** (criterion 2). All 66 interactive elements traced.
+  One real dead control, fixed then; **the latent trap it named was real and
+  is now closed** — `confirmSheet()` had no path for a wired `action` row and
+  `lib/settings.js` never sent `POST`, so the first action ever wired would
+  have had a silently dead button. `reboot` was that first action, in 9d,
+  and `runSetting` is the missing call. The audit predicted this exactly.
+- **The settings wiring map** (criterion 1). Of 48 unwired rows: 14 are a read
+  away, 19 need a branch, 4 need the feature built, 11 need a route or a
+  sub-screen. `viz_timeout` is read by the daemon but missing from `wired`, so
+  the phone cannot change a setting something actually consults.
+
+
+
+
+
+
+
+
 
 **Phase 7a — panel responsiveness — is closed** (2026-09-18). Artwork at the
 size drawn, an instrument that survives its own scrutiny, and a baseline:

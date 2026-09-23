@@ -21,6 +21,8 @@
   --ink-body:       rgba(233, 238, 242, 0.82);
   --ink-muted:      rgba(233, 238, 242, 0.72);
   --ink-quiet:      rgba(233, 238, 242, 0.60);  /* 4.5:1 floor on --bg-base */
+  --ink-tab-off:    rgba(233, 238, 242, 0.50);  /* unselected 17px meta tab */
+  --ink-lyric-off:  rgba(233, 238, 242, 0.34);  /* a line not being sung     */
   --ink-line:       rgba(233, 238, 242, 0.10);  /* hairline rules           */
   --ink-fill:       rgba(233, 238, 242, 0.07);  /* resting control ground   */
   --ink-fill-press: rgba(233, 238, 242, 0.18);
@@ -45,12 +47,12 @@
      and mono labels below that are chrome only. */
   --t-hero:     132px;  /* idle clock                                      */
   --t-display:   76px;  /* handoff screen                                  */
-  --t-title:     58px;  /* now playing track title                         */
+  --t-title:     54px;  /* now playing track title                         */
   --t-h1:        34px;
   --t-h2:        30px;
-  --t-artist:    29px;
+  --t-artist:    35px;  /* now playing artist line                         */
   --t-h3:        26px;
-  --t-lead:      22px;
+  --t-lead:      25px;  /* now playing year                                */
   --t-body:      19px;
   --t-body-sm:   17px;
   --t-meta:      15px;
@@ -59,6 +61,7 @@
   --t-micro:     11px;
 
   --track-label: 0.20em;  /* mono uppercase labels                         */
+  --track-wide:  0.16em;  /* the source mark's word                        */
   --track-tight: -0.015em; /* display sizes                                */
 
   /* ---- radii ----------------------------------------------------------- */
@@ -78,7 +81,7 @@
   --art:        500px;  /* now playing artwork                             */
   --pad-screen: 44px 56px 40px;
   --header-h:    96px;
-  --ministrip-h: 96px;
+  --ministrip-h: 104px;  /* unreferenced today: MiniStrip.svelte hardcodes it */
 
   /* ---- motion ---------------------------------------------------------- */
   /* Raspberry Pi 4 target: transform and opacity only, never layout or

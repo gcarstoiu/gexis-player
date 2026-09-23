@@ -1,6 +1,6 @@
 [Plymouth Theme]
 Name=gexis
-Description=The gexis boot animation: four tiles, no text (ADR-0043)
+Description=The gexis boot screen: a still, four tiles, no text (ADR-0043)
 ModuleName=script
 
 [script]

@@ -25,8 +25,21 @@ install -D -m 644 files/gexis-core.service \
 	"${ROOTFS_DIR}/etc/systemd/system/gexis-core.service"
 install -D -m 644 files/gexis-boot-volume.service \
 	"${ROOTFS_DIR}/etc/systemd/system/gexis-boot-volume.service"
-install -D -m 644 files/gexis-bluetooth-trust.service \
-	"${ROOTFS_DIR}/etc/systemd/system/gexis-bluetooth-trust.service"
+# `gexis-bluetooth-trust.service` is gone (ADR-0045). It polled every two
+# seconds and trusted *every* paired-but-untrusted device, which would grant
+# exactly what a human had just been asked about and might have refused -
+# the confirmation would have decided nothing. The agent trusts what it was
+# told to, and `bt_autotrust` became a real switch rather than a description
+# of something that happened regardless.
+#
+# **Deleted here, not merely un-installed.** Builds are warm - the stage
+# rootfs is preserved between them (`CONTINUE=1`), so a file an earlier
+# build wrote stays until something removes it. Not removing it shipped an
+# enabled unit whose module no longer exists: it would have failed at every
+# boot and retried every two seconds for ever. Found by
+# `image/verify-image.sh` against the built artefact, 2026-09-22.
+rm -f "${ROOTFS_DIR}/etc/systemd/system/gexis-bluetooth-trust.service" \
+	"${ROOTFS_DIR}/etc/systemd/system/multi-user.target.wants/gexis-bluetooth-trust.service"
 install -D -m 644 files/gexis-meter.service \
 	"${ROOTFS_DIR}/etc/systemd/system/gexis-meter.service"
 
@@ -43,3 +56,37 @@ install -D -m 644 files/gexis-meter.service \
 # alsactl from persisting a level on shutdown at all.
 mkdir -p "${ROOTFS_DIR}/etc/systemd/system"
 ln -sf /dev/null "${ROOTFS_DIR}/etc/systemd/system/alsa-restore.service"
+
+# ADR-0049: the idle screen's own pictures arrive over SMB, because nothing
+# else on this appliance can put a file on it. **One directory**: not the
+# home directory, not /var/lib/gexis-core - which holds the settings
+# database, the enrichment cache and the downloaded wallpaper cache - and
+# not a parent of either.
+#
+# The directory has to exist before the share does, owned by the user the
+# share forces writes to. An absent path makes samba answer "connection
+# refused" for a reason nobody can see from a phone.
+install -d -o 1000 -g 1000 -m 2775 "${ROOTFS_DIR}/var/lib/gexis-core/pictures"
+install -D -m 644 files/gexis-pictures.conf \
+	"${ROOTFS_DIR}/etc/samba/smb.conf.d/gexis-pictures.conf"
+# Debian ships one monolithic smb.conf. Appending an include leaves their
+# file to be theirs, so a package upgrade that rewrites it takes our share
+# with it rather than fighting a conffile prompt - and the chroot step
+# below asserts samba still reads the share afterwards.
+if ! grep -q "smb.conf.d/gexis-pictures.conf" "${ROOTFS_DIR}/etc/samba/smb.conf"; then
+	printf '\n# ADR-0049: the idle screen pictures share.\ninclude = /etc/samba/smb.conf.d/gexis-pictures.conf\n' \
+		>> "${ROOTFS_DIR}/etc/samba/smb.conf"
+fi
+
+# ADR-0049 §4: avahi already runs here - it is how gexis.local resolves - so
+# this is what puts the share in Finder's sidebar without nmbd.
+install -D -m 644 files/gexis-smb.service \
+	"${ROOTFS_DIR}/etc/avahi/services/gexis-smb.service"
+
+# **Two of samba's three services are not wanted.** `nmbd` is NetBIOS name
+# service, a second discovery protocol broadcasting on a LAN that already
+# has one; `samba-ad-dc` is a domain controller, which the package enables
+# by default and which this is not. Masked rather than disabled, so an
+# upgrade cannot quietly re-enable them.
+ln -sf /dev/null "${ROOTFS_DIR}/etc/systemd/system/nmbd.service"
+ln -sf /dev/null "${ROOTFS_DIR}/etc/systemd/system/samba-ad-dc.service"

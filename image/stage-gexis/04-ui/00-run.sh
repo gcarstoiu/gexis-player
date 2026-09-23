@@ -19,6 +19,17 @@ cp -r "${UI_DIST}/." "${ROOTFS_DIR}/opt/gexis-ui/"
 install -D -m 644 files/kiosk.env "${ROOTFS_DIR}/etc/gexis/kiosk.env"
 install -D -m 755 files/gexis-kiosk-start \
 	"${ROOTFS_DIR}/usr/local/bin/gexis-kiosk-start"
+# The page-cache warm-up (ADR-0043's Open, measured 2026-09-19): Chromium
+# takes ~15s cold and ~2.7s warm, and the boot spends ~17s blocked on the
+# network with the disk idle. This spends that window on reads that have to
+# happen anyway.
+install -D -m 755 files/gexis-panel-warmup \
+	"${ROOTFS_DIR}/usr/local/bin/gexis-panel-warmup"
+install -D -m 644 files/gexis-panel-warmup.service \
+	"${ROOTFS_DIR}/etc/systemd/system/gexis-panel-warmup.service"
+ln -sf /etc/systemd/system/gexis-panel-warmup.service \
+	"${ROOTFS_DIR}/etc/systemd/system/multi-user.target.wants/gexis-panel-warmup.service"
+
 install -D -m 644 files/gexis-kiosk.service \
 	"${ROOTFS_DIR}/etc/systemd/system/gexis-kiosk.service"
 install -D -m 644 files/labwc-rc.xml \

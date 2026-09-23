@@ -113,6 +113,7 @@ instead of Spotify's own software state.
 from __future__ import annotations
 
 import asyncio
+import concurrent.futures
 import logging
 import re
 import time
@@ -224,6 +225,17 @@ def db_to_raw(db: float) -> int:
 # (Findings 009, 010). The number shown is the slider position.
 SLIDER_DB_MIN = -45.0
 
+#: ADR-0052 §4. A new target is walked to rather than jumped to, because a
+#: drag only ever delivers a *sample* of itself to us - measured, 6 of 12
+#: finger positions on a fast one, in 4 dB steps (Finding 045 §2). The
+#: hardware fills in the rest at its own pace: one raw step is 0.5 dB and
+#: costs ~5.7 ms, so the cap is what bounds a big move rather than the step
+#: count. A 4 dB gap becomes eight steps and ~46 ms - a slide.
+RAMP_MAX_S = 0.12
+#: Below this a move is a single write: one or two steps ramped would cost
+#: more in bookkeeping than the smoothness is worth.
+RAMP_MIN_STEPS = 3
+
 
 def slider_percent_to_raw(percent: float) -> int:
     if percent <= 0:
@@ -328,8 +340,121 @@ async def get_raw(mixer_name: str, device: str = MIXER_DEVICE) -> int | None:
     return int(m.group(1)) if m else None
 
 
+class _Mixer:
+    """The DAC's volume control through libasound, opened once.
+
+    **Measured, which is why this exists** (ADR-0052 §4, Finding 045 §1):
+    one write costs **16.4 ms** as an `amixer` subprocess and **5.7 ms**
+    through this, of which 5.7 is the DAC's own I²C - so two thirds of the
+    cost was the process spawn, and removing it is what makes a ramp
+    affordable at all.
+
+    `amixer` stays as the fallback. A device whose mixer cannot be opened
+    this way still has its volume, a little slower.
+    """
+
+    def __init__(self, device: str, control: str) -> None:
+        self._device, self._control = device, control
+        self._lib = None
+        self._elem = None
+        self._broken = False
+
+    def _open(self) -> bool:
+        if self._elem is not None:
+            return True
+        if self._broken:
+            return False
+        try:
+            import ctypes
+
+            lib = ctypes.CDLL("libasound.so.2")
+            # **Every signature is declared.** ctypes assumes `int` for a
+            # return value it has not been told about, which truncates a
+            # 64-bit pointer to 32 bits - `snd_mixer_find_selem` then hands
+            # back a plausible-looking address that is not the element, and
+            # the first write through it takes the process down with SIGSEGV.
+            # Found the hard way on the device, 2026-09-22: five restarts in
+            # fifteen seconds.
+            lib.snd_mixer_open.argtypes = [ctypes.POINTER(ctypes.c_void_p), ctypes.c_int]
+            lib.snd_mixer_attach.argtypes = [ctypes.c_void_p, ctypes.c_char_p]
+            lib.snd_mixer_selem_register.argtypes = [
+                ctypes.c_void_p, ctypes.c_void_p, ctypes.c_void_p
+            ]
+            lib.snd_mixer_load.argtypes = [ctypes.c_void_p]
+            lib.snd_mixer_selem_id_malloc.argtypes = [ctypes.POINTER(ctypes.c_void_p)]
+            lib.snd_mixer_selem_id_set_index.argtypes = [ctypes.c_void_p, ctypes.c_uint]
+            lib.snd_mixer_selem_id_set_name.argtypes = [ctypes.c_void_p, ctypes.c_char_p]
+            lib.snd_mixer_find_selem.restype = ctypes.c_void_p
+            lib.snd_mixer_find_selem.argtypes = [ctypes.c_void_p, ctypes.c_void_p]
+            lib.snd_mixer_selem_set_playback_volume_all.argtypes = [
+                ctypes.c_void_p, ctypes.c_long
+            ]
+            handle = ctypes.c_void_p()
+            if lib.snd_mixer_open(ctypes.byref(handle), 0) != 0:
+                raise OSError("snd_mixer_open")
+            for call in (
+                lambda: lib.snd_mixer_attach(handle, self._device.encode()),
+                lambda: lib.snd_mixer_selem_register(handle, None, None),
+                lambda: lib.snd_mixer_load(handle),
+            ):
+                if call() != 0:
+                    raise OSError("mixer setup")
+            sid = ctypes.c_void_p()
+            lib.snd_mixer_selem_id_malloc(ctypes.byref(sid))
+            lib.snd_mixer_selem_id_set_index(sid, 0)
+            lib.snd_mixer_selem_id_set_name(sid, self._control.encode())
+            found = lib.snd_mixer_find_selem(handle, sid)
+            if not found:
+                raise OSError(f"no control {self._control!r} on {self._device!r}")
+            self._lib, self._handle, self._ctypes = lib, handle, ctypes
+            self._elem = ctypes.c_void_p(found)
+            logger.info("volume: %s/%s opened directly", self._device, self._control)
+            return True
+        except Exception as exc:  # noqa: BLE001 - any failure means "use amixer"
+            logger.warning("volume: %s/%s not openable (%s); using amixer",
+                           self._device, self._control, exc)
+            self._broken = True
+            return False
+
+    def set(self, value: int) -> bool:
+        if not self._open():
+            return False
+        try:
+            self._lib.snd_mixer_selem_set_playback_volume_all(
+                self._elem, self._ctypes.c_long(value)
+            )
+            return True
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("volume: direct write failed (%s); using amixer", exc)
+            self._broken = True
+            self._elem = None
+            return False
+
+
+#: One per control, built on first use. The hardware DAC is the only one
+#: written here; the dummy controls are read, never written (§9 of the
+#: finding: nothing of ours writes them).
+_MIXERS: dict[tuple[str, str], _Mixer] = {}
+
+#: One worker, so every libasound call on a mixer handle comes from the
+#: thread that opened it.
+_MIXER_THREAD = concurrent.futures.ThreadPoolExecutor(
+    max_workers=1, thread_name_prefix="gexis-mixer"
+)
+
+
 async def set_raw(mixer_name: str, value: int) -> None:
     value = max(0, min(HARDWARE_MAX, value))
+    key = (MIXER_DEVICE, mixer_name)
+    mixer = _MIXERS.get(key)
+    if mixer is None:
+        mixer = _MIXERS[key] = _Mixer(*key)
+    # **Off the event loop, and always the same thread.** 5.7 ms of the
+    # write is the DAC's own I²C and a ramp makes that call twenty times
+    # over, so it cannot sit on the loop - and an `snd_mixer` handle is not
+    # thread-safe, so it cannot go to a pool either.
+    if await asyncio.get_running_loop().run_in_executor(_MIXER_THREAD, mixer.set, value):
+        return
     proc = await asyncio.create_subprocess_exec(
         "amixer",
         "-D",
@@ -367,6 +492,7 @@ class VolumeBridge:
         volume_memory,
         get_active_renderer,
         on_hardware_level=None,
+        ceiling_db=None,
     ) -> None:
         """`adapter` is any `VolumeMechanism.SOFTWARE_API` renderer
         (`adapters/base.py`'s `SoftwareVolumeAdapter` protocol) - only
@@ -395,7 +521,43 @@ class VolumeBridge:
         # docstring on why this is value-matched rather than a time window.
         self._expected_hw_raw: tuple[int, float] | None = None
         self._expected_adapter_value: tuple[int, float] | None = None
+        #: ADR-0052 §3: `max_ceiling`, read through a callable so a change
+        #: applies to the next write rather than the next restart. Returns
+        #: dB or None.
+        self._ceiling_db = ceiling_db or (lambda: None)
+        #: The ramp in flight, cancelled when a newer target arrives.
+        self._ramp: asyncio.Task | None = None
+        self._last_written: int | None = None
+        #: **Every value we write, not only the target** (ADR-0052 §4). A
+        #: ramp writes a dozen intermediate values and `alsactl monitor`
+        #: reports each one; matching only the target made every step look
+        #: like somebody turning the knob - which republished the level a
+        #: dozen times (the volume drawer then never auto-hid, George,
+        #: 2026-09-22) and echoed each step out to Spotify.
+        self._written: dict[int, float] = {}
         adapter.on_volume_change(self._on_adapter_volume)
+
+    def _capped(self, raw: int) -> int:
+        """Every level reaches the DAC through here, so the ceiling is
+        enforced in one place (ADR-0052 §3) - panel, mirror and restore
+        alike."""
+        ceiling = self._ceiling_db()
+        if ceiling is None:
+            return raw
+        return min(raw, db_to_raw(float(ceiling)))
+
+    def _note_written(self, raw: int) -> None:
+        now = time.monotonic()
+        self._written = {
+            value: at for value, at in self._written.items() if now - at < ECHO_WINDOW_S
+        }
+        self._written[raw] = now
+
+    def _was_ours(self, raw: int) -> bool:
+        """True if we wrote this value ourselves within the echo window -
+        the ramp's own steps coming back through the monitor."""
+        at = self._written.get(raw)
+        return at is not None and time.monotonic() - at < ECHO_WINDOW_S
 
     @staticmethod
     def _consume(expected: tuple[int, float] | None, value: int) -> bool:
@@ -429,9 +591,57 @@ class VolumeBridge:
         not `set_raw` directly - restore-on-acquire and the unmanaged-
         renderer floor bump both do now.
         """
+        raw = self._capped(raw)
         self._expected_hw_raw = (raw, time.monotonic())
-        await set_raw(self._mixer_name, raw)
+        # **The panel is told the target, not the journey** (ADR-0052 §4):
+        # a readout that crawled through the ramp would be worse than the
+        # staircase it replaces.
         self._report_hardware_level(raw)
+        if self._ramp is not None and not self._ramp.done():
+            self._ramp.cancel()
+        self._ramp = asyncio.ensure_future(self._ramp_to(raw))
+        # Never raises: a ramp the next target supersedes ends quietly, and
+        # its caller is not the one who cancelled it.
+        await self._ramp
+
+    async def _ramp_to(self, target: int) -> None:
+        """Walk the DAC to `target` in single raw steps (0.5 dB each).
+
+        A drag reaches us as a handful of positions a second, so the
+        hardware fills in the rest - it will take ~175 changes a second and
+        the ear hears a slide rather than a staircase (Finding 045 §1, §2).
+        Cancelled the moment a newer target arrives, which is what makes a
+        fast drag land on the last value rather than on a queue of old ones.
+        """
+        start = self._last_written
+        try:
+            if start is not None and abs(target - start) >= RAMP_MIN_STEPS:
+                # One write per step unless that would outrun the cap, in
+                # which case the steps get bigger rather than the move
+                # slower.
+                budget = max(1, int(RAMP_MAX_S / 0.006))
+                stride = max(1, -(-abs(target - start) // budget))
+                step = stride if target > start else -stride
+                value = start
+                while (step > 0 and value + step < target) or (step < 0 and value + step > target):
+                    value += step
+                    self._note_written(value)
+                    await set_raw(self._mixer_name, value)
+                    self._last_written = value
+            # **The target is always written, and written last.** A ramp
+            # that stopped short of it is the defect this replaced
+            # ("blocker 4": a fast drag to maximum landing below full
+            # scale), so it is unconditional and outside the cancellable
+            # walk above.
+            self._note_written(target)
+            await set_raw(self._mixer_name, target)
+            self._last_written = target
+        except asyncio.CancelledError:
+            # Superseded: whatever step we reached is where the hardware
+            # is, and the newer target ramps from there. Swallowed rather
+            # than re-raised so it never surfaces in the caller that asked
+            # for the *earlier* level.
+            return
 
     def _report_hardware_level(self, raw: int) -> None:
         if self._on_hardware_level is not None:
@@ -493,7 +703,7 @@ class VolumeBridge:
                 # single write can produce - they all read back the same
                 # value, so only the first reaches anything below.
                 continue
-            if self._consume(self._expected_hw_raw, raw):
+            if self._consume(self._expected_hw_raw, raw) or self._was_ours(raw):
                 # Our own write coming back at us, not somebody turning
                 # the knob. Record it as the new baseline so the next
                 # genuine change still registers as a change.
@@ -536,6 +746,9 @@ class VolumeBridge:
 #: clears that report; it is also how long an LMS app's volume change
 #: takes to reach the DAC, which is the price of telling the two apart.
 SETTLE_S = 0.8
+
+#: ADR-0052 §5. Below a finger's rate, far below a fault's.
+MIRROR_MIN_INTERVAL_S = 0.04
 
 
 class DummyMixerBridge:
@@ -611,6 +824,10 @@ class DummyMixerBridge:
     ) -> None:
         self._renderer_id = renderer_id
         self._dummy_card = dummy_card
+        #: ADR-0052 §5's rate limit.
+        self._last_mirror_at = 0.0
+        self._pending: tuple[int, int, str] | None = None
+        self._mirror_soon: asyncio.Task | None = None
         self._dummy_control = dummy_control
         self._hardware_control = hardware_control
         self._volume_memory = volume_memory
@@ -636,8 +853,40 @@ class DummyMixerBridge:
                 raw,
             )
             return
+        # **One write per 40 ms, latest value wins** (ADR-0052 §5). A finger
+        # on a phone's slider produces nothing like that rate; a bluealsa
+        # meltdown produced 750 dummy changes a second (Finding 045 §10) and
+        # this turned every one of them into a 16 ms hardware write.
+        now = time.monotonic()
+        since = now - self._last_mirror_at
+        if since < MIRROR_MIN_INTERVAL_S:
+            self._pending = (raw, hardware_raw, why)
+            if self._mirror_soon is None or self._mirror_soon.done():
+                self._mirror_soon = asyncio.ensure_future(
+                    self._mirror_after(MIRROR_MIN_INTERVAL_S - since)
+                )
+            return
+        self._last_mirror_at = now
         logger.info(
             "volume: %s -> hardware (dummy %s -> %s/240)%s",
+            self._renderer_id,
+            raw,
+            hardware_raw,
+            why,
+        )
+        await set_raw(self._hardware_control, hardware_raw)
+
+    async def _mirror_after(self, delay: float) -> None:
+        """The value that arrived during the quiet period, once it is over.
+        Only the newest is kept: the ones in between are already stale."""
+        await asyncio.sleep(delay)
+        pending, self._pending = self._pending, None
+        if pending is None:
+            return
+        raw, hardware_raw, why = pending
+        self._last_mirror_at = time.monotonic()
+        logger.info(
+            "volume: %s -> hardware (dummy %s -> %s/240)%s [coalesced]",
             self._renderer_id,
             raw,
             hardware_raw,

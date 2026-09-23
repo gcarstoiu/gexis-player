@@ -74,6 +74,45 @@ is fed from the passthrough pipe this record already required — its own
 `data.source type = pipe`, pointed at ours rather than peppyalsa's. Upstream's
 only other input is HTTP polling; there is no WebSocket input.
 
+## Amended 2026-09-22 — the pipes live in `/run/gexis`, because a sandbox can hide `/tmp`
+
+**The visualiser was blind for the whole of Bluetooth and nothing said so.**
+Measured, then traced to the kernel call (Finding 045 §8, and the strace in
+its §11): peppyalsa, loaded inside `bluealsa-aplay`, opened
+`/tmp/peppymeter` and got **`ENXIO` — no reader — on every period, for
+ever**, while our service sat reading a file of the same name.
+
+They were different files. **`bluealsa-aplay.service` ships with
+`PrivateTmp=yes`** (so does `bluealsa.service`); systemd gives such a
+service its own `/tmp`, so "the same path" is not the same file. Our other
+renderers — `squeezelite`, `go-librespot` — have `PrivateTmp=no` and were
+never affected, which is exactly why this survived Phase 5's proving: the
+meter was proved against LMS.
+
+**So the four pipes move out of `/tmp`:**
+
+| was | is |
+|---|---|
+| `/tmp/peppymeter` | `/run/gexis/meter.fifo` |
+| `/tmp/peppyspectrum` | `/run/gexis/spectrum.fifo` |
+| `/tmp/gexis-peppymeter` | `/run/gexis/meter-peppy.fifo` |
+| `/tmp/gexis-peppyspectrum` | `/run/gexis/spectrum-peppy.fifo` |
+
+`/run/gexis` is where this device's runtime files already live
+(`nowplaying.json`, and ADR-0051's `visualisation.json`), and no sandbox
+hides it.
+
+**The daemon creates all four**, mode 0666, at startup: it is the one
+process that is root and owns the directory. peppyalsa would create its own
+if it could, and a renderer that cannot write the directory goes blind
+silently — which is the failure this amendment exists to end.
+
+**Turning `PrivateTmp` off for that unit would also have worked** and was
+rejected: it weakens a sandbox on the one service that parses input from
+strangers' phones, and it would have to be re-applied whenever the vendor's
+unit changes. Moving our own files is the smaller and more durable
+statement.
+
 ## Consequences
 
 - The renderer choice for the Peppy screen stays reversible at the cost of two

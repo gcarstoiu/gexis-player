@@ -72,15 +72,31 @@ class Config:
     # and answers the API only, which is what every deployment before
     # Phase 4b did and what a core-only development install still does.
     ui_dir: str = "/opt/gexis-ui"
+    # ADR-0047 §2a: Pixabay forbids permanent hotlinking, so the wallpapers
+    # on screen are files on this device. Beside the settings database -
+    # they are what the idle screen shows when the network is not there, so
+    # /tmp would empty them at exactly the wrong moment.
+    wallpaper_dir: str = "/var/lib/gexis-core/wallpapers"
+    # "Wallpapers on device". **How pictures get here is ADR-0047's open
+    # question** - today SSH or a card - and whatever answers it writes into
+    # this directory rather than changing any of the code that reads it.
+    pictures_dir: str = "/var/lib/gexis-core/pictures"
 
     # Phase 5 criterion 1: the visualisation service (ADR-0011). The two
     # peppyalsa pipes are read by that service alone - a FIFO splits its
     # bytes between readers - and it republishes on the passthrough pair,
     # which is what our vendored PeppyMeter is pointed at.
-    meter_fifo: str = "/tmp/peppymeter"
-    spectrum_fifo: str = "/tmp/peppyspectrum"
-    meter_passthrough: str = "/tmp/gexis-peppymeter"
-    spectrum_passthrough: str = "/tmp/gexis-peppyspectrum"
+    # **In /run, not /tmp** (ADR-0011, amended 2026-09-22). `bluealsa-aplay`
+    # ships with `PrivateTmp=yes`, so peppyalsa loaded inside it opened
+    # `/tmp/peppymeter` in a *private* /tmp - a different file with no
+    # reader - and got ENXIO on every period, for ever. The visualiser was
+    # blind for the whole of Bluetooth and nothing said so. /run/gexis is
+    # where this device's runtime files already live and no sandbox hides
+    # it.
+    meter_fifo: str = "/run/gexis/meter.fifo"
+    spectrum_fifo: str = "/run/gexis/spectrum.fifo"
+    meter_passthrough: str = "/run/gexis/meter-peppy.fifo"
+    spectrum_passthrough: str = "/run/gexis/spectrum-peppy.fifo"
     spectrum_bands: int = 30  # peppyalsa's spectrum_size, output.conf
     meter_frame_rate: int = 30  # the skins' own ui.refresh.period, ADR-0015
     meter_port: int = 8091
@@ -90,6 +106,10 @@ class Config:
 
     # Phase 5: where the panel's compositor socket lives, for raising and
     # hiding the Peppy screen. The daemon runs as root with no session.
+    # ADR-0050: the picker's previews are the skins' own pictures, read from
+    # where the image installs them. Several packs live under this, each with
+    # its own templates directories.
+    peppy_skins_dir: str = "/opt/gexis-peppy/skins"
     peppy_runtime_dir: str = "/run/user/1000"
     peppy_wayland_display: str = "wayland-0"
 

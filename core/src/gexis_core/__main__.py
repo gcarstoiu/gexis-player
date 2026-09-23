@@ -7,12 +7,13 @@ from __future__ import annotations
 
 import asyncio
 import logging
-import socket
 from pathlib import Path
 
 import aiohttp
+from dbus_next import BusType
+from dbus_next.aio import MessageBus
 
-from gexis_core import alsa
+from gexis_core import alsa, bluetooth_adapter_state, bluetooth_agent, device_name, meters, skins, wifi
 from gexis_core.adapters.base import VolumeMechanism
 from gexis_core.adapters.bluetooth import BluetoothAdapter
 from gexis_core.adapters.lms import LmsAdapter
@@ -20,12 +21,17 @@ from gexis_core.library import LmsLibrary
 from gexis_core.radio import RadioBrowser
 from gexis_core.adapters.spotify import SpotifyAdapter
 from gexis_core.arbitration import Supervisor
+from dataclasses import replace
+
 from gexis_core.config import Config
 from gexis_core.idle_page import probe as probe_idle_page
+from gexis_core.wallpapers import Wallpapers
+from gexis_core.weather import Weather
 from gexis_core.metadata_file import MetadataFileWriter
 from gexis_core.artistinfo import LmsArtistInfo
 from gexis_core.enrichment import PREFETCH_AFTER_S, Cache, EnrichmentService, TrackKey
 from gexis_core.providers import (
+    FANART_BACKGROUND,
     ArtistIdentity,
     CoverArtProvider,
     FanartArtistImage,
@@ -85,7 +91,12 @@ def unmanaged_floor_raw(current: int | None, floor_db: float) -> int | None:
     return db_to_raw(floor_db)
 
 
-def make_restore_volume(config: Config, volume_memory: RendererVolumeMemory, volume_bridge: VolumeBridge):
+def make_restore_volume(
+    config: Config,
+    volume_memory: RendererVolumeMemory,
+    volume_bridge: VolumeBridge,
+    ceiling_db=None,
+):
     async def restore_volume(renderer_id: str) -> None:
         # George's decision, 2026-09-07: each renderer keeps its own
         # volume, restored when it becomes active - not reset to the
@@ -103,6 +114,10 @@ def make_restore_volume(config: Config, volume_memory: RendererVolumeMemory, vol
             renderer_id,
             boot_default=config.boot_volume_steps,
             floor_db=config.restore_volume_floor_db,
+            # ADR-0052 §1: a renderer may not put the device above this on
+            # its own. Read per restore through the callable, so a change
+            # applies to the next one rather than the next restart.
+            ceiling_db=ceiling_db() if ceiling_db else None,
         )
         if raw is not None:
             logger.info("volume: restoring %s to %s/240", renderer_id, raw)
@@ -133,6 +148,81 @@ def make_restore_volume(config: Config, volume_memory: RendererVolumeMemory, vol
     return restore_volume
 
 
+def _chosen_server(config: Config, store: SettingsStore) -> Config:
+    """`config`, with `lms_server` applied if one was chosen and is usable.
+
+    A stored value that cannot be read as host:port is ignored with a log
+    line rather than taking the daemon down on the next boot - the settings
+    DB is user-writable and a bad value there must not brick the player.
+    """
+    chosen = store.get("lms_server")
+    if not chosen:
+        return config
+    host, _, port = str(chosen).rpartition(":")
+    try:
+        config = replace(config, lms_host=host or str(chosen), lms_port=int(port))
+    except ValueError:
+        logger.warning("settings: ignoring lms_server %r: not host:port", chosen)
+        return config
+    logger.info("settings: lms_server chosen, using %s:%s", config.lms_host, config.lms_port)
+    return config
+
+
+async def _apply_discoverable(mode: str, attempts: int = 1) -> bool:
+    """`bt_discoverable`, on the adapter. Live: discoverability is not
+    audible and nothing about it is mid-session, so unlike a rename there
+    is nothing to defer.
+
+    `attempts` is for the one at startup. `gexis-bluetooth-setup.service`
+    powers the adapter and nothing orders this after it, so the adapter can
+    still be absent from the bus when the daemon comes up - and a setting
+    that silently did not apply at boot is the defect this replaces, not one
+    to reintroduce.
+    """
+    bus = await MessageBus(bus_type=BusType.SYSTEM).connect()
+    try:
+        for attempt in range(attempts):
+            if await bluetooth_adapter_state.apply_discoverable(bus, mode):
+                return True
+            if attempt + 1 < attempts:
+                await asyncio.sleep(2)
+        return False
+    finally:
+        bus.disconnect()
+
+
+def apply_device_name(name: str) -> None:
+    """One name to four services (ADR-0048). Nothing restarts: the rename is
+    restart-gated, and the panel says so. A target that refuses is logged
+    here and reported to whoever asked - a half-renamed device with nothing
+    on screen to say so only surfaces at the restart, hours after the cause.
+    """
+    written = device_name.apply(name)
+    if written.ok:
+        logger.info("device name: %r written, hostname %s", name, written.hostname)
+    else:
+        logger.warning("device name: %r not taken by %s", name, ", ".join(written.failed))
+
+
+async def _set_timezone(zone: str) -> None:
+    """`timedatectl`, which moves /etc/localtime and tells the clock. The
+    daemon is root on this image, so there is no polkit prompt to answer."""
+    process = await asyncio.create_subprocess_exec(
+        "timedatectl", "set-timezone", zone,
+        stdout=asyncio.subprocess.DEVNULL, stderr=asyncio.subprocess.PIPE,
+    )
+    _, err = await process.communicate()
+    if process.returncode:
+        logger.warning("timezone: %s", err.decode("utf-8", "replace").strip())
+    else:
+        logger.info("timezone: set to %s", zone)
+
+
+async def _reboot() -> None:
+    logger.info("reboot: requested from settings")
+    await asyncio.create_subprocess_exec("systemctl", "reboot")
+
+
 def read_timezone(localtime: Path = Path("/etc/localtime")) -> str | None:
     # The /etc/localtime link is what the clock uses; /etc/timezone can be
     # stale (timedatectl updates only the link).
@@ -152,6 +242,15 @@ async def main() -> None:
     # proves the DB file and schema actually come up clean on the image.
     settings_store = SettingsStore()
     logger.info("settings: store ready at %s", settings_store.path)
+
+    # A server chosen from the Settings sheet (ADR-0044 §1's `kind: server`)
+    # wins over the deployment's own address - but only from here, at
+    # startup. Moving a running daemon to another server means dropping a
+    # CometD subscription, re-resolving the player and re-arbitrating; that
+    # is its own piece of work and its own record. **So the write is stored
+    # and the switch happens on the next start**, which is what the panel
+    # says when a server is picked.
+    config = _chosen_server(config, settings_store)
 
     lms = LmsAdapter(config.lms_host, config.lms_port, config.lms_player_name)
     spotify = SpotifyAdapter(config.go_librespot_host, config.go_librespot_port)
@@ -217,8 +316,14 @@ async def main() -> None:
         volume_memory=volume_memory,
         get_active_renderer=lambda: supervisor.active,
         on_hardware_level=lambda raw: publish_volume(raw),
+        # ADR-0052 §3: `max_ceiling` clamps every level that reaches the
+        # DAC, from any source. `_number` is defined further down `main()`
+        # and resolved when this is called, not now.
+        ceiling_db=lambda: _number("max_ceiling"),
     )
-    restore_volume = make_restore_volume(config, volume_memory, volume_bridge)
+    restore_volume = make_restore_volume(
+        config, volume_memory, volume_bridge, lambda: _number("restore_ceiling")
+    )
 
     # ADR-0034. Observes every level before it is published, so a change
     # from anywhere else ends mute in the same broadcast that shows it.
@@ -304,6 +409,54 @@ async def main() -> None:
     async def idle_page() -> dict:
         return await probe_idle_page(settings.value("idle_url") or "", idle_session)
 
+    # ADR-0047 §2a. Both share the idle screen's session: one screen, three
+    # things it asks for, and a fourth connection pool would be a pool for
+    # something that runs once every fifteen minutes.
+    forecast = Weather(idle_session)
+    # Beside the settings database rather than in /tmp: the pictures are
+    # what the screen shows when the network is down, so they have to
+    # survive a reboot (ADR-0047 §2a - the device is the cache).
+    wallpapers = Wallpapers(
+        idle_session, config.wallpaper_dir, local_dir=Path(config.pictures_dir)
+    )
+
+    # ADR-0051. The three visualisation rows describe what the renderer
+    # draws, and the renderer is another process: it learns of a change by
+    # re-reading one small file, on the same poll that already carries the
+    # track. `settings` is assigned by this very statement and read only when
+    # one of these is called, which is after it exists.
+    skins_root = Path(config.peppy_skins_dir)
+
+    def skins_offered() -> list[str]:
+        return skins.names(skins_root, str(settings.value("skin_corpus") or skins.ALL))
+
+    def first_skin() -> str | None:
+        offered = skins_offered()
+        return offered[0] if offered else None
+
+    def publish_visualisation(_value: object = None) -> None:
+        skins.write_selection(
+            str(settings.value("skin_corpus") or skins.ALL),
+            settings.value("skin"),
+            settings.value("skin_rotate") is not False,
+        )
+
+    def apply_corpus(word: object) -> None:
+        """A narrower corpus takes the skin in use with it (ADR-0051 §4).
+
+        **A write, not a substitution.** If the stored skin is not in the new
+        corpus the first one that is gets stored, so the row, the picker and
+        the screen all say the same thing; `set` publishes on its way out.
+        """
+        offered = skins_offered()
+        if settings.value("skin") in offered:
+            publish_visualisation()
+            return
+        if offered:
+            settings.set("skin", offered[0])
+        else:
+            publish_visualisation()
+
     # ADR-0035. Defaults are what is true of this deployment today. A wired
     # row is read where it is used - the idle page probe here, the rest by
     # the UI - so none needs a callback.
@@ -315,26 +468,162 @@ async def main() -> None:
             "lms_server": lambda: f"{config.lms_host}:{config.lms_port}",
             "lms_player": lambda: config.lms_player_name,
             "idle_url": lambda: config.idle_url or None,
-            "device_name": socket.gethostname,
+            "device_name": device_name.hostname,
             "timezone": read_timezone,
+            "wifi": wifi.connected_ssid,
+            # Nothing stored means the first skin the corpus offers, so the
+            # picker opens on something rather than on nothing.
+            "skin": first_skin,
         },
+        # ADR-0051 §4: which skins there are depends on where they are
+        # installed and on what `skin_corpus` holds, neither of which the
+        # registry module can know.
+        options={"skin_corpus": skins_offered},
         # Wired = something reads it (ADR-0035). The token is read on every
         # Popular lookup, so it takes effect as soon as it is typed.
+        # Wired = something reads it, or something happens. `lms_server` is
+        # read at the next start (see `_chosen_server`); `timezone` and
+        # `reboot` act at once.
+        # ADR-0047's rows are read where they are used: the two routes above
+        # read the weather and wallpaper rows on every request, and the panel
+        # reads the rest as it draws. None of them needs a callback, and all
+        # of them are wired, because something reads every one.
         wired={"idle_url": None, "idle_timeout": None, "drawer_on_external": None,
                "drawer_autohide": None, "listenbrainz_token": None,
-               "fanart_key": None},
+               "fanart_key": None, "lms_server": None,
+               "idle_screen": None, "idle_background": None,
+               "background_brightness": None, "background_interval": None,
+               "wallpaper_key": None, "wallpaper_topics": None,
+               "idle_weather": None,
+               "weather_location": None, "idle_forecast": None,
+               "idle_icons": None,
+               "viz_timeout": None, "viz_stop": None,
+               # ADR-0052: read on every write and every restore.
+               "max_ceiling": None, "restore_ceiling": None,
+               # ADR-0051: read by the driver, through the file these write.
+               "skin": publish_visualisation,
+               "skin_rotate": publish_visualisation,
+               "skin_corpus": apply_corpus,
+               "home_strip": None, "home_strip_count": None,
+               "idle_clock": None,
+               "device_name": apply_device_name,
+               "bt_discoverable": lambda mode: asyncio.ensure_future(
+                   _apply_discoverable(mode)
+               ),
+               "timezone": lambda zone: asyncio.ensure_future(_set_timezone(zone)),
+               "reboot": lambda _: asyncio.ensure_future(_reboot())},
         on_change=state_store.bump_settings_revision,
     )
 
+    # The fourth corpus word was `Random` until 2026-09-22 and is `All`
+    # now; a device that stored the old one is moved over rather than left
+    # holding a value its own row no longer offers.
+    if settings.value("skin_corpus") == "Random":
+        settings.set("skin_corpus", skins.ALL)
+
+    # **The visualiser's four pipes, made by the one process that can.**
+    # peppyalsa (inside each renderer) and the meter service open them; this
+    # daemon is root and owns /run/gexis, so it creates them. Until
+    # 2026-09-22 they lived in /tmp, where `bluealsa-aplay`'s `PrivateTmp=yes`
+    # hid ours from it and the visualiser was blind for the whole of
+    # Bluetooth (ADR-0011, amended).
+    for fifo in (
+        config.meter_fifo,
+        config.spectrum_fifo,
+        config.meter_passthrough,
+        config.spectrum_passthrough,
+    ):
+        meters.ensure_fifo(fifo)
+
+    # The driver starts with whatever this says, so it is written once here
+    # rather than only on a change: a device that has never touched the three
+    # rows still has to tell the renderer what they hold (ADR-0051 §1).
+    publish_visualisation()
+
+    # ADR-0045: the adapter's own switches, applied from the stored setting
+    # rather than left to a shell script that could not express them, and
+    # our own Agent1 so the question can reach the panel at all.
+    pairing_agent = bluetooth_agent.Agent(
+        # `to_json` here, not in the store: the agent publishes its own
+        # object and the store holds what goes on the wire. Passing the
+        # dataclass straight through made `json.dumps` raise inside the
+        # broadcast, which took **every** state update with it for as long
+        # as a request was open - not just the pairing field.
+        publish=lambda request: _publish_pairing(request),
+        # Read per request, not captured: changing either takes effect on
+        # the next pair rather than on the next boot.
+        confirm_required=lambda: settings.value("bt_pairing") != "PIN-free",
+        should_trust=lambda: settings.value("bt_autotrust") is not False,
+    )
+
+    def _publish_pairing(request) -> None:
+        """The request, and the screen it needs.
+
+        **The visualiser is a separate process window, not a layer.** The
+        panel can draw the pairing frame over its own idle screen because
+        that is a div; it cannot draw over PeppyMeter, which is another
+        X client entirely. A request arriving while the meter is up would
+        be invisible for its whole thirty seconds and then lapse, with
+        nothing on screen to explain it - ADR-0045's open question about
+        what a request takes the screen from, answered: it takes it, and
+        here is the half the panel cannot do for itself.
+
+        `peppy` is assigned further down `main()`; a lambda would resolve
+        it at call time and so does this, which is why the reference is
+        safe despite reading like it is out of order.
+        """
+        state_store.set_pairing(request.to_json() if request is not None else None)
+        if request is not None and request.state == "asking":
+            peppy.request("hide")
+
+    async def _bluetooth_setup() -> None:
+        await _apply_discoverable(
+            settings.value("bt_discoverable") or "3 min after boot", attempts=10
+        )
+        bus = await MessageBus(bus_type=BusType.SYSTEM).connect()
+        await bluetooth_agent.register(
+            bus,
+            pairing_agent,
+            bluetooth_agent.capability_for(settings.value("bt_pairing")),
+        )
+        # The bus stays open for the process: an agent whose connection
+        # closes is unregistered by BlueZ, silently, and pairing goes back
+        # to whatever answered before.
+        await bus.wait_for_disconnect()
+
+    asyncio.ensure_future(_bluetooth_setup())
+
     # Phase 5 criteria 6 and 8 (ADR-0036). The meter process keeps running
     # whether or not it is on screen; this only raises and lowers it.
-    peppy_timeout = float(settings.value("viz_timeout") or 300)
+    # **Minutes, and read per tick** (9h). The row is in minutes because the
+    # design draws it that way and because a number nobody can see the unit
+    # of is a number nobody can set; reading it through a callable means a
+    # change from the phone lands on the next tick rather than the next
+    # restart.
+    def _number(key: str) -> float | None:
+        """A number row's value, or None when it is unset - the shape
+        `max_ceiling` and `restore_ceiling` both want (ADR-0052 §1, §3)."""
+        try:
+            value = settings.value(key)
+        except Exception:  # noqa: BLE001 - a row that is not there is None
+            return None
+        return None if value is None else float(value)
+
+    def minutes(key: str, fallback: float):
+        def read() -> float:
+            value = settings.value(key)
+            return float(value) * 60 if value else fallback
+        return read
+
     peppy = PeppyController(
         PeppyScreen(
             runtime_dir=config.peppy_runtime_dir,
             wayland_display=config.peppy_wayland_display,
         ),
-        UnattendedPlayback(peppy_timeout),
+        UnattendedPlayback(
+            minutes("viz_timeout", 600),
+            stop_after_s=minutes("viz_stop", 300),
+        ),
     )
 
     previous_active = state_store.state.active
@@ -376,6 +665,12 @@ async def main() -> None:
             # first takes the picture and leaves the biography to LMS.
             FanartArtistImage(http, identity, lambda: settings.value("fanart_key"),
                               proxy_base=f"http://{config.lms_host}:{config.lms_port}"),
+            # The same source, asked for the other shape: the idle screen's
+            # background (ADR-0047 §1b). Only the idle route asks for it by
+            # name, so no other screen pays for it.
+            FanartArtistImage(http, identity, lambda: settings.value("fanart_key"),
+                              proxy_base=f"http://{config.lms_host}:{config.lms_port}",
+                              **FANART_BACKGROUND),
             LmsArtistProvider(artistinfo, lambda: lms.current_artist_id),
             LmsReleaseProvider(library, artistinfo, lambda: lms.current_album_id),
             WikipediaBiography(http, identity),
@@ -441,9 +736,17 @@ async def main() -> None:
         # ADR-0038 §8: the one SlimBrowse subtree, browsed by handles the
         # core issues.
         radio=RadioBrowser(library.rpc, lambda: lms.player_id),
+        # ADR-0045: the panel's answer, back to the agent that is holding
+        # BlueZ's handshake open waiting for it.
+        pairing_answer=pairing_agent.answer,
         # ADR-0043: the panel reports its first painted frame and the boot
         # animation ends there, not when the kiosk unit goes active.
         splash=Splash(),
+        # ADR-0047: the idle screen's two providers.
+        weather=forecast,
+        wallpapers=wallpapers,
+        # ADR-0050: the picker's previews are the skins' own pictures.
+        skins_dir=Path(config.peppy_skins_dir),
         ui_dir=ui_dir,
     )
 
@@ -506,6 +809,9 @@ async def main() -> None:
         volume_bridge.run(),
         *(bridge.run() for bridge in dummy_mixer_bridges.values()),
         peppy.run(),
+        # The `wifi` row's value, kept current from here rather than read on
+        # the request path - where it measured 3.2 s and blocked everything.
+        wifi.watch_connected(),
         state_server.run(),
     )
 

@@ -42,7 +42,14 @@ ExecStartPre=/usr/local/lib/gexis/squeezelite-mixer-check.sh
 # control onto the real DAC only while LMS is active
 # (volume.py's DummyMixerBridge) - see image/stage-gexis/00-alsa's
 # modprobe config for where hw:gexislmsvol comes from.
-ExecStart=/usr/bin/squeezelite -o output -O hw:gexislmsvol -V Master -C 1 -n gexis
+# The player's advertised name comes from a file, not from this line
+# (ADR-0048 §1): settings writes /etc/gexis/device-name.env and the name
+# takes effect at the next start, which is what "renaming is restart-gated"
+# means in practice. The `-` makes a missing file not a failure to start,
+# and the default below is what a device that has never been renamed uses.
+Environment=GEXIS_DEVICE_NAME=gexis
+EnvironmentFile=-/etc/gexis/device-name.env
+ExecStart=/usr/bin/squeezelite -o output -O hw:gexislmsvol -V Master -C 1 -n ${GEXIS_DEVICE_NAME}
 Restart=on-failure
 RestartSec=2
 User=pi

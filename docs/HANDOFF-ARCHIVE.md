@@ -3334,3 +3334,198 @@ the library reads already do - `ARTWORK_THUMB` exists for exactly this - and
 oversized covers were part of what made the New Music strip scroll unevenly
 (Finding 029 §5). Not changed yet: George deferred it to the one
 investigation rather than fixing piecemeal.
+
+---
+
+## From HANDOFF.md, 2026-09-19 (was the nineteenth session's "Start here")
+
+Moved verbatim when the twentieth session replaced it. Phase 8 and Phase 9
+step 1 are finished; what follows is how they read while they were current.
+
+
+## Start here
+
+**Phase 8 — enrichment and lyrics — is done** (2026-09-18, branch
+`phase-8-plan`). Now playing's Artist, Release and Lyrics tabs are filled,
+synced lyrics follow the playhead on the Track tab, the artist page has its
+About, Popular and Similar, Bluetooth and Spotify get cover art they were
+never sent, and a radio stream gets artwork from the song rather than the
+station. [ADR-0040](docs/decisions/0040-enrichment-providers.md) records the
+providers and was twice amended by what the work measured.
+
+**The idea to carry forward: "could not ask" is not "there is nothing
+there."** MusicBrainz's search answered 503 for 4 of 9 tries, LRCLIB has a
+busy-503 of its own, and LMS's plugin holds a socket for 75 s before
+dropping it - which is also what an *absent* plugin does, in milliseconds.
+Every one of those looks like an empty answer. Caching one would deny a
+track its enrichment permanently; reading one as "no plugin here" turned
+every artist photo off for ten minutes. The distinction is made in five
+places now and is the phase's single most load-bearing idea.
+
+**Two keys, both per-user settings George chose:** `listenbrainz_token` (its
+popularity endpoint began demanding one mid-phase, having answered 200 the
+same morning) and `fanart_key` for artist pictures. Nothing else needs one,
+and with neither set the panel simply shows less.
+
+**Fanart adds quality, not coverage** (measured on 14 random artists: 9 had
+a picture from both sources, 5 from LMS only, **0 from fanart only**). It
+goes first where it has one; LMS stays behind it. Its pictures go through
+LMS's image proxy - 705 KB became 32.8 KB at 300 px.
+
+**Parked by George: a background sweep for missing album art.** 155 of 4,567
+albums have none. The same sweep for artist pictures was rejected on the
+measurement above: 30-45 minutes of MusicBrainz's one-a-second allowance to
+improve pictures that already exist.
+
+**Phase 9 step 1 is done, and its question had a wrong premise.** "Why is a
+playing panel never idle?" came from Finding 034's idle control, which was
+measuring a queue rail left open by the run before it - the rail's blurred
+scrim costs 71 % of the frames on its own. An idle panel is idle.
+
+**What the chase found instead is worth more:
+[ADR-0041](docs/decisions/0041-scrims-dim-but-do-not-blur.md) - scrims dim
+but do not blur.** `backdrop-filter` costs 24.5 ms a frame in draw-and-submit
+against a 16.7 ms budget, with the CPU idle: the compositor draws the
+backdrop into its own texture and reads it back every frame, which is a
+tile-based GPU's worst case
+([Finding 037](docs/findings/037-why-a-blurred-scrim-costs-the-panel.md)).
+Not the radius, not the area, and Vulkan is worse. **It is off the queue
+rail and the volume drawer**, which George checked and kept; Settings and
+the rail's source sheet are left for the sweep. **The rule for the design:
+depth is affordable, live readback is not** - a static blurred image costs
+almost nothing and the artwork backdrop stays exactly as it is.
+
+**It does not reach the target on its own:** the rail goes from ~15 fps to
+~36 against a 55 fps floor, and its own list is the rest - the same work the
+artist grid needs.
+
+**Next: Phase 9, in the order George agreed on 2026-09-18** - the idle
+question first, then the UI sweep, then the performance work, then the
+settings and the triage. The reason for that order is in
+`docs/DEVELOPMENT.md`: the sweep is a judgement call, and a judgement made
+on a panel that drops 71 % of its frames before anyone touches it cannot be
+told from the floor it is standing on.
+
+## From HANDOFF, 2026-09-19 (twentieth session) — the image that had never been booted
+
+Superseded 2026-09-20: it was booted, four times on the 19th and once on the
+20th. Finding 039 and Finding 041 record what that found. Moved here verbatim.
+
+**The one thing waiting on hardware: an image with a boot animation that has
+never been booted.** `2026-09-19-gexis-player-v0.2.1-287-ge59654c-dirty.img`.
+George is flashing it to a *different* SD card, keeping the Phase 8 card as
+the fallback — the right call, because the change touches the initramfs and
+a wrong one does not reach a state where SSH can help.
+
+**What to check on that first boot**, in order, because each answers a
+different unknown in [ADR-0043](docs/decisions/0043-boot-animation-and-a-silent-boot.md):
+
+1. **Does it boot at all?** The initramfs is rebuilt by
+   `06-splash/02-run-chroot.sh`. If it does not, the fallback is the other
+   card, not a fix on this one.
+2. **Does the animation appear, and how early?** It should start a second or
+   two after power, from the initramfs. Late (~4 s) means plymouth is
+   starting after the root mount instead.
+3. **Is there any text at all?** Six sources were quieted; any survivor is a
+   defect and worth naming precisely.
+4. **Is the handover clean?** The splash is held until the panel reports its
+   first painted frame. A flash of black between animation and UI means the
+   signal is not arriving.
+5. **What did it cost?** `free -m` early on. Plymouth may hold all 100 frames
+   in memory, ~400 MB if so. 36 of the 100 are exact duplicates, so there is
+   cheap headroom if it matters.
+
+**The failure that is worth remembering from this session.** The first build
+of the splash stage failed on its *own assertion*: plymouth was not in the
+initramfs. The rebuild had reported no error — Raspberry Pi OS ships
+`update_initramfs=no`, so `update-initramfs` prints "Not updating initramfs."
+and does nothing. Without that assertion the build would have succeeded and
+produced a card whose animation starts late, which looks like a design choice
+rather than a defect. Same shape as everything in `docs/LESSONS.md`.
+
+**Also in this image, and not on the card George is looking at today:** the
+Peppy source badge is now the mark alone (the renderer's name was the only
+thing drawn outside the square each skin reserves, and on 7 of the 71 skins
+"Bluetooth" left the screen), the album page's track rows are actionable, and
+no `backdrop-filter` remains anywhere in the panel.
+
+## Phase 9's design sweep — the state before 9a, archived 2026-09-20
+
+Carried in HANDOFF.md until 9a through 9d were done. Kept verbatim: it is
+what the sweep was planned against.
+
+**The design drop is reviewed and nothing is built.**
+[Finding 040](docs/findings/040-the-design-drop-and-what-it-changes.md) is the
+survey, with George's corrections inline and authoritative; ADR-0044
+(settings vocabulary), ADR-0045 (pairing confirmation) and ADR-0046 (fixed
+output) are Proposed. `design/` in this repository is **still the previous
+package** - the new one has not been landed, and landing it must preserve
+`design/fonts/` and `IMPLEMENTED-DIFFERENTLY.md`, both of which the drop
+reverts or does not know about.
+
+**The next session's first job is a second comparison**: Claude Design is
+adjusting the designs against the feedback in Finding 040's last two
+sections, so the package on disk, the package they send back, and the
+shipped UI all need diffing again. Finding 040 records how to do it - the
+two `.dc.html` files carry 2,461 lines of diff and hold every screen except
+Settings, and a skim of the prose misses nearly all of it.
+
+**Three things in Finding 040 want a panel, not a repository:** whether Back
+from a New Music album reaches the artist (the code says root, George says
+artist), and the two reboot-dependent boot items below.
+
+**Next, in the order George agreed:** the UI sweep (his, with
+`design/IMPLEMENTED-DIFFERENTLY.md` in Claude Design's hands), then the
+performance work against a baseline retaken *after* the sweep, then settings
+and triage.
+
+---
+
+## From HANDOFF, 2026-09-22 (twenty-second session) — 9h before the picker arrived
+
+Moved verbatim when the same day's second half finished 9h. The design
+drop George was waiting on arrived, so the two things "waiting on his
+designs" and the one 9h "still owed" are all answered below it.
+
+## Start here
+
+**Phase 9's design sweep is seven subphases in and the eighth is mostly
+built.** Nine were planned (`docs/DEVELOPMENT.md`), volume last; **9a
+through 9g are done, checked by George on the panel and committed**, and
+**9h is built except the picker**.
+
+**Two things wait on George's designs** (2026-09-22: *"Will provide soon the
+designs"*):
+
+- **The skin picker.** He is redrawing it — a list of skins, with the
+  preview shown only when a row is tapped, because the drop's grid *"will
+  put some strain on the rendering"*. **The daemon side is built and
+  waiting**: `GET /skins` (name, kind, whether the corpus takes it) and
+  `GET /skins/{name}/preview`.
+- **The weather bar's other fields.** Open-Meteo returns them in the request
+  the screen already makes — feels-like, humidity, wind with gusts and
+  direction, cloud cover, pressure, sunrise and sunset, UV, chance of rain,
+  daily wind maxima; 3.4 KB against the 748 B now fetched, no extra call.
+  **The design's bar is full**, so anything added is a layout change.
+
+**What 9h has landed:**
+
+- **Three kinds of skin, not two** — 77 meters, 9 spectrum, 13 both, counted
+  on the device. The old two options were *directories*, and `templates/` is
+  not the meter corpus. The row is **Skins**: VU meters / Spectrum / VU
+  meters + spectrum / Random.
+- **[ADR-0050](docs/decisions/0050-skin-previews-are-the-skins-own-picture.md):
+  a preview is the skin's own `screen.bgr`** — no render, no cache, no
+  change detection, and **9h no longer needs an image build**.
+- **The home strip, all three shapes**, after George corrected a finding
+  that said two of them were impossible (`docs/LESSONS.md` case 14). They
+  are `browselibrary` **sorts**, not fields or tags, and need no plugin.
+- **`viz_stop` wired**, and `viz_timeout` moved from seconds to the minutes
+  the design draws. Both read per tick.
+- **`idle_clock`**, so the panel can be a picture frame (2026-09-22).
+
+**What 9h still owes besides the picker: the visualiser does not honour the
+Skins choice.** Our own `driver.py` loads one corpus directory and the kinds
+cut across directories, so "Random" needs a composed directory of symlinks.
+It is a change to the screen George watches, so it wants his eyes with music
+playing.

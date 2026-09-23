@@ -342,7 +342,21 @@ class FanartArtistImage:
     SIZE = 300
 
     def __init__(self, http: Http, identity: ArtistIdentity, key=None,
-                 proxy_base: str | None = None) -> None:
+                 proxy_base: str | None = None, *,
+                 name: str | None = None,
+                 preferred: tuple[str, ...] | None = None,
+                 size: int | None = None) -> None:
+        # **The same provider serves two shapes of picture** (ADR-0047 §1b).
+        # A 262px disc on the artist page wants `artistthumb`, a portrait;
+        # the idle screen's background wants `artistbackground`, which
+        # fanart publishes at 1920x1080 for exactly this. Two instances
+        # under two names rather than one that guesses from the caller.
+        if name:
+            self.name = name
+        if preferred:
+            self.PREFERRED = preferred
+        if size:
+            self.SIZE = size
         self._http = http
         self._identity = identity
         self._key = key or (lambda: None)
@@ -387,6 +401,18 @@ class FanartArtistImage:
         if not self._proxy_base:
             return url
         return f"{self._proxy_base}/imageproxy/{url}/image_{self.SIZE}x{self.SIZE}_o.jpg"
+
+
+#: The idle screen's background, from the same provider (ADR-0047 §1b).
+#: `artistbackground` first because fanart publishes those at 1920x1080 to
+#: be shown full-bleed, and a 1000px square portrait stretched across a
+#: 1280x800 panel is the shape mistake in the other direction.
+FANART_BACKGROUND = {
+    "name": "fanart-bg",
+    "preferred": ("artistbackground", "artistthumb", "musicbanner"),
+    #: The panel's own width. Finding 035's rule: ask for what is drawn.
+    "size": 1280,
+}
 
 
 #: What a renderer adds to a title and a lyrics site does not: a take

@@ -86,7 +86,7 @@ A2DP_CODECS = {0x00: "SBC", 0x01: "MP3", 0x02: "AAC", 0x04: "ATRAC", 0xFF: "vend
 def _unwrap(props: dict) -> dict:
     """`org.freedesktop.DBus.ObjectManager`/`PropertiesChanged` values are
     dbus_next `Variant`s - `.value` unwraps to a plain Python value.
-    Matches bluetooth_trust.py's own `device.get("Paired").value` idiom
+    The `device.get("Paired").value` idiom used throughout here
     rather than dbus_next's introspection-generated property getters, so
     this doesn't depend on BlueZ's introspection XML shape being what
     dbus_next's codegen expects.
@@ -347,7 +347,7 @@ class BluetoothAdapter(Adapter):
         `org.freedesktop.DBus.Properties` interface, not of `MediaPlayer1`
         itself (whose own introspected `signals` list is empty). The fix is
         to get *that* interface's proxy instead - matching
-        `bluetooth_trust.py`'s existing `PROPERTIES_IFACE` idiom for
+        the `PROPERTIES_IFACE` idiom used for
         `call_set`, just for a signal instead of a method call. The
         double-unwrap for a dict-valued property like `Track` is unchanged
         and still not independently confirmed against a live payload

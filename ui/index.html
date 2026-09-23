@@ -4,6 +4,18 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <title>gexis</title>
+    <!-- The panel's ground colour, before any stylesheet has loaded. Without
+         it Chromium's first paint is white, which is a flash between the
+         boot animation and the UI (ADR-0043). --tokens.css sets the same
+         value as --bg-base. -->
+    <meta name="color-scheme" content="dark" />
+    <style>
+      html,
+      body {
+        margin: 0;
+        background: #101a21;
+      }
+    </style>
   </head>
   <body>
     <div id="app"></div>

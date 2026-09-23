@@ -1497,6 +1497,334 @@ the point:
    unwired UI without a justification (2), and the "issues to look at
    later" triaged (4) - including the parked album-art sweep.
 
+**Plan revised 2026-09-20 (George), after the second design drop was diffed
+against the device** ([Finding 042](findings/042-the-device-against-the-new-design.md)).
+The 2026-09-18 order above stands for the performance work; what follows is
+the design sweep, which is most of criterion 3 and much of criterion 1.
+
+**Ten subphases, in this order. Each one lands on its own and is checked on
+the panel before the next** - George runs the regression pass, and a batch he
+cannot attribute is a batch he cannot judge.
+
+**Nine until 2026-09-22**, when the volume work was split in two on George's
+agreement: the audio card is not the only output this device has, and
+choosing between them is a decision about the same thing volume is. 9i is the
+level, 9j is where it goes.
+
+**The volume work is last, by George's instruction (2026-09-20).** It is the
+only subphase with a physical consequence, it carries the one number still
+undecided, and nothing else depends on it.
+
+1. **9a - Decisions, no code.** Settle [ADR-0044](decisions/0044-settings-row-vocabulary.md),
+   [ADR-0045](decisions/0045-bluetooth-pairing-confirmation.md) and
+   [ADR-0046](decisions/0046-fixed-output-hides-the-slider.md), all Proposed
+   since 2026-09-20. Amend [ADR-0022](decisions/0022-settings.md) for the
+   catalogue/surfaced split and the design as point of truth. A new ADR for
+   the idle screen. Land the design drop into `design/`, **preserving
+   `design/fonts/` and `IMPLEMENTED-DIFFERENTLY.md`** - the drop carries
+   neither, and unpacking it over the tree deletes four woff2 files and two
+   licences.
+   *Gate: reading. Nothing reaches the panel.*
+
+2. **9b - Now Playing restyle.** One Track header whether or not lyrics are
+   present; artist 25 and album 19; the album year; the source mark (mono
+   17px, no ground, 2.4s pulse); lyrics 25 in Track and 31 in the Lyrics tab;
+   meta tabs 17px with per-tab underline colours; `--track-wide` and
+   `--ink-tab-off`. Finding 042 §3.
+   *One component. Gate: the panel, with and without synced lyrics.*
+
+3. **9c - Library mechanical fixes.** The album page's missing **Add to
+   queue**; **Back to the artist** from the New Music strip (a one-route
+   defect, not a design change); the artist page's genre/tag pills, album
+   wrapping and Retry treatment; `WaitingServices` icon sizes; the radio
+   restyle - a grid at the top level and ten tinted glyphs, styling only;
+   `readonly` rows taking no tap and drawing no chevron; press feedback at
+   0.95; the build stamp out of the Settings header.
+   *Gate: the panel, screen by screen. **This is where the items Finding 042
+   §8 admits it missed will surface**, and George judges them there.*
+
+4. **9d - The settings vocabulary, and the Settings screen's appearance**
+   (ADR-0044). `list`, `warn`, `onlyWhen`, `optionsFrom`, `picker`, and
+   `surfaced` - the flag that keeps a row inventoried but not shown. Registry
+   and panel together.
+
+   **The restyle belongs here, added 2026-09-20 at George's question** - the
+   plan had no home for it, and "on the go" is how a screen ends up 80%
+   ported with nobody able to say which 20% is missing. Most of it is
+   inseparable from the mechanics anyway: a `list` row cannot be styled
+   before `list` exists, `onlyWhen` rows cannot be laid out before they can
+   hide, and there is no picker to draw until there is a picker.
+
+   **Run the Settings visual diff before starting.** Finding 042 compared the
+   *inventory* key by key and only three of the screen's visual items;
+   layout, spacing, the two-pane geometry, the sheet and the category cards
+   are unmeasured. One component (908 lines) against one `.dc.html` at two
+   widths - far more bounded than the Library sweep declined on cost. What is
+   known: the type scales already overlap at 12/13/14/15/16/17/18/19/22/25px,
+   the device carries a 20px and a 23px the design does not, and the design a
+   38px the device does not. The gap is probably small, and "probably" is the
+   reason to measure it rather than the reason not to.
+
+   *Gates 9e, 9f, 9g and the skin picker. Acceptance: the existing rows still
+   render, **and the screen matches `Settings.dc.html` at both widths**.*
+
+   **Appended 2026-09-20, on George's instruction** — *"or we append 9d and
+   do both now"* — after he checked the screen and found four things that no
+   subphase owned. Three were mine to have caught:
+
+   - **Wi-Fi and LMS discovery were scheduled nowhere.** ADR-0044 recorded
+     "where a list's items come from... none exists" as open, and no subphase
+     was ever given it; the only mention of either in this document was
+     Phase 13's setup *page*. Both are built here, daemon and panel.
+   - **`handoff_duration` and `reboot` were owed to nobody.** Thirteen of the
+     fifteen design keys the registry lacked are covered by 9g's and 9h's
+     prose; these two were named nowhere. Neither has a feature behind it, so
+     both belonged in 9d. The registry test now lists the remaining thirteen
+     *by their owing subphase*, so the next omission fails a test.
+   - **`grouped` is a seventh mechanic, counted as six.** The drop's time
+     zone picker takes its choice in two steps and that was read as a fixture
+     of its demo. The row shipped with three hardcoded options and no effect.
+
+   **Done 2026-09-20, on the device, awaiting George's check.** All six
+   mechanics, the registry's `visible` per row (34 of 54 surfaced, System
+   gone entirely), `secret`/`placeholder` on the two API keys, and the
+   restyle: the number sheet's 38 px readout, 14 px track and 34 px knob, and
+   the 62 px field - the two things the new drop draws that the one before it
+   only described. The visual diff the entry asks for was run first and found
+   the rest already matching: head, back, rail, cards, rows, sheet and the
+   type scale, which now agree at every size. **Four elements are
+   deliberately unbuilt** because nothing can make them true yet - the
+   discovery spinner, the Wi-Fi join flow, per-item `Forget`, "password
+   needed" - and `optionsFrom`/`picker` wait on 9h for their one row. All in
+   [ADR-0044](decisions/0044-settings-row-vocabulary.md), which also closes
+   its `warn` question: the confirm is gated.
+
+   **And the appended half**: `wifi.py` (NetworkManager through `nmcli`,
+   running as root so there is no polkit agent), `discovery.py` (the UDP
+   broadcast on 3483, protocol verified against the real server), one generic
+   pair of routes - `GET`/`POST /settings/{key}/items` - so a `list` gets a
+   source without the panel learning where it lives, and the panel's
+   searching state, join flow with its failure, `Forget`, grouped picker and
+   the `action` POST that nothing had ever needed. `timezone` and `reboot`
+   are wired; `lms_server` is stored and applied at the next start.
+   *Gate: scan, join a network, forget it, pick a server, set a zone.*
+
+5. **9e - The device name is the only name.** Wire `device_name` - refused
+   today with `HTTP 409 "not wired yet"` - and push it to squeezelite's `-n`,
+   go-librespot's `config.yml`, the BlueZ alias and the hostname, with the
+   sanitiser. Header reads `name - hostname - IP`. **Restart-gated**, so no
+   renderer restarts mid-session.
+   *Gate: rename, restart, confirm all four advertise it.*
+
+   **Done 2026-09-21. The gate passed on the second run and found two
+   defects on the first**, neither visible from the code:
+
+   - **BlueZ never read `main.conf`'s `Name =`.** Its `hostname` plugin
+     overrides it, and the vendor file says so two lines above the setting.
+     The image had set it since Phase 2 and the build asserted its own sed
+     had matched - a check that passed every time and meant nothing, because
+     the hostname was the same string. `/etc/machine-info`'s
+     `PRETTY_HOSTNAME` is the real mechanism. [LESSONS](LESSONS.md) case 9.
+   - **A rename locked the panel out of its own browser.** Chromium's
+     profile lock is `<hostname>-<pid>` and it refuses to start when that
+     hostname is not the machine's, with a two-button dialog on an appliance
+     that has no keyboard. `gexis-kiosk-start` clears the three Singleton
+     entries before launching.
+
+   Then a third, in the deploy rather than the work: `rsync -a` put the
+   repository's 644 over the 755 the image installs, so Chromium never
+   started while `systemctl is-active` still said `active`.
+   [LESSONS](LESSONS.md) case 10; the eight affected scripts are executable
+   in git now.
+
+   **Gate, run end to end:** renamed to `SofaPi`, rebooted, all four
+   advertised it; renamed back to `gexis`, rebooted, all four advertised
+   that, and the kiosk started clean through both.
+   [ADR-0048](decisions/0048-how-the-device-name-reaches-four-services.md)
+   holds the mechanism and the one decision inside it: **nothing is applied
+   while the device is running**, not even the hostname, which can be. ADR-0022
+   worried that renaming from a remote browser might disconnect the browser;
+   setting the hostname live does exactly that, and applying two of four
+   immediately would leave the device advertising one name over Bluetooth and
+   another over LMS until the restart.
+
+   `squeezelite.service` now reads `-n ${GEXIS_DEVICE_NAME}` from
+   `/etc/gexis/device-name.env` rather than carrying the name inside
+   `ExecStart`, where only a drop-in restating the whole command line could
+   reach it; `01-run.sh` ships the file and asserts the unit still reads it.
+
+   Exercised end to end on the device with an accented name: `Gexis Café
+   Münster` gave the hostname `gexis-cafe-munster` while all three display
+   names kept the accents, and the device stayed reachable throughout.
+   **`/etc/hosts` carries the new name and the running one while they
+   differ** - a rename takes effect at the restart, so naming only the new
+   one would leave the *current* hostname unresolvable for that whole window.
+
+6. **9f - Bluetooth pairing** (ADR-0045). Our own `Agent1` replacing
+   `bt-agent --capability=NoInputNoOutput`; the request surfaced to the
+   panel; accept and reject; a countdown that is the agent's, not the
+   panel's; first pair only; the confirmation screen. **And
+   `bt_discoverable` actually implemented** - all three options, with
+   `DiscoverableTimeout=0` for Always, which is the "3 minutes" defect.
+   *Mostly daemon. Gate: pair a phone that has never paired.*
+
+   **Done 2026-09-21.** All three parts landed, plus `bt_trusted`'s item
+   list and `Forget`, which 9d left here. Two panel defects came out of the
+   gate rather than out of any test: the frame froze on a reactive cycle
+   while every server-side check passed (`docs/LESSONS.md` case 11), and the
+   Trusted devices row read "None" with a phone paired, because a `list`'s
+   items reached the sheet and never the row. ADR-0044 §1 is amended for
+   what that turned out to be about - **when a list's items arrive** - and a
+   list that does not have to go looking now ships with the row and opens
+   drawn. George on the panel: *"Works fine."*
+
+7. **9g - The idle screen.** Four background sources, the weather stack, two
+   third-party services and their keys. Needs its own ADR and the provider
+   choice, the same shape as Finding 030's enrichment question.
+   *Self-contained. Gate: leave it idle.*
+
+   **Done 2026-09-21.** The providers were chosen the way Finding 030 chose
+   the enrichment ones - terms read, calls made from the device,
+   recommendation, George deciding: **Pixabay** and **Open-Meteo**
+   ([Finding 043](findings/043-the-idle-screens-two-providers.md),
+   [ADR-0047](decisions/0047-the-idle-screen-gains-backgrounds-and-weather.md)).
+   `weather_key` left the registry because a key-free provider leaves it
+   gating nothing - the first deliberate deviation from the design drop
+   since it became the point of truth.
+
+   **Three things the subphase found that no test would have.** The design
+   draws this screen and the first build did not look for it, because it is
+   in `Now Playing.dc.html` rather than a file of its own (`docs/LESSONS.md`
+   case 13, which is case 12's shape one day later). A flat 4px contour is a
+   rim on a 132px numeral and most of a 21px letter, so the small type read
+   grey - measured, then tapered. And `object-fit: cover` keeps 35% of a
+   portrait photograph's height, which is now where the blurred-halo fit
+   comes from.
+
+   **Four rows the design does not have**, each confirmed by George:
+   `wallpaper_topics`, `background_interval`, `background_brightness`, and
+   an SMB share to put a picture on the device at all
+   ([ADR-0049](decisions/0049-the-pictures-folder-is-a-share.md)). **That
+   share's image stage has never been through a build** - it is installed
+   and verified on the device, and the next rebuild is what proves the
+   stage.
+
+8. **9h - Home strip, skin picker, `viz_stop`.** Two LMS queries and the
+   three strip variants; the skin picker; and `viz_stop` wired, without
+   which the visualiser sits under the idle screen until the renderer
+   closes or somebody taps.
+   *Gate: the panel.*
+
+   **No image build after all** ([ADR-0050](decisions/0050-skin-previews-are-the-skins-own-picture.md),
+   George: *"Let's keep it simple and use what we have instead of generating
+   thumbnails and cache and more logic"*). The thumbnails were to be
+   rendered at build time; every skin already ships a 1280x800 picture of
+   itself as its `screen.bgr`, so a preview is that file. No render, no
+   cache, and nothing to notice when a pack changes.
+
+   **Three kinds of skin, not two**, counted over the corpus on the device:
+   77 meters, 9 spectrum, 13 both. The old two options were *directories*,
+   and `templates/` is not the meter corpus (ADR-0019 as amended).
+
+   **The home strip is built**, all three shapes, and George's correction is
+   why: *"have a proper look at lms as I am seeing both popular artists and
+   recently played built in the interface, so you should also be able to see
+   them."* [Finding 044](findings/044-what-lms-knows-about-what-was-played.md)
+   had concluded the server held neither, from measurements that were
+   accurate and a question that was wrong - play counts and last-played
+   times are **sorts** through `browselibrary`, not fields or tags
+   (`docs/LESSONS.md` case 14). Neither needs a plugin. The one thing that
+   really is missing is the *when* caption, so the recently-played card
+   carries the album count like its neighbour.
+
+   **`viz_stop` is wired**, and `viz_timeout` was in seconds where the
+   design draws minutes. Both are minutes now and both are read per tick.
+
+   **The picker is built** — his redrawing arrived on 2026-09-22 and is what
+   9h ends on: a 380px list with a preview pane beside it, where tapping a
+   row previews and only the button writes. *"The picker as is now designed
+   will put some strain on the rendering"* is answered by fetching one
+   1280x800 picture per tap instead of 84 at once.
+
+   **And the hole 9h did not know it had:** `skin_corpus` and `skin_rotate`
+   had been in the registry since 9d with **nothing reading them**, so a
+   write was refused and a picker would have had nothing to write to.
+   [ADR-0051](decisions/0051-the-visualiser-reads-its-selection-from-a-file.md)
+   gives the renderer a file to poll beside the one it already reads, and
+   the corpus becomes the pack rather than one directory — measured, the
+   directory the engine loads holds 71 meters and not one spectrum, so two
+   of the four corpus words would have offered nothing at all. The fourth
+   word is **All**; it was `Random` until George renamed it (*"since it
+   makes more sense"* — `skin_rotate` is the one that is random).
+
+9. **9i - The volume path, measured, then the rows.** **Eight rows in the
+   Audio group and not one of them is wired**: `output_mode`, `boot_volume`,
+   `max_ceiling`, `restore_floor`, `boot_default_scope`,
+   `per_renderer_volume`, `volume_managed`, `travel_curve`. Fixed output
+   (ADR-0046) - the per-option warning, the absent slider, the padlock, the
+   drawer's replacement row, and `/state` publishing the mode - was **never
+   built, and found by Finding 040 rather than by anything the code said**.
+   Percent is the only user-facing unit (George, 2026-09-20).
+
+   **It opens with a finding, not with code** (George, 2026-09-22, on the
+   built panel): *"the volume is not increased or decreased smoothly, there
+   is this delay we introduce a while back"*; *"there are the occasional hops
+   in volume (especially after a first boot)"*; and *"sometimes it feels like
+   the max volume is different between renderers (song quality
+   independent)"*. Three symptoms, three first hypotheses, all measurable:
+
+   - **The delay.** `VolumeDrawer.svelte` sends one request at a time and
+     queues only the latest; each is a round trip, and what the slider
+     settles to is what the *renderer* reports, not what the finger did.
+     Two suppression windows sit in the same file - `OWN_WINDOW_MS = 1500`
+     and 3 s after a renderer change. Measure finger-to-echo per renderer.
+   - **The hops.** Three levels race at startup: `gexis-boot-volume` sets the
+     DAC to 60/240, each renderer's dummy control starts where it starts, and
+     `per_renderer_volume` restores a remembered level on first activation.
+     Log all three through a cold boot and see which moves last.
+   - **The maximum.** Each renderer has **its own dummy mixer** that the
+     daemon observes - `hw:gexislmsvol`, `hw:gexisbtvol`, Spotify's event
+     stream - each mapped into the DAC's -120...0 dB by a separate constant,
+     all -45 today (`SLIDER_DB_MIN`, `DUMMY_DB_MIN`, `SPOTIFY_DB_MIN`). If a
+     renderer applies its own curve first - Spotify sends 0-1, AVRCP is
+     0-127 - then 100% is a different attenuation on each. Play one track at
+     100% on all three and read the raw DAC value.
+
+   **Then the decisions the numbers inform**, all George's: the boot level
+   (raw 60/240 = **-90 dB = 0%** today against the design's 60% = -18 dB, **a
+   72 dB difference at every cold boot** into an amplifier at whatever gain
+   it was left at; 20% is -36 dB, 40% is -27 dB); whether ADR-0034's -45...0
+   window *is* "Perceptual", since `travel_curve` names a curve the code does
+   not implement (Finding 042 §2); where `max_ceiling` is enforced, being
+   `None` today; what a self-managing renderer does in fixed mode; and
+   whether the mode is per-device or per-renderer.
+   *Gate: hardware, with the amplifier turned down first.*
+
+10. **9j - Which output.** The device has **four cards** - the HiFiBerry
+   DAC+ HD, HDMI 0, HDMI 1 and the 3.5 mm jack - and the user has never been
+   offered the choice (George, 2026-09-22: *"The card holds now 3 outputs but
+   only one we've dealt with"*).
+
+   **One file decides it.** All three renderers already play to one PCM:
+   squeezelite `-o output`, go-librespot `audio_device: output`,
+   bluealsa-aplay `--pcm=output`, defined in `/etc/alsa/conf.d/output.conf`
+   as a `meter` PCM whose slave is `hw:sndrpihifiberry` and whose scope is
+   peppyalsa. Switching output is `slave.pcm` and `ctl.output` - and because
+   the meter sits above the slave, **the VU meter and spectrum follow the
+   audio wherever it goes**.
+
+   **The alternatives are not equivalent, which is the design question.**
+   The HiFiBerry has `DAC` (0-240 = -120...0 dB) and the jack has `PCM`;
+   **HDMI has no mixer control at all** - measured on the device, `amixer -c
+   vc4hdmi0 scontrols` is empty. So choosing HDMI *is* fixed output, and the
+   proposal is that it sets `output_mode` to Fixed and says so, rather than
+   leaving a slider that cannot work. ADR-0046 already describes that panel.
+
+   Wants its own ADR before implementation: the switch is a file the image
+   ships, the three renderers restart to follow it (ADR-0048's shape), and
+   the two mixer-check scripts and three dummy controls have to move with it.
+   *Gate: hardware - play on each output, and check the meter still moves.*
+
 **Where the settings stand as of 2026-09-18:** 54 rows, **6 wired**
 (`idle_url`, `idle_timeout`, `drawer_on_external`, `drawer_autohide`,
 `listenbrainz_token`, `fanart_key`). **Eight still owe a decision** -

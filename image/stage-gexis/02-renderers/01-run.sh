@@ -42,6 +42,13 @@ install -D -m 644 files/go-librespot.service \
 # criterion 2's ExecStartPre guard needs a real one, written from scratch.
 install -D -m 644 files/squeezelite.service \
 	"${ROOTFS_DIR}/etc/systemd/system/squeezelite.service"
+
+# The unit reads the player's name from here (ADR-0048 §1). Shipped with the
+# build-time name rather than left to the unit's fallback, so the file the
+# settings screen rewrites always exists and one place holds the answer.
+install -d -m 755 "${ROOTFS_DIR}/etc/gexis"
+printf 'GEXIS_DEVICE_NAME=gexis\n' \
+	> "${ROOTFS_DIR}/etc/gexis/device-name.env"
 install -D -m 755 files/squeezelite-mixer-check.sh \
 	"${ROOTFS_DIR}/usr/local/lib/gexis/squeezelite-mixer-check.sh"
 
@@ -57,16 +64,20 @@ install -D -m 644 files/bluealsa-aplay-override.conf \
 install -D -m 644 files/bluealsa-override.conf \
 	"${ROOTFS_DIR}/etc/systemd/system/bluealsa.service.d/override.conf"
 
-# BlueZ's adapter name defaults to the system hostname (already "gexis"
-# via firstrun.sh) unless main.conf's Name= is set - but relying on that
-# implicitly is exactly the kind of thing ADR-0022 wants made explicit
-# everywhere a device name shows up (mDNS, Spotify, Bluetooth). Set
-# explicitly here rather than trusted as an implicit side effect.
-# Targeted sed on the vendor-shipped file, not a full replacement - it's
-# ~250 lines of reference documentation for settings this project
-# doesn't otherwise touch, and replacing it wholesale would bury that
-# for no gain here.
-sed -i 's/^#Name = BlueZ$/Name = gexis/' "${ROOTFS_DIR}/etc/bluetooth/main.conf"
+# BlueZ's adapter name comes from /etc/machine-info's PRETTY_HOSTNAME,
+# which is where the settings screen writes it (ADR-0048 §4a).
+#
+# **main.conf's `Name =` does nothing**, and this stage set it for months.
+# The shipped file says so two lines above the setting itself - "The plugin
+# 'hostname' is loaded by default and overides the Name set here so consider
+# modifying /etc/machine-info with variable PRETTY_HOSTNAME=<NewName>
+# instead" - and the check below asserted only that the sed had matched,
+# which it always had. It looked right because the hostname was the same
+# string. Verified on the device 2026-09-21: with `Name = SofaPi` in
+# main.conf and no PRETTY_HOSTNAME, the adapter reported `sofapi`; with
+# PRETTY_HOSTNAME it reported `SofaPi`. See docs/LESSONS.md.
+install -d -m 755 "${ROOTFS_DIR}/etc"
+printf 'PRETTY_HOSTNAME=gexis\n' > "${ROOTFS_DIR}/etc/machine-info"
 
 # Bluetooth pairing setup (ADR-0024): unblock the rfkill soft-block
 # main.conf can't override on its own, power on, and register a
@@ -75,8 +86,12 @@ install -D -m 755 files/gexis-bluetooth-setup.sh \
 	"${ROOTFS_DIR}/usr/local/lib/gexis/bluetooth-setup.sh"
 install -D -m 644 files/gexis-bluetooth-setup.service \
 	"${ROOTFS_DIR}/etc/systemd/system/gexis-bluetooth-setup.service"
-install -D -m 644 files/gexis-bt-agent.service \
-	"${ROOTFS_DIR}/etc/systemd/system/gexis-bt-agent.service"
+# `gexis-bt-agent.service` is gone (ADR-0045). It ran `bt-agent
+# --capability=NoInputNoOutput` from bluez-tools, which answers the pairing
+# handshake on its own console and has no route to a screen - so pairing
+# could never be confirmed by anyone. `gexis_core.bluetooth_agent` registers
+# an `org.bluez.Agent1` of our own with `DisplayYesNo`, which is what makes
+# BlueZ produce a six-digit code at all.
 
 # Enable our own units. Symlinked directly rather than via systemctl -
 # there is no running systemd inside this chroot to talk to.
@@ -87,8 +102,6 @@ ln -sf /etc/systemd/system/squeezelite.service \
 	"${ROOTFS_DIR}/etc/systemd/system/multi-user.target.wants/squeezelite.service"
 ln -sf /etc/systemd/system/gexis-bluetooth-setup.service \
 	"${ROOTFS_DIR}/etc/systemd/system/multi-user.target.wants/gexis-bluetooth-setup.service"
-ln -sf /etc/systemd/system/gexis-bt-agent.service \
-	"${ROOTFS_DIR}/etc/systemd/system/multi-user.target.wants/gexis-bt-agent.service"
 
 # Build-time assertion: every file this stage installs actually landed
 # where the systemd units expect it, and pi owns what it needs to own.
@@ -102,19 +115,32 @@ for f in \
 	"${ROOTFS_DIR}/etc/systemd/system/bluealsa.service.d/override.conf" \
 	"${ROOTFS_DIR}/usr/local/lib/gexis/bluetooth-setup.sh" \
 	"${ROOTFS_DIR}/etc/systemd/system/gexis-bluetooth-setup.service" \
-	"${ROOTFS_DIR}/etc/systemd/system/gexis-bt-agent.service"
+	"${ROOTFS_DIR}/etc/gexis/device-name.env"
 do
 	if [ ! -e "${f}" ]; then
 		echo "ERROR: ${f} missing after install" >&2
 		exit 1
 	fi
 done
-# The sed above must have actually matched - a missed pattern (e.g. if
-# the vendor file's default comment text ever changes upstream) fails
-# silently otherwise, leaving the adapter name on whatever bluetoothd's
-# hostname-derived fallback happens to be.
-if ! grep -q "^Name = gexis$" "${ROOTFS_DIR}/etc/bluetooth/main.conf"; then
-	echo "ERROR: main.conf's Name= substitution did not take - pattern may have changed upstream" >&2
+# ADR-0048 §1: the name lives in the env file, and a unit that stopped
+# reading it would silently pin every device to one name again - visible
+# only as "the rename did nothing", which is the hardest kind to trace.
+if ! grep -q 'EnvironmentFile=-/etc/gexis/device-name.env' \
+	"${ROOTFS_DIR}/etc/systemd/system/squeezelite.service"; then
+	echo "ERROR: squeezelite.service no longer reads /etc/gexis/device-name.env" >&2
+	exit 1
+fi
+if ! grep -q -- '-n \${GEXIS_DEVICE_NAME}' \
+	"${ROOTFS_DIR}/etc/systemd/system/squeezelite.service"; then
+	echo "ERROR: squeezelite.service's -n is not the device name variable" >&2
+	exit 1
+fi
+
+# The name BlueZ will actually use. Checked as a value, not as a
+# substitution: the line this replaced asserted that main.conf said
+# `Name = gexis`, which was true and meant nothing (docs/LESSONS.md).
+if ! grep -q "^PRETTY_HOSTNAME=gexis$" "${ROOTFS_DIR}/etc/machine-info"; then
+	echo "ERROR: /etc/machine-info does not carry the device name" >&2
 	exit 1
 fi
 # These two are symlinks to an absolute path (/etc/systemd/system/...)
@@ -131,8 +157,7 @@ fi
 for f in \
 	"${ROOTFS_DIR}/etc/systemd/system/multi-user.target.wants/go-librespot.service" \
 	"${ROOTFS_DIR}/etc/systemd/system/multi-user.target.wants/squeezelite.service" \
-	"${ROOTFS_DIR}/etc/systemd/system/multi-user.target.wants/gexis-bluetooth-setup.service" \
-	"${ROOTFS_DIR}/etc/systemd/system/multi-user.target.wants/gexis-bt-agent.service"
+	"${ROOTFS_DIR}/etc/systemd/system/multi-user.target.wants/gexis-bluetooth-setup.service"
 do
 	if [ ! -L "${f}" ]; then
 		echo "ERROR: ${f} missing after install" >&2

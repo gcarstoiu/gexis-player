@@ -1,0 +1,148 @@
+<!-- @dsCard group="Brand" viewport="760x440" name="Boot sequence" subtitle="Intro plays once, pulse loops. Travel is always g e i s." -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<link rel="stylesheet" href="../styles.css" />
+<style>
+  html, body { margin: 0; background: var(--bg-base); }
+  body { font-family: var(--font-ui); color: var(--ink); padding: 18px 20px; }
+  .lbl { font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.18em;
+         text-transform: uppercase; color: var(--ink-quiet); margin-bottom: 12px; }
+  .row { display: flex; gap: 14px; flex-wrap: wrap; }
+  .scr { position: relative; width: 168px; height: 200px; border-radius: var(--r-card);
+         border: 1px solid var(--line); background: var(--bg-base);
+         display: flex; flex-direction: column; align-items: center;
+         justify-content: center; gap: 13px; overflow: hidden; box-sizing: border-box; }
+  .d   { position: relative; display: grid; grid-template-columns: 16px 16px;
+         grid-template-rows: 16px 16px; gap: 4px; transform: rotate(45deg); }
+  .t   { position: relative; border-radius: 4.5px; background: var(--logo-unlit);
+         display: flex; align-items: center; justify-content: center; }
+  .t > span { transform: rotate(-45deg); font-family: var(--logo-face);
+              font-weight: var(--logo-weight); font-size: 8.5px; line-height: 1;
+              color: var(--logo-unlit-ink); }
+  .lit { position: absolute; inset: 0; border-radius: 4.5px; display: flex;
+         align-items: center; justify-content: center; opacity: 0; }
+  .lit > span { transform: rotate(-45deg); font-family: var(--logo-face);
+                font-weight: var(--logo-weight); font-size: 8.5px; line-height: 1; }
+  .lit.g { background: var(--logo-g); } .lit.g > span { color: var(--logo-ink-g); }
+  .lit.e { background: var(--logo-e); } .lit.e > span { color: var(--logo-ink-e); }
+  .lit.i { background: var(--logo-i); } .lit.i > span { color: var(--logo-ink-i); }
+  .lit.s { background: var(--logo-s); } .lit.s > span { color: var(--logo-ink-s); }
+  .wm  { font-family: var(--logo-face); font-weight: var(--word-weight);
+         font-size: 30px; line-height: 1; letter-spacing: var(--track-tight); opacity: 0; }
+  .sb  { font-family: var(--font-mono); font-size: 9px; font-weight: var(--w-semibold);
+         letter-spacing: var(--track-label); text-transform: uppercase; opacity: 0; }
+  .fx  { position: absolute; inset: 0; pointer-events: none; opacity: 0; }
+  .cap { font-family: var(--font-mono); font-size: 9px; letter-spacing: 0.08em;
+         color: var(--ink-quiet); margin-top: 8px; text-align: center; }
+  .note { font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.05em;
+          color: var(--ink-quiet); margin-top: 16px; line-height: 1.8; }
+</style>
+</head>
+<body>
+
+<div class="lbl">g gazette &middot; e engine room &middot; i inbox &middot; s sound</div>
+<div class="row">
+
+  <div>
+    <div class="scr">
+      <div class="d">
+        <div class="t"><span>g</span><div class="lit g" style="animation:iv-1h 2s linear 1 forwards"><span>g</span></div></div>
+        <div class="t"><span>e</span><div class="lit e" style="animation:iv-2 2s linear 1 forwards"><span>e</span></div></div>
+        <div class="t"><span>i</span><div class="lit i" style="animation:iv-3 2s linear 1 forwards"><span>i</span></div></div>
+        <div class="t"><span>s</span><div class="lit s" style="animation:iv-4 2s linear 1 forwards"><span>s</span></div></div>
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:center;gap:6px;position:relative">
+        <div class="wm" style="animation:iv-word 2s linear 1 forwards">gexis</div>
+        <div class="sb" style="color:var(--logo-g);animation:iv-sub 2s linear 1 forwards">gazette</div>
+      </div>
+      <div class="fx" style="animation:iv-fx 2s linear 1 forwards">
+        <div style="position:absolute;bottom:14px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:5px">
+          <div style="width:56px;height:1px;background:var(--logo-g);opacity:.35"></div>
+          <div style="width:2px;height:11px;background:var(--logo-g);animation:pl-caret 1s steps(1,end) 2s infinite"></div>
+        </div>
+      </div>
+    </div>
+    <div class="cap">caret</div>
+  </div>
+
+  <div>
+    <div class="scr">
+      <div class="d">
+        <div class="t"><span>g</span><div class="lit g" style="animation:iv-1 2s linear 1 forwards"><span>g</span></div></div>
+        <div class="t"><span>e</span><div class="lit e" style="animation:iv-2h 2s linear 1 forwards"><span>e</span></div></div>
+        <div class="t"><span>i</span><div class="lit i" style="animation:iv-3 2s linear 1 forwards"><span>i</span></div></div>
+        <div class="t"><span>s</span><div class="lit s" style="animation:iv-4 2s linear 1 forwards"><span>s</span></div></div>
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:center;gap:6px;position:relative">
+        <div class="wm" style="animation:iv-word 2s linear 1 forwards">gexis</div>
+        <div class="sb" style="color:var(--logo-e);animation:iv-sub 2s linear 1 forwards">engine room</div>
+      </div>
+      <div class="fx" style="animation:iv-fx 2s linear 1 forwards">
+        <div style="position:absolute;bottom:15px;left:50%;transform:translateX(-50%);display:flex;gap:7px">
+          <div style="width:6px;height:6px;border-radius:var(--r-circle);background:var(--logo-e);animation:pl-led1 1.5s linear 2s infinite"></div>
+          <div style="width:6px;height:6px;border-radius:var(--r-circle);background:var(--logo-e);animation:pl-led2 1.5s linear 2s infinite"></div>
+          <div style="width:6px;height:6px;border-radius:var(--r-circle);background:var(--logo-e);animation:pl-led3 1.5s linear 2s infinite"></div>
+        </div>
+      </div>
+    </div>
+    <div class="cap">status leds</div>
+  </div>
+
+  <div>
+    <div class="scr">
+      <div style="position:relative">
+        <div class="d">
+          <div class="t"><span>g</span><div class="lit g" style="animation:iv-1 2s linear 1 forwards"><span>g</span></div></div>
+          <div class="t"><span>e</span><div class="lit e" style="animation:iv-2 2s linear 1 forwards"><span>e</span></div></div>
+          <div class="t"><span>i</span><div class="lit i" style="animation:iv-3h 2s linear 1 forwards"><span>i</span></div></div>
+          <div class="t"><span>s</span><div class="lit s" style="animation:iv-4 2s linear 1 forwards"><span>s</span></div></div>
+        </div>
+        <div class="fx" style="position:absolute;right:-9px;top:-9px;inset:auto;animation:iv-fx 2s linear 1 forwards">
+          <div style="width:15px;height:15px;border-radius:var(--r-circle);background:var(--logo-i);color:var(--logo-ink-i);display:flex;align-items:center;justify-content:center;font-family:var(--logo-face);font-weight:var(--logo-weight);font-size:9px;animation:pl-badge 2s linear 2s infinite">1</div>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:center;gap:6px;position:relative">
+        <div class="wm" style="animation:iv-word 2s linear 1 forwards">gexis</div>
+        <div class="sb" style="color:var(--logo-i);animation:iv-sub 2s linear 1 forwards">inbox</div>
+      </div>
+    </div>
+    <div class="cap">unread badge</div>
+  </div>
+
+  <div>
+    <div class="scr">
+      <div class="fx" style="display:flex;align-items:center;justify-content:center;animation:iv-fx 2s linear 1 forwards">
+        <div style="position:relative;width:99px;height:99px">
+          <div style="position:absolute;inset:0;border-radius:var(--r-circle);background:radial-gradient(circle,rgba(242,164,143,.17),transparent 68%);animation:pl-halo 2s linear 2s infinite"></div>
+          <div style="position:absolute;inset:0;border-radius:var(--r-circle);border:2px solid var(--logo-s);opacity:0;animation:pl-w1 2s linear 2s infinite"></div>
+          <div style="position:absolute;inset:0;border-radius:var(--r-circle);border:2px solid var(--logo-s);opacity:0;animation:pl-w2 2s linear 2s infinite"></div>
+        </div>
+      </div>
+      <div class="d">
+        <div class="t"><span>g</span><div class="lit g" style="animation:iv-1 2s linear 1 forwards"><span>g</span></div></div>
+        <div class="t"><span>e</span><div class="lit e" style="animation:iv-2 2s linear 1 forwards"><span>e</span></div></div>
+        <div class="t"><span>i</span><div class="lit i" style="animation:iv-3 2s linear 1 forwards"><span>i</span></div></div>
+        <div class="t"><span>s</span><div class="lit s" style="animation:iv-4h 2s linear 1 forwards"><span>s</span></div></div>
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:center;gap:6px;position:relative">
+        <div class="wm" style="animation:iv-word 2s linear 1 forwards">gexis</div>
+        <div class="sb" style="color:var(--logo-s);animation:iv-sub 2s linear 1 forwards">sound</div>
+      </div>
+    </div>
+    <div class="cap">wavefronts</div>
+  </div>
+
+</div>
+
+<div class="note">
+  Intro 2 s, <span style="color:var(--ink)">plays once</span> &mdash; travel 0&ndash;46 %, wordmark 55&ndash;75 %, sub-label and flourish 68&ndash;86 %. Pulse 2 s, <span style="color:var(--ink)">loops</span> &mdash; lub-dub, then rest.<br>
+  Tile g is always slot 1, e slot 2, i slot 3, s slot 4. Only the landing tile swaps to the -h variant that holds, so the travel is g e i s on every screen.<br>
+  The wordmark is the larger element; the mark sits above it at about a third of its width. Wavefronts launch clear of the tiles &mdash; never from behind them.<br>
+  Opacity and transform only. <span style="color:var(--accent-warn)">The pulse is the system's second indefinite animation</span>, declared in tokens/patterns-brand.css; boot is not a running screen.<br>
+  On the device the sound sequence ships as Plymouth frames: intro 1&ndash;50 once, pulse 51&ndash;100 looped, pixel-identical wrap.
+</div>
+
+</body>
+</html>

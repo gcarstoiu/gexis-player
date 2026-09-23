@@ -1,0 +1,90 @@
+#!/bin/bash
+# Read the panel's binaries into the page cache while the boot is waiting on
+# something else (ADR-0043's Open, measured 2026-09-19).
+#
+# The panel is not slow to start, it is slow to be *read*. Chromium takes
+# ~15s from a cold page cache and ~2.7s warm - same binary, same page, the
+# difference is 484MB of Chromium coming off an SD card. Meanwhile the boot
+# spends ~17s blocked on NetworkManager-wait-online with the disk largely
+# idle, and only then starts the kiosk. The two costs are strictly in
+# series.
+#
+# So this spends the idle window on reads that have to happen anyway. It
+# does not make anything start sooner; it makes the start cheaper when it
+# comes.
+#
+# Deliberately best-effort in every direction: idle I/O priority so real
+# boot work always wins, `nice` for the same reason on CPU, no failure that
+# can propagate, and a cap so a machine with less memory than this one does
+# not end up evicting something it needs. Warming is an optimisation; if it
+# does nothing at all the panel still starts exactly as it did before.
+
+set -u
+
+# Chromium's own tree is 482MB and the compositor's set below is ~196MB.
+# 700 holds both complete, and is well under the ~2.5GB free on this device
+# at that point in the boot. Raised from 600 on 2026-09-20: at 600 the two
+# sets no longer both fit, and truncating is worse than the extra 100MB.
+BUDGET_MB=700
+
+# ORDER IS LOAD-BEARING, and it was wrong until 2026-09-20 (Finding 041).
+#
+# Chromium was first, so its 482MB took the whole idle window and the
+# compositor's libraries were read last - 7.4s AFTER labwc had already
+# started and needed them. Measured on the 2026-09-20 boot: the warmup ran
+# 10.70 -> 33.06s while gexis-kiosk started at 25.44s, and labwc then spent
+# 3.6s producing no output at all before reporting ready.
+#
+# labwc is needed at ~25s and Chromium at ~32s, so labwc's set goes first.
+#
+# The second half of the mistake is subtler: the old list warmed
+# /usr/bin/labwc, which is 515KB, and nothing else. What labwc actually
+# reads is dlopen'd at runtime and therefore invisible to `ldd` - Mesa's
+# gallium driver, which pulls in LLVM as its shader compiler, and z3.
+# Measured from a running labwc's /proc/PID/maps:
+#
+#   libLLVM.so.19.1        117MB
+#   libgallium-*.so         49MB   (vc4_dri.so and v3d_dri.so symlink into it)
+#   libz3.so.4              25MB
+#   librsvg-2.so.2           5MB
+#
+# Globbed rather than pinned, because these carry upstream version numbers
+# that change under us; a glob that matches nothing stays a literal and is
+# skipped by the `-e` test below, which is the safe direction. Deriving the
+# list from the binary is not possible - that is the whole point of dlopen.
+LIBDIR=/usr/lib/$(uname -m)-linux-gnu
+WARM=(
+	/usr/bin/labwc
+	/usr/bin/swaybg
+	"${LIBDIR}"/libgallium-*.so
+	"${LIBDIR}"/libLLVM.so.*
+	"${LIBDIR}"/libz3.so.*
+	"${LIBDIR}"/librsvg-2.so.*
+	"${LIBDIR}"/dri
+	/usr/lib/chromium
+)
+
+read_bytes=0
+budget=$((BUDGET_MB * 1024 * 1024))
+
+for target in "${WARM[@]}"; do
+	[ -e "${target}" ] || continue
+	before=${read_bytes}
+	while IFS= read -r -d '' file; do
+		size=$(stat -c %s "${file}" 2>/dev/null) || continue
+		if [ $((read_bytes + size)) -gt "${budget}" ]; then
+			echo "gexis-panel-warmup: budget reached at $((read_bytes / 1024 / 1024))MB"
+			exit 0
+		fi
+		# dd rather than cat: a fixed block size, no shell pipe, and no
+		# chance of a huge file being slurped into a variable somewhere.
+		dd if="${file}" of=/dev/null bs=1M status=none 2>/dev/null || true
+		read_bytes=$((read_bytes + size))
+	done < <(find "${target}" -type f -print0 2>/dev/null)
+	# One line per target, so the journal's own timestamps say whether the
+	# compositor's set finished before gexis-kiosk started rather than
+	# leaving it to be inferred. Finding 041 had to infer it.
+	echo "gexis-panel-warmup: $(basename "${target}") +$(( (read_bytes - before) / 1024 / 1024 ))MB (running total $((read_bytes / 1024 / 1024))MB)"
+done
+
+echo "gexis-panel-warmup: warmed $((read_bytes / 1024 / 1024))MB"

@@ -13,6 +13,17 @@ device_type: avr
 
 audio_backend: alsa
 audio_device: output
+# **go-librespot does not touch the audio** (ADR-0052 §6). Measured on the
+# device, 2026-09-22: at its volume 25 the *stream* was down 21 dB and the
+# DAC was at -34 - both applied, about -55 dB where a quarter was asked for,
+# against -37 on LMS which attenuates in hardware alone (Finding 045 §7).
+# That is what "the max volume is different between renderers" was.
+#
+# `external_volume` keeps the phone's slider and its volume events - which
+# gexis-core mirrors onto the DAC - and stops the software attenuation, so
+# Spotify matches LMS: full-scale digital, all of the level in hardware.
+# It makes Spotify **louder at the same setting**, by up to 21 dB.
+external_volume: true
 
 zeroconf_enabled: true
 # avahi, not go-librespot's own built-in mDNS responder: avahi-daemon is

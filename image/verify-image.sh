@@ -36,7 +36,6 @@ done <<'EOF'
 image/stage-gexis/03-core/files/core.toml /etc/gexis/core.toml
 image/stage-gexis/03-core/files/gexis-core.service /etc/systemd/system/gexis-core.service
 image/stage-gexis/03-core/files/gexis-boot-volume.service /etc/systemd/system/gexis-boot-volume.service
-image/stage-gexis/03-core/files/gexis-bluetooth-trust.service /etc/systemd/system/gexis-bluetooth-trust.service
 image/stage-gexis/03-core/files/gexis-meter.service /etc/systemd/system/gexis-meter.service
 image/stage-gexis/04-ui/files/gexis-kiosk.service /etc/systemd/system/gexis-kiosk.service
 image/stage-gexis/04-ui/files/gexis-kiosk-start /usr/local/bin/gexis-kiosk-start
@@ -53,10 +52,24 @@ skins/templates_spectrum/meters.txt /opt/gexis-peppy/skins/gelo5/templates_spect
 skins/templates_spectrum/spectrum.txt /opt/gexis-peppy/skins/gelo5/templates_spectrum/1280x800/spectrum.txt
 EOF
 
+echo "== files the services must be able to write"
+# The driver rewrites the spectrum engine's config to choose a section - the
+# engine has no other way to be told - and the unit runs as pi (uid 1000).
+# Shipped root-owned, that write raised PermissionError after the display
+# existed and left a black window on the panel (ADR-0051 §3).
+own=$(dfs "stat /opt/gexis-peppy/spectrum/config.txt" | grep -o 'User: *[0-9]*' | tr -s ' ')
+[ "$own" = "User: 1000" ] && ok "spectrum config owned by uid 1000" || bad "spectrum config ownership: '${own:-missing}'"
+
 echo "== units enabled (symlink targets)"
-for u in gexis-core gexis-boot-volume gexis-bluetooth-trust gexis-meter gexis-kiosk gexis-peppy; do
+for u in gexis-core gexis-boot-volume gexis-meter gexis-kiosk gexis-peppy; do
 	t=$(dfs "stat /etc/systemd/system/multi-user.target.wants/$u.service" | grep -o 'Fast link dest: ".*"')
 	[ "$t" = "Fast link dest: \"/etc/systemd/system/$u.service\"" ] && ok "$u -> $t" || bad "$u enablement: '${t:-missing}'"
+done
+# ADR-0045 removed this one. A warm build keeps what an earlier build wrote,
+# and it shipped enabled with its module already deleted.
+for gone in /etc/systemd/system/gexis-bluetooth-trust.service \
+	/etc/systemd/system/multi-user.target.wants/gexis-bluetooth-trust.service; do
+	dfs "stat $gone" | grep -q 'Inode:' && bad "$gone still in the image (ADR-0045)" || ok "$gone absent"
 done
 t=$(dfs "stat /etc/systemd/system/alsa-restore.service" | grep -o 'Fast link dest: ".*"')
 [ "$t" = 'Fast link dest: "/dev/null"' ] && ok "alsa-restore masked" || bad "alsa-restore mask: '${t:-missing}'"

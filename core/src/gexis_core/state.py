@@ -55,6 +55,7 @@ class StateStore:
         self._handoff: Handoff | None = None
         self._volume: VolumeState | None = None
         self._settings_revision = 0
+        self._pairing: dict | None = None
         self._subscribers: list[Callable[[PlaybackState], None]] = []
 
     def subscribe(self, callback: Callable[[PlaybackState], None]) -> None:
@@ -78,6 +79,7 @@ class StateStore:
             volume=self._volume,
             handoff_exempt_pairs=self._handoff_exempt_pairs,
             settings_revision=self._settings_revision,
+            pairing=self._pairing,
         )
 
     def set_active(self, renderer_id: str | None) -> None:
@@ -160,6 +162,21 @@ class StateStore:
         if volume == self._volume:
             return
         self._volume = volume
+        self._notify()
+
+    def set_pairing(self, pairing: dict | None) -> None:
+        """A Bluetooth pairing request, or None once it is answered or gone
+        (ADR-0045). **Published the moment the agent asks**: the agent is
+        holding BlueZ's handshake open while this travels, and the panel has
+        the agent's whole window to be told, not a share of it."""
+        # **A dict, not the agent's own object.** This goes straight into
+        # `json.dumps` in the broadcast, where a dataclass raises and takes
+        # every other state update with it until the request closes.
+        if pairing is not None and not isinstance(pairing, dict):
+            raise TypeError(f"pairing must be a dict, got {type(pairing).__name__}")
+        if pairing == self._pairing:
+            return
+        self._pairing = pairing
         self._notify()
 
     def bump_settings_revision(self) -> None:

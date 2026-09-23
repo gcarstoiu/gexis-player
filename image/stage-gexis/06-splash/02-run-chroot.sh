@@ -21,22 +21,53 @@ if [ "${selected}" != "gexis" ]; then
 fi
 
 # Plymouth ships units that quit the splash as soon as the system is up.
-# They must not run: the panel is still painting. gexis-core drops it when
-# the UI reports its first frame, and gexis-splash-backstop.service is the
-# safety net if that never arrives.
+# They must not run: the panel is still ~2s from painting then, and plymouth
+# has to be ended in a controlled place - gexis-kiosk.service does it, just
+# before labwc, because plymouth holds DRM until it goes. The backstop timer
+# is the net for a kiosk that never starts at all.
 systemctl mask plymouth-quit.service
 systemctl mask plymouth-quit-wait.service
-systemctl enable gexis-splash-backstop.service
+systemctl enable gexis-splash-backstop.timer
 
-# Rebuild every initramfs so the plymouth hook and the theme are in it.
-# -k all rather than a version we guessed: this image is built for more than
-# one Pi and carries more than one kernel.
+# Rebuild every initramfs so the plymouth hook is in it. -k all rather than a
+# version we guessed: this image carries two kernels, `+rpt-rpi-v8` for the
+# Pi 4 and `+rpt-rpi-2712` for the Pi 5, and the raspi-firmware post-update
+# hook copies each to /boot/firmware/initramfs8 and initramfs_2712.
 #
-# -u updates an existing initramfs and fails when there is none; -c creates
-# one and fails when there is. Which applies depends on whether stage2's
-# kernel postinst already ran here, so try the update and fall back rather
-# than assuming either.
-update-initramfs -u -k all || update-initramfs -c -k all
+# update-initramfs can print "Not updating initramfs." and do nothing at all,
+# depending on this setting. Found on 2026-09-19 by this stage's own
+# assertion, on the first build after it was written: the rebuild appeared to
+# succeed and the initramfs was still the one stage2 produced, without
+# plymouth in it. So it is forced on for this one rebuild and put back
+# exactly as it was found.
+#
+# **This comment used to assert "Raspberry Pi OS ships update_initramfs=no".
+# That is not true of the flashed device and the claim is withdrawn**
+# (2026-09-20). Measured on `gexis`: the file reads `update_initramfs=yes`
+# and its md5 is byte-identical to the conffile `initramfs-tools` shipped, so
+# it has never been edited, and `dpkg.log` records no upgrade of that package
+# since the flash. Why the build saw a rebuild that did nothing is therefore
+# **unexplained** - it was attributed to a value the device does not have.
+# It does not affect the code below, which captures whatever it finds and
+# restores that; it does mean the cause of the 2026-09-19 failure is still
+# open. Do not re-derive the `no` claim from the old commit message.
+#
+# Acting on the withdrawn claim cost something, and it is worth recording
+# why: it was read as fact, George was asked whether to "restore" the device
+# to `no` on that basis, and the change was made and then reverted when the
+# conffile md5 was finally checked. The check that would have prevented it -
+# comparing against what the package shipped - takes one command.
+CONF=/etc/initramfs-tools/update-initramfs.conf
+ORIGINAL="$(grep '^update_initramfs=' "${CONF}" || echo 'update_initramfs=no')"
+
+sed -i 's/^update_initramfs=.*/update_initramfs=all/' "${CONF}"
+update-initramfs -u -k all
+sed -i "s/^update_initramfs=.*/${ORIGINAL}/" "${CONF}"
+
+grep -q "^${ORIGINAL}\$" "${CONF}" || {
+	echo "ERROR: failed to restore ${CONF} to '${ORIGINAL}'" >&2
+	exit 1
+}
 
 # An initramfs that is missing, empty or missing its plymouth hook does not
 # fail the build on its own - it produces a device that shows no animation,

@@ -14,6 +14,7 @@
   html,body{margin:0;padding:0;background:#0c1014;}
   a{color:#7ed6bc;}a:hover{color:#a8e5d3;}
   [data-noscrollbar]::-webkit-scrollbar{display:none;}
+  @keyframes setSpin{to{transform:rotate(360deg);}}
   /* row-level reflow is pure layout, so the row is its own container: below
      520px the value drops under the label instead of squeezing it */
   @container srow (max-width: 520px){
@@ -31,36 +32,33 @@
   <div style="position:relative;height:100%;display:flex;flex-direction:column;min-height:0;">
 
     <div style="flex-shrink:0;display:flex;align-items:center;gap:16px;box-sizing:border-box;border-bottom:1px solid rgba(233,238,242,0.09);padding:{{ headPad }};min-height:{{ headMin }};">
-      <div onClick="{{ onBack }}" style="width:56px;height:56px;border-radius:50%;background:rgba(233,238,242,0.07);align-items:center;justify-content:center;flex-shrink:0;display:{{ backDisplay }};" style-active="background:rgba(233,238,242,0.2)">
+      <div onClick="{{ onBack }}" style="width:56px;height:56px;border-radius:50%;background:rgba(233,238,242,0.07);align-items:center;justify-content:center;flex-shrink:0;display:{{ backDisplay }};" style-active="transform:scale(0.95)">
         <div style="width:13px;height:13px;border-left:3px solid #e9eef2;border-bottom:3px solid #e9eef2;transform:rotate(45deg);margin-left:10px;"></div>
       </div>
       <div style="flex:1;min-width:0;">
         <div style="font-weight:700;letter-spacing:-0.01em;color:#e9eef2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:{{ titleSize }};">{{ title }}</div>
         <div style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:13px;letter-spacing:0.06em;color:rgba(233,238,242,0.5);margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:{{ subDisplay }};">{{ subtitle }}</div>
       </div>
-      <span style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:12px;letter-spacing:0.14em;text-transform:uppercase;color:rgba(233,238,242,0.6);flex-shrink:0;display:{{ buildDisplay }};">{{ buildShort }}</span>
     </div>
 
     <div style="position:relative;flex:1;min-height:0;display:flex;">
 
       <div data-noscrollbar style="width:290px;flex-shrink:0;border-right:1px solid rgba(233,238,242,0.09);padding:18px 16px;box-sizing:border-box;overflow-y:auto;flex-direction:column;gap:4px;display:{{ railDisplay }};">
         <sc-for list="{{ cats }}" as="c" hint-placeholder-count="7">
-          <div onClick="{{ c.onTap }}" style="flex-shrink:0;display:flex;align-items:center;gap:15px;height:72px;padding:0 16px;border-radius:14px;box-sizing:border-box;background:{{ c.bg }};" style-active="background:rgba(233,238,242,0.13)">
+          <div onClick="{{ c.onTap }}" style="flex-shrink:0;display:flex;align-items:center;gap:15px;height:72px;padding:0 16px;border-radius:14px;box-sizing:border-box;background:{{ c.bg }};">
             <span style="width:4px;height:30px;border-radius:2px;flex-shrink:0;display:block;background:{{ c.bar }};"></span>
             <span style="flex:1;min-width:0;font-size:19px;font-weight:600;color:{{ c.ink }};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ c.name }}</span>
-            <span style="width:9px;height:9px;border-radius:50%;background:#e0a758;flex-shrink:0;display:{{ c.dotDisplay }};"></span>
           </div>
         </sc-for>
       </div>
 
       <div data-noscrollbar style="flex:1;min-width:0;overflow-y:auto;box-sizing:border-box;flex-direction:column;gap:6px;padding:{{ listPad }};display:{{ groupsDisplay }};">
         <sc-for list="{{ cats }}" as="c" hint-placeholder-count="7">
-          <div onClick="{{ c.onTap }}" style="flex-shrink:0;display:flex;align-items:center;gap:16px;min-height:78px;padding:16px 18px;border-radius:16px;box-sizing:border-box;background:rgba(255,255,255,0.05);border:1px solid rgba(233,238,242,0.1);" style-active="background:rgba(233,238,242,0.13)">
+          <div onClick="{{ c.onTap }}" style="flex-shrink:0;display:flex;align-items:center;gap:16px;min-height:78px;padding:16px 18px;border-radius:16px;box-sizing:border-box;background:rgba(255,255,255,0.05);border:1px solid rgba(233,238,242,0.1);">
             <span style="width:4px;align-self:stretch;border-radius:2px;flex-shrink:0;display:block;background:{{ c.bar }};"></span>
             <span style="flex:1;min-width:0;display:block;">
               <span style="display:flex;align-items:center;gap:9px;">
                 <span style="font-size:19px;font-weight:600;color:#e9eef2;">{{ c.name }}</span>
-                <span style="width:8px;height:8px;border-radius:50%;background:#e0a758;flex-shrink:0;display:{{ c.dotDisplay }};"></span>
               </span>
               <span style="display:block;font-family:'IBM Plex Mono','Courier New',monospace;font-size:13px;letter-spacing:0.05em;color:rgba(233,238,242,0.55);margin-top:6px;">{{ c.blurb }}</span>
             </span>
@@ -77,12 +75,11 @@
               <span style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:13px;letter-spacing:0.2em;text-transform:uppercase;color:{{ r.headInk }};flex-shrink:0;">{{ r.group }}</span>
               <span style="flex:1;height:1px;background:rgba(233,238,242,0.1);display:block;"></span>
             </div>
-            <div data-srow onClick="{{ r.onTap }}" style="container-type:inline-size;container-name:srow;box-sizing:border-box;border-radius:15px;padding:14px 20px;display:{{ r.rowDisplay }};background:{{ r.bg }};border:1px solid {{ r.border }};" style-active="background:rgba(233,238,242,0.12)">
+            <div data-srow onClick="{{ r.onTap }}" style="container-type:inline-size;container-name:srow;box-sizing:border-box;border-radius:15px;padding:14px 20px;display:{{ r.rowDisplay }};background:{{ r.bg }};border:1px solid {{ r.border }};">
               <div data-sbody style="display:flex;align-items:center;gap:18px;min-width:0;min-height:50px;">
                 <div style="flex:1;min-width:0;">
                   <div style="display:flex;align-items:center;gap:9px;">
                     <span style="font-size:18px;font-weight:600;color:{{ r.ink }};">{{ r.label }}</span>
-                    <span style="width:8px;height:8px;border-radius:50%;background:#e0a758;flex-shrink:0;display:{{ r.dotDisplay }};"></span>
                   </div>
                   <div style="font-size:14px;line-height:1.36;color:rgba(233,238,242,0.55);margin-top:5px;text-wrap:pretty;display:{{ r.noteDisplay }};">{{ r.note }}</div>
                 </div>
@@ -99,7 +96,61 @@
     </div>
   </div>
 
-  <div onClick="{{ onSheetClose }}" style="position:absolute;inset:0;background:rgba(8,12,16,0.62);backdrop-filter:blur(3px);transition:opacity 180ms ease;opacity:{{ sheetScrim }};pointer-events:{{ sheetPointer }};"></div>
+  <div style="position:absolute;inset:0;z-index:30;background:#101a21;flex-direction:column;overflow:hidden;display:{{ pickerDisplay }};">
+    <div style="position:absolute;inset:-90px;background:repeating-linear-gradient(38deg,#3f5a6d 0 48px,#2e4453 48px 96px);filter:blur(70px);transform:scale(1.14);"></div>
+    <div style="position:absolute;inset:0;background:radial-gradient(130% 105% at 20% 42%,rgba(20,33,42,0.72),rgba(13,21,28,0.96));"></div>
+
+    <div style="position:relative;flex-shrink:0;display:flex;align-items:center;gap:18px;padding:0 36px;min-height:92px;border-bottom:1px solid rgba(233,238,242,0.09);">
+      <div onClick="{{ onPickerBack }}" style="width:56px;height:56px;border-radius:50%;background:rgba(233,238,242,0.07);display:flex;align-items:center;justify-content:center;flex-shrink:0;" style-active="background:rgba(233,238,242,0.2)">
+        <div style="width:13px;height:13px;border-left:3px solid #e9eef2;border-bottom:3px solid #e9eef2;transform:rotate(45deg);margin-left:10px;"></div>
+      </div>
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:25px;font-weight:700;letter-spacing:-0.01em;color:#e9eef2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ pickerTitle }}</div>
+        <div style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:13px;letter-spacing:0.06em;color:rgba(233,238,242,0.6);margin-top:4px;white-space:nowrap;">{{ pickerCount }}</div>
+      </div>
+    </div>
+
+    <div style="position:relative;flex:1;min-height:0;display:flex;">
+
+      <div data-noscrollbar style="flex-shrink:0;min-height:0;overflow-y:auto;border-right:1px solid rgba(233,238,242,0.09);padding:10px 0 24px;box-sizing:border-box;width:{{ pickerListWidth }};">
+        <sc-for list="{{ pickerTiles }}" as="t" hint-placeholder-count="14">
+          <div onClick="{{ t.onTap }}" style="display:flex;align-items:center;gap:14px;padding:0 26px;min-height:62px;box-sizing:border-box;background:{{ t.bg }};border-left:3px solid {{ t.rail }};" style-active="background:rgba(233,238,242,0.1)">
+            <span style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:13px;letter-spacing:0.08em;color:rgba(233,238,242,0.45);flex-shrink:0;width:32px;">{{ t.ord }}</span>
+            <span style="flex:1;min-width:0;font-size:17px;font-weight:600;color:{{ t.ink }};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ t.label }}</span>
+            <span style="width:20px;height:20px;border-radius:50%;background:#7ed6bc;align-items:center;justify-content:center;flex-shrink:0;display:{{ t.checkDisplay }};">
+              <span style="width:7px;height:4px;border-left:2.5px solid #0d151c;border-bottom:2.5px solid #0d151c;transform:rotate(-45deg);margin-top:-2px;display:block;"></span>
+            </span>
+          </div>
+        </sc-for>
+      </div>
+
+      <div style="position:{{ pickerPaneMode }};inset:0;flex:1;min-width:0;min-height:0;background:{{ pickerPaneBg }};flex-direction:column;padding:26px 28px 28px;box-sizing:border-box;gap:20px;display:{{ pickerPaneDisplay }};">
+        <div style="flex-shrink:0;align-items:center;gap:14px;display:{{ pickerPaneBackDisplay }};">
+          <div onClick="{{ onPickerViewBack }}" style="width:46px;height:46px;border-radius:50%;background:rgba(233,238,242,0.07);display:flex;align-items:center;justify-content:center;flex-shrink:0;" style-active="background:rgba(233,238,242,0.2)">
+            <div style="width:11px;height:11px;border-left:2.5px solid #e9eef2;border-bottom:2.5px solid #e9eef2;transform:rotate(45deg);margin-left:8px;"></div>
+          </div>
+          <span style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:13px;letter-spacing:0.08em;color:rgba(233,238,242,0.6);">BACK TO LIST</span>
+        </div>
+
+        <div style="position:relative;width:100%;aspect-ratio:16/10;max-height:58%;border-radius:16px;overflow:hidden;background:#17242d;border:1px solid rgba(233,238,242,0.14);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+          <span style="position:absolute;inset:0;background:radial-gradient(120% 120% at 30% 20%,rgba(233,238,242,0.08),transparent 70%);display:block;"></span>
+          <span style="height:62%;aspect-ratio:1;border-radius:50%;border:2px solid rgba(233,238,242,0.22);display:block;"></span>
+          <span style="position:absolute;bottom:14px;left:16px;font-family:'IBM Plex Mono','Courier New',monospace;font-size:12px;letter-spacing:0.1em;color:rgba(233,238,242,0.4);">PREVIEW PLACEHOLDER</span>
+        </div>
+
+        <div style="flex:1;min-height:0;">
+          <div style="font-size:26px;font-weight:700;letter-spacing:-0.01em;color:#e9eef2;text-wrap:pretty;">{{ pickerViewLabel }}</div>
+          <div style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:13px;letter-spacing:0.06em;color:rgba(233,238,242,0.55);margin-top:8px;word-break:break-word;">{{ pickerViewMeta }}</div>
+        </div>
+
+        <div onClick="{{ onPickerUse }}" style="flex-shrink:0;min-height:60px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:600;background:{{ pickerUseBg }};color:{{ pickerUseInk }};border:1px solid {{ pickerUseBorder }};" style-active="opacity:0.75">{{ pickerUseText }}</div>
+      </div>
+
+    </div>
+
+  </div>
+
+  <div onClick="{{ onSheetClose }}" style="position:absolute;inset:0;background:rgba(8,12,16,0.62);transition:opacity 180ms ease;opacity:{{ sheetScrim }};pointer-events:{{ sheetPointer }};"></div>
 
   <div style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:calc(100% - 44px);max-width:560px;max-height:82%;background:#16232c;border:1px solid rgba(233,238,242,0.14);border-radius:22px;box-shadow:0 30px 70px rgba(0,0,0,0.5);box-sizing:border-box;padding:26px;flex-direction:column;gap:18px;transition:opacity 180ms ease;opacity:{{ sheetScrim }};pointer-events:{{ sheetPointer }};display:{{ sheetDisplay }};">
     <div style="flex-shrink:0;min-width:0;">
@@ -107,22 +158,101 @@
       <div style="font-size:15px;line-height:1.4;color:rgba(233,238,242,0.6);margin-top:8px;text-wrap:pretty;display:{{ sheetNoteDisplay }};">{{ sheetNote }}</div>
     </div>
 
+    <div style="flex-shrink:0;align-items:flex-start;gap:14px;padding:16px 18px;border-radius:14px;background:rgba(224,167,88,0.12);border:1px solid rgba(224,167,88,0.42);display:{{ sheetWarnDisplay }};">
+      <span style="width:26px;height:26px;border-radius:50%;background:#e0a758;color:#16232c;font-weight:700;font-size:17px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">!</span>
+      <span style="flex:1;min-width:0;font-size:15px;line-height:1.45;color:#e9eef2;text-wrap:pretty;">{{ sheetWarn }}</span>
+    </div>
+
     <div data-noscrollbar style="flex:1;min-height:0;overflow-y:auto;flex-direction:column;gap:6px;display:{{ sheetOptionsDisplay }};">
       <sc-for list="{{ sheetOptions }}" as="o" hint-placeholder-count="3">
-        <div onClick="{{ o.onTap }}" style="flex-shrink:0;display:flex;align-items:center;gap:16px;min-height:62px;padding:12px 18px;border-radius:14px;box-sizing:border-box;background:{{ o.bg }};border:1px solid {{ o.border }};" style-active="background:rgba(233,238,242,0.14)">
+        <div onClick="{{ o.onTap }}" style="flex-shrink:0;display:flex;align-items:center;gap:16px;min-height:62px;padding:12px 18px;border-radius:14px;box-sizing:border-box;background:{{ o.bg }};border:1px solid {{ o.border }};">
           <span style="width:22px;height:22px;border-radius:50%;flex-shrink:0;box-sizing:border-box;display:flex;align-items:center;justify-content:center;border:2px solid {{ o.ringInk }};">
             <span style="width:11px;height:11px;border-radius:50%;background:#7ed6bc;display:{{ o.dotDisplay }};"></span>
           </span>
+          <span style="flex-shrink:0;font-family:'IBM Plex Mono','Courier New',monospace;font-size:14px;letter-spacing:0.06em;color:rgba(233,238,242,0.5);width:34px;display:{{ o.ordDisplay }};">{{ o.ord }}</span>
           <span style="flex:1;min-width:0;font-size:17px;font-weight:600;color:{{ o.ink }};text-wrap:pretty;">{{ o.label }}</span>
         </div>
       </sc-for>
     </div>
 
+    <div data-noscrollbar style="flex:1;min-height:0;overflow-y:auto;flex-direction:column;gap:6px;display:{{ sheetListDisplay }};">
+      <sc-for list="{{ sheetItems }}" as="it" hint-placeholder-count="3">
+        <div onClick="{{ it.onTap }}" style="flex-shrink:0;display:flex;align-items:center;gap:16px;min-height:66px;padding:12px 18px;border-radius:14px;box-sizing:border-box;background:{{ it.bg }};border:1px solid {{ it.border }};">
+          <span style="width:26px;height:20px;align-items:flex-end;gap:3px;flex-shrink:0;display:{{ it.barsDisplay }};">
+            <span style="width:4px;height:6px;border-radius:1px;background:{{ it.bar1 }};display:block;"></span>
+            <span style="width:4px;height:10px;border-radius:1px;background:{{ it.bar2 }};display:block;"></span>
+            <span style="width:4px;height:14px;border-radius:1px;background:{{ it.bar3 }};display:block;"></span>
+            <span style="width:4px;height:18px;border-radius:1px;background:{{ it.bar4 }};display:block;"></span>
+          </span>
+          <span style="flex:1;min-width:0;display:block;">
+            <span style="display:flex;align-items:center;gap:9px;">
+              <span style="font-size:17px;font-weight:600;color:#e9eef2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ it.name }}</span>
+              <span style="width:13px;height:15px;position:relative;flex-shrink:0;display:{{ it.lockDisplay }};">
+                <span style="position:absolute;left:0;bottom:0;width:13px;height:9px;border-radius:2px;background:rgba(233,238,242,0.6);display:block;"></span>
+                <span style="position:absolute;left:3px;top:0;width:7px;height:8px;border:2px solid rgba(233,238,242,0.6);border-bottom:none;border-radius:4px 4px 0 0;box-sizing:border-box;display:block;"></span>
+              </span>
+            </span>
+            <span style="display:block;font-family:'IBM Plex Mono','Courier New',monospace;font-size:13px;letter-spacing:0.04em;margin-top:4px;color:{{ it.metaInk }};">{{ it.meta }}</span>
+          </span>
+          <span onClick="{{ it.onForget }}" style="flex-shrink:0;height:44px;padding:0 18px;border-radius:12px;background:rgba(224,167,88,0.14);border:1px solid rgba(224,167,88,0.4);align-items:center;font-family:'IBM Plex Mono','Courier New',monospace;font-size:13px;font-weight:600;letter-spacing:0.14em;text-transform:uppercase;color:#e0a758;display:{{ it.forgetDisplay }};" style-active="transform:scale(0.95)">Forget</span>
+          <span style="flex-shrink:0;font-family:'IBM Plex Mono','Courier New',monospace;font-size:12px;letter-spacing:0.14em;text-transform:uppercase;color:rgba(233,238,242,0.6);max-width:150px;text-align:right;text-wrap:pretty;display:{{ it.noteDisplay }};">Password needed</span>
+        </div>
+      </sc-for>
+      <div style="flex-shrink:0;font-family:'IBM Plex Mono','Courier New',monospace;font-size:13px;line-height:1.5;letter-spacing:0.02em;color:rgba(233,238,242,0.6);padding:14px 4px 2px;text-wrap:pretty;display:{{ sheetHintDisplay }};">{{ sheetHint }}</div>
+    </div>
+
+    <div style="flex-shrink:0;flex-direction:column;align-items:center;gap:16px;padding:34px 20px;display:{{ sheetEmptyDisplay }};">
+      <span style="width:58px;height:58px;border-radius:50%;border:2px dashed rgba(233,238,242,0.28);display:block;"></span>
+      <span style="font-size:16px;line-height:1.45;color:rgba(233,238,242,0.62);text-align:center;text-wrap:pretty;max-width:36ch;">{{ sheetEmpty }}</span>
+    </div>
+
+    <div style="flex-shrink:0;flex-direction:column;gap:18px;display:{{ sheetSliderDisplay }};">
+      <div style="display:flex;align-items:baseline;gap:10px;">
+        <span style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:38px;font-weight:700;letter-spacing:-0.01em;color:#e9eef2;line-height:1;">{{ sheetSliderValue }}</span>
+        <span style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:17px;color:rgba(233,238,242,0.6);">{{ sheetSliderUnit }}</span>
+      </div>
+      <div onPointerDown="{{ onSlideDown }}" onPointerMove="{{ onSlideMove }}" onPointerUp="{{ onSlideUp }}" onPointerCancel="{{ onSlideUp }}" style="position:relative;height:56px;display:flex;align-items:center;touch-action:none;">
+        <div style="position:relative;width:100%;height:14px;border-radius:999px;background:rgba(233,238,242,0.13);overflow:hidden;">
+          <div style="position:absolute;inset:0 auto 0 0;border-radius:999px;background:#7ed6bc;width:{{ sheetSliderPct }};"></div>
+        </div>
+        <div style="position:absolute;top:50%;width:34px;height:34px;margin-left:-17px;border-radius:50%;background:#e9eef2;box-shadow:0 2px 10px rgba(0,0,0,0.45);transform:translateY(-50%);left:{{ sheetSliderPct }};"></div>
+      </div>
+      <div style="display:flex;justify-content:space-between;font-family:'IBM Plex Mono','Courier New',monospace;font-size:13px;letter-spacing:0.1em;color:rgba(233,238,242,0.6);">
+        <span>{{ sheetSliderMin }}</span><span>{{ sheetSliderMax }}</span>
+      </div>
+    </div>
+
     <div style="flex-shrink:0;border-radius:14px;background:rgba(8,12,16,0.5);border:1px solid rgba(233,238,242,0.12);padding:16px 18px;font-family:'IBM Plex Mono','Courier New',monospace;font-size:15px;line-height:1.5;color:rgba(233,238,242,0.9);word-break:break-all;display:{{ sheetValueDisplay }};">{{ sheetValue }}</div>
 
+    <div style="flex-shrink:0;display:{{ scanDisplay }};align-items:center;gap:16px;padding:14px 4px;">
+      <div style="width:30px;height:30px;border-radius:50%;box-sizing:border-box;border:3px solid rgba(233,238,242,0.14);border-top-color:#7ed6bc;animation:setSpin 900ms linear infinite;flex-shrink:0;"></div>
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:17px;font-weight:600;color:#e9eef2;">Searching the network</div>
+        <div style="font-size:14px;color:rgba(233,238,242,0.6);margin-top:4px;text-wrap:pretty;">Servers answer within a few seconds.</div>
+      </div>
+    </div>
+
+    <div style="flex-shrink:0;flex-direction:column;align-items:center;gap:18px;padding:12px 0 4px;display:{{ joinDisplay }};">
+      <div style="width:64px;height:64px;position:relative;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+        <div style="position:absolute;inset:0;border-radius:50%;box-sizing:border-box;border:3px solid rgba(233,238,242,0.14);border-top-color:#7ed6bc;animation:setSpin 900ms linear infinite;display:{{ joinSpinDisplay }};"></div>
+        <div style="position:absolute;inset:0;border-radius:50%;background:rgba(126,214,188,0.16);border:1px solid rgba(126,214,188,0.45);align-items:center;justify-content:center;display:{{ joinOkDisplay }};">
+          <div style="width:22px;height:12px;border-left:3px solid #7ed6bc;border-bottom:3px solid #7ed6bc;transform:rotate(-45deg);margin-top:-4px;"></div>
+        </div>
+        <div style="position:absolute;inset:0;border-radius:50%;background:rgba(224,167,88,0.16);border:1px solid rgba(224,167,88,0.45);align-items:center;justify-content:center;display:{{ joinErrDisplay }};">
+          <div style="width:4px;height:30px;border-radius:2px;background:#e0a758;"></div>
+        </div>
+      </div>
+      <div style="text-align:center;">
+        <div style="font-size:19px;font-weight:700;color:{{ joinInk }};">{{ joinTitle }}</div>
+        <div style="font-size:15px;line-height:1.4;color:rgba(233,238,242,0.6);margin-top:7px;text-wrap:pretty;">{{ joinNote }}</div>
+      </div>
+    </div>
+
+    <input type="{{ sheetInputType }}" value="{{ sheetInput }}" onInput="{{ onSheetInput }}" placeholder="{{ sheetPlaceholder }}" autoFocus="{{ true }}" autoComplete="off" spellCheck="{{ false }}" style="flex-shrink:0;width:100%;box-sizing:border-box;height:62px;border-radius:14px;background:rgba(8,12,16,0.6);border:1px solid rgba(126,214,188,0.45);padding:0 18px;font-family:'IBM Plex Mono','Courier New',monospace;font-size:17px;letter-spacing:0.02em;color:#e9eef2;outline:none;display:{{ sheetInputDisplay }};" style-focus="border-color:#7ed6bc" />
+
     <div style="flex-shrink:0;align-items:center;gap:12px;display:{{ sheetActionsDisplay }};">
-      <div onClick="{{ onSheetClose }}" style="flex:1;height:58px;border-radius:15px;background:rgba(233,238,242,0.07);border:1px solid rgba(233,238,242,0.14);display:flex;align-items:center;justify-content:center;font-size:17px;font-weight:600;color:#e9eef2;box-sizing:border-box;" style-active="background:rgba(233,238,242,0.2)">{{ sheetCancelLabel }}</div>
-      <div onClick="{{ onSheetConfirm }}" style="flex:1;height:58px;border-radius:15px;box-sizing:border-box;display:flex;align-items:center;justify-content:center;font-size:17px;font-weight:700;background:{{ sheetConfirmBg }};border:1px solid {{ sheetConfirmBorder }};color:{{ sheetConfirmInk }};display:{{ sheetConfirmDisplay }};" style-active="opacity:0.8">{{ sheetConfirmLabel }}</div>
+      <div onClick="{{ onSheetClose }}" style="flex:1;height:58px;border-radius:15px;background:rgba(233,238,242,0.07);border:1px solid rgba(233,238,242,0.14);display:flex;align-items:center;justify-content:center;font-size:17px;font-weight:600;color:#e9eef2;box-sizing:border-box;" style-active="transform:scale(0.95)">{{ sheetCancelLabel }}</div>
+      <div onClick="{{ onSheetConfirm }}" style="flex:1;height:58px;border-radius:15px;box-sizing:border-box;display:flex;align-items:center;justify-content:center;font-size:17px;font-weight:700;background:{{ sheetConfirmBg }};border:1px solid {{ sheetConfirmBorder }};color:{{ sheetConfirmInk }};display:{{ sheetConfirmDisplay }};" style-active="transform:scale(0.95)">{{ sheetConfirmLabel }}</div>
     </div>
   </div>
 
@@ -131,111 +261,171 @@
 </x-dc>
 <script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:412,&quot;height&quot;:915},&quot;mode&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;auto&quot;,&quot;wide&quot;,&quot;narrow&quot;],&quot;default&quot;:&quot;auto&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Layout&quot;},&quot;onBack&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;() =&gt; void&quot;}}">
 // Settings inventory. Marks come straight from the record — R recorded, H
-// hardcoded today, N new suggestion, ? a decision still owed — and the amber
-// dot is derived from '?' rather than hand-placed.
-// Row vocabulary: group | toggle | choice | number | text | readonly | action
+// hardcoded today, N new suggestion, ? a decision still owed. Nothing renders
+// from them: the amber dots and amber value ink were removed on 2026-09-19, so
+// a row still owed a decision looks like any other.
+// Row vocabulary: group | toggle | choice | number | text | list | readonly |
+// action — seven settable types and one separator.
+// ANY is the sentinel for a dependency on a value being present at all,
+// rather than on a given value
+const ANY = { any: true };
+// The zone is taken from the network. The picker exists for the case where
+// that guess is wrong, and it is two short lists rather than one list of 350.
+const TZ = {
+  Africa: ['Cairo', 'Johannesburg', 'Lagos', 'Nairobi'],
+  America: ['Chicago', 'Denver', 'Los_Angeles', 'Mexico_City', 'New_York', 'Sao_Paulo', 'Toronto'],
+  Asia: ['Dubai', 'Hong_Kong', 'Jakarta', 'Kolkata', 'Seoul', 'Shanghai', 'Singapore', 'Tokyo'],
+  Australia: ['Adelaide', 'Brisbane', 'Melbourne', 'Perth', 'Sydney'],
+  Europe: ['Amsterdam', 'Berlin', 'Dublin', 'Lisbon', 'London', 'Madrid', 'Moscow', 'Paris', 'Rome', 'Stockholm', 'Warsaw', 'Zurich'],
+  Pacific: ['Auckland', 'Honolulu'],
+  UTC: ['UTC']
+};
 const INV = [
   ['audio', 'Audio', 'Level and output', '#7ed6bc', [
     { k: 'output_mode', type: 'choice', label: 'Output mode', value: 'Variable', marks: 'R',
       options: ['Variable', 'Fixed'],
+      warn: { Fixed: 'Fixed output sends the signal at 100%. Turn your amplifier down before confirming \u2014 the panel can no longer lower it.' },
       note: 'Only variable is built and hardware-verified. Fixed hides the volume control everywhere and applies after stop.' },
-    { k: 'boot_volume', type: 'number', label: 'Boot volume', value: '\u221290 dB', marks: 'RH',
-      unit: 'dB', min: -90, max: -20,
+    { k: 'boot_volume', type: 'number', label: 'Boot volume', value: '60%', marks: 'RH',
+      unit: '%', min: 0, max: 100,
       note: 'A fixed safe level at every cold boot, never the last session\u2019s.' },
-    { k: 'max_ceiling', type: 'number', label: 'Maximum ceiling', value: 'Not set', marks: 'R?', unit: 'dB', min: -60, max: 0 },
-    { k: 'restore_floor', type: 'number', label: 'Restore floor', value: '\u221240 dB', marks: 'RH?', unit: 'dB', min: -60, max: -10,
-      note: 'Placeholder, never confirmed. Measured too quiet for Bluetooth\u2019s unmanaged floor.' },
-    { k: 'boot_default_scope', type: 'choice', label: 'Boot default applies', value: 'Cold boot only', marks: 'R?',
-      options: ['Cold boot only', 'Every renderer start'],
-      note: 'A renderer\u2019s first use mid-session currently starts as quiet as a power-on.' },
+    { k: 'max_ceiling', type: 'number', label: 'Maximum ceiling', value: '100%', marks: 'R', unit: '%', min: 0, max: 100,
+      note: 'The highest the volume can be raised, on the same scale as every other level.' },
     { k: 'per_renderer_volume', type: 'toggle', label: 'Remember level per renderer', value: true, marks: 'RH' },
-    { k: 'volume_managed', type: 'readonly', label: 'Volume-managed renderers', value: 'LMS, Spotify', marks: 'RH',
-      note: 'Bluetooth excluded pending Finding 006.' },
-    { k: 'travel_curve', type: 'choice', label: 'Slider travel curve', value: 'dB-linear', marks: 'N?',
+    { k: 'travel_curve', type: 'choice', label: 'Slider travel curve', value: 'Perceptual', marks: 'N',
       options: ['dB-linear', 'Perceptual'],
-      note: 'Travel maps straight to dB, so 55% is already \u221254 dB.' }
+      note: 'Perceptual spreads the useful range across the travel. dB-linear maps travel straight to dB, where 55% is already \u221254 dB.' }
   ]],
   ['sources', 'Sources', 'Renderers and services', '#9fb4e8', [
     { type: 'group', label: 'LMS', accent: '#7ed6bc' },
     { k: 'lms_enabled', type: 'toggle', label: 'Enabled', value: true, marks: 'R' },
-    { k: 'lms_server', type: 'text', label: 'Server', value: '192.168.178.188:9000', marks: 'RH',
-      note: 'Hardcoded today. Discovery is the alternative.' },
-    { k: 'lms_player', type: 'text', label: 'Player name', value: 'gexis', marks: 'H' },
-    { k: 'plugins', type: 'action', label: 'Plugins', marks: 'R' },
+    { k: 'lms_server', type: 'list', kind: 'server', label: 'Server', value: '192.168.178.188:9000', marks: 'RH',
+      note: 'Servers announce themselves on the network. Typing an address is the fallback, not the route.',
+      discover: true,
+      manual: 'Enter an address',
+      empty: 'No servers found. Check the server is running, or enter its address by hand.',
+      items: [
+        ['192.168.178.188:9000', 'gexis-lms \u00b7 4554 albums', 'current'],
+        ['192.168.178.42:9000', 'studio-pi', 'found'],
+        ['192.168.178.7:9000', 'NAS \u00b7 Logitech Media Server', 'found']
+      ] },
     { type: 'group', label: 'Spotify Connect', accent: '#7ed6bc' },
     { k: 'spotify_enabled', type: 'toggle', label: 'Enabled', value: true, marks: 'R' },
-    { k: 'spotify_name', type: 'readonly', label: 'Advertised name', value: 'gexis', marks: 'R',
-      note: 'Follows the device name.' },
     { type: 'group', label: 'Bluetooth', accent: '#9fb4e8' },
     { k: 'bt_enabled', type: 'toggle', label: 'Enabled', value: true, marks: 'R' },
-    { k: 'bt_pairing', type: 'choice', label: 'Pairing', value: 'PIN-free', marks: 'R?',
-      options: ['PIN-free', 'Confirmation required'],
-      note: 'Needs this screen before it can be anything but hardcoded.' },
-    { k: 'bt_discoverable', type: 'choice', label: 'Discoverable', value: '3 min after boot', marks: 'R',
+    { k: 'bt_pairing', type: 'choice', label: 'Pairing', value: 'Confirmation required', marks: 'R',
+      options: ['Confirmation required', 'PIN-free'] },
+    { k: 'bt_discoverable', type: 'choice', label: 'Discoverable', value: 'Always', marks: 'R',
       options: ['Always', '3 min after boot', 'Off'] },
-    { k: 'bt_trusted', type: 'action', label: 'Trusted devices', value: '4 paired', marks: 'R',
-      note: 'View and forget remembered devices. Clearing breaks automatic reconnection.' },
+    { k: 'bt_trusted', type: 'list', label: 'Trusted devices', value: '4 paired', marks: 'R',
+      note: 'Forgetting a device breaks its automatic reconnection.',
+      empty: 'No devices paired yet. Put this device in pairing mode from your phone.',
+      items: [
+        ['George\u2019s iPhone', 'Connected 2 hours ago'],
+        ['Kitchen Echo', 'Connected yesterday'],
+        ['MacBook Pro', 'Connected 3 days ago'],
+        ['Ana\u2019s Pixel', 'Connected last week']
+      ] },
     { k: 'bt_autotrust', type: 'toggle', label: 'Auto-trust on pair', value: true, marks: 'H' }
   ]],
   ['handoff', 'Handoff', 'Who gets the device', '#e0a758', [
     { k: 'restore_transport', type: 'choice', label: 'Restore transport on return', value: 'Play only if playing', marks: 'RH',
       options: ['Play only if playing', 'Always pause', 'Always play'] },
-    { k: 'seek_reanchor', type: 'toggle', label: 'Re-anchor seek position', value: false, marks: 'R?',
-      note: 'Pressing play on a deactivated player currently loses the position entirely.' },
     { k: 'reclaim_lms', type: 'toggle', label: 'Reclaim LMS when a session ends', value: false, marks: 'N',
       note: 'Never done by design. Opting in reintroduces the spurious reclaims that were measured.' },
-    { k: 'release_ladder', type: 'readonly', label: 'Release ladder', value: '2s \u00b7 5s \u00b7 kill', marks: 'H',
-      note: 'Polite stop, then SIGTERM, then SIGKILL.' },
-    { k: 'idle_close', type: 'number', label: 'squeezelite idle close', value: '1 s', marks: 'RH', unit: 's', min: 0, max: 30 },
-    { k: 'handoff_threshold', type: 'number', label: 'Transition screen threshold', value: '1 s', marks: 'RH?', unit: 's', min: 0, max: 5,
-      note: 'Pairs earn exemption by measurement rather than preference.' }
+    { k: 'show_transition', type: 'toggle', label: 'Show transition screen', value: true, marks: 'N' },
+    { k: 'handoff_threshold', type: 'number', label: 'Transition screen threshold', value: '1 s', marks: 'RH?', unit: 's', min: 0.5, max: 4, step: 0.5,
+      onlyWhen: ['show_transition', true] },
+    { k: 'handoff_duration', type: 'number', label: 'Transition screen length', value: '2.5 s', marks: 'N', unit: 's', min: 1, max: 5, step: 0.5,
+      onlyWhen: ['show_transition', true],
+      note: 'How long the takeover animation stays up once it is shown.' },
   ]],
   ['display', 'Display', 'Screen and idle', '#c8a2d8', [
     { type: 'group', label: 'Panel', accent: '#c8a2d8' },
-    { k: 'theme', type: 'choice', label: 'Theme', value: 'Deep Teal', marks: 'R', options: ['Deep Teal', 'Faded 80s', 'Graphite'] },
-    { k: 'brightness', type: 'number', label: 'Brightness', value: '78%', marks: 'N', unit: '%', min: 10, max: 100 },
-    { k: 'time_display', type: 'choice', label: 'Time display', value: 'Elapsed', marks: 'N', options: ['Elapsed', 'Remaining'] },
-    { k: 'show_transition', type: 'toggle', label: 'Show transition screen', value: true, marks: 'N' },
     { k: 'headless', type: 'toggle', label: 'Headless', value: false, marks: 'R',
       note: 'Disables the local screen entirely.' },
+    { k: 'drawer_on_external', type: 'toggle', label: 'Show volume on remote change', value: true, marks: 'H',
+      note: 'A change from a phone raises the volume drawer. The panel\u2019s own changes and a restored level do not.' },
+    { k: 'drawer_autohide', type: 'number', label: 'Volume drawer auto-hide', value: '3 s', marks: 'H', unit: 's', min: 1, max: 10 },
+    { type: 'group', label: 'Home screen', accent: '#c8a2d8' },
+    { k: 'home_strip', type: 'choice', label: 'Strip below the tiles', value: 'New music', marks: 'N',
+      options: ['New music', 'Most played artists', 'Recently played artists'] },
+    { k: 'home_strip_count', type: 'number', label: 'Items in the strip', value: '10', marks: 'N', unit: '', min: 4, max: 20 },
     { type: 'group', label: 'Idle screen', accent: '#c8a2d8' },
+    { k: 'idle_screen', type: 'choice', label: 'Screen', value: 'Built in', marks: 'R',
+      options: ['Built in', 'External URL'],
+      note: 'The built-in screen shows the clock and weather. An external page replaces it entirely.' },
     { k: 'idle_url', type: 'text', label: 'URL', value: 'http://192.168.178.42:8000/idle', marks: 'R',
-      note: 'External and lazy loaded. Falls back to the clock when unreachable or unconfigured.' },
+      onlyWhen: ['idle_screen', 'External URL'],
+      note: 'Lazy loaded. Falls back to the built-in screen when unreachable, unconfigured, or refusing to be framed.' },
     { k: 'idle_timeout', type: 'number', label: 'Timeout', value: '10 min', marks: 'R', unit: 'min', min: 1, max: 60,
-      note: 'Reset by local touch only.' },
-    { k: 'idle_grace', type: 'number', label: 'Grace after stop', value: '5 min', marks: 'R', unit: 'min', min: 0, max: 30 },
+      note: 'Counted from when playback stops, and reset by local touch only. The separate grace period was merged into this.' },
+    { k: 'idle_background', type: 'choice', label: 'Background', value: 'Artist pictures', marks: 'N',
+      options: ['Artist pictures', 'Wallpapers online', 'Wallpapers on device', 'Black'],
+      onlyWhen: ['idle_screen', 'Built in'],
+      note: 'Artist pictures come from the library. Online wallpapers come from a third party service; on-device wallpapers are read from local storage.' },
+    { k: 'wallpaper_key', type: 'text', label: 'Wallpaper API key', value: '', marks: 'N', secret: true,
+      placeholder: 'Provider API key',
+      onlyWhen: ['idle_background', 'Wallpapers online'],
+      note: 'The service is not chosen yet. Whether a key is needed at all depends on which one it turns out to be.' },
+    { k: 'idle_weather', type: 'toggle', label: 'Weather', value: true, marks: 'N',
+      onlyWhen: ['idle_screen', 'Built in'] },
+    { k: 'weather_key', type: 'text', label: 'Weather API key', value: '', marks: 'N', secret: true,
+      placeholder: 'Provider API key',
+      onlyWhen: ['idle_weather', true],
+      note: 'Without a key the idle screen shows the clock alone.' },
+    { k: 'weather_location', type: 'text', label: 'Location', value: 'Berlin, DE', marks: 'N',
+      placeholder: 'City, country',
+      onlyWhen: ['weather_key', ANY] },
+    { k: 'idle_forecast', type: 'choice', label: 'Forecast', value: '3 days', marks: 'N',
+      options: ['3 days', 'None'],
+      onlyWhen: ['weather_key', ANY] },
+    { k: 'idle_minmax', type: 'toggle', label: 'Show min and max', value: true, marks: 'N',
+      onlyWhen: ['weather_key', ANY] },
+    { k: 'idle_icons', type: 'choice', label: 'Weather icons', value: 'Solid', marks: 'N',
+      options: ['Solid', 'Duotone', 'Neon'],
+      onlyWhen: ['weather_key', ANY] },
     { type: 'group', label: 'Visualization', accent: '#c8a2d8' },
-    { k: 'viz_timeout', type: 'number', label: 'Timeout', value: '30 s', marks: 'R', unit: 's', min: 0, max: 300 },
+    { k: 'viz_timeout', type: 'number', label: 'Timeout', value: '10 min', marks: 'R', unit: 'min', min: 1, max: 60 },
+    { k: 'viz_stop', type: 'number', label: 'Stop when nothing is playing', value: '5 min', marks: 'N', unit: 'min', min: 1, max: 60 },
     { k: 'skin_corpus', type: 'choice', label: 'Skin corpus', value: 'Meter + spectrum', marks: 'R', options: ['Meter only', 'Meter + spectrum'] },
-    { k: 'skin_rotate', type: 'toggle', label: 'Rotate skin per track', value: true, marks: 'N' }
+    { k: 'skin_rotate', type: 'toggle', label: 'Rotate skin per track', value: true, marks: 'N' },
+    // with rotation off one skin has to be named, and the choice is drawn from
+    // whichever corpus is selected above
+    { k: 'skin', type: 'choice', label: 'Skin', value: '01G5_Accuphase', marks: 'N',
+      picker: true, options: [], optionsFrom: 'skin_corpus',
+      onlyWhen: ['skin_rotate', false] }
   ]],
   ['enrich', 'Enrichment', 'Lyrics and artist info', '#e8a0b4', [
     { k: 'enrichment', type: 'toggle', label: 'Enrichment', value: true, marks: 'R' },
-    { k: 'confidence', type: 'number', label: 'Confidence threshold', value: '0.80', marks: 'R', unit: '', min: 0, max: 1, step: 0.05,
-      note: 'Below it nothing is shown \u2014 a confidently wrong biography is worse than a blank panel.' },
     { k: 'lyrics', type: 'toggle', label: 'Lyrics', value: true, marks: 'R' },
     { k: 'artwork_lookup', type: 'toggle', label: 'Look up missing artwork', value: true, marks: 'R',
-      note: 'For renderers that supply none. Title and artist are enough to find it later.' }
+      note: 'For renderers that supply none. Title and artist are enough to find it later.' },
+    { k: 'listenbrainz_token', type: 'text', label: 'ListenBrainz token', value: '', marks: 'N?', secret: true, placeholder: 'ListenBrainz token',
+      note: 'Popular tracks need one; the endpoint began requiring it mid-phase. Without it the Popular panel is absent.' },
+    { k: 'fanart_key', type: 'text', label: 'fanart.tv key', value: '', marks: 'N?', secret: true, placeholder: 'fanart.tv key',
+      note: 'Better artist photographs than the LMS plugin\u2019s. Optional.' }
   ]],
   ['device', 'Device', 'Identity and network', '#8fc4d8', [
     { k: 'device_name', type: 'text', label: 'Device name', value: 'gexis', marks: 'R',
-      note: 'One name for mDNS, Spotify and Bluetooth.' },
-    { k: 'wifi', type: 'action', label: 'Wi-Fi', value: 'Studio 5G', marks: 'R' },
+      warn: 'Saving restarts the services that carry the name. Anything playing stops and any connected renderer is dropped.',
+      note: 'One name for everything: the mDNS hostname, the LMS player, the Spotify Connect device and the Bluetooth name. There is no per-service override.' },
+    { k: 'wifi', type: 'list', label: 'Wi-Fi', value: 'Studio 5G', marks: 'R',
+      empty: 'No networks in range.',
+      hint: 'A secured network needs its password the first time. Saved networks join in one tap.',
+      items: [
+        ['Studio 5G', 'Connected', 4, 'connected'],
+        ['Studio', 'Saved', 4, 'saved'],
+        ['Werkstatt', 'Saved', 2, 'saved'],
+        ['FRITZ!Box 7530 GX', 'Secured', 3, 'locked'],
+        ['Nachbar-WLAN', 'Secured', 2, 'locked'],
+        ['Cafe Gast', 'Open', 1, 'open']
+      ] },
     { k: 'timezone', type: 'choice', label: 'Time zone', value: 'Europe/Berlin', marks: 'N',
-      options: ['Europe/Berlin', 'Europe/London', 'UTC'] },
-    { k: 'api_loopback', type: 'toggle', label: 'Restrict API to loopback', value: false, marks: 'N',
-      note: 'The API binds all interfaces and is unauthenticated by decision.' }
-  ]],
-  ['system', 'System', 'Updates and maintenance', '#b0bcc4', [
-    { k: 'updates', type: 'choice', label: 'Updates', value: 'Manual', marks: 'RN', options: ['Manual', 'Automatic'] },
+      tz: true, options: [],
+      note: 'Taken from the network. Set it by hand only when that comes out wrong.' },
     { k: 'version', type: 'readonly', label: 'Version', value: 'v0.2.1-110-gc49c0a0-dirty', marks: 'R?' },
-    { k: 'image_build', type: 'readonly', label: 'Image build', value: '2026-09-14-gexis-player-v0.2.1-110-gc49c0a0-dirty', marks: 'R?',
-      note: 'Nothing else on a running device reports which build it is.' },
-    { k: 'log_level', type: 'choice', label: 'Log level', value: 'Info', marks: 'N', options: ['Error', 'Warn', 'Info', 'Debug'] },
-    { k: 'backup', type: 'action', label: 'Back up settings', marks: 'N' },
-    { k: 'factory_reset', type: 'action', label: 'Factory reset', marks: 'R', danger: true, confirm: 'Erase all settings',
-      note: 'Every setting returns to its shipped default. Paired devices and Wi-Fi credentials are cleared.' },
-    { k: 'power', type: 'action', label: 'Reboot or shut down', marks: 'N', danger: true, confirm: 'Reboot now' }
+    { k: 'reboot', type: 'action', label: 'Reboot', marks: 'N', danger: true, confirm: 'Reboot now' }
   ]]
 ];
 
@@ -248,9 +438,9 @@ const hostOf = (name) => (String(name || '')
   .slice(0, 63) || 'gexis') + '.local';
 
 class Component extends DCLogic {
-  state = { w: 0, cat: 'audio', drilled: null, vals: {}, sheet: null, toast: null };
+  state = { w: 0, cat: 'audio', drilled: null, vals: {}, sheet: null, toast: null, forgotten: [], draft: null, picker: null, pickerView: null, join: null, scan: null };
 
-  componentWillUnmount() { if (this.ro) this.ro.disconnect(); clearTimeout(this._toast); }
+  componentWillUnmount() { if (this.ro) this.ro.disconnect(); clearTimeout(this._toast); clearTimeout(this._join); clearTimeout(this._scan); }
 
   // the mount's own width decides the mode — not the viewport — because the
   // component is embedded on the panel and standalone on the phone
@@ -275,6 +465,98 @@ class Component extends DCLogic {
     return (this.state.w || 1280) >= 720;
   }
 
+  // The real corpus, verbatim from the INI section names parsed by
+  // core/src/gexis_core/skins.py. The NNG5_ prefix is the sort order plus the
+  // Gelo5 marker (the stock Volumio-branded skins are not the image default),
+  // so the stored value is the full section name and only the display strips
+  // the prefix. 71 meter skins; the spectrum corpus adds 13 more.
+  METER_SKINS = ['01G5_Accuphase', '02G5_Accuphase monoblock', '03G5_Berlant', '04G5_Berlant Purple', '05G5_Audio Research', '06G5_McIntosh', '07G5_McIntosh monoblock', '08G5_McIntosh Hybrid', '09G5_McIntosh Tube', '10G5_Kenwood Ver', '11G5_Kenwood Rev', '12G5_VU Single Yellow', '13G5_NAD C3050 Purple', '14G5_NAD C3050', '15G5_Naim green', '16G5_Naim 2', '17G5_Naim Rev', '18G5_Sansui', '19G5_Sansui 2V', '20G5_Brianworks', '21G5_BlackBlur', '22G5_Dark Spotify', '23G5_Hitachi HMA7500 Black', '24G5_Hitachi HCA7500 Silver', '25G5_Marantz Silver', '26G5_Marantz Black', '27G5_MarantzCD', '28G5_Technisc_Black', '29G5_Technisc_Silver', '30G5_Round yellow', '31G5_Rehringer', '32G5_Akai Reverse', '33G5_ClasseM', '34G5_BMC', '35G5_Hartman', '36G5_Klanghelm', '37G5_TURN Vinyl Green', '38G5_TURN Vinyl Green 2', '39G5_TURN Vinyl Silver', '40G5_TURN Vinyl Black', '41G5_Yellowkidney', '42G5_OLD Meter', '43G5_Old2 braun', '44G5_T+A', '45G5_Triplett', '46G5_Leben', '47G5_Luxman Gold', '48G5_Vertical blue', '49G5_MarkLev', '50G5_Teac Cassette', '51G5_Optonica', '52G5_PioneerCT', '53G5_Abrahamsen', '54G5_Dorrough', '55G5_Dorrough Vertical', '56G5_Advence', '57G5_Unison Research', '58G5_TAPE orange', '59G5_Yamaha M85', '60G5_Sound90', '61G5_Fire Rock', '62G5_Burmaster', '63G5_Violin', '64G5_Struder', '65G5_J37 Tape', '66G5_HelixOne', '67G5_DAgostini', '68G5_Reher Tube', '69G5_Boombox', '70G5_Nixi Pipe', '71G5_Nixi Spectrum'];
+  SPECTRUM_SKINS = ['101G5_Free S+M', '102G5_Naim S+M', '103G5_Marschal Spectrum', '104G5_Lyngdorf S+M', '105G5_Kenwood Spectrum', '106G5_OldPipe Spectrum', '107G5_Marantz S+M', '108G5_Kenwood Rev S+M', '109G5_475A Oscil S+M', '110G5_PeppyP S+M', '111G5_Teletronix S+M', '112G5_KeySlight S+M', '113G5_Old Spectrum S+M'];
+
+  // Choosing among 84 visual skins: a list on the left, the preview of the
+  // tapped entry on the right. Below 720px the preview covers the list and
+  // steps back to it. Tapping a row previews only; the value is written by
+  // the button under the preview.
+  //
+  // No preview renders exist in the repo — skins/ holds only INI files — so
+  // every preview is a placeholder until the image build supplies one.
+  //
+  // Grouping by make was tried and dropped: the section names carry no brand
+  // field, and tokenising them yields 63 groups for 84 skins with 51 holding
+  // a single skin — a longer list than the grid it was meant to shorten.
+  pickerVals() {
+    const p = this.state.picker;
+    if (!p) {
+      return {
+        pickerDisplay: 'none', pickerPaneDisplay: 'none', pickerPaneBackDisplay: 'none',
+        pickerTitle: '', pickerCount: '', pickerTiles: [], onPickerBack: null,
+        pickerListWidth: '100%', pickerPaneMode: 'relative', pickerPaneBg: 'transparent',
+        pickerViewLabel: '', pickerViewMeta: '', pickerUseText: '',
+        pickerUseBg: 'transparent', pickerUseInk: '#e9eef2', pickerUseBorder: 'transparent',
+        onPickerViewBack: null, onPickerUse: null
+      };
+    }
+    const wide = this.wide();
+    const all = this.optionsFor(p);
+    const current = String(this.val(p));
+    // tapping a row only previews it; the choice is not written until the
+    // button below the preview is used
+    const viewing = this.state.pickerView || (wide ? current : null);
+    const q = viewing ? this.skinParts(viewing) : { ord: '', label: '' };
+    const isCurrent = viewing === current;
+    const tile = (name) => {
+      const t = this.skinParts(name);
+      const sel = name === viewing;
+      return {
+        ord: t.ord, label: t.label,
+        bg: sel ? 'rgba(200,162,216,0.14)' : 'transparent',
+        rail: sel ? '#c8a2d8' : 'transparent',
+        ink: name === current ? '#7ed6bc' : '#e9eef2',
+        checkDisplay: name === current ? 'flex' : 'none',
+        onTap: () => this.setState({ pickerView: name })
+      };
+    };
+    return {
+      pickerDisplay: 'flex',
+      pickerTitle: p.label,
+      pickerCount: all.length + ' skins',
+      pickerTiles: all.map(tile),
+      pickerListWidth: wide ? '380px' : '100%',
+      pickerPaneMode: wide ? 'relative' : 'absolute',
+      pickerPaneBg: wide ? 'transparent' : '#101a21',
+      pickerPaneDisplay: viewing ? 'flex' : 'none',
+      pickerPaneBackDisplay: wide ? 'none' : 'flex',
+      pickerViewLabel: q.label,
+      pickerViewMeta: viewing ? viewing + '  \u00b7  ' + (isCurrent ? 'IN USE' : 'NOT IN USE') : '',
+      pickerUseText: isCurrent ? 'In use' : 'Use this skin',
+      pickerUseBg: isCurrent ? 'transparent' : '#7ed6bc',
+      pickerUseInk: isCurrent ? 'rgba(233,238,242,0.5)' : '#0d151c',
+      pickerUseBorder: isCurrent ? 'rgba(233,238,242,0.18)' : '#7ed6bc',
+      onPickerViewBack: () => this.setState({ pickerView: null }),
+      onPickerUse: () => {
+        if (!viewing || isCurrent) return;
+        this.setState(s => ({ vals: Object.assign({}, s.vals, { [p.k]: viewing }), picker: null, pickerView: null }));
+        this.flash(this.skinParts(viewing).label);
+      },
+      onPickerBack: () => this.setState({ picker: null, pickerView: null })
+    };
+  }
+
+  optionsFor(row) {
+    if (!row.optionsFrom) return row.options || [];
+    const corpus = this.val({ k: row.optionsFrom, value: 'Meter + spectrum' });
+    return corpus === 'Meter only'
+      ? this.METER_SKINS
+      : this.METER_SKINS.concat(this.SPECTRUM_SKINS);
+  }
+
+  // '06G5_McIntosh' reads as 06 / McIntosh: the ordinal is how the corpus is
+  // organised, and it is the only way to scan a list this long
+  skinParts(name) {
+    const m = String(name).match(/^(\d+)G5_(.*)$/);
+    return m ? { ord: m[1], label: m[2] } : { ord: '', label: String(name) };
+  }
+
   val(row) {
     const v = this.state.vals[row.k];
     return v === undefined ? row.value : v;
@@ -296,31 +578,61 @@ class Component extends DCLogic {
         knobLeft: '3px', knobBg: '', chevDisplay: 'none', onTap: null
       };
     }
-    const pending = r.marks.indexOf('?') >= 0;
-    const v = this.val(r);
+    let v = this.val(r);
+    // narrowing the corpus can orphan the named skin; fall back to the first
+    // one the new corpus offers rather than showing a skin that is gone
+    if (r.optionsFrom) {
+      const avail = this.optionsFor(r);
+      if (avail.length && avail.indexOf(v) < 0) v = avail[0];
+      v = this.skinParts(v).label;
+    }
     const isTog = r.type === 'toggle';
     const on = !!v;
-    const shown = isTog ? '' : (r.type === 'action' ? (r.value || '') : String(v));
+    let shown = isTog ? '' : (r.type === 'action' ? (r.value || '') : String(v));
+    // "Not set" is derived from an empty value, never stored as one, so it can
+    // never be pre-filled into the field and saved as the real thing. A secret
+    // that is set reports only that, never the value.
+    if (r.type === 'text') shown = !v ? 'Not set' : (r.secret ? '\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022' : String(v));
+    if (r.type === 'list') {
+      // a server list shows which one is in use; a device list shows how many
+      if (r.kind === 'server') shown = String(v);
+      else {
+        const n = (r.items || []).filter(it => (this.state.forgotten || []).indexOf(it[0]) < 0).length;
+        shown = n ? n + ' paired' : 'None';
+      }
+    }
     return {
       headDisplay: 'none', group: '', headInk: '#e9eef2', rowDisplay: 'block',
       label: r.label, note: r.note || '',
       noteDisplay: r.note ? 'block' : 'none',
-      dotDisplay: pending ? 'block' : 'none',
+
       ink: r.danger ? '#e0a758' : '#e9eef2',
       bg: 'rgba(255,255,255,0.05)',
       border: r.danger ? 'rgba(224,167,88,0.3)' : 'rgba(233,238,242,0.1)',
       value: shown,
       valDisplay: !isTog && shown ? 'block' : 'none',
-      valInk: pending ? '#e0a758' : 'rgba(233,238,242,0.72)',
+      valInk: 'rgba(233,238,242,0.72)',
       togDisplay: isTog ? 'block' : 'none',
       togBg: on ? 'rgba(126,214,188,0.32)' : 'rgba(233,238,242,0.08)',
       togBorder: on ? 'rgba(126,214,188,0.5)' : 'rgba(233,238,242,0.16)',
       knobLeft: on ? '29px' : '3px',
       knobBg: on ? '#7ed6bc' : 'rgba(233,238,242,0.6)',
-      chevDisplay: isTog ? 'none' : 'flex',
-      onTap: () => {
+      // a readonly row reports a fact; it takes no tap and shows no chevron
+      chevDisplay: (isTog || r.type === 'readonly') ? 'none' : 'flex',
+      onTap: r.type === 'readonly' ? null : () => {
         if (isTog) this.setState(s => ({ vals: Object.assign({}, s.vals, { [r.k]: !on }) }));
-        else this.setState({ sheet: r });
+        // 84 visual things cannot be chosen from a 560px list, so the skin
+        // row opens a full-width picker instead of the sheet
+        else if (r.picker) this.setState({ picker: r, pickerView: null });
+        // a discovery list searches when it opens; the results are not
+        // instant and pretending otherwise misrepresents the wait
+        else if (r.discover) {
+          this.setState({ sheet: r, scan: 'searching' });
+          clearTimeout(this._scan);
+          this._scan = setTimeout(() => this.setState({ scan: null }), 2200);
+        }
+        // a text row opens with its current value in the field, ready to edit
+        else this.setState({ sheet: r, draft: r.type === 'text' ? String(this.val(r) || '') : null });
       }
     };
   }
@@ -333,15 +645,52 @@ class Component extends DCLogic {
     const sheet = this.state.sheet;
 
     let accent = '';
-    const rows = (cat || wide) ? active[4].map(r => {
+    // A row that only applies under another row's value is absent otherwise,
+    // never shown disabled — and the test is transitive: a row whose
+    // dependency is itself hidden is hidden too, so a parent switching off
+    // takes its whole subtree with it rather than orphaning it.
+    const visible = (r, seen) => {
+      if (!r || !r.onlyWhen) return true;
+      const [dep, want] = r.onlyWhen;
+      if (seen.indexOf(dep) >= 0) return true;
+      const src = active[4].find(x => x.k === dep);
+      if (!src) return true;
+      const got = this.val(src);
+      const ok = want === ANY ? String(got == null ? '' : got).trim() !== '' : got === want;
+      return ok && visible(src, seen.concat([dep]));
+    };
+    const rows = (cat || wide) ? active[4].filter(r => visible(r, [])).map(r => {
       if (r.type === 'group') accent = r.accent;
       return this.row(r, accent);
     }) : [];
 
-    const sheetOptions = sheet && sheet.type === 'choice' ? sheet.options.map(o => {
-      const sel = String(this.val(sheet)) === o;
+    const tzRegion = this.state.tzRegion;
+    const tzOptions = sheet && sheet.tz ? (tzRegion
+      ? TZ[tzRegion].map(c => ({ label: c.replace(/_/g, ' '), value: tzRegion + '/' + c }))
+      : Object.keys(TZ).map(r => ({ label: r, value: null, region: r }))) : [];
+    const sheetOptions = sheet && sheet.tz ? tzOptions.map(o => {
+      const sel = o.value ? String(this.val(sheet)) === o.value
+                          : String(this.val(sheet)).split('/')[0] === o.region;
       return {
-        label: o,
+        label: o.label, ord: '', ordDisplay: 'none',
+        bg: sel ? 'rgba(126,214,188,0.14)' : 'rgba(255,255,255,0.04)',
+        border: sel ? 'rgba(126,214,188,0.4)' : 'rgba(233,238,242,0.1)',
+        ink: sel ? '#e9eef2' : 'rgba(233,238,242,0.82)',
+        ringInk: sel ? '#7ed6bc' : 'rgba(233,238,242,0.3)',
+        dotDisplay: sel ? 'block' : 'none',
+        onTap: () => {
+          if (!o.value) { this.setState({ tzRegion: o.region }); return; }
+          this.setState(s2 => ({ vals: Object.assign({}, s2.vals, { [sheet.k]: o.value }), sheet: null, tzRegion: null }));
+          this.flash(sheet.label + ': ' + o.value);
+        }
+      };
+    }) : sheet && sheet.type === 'choice' ? this.optionsFor(sheet).map(o => {
+      const sel = String(this.val(sheet)) === o;
+      const p = sheet.optionsFrom ? this.skinParts(o) : { ord: '', label: o };
+      return {
+        label: p.label,
+        ord: p.ord,
+        ordDisplay: p.ord ? 'block' : 'none',
         bg: sel ? 'rgba(126,214,188,0.14)' : 'rgba(255,255,255,0.04)',
         border: sel ? 'rgba(126,214,188,0.4)' : 'rgba(233,238,242,0.1)',
         ink: sel ? '#e9eef2' : 'rgba(233,238,242,0.82)',
@@ -354,17 +703,27 @@ class Component extends DCLogic {
       };
     }) : [];
 
+    // a list row is navigation, not a command: it opens its items with a
+    // per-item action, and says so plainly when there are none
+    const isList = !!sheet && sheet.type === 'list';
+    const listItems = isList
+      ? (sheet.items || []).filter(it => (this.state.forgotten || []).indexOf(it[0]) < 0)
+      : [];
     const isChoice = !!sheet && sheet.type === 'choice';
     const isAction = !!sheet && sheet.type === 'action';
     const showValue = !!sheet && (sheet.type === 'readonly' || sheet.type === 'text' || sheet.type === 'number');
+    const typing = !!sheet && sheet.type === 'text';
+    const join = this.state.join;
+    const scanning = !!sheet && sheet.discover && this.state.scan === 'searching';
 
     return {
       rootRef: (el) => this.observe(el),
       title: wide ? 'Settings' : (this.state.drilled ? active[1] : 'Settings'),
-      subtitle: name + '  \u00b7  ' + hostOf(name),
-      subDisplay: wide ? 'none' : 'block',
-      buildShort: '2026.09.14',
-      buildDisplay: wide ? 'block' : 'none',
+      subtitle: name + '  \u00b7  ' + hostOf(name) + '  \u00b7  192.168.178.51',
+      // shown in both modes: the record requires the sanitised hostname to sit
+      // beside the typed name, never to replace it silently, and the panel is
+      // where someone types the name in the first place
+      subDisplay: 'block',
       titleSize: wide ? '25px' : '23px',
       headPad: wide ? '0 36px' : '14px 18px',
       headMin: wide ? '92px' : '78px',
@@ -381,7 +740,7 @@ class Component extends DCLogic {
 
       cats: INV.map(c => ({
         name: c[1], blurb: c[2], bar: c[3],
-        dotDisplay: c[4].some(r => r.marks && r.marks.indexOf('?') >= 0) ? 'block' : 'none',
+
         bg: wide && c[0] === cat ? 'rgba(233,238,242,0.1)' : 'transparent',
         ink: wide && c[0] === cat ? '#e9eef2' : 'rgba(233,238,242,0.76)',
         onTap: () => this.setState(wide ? { cat: c[0] } : { drilled: c[0] })
@@ -391,24 +750,184 @@ class Component extends DCLogic {
       sheetDisplay: sheet ? 'flex' : 'none',
       sheetScrim: sheet ? '1' : '0',
       sheetPointer: sheet ? 'auto' : 'none',
-      sheetTitle: sheet ? sheet.label : '',
+      sheetTitle: sheet && sheet.tz && tzRegion ? tzRegion : (sheet ? sheet.label : ''),
       sheetNote: sheet && sheet.note ? sheet.note : '',
-      sheetNoteDisplay: sheet && sheet.note ? 'block' : 'none',
+      sheetNoteDisplay: sheet && sheet.note && !join ? 'block' : 'none',
       sheetOptions,
       sheetOptionsDisplay: isChoice ? 'flex' : 'none',
-      sheetValue: showValue ? String(this.val(sheet)) : '',
-      sheetValueDisplay: showValue ? 'block' : 'none',
-      sheetActionsDisplay: sheet ? 'flex' : 'none',
-      sheetCancelLabel: isChoice ? 'Close' : 'Cancel',
-      sheetConfirmDisplay: sheet && (isAction || sheet.type === 'text' || sheet.type === 'number') ? 'flex' : 'none',
-      sheetConfirmLabel: sheet ? (sheet.confirm || (isAction ? 'Continue' : 'Edit')) : '',
+      scanDisplay: scanning ? 'flex' : 'none',
+      sheetListDisplay: isList && listItems.length && !scanning ? 'flex' : 'none',
+      // "nothing found" is only true once the search has finished
+      sheetEmptyDisplay: isList && !listItems.length && !scanning ? 'flex' : 'none',
+      sheetEmpty: isList ? (sheet.empty || 'Nothing here yet.') : '',
+      sheetHint: isList && sheet.hint ? sheet.hint : '',
+      sheetHintDisplay: isList && sheet.hint && !scanning ? 'block' : 'none',
+      sheetItems: listItems.map(it => {
+        // [name, meta, bars, state] for Wi-Fi; [address, description, state]
+        // for a discovered server, which has no signal and cannot be forgotten
+        const server = sheet.kind === 'server';
+        const bars = server ? undefined : it[2];
+        const state = server ? it[2] : it[3];
+        const joined = state === 'connected' || state === 'current';
+        const on = (n) => (bars >= n ? (joined ? '#7ed6bc' : 'rgba(233,238,242,0.82)') : 'rgba(233,238,242,0.2)');
+        return {
+          name: it[0], meta: it[1],
+          metaInk: joined ? '#7ed6bc' : 'rgba(233,238,242,0.6)',
+          bg: joined ? 'rgba(126,214,188,0.12)' : 'rgba(255,255,255,0.045)',
+          border: joined ? 'rgba(126,214,188,0.34)' : 'rgba(233,238,242,0.1)',
+          barsDisplay: bars ? 'flex' : 'none',
+          bar1: on(1), bar2: on(2), bar3: on(3), bar4: on(4),
+          lockDisplay: state === 'locked' ? 'block' : 'none',
+          noteDisplay: state === 'locked' ? 'block' : 'none',
+          forgetDisplay: !server && (state === 'connected' || state === 'saved' || bars === undefined) ? 'flex' : 'none',
+          onTap: () => {
+            if (server) {
+              this.setState(s => ({ vals: Object.assign({}, s.vals, { [sheet.k]: it[0] }), sheet: null }));
+              this.flash('Server set to ' + it[0]);
+            }
+            else if (state === 'saved' || state === 'open') this.flash('Joining ' + it[0]);
+            // a secured network asks for its password in the same sheet
+            // pattern as any other text row
+            else if (state === 'locked') this.setState({
+              sheet: { k: 'wifi_pass_' + it[0], type: 'text', label: it[0],
+                       note: 'Enter the network password.', secret: true, join: true,
+                       placeholder: 'Network password', confirm: 'Join' },
+              draft: ''
+            });
+          },
+          onForget: (e) => {
+            if (e && e.stopPropagation) e.stopPropagation();
+            this.setState(s => ({ forgotten: (s.forgotten || []).concat([it[0]]) }));
+            this.flash(it[0] + ' forgotten');
+          }
+        };
+      }),
+      // a choice carries a per-option warning, keyed by the option; a row whose
+      // side effect does not depend on the value carries one plain string
+      sheetWarn: sheet && sheet.warn ? (typeof sheet.warn === 'string' ? sheet.warn : (sheet.warn[String(this.val(sheet))] || '')) : '',
+      sheetWarnDisplay: sheet && sheet.warn && (typeof sheet.warn === 'string' || sheet.warn[String(this.val(sheet))]) ? 'flex' : 'none',
+      // a bounded number is set on a slider; only unbounded values fall back
+      // to the plain readout
+      ...(() => {
+        const bounded = !!sheet && sheet.type === 'number' && sheet.min !== undefined && sheet.max !== undefined;
+        if (!bounded) {
+          return {
+            sheetSliderDisplay: 'none', sheetSliderValue: '', sheetSliderUnit: '',
+            sheetSliderPct: '0%', sheetSliderMin: '', sheetSliderMax: '',
+            onSlideDown: null, onSlideMove: null, onSlideUp: null,
+            // a text row is typed into, not read: the panel takes an attached
+            // keyboard and the phone its own, and no on-screen keyboard exists
+            sheetValue: showValue && !typing ? String(this.val(sheet)) : '',
+            sheetValueDisplay: showValue && !typing ? 'block' : 'none'
+          };
+        }
+        const raw = String(this.val(sheet));
+        const parsed = parseFloat(raw);
+        const n = isNaN(parsed) ? sheet.min : parsed;
+        const pct = ((n - sheet.min) / (sheet.max - sheet.min)) * 100;
+        const step = sheet.step || 1;
+        // one formatter for the row and the readout: decimals follow the step,
+        // and a word unit is spaced where % is not
+        const fmt = (v) => {
+          const s = step < 1 ? String(Math.round(v / step) * step) : String(Math.round(v));
+          return s;
+        };
+        const withUnit = (s) => {
+          const u = sheet.unit || '';
+          if (!u) return s;
+          return u === '%' ? s + u : s + ' ' + u;
+        };
+        const set = (e) => {
+          const bar = e.currentTarget.getBoundingClientRect();
+          const t = Math.min(1, Math.max(0, (e.clientX - bar.left) / bar.width));
+          const v = Math.round((sheet.min + t * (sheet.max - sheet.min)) / step) * step;
+          this.setState(s => ({ vals: Object.assign({}, s.vals, { [sheet.k]: withUnit(fmt(v)) }) }));
+        };
+        return {
+          sheetSliderDisplay: 'flex',
+          sheetSliderValue: isNaN(parsed) ? '\u2014' : fmt(n),
+          sheetSliderUnit: sheet.unit || '',
+          sheetSliderPct: Math.min(100, Math.max(0, pct)) + '%',
+          sheetSliderMin: withUnit(String(sheet.min)),
+          sheetSliderMax: withUnit(String(sheet.max)),
+          onSlideDown: (e) => {
+            this._sliding = true;
+            if (e.currentTarget.setPointerCapture) e.currentTarget.setPointerCapture(e.pointerId);
+            set(e);
+          },
+          onSlideMove: (e) => { if (this._sliding) set(e); },
+          onSlideUp: () => { this._sliding = false; },
+          sheetValue: '',
+          sheetValueDisplay: 'none'
+        };
+      })(),
+      ...this.pickerVals(),
+      // joining takes real seconds and can fail, so the sheet reports the
+      // attempt rather than closing and leaving the outcome unsaid
+      joinDisplay: join ? 'flex' : 'none',
+      joinSpinDisplay: join === 'connecting' ? 'block' : 'none',
+      joinOkDisplay: join === 'ok' ? 'flex' : 'none',
+      joinErrDisplay: join === 'error' ? 'flex' : 'none',
+      joinInk: join === 'error' ? '#e0a758' : join === 'ok' ? '#7ed6bc' : '#e9eef2',
+      joinTitle: join === 'connecting' ? 'Joining' + (sheet ? ' ' + sheet.label : '')
+        : join === 'ok' ? 'Connected' : join === 'error' ? 'Could not join' : '',
+      joinNote: join === 'connecting' ? 'Checking the password and getting an address.'
+        : join === 'ok' ? 'This network is saved and will reconnect on its own.'
+        : join === 'error' ? 'The password was not accepted. Check it and try again.' : '',
+      sheetInputDisplay: typing && !join ? 'block' : 'none',
+      sheetInputType: sheet && sheet.secret ? 'password' : 'text',
+      sheetInput: this.state.draft === null ? '' : this.state.draft,
+      sheetPlaceholder: sheet && sheet.placeholder ? sheet.placeholder : '',
+      onSheetInput: (e) => this.setState({ draft: e.target.value }),
+      sheetActionsDisplay: sheet && join !== 'connecting' && join !== 'ok' ? 'flex' : 'none',
+      sheetCancelLabel: join === 'error' ? 'Give up' : (sheet && sheet.tz && tzRegion) ? 'Back' : isChoice ? 'Close' : 'Cancel',
+      sheetConfirmDisplay: sheet && (isAction || sheet.type === 'text' || sheet.type === 'number' || (isList && sheet.manual)) ? 'flex' : 'none',
+      sheetConfirmLabel: join === 'error' ? 'Try again' : sheet ? (sheet.manual || sheet.confirm || (isAction ? 'Continue' : typing ? 'Save' : 'Set')) : '',
       sheetConfirmBg: sheet && sheet.danger ? 'rgba(224,167,88,0.2)' : 'rgba(126,214,188,0.16)',
       sheetConfirmBorder: sheet && sheet.danger ? 'rgba(224,167,88,0.5)' : 'rgba(126,214,188,0.4)',
       sheetConfirmInk: sheet && sheet.danger ? '#e0a758' : '#7ed6bc',
-      onSheetClose: () => this.setState({ sheet: null }),
+      onSheetClose: () => {
+        // inside the picker the same button steps back a level before it closes
+        if (sheet && sheet.tz && tzRegion) { this.setState({ tzRegion: null }); return; }
+        clearTimeout(this._join); clearTimeout(this._scan);
+        this.setState({ sheet: null, draft: null, join: null, scan: null, tzRegion: null });
+      },
       onSheetConfirm: () => {
         const label = sheet ? sheet.label : '';
-        this.setState({ sheet: null });
+        // a failed attempt returns to the field with the password still in it
+        if (join === 'error') { this.setState({ join: null }); return; }
+        // joining a secured network is the one action here that takes time and
+        // can fail; WPA's 8-character minimum decides the outcome
+        if (sheet && sheet.join) {
+          const pass = (this.state.draft || '');
+          this.setState({ join: 'connecting' });
+          this._join = setTimeout(() => {
+            if (pass.length < 8) { this.setState({ join: 'error' }); return; }
+            this.setState({ join: 'ok' });
+            this._join = setTimeout(() => {
+              this.setState({ sheet: null, draft: null, join: null });
+              this.flash('Joined ' + label);
+            }, 1400);
+          }, 1800);
+          return;
+        }
+        // the fallback route out of a discovery list: type the address
+        if (isList && sheet.manual) {
+          this.setState({
+            sheet: { k: sheet.k, type: 'text', label: sheet.label,
+                     note: 'Host and port, for a server discovery cannot reach.',
+                     placeholder: '192.168.1.10:9000', confirm: 'Save' },
+            draft: String(this.val(sheet) || '')
+          });
+          return;
+        }
+        if (typing) {
+          const v = (this.state.draft || '').trim();
+          this.setState(s => ({ vals: Object.assign({}, s.vals, { [sheet.k]: v }), sheet: null, draft: null }));
+          this.flash(label + ' set');
+          return;
+        }
+        this.setState({ sheet: null, draft: null });
         this.flash(label + ' \u2014 not wired yet');
       },
 

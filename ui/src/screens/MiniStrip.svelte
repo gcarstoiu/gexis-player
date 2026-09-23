@@ -13,7 +13,6 @@
 
   let { active, metadata, volume, controls = [], onopen, onvolume } = $props();
 
-  const LABELS = { lms: 'LMS', spotify: 'Spotify', bluetooth: 'Bluetooth' };
 
   const transport = $derived(metadata?.transport ?? null);
   const head = playhead(() => metadata);
@@ -70,11 +69,10 @@
     </div>
   </div>
 
-  <span class="badge">
-    <span class="badge__icon" class:is-playing={transport === 'playing'}>
-      <SourceMark source={active} size={15} color="var(--src-accent)" />
-    </span>
-    {LABELS[active] ?? active}
+  <!-- The mark alone at 38px, as on the screen above it: the word went in
+       the same change (design, 2026-09-22). -->
+  <span class="badge" class:is-playing={transport === 'playing'}>
+    <SourceMark source={active} size={38} color="var(--src-accent)" />
   </span>
 
   <div class="right">
@@ -194,27 +192,17 @@
     margin-top: 4px;
   }
 
+  /* Mark and word only. The pill ground, border and padding were removed
+     on 2026-09-21, the same change Now Playing's source mark took in 9b -
+     the design draws neither as a pill, and two different treatments of one
+     renderer on two surfaces is the kind of thing only a diff notices. */
   .badge {
     display: inline-flex;
     align-items: center;
-    gap: 9px;
-    background: rgba(255, 255, 255, 0.08);
-    border: 1px solid color-mix(in oklab, var(--src-accent) 40%, transparent);
     color: var(--src-accent);
-    font-size: var(--t-label-sm);
-    font-weight: 700;
-    letter-spacing: 0.18em;
-    text-transform: uppercase;
-    padding: 7px 13px;
-    border-radius: var(--r-pill);
-    white-space: nowrap;
     flex-shrink: 0;
   }
-  .badge__icon {
-    display: flex;
-    align-items: center;
-  }
-  .badge__icon.is-playing {
+  .badge.is-playing {
     animation: pulse 2.4s ease-in-out infinite;
   }
   @keyframes pulse {
