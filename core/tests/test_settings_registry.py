@@ -772,3 +772,34 @@ def test_a_choice_a_user_had_already_made_is_still_settable(store):
 def test_a_row_with_nothing_greyed_carries_no_field(store):
     settings = Settings(store, wired={"output_mode": None})
     assert "unavailable" not in _row(settings)
+
+
+def test_a_recommended_value_in_a_note_is_that_row_s_own_default():
+    """**George, 2026-09-23:** *"Can you add in text the current values as
+    recommended? This way if user forgets where he started from, he can
+    always find back."*
+
+    The note is prose and the default is a field, which is two places for
+    one fact ([LESSONS](../../docs/LESSONS.md) case 20). This is what stops
+    them drifting: change the default and the note has to move with it.
+    """
+    import re
+
+    checked = 0
+    for row in _rows():
+        note = row.get("note") or ""
+        match = re.search(r"Recommended:\s*([0-9]+)", note)
+        if not match:
+            continue
+        checked += 1
+        assert row.get("default") is not None, f"{row['key']} recommends a value it has no default for"
+        assert int(match.group(1)) == row["default"], (
+            f"{row['key']}: the note recommends {match.group(1)}, "
+            f"the default is {row['default']}"
+        )
+        unit = row.get("unit")
+        if unit:
+            assert f"{row['default']}{'' if unit == '%' else ' '}{unit}" in note, (
+                f"{row['key']}: the recommendation should carry its unit"
+            )
+    assert checked == 3, f"expected ADR-0058's three rows to recommend a value, found {checked}"

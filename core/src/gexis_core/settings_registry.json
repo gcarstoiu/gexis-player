@@ -687,7 +687,7 @@
         "min": 0,
         "max": 99,
         "unit": "%",
-        "note": "How much of each bar’s previous height is kept on every update. Low is twitchy, high glides and blunts a drum hit. Measured at 44.1 kHz: 50 settles in about 30 ms, 90 in 200 ms, 97 in 0.7 s. Applying it reopens the sound card, so it stops whatever is playing.",
+        "note": "Recommended: 90%. How much of each bar’s previous height is kept on every update. Low is twitchy, high glides and blunts a drum hit. Measured at 44.1 kHz: 50 settles in about 30 ms, 90 in 200 ms, 97 in 0.7 s. Applying it reopens the sound card, so it stops whatever is playing.",
         "default": 90,
         "warn": "Changing this stops whatever is playing while the sound card is reopened."
       },
@@ -699,7 +699,7 @@
         "min": 100,
         "max": 2000,
         "unit": "ms",
-        "note": "How long a needle takes to drop from full scale to nothing. Its rise is immediate and cannot be slowed. Applying it reopens the sound card, so it stops whatever is playing.",
+        "note": "Recommended: 400 ms. How long a needle takes to drop from full scale to nothing. Its rise is immediate and cannot be slowed. Applying it reopens the sound card, so it stops whatever is playing.",
         "default": 400,
         "warn": "Changing this stops whatever is playing while the sound card is reopened."
       },
@@ -711,7 +711,7 @@
         "min": 40,
         "max": 800,
         "unit": "ms",
-        "note": "How long a stretch of the music each needle is averaged over. Short twitches with every beat, long is a real VU movement and arrives late. Rounded to the nearest 40 ms, which is how often the meter reads its level. The visualiser restarts to apply it.",
+        "note": "Recommended: 240 ms. How long a stretch of the music each needle is averaged over. Short twitches with every beat, long is a real VU movement and arrives late. Rounded to the nearest 40 ms, which is how often the meter reads its level. The visualiser restarts to apply it.",
         "default": 240,
         "warn": "Changing this restarts the visualiser."
       }

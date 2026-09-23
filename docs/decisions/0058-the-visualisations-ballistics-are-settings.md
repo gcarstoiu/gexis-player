@@ -52,6 +52,17 @@ spectrum tweaks".**
   nearest step, with a floor of one sample, because a buffer of zero turns
   the averaging *off* rather than shortening it.
 
+**Each note opens with the value to come back to.** George: *"Can you add
+in text the current values as recommended? This way if user forgets where
+he started from, he can always find back."* So every note begins
+*"Recommended: 90%."* and so on — the shipped value, in the row's own unit,
+in the one place a person is already reading.
+
+**The note and the `default` field are two places for one fact**
+([LESSONS](../LESSONS.md) case 20), so a test pins them together: any row
+whose note says *Recommended: N* must have `N` as its default, with its
+unit. Change one and the other has to move.
+
 **Applying them costs something, and each row says so.**
 
 - `spectrum_smoothing` and `meter_fall` are peppyalsa's, and peppyalsa is
@@ -97,4 +108,10 @@ spectrum tweaks".**
 ## Open
 
 - **Whether the defaults are right.** 90 / 400 / 240 are where the day
-  ended, not where anyone has settled.
+  ended, not where anyone has settled — which is also what the notes now
+  call *recommended*. If George settles on different numbers, the defaults
+  move and the notes move with them.
+- **Whether every numeric row should say this.** These three do, because
+  they are the ones somebody will tweak by ear and want to undo. The rest
+  of the registry does not, and the test only checks the rows that claim
+  it.
