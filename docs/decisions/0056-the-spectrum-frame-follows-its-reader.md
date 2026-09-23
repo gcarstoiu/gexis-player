@@ -78,6 +78,14 @@ learns that size from the reader's own configuration.**
   20 — so the file does not change while the engine runs and the two cannot
   drift apart (Finding 049).
 
+- **The pipe had to be given frames before any of this could hold.**
+  peppyalsa wrote the spectrum one band at a time, so there were no record
+  boundaries at all and a poll landing mid-frame spliced two frames together
+  ([Finding 052](../findings/052-the-spectrum-pipe-had-no-frames-in-it.md)).
+  The image patches it to write each frame in one call — atomic below
+  `PIPE_BUF` — which is what makes "the frame is the size its reader
+  expects" a statement about records rather than about bytes.
+
 - **The relay now depends on a file the driver writes**, across two
   services. It degrades to "change nothing" if the file is missing or
   unreadable, which is the old behaviour, so a broken read cannot make the

@@ -509,6 +509,24 @@ and `declares 20` from the relay, while the engine drawing them had been on
 not just what each one holds.** The fix was to stop the number changing at
 all - one count for the whole corpus, since the spread was a single bar.
 
+**25. Three faults, one symptom, and each fix made the next one visible**
+(2026-09-23). "The spectrum is flashing" was, in order: frames read at the
+wrong length because the driver had changed the bar count (Finding 051); the
+same thing again from the second skin onwards, because the engine reads that
+count once and the relay re-reads it (case 24); and finally the pipe having
+no frame boundaries at all, because peppyalsa writes the thirty bands as
+thirty separate writes (Finding 052).
+
+**Each fix was correct and each was measured.** None of them was the whole
+answer, and after each one I reported the symptom as fixed. The third was
+underneath the other two the entire time and could not have been seen while
+they were there.
+
+**A measurement that shows the fault is gone shows that *a* fault is gone.**
+When a symptom survives a fix that demonstrably worked, the honest reading
+is that there was more than one cause, not that the fix failed - and the
+next question is what the fix just made visible.
+
 ## Common shape
 
 Every case had a *plausible* substitute for the real target — the build

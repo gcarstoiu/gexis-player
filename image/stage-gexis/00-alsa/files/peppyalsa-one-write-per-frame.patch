@@ -1,0 +1,52 @@
+diff --git a/src/spectrum.c b/src/spectrum.c
+index bed8e8d..4d6ae12 100644
+--- a/src/spectrum.c
++++ b/src/spectrum.c
+@@ -54,6 +54,12 @@ static char *mypipesa;
+ static int fifo_fd_sa = -1;
+ static int spectrum_max;
+ static int spectrum_size;
++/* One whole frame, assembled here and written in a single call. A pipe has
++   no message boundaries, and sending the bands one at a time left a reader
++   no way to tell where a frame begins. Sized at init from output_size, the
++   largest spectrum_size the plugin can be configured with. */
++static unsigned int *frame_buffer;
++static int frame_index;
+ static int log_f;
+ static int log_y;
+ static int smooth_f;
+@@ -69,9 +75,24 @@ static void open_pipe() {
+ 
+ static void send_to_pipe(unsigned int value) {
+ 	if(fifo_fd_sa == -1) {
++		/* No reader: drop the partial frame rather than flush it at the
++		   wrong length when one arrives. */
++		frame_index = 0;
+ 		return;
+ 	}
+-	write(fifo_fd_sa, &value, sizeof(value));
++	if(frame_buffer == NULL || spectrum_size <= 0) {
++		write(fifo_fd_sa, &value, sizeof(value));
++		return;
++	}
++	if(frame_index < (int)output_size) {
++		frame_buffer[frame_index++] = value;
++	}
++	if(frame_index >= spectrum_size) {
++		/* POSIX: a write of at most PIPE_BUF is atomic, and a frame is at
++		   most output_size values, so the pipe carries whole records. */
++		write(fifo_fd_sa, frame_buffer, spectrum_size * sizeof(unsigned int));
++		frame_index = 0;
++	}
+ }
+ 
+ static void cleanup(void) {
+@@ -107,6 +128,8 @@ static int init(const char *name, int max, int show, int p, int f_log, int y_log
+ 	mkfifo(mypipesa, 0666);
+ 	open_pipe();
+ 	atexit(cleanup);
++	frame_buffer = (unsigned int*)calloc(output_size, sizeof(unsigned int));
++	frame_index = 0;
+ 	input_buffer = (double*)(fftw_malloc(input_size * sizeof(double)));
+ 	output_buffer = (fftw_complex*)(fftw_malloc(output_size * sizeof(fftw_complex)));
+ 	plan = fftw_plan_dft_r2c_1d(input_size, input_buffer, output_buffer, FFTW_ESTIMATE);

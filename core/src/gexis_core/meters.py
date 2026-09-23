@@ -96,9 +96,22 @@ def open_fifo(path: str) -> int | None:
 
 
 def read_latest_frame(fd: int, frame_size: int) -> bytes | None:
-    """The newest whole frame available, or None when nothing is queued."""
+    """The newest whole frame available, or None when nothing is queued.
+
+    **This takes the last whole frame of what one read returned, so it needs
+    the read to have begun on a frame boundary.** peppyalsa used to send the
+    spectrum one band at a time - thirty separate writes - which left the
+    FIFO a plain byte stream with nothing marking a frame, and a poll that
+    landed part-way through one spliced the tail of that frame onto the head
+    of the next ([Finding 052](../../../docs/findings/052-the-spectrum-pipe-had-no-frames-in-it.md)).
+    The image patches the plugin to write each frame in one call, which a
+    pipe guarantees is atomic below PIPE_BUF, so the boundary is real.
+
+    **The read is rounded down to a whole number of frames** so this side
+    cannot reintroduce the splice by truncating a record at the chunk limit.
+    """
     try:
-        data = os.read(fd, READ_CHUNK)
+        data = os.read(fd, (READ_CHUNK // frame_size) * frame_size)
     except BlockingIOError:
         return None
     except OSError as exc:

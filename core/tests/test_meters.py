@@ -338,3 +338,25 @@ class TestFoldingKeepsTheWholeSpectrum:
         assert set(widths) == {1, 2}
         # no run of three consecutive doubled groups
         assert "2, 2, 2" not in ", ".join(str(w) for w in widths)
+
+
+def test_the_read_is_a_whole_number_of_frames(monkeypatch):
+    """**A pipe carries bytes.** Reading a chunk that is not a multiple of the
+    frame would truncate the last record and splice it onto the next read -
+    the fault Finding 052 is about, reintroduced on this side."""
+    import os as real_os
+    from gexis_core import meters
+
+    asked = []
+
+    def fake_read(fd, n):
+        asked.append(n)
+        return b""
+
+    monkeypatch.setattr(meters.os, "read", fake_read)
+    meters.read_latest_frame(3, 120)
+    meters.read_latest_frame(3, 4)
+    assert asked, "the read was never attempted"
+    for n, frame in zip(asked, (120, 4)):
+        assert n % frame == 0, (n, frame)
+        assert n > 0
