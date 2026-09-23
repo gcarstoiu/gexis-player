@@ -1,10 +1,11 @@
 # Handoff
 
 Last updated: 2026-09-23 (twenty-second session, on R2D2 — **Phase 9's
-design sweep: 9a through 9h are done, the 2026-09-22 drop is applied, and
-the image is built and verified. The volume work is split in two: 9i the
-level, 9j where it goes. 9i's path is built; its rows are not, and
-ADR-0053 is on George's desk**)
+design sweep: 9a through 9h are done, the 2026-09-22 drop is applied. 9i
+(the level) and 9j (where it goes) are built and George has passed both on
+the device. Since his pass: the visualiser's two rendering faults are
+fixed and measured — the spectrum overflow and the two skins that drew the
+wrong picture. The image predates all of it and needs rebuilding**)
 
 ## Start here
 
@@ -165,12 +166,36 @@ subphases, split on George's agreement (2026-09-22):
   **9i and 9j are built**, and George has passed both on the device.
 
   **Three things closed on 2026-09-23 after his pass:**
-  - **Two skins render wrong and are no longer offered**
-    ([Finding 048](docs/findings/048-two-skins-that-render-wrong.md)) —
-    judged as pixels, not inferred. `111G5_Teletronix S+M` puts both
-    needle pins outside the dial it draws; `108G5_Kenwood Rev S+M` is the
-    only skin of 99 whose `start.angle` is outside 0–65. **The corpus is
-    97.** Seven `S+M` skins in that pack have not been looked at.
+  - ~~**Two skins render wrong and are no longer offered**~~ **Both are
+    fixed and offered again, and the corpus is 99**
+    ([Finding 050](docs/findings/050-two-skins-name-the-wrong-background.md),
+    on George's *"Check all and don't just exclude, but try to fix
+    them."*). `111G5_Teletronix S+M` named the **spectrum's blank panel**
+    as its dial face — the same file `spectrum.txt` uses — so PeppyMeter
+    drew a blank frame over the left dial and repainted under the needle
+    out of the wrong picture: George's overlay and his trails, one cause.
+    `107G5_Marantz S+M` had the identical defect and nobody had reported
+    it. **Checked mechanically over both packs: those two are the only
+    ones**, and the image now points each at its own `screen.bgr`, with a
+    build check that refuses any skin that repeats it.
+    `108G5_Kenwood Rev S+M` was never broken — −227° is a reverse dial,
+    and the capture that condemned it was taken with nothing playing, so
+    it was a held last frame. `skins.BROKEN` is empty.
+    [Finding 048](docs/findings/048-two-skins-that-render-wrong.md) is
+    marked superseded where it is wrong; LESSONS case 22 is why.
+  - **The spectrum bars fit their frame**
+    ([Finding 049](docs/findings/049-the-spectrum-draws-more-bars-than-it-has-room-for.md)),
+    on George's *"the spectrum bars are actually falling slightly outside
+    their designated area in the right"*. The engine draws one global
+    `size` for every skin and **ignores each skin's own `steps`**, which
+    ADR-0015 records. That number was 30 and **all 22 spectrum sections
+    overflow at 30**; twelve overflow at their own declared count as well
+    (`Kenwood Big` wants 30 bars in an 850px frame that holds 20). The
+    driver now writes the skin's `steps`, clamped to what its own
+    background PNG holds. **The pipe stays at 30 bands** — narrowing it
+    would cost the ten skins drawn for thirty their resolution — the bar
+    sprite is not resized, and no skin file is edited. Re-measured across
+    all 22: none overflows.
   - **The visualisation's settings are written down** —
     [every key both programs read](docs/reference/peppy-visualisation-settings.md),
     in plain words, marked already-a-setting / fixed-by-the-build /
