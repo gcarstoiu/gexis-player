@@ -336,25 +336,33 @@ every setting and change every one that is not text.
   raised again as a usability concern; the design's own preference for
   avoiding input fields is a separate and welcome argument.
 
-## Amendment, 2026-09-23 — `locked`
+## Amendment, 2026-09-23 — `unavailable`
 
-A row that is **shown, relevant, and not the user's to set right now**,
-because the hardware has taken the choice away. It carries the value in
-force and a sentence saying why; a write is refused with 409.
+**Per option, not per row.** A `choice` may carry `unavailable`, a map from
+option to the sentence explaining why the hardware cannot honour it now.
+The row opens as usual, every option is drawn, and those ones are **greyed
+with their reason**; a write of one is refused with 409.
 
 Added for [ADR-0055](0055-which-output-the-device-plays-to.md) §5: an
-output with no volume control of its own makes `output_mode` a question
-with one answer, and George's instruction was to *"move the output to fixed
-and not allow a change"* rather than leave a choice that cannot be
-honoured.
+output with no volume control of its own cannot be Variable.
 
-**Distinct from the two neighbours it would otherwise be confused with.**
-`surfaced: false` is inventoried but never drawn; `onlyWhen` is drawn only
-when another *row* makes it relevant. `locked` is drawn, is relevant, and
-is decided elsewhere — and it is dynamic, set by the daemon rather than
-written in the registry, because only the daemon knows what the sound card
-can do.
+**The first version locked the whole row and George corrected it:** *"while
+on outputs that do not support it, variable should be greyed out. I
+wouldn't hide this time as settings is different than the now playing
+screen when it comes to capabilities."*
 
-**It never overwrites the stored value.** The lock is read in front of the
-store, so releasing it hands back whatever the user had chosen, and the
-row's own default answers when they had chosen nothing.
+**That distinction is the rule, and it is deliberate in both directions.**
+A screen for *listening* carries no dead controls — ADR-0046 hides the
+volume slider and ADR-0055 §6 hides the visualiser button rather than
+greying them. A screen for *changing things* is where a user goes to find
+out what can be changed, so it shows what cannot and says why.
+
+**Distinct from its two neighbours.** `surfaced: false` is inventoried but
+never drawn; `onlyWhen` is drawn only when another *row* makes it relevant.
+This is drawn, relevant, and refused — and it is dynamic, set by the daemon
+rather than written in the registry, because only the daemon knows what the
+sound card can do.
+
+**It never overwrites the stored value.** The restriction is read in front
+of the store, so lifting it hands back whatever the user had chosen, and
+the row's own default answers when they had chosen nothing.

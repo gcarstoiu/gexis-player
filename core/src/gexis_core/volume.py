@@ -818,6 +818,23 @@ class VolumeBridge:
         self._written: dict[int, float] = {}
         adapter.on_volume_change(self._on_adapter_volume)
 
+    def set_mixer_name(self, mixer_name: str) -> None:
+        """**The control's name follows the chosen output** (ADR-0055 §3):
+        `DAC` on this HAT, `PCM` on the Pi's own jack. Settable rather than
+        fixed at construction so switching output does not need the daemon
+        restarted, which George measured as the slow part: *"Changing the
+        output is slow at changing the volume output type. It should be
+        nearly instant."*
+
+        The *device* needs no such treatment - it is `ctl.output`, the
+        alias ADR-0009 put there, and rewriting `output.conf` moves it.
+        """
+        if mixer_name == self._mixer_name:
+            return
+        logger.info("volume: the control is now %r", mixer_name)
+        self._mixer_name = mixer_name
+        self._last_written = None
+
     def _capped(self, raw: int) -> int:
         """Every level reaches the DAC through here, so the ceiling is
         enforced in one place (ADR-0052 §3) - panel, mirror and restore

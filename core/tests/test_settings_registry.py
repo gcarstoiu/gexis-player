@@ -708,47 +708,61 @@ def test_an_injected_resolver_has_to_name_a_source_that_exists(store):
         Settings(store, options={"skin_korpus": list})
 
 
-def test_a_locked_row_shows_the_value_in_force_and_refuses_a_write(store):
-    """**ADR-0055 §5**, George 2026-09-23: *"in settings, you need to move
-    the output to fixed and not allow a change."*"""
+def _row(settings, key="output_mode"):
+    return next(r for g in settings.to_json() for r in g["rows"] if r.get("key") == key)
+
+
+def test_an_unavailable_option_is_greyed_not_hidden(store):
+    """**ADR-0044's `unavailable`**, George 2026-09-23: *"while on outputs
+    that do not support it, variable should be greyed out. I wouldn't hide
+    this time as settings is different than the now playing screen when it
+    comes to capabilities."*
+
+    The opposite of the now-playing rule, on purpose: a screen for changing
+    things should say what cannot be changed and why."""
     settings = Settings(store, wired={"output_mode": None})
     settings.set("output_mode", "Variable")
 
-    settings.lock("output_mode", "Fixed", "HDMI 1 has no volume control.")
+    settings.restrict("output_mode", {"Variable": "HDMI 1 has no volume control."})
 
-    assert settings.value("output_mode") == "Fixed"
-    row = next(r for g in settings.to_json() for r in g["rows"] if r.get("key") == "output_mode")
-    assert row["value"] == "Fixed"
-    assert row["locked"] == "HDMI 1 has no volume control."
+    row = _row(settings)
+    assert row["options"] == ["Variable", "Fixed"]  # both still offered
+    assert row["unavailable"] == {"Variable": "HDMI 1 has no volume control."}
+    assert row["value"] == "Fixed"  # what is in force
     with pytest.raises(Locked):
         settings.set("output_mode", "Variable")
 
 
-def test_unlocking_gives_back_the_choice_that_was_there_before(store):
+def test_the_stored_choice_is_untouched_and_comes_back(store):
     """*"When changing back to dac set the previously selected option."*
-    The lock sits **over** the stored value and never replaces it, so
-    handing the row back is one line and cannot lose anything."""
+    The restriction sits **over** the store and never replaces it."""
     settings = Settings(store, wired={"output_mode": None})
-    settings.set("output_mode", "Fixed")
-    settings.lock("output_mode", "Fixed", "no volume control here")
+    settings.set("output_mode", "Variable")
+    settings.restrict("output_mode", {"Variable": "no volume control here"})
+    assert settings.value("output_mode") == "Fixed"
 
-    settings.unlock("output_mode")
-
-    assert settings.value("output_mode") == "Fixed"  # what the user chose
-
-
-def test_with_no_previous_choice_unlocking_falls_back_to_the_default(store):
-    """*"If there is no previous selection default to variable."* - which
-    is the row's own default, so nothing special is needed for it."""
-    settings = Settings(store, wired={"output_mode": None})
-    settings.lock("output_mode", "Fixed", "no volume control here")
-
-    settings.unlock("output_mode")
+    settings.restrict("output_mode", {})
 
     assert settings.value("output_mode") == "Variable"
 
 
-def test_a_row_that_is_not_locked_carries_no_lock_field(store):
+def test_with_no_previous_choice_the_rows_own_default_answers(store):
+    """*"If there is no previous selection default to variable."*"""
     settings = Settings(store, wired={"output_mode": None})
-    row = next(r for g in settings.to_json() for r in g["rows"] if r.get("key") == "output_mode")
-    assert "locked" not in row
+    settings.restrict("output_mode", {"Variable": "no volume control here"})
+    settings.restrict("output_mode", {})
+
+    assert settings.value("output_mode") == "Variable"
+
+
+def test_a_choice_a_user_had_already_made_is_still_settable(store):
+    """Only the greyed option is refused, not the row."""
+    settings = Settings(store, wired={"output_mode": None})
+    settings.restrict("output_mode", {"Variable": "no volume control here"})
+
+    assert settings.set("output_mode", "Fixed") == "Fixed"
+
+
+def test_a_row_with_nothing_greyed_carries_no_field(store):
+    settings = Settings(store, wired={"output_mode": None})
+    assert "unavailable" not in _row(settings)

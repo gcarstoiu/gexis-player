@@ -126,9 +126,15 @@ itself.
 and not allow a change. When changing back to dac set the previously
 selected option. If there is no previous selection default to variable."*
 
-So the row **shows `Fixed`, says why, and refuses a write** (HTTP 409) while
-the chosen output cannot attenuate. It is not greyed with no explanation —
-the same rule ADR-0046 sets for the slider.
+So the row shows **`Fixed`**, and opening it draws both options with
+`Variable` **greyed and carrying its reason**; a write of it is refused
+(HTTP 409).
+
+**Greyed, not hidden, and that is the opposite of the now-playing rule on
+purpose.** George: *"I wouldn't hide this time as settings is different
+than the now playing screen when it comes to capabilities."* A screen for
+listening carries no dead controls; a screen for changing things is where
+someone goes to find out what can be changed, so it says what cannot.
 
 **The lock sits over the stored value and never replaces it**, which is
 what makes handing the row back free: switching to an output that *can*
@@ -140,6 +146,26 @@ This adds `locked` to ADR-0044's row vocabulary — a row that is shown and
 relevant but not the user's to set right now. Distinct from
 `surfaced: false` (inventoried, not shown) and from `onlyWhen` (shown only
 when another row makes it relevant).
+
+### 5a. The visible half of a switch does not wait for the sound card
+
+**George: *"Changing the output is slow at changing the volume output type.
+It should be nearly instant."*** It was taking fifteen seconds or more,
+because the switch restarted `gexis-core` — which took the panel's
+websocket with it — and did so only after stopping three renderers.
+
+Nothing the user can see needs the card. The mode, the greyed option, the
+padlock and the visualiser button are all consequences of *which output was
+chosen*, which is known immediately. So they are applied first, and the
+renderers are restarted behind them.
+
+**The daemon is no longer restarted at all.** It was, to pick up the new
+card's control name; that name is settable in place now
+(`VolumeBridge.set_mixer_name`), and the *device* never needed it — it is
+`ctl.output`, the alias ADR-0009 put there, and rewriting `output.conf`
+moves it.
+
+**Measured: 338 ms to HDMI, 358 ms back**, against fifteen seconds or more.
 
 ### 6. An output with no meter hides the visualiser, everywhere
 

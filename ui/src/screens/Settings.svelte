@@ -476,11 +476,6 @@
       if (await write(row, option)) flash(`${row.label}: ${option}`);
       return;
     }
-    if (row.locked) {
-      sheetKey = null;
-      flash(row.locked);
-      return;
-    }
     if (!row.wired) {
       sheetKey = null;
       flash(`${row.label} — not wired yet`);
@@ -607,7 +602,7 @@
                 <button
                   class="row"
                   class:row--danger={r.danger}
-                  class:row--readonly={r.type === 'readonly' || r.locked}
+                  class:row--readonly={r.type === 'readonly'}
                   type="button"
                   disabled={r.type === 'readonly'}
                   data-unwired={r.wired ? undefined : 'settings'}
@@ -619,22 +614,14 @@
                         <span class="row__name">{r.label}</span>
                         {#if pending(r)}<span class="dot dot--sm"></span>{/if}
                       </span>
-                      {#if r.locked}
-                        <!-- ADR-0055 §5: the hardware has taken the choice
-                             away, so the row shows the value in force and
-                             says why instead of offering one that cannot
-                             be honoured. -->
-                        <span class="row__note">{r.locked}</span>
-                      {:else if r.note}
-                        <span class="row__note">{r.note}</span>
-                      {/if}
+                      {#if r.note}<span class="row__note">{r.note}</span>{/if}
                     </span>
                     {#if r.type !== 'toggle' && shown(r)}
                       <span class="row__value" class:is-pending={pending(r)}>{shown(r)}</span>
                     {/if}
                     {#if r.type === 'toggle'}
                       <span class="toggle" class:is-on={!!r.value}><span></span></span>
-                    {:else if r.type !== 'readonly' && !r.locked}
+                    {:else if r.type !== 'readonly'}
                       <span class="chev"></span>
                     {/if}
                   </span>
@@ -797,10 +784,24 @@
           {#each sheet.options ?? [] as option (option)}
             {@const selected = choicePending !== null ? choicePending === option : String(sheet.value) === option}
             {@const p = sheet.optionsFrom ? parts(option) : { ord: '', label: option }}
-            <button class="option" class:is-selected={selected} type="button" onclick={() => choose(option)}>
+            {@const why = sheet.unavailable?.[option]}
+            <!-- ADR-0044's `unavailable`: greyed, not hidden. George,
+                 2026-09-23: "settings is different than the now playing
+                 screen when it comes to capabilities" - a screen for
+                 changing things should say what cannot be changed and
+                 why, where a screen for listening should carry no dead
+                 controls. -->
+            <button
+              class="option"
+              class:is-selected={selected}
+              class:is-unavailable={!!why}
+              type="button"
+              onclick={() => (why ? flash(why) : choose(option))}
+            >
               <span class="radio"><span></span></span>
               {#if p.ord}<span class="option__ord">{p.ord}</span>{/if}
               <span class="option__label">{p.label}</span>
+              {#if why}<span class="option__why">{why}</span>{/if}
             </button>
           {/each}
         </div>
@@ -1486,6 +1487,18 @@
     width: 12px;
     height: 12px;
   }
+  .option.is-unavailable {
+    opacity: 0.42;
+  }
+
+  .option__why {
+    margin-left: auto;
+    padding-left: 14px;
+    font-size: 17px;
+    color: var(--ink-dim, #9fb0bd);
+    text-align: right;
+  }
+
   .option__label {
     flex: 1;
     min-width: 0;

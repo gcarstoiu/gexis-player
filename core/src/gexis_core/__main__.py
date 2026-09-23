@@ -432,7 +432,7 @@ async def main() -> None:
     # §4). Not a side effect: the device cannot attenuate, so ADR-0046's
     # behaviour is the only honest one, and the row below cannot override
     # it.
-    forced_fixed = chosen_output is not None and chosen_output.control is None
+    forced_fixed = chosen_output is not None and chosen_output.control is None  # noqa: F841
     fixed_wanted = {"value": forced_fixed}
     fixed_now = {"value": False}
     set_fixed_output_reader(lambda: fixed_now["value"])
@@ -467,6 +467,22 @@ async def main() -> None:
             logger.info("output: variable - the device attenuates again")
             _reapply_level()
 
+    def _restrict_output_mode(output) -> None:
+        """Grey `Variable` out on an output that cannot attenuate.
+
+        ADR-0055 §5. The row still opens and still draws both options -
+        George: *"I wouldn't hide this time as settings is different than
+        the now playing screen when it comes to capabilities"* - and the
+        one that cannot be had says why.
+        """
+        if output is not None and output.control is None:
+            settings.restrict(
+                "output_mode",
+                {"Variable": f"{output.label} has no volume control of its own."},
+            )
+        else:
+            settings.restrict("output_mode", {})
+
     async def _switch_output() -> None:
         """Put the chosen output into `output.conf` and reopen everything.
 
@@ -485,6 +501,21 @@ async def main() -> None:
         if chosen is None:
             logger.error("outputs: nothing to switch to")
             return
+
+        # **Everything the user can see changes now, before the slow part**
+        # (George: *"Changing the output is slow at changing the volume
+        # output type. It should be nearly instant."*). None of it needs
+        # the sound card: the mode, the greyed option, the padlock and the
+        # visualiser button are all consequences of *which output was
+        # chosen*, which is already known.
+        nonlocal forced_fixed
+        forced_fixed = chosen.control is None
+        _restrict_output_mode(chosen)
+        volume_bridge.set_mixer_name(chosen.control or config.mixer_name)
+        state_store.set_meters(outputs.needs_plug(chosen.card) is not True)
+        _choose_output_mode()
+        state_store.bump_settings_revision()
+
         # Long enough for the settings write to have been answered.
         await asyncio.sleep(0.5)
         # **Stopped before the file is written, not after.** The config is
@@ -502,10 +533,15 @@ async def main() -> None:
         await stop.wait()
         if not outputs.write(chosen):
             logger.info("outputs: %s is already the output", chosen.label)
-        logger.info("outputs: starting them again, and myself, for %s", chosen.label)
+        # **This daemon is not restarted any more.** It was, to pick up the
+        # new card's control name; that name is now settable in place
+        # (`VolumeBridge.set_mixer_name`), and the restart was most of what
+        # made the switch feel slow - the panel lost its websocket and
+        # everything with it.
+        logger.info("outputs: starting the renderers again for %s", chosen.label)
         await asyncio.create_subprocess_exec(
             "systemctl", "restart", "squeezelite.service", "go-librespot.service",
-            "bluealsa-aplay.service", "gexis-core.service",
+            "bluealsa-aplay.service",
         )
 
     def _choose_output_mode(value=None) -> None:
@@ -921,12 +957,8 @@ async def main() -> None:
     # one that cannot be honoured. The user's own choice is never
     # overwritten - the lock sits *over* the stored value - so switching
     # back to an output that can attenuate hands it straight back.
+    _restrict_output_mode(chosen_output)
     if forced_fixed:
-        settings.lock(
-            "output_mode",
-            "Fixed",
-            f"{chosen_output.label} has no volume control, so the output is fixed.",
-        )
         asyncio.ensure_future(_apply_output_mode())
 
     state_store.set_meters(meters_available)

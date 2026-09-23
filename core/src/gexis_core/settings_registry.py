@@ -13,6 +13,7 @@ import logging
 import math
 from functools import lru_cache
 from pathlib import Path
+from collections.abc import Hashable
 from typing import Any, Callable
 
 from gexis_core.settings import SettingsStore
@@ -289,17 +290,17 @@ def load_seed(settings_rows: dict[str, dict], path: Path = SEED_PATH) -> dict[st
     return checked
 
 
-#: **ADR-0044 §8, added 2026-09-23.** A row whose value is not the user's
-#: to choose *right now*, because the hardware has taken the choice away.
-#: It is drawn, it shows the value in force, and it will not accept a
-#: write. George: *"you need to move the output to fixed and not allow a
-#: change."*
+#: **ADR-0044 §8, added 2026-09-23.** Raised when an option exists but the
+#: hardware cannot honour it right now.
 #:
-#: **Distinct from `surfaced: false`** (inventoried but not shown) and from
-#: `onlyWhen` (shown only when another row makes it relevant). This one is
-#: shown, relevant, and locked - and says why, because a control that
-#: refuses without explaining is the thing ADR-0046 spent a record
-#: avoiding.
+#: The first version locked the whole *row*, which George corrected:
+#: *"while on outputs that do not support it, variable should be greyed
+#: out. I wouldn't hide this time as settings is different than the now
+#: playing screen when it comes to capabilities."* So the row opens, both
+#: options are drawn, and the one that cannot be had is greyed with its
+#: reason - **the opposite of the now-playing rule, on purpose**: a screen
+#: for changing things should show what could be changed and why it
+#: cannot, where a screen for listening should not carry dead controls.
 class Locked(Exception):
     pass
 
@@ -330,10 +331,10 @@ class Settings:
         # daemon knows where the corpus is and what the other row holds
         # (ADR-0051 §4).
         self._options = {**OPTION_RESOLVERS, **(options or {})}
-        #: key -> (value in force, why), for rows the hardware has taken
-        #: over. Injected by the daemon, because only it knows what the
-        #: sound card can do.
-        self._locks: dict[str, tuple[Any, str]] = {}
+        #: key -> {option: why}, for choices the hardware cannot honour.
+        #: Injected by the daemon, because only it knows what the sound
+        #: card can do.
+        self._unavailable: dict[str, dict[Any, str]] = {}
         unknown_sources = set(options or ()) - OPTION_SOURCES
         if unknown_sources:
             raise ValueError(f"not an option source: {sorted(unknown_sources)}")
@@ -349,24 +350,38 @@ class Settings:
         except KeyError:
             raise UnknownSetting(key) from None
 
-    def lock(self, key: str, value: Any, why: str) -> None:
-        """Take a row over, or hand it back with `unlock`."""
-        self.row(key)
-        self._locks[key] = (value, why)
+    def restrict(self, key: str, unavailable: dict[Any, str]) -> None:
+        """Grey out options the hardware cannot honour, or clear the set by
+        passing an empty one.
 
-    def unlock(self, key: str) -> None:
-        """**The user's own choice comes back**, because a lock never
-        overwrote it: `value()` reads the lock first and the store
-        underneath is untouched. George: *"When changing back to dac set
-        the previously selected option. If there is no previous selection
-        default to variable."* - which is the row's own default."""
-        self._locks.pop(key, None)
+        **The stored value is never touched**, which is what makes handing
+        the choice back free. George: *"When changing back to dac set the
+        previously selected option. If there is no previous selection
+        default to variable."* - the first is the store, still there; the
+        second is the row's own default.
+        """
+        self.row(key)
+        if unavailable:
+            self._unavailable[key] = dict(unavailable)
+        else:
+            self._unavailable.pop(key, None)
 
     def value(self, key: str) -> Any:
         row = self.row(key)
-        locked = self._locks.get(key)
-        if locked is not None:
-            return locked[0]
+        blocked = self._unavailable.get(key)
+        if blocked:
+            # What is in force, which is not what is stored: the stored
+            # choice is waiting for the hardware that can honour it.
+            stored = self._value(key)
+            if stored in blocked:
+                for option in row.get("options") or ():
+                    if option not in blocked:
+                        return option
+            return stored
+        return self._value(key)
+
+    def _value(self, key: str) -> Any:
+        row = self.row(key)
         stored = self._store.get(key, _MISSING)
         if stored is not _MISSING:
             return stored
@@ -400,9 +415,9 @@ class Settings:
                     public["options"] = list(self._options.get(source, tuple)())
                 public["value"] = self.value(row["key"])
                 public["wired"] = row["key"] in self._wired
-                locked = self._locks.get(row["key"])
-                if locked is not None:
-                    public["locked"] = locked[1]
+                blocked = self._unavailable.get(row["key"])
+                if blocked:
+                    public["unavailable"] = dict(blocked)
                 public["visible"] = visible(row, self._rows, values)
                 rows.append(public)
             groups.append({**group, "rows": rows})
@@ -418,9 +433,11 @@ class Settings:
             raise NotSettable(f"{key} is a list and takes no value")
         if key not in self._wired:
             raise NotWired(f"{key} is not wired yet")
-        locked = self._locks.get(key)
-        if locked is not None:
-            raise Locked(locked[1])
+        # `multi` rows take a list, which is not a dict key - and a list is
+        # never an option anyway.
+        blocked = self._unavailable.get(key) or {}
+        if isinstance(value, Hashable) and value in blocked:
+            raise Locked(blocked[value])
         source = row.get("optionsFrom")
         value = validate(row, value, options=list(self._options[source]()) if source else None)
         if value == "" and row["type"] == "text":
