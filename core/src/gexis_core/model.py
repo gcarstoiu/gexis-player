@@ -208,6 +208,15 @@ class PlaybackState:
     settings_revision: int = 0
     #: The active renderer's queue, or None where it has no such thing.
     queue: Queue | None = None
+    #: **ADR-0046: `True` when the device is not attenuating at all.**
+    #:
+    #: Published rather than inferred, and that is the point of it: a
+    #: renderer that has simply not reported its level yet looks exactly
+    #: like fixed output from the outside, so `volume is None` cannot
+    #: stand in for this. The panel drew a *disabled* slider for both
+    #: cases, which the design named as the one outcome to avoid -
+    #: "indistinguishable from a bug".
+    fixed_output: bool = False
     #: A Bluetooth pairing request waiting for an answer, or None
     #: (ADR-0045). Published here rather than on a channel of its own
     #: because the panel already subscribes to this and a request has to
@@ -248,6 +257,7 @@ class PlaybackState:
             "capabilities": {rid: cap.to_json() for rid, cap in self.capabilities.items()},
             "handoff": self.handoff.to_json() if self.handoff else None,
             "volume": self.volume.to_json() if self.volume else None,
+            "fixed_output": self.fixed_output,
             "handoff_exempt_pairs": [list(pair) for pair in self.handoff_exempt_pairs],
             "settings_revision": self.settings_revision,
             "controls": self.controls,

@@ -1,7 +1,7 @@
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
 <script>
   import { onMount, untrack } from 'svelte';
-  import { connect, active, metadata, volume, handoff, handoffExemptPairs, capabilities, available, availability, shuffle, repeat, queue, pairing } from './lib/state.js';
+  import { connect, active, metadata, volume, handoff, handoffExemptPairs, capabilities, available, availability, shuffle, repeat, queue, pairing, fixedOutput } from './lib/state.js';
   import NowPlaying from './screens/NowPlaying.svelte';
   import Library from './screens/Library.svelte';
   import PanelBackground from './screens/PanelBackground.svelte';
@@ -237,7 +237,11 @@
     </div>
   {/if}
 
-  {#if $volume}
+  <!-- ADR-0046: **mounted in fixed output too, with no level to show.**
+       The drawer is where the sentence lives - "the answer is where the
+       question is asked" - and `{#if $volume}` alone left the padlock
+       opening nothing at all. -->
+  {#if $volume || $fixedOutput}
     <VolumeDrawer
       open={volumeOpen}
       volume={$volume}

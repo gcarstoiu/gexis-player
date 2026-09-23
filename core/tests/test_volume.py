@@ -991,3 +991,53 @@ class TestTheVolumeCurveRow:
 
         volume_module.set_curve_reader(lambda: "Bezier")
         assert volume_module.curve() == volume_module.CURVE_CUBIC
+
+
+class TestFixedOutput:
+    """ADR-0046, built 2026-09-23 and the oldest unbuilt decision in the
+    project. **The device is not attenuating at all**, so nothing may write
+    the DAC and there is no level to show."""
+
+    @pytest.fixture(autouse=True)
+    def _back_to_variable(self):
+        yield
+        volume_module.set_fixed_output_reader(lambda: False)
+
+    def test_variable_is_what_ships(self):
+        assert volume_module.fixed_output() is False
+
+    def test_an_unreadable_row_is_not_fixed_output(self):
+        """**Failing into fixed output means failing into full scale**,
+        which is the loudest mistake this device can make - ADR-0046: "a
+        wrong choice here is loud"."""
+        def boom():
+            raise RuntimeError("no settings store yet")
+
+        volume_module.set_fixed_output_reader(boom)
+        assert volume_module.fixed_output() is False
+
+    @pytest.mark.asyncio
+    async def test_nothing_reaches_the_dac(self, fake_set_raw):
+        """Checked at `write_hardware` rather than at each caller, because
+        every path to the hardware already goes through it - the panel, the
+        mirrors, the restores."""
+        bridge, _ = make_bridge()
+        volume_module.set_fixed_output_reader(lambda: True)
+
+        await bridge.write_hardware(180)
+        await settle()
+
+        assert fake_set_raw == []
+
+    @pytest.mark.asyncio
+    async def test_the_level_is_written_again_once_it_is_variable(self, fake_set_raw):
+        bridge, _ = make_bridge()
+        volume_module.set_fixed_output_reader(lambda: True)
+        await bridge.write_hardware(180)
+        await settle()
+        volume_module.set_fixed_output_reader(lambda: False)
+
+        await bridge.write_hardware(180)
+        await settle()
+
+        assert ("DAC", 180) in fake_set_raw

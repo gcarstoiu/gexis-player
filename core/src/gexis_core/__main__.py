@@ -63,8 +63,10 @@ from gexis_core.volume import (
     get_raw,
     Mute,
     renderer_value_to_hardware_raw,
+    HARDWARE_MAX,
     set_ceiling_reader,
     set_curve_reader,
+    set_fixed_output_reader,
     set_raw,
     slider_percent_to_raw,
     raw_to_db,
@@ -396,6 +398,45 @@ async def main() -> None:
     # ADR-0022's inventory, wired 2026-09-23: which of the two curves maps
     # the slider's travel onto loudness (ADR-0054 §3).
     set_curve_reader(lambda: settings.value("travel_curve"))
+    # ADR-0046. `output_mode` is what the *user* has chosen; `_fixed_now`
+    # is what is in force, which lags it while something is playing.
+    fixed_wanted = {"value": False}
+    fixed_now = {"value": False}
+    set_fixed_output_reader(lambda: fixed_now["value"])
+
+    async def _apply_output_mode() -> None:
+        """Put the chosen mode into force, if now is a legal moment.
+
+        **ADR-0018 requires the change to apply on the next track or after
+        stop, and ADR-0046 keeps that**: switching to fixed output while
+        music is playing would take the level to full scale mid-track, into
+        an amplifier set for whatever it was hearing a second earlier.
+        That is the loudest mistake this device can make, so it waits.
+        """
+        wanted = fixed_wanted["value"]
+        if wanted == fixed_now["value"]:
+            return
+        if state_store.state.metadata.transport == "playing":
+            logger.info(
+                "output: %s is chosen but something is playing; it applies after stop",
+                "fixed" if wanted else "variable",
+            )
+            return
+        fixed_now["value"] = wanted
+        state_store.set_fixed_output(wanted)
+        if wanted:
+            # Nothing is attenuating, so the one level the DAC may hold is
+            # full scale. Written directly: `write_hardware` now refuses
+            # every write in this mode, including this one.
+            logger.info("output: fixed - DAC to full scale, the panel can no longer lower it")
+            await set_raw(config.mixer_name, HARDWARE_MAX)
+        else:
+            logger.info("output: variable - the device attenuates again")
+            _reapply_level()
+
+    def _choose_output_mode(value=None) -> None:
+        fixed_wanted["value"] = (value or settings.value("output_mode")) == "Fixed"
+        asyncio.ensure_future(_apply_output_mode())
 
     def _reapply_level() -> None:
         """Put the level back where the *position* now says it belongs.
@@ -654,6 +695,8 @@ async def main() -> None:
                # the level under a slider that has not been touched, so it
                # is re-applied rather than waiting for the next change.
                "travel_curve": lambda _value=None: _reapply_level(),
+               # ADR-0046: chosen now, in force at the next legal moment.
+               "output_mode": _choose_output_mode,
                # Readonly: nothing to do on a write, and the value is the
                # live one below rather than the registry's literal.
                "volume_managed": None,
@@ -787,6 +830,10 @@ async def main() -> None:
 
     def follow_playback(state) -> None:
         nonlocal previous_active
+        # ADR-0018/0046: a mode change waits for playback to stop, and this
+        # is where stopping is noticed.
+        if fixed_wanted["value"] != fixed_now["value"]:
+            asyncio.ensure_future(_apply_output_mode())
         if state.active != previous_active:
             previous_active = state.active
             peppy.on_active_change(state.active)

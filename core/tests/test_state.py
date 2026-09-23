@@ -263,3 +263,30 @@ def test_handoff_exempt_pairs_are_published_not_applied():
     store = StateStore(_caps("lms", "spotify"), handoff_exempt_pairs=(("lms", "spotify"),))
 
     assert store.state.to_json()["handoff_exempt_pairs"] == [["lms", "spotify"]]
+
+
+def test_fixed_output_is_published_rather_than_inferred():
+    """**ADR-0046, and the reason the old `disabled={!volume}` was wrong
+    rather than merely ugly**: a renderer that has not reported its level
+    yet looks exactly like fixed output from outside, and the panel drew a
+    greyed control for both - "indistinguishable from a bug"."""
+    store = StateStore(_caps("lms"))
+    assert store.state.to_json()["fixed_output"] is False
+
+    store.set_fixed_output(True)
+
+    assert store.state.to_json()["fixed_output"] is True
+
+
+def test_fixed_output_clears_the_level_and_keeps_it_clear():
+    """There is nothing to show, and a stale number would have the panel
+    hiding a slider while the mini strip still knew a percentage."""
+    store = StateStore(_caps("lms"))
+    store.set_volume_raw(180)
+    assert store.state.volume is not None
+
+    store.set_fixed_output(True)
+    assert store.state.volume is None
+
+    store.set_volume_raw(200)  # a mirror or the monitor, still running
+    assert store.state.volume is None

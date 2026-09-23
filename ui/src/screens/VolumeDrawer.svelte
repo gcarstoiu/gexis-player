@@ -5,7 +5,8 @@
   slider position; mute restores the level from before it.
 -->
 <script>
-  import { setVolume, setMute } from '../lib/state.js';
+  import { setVolume, setMute, fixedOutput } from '../lib/state.js';
+  import LockIcon from '../lib/LockIcon.svelte';
   import VolumeIcon from '../lib/VolumeIcon.svelte';
 
   let { open, volume, active, onclose, onexternal, onactivity, onsettled } = $props();
@@ -126,6 +127,16 @@
      onpointerdown={onactivity} onpointerup={onsettled}
      onpointercancel={onsettled} onpointerleave={onsettled}>
   <div class="drawer__title">Controls</div>
+  {#if $fixedOutput}
+    <!--
+      ADR-0046: the drawer still opens, so the answer is where the question
+      is asked. Not a disabled slider - the design ruled that out by name.
+    -->
+    <div class="fixed">
+      <LockIcon size={26} />
+      <span>Fixed output — level is set downstream. Set it on your amplifier.</span>
+    </div>
+  {:else}
   <div class="row">
     <button class="mute" class:is-muted={muted} type="button" aria-label={muted ? 'Unmute' : 'Mute'} onclick={toggleMute}>
       <VolumeIcon percent={pct} {muted} />
@@ -152,6 +163,7 @@
 
     <span class="readout" class:is-muted={muted}>{muted ? 'Mute' : shown}</span>
   </div>
+  {/if}
 </div>
 
 <div class="toast" class:is-shown={toast}>
@@ -288,6 +300,16 @@
   }
   .readout.is-muted {
     color: var(--accent-warn);
+  }
+
+  .fixed {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 4px 6px 2px;
+    color: var(--ink-dim, #9fb0bd);
+    font-size: 19px;
+    line-height: 1.35;
   }
 
   .toast {

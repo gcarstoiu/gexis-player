@@ -345,6 +345,30 @@ def _taper_floor() -> float:
     return 10.0 ** (-RENDERER_DB_SPAN / 60.0)
 
 
+#: **ADR-0046: fixed output.** When the device is not attenuating at all,
+#: nothing here may write the DAC - not the panel, not a renderer's mirror,
+#: not a restore. Read through a callable like the ceiling and the curve,
+#: so the mode is one fact with one reader rather than a flag copied into
+#: three classes.
+_fixed_output_reader: Callable[[], bool] = lambda: False
+
+
+def set_fixed_output_reader(reader) -> None:
+    global _fixed_output_reader
+    _fixed_output_reader = reader
+
+
+def fixed_output() -> bool:
+    """False - the device attenuates - unless the row says otherwise,
+    **including when it cannot be read**. Failing into fixed output would
+    mean failing into full scale, which is the loudest mistake this device
+    can make (ADR-0046: "a wrong choice here is loud")."""
+    try:
+        return bool(_fixed_output_reader())
+    except Exception:  # noqa: BLE001 - an unreadable row is not fixed output
+        return False
+
+
 #: **The curve is a setting** (ADR-0022's inventory, on George's
 #: instruction 2026-09-23). Two names, and they are the two that exist:
 #: `Cubic` is what ships and `Linear (dB)` is the even-decibels curve it
@@ -837,6 +861,12 @@ class VolumeBridge:
     async def write_hardware(self, raw: int) -> None:
         """Write `raw` to the real DAC and arm the echo window first.
 
+        **Refused outright in fixed output** (ADR-0046): the device is not
+        attenuating, so the only level it may hold is full scale. Refused
+        *here* rather than at each caller because every path to the
+        hardware already goes through this one - the panel, the mirrors,
+        the restores - which is what makes one check enough.
+
         Found on hardware, 2026-09-08: `restore_volume` (`__main__.py`)
         was calling `set_raw()` directly on acquire, bypassing this
         class's echo window entirely. That write still shows up on
@@ -856,6 +886,9 @@ class VolumeBridge:
         not `set_raw` directly - restore-on-acquire and the unmanaged-
         renderer floor bump both do now.
         """
+        if fixed_output():
+            logger.debug("volume: fixed output, %s/240 not written", raw)
+            return
         raw = self._capped(raw)
         self._expected_hw_raw = (raw, time.monotonic())
         # **The panel is told the target, not the journey** (ADR-0052 §4):

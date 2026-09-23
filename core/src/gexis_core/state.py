@@ -54,6 +54,7 @@ class StateStore:
         self._active: str | None = None
         self._handoff: Handoff | None = None
         self._volume: VolumeState | None = None
+        self._fixed_output = False
         self._settings_revision = 0
         self._pairing: dict | None = None
         self._subscribers: list[Callable[[PlaybackState], None]] = []
@@ -77,6 +78,7 @@ class StateStore:
             capabilities=dict(self._capabilities),
             handoff=self._handoff,
             volume=self._volume,
+            fixed_output=self._fixed_output,
             handoff_exempt_pairs=self._handoff_exempt_pairs,
             settings_revision=self._settings_revision,
             pairing=self._pairing,
@@ -168,6 +170,11 @@ class StateStore:
         hardware's own throughout - they are facts about the DAC, and the
         drawer's dB readout is not a renderer's opinion.
         """
+        if self._fixed_output:
+            # ADR-0046: nothing is attenuating, so there is no level to
+            # publish. Swallowed here rather than at every caller, because
+            # the mirrors and the monitor all still run.
+            return
         volume = VolumeState(
             raw=raw,
             db=raw_to_db(raw),
@@ -177,6 +184,19 @@ class StateStore:
         if volume == self._volume:
             return
         self._volume = volume
+        self._notify()
+
+    def set_fixed_output(self, fixed: bool) -> None:
+        """ADR-0046. **The level is cleared with it**: in fixed mode there
+        is no level to show, and leaving the last one published would have
+        the panel hiding a slider while the mini strip still knew a
+        number."""
+        if fixed == self._fixed_output:
+            return
+        logger.info("state: output is %s", "fixed" if fixed else "variable")
+        self._fixed_output = fixed
+        if fixed:
+            self._volume = None
         self._notify()
 
     def set_pairing(self, pairing: dict | None) -> None:

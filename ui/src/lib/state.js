@@ -67,6 +67,10 @@ export const active = derived(playback, ($s) => $s?.active ?? null);
 export const metadata = derived(playback, ($s) => $s?.metadata ?? null);
 export const availability = derived(playback, ($s) => $s?.available ?? {});
 export const volume = derived(playback, ($s) => $s?.volume ?? null);
+// ADR-0046: published, never inferred. A renderer that has not reported
+// its level yet looks exactly like fixed output from here, which is why
+// `!volume` was the wrong test and drew a disabled slider for both.
+export const fixedOutput = derived(playback, ($s) => $s?.fixed_output === true);
 export const handoff = derived(playback, ($s) => $s?.handoff ?? null);
 export const handoffExemptPairs = derived(playback, ($s) => $s?.handoff_exempt_pairs ?? []);
 /** What each renderer has (ADR-0037 §2's static layer), by renderer id. */
