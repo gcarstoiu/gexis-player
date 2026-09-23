@@ -162,7 +162,29 @@ subphases, split on George's agreement (2026-09-22):
     close on the same day's work**, and the one that stays is named: a
     phone's own slider still moves and now changes nothing.
 
-  **9i is built.** What is left of it is George's regression pass.
+  **9i and 9j are built**, and George has passed both on the device.
+
+  **Three things closed on 2026-09-23 after his pass:**
+  - **Two skins render wrong and are no longer offered**
+    ([Finding 048](docs/findings/048-two-skins-that-render-wrong.md)) —
+    judged as pixels, not inferred. `111G5_Teletronix S+M` puts both
+    needle pins outside the dial it draws; `108G5_Kenwood Rev S+M` is the
+    only skin of 99 whose `start.angle` is outside 0–65. **The corpus is
+    97.** Seven `S+M` skins in that pack have not been looked at.
+  - **The visualisation's settings are written down** —
+    [every key both programs read](docs/reference/peppy-visualisation-settings.md),
+    in plain words, marked already-a-setting / fixed-by-the-build /
+    candidate / not-applicable. **Nothing in it is proposed for ADR-0022's
+    inventory**; that stays George's to ask for. The five worth having, in
+    order, are at the end of it.
+  - **Arbitration watches one card whatever the output is** — measured
+    (Finding 048 §5): with the output on the headphone jack and something
+    holding it, `device_busy()` answers `False`, so the release ladder
+    would hand the device over while the outgoing renderer still had it.
+    `alsa.CARD_ID` has been a constant since Phase 2; ADR-0055 is what
+    made a second output reachable. **Not fixed** — it wants a decision on
+    whether the card follows the output or arbitration is scoped to the
+    DAC by definition.
 
   **Needs George, and nothing else will do:**
   - **Bluetooth, on the new path, with the amplifier turned down first.**
