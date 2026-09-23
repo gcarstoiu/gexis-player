@@ -45,7 +45,15 @@ from gexis_core.providers import (
     RecordingArtProvider,
     WikipediaBiography,
 )
-from gexis_core.peppy import PeppyController, PeppyScreen, UnattendedPlayback
+# `set_meter_smoothing` by name, not the module: `peppy` is a local
+# further down (the controller), and a module import of the same name
+# is shadowed by it - which is a 500 on the row, not an import error.
+from gexis_core.peppy import (
+    PeppyController,
+    PeppyScreen,
+    UnattendedPlayback,
+    set_meter_smoothing,
+)
 from gexis_core.peppy_metadata import PeppyMetadataWriter
 from gexis_core.settings import SettingsStore
 from gexis_core.settings_registry import Settings
@@ -538,7 +546,7 @@ async def main() -> None:
             "bluealsa-aplay.service",
         )
         await stop.wait()
-        outputs.write(chosen)
+        outputs.write(chosen, tuning=_tuning())
         # **This daemon is not restarted any more.** It was, to pick up the
         # new card's control name; that name is now settable in place
         # (`VolumeBridge.set_mixer_name`), and the restart was most of what
@@ -549,6 +557,61 @@ async def main() -> None:
             "systemctl", "restart", "squeezelite.service", "go-librespot.service",
             "bluealsa-aplay.service",
         )
+
+    def _tuning() -> outputs.Tuning:
+        """ADR-0058's two peppyalsa numbers, as the settings have them."""
+        return outputs.Tuning(
+            decay_ms=int(settings.value("meter_fall") or outputs.DECAY_MS),
+            smoothing_factor=int(
+                settings.value("spectrum_smoothing")
+                if settings.value("spectrum_smoothing") is not None
+                else outputs.SMOOTHING_FACTOR
+            ),
+        )
+
+    async def _rewrite_output_conf(reason: str) -> None:
+        """Put the current output and tuning in `output.conf` and reopen.
+
+        **The renderers stop first.** Not for politeness: `outputs.write`
+        has to *open* the card to ask whether it needs a conversion layer,
+        and a card someone is holding answers nothing (LESSONS case 21).
+        They restart afterwards, which is also what makes the new file
+        mean anything - ALSA reads it when a PCM is opened.
+        """
+        chosen = outputs.resolve(settings.value("output_device"))
+        if chosen is None:
+            logger.error("outputs: nothing to write the tuning to")
+            return
+        logger.info("outputs: stopping the renderers - %s", reason)
+        stop = await asyncio.create_subprocess_exec(
+            "systemctl", "stop", "squeezelite.service", "go-librespot.service",
+            "bluealsa-aplay.service",
+        )
+        await stop.wait()
+        outputs.write(chosen, tuning=_tuning())
+        await asyncio.create_subprocess_exec(
+            "systemctl", "restart", "squeezelite.service", "go-librespot.service",
+            "bluealsa-aplay.service",
+        )
+
+    def _apply_scope_tuning(_value=None) -> None:
+        """`spectrum_smoothing` and `meter_fall` both live in `output.conf`."""
+        asyncio.ensure_future(_rewrite_output_conf("the visualisation was retuned"))
+
+    def _apply_meter_smoothing(value=None) -> None:
+        """`meter_smoothing` lives in PeppyMeter's own config, which it reads
+        once at start - so this restarts the visualiser, and only when the
+        file actually changed."""
+        window = int(value if value is not None else (settings.value("meter_smoothing") or 240))
+        if not set_meter_smoothing(window, Path(config.meter_consumer_config)):
+            return
+
+        async def restart() -> None:
+            await asyncio.create_subprocess_exec(
+                "systemctl", "restart", "gexis-peppy.service"
+            )
+
+        asyncio.ensure_future(restart())
 
     def _choose_output_mode(value=None) -> None:
         fixed_wanted["value"] = forced_fixed or (
@@ -834,6 +897,11 @@ async def main() -> None:
                "skin": publish_visualisation,
                "skin_rotate": publish_visualisation,
                "skin_corpus": apply_corpus,
+               # ADR-0058. Two of the three are peppyalsa's and go in
+               # `output.conf`; the third is PeppyMeter's own.
+               "spectrum_smoothing": _apply_scope_tuning,
+               "meter_fall": _apply_scope_tuning,
+               "meter_smoothing": _apply_meter_smoothing,
                "home_strip": None, "home_strip_count": None,
                "idle_clock": None,
                "device_name": apply_device_name,

@@ -87,6 +87,10 @@ class Config:
     # different band from one refresh to the next (Finding 051). The
     # passthrough follows what the consumer declares rather than guessing.
     spectrum_consumer_config: str = "/opt/gexis-peppy/spectrum/config.txt"
+    # **PeppyMeter's own config**, which carries how many samples the
+    # needle is averaged over (ADR-0058). It reads it once, at start, so a
+    # change to it means restarting `gexis-peppy`.
+    meter_consumer_config: str = "/opt/gexis-peppy/peppymeter/config.txt"
     # **Where the daemon leaves the dB it is currently cutting** (ADR-0057).
     # `volume.ATTENUATION_PATH` is the writer's copy of this and the two
     # are pinned together by a test - a meter reading a path nobody writes

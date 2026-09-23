@@ -126,6 +126,10 @@ def test_registry_keys_are_the_designs_keys_apart_from_recorded_deviations():
         "output_device",
         "background_brightness", "background_interval", "idle_clock",
         "time_display", "updates", "volume_managed", "wallpaper_topics",
+        # ADR-0058, 2026-09-23: George asked for the three numbers that decide
+        # how the visualisation *moves*. The design has no rows for them
+        # because until this week nobody knew which knobs there were.
+        "spectrum_smoothing", "meter_fall", "meter_smoothing",
     }
 
 
@@ -476,9 +480,11 @@ def test_the_shipped_registry_hides_twenty_rows_and_shows_the_rest():
     # the behaviour behind them stays hardcoded. Less `per_renderer_volume`
     # too, deleted with the memory it switched on and off, and
     # `boot_volume`, deleted with the unit that read it. Plus
-    # `output_device`, ADR-0055's own.
-    assert len(rows) == 68
-    assert len(rows) - len(kept) == 50
+    # `output_device`, ADR-0055's own. Plus ADR-0058's three: the numbers
+    # that decide how the visualisation moves, which George asked for by
+    # name on 2026-09-23.
+    assert len(rows) == 71
+    assert len(rows) - len(kept) == 53
 
 
 def test_the_clock_can_be_turned_off_without_taking_the_screen_with_it():

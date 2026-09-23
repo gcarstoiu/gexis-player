@@ -25,10 +25,31 @@ import re
 import subprocess
 from dataclasses import dataclass
 from pathlib import Path
+from typing import NamedTuple
 
 logger = logging.getLogger("gexis_core.outputs")
 
 CONF_PATH = Path("/etc/alsa/conf.d/output.conf")
+
+#: **What the shipped `output.conf` says**, and what `render` uses when it is
+#: given nothing. Both are peppyalsa's, both are about how the visualisation
+#: *moves* rather than what it measures, and both are settings
+#: ([ADR-0058](../../../docs/decisions/0058-the-visualisations-ballistics-are-settings.md)).
+DECAY_MS = 400
+SMOOTHING_FACTOR = 90
+
+
+class Tuning(NamedTuple):
+    """How the meter and the spectrum move, as peppyalsa takes it.
+
+    `decay_ms` is how long the *VU level* takes to fall full scale; its rise
+    is instant and there is no knob for that. `smoothing_factor` is the
+    percentage of each spectrum band's previous value kept on every block -
+    higher is slower, in both directions.
+    """
+
+    decay_ms: int = DECAY_MS
+    smoothing_factor: int = SMOOTHING_FACTOR
 DRM = Path("/sys/class/drm")
 
 #: Our own snd-dummy cards. They have a mixer and no audio path, which is
@@ -252,7 +273,7 @@ def resolve(
     return available[0]
 
 
-def render(output: Output, plug: bool) -> str:
+def render(output: Output, plug: bool, tuning: Tuning = Tuning()) -> str:
     """`output.conf`, with this output's card in the two places it goes.
 
     The rest is verbatim from what the image ships - the comment earns its
@@ -302,7 +323,7 @@ ctl.output {{
 
 pcm_scope.peppyalsa {{
     type peppyalsa
-    decay_ms 400
+    decay_ms {tuning.decay_ms}
     meter "/run/gexis/meter.fifo"
     meter_max 100
     meter_show 0
@@ -311,7 +332,7 @@ pcm_scope.peppyalsa {{
     spectrum_size 30
     logarithmic_frequency 1
     logarithmic_amplitude 1
-    smoothing_factor 90
+    smoothing_factor {tuning.smoothing_factor}
     window 3
 }}
 
@@ -321,7 +342,7 @@ pcm_scope_type.peppyalsa {{
 '''
 
 
-def write(output: Output, path: Path = CONF_PATH) -> bool:
+def write(output: Output, path: Path = CONF_PATH, tuning: Tuning = Tuning()) -> bool:
     """Put `output` in the config. True if the file changed.
 
     ALSA reads this when a PCM is *opened*, so writing it changes nothing
@@ -340,7 +361,7 @@ def write(output: Output, path: Path = CONF_PATH) -> bool:
             path, output.card,
         )
         return False
-    wanted = render(output, plug)
+    wanted = render(output, plug, tuning)
     try:
         if path.read_text() == wanted:
             logger.info("outputs: %s is already the output", output.label)

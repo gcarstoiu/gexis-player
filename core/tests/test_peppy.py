@@ -396,3 +396,67 @@ async def test_the_controller_raises_the_meter_then_gives_the_screen_back():
     task.cancel()
     assert not screen.visible
     assert screen.calls == ["hide", "show", "hide"]
+
+
+class TestTheNeedleSmoothingSetting:
+    """ADR-0058. PeppyMeter averages the needle over N samples of a pipe it
+    reads every 40 ms; the setting is the window in milliseconds, because
+    "6 samples" means nothing to the person choosing it."""
+
+    def test_milliseconds_become_samples(self):
+        from gexis_core.peppy import meter_smoothing_samples
+
+        assert meter_smoothing_samples(240) == 6
+        assert meter_smoothing_samples(40) == 1
+        assert meter_smoothing_samples(800) == 20
+        # rounded to the nearest step, because nothing between them exists
+        assert meter_smoothing_samples(100) == 3
+        assert meter_smoothing_samples(119) == 3
+
+    def test_zero_is_one_sample_not_no_smoothing(self):
+        """A buffer of 0 turns PeppyMeter's averaging off rather than
+        shortening it, which is a different thing."""
+        from gexis_core.peppy import meter_smoothing_samples
+
+        assert meter_smoothing_samples(0) == 1
+        assert meter_smoothing_samples(-40) == 1
+
+    def test_it_rewrites_only_that_line(self, tmp_path):
+        from gexis_core.peppy import set_meter_smoothing
+
+        conf = tmp_path / "config.txt"
+        conf.write_text(
+            "# a comment the engine's own writer would eat\n"
+            "[data.source]\n"
+            "polling.interval = 0.04\n"
+            "smooth.buffer.size = 6\n"
+            "step = 6\n"
+        )
+        assert set_meter_smoothing(400, conf) is True
+        text = conf.read_text()
+        assert "smooth.buffer.size = 10\n" in text
+        assert "# a comment the engine's own writer would eat" in text
+        assert "step = 6\n" in text
+        assert "polling.interval = 0.04\n" in text
+
+    def test_no_change_is_reported_as_no_change(self, tmp_path):
+        """The caller restarts the visualiser on True, so an unchanged file
+        must not say it changed."""
+        from gexis_core.peppy import set_meter_smoothing
+
+        conf = tmp_path / "config.txt"
+        conf.write_text("smooth.buffer.size = 6\n")
+        assert set_meter_smoothing(240, conf) is False
+
+    def test_a_file_without_the_key_is_left_alone(self, tmp_path):
+        from gexis_core.peppy import set_meter_smoothing
+
+        conf = tmp_path / "config.txt"
+        conf.write_text("[data.source]\nstep = 6\n")
+        assert set_meter_smoothing(240, conf) is False
+        assert conf.read_text() == "[data.source]\nstep = 6\n"
+
+    def test_an_unreadable_file_is_not_a_crash(self, tmp_path):
+        from gexis_core.peppy import set_meter_smoothing
+
+        assert set_meter_smoothing(240, tmp_path / "nope.txt") is False

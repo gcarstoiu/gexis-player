@@ -268,3 +268,41 @@ class TestAnUnanswerableCard:
 
         assert outputs.write(HDMI1, path) is False
         assert path.read_text() == "something that works\n"
+
+
+class TestTheBallisticsAreInTheConfig:
+    """ADR-0058: two of the three numbers George asked for are peppyalsa's,
+    and peppyalsa is configured in `output.conf`."""
+
+    def test_the_defaults_are_what_the_image_ships(self):
+        from gexis_core import outputs
+
+        rendered = outputs.render(HIFIBERRY, plug=False)
+        assert f"decay_ms {outputs.DECAY_MS}" in rendered
+        assert f"smoothing_factor {outputs.SMOOTHING_FACTOR}" in rendered
+
+    def test_a_tuning_reaches_the_file(self):
+        from gexis_core import outputs
+
+        rendered = outputs.render(
+            HIFIBERRY, plug=False, tuning=outputs.Tuning(decay_ms=900, smoothing_factor=72)
+        )
+        assert "decay_ms 900" in rendered
+        assert "smoothing_factor 72" in rendered
+        # and nothing else moved
+        assert 'slave.pcm "hw:sndrpihifiberry"' in rendered
+        assert "spectrum_size 30" in rendered
+
+    def test_a_converted_chain_defines_the_scope_but_attaches_nothing(self):
+        """No meter on a `plug` chain, so the tuning reaches a scope that is
+        never used. It is still written, because the block is the same text
+        either way - what changes is the `scopes.0` line that hangs it on
+        the PCM."""
+        from gexis_core import outputs
+
+        rendered = outputs.render(
+            HIFIBERRY, plug=True, tuning=outputs.Tuning(decay_ms=900, smoothing_factor=72)
+        )
+        assert "scopes.0 peppyalsa" not in rendered
+        assert "type meter" not in rendered
+        assert "decay_ms 900" in rendered

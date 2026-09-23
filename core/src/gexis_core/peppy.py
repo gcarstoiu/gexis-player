@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+from pathlib import Path
 import os
 import shutil
 import subprocess
@@ -300,3 +301,64 @@ class PeppyController:
                 logger.info("peppy: nothing playing for %.0fs, exiting to the panel",
                             self._timer.stop_after_s or 0)
                 self._screen.hide()
+
+
+#: PeppyMeter polls its pipe at this rate (`polling.interval` in the config
+#: the image ships). The needle's smoothing is a count of samples, so this is
+#: what turns it into a time the user can be shown.
+METER_POLL_MS = 40
+
+#: What the shipped config says, and the fallback if the file cannot be read.
+METER_SMOOTH_SAMPLES = 6
+
+
+def meter_smoothing_samples(window_ms: int) -> int:
+    """The `smooth.buffer.size` that averages the needle over `window_ms`.
+
+    PeppyMeter averages the last N samples of a pipe it reads every 40 ms, so
+    the window is N x 40 and nothing between those steps exists. At least
+    one: a buffer of zero turns the averaging off rather than shortening it,
+    which is a different thing and not what a minimum should mean.
+    """
+    # int(x + 0.5), not round(): round() sends an exact half to the even
+    # neighbour, so 100 ms would become 80 rather than 120 and the row
+    # would not do what "nearest" says.
+    return max(1, int(window_ms / METER_POLL_MS + 0.5))
+
+
+def set_meter_smoothing(window_ms: int, path: Path) -> bool:
+    """Put `smooth.buffer.size` in PeppyMeter's config. True if it changed.
+
+    **Rewritten in place, one key.** The engine's own parser is not used to
+    write it back: it drops the comments the file is mostly made of, and the
+    file is the image's, not ours to reformat.
+
+    **PeppyMeter reads this once, at start** ([ADR-0058](../../../docs/decisions/0058-the-visualisations-ballistics-are-settings.md)),
+    so the caller restarts `gexis-peppy` when this returns True.
+    """
+    samples = meter_smoothing_samples(window_ms)
+    try:
+        lines = path.read_text().splitlines(keepends=True)
+    except OSError as exc:
+        logger.warning("peppy: cannot read %s: %s", path, exc)
+        return False
+    wanted = f"smooth.buffer.size = {samples}\n"
+    out, seen = [], False
+    for line in lines:
+        if line.split("=")[0].strip() == "smooth.buffer.size":
+            out.append(wanted)
+            seen = True
+        else:
+            out.append(line)
+    if not seen:
+        logger.warning("peppy: %s has no smooth.buffer.size to set", path)
+        return False
+    if "".join(out) == "".join(lines):
+        return False
+    try:
+        path.write_text("".join(out))
+    except OSError as exc:
+        logger.warning("peppy: cannot write %s: %s", path, exc)
+        return False
+    logger.info("peppy: the needle is averaged over %s samples (%s ms)", samples, samples * METER_POLL_MS)
+    return True
