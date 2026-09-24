@@ -603,6 +603,27 @@ whose accuracy depends on the very thing the experiment changes.
 matches `PipelineReporter` to within a frame while the scroll is on the main
 thread, which is what earns it the right to disagree when it is not.
 
+**31. Three fixes for the symptom, because I never asked what the row was**
+(2026-09-24). A swiped queue row slid back into place before vanishing.
+I cleared the swiped state sooner; George saw it again. I cleared it on the
+queue's arrival instead; he saw it again. I suppressed the transition for a
+frame — and that third attempt read and wrote the same state in one
+`$effect`, which made the effect its own trigger and **left the panel not
+answering at all**.
+
+**The row was keyed by its position in the queue, so it was never
+destroyed.** Remove the track at 7 and the old 8 becomes 7: every key still
+exists, Svelte keeps every node and hands each one a different track. The
+row I was animating was the *next* track wearing the last one's state.
+
+**Two failures of the same fix are a fact about the diagnosis.** Each
+attempt was a smaller intervention than the one before, which felt like
+converging and was the opposite: I was adding machinery to a component whose
+model was wrong.
+
+**And the third made it worse than the bug.** An effect that clears state
+must not also be woken by it.
+
 ## Common shape
 
 Every case had a *plausible* substitute for the real target — the build
