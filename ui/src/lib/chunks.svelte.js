@@ -10,15 +10,18 @@
  * sixty frames a second - so what changes here is when they are made.
  */
 
-//: Enough to fill the panel and a little past it: the grid draws 7 cards a
-//: row in a 600px window, a playlist's rows are 56px in 700px. Bigger
-//: delays the first paint for rows nobody has reached; smaller leaves the
-//: scroller too short to drag.
-const FIRST = 140;
+//: **Just past one screen.** The artist grid draws 7 cards a row in a 600px
+//: window - 28 of them visible, so this is two screenfuls. 140 was the
+//: first try and it cost 584ms to the first painted frame, which is long
+//: enough to look like the tap did nothing: the home screen leaves the DOM
+//: at 155ms and the panel shows its last frame until the new one is ready
+//: (George, 2026-09-24: *"the animation ... is gone except for Radio"* -
+//: Radio's skeleton is a handful of nodes and paints at once).
+const FIRST = 56;
 
-//: How many more per frame. At 2-3ms a row this is a few frames' work per
-//: pass, spread across frames rather than spent before the first one.
-const CHUNK = 160;
+//: How many more per frame, once something is on screen. Larger than the
+//: first pass on purpose: by then the panel has answered.
+const CHUNK = 180;
 
 /**
  * A count that starts at a screenful and grows to `total()`.
@@ -28,24 +31,41 @@ const CHUNK = 160;
  * (LESSONS 31) - so the growing count is mirrored in a plain variable and
  * the state is only ever written.
  */
+//: **After the frame is on the screen, not before it.** A
+//: `requestAnimationFrame` callback runs *before* the paint it belongs to,
+//: so scheduling the next chunk there puts it in the same frame: the panel
+//: kept building and the first screenful was not painted for 584ms, whether
+//: that screenful was 140 rows or 56. The timeout runs once the frame has
+//: gone out.
+function afterPaint(run) {
+  let timer = null;
+  const frame = requestAnimationFrame(() => {
+    timer = setTimeout(run, 0);
+  });
+  return () => {
+    cancelAnimationFrame(frame);
+    if (timer) clearTimeout(timer);
+  };
+}
+
 export function revealing(total) {
   let shown = $state(FIRST);
-  let frame = null;
+  let cancel = null;
 
   $effect(() => {
     const want = total();
-    if (frame) cancelAnimationFrame(frame);
+    if (cancel) cancel();
     let at = Math.min(FIRST, want);
     shown = at;
     const step = () => {
       at = Math.min(want, at + CHUNK);
       shown = at;
-      frame = at < want ? requestAnimationFrame(step) : null;
+      cancel = at < want ? afterPaint(step) : null;
     };
-    frame = at < want ? requestAnimationFrame(step) : null;
+    cancel = at < want ? afterPaint(step) : null;
     return () => {
-      if (frame) cancelAnimationFrame(frame);
-      frame = null;
+      if (cancel) cancel();
+      cancel = null;
     };
   });
 
@@ -57,8 +77,8 @@ export function revealing(total) {
      *  on - the A-Z rail jumps to a group, and cannot jump to one that has
      *  not been built yet. */
     all() {
-      if (frame) cancelAnimationFrame(frame);
-      frame = null;
+      if (cancel) cancel();
+      cancel = null;
       shown = Number.MAX_SAFE_INTEGER;
     },
   };

@@ -641,6 +641,28 @@ when the thing being measured became continuous work on that same thread.
 same lesson as case 30, in a different instrument: there, the frame counter
 under-counted the change being tested; here, the clock ran through it.
 
+**33. The fix scheduled itself before the paint it was waiting for**
+(2026-09-24). ADR-0065 drew a screenful and then filled in the rest, and
+George still waited: *"Rapping artists still gives me a 1 to 2 seconds
+wait."* The rows existed at 155 ms and the first frame a person could see
+arrived at 584. Each chunk was scheduled in `requestAnimationFrame`, which
+runs **before** the paint of that frame - so the next chunk joined the same
+frame, and the frame never went out.
+
+**Halving the first chunk moved it by 60 ms**, which is what proved the size
+was not the problem. A fix that barely responds to its own main parameter is
+not the fix.
+
+**And it explained a symptom I had filed as unrelated.** George also
+reported the home cards had lost their animation, *"except for Radio"*.
+Nothing was lost: the home screen leaves the DOM at 150 ms and the panel
+keeps showing its last frame until the next one is painted. Radio's skeleton
+is a handful of nodes and paints at once, so only Radio looked alive.
+
+**`requestAnimationFrame` is "before the next frame", not "after the last
+one".** To yield to the screen: `requestAnimationFrame`, then
+`setTimeout(…, 0)`.
+
 ## Common shape
 
 Every case had a *plausible* substitute for the real target — the build

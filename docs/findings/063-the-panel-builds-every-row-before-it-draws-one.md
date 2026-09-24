@@ -61,12 +61,17 @@ DOM for the group it is jumping to.
 [ADR-0065](../decisions/0065-long-lists-are-built-a-screenful-at-a-time.md),
 the same day: 140 rows, then 160 more per frame.
 
-| | before | after |
-| --- | --- | --- |
-| artist grid, first row | 1939 ms | **264 ms** |
-| artist grid, all 917 | — | 1798 ms, behind the first paint |
-| playlist, first row | 1407 ms | **312 ms** |
-| playlist, all 467 | — | 887 ms |
+| | before | first attempt | **shipped** |
+| --- | --- | --- | --- |
+| artist grid, painted | 1939 ms | 584–672 ms | **235–370 ms** |
+| browse pane, painted | — | 308–380 ms | **146–161 ms** |
+| a playlist, painted | 1407 ms | 173 ms | **104 ms** |
+
+The middle column is the same fix scheduling its chunks in
+`requestAnimationFrame`, which runs *before* the paint it belongs to - so
+each chunk landed in the same frame as the one before and the first
+screenful was never painted. Halving the first chunk from 140 rows to 56
+changed it by 60 ms, which is what said the size was not the problem.
 
 **And the first measurement of the fix was wrong.** Polling the page for the
 row count reported 854 ms where the page's own clock said 264: `Runtime.evaluate`

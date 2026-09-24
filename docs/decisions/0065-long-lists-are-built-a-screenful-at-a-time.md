@@ -28,13 +28,29 @@ rows and grows by **160** per animation frame until it reaches the list's
 length. Three lists use it — the artist grid, the browse screen's artist
 pane (the same 917 album artists) and a playlist's tracks.
 
+**And the chunk after the first one waits for the frame to go out.** A
+`requestAnimationFrame` callback runs *before* the paint it belongs to, so
+scheduling the next chunk there puts it in the same frame: the panel kept
+building and the first screenful was not painted for **584 ms**, whether
+that screenful was 140 rows or 56. `requestAnimationFrame` then
+`setTimeout(…, 0)` runs once the frame is on the screen.
+
+Measured from inside the page, to the frame a person could see:
+
 | | before | after |
 | --- | --- | --- |
-| artist grid, first row | 1939 ms | **264 ms** |
-| artist grid, all 917 | — | 1798 ms, behind the first paint |
-| playlist, first row | 1407 ms | **312 ms** |
-| playlist, all 467 | — | 887 ms |
-| a three-row screen, for the floor | — | 147 ms |
+| artist grid, **painted** | 1939 ms | **235–370 ms** |
+| browse pane, painted | — | **146–161 ms** |
+| a playlist, painted | 1407 ms | **104 ms** |
+| artist grid, done growing | — | ~1.8 s, behind the first paint |
+| a three-row screen, for the floor | — | 89–147 ms |
+
+**This is also why the home cards seemed to lose their animation.** George
+reported that tapping Browse, Artists or Playlists gave nothing back while
+Radio still responded. Nothing was lost: the home screen leaves the DOM at
+about 150 ms and the panel shows its *last frame* until the new screen is
+painted, which was 600 ms away. Radio's skeleton is a handful of nodes and
+paints at once, so only Radio looked alive.
 
 - **The count is per list and reset by its length changing**, so opening a
   different playlist starts again at a screenful.
