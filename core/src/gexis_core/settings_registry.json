@@ -6,6 +6,16 @@
     "accent": "#7ed6bc",
     "rows": [
       {
+        "key": "output_device",
+        "type": "choice",
+        "label": "Output",
+        "marks": "R",
+        "note": "Where the sound goes. **HDMI costs three things**: it has no volume control of its own, so the level is fixed; the Pi carries HDMI audio in a format that has to be converted to, so it is no longer bit-perfect; and the visualiser gets no levels from it. The headphone jack and the DAC keep all three.",
+        "optionsFrom": "output_device",
+        "default": null,
+        "warn": "Changing the output stops whatever is playing while the sound card is reopened. An output with no volume control of its own — either HDMI — also takes the volume control off the panel."
+      },
+      {
         "key": "output_mode",
         "type": "choice",
         "label": "Output mode",
@@ -21,77 +31,21 @@
         }
       },
       {
-        "key": "boot_volume",
-        "type": "number",
-        "label": "Boot volume",
-        "marks": "RH",
-        "note": "A fixed safe level at every cold boot, never the last session’s.",
-        "min": -90,
-        "max": -20,
-        "unit": "dB",
-        "default": -90
-      },
-      {
         "key": "max_ceiling",
         "type": "number",
-        "label": "Maximum ceiling",
-        "marks": "R?",
-        "note": null,
-        "min": -60,
-        "max": 0,
-        "unit": "dB",
+        "label": "Maximum volume",
+        "marks": "R",
+        "note": "The loudest the device will go, on any input. Set it to 80 and the device is never louder than the slider at 80 — and 100% on the panel, in LMS and on a connected phone all mean that level, so no control shows a number louder than what comes out.",
+        "min": 10,
+        "max": 100,
+        "unit": "%",
         "default": null
-      },
-      {
-        "key": "restore_ceiling",
-        "type": "number",
-        "label": "Loudest a renderer may restore",
-        "marks": "N",
-        "note": "When a renderer becomes active it puts back the level it last had. This is as far up as it may go on its own \u2014 measured on this device, a boot raised the level 53 dB without anyone touching it.",
-        "min": -45,
-        "max": 0,
-        "unit": "dB",
-        "default": -20,
-        "surfaced": false
-      },
-      {
-        "key": "restore_floor",
-        "type": "number",
-        "label": "Restore floor",
-        "marks": "RH?",
-        "note": "Placeholder, never confirmed. Measured too quiet for Bluetooth’s unmanaged floor.",
-        "min": -60,
-        "max": -10,
-        "unit": "dB",
-        "default": -40,
-        "surfaced": false
-      },
-      {
-        "key": "boot_default_scope",
-        "type": "choice",
-        "label": "Boot default applies",
-        "marks": "R?",
-        "note": "A renderer’s first use mid-session currently starts as quiet as a power-on.",
-        "options": [
-          "Cold boot only",
-          "Every renderer start"
-        ],
-        "default": "Cold boot only",
-        "surfaced": false
-      },
-      {
-        "key": "per_renderer_volume",
-        "type": "toggle",
-        "label": "Remember level per renderer",
-        "marks": "RH",
-        "note": null,
-        "default": true
       },
       {
         "key": "volume_managed",
         "type": "readonly",
         "label": "Volume-managed renderers",
-        "marks": "RH",
+        "marks": "R",
         "note": "Bluetooth excluded pending Finding 006.",
         "default": "LMS, Spotify",
         "surfaced": false
@@ -99,14 +53,14 @@
       {
         "key": "travel_curve",
         "type": "choice",
-        "label": "Slider travel curve",
-        "marks": "RH",
-        "note": "Perceptual is the slider as it is: −45 to 0 dB, even in dB, showing its position. dB-linear would spread travel across the hardware's whole −120 dB and is not implemented.",
+        "label": "Volume curve",
+        "marks": "R",
+        "note": "How the slider's travel maps to loudness, over 60 dB either way. Cubic is the shape a volume control usually has — half travel is −15.5 dB. Linear spreads the decibels evenly instead, which puts half travel at −30 dB and makes the bottom of the slider very quiet.",
         "options": [
-          "Perceptual",
-          "dB-linear"
+          "Cubic",
+          "Linear (dB)"
         ],
-        "default": "Perceptual"
+        "default": "Cubic"
       }
     ]
   },
@@ -719,6 +673,47 @@
           false
         ],
         "default": null
+      },
+      {
+        "type": "group",
+        "label": "Meters and spectrum tweaks",
+        "accent": "#c8a2d8"
+      },
+      {
+        "key": "spectrum_smoothing",
+        "type": "number",
+        "label": "Spectrum smoothing",
+        "marks": "R",
+        "min": 0,
+        "max": 99,
+        "unit": "%",
+        "note": "Recommended: 90%. How much of each bar’s previous height is kept on every update. Low is twitchy, high glides and blunts a drum hit. Measured at 44.1 kHz: 50 settles in about 30 ms, 90 in 200 ms, 97 in 0.7 s. Applying it reopens the sound card, so it stops whatever is playing.",
+        "default": 90,
+        "warn": "Changing this stops whatever is playing while the sound card is reopened."
+      },
+      {
+        "key": "meter_fall",
+        "type": "number",
+        "label": "Needle fall time",
+        "marks": "R",
+        "min": 100,
+        "max": 2000,
+        "unit": "ms",
+        "note": "Recommended: 400 ms. How long a needle takes to drop from full scale to nothing. Its rise is immediate and cannot be slowed. Applying it reopens the sound card, so it stops whatever is playing.",
+        "default": 400,
+        "warn": "Changing this stops whatever is playing while the sound card is reopened."
+      },
+      {
+        "key": "meter_smoothing",
+        "type": "number",
+        "label": "Needle smoothing",
+        "marks": "R",
+        "min": 40,
+        "max": 800,
+        "unit": "ms",
+        "note": "Recommended: 240 ms. How long a stretch of the music each needle is averaged over. Short twitches with every beat, long is a real VU movement and arrives late. Rounded to the nearest 40 ms, which is how often the meter reads its level. The visualiser restarts to apply it.",
+        "default": 240,
+        "warn": "Changing this restarts the visualiser."
       }
     ]
   },
@@ -735,19 +730,6 @@
         "marks": "R",
         "note": null,
         "default": null
-      },
-      {
-        "key": "confidence",
-        "type": "number",
-        "label": "Confidence threshold",
-        "marks": "R",
-        "note": "Below it nothing is shown — a confidently wrong biography is worse than a blank panel.",
-        "min": 0,
-        "max": 1,
-        "unit": "",
-        "step": 0.05,
-        "default": null,
-        "surfaced": false
       },
       {
         "key": "lyrics",
@@ -784,6 +766,48 @@
         "marks": "N",
         "note": "Artist pictures. Without it they come from LMS's own plugin, where the server has one, and initials otherwise.",
         "default": null
+      },
+      {
+        "type": "group",
+        "label": "Pictures from fanart.tv",
+        "accent": "#e8a0b4"
+      },
+      {
+        "key": "sweep_portraits",
+        "type": "action",
+        "label": "Update artist portraits",
+        "marks": "R",
+        "note": "Looks up every album artist on fanart.tv and keeps LMS's picture where fanart has none. Checks all of them, every time. Runs in the background; playback is not interrupted.",
+        "default": null
+      },
+      {
+        "key": "sweep_covers",
+        "type": "action",
+        "label": "Update album covers",
+        "marks": "R",
+        "note": "The same walk, for every album rather than only the ones with no cover. One of the two runs at a time.",
+        "default": null
+      },
+      {
+        "key": "sweep_status",
+        "type": "readonly",
+        "label": "Progress",
+        "marks": "R",
+        "note": "What the last or current run has done.",
+        "default": null
+      },
+      {
+        "key": "confidence",
+        "type": "number",
+        "label": "Confidence threshold",
+        "marks": "R",
+        "note": "How sure MusicBrainz has to be that it found the right artist. Below it the artist keeps LMS's picture. It gates every enrichment lookup, not only pictures.",
+        "min": 0,
+        "max": 1,
+        "unit": "",
+        "step": 0.05,
+        "default": null,
+        "surfaced": false
       }
     ]
   },

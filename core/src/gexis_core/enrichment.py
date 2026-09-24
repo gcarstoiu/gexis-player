@@ -385,14 +385,28 @@ class EnrichmentService:
     filling a tab, and now playing has already rendered (ADR-0012)."""
 
     def __init__(self, providers, cache: Cache, *, clock=time.monotonic,
-                 confidence_min: int = CONFIDENCE_MIN) -> None:
+                 confidence_min: int = CONFIDENCE_MIN, gate=None) -> None:
         #: In the order they are asked. ADR-0040 §1: LMS's own plugin first
         #: where it answers, the key-free set behind it.
         self._providers = list(providers)
         self._cache = cache
         self._clock = clock
+        #: An int or a callable returning one. **Callable, because it is a
+        #: settings row** (ADR-0022, wired 2026-09-24): a service holding the
+        #: number it was built with would answer to yesterday's setting for
+        #: as long as the daemon ran.
         self._confidence_min = confidence_min
+        #: `name -> bool`: whether this provider may be asked at all.
+        #: ADR-0059 wired Enrichment's toggles through here - the master
+        #: switch, lyrics and artwork are each a row, and each is a reason
+        #: not to ask somebody rather than a reason to ignore their answer.
+        self._gate = gate or (lambda _name: True)
         self._unavailable_until: dict[str, float] = {}
+
+    @property
+    def confidence_min(self) -> int:
+        value = self._confidence_min
+        return int(value() if callable(value) else value)
 
     async def for_track(self, key: TrackKey, *, renderer: str | None = None,
                         only: tuple[str, ...] | None = None,
@@ -417,6 +431,8 @@ class EnrichmentService:
             # took up to fifteen minutes to take effect that way (George,
             # 2026-09-18).
             and getattr(provider, "ready", _always_ready)()
+            # A row that is off is a provider that is not asked.
+            and self._gate(provider.name)
         ]
         # **All at once, merged in order.** Asked one after another, the
         # lyrics waited behind three providers that each begin with the same
@@ -441,11 +457,11 @@ class EnrichmentService:
             answer = task.result()
             if answer.outcome is not Outcome.FOUND:
                 continue
-            if answer.confidence < self._confidence_min:
+            if answer.confidence < self.confidence_min:
                 # ADR-0012: a confidently wrong biography is worse than a
                 # blank panel.
                 logger.info("enrichment: %s scored %d for %r, below %d - ignored",
-                            provider.name, answer.confidence, key.title, self._confidence_min)
+                            provider.name, answer.confidence, key.title, self.confidence_min)
                 continue
             found = found.merged_with(answer.enrichment)
         return found

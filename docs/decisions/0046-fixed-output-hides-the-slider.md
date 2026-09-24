@@ -1,6 +1,9 @@
 # ADR-0046 — Fixed output hides the volume control everywhere
 
-**Status:** Accepted — George, 2026-09-20: *"this is something that was
+**Status:** **Built 2026-09-23**, and verified on the panel — the trigger
+carries a padlock, the drawer opens onto the sentence and not a slider,
+and neither the panel nor a renderer can move the DAC off full scale.
+**Accepted** — George, 2026-09-20: *"this is something that was
 completely missed in the implementation until now and needs to be handled.
 Should be bundled with the topic above"* — the topic being the whole volume
 setup. Scheduled as Phase 9 subphase **9i, deliberately last**: it is the only
@@ -82,30 +85,53 @@ reason is visible where the control used to be.**
 - **Keep the slider and clamp it to 100%.** Rejected: it would move and change
   nothing, which is the lie the design refers to.
 
+## How it was built (2026-09-23)
+
+- **`state.fixed_output` is published**, and the level is cleared with it.
+  The panel's `disabled={!volume}` is gone from both triggers.
+- **`write_hardware` refuses every write** in this mode — one check, at the
+  one place the panel, the mirrors and the restores all pass through. On
+  entering the mode the DAC is set to full scale directly, once.
+- **The change waits for playback to stop**, per ADR-0018: switching
+  mid-track would take the level to full scale into an amplifier set for
+  whatever it was hearing a second earlier. `output_mode` is what the user
+  chose; what is in force lags it until the transport is not playing.
+- **The drawer is mounted in fixed mode too.** `{#if $volume}` alone left
+  the padlock opening nothing at all — found on the panel, not in review.
+
+**Measured on the device, nothing playing:** choosing Fixed put the DAC at
+0.00 dB and `volume` at `null`; a panel request for 10% left it at 0.00 dB;
+LMS acquiring left it at 0.00 dB; returning to Variable brought the level
+back to LMS's own number.
+
 ## Open
 
 - ~~**Whether fixed mode is reachable at all before ADR-0044 lands.**~~
   **Closed by sequencing:** ADR-0044 is 9d and this is 9i, so `warn` exists
   before it is needed.
-- **The boot level, which is the number nobody has chosen.** Measured
-  2026-09-20 with the daemon's own functions: the device boots at raw 60/240
-  = **−90.0 dB = 0%** (`gexis-boot-volume.service`: *"setting 'DAC' to 60/240
-  (fixed safe level, not restored)"*), and the design's `boot_volume` default
-  is **60% = −18.0 dB**. That is **+72 dB at every cold boot**, into an
-  amplifier at whatever gain it was left at. ADR-0018 calls the present level
-  "a fixed safe level". 20% is −36 dB and 40% is −27 dB; there is a great deal
-  of room between the two. **George's call, inside 9i.**
-- **`travel_curve` names a curve the code does not implement.** The row
-  reports `dB-linear`, which the design defines as travel straight to dB —
-  *"55% is already −54 dB"*, exact across the hardware's −120…0 range. The
-  slider is ADR-0034's −45…0 window, where 55% is **−20.25 dB**. It is
-  unwired, so nothing acts on it; wiring it as written would make every
-  renderer's slider 34 dB quieter at mid-travel, since `SPOTIFY_DB_MIN` uses
-  the same span. Whether ADR-0034's window *is* "Perceptual" is the real
-  question.
-- **`max_ceiling` is `None`** — no ceiling is enforced at all today.
+- ~~**The boot level, which is the number nobody has chosen.**~~ **Closed
+  2026-09-23: there is no boot level.** `gexis-boot-volume` is deleted
+  (ADR-0018 amended) — measured over two boots, the converter comes up at
+  −20 dB of its own accord, nothing carries a level across a boot, and
+  nothing plays before a renderer acquires (Finding 047 §10). The +72 dB
+  this paragraph worried about cannot happen because neither number
+  exists.
+- ~~**`travel_curve` names a curve the code does not implement.**~~
+  **Closed 2026-09-23.** It is now "Volume curve" and names the two that
+  exist — **Cubic** (shipping) and **Linear (dB)** — over one 60 dB span
+  shared by every renderer and the panel
+  ([ADR-0054](0054-one-curve-and-the-renderers-own-number.md) §3). Wired.
+- ~~**`max_ceiling` is `None`** — no ceiling is enforced at all today.~~
+  **Closed 2026-09-22/23:** enforced, and expressed as a percentage on
+  George's instruction — 80% means the device is never louder than the
+  slider at 80.
 - **What a renderer that manages its own volume does in fixed mode** — see
   `volume_managed` above.
-- **Whether the mode is per-device or per-renderer.** ADR-0018 assumes the
-  device; nothing has tested that assumption against Spotify or Bluetooth,
-  both of which carry their own volume.
+- ~~**Whether the mode is per-device or per-renderer.**~~ **Answered by
+  [ADR-0052](0052-the-volume-path.md) §7: per-device**, as ADR-0018
+  assumed; nothing measured argued otherwise.
+- **Still open: what a renderer's own volume control should do in fixed
+  mode.** Ours ignores it, which is right for the DAC — but a phone's
+  Spotify or AVRCP slider still moves and now changes nothing at all,
+  because `--volume=none` means bluealsa does not attenuate either. That is
+  honest and it is also a silent control. **Not decided here.**

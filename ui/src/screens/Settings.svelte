@@ -171,7 +171,7 @@
     saving = true;
     try {
       const result = await writeSetting(row.key, value);
-      if (result.status === 409) flash(`${row.label} — not wired yet`);
+      if (result.status === 409) flash(result.error || `${row.label} — not wired yet`);
       else if (!result.ok) flash(`${row.label}: ${result.error ?? `HTTP ${result.status}`}`);
       return result.ok;
     } finally {
@@ -784,10 +784,24 @@
           {#each sheet.options ?? [] as option (option)}
             {@const selected = choicePending !== null ? choicePending === option : String(sheet.value) === option}
             {@const p = sheet.optionsFrom ? parts(option) : { ord: '', label: option }}
-            <button class="option" class:is-selected={selected} type="button" onclick={() => choose(option)}>
+            {@const why = sheet.unavailable?.[option]}
+            <!-- ADR-0044's `unavailable`: greyed, not hidden. George,
+                 2026-09-23: "settings is different than the now playing
+                 screen when it comes to capabilities" - a screen for
+                 changing things should say what cannot be changed and
+                 why, where a screen for listening should carry no dead
+                 controls. -->
+            <button
+              class="option"
+              class:is-selected={selected}
+              class:is-unavailable={!!why}
+              type="button"
+              onclick={() => (why ? flash(why) : choose(option))}
+            >
               <span class="radio"><span></span></span>
               {#if p.ord}<span class="option__ord">{p.ord}</span>{/if}
               <span class="option__label">{p.label}</span>
+              {#if why}<span class="option__why">{why}</span>{/if}
             </button>
           {/each}
         </div>
@@ -1473,6 +1487,18 @@
     width: 12px;
     height: 12px;
   }
+  .option.is-unavailable {
+    opacity: 0.42;
+  }
+
+  .option__why {
+    margin-left: auto;
+    padding-left: 14px;
+    font-size: 17px;
+    color: var(--ink-dim, #9fb0bd);
+    text-align: right;
+  }
+
   .option__label {
     flex: 1;
     min-width: 0;

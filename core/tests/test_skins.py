@@ -289,3 +289,39 @@ def test_a_selection_that_cannot_be_written_is_not_fatal(tmp_path):
     blocked = tmp_path / "file"
     blocked.write_text("not a directory")
     assert write_selection("Random", None, True, blocked / "visualisation.json") is False
+
+
+def test_a_skin_named_broken_is_not_offered(tmp_path):
+    """The mechanism, exercised against a name put there by the test.
+
+    `BROKEN` itself is empty (Finding 050): the two skins that were on it
+    are fixed and offered again. The machinery stays, because the next one
+    seen to render wrong should be removable in one line."""
+    from gexis_core import skins
+
+    pack = tmp_path / "gelo5" / "templates_spectrum" / skins.RESOLUTION
+    pack.mkdir(parents=True)
+    (pack / "meters.txt").write_text(
+        "[a bad one]\nmeter.type = circular\n\n"
+        "[a good one]\nmeter.type = circular\n"
+    )
+
+    skins.BROKEN["a bad one"] = "put here by this test"
+    try:
+        offered = [s.name for s, _ in skins.installed(tmp_path)]
+    finally:
+        del skins.BROKEN["a bad one"]
+
+    assert "a good one" in offered
+    assert "a bad one" not in offered
+
+
+def test_the_broken_list_says_why_for_each(tmp_path):
+    """A name with no reason is a name nobody can ever remove again.
+
+    Empty is the expected state: five models of "which skins are broken"
+    were built from the numbers and all five were wrong, so a name only
+    belongs here once someone has seen it render wrong."""
+    from gexis_core import skins
+
+    assert all(len(why) > 20 for why in skins.BROKEN.values())

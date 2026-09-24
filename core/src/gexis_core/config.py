@@ -20,24 +20,6 @@ DEFAULT_CONFIG_PATH = Path("/etc/gexis/core.toml")
 
 @dataclass(frozen=True)
 class Config:
-    # ALSA mixer steps, 0-240 (ADR-0018: 240 steps of 0.5dB, 0=mute,
-    # 240=0dB). Confirmed by George, 2026-09-06 (HANDOFF.md) - -90dB,
-    # deliberately quiet. This is the *boot* default only - it is not
-    # subject to restore_volume_floor_db below, on purpose (see
-    # __main__.py's restore_volume).
-    boot_volume_steps: int = 60
-
-    # dB floor applied only when *restoring a renderer's own remembered
-    # volume* (criterion 5, per-renderer memory) - never to the boot
-    # default above. Found necessary on hardware, 2026-09-08: a
-    # renderer with no memory yet falling back to the boot level (-90dB)
-    # was indistinguishable from a broken renderer - inaudible, no
-    # obvious cause, nothing to diagnose (the exact "state the user
-    # cannot account for" ADR-0010/0018 both warn against). PLACEHOLDER
-    # value - a reasonable "clearly audible" floor, not confirmed by
-    # George. See HANDOFF.md.
-    restore_volume_floor_db: float = -40.0
-
     mixer_name: str = "DAC"
 
     # LMS runs on its own machine, not on gexis - there is no sane
@@ -98,6 +80,22 @@ class Config:
     meter_passthrough: str = "/run/gexis/meter-peppy.fifo"
     spectrum_passthrough: str = "/run/gexis/spectrum-peppy.fifo"
     spectrum_bands: int = 30  # peppyalsa's spectrum_size, output.conf
+    # **The spectrum engine's own config, read to find out how many bars it
+    # is about to draw.** A pipe has no message boundaries: PeppySpectrum
+    # reads `4 * size` bytes at a time, so a frame of any other length
+    # leaves it reading across record boundaries and every bar shows a
+    # different band from one refresh to the next (Finding 051). The
+    # passthrough follows what the consumer declares rather than guessing.
+    spectrum_consumer_config: str = "/opt/gexis-peppy/spectrum/config.txt"
+    # **PeppyMeter's own config**, which carries how many samples the
+    # needle is averaged over (ADR-0058). It reads it once, at start, so a
+    # change to it means restarting `gexis-peppy`.
+    meter_consumer_config: str = "/opt/gexis-peppy/peppymeter/config.txt"
+    # **Where the daemon leaves the dB it is currently cutting** (ADR-0057).
+    # `volume.ATTENUATION_PATH` is the writer's copy of this and the two
+    # are pinned together by a test - a meter reading a path nobody writes
+    # would show the source level and say nothing about it.
+    attenuation_path: str = "/run/gexis/attenuation"
     meter_frame_rate: int = 30  # the skins' own ui.refresh.period, ADR-0015
     meter_port: int = 8091
     # Empty by default: pushing to a PeppyMeter web server elsewhere is for a

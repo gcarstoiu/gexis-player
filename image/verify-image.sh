@@ -35,7 +35,6 @@ while read -r src dst; do
 done <<'EOF'
 image/stage-gexis/03-core/files/core.toml /etc/gexis/core.toml
 image/stage-gexis/03-core/files/gexis-core.service /etc/systemd/system/gexis-core.service
-image/stage-gexis/03-core/files/gexis-boot-volume.service /etc/systemd/system/gexis-boot-volume.service
 image/stage-gexis/03-core/files/gexis-meter.service /etc/systemd/system/gexis-meter.service
 image/stage-gexis/04-ui/files/gexis-kiosk.service /etc/systemd/system/gexis-kiosk.service
 image/stage-gexis/04-ui/files/gexis-kiosk-start /usr/local/bin/gexis-kiosk-start
@@ -48,9 +47,29 @@ image/stage-gexis/05-peppy/files/gexis_peppy_render.py /opt/gexis-peppy/gexis_pe
 image/stage-gexis/05-peppy/files/peppy-meter.txt /opt/gexis-peppy/peppymeter/config.txt
 image/stage-gexis/05-peppy/files/peppy-spectrum.txt /opt/gexis-peppy/spectrum/config.txt
 skins/templates/meters.txt /opt/gexis-peppy/skins/gelo5/templates/1280x800/meters.txt
-skins/templates_spectrum/meters.txt /opt/gexis-peppy/skins/gelo5/templates_spectrum/1280x800/meters.txt
 skins/templates_spectrum/spectrum.txt /opt/gexis-peppy/skins/gelo5/templates_spectrum/1280x800/spectrum.txt
 EOF
+
+# The spectrum pack's meters.txt is the one file the build does not install
+# verbatim: two sections named the *spectrum's* blank panel as their meter
+# background, and 05-peppy/01-run.sh corrects them (Finding 050). So it is
+# compared against the upstream copy *with that correction applied* - the
+# same sed, run here, rather than the check being dropped.
+sm_src="$OUT/meters-expected.txt"
+sed -e '/\[111G5_Teletronix S+M\]/,/\[112G5/ s/Teletronix_bgr\.png/Teletronix.jpg/' \
+	-e '/\[107G5_Marantz S+M\]/,/\[108G5/ s/Marantz_bgr\.png/Marantz.jpg/' \
+	"$REPO/skins/templates_spectrum/meters.txt" > "$sm_src"
+if ! cmp -s "$REPO/skins/templates_spectrum/meters.txt" "$sm_src"; then
+	dfs "dump /opt/gexis-peppy/skins/gelo5/templates_spectrum/1280x800/meters.txt $OUT/one" >/dev/null
+	if cmp -s "$sm_src" "$OUT/one"; then
+		ok "spectrum meters.txt = upstream + the two corrected backgrounds"
+	else
+		bad "spectrum meters.txt is neither upstream nor upstream+correction"
+	fi
+	rm -f "$OUT/one"
+else
+	bad "the meter background correction matched nothing in skins/ (Finding 050)"
+fi
 
 echo "== files the services must be able to write"
 # The driver rewrites the spectrum engine's config to choose a section - the
@@ -61,14 +80,20 @@ own=$(dfs "stat /opt/gexis-peppy/spectrum/config.txt" | grep -o 'User: *[0-9]*' 
 [ "$own" = "User: 1000" ] && ok "spectrum config owned by uid 1000" || bad "spectrum config ownership: '${own:-missing}'"
 
 echo "== units enabled (symlink targets)"
-for u in gexis-core gexis-boot-volume gexis-meter gexis-kiosk gexis-peppy; do
+for u in gexis-core gexis-meter gexis-kiosk gexis-peppy; do
 	t=$(dfs "stat /etc/systemd/system/multi-user.target.wants/$u.service" | grep -o 'Fast link dest: ".*"')
 	[ "$t" = "Fast link dest: \"/etc/systemd/system/$u.service\"" ] && ok "$u -> $t" || bad "$u enablement: '${t:-missing}'"
 done
-# ADR-0045 removed this one. A warm build keeps what an earlier build wrote,
-# and it shipped enabled with its module already deleted.
+# Units a decision removed. A warm build keeps what an earlier build wrote,
+# and gexis-bluetooth-trust shipped enabled with its module already deleted -
+# which is why these are asserted absent rather than merely not installed.
+# gexis-boot-volume went the same way on 2026-09-23 (ADR-0018 amended,
+# Finding 047 §10: nothing carries a level across a boot).
 for gone in /etc/systemd/system/gexis-bluetooth-trust.service \
-	/etc/systemd/system/multi-user.target.wants/gexis-bluetooth-trust.service; do
+	/etc/systemd/system/multi-user.target.wants/gexis-bluetooth-trust.service \
+	/etc/systemd/system/gexis-boot-volume.service \
+	/etc/systemd/system/multi-user.target.wants/gexis-boot-volume.service \
+	/usr/local/bin/gexis-boot-volume; do
 	dfs "stat $gone" | grep -q 'Inode:' && bad "$gone still in the image (ADR-0045)" || ok "$gone absent"
 done
 t=$(dfs "stat /etc/systemd/system/alsa-restore.service" | grep -o 'Fast link dest: ".*"')

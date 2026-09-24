@@ -5,8 +5,6 @@
 mkdir -p "${ROOTFS_DIR}/etc/systemd/system/multi-user.target.wants"
 ln -sf /etc/systemd/system/gexis-core.service \
 	"${ROOTFS_DIR}/etc/systemd/system/multi-user.target.wants/gexis-core.service"
-ln -sf /etc/systemd/system/gexis-boot-volume.service \
-	"${ROOTFS_DIR}/etc/systemd/system/multi-user.target.wants/gexis-boot-volume.service"
 # Phase 5: without this the Peppy screen gets no levels on a fresh image -
 # until 2026-09-16 it had only ever been started by hand.
 ln -sf /etc/systemd/system/gexis-meter.service \
@@ -26,8 +24,7 @@ ln -sf /etc/systemd/system/gexis-meter.service \
 for f in \
 	"${ROOTFS_DIR}/opt/gexis-core/venv/bin/pip" \
 	"${ROOTFS_DIR}/etc/gexis/core.toml" \
-	"${ROOTFS_DIR}/etc/systemd/system/gexis-core.service" \
-	"${ROOTFS_DIR}/etc/systemd/system/gexis-boot-volume.service"
+	"${ROOTFS_DIR}/etc/systemd/system/gexis-core.service"
 do
 	if [ ! -e "${f}" ]; then
 		echo "ERROR: ${f} missing after install" >&2
@@ -41,8 +38,7 @@ fi
 # Symlinks resolve only once ${ROOTFS_DIR} is the real root (after boot) -
 # see 02-renderers/01-run.sh's comment on why this is -L, not -e.
 for f in \
-	"${ROOTFS_DIR}/etc/systemd/system/multi-user.target.wants/gexis-core.service" \
-	"${ROOTFS_DIR}/etc/systemd/system/multi-user.target.wants/gexis-boot-volume.service"
+	"${ROOTFS_DIR}/etc/systemd/system/multi-user.target.wants/gexis-core.service"
 do
 	if [ ! -L "${f}" ]; then
 		echo "ERROR: ${f} missing after install" >&2

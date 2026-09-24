@@ -13,6 +13,7 @@ import logging
 import math
 from functools import lru_cache
 from pathlib import Path
+from collections.abc import Hashable
 from typing import Any, Callable
 
 from gexis_core.settings import SettingsStore
@@ -50,7 +51,7 @@ ONLY_WHEN_NOT = "not"
 #: Sources a `choice` may draw its options from instead of a literal list
 #: (ADR-0044 §4). Adding one is a code change, not a registry edit, which is
 #: the point: an unknown name is a typo and must fail the load.
-OPTION_SOURCES = {"skin_corpus", "timezones"}
+OPTION_SOURCES = {"skin_corpus", "timezones", "output_device"}
 
 
 @lru_cache(maxsize=1)
@@ -79,7 +80,10 @@ def _timezones() -> tuple[str, ...]:
 #: value, neither of which this module knows; the daemon injects it
 #: (`Settings(options=...)`, ADR-0051 §4) and a Settings built without one
 #: offers nothing, which is what a device with no skins has.
-OPTION_RESOLVERS = {"timezones": _timezones, "skin_corpus": tuple}
+#: `tuple` is "nothing, until the daemon injects a real resolver" - a
+#: device that cannot read its corpus or its sound cards gets an empty
+#: picker rather than a crash (ADR-0044 §4).
+OPTION_RESOLVERS = {"timezones": _timezones, "skin_corpus": tuple, "output_device": tuple}
 
 logger = logging.getLogger("gexis_core.settings_registry")
 
@@ -286,6 +290,21 @@ def load_seed(settings_rows: dict[str, dict], path: Path = SEED_PATH) -> dict[st
     return checked
 
 
+#: **ADR-0044 §8, added 2026-09-23.** Raised when an option exists but the
+#: hardware cannot honour it right now.
+#:
+#: The first version locked the whole *row*, which George corrected:
+#: *"while on outputs that do not support it, variable should be greyed
+#: out. I wouldn't hide this time as settings is different than the now
+#: playing screen when it comes to capabilities."* So the row opens, both
+#: options are drawn, and the one that cannot be had is greyed with its
+#: reason - **the opposite of the now-playing rule, on purpose**: a screen
+#: for changing things should show what could be changed and why it
+#: cannot, where a screen for listening should not carry dead controls.
+class Locked(Exception):
+    pass
+
+
 class Settings:
     """`defaults` maps a key to a callable giving its value from deployment
     config or the running system. Precedence, highest first (ADR-0035 §4): a
@@ -312,6 +331,10 @@ class Settings:
         # daemon knows where the corpus is and what the other row holds
         # (ADR-0051 §4).
         self._options = {**OPTION_RESOLVERS, **(options or {})}
+        #: key -> {option: why}, for choices the hardware cannot honour.
+        #: Injected by the daemon, because only it knows what the sound
+        #: card can do.
+        self._unavailable: dict[str, dict[Any, str]] = {}
         unknown_sources = set(options or ()) - OPTION_SOURCES
         if unknown_sources:
             raise ValueError(f"not an option source: {sorted(unknown_sources)}")
@@ -327,7 +350,37 @@ class Settings:
         except KeyError:
             raise UnknownSetting(key) from None
 
+    def restrict(self, key: str, unavailable: dict[Any, str]) -> None:
+        """Grey out options the hardware cannot honour, or clear the set by
+        passing an empty one.
+
+        **The stored value is never touched**, which is what makes handing
+        the choice back free. George: *"When changing back to dac set the
+        previously selected option. If there is no previous selection
+        default to variable."* - the first is the store, still there; the
+        second is the row's own default.
+        """
+        self.row(key)
+        if unavailable:
+            self._unavailable[key] = dict(unavailable)
+        else:
+            self._unavailable.pop(key, None)
+
     def value(self, key: str) -> Any:
+        row = self.row(key)
+        blocked = self._unavailable.get(key)
+        if blocked:
+            # What is in force, which is not what is stored: the stored
+            # choice is waiting for the hardware that can honour it.
+            stored = self._value(key)
+            if stored in blocked:
+                for option in row.get("options") or ():
+                    if option not in blocked:
+                        return option
+            return stored
+        return self._value(key)
+
+    def _value(self, key: str) -> Any:
         row = self.row(key)
         stored = self._store.get(key, _MISSING)
         if stored is not _MISSING:
@@ -359,9 +412,12 @@ class Settings:
                 public = {k: v for k, v in row.items() if k != "default"}
                 source = row.get("optionsFrom")
                 if source is not None:
-                    public["options"] = list(self._options[source]())
+                    public["options"] = list(self._options.get(source, tuple)())
                 public["value"] = self.value(row["key"])
                 public["wired"] = row["key"] in self._wired
+                blocked = self._unavailable.get(row["key"])
+                if blocked:
+                    public["unavailable"] = dict(blocked)
                 public["visible"] = visible(row, self._rows, values)
                 rows.append(public)
             groups.append({**group, "rows": rows})
@@ -377,6 +433,11 @@ class Settings:
             raise NotSettable(f"{key} is a list and takes no value")
         if key not in self._wired:
             raise NotWired(f"{key} is not wired yet")
+        # `multi` rows take a list, which is not a dict key - and a list is
+        # never an option anyway.
+        blocked = self._unavailable.get(key) or {}
+        if isinstance(value, Hashable) and value in blocked:
+            raise Locked(blocked[value])
         source = row.get("optionsFrom")
         value = validate(row, value, options=list(self._options[source]()) if source else None)
         if value == "" and row["type"] == "text":

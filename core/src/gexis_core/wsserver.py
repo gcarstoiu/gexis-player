@@ -36,6 +36,7 @@ from dbus_next.aio import MessageBus
 from gexis_core import bluetooth_devices, device_name, discovery, skins, wifi
 from gexis_core.adapters.base import TRANSPORT_COMMANDS
 from gexis_core.artistinfo import PHOTO_BACKGROUND, PHOTO_LARGE, PHOTO_THUMB
+from gexis_core.artwork_sweep import ARTIST_NAMESPACE, remembered
 
 #: How many artists the idle screen draws from, and how many of those it
 #: asks the photo plugin about at once (ADR-0047 §1).
@@ -52,7 +53,13 @@ from gexis_core.enrichment import Enrichment, TrackKey, fold
 from gexis_core.library import LibraryUnavailable, NoPlayer, NotFound
 from gexis_core.radio import RadioUnavailable, UnknownHandle
 from gexis_core.model import PlaybackState
-from gexis_core.settings_registry import InvalidValue, NotSettable, NotWired, UnknownSetting
+from gexis_core.settings_registry import (
+    InvalidValue,
+    Locked,
+    NotSettable,
+    NotWired,
+    UnknownSetting,
+)
 from gexis_core.state import StateStore
 
 #: The most artists one request may ask photos for. A screen of
@@ -85,6 +92,7 @@ class StateServer:
         peppy=None,
         library=None,
         artistinfo=None,
+        notes=None,
         enrichment=None,
         radio=None,
         pairing_answer=None,
@@ -107,6 +115,10 @@ class StateServer:
         where only the core is installed.
         """
         self._store = store
+        #: ADR-0059's sweep leaves fanart URLs here. Not `_store`,
+        #: which is the *state* store - two different things that
+        #: would otherwise share a name in this file.
+        self._notes = notes
         self._host = host
         self._port = port
         self._activate = activate
@@ -625,7 +637,32 @@ class StateServer:
         if size not in (PHOTO_THUMB, PHOTO_LARGE):
             return web.json_response({"error": f"unknown size {size}"}, status=400)
         photos = await self._artistinfo.photos(ids, size)
-        return web.json_response({str(k): v for k, v in photos.items()})
+        return web.json_response(
+            {str(k): await self._portrait(k, v, size) for k, v in photos.items()}
+        )
+
+    async def _portrait(self, artist_id: int, lms_url, size: int):
+        """**fanart's portrait if ADR-0059's sweep found one, LMS's otherwise.**
+
+        The panel asks by LMS id and the sweep stores by folded name, because
+        a rescan renumbers the ids (Finding 029) - so the name comes from the
+        library, which already holds it.
+
+        Both go through LMS's image proxy, so the grid gets the size it asked
+        for and LMS does the fetching and caching either way.
+        """
+        if self._library is None:
+            return lms_url
+        try:
+            name = await self._library.artist_name(artist_id)
+        except Exception:
+            return lms_url
+        if not name:
+            return lms_url
+        found = remembered(self._notes, ARTIST_NAMESPACE, fold(name))
+        if not found or found is True:
+            return lms_url
+        return f"{self._library.base}/imageproxy/{found}/image_{size}x{size}_o.jpg"
 
     async def _handle_artist_info(self, request: web.Request) -> web.Response:
         """`?id=<lms artist id>&name=<artist>` -> what the artist page draws
@@ -973,6 +1010,10 @@ class StateServer:
         except NotSettable as exc:
             return web.json_response({"error": str(exc)}, status=405)
         except NotWired as exc:
+            return web.json_response({"error": str(exc)}, status=409)
+        except Locked as exc:
+            # 409 as well: the row exists and is settable in general, but
+            # not while the hardware has taken the choice away (ADR-0055).
             return web.json_response({"error": str(exc)}, status=409)
         except InvalidValue as exc:
             return web.json_response({"error": str(exc)}, status=400)

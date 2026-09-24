@@ -19,23 +19,38 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+import os
+from pathlib import Path
 
 import aiohttp
 from aiohttp import web
 
 from gexis_core.config import Config
-from gexis_core.meters import FifoPassthrough, FifoSource, Levels
+from gexis_core.meters import (
+    FifoPassthrough,
+    FifoSource,
+    Levels,
+    attenuate,
+    read_attenuation,
+)
 
 logger = logging.getLogger("gexis_core.meter_service")
 
 
 class MeterServer:
     def __init__(self, source: FifoSource, *, passthrough: FifoPassthrough | None = None,
-                 http_target: str = "", interval: float = 1 / 30) -> None:
+                 http_target: str = "", interval: float = 1 / 30,
+                 attenuation_path: Path | None = None) -> None:
         self._source = source
         self._passthrough = passthrough
         self._http_target = http_target
         self._interval = interval
+        #: ADR-0057. The dB the device is cutting right now, left by the
+        #: daemon. Re-read only when the file changes: it is written on every
+        #: hardware level change, and this loop runs 30 times a second.
+        self._attenuation_path = attenuation_path
+        self._attenuation_seen: tuple[int, int] | None = None
+        self._attenuation = 0.0
         self._clients: set[web.WebSocketResponse] = set()
         self._session: aiohttp.ClientSession | None = None
 
@@ -76,11 +91,25 @@ class MeterServer:
             except (aiohttp.ClientError, asyncio.TimeoutError):
                 pass  # a display that is not listening must not slow the loop
 
+    def attenuation(self) -> float:
+        """How much the device is attenuating, in dB."""
+        if self._attenuation_path is None:
+            return 0.0
+        try:
+            stat = os.stat(self._attenuation_path)
+        except OSError:
+            return 0.0
+        key = (stat.st_mtime_ns, stat.st_size)
+        if key != self._attenuation_seen:
+            self._attenuation_seen = key
+            self._attenuation = read_attenuation(self._attenuation_path)
+        return self._attenuation
+
     async def run_loop(self) -> None:
         self._session = aiohttp.ClientSession() if self._http_target else None
         try:
             while True:
-                await self.publish(self._source.read())
+                await self.publish(attenuate(self._source.read(), self.attenuation()))
                 await asyncio.sleep(self._interval)
         finally:
             if self._session is not None:
@@ -91,12 +120,17 @@ async def main() -> None:
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
     config = Config.load()
     source = FifoSource(config.meter_fifo, config.spectrum_fifo, bands=config.spectrum_bands)
-    passthrough = FifoPassthrough(config.meter_passthrough, config.spectrum_passthrough)
+    passthrough = FifoPassthrough(
+        config.meter_passthrough,
+        config.spectrum_passthrough,
+        spectrum_consumer_config=config.spectrum_consumer_config,
+    )
     server = MeterServer(
         source,
         passthrough=passthrough,
         http_target=config.meter_http_target,
         interval=1 / config.meter_frame_rate,
+        attenuation_path=Path(config.attenuation_path),
     )
     runner = web.AppRunner(server.make_app())
     await runner.setup()

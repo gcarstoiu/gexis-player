@@ -115,8 +115,11 @@ from __future__ import annotations
 import asyncio
 import concurrent.futures
 import logging
+import math
 import re
 import time
+from collections.abc import Callable
+from pathlib import Path
 
 from gexis_core import alsa
 
@@ -131,6 +134,14 @@ MIXER_DEVICE = "output"
 HARDWARE_MAX = 240  # ADR-0018: 240 steps, 0=mute, 240=0dB
 DB_MIN = -120.0  # raw 0
 DB_STEP = 0.5  # dB per raw step (ADR-0018, confirmed against amixer's own dBscale readout)
+
+#: **Where the current attenuation is left for the meter service to read**
+#: ([ADR-0057](../../../docs/decisions/0057-the-meters-follow-the-volume.md)).
+#: The meter tap is `pcm.output`, which sits *before* the DAC attenuates, so
+#: nothing the volume does reaches the needles unless this number does. One
+#: line, the dB the device is currently cutting, 0 for none - a separate
+#: process reads it and the daemon is the only writer.
+ATTENUATION_PATH = Path("/run/gexis/attenuation")
 # The real DAC's control ("Front Left: Playback 216 [90%]...") and a
 # snd-dummy control's ("Front Left: 30 [53%]... Capture [off]") format
 # this differently - amixer only prints "Playback" when a control has
@@ -157,17 +168,91 @@ _VALUE_RE = re.compile(rb"Front Left: (?:Playback )?(-?\d+) \[")
 # `amixer -D hw:<dummy> sget Master`: raw -50..100, dBscale-min -45.00dB,
 # step 0.30dB. Confirmed against the formula below (raw=0 -> -30.00dB,
 # raw=59 -> -12.30dB, both matched a live reading exactly).
-DUMMY_MIN_RAW = -50
-DUMMY_MAX_RAW = 100
-DUMMY_DB_MIN = -45.0
+# **0..127 since 2026-09-22**, so AVRCP's 128 steps round-trip through this
+# control exactly (see the modprobe config for the ratchet this ends).
+# snd-dummy's dB scale is fixed - -45 dB at the control's minimum, 0.30 dB
+# a step - so the declared range is now -45.00..-6.90 dB, measured on the
+# device. **The 6.9 dB is taken back here**, as a constant shift rather than
+# a rescale: every step stays 0.30 dB and the curve keeps its shape, which
+# is what the 2026-09-08 rejection of fractional rescaling was about. The
+# window a renderer's own slider spans becomes -38.1..0 dB.
+DUMMY_MIN_RAW = 0
+DUMMY_MAX_RAW = 127
+DUMMY_DB_MIN = -38.1
 DUMMY_DB_STEP = 0.30
 DUMMY_CARD_LMS = "gexislmsvol"
 DUMMY_CARD_BLUETOOTH = "gexisbtvol"
 DUMMY_CONTROL = "Master"
 
 
+#: **ADR-0052 §3, amended 2026-09-22.** `max_ceiling` is not a clip laid on
+#: top of a fixed scale - it *is* where the top of every scale sits. George,
+#: on the clipping version: *"We are taking away the decision from the user
+#: and creating what looks like an error because the sound jumps up or down
+#: with the first move of the volume."* He is right about the mechanism: a
+#: clip holds the hardware down while every number in sight - the panel's,
+#: LMS's, the phone's - still reads 100, and the first move of any slider
+#: releases the whole difference at once.
+#:
+#: **It is applied as a shift, not a compression.** Every position-to-dB map
+#: in this module (the panel slider, the dummy controls, Spotify's fraction)
+#: adds `ceiling_db()`, which is <= 0. So 100% means the ceiling, 0% means
+#: the ceiling minus the same span as before, and *every step keeps its
+#: size*: 0.30 dB on a dummy, 0.45 dB on the panel. Compressing the window
+#: instead would change step sizes with the setting, make the dummy's 128
+#: values no longer land on distinct DAC steps, and re-stretch the gentle
+#: renderer curve that 2026-09-08 was spent recovering (see
+#: `dummy_raw_to_hardware_raw`). The cost of shifting is that the bottom of
+#: travel goes quieter than -45 dB, which is inaudible either way.
+_ceiling_reader: Callable[[], float | None] = lambda: None
+
+
+def set_ceiling_reader(reader) -> None:
+    """The daemon installs the settings row here. A reader rather than a
+    value, so a change from the phone applies to the next map rather than
+    the next restart - the same shape the rest of ADR-0052's rows use."""
+    global _ceiling_reader
+    _ceiling_reader = reader
+
+
+def ceiling_db() -> float:
+    """How far below the DAC's own maximum the top of every scale sits.
+
+    **The row is a percentage, not decibels** (George, 2026-09-23: *"While
+    expressing everything in dB makes sense, everything must be in
+    percentage. For example the maximum ceiling - if we say 80% then the
+    max output can only be 80% of the max volume."*). So 80 means "as loud
+    as the slider at 80 makes it", and the answer comes from the same curve
+    everything else uses - which also means the ceiling follows the curve
+    when the curve changes, since 80% of the travel is what it says.
+
+    `0.0` - no ceiling - is the default and what an unset, unreadable or
+    nonsensical row gives, because a ceiling that fails open is a quiet
+    device and a ceiling that fails closed is a silent one.
+    """
+    try:
+        value = _ceiling_reader()
+    except Exception:  # noqa: BLE001 - a missing row is no ceiling
+        return 0.0
+    if value is None:
+        return 0.0
+    try:
+        percent = float(value)
+    except (TypeError, ValueError):
+        return 0.0
+    if percent < 0:
+        # A value left behind from when this row was in dB. Treated as
+        # unset rather than as 0%, which would be silence - a migration
+        # must not be able to mute the device.
+        logger.warning("volume: max_ceiling is %r, which is not a percentage; ignoring", value)
+        return 0.0
+    if percent >= 100:
+        return 0.0
+    return _curve_db(percent / 100.0)
+
+
 def dummy_raw_to_db(raw: int) -> float:
-    return DUMMY_DB_MIN + (raw - DUMMY_MIN_RAW) * DUMMY_DB_STEP
+    return DUMMY_DB_MIN + ceiling_db() + (raw - DUMMY_MIN_RAW) * DUMMY_DB_STEP
 
 
 def dummy_raw_to_hardware_raw(raw: int) -> int:
@@ -201,6 +286,191 @@ def dummy_raw_to_hardware_raw(raw: int) -> int:
     return db_to_raw(dummy_raw_to_db(raw))
 
 
+#: **ADR-0053's arithmetic, and the invariant that keeps it safe.**
+#:
+#: In the remote-control model the panel's number *is* the active
+#: renderer's, shown on the panel's own 0-100. Two maps do the whole of it:
+#: a panel position onto the renderer's scale, and a renderer's value back
+#: onto the panel's.
+#:
+#: **The panel's own round trip is exact at every scale in play** - checked
+#: for all 101 positions against LMS's and Spotify's 0-100, Bluetooth's
+#: 0-127 and go-librespot's fallback 0-65535. Drag the panel to 37 and 37 is
+#: what comes back.
+#:
+#: **The other direction is not, and must never be taken.** A value arriving
+#: *from* Bluetooth, rendered as a percentage and sent back out, lands
+#: somewhere else for **27 of AVRCP's 128 values**: 101 positions cannot
+#: name 128 without collisions. Raw 101 shows as 80% and 80% sends 102. That
+#: is the shape of the ratchet Finding 045 §12 measured, where 107 went out
+#: and 108 came back until bluealsa died of it.
+#:
+#: So the invariant is not "make the round trip exact", which is impossible
+#: here. It is **a renderer's own value is never sent back to it**: the
+#: panel's percentage is a *view* of what the renderer reported, and only a
+#: change whose origin is the panel is ever pushed outward.
+#: **ADR-0054's curve, and the only one on the device.**
+#:
+#: Until 2026-09-23 nobody's volume curve was ours. squeezelite derived its
+#: own from the dummy control's declared TLV range, bluealsa applied its
+#: AVRCP curve (~10 dB per doubling), and we copied whatever dB came out.
+#: Measured, that gave a renderer's zero at **-38.1 dB instead of silence**
+#: and put LMS's 0%, 5% and 10% on one value with 0-20% spanning one
+#: decibel (Finding 047 §3). Since ADR-0053 the daemon knows each
+#: renderer's *own* number, so it does not need anyone to derive anything.
+#:
+#: **60 dB**, because that is what librespot's `softvol` uses and what
+#: George found works on the same DAC in the device he compared against
+#: (Finding 047 §5). A constant, so changing it is a one-line experiment.
+RENDERER_DB_SPAN = 60.0
+
+#: **The taper, changed 2026-09-23 from linear-in-dB to cubic.**
+#:
+#: George, on the first build: *"60db might not be enough. The bottom half
+#: of the volume range is quite quiet."* The symptom is right and the
+#: remedy he reached for goes the wrong way - a *wider* span makes the
+#: bottom quieter, not louder (at 80 dB, half travel is -40 dB against
+#: -30). What was actually wrong is the shape.
+#:
+#: Linear in dB spends half its decibels on the bottom half of the slider,
+#: so half travel was -30 dB - about a twentieth of the loudness at the
+#: top. **Cubic is how a volume control is normally tapered** and is what
+#: librespot offers beside its `log`; both it and the dr-lex article
+#: librespot's own source cites describe the same curve. Half travel
+#: becomes **-15.6 dB**, a quarter -29.3, and the bottom still reaches
+#: -60 dB before the cliff to silence.
+#:
+#: **What it costs, stated because it is the same shape of complaint moved
+#: elsewhere:** the curve is finer than the DAC's 0.5 dB steps above about
+#: 44%, so 101 slider positions land on 81 distinct levels and some pairs
+#: of percentages sound identical. Those pairs are 0.23 dB apart, which is
+#: inaudible; the bottom-end collapse it replaces was ten positions on one
+#: value across a usable range.
+#:
+#: **Note that librespot's `log` is *not* an alternative here**: read from
+#: its own source, `ratio = exp(ln(db_ratio)*x) / db_ratio`, which for
+#: 60 dB is 1000^(x-1) - exactly linear in dB, the curve being replaced.
+def _taper_floor() -> float:
+    return 10.0 ** (-RENDERER_DB_SPAN / 60.0)
+
+
+#: **ADR-0046: fixed output.** When the device is not attenuating at all,
+#: nothing here may write the DAC - not the panel, not a renderer's mirror,
+#: not a restore. Read through a callable like the ceiling and the curve,
+#: so the mode is one fact with one reader rather than a flag copied into
+#: three classes.
+_fixed_output_reader: Callable[[], bool] = lambda: False
+
+
+def set_fixed_output_reader(reader) -> None:
+    global _fixed_output_reader
+    _fixed_output_reader = reader
+
+
+def fixed_output() -> bool:
+    """False - the device attenuates - unless the row says otherwise,
+    **including when it cannot be read**. Failing into fixed output would
+    mean failing into full scale, which is the loudest mistake this device
+    can make (ADR-0046: "a wrong choice here is loud")."""
+    try:
+        return bool(_fixed_output_reader())
+    except Exception:  # noqa: BLE001 - an unreadable row is not fixed output
+        return False
+
+
+#: **The curve is a setting** (ADR-0022's inventory, on George's
+#: instruction 2026-09-23). Two names, and they are the two that exist:
+#: `Cubic` is what ships and `Linear (dB)` is the even-decibels curve it
+#: replaced, kept because it is a legitimate taste and because somebody
+#: driving this from a phone at arm's length may want the bottom of the
+#: slider to be genuinely quiet.
+CURVE_CUBIC = "Cubic"
+CURVE_LINEAR = "Linear (dB)"
+_curve_reader: Callable[[], str | None] = lambda: None
+
+
+def set_curve_reader(reader) -> None:
+    """A reader, not a value, so a change from the phone applies to the
+    next map rather than the next restart - as `set_ceiling_reader`."""
+    global _curve_reader
+    _curve_reader = reader
+
+
+def curve() -> str:
+    """`Cubic` unless the row says otherwise, including when the row cannot
+    be read: a device that cannot reach its settings should sound the way
+    it shipped."""
+    try:
+        value = _curve_reader()
+    except Exception:  # noqa: BLE001 - a missing row is the default curve
+        return CURVE_CUBIC
+    return CURVE_LINEAR if value == CURVE_LINEAR else CURVE_CUBIC
+
+
+def _curve_db(fraction: float) -> float:
+    """How far below the top a position sits, **before any ceiling**.
+
+    Split out so `ceiling_db` can ask the same question of the same curve:
+    a ceiling expressed as a percentage is exactly "the level this position
+    produces", and computing it any other way would let the two drift.
+    """
+    if fraction <= 0.0:
+        return -math.inf
+    fraction = min(1.0, fraction)
+    if curve() == CURVE_LINEAR:
+        return -(1.0 - fraction) * RENDERER_DB_SPAN
+    floor = _taper_floor()
+    return 20.0 * math.log10((fraction * (1.0 - floor) + floor) ** 3)
+
+
+def renderer_value_to_hardware_raw(value: int, steps: int) -> int:
+    """A renderer's own value, on its own scale, as a DAC level.
+
+    **Zero is silence.** Not the bottom of a window - silence. The
+    2026-09-08 note on `dummy_raw_to_hardware_raw` accepted the opposite
+    ("dead silence is what pause/mute are for, not the bottom of a
+    renderer's own volume slider"), and George found it wrong in use:
+    *"Even with volume at 0 on any renderer there is still sound coming.
+    Faint but still there."*
+
+    Above zero the travel is linear in dB - ADR-0034's `Perceptual`, and
+    within about a decibel of librespot's `log` over most of its range -
+    ending at `ceiling_db()`, which is the user's own maximum and 0 dB
+    when unset (ADR-0052 amended).
+    """
+    if steps <= 0 or value <= 0:
+        return 0
+    return db_to_raw(ceiling_db() + _curve_db(value / steps))
+
+
+def hardware_raw_to_renderer_value(raw: int, steps: int) -> int:
+    """The inverse, for the one case that needs it: reporting a level the
+    *hardware* has to a renderer that did not set it."""
+    if steps <= 0 or raw <= 0:
+        return 0
+    short = ceiling_db() - raw_to_db(raw)
+    if curve() == CURVE_LINEAR:
+        fraction = 1.0 - short / RENDERER_DB_SPAN
+    else:
+        floor = _taper_floor()
+        ratio = 10.0 ** (-short / 20.0)
+        fraction = (ratio ** (1.0 / 3.0) - floor) / (1.0 - floor)
+    return max(0, min(steps, round(fraction * steps)))
+
+
+def renderer_percent_to_value(percent: float, steps: int) -> int:
+    """A panel position on a renderer's own scale."""
+    return round(max(0.0, min(100.0, percent)) / 100 * steps)
+
+
+def renderer_value_to_percent(value: int, steps: int) -> int:
+    """A renderer's own value as the panel's number. `steps` is the
+    renderer's maximum, so the scale has `steps + 1` positions."""
+    if steps <= 0:
+        return 0
+    return max(0, min(100, round(value / steps * 100)))
+
+
 def raw_to_db(raw: int) -> float:
     """Raw ALSA step (0-240) to dB, per ADR-0018's documented scale.
 
@@ -218,6 +488,26 @@ def raw_to_db(raw: int) -> float:
 def db_to_raw(db: float) -> int:
     raw = round((db - DB_MIN) / DB_STEP)
     return max(0, min(HARDWARE_MAX, raw))
+
+
+def publish_attenuation(raw: int, path: Path = ATTENUATION_PATH) -> None:
+    """Leave the dB this device is currently cutting where the meter service
+    can find it.
+
+    **A positive number of dB, 0 for none.** In fixed output the DAC is at
+    full scale, so this is 0 and the meters show the source level - which is
+    what ADR-0057 wants there, with no special case to get wrong.
+
+    Best effort: a meter that cannot read this falls back to showing the
+    source, which is what it did before it existed.
+    """
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        # max(), not just the negation: at full scale that is -0.0, which
+        # formats as "-0.00" and reads like an attenuation of the wrong sign.
+        path.write_text(f"{max(0.0, -raw_to_db(raw)):.2f}\n")
+    except OSError as exc:
+        logger.debug("volume: cannot publish the attenuation: %s", exc)
 
 
 # ADR-0034: the panel slider spans -45..0dB, linear in dB, with the bottom
@@ -238,17 +528,16 @@ RAMP_MIN_STEPS = 3
 
 
 def slider_percent_to_raw(percent: float) -> int:
-    if percent <= 0:
-        return 0
-    return db_to_raw(SLIDER_DB_MIN + min(percent, 100) / 100 * -SLIDER_DB_MIN)
+    """The panel's own slider, for when there is no renderer to be a remote
+    for. **The same curve as everything else since ADR-0054 §4**: it used
+    to be its own -45..0 dB window, which is why the published number moved
+    when a renderer let go (Finding 046 §9's seam). One curve, no seam."""
+    return renderer_value_to_hardware_raw(round(max(0.0, percent)), 100)
 
 
 def raw_to_slider_percent(raw: int) -> int:
     """Quieter than the slider's floor but not silent reads as 0%."""
-    if raw <= 0:
-        return 0
-    percent = (raw_to_db(raw) - SLIDER_DB_MIN) / -SLIDER_DB_MIN * 100
-    return max(0, min(100, round(percent)))
+    return hardware_raw_to_renderer_value(raw, 100)
 
 
 class Mute:
@@ -304,8 +593,11 @@ SPOTIFY_DB_MIN = -45.0
 
 
 def spotify_fraction_to_hardware_raw(fraction: float) -> int:
-    db = SPOTIFY_DB_MIN + fraction * (0.0 - SPOTIFY_DB_MIN)
-    return db_to_raw(db)
+    """**ADR-0054 §3: the same curve as everything else.** Spotify used to
+    have its own -45..0 dB window, chosen in 2026-09-08 "for consistency
+    across renderers' sliders" - which is now literal rather than
+    approximate."""
+    return renderer_value_to_hardware_raw(round(max(0.0, fraction) * 1000), 1000)
 
 
 def hardware_raw_to_spotify_fraction(raw: int) -> float:
@@ -316,9 +608,7 @@ def hardware_raw_to_spotify_fraction(raw: int) -> float:
     LMS/Bluetooth's own dummy floor, or a manual amixer write) has no
     fraction below 0% to express - report 0%, not a negative one.
     """
-    db = raw_to_db(raw)
-    frac = (db - SPOTIFY_DB_MIN) / (0.0 - SPOTIFY_DB_MIN)
-    return max(0.0, min(1.0, frac))
+    return hardware_raw_to_renderer_value(raw, 1000) / 1000
 
 
 async def get_raw(mixer_name: str, device: str = MIXER_DEVICE) -> int | None:
@@ -443,9 +733,22 @@ _MIXER_THREAD = concurrent.futures.ThreadPoolExecutor(
 )
 
 
-async def set_raw(mixer_name: str, value: int) -> None:
-    value = max(0, min(HARDWARE_MAX, value))
-    key = (MIXER_DEVICE, mixer_name)
+async def set_raw(
+    mixer_name: str,
+    value: int,
+    device: str = MIXER_DEVICE,
+    maximum: int = HARDWARE_MAX,
+) -> None:
+    """Write a raw value to a mixer control.
+
+    `device` and `maximum` default to the real DAC's, which is every caller
+    but one: ADR-0053 makes the panel write **Bluetooth's own dummy
+    control**, because that control is what `bluealsa-aplay --volume=mixer`
+    pushes out to the phone over AVRCP. Its scale is 0-127, not 0-240, so
+    the clamp has to travel with the device.
+    """
+    value = max(0, min(maximum, value))
+    key = (device, mixer_name)
     mixer = _MIXERS.get(key)
     if mixer is None:
         mixer = _MIXERS[key] = _Mixer(*key)
@@ -458,7 +761,7 @@ async def set_raw(mixer_name: str, value: int) -> None:
     proc = await asyncio.create_subprocess_exec(
         "amixer",
         "-D",
-        MIXER_DEVICE,
+        device,
         "sset",
         mixer_name,
         f"{value}",
@@ -469,19 +772,23 @@ async def set_raw(mixer_name: str, value: int) -> None:
 
 
 class VolumeBridge:
-    """Bridges the hardware mixer with go-librespot's own volume, and
-    feeds every genuine hardware change to `volume_memory` (renderer_
-    volume.py) so it can be restored the next time that renderer becomes
-    active - George's decision, 2026-09-07.
+    """Bridges the hardware mixer with go-librespot's own volume.
+
+    **It used to feed every hardware change to a per-renderer memory**
+    (George's decision 2026-09-07, `renderer_volume.py`). That memory was
+    deleted on 2026-09-23: since ADR-0054 §5 a renderer is *asked* where it
+    is when it takes the device, and the renderer's own memory is the real
+    one - ours was a second, worse copy of it.
 
     `get_active_renderer` is a zero-arg callable (typically
     `lambda: supervisor.active`) - who a hardware change gets attributed
     to, and whether an incoming Spotify volume report should actually
     touch the live mixer, both depend on who currently owns the device.
-    Reporting into `volume_memory` while a renderer is *not* active is
-    still correct (e.g. go-librespot firing a stale event) - it updates
-    what will be restored later without touching the mixer someone else
-    currently owns.
+
+    **The deletion left one call to the deleted object behind**, and it
+    crashed the daemon the first time a write reached the mixer without
+    going through `write_hardware` - which is what entering fixed output
+    does. Removed 2026-09-23 (Finding 053).
     """
 
     def __init__(
@@ -489,9 +796,9 @@ class VolumeBridge:
         mixer_name: str,
         adapter,
         *,
-        volume_memory,
         get_active_renderer,
         on_hardware_level=None,
+        on_renderer_value=None,
         ceiling_db=None,
     ) -> None:
         """`adapter` is any `VolumeMechanism.SOFTWARE_API` renderer
@@ -513,9 +820,13 @@ class VolumeBridge:
         """
         self._mixer_name = mixer_name
         self._adapter = adapter
-        self._volume_memory = volume_memory
         self._get_active_renderer = get_active_renderer
         self._on_hardware_level = on_hardware_level
+        #: ADR-0053. What Spotify says its own volume is, passed on so the
+        #: panel can show Spotify's number rather than a second one derived
+        #: from the DAC. Reported before attribution and before the echo
+        #: check below, because the number is true whoever caused it.
+        self._on_renderer_value = on_renderer_value
         # Each is (value, armed_at) or None - the exact value we wrote in
         # that direction, awaiting its own echo back. See the module
         # docstring on why this is value-matched rather than a time window.
@@ -528,6 +839,9 @@ class VolumeBridge:
         #: The ramp in flight, cancelled when a newer target arrives.
         self._ramp: asyncio.Task | None = None
         self._last_written: int | None = None
+        #: The `alsactl monitor` subprocess, so it can be moved to another
+        #: card when the output changes (ADR-0055).
+        self._monitor = None
         #: **Every value we write, not only the target** (ADR-0052 §4). A
         #: ramp writes a dozen intermediate values and `alsactl monitor`
         #: reports each one; matching only the target made every step look
@@ -537,10 +851,49 @@ class VolumeBridge:
         self._written: dict[int, float] = {}
         adapter.on_volume_change(self._on_adapter_volume)
 
+    def restart_monitor(self) -> None:
+        """End the `alsactl monitor` so `run()` starts a new one.
+
+        It is spawned for one card and the output can move under it. The
+        loop already restarts the monitor when it exits - that path was
+        written for the monitor dying on its own - so ending it here is the
+        whole of the move.
+        """
+        proc = getattr(self, "_monitor", None)
+        if proc is None or proc.returncode is not None:
+            return
+        logger.info("volume: moving the mixer monitor to %s", alsa.card())
+        proc.terminate()
+
+    def set_mixer_name(self, mixer_name: str) -> None:
+        """**The control's name follows the chosen output** (ADR-0055 §3):
+        `DAC` on this HAT, `PCM` on the Pi's own jack. Settable rather than
+        fixed at construction so switching output does not need the daemon
+        restarted, which George measured as the slow part: *"Changing the
+        output is slow at changing the volume output type. It should be
+        nearly instant."*
+
+        The *device* needs no such treatment - it is `ctl.output`, the
+        alias ADR-0009 put there, and rewriting `output.conf` moves it.
+        """
+        if mixer_name == self._mixer_name:
+            return
+        logger.info("volume: the control is now %r", mixer_name)
+        self._mixer_name = mixer_name
+        self._last_written = None
+
     def _capped(self, raw: int) -> int:
         """Every level reaches the DAC through here, so the ceiling is
         enforced in one place (ADR-0052 §3) - panel, mirror and restore
-        alike."""
+        alike.
+
+        **Since the amendment this is a backstop, not the mechanism.** The
+        ceiling is a shift on every position-to-dB map (`ceiling_db`), so
+        nothing a slider or a renderer asks for lands above it in the first
+        place. What still can is an *absolute* raw: a level remembered
+        before the ceiling was set, or somebody's `amixer`. Those are
+        clamped, and a clamp is the right answer for them - there is no
+        position to reinterpret."""
         ceiling = self._ceiling_db()
         if ceiling is None:
             return raw
@@ -572,6 +925,12 @@ class VolumeBridge:
     async def write_hardware(self, raw: int) -> None:
         """Write `raw` to the real DAC and arm the echo window first.
 
+        **Refused outright in fixed output** (ADR-0046): the device is not
+        attenuating, so the only level it may hold is full scale. Refused
+        *here* rather than at each caller because every path to the
+        hardware already goes through this one - the panel, the mirrors,
+        the restores - which is what makes one check enough.
+
         Found on hardware, 2026-09-08: `restore_volume` (`__main__.py`)
         was calling `set_raw()` directly on acquire, bypassing this
         class's echo window entirely. That write still shows up on
@@ -591,6 +950,9 @@ class VolumeBridge:
         not `set_raw` directly - restore-on-acquire and the unmanaged-
         renderer floor bump both do now.
         """
+        if fixed_output():
+            logger.debug("volume: fixed output, %s/240 not written", raw)
+            return
         raw = self._capped(raw)
         self._expected_hw_raw = (raw, time.monotonic())
         # **The panel is told the target, not the journey** (ADR-0052 §4):
@@ -644,6 +1006,10 @@ class VolumeBridge:
             return
 
     def _report_hardware_level(self, raw: int) -> None:
+        # The one funnel for "the DAC is now here" - our own writes and the
+        # changes the monitor sees - so it is where the meters are told too
+        # (ADR-0057).
+        publish_attenuation(raw)
         if self._on_hardware_level is not None:
             self._on_hardware_level(raw)
 
@@ -652,24 +1018,18 @@ class VolumeBridge:
         if max_ <= 0:
             logger.warning("volume: %s reported max=%r, ignoring", renderer_id, max_)
             return
+        if self._on_renderer_value is not None:
+            self._on_renderer_value(renderer_id, value, max_)
         if self._consume(self._expected_adapter_value, value):
             self._expected_adapter_value = None
             logger.debug("volume: ignoring %s's echo of our own %s", renderer_id, value)
             return
-        raw = spotify_fraction_to_hardware_raw(value / max_)
-        self._volume_memory.remember(renderer_id, raw)
-        if self._get_active_renderer() != renderer_id:
-            # Remembered for next time, but this renderer doesn't
-            # currently own the mixer - writing now would move someone
-            # else's volume out from under them.
-            logger.debug(
-                "volume: %s reported %s/240 while inactive, remembered but not applied",
-                renderer_id,
-                raw,
-            )
-            return
-        logger.info("volume: %s -> hardware (%s/%s -> %s/240)", renderer_id, value, max_, raw)
-        asyncio.create_task(self.write_hardware(raw))
+        # **The hardware write is no longer here** (ADR-0054 §3). Every
+        # renderer's number now reaches the DAC by one path - the callback
+        # above - so there is one curve and one place that applies it,
+        # rather than this class owning Spotify's and DummyMixerBridge
+        # owning the other two's.
+        logger.debug("volume: %s reported %s/%s", renderer_id, value, max_)
 
     async def run(self) -> None:
         """Watch `alsactl monitor` and push hardware changes to the
@@ -686,9 +1046,13 @@ class VolumeBridge:
         proc = await asyncio.create_subprocess_exec(
             "alsactl",
             "monitor",
-            f"hw:{alsa.CARD_ID}",
+            # **The card the device is playing to** (ADR-0055), not the one
+            # it shipped with: an `amixer` from elsewhere is only worth
+            # noticing on the control we are actually writing.
+            f"hw:{alsa.card()}",
             stdout=asyncio.subprocess.PIPE,
         )
+        self._monitor = proc
         assert proc.stdout is not None
         last_raw: int | None = None
         while True:
@@ -728,7 +1092,6 @@ class VolumeBridge:
                     raw,
                 )
                 continue
-            self._volume_memory.remember(active, raw)
             if active != self._adapter.renderer_id:
                 continue
             steps = await self._adapter.get_volume_steps()
@@ -749,6 +1112,10 @@ SETTLE_S = 0.8
 
 #: ADR-0052 §5. Below a finger's rate, far below a fault's.
 MIRROR_MIN_INTERVAL_S = 0.04
+
+
+async def _noop() -> None:
+    """The default `on_moved`: a bridge with nobody listening."""
 
 
 class DummyMixerBridge:
@@ -818,37 +1185,40 @@ class DummyMixerBridge:
         dummy_control: str,
         hardware_control: str,
         *,
-        volume_memory,
         get_active_renderer,
         is_playing=None,
+        on_moved=None,
     ) -> None:
         self._renderer_id = renderer_id
         self._dummy_card = dummy_card
         #: ADR-0052 §5's rate limit.
         self._last_mirror_at = 0.0
-        self._pending: tuple[int, int, str] | None = None
+        self._pending: tuple[int, str] | None = None
         self._mirror_soon: asyncio.Task | None = None
         self._dummy_control = dummy_control
         self._hardware_control = hardware_control
-        self._volume_memory = volume_memory
         self._get_active_renderer = get_active_renderer
         self._is_playing = is_playing
+        #: ADR-0054 §2: what to do when this renderer's control moves. The
+        #: daemon asks the renderer where it is and puts *that* on the DAC.
+        self._on_moved = on_moved or (lambda _renderer_id: _noop())
         #: The last reading, to absorb the repeated monitor lines one
         #: change produces.
         self._last_seen: int | None = None
         self._settling: asyncio.Task | None = None
 
     async def _mirror(self, raw: int, *, why: str = "") -> None:
-        hardware_raw = dummy_raw_to_hardware_raw(raw)
-        # remember() no-ops for renderers outside MANAGED_RENDERERS
-        # (renderer_volume.py) - currently just Bluetooth, per Finding
-        # 006. Calling it unconditionally keeps this class the same
-        # for both renderers rather than needing a persist flag.
-        self._volume_memory.remember(self._renderer_id, hardware_raw)
+        """**Since ADR-0054 §2 this reports an event, not a level.**
+
+        The control's *value* is no longer anybody's volume: for LMS it is
+        squeezelite's curve of LMS's number (LMS 25 lands on 27, and both
+        LMS 10 and LMS 0 land on 0 - Finding 046 §1), so it could never say
+        what LMS says. What it is good for is saying *when*, in 0.1 ms. The
+        number is then read from the renderer itself.
+        """
         if self._get_active_renderer() != self._renderer_id:
             logger.debug(
-                "volume: %s's dummy control changed to %s while inactive, "
-                "remembered but not applied",
+                "volume: %s's dummy control changed to %s while inactive",
                 self._renderer_id,
                 raw,
             )
@@ -860,21 +1230,15 @@ class DummyMixerBridge:
         now = time.monotonic()
         since = now - self._last_mirror_at
         if since < MIRROR_MIN_INTERVAL_S:
-            self._pending = (raw, hardware_raw, why)
+            self._pending = (raw, why)
             if self._mirror_soon is None or self._mirror_soon.done():
                 self._mirror_soon = asyncio.ensure_future(
                     self._mirror_after(MIRROR_MIN_INTERVAL_S - since)
                 )
             return
         self._last_mirror_at = now
-        logger.info(
-            "volume: %s -> hardware (dummy %s -> %s/240)%s",
-            self._renderer_id,
-            raw,
-            hardware_raw,
-            why,
-        )
-        await set_raw(self._hardware_control, hardware_raw)
+        logger.info("volume: %s's control moved (dummy %s)%s", self._renderer_id, raw, why)
+        await self._on_moved(self._renderer_id)
 
     async def _mirror_after(self, delay: float) -> None:
         """The value that arrived during the quiet period, once it is over.
@@ -883,16 +1247,12 @@ class DummyMixerBridge:
         pending, self._pending = self._pending, None
         if pending is None:
             return
-        raw, hardware_raw, why = pending
+        raw, why = pending
         self._last_mirror_at = time.monotonic()
         logger.info(
-            "volume: %s -> hardware (dummy %s -> %s/240)%s [coalesced]",
-            self._renderer_id,
-            raw,
-            hardware_raw,
-            why,
+            "volume: %s's control moved (dummy %s)%s [coalesced]", self._renderer_id, raw, why
         )
-        await set_raw(self._hardware_control, hardware_raw)
+        await self._on_moved(self._renderer_id)
 
     async def _on_dummy_change(self, raw: int | None) -> None:
         """One reading of the dummy control: dedupe, then the pause-fade

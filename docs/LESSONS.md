@@ -362,6 +362,187 @@ thing, find the call *it* makes before concluding the data is absent — here,
 one request to `material-skin browsemodes` listed `myMusicTopArtists` and
 `myMusicRecentlyPlayedArtists` with their exact parameters.
 
+**17. A client that logged nothing when it matched nothing** (2026-09-23,
+Phase 9 subphase 9i). `bluealsa_volume.py` was written to follow the A2DP
+PCM's `Volume` property over D-Bus. It filtered on `Mode == "sink"` — the
+right word for the wrong end. `bluealsa -p a2dp-sink` makes *this device*
+the sink, so the transport is `A2DP-sink`, but a PCM's `Mode` is the
+direction from the **client's** side, and a client reads this one: its Mode
+is `"source"`. The filter matched nothing, ever.
+
+**What made it cost a whole test round with George** is not the filter, it
+is that the module logged only on success and on failure of the *bus
+connection*. A total mismatch produced exactly the same output as a phone
+not being connected: none. He reported *"the volume bar moves on the phone
+but nothing happens on the panel"*, and the daemon's log for the whole
+session had not one line from the module responsible.
+
+**A component that can do nothing must say so.** It now logs what it is
+watching and how many objects it found on startup, and logs every object it
+declines with the properties it declined it on. The next failure of the
+same kind is one `journalctl` away instead of a round trip through somebody
+else's evening.
+
+**18. The same `amixer` grep, a second time** (2026-09-23). Finding 045 §6
+records `grep -oE "Playback [0-9]+"` matching `Limits: Playback 0 - 240`
+and reporting the control's *floor* as its value. Verifying ADR-0054's
+curve on the device, the same one-liner was written again and reported
+**silence at every slider position**, on a device whose DAC was tracking
+perfectly. It was caught because the result was absurd rather than merely
+wrong — which is luck, not method.
+
+**Reading a mixer with a regular expression is a known trap in this
+repository and there is a correct parser in `volume.py`.** The probe
+scripts should use it; where a shell one-liner is unavoidable, anchor it to
+`Front Left:` rather than to the word `Playback`.
+
+**19. The tests never ran the daemon's own wiring** (2026-09-23). A
+settings row was removed from the registry and its entry in `__main__`'s
+`defaults` dictionary was left behind. `Settings.__init__` **already checks
+exactly this** and raises `not in the registry: [...]` - but nothing in the
+suite constructs it with the daemon's real dictionaries, so the check only
+ever ran on the device. 894 tests passed and `gexis-core` would not start.
+
+**A validation that only runs in production is a deployment step, not a
+test.** `test_registry_wiring.py` now reads the two dictionaries out of the
+source with `ast` and checks them against the registry, and it asserts it
+found the call at all - otherwise it would pass by finding nothing.
+
+**20. Removing a thing leaves references that only production checks**
+(2026-09-23, twice in one afternoon). A settings row was deleted and its
+entry in `__main__`'s `defaults` stayed; then `boot_volume_steps` was
+deleted from `Config` and stayed in the shipped `core.toml`. Both have a
+correct, deliberate validation — `Settings.__init__` raises `not in the
+registry`, `Config.load` raises `unknown config key(s)` — and **both
+validations only ever ran on the device.** The suite was green each time
+and the daemon would not start.
+
+The second one also hit systemd's restart rate limit, so the service ended
+`failed` and needed `reset-failed` rather than another `restart` — a
+deployment that is *wrong* looks different from one that is merely broken.
+
+**A declaration and the thing it declares are two files, and nothing was
+comparing them.** `test_registry_wiring.py` now reads the daemon's
+`defaults`/`wired`/`options` keys out of the source with `ast` and the
+shipped `core.toml` against `Config`'s fields. Both assert they found
+something first, so they cannot pass by looking at nothing.
+
+**21. "No answer" folded into an answer** (2026-09-23). Choosing an output
+has to know whether the card can accept PCM, and asking means *opening* it.
+A card a renderer is still holding answers nothing — and `needs_plug`
+returned `False` for that nothing, which reads as "needs no conversion".
+
+**It wrote a working config into a broken one, twice, and the second time
+after I had already fixed the caching.** The first version cached the
+false answer, so one busy moment decided the card for ever. The second
+stopped caching it and still *returned* it, so the startup reconciliation
+rewrote HDMI's config with no conversion layer — the exact failure George
+had reported ten minutes earlier.
+
+**A value that means "I could not tell" must not be the same value as "I
+checked, and no".** It is now `None`, and a config that cannot be computed
+is not written at all. The switch also stops the renderers *before* it
+writes, so the question is answerable when it is asked.
+
+**22. The arithmetic was right and the cause was wrong** (2026-09-23).
+Teletronix's needle pins are at (317, 350) and (963, 350); its dial
+picture is 672×302 at the origin. Both pins are outside it. That is true,
+it was measured from the engine's own source, and I excluded the skin for
+it.
+
+**The picture was the wrong file.** `bgr.filename` named the *spectrum's*
+blank panel — the same filename `spectrum.txt` uses — instead of the dial
+artwork, which is 1280×800 and holds both pins comfortably. The
+measurement described the symptom exactly and pointed at the skin's
+geometry, which was never wrong.
+
+I also excluded a second skin on a model alone, and it renders correctly:
+the capture it rested on was taken with nothing playing, so it was a held
+last frame, not a rendering. Six models of "which skins are broken" were
+built in two days; the one that held was "is this file also a spectrum
+background", which is a question about *what a value names*, not about
+where it points.
+
+**A quantity being out of range tells you where to look, not what is
+wrong.** Before excluding something on a number, ask what would have to be
+true for the number to be right — and check that a capture is of a live
+screen, not a frozen one.
+
+**23. The repository's own record was the wrong answer** (2026-09-23).
+George asked me to go back to an earlier investigation and redo the
+spectrum fix from what it found. I did, and ADR-0015 said `steps` was
+*"bar count — 15, 20, 25 or 30"*. It is not: `spectrum.py` sets
+`step = bar area height / steps`, the height of one vertical segment of a
+bar. The bar count is the global `size`.
+
+**It shipped, and it looked right.** The number was then clamped to what
+the artwork holds, so nothing overflowed and the screen was correct. What
+it cost was invisible on the screen: ten of the twenty-two skins drew
+fewer bars than they had room for — `s.1` twelve where twenty fit — which
+is the exact loss of resolution the instruction was about. It was found an
+hour later, while measuring something else.
+
+**Searching this repository first is the rule here, and it is right.** But
+the rule guards against contradicting a decision already taken, not
+against a measurement being wrong. A record of *what a value means in
+someone else's code* is a reading, not a decision, and a reading can be
+checked against the code in a minute. Take a decision from the record;
+take a fact about a dependency from the dependency.
+
+**24. Fixed once, in one of the two places that had to agree**
+(2026-09-23). Finding 051: PeppySpectrum reads `4 x size` bytes and the
+relay wrote 30 bands, so the frames were taken across record boundaries and
+every bar showed a different band each refresh. I made the relay follow the
+number the engine declares, measured it, and it was right.
+
+**It was right for one skin.** The engine reads that number once, when it is
+constructed; a skin change re-points everything else and leaves it. The
+relay re-reads the file. So from the second skin onwards they disagreed
+again, and the same scramble came back - reported an hour later as *"still
+seeing some flashing at the lower part of the frequency"*.
+
+The device's own log had said so at the time: `drawing 20` from the driver
+and `declares 20` from the relay, while the engine drawing them had been on
+19 since startup. I had read both lines as confirmation.
+
+**When two processes have to agree on a number, ask how each one learns it,
+not just what each one holds.** The fix was to stop the number changing at
+all - one count for the whole corpus, since the spread was a single bar.
+
+**25. Three faults, one symptom, and each fix made the next one visible**
+(2026-09-23). "The spectrum is flashing" was, in order: frames read at the
+wrong length because the driver had changed the bar count (Finding 051); the
+same thing again from the second skin onwards, because the engine reads that
+count once and the relay re-reads it (case 24); and finally the pipe having
+no frame boundaries at all, because peppyalsa writes the thirty bands as
+thirty separate writes (Finding 052).
+
+**Each fix was correct and each was measured.** None of them was the whole
+answer, and after each one I reported the symptom as fixed. The third was
+underneath the other two the entire time and could not have been seen while
+they were there.
+
+**A measurement that shows the fault is gone shows that *a* fault is gone.**
+When a symptom survives a fix that demonstrably worked, the honest reading
+is that there was more than one cause, not that the fix failed - and the
+next question is what the fix just made visible.
+
+**26. The check I ran to confirm a detail found the feature broken**
+(2026-09-23). I told George how the meters behave in fixed output and
+flagged one link as read from the code rather than watched. He said *"Check
+it to make sure."* Fixed output did not work at all: the DAC never moved and
+the daemon exited 1 three seconds later, on a call to an object deleted
+earlier the same day (Finding 053).
+
+**The orphaned line sat on the one path that only fixed output takes.**
+Entering the mode writes the mixer *around* `write_hardware`, so the monitor
+saw an external change, and the next line called the deleted thing. The
+action that makes the mode work is the action that killed the process.
+
+**Say which parts of an explanation are measured, and then measure those
+too when asked.** Flagging the gap was right; it was not a substitute for
+closing it, and the gap turned out not to be a detail.
+
 ## Common shape
 
 Every case had a *plausible* substitute for the real target — the build
@@ -373,6 +554,13 @@ itself, a log line for the screen it describes, a lucky memory layout for
 the one the daemon would get — and the check quietly accepted the
 substitute. None of these failed loudly. Each
 produced an answer that looked like a normal result, not an error.
+
+**And a third corollary, from cases 17 and 18.** Silence is not evidence of
+absence *unless the thing was built to break its silence* — a check that
+cannot report "I found nothing to look at" is indistinguishable from one
+that found nothing wrong. And a trap this page already records will be
+walked into again: case 18 is case 6's own instrument, rewritten from
+memory nine days later.
 
 **What to check before trusting a verification result:** not just "does
 this check look right," but "is the thing I just checked actually the

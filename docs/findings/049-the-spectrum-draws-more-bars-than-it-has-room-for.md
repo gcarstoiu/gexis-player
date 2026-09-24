@@ -1,0 +1,180 @@
+# Finding 049 — The spectrum draws more bars than the skin has room for
+
+> **Corrected 2026-09-23, the same day.** The fix below used each section's
+> `steps` as its bar count, on ADR-0015's word. **`steps` is not the bar
+> count** — `spectrum.py` sets `step = bar area height / steps`, the height
+> of one vertical segment of a bar. The right number is `room` alone, and
+> using it gives ten skins back resolution the first version threw away.
+> The two sections from "The fix" on are rewritten; the overflow
+> measurement that opens the finding is unchanged and still correct.
+
+**Date:** 2026-09-23
+**Raised by:** George, on the device: *"the spectrum bars are actually
+falling slightly outside their designated area in the right"*
+**Scope:** all 22 spectrum sections in the two installed packs (`gelo5`,
+13 sections, and `stock`, 9), at 1280x800, measured from their own
+`spectrum.txt` and the pixel width of their own background PNG. One
+section (`Kenwood Big`, reached through the skin `105G5_Kenwood Spectrum`)
+was also photographed on the panel with music playing. **Not tested:**
+other resolutions, packs not installed, and whether the peak-hold
+`topping` sprite overhangs the last bar.
+
+## What the engine does
+
+`spectrum.py` draws `config[SIZE]` bars. `SIZE` is one number, `size`, in
+the global `/opt/gexis-peppy/spectrum/config.txt`, and it applies to every
+skin alike. It was 30.
+
+**No section's artwork has room for 30.** They hold 20 to 22, and the
+surplus ran off the right-hand end. That is what George saw.
+
+Each section also carries `steps`, which
+[ADR-0015](../decisions/0015-skin-renderer-peppymeter-format.md) recorded
+as *"bar count — 15, 20, 25 or 30"*. **It is not the bar count** — see
+"The first version used the wrong number" below — and the engine reads it
+for something else entirely.
+
+## What was measured
+
+For each section, the room its own background holds:
+
+```
+room = (background width − origin.x + bar.gap) // (bar.width + bar.gap)
+```
+
+- **All 22 sections overflow at 30 bars.** The worst, `s.7`, holds 20 in
+  250px; thirty bars would need 355px of that 250px background.
+- **The most any section holds is 22**, the least 20. The 30 in the config
+  was never right for any skin in either pack.
+
+## The fix, and what it does not do
+
+`gexis-peppy-driver.py` writes, as the global `size` before the engine
+starts, **the number of bars the selected section's own artwork has room
+for**:
+
+```
+room = (background width − 2 × origin.x + bar.gap) // (bar.width + bar.gap)
+```
+
+capped at the 30 bands peppyalsa puts in the pipe — never more bars than
+there are measurements.
+
+**Measured over all 22 sections: every one holds 19 or 20.**
+
+### `origin.x` twice, because the picture has a frame
+
+The first version of this used the background's own width as the right-hand
+limit, and that put the last bar on the bezel. Measured on `Free`: the
+panel picture is 933px wide and is drawn at x 342, so it ends at 1275 — but
+its *drawn interior*, read off a capture, ends at **1250**. Twenty-two bars
+reach exactly 1275. The last one overhung by 25 of its 30 pixels.
+
+George, 2026-09-23: *"the bars for spectrum are also out of the bounds of
+the space they should sit in, by half a bar in general for all skins."*
+
+**The inset is not in the config**, and it is not the same as the bottom
+margin either — `Naim` leaves 125px below its bars and `Old` leaves 5, so
+mirroring that vertical margin gives 14 bars for one and 22 for the other.
+What *is* in the config is `origin.x`, the author's own left-hand margin.
+**Ending as far from the right edge as the bars begin from the left is a
+layout that cannot overhang**, and across all 22 sections it gives 19 or 20
+— consistent enough to read as deliberate rather than as each skin
+choosing its own number.
+
+| room | sections |
+| --- | --- |
+| 19 | `Free`, `Lyng`, `Kenwood Big`, `OPipe`, `Kenwoo`, `Teletronix`, `Old`, `s.2`, `s.3`, `s.4` |
+| 20 | `Naim`, `Marschal`, `Marantz`, `475A`, `Peppy`, `KeyS`, `s.1`, `s.5`, `s.6`, `s.7`, `s.8`, `s.9` |
+
+**This is not the cut George ruled out.** The *pipe* keeps all 30 bands and
+the measurement keeps its resolution; what changes is only how many of them
+a skin has room to draw, which is a property of the artwork.
+
+### One number for the corpus, not one per skin
+
+**The engine reads `size` once.** `Spectrum` is constructed at startup and
+`config[SIZE]` keeps the value it read then; a skin change re-points the
+section, the base folder and the screen size, and never touches it. The
+meter relay, meanwhile, follows the same file and *does* re-read it
+([ADR-0056](../decisions/0056-the-spectrum-frame-follows-its-reader.md)).
+
+So a per-skin count made the two disagree from the second skin onwards, and
+a FIFO has no message boundaries — the reader then takes its frames across
+record boundaries and every bar shows a different band each refresh, which
+is Finding 051 all over again. George saw it as flashing in the low bars,
+and the device's own log had it in plain sight:
+
+```
+20:05:24 peppy:  Marantz: 406px inset 12 holds 20 bars, drawing 20
+20:05:24 meters: the spectrum engine declares 20 bars
+```
+
+— while the engine that was drawing them had been on 19 since startup.
+
+**The spread is one bar**, 19 against 20, so the minimum over the whole
+installed corpus costs nothing and removes the disagreement entirely. The
+number is computed from every pack's sections at startup, written once, and
+does not change while the engine runs. Verified across four skin changes:
+`size` stayed 19 and the relay re-read 19 every time.
+
+### The first version used the wrong number
+
+It took the section's `steps` and clamped *that* to `room`.
+[ADR-0015](../decisions/0015-skin-renderer-peppymeter-format.md) recorded
+`steps` as *"bar count — 15, 20, 25 or 30"*, and it is not. `spectrum.py`
+computes
+
+```python
+self.step = int(self.height / self.spectrum_configs[self.index][STEPS])
+```
+
+— the height of one **vertical** segment of a bar. `steps` says how finely
+a bar's height is quantised and nothing about how many bars there are. The
+bar count is `config[SIZE]`, the global number, which is what both versions
+write.
+
+It produced numbers that fit, because they were clamped to `room` anyway,
+so nothing overflowed and the screen looked right. **What it cost was
+resolution**, on ten of the twenty-two: `s.1` drew 12 bars in a frame that
+holds 20; `Naim` 15 in a frame that holds 22; `s.6`–`s.9` 16 in frames
+holding 20 to 22; `Marantz`, `Peppy`, `Teletronix` and `KeyS` 20 where 21
+fit. That is the opposite of what the fix was for — George asked for a
+solution that did not cut the bar count and lose resolution.
+
+**ADR-0015's line is corrected.** [LESSONS](../LESSONS.md) case 23: the
+repository's own record was the wrong answer, and searching it first — the
+right instinct, and this project's own rule — is not the same as checking
+it.
+
+**The pipe is not narrowed.** peppyalsa keeps sending 30 bands
+([ADR-0011](../decisions/0011-meter-data-three-transports.md)). Cutting the
+pipe would cost every skin resolution; `room` only ever limits what is
+*drawn*. **The bar width is not changed either** — the bar is a sprite the
+skin's author drew at a fixed size, and narrowing it would scale their
+artwork.
+
+**Nothing in the skin packs is edited.** The count is computed at load, so
+a pack nobody has seen yet gets the same treatment, and the stock pack's
+files stay as shipped.
+
+## After
+
+Re-measured across all 22: **none overflows**, and each draws the most its
+own artwork allows. The log says so at selection:
+
+```
+Free: 933px inset 84 holds 19 bars, drawing 19
+```
+
+Photographed on the panel with LMS playing, twice: at the first version the
+bars reached the frame; at this one they stop clear of it.
+
+## What is left
+
+- **Nothing was heard.** Every judgement here is pixels and arithmetic.
+- **1280x800 only.** The packs ship other resolutions; none was measured.
+- **`steps` is left alone.** It is the vertical quantisation and it is the
+  skin author's choice; with 12 to 30 segments over a bar's height, a bar
+  moves in visible jumps however smooth the number feeding it is. That is
+  a separate question from this one.

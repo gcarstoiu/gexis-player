@@ -44,6 +44,29 @@ BOTH = "both"
 #: described one behaviour between them. `Random` is still understood, for
 #: a value stored before the rename.
 ALL = "All"
+#: **Skins that render wrong and are not offered.** Empty since
+#: 2026-09-23: both entries came out once the fault was understood.
+#:
+#: George photographed one on the panel - *"a visualisation with broken vu
+#: meters"*, and then, when the first diagnosis missed it: *"the arrows of
+#: the vu meters were trailing some shadows behind and the in the left,
+#: there was an overlay on top of the actual meter."* The cause was neither
+#: skin's geometry. `111G5_Teletronix S+M` named the *spectrum* panel as
+#: its *meter* background, so PeppyMeter drew a blank panel over the dial
+#: and repainted under the needle from the wrong picture
+#: ([Finding 050](../../../docs/findings/050-two-skins-name-the-wrong-background.md)).
+#: The image corrects that section, and `107G5_Marantz S+M`, which had the
+#: same defect and had not been noticed. `108G5_Kenwood Rev S+M` was never
+#: broken: its `start.angle = -227` is a reverse dial whose needles hang
+#: from the top, and it was photographed rendering correctly with music
+#: playing.
+#:
+#: **Leave it empty unless a skin has been seen to render wrong.** Five
+#: models of "which skins are broken" were built from the numbers alone and
+#: all five were wrong (`docs/LESSONS.md`); the one that held was a
+#: photograph.
+BROKEN: dict[str, str] = {}
+
 CORPUS = {
     "VU meters": (METERS,),
     "Spectrum": (SPECTRUM,),
@@ -256,6 +279,9 @@ def installed(root: Path, pack: str | None = None) -> list[tuple[Skin, Path]]:
                 # Two packs can name a skin the same thing; the first one
                 # wins, so what is listed is what would be selected.
                 if skin.name in seen:
+                    continue
+                if skin.name in BROKEN:
+                    logger.info("skins: not offering %s - %s", skin.name, BROKEN[skin.name])
                     continue
                 seen.add(skin.name)
                 found.append((skin, meters.parent))

@@ -213,16 +213,29 @@ def test_volume_is_published_as_percent_raw_db_and_muted():
     assert store.state.volume.to_json() == {"percent": 100, "raw": 240, "db": 0.0, "muted": False}
 
 
-def test_volume_percent_is_the_slider_position_over_minus_45_db():
-    """ADR-0034: the number shown is slider position, half travel -22.5dB -
-    not the hardware control's own travel, where half was -60dB."""
+def test_volume_percent_is_the_slider_position_on_the_shared_curve():
+    """ADR-0034 as amended by ADR-0054 §3: the number shown is slider
+    position on the one curve - cubic over 60 dB - so half travel is
+    -15.5 dB, not the hardware control's own travel, where half was -60."""
     store = StateStore(_caps("lms"))
 
-    store.set_volume_raw(195)
+    store.set_volume_raw(209)
 
     published = store.state.volume.to_json()
     assert published["percent"] == 50
-    assert published["db"] == -22.5
+    assert published["db"] == -15.5
+
+
+def test_a_renderers_own_number_overrides_the_derivation():
+    """ADR-0053: while a renderer holds the device the panel shows *its*
+    number. `raw` and `db` stay the hardware's own."""
+    store = StateStore(_caps("lms"))
+
+    store.set_volume_raw(209, percent=25)
+
+    published = store.state.volume.to_json()
+    assert published["percent"] == 25
+    assert published["db"] == -15.5
 
 
 def test_muted_is_published():
@@ -250,3 +263,44 @@ def test_handoff_exempt_pairs_are_published_not_applied():
     store = StateStore(_caps("lms", "spotify"), handoff_exempt_pairs=(("lms", "spotify"),))
 
     assert store.state.to_json()["handoff_exempt_pairs"] == [["lms", "spotify"]]
+
+
+def test_fixed_output_is_published_rather_than_inferred():
+    """**ADR-0046, and the reason the old `disabled={!volume}` was wrong
+    rather than merely ugly**: a renderer that has not reported its level
+    yet looks exactly like fixed output from outside, and the panel drew a
+    greyed control for both - "indistinguishable from a bug"."""
+    store = StateStore(_caps("lms"))
+    assert store.state.to_json()["fixed_output"] is False
+
+    store.set_fixed_output(True)
+
+    assert store.state.to_json()["fixed_output"] is True
+
+
+def test_fixed_output_clears_the_level_and_keeps_it_clear():
+    """There is nothing to show, and a stale number would have the panel
+    hiding a slider while the mini strip still knew a percentage."""
+    store = StateStore(_caps("lms"))
+    store.set_volume_raw(180)
+    assert store.state.volume is not None
+
+    store.set_fixed_output(True)
+    assert store.state.volume is None
+
+    store.set_volume_raw(200)  # a mirror or the monitor, still running
+    assert store.state.volume is None
+
+
+def test_meters_say_whether_the_visualiser_can_have_levels():
+    """**ADR-0055 §6**, George 2026-09-23: *"hide the button in now playing
+    if the capability is not there anymore for this output."*
+
+    Published for the same reason `fixed_output` is: the panel cannot tell
+    "no levels yet" from "no levels ever"."""
+    store = StateStore(_caps("lms"))
+    assert store.state.to_json()["meters"] is True
+
+    store.set_meters(False)
+
+    assert store.state.to_json()["meters"] is False

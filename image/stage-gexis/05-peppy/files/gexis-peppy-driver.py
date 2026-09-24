@@ -34,6 +34,13 @@ PEPPY = Path(os.environ.get("GEXIS_PEPPY_DIR", "/opt/gexis-peppy"))
 METER_DIR = PEPPY / "peppymeter"
 SPECTRUM_DIR = PEPPY / "spectrum"
 
+#: How many bands peppyalsa puts in the spectrum pipe
+#: ([ADR-0011](../../../../docs/decisions/0011-meter-data-three-transports.md),
+#: `spectrum_size` in `/etc/alsa/conf.d/output.conf`). The cap on how many
+#: bars a skin may draw: more bars than measurements would invent data, and
+#: fewer is only ever the skin's own artwork running out of room.
+SPECTRUM_BANDS = 30
+
 
 def meter_sections(path: Path) -> dict[str, dict[str, str]]:
     """The skin file, read with the same tolerance the engines use: unknown
@@ -202,6 +209,108 @@ def spectrum_for(skin: dict[str, str]) -> tuple[str, int, int] | None:
     return name, width, height
 
 
+#: The bar count, once the corpus has been looked at: see `spectrum_bars`.
+_BARS: int | None = None
+
+
+def spectrum_bars(base_folder: Path | None, folder: str, bands: int) -> int | None:
+    """**How many bars every spectrum skin draws.**
+
+    The engine draws `config[SIZE]` bars from the global `config.txt`. It was
+    30 and no skin has room for 30: measured across both installed packs,
+    their artwork holds 19 or 20 (Finding 049). What fits is arithmetic on
+    the skin's own numbers - the width of its background picture, where the
+    first bar starts, and how wide a bar and a gap are:
+
+        room = (background width - 2*origin.x + bar.gap) // (bar.width + bar.gap)
+
+    **`origin.x` twice, because the picture has a frame.** Filling to the
+    picture's own right-hand edge puts the last bar on the bezel: `Free`'s
+    panel is 933px wide and its drawn interior ends 25px short of that, so
+    the 22nd bar overhung by most of its width (George, 2026-09-23: *"the
+    bars for spectrum are also out of the bounds of the space they should
+    sit in, by half a bar in general for all skins"*). The inset is not in
+    the config; `origin.x` is the author's own left-hand margin, and ending
+    as far from the right edge as the bars begin from the left cannot
+    overhang.
+
+    **One number for the whole corpus, not one per skin**, and that is the
+    part worth explaining. The engine reads `size` **once**, when the driver
+    constructs it - a skin change re-points the section, the base folder and
+    the screen size, but `config[SIZE]` keeps the value it started with. The
+    meter relay, meanwhile, reads this same file and follows it
+    ([ADR-0056](../../../../docs/decisions/0056-the-spectrum-frame-follows-its-reader.md)).
+    So a per-skin count made the two disagree from the second skin onwards,
+    and a FIFO has no message boundaries: the reader then takes its frames
+    across record boundaries and every bar shows a different band each
+    refresh. George saw it as flashing in the low bars, and the device's own
+    log had it - *"drawing 20"* while the engine was still on 19.
+
+    **The spread is one bar**, 19 against 20, so the minimum over the whole
+    installed corpus costs nothing and removes the disagreement entirely:
+    the number is written once and never changes while the engine runs.
+
+    **The pipe is not touched.** peppyalsa keeps sending `bands` bands
+    (ADR-0011); the count is capped at that, never the other way round.
+
+    **The count comes down, never the bar width.** The bar is a picture the
+    skin's author drew at a fixed size; narrowing it would scale their
+    artwork.
+    """
+    global _BARS
+    if _BARS is not None:
+        return _BARS
+    if base_folder is None or not folder:
+        return None
+    rooms = []
+    # `base_folder` is `<root>/<pack>/templates_spectrum`, so two levels up is
+    # the root every installed pack sits under. Every pack, not just the one
+    # in use: the number has to hold for whatever the corpus rotates onto.
+    root = base_folder.parent.parent
+    for spectrum_txt in sorted(root.glob(f"*/templates*/{folder}/spectrum.txt")):
+        parser = configparser.ConfigParser(strict=False)
+        try:
+            parser.read(spectrum_txt)
+        except configparser.Error:
+            continue
+        for name in parser.sections():
+            section = parser[name]
+            try:
+                width = int(section["bar.width"])
+                gap = int(section["bar.gap"])
+                origin = int(section["origin.x"])
+                area = png_width(spectrum_txt.parent / section["bgr.filename"])
+            except (KeyError, ValueError, OSError):
+                continue
+            if not area:
+                continue
+            room = (area - 2 * origin + gap) // (width + gap)
+            if room > 0:
+                rooms.append(room)
+    if not rooms:
+        return None
+    _BARS = min(min(rooms), bands)
+    print(
+        f"peppy: {len(rooms)} spectrum sections hold {min(rooms)}-{max(rooms)} bars, "
+        f"drawing {_BARS} everywhere",
+        flush=True,
+    )
+    return _BARS
+
+
+def png_width(path: Path) -> int | None:
+    """A PNG's width, without pulling in an image library. The spectrum
+    backgrounds are all PNG; anything else answers None and the skin keeps
+    its own count."""
+    try:
+        header = path.read_bytes()[:24]
+    except OSError:
+        return None
+    if header[:8] != b"\x89PNG\r\n\x1a\n":
+        return None
+    return int.from_bytes(header[16:20], "big")
+
+
 def select_spectrum_section(name: str, base_folder: Path | None = None) -> None:
     """Point the spectrum engine's own config at one section. Rewritten in
     place: configparser fails hard on a duplicate key, and an appended one
@@ -220,6 +329,15 @@ def select_spectrum_section(name: str, base_folder: Path | None = None) -> None:
     parser["current"]["spectrum"] = name
     if base_folder is not None:
         parser["current"]["base.folder"] = str(base_folder)
+    # The engine resolves its sections under `base.folder/spectrum.folder`,
+    # so the bar count is read from the same place it will read the rest.
+    # The cap is what the *pipe* carries, which is the band count peppyalsa
+    # was configured with - never more bars than there are measurements.
+    bars = spectrum_bars(
+        base_folder, parser["current"].get("spectrum.folder", ""), SPECTRUM_BANDS
+    )
+    if bars:
+        parser["current"]["size"] = str(bars)
     # The engine reads this file; the daemon never does. It is rewritten on
     # every skin change, which is why the image installs it writable by the
     # user the unit runs as.

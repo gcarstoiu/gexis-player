@@ -27,6 +27,9 @@ import unicodedata
 
 import aiohttp
 
+from gexis_core.artwork_sweep import ALBUM_NAMESPACE, remembered
+from gexis_core.enrichment import fold
+
 logger = logging.getLogger("gexis_core.library")
 
 #: ADR-0022 inventory, "Albums in the New Music strip" [H]: the design's ten.
@@ -126,8 +129,16 @@ def _float(value) -> float | None:
 
 
 class LmsLibrary:
-    def __init__(self, host: str, port: int, *, player_id=None, clock=time.monotonic) -> None:
+    def __init__(self, host: str, port: int, *, player_id=None, clock=time.monotonic,
+                 store=None) -> None:
         self._base = f"http://{host}:{port}"
+        #: ADR-0059's sweep leaves fanart covers here, keyed on the folded
+        #: artist and title. Optional: without it every cover is LMS's, which
+        #: is what shipped before.
+        self._store = store
+        #: `artist id -> name`, rebuilt when LMS reports a new scan.
+        self._names: dict[int, str] | None = None
+        self._names_scan: str | None = None
         #: Reads the renderer adapter's own resolved player id: the library
         #: plays on the same player the adapter arbitrates for, and never
         #: hardcodes one (the project's rule for anything that differs per
@@ -204,6 +215,24 @@ class LmsLibrary:
             return None
         return f"{self._base}/music/{track_id}/cover_{size}x{size}_o.jpg"
 
+    def _cover(self, raw: dict, size: int) -> str | None:
+        """An album's cover: **fanart's if the sweep found one, LMS's
+        otherwise** ([ADR-0059](../../../docs/decisions/0059-artist-portraits-in-the-list.md)).
+
+        Through LMS's image proxy either way, so a 1000px fanart cover
+        arrives at the size the grid asked for and LMS does the caching.
+        """
+        lms = self._artwork(raw.get("artwork_track_id") or raw.get("coverid"), size)
+        artist, title = raw.get("artist"), raw.get("album")
+        if self._store is None or not artist or not title:
+            return lms
+        found = remembered(
+            self._store, ALBUM_NAMESPACE, f"{fold(artist)}\x1f{fold(title)}"
+        )
+        if not found or found is True:
+            return lms
+        return f"{self._base}/imageproxy/{found}/image_{size}x{size}_o.jpg"
+
     # --- shapes ------------------------------------------------------------
 
     def _album(self, raw: dict, size: int = ARTWORK_COVER) -> dict:
@@ -214,7 +243,7 @@ class LmsLibrary:
             "artist_id": _int(raw.get("artist_id")),
             "year": _int(raw.get("year")) or None,
             "release_type": raw.get("release_type"),
-            "artwork": self._artwork(raw.get("artwork_track_id"), size),
+            "artwork": self._cover(raw, size),
         }
 
     def _track(self, raw: dict, size: int = ARTWORK_ROW) -> dict:
@@ -284,6 +313,37 @@ class LmsLibrary:
         for artist, count in zip(artists, counts):
             artist["albums"] = 0 if isinstance(count, BaseException) else (_int(count.get("count")) or 0)
         return artists
+
+    @property
+    def base(self) -> str:
+        """LMS's own root, which is also its image proxy's."""
+        return self._base
+
+    async def artist_name(self, artist_id: int) -> str | None:
+        """One album artist's name, from the map the sweep and the grid both
+        need. Built once per scan and kept: 917 names is nothing to hold, and
+        the alternative is a round trip per tile."""
+        if self._names is None or self._names_scan != self._lastscan:
+            pairs = await self.album_artists()
+            self._names = {i: n for i, n in pairs}
+            self._names_scan = self._lastscan
+        return self._names.get(artist_id)
+
+    async def album_artists(self) -> list[tuple[int, str]]:
+        """Every album artist, `(id, name)`, for the artwork sweep.
+
+        **All of them in one call**, which is what a sweep wants and what a
+        screen must never do: 917 on George's library against 7,296
+        contributors. Uncached deliberately - a sweep is the one caller that
+        wants what LMS has now rather than what it had when the page opened.
+        """
+        result = await self._rpc(["artists", 0, 100000, "role_id:ALBUMARTIST"])
+        loop = (result or {}).get("artists_loop") or []
+        return [
+            (_int(row.get("id")), row.get("artist") or "")
+            for row in loop
+            if row.get("artist")
+        ]
 
     async def artists(self, offset: int = 0, limit: int = 1000) -> dict:
         """Album artists (George, 2026-09-17), in LMS's order, each with

@@ -7,9 +7,9 @@ smoothly, there is this delay we introduce a while back"*; *"there are the
 occasional hops in volume (especially after a first boot)"*; and *"sometimes
 it feels like the max volume is different between renderers (song quality
 independent)."* What is actually happening?
-**Status:** LMS and Spotify measured. Bluetooth is the one renderer left,
-and it needs a phone connected and nothing else. **§7 is the answer to the
-third symptom, and it is a defect, not a scale difference.**
+**Status:** LMS and Spotify measured; Bluetooth measured as far as it can be
+without a phone in George's hand — §12 is where it stands. **§7 is the
+answer to the third symptom, and it is a defect, not a scale difference.**
 
 **Scope, stated up front:**
 
@@ -368,6 +368,90 @@ the worker now holds `/run/gexis/meter.fifo` and `/run/gexis/spectrum.fifo`,
 the meter reads a live signal, and a screenshot of the panel shows the VU
 needles moving with the Bluetooth mark under them.
 
+## 12. The storm again, without a disconnect — and the ±1 ratchet under it
+
+George, after the rate limit and the ramp shipped: *"Storm again with
+Bluetooth. I wasn't disconnecting the phone. Just started playing something
+and was changing the volume. I believe your analysis is missing something
+... this has worked fine for weeks."*
+
+**He is right, and §10's account is incomplete.** §10 named the symptom —
+bluealsa retrying a failed volume push ~750 times a second until it died —
+and stopped at "the control channel failed, cause unknown, probably the
+phone". The recurrence rules that out: no disconnect, no restart of mine,
+ordinary playback, and the storm arrives anyway. Something *makes* the push
+fail, repeatedly, and it is reachable from here.
+
+**The evidence, from bluealsa's own log before the retries buried it:**
+
+```
+volume: 107  ->  (push to phone)  ->  volume: 108
+volume: 102  ->  (push to phone)  ->  volume: 101
+```
+
+A value goes out to the phone and a **different value by one** comes back.
+Each return is a fresh mixer change, which `--volume=mixer` pushes out
+again, which returns changed again. That is the ratchet, and every turn of
+it is another AVRCP write on a control channel that only has to stumble once
+for the retry loop of §10 to start.
+
+**Where the ±1 comes from is arithmetic, not a bug in anyone's code.** AVRCP
+carries 0–127. The dummy control was **−50…100**, 151 values. 128 onto 151
+and back is lossy by construction: some values survive the round trip and
+some land one step off. A single tap settles — that is why it looked fine
+for weeks — but a *drag* keeps feeding it, and a drifting value never
+settles at all.
+
+**Why this is ours and not bluealsa's:** the 151-value range is the
+`snd-dummy` default, and we chose to leave it there. bluealsa is doing
+exactly what `--volume=mixer` says.
+
+**The fix, and what it cost.** `mixer_volume_level_min=0
+mixer_volume_level_max=127` on the `snd-dummy` module — **for both dummy
+cards, since one module instance serves both** — makes the round trip exact:
+128 against 128.
+
+Measured on the device after the change:
+
+| what | before (−50…100) | after (0…127) |
+| --- | --- | --- |
+| control minimum | raw −50, −45.00 dB | raw 0, −45.00 dB |
+| control maximum | raw 100, **0.00 dB** | raw 127, **−6.90 dB** |
+| step | 0.30 dB | 0.30 dB |
+
+snd-dummy's dB scale is **fixed** — −45.00 dB at whatever the minimum is,
+0.30 dB a step — so a 128-value range simply stops 6.90 dB short of 0. That
+is a real loss of top end on the *dummy*, which is not where the audio is:
+`volume.py` takes it back with a **constant shift**, `DUMMY_DB_MIN = -38.1`,
+so the window a renderer's slider spans becomes −38.1…0 dB at the DAC. Every
+step stays 0.30 dB; only where the window sits moved. (A *rescale* — 128
+steps stretched over 45 dB — was rejected on 2026-09-08 and stays rejected:
+it makes steps of unequal size and the round trip inexact again.)
+
+**LMS measured end to end afterwards**, panel percentage → dummy raw → DAC:
+
+| LMS | dummy raw | DAC |
+| --- | --- | --- |
+| 100% | 127 | 0.00 dB |
+| 75% | 109 | −5.50 dB |
+| 50% | 68 | −17.50 dB |
+| 25% | 27 | −30.00 dB |
+| 10% | 0 | −38.00 dB |
+
+> **Corrected 2026-09-23 by
+> [Finding 047](047-where-the-volume-actually-goes.md) §2.** The storm *is*
+> gone — 7 retries and 929 log lines against 104,780 — but **the ratchet is
+> not**, and the reasoning above was wrong about why. 128 values against 128
+> does not make the round trip exact, because the two scales are different
+> *shapes*: bluealsa's AVRCP curve is ~10 dB per doubling and this control is
+> linear in dB. One in three round trips still drifts, and five in six
+> minutes jumped to 127. Matching the step counts addressed a symptom.
+
+**What this does not prove:** that the storm is gone. That needs George's
+phone and a drag, and the ratchet is only the *trigger* this side can
+remove — §10's retry-without-backoff on a failed push is still bluealsa's,
+and anything else that makes a push fail would start it again.
+
 ## What is left, and what it needs
 
 **Silent, but needs a phone connected** — no listening, just a stream:
@@ -380,3 +464,7 @@ needles moving with the Bluetooth mark under them.
 
 **Needs the amplifier, and George at it:** how a ramp sounds, and the boot
 level itself.
+
+**Needs his phone, and a drag:** whether the 0…127 dummy range of §12 ends
+the storm. The ratchet it removes is measured; the storm not recurring is
+not, and cannot be from this side.

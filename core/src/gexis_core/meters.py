@@ -13,8 +13,10 @@ in 0-100 already, so nothing is rescaled here.
 """
 from __future__ import annotations
 
+import configparser
 import errno
 import logging
+import math
 import os
 import stat
 import struct
@@ -94,9 +96,22 @@ def open_fifo(path: str) -> int | None:
 
 
 def read_latest_frame(fd: int, frame_size: int) -> bytes | None:
-    """The newest whole frame available, or None when nothing is queued."""
+    """The newest whole frame available, or None when nothing is queued.
+
+    **This takes the last whole frame of what one read returned, so it needs
+    the read to have begun on a frame boundary.** peppyalsa used to send the
+    spectrum one band at a time - thirty separate writes - which left the
+    FIFO a plain byte stream with nothing marking a frame, and a poll that
+    landed part-way through one spliced the tail of that frame onto the head
+    of the next ([Finding 052](../../../docs/findings/052-the-spectrum-pipe-had-no-frames-in-it.md)).
+    The image patches the plugin to write each frame in one call, which a
+    pipe guarantees is atomic below PIPE_BUF, so the boundary is real.
+
+    **The read is rounded down to a whole number of frames** so this side
+    cannot reintroduce the splice by truncating a record at the chunk limit.
+    """
     try:
-        data = os.read(fd, READ_CHUNK)
+        data = os.read(fd, (READ_CHUNK // frame_size) * frame_size)
     except BlockingIOError:
         return None
     except OSError as exc:
@@ -155,6 +170,123 @@ class FifoSource:
         self._meter_fd = self._spectrum_fd = None
 
 
+#: **100 meter units of spectrum are this many dB.** peppyalsa's spectrum is
+#: logarithmic (`logarithmic_amplitude 1`): it sends
+#: `100 * log10(magnitude) / 4.82`, and a magnitude of 65535 is 96.3 dB above
+#: one. So a unit is 0.963 dB, and attenuating the *spectrum* is a subtraction
+#: where attenuating the linear VU level is a multiplication. Reading the two
+#: as the same kind of number would put the bars in the wrong place at every
+#: volume but full.
+SPECTRUM_DB_FULL_SCALE = 20 * math.log10(65535)
+
+
+def read_attenuation(path: Path) -> float:
+    """The dB the device is cutting right now, from the file `volume.py`
+    leaves it in. 0 when there is none, or when it cannot be read: a meter
+    that shows the source is what this did before ADR-0057."""
+    try:
+        value = float(path.read_text().strip())
+    except (OSError, ValueError):
+        return 0.0
+    return value if value > 0 else 0.0
+
+
+#: **The dB a VU dial is marked for.** The faces in both packs run from −20
+#: to about +3, and 0 VU sits around three quarters along the arc. Twenty dB
+#: below that is the bottom stop.
+VU_SCALE_DB = 20.0
+
+#: **How much of the volume's travel the meters follow.**
+#:
+#: The volume curve spans 60 dB ([ADR-0054](../../../docs/decisions/0054-one-curve-and-the-renderers-own-number.md)),
+#: and George has ruled that out of scope for changing: *"For sure we will
+#: not narrow the volume curve though - that stays in place as is."* Applied
+#: to the needle one-for-one, that travel is three times the dial's own, so
+#: the needles reach the bottom stop at about 40% on the slider and the rest
+#: of the range shows nothing - *"a bit quiet on the bottom part"*.
+#:
+#: **So the volume's full travel is mapped onto the dial's full travel**
+#: rather than onto three of them. The meters still fall as the volume comes
+#: down, by a third of the dB, which keeps the needle alive across the whole
+#: slider. This is the one number that decides how far they fall; it is a
+#: candidate for ADR-0022's inventory and is not on it.
+METER_VOLUME_TRACKING = VU_SCALE_DB / 60.0
+
+
+def attenuate(levels: Levels, db: float, tracking: float = METER_VOLUME_TRACKING) -> Levels:
+    """`levels` as they would be after the device's own volume control.
+
+    **The meter tap is upstream of it.** `pcm.output` is a `type meter` over
+    the card, and the DAC attenuates in hardware afterwards, so the needles
+    and the bars show the recording rather than what is coming out of the
+    speakers ([ADR-0057](../../../docs/decisions/0057-the-meters-follow-the-volume.md)).
+    George, 2026-09-23: *"Shouldn't the vu meters and spectrum amplitude be
+    based on volume?"*
+
+    **`tracking` scales the dB before it is applied**, because the volume's
+    60 dB is three times what a VU dial is drawn for. See
+    `METER_VOLUME_TRACKING`. At 1.0 this is the physically exact thing and
+    the needles are at a tenth of scale by 40% on the slider.
+
+    **The two scales are different kinds of number.** peppyalsa's meter
+    level is linear amplitude, so this is a multiplication. Its spectrum is
+    logarithmic - `100·log10(magnitude)/4.82`, a unit being 0.963 dB - so it
+    is a subtraction. Treating them alike would put the bars in the wrong
+    place at every volume but full.
+
+    **Nothing to do at 0 dB**, which is also what fixed output looks like -
+    there the device is not attenuating, so the meters show the source and
+    no special case is needed to arrange it.
+    """
+    db = db * tracking
+    if db <= 0:
+        return levels
+    gain = 10 ** (-db / 20)
+    shift = db * 100 / SPECTRUM_DB_FULL_SCALE
+    return Levels(
+        max(0, round(levels.left * gain)),
+        max(0, round(levels.right * gain)),
+        tuple(max(0, round(b - shift)) for b in levels.bands),
+    )
+
+
+def read_declared_size(path: str) -> int | None:
+    """`size` from the spectrum engine's `[current]` section, or None."""
+    try:
+        parser = configparser.ConfigParser(strict=False)
+        parser.read(path)
+        return parser.getint("current", "size")
+    except (configparser.Error, ValueError, OSError):
+        return None
+
+
+def resample(bands: tuple[int, ...], want: int | None) -> tuple[int, ...]:
+    """`bands` folded down to `want` values, by taking each group's peak.
+
+    **Why this exists at all.** peppyalsa measures 30 bands; a skin draws as
+    many bars as its artwork has room for, which is 20 to 22
+    ([Finding 049](../../../docs/findings/049-the-spectrum-draws-more-bars-than-it-has-room-for.md)).
+    A FIFO carries bytes, not messages, and PeppySpectrum reads `4 * size`
+    of them at a time - so a 120-byte record read 88 bytes at a time makes
+    every bar show a different band from one refresh to the next
+    ([Finding 051](../../../docs/findings/051-the-spectrum-pipe-and-the-bars-must-agree.md)).
+    The frame that goes down the pipe has to be the frame the reader expects.
+
+    **The peak of each group, not the mean.** A bar on a spectrum display
+    stands for the loudest thing in its range; averaging would pull every
+    doubled band down and make the display quieter than the music.
+
+    **Never upward.** Asked for more values than there are measurements this
+    returns what it has: the pipe would then disagree with the reader again,
+    which is bad, but inventing bands is worse and it cannot happen - the
+    count is capped at the band count where it is computed.
+    """
+    have = len(bands)
+    if not want or want == have or want > have or want < 1:
+        return bands
+    return tuple(max(bands[(i * have) // want : ((i + 1) * have) // want]) for i in range(want))
+
+
 class FifoPassthrough:
     """ADR-0011's compatibility transport, and how our own PeppyMeter is fed:
     its `data.source type = pipe` points here, not at peppyalsa.
@@ -163,9 +295,17 @@ class FifoPassthrough:
     non-blocking and simply has nowhere to write until PeppyMeter starts.
     """
 
-    def __init__(self, meter_path: str, spectrum_path: str) -> None:
+    def __init__(
+        self,
+        meter_path: str,
+        spectrum_path: str,
+        spectrum_consumer_config: str | None = None,
+    ) -> None:
         self._paths = {"meter": meter_path, "spectrum": spectrum_path}
         self._fds: dict[str, int | None] = {"meter": None, "spectrum": None}
+        self._consumer_config = spectrum_consumer_config
+        self._config_seen: tuple[int, int] | None = None
+        self._declared: int | None = None
         for path in self._paths.values():
             self._make(path)
 
@@ -186,9 +326,27 @@ class FifoPassthrough:
                 return None  # no reader yet; normal
         return self._fds[which]
 
+    def declared_bands(self) -> int | None:
+        """How many bars the spectrum engine is about to draw, from its own
+        config file. Re-read only when the file changes - the driver rewrites
+        it on every skin change, and this is polled at the frame rate."""
+        if not self._consumer_config:
+            return None
+        try:
+            stat = os.stat(self._consumer_config)
+        except OSError:
+            return None
+        key = (stat.st_mtime_ns, stat.st_size)
+        if key != self._config_seen:
+            self._config_seen = key
+            self._declared = read_declared_size(self._consumer_config)
+            logger.info("meters: the spectrum engine declares %s bars", self._declared)
+        return self._declared
+
     def publish(self, levels: Levels) -> None:
         self._write("meter", struct.pack("<HH", levels.left, levels.right))
-        self._write("spectrum", struct.pack(f"<{len(levels.bands)}I", *levels.bands))
+        bands = resample(levels.bands, self.declared_bands())
+        self._write("spectrum", struct.pack(f"<{len(bands)}I", *bands))
 
     def _write(self, which: str, payload: bytes) -> None:
         fd = self._fd(which)

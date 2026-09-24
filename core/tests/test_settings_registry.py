@@ -11,6 +11,7 @@ from aiohttp.test_utils import TestClient, TestServer
 
 from gexis_core.settings import SettingsStore
 from gexis_core.settings_registry import (
+    Locked,
     ONLY_WHEN_ANY,
     SETTABLE,
     InvalidValue,
@@ -70,7 +71,19 @@ DESIGN_KEYS_NOT_YET_IN_THE_REGISTRY: set[str] = set()
 #:
 #: **This set only grows with George's agreement**, and both of these are
 #: his.
-DESIGN_KEYS_WE_DECLINED = {"weather_key", "idle_minmax"}
+#: `per_renderer_volume` joined them on 2026-09-23, with the machinery
+#: behind it: since ADR-0054 §5 a renderer is *asked* where it is when it
+#: takes the device, so a second copy of what the renderer already
+#: remembers decides nothing. Measured before deleting: 12 acquisitions,
+#: 12 answers, 0 fallbacks. George: "delete them".
+#: `boot_volume` joined them the same day, with the unit behind it.
+#: Measured over two boots: the converter comes up at -20 dB of its own
+#: accord, nothing carries a level across a boot, and nothing plays before
+#: a renderer acquires - at which point ADR-0054 §5 sets the level from the
+#: renderer itself (Finding 047 §10). ADR-0018's boot level is amended out.
+DESIGN_KEYS_WE_DECLINED = {
+    "weather_key", "idle_minmax", "per_renderer_volume", "boot_volume",
+}
 
 
 #: Not a row. The Wi-Fi password sheet builds its key at runtime from the
@@ -103,15 +116,24 @@ def test_registry_keys_are_the_designs_keys_apart_from_recorded_deviations():
     # no row for which ones, for how often the picture changes, or for how
     # bright it is.
     assert ours - design_keys == {
-        "api_loopback", "backup", "boot_default_scope", "brightness",
+        "api_loopback", "backup", "brightness",
         "confidence", "factory_reset", "idle_close", "image_build",
         "lms_player", "log_level", "plugins", "power", "release_ladder",
-        "restore_floor", "seek_reanchor", "spotify_name", "theme",
-        # ADR-0052 §1, earned by measurement: the level rose 53 dB thirteen
-        # seconds after a boot with nobody touching it (Finding 045 §5).
-        "restore_ceiling",
+        "seek_reanchor", "spotify_name", "theme",
+        # ADR-0055, 2026-09-23: the design has no output picker, because
+        # the design did not know the device has four playback outputs and
+        # that two of them cannot be turned down.
+        "output_device",
         "background_brightness", "background_interval", "idle_clock",
         "time_display", "updates", "volume_managed", "wallpaper_topics",
+        # ADR-0058, 2026-09-23: George asked for the three numbers that decide
+        # how the visualisation *moves*. The design has no rows for them
+        # because until this week nobody knew which knobs there were.
+        "spectrum_smoothing", "meter_fall", "meter_smoothing",
+        # ADR-0059, 2026-09-24: the two buttons George asked for and the row
+        # that reports them. The design has no rows for these because the
+        # design assumed LMS's pictures were the pictures.
+        "sweep_portraits", "sweep_covers", "sweep_status",
     }
 
 
@@ -442,9 +464,7 @@ def test_the_device_name_warning_says_what_this_device_does():
 def test_the_shipped_registry_hides_twenty_rows_and_shows_the_rest():
     rows = _rows()
     kept = [r for r in rows if r.get("surfaced") is False]
-    # 21 since `restore_ceiling` (ADR-0052 §1) - inventoried like its
-    # neighbour `restore_floor`, and not a row anyone should have to find.
-    assert len(kept) == 21, "ADR-0022's amendment: inventoried, not surfaced"
+    assert len(kept) == 18, "ADR-0022's amendment: inventoried, not surfaced"
     # Every one of them is still served by the API.
     assert all(r.get("key") for r in kept)
     # 54 at the start of 9d, plus the two rows the design has and the plan
@@ -456,10 +476,20 @@ def test_the_shipped_registry_hides_twenty_rows_and_shows_the_rest():
     # `home_strip_count`. Then `idle_clock`, asked for on 2026-09-22, and
     # `skin`, the picker's own row, which the same day's drop drew
     # (ADR-0051 §4). Less `idle_minmax`, which George removed the same day.
-    # Plus `restore_ceiling`, which Finding 045 §5 earned: the level rose
-    # 53 dB after a boot with nobody touching it (ADR-0052 §1).
-    assert len(rows) == 72
-    assert len(rows) - len(kept) == 51
+    # `restore_ceiling` was added and withdrawn the same day without ever
+    # being surfaced (ADR-0052's amendment), so it leaves no trace here.
+    # Less `restore_floor` and `boot_default_scope`, which George ruled out
+    # of scope on 2026-09-23 ("The other 2 you flagged - not needed"):
+    # both were [?] rows, decisions owed rather than behaviour missing, and
+    # the behaviour behind them stays hardcoded. Less `per_renderer_volume`
+    # too, deleted with the memory it switched on and off, and
+    # `boot_volume`, deleted with the unit that read it. Plus
+    # `output_device`, ADR-0055's own. Plus ADR-0058's three: the numbers
+    # that decide how the visualisation moves, which George asked for by
+    # name on 2026-09-23. Plus ADR-0059's two buttons and their progress
+    # row, on 2026-09-24.
+    assert len(rows) == 74
+    assert len(rows) - len(kept) == 56
 
 
 def test_the_clock_can_be_turned_off_without_taking_the_screen_with_it():
@@ -687,3 +717,94 @@ def test_a_settings_with_no_corpus_resolver_offers_no_skins(store):
 def test_an_injected_resolver_has_to_name_a_source_that_exists(store):
     with pytest.raises(ValueError):
         Settings(store, options={"skin_korpus": list})
+
+
+def _row(settings, key="output_mode"):
+    return next(r for g in settings.to_json() for r in g["rows"] if r.get("key") == key)
+
+
+def test_an_unavailable_option_is_greyed_not_hidden(store):
+    """**ADR-0044's `unavailable`**, George 2026-09-23: *"while on outputs
+    that do not support it, variable should be greyed out. I wouldn't hide
+    this time as settings is different than the now playing screen when it
+    comes to capabilities."*
+
+    The opposite of the now-playing rule, on purpose: a screen for changing
+    things should say what cannot be changed and why."""
+    settings = Settings(store, wired={"output_mode": None})
+    settings.set("output_mode", "Variable")
+
+    settings.restrict("output_mode", {"Variable": "HDMI 1 has no volume control."})
+
+    row = _row(settings)
+    assert row["options"] == ["Variable", "Fixed"]  # both still offered
+    assert row["unavailable"] == {"Variable": "HDMI 1 has no volume control."}
+    assert row["value"] == "Fixed"  # what is in force
+    with pytest.raises(Locked):
+        settings.set("output_mode", "Variable")
+
+
+def test_the_stored_choice_is_untouched_and_comes_back(store):
+    """*"When changing back to dac set the previously selected option."*
+    The restriction sits **over** the store and never replaces it."""
+    settings = Settings(store, wired={"output_mode": None})
+    settings.set("output_mode", "Variable")
+    settings.restrict("output_mode", {"Variable": "no volume control here"})
+    assert settings.value("output_mode") == "Fixed"
+
+    settings.restrict("output_mode", {})
+
+    assert settings.value("output_mode") == "Variable"
+
+
+def test_with_no_previous_choice_the_rows_own_default_answers(store):
+    """*"If there is no previous selection default to variable."*"""
+    settings = Settings(store, wired={"output_mode": None})
+    settings.restrict("output_mode", {"Variable": "no volume control here"})
+    settings.restrict("output_mode", {})
+
+    assert settings.value("output_mode") == "Variable"
+
+
+def test_a_choice_a_user_had_already_made_is_still_settable(store):
+    """Only the greyed option is refused, not the row."""
+    settings = Settings(store, wired={"output_mode": None})
+    settings.restrict("output_mode", {"Variable": "no volume control here"})
+
+    assert settings.set("output_mode", "Fixed") == "Fixed"
+
+
+def test_a_row_with_nothing_greyed_carries_no_field(store):
+    settings = Settings(store, wired={"output_mode": None})
+    assert "unavailable" not in _row(settings)
+
+
+def test_a_recommended_value_in_a_note_is_that_row_s_own_default():
+    """**George, 2026-09-23:** *"Can you add in text the current values as
+    recommended? This way if user forgets where he started from, he can
+    always find back."*
+
+    The note is prose and the default is a field, which is two places for
+    one fact ([LESSONS](../../docs/LESSONS.md) case 20). This is what stops
+    them drifting: change the default and the note has to move with it.
+    """
+    import re
+
+    checked = 0
+    for row in _rows():
+        note = row.get("note") or ""
+        match = re.search(r"Recommended:\s*([0-9]+)", note)
+        if not match:
+            continue
+        checked += 1
+        assert row.get("default") is not None, f"{row['key']} recommends a value it has no default for"
+        assert int(match.group(1)) == row["default"], (
+            f"{row['key']}: the note recommends {match.group(1)}, "
+            f"the default is {row['default']}"
+        )
+        unit = row.get("unit")
+        if unit:
+            assert f"{row['default']}{'' if unit == '%' else ' '}{unit}" in note, (
+                f"{row['key']}: the recommendation should carry its unit"
+            )
+    assert checked == 3, f"expected ADR-0058's three rows to recommend a value, found {checked}"

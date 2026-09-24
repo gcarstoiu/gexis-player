@@ -8,11 +8,12 @@
 <script>
   import SourceMark from '../lib/SourceMark.svelte';
   import VolumeIcon from '../lib/VolumeIcon.svelte';
+  import LockIcon from '../lib/LockIcon.svelte';
   import { retryEnrichment, trackEnrichment } from '../lib/enrichment.js';
   import { artistsCached, foldedName, loadArtistGenres } from '../lib/library.js';
   import QueueRail from './QueueRail.svelte';
 
-  import { sendTransport } from '../lib/state.js';
+  import { sendTransport, fixedOutput, meters } from '../lib/state.js';
   import { playhead, mmss } from '../lib/playhead.svelte.js';
   import { playToggle } from '../lib/playToggle.svelte.js';
 
@@ -585,11 +586,17 @@
           <button class="btn btn--home" type="button" aria-label="Home" onclick={onhome}>
             <span class="i-tiles"><i></i><i></i><i></i><i></i></span>
           </button>
-          <button class="btn" type="button" aria-label="Visualization" onclick={onvisualisation}>
-            <span class="i-meter">
-              <i style="height:12px"></i><i style="height:22px"></i><i style="height:16px"></i><i style="height:8px"></i>
-            </span>
-          </button>
+          {#if $meters}
+            <!-- ADR-0055 §6: gone, not disabled, on an output that cannot
+                 feed it - the same rule ADR-0046 sets for the volume
+                 slider. A button that opens a dead screen is worse than no
+                 button. -->
+            <button class="btn" type="button" aria-label="Visualization" onclick={onvisualisation}>
+              <span class="i-meter">
+                <i style="height:12px"></i><i style="height:22px"></i><i style="height:16px"></i><i style="height:8px"></i>
+              </span>
+            </button>
+          {/if}
         </div>
 
         <div class="bar__mid">
@@ -622,8 +629,20 @@
         </div>
 
         <div class="bar__right">
-          <button class="btn" type="button" aria-label="Volume" disabled={!volume} onclick={onvolume}>
-            <VolumeIcon percent={volume?.percent ?? null} muted={!!volume?.muted} />
+          <button
+            class="btn"
+            class:is-fixed={$fixedOutput}
+            type="button"
+            aria-label={$fixedOutput ? 'Fixed output' : 'Volume'}
+            disabled={!$fixedOutput && !volume}
+            onclick={onvolume}
+          >
+            {#if $fixedOutput}
+              <!-- ADR-0046: the state is legible without opening anything. -->
+              <LockIcon />
+            {:else}
+              <VolumeIcon percent={volume?.percent ?? null} muted={!!volume?.muted} />
+            {/if}
           </button>
           {#if lmsOnly}
             <button class="btn btn--queue" type="button" aria-label="Queue" onclick={() => (queueOpen = true)}>

@@ -7,15 +7,47 @@ card id string every time.
 """
 from __future__ import annotations
 
+import logging
 import re
 import subprocess
 from pathlib import Path
 
+logger = logging.getLogger("gexis_core.alsa")
+
+#: The card as shipped. **Not "the card" any more** - since
+#: [ADR-0055](../../../docs/decisions/0055-which-output-the-device-plays-to.md)
+#: the user can send the audio somewhere else, and arbitration has to ask
+#: about wherever that is.
 CARD_ID = "sndrpihifiberry"
 
+#: The card the device is actually playing to. Every function below
+#: defaults to it rather than to `CARD_ID`.
+#:
+#: **Measured before it was fixed** (Finding 048 §5): with the output on
+#: the headphone jack and something holding it, `device_busy()` answered
+#: `False`, because it was looking at the HiFiBerry's node. The release
+#: ladder would have read "already released" the instant a polite stop was
+#: sent and handed the device over while the outgoing renderer still had
+#: it. George, 2026-09-23: *"Any output holding the device follows the same
+#: arbitration as the DAC. Needs to be fixed."*
+_card = CARD_ID
 
-def resolve_card_number(card_id: str = CARD_ID, cards_file: Path | None = None) -> int:
+
+def set_card(card_id: str) -> None:
+    """Point arbitration at the output the device is playing to."""
+    global _card
+    if card_id and card_id != _card:
+        logger.info("alsa: arbitration now watches %s", card_id)
+        _card = card_id
+
+
+def card() -> str:
+    return _card
+
+
+def resolve_card_number(card_id: str | None = None, cards_file: Path | None = None) -> int:
     """Resolve e.g. "sndrpihifiberry" to its current ALSA card number."""
+    card_id = card_id or _card
     path = cards_file or Path("/proc/asound/cards")
     for line in path.read_text().splitlines():
         # /proc/asound/cards pads the bracketed id to a fixed 15-char
@@ -32,12 +64,12 @@ def resolve_card_number(card_id: str = CARD_ID, cards_file: Path | None = None) 
     raise RuntimeError(f"ALSA card {card_id!r} not found in {path}")
 
 
-def playback_pcm_node(card_id: str = CARD_ID) -> Path:
+def playback_pcm_node(card_id: str | None = None) -> Path:
     """The kernel device node for the card's first playback PCM."""
     return Path(f"/dev/snd/pcmC{resolve_card_number(card_id)}D0p")
 
 
-def device_busy(card_id: str = CARD_ID) -> bool:
+def device_busy(card_id: str | None = None) -> bool:
     """Whether anything currently holds the playback PCM.
 
     Used by the timeout ladder (criterion 4) to decide whether a "polite
@@ -74,7 +106,7 @@ def _unit_main_pid(unit: str) -> int | None:
     return pid or None
 
 
-def device_held_by(unit: str, card_id: str = CARD_ID) -> bool:
+def device_held_by(unit: str, card_id: str | None = None) -> bool:
     """Whether `unit`'s own process specifically still holds the playback
     PCM - not just whether *something* does.
 

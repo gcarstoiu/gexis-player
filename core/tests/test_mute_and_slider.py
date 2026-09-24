@@ -14,15 +14,25 @@ def test_bottom_of_travel_is_silence():
     assert raw_to_slider_percent(0) == 0
 
 
-def test_travel_is_linear_in_db_over_minus_45_to_0():
+def test_travel_is_the_shared_cubic_curve_and_zero_is_silence():
+    """**ADR-0054 §3/§4.** The panel's own window was -45..0 dB with its
+    floor a level rather than silence; it is now the same curve every
+    renderer gets - cubic over 60 dB - and 0% is silence.
+
+    George, 2026-09-23: *"Even with volume at 0 on any renderer there is
+    still sound coming. Faint but still there"*, then *"the bottom half of
+    the volume range is quite quiet."*"""
     assert raw_to_db(slider_percent_to_raw(100)) == 0.0
-    assert raw_to_db(slider_percent_to_raw(50)) == -22.5
-    assert raw_to_db(slider_percent_to_raw(1)) == pytest.approx(-44.55, abs=0.5)
+    assert raw_to_db(slider_percent_to_raw(50)) == -15.5
+    assert raw_to_db(slider_percent_to_raw(1)) == pytest.approx(-58.0, abs=0.5)
+    assert slider_percent_to_raw(0) == 0
 
 
 @pytest.mark.parametrize("percent", range(0, 101))
-def test_every_slider_position_round_trips_within_one_step(percent):
-    # 45dB is 90 hardware steps for 101 positions, so some positions share a step.
+def test_every_slider_position_round_trips_within_one(percent):
+    """The cubic taper is finer than the DAC's 0.5 dB steps above about
+    44%, so some neighbouring positions share a level (volume.py's note on
+    the taper). Below that every position has one of its own."""
     assert abs(raw_to_slider_percent(slider_percent_to_raw(percent)) - percent) <= 1
 
 

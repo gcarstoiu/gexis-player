@@ -123,6 +123,15 @@ class Capabilities:
     #: DUMMY_CARD_BLUETOOTH are the same values, referenced here so the
     #: two never drift apart).
     dummy_mixer_card: str | None = None
+    #: **ADR-0054 §1.** This renderer's level is read and written over
+    #: bluealsa's own D-Bus API rather than through any ALSA control.
+    #:
+    #: True for Bluetooth, and it replaced a mixer round trip that was
+    #: measured wrong one time in three and that pushed a stale mixer value
+    #: at the phone whenever a stream started (Finding 047 §2). It still has
+    #: `dummy_mixer_card` because `bluealsa-aplay` is given one; nothing
+    #: writes it now, and nothing reads it.
+    volume_over_bluealsa: bool = False
     #: Transport commands accepted through our own control channel right
     #: now - deliberately empty on all three built-ins today. No adapter
     #: currently exposes a way to send play/pause/seek/etc on a user's
