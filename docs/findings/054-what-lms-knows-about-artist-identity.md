@@ -251,6 +251,42 @@ twenty-five minutes makes the third reasonable: tag the files and every
 panel benefits; share one panel's `enrichment.db` with the others; or let
 each panel do its own sweep once.
 
+## 11. What the two sweeps actually did, and what the matcher was worth
+
+Run end to end on George's library, 2026-09-24.
+
+**Portraits: 917 of 917 in seven minutes, 525 found.** 759 distinct answers
+stored, 492 with a picture — so **about 43% keep LMS's photo**. That is
+fanart's coverage of this library, not a fault, and the grid will look
+mixed.
+
+**Covers, first run:** 2,114 of 4,567 albums (46%) got one, 492 (11%) were
+asked about and fanart had none, and **1,961 (43%) never matched a release
+group at all**. That last number was the matcher, not fanart: LMS shows what
+the tagger wrote — `12 x 5 (2006, Japan Mini LP)`, `[1997] MTV Unplugged
+[EP]`, `57th & 9th (Deluxe Edition)` — where MusicBrainz's release group is
+`12 X 5`, `MTV Unplugged`, `57th & 9th`.
+
+**Covers, after stripping brackets and edition phrases for the comparison:**
+
+| | first run | after |
+| --- | --- | --- |
+| fanart cover | 2,114 (46%) | **2,289 (50%)** |
+| asked, fanart had none | 492 (11%) | 1,793 (39%) |
+| never matched a release group | 1,961 (43%) | **485 (11%)** |
+| rows stored | 16,391 | **4,334** |
+
+**The matcher did its job and the pictures barely moved.** Unmatched fell
+from 43% to 11%, and only four points of that turned into covers — the rest
+matched a release group fanart has no cover for. So **fanart's album
+coverage for this library is about 50%**, which the first run's 46% had
+looked like a ceiling of the matcher rather than of fanart.
+
+**And the store stopped holding a catalogue.** The first run kept a cover
+for every release group those 917 artists ever made — 16,391 rows for a
+4,567-album library, ~12,000 of them never read. It now walks the albums
+this library has and looks each one up in theirs: one row per album owned.
+
 ## What this does not settle
 
 - **Nothing was looked at.** No portrait was compared with LMS's for

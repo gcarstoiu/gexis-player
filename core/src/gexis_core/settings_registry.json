@@ -801,13 +801,11 @@
         "type": "number",
         "label": "Confidence threshold",
         "marks": "R",
-        "note": "How sure MusicBrainz has to be that it found the right artist. Below it the artist keeps LMS's picture. It gates every enrichment lookup, not only pictures.",
+        "note": "Recommended: 90%. How sure MusicBrainz has to be that it found the right artist or release. Below it the picture is not taken and LMS's is kept. It gates every enrichment lookup, not only pictures — a confidently wrong biography is worse than a blank panel.",
         "min": 0,
-        "max": 1,
-        "unit": "",
-        "step": 0.05,
-        "default": null,
-        "surfaced": false
+        "max": 100,
+        "unit": "%",
+        "default": 90
       }
     ]
   },

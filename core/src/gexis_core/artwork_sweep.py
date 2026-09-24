@@ -24,6 +24,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import re
 import time
 from dataclasses import dataclass, replace
 
@@ -54,6 +55,37 @@ ARTIST_KINDS = ("artistthumb", "musicbanner")
 
 #: fanart's album images.
 ALBUM_KINDS = ("albumcover",)
+
+
+#: Everything an edition adds to a title. LMS shows what the tagger wrote -
+#: `12 x 5 (2006, Japan Mini LP)`, `[1997] MTV Unplugged [EP]`,
+#: `57th & 9th (Deluxe Edition)` - and MusicBrainz's release group is called
+#: `12 X 5`, `MTV Unplugged`, `57th & 9th`. Comparing them as they stand
+#: matched nothing for **43% of George's albums** (measured 2026-09-24), and
+#: that was the matcher falling short rather than fanart having no cover.
+_BRACKETS = re.compile(r"[\(\[\{][^\)\]\}]*[\)\]\}]")
+
+#: Words an edition is usually announced with, when there are no brackets to
+#: strip - `Abbey Road Remastered`, `Nevermind Deluxe Edition`.
+_EDITION = re.compile(
+    r"\b(deluxe|expanded|remaster(ed)?|anniversary|edition|version|reissue|"
+    r"mono|stereo|bonus|disc \d+|cd \d+|vol(ume)? \d+)\b.*$"
+)
+
+
+def match_title(title: str) -> str:
+    """A title reduced to what two catalogues can agree on.
+
+    Brackets first, then a trailing edition phrase, then the ordinary fold.
+    **Only for matching** - what is stored and looked up is still the folded
+    title as the library has it, so the panel finds it by the name it knows.
+    """
+    folded = fold(_BRACKETS.sub(" ", title or "")) or fold(title)
+    # **Never empty.** A title that is nothing *but* an edition phrase -
+    # `(Deluxe Edition)` - would reduce to "", and an empty key matches every
+    # other album that reduced to "" as well. Each step falls back to the one
+    # before it rather than to nothing.
+    return fold(_EDITION.sub("", folded)) or folded
 
 
 @dataclass(frozen=True)
@@ -170,7 +202,7 @@ class ArtworkSweep:
             found = 0
             for index, (artist_id, name) in enumerate(artists, start=1):
                 try:
-                    hit = await self._one(kind, name)
+                    hit = await self._one(kind, artist_id, name)
                 except asyncio.CancelledError:
                     raise
                 except Exception as exc:  # one bad artist must not end the run
@@ -198,7 +230,7 @@ class ArtworkSweep:
         """
         return await self._library.album_artists()
 
-    async def _one(self, kind: str, name: str) -> bool:
+    async def _one(self, kind: str, artist_id: int, name: str) -> bool:
         """One artist. True when something was stored for them."""
         folded = fold(name)
         if not folded:
@@ -225,12 +257,25 @@ class ArtworkSweep:
             self._remember(ARTIST_NAMESPACE, folded, url)
             return url is not None
 
+        mine = await self._library.album_titles(artist_id)
+        if not mine:
+            return False
         groups = await self._release_groups(mbid)
         albums = art.get("albums") or {}
-        stored = 0
+        # **Their catalogue, indexed the way ours can be matched against it.**
+        by_title: dict[str, str] = {}
         for group_id, title in groups.items():
-            entry = albums.get(group_id)
-            url = self._pick(entry or {}, ALBUM_KINDS)
+            key = match_title(title)
+            if key:
+                by_title.setdefault(key, group_id)
+
+        stored = 0
+        for title in mine:
+            group_id = by_title.get(match_title(title))
+            url = self._pick(albums.get(group_id) or {}, ALBUM_KINDS) if group_id else None
+            # **Stored under the title the library has**, not the release
+            # group's, because that is the key the panel looks up. `None` is
+            # stored too: "asked, fanart had none" is an answer.
             self._remember(ALBUM_NAMESPACE, f"{folded}\x1f{fold(title)}", url)
             stored += 1 if url else 0
         return stored > 0

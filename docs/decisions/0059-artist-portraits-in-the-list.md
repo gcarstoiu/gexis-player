@@ -154,6 +154,35 @@ seven hours album art was first estimated at alone.
   write them. A household that wants this shared tags its files with Picard;
   otherwise each panel presses the button once, which is now half an hour.
 
+### Built 2026-09-24, and what two corrections cost
+
+**Measured on George's own library** (Finding 054 §11): portraits **917 of
+917 in seven minutes, 525 found**; covers **2,289 of 4,567 albums (50%)**.
+About 43% of artists and half the albums keep LMS's picture, which is
+fanart's coverage rather than a fault.
+
+Two things the first run got wrong, both found by measuring the result
+rather than the run:
+
+- **The titles did not match.** 43% of albums matched no release group,
+  because LMS shows what the tagger wrote and MusicBrainz shows its own
+  title. `match_title` strips brackets and trailing edition phrases **for
+  the comparison only** — what is stored is still the folded title as the
+  library has it, because that is the key the panel looks up. Unmatched fell
+  to 11%; covers rose four points, so the rest of the gap is fanart's.
+- **The store held a catalogue, not a library.** Keying on every release
+  group those artists ever made put 16,391 rows in the store for a
+  4,567-album library. It now walks this library's albums and looks each one
+  up in theirs: **4,334 rows**, one per album owned.
+
+**And the confidence threshold was invisible.** It carried ADR-0022's
+`surfaced: false`, so the API published it and the panel filtered it out —
+George: *"I am not seeing the confidence setting in the enrichment menu."*
+It is surfaced now, **and it was also on the wrong scale**: 0–1 with a 0.05
+step, against the 0–100 that MusicBrainz scores and `CONFIDENCE_MIN` use, so
+every setting would have collapsed to 0 or 1 and the gate would have meant
+nothing. 0–100%, default 90.
+
 ## Also in 9k: the rest of Enrichment
 
 George: *"wire the rest of the enrichment entries which are not wired as of

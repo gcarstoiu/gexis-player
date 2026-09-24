@@ -464,7 +464,10 @@ def test_the_device_name_warning_says_what_this_device_does():
 def test_the_shipped_registry_hides_twenty_rows_and_shows_the_rest():
     rows = _rows()
     kept = [r for r in rows if r.get("surfaced") is False]
-    assert len(kept) == 18, "ADR-0022's amendment: inventoried, not surfaced"
+    # 17 since 2026-09-24: George asked to see the confidence threshold,
+    # which ADR-0059 now gates the artwork sweep on ("I am not seeing the
+    # confidence setting in the enrichment menu").
+    assert len(kept) == 17, "ADR-0022's amendment: inventoried, not surfaced"
     # Every one of them is still served by the API.
     assert all(r.get("key") for r in kept)
     # 54 at the start of 9d, plus the two rows the design has and the plan
@@ -489,7 +492,7 @@ def test_the_shipped_registry_hides_twenty_rows_and_shows_the_rest():
     # name on 2026-09-23. Plus ADR-0059's two buttons and their progress
     # row, on 2026-09-24.
     assert len(rows) == 74
-    assert len(rows) - len(kept) == 56
+    assert len(rows) - len(kept) == 57
 
 
 def test_the_clock_can_be_turned_off_without_taking_the_screen_with_it():
@@ -807,4 +810,7 @@ def test_a_recommended_value_in_a_note_is_that_row_s_own_default():
             assert f"{row['default']}{'' if unit == '%' else ' '}{unit}" in note, (
                 f"{row['key']}: the recommendation should carry its unit"
             )
-    assert checked == 3, f"expected ADR-0058's three rows to recommend a value, found {checked}"
+    assert checked == 4, (
+        "expected ADR-0058's three rows plus the confidence threshold to "
+        f"recommend a value, found {checked}"
+    )

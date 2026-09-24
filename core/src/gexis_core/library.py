@@ -329,6 +329,20 @@ class LmsLibrary:
             self._names_scan = self._lastscan
         return self._names.get(artist_id)
 
+    async def album_titles(self, artist_id: int) -> list[str]:
+        """The titles this library holds for one album artist.
+
+        **The sweep stores a cover per album we own, not per release group
+        MusicBrainz knows** (ADR-0059, corrected 2026-09-24): keying on their
+        catalogue put 16,391 rows in the store for a 4,567-album library, and
+        none of the extras is ever read.
+        """
+        result = await self._rpc(
+            ["albums", 0, 2000, f"artist_id:{artist_id}", "role_id:ALBUMARTIST"]
+        )
+        loop = (result or {}).get("albums_loop") or []
+        return [row.get("album") or "" for row in loop if row.get("album")]
+
     async def album_artists(self) -> list[tuple[int, str]]:
         """Every album artist, `(id, name)`, for the artwork sweep.
 

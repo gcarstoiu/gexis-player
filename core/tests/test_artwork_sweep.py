@@ -14,6 +14,7 @@ from gexis_core.artwork_sweep import (
     ARTIST_NAMESPACE,
     ArtworkSweep,
     Progress,
+    match_title,
     remembered,
 )
 
@@ -33,11 +34,15 @@ class FakeStore:
 
 
 class FakeLibrary:
-    def __init__(self, artists):
+    def __init__(self, artists, albums=None):
         self._artists = artists
+        self._albums = albums or {}
 
     async def album_artists(self):
         return self._artists
+
+    async def album_titles(self, artist_id):
+        return self._albums.get(artist_id, [])
 
 
 class FakeIdentity:
@@ -65,7 +70,10 @@ class FakeHttp:
 
 def build(**kw):
     store = kw.pop("store", FakeStore())
-    library = kw.pop("library", FakeLibrary([(1, "Isaac Hayes")]))
+    library = kw.pop("library", FakeLibrary(
+        [(1, "Isaac Hayes")],
+        {1: ["Hot Buttered Soul", "Black Moses (Deluxe Edition)", "Nothing Fanart Has"]},
+    ))
     identity = kw.pop("identity", FakeIdentity({"isaac hayes": ("MB1", 100)}))
     http = kw.pop("http", FakeHttp({}))
     sweep = ArtworkSweep(
@@ -168,9 +176,17 @@ class TestCovers:
         }))
         await run(sweep, "covers")
         assert store.rows[(ALBUM_NAMESPACE, "isaac hayes\x1fhot buttered soul")] == "https://fan/one.jpg"
-        assert store.rows[(ALBUM_NAMESPACE, "isaac hayes\x1fblack moses")] == "https://fan/two.jpg"
+        # **The edition suffix is stripped for matching and kept for the key**:
+        # the panel looks it up by the name the library has.
+        assert store.rows[
+            (ALBUM_NAMESPACE, "isaac hayes\x1fblack moses deluxe edition")
+        ] == "https://fan/two.jpg"
         # asked for, and fanart had none: stored as nothing, not skipped
         assert store.rows[(ALBUM_NAMESPACE, "isaac hayes\x1fnothing fanart has")] is None
+        # **Only what this library holds.** Their catalogue had a release
+        # group we do not own; storing it put 16,391 rows in a 4,567-album
+        # store and none of the extras was ever read.
+        assert len(store.rows) == 3
         # one fanart call and one MusicBrainz lookup, for three albums
         assert sum("fanart" in c for c in http.calls) == 1
         assert sum("musicbrainz" in c for c in http.calls) == 1
@@ -214,3 +230,31 @@ class TestWhatTheCallersRead:
         assert remembered(store, ARTIST_NAMESPACE, "b") is None      # asked, nothing
         assert remembered(store, ARTIST_NAMESPACE, "c") is False     # never asked
         assert remembered(None, ARTIST_NAMESPACE, "a") is False
+
+
+class TestMatchingTwoCatalogues:
+    """**43% of George's albums matched nothing** before this (measured
+    2026-09-24), and it was the matcher rather than fanart's coverage: LMS
+    shows what the tagger wrote and MusicBrainz shows its own title."""
+
+    @pytest.mark.parametrize("theirs, ours", [
+        ("12 X 5", "12 x 5 (2006, Japan Mini LP)"),
+        ("MTV Unplugged", "[1997] MTV Unplugged [EP]"),
+        ("57th & 9th", "57th & 9th (Deluxe Edition)"),
+        ("Abbey Road", "Abbey Road (Remastered)"),
+        ("Nevermind", "Nevermind - Deluxe Edition"),
+        ("OK Computer", "OK Computer"),
+    ])
+    def test_an_edition_matches_the_release_group(self, theirs, ours):
+        assert match_title(theirs) == match_title(ours)
+
+    def test_it_does_not_collapse_different_albums(self):
+        """Stripping too much would hand one cover to two records."""
+        assert match_title("Kid A") != match_title("Amnesiac")
+        assert match_title("Vol. 1") != match_title("Greatest Hits")
+
+    def test_a_title_that_is_only_an_edition_word_survives(self):
+        """`fold` of nothing is nothing, and a key of "" would match every
+        other album with an empty key."""
+        assert match_title("Remastered") == "remastered"
+        assert match_title("(Deluxe Edition)") == "deluxe edition"
