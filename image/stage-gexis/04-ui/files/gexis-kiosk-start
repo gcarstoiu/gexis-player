@@ -24,6 +24,16 @@
 #                             Chromium quietly fetching components.
 #   --check-for-update-interval
 #                             same reasoning, for the updater nag.
+#   --disable-lcd-text        ADR-0061. Chromium keeps a scroll on the main
+#                             thread rather than lose subpixel text on a
+#                             scroller that is not opaque, and every screen
+#                             here draws over a translucent veil - so every
+#                             list paid, and a main-thread scroll re-rasters
+#                             what it damages every frame. Without it the
+#                             artist grid draws 25 frames a second and the
+#                             queue rail 39; with it, both draw 57-58 and
+#                             drop none (Finding 062). It is not clear the
+#                             panel was getting subpixel text anyway.
 #   --overscroll-history-navigation=0, --disable-pinch
 #                             this is a touchscreen: a stray swipe must not
 #                             navigate the SPA away, and pinch-zoom on a
@@ -88,6 +98,7 @@ exec chromium \
 	--disable-component-update \
 	--check-for-update-interval=31536000 \
 	--overscroll-history-navigation=0 \
+	--disable-lcd-text \
 	--disable-pinch \
 	--autoplay-policy=no-user-gesture-required \
 	--user-data-dir="${GEXIS_KIOSK_PROFILE}" \

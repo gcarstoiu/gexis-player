@@ -7,6 +7,7 @@ from gexis_core.model import BLANK_METADATA, PlaybackState, TrackMetadata
 def test_blank_metadata_is_all_none():
     assert TrackMetadata() == BLANK_METADATA
     assert BLANK_METADATA.to_json() == {
+        "track_id": None,
         "title": None,
         "artist": None,
         "album": None,

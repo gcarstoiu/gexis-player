@@ -43,9 +43,19 @@ logger = logging.getLogger("gexis_core.adapters.lms")
 
 UNIT_NAME = "squeezelite.service"
 
-#: How much of the queue the rail reads. The design shows what is coming
-#: up, not a whole 500-track load.
+#: How much of the queue the rail reads **when LMS will not say**. The
+#: server has the answer and it is a setting its owner already made:
+#: `maxPlaylistLength` (Settings -> Advanced -> Performance), 2500 on
+#: George's. Following it is ADR-0063 - a queue longer than this window was
+#: not merely cut off on the rail, it broke removing a track, because the
+#: window refilled from beyond itself and the row could not see itself
+#: leave.
 QUEUE_LIMIT = 100
+
+#: Past this, reading the whole queue costs more than a rail can show. LMS
+#: allows `maxPlaylistLength` to be set to anything, including 0 for no
+#: limit at all, and a queue read happens on every queue change.
+QUEUE_CEILING = 2500
 
 #: The size asked of LMS for the *current* track's artwork. The design's now
 #: playing well is 500x500 (`design/data-contract.md`) and the Peppy screen
@@ -237,6 +247,8 @@ class LmsAdapter(Adapter):
         self._on_queue = None
         #: (playlist_timestamp, current index) when the queue was last read.
         self._queue_stamp: tuple | None = None
+        #: LMS's `maxPlaylistLength`, read once per run (ADR-0063).
+        self._max_queue: int | None = None
         self._artist_id: int | None = None
         self._album_id: int | None = None
         self._on_availability: Callable[[bool], None] | None = None
@@ -296,7 +308,9 @@ class LmsAdapter(Adapter):
         self._queue_stamp = stamp
         try:
             queued = await self._rpc(
-                session, self._player_id, ["status", 0, QUEUE_LIMIT, f"tags:{METADATA_TAGS}"]
+                session,
+                self._player_id,
+                ["status", 0, await self._queue_limit(session), f"tags:{METADATA_TAGS}"],
             )
         except aiohttp.ClientError as exc:
             logger.warning("lms: could not read the queue: %s", exc)
@@ -304,6 +318,9 @@ class LmsAdapter(Adapter):
         queue = queued.get("result", {})
         items = tuple(
             TrackMetadata(
+                # LMS's own track id for the row, so the rail can tell one
+                # row from another without counting (ADR-0064).
+                track_id=str(song["id"]) if song.get("id") is not None else None,
                 title=song.get("title"),
                 artist=song.get("artist"),
                 album=song.get("album"),
@@ -510,6 +527,36 @@ class LmsAdapter(Adapter):
         async with session.post(f"{self._base}/jsonrpc.js", json=body) as resp:
             resp.raise_for_status()
             return await resp.json()
+
+    async def _queue_limit(self, session: aiohttp.ClientSession) -> int:
+        """How many queue rows to read: LMS's own `maxPlaylistLength`
+        (ADR-0063).
+
+        **Read once and kept.** It is a server preference someone sets and
+        forgets, and this runs on every queue change. A restart re-reads it,
+        which is the same cadence as the rest of this adapter's setup.
+
+        `0` means no limit in LMS, and no limit is not a number to put in a
+        request, so it becomes the ceiling - as does anything above it.
+        """
+        if self._max_queue is not None:
+            return self._max_queue
+        limit = QUEUE_LIMIT
+        try:
+            result = await self._rpc(session, "", ["pref", "maxPlaylistLength", "?"])
+            said = (result.get("result") or {}).get("_p2")
+            if said is not None:
+                limit = int(said) or QUEUE_CEILING
+        except (aiohttp.ClientError, TypeError, ValueError) as exc:
+            # Not an error: an older server, or one that will not say. The
+            # rail shows what it can rather than nothing.
+            logger.info("lms: could not read maxPlaylistLength (%s), using %d", exc, limit)
+        self._max_queue = max(1, min(limit, QUEUE_CEILING))
+        if self._max_queue != limit:
+            logger.info(
+                "lms: maxPlaylistLength is %s; reading %d queue rows", limit, self._max_queue
+            )
+        return self._max_queue
 
     async def _resolve_player_id(self, session: aiohttp.ClientSession) -> str:
         result = await self._rpc(session, "", ["players", 0, 99])

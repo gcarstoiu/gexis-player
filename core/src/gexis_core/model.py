@@ -33,6 +33,13 @@ class TrackMetadata:
     that into `null` for the UI to blank, never into a placeholder value.
     """
 
+    #: **What the renderer calls this track**, when it calls it anything.
+    #: Only the queue needs it: its rows are identified by where they sit,
+    #: and a position is not an identity - removing one track hands every
+    #: row below it a different track, which is a rewrite of the whole list
+    #: rather than the removal of one row (ADR-0064). LMS supplies its own
+    #: track id per queue row; the others have no queue at all.
+    track_id: str | None = None
     title: str | None = None
     artist: str | None = None
     album: str | None = None
@@ -88,6 +95,7 @@ class TrackMetadata:
 
     def to_json(self) -> dict:
         return {
+            "track_id": self.track_id,
             "title": self.title,
             "artist": self.artist,
             "album": self.album,

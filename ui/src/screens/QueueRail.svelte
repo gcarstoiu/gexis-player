@@ -23,6 +23,27 @@
   const index = $derived(queue?.index ?? 0);
   //: The track playing now, then what follows it.
   const rows = $derived((queue?.items ?? []).slice(index));
+
+  //: **Each row with an identity of its own** (ADR-0064). Keyed by position,
+  //: removing one track handed every row below it a different track: Svelte
+  //: kept the nodes and rewrote their contents, which is 180 titles,
+  //: artists and covers for one removal - and the swiped row was never
+  //: destroyed, so it animated its way back in wearing the next track
+  //: (George, 2026-09-24). The daemon now carries LMS's track id per row.
+  //:
+  //: A queue may hold the same track twice, and two rows may not share a
+  //: key, so the count settles it. That makes a duplicate's key depend on
+  //: how many come before it - which is only wrong for the duplicates
+  //: themselves, and only when an earlier one is removed.
+  const keyed = $derived.by(() => {
+    const seen = new Map();
+    return rows.map((item, offset) => {
+      const id = item.track_id ?? `at:${index + offset}`;
+      const nth = (seen.get(id) ?? 0) + 1;
+      seen.set(id, nth);
+      return { item, offset, at: index + offset, key: `${id}#${nth}` };
+    });
+  });
   //: What "Up next" counts: the rest, not the one already playing.
   const rest = $derived(rows.slice(1));
   const minutes = $derived(
@@ -42,6 +63,139 @@
 
   const pad = (n) => String(n).padStart(2, '0');
 
+  //: **How far a row travels before releasing it removes the track**
+  //: (ADR-0062). A queue row is 60px tall in a 417px rail, so this is under
+  //: a third of the width - far enough that a mis-aimed vertical scroll
+  //: never reaches it, short enough to do with a thumb.
+  const REMOVE_AT = 96;
+  //: Below this a gesture has not said what it is yet. Past it, whichever
+  //: axis is larger wins: the list scrolls vertically and a row swipes
+  //: horizontally, and one gesture must not do both.
+  const DECIDE_AT = 12;
+
+  //: The row being swiped, if any. One at a time - a second finger on
+  //: another row is not a thing this rail does. `live` is a finger actually
+  //: on it, which is the only time the row must not animate: it is wherever
+  //: the finger is. The hint below moves a row with no finger on it.
+  let swipe = $state({ key: null, dx: 0, going: false, live: false });
+
+  //: **A key is a position, and positions move.** Removing the track at 7
+  //: makes the old 8 the new 7 - so a key left set after a removal belongs
+  //: to a different track, and the row that inherits it inherits being
+  //: swiped off with *Remove* showing behind it, permanently (George,
+  //: 2026-09-24). Any change to the queue's shape ends the gesture.
+  //:
+  //: Its *shape*, not the queue: the daemon republishes state while a track
+  //: plays, and clearing on every one of those would cancel a swipe under
+  //: the finger.
+  //:
+  //: **The length is not enough on its own.** The queue arrives as a window
+  //: of `QUEUE_LIMIT` tracks (100, `adapters/lms.py`), so removing one from
+  //: a longer queue refills the window from beyond it and the length does
+  //: not move - which left the row swiped open over its *Remove* with the
+  //: list shifted up behind it (George, 2026-09-24). The last row in the
+  //: window is whatever just moved into it, so it changes when the length
+  //: cannot.
+  const shape = $derived(
+    `${queue?.items?.length ?? 0}:${index}:${queue?.items?.at(-1)?.title ?? ''}`,
+  );
+  //: A removal made anywhere else - a phone, the server - ends a swipe
+  //: here too. **This only writes `swipe`.** Reading it as well made the
+  //: effect its own trigger and the panel stopped answering (George,
+  //: 2026-09-24): an effect that clears state must not also be woken by it.
+  $effect(() => {
+    void shape;
+    swipe = { key: null, dx: 0, going: false, live: false };
+  });
+
+  //: **The gesture has nothing to see**, so it is shown once: the first row
+  //: that can be removed opens a little and closes again, the first time the
+  //: rail is opened with something in it (ADR-0062). Once per run of the
+  //: panel - a hint that repeats is a nag.
+  let hinted = false;
+  let hints = [];
+  $effect(() => {
+    if (!open || hinted || rows.length < 2) return;
+    hinted = true;
+    const key = keyed[1]?.key;
+    if (!key) return;
+    hints = [
+      setTimeout(() => (swipe = { key, dx: -70, going: false, live: false }), 480),
+      setTimeout(() => (swipe = { key: null, dx: 0, going: false, live: false }), 1500),
+    ];
+  });
+  $effect(() => () => {
+    hints.forEach(clearTimeout);
+    clearTimeout(settle);
+  });
+  //: The gesture in progress, which is not state: nothing draws from it,
+  //: and it changes on every pointer event.
+  let gesture = null;
+  //: A swipe ends with a click on the row underneath. This is when the last
+  //: one finished, so that click can be ignored.
+  let swiped = 0;
+  //: Clears a removed row whether or not the queue can show it leaving.
+  let settle = null;
+
+  function grab(event, key) {
+    if (event.pointerType === 'mouse' && event.button !== 0) return;
+    gesture = { key, id: event.pointerId, x: event.clientX, y: event.clientY, decided: false };
+  }
+
+  function drag(event) {
+    if (!gesture || event.pointerId !== gesture.id) return;
+    const dx = event.clientX - gesture.x;
+    const dy = event.clientY - gesture.y;
+    if (!gesture.decided) {
+      if (Math.abs(dy) > DECIDE_AT && Math.abs(dy) >= Math.abs(dx)) {
+        // A scroll. Let the list have it.
+        gesture = null;
+        return;
+      }
+      if (Math.abs(dx) <= DECIDE_AT) return;
+      gesture.decided = true;
+      // Only now, so the list keeps the gesture when it is a scroll.
+      event.currentTarget.setPointerCapture(event.pointerId);
+      swipe = { key: gesture.key, dx: 0, going: false, live: true };
+    }
+    // Leftward only: there is nothing on the other side.
+    swipe = { ...swipe, dx: Math.min(0, dx) };
+  }
+
+  async function release(at) {
+    if (!gesture) return;
+    const decided = gesture.decided;
+    gesture = null;
+    if (!decided) return;
+    swiped = Date.now();
+    if (-swipe.dx < REMOVE_AT) {
+      swipe = { key: null, dx: 0, going: false, live: false };
+      return;
+    }
+    // Off the edge, and then gone: the row keeps its own key, so when the
+    // queue arrives without it the node is destroyed rather than handed the
+    // next track. Nothing to animate back.
+    const key = swipe.key;
+    swipe = { ...swipe, going: true, live: false };
+    const ok = await queueAction(at, 'remove');
+    clearTimeout(settle);
+    if (!ok) {
+      // Nothing changed, so nothing will clear it: put the row back rather
+      // than leave it hanging open over its own Remove.
+      swipe = { key: null, dx: 0, going: false, live: false };
+      return;
+    }
+    // The queue clears this through `shape`; this is only the guarantee
+    // that it clears at all if the queue never arrives.
+    settle = setTimeout(() => {
+      if (swipe.key === key) swipe = { key: null, dx: 0, going: false, live: false };
+    }, 3000);
+  }
+
+  //: The click that ends a swipe is not a tap. 320ms covers the pointerup
+  //: and the click that follows it, and nothing a person does on purpose.
+  const tapped = () => Date.now() - swiped > 320;
+
   const mmss = (s) => {
     const whole = Math.max(0, Math.round(s ?? 0));
     return `${Math.floor(whole / 60)}:${String(whole % 60).padStart(2, '0')}`;
@@ -50,8 +204,10 @@
   async function queueAction(at, action) {
     try {
       await libraryAction('queue', at, action);
+      return true;
     } catch (err) {
       console.info('queue:', err.message);
+      return false;
     }
   }
 
@@ -98,10 +254,27 @@
     <span class="source__action">{sourceAction}</span>
   </button>
 
-  <div class="rail__list">
-    {#each rows as item, offset (index + offset)}
-      <div class="qrow" class:is-now={offset === 0}>
-        <button class="qrow__hit" type="button" onclick={() => offset && queueAction(index + offset, 'play')}>
+  <!-- A list, said out loud: the rows carry the swipe handlers, and a
+       handler on a bare <div> has no role for anything but a mouse. -->
+  <div class="rail__list" role="list">
+    {#each keyed as { item, offset, at, key } (key)}
+      <div
+        class="qrow"
+        role="listitem"
+        class:is-now={offset === 0}
+        class:is-swiping={swipe.key === key}
+        class:is-dragging={swipe.key === key && swipe.live}
+        class:is-going={swipe.key === key && swipe.going}
+        style:--dx={swipe.key === key ? `${swipe.dx}px` : '0px'}
+        onpointerdown={(event) => grab(event, key)}
+        onpointermove={drag}
+        onpointerup={() => release(at)}
+        onpointercancel={() => release(at)}
+      >
+        <!-- What a swipe uncovers. Behind the row, so it needs no layout of
+             its own and no space in it. -->
+        <span class="qrow__behind" aria-hidden="true">Remove</span>
+        <button class="qrow__hit" type="button" onclick={() => tapped() && offset && queueAction(at, 'play')}>
           <span class="qrow__num">{offset === 0 ? '▶' : pad(offset)}</span>
           <span class="qrow__art">
             {#if item.artwork && !failed.has(item.artwork)}
@@ -118,9 +291,10 @@
             <span class="qrow__dur">{mmss(item.duration)}</span>
           {/if}
         </button>
-        <button class="qrow__remove" type="button" aria-label="Remove" onclick={() => queueAction(index + offset, 'remove')}>
-          <span></span><span></span>
-        </button>
+        <!-- A swipe has no accessible name and nothing to focus, so the
+             action keeps a control - off screen, not absent. -->
+        <button class="qrow__away" type="button" aria-label="Remove {item.title ?? 'track'} from the queue"
+                onclick={() => queueAction(at, 'remove')}></button>
       </div>
     {:else}
       <div class="empty">
@@ -373,13 +547,22 @@
   .qrow {
     height: 60px;
     flex-shrink: 0;
+    /* Only the removal animates it; a row that is simply there must not
+       ease into its own height when the list re-renders. */
+    transition: none;
     display: flex;
     align-items: center;
     border-radius: 12px;
     padding-right: 8px;
+    /* The row swipes; the list scrolls. `pan-y` gives the browser the
+       vertical gesture and leaves the horizontal one to this component,
+       so neither has to guess (ADR-0062). */
+    touch-action: pan-y;
+    position: relative;
+    overflow: hidden;
   }
   .qrow.is-now {
-    background: rgba(126, 214, 188, 0.14);
+    --now-tint: rgba(126, 214, 188, 0.14);
   }
   .qrow__hit {
     flex: 1;
@@ -389,6 +572,34 @@
     align-items: center;
     gap: 15px;
     padding: 0 14px;
+    /* Opaque, so the row covers what a swipe uncovers. `--bg-panel` is the
+       rail's own plate, which is also what keeps the background's blur out
+       of this scroller's raster (Finding 059). */
+    background: var(--bg-panel);
+    border-radius: 12px;
+    transform: translateX(var(--dx, 0px));
+    transition: transform 190ms cubic-bezier(0.2, 0.8, 0.2, 1);
+  }
+  .is-now .qrow__hit {
+    background: linear-gradient(var(--now-tint), var(--now-tint)), var(--bg-panel);
+  }
+  /* While a finger is on it there is nothing to animate towards: the row is
+     wherever the finger is. With no finger - the hint - it animates. */
+  .is-dragging .qrow__hit {
+    transition: none;
+  }
+  .is-going .qrow__hit {
+    transform: translateX(-100%);
+    transition: transform 190ms cubic-bezier(0.4, 0, 1, 1);
+  }
+  /* And the row closes up behind it, so the list arrives at its new shape
+     before the queue does rather than jumping when it lands. */
+  .qrow.is-going {
+    height: 0;
+    opacity: 0;
+    transition:
+      height 190ms cubic-bezier(0.4, 0, 1, 1) 60ms,
+      opacity 140ms linear 60ms;
   }
   .qrow__hit:active {
     opacity: 0.62;
@@ -458,33 +669,49 @@
     color: rgba(233, 238, 242, 0.5);
     flex-shrink: 0;
   }
-  .qrow__remove {
-    position: relative;
-    width: 44px;
+  /* **Off screen, not gone** (ADR-0062). A swipe has no accessible name
+     and nothing to focus; this does, and it costs no paint. */
+  .qrow__away {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    padding: 0;
+    border: 0;
+  }
+  .qrow__away:focus-visible {
+    position: static;
+    width: auto;
     height: 44px;
-    border-radius: 12px;
+    clip-path: none;
+    padding: 0 14px;
+    border-radius: 11px;
     background: var(--ink-fill);
-    border: 1px solid rgba(233, 238, 242, 0.14);
-    flex-shrink: 0;
+    color: var(--ink-strong);
+  }
+
+  .qrow__behind {
+    position: absolute;
+    inset: 0;
     display: flex;
     align-items: center;
-    justify-content: center;
+    justify-content: flex-end;
+    padding-right: 22px;
+    border-radius: 12px;
+    background: rgba(242, 164, 143, 0.16);
+    font-family: var(--font-mono);
+    font-size: var(--t-label);
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--accent-warm, #f2a48f);
+    /* Uncovered rather than faded in: it is already there, the row is
+       simply on top of it. Shown only once the gesture has committed to
+       being a swipe, so a scroll never flashes it. */
+    opacity: 0;
   }
-  .qrow__remove:active {
-    background: rgba(242, 164, 143, 0.26);
-  }
-  .qrow__remove span {
-    position: absolute;
-    width: 15px;
-    height: 2.5px;
-    border-radius: 2px;
-    background: rgba(233, 238, 242, 0.75);
-  }
-  .qrow__remove span:first-child {
-    transform: rotate(45deg);
-  }
-  .qrow__remove span:last-child {
-    transform: rotate(-45deg);
+  .is-swiping .qrow__behind {
+    opacity: 1;
   }
 
   .empty {
