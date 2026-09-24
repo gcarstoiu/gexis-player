@@ -732,19 +732,6 @@
         "default": null
       },
       {
-        "key": "confidence",
-        "type": "number",
-        "label": "Confidence threshold",
-        "marks": "R",
-        "note": "Below it nothing is shown — a confidently wrong biography is worse than a blank panel.",
-        "min": 0,
-        "max": 1,
-        "unit": "",
-        "step": 0.05,
-        "default": null,
-        "surfaced": false
-      },
-      {
         "key": "lyrics",
         "type": "toggle",
         "label": "Lyrics",
@@ -779,6 +766,48 @@
         "marks": "N",
         "note": "Artist pictures. Without it they come from LMS's own plugin, where the server has one, and initials otherwise.",
         "default": null
+      },
+      {
+        "type": "group",
+        "label": "Pictures from fanart.tv",
+        "accent": "#e8a0b4"
+      },
+      {
+        "key": "sweep_portraits",
+        "type": "action",
+        "label": "Update artist portraits",
+        "marks": "R",
+        "note": "Looks up every album artist on fanart.tv and keeps LMS's picture where fanart has none. Checks all of them, every time. Runs in the background; playback is not interrupted.",
+        "default": null
+      },
+      {
+        "key": "sweep_covers",
+        "type": "action",
+        "label": "Update album covers",
+        "marks": "R",
+        "note": "The same walk, for every album rather than only the ones with no cover. One of the two runs at a time.",
+        "default": null
+      },
+      {
+        "key": "sweep_status",
+        "type": "readonly",
+        "label": "Progress",
+        "marks": "R",
+        "note": "What the last or current run has done.",
+        "default": null
+      },
+      {
+        "key": "confidence",
+        "type": "number",
+        "label": "Confidence threshold",
+        "marks": "R",
+        "note": "How sure MusicBrainz has to be that it found the right artist. Below it the artist keeps LMS's picture. It gates every enrichment lookup, not only pictures.",
+        "min": 0,
+        "max": 1,
+        "unit": "",
+        "step": 0.05,
+        "default": null,
+        "surfaced": false
       }
     ]
   },

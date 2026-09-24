@@ -130,6 +130,10 @@ def test_registry_keys_are_the_designs_keys_apart_from_recorded_deviations():
         # how the visualisation *moves*. The design has no rows for them
         # because until this week nobody knew which knobs there were.
         "spectrum_smoothing", "meter_fall", "meter_smoothing",
+        # ADR-0059, 2026-09-24: the two buttons George asked for and the row
+        # that reports them. The design has no rows for these because the
+        # design assumed LMS's pictures were the pictures.
+        "sweep_portraits", "sweep_covers", "sweep_status",
     }
 
 
@@ -482,9 +486,10 @@ def test_the_shipped_registry_hides_twenty_rows_and_shows_the_rest():
     # `boot_volume`, deleted with the unit that read it. Plus
     # `output_device`, ADR-0055's own. Plus ADR-0058's three: the numbers
     # that decide how the visualisation moves, which George asked for by
-    # name on 2026-09-23.
-    assert len(rows) == 71
-    assert len(rows) - len(kept) == 53
+    # name on 2026-09-23. Plus ADR-0059's two buttons and their progress
+    # row, on 2026-09-24.
+    assert len(rows) == 74
+    assert len(rows) - len(kept) == 56
 
 
 def test_the_clock_can_be_turned_off_without_taking_the_screen_with_it():

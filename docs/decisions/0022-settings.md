@@ -86,6 +86,9 @@ Phase 2 and ADR-0027.
 | Spectrum smoothing | [R] | **Appended 2026-09-23, asked for by George** (*"Add these as settings for me to tweak as I please"*). [ADR-0058](0058-the-visualisations-ballistics-are-settings.md). peppyalsa's `smoothing_factor`: how much of each bar's previous height is kept on every block. Stays a **percentage**, because the block rate is the ALSA period's and milliseconds would change with the sample rate; the note carries the measured times at 44.1 kHz. Applying it reopens the sound card, so it stops playback |
 | Needle fall time | [R] | **Appended 2026-09-23**, as above. peppyalsa's `decay_ms`, in ms: how long a needle takes to fall full scale. Its rise is instant and there is no knob for it. Stops playback to apply |
 | Needle smoothing | [R] | **Appended 2026-09-23**, as above. PeppyMeter's `smooth.buffer.size`, shown as the **window in ms** rather than the sample count: it averages a pipe it reads every 40 ms, so the count is derived and rounded to the nearest step, floored at one sample (zero turns the averaging off rather than shortening it). Restarts the visualiser, and only when the file changed |
+| Update artist portraits | [R] | **Appended and built 2026-09-24, asked for by George** ([ADR-0059](0059-artist-portraits-in-the-list.md)). An action: every album artist looked up on fanart.tv, LMS's picture kept where fanart has none. Checks all of them on every press, his call. Measured on his library: **917 of 917 in seven minutes, 525 portraits found** |
+| Update album covers | [R] | **Appended and built 2026-09-24.** The same walk, for every album rather than only the ones with no cover - fanart returns an artist's albums in the artist call, so it needs no per-album request (Finding 054 §9). One of the two runs at a time |
+| Progress | [R] | **Appended and built 2026-09-24**, readonly, in George's own words: *"X out of Y processed (searched for), Z artist portraits found."* The third number matters - fanart has nothing for 43% of his album artists, so a run that ends at Y of Y with 57% found has worked |
 | `steps.per.degree` override | [R] | ADR-0015, deferred to a spike; may not survive as a user setting |
 | Theme | [R] | Should tier |
 | Headless — disable the local screen | [R] | Must |
@@ -148,9 +151,10 @@ hardcoded as Phase 7 builds them.
 
 | Setting | Mark | Notes |
 |---|---|---|
-| Enrichment on/off | [R] | ADR-0012 |
-| Confidence threshold | [R] | ADR-0012: below it, show nothing. A confidently wrong artist biography is worse than a blank panel |
-| Lyrics on/off | [R] | |
+| Enrichment on/off | [R] | ADR-0012. **Wired 2026-09-24** (ADR-0059): off means no provider is *asked*, rather than their answers being ignored |
+| Confidence threshold | [R] | ADR-0012: below it, show nothing. A confidently wrong artist biography is worse than a blank panel. **Wired 2026-09-24** (ADR-0059), read on every ask rather than captured at startup, and it now gates the artwork sweep too: `Head` resolved at 100 and nothing can say it is the right Head. Moved beside the two buttons it governs, at George's request |
+| Lyrics on/off | [R] | **Wired 2026-09-24** (ADR-0059): off means LRCLIB is not asked |
+| Look up missing artwork | [R] | **Wired 2026-09-24** as the *automatic* half of ADR-0059's album-cover button (George: *"automatic way for sure"*): with it on, a new album gets a cover as it arrives, and the button does the whole library on demand. Off means the Cover Art Archive and the recording-art provider are not asked |
 | Artwork lookup for renderers that supply none | [R] | George, 2026-09-12: Bluetooth's absent art is transient — artist/album/title are enough to find it later |
 | Enrichment provider API keys, one per provider that needs one | [N] | Confirmed as a setting by George, 2026-09-17: entered by each user, never shipped in the image or the repo, so a provider requiring a key is not ruled out by it. Which providers need one depends on the Phase 8 provider decision |
 | fanart.tv key | [N] | Artist pictures (George, 2026-09-18). Without it they come from LMS's own plugin where the server has one, and initials otherwise. A personal key sees a new image about two days after it is added where a project key waits seven (Finding 030) |

@@ -29,7 +29,13 @@ from gexis_core.wallpapers import Wallpapers
 from gexis_core.weather import Weather
 from gexis_core.metadata_file import MetadataFileWriter
 from gexis_core.artistinfo import LmsArtistInfo
-from gexis_core.enrichment import PREFETCH_AFTER_S, Cache, EnrichmentService, TrackKey
+from gexis_core.enrichment import (
+    CONFIDENCE_MIN,
+    PREFETCH_AFTER_S,
+    Cache,
+    EnrichmentService,
+    TrackKey,
+)
 from gexis_core.providers import (
     FANART_BACKGROUND,
     ArtistIdentity,
@@ -60,6 +66,7 @@ from gexis_core.settings_registry import Settings
 from gexis_core.splash import Splash
 from gexis_core.state import StateStore
 from gexis_core import bluealsa_volume, outputs
+from gexis_core.artwork_sweep import ArtworkSweep
 from gexis_core.bluealsa_volume import BluealsaVolume
 from gexis_core.remote_volume import RemoteVolume
 from gexis_core.volume import (
@@ -613,6 +620,12 @@ async def main() -> None:
 
         asyncio.ensure_future(restart())
 
+    def _start_sweep(kind: str) -> None:
+        """ADR-0059. Refused rather than queued while the other one runs."""
+        if not sweep.start(kind):
+            logger.info("sweep: %s not started", kind)
+        state_store.bump_settings_revision()
+
     def _choose_output_mode(value=None) -> None:
         fixed_wanted["value"] = forced_fixed or (
             value or settings.value("output_mode")
@@ -844,6 +857,9 @@ async def main() -> None:
                 )
             )
             or "None",
+            # ADR-0059. George's own wording: "X out of Y processed (searched
+            # for), Z artist portraits found."
+            "sweep_status": lambda: sweep.progress.sentence,
         },
         # ADR-0051 §4: which skins there are depends on where they are
         # installed and on what `skin_corpus` holds, neither of which the
@@ -867,6 +883,10 @@ async def main() -> None:
         wired={"idle_url": None, "idle_timeout": None, "drawer_on_external": None,
                "drawer_autohide": None, "listenbrainz_token": None,
                "fanart_key": None, "lms_server": None,
+               # ADR-0059: read on every ask through `gate` and
+               # `confidence_min`, so nothing has to happen on the write.
+               "enrichment": None, "lyrics": None, "artwork_lookup": None,
+               "confidence": None,
                "idle_screen": None, "idle_background": None,
                "background_brightness": None, "background_interval": None,
                "wallpaper_key": None, "wallpaper_topics": None,
@@ -909,6 +929,12 @@ async def main() -> None:
                    _apply_discoverable(mode)
                ),
                "timezone": lambda zone: asyncio.ensure_future(_set_timezone(zone)),
+               # ADR-0059's two buttons. `start` refuses rather than queues
+               # while the other is running - a queued button is a progress
+               # bar that lies.
+               "sweep_portraits": lambda _=None: _start_sweep("portraits"),
+               "sweep_covers": lambda _=None: _start_sweep("covers"),
+               "sweep_status": None,
                "reboot": lambda _: asyncio.ensure_future(_reboot())},
         on_change=state_store.bump_settings_revision,
     )
@@ -1059,10 +1085,12 @@ async def main() -> None:
 
     # Phase 7 (ADR-0038): the same server, and the same player, the renderer
     # adapter talks to. Radio shares its HTTP session.
-    library = LmsLibrary(config.lms_host, config.lms_port, player_id=lambda: lms.player_id)
     # LMS's own artist photos and biographies, where the server has the
     # plugin (ADR-0040 §1). Shares the library's HTTP session.
     enrichment_cache = Cache()
+    library = LmsLibrary(config.lms_host, config.lms_port, player_id=lambda: lms.player_id,
+                         # ADR-0059: fanart covers the sweep found, LMS's otherwise.
+                         store=enrichment_cache)
     artistinfo = LmsArtistInfo(library.rpc, f"http://{config.lms_host}:{config.lms_port}",
                                store=enrichment_cache)
     # ADR-0040 §1: LMS's own plugin first where it answers, the key-free
@@ -1071,6 +1099,37 @@ async def main() -> None:
     # One MusicBrainz lookup for the artist, shared: two providers needed the
     # same id and each was searching for it (see ArtistIdentity).
     identity = ArtistIdentity(http, store=enrichment_cache)
+    # ADR-0059's two buttons, which share this walk: the album artists, their
+    # MusicBrainz ids, and one fanart call each that answers the portrait and
+    # every album cover at once (Finding 054 §9).
+    sweep = ArtworkSweep(
+        library,
+        identity,
+        http,
+        enrichment_cache,
+        fanart_key=lambda: settings.value("fanart_key"),
+        # George, 2026-09-24: *"Use the confidence level for sure."* `Head`
+        # resolved at 100 and there is no telling it is the right Head.
+        confidence=lambda: int(settings.value("confidence") or 0),
+        on_change=state_store.bump_settings_revision,
+    )
+    #: ADR-0059: Enrichment's own rows, wired at last. Each is a reason not
+    #: to *ask* somebody rather than a reason to throw their answer away.
+    #: `artwork_lookup` is the automatic half of the album-cover button
+    #: (George, 2026-09-24: *"automatic way for sure"*) - new albums get a
+    #: cover as they arrive, and the button does the library on demand.
+    LYRIC_PROVIDERS = ("lrclib",)
+    ARTWORK_PROVIDERS = ("coverart", "recording-art")
+
+    def _may_ask(name: str) -> bool:
+        if settings.value("enrichment") is False:
+            return False
+        if name in LYRIC_PROVIDERS and settings.value("lyrics") is False:
+            return False
+        if name in ARTWORK_PROVIDERS and settings.value("artwork_lookup") is False:
+            return False
+        return True
+
     enrichment = EnrichmentService(
         [
             # **Pictures before LMS, text after it** (George, 2026-09-18,
@@ -1104,6 +1163,14 @@ async def main() -> None:
             RecordingArtProvider(http),
         ],
         enrichment_cache,
+        # ADR-0022's rows, wired 2026-09-24. Read on every ask, not captured
+        # at startup: a threshold typed into Settings has to mean something
+        # before the next reboot.
+        confidence_min=lambda: int(
+            settings.value("confidence") if settings.value("confidence") is not None
+            else CONFIDENCE_MIN
+        ),
+        gate=_may_ask,
     )
     # Warm the Artist tab while the track plays, so opening it shows
     # something rather than a skeleton (George, 2026-09-18). Debounced,
@@ -1148,6 +1215,8 @@ async def main() -> None:
         library=library,
         artistinfo=artistinfo,
         enrichment=enrichment,
+        # ADR-0059: where the artwork sweep leaves what it found.
+        notes=enrichment_cache,
         # ADR-0038 §8: the one SlimBrowse subtree, browsed by handles the
         # core issues.
         radio=RadioBrowser(library.rpc, lambda: lms.player_id),

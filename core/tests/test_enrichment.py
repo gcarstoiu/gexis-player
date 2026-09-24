@@ -451,3 +451,46 @@ async def test_nothing_pending_when_everyone_answered():
     await service.for_track(KEY, pending=pending)
 
     assert pending == []
+
+
+class TestEnrichmentsOwnRowsAreWired:
+    """ADR-0059, 2026-09-24. George: *"wire the rest of the enrichment
+    entries which are not wired as of now."* Four rows had no code behind
+    them at all. Each is a reason not to *ask* somebody rather than a reason
+    to throw their answer away."""
+
+    async def test_a_gated_provider_is_never_asked(self):
+        from gexis_core.enrichment import Cache, EnrichmentService, TrackKey
+
+        asked = []
+
+        class Provider:
+            name = "lrclib"
+            def serves(self, _renderer):
+                return True
+            async def fetch(self, key):
+                asked.append(key)
+                raise AssertionError("a gated provider must not be asked")
+
+        service = EnrichmentService([Provider()], Cache(Path(":memory:")), gate=lambda name: False)
+        found = await service.for_track(TrackKey(artist="a", title="t"))
+        assert not asked
+        assert found.to_json()["lyrics"] is None
+
+    async def test_the_threshold_is_read_on_every_ask(self):
+        """A service holding the number it was built with would answer to
+        yesterday's setting for as long as the daemon ran."""
+        from gexis_core.enrichment import Cache, EnrichmentService
+
+        threshold = {"value": 10}
+        service = EnrichmentService([], Cache(Path(":memory:")),
+                                    confidence_min=lambda: threshold["value"])
+        assert service.confidence_min == 10
+        threshold["value"] = 90
+        assert service.confidence_min == 90
+
+    async def test_a_plain_int_still_works(self):
+        from gexis_core.enrichment import Cache, EnrichmentService
+
+        assert EnrichmentService([], Cache(Path(":memory:")),
+                                 confidence_min=55).confidence_min == 55
