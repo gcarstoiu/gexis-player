@@ -287,6 +287,80 @@ for every release group those 917 artists ever made — 16,391 rows for a
 4,567-album library, ~12,000 of them never read. It now walks the albums
 this library has and looks each one up in theirs: one row per album owned.
 
+## 12. Where the misses went, and what three changes recovered
+
+George: *"Can we do more to cover more artists from fanart with the same
+level of confidence?"* Measured over **all 870** distinct album artists, not
+a sample.
+
+**Before** — and note the threshold was costing nothing, so there was
+nothing to buy back by relaxing it:
+
+| | of 870 |
+| --- | --- |
+| portrait | **492 (57%)** |
+| MusicBrainz placed them, fanart had no portrait | 267 (31%) |
+| MusicBrainz found nobody | 106 (12%) |
+| never asked | 5 |
+| **below the confidence threshold** | **0** |
+
+### The 106 MusicBrainz could not place
+
+Asked again, one candidate at a time, with the same quoted query:
+
+| | of 106 |
+| --- | --- |
+| the **raw** name finds them - folding was losing them | **17** |
+| the part before `feat.`/`presents`/`with`/`vs` | 8 |
+| the part before `&`/`,`/`and` | 57 |
+| still nobody | 24 |
+
+**Folding the query was a defect.** Quoted, `artist:"b u g mafia"` answers
+nobody where `artist:"B.U.G. Mafia"` answers exactly, and
+`The B.B. King Blues Band` becomes `The BB King Blues Band` rather than
+nothing. Folding belongs to the cache key, not to a catalogue that stores
+punctuation deliberately.
+
+**And the score is not what it looks like.** Asked *unquoted*, MusicBrainz
+answers `Tina Dico` with **Tina Dickow at 100** and `DJ Project (2)` with
+**ProjeKct Two at 100**. The score says how well the string matched the
+index, not whether it is the right person. **What protects us is the
+quoting**, which is strict enough that both return nobody; the confidence
+threshold is a second line, not the first. This corrects what was said on
+2026-09-23, that the threshold would guard against a wrong `Head`.
+
+### The 267 fanart had no portrait for
+
+Re-queried 25 of them for every image kind fanart publishes:
+
+| | of 25 |
+| --- | --- |
+| **no image of any kind** | **18 (72%)** |
+| `hdmusiclogo` | 5 |
+| `artistbackground` | 3 |
+| `musiclogo` | 1 |
+
+**Drawn as the grid draws them**, ten of them circular and centre-cropped,
+the split was obvious: fanart's *backgrounds* are photographs of the artist
+and crop like any portrait, while the *logos* are wide wordmarks that a
+square crop cuts to `TRIN`, `PI`, `TLO`, `BOU`. Fitted whole they read
+perfectly and sit small and letterboxed among full-bleed faces - a different
+grid. George, 2026-09-24: *"only with the backgrounds, no logos."*
+
+### After all three
+
+Re-run from a cleared store:
+
+| | before | after |
+| --- | --- | --- |
+| picture | **492 (57%)** | **585 (67%)** |
+| fanart has no picture | 267 (31%) | 256 (29%) |
+| MusicBrainz found nobody | 106 (12%) | **24 (2.8%)** |
+
+**MusicBrainz now places all but 24 of 870.** The remaining 256 are fanart's
+own gap, and by the sample about three quarters of them have no image at
+all - which is where LMS's picture stays whatever we do.
+
 ## What this does not settle
 
 - **Nothing was looked at.** No portrait was compared with LMS's for

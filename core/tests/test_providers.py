@@ -858,3 +858,92 @@ async def test_a_busy_musicbrainz_leaves_the_release_unavailable():
     key = TrackKey.of(TrackMetadata(title="x", artist="y", album="z"))
 
     assert (await MusicBrainzRelease(http).fetch(key)).outcome is Outcome.UNAVAILABLE
+
+
+class TestWhichNamesMusicBrainzIsAsked:
+    """ADR-0059, 2026-09-24. Measured over the 106 album artists MusicBrainz
+    could not place on George's library: 17 answered to the raw name, 8 to
+    the part before a credit word, 57 to the part before a joiner."""
+
+    def test_the_raw_name_comes_first(self):
+        from gexis_core.providers import search_names
+
+        assert list(search_names("B.U.G. Mafia"))[0] == "B.U.G. Mafia"
+
+    def test_a_credit_word_beats_a_joiner(self):
+        """The order is the whole trick: `Above & Beyond presents OceanLab`
+        splits on `presents` and would become plain `Above` if `&` went
+        first."""
+        from gexis_core.providers import search_names
+
+        names = list(search_names("Above & Beyond presents OceanLab"))
+        assert names[0] == "Above & Beyond presents OceanLab"
+        assert names[1] == "Above & Beyond"
+        assert "Above" not in names[:2]
+
+    def test_a_joiner_is_the_last_resort(self):
+        from gexis_core.providers import search_names
+
+        assert list(search_names("Louis Armstrong & Duke Ellington")) == [
+            "Louis Armstrong & Duke Ellington",
+            "Louis Armstrong",
+        ]
+        assert list(search_names("Chet Atkins and Mark Knopfler"))[-1] == "Chet Atkins"
+        assert list(search_names("Beethoven, Bernstein"))[-1] == "Beethoven"
+
+    def test_a_plain_name_is_asked_once(self):
+        """An artist who resolves first time must not cost three searches."""
+        from gexis_core.providers import search_names
+
+        assert list(search_names("Radiohead")) == ["Radiohead"]
+        assert list(search_names("Isaac Hayes")) == ["Isaac Hayes"]
+
+    def test_nothing_is_yielded_for_nothing(self):
+        from gexis_core.providers import search_names
+
+        assert list(search_names("")) == []
+        assert list(search_names("   ")) == []
+
+
+class TestResolvingThroughAReducedName:
+    async def test_it_falls_back_and_caches_under_the_original(self):
+        from gexis_core.providers import ArtistIdentity
+
+        class Http:
+            def __init__(self):
+                self.asked = []
+            async def json(self, url, params=None, headers=None):
+                self.asked.append(params["query"])
+                if params["query"] == 'artist:"Louis Armstrong"':
+                    return {"artists": [{"id": "MB-LOUIS", "score": 100}]}
+                return {"artists": []}
+
+        http = Http()
+        identity = ArtistIdentity(http)
+        got = await identity.resolve("louis armstrong duke ellington",
+                                     raw="Louis Armstrong & Duke Ellington")
+        assert got == ("MB-LOUIS", 100)
+        assert http.asked == [
+            'artist:"Louis Armstrong & Duke Ellington"',
+            'artist:"Louis Armstrong"',
+        ]
+        # cached under the key we were given, not the name that answered
+        assert identity._known["louis armstrong duke ellington"] == ("MB-LOUIS", 100)
+
+    async def test_a_503_stops_the_walk_and_remembers_nothing(self):
+        """Finding 036's line. Trying the reduced names after a busy server
+        would turn one outage into a wrong answer cached for ever."""
+        from gexis_core.providers import ArtistIdentity
+
+        class Http:
+            def __init__(self):
+                self.asked = []
+            async def json(self, url, params=None, headers=None):
+                self.asked.append(params["query"])
+                return None
+
+        http = Http()
+        identity = ArtistIdentity(http)
+        assert await identity.resolve("a b", raw="A & B") is False
+        assert len(http.asked) == 1
+        assert "a b" not in identity._known

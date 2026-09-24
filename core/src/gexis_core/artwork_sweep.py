@@ -52,11 +52,21 @@ FANART_GAP_S = 0.3
 #: artist cost 279 strip reloads in two minutes (measured 2026-09-24).
 PUBLISH_EVERY_S = 3.0
 
-#: fanart's artist images, best first. `artistthumb` is the portrait a round
-#: tile wants; `musicbanner` is the fallback that at least has the artist in
-#: it. `artistbackground` is deliberately absent - it is 1920x1080 scenery
-#: and looks wrong in a 64px circle.
-ARTIST_KINDS = ("artistthumb", "musicbanner")
+#: fanart's artist images, best first.
+#:
+#: `artistthumb` is the portrait a round tile wants. **`artistbackground` is
+#: the fallback**, added 2026-09-24 after George looked at ten real examples
+#: drawn as the grid draws them: fanart's backgrounds are photographs of the
+#: artist, and they centre-crop to a circle like any portrait.
+#:
+#: **No logos.** `musiclogo`, `hdmusiclogo` and `musicbanner` are wide
+#: wordmarks, and a square centre-crop cuts them to unreadable fragments -
+#: `TRIN` for 4 Strings, `BOU` for La Bouche. Fitted whole they read
+#: perfectly and sit small and letterboxed among full-bleed faces, which is
+#: a different grid. George, 2026-09-24: *"only with the backgrounds, no
+#: logos."* Measured: of 25 artists with no portrait, ~12% have a
+#: background and ~24% only a logo; 72% have nothing at all.
+ARTIST_KINDS = ("artistthumb", "artistbackground")
 
 #: fanart's album images.
 ALBUM_KINDS = ("albumcover",)
@@ -268,7 +278,9 @@ class ArtworkSweep:
         folded = fold(name)
         if not folded:
             return False
-        resolved = await self._identity.resolve(folded)
+        # **The raw name is what MusicBrainz is asked**; the folded one is
+        # only the cache key (`providers.search_names`).
+        resolved = await self._identity.resolve(folded, raw=name)
         if resolved is False:
             # Could not ask. **Never stored as "no picture"** - Finding 036's
             # most important line, and on a sweep of 870 it would poison the

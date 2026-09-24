@@ -50,8 +50,10 @@ class FakeIdentity:
         self.answers = answers
         self.asked = []
 
-    async def resolve(self, folded):
-        self.asked.append(folded)
+    async def resolve(self, folded, raw=None):
+        # The sweep asks with the folded key *and* the raw name: the key is
+        # ours, the name is what MusicBrainz is searched with.
+        self.asked.append((folded, raw))
         return self.answers.get(folded, None)
 
 

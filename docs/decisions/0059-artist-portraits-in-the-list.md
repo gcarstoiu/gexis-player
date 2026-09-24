@@ -203,6 +203,33 @@ step, against the 0–100 that MusicBrainz scores and `CONFIDENCE_MIN` use, so
 every setting would have collapsed to 0 or 1 and the gate would have meant
 nothing. 0–100%, default 90.
 
+### More coverage at the same confidence, 2026-09-24
+
+George: *"Can we do more to cover more artists from fanart with the same
+level of confidence?"* Three changes, measured in
+[Finding 054](../findings/054-what-lms-knows-about-artist-identity.md) §12:
+**57% → 67%**, and MusicBrainz now places all but **24 of 870** artists.
+
+- **Ask MusicBrainz the raw name, not the folded one.** A defect, not a
+  limit: quoted, `artist:"b u g mafia"` finds nobody and
+  `artist:"B.U.G. Mafia"` finds them exactly. Folding is for the cache key.
+- **Try the leading credit when the full name finds nobody.** The credit
+  words (`feat.`, `presents`, `with`, `vs`) before the joiners (`&`, `,`,
+  `and`), which is what keeps *Above & Beyond presents OceanLab* as *Above &
+  Beyond* rather than *Above*. Same quoted query, same threshold. **The
+  meaning does change**, and that is George's call: the tile for *Louis
+  Armstrong & Duke Ellington* shows Louis Armstrong.
+- **`artistbackground` after `artistthumb`, and no logos.** Decided from ten
+  real examples drawn as the grid draws them. `musicbanner` is dropped with
+  the logos - it is a wordmark, and the measurement is about what survives a
+  circular crop.
+
+**And a correction this produced.** It was said on 2026-09-23 that the
+confidence threshold would protect against a wrong match. It does not:
+unquoted, `Tina Dico` answers *Tina Dickow* at **100**. What protects us is
+the **quoted** query. The threshold is a second line, and on this library it
+rejected nothing at all.
+
 ## Also in 9k: the rest of Enrichment
 
 George: *"wire the rest of the enrichment entries which are not wired as of
