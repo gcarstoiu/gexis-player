@@ -57,6 +57,7 @@ class StateStore:
         self._fixed_output = False
         self._meters = True
         self._settings_revision = 0
+        self._pictures_revision = 0
         self._pairing: dict | None = None
         self._subscribers: list[Callable[[PlaybackState], None]] = []
 
@@ -83,6 +84,7 @@ class StateStore:
             meters=self._meters,
             handoff_exempt_pairs=self._handoff_exempt_pairs,
             settings_revision=self._settings_revision,
+            pictures_revision=self._pictures_revision,
             pairing=self._pairing,
         )
 
@@ -227,6 +229,16 @@ class StateStore:
 
     def bump_settings_revision(self) -> None:
         self._settings_revision += 1
+        self._notify()
+
+    def bump_pictures_revision(self) -> None:
+        """The library's pictures changed under the panel.
+
+        **Once per sweep, not once per artist.** The panel's answer is to
+        drop every artist photo it is holding and ask again, which is right
+        after a run and ruinous 917 times during one.
+        """
+        self._pictures_revision += 1
         self._notify()
 
     def _notify(self) -> None:

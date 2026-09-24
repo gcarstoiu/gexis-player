@@ -206,6 +206,12 @@ class PlaybackState:
     #: Bumped on every settings write (ADR-0035); a client refetches
     #: `GET /settings` when it moves.
     settings_revision: int = 0
+    #: Bumped when the library's *pictures* change under the panel -
+    #: today only when ADR-0059's sweep finishes. Separate from
+    #: `settings_revision` because that one fires on every write, and the
+    #: panel's answer to this is to throw away every artist photo it holds
+    #: and ask again.
+    pictures_revision: int = 0
     #: The active renderer's queue, or None where it has no such thing.
     queue: Queue | None = None
     #: **ADR-0046: `True` when the device is not attenuating at all.**
@@ -270,6 +276,7 @@ class PlaybackState:
             "meters": self.meters,
             "handoff_exempt_pairs": [list(pair) for pair in self.handoff_exempt_pairs],
             "settings_revision": self.settings_revision,
+            "pictures_revision": self.pictures_revision,
             "controls": self.controls,
             "queue": self.queue.to_json() if self.queue else None,
             "pairing": self.pairing,

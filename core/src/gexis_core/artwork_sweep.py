@@ -47,6 +47,11 @@ ALBUM_NAMESPACE = "fanart-album"
 #: take about ten minutes with this on top.
 FANART_GAP_S = 0.3
 
+#: How often the progress reaches the panel. A settings revision makes it
+#: re-read the settings *and* reload the home strip, so publishing every
+#: artist cost 279 strip reloads in two minutes (measured 2026-09-24).
+PUBLISH_EVERY_S = 3.0
+
 #: fanart's artist images, best first. `artistthumb` is the portrait a round
 #: tile wants; `musicbanner` is the fallback that at least has the artist in
 #: it. `artistbackground` is deliberately absent - it is 1920x1080 scenery
@@ -141,7 +146,9 @@ class ArtworkSweep:
     """
 
     def __init__(self, library, identity, http, store, *, fanart_key=None,
-                 confidence=None, on_change=None, gap_s: float = FANART_GAP_S) -> None:
+                 confidence=None, on_change=None, on_finish=None,
+                 gap_s: float = FANART_GAP_S, publish_every_s: float = PUBLISH_EVERY_S,
+                 clock=time.monotonic) -> None:
         self._library = library
         self._identity = identity
         self._http = http
@@ -152,7 +159,13 @@ class ArtworkSweep:
         #: threshold the artist keeps LMS's picture (ADR-0012, ADR-0059).
         self._confidence = confidence or (lambda: 0)
         self._on_change = on_change or (lambda: None)
+        #: Called once when a run ends, so the panel can drop the pictures it
+        #: is holding. Separate from `on_change`, which fires per artist.
+        self._on_finish = on_finish or (lambda: None)
         self._gap_s = gap_s
+        self._publish_every_s = publish_every_s
+        self._clock = clock
+        self._published_at = 0.0
         self._progress = Progress()
         self._task: asyncio.Task | None = None
 
@@ -162,8 +175,22 @@ class ArtworkSweep:
     def progress(self) -> Progress:
         return self._progress
 
-    def _set(self, **fields) -> None:
+    def _set(self, *, always: bool = False, **fields) -> None:
+        """Update the progress, and tell the panel **at most every few
+        seconds**.
+
+        The first version told it on every artist. The panel treats a
+        settings revision as a reason to re-read the settings *and* reload
+        the home strip, so one run produced **279 strip reloads and 279
+        settings reads in two minutes** on George's device - each strip
+        reload an LMS browse. The number on screen does not need to be
+        right 917 times; it needs to be moving.
+        """
         self._progress = replace(self._progress, **fields)
+        now = self._clock()
+        if not always and now - self._published_at < self._publish_every_s:
+            return
+        self._published_at = now
         try:
             self._on_change()
         except Exception as exc:  # a display that fails must not stop the run
@@ -183,6 +210,7 @@ class ArtworkSweep:
             logger.warning("sweep: no fanart.tv key, nothing to ask")
             return False
         self._progress = Progress(kind=kind, running=True)
+        self._published_at = self._clock()
         self._on_change()
         self._task = asyncio.ensure_future(self._run(kind))
         return True
@@ -210,16 +238,21 @@ class ArtworkSweep:
                     hit = False
                 found += 1 if hit else 0
                 self._set(processed=index, found=found)
-            self._set(running=False, finished_at=time.time())
+            self._set(running=False, finished_at=time.time(), always=True)
+            # **The pictures changed under the panel.** Once, here, and not
+            # 917 times on the way.
+            self._on_finish()
             logger.info("sweep: %s finished - %s of %s, %s found",
                         kind, self._progress.processed, self._progress.total, found)
         except asyncio.CancelledError:
-            self._set(running=False, cancelled=True, finished_at=time.time())
+            self._set(running=False, cancelled=True, finished_at=time.time(), always=True)
+            self._on_finish()
             logger.info("sweep: %s cancelled at %s of %s",
                         kind, self._progress.processed, self._progress.total)
             raise
         except Exception as exc:
-            self._set(running=False, finished_at=time.time())
+            self._set(running=False, finished_at=time.time(), always=True)
+            self._on_finish()
             logger.error("sweep: %s stopped: %s", kind, exc)
 
     async def _album_artists(self) -> list[tuple[int, str]]:

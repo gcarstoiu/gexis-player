@@ -175,6 +175,26 @@ rather than the run:
   4,567-album library. It now walks this library's albums and looks each one
   up in theirs: **4,334 rows**, one per album owned.
 
+**Two more, found when George said the grid had not changed** (*"the artist
+navigation is not loading the new art"*). Neither was a stale LMS cache; the
+daemon was serving fanart correctly all along — 8 of the first 12 album
+artists, and the URL fetched 200 as a 200x200 JPEG.
+
+- **The panel only ever fills its photo store.** `loadArtistPhotos` skips an
+  id it already holds, so after a sweep every face drawn earlier in that
+  session stayed LMS's until a reboot. The state now carries a
+  **`pictures_revision`**, bumped **once when a run ends**, and the panel
+  empties `artistPhotos` when it changes. Its own signal, not
+  `settings_revision`: throwing away every face is right once and ruinous
+  917 times.
+- **The progress was flooding the panel.** The first version published on
+  every artist, and the panel treats a settings revision as a reason to
+  re-read the settings *and* reload the home strip — each reload an LMS
+  browse. Measured on the device: **279 strip reloads and 279 settings reads
+  in two minutes.** Progress now reaches the panel at most every three
+  seconds, and always at the start and the end: **17 in sixty seconds**, and
+  the number still moves.
+
 **And the confidence threshold was invisible.** It carried ADR-0022's
 `surfaced: false`, so the API published it and the panel filtered it out —
 George: *"I am not seeing the confidence setting in the enrichment menu."*

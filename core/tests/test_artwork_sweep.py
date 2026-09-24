@@ -258,3 +258,57 @@ class TestMatchingTwoCatalogues:
         other album with an empty key."""
         assert match_title("Remastered") == "remastered"
         assert match_title("(Deluxe Edition)") == "deluxe edition"
+
+
+class TestProgressDoesNotFloodThePanel:
+    """**279 strip reloads and 279 settings reads in two minutes**, measured
+    on George's device during the first run. The panel treats a settings
+    revision as a reason to re-read the settings *and* reload the home strip,
+    and the first version published one per artist.
+    """
+
+    async def test_it_publishes_on_a_timer_not_per_artist(self):
+        ticks = {"now": 0.0}
+        published = []
+
+        library = FakeLibrary(
+            [(i, f"Artist {i}") for i in range(20)],
+            {i: [] for i in range(20)},
+        )
+        sweep, _, _, _ = build(
+            library=library,
+            identity=FakeIdentity({}),          # nothing resolves; the walk still runs
+            on_change=lambda: published.append(ticks["now"]),
+            publish_every_s=3.0,
+            clock=lambda: ticks["now"],
+        )
+        assert sweep.start("portraits") is True
+        await sweep._task
+        # start, and the end - not twenty
+        assert len(published) <= 3, published
+
+    async def test_the_end_is_always_published(self):
+        published = []
+        sweep, _, _, _ = build(
+            library=FakeLibrary([(1, "A")], {1: []}),
+            identity=FakeIdentity({}),
+            on_change=lambda: published.append(1),
+            publish_every_s=999.0,
+            clock=lambda: 0.0,
+        )
+        await run(sweep, "portraits")
+        assert len(published) >= 2, "the final number must reach the panel"
+        assert sweep.progress.running is False
+
+    async def test_the_pictures_signal_fires_once_at_the_end(self):
+        """The panel drops every face it holds when this changes, so it must
+        not fire per artist."""
+        finished = []
+        sweep, _, _, _ = build(
+            library=FakeLibrary([(i, f"A{i}") for i in range(10)], {}),
+            identity=FakeIdentity({}),
+            on_finish=lambda: finished.append(1),
+            clock=lambda: 0.0,
+        )
+        await run(sweep, "portraits")
+        assert finished == [1]

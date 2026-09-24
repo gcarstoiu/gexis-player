@@ -1112,6 +1112,9 @@ async def main() -> None:
         # resolved at 100 and there is no telling it is the right Head.
         confidence=lambda: int(settings.value("confidence") or 0),
         on_change=state_store.bump_settings_revision,
+        # Once at the end: the panel's answer to this is to drop every
+        # artist photo it holds and ask again.
+        on_finish=state_store.bump_pictures_revision,
     )
     #: ADR-0059: Enrichment's own rows, wired at last. Each is a reason not
     #: to *ask* somebody rather than a reason to throw their answer away.

@@ -140,6 +140,25 @@ playback.subscribe(($state) => {
   if (!first) reloadStrip();
 });
 
+//: **The library's pictures changed under us** (ADR-0059): the artwork sweep
+//: has finished and the faces we are holding are the ones it replaced. This
+//: store is only ever filled - `loadArtistPhotos` skips an id it already has
+//: - so after a sweep the panel kept showing LMS's photos for the whole
+//: session, and a reboot was the only cure (George, 2026-09-24: "the artist
+//: navigation is not loading the new art").
+//:
+//: Its own signal, not `settings_revision`: that one fires on every write,
+//: and throwing away every face to ask again is right once and ruinous 917
+//: times.
+let seenPictures;
+playback.subscribe(($state) => {
+  const revision = $state?.pictures_revision;
+  if (revision === undefined || revision === seenPictures) return;
+  const first = seenPictures === undefined;
+  seenPictures = revision;
+  if (!first) artistPhotos.set({});
+});
+
 /** Read the root's counts and its strip, decode any covers, then publish
  *  both together. Concurrent calls share one read.
  *
