@@ -13,7 +13,7 @@
   while the idle screen, which is removed when it closes, never did.
 -->
 <script>
-  import { untrack } from 'svelte';
+  import { tick, untrack } from 'svelte';
 
   import {
     foldedName,
@@ -33,6 +33,7 @@
     radioPlay,
     libraryAction,
   } from '../lib/library.js';
+  import { revealing } from '../lib/chunks.svelte.js';
   import MiniStrip from './MiniStrip.svelte';
   import WaitingServices from './WaitingServices.svelte';
 
@@ -85,6 +86,14 @@
     return TINTS[h % TINTS.length];
   }
 
+  //: **Long lists are built a screenful at a time** (ADR-0065). One per
+  //: list, because each has its own length and its own moment of arriving.
+  //: One for the album artists, which the grid and the browse screen's
+  //: first pane both draw - they are never on screen together, and a count
+  //: already grown is a screen that opens complete.
+  const artistsReveal = revealing(() => artists.length);
+  const playlistReveal = revealing(() => playlist?.items?.length ?? 0);
+
   const RAIL = ['#', ...'ABCDEFGHIJKLMNOPQRSTUVWXYZ'];
   // Grouped by the letter the core folded for us (ADR-0038 §1a), keeping
   // LMS's own order within each group.
@@ -105,11 +114,32 @@
     RAIL.map((ch) => ({ ch, group: groups.find((g) => g.letter === ch) ?? null })),
   );
 
+  //: The groups as far as the grid has been built, cut mid-group where the
+  //: count lands there - a letter with 200 artists must not be all-or-
+  //: nothing.
+  const shownGroups = $derived.by(() => {
+    let left = artistsReveal.shown;
+    const out = [];
+    for (const group of groups) {
+      if (left <= 0) break;
+      out.push(
+        left >= group.items.length ? group : { ...group, items: group.items.slice(0, left) },
+      );
+      left -= group.items.length;
+    }
+    return out;
+  });
+
   let grid = $state(null);
   // Each pane's scroller, so a new selection starts at the top of the next
   // pane rather than wherever the previous list was left (George,
   // 2026-09-18).
-  function jumpTo(group) {
+  async function jumpTo(group) {
+    // **The rail can name a group the grid has not built yet** (ADR-0065),
+    // and a jump has nothing to measure until it exists. Finishing takes
+    // the rest of the 1.9 seconds the first paint no longer spends.
+    artistsReveal.all();
+    await tick();
     const target = grid?.querySelector(`#${group.id}`);
     if (!target || !grid) return;
     // Measured against the scroller rather than by offsetTop, which the
@@ -972,7 +1002,7 @@
           <span class="group__rule"></span>
           <span class="playall__meta">{playlistMeta}</span>
         </div>
-        {#each playlist.items as entry, index (entry.id)}
+        {#each playlist.items.slice(0, playlistReveal.shown) as entry, index (entry.id)}
           <div class="row row--wide">
             <button class="row__hit" type="button" onclick={() => (revealed = revealed === `pltrack-${index}` ? null : `pltrack-${index}`)}>
               <span class="row__num">{index + 1}</span>
@@ -1001,7 +1031,7 @@
               <span class="pane__count">{artists.length}</span>
             </div>
             <div class="pane__list" use:fromTop={where}>
-              {#each artists as entry (entry.id)}
+              {#each artists.slice(0, artistsReveal.shown) as entry (entry.id)}
                 <div class="row" class:is-on={chosenArtist?.id === entry.id}>
                   <button class="row__hit" type="button" onclick={() => chooseArtist(entry)}>
                     <span class="row__label">{entry.name}</span>
@@ -1080,7 +1110,7 @@
     {:else if here?.kind === 'artists'}
       <div class="grid">
         <div class="grid__scroll" bind:this={grid} use:fromTop={where}>
-          {#each groups as group (group.letter)}
+          {#each shownGroups as group (group.letter)}
             <div class="group">
               <div class="group__head" id={group.id}>
                 <span class="group__letter">{group.letter}</span>

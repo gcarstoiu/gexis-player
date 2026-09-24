@@ -56,6 +56,24 @@ keeps every existing behaviour and changes when work happens. Virtualising
 changes what exists in the DOM at all, and the A-Z rail's `jumpTo` reads the
 DOM for the group it is jumping to.
 
+## What it cost to fix
+
+[ADR-0065](../decisions/0065-long-lists-are-built-a-screenful-at-a-time.md),
+the same day: 140 rows, then 160 more per frame.
+
+| | before | after |
+| --- | --- | --- |
+| artist grid, first row | 1939 ms | **264 ms** |
+| artist grid, all 917 | — | 1798 ms, behind the first paint |
+| playlist, first row | 1407 ms | **312 ms** |
+| playlist, all 467 | — | 887 ms |
+
+**And the first measurement of the fix was wrong.** Polling the page for the
+row count reported 854 ms where the page's own clock said 264: `Runtime.evaluate`
+runs on the main thread, which is exactly what is busy while a list is being
+built, so each poll waited behind the work it was timing. The numbers above
+come from a `MutationObserver` inside the page, which is not in that queue.
+
 ## What this does not settle
 
 - **Which fix.** That is ADR-0065 and George's call.

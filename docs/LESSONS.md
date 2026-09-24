@@ -624,6 +624,23 @@ model was wrong.
 **And the third made it worse than the bug.** An effect that clears state
 must not also be woken by it.
 
+**32. The probe waited behind the work it was timing** (2026-09-24).
+After ADR-0065 made the artist grid draw a screenful first, the harness
+reported its first row at 854 ms - and a 467-track playlist at 858, and a
+three-row screen at 116. Two long lists landing on the same number was the
+tell: `Runtime.evaluate` runs on the main thread, which is precisely what is
+busy while a list is being built, so every poll queued behind the chunks and
+reported the queue as part of the render. The page's own `MutationObserver`
+said **264 ms**.
+
+**A poll is a request for the resource under test.** It was fine while the
+panel built everything in one go and idled afterwards; it stopped being fine
+when the thing being measured became continuous work on that same thread.
+
+**Measure from inside, or measure something that is not the subject.** The
+same lesson as case 30, in a different instrument: there, the frame counter
+under-counted the change being tested; here, the clock ran through it.
+
 ## Common shape
 
 Every case had a *plausible* substitute for the real target — the build
