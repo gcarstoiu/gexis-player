@@ -56,7 +56,7 @@
   onpointercancel={() => (pressed = false)}
 >
   <div class="hairline" class:is-hidden={!head.hasPosition}>
-    <div class="hairline__fill" style:width={`${head.percent.toFixed(2)}%`}></div>
+    <div class="hairline__fill" style:--pos={`${head.percent.toFixed(2)}%`}></div>
   </div>
 
   <div class="left">
@@ -144,15 +144,27 @@
     top: 0;
     height: 2px;
     background: rgba(233, 238, 242, 0.08);
+    /* Clips the translated fill below, which is full width. */
+    overflow: hidden;
   }
+  /* **Translated, not resized** ([Finding 057](../../../docs/findings/057-the-progress-bar-is-what-keeps-the-panel-awake.md)).
+     `width` cannot animate without layout, and the playhead ticks every
+     500 ms against a 400 ms transition - so the old rule ran layout 80% of
+     the time, on every screen that carries this strip. A still artist grid
+     asked for 75 frames a run because of it, and 5 without.
+
+     A full-width fill shifted left costs the compositor alone. **Not
+     `scaleX`**, which George would have accepted: that squashes the pill's
+     rounded caps, and the track already clips to its own radius, so there
+     is nothing to give up. */
   .hairline__fill {
     position: absolute;
-    left: 0;
-    top: 0;
-    bottom: 0;
+    inset: 0;
     background: var(--src-accent);
     opacity: 0.6;
-    transition: width 400ms linear;
+    transform: translateX(calc(var(--pos, 0%) - 100%));
+    transition: transform 400ms linear;
+    will-change: transform;
   }
   .is-hidden {
     visibility: hidden;

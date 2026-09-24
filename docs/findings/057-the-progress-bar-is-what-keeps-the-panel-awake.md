@@ -63,18 +63,32 @@ not.** Nothing in Finding 055's table is wrong, but two scenes there cannot
 be compared with each other on percentage alone unless they asked for a
 similar number of frames.
 
-## The fix is not obvious, and is not made here
+## Fixed, 2026-09-24
 
-`width` cannot be animated without layout. The usual answer, `transform:
-scaleX()`, would distort the bar's rounded caps - it is a pill four pixels
-tall, and scaling it horizontally squashes both ends. Translating a
-full-width fill inside a clipping parent keeps the caps and costs nothing,
-but it is a change to a **designed** component, so it is George's rather
-than mine.
+George: *"If the rounded corners would be the only thing we would lose, go
+for the change as it is barely visible."* They were not the only option, and
+nothing was lost: **`.progress__track` already has `border-radius` and
+`overflow: hidden`**, so a full-width fill translated left is clipped to the
+track's own pill. `transform: translateX(calc(var(--pos) - 100%))` with a
+`transform` transition, on both surfaces.
 
-**What is certain is the size of the prize:** a still panel that asks for
-five frames a run instead of seventy-five, on every screen that carries the
-mini strip.
+Measured on the shipped build:
+
+| still screen | before | after |
+| --- | --- | --- |
+| now playing | ~2.30% dropped | **0.00%** |
+| artist grid | 9.33% | **0.00%** |
+
+**Both still screens are now inside the 2% target**, and the only running
+animation on the panel is a `transform`, which the compositor does alone.
+The bar was checked in place: at a position of 97.46% the fill is visible
+from 0 to 1137px of a 1168px track, with its caps intact.
+
+## The fix that was not needed
+
+`scaleX` was offered and accepted, and is not what was done: it squashes
+the caps of a four-pixel pill, and the track's own clipping made that
+unnecessary. Recorded because the cheaper-looking answer was the worse one.
 
 ## What this does not settle
 
