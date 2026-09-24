@@ -1,6 +1,6 @@
 # ADR-0059 — Where the artist list's portraits come from
 
-**Status:** **Accepted**, 2026-09-24. George chose neither a sweep nor
+**Status:** **Accepted and built**, 2026-09-24, and **closed the same day** on George's word: *"9k is final and closed."* 67% of his album artists carry a fanart portrait; the rest keep LMS's picture. George chose neither a sweep nor
 scrolling but **a button**: *"there should be a trigger in settings
 enrichment for a user to trigger an automatic update of album artists
 portraits, with a progress bar and completion status."* Phase 9 subphase

@@ -1476,7 +1476,47 @@ ADRs were updated.
      previous letter.
    - **Measure with the same instrument** (`tools/panel-frames.py`,
      `tools/panel-touch.py`) so the numbers are comparable, and read
-     Finding 034's six instrument faults before trusting a new one.
+     Finding 034's five instrument faults before trusting a new one.
+
+   **Plan approved by George, 2026-09-24**, with three rulings that settle
+   what was open:
+
+   1. **The UI sweep is done; measuring can start.** 9a-9k have landed and
+      he has passed them on the device.
+   2. **9k is final and closed.** The artist grid will not change again
+      under the baseline: 67% of album artists carry a fanart portrait and
+      the rest keep LMS's picture ([ADR-0059](decisions/0059-artist-portraits-in-the-list.md)).
+   3. **Everything on the panel, not only the three screens Finding 034
+      measured.** Settings, the sheets, the idle screen and the visualiser
+      are in scope, not just New Music, the artist grid and the queue rail.
+
+   **The five steps, in order:**
+
+   1. **Retake the baseline before touching anything.** Finding 034's table
+      is void twice over - its idle control was measuring a queue rail left
+      open by the run before it, and the design sweep has since rebuilt the
+      screens. Add a sixth instrument guard: **assert which screen the
+      control is on**, which is exactly what let the void control through
+      four rounds of scrutiny.
+   2. **Say what the target costs on today's screens.** Which fail, which
+      already pass, and by how much. Some may already pass - allowed for
+      when 7a closed.
+   3. **Attribute before optimising.** Finding 032 failed because it could
+      not separate its causes. One number per candidate per slow screen -
+      list length, card weight, artwork decode, layout - and **no change
+      lands without a measurement naming it**.
+   4. **The list work, in the order the evidence supports**: rendering only
+      what is on screen, lighter cards, letter buckets from the core rather
+      than one list of 917. `content-visibility: auto` was tried in Phase 7
+      and removed - with off-screen groups only estimated, the jump rail
+      landed inside the previous letter, and whatever replaces it must keep
+      the rail exact.
+   5. **George's pass**, and the floor either met or explicitly not met with
+      the reason.
+
+   **The biggest single item is structural**, and it is core work rather
+   than UI polish: the artist grid is a 917-item list and letter buckets
+   have to come from the core.
 
 1. **Every row in ADR-0022's settings inventory is wired end to end** (panel
    and phone, ADR-0035), or marked out of scope with the reason.
