@@ -229,6 +229,42 @@ export async function loadArtistPhotos(ids, size = 200) {
   }
 }
 
+//: **How many ids one request carries.** The daemon caps a request at 80
+//: (`PHOTO_BATCH`); 50 leaves room to raise that cap without changing this.
+const PREFETCH_BATCH = 50;
+
+let prefetching = null;
+
+/** Every portrait the grid will want, before it wants them (ADR-0068).
+ *
+ *  **The grid used to discover them as cards came into view**, twenty at a
+ *  time, so a card was always drawn as initials and became a picture
+ *  afterwards - and a batch of twenty nobody had opened took 353 ms, because
+ *  the daemon asked LMS's plugin for every one of them. With the sweep
+ *  answered first the whole library is 145 ms warm, so the panel asks for
+ *  all of it and every card is drawn with its picture already.
+ *
+ *  Asks only for what it lacks, so opening the grid again costs nothing, and
+ *  yields between batches so filling the map never holds up a scroll. */
+export function prefetchArtistPhotos(ids, size = 200) {
+  if (prefetching) return prefetching;
+  prefetching = (async () => {
+    try {
+      let known = {};
+      artistPhotos.subscribe((value) => (known = value))();
+      const suffix = size === 200 ? '' : `@${size}`;
+      const missing = ids.filter((id) => known[`${id}${suffix}`] === undefined);
+      for (let at = 0; at < missing.length; at += PREFETCH_BATCH) {
+        await loadArtistPhotos(missing.slice(at, at + PREFETCH_BATCH), size);
+        await new Promise((settle) => setTimeout(settle, 0));
+      }
+    } finally {
+      prefetching = null;
+    }
+  })();
+  return prefetching;
+}
+
 /** What the artist page draws below its discography: the biography with the
  *  credit its licence requires, and similar artists (ADR-0038 §2, filled by
  *  Phase 8). LMS's own plugin answers first where the server has it. */

@@ -636,33 +636,51 @@ class StateServer:
             return web.json_response({})
         if size not in (PHOTO_THUMB, PHOTO_LARGE):
             return web.json_response({"error": f"unknown size {size}"}, status=400)
-        photos = await self._artistinfo.photos(ids, size)
+        # **The sweep first, LMS for the rest** (ADR-0068). ADR-0059 settled
+        # that order and this asked in the other one: every id went to the
+        # LMS plugin and 68 % of the answers were then thrown away for a
+        # fanart portrait already on the device. An artist the plugin has
+        # not looked up costs it 500-900 ms upstream, so a batch of twenty
+        # nobody had opened took 353 ms against 5 ms for one already known.
+        swept = {artist_id: await self._swept_portrait(artist_id, size) for artist_id in ids}
+        rest = [artist_id for artist_id, url in swept.items() if url is None]
+        photos = await self._artistinfo.photos(rest, size) if rest else {}
         return web.json_response(
-            {str(k): await self._portrait(k, v, size) for k, v in photos.items()}
+            {str(artist_id): swept[artist_id] or photos.get(artist_id) for artist_id in swept}
         )
+
+    async def _swept_portrait(self, artist_id: int, size: int) -> str | None:
+        """**The portrait ADR-0059's sweep found**, or None if it found none.
+
+        The panel asks by LMS id and the sweep stores by folded name, because
+        a rescan renumbers the ids (Finding 029) - so the name comes from the
+        library, which already holds it and answers from one map built per
+        scan.
+
+        It goes through LMS's image proxy, so the grid gets the size it asked
+        for and LMS does the fetching and the caching.
+        """
+        if self._library is None:
+            return None
+        try:
+            name = await self._library.artist_name(artist_id)
+        except Exception:
+            return None
+        if not name:
+            return None
+        found = remembered(self._notes, ARTIST_NAMESPACE, fold(name))
+        if not found or found is True:
+            return None
+        return f"{self._library.base}/imageproxy/{found}/image_{size}x{size}_o.jpg"
 
     async def _portrait(self, artist_id: int, lms_url, size: int):
         """**fanart's portrait if ADR-0059's sweep found one, LMS's otherwise.**
 
-        The panel asks by LMS id and the sweep stores by folded name, because
-        a rescan renumbers the ids (Finding 029) - so the name comes from the
-        library, which already holds it.
-
-        Both go through LMS's image proxy, so the grid gets the size it asked
-        for and LMS does the fetching and caching either way.
+        For a single artist, where asking LMS first costs nothing because it
+        is being asked anyway. The list route resolves the sweep first and
+        asks LMS only for what is left (ADR-0068).
         """
-        if self._library is None:
-            return lms_url
-        try:
-            name = await self._library.artist_name(artist_id)
-        except Exception:
-            return lms_url
-        if not name:
-            return lms_url
-        found = remembered(self._notes, ARTIST_NAMESPACE, fold(name))
-        if not found or found is True:
-            return lms_url
-        return f"{self._library.base}/imageproxy/{found}/image_{size}x{size}_o.jpg"
+        return await self._swept_portrait(artist_id, size) or lms_url
 
     async def _handle_artist_info(self, request: web.Request) -> web.Response:
         """`?id=<lms artist id>&name=<artist>` -> what the artist page draws

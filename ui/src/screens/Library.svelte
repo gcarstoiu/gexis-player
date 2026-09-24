@@ -29,6 +29,7 @@
     playlistsCached,
     loadPlaylists,
     loadPlaylist,
+    prefetchArtistPhotos,
     browseRadio,
     radioPlay,
     libraryAction,
@@ -417,6 +418,10 @@
     busy = 'artists';
     try {
       artists = await artistsCached();
+      // **Every portrait, before the grid wants them** (ADR-0068). Not
+      // awaited: the grid opens now and fills in behind itself, where it
+      // used to discover twenty at a time as cards came into view.
+      prefetchArtistPhotos(artists.map((entry) => entry.id));
       path = [{ kind: 'artists', label: 'Artists' }];
     } catch (err) {
       console.info('library:', err.message);

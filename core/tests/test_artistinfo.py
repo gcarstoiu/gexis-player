@@ -234,6 +234,57 @@ async def test_the_route_answers_a_url_per_artist():
                     "7453": None}
 
 
+class FakeLibrary:
+    """Just enough of the library for the portrait route: a name per id."""
+
+    def __init__(self, names):
+        self._names = names
+        self.base = BASE
+
+    async def artist_name(self, artist_id):
+        return self._names.get(artist_id)
+
+
+class FakeNotes:
+    """The sweep's store, as `remembered` reads it."""
+
+    def __init__(self, rows=None):
+        self.rows = rows or {}
+
+    def recall(self, namespace, key):
+        if (namespace, key) not in self.rows:
+            raise KeyError(key)
+        return self.rows[(namespace, key)]
+
+
+@pytest.mark.asyncio
+async def test_the_sweeps_portrait_is_answered_without_asking_lms():
+    """ADR-0068. ADR-0059 settled that the sweep comes first and LMS is the
+    fallback; asking LMS anyway cost 353 ms a batch for an answer thrown
+    away 68 % of the time."""
+    from aiohttp.test_utils import TestClient, TestServer
+
+    from gexis_core.artwork_sweep import ARTIST_NAMESPACE
+    from gexis_core.state import StateStore
+    from gexis_core.wsserver import StateServer
+
+    lms = FakeLms(photos={7452: "imageproxy/mai/artist/7452/image.png"})
+    server = StateServer(
+        StateStore({}),
+        artistinfo=_info(lms),
+        library=FakeLibrary({7452: "Isaac Hayes", 7453: "Nobody At All"}),
+        notes=FakeNotes({(ARTIST_NAMESPACE, "isaac hayes"): "https://fan/thumb.jpg"}),
+    )
+
+    async with TestClient(TestServer(server.make_app())) as client:
+        body = await (await client.get("/library/artist-photos?ids=7452,7453")).json()
+
+    assert body["7452"] == f"{BASE}/imageproxy/https://fan/thumb.jpg/image_200x200_o.jpg"
+    # The one the sweep had no picture for still reaches the plugin.
+    asked = [c for c in lms.commands if c[1] == "artistphoto"]
+    assert [c[-1] for c in asked] == ["artist_id:7453"]
+
+
 @pytest.mark.asyncio
 async def test_the_route_is_503_when_artist_info_is_not_wired():
     from aiohttp.test_utils import TestClient, TestServer
