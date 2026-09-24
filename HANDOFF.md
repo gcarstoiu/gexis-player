@@ -131,13 +131,29 @@ loses its blur unless it is baked into an image — it is static, so baking
 keeps it exactly. Nothing is implemented; **an ADR comes first, and George
 has not yet ruled**.
 
+**[Finding 060](docs/findings/060-the-queue-rails-own-cost.md): the rail's
+own 17.9 % is two decorations.** Its plate's `box-shadow: -30px 0 80px` —
+an 80 px blur, the same family again — and `.qrow__remove`, a 44 × 44 box
+with a border and two rotated bars on every row. About eight frames each:
+38.2 → 46.1 → **53.5 fps and 0.00 % dropped**, with artwork and text still
+drawn. Measured in eight interleaved rounds after a block-by-block pass
+drifted.
+
 ### Next
 
-Criterion 0 step 3's remainder: **the queue rail's own 17.9 %**, which is
-immune to the background and is a separate question, and **why every list
-scrolls on the main thread at all** — Finding 032 blamed its own synthesised
-touches for that, and with real touches it is still true, so that caveat is
-resolved in the other direction.
+**One test needs a permission this session did not have.** Every list scrolls
+on the main thread, including the rail; the leading explanation is Chromium's
+`kNotOpaqueForTextAndLCDText`, and starting the kiosk with
+`--disable-lcd-text` would settle it. That is an edit to
+`/usr/local/bin/gexis-kiosk-start` on the device, which was refused. **If
+composited scrolling is reachable, every paint cost in Findings 059 and 060
+stops mattering during a scroll**, so it is worth the one test.
+
+**And the device has a hardware flag worth George's eye.** `vcgencmd
+get_throttled` reads `0xd0000`: under-voltage, frequency capping and the
+soft temperature limit have all *occurred* during this uptime — historical
+bits, none current, at 74.5 °C and a full 1.8 GHz. Not a UI measurement,
+but it is the kind of thing that makes measurements wander.
 
 
 ## Build environment (2026-09-13) — read this before the next build
