@@ -618,6 +618,14 @@ async def _scene(name, arrive, interact, runs, per_run,
 
 
 
+#: Scenes with no gesture. For these, **few frames is the answer, not a
+#: broken run**: a still screen that asks for almost nothing is a still
+#: screen that costs almost nothing. Removing the badge pulse took now
+#: playing from 86 frames a run to under 25, and the report called that a
+#: failure (Finding 056, 2026-09-24).
+STILL = ("idle-control", "grid-still")
+
+
 def report(results: dict) -> None:
     print()
     for name, runs in results.items():
@@ -626,6 +634,12 @@ def report(results: dict) -> None:
             print(f"{name:20} FAILED - {failed[0]['error']}")
             continue
         usable = [r for r in runs if (r.get("wanted") or 0) >= MIN_FRAMES]
+        if name in STILL and len(usable) < len(runs) / 2:
+            asked = sorted(r.get("wanted") or 0 for r in runs)
+            drops = sum(r.get("dropped") or 0 for r in runs)
+            print(f"{name:20} asks for almost nothing - {asked[len(asked)//2]} frames a run "
+                  f"(min {asked[0]} max {asked[-1]}), {drops} dropped in {len(runs)} runs")
+            continue
         thin = len(runs) - len(usable)
         pcts = [r["dropped_pct"] for r in usable if r["dropped_pct"] is not None]
         partials = [r["partial_pct"] for r in usable if r["partial_pct"] is not None]

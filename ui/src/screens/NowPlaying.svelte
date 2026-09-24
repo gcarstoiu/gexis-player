@@ -298,7 +298,7 @@
        went: the accent rule along the top edge and the mark itself already
        say which renderer this is, and a third statement in words was the
        one taking the most room. -->
-  <span class="srcpill" class:is-playing={transport === 'playing'}>
+  <span class="srcpill">
     <SourceMark source={active} size={32} color="var(--src-accent)" />
   </span>
 
@@ -695,14 +695,13 @@
     align-items: center;
     color: var(--src-accent);
   }
-  .srcpill.is-playing {
-    animation: pulse 2.4s ease-in-out infinite;
-  }
-  @keyframes pulse {
-    0%,
-    100% { opacity: 1; }
-    50% { opacity: 0.35; }
-  }
+  /* **No pulse.** The badge used to animate its opacity forever while the
+     transport was playing, which kept the whole panel composited at 60 fps -
+     on the artist grid that was 15.3% of frames dropped on a screen nobody
+     was touching, against 2.7% without it
+     ([Finding 056](../../../docs/findings/056-why-a-still-panel-is-never-idle.md)).
+     George, 2026-09-24: remove it from both surfaces. The badge still says
+     which renderer is playing; it says it without breathing. */
   .screen__body {
     position: absolute;
     inset: 0;

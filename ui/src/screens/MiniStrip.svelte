@@ -73,7 +73,7 @@
 
   <!-- The mark alone at 38px, as on the screen above it: the word went in
        the same change (design, 2026-09-22). -->
-  <span class="badge" class:is-playing={transport === 'playing'}>
+  <span class="badge">
     <SourceMark source={active} size={38} color="var(--src-accent)" />
   </span>
 
@@ -209,14 +209,13 @@
     color: var(--src-accent);
     flex-shrink: 0;
   }
-  .badge.is-playing {
-    animation: pulse 2.4s ease-in-out infinite;
-  }
-  @keyframes pulse {
-    0%,
-    100% { opacity: 1; }
-    50% { opacity: 0.35; }
-  }
+  /* **No pulse.** The badge used to animate its opacity forever while the
+     transport was playing, which kept the whole panel composited at 60 fps -
+     on the artist grid that was 15.3% of frames dropped on a screen nobody
+     was touching, against 2.7% without it
+     ([Finding 056](../../../docs/findings/056-why-a-still-panel-is-never-idle.md)).
+     George, 2026-09-24: remove it from both surfaces. The badge still says
+     which renderer is playing; it says it without breathing. */
 
   .right {
     display: flex;
