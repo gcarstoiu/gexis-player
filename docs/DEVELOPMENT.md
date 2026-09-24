@@ -1492,7 +1492,21 @@ ADRs were updated.
 
    **The five steps, in order:**
 
-   1. **Retake the baseline before touching anything.** Finding 034's table
+   1. ~~**Retake the baseline before touching anything.**~~ **Done
+      2026-09-24: [Finding 055](findings/055-what-the-panel-presents-now.md).**
+      Fifteen scenes, twenty runs each, music playing. **Nothing on the
+      panel meets the target**; the one scene that passes does so by not
+      drawing. The four worst are all list scrolls - the artist grid at
+      **49.6% dropped**, the artist page 30.1%, the album pane 27.1%, New
+      Music 24.6% - which is the evidence for step 4. ADR-0041 is confirmed
+      on the one screen that had a scrim: the queue rail went from Finding
+      034's 13.9 fps / 75.2% to **50.0 fps / 11.4%**. The artist grid is
+      unchanged at 49.6% against 034's 50.7%, because it never had a scrim.
+      Extending the harness to the whole panel found **four more instrument
+      faults** before any number was taken, and a fifth that cost a full
+      run.
+
+      *Original text:* **Retake the baseline before touching anything.** Finding 034's table
       is void twice over - its idle control was measuring a queue rail left
       open by the run before it, and the design sweep has since rebuilt the
       screens. Add a sixth instrument guard: **assert which screen the

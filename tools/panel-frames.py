@@ -224,7 +224,11 @@ SETTINGS_LIST = ".settings .list"
 #: NO_UPDATE_DESIRED, which the harness correctly refused to report.
 SETTINGS_DISPLAY = ".settings .cat"
 PANE_LIST = ".pane__list"
+#: The artist page's own scroller. `.tracks__list` is the *album*
+#: page's; the artist page scrolls `.artistright`, and asking for the
+#: wrong one lost a twenty-minute run on its last scene (2026-09-24).
 TRACKS_LIST = ".tracks__list"
+ARTIST_RIGHT = ".artistright"
 ARTIST_FACE = ".grid__scroll .face, .grid__scroll .artist"
 ARTIST_PAGE = ".artist__disc"
 VOLUME_TRIGGER = '.btn[aria-label="Volume"], .mini__volume'
@@ -527,8 +531,8 @@ async def measure(port: int, runs: int, only: str | None, playback: str | None) 
                                lambda: screen.tap(RADIO_CARD, settle=0.2)),
                 "artist-page-open": (lambda: screen.go_artist_grid(),
                                      lambda: screen.tap(ARTIST_FACE, settle=0.2)),
-                "artist-page-scroll": (lambda: screen.arrive_scroll(screen.go_artist_page, TRACKS_LIST),
-                                       lambda: screen.swipe(TRACKS_LIST, "y")),
+                "artist-page-scroll": (lambda: screen.arrive_scroll(screen.go_artist_page, ARTIST_RIGHT),
+                                       lambda: screen.swipe(ARTIST_RIGHT, "y")),
             }
             if only:
                 steps = {k: v for k, v in steps.items() if k == only}
@@ -544,43 +548,63 @@ async def measure(port: int, runs: int, only: str | None, playback: str | None) 
                 "queue-rail-scroll": RAIL_LIST,
                 "settings-scroll": SETTINGS_LIST,
                 "albums-scroll": PANE_LIST,
-                "artist-page-scroll": TRACKS_LIST,
+                "artist-page-scroll": ARTIST_RIGHT,
             }
 
             for name, (arrive, interact) in steps.items():
                 per_run = []
-                for _ in range(runs):
-                    if playback:
-                        await set_playback(session, playback)
-                    await arrive()
-                    before = await state(session)
-                    scroller = scrollers.get(name)
-                    was = await screen.scroll_top(scroller) if scroller else None
-                    result = await panel.trace(interact)
-                    now = await screen.scroll_top(scroller) if scroller else None
-                    result["scrolled_px"] = (
-                        None if was is None or now is None else round(abs(now - was))
-                    )
-                    after = await state(session)
-                    # A gesture that changed the track changed the panel's
-                    # work as well, so the run says so rather than being
-                    # averaged in silently.
-                    result["playback"] = before
-                    result["disturbed"] = (
-                        before.get("queue_index") != after.get("queue_index")
-                        or before.get("transport") != after.get("transport")
-                    )
-                    per_run.append(result)
-                    await asyncio.sleep(0.4)
+                # **A scene that cannot run loses itself, not the run.** The
+                # first full pass died on its last scene - the wrong
+                # selector for the artist page - and took twenty minutes of
+                # everything else with it (2026-09-24).
+                try:
+                    await _scene(name, arrive, interact, runs, per_run,
+                                 panel, screen, session, playback, scrollers)
+                except Exception as exc:
+                    results[name] = [{"error": f"{type(exc).__name__}: {exc}"}]
+                    print(f"  {name}: FAILED - {exc}", file=sys.stderr)
+                    continue
                 results[name] = per_run
                 print(f"  {name}: done", file=sys.stderr)
         await panel.close()
     return results
 
 
+async def _scene(name, arrive, interact, runs, per_run,
+                 panel, screen, session, playback, scrollers) -> None:
+    """One scene, `runs` times."""
+    for _ in range(runs):
+        if playback:
+            await set_playback(session, playback)
+        await arrive()
+        before = await state(session)
+        scroller = scrollers.get(name)
+        was = await screen.scroll_top(scroller) if scroller else None
+        result = await panel.trace(interact)
+        now = await screen.scroll_top(scroller) if scroller else None
+        result["scrolled_px"] = (
+            None if was is None or now is None else round(abs(now - was))
+        )
+        after = await state(session)
+        # A gesture that changed the track changed the panel's work as well,
+        # so the run says so rather than being averaged in silently.
+        result["playback"] = before
+        result["disturbed"] = (
+            before.get("queue_index") != after.get("queue_index")
+            or before.get("transport") != after.get("transport")
+        )
+        per_run.append(result)
+        await asyncio.sleep(0.4)
+
+
+
 def report(results: dict) -> None:
     print()
     for name, runs in results.items():
+        failed = [r for r in runs if r.get("error")]
+        if failed:
+            print(f"{name:20} FAILED - {failed[0]['error']}")
+            continue
         usable = [r for r in runs if (r.get("wanted") or 0) >= MIN_FRAMES]
         thin = len(runs) - len(usable)
         pcts = [r["dropped_pct"] for r in usable if r["dropped_pct"] is not None]
