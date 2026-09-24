@@ -33,7 +33,7 @@
     radioPlay,
     libraryAction,
   } from '../lib/library.js';
-  import { revealing } from '../lib/chunks.svelte.js';
+  import { afterPaint, revealing } from '../lib/chunks.svelte.js';
   import MiniStrip from './MiniStrip.svelte';
   import WaitingServices from './WaitingServices.svelte';
 
@@ -91,8 +91,38 @@
   //: One for the album artists, which the grid and the browse screen's
   //: first pane both draw - they are never on screen together, and a count
   //: already grown is a screen that opens complete.
-  const artistsReveal = revealing(() => artists.length);
-  const playlistReveal = revealing(() => playlist?.items?.length ?? 0);
+  const artistsReveal = revealing(() => artists.length, () => where);
+  const playlistReveal = revealing(() => playlist?.items?.length ?? 0, () => where);
+
+  //: **A home card says it was pressed** (George, 2026-09-24: the cards
+  //: give nothing back on a tap, *"Radio has a tapping animation. The rest
+  //: do not"*). Radio only looked alive because its screen is a skeleton
+  //: that paints at once, where the others held the panel's last frame
+  //: while the new screen was built.
+  //:
+  //: `:active` alone is not enough here: a quick tap can begin and end
+  //: inside one frame, and the frame that would have shown it is the one
+  //: spent opening the next screen. So the press is held long enough to be
+  //: painted, and **the screen is opened a painted frame later** - the
+  //: feedback goes out first, and the work follows it.
+  const PRESS_MS = 130;
+  let pressed = $state(null);
+  let unpressing = null;
+
+  function press(what) {
+    clearTimeout(unpressing);
+    pressed = what;
+  }
+
+  function lift() {
+    clearTimeout(unpressing);
+    unpressing = setTimeout(() => (pressed = null), PRESS_MS);
+  }
+
+  /** Runs `go` once the pressed frame is on the screen. */
+  function opening(go) {
+    afterPaint(go);
+  }
 
   const RAIL = ['#', ...'ABCDEFGHIJKLMNOPQRSTUVWXYZ'];
   // Grouped by the letter the core folded for us (ADR-0038 §1a), keeping
@@ -787,7 +817,15 @@
     {:else if atHome}
       <div class="root">
         <div class="cards">
-          <button class="card card--browse" type="button" onclick={openBrowse}>
+          <button
+            class="card card--browse"
+            class:is-pressed={pressed === 'browse'}
+            type="button"
+            onpointerdown={() => press('browse')}
+            onpointerup={lift}
+            onpointercancel={lift}
+            onclick={() => opening(openBrowse)}
+          >
             <span class="glyph glyph--bars"><i style="height:26px"></i><i style="height:44px"></i><i style="height:32px"></i><i style="height:39px"></i></span>
             <span>
               <span class="card__name">Browse</span>
@@ -795,7 +833,15 @@
             </span>
           </button>
 
-          <button class="card card--artists" type="button" onclick={openArtists}>
+          <button
+            class="card card--artists"
+            class:is-pressed={pressed === 'artists'}
+            type="button"
+            onpointerdown={() => press('artists')}
+            onpointerup={lift}
+            onpointercancel={lift}
+            onclick={() => opening(openArtists)}
+          >
             <span class="glyph glyph--dots"><i></i><i></i><i></i></span>
             <span>
               <span class="card__name">Artists</span>
@@ -803,7 +849,15 @@
             </span>
           </button>
 
-          <button class="card card--playlists" type="button" onclick={openPlaylists}>
+          <button
+            class="card card--playlists"
+            class:is-pressed={pressed === 'playlists'}
+            type="button"
+            onpointerdown={() => press('playlists')}
+            onpointerup={lift}
+            onpointercancel={lift}
+            onclick={() => opening(openPlaylists)}
+          >
             <span class="glyph glyph--list">
               <span><i></i><b style="width:44px"></b></span>
               <span><i></i><b style="width:32px"></b></span>
@@ -815,7 +869,15 @@
             </span>
           </button>
 
-          <button class="card card--radio" type="button" onclick={() => openRadio()}>
+          <button
+            class="card card--radio"
+            class:is-pressed={pressed === 'radio'}
+            type="button"
+            onpointerdown={() => press('radio')}
+            onpointerup={lift}
+            onpointercancel={lift}
+            onclick={() => opening(() => openRadio())}
+          >
             <span class="glyph glyph--waves"><i></i><b></b><b></b></span>
             <span>
               <span class="card__name">Radio</span>
@@ -825,7 +887,15 @@
             </span>
           </button>
 
-          <button class="card card--settings" type="button" onclick={onsettings}>
+          <button
+            class="card card--settings"
+            class:is-pressed={pressed === 'settings'}
+            type="button"
+            onpointerdown={() => press('settings')}
+            onpointerup={lift}
+            onpointercancel={lift}
+            onclick={() => opening(onsettings)}
+          >
             <span class="glyph glyph--sliders"><i></i><b></b><i></i><b></b></span>
             <span>
               <span class="card__name">Settings</span>
@@ -1555,9 +1625,16 @@
     padding: 26px 24px;
     box-sizing: border-box;
     height: 200px;
+    transition:
+      transform 110ms cubic-bezier(0.2, 0.8, 0.2, 1),
+      background 110ms linear,
+      border-color 110ms linear;
   }
-  .card:not(:disabled):active {
+  .card:not(:disabled):active,
+  .card.is-pressed {
     background: rgba(var(--card), 0.24);
+    border-color: rgba(var(--card), 0.55);
+    transform: scale(0.975);
   }
   .card--browse { --card: 126, 214, 188; }
   .card--artists { --card: 159, 180, 232; }

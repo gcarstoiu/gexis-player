@@ -663,6 +663,21 @@ is a handful of nodes and paints at once, so only Radio looked alive.
 one".** To yield to the screen: `requestAnimationFrame`, then
 `setTimeout(…, 0)`.
 
+**34. The count was reset by the wrong thing** (2026-09-24). ADR-0065
+built a list a screenful at a time, and the count reset when the list's
+*length* changed. Reopening the same screen does not change its length - so
+the count kept whatever it had grown to, and the second visit built all 917
+cards in one go, exactly what the first visit had avoided. George: *"it felt
+like it worked after the first two but then on second it went back to being
+slower."*
+
+**A cache keyed on the data is not keyed on the showing of it.** The length
+answers "is this a different list", which is not the question; the question
+is "is this a different time I am looking at one".
+
+**It only appears on the second visit**, so a measurement that opens a
+screen once cannot see it. The probe now opens the same screen four times.
+
 ## Common shape
 
 Every case had a *plausible* substitute for the real target — the build

@@ -52,8 +52,13 @@ about 150 ms and the panel shows its *last frame* until the new screen is
 painted, which was 600 ms away. Radio's skeleton is a handful of nodes and
 paints at once, so only Radio looked alive.
 
-- **The count is per list and reset by its length changing**, so opening a
-  different playlist starts again at a screenful.
+- **The count is reset by the page being opened, not only by the list's
+  length changing.** Without that, a list closed and reopened is built
+  whole: the count keeps whatever it grew to, the length has not moved, and
+  the second visit pays everything the first one avoided. George saw exactly
+  that — *"it felt like it worked after the first two but then on second it
+  went back to being slower"*. Reopening the grid now measures 154–183 ms to
+  the screen and 271–318 ms painted, run after run.
 - **The A-Z rail finishes the grid before it jumps.** `jumpTo` reads the DOM
   for the group it is scrolling to, and cannot scroll to a group that has
   not been built. Measured: 350 ms after opening, the grid holds 460 cards

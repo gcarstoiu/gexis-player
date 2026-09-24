@@ -37,7 +37,7 @@ const CHUNK = 180;
 //: kept building and the first screenful was not painted for 584ms, whether
 //: that screenful was 140 rows or 56. The timeout runs once the frame has
 //: gone out.
-function afterPaint(run) {
+export function afterPaint(run) {
   let timer = null;
   const frame = requestAnimationFrame(() => {
     timer = setTimeout(run, 0);
@@ -48,12 +48,24 @@ function afterPaint(run) {
   };
 }
 
-export function revealing(total) {
+/**
+ * @param total  how many rows the list has
+ * @param key    what makes it a *different* showing of a list - the page
+ *               being opened again, most of all. **Without it a list that
+ *               is closed and reopened is built whole**: the count keeps
+ *               whatever it grew to, the length has not changed, so nothing
+ *               resets it and the second open pays what the first one
+ *               avoided (George, 2026-09-24: *"it felt like it worked after
+ *               the first two but then on second it went back to being
+ *               slower"*).
+ */
+export function revealing(total, key = () => null) {
   let shown = $state(FIRST);
   let cancel = null;
 
   $effect(() => {
     const want = total();
+    void key();
     if (cancel) cancel();
     let at = Math.min(FIRST, want);
     shown = at;
