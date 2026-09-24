@@ -543,6 +543,34 @@ action that makes the mode work is the action that killed the process.
 too when asked.** Flagging the gap was right; it was not a substitute for
 closing it, and the gap turned out not to be a detail.
 
+**27. The percentage went to zero because the panel got slower**
+(2026-09-24). Giving the artist grid's scroller an opaque background took it
+from 31.58 % of frames dropped to **0.00 %** — at 13.9 fps, half the 27.7 it
+had. The compositor stopped asking for frames it could not deliver, and a
+frame never asked for is never dropped.
+
+**The metric's denominator is the compositor's own appetite.** Any change
+that makes the panel ask for less improves it, and three variants in a row
+did exactly that before the frame rate beside them was read.
+
+**Report the rate, not only the share.** `panel-frames.py` has printed both
+since Finding 034; it is a number being *read* that stops this one.
+
+**28. CSS cannot fake a downscale, and the screenshot said so**
+(2026-09-24). A blur can be replaced by a small picture stretched large, so
+I wrote `width: 12px; transform: scale(133)` and measured the frames coming
+back. The look was wrong: Chromium rasterises a scaled element at its final
+size from the full-resolution source, so the small intermediate never
+exists. The background read "ROD STEWART / ANOTHER COUNTRY" at 12 px.
+
+**The frame numbers were real and meant nothing.** The variant was cheap
+because it dropped `filter`, not because it downscaled anything, so it
+measured a fix that did not exist. The real one needs a genuinely small
+bitmap — the artwork URL carries its own size.
+
+**Photograph a change that is supposed to look the same.** The cost was
+measured eight ways before anyone looked at it.
+
 ## Common shape
 
 Every case had a *plausible* substitute for the real target — the build

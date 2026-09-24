@@ -80,6 +80,17 @@ NO_UPDATE = "STATE_NO_UPDATE_DESIRED"
 MIN_FRAMES = 25
 
 
+#: **The same gesture everywhere.** A swipe used to span 70 % of whatever
+#: element it was in, so the artist grid (600 px tall) was dragged 420 px and
+#: the browse screen's artist pane (250 px tall) only 175 - a different
+#: *velocity*, which is a different amount of scrolling to draw per frame.
+#: Finding 058 compared them anyway. Now every scroll is dragged the same
+#: distance over the same time - about 400 px/s - clamped where an element is
+#: too small to hold it, and each run reports how far it actually travelled.
+SWIPE_PX = 170
+SWIPE_MS = 420
+
+
 class Panel:
     """One DevTools session against the kiosk's page.
 
@@ -337,21 +348,24 @@ class Screen:
         self._finger.tap(round(x + w / 2), round(y + h / 2))
         await asyncio.sleep(settle)
 
-    async def swipe(self, selector: str, axis: str = "y", fraction: float = 0.7,
-                    ms: int = 420) -> None:
+    async def swipe(self, selector: str, axis: str = "y",
+                    span: int = SWIPE_PX, ms: int = SWIPE_MS) -> None:
         """A swipe *inside* an element, so it scrolls that element and not
-        whatever happens to be under a fixed coordinate."""
+        whatever happens to be under a fixed coordinate - and **the same
+        gesture in every scene**. See `SWIPE_PX`."""
         box = await self.rect(selector)
         if box is None:
             raise RuntimeError(f"nothing to swipe: {selector} is not on the panel")
         x, y, w, h = box
         cx, cy = x + w / 2, y + h / 2
+        extent = w if axis == "x" else h
+        reach = min(span, round(extent * 0.8)) / 2
+        if reach < 20:
+            raise RuntimeError(f"{selector} is {extent} px across: too small to swipe")
         if axis == "x":
-            span = w * fraction / 2
-            self._finger.swipe(round(cx + span), round(cy), round(cx - span), round(cy), ms=ms)
+            self._finger.swipe(round(cx + reach), round(cy), round(cx - reach), round(cy), ms=ms)
         else:
-            span = h * fraction / 2
-            self._finger.swipe(round(cx), round(cy + span), round(cx), round(cy - span), ms=ms)
+            self._finger.swipe(round(cx), round(cy + reach), round(cx), round(cy - reach), ms=ms)
 
     async def must_be(self, selector: str, where: str) -> None:
         if not await self.has(selector):
@@ -562,7 +576,11 @@ async def measure(port: int, runs: int, only: str | None, playback: str | None) 
                                     lambda: screen.swipe(SETTINGS_LIST, "y")),
                 "albums-open": (lambda: screen.go_home(),
                                 lambda: screen.tap(BROWSE_CARD, settle=0.2)),
-                "albums-scroll": (lambda: screen.arrive_scroll(
+                # The browse screen's **artist** pane: three `.pane__list`
+                # boxes are stacked there and this is the first, 917 rows in
+                # a 250 px window. Named for the list, not the screen, since
+                # "albums-scroll" was measuring this one (2026-09-24).
+                "browse-artists-scroll": (lambda: screen.arrive_scroll(
                                      lambda: screen.go_card(BROWSE_CARD, PANE_LIST, "browse"), PANE_LIST),
                                   lambda: screen.swipe(PANE_LIST, "y")),
                 "playlists-open": (lambda: screen.go_home(),
@@ -587,7 +605,7 @@ async def measure(port: int, runs: int, only: str | None, playback: str | None) 
                 "artist-grid-scroll": ARTIST_GRID,
                 "queue-rail-scroll": RAIL_LIST,
                 "settings-scroll": SETTINGS_LIST,
-                "albums-scroll": PANE_LIST,
+                "browse-artists-scroll": PANE_LIST,
                 "artist-page-scroll": ARTIST_RIGHT,
             }
 
@@ -649,8 +667,10 @@ STILL = ("idle-control", "grid-still")
 #: reported at 50 fps and 11% dropped in Finding 055, and at 0.00% dropped
 #: after the metric was corrected - on a queue of sixteen tracks that fits
 #: the screen and **moved 0 px**. A gesture that moves nothing is not a
-#: fast scroll (2026-09-24).
-SCROLLED_MIN_PX = 200
+#: fast scroll (2026-09-24). With `SWIPE_PX` constant, a scroll with room to
+#: move travels 170 px and some momentum beyond it; well under that means the
+#: list ran out of room, not that the panel is fast.
+SCROLLED_MIN_PX = 120
 
 
 def report(results: dict) -> None:
@@ -707,10 +727,15 @@ def report(results: dict) -> None:
         if main or composited:
             where = f"   scroll on the {'MAIN THREAD' if main > composited else 'compositor'}"
         invisible = sum(r.get("dropped_invisible", 0) for r in usable)
+        # **How far it went, in the same line as what it cost.** Two scenes
+        # are only comparable if the gesture moved them the same distance;
+        # Finding 058 compared 574 px against 191 (2026-09-24).
+        travel = f"   moved {statistics.median(moved):.0f} px" if moved else ""
         print(f"{name:20} {fps_note}dropped median {statistics.median(pcts):5.2f} %  "
               f"(min {min(pcts):5.2f} max {max(pcts):5.2f})   "
               f"partial median {statistics.median(partials):5.2f} %   "
               f"frames/run {statistics.median(frames):.0f}   n={len(pcts)}"
+              + travel
               + where
               + (f"   invisible-drops {invisible}" if invisible else "")
               + (f"   thin {thin}" if thin else "")

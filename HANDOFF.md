@@ -4,7 +4,9 @@ Last updated: 2026-09-24 (twenty-third session, on R2D2 — **Phase 9: 9a
 through 9j are done and passed on the device. The visualiser's four faults
 are fixed and measured, its ballistics are three settings, and 9k — the
 library's pictures from fanart — is built, with the portrait sweep run on
-George's own library. The image predates all of it**)
+George's own library. Criterion 0 has the panel measured: the still screens
+are at 0.00 %, and every scroll's cost is the background's two blurs. The
+image predates all of it**)
 
 ## Start here
 
@@ -86,12 +88,56 @@ words.
   artists at about 3 s each, so **45–50 minutes**, more than the 25–30 first
   estimated. Its number is in the settings row.
 - **The image is a long way behind.** It predates all of the above.
-- **Waiting on George:** the three ballistics defaults, and whether the
-  mixed look of the artist grid is acceptable.
+- **Waiting on George:** the three ballistics defaults, whether the
+  mixed look of the artist grid is acceptable, and **the background's blur**
+  (below).
+
+### Criterion 0 — the panel measured, 2026-09-24
+
+**Steps 1 and 2 are done: the still screens are at 0.00 %.** A pulsing badge
+and a progress bar animated with `width` were what an untouched panel was
+paying for (Findings 056 and 057); both are gone.
+
+**Step 3, the scrolls, is answered — and it cost two retractions.**
+
+- **[Finding 058](docs/findings/058-what-the-scrolls-are-not.md) withdraws
+  two of Finding 055's numbers.** The instrument counted dropped frames the
+  compositor had marked as not affecting smoothness, so **every figure it
+  had ever printed was high by roughly a factor of two**; and
+  `queue-rail-scroll` was measured on a sixteen-track queue that **moved
+  0 px**, which makes the claim that ADR-0041 took the rail from 13.9 fps to
+  50.0 unsupported. `albums-scroll` moved 191 px against the grid's 574.
+  **Finding 055's table needs re-taking** — a corrected one is in 059.
+- **The harness now refuses both mistakes**, swipes the same 170 px in every
+  scene, and prints how far each run actually travelled.
+- **[Finding 059](docs/findings/059-what-the-panel-pays-for-its-blur.md)
+  names the cause: `filter: blur()` on `PanelBackground`.** A blur is
+  re-evaluated over whatever area a frame damages, so the cost is the
+  scroller's *area* and nothing about its contents — which is why Finding
+  058's eight candidates were all negative. Suppress both blurs and the
+  artist grid goes **25.6 fps / 33.81 % → 54.4 fps / 1.61 %**. The queue
+  rail, which sits on an opaque plate that occludes the blur, does not move.
+- **Layer promotion does not help and a smaller radius does not help**: a
+  9 px blur costs nearly what 70 px costs. Only `filter: none` does.
+
+**The fix that works, measured: hand the browser a small picture instead of
+a filter.** The artwork URL carries its own size, so a 16 px cover stretched
+over the panel *is* a blur, with no filter at all — **44.7 fps / 6.50 %** on
+the artist grid, within 1 fps of removing the background altogether.
+
+**This is a product decision, not a build task.** It changes the look twice:
+`saturate(1.7)` is a filter too (keeping it costs ~2 fps), and the weave
+loses its blur unless it is baked into an image — it is static, so baking
+keeps it exactly. Nothing is implemented; **an ADR comes first, and George
+has not yet ruled**.
 
 ### Next
 
-**Criterion 0**, per `docs/DEVELOPMENT.md`.
+Criterion 0 step 3's remainder: **the queue rail's own 17.9 %**, which is
+immune to the background and is a separate question, and **why every list
+scrolls on the main thread at all** — Finding 032 blamed its own synthesised
+touches for that, and with real touches it is still true, so that caveat is
+resolved in the other direction.
 
 
 ## Build environment (2026-09-13) — read this before the next build
