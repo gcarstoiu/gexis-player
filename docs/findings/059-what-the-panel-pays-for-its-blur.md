@@ -1,5 +1,19 @@
 # Finding 059 — Every scroll on the panel pays for the background's blur
 
+> **Corrected 2026-09-24, the same day, by
+> [Finding 061](061-the-background-wants-a-layer-of-its-own.md).** Three
+> rows below — `will-change: transform`, `contain: paint` and
+> `translateZ(0)` on `.bg` — were written with the selector
+> `[aria-hidden='true'] .bg`, **which matches nothing**: `.bg` *is* the
+> element carrying `aria-hidden`, not a descendant of one. Those variants
+> measured the page unchanged while wearing a variant's name. With the
+> selector fixed, **`will-change: transform` on `.bg` takes the artist grid
+> from 27.8 fps to 52.9** — as good as deleting the blurs — and is
+> pixel-identical. So the paragraph below claiming a cached layer *cannot*
+> help is wrong, and so is the reasoning built on it. The `.weave` and
+> `.bleed` variants **are** descendants of `.bg` and did apply, so every
+> blur result here stands.
+
 **Date:** 2026-09-24
 **Question:** Criterion 0 step 3. [Finding 058](058-what-the-scrolls-are-not.md)
 eliminated eight candidates for the scrolls and named none. This names it.
@@ -54,18 +68,21 @@ The rail's own 17.9% is its rows, and is a separate question.
 
 ## Four things that do not fix it
 
-**Giving the background its own compositor layer does nothing**, which is
-how we know the blur is not being rastered *inside* the scroller's raster —
-a cached layer cannot help, because a blur of a damaged region has to be
-recomputed whatever layer it lives in.
+> **This section is the one that was wrong — see the correction above.**
+> Three of its four rows selected nothing. The corrected measurement is in
+> [Finding 061](061-the-background-wants-a-layer-of-its-own.md); what
+> survives here is the last row, which used `.weave`/`.bleed` and did apply.
 
-| on the artist grid | dropped | fps |
-| --- | --- | --- |
-| as it ships | 33.81% | 25.6 |
-| `.bg { will-change: transform }` | 30.55% | 25.5 |
-| `.bg { contain: paint }` | 31.58% | 25.5 |
-| `.bg { transform: translateZ(0) }` | 31.11% | 27.8 |
-| `will-change` on the blurs themselves | **44.97%** | 26.2 |
+| on the artist grid | dropped | fps | |
+| --- | --- | --- | --- |
+| as it ships | 33.81% | 25.6 | |
+| `.bg { will-change: transform }` | 30.55% | 25.5 | **void — matched nothing** |
+| `.bg { contain: paint }` | 31.58% | 25.5 | **void — matched nothing** |
+| `.bg { transform: translateZ(0) }` | 31.11% | 27.8 | **void — matched nothing** |
+| `will-change` on the blurs themselves | **44.97%** | 26.2 | stands |
+
+Promoting the two *filtered* elements to layers of their own made it worse,
+which is real and is not the same test as promoting their parent.
 
 **And a smaller radius does not fix it either.** A 9 px blur costs nearly
 what a 70 px blur costs; it is the filter's existence that is dear:
@@ -110,7 +127,9 @@ Measured on the artist grid, with the weave's filter dropped too:
 | background removed entirely (the ceiling) | 5.63% | 45.7 |
 
 That is the whole of it: **within 1 fps of removing the background, with the
-background still there.**
+background still there** — and superseded the same day by a one-line change
+that costs nothing at all
+([Finding 061](061-the-background-wants-a-layer-of-its-own.md)).
 
 Two costs, both visible in the screenshots beside this finding:
 

@@ -107,6 +107,13 @@ class Panel:
         self._waiting: dict[int, asyncio.Future] = {}
         self._events: list[dict] = []
         self._complete = asyncio.Event()
+        #: Called with every protocol event that is not trace data. A second
+        #: opinion on the frame rate needs one: `PipelineReporter` is the
+        #: compositor's own bookkeeping, and a scroll that moves *to* the
+        #: compositor produces fewer of those reporters - so a flag that
+        #: changes where the scroll runs cannot be judged by it alone
+        #: (2026-09-24).
+        self.on_event = None
         self._reader = asyncio.ensure_future(self._read())
 
     @classmethod
@@ -130,6 +137,8 @@ class Panel:
                 self._events.extend(data["params"]["value"])
             elif data.get("method") == "Tracing.tracingComplete":
                 self._complete.set()
+            elif self.on_event is not None:
+                self.on_event(data.get("method"), data.get("params") or {})
 
     async def send(self, method: str, params: dict | None = None) -> dict:
         self._id += 1
@@ -183,6 +192,19 @@ class Panel:
                                     bool(reporter.get(SMOOTHNESS)),
                                     reporter.get("scroll_state")))
 
+        # **A frame counter that is not the compositor's own bookkeeping.**
+        # `PipelineReporter` under-counts a scroll the compositor drives: on
+        # the artist grid with `--disable-lcd-text` it read 10.4 fps while
+        # the display was drawing 58 frames a second. `DrawToScheduleOverlay`
+        # is one per frame drawn, and with the flag off it agrees with
+        # `PipelineReporter` to within a frame - 25.5 against 25.4 on the
+        # grid, 39.1 against 37.2 on the rail - which is what makes it
+        # trustworthy where the other is not (2026-09-24).
+        drawn = sum(1 for e in self._events
+                    if e.get("name") == "DrawToScheduleOverlay"
+                    and e.get("ph") not in ("e", "E", "n")
+                    and started <= e.get("ts", 0) / 1e6 <= ended)
+
         states: dict[str, int] = {}
         scrolls: dict[str, int] = {}
         in_window = 0
@@ -216,8 +238,13 @@ class Panel:
             # moves with whatever else happens to be animating - now
             # playing's progress bar alone changes it - so the rate is the
             # honest number and 60 is the ceiling this panel can reach.
+            # The trace covers roughly three times the gesture, so any
+            # count taken over the whole trace is inflated by that much.
+            # A second opinion has to use the same window this does.
+            "window": (started, ended),
             "gesture_s": round(ended - started, 3),
             "presented_in_gesture": in_window,
+            "drawn_fps": round(drawn / (ended - started), 1) if ended > started else None,
             "fps": round(in_window / (ended - started), 1) if ended > started else None,
         }
 
@@ -714,6 +741,9 @@ def report(results: dict) -> None:
             continue
         fps = [r["fps"] for r in usable if r.get("fps") is not None]
         fps_note = f"fps median {statistics.median(fps):4.1f}   " if fps else ""
+        drawn = [r["drawn_fps"] for r in runs if r.get("drawn_fps") is not None]
+        if drawn:
+            fps_note += f"drawn/s {statistics.median(drawn):4.1f}   "
         # **Where the scroll ran.** A scroll the compositor handles alone
         # survives a busy main thread; one on the main thread does not, and
         # that is the difference between the queue rail and the artist grid

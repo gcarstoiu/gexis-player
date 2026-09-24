@@ -571,6 +571,38 @@ bitmap — the artwork URL carries its own size.
 **Photograph a change that is supposed to look the same.** The cost was
 measured eight ways before anyone looked at it.
 
+**29. A selector that matched nothing measured the page three times**
+(2026-09-24). Three variants in Finding 059 used `[aria-hidden='true'] .bg`
+to promote the panel's background to its own layer. `.bg` *is* the element
+carrying `aria-hidden`, so the descendant combinator matched nothing, all
+three measured the page unchanged, and "layer promotion does nothing" went
+into a finding and into a report to George — with an explanation of *why* a
+cached layer could not help, reasoned from an artefact. It can: the one line
+takes the artist grid from 27.8 fps to 52.9, and is pixel-identical.
+
+**CSS fails silently and so does a probe built on it.** A rule that selects
+nothing is not an error; it is a control run under another name, and it
+looks exactly like a negative result.
+
+**A guard caught it, a re-read would not have.** The probe for the next idea
+checked the change had applied before measuring, printed `applied: None` and
+refused to produce a number. Every suppression variant now proves it matched
+something first.
+
+**30. The frame counter under-counted exactly the change being tested**
+(2026-09-24). `--disable-lcd-text` moves every scroll to the compositor.
+`PipelineReporter` then said the artist grid had fallen from 25.6 fps to
+11.7, and George was told the cure was worse than the disease. It is the
+compositor's own bookkeeping and produces fewer reporters for a scroll it
+drives; the display was drawing **58 frames a second**.
+
+**The instrument was biased against the treatment.** Not noise — a metric
+whose accuracy depends on the very thing the experiment changes.
+
+**Two counters, and they have to agree somewhere.** `DrawToScheduleOverlay`
+matches `PipelineReporter` to within a frame while the scroll is on the main
+thread, which is what earns it the right to disagree when it is not.
+
 ## Common shape
 
 Every case had a *plausible* substitute for the real target — the build
