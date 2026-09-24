@@ -1,9 +1,10 @@
 # ADR-0059 — Where the artist list's portraits come from
 
-**Status:** **Proposed**, 2026-09-23 — George asked for options before a
-decision: *"can you give me options on how to do this? One larger prefetch
-working in the background, on the go when scrolling (although this might
-make it slow) or any other option that could work."*
+**Status:** **Accepted**, 2026-09-24. George chose neither a sweep nor
+scrolling but **a button**: *"there should be a trigger in settings
+enrichment for a user to trigger an automatic update of album artists
+portraits, with a progress bar and completion status."* Phase 9 subphase
+**9k**.
 **Date:** 2026-09-23
 **Raised by:** George: *"the artist navigation holds currently the LMS
 artist portraits. Those are though of questionable quality so I would like
@@ -79,49 +80,92 @@ the ones that get fixed. *Against:* the tail stays visibly mixed, and
 *For:* it is today, and it costs nothing. *Against:* it is what George asked
 to change.
 
-## Recommendation
+## Decision
 
-**A — one background sweep — now that it is 89 artists.** It runs once,
-takes minutes, needs no queue, no cancellation on scroll and no priority
-scheme, and afterwards the list is simply right. New album artists are a
-handful at a time and can ride the same job after a library rescan.
+**A button in Settings → Enrichment, and a second one beside it for album
+covers.** Not a background sweep, not on scroll: the user asks, and watches
+it happen.
 
-C and D were written for a job measured in hours and are no longer worth
-their complexity. **B is still wrong** on its own: a 1.5–5.3 s wait per tile
-is the one thing a navigation list must not have.
+### What the buttons do
 
-**And, whichever is chosen: LMS's picture draws immediately and fanart
-replaces it when it arrives.** Never an empty tile, never a spinner — the
-list is a navigation surface and must not wait on the network. That is
-[ADR-0012](0012-enrichment-additive-only.md)'s additive rule applied to a
-picture.
+| | |
+| --- | --- |
+| **Update artist portraits** | Every album artist, fanart first, LMS's picture as the fallback |
+| **Update album covers** | Every album, fanart first, LMS's own cover as the fallback |
 
-## Album artwork
+- **Every one, every time.** George: *"Check everything again."* A press
+  re-asks the lot, so an artist fanart had nothing for last month is picked
+  up when it does. Nothing is skipped for being answered before.
+- **A 503 is never an answer.** Finding 036's line, and it matters more here
+  than anywhere: a sweep that stored "could not ask" as "no picture" would
+  poison 870 artists in one press.
+- **Honest progress**, in George's own words: *"X out of Y processed
+  (searched for), Z artist portraits found."* It does not end at 100%
+  meaning everyone was upgraded, because fanart has nothing for a real
+  share of them.
+- **Paced**, so it neither disturbs playback nor earns a throttle.
+  MusicBrainz is one request per second by rule; fanart's limit we have
+  never been able to read (Finding 030), so it is spaced rather than
+  hammered.
+- **One at a time.** They share the same two APIs, so the second waits for
+  the first. Left to me, and the reason is Finding 054 §9: they are largely
+  the same walk, so running them in series costs almost nothing over running
+  one.
 
-George, in the same message: *"Can we also get album artwork? What would
-that cost."* It is a different question with a different price, because
-album art is keyed on a MusicBrainz **release group** and needs its own
-search per album.
+### What it costs, and why album covers are cheap
 
-- **LMS already has a cover for 4,412 of 4,567 albums.** 155 have none —
-  3.4%, mostly editions and live bootlegs.
-- **Filling those 155: about nine minutes.** `providers.CoverArtProvider`
-  already does it, so this is scheduling, not building.
-- **Replacing all 4,567 with fanart's or the Cover Art Archive's: four to
-  seven hours**, and nothing measured says the covers LMS has are worse.
+Finding 054 §9 measured what the first version of this record assumed
+wrongly. **fanart returns an artist's albums in the artist call** — 17
+release groups for Isaac Hayes, each with its cover — so there is no
+per-album fanart request. And the release-group ids come from
+`artist/<mbid>?inc=release-groups`, a **145 ms lookup** on the endpoint that
+answers reliably, not the search endpoint that 503s.
 
-**Recommended: fill the 155, leave the rest.** The same background sweep can
-carry it.
+| call | count | total |
+| --- | --- | --- |
+| MusicBrainz search, the 89 never resolved | 89 | ~5 min |
+| MusicBrainz artist lookup with release groups | 917 | ~15 min |
+| fanart, one per artist, portraits *and* albums | 870 | ~6 min |
+
+**Twenty-five to thirty minutes for both buttons**, against the four to
+seven hours album art was first estimated at alone.
+
+### Where the pictures are used
+
+- **The artist grid** and the **home-screen strips** (most-played, recently
+  played) — today's LMS-only surfaces, and the reason for the work.
+- **Now playing's Artist tab** and the **artist page** — already fanart-first
+  since 2026-09-18; they need nothing.
+- **New artists are done as they arrive**, on the path that already exists.
+
+### The rules that go with it
+
+- **Keyed on the folded artist name, never on LMS's id.** Finding 030's
+  rule, from Finding 029: a full rescan renumbers every artist and album id.
+  Today's LMS photo cache *is* id-keyed and silently goes stale; this one
+  will not.
+- **The confidence threshold decides.** `Head` resolved with a score of 100
+  and there is no way to know it is the right Head. A match below the
+  threshold keeps LMS's picture. George: *"Use the confidence level for
+  sure"* — and the row moves into this group so it is next to what it
+  governs, though it still governs all enrichment.
+- **LMS cannot hold the ids for us** (Finding 054 §10). There is no write
+  path in its API, and the plugins in this space import tags rather than
+  write them. A household that wants this shared tags its files with Picard;
+  otherwise each panel presses the button once, which is now half an hour.
+
+## Also in 9k: the rest of Enrichment
+
+George: *"wire the rest of the enrichment entries which are not wired as of
+now."* Four rows in that section have no code behind them at all —
+`enrichment` (the master toggle), `confidence`, `lyrics` and
+`artwork_lookup`. They join this subphase.
 
 ## Open
 
-- **Which option**, and whether album art is the 155 or all 4,567. George's.
-- **What "no picture anywhere" looks like.** LMS has *something* for most
-  artists; the grid's existing `failed` set already handles a broken URL.
-- **Whether the sweep is a setting or a button.** A row that says how many
-  artists are resolved, with a "look up the rest" action, is one shape; a
-  silent background job is another. Not decided.
-- **Ambiguous names.** MusicBrainz search returns a score and ADR-0012 has a
-  confidence threshold; nothing has tested it on `Head`, which is exactly
-  the kind of name that goes wrong. Worth a check before a sweep asks it
-  6,474 times.
+- **Whether `artwork_lookup` survives.** *"Look up missing artwork"* as a
+  background behaviour overlaps the new button, which does every album
+  rather than the missing ones. It may become the *automatic* half — new
+  albums as they arrive — or it may be redundant.
+- **What a household does.** Three options in Finding 054 §10; none chosen,
+  and at half an hour a panel it may not need choosing.

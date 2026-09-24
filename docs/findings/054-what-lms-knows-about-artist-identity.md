@@ -196,6 +196,61 @@ files that already have ids and cannot add them.
 rewrite the whole tag set, not just the MusicBrainz fields. On a 61,225-file
 library that somebody has curated, that is the risk, not the effort.
 
+## 9. Album covers come free with the artist call
+
+Measured 2026-09-24, after George asked for album artwork as its own sweep.
+§7's four-to-seven-hour figure assumed a MusicBrainz *search* per album. It
+is wrong, and the reason is worth keeping.
+
+**One fanart call on the artist's id returns the albums too.**
+`/v3/music/<artist-mbid>` for Isaac Hayes came back with `artistthumb`,
+`artistbackground`, `musiclogo` **and `albums` — 17 release groups**, each
+with its own `albumcover` and `cdart`. So fanart needs **no per-album
+request at all**.
+
+**And the release-group ids come from a lookup, not a search.**
+`/ws/2/artist/<mbid>?inc=release-groups` answered in **145 ms** with all 25
+of that artist's release groups and their titles — the endpoint Finding 036
+measured at 4 of 4, against the *search* endpoint's 4 of 9. One call per
+artist, matched to our albums by folded title.
+
+So both sweeps are the same walk over 917 album artists:
+
+| call | count | paced at | total |
+| --- | --- | --- | --- |
+| MusicBrainz search, for the 89 never resolved | 89 | 1/s | ~5 min |
+| MusicBrainz artist lookup, `inc=release-groups` | 917 | 1/s | ~15 min |
+| fanart, one per artist, carrying portraits *and* albums | 870 | paced | ~6 min |
+
+**Twenty-five to thirty minutes for both**, against §7's estimate of four to
+seven hours for album art alone.
+
+## 10. LMS cannot be given the ids to hold
+
+George: *"Can we store the musicbrainz IDs in LMS directly as a tag? That
+would make it easier for the setup with multiple panels in one household."*
+
+**No.** LMS's JSON-RPC and CLI cover playback, browsing, favourites,
+playlists and rescans; there is no command that writes track metadata. The
+two plugins in this space — `Custom Scan` and `Custom Tag Importer` —
+**import** custom tags *from* the files; neither writes them, and Custom
+Scan has been unmaintained since LMS 8.
+
+LMS fills its `musicbrainz_id` columns from the files' own tags at scan
+time, so the only way to put an id where every panel in a household can see
+it is **to put it in the file**: Picard, then a rescan. That also buys
+something of LMS's own — its `tracks_persistent` table (play counts,
+ratings) survives a full rescan *"as long as you have musicbrainz tags or
+haven't moved or renamed a music file"*.
+
+**The same is true of artwork.** LMS serves what it found in the files or
+the folder; there is no API to give it a different cover.
+
+**Which leaves three honest options for a household**, and the sweep being
+twenty-five minutes makes the third reasonable: tag the files and every
+panel benefits; share one panel's `enrichment.db` with the others; or let
+each panel do its own sweep once.
+
 ## What this does not settle
 
 - **Nothing was looked at.** No portrait was compared with LMS's for
