@@ -34,6 +34,7 @@
     libraryAction,
   } from '../lib/library.js';
   import { afterPaint, revealing } from '../lib/chunks.svelte.js';
+  import { inView, watchScroller } from '../lib/window.svelte.js';
   import MiniStrip from './MiniStrip.svelte';
   import WaitingServices from './WaitingServices.svelte';
 
@@ -88,10 +89,9 @@
 
   //: **Long lists are built a screenful at a time** (ADR-0065). One per
   //: list, because each has its own length and its own moment of arriving.
-  //: One for the album artists, which the grid and the browse screen's
-  //: first pane both draw - they are never on screen together, and a count
-  //: already grown is a screen that opens complete.
-  const artistsReveal = revealing(() => artists.length, () => where);
+  //: A playlist still builds a screenful at a time (ADR-0065); it paints in
+  //: 104ms and is not worth windowing. The artist grid and the browse pane
+  //: are windowed instead (ADR-0067).
   const playlistReveal = revealing(() => playlist?.items?.length ?? 0, () => where);
 
   //: **A home card says it was pressed** (George, 2026-09-24: the cards
@@ -144,38 +144,137 @@
     RAIL.map((ch) => ({ ch, group: groups.find((g) => g.letter === ch) ?? null })),
   );
 
-  //: The groups as far as the grid has been built, cut mid-group where the
-  //: count lands there - a letter with 200 artists must not be all-or-
-  //: nothing.
-  const shownGroups = $derived.by(() => {
-    let left = artistsReveal.shown;
+  //: **The grid builds only the groups on screen** (ADR-0067). 917 cards
+  //: cost about 1.3ms each to create and lay out, and nothing in a card
+  //: accounts for it (Finding 064) - so the grid holds one or two of its 27
+  //: letter groups and a spacer stands in for the rest.
+  const COLS = 6;
+  //: The gap between rows of cards, and between one group and the next -
+  //: `.group__cards { gap: 26px 20px }` and
+  //: `.group + .group .group__head { padding-top: 26px }`.
+  const ROW_GAP = 26;
+  const GROUP_GAP = 26;
+  //: How much beyond the window to build, so a flick has somewhere to land
+  //: before the next frame catches up. One screen either side.
+  const OVERSCAN = 700;
+
+  const gridScroll = watchScroller();
+  const paneScroll = watchScroller();
+
+  //: A header's and a card's height, read from the panel rather than
+  //: assumed: a card is `aspect-ratio: 1` in a six-column grid, so its
+  //: height is the panel's width divided by six, less the gaps.
+  let sizes = $state(null);
+  //: Plain, not state: read inside the effect that sets `sizes`, and an
+  //: effect that reads what it writes wakes itself (LESSONS 31).
+  let measured = false;
+
+  function measure() {
+    const head = grid?.querySelector('.group__head');
+    const card = grid?.querySelector('.artist');
+    if (!head || !card) return;
+    sizes = { head: head.offsetHeight, card: card.offsetHeight };
+    measured = true;
+  }
+
+  $effect(() => {
+    // Re-measured when the list changes shape, never per scroll.
+    void groups.length;
+    void gridScroll.view;
+    if (!grid) return;
+    if (!measured) afterPaint(measure);
+  });
+
+  //: Every group's top and height, without building any of them.
+  const gridBlocks = $derived.by(() => {
+    if (!sizes) return [];
     const out = [];
-    for (const group of groups) {
-      if (left <= 0) break;
-      out.push(
-        left >= group.items.length ? group : { ...group, items: group.items.slice(0, left) },
-      );
-      left -= group.items.length;
+    let y = 0;
+    for (const [at, group] of groups.entries()) {
+      const rows = Math.ceil(group.items.length / COLS);
+      const height =
+        (at ? GROUP_GAP : 0) +
+        sizes.head +
+        rows * sizes.card +
+        Math.max(0, rows - 1) * ROW_GAP;
+      out.push({ top: y, height, group });
+      y += height;
     }
     return out;
+  });
+
+  //: Before the first measurement there is nothing to compute with, so the
+  //: grid draws **one header and two rows of cards** - enough to measure
+  //: both and no more. Three whole groups was the first try, and "A" alone
+  //: can be a hundred artists: it put the screen change back to 300ms from
+  //: 150 (2026-09-24).
+  const shownGroups = $derived.by(() => {
+    if (!sizes || !gridBlocks.length) {
+      const first = groups[0];
+      return first ? [{ ...first, items: first.items.slice(0, COLS * 2) }] : [];
+    }
+    const { from, to } = inView(gridBlocks, gridScroll.top, gridScroll.view || 600, OVERSCAN);
+    return gridBlocks.slice(from, to + 1).map((b) => b.group);
+  });
+  //: **The browse screen's artist pane, the simple case** (ADR-0067): one
+  //: row height, 917 of them, a 250px window. Measured the same way, since
+  //: a row's height is the design's and not this component's to know.
+  let rowSize = $state(null);
+  let rowMeasured = false;
+  let pane = $state(null);
+
+  function measureRow() {
+    const row = pane?.querySelector('.row');
+    if (!row) return;
+    // **The pitch, not the height.** `.pane__list` is a flex column with a
+    // 1px gap, so 917 rows are 917px taller than 917 row heights - the
+    // pane computed 42,214px where the list measures 43,108 (2026-09-24).
+    const gap = parseFloat(getComputedStyle(pane).rowGap) || 0;
+    rowSize = row.offsetHeight + gap;
+    rowMeasured = true;
+  }
+
+  $effect(() => {
+    void artists.length;
+    void paneScroll.view;
+    if (!pane) return;
+    if (!rowMeasured) afterPaint(measureRow);
+  });
+
+  const paneBlocks = $derived.by(() => {
+    if (!rowSize) return [];
+    return artists.map((entry, at) => ({ top: at * rowSize, height: rowSize, entry }));
+  });
+  const paneWindow = $derived.by(() => {
+    if (!rowSize || !paneBlocks.length) {
+      return { rows: artists.slice(0, 24), above: 0, below: 0 };
+    }
+    const { from, to, above, below } = inView(
+      paneBlocks,
+      paneScroll.top,
+      paneScroll.view || 250,
+      OVERSCAN,
+    );
+    return { rows: paneBlocks.slice(from, to + 1).map((b) => b.entry), above, below };
+  });
+
+  const gridSpace = $derived.by(() => {
+    if (!sizes || !gridBlocks.length) return { above: 0, below: 0 };
+    const { above, below } = inView(gridBlocks, gridScroll.top, gridScroll.view || 600, OVERSCAN);
+    return { above, below };
   });
 
   let grid = $state(null);
   // Each pane's scroller, so a new selection starts at the top of the next
   // pane rather than wherever the previous list was left (George,
   // 2026-09-18).
-  async function jumpTo(group) {
-    // **The rail can name a group the grid has not built yet** (ADR-0065),
-    // and a jump has nothing to measure until it exists. Finishing takes
-    // the rest of the 1.9 seconds the first paint no longer spends.
-    artistsReveal.all();
-    await tick();
-    const target = grid?.querySelector(`#${group.id}`);
-    if (!target || !grid) return;
-    // Measured against the scroller rather than by offsetTop, which the
-    // group's own containment would make relative to the group.
-    const top = target.getBoundingClientRect().top - grid.getBoundingClientRect().top;
-    grid.scrollTop = Math.max(0, grid.scrollTop + top - 10);
+  function jumpTo(group) {
+    // **Arithmetic, not a DOM query** (ADR-0067). The group being jumped to
+    // is usually not built - that is the point of windowing - so there is
+    // nothing to measure. `gridBlocks` knows where it would be.
+    const block = gridBlocks.find((b) => b.group.letter === group.letter);
+    if (!grid || !block) return;
+    grid.scrollTop = Math.max(0, block.top);
   }
 
   // LMS's own artist photos, where the server has the plugin (ADR-0040 §1).
@@ -297,7 +396,12 @@
     }, 120);
   }
 
-  /** Asks for a card's photo once it is on screen (or nearly). */
+  /** Asks for a card's photo once it is on screen (or nearly).
+   *
+   *  **One per card, and that is not what a card costs.** Finding 064
+   *  measured the grid with a single shared observer, and with none at all:
+   *  both within noise of all 917. The cost is the elements, which is
+   *  ADR-0067's answer, and there are now a few dozen of them. */
   function artistCard(node, id) {
     const observer = new IntersectionObserver(
       (entries) => {
@@ -1100,8 +1204,14 @@
               <span class="pane__label">Artist</span>
               <span class="pane__count">{artists.length}</span>
             </div>
-            <div class="pane__list" use:fromTop={where}>
-              {#each artists.slice(0, artistsReveal.shown) as entry (entry.id)}
+            <div
+              class="pane__list"
+              bind:this={pane}
+              use:fromTop={where}
+              use:paneScroll.attach
+            >
+              <div class="grid__space" style:height="{paneWindow.above}px"></div>
+              {#each paneWindow.rows as entry (entry.id)}
                 <div class="row" class:is-on={chosenArtist?.id === entry.id}>
                   <button class="row__hit" type="button" onclick={() => chooseArtist(entry)}>
                     <span class="row__label">{entry.name}</span>
@@ -1115,6 +1225,7 @@
                   {/if}
                 </div>
               {/each}
+              <div class="grid__space" style:height="{paneWindow.below}px"></div>
             </div>
           </div>
 
@@ -1179,7 +1290,13 @@
       </div>
     {:else if here?.kind === 'artists'}
       <div class="grid">
-        <div class="grid__scroll" bind:this={grid} use:fromTop={where}>
+        <div
+          class="grid__scroll"
+          bind:this={grid}
+          use:fromTop={where}
+          use:gridScroll.attach
+        >
+          <div class="grid__space" style:height="{gridSpace.above}px"></div>
           {#each shownGroups as group (group.letter)}
             <div class="group">
               <div class="group__head" id={group.id}>
@@ -1218,6 +1335,7 @@
               </div>
             </div>
           {/each}
+          <div class="grid__space" style:height="{gridSpace.below}px"></div>
         </div>
         <div class="rail">
           {#each railLetters as letter (letter.ch)}
@@ -2496,6 +2614,10 @@
     font-size: var(--t-label-sm);
     letter-spacing: 0.1em;
     color: var(--ink-quiet);
+    flex-shrink: 0;
+  }
+  /* What stands in for the groups that are not built (ADR-0067). */
+  .grid__space {
     flex-shrink: 0;
   }
   .group__cards {
