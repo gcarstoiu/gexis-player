@@ -139,15 +139,27 @@ with a border and two rotated bars on every row. About eight frames each:
 drawn. Measured in eight interleaved rounds after a block-by-block pass
 drifted.
 
+**[Finding 061](docs/findings/061-the-background-wants-a-layer-of-its-own.md):
+the fix is one line and it is invisible.** `.bg { will-change: transform }`
+takes the artist grid from **27.8 fps to 52.9**, as good as deleting the
+background, and is pixel-identical — max difference 2 of 255, photographed
+paused. **It also corrects Finding 059 and a report to George**: three of
+059's rows used `[aria-hidden='true'] .bg`, which matches nothing, so
+"layer promotion does nothing" was three more control runs.
+
+**And `kNotOpaqueForTextAndLCDText` is confirmed.** With
+`--disable-lcd-text` every scroll reads `SCROLL_COMPOSITOR_THREAD` and the
+display draws **~58 frames a second** on both the grid and the rail. The
+first reading of that flag was wrong: `PipelineReporter` under-counts a
+scroll the compositor drives, said 11.7 fps, and George was told the cure
+was worse than the disease. The harness now reports `drawn/s` beside it.
+**The flag was tested and reverted; the device is back as it was.**
+
 ### Next
 
-**One test needs a permission this session did not have.** Every list scrolls
-on the main thread, including the rail; the leading explanation is Chromium's
-`kNotOpaqueForTextAndLCDText`, and starting the kiosk with
-`--disable-lcd-text` would settle it. That is an edit to
-`/usr/local/bin/gexis-kiosk-start` on the device, which was refused. **If
-composited scrolling is reachable, every paint cost in Findings 059 and 060
-stops mattering during a scroll**, so it is worth the one test.
+**Four decisions are with George**, with numbers and pictures: the one-line
+background layer, the flag, the rail's shadow and the rail's remove button.
+Nothing is implemented and each needs an ADR first.
 
 **And the device has a hardware flag worth George's eye.** `vcgencmd
 get_throttled` reads `0xd0000`: under-voltage, frequency capping and the
