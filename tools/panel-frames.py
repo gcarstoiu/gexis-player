@@ -59,6 +59,15 @@ CATEGORIES = ",".join([
 #: touching. Dropped means `STATE_DROPPED`: never presented at all.
 PRESENTED = ("STATE_PRESENTED_ALL", "STATE_PRESENTED_PARTIAL")
 DROPPED = "STATE_DROPPED"
+
+#: **A dropped frame that nobody could see is not a dropped frame.** The
+#: compositor marks each one `affects_smoothness`, and Chromium's own
+#: "percent dropped frames" counts only those. Counting every
+#: `STATE_DROPPED` nearly doubles the figure: measured on one artist-grid
+#: scroll, **19 of 36 dropped frames affected smoothness and 17 did not**
+#: (2026-09-24). The tenth instrument fault, and the one that moves every
+#: number this tool has ever printed.
+SMOOTHNESS = "affects_smoothness"
 #: Not a frame anyone wanted: the compositor began one and found nothing to
 #: draw. Counting these in the denominator flatters every result, so they
 #: are excluded and reported separately.
@@ -159,17 +168,26 @@ class Panel:
             if not state:
                 continue
             key = (reporter.get("frame_source"), reporter.get("frame_sequence"))
-            frames.setdefault(key, (state, event.get("ts", 0) / 1e6))
+            frames.setdefault(key, (state, event.get("ts", 0) / 1e6,
+                                    bool(reporter.get(SMOOTHNESS)),
+                                    reporter.get("scroll_state")))
 
         states: dict[str, int] = {}
+        scrolls: dict[str, int] = {}
         in_window = 0
-        for state, ts in frames.values():
+        invisible = 0
+        for state, ts, smooth, scroll in frames.values():
             states[state] = states.get(state, 0) + 1
+            if scroll:
+                scrolls[scroll] = scrolls.get(scroll, 0) + 1
+            if state == DROPPED and not smooth:
+                invisible += 1
             if state in PRESENTED and started <= ts <= ended:
                 in_window += 1
         wanted = sum(v for k, v in states.items() if k != NO_UPDATE)
         total = sum(states.values())
-        dropped = states.get(DROPPED, 0)
+        # Only the ones a person could have seen (see SMOOTHNESS).
+        dropped = states.get(DROPPED, 0) - invisible
         partial = states.get("STATE_PRESENTED_PARTIAL", 0)
         return {
             "frames": total,
@@ -177,6 +195,8 @@ class Panel:
             "presented": sum(states.get(s, 0) for s in PRESENTED),
             "partial": partial,
             "dropped": dropped,
+            "dropped_invisible": invisible,
+            "scroll_states": scrolls,
             "dropped_pct": round(dropped / wanted * 100, 2) if wanted else None,
             "partial_pct": round(partial / wanted * 100, 2) if wanted else None,
             "states": states,
@@ -625,6 +645,13 @@ async def _scene(name, arrive, interact, runs, per_run,
 #: failure (Finding 056, 2026-09-24).
 STILL = ("idle-control", "grid-still")
 
+#: **How far a scroll has to travel to be a scroll.** The queue rail was
+#: reported at 50 fps and 11% dropped in Finding 055, and at 0.00% dropped
+#: after the metric was corrected - on a queue of sixteen tracks that fits
+#: the screen and **moved 0 px**. A gesture that moves nothing is not a
+#: fast scroll (2026-09-24).
+SCROLLED_MIN_PX = 200
+
 
 def report(results: dict) -> None:
     print()
@@ -646,6 +673,13 @@ def report(results: dict) -> None:
         frames = [r["wanted"] for r in usable]
         disturbed = sum(1 for r in usable if r.get("disturbed"))
         moved = [r.get("scrolled_px") for r in runs if r.get("scrolled_px") is not None]
+        if moved and statistics.median(moved) < SCROLLED_MIN_PX and max(moved) > 0:
+            print(f"{name:20} BARELY MOVED - {statistics.median(moved):.0f} px median "
+                  f"(max {max(moved):.0f}). Nothing here is a scroll measurement.")
+            continue
+        if moved and max(moved) == 0:
+            print(f"{name:20} DID NOT MOVE - there is nothing to scroll on this screen.")
+            continue
         if not pcts and moved and min(moved) > 0:
             # **It scrolled and asked for nothing to be drawn.** A list of
             # already-rasterised text moves as a compositor transform; there
@@ -660,10 +694,25 @@ def report(results: dict) -> None:
             continue
         fps = [r["fps"] for r in usable if r.get("fps") is not None]
         fps_note = f"fps median {statistics.median(fps):4.1f}   " if fps else ""
+        # **Where the scroll ran.** A scroll the compositor handles alone
+        # survives a busy main thread; one on the main thread does not, and
+        # that is the difference between the queue rail and the artist grid
+        # (2026-09-24).
+        main = sum(r.get("scroll_states", {}).get("SCROLL_MAIN_THREAD", 0) for r in usable)
+        composited = sum(
+            v for r in usable for k, v in r.get("scroll_states", {}).items()
+            if k not in ("SCROLL_MAIN_THREAD", "SCROLL_NONE")
+        )
+        where = ""
+        if main or composited:
+            where = f"   scroll on the {'MAIN THREAD' if main > composited else 'compositor'}"
+        invisible = sum(r.get("dropped_invisible", 0) for r in usable)
         print(f"{name:20} {fps_note}dropped median {statistics.median(pcts):5.2f} %  "
               f"(min {min(pcts):5.2f} max {max(pcts):5.2f})   "
               f"partial median {statistics.median(partials):5.2f} %   "
               f"frames/run {statistics.median(frames):.0f}   n={len(pcts)}"
+              + where
+              + (f"   invisible-drops {invisible}" if invisible else "")
               + (f"   thin {thin}" if thin else "")
               + (f"   DISTURBED {disturbed}" if disturbed else ""))
     print()

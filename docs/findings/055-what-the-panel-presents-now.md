@@ -1,5 +1,15 @@
 # Finding 055 — What the panel presents, after the design sweep
 
+> **Corrected 2026-09-24 by [Finding 058](058-what-the-scrolls-are-not.md),
+> the same day.** Two numbers here are wrong and one claim with them. The
+> dropped-frame figures count frames the compositor marked as not affecting
+> smoothness — Chromium's own metric excludes those, and roughly half of
+> them were. And `queue-rail-scroll` and `albums-scroll` were measured on a
+> queue of sixteen tracks that **moved 0 px** and an album pane that moved
+> 191; neither is a scroll measurement, so the claim below that ADR-0041
+> took the rail from 13.9 fps to 50.0 is not supported by this table. The
+> instrument now refuses both mistakes. **The table needs re-taking.**
+
 **Date:** 2026-09-24
 **Question:** Phase 9 criterion 0 step 1. [Finding 034](034-what-the-panel-presents.md)'s
 table is void twice over — its idle control was measuring a queue rail left
