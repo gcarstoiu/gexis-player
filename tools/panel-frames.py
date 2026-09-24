@@ -463,14 +463,28 @@ async def state(session) -> dict:
 
 
 async def set_playback(session, want: str) -> None:
-    """`playing` or `paused`, so a measurement says which panel it measured."""
+    """`playing` or `paused`, so a measurement says which panel it measured.
+
+    **And it insists**, because asking is not getting: a queue that has run
+    out answers `play` with nothing, the panel goes to the idle screen, and
+    every run after that measures a screen nobody asked for. That happened
+    on 2026-09-24 and read as "NO USABLE RUN" - a paused panel asks for
+    almost no frames at all, which is true and was not the question.
+    """
+    for attempt in range(3):
+        now = await state(session)
+        if now.get("transport") == want:
+            return
+        command = "play" if want == "playing" else "pause"
+        async with session.post(f"http://127.0.0.1:8090/transport/{command}") as resp:
+            await resp.read()
+        await asyncio.sleep(2.0 + attempt)
     now = await state(session)
-    if now.get("transport") == want:
-        return
-    command = "play" if want == "playing" else "pause"
-    async with session.post(f"http://127.0.0.1:8090/transport/{command}") as resp:
-        await resp.read()
-    await asyncio.sleep(2.0)
+    if now.get("transport") != want:
+        raise RuntimeError(
+            f"asked for {want} and the transport is {now.get('transport')!r}; "
+            "a measurement now would be of a screen nobody chose"
+        )
 
 
 async def measure(port: int, runs: int, only: str | None, playback: str | None) -> dict:
@@ -498,6 +512,12 @@ async def measure(port: int, runs: int, only: str | None, playback: str | None) 
 
             steps = {
                 "idle-control": (arrive_idle, idle),
+                # **A second control, on a screen with no playhead.** Now
+                # playing redraws its progress bar twice a second while
+                # music plays; the artist grid sitting still does not. If
+                # the two differ, the "idle" panel is not idle - it is
+                # drawing the playhead (2026-09-24).
+                "grid-still": (lambda: screen.go_artist_grid(), idle),
                 "home-open": (lambda: screen.go_now_playing(),
                               lambda: screen.tap(HOME_BUTTON, settle=0.2)),
                 "new-music-scroll": (lambda: screen.arrive_scroll(screen.go_home, NEW_MUSIC),
