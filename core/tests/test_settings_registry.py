@@ -814,3 +814,24 @@ def test_a_recommended_value_in_a_note_is_that_row_s_own_default():
         "expected ADR-0058's three rows plus the confidence threshold to "
         f"recommend a value, found {checked}"
     )
+
+
+def test_no_row_carries_markdown_the_panel_will_not_render():
+    """**The panel prints a note verbatim.** `output_device`'s said
+    `**HDMI costs three things**` and the panel drew the asterisks, which
+    George saw on screen on 2026-09-24. Nothing renders markdown here, so
+    nothing should write it."""
+    import re
+
+    for row in _rows():
+        for field in ("note", "warn", "label", "placeholder"):
+            value = row.get(field)
+            texts = (
+                list(value.values()) if isinstance(value, dict)
+                else [value] if isinstance(value, str) else []
+            )
+            for text in texts:
+                assert "**" not in text, f"{row['key']}.{field} has bold markdown: {text[:60]}"
+                assert not re.search(r"\[[^\]]+\]\([^)]+\)", text), (
+                    f"{row['key']}.{field} has a markdown link: {text[:60]}"
+                )

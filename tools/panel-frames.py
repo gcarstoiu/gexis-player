@@ -208,11 +208,67 @@ NEW_MUSIC = ".new__scroll"
 ARTIST_GRID = ".grid__scroll"
 RAIL_LIST = ".rail__list"
 RAIL_OPEN = ".rail.is-open"
+#: **Everything on the panel, not only the three screens Finding 034
+#: measured** - George's ruling when he approved criterion 0's plan
+#: (2026-09-24). Settings, the library's other panes, the artist page and
+#: the two sheets each get their own scene below.
+BROWSE_CARD = ".card--browse"
+PLAYLISTS_CARD = ".card--playlists"
+RADIO_CARD = ".card--radio"
+SETTINGS_CARD = ".card--settings"
+SETTINGS_SCREEN = ".settings"
+SETTINGS_RAIL = ".settings .rail"
+SETTINGS_LIST = ".settings .list"
+#: The Display section, which is the long one. Audio has five rows and
+#: does not scroll at all - a swipe there produced 31 frames of
+#: NO_UPDATE_DESIRED, which the harness correctly refused to report.
+SETTINGS_DISPLAY = ".settings .cat"
+PANE_LIST = ".pane__list"
+TRACKS_LIST = ".tracks__list"
+ARTIST_FACE = ".grid__scroll .face, .grid__scroll .artist"
+ARTIST_PAGE = ".artist__disc"
+VOLUME_TRIGGER = '.btn[aria-label="Volume"], .mini__volume'
+VOLUME_DRAWER = ".drawer.is-open, .volume.is-open"
+#: **Not `.btn`.** Settings' back is `<button class="back" aria-label="Back">`
+#: and its picker's is `.back--small` labelled "Back to list"; a selector that
+#: insisted on `.btn` matched neither, so a run that ended inside a settings
+#: picker could not get out and every scene after it failed on the wrong
+#: assertion (2026-09-24).
+BACK_BUTTON = '[aria-label="Back to list"], [aria-label="Back"]'
+LYRICS = ".lyrics__scroller"
 #: Any sheet's dimming layer. Used to assert that nothing is covering the
 #: panel before a measurement that assumes nothing is.
 SCRIM = ".scrim, .sw-scrim"
 
 RECT = """(() => {{ const e = document.querySelector({selector!r});
+  if (!e) return null; const r = e.getBoundingClientRect();
+  return [r.x, r.y, r.width, r.height]; }})()"""
+
+#: Put a scroller back at the top. **The sixth instrument fault** (2026-09-24):
+#: a scroll scene that arrives on a list already scrolled to its end measures
+#: a gesture with nothing left to draw, and reports 31 frames of
+#: `NO_UPDATE_DESIRED` - which reads as "smooth" to anything that does not
+#: check. Settings' Display section runs out in one swipe; the artist grid
+#: does not, which is why four rounds of scrutiny never met this.
+#: **Is anything actually covering the panel?** A rect is not the test: this
+#: UI keeps its scrims mounted at full size with `opacity: 0` between
+#: transitions, so `querySelector('.scrim')` is truthy on a clear screen. The
+#: seventh instrument fault, and the same shape as the first six - a selector
+#: believed to mean what it appears to mean (2026-09-24).
+COVERING = """(() => {{ return [...document.querySelectorAll({selector!r})].some(e => {{
+    const s = getComputedStyle(e);
+    if (s.display === 'none' || s.visibility === 'hidden') return false;
+    if (parseFloat(s.opacity || '1') < 0.05) return false;
+    const r = e.getBoundingClientRect();
+    return r.width > 4 && r.height > 4;
+  }}); }})()"""
+
+TOP = """(() => {{ const e = document.querySelector({selector!r});
+  if (!e) return false; e.scrollTop = 0; e.scrollLeft = 0; return true; }})()"""
+
+#: The nth match rather than the first - a settings section is one of a list
+#: of identical buttons, and only its position tells them apart.
+RECT_NTH = """(() => {{ const e = document.querySelectorAll({selector!r})[{index}];
   if (!e) return null; const r = e.getBoundingClientRect();
   return [r.x, r.y, r.width, r.height]; }})()"""
 
@@ -226,6 +282,18 @@ class Screen:
     async def rect(self, selector: str):
         return await self._panel.evaluate(RECT.format(selector=selector))
 
+    async def to_top(self, selector: str) -> None:
+        """Put a scroller back where a run starts, so every run measures the
+        same gesture. See `TOP`."""
+        if not await self._panel.evaluate(TOP.format(selector=selector)):
+            raise RuntimeError(f"cannot reset: {selector} is not on the panel")
+        await asyncio.sleep(0.25)
+
+    async def covering(self, selector: str = SCRIM) -> bool:
+        """Whether anything matching `selector` is really on top. See
+        `COVERING`."""
+        return bool(await self._panel.evaluate(COVERING.format(selector=selector)))
+
     async def has(self, selector: str) -> bool:
         return bool(await self.rect(selector))
 
@@ -233,6 +301,14 @@ class Screen:
         box = await self.rect(selector)
         if box is None:
             raise RuntimeError(f"nothing to tap: {selector} is not on the panel")
+        x, y, w, h = box
+        self._finger.tap(round(x + w / 2), round(y + h / 2))
+        await asyncio.sleep(settle)
+
+    async def tap_nth(self, selector: str, index: int, settle: float = 1.4) -> None:
+        box = await self._panel.evaluate(RECT_NTH.format(selector=selector, index=index))
+        if box is None:
+            raise RuntimeError(f"nothing to tap: {selector}[{index}] is not on the panel")
         x, y, w, h = box
         self._finger.tap(round(x + w / 2), round(y + h / 2))
         await asyncio.sleep(settle)
@@ -260,8 +336,23 @@ class Screen:
     # --- places -------------------------------------------------------------
 
     async def go_now_playing(self) -> None:
-        if await self.has(MINI_STRIP):
-            await self.tap(MINI_STRIP)
+        """Back to now playing **from wherever the panel is**.
+
+        Settings has no mini strip, only a Back button, so a scene that
+        ended there used to strand every scene after it: the harness tapped
+        nothing and then failed the assertion two levels down, reporting
+        "not on now playing" rather than "still in Settings" (2026-09-24).
+        """
+        await self.close_sheets()
+        for _ in range(3):
+            if await self.has(QUEUE_BUTTON):
+                return
+            if await self.has(MINI_STRIP):
+                await self.tap(MINI_STRIP)
+            elif await self.has(BACK_BUTTON):
+                await self.tap(BACK_BUTTON)
+            else:
+                break
         await self.must_be(QUEUE_BUTTON, "now playing")
 
     async def go_home(self) -> None:
@@ -283,6 +374,50 @@ class Screen:
             await self.tap(QUEUE_BUTTON)
         await self.must_be(RAIL_OPEN, "the queue rail")
 
+    async def arrive_scroll(self, arrive, selector: str) -> None:
+        """Arrive, then put the list back at the top."""
+        await arrive()
+        await self.to_top(selector)
+
+    async def scroll_top(self, selector: str):
+        """Where a scroller is now, so a run can say whether it moved."""
+        # One f-string, one set of escapes: the second half used to be a
+        # plain literal whose `}}` stayed doubled, so every probe was a
+        # syntax error answering `null`.
+        return await self._panel.evaluate(
+            f"(() => {{ const e = document.querySelector({selector!r});"
+            f" return e ? e.scrollTop + e.scrollLeft : null; }})()"
+        )
+
+    async def go_settings(self) -> None:
+        """Settings, which is reached from the library root's card and
+        nowhere else on the panel (`design/screens.md`, Navigation)."""
+        if not await self.has(SETTINGS_SCREEN):
+            await self.go_home()
+            await self.tap(SETTINGS_CARD, settle=1.2)
+        await self.must_be(SETTINGS_SCREEN, "settings")
+
+    async def go_settings_display(self) -> None:
+        """Settings, on the section that actually has a list to scroll."""
+        await self.go_settings()
+        await self.tap_nth(SETTINGS_DISPLAY, 3, settle=0.6)   # Audio, Sources, Handoff, Display
+        await self.must_be(SETTINGS_LIST, "the settings list")
+
+    async def go_card(self, card: str, wait: str, where: str,
+                      settle: float = 2.0) -> None:
+        """One of the library root's cards, and the pane it opens."""
+        if not await self.has(wait):
+            await self.go_home()
+            await self.tap(card, settle=settle)
+        await self.must_be(wait, where)
+
+    async def go_artist_page(self) -> None:
+        """An artist's own page, opened from the grid."""
+        if not await self.has(ARTIST_PAGE):
+            await self.go_artist_grid()
+            await self.tap(ARTIST_FACE, settle=2.0)
+        await self.must_be(ARTIST_PAGE, "an artist page")
+
     async def close_sheets(self) -> None:
         """Dismiss anything with a scrim.
 
@@ -292,10 +427,15 @@ class Screen:
         its blurred scrim costs that much on its own (Finding 037). A sheet
         left open also swallows the next tap.
         """
-        for _ in range(3):
-            if not await self.has(SCRIM):
+        for _ in range(4):
+            if not await self.covering(SCRIM):
                 return
-            # The far left is scrim in every sheet this panel has.
+            # A settings picker is a sheet with its own way out: its scrim is
+            # not tappable in the same place, and it answers to Back.
+            if await self.has(BACK_BUTTON):
+                await self.tap(BACK_BUTTON, settle=0.7)
+                continue
+            # The far left is scrim in every other sheet this panel has.
             self._finger.tap(60, 400)
             await asyncio.sleep(0.9)
 
@@ -348,7 +488,7 @@ async def measure(port: int, runs: int, only: str | None, playback: str | None) 
                 control believes it is measuring (Finding 037)."""
                 await screen.close_sheets()
                 await screen.go_now_playing()
-                if await screen.has(SCRIM):
+                if await screen.covering(SCRIM):
                     raise RuntimeError("something is still covering the panel; "
                                        "an idle measurement would be of that")
 
@@ -356,19 +496,56 @@ async def measure(port: int, runs: int, only: str | None, playback: str | None) 
                 "idle-control": (arrive_idle, idle),
                 "home-open": (lambda: screen.go_now_playing(),
                               lambda: screen.tap(HOME_BUTTON, settle=0.2)),
-                "new-music-scroll": (lambda: screen.go_home(),
+                "new-music-scroll": (lambda: screen.arrive_scroll(screen.go_home, NEW_MUSIC),
                                      lambda: screen.swipe(NEW_MUSIC, "x")),
                 "artist-grid-open": (lambda: screen.go_home(),
                                      lambda: screen.tap(ARTISTS_CARD, settle=0.2)),
-                "artist-grid-scroll": (lambda: screen.go_artist_grid(),
+                "artist-grid-scroll": (lambda: screen.arrive_scroll(screen.go_artist_grid, ARTIST_GRID),
                                        lambda: screen.swipe(ARTIST_GRID, "y")),
                 "queue-rail-open": (lambda: screen.go_now_playing(),
                                     lambda: screen.tap(QUEUE_BUTTON, settle=0.2)),
-                "queue-rail-scroll": (lambda: screen.go_queue_rail(),
+                "queue-rail-scroll": (lambda: screen.arrive_scroll(screen.go_queue_rail, RAIL_LIST),
                                       lambda: screen.swipe(RAIL_LIST, "y")),
+                # **The rest of the panel** (George, 2026-09-24: "everything
+                # on the panel, not just the three screens"). Each arrives
+                # through the same asserted route, so a scene that did not
+                # get there fails loudly rather than measuring whatever was
+                # already on screen - which is how the void idle control
+                # happened.
+                "settings-open": (lambda: screen.go_home(),
+                                  lambda: screen.tap(SETTINGS_CARD, settle=0.2)),
+                "settings-scroll": (lambda: screen.arrive_scroll(screen.go_settings_display, SETTINGS_LIST),
+                                    lambda: screen.swipe(SETTINGS_LIST, "y")),
+                "albums-open": (lambda: screen.go_home(),
+                                lambda: screen.tap(BROWSE_CARD, settle=0.2)),
+                "albums-scroll": (lambda: screen.arrive_scroll(
+                                     lambda: screen.go_card(BROWSE_CARD, PANE_LIST, "browse"), PANE_LIST),
+                                  lambda: screen.swipe(PANE_LIST, "y")),
+                "playlists-open": (lambda: screen.go_home(),
+                                   lambda: screen.tap(PLAYLISTS_CARD, settle=0.2)),
+                "radio-open": (lambda: screen.go_home(),
+                               lambda: screen.tap(RADIO_CARD, settle=0.2)),
+                "artist-page-open": (lambda: screen.go_artist_grid(),
+                                     lambda: screen.tap(ARTIST_FACE, settle=0.2)),
+                "artist-page-scroll": (lambda: screen.arrive_scroll(screen.go_artist_page, TRACKS_LIST),
+                                       lambda: screen.swipe(TRACKS_LIST, "y")),
             }
             if only:
                 steps = {k: v for k, v in steps.items() if k == only}
+
+            #: Which element each scroll scene moves, so a run that produced
+            #: no repaint can say whether it *scrolled*. Settings' list is
+            #: text that is already rasterised: dragging it is a compositor
+            #: transform with nothing to draw, which looked identical to a
+            #: gesture that missed until this told them apart (2026-09-24).
+            scrollers = {
+                "new-music-scroll": NEW_MUSIC,
+                "artist-grid-scroll": ARTIST_GRID,
+                "queue-rail-scroll": RAIL_LIST,
+                "settings-scroll": SETTINGS_LIST,
+                "albums-scroll": PANE_LIST,
+                "artist-page-scroll": TRACKS_LIST,
+            }
 
             for name, (arrive, interact) in steps.items():
                 per_run = []
@@ -377,7 +554,13 @@ async def measure(port: int, runs: int, only: str | None, playback: str | None) 
                         await set_playback(session, playback)
                     await arrive()
                     before = await state(session)
+                    scroller = scrollers.get(name)
+                    was = await screen.scroll_top(scroller) if scroller else None
                     result = await panel.trace(interact)
+                    now = await screen.scroll_top(scroller) if scroller else None
+                    result["scrolled_px"] = (
+                        None if was is None or now is None else round(abs(now - was))
+                    )
                     after = await state(session)
                     # A gesture that changed the track changed the panel's
                     # work as well, so the run says so rather than being
@@ -404,6 +587,15 @@ def report(results: dict) -> None:
         partials = [r["partial_pct"] for r in usable if r["partial_pct"] is not None]
         frames = [r["wanted"] for r in usable]
         disturbed = sum(1 for r in usable if r.get("disturbed"))
+        moved = [r.get("scrolled_px") for r in runs if r.get("scrolled_px") is not None]
+        if not pcts and moved and min(moved) > 0:
+            # **It scrolled and asked for nothing to be drawn.** A list of
+            # already-rasterised text moves as a compositor transform; there
+            # is no frame to drop because there is no frame to make. Not the
+            # same as a gesture that missed, which moves nothing.
+            print(f"{name:20} composited scroll - moved {min(moved)}-{max(moved)} px "
+                  f"with no repaint asked for, over {len(runs)} runs")
+            continue
         if not pcts:
             print(f"{name:20} NO USABLE RUN - every run had under {MIN_FRAMES} frames. "
                   f"A broken measurement, not a smooth panel.")
