@@ -426,10 +426,19 @@ holds each phase's acceptance criteria; this list is only the order.
      measured 2026-09-24.
   6. **Append C3PO's SSH key** — see below.
 
-  **What survives without being touched:** everything whose registry default
-  is what George settled on, which includes ADR-0058's three ballistics
-  (spectrum smoothing 90 %, needle fall 400 ms, needle smoothing 240 ms) and
-  `lms_server`, baked into the image's `core.toml`.
+  **What survives without being touched:** `lms_server`, baked into the
+  image's `core.toml`, and any row George never moved off its default.
+  **That is fewer than it looks.** The 2026-09-25 backup shows
+  `spectrum_smoothing` at **62** against a registry default of 90 — so
+  ADR-0058's ballistics are *not* all at their defaults, and an earlier note
+  here claiming they were was wrong. `meter_fall` (400 ms) and
+  `meter_smoothing` (240 ms) do match.
+
+  **Restoring wholesale carries dead keys.** That DB still holds
+  `per_renderer_volume` and `boot_volume`, rows deleted on 2026-09-23 with the
+  machinery behind them, and `idle_brightness`, which the registry now calls
+  `background_brightness`. Harmless — `Settings.value` reads the registry, not
+  the store — but a restore is not a reason to stop reading what it contains.
 
 - **A reflashed card only has R2D2's SSH key.** `make provision` writes the
   one key in `image/provision.local.env`; C3PO's
