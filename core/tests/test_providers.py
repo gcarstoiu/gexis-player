@@ -1091,3 +1091,87 @@ class TestResolvingThroughAReducedName:
         assert await identity.resolve("a b", raw="A & B") is False
         assert len(http.asked) == 1
         assert "a b" not in identity._known
+
+
+from gexis_core.providers import CoverArtProvider
+
+
+# ---------------------------------------------------------------------------
+# ADR-0080: a cover is matched on a title both catalogues agree on.
+# ---------------------------------------------------------------------------
+
+
+class SearchingHttp:
+    """`FakeHttp` cannot tell two searches apart - it matches on the URL and
+    both asks go to the same one. This one answers on the album inside the
+    query, which is the whole thing under test."""
+
+    def __init__(self, groups_by_album, caa=None):
+        self._groups = groups_by_album
+        self._caa = CAA if caa is None else caa
+        self.albums = []
+
+    async def json(self, url, params=None):
+        if "coverartarchive.org" in url:
+            return self._caa
+        query = (params or {}).get("query", "")
+        album = query.split('releasegroup:"')[1].rstrip('"') if 'releasegroup:"' in query else ""
+        self.albums.append(album)
+        return {"release-groups": self._groups.get(album, [])}
+
+
+def _key(album):
+    return TrackKey.of(TrackMetadata(title="Song", artist="Sting", album=album))
+
+
+@pytest.mark.asyncio
+async def test_the_title_as_it_is_is_asked_first_and_nothing_else_is():
+    """An album that resolves exactly must cost one request, not two, and must
+    not go near the reduction - reducing `Greatest Hits Volume 2` would find
+    the wrong volume."""
+    http = SearchingHttp({"greatest hits volume 2": [{"id": "rg", "title": "Greatest Hits Volume 2", "score": 100}]})
+
+    answer = await CoverArtProvider(http).fetch(_key("Greatest Hits Volume 2"))
+
+    assert answer.outcome is Outcome.FOUND
+    assert http.albums == ["greatest hits volume 2"]
+
+
+@pytest.mark.asyncio
+async def test_a_tagged_edition_is_found_by_the_reduced_title():
+    """George, 2026-09-25. LMS shows what the tagger wrote; MusicBrainz calls
+    it `57th & 9th`. Comparing them as they stand missed 43% of his albums."""
+    http = SearchingHttp({"57th 9th": [{"id": "rg", "title": "57th & 9th", "score": 88}]})
+
+    answer = await CoverArtProvider(http).fetch(_key("57th & 9th (Deluxe Edition)"))
+
+    assert answer.outcome is Outcome.FOUND
+    assert answer.enrichment.album_art == "http://caa/front-500.jpg"
+    # Exactly once each, in that order.
+    assert http.albums == ["57th 9th deluxe edition", "57th 9th"]
+
+
+@pytest.mark.asyncio
+async def test_the_reduced_answer_is_checked_against_the_title_we_asked_about():
+    """A reduced query is a looser query, and MusicBrainz scores a confident
+    match on a release group whose title merely contains the words. A wrong
+    cover on a screen nobody can correct is worse than the pending glyph
+    (ADR-0012)."""
+    http = SearchingHttp({"mtv unplugged": [{"id": "rg", "title": "MTV Unplugged in New York", "score": 100}]})
+
+    answer = await CoverArtProvider(http).fetch(_key("[1997] MTV Unplugged [EP]"))
+
+    assert answer.outcome is Outcome.MISSING
+    assert answer.confidence == 100  # scored well, and still refused
+
+
+@pytest.mark.asyncio
+async def test_a_title_reduction_cannot_change_costs_only_one_request():
+    """`Nevermind` reduces to itself. Asking twice would be one wasted request
+    on every album that simply has no cover."""
+    http = SearchingHttp({})
+
+    answer = await CoverArtProvider(http).fetch(_key("Nevermind"))
+
+    assert answer.outcome is Outcome.MISSING
+    assert http.albums == ["nevermind"]
