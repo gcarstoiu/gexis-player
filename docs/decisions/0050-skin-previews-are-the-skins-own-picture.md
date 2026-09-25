@@ -10,7 +10,7 @@ means it doesn't make any sense to generate the thumbnails with each
 build. It should be created, cached and reused, until a change in skins is
 detected and even then only the diff."*
 **Amends:** [ADR-0019](0019-peppy-screen-lifecycle.md) (the skin picker),
-[ADR-0015](0015-skin-corpus-validation.md)'s corpus reading
+[ADR-0015](0015-skin-renderer-peppymeter-format.md)'s corpus reading
 
 ## Context
 

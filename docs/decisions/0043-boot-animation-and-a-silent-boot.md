@@ -375,5 +375,5 @@ re-read rather than patched.
   fires against the already-running initramfs daemon. If it resets the theme
   script, the intro replays seven seconds in. Not determinable from logs.
 - **Whether any of this is a setting.** Unchanged: hardcoded as proposed, and
-  a row goes into [ADR-0022](0022-settings-inventory.md)'s inventory only if
+  a row goes into [ADR-0022](0022-settings.md)'s inventory only if
   George says so.

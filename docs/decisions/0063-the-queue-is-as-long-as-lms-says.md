@@ -5,7 +5,7 @@ whatever is set in Lms. This is a setting there that we should follow."*
 **Date:** 2026-09-24
 **Relates to:** [ADR-0038](0038-library-and-radio-on-the-panel.md) §1 (the
 rail), [ADR-0064](0064-queue-rows-have-identities.md) (which this made
-necessary), [Finding 029](../findings/029-what-lms-answers.md) (how the
+necessary), [Finding 029](../findings/029-library-and-radio-against-lms.md) (how the
 queue is read)
 
 ## Context

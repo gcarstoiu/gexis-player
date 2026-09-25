@@ -4,7 +4,7 @@
 **Date:** 2026-09-18
 **Raised by:** Phase 8 (enrichment and lyrics); decisions taken with George
 2026-09-18
-**Amends:** [0012](0012-enrichment-service.md) — its Sources section names
+**Amends:** [0012](0012-enrichment-additive-only.md) — its Sources section names
 MusicBrainz and ListenBrainz only. This replaces that list and leaves its
 rate-limiting, caching and confidence rules standing.
 **Builds on:** [0020](0020-library-browse-tree.md) (artwork comes straight

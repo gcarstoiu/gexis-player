@@ -14,7 +14,7 @@ see "Amendment" below. Nothing else in this record changes.
 the three symptoms he found on the built panel.
 **Implements / amends:** [ADR-0018](0018-volume-and-output-modes.md) (the
 boot level is no longer the last word), [ADR-0034](0034-panel-volume-travel-and-mute.md)
-(what the travel curve is called), [ADR-0035](0035-settings-registry.md)
+(what the travel curve is called), [ADR-0035](0035-settings-api.md)
 (two rows)
 
 ## Context

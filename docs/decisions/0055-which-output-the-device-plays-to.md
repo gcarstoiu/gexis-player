@@ -10,7 +10,7 @@ as it is directly related to volume as well. The card holds now 3 outputs
 but only one we've dealt with. We need to give the user the choice of
 output."*
 **Date:** 2026-09-23
-**Relates to:** [ADR-0009](0009-alsa-device-indirection.md) (`pcm.output`,
+**Relates to:** [ADR-0009](0009-logical-output-device.md) (`pcm.output`,
 the indirection this rests on), [ADR-0046](0046-fixed-output-hides-the-slider.md)
 (fixed output, built today and load-bearing here),
 [ADR-0011](0011-meter-data-three-transports.md) (the meter tap rides the
