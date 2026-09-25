@@ -1,0 +1,9 @@
+{
+  "id": "bluetooth",
+  "name": "Bluetooth",
+  "kind": "renderer",
+  "unit": "bluealsa-aplay.service",
+  "label": "Bluetooth Active",
+  "accent": "#9fb4e8",
+  "status": "Pairable"
+}

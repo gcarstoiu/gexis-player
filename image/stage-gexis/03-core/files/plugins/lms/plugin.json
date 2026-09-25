@@ -1,0 +1,9 @@
+{
+  "id": "lms",
+  "name": "Lyrion",
+  "kind": "renderer",
+  "unit": "squeezelite.service",
+  "label": "Squeezelite Active",
+  "accent": "#7ed6bc",
+  "status": "Starts on play"
+}

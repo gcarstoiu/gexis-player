@@ -65,6 +65,19 @@ install -D -m 644 files/gexis-meter.service \
 mkdir -p "${ROOTFS_DIR}/etc/systemd/system"
 ln -sf /dev/null "${ROOTFS_DIR}/etc/systemd/system/alsa-restore.service"
 
+# ADR-0086: the three built-ins describe themselves the way a plugin does.
+# Not for tidiness - so the generic path is the one exercised on every boot. A
+# plugin's glyph drawn by code nothing else runs is how the first external
+# plugin finds a hole.
+#
+# `/usr/share`, not `/etc`: a manifest is part of the software, shipped and
+# upgraded with it, not something an administrator edits.
+for plugin in files/plugins/*/; do
+	id="$(basename "${plugin}")"
+	install -D -m 644 "${plugin}plugin.json" \
+		"${ROOTFS_DIR}/usr/share/gexis/plugins/${id}/plugin.json"
+done
+
 # ADR-0049: the idle screen's own pictures arrive over SMB, because nothing
 # else on this appliance can put a file on it. **One directory**: not the
 # home directory, not /var/lib/gexis-core - which holds the settings
