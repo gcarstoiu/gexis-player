@@ -77,24 +77,33 @@ had no slot for. **A fifth was mine**: the supervisor had been given a *copy* of
 the adapter map, so the release ladder could not ask whether a plugin still held
 the device — `KeyError: 'plexamp'` from inside `_release_with_ladder`.
 
-### The decision waiting for George
+### The token in the artwork URL: decided
 
-**The artwork URL carries an account-wide Plex token, and the core publishes the
-state to the LAN.** Not a new kind of exposure — ADR-0083 already records the
-three API keys and the Beszel token — but a new degree: those are per-service, a
-Plex token reaches every server that account can see. Three options and their
-costs are in Finding 083; **accepting it is what happens if nobody chooses.**
+**George, 2026-09-25:** *"If the calls stay inside the local network then it is
+fine to keep it like this."* Accepted — and **the plugin now holds itself to
+that condition rather than assuming it**: artwork is published only when the
+Plex server's address is not globally routable. Plexamp will happily play from a
+server anywhere, and for a remote one that URL would carry an account-wide
+credential across the internet to be fetched by a browser. A hostname counts as
+not local, because it could resolve anywhere and the safe answer to *"I cannot
+tell"* is no.
 
 ### What is left in Phase 11
 
 Its own acceptance list, none of which is contract work any more:
 
-- **Volume.** A plugin renderer is not registered with the volume bridges, so
-  `volume` from a plugin is still dropped. Real work, not done.
+- ~~**Volume.**~~ — **done**
+  ([Finding 084](docs/findings/084-a-plugins-volume.md)). The panel's slider
+  drives Plexamp and a change made on the player reaches the DAC through the
+  same single curve every renderer uses. It needed `remote.forget`, which did
+  not exist, and the echo guard this project has now written three times.
 - **Claiming** from the `claim_token` row, rather than Plexamp's own setup.
-- **The panel**: source pill, handoff screen, Peppy badge, and design assets —
-  and simply *looking* at Now Playing with Plexamp on it, which has never been
-  done.
+- **The panel.** Now Playing has been looked at and **it is right**: cover from
+  the Plex server, title, artist, album, year, progress, transport — a
+  screenshot went to George. What is *not* done is the rest of criterion 6:
+  **the source mark**. `plugin.json` ships no `mark.png`, so the panel draws its
+  fallback; Spotify and Bluetooth ship one each. Also unchecked: the handoff
+  screen and the Peppy badge with Plexamp as a party.
 - **Takeover gaps and cross-rate**, criterion 2 of Phase 11's own list.
 - **`08-plexamp`**, the image stage from
   [ADR-0090](docs/decisions/0090-plexamp-ships-the-way-beszel-does.md). Nothing
