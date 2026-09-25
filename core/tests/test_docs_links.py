@@ -31,7 +31,8 @@ LINK = re.compile(r"\[[^\]]*\]\(([^)\s#]+)(?:#[^)]*)?\)")
 #: Those blocks were written at the repository root, where `docs/decisions/x`
 #: is the right path; from inside `docs/` it is not. **74 links, all of that
 #: one kind.** Rewriting them would edit what the file promises never to
-#: edit, so this check does not ask.
+#: edit, so this check does not ask - **ADR-0082**, George's call on
+#: 2026-09-25: *"Keep it."*
 VERBATIM = {"HANDOFF-ARCHIVE.md"}
 
 

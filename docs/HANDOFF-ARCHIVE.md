@@ -10,6 +10,14 @@ order, so a `git log -p` trail still matches. What was removed from
 `HANDOFF.md` is exactly what appears here — the split was line-counted, not
 eyeballed.
 
+**So the links in them do not work, and that is deliberate**
+([ADR-0082](decisions/0082-the-archive-keeps-its-dead-links.md), George,
+2026-09-25: *"Keep it."*). They were written at the repository root, where
+`docs/decisions/0027-…` is the right path; from inside `docs/` it is not. All
+74 of them name the record's number in the link text, so the way to follow one
+is to look it up by number. `core/tests/test_docs_links.py` skips this file for
+that reason and checks every other.
+
 **Where the durable conclusions went instead.** History was moved, not lost,
 but the *rules* it produced live elsewhere and are the things to act on:
 
