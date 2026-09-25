@@ -133,3 +133,24 @@ others — a check that could only ever confirm what it already believed. It now
 lists what is there and names what is missing.
 
 **Still not booted.** Every statement here is about a file.
+
+## The third image — everything Phase 11 produced, 2026-09-25
+
+`2026-09-25-gexis-player-v0.2.1-585-gb74e95f.img`, **695 s**, exit 0. Both
+Plexamp downloads came from the cache; the plugin is pinned at **v0.2.0**, the
+release carrying the repeat mapping.
+
+**Checked for the two things that missed the previous image**, because "a stage
+ran" is not the same as "the fix is in it":
+
+```
+  /opt/gexis-peppy/gexis_peppy_render.py: PLUGIN_MARKS present = True
+  the image's UI bundle: index-CGKf9H2v.js
+  the built UI bundle:   index-CGKf9H2v.js
+```
+
+The Peppy badge fallback and both panel mark lookups are in. `verify-image.sh`
+passes every check, including the 47 `.py` files of the core venv byte-identical
+to `core/src` at the built commit.
+
+**Still not booted.**
