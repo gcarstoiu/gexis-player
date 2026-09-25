@@ -1424,6 +1424,20 @@ ADRs were updated.
 
 **Acceptance**
 
+0. ~~**The panel meets Phase 7a's target**~~ — **closed 2026-09-25 with the
+   screen opens below the floor**, on George's judgement from using the
+   panel ([ADR-0076](decisions/0076-criterion-0-closes-with-the-opens-below-the-floor.md),
+   [Finding 067](findings/067-what-the-panel-presents-at-the-end-of-criterion-0.md)).
+   The scrolls reach **56.9-59.5 frames a second at 0.00 % dropped**; the
+   opens are **30-53 and 2.5-5.6 %**, against a floor of 55 and 2 %.
+   **Revisit before Phase 13 is implemented** - the setup phase is where
+   the panel stops being George's and starts being a stranger's, and a floor
+   waived on the judgement of the person who knows what the device is doing
+   should not survive that unexamined. The measured lever is the home
+   screen's teardown: ~190 ms of a ~280 ms transition.
+
+   The original criterion, for the record:
+
 0. **The panel meets Phase 7a's target**, which is where the panel-speed work
    lives now that 7a has measured rather than guessed. Added 2026-09-18 when
    Phase 7a closed.

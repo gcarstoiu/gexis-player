@@ -88,9 +88,12 @@ words.
   artists at about 3 s each, so **45–50 minutes**, more than the 25–30 first
   estimated. Its number is in the settings row.
 - **The image is a long way behind.** It predates all of the above.
-- **Waiting on George:** the three ballistics defaults, whether the
-  mixed look of the artist grid is acceptable, and **the background's blur**
-  (below).
+- **Waiting on George:** whether the mixed look of the artist grid is
+  acceptable. **The ballistics are closed** (George, 2026-09-25: the three
+  settings are there for him to fine-tune, so the defaults need no verdict).
+- **Criterion 0 is closed** with the screen opens below Phase 7a's floor
+  ([ADR-0076](docs/decisions/0076-criterion-0-closes-with-the-opens-below-the-floor.md)),
+  **to be revisited before Phase 13**.
 
 ### Criterion 0 — the panel measured, 2026-09-24
 
