@@ -1576,8 +1576,31 @@ ADRs were updated.
    *Original text:* **Every row in ADR-0022's settings inventory is wired end
    to end** (panel and phone, ADR-0035), or marked out of scope with the
    reason.
-2. **No unwired UI remains, or each survivor is explicitly justified.** Added
-   2026-09-13; moved here from the plugin-contract phase 2026-09-16, where
+2. ~~**No unwired UI remains, or each survivor is explicitly justified.**~~ —
+   **closed 2026-09-25.** George: *"Close criterion 2 and move to 3."*
+
+   **Four generated lists, not an audit**
+   ([Finding 071](findings/071-what-the-panel-shows-that-does-nothing.md)).
+   It should ideally find nothing and it found one thing — **the check
+   itself**. Settings marks a row `data-unwired` when the daemon reports
+   `wired: false`, and `wifi` and `bt_trusted` reported that while working:
+   they act through `POST /settings/{key}/items`, not through `set`, and the
+   flag only knew about `set`. `Settings` now takes a `lists={...}`
+   declaration. **No visible row is marked unwired.**
+
+   The survivors, justified: **17 controls that can be disabled**, every one
+   conditional and with a real handler — "cannot work right now", which
+   ADR-0037 §3 requires rather than forbids — each tabulated with its reason
+   in the finding. And nothing else: **0** optional callbacks no parent
+   supplies, **0** empty handlers, **0** clickable non-buttons, and all **20**
+   paths the UI fetches matched against the daemon's **33** routes.
+
+   **Not covered, and left to criterion 3 where it belongs:** a control that
+   works and arrives somewhere empty, gestures, the visualiser's own surface,
+   and whether an enabled control does what its label says.
+
+   *Original text:* **No unwired UI remains, or each survivor is explicitly
+   justified.** Added 2026-09-13; moved here from the plugin-contract phase 2026-09-16, where
    the polish happens. From Phase 4 the UI is imported from complete designs while the
    backend is wired a phase at a time, so screens legitimately carry controls
    that do nothing yet (`decisions/README.md`'s scope note on unusable
