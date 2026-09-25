@@ -173,9 +173,17 @@ Each carries an `id`; the plugin answers exactly once:
 
 ## Deliberately not here yet
 
-- **Discovery.** How the core learns a plugin exists and who starts it.
-  ADR-0016 listed lifecycle as its own open consequence and it still is. This
-  document assumes a plugin is already running and connects.
+- **Who starts a plugin.** ADR-0016 listed lifecycle as its own open
+  consequence and it still is. **Discovery itself is settled**
+  ([ADR-0086](decisions/0086-a-plugin-declares-itself-in-a-manifest.md)): a
+  plugin ships `plugin.json` under `/usr/share/gexis/plugins/<id>/`, and its
+  id must match one before it may connect. Connecting says a plugin is
+  *running*, not that it exists.
+- **Arbitration for a plugin renderer.** The socket carries `acquire`,
+  `release` and the commands; what does not exist yet is the adapter built
+  around a session and registered with the supervisor. A `renderer` that
+  connects today is welcomed and idle, and the log says so. A `service` is
+  complete.
 - **Authentication.** The socket's permissions are the model (ADR-0084).
 - **Anything about themes.** ADR-0016 lists them as plugins and a theme has no
   process; Phase 14 settles that before anything is built.

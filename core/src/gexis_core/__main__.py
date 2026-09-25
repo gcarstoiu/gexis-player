@@ -68,6 +68,7 @@ from gexis_core.settings_registry import Settings
 from gexis_core.splash import Splash
 from gexis_core.state import StateStore
 from gexis_core import backups, bluealsa_volume, outputs, plugins
+from gexis_core.plugin_server import PluginServer
 from gexis_core.systemd import set_enabled as _set_unit_enabled
 from gexis_core.artwork_sweep import ArtworkSweep
 from gexis_core.bluealsa_volume import BluealsaVolume
@@ -1785,6 +1786,35 @@ async def main() -> None:
         and not adapter.capabilities.volume_over_bluealsa
     }
 
+    def _plugin_connected(session) -> None:
+        """**ADR-0084/0086.** A plugin said it is running.
+
+        A `service` needs nothing further - being connected is the whole of
+        what it does, which is the point of the `kind` split. A `renderer`
+        will need an adapter built around this session and registered with the
+        supervisor; that is the next piece and is deliberately not faked here.
+        """
+        if session.kind == "renderer":
+            logger.info(
+                "plugins: %s is a renderer and arbitration does not carry plugins "
+                "yet - it is connected and idle", session.id,
+            )
+
+    def _plugin_event(session, kind: str, message: dict) -> None:
+        # Availability is the one event that means something without an
+        # adapter: it is the panel's own question, and the state store has
+        # held a slot per renderer since Phase 3.
+        if kind == "available" and session.id in state_store.state.available:
+            state_store.set_available(session.id, bool(message.get("available")))
+            return
+        logger.debug("plugins: %s sent %s", session.id, kind)
+
+    plugin_server = PluginServer(
+        installed_plugins,
+        on_event=_plugin_event,
+        on_connect=_plugin_connected,
+    )
+
     logger.info("gexis-core starting: adapters=%s", list(adapters))
     await asyncio.gather(
         # ADR-0077: through the gate, not directly - an adapter runs while its
@@ -1800,6 +1830,9 @@ async def main() -> None:
         # The `wifi` row's value, kept current from here rather than read on
         # the request path - where it measured 3.2 s and blocked everything.
         wifi.watch_connected(),
+        # ADR-0084: the socket plugins connect to. Served for the life of the
+        # process, beside the one the browser uses.
+        plugin_server.run(),
         state_server.run(),
     )
 

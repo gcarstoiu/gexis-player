@@ -194,8 +194,18 @@ they are the contract's **source**, not its consumers, and
    arriving from the plugin. The unsurfaced `plugins` row is where it lands.
 5. The **Beszel agent** against the draft, *before* freezing it — it is the
    test that the contract carries something with no metadata, no transport and
-   no claim on the audio device.
+   no claim on the audio device. **The machinery it needs is built**: a
+   service connects over the socket, is welcomed, and appears in the payload
+   as `kind: "service"` with no accent, status or mark — checked on the device
+   with a throwaway manifest. What is left is the agent itself and the
+   question of where its hub lives.
 6. Freeze v1. Criterion 2 closes in Phase 11.
+
+**Still open inside discovery:** a plugin's **settings rows** merged into the
+registry, and writes reaching it over the socket. And **arbitration does not
+carry plugins yet** — a `renderer` that connects is welcomed and idle, and the
+log says so rather than pretending otherwise. Both are adapter-shaped work:
+an `Adapter` built around a session and registered with the supervisor.
 
 **Read [Finding 075](docs/findings/075-what-moode-learned-about-plexamp.md)
 before starting.** George's moOde project built a Plexamp route and **parked
