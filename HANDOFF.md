@@ -66,11 +66,17 @@ is written, and both are his:
 | `signal_stop` | its unit; the core does this itself regardless |
 | `on_release` | **`alsa.device_held_by`**, not the TCP count — that was measured to mean nothing |
 
-**And one thing is measured and unsolved:** Plexamp opens `hw:5,0` directly in
-**S32_LE**, so `pcm.output` and peppyalsa are not in its path.
-[ADR-0085](docs/decisions/0085-the-alsa-default-is-our-output.md) made our output
-the ALSA default to catch exactly this, **and whether the meters then work is
-unverified** — moOde measured peppyalsa giving an all-zero FIFO for S32_LE.
+**And the audio path is solved, not open.** Plexamp opened `hw:5,0` directly in
+**S32_LE**, and George's question — *"why aren't we setting the default for the
+device to our hat and let plexamp use it?"* — is
+[ADR-0085](docs/decisions/0085-the-alsa-default-is-our-output.md). With
+`pcm.!default "output"` and Plexamp set to **Default**, it goes through
+`pcm.output` with peppyalsa in the path, **and the meters work**: Finding 077
+measured the FIFO live with a control, `25 23 25 24 26 25 …` playing against no
+writer at all when stopped, and the spectrum FIFO carrying bands. **moOde's
+all-zero symptom does not reproduce on this device.** Why it happened there is
+not explained and was not investigated; what is established is that it does not
+happen here.
 
 ### The two defects the device found, because they are the reason to read this
 

@@ -2240,6 +2240,7 @@ the ALSA default.
    for S32_LE on moOde, which is why its `.asoundrc` pins S24_LE *because of
    Plexamp*. `image/stage-gexis/00-alsa/files/output.conf` pins **no format at
    all**, so the visualiser would go flat with nothing on screen to say why.
+   **Answered: it does not happen here** — see the fourth bullet below.
 
    **All four were answered by the same install, 2026-09-25**
    ([Finding 077](findings/077-plexamp-on-gexis.md)), and three of the four
@@ -2251,11 +2252,20 @@ the ALSA default.
      overrides it for squeezelite's idle tick.
    - **It frees the device and keeps running**, so **ADR-0008's reversal
      condition is not triggered.**
-   - **The audio path is the problem.** It opens `hw:5,0` directly, so
-     `pcm.output` and peppyalsa are not in the path, and the format is
+   - ~~**The audio path is the problem.**~~ — **solved the same day by
+     [ADR-0085](decisions/0085-the-alsa-default-is-our-output.md)**, on
+     George's question: *"why aren't we setting the default for the device to
+     our hat and let plexamp use it?"* It opened `hw:5,0` directly, so
+     `pcm.output` and peppyalsa were not in the path, and the format is
      **S32_LE** — the one moOde measured as giving an all-zero meter FIFO.
      `output` is an ALSA PCM and `aplay -L` lists it, but Plexamp's own
-     enumeration does not, and setting it is silently ignored.
+     enumeration does not, and setting it is silently ignored — hence
+     `pcm.!default`.
+
+     **With that in place the meters work**, measured with a control: the FIFO
+     reads `25 23 25 24 26 25 …` while playing and has no writer at all when
+     stopped, and the spectrum FIFO carries bands. **moOde's all-zero symptom
+     does not reproduce here.**
    - **The TCP signal is still unanswered**: the count was 0 throughout,
      including while playing, because no phone was attached. It reflects a
      *controller* being connected, not audio.
