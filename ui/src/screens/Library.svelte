@@ -13,7 +13,7 @@
   while the idle screen, which is removed when it closes, never did.
 -->
 <script>
-  import { untrack } from 'svelte';
+  import { tick, untrack } from 'svelte';
 
   import {
     foldedName,
@@ -29,10 +29,13 @@
     playlistsCached,
     loadPlaylists,
     loadPlaylist,
+    prefetchArtistPhotos,
     browseRadio,
     radioPlay,
     libraryAction,
   } from '../lib/library.js';
+  import { afterPaint, revealing } from '../lib/chunks.svelte.js';
+  import { inView, watchScroller } from '../lib/window.svelte.js';
   import MiniStrip from './MiniStrip.svelte';
   import WaitingServices from './WaitingServices.svelte';
 
@@ -85,6 +88,43 @@
     return TINTS[h % TINTS.length];
   }
 
+  //: **Long lists are built a screenful at a time** (ADR-0065). One per
+  //: list, because each has its own length and its own moment of arriving.
+  //: A playlist still builds a screenful at a time (ADR-0065); it paints in
+  //: 104ms and is not worth windowing. The artist grid and the browse pane
+  //: are windowed instead (ADR-0067).
+  const playlistReveal = revealing(() => playlist?.items?.length ?? 0, () => where);
+
+  //: **A home card says it was pressed** (George, 2026-09-24: the cards
+  //: give nothing back on a tap, *"Radio has a tapping animation. The rest
+  //: do not"*). Radio only looked alive because its screen is a skeleton
+  //: that paints at once, where the others held the panel's last frame
+  //: while the new screen was built.
+  //:
+  //: `:active` alone is not enough here: a quick tap can begin and end
+  //: inside one frame, and the frame that would have shown it is the one
+  //: spent opening the next screen. So the press is held long enough to be
+  //: painted, and **the screen is opened a painted frame later** - the
+  //: feedback goes out first, and the work follows it.
+  const PRESS_MS = 130;
+  let pressed = $state(null);
+  let unpressing = null;
+
+  function press(what) {
+    clearTimeout(unpressing);
+    pressed = what;
+  }
+
+  function lift() {
+    clearTimeout(unpressing);
+    unpressing = setTimeout(() => (pressed = null), PRESS_MS);
+  }
+
+  /** Runs `go` once the pressed frame is on the screen. */
+  function opening(go) {
+    afterPaint(go);
+  }
+
   const RAIL = ['#', ...'ABCDEFGHIJKLMNOPQRSTUVWXYZ'];
   // Grouped by the letter the core folded for us (ADR-0038 §1a), keeping
   // LMS's own order within each group.
@@ -105,17 +145,137 @@
     RAIL.map((ch) => ({ ch, group: groups.find((g) => g.letter === ch) ?? null })),
   );
 
+  //: **The grid builds only the groups on screen** (ADR-0067). 917 cards
+  //: cost about 1.3ms each to create and lay out, and nothing in a card
+  //: accounts for it (Finding 064) - so the grid holds one or two of its 27
+  //: letter groups and a spacer stands in for the rest.
+  const COLS = 6;
+  //: The gap between rows of cards, and between one group and the next -
+  //: `.group__cards { gap: 26px 20px }` and
+  //: `.group + .group .group__head { padding-top: 26px }`.
+  const ROW_GAP = 26;
+  const GROUP_GAP = 26;
+  //: How much beyond the window to build, so a flick has somewhere to land
+  //: before the next frame catches up. One screen either side.
+  const OVERSCAN = 700;
+
+  const gridScroll = watchScroller();
+  const paneScroll = watchScroller();
+
+  //: A header's and a card's height, read from the panel rather than
+  //: assumed: a card is `aspect-ratio: 1` in a six-column grid, so its
+  //: height is the panel's width divided by six, less the gaps.
+  let sizes = $state(null);
+  //: Plain, not state: read inside the effect that sets `sizes`, and an
+  //: effect that reads what it writes wakes itself (LESSONS 31).
+  let measured = false;
+
+  function measure() {
+    const head = grid?.querySelector('.group__head');
+    const card = grid?.querySelector('.artist');
+    if (!head || !card) return;
+    sizes = { head: head.offsetHeight, card: card.offsetHeight };
+    measured = true;
+  }
+
+  $effect(() => {
+    // Re-measured when the list changes shape, never per scroll.
+    void groups.length;
+    void gridScroll.view;
+    if (!grid) return;
+    if (!measured) afterPaint(measure);
+  });
+
+  //: Every group's top and height, without building any of them.
+  const gridBlocks = $derived.by(() => {
+    if (!sizes) return [];
+    const out = [];
+    let y = 0;
+    for (const [at, group] of groups.entries()) {
+      const rows = Math.ceil(group.items.length / COLS);
+      const height =
+        (at ? GROUP_GAP : 0) +
+        sizes.head +
+        rows * sizes.card +
+        Math.max(0, rows - 1) * ROW_GAP;
+      out.push({ top: y, height, group });
+      y += height;
+    }
+    return out;
+  });
+
+  //: Before the first measurement there is nothing to compute with, so the
+  //: grid draws **one header and two rows of cards** - enough to measure
+  //: both and no more. Three whole groups was the first try, and "A" alone
+  //: can be a hundred artists: it put the screen change back to 300ms from
+  //: 150 (2026-09-24).
+  const shownGroups = $derived.by(() => {
+    if (!sizes || !gridBlocks.length) {
+      const first = groups[0];
+      return first ? [{ ...first, items: first.items.slice(0, COLS * 2) }] : [];
+    }
+    const { from, to } = inView(gridBlocks, gridScroll.top, gridScroll.view || 600, OVERSCAN);
+    return gridBlocks.slice(from, to + 1).map((b) => b.group);
+  });
+  //: **The browse screen's artist pane, the simple case** (ADR-0067): one
+  //: row height, 917 of them, a 250px window. Measured the same way, since
+  //: a row's height is the design's and not this component's to know.
+  let rowSize = $state(null);
+  let rowMeasured = false;
+  let pane = $state(null);
+
+  function measureRow() {
+    const row = pane?.querySelector('.row');
+    if (!row) return;
+    // **The pitch, not the height.** `.pane__list` is a flex column with a
+    // 1px gap, so 917 rows are 917px taller than 917 row heights - the
+    // pane computed 42,214px where the list measures 43,108 (2026-09-24).
+    const gap = parseFloat(getComputedStyle(pane).rowGap) || 0;
+    rowSize = row.offsetHeight + gap;
+    rowMeasured = true;
+  }
+
+  $effect(() => {
+    void artists.length;
+    void paneScroll.view;
+    if (!pane) return;
+    if (!rowMeasured) afterPaint(measureRow);
+  });
+
+  const paneBlocks = $derived.by(() => {
+    if (!rowSize) return [];
+    return artists.map((entry, at) => ({ top: at * rowSize, height: rowSize, entry }));
+  });
+  const paneWindow = $derived.by(() => {
+    if (!rowSize || !paneBlocks.length) {
+      return { rows: artists.slice(0, 24), above: 0, below: 0 };
+    }
+    const { from, to, above, below } = inView(
+      paneBlocks,
+      paneScroll.top,
+      paneScroll.view || 250,
+      OVERSCAN,
+    );
+    return { rows: paneBlocks.slice(from, to + 1).map((b) => b.entry), above, below };
+  });
+
+  const gridSpace = $derived.by(() => {
+    if (!sizes || !gridBlocks.length) return { above: 0, below: 0 };
+    const { above, below } = inView(gridBlocks, gridScroll.top, gridScroll.view || 600, OVERSCAN);
+    return { above, below };
+  });
+
   let grid = $state(null);
   // Each pane's scroller, so a new selection starts at the top of the next
   // pane rather than wherever the previous list was left (George,
   // 2026-09-18).
   function jumpTo(group) {
-    const target = grid?.querySelector(`#${group.id}`);
-    if (!target || !grid) return;
-    // Measured against the scroller rather than by offsetTop, which the
-    // group's own containment would make relative to the group.
-    const top = target.getBoundingClientRect().top - grid.getBoundingClientRect().top;
-    grid.scrollTop = Math.max(0, grid.scrollTop + top - 10);
+    // **Arithmetic, not a DOM query** (ADR-0067). The group being jumped to
+    // is usually not built - that is the point of windowing - so there is
+    // nothing to measure. `gridBlocks` knows where it would be.
+    const block = gridBlocks.find((b) => b.group.letter === group.letter);
+    if (!grid || !block) return;
+    grid.scrollTop = Math.max(0, block.top);
   }
 
   // LMS's own artist photos, where the server has the plugin (ADR-0040 §1).
@@ -154,11 +314,9 @@
   //: biography and hid the discography on a long one.
   const ALBUM_PEEK = 0.25;
   //: Never so little that About is pointless.
-  const ABOUT_MIN = 64;
 
   let aboutEl = $state(null);
   let columnEl = $state(null);
-  let aboutMax = $state(ABOUT_MIN);
   //: Whether there is anything under the fold. Measured in `fitAbout`.
   let bioClipped = $state(false);
 
@@ -174,28 +332,29 @@
     toggle();
   }
 
-  /** One measured correction: everything below About is a fixed height, so
-   *  the slack between where the first album row sits now and where it
-   *  should sit is exactly what About may grow or shrink by. */
+  /** **Only the fade now** (ADR-0074). This used to measure the slack
+   *  between where the first album row sat and where it should sit, and
+   *  size About by it - which is what the held region does directly, and
+   *  what the biography's own `flex` does inside it. What is left is the
+   *  question the measurement cannot answer from geometry alone: is there
+   *  more text than the box shows, and so should the fade be drawn?
+   */
   function fitAbout() {
-    if (!aboutEl || !columnEl || bioOpen) return;
-    const card = columnEl.querySelector('.disc');
-    if (!card) return;
-    const column = columnEl.getBoundingClientRect();
-    const first = card.getBoundingClientRect();
-    // **Measured in the column's own content, not on screen.** Unfolding the
-    // biography makes the column taller and it can be scrolled; folding it
-    // back then measured the first album row from wherever the scroll had
-    // left it, so the answer came out wrong and About never returned to the
-    // height it had (George, on the panel, 2026-09-20). Adding the scroll
-    // offset back makes the sum the same at any scroll position.
-    const scrolled = columnEl.scrollTop;
-    const firstTop = first.top - column.top + scrolled;
-    const wanted = columnEl.clientHeight - first.height * ALBUM_PEEK;
-    const slack = wanted - firstTop;
-    const next = Math.max(ABOUT_MIN, Math.round(aboutEl.getBoundingClientRect().height + slack));
-    if (Math.abs(next - aboutMax) > 4) aboutMax = next;
-    bioClipped = aboutEl.scrollHeight > next + 2;
+    if (!aboutEl || bioOpen) return;
+    bioClipped = aboutEl.scrollHeight > aboutEl.clientHeight + 2;
+    if (artistInfo.state === 'ready' && !decided) {
+      // **The paragraphs' own height, not `scrollHeight`.** A box never
+      // reports a scroll height smaller than itself, so a one-line
+      // biography in a 400px box said it filled it - and every artist held
+      // (2026-09-25). The text is what is being asked about.
+      const paras = [...aboutEl.querySelectorAll('.artistmeta__para')];
+      const text = paras.length
+        ? paras[paras.length - 1].getBoundingClientRect().bottom -
+          paras[0].getBoundingClientRect().top
+        : 0;
+      fills = text >= aboutEl.clientHeight - 4;
+      decided = true;
+    }
   }
 
   $effect(() => {
@@ -206,6 +365,70 @@
     void artistInfo.popular;
     if (bioOpen) return;
     const frame = requestAnimationFrame(() => untrack(fitAbout));
+    return () => cancelAnimationFrame(frame);
+  });
+
+  //: **The discography's place is held while About is still loading**
+  //: (ADR-0074). The biography and Popular arrive about 1.8s after the
+  //: page, and the discography was sitting at 105px until they did and at
+  //: 478 afterwards - a 373px shove, measured, and the same 373 whether the
+  //: artist had five popular tracks and a short life story or no popular
+  //: tracks and a long one, because `fitAbout` clamps the biography to
+  //: whatever is left.
+  //:
+  //: So the height is not guessed: it is the one `fitAbout` aims at - the
+  //: first album card at `clientHeight - cardHeight * ALBUM_PEEK` - and the
+  //: discography is already on the page to be measured against it.
+  //: How tall the About region will be once it has something in it
+  //: (ADR-0074), measured while it is still a skeleton and then kept - so
+  //: the biography and Popular arrive *into* a box that is already the
+  //: right size rather than growing one under the discography.
+  let hold = $state(0);
+
+  //: **Whether this artist's biography is long enough to fill the space.**
+  //: Decided once, when the lookup comes back, and not revisited - the
+  //: answer changes the height it was measured in, so asking twice
+  //: oscillates for a biography that sits near the boundary.
+  let fills = $state(false);
+  //: **Held until the question has been asked.** `fills` starting false made
+  //: the region compress the moment the lookup returned, and the biography
+  //: was then measured against the *compressed* box - where any text fills
+  //: it, so everything held (2026-09-25).
+  let decided = $state(false);
+
+  //: Held while there is something coming, and afterwards only if what came
+  //: can fill it. An artist whose lookup failed, who has no biography, or
+  //: whose biography is two lines long lets the page close up - George,
+  //: 2026-09-25: *"in the likelihood the info doesn't come then it can
+  //: compress, but that is a less likely event."* A one-line life story
+  //: stretched over 400px of nothing is the same fault as a short Popular
+  //: list leaving a hole.
+  const holding = $derived(
+    artistInfo.state === 'loading' ||
+      (artistInfo.state === 'ready' && !!artistInfo.found?.biography && (!decided || fills)),
+  );
+
+  $effect(() => {
+    const waiting = artistInfo.state === 'loading';
+    void releases;
+    void artist?.id;
+    if (!waiting || !columnEl) return;
+    const frame = requestAnimationFrame(() => {
+      const card = columnEl?.querySelector('.disc');
+      const region = columnEl?.querySelector('.artistmeta__region');
+      if (!card || !region) return;
+      const column = columnEl.getBoundingClientRect();
+      const first = card.getBoundingClientRect();
+      // The place `fitAbout` aims the first album card at.
+      const want = columnEl.clientHeight - first.height * ALBUM_PEEK;
+      // **The card's own top, as `fitAbout` measures it.** Measuring where
+      // `.releases` starts instead counted the release heading twice and
+      // left the discography 40px low (2026-09-25).
+      const have = first.top - column.top + columnEl.scrollTop;
+      // Written, never read here: an effect that reads what it writes wakes
+      // itself (LESSONS 31).
+      hold = Math.max(0, Math.round(region.getBoundingClientRect().height + want - have));
+    });
     return () => cancelAnimationFrame(frame);
   });
 
@@ -237,7 +460,12 @@
     }, 120);
   }
 
-  /** Asks for a card's photo once it is on screen (or nearly). */
+  /** Asks for a card's photo once it is on screen (or nearly).
+   *
+   *  **One per card, and that is not what a card costs.** Finding 064
+   *  measured the grid with a single shared observer, and with none at all:
+   *  both within noise of all 917. The cost is the elements, which is
+   *  ADR-0067's answer, and there are now a few dozen of them. */
   function artistCard(node, id) {
     const observer = new IntersectionObserver(
       (entries) => {
@@ -253,6 +481,10 @@
     busy = 'artists';
     try {
       artists = await artistsCached();
+      // **Every portrait, before the grid wants them** (ADR-0068). Not
+      // awaited: the grid opens now and fills in behind itself, where it
+      // used to discover twenty at a time as cards came into view.
+      prefetchArtistPhotos(artists.map((entry) => entry.id));
       path = [{ kind: 'artists', label: 'Artists' }];
     } catch (err) {
       console.info('library:', err.message);
@@ -277,6 +509,51 @@
   //: Reset twice - now, and after the next frame - because the rows are
   //: often still arriving when the token moves, and a scroller with no
   //: content yet has nothing to scroll.
+  //: **Where a list was left**, so going into an artist and back out again
+  //: lands where you were rather than at the top (George, 2026-09-25).
+  //: Module-level would outlive a rescan; this lives as long as the library
+  //: screen does, which is as long as the places it remembers.
+  const leftAt = new Map();
+
+  //: Saved from the scroller this component already watches, rather than a
+  //: second listener on the same element.
+  $effect(() => {
+    const at = gridScroll.top;
+    const page = where;
+    if (page) leftAt.set(page, at);
+  });
+
+  //: **Coming back to the library root forgets where the lists were.**
+  //: George asked for the grid to hold its place across going into an
+  //: artist and out again; opening Artists afresh from the home screen is a
+  //: different journey and starts at the top, where the A's are.
+  $effect(() => {
+    if (path.length === 0) leftAt.clear();
+  });
+
+  /** Puts a scroller back where it was, or at the top if it has not been
+   *  here before. */
+  function keepPlace(node, token) {
+    let key = token;
+    let frame;
+    const put = () => {
+      const at = leftAt.get(key) ?? 0;
+      node.scrollTop = at;
+      cancelAnimationFrame(frame);
+      // A second go once the spacers have their height: the windowed grid
+      // is only as tall as its arithmetic after the first frame.
+      frame = requestAnimationFrame(() => (node.scrollTop = at));
+    };
+    put();
+    return {
+      update(next) {
+        key = next;
+        put();
+      },
+      destroy: () => cancelAnimationFrame(frame),
+    };
+  }
+
   function fromTop(node, _token) {
     let frame;
     const reset = () => {
@@ -391,6 +668,8 @@
       // biography that takes a second (Finding 035).
       artistInfo = { state: 'loading', for: entry.id, found: null, popular: [] };
       bioOpen = false;
+      fills = false;
+      decided = false;
       loadArtistInfo(entry.id, entry.name).then((answer) => {
         if (artistInfo.for !== entry.id) return;
         artistInfo = {
@@ -722,11 +1001,29 @@
   {#if path.length}
     <div class="header">
       {#if path.length > 1}
-        <button class="round" type="button" aria-label="Home" onclick={() => (path = [])}>
+        <button
+          class="round"
+          class:is-pressed={pressed === 'lib-home'}
+          type="button"
+          aria-label="Home"
+          onpointerdown={() => press('lib-home')}
+          onpointerup={lift}
+          onpointercancel={lift}
+          onclick={() => opening(() => (path = []))}
+        >
           <span class="i-tiles"><i></i><i></i><i></i><i></i></span>
         </button>
       {/if}
-      <button class="round" type="button" aria-label="Back" onclick={back}>
+      <button
+          class="round"
+          class:is-pressed={pressed === 'lib-back'}
+          type="button"
+          aria-label="Back"
+          onpointerdown={() => press('lib-back')}
+          onpointerup={lift}
+          onpointercancel={lift}
+          onclick={() => opening(back)}
+        >
         <span class="i-back"></span>
       </button>
       <div class="heading">
@@ -757,7 +1054,15 @@
     {:else if atHome}
       <div class="root">
         <div class="cards">
-          <button class="card card--browse" type="button" onclick={openBrowse}>
+          <button
+            class="card card--browse"
+            class:is-pressed={pressed === 'browse'}
+            type="button"
+            onpointerdown={() => press('browse')}
+            onpointerup={lift}
+            onpointercancel={lift}
+            onclick={() => opening(openBrowse)}
+          >
             <span class="glyph glyph--bars"><i style="height:26px"></i><i style="height:44px"></i><i style="height:32px"></i><i style="height:39px"></i></span>
             <span>
               <span class="card__name">Browse</span>
@@ -765,7 +1070,15 @@
             </span>
           </button>
 
-          <button class="card card--artists" type="button" onclick={openArtists}>
+          <button
+            class="card card--artists"
+            class:is-pressed={pressed === 'artists'}
+            type="button"
+            onpointerdown={() => press('artists')}
+            onpointerup={lift}
+            onpointercancel={lift}
+            onclick={() => opening(openArtists)}
+          >
             <span class="glyph glyph--dots"><i></i><i></i><i></i></span>
             <span>
               <span class="card__name">Artists</span>
@@ -773,7 +1086,15 @@
             </span>
           </button>
 
-          <button class="card card--playlists" type="button" onclick={openPlaylists}>
+          <button
+            class="card card--playlists"
+            class:is-pressed={pressed === 'playlists'}
+            type="button"
+            onpointerdown={() => press('playlists')}
+            onpointerup={lift}
+            onpointercancel={lift}
+            onclick={() => opening(openPlaylists)}
+          >
             <span class="glyph glyph--list">
               <span><i></i><b style="width:44px"></b></span>
               <span><i></i><b style="width:32px"></b></span>
@@ -785,7 +1106,15 @@
             </span>
           </button>
 
-          <button class="card card--radio" type="button" onclick={() => openRadio()}>
+          <button
+            class="card card--radio"
+            class:is-pressed={pressed === 'radio'}
+            type="button"
+            onpointerdown={() => press('radio')}
+            onpointerup={lift}
+            onpointercancel={lift}
+            onclick={() => opening(() => openRadio())}
+          >
             <span class="glyph glyph--waves"><i></i><b></b><b></b></span>
             <span>
               <span class="card__name">Radio</span>
@@ -795,7 +1124,15 @@
             </span>
           </button>
 
-          <button class="card card--settings" type="button" onclick={onsettings}>
+          <button
+            class="card card--settings"
+            class:is-pressed={pressed === 'settings'}
+            type="button"
+            onpointerdown={() => press('settings')}
+            onpointerup={lift}
+            onpointercancel={lift}
+            onclick={() => opening(onsettings)}
+          >
             <span class="glyph glyph--sliders"><i></i><b></b><i></i><b></b></span>
             <span>
               <span class="card__name">Settings</span>
@@ -972,7 +1309,7 @@
           <span class="group__rule"></span>
           <span class="playall__meta">{playlistMeta}</span>
         </div>
-        {#each playlist.items as entry, index (entry.id)}
+        {#each playlist.items.slice(0, playlistReveal.shown) as entry, index (entry.id)}
           <div class="row row--wide">
             <button class="row__hit" type="button" onclick={() => (revealed = revealed === `pltrack-${index}` ? null : `pltrack-${index}`)}>
               <span class="row__num">{index + 1}</span>
@@ -1000,8 +1337,14 @@
               <span class="pane__label">Artist</span>
               <span class="pane__count">{artists.length}</span>
             </div>
-            <div class="pane__list" use:fromTop={where}>
-              {#each artists as entry (entry.id)}
+            <div
+              class="pane__list"
+              bind:this={pane}
+              use:fromTop={where}
+              use:paneScroll.attach
+            >
+              <div class="grid__space" style:height="{paneWindow.above}px"></div>
+              {#each paneWindow.rows as entry (entry.id)}
                 <div class="row" class:is-on={chosenArtist?.id === entry.id}>
                   <button class="row__hit" type="button" onclick={() => chooseArtist(entry)}>
                     <span class="row__label">{entry.name}</span>
@@ -1015,6 +1358,7 @@
                   {/if}
                 </div>
               {/each}
+              <div class="grid__space" style:height="{paneWindow.below}px"></div>
             </div>
           </div>
 
@@ -1079,8 +1423,14 @@
       </div>
     {:else if here?.kind === 'artists'}
       <div class="grid">
-        <div class="grid__scroll" bind:this={grid} use:fromTop={where}>
-          {#each groups as group (group.letter)}
+        <div
+          class="grid__scroll"
+          bind:this={grid}
+          use:keepPlace={where}
+          use:gridScroll.attach
+        >
+          <div class="grid__space" style:height="{gridSpace.above}px"></div>
+          {#each shownGroups as group (group.letter)}
             <div class="group">
               <div class="group__head" id={group.id}>
                 <span class="group__letter">{group.letter}</span>
@@ -1118,6 +1468,7 @@
               </div>
             </div>
           {/each}
+          <div class="grid__space" style:height="{gridSpace.below}px"></div>
         </div>
         <div class="rail">
           {#each railLetters as letter (letter.ch)}
@@ -1173,6 +1524,17 @@
         <!-- The design's right column: About, Popular, the discography,
              then Similar artists - all of it one scroller. -->
         <div class="artistright" bind:this={columnEl} use:fromTop={where}>
+          <!-- **The region is held, not a gap after it** (ADR-0074). A
+               spacer between About and the discography had to shrink as
+               About filled, and the two were measured a frame apart - so
+               the discography flicked one way and then the other. A
+               `min-height` on the region itself simply does not move: what
+               arrives fills it. -->
+          <div
+            class="artistmeta__region"
+            class:is-held={holding && hold}
+            style:min-height={holding && hold ? `${hold}px` : null}
+          >
             <div class="sect">
               <span class="sect__label">About</span>
               <span class="sect__rule"></span>
@@ -1188,7 +1550,17 @@
               <!-- Clamped, so Popular and the discography are still on
                    screen under it (George, 2026-09-18). Tapping opens the
                    rest; not a nested scroller, which is what made the
-                   discography move under a finger meant for the column. -->
+                   discography move under a finger meant for the column.
+
+                   **Clamped from the first frame it exists** (ADR-0074).
+                   The clamp used to be gated on `bioClipped`, which is what
+                   `fitAbout` concludes *after* measuring - so a biography
+                   rendered at its full natural height, 1,500px and more,
+                   until the next frame, flinging the discography down the
+                   column and back. It depended on the artist before it,
+                   which is why one never opened before was worse (George,
+                   2026-09-25). `bioClipped` still decides the fade, which
+                   is a question about the text rather than the space. -->
               <!-- No More/Less: tapping the text is the control, and the
                    fade says there is more (George, 2026-09-21). Which means
                    the fade must not appear over a biography that is already
@@ -1196,7 +1568,7 @@
               <div
                 class="artistmeta__bio"
                 class:is-clamped={!bioOpen && bioClipped}
-                style:max-height={bioOpen || !bioClipped ? null : `${aboutMax}px`}
+                class:is-open={bioOpen}
                 role="button"
                 tabindex="0"
                 aria-expanded={bioOpen}
@@ -1243,6 +1615,8 @@
               {/each}
             </div>
           {/if}
+
+          </div>
 
           <div class="releases">
           {#each releases as group (group.label)}
@@ -1442,8 +1816,12 @@
     flex-shrink: 0;
   }
   /* Shrinks rather than filling grey - see now playing's buttons. */
-  .round:active {
+  /* Held long enough to be painted (ADR-0066): a quick tap can begin and
+     end inside one frame, and that frame is the one spent changing screen. */
+  .round:active,
+  .round.is-pressed {
     transform: scale(0.95);
+    background: var(--ink-fill-press, rgba(233, 238, 242, 0.14));
   }
   .i-tiles {
     width: 22px;
@@ -1457,13 +1835,20 @@
     border-radius: 2px;
     background: var(--ink-strong);
   }
+  /* **The ink, not the box, is what wants centring** (2026-09-25). A
+     chevron drawn as two borders of a square has all its ink in the box's
+     left column and bottom row, so its centre of mass sits toward that
+     corner - about 3.6px from the box's own centre once the box is turned
+     45 degrees. A `margin-left` was standing in for that and overshot: the
+     arrow measured 1.9px right of the button's centre. Moving the ink
+     after the rotation says what is meant and leaves the box centred;
+     4.2px is measured from the drawn pixels, not derived. */
   .i-back {
     width: 14px;
     height: 14px;
     border-left: 3px solid var(--ink);
     border-bottom: 3px solid var(--ink);
-    transform: rotate(45deg);
-    margin-left: 11px;
+    transform: translateX(4.2px) rotate(45deg);
   }
   .heading {
     flex: 1;
@@ -1525,9 +1910,16 @@
     padding: 26px 24px;
     box-sizing: border-box;
     height: 200px;
+    transition:
+      transform 110ms cubic-bezier(0.2, 0.8, 0.2, 1),
+      background 110ms linear,
+      border-color 110ms linear;
   }
-  .card:not(:disabled):active {
+  .card:not(:disabled):active,
+  .card.is-pressed {
     background: rgba(var(--card), 0.24);
+    border-color: rgba(var(--card), 0.55);
+    transform: scale(0.975);
   }
   .card--browse { --card: 126, 214, 188; }
   .card--artists { --card: 159, 180, 232; }
@@ -2391,6 +2783,10 @@
     color: var(--ink-quiet);
     flex-shrink: 0;
   }
+  /* What stands in for the groups that are not built (ADR-0067). */
+  .grid__space {
+    flex-shrink: 0;
+  }
   .group__cards {
     display: grid;
     grid-template-columns: repeat(6, 1fr);
@@ -2603,6 +2999,17 @@
     gap: 10px;
     width: 100%;
   }
+  /* **The biography takes whatever the region has left** (ADR-0074). The
+     region is held at the height it will have, which is what stops the
+     discography moving - and that left `fitAbout` nothing to measure, so an
+     artist with three popular tracks instead of five got a short biography
+     and a hole under it (George, 2026-09-25). Flexing, the text fills the
+     space instead of the space sitting empty. */
+  .artistmeta__region.is-held .artistmeta__bio:not(.is-open) {
+    flex: 1 1 0;
+    min-height: 64px;
+    overflow: hidden;
+  }
   .artistmeta__para {
     margin: 0;
   }
@@ -2615,6 +3022,14 @@
     overflow: hidden;
     -webkit-mask-image: linear-gradient(180deg, #000 58%, transparent 100%);
     mask-image: linear-gradient(180deg, #000 58%, transparent 100%);
+  }
+  /* One flex item holding About and Popular, with the column's own gap
+     inside it so nothing looks different (ADR-0074). */
+  .artistmeta__region {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    flex-shrink: 0;
   }
   .artistmeta__credit {
     display: flex;

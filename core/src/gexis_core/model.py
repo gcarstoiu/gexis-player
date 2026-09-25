@@ -33,6 +33,13 @@ class TrackMetadata:
     that into `null` for the UI to blank, never into a placeholder value.
     """
 
+    #: **What the renderer calls this track**, when it calls it anything.
+    #: Only the queue needs it: its rows are identified by where they sit,
+    #: and a position is not an identity - removing one track hands every
+    #: row below it a different track, which is a rewrite of the whole list
+    #: rather than the removal of one row (ADR-0064). LMS supplies its own
+    #: track id per queue row; the others have no queue at all.
+    track_id: str | None = None
     title: str | None = None
     artist: str | None = None
     album: str | None = None
@@ -44,6 +51,12 @@ class TrackMetadata:
     #: publish nothing, so the panel falls back to enrichment for those.
     year: str | None = None
     artwork: str | None = None
+    #: **The same cover at the size the small places draw it** (ADR-0070).
+    #: `artwork` is 500px because now playing's well is 500; the mini strip
+    #: and the release tab draw 64, and were decoding a quarter of a million
+    #: pixels to fill four thousand - on every screen, on every track. A
+    #: renderer that has only one size leaves this None and they fall back.
+    artwork_small: str | None = None
     sample_rate: int | None = None  # Hz
     position: float | None = None  # seconds
     duration: float | None = None  # seconds
@@ -88,11 +101,13 @@ class TrackMetadata:
 
     def to_json(self) -> dict:
         return {
+            "track_id": self.track_id,
             "title": self.title,
             "artist": self.artist,
             "album": self.album,
             "year": self.year,
             "artwork": self.artwork,
+            "artwork_small": self.artwork_small,
             "sample_rate": self.sample_rate,
             "codec": self.codec,
             "remaining_time": self.remaining_time,
@@ -206,6 +221,12 @@ class PlaybackState:
     #: Bumped on every settings write (ADR-0035); a client refetches
     #: `GET /settings` when it moves.
     settings_revision: int = 0
+    #: Bumped when the library's *pictures* change under the panel -
+    #: today only when ADR-0059's sweep finishes. Separate from
+    #: `settings_revision` because that one fires on every write, and the
+    #: panel's answer to this is to throw away every artist photo it holds
+    #: and ask again.
+    pictures_revision: int = 0
     #: The active renderer's queue, or None where it has no such thing.
     queue: Queue | None = None
     #: **ADR-0046: `True` when the device is not attenuating at all.**
@@ -270,6 +291,7 @@ class PlaybackState:
             "meters": self.meters,
             "handoff_exempt_pairs": [list(pair) for pair in self.handoff_exempt_pairs],
             "settings_revision": self.settings_revision,
+            "pictures_revision": self.pictures_revision,
             "controls": self.controls,
             "queue": self.queue.to_json() if self.queue else None,
             "pairing": self.pairing,

@@ -80,6 +80,23 @@ CALL_TIMEOUT_S = 30.0
 #: distinction at the level of the whole plugin).
 SLOW_COOLDOWN_S = 300.0
 
+#: **And how long that is remembered across restarts** (Finding 065).
+#: `_slow_until` above is a cooldown inside one process, so every restart
+#: paid the 30 s timeout again: asking for the whole library cost 31 seconds
+#: after each one, and *all* of it was a single artist holding its batch.
+#: A day is long enough that nobody meets it twice in an evening, and short
+#: enough that an artist whose picture the plugin later has is not written
+#: off.
+#:
+#: **It is still not an answer.** Nothing is recorded as "this artist has no
+#: photo" - Finding 036's rule - only that asking cost us thirty seconds and
+#: when. The photo namespace is untouched.
+SLOW_REMEMBERED_S = 86400.0
+
+#: Where that goes. Its own namespace, so nothing reading photos can mistake
+#: it for one.
+SLOW_NAMESPACE = "artist-photo-slow"
+
 #: A dropped connection means "no such command" only if it happens at once.
 #: Measured 2026-09-18: LMS refuses an unknown command in milliseconds, but
 #: an artist whose picture it must fetch from elsewhere holds the socket for
@@ -142,6 +159,31 @@ class LmsArtistInfo:
 
     def _believed_absent(self) -> bool:
         return self._absent_until is not None and self._clock() < self._absent_until
+
+    def _recall_slow(self, artist_id: int) -> None:
+        """Restore a timeout this process has not seen but a previous one
+        paid for (Finding 065)."""
+        if artist_id in self._slow_until or self._store is None:
+            return
+        try:
+            when = self._store.recall(SLOW_NAMESPACE, artist_id)
+        except KeyError:
+            return
+        except Exception as exc:
+            logger.info("artistinfo: could not read the slow marker (%s)", exc)
+            return
+        if not isinstance(when, (int, float)):
+            return
+        if self._clock() - when < SLOW_REMEMBERED_S:
+            self._slow_until[artist_id] = when + SLOW_REMEMBERED_S
+
+    def _remember_slow(self, artist_id: int) -> None:
+        if self._store is None:
+            return
+        try:
+            self._store.remember(SLOW_NAMESPACE, artist_id, self._clock())
+        except Exception as exc:
+            logger.info("artistinfo: could not store the slow marker (%s)", exc)
 
     def _believed_slow(self, artist_id: int) -> bool:
         until = self._slow_until.get(artist_id)
@@ -206,10 +248,15 @@ class LmsArtistInfo:
                 continue
             try:
                 self._photos[artist_id] = self._store.recall(self.NAMESPACE, artist_id)
+                continue
             except KeyError:
                 pass
             except Exception as exc:  # a cold cache is not a failure
                 logger.info("artistinfo: could not read the stored photo (%s)", exc)
+            # Nothing stored for this artist. Did asking last time cost us
+            # thirty seconds? (Finding 065 - one such artist made the whole
+            # library take 31 s after every restart.)
+            self._recall_slow(artist_id)
         wanted = [
             i for i in dict.fromkeys(artist_ids)
             if i not in self._photos and not self._believed_slow(i)
@@ -225,8 +272,10 @@ class LmsArtistInfo:
                 # enrichment.py draws between MISSING and UNAVAILABLE).
                 if result is None:
                     # Not an answer: left out of `_photos` so it is asked
-                    # again later, but not again immediately.
+                    # again later, but not again immediately - nor again on
+                    # the next restart (Finding 065).
                     self._slow_until[artist_id] = self._clock() + SLOW_COOLDOWN_S
+                    self._remember_slow(artist_id)
                     continue
                 self._slow_until.pop(artist_id, None)
                 url = self._url(result, PHOTO_THUMB)
@@ -271,5 +320,9 @@ class LmsArtistInfo:
         """Drop what is remembered - after a rescan, when every artist id may
         mean a different artist (Finding 029 §4)."""
         self._photos.clear()
+        self._slow_until.clear()
         if self._store is not None:
             self._store.forget_namespace(self.NAMESPACE)
+            # A renumbered id is a different artist, so what the old one
+            # cost us says nothing about the new one.
+            self._store.forget_namespace(SLOW_NAMESPACE)

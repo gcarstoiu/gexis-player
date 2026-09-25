@@ -43,9 +43,19 @@ logger = logging.getLogger("gexis_core.adapters.lms")
 
 UNIT_NAME = "squeezelite.service"
 
-#: How much of the queue the rail reads. The design shows what is coming
-#: up, not a whole 500-track load.
+#: How much of the queue the rail reads **when LMS will not say**. The
+#: server has the answer and it is a setting its owner already made:
+#: `maxPlaylistLength` (Settings -> Advanced -> Performance), 2500 on
+#: George's. Following it is ADR-0063 - a queue longer than this window was
+#: not merely cut off on the rail, it broke removing a track, because the
+#: window refilled from beyond itself and the row could not see itself
+#: leave.
 QUEUE_LIMIT = 100
+
+#: Past this, reading the whole queue costs more than a rail can show. LMS
+#: allows `maxPlaylistLength` to be set to anything, including 0 for no
+#: limit at all, and a queue read happens on every queue change.
+QUEUE_CEILING = 2500
 
 #: The size asked of LMS for the *current* track's artwork. The design's now
 #: playing well is 500x500 (`design/data-contract.md`) and the Peppy screen
@@ -237,6 +247,8 @@ class LmsAdapter(Adapter):
         self._on_queue = None
         #: (playlist_timestamp, current index) when the queue was last read.
         self._queue_stamp: tuple | None = None
+        #: LMS's `maxPlaylistLength`, read once per run (ADR-0063).
+        self._max_queue: int | None = None
         self._artist_id: int | None = None
         self._album_id: int | None = None
         self._on_availability: Callable[[bool], None] | None = None
@@ -283,6 +295,33 @@ class LmsAdapter(Adapter):
         the queue changed, not on every status push."""
         self._on_queue = callback
 
+    async def queue_changed_by_us(self) -> None:
+        """Re-read the queue now, because *we* just changed it (ADR-0071).
+
+        The rail learns about a change from LMS's own push, which arrives
+        about **1.2 seconds** after the command it answers - measured on
+        Clear: the daemon replied in 35 ms and the queue emptied at 1,268 ms,
+        with LMS able to hand over all 467 rows in 27 ms. Nothing was slow;
+        the panel was waiting to be told something it had just done.
+
+        Only for commands this daemon issued. A change made anywhere else
+        still arrives by the push, which is the only way to hear about it.
+        """
+        if self._on_queue is None or self._player_id is None:
+            return
+        async with aiohttp.ClientSession() as session:
+            try:
+                status = await self._rpc(
+                    session, self._player_id, ["status", "-", 1, f"tags:{METADATA_TAGS}"]
+                )
+            except aiohttp.ClientError as exc:
+                logger.info("lms: could not re-read the queue after our own change: %s", exc)
+                return
+            # The stamp is what `_report_queue_if_changed` compares against,
+            # and LMS has already moved it - so this reads as a change and
+            # the push that follows reads as none.
+            await self._report_queue_if_changed(session, status.get("result", {}))
+
     async def _report_queue_if_changed(self, session, result: dict) -> None:
         """LMS's `playlist_timestamp` moves on a load, an add and a shuffle,
         and not on pause, skip or a power cycle (Finding 029, step 1a), so
@@ -296,7 +335,9 @@ class LmsAdapter(Adapter):
         self._queue_stamp = stamp
         try:
             queued = await self._rpc(
-                session, self._player_id, ["status", 0, QUEUE_LIMIT, f"tags:{METADATA_TAGS}"]
+                session,
+                self._player_id,
+                ["status", 0, await self._queue_limit(session), f"tags:{METADATA_TAGS}"],
             )
         except aiohttp.ClientError as exc:
             logger.warning("lms: could not read the queue: %s", exc)
@@ -304,6 +345,9 @@ class LmsAdapter(Adapter):
         queue = queued.get("result", {})
         items = tuple(
             TrackMetadata(
+                # LMS's own track id for the row, so the rail can tell one
+                # row from another without counting (ADR-0064).
+                track_id=str(song["id"]) if song.get("id") is not None else None,
                 title=song.get("title"),
                 artist=song.get("artist"),
                 album=song.get("album"),
@@ -425,11 +469,24 @@ class LmsAdapter(Adapter):
         song = (result.get("playlist_loop") or [{}])[0]
         if result.get("remote"):
             title, album, artwork = self._remote_fields(result, song)
+            # A stream's artwork is whatever the station published; there is
+            # no second size of it to ask for.
+            small = None
         else:
             coverid = song.get("coverid")
             title, album = song.get("title"), song.get("album")
             artwork = (
                 f"{self._base}/music/{coverid}/cover_{ARTWORK_SIZE}x{ARTWORK_SIZE}_o.jpg"
+                if coverid
+                else None
+            )
+            # **The same cover at row size** (ADR-0070), for the places that
+            # draw 64px and were given the 500px one: the mini strip on every
+            # library screen, and now playing's release tab. It is the size
+            # the queue rows already ask for, so one cached picture serves
+            # all three.
+            small = (
+                f"{self._base}/music/{coverid}/cover_{ARTWORK_ROW}x{ARTWORK_ROW}_o.jpg"
                 if coverid
                 else None
             )
@@ -461,6 +518,7 @@ class LmsAdapter(Adapter):
                 album=album,
                 year=_as_year(song.get("year")),
                 artwork=artwork,
+                artwork_small=small,
                 # LMS-CLI.md's songinfo table documents tag T ("samplerate")
                 # as "in KHz", but its own worked example returns a raw Hz
                 # value (44100 for 44.1kHz content) - a known doc/reality
@@ -510,6 +568,36 @@ class LmsAdapter(Adapter):
         async with session.post(f"{self._base}/jsonrpc.js", json=body) as resp:
             resp.raise_for_status()
             return await resp.json()
+
+    async def _queue_limit(self, session: aiohttp.ClientSession) -> int:
+        """How many queue rows to read: LMS's own `maxPlaylistLength`
+        (ADR-0063).
+
+        **Read once and kept.** It is a server preference someone sets and
+        forgets, and this runs on every queue change. A restart re-reads it,
+        which is the same cadence as the rest of this adapter's setup.
+
+        `0` means no limit in LMS, and no limit is not a number to put in a
+        request, so it becomes the ceiling - as does anything above it.
+        """
+        if self._max_queue is not None:
+            return self._max_queue
+        limit = QUEUE_LIMIT
+        try:
+            result = await self._rpc(session, "", ["pref", "maxPlaylistLength", "?"])
+            said = (result.get("result") or {}).get("_p2")
+            if said is not None:
+                limit = int(said) or QUEUE_CEILING
+        except (aiohttp.ClientError, TypeError, ValueError) as exc:
+            # Not an error: an older server, or one that will not say. The
+            # rail shows what it can rather than nothing.
+            logger.info("lms: could not read maxPlaylistLength (%s), using %d", exc, limit)
+        self._max_queue = max(1, min(limit, QUEUE_CEILING))
+        if self._max_queue != limit:
+            logger.info(
+                "lms: maxPlaylistLength is %s; reading %d queue rows", limit, self._max_queue
+            )
+        return self._max_queue
 
     async def _resolve_player_id(self, session: aiohttp.ClientSession) -> str:
         result = await self._rpc(session, "", ["players", 0, 99])
@@ -771,10 +859,12 @@ class LmsAdapter(Adapter):
         return await self._command(["button", "jump_fwd"])
 
     async def shuffle(self, on: bool) -> bool:
-        return await self._command(["playlist", "shuffle", 1 if on else 0])
+        return await self._command(["playlist", "shuffle", 1 if on else 0], read_back=True)
 
     async def repeat(self, mode: str) -> bool:
-        return await self._command(["playlist", "repeat", REPEAT_TO_LMS[mode]])
+        return await self._command(
+            ["playlist", "repeat", REPEAT_TO_LMS[mode]], read_back=True
+        )
 
     async def previous(self) -> bool:
         """`jump_rew`, not `playlist index -1`: the index always goes back a
@@ -782,10 +872,22 @@ class LmsAdapter(Adapter):
         its start - what LMS's own apps do (Finding 028)."""
         return await self._command(["button", "jump_rew"])
 
-    async def _command(self, command: list) -> bool:
+    async def _command(self, command: list, *, read_back: bool = False) -> bool:
         """A user's transport command. Like `activate()`, it reports nothing
         itself: the CometD watch sees the result, so there is one path by
-        which state changes, whoever caused them."""
+        which state changes, whoever caused them.
+
+        **`read_back` asks once, for the toggles** (ADR-0072). Shuffle and
+        repeat draw their own state, and LMS's push takes about 560 ms to
+        say what it now is - so the fill arrived long after the finger. This
+        is not an optimistic guess: it is LMS's own answer, read through the
+        same `_report_metadata` the push uses, and the push that follows
+        says the same thing.
+
+        Not for play, pause, next or previous: a status read straight after
+        a skip can catch LMS between tracks, and those have not been
+        measured as late.
+        """
         if self._player_id is None:
             logger.warning("lms: %s with no resolved player id", command)
             return False
@@ -795,6 +897,15 @@ class LmsAdapter(Adapter):
             except aiohttp.ClientError as exc:
                 logger.warning("lms: %s failed: %s", command, exc)
                 return False
+            if read_back:
+                try:
+                    status = await self._rpc(
+                        session, self._player_id, ["status", "-", 1, f"tags:{METADATA_TAGS}"]
+                    )
+                    self._report_metadata(status.get("result", {}))
+                except aiohttp.ClientError as exc:
+                    # The push will bring it in half a second either way.
+                    logger.info("lms: could not read back after %s: %s", command, exc)
         logger.info("lms: %s on request", command)
         return True
 

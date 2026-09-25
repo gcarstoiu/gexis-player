@@ -84,16 +84,25 @@ export const foldedName = (name) =>
 
 export const loadArtists = () => get('artists');
 
-/** An artist's discography, newest first, covers decoded first so the page
- *  arrives whole. */
 /** The artist's genres, for the tag pills under their name. LMS answers this
  *  from its own tables, so it needs no provider and no network lookup - and
  *  an artist with none simply has no pills. */
 export const loadArtistGenres = (id) => get(`artists/${id}/genres`);
 
+/** An artist's discography, newest first (ADR-0073).
+ *
+ *  **The covers are started, not waited for.** This used to await the first
+ *  twelve of them so the page "arrives whole", and for an artist nobody had
+ *  opened that was **2.4 seconds** of nothing: the discography itself comes
+ *  back in 33 ms and the page appeared at 2,516. Warm - every cover already
+ *  in Chromium's own cache - it cost about 120 ms, which is what made it
+ *  look harmless.
+ *
+ *  They are still asked for here rather than left to the page's `<img>`
+ *  tags, so they are in flight while the page is being built. */
 export async function loadArtistAlbums(id) {
   const albums = await get(`artists/${id}/albums`);
-  await Promise.all(albums.slice(0, 12).map((album) => decoded(album.artwork)));
+  for (const album of albums.slice(0, 12)) decoded(album.artwork);
   return albums;
 }
 
@@ -138,6 +147,25 @@ playback.subscribe(($state) => {
   const first = seenRevision === undefined;
   seenRevision = revision;
   if (!first) reloadStrip();
+});
+
+//: **The library's pictures changed under us** (ADR-0059): the artwork sweep
+//: has finished and the faces we are holding are the ones it replaced. This
+//: store is only ever filled - `loadArtistPhotos` skips an id it already has
+//: - so after a sweep the panel kept showing LMS's photos for the whole
+//: session, and a reboot was the only cure (George, 2026-09-24: "the artist
+//: navigation is not loading the new art").
+//:
+//: Its own signal, not `settings_revision`: that one fires on every write,
+//: and throwing away every face to ask again is right once and ruinous 917
+//: times.
+let seenPictures;
+playback.subscribe(($state) => {
+  const revision = $state?.pictures_revision;
+  if (revision === undefined || revision === seenPictures) return;
+  const first = seenPictures === undefined;
+  seenPictures = revision;
+  if (!first) artistPhotos.set({});
 });
 
 /** Read the root's counts and its strip, decode any covers, then publish
@@ -208,6 +236,42 @@ export async function loadArtistPhotos(ids, size = 200) {
   } catch {
     return {};
   }
+}
+
+//: **How many ids one request carries.** The daemon caps a request at 80
+//: (`PHOTO_BATCH`); 50 leaves room to raise that cap without changing this.
+const PREFETCH_BATCH = 50;
+
+let prefetching = null;
+
+/** Every portrait the grid will want, before it wants them (ADR-0068).
+ *
+ *  **The grid used to discover them as cards came into view**, twenty at a
+ *  time, so a card was always drawn as initials and became a picture
+ *  afterwards - and a batch of twenty nobody had opened took 353 ms, because
+ *  the daemon asked LMS's plugin for every one of them. With the sweep
+ *  answered first the whole library is 145 ms warm, so the panel asks for
+ *  all of it and every card is drawn with its picture already.
+ *
+ *  Asks only for what it lacks, so opening the grid again costs nothing, and
+ *  yields between batches so filling the map never holds up a scroll. */
+export function prefetchArtistPhotos(ids, size = 200) {
+  if (prefetching) return prefetching;
+  prefetching = (async () => {
+    try {
+      let known = {};
+      artistPhotos.subscribe((value) => (known = value))();
+      const suffix = size === 200 ? '' : `@${size}`;
+      const missing = ids.filter((id) => known[`${id}${suffix}`] === undefined);
+      for (let at = 0; at < missing.length; at += PREFETCH_BATCH) {
+        await loadArtistPhotos(missing.slice(at, at + PREFETCH_BATCH), size);
+        await new Promise((settle) => setTimeout(settle, 0));
+      }
+    } finally {
+      prefetching = null;
+    }
+  })();
+  return prefetching;
 }
 
 /** What the artist page draws below its discography: the biography with the

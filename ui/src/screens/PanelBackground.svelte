@@ -34,6 +34,18 @@
     overflow: hidden;
     background: var(--bg-base);
     pointer-events: none;
+    /* **A compositor layer of its own** (ADR-0060). The two blurs below
+       cost nothing while the panel is still and everything during a
+       scroll: a blur is re-evaluated over the region a frame damages, and
+       a scroll damages the whole scroller. Promoted, the blur is rastered
+       once and reused. The artist grid goes 27.8 -> 52.9 fps, as good as
+       deleting the background, and the panel is pixel-identical - maximum
+       difference 2 of 255 (Finding 061).
+
+       Not `contain: paint`, which clips rather than promotes and does not
+       help (26.6 fps), and not `translateZ(0)`, which is the same idea
+       said less plainly and measured slightly worse. */
+    will-change: transform;
   }
   .weave {
     position: absolute;

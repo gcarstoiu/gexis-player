@@ -1,6 +1,6 @@
 # ADR-0059 — Where the artist list's portraits come from
 
-**Status:** **Accepted**, 2026-09-24. George chose neither a sweep nor
+**Status:** **Accepted and built**, 2026-09-24, and **closed the same day** on George's word: *"9k is final and closed."* 67% of his album artists carry a fanart portrait; the rest keep LMS's picture. George chose neither a sweep nor
 scrolling but **a button**: *"there should be a trigger in settings
 enrichment for a user to trigger an automatic update of album artists
 portraits, with a progress bar and completion status."* Phase 9 subphase
@@ -153,6 +153,82 @@ seven hours album art was first estimated at alone.
   path in its API, and the plugins in this space import tags rather than
   write them. A household that wants this shared tags its files with Picard;
   otherwise each panel presses the button once, which is now half an hour.
+
+### Built 2026-09-24, and what two corrections cost
+
+**Measured on George's own library** (Finding 054 §11): portraits **917 of
+917 in seven minutes, 525 found**; covers **2,289 of 4,567 albums (50%)**.
+About 43% of artists and half the albums keep LMS's picture, which is
+fanart's coverage rather than a fault.
+
+Two things the first run got wrong, both found by measuring the result
+rather than the run:
+
+- **The titles did not match.** 43% of albums matched no release group,
+  because LMS shows what the tagger wrote and MusicBrainz shows its own
+  title. `match_title` strips brackets and trailing edition phrases **for
+  the comparison only** — what is stored is still the folded title as the
+  library has it, because that is the key the panel looks up. Unmatched fell
+  to 11%; covers rose four points, so the rest of the gap is fanart's.
+- **The store held a catalogue, not a library.** Keying on every release
+  group those artists ever made put 16,391 rows in the store for a
+  4,567-album library. It now walks this library's albums and looks each one
+  up in theirs: **4,334 rows**, one per album owned.
+
+**Two more, found when George said the grid had not changed** (*"the artist
+navigation is not loading the new art"*). Neither was a stale LMS cache; the
+daemon was serving fanart correctly all along — 8 of the first 12 album
+artists, and the URL fetched 200 as a 200x200 JPEG.
+
+- **The panel only ever fills its photo store.** `loadArtistPhotos` skips an
+  id it already holds, so after a sweep every face drawn earlier in that
+  session stayed LMS's until a reboot. The state now carries a
+  **`pictures_revision`**, bumped **once when a run ends**, and the panel
+  empties `artistPhotos` when it changes. Its own signal, not
+  `settings_revision`: throwing away every face is right once and ruinous
+  917 times.
+- **The progress was flooding the panel.** The first version published on
+  every artist, and the panel treats a settings revision as a reason to
+  re-read the settings *and* reload the home strip — each reload an LMS
+  browse. Measured on the device: **279 strip reloads and 279 settings reads
+  in two minutes.** Progress now reaches the panel at most every three
+  seconds, and always at the start and the end: **17 in sixty seconds**, and
+  the number still moves.
+
+**And the confidence threshold was invisible.** It carried ADR-0022's
+`surfaced: false`, so the API published it and the panel filtered it out —
+George: *"I am not seeing the confidence setting in the enrichment menu."*
+It is surfaced now, **and it was also on the wrong scale**: 0–1 with a 0.05
+step, against the 0–100 that MusicBrainz scores and `CONFIDENCE_MIN` use, so
+every setting would have collapsed to 0 or 1 and the gate would have meant
+nothing. 0–100%, default 90.
+
+### More coverage at the same confidence, 2026-09-24
+
+George: *"Can we do more to cover more artists from fanart with the same
+level of confidence?"* Three changes, measured in
+[Finding 054](../findings/054-what-lms-knows-about-artist-identity.md) §12:
+**57% → 67%**, and MusicBrainz now places all but **24 of 870** artists.
+
+- **Ask MusicBrainz the raw name, not the folded one.** A defect, not a
+  limit: quoted, `artist:"b u g mafia"` finds nobody and
+  `artist:"B.U.G. Mafia"` finds them exactly. Folding is for the cache key.
+- **Try the leading credit when the full name finds nobody.** The credit
+  words (`feat.`, `presents`, `with`, `vs`) before the joiners (`&`, `,`,
+  `and`), which is what keeps *Above & Beyond presents OceanLab* as *Above &
+  Beyond* rather than *Above*. Same quoted query, same threshold. **The
+  meaning does change**, and that is George's call: the tile for *Louis
+  Armstrong & Duke Ellington* shows Louis Armstrong.
+- **`artistbackground` after `artistthumb`, and no logos.** Decided from ten
+  real examples drawn as the grid draws them. `musicbanner` is dropped with
+  the logos - it is a wordmark, and the measurement is about what survives a
+  circular crop.
+
+**And a correction this produced.** It was said on 2026-09-23 that the
+confidence threshold would protect against a wrong match. It does not:
+unquoted, `Tina Dico` answers *Tina Dickow* at **100**. What protects us is
+the **quoted** query. The threshold is a second line, and on this library it
+rejected nothing at all.
 
 ## Also in 9k: the rest of Enrichment
 

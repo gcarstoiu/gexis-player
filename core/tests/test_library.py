@@ -622,6 +622,39 @@ async def test_the_rail_clears_the_whole_queue(lms):
 
 
 @pytest.mark.asyncio
+async def test_changing_the_queue_says_so_at_once(lms):
+    """ADR-0071: the rail learned about its own Clear from LMS's push, about
+    1.2 s after the command - measured, with the daemon replying in 35 ms."""
+    told = []
+
+    async def changed():
+        told.append(True)
+
+    library = _lib()
+    library.on_queue_changed(changed)
+    await library.act("queue", 0, "clear")
+    await library.act("album", 101, "play")
+
+    assert told == [True, True]
+
+
+@pytest.mark.asyncio
+async def test_a_queue_re_read_that_fails_is_not_the_action_failing(lms):
+    """The push brings it along in a moment either way, so this is a lost
+    second rather than a lost update - and the tap must not report an
+    error."""
+    async def changed():
+        raise RuntimeError("LMS blinked")
+
+    library = _lib()
+    library.on_queue_changed(changed)
+
+    await library.act("queue", 0, "clear")
+
+    assert lms.commands[-1] == ["playlist", "clear"]
+
+
+@pytest.mark.asyncio
 async def test_an_unknown_queue_action_is_not_found(lms):
     with pytest.raises(NotFound):
         await _lib().act("queue", 1, "shuffle")

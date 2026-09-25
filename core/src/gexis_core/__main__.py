@@ -1091,6 +1091,9 @@ async def main() -> None:
     library = LmsLibrary(config.lms_host, config.lms_port, player_id=lambda: lms.player_id,
                          # ADR-0059: fanart covers the sweep found, LMS's otherwise.
                          store=enrichment_cache)
+    # ADR-0071: a queue this daemon changed is re-read at once, instead of
+    # waiting about 1.2s for LMS to report back something we just did.
+    library.on_queue_changed(lms.queue_changed_by_us)
     artistinfo = LmsArtistInfo(library.rpc, f"http://{config.lms_host}:{config.lms_port}",
                                store=enrichment_cache)
     # ADR-0040 §1: LMS's own plugin first where it answers, the key-free
@@ -1112,6 +1115,9 @@ async def main() -> None:
         # resolved at 100 and there is no telling it is the right Head.
         confidence=lambda: int(settings.value("confidence") or 0),
         on_change=state_store.bump_settings_revision,
+        # Once at the end: the panel's answer to this is to drop every
+        # artist photo it holds and ask again.
+        on_finish=state_store.bump_pictures_revision,
     )
     #: ADR-0059: Enrichment's own rows, wired at last. Each is a reason not
     #: to *ask* somebody rather than a reason to throw their answer away.

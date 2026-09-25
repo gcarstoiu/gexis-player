@@ -4,7 +4,9 @@ Last updated: 2026-09-24 (twenty-third session, on R2D2 — **Phase 9: 9a
 through 9j are done and passed on the device. The visualiser's four faults
 are fixed and measured, its ballistics are three settings, and 9k — the
 library's pictures from fanart — is built, with the portrait sweep run on
-George's own library. The image predates all of it**)
+George's own library. Criterion 0 has the panel measured: the still screens
+are at 0.00 %, and every scroll's cost is the background's two blurs. The
+image predates all of it**)
 
 ## Start here
 
@@ -86,12 +88,87 @@ words.
   artists at about 3 s each, so **45–50 minutes**, more than the 25–30 first
   estimated. Its number is in the settings row.
 - **The image is a long way behind.** It predates all of the above.
-- **Waiting on George:** the three ballistics defaults, and whether the
-  mixed look of the artist grid is acceptable.
+- **Waiting on George:** whether the mixed look of the artist grid is
+  acceptable. **The ballistics are closed** (George, 2026-09-25: the three
+  settings are there for him to fine-tune, so the defaults need no verdict).
+- **Criterion 0 is closed** with the screen opens below Phase 7a's floor
+  ([ADR-0076](docs/decisions/0076-criterion-0-closes-with-the-opens-below-the-floor.md)),
+  **to be revisited before Phase 13**.
+
+### Criterion 0 — the panel measured, 2026-09-24
+
+**Steps 1 and 2 are done: the still screens are at 0.00 %.** A pulsing badge
+and a progress bar animated with `width` were what an untouched panel was
+paying for (Findings 056 and 057); both are gone.
+
+**Step 3, the scrolls, is answered — and it cost two retractions.**
+
+- **[Finding 058](docs/findings/058-what-the-scrolls-are-not.md) withdraws
+  two of Finding 055's numbers.** The instrument counted dropped frames the
+  compositor had marked as not affecting smoothness, so **every figure it
+  had ever printed was high by roughly a factor of two**; and
+  `queue-rail-scroll` was measured on a sixteen-track queue that **moved
+  0 px**, which makes the claim that ADR-0041 took the rail from 13.9 fps to
+  50.0 unsupported. `albums-scroll` moved 191 px against the grid's 574.
+  **Finding 055's table needs re-taking** — a corrected one is in 059.
+- **The harness now refuses both mistakes**, swipes the same 170 px in every
+  scene, and prints how far each run actually travelled.
+- **[Finding 059](docs/findings/059-what-the-panel-pays-for-its-blur.md)
+  names the cause: `filter: blur()` on `PanelBackground`.** A blur is
+  re-evaluated over whatever area a frame damages, so the cost is the
+  scroller's *area* and nothing about its contents — which is why Finding
+  058's eight candidates were all negative. Suppress both blurs and the
+  artist grid goes **25.6 fps / 33.81 % → 54.4 fps / 1.61 %**. The queue
+  rail, which sits on an opaque plate that occludes the blur, does not move.
+- **Layer promotion does not help and a smaller radius does not help**: a
+  9 px blur costs nearly what 70 px costs. Only `filter: none` does.
+
+**The fix that works, measured: hand the browser a small picture instead of
+a filter.** The artwork URL carries its own size, so a 16 px cover stretched
+over the panel *is* a blur, with no filter at all — **44.7 fps / 6.50 %** on
+the artist grid, within 1 fps of removing the background altogether.
+
+**This is a product decision, not a build task.** It changes the look twice:
+`saturate(1.7)` is a filter too (keeping it costs ~2 fps), and the weave
+loses its blur unless it is baked into an image — it is static, so baking
+keeps it exactly. Nothing is implemented; **an ADR comes first, and George
+has not yet ruled**.
+
+**[Finding 060](docs/findings/060-the-queue-rails-own-cost.md): the rail's
+own 17.9 % is two decorations.** Its plate's `box-shadow: -30px 0 80px` —
+an 80 px blur, the same family again — and `.qrow__remove`, a 44 × 44 box
+with a border and two rotated bars on every row. About eight frames each:
+38.2 → 46.1 → **53.5 fps and 0.00 % dropped**, with artwork and text still
+drawn. Measured in eight interleaved rounds after a block-by-block pass
+drifted.
+
+**[Finding 061](docs/findings/061-the-background-wants-a-layer-of-its-own.md):
+the fix is one line and it is invisible.** `.bg { will-change: transform }`
+takes the artist grid from **27.8 fps to 52.9**, as good as deleting the
+background, and is pixel-identical — max difference 2 of 255, photographed
+paused. **It also corrects Finding 059 and a report to George**: three of
+059's rows used `[aria-hidden='true'] .bg`, which matches nothing, so
+"layer promotion does nothing" was three more control runs.
+
+**And `kNotOpaqueForTextAndLCDText` is confirmed.** With
+`--disable-lcd-text` every scroll reads `SCROLL_COMPOSITOR_THREAD` and the
+display draws **~58 frames a second** on both the grid and the rail. The
+first reading of that flag was wrong: `PipelineReporter` under-counts a
+scroll the compositor drives, said 11.7 fps, and George was told the cure
+was worse than the disease. The harness now reports `drawn/s` beside it.
+**The flag was tested and reverted; the device is back as it was.**
 
 ### Next
 
-**Criterion 0**, per `docs/DEVELOPMENT.md`.
+**Four decisions are with George**, with numbers and pictures: the one-line
+background layer, the flag, the rail's shadow and the rail's remove button.
+Nothing is implemented and each needs an ADR first.
+
+**And the device has a hardware flag worth George's eye.** `vcgencmd
+get_throttled` reads `0xd0000`: under-voltage, frequency capping and the
+soft temperature limit have all *occurred* during this uptime — historical
+bits, none current, at 74.5 °C and a full 1.8 GHz. Not a UI measurement,
+but it is the kind of thing that makes measurements wander.
 
 
 ## Build environment (2026-09-13) — read this before the next build

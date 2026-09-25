@@ -410,9 +410,13 @@ class EnrichmentService:
 
     async def for_track(self, key: TrackKey, *, renderer: str | None = None,
                         only: tuple[str, ...] | None = None,
+                        omit: tuple[str, ...] = (),
                         pending: list | None = None) -> Enrichment:
         """`only` names the providers to ask; the rest are left for when
         somebody actually looks (see `prefetch`).
+
+        `omit` names providers not to ask at all, because the caller can
+        already answer for them.
 
         `pending` collects the names of providers that had not answered
         within `WAIT_S`. A caller that hands one in learns that this answer
@@ -425,6 +429,11 @@ class EnrichmentService:
         asked = [
             provider for provider in self._providers
             if (only is None or provider.name in only)
+            # A provider whose answer the caller already has. The sweep holds
+            # fanart's portraits on this device (ADR-0075), and asking for a
+            # picture we are looking at is a call fanart has asked us not to
+            # make twice (Finding 030).
+            and provider.name not in omit
             and provider.serves(renderer)
             # A provider that is not configured has not failed, so it must
             # not start the backoff in `_ask`: a token typed into Settings

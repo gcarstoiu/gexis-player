@@ -24,6 +24,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import re
 import time
 from dataclasses import dataclass, replace
 
@@ -46,14 +47,60 @@ ALBUM_NAMESPACE = "fanart-album"
 #: take about ten minutes with this on top.
 FANART_GAP_S = 0.3
 
-#: fanart's artist images, best first. `artistthumb` is the portrait a round
-#: tile wants; `musicbanner` is the fallback that at least has the artist in
-#: it. `artistbackground` is deliberately absent - it is 1920x1080 scenery
-#: and looks wrong in a 64px circle.
-ARTIST_KINDS = ("artistthumb", "musicbanner")
+#: How often the progress reaches the panel. A settings revision makes it
+#: re-read the settings *and* reload the home strip, so publishing every
+#: artist cost 279 strip reloads in two minutes (measured 2026-09-24).
+PUBLISH_EVERY_S = 3.0
+
+#: fanart's artist images, best first.
+#:
+#: `artistthumb` is the portrait a round tile wants. **`artistbackground` is
+#: the fallback**, added 2026-09-24 after George looked at ten real examples
+#: drawn as the grid draws them: fanart's backgrounds are photographs of the
+#: artist, and they centre-crop to a circle like any portrait.
+#:
+#: **No logos.** `musiclogo`, `hdmusiclogo` and `musicbanner` are wide
+#: wordmarks, and a square centre-crop cuts them to unreadable fragments -
+#: `TRIN` for 4 Strings, `BOU` for La Bouche. Fitted whole they read
+#: perfectly and sit small and letterboxed among full-bleed faces, which is
+#: a different grid. George, 2026-09-24: *"only with the backgrounds, no
+#: logos."* Measured: of 25 artists with no portrait, ~12% have a
+#: background and ~24% only a logo; 72% have nothing at all.
+ARTIST_KINDS = ("artistthumb", "artistbackground")
 
 #: fanart's album images.
 ALBUM_KINDS = ("albumcover",)
+
+
+#: Everything an edition adds to a title. LMS shows what the tagger wrote -
+#: `12 x 5 (2006, Japan Mini LP)`, `[1997] MTV Unplugged [EP]`,
+#: `57th & 9th (Deluxe Edition)` - and MusicBrainz's release group is called
+#: `12 X 5`, `MTV Unplugged`, `57th & 9th`. Comparing them as they stand
+#: matched nothing for **43% of George's albums** (measured 2026-09-24), and
+#: that was the matcher falling short rather than fanart having no cover.
+_BRACKETS = re.compile(r"[\(\[\{][^\)\]\}]*[\)\]\}]")
+
+#: Words an edition is usually announced with, when there are no brackets to
+#: strip - `Abbey Road Remastered`, `Nevermind Deluxe Edition`.
+_EDITION = re.compile(
+    r"\b(deluxe|expanded|remaster(ed)?|anniversary|edition|version|reissue|"
+    r"mono|stereo|bonus|disc \d+|cd \d+|vol(ume)? \d+)\b.*$"
+)
+
+
+def match_title(title: str) -> str:
+    """A title reduced to what two catalogues can agree on.
+
+    Brackets first, then a trailing edition phrase, then the ordinary fold.
+    **Only for matching** - what is stored and looked up is still the folded
+    title as the library has it, so the panel finds it by the name it knows.
+    """
+    folded = fold(_BRACKETS.sub(" ", title or "")) or fold(title)
+    # **Never empty.** A title that is nothing *but* an edition phrase -
+    # `(Deluxe Edition)` - would reduce to "", and an empty key matches every
+    # other album that reduced to "" as well. Each step falls back to the one
+    # before it rather than to nothing.
+    return fold(_EDITION.sub("", folded)) or folded
 
 
 @dataclass(frozen=True)
@@ -109,7 +156,9 @@ class ArtworkSweep:
     """
 
     def __init__(self, library, identity, http, store, *, fanart_key=None,
-                 confidence=None, on_change=None, gap_s: float = FANART_GAP_S) -> None:
+                 confidence=None, on_change=None, on_finish=None,
+                 gap_s: float = FANART_GAP_S, publish_every_s: float = PUBLISH_EVERY_S,
+                 clock=time.monotonic) -> None:
         self._library = library
         self._identity = identity
         self._http = http
@@ -120,7 +169,13 @@ class ArtworkSweep:
         #: threshold the artist keeps LMS's picture (ADR-0012, ADR-0059).
         self._confidence = confidence or (lambda: 0)
         self._on_change = on_change or (lambda: None)
+        #: Called once when a run ends, so the panel can drop the pictures it
+        #: is holding. Separate from `on_change`, which fires per artist.
+        self._on_finish = on_finish or (lambda: None)
         self._gap_s = gap_s
+        self._publish_every_s = publish_every_s
+        self._clock = clock
+        self._published_at = 0.0
         self._progress = Progress()
         self._task: asyncio.Task | None = None
 
@@ -130,8 +185,22 @@ class ArtworkSweep:
     def progress(self) -> Progress:
         return self._progress
 
-    def _set(self, **fields) -> None:
+    def _set(self, *, always: bool = False, **fields) -> None:
+        """Update the progress, and tell the panel **at most every few
+        seconds**.
+
+        The first version told it on every artist. The panel treats a
+        settings revision as a reason to re-read the settings *and* reload
+        the home strip, so one run produced **279 strip reloads and 279
+        settings reads in two minutes** on George's device - each strip
+        reload an LMS browse. The number on screen does not need to be
+        right 917 times; it needs to be moving.
+        """
         self._progress = replace(self._progress, **fields)
+        now = self._clock()
+        if not always and now - self._published_at < self._publish_every_s:
+            return
+        self._published_at = now
         try:
             self._on_change()
         except Exception as exc:  # a display that fails must not stop the run
@@ -151,6 +220,7 @@ class ArtworkSweep:
             logger.warning("sweep: no fanart.tv key, nothing to ask")
             return False
         self._progress = Progress(kind=kind, running=True)
+        self._published_at = self._clock()
         self._on_change()
         self._task = asyncio.ensure_future(self._run(kind))
         return True
@@ -170,7 +240,7 @@ class ArtworkSweep:
             found = 0
             for index, (artist_id, name) in enumerate(artists, start=1):
                 try:
-                    hit = await self._one(kind, name)
+                    hit = await self._one(kind, artist_id, name)
                 except asyncio.CancelledError:
                     raise
                 except Exception as exc:  # one bad artist must not end the run
@@ -178,16 +248,21 @@ class ArtworkSweep:
                     hit = False
                 found += 1 if hit else 0
                 self._set(processed=index, found=found)
-            self._set(running=False, finished_at=time.time())
+            self._set(running=False, finished_at=time.time(), always=True)
+            # **The pictures changed under the panel.** Once, here, and not
+            # 917 times on the way.
+            self._on_finish()
             logger.info("sweep: %s finished - %s of %s, %s found",
                         kind, self._progress.processed, self._progress.total, found)
         except asyncio.CancelledError:
-            self._set(running=False, cancelled=True, finished_at=time.time())
+            self._set(running=False, cancelled=True, finished_at=time.time(), always=True)
+            self._on_finish()
             logger.info("sweep: %s cancelled at %s of %s",
                         kind, self._progress.processed, self._progress.total)
             raise
         except Exception as exc:
-            self._set(running=False, finished_at=time.time())
+            self._set(running=False, finished_at=time.time(), always=True)
+            self._on_finish()
             logger.error("sweep: %s stopped: %s", kind, exc)
 
     async def _album_artists(self) -> list[tuple[int, str]]:
@@ -198,12 +273,14 @@ class ArtworkSweep:
         """
         return await self._library.album_artists()
 
-    async def _one(self, kind: str, name: str) -> bool:
+    async def _one(self, kind: str, artist_id: int, name: str) -> bool:
         """One artist. True when something was stored for them."""
         folded = fold(name)
         if not folded:
             return False
-        resolved = await self._identity.resolve(folded)
+        # **The raw name is what MusicBrainz is asked**; the folded one is
+        # only the cache key (`providers.search_names`).
+        resolved = await self._identity.resolve(folded, raw=name)
         if resolved is False:
             # Could not ask. **Never stored as "no picture"** - Finding 036's
             # most important line, and on a sweep of 870 it would poison the
@@ -225,12 +302,25 @@ class ArtworkSweep:
             self._remember(ARTIST_NAMESPACE, folded, url)
             return url is not None
 
+        mine = await self._library.album_titles(artist_id)
+        if not mine:
+            return False
         groups = await self._release_groups(mbid)
         albums = art.get("albums") or {}
-        stored = 0
+        # **Their catalogue, indexed the way ours can be matched against it.**
+        by_title: dict[str, str] = {}
         for group_id, title in groups.items():
-            entry = albums.get(group_id)
-            url = self._pick(entry or {}, ALBUM_KINDS)
+            key = match_title(title)
+            if key:
+                by_title.setdefault(key, group_id)
+
+        stored = 0
+        for title in mine:
+            group_id = by_title.get(match_title(title))
+            url = self._pick(albums.get(group_id) or {}, ALBUM_KINDS) if group_id else None
+            # **Stored under the title the library has**, not the release
+            # group's, because that is the key the panel looks up. `None` is
+            # stored too: "asked, fanart had none" is an answer.
             self._remember(ALBUM_NAMESPACE, f"{folded}\x1f{fold(title)}", url)
             stored += 1 if url else 0
         return stored > 0

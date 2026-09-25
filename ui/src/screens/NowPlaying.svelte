@@ -6,6 +6,7 @@
   data-unwired="<phase>" until the phase that wires them.
 -->
 <script>
+  import { pressing } from '../lib/press.svelte.js';
   import SourceMark from '../lib/SourceMark.svelte';
   import VolumeIcon from '../lib/VolumeIcon.svelte';
   import LockIcon from '../lib/LockIcon.svelte';
@@ -33,6 +34,13 @@
     const found = artistInfo.enrichment?.album_art;
     return found && found !== failedArtwork ? found : null;
   });
+
+  //: Home and the visualisation button say they were pressed, like the home
+  //: screen's own tiles (ADR-0066, extended 2026-09-25).
+  const press = pressing();
+
+  //: For the 64px places. See ADR-0070.
+  const smallArtwork = $derived(metadata?.artwork_small || artwork);
 
   const head = playhead(() => metadata);
 
@@ -298,7 +306,7 @@
        went: the accent rule along the top edge and the mark itself already
        say which renderer this is, and a third statement in words was the
        one taking the most room. -->
-  <span class="srcpill" class:is-playing={transport === 'playing'}>
+  <span class="srcpill">
     <SourceMark source={active} size={32} color="var(--src-accent)" />
   </span>
 
@@ -435,7 +443,9 @@
             <div class="artisttab">
               <div class="artisttab__head">
                 <span class="reltab__art">
-                  {#if artwork}<img src={artwork} alt="" />{/if}
+                  <!-- 64px, so the row-sized cover (ADR-0070), not the
+                       well's 500px one. -->
+                  {#if smallArtwork}<img src={smallArtwork} alt="" />{/if}
                 </span>
                 <span class="reltab__titles">
                   <span class="reltab__name">{metadata?.album ?? 'No album'}</span>
@@ -583,7 +593,16 @@
 
       <div class="bar">
         <div class="bar__left">
-          <button class="btn btn--home" type="button" aria-label="Home" onclick={onhome}>
+          <button
+            class="btn btn--home"
+            class:is-pressed={press.is('home')}
+            type="button"
+            aria-label="Home"
+            onpointerdown={() => press.down('home')}
+            onpointerup={press.up}
+            onpointercancel={press.up}
+            onclick={() => press.act(onhome)}
+          >
             <span class="i-tiles"><i></i><i></i><i></i><i></i></span>
           </button>
           {#if $meters}
@@ -591,7 +610,16 @@
                  feed it - the same rule ADR-0046 sets for the volume
                  slider. A button that opens a dead screen is worse than no
                  button. -->
-            <button class="btn" type="button" aria-label="Visualization" onclick={onvisualisation}>
+            <button
+              class="btn"
+              class:is-pressed={press.is('viz')}
+              type="button"
+              aria-label="Visualization"
+              onpointerdown={() => press.down('viz')}
+              onpointerup={press.up}
+              onpointercancel={press.up}
+              onclick={() => press.act(onvisualisation)}
+            >
               <span class="i-meter">
                 <i style="height:12px"></i><i style="height:22px"></i><i style="height:16px"></i><i style="height:8px"></i>
               </span>
@@ -695,14 +723,13 @@
     align-items: center;
     color: var(--src-accent);
   }
-  .srcpill.is-playing {
-    animation: pulse 2.4s ease-in-out infinite;
-  }
-  @keyframes pulse {
-    0%,
-    100% { opacity: 1; }
-    50% { opacity: 0.35; }
-  }
+  /* **No pulse.** The badge used to animate its opacity forever while the
+     transport was playing, which kept the whole panel composited at 60 fps -
+     on the artist grid that was 15.3% of frames dropped on a screen nobody
+     was touching, against 2.7% without it
+     ([Finding 056](../../../docs/findings/056-why-a-still-panel-is-never-idle.md)).
+     George, 2026-09-24: remove it from both surfaces. The badge still says
+     which renderer is playing; it says it without breathing. */
   .screen__body {
     position: absolute;
     inset: 0;
@@ -1403,13 +1430,24 @@
     background: rgba(233, 238, 242, 0.13);
     overflow: hidden;
   }
+  /* **Translated, not resized** ([Finding 057](../../../docs/findings/057-the-progress-bar-is-what-keeps-the-panel-awake.md)).
+     `width` cannot animate without layout, and the playhead ticks every
+     500 ms against a 400 ms transition - so the old rule ran layout 80% of
+     the time, on every screen that carries this strip. A still artist grid
+     asked for 75 frames a run because of it, and 5 without.
+
+     A full-width fill shifted left costs the compositor alone. **Not
+     `scaleX`**, which George would have accepted: that squashes the pill's
+     rounded caps, and the track already clips to its own radius, so there
+     is nothing to give up. */
   .progress__fill {
     position: absolute;
-    inset: 0 auto 0 0;
-    width: var(--pos, 0%);
+    inset: 0 0 0 0;
     border-radius: var(--r-pill);
     background: var(--src-accent);
-    transition: width 400ms linear;
+    transform: translateX(calc(var(--pos, 0%) - 100%));
+    transition: transform 400ms linear;
+    will-change: transform;
   }
   .progress__times {
     display: flex;
@@ -1459,7 +1497,8 @@
   }
   /* Pressed by shrinking, like play and the transport buttons (George,
      2026-09-16/17: the design's grey press fill reads as a flash). */
-  .btn:not(:disabled):active {
+  .btn:not(:disabled):active,
+  .btn.is-pressed:not(:disabled) {
     transform: scale(0.95);
   }
   /* Cannot work right now (ADR-0037 §3). The design dims an unavailable tab

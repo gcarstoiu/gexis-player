@@ -144,6 +144,11 @@ class LmsLibrary:
         #: hardcodes one (the project's rule for anything that differs per
         #: machine).
         self._player_id = player_id or (lambda: None)
+        #: Told after any command that changes the queue, so the rail does
+        #: not wait 1.2s for LMS to report back something we just did
+        #: (ADR-0071). Optional: without it the push is the only route, as
+        #: it was.
+        self._on_queue_changed = None
         self._clock = clock
         self._cache: dict[tuple, dict] = {}
         self._http: aiohttp.ClientSession | None = None
@@ -329,6 +334,20 @@ class LmsLibrary:
             self._names_scan = self._lastscan
         return self._names.get(artist_id)
 
+    async def album_titles(self, artist_id: int) -> list[str]:
+        """The titles this library holds for one album artist.
+
+        **The sweep stores a cover per album we own, not per release group
+        MusicBrainz knows** (ADR-0059, corrected 2026-09-24): keying on their
+        catalogue put 16,391 rows in the store for a 4,567-album library, and
+        none of the extras is ever read.
+        """
+        result = await self._rpc(
+            ["albums", 0, 2000, f"artist_id:{artist_id}", "role_id:ALBUMARTIST"]
+        )
+        loop = (result or {}).get("albums_loop") or []
+        return [row.get("album") or "" for row in loop if row.get("album")]
+
     async def album_artists(self) -> list[tuple[int, str]]:
         """Every album artist, `(id, name)`, for the artwork sweep.
 
@@ -471,6 +490,9 @@ class LmsLibrary:
             # LMS answers an unknown id with no count rather than an error.
             raise NotFound(f"{kind} {item_id}")
         logger.info("library: %s %s %s -> %s tracks", action, kind, item_id, count)
+        # Playing or adding replaces or extends the queue, so the rail wants
+        # it now rather than in a second's time (ADR-0071).
+        await self._queue_changed()
         return {"tracks": count}
 
     async def _queue_action(self, index: int, action: str) -> dict:
@@ -485,7 +507,22 @@ class LmsLibrary:
             raise NoPlayer("the LMS player has not been resolved yet")
         await self._rpc(command if action == "clear" else [*command, index], player)
         logger.info("library: queue %s %s", action, "" if action == "clear" else index)
+        await self._queue_changed()
         return {"index": index}
+
+    def on_queue_changed(self, callback) -> None:
+        """Called after this daemon changes the queue (ADR-0071)."""
+        self._on_queue_changed = callback
+
+    async def _queue_changed(self) -> None:
+        if self._on_queue_changed is None:
+            return
+        try:
+            await self._on_queue_changed()
+        except Exception as exc:
+            # The push will bring it along in a moment either way, so this
+            # is a lost second, not a lost update.
+            logger.info("library: could not re-read the queue at once (%s)", exc)
 
     async def _add_to_playlist(self, kind: str, item_id: int, playlist_id: int | None) -> dict:
         """Add an album, artist, track or playlist's tracks to a library

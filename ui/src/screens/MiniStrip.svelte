@@ -26,8 +26,12 @@
   //: same rule as now playing (ADR-0012 is additive-only). Bluetooth often
   //: sends no cover at all, and the strip showed nothing while the cover
   //: had already been looked up (George, 2026-09-18).
+  //: **The small one where there is one** (ADR-0070). This draws 64px and
+  //: was given now playing's 500px cover - 52KB and a quarter of a million
+  //: pixels to fill four thousand, on every library screen and every track.
+  //: A renderer with only one size falls back to it.
   const artwork = $derived.by(() => {
-    const supplied = metadata?.artwork;
+    const supplied = metadata?.artwork_small || metadata?.artwork;
     if (supplied && supplied !== failedArtwork) return supplied;
     return $enrichedArtwork && $enrichedArtwork !== failedArtwork ? $enrichedArtwork : null;
   });
@@ -56,7 +60,7 @@
   onpointercancel={() => (pressed = false)}
 >
   <div class="hairline" class:is-hidden={!head.hasPosition}>
-    <div class="hairline__fill" style:width={`${head.percent.toFixed(2)}%`}></div>
+    <div class="hairline__fill" style:--pos={`${head.percent.toFixed(2)}%`}></div>
   </div>
 
   <div class="left">
@@ -73,7 +77,7 @@
 
   <!-- The mark alone at 38px, as on the screen above it: the word went in
        the same change (design, 2026-09-22). -->
-  <span class="badge" class:is-playing={transport === 'playing'}>
+  <span class="badge">
     <SourceMark source={active} size={38} color="var(--src-accent)" />
   </span>
 
@@ -144,15 +148,27 @@
     top: 0;
     height: 2px;
     background: rgba(233, 238, 242, 0.08);
+    /* Clips the translated fill below, which is full width. */
+    overflow: hidden;
   }
+  /* **Translated, not resized** ([Finding 057](../../../docs/findings/057-the-progress-bar-is-what-keeps-the-panel-awake.md)).
+     `width` cannot animate without layout, and the playhead ticks every
+     500 ms against a 400 ms transition - so the old rule ran layout 80% of
+     the time, on every screen that carries this strip. A still artist grid
+     asked for 75 frames a run because of it, and 5 without.
+
+     A full-width fill shifted left costs the compositor alone. **Not
+     `scaleX`**, which George would have accepted: that squashes the pill's
+     rounded caps, and the track already clips to its own radius, so there
+     is nothing to give up. */
   .hairline__fill {
     position: absolute;
-    left: 0;
-    top: 0;
-    bottom: 0;
+    inset: 0;
     background: var(--src-accent);
     opacity: 0.6;
-    transition: width 400ms linear;
+    transform: translateX(calc(var(--pos, 0%) - 100%));
+    transition: transform 400ms linear;
+    will-change: transform;
   }
   .is-hidden {
     visibility: hidden;
@@ -209,14 +225,13 @@
     color: var(--src-accent);
     flex-shrink: 0;
   }
-  .badge.is-playing {
-    animation: pulse 2.4s ease-in-out infinite;
-  }
-  @keyframes pulse {
-    0%,
-    100% { opacity: 1; }
-    50% { opacity: 0.35; }
-  }
+  /* **No pulse.** The badge used to animate its opacity forever while the
+     transport was playing, which kept the whole panel composited at 60 fps -
+     on the artist grid that was 15.3% of frames dropped on a screen nobody
+     was touching, against 2.7% without it
+     ([Finding 056](../../../docs/findings/056-why-a-still-panel-is-never-idle.md)).
+     George, 2026-09-24: remove it from both surfaces. The badge still says
+     which renderer is playing; it says it without breathing. */
 
   .right {
     display: flex;

@@ -21,9 +21,10 @@ from __future__ import annotations
 
 import asyncio
 
+import aiohttp
 import pytest
 
-from gexis_core.adapters.lms import LmsAdapter
+from gexis_core.adapters.lms import QUEUE_CEILING, QUEUE_LIMIT, LmsAdapter
 from gexis_core.model import TrackMetadata
 
 
@@ -431,6 +432,8 @@ def test_report_metadata_maps_the_current_song():
             artist="The Artist",
             album="The Album",
             artwork="http://127.0.0.1:9000/music/abc123/cover_500x500_o.jpg",
+            # ADR-0070: the same cover at row size, for the 64px places.
+            artwork_small="http://127.0.0.1:9000/music/abc123/cover_100x100_o.jpg",
             sample_rate=44100,
             position=30.5,
             duration=200.0,
@@ -712,13 +715,42 @@ async def test_shuffle_and_repeat_commands_use_lms_numbers(monkeypatch):
     for mode in ("off", "all", "one"):
         await adapter.repeat(mode)
 
-    assert rpc.commands == [
+    # ADR-0072: each toggle reads its own state back, so the fill does not
+    # wait ~560 ms for LMS's push. The status reads are filtered out here.
+    assert [c for c in rpc.commands if c[0] != "status"] == [
         ["playlist", "shuffle", 1],
         ["playlist", "shuffle", 0],
         ["playlist", "repeat", 0],
         ["playlist", "repeat", 2],
         ["playlist", "repeat", 1],
     ]
+
+
+@pytest.mark.asyncio
+async def test_a_toggle_reports_its_new_state_without_waiting(monkeypatch):
+    """ADR-0072. The green fill is drawn from what the daemon reports, and
+    LMS's push took 558-576 ms to say what shuffle now is - measured, with
+    the daemon itself replying in 17-25 ms."""
+    adapter, rpc = _adapter(monkeypatch, mode="play")
+    seen = []
+    adapter.on_metadata_change(seen.append)
+
+    await adapter.shuffle(True)
+
+    assert [c[0] for c in rpc.commands] == ["playlist", "status"]
+    assert seen, "the toggle reported nothing"
+
+
+@pytest.mark.asyncio
+async def test_a_skip_does_not_read_back(monkeypatch):
+    """A status read straight after a skip can catch LMS between tracks,
+    and skips were not measured as late."""
+    adapter, rpc = _adapter(monkeypatch, mode="play")
+
+    await adapter.next()
+    await adapter.pause()
+
+    assert [c[0] for c in rpc.commands] == ["button", "pause"]
 
 
 # --- ADR-0038 §1: the queue rail's contents --------------------------------
@@ -728,14 +760,21 @@ class QueueRpc(FakeRpc):
     """Answers the metadata query and the queue query differently, the way
     LMS does: `start="-"` is the current song, `start=0` the whole queue."""
 
-    def __init__(self, timestamp=1.0, index=1):
+    def __init__(self, timestamp=1.0, index=1, max_playlist="2500"):
         super().__init__()
         self.timestamp = timestamp
         self.index = index
         self.queue_reads = 0
+        #: What the server says `maxPlaylistLength` is; `None` refuses to
+        #: answer, as an older server would.
+        self.max_playlist = max_playlist
 
     async def __call__(self, session, player, command):
         self.commands.append(list(command))
+        if command[0] == "pref" and command[1] == "maxPlaylistLength":
+            if self.max_playlist is None:
+                raise aiohttp.ClientError("no such preference")
+            return {"result": {"_p2": self.max_playlist}}
         if command[0] == "status" and command[1] == 0:
             self.queue_reads += 1
             return {
@@ -745,8 +784,9 @@ class QueueRpc(FakeRpc):
                     "playlist_id": 900,
                     "playlist_modified": 0,
                     "playlist_loop": [
-                        {"title": "Opening", "artist": "Aria Nova", "coverid": "abc", "duration": 201.5},
-                        {"title": "Closing", "artist": "Aria Nova"},
+                        {"id": 71, "title": "Opening", "artist": "Aria Nova",
+                         "coverid": "abc", "duration": 201.5},
+                        {"id": 72, "title": "Closing", "artist": "Aria Nova"},
                     ],
                 }
             }
@@ -768,11 +808,109 @@ async def test_the_queue_is_read_and_reported(monkeypatch):
     assert rpc.queue_reads == 1
     queue = seen[0]
     assert [item.title for item in queue.items] == ["Opening", "Closing"]
+    # **The rail needs to tell one row from another** (ADR-0064): keyed by
+    # position, removing a track rewrites every row below it.
+    assert [item.track_id for item in queue.items] == ["71", "72"]
     assert queue.index == 1
     assert (queue.name, queue.id, queue.modified) == ("Sunday", 900, False)
     # A queue row is 42px: it gets the row step, not now playing's 500
     # (Phase 7a step 1 - up to a hundred of them open at once).
     assert queue.items[0].artwork.endswith("/music/abc/cover_100x100_o.jpg")
+
+
+@pytest.mark.asyncio
+async def test_the_queue_is_read_as_long_as_lms_allows(monkeypatch):
+    """ADR-0063: the length of the queue is the server owner's setting, and
+    the rail follows it rather than keeping a window of its own."""
+    adapter, _ = _adapter(monkeypatch, mode="play")
+    rpc = QueueRpc(max_playlist="2500")
+    monkeypatch.setattr(LmsAdapter, "_rpc", rpc)
+    adapter.on_queue_change(lambda queue: None)
+
+    await adapter._report_queue_if_changed(None, {"playlist_timestamp": 1.0, "playlist_cur_index": 1})
+
+    status = [c for c in rpc.commands if c[0] == "status" and c[1] == 0]
+    assert status[0][2] == 2500
+
+
+@pytest.mark.asyncio
+async def test_the_playlist_length_is_asked_for_once(monkeypatch):
+    """It is a preference someone sets and forgets, and this runs on every
+    queue change."""
+    adapter, _ = _adapter(monkeypatch, mode="play")
+    rpc = QueueRpc()
+    monkeypatch.setattr(LmsAdapter, "_rpc", rpc)
+    adapter.on_queue_change(lambda queue: None)
+
+    for stamp in (1.0, 2.0, 3.0):
+        await adapter._report_queue_if_changed(
+            None, {"playlist_timestamp": stamp, "playlist_cur_index": 1}
+        )
+
+    assert len([c for c in rpc.commands if c[0] == "pref"]) == 1
+
+
+@pytest.mark.asyncio
+async def test_no_limit_in_lms_is_not_no_limit_here(monkeypatch):
+    """`0` means unlimited to LMS. A request needs a number, and a rail that
+    reads an unbounded queue on every change is its own problem."""
+    adapter, _ = _adapter(monkeypatch, mode="play")
+    rpc = QueueRpc(max_playlist="0")
+    monkeypatch.setattr(LmsAdapter, "_rpc", rpc)
+    adapter.on_queue_change(lambda queue: None)
+
+    await adapter._report_queue_if_changed(None, {"playlist_timestamp": 1.0, "playlist_cur_index": 1})
+
+    status = [c for c in rpc.commands if c[0] == "status" and c[1] == 0]
+    assert status[0][2] == QUEUE_CEILING
+
+
+@pytest.mark.asyncio
+async def test_a_server_that_will_not_say_still_gets_a_queue(monkeypatch):
+    """An older server, or one that refuses the preference. The rail shows
+    what it can rather than nothing."""
+    adapter, _ = _adapter(monkeypatch, mode="play")
+    rpc = QueueRpc(max_playlist=None)
+    monkeypatch.setattr(LmsAdapter, "_rpc", rpc)
+    seen = []
+    adapter.on_queue_change(seen.append)
+
+    await adapter._report_queue_if_changed(None, {"playlist_timestamp": 1.0, "playlist_cur_index": 1})
+
+    status = [c for c in rpc.commands if c[0] == "status" and c[1] == 0]
+    assert status[0][2] == QUEUE_LIMIT
+    assert [item.title for item in seen[0].items] == ["Opening", "Closing"]
+
+
+@pytest.mark.asyncio
+async def test_a_queue_we_changed_ourselves_is_read_at_once(monkeypatch):
+    """ADR-0071. The rail learned about its own Clear from LMS's push, which
+    arrives about 1.2 s later: the daemon replied in 35 ms and the queue
+    emptied at 1,268, with LMS able to hand over all 467 rows in 27 ms."""
+    adapter, _ = _adapter(monkeypatch, mode="play")
+    rpc = QueueRpc()
+    monkeypatch.setattr(LmsAdapter, "_rpc", rpc)
+    adapter._player_id = "aa:bb"
+    seen = []
+    adapter.on_queue_change(seen.append)
+
+    await adapter.queue_changed_by_us()
+
+    assert [item.title for item in seen[0].items] == ["Opening", "Closing"]
+    assert rpc.queue_reads == 1
+
+
+@pytest.mark.asyncio
+async def test_nothing_happens_when_nobody_wants_the_queue(monkeypatch):
+    """A renderer with no rail listening asks LMS for nothing."""
+    adapter, _ = _adapter(monkeypatch, mode="play")
+    rpc = QueueRpc()
+    monkeypatch.setattr(LmsAdapter, "_rpc", rpc)
+    adapter._player_id = "aa:bb"
+
+    await adapter.queue_changed_by_us()
+
+    assert rpc.commands == []
 
 
 @pytest.mark.asyncio

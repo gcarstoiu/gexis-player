@@ -118,6 +118,52 @@ class Http:
             await self._session.close()
 
 
+#: Words that introduce a *guest*, not part of the act's name. Tried before
+#: the joiners below, and the order is the whole trick: `Above & Beyond
+#: presents OceanLab` splits correctly on `presents` and would become plain
+#: `Above` if `&` went first.
+_CREDIT = re.compile(r"\s+(?:feat\.?|featuring|presents|pres\.?|with|vs\.?)\s+", re.I)
+
+#: Words that join two acts. Last resort, because sometimes they are part of
+#: one name - and the leading credit is the one whose picture we show.
+_JOIN = re.compile(r"\s*(?:&|,|/|\band\b)\s*", re.I)
+
+
+def search_names(artist: str):
+    """The names to ask MusicBrainz about, best first.
+
+    **The raw name, not the folded one.** Folding for the *query* was losing
+    artists outright: quoted, `artist:"b u g mafia"` finds nobody while
+    `artist:"B.U.G. Mafia"` finds them exactly, and `The B.B. King Blues
+    Band` becomes `The BB King Blues Band` rather than nothing. Folding is
+    for the cache key, where two spellings must not cache twice; it is not
+    for asking a catalogue that stores punctuation on purpose.
+
+    **Then the leading credit, for collaborations.** MusicBrainz has no
+    artist called `Louis Armstrong & Duke Ellington`; it has two artists.
+    Measured over the 106 album artists it could not place on George's
+    library: 17 answered to the raw name, 8 to the part before a credit word
+    and 57 to the part before a joiner, leaving 24 genuinely unplaceable.
+
+    **The threshold does not move.** Each candidate is the same quoted query
+    and is held to the same score; what changes is what we ask, not what we
+    accept. What *does* change is the meaning: the tile for `Louis Armstrong
+    & Duke Ellington` shows Louis Armstrong, which is George's call
+    (2026-09-24) and is recorded in
+    [ADR-0059](../../../docs/decisions/0059-artist-portraits-in-the-list.md).
+    """
+    name = (artist or "").strip()
+    if not name:
+        return
+    yield name
+    lead = _CREDIT.split(name)[0].strip()
+    if lead and lead != name:
+        yield lead
+    joined = _JOIN.split(lead or name)[0].strip()
+    if joined and joined not in (name, lead):
+        yield joined
+
+
 class ArtistIdentity:
     """Who this artist is on MusicBrainz, resolved once and shared.
 
@@ -143,9 +189,13 @@ class ArtistIdentity:
         #: against the one endpoint that answers 503 most often.
         self._store = store
 
-    async def resolve(self, artist: str) -> tuple[str, int] | None | bool:
+    async def resolve(self, artist: str, raw: str | None = None) -> tuple[str, int] | None | bool:
         """`(mbid, score)`, `None` when MusicBrainz has no such artist, and
-        `False` when it could not be asked - the three outcomes again."""
+        `False` when it could not be asked - the three outcomes again.
+
+        `artist` is the cache key, folded. **`raw` is what to search with**,
+        and it matters: see `search_names`.
+        """
         if not artist:
             return None
         if artist in self._known:
@@ -159,14 +209,19 @@ class ArtistIdentity:
                 pass
             except Exception as exc:
                 logger.info("providers: could not read a stored artist id (%s)", exc)
-        found = await self._http.json(
-            "https://musicbrainz.org/ws/2/artist/",
-            {"query": f'artist:"{artist}"', "fmt": "json", "limit": "1"},
-        )
-        if found is None:
-            return False
-        artists = found.get("artists") or []
-        identity = (artists[0]["id"], int(artists[0].get("score") or 0)) if artists else None
+        identity = None
+        for candidate in search_names(raw or artist):
+            answer = await self._search(candidate)
+            if answer is False:
+                # Could not ask. Nothing is remembered, so the next pass tries
+                # again rather than reading a busy server as "no such artist"
+                # (Finding 036).
+                return False
+            if answer is not None:
+                identity = answer
+                if candidate != (raw or artist):
+                    logger.info("providers: %r resolved through %r", raw or artist, candidate)
+                break
         self._known[artist] = identity
         if self._store is not None:
             try:
@@ -174,6 +229,21 @@ class ArtistIdentity:
             except Exception as exc:
                 logger.info("providers: could not store an artist id (%s)", exc)
         return identity
+
+    async def _search(self, name: str) -> tuple[str, int] | None | bool:
+        """One quoted search. The quoting is what keeps this honest: asked
+        unquoted, MusicBrainz answers `Tina Dico` with `Tina Dickow` at a
+        score of **100**, and `DJ Project (2)` with `ProjeKct Two` at 100 -
+        the score says how well the string matched the index, not whether it
+        is the right person (measured 2026-09-24)."""
+        found = await self._http.json(
+            "https://musicbrainz.org/ws/2/artist/",
+            {"query": f'artist:"{name}"', "fmt": "json", "limit": "1"},
+        )
+        if found is None:
+            return False
+        artists = found.get("artists") or []
+        return (artists[0]["id"], int(artists[0].get("score") or 0)) if artists else None
 
 
 class LmsArtistProvider:

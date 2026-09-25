@@ -636,33 +636,60 @@ class StateServer:
             return web.json_response({})
         if size not in (PHOTO_THUMB, PHOTO_LARGE):
             return web.json_response({"error": f"unknown size {size}"}, status=400)
-        photos = await self._artistinfo.photos(ids, size)
+        # **The sweep first, LMS for the rest** (ADR-0068). ADR-0059 settled
+        # that order and this asked in the other one: every id went to the
+        # LMS plugin and 68 % of the answers were then thrown away for a
+        # fanart portrait already on the device. An artist the plugin has
+        # not looked up costs it 500-900 ms upstream, so a batch of twenty
+        # nobody had opened took 353 ms against 5 ms for one already known.
+        swept = {artist_id: await self._swept_portrait(artist_id, size) for artist_id in ids}
+        rest = [artist_id for artist_id, url in swept.items() if url is None]
+        photos = await self._artistinfo.photos(rest, size) if rest else {}
         return web.json_response(
-            {str(k): await self._portrait(k, v, size) for k, v in photos.items()}
+            {str(artist_id): swept[artist_id] or photos.get(artist_id) for artist_id in swept}
         )
+
+    def swept_portrait_of(self, name: str | None, size: int) -> str | None:
+        """**The portrait ADR-0059's sweep found for a name** (ADR-0075).
+
+        The sweep stores by folded artist name, not by LMS id, because a
+        rescan renumbers the ids (Finding 029) - and a name is something
+        *every* renderer has. So this answers for a Spotify or Bluetooth
+        track as readily as for the library's own grid, whenever the artist
+        is one the sweep has been over.
+
+        It goes through LMS's image proxy, so the caller gets the size it
+        asked for and LMS does the fetching and the caching.
+        """
+        if self._library is None or not name:
+            return None
+        found = remembered(self._notes, ARTIST_NAMESPACE, fold(name))
+        if not found or found is True:
+            return None
+        return f"{self._library.base}/imageproxy/{found}/image_{size}x{size}_o.jpg"
+
+    async def _swept_portrait(self, artist_id: int, size: int) -> str | None:
+        """The same, for a caller that has an LMS id rather than a name.
+
+        The name comes from the library, which already holds it and answers
+        from one map built per scan.
+        """
+        if self._library is None:
+            return None
+        try:
+            name = await self._library.artist_name(artist_id)
+        except Exception:
+            return None
+        return self.swept_portrait_of(name, size)
 
     async def _portrait(self, artist_id: int, lms_url, size: int):
         """**fanart's portrait if ADR-0059's sweep found one, LMS's otherwise.**
 
-        The panel asks by LMS id and the sweep stores by folded name, because
-        a rescan renumbers the ids (Finding 029) - so the name comes from the
-        library, which already holds it.
-
-        Both go through LMS's image proxy, so the grid gets the size it asked
-        for and LMS does the fetching and caching either way.
+        For a single artist, where asking LMS first costs nothing because it
+        is being asked anyway. The list route resolves the sweep first and
+        asks LMS only for what is left (ADR-0068).
         """
-        if self._library is None:
-            return lms_url
-        try:
-            name = await self._library.artist_name(artist_id)
-        except Exception:
-            return lms_url
-        if not name:
-            return lms_url
-        found = remembered(self._notes, ARTIST_NAMESPACE, fold(name))
-        if not found or found is True:
-            return lms_url
-        return f"{self._library.base}/imageproxy/{found}/image_{size}x{size}_o.jpg"
+        return await self._swept_portrait(artist_id, size) or lms_url
 
     async def _handle_artist_info(self, request: web.Request) -> web.Response:
         """`?id=<lms artist id>&name=<artist>` -> what the artist page draws
@@ -693,9 +720,12 @@ class StateServer:
                 artist_image=photos.get(artist_id),
                 sources=("lms",) if (biography or photos.get(artist_id)) else (),
             )
+        # **The sweep answers for fanart, so fanart is not asked** (ADR-0075).
+        swept = self.swept_portrait_of(name, PHOTO_LARGE)
         rest = await self._enrichment.for_track(
             TrackKey(artist=fold(name)),
             only=("fanart", "wikipedia", "listenbrainz", "popular"),
+            omit=("fanart",) if swept else (),
         )
         found = found.merged_with(rest)
         if rest.artist_image:
@@ -704,6 +734,10 @@ class StateServer:
             # text above is still LMS's where it has any - only the picture
             # changes hands.
             found = replace(found, artist_image=rest.artist_image)
+        # **And the sweep comes before fanart** (ADR-0075). It is the same
+        # picture, from the same place, already on this device.
+        if swept:
+            found = replace(found, artist_image=swept)
         return web.json_response({
             "artist": name,
             "enrichment": found.to_json(),
@@ -753,7 +787,18 @@ class StateServer:
         if key.is_empty():
             return web.json_response({"track": None, "enrichment": Enrichment().to_json()})
         pending: list[str] = []
-        found = await self._enrichment.for_track(key, renderer=state.active, pending=pending)
+        # **The sweep's portrait, for whatever is playing** (ADR-0075). It is
+        # keyed on the folded artist name, so a Spotify or Bluetooth track by
+        # an artist the sweep has been over gets its picture from this device
+        # rather than from a lookup - and fanart is not asked for a picture
+        # we are already holding.
+        swept = self.swept_portrait_of(state.metadata.artist, PHOTO_LARGE)
+        found = await self._enrichment.for_track(
+            key, renderer=state.active, pending=pending,
+            omit=("fanart",) if swept else (),
+        )
+        if swept:
+            found = replace(found, artist_image=swept)
         return web.json_response({
             # True when a provider had not finished: the panel asks again
             # rather than treating this as the final word.

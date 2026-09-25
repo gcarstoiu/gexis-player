@@ -543,6 +543,194 @@ action that makes the mode work is the action that killed the process.
 too when asked.** Flagging the gap was right; it was not a substitute for
 closing it, and the gap turned out not to be a detail.
 
+**27. The percentage went to zero because the panel got slower**
+(2026-09-24). Giving the artist grid's scroller an opaque background took it
+from 31.58 % of frames dropped to **0.00 %** — at 13.9 fps, half the 27.7 it
+had. The compositor stopped asking for frames it could not deliver, and a
+frame never asked for is never dropped.
+
+**The metric's denominator is the compositor's own appetite.** Any change
+that makes the panel ask for less improves it, and three variants in a row
+did exactly that before the frame rate beside them was read.
+
+**Report the rate, not only the share.** `panel-frames.py` has printed both
+since Finding 034; it is a number being *read* that stops this one.
+
+**28. CSS cannot fake a downscale, and the screenshot said so**
+(2026-09-24). A blur can be replaced by a small picture stretched large, so
+I wrote `width: 12px; transform: scale(133)` and measured the frames coming
+back. The look was wrong: Chromium rasterises a scaled element at its final
+size from the full-resolution source, so the small intermediate never
+exists. The background read "ROD STEWART / ANOTHER COUNTRY" at 12 px.
+
+**The frame numbers were real and meant nothing.** The variant was cheap
+because it dropped `filter`, not because it downscaled anything, so it
+measured a fix that did not exist. The real one needs a genuinely small
+bitmap — the artwork URL carries its own size.
+
+**Photograph a change that is supposed to look the same.** The cost was
+measured eight ways before anyone looked at it.
+
+**29. A selector that matched nothing measured the page three times**
+(2026-09-24). Three variants in Finding 059 used `[aria-hidden='true'] .bg`
+to promote the panel's background to its own layer. `.bg` *is* the element
+carrying `aria-hidden`, so the descendant combinator matched nothing, all
+three measured the page unchanged, and "layer promotion does nothing" went
+into a finding and into a report to George — with an explanation of *why* a
+cached layer could not help, reasoned from an artefact. It can: the one line
+takes the artist grid from 27.8 fps to 52.9, and is pixel-identical.
+
+**CSS fails silently and so does a probe built on it.** A rule that selects
+nothing is not an error; it is a control run under another name, and it
+looks exactly like a negative result.
+
+**A guard caught it, a re-read would not have.** The probe for the next idea
+checked the change had applied before measuring, printed `applied: None` and
+refused to produce a number. Every suppression variant now proves it matched
+something first.
+
+**30. The frame counter under-counted exactly the change being tested**
+(2026-09-24). `--disable-lcd-text` moves every scroll to the compositor.
+`PipelineReporter` then said the artist grid had fallen from 25.6 fps to
+11.7, and George was told the cure was worse than the disease. It is the
+compositor's own bookkeeping and produces fewer reporters for a scroll it
+drives; the display was drawing **58 frames a second**.
+
+**The instrument was biased against the treatment.** Not noise — a metric
+whose accuracy depends on the very thing the experiment changes.
+
+**Two counters, and they have to agree somewhere.** `DrawToScheduleOverlay`
+matches `PipelineReporter` to within a frame while the scroll is on the main
+thread, which is what earns it the right to disagree when it is not.
+
+**31. Three fixes for the symptom, because I never asked what the row was**
+(2026-09-24). A swiped queue row slid back into place before vanishing.
+I cleared the swiped state sooner; George saw it again. I cleared it on the
+queue's arrival instead; he saw it again. I suppressed the transition for a
+frame — and that third attempt read and wrote the same state in one
+`$effect`, which made the effect its own trigger and **left the panel not
+answering at all**.
+
+**The row was keyed by its position in the queue, so it was never
+destroyed.** Remove the track at 7 and the old 8 becomes 7: every key still
+exists, Svelte keeps every node and hands each one a different track. The
+row I was animating was the *next* track wearing the last one's state.
+
+**Two failures of the same fix are a fact about the diagnosis.** Each
+attempt was a smaller intervention than the one before, which felt like
+converging and was the opposite: I was adding machinery to a component whose
+model was wrong.
+
+**And the third made it worse than the bug.** An effect that clears state
+must not also be woken by it.
+
+**32. The probe waited behind the work it was timing** (2026-09-24).
+After ADR-0065 made the artist grid draw a screenful first, the harness
+reported its first row at 854 ms - and a 467-track playlist at 858, and a
+three-row screen at 116. Two long lists landing on the same number was the
+tell: `Runtime.evaluate` runs on the main thread, which is precisely what is
+busy while a list is being built, so every poll queued behind the chunks and
+reported the queue as part of the render. The page's own `MutationObserver`
+said **264 ms**.
+
+**A poll is a request for the resource under test.** It was fine while the
+panel built everything in one go and idled afterwards; it stopped being fine
+when the thing being measured became continuous work on that same thread.
+
+**Measure from inside, or measure something that is not the subject.** The
+same lesson as case 30, in a different instrument: there, the frame counter
+under-counted the change being tested; here, the clock ran through it.
+
+**33. The fix scheduled itself before the paint it was waiting for**
+(2026-09-24). ADR-0065 drew a screenful and then filled in the rest, and
+George still waited: *"Rapping artists still gives me a 1 to 2 seconds
+wait."* The rows existed at 155 ms and the first frame a person could see
+arrived at 584. Each chunk was scheduled in `requestAnimationFrame`, which
+runs **before** the paint of that frame - so the next chunk joined the same
+frame, and the frame never went out.
+
+**Halving the first chunk moved it by 60 ms**, which is what proved the size
+was not the problem. A fix that barely responds to its own main parameter is
+not the fix.
+
+**And it explained a symptom I had filed as unrelated.** George also
+reported the home cards had lost their animation, *"except for Radio"*.
+Nothing was lost: the home screen leaves the DOM at 150 ms and the panel
+keeps showing its last frame until the next one is painted. Radio's skeleton
+is a handful of nodes and paints at once, so only Radio looked alive.
+
+**`requestAnimationFrame` is "before the next frame", not "after the last
+one".** To yield to the screen: `requestAnimationFrame`, then
+`setTimeout(…, 0)`.
+
+**34. The count was reset by the wrong thing** (2026-09-24). ADR-0065
+built a list a screenful at a time, and the count reset when the list's
+*length* changed. Reopening the same screen does not change its length - so
+the count kept whatever it had grown to, and the second visit built all 917
+cards in one go, exactly what the first visit had avoided. George: *"it felt
+like it worked after the first two but then on second it went back to being
+slower."*
+
+**A cache keyed on the data is not keyed on the showing of it.** The length
+answers "is this a different list", which is not the question; the question
+is "is this a different time I am looking at one".
+
+**It only appears on the second visit**, so a measurement that opens a
+screen once cannot see it. The probe now opens the same screen four times.
+
+**35. The probe thought the grid was an artist page** (2026-09-25). A
+scroll-position check reported the place was lost. It was not: the harness
+called an artist page `.artist__disc`, which is also the class on **every
+card in the grid**, so `has(ARTIST_PAGE)` was true while still on the grid.
+The probe "opened an artist", pressed Back from the top level, went to the
+home screen, and found no grid to read.
+
+**`go_artist_page` had believed the same thing for days**, returning at once
+whenever the grid was up - so any scene that went through it measured the
+grid. Finding 066's first artist-page survey is visibly the grid's contents,
+which is what made it worth chasing.
+
+**A class shared by a container and its items is not a screen.** The page's
+own element is `.artist__disc--big`.
+
+**36. I explained the residual instead of chasing it** (2026-09-25).
+Holding the artist page's discography in place took a 373px shove down to a
+14px settle up, and the 14 reproduced exactly on every artist - biographies
+from 119 to 407px, Popular from nothing to five tracks. I wrote that down as
+*"a property of the layout rather than of the content"* and stopped.
+
+George: *"Are you sure the change is in the panel? Seeing pretty much the
+same behaviour."* The change was in the panel. What he was seeing was not
+the 14px at all: the biography's clamp was gated on a flag `fitAbout` only
+sets *after* measuring, so a biography rendered at its full natural height -
+1,500px and more - for a frame or four, flinging the discography down the
+column and back. My own traces showed it, as single samples at 997, 1453 and
+1957, and I had called them a transient and moved on.
+
+**A residual that reproduces exactly is a clue.** Noise varies; 14px every
+time was the shape of a structure being wrong - a gap reserved *after* a
+region has to shrink as the region fills, and the two are measured a frame
+apart. Holding the region itself takes it to zero.
+
+**And a sample I cannot explain is not a transient.** Naming it one is how I
+stopped looking at the only evidence of the real defect.
+
+**37. A box never reports a scroll height smaller than itself**
+(2026-09-25). The artist page holds space for a biography that has not
+arrived, and should give it up when the biography turns out to be two lines
+long. The test was `scrollHeight >= clientHeight`, which is **always true**:
+`scrollHeight` is the content's height *or the box's*, whichever is larger.
+Every artist reported that its text filled the space, and every artist held
+it - including one whose entire biography was a single sentence in a 400px
+box, photographed by George.
+
+**The question was about the text and the measurement was about the box.**
+The paragraphs' own heights answer it.
+
+**It reported success, which is why it took a photograph to find.** A test
+that cannot return false is not a test, and this one had already been
+deployed and measured as working.
+
 ## Common shape
 
 Every case had a *plausible* substitute for the real target — the build

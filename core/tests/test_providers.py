@@ -501,6 +501,150 @@ async def test_the_artist_page_asks_lms_first_then_the_rest():
 
 
 @pytest.mark.asyncio
+async def test_the_sweeps_portrait_answers_without_a_lookup():
+    """ADR-0075. The sweep already holds this picture, from the same place
+    fanart would be asked for it - and asking cost 864-1,432 ms the first
+    time each artist was looked at."""
+    from aiohttp.test_utils import TestClient, TestServer
+
+    from gexis_core.artwork_sweep import ARTIST_NAMESPACE
+    from gexis_core.enrichment import Cache, EnrichmentService
+    from gexis_core.state import StateStore
+    from gexis_core.wsserver import StateServer
+    from pathlib import Path as _P
+
+    class Info:
+        async def photos(self, ids, size=200):
+            return {ids[0]: "http://lms/photo.jpg"}
+
+        async def biography(self, artist_id):
+            return "From the plugin."
+
+    class Library:
+        base = "http://lms"
+
+        async def artist_name(self, artist_id):
+            return "AC/DC"
+
+    class Notes:
+        def recall(self, namespace, key):
+            # `fold` turns the slash into a space - see artwork_sweep.fold.
+            if (namespace, key) == (ARTIST_NAMESPACE, "ac dc"):
+                return "https://fan/acdc.jpg"
+            raise KeyError(key)
+
+    server = StateServer(
+        StateStore({}),
+        artistinfo=Info(),
+        enrichment=EnrichmentService([], Cache(_P(":memory:"))),
+        library=Library(),
+        notes=Notes(),
+    )
+
+    async with TestClient(TestServer(server.make_app())) as client:
+        body = await (await client.get("/library/artist-info?id=7452&name=AC%2FDC")).json()
+
+    assert body["enrichment"]["artist_image"] == (
+        "http://lms/imageproxy/https://fan/acdc.jpg/image_300x300_o.jpg"
+    )
+    # The text is still the plugin's; only the picture changes hands.
+    assert body["enrichment"]["biography"] == "From the plugin."
+
+
+@pytest.mark.asyncio
+async def test_fanart_is_not_asked_for_a_picture_we_are_holding():
+    """ADR-0075 and Finding 030: fanart asked us not to ask twice."""
+    from aiohttp.test_utils import TestClient, TestServer
+
+    from gexis_core.artwork_sweep import ARTIST_NAMESPACE
+    from gexis_core.enrichment import Cache, EnrichmentService, Enrichment, Answer, Outcome
+    from gexis_core.state import StateStore
+    from gexis_core.wsserver import StateServer
+    from pathlib import Path as _P
+
+    asked = []
+
+    class Fanart:
+        name = "fanart"
+
+        def serves(self, renderer):
+            return True
+
+        async def fetch(self, key):
+            asked.append(key)
+            return Answer(Outcome.FOUND, Enrichment(artist_image="http://fanart/net.jpg"))
+
+    class Library:
+        base = "http://lms"
+
+        async def artist_name(self, artist_id):
+            return "AC/DC"
+
+    class Notes:
+        def recall(self, namespace, key):
+            if (namespace, key) == (ARTIST_NAMESPACE, "ac dc"):
+                return "https://fan/acdc.jpg"
+            raise KeyError(key)
+
+    server = StateServer(
+        StateStore({}),
+        enrichment=EnrichmentService([Fanart()], Cache(_P(":memory:"))),
+        library=Library(),
+        notes=Notes(),
+    )
+
+    async with TestClient(TestServer(server.make_app())) as client:
+        held = await (await client.get("/library/artist-info?id=7&name=AC%2FDC")).json()
+        missing = await (await client.get("/library/artist-info?id=7&name=Nobody")).json()
+
+    # Asked for the one the sweep has nothing for, and only that one.
+    assert [k.artist for k in asked] == ["nobody"]
+    assert held["enrichment"]["artist_image"].endswith("image_300x300_o.jpg")
+    assert missing["enrichment"]["artist_image"] == "http://fanart/net.jpg"
+
+
+@pytest.mark.asyncio
+async def test_what_is_playing_gets_the_sweeps_portrait_too():
+    """ADR-0075: the sweep is keyed on a folded name, which every renderer
+    has - so a Spotify track by an artist the sweep has been over shows its
+    picture from this device."""
+    from aiohttp.test_utils import TestClient, TestServer
+
+    from gexis_core.artwork_sweep import ARTIST_NAMESPACE
+    from gexis_core.enrichment import Cache, EnrichmentService
+    from gexis_core.model import TrackMetadata
+    from gexis_core.state import StateStore
+    from gexis_core.wsserver import StateServer
+    from pathlib import Path as _P
+
+    class Library:
+        base = "http://lms"
+
+    class Notes:
+        def recall(self, namespace, key):
+            if (namespace, key) == (ARTIST_NAMESPACE, "daft punk"):
+                return "https://fan/daft.jpg"
+            raise KeyError(key)
+
+    store = StateStore({"spotify": True})
+    store.set_active("spotify")
+    store.set_metadata("spotify", TrackMetadata(artist="Daft Punk", title="One More Time"))
+    server = StateServer(
+        store,
+        enrichment=EnrichmentService([], Cache(_P(":memory:"))),
+        library=Library(),
+        notes=Notes(),
+    )
+
+    async with TestClient(TestServer(server.make_app())) as client:
+        body = await (await client.get("/enrichment")).json()
+
+    assert body["enrichment"]["artist_image"] == (
+        "http://lms/imageproxy/https://fan/daft.jpg/image_300x300_o.jpg"
+    )
+
+
+@pytest.mark.asyncio
 async def test_the_artist_page_falls_back_when_lms_has_nothing():
     from aiohttp.test_utils import TestClient, TestServer
 
@@ -858,3 +1002,92 @@ async def test_a_busy_musicbrainz_leaves_the_release_unavailable():
     key = TrackKey.of(TrackMetadata(title="x", artist="y", album="z"))
 
     assert (await MusicBrainzRelease(http).fetch(key)).outcome is Outcome.UNAVAILABLE
+
+
+class TestWhichNamesMusicBrainzIsAsked:
+    """ADR-0059, 2026-09-24. Measured over the 106 album artists MusicBrainz
+    could not place on George's library: 17 answered to the raw name, 8 to
+    the part before a credit word, 57 to the part before a joiner."""
+
+    def test_the_raw_name_comes_first(self):
+        from gexis_core.providers import search_names
+
+        assert list(search_names("B.U.G. Mafia"))[0] == "B.U.G. Mafia"
+
+    def test_a_credit_word_beats_a_joiner(self):
+        """The order is the whole trick: `Above & Beyond presents OceanLab`
+        splits on `presents` and would become plain `Above` if `&` went
+        first."""
+        from gexis_core.providers import search_names
+
+        names = list(search_names("Above & Beyond presents OceanLab"))
+        assert names[0] == "Above & Beyond presents OceanLab"
+        assert names[1] == "Above & Beyond"
+        assert "Above" not in names[:2]
+
+    def test_a_joiner_is_the_last_resort(self):
+        from gexis_core.providers import search_names
+
+        assert list(search_names("Louis Armstrong & Duke Ellington")) == [
+            "Louis Armstrong & Duke Ellington",
+            "Louis Armstrong",
+        ]
+        assert list(search_names("Chet Atkins and Mark Knopfler"))[-1] == "Chet Atkins"
+        assert list(search_names("Beethoven, Bernstein"))[-1] == "Beethoven"
+
+    def test_a_plain_name_is_asked_once(self):
+        """An artist who resolves first time must not cost three searches."""
+        from gexis_core.providers import search_names
+
+        assert list(search_names("Radiohead")) == ["Radiohead"]
+        assert list(search_names("Isaac Hayes")) == ["Isaac Hayes"]
+
+    def test_nothing_is_yielded_for_nothing(self):
+        from gexis_core.providers import search_names
+
+        assert list(search_names("")) == []
+        assert list(search_names("   ")) == []
+
+
+class TestResolvingThroughAReducedName:
+    async def test_it_falls_back_and_caches_under_the_original(self):
+        from gexis_core.providers import ArtistIdentity
+
+        class Http:
+            def __init__(self):
+                self.asked = []
+            async def json(self, url, params=None, headers=None):
+                self.asked.append(params["query"])
+                if params["query"] == 'artist:"Louis Armstrong"':
+                    return {"artists": [{"id": "MB-LOUIS", "score": 100}]}
+                return {"artists": []}
+
+        http = Http()
+        identity = ArtistIdentity(http)
+        got = await identity.resolve("louis armstrong duke ellington",
+                                     raw="Louis Armstrong & Duke Ellington")
+        assert got == ("MB-LOUIS", 100)
+        assert http.asked == [
+            'artist:"Louis Armstrong & Duke Ellington"',
+            'artist:"Louis Armstrong"',
+        ]
+        # cached under the key we were given, not the name that answered
+        assert identity._known["louis armstrong duke ellington"] == ("MB-LOUIS", 100)
+
+    async def test_a_503_stops_the_walk_and_remembers_nothing(self):
+        """Finding 036's line. Trying the reduced names after a busy server
+        would turn one outage into a wrong answer cached for ever."""
+        from gexis_core.providers import ArtistIdentity
+
+        class Http:
+            def __init__(self):
+                self.asked = []
+            async def json(self, url, params=None, headers=None):
+                self.asked.append(params["query"])
+                return None
+
+        http = Http()
+        identity = ArtistIdentity(http)
+        assert await identity.resolve("a b", raw="A & B") is False
+        assert len(http.asked) == 1
+        assert "a b" not in identity._known

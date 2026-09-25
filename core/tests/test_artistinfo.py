@@ -234,6 +234,57 @@ async def test_the_route_answers_a_url_per_artist():
                     "7453": None}
 
 
+class FakeLibrary:
+    """Just enough of the library for the portrait route: a name per id."""
+
+    def __init__(self, names):
+        self._names = names
+        self.base = BASE
+
+    async def artist_name(self, artist_id):
+        return self._names.get(artist_id)
+
+
+class FakeNotes:
+    """The sweep's store, as `remembered` reads it."""
+
+    def __init__(self, rows=None):
+        self.rows = rows or {}
+
+    def recall(self, namespace, key):
+        if (namespace, key) not in self.rows:
+            raise KeyError(key)
+        return self.rows[(namespace, key)]
+
+
+@pytest.mark.asyncio
+async def test_the_sweeps_portrait_is_answered_without_asking_lms():
+    """ADR-0068. ADR-0059 settled that the sweep comes first and LMS is the
+    fallback; asking LMS anyway cost 353 ms a batch for an answer thrown
+    away 68 % of the time."""
+    from aiohttp.test_utils import TestClient, TestServer
+
+    from gexis_core.artwork_sweep import ARTIST_NAMESPACE
+    from gexis_core.state import StateStore
+    from gexis_core.wsserver import StateServer
+
+    lms = FakeLms(photos={7452: "imageproxy/mai/artist/7452/image.png"})
+    server = StateServer(
+        StateStore({}),
+        artistinfo=_info(lms),
+        library=FakeLibrary({7452: "Isaac Hayes", 7453: "Nobody At All"}),
+        notes=FakeNotes({(ARTIST_NAMESPACE, "isaac hayes"): "https://fan/thumb.jpg"}),
+    )
+
+    async with TestClient(TestServer(server.make_app())) as client:
+        body = await (await client.get("/library/artist-photos?ids=7452,7453")).json()
+
+    assert body["7452"] == f"{BASE}/imageproxy/https://fan/thumb.jpg/image_200x200_o.jpg"
+    # The one the sweep had no picture for still reaches the plugin.
+    asked = [c for c in lms.commands if c[1] == "artistphoto"]
+    assert [c[-1] for c in asked] == ["artist_id:7453"]
+
+
 @pytest.mark.asyncio
 async def test_the_route_is_503_when_artist_info_is_not_wired():
     from aiohttp.test_utils import TestClient, TestServer
@@ -373,6 +424,74 @@ async def test_an_artist_with_no_photo_is_remembered_as_having_none():
 
     assert photos == {7452: None}
     assert again.commands == []
+
+
+@pytest.mark.asyncio
+async def test_a_lookup_that_never_came_back_is_not_paid_for_twice():
+    """**Finding 065.** One artist whose lookup does not return holds its
+    whole batch for `CALL_TIMEOUT_S`, and the cooldown that stops it being
+    re-asked lived in memory - so asking for the library's portraits cost 31
+    seconds after *every* restart, all of it that one artist."""
+    clock = FakeClock()
+    store = _store()
+    lms = SlowLms(clock)
+    await LmsArtistInfo(lms, BASE, store=store, clock=clock).photos([1])
+    assert [c[-1] for c in lms.commands] == ["artist_id:1"]
+
+    restarted = SlowLms(clock)
+    await LmsArtistInfo(restarted, BASE, store=store, clock=clock).photos([1])
+
+    assert restarted.commands == []
+
+
+@pytest.mark.asyncio
+async def test_it_is_not_remembered_as_having_no_photo():
+    """Finding 036's rule stands: a provider that could not be asked has not
+    said there is nothing. Only *that asking cost us* is written down."""
+    from gexis_core.artistinfo import SLOW_NAMESPACE
+
+    clock = FakeClock()
+    store = _store()
+    await LmsArtistInfo(SlowLms(clock), BASE, store=store, clock=clock).photos([1])
+
+    # That asking cost us, and when - not that there is no picture.
+    assert isinstance(store.recall(SLOW_NAMESPACE, 1), (int, float))
+    with pytest.raises(KeyError):
+        store.recall(LmsArtistInfo.NAMESPACE, 1)
+
+
+@pytest.mark.asyncio
+async def test_a_day_later_the_artist_is_asked_again():
+    """It is a cooldown with a life, not a verdict: the plugin may have the
+    picture by tomorrow."""
+    from gexis_core.artistinfo import SLOW_REMEMBERED_S
+
+    clock = FakeClock()
+    store = _store()
+    await LmsArtistInfo(SlowLms(clock), BASE, store=store, clock=clock).photos([1])
+
+    clock.advance(SLOW_REMEMBERED_S + 1)
+    later = FakeLms(photos={1: "imageproxy/mai/artist/1/image.png"})
+    photos = await LmsArtistInfo(later, BASE, store=store, clock=clock).photos([1])
+
+    assert [c[-1] for c in later.commands] == ["artist_id:1"]
+    assert photos[1].endswith("image_200x200_o.jpg")
+
+
+@pytest.mark.asyncio
+async def test_a_rescan_drops_what_a_lookup_cost_as_well():
+    """A renumbered id is a different artist, so what the old one cost says
+    nothing about the new one (Finding 029 §4)."""
+    clock = FakeClock()
+    store = _store()
+    info = LmsArtistInfo(SlowLms(clock), BASE, store=store, clock=clock)
+    await info.photos([1])
+
+    info.forget()
+    asked = SlowLms(clock)
+    await LmsArtistInfo(asked, BASE, store=store, clock=clock).photos([1])
+
+    assert [c[-1] for c in asked.commands] == ["artist_id:1"]
 
 
 @pytest.mark.asyncio
