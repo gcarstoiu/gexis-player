@@ -1,42 +1,51 @@
 # Handoff
 
 Last updated: 2026-09-25 (twenty-fifth session, on R2D2 — **Phase 10. The
-plugin contract now carries a plugin that is not a renderer: the Beszel agent
-ships as a manifest, a unit and a binary, with its own entry on the settings
-screen and its keys behind its switch. Two defects were found by putting it on
-the device rather than by writing it. Enrolment is the one thing blocked, and it
-is blocked on George.**)
+Beszel agent is installed, enrolled against George's hub with his own keys, and
+switched on from a Plugins category of its own. Criterion 3 is done. What is
+left before v1 freezes is arbitration for a plugin renderer, and an image that
+has never been built.**)
 
 ## Start here
 
-**Criterion 3 is built and criterion 1 is one step from closing.** The Beszel
-agent is the non-renderer Phase 10 exists to test — *"if the contract cannot
-express that, it is a renderer API wearing a plugin's name"* — and it now needs
-**nothing from the core that names it**. It is
+**Criterion 3 is done.** The Beszel agent runs on the device, reporting to
+George's hub, configured entirely through the settings screen — and **the core
+contains nothing that names it**. It is
 [ADR-0087](docs/decisions/0087-the-beszel-agent-is-the-first-service-plugin.md)
 and [ADR-0088](docs/decisions/0088-a-plugins-settings-reach-its-unit-as-environment.md),
-verified in [Finding 079](docs/findings/079-what-the-plugin-contract-carries-to-a-unit.md).
+measured in Findings [078](docs/findings/078-what-the-beszel-agent-costs-and-listens-on.md),
+[079](docs/findings/079-what-the-plugin-contract-carries-to-a-unit.md) and
+[080](docs/findings/080-the-agent-enrolled.md).
 
-**What is blocked, and it is the only thing:** the agent cannot be enrolled
-without the **token and the hub's public key** from George's hub's Add System
-dialog (`http://192.168.178.69:8090/`). `…/api/beszel/getkey` returns 401
-unauthenticated, so this cannot be read from here. Until then the agent is
-installed, switched off, and has never spoken to a hub — every run in Finding
-079 ends in a 401 from a fake token.
+**Where a plugin lives on the screen is George's shape**, given 2026-09-25 after
+seeing the first attempt put everything in System: *"we need to separate a plugin
+from default functionality for a user… create the plugin category in settings and
+add in there only Beszel toggle. When enabled then the config fields show up in
+system like now in the Beszel subgroup. When the toggle is off the entire
+subgroup is off."*
 
-**What George sees on the settings screen**, as the API publishes it:
+- **Plugins** — one row per installed plugin, named after it, carrying its switch.
+- **Sources / System** — that plugin's own rows, under a sub-heading with its
+  name, hidden with the heading when the switch is off. The core applies that to
+  every plugin row rather than leaving it to a manifest that might forget.
+- The three built-ins are untouched: they name an existing row with
+  `enabled_row`, which is how a default says it is furniture rather than
+  something the user added.
 
-```
-  group [System] -> heading 'Beszel'
-  beszel.enabled   visible=True  value=False
-  beszel.hub       visible=False onlyWhen=['beszel.enabled', True]
-  beszel.token     visible=False onlyWhen=[...]  secret=True
-  beszel.key       visible=False onlyWhen=[...]  secret=True
-```
+**Two things are owed to George and neither blocks anything:**
 
-which is his own sentence: *"visible in the settings under a plugin entry. Then
-beszel could be enabled or disabled from there. When enabled fields appear that
-allow keys to be provided."*
+- **ADR-0022's inventory** has not gained the Plugins category or Beszel's four
+  rows. They are proposed in ADR-0087 and wait on his word, as the rule says.
+- **The agent cannot see throttling.** ADR-0087 claimed it gave him the throttle
+  log he asked for on 2026-09-18; the binary has no `vcgencmd`, `vcio` or
+  `throttl` string at all, because the Pi's throttle bits are not a Linux sensor.
+  He gets temperature and CPU over time — two of the four parts he asked for.
+  **Whether something small should sample `vcgencmd get_throttled` is a decision
+  nobody has taken.**
+
+**The costs, now that they are real:** **0.02 % of one core and 14.2 MB**
+connected, against an 0.84 % *unconnected* floor — reconnecting was the expensive
+case, so nothing here needs re-measuring against the panel's frame budget.
 
 ### The two defects the device found, because they are the reason to read this
 
@@ -92,8 +101,14 @@ Four commits, in this order:
    fingerprint there is the identity the hub binds this system to, which is the
    Spotify pairing's lesson applied before it could be learned twice.
 
-**1158 tests pass.** The device is left with the plugin installed exactly as the
-stage installs it, switched **off**, with no stored values.
+5. **The Plugins category**, after George corrected the placement, and
+   **Finding 080** once he had entered his keys: the connected cost, the
+   throttle gap, and a backup read back out of its own archive to show it
+   carries the enrolment. The three keys needed nothing added — they are
+   settings — and the fingerprint, added earlier, is there.
+
+**1160 tests pass.** The device is left with the agent **installed, enrolled and
+running**, and one current backup from 18:57 that contains the enrolment.
 
 ### Where it stands right now
 
@@ -107,8 +122,7 @@ stage installs it, switched **off**, with no stored values.
   3,664 enrichment rows, the phone's pairing, and `idle_url`. Checked usable
   rather than merely present — 8 of 8 artist portraits served from the cache.
 - **PR #26** is open with everything: https://github.com/gcarstoiu/gexis-player/pull/26
-- **The image is now four commits behind the branch in ways a flash would
-  notice**: ADR-0083's `[backups]` share, ADR-0085's ALSA default, the plugin
+- **The image is behind the branch in ways a flash would notice**: ADR-0083's `[backups]` share, ADR-0085's ALSA default, the plugin
   manifests, and now the whole `07-beszel` stage. **Nothing in that stage has
   been through `make image`** — its files were installed by hand at the same
   paths, modes and user, so the download, the checksum and the chroot step are
@@ -181,12 +195,12 @@ they are the contract's **source**, not its consumers, and
    hub is George's. The agent listens on nothing. It costs 14 MB and under 1 %
    of a core. It ships in the image, defaulting off — George's call.
 
-   **What is left is the enrolment**, and only George can unblock it: the
-   **token and the hub's public key** from the Add System dialog. Then the
-   things nobody has measured — what the hub actually reports, **whether
-   throttle state is among it** (ADR-0087 claims temperature, clocks, throttle
-   and load; only temperature and load are certain), and the cost while
-   connected, re-measured under a scroll against Finding 067.
+   ~~**What is left is the enrolment.**~~ **Done 2026-09-25** — George entered
+   the token and the hub key through the settings screen: *"Added the keys into
+   the plugin and can confirm it works."* The cost is measured
+   ([Finding 080](docs/findings/080-the-agent-enrolled.md)) and **throttle state
+   turned out not to be there at all**, which ADR-0087 now says instead of
+   claiming otherwise.
 6. **Freeze v1** — the last step, and it must stay last. This criterion's plugin
    has now amended the contract **twice**; freezing before it was built would
    have frozen a contract that its first real consumer broke.
