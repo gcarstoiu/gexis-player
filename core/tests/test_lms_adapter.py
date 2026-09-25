@@ -854,6 +854,37 @@ async def test_a_server_that_will_not_say_still_gets_a_queue(monkeypatch):
 
 
 @pytest.mark.asyncio
+async def test_a_queue_we_changed_ourselves_is_read_at_once(monkeypatch):
+    """ADR-0071. The rail learned about its own Clear from LMS's push, which
+    arrives about 1.2 s later: the daemon replied in 35 ms and the queue
+    emptied at 1,268, with LMS able to hand over all 467 rows in 27 ms."""
+    adapter, _ = _adapter(monkeypatch, mode="play")
+    rpc = QueueRpc()
+    monkeypatch.setattr(LmsAdapter, "_rpc", rpc)
+    adapter._player_id = "aa:bb"
+    seen = []
+    adapter.on_queue_change(seen.append)
+
+    await adapter.queue_changed_by_us()
+
+    assert [item.title for item in seen[0].items] == ["Opening", "Closing"]
+    assert rpc.queue_reads == 1
+
+
+@pytest.mark.asyncio
+async def test_nothing_happens_when_nobody_wants_the_queue(monkeypatch):
+    """A renderer with no rail listening asks LMS for nothing."""
+    adapter, _ = _adapter(monkeypatch, mode="play")
+    rpc = QueueRpc()
+    monkeypatch.setattr(LmsAdapter, "_rpc", rpc)
+    adapter._player_id = "aa:bb"
+
+    await adapter.queue_changed_by_us()
+
+    assert rpc.commands == []
+
+
+@pytest.mark.asyncio
 async def test_the_queue_is_not_re_read_on_every_push(monkeypatch):
     """A status push arrives for every state change; the queue is only
     worth re-reading when LMS says it moved (Finding 029, step 1a)."""

@@ -295,6 +295,33 @@ class LmsAdapter(Adapter):
         the queue changed, not on every status push."""
         self._on_queue = callback
 
+    async def queue_changed_by_us(self) -> None:
+        """Re-read the queue now, because *we* just changed it (ADR-0071).
+
+        The rail learns about a change from LMS's own push, which arrives
+        about **1.2 seconds** after the command it answers - measured on
+        Clear: the daemon replied in 35 ms and the queue emptied at 1,268 ms,
+        with LMS able to hand over all 467 rows in 27 ms. Nothing was slow;
+        the panel was waiting to be told something it had just done.
+
+        Only for commands this daemon issued. A change made anywhere else
+        still arrives by the push, which is the only way to hear about it.
+        """
+        if self._on_queue is None or self._player_id is None:
+            return
+        async with aiohttp.ClientSession() as session:
+            try:
+                status = await self._rpc(
+                    session, self._player_id, ["status", "-", 1, f"tags:{METADATA_TAGS}"]
+                )
+            except aiohttp.ClientError as exc:
+                logger.info("lms: could not re-read the queue after our own change: %s", exc)
+                return
+            # The stamp is what `_report_queue_if_changed` compares against,
+            # and LMS has already moved it - so this reads as a change and
+            # the push that follows reads as none.
+            await self._report_queue_if_changed(session, status.get("result", {}))
+
     async def _report_queue_if_changed(self, session, result: dict) -> None:
         """LMS's `playlist_timestamp` moves on a load, an add and a shuffle,
         and not on pause, skip or a power cycle (Finding 029, step 1a), so

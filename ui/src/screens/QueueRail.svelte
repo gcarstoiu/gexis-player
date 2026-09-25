@@ -13,6 +13,7 @@
 -->
 <script>
   import { libraryAction, loadPlaylists } from '../lib/library.js';
+  import { flip } from 'svelte/animate';
   import { inView, watchScroller } from '../lib/window.svelte.js';
 
   let { open, queue, onclose } = $props();
@@ -174,6 +175,7 @@
   $effect(() => () => {
     hints.forEach(clearTimeout);
     clearTimeout(settle);
+    clearTimeout(flipUntil);
   });
   //: The gesture in progress, which is not state: nothing draws from it,
   //: and it changes on every pointer event.
@@ -183,6 +185,25 @@
   let swiped = 0;
   //: Clears a removed row whether or not the queue can show it leaving.
   let settle = null;
+
+  //: **The rows below a removal slide up; the rest of the time they do not.**
+  //: Timing the collapse against the queue's return is a race that cannot be
+  //: won: the daemon now re-reads the queue itself (ADR-0071) and it comes
+  //: back in about 160ms, so a 250ms collapse was cut short and the list
+  //: jumped 54px in one step. Animating the *movement* instead is smooth
+  //: whenever the update lands.
+  //:
+  //: Gated, because a windowed list moves its rows on every scroll as the
+  //: spacer above them changes - and animating that would fight the scroll.
+  const FLIP_MS = 200;
+  let flipping = $state(false);
+  let flipUntil = null;
+
+  function closingUp() {
+    clearTimeout(flipUntil);
+    flipping = true;
+    flipUntil = setTimeout(() => (flipping = false), 1200);
+  }
 
   function grab(event, key) {
     if (event.pointerType === 'mouse' && event.button !== 0) return;
@@ -224,6 +245,7 @@
     // next track. Nothing to animate back.
     const key = swipe.key;
     swipe = { ...swipe, going: true, live: false };
+    closingUp();
     const ok = await queueAction(at, 'remove');
     clearTimeout(settle);
     if (!ok) {
@@ -318,6 +340,7 @@
         onpointermove={drag}
         onpointerup={() => release(at)}
         onpointercancel={() => release(at)}
+        animate:flip={{ duration: flipping ? FLIP_MS : 0 }}
       >
         <!-- What a swipe uncovers. Behind the row, so it needs no layout of
              its own and no space in it. -->
@@ -644,22 +667,25 @@
   .is-dragging .qrow__hit {
     transition: none;
   }
+  /* **Short enough to finish before the queue comes back** (ADR-0071). The
+     removed row used to be destroyed when LMS's push arrived, about 1.2s
+     later, so the collapse had all the time it wanted. Now the daemon
+     re-reads the queue itself and it returns in about 160ms - which cut a
+     250ms collapse short and made the list jump 54px in one step instead of
+     easing (George, 2026-09-25). */
   .is-going .qrow__hit {
     transform: translateX(-100%);
-    transition: transform 190ms cubic-bezier(0.4, 0, 1, 1);
+    transition: transform 130ms cubic-bezier(0.4, 0, 1, 1);
   }
   /* And the row closes up behind it, so the list arrives at its new shape
      before the queue does rather than jumping when it lands. */
+  /* The row leaves sideways and fades; it no longer collapses its own
+     height, because the list closing up is an `animate:flip` on the rows
+     below and that is smooth whenever the queue returns. */
   .qrow.is-going {
-    height: 0;
-    /* Its own spacing goes with it, so nothing is left to close up when
-       the row is finally taken out of the list. */
-    margin-bottom: 0;
     opacity: 0;
-    transition:
-      height 190ms cubic-bezier(0.4, 0, 1, 1) 60ms,
-      margin-bottom 190ms cubic-bezier(0.4, 0, 1, 1) 60ms,
-      opacity 140ms linear 60ms;
+    transition: opacity 120ms linear;
+    pointer-events: none;
   }
   .qrow__hit:active {
     opacity: 0.62;
