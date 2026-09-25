@@ -1,0 +1,43 @@
+{
+  "id": "beszel",
+  "name": "Beszel",
+  "kind": "service",
+  "unit": "beszel-agent.service",
+  "settings": [
+    {
+      "key": "hub",
+      "type": "text",
+      "label": "Hub address",
+      "marks": "N",
+      "note": "The Beszel hub this device reports to. The hub is not on this device.",
+      "placeholder": "http://hub:8090",
+      "default": null,
+      "env": "HUB_URL",
+      "onlyWhen": ["enabled", true]
+    },
+    {
+      "key": "token",
+      "type": "text",
+      "label": "Token",
+      "marks": "N",
+      "note": "From the hub's Add System dialog, with the key below.",
+      "secret": true,
+      "placeholder": "Token",
+      "default": null,
+      "env": "TOKEN",
+      "onlyWhen": ["enabled", true]
+    },
+    {
+      "key": "key",
+      "type": "text",
+      "label": "Hub public key",
+      "marks": "N",
+      "note": "The hub's own SSH public key. The agent refuses to talk to a hub that cannot prove it is the one named above.",
+      "secret": true,
+      "placeholder": "ssh-ed25519 AAAA...",
+      "default": null,
+      "env": "KEY",
+      "onlyWhen": ["enabled", true]
+    }
+  ]
+}

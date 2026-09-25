@@ -26,6 +26,8 @@ def _device(root):
     (root / "etc/gexis/core.toml").write_text('idle_url = "secret"')
     (root / "etc/gexis/device-name.env").write_text("NAME=gexis")
     (root / "var/lib/bluetooth/11:22/info").write_text("paired")
+    (root / "var/lib/beszel-agent").mkdir(parents=True)
+    (root / "var/lib/beszel-agent/fingerprint").write_text("ec4c41e0")
     return root
 
 
@@ -49,6 +51,19 @@ def test_it_holds_the_spotify_pairing(tmp_path):
     with tarfile.open(out / name) as archive:
         held = set(archive.getnames())
     assert "var/lib/go-librespot/state.json" in held
+
+
+def test_it_holds_the_beszel_fingerprint(tmp_path):
+    """**The same lesson, applied before it could be learned twice** (ADR-0087).
+    The agent's fingerprint is the identity the hub binds this system to, so a
+    reflash that loses it is a device the hub no longer recognises - which is
+    exactly what happened to the Spotify pairing above."""
+    root, out = _device(tmp_path / "root"), tmp_path / "out"
+    name = backups.create("gexis", out, root)
+
+    with tarfile.open(out / name) as archive:
+        held = set(archive.getnames())
+    assert "var/lib/beszel-agent/fingerprint" in held
 
 
 def test_a_missing_member_is_skipped_not_fatal(tmp_path):

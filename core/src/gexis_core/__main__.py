@@ -71,7 +71,7 @@ from gexis_core import backups, bluealsa_volume, outputs, plugin_env, plugins
 from gexis_core.plugin_server import PluginServer
 from gexis_core.systemd import is_enabled as _unit_is_enabled
 from gexis_core.systemd import set_enabled as _set_unit_enabled
-from gexis_core.systemd import try_restart_unit as _try_restart_unit
+from gexis_core.systemd import restart_if_enabled as _restart_if_enabled
 from gexis_core.artwork_sweep import ArtworkSweep
 from gexis_core.bluealsa_volume import BluealsaVolume
 from gexis_core.remote_volume import RemoteVolume
@@ -151,11 +151,11 @@ async def set_unit_enabled(unit: str, enabled: bool, *, now: bool = True) -> Non
     await asyncio.to_thread(functools.partial(_set_unit_enabled, unit, enabled, now=now))
 
 
-async def try_restart_unit(unit: str) -> None:
-    """`systemd.try_restart_unit` off the event loop, for the same reason
+async def restart_if_enabled(unit: str) -> None:
+    """`systemd.restart_if_enabled` off the event loop, for the same reason
     `set_unit_enabled` is: it stops a process, and how long that takes is the
     process's business, not ours."""
-    await asyncio.to_thread(functools.partial(_try_restart_unit, unit))
+    await asyncio.to_thread(functools.partial(_restart_if_enabled, unit))
 
 
 def _chosen_server(config: Config, store: SettingsStore) -> Config:
@@ -1026,9 +1026,10 @@ async def main() -> None:
         plugin = next((p for p in installed_plugins if p.id == plugin_id), None)
         if plugin is not None and _plugin_env(plugin):
             # Environment is read once at exec, so a changed value means a
-            # restart - and `try-restart` only touches a unit that is already
-            # running, so a plugin switched off stays switched off.
-            asyncio.ensure_future(try_restart_unit(plugin.unit))
+            # restart - of a unit that is *enabled*, whatever state its process
+            # is in. A plugin switched on before it was configured is sitting in
+            # `failed` precisely because the value just typed was missing.
+            asyncio.ensure_future(restart_if_enabled(plugin.unit))
         session = plugin_server.sessions.get(plugin_id)
         if session is None:
             logger.info("plugins: %s is not connected; %s stored for its next start",

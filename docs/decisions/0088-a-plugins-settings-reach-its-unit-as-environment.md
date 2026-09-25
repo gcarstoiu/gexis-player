@@ -1,6 +1,8 @@
 # ADR-0088 — A plugin's settings reach its unit as environment
 
-**Status:** Proposed — the mechanism
+**Status:** **Accepted and built**, 2026-09-25, and **amended the same day on the
+device** — the restart gate was `is-active` and had to become `is-enabled`; see
+the decision below. The mechanism
 [ADR-0087](0087-the-beszel-agent-is-the-first-service-plugin.md) needs, drawn
 generically because a Beszel-shaped answer would fail Phase 10 criterion 2's
 *"no changes to the core"* the first time a second service plugin arrived.
@@ -55,9 +57,19 @@ such row to one file per plugin.**
   a reboot should rebuild it from the store rather than leave a stale copy of a
   credential on disk.
 - **Written before the unit is started, and again whenever one of those rows
-  changes** — then the unit is restarted if it is active, because environment is
-  read once at exec. A row change with the plugin switched off writes the file
+  changes** — then the unit is restarted **if it is enabled**, because environment
+  is read once at exec. A row change with the plugin switched off writes the file
   and starts nothing.
+
+  **Amended the same day, on the device.** This first read *"if it is active"*,
+  implemented as `systemctl try-restart`, and it was wrong in the case this plugin
+  exists for: the agent is switched on before anything has been typed into it —
+  the fields only appear once it is on — so it refuses to start and sits in
+  `failed`. `try-restart` does nothing to a failed unit, so the token arrived and
+  nothing read it until the next reboot. `is-enabled` is the honest gate: enabled
+  means somebody asked for this to run. `reset-failed` runs first, because a unit
+  that spent its `StartLimitBurst` while unconfigured is the expected path here
+  ([Finding 079](../findings/079-what-the-plugin-contract-carries-to-a-unit.md)).
 - **A row with no value is omitted entirely**, not written empty: an unset
   variable and one set to the empty string are different to most programs, and
   the honest statement is *not configured*.

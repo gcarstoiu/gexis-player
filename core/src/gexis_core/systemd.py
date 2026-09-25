@@ -98,18 +98,34 @@ def set_enabled(unit: str, enabled: bool, *, now: bool = True) -> None:
         )
 
 
-def try_restart_unit(unit: str) -> None:
-    """`systemctl try-restart` - restart it if it is running, do nothing if it
-    is not (ADR-0088).
+def restart_if_enabled(unit: str) -> None:
+    """Restart a unit that is *supposed* to be running, and only that (ADR-0088).
 
     A plugin's environment is read once at exec, so a changed credential means a
-    restart. `try-restart` rather than `restart` because a plugin that is
-    switched off must stay off: `restart` would start it, turning a settings
-    write into an activation nobody asked for. It is also not `enable --now` -
-    the unit's enabled state is not this call's business, only its process.
+    restart. The question is which units that applies to, and the first answer
+    was wrong: `systemctl try-restart` touches a unit that is **active**, and the
+    Beszel agent's first real state was **failed** - switched on before anyone had
+    typed a token, refusing to start without one, exactly as it should. Typing the
+    token then changed the file and `try-restart` did nothing, because a failed
+    unit is not active. The credential arrived and nothing used it until a reboot.
+    Found on the device 2026-09-25 (Finding 079).
+
+    **So the gate is `is-enabled`, not `is-active`**: enabled means somebody asked
+    for this to run, and a value they just typed is how it gets to. Disabled means
+    off, and off stays off - which is the one case `try-restart` got right and
+    this keeps.
+
+    `reset-failed` first: a unit that has hit `StartLimitBurst` refuses a plain
+    restart with "start request repeated too quickly", and an agent that spent its
+    five tries before being configured is the *expected* path here, not an edge
+    case. Harmless on a healthy unit.
     """
-    logger.info("systemctl try-restart %s", unit)
-    subprocess.run(["systemctl", "try-restart", unit], check=False, capture_output=True)
+    if not is_enabled(unit):
+        logger.info("plugins: %s is disabled, not restarting it", unit)
+        return
+    logger.info("systemctl reset-failed + restart %s", unit)
+    subprocess.run(["systemctl", "reset-failed", unit], check=False, capture_output=True)
+    subprocess.run(["systemctl", "restart", unit], check=False, capture_output=True)
 
 
 def is_enabled(unit: str) -> bool:

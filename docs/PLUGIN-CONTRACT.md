@@ -229,9 +229,11 @@ configuration from the environment like most daemons do.
   `EnvironmentFile=-/run/gexis/plugins/<id>.env` — the `-` so a plugin with
   nothing set still starts.
 - **The file is written before your unit is started**, and again whenever one of
-  those values changes; the unit is then restarted **if it is already running**.
-  A value changed while the plugin is switched off writes the file and starts
-  nothing.
+  those values changes; the unit is then restarted **if it is enabled** — whatever
+  state its process is in. Enabled means somebody asked for it to run, and a
+  plugin switched on before it was configured is sitting in `failed` *because*
+  the value just typed was missing. A value changed while the plugin is switched
+  **off** writes the file and starts nothing.
 - **A value nobody has given writes no line at all**, so the variable is unset
   rather than empty. `false` *is* written, because a toggle that is off is a
   decision.

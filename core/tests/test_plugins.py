@@ -226,3 +226,101 @@ def test_a_synthesised_switch_reads_the_units_real_state(monkeypatch):
     for unit in ("off.service", "static.service", "masked.service", "gone.service"):
         assert systemd.is_enabled(unit) is False
     assert all(argv[:2] == ["systemctl", "is-enabled"] for argv in seen)
+
+
+BESZEL = (Path(__file__).resolve().parents[2] / "image" / "stage-gexis"
+          / "07-beszel" / "files")
+
+
+def test_the_shipped_beszel_manifest_is_what_the_record_says():
+    """**ADR-0087's row list**, which George confirmed as a settings decision -
+    so a drift here is a drift from a decision, not a detail."""
+    plugin = parse(json.loads((BESZEL / "plugin.json").read_text()))
+    assert (plugin.id, plugin.kind, plugin.unit) == (
+        "beszel", "service", "beszel-agent.service")
+    # No `enabled_row`, so ADR-0086's amendment synthesises the switch. That is
+    # the point of this plugin: it proves the contract carries a non-renderer
+    # without the core knowing its name.
+    assert plugin.enabled_row is None
+    assert [r["key"] for r in plugin.settings] == ["hub", "token", "key"]
+    assert [r.get("env") for r in plugin.settings] == ["HUB_URL", "TOKEN", "KEY"]
+    # Every row hides behind the switch (ADR-0088), which is George's
+    # *"when enabled fields appear that allow keys to be provided"*.
+    assert all(r.get("onlyWhen") == ["enabled", True] for r in plugin.settings)
+    # The two credentials are masked on the panel; `hub` is an address.
+    assert [bool(r.get("secret")) for r in plugin.settings] == [False, True, True]
+
+
+def test_the_beszel_unit_reads_what_the_contract_writes():
+    """The unit and ADR-0088 have to agree on one path, and nothing else checks
+    it: the manifest names variables, the unit names the file they arrive in."""
+    from gexis_core import plugin_env
+
+    unit = (BESZEL / "beszel-agent.service").read_text()
+    assert f"EnvironmentFile=-{plugin_env.path('beszel')}" in unit
+    # ADR-0087, Finding 078: the agent opens an inbound SSH port on 45876 even in
+    # outbound mode, and this is the flag that removes it. Not a settings row -
+    # a security property, not a preference.
+    assert "--listen -1" in unit
+    assert "DATA_DIR=/var/lib/beszel-agent" in unit
+    assert "StateDirectory=beszel-agent" in unit
+
+
+def test_the_fingerprint_is_in_the_backup():
+    """It is the identity the hub binds this system to. The Spotify pairing
+    taught this the expensive way (ADR-0083, 2026-09-25)."""
+    from gexis_core.backups import MEMBERS
+
+    assert "var/lib/beszel-agent" in MEMBERS
+
+
+def test_the_listen_check_runs_after_the_agent_has_started():
+    """**Before would measure the wrong thing.** What matters is what the agent
+    actually bound, not what it was asked to bind - `-1` is a value the flag
+    parser happens to accept and an upgrade could start ignoring it."""
+    unit = (BESZEL / "beszel-agent.service").read_text()
+    assert "ExecStartPost=/usr/local/lib/gexis/beszel-agent-listen-check.sh" in unit
+    assert "ExecStartPre=/usr/local/lib/gexis/beszel-agent-listen-check.sh" not in unit
+    check = (BESZEL / "beszel-agent-listen-check.sh").read_text()
+    assert "45876" in check
+
+
+def test_a_changed_value_restarts_a_unit_that_is_enabled_even_if_it_failed(monkeypatch):
+    """**The gap the device found** (Finding 079). Beszel's first real state was
+    `failed` - switched on before anyone had typed a token, refusing to start
+    without one. `try-restart` does nothing to a failed unit, so the token
+    arrived and nothing used it until a reboot. The gate is *should this be
+    running*, not *is it running*."""
+    from gexis_core import systemd
+
+    calls = []
+
+    class Result:
+        stdout = "enabled\n"
+
+    def fake_run(argv, **kw):
+        calls.append(argv[1])
+        return Result()
+
+    monkeypatch.setattr(systemd.subprocess, "run", fake_run)
+    systemd.restart_if_enabled("beszel-agent.service")
+    # `reset-failed` before `restart`: a unit that spent its StartLimitBurst
+    # while unconfigured refuses a plain restart, and that is the expected path
+    # here rather than an edge case.
+    assert calls == ["is-enabled", "reset-failed", "restart"]
+
+
+def test_a_disabled_unit_is_left_alone(monkeypatch):
+    """Off stays off. A credential typed for a plugin nobody switched on is
+    stored and exported and starts nothing."""
+    from gexis_core import systemd
+
+    calls = []
+
+    class Result:
+        stdout = "disabled\n"
+
+    monkeypatch.setattr(systemd.subprocess, "run",
+                        lambda argv, **kw: (calls.append(argv[1]), Result())[1])
+    systemd.restart_if_enabled("beszel-agent.service")
+    assert calls == ["is-enabled"]

@@ -1,0 +1,56 @@
+[Unit]
+Description=Beszel agent (system metrics, ADR-0087)
+Documentation=https://beszel.dev
+After=network-online.target
+Wants=network-online.target
+# The same limit go-librespot's unit carries and for the same reason: a
+# misconfigured agent restarting forever buries the real error in noise. The
+# hub being unreachable is *not* a failure - the agent retries its own
+# WebSocket every 10 s and stays running - so this only fires on a genuine
+# refusal to start.
+StartLimitIntervalSec=60
+StartLimitBurst=5
+
+[Service]
+Type=simple
+# ADR-0088: whatever the settings screen holds for this plugin. `-` so the
+# agent still starts before anything has been typed in - it will fail to
+# authenticate and say so in its own journal, which is a diagnosis a person can
+# make.
+EnvironmentFile=-/run/gexis/plugins/beszel.env
+# **`--listen -1` is the whole inbound surface of this plugin: none.** Finding
+# 078 measured that the agent starts an SSH listener on *:45876 *even when given
+# a hub URL and a token*, which is the outbound configuration. With this, it owns
+# no listening socket at all and the outbound WebSocket is unaffected. Not a
+# settings row: this is a security property, not a preference, and a row would
+# let it be switched back on by accident.
+#
+# `-1` is a value the flag parser accepts and the log prints back as `:-1`. It is
+# not documented Beszel behaviour, so the check below asserts it on every start
+# rather than trusting it across an upgrade - *after* the agent has started,
+# because what matters is what it actually bound, not what it was asked to.
+ExecStart=/usr/local/bin/beszel-agent --listen -1
+ExecStartPost=/usr/local/lib/gexis/beszel-agent-listen-check.sh
+# The agent's `fingerprint` lives here, and it is the identity the hub binds
+# this system to - lose it and the hub no longer recognises the device.
+# StateDirectory rather than an install-time mkdir, for the reason
+# go-librespot's unit gives: it is created and re-chowned on every start, so
+# ownership cannot drift and a restored backup does not have to match a uid.
+StateDirectory=beszel-agent
+Environment=DATA_DIR=/var/lib/beszel-agent
+User=beszel
+Group=beszel
+Restart=on-failure
+RestartSec=5
+# It reads /proc and /sys and writes one file. Nothing here blocks that, and it
+# was verified on the device rather than assumed.
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+ProtectKernelTunables=yes
+ProtectControlGroups=yes
+RestrictSUIDSGID=yes
+
+[Install]
+WantedBy=multi-user.target

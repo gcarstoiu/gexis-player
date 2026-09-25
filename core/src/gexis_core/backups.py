@@ -46,6 +46,12 @@ MEMBERS = (
     # profile that ADR-0043 keeps off the default path precisely so wiping it
     # is one directory, and samba's own tdb state, which is not anybody's.
     "var/lib/go-librespot",
+    # **The Beszel agent's fingerprint** (added 2026-09-25, ADR-0087). Same
+    # lesson as the line above, applied before it could be learned twice: the
+    # agent's `DATA_DIR` holds the identity the hub binds this system to, and a
+    # reflash that loses it is a device the hub no longer recognises. Absent
+    # until the plugin has run, and `create` skips a member that is not there.
+    "var/lib/beszel-agent",
 )
 
 #: `gexis-<name>-<stamp>.tgz`. The name is the device's, so an archive says
