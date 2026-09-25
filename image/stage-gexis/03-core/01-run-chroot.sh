@@ -22,19 +22,34 @@ grep -q "^[[:space:]]*read only = No$" <<<"${share}" || {
 grep -q "^[[:space:]]*guest ok = Yes$" <<<"${share}" || {
 	echo "ERROR: the pictures share is not guest-reachable (ADR-0049)" >&2; exit 1; }
 
+# ADR-0083: the backups share, asked the same way and for the same reasons.
+backups="$(testparm -s --section-name=backups 2>/dev/null || true)"
+grep -q "^[[:space:]]*path = /var/lib/gexis-core/backups$" <<<"${backups}" || {
+	echo "ERROR: samba does not serve the backups share (ADR-0083)" >&2
+	testparm -s 2>&1 | head -40 >&2
+	exit 1
+}
+# Writable, because restoring is dropping a file back in.
+grep -q "^[[:space:]]*read only = No$" <<<"${backups}" || {
+	echo "ERROR: the backups share is not writable (ADR-0083)" >&2; exit 1; }
+grep -q "^[[:space:]]*guest ok = Yes$" <<<"${backups}" || {
+	echo "ERROR: the backups share is not guest-reachable (ADR-0083)" >&2; exit 1; }
+
 # **And nothing else is shared.** Debian's stock smb.conf adds `[homes]` -
 # every local user's home directory - plus `[printers]` and `[print$]`. Our
 # include says `available = no` to all three, and this asserts the effect:
-# any section that is not `pictures` must be unavailable, whatever a later
-# package upgrade adds to their file.
+# any section that is not one of ours must be unavailable, whatever a later
+# package upgrade adds to their file. **Two now** (ADR-0083), which is the
+# rule holding rather than bending: no share wider than its purpose.
 testparm -s 2>/dev/null | awk '
 	/^\[/        { section = $0; available = "yes" }
 	/available/  { available = $3 }
 	/^$/         { if (section != "" && section != "[global]") print section, available; section = "" }
 	END          { if (section != "" && section != "[global]") print section, available }
 ' | while read -r section available; do
-	if [ "${section}" != "[pictures]" ] && [ "${available}" != "No" ]; then
-		echo "ERROR: samba also serves ${section} (ADR-0049: one directory)" >&2
+	if [ "${section}" != "[pictures]" ] && [ "${section}" != "[backups]" ] \
+		&& [ "${available}" != "No" ]; then
+		echo "ERROR: samba also serves ${section} (ADR-0049: nothing wider than its purpose)" >&2
 		exit 1
 	fi
 done

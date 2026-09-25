@@ -9,12 +9,16 @@
   import spotifyMark from '../assets/icon-spotify.png';
   import bluetoothMark from '../assets/icon-bluetooth.png';
   import lyrionMark from '../assets/icon-lyrion.svg';
+  import { sources } from '../lib/state.js';
 
   let { from, to } = $props();
 
-  const LABELS = { lms: 'LMS', spotify: 'Spotify', bluetooth: 'Bluetooth' };
   const IMAGES = { spotify: spotifyMark, bluetooth: bluetoothMark };
-  const accent = $derived(`var(--accent-${to}, var(--accent-lms))`);
+  //: ADR-0086: the name and the colour are the source's own, so a takeover
+  //: to a renderer this file has never heard of is still announced by name.
+  //: The id is the fallback, which is what it always was for an unknown one.
+  const label = (id) => $sources[id]?.name ?? id;
+  const accent = $derived($sources[to]?.accent ?? `var(--accent-${to}, var(--accent-lms))`);
 </script>
 
 {#snippet mark(source, size, color, opacity)}
@@ -44,7 +48,7 @@
   <div class="pair">
     <div class="side">
       <div class="ring ring--from">{@render mark(from, 44, 'var(--ink)', 0.42)}</div>
-      <span class="label label--from">{LABELS[from] ?? from}</span>
+      <span class="label label--from">{label(from)}</span>
     </div>
 
     <div class="flow">
@@ -56,7 +60,7 @@
 
     <div class="side">
       <div class="ring ring--to">{@render mark(to, 50, 'var(--to-accent)', 1)}</div>
-      <span class="label label--to">{LABELS[to] ?? to}</span>
+      <span class="label label--to">{label(to)}</span>
     </div>
   </div>
 </div>

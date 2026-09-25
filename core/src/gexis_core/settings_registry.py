@@ -105,7 +105,17 @@ class NotSettable(Exception):
 
 
 def load_registry(path: Path = REGISTRY_PATH) -> list[dict]:
-    groups = json.loads(path.read_text())
+    return check(json.loads(path.read_text()))
+
+
+def check(groups: list[dict]) -> list[dict]:
+    """Every rule a row has to satisfy, whoever wrote it.
+
+    **Split out of `load_registry` on 2026-09-25 so a plugin's rows go through
+    the same door** (ADR-0086). A plugin is written elsewhere, by somebody who
+    cannot test against this device, and the alternative to validating its
+    rows is a Settings screen that draws something nobody checked.
+    """
     seen: set[str] = set()
     for group in groups:
         for row in group["rows"]:
@@ -310,6 +320,131 @@ class Settings:
     config or the running system. Precedence, highest first (ADR-0035 §4): a
     stored value, the flash-time seed, a `defaults` callable, the registry's
     own default."""
+
+    @staticmethod
+    def with_plugins(registry: list[dict], plugins) -> list[dict]:
+        """**A plugin's rows, merged into the registry** (ADR-0086).
+
+        **Two places, and the split is George's** (2026-09-25): *"create the
+        plugin category in settings and add in there only Beszel toggle. When
+        enabled then the config fields show up in system like now in the Beszel
+        subgroup. When the toggle is off the entire subgroup is off."*
+
+        - **The switch goes in `plugins`**, labelled with the plugin's name, so
+          that category is the list of what is installed beyond the player
+          itself. *"We need to separate a plugin from default functionality for
+          a user."*
+        - **Its own rows go where they belong** - a renderer's in `sources`, a
+          service's in `system` - under a sub-heading carrying its name, which
+          is the shape LMS, Spotify and Bluetooth already have.
+        - **And they hide when the switch is off**, sub-heading included. The
+          core applies that, whether or not the manifest asks for it: a plugin
+          that is off has no configuration worth reading, and a manifest that
+          forgot would leave fields on the screen for a process nobody can
+          reach.
+
+        **Keys are prefixed with the plugin's id.** Two plugins both shipping
+        an `enabled` row would otherwise collide, and the second would be
+        refused at load with a duplicate-key error nobody could act on. A
+        plugin writes `enabled` and the registry holds `plexamp.enabled`.
+
+        Rows that fail the registry's own rules are dropped with the reason
+        logged, not raised: one badly packaged plugin must not stop the
+        others, nor the device.
+        """
+        merged = [dict(g, rows=list(g["rows"])) for g in registry]
+        by_id = {g.get("id"): g for g in merged}
+        for plugin in plugins:
+            if not plugin.settings and plugin.enabled_row is not None:
+                # Nothing to add: its rows are the registry's already.
+                continue
+            target = by_id.get("sources" if plugin.kind == "renderer" else "system")
+            if target is None:
+                continue
+            switch_group = by_id.get("plugins")
+            switch = plugin.enabled_row
+            switches = []
+            if switch is None:
+                # **Every plugin can be switched off** (ADR-0086 as amended).
+                # Not something a plugin declares, because a plugin that
+                # forgot to would be one nobody could turn off - and
+                # "installed, started, kept running and switched off again" is
+                # the whole of what `docs/DEVELOPMENT.md` says a service
+                # wants. A manifest naming an existing row opts out, which is
+                # how the built-ins keep the keys they have always had.
+                #
+                # **Labelled with the plugin's name, not "Enabled"**: it is a
+                # row in a list of plugins now, not a row under a heading that
+                # already said which plugin this is.
+                switch = f"{plugin.id}.enabled"
+                switches.append({"key": switch, "type": "toggle",
+                                 "label": plugin.name, "default": True})
+            if switches and switch_group is None:
+                # A registry with no `plugins` category cannot hold the switch,
+                # and a plugin with no switch is the thing ADR-0086's amendment
+                # exists to prevent - so the plugin is dropped rather than
+                # silently made permanent.
+                logger.warning(
+                    "plugins: %s cannot be added - this registry has no `plugins` "
+                    "category to hold its switch", plugin.id,
+                )
+                continue
+            rows = [{"type": "group", "label": plugin.name, "accent": plugin.accent,
+                     "onlyWhen": [switch, True]}]
+            reserved = {"enabled"} if plugin.enabled_row is None else set()
+            for row in plugin.settings:
+                row = dict(row)
+                if not row.get("key"):
+                    logger.warning("plugins: %s has a row with no key", plugin.id)
+                    continue
+                if row["key"] in reserved:
+                    # **`enabled` is the core's.** A plugin shipping its own
+                    # would collide with the switch it gets for free, and
+                    # dropping the whole plugin over one row would cost it
+                    # every other setting it has. The switch wins, because a
+                    # plugin nobody can turn off is the thing this exists to
+                    # prevent.
+                    logger.warning(
+                        "plugins: %s declares %r, which is the core's own switch - "
+                        "ignoring the plugin's and keeping the switch",
+                        plugin.id, row["key"],
+                    )
+                    continue
+                row["key"] = f"{plugin.id}.{row['key']}"
+                only = row.get("onlyWhen")
+                if isinstance(only, list) and len(only) == 2 and isinstance(only[0], str):
+                    # **A manifest's `onlyWhen` names the plugin's own rows**
+                    # (ADR-0088), prefixed exactly as `key` is - `enabled`
+                    # becomes `beszel.enabled`, which is the switch ADR-0086
+                    # synthesised, and that is what makes George's *"when
+                    # enabled fields appear"* work. Unconditional rather than
+                    # "unless it looks like a core key": a plugin able to
+                    # depend on a core row would be coupled to a registry it
+                    # does not ship with, and the breakage would arrive the day
+                    # that key was renamed.
+                    row["onlyWhen"] = [f"{plugin.id}.{only[0]}", only[1]]
+                else:
+                    # **Off means the whole subgroup is off** (George,
+                    # 2026-09-25). Applied here rather than left to the
+                    # manifest: every row of a plugin that is switched off is a
+                    # field for a process nobody can reach. A row that declares
+                    # its own condition keeps it, and `visible` is transitive -
+                    # every chain inside a plugin ends at a row carrying this.
+                    row["onlyWhen"] = [switch, True]
+                rows.append(row)
+            if len(rows) == 1:
+                # A heading over nothing. The panel drops one anyway; not
+                # publishing it is the same statement made once.
+                rows = []
+            try:
+                check([{"id": "check", "label": "check", "rows": switches + rows}])
+            except (ValueError, KeyError) as exc:
+                logger.warning("plugins: %s's settings are not usable: %s", plugin.id, exc)
+                continue
+            if switch_group is not None:
+                switch_group["rows"].extend(switches)
+            target["rows"].extend(rows)
+        return merged
 
     def __init__(
         self,

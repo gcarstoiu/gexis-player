@@ -306,3 +306,58 @@ class TestTheBallisticsAreInTheConfig:
         assert "scopes.0 peppyalsa" not in rendered
         assert "type meter" not in rendered
         assert "decay_ms 900" in rendered
+
+
+class TestTheAlsaDefault:
+    """**ADR-0085: the ALSA default is our output.**
+
+    It exists for software that enumerates its own device list and cannot be
+    told about `pcm.output` - Plexamp is the case that found it
+    (Finding 077). The risk is that it quietly stops being installed, or that
+    somebody "tidies" it into `output.conf`, which is regenerated on every
+    output change and would drop it.
+    """
+
+    @staticmethod
+    def _repo():
+        from pathlib import Path
+        return Path(__file__).resolve().parents[2]
+
+    @staticmethod
+    def _conf():
+        return (TestTheAlsaDefault._repo() / "image" / "stage-gexis" / "00-alsa"
+                / "files" / "zz-gexis-default.conf")
+
+    def test_the_default_points_at_our_output_by_name(self):
+        text = self._conf().read_text()
+        assert 'pcm.!default "output"' in text
+
+    def test_it_adds_no_plug_anywhere(self):
+        """A `plug` on top would silently convert rather than let the card
+        refuse, on a device whose point is not converting - and a `plug`
+        *under* the meter breaks the peppyalsa scope outright."""
+        body = [
+            line.split("#")[0]
+            for line in self._conf().read_text().splitlines()
+        ]
+        assert not any("plug" in line for line in body)
+
+    def test_it_never_names_a_card(self):
+        """ADR-0009. The whole point is that software which cannot be told
+        about `output` stops needing to know an index."""
+        body = "\n".join(
+            line.split("#")[0] for line in self._conf().read_text().splitlines()
+        )
+        assert "hw:" not in body
+
+    def test_the_image_installs_it_separately_from_output_conf(self):
+        run = (self._repo() / "image" / "stage-gexis" / "00-alsa" / "02-run.sh").read_text()
+        assert "zz-gexis-default.conf" in run
+        assert "/etc/alsa/conf.d/zz-gexis-default.conf" in run
+
+    def test_the_regenerated_output_conf_does_not_carry_it(self):
+        """If this ever moves into the template, an output change silently
+        deletes it - `outputs.write` rewrites that whole file."""
+        from gexis_core.outputs import Output, render
+        rendered = render(Output(card="sndrpihifiberry", label="DAC", control="Master"), plug=False)
+        assert "!default" not in rendered

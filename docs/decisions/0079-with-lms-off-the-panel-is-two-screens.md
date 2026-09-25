@@ -99,6 +99,11 @@ seconds apart.
 - Turning LMS back on restores the library with no restart: the row is read
   where the panel draws, like every other.
 
+**The scale is 1.8× and George accepted it**, 2026-09-25: *"Scale is fine."*
+Two services come to 680 px of the width and about 300 px of the height on a
+1280 × 800 panel — the reading of *"not the entire height and width of the
+screen"*, now confirmed against the thing itself rather than the words.
+
 ## What this does not settle
 
 - **The phone.** Settings on a phone is the same page and is unaffected, but

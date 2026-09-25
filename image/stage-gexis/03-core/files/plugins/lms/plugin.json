@@ -1,0 +1,10 @@
+{
+  "id": "lms",
+  "name": "LMS",
+  "kind": "renderer",
+  "unit": "squeezelite.service",
+  "label": "Squeezelite Active",
+  "accent": "#7ed6bc",
+  "status": "Starts on play",
+  "enabled_row": "lms_enabled"
+}

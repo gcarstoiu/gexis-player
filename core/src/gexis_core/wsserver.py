@@ -26,6 +26,7 @@ import asyncio
 import json
 import logging
 import random
+import tarfile
 from urllib.parse import quote
 from pathlib import Path
 
@@ -33,7 +34,7 @@ from aiohttp import web
 from dbus_next import BusType
 from dbus_next.aio import MessageBus
 
-from gexis_core import bluetooth_devices, device_name, discovery, skins, wifi
+from gexis_core import backups, bluetooth_devices, device_name, discovery, skins, wifi
 from gexis_core.adapters.base import TRANSPORT_COMMANDS
 from gexis_core.artistinfo import PHOTO_BACKGROUND, PHOTO_LARGE, PHOTO_THUMB
 from gexis_core.artwork_sweep import ARTIST_NAMESPACE, remembered
@@ -96,6 +97,8 @@ class StateServer:
         enrichment=None,
         radio=None,
         pairing_answer=None,
+        restore=None,
+        plugins=(),
         splash=None,
         weather=None,
         wallpapers=None,
@@ -133,6 +136,16 @@ class StateServer:
         self._enrichment = enrichment
         self._radio = radio
         self._pairing_answer = pairing_answer
+        #: **ADR-0086.** The installed manifests, so `/plugins/{id}/mark` can
+        #: find a file. Held by id rather than searched per request: the set is
+        #: fixed for the process and a request must not walk a directory a
+        #: URL named.
+        self._plugins = {p.id: p for p in plugins}
+        #: **ADR-0083.** Called after an archive has been written back, to
+        #: reboot. Injected rather than imported so the route stays a route:
+        #: the daemon owns what "restart the device" means, and a test can
+        #: watch it without one.
+        self._restore = restore
         self._splash = splash
         self._weather = weather
         self._wallpapers = wallpapers
@@ -809,6 +822,23 @@ class StateServer:
             "enrichment": found.to_json(),
         })
 
+    async def _handle_plugin_mark(self, request: web.Request) -> web.Response:
+        """A source's glyph, by id (ADR-0086).
+
+        **The id is looked up, never joined onto a path.** It arrives from a
+        URL, and a manifest directory is not somewhere a request gets to point
+        at - the set of plugins is fixed at startup and anything not in it is
+        a 404.
+        """
+        plugin = self._plugins.get(request.match_info["id"])
+        if plugin is None or plugin.mark is None:
+            return web.json_response({"error": "no mark for that source"}, status=404)
+        # Immutable for the life of an install: a mark changes when a package
+        # does, and the panel reloads on a new build anyway.
+        return web.FileResponse(
+            plugin.mark, headers={"Cache-Control": "public, max-age=86400"}
+        )
+
     async def _handle_surface(self, request: web.Request) -> web.Response:
         """ADR-0035 §6: the panel always arrives on loopback, a phone from the LAN."""
         panel = request.remote in ("127.0.0.1", "::1")
@@ -877,6 +907,11 @@ class StateServer:
     #: Module and attribute rather than the function itself, so the name is
     #: resolved when it is called - the same late binding every other call
     #: here has, and what lets a test stand in for BlueZ.
+    #: Lists whose items arrive with `/settings` rather than being fetched
+    #: when the sheet opens. `bt_trusted` reads BlueZ; `restore` reads a
+    #: directory (ADR-0083), which is local and instant, so making somebody
+    #: open the sheet to learn there are no backups would be a spinner over
+    #: a `stat` call.
     SEEDED_LISTS = {"bt_trusted": (bluetooth_devices, "known")}
 
     async def _seed_lists(self, groups: list[dict]) -> None:
@@ -898,8 +933,14 @@ class StateServer:
         """
         for group in groups:
             for row in group["rows"]:
-                source = self.SEEDED_LISTS.get(row.get("key"))
-                if source is None or row["type"] != "list":
+                key = row.get("key")
+                if row["type"] != "list":
+                    continue
+                if key == "restore":
+                    row["items"] = [a.to_item() for a in backups.available()]
+                    continue
+                source = self.SEEDED_LISTS.get(key)
+                if source is None:
                     continue
                 module, name = source
                 # `_bluetooth` answers [] for an adapter that is not there,
@@ -972,7 +1013,7 @@ class StateServer:
 
     #: Where a `list` row's items come from - ADR-0044 §1's first open
     #: question, now answered for all three.
-    LIST_SOURCES = ("wifi", "lms_server", "bt_trusted")
+    LIST_SOURCES = ("wifi", "lms_server", "bt_trusted", "restore")
 
     async def _list_row(self, request: web.Request):
         """The `list` row named in the path, or a response explaining why
@@ -1001,6 +1042,13 @@ class StateServer:
             return web.json_response({"items": await wifi.scan()})
         if key == "bt_trusted":
             return web.json_response({"items": await self._bluetooth(bluetooth_devices.known)})
+        if key == "restore":
+            # ADR-0083. Read from the share every time: somebody may have
+            # copied one in from another machine since the sheet last opened,
+            # which is the whole point of it being a share.
+            return web.json_response(
+                {"items": [a.to_item() for a in backups.available()]}
+            )
         # A discovered server is named by its address, because that is what
         # the setting stores; the human name is the line underneath.
         current = str(self._settings.value("lms_server") or "")
@@ -1032,6 +1080,27 @@ class StateServer:
                 return web.json_response({"error": f"unknown action {action}"}, status=400)
             ok, error = await self._bluetooth(bluetooth_devices.forget, name)
             return web.json_response({"ok": ok, "error": error})
+        if key == "restore":
+            # **ADR-0083: this one reboots.** The answer goes out first and
+            # the reboot is scheduled behind it, or the panel would be told
+            # nothing and left looking stuck through the restart.
+            if action == "forget":
+                try:
+                    await asyncio.to_thread(backups.forget, name)
+                except (OSError, ValueError) as exc:
+                    return web.json_response({"ok": False, "error": str(exc)})
+                return web.json_response({"ok": True, "error": None})
+            if action != "join":
+                return web.json_response({"error": f"unknown action {action}"}, status=400)
+            if self._restore is None:
+                return web.json_response({"ok": False, "error": "restoring is not wired up"})
+            try:
+                await asyncio.to_thread(backups.restore, name)
+            except (OSError, ValueError, tarfile.TarError) as exc:
+                logger.warning("restore: %s failed: %s", name, exc)
+                return web.json_response({"ok": False, "error": str(exc)})
+            asyncio.ensure_future(self._restore())
+            return web.json_response({"ok": True, "error": None})
         if key != "wifi":
             return web.json_response({"error": f"{key} has no per-item action"}, status=405)
         if not wifi.available():
@@ -1098,6 +1167,7 @@ class StateServer:
         # somebody typed, spaces and punctuation included.
         app.router.add_get("/skins", self._handle_skins)
         app.router.add_get("/skins/{name:.*}/preview", self._handle_skin_preview)
+        app.router.add_get("/plugins/{id}/mark", self._handle_plugin_mark)
         app.router.add_get("/radio", self._handle_radio)
         app.router.add_post("/radio/play", self._handle_radio_play)
         app.router.add_get("/library/artist-photos", self._handle_artist_photos)

@@ -109,7 +109,7 @@
         "type": "action",
         "label": "Plugins",
         "marks": "R",
-        "note": null,
+        "note": "Superseded by the Plugins category, which George asked for on 2026-09-25. ADR-0022 inventoried this as a row in Sources; what it would have opened is now a category of its own, listing each installed plugin's switch. Kept unsurfaced rather than deleted because removing an inventoried row is George's call.",
         "default": null,
         "surfaced": false
       },
@@ -894,6 +894,13 @@
     ]
   },
   {
+    "id": "plugins",
+    "label": "Plugins",
+    "subtitle": "What is installed beyond the player itself",
+    "accent": "#a8d68f",
+    "rows": []
+  },
+  {
     "id": "system",
     "label": "System",
     "subtitle": "Updates and maintenance",
@@ -939,11 +946,21 @@
       {
         "key": "backup",
         "type": "action",
-        "label": "Back up settings",
+        "label": "Back up now",
+        "marks": "R",
+        "note": "Writes the settings, the library's pictures, the paired devices and this device's own configuration into the Backups share.",
+        "confirm": "Back up",
+        "default": null
+      },
+      {
+        "key": "restore",
+        "type": "list",
+        "label": "Restore",
         "marks": "N",
-        "note": null,
+        "note": "Replaces everything a backup holds and restarts the device. Backups are read from the Backups share, so one copied there from another machine is offered too.",
         "default": null,
-        "surfaced": false
+        "empty": "No backups yet. Back up first, or copy one into the Backups share.",
+        "kind": "backup"
       },
       {
         "key": "factory_reset",

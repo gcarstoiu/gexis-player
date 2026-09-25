@@ -7,6 +7,7 @@
 -->
 <script>
   import SourceMark from '../lib/SourceMark.svelte';
+  import { sources } from '../lib/state.js';
 
   // **ADR-0079: `full` promotes this from a footer to the whole screen.** With
   // LMS off there is no library for it to sit under, and "nothing is playing
@@ -24,12 +25,24 @@
   // and `('bluetooth', '#e9eef2', 41, 0.72)`. Bluetooth is the odd one
   // because its glyph is taller than it is wide, so matching it by height
   // would leave it visibly smaller than the other two.
-  const SERVICES = [
-    { id: 'lms', name: 'Lyrion', status: 'Starts on play', size: 38, lead: true, delays: [0, 1400] },
-    { id: 'spotify', name: 'Spotify', status: 'Listening', size: 38, lead: false, delays: [900, 2300] },
-    { id: 'bluetooth', name: 'Bluetooth', status: 'Pairable', size: 41, lead: false, delays: [1800, 400] },
-  ];
-  const shown = $derived(SERVICES.filter((s) => availability[s.id]));
+  //
+  // **ADR-0086: the name and the status line come from the manifest**, the
+  // sizes and ring delays stay here. The split is what each thing belongs to:
+  // a plugin knows what it is called and what it is waiting for; the design
+  // knows how big a mark is drawn and when a ring pulses.
+  const DRAWN = {
+    lms: { size: 38, lead: true, delays: [0, 1400] },
+    spotify: { size: 38, lead: false, delays: [900, 2300] },
+    bluetooth: { size: 41, lead: false, delays: [1800, 400] },
+  };
+  //: A source the design has no drawing values for - any plugin - gets the
+  //: middle of the three rather than nothing.
+  const GENERIC = { size: 38, lead: false, delays: [600, 1900] };
+  const shown = $derived(
+    Object.values($sources)
+      .filter((s) => s.kind === 'renderer' && availability[s.id])
+      .map((s) => ({ ...(DRAWN[s.id] ?? GENERIC), ...s })),
+  );
   // The mark is an SVG sized by a prop, not by CSS, so it scales with the
   // disc rather than sitting small inside a bigger circle. 1.8x, the same
   // factor the metrics below use, rounded to whole pixels - and Bluetooth
@@ -49,6 +62,7 @@
           <div class="disc">
             <SourceMark
               source={s.id}
+              mark={s.mark}
               size={markSize(s)}
               color={s.lead ? 'var(--accent-lms)' : 'var(--ink)'}
               opacity={s.lead ? 1 : 0.72}

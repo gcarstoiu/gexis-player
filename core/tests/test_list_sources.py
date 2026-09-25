@@ -311,11 +311,15 @@ def test_a_seeded_list_never_also_goes_looking():
     `discover` to decide whether to draw a searching state. A row that is
     both would open on a spinner over items it already had."""
     rows = {r["key"]: r for g in load_registry() for r in g["rows"] if r["type"] != "group"}
-    for key in StateServer.SEEDED_LISTS:
+    # `restore` is seeded too and is not in `SEEDED_LISTS`: that map is for
+    # the ones read through a bus, and a directory listing needs none
+    # (ADR-0083). Named here so the rule still covers it.
+    seeded = set(StateServer.SEEDED_LISTS) | {"restore"}
+    for key in seeded:
         assert rows[key]["type"] == "list"
         assert not rows[key].get("discover")
     for key, row in rows.items():
-        if row["type"] == "list" and key not in StateServer.SEEDED_LISTS:
+        if row["type"] == "list" and key not in seeded:
             assert row.get("discover"), f"{key} neither arrives with its items nor looks for them"
 
 

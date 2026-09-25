@@ -104,7 +104,9 @@ are different questions and the second one is George's.
 
 ## What this does not settle
 
-- **Whether `handoff_exempt_pairs` should survive at all.** With a working
+- ~~**Whether `handoff_exempt_pairs` should survive at all.**~~ **Parked
+  2026-09-25**, George: *"handoff exempt we park for now."* With a working
   threshold it changes no outcome today: both its pairs are far under any value
   the bar offers. It stays because it is measured evidence and because removing
-  published state is Phase 4 criterion 4's business, not this record's.
+  published state is Phase 4 criterion 4's business, not this record's — and
+  now because nothing is waiting on the answer.

@@ -96,3 +96,54 @@ def set_enabled(unit: str, enabled: bool, *, now: bool = True) -> None:
             result.returncode,
             (result.stderr or "").strip(),
         )
+
+
+def restart_if_enabled(unit: str) -> None:
+    """Restart a unit that is *supposed* to be running, and only that (ADR-0088).
+
+    A plugin's environment is read once at exec, so a changed credential means a
+    restart. The question is which units that applies to, and the first answer
+    was wrong: `systemctl try-restart` touches a unit that is **active**, and the
+    Beszel agent's first real state was **failed** - switched on before anyone had
+    typed a token, refusing to start without one, exactly as it should. Typing the
+    token then changed the file and `try-restart` did nothing, because a failed
+    unit is not active. The credential arrived and nothing used it until a reboot.
+    Found on the device 2026-09-25 (Finding 079).
+
+    **So the gate is `is-enabled`, not `is-active`**: enabled means somebody asked
+    for this to run, and a value they just typed is how it gets to. Disabled means
+    off, and off stays off - which is the one case `try-restart` got right and
+    this keeps.
+
+    `reset-failed` first: a unit that has hit `StartLimitBurst` refuses a plain
+    restart with "start request repeated too quickly", and an agent that spent its
+    five tries before being configured is the *expected* path here, not an edge
+    case. Harmless on a healthy unit.
+    """
+    if not is_enabled(unit):
+        logger.info("plugins: %s is disabled, not restarting it", unit)
+        return
+    logger.info("systemctl reset-failed + restart %s", unit)
+    subprocess.run(["systemctl", "reset-failed", unit], check=False, capture_output=True)
+    subprocess.run(["systemctl", "restart", unit], check=False, capture_output=True)
+
+
+def is_enabled(unit: str) -> bool:
+    """Whether systemd will start this unit at boot.
+
+    **The truth a synthesised `Enabled` row defaults to** (ADR-0086 as amended,
+    ADR-0088). A declared default would be a second statement of the same fact,
+    and found on the device 2026-09-25: a manifest defaulting its switch to
+    *on* beside an image that installs the unit *disabled* puts a row on the
+    screen reading "Enabled" for something that is not running and will not
+    start. Asking systemd cannot disagree with systemd.
+
+    `enabled-runtime` counts as enabled - it is, until the next boot - and
+    everything else does not, including `static` and `masked`: neither is a
+    thing this switch can meaningfully turn on.
+    """
+    result = subprocess.run(
+        ["systemctl", "is-enabled", unit], check=False, capture_output=True, text=True,
+    )
+    state = (result.stdout or "").strip()
+    return state in ("enabled", "enabled-runtime")

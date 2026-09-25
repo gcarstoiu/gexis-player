@@ -4540,3 +4540,238 @@ soft temperature limit have all *occurred* during this uptime — historical
 bits, none current, at 74.5 °C and a full 1.8 GHz. Not a UI measurement,
 but it is the kind of thing that makes measurements wander.
 
+## From HANDOFF, 2026-09-25 (twenty-fourth session) — Phase 9 closing, all five criteria, as it carried them
+
+# Handoff
+
+Last updated: 2026-09-25 (twenty-fourth session, on R2D2 — **Phase 9 is
+COMPLETE. All five criteria closed on George's own word, in one session:
+criterion 0 on lived judgement with the opens below the floor, 1 with every
+surfaced settings row acting, 2 with the check that was lying about two rows
+fixed, 3 with his review's three findings, 4 with the handoff's own list
+triaged. Next is Phase 10, the plugin contract.**)
+
+## Start here
+
+**Criterion 0 is closed** and
+[ADR-0076](docs/decisions/0076-criterion-0-closes-with-the-opens-below-the-floor.md)
+says so honestly: the scrolls reach 56.9–59.5 drawn/s at 0.00 % dropped, and
+**the screen opens are 30–53 fps at 2.5–5.6 %, below Phase 7a's floor of 55
+and 2 %** ([Finding 067](docs/findings/067-what-the-panel-presents-at-the-end-of-criterion-0.md)).
+George closed it on lived use — *"the panel feels fast based on current
+interaction"* — not on the numbers. **Revisit before Phase 13**, the setup
+phase, when the panel stops being his.
+
+**Phase 9 is complete**, and the five closures are recorded where they were
+written — `docs/DEVELOPMENT.md`, each struck through with the closure above it
+and the original text kept below.
+
+- **0 — the panel meets Phase 7a's target.** Closed on lived judgement, not on
+  the numbers: scrolls reach 56.9–59.5 drawn/s at 0.00 % dropped, **the opens
+  are 30–53 and 2.5–5.6 % against a floor of 55 and 2 %**
+  ([ADR-0076](docs/decisions/0076-criterion-0-closes-with-the-opens-below-the-floor.md)).
+  **Revisit before Phase 13.**
+- **1 — every ADR-0022 row wired or scoped out.** Checked against the running
+  daemon: of 74 rows, no surfaced row is unwired and none carries a `?`.
+- **2 — no unwired UI remains.** Four generated lists. It found one thing, and
+  the thing was the check
+  ([Finding 071](docs/findings/071-what-the-panel-shows-that-does-nothing.md)).
+- **3 — the review pass with George.** Three issues, all fixed.
+- **4 — the handoff's issues triaged.** Ten items
+  ([Finding 074](docs/findings/074-the-handoffs-issues-triaged.md)).
+
+### What was wired this session
+
+Three commits, in this order, each verified on the hardware before the next:
+
+1. **The device says which build it is.** `version` and `image_build` read
+   `/etc/gexis/image.info`, which the image now writes — nothing on a running
+   device could report it, because the `.info` beside the image is on the
+   build host. A device flashed before that stage existed says `unknown`
+   rather than showing an empty row.
+2. **Three handoff rows** — `restore_transport`, `show_transition`,
+   `handoff_duration` — read where they are used, so none needs a callback.
+3. **Reclaim, and the two Bluetooth rows.** `reclaim_lms` takes the device
+   back for LMS when a session ends, **off by default and opt-in by row**:
+   ADR-0027 declines to do it, and the reclaims that were measured were
+   spurious — a Spotify session ending because a phone locked would drag LMS
+   back on. `bt_pairing` needed more than storing, because the capability is
+   fixed when the BlueZ agent registers and `NoInputNoOutput` means BlueZ
+   never asks at all — so a change unregisters and registers again.
+   `bt_autotrust` was read per request already and simply was not settable.
+   **ADR-0022's note for it was stale**: there is no
+   `gexis-bluetooth-trust.service` in the image; the agent does the trusting.
+4. **[ADR-0077](docs/decisions/0077-a-source-that-is-off-is-not-running.md):
+   a source that is off is not running.** The last four rows — the three
+   `Enabled` toggles and `headless`.
+5. **The two orange dots**, both found by George reading the screen. The dot
+   means a row's marks carry `?`, a decision still owed. `version` and
+   `image_build` were still asking one that had been answered when they were
+   wired; `version` says `unknown` correctly on this image, and `built` now
+   falls back to `/etc/rpi-issue`, which pi-gen writes on every image, so it
+   reads **2026-09-19**.
+6. **[ADR-0078](docs/decisions/0078-the-transition-screen-waits-for-the-threshold.md):
+   the transition screen waits for the threshold.** `handoff_threshold` showed
+   `1` with no slider because a `number` row only draws one once it is wired —
+   and it had stayed unwired because **nothing had ever read it**. It now means
+   how long a takeover has to be in flight before the panel explains it; 0–3 s
+   in 0.5 s steps, 0 being the old behaviour. Five runs on the panel
+   ([Finding 069](docs/findings/069-the-transition-screen-against-the-threshold.md)).
+
+### ADR-0077, because it is the one with teeth
+
+Off means the renderer's unit is stopped **and disabled**, its adapter is not
+watching, the state reports it unavailable, and arbitration refuses it. Three
+things worth carrying forward:
+
+- **Disabled, not just stopped.** A row whose effect ends at the next boot is
+  a row that lies the second time you look at it.
+- **A row only the panel honoured would not be a switch.** Spotify Connect is
+  advertised on the network, squeezelite is a player in the LMS app, and a
+  Bluetooth device is in a phone's settings screen. So Bluetooth off **powers
+  the radio down** as well as stopping `bluealsa-aplay`, and disables the unit
+  that unblocks rfkill at boot.
+- **The gate is in the core, not the adapters.** ADR-0013 says the three
+  defaults implement the public plugin contract; a plugin that read a settings
+  row named after itself would put that row in the contract. The adapter's
+  `run()` is wrapped instead. That also ends what would have been permanent
+  noise — with go-librespot stopped, the Spotify watch retried every five
+  seconds forever.
+
+**`systemctl disable --now go-librespot.service` measured 7.0 s**, all of it
+stopping the unit, so the call goes through `asyncio.to_thread`. Inline it was
+seven seconds in which the daemon answered nothing. After: the row's own `PUT`
+returns in 18 ms and the next request in 5 ms while the unit is still stopping.
+
+**`headless` stops three units** — kiosk, visualiser, and the panel warm-up
+that is pure boot cost with no kiosk to warm for. Turning it on from the panel
+closes the panel; it is reversible from a phone, and only from a phone. 12 s
+to the panel gone, 20 s to it back.
+
+7. **[ADR-0079](docs/decisions/0079-with-lms-off-the-panel-is-two-screens.md):
+   with LMS off, the panel is two screens.** George's answer to the question
+   ADR-0077 left open — *"Library, browse and radio go with it."* Nothing
+   playing is the waiting marks at 1.8× with a settings icon in the corner;
+   something playing is Now Playing as the root, Home button become Settings,
+   artist line inert, no mini strip. **The row decides it, not
+   `availability.lms`**, which also goes false when the server is merely
+   unreachable. Six states on the panel
+   ([Finding 070](docs/findings/070-the-panel-with-lms-off.md)).
+
+**Both dots are gone**, and no surfaced row carries a `?` any more.
+
+**And building screen 7 found a bug in ADR-0077**: switching off the *active*
+renderer left it active forever, because cancelling its watch is also how the
+release event stops arriving. The panel showed a stopped Spotify's track,
+artwork and progress bar indefinitely, while the same payload said the renderer
+was unavailable. Fixed with one `relinquish`; [LESSONS](docs/LESSONS.md) 39 is
+the part worth keeping.
+
+## From HANDOFF, 2026-09-25 — how Phase 10 was planned, as it carried the plan
+
+### How Phase 10 was planned, and what the plan got wrong
+
+**Planned 2026-09-25 and reshaped by three of George's decisions**: themes
+leave for Phase 14, the three default renderers **stay in the core process**,
+and **Plexamp replaces Qobuz** as the contract's fourth-renderer proof, because
+Qobuz needs a partnership and a private repository and that put the only proof
+two phases out.
+
+Keeping the defaults in place makes ADR-0013's claim — *"implemented against
+the public plugin contract, not special-cased"* — untrue as written, so
+[the record is amended](docs/decisions/0013-defaults-implement-public-contract.md):
+they are the contract's **source**, not its consumers, and
+`core/tests/test_contract_surface.py` pins the surface so the wire schema and
+`Capabilities` cannot drift apart in silence.
+
+**The order, and the reason for it:**
+
+1. ~~**The Plexamp hardware check**~~ — **done 2026-09-25**
+   ([Finding 077](docs/findings/077-plexamp-on-gexis.md)). Plexamp headless
+   4.13.2 is installed and claimed on the device. **It can be a renderer**: a
+   commanded stop works, it frees the ALSA device and keeps running, so
+   ADR-0008's reversal is not triggered. Two things to carry into Phase 11 —
+   the device is held for a deterministic **14 s** after the stop, so its
+   `release_ladder` needs a longer polite grace than the default; and **the
+   audio path does not work for the meters**, because it opens `hw:5,0`
+   directly rather than `pcm.output`, in **S32_LE**, which is the format moOde
+   measured as giving an all-zero peppyalsa FIFO.
+2. ~~ADRs: the transport~~ — **done**, George took the recommendation:
+   [ADR-0084](docs/decisions/0084-plugins-speak-json-lines-over-a-unix-socket.md),
+   a Unix socket carrying JSON lines. The plugin channel can claim the audio
+   device and lie about what is playing, which is not the class of thing
+   ADR-0028 left open on the LAN.
+3. ~~Draw the contract from `Adapter` and `Capabilities` as they are.~~ —
+   **drafted**: [`docs/PLUGIN-CONTRACT.md`](docs/PLUGIN-CONTRACT.md), version
+   1, **and deliberately not frozen**. It freezes after a non-renderer has
+   been built against it, not before. `test_contract_surface.py` now checks
+   the document against the objects as well as the objects against
+   themselves, which is the drift guard ADR-0013's amendment promised.
+
+   **The `kind` split is the part to attack**: `renderer` declares a unit, a
+   release action and capabilities; `service` declares a unit and nothing
+   else. If a Beszel agent cannot be said as a `hello` with
+   `kind: "service"`, the contract is wrong.
+4. **Discovery — the mass of the phase.** `"lms"` appears in **six core
+   modules outside `adapters/`** and **ten UI files**, so "no core changes"
+   means a manifest, a scanned directory, and settings rows and source artwork
+   arriving from the plugin. The unsurfaced `plugins` row is where it lands.
+5. ~~The **Beszel agent** against the draft, *before* freezing it.~~ —
+   **built 2026-09-25**, and it did its job twice over: it found that a plugin
+   could declare rows but nothing could switch it off (ADR-0086's amendment),
+   and then that a plugin's settings could not reach a third-party binary at all
+   (ADR-0088). Both were holes in the contract, found by the plugin written to
+   look for them, which is what this criterion is for.
+
+   **All four of the questions the record said were owed are answered.** The
+   hub is George's. The agent listens on nothing. It costs 14 MB and under 1 %
+   of a core. It ships in the image, defaulting off — George's call.
+
+   ~~**What is left is the enrolment.**~~ **Done 2026-09-25** — George entered
+   the token and the hub key through the settings screen: *"Added the keys into
+   the plugin and can confirm it works."* The cost is measured
+   ([Finding 080](docs/findings/080-the-agent-enrolled.md)) and **throttle state
+   turned out not to be there at all**, which ADR-0087 now says instead of
+   claiming otherwise.
+6. **Freeze v1** — the last step, and it must stay last. This criterion's plugin
+   has now amended the contract **twice**; freezing before it was built would
+   have frozen a contract that its first real consumer broke.
+
+**Settings rows are done** (2026-09-25), and a plugin's now reach a process
+that cannot speak to us: see ADR-0088 above. A manifest's `settings` are merged
+into the registry — a renderer's under a sub-heading in Sources, the shape the
+three built-ins already have — with keys prefixed by the plugin's id so two
+plugins shipping `enabled` cannot collide. Rows go through the registry's own
+validation and a bad one is dropped with the reason logged rather than taking
+the device down. A write reaches the plugin as `setting` under **its own** key;
+the value is stored either way, and a plugin that was down is handed every
+current value in its `welcome`. Proved on the device with a service plugin
+written in `socket` and `json`.
+
+**Still open inside discovery: arbitration does not carry plugins.** A
+`renderer` that connects is welcomed and **idle**, and the log says so rather
+than pretending otherwise. That is the last piece — an `Adapter` built around
+a session and registered with the supervisor — and it is what Phase 11 needs
+before Plexamp can be an external plugin.
+
+**Read [Finding 075](docs/findings/075-what-moode-learned-about-plexamp.md)
+before starting.** George's moOde project built a Plexamp route and **parked
+it**: pause and app-dismissed are byte-identical at every observable endpoint.
+
+**That phrase is narrower than it sounds, and the second export settles it.**
+It was about the *HTTP endpoints*. Plexamp on `:32500` turns out to fit
+ADR-0010's ladder without bending:
+
+| our contract | Plexamp, per moOde |
+|---|---|
+| `release()` — the polite stop | the API stop at `:32500`. Frees the DAC, leaves Plexamp running |
+| `signal_stop(force)` | kill the unit — which needs a restart, so it is rightly the second step |
+| `on_release` | **TCP count to `:32500` reaching 0**, seconds after the app goes away |
+
+So **Plexamp looks viable**, on someone else's machine, with two gaps neither
+project has measured: the stop test's "before" read was empty, and nobody knows
+what the TCP count does after an API stop — if our own `release()` drops it,
+the adapter reads its own polite stop as a user disconnect.
+
+The finding also carries two smaller things — our `output.conf` pins no sample
+format, and peppyalsa gave moOde an all-zero meter FIFO for S32_LE.

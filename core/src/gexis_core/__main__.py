@@ -64,11 +64,14 @@ from gexis_core.peppy import (
 )
 from gexis_core.peppy_metadata import PeppyMetadataWriter
 from gexis_core.settings import SettingsStore
-from gexis_core.settings_registry import Settings
+from gexis_core.settings_registry import Settings, load_registry
 from gexis_core.splash import Splash
 from gexis_core.state import StateStore
-from gexis_core import bluealsa_volume, outputs
+from gexis_core import backups, bluealsa_volume, outputs, plugin_env, plugins
+from gexis_core.plugin_server import PluginServer
+from gexis_core.systemd import is_enabled as _unit_is_enabled
 from gexis_core.systemd import set_enabled as _set_unit_enabled
+from gexis_core.systemd import restart_if_enabled as _restart_if_enabled
 from gexis_core.artwork_sweep import ArtworkSweep
 from gexis_core.bluealsa_volume import BluealsaVolume
 from gexis_core.remote_volume import RemoteVolume
@@ -148,6 +151,13 @@ async def set_unit_enabled(unit: str, enabled: bool, *, now: bool = True) -> Non
     await asyncio.to_thread(functools.partial(_set_unit_enabled, unit, enabled, now=now))
 
 
+async def restart_if_enabled(unit: str) -> None:
+    """`systemd.restart_if_enabled` off the event loop, for the same reason
+    `set_unit_enabled` is: it stops a process, and how long that takes is the
+    process's business, not ours."""
+    await asyncio.to_thread(functools.partial(_restart_if_enabled, unit))
+
+
 def _chosen_server(config: Config, store: SettingsStore) -> Config:
     """`config`, with `lms_server` applied if one was chosen and is usable.
 
@@ -216,6 +226,15 @@ async def _set_timezone(zone: str) -> None:
         logger.warning("timezone: %s", err.decode("utf-8", "replace").strip())
     else:
         logger.info("timezone: set to %s", zone)
+
+
+async def _restore_done() -> None:
+    """**ADR-0083: a restore reboots.** The archive is already written back by
+    the time this runs; the pause is only so the answer reaches whoever asked
+    before the device goes down under them."""
+    logger.warning("restore: rebooting to come up on the restored state")
+    await asyncio.sleep(1.5)
+    await asyncio.create_subprocess_exec("systemctl", "reboot")
 
 
 async def _reboot() -> None:
@@ -295,9 +314,24 @@ async def main() -> None:
     # own metadata/availability reports below - constructed before
     # Supervisor for the same closure reason as volume_bridge (its
     # callbacks reference `supervisor`, assigned later).
+    # **ADR-0086: every source describes itself in a manifest**, the three
+    # built-ins included, so the panel's generic path is the one exercised on
+    # every boot rather than a fallback nothing runs.
+    installed_plugins = plugins.installed()
+    if installed_plugins:
+        logger.info(
+            "plugins: %s", ", ".join(f"{p.id} ({p.kind})" for p in installed_plugins)
+        )
+    else:
+        logger.warning(
+            "plugins: no manifests under %s - the panel will draw sources "
+            "without names or marks", plugins.DEFAULT_DIR,
+        )
+
     state_store = StateStore(
         {rid: adapter.capabilities for rid, adapter in adapters.items()},
         handoff_exempt_pairs=config.handoff_exempt_pairs,
+        sources=tuple(p.to_json() for p in installed_plugins),
     )
 
     # Criterion 4: moOde-compatible metadata file, subscribed the same way
@@ -957,8 +991,118 @@ async def main() -> None:
     # ADR-0035. Defaults are what is true of this deployment today. A wired
     # row is read where it is used - the idle page probe here, the rest by
     # the UI - so none needs a callback.
+    def _plugin_env(plugin) -> bool:
+        """**Export what this plugin's rows say to its unit** (ADR-0088).
+
+        True if the file changed. Every value comes from the registry, so a row
+        never read by anything still exports what is stored - the plugin's
+        process is the thing that reads it, and it is not running yet when this
+        is first written.
+        """
+        if not plugin_env.has_env(plugin):
+            return False
+        values = {
+            f"{plugin.id}.{row['key']}": settings.value(f"{plugin.id}.{row['key']}")
+            for row in plugin.settings
+            if row.get("key") and row.get("env")
+        }
+        try:
+            return plugin_env.write(plugin, values)
+        except OSError as exc:
+            logger.warning("plugins: could not write %s's environment: %s", plugin.id, exc)
+            return False
+
+    def _plugin_setting(key: str, value) -> None:
+        """**A plugin's own row was written** (ADR-0086, ADR-0088).
+
+        Two things can happen and they are not alternatives. **The file is
+        written whatever else does or does not happen**: a third-party binary
+        reads its configuration from the environment and will never connect to
+        the socket, and that is the case ADR-0088 exists for. Then the plugin is
+        told over the socket if it is connected; one that is down misses
+        nothing, since it is handed every current value in its `welcome`.
+        """
+        plugin_id, _, own = key.partition(".")
+        plugin = next((p for p in installed_plugins if p.id == plugin_id), None)
+        if plugin is not None and _plugin_env(plugin):
+            # Environment is read once at exec, so a changed value means a
+            # restart - of a unit that is *enabled*, whatever state its process
+            # is in. A plugin switched on before it was configured is sitting in
+            # `failed` precisely because the value just typed was missing.
+            asyncio.ensure_future(restart_if_enabled(plugin.unit))
+        session = plugin_server.sessions.get(plugin_id)
+        if session is None:
+            logger.info("plugins: %s is not connected; %s stored for its next start",
+                        plugin_id, own)
+            return
+
+        async def tell() -> None:
+            try:
+                await session.send("setting", key=own, value=value)
+            except Exception as exc:  # noqa: BLE001 - a refusal is the plugin's
+                logger.warning("plugins: %s refused %s: %s", plugin_id, own, exc)
+
+        asyncio.ensure_future(tell())
+
+    async def _apply_plugin_unit(plugin, on: bool) -> None:
+        """**A plugin switched on or off** (ADR-0086 as amended).
+
+        ADR-0077's machinery, pointed at a plugin's unit instead of a
+        renderer's: enabled and started, or stopped and kept stopped. It is
+        the same sentence for the same reason - a row whose effect ends at the
+        next boot is a row that lies the second time you look at it.
+
+        **The environment is written first** (ADR-0088), so a plugin being
+        switched on for the first time starts with the values already typed in
+        rather than starting blank and being restarted a moment later.
+        """
+        if on:
+            _plugin_env(plugin)
+        await set_unit_enabled(plugin.unit, on)
+
+    def _plugin_switch(plugin):
+        return lambda on, p=plugin: asyncio.ensure_future(
+            _apply_plugin_unit(p, on is not False)
+        )
+
+    #: The switch every plugin gets unless its manifest names a row that
+    #: already exists - which the three built-ins do, because theirs predate
+    #: this and do more than manage a unit.
+    plugin_switches = {
+        f"{plugin.id}.enabled": _plugin_switch(plugin)
+        for plugin in installed_plugins
+        if plugin.enabled_row is None
+    }
+
+    #: **What that switch reads before anyone has touched it: whatever systemd
+    #: says about the unit.** Not a value the manifest declares. Found on the
+    #: device 2026-09-25 with a manifest defaulting to on beside a unit the image
+    #: installs disabled - the row said "Enabled" for something that was neither
+    #: running nor going to start. Read once here rather than per request: it is
+    #: a subprocess, a settings screen reads every row at once, and a stored
+    #: value takes over the moment the switch is used.
+    plugin_switch_defaults = {
+        key: (lambda on=_unit_is_enabled(plugin.unit): on)
+        for plugin in installed_plugins
+        if plugin.enabled_row is None
+        for key in (f"{plugin.id}.enabled",)
+    }
+
+    #: Every row a plugin brought, keyed as the registry stores it. The
+    #: callback is the same for all of them - tell the plugin - so the key is
+    #: bound per row rather than passed: `Settings.set` calls a wired callback
+    #: with the value and nothing else, as it does for every other row.
+    plugin_rows = {
+        f"{plugin.id}.{row['key']}":
+            (lambda value, key=f"{plugin.id}.{row['key']}": _plugin_setting(key, value))
+        for plugin in installed_plugins
+        for row in plugin.settings
+        if row.get("key")
+    }
+
     settings = Settings(
         settings_store,
+        registry=Settings.with_plugins(load_registry(), installed_plugins),
         defaults={
             "lms_server": lambda: f"{config.lms_host}:{config.lms_port}",
             "lms_player": lambda: config.lms_player_name,
@@ -991,6 +1135,9 @@ async def main() -> None:
             # showing an empty row.
             "version": lambda: image_info().get("version") or "unknown",
             "image_build": lambda: image_info().get("built") or "unknown",
+            # ADR-0086 as amended: a synthesised switch reads what systemd says
+            # about the unit until somebody uses it.
+            **plugin_switch_defaults,
         },
         # ADR-0051 §4: which skins there are depends on where they are
         # installed and on what `skin_corpus` holds, neither of which the
@@ -1103,7 +1250,18 @@ async def main() -> None:
                # `volume_managed` is: it is how a row says it reports
                # something rather than nothing (ADR-0022's `version`).
                "version": None, "image_build": None,
-               "reboot": lambda _: asyncio.ensure_future(_reboot())},
+               "reboot": lambda _: asyncio.ensure_future(_reboot()),
+               # **ADR-0083.** A backup that stays on the device does not
+               # survive the event it exists for, so this writes into a share
+               # of its own. `restore` is the other half and is a `list` row -
+               # its items are what is in that share, so one copied in from
+               # another machine is offered too.
+               "backup": lambda _=None: asyncio.ensure_future(_make_backup()),
+               "restore": None,
+               # ADR-0086: whatever the installed plugins brought. Wired
+               # like any other row - something acts on it - and the thing
+               # that acts is the plugin.
+               **plugin_switches, **plugin_rows},
         # **Phase 9 criterion 2.** These two act through
         # `POST /settings/{key}/items`, not through `set` - joining a network
         # and forgetting a device - so they are wired, and saying otherwise
@@ -1113,6 +1271,15 @@ async def main() -> None:
         lists={"wifi", "bt_trusted"},
         on_change=state_store.bump_settings_revision,
     )
+
+    # **Every plugin's environment, before anything of theirs is started**
+    # (ADR-0088). `/run` is tmpfs, so on a fresh boot none of these files
+    # exists and the units that read them are ordered after this daemon. A
+    # plugin whose values are unchanged gets no write and no restart; one whose
+    # file is simply absent gets written and is *not* restarted here, because it
+    # has not been started yet either.
+    for plugin in installed_plugins:
+        _plugin_env(plugin)
 
     # The fourth corpus word was `Random` until 2026-09-22 and is `All`
     # now; a device that stored the old one is moved over rather than left
@@ -1193,6 +1360,24 @@ async def main() -> None:
         await bluetooth_agent.register(
             bus, pairing_agent, bluetooth_agent.capability_for(mode)
         )
+
+    async def _make_backup() -> None:
+        """**Everything a flash destroys, into the Backups share** (ADR-0083).
+
+        Off the loop: it reads the enrichment cache, which was 12 MB on
+        George's device, and gzips it.
+        """
+        try:
+            name = await asyncio.to_thread(
+                backups.create, settings.value("device_name") or "gexis"
+            )
+        except Exception as exc:  # noqa: BLE001 - a backup is never fatal
+            logger.warning("backup: failed: %s", exc)
+            return
+        logger.info("backup: %s", name)
+        # The Restore row lists the share, so a new archive has to reach the
+        # panel without it being reopened.
+        state_store.bump_settings_revision()
 
     def renderer_enabled(renderer_id: str) -> bool:
         """**ADR-0077.** Whether that source is switched on.
@@ -1662,6 +1847,11 @@ async def main() -> None:
         # ADR-0045: the panel's answer, back to the agent that is holding
         # BlueZ's handshake open waiting for it.
         pairing_answer=pairing_agent.answer,
+        # ADR-0083: what "restart the device" means is the daemon's to say.
+        restore=_restore_done,
+        # ADR-0086: the panel asks for a source's mark by id; the daemon is
+        # the only thing that knows where manifests live.
+        plugins=installed_plugins,
         # ADR-0043: the panel reports its first painted frame and the boot
         # animation ends there, not when the kiosk unit goes active.
         splash=Splash(),
@@ -1731,6 +1921,42 @@ async def main() -> None:
         and not adapter.capabilities.volume_over_bluealsa
     }
 
+    def _plugin_connected(session) -> None:
+        """**ADR-0084/0086.** A plugin said it is running.
+
+        A `service` needs nothing further - being connected is the whole of
+        what it does, which is the point of the `kind` split. A `renderer`
+        will need an adapter built around this session and registered with the
+        supervisor; that is the next piece and is deliberately not faked here.
+        """
+        if session.kind == "renderer":
+            logger.info(
+                "plugins: %s is a renderer and arbitration does not carry plugins "
+                "yet - it is connected and idle", session.id,
+            )
+
+    def _plugin_event(session, kind: str, message: dict) -> None:
+        # Availability is the one event that means something without an
+        # adapter: it is the panel's own question, and the state store has
+        # held a slot per renderer since Phase 3.
+        if kind == "available" and session.id in state_store.state.available:
+            state_store.set_available(session.id, bool(message.get("available")))
+            return
+        logger.debug("plugins: %s sent %s", session.id, kind)
+
+    plugin_server = PluginServer(
+        installed_plugins,
+        on_event=_plugin_event,
+        on_connect=_plugin_connected,
+        # ADR-0086: a plugin's rows outlive its process, so it is handed
+        # their current values rather than coming up on its own defaults.
+        settings_for=lambda plugin_id: {
+            key.split(".", 1)[1]: settings.value(key)
+            for key in plugin_rows
+            if key.startswith(f"{plugin_id}.")
+        },
+    )
+
     logger.info("gexis-core starting: adapters=%s", list(adapters))
     await asyncio.gather(
         # ADR-0077: through the gate, not directly - an adapter runs while its
@@ -1746,6 +1972,9 @@ async def main() -> None:
         # The `wifi` row's value, kept current from here rather than read on
         # the request path - where it measured 3.2 s and blocked everything.
         wifi.watch_connected(),
+        # ADR-0084: the socket plugins connect to. Served for the life of the
+        # process, beside the one the browser uses.
+        plugin_server.run(),
         state_server.run(),
     )
 

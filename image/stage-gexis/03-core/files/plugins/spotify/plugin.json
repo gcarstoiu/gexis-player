@@ -1,0 +1,10 @@
+{
+  "id": "spotify",
+  "name": "Spotify",
+  "kind": "renderer",
+  "unit": "go-librespot.service",
+  "label": "Spotify Active",
+  "accent": "#8fd9a8",
+  "status": "Listening",
+  "enabled_row": "spotify_enabled"
+}

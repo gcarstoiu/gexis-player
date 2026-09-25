@@ -218,6 +218,10 @@ class PlaybackState:
     #: is "data, not a constant" - a pair earns exemption by being
     #: measured and loses it if a later measurement moves it back.
     handoff_exempt_pairs: tuple[tuple[str, str], ...] = ()
+    #: **ADR-0086.** One entry per installed source: id, name, kind, accent,
+    #: status line and mark URL. Static for the process, like `capabilities`,
+    #: and the reason the panel can draw a renderer it has never heard of.
+    sources: tuple[dict, ...] = ()
     #: Bumped on every settings write (ADR-0035); a client refetches
     #: `GET /settings` when it moves.
     settings_revision: int = 0
@@ -290,6 +294,7 @@ class PlaybackState:
             "fixed_output": self.fixed_output,
             "meters": self.meters,
             "handoff_exempt_pairs": [list(pair) for pair in self.handoff_exempt_pairs],
+            "sources": [dict(s) for s in self.sources],
             "settings_revision": self.settings_revision,
             "pictures_revision": self.pictures_revision,
             "controls": self.controls,

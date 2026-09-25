@@ -1,150 +1,182 @@
 # Handoff
 
-Last updated: 2026-09-25 (twenty-fourth session, on R2D2 — **Phase 9 is
-COMPLETE. All five criteria closed on George's own word, in one session:
-criterion 0 on lived judgement with the opens below the floor, 1 with every
-surfaced settings row acting, 2 with the check that was lying about two rows
-fixed, 3 with his review's three findings, 4 with the handoff's own list
-triaged. Next is Phase 10, the plugin contract.**)
+Last updated: 2026-09-25 (twenty-fifth session, on R2D2 — **Phase 10 is
+CLOSED. The plugin contract carries a plugin that is not a renderer: the Beszel
+agent ships in the image, enrols from the settings screen and runs on George's
+hub, and the core contains nothing that names it. Next is Phase 11 — Plexamp as
+a renderer, as a plugin — which carries Phase 10's criterion 2 and the freeze
+with it.**)
 
 ## Start here
 
-**Criterion 0 is closed** and
-[ADR-0076](docs/decisions/0076-criterion-0-closes-with-the-opens-below-the-floor.md)
-says so honestly: the scrolls reach 56.9–59.5 drawn/s at 0.00 % dropped, and
-**the screen opens are 30–53 fps at 2.5–5.6 %, below Phase 7a's floor of 55
-and 2 %** ([Finding 067](docs/findings/067-what-the-panel-presents-at-the-end-of-criterion-0.md)).
-George closed it on lived use — *"the panel feels fast based on current
-interaction"* — not on the numbers. **Revisit before Phase 13**, the setup
-phase, when the panel stops being his.
+**Criterion 3 is done.** The Beszel agent runs on the device, reporting to
+George's hub, configured entirely through the settings screen — and **the core
+contains nothing that names it**. It is
+[ADR-0087](docs/decisions/0087-the-beszel-agent-is-the-first-service-plugin.md)
+and [ADR-0088](docs/decisions/0088-a-plugins-settings-reach-its-unit-as-environment.md),
+measured in Findings [078](docs/findings/078-what-the-beszel-agent-costs-and-listens-on.md),
+[079](docs/findings/079-what-the-plugin-contract-carries-to-a-unit.md) and
+[080](docs/findings/080-the-agent-enrolled.md).
 
-**Phase 9 is complete**, and the five closures are recorded where they were
-written — `docs/DEVELOPMENT.md`, each struck through with the closure above it
-and the original text kept below.
+**Where a plugin lives on the screen is George's shape**, given 2026-09-25 after
+seeing the first attempt put everything in System: *"we need to separate a plugin
+from default functionality for a user… create the plugin category in settings and
+add in there only Beszel toggle. When enabled then the config fields show up in
+system like now in the Beszel subgroup. When the toggle is off the entire
+subgroup is off."*
 
-- **0 — the panel meets Phase 7a's target.** Closed on lived judgement, not on
-  the numbers: scrolls reach 56.9–59.5 drawn/s at 0.00 % dropped, **the opens
-  are 30–53 and 2.5–5.6 % against a floor of 55 and 2 %**
-  ([ADR-0076](docs/decisions/0076-criterion-0-closes-with-the-opens-below-the-floor.md)).
-  **Revisit before Phase 13.**
-- **1 — every ADR-0022 row wired or scoped out.** Checked against the running
-  daemon: of 74 rows, no surfaced row is unwired and none carries a `?`.
-- **2 — no unwired UI remains.** Four generated lists. It found one thing, and
-  the thing was the check
-  ([Finding 071](docs/findings/071-what-the-panel-shows-that-does-nothing.md)).
-- **3 — the review pass with George.** Three issues, all fixed.
-- **4 — the handoff's issues triaged.** Ten items
-  ([Finding 074](docs/findings/074-the-handoffs-issues-triaged.md)).
+- **Plugins** — one row per installed plugin, named after it, carrying its switch.
+- **Sources / System** — that plugin's own rows, under a sub-heading with its
+  name, hidden with the heading when the switch is off. The core applies that to
+  every plugin row rather than leaving it to a manifest that might forget.
+- The three built-ins are untouched: they name an existing row with
+  `enabled_row`, which is how a default says it is furniture rather than
+  something the user added.
 
-### What was wired this session
+**Two things are owed to George and neither blocks anything:**
 
-Three commits, in this order, each verified on the hardware before the next:
+- **ADR-0022's inventory** has not gained the Plugins category or Beszel's four
+  rows. They are proposed in ADR-0087 and wait on his word, as the rule says.
+- **The agent cannot see throttling.** ADR-0087 claimed it gave him the throttle
+  log he asked for on 2026-09-18; the binary has no `vcgencmd`, `vcio` or
+  `throttl` string at all, because the Pi's throttle bits are not a Linux sensor.
+  He gets temperature and CPU over time — two of the four parts he asked for.
+  **Whether something small should sample `vcgencmd get_throttled` is a decision
+  nobody has taken.**
 
-1. **The device says which build it is.** `version` and `image_build` read
-   `/etc/gexis/image.info`, which the image now writes — nothing on a running
-   device could report it, because the `.info` beside the image is on the
-   build host. A device flashed before that stage existed says `unknown`
-   rather than showing an empty row.
-2. **Three handoff rows** — `restore_transport`, `show_transition`,
-   `handoff_duration` — read where they are used, so none needs a callback.
-3. **Reclaim, and the two Bluetooth rows.** `reclaim_lms` takes the device
-   back for LMS when a session ends, **off by default and opt-in by row**:
-   ADR-0027 declines to do it, and the reclaims that were measured were
-   spurious — a Spotify session ending because a phone locked would drag LMS
-   back on. `bt_pairing` needed more than storing, because the capability is
-   fixed when the BlueZ agent registers and `NoInputNoOutput` means BlueZ
-   never asks at all — so a change unregisters and registers again.
-   `bt_autotrust` was read per request already and simply was not settable.
-   **ADR-0022's note for it was stale**: there is no
-   `gexis-bluetooth-trust.service` in the image; the agent does the trusting.
-4. **[ADR-0077](docs/decisions/0077-a-source-that-is-off-is-not-running.md):
-   a source that is off is not running.** The last four rows — the three
-   `Enabled` toggles and `headless`.
-5. **The two orange dots**, both found by George reading the screen. The dot
-   means a row's marks carry `?`, a decision still owed. `version` and
-   `image_build` were still asking one that had been answered when they were
-   wired; `version` says `unknown` correctly on this image, and `built` now
-   falls back to `/etc/rpi-issue`, which pi-gen writes on every image, so it
-   reads **2026-09-19**.
-6. **[ADR-0078](docs/decisions/0078-the-transition-screen-waits-for-the-threshold.md):
-   the transition screen waits for the threshold.** `handoff_threshold` showed
-   `1` with no slider because a `number` row only draws one once it is wired —
-   and it had stayed unwired because **nothing had ever read it**. It now means
-   how long a takeover has to be in flight before the panel explains it; 0–3 s
-   in 0.5 s steps, 0 being the old behaviour. Five runs on the panel
-   ([Finding 069](docs/findings/069-the-transition-screen-against-the-threshold.md)).
+**The costs, now that they are real:** **0.02 % of one core and 14.2 MB**
+connected, against an 0.84 % *unconnected* floor — reconnecting was the expensive
+case, so nothing here needs re-measuring against the panel's frame budget.
 
-### ADR-0077, because it is the one with teeth
+### The two defects the device found, because they are the reason to read this
 
-Off means the renderer's unit is stopped **and disabled**, its adapter is not
-watching, the state reports it unavailable, and arbitration refuses it. Three
-things worth carrying forward:
+Both looked fine in a unit test and both would have shipped.
 
-- **Disabled, not just stopped.** A row whose effect ends at the next boot is
-  a row that lies the second time you look at it.
-- **A row only the panel honoured would not be a switch.** Spotify Connect is
-  advertised on the network, squeezelite is a player in the LMS app, and a
-  Bluetooth device is in a phone's settings screen. So Bluetooth off **powers
-  the radio down** as well as stopping `bluealsa-aplay`, and disables the unit
-  that unblocks rfkill at boot.
-- **The gate is in the core, not the adapters.** ADR-0013 says the three
-  defaults implement the public plugin contract; a plugin that read a settings
-  row named after itself would put that row in the contract. The adapter's
-  `run()` is wrapped instead. That also ends what would have been permanent
-  noise — with go-librespot stopped, the Spotify watch retried every five
-  seconds forever.
+1. **The switch was lying.** ADR-0086's amendment synthesised a plugin's
+   `Enabled` row with `default: True`, while ADR-0087 has the image install
+   Beszel's unit **disabled**. Two statements of one fact, and they disagreed:
+   the screen would have read **Enabled** for something neither running nor
+   going to start. It now asks systemd — `systemd.is_enabled`, once at startup —
+   because a declared default is a copy that nothing would notice going stale.
+2. **A credential arrived and nothing used it.** The restart on a changed value
+   was `systemctl try-restart`, which touches a unit that is *active*. Switched
+   on before anything was typed in — which is what anyone does, since the fields
+   only appear once it is on — the agent refuses to start and sits in `failed`.
+   `try-restart` does nothing to a failed unit. **In the first test the agent had
+   been started by hand and the mechanism looked correct.** The gate is now
+   `is-enabled`, with `reset-failed` first, because a unit that spent its
+   `StartLimitBurst` while unconfigured is the expected path here.
 
-**`systemctl disable --now go-librespot.service` measured 7.0 s**, all of it
-stopping the unit, so the call goes through `asyncio.to_thread`. Inline it was
-seven seconds in which the daemon answered nothing. After: the row's own `PUT`
-returns in 18 ms and the next request in 5 ms while the unit is still stopping.
+The second one is **[LESSONS 41](docs/LESSONS.md)**: a test double built to work
+does not visit the states the real subject starts in. The throwaway plugin's unit
+was a shell script that always started, so the mechanism was measured against a
+*running* unit six times out of six.
 
-**`headless` stops three units** — kiosk, visualiser, and the panel warm-up
-that is pure boot cost with no kiosk to warm for. Turning it on from the panel
-closes the panel; it is reversible from a phone, and only from a phone. 12 s
-to the panel gone, 20 s to it back.
+### What was built this session
 
-7. **[ADR-0079](docs/decisions/0079-with-lms-off-the-panel-is-two-screens.md):
-   with LMS off, the panel is two screens.** George's answer to the question
-   ADR-0077 left open — *"Library, browse and radio go with it."* Nothing
-   playing is the waiting marks at 1.8× with a settings icon in the corner;
-   something playing is Now Playing as the root, Home button become Settings,
-   artist line inert, no mini strip. **The row decides it, not
-   `availability.lms`**, which also goes false when the server is merely
-   unreachable. Six states on the panel
-   ([Finding 070](docs/findings/070-the-panel-with-lms-off.md)).
+Four commits, in this order:
 
-**Both dots are gone**, and no surfaced row carries a `?` any more.
+1. **[ADR-0086's amendment, verified](docs/decisions/0086-a-plugin-declares-itself-in-a-manifest.md)** —
+   every plugin gets an `Enabled` toggle. The three built-ins name their
+   existing row with `enabled_row` and keep one switch each; a plugin that names
+   none gets `<id>.enabled` wired to `systemctl enable/disable --now`.
+2. **[Finding 078](docs/findings/078-what-the-beszel-agent-costs-and-listens-on.md)** —
+   three of criterion 3's four open questions, measured before anything was
+   built. **The agent opens an inbound SSH port on 45876 even when given a hub
+   URL and a token**; `--listen -1` leaves it owning no listening socket at all,
+   so **ADR-0028's "unauthenticated on the LAN" stance needs no extending**.
+   14.3 MB RSS and 0.84 % of one core, as an unconnected floor.
+3. **[ADR-0088](docs/decisions/0088-a-plugins-settings-reach-its-unit-as-environment.md)** —
+   a manifest row may name an `env` variable, exported to
+   `/run/gexis/plugins/<id>.env` at 0600, which the unit reads with
+   `EnvironmentFile=-`. The case it exists for is a third-party binary that will
+   **never** speak ADR-0084's protocol. Also: a manifest's `onlyWhen` names the
+   plugin's own rows and is prefixed like `key`, which is what makes the fields
+   appear. **The quoting was checked against real systemd**, not against its
+   manual — seven values through a live unit, byte for byte.
+4. **`image/stage-gexis/07-beszel/`** — the binary pinned at **v0.20.0** with
+   the checksum agreed three ways, the unit, the `beszel` system user, the
+   manifest, and `beszel-agent-listen-check.sh`, which asserts after every start
+   that nothing is listening on 45876 and refuses to run a build where `-1` has
+   stopped working. `var/lib/beszel-agent` joined ADR-0083's backup members: the
+   fingerprint there is the identity the hub binds this system to, which is the
+   Spotify pairing's lesson applied before it could be learned twice.
 
-**And building screen 7 found a bug in ADR-0077**: switching off the *active*
-renderer left it active forever, because cancelling its watch is also how the
-release event stops arriving. The panel showed a stopped Spotify's track,
-artwork and progress bar indefinitely, while the same payload said the renderer
-was unavailable. Fixed with one `relinquish`; [LESSONS](docs/LESSONS.md) 39 is
-the part worth keeping.
+5. **The Plugins category**, after George corrected the placement, and
+   **Finding 080** once he had entered his keys: the connected cost, the
+   throttle gap, and a backup read back out of its own archive to show it
+   carries the enrolment. The three keys needed nothing added — they are
+   settings — and the fingerprint, added earlier, is there.
+
+**1160 tests pass.** The device is left with the agent **installed, enrolled and
+running**, and one current backup from 18:57 that contains the enrolment.
 
 ### Where it stands right now
 
-- **PR #25 is open** on `phase-8-plan`, and carries Phase 8 and the whole of
-  Phase 9.
-- **A fresh image is building** from the completed phase. The previous one,
-  `2026-09-25-…-489-gc25a7b1.img`, predates every criterion-1-to-4 commit.
-- **The core on the device is rsynced, not installed from the branch.** It is
-  the current tree and 1,039 tests pass, but a reflash is what makes it real.
+- **`gexis` runs the flashed image**, not an rsynced tree —
+  `2026-09-25-gexis-player-v0.2.1-513-g8cbff39.img`, on a **new card**. The old
+  one is kept intact and untouched, which is a better fallback than any
+  archive. **Phase 9 holds on it**: no orange dots, no visible-and-unwired row,
+  and `version` finally reports the build instead of `unknown`
+  ([Finding 076](docs/findings/076-the-first-flash-since-the-settings-work.md)).
+- **George's state was restored onto it** from the pre-flash copy: 41 settings,
+  3,664 enrichment rows, the phone's pairing, and `idle_url`. Checked usable
+  rather than merely present — 8 of 8 artist portraits served from the cache.
+- **PR #26** is open with everything: https://github.com/gcarstoiu/gexis-player/pull/26
+- **The image is behind the branch in ways a flash would notice**: ADR-0083's `[backups]` share, ADR-0085's ALSA default, the plugin
+  manifests, and now the whole `07-beszel` stage. **Nothing in that stage has
+  been through `make image`** — its files were installed by hand at the same
+  paths, modes and user, so the download, the checksum and the chroot step are
+  untested.
+- **[ADR-0083](docs/decisions/0083-a-backup-leaves-the-device.md) is rsynced on
+  top, not in the image.** Backup, the share and a restore round trip are all
+  verified on the hardware; the image *stage* that installs the share has not
+  run. **The next build is what proves it** - and until then a flash still
+  needs the hand copy above.
 - **The album-cover sweep has not been re-run** since the raw-name and
   collaboration fixes. 82 newly placed artists would now find release groups.
   George's low-cover report turned out to be the Bluetooth path (ADR-0080), so
   this is still owed and still unmeasured.
 
-### Next — Phase 10, the plugin contract
+### Next — Phase 11: Plexamp as a renderer, as a plugin
 
-ADR-0013 says the three default renderers are implemented against the public
-plugin contract and are not special-cased; Phase 10 is where that claim is
-tested by something outside the repository. Qobuz is the fourth-renderer test
-and a Beszel agent is the test that the contract carries a **non-renderer**
-(George, 2026-09-18).
+**George, 2026-09-25:** *"start 11, with the aim as having plexamp as the new
+renderer as a plugin."*
 
-**Three decisions are open and labelled in the ADRs**, none blocking:
+**The first work is not Plexamp.** It is the thing
+[`docs/PLUGIN-CONTRACT.md`](docs/PLUGIN-CONTRACT.md) names in its own open list:
+**arbitration does not carry plugins.** A `renderer` that connects is welcomed,
+logged and left idle, because the adapter built around a session and registered
+with the supervisor does not exist. **Nothing has ever played audio through this
+contract.** Everything else in Phase 11 is written against that adapter, so it
+comes first.
+
+Then, in order:
+
+1. **The adapter** — an `Adapter` whose acquire, release and commands are
+   ADR-0084 messages on a session, registered with the supervisor like the three
+   built-ins. Needs an ADR before it is built.
+2. **Plexamp in its own repository**, speaking the contract, with **no core
+   changes** — which is Phase 10's criterion 2, and the only thing that proves
+   the renderer half of the contract is right.
+3. **Freeze contract v1**, last, on that evidence.
+
+**What Finding 077 already measured, and the phase has to build around:**
+
+- **A commanded stop works, and the device is held for a deterministic 14 s
+  afterwards.** So this renderer's `release_ladder` needs a polite grace longer
+  than that, exactly as LMS overrides it for squeezelite's idle tick.
+- **It frees the device and keeps running**, so ADR-0008's reversal condition is
+  **not** triggered.
+- **It opens `hw:5,0` in S32_LE**, not `pcm.output`, which is why
+  [ADR-0085](docs/decisions/0085-the-alsa-default-is-our-output.md) made our
+  output the ALSA default. Whether the meters then work is **unverified** — moOde
+  measured peppyalsa giving an all-zero FIFO for S32_LE.
+- **The TCP count at `:32500` is not a release signal.** `alsa.device_held_by` is.
+
+### Still open, and none of it blocking
+
+**Three decisions are labelled in the ADRs:**
 
 - **Is 1.8× the right scale for the waiting screen?** A judgement, not a
   measurement: two services come to 680 px of the width and about 300 px of the
@@ -164,6 +196,13 @@ get_throttled` read `0xd0000` last session: under-voltage, frequency capping
 and the soft temperature limit have all *occurred* during that uptime —
 historical bits, none current, at 74.5 °C and a full 1.8 GHz. Not a UI
 measurement, but it is the kind of thing that makes measurements wander.
+
+**The Beszel agent does not close this.** It cannot read those bits at all
+([Finding 080](docs/findings/080-the-agent-enrolled.md)) — they come from
+`vcgencmd get_throttled` over `/dev/vcio`, which it never opens. George gets
+temperature and CPU over time, which is two of the four parts he asked for on
+2026-09-18. **Whether something small should sample the bits themselves is a
+decision nobody has taken.**
 
 ## Build environment (2026-09-13) — read this before the next build
 
@@ -325,18 +364,31 @@ reverted, currently-flashed image predates this fix.
 9  settings wiring + UI polish          * COMPLETE 2026-09-25 - all five
                                             criteria closed. 0 carries a
                                             revisit before 13
-10 plugin contract + themes               <- next
-                                          Qobuz is the fourth-renderer test;
-                                            a Beszel agent is the test that
-                                            the contract carries a non-renderer
-                                            (George, 2026-09-18)
-11 Plexamp as a renderer                  starts with the hardware check: does it
-                                            release the device? (ADR-0008's
-                                            reversal condition)
-12 Qobuz Connect as a renderer            the plugin that proves 10
+10 plugin contract                      * COMPLETE 2026-09-25 - criterion 3
+                                            done, criterion 1 documented and
+                                            versioned. Criterion 2 and the
+                                            freeze go to 11, because 2 is the
+                                            freeze's evidence. Themes left it
+                                            for 14 and the defaults stayed in
+                                            the core process, both George's;
+                                            the Beszel agent was the test that
+                                            it carries a non-renderer, and it
+                                            amended the contract twice
+11 Plexamp as a renderer, as a plugin     <- next. ALSO the fourth-renderer proof
+                                            for 10, replacing Qobuz. Its
+                                            hardware check is pulled forward
+                                            into 10 - Finding 075 says moOde
+                                            built a Plexamp route and parked it
+12 Qobuz Connect as a renderer            a second plugin against a contract
+                                            already proved; keeps the private
+                                            repository out of the critical path
 13 first boot without a network           setup access point; pull forward the
                                             moment a non-developer gets a device
                                             (ADR-0031)
+14 themes                                 cut out of 10. ADR-0016 calls themes
+                                            plugins and plugins processes; a
+                                            theme has no process - settle that
+                                            first
 ```
 
 Phases 9-13 were renumbered on 2026-09-16 (George). `docs/DEVELOPMENT.md`
@@ -349,6 +401,56 @@ holds each phase's acceptance criteria; this list is only the order.
   daemon restart measures the *old* bundle faithfully and reports that the
   change does not work. `Page.navigate` to the same URL over CDP on 9222.
   [LESSONS](docs/LESSONS.md) 38, and it cost a wrong result on 2026-09-25.
+
+- **A flash wipes everything the device learned.** Both databases live on the
+  card — `/var/lib/gexis-core/settings.db` and `enrichment.db` — as do BlueZ's
+  pairings. **ADR-0022's `backup` row is inventoried and unwired**, so nothing
+  on the device exports either. **A manual copy was taken 2026-09-25**, and it
+  is the shape to repeat before every flash:
+
+  ```
+  ssh pi@gexis.local 'sudo tar -czf /tmp/gexis-state.tgz -C / \
+      var/lib/gexis-core/settings.db var/lib/gexis-core/enrichment.db \
+      etc/gexis/core.toml etc/gexis/device-name.env
+    sudo tar -czf /tmp/gexis-bt.tgz -C / var/lib/bluetooth
+    sudo chown pi /tmp/gexis-*.tgz'
+  scp pi@gexis.local:/tmp/gexis-{state,bt}.tgz <somewhere outside this repo>
+  ```
+
+  **Outside the repository, always.** `core.toml` carries `idle_url`, a
+  per-display identifier that must never be committed. The 2026-09-25 copy is
+  in `~/gexis-backups/2026-09-25-pre-flash/`: 41 stored settings including all
+  three secrets, 3,664 enrichment rows, 7,061 notes, and the phone's pairing.
+
+  **After a flash, in this order:**
+
+  1. **The two keys and the token**, which have no default and nothing can
+     guess: `fanart_key` (without it, portraits come from LMS only),
+     `wallpaper_key` (Pixabay, ADR-0047), `listenbrainz_token`.
+  2. **`idle_url`** — deliberately *not* in the image's `core.toml` because it
+     carries a per-display identifier and this repository is public. Until it
+     is set, the idle screen falls back to the built-in clock.
+  3. **`weather_location`**, **`timezone`**, **`device_name`** if not `gexis`.
+  4. **Re-pair the phone.** BlueZ's store went with the card.
+  5. **Run both sweeps** — artist portraits and album covers. `enrichment.db`
+     held every one and it is gone, so the library starts with LMS's pictures
+     and nothing else. Roughly seven minutes and 45–50 minutes respectively,
+     measured 2026-09-24.
+  6. **Append C3PO's SSH key** — see below.
+
+  **What survives without being touched:** `lms_server`, baked into the
+  image's `core.toml`, and any row George never moved off its default.
+  **That is fewer than it looks.** The 2026-09-25 backup shows
+  `spectrum_smoothing` at **62** against a registry default of 90 — so
+  ADR-0058's ballistics are *not* all at their defaults, and an earlier note
+  here claiming they were was wrong. `meter_fall` (400 ms) and
+  `meter_smoothing` (240 ms) do match.
+
+  **Restoring wholesale carries dead keys.** That DB still holds
+  `per_renderer_volume` and `boot_volume`, rows deleted on 2026-09-23 with the
+  machinery behind them, and `idle_brightness`, which the registry now calls
+  `background_brightness`. Harmless — `Settings.value` reads the registry, not
+  the store — but a restore is not a reason to stop reading what it contains.
 
 - **A reflashed card only has R2D2's SSH key.** `make provision` writes the
   one key in `image/provision.local.env`; C3PO's
