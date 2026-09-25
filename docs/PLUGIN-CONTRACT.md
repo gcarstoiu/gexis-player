@@ -251,12 +251,22 @@ configuration from the environment like most daemons do.
 
 ## Deliberately not here yet
 
-- **Who starts a plugin.** ADR-0016 listed lifecycle as its own open
-  consequence and it still is. **Discovery itself is settled**
-  ([ADR-0086](decisions/0086-a-plugin-declares-itself-in-a-manifest.md)): a
-  plugin ships `plugin.json` under `/usr/share/gexis/plugins/<id>/`, and its
-  id must match one before it may connect. Connecting says a plugin is
-  *running*, not that it exists.
+- ~~**Who starts a plugin.**~~ **Answered for a plugin that is a unit**, which
+  every plugin is today: it declares one in its manifest, the core gives it a
+  switch, and the switch is `systemctl enable/disable --now`
+  ([ADR-0086](decisions/0086-a-plugin-declares-itself-in-a-manifest.md) as
+  amended). Its settings reach it before it starts
+  ([ADR-0088](decisions/0088-a-plugins-settings-reach-its-unit-as-environment.md)).
+  **Discovery is settled too**: a plugin ships `plugin.json` under
+  `/usr/share/gexis/plugins/<id>/`, and its id must match one before it may
+  connect. Connecting says a plugin is *running*, not that it exists.
+
+  **What is still open is who puts it there.** Every plugin so far arrives in
+  the image ([ADR-0087](decisions/0087-the-beszel-agent-is-the-first-service-plugin.md),
+  George's call), and nothing installs one on a running device: that needs a
+  writable plugin directory, a checksummed download and a rule about who may
+  ask. ADR-0016's lifecycle consequence survives as *installation*, not as
+  *starting*.
 - **Arbitration for a plugin renderer.** The socket carries `acquire`,
   `release` and the commands; what does not exist yet is the adapter built
   around a session and registered with the supervisor. A `renderer` that
