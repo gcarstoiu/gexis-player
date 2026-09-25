@@ -244,22 +244,69 @@ waits for Spotify, that is the right trade, and it is the same trade LMS makes
 14 s timer runs while nobody is waiting, and the device is already free by the
 time anyone reaches for another renderer.
 
-### Is the hold configurable? Not that this found
+### Is the hold configurable? An exhaustive search says no
 
-**Checked:** all **138** settings in Plexamp's own store, filtered for
-`audio`, `device`, `idle`, `hold`, `release`, `buffer`, `exclusive`, `sink`,
-`output`; the audio settings the web UI exposes; and the bundle for
-`freeDevice`, `deviceTimeout`, `BASS_Free` and 14–15 s constants.
+George asked for every possible place to be checked. **The mechanism is now
+named, and it is compiled in.**
 
-The only `idleTimeout` in the JavaScript is **15 s on an EventSource**
-(`connect`, `onMessage`, `eventSource.close`) — the same number against a
-different thing, and **not** claimed here as the cause.
+**What it actually is — two timers, from the log:**
 
-**Not checked, and where the answer probably is:** `treble/linux-arm64/` holds
-the native BASS libraries (`libbass*.so`). The device is opened and freed
-there, not in the JavaScript, so a setting for it would be BASS's rather than
-Plexamp's. `PLEXAMP_JACK` is the only Plexamp environment variable in the
-bundle.
+```
+16:43:33.120  stop issued
+16:43:33.147  BASS: Stopped in 0 ms                      <- audio stops at once
+16:43:36.113  BASS: Pausing audio output (after delay: 1)
+              BASS: Suspending player                     <- +3.0 s
+16:43:47.156  BASS: Suspending quiescent device
+              BASS: Suspending device (… force: 0)
+              BASS: Tearing down audio stack              <- +14.0 s
+16:43:47.250  card closed
+```
+
+So the device is freed by **`Suspending quiescent device`**, eleven seconds
+after the player suspends and fourteen after the stop.
+
+**Where that code lives.** Every one of those strings is in
+`treble/linux-arm64/treble.node` — Plexamp's native BASS bridge, 7.1 MB — and
+**none of them is in the 9.2 MB JavaScript bundle**:
+
+| string | in the JS | in `treble.node` |
+|---|---|---|
+| `quiescent` | **0** | 2 |
+| `Pausing audio output` | **0** | 1 |
+| `suspendDevice` | **0** | 2 |
+| `Suspending player` | **0** | 1 |
+
+**So there is no JavaScript constant to change and no setting that reaches
+it.** `BASS_SetConfig` is called from inside `treble.node` with values
+compiled into it.
+
+**Everything that was searched:**
+
+1. **All 138 settings** in Plexamp's own store, enumerated in full rather than
+   filtered — nothing about device hold, idle or release.
+2. The audio settings the **web UI** exposes, and `/settings/values` for each.
+3. The **JavaScript bundle** for `quiescent`, `Pausing audio output`,
+   `suspendDevice`, `Suspending player`, `freeDevice`, `deviceTimeout`,
+   `BASS_Free`, `idleTimeout`, and 14 000/15 000 constants. The only
+   `idleTimeout` is **15 s on an EventSource** — the same number against a
+   different thing, and not the cause.
+4. **`treble.node`'s strings**: every `BASS:` log line, every BASS API call it
+   makes, and every environment variable name.
+5. **`libbass.so` and `libbassmix.so`** for `timeout`, `idle`, `nonstop`,
+   `keepalive`, `BASS_CONFIG`, `dev_` — nothing.
+6. **Environment variables Plexamp reads**, which are exactly three:
+   `PLEXAMP_CLAIM_TOKEN`, `PLEXAMP_JACK`, `PLEXAMP_PLAYER_NAME`. None touches
+   the audio device lifecycle.
+7. **Config files outside the settings store** — there are none.
+8. **Seven settings changed by hand** and measured, including `sweetFades` and
+   `precacheNetworkSpeed`. No effect.
+
+**What was not done:** disassembling `treble.node` to locate the constant.
+That would find the number and still not make it settable without patching a
+shipped binary, which is not something this project would do.
+
+**And it does not matter**, for the reason in the section above: the ladder
+frees the device in ~170 ms and nothing has to wait fourteen seconds.
 
 ### Does "no source selected" in the web UI invalidate any of this? No
 
