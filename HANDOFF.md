@@ -1,10 +1,10 @@
 # Handoff
 
-Last updated: 2026-09-25 (twenty-fifth session, on R2D2 — **Phase 10 is closed
-and merged (PR #27). Phase 11 has started and its first work is done:
-arbitration carries a plugin renderer. A plugin can now take the audio device
-from LMS over the socket, and a plugin that will not let go is escalated against
-its own unit — proved end to end in the suite, not yet by a real renderer.**)
+Last updated: 2026-09-25 (twenty-fifth session, on R2D2 — **Phase 10 closed and
+merged. Phase 11 has a renderer plugin living in its own repository,
+`gcarstoiu/gexis-plexamp`, connected to the core and carried by arbitration.
+Writing it found two more holes in the contract, which is what it was for. What
+has not happened is a takeover: Plexamp has not played through it.**)
 
 ## Start here
 
@@ -43,38 +43,56 @@ rather than engineers around.
 11, and until it happens the renderer half of the contract stays provisional —
 which is why v1 is still not frozen.
 
-### Next, and it needs two words from George
+### Where Phase 11 actually is
 
-**Plexamp ships the way Beszel does** —
-[ADR-0090](docs/decisions/0090-plexamp-ships-the-way-beszel-does.md), on his
-instruction: *"Present in the image just like beszel. I thought in general we
-did beszel to learn how to do it. Let's rely on the learnings and do it
-similarly."*
+**`gcarstoiu/gexis-plexamp` exists, is public, and works as far as it has been
+taken.** On the device:
 
-One stage, `08-plexamp`, pinning Plexamp headless **and** our plugin — which
-lives in its own repository, because that is Phase 10's criterion 2 and the
-whole point of the exercise.
+```
+arbitration: plexamp registered
+state: plexamp has a slot
+plugins: plexamp is a renderer and arbitration carries it
+```
 
-**The one structural difference from Beszel**: Plexamp is two processes where
-Beszel was one. The manifest's `unit` is `plexamp.service`, because the release
-ladder escalates against whoever holds the device; our plugin is a second unit
-`PartOf=` it, so the single switch in the Plugins category controls both.
-**A `plugin_unit` field in the contract was considered and rejected** — Phase 10
-amended the contract twice because things could not be expressed at all, and
-systemd already says "these two go together".
+and the settings screen shows `plexamp.enabled` in **Plugins** reading off, with
+its claim token hidden in **Sources** until it is on — George's shape, now for a
+renderer.
 
-**Two things wait on George:**
+**Writing it from outside broke two things, neither of which any test here could
+have caught**, because every test until now was written by the same hand as the
+thing it tested:
 
-- **The repository's name.** Proposal: `gcarstoiu/gexis-plexamp`, public,
-  publishing tagged releases the stage pins by checksum — the relationship the
-  image already has with go-librespot, peppyalsa and beszel-agent.
-- **`plexamp.claim_token` for ADR-0022's inventory**, in the Plugins group. The
-  only row: claiming needs a token *and* a player name in one session, and the
-  name comes from ADR-0048's device name rather than being typed a second time.
+- **The socket authorised nobody but root.** `0660` on a socket this daemon
+  creates is `root:root`; the plugin ran as `pi`, as ADR-0087 says a plugin
+  should, and the kernel refused it before `hello`. Now `root:gexis-plugins`,
+  with the group created in the image
+  ([ADR-0084](docs/decisions/0084-plugins-speak-json-lines-over-a-unix-socket.md)
+  amended).
+- **Arbitration carried it and the published state did not.** ADR-0089 named the
+  supervisor and missed `StateStore`, whose renderer slots come from the same
+  fixed map. It failed as `unknown renderer 'plexamp'` *after* the handshake, the
+  adapter and the registration had all worked.
 
-**And a number that was not known when the shape was chosen:** this costs about
-**92 MB** — Node is not in the image today, and with Plexamp itself that is
-51 + 41 MB against the Beszel agent's 9.5.
+### The next thing, and it needs the device to be free
+
+**Plexamp has never played through the contract.** The attempt on 2026-09-25 did
+not happen: `playMedia` answered 200 and the timeline stayed `stopped`, with
+Spotify holding the device and the panel in use. **Nothing was proven about the
+takeover, the release ladder against a plugin renderer, or the 14 s hold in
+practice** — the end-to-end test in `core/tests/` covers that path with a fake
+plugin, and a fake plugin is not this.
+
+So the next session: with the device free, play something on Plexamp, watch the
+`acquire` reach arbitration, then have LMS take it and watch the ladder wait out
+the 14 s rather than escalating. **That is Phase 10's criterion 2 closing**, and
+until it happens the renderer half of the contract is still unproven and v1 must
+not freeze.
+
+**Two probe mistakes worth not repeating**, both in the same script: it read
+`/proc/asound/card5` because an older scratch script did — **this project forbids
+referencing a card by index** and the right form is to resolve
+`sndrpihifiberry` by name — and it posted to `/renderers/lms/activate`, which
+does not exist; the route is `/renderer/{id}/activate`.
 
 **What the plugin has to do is already measured**
 ([Finding 077](docs/findings/077-plexamp-on-gexis.md)) and needs no discovery:
