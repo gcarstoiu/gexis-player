@@ -172,8 +172,22 @@ they are the contract's **source**, not its consumers, and
    audio path does not work for the meters**, because it opens `hw:5,0`
    directly rather than `pcm.output`, in **S32_LE**, which is the format moOde
    measured as giving an all-zero peppyalsa FIFO.
-2. ADRs: the transport (recommended: **Unix socket, line-delimited JSON**).
-3. Draw the contract from `Adapter` and `Capabilities` as they are.
+2. ~~ADRs: the transport~~ — **done**, George took the recommendation:
+   [ADR-0084](docs/decisions/0084-plugins-speak-json-lines-over-a-unix-socket.md),
+   a Unix socket carrying JSON lines. The plugin channel can claim the audio
+   device and lie about what is playing, which is not the class of thing
+   ADR-0028 left open on the LAN.
+3. ~~Draw the contract from `Adapter` and `Capabilities` as they are.~~ —
+   **drafted**: [`docs/PLUGIN-CONTRACT.md`](docs/PLUGIN-CONTRACT.md), version
+   1, **and deliberately not frozen**. It freezes after a non-renderer has
+   been built against it, not before. `test_contract_surface.py` now checks
+   the document against the objects as well as the objects against
+   themselves, which is the drift guard ADR-0013's amendment promised.
+
+   **The `kind` split is the part to attack**: `renderer` declares a unit, a
+   release action and capabilities; `service` declares a unit and nothing
+   else. If a Beszel agent cannot be said as a `hello` with
+   `kind: "service"`, the contract is wrong.
 4. **Discovery — the mass of the phase.** `"lms"` appears in **six core
    modules outside `adapters/`** and **ten UI files**, so "no core changes"
    means a manifest, a scanned directory, and settings rows and source artwork

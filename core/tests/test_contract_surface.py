@@ -91,3 +91,74 @@ def test_every_default_renderer_satisfies_it():
         for name in ("renderer_id", "release_action", "capabilities", "unit_name"):
             assert getattr(adapter, name, None) is not None, f"{adapter.__name__}.{name}"
         assert {f.name for f in dataclasses.fields(adapter.capabilities)} == DECLARED
+
+
+# ---------------------------------------------------------------------------
+# The document, against the objects it is derived from.
+# ---------------------------------------------------------------------------
+
+from pathlib import Path  # noqa: E402
+
+CONTRACT = Path(__file__).resolve().parents[2] / "docs" / "PLUGIN-CONTRACT.md"
+
+
+def test_the_contract_document_exists():
+    """Phase 10 criterion 1 is "contract documented and versioned". Without
+    the file, every assertion below passes by checking nothing."""
+    assert CONTRACT.is_file()
+    assert "**Version:** `1`" in CONTRACT.read_text()
+
+
+def test_it_names_every_declared_field():
+    """**The drift guard's other half** (ADR-0013 as amended). The defaults do
+    not speak this protocol, so nothing exercises the two together; if
+    `Capabilities` grows a field the document never mentions, a plugin author
+    cannot know it exists."""
+    text = CONTRACT.read_text()
+    missing = [name for name in DECLARED if name not in text]
+    assert not missing, f"the contract document never mentions: {missing}"
+
+
+def test_it_names_every_method_a_plugin_has_to_answer():
+    text = CONTRACT.read_text()
+    missing = [name for name in REQUIRED | OPTIONAL if name not in text]
+    assert not missing, f"the contract document never mentions: {missing}"
+
+
+#: Two attributes are shorter on the wire than in Python. Written out rather
+#: than derived, so a rename on either side has to be made deliberately here.
+WIRE_NAME = {"renderer_id": "id", "unit_name": "unit"}
+
+
+def test_it_names_every_attribute():
+    text = CONTRACT.read_text()
+    missing = [
+        name for name in ATTRIBUTES
+        if f"`{WIRE_NAME.get(name, name)}`" not in text
+    ]
+    assert not missing, f"the contract document never mentions: {missing}"
+
+
+def test_it_carries_the_transport_decision_rather_than_restating_it():
+    """A specification that re-argues its own transport is one that will
+    disagree with the record. It cites ADR-0084 instead."""
+    text = CONTRACT.read_text()
+    assert "0084-plugins-speak-json-lines-over-a-unix-socket.md" in text
+    assert "/run/gexis/plugins.sock" in text
+
+
+def test_it_still_says_it_is_a_draft():
+    """Phase 10 freezes this *after* a non-renderer is built against it. If
+    this assertion is changed, that should be a deliberate act with the
+    Beszel agent already written."""
+    text = CONTRACT.read_text()
+    assert "draft, not frozen" in text
+
+
+def test_a_service_plugin_is_expressible():
+    """`docs/DEVELOPMENT.md`: "If the contract cannot express that, it is a
+    renderer API wearing a plugin's name." The `kind` split is what makes a
+    non-renderer sayable, so it is asserted rather than assumed."""
+    text = CONTRACT.read_text()
+    assert '`service`' in text
+    assert '`renderer`' in text
