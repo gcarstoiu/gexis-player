@@ -138,9 +138,10 @@ corrects an earlier guide that had it the other way round.
   and is still unanswered. §1 is about a *different* signal, and a renderer
   could fail either independently.
 - **Whether a Stop command drops the connection.** George says it does; the
-  supplied export does not mention it and nothing here could test it. **Three
+  supplied export does not mention it and nothing here could test it. **Four
   separate questions now hang on the same install**: does it free the device,
-  does a commanded stop work, and can a spontaneous release be observed.
+  does a commanded stop work, can a spontaneous release be observed, and what
+  sample format does it open.
 - **Whether a newer Plexamp behaves differently.** 4.13.2 is what was parked.
 - **Whether the S32_LE problem is peppyalsa's, the plugin's, or the stream's.**
   The note says the mechanism was not investigated.
