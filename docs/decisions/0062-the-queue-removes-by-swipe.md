@@ -39,6 +39,27 @@ Snowflake"* stop being truncated, which is 50 px back on a 417 px rail.
 - **A tap still plays.** The click that ends a swipe is ignored for 320 ms
   after it.
 
+## The spacing belongs to the row, 2026-09-25
+
+George: *"it has a few pixels settle after the removal itself, when all
+tracks under the removed one just push up by a few pixels."*
+
+**Three pixels, and the list's `gap` was three pixels.** A collapsing row
+animates its own height to nothing, but a `gap` belongs to the *list*, so
+the space the row was holding stays open until the node is destroyed — which
+is when the new queue arrives, about a second after the animation ended.
+Watched on the row below: 493 → 433 over 600 ms, then **433 → 430 at
+951 ms**.
+
+The spacing is now `margin-bottom` on the row and collapses with it. The
+same row now travels 490 → 427 in one movement ending at 610 ms, and stays
+there.
+
+**It also made the windowing exact.** A spacer standing in for *n* rows is
+*n* pitches tall, but the flex `gap` added one more gap either side of it,
+so the rail measured three pixels taller than the arithmetic. 455 rows now
+give 28,665 px, which is 455 × 63 exactly.
+
 ## The affordance, which is the cost
 
 **A swipe cannot be seen.** The X said what it did and where; this says

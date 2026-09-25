@@ -79,10 +79,11 @@
   function measurePitch() {
     const row = list?.querySelector('.qrow');
     if (!row) return;
-    // The gap counts: the list is a flex column with 3px between rows, so
-    // 458 rows are 1,374px taller than 458 row heights.
-    const gap = parseFloat(getComputedStyle(list).rowGap) || 0;
-    pitch = row.offsetHeight + gap;
+    // A row's own bottom margin is its share of the spacing, so the pitch
+    // is the two together - and the spacers, which have no margin, stand
+    // for exactly that many rows.
+    const spacing = parseFloat(getComputedStyle(row).marginBottom) || 0;
+    pitch = row.offsetHeight + spacing;
     pitched = true;
   }
 
@@ -583,7 +584,13 @@
     overflow-y: auto;
     display: flex;
     flex-direction: column;
-    gap: 3px;
+    /* **The space between rows belongs to the row**, not to the list. A
+       `gap` is the list's, so a row that collapses to nothing still holds
+       its gap open until the node is destroyed - which is when the queue
+       comes back, about a second later. The list then settled upward by
+       exactly 3px, long after the removal looked finished (George,
+       2026-09-25; measured 493 -> 433 over 600ms, then 433 -> 430 at
+       951ms). As a margin it collapses with the row. */
     scrollbar-width: none;
     contain: content;
     touch-action: pan-y;
@@ -594,6 +601,7 @@
 
   .qrow {
     height: 60px;
+    margin-bottom: 3px;
     flex-shrink: 0;
     /* Only the removal animates it; a row that is simply there must not
        ease into its own height when the list re-renders. */
@@ -644,9 +652,13 @@
      before the queue does rather than jumping when it lands. */
   .qrow.is-going {
     height: 0;
+    /* Its own spacing goes with it, so nothing is left to close up when
+       the row is finally taken out of the list. */
+    margin-bottom: 0;
     opacity: 0;
     transition:
       height 190ms cubic-bezier(0.4, 0, 1, 1) 60ms,
+      margin-bottom 190ms cubic-bezier(0.4, 0, 1, 1) 60ms,
       opacity 140ms linear 60ms;
   }
   .qrow__hit:active {
