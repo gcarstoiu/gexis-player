@@ -147,16 +147,19 @@ running**, and one current backup from 18:57 that contains the enrolment.
   3,664 enrichment rows, the phone's pairing, and `idle_url`. Checked usable
   rather than merely present — 8 of 8 artist portraits served from the cache.
 - **PR #26** is open with everything: https://github.com/gcarstoiu/gexis-player/pull/26
-- **The image is behind the branch in ways a flash would notice**: ADR-0083's `[backups]` share, ADR-0085's ALSA default, the plugin
-  manifests, and now the whole `07-beszel` stage. **Nothing in that stage has
-  been through `make image`** — its files were installed by hand at the same
-  paths, modes and user, so the download, the checksum and the chroot step are
-  untested.
-- **[ADR-0083](docs/decisions/0083-a-backup-leaves-the-device.md) is rsynced on
-  top, not in the image.** Backup, the share and a restore round trip are all
-  verified on the hardware; the image *stage* that installs the share has not
-  run. **The next build is what proves it** - and until then a flash still
-  needs the hand copy above.
+- **A new image is built and verified as a file**:
+  `2026-09-25-gexis-player-v0.2.1-559-gf475cfa.img`, from `main` at the merge of
+  PR #27 — so it carries all of Phase 10 and **none** of Phase 11
+  ([Finding 081](docs/findings/081-the-first-image-with-the-plugin-stage.md)).
+  `07-beszel` ran for the first time, `verify-image.sh` gained a section for it
+  and passes, and the agent binary in the image is asserted to be the one that
+  was enrolled and measured. **Nothing has been booted** — every statement about
+  it is about a file. **Not flashed.**
+- ~~**[ADR-0083](docs/decisions/0083-a-backup-leaves-the-device.md) is rsynced on
+  top, not in the image.**~~ — **it is in the image now**, along with ADR-0085's
+  ALSA default and the four plugin manifests. Backup, the share and a restore
+  round trip were verified on the hardware before this; what the build settles is
+  that the *stage* installs them.
 - **The album-cover sweep has not been re-run** since the raw-name and
   collaboration fixes. 82 newly placed artists would now find release groups.
   George's low-cover report turned out to be the Bluetooth path (ADR-0080), so
