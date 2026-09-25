@@ -138,11 +138,41 @@ the part worth keeping.
 
 ### Next — Phase 10, the plugin contract
 
-ADR-0013 says the three default renderers are implemented against the public
-plugin contract and are not special-cased; Phase 10 is where that claim is
-tested by something outside the repository. Qobuz is the fourth-renderer test
-and a Beszel agent is the test that the contract carries a **non-renderer**
-(George, 2026-09-18).
+**Planned 2026-09-25 and reshaped by three of George's decisions**: themes
+leave for Phase 14, the three default renderers **stay in the core process**,
+and **Plexamp replaces Qobuz** as the contract's fourth-renderer proof, because
+Qobuz needs a partnership and a private repository and that put the only proof
+two phases out.
+
+Keeping the defaults in place makes ADR-0013's claim — *"implemented against
+the public plugin contract, not special-cased"* — untrue as written, so
+[the record is amended](docs/decisions/0013-defaults-implement-public-contract.md):
+they are the contract's **source**, not its consumers, and
+`core/tests/test_contract_surface.py` pins the surface so the wire schema and
+`Capabilities` cannot drift apart in silence.
+
+**The order, and the reason for it:**
+
+1. **The Plexamp hardware check, pulled forward out of Phase 11.** Do not
+   freeze a contract around a renderer that cannot be one.
+2. ADRs: the transport (recommended: **Unix socket, line-delimited JSON**).
+3. Draw the contract from `Adapter` and `Capabilities` as they are.
+4. **Discovery — the mass of the phase.** `"lms"` appears in **six core
+   modules outside `adapters/`** and **ten UI files**, so "no core changes"
+   means a manifest, a scanned directory, and settings rows and source artwork
+   arriving from the plugin. The unsurfaced `plugins` row is where it lands.
+5. The **Beszel agent** against the draft, *before* freezing it — it is the
+   test that the contract carries something with no metadata, no transport and
+   no claim on the audio device.
+6. Freeze v1. Criterion 2 closes in Phase 11.
+
+**Read [Finding 075](docs/findings/075-what-moode-learned-about-plexamp.md)
+before starting.** George's moOde project built a Plexamp route and **parked
+it**: pause and app-dismissed are byte-identical at every observable endpoint,
+which is exactly the release edge `Adapter.run` requires. This device saw the
+same shape over Bluetooth. The finding also carries two smaller things — our
+`output.conf` pins no sample format, and peppyalsa gave moOde an all-zero meter
+FIFO for S32_LE.
 
 **Three decisions are open and labelled in the ADRs**, none blocking:
 
@@ -325,18 +355,28 @@ reverted, currently-flashed image predates this fix.
 9  settings wiring + UI polish          * COMPLETE 2026-09-25 - all five
                                             criteria closed. 0 carries a
                                             revisit before 13
-10 plugin contract + themes               <- next
-                                          Qobuz is the fourth-renderer test;
-                                            a Beszel agent is the test that
-                                            the contract carries a non-renderer
-                                            (George, 2026-09-18)
-11 Plexamp as a renderer                  starts with the hardware check: does it
-                                            release the device? (ADR-0008's
-                                            reversal condition)
-12 Qobuz Connect as a renderer            the plugin that proves 10
+10 plugin contract                        <- next. Themes left it for 14, and
+                                            the defaults stay in the core
+                                            process (George, 2026-09-25), so
+                                            ADR-0013 is amended: they are the
+                                            contract's source, not its
+                                            consumers. A Beszel agent is the
+                                            test that it carries a non-renderer
+11 Plexamp as a renderer                  now ALSO the fourth-renderer proof
+                                            for 10, replacing Qobuz. Its
+                                            hardware check is pulled forward
+                                            into 10 - Finding 075 says moOde
+                                            built a Plexamp route and parked it
+12 Qobuz Connect as a renderer            a second plugin against a contract
+                                            already proved; keeps the private
+                                            repository out of the critical path
 13 first boot without a network           setup access point; pull forward the
                                             moment a non-developer gets a device
                                             (ADR-0031)
+14 themes                                 cut out of 10. ADR-0016 calls themes
+                                            plugins and plugins processes; a
+                                            theme has no process - settle that
+                                            first
 ```
 
 Phases 9-13 were renumbered on 2026-09-16 (George). `docs/DEVELOPMENT.md`

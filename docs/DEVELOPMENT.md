@@ -2030,15 +2030,38 @@ implemented but not settable**, which is the awkward category:
 `lms_server`, `lms_player` and `bt_autotrust` are hardcoded values the
 registry advertises.
 
-### Phase 10 — Plugin contract and themes
+### Phase 10 — Plugin contract
+
+**Themes left this phase on 2026-09-25** (George): *"Themes to be cut out and
+have its own phase at the end of the current list."* They are **Phase 14**.
+
+**The defaults are not ported** (George, 2026-09-25): *"Spotify will stay where
+it is. No moving. So is lms and Bluetooth."* They stay in the core process, so
+they are the contract's **source** and not its consumers —
+[ADR-0013](decisions/0013-defaults-implement-public-contract.md) is amended to
+say so, and `core/tests/test_contract_surface.py` is the guard that replaces
+the exercise.
 
 **Acceptance**
 
 1. Contract documented and versioned.
 2. A fourth renderer built against it, in a separate repository, with no changes
-   to the core. **Qobuz Connect (Phase 12) is that renderer**
-   ([ADR-0016](decisions/0016-plugins-as-separate-processes.md): an optional
-   plugin in a private repository).
+   to the core. ~~**Qobuz Connect (Phase 12) is that renderer**~~ — **Plexamp
+   (Phase 11) is**, George 2026-09-25: *"If qobuz is too expensive now,
+   especially because it requires a private project, we give it a go with
+   plexamp."* Qobuz needs a partnership and a private repository
+   ([ADR-0016](decisions/0016-plugins-as-separate-processes.md)), which put the
+   contract's only renderer proof two phases out; Plexamp is public, already
+   planned, and one phase out.
+
+   **This criterion therefore closes in Phase 11, not here**, and it couples
+   two risks that were separate: *is the contract right* and *does this
+   renderer behave*. [Finding 075](findings/075-what-moode-learned-about-plexamp.md)
+   is why that matters — on moOde, Plexamp headless was **built and then
+   parked** because pause and app-dismissed are byte-identical at every
+   observable endpoint, which is the `on_release` edge `Adapter.run` requires.
+   Phase 11's criterion 1 is pulled forward into this phase for the same
+   reason: **find out before the contract is frozen around it.**
 3. **A second plugin that is not a renderer: a Beszel agent** (George,
    2026-09-18). Qobuz alone tests the contract with the thing it was drawn
    for; a monitoring agent tests whether the contract can carry anything
@@ -2063,7 +2086,7 @@ registry advertises.
    extends to it, whether it ships in the image or installs on demand, and
    what it costs in memory and CPU on a Pi 4 that is already frame-limited.
    None of that is settled by adding it to this list.
-4. Theme engine.
+4. ~~Theme engine.~~ **Moved to Phase 14**, 2026-09-25.
 
 ### Phase 11 — Plexamp as a renderer
 
@@ -2078,6 +2101,22 @@ comes before anything is built.
 1. **Hardware check first:** Plexamp headless on `gexis`, and whether it
    releases the audio device on a takeover. If it does not, an ADR on
    ADR-0008's reversal before anything else in this phase.
+
+   **Pulled forward into Phase 10** (2026-09-25), because Plexamp is now that
+   phase's renderer proof and a contract should not be frozen around a
+   renderer that cannot be one. **And a second question joins it**, from
+   [Finding 075](findings/075-what-moode-learned-about-plexamp.md): whether
+   Plexamp headless gives *any* observable disconnect signal. moOde built a
+   Plexamp route and parked it because pause and app-dismissed are identical
+   at every endpoint it could see — a different failure from not releasing the
+   device, and fatal to `Adapter.run`'s release edge in its own right. This
+   device has seen the same shape over Bluetooth: pauses reported 4.5–6 s
+   late, or never.
+
+   **And a third, cheaper one:** `peppyalsa` produced an all-zero meter FIFO
+   for S32_LE on moOde, which is why its `.asoundrc` pins S24_LE *because of
+   Plexamp*. `image/stage-gexis/00-alsa/files/output.conf` pins **no format at
+   all**, so the visualiser would go flat with nothing on screen to say why.
 2. Acquisition and release fit the arbitration model (ADR-0010); takeover gaps
    measured against the other renderers.
 3. Metadata from Plexamp's local API: title, artist, album, artwork, position,
@@ -2096,7 +2135,9 @@ plugin ([ADR-0016](decisions/0016-plugins-as-separate-processes.md)).
 1. **Client chosen, licence checked:** the open-source client ARCHITECTURE.md
    §9 points at.
 2. **Delivered as an optional plugin from a separate repository, with no core
-   changes** — this is Phase 10 criterion 2.
+   changes.** ~~this is Phase 10 criterion 2~~ — **Phase 11's Plexamp is now
+   that proof** (2026-09-25); Qobuz is a second plugin against a contract
+   already proved, which is a cheaper place for a private repository to sit.
 3. Acquisition ("device selected in the app"), release (disconnect), metadata,
    volume and transport, as for Plexamp.
 4. Source pill, handoff screen, Peppy badge; design assets from Claude Design.
@@ -2149,6 +2190,35 @@ set the device up without it, so it is a hard gate on anyone else owning one.
    in the first cut).
 
 ---
+
+### Phase 14 — Themes
+
+**Cut out of Phase 10 on 2026-09-25** (George): *"Themes to be cut out and have
+its own phase at the end of the current list."* It was that phase's criterion
+4, beside the plugin contract, and it has nothing to do with one: the contract
+is about processes and a theme is a set of values.
+
+**A decision is owed before anything is built.**
+[ADR-0016](decisions/0016-plugins-as-separate-processes.md) says plugins are
+**separate processes** and lists themes among the things plugins provide.
+**A theme has no process.** It is `ui/src/styles/tokens.css` — roughly forty
+CSS custom properties on `:root`, every value of which "appears in the design
+rather than being invented". So either ADR-0016 is amended, or "plugin" gains
+a class that ships data and never runs. Nothing here should be built until
+that is settled.
+
+**Acceptance**
+
+1. **The decision above**, as an ADR.
+2. **Theme engine.** The `theme` row already exists in ADR-0022's inventory,
+   `surfaced: false`, offering **Deep Teal / Faded 80s / Graphite** — Deep Teal
+   being what ships. Surfacing it is the visible half.
+3. **A theme is a set of token overrides, not a second stylesheet.** The
+   tokens file is the design's, copied rather than invented, and a theme that
+   forked it would drift from the design on the next export
+   (`docs/DEVELOPMENT.md`'s own rule: accuracy is checked against a picture).
+4. **The visualiser is not themed by this.** PeppyMeter skins are ADR-0051's
+   separate corpus with their own picker, and share no tokens with the panel.
 
 ## Test tiers
 

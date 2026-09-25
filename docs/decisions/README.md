@@ -32,7 +32,7 @@ the question blocking it was answered.
 | [0010](0010-arbitration-slot-model.md) | Arbitration: base slot, connection acquisition, uniform disconnect | Accepted, amended, **partly superseded by [0027](0027-lms-power-as-arbitration-mechanism.md)** |
 | [0011](0011-meter-data-three-transports.md) | Meter data on three transports from one service | Accepted |
 | [0012](0012-enrichment-additive-only.md) | Enrichment is renderer-agnostic and additive only | Accepted |
-| [0013](0013-defaults-implement-public-contract.md) | Default renderers implement the public plugin contract | Accepted |
+| [0013](0013-defaults-implement-public-contract.md) | Default renderers implement the public plugin contract | Accepted. **Amended 2026-09-25**: the defaults stay in the core process (George — *"Spotify will stay where it is. No moving. So is lms and Bluetooth"*), so they are the contract's **source** and not its consumers. The original sentence is literally untrue and the amendment says so. `core/tests/test_contract_surface.py` is the drift guard that replaces the exercise |
 | [0014](0014-nowplaying-and-peppy-are-distinct.md) | Now playing and the Peppy screen are distinct screens | Accepted |
 | [0015](0015-skin-renderer-peppymeter-format.md) | Skin renderer targets the PeppyMeter/Volumio extended format | Accepted, one item deferred to a spike |
 | [0016](0016-plugins-as-separate-processes.md) | Plugins are separate processes with an IPC contract | Accepted |
