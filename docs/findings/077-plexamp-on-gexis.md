@@ -71,6 +71,30 @@ warned the test could not distinguish.
 same shape as that record's *"pause and app-dismissed are byte-identical"*,
 one level down.
 
+### Re-run with the card explicitly selected — same answer
+
+George, 2026-09-25: *"Can you check audio card is selected now and perform
+again the disconnect test."*
+
+**It was not selected correctly.** `audioDeviceUuid` read **`sysdefault`**,
+which on this device resolves to **card 0, `vc4hdmi0` — HDMI**, not the
+HiFiBerry. Set explicitly to `hw:5,0` and re-run:
+
+```
+open, playing: format: S32_LE          <- card5, the DAC
+STOP -> HTTP 200, state="stopped"
+  +1s still open   +3s still open   +6s still open
+released 14s after the stop
+plexamp still: active
+```
+
+**Unchanged.** Which is what the idle-timer reading predicts: the hold is in
+the audio layer, so which card is open does not alter it.
+
+**No controller was connected for this run either** — the count was 0
+throughout, and the one connection seen beforehand was a `FIN-WAIT-2` already
+closing. So the phone half is still untested.
+
 ### Is the hold configurable? Not that this found
 
 **Checked:** all **138** settings in Plexamp's own store, filtered for
