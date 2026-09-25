@@ -57,9 +57,10 @@ Both looked fine in a unit test and both would have shipped.
    `is-enabled`, with `reset-failed` first, because a unit that spent its
    `StartLimitBurst` while unconfigured is the expected path here.
 
-The second one is the entry for `docs/LESSONS.md` if it earns one: the temporary
-test plugin could not find it, because a throwaway plugin is never left in the
-state a real one starts in.
+The second one is **[LESSONS 41](docs/LESSONS.md)**: a test double built to work
+does not visit the states the real subject starts in. The throwaway plugin's unit
+was a shell script that always started, so the mechanism was measured against a
+*running* unit six times out of six.
 
 ### What was built this session
 

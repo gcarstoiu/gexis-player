@@ -788,6 +788,32 @@ symptom is evidence; the hypothesis is a lead, and confirming it is not the
 same as exhausting it. Ask the external thing what it actually does before
 concluding the story is the one you were handed.
 
+**41. The throwaway plugin was never in the state a real one starts in**
+(2026-09-25). ADR-0088's mechanism was verified end to end on the device with a
+temporary service plugin and six legs, all of which passed: the switch agreed
+with the unit, the fields hid and appeared, a token containing a space and a
+quote reached the process intact, an unrelated row caused no restart, an
+unchanged value caused no restart, and a value changed while off started nothing.
+
+Then the real plugin was installed and switched on **before anything had been
+typed into it** — which is what anyone would do, because the fields only appear
+once it is on. The agent refused to start without a key, correctly, and the unit
+sat in `failed`. The restart was `systemctl try-restart`, which touches a unit
+that is *active*. **The token was typed, the file was written, and nothing read
+it** until a reboot.
+
+**The probe never entered that state.** The temporary plugin's unit was a shell
+script that always started, and in the one run where the real agent did fail, it
+had been brought up by hand with `systemctl start` before the values were
+written — so the mechanism was measured against a *running* unit every single
+time. Six legs, none of them the state a real plugin is in on the day it is
+first switched on.
+
+**A test double that cannot fail cannot exercise the failure path.** When the
+thing under test is "what happens after X", check the states X actually reaches —
+including the one where X refuses to run because it is not configured yet, which
+for anything needing a credential is its **first** state, not an edge case.
+
 ## Common shape
 
 Every case had a *plausible* substitute for the real target — the build
@@ -796,9 +822,14 @@ local ref for the remote, the kernel's OOM killer for any killer, an idle
 device for a booting one, a comment for the machine it describes, a
 summary line for the rule it summarises, a directory listing for the design
 itself, a log line for the screen it describes, a lucky memory layout for
-the one the daemon would get — and the check quietly accepted the
-substitute. None of these failed loudly. Each
+the one the daemon would get, a unit that always starts for one that refuses
+to — and the check quietly accepted the substitute. None of these failed loudly. Each
 produced an answer that looked like a normal result, not an error.
+
+**And a corollary from case 41.** A probe built to exercise a mechanism will be
+built to work, and a thing built to work does not visit the states the real
+subject starts in. The substitute there was not a file or a host — it was a
+*unit that always starts* standing in for one that refuses to.
 
 **And a third corollary, from cases 17 and 18.** Silence is not evidence of
 absence *unless the thing was built to break its silence* — a check that
