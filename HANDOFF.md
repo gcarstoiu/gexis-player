@@ -1,52 +1,76 @@
 # Handoff
 
-Last updated: 2026-09-25 (twenty-fifth session, on R2D2 — **Phase 10 is
-CLOSED. The plugin contract carries a plugin that is not a renderer: the Beszel
-agent ships in the image, enrols from the settings screen and runs on George's
-hub, and the core contains nothing that names it. Next is Phase 11 — Plexamp as
-a renderer, as a plugin — which carries Phase 10's criterion 2 and the freeze
-with it.**)
+Last updated: 2026-09-25 (twenty-fifth session, on R2D2 — **Phase 10 is closed
+and merged (PR #27). Phase 11 has started and its first work is done:
+arbitration carries a plugin renderer. A plugin can now take the audio device
+from LMS over the socket, and a plugin that will not let go is escalated against
+its own unit — proved end to end in the suite, not yet by a real renderer.**)
 
 ## Start here
 
-**Criterion 3 is done.** The Beszel agent runs on the device, reporting to
-George's hub, configured entirely through the settings screen — and **the core
-contains nothing that names it**. It is
-[ADR-0087](docs/decisions/0087-the-beszel-agent-is-the-first-service-plugin.md)
-and [ADR-0088](docs/decisions/0088-a-plugins-settings-reach-its-unit-as-environment.md),
-measured in Findings [078](docs/findings/078-what-the-beszel-agent-costs-and-listens-on.md),
-[079](docs/findings/079-what-the-plugin-contract-carries-to-a-unit.md) and
-[080](docs/findings/080-the-agent-enrolled.md).
+**Phase 10 closed and merged**, PR #27. Criterion 3 done, criterion 1 documented
+and versioned; **criterion 2 and the contract freeze moved to Phase 11**, because
+criterion 2 is the freeze's evidence.
 
-**Where a plugin lives on the screen is George's shape**, given 2026-09-25 after
-seeing the first attempt put everything in System: *"we need to separate a plugin
-from default functionality for a user… create the plugin category in settings and
-add in there only Beszel toggle. When enabled then the config fields show up in
-system like now in the Beszel subgroup. When the toggle is off the entire
-subgroup is off."*
+**Phase 11 has begun and its first work is built**:
+[ADR-0089](docs/decisions/0089-arbitration-carries-a-plugin-renderer.md) —
+arbitration carries a plugin renderer. Until today a `renderer` that connected
+was welcomed, logged and **left idle**; now it gets an adapter around its
+session, registered with the supervisor, and its `acquire`/`release` reach
+arbitration exactly as the three built-ins' events do.
 
-- **Plugins** — one row per installed plugin, named after it, carrying its switch.
-- **Sources / System** — that plugin's own rows, under a sub-heading with its
-  name, hidden with the heading when the switch is off. The core applies that to
-  every plugin row rather than leaving it to a manifest that might forget.
-- The three built-ins are untouched: they name an existing row with
-  `enabled_row`, which is how a default says it is furniture rather than
-  something the user added.
+**Three things that record settles beyond the obvious**, each of which is a way
+a plugin could otherwise have hurt the device:
 
-**Two things are owed to George and neither blocks anything:**
+- **The manifest owns the unit name.** A `hello` that disagrees is refused. The
+  release ladder attributes a still-busy device to that name, so a renderer able
+  to name its own could point process-level escalation at any unit here.
+- **`signal_stop` tells the plugin and then acts itself**, not either/or. A
+  plugin that answered `true` and did nothing would leave the device held with
+  the ladder believing it had escalated.
+- **A bad `hello` costs the plugin its connection, not its arbitration.** The
+  server now calls `on_connect` before `welcome` so it can refuse, and still
+  knows nothing about adapters.
 
-- **ADR-0022's inventory** has not gained the Plugins category or Beszel's four
-  rows. They are proposed in ADR-0087 and wait on his word, as the rule says.
-- **The agent cannot see throttling.** ADR-0087 claimed it gave him the throttle
-  log he asked for on 2026-09-18; the binary has no `vcgencmd`, `vcio` or
-  `throttl` string at all, because the Pi's throttle bits are not a Linux sensor.
-  He gets temperature and CPU over time — two of the four parts he asked for.
-  **Whether something small should sample `vcgencmd get_throttled` is a decision
-  nobody has taken.**
+**Proved end to end** (`core/tests/test_plugin_renderer_end_to_end.py`), over a
+real Unix socket with a fake plugin process: a plugin takes the device from LMS;
+the core releases the plugin when something takes over; a plugin that will not
+let go is escalated against its unit; a plugin that vanishes stops being active
+and unavailable **while the device stays held**, which ADR-0089 writes down
+rather than engineers around.
 
-**The costs, now that they are real:** **0.02 % of one core and 14.2 MB**
-connected, against an 0.84 % *unconnected* floor — reconnecting was the expensive
-case, so nothing here needs re-measuring against the panel's frame budget.
+**What it has not been is used by a real renderer.** That is the rest of Phase
+11, and until it happens the renderer half of the contract stays provisional —
+which is why v1 is still not frozen.
+
+### Next, and it needs George
+
+**Plexamp in its own repository.** Two things have to be decided before any of it
+is written, and both are his:
+
+- **Where it lives.** A separate repository is what Phase 10 criterion 2
+  requires; it needs a name and an owner.
+- **How it reaches the device.** Every plugin so far arrives in the image
+  ([ADR-0087](docs/decisions/0087-the-beszel-agent-is-the-first-service-plugin.md),
+  his call). Nothing installs a plugin on a running device, and building that
+  would be the first half of a plugin installer.
+
+**What the plugin has to do is already measured**
+([Finding 077](docs/findings/077-plexamp-on-gexis.md)) and needs no discovery:
+
+| contract | Plexamp |
+|---|---|
+| `acquire` | a controller starts playback — the event still has to be chosen and watched |
+| `release` | the API stop at `:32500`. Confirms instantly, **device held 14 s** |
+| `release_ladder` | must declare a polite grace over 14 s |
+| `signal_stop` | its unit; the core does this itself regardless |
+| `on_release` | **`alsa.device_held_by`**, not the TCP count — that was measured to mean nothing |
+
+**And one thing is measured and unsolved:** Plexamp opens `hw:5,0` directly in
+**S32_LE**, so `pcm.output` and peppyalsa are not in its path.
+[ADR-0085](docs/decisions/0085-the-alsa-default-is-our-output.md) made our output
+the ALSA default to catch exactly this, **and whether the meters then work is
+unverified** — moOde measured peppyalsa giving an all-zero FIFO for S32_LE.
 
 ### The two defects the device found, because they are the reason to read this
 
@@ -138,41 +162,19 @@ running**, and one current backup from 18:57 that contains the enrolment.
   George's low-cover report turned out to be the Bluetooth path (ADR-0080), so
   this is still owed and still unmeasured.
 
-### Next — Phase 11: Plexamp as a renderer, as a plugin
+### Phase 11's order, and where it stands
 
 **George, 2026-09-25:** *"start 11, with the aim as having plexamp as the new
 renderer as a plugin."*
 
-**The first work is not Plexamp.** It is the thing
-[`docs/PLUGIN-CONTRACT.md`](docs/PLUGIN-CONTRACT.md) names in its own open list:
-**arbitration does not carry plugins.** A `renderer` that connects is welcomed,
-logged and left idle, because the adapter built around a session and registered
-with the supervisor does not exist. **Nothing has ever played audio through this
-contract.** Everything else in Phase 11 is written against that adapter, so it
-comes first.
-
-Then, in order:
-
-1. **The adapter** — an `Adapter` whose acquire, release and commands are
-   ADR-0084 messages on a session, registered with the supervisor like the three
-   built-ins. Needs an ADR before it is built.
+1. ~~**The adapter.**~~ — **done**, [ADR-0089](docs/decisions/0089-arbitration-carries-a-plugin-renderer.md),
+   with the detail at the top of this file. It came first because everything
+   else in the phase is written against it.
 2. **Plexamp in its own repository**, speaking the contract, with **no core
    changes** — which is Phase 10's criterion 2, and the only thing that proves
-   the renderer half of the contract is right.
+   the renderer half of the contract is right. **Blocked on George**: see
+   "Next, and it needs George" above.
 3. **Freeze contract v1**, last, on that evidence.
-
-**What Finding 077 already measured, and the phase has to build around:**
-
-- **A commanded stop works, and the device is held for a deterministic 14 s
-  afterwards.** So this renderer's `release_ladder` needs a polite grace longer
-  than that, exactly as LMS overrides it for squeezelite's idle tick.
-- **It frees the device and keeps running**, so ADR-0008's reversal condition is
-  **not** triggered.
-- **It opens `hw:5,0` in S32_LE**, not `pcm.output`, which is why
-  [ADR-0085](docs/decisions/0085-the-alsa-default-is-our-output.md) made our
-  output the ALSA default. Whether the meters then work is **unverified** — moOde
-  measured peppyalsa giving an all-zero FIFO for S32_LE.
-- **The TCP count at `:32500` is not a release signal.** `alsa.device_held_by` is.
 
 ### Still open, and none of it blocking
 
@@ -262,6 +264,27 @@ Two traps here, both of which cost time this session:
 anything already present at the right size, and appends the manifest
 annotation `image` would have. Verified: recovered image byte-identical,
 manifest reporting the true 749s.
+
+**5. The build bind-mounts the live working tree — do not edit `core/` while one
+runs.** `PIGEN_DOCKER_OPTS` mounts `core`, `ui/dist`, `skins` and
+`stage-gexis` **read-only into the container, not copies**, and each stage reads
+them when it runs. An edit landing between two stages produces an image that is
+half one commit and half another, **and the `.info` still reports the git-describe
+version it started with**, so the artefact would name a commit whose contents it
+does not have.
+
+Nearly hit on 2026-09-25: `03-core` finished at container 17:22:06 and the first
+edit of that session's next piece of work landed 25 seconds later on the host
+clock. **The clocks are not the same** — the container runs two hours behind —
+so the arithmetic proved nothing. What settled it was looking:
+
+```
+docker exec pigen_work_cont sh -c 'ls /pi-gen/work/*/stage-gexis/rootfs/opt/gexis-core/venv/lib/python3*/site-packages/gexis_core/adapters/'
+```
+
+The new module was absent, so the image held exactly the merged commit. **Check
+that way, not by comparing timestamps**, and prefer starting a build from a
+clean tree you then leave alone.
 
 **Current warm-build baseline: 12m29s** (cold ~40m), 2026-09-13, with prune
 and no compression. Latest artefact:
