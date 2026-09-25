@@ -26,8 +26,12 @@
   //: same rule as now playing (ADR-0012 is additive-only). Bluetooth often
   //: sends no cover at all, and the strip showed nothing while the cover
   //: had already been looked up (George, 2026-09-18).
+  //: **The small one where there is one** (ADR-0070). This draws 64px and
+  //: was given now playing's 500px cover - 52KB and a quarter of a million
+  //: pixels to fill four thousand, on every library screen and every track.
+  //: A renderer with only one size falls back to it.
   const artwork = $derived.by(() => {
-    const supplied = metadata?.artwork;
+    const supplied = metadata?.artwork_small || metadata?.artwork;
     if (supplied && supplied !== failedArtwork) return supplied;
     return $enrichedArtwork && $enrichedArtwork !== failedArtwork ? $enrichedArtwork : null;
   });

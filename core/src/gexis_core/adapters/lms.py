@@ -442,11 +442,24 @@ class LmsAdapter(Adapter):
         song = (result.get("playlist_loop") or [{}])[0]
         if result.get("remote"):
             title, album, artwork = self._remote_fields(result, song)
+            # A stream's artwork is whatever the station published; there is
+            # no second size of it to ask for.
+            small = None
         else:
             coverid = song.get("coverid")
             title, album = song.get("title"), song.get("album")
             artwork = (
                 f"{self._base}/music/{coverid}/cover_{ARTWORK_SIZE}x{ARTWORK_SIZE}_o.jpg"
+                if coverid
+                else None
+            )
+            # **The same cover at row size** (ADR-0070), for the places that
+            # draw 64px and were given the 500px one: the mini strip on every
+            # library screen, and now playing's release tab. It is the size
+            # the queue rows already ask for, so one cached picture serves
+            # all three.
+            small = (
+                f"{self._base}/music/{coverid}/cover_{ARTWORK_ROW}x{ARTWORK_ROW}_o.jpg"
                 if coverid
                 else None
             )
@@ -478,6 +491,7 @@ class LmsAdapter(Adapter):
                 album=album,
                 year=_as_year(song.get("year")),
                 artwork=artwork,
+                artwork_small=small,
                 # LMS-CLI.md's songinfo table documents tag T ("samplerate")
                 # as "in KHz", but its own worked example returns a raw Hz
                 # value (44100 for 44.1kHz content) - a known doc/reality

@@ -51,6 +51,12 @@ class TrackMetadata:
     #: publish nothing, so the panel falls back to enrichment for those.
     year: str | None = None
     artwork: str | None = None
+    #: **The same cover at the size the small places draw it** (ADR-0070).
+    #: `artwork` is 500px because now playing's well is 500; the mini strip
+    #: and the release tab draw 64, and were decoding a quarter of a million
+    #: pixels to fill four thousand - on every screen, on every track. A
+    #: renderer that has only one size leaves this None and they fall back.
+    artwork_small: str | None = None
     sample_rate: int | None = None  # Hz
     position: float | None = None  # seconds
     duration: float | None = None  # seconds
@@ -101,6 +107,7 @@ class TrackMetadata:
             "album": self.album,
             "year": self.year,
             "artwork": self.artwork,
+            "artwork_small": self.artwork_small,
             "sample_rate": self.sample_rate,
             "codec": self.codec,
             "remaining_time": self.remaining_time,

@@ -432,6 +432,8 @@ def test_report_metadata_maps_the_current_song():
             artist="The Artist",
             album="The Album",
             artwork="http://127.0.0.1:9000/music/abc123/cover_500x500_o.jpg",
+            # ADR-0070: the same cover at row size, for the 64px places.
+            artwork_small="http://127.0.0.1:9000/music/abc123/cover_100x100_o.jpg",
             sample_rate=44100,
             position=30.5,
             duration=200.0,

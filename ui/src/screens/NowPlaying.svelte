@@ -34,6 +34,9 @@
     return found && found !== failedArtwork ? found : null;
   });
 
+  //: For the 64px places. See ADR-0070.
+  const smallArtwork = $derived(metadata?.artwork_small || artwork);
+
   const head = playhead(() => metadata);
 
   // ADR-0037: shown when the renderer has the command.
@@ -435,7 +438,9 @@
             <div class="artisttab">
               <div class="artisttab__head">
                 <span class="reltab__art">
-                  {#if artwork}<img src={artwork} alt="" />{/if}
+                  <!-- 64px, so the row-sized cover (ADR-0070), not the
+                       well's 500px one. -->
+                  {#if smallArtwork}<img src={smallArtwork} alt="" />{/if}
                 </span>
                 <span class="reltab__titles">
                   <span class="reltab__name">{metadata?.album ?? 'No album'}</span>

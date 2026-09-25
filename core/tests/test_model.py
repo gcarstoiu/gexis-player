@@ -13,6 +13,7 @@ def test_blank_metadata_is_all_none():
         "album": None,
         "year": None,
         "artwork": None,
+        "artwork_small": None,
         "sample_rate": None,
         "codec": None,
         "remaining_time": None,
