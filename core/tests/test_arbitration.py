@@ -867,9 +867,42 @@ async def test_forgetting_something_that_was_never_registered_is_quiet():
 
 
 @pytest.mark.asyncio
-async def test_the_callers_adapter_dict_is_not_mutated():
-    """`__main__` reads its own `adapters` elsewhere for the three built-ins'
-    wiring; registering a plugin must not appear in it."""
+async def test_the_callers_adapter_dict_is_the_same_one():
+    """**Amended after it crashed on the device, 2026-09-25.**
+
+    The first version copied the caller's dict, reasoning that it was the
+    caller's own. It is not: `__main__` looks renderers up in that same dict at
+    runtime - `device_busy` does, and so does transport dispatch - so a copy
+    meant a plugin renderer the supervisor knew about and the caller did not.
+    The first takeover from a real plugin renderer raised `KeyError: 'plexamp'`
+    from inside the release ladder.
+    """
     supervisor, adapters, holder = build()
     supervisor.register(FakeAdapter("plexamp", ReleaseAction.DISCONNECT, holder))
+    assert set(adapters) == {"lms", "spotify", "bluetooth", "plexamp"}
+    supervisor.forget("plexamp")
     assert set(adapters) == {"lms", "spotify", "bluetooth"}
+
+
+@pytest.mark.asyncio
+async def test_the_ladder_can_ask_whether_a_plugin_renderer_still_holds_it():
+    """The specific thing that crashed: `device_busy` is a callback the caller
+    writes, and it looks the renderer up by id. If registration does not reach
+    that lookup, the ladder cannot ask its central question."""
+    holder = {"who": None}
+    adapters = {"lms": FakeAdapter("lms", ReleaseAction.PAUSE, holder)}
+    asked = []
+
+    def device_busy(renderer_id):
+        # Exactly `__main__`'s shape: the unit name comes out of the map.
+        asked.append(adapters[renderer_id].unit_name)
+        return holder["who"] == renderer_id
+
+    supervisor = Supervisor(adapters, device_busy=device_busy, ladder=FAST_LADDER)
+    supervisor.register(FakeAdapter("plexamp", ReleaseAction.DISCONNECT, holder))
+    await supervisor.acquire("plexamp")
+    holder["who"] = "plexamp"
+    await supervisor.acquire("lms")
+
+    assert "plexamp.service" in asked
+    assert supervisor.active == "lms"

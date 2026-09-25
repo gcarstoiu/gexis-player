@@ -106,10 +106,19 @@ class Supervisor:
         """
         if not adapters:
             raise ValueError("supervisor needs at least one adapter")
-        # Copied, not aliased: `register` and `forget` mutate this (ADR-0089)
-        # and the caller's dict is its own - `__main__`'s `adapters` is read
-        # elsewhere for the three built-ins' wiring.
-        self._adapters = dict(adapters)
+        # **Shared, not copied** (ADR-0089 as amended 2026-09-25). The first
+        # version copied it, reasoning that the caller's dict was its own. It is
+        # not: `__main__` looks renderers up in that same dict at runtime - the
+        # release ladder's own `device_busy` does, and so does transport
+        # dispatch - so a copy meant a plugin renderer the supervisor knew about
+        # and the caller did not.
+        #
+        # It crashed on the hardware the first time a plugin renderer was asked
+        # to give up the device: `KeyError: 'plexamp'` from inside
+        # `_release_with_ladder`, which is the worst possible place for it.
+        # One map, one source of truth; `register` and `forget` maintain it for
+        # everyone.
+        self._adapters = adapters
         self._device_busy = device_busy
         self._ladder = ladder or TimeoutLadder()
         self._restore_volume = restore_volume

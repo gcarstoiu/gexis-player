@@ -2062,8 +2062,30 @@ the exercise.
    `core/tests/test_contract_surface.py` pinning the document against the
    objects so the two cannot drift in silence. **The freeze moves to Phase 11**
    with criterion 2, for the reason below.
-2. A fourth renderer built against it, in a separate repository, with no changes
-   to the core. ~~**Qobuz Connect (Phase 12) is that renderer**~~ — **Plexamp
+2. ~~A fourth renderer built against it, in a separate repository, with no
+   changes to the core.~~ — **CLOSED 2026-09-25**, on hardware, with audio
+   ([Finding 082](findings/082-a-renderer-from-another-repository.md)).
+   **`gcarstoiu/gexis-plexamp`** took the device from LMS and gave it back:
+
+   ```
+   acquire: plexamp takes the device (was lms)
+   release[lms]: polite stop freed the device (0.1s)
+   acquire: lms takes the device (was plexamp)
+   release[plexamp]: freed within polite grace (14.1s)
+   ```
+
+   The 14.1 s is Plexamp's measured hold, absorbed by the 16 s polite grace
+   **the plugin declared for itself** — no SIGTERM, no SIGKILL. And *"no changes
+   to the core"* holds in the sense that matters: every occurrence of the
+   renderer's name in `core/src/` is a comment explaining why something is the
+   way it is. No branch, no map, no special case.
+
+   **It failed three times first, and that is the criterion working** — the
+   socket authorised nobody but root, the published state had no slot for a
+   plugin renderer, and the supervisor had been given a *copy* of the adapter
+   map so the release ladder could not ask whether a plugin still held the
+   device. None of the three could have been found by a test in this
+   repository. ~~**Qobuz Connect (Phase 12) is that renderer**~~ — **Plexamp
    (Phase 11) is**, George 2026-09-25: *"If qobuz is too expensive now,
    especially because it requires a private project, we give it a go with
    plexamp."* Qobuz needs a partnership and a private repository
