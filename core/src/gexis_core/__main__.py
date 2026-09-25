@@ -63,6 +63,7 @@ from gexis_core.peppy import (
     set_meter_smoothing,
 )
 from gexis_core.peppy_metadata import PeppyMetadataWriter
+from gexis_core.model import BLANK_METADATA, TrackMetadata
 from gexis_core.settings import SettingsStore
 from gexis_core.settings_registry import Settings, load_registry
 from gexis_core.splash import Splash
@@ -992,6 +993,40 @@ async def main() -> None:
     # ADR-0035. Defaults are what is true of this deployment today. A wired
     # row is read where it is used - the idle page probe here, the rest by
     # the UI - so none needs a callback.
+    def plugin_metadata(renderer_id: str, raw) -> TrackMetadata:
+        """**A plugin's metadata line, as the model** (contract v1).
+
+        Generic: it reads the fields the contract names and ignores everything
+        else. A plugin is written by somebody who cannot test against this
+        device, so a bad value is dropped rather than raised - a renderer that
+        sends a string where a number belongs should lose that field, not take
+        the daemon down mid-track.
+
+        `source_type` is **ours to set**, not the plugin's: it says which
+        renderer supplied the metadata, and a plugin naming a different one
+        would be lying about attribution the panel draws.
+        """
+        raw = raw if isinstance(raw, dict) else {}
+        text = ("track_id", "title", "artist", "album", "year", "artwork",
+                "artwork_small", "codec", "transport", "repeat")
+        fields = {k: str(raw[k]) for k in text if raw.get(k) is not None}
+        for number, cast in (("position", float), ("duration", float),
+                             ("sample_rate", int)):
+            try:
+                if raw.get(number) is not None:
+                    fields[number] = cast(raw[number])
+            except (TypeError, ValueError):
+                logger.warning(
+                    "plugins: %s sent %s=%r, which is not a number",
+                    renderer_id, number, raw.get(number),
+                )
+        if isinstance(raw.get("shuffle"), bool):
+            fields["shuffle"] = raw["shuffle"]
+        unavailable = raw.get("unavailable")
+        if isinstance(unavailable, list):
+            fields["unavailable"] = frozenset(str(u) for u in unavailable)
+        return replace(BLANK_METADATA, source_type=renderer_id, **fields)
+
     def _plugin_env(plugin) -> bool:
         """**Export what this plugin's rows say to its unit** (ADR-0088).
 
@@ -1995,6 +2030,18 @@ async def main() -> None:
                 return
             if kind == "release":
                 adapter.on_release()
+                return
+            if kind == "metadata":
+                # **What is playing** (`docs/PLUGIN-CONTRACT.md`). The three
+                # built-ins reach the same call through `on_metadata_change`;
+                # this is the same destination by a different road.
+                state_store.set_metadata(
+                    session.id, plugin_metadata(session.id, message.get("metadata")),
+                )
+                return
+            if kind == "queue":
+                queue = message.get("queue")
+                state_store.set_queue(session.id, queue if isinstance(queue, list) else None)
                 return
         logger.debug("plugins: %s sent %s", session.id, kind)
 

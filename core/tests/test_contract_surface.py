@@ -147,12 +147,22 @@ def test_it_carries_the_transport_decision_rather_than_restating_it():
     assert "/run/gexis/plugins.sock" in text
 
 
-def test_it_still_says_it_is_a_draft():
-    """Phase 10 freezes this *after* a non-renderer is built against it. If
-    this assertion is changed, that should be a deliberate act with the
-    Beszel agent already written."""
+def test_it_is_frozen_and_says_what_that_cost():
+    """**This assertion replaced its own tripwire on 2026-09-25**, which read
+    `"draft, not frozen" in text` and said changing it should be a deliberate
+    act with the Beszel agent already written. It was: both plugins exist, and
+    George said *"Freeze now and do metadata. If we need to adapt it's v2."*
+
+    What is asserted now is the thing that matters going forward - that the
+    document states a version discipline, because within v1 fields may be added
+    and never removed or repurposed, and a plugin in another repository is
+    entitled to rely on that.
+    """
     text = CONTRACT.read_text()
-    assert "draft, not frozen" in text
+    assert "frozen 2026-09-25" in text.lower()
+    assert "draft, not frozen" not in text
+    # The rule a frozen version is worth nothing without.
+    assert "added and never removed or repurposed" in text
 
 
 def test_a_service_plugin_is_expressible():
