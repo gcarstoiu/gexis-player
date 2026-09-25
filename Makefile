@@ -64,6 +64,15 @@ IMAGE_VERSION := $(shell git describe --tags --always --dirty)
 #    silently discard it, restoring the wasted export with no warning.
 #    Idempotent - safe whether or not the file is already gone.
 #
+#    **Put back when the build ends** (2026-09-25). `IMAGE_VERSION` is a
+#    simple variable, so `git describe --tags --always --dirty` runs when
+#    make parses this file - before the recipe. Leaving the file deleted
+#    therefore made *every build after the first* report `-dirty` and name
+#    its image so, with nothing uncommitted in the repository at all. The
+#    marker is there to say "built from uncommitted changes"; it was saying
+#    "a build has run before". Restored in the same shell line as the copy-
+#    out, so the tree is clean whether the build succeeded or failed.
+#
 # 2. CONTINUE=1/PRESERVE_CONTAINER=1 (both build-docker.sh's own, documented
 #    flags) reuse the previous build's container and volumes instead of
 #    starting from scratch, letting pi-gen skip re-populating any stage
@@ -144,6 +153,7 @@ image: ui skins prune
 	( cd image && CONTINUE=1 PRESERVE_CONTAINER=1 PIGEN_DOCKER_OPTS="--volume $(STAGE_GEXIS_DIR):/pi-gen/stage-gexis:ro --volume $(CORE_SRC_DIR):/pi-gen/gexis-core-src:ro --volume $(UI_DIST_DIR):/pi-gen/gexis-ui-dist:ro --volume $(SKINS_DIR):/pi-gen/gexis-skins:ro --volume $(BUILD_CACHE_DIR):/pi-gen/gexis-cache -e IMG_SUFFIX=-$(IMAGE_VERSION)" \
 		./pi-gen/build-docker.sh -c config ); \
 	status=$$?; \
+	git -C image/pi-gen checkout -- stage2/EXPORT_IMAGE 2>/dev/null || true; \
 	end=$$(date +%s); \
 	elapsed=$$((end - start)); \
 	echo "Build took $${elapsed}s"; \
