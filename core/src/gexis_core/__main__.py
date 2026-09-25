@@ -1592,6 +1592,52 @@ async def main() -> None:
 
     state_store.subscribe(warm_enrichment)
 
+    async def _check_lms_volume_control() -> None:
+        """**Say so when LMS's player is on fixed volume** (Phase 9 criterion
+        4, from the handoff's issues list).
+
+        `digitalVolumeControl` at 0 means LMS moves its own number and always
+        sends full level, so **no LMS volume change ever reaches the device**.
+        George hit it on 2026-09-16 as *"phone volume does nothing while the
+        panel is muted, and LMS's volume bar is frozen"* - and mute became a
+        trap, because the one change that ends it (ADR-0034) never arrived.
+        Nothing in this repository sets it and nobody set it by hand; the
+        cause is still unknown.
+
+        **This only says so.** Writing a pref on somebody's music server
+        because we disagree with it is not ours to do, and the value is a
+        real choice for anybody driving the DAC from elsewhere. A line in the
+        journal turns an unexplainable symptom into a greppable one, which is
+        the whole of what was missing.
+        """
+        for _ in range(15):
+            if lms.player_id:
+                break
+            await asyncio.sleep(2)
+        else:
+            return
+        try:
+            answer = await library.rpc(
+                ["playerpref", "digitalVolumeControl", "?"], lms.player_id
+            )
+        except Exception as exc:  # noqa: BLE001 - a check is never fatal
+            logger.info("lms: could not read digitalVolumeControl: %s", exc)
+            return
+        value = str((answer or {}).get("_p2", ""))
+        if value == "0":
+            logger.warning(
+                "lms: player %s has digitalVolumeControl=0 (fixed volume). LMS will "
+                "move its own number and always send full level, so no volume change "
+                "from LMS or a phone reaches this device, and mute cannot be ended "
+                "from there. Set it to 1 in LMS's player settings.",
+                lms.player_id,
+            )
+        elif value:
+            logger.info("lms: digitalVolumeControl=%s on %s", value, lms.player_id)
+
+    if renderer_enabled("lms"):
+        asyncio.ensure_future(_check_lms_volume_control())
+
     state_server = StateServer(
         state_store,
         host=config.state_host,

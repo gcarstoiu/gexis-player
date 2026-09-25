@@ -1613,8 +1613,37 @@ ADRs were updated.
    revisited — a control designed for a feature that was quietly dropped —
    and should ideally find nothing. Unwired UI is marked in code, so checking
    is a generated list rather than an audit.
-3. **A review pass on the panel with George:** every issue found is fixed or
-   explicitly deferred.
+3. ~~**A review pass on the panel with George:** every issue found is fixed
+   or explicitly deferred.~~ — **closed 2026-09-25.** George: *"Then we are
+   done with this criterion as well."*
+
+   Three issues found, all three fixed and checked on the panel:
+
+   - **The Bluetooth cover never reached PeppyMeter.** The fallback lived in
+     the browser, so the published state said `null` and the meter — another
+     process with no client for `/state` — drew nothing, as did the moOde
+     file ([ADR-0081](decisions/0081-the-daemon-owns-the-cover-it-found.md),
+     [Finding 073](findings/073-the-cover-that-never-reached-the-meter.md)).
+   - **Few album covers were found.** George's diagnosis — modifiers in the
+     album name — was right and was the smaller half: the query was also
+     being *folded*, and `releasegroup:"57th & 9th"` scores 100 where
+     `"57th 9th"` returns nothing. **31.2 % of his 4,567 albums** carry a
+     character folding removes, against 11.1 % carrying a modifier. Measured
+     old against new on 40 albums: **27 found → 32, none lost**
+     ([ADR-0080](decisions/0080-a-cover-is-matched-on-a-title-both-catalogues-agree-on.md),
+     [Finding 072](findings/072-the-album-titles-the-matcher-could-not-use.md)).
+   - **The fanart rows were in the wrong place.** They are LMS's, so they are
+     in the LMS group and hide with it.
+
+   **And one defect the review surfaced indirectly**: building
+   [ADR-0079](decisions/0079-with-lms-off-the-panel-is-two-screens.md)'s
+   screens showed that switching off the *active* renderer left it active
+   for ever — the published state carried `available: false` and
+   `active: "spotify"` at once and nothing objected
+   ([LESSONS](LESSONS.md) 39).
+
+   *Original text:* **A review pass on the panel with George:** every issue
+   found is fixed or explicitly deferred.
 4. **The handoff's "issues to look at later" are triaged:** fixed, scheduled,
    or dropped.
 
