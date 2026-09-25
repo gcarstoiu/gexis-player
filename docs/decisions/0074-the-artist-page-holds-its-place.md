@@ -27,45 +27,52 @@ discography has a designed height, not an accidental one.
 
 ## Decision
 
-**Reserve that height while About is loading.**
+**The About region is given the height it will have, and keeps it.**
 
 The number is not guessed and not hardcoded: it is the one `fitAbout`
 already aims at — the first album card at
-`clientHeight - cardHeight * ALBUM_PEEK` — and the discography is on the
-page from the first frame, so the shortfall can be measured against it.
+`clientHeight - cardHeight * ALBUM_PEEK` — measured while About is still a
+skeleton, and the discography is on the page from the first frame to measure
+against.
 
-A spacer holds the difference, and it exists only while `artistInfo.state`
-is `loading`. **If nothing arrives, the page closes up**, which is what
-George asked for: *"in the likelihood the info doesn't come then it can
-compress, but that is a less likely event."*
+It is a `min-height` on the region itself, not a spacer after it. **What
+arrives fills a box that is already the right size**, so nothing moves.
+
+**If nothing arrives, the page closes up**: the height is held while the
+lookup is in flight and while what came back has a biography, and dropped
+otherwise — which is what George asked for, *"in the likelihood the info
+doesn't come then it can compress, but that is a less likely event."*
 
 | | before | after |
 | --- | --- | --- |
-| the discography moves | **+373 px down** | **14 px up** |
+| the discography moves | **+373 px down** | **it does not** |
 
-## The fourteen pixels
+Measured on four artists: the discography appears at 478 and stays there,
+with no intermediate position at all.
 
-**It settles up by 14 px and I could not close that.** Three attempts
-failed for the same reason: the reserve is measured *from* the loading
-layout and then changes it, so anything added to that layout raises the
-measured position and shrinks the reserve by exactly as much. Giving the
-licence credit an empty box of its own changed nothing. Recording where the
-discography actually came to rest and aiming at that changed nothing either.
+## Two wrong answers first, and what they were hiding
 
-The loaded position is settled by `fitAbout` through a rounded `aboutMax`
-with a ±4 px tolerance; the reserved one by this arithmetic. They agree to
-14 px on a 550 px column and were not made to agree exactly.
+**A spacer after the region left 14 px.** Reserving the *gap* between About
+and the discography means the gap has to shrink as About fills, and the two
+are measured a frame apart. I reported that 14 px as a property of the
+layout and stopped. George: *"Are you sure the change is in the panel?
+Seeing pretty much the same behaviour."* He was right and the reasoning was
+wrong: a residual that reproduces exactly is a clue, not a floor.
 
-**It is consistent** — 14 px on every artist measured, with biographies from
-119 to 407 px and Popular from nothing to five tracks — so it is a property
-of the layout rather than of the content.
+**And the thing he was actually seeing was worse than 14 px.** The
+biography's clamp was gated on `bioClipped`, which is what `fitAbout`
+concludes *after* measuring — so a biography rendered at its **full natural
+height**, 1,500 px and more, until the next frame. The discography was flung
+down the column and back, for 10–65 ms. It depended on the artist opened
+before, which is why one never opened before was worse. The clamp now
+applies from the first frame the biography exists; `bioClipped` still
+decides the fade, which is a question about the text rather than the space.
 
 ## Consequences
 
-- **The discography stops moving under a finger**, which is the point:
-  before, an album tapped at 1.7 s was a different album at 1.9 s.
-- **A page whose lookup fails still compresses.** The reserve goes with the
-  loading state.
-- **One transient frame remains** where the biography renders before
-  `fitAbout` clamps it, and the discography is briefly far down the column.
-  It predates this and was not changed.
+- **The discography stops moving under a finger.** Before, an album tapped
+  at 1.7 s was a different album at 1.9 s.
+- **One flex item more in the column**, carrying the column's own 14 px gap
+  inside it so nothing looks different.
+- **A page whose lookup fails still compresses**, and one with no biography
+  at all never holds the space.

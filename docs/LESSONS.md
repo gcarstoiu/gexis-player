@@ -693,6 +693,28 @@ which is what made it worth chasing.
 **A class shared by a container and its items is not a screen.** The page's
 own element is `.artist__disc--big`.
 
+**36. I explained the residual instead of chasing it** (2026-09-25).
+Holding the artist page's discography in place took a 373px shove down to a
+14px settle up, and the 14 reproduced exactly on every artist - biographies
+from 119 to 407px, Popular from nothing to five tracks. I wrote that down as
+*"a property of the layout rather than of the content"* and stopped.
+
+George: *"Are you sure the change is in the panel? Seeing pretty much the
+same behaviour."* The change was in the panel. What he was seeing was not
+the 14px at all: the biography's clamp was gated on a flag `fitAbout` only
+sets *after* measuring, so a biography rendered at its full natural height -
+1,500px and more - for a frame or four, flinging the discography down the
+column and back. My own traces showed it, as single samples at 997, 1453 and
+1957, and I had called them a transient and moved on.
+
+**A residual that reproduces exactly is a clue.** Noise varies; 14px every
+time was the shape of a structure being wrong - a gap reserved *after* a
+region has to shrink as the region fills, and the two are measured a frame
+apart. Holding the region itself takes it to zero.
+
+**And a sample I cannot explain is not a transient.** Naming it one is how I
+stopped looking at the only evidence of the real defect.
+
 ## Common shape
 
 Every case had a *plausible* substitute for the real target — the build

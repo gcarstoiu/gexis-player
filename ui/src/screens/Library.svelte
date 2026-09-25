@@ -380,7 +380,20 @@
   //: So the height is not guessed: it is the one `fitAbout` aims at - the
   //: first album card at `clientHeight - cardHeight * ALBUM_PEEK` - and the
   //: discography is already on the page to be measured against it.
-  let reserve = $state(0);
+  //: How tall the About region will be once it has something in it
+  //: (ADR-0074), measured while it is still a skeleton and then kept - so
+  //: the biography and Popular arrive *into* a box that is already the
+  //: right size rather than growing one under the discography.
+  let hold = $state(0);
+
+  //: Held while there is something coming, and while what came fills it.
+  //: An artist whose lookup failed, or who has no biography at all, lets
+  //: the page close up - George, 2026-09-25: *"in the likelihood the info
+  //: doesn't come then it can compress, but that is a less likely event."*
+  const holding = $derived(
+    artistInfo.state === 'loading' ||
+      (artistInfo.state === 'ready' && !!artistInfo.found?.biography),
+  );
 
   $effect(() => {
     const waiting = artistInfo.state === 'loading';
@@ -389,7 +402,8 @@
     if (!waiting || !columnEl) return;
     const frame = requestAnimationFrame(() => {
       const card = columnEl?.querySelector('.disc');
-      if (!card) return;
+      const region = columnEl?.querySelector('.artistmeta__region');
+      if (!card || !region) return;
       const column = columnEl.getBoundingClientRect();
       const first = card.getBoundingClientRect();
       // The place `fitAbout` aims the first album card at.
@@ -400,7 +414,7 @@
       const have = first.top - column.top + columnEl.scrollTop;
       // Written, never read here: an effect that reads what it writes wakes
       // itself (LESSONS 31).
-      reserve = Math.max(0, Math.round(want - have));
+      hold = Math.max(0, Math.round(region.getBoundingClientRect().height + want - have));
     });
     return () => cancelAnimationFrame(frame);
   });
@@ -1495,6 +1509,13 @@
         <!-- The design's right column: About, Popular, the discography,
              then Similar artists - all of it one scroller. -->
         <div class="artistright" bind:this={columnEl} use:fromTop={where}>
+          <!-- **The region is held, not a gap after it** (ADR-0074). A
+               spacer between About and the discography had to shrink as
+               About filled, and the two were measured a frame apart - so
+               the discography flicked one way and then the other. A
+               `min-height` on the region itself simply does not move: what
+               arrives fills it. -->
+          <div class="artistmeta__region" style:min-height={holding && hold ? `${hold}px` : null}>
             <div class="sect">
               <span class="sect__label">About</span>
               <span class="sect__rule"></span>
@@ -1510,7 +1531,17 @@
               <!-- Clamped, so Popular and the discography are still on
                    screen under it (George, 2026-09-18). Tapping opens the
                    rest; not a nested scroller, which is what made the
-                   discography move under a finger meant for the column. -->
+                   discography move under a finger meant for the column.
+
+                   **Clamped from the first frame it exists** (ADR-0074).
+                   The clamp used to be gated on `bioClipped`, which is what
+                   `fitAbout` concludes *after* measuring - so a biography
+                   rendered at its full natural height, 1,500px and more,
+                   until the next frame, flinging the discography down the
+                   column and back. It depended on the artist before it,
+                   which is why one never opened before was worse (George,
+                   2026-09-25). `bioClipped` still decides the fade, which
+                   is a question about the text rather than the space. -->
               <!-- No More/Less: tapping the text is the control, and the
                    fade says there is more (George, 2026-09-21). Which means
                    the fade must not appear over a biography that is already
@@ -1518,7 +1549,7 @@
               <div
                 class="artistmeta__bio"
                 class:is-clamped={!bioOpen && bioClipped}
-                style:max-height={bioOpen || !bioClipped ? null : `${aboutMax}px`}
+                style:max-height={bioOpen ? null : `${aboutMax}px`}
                 role="button"
                 tabindex="0"
                 aria-expanded={bioOpen}
@@ -1566,13 +1597,7 @@
             </div>
           {/if}
 
-          <!-- Holds the discography where it will end up, so the About
-               section filling in does not shove it down (ADR-0074). If
-               nothing arrives, this goes with the loading state and the
-               page closes up. -->
-          {#if artistInfo.state === 'loading' && reserve > 0}
-            <div class="artistmeta__hold" style:height="{reserve}px" aria-hidden="true"></div>
-          {/if}
+          </div>
 
           <div class="releases">
           {#each releases as group (group.label)}
@@ -2961,7 +2986,12 @@
     -webkit-mask-image: linear-gradient(180deg, #000 58%, transparent 100%);
     mask-image: linear-gradient(180deg, #000 58%, transparent 100%);
   }
-  .artistmeta__hold {
+  /* One flex item holding About and Popular, with the column's own gap
+     inside it so nothing looks different (ADR-0074). */
+  .artistmeta__region {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
     flex-shrink: 0;
   }
   .artistmeta__credit {
