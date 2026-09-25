@@ -14,6 +14,7 @@
 <script>
   import WaitingServices from './WaitingServices.svelte';
   import { pressing } from '../lib/press.svelte.js';
+  import { sources } from '../lib/state.js';
 
   let { availability = {}, onsettings } = $props();
 
@@ -21,7 +22,11 @@
   // Every source switched off is reachable now that the rows work (ADR-0077),
   // and an empty screen with no way off it would be the panel bricking itself.
   // The icon stays whatever happens; this only says why the screen is bare.
-  const none = $derived(!['lms', 'spotify', 'bluetooth'].some((id) => availability[id]));
+  //: ADR-0086: whatever is installed, not a list written here. A device with
+  //: a fourth renderer would otherwise say "no sources" while one waited.
+  const none = $derived(
+    !Object.values($sources).some((s) => s.kind === 'renderer' && availability[s.id]),
+  );
 </script>
 
 <div class="waithome">

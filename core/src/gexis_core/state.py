@@ -34,6 +34,7 @@ class StateStore:
         capabilities: Mapping[str, Capabilities],
         *,
         handoff_exempt_pairs: tuple[tuple[str, str], ...] = (),
+        sources: tuple[dict, ...] = (),
     ) -> None:
         """`capabilities` is the single source of truth for which
         renderers exist (Phase 3 criterion 2) - one dict, not a separate
@@ -48,6 +49,13 @@ class StateStore:
         decides from.
         """
         self._capabilities = dict(capabilities)
+        #: **ADR-0086.** How each source presents itself - name, accent,
+        #: status line, mark - read from the manifests at startup. Beside
+        #: `capabilities` because it is the same kind of thing: static for the
+        #: process, and the panel cannot draw a source without it. The three
+        #: built-ins are in here on the same footing as any plugin, which is
+        #: the point: the generic path is the one exercised on every boot.
+        self._sources = tuple(sources)
         self._handoff_exempt_pairs = tuple(tuple(p) for p in handoff_exempt_pairs)
         self._available: dict[str, bool] = {rid: False for rid in capabilities}
         self._metadata: dict[str, TrackMetadata] = {}
@@ -104,6 +112,7 @@ class StateStore:
             fixed_output=self._fixed_output,
             meters=self._meters,
             handoff_exempt_pairs=self._handoff_exempt_pairs,
+            sources=self._sources,
             settings_revision=self._settings_revision,
             pictures_revision=self._pictures_revision,
             pairing=self._pairing,

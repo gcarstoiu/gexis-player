@@ -98,6 +98,7 @@ class StateServer:
         radio=None,
         pairing_answer=None,
         restore=None,
+        plugins=(),
         splash=None,
         weather=None,
         wallpapers=None,
@@ -135,6 +136,11 @@ class StateServer:
         self._enrichment = enrichment
         self._radio = radio
         self._pairing_answer = pairing_answer
+        #: **ADR-0086.** The installed manifests, so `/plugins/{id}/mark` can
+        #: find a file. Held by id rather than searched per request: the set is
+        #: fixed for the process and a request must not walk a directory a
+        #: URL named.
+        self._plugins = {p.id: p for p in plugins}
         #: **ADR-0083.** Called after an archive has been written back, to
         #: reboot. Injected rather than imported so the route stays a route:
         #: the daemon owns what "restart the device" means, and a test can
@@ -816,6 +822,23 @@ class StateServer:
             "enrichment": found.to_json(),
         })
 
+    async def _handle_plugin_mark(self, request: web.Request) -> web.Response:
+        """A source's glyph, by id (ADR-0086).
+
+        **The id is looked up, never joined onto a path.** It arrives from a
+        URL, and a manifest directory is not somewhere a request gets to point
+        at - the set of plugins is fixed at startup and anything not in it is
+        a 404.
+        """
+        plugin = self._plugins.get(request.match_info["id"])
+        if plugin is None or plugin.mark is None:
+            return web.json_response({"error": "no mark for that source"}, status=404)
+        # Immutable for the life of an install: a mark changes when a package
+        # does, and the panel reloads on a new build anyway.
+        return web.FileResponse(
+            plugin.mark, headers={"Cache-Control": "public, max-age=86400"}
+        )
+
     async def _handle_surface(self, request: web.Request) -> web.Response:
         """ADR-0035 §6: the panel always arrives on loopback, a phone from the LAN."""
         panel = request.remote in ("127.0.0.1", "::1")
@@ -1144,6 +1167,7 @@ class StateServer:
         # somebody typed, spaces and punctuation included.
         app.router.add_get("/skins", self._handle_skins)
         app.router.add_get("/skins/{name:.*}/preview", self._handle_skin_preview)
+        app.router.add_get("/plugins/{id}/mark", self._handle_plugin_mark)
         app.router.add_get("/radio", self._handle_radio)
         app.router.add_post("/radio/play", self._handle_radio_play)
         app.router.add_get("/library/artist-photos", self._handle_artist_photos)

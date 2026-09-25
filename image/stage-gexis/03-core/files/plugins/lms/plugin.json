@@ -1,6 +1,6 @@
 {
   "id": "lms",
-  "name": "Lyrion",
+  "name": "LMS",
   "kind": "renderer",
   "unit": "squeezelite.service",
   "label": "Squeezelite Active",

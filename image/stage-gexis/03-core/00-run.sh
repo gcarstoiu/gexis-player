@@ -76,6 +76,12 @@ for plugin in files/plugins/*/; do
 	id="$(basename "${plugin}")"
 	install -D -m 644 "${plugin}plugin.json" \
 		"${ROOTFS_DIR}/usr/share/gexis/plugins/${id}/plugin.json"
+	# A mark is optional: LMS's glyph is drawn in CSS rather than shipped as
+	# an image, so it has none and the panel draws its bars.
+	if [ -f "${plugin}mark.png" ]; then
+		install -D -m 644 "${plugin}mark.png" \
+			"${ROOTFS_DIR}/usr/share/gexis/plugins/${id}/mark.png"
+	fi
 done
 
 # ADR-0049: the idle screen's own pictures arrive over SMB, because nothing

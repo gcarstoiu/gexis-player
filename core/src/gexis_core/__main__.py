@@ -67,7 +67,7 @@ from gexis_core.settings import SettingsStore
 from gexis_core.settings_registry import Settings
 from gexis_core.splash import Splash
 from gexis_core.state import StateStore
-from gexis_core import backups, bluealsa_volume, outputs
+from gexis_core import backups, bluealsa_volume, outputs, plugins
 from gexis_core.systemd import set_enabled as _set_unit_enabled
 from gexis_core.artwork_sweep import ArtworkSweep
 from gexis_core.bluealsa_volume import BluealsaVolume
@@ -304,9 +304,24 @@ async def main() -> None:
     # own metadata/availability reports below - constructed before
     # Supervisor for the same closure reason as volume_bridge (its
     # callbacks reference `supervisor`, assigned later).
+    # **ADR-0086: every source describes itself in a manifest**, the three
+    # built-ins included, so the panel's generic path is the one exercised on
+    # every boot rather than a fallback nothing runs.
+    installed_plugins = plugins.installed()
+    if installed_plugins:
+        logger.info(
+            "plugins: %s", ", ".join(f"{p.id} ({p.kind})" for p in installed_plugins)
+        )
+    else:
+        logger.warning(
+            "plugins: no manifests under %s - the panel will draw sources "
+            "without names or marks", plugins.DEFAULT_DIR,
+        )
+
     state_store = StateStore(
         {rid: adapter.capabilities for rid, adapter in adapters.items()},
         handoff_exempt_pairs=config.handoff_exempt_pairs,
+        sources=tuple(p.to_json() for p in installed_plugins),
     )
 
     # Criterion 4: moOde-compatible metadata file, subscribed the same way
@@ -1698,6 +1713,9 @@ async def main() -> None:
         pairing_answer=pairing_agent.answer,
         # ADR-0083: what "restart the device" means is the daemon's to say.
         restore=_restore_done,
+        # ADR-0086: the panel asks for a source's mark by id; the daemon is
+        # the only thing that knows where manifests live.
+        plugins=installed_plugins,
         # ADR-0043: the panel reports its first painted frame and the boot
         # animation ends there, not when the kiosk unit goes active.
         splash=Splash(),

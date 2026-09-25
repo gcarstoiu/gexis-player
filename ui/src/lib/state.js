@@ -78,6 +78,18 @@ export const handoff = derived(playback, ($s) => $s?.handoff ?? null);
 export const handoffExemptPairs = derived(playback, ($s) => $s?.handoff_exempt_pairs ?? []);
 /** What each renderer has (ADR-0037 §2's static layer), by renderer id. */
 export const capabilities = derived(playback, ($s) => $s?.capabilities ?? {});
+
+/** **ADR-0086: how each source presents itself**, from its manifest - name,
+ *  accent, status line, mark URL. Keyed by id, because every screen that
+ *  wants it has an id in hand and none of them wants a list.
+ *
+ *  The three built-ins are in here on the same footing as any plugin. That is
+ *  the point: a screen that reads this draws a renderer it has never heard of
+ *  without being edited, and the path is exercised on every boot rather than
+ *  being a fallback nobody runs. */
+export const sources = derived(playback, ($s) =>
+  Object.fromEntries(($s?.sources ?? []).map((source) => [source.id, source])),
+);
 /** What the active renderer can do right now (ADR-0037 §2's "can now"). */
 export const available = derived(playback, ($s) => $s?.controls?.available ?? []);
 /** The active renderer's own shuffle (bool) and repeat ('off'|'all'|'one'). */
