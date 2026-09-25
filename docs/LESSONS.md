@@ -715,6 +715,22 @@ apart. Holding the region itself takes it to zero.
 **And a sample I cannot explain is not a transient.** Naming it one is how I
 stopped looking at the only evidence of the real defect.
 
+**37. A box never reports a scroll height smaller than itself**
+(2026-09-25). The artist page holds space for a biography that has not
+arrived, and should give it up when the biography turns out to be two lines
+long. The test was `scrollHeight >= clientHeight`, which is **always true**:
+`scrollHeight` is the content's height *or the box's*, whichever is larger.
+Every artist reported that its text filled the space, and every artist held
+it - including one whose entire biography was a single sentence in a 400px
+box, photographed by George.
+
+**The question was about the text and the measurement was about the box.**
+The paragraphs' own heights answer it.
+
+**It reported success, which is why it took a photograph to find.** A test
+that cannot return false is not a test, and this one had already been
+deployed and measured as working.
+
 ## Common shape
 
 Every case had a *plausible* substitute for the real target — the build

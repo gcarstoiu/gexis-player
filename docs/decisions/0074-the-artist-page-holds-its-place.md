@@ -73,6 +73,30 @@ sitting empty:
 one question geometry cannot answer: **is there more text than the box
 shows**, and so should the fade be drawn. `aboutMax` is gone.
 
+## When the metadata does not come
+
+All four forced in the page and photographed. **Every one of them closes the
+page up** — the space is held only while an answer is coming, and afterwards
+only if what came can fill it:
+
+| | About shows | region | discography sits at |
+| --- | --- | --- | --- |
+| the network failed | *"Artist details unavailable offline. Your library is unaffected."* + Retry | 88 px | 102 |
+| nothing found | *"Nothing found for this artist."* | 52 px | 66 |
+| a one-line biography, no Popular | the line | 121 px | 135 |
+| Popular but no biography | the message, then Popular | 196 px | 210 |
+
+**The hold is conditional on the biography being able to fill it.** A
+one-line life story stretched down 400 px of nothing is the same fault as a
+short Popular list leaving a hole, so the question is asked once per artist
+— *is there as much text as there is space?* — and the answer decides
+whether the space is kept.
+
+**The cost is a compression when the answer is no**: about 400 px, once, at
+around 1.3 s, on an artist whose biography cannot fill the page. One of five
+in a sample. George, 2026-09-25: *"in the likelihood the info doesn't come
+then it can compress, but that is a less likely event."*
+
 ## Three wrong answers first, and what they were hiding
 
 **A spacer after the region left 14 px.** Reserving the *gap* between About
@@ -90,6 +114,19 @@ down the column and back, for 10–65 ms. It depended on the artist opened
 before, which is why one never opened before was worse. The clamp now
 applies from the first frame the biography exists; `bioClipped` still
 decides the fade, which is a question about the text rather than the space.
+
+## Three more traps in the measuring
+
+- **`fills` starting false compressed the region the instant the lookup
+  returned**, so the biography was then measured against the *compressed*
+  box — where any text fills it, and so everything held. The region stays
+  held until the question has been asked.
+- **A box never reports a `scrollHeight` smaller than itself.** Asking
+  whether the text is shorter than its box that way always answered no. The
+  paragraphs' own height is what is being asked about.
+- **`flex: 1 1 0` with nothing to fill collapses to its floor.** Once the
+  region stopped being held, the biography kept flexing and was cut to
+  64 px. The flex belongs to the held state and is scoped to it.
 
 ## Consequences
 

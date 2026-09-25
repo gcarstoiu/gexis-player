@@ -342,6 +342,19 @@
   function fitAbout() {
     if (!aboutEl || bioOpen) return;
     bioClipped = aboutEl.scrollHeight > aboutEl.clientHeight + 2;
+    if (artistInfo.state === 'ready' && !decided) {
+      // **The paragraphs' own height, not `scrollHeight`.** A box never
+      // reports a scroll height smaller than itself, so a one-line
+      // biography in a 400px box said it filled it - and every artist held
+      // (2026-09-25). The text is what is being asked about.
+      const paras = [...aboutEl.querySelectorAll('.artistmeta__para')];
+      const text = paras.length
+        ? paras[paras.length - 1].getBoundingClientRect().bottom -
+          paras[0].getBoundingClientRect().top
+        : 0;
+      fills = text >= aboutEl.clientHeight - 4;
+      decided = true;
+    }
   }
 
   $effect(() => {
@@ -372,13 +385,27 @@
   //: right size rather than growing one under the discography.
   let hold = $state(0);
 
-  //: Held while there is something coming, and while what came fills it.
-  //: An artist whose lookup failed, or who has no biography at all, lets
-  //: the page close up - George, 2026-09-25: *"in the likelihood the info
-  //: doesn't come then it can compress, but that is a less likely event."*
+  //: **Whether this artist's biography is long enough to fill the space.**
+  //: Decided once, when the lookup comes back, and not revisited - the
+  //: answer changes the height it was measured in, so asking twice
+  //: oscillates for a biography that sits near the boundary.
+  let fills = $state(false);
+  //: **Held until the question has been asked.** `fills` starting false made
+  //: the region compress the moment the lookup returned, and the biography
+  //: was then measured against the *compressed* box - where any text fills
+  //: it, so everything held (2026-09-25).
+  let decided = $state(false);
+
+  //: Held while there is something coming, and afterwards only if what came
+  //: can fill it. An artist whose lookup failed, who has no biography, or
+  //: whose biography is two lines long lets the page close up - George,
+  //: 2026-09-25: *"in the likelihood the info doesn't come then it can
+  //: compress, but that is a less likely event."* A one-line life story
+  //: stretched over 400px of nothing is the same fault as a short Popular
+  //: list leaving a hole.
   const holding = $derived(
     artistInfo.state === 'loading' ||
-      (artistInfo.state === 'ready' && !!artistInfo.found?.biography),
+      (artistInfo.state === 'ready' && !!artistInfo.found?.biography && (!decided || fills)),
   );
 
   $effect(() => {
@@ -641,6 +668,8 @@
       // biography that takes a second (Finding 035).
       artistInfo = { state: 'loading', for: entry.id, found: null, popular: [] };
       bioOpen = false;
+      fills = false;
+      decided = false;
       loadArtistInfo(entry.id, entry.name).then((answer) => {
         if (artistInfo.for !== entry.id) return;
         artistInfo = {
@@ -1501,7 +1530,11 @@
                the discography flicked one way and then the other. A
                `min-height` on the region itself simply does not move: what
                arrives fills it. -->
-          <div class="artistmeta__region" style:min-height={holding && hold ? `${hold}px` : null}>
+          <div
+            class="artistmeta__region"
+            class:is-held={holding && hold}
+            style:min-height={holding && hold ? `${hold}px` : null}
+          >
             <div class="sect">
               <span class="sect__label">About</span>
               <span class="sect__rule"></span>
@@ -2965,7 +2998,7 @@
      artist with three popular tracks instead of five got a short biography
      and a hole under it (George, 2026-09-25). Flexing, the text fills the
      space instead of the space sitting empty. */
-  .artistmeta__region .artistmeta__bio:not(.is-open) {
+  .artistmeta__region.is-held .artistmeta__bio:not(.is-open) {
     flex: 1 1 0;
     min-height: 64px;
     overflow: hidden;
