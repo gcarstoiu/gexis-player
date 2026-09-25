@@ -162,8 +162,16 @@ they are the contract's **source**, not its consumers, and
 
 **The order, and the reason for it:**
 
-1. **The Plexamp hardware check, pulled forward out of Phase 11.** Do not
-   freeze a contract around a renderer that cannot be one.
+1. ~~**The Plexamp hardware check**~~ — **done 2026-09-25**
+   ([Finding 077](docs/findings/077-plexamp-on-gexis.md)). Plexamp headless
+   4.13.2 is installed and claimed on the device. **It can be a renderer**: a
+   commanded stop works, it frees the ALSA device and keeps running, so
+   ADR-0008's reversal is not triggered. Two things to carry into Phase 11 —
+   the device is held for a deterministic **14 s** after the stop, so its
+   `release_ladder` needs a longer polite grace than the default; and **the
+   audio path does not work for the meters**, because it opens `hw:5,0`
+   directly rather than `pcm.output`, in **S32_LE**, which is the format moOde
+   measured as giving an all-zero peppyalsa FIFO.
 2. ADRs: the transport (recommended: **Unix socket, line-delimited JSON**).
 3. Draw the contract from `Adapter` and `Capabilities` as they are.
 4. **Discovery — the mass of the phase.** `"lms"` appears in **six core

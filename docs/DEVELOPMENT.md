@@ -2126,8 +2126,24 @@ comes before anything is built.
    Plexamp*. `image/stage-gexis/00-alsa/files/output.conf` pins **no format at
    all**, so the visualiser would go flat with nothing on screen to say why.
 
-   **All four are answered by the same install**, which is the argument for
-   doing it before anything else in Phase 10.
+   **All four were answered by the same install, 2026-09-25**
+   ([Finding 077](findings/077-plexamp-on-gexis.md)), and three of the four
+   came out well:
+
+   - **A commanded stop works** — 200, `state="stopped"` at once — but the
+     device stays held for a deterministic **14 s**. So this renderer's
+     `release_ladder` needs a polite grace longer than that, exactly as LMS
+     overrides it for squeezelite's idle tick.
+   - **It frees the device and keeps running**, so **ADR-0008's reversal
+     condition is not triggered.**
+   - **The audio path is the problem.** It opens `hw:5,0` directly, so
+     `pcm.output` and peppyalsa are not in the path, and the format is
+     **S32_LE** — the one moOde measured as giving an all-zero meter FIFO.
+     `output` is an ALSA PCM and `aplay -L` lists it, but Plexamp's own
+     enumeration does not, and setting it is silently ignored.
+   - **The TCP signal is still unanswered**: the count was 0 throughout,
+     including while playing, because no phone was attached. It reflects a
+     *controller* being connected, not audio.
 2. Acquisition and release fit the arbitration model (ADR-0010); takeover gaps
    measured against the other renderers.
 3. Metadata from Plexamp's local API: title, artist, album, artwork, position,

@@ -64,6 +64,13 @@ otherwise unreachable.
 > playback confirmed running was suggested; **whether it happened is
 > UNVERIFIED.**
 
+**The rerun has now happened, on `gexis`, and the caveat was the important
+part** ([Finding 077](077-plexamp-on-gexis.md)). With playback confirmed open,
+the stop leaves the device **held for 14 seconds** — deterministically, three
+runs out of three — before releasing it. The guide's sentence is true only of
+the end state, and a release ladder sized from it would escalate to SIGKILL
+every time.
+
 **2. There *is* a positive disconnect signal — and it is not in the API.** The
 count of TCP connections to `:32500` **drops to 0** when the phone app is
 dismissed or explicitly disconnected, and recovers on reopen, with a latency of
