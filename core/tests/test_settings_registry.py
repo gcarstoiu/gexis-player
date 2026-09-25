@@ -134,6 +134,11 @@ def test_registry_keys_are_the_designs_keys_apart_from_recorded_deviations():
         # that reports them. The design has no rows for these because the
         # design assumed LMS's pictures were the pictures.
         "sweep_portraits", "sweep_covers", "sweep_status",
+        # ADR-0083, 2026-09-25: `backup` is the design's and this is its other
+        # half. A backup nobody can put back is a file, not a backup - and the
+        # design has no row for it because the design predates the device
+        # holding anything worth losing.
+        "restore",
     }
 
 
@@ -144,7 +149,10 @@ def test_navigation_is_gone_and_lists_replaced_it():
     does, and nothing carries `navigation` any more."""
     assert not [r for r in _rows() if r.get("navigation")]
     lists = {r["key"] for r in _rows() if r["type"] == "list"}
-    assert lists == {"bt_trusted", "wifi", "lms_server"}
+    # `restore` joined them 2026-09-25 (ADR-0083). It is a list for the same
+    # reason `bt_trusted` is: the items are found on the device, not written
+    # down here, and each one is acted on rather than selected.
+    assert lists == {"bt_trusted", "wifi", "lms_server", "restore"}
     # A list is navigation, not a value: it never takes a scalar write.
     assert all(r["type"] not in SETTABLE for r in _rows() if r["type"] == "list")
 
@@ -467,7 +475,12 @@ def test_the_shipped_registry_hides_twenty_rows_and_shows_the_rest():
     # 17 since 2026-09-24: George asked to see the confidence threshold,
     # which ADR-0059 now gates the artwork sweep on ("I am not seeing the
     # confidence setting in the enrichment menu").
-    assert len(kept) == 17, "ADR-0022's amendment: inventoried, not surfaced"
+    #
+    # **16 since 2026-09-25**: `backup` was surfaced and wired (ADR-0083),
+    # having been inventoried and unwired since ADR-0022 - which cost a hand
+    # copy over SSH the day the card was reflashed. `restore` arrived with it
+    # and was surfaced from the start, so it never appears in this count.
+    assert len(kept) == 16, "ADR-0022's amendment: inventoried, not surfaced"
     # Every one of them is still served by the API.
     assert all(r.get("key") for r in kept)
     # 54 at the start of 9d, plus the two rows the design has and the plan
@@ -491,8 +504,12 @@ def test_the_shipped_registry_hides_twenty_rows_and_shows_the_rest():
     # that decide how the visualisation moves, which George asked for by
     # name on 2026-09-23. Plus ADR-0059's two buttons and their progress
     # row, on 2026-09-24.
-    assert len(rows) == 74
-    assert len(rows) - len(kept) == 57
+    # 75 since 2026-09-25: `restore` (ADR-0083).
+    assert len(rows) == 75
+    # 59 since 2026-09-25: `backup` was surfaced and `restore` arrived with
+    # it (ADR-0083), so the shown count gains two while the hidden one loses
+    # one.
+    assert len(rows) - len(kept) == 59
 
 
 def test_the_clock_can_be_turned_off_without_taking_the_screen_with_it():

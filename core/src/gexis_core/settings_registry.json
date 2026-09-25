@@ -939,11 +939,21 @@
       {
         "key": "backup",
         "type": "action",
-        "label": "Back up settings",
+        "label": "Back up now",
+        "marks": "R",
+        "note": "Writes the settings, the library's pictures, the paired devices and this device's own configuration into the Backups share.",
+        "confirm": "Back up",
+        "default": null
+      },
+      {
+        "key": "restore",
+        "type": "list",
+        "label": "Restore",
         "marks": "N",
-        "note": null,
+        "note": "Replaces everything a backup holds and restarts the device. Backups are read from the Backups share, so one copied there from another machine is offered too.",
         "default": null,
-        "surfaced": false
+        "empty": "No backups yet. Back up first, or copy one into the Backups share.",
+        "kind": "backup"
       },
       {
         "key": "factory_reset",

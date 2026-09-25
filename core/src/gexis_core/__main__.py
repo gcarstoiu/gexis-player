@@ -67,7 +67,7 @@ from gexis_core.settings import SettingsStore
 from gexis_core.settings_registry import Settings
 from gexis_core.splash import Splash
 from gexis_core.state import StateStore
-from gexis_core import bluealsa_volume, outputs
+from gexis_core import backups, bluealsa_volume, outputs
 from gexis_core.systemd import set_enabled as _set_unit_enabled
 from gexis_core.artwork_sweep import ArtworkSweep
 from gexis_core.bluealsa_volume import BluealsaVolume
@@ -216,6 +216,15 @@ async def _set_timezone(zone: str) -> None:
         logger.warning("timezone: %s", err.decode("utf-8", "replace").strip())
     else:
         logger.info("timezone: set to %s", zone)
+
+
+async def _restore_done() -> None:
+    """**ADR-0083: a restore reboots.** The archive is already written back by
+    the time this runs; the pause is only so the answer reaches whoever asked
+    before the device goes down under them."""
+    logger.warning("restore: rebooting to come up on the restored state")
+    await asyncio.sleep(1.5)
+    await asyncio.create_subprocess_exec("systemctl", "reboot")
 
 
 async def _reboot() -> None:
@@ -1103,7 +1112,14 @@ async def main() -> None:
                # `volume_managed` is: it is how a row says it reports
                # something rather than nothing (ADR-0022's `version`).
                "version": None, "image_build": None,
-               "reboot": lambda _: asyncio.ensure_future(_reboot())},
+               "reboot": lambda _: asyncio.ensure_future(_reboot()),
+               # **ADR-0083.** A backup that stays on the device does not
+               # survive the event it exists for, so this writes into a share
+               # of its own. `restore` is the other half and is a `list` row -
+               # its items are what is in that share, so one copied in from
+               # another machine is offered too.
+               "backup": lambda _=None: asyncio.ensure_future(_make_backup()),
+               "restore": None},
         # **Phase 9 criterion 2.** These two act through
         # `POST /settings/{key}/items`, not through `set` - joining a network
         # and forgetting a device - so they are wired, and saying otherwise
@@ -1193,6 +1209,24 @@ async def main() -> None:
         await bluetooth_agent.register(
             bus, pairing_agent, bluetooth_agent.capability_for(mode)
         )
+
+    async def _make_backup() -> None:
+        """**Everything a flash destroys, into the Backups share** (ADR-0083).
+
+        Off the loop: it reads the enrichment cache, which was 12 MB on
+        George's device, and gzips it.
+        """
+        try:
+            name = await asyncio.to_thread(
+                backups.create, settings.value("device_name") or "gexis"
+            )
+        except Exception as exc:  # noqa: BLE001 - a backup is never fatal
+            logger.warning("backup: failed: %s", exc)
+            return
+        logger.info("backup: %s", name)
+        # The Restore row lists the share, so a new archive has to reach the
+        # panel without it being reopened.
+        state_store.bump_settings_revision()
 
     def renderer_enabled(renderer_id: str) -> bool:
         """**ADR-0077.** Whether that source is switched on.
@@ -1662,6 +1696,8 @@ async def main() -> None:
         # ADR-0045: the panel's answer, back to the agent that is holding
         # BlueZ's handshake open waiting for it.
         pairing_answer=pairing_agent.answer,
+        # ADR-0083: what "restart the device" means is the daemon's to say.
+        restore=_restore_done,
         # ADR-0043: the panel reports its first painted frame and the boot
         # animation ends there, not when the kiosk unit goes active.
         splash=Splash(),

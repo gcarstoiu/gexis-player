@@ -50,6 +50,12 @@
   // A warned option that has been selected and not yet committed
   // (ADR-0044 §2). Null whenever nothing is being held back.
   let choicePending = $state(null);
+  //: **ADR-0083.** The backup chosen for restoring, held until it is
+  //: confirmed. A restore replaces everything and reboots, so it is the one
+  //: item action on this screen that cannot happen on a single tap - and a
+  //: `danger` confirm is the shape the screen already has for that
+  //: (`factory_reset`).
+  let restorePending = $state(null);
   // A list's items, and whether they have been looked for yet (ADR-0044 §1).
   // A Wi-Fi scan and an LMS broadcast both take seconds, so `searching` is a
   // real state rather than a courtesy: showing "nothing found" before the
@@ -409,6 +415,12 @@
       if (await write(row, item.name)) flash(`${row.label} set — restart to use it`);
       return;
     }
+    if (row.kind === 'backup') {
+      // ADR-0083: ask first. Everything this replaces is unrecoverable
+      // afterwards, and the device restarts.
+      restorePending = item;
+      return;
+    }
     if (item.state === 'connected') return;
     if (item.state === 'locked') {
       joinItem = item;
@@ -462,6 +474,24 @@
       joinError = null;
       return;
     }
+    if (restorePending) {
+      // ADR-0083. The daemon answers before it reboots, so there is one to
+      // hear - and then the device goes, which is what the row said.
+      const item = restorePending;
+      restorePending = null;
+      join = 'connecting';
+      await command({ name: item.name, action: 'join' }, (answer) => {
+        if (!answer.ok) {
+          join = 'error';
+          joinError = answer.error;
+          return;
+        }
+        join = null;
+        closeSheet();
+        flash('Restoring — the device is restarting');
+      });
+      return;
+    }
     if (joinItem) {
       doJoin(joinItem.name, draft);
       return;
@@ -502,7 +532,18 @@
     }
   }
 
+  function cancelSheet() {
+    // A pending restore is a step inside the sheet, not the sheet: cancelling
+    // it goes back to the list, the way cancelling a choice does.
+    if (restorePending) {
+      restorePending = null;
+      return;
+    }
+    closeSheet();
+  }
+
   function closeSheet() {
+    restorePending = null;
     // Inside a level, the same button steps back before it closes.
     if (joinItem && join !== 'connecting') {
       joinItem = null;
@@ -766,6 +807,18 @@
           <span class="warn__mark">!</span>
           <span class="warn__text">{sheet.warn[choicePending]}</span>
         </div>
+      {:else if restorePending}
+        <!-- ADR-0083: say which one, and what it costs. A confirm that does
+             not name what it is confirming is a confirm nobody reads. -->
+        <div class="warn">
+          <span class="warn__mark">!</span>
+          <span class="warn__text"
+            >Restoring <b>{restorePending.name}</b> replaces every setting, the
+            library's pictures and the paired devices with what this backup
+            holds, then restarts the device. Nothing it replaces can be got
+            back.</span
+          >
+        </div>
       {/if}
 
       <!-- A grouped choice, level one: the regions. ADR-0044 §4 - two short
@@ -987,21 +1040,23 @@
 
       {#if join !== 'connecting' && join !== 'ok'}
       <div class="sheet__actions">
-        <button class="btn" type="button" disabled={saving} onclick={closeSheet}>
+        <button class="btn" type="button" disabled={saving} onclick={cancelSheet}>
           {#if join === 'error'}
             Give up
           {:else if joinItem || (sheet.grouped && region !== null)}
             Back
+          {:else if restorePending}
+            Cancel
           {:else if choicePending === null && (sheet.type === 'choice' || sheet.type === 'multi' || sheet.grouped || (sheet.wired && sheet.type === 'number'))}
             Close
           {:else}
             Cancel
           {/if}
         </button>
-        {#if join === 'error' || joinItem || choicePending !== null || sheet.type === 'action' || sheet.type === 'text' || (sheet.type === 'number' && !sheet.wired) || (sheet.type === 'list' && sheet.manual && !searching)}
+        {#if join === 'error' || joinItem || restorePending || choicePending !== null || sheet.type === 'action' || sheet.type === 'text' || (sheet.type === 'number' && !sheet.wired) || (sheet.type === 'list' && sheet.manual && !searching)}
           <button
             class="btn btn--confirm"
-            class:btn--danger={sheet.danger || choicePending !== null}
+            class:btn--danger={sheet.danger || restorePending || choicePending !== null}
             type="button"
             disabled={saving}
             onclick={confirmSheet}
@@ -1010,6 +1065,8 @@
               <span class="btn__spin"></span>Saving
             {:else if join === 'error'}
               Try again
+            {:else if restorePending}
+              Restore and restart
             {:else if joinItem}
               Join
             {:else if choicePending !== null}

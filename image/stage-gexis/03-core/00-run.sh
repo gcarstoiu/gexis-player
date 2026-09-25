@@ -75,6 +75,10 @@ ln -sf /dev/null "${ROOTFS_DIR}/etc/systemd/system/alsa-restore.service"
 # share forces writes to. An absent path makes samba answer "connection
 # refused" for a reason nobody can see from a phone.
 install -d -o 1000 -g 1000 -m 2775 "${ROOTFS_DIR}/var/lib/gexis-core/pictures"
+# ADR-0083: the second share, for the same reason and with the same shape - a
+# backup that stays on the device does not survive the event it exists for,
+# and this is how one leaves without a shell. Same file, same include.
+install -d -o 1000 -g 1000 -m 2775 "${ROOTFS_DIR}/var/lib/gexis-core/backups"
 install -D -m 644 files/gexis-pictures.conf \
 	"${ROOTFS_DIR}/etc/samba/smb.conf.d/gexis-pictures.conf"
 # Debian ships one monolithic smb.conf. Appending an include leaves their
