@@ -2205,6 +2205,23 @@ about who may ask, and that is a phase of its own if it is ever wanted.
 
 ### Phase 11 — Plexamp as a renderer, and the contract's proof
 
+> **COMPLETE 2026-09-25.** All six criteria closed, **and Phase 10's criterion 2
+> with them** — a renderer in its own repository, `gcarstoiu/gexis-plexamp`,
+> taking the audio device from LMS and giving it back inside its own declared
+> grace. **Contract v1 is frozen** on that evidence.
+>
+> **Six amendments came out of this phase and the one before it**, every single
+> one found by building rather than reading: a switch for every plugin;
+> settings reaching a unit as environment; a socket that authorised nobody but
+> root; a published state with no slot for a plugin renderer; an adapter map the
+> supervisor was given a *copy* of, so the release ladder could not ask its own
+> question; and a manifest glyph that three screens never looked up.
+>
+> **What is not done, and is named rather than implied:** cross-rate takeover
+> gaps (blocked on content that does not exist in George's library), the gaps
+> against Spotify and Bluetooth (which need a phone), claiming from the settings
+> row, and a boot of the image that carries all of it.
+
 **Added 2026-09-16 (George).** ~~Same shape as Spotify and LMS.~~ — **not the
 same shape**, and that is the point of it now.
 
@@ -2301,8 +2318,15 @@ the ALSA default.
    - **The TCP signal is still unanswered**: the count was 0 throughout,
      including while playing, because no phone was attached. It reflects a
      *controller* being connected, not audio.
-2. Acquisition and release fit the arbitration model (ADR-0010); takeover gaps
-   measured against the other renderers.
+2. ~~Acquisition and release fit the arbitration model (ADR-0010); takeover gaps
+   measured against the other renderers.~~ — **Done for LMS, and the other two
+   need a phone** ([Finding 085](findings/085-the-takeover-gaps-and-the-controls.md)).
+   Six takeovers: **LMS lets go in 0.2 s**, five times with no variance;
+   **Plexamp takes 12.6–14.2 s**, every one inside the 16 s grace it declares
+   for itself, so the ladder never escalated. Spotify and Bluetooth answer
+   **409** to `activate` and correctly so — neither can be made to take the
+   device on request. **Cross-rate remains blocked** on content that does not
+   exist in George's library.
 
    **The ladder is already designed, from Finding 077's numbers.** The API
    stop frees the device in **14 s**; stopping the unit frees it in **169 ms**
@@ -2313,11 +2337,27 @@ the ALSA default.
    uses for squeezelite. **A takeover then costs a little over a second**,
    against LMS's measured 3.1 s. George raised this as a user-experience
    concern and it is answered by sizing the grace, not by waiting.
-3. Metadata from Plexamp's local API: title, artist, album, artwork, position,
-   duration, transport.
-4. Volume mechanism derived and measured.
-5. Transport commands measured and declared (ADR-0037).
-6. Source pill, handoff screen, Peppy badge; design assets from Claude Design.
+3. ~~Metadata from Plexamp's local API: title, artist, album, artwork, position,
+   duration, transport.~~ — **Done**
+   ([Finding 083](findings/083-metadata-from-a-plugin.md)). Not from the local
+   API alone: the player's timeline says *what is happening* and the Plex server
+   says *what is playing*, fetched once per track. **The core was dropping a
+   plugin's metadata entirely** until this criterion made someone send some.
+4. ~~Volume mechanism derived and measured.~~ — **Done**, both directions
+   ([Finding 084](findings/084-a-plugins-volume.md)). It needed `remote.forget`,
+   which did not exist, and the echo guard this project has now written three
+   times.
+5. ~~Transport commands measured and declared (ADR-0037).~~ — **Done**, and it
+   found the defect it exists to find: every control was **declared and not
+   implemented**, answering 502 (Finding 085). All act now.
+6. ~~Source pill, handoff screen, Peppy badge; design assets from Claude
+   Design.~~ — **Done**, and it cost
+   [ADR-0086 an amendment](decisions/0086-a-plugin-declares-itself-in-a-manifest.md):
+   the manifest's glyph reached the payload and **three separate places drew a
+   plugin renderer as an empty space** — `SourceMark`, the handoff screen and
+   the Peppy renderer — each with a map of the three built-ins and no fallback.
+   The design asset is Plexamp's own mark, George's call: *"You can use their
+   logo for plexamp."*
 
 ### Phase 12 — Qobuz Connect as a renderer
 

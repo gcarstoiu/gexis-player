@@ -106,3 +106,30 @@ it moves between tracks.** A queue of several would settle it and was not built.
   **zero** non-44.1 kHz files, so testing it means sourcing content first.
 - **Nothing about what the panel showed** during these takeovers beyond the
   handoff screen already photographed.
+
+## The Peppy badge, criterion 6's last piece
+
+**Not a photograph.** Peppy is a Wayland client under labwc and nothing on this
+device can capture one — `/dev/fb0` reads back a single colour, because the
+compositor owns the display through DRM rather than the legacy framebuffer, and
+no Wayland capture tool is installed. Adding one to an appliance for a
+screenshot was not worth it.
+
+So the same code path was run off-screen against the **real** skin file and the
+**live** metadata:
+
+```
+  skin section: 01G5_Accuphase
+  badge box: 610,550 50,50
+  now playing: 2 Unlimited - Get Ready for This (orchestral mix) | file: plexamp
+  badge rect: <rect(610, 550, 50, 50)>
+```
+
+Plexamp's mark, composited at the exact box the skin author reserved
+(`playinfo.type.pos`), from `/usr/share/gexis/plugins/plexamp/mark.png`. The
+3× crop shows the gold chevrons on the meter's black.
+
+**What that does and does not establish:** the badge resolves, is scaled into
+the reserved square and is blitted there, by the same `MetadataLayer` the
+running process uses. It does not establish that the running process is
+currently doing it — that would need a capture nothing here can take.

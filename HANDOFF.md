@@ -1,134 +1,56 @@
 # Handoff
 
-Last updated: 2026-09-25 (twenty-fifth session, on R2D2 — **Phase 10 is
-complete and its contract is FROZEN at v1. Both halves are proved from outside:
-`gcarstoiu/gexis-plexamp` takes the audio device from LMS, gives it back inside
-its own declared grace, and now publishes title, artist, album and artwork to
-the panel. One decision is open and it is George's — the artwork URL carries his
-Plex token.**)
+Last updated: 2026-09-25 (twenty-fifth session, on R2D2 — **Phase 10 and Phase
+11 are both COMPLETE. The plugin contract is frozen at v1 and proved from
+outside: `gcarstoiu/gexis-plexamp` takes the audio device, gives it back inside
+its own declared grace, publishes what is playing, takes volume and every
+transport command, and draws its own mark on three screens. Next is Phase 12 —
+Qobuz — or Phase 13, whichever George wants.**)
 
 ## Start here
 
-**Phase 10 closed and merged**, PR #27. Criterion 3 done, criterion 1 documented
-and versioned; **criterion 2 and the contract freeze moved to Phase 11**, because
-criterion 2 is the freeze's evidence.
+**Phase 11 is complete**, all six criteria, and **Phase 10's criterion 2 with
+it**. The contract is frozen at v1.
 
-**Phase 11 has begun and its first work is built**:
-[ADR-0089](docs/decisions/0089-arbitration-carries-a-plugin-renderer.md) —
-arbitration carries a plugin renderer. Until today a `renderer` that connected
-was welcomed, logged and **left idle**; now it gets an adapter around its
-session, registered with the supervisor, and its `acquire`/`release` reach
-arbitration exactly as the three built-ins' events do.
+**The one number that describes this renderer**: taking the device from LMS
+costs **0.2 s**; giving it back costs **12.6–14.2 s**, because a commanded stop
+confirms at once and Plexamp's native layer holds the device until its own timer
+expires. The plugin declares a **16 s** polite grace for itself and the ladder
+honoured it in all six takeovers — no SIGTERM, no SIGKILL, for a renderer the
+core knows nothing about
+([Finding 085](docs/findings/085-the-takeover-gaps-and-the-controls.md)).
 
-**Three things that record settles beyond the obvious**, each of which is a way
-a plugin could otherwise have hurt the device:
+### Six amendments, every one found by building
 
-- **The manifest owns the unit name.** A `hello` that disagrees is refused. The
-  release ladder attributes a still-busy device to that name, so a renderer able
-  to name its own could point process-level escalation at any unit here.
-- **`signal_stop` tells the plugin and then acts itself**, not either/or. A
-  plugin that answered `true` and did nothing would leave the device held with
-  the ladder believing it had escalated.
-- **A bad `hello` costs the plugin its connection, not its arbitration.** The
-  server now calls `on_connect` before `welcome` so it can refuse, and still
-  knows nothing about adapters.
+This is the argument for the ordering, and the reason v1 was not frozen a week
+earlier. Two plugins written against the contract broke it six times:
 
-**Proved end to end** (`core/tests/test_plugin_renderer_end_to_end.py`), over a
-real Unix socket with a fake plugin process: a plugin takes the device from LMS;
-the core releases the plugin when something takes over; a plugin that will not
-let go is escalated against its unit; a plugin that vanishes stops being active
-and unavailable **while the device stays held**, which ADR-0089 writes down
-rather than engineers around.
+| | what could not be expressed |
+|---|---|
+| ADR-0086 | a plugin could declare rows and **nothing could switch it off** |
+| ADR-0088 | a plugin's settings **could not reach a third-party binary** |
+| ADR-0084 | the socket **authorised nobody but root** |
+| ADR-0089 | arbitration carried a renderer **the published state had no slot for** |
+| ADR-0089 | the supervisor had a **copy** of the adapter map, so the release ladder could not ask whether a plugin still held the device |
+| ADR-0086 | the manifest's glyph reached the payload and **three screens never looked it up** |
 
-**What it has not been is used by a real renderer.** That is the rest of Phase
-11, and until it happens the renderer half of the contract stays provisional —
-which is why v1 is still not frozen.
+**The fifth was mine**, written down deliberately with a reason that turned out
+to be wrong, and it crashed the first real takeover with `KeyError: 'plexamp'`
+from inside `_release_with_ladder`.
 
-### Where Phase 11 actually is
+### What is not done, and is named rather than implied
 
-**Criterion 2 closed and the contract is frozen.** On the hardware, with audio:
-
-```
-acquire: plexamp takes the device (was lms)
-release[lms]: polite stop freed the device (0.1s)
-acquire: lms takes the device (was plexamp)
-release[plexamp]: freed within polite grace (14.1s)
-```
-
-14.1 s is Plexamp's measured hold, absorbed by the 16 s grace **the plugin
-declared for itself** — no SIGTERM, no SIGKILL
-([Finding 082](docs/findings/082-a-renderer-from-another-repository.md)).
-
-And metadata, from the same plugin through the frozen contract
-([Finding 083](docs/findings/083-metadata-from-a-plugin.md)):
-
-```
-file=plexamp
-artist=2 Unlimited
-album=Get Ready
-title=Get Ready for This (orchestral mix)
-```
-
-**Four amendments were forced by the two plugins**, every one found by building
-rather than reading, and that is the whole argument for the ordering: a switch
-for every plugin, settings reaching a unit as environment, a socket that
-authorised nobody but root, and a renderer arbitration carried that the state
-had no slot for. **A fifth was mine**: the supervisor had been given a *copy* of
-the adapter map, so the release ladder could not ask whether a plugin still held
-the device — `KeyError: 'plexamp'` from inside `_release_with_ladder`.
-
-### The token in the artwork URL: decided
-
-**George, 2026-09-25:** *"If the calls stay inside the local network then it is
-fine to keep it like this."* Accepted — and **the plugin now holds itself to
-that condition rather than assuming it**: artwork is published only when the
-Plex server's address is not globally routable. Plexamp will happily play from a
-server anywhere, and for a remote one that URL would carry an account-wide
-credential across the internet to be fetched by a browser. A hostname counts as
-not local, because it could resolve anywhere and the safe answer to *"I cannot
-tell"* is no.
-
-### What is left in Phase 11
-
-- **Claiming** from the `claim_token` row. The row exists, the plugin accepts
-  it and does nothing with it; Plexamp's own setup wants a token *and* a name in
-  one session ([Finding 077](docs/findings/077-plexamp-on-gexis.md)), and the
-  name should come from ADR-0048's device name rather than being typed twice.
-- **Takeover gaps and cross-rate**, Phase 11's own criterion 2. The cross-rate
-  half has been blocked since Phase 9 for a reason that has not changed: a
-  60,974-track library scan found **zero** non-44.1 kHz files, so testing it
-  means sourcing content first.
-- **The waiting screen and the Peppy badge** with Plexamp as a party. Neither
-  has been seen. The waiting screen is where the 48px mark is stretched to 68px.
-- **A boot.** `2026-09-25-gexis-player-v0.2.1-579-g0646b8e.img` is built and
-  verified as a file — 690 s, everything the stage installs present, neither
-  unit enabled, **150 MB larger** for Node and Plexamp
-  ([Finding 081](docs/findings/081-the-first-image-with-the-plugin-stage.md)).
-  **Nothing built from it has been run**, which is George's to close by flashing.
-
-  **Two things are not in it**, both landing after their stage had run: the
-  Peppy badge fallback (`05-peppy`) and the panel's mark lookups (`04-ui`, which
-  takes `ui/dist`). The mark and handoff fixes *are* on the device, rsynced.
-  A rebuild ships them.
-
-### What was done in Phase 11, in order
-
-1. **[ADR-0089](docs/decisions/0089-arbitration-carries-a-plugin-renderer.md)** —
-   arbitration carries a plugin renderer.
-2. **The plugin**, `gcarstoiu/gexis-plexamp`, public, v0.1.0 released.
-3. **Criterion 2 closed** with audio
-   ([Finding 082](docs/findings/082-a-renderer-from-another-repository.md)), and
-   **contract v1 frozen** on that evidence.
-4. **Metadata** ([083](docs/findings/083-metadata-from-a-plugin.md)) and
-   **volume** ([084](docs/findings/084-a-plugins-volume.md)), both directions.
-5. **The mark and the handoff screen**, which cost ADR-0086 an amendment: the
-   manifest's glyph reached the payload and **two of the three screens that draw
-   a mark never looked it up**.
-6. **`08-plexamp`**, the image stage, with a `verify-image.sh` section.
-
-**Five amendments came out of the two plugins and one out of me**, every one
-found by building rather than reading. That is the argument for the ordering,
-and it is the reason v1 was not frozen a week earlier.
+- **Cross-rate takeover gaps.** Blocked since Phase 9 for a reason that has not
+  changed: a 60,974-track scan found **zero** non-44.1 kHz files.
+- **Gaps against Spotify and Bluetooth.** Neither can be made to take the device
+  on request — they answer 409 to `activate`, correctly — so measuring them
+  needs a phone.
+- **Claiming** from the `claim_token` row. The row exists and the plugin accepts
+  it; Plexamp's own setup still does the claiming. **Not one of Phase 11's
+  criteria** — something added to the list here.
+- **`next`/`previous` moving between tracks.** Both reached Plexamp and were
+  accepted, but the test queue held one track.
+- **A boot.** The image carries everything; nothing built from it has been run.
 
 ### The two defects the device found, because they are the reason to read this
 
@@ -458,7 +380,9 @@ reverted, currently-flashed image predates this fix.
                                             the Beszel agent was the test that
                                             it carries a non-renderer, and it
                                             amended the contract twice
-11 Plexamp as a renderer, as a plugin     <- next. ALSO the fourth-renderer proof
+11 Plexamp as a renderer, as a plugin   * COMPLETE 2026-09-25 - all six
+                                            criteria, and Phase 10's criterion
+                                            2 with them. ALSO the proof
                                             for 10, replacing Qobuz. Its
                                             hardware check is pulled forward
                                             into 10 - Finding 075 says moOde
