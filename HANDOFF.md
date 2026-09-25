@@ -100,8 +100,16 @@ tell"* is no.
   means sourcing content first.
 - **The waiting screen and the Peppy badge** with Plexamp as a party. Neither
   has been seen. The waiting screen is where the 48px mark is stretched to 68px.
-- **A boot.** Nothing built from `08-plexamp` has been run, which is the same
-  sentence Beszel's stage earned and is George's to close by flashing.
+- **A boot.** `2026-09-25-gexis-player-v0.2.1-579-g0646b8e.img` is built and
+  verified as a file — 690 s, everything the stage installs present, neither
+  unit enabled, **150 MB larger** for Node and Plexamp
+  ([Finding 081](docs/findings/081-the-first-image-with-the-plugin-stage.md)).
+  **Nothing built from it has been run**, which is George's to close by flashing.
+
+  **Two things are not in it**, both landing after their stage had run: the
+  Peppy badge fallback (`05-peppy`) and the panel's mark lookups (`04-ui`, which
+  takes `ui/dist`). The mark and handoff fixes *are* on the device, rsynced.
+  A rebuild ships them.
 
 ### What was done in Phase 11, in order
 
