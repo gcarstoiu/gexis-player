@@ -1,6 +1,7 @@
 # ADR-0086 — A plugin declares itself in a manifest
 
-**Status:** Accepted
+**Status:** Accepted, **amended the same day** — every plugin gets an
+`Enabled` switch, which is the gap a Beszel agent found. See *Amendment*.
 **Date:** 2026-09-25
 **Relates to:** [ADR-0016](0016-plugins-as-separate-processes.md) (separate
 processes; lifecycle left open), [ADR-0084](0084-plugins-speak-json-lines-over-a-unix-socket.md)
@@ -113,6 +114,32 @@ background process is up.
 shipped and upgraded with it. Putting it in `/etc` would invite hand-editing
 and make a package upgrade a conffile fight — the same reasoning ADR-0049
 applied to samba's include.
+
+## Amendment, 2026-09-25 — every plugin can be switched off
+
+**Found by the thing it was meant to find.** `docs/DEVELOPMENT.md` says a
+non-renderer *"only wants to be installed, started, kept running and switched
+off again. If the contract cannot express that, it is a renderer API wearing a
+plugin's name."* Building a Beszel agent against this record showed it could
+not: a plugin could declare rows, and **nothing could stop its unit**. The
+three renderers get that from a hardcoded `RENDERER_ROWS` and a renderer-only
+`_apply_renderer`.
+
+So: **every plugin gets an `Enabled` toggle it did not ask for**, wired to
+ADR-0077's `set_unit_enabled` against the unit in its manifest — enabled and
+started, or stopped and kept stopped, for the same reason that record gives.
+
+- **Not something a plugin declares.** One that forgot would be one nobody
+  could turn off, and the point of this is that there is no such plugin.
+- **`enabled` is the core's key.** A plugin shipping its own is ignored with
+  the reason logged, and keeps its other rows — dropping the whole plugin over
+  one row would cost it every setting it has, and letting the plugin's win
+  would leave a switch that switches nothing.
+- **A manifest may name a row that already exists**, `enabled_row`. The three
+  built-ins do: theirs predate this and do more than manage a unit — ADR-0077's
+  `lms_enabled` also stops the adapter watching and makes arbitration refuse
+  it — so they keep the keys they have always had rather than growing a second
+  switch each.
 
 ## Consequences
 

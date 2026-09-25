@@ -932,18 +932,35 @@ def test_a_renderers_rows_land_in_sources_under_its_own_name():
                                        "label": "Quality", "options": ["A", "B"]}])])
     sources = next(g for g in merged if g["id"] == "sources")
     labels = [r.get("label") for r in sources["rows"]]
-    assert labels == ["Enabled", "Plexamp", "Quality"]
+    # `Enabled` twice: LMS's own, then the switch every plugin gets.
+    assert labels == ["Enabled", "Plexamp", "Enabled", "Quality"]
     assert sources["rows"][1]["type"] == "group"
 
 
 def test_keys_are_prefixed_so_two_plugins_cannot_collide():
-    """Two plugins both shipping `enabled` would otherwise be a duplicate-key
+    """Two plugins both shipping `quality` would otherwise be a duplicate-key
     error nobody could act on."""
-    row = {"key": "enabled", "type": "toggle", "label": "Enabled"}
+    row = {"key": "quality", "type": "toggle", "label": "Quality"}
     merged = Settings.with_plugins(
         _groups(), [_plugin("plexamp", settings=[row]), _plugin("qobuz", settings=[row])])
     keys = [r["key"] for g in merged for r in g["rows"] if r.get("key")]
-    assert keys == ["lms_enabled", "plexamp.enabled", "qobuz.enabled"]
+    assert keys == ["lms_enabled", "plexamp.enabled", "plexamp.quality",
+                    "qobuz.enabled", "qobuz.quality"]
+
+
+def test_a_plugin_declaring_enabled_keeps_the_switch_and_its_other_rows():
+    """`enabled` is the core's. Dropping the whole plugin over one row would
+    cost it every other setting; letting the plugin's win would leave a switch
+    that does not switch anything."""
+    merged = Settings.with_plugins(_groups(), [_plugin("plexamp", settings=[
+        {"key": "enabled", "type": "toggle", "label": "On"},
+        {"key": "quality", "type": "toggle", "label": "Quality"},
+    ])])
+    sources = next(g for g in merged if g["id"] == "sources")
+    rows = [r for r in sources["rows"] if r.get("key")]
+    assert [r["key"] for r in rows] == ["lms_enabled", "plexamp.enabled", "plexamp.quality"]
+    # The core's, not the plugin's - the label gives it away.
+    assert rows[1]["label"] == "Enabled"
 
 
 def test_a_service_does_not_land_in_sources():
@@ -953,7 +970,8 @@ def test_a_service_does_not_land_in_sources():
     sources = next(g for g in merged if g["id"] == "sources")
     system = next(g for g in merged if g["id"] == "system")
     assert [r["key"] for r in sources["rows"] if r.get("key")] == ["lms_enabled"]
-    assert [r["key"] for r in system["rows"] if r.get("key")] == ["beszel.hub"]
+    assert [r["key"] for r in system["rows"] if r.get("key")] == [
+        "beszel.enabled", "beszel.hub"]
 
 
 def test_rows_go_through_the_registrys_own_validation():
@@ -971,7 +989,8 @@ def test_one_bad_plugin_does_not_cost_the_others():
     bad = _plugin("plexamp", settings=[{"key": "size", "type": "number", "label": "S"}])
     merged = Settings.with_plugins(_groups(), [bad, good])
     keys = [r["key"] for g in merged for r in g["rows"] if r.get("key")]
-    assert keys == ["lms_enabled", "qobuz.quality"]
+    assert keys == ["lms_enabled", "qobuz.enabled", "qobuz.quality"]
+    assert not [k for k in keys if k.startswith("plexamp.")]
 
 
 def test_a_row_with_no_key_is_dropped_and_the_rest_kept():
@@ -979,7 +998,7 @@ def test_a_row_with_no_key_is_dropped_and_the_rest_kept():
         _groups(), [_plugin(settings=[{"type": "toggle", "label": "Nameless"},
                                       {"key": "ok", "type": "toggle", "label": "Fine"}])])
     keys = [r["key"] for g in merged for r in g["rows"] if r.get("key")]
-    assert keys == ["lms_enabled", "plexamp.ok"]
+    assert keys == ["lms_enabled", "plexamp.enabled", "plexamp.ok"]
 
 
 def test_the_original_registry_is_not_mutated():
@@ -991,10 +1010,13 @@ def test_the_original_registry_is_not_mutated():
     assert [r["key"] for r in original[0]["rows"]] == ["lms_enabled"]
 
 
-def test_a_plugin_with_no_settings_adds_no_heading():
+def test_a_plugin_with_no_settings_still_gets_a_switch():
+    """It used to add nothing, which meant a plugin declaring no rows could
+    not be turned off at all - the gap the Beszel agent found."""
     merged = Settings.with_plugins(_groups(), [_plugin()])
     sources = next(g for g in merged if g["id"] == "sources")
-    assert [r.get("label") for r in sources["rows"]] == ["Enabled"]
+    assert [r.get("label") for r in sources["rows"]] == ["Enabled", "Plexamp", "Enabled"]
+    assert sources["rows"][2]["key"] == "plexamp.enabled"
 
 
 def test_a_wired_callback_is_called_with_the_value_alone(store):
@@ -1010,3 +1032,40 @@ def test_a_wired_callback_is_called_with_the_value_alone(store):
     )
     settings.set("plexamp.quality", True)
     assert seen == [True]
+
+
+def test_every_plugin_can_be_switched_off():
+    """**The gap the Beszel agent found**, 2026-09-25. A plugin could declare
+    rows and nothing could stop its unit - and `docs/DEVELOPMENT.md` says a
+    service "only wants to be installed, started, kept running and switched
+    off again. If the contract cannot express that, it is a renderer API
+    wearing a plugin's name."
+
+    Not something a plugin declares: one that forgot would be one nobody
+    could turn off."""
+    merged = Settings.with_plugins(_groups(), [_plugin("beszel", kind="service")])
+    system = next(g for g in merged if g["id"] == "system")
+    switch = next(r for r in system["rows"] if r.get("key") == "beszel.enabled")
+    assert switch["type"] == "toggle"
+    assert switch["default"] is True
+
+
+def test_a_manifest_can_name_a_switch_that_already_exists():
+    """The three built-ins do. Their rows predate this and do more than manage
+    a unit, so they must not grow a second switch each."""
+    from gexis_core.plugins import Plugin
+    lms = Plugin(id="lms", name="LMS", kind="renderer", unit="squeezelite.service",
+                 enabled_row="lms_enabled")
+    merged = Settings.with_plugins(_groups(), [lms])
+    keys = [r["key"] for g in merged for r in g["rows"] if r.get("key")]
+    assert keys == ["lms_enabled"]
+
+
+def test_a_plugin_with_settings_gets_the_switch_first():
+    """Above its own rows, where the three built-ins put theirs."""
+    merged = Settings.with_plugins(
+        _groups(), [_plugin("beszel", kind="service",
+                            settings=[{"key": "hub", "type": "text", "label": "Hub"}])])
+    system = next(g for g in merged if g["id"] == "system")
+    assert [r.get("key") or r["label"] for r in system["rows"]] == [
+        "Beszel", "beszel.enabled", "beszel.hub"]

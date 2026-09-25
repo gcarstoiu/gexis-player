@@ -1004,6 +1004,30 @@ async def main() -> None:
 
         asyncio.ensure_future(tell())
 
+    async def _apply_plugin_unit(plugin, on: bool) -> None:
+        """**A plugin switched on or off** (ADR-0086 as amended).
+
+        ADR-0077's machinery, pointed at a plugin's unit instead of a
+        renderer's: enabled and started, or stopped and kept stopped. It is
+        the same sentence for the same reason - a row whose effect ends at the
+        next boot is a row that lies the second time you look at it.
+        """
+        await set_unit_enabled(plugin.unit, on)
+
+    def _plugin_switch(plugin):
+        return lambda on, p=plugin: asyncio.ensure_future(
+            _apply_plugin_unit(p, on is not False)
+        )
+
+    #: The switch every plugin gets unless its manifest names a row that
+    #: already exists - which the three built-ins do, because theirs predate
+    #: this and do more than manage a unit.
+    plugin_switches = {
+        f"{plugin.id}.enabled": _plugin_switch(plugin)
+        for plugin in installed_plugins
+        if plugin.enabled_row is None
+    }
+
     #: Every row a plugin brought, keyed as the registry stores it. The
     #: callback is the same for all of them - tell the plugin - so the key is
     #: bound per row rather than passed: `Settings.set` calls a wired callback
@@ -1174,7 +1198,7 @@ async def main() -> None:
                # ADR-0086: whatever the installed plugins brought. Wired
                # like any other row - something acts on it - and the thing
                # that acts is the plugin.
-               **plugin_rows},
+               **plugin_switches, **plugin_rows},
         # **Phase 9 criterion 2.** These two act through
         # `POST /settings/{key}/items`, not through `set` - joining a network
         # and forgetting a device - so they are wired, and saying otherwise

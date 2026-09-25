@@ -341,16 +341,41 @@ class Settings:
         merged = [dict(g, rows=list(g["rows"])) for g in registry]
         by_id = {g.get("id"): g for g in merged}
         for plugin in plugins:
-            if not plugin.settings:
+            if not plugin.settings and plugin.enabled_row is not None:
+                # Nothing to add: its rows are the registry's already.
                 continue
             target = by_id.get("sources" if plugin.kind == "renderer" else "system")
             if target is None:
                 continue
             rows = [{"type": "group", "label": plugin.name, "accent": plugin.accent}]
+            if plugin.enabled_row is None:
+                # **Every plugin can be switched off** (ADR-0086 as amended).
+                # Not something a plugin declares, because a plugin that
+                # forgot to would be one nobody could turn off - and
+                # "installed, started, kept running and switched off again" is
+                # the whole of what `docs/DEVELOPMENT.md` says a service
+                # wants. A manifest naming an existing row opts out, which is
+                # how the built-ins keep the keys they have always had.
+                rows.append({"key": f"{plugin.id}.enabled", "type": "toggle",
+                             "label": "Enabled", "default": True})
+            reserved = {"enabled"} if plugin.enabled_row is None else set()
             for row in plugin.settings:
                 row = dict(row)
                 if not row.get("key"):
                     logger.warning("plugins: %s has a row with no key", plugin.id)
+                    continue
+                if row["key"] in reserved:
+                    # **`enabled` is the core's.** A plugin shipping its own
+                    # would collide with the switch it gets for free, and
+                    # dropping the whole plugin over one row would cost it
+                    # every other setting it has. The switch wins, because a
+                    # plugin nobody can turn off is the thing this exists to
+                    # prevent.
+                    logger.warning(
+                        "plugins: %s declares %r, which is the core's own switch - "
+                        "ignoring the plugin's and keeping the switch",
+                        plugin.id, row["key"],
+                    )
                     continue
                 row["key"] = f"{plugin.id}.{row['key']}"
                 rows.append(row)

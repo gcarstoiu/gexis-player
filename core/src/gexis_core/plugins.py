@@ -56,6 +56,14 @@ class Plugin:
     #: Rows to merge into the settings registry, untouched here: the registry
     #: owns that vocabulary and validates it (ADR-0044).
     settings: tuple[dict, ...] = field(default_factory=tuple)
+    #: **The row that switches this plugin off** (ADR-0086 as amended
+    #: 2026-09-25). A plugin that cannot be switched off is one the contract
+    #: cannot express, which `docs/DEVELOPMENT.md` names as the test a
+    #: non-renderer exists to apply. Left unset, the core makes one -
+    #: `<id>.enabled` - and wires it to the plugin's unit. Set, it names a row
+    #: that already exists, which is how the three built-ins keep the keys
+    #: they have always had rather than growing a second switch each.
+    enabled_row: str | None = None
     #: True for the three this repository ships. They are not special in how
     #: they are read - only in who wrote them.
     built_in: bool = False
@@ -98,6 +106,7 @@ def parse(raw: dict, *, directory: Path | None = None, built_in: bool = False) -
         kind=raw["kind"],
         unit=raw["unit"],
         label=raw.get("label"),
+        enabled_row=raw.get("enabled_row"),
         accent=raw.get("accent"),
         status=raw.get("status"),
         mark=mark,

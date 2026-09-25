@@ -192,6 +192,14 @@ shipping the same obvious key would otherwise collide and the second would be
 refused. On the wire the prefix is not used: a plugin says and hears its own
 key.
 
+**Every plugin also gets an `Enabled` toggle it did not declare**, wired to
+its `unit` — because a plugin nobody can switch off is what
+`docs/DEVELOPMENT.md` calls a renderer API wearing a plugin's name. `enabled`
+is therefore the core's key: a plugin shipping its own is ignored and keeps
+its other rows. A manifest may name an existing row instead with
+`enabled_row`, which is how the three built-ins keep the keys they have always
+had.
+
 A renderer's rows land in **Sources**, under a sub-heading carrying its name,
 which is the shape the three built-ins already have. Rows that fail the
 registry's own validation are dropped with the reason logged rather than

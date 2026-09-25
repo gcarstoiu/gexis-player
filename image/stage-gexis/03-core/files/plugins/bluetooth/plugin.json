@@ -5,5 +5,6 @@
   "unit": "bluealsa-aplay.service",
   "label": "Bluetooth Active",
   "accent": "#9fb4e8",
-  "status": "Pairable"
+  "status": "Pairable",
+  "enabled_row": "bt_enabled"
 }
