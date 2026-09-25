@@ -75,3 +75,22 @@ their own route.
 - **The phone.** The criterion says panel *and* phone (ADR-0035); this was
   read from the daemon, which serves both, but nothing was tried in a
   browser.
+
+---
+
+## Closed
+
+**Phase 9 criterion 1 closed 2026-09-25.** George: *"I think this concludes
+criterion 1."* Every row this finding listed is wired or was ruled on, and the
+list was re-generated from the running daemon to say so rather than ticked off
+here: of 74 rows the 18 reporting `wired: false` are the 14 that are
+`surfaced: false`, plus `wifi` and `bt_trusted`, which work through their own
+`/settings/{key}/items` route and were never unwired. **No surfaced row is
+unwired, and none carries a `?`.**
+
+`handoff_threshold` — the one row this finding recorded as *"evidence-gated
+rather than preference"* and therefore possibly not to be wired at all — was
+wired after George asked for its slider
+([ADR-0078](../decisions/0078-the-transition-screen-waits-for-the-threshold.md)).
+`lms_enabled` grew a screen rather than a switch
+([ADR-0079](../decisions/0079-with-lms-off-the-panel-is-two-screens.md)).

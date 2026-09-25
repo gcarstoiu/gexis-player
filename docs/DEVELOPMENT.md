@@ -1546,8 +1546,36 @@ ADRs were updated.
    than UI polish: the artist grid is a 917-item list and letter buckets
    have to come from the core.
 
-1. **Every row in ADR-0022's settings inventory is wired end to end** (panel
-   and phone, ADR-0035), or marked out of scope with the reason.
+1. ~~**Every row in ADR-0022's settings inventory is wired end to end**~~ —
+   **closed 2026-09-25.** George: *"I think this concludes criterion 1."*
+
+   **Checked against the running daemon, not against a reading of the code.**
+   `/settings` reports `wired` and `visible` per row and
+   `SettingsRegistry.set` raises `NotWired` for a row nothing listens to, so
+   the answer is in the device ([Finding 068](findings/068-what-is-left-unwired-in-settings.md)).
+   Of **74 rows**, the 18 reporting `wired: false` are 14 that are
+   `surfaced: false` — inventoried and deliberately not offered — plus `wifi`
+   and `bt_trusted`, which work through their own `/settings/{key}/items`
+   route and were never unwired. **No surfaced row is unwired, and none
+   carries a `?` any more.**
+
+   The last eight rows, each landed on its own and checked on the panel:
+   `version` and `image_build` ([ADR-0022](decisions/0022-settings.md)'s build
+   rows, with `/etc/rpi-issue` as the build-date fallback), `restore_transport`,
+   `show_transition`, `handoff_duration`, `reclaim_lms`, `bt_pairing`,
+   `bt_autotrust`, the three source toggles and `headless`
+   ([ADR-0077](decisions/0077-a-source-that-is-off-is-not-running.md)), and
+   `handoff_threshold` ([ADR-0078](decisions/0078-the-transition-screen-waits-for-the-threshold.md),
+   [Finding 069](findings/069-the-transition-screen-against-the-threshold.md)).
+
+   **`lms_enabled` grew a screen** rather than only a switch:
+   [ADR-0079](decisions/0079-with-lms-off-the-panel-is-two-screens.md) is
+   George's answer to what the panel is without a library
+   ([Finding 070](findings/070-the-panel-with-lms-off.md)).
+
+   *Original text:* **Every row in ADR-0022's settings inventory is wired end
+   to end** (panel and phone, ADR-0035), or marked out of scope with the
+   reason.
 2. **No unwired UI remains, or each survivor is explicitly justified.** Added
    2026-09-13; moved here from the plugin-contract phase 2026-09-16, where
    the polish happens. From Phase 4 the UI is imported from complete designs while the
