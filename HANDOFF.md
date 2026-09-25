@@ -406,9 +406,23 @@ holds each phase's acceptance criteria; this list is only the order.
 
 - **A flash wipes everything the device learned.** Both databases live on the
   card — `/var/lib/gexis-core/settings.db` and `enrichment.db` — as do BlueZ's
-  pairings. **There is no backup**: ADR-0022's `backup` row is inventoried and
-  unwired, and nothing exports the settings DB. First done 2026-09-25, where
-  the card went before anybody thought to copy it.
+  pairings. **ADR-0022's `backup` row is inventoried and unwired**, so nothing
+  on the device exports either. **A manual copy was taken 2026-09-25**, and it
+  is the shape to repeat before every flash:
+
+  ```
+  ssh pi@gexis.local 'sudo tar -czf /tmp/gexis-state.tgz -C / \
+      var/lib/gexis-core/settings.db var/lib/gexis-core/enrichment.db \
+      etc/gexis/core.toml etc/gexis/device-name.env
+    sudo tar -czf /tmp/gexis-bt.tgz -C / var/lib/bluetooth
+    sudo chown pi /tmp/gexis-*.tgz'
+  scp pi@gexis.local:/tmp/gexis-{state,bt}.tgz <somewhere outside this repo>
+  ```
+
+  **Outside the repository, always.** `core.toml` carries `idle_url`, a
+  per-display identifier that must never be committed. The 2026-09-25 copy is
+  in `~/gexis-backups/2026-09-25-pre-flash/`: 41 stored settings including all
+  three secrets, 3,664 enrichment rows, 7,061 notes, and the phone's pairing.
 
   **After a flash, in this order:**
 
