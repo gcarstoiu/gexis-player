@@ -89,8 +89,25 @@ reaches every server that account can see.
 | The plugin stops sending artwork | one line, `supports_artwork: false`; the panel falls back to enrichment's covers, which work |
 | The core proxies artwork | a new route, a cache, and a **contract question** — `artwork` is a URL and the frozen v1 has no way to say "fetch this on my behalf". That is a v2 conversation |
 
-**The first is what happens if nobody chooses**, which is why it is written here
-rather than left implicit.
+**George chose the first, the same day:** *"If the calls stay inside the local
+network then it is fine to keep it like this."*
+
+**So the condition is now checked rather than assumed.** Plexamp will happily
+play from a Plex server anywhere, and for a remote one that same URL would carry
+an account-wide credential across the internet to be fetched by a browser. The
+plugin publishes artwork **only when the server's address is not globally
+routable** — `ipaddress.is_global`, negated, which covers private ranges,
+loopback and link-local against IANA's registry rather than a list written by
+hand. A hostname that is not an address at all counts as not local, because it
+could resolve anywhere and the safe answer to *"I cannot tell"* is no.
+
+Omitted rather than sent tokenless: a Plex thumb without a token is a 401, and a
+panel drawing a broken image is worse than one falling back to the cover lookup
+the core already does well.
+
+**The decision is his and the guard is what makes his premise true**, rather
+than a condition that happens to hold today because his server is in the next
+room.
 
 ## What this does not show
 

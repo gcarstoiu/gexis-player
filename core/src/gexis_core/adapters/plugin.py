@@ -185,6 +185,24 @@ class PluginAdapter(Adapter):
             pass
         self._signal_unit(self.unit_name, force=force)
 
+    #: The scale `set_volume` is sent on. The contract carries `value` and
+    #: `steps` together, so a plugin never has to guess which scale a number is
+    #: on - and 100 is what every renderer here is normalised to before the
+    #: hardware curve is applied (ADR-0054).
+    VOLUME_STEPS = 100
+
+    async def set_volume(self, value: int) -> None:
+        """Drive this renderer's own volume (ADR-0053: the panel is a remote).
+
+        Errors are swallowed for the same reason `release` does not raise: a
+        renderer that has gone cannot be told anything, and the volume path runs
+        on every drag of a slider. It is not a place to take the daemon down.
+        """
+        try:
+            await self._session.send("set_volume", value=int(value), steps=self.VOLUME_STEPS)
+        except PluginGone as exc:
+            logger.info("plugins: %s did not take a volume (%s)", self.renderer_id, exc)
+
     async def device_freed(self) -> None:
         await self._tell("device_freed")
 

@@ -85,6 +85,12 @@ class RemoteVolume:
         slider."""
         self._channels[renderer_id] = _Channel(steps=steps, send=send)
 
+    def forget(self, renderer_id: str) -> None:
+        """**Its plugin went away** (ADR-0089). A channel left behind is a
+        slider the panel keeps offering for a renderer that is not there, and
+        `send` on it would write into a closed socket."""
+        self._channels.pop(renderer_id, None)
+
     def set_steps(self, renderer_id: str, steps: int) -> None:
         """Spotify's scale is whatever `/status` says, and that answer
         arrives after the wiring does."""

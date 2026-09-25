@@ -1986,6 +1986,14 @@ async def main() -> None:
         # by name, which is how the first external plugin failed after
         # everything else about it worked.
         state_store.add_renderer(session.id, adapter.capabilities)
+        if adapter.capabilities.volume_managed:
+            # **ADR-0053: the panel is a remote for what is playing.** The three
+            # built-ins are registered at startup from this same shape; a plugin
+            # arrives later and is registered here, and forgotten on the way out
+            # so the panel stops offering a slider for a renderer that is gone.
+            remote.register(
+                session.id, steps=adapter.VOLUME_STEPS, send=adapter.set_volume,
+            )
         plugin_adapters[session.id] = adapter
         # The adapter parks - the socket is its watch - but `run` is still what
         # holds its callbacks, and the supervisor's lifecycle is written around
@@ -2010,6 +2018,7 @@ async def main() -> None:
         if task is not None:
             task.cancel()
         supervisor.forget(session.id)
+        remote.forget(session.id)
         state_store.drop_renderer(session.id)
 
     def _plugin_event(session, kind: str, message: dict) -> None:
@@ -2042,6 +2051,19 @@ async def main() -> None:
             if kind == "queue":
                 queue = message.get("queue")
                 state_store.set_queue(session.id, queue if isinstance(queue, list) else None)
+                return
+            if kind == "volume":
+                # The renderer's own level changed - somebody turned it up in
+                # the Plex app, or Plexamp restored what it had. Same
+                # destination as every other renderer's report.
+                try:
+                    value = int(message["value"])
+                    steps = int(message.get("steps") or adapter.VOLUME_STEPS)
+                except (KeyError, TypeError, ValueError):
+                    logger.warning("plugins: %s sent an unusable volume: %r",
+                                   session.id, message)
+                    return
+                report_renderer_volume(session.id, value, steps)
                 return
         logger.debug("plugins: %s sent %s", session.id, kind)
 
