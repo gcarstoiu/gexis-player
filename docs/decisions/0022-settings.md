@@ -65,7 +65,7 @@ Phase 2 and ADR-0027.
 | Setting | Mark | Notes |
 |---|---|---|
 | Enable / disable each renderer | [R] | implied by ADR-0013 |
-| Re-activate LMS automatically when another session ends | [N] | ADR-0027 deliberately never does this — the reason Phase 4 criterion 7 existed at all (withdrawn 2026-09-15). Plausible opt-in, but it would reintroduce the spurious-reclaim failure that record measured, so not a free toggle |
+| Re-activate LMS automatically when another session ends | [R] | **Wired 2026-09-25, off by default and opt-in by row.** ADR-0027 declines to do it and the measured reclaims were spurious - a Spotify session ending because a phone locked would drag LMS back on. Somebody who wants it can have it; nobody gets it by accident |
 | Restore transport state on return | [R] | **Wired 2026-09-25.** Three answers - *Play only if playing* (ADR-0027's rule and the default), *Always play*, *Always pause*. Read at the moment of the takeover rather than held, so a change needs no restart, and a reading that fails is ADR-0027's rule |
 | Seek re-anchor on return | [R][?] | Deferred twice in ADR-0027's Open, which then found a second argument for it: pressing play on a deactivated player loses the position entirely |
 | Timeout ladder: polite / SIGTERM / SIGKILL grace | [H] | `TimeoutLadder` defaults |
@@ -116,10 +116,10 @@ background that is a picture — which is the negated form
 |---|---|---|
 | LMS server address, or discovery | [R][H] | Must. Hardcoded to `192.168.178.188:9000` in `core.toml` today |
 | LMS player name | [H] | `gexis` |
-| Bluetooth pairing: PIN-free vs confirmation | [R][?] | ADR-0024, and listed in `README.md`'s deferred table as *needing this record's settings infrastructure* before it can be anything but hardcoded. **Half-unblocked as of Phase 3**: the SQLite store exists, the settings screen does not |
+| Bluetooth pairing: PIN-free vs confirmation | [R] | **Decided and wired 2026-09-25.** George: *"confirmation is default, pin free as viable option."* The capability is fixed when the agent registers - `NoInputNoOutput` means BlueZ never asks at all - so changing this unregisters and registers again rather than waiting for a reboot. Proved on the hardware, both ways |
 | Bluetooth discoverability | [R] | BlueZ's 180 s default, no change by decision (ADR-0024's amendment). "Always / 3 minutes after boot / off" is the natural triple if it becomes a setting |
 | Trusted device list — view and forget | [R] | ADR-0010 requires a recently-connected list for reconnection. Clearing it is one of this record's two named accepted risks |
-| Auto-trust on pair | [H] | `gexis-bluetooth-trust.service` |
+| Auto-trust on pair | [R] | **Wired 2026-09-25.** The agent has read this per request for some time - what was missing was the row being settable. **The note here was stale**: there is no `gexis-bluetooth-trust.service` in the image; the agent does the trusting |
 | Spotify Connect device name | [R] | Follows the single device name below |
 | Plugin management | [R] | Should tier, ADR-0016 |
 

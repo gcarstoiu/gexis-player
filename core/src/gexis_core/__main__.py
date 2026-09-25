@@ -656,12 +656,36 @@ async def main() -> None:
             raw = slider_percent_to_raw(volume.percent)
         asyncio.ensure_future(volume_bridge.write_hardware(raw))
 
+    async def _reclaim_lms() -> None:
+        """**Take the device back for LMS when a session ends** (ADR-0022's
+        `reclaim_lms`, wired 2026-09-25).
+
+        **Off by design and opt-in by row.** ADR-0027 declines to do this:
+        nothing is restored because nothing was stored, and the reclaims
+        that were measured were spurious - a Spotify session ending because
+        the phone locked would drag LMS back on. Somebody who wants it can
+        have it; nobody gets it by accident.
+        """
+        lms_adapter = adapters.get("lms")
+        if lms_adapter is None or not hasattr(lms_adapter, "activate"):
+            return
+        try:
+            await lms_adapter.activate()
+            logger.info("reclaim: LMS taken back after the session ended")
+        except Exception as exc:
+            # Whoever released the device has already released it; failing
+            # to take it back is not that renderer's problem.
+            logger.warning("reclaim: could not take the device back for LMS: %s", exc)
+
     def on_active_change(renderer_id: str | None) -> None:
         state_store.set_active(renderer_id)
         # ADR-0053: the number on the panel belongs to whoever holds the
         # device, so a takeover changes what it means - from one renderer's
         # scale to another's, or to the hardware's own with nobody active.
         publish_volume()
+        # Nobody holds it, and somebody asked for LMS to step in.
+        if renderer_id is None and settings.value("reclaim_lms"):
+            asyncio.ensure_future(_reclaim_lms())
 
     # ADR-0054 §1. Constructed before the supervisor because
     # `restore_volume` reaches it through `acquire_volume`; its own watch is
@@ -923,7 +947,12 @@ async def main() -> None:
                # ADR-0022's handoff rows, wired 2026-09-25. Read where they
                # are used - the adapter at a takeover, the panel for the
                # transition screen - so none needs a callback.
-               "restore_transport": None,
+               "restore_transport": None, "reclaim_lms": None,
+               # The agent reads both per request; `bt_pairing` also needs
+               # BlueZ told, because the capability is fixed when the agent
+               # registers and `NoInputNoOutput` means BlueZ never asks.
+               "bt_pairing": lambda mode: asyncio.ensure_future(_apply_pairing(mode)),
+               "bt_autotrust": None,
                "show_transition": None, "handoff_duration": None,
                # ADR-0052 §3: read on every map between a position and a
                # level, and re-applied here when it changes so the level
@@ -1035,11 +1064,31 @@ async def main() -> None:
         if request is not None and request.state == "asking":
             peppy.request("hide")
 
+    #: The agent's own bus, kept so the capability can be changed without a
+    #: restart (ADR-0022's `bt_pairing`).
+    pairing_bus: list = []
+
+    async def _apply_pairing(mode: str) -> None:
+        """Confirmation or PIN-free, applied now rather than at next boot.
+
+        The capability is fixed when the agent registers, so this
+        unregisters and registers again. George, 2026-09-25: *"confirmation
+        is default, pin free as viable option."*
+        """
+        if not pairing_bus:
+            return
+        bus = pairing_bus[0]
+        await bluetooth_agent.unregister(bus)
+        await bluetooth_agent.register(
+            bus, pairing_agent, bluetooth_agent.capability_for(mode)
+        )
+
     async def _bluetooth_setup() -> None:
         await _apply_discoverable(
             settings.value("bt_discoverable") or "3 min after boot", attempts=10
         )
         bus = await MessageBus(bus_type=BusType.SYSTEM).connect()
+        pairing_bus.append(bus)
         await bluetooth_agent.register(
             bus,
             pairing_agent,
