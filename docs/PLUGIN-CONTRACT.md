@@ -36,6 +36,8 @@ Both use the same handshake; a renderer simply declares more.
 - **Socket:** `/run/gexis/plugins.sock`, Unix domain, stream.
 - **Framing:** one JSON object per line, `\n`-terminated, UTF-8. No length
   prefix, no envelope.
+- **Permissions:** `root:gexis-plugins`, mode `0660`. Your user joins that
+  group; running as root is not the answer.
 - **Direction:** the core listens, the plugin connects. A plugin may reconnect
   freely; the core treats a closed connection as the plugin being gone.
 - **Ordering:** messages are processed in the order they arrive on a
@@ -292,6 +294,12 @@ configuration from the environment like most daemons do.
     are told first, and the core then acts on your unit regardless — so
     disconnecting cannot strand the audio device, and answering `true` without
     doing anything does not fool the ladder.
-- **Authentication.** The socket's permissions are the model (ADR-0084).
+- **Authentication.** The socket's permissions are the model (ADR-0084 as
+  amended). Concretely: `/run/gexis/plugins.sock` is `root:gexis-plugins 0660`,
+  so **your unit's user must be in the `gexis-plugins` group** or the kernel
+  refuses you before you can say `hello`. Do not run as root to get around
+  this — a plugin with its own unprivileged account joining that group is the
+  shape this expects, and the first plugin written outside the core is what
+  established it.
 - **Anything about themes.** ADR-0016 lists them as plugins and a theme has no
   process; Phase 14 settles that before anything is built.

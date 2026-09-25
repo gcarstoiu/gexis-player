@@ -20,6 +20,7 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+import shutil
 from pathlib import Path
 
 logger = logging.getLogger("gexis_core.plugin_server")
@@ -31,6 +32,12 @@ DEFAULT_PATH = Path("/run/gexis/plugins.sock")
 #: own consequence is that plugins in other repositories will lag, and a quiet
 #: partial service is worse than a clear refusal.
 CONTRACT = 1
+
+#: **The group that may connect** (ADR-0084 as amended). The daemon is root, so
+#: `0660` on its own is root-only; a plugin runs as its own unprivileged account
+#: and joins this group. Named for what it grants rather than for the project,
+#: because that is what an administrator reading `ls -l` needs to know.
+GROUP = "gexis-plugins"
 
 #: A line longer than this is not a message, it is a mistake or an attack.
 #: The largest thing a plugin legitimately sends is a queue, and LMS's ceiling
@@ -151,9 +158,40 @@ class PluginServer:
         # Nothing on the network can reach a filesystem socket, but anyone on
         # the device could: the permission is the authorisation (ADR-0084).
         self._path.chmod(0o660)
+        self._give_the_group_access()
         logger.info("plugins: listening on %s (contract %d)", self._path, self._contract)
         async with server:
             await server.serve_forever()
+
+    def _give_the_group_access(self) -> None:
+        """**Who may connect** (ADR-0084 as amended 2026-09-25).
+
+        `0660` alone means *root only*, because this daemon runs as root and so
+        the socket is `root:root`. That was found by the first plugin written
+        outside this repository: it ran as `pi`, as ADR-0087 says a plugin
+        should, and got `Permission denied` - so the access model as built was
+        "every plugin runs as root", which is the thing that record refused for
+        Beszel.
+
+        So the socket is group-owned by `GROUP`, and a plugin's unit runs as a
+        user in it. The same shape `docker.sock` has, for the same reason: the
+        permission is the authorisation and a group is how a permission names
+        more than one account.
+
+        **A missing group is a warning, not a failure.** A device upgraded from
+        an image that predates the group would otherwise lose its daemon over a
+        socket only root was using anyway.
+        """
+        try:
+            shutil.chown(self._path, group=GROUP)
+        except (LookupError, KeyError):
+            logger.warning(
+                "plugins: no %r group on this device - the socket stays root-only "
+                "and any plugin not running as root will be refused by the "
+                "kernel before it can say hello", GROUP,
+            )
+        except OSError as exc:
+            logger.warning("plugins: could not give %r the socket: %s", GROUP, exc)
 
     async def _serve(self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter) -> None:
         session = None

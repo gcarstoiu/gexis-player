@@ -5,6 +5,8 @@ from dataclasses import replace
 
 from gexis_core.adapters.base import Capabilities, VolumeMechanism
 from gexis_core.model import BLANK_METADATA, TrackMetadata
+import pytest
+
 from gexis_core.state import StateStore
 
 
@@ -400,3 +402,53 @@ def test_a_found_cover_broadcasts():
 
     store.set_found_artwork("bluetooth", BT_TRACK, "http://caa/found.jpg")
     assert seen == ["http://caa/found.jpg"]
+
+
+def _store():
+    return StateStore(_caps("lms"))
+
+
+def test_a_renderer_can_be_added_after_the_store_was_built():
+    """**ADR-0089 as amended.** A plugin renderer had arbitration and no place
+    in the published state: it failed as `unknown renderer` from
+    `set_available`, after the handshake, the adapter and the registration had
+    all worked. Without a slot the panel cannot draw the source at all."""
+    store = _store()
+    with pytest.raises(ValueError):
+        store.set_available("plexamp", True)
+
+    store.add_renderer("plexamp", _caps("plexamp")["plexamp"])
+    assert store.state.available["plexamp"] is False
+    store.set_available("plexamp", True)
+    assert store.state.available["plexamp"] is True
+    assert "plexamp" in store.state.capabilities
+
+
+def test_adding_the_same_renderer_twice_is_not_an_error():
+    """A plugin that reconnects is the ordinary case, and its availability must
+    not be reset by the reconnection itself."""
+    store = _store()
+    store.add_renderer("plexamp", _caps("plexamp")["plexamp"])
+    store.set_available("plexamp", True)
+    store.add_renderer("plexamp", _caps("plexamp")["plexamp"])
+    assert store.state.available["plexamp"] is True
+
+
+def test_dropping_a_renderer_takes_its_slot_and_leaves_the_manifest():
+    """The slot goes, so the panel stops offering a source nothing is behind.
+    The source description stays: a plugin that is installed and not running is
+    still installed (ADR-0086)."""
+    store = StateStore(_caps("lms"), sources=({"id": "plexamp", "name": "Plexamp"},))
+    store.add_renderer("plexamp", _caps("plexamp")["plexamp"])
+    store.set_available("plexamp", True)
+
+    store.drop_renderer("plexamp")
+    assert "plexamp" not in store.state.available
+    assert "plexamp" not in store.state.capabilities
+    assert [s["id"] for s in store.state.sources] == ["plexamp"]
+
+
+def test_dropping_one_that_was_never_there_is_quiet():
+    store = _store()
+    store.drop_renderer("never-here")
+    assert set(store.state.available) == {"lms"}

@@ -11,3 +11,16 @@ python3 -m venv /opt/gexis-core/venv
 # that was only there to install from would otherwise ship twice for no
 # reason.
 rm -rf /opt/gexis-core/src
+
+# **The group that may connect to the plugin socket** (ADR-0084 as amended
+# 2026-09-25). The daemon runs as root, so `0660` on the socket is root-only by
+# itself - which made the access model "every plugin runs as root", the thing
+# ADR-0087 refused for Beszel. Found by the first plugin written outside this
+# repository: it ran as `pi` and the kernel refused it before it could speak.
+#
+# `pi` is in it because that is who plugin units run as today. A plugin with its
+# own account joins this group instead of being given root.
+if ! getent group gexis-plugins > /dev/null; then
+	addgroup --system gexis-plugins
+fi
+adduser pi gexis-plugins

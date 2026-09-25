@@ -1946,6 +1946,11 @@ async def main() -> None:
         # the server calls this before `welcome` precisely so it can.
         adapter = PluginAdapter(session)
         supervisor.register(adapter)
+        # **And a slot in the published state** (ADR-0089 as amended): without
+        # one the panel cannot draw this source and `set_available` refuses it
+        # by name, which is how the first external plugin failed after
+        # everything else about it worked.
+        state_store.add_renderer(session.id, adapter.capabilities)
         plugin_adapters[session.id] = adapter
         # The adapter parks - the socket is its watch - but `run` is still what
         # holds its callbacks, and the supervisor's lifecycle is written around
@@ -1970,8 +1975,7 @@ async def main() -> None:
         if task is not None:
             task.cancel()
         supervisor.forget(session.id)
-        if session.id in state_store.state.available:
-            state_store.set_available(session.id, False)
+        state_store.drop_renderer(session.id)
 
     def _plugin_event(session, kind: str, message: dict) -> None:
         # Availability is the one event that means something without an

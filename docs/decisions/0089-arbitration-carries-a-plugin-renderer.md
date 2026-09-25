@@ -56,7 +56,20 @@ negotiable:
 **A `PluginAdapter`, constructed from a session, registered with the supervisor
 while that session lives.**
 
-### 1. The supervisor gains `register` and `unregister`
+### 1. The supervisor gains `register` and `unregister` — and so does the state
+
+**Amended 2026-09-25, on the device.** This record named the supervisor and
+missed its twin: `StateStore`'s renderer slots are built from the same fixed map
+at construction, so a plugin renderer had arbitration and **no place in the
+published state**. It failed as `unknown renderer 'plexamp'` from
+`set_available`, after the handshake, the adapter and the registration had all
+worked. The store gains `add_renderer` and `drop_renderer`; without a slot the
+panel cannot draw the source at all.
+
+**What `drop_renderer` leaves behind is deliberate**: the slot goes, so the
+panel stops offering a source nothing is behind, and the *source description*
+from the manifest stays, because a plugin that is installed and not running is
+still installed (ADR-0086).
 
 Its adapter map stops being fixed at construction. Everything else about it is
 unchanged: the lock, the ladder, the ADR-0077 gate, `device_busy`.

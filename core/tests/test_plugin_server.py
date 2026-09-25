@@ -315,3 +315,38 @@ async def test_on_connect_can_refuse_the_connection(tmp_path):
         # And it left nothing behind: a refused plugin is not connected.
         assert "plexamp" not in h.server.sessions
         writer.close()
+
+
+def test_the_socket_names_a_group_that_is_not_root():
+    """**ADR-0084 as amended 2026-09-25.** The daemon runs as root, so `0660`
+    on its own authorised nobody else - and the first plugin written outside
+    this repository, running as `pi` the way ADR-0087 says a plugin should, was
+    refused by the kernel before it could say hello.
+
+    The name is asserted rather than the mechanism: the image creates this
+    group, the unit files put their users in it, and a rename here that did not
+    reach those would lock every plugin out again with nothing to say why.
+    """
+    from gexis_core.plugin_server import GROUP
+
+    assert GROUP == "gexis-plugins"
+
+
+@pytest.mark.asyncio
+async def test_a_missing_group_is_a_warning_not_a_failure(tmp_path, caplog, monkeypatch):
+    """A device upgraded from an image that predates the group would otherwise
+    lose its daemon over a socket only root was using anyway."""
+    import shutil as shutil_module
+
+    from gexis_core import plugin_server as module
+
+    def no_such_group(path, group=None):
+        raise LookupError("no such group")
+
+    monkeypatch.setattr(module.shutil, "chown", no_such_group)
+    async with Harness(tmp_path) as h:
+        reader, writer = await h.connect()
+        await _say(writer, {"t": "hello", "contract": CONTRACT, "id": "beszel"})
+        assert (await _hear(reader))["t"] == "welcome"
+        writer.close()
+    assert "gexis-plugins" in caplog.text

@@ -1,6 +1,8 @@
 # ADR-0084 — Plugins speak JSON lines over a Unix socket
 
-**Status:** Accepted
+**Status:** Accepted, **amended 2026-09-25** — `0660` alone meant *root only*,
+so the access model as built was "every plugin runs as root". Found by the first
+plugin written outside this repository; see the amendment at the end.
 **Date:** 2026-09-25
 **Relates to:** [ADR-0016](0016-plugins-as-separate-processes.md) (separate
 processes with an IPC contract — this is that contract's carrier),
@@ -124,3 +126,40 @@ on purpose.
   own open consequence and it still is.
 - **Whether the defaults ever move onto it.** ADR-0013 as amended says they do
   not, and that the guard against drift is a test rather than a shared path.
+
+## Amendment, 2026-09-25 — who may open the socket
+
+**`0660` is the authorisation, and on its own it authorised nobody but root.**
+
+This daemon runs as root, so the socket it creates is `root:root`. Every plugin
+until now either was the core itself (the three built-ins, which do not use the
+socket) or never opened it at all (the Beszel agent, a `service` whose whole
+contract is a managed unit). **The first plugin to actually connect from
+outside** — `gexis-plexamp`, running as `pi` exactly as
+[ADR-0087](0087-the-beszel-agent-is-the-first-service-plugin.md) says a plugin
+should — was refused by the kernel before it could say `hello`:
+
+```
+gexis_plexamp INFO cannot reach the core ([Errno 13] Permission denied); retrying
+srw-rw---- 1 root root 0 /run/gexis/plugins.sock
+```
+
+So the model as built was **"every plugin runs as root"**, which is the thing
+ADR-0087 explicitly refused for Beszel — it gave that agent its own
+unprivileged account precisely so a third-party binary would not have the
+device.
+
+**The socket is group-owned by `gexis-plugins`**, and a plugin's unit runs as a
+user in that group. The same shape `docker.sock` has, for the same reason: the
+permission is the authorisation, and a group is how a permission names more than
+one account. The image creates the group and puts `pi` in it; a plugin with its
+own account joins the group rather than being given root.
+
+**A missing group is a warning, not a failure.** A device upgraded from an image
+that predates it would otherwise lose its daemon over a socket only root was
+using anyway.
+
+**What this does not change:** anyone who can reach the socket can still claim
+the audio device and lie about what is playing. The group narrows *who* from
+"root" to "root plus plugins"; it is not authentication, and this record's
+original position — that the socket's permissions are the model — stands.
