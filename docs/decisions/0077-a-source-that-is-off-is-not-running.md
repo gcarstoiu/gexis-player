@@ -147,10 +147,11 @@ and the next request is answered in **5 ms** while the unit is still stopping.
   the renderer, so they keep working with LMS off — a library you can browse
   and cannot play to. **A product decision for George**, raised separately,
   not guessed at here.
-- **Whether turning `headless` on should hand tty1 back to a getty.** Today
-  the screen goes blank until the next boot, which then shows a login prompt
-  (above). Starting the getty would make the two agree, and it is a keyboard
-  on an appliance - **George's call**, not made here.
+- ~~**Whether turning `headless` on should hand tty1 back to a getty.**~~
+  **Parked 2026-09-25**, George: *"handover... we park for now."* Today the
+  screen goes blank until the next boot, which then shows a login prompt
+  (above). Starting the getty would make the two agree; it is also a keyboard
+  on an appliance, and nothing is waiting on it.
 - **Whether the rows should warn before acting.** `headless` in particular is
   a toggle that removes the surface it was pressed on. Left as it is, on the
   grounds that the note under the row says what it does.

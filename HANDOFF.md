@@ -404,6 +404,33 @@ holds each phase's acceptance criteria; this list is only the order.
   change does not work. `Page.navigate` to the same URL over CDP on 9222.
   [LESSONS](docs/LESSONS.md) 38, and it cost a wrong result on 2026-09-25.
 
+- **A flash wipes everything the device learned.** Both databases live on the
+  card — `/var/lib/gexis-core/settings.db` and `enrichment.db` — as do BlueZ's
+  pairings. **There is no backup**: ADR-0022's `backup` row is inventoried and
+  unwired, and nothing exports the settings DB. First done 2026-09-25, where
+  the card went before anybody thought to copy it.
+
+  **After a flash, in this order:**
+
+  1. **The two keys and the token**, which have no default and nothing can
+     guess: `fanart_key` (without it, portraits come from LMS only),
+     `wallpaper_key` (Pixabay, ADR-0047), `listenbrainz_token`.
+  2. **`idle_url`** — deliberately *not* in the image's `core.toml` because it
+     carries a per-display identifier and this repository is public. Until it
+     is set, the idle screen falls back to the built-in clock.
+  3. **`weather_location`**, **`timezone`**, **`device_name`** if not `gexis`.
+  4. **Re-pair the phone.** BlueZ's store went with the card.
+  5. **Run both sweeps** — artist portraits and album covers. `enrichment.db`
+     held every one and it is gone, so the library starts with LMS's pictures
+     and nothing else. Roughly seven minutes and 45–50 minutes respectively,
+     measured 2026-09-24.
+  6. **Append C3PO's SSH key** — see below.
+
+  **What survives without being touched:** everything whose registry default
+  is what George settled on, which includes ADR-0058's three ballistics
+  (spectrum smoothing 90 %, needle fall 400 ms, needle smoothing 240 ms) and
+  `lms_server`, baked into the image's `core.toml`.
+
 - **A reflashed card only has R2D2's SSH key.** `make provision` writes the
   one key in `image/provision.local.env`; C3PO's
   (`~/.ssh/c3po_id_ed25519.pub`) is appended by hand after first boot
