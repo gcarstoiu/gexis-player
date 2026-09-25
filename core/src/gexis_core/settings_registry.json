@@ -109,7 +109,7 @@
         "type": "action",
         "label": "Plugins",
         "marks": "R",
-        "note": null,
+        "note": "Superseded by the Plugins category, which George asked for on 2026-09-25. ADR-0022 inventoried this as a row in Sources; what it would have opened is now a category of its own, listing each installed plugin's switch. Kept unsurfaced rather than deleted because removing an inventoried row is George's call.",
         "default": null,
         "surfaced": false
       },
@@ -892,6 +892,13 @@
         "confirm": "Reboot now"
       }
     ]
+  },
+  {
+    "id": "plugins",
+    "label": "Plugins",
+    "subtitle": "What is installed beyond the player itself",
+    "accent": "#a8d68f",
+    "rows": []
   },
   {
     "id": "system",

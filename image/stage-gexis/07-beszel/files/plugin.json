@@ -12,8 +12,7 @@
       "note": "The Beszel hub this device reports to. The hub is not on this device.",
       "placeholder": "http://hub:8090",
       "default": null,
-      "env": "HUB_URL",
-      "onlyWhen": ["enabled", true]
+      "env": "HUB_URL"
     },
     {
       "key": "token",
@@ -24,8 +23,7 @@
       "secret": true,
       "placeholder": "Token",
       "default": null,
-      "env": "TOKEN",
-      "onlyWhen": ["enabled", true]
+      "env": "TOKEN"
     },
     {
       "key": "key",
@@ -36,8 +34,7 @@
       "secret": true,
       "placeholder": "ssh-ed25519 AAAA...",
       "default": null,
-      "env": "KEY",
-      "onlyWhen": ["enabled", true]
+      "env": "KEY"
     }
   ]
 }

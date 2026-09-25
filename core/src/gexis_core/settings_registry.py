@@ -325,9 +325,23 @@ class Settings:
     def with_plugins(registry: list[dict], plugins) -> list[dict]:
         """**A plugin's rows, merged into the registry** (ADR-0086).
 
-        A renderer's rows land in `sources`, under a sub-heading carrying its
-        own name - the same shape LMS, Spotify and Bluetooth already have, so
-        a fourth renderer reads like the three rather than like an appendix.
+        **Two places, and the split is George's** (2026-09-25): *"create the
+        plugin category in settings and add in there only Beszel toggle. When
+        enabled then the config fields show up in system like now in the Beszel
+        subgroup. When the toggle is off the entire subgroup is off."*
+
+        - **The switch goes in `plugins`**, labelled with the plugin's name, so
+          that category is the list of what is installed beyond the player
+          itself. *"We need to separate a plugin from default functionality for
+          a user."*
+        - **Its own rows go where they belong** - a renderer's in `sources`, a
+          service's in `system` - under a sub-heading carrying its name, which
+          is the shape LMS, Spotify and Bluetooth already have.
+        - **And they hide when the switch is off**, sub-heading included. The
+          core applies that, whether or not the manifest asks for it: a plugin
+          that is off has no configuration worth reading, and a manifest that
+          forgot would leave fields on the screen for a process nobody can
+          reach.
 
         **Keys are prefixed with the plugin's id.** Two plugins both shipping
         an `enabled` row would otherwise collide, and the second would be
@@ -347,8 +361,10 @@ class Settings:
             target = by_id.get("sources" if plugin.kind == "renderer" else "system")
             if target is None:
                 continue
-            rows = [{"type": "group", "label": plugin.name, "accent": plugin.accent}]
-            if plugin.enabled_row is None:
+            switch_group = by_id.get("plugins")
+            switch = plugin.enabled_row
+            switches = []
+            if switch is None:
                 # **Every plugin can be switched off** (ADR-0086 as amended).
                 # Not something a plugin declares, because a plugin that
                 # forgot to would be one nobody could turn off - and
@@ -356,8 +372,25 @@ class Settings:
                 # the whole of what `docs/DEVELOPMENT.md` says a service
                 # wants. A manifest naming an existing row opts out, which is
                 # how the built-ins keep the keys they have always had.
-                rows.append({"key": f"{plugin.id}.enabled", "type": "toggle",
-                             "label": "Enabled", "default": True})
+                #
+                # **Labelled with the plugin's name, not "Enabled"**: it is a
+                # row in a list of plugins now, not a row under a heading that
+                # already said which plugin this is.
+                switch = f"{plugin.id}.enabled"
+                switches.append({"key": switch, "type": "toggle",
+                                 "label": plugin.name, "default": True})
+            if switches and switch_group is None:
+                # A registry with no `plugins` category cannot hold the switch,
+                # and a plugin with no switch is the thing ADR-0086's amendment
+                # exists to prevent - so the plugin is dropped rather than
+                # silently made permanent.
+                logger.warning(
+                    "plugins: %s cannot be added - this registry has no `plugins` "
+                    "category to hold its switch", plugin.id,
+                )
+                continue
+            rows = [{"type": "group", "label": plugin.name, "accent": plugin.accent,
+                     "onlyWhen": [switch, True]}]
             reserved = {"enabled"} if plugin.enabled_row is None else set()
             for row in plugin.settings:
                 row = dict(row)
@@ -390,12 +423,26 @@ class Settings:
                     # does not ship with, and the breakage would arrive the day
                     # that key was renamed.
                     row["onlyWhen"] = [f"{plugin.id}.{only[0]}", only[1]]
+                else:
+                    # **Off means the whole subgroup is off** (George,
+                    # 2026-09-25). Applied here rather than left to the
+                    # manifest: every row of a plugin that is switched off is a
+                    # field for a process nobody can reach. A row that declares
+                    # its own condition keeps it, and `visible` is transitive -
+                    # every chain inside a plugin ends at a row carrying this.
+                    row["onlyWhen"] = [switch, True]
                 rows.append(row)
+            if len(rows) == 1:
+                # A heading over nothing. The panel drops one anyway; not
+                # publishing it is the same statement made once.
+                rows = []
             try:
-                check([{"id": "check", "label": "check", "rows": rows}])
+                check([{"id": "check", "label": "check", "rows": switches + rows}])
             except (ValueError, KeyError) as exc:
                 logger.warning("plugins: %s's settings are not usable: %s", plugin.id, exc)
                 continue
+            if switch_group is not None:
+                switch_group["rows"].extend(switches)
             target["rows"].extend(rows)
         return merged
 

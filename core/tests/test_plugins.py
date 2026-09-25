@@ -244,9 +244,11 @@ def test_the_shipped_beszel_manifest_is_what_the_record_says():
     assert plugin.enabled_row is None
     assert [r["key"] for r in plugin.settings] == ["hub", "token", "key"]
     assert [r.get("env") for r in plugin.settings] == ["HUB_URL", "TOKEN", "KEY"]
-    # Every row hides behind the switch (ADR-0088), which is George's
-    # *"when enabled fields appear that allow keys to be provided"*.
-    assert all(r.get("onlyWhen") == ["enabled", True] for r in plugin.settings)
+    # **No row declares `onlyWhen`.** Every one hides behind the switch anyway -
+    # the core applies that to every plugin row, so a manifest that forgot would
+    # not leave fields on screen for a process nobody can reach (George,
+    # 2026-09-25: *"when the toggle is off the entire subgroup is off"*).
+    assert not any("onlyWhen" in r for r in plugin.settings)
     # The two credentials are masked on the panel; `hub` is an address.
     assert [bool(r.get("secret")) for r in plugin.settings] == [False, True, True]
 
