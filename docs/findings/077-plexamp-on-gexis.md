@@ -158,7 +158,43 @@ triggered.**
 **4. What sample format?** **`S32_LE`**, 44100, 2 channels, MMAP_INTERLEAVED —
 and this is the one that costs something.
 
-## The audio path is the real problem, and it is two problems
+## The audio path had two problems. George's question removed both
+
+**George, 2026-09-25: *"Why aren't we setting the default for the device to
+our hat and let plexamp use it?"*** — which is the answer, and it is
+[ADR-0085](../decisions/0085-the-alsa-default-is-our-output.md).
+
+With `pcm.!default "output"` in place and Plexamp set to **Default**:
+
+```
+open: /proc/asound/card5/pcm0p/sub0/hw_params     <- the DAC, via pcm.output
+   format: S32_LE     rate: 44100 (44100/1)
+meter fifo:  25 23 25 24 26 25 26 25 16 17 25 26 26 25 27 25 …
+```
+
+**So the card is right, by name, and peppyalsa is in the path.** No index
+anywhere, and it follows ADR-0055's output picker for free.
+
+### And the S32_LE meter problem does not reproduce here
+
+The risk carried from moOde was that peppyalsa gives an **all-zero** meter
+FIFO for S32_LE. **On `gexis` it does not.** Measured with a control:
+
+| | meter FIFO |
+|---|---|
+| Plexamp playing, S32_LE, through `pcm.output` | `25 23 25 24 26 25 26 25 …` |
+| nothing playing, card closed | **no writer, nothing to read** |
+| playing again | `27 24 26 21 23 21 19 17 …` |
+
+The spectrum FIFO carries bands the same way (`38 35 40 46 43 …`). Why moOde
+saw zeros is not explained by this — different build, and this image patches
+peppyalsa to write each frame in one call (Finding 052) — and that is not
+investigated here. **What is established is that the symptom does not appear
+on this device.**
+
+## What the problems were, before that
+
+
 
 **a. Plexamp opens `hw:5,0` directly, so `pcm.output` is not in the path.**
 Every other renderer here goes through `pcm.output`, which is a `type meter`
