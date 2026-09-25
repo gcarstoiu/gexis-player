@@ -51,9 +51,10 @@ back as `:-1`, so it gets an assertion where the agent is installed rather than
 trust.
 
 **3. It costs 14 MB and under 1 % of one core** — as a floor, in a reconnect
-loop, with no hub attached. The connected number is not measured and the finding
-says so; it gets re-measured under a scroll after enrolment, against Finding
-067's panel numbers.
+loop, with no hub attached. **Enrolled, it costs 0.02 % of one core and the same
+14.2 MB** ([Finding 080](../findings/080-the-agent-enrolled.md)). The floor was
+the expensive case: reconnecting cost, reporting does not, so the re-measurement
+under a scroll that this record promised is not worth taking.
 
 ## The shape
 
@@ -165,7 +166,18 @@ was exactly how the Spotify pairing was lost.
 - **v1 cannot be frozen before this lands.** Criterion 1 is the frozen contract
   and criterion 3 is the plugin that has already amended it once; freezing in
   the other order would freeze a contract that the next plugin breaks.
-- George gets the throttle log he asked for on 2026-09-18, which nothing on the
-  device can currently produce.
+- ~~George gets the throttle log he asked for on 2026-09-18, which nothing on the
+  device can currently produce.~~ **Wrong, corrected 2026-09-25 once the agent
+  was enrolled** ([Finding 080](../findings/080-the-agent-enrolled.md)): the
+  binary contains no `throttl`, `vcgencmd`, `vcio` or `undervolt` string at all.
+  The Pi's throttle state is not a Linux sensor — it comes from
+  `vcgencmd get_throttled` over `/dev/vcio`, and this agent never opens it.
+
+  **What he does get is two of the four parts he asked for**: temperature and CPU
+  over time, which is enough to see a thermal event coming and to say what the
+  CPU was doing. Not the throttle bits, and nothing about the GPU. **That leaves
+  a question owed** — whether something small should sample
+  `vcgencmd get_throttled` on its own — and it is a new decision, not part of
+  this one.
 - Two settings rows join ADR-0022's inventory, **after George confirms**, plus
   the synthesised `beszel.enabled`.
