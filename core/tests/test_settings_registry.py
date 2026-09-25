@@ -1069,3 +1069,61 @@ def test_a_plugin_with_settings_gets_the_switch_first():
     system = next(g for g in merged if g["id"] == "system")
     assert [r.get("key") or r["label"] for r in system["rows"]] == [
         "Beszel", "beszel.enabled", "beszel.hub"]
+
+
+def test_a_manifests_onlyWhen_names_its_own_rows():
+    """**ADR-0088, and what makes George's *"when enabled fields appear"*
+    work.** A manifest writes `enabled`; the registry holds `beszel.enabled`,
+    which is the switch ADR-0086 synthesised. Unprefixed it would be refused at
+    load as an unknown setting and the whole plugin would vanish from the screen
+    with a log line for company."""
+    merged = Settings.with_plugins(
+        _groups(), [_plugin("beszel", kind="service", settings=[
+            {"key": "token", "type": "text", "label": "Token", "secret": True,
+             "onlyWhen": ["enabled", True]}])])
+    system = next(g for g in merged if g["id"] == "system")
+    token = next(r for r in system["rows"] if r.get("key") == "beszel.token")
+    assert token["onlyWhen"] == ["beszel.enabled", True]
+
+
+def test_a_row_can_depend_on_another_row_of_the_same_plugin():
+    merged = Settings.with_plugins(
+        _groups(), [_plugin("beszel", kind="service", settings=[
+            {"key": "hub", "type": "text", "label": "Hub"},
+            {"key": "token", "type": "text", "label": "Token",
+             "onlyWhen": ["hub", "*any*"]}])])
+    system = next(g for g in merged if g["id"] == "system")
+    token = next(r for r in system["rows"] if r.get("key") == "beszel.token")
+    assert token["onlyWhen"] == ["beszel.hub", "*any*"]
+
+
+def test_a_plugin_cannot_depend_on_a_core_row():
+    """Prefixed unconditionally: a plugin able to depend on a core key would be
+    coupled to a registry it does not ship with, and the breakage would arrive
+    the day that key was renamed. It is refused, loudly, and the plugin's other
+    rows go with it - the row it asked for does not exist."""
+    merged = Settings.with_plugins(
+        _groups(), [_plugin("beszel", kind="service", settings=[
+            {"key": "token", "type": "text", "label": "Token",
+             "onlyWhen": ["lms_enabled", True]}])])
+    system = next(g for g in merged if g["id"] == "system")
+    assert [r.get("key") for r in system["rows"]] == []
+
+
+def test_a_hidden_row_is_published_and_marked_invisible(store):
+    """ADR-0044 §6: the API publishes the row, the panel filters. A plugin's
+    rows are no different, which is what lets a phone and the panel agree."""
+    settings = Settings(
+        store,
+        registry=Settings.with_plugins(_groups(), [_plugin("beszel", kind="service", settings=[
+            {"key": "token", "type": "text", "label": "Token", "default": None,
+             "onlyWhen": ["enabled", True]}])]),
+        wired={"beszel.enabled": lambda v: None, "beszel.token": lambda v: None},
+    )
+    def token():
+        return next(r for g in settings.to_json() for r in g["rows"]
+                    if r.get("key") == "beszel.token")
+    settings.set("beszel.enabled", False)
+    assert token()["visible"] is False
+    settings.set("beszel.enabled", True)
+    assert token()["visible"] is True

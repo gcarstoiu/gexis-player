@@ -67,9 +67,11 @@ from gexis_core.settings import SettingsStore
 from gexis_core.settings_registry import Settings, load_registry
 from gexis_core.splash import Splash
 from gexis_core.state import StateStore
-from gexis_core import backups, bluealsa_volume, outputs, plugins
+from gexis_core import backups, bluealsa_volume, outputs, plugin_env, plugins
 from gexis_core.plugin_server import PluginServer
+from gexis_core.systemd import is_enabled as _unit_is_enabled
 from gexis_core.systemd import set_enabled as _set_unit_enabled
+from gexis_core.systemd import try_restart_unit as _try_restart_unit
 from gexis_core.artwork_sweep import ArtworkSweep
 from gexis_core.bluealsa_volume import BluealsaVolume
 from gexis_core.remote_volume import RemoteVolume
@@ -147,6 +149,13 @@ async def set_unit_enabled(unit: str, enabled: bool, *, now: bool = True) -> Non
     inline.
     """
     await asyncio.to_thread(functools.partial(_set_unit_enabled, unit, enabled, now=now))
+
+
+async def try_restart_unit(unit: str) -> None:
+    """`systemd.try_restart_unit` off the event loop, for the same reason
+    `set_unit_enabled` is: it stops a process, and how long that takes is the
+    process's business, not ours."""
+    await asyncio.to_thread(functools.partial(_try_restart_unit, unit))
 
 
 def _chosen_server(config: Config, store: SettingsStore) -> Config:
@@ -982,14 +991,44 @@ async def main() -> None:
     # ADR-0035. Defaults are what is true of this deployment today. A wired
     # row is read where it is used - the idle page probe here, the rest by
     # the UI - so none needs a callback.
-    def _plugin_setting(key: str, value) -> None:
-        """**A plugin's own row was written** (ADR-0086).
+    def _plugin_env(plugin) -> bool:
+        """**Export what this plugin's rows say to its unit** (ADR-0088).
 
-        Stored by the registry either way; this only tells the plugin, and
-        only if it is connected. One that is down misses nothing - it is
-        handed every current value in its `welcome`.
+        True if the file changed. Every value comes from the registry, so a row
+        never read by anything still exports what is stored - the plugin's
+        process is the thing that reads it, and it is not running yet when this
+        is first written.
+        """
+        if not plugin_env.has_env(plugin):
+            return False
+        values = {
+            f"{plugin.id}.{row['key']}": settings.value(f"{plugin.id}.{row['key']}")
+            for row in plugin.settings
+            if row.get("key") and row.get("env")
+        }
+        try:
+            return plugin_env.write(plugin, values)
+        except OSError as exc:
+            logger.warning("plugins: could not write %s's environment: %s", plugin.id, exc)
+            return False
+
+    def _plugin_setting(key: str, value) -> None:
+        """**A plugin's own row was written** (ADR-0086, ADR-0088).
+
+        Two things can happen and they are not alternatives. **The file is
+        written whatever else does or does not happen**: a third-party binary
+        reads its configuration from the environment and will never connect to
+        the socket, and that is the case ADR-0088 exists for. Then the plugin is
+        told over the socket if it is connected; one that is down misses
+        nothing, since it is handed every current value in its `welcome`.
         """
         plugin_id, _, own = key.partition(".")
+        plugin = next((p for p in installed_plugins if p.id == plugin_id), None)
+        if plugin is not None and _plugin_env(plugin):
+            # Environment is read once at exec, so a changed value means a
+            # restart - and `try-restart` only touches a unit that is already
+            # running, so a plugin switched off stays switched off.
+            asyncio.ensure_future(try_restart_unit(plugin.unit))
         session = plugin_server.sessions.get(plugin_id)
         if session is None:
             logger.info("plugins: %s is not connected; %s stored for its next start",
@@ -1011,7 +1050,13 @@ async def main() -> None:
         renderer's: enabled and started, or stopped and kept stopped. It is
         the same sentence for the same reason - a row whose effect ends at the
         next boot is a row that lies the second time you look at it.
+
+        **The environment is written first** (ADR-0088), so a plugin being
+        switched on for the first time starts with the values already typed in
+        rather than starting blank and being restarted a moment later.
         """
+        if on:
+            _plugin_env(plugin)
         await set_unit_enabled(plugin.unit, on)
 
     def _plugin_switch(plugin):
@@ -1026,6 +1071,20 @@ async def main() -> None:
         f"{plugin.id}.enabled": _plugin_switch(plugin)
         for plugin in installed_plugins
         if plugin.enabled_row is None
+    }
+
+    #: **What that switch reads before anyone has touched it: whatever systemd
+    #: says about the unit.** Not a value the manifest declares. Found on the
+    #: device 2026-09-25 with a manifest defaulting to on beside a unit the image
+    #: installs disabled - the row said "Enabled" for something that was neither
+    #: running nor going to start. Read once here rather than per request: it is
+    #: a subprocess, a settings screen reads every row at once, and a stored
+    #: value takes over the moment the switch is used.
+    plugin_switch_defaults = {
+        key: (lambda on=_unit_is_enabled(plugin.unit): on)
+        for plugin in installed_plugins
+        if plugin.enabled_row is None
+        for key in (f"{plugin.id}.enabled",)
     }
 
     #: Every row a plugin brought, keyed as the registry stores it. The
@@ -1075,6 +1134,9 @@ async def main() -> None:
             # showing an empty row.
             "version": lambda: image_info().get("version") or "unknown",
             "image_build": lambda: image_info().get("built") or "unknown",
+            # ADR-0086 as amended: a synthesised switch reads what systemd says
+            # about the unit until somebody uses it.
+            **plugin_switch_defaults,
         },
         # ADR-0051 §4: which skins there are depends on where they are
         # installed and on what `skin_corpus` holds, neither of which the
@@ -1208,6 +1270,15 @@ async def main() -> None:
         lists={"wifi", "bt_trusted"},
         on_change=state_store.bump_settings_revision,
     )
+
+    # **Every plugin's environment, before anything of theirs is started**
+    # (ADR-0088). `/run` is tmpfs, so on a fresh boot none of these files
+    # exists and the units that read them are ordered after this daemon. A
+    # plugin whose values are unchanged gets no write and no restart; one whose
+    # file is simply absent gets written and is *not* restarted here, because it
+    # has not been started yet either.
+    for plugin in installed_plugins:
+        _plugin_env(plugin)
 
     # The fourth corpus word was `Random` until 2026-09-22 and is `All`
     # now; a device that stored the old one is moved over rather than left

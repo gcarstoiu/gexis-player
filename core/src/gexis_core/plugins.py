@@ -32,6 +32,12 @@ ID = re.compile(r"^[a-z][a-z0-9-]{1,30}$")
 
 KINDS = ("renderer", "service")
 
+#: What a row's `env` may be named (ADR-0088). Duplicated from
+#: `plugin_env.NAME` deliberately: importing it here would make the manifest
+#: reader depend on the exporter, and this module is read by things that never
+#: write a file.
+ENV_NAME = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
+
 
 @dataclass(frozen=True)
 class Plugin:
@@ -96,6 +102,14 @@ def parse(raw: dict, *, directory: Path | None = None, built_in: bool = False) -
     settings = raw.get("settings") or []
     if not isinstance(settings, list) or any(not isinstance(r, dict) for r in settings):
         raise BadManifest("settings must be a list of rows")
+    for row in settings:
+        # ADR-0088. Refused here rather than dropped at export: a variable name
+        # the shell cannot carry is a typo, and a plugin whose credential
+        # silently never reaches its process is the hardest kind of broken to
+        # see - it starts, it runs, it just never authenticates.
+        name = row.get("env")
+        if name is not None and (not isinstance(name, str) or not ENV_NAME.match(name)):
+            raise BadManifest(f"{name!r} is not a usable environment variable name")
     mark = None
     if directory is not None:
         candidate = directory / "mark.png"

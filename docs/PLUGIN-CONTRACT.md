@@ -201,9 +201,51 @@ its other rows. A manifest may name an existing row instead with
 had.
 
 A renderer's rows land in **Sources**, under a sub-heading carrying its name,
-which is the shape the three built-ins already have. Rows that fail the
-registry's own validation are dropped with the reason logged rather than
-taking the device down: one badly packaged plugin must not cost the others.
+which is the shape the three built-ins already have. A service's land in
+**System**, same shape. Rows that fail the registry's own validation are dropped
+with the reason logged rather than taking the device down: one badly packaged
+plugin must not cost the others.
+
+**A row may hide behind another with `onlyWhen`** (ADR-0044's vocabulary), and
+**it names your rows, not the core's**: the key is prefixed exactly as `key` is,
+so `["enabled", true]` becomes `["<id>.enabled", true]` and means *"only when
+this plugin is switched on"*. A manifest cannot make a row depend on a core
+setting — that would couple it to a registry it does not ship with — and one
+that tries has all its rows dropped, because the row it named does not exist.
+
+### A row may name an environment variable
+
+**ADR-0088.** For the case that matters most in practice: the program being
+configured is not yours, will never connect to this socket, and reads its
+configuration from the environment like most daemons do.
+
+```json
+{ "key": "token", "type": "text", "secret": true, "env": "TOKEN",
+  "onlyWhen": ["enabled", true] }
+```
+
+- Every row with an `env` is exported to **`/run/gexis/plugins/<id>.env`**, mode
+  `0600`, in systemd's `EnvironmentFile` syntax. Your unit reads it with
+  `EnvironmentFile=-/run/gexis/plugins/<id>.env` — the `-` so a plugin with
+  nothing set still starts.
+- **The file is written before your unit is started**, and again whenever one of
+  those values changes; the unit is then restarted **if it is already running**.
+  A value changed while the plugin is switched off writes the file and starts
+  nothing.
+- **A value nobody has given writes no line at all**, so the variable is unset
+  rather than empty. `false` *is* written, because a toggle that is off is a
+  decision.
+- Values are quoted, so spaces, `"` and `\` are safe — the case that forced it
+  is an SSH public key. A value containing a newline is refused and logged, since
+  no `EnvironmentFile` line can carry one.
+- The variable name must match `[A-Za-z_][A-Za-z0-9_]*`. A manifest naming
+  anything else is refused outright, because a credential that silently never
+  reaches your process is the hardest kind of broken to find.
+
+**This is not encryption.** The values are in the settings store and `GET
+/settings` serves them to the same LAN, which
+[ADR-0083](decisions/0083-a-backup-leaves-the-device.md) states outright.
+`secret: true` masks a row on the panel and nothing more.
 
 ## Deliberately not here yet
 
@@ -217,7 +259,8 @@ taking the device down: one badly packaged plugin must not cost the others.
   `release` and the commands; what does not exist yet is the adapter built
   around a session and registered with the supervisor. A `renderer` that
   connects today is welcomed and idle, and the log says so. A `service` is
-  complete.
+  complete — and a service that only wants a unit managed and some values
+  exported never opens this socket at all.
 - **Authentication.** The socket's permissions are the model (ADR-0084).
 - **Anything about themes.** ADR-0016 lists them as plugins and a theme has no
   process; Phase 14 settles that before anything is built.

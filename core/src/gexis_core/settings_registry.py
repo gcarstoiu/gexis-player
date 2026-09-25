@@ -378,6 +378,18 @@ class Settings:
                     )
                     continue
                 row["key"] = f"{plugin.id}.{row['key']}"
+                only = row.get("onlyWhen")
+                if isinstance(only, list) and len(only) == 2 and isinstance(only[0], str):
+                    # **A manifest's `onlyWhen` names the plugin's own rows**
+                    # (ADR-0088), prefixed exactly as `key` is - `enabled`
+                    # becomes `beszel.enabled`, which is the switch ADR-0086
+                    # synthesised, and that is what makes George's *"when
+                    # enabled fields appear"* work. Unconditional rather than
+                    # "unless it looks like a core key": a plugin able to
+                    # depend on a core row would be coupled to a registry it
+                    # does not ship with, and the breakage would arrive the day
+                    # that key was renamed.
+                    row["onlyWhen"] = [f"{plugin.id}.{only[0]}", only[1]]
                 rows.append(row)
             try:
                 check([{"id": "check", "label": "check", "rows": rows}])

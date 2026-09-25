@@ -96,3 +96,38 @@ def set_enabled(unit: str, enabled: bool, *, now: bool = True) -> None:
             result.returncode,
             (result.stderr or "").strip(),
         )
+
+
+def try_restart_unit(unit: str) -> None:
+    """`systemctl try-restart` - restart it if it is running, do nothing if it
+    is not (ADR-0088).
+
+    A plugin's environment is read once at exec, so a changed credential means a
+    restart. `try-restart` rather than `restart` because a plugin that is
+    switched off must stay off: `restart` would start it, turning a settings
+    write into an activation nobody asked for. It is also not `enable --now` -
+    the unit's enabled state is not this call's business, only its process.
+    """
+    logger.info("systemctl try-restart %s", unit)
+    subprocess.run(["systemctl", "try-restart", unit], check=False, capture_output=True)
+
+
+def is_enabled(unit: str) -> bool:
+    """Whether systemd will start this unit at boot.
+
+    **The truth a synthesised `Enabled` row defaults to** (ADR-0086 as amended,
+    ADR-0088). A declared default would be a second statement of the same fact,
+    and found on the device 2026-09-25: a manifest defaulting its switch to
+    *on* beside an image that installs the unit *disabled* puts a row on the
+    screen reading "Enabled" for something that is not running and will not
+    start. Asking systemd cannot disagree with systemd.
+
+    `enabled-runtime` counts as enabled - it is, until the next boot - and
+    everything else does not, including `static` and `masked`: neither is a
+    thing this switch can meaningfully turn on.
+    """
+    result = subprocess.run(
+        ["systemctl", "is-enabled", unit], check=False, capture_output=True, text=True,
+    )
+    state = (result.stdout or "").strip()
+    return state in ("enabled", "enabled-runtime")

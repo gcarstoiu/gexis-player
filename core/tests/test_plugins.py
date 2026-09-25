@@ -64,6 +64,12 @@ def test_no_mark_is_not_an_error(tmp_path):
     ({**GOOD, "id": "a"}, "not a usable id"),
     ({**GOOD, "settings": {"key": "x"}}, "list of rows"),
     ({**GOOD, "settings": ["not a row"]}, "list of rows"),
+    # ADR-0088: a variable name no shell can carry is a typo, and the plugin it
+    # belongs to would otherwise start, run, and never authenticate.
+    ({**GOOD, "settings": [{"key": "t", "env": "2TOKEN"}]}, "environment variable"),
+    ({**GOOD, "settings": [{"key": "t", "env": "HUB URL"}]}, "environment variable"),
+    ({**GOOD, "settings": [{"key": "t", "env": "HUB-URL"}]}, "environment variable"),
+    ({**GOOD, "settings": [{"key": "t", "env": 7}]}, "environment variable"),
 ])
 def test_what_is_refused_and_why(bad, why):
     """Refused *with a reason*: the author cannot see this device's log, so
@@ -177,3 +183,46 @@ def test_the_accents_are_tokens_the_panel_actually_defines():
     for plugin in plugins.installed(SHIPPED):
         assert plugin.accent
         assert plugin.accent.lower() in tokens.lower(), f"{plugin.id}: {plugin.accent}"
+
+
+def test_a_row_may_name_an_environment_variable(tmp_path):
+    """ADR-0088. Lowercase is allowed: the uppercase convention is not
+    universal, and a manifest naming a variable this core refuses would be a
+    plugin nobody could configure."""
+    for name in ("TOKEN", "HUB_URL", "_x", "hub_url", "KEY2"):
+        assert parse({**GOOD, "settings": [{"key": "k", "env": name}]}).settings[0]["env"] == name
+
+
+def test_a_row_without_env_is_still_fine(tmp_path):
+    """Most rows are the panel's business only. `env` is what a third-party
+    binary needs, not what every row has."""
+    plugin = parse({**GOOD, "settings": [{"key": "k", "type": "toggle"}]})
+    assert "env" not in plugin.settings[0]
+
+
+def test_a_synthesised_switch_reads_the_units_real_state(monkeypatch):
+    """**Found on the device, 2026-09-25.** A manifest defaulting its switch to
+    *on* beside an image that installs the unit *disabled* put a row on the
+    screen reading "Enabled" for something that was neither running nor going
+    to start. Asking systemd cannot disagree with systemd.
+    """
+    from gexis_core import systemd
+
+    class Result:
+        def __init__(self, out):
+            self.stdout = out
+
+    seen = []
+
+    def fake_run(argv, **kw):
+        seen.append(argv)
+        return Result({"on.service": "enabled\n", "rt.service": "enabled-runtime\n",
+                       "off.service": "disabled\n", "static.service": "static\n",
+                       "masked.service": "masked\n", "gone.service": ""}[argv[-1]])
+
+    monkeypatch.setattr(systemd.subprocess, "run", fake_run)
+    assert systemd.is_enabled("on.service") is True
+    assert systemd.is_enabled("rt.service") is True
+    for unit in ("off.service", "static.service", "masked.service", "gone.service"):
+        assert systemd.is_enabled(unit) is False
+    assert all(argv[:2] == ["systemctl", "is-enabled"] for argv in seen)
