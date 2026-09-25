@@ -76,6 +76,13 @@ count of TCP connections to `:32500` **drops to 0** when the phone app is
 dismissed or explicitly disconnected, and recovers on reopen, with a latency of
 seconds.
 
+> **Measured on `gexis` 2026-09-25 and it does not hold**
+> ([Finding 077](077-plexamp-on-gexis.md)). With a phone connected and
+> playing, the count reads **0 while the card is open and audio is playing** —
+> three times in twenty seconds. They are short-lived timeline polls, not a
+> session, so an instantaneous count cannot tell "the controller left" from
+> "between polls".
+
 **So "no observable disconnect signal" was about the HTTP endpoints, not about
 the renderer.** This finding's §1 repeated that phrase as though it closed the
 question. It does not: the socket count is an observable signal, and it is the

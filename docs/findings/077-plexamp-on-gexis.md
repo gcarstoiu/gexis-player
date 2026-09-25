@@ -95,6 +95,42 @@ the audio layer, so which card is open does not alter it.
 throughout, and the one connection seen beforehand was a `FIN-WAIT-2` already
 closing. So the phone half is still untested.
 
+### With a phone connected: the hold is unchanged, and the TCP count is not a signal
+
+George connected his phone and started playback, 2026-09-25. Sampled at 1 s,
+card and controller connections together:
+
+```
+BASELINE   card=OPEN  tcp=3  3  3  3  1
+STOP -> 200
+  +0s..+6s   card=OPEN    tcp=2 2 2 2 2 2 2
+  +7s        card=OPEN    tcp=0          <- zero, while playing and connected
+  +8s..+11s  card=OPEN    tcp=2 2 2 2
+  +12s,+13s  card=OPEN    tcp=0 0        <- zero again
+  +14s       card=closed  tcp=3
+  +18s...    card=closed  tcp=0 0 0 0 0 0 0
+```
+
+**1. The 14 s hold is unconditional.** Card open until **+14 s**, exactly as
+with no phone attached. **A stop with a controller connected does not free the
+card any sooner.** The idle timer is the whole mechanism.
+
+**2. The TCP count cannot serve as `on_release`.** It reads **0 at +7 s, +12 s
+and +13 s — while the card was open, audio was playing and the phone was
+connected.** These are short-lived HTTP timeline polls, not a session: the
+count is "is a poll in flight this instant", and between polls it is zero.
+
+It is also **3 again at +14–17 s, after the card closed**, and only settles at
+0 from +18 s — which looks like the phone's polling backing off once nothing
+is playing, not the phone going away.
+
+**So Finding 075's *"TCP connection count is the only positive disconnect
+signal"* does not survive contact with a 1 Hz sample.** An instantaneous count
+cannot tell "the controller left" from "between polls". A *windowed* count —
+no connection for several consecutive seconds — might still work, since the
+gaps seen here were 1–2 s; that is not tested, and it would be inferring a
+session from traffic either way.
+
 ### Is the hold configurable? Not that this found
 
 **Checked:** all **138** settings in Plexamp's own store, filtered for
@@ -141,14 +177,11 @@ for this renderer has to be **longer than 14 s**, or the ladder escalates to
 That is exactly why the ladder is per-renderer: LMS already overrides it for
 squeezelite's own idle tick.
 
-**2. Can a spontaneous release be observed?** **Not answered.** The TCP count
-on `:32500` was **0 throughout — including while playing** — because no Plex
-controller was attached; this session drove playback through the API itself.
-**The count reflects a controller being connected, not audio being played**,
-which is a different thing from what Finding 075 assumed and needs a phone to
-test. It also raises a question that record did not: a phone that locks or
-backgrounds drops the connection while the audio keeps going, which would read
-as a release that did not happen.
+**2. Can a spontaneous release be observed?** **Answered, and the answer is
+no — not by the TCP count.** With George's phone connected and playing, the
+count hit **0 three times while the card was open and audio was playing**
+(above). It measures polls in flight, not a controller's presence. A windowed
+version is untested and would still be inferring a session from traffic.
 
 **3. Does it free the ALSA device (ADR-0008's reversal condition)?** **Yes, in
 14 s, with the service still running.** ADR-0008's reversal is about a renderer
