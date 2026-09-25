@@ -1,10 +1,11 @@
 # Handoff
 
-Last updated: 2026-09-25 (twenty-fifth session, on R2D2 — **Phase 10. The
-Beszel agent is installed, enrolled against George's hub with his own keys, and
-switched on from a Plugins category of its own. Criterion 3 is done. What is
-left before v1 freezes is arbitration for a plugin renderer, and an image that
-has never been built.**)
+Last updated: 2026-09-25 (twenty-fifth session, on R2D2 — **Phase 10 is
+CLOSED. The plugin contract carries a plugin that is not a renderer: the Beszel
+agent ships in the image, enrols from the settings screen and runs on George's
+hub, and the core contains nothing that names it. Next is Phase 11 — Plexamp as
+a renderer, as a plugin — which carries Phase 10's criterion 2 and the freeze
+with it.**)
 
 ## Start here
 
@@ -137,114 +138,45 @@ running**, and one current backup from 18:57 that contains the enrolment.
   George's low-cover report turned out to be the Bluetooth path (ADR-0080), so
   this is still owed and still unmeasured.
 
-### Next — Phase 10, the plugin contract
+### Next — Phase 11: Plexamp as a renderer, as a plugin
 
-**Planned 2026-09-25 and reshaped by three of George's decisions**: themes
-leave for Phase 14, the three default renderers **stay in the core process**,
-and **Plexamp replaces Qobuz** as the contract's fourth-renderer proof, because
-Qobuz needs a partnership and a private repository and that put the only proof
-two phases out.
+**George, 2026-09-25:** *"start 11, with the aim as having plexamp as the new
+renderer as a plugin."*
 
-Keeping the defaults in place makes ADR-0013's claim — *"implemented against
-the public plugin contract, not special-cased"* — untrue as written, so
-[the record is amended](docs/decisions/0013-defaults-implement-public-contract.md):
-they are the contract's **source**, not its consumers, and
-`core/tests/test_contract_surface.py` pins the surface so the wire schema and
-`Capabilities` cannot drift apart in silence.
+**The first work is not Plexamp.** It is the thing
+[`docs/PLUGIN-CONTRACT.md`](docs/PLUGIN-CONTRACT.md) names in its own open list:
+**arbitration does not carry plugins.** A `renderer` that connects is welcomed,
+logged and left idle, because the adapter built around a session and registered
+with the supervisor does not exist. **Nothing has ever played audio through this
+contract.** Everything else in Phase 11 is written against that adapter, so it
+comes first.
 
-**The order, and the reason for it:**
+Then, in order:
 
-1. ~~**The Plexamp hardware check**~~ — **done 2026-09-25**
-   ([Finding 077](docs/findings/077-plexamp-on-gexis.md)). Plexamp headless
-   4.13.2 is installed and claimed on the device. **It can be a renderer**: a
-   commanded stop works, it frees the ALSA device and keeps running, so
-   ADR-0008's reversal is not triggered. Two things to carry into Phase 11 —
-   the device is held for a deterministic **14 s** after the stop, so its
-   `release_ladder` needs a longer polite grace than the default; and **the
-   audio path does not work for the meters**, because it opens `hw:5,0`
-   directly rather than `pcm.output`, in **S32_LE**, which is the format moOde
-   measured as giving an all-zero peppyalsa FIFO.
-2. ~~ADRs: the transport~~ — **done**, George took the recommendation:
-   [ADR-0084](docs/decisions/0084-plugins-speak-json-lines-over-a-unix-socket.md),
-   a Unix socket carrying JSON lines. The plugin channel can claim the audio
-   device and lie about what is playing, which is not the class of thing
-   ADR-0028 left open on the LAN.
-3. ~~Draw the contract from `Adapter` and `Capabilities` as they are.~~ —
-   **drafted**: [`docs/PLUGIN-CONTRACT.md`](docs/PLUGIN-CONTRACT.md), version
-   1, **and deliberately not frozen**. It freezes after a non-renderer has
-   been built against it, not before. `test_contract_surface.py` now checks
-   the document against the objects as well as the objects against
-   themselves, which is the drift guard ADR-0013's amendment promised.
+1. **The adapter** — an `Adapter` whose acquire, release and commands are
+   ADR-0084 messages on a session, registered with the supervisor like the three
+   built-ins. Needs an ADR before it is built.
+2. **Plexamp in its own repository**, speaking the contract, with **no core
+   changes** — which is Phase 10's criterion 2, and the only thing that proves
+   the renderer half of the contract is right.
+3. **Freeze contract v1**, last, on that evidence.
 
-   **The `kind` split is the part to attack**: `renderer` declares a unit, a
-   release action and capabilities; `service` declares a unit and nothing
-   else. If a Beszel agent cannot be said as a `hello` with
-   `kind: "service"`, the contract is wrong.
-4. **Discovery — the mass of the phase.** `"lms"` appears in **six core
-   modules outside `adapters/`** and **ten UI files**, so "no core changes"
-   means a manifest, a scanned directory, and settings rows and source artwork
-   arriving from the plugin. The unsurfaced `plugins` row is where it lands.
-5. ~~The **Beszel agent** against the draft, *before* freezing it.~~ —
-   **built 2026-09-25**, and it did its job twice over: it found that a plugin
-   could declare rows but nothing could switch it off (ADR-0086's amendment),
-   and then that a plugin's settings could not reach a third-party binary at all
-   (ADR-0088). Both were holes in the contract, found by the plugin written to
-   look for them, which is what this criterion is for.
+**What Finding 077 already measured, and the phase has to build around:**
 
-   **All four of the questions the record said were owed are answered.** The
-   hub is George's. The agent listens on nothing. It costs 14 MB and under 1 %
-   of a core. It ships in the image, defaulting off — George's call.
+- **A commanded stop works, and the device is held for a deterministic 14 s
+  afterwards.** So this renderer's `release_ladder` needs a polite grace longer
+  than that, exactly as LMS overrides it for squeezelite's idle tick.
+- **It frees the device and keeps running**, so ADR-0008's reversal condition is
+  **not** triggered.
+- **It opens `hw:5,0` in S32_LE**, not `pcm.output`, which is why
+  [ADR-0085](docs/decisions/0085-the-alsa-default-is-our-output.md) made our
+  output the ALSA default. Whether the meters then work is **unverified** — moOde
+  measured peppyalsa giving an all-zero FIFO for S32_LE.
+- **The TCP count at `:32500` is not a release signal.** `alsa.device_held_by` is.
 
-   ~~**What is left is the enrolment.**~~ **Done 2026-09-25** — George entered
-   the token and the hub key through the settings screen: *"Added the keys into
-   the plugin and can confirm it works."* The cost is measured
-   ([Finding 080](docs/findings/080-the-agent-enrolled.md)) and **throttle state
-   turned out not to be there at all**, which ADR-0087 now says instead of
-   claiming otherwise.
-6. **Freeze v1** — the last step, and it must stay last. This criterion's plugin
-   has now amended the contract **twice**; freezing before it was built would
-   have frozen a contract that its first real consumer broke.
+### Still open, and none of it blocking
 
-**Settings rows are done** (2026-09-25), and a plugin's now reach a process
-that cannot speak to us: see ADR-0088 above. A manifest's `settings` are merged
-into the registry — a renderer's under a sub-heading in Sources, the shape the
-three built-ins already have — with keys prefixed by the plugin's id so two
-plugins shipping `enabled` cannot collide. Rows go through the registry's own
-validation and a bad one is dropped with the reason logged rather than taking
-the device down. A write reaches the plugin as `setting` under **its own** key;
-the value is stored either way, and a plugin that was down is handed every
-current value in its `welcome`. Proved on the device with a service plugin
-written in `socket` and `json`.
-
-**Still open inside discovery: arbitration does not carry plugins.** A
-`renderer` that connects is welcomed and **idle**, and the log says so rather
-than pretending otherwise. That is the last piece — an `Adapter` built around
-a session and registered with the supervisor — and it is what Phase 11 needs
-before Plexamp can be an external plugin.
-
-**Read [Finding 075](docs/findings/075-what-moode-learned-about-plexamp.md)
-before starting.** George's moOde project built a Plexamp route and **parked
-it**: pause and app-dismissed are byte-identical at every observable endpoint.
-
-**That phrase is narrower than it sounds, and the second export settles it.**
-It was about the *HTTP endpoints*. Plexamp on `:32500` turns out to fit
-ADR-0010's ladder without bending:
-
-| our contract | Plexamp, per moOde |
-|---|---|
-| `release()` — the polite stop | the API stop at `:32500`. Frees the DAC, leaves Plexamp running |
-| `signal_stop(force)` | kill the unit — which needs a restart, so it is rightly the second step |
-| `on_release` | **TCP count to `:32500` reaching 0**, seconds after the app goes away |
-
-So **Plexamp looks viable**, on someone else's machine, with two gaps neither
-project has measured: the stop test's "before" read was empty, and nobody knows
-what the TCP count does after an API stop — if our own `release()` drops it,
-the adapter reads its own polite stop as a user disconnect.
-
-The finding also carries two smaller things — our `output.conf` pins no sample
-format, and peppyalsa gave moOde an all-zero meter FIFO for S32_LE.
-
-**Three decisions are open and labelled in the ADRs**, none blocking:
+**Three decisions are labelled in the ADRs:**
 
 - **Is 1.8× the right scale for the waiting screen?** A judgement, not a
   measurement: two services come to 680 px of the width and about 300 px of the
@@ -264,6 +196,13 @@ get_throttled` read `0xd0000` last session: under-voltage, frequency capping
 and the soft temperature limit have all *occurred* during that uptime —
 historical bits, none current, at 74.5 °C and a full 1.8 GHz. Not a UI
 measurement, but it is the kind of thing that makes measurements wander.
+
+**The Beszel agent does not close this.** It cannot read those bits at all
+([Finding 080](docs/findings/080-the-agent-enrolled.md)) — they come from
+`vcgencmd get_throttled` over `/dev/vcio`, which it never opens. George gets
+temperature and CPU over time, which is two of the four parts he asked for on
+2026-09-18. **Whether something small should sample the bits themselves is a
+decision nobody has taken.**
 
 ## Build environment (2026-09-13) — read this before the next build
 
@@ -425,14 +364,17 @@ reverted, currently-flashed image predates this fix.
 9  settings wiring + UI polish          * COMPLETE 2026-09-25 - all five
                                             criteria closed. 0 carries a
                                             revisit before 13
-10 plugin contract                        <- next. Themes left it for 14, and
-                                            the defaults stay in the core
-                                            process (George, 2026-09-25), so
-                                            ADR-0013 is amended: they are the
-                                            contract's source, not its
-                                            consumers. A Beszel agent is the
-                                            test that it carries a non-renderer
-11 Plexamp as a renderer                  now ALSO the fourth-renderer proof
+10 plugin contract                      * COMPLETE 2026-09-25 - criterion 3
+                                            done, criterion 1 documented and
+                                            versioned. Criterion 2 and the
+                                            freeze go to 11, because 2 is the
+                                            freeze's evidence. Themes left it
+                                            for 14 and the defaults stayed in
+                                            the core process, both George's;
+                                            the Beszel agent was the test that
+                                            it carries a non-renderer, and it
+                                            amended the contract twice
+11 Plexamp as a renderer, as a plugin     <- next. ALSO the fourth-renderer proof
                                             for 10, replacing Qobuz. Its
                                             hardware check is pulled forward
                                             into 10 - Finding 075 says moOde

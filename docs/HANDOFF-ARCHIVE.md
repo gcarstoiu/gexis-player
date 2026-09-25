@@ -4666,3 +4666,112 @@ release event stops arriving. The panel showed a stopped Spotify's track,
 artwork and progress bar indefinitely, while the same payload said the renderer
 was unavailable. Fixed with one `relinquish`; [LESSONS](docs/LESSONS.md) 39 is
 the part worth keeping.
+
+## From HANDOFF, 2026-09-25 — how Phase 10 was planned, as it carried the plan
+
+### How Phase 10 was planned, and what the plan got wrong
+
+**Planned 2026-09-25 and reshaped by three of George's decisions**: themes
+leave for Phase 14, the three default renderers **stay in the core process**,
+and **Plexamp replaces Qobuz** as the contract's fourth-renderer proof, because
+Qobuz needs a partnership and a private repository and that put the only proof
+two phases out.
+
+Keeping the defaults in place makes ADR-0013's claim — *"implemented against
+the public plugin contract, not special-cased"* — untrue as written, so
+[the record is amended](docs/decisions/0013-defaults-implement-public-contract.md):
+they are the contract's **source**, not its consumers, and
+`core/tests/test_contract_surface.py` pins the surface so the wire schema and
+`Capabilities` cannot drift apart in silence.
+
+**The order, and the reason for it:**
+
+1. ~~**The Plexamp hardware check**~~ — **done 2026-09-25**
+   ([Finding 077](docs/findings/077-plexamp-on-gexis.md)). Plexamp headless
+   4.13.2 is installed and claimed on the device. **It can be a renderer**: a
+   commanded stop works, it frees the ALSA device and keeps running, so
+   ADR-0008's reversal is not triggered. Two things to carry into Phase 11 —
+   the device is held for a deterministic **14 s** after the stop, so its
+   `release_ladder` needs a longer polite grace than the default; and **the
+   audio path does not work for the meters**, because it opens `hw:5,0`
+   directly rather than `pcm.output`, in **S32_LE**, which is the format moOde
+   measured as giving an all-zero peppyalsa FIFO.
+2. ~~ADRs: the transport~~ — **done**, George took the recommendation:
+   [ADR-0084](docs/decisions/0084-plugins-speak-json-lines-over-a-unix-socket.md),
+   a Unix socket carrying JSON lines. The plugin channel can claim the audio
+   device and lie about what is playing, which is not the class of thing
+   ADR-0028 left open on the LAN.
+3. ~~Draw the contract from `Adapter` and `Capabilities` as they are.~~ —
+   **drafted**: [`docs/PLUGIN-CONTRACT.md`](docs/PLUGIN-CONTRACT.md), version
+   1, **and deliberately not frozen**. It freezes after a non-renderer has
+   been built against it, not before. `test_contract_surface.py` now checks
+   the document against the objects as well as the objects against
+   themselves, which is the drift guard ADR-0013's amendment promised.
+
+   **The `kind` split is the part to attack**: `renderer` declares a unit, a
+   release action and capabilities; `service` declares a unit and nothing
+   else. If a Beszel agent cannot be said as a `hello` with
+   `kind: "service"`, the contract is wrong.
+4. **Discovery — the mass of the phase.** `"lms"` appears in **six core
+   modules outside `adapters/`** and **ten UI files**, so "no core changes"
+   means a manifest, a scanned directory, and settings rows and source artwork
+   arriving from the plugin. The unsurfaced `plugins` row is where it lands.
+5. ~~The **Beszel agent** against the draft, *before* freezing it.~~ —
+   **built 2026-09-25**, and it did its job twice over: it found that a plugin
+   could declare rows but nothing could switch it off (ADR-0086's amendment),
+   and then that a plugin's settings could not reach a third-party binary at all
+   (ADR-0088). Both were holes in the contract, found by the plugin written to
+   look for them, which is what this criterion is for.
+
+   **All four of the questions the record said were owed are answered.** The
+   hub is George's. The agent listens on nothing. It costs 14 MB and under 1 %
+   of a core. It ships in the image, defaulting off — George's call.
+
+   ~~**What is left is the enrolment.**~~ **Done 2026-09-25** — George entered
+   the token and the hub key through the settings screen: *"Added the keys into
+   the plugin and can confirm it works."* The cost is measured
+   ([Finding 080](docs/findings/080-the-agent-enrolled.md)) and **throttle state
+   turned out not to be there at all**, which ADR-0087 now says instead of
+   claiming otherwise.
+6. **Freeze v1** — the last step, and it must stay last. This criterion's plugin
+   has now amended the contract **twice**; freezing before it was built would
+   have frozen a contract that its first real consumer broke.
+
+**Settings rows are done** (2026-09-25), and a plugin's now reach a process
+that cannot speak to us: see ADR-0088 above. A manifest's `settings` are merged
+into the registry — a renderer's under a sub-heading in Sources, the shape the
+three built-ins already have — with keys prefixed by the plugin's id so two
+plugins shipping `enabled` cannot collide. Rows go through the registry's own
+validation and a bad one is dropped with the reason logged rather than taking
+the device down. A write reaches the plugin as `setting` under **its own** key;
+the value is stored either way, and a plugin that was down is handed every
+current value in its `welcome`. Proved on the device with a service plugin
+written in `socket` and `json`.
+
+**Still open inside discovery: arbitration does not carry plugins.** A
+`renderer` that connects is welcomed and **idle**, and the log says so rather
+than pretending otherwise. That is the last piece — an `Adapter` built around
+a session and registered with the supervisor — and it is what Phase 11 needs
+before Plexamp can be an external plugin.
+
+**Read [Finding 075](docs/findings/075-what-moode-learned-about-plexamp.md)
+before starting.** George's moOde project built a Plexamp route and **parked
+it**: pause and app-dismissed are byte-identical at every observable endpoint.
+
+**That phrase is narrower than it sounds, and the second export settles it.**
+It was about the *HTTP endpoints*. Plexamp on `:32500` turns out to fit
+ADR-0010's ladder without bending:
+
+| our contract | Plexamp, per moOde |
+|---|---|
+| `release()` — the polite stop | the API stop at `:32500`. Frees the DAC, leaves Plexamp running |
+| `signal_stop(force)` | kill the unit — which needs a restart, so it is rightly the second step |
+| `on_release` | **TCP count to `:32500` reaching 0**, seconds after the app goes away |
+
+So **Plexamp looks viable**, on someone else's machine, with two gaps neither
+project has measured: the stop test's "before" read was empty, and nobody knows
+what the TCP count does after an API stop — if our own `release()` drops it,
+the adapter reads its own polite stop as a user disconnect.
+
+The finding also carries two smaller things — our `output.conf` pins no sample
+format, and peppyalsa gave moOde an all-zero meter FIFO for S32_LE.

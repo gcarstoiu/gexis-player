@@ -2032,8 +2032,20 @@ registry advertises.
 
 ### Phase 10 — Plugin contract
 
+> **CLOSED 2026-09-25** (George: *"Let's close 10, commit and push everything
+> including all relevant documents."*). **Criterion 3 is done and criterion 1 is
+> done as far as this phase can take it. Criterion 2 goes to Phase 11 with the
+> freeze**, because it *is* the freeze's evidence — see "What closing this means"
+> at the end.
+>
+> The phase produced: ADR-0084 (the transport), ADR-0085, ADR-0086 (the manifest,
+> amended twice), ADR-0087 (the first service plugin), ADR-0088 (settings reach a
+> unit), `docs/PLUGIN-CONTRACT.md` at version 1, and Findings 075-080.
+
 **Themes left this phase on 2026-09-25** (George): *"Themes to be cut out and
-have its own phase at the end of the current list."* They are **Phase 14**.
+have its own phase at the end of the current list."* They are **Phase 14**, and
+he restated it on the day the phase closed: *"I stated before that themes are
+out and have their own phase at the end of the list."*
 
 **The defaults are not ported** (George, 2026-09-25): *"Spotify will stay where
 it is. No moving. So is lms and Bluetooth."* They stay in the core process, so
@@ -2044,7 +2056,12 @@ the exercise.
 
 **Acceptance**
 
-1. Contract documented and versioned.
+1. ~~Contract documented and versioned.~~ — **Done, and deliberately not
+   frozen.** [`docs/PLUGIN-CONTRACT.md`](PLUGIN-CONTRACT.md) is version 1,
+   derived from `Adapter` and `Capabilities` rather than designed, with
+   `core/tests/test_contract_surface.py` pinning the document against the
+   objects so the two cannot drift in silence. **The freeze moves to Phase 11**
+   with criterion 2, for the reason below.
 2. A fourth renderer built against it, in a separate repository, with no changes
    to the core. ~~**Qobuz Connect (Phase 12) is that renderer**~~ — **Plexamp
    (Phase 11) is**, George 2026-09-25: *"If qobuz is too expensive now,
@@ -2062,8 +2079,45 @@ the exercise.
    observable endpoint, which is the `on_release` edge `Adapter.run` requires.
    Phase 11's criterion 1 is pulled forward into this phase for the same
    reason: **find out before the contract is frozen around it.**
-3. **A second plugin that is not a renderer: a Beszel agent** (George,
-   2026-09-18). Qobuz alone tests the contract with the thing it was drawn
+3. ~~**A second plugin that is not a renderer: a Beszel agent.**~~ — **DONE
+   2026-09-25.** It runs on the device, enrolled against George's own hub,
+   configured entirely from the settings screen, and **the core contains nothing
+   that names it** ([ADR-0087](decisions/0087-the-beszel-agent-is-the-first-service-plugin.md)).
+
+   **It did the job this criterion was written for, twice.** It broke the
+   contract before the contract could be frozen around it:
+
+   - **A plugin could declare rows and nothing could switch it off** — the three
+     renderers got that from a hardcoded `RENDERER_ROWS` a plugin cannot reach.
+     [ADR-0086](decisions/0086-a-plugin-declares-itself-in-a-manifest.md)'s
+     amendment: every plugin gets a switch, and its default is whatever
+     `systemctl is-enabled` says rather than something a manifest declares.
+   - **A plugin's settings could not reach a third-party binary at all.**
+     ADR-0084's socket needs the plugin to be ours, and the Beszel agent will
+     never speak it — nor will Plexamp, nor anything else worth plugging in that
+     already exists.
+     [ADR-0088](decisions/0088-a-plugins-settings-reach-its-unit-as-environment.md):
+     a manifest row may name an environment variable.
+
+   **And George settled where a plugin lives on the screen**, 2026-09-25:
+   *"we need to separate a plugin from default functionality for a user…
+   create the plugin category in settings and add in there only Beszel toggle.
+   When enabled then the config fields show up in system like now in the Beszel
+   subgroup. When the toggle is off the entire subgroup is off."* A **Plugins**
+   category holds one switch per installed plugin; its own rows sit in Sources or
+   System under its name and vanish with the switch. ADR-0022's inventory gained
+   a Plugins group on his word.
+
+   **Three things it measured** (Findings 078 and 080): the agent opens an
+   inbound SSH port on 45876 **even in outbound mode**, and `--listen -1` removes
+   it entirely, so ADR-0028's LAN stance needs no extending; it costs **0.02 % of
+   one core** connected, the unconnected retry loop having been the expensive
+   case; and **it cannot see throttling at all**, which this record claimed it
+   could — George gets temperature and CPU over time, not the throttle bits.
+
+   The original text, which is what was asked:
+
+   Qobuz alone tests the contract with the thing it was drawn
    for; a monitoring agent tests whether the contract can carry anything
    else - something with no metadata, no transport and no claim on the audio
    device, that only wants to be installed, started, kept running and
@@ -2088,13 +2142,74 @@ the exercise.
    None of that is settled by adding it to this list.
 4. ~~Theme engine.~~ **Moved to Phase 14**, 2026-09-25.
 
-### Phase 11 — Plexamp as a renderer
+### What closing this means, and what it deliberately does not
 
-**Added 2026-09-16 (George).** Same shape as Spotify and LMS. **The phase that
-moves Plexamp into Must**, which is
+**The renderer half of this contract has never been spoken by a renderer.**
+Services are complete — a service that wants a unit managed and some values
+exported never opens the socket at all, and Beszel proved it end to end. A
+`renderer` that connects today is welcomed, logged, and left **idle**, because
+the adapter built around a session and registered with the supervisor does not
+exist. Arbitration does not carry plugins.
+
+**So the freeze goes to Phase 11, with criterion 2, because criterion 2 is its
+evidence.** Freezing v1 here would freeze a renderer protocol no renderer has
+ever used — and this phase's own plugin amended the contract **twice**, both
+times from building the thing rather than reading the document. Doing it in the
+other order is the mistake the ordering was chosen to avoid.
+
+Criterion 1 as written asks for *documented and versioned*, and that is done.
+The freeze was a discipline added on top of it, and it belongs with the proof.
+
+**What that leaves for Phase 11**, beyond its own acceptance: the plugin adapter,
+and then the freeze. Both are named in
+[`docs/PLUGIN-CONTRACT.md`](PLUGIN-CONTRACT.md)'s own "Deliberately not here
+yet".
+
+**Also still open, and not this phase's:** nothing installs a plugin on a running
+device. Every plugin arrives in the image, which was George's call
+([ADR-0087](decisions/0087-the-beszel-agent-is-the-first-service-plugin.md)); an
+installer needs a writable plugin directory, a checksummed download and a rule
+about who may ask, and that is a phase of its own if it is ever wanted.
+
+### Phase 11 — Plexamp as a renderer, and the contract's proof
+
+**Added 2026-09-16 (George).** ~~Same shape as Spotify and LMS.~~ — **not the
+same shape**, and that is the point of it now.
+
+**George, 2026-09-25, opening the phase:** *"start 11, with the aim as having
+plexamp as the new renderer as a plugin."* So this phase carries **Phase 10's
+criterion 2** as well as its own: *a fourth renderer built against the contract,
+in a separate repository, with no changes to the core.* Plexamp replaced Qobuz
+in that role on his word the same week, because Qobuz needs a partnership and a
+private repository and that put the contract's only renderer proof two phases
+out.
+
+**Three things therefore have to be true at the end of this phase**, and the
+first two are not about Plexamp at all:
+
+- **Arbitration carries plugins.** A `renderer` that connects today is welcomed,
+  logged and left idle: the adapter built around a session and registered with
+  the supervisor does not exist. Nothing has ever played audio through the
+  contract. **This is the first work of the phase**, before any Plexamp code,
+  because everything else here is written against it.
+- **Phase 10's criterion 2 closes** — the renderer lives in its own repository
+  and the core gains nothing that names it.
+- **Contract v1 freezes**, last, on the evidence of the two above. It was not
+  frozen in Phase 10 deliberately: Phase 10's own plugin amended it twice, both
+  times from building rather than reading, and freezing a renderer protocol no
+  renderer had spoken would be that mistake made on purpose.
+
+**The phase that moves Plexamp into Must**, which is
 [ADR-0008](decisions/0008-direct-alsa-over-pipewire.md)'s reversal condition:
-Plexamp headless is its named non-cooperative renderer. Hence criterion 1
-comes before anything is built.
+Plexamp headless is its named non-cooperative renderer. ~~Hence criterion 1
+comes before anything is built.~~ — **criterion 1 was pulled into Phase 10 and
+is done** ([Finding 077](findings/077-plexamp-on-gexis.md)): it releases the
+device and keeps running, so **ADR-0008's reversal is not triggered**. Two
+things it measured that this phase has to build around — a **14 s** hold after a
+commanded stop, so the release ladder needs a longer polite grace; and an audio
+path that opens `hw:5,0` in **S32_LE**, which is why
+[ADR-0085](decisions/0085-the-alsa-default-is-our-output.md) made `pcm.output`
+the ALSA default.
 
 **Acceptance**
 
