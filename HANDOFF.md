@@ -49,6 +49,19 @@ Three commits, in this order, each verified on the hardware before the next:
 4. **[ADR-0077](docs/decisions/0077-a-source-that-is-off-is-not-running.md):
    a source that is off is not running.** The last four rows — the three
    `Enabled` toggles and `headless`.
+5. **The two orange dots**, both found by George reading the screen. The dot
+   means a row's marks carry `?`, a decision still owed. `version` and
+   `image_build` were still asking one that had been answered when they were
+   wired; `version` says `unknown` correctly on this image, and `built` now
+   falls back to `/etc/rpi-issue`, which pi-gen writes on every image, so it
+   reads **2026-09-19**.
+6. **[ADR-0078](docs/decisions/0078-the-transition-screen-waits-for-the-threshold.md):
+   the transition screen waits for the threshold.** `handoff_threshold` showed
+   `1` with no slider because a `number` row only draws one once it is wired —
+   and it had stayed unwired because **nothing had ever read it**. It now means
+   how long a takeover has to be in flight before the panel explains it; 0–3 s
+   in 0.5 s steps, 0 being the old behaviour. Five runs on the panel
+   ([Finding 069](docs/findings/069-the-transition-screen-against-the-threshold.md)).
 
 ### ADR-0077, because it is the one with teeth
 
@@ -80,6 +93,8 @@ that is pure boot cost with no kiosk to warm for. Turning it on from the panel
 closes the panel; it is reversible from a phone, and only from a phone. 12 s
 to the panel gone, 20 s to it back.
 
+**Both dots are gone**, and no surfaced row carries a `?` any more.
+
 ### Where it stands right now
 
 - **PR #25 is open** on `phase-8-plan`. The four commits above are on it.
@@ -100,7 +115,7 @@ settings rows. Anything on any screen that looks like a control and is not one.
 **Criterion 4: triage the handoff's own "issues to look at later"** — the list
 under *Things that will bite if forgotten*, below.
 
-**Two decisions are open and labelled in ADR-0077**, neither blocking:
+**Three decisions are open and labelled in the ADRs**, none blocking:
 
 - **Do the Library, Browse and Radio screens go with `lms_enabled`?** They are
   LMS's screens and they read the server directly rather than through the
@@ -110,6 +125,10 @@ under *Things that will bite if forgotten*, below.
   goes blank until the next boot, which then reaches a login prompt normally
   (the kiosk's `Conflicts=getty@tty1` stops the getty and systemd does not
   start it again). Measured on the device.
+- **Should `handoff_exempt_pairs` survive?** With a working threshold it
+  changes no outcome — both its pairs are far under any value the bar offers.
+  It stays because it is measured evidence and because removing published
+  state is Phase 4 criterion 4's business (ADR-0078).
 
 **And the device has a hardware flag worth George's eye.** `vcgencmd
 get_throttled` read `0xd0000` last session: under-voltage, frequency capping
@@ -296,6 +315,12 @@ Phases 9-13 were renumbered on 2026-09-16 (George). `docs/DEVELOPMENT.md`
 holds each phase's acceptance criteria; this list is only the order.
 
 ## Things that will bite if forgotten
+
+- **Restarting `gexis-core` does not reload the panel.** `ui/dist` rsynced to
+  `/opt/gexis-ui` reaches Chromium only on a page load, so a probe run after a
+  daemon restart measures the *old* bundle faithfully and reports that the
+  change does not work. `Page.navigate` to the same URL over CDP on 9222.
+  [LESSONS](docs/LESSONS.md) 38, and it cost a wrong result on 2026-09-25.
 
 - **A reflashed card only has R2D2's SSH key.** `make provision` writes the
   one key in `image/provision.local.env`; C3PO's
