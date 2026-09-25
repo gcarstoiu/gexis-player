@@ -903,3 +903,110 @@ def test_a_list_declaration_for_a_row_that_is_not_a_list_is_refused(store):
 def test_a_list_declaration_for_a_row_that_does_not_exist_is_refused(store):
     with pytest.raises(ValueError, match="not in the registry"):
         Settings(store, registry=_one("wifi"), lists={"nope"})
+
+
+# ---------------------------------------------------------------------------
+# ADR-0086: a plugin's rows, merged into the registry.
+# ---------------------------------------------------------------------------
+
+
+def _plugin(id="plexamp", kind="renderer", settings=()):
+    from gexis_core.plugins import Plugin
+    return Plugin(id=id, name=id.title(), kind=kind, unit=f"{id}.service",
+                  accent="#e5a00d", settings=tuple(settings))
+
+
+def _groups():
+    return [
+        {"id": "sources", "label": "Sources", "rows": [
+            {"key": "lms_enabled", "type": "toggle", "label": "Enabled"}]},
+        {"id": "system", "label": "System", "rows": []},
+    ]
+
+
+def test_a_renderers_rows_land_in_sources_under_its_own_name():
+    """The shape the three built-ins already have, so a fourth reads like the
+    three rather than like an appendix."""
+    merged = Settings.with_plugins(
+        _groups(), [_plugin(settings=[{"key": "quality", "type": "choice",
+                                       "label": "Quality", "options": ["A", "B"]}])])
+    sources = next(g for g in merged if g["id"] == "sources")
+    labels = [r.get("label") for r in sources["rows"]]
+    assert labels == ["Enabled", "Plexamp", "Quality"]
+    assert sources["rows"][1]["type"] == "group"
+
+
+def test_keys_are_prefixed_so_two_plugins_cannot_collide():
+    """Two plugins both shipping `enabled` would otherwise be a duplicate-key
+    error nobody could act on."""
+    row = {"key": "enabled", "type": "toggle", "label": "Enabled"}
+    merged = Settings.with_plugins(
+        _groups(), [_plugin("plexamp", settings=[row]), _plugin("qobuz", settings=[row])])
+    keys = [r["key"] for g in merged for r in g["rows"] if r.get("key")]
+    assert keys == ["lms_enabled", "plexamp.enabled", "qobuz.enabled"]
+
+
+def test_a_service_does_not_land_in_sources():
+    merged = Settings.with_plugins(
+        _groups(), [_plugin("beszel", kind="service",
+                            settings=[{"key": "hub", "type": "text", "label": "Hub"}])])
+    sources = next(g for g in merged if g["id"] == "sources")
+    system = next(g for g in merged if g["id"] == "system")
+    assert [r["key"] for r in sources["rows"] if r.get("key")] == ["lms_enabled"]
+    assert [r["key"] for r in system["rows"] if r.get("key")] == ["beszel.hub"]
+
+
+def test_rows_go_through_the_registrys_own_validation():
+    """A plugin is written by somebody who cannot test against this device.
+    The alternative to checking is a Settings screen drawing something nobody
+    looked at."""
+    bad = _plugin(settings=[{"key": "size", "type": "number", "label": "Size"}])  # no min/max
+    merged = Settings.with_plugins(_groups(), [bad])
+    sources = next(g for g in merged if g["id"] == "sources")
+    assert [r.get("label") for r in sources["rows"]] == ["Enabled"]
+
+
+def test_one_bad_plugin_does_not_cost_the_others():
+    good = _plugin("qobuz", settings=[{"key": "quality", "type": "toggle", "label": "Q"}])
+    bad = _plugin("plexamp", settings=[{"key": "size", "type": "number", "label": "S"}])
+    merged = Settings.with_plugins(_groups(), [bad, good])
+    keys = [r["key"] for g in merged for r in g["rows"] if r.get("key")]
+    assert keys == ["lms_enabled", "qobuz.quality"]
+
+
+def test_a_row_with_no_key_is_dropped_and_the_rest_kept():
+    merged = Settings.with_plugins(
+        _groups(), [_plugin(settings=[{"type": "toggle", "label": "Nameless"},
+                                      {"key": "ok", "type": "toggle", "label": "Fine"}])])
+    keys = [r["key"] for g in merged for r in g["rows"] if r.get("key")]
+    assert keys == ["lms_enabled", "plexamp.ok"]
+
+
+def test_the_original_registry_is_not_mutated():
+    """`with_plugins` is called on the shipped registry; a caller that reloads
+    must not find a plugin's rows already in it."""
+    original = _groups()
+    Settings.with_plugins(original, [_plugin(settings=[
+        {"key": "quality", "type": "toggle", "label": "Q"}])])
+    assert [r["key"] for r in original[0]["rows"]] == ["lms_enabled"]
+
+
+def test_a_plugin_with_no_settings_adds_no_heading():
+    merged = Settings.with_plugins(_groups(), [_plugin()])
+    sources = next(g for g in merged if g["id"] == "sources")
+    assert [r.get("label") for r in sources["rows"]] == ["Enabled"]
+
+
+def test_a_wired_callback_is_called_with_the_value_alone(store):
+    """**The signature every wired row has**, and the one a plugin row has to
+    match. Got this wrong on 2026-09-25: a two-argument callback stored the
+    value and then 500'd the caller, so the write worked and the answer said
+    it had not."""
+    seen = []
+    settings = Settings(
+        store,
+        registry=_one("plexamp.quality", kind="toggle"),
+        wired={"plexamp.quality": lambda value: seen.append(value)},
+    )
+    settings.set("plexamp.quality", True)
+    assert seen == [True]

@@ -105,7 +105,17 @@ class NotSettable(Exception):
 
 
 def load_registry(path: Path = REGISTRY_PATH) -> list[dict]:
-    groups = json.loads(path.read_text())
+    return check(json.loads(path.read_text()))
+
+
+def check(groups: list[dict]) -> list[dict]:
+    """Every rule a row has to satisfy, whoever wrote it.
+
+    **Split out of `load_registry` on 2026-09-25 so a plugin's rows go through
+    the same door** (ADR-0086). A plugin is written elsewhere, by somebody who
+    cannot test against this device, and the alternative to validating its
+    rows is a Settings screen that draws something nobody checked.
+    """
     seen: set[str] = set()
     for group in groups:
         for row in group["rows"]:
@@ -310,6 +320,47 @@ class Settings:
     config or the running system. Precedence, highest first (ADR-0035 §4): a
     stored value, the flash-time seed, a `defaults` callable, the registry's
     own default."""
+
+    @staticmethod
+    def with_plugins(registry: list[dict], plugins) -> list[dict]:
+        """**A plugin's rows, merged into the registry** (ADR-0086).
+
+        A renderer's rows land in `sources`, under a sub-heading carrying its
+        own name - the same shape LMS, Spotify and Bluetooth already have, so
+        a fourth renderer reads like the three rather than like an appendix.
+
+        **Keys are prefixed with the plugin's id.** Two plugins both shipping
+        an `enabled` row would otherwise collide, and the second would be
+        refused at load with a duplicate-key error nobody could act on. A
+        plugin writes `enabled` and the registry holds `plexamp.enabled`.
+
+        Rows that fail the registry's own rules are dropped with the reason
+        logged, not raised: one badly packaged plugin must not stop the
+        others, nor the device.
+        """
+        merged = [dict(g, rows=list(g["rows"])) for g in registry]
+        by_id = {g.get("id"): g for g in merged}
+        for plugin in plugins:
+            if not plugin.settings:
+                continue
+            target = by_id.get("sources" if plugin.kind == "renderer" else "system")
+            if target is None:
+                continue
+            rows = [{"type": "group", "label": plugin.name, "accent": plugin.accent}]
+            for row in plugin.settings:
+                row = dict(row)
+                if not row.get("key"):
+                    logger.warning("plugins: %s has a row with no key", plugin.id)
+                    continue
+                row["key"] = f"{plugin.id}.{row['key']}"
+                rows.append(row)
+            try:
+                check([{"id": "check", "label": "check", "rows": rows}])
+            except (ValueError, KeyError) as exc:
+                logger.warning("plugins: %s's settings are not usable: %s", plugin.id, exc)
+                continue
+            target["rows"].extend(rows)
+        return merged
 
     def __init__(
         self,

@@ -64,7 +64,7 @@ from gexis_core.peppy import (
 )
 from gexis_core.peppy_metadata import PeppyMetadataWriter
 from gexis_core.settings import SettingsStore
-from gexis_core.settings_registry import Settings
+from gexis_core.settings_registry import Settings, load_registry
 from gexis_core.splash import Splash
 from gexis_core.state import StateStore
 from gexis_core import backups, bluealsa_volume, outputs, plugins
@@ -982,8 +982,43 @@ async def main() -> None:
     # ADR-0035. Defaults are what is true of this deployment today. A wired
     # row is read where it is used - the idle page probe here, the rest by
     # the UI - so none needs a callback.
+    def _plugin_setting(key: str, value) -> None:
+        """**A plugin's own row was written** (ADR-0086).
+
+        Stored by the registry either way; this only tells the plugin, and
+        only if it is connected. One that is down misses nothing - it is
+        handed every current value in its `welcome`.
+        """
+        plugin_id, _, own = key.partition(".")
+        session = plugin_server.sessions.get(plugin_id)
+        if session is None:
+            logger.info("plugins: %s is not connected; %s stored for its next start",
+                        plugin_id, own)
+            return
+
+        async def tell() -> None:
+            try:
+                await session.send("setting", key=own, value=value)
+            except Exception as exc:  # noqa: BLE001 - a refusal is the plugin's
+                logger.warning("plugins: %s refused %s: %s", plugin_id, own, exc)
+
+        asyncio.ensure_future(tell())
+
+    #: Every row a plugin brought, keyed as the registry stores it. The
+    #: callback is the same for all of them - tell the plugin - so the key is
+    #: bound per row rather than passed: `Settings.set` calls a wired callback
+    #: with the value and nothing else, as it does for every other row.
+    plugin_rows = {
+        f"{plugin.id}.{row['key']}":
+            (lambda value, key=f"{plugin.id}.{row['key']}": _plugin_setting(key, value))
+        for plugin in installed_plugins
+        for row in plugin.settings
+        if row.get("key")
+    }
+
     settings = Settings(
         settings_store,
+        registry=Settings.with_plugins(load_registry(), installed_plugins),
         defaults={
             "lms_server": lambda: f"{config.lms_host}:{config.lms_port}",
             "lms_player": lambda: config.lms_player_name,
@@ -1135,7 +1170,11 @@ async def main() -> None:
                # its items are what is in that share, so one copied in from
                # another machine is offered too.
                "backup": lambda _=None: asyncio.ensure_future(_make_backup()),
-               "restore": None},
+               "restore": None,
+               # ADR-0086: whatever the installed plugins brought. Wired
+               # like any other row - something acts on it - and the thing
+               # that acts is the plugin.
+               **plugin_rows},
         # **Phase 9 criterion 2.** These two act through
         # `POST /settings/{key}/items`, not through `set` - joining a network
         # and forgetting a device - so they are wired, and saying otherwise
@@ -1813,6 +1852,13 @@ async def main() -> None:
         installed_plugins,
         on_event=_plugin_event,
         on_connect=_plugin_connected,
+        # ADR-0086: a plugin's rows outlive its process, so it is handed
+        # their current values rather than coming up on its own defaults.
+        settings_for=lambda plugin_id: {
+            key.split(".", 1)[1]: settings.value(key)
+            for key in plugin_rows
+            if key.startswith(f"{plugin_id}.")
+        },
     )
 
     logger.info("gexis-core starting: adapters=%s", list(adapters))

@@ -125,6 +125,7 @@ class PluginServer:
         on_event=None,
         on_connect=None,
         on_disconnect=None,
+        settings_for=None,
         contract: int = CONTRACT,
     ) -> None:
         self._installed = {p.id: p for p in plugins}
@@ -132,6 +133,11 @@ class PluginServer:
         self._on_event = on_event
         self._on_connect = on_connect
         self._on_disconnect = on_disconnect
+        #: `settings_for(plugin_id) -> dict`. **Handed over in `welcome`**,
+        #: because a plugin's rows outlive its process: somebody can change
+        #: one while it is stopped, and it has to come up on the answer rather
+        #: than on its own default (ADR-0086).
+        self._settings_for = settings_for
         self._contract = contract
         self.sessions: dict[str, Session] = {}
 
@@ -219,7 +225,10 @@ class PluginServer:
 
         session = Session(plugin, hello, writer)
         self.sessions[plugin.id] = session
-        session._write({"t": "welcome", "contract": self._contract})
+        welcome = {"t": "welcome", "contract": self._contract}
+        if self._settings_for is not None:
+            welcome["settings"] = self._settings_for(plugin.id)
+        session._write(welcome)
         await writer.drain()
         logger.info("plugins: %s connected (%s)", plugin.id, plugin.kind)
         if self._on_connect is not None:

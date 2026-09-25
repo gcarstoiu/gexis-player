@@ -60,11 +60,18 @@ Every message has a `t` (type). Everything else depends on `t`.
  "release_ladder": {"polite_grace": 1.0, "sigterm_grace": 2.0, "sigkill_grace": 2.0}}
 ```
 
-The core answers:
+The core answers, handing over the current value of every setting the plugin
+declared:
 
 ```json
-{"t": "welcome", "contract": 1}
+{"t": "welcome", "contract": 1, "settings": {"hub": "http://beszel.local:8090"}}
 ```
+
+**Keys are the plugin's own**, without the `<id>.` prefix the registry stores
+them under — a plugin declares `hub` and is told `hub`. It is handed them at
+`welcome` because **its rows outlive its process**: somebody can change one
+while it is stopped, and it has to come up on the answer rather than on its
+own default.
 
 or refuses and closes, saying why:
 
@@ -151,6 +158,7 @@ Taken from `Adapter` and `Capabilities` as they are. The prose for each is in
 {"t": "activate", "id": 11}
 {"t": "transport", "id": 12, "command": "pause", "argument": null}
 {"t": "set_volume", "id": 13, "value": 62, "steps": 100}
+{"t": "setting", "id": 14, "key": "hub", "value": "http://beszel.local:8090"}
 ```
 
 Each carries an `id`; the plugin answers exactly once:
@@ -170,6 +178,24 @@ Each carries an `id`; the plugin answers exactly once:
 - **`device_freed`** and **`restart_after_release`** are the two hooks that
   exist because of measured races, not design (Findings 013 §1 and 014).
   Default: do nothing, answer `true`.
+- **`setting`** is one of the plugin's own rows being changed, under the key
+  the plugin declared. **The core stores the value whether or not the plugin
+  is connected**, so one that is down misses nothing: it is handed every
+  current value at `welcome`.
+
+### A plugin's own settings
+
+A manifest may carry `settings`, and those rows are merged into the registry
+(ADR-0086). **Their keys are prefixed with the plugin's id** — a plugin
+declaring `enabled` is stored as `plexamp.enabled` — because two plugins
+shipping the same obvious key would otherwise collide and the second would be
+refused. On the wire the prefix is not used: a plugin says and hears its own
+key.
+
+A renderer's rows land in **Sources**, under a sub-heading carrying its name,
+which is the shape the three built-ins already have. Rows that fail the
+registry's own validation are dropped with the reason logged rather than
+taking the device down: one badly packaged plugin must not cost the others.
 
 ## Deliberately not here yet
 

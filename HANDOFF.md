@@ -201,11 +201,21 @@ they are the contract's **source**, not its consumers, and
    question of where its hub lives.
 6. Freeze v1. Criterion 2 closes in Phase 11.
 
-**Still open inside discovery:** a plugin's **settings rows** merged into the
-registry, and writes reaching it over the socket. And **arbitration does not
-carry plugins yet** — a `renderer` that connects is welcomed and idle, and the
-log says so rather than pretending otherwise. Both are adapter-shaped work:
-an `Adapter` built around a session and registered with the supervisor.
+**Settings rows are done** (2026-09-25). A manifest's `settings` are merged
+into the registry — a renderer's under a sub-heading in Sources, the shape the
+three built-ins already have — with keys prefixed by the plugin's id so two
+plugins shipping `enabled` cannot collide. Rows go through the registry's own
+validation and a bad one is dropped with the reason logged rather than taking
+the device down. A write reaches the plugin as `setting` under **its own** key;
+the value is stored either way, and a plugin that was down is handed every
+current value in its `welcome`. Proved on the device with a service plugin
+written in `socket` and `json`.
+
+**Still open inside discovery: arbitration does not carry plugins.** A
+`renderer` that connects is welcomed and **idle**, and the log says so rather
+than pretending otherwise. That is the last piece — an `Adapter` built around
+a session and registered with the supervisor — and it is what Phase 11 needs
+before Plexamp can be an external plugin.
 
 **Read [Finding 075](docs/findings/075-what-moode-learned-about-plexamp.md)
 before starting.** George's moOde project built a Plexamp route and **parked
