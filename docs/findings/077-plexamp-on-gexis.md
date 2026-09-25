@@ -48,12 +48,70 @@ No variance across three runs: a fixed hold, not a fade or a race. The service
 stays `active` throughout and is instantly reusable, which is the half of the
 guide that does hold.
 
+### It is a fixed idle timer, not something the stop does
+
+George, 2026-09-25: *"I remember for sure how the stop basically disconnected
+the phone that was connected to moOde and then the investigation showed that
+the card was released."* He is right that the card is released, and the
+measurement below says why both records can be true at once.
+
+| played for | then | device released after |
+|---|---|---|
+| 3 s | **stop** | **14 s** |
+| 30 s | **stop** | **14 s** |
+| 10 s | **pause** | **15 s** |
+
+**Independent of how long it played, and the same for pause as for stop.**
+That is an idle timeout, not a teardown: nothing about the *command* frees the
+device, and nothing about the session's length changes it. moOde's guide saw
+`closed` because it looked afterwards — which is exactly what its own caveat
+warned the test could not distinguish.
+
+**And it means pause and stop are identical at the audio layer**, which is the
+same shape as that record's *"pause and app-dismissed are byte-identical"*,
+one level down.
+
+### Is the hold configurable? Not that this found
+
+**Checked:** all **138** settings in Plexamp's own store, filtered for
+`audio`, `device`, `idle`, `hold`, `release`, `buffer`, `exclusive`, `sink`,
+`output`; the audio settings the web UI exposes; and the bundle for
+`freeDevice`, `deviceTimeout`, `BASS_Free` and 14–15 s constants.
+
+The only `idleTimeout` in the JavaScript is **15 s on an EventSource**
+(`connect`, `onMessage`, `eventSource.close`) — the same number against a
+different thing, and **not** claimed here as the cause.
+
+**Not checked, and where the answer probably is:** `treble/linux-arm64/` holds
+the native BASS libraries (`libbass*.so`). The device is opened and freed
+there, not in the JavaScript, so a setting for it would be BASS's rather than
+Plexamp's. `PLEXAMP_JACK` is the only Plexamp environment variable in the
+bundle.
+
+### Does "no source selected" in the web UI invalidate any of this? No
+
+George opened `:32500` and saw no source selected. **That page is a Plexamp
+*browser client*** — `js/index-browser.js`, 9.6 MB, served by the headless
+player at `/` — and its source selection is the browser's own, not the
+player's.
+
+The player's own state is set and was used:
+
+- `/resources` reports **`<Player title="Gexis" product="Plexamp" deviceClass="speaker">`** — the headless player, identifying itself.
+- Its settings carry `server:identifier` (Plexy), `server:library`
+  (`/library/sections/4`, Music) and populated `discovery:hubs`.
+- **And playback provably resolved against them**: a queue created on that
+  server, `state="playing"`, `key="/library/metadata/91795"`, the DAC open.
+
+A player with no source could not have done that. The numbers stand.
+
 ## The four questions
 
 **1. Does a commanded stop work?** **Yes.** `GET
 /player/playback/stop?commandID=N` on `:32500` answers 200, the timeline goes
 to `state="stopped"` at once, and audio stops. **But the device is not free
-for 14 s.** So `Adapter.release()` exists and works; ADR-0010's polite grace
+for 14 s**, and that is a fixed idle timer rather than anything the stop does
+— see above. So `Adapter.release()` exists and works; ADR-0010's polite grace
 for this renderer has to be **longer than 14 s**, or the ladder escalates to
 `signal_stop` — which kills the service and costs a restart before next use.
 That is exactly why the ladder is per-renderer: LMS already overrides it for
@@ -128,7 +186,11 @@ enumerable to Plexamp, which is untried.
 
 - **Anything with a phone attached**, which is questions 2's whole subject and
   the normal way a person uses this.
-- **Whether 14 s is tunable.** No setting was looked for.
+- **Whether 14 s is tunable.** Looked for and not found; what was searched and
+  what was not is listed above. The native BASS layer is the unexamined part.
+- **Whether a connected phone changes any of it.** This is George's own
+  recollection and the one thing none of this touches: every measurement here
+  was taken with no Plex controller attached.
 - **Whether `output` can be made visible to Plexamp**, by an ALSA hint or
   otherwise. `aplay -L` already lists it, so its enumeration filters on
   something else, and what that is was not investigated.
