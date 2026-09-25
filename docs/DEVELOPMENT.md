@@ -2146,6 +2146,16 @@ comes before anything is built.
      *controller* being connected, not audio.
 2. Acquisition and release fit the arbitration model (ADR-0010); takeover gaps
    measured against the other renderers.
+
+   **The ladder is already designed, from Finding 077's numbers.** The API
+   stop frees the device in **14 s**; stopping the unit frees it in **169 ms**
+   and Plexamp answers again **3 s** later. So: issue the API stop (it ends
+   the Plex session cleanly and the phone sees `stopped`), give it about a
+   second rather than fourteen, then stop the unit, then
+   `restart_after_release()` — which the base class defines and LMS already
+   uses for squeezelite. **A takeover then costs a little over a second**,
+   against LMS's measured 3.1 s. George raised this as a user-experience
+   concern and it is answered by sizing the grace, not by waiting.
 3. Metadata from Plexamp's local API: title, artist, album, artwork, position,
    duration, transport.
 4. Volume mechanism derived and measured.

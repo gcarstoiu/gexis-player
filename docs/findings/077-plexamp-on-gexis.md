@@ -203,6 +203,47 @@ evidence already implied and this tests directly: the hold was identical for a
 3-second play and a 30-second one, and identical for `pause` as for `stop`.
 None of that is a buffer being drained.
 
+### The 14 s need not be waited for, and the ladder is why
+
+George, 2026-09-25: *"when I want to take over from plexamp then I would need
+to wait 14s for Spotify to take over for example which makes for a bit of a
+bad user experience."* Correct — if the polite rung is the only rung. It is
+not. Measured:
+
+| | device free after |
+|---|---|
+| **API stop** — the polite rung | **14 s** |
+| **`systemctl stop plexamp`** | **169 ms** |
+| **`systemctl kill -s SIGTERM`** | **180 ms** |
+| Plexamp answering again after a start | **3 s** |
+
+**So the answer is a short polite grace, not a long one.** ADR-0010's ladder
+is `release()` → SIGTERM → SIGKILL with a per-renderer `TimeoutLadder`, and
+LMS already overrides it because squeezelite's timing is its own. Plexamp's
+shape:
+
+1. **Issue the API stop anyway.** It costs nothing to send, it ends the Plex
+   session cleanly, and the phone app sees `stopped` rather than a player that
+   died under it.
+2. **Do not wait 14 s for it.** Give it about a second, then stop the unit —
+   the device is free in **~170 ms**.
+3. **`restart_after_release()`**, which the base class already defines and LMS
+   already uses, brings it back in **3 s**.
+
+**Total cost of a takeover: a little over a second**, against LMS's measured
+3.1 s polite release (Finding 020). Plexamp is not the slow renderer here —
+it only looked like one because the first rung is slow and nothing has to wait
+for it.
+
+**What it costs**: the Plex session ends and Plexamp is unavailable for about
+three seconds afterwards. Against fourteen seconds of silence while somebody
+waits for Spotify, that is the right trade, and it is the same trade LMS makes
+— `restart_after_release` exists because squeezelite had to be stopped too.
+
+**And the idle case costs nothing at all.** If Plexamp stopped on its own, the
+14 s timer runs while nobody is waiting, and the device is already free by the
+time anyone reaches for another renderer.
+
 ### Is the hold configurable? Not that this found
 
 **Checked:** all **138** settings in Plexamp's own store, filtered for
