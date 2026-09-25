@@ -1,10 +1,11 @@
 # Handoff
 
-Last updated: 2026-09-25 (twenty-fifth session, on R2D2 — **Phase 10 closed and
-merged. Phase 11 has a renderer plugin living in its own repository,
-`gcarstoiu/gexis-plexamp`, connected to the core and carried by arbitration.
-Writing it found two more holes in the contract, which is what it was for. What
-has not happened is a takeover: Plexamp has not played through it.**)
+Last updated: 2026-09-25 (twenty-fifth session, on R2D2 — **Phase 10 is
+complete and its contract is FROZEN at v1. Both halves are proved from outside:
+`gcarstoiu/gexis-plexamp` takes the audio device from LMS, gives it back inside
+its own declared grace, and now publishes title, artist, album and artwork to
+the panel. One decision is open and it is George's — the artwork URL carries his
+Plex token.**)
 
 ## Start here
 
@@ -45,78 +46,60 @@ which is why v1 is still not frozen.
 
 ### Where Phase 11 actually is
 
-**`gcarstoiu/gexis-plexamp` exists, is public, and works as far as it has been
-taken.** On the device:
+**Criterion 2 closed and the contract is frozen.** On the hardware, with audio:
 
 ```
-arbitration: plexamp registered
-state: plexamp has a slot
-plugins: plexamp is a renderer and arbitration carries it
+acquire: plexamp takes the device (was lms)
+release[lms]: polite stop freed the device (0.1s)
+acquire: lms takes the device (was plexamp)
+release[plexamp]: freed within polite grace (14.1s)
 ```
 
-and the settings screen shows `plexamp.enabled` in **Plugins** reading off, with
-its claim token hidden in **Sources** until it is on — George's shape, now for a
-renderer.
+14.1 s is Plexamp's measured hold, absorbed by the 16 s grace **the plugin
+declared for itself** — no SIGTERM, no SIGKILL
+([Finding 082](docs/findings/082-a-renderer-from-another-repository.md)).
 
-**Writing it from outside broke two things, neither of which any test here could
-have caught**, because every test until now was written by the same hand as the
-thing it tested:
+And metadata, from the same plugin through the frozen contract
+([Finding 083](docs/findings/083-metadata-from-a-plugin.md)):
 
-- **The socket authorised nobody but root.** `0660` on a socket this daemon
-  creates is `root:root`; the plugin ran as `pi`, as ADR-0087 says a plugin
-  should, and the kernel refused it before `hello`. Now `root:gexis-plugins`,
-  with the group created in the image
-  ([ADR-0084](docs/decisions/0084-plugins-speak-json-lines-over-a-unix-socket.md)
-  amended).
-- **Arbitration carried it and the published state did not.** ADR-0089 named the
-  supervisor and missed `StateStore`, whose renderer slots come from the same
-  fixed map. It failed as `unknown renderer 'plexamp'` *after* the handshake, the
-  adapter and the registration had all worked.
+```
+file=plexamp
+artist=2 Unlimited
+album=Get Ready
+title=Get Ready for This (orchestral mix)
+```
 
-### The next thing, and it needs the device to be free
+**Four amendments were forced by the two plugins**, every one found by building
+rather than reading, and that is the whole argument for the ordering: a switch
+for every plugin, settings reaching a unit as environment, a socket that
+authorised nobody but root, and a renderer arbitration carried that the state
+had no slot for. **A fifth was mine**: the supervisor had been given a *copy* of
+the adapter map, so the release ladder could not ask whether a plugin still held
+the device — `KeyError: 'plexamp'` from inside `_release_with_ladder`.
 
-**Plexamp has never played through the contract.** The attempt on 2026-09-25 did
-not happen: `playMedia` answered 200 and the timeline stayed `stopped`, with
-Spotify holding the device and the panel in use. **Nothing was proven about the
-takeover, the release ladder against a plugin renderer, or the 14 s hold in
-practice** — the end-to-end test in `core/tests/` covers that path with a fake
-plugin, and a fake plugin is not this.
+### The decision waiting for George
 
-So the next session: with the device free, play something on Plexamp, watch the
-`acquire` reach arbitration, then have LMS take it and watch the ladder wait out
-the 14 s rather than escalating. **That is Phase 10's criterion 2 closing**, and
-until it happens the renderer half of the contract is still unproven and v1 must
-not freeze.
+**The artwork URL carries an account-wide Plex token, and the core publishes the
+state to the LAN.** Not a new kind of exposure — ADR-0083 already records the
+three API keys and the Beszel token — but a new degree: those are per-service, a
+Plex token reaches every server that account can see. Three options and their
+costs are in Finding 083; **accepting it is what happens if nobody chooses.**
 
-**Two probe mistakes worth not repeating**, both in the same script: it read
-`/proc/asound/card5` because an older scratch script did — **this project forbids
-referencing a card by index** and the right form is to resolve
-`sndrpihifiberry` by name — and it posted to `/renderers/lms/activate`, which
-does not exist; the route is `/renderer/{id}/activate`.
+### What is left in Phase 11
 
-**What the plugin has to do is already measured**
-([Finding 077](docs/findings/077-plexamp-on-gexis.md)) and needs no discovery:
+Its own acceptance list, none of which is contract work any more:
 
-| contract | Plexamp |
-|---|---|
-| `acquire` | a controller starts playback — the event still has to be chosen and watched |
-| `release` | the API stop at `:32500`. Confirms instantly, **device held 14 s** |
-| `release_ladder` | must declare a polite grace over 14 s |
-| `signal_stop` | its unit; the core does this itself regardless |
-| `on_release` | **`alsa.device_held_by`**, not the TCP count — that was measured to mean nothing |
-| audio path | **solved**: ADR-0085 puts it through `pcm.output`, and the meters were measured working |
-
-**And the audio path is solved, not open.** Plexamp opened `hw:5,0` directly in
-**S32_LE**, and George's question — *"why aren't we setting the default for the
-device to our hat and let plexamp use it?"* — is
-[ADR-0085](docs/decisions/0085-the-alsa-default-is-our-output.md). With
-`pcm.!default "output"` and Plexamp set to **Default**, it goes through
-`pcm.output` with peppyalsa in the path, **and the meters work**: Finding 077
-measured the FIFO live with a control, `25 23 25 24 26 25 …` playing against no
-writer at all when stopped, and the spectrum FIFO carrying bands. **moOde's
-all-zero symptom does not reproduce on this device.** Why it happened there is
-not explained and was not investigated; what is established is that it does not
-happen here.
+- **Volume.** A plugin renderer is not registered with the volume bridges, so
+  `volume` from a plugin is still dropped. Real work, not done.
+- **Claiming** from the `claim_token` row, rather than Plexamp's own setup.
+- **The panel**: source pill, handoff screen, Peppy badge, and design assets —
+  and simply *looking* at Now Playing with Plexamp on it, which has never been
+  done.
+- **Takeover gaps and cross-rate**, criterion 2 of Phase 11's own list.
+- **`08-plexamp`**, the image stage from
+  [ADR-0090](docs/decisions/0090-plexamp-ships-the-way-beszel-does.md). Nothing
+  of this plugin is in the image; it was installed by hand at
+  `/opt/gexis-plexamp`.
 
 ### The two defects the device found, because they are the reason to read this
 
