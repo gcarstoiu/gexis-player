@@ -101,3 +101,35 @@ it is pointed at**, which its own header implies and nothing enforced.
   ([ADR-0083](../decisions/0083-a-backup-leaves-the-device.md)). Whether the
   hub accepts a restored fingerprint as the same system is still untested, and
   it is the reason that file is in the backup at all.
+
+## The second image, with Plexamp in it — 2026-09-25
+
+`2026-09-25-gexis-player-v0.2.1-579-g0646b8e.img`, **690s**, exit 0.
+`08-plexamp` ran in **three seconds** — both downloads came from ADR-0042's
+cache, having been fetched and checksummed while the stage was being written.
+
+```
+  ok   /etc/systemd/system/plexamp.service
+  ok   /etc/systemd/system/gexis-plexamp.service
+  ok   /usr/share/gexis/plugins/plexamp/plugin.json
+  ok   /usr/share/gexis/plugins/plexamp/mark.png
+  ok   /opt/gexis-plexamp/src/gexis_plexamp/main.py
+  ok   /home/pi/plexamp/js/index.js
+  ok   node installed
+  ok   plexamp not enabled
+  ok   gexis-plexamp not enabled
+  ok   the manifest names the unit the release ladder escalates against
+  ok   plugin manifests: beszel bluetooth lms plexamp spotify
+```
+
+**It cost 150 MB**: 4,966,055,936 → 5,117,050,880 bytes. ADR-0090 estimated
+~92 MB for Node plus Plexamp; the rest is what apt brings with `nodejs` and the
+filesystem's own overhead. The estimate was the right order and low.
+
+**And the verifier was lying by omission until that last line was fixed.** The
+manifest check grepped for the four names it already knew, so `plexamp` could
+not have appeared in its output even with its manifest sitting beside the
+others — a check that could only ever confirm what it already believed. It now
+lists what is there and names what is missing.
+
+**Still not booted.** Every statement here is about a file.

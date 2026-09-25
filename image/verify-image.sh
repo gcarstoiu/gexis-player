@@ -175,11 +175,21 @@ rm -f "$OUT/passwd"
 
 # Every built-in manifest plus this one. A plugin the core cannot read is a
 # source the panel cannot draw (ADR-0086).
-plugins=$(dfs "ls /usr/share/gexis/plugins" | grep -oE '(beszel|lms|spotify|bluetooth)' | sort -u | tr '\n' ' ')
-case "$plugins" in
-	*beszel*lms*spotify*) ok "plugin manifests: $plugins" ;;
-	*) bad "plugin manifests incomplete: $plugins" ;;
-esac
+# **Whatever is installed, not a list written here.** The first version of this
+# grepped for the four names it knew, so `plexamp` could not appear in its
+# output even with its manifest sitting beside the others - a check that could
+# only ever confirm what it already believed.
+plugins=$(dfs "ls -l /usr/share/gexis/plugins" | awk '{print $NF}' \
+	| grep -vE '^(\.|\.\.)?$' | sort -u | tr '\n' ' ')
+missing=""
+for want in beszel lms spotify bluetooth; do
+	case " $plugins " in *" $want "*) ;; *) missing="$missing $want" ;; esac
+done
+if [ -n "$missing" ]; then
+	bad "plugin manifests missing:$missing (found: $plugins)"
+else
+	ok "plugin manifests: $plugins"
+fi
 
 echo "== Plexamp (ADR-0090), a renderer from another repository"
 for f in /etc/systemd/system/plexamp.service \
