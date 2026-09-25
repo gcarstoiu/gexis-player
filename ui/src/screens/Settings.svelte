@@ -1107,13 +1107,14 @@
     transform: scale(0.95);
     background: rgba(233, 238, 242, 0.16);
   }
+  /* The ink is what wants centring, not the box - see `.i-back` in
+     Library.svelte. 13px here rather than 14, so the offset is smaller. */
   .back span {
     width: 13px;
     height: 13px;
     border-left: 3px solid var(--ink);
     border-bottom: 3px solid var(--ink);
-    transform: rotate(45deg);
-    margin-left: 10px;
+    transform: translateX(3.9px) rotate(45deg);
   }
   .head__text {
     flex: 1;

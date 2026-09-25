@@ -1835,13 +1835,20 @@
     border-radius: 2px;
     background: var(--ink-strong);
   }
+  /* **The ink, not the box, is what wants centring** (2026-09-25). A
+     chevron drawn as two borders of a square has all its ink in the box's
+     left column and bottom row, so its centre of mass sits toward that
+     corner - about 3.6px from the box's own centre once the box is turned
+     45 degrees. A `margin-left` was standing in for that and overshot: the
+     arrow measured 1.9px right of the button's centre. Moving the ink
+     after the rotation says what is meant and leaves the box centred;
+     4.2px is measured from the drawn pixels, not derived. */
   .i-back {
     width: 14px;
     height: 14px;
     border-left: 3px solid var(--ink);
     border-bottom: 3px solid var(--ink);
-    transform: rotate(45deg);
-    margin-left: 11px;
+    transform: translateX(4.2px) rotate(45deg);
   }
   .heading {
     flex: 1;
