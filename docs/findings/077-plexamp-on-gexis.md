@@ -180,6 +180,29 @@ Untested as an adapter, and named here as the direction rather than the
 answer: polling the device is a cost, and how often is a question this finding
 does not settle.
 
+### Seven settings changed, and the hold did not move
+
+George changed a set of audio settings and asked for the stop to be measured
+again, 2026-09-25. What differed from the earlier runs:
+
+| setting | now |
+|---|---|
+| `sweetFades` | **false** — Plexamp's crossfade, the obvious suspect |
+| `precacheNetworkSpeed` | **0** — no precaching, the other obvious suspect |
+| `loudnessLeveling` | false |
+| `audioMixdownToStereo` / `audioConversionMixdownToStereo` | false |
+| `sampleRateMatching` | 1 |
+| `sampleRateConversionQuality` | 3 |
+| `audioDeviceUuid` | `default` (ADR-0085's alias) |
+
+**Four runs: 15 s, 15 s, 14 s, 15 s.** Against 14 s, 14 s, 14 s, 14 s before
+— the same number inside a ±1 s sampling interval.
+
+**Neither crossfade nor precaching is the cause**, which is what the earlier
+evidence already implied and this tests directly: the hold was identical for a
+3-second play and a 30-second one, and identical for `pause` as for `stop`.
+None of that is a buffer being drained.
+
 ### Is the hold configurable? Not that this found
 
 **Checked:** all **138** settings in Plexamp's own store, filtered for
@@ -329,8 +352,10 @@ enumerable to Plexamp, which is untried.
 
 - **Anything with a phone attached**, which is questions 2's whole subject and
   the normal way a person uses this.
-- **Whether 14 s is tunable.** Looked for and not found; what was searched and
-  what was not is listed above. The native BASS layer is the unexamined part.
+- **Whether 14 s is tunable.** Looked for and not found, and **seven settings
+  changed by hand did not move it** — including `sweetFades` and
+  `precacheNetworkSpeed`. What was searched and what was not is listed above;
+  the native BASS layer is the unexamined part.
 - **Whether a connected phone changes any of it.** This is George's own
   recollection and the one thing none of this touches: every measurement here
   was taken with no Plex controller attached.
