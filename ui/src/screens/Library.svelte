@@ -891,11 +891,29 @@
   {#if path.length}
     <div class="header">
       {#if path.length > 1}
-        <button class="round" type="button" aria-label="Home" onclick={() => (path = [])}>
+        <button
+          class="round"
+          class:is-pressed={pressed === 'lib-home'}
+          type="button"
+          aria-label="Home"
+          onpointerdown={() => press('lib-home')}
+          onpointerup={lift}
+          onpointercancel={lift}
+          onclick={() => opening(() => (path = []))}
+        >
           <span class="i-tiles"><i></i><i></i><i></i><i></i></span>
         </button>
       {/if}
-      <button class="round" type="button" aria-label="Back" onclick={back}>
+      <button
+          class="round"
+          class:is-pressed={pressed === 'lib-back'}
+          type="button"
+          aria-label="Back"
+          onpointerdown={() => press('lib-back')}
+          onpointerup={lift}
+          onpointercancel={lift}
+          onclick={() => opening(back)}
+        >
         <span class="i-back"></span>
       </button>
       <div class="heading">
@@ -1665,8 +1683,12 @@
     flex-shrink: 0;
   }
   /* Shrinks rather than filling grey - see now playing's buttons. */
-  .round:active {
+  /* Held long enough to be painted (ADR-0066): a quick tap can begin and
+     end inside one frame, and that frame is the one spent changing screen. */
+  .round:active,
+  .round.is-pressed {
     transform: scale(0.95);
+    background: var(--ink-fill-press, rgba(233, 238, 242, 0.14));
   }
   .i-tiles {
     width: 22px;

@@ -7,6 +7,7 @@
 -->
 <script>
   import { onMount } from 'svelte';
+  import { pressing } from '../lib/press.svelte.js';
   import {
     settingsGroups,
     settingsDevice,
@@ -27,6 +28,9 @@
   let { onback = null, embedded = false } = $props();
 
   const WIDE_MIN = 720;
+
+  //: Back says it was pressed, like the home screen's tiles (ADR-0066).
+  const press = pressing();
 
   let width = $state(0);
   let cat = $state(null);
@@ -537,7 +541,16 @@
   <div class="frame">
     <div class="head" class:head--wide={wide}>
       {#if (wide && onback) || (!wide && drilled)}
-        <button class="back" type="button" aria-label="Back" onclick={back}><span></span></button>
+        <button
+          class="back"
+          class:is-pressed={press.is('back')}
+          type="button"
+          aria-label="Back"
+          onpointerdown={() => press.down('back')}
+          onpointerup={press.up}
+          onpointercancel={press.up}
+          onclick={() => press.act(back)}
+        ><span></span></button>
       {/if}
       <div class="head__text">
         <div class="title" class:title--wide={wide}>{!wide && current ? current.label : 'Settings'}</div>
@@ -649,7 +662,16 @@
       <div class="weave"></div>
       <div class="veil"></div>
       <div class="picker__head" class:head--wide={wide}>
-        <button class="back" type="button" aria-label="Back" onclick={() => (pickerKey = null)}><span></span></button>
+        <button
+          class="back"
+          class:is-pressed={press.is('picker-back')}
+          type="button"
+          aria-label="Back"
+          onpointerdown={() => press.down('picker-back')}
+          onpointerup={press.up}
+          onpointercancel={press.up}
+          onclick={() => press.act(() => (pickerKey = null))}
+        ><span></span></button>
         <div class="head__text">
           <div class="title" class:title--wide={wide}>{picker.label}</div>
           <div class="subtitle">{options.length} skins</div>
@@ -684,7 +706,16 @@
           <div class="pane" class:pane--over={!wide}>
             {#if !wide}
               <div class="pane__back">
-                <button class="back back--small" type="button" aria-label="Back to list" onclick={() => (pickerView = null)}><span></span></button>
+                <button
+                  class="back back--small"
+                  class:is-pressed={press.is('view-back')}
+                  type="button"
+                  aria-label="Back to list"
+                  onpointerdown={() => press.down('view-back')}
+                  onpointerup={press.up}
+                  onpointercancel={press.up}
+                  onclick={() => press.act(() => (pickerView = null))}
+                ><span></span></button>
                 <span class="pane__backlabel">Back to list</span>
               </div>
             {/if}
@@ -1070,8 +1101,11 @@
     flex-shrink: 0;
   }
   /* Shrinks rather than filling grey - see now playing's buttons. */
-  .back:active {
+  /* Held long enough to be painted (ADR-0066). */
+  .back:active,
+  .back.is-pressed {
     transform: scale(0.95);
+    background: rgba(233, 238, 242, 0.16);
   }
   .back span {
     width: 13px;

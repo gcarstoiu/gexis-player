@@ -859,10 +859,12 @@ class LmsAdapter(Adapter):
         return await self._command(["button", "jump_fwd"])
 
     async def shuffle(self, on: bool) -> bool:
-        return await self._command(["playlist", "shuffle", 1 if on else 0])
+        return await self._command(["playlist", "shuffle", 1 if on else 0], read_back=True)
 
     async def repeat(self, mode: str) -> bool:
-        return await self._command(["playlist", "repeat", REPEAT_TO_LMS[mode]])
+        return await self._command(
+            ["playlist", "repeat", REPEAT_TO_LMS[mode]], read_back=True
+        )
 
     async def previous(self) -> bool:
         """`jump_rew`, not `playlist index -1`: the index always goes back a
@@ -870,10 +872,22 @@ class LmsAdapter(Adapter):
         its start - what LMS's own apps do (Finding 028)."""
         return await self._command(["button", "jump_rew"])
 
-    async def _command(self, command: list) -> bool:
+    async def _command(self, command: list, *, read_back: bool = False) -> bool:
         """A user's transport command. Like `activate()`, it reports nothing
         itself: the CometD watch sees the result, so there is one path by
-        which state changes, whoever caused them."""
+        which state changes, whoever caused them.
+
+        **`read_back` asks once, for the toggles** (ADR-0072). Shuffle and
+        repeat draw their own state, and LMS's push takes about 560 ms to
+        say what it now is - so the fill arrived long after the finger. This
+        is not an optimistic guess: it is LMS's own answer, read through the
+        same `_report_metadata` the push uses, and the push that follows
+        says the same thing.
+
+        Not for play, pause, next or previous: a status read straight after
+        a skip can catch LMS between tracks, and those have not been
+        measured as late.
+        """
         if self._player_id is None:
             logger.warning("lms: %s with no resolved player id", command)
             return False
@@ -883,6 +897,15 @@ class LmsAdapter(Adapter):
             except aiohttp.ClientError as exc:
                 logger.warning("lms: %s failed: %s", command, exc)
                 return False
+            if read_back:
+                try:
+                    status = await self._rpc(
+                        session, self._player_id, ["status", "-", 1, f"tags:{METADATA_TAGS}"]
+                    )
+                    self._report_metadata(status.get("result", {}))
+                except aiohttp.ClientError as exc:
+                    # The push will bring it in half a second either way.
+                    logger.info("lms: could not read back after %s: %s", command, exc)
         logger.info("lms: %s on request", command)
         return True
 

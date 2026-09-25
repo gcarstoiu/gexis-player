@@ -6,6 +6,7 @@
   data-unwired="<phase>" until the phase that wires them.
 -->
 <script>
+  import { pressing } from '../lib/press.svelte.js';
   import SourceMark from '../lib/SourceMark.svelte';
   import VolumeIcon from '../lib/VolumeIcon.svelte';
   import LockIcon from '../lib/LockIcon.svelte';
@@ -33,6 +34,10 @@
     const found = artistInfo.enrichment?.album_art;
     return found && found !== failedArtwork ? found : null;
   });
+
+  //: Home and the visualisation button say they were pressed, like the home
+  //: screen's own tiles (ADR-0066, extended 2026-09-25).
+  const press = pressing();
 
   //: For the 64px places. See ADR-0070.
   const smallArtwork = $derived(metadata?.artwork_small || artwork);
@@ -588,7 +593,16 @@
 
       <div class="bar">
         <div class="bar__left">
-          <button class="btn btn--home" type="button" aria-label="Home" onclick={onhome}>
+          <button
+            class="btn btn--home"
+            class:is-pressed={press.is('home')}
+            type="button"
+            aria-label="Home"
+            onpointerdown={() => press.down('home')}
+            onpointerup={press.up}
+            onpointercancel={press.up}
+            onclick={() => press.act(onhome)}
+          >
             <span class="i-tiles"><i></i><i></i><i></i><i></i></span>
           </button>
           {#if $meters}
@@ -596,7 +610,16 @@
                  feed it - the same rule ADR-0046 sets for the volume
                  slider. A button that opens a dead screen is worse than no
                  button. -->
-            <button class="btn" type="button" aria-label="Visualization" onclick={onvisualisation}>
+            <button
+              class="btn"
+              class:is-pressed={press.is('viz')}
+              type="button"
+              aria-label="Visualization"
+              onpointerdown={() => press.down('viz')}
+              onpointerup={press.up}
+              onpointercancel={press.up}
+              onclick={() => press.act(onvisualisation)}
+            >
               <span class="i-meter">
                 <i style="height:12px"></i><i style="height:22px"></i><i style="height:16px"></i><i style="height:8px"></i>
               </span>
@@ -1474,7 +1497,8 @@
   }
   /* Pressed by shrinking, like play and the transport buttons (George,
      2026-09-16/17: the design's grey press fill reads as a flash). */
-  .btn:not(:disabled):active {
+  .btn:not(:disabled):active,
+  .btn.is-pressed:not(:disabled) {
     transform: scale(0.95);
   }
   /* Cannot work right now (ADR-0037 §3). The design dims an unavailable tab

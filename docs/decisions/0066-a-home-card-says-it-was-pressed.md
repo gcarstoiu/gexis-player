@@ -49,6 +49,26 @@ whatever element takes the tapped one's place, so the wrong row lit up.
 card with it, and there is no successor to inherit the state. The hazard
 that removed it from rows does not exist here.
 
+## Extended beyond the home cards, 2026-09-25
+
+George: *"Add the same feedback response on tapping as the Homescreen tiles
+to back, home screen, visualisation buttons."*
+
+The reasoning is the same wherever a tap changes the screen, so the pattern
+is now a helper — `lib/press.svelte.js` — rather than three copies of it.
+Applied to now playing's **Home** and **Visualization**, the library
+header's **Home** and **Back**, and Settings' **Back**.
+
+Measured, from the touch to a frame carrying the pressed state:
+
+| | pressed at | painted while pressed |
+| --- | --- | --- |
+| now playing: Home | 14 ms | 29 ms |
+| now playing: Visualization | 11 ms | 19 ms |
+| library: Back | 8 ms | 14 ms |
+| library: Home | 8 ms | 17 ms |
+| settings: Back | 16 ms | 24 ms |
+
 ## Consequences
 
 - **Every navigation off the home screen is one painted frame slower** —

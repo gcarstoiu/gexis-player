@@ -715,13 +715,42 @@ async def test_shuffle_and_repeat_commands_use_lms_numbers(monkeypatch):
     for mode in ("off", "all", "one"):
         await adapter.repeat(mode)
 
-    assert rpc.commands == [
+    # ADR-0072: each toggle reads its own state back, so the fill does not
+    # wait ~560 ms for LMS's push. The status reads are filtered out here.
+    assert [c for c in rpc.commands if c[0] != "status"] == [
         ["playlist", "shuffle", 1],
         ["playlist", "shuffle", 0],
         ["playlist", "repeat", 0],
         ["playlist", "repeat", 2],
         ["playlist", "repeat", 1],
     ]
+
+
+@pytest.mark.asyncio
+async def test_a_toggle_reports_its_new_state_without_waiting(monkeypatch):
+    """ADR-0072. The green fill is drawn from what the daemon reports, and
+    LMS's push took 558-576 ms to say what shuffle now is - measured, with
+    the daemon itself replying in 17-25 ms."""
+    adapter, rpc = _adapter(monkeypatch, mode="play")
+    seen = []
+    adapter.on_metadata_change(seen.append)
+
+    await adapter.shuffle(True)
+
+    assert [c[0] for c in rpc.commands] == ["playlist", "status"]
+    assert seen, "the toggle reported nothing"
+
+
+@pytest.mark.asyncio
+async def test_a_skip_does_not_read_back(monkeypatch):
+    """A status read straight after a skip can catch LMS between tracks,
+    and skips were not measured as late."""
+    adapter, rpc = _adapter(monkeypatch, mode="play")
+
+    await adapter.next()
+    await adapter.pause()
+
+    assert [c[0] for c in rpc.commands] == ["button", "pause"]
 
 
 # --- ADR-0038 §1: the queue rail's contents --------------------------------
