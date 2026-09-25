@@ -314,11 +314,9 @@
   //: biography and hid the discography on a long one.
   const ALBUM_PEEK = 0.25;
   //: Never so little that About is pointless.
-  const ABOUT_MIN = 64;
 
   let aboutEl = $state(null);
   let columnEl = $state(null);
-  let aboutMax = $state(ABOUT_MIN);
   //: Whether there is anything under the fold. Measured in `fitAbout`.
   let bioClipped = $state(false);
 
@@ -334,28 +332,16 @@
     toggle();
   }
 
-  /** One measured correction: everything below About is a fixed height, so
-   *  the slack between where the first album row sits now and where it
-   *  should sit is exactly what About may grow or shrink by. */
+  /** **Only the fade now** (ADR-0074). This used to measure the slack
+   *  between where the first album row sat and where it should sit, and
+   *  size About by it - which is what the held region does directly, and
+   *  what the biography's own `flex` does inside it. What is left is the
+   *  question the measurement cannot answer from geometry alone: is there
+   *  more text than the box shows, and so should the fade be drawn?
+   */
   function fitAbout() {
-    if (!aboutEl || !columnEl || bioOpen) return;
-    const card = columnEl.querySelector('.disc');
-    if (!card) return;
-    const column = columnEl.getBoundingClientRect();
-    const first = card.getBoundingClientRect();
-    // **Measured in the column's own content, not on screen.** Unfolding the
-    // biography makes the column taller and it can be scrolled; folding it
-    // back then measured the first album row from wherever the scroll had
-    // left it, so the answer came out wrong and About never returned to the
-    // height it had (George, on the panel, 2026-09-20). Adding the scroll
-    // offset back makes the sum the same at any scroll position.
-    const scrolled = columnEl.scrollTop;
-    const firstTop = first.top - column.top + scrolled;
-    const wanted = columnEl.clientHeight - first.height * ALBUM_PEEK;
-    const slack = wanted - firstTop;
-    const next = Math.max(ABOUT_MIN, Math.round(aboutEl.getBoundingClientRect().height + slack));
-    if (Math.abs(next - aboutMax) > 4) aboutMax = next;
-    bioClipped = aboutEl.scrollHeight > next + 2;
+    if (!aboutEl || bioOpen) return;
+    bioClipped = aboutEl.scrollHeight > aboutEl.clientHeight + 2;
   }
 
   $effect(() => {
@@ -1549,7 +1535,7 @@
               <div
                 class="artistmeta__bio"
                 class:is-clamped={!bioOpen && bioClipped}
-                style:max-height={bioOpen ? null : `${aboutMax}px`}
+                class:is-open={bioOpen}
                 role="button"
                 tabindex="0"
                 aria-expanded={bioOpen}
@@ -2972,6 +2958,17 @@
     flex-direction: column;
     gap: 10px;
     width: 100%;
+  }
+  /* **The biography takes whatever the region has left** (ADR-0074). The
+     region is held at the height it will have, which is what stops the
+     discography moving - and that left `fitAbout` nothing to measure, so an
+     artist with three popular tracks instead of five got a short biography
+     and a hole under it (George, 2026-09-25). Flexing, the text fills the
+     space instead of the space sitting empty. */
+  .artistmeta__region .artistmeta__bio:not(.is-open) {
+    flex: 1 1 0;
+    min-height: 64px;
+    overflow: hidden;
   }
   .artistmeta__para {
     margin: 0;

@@ -50,7 +50,30 @@ doesn't come then it can compress, but that is a less likely event."*
 Measured on four artists: the discography appears at 478 and stays there,
 with no intermediate position at all.
 
-## Two wrong answers first, and what they were hiding
+## And the biography fills what is left
+
+Holding the region had a cost that took a third pass to see: `fitAbout`
+sized About by measuring the slack between where the first album row sat and
+where it should sit — and with the region held, that slack is always zero.
+So an artist with **three** popular tracks instead of five got the same
+short biography as one with five, and a hole under Popular where the other
+two tracks would have been.
+
+**The biography now takes the space itself**, with `flex: 1 1 0` inside the
+held region, so the text fills what Popular leaves instead of the space
+sitting empty:
+
+| | popular tracks | biography |
+| --- | --- | --- |
+| Adele | 5 | 119 px |
+| Aqua | 5 | 119 px |
+| Bausa | **3** | **215 px** |
+
+`fitAbout` no longer measures anything geometric. What remains of it is the
+one question geometry cannot answer: **is there more text than the box
+shows**, and so should the fade be drawn. `aboutMax` is gone.
+
+## Three wrong answers first, and what they were hiding
 
 **A spacer after the region left 14 px.** Reserving the *gap* between About
 and the discography means the gap has to shrink as About fills, and the two
