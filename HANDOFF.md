@@ -98,12 +98,16 @@ Its own acceptance list, none of which is contract work any more:
   same single curve every renderer uses. It needed `remote.forget`, which did
   not exist, and the echo guard this project has now written three times.
 - **Claiming** from the `claim_token` row, rather than Plexamp's own setup.
-- **The panel.** Now Playing has been looked at and **it is right**: cover from
-  the Plex server, title, artist, album, year, progress, transport — a
-  screenshot went to George. What is *not* done is the rest of criterion 6:
-  **the source mark**. `plugin.json` ships no `mark.png`, so the panel draws its
-  fallback; Spotify and Bluetooth ship one each. Also unchecked: the handoff
-  screen and the Peppy badge with Plexamp as a party.
+- ~~**The panel.**~~ — Now Playing is **right**, and **the mark is drawn**:
+  Plexamp's own icon, which George approved taking. Finding that work needed
+  [ADR-0086 amended](docs/decisions/0086-a-plugin-declares-itself-in-a-manifest.md):
+  the manifest's glyph reached the payload and **only the waiting screen ever
+  passed it down**, so a plugin renderer drew an empty span on Now Playing. The
+  lookup now lives in `SourceMark` itself.
+
+  **Still unchecked on the panel:** the handoff screen and the Peppy badge with
+  Plexamp as a party, and the waiting screen, where the 48px mark is stretched
+  to 68px — 48px is all the resolution that exists for it.
 - **Takeover gaps and cross-rate**, criterion 2 of Phase 11's own list.
 - **`08-plexamp`**, the image stage from
   [ADR-0090](docs/decisions/0090-plexamp-ships-the-way-beszel-does.md). Nothing
