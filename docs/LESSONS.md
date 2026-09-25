@@ -749,6 +749,25 @@ not in the panel. Both are answered by the same question, which is now the
 first step of the probe rather than an afterthought: **is the code I am
 measuring the code I deployed?**
 
+**39. The renderer was switched off and stayed the active one** (2026-09-25).
+ADR-0077's hardware pass checked the unit, the radio, the availability and the
+arbitration refusal, and every one of them passed. It did not check what the
+panel said afterwards, and the panel said Spotify was still playing - artwork,
+title and a progress bar - for a renderer whose process had been stopped.
+
+**The cause was the gate itself.** Cancelling the adapter's watch is how a
+source that is off stops watching, and it is also how the `inactive` event
+that releases the device stops arriving. **Nobody was left to report the
+release.**
+
+**The state payload was happy to carry a contradiction**: `available: false`
+and `active: "spotify"` at the same time. Nothing asserted that a renderer
+which is unavailable cannot be the active one, so nothing caught it - it took
+building the screen that had to render that state to see it.
+
+**What to add to a pass that switches something off: ask what the thing now
+says about itself**, not only whether it stopped.
+
 ## Common shape
 
 Every case had a *plausible* substitute for the real target — the build

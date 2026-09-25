@@ -4,6 +4,7 @@
   import { connect, active, metadata, volume, handoff, handoffExemptPairs, capabilities, available, availability, shuffle, repeat, queue, pairing, fixedOutput } from './lib/state.js';
   import NowPlaying from './screens/NowPlaying.svelte';
   import Library from './screens/Library.svelte';
+  import WaitingHome from './screens/WaitingHome.svelte';
   import PanelBackground from './screens/PanelBackground.svelte';
   import IdleScreen from './screens/IdleScreen.svelte';
   import VolumeDrawer from './screens/VolumeDrawer.svelte';
@@ -174,7 +175,17 @@
   // nothing is connected; otherwise now playing's Home button opens it and
   // the mini strip closes it.
   let libraryRequested = $state(false);
-  const libraryOpen = $derived(!$active || libraryRequested);
+  // **ADR-0079: with LMS off there is no library, so the panel is two
+  // screens.** Nothing playing is the waiting marks; something playing is now
+  // playing, as the root.
+  //
+  // **The row decides it, not `availability.lms`.** Availability is also false
+  // when the server is merely unreachable, and a library that vanished on a
+  // Wi-Fi blip and grew back a few seconds later would be two different
+  // products in one minute. A row somebody set is a stable fact.
+  const lmsOff = $derived($settingValues.lms_enabled === false);
+  const libraryOpen = $derived(!lmsOff && (!$active || libraryRequested));
+  const waitingOpen = $derived(lmsOff && !$active);
   let previousActive = null;
   $effect(() => {
     const now = $active;
@@ -216,8 +227,10 @@
   onMount(() => {
     connect();
     loadSettings();
-    // Ahead of the first time Home opens (see lib/library.js).
-    loadLibraryRoot();
+    // Ahead of the first time Home opens (see lib/library.js). Not with LMS
+    // off: there is no home to be ahead of, and the read would be three
+    // requests to a server this device is not using (ADR-0079).
+    if ($settingValues.lms_enabled !== false) loadLibraryRoot();
     fetch('/surface')
       .then((r) => r.json())
       .then((body) => (surface = body.surface))
@@ -254,6 +267,10 @@
     <div class="screen-layer">
       <Settings onback={() => (settingsOpen = false)} embedded />
     </div>
+  {:else if waitingOpen}
+    <div class="screen-layer">
+      <WaitingHome availability={$availability} onsettings={openSettings} />
+    </div>
   {:else if libraryOpen}
     <div class="screen-layer">
       <Library
@@ -270,8 +287,13 @@
     </div>
   {:else if $active}
     <div class="screen-layer">
-      <NowPlaying active={$active} metadata={$metadata} volume={$volume} controls={$capabilities[$active]?.controls ?? []} available={$available} shuffle={$shuffle} repeat={$repeat} queue={$queue} onvolume={openVolume} onvisualisation={showVisualisation} onhome={() => (libraryRequested = true)}
-        onartist={(name) => { libraryArtist = name; libraryRequested = true; }} />
+      <!-- ADR-0079: with LMS off the Home button is a Settings button and
+           `onartist` is not passed at all, so the artist line is a name rather
+           than a link that leads nowhere. -->
+      <NowPlaying active={$active} metadata={$metadata} volume={$volume} controls={$capabilities[$active]?.controls ?? []} available={$available} shuffle={$shuffle} repeat={$repeat} queue={$queue} onvolume={openVolume} onvisualisation={showVisualisation}
+        rootless={lmsOff}
+        onhome={lmsOff ? openSettings : () => (libraryRequested = true)}
+        onartist={lmsOff ? undefined : (name) => { libraryArtist = name; libraryRequested = true; }} />
     </div>
   {/if}
 

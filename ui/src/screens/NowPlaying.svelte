@@ -18,7 +18,14 @@
   import { playhead, mmss } from '../lib/playhead.svelte.js';
   import { playToggle } from '../lib/playToggle.svelte.js';
 
-  let { active, metadata, volume, controls = [], available = [], shuffle = null, repeat = null, queue = null, onvolume, onvisualisation, onhome, onartist } = $props();
+  // `rootless` is ADR-0079: with LMS off this screen *is* the home screen, so
+  // there is no home to go to. The left button becomes Settings and the artist
+  // line stops being a link - George, 2026-09-25: *"The home button is
+  // replaced by settings button... Tapping in the artist does nothing."* An
+  // absent `onartist` is what makes the line inert, so nothing here can offer
+  // a page that is not reachable.
+  let { active, metadata, volume, controls = [], available = [], shuffle = null, repeat = null, queue = null, onvolume, onvisualisation, onhome, onartist, rootless = false } = $props();
+  const artistLinked = $derived(!!onartist);
 
   const transport = $derived(metadata?.transport ?? null);
 
@@ -347,13 +354,21 @@
               <div class="metaline">
                 <!-- The design links the artist line to that artist's page
                      (`onNpArtist`). -->
-                <button
-                  class="artist artist--link"
-                  class:is-empty={!metadata?.artist}
-                  type="button"
-                  disabled={!metadata?.artist}
-                  onclick={() => onartist?.(metadata.artist)}
-                >{metadata?.artist ?? ''}</button>
+                {#if artistLinked}
+                  <button
+                    class="artist artist--link"
+                    class:is-empty={!metadata?.artist}
+                    type="button"
+                    disabled={!metadata?.artist}
+                    onclick={() => onartist(metadata.artist)}
+                  >{metadata?.artist ?? ''}</button>
+                {:else}
+                  <!-- ADR-0079: not a disabled button. A control that looks
+                       pressable and does nothing reads as a fault; this is
+                       simply the artist's name. -->
+                  <span class="artist" class:is-empty={!metadata?.artist}
+                    >{metadata?.artist ?? ''}</span>
+                {/if}
                 <span class="album" class:is-empty={!metadata?.album}>{metadata?.album ?? ''}</span>
                 <!-- The release year. LMS first: it carries one per track
                      (songinfo tag `y`) and it is the library's own record.
@@ -597,13 +612,17 @@
             class="btn btn--home"
             class:is-pressed={press.is('home')}
             type="button"
-            aria-label="Home"
+            aria-label={rootless ? 'Settings' : 'Home'}
             onpointerdown={() => press.down('home')}
             onpointerup={press.up}
             onpointercancel={press.up}
             onclick={() => press.act(onhome)}
           >
-            <span class="i-tiles"><i></i><i></i><i></i><i></i></span>
+            {#if rootless}
+              <span class="i-sliders"><i></i><b></b><i></i><b></b></span>
+            {:else}
+              <span class="i-tiles"><i></i><i></i><i></i><i></i></span>
+            {/if}
           </button>
           {#if $meters}
             <!-- ADR-0055 §6: gone, not disabled, on an output that cannot
@@ -1580,6 +1599,33 @@
     gap: 3.5px;
   }
   .i-tiles i { border-radius: 3px; background: var(--ink-strong); }
+  /* ADR-0079's Settings button, in the Home button's place and at its size:
+     two slider tracks with their handles at different positions, which is the
+     library tile's own `glyph--sliders`. */
+  .i-sliders {
+    position: relative;
+    width: 22px;
+    height: 16px;
+    display: block;
+  }
+  .i-sliders i,
+  .i-sliders b {
+    position: absolute;
+    display: block;
+    background: var(--ink-strong);
+  }
+  .i-sliders i {
+    left: 0;
+    width: 22px;
+    height: 2px;
+    border-radius: 1px;
+    opacity: 0.6;
+  }
+  .i-sliders i:first-child { top: 3px; }
+  .i-sliders i:nth-child(3) { top: 11px; }
+  .i-sliders b { width: 6px; height: 6px; border-radius: 50%; }
+  .i-sliders b:nth-child(2) { top: 1px; left: 5px; }
+  .i-sliders b:nth-child(4) { top: 9px; left: 13px; }
   .i-meter { display: flex; align-items: flex-end; gap: 4px; height: 22px; }
   .i-meter i { width: 4px; border-radius: 2px; background: var(--ink-body); }
 

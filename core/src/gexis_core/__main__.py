@@ -1261,6 +1261,17 @@ async def main() -> None:
             finally:
                 bus.disconnect()
         if not on:
+            # **The renderer that was switched off must not stay the active
+            # one** (found on the panel 2026-09-25, building ADR-0079: with
+            # Spotify switched off mid-track, Now Playing went on showing its
+            # track indefinitely). Its adapter's watch is cancelled below, so
+            # the `inactive` event that would normally release the device
+            # never arrives - nobody is left to report it. Said here instead,
+            # which is what the adapter would have said.
+            #
+            # `relinquish` is ignored unless this renderer is still the active
+            # one, so this is safe whatever was holding the device.
+            await supervisor.relinquish(renderer_id)
             state_store.set_available(renderer_id, False)
         # Last, so the watch starts against a unit that is already running and
         # stops after the unit it was watching has gone.

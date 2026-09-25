@@ -385,7 +385,11 @@
           "Most played artists",
           "Recently played artists"
         ],
-        "default": "New music"
+        "default": "New music",
+        "onlyWhen": [
+          "lms_enabled",
+          true
+        ]
       },
       {
         "key": "home_strip_count",
@@ -396,7 +400,11 @@
         "min": 4,
         "max": 20,
         "unit": "",
-        "default": 10
+        "default": 10,
+        "onlyWhen": [
+          "lms_enabled",
+          true
+        ]
       },
       {
         "type": "group",

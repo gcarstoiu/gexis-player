@@ -777,3 +777,25 @@ async def test_an_unknown_renderer_still_raises_rather_than_being_refused():
 
     with pytest.raises(ValueError):
         await supervisor.acquire("airplay")
+
+
+@pytest.mark.asyncio
+async def test_switching_off_the_active_renderer_leaves_nobody_holding_it():
+    """**Found on the panel, 2026-09-25.** Turning Spotify off mid-track left
+    it the active renderer forever: its watch is cancelled when the row goes
+    off, so the `inactive` event that would have released the device never
+    arrives and Now Playing went on showing its track. `_apply_renderer` says
+    it instead - this is that call."""
+    holder = {"who": "spotify"}
+    supervisor = Supervisor(
+        _three(holder),
+        device_busy=lambda renderer_id: holder["who"] == renderer_id,
+        ladder=FAST_LADDER,
+        enabled=lambda renderer_id: renderer_id != "spotify",
+    )
+    supervisor._active = "spotify"
+
+    # The row is already off by the time this is called, so the gate above
+    # must not swallow it: `relinquish` is release, not acquisition.
+    await supervisor.relinquish("spotify")
+    assert supervisor.active is None

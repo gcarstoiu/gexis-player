@@ -8,7 +8,13 @@
 <script>
   import SourceMark from '../lib/SourceMark.svelte';
 
-  let { availability = {} } = $props();
+  // **ADR-0079: `full` promotes this from a footer to the whole screen.** With
+  // LMS off there is no library for it to sit under, and "nothing is playing
+  // and here is what could be" becomes the entire message. Same marks, same
+  // ring delays, same order - scaled, not stretched (George: *"not the entire
+  // height and width of the screen"*), so the cluster grows and the screen
+  // keeps its air.
+  let { availability = {}, full = false } = $props();
 
   // Order, colours, labels, sizes and ring delays are the design's.
   //
@@ -24,9 +30,15 @@
     { id: 'bluetooth', name: 'Bluetooth', status: 'Pairable', size: 41, lead: false, delays: [1800, 400] },
   ];
   const shown = $derived(SERVICES.filter((s) => availability[s.id]));
+  // The mark is an SVG sized by a prop, not by CSS, so it scales with the
+  // disc rather than sitting small inside a bigger circle. 1.8x, the same
+  // factor the metrics below use, rounded to whole pixels - and Bluetooth
+  // stays the odd one for the reason above.
+  const FULL = 1.8;
+  const markSize = $derived((s) => (full ? Math.round(s.size * FULL) : s.size));
 </script>
 
-<div class="waiting">
+<div class="waiting" class:is-full={full}>
   <div class="row">
     {#each shown as s (s.id)}
       <div class="service" class:is-lead={s.lead}>
@@ -37,7 +49,7 @@
           <div class="disc">
             <SourceMark
               source={s.id}
-              size={s.size}
+              size={markSize(s)}
               color={s.lead ? 'var(--accent-lms)' : 'var(--ink)'}
               opacity={s.lead ? 1 : 0.72}
             />
@@ -54,6 +66,14 @@
 
 <style>
   .waiting {
+    /* Every size below is one of these, so `.is-full` re-states the six
+       numbers rather than the fifteen rules that use them. */
+    --wait-ring: 100px;
+    --wait-disc: 90px;
+    --wait-col: 172px;
+    --wait-gap: 30px;
+    --wait-name: 16px;
+    --wait-stack: 13px;
     position: relative;
     height: 186px;
     flex-shrink: 0;
@@ -65,26 +85,42 @@
     padding: 0 40px;
     box-sizing: border-box;
   }
+  /* 1.8x the footer's cluster on a 1280x800 panel: two services come to
+     680px of the width and about 300px of the height, centred, which reads as
+     a screen about waiting rather than a bar that was pulled out of shape.
+     No border and no plate - there is nothing above it to be divided from. */
+  .waiting.is-full {
+    --wait-ring: 180px;
+    --wait-disc: 162px;
+    --wait-col: 310px;
+    --wait-gap: 60px;
+    --wait-name: 27px;
+    --wait-stack: 24px;
+    height: 100%;
+    border-top: 0;
+    background: transparent;
+    padding: 0 48px;
+  }
   .row {
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 30px;
+    gap: var(--wait-gap);
   }
   .service {
-    width: 172px;
+    width: var(--wait-col);
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 13px;
+    gap: var(--wait-stack);
   }
   /* 100px rings around a 90px disc, per the design's notice footer. The
      whole cluster shipped undersized - 72px rings around a 58px disc - which
      is what made the marks inside look small (George, 2026-09-20). */
   .rings {
     position: relative;
-    width: 100px;
-    height: 100px;
+    width: var(--wait-ring);
+    height: var(--wait-ring);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -92,8 +128,8 @@
   }
   .ring {
     position: absolute;
-    width: 100px;
-    height: 100px;
+    width: var(--wait-ring);
+    height: var(--wait-ring);
     border-radius: 50%;
     border: 2px solid rgba(233, 238, 242, 0.6);
     animation: ring 2800ms ease-out infinite;
@@ -107,8 +143,8 @@
     100% { transform: scale(1.75); opacity: 0; }
   }
   .disc {
-    width: 90px;
-    height: 90px;
+    width: var(--wait-disc);
+    height: var(--wait-disc);
     border-radius: 50%;
     background: var(--ink-fill);
     border: 1px solid rgba(233, 238, 242, 0.16);
@@ -125,7 +161,7 @@
     text-align: center;
   }
   .name {
-    font-size: 16px;
+    font-size: var(--wait-name);
     font-weight: 700;
     color: var(--ink);
     white-space: nowrap;
@@ -134,6 +170,10 @@
     font-family: var(--font-mono);
     font-size: var(--t-micro);
     letter-spacing: 0.16em;
+  }
+  .is-full .status {
+    font-size: 15px;
+    margin-top: 9px;
     text-transform: uppercase;
     color: var(--ink-quiet);
     margin-top: 4px;
