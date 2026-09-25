@@ -1,0 +1,26 @@
+[Unit]
+Description=Plexamp (headless)
+Documentation=https://plexamp.com
+After=network-online.target sound.target
+Wants=network-online.target
+# A misconfigured renderer restarting forever buries the real error in noise -
+# the same limit go-librespot's unit carries, for the reason found there.
+StartLimitIntervalSec=60
+StartLimitBurst=5
+
+[Service]
+Type=simple
+User=pi
+WorkingDirectory=/home/pi/plexamp
+ExecStart=/usr/bin/node /home/pi/plexamp/js/index.js
+Restart=on-failure
+RestartSec=5
+# **ADR-0090: one switch controls the pair.** The manifest names *this* unit,
+# because this is the process that opens the audio device and the release ladder
+# attributes a busy device to it. The plugin that speaks the contract is a
+# second unit, pulled in here and `PartOf=` this one, so enabling this starts
+# both and stopping it stops both.
+Wants=gexis-plexamp.service
+
+[Install]
+WantedBy=multi-user.target

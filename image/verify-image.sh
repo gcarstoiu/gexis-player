@@ -181,6 +181,37 @@ case "$plugins" in
 	*) bad "plugin manifests incomplete: $plugins" ;;
 esac
 
+echo "== Plexamp (ADR-0090), a renderer from another repository"
+for f in /etc/systemd/system/plexamp.service \
+         /etc/systemd/system/gexis-plexamp.service \
+         /usr/share/gexis/plugins/plexamp/plugin.json \
+         /usr/share/gexis/plugins/plexamp/mark.png \
+         /opt/gexis-plexamp/src/gexis_plexamp/main.py \
+         /home/pi/plexamp/js/index.js; do
+	dfs "stat $f" | grep -q 'Inode:' && ok "$f" || bad "$f missing"
+done
+# Node is the runtime Plexamp needs and nothing else here uses. Its absence
+# would be a renderer that cannot start, with the reason two layers down.
+dfs "stat /usr/bin/node" | grep -q 'Inode:' && ok "node installed" || bad "node missing"
+# **Neither unit enabled.** An unclaimed Plexamp cannot play anything, and the
+# Plugins row reads the unit's real state.
+for u in plexamp gexis-plexamp; do
+	if dfs "stat /etc/systemd/system/multi-user.target.wants/$u.service" | grep -q 'Inode:'; then
+		bad "$u is enabled in the image - ADR-0090 ships it off"
+	else
+		ok "$u not enabled"
+	fi
+done
+# The manifest is the plugin repository's, so this checks what it must say
+# rather than that it matches a copy here - there is no copy here.
+dfs "dump /usr/share/gexis/plugins/plexamp/plugin.json $OUT/one" >/dev/null
+if grep -q '"unit": *"plexamp.service"' "$OUT/one" && grep -q '"kind": *"renderer"' "$OUT/one"; then
+	ok "the manifest names the unit the release ladder escalates against"
+else
+	bad "plexamp's manifest does not name plexamp.service as a renderer"
+fi
+rm -f "$OUT/one"
+
 echo "== ADR-0085: the ALSA default is our output"
 dfs "dump /etc/alsa/conf.d/zz-gexis-default.conf $OUT/one" >/dev/null
 if grep -q 'pcm.!default' "$OUT/one" 2>/dev/null; then

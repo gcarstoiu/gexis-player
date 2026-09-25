@@ -1,6 +1,8 @@
 # ADR-0090 — Plexamp ships the way Beszel does
 
-**Status:** **Accepted** — George, 2026-09-25: *"Present in the image just like
+**Status:** **Accepted and built**, 2026-09-25 — the stage is
+`image/stage-gexis/08-plexamp` and `verify-image.sh` has a section for it;
+**nothing built from it has been booted.** George, 2026-09-25: *"Present in the image just like
 beszel. I thought in general we did beszel to learn how to do it. Let's rely on
 the learnings and do it similarly."* The two things this record asked him for —
 the repository's name and the settings row — were confirmed the same day: *"I am
@@ -70,8 +72,8 @@ together"; the contract does not need its own.
 | | installed size |
 |---|---|
 | `nodejs` + `libnode115` | **~51 MB** — and **not in the image today**; it was hand-installed on 2026-09-25 at 14:42, after the flash |
-| Plexamp headless | **41 MB** |
-| our plugin | small, unwritten |
+| Plexamp headless | **41 MB** on disk, from a 14.6 MB tarball |
+| our plugin | **built**: the release tarball is 12 KB, and `/opt/gexis-plexamp` is source only |
 | *(for comparison: the Beszel agent)* | 9.5 MB |
 
 **About 92 MB**, an order of magnitude more than the precedent. Stated rather
