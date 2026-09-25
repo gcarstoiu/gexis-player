@@ -1,9 +1,12 @@
 # ADR-0090 — Plexamp ships the way Beszel does
 
-**Status:** Proposed — George, 2026-09-25: *"Present in the image just like
+**Status:** **Accepted** — George, 2026-09-25: *"Present in the image just like
 beszel. I thought in general we did beszel to learn how to do it. Let's rely on
-the learnings and do it similarly."* **Two things still need his word**: the
-repository's name, and the settings row below for ADR-0022's inventory.
+the learnings and do it similarly."* The two things this record asked him for —
+the repository's name and the settings row — were confirmed the same day: *"I am
+fine with your proposal."* So the plugin lives at **`gcarstoiu/gexis-plexamp`**,
+public, publishing tagged releases the stage pins by checksum, and
+`plexamp.claim_token` is in ADR-0022's Plugins group.
 **Date:** 2026-09-25
 **Raised by:** Phase 11, and Phase 10's criterion 2 which it carries — *a fourth
 renderer built against the contract, in a separate repository, with no changes
@@ -108,11 +111,12 @@ is the plugin's business and not this record's.
   everything with a Plex controller attached, and whether a connected phone
   changes the 14 s hold. Both were listed there as untouched.
 
-## Still to decide — George
+## Settled with it
 
-- **The repository's name.** Proposal: **`gcarstoiu/gexis-plexamp`**, public,
-  publishing tagged releases that the stage pins by checksum — the same
-  relationship the image already has with go-librespot, peppyalsa and
-  beszel-agent.
-- **`plexamp.claim_token` for ADR-0022's inventory**, marked `[N]`, in the
-  Plugins group added on 2026-09-25.
+- **The repository is `gcarstoiu/gexis-plexamp`**, public, publishing tagged
+  releases that the stage pins by checksum — the same relationship the image
+  already has with go-librespot, peppyalsa and beszel-agent. **Public matters
+  here beyond preference**: criterion 2 is about a renderer somebody else could
+  have written, and a private repository would make that claim untestable by
+  anyone but us.
+- **`plexamp.claim_token` is in ADR-0022's inventory**, Plugins group, `[N]`.
