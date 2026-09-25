@@ -170,13 +170,20 @@ they are the contract's **source**, not its consumers, and
 before starting.** George's moOde project built a Plexamp route and **parked
 it**: pause and app-dismissed are byte-identical at every observable endpoint.
 
-**But that is the smaller of two questions, and the finding now separates
-them.** Being *released on command* is `Adapter.release()` and is what a
-takeover needs; *noticing* a release nobody commanded is `on_release` and costs
-only ADR-0027's "nobody holds the device". **George says a Stop command does
-drop Plexamp's connection** (2026-09-25) — not in the record he supplied, not
-testable here, and the first thing the pulled-forward hardware check should
-answer. If he is right, the parking note does not disqualify Plexamp.
+**That phrase is narrower than it sounds, and the second export settles it.**
+It was about the *HTTP endpoints*. Plexamp on `:32500` turns out to fit
+ADR-0010's ladder without bending:
+
+| our contract | Plexamp, per moOde |
+|---|---|
+| `release()` — the polite stop | the API stop at `:32500`. Frees the DAC, leaves Plexamp running |
+| `signal_stop(force)` | kill the unit — which needs a restart, so it is rightly the second step |
+| `on_release` | **TCP count to `:32500` reaching 0**, seconds after the app goes away |
+
+So **Plexamp looks viable**, on someone else's machine, with two gaps neither
+project has measured: the stop test's "before" read was empty, and nobody knows
+what the TCP count does after an API stop — if our own `release()` drops it,
+the adapter reads its own polite stop as a user disconnect.
 
 The finding also carries two smaller things — our `output.conf` pins no sample
 format, and peppyalsa gave moOde an all-zero meter FIFO for S32_LE.

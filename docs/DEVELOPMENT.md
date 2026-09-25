@@ -2108,19 +2108,18 @@ comes before anything is built.
    [Finding 075](findings/075-what-moode-learned-about-plexamp.md), and one
    ranks above the original:
 
-   - **Does a Stop command drop the connection?** George believes it does
-     (2026-09-25). It is not in the moOde record he supplied and could not be
-     checked here. **This is the load-bearing one**: it is
-     `Adapter.release()`, ADR-0010's polite stop, and it is what a takeover
-     actually needs.
-   - **Can a spontaneous release be observed at all?** moOde built a Plexamp
-     route and parked it because pause and app-dismissed are identical at
-     every endpoint it could see. That is `on_release` in `Adapter.run()`, and
-     losing it costs ADR-0027's *"nobody holds the device"* rather than the
-     takeover itself — the renderer shows as active until something takes
-     over, which is the defect ADR-0077 created and LESSONS 39 records. This
-     device has seen the same shape over Bluetooth: pauses reported 4.5–6 s
-     late, or never.
+   - **Does the API stop free a device that was open?** moOde's record says
+     the stop at `:32500` frees the DAC *without restarting the service* —
+     which is `Adapter.release()`, ADR-0010's polite step, and the one a
+     takeover needs. **Its own caveat is that the "before" read was empty**,
+     so it shows *stopped and closed* rather than *open, then stop, then
+     closed*. The rerun is written out in the export; run it first.
+   - **Does the TCP count to `:32500` behave as `on_release`?** It drops to 0
+     when the app is dismissed and recovers on reopen, seconds later — so a
+     positive disconnect signal **does** exist, and "no observable disconnect
+     signal" was about the HTTP endpoints. Two things to settle: the latency,
+     and **what the count does after our own API stop**, which nobody has
+     measured and which would otherwise read as a user disconnect.
 
    **And a fourth, cheaper one:** `peppyalsa` produced an all-zero meter FIFO
    for S32_LE on moOde, which is why its `.asoundrc` pins S24_LE *because of
