@@ -387,6 +387,11 @@ reverted, currently-flashed image predates this fix.
                                             hardware check is pulled forward
                                             into 10 - Finding 075 says moOde
                                             built a Plexamp route and parked it
+11a the library answers for itself        <- next, added 2026-09-25 (George):
+                                            leverage the Plex server's own
+                                            metadata, internet providers kept
+                                            as fallbacks. Measured first:
+                                            Finding 086
 12 Qobuz Connect as a renderer            a second plugin against a contract
                                             already proved; keeps the private
                                             repository out of the critical path

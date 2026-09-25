@@ -2359,6 +2359,74 @@ the ALSA default.
    The design asset is Plexamp's own mark, George's call: *"You can use their
    logo for plexamp."*
 
+### Phase 11a — The library answers for itself
+
+**Added 2026-09-25 (George):** *"Let's introduce another phase before qobuz,
+which should tackle the question of how we can we leverage the plexamp/Plex
+server metadata that is available. Anything that can reduce the dependency on
+internet providers is a good thing. They can be kept as fallbacks, not
+removed."*
+
+**Numbered `11a`, not 12.** Phase 7a set the precedent for a phase inserted
+beside one that is finished, and renumbering 12, 13 and 14 for this would churn
+every record that names them.
+
+**The case is measured, not assumed**
+([Finding 086](findings/086-what-the-plex-server-could-answer.md)). For the
+**51.7 %** of looked-up artists that George's Plex server knows, it is more
+complete than every internet provider we ask:
+
+| what | the internet, today | Plex |
+|---|---|---|
+| Album cover | **50 %** | **100 %** — 3,908 of 3,908 |
+| Artist picture | **61 %**, needs a key | **100 %** |
+| Biography | **73 %** | **97 %** |
+| Similar artists | **80 %** | 59 of the first 60 artists |
+
+**Two things that are *not* the case for it**, written down so nobody argues
+them later: **it is not faster** — the internet providers answered in ~110 ms,
+the same as Plex on the LAN — and **it does not replace anything.** Popular
+tracks are 404 on that server and timed lyrics do not exist there, so
+ListenBrainz and LRCLIB stay regardless.
+
+**Acceptance**
+
+1. **An ADR on where the Plex credential lives.** The core would be asking a
+   Plex server for metadata about whatever is playing, **including tracks
+   playing on LMS, Spotify or Bluetooth** — so this belongs in the core's
+   provider chain, not in the Plexamp plugin, which only knows what Plexamp
+   plays. But the only Plex token on this device belongs to that plugin, and
+   the core reading a plugin's private files is the coupling
+   [ADR-0016](decisions/0016-plugins-as-separate-processes.md) exists to
+   prevent. **Decide before building**: a second credential in ADR-0022's
+   inventory, a claim-token exchange the core performs itself, or something
+   else.
+2. **A Plex provider in the existing chain, ahead of the internet ones.**
+   [ADR-0040](decisions/0040-enrichment-providers.md)'s merge is already
+   field-by-field and first-wins — which is exactly *"kept as fallbacks, not
+   removed"*, with no new architecture. Nothing is deleted and no provider is
+   reordered relative to the others.
+3. **Matching stated and measured.** 51.7 % is one folding rule over names. A
+   real strategy — MusicBrainz ids where both sides carry them, names where they
+   do not — must report its own hit rate on this library, and the number goes in
+   a finding rather than in a hope.
+4. **It degrades when the server is not there.** The Plex server is another
+   machine; if it sleeps, every lookup must fall through to the internet
+   providers at the cost of one timeout, not hang the enrichment path. **What
+   that timeout is, measured.**
+5. **Album covers first.** The single largest win and the cheapest to verify:
+   the sweep that reports *"X of Y processed, Z found"* should improve, and by
+   how much is the measurement that closes this criterion.
+6. **Decided in this phase, not before:** whether the three things Plex has and
+   this project does not — **sonic similarity with distances**, **moods and
+   styles**, and **ReplayGain** — are worth model changes, or are noted and left.
+   They are not enrichment as ADR-0040 defines it, and one of them (ReplayGain)
+   is an audio decision rather than a metadata one.
+
+**Out of scope, and named:** Plex's `UltraBlurColors`, its album reviews, and
+its own catalogue groupings (*Singles & EPs*, *Live Albums*, *Compilations*).
+All are there; none is asked for by anything today.
+
 ### Phase 12 — Qobuz Connect as a renderer
 
 **Added 2026-09-16 (George).** Same shape as Spotify and LMS, delivered as a
