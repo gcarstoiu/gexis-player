@@ -369,6 +369,42 @@
     return () => cancelAnimationFrame(frame);
   });
 
+  //: **The discography's place is held while About is still loading**
+  //: (ADR-0074). The biography and Popular arrive about 1.8s after the
+  //: page, and the discography was sitting at 105px until they did and at
+  //: 478 afterwards - a 373px shove, measured, and the same 373 whether the
+  //: artist had five popular tracks and a short life story or no popular
+  //: tracks and a long one, because `fitAbout` clamps the biography to
+  //: whatever is left.
+  //:
+  //: So the height is not guessed: it is the one `fitAbout` aims at - the
+  //: first album card at `clientHeight - cardHeight * ALBUM_PEEK` - and the
+  //: discography is already on the page to be measured against it.
+  let reserve = $state(0);
+
+  $effect(() => {
+    const waiting = artistInfo.state === 'loading';
+    void releases;
+    void artist?.id;
+    if (!waiting || !columnEl) return;
+    const frame = requestAnimationFrame(() => {
+      const card = columnEl?.querySelector('.disc');
+      if (!card) return;
+      const column = columnEl.getBoundingClientRect();
+      const first = card.getBoundingClientRect();
+      // The place `fitAbout` aims the first album card at.
+      const want = columnEl.clientHeight - first.height * ALBUM_PEEK;
+      // **The card's own top, as `fitAbout` measures it.** Measuring where
+      // `.releases` starts instead counted the release heading twice and
+      // left the discography 40px low (2026-09-25).
+      const have = first.top - column.top + columnEl.scrollTop;
+      // Written, never read here: an effect that reads what it writes wakes
+      // itself (LESSONS 31).
+      reserve = Math.max(0, Math.round(want - have));
+    });
+    return () => cancelAnimationFrame(frame);
+  });
+
   const paragraphs = $derived.by(() => {
     const text = artistInfo.found?.biography ?? '';
     return text
@@ -1528,6 +1564,14 @@
                 </button>
               {/each}
             </div>
+          {/if}
+
+          <!-- Holds the discography where it will end up, so the About
+               section filling in does not shove it down (ADR-0074). If
+               nothing arrives, this goes with the loading state and the
+               page closes up. -->
+          {#if artistInfo.state === 'loading' && reserve > 0}
+            <div class="artistmeta__hold" style:height="{reserve}px" aria-hidden="true"></div>
           {/if}
 
           <div class="releases">
@@ -2916,6 +2960,9 @@
     overflow: hidden;
     -webkit-mask-image: linear-gradient(180deg, #000 58%, transparent 100%);
     mask-image: linear-gradient(180deg, #000 58%, transparent 100%);
+  }
+  .artistmeta__hold {
+    flex-shrink: 0;
   }
   .artistmeta__credit {
     display: flex;
