@@ -31,6 +31,43 @@ deactivated, Spotify on go-librespot's `inactive`, Bluetooth on `MediaPlayer1`
 disappearing. If pause and gone-away are indistinguishable, a Plexamp adapter
 has nothing to raise that edge with.
 
+### A commanded stop is a different question, and it is the one that matters
+
+**George, 2026-09-25: *"I believe that the findings also should show that
+sending a Stop command to plexamp stopped the connection."***
+
+**Not found in the supplied export.** Searched for `stop`, `disconnect`,
+`power 0`, `slpower` and `release`: the only disconnect items are the Route A
+sentence above and an open one about the **Squeezelite** disconnect button
+(LMS `power 0` → `slpower.sh` → `slactive=0`), whose own note ends *"Results
+not received."* Nothing about a Stop to Plexamp. The `moode-customisations`
+clone is not on this machine and Plexamp is not installed on `gexis`, so it
+could not be checked any further here.
+
+**It is not contradicted either, and the two statements are compatible.** The
+export says pause and app-dismissed cannot be *told apart*; a Stop that drops
+the connection is a *command that works*. Both can be true at once, and the
+distinction is the whole of whether Plexamp can be a renderer here:
+
+| what arbitration needs | where it lives | Plexamp |
+|---|---|---|
+| **Release it on a takeover** — the polite stop through the renderer's own control channel | `Adapter.release()`, ADR-0010's first ladder step | **This is what George's Stop would be.** If it drops the connection, the critical path works |
+| **Notice it released by itself** — the user paused and walked away | `on_release` in `Adapter.run()`, ADR-0027 | This is what the export says is impossible |
+
+**The first is load-bearing and the second is not.** A renderer that can be
+released on demand fits ADR-0010; without the second it only fails to report
+*"nobody holds the device"*, which leaves it showing as active until something
+takes over. That is a known shape — it is exactly the defect ADR-0077 created
+and [LESSONS](../LESSONS.md) 39 records, where a renderer switched off stayed
+active for ever because nothing was left to raise the edge.
+
+So **the parking note alone does not disqualify Plexamp**, and this finding
+should not be read as saying it does. What it does is put one question ahead
+of the others in Phase 10's pulled-forward hardware check: **does a Stop
+command drop the connection?** George believes it does. It is not written down
+anywhere this device can reach, and it is cheap to answer once Plexamp headless
+is on `gexis` — which that check installs anyway.
+
 **And this device has seen the same shape independently.** The handoff's own
 issues list, from the Phase 6 hardware rounds on `gexis`:
 
@@ -100,6 +137,10 @@ corrects an earlier guide that had it the other way round.
 - **Whether Plexamp releases the ALSA device.** That is Phase 11 criterion 1
   and is still unanswered. §1 is about a *different* signal, and a renderer
   could fail either independently.
+- **Whether a Stop command drops the connection.** George says it does; the
+  supplied export does not mention it and nothing here could test it. **Three
+  separate questions now hang on the same install**: does it free the device,
+  does a commanded stop work, and can a spontaneous release be observed.
 - **Whether a newer Plexamp behaves differently.** 4.13.2 is what was parked.
 - **Whether the S32_LE problem is peppyalsa's, the plugin's, or the stream's.**
   The note says the mechanism was not investigated.

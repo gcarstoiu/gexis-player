@@ -168,11 +168,18 @@ they are the contract's **source**, not its consumers, and
 
 **Read [Finding 075](docs/findings/075-what-moode-learned-about-plexamp.md)
 before starting.** George's moOde project built a Plexamp route and **parked
-it**: pause and app-dismissed are byte-identical at every observable endpoint,
-which is exactly the release edge `Adapter.run` requires. This device saw the
-same shape over Bluetooth. The finding also carries two smaller things — our
-`output.conf` pins no sample format, and peppyalsa gave moOde an all-zero meter
-FIFO for S32_LE.
+it**: pause and app-dismissed are byte-identical at every observable endpoint.
+
+**But that is the smaller of two questions, and the finding now separates
+them.** Being *released on command* is `Adapter.release()` and is what a
+takeover needs; *noticing* a release nobody commanded is `on_release` and costs
+only ADR-0027's "nobody holds the device". **George says a Stop command does
+drop Plexamp's connection** (2026-09-25) — not in the record he supplied, not
+testable here, and the first thing the pulled-forward hardware check should
+answer. If he is right, the parking note does not disqualify Plexamp.
+
+The finding also carries two smaller things — our `output.conf` pins no sample
+format, and peppyalsa gave moOde an all-zero meter FIFO for S32_LE.
 
 **Three decisions are open and labelled in the ADRs**, none blocking:
 
