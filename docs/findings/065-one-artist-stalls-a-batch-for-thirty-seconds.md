@@ -58,16 +58,21 @@ three times across three restarts: 30,327 ms, 30,461 ms, 30,646 ms.
 - **It is on the path for a person**, though: anyone who scrolls to that
   artist waits for the same 30 s call, and always did.
 
-## What would fix it, and what that costs
+## Fixed the next day
 
-**Remember that a lookup did not come back, with a life of its own** — a
-separate namespace from "this artist has no photo", holding "asking cost us
-30 seconds on this date" for a day rather than for a process. It keeps
-Finding 036's distinction — nothing is recorded as an answer — while not
-re-paying the timeout on every restart.
+[ADR-0069](../decisions/0069-what-a-lookup-cost-is-remembered.md), 2026-09-25,
+on George's ruling that *"a fix that turns into a 30 seconds wait is worse
+than before"*: what a lookup **cost** is remembered in its own namespace,
+for a day. Its **answer** still is not, so Finding 036's rule is intact —
+nothing says this artist has no picture.
 
-**Not done, and it is a decision rather than a repair**: Finding 036's rule
-was written deliberately and this bends it. It needs George.
+| asking for all 917 | before | after |
+| --- | --- | --- |
+| straight after a restart | 30,327–30,646 ms | **116–200 ms** |
+| warm | 180 ms | 180 ms |
+
+The store holds exactly one marker, for **artist id 9934** — the single
+artist all 31 seconds belonged to.
 
 ## What this does not settle
 
