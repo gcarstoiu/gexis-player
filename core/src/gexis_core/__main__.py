@@ -1096,6 +1096,13 @@ async def main() -> None:
                # something rather than nothing (ADR-0022's `version`).
                "version": None, "image_build": None,
                "reboot": lambda _: asyncio.ensure_future(_reboot())},
+        # **Phase 9 criterion 2.** These two act through
+        # `POST /settings/{key}/items`, not through `set` - joining a network
+        # and forgetting a device - so they are wired, and saying otherwise
+        # made the panel mark two working rows `data-unwired`. `lms_server`
+        # is a list too and is already in `wired` above, because something
+        # also reads its value.
+        lists={"wifi", "bt_trusted"},
         on_change=state_store.bump_settings_revision,
     )
 

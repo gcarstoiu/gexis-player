@@ -318,6 +318,7 @@ class Settings:
         registry: list[dict] | None = None,
         defaults: dict[str, Callable[[], Any]] | None = None,
         wired: dict[str, Callable[[Any], None] | None] | None = None,
+        lists: set[str] | None = None,
         on_change: Callable[[], None] | None = None,
         options: dict[str, Callable[[], Any]] | None = None,
         seed_path: Path = SEED_PATH,
@@ -327,6 +328,19 @@ class Settings:
         self._rows = {r["key"]: r for g in self._groups for r in g["rows"] if r["type"] != "group"}
         self._defaults = defaults or {}
         self._wired = wired or {}
+        #: **`list` rows that act through their own route** rather than
+        #: through `set` - `POST /settings/{key}/items` (ADR-0044 §1). They
+        #: are wired in the only sense the word has here, "something acts on
+        #: it", and until 2026-09-25 they reported `wired: false` and the
+        #: panel marked them `data-unwired`. That is Phase 9 criterion 2's
+        #: own mechanism lying about two rows that work: `wifi` joins a
+        #: network and `bt_trusted` forgets a device.
+        #:
+        #: Declared rather than inferred from `type == "list"`, because a
+        #: future list row with no handler behind it must still report
+        #: itself unwired. `set` keeps refusing all of them - a list row is
+        #: not written by writing a value.
+        self._lists = set(lists or ())
         # An injected resolver wins over the module's, because only the
         # daemon knows where the corpus is and what the other row holds
         # (ADR-0051 §4).
@@ -340,9 +354,12 @@ class Settings:
             raise ValueError(f"not an option source: {sorted(unknown_sources)}")
         self._on_change = on_change
         self._seed = load_seed(self._rows, seed_path)
-        unknown = (set(self._defaults) | set(self._wired)) - set(self._rows)
+        unknown = (set(self._defaults) | set(self._wired) | self._lists) - set(self._rows)
         if unknown:
             raise ValueError(f"not in the registry: {sorted(unknown)}")
+        not_lists = {k for k in self._lists if self._rows[k]["type"] != "list"}
+        if not_lists:
+            raise ValueError(f"declared as list rows but are not: {sorted(not_lists)}")
 
     def row(self, key: str) -> dict:
         try:
@@ -414,7 +431,9 @@ class Settings:
                 if source is not None:
                     public["options"] = list(self._options.get(source, tuple)())
                 public["value"] = self.value(row["key"])
-                public["wired"] = row["key"] in self._wired
+                # A row is wired when something acts on it. For most that is
+                # a `set` callback; for a `list` it is the items route.
+                public["wired"] = row["key"] in self._wired or row["key"] in self._lists
                 blocked = self._unavailable.get(row["key"])
                 if blocked:
                     public["unavailable"] = dict(blocked)

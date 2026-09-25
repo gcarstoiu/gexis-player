@@ -835,3 +835,54 @@ def test_no_row_carries_markdown_the_panel_will_not_render():
                 assert not re.search(r"\[[^\]]+\]\([^)]+\)", text), (
                     f"{row['key']}.{field} has a markdown link: {text[:60]}"
                 )
+
+
+# ---------------------------------------------------------------------------
+# Phase 9 criterion 2: a row is wired when something acts on it.
+# ---------------------------------------------------------------------------
+
+
+def _one(key, kind="list", **extra):
+    return [{"id": "g", "label": "G", "rows": [{"key": key, "type": kind, "label": key, **extra}]}]
+
+
+def _wired_flag(settings, key):
+    return next(r for g in settings.to_json() for r in g["rows"] if r.get("key") == key)["wired"]
+
+
+def test_a_declared_list_row_reports_itself_wired(store):
+    """`wifi` and `bt_trusted` act through `POST /settings/{key}/items`, not
+    through `set` - joining a network, forgetting a device. Reporting them
+    unwired made the panel mark two working rows `data-unwired`, which is
+    criterion 2's own mechanism lying about them."""
+    settings = Settings(store, registry=_one("wifi"), lists={"wifi"})
+    assert _wired_flag(settings, "wifi") is True
+
+
+def test_a_list_row_nobody_declared_stays_unwired(store):
+    """Declared, not inferred from `type == "list"`: a future list row with no
+    handler behind it must still report itself unwired, or this stops being a
+    check at all."""
+    settings = Settings(store, registry=_one("wifi"))
+    assert _wired_flag(settings, "wifi") is False
+
+
+def test_a_declared_list_row_still_refuses_a_write(store):
+    """**Wired is not writable.** A list row is acted on per item, never by
+    writing a value to it, and declaring it wired must not open a door that
+    was shut. `NotSettable` rather than `NotWired`, which is the better
+    refusal of the two: it says why, and it does not depend on the
+    declaration."""
+    settings = Settings(store, registry=_one("wifi"), lists={"wifi"})
+    with pytest.raises(NotSettable):
+        settings.set("wifi", "somenetwork")
+
+
+def test_a_list_declaration_for_a_row_that_is_not_a_list_is_refused(store):
+    with pytest.raises(ValueError, match="not"):
+        Settings(store, registry=_one("skin", kind="text"), lists={"skin"})
+
+
+def test_a_list_declaration_for_a_row_that_does_not_exist_is_refused(store):
+    with pytest.raises(ValueError, match="not in the registry"):
+        Settings(store, registry=_one("wifi"), lists={"nope"})
