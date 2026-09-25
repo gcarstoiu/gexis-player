@@ -81,7 +81,10 @@ seconds.
 > playing, the count reads **0 while the card is open and audio is playing** —
 > three times in twenty seconds. They are short-lived timeline polls, not a
 > session, so an instantaneous count cannot tell "the controller left" from
-> "between polls".
+> "between polls". **And with the app closed, playback continues while the
+> count runs 0 for 15 s, 3 for 22 s, then 0 for 18 s** — so a windowed count
+> fails too, and "the controller went away" is not "the device was released"
+> in the first place.
 
 **So "no observable disconnect signal" was about the HTTP endpoints, not about
 the renderer.** This finding's §1 repeated that phrase as though it closed the

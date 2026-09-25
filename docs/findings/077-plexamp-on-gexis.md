@@ -131,6 +131,55 @@ no connection for several consecutive seconds — might still work, since the
 gaps seen here were 1–2 s; that is not tested, and it would be inferring a
 session from traffic either way.
 
+### Phone app closed: the audio keeps going, and the count means nothing at all
+
+George closed the app while a track was playing, 2026-09-25. Sampled at 1 s
+for 55 s:
+
+```
++0s ..+14s   card=OPEN  tcp=0        state="playing"
++15s..+36s   card=OPEN  tcp=3,1,2    state="playing"
++37s..+54s   card=OPEN  tcp=0        state="playing"
+```
+
+**1. Closing the controller does not stop anything.** `state="playing"`, the
+card open, for the whole run and still going when sampling ended. **"The
+controller went away" is not "the renderer released the device"** — which is
+the question a Plexamp adapter would have been answering wrongly.
+
+**2. And it finishes off the TCP count.** Over 55 s of continuous playback it
+read **0 for fifteen seconds, then 3 for twenty-two, then 0 for eighteen**.
+Completely decorrelated from what the renderer is doing.
+
+That kills the windowed version too, which was the last thing standing:
+**a 15 s run of zero and an 18 s run of zero both happened while the music
+played.** Any window short enough to be useful would fire during playback.
+
+**So moOde's conclusion was right — there is no observable disconnect signal
+in Plexamp's API or its sockets.** This finding adds the reason and removes
+the alternative.
+
+### But the signal that matters is already in this codebase
+
+The question a renderer adapter actually has to answer is not *"is a phone
+attached"* — it is **"does this renderer still hold the audio device"**, and
+`alsa.device_held_by` has answered that since 2026-09-08. It is what the
+release ladder uses. Checked on the device while Plexamp played:
+
+```
+alsa.device_held_by("plexamp.service")    -> True
+alsa.device_held_by("squeezelite.service") -> False
+```
+
+**That is a usable `on_release` for a renderer with no release event**: watch
+the device, raise the edge when it is let go. It is **14 s late** by the idle
+timer measured above, and that is affordable — ADR-0027's *"nobody holds the
+device"* is not a time-critical claim, and nothing in arbitration waits on it.
+
+Untested as an adapter, and named here as the direction rather than the
+answer: polling the device is a cost, and how often is a question this finding
+does not settle.
+
 ### Is the hold configurable? Not that this found
 
 **Checked:** all **138** settings in Plexamp's own store, filtered for
@@ -177,11 +226,12 @@ for this renderer has to be **longer than 14 s**, or the ladder escalates to
 That is exactly why the ladder is per-renderer: LMS already overrides it for
 squeezelite's own idle tick.
 
-**2. Can a spontaneous release be observed?** **Answered, and the answer is
-no — not by the TCP count.** With George's phone connected and playing, the
-count hit **0 three times while the card was open and audio was playing**
-(above). It measures polls in flight, not a controller's presence. A windowed
-version is untested and would still be inferring a session from traffic.
+**2. Can a spontaneous release be observed?** **Not from Plexamp — but yes
+from the device.** The TCP count is decorrelated from playback (0 for 15 s,
+then 3 for 22 s, then 0 for 18 s, all while playing), and closing the app does
+not stop the music, so neither the API nor the sockets say anything about
+release. **`alsa.device_held_by("plexamp.service")` does**, and it is already
+what the release ladder uses. 14 s late, which is affordable.
 
 **3. Does it free the ALSA device (ADR-0008's reversal condition)?** **Yes, in
 14 s, with the service still running.** ADR-0008's reversal is about a renderer
