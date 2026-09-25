@@ -43,17 +43,38 @@ rather than engineers around.
 11, and until it happens the renderer half of the contract stays provisional —
 which is why v1 is still not frozen.
 
-### Next, and it needs George
+### Next, and it needs two words from George
 
-**Plexamp in its own repository.** Two things have to be decided before any of it
-is written, and both are his:
+**Plexamp ships the way Beszel does** —
+[ADR-0090](docs/decisions/0090-plexamp-ships-the-way-beszel-does.md), on his
+instruction: *"Present in the image just like beszel. I thought in general we
+did beszel to learn how to do it. Let's rely on the learnings and do it
+similarly."*
 
-- **Where it lives.** A separate repository is what Phase 10 criterion 2
-  requires; it needs a name and an owner.
-- **How it reaches the device.** Every plugin so far arrives in the image
-  ([ADR-0087](docs/decisions/0087-the-beszel-agent-is-the-first-service-plugin.md),
-  his call). Nothing installs a plugin on a running device, and building that
-  would be the first half of a plugin installer.
+One stage, `08-plexamp`, pinning Plexamp headless **and** our plugin — which
+lives in its own repository, because that is Phase 10's criterion 2 and the
+whole point of the exercise.
+
+**The one structural difference from Beszel**: Plexamp is two processes where
+Beszel was one. The manifest's `unit` is `plexamp.service`, because the release
+ladder escalates against whoever holds the device; our plugin is a second unit
+`PartOf=` it, so the single switch in the Plugins category controls both.
+**A `plugin_unit` field in the contract was considered and rejected** — Phase 10
+amended the contract twice because things could not be expressed at all, and
+systemd already says "these two go together".
+
+**Two things wait on George:**
+
+- **The repository's name.** Proposal: `gcarstoiu/gexis-plexamp`, public,
+  publishing tagged releases the stage pins by checksum — the relationship the
+  image already has with go-librespot, peppyalsa and beszel-agent.
+- **`plexamp.claim_token` for ADR-0022's inventory**, in the Plugins group. The
+  only row: claiming needs a token *and* a player name in one session, and the
+  name comes from ADR-0048's device name rather than being typed a second time.
+
+**And a number that was not known when the shape was chosen:** this costs about
+**92 MB** — Node is not in the image today, and with Plexamp itself that is
+51 + 41 MB against the Beszel agent's 9.5.
 
 **What the plugin has to do is already measured**
 ([Finding 077](docs/findings/077-plexamp-on-gexis.md)) and needs no discovery:
@@ -65,6 +86,7 @@ is written, and both are his:
 | `release_ladder` | must declare a polite grace over 14 s |
 | `signal_stop` | its unit; the core does this itself regardless |
 | `on_release` | **`alsa.device_held_by`**, not the TCP count — that was measured to mean nothing |
+| audio path | **solved**: ADR-0085 puts it through `pcm.output`, and the meters were measured working |
 
 **And the audio path is solved, not open.** Plexamp opened `hw:5,0` directly in
 **S32_LE**, and George's question — *"why aren't we setting the default for the
