@@ -115,6 +115,47 @@
       },
       {
         "type": "group",
+        "label": "Pictures from fanart.tv",
+        "accent": "#7ed6bc"
+      },
+      {
+        "key": "sweep_portraits",
+        "type": "action",
+        "label": "Update artist portraits",
+        "marks": "R",
+        "note": "Looks up every album artist on fanart.tv and keeps LMS's picture where fanart has none. Checks all of them, every time. Runs in the background; playback is not interrupted.",
+        "default": null,
+        "onlyWhen": [
+          "lms_enabled",
+          true
+        ]
+      },
+      {
+        "key": "sweep_covers",
+        "type": "action",
+        "label": "Update album covers",
+        "marks": "R",
+        "note": "The same walk, for every album rather than only the ones with no cover. One of the two runs at a time.",
+        "default": null,
+        "onlyWhen": [
+          "lms_enabled",
+          true
+        ]
+      },
+      {
+        "key": "sweep_status",
+        "type": "readonly",
+        "label": "Progress",
+        "marks": "R",
+        "note": "What the last or current run has done.",
+        "default": null,
+        "onlyWhen": [
+          "lms_enabled",
+          true
+        ]
+      },
+      {
+        "type": "group",
         "label": "Spotify Connect",
         "accent": "#7ed6bc"
       },
@@ -774,35 +815,6 @@
         "label": "fanart.tv key",
         "marks": "N",
         "note": "Artist pictures. Without it they come from LMS's own plugin, where the server has one, and initials otherwise.",
-        "default": null
-      },
-      {
-        "type": "group",
-        "label": "Pictures from fanart.tv",
-        "accent": "#e8a0b4"
-      },
-      {
-        "key": "sweep_portraits",
-        "type": "action",
-        "label": "Update artist portraits",
-        "marks": "R",
-        "note": "Looks up every album artist on fanart.tv and keeps LMS's picture where fanart has none. Checks all of them, every time. Runs in the background; playback is not interrupted.",
-        "default": null
-      },
-      {
-        "key": "sweep_covers",
-        "type": "action",
-        "label": "Update album covers",
-        "marks": "R",
-        "note": "The same walk, for every album rather than only the ones with no cover. One of the two runs at a time.",
-        "default": null
-      },
-      {
-        "key": "sweep_status",
-        "type": "readonly",
-        "label": "Progress",
-        "marks": "R",
-        "note": "What the last or current run has done.",
         "default": null
       },
       {
