@@ -678,6 +678,21 @@ is "is this a different time I am looking at one".
 **It only appears on the second visit**, so a measurement that opens a
 screen once cannot see it. The probe now opens the same screen four times.
 
+**35. The probe thought the grid was an artist page** (2026-09-25). A
+scroll-position check reported the place was lost. It was not: the harness
+called an artist page `.artist__disc`, which is also the class on **every
+card in the grid**, so `has(ARTIST_PAGE)` was true while still on the grid.
+The probe "opened an artist", pressed Back from the top level, went to the
+home screen, and found no grid to read.
+
+**`go_artist_page` had believed the same thing for days**, returning at once
+whenever the grid was up - so any scene that went through it measured the
+grid. Finding 066's first artist-page survey is visibly the grid's contents,
+which is what made it worth chasing.
+
+**A class shared by a container and its items is not a screen.** The page's
+own element is `.artist__disc--big`.
+
 ## Common shape
 
 Every case had a *plausible* substitute for the real target — the build

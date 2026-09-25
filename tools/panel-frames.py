@@ -288,7 +288,11 @@ PANE_LIST = ".pane__list"
 TRACKS_LIST = ".tracks__list"
 ARTIST_RIGHT = ".artistright"
 ARTIST_FACE = ".grid__scroll .face, .grid__scroll .artist"
-ARTIST_PAGE = ".artist__disc"
+#: **The page's own disc, not a card's.** `.artist__disc` is the class on
+#: every card in the grid too, so `has(ARTIST_PAGE)` was true while still
+#: on the grid - `go_artist_page` then believed it had arrived and
+#: measured the grid instead (2026-09-25).
+ARTIST_PAGE = ".artist__disc--big"
 VOLUME_TRIGGER = '.btn[aria-label="Volume"], .mini__volume'
 VOLUME_DRAWER = ".drawer.is-open, .volume.is-open"
 #: **Not `.btn`.** Settings' back is `<button class="back" aria-label="Back">`

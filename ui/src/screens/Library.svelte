@@ -446,6 +446,51 @@
   //: Reset twice - now, and after the next frame - because the rows are
   //: often still arriving when the token moves, and a scroller with no
   //: content yet has nothing to scroll.
+  //: **Where a list was left**, so going into an artist and back out again
+  //: lands where you were rather than at the top (George, 2026-09-25).
+  //: Module-level would outlive a rescan; this lives as long as the library
+  //: screen does, which is as long as the places it remembers.
+  const leftAt = new Map();
+
+  //: Saved from the scroller this component already watches, rather than a
+  //: second listener on the same element.
+  $effect(() => {
+    const at = gridScroll.top;
+    const page = where;
+    if (page) leftAt.set(page, at);
+  });
+
+  //: **Coming back to the library root forgets where the lists were.**
+  //: George asked for the grid to hold its place across going into an
+  //: artist and out again; opening Artists afresh from the home screen is a
+  //: different journey and starts at the top, where the A's are.
+  $effect(() => {
+    if (path.length === 0) leftAt.clear();
+  });
+
+  /** Puts a scroller back where it was, or at the top if it has not been
+   *  here before. */
+  function keepPlace(node, token) {
+    let key = token;
+    let frame;
+    const put = () => {
+      const at = leftAt.get(key) ?? 0;
+      node.scrollTop = at;
+      cancelAnimationFrame(frame);
+      // A second go once the spacers have their height: the windowed grid
+      // is only as tall as its arithmetic after the first frame.
+      frame = requestAnimationFrame(() => (node.scrollTop = at));
+    };
+    put();
+    return {
+      update(next) {
+        key = next;
+        put();
+      },
+      destroy: () => cancelAnimationFrame(frame),
+    };
+  }
+
   function fromTop(node, _token) {
     let frame;
     const reset = () => {
@@ -1316,7 +1361,7 @@
         <div
           class="grid__scroll"
           bind:this={grid}
-          use:fromTop={where}
+          use:keepPlace={where}
           use:gridScroll.attach
         >
           <div class="grid__space" style:height="{gridSpace.above}px"></div>
