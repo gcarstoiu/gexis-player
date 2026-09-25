@@ -678,3 +678,102 @@ async def test_handoff_is_cleared_even_if_the_release_raises():
         await supervisor.acquire("spotify")
 
     assert seen == [("lms", "spotify"), (None, None)]
+
+
+# ---------------------------------------------------------------------------
+# ADR-0077: a source that is off does not take the device.
+# ---------------------------------------------------------------------------
+
+
+def _three(holder):
+    return {
+        "lms": FakeAdapter("lms", ReleaseAction.PAUSE, holder),
+        "spotify": FakeAdapter("spotify", ReleaseAction.DISCONNECT, holder),
+        "bluetooth": FakeAdapter("bluetooth", ReleaseAction.DISCONNECT, holder),
+    }
+
+
+@pytest.mark.asyncio
+async def test_a_renderer_that_is_switched_off_does_not_acquire():
+    """The whole point of the gate. An event from a renderer whose unit was
+    just stopped - go-librespot's last `will_play`, say - must not take the
+    device on its way out."""
+    holder = {"who": None}
+    supervisor = Supervisor(
+        _three(holder),
+        device_busy=lambda renderer_id: holder["who"] == renderer_id,
+        ladder=FAST_LADDER,
+        enabled=lambda renderer_id: renderer_id != "spotify",
+    )
+
+    await supervisor.acquire("spotify")
+    assert supervisor.active is None
+
+
+@pytest.mark.asyncio
+async def test_a_renderer_that_is_off_cannot_displace_the_active_one():
+    """Not just "it does not become active" - it must not release whoever
+    holds the device either. A refused acquisition is not a takeover."""
+    holder = {"who": "lms"}
+    adapters = _three(holder)
+    supervisor = Supervisor(
+        adapters,
+        device_busy=lambda renderer_id: holder["who"] == renderer_id,
+        ladder=FAST_LADDER,
+        enabled=lambda renderer_id: renderer_id != "bluetooth",
+    )
+    supervisor._active = "lms"  # ADR-0027: no implicit base, say so explicitly
+
+    await supervisor.acquire("bluetooth")
+    assert supervisor.active == "lms"
+    assert adapters["lms"].release_calls == 0
+
+
+@pytest.mark.asyncio
+async def test_a_refused_acquisition_reports_no_handoff():
+    """Phase 4 criterion 4's transition screen appears on the handoff edges.
+    A renderer that is off never gets one, so nothing flashes on screen for a
+    takeover that did not happen."""
+    holder = {"who": None}
+    edges = []
+    supervisor = Supervisor(
+        _three(holder),
+        device_busy=lambda renderer_id: holder["who"] == renderer_id,
+        ladder=FAST_LADDER,
+        on_handoff_change=lambda a, b: edges.append((a, b)),
+        on_active_change=lambda rid: edges.append(("active", rid)),
+        enabled=lambda renderer_id: False,
+    )
+
+    await supervisor.acquire("lms")
+    assert edges == []
+
+
+@pytest.mark.asyncio
+async def test_no_predicate_means_every_renderer_is_on():
+    """Every caller before ADR-0077, and every other test in this file."""
+    holder = {"who": None}
+    supervisor = Supervisor(
+        _three(holder),
+        device_busy=lambda renderer_id: holder["who"] == renderer_id,
+        ladder=FAST_LADDER,
+    )
+
+    await supervisor.acquire("spotify")
+    assert supervisor.active == "spotify"
+
+
+@pytest.mark.asyncio
+async def test_an_unknown_renderer_still_raises_rather_than_being_refused():
+    """The gate is checked after the membership test, so a typo in a renderer
+    id stays a programming error rather than becoming a silent no-op."""
+    holder = {"who": None}
+    supervisor = Supervisor(
+        _three(holder),
+        device_busy=lambda renderer_id: holder["who"] == renderer_id,
+        ladder=FAST_LADDER,
+        enabled=lambda renderer_id: False,
+    )
+
+    with pytest.raises(ValueError):
+        await supervisor.acquire("airplay")

@@ -91,7 +91,7 @@ Phase 2 and ADR-0027.
 | Progress | [R] | **Appended and built 2026-09-24**, readonly, in George's own words: *"X out of Y processed (searched for), Z artist portraits found."* The third number matters - fanart has nothing for 43% of his album artists, so a run that ends at Y of Y with 57% found has worked |
 | `steps.per.degree` override | [R] | ADR-0015, deferred to a spike; may not survive as a user setting |
 | Theme | [R] | Should tier |
-| Headless — disable the local screen | [R] | Must |
+| Headless — disable the local screen | [R] | **Wired 2026-09-25** ([ADR-0077](0077-a-source-that-is-off-is-not-running.md)). Must. Three units, not one: the kiosk, the visualiser, and the panel warm-up that is pure boot cost without a kiosk to warm for. The core, the phone UI and audio are untouched. **Turning it on from the panel closes the panel**; it is reversible from a phone, and only from a phone. Measured on the device: 12 s to the panel gone, 20 s to it back |
 | Screen brightness | [N] | The panel never sleeps by decision (ADR-0019); brightness is a separate question that record does not answer |
 | Elapsed vs remaining time | [N] | Both are published |
 | Show the transition screen at all | [R] | **Wired 2026-09-25**, with the screen's length beside it. Off means a takeover changes screen with no announcement |
@@ -114,6 +114,7 @@ background that is a picture — which is the negated form
 
 | Setting | Mark | Notes |
 |---|---|---|
+| LMS on/off, Spotify Connect on/off, Bluetooth on/off | [R] | **Wired 2026-09-25** ([ADR-0077](0077-a-source-that-is-off-is-not-running.md)). Three rows the design has always carried and this inventory never listed - noticed when they were the last `R` rows left unwired ([Finding 068](../findings/068-what-is-left-unwired-in-settings.md)). Off means the renderer's unit is **stopped and disabled**, its adapter is not watching, the state reports it unavailable and arbitration refuses it; Bluetooth off also powers the radio down. A row only the panel honoured would not be a switch - all three sources are reachable without the panel. Proved on the hardware, all three ways and back |
 | LMS server address, or discovery | [R][H] | Must. Hardcoded to `192.168.178.188:9000` in `core.toml` today |
 | LMS player name | [H] | `gexis` |
 | Bluetooth pairing: PIN-free vs confirmation | [R] | **Decided and wired 2026-09-25.** George: *"confirmation is default, pin free as viable option."* The capability is fixed when the agent registers - `NoInputNoOutput` means BlueZ never asks at all - so changing this unregisters and registers again rather than waiting for a reboot. Proved on the hardware, both ways |

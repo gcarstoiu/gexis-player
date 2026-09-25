@@ -6,6 +6,7 @@ supervisor and every adapter for the process lifetime - this is
 from __future__ import annotations
 
 import asyncio
+import functools
 import logging
 from pathlib import Path
 
@@ -66,6 +67,7 @@ from gexis_core.settings_registry import Settings
 from gexis_core.splash import Splash
 from gexis_core.state import StateStore
 from gexis_core import bluealsa_volume, outputs
+from gexis_core.systemd import set_enabled as _set_unit_enabled
 from gexis_core.artwork_sweep import ArtworkSweep
 from gexis_core.bluealsa_volume import BluealsaVolume
 from gexis_core.remote_volume import RemoteVolume
@@ -93,7 +95,48 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(levelname
 #: How a renderer is named to a person. Only where the id is not simply its
 #: name capitalised, which today is LMS alone.
 RENDERER_LABELS = {"lms": "LMS"}
+
+#: **ADR-0077.** Which Settings row switches each source on and off. The three
+#: rows are `R` in ADR-0022's inventory - the design has always had them - and
+#: until 2026-09-25 they stored a value and switched nothing off.
+RENDERER_ROWS = {
+    "lms": "lms_enabled",
+    "spotify": "spotify_enabled",
+    "bluetooth": "bt_enabled",
+}
+
+#: **ADR-0077: `headless` turns off three units, not one.** The kiosk is the
+#: screen; the warm-up exists only to read the kiosk's binaries into the page
+#: cache and is pure boot cost without it; PeppyMeter has nowhere to draw. The
+#: core, the phone UI and audio are untouched.
+#: `now` is False for the warm-up: its own unit file says warming is pointless
+#: once the kiosk has started, so enabling it asks for it at the next boot
+#: rather than running it here.
+SCREEN_UNITS = (
+    ("gexis-kiosk.service", True),
+    ("gexis-panel-warmup.service", False),
+    ("gexis-peppy.service", True),
+)
+
+#: `bt_enabled` off powers the radio down as well as stopping the audio path,
+#: and this is the unit that unblocks rfkill and powers it up at boot - so it
+#: goes with it, or a reboot turns Bluetooth back on behind the row's back.
+BLUETOOTH_SETUP_UNIT = "gexis-bluetooth-setup.service"
+
 logger = logging.getLogger("gexis_core")
+
+
+async def set_unit_enabled(unit: str, enabled: bool, *, now: bool = True) -> None:
+    """`systemd.set_enabled` off the event loop.
+
+    Measured on the device 2026-09-25: `systemctl disable --now
+    go-librespot.service` took **7.0 s**, all of it stopping the unit, and run
+    inline that is 7 s in which the daemon answers nothing - no state pushes,
+    no panel, no phone. The renderer being switched off is the one thing that
+    is *expected* to take time, so this is the one call that must not be made
+    inline.
+    """
+    await asyncio.to_thread(functools.partial(_set_unit_enabled, unit, enabled, now=now))
 
 
 def _chosen_server(config: Config, store: SettingsStore) -> Config:
@@ -669,6 +712,9 @@ async def main() -> None:
         lms_adapter = adapters.get("lms")
         if lms_adapter is None or not hasattr(lms_adapter, "activate"):
             return
+        # ADR-0077: nothing reclaims the device for a source that is off.
+        if not renderer_enabled("lms"):
+            return
         try:
             await lms_adapter.activate()
             logger.info("reclaim: LMS taken back after the session ended")
@@ -700,6 +746,10 @@ async def main() -> None:
         restore_volume=restore_volume,
         on_active_change=lambda renderer_id: on_active_change(renderer_id),
         on_handoff_change=state_store.set_handoff,
+        # ADR-0077: a source that is switched off does not take the device,
+        # whatever fired - an event from an instance that had not died yet,
+        # `activate` from a phone, the reclaim above.
+        enabled=lambda renderer_id: renderer_enabled(renderer_id),
     )
 
     # ADR-0053's three channels. A renderer with a `set_volume` is driven
@@ -749,6 +799,12 @@ async def main() -> None:
     # wsserver.py so that module stays transport-only and knows nothing
     # about adapters or mixer scales.
     async def activate(renderer_id: str) -> bool:
+        # ADR-0077. The supervisor refuses it too, but refusing here means a
+        # renderer that is off is not woken up first and then ignored - LMS's
+        # `activate` powers a player on.
+        if not renderer_enabled(renderer_id):
+            logger.info("command: %s is switched off, not activating", renderer_id)
+            return False
         adapter = adapters[renderer_id]
         activate_method = getattr(adapter, "activate", None)
         if activate_method is None:
@@ -953,6 +1009,25 @@ async def main() -> None:
                # registers and `NoInputNoOutput` means BlueZ never asks.
                "bt_pairing": lambda mode: asyncio.ensure_future(_apply_pairing(mode)),
                "bt_autotrust": None,
+               # ADR-0077's three source toggles, wired 2026-09-25. Off stops
+               # and disables the renderer's unit, stops its adapter watching,
+               # reports it unavailable and makes arbitration refuse it - a row
+               # that only the panel honoured would not be a switch, because
+               # all three sources are reachable without the panel.
+               "lms_enabled": lambda _=None: asyncio.ensure_future(
+                   _apply_renderer("lms")
+               ),
+               "spotify_enabled": lambda _=None: asyncio.ensure_future(
+                   _apply_renderer("spotify")
+               ),
+               "bt_enabled": lambda _=None: asyncio.ensure_future(
+                   _apply_renderer("bluetooth")
+               ),
+               # ADR-0077. Turning this on from the panel closes the panel; it
+               # is reversible from a phone, and only from a phone.
+               "headless": lambda value: asyncio.ensure_future(
+                   _apply_headless(value)
+               ),
                "show_transition": None, "handoff_duration": None,
                # ADR-0052 §3: read on every map between a position and a
                # level, and re-applied here when it changes so the level
@@ -1083,10 +1158,134 @@ async def main() -> None:
             bus, pairing_agent, bluetooth_agent.capability_for(mode)
         )
 
+    def renderer_enabled(renderer_id: str) -> bool:
+        """**ADR-0077.** Whether that source is switched on.
+
+        Unset reads as on: the rows default to true and an absent value is a
+        device that has never been to Settings, not a device with no sources.
+        A row that is not in `RENDERER_ROWS` - a plugin renderer, one day - has
+        no switch and is always on.
+        """
+        row = RENDERER_ROWS.get(renderer_id)
+        if row is None:
+            return True
+        return settings.value(row) is not False
+
+    #: Set when a source row flips, so the run gates below re-read rather than
+    #: poll. One event for all three: a wakeup is cheap and a gate that finds
+    #: its own row unchanged goes straight back to waiting.
+    sources_changed = asyncio.Event()
+
+    async def _run_renderer(renderer_id: str, adapter, on_acquire, on_release) -> None:
+        """**Run the adapter while its row is on, and not while it is off**
+        (ADR-0077).
+
+        The gate is here rather than inside the adapter because ADR-0013 says
+        the three defaults implement the public plugin contract and are not
+        special-cased - a plugin that read a settings row named after itself to
+        decide whether to run would put that row in the contract. Whether a
+        renderer runs at all is the core's business.
+
+        Cancellation is the mechanism and it is safe to use: all three `run()`
+        methods catch `Exception`, not `BaseException`, so a cancel propagates
+        out of their retry loops instead of being swallowed and retried, and
+        each holds its connection in an `async with` that closes on the way
+        out. It also settles what would otherwise be permanent noise - with
+        `go-librespot` stopped, the Spotify adapter's watch retries every five
+        seconds forever, logging a warning each time.
+        """
+        task: asyncio.Task | None = None
+        try:
+            while True:
+                wanted = renderer_enabled(renderer_id)
+                if wanted and task is None:
+                    logger.info("sources: %s is on, watching", renderer_id)
+                    task = asyncio.ensure_future(adapter.run(on_acquire, on_release))
+                elif not wanted and task is not None:
+                    logger.info("sources: %s is off, stopping its watch", renderer_id)
+                    task.cancel()
+                    # The adapter is gone, so nothing will report this itself.
+                    # Said here rather than left at whatever it was, or the
+                    # panel keeps offering a source that is switched off.
+                    state_store.set_available(renderer_id, False)
+                    task = None
+                sources_changed.clear()
+                await sources_changed.wait()
+        finally:
+            if task is not None:
+                task.cancel()
+
+    async def _apply_renderer(renderer_id: str) -> None:
+        """A source row was written: make the device match it (ADR-0077)."""
+        on = renderer_enabled(renderer_id)
+        adapter = adapters.get(renderer_id)
+        if adapter is None:
+            return
+        # The unit first. Off, this stops the renderer and keeps it stopped
+        # across a reboot; on, it starts it and asks for it at the next boot
+        # too. Both are idempotent, so a row rewritten to the value it already
+        # had is a no-op rather than a restart.
+        await set_unit_enabled(adapter.unit_name, on)
+        if renderer_id == "bluetooth":
+            await set_unit_enabled(BLUETOOTH_SETUP_UNIT, on)
+            bus = await MessageBus(bus_type=BusType.SYSTEM).connect()
+            try:
+                await bluetooth_adapter_state.set_powered(bus, on)
+                if on:
+                    # Powering up does not restore what the row asked for, and
+                    # `gexis-bluetooth-setup.service` may not have re-run yet.
+                    await bluetooth_adapter_state.apply_discoverable(
+                        bus, settings.value("bt_discoverable") or "3 min after boot"
+                    )
+            finally:
+                bus.disconnect()
+        if not on:
+            state_store.set_available(renderer_id, False)
+        # Last, so the watch starts against a unit that is already running and
+        # stops after the unit it was watching has gone.
+        sources_changed.set()
+
+    async def _apply_headless(headless) -> None:
+        """**ADR-0077: `headless` turns off three units, not one.**
+
+        Turning this on from the panel closes the panel - that is the row doing
+        what it says, and it is reversible from a phone. The kiosk unit's own
+        `ExecStopPost` puts the text console back, so the screen shows a
+        console rather than a black panel nobody can tell from a failed boot.
+        """
+        wanted = not headless
+        logger.info("display: headless=%s, local screen %s", bool(headless), "on" if wanted else "off")
+        for unit, now in SCREEN_UNITS:
+            await set_unit_enabled(unit, wanted, now=now)
+
+    async def _reconcile_sources() -> None:
+        """**Make the device match the rows at startup** (ADR-0077).
+
+        Only the rows that are *off* are enforced. A row that is on wants what
+        the image ships - the unit enabled - so there is nothing to do, and
+        `enable --now` on every boot would re-run Bluetooth's power-up and
+        discoverability on top of `_bluetooth_setup` for no reason.
+
+        Off is enforced because the two can drift: the settings DB survives an
+        image update that re-enables the unit, and then the row would say off
+        while the renderer ran.
+        """
+        for renderer_id in RENDERER_ROWS:
+            if renderer_id in adapters and not renderer_enabled(renderer_id):
+                logger.info("sources: %s is off at startup, enforcing", renderer_id)
+                await _apply_renderer(renderer_id)
+        if settings.value("headless"):
+            await _apply_headless(True)
+
     async def _bluetooth_setup() -> None:
-        await _apply_discoverable(
-            settings.value("bt_discoverable") or "3 min after boot", attempts=10
-        )
+        # ADR-0077: nothing advertises a radio the row says is off. The agent
+        # below still registers - it costs nothing, and turning the row back on
+        # then has one rather than pairing falling back to whatever BlueZ's
+        # default answers.
+        if renderer_enabled("bluetooth"):
+            await _apply_discoverable(
+                settings.value("bt_discoverable") or "3 min after boot", attempts=10
+            )
         bus = await MessageBus(bus_type=BusType.SYSTEM).connect()
         pairing_bus.append(bus)
         await bluetooth_agent.register(
@@ -1099,6 +1298,7 @@ async def main() -> None:
         # to whatever answered before.
         await bus.wait_for_disconnect()
 
+    asyncio.ensure_future(_reconcile_sources())
     asyncio.ensure_future(_bluetooth_setup())
 
     # Phase 5 criteria 6 and 8 (ADR-0036). The meter process keeps running
@@ -1388,8 +1588,10 @@ async def main() -> None:
 
     logger.info("gexis-core starting: adapters=%s", list(adapters))
     await asyncio.gather(
+        # ADR-0077: through the gate, not directly - an adapter runs while its
+        # source row is on and not while it is off.
         *(
-            adapter.run(make_on_acquire(rid), make_on_release(rid))
+            _run_renderer(rid, adapter, make_on_acquire(rid), make_on_release(rid))
             for rid, adapter in adapters.items()
         ),
         volume_bridge.run(),

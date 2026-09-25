@@ -46,9 +46,9 @@ not wired.
 
 | group | row | mark | what it would take |
 | --- | --- | --- | --- |
-| sources | `lms_enabled` | R | stop arbitrating and starting a renderer that is off (ADR-0013) |
-| sources | `spotify_enabled` | R | as above |
-| sources | `bt_enabled` | R | as above |
+| sources | `lms_enabled` | R | ~~stop arbitrating and starting a renderer that is off (ADR-0013)~~ **wired 2026-09-25, [ADR-0077](../decisions/0077-a-source-that-is-off-is-not-running.md)** |
+| sources | `spotify_enabled` | R | ~~as above~~ **wired 2026-09-25** |
+| sources | `bt_enabled` | R | ~~as above~~ **wired 2026-09-25**, and it powers the radio down as well |
 | sources | `bt_pairing` | R | PIN-free vs confirmation. ADR-0024 leaves this `[?]` — **a decision is owed before wiring** |
 | sources | `bt_trusted` | R | view and forget remembered devices; clearing breaks reconnection |
 | sources | `bt_autotrust` | H | today `gexis-bluetooth-trust.service` does it unconditionally |
@@ -57,7 +57,7 @@ not wired.
 | handoff | `show_transition` | N | whether the takeover screen appears at all |
 | handoff | `handoff_threshold` | R H ? | ADR-0010's 1 s. The inventory calls it **evidence-gated rather than preference** |
 | handoff | `handoff_duration` | N | how long the takeover animation stays |
-| display | `headless` | R | disable the local screen entirely — Must tier |
+| display | `headless` | R | ~~disable the local screen entirely — Must tier~~ **wired 2026-09-25**, three units |
 | device | `version` | R ? | readonly and reporting **nothing**; the smallest of them |
 
 **Not on the list after all:** `wifi` and `bt_trusted`, which work through
