@@ -649,16 +649,30 @@ class StateServer:
             {str(artist_id): swept[artist_id] or photos.get(artist_id) for artist_id in swept}
         )
 
+    def swept_portrait_of(self, name: str | None, size: int) -> str | None:
+        """**The portrait ADR-0059's sweep found for a name** (ADR-0075).
+
+        The sweep stores by folded artist name, not by LMS id, because a
+        rescan renumbers the ids (Finding 029) - and a name is something
+        *every* renderer has. So this answers for a Spotify or Bluetooth
+        track as readily as for the library's own grid, whenever the artist
+        is one the sweep has been over.
+
+        It goes through LMS's image proxy, so the caller gets the size it
+        asked for and LMS does the fetching and the caching.
+        """
+        if self._library is None or not name:
+            return None
+        found = remembered(self._notes, ARTIST_NAMESPACE, fold(name))
+        if not found or found is True:
+            return None
+        return f"{self._library.base}/imageproxy/{found}/image_{size}x{size}_o.jpg"
+
     async def _swept_portrait(self, artist_id: int, size: int) -> str | None:
-        """**The portrait ADR-0059's sweep found**, or None if it found none.
+        """The same, for a caller that has an LMS id rather than a name.
 
-        The panel asks by LMS id and the sweep stores by folded name, because
-        a rescan renumbers the ids (Finding 029) - so the name comes from the
-        library, which already holds it and answers from one map built per
-        scan.
-
-        It goes through LMS's image proxy, so the grid gets the size it asked
-        for and LMS does the fetching and the caching.
+        The name comes from the library, which already holds it and answers
+        from one map built per scan.
         """
         if self._library is None:
             return None
@@ -666,12 +680,7 @@ class StateServer:
             name = await self._library.artist_name(artist_id)
         except Exception:
             return None
-        if not name:
-            return None
-        found = remembered(self._notes, ARTIST_NAMESPACE, fold(name))
-        if not found or found is True:
-            return None
-        return f"{self._library.base}/imageproxy/{found}/image_{size}x{size}_o.jpg"
+        return self.swept_portrait_of(name, size)
 
     async def _portrait(self, artist_id: int, lms_url, size: int):
         """**fanart's portrait if ADR-0059's sweep found one, LMS's otherwise.**
@@ -711,9 +720,12 @@ class StateServer:
                 artist_image=photos.get(artist_id),
                 sources=("lms",) if (biography or photos.get(artist_id)) else (),
             )
+        # **The sweep answers for fanart, so fanart is not asked** (ADR-0075).
+        swept = self.swept_portrait_of(name, PHOTO_LARGE)
         rest = await self._enrichment.for_track(
             TrackKey(artist=fold(name)),
             only=("fanart", "wikipedia", "listenbrainz", "popular"),
+            omit=("fanart",) if swept else (),
         )
         found = found.merged_with(rest)
         if rest.artist_image:
@@ -722,6 +734,10 @@ class StateServer:
             # text above is still LMS's where it has any - only the picture
             # changes hands.
             found = replace(found, artist_image=rest.artist_image)
+        # **And the sweep comes before fanart** (ADR-0075). It is the same
+        # picture, from the same place, already on this device.
+        if swept:
+            found = replace(found, artist_image=swept)
         return web.json_response({
             "artist": name,
             "enrichment": found.to_json(),
@@ -771,7 +787,18 @@ class StateServer:
         if key.is_empty():
             return web.json_response({"track": None, "enrichment": Enrichment().to_json()})
         pending: list[str] = []
-        found = await self._enrichment.for_track(key, renderer=state.active, pending=pending)
+        # **The sweep's portrait, for whatever is playing** (ADR-0075). It is
+        # keyed on the folded artist name, so a Spotify or Bluetooth track by
+        # an artist the sweep has been over gets its picture from this device
+        # rather than from a lookup - and fanart is not asked for a picture
+        # we are already holding.
+        swept = self.swept_portrait_of(state.metadata.artist, PHOTO_LARGE)
+        found = await self._enrichment.for_track(
+            key, renderer=state.active, pending=pending,
+            omit=("fanart",) if swept else (),
+        )
+        if swept:
+            found = replace(found, artist_image=swept)
         return web.json_response({
             # True when a provider had not finished: the panel asks again
             # rather than treating this as the final word.
