@@ -56,8 +56,19 @@
   // it - the registry's own default was raised to match rather than the
   // screen being quietly lengthened.
   const HANDOFF_MIN_MS = $derived(($settingValues.handoff_duration ?? 1.4) * 1000);
+  // **ADR-0078: the threshold is how long a takeover has to be in flight
+  // before the panel explains it.** ADR-0010 set 1s and nothing ever read it -
+  // the exempt list was compared against it once, by hand. A takeover that
+  // finishes inside the wait is never announced, which is what stops the
+  // screen being "a flicker - noise, not information". 0 announces every one
+  // immediately, exactly as this behaved before.
+  const HANDOFF_WAIT_MS = $derived(($settingValues.handoff_threshold ?? 1) * 1000);
   let shownHandoff = $state.raw(null);
   let handoffShownAt = 0;
+  // Two timers, not one: the wait before the screen appears and the hold that
+  // stops it flashing are both in flight at different moments, and a single
+  // handle let the hold cancel a wait that had not fired yet.
+  let handoffWait;
   let handoffTimer;
   $effect(() => {
     const h = $handoff;
@@ -65,15 +76,32 @@
     untrack(() => {
       clearTimeout(handoffTimer);
       if ($settingValues.show_transition === false) {
+        clearTimeout(handoffWait);
         shownHandoff = null;
         return;
       }
       if (h && !exempt) {
-        if (!shownHandoff) handoffShownAt = performance.now();
-        shownHandoff = h;
-      } else if (shownHandoff) {
-        const remaining = HANDOFF_MIN_MS - (performance.now() - handoffShownAt);
-        handoffTimer = setTimeout(() => (shownHandoff = null), Math.max(0, remaining));
+        if (shownHandoff) {
+          // Already up: a second takeover replaces what it says rather than
+          // restarting the wait.
+          shownHandoff = h;
+          return;
+        }
+        clearTimeout(handoffWait);
+        const show = () => {
+          handoffShownAt = performance.now();
+          shownHandoff = h;
+        };
+        if (HANDOFF_WAIT_MS <= 0) show();
+        else handoffWait = setTimeout(show, HANDOFF_WAIT_MS);
+      } else {
+        // The takeover is over. Anything still waiting is cancelled - it
+        // finished inside the threshold and is not announced at all.
+        clearTimeout(handoffWait);
+        if (shownHandoff) {
+          const remaining = HANDOFF_MIN_MS - (performance.now() - handoffShownAt);
+          handoffTimer = setTimeout(() => (shownHandoff = null), Math.max(0, remaining));
+        }
       }
     });
   });

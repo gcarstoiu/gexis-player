@@ -55,7 +55,7 @@ not wired.
 | handoff | `restore_transport` | R H | ADR-0027 plays only if it was playing |
 | handoff | `reclaim_lms` | N | ADR-0027 deliberately never does this; the row is the opt-in |
 | handoff | `show_transition` | N | whether the takeover screen appears at all |
-| handoff | `handoff_threshold` | R H ? | ADR-0010's 1 s. The inventory calls it **evidence-gated rather than preference** |
+| handoff | `handoff_threshold` | R H ? | ~~ADR-0010's 1 s. The inventory calls it **evidence-gated rather than preference**~~ **wired 2026-09-25, [ADR-0078](../decisions/0078-the-transition-screen-waits-for-the-threshold.md)** — George asked for the bar and the `?` is answered |
 | handoff | `handoff_duration` | N | how long the takeover animation stays |
 | display | `headless` | R | ~~disable the local screen entirely — Must tier~~ **wired 2026-09-25**, three units |
 | device | `version` | R ? | readonly and reporting **nothing**; the smallest of them |

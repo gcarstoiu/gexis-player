@@ -1021,6 +1021,10 @@ async def main() -> None:
                # are used - the adapter at a takeover, the panel for the
                # transition screen - so none needs a callback.
                "restore_transport": None, "reclaim_lms": None,
+               # ADR-0078: read by the panel, which is where the screen is
+               # drawn and therefore where the wait belongs. Nothing in the
+               # daemon has an opinion on it.
+               "handoff_threshold": None,
                # The agent reads both per request; `bt_pairing` also needs
                # BlueZ told, because the capability is fixed when the agent
                # registers and `NoInputNoOutput` means BlueZ never asks.

@@ -731,6 +731,24 @@ The paragraphs' own heights answer it.
 that cannot return false is not a test, and this one had already been
 deployed and measured as working.
 
+**38. The panel was still running the bundle from before the deploy**
+(2026-09-25). ADR-0078's threshold was probed on the device and reported
+**shown** for a handoff that should have been too short to announce - the
+change appearing not to work. `ui/dist` had been rsynced to `/opt/gexis-ui`
+and `gexis-core` restarted, but **restarting the daemon does not reload the
+page**: Chromium was still running the JavaScript it had loaded before the
+deploy, so the probe measured the old behaviour faithfully.
+
+**A restart of the thing that serves the panel is not a restart of the
+panel.** One `Page.navigate` to the same URL and all five cases came out as
+designed.
+
+This is case 36 from the other side. There, the change *was* in the panel and
+I explained away the residual; here, the residual was real and the change was
+not in the panel. Both are answered by the same question, which is now the
+first step of the probe rather than an afterthought: **is the code I am
+measuring the code I deployed?**
+
 ## Common shape
 
 Every case had a *plausible* substitute for the real target — the build
