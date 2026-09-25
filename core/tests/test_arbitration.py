@@ -799,3 +799,77 @@ async def test_switching_off_the_active_renderer_leaves_nobody_holding_it():
     # must not swallow it: `relinquish` is release, not acquisition.
     await supervisor.relinquish("spotify")
     assert supervisor.active is None
+
+
+# --- ADR-0089: a renderer that arrives after construction --------------------
+
+
+@pytest.mark.asyncio
+async def test_a_plugin_renderer_can_be_registered_and_then_acquires():
+    """**ADR-0089.** The supervisor's adapters used to be fixed at
+    construction, and `acquire` raised `ValueError` for anything else - which
+    is where a plugin renderer stopped being a renderer."""
+    supervisor, _, holder = build()
+    plexamp = FakeAdapter("plexamp", ReleaseAction.DISCONNECT, holder)
+
+    with pytest.raises(ValueError):
+        await supervisor.acquire("plexamp")
+
+    supervisor.register(plexamp)
+    await supervisor.acquire("plexamp")
+    assert supervisor.active == "plexamp"
+
+
+@pytest.mark.asyncio
+async def test_a_duplicate_id_is_refused_not_replaced():
+    """Replacing the adapter of a renderer that currently holds the device
+    would leave the release ladder talking to a connection that never acquired
+    anything."""
+    supervisor, adapters, holder = build()
+    with pytest.raises(ValueError):
+        supervisor.register(FakeAdapter("lms", ReleaseAction.PAUSE, holder))
+    assert supervisor._adapters["lms"] is adapters["lms"]
+
+
+@pytest.mark.asyncio
+async def test_a_plugin_that_goes_away_stops_being_active():
+    """A renderer that is no longer here cannot be the active one. The change
+    is published the way any other release is."""
+    seen = []
+    supervisor, _, holder = build()
+    supervisor._on_active_change = lambda who: seen.append(who)
+    supervisor.register(FakeAdapter("plexamp", ReleaseAction.DISCONNECT, holder))
+    await supervisor.acquire("plexamp")
+    seen.clear()
+
+    supervisor.forget("plexamp")
+    assert supervisor.active is None
+    assert seen == [None]
+    with pytest.raises(ValueError):
+        await supervisor.acquire("plexamp")
+
+
+@pytest.mark.asyncio
+async def test_forgetting_a_renderer_that_is_not_active_leaves_the_active_one_alone():
+    supervisor, _, holder = build(active="lms")
+    supervisor.register(FakeAdapter("plexamp", ReleaseAction.DISCONNECT, holder))
+    supervisor.forget("plexamp")
+    assert supervisor.active == "lms"
+
+
+@pytest.mark.asyncio
+async def test_forgetting_something_that_was_never_registered_is_quiet():
+    """A session refused during the handshake never registered, and the
+    disconnect path must not care."""
+    supervisor, _, _ = build(active="lms")
+    supervisor.forget("never-here")
+    assert supervisor.active == "lms"
+
+
+@pytest.mark.asyncio
+async def test_the_callers_adapter_dict_is_not_mutated():
+    """`__main__` reads its own `adapters` elsewhere for the three built-ins'
+    wiring; registering a plugin must not appear in it."""
+    supervisor, adapters, holder = build()
+    supervisor.register(FakeAdapter("plexamp", ReleaseAction.DISCONNECT, holder))
+    assert set(adapters) == {"lms", "spotify", "bluetooth"}

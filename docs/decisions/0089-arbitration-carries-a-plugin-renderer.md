@@ -1,8 +1,9 @@
 # ADR-0089 — Arbitration carries a plugin renderer
 
-**Status:** Proposed — the first work of Phase 11, and the thing
-`docs/PLUGIN-CONTRACT.md` names first in its own open list. Nothing is built
-yet.
+**Status:** **Accepted and built**, 2026-09-25 — the first work of Phase 11, and
+the thing `docs/PLUGIN-CONTRACT.md` named first in its own open list. **Not yet
+exercised by a real renderer**: that is Plexamp, and until it has happened the
+renderer half of the contract is still provisional.
 **Date:** 2026-09-25
 **Raised by:** George, 2026-09-25: *"start 11, with the aim as having plexamp as
 the new renderer as a plugin."* Phase 10 closed with the renderer half of the

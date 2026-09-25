@@ -68,6 +68,7 @@ from gexis_core.settings_registry import Settings, load_registry
 from gexis_core.splash import Splash
 from gexis_core.state import StateStore
 from gexis_core import backups, bluealsa_volume, outputs, plugin_env, plugins
+from gexis_core.adapters.plugin import PluginAdapter
 from gexis_core.plugin_server import PluginServer
 from gexis_core.systemd import is_enabled as _unit_is_enabled
 from gexis_core.systemd import set_enabled as _set_unit_enabled
@@ -1921,19 +1922,56 @@ async def main() -> None:
         and not adapter.capabilities.volume_over_bluealsa
     }
 
+    #: A connected renderer plugin's adapter, by id (ADR-0089). Only ever holds
+    #: what is connected right now: a plugin that goes away is forgotten by the
+    #: supervisor in the same breath.
+    plugin_adapters: dict[str, PluginAdapter] = {}
+
     def _plugin_connected(session) -> None:
-        """**ADR-0084/0086.** A plugin said it is running.
+        """**ADR-0084/0086/0089.** A plugin said it is running.
 
         A `service` needs nothing further - being connected is the whole of
-        what it does, which is the point of the `kind` split. A `renderer`
-        will need an adapter built around this session and registered with the
-        supervisor; that is the next piece and is deliberately not faked here.
+        what it does, which is the point of the `kind` split. A `renderer` gets
+        an adapter built around this session and registered with the
+        supervisor, which is what makes it a renderer rather than a connection.
+
+        **A declaration this core cannot act on costs the plugin its
+        connection**, not its arbitration: a renderer that was registered with
+        wrong capabilities would be offered on the panel, chosen, and then fail
+        to do what it said.
         """
-        if session.kind == "renderer":
-            logger.info(
-                "plugins: %s is a renderer and arbitration does not carry plugins "
-                "yet - it is connected and idle", session.id,
-            )
+        if session.kind != "renderer":
+            return
+        # Raising here refuses the connection and puts the reason on the wire:
+        # the server calls this before `welcome` precisely so it can.
+        adapter = PluginAdapter(session)
+        supervisor.register(adapter)
+        plugin_adapters[session.id] = adapter
+        # The adapter parks - the socket is its watch - but `run` is still what
+        # holds its callbacks, and the supervisor's lifecycle is written around
+        # a task per renderer.
+        adapter.task = asyncio.ensure_future(
+            adapter.run(make_on_acquire(session.id), make_on_release(session.id))
+        )
+        state_store.set_available(session.id, True)
+        logger.info("plugins: %s is a renderer and arbitration carries it", session.id)
+
+    def _plugin_disconnected(session) -> None:
+        """**The renderer is gone** (ADR-0089).
+
+        Forgotten by the supervisor, which clears `active` if it was the active
+        one, and marked unavailable - the panel must not keep offering a source
+        whose process has left.
+        """
+        adapter = plugin_adapters.pop(session.id, None)
+        if adapter is None:
+            return
+        task = getattr(adapter, "task", None)
+        if task is not None:
+            task.cancel()
+        supervisor.forget(session.id)
+        if session.id in state_store.state.available:
+            state_store.set_available(session.id, False)
 
     def _plugin_event(session, kind: str, message: dict) -> None:
         # Availability is the one event that means something without an
@@ -1942,12 +1980,25 @@ async def main() -> None:
         if kind == "available" and session.id in state_store.state.available:
             state_store.set_available(session.id, bool(message.get("available")))
             return
+        adapter = plugin_adapters.get(session.id)
+        if adapter is not None:
+            # **ADR-0089: the socket is the watch.** These two are the edges
+            # every other adapter finds by watching D-Bus or a WebSocket, and
+            # they go the same place - `supervisor.acquire` and `relinquish`,
+            # through the same callbacks `run` was handed.
+            if kind == "acquire":
+                adapter.on_acquire()
+                return
+            if kind == "release":
+                adapter.on_release()
+                return
         logger.debug("plugins: %s sent %s", session.id, kind)
 
     plugin_server = PluginServer(
         installed_plugins,
         on_event=_plugin_event,
         on_connect=_plugin_connected,
+        on_disconnect=_plugin_disconnected,
         # ADR-0086: a plugin's rows outlive its process, so it is handed
         # their current values rather than coming up on its own defaults.
         settings_for=lambda plugin_id: {

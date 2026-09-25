@@ -6,11 +6,17 @@
 **Carried by:** a Unix socket at `/run/gexis/plugins.sock`, one JSON object per
 line ([ADR-0084](decisions/0084-plugins-speak-json-lines-over-a-unix-socket.md)).
 
-> **Why it is a draft.** Phase 10 freezes this **after** a non-renderer has
-> been built against it, not before. `docs/DEVELOPMENT.md`: *"If the contract
-> cannot express that, it is a renderer API wearing a plugin's name."* A
-> Beszel agent is that test. Until it has been written, every field below is
-> provisional.
+> **Why it is still a draft.** Phase 10 required a non-renderer built against
+> this before freezing — *"if the contract cannot express that, it is a renderer
+> API wearing a plugin's name."* **The Beszel agent was that test and it passed,
+> having first forced two amendments**: every plugin gets a switch (ADR-0086),
+> and a plugin's settings reach its unit as environment (ADR-0088).
+>
+> **The freeze moved to Phase 11 with criterion 2**, because the *renderer* half
+> of this document has never been spoken by a renderer. Freezing it here would
+> freeze a protocol nothing has used, which is the same mistake in the other
+> direction. Everything about a `service` is settled; everything about a
+> `renderer` is provisional until Plexamp has used it.
 
 ## What this is, and what it is not
 
@@ -267,12 +273,25 @@ configuration from the environment like most daemons do.
   writable plugin directory, a checksummed download and a rule about who may
   ask. ADR-0016's lifecycle consequence survives as *installation*, not as
   *starting*.
-- **Arbitration for a plugin renderer.** The socket carries `acquire`,
-  `release` and the commands; what does not exist yet is the adapter built
-  around a session and registered with the supervisor. A `renderer` that
-  connects today is welcomed and idle, and the log says so. A `service` is
-  complete — and a service that only wants a unit managed and some values
-  exported never opens this socket at all.
+- ~~**Arbitration for a plugin renderer.**~~ **Built**
+  ([ADR-0089](decisions/0089-arbitration-carries-a-plugin-renderer.md)): a
+  `renderer` that connects gets an adapter built around its session and
+  registered with the supervisor, and its `acquire` and `release` reach
+  arbitration the way the three built-ins' events do. **Not yet exercised by a
+  real renderer** — that is Phase 11's Plexamp, and until it has happened this
+  document stays a draft.
+
+  Three things worth knowing before writing one:
+
+  - **Your `hello` is validated and a bad one costs you the connection**, with
+    the reason on the wire. A renderer registered with wrong capabilities would
+    be offered on the panel, chosen, and then fail to do what it said.
+  - **The manifest owns your unit name.** You may repeat it in `hello`; you may
+    not disagree with it.
+  - **`signal_stop` is a command and a core-side action**, not either/or. You
+    are told first, and the core then acts on your unit regardless — so
+    disconnecting cannot strand the audio device, and answering `true` without
+    doing anything does not fool the ladder.
 - **Authentication.** The socket's permissions are the model (ADR-0084).
 - **Anything about themes.** ADR-0016 lists them as plugins and a theme has no
   process; Phase 14 settles that before anything is built.

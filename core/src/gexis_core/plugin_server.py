@@ -222,17 +222,41 @@ class PluginServer:
                 writer, f"{plugin.id} says it is a {hello['kind']!r} and its manifest "
                         f"says {plugin.kind!r}")
             return None
+        if hello.get("unit") and hello["unit"] != plugin.unit:
+            # **The manifest owns the unit name** (ADR-0089). The release
+            # ladder attributes a still-busy device to it, so a renderer that
+            # could name its own at runtime could point process-level
+            # escalation at any unit on the device. Refused rather than
+            # ignored, because a plugin that believes it named something is
+            # a plugin whose author needs to hear otherwise.
+            await self._refuse(
+                writer, f"{plugin.id} says its unit is {hello['unit']!r} and its "
+                        f"manifest says {plugin.unit!r} - the manifest is the one "
+                        f"the release ladder uses")
+            return None
 
         session = Session(plugin, hello, writer)
         self.sessions[plugin.id] = session
+        if self._on_connect is not None:
+            # **Before `welcome`, and allowed to refuse** (ADR-0089). The
+            # daemon builds a renderer's adapter here, and a declaration it
+            # cannot act on has to cost the plugin its connection rather than
+            # its arbitration: a renderer registered with wrong capabilities
+            # would be offered on the panel, chosen, and then fail to do what
+            # it said. This module still knows nothing about adapters - it
+            # calls a callable and reports what came back.
+            try:
+                self._on_connect(session)
+            except Exception as exc:  # noqa: BLE001 - the reason goes on the wire
+                self.sessions.pop(plugin.id, None)
+                await self._refuse(writer, f"{plugin.id}: {exc}")
+                return None
         welcome = {"t": "welcome", "contract": self._contract}
         if self._settings_for is not None:
             welcome["settings"] = self._settings_for(plugin.id)
         session._write(welcome)
         await writer.drain()
         logger.info("plugins: %s connected (%s)", plugin.id, plugin.kind)
-        if self._on_connect is not None:
-            self._on_connect(session)
         return session
 
     async def _listen(self, session: Session, reader) -> None:

@@ -108,6 +108,11 @@ async def test_a_service_needs_nothing_a_renderer_needs(tmp_path):
     ({"t": "acquire"}, "not 'hello'"),
     ({"t": "hello", "contract": CONTRACT, "id": "plexamp", "kind": "service"},
      "its manifest says"),
+    # **ADR-0089: the manifest owns the unit name.** The release ladder
+    # attributes a still-busy device to it, so a renderer that could name its
+    # own at runtime could point process-level escalation at any unit here.
+    ({"t": "hello", "contract": CONTRACT, "id": "plexamp", "unit": "sshd.service"},
+     "the release ladder uses"),
 ])
 async def test_what_is_refused_and_why(tmp_path, hello, because):
     """Refused **on the wire**, with a reason. The log is on a device the
@@ -273,3 +278,40 @@ async def test_the_socket_is_not_world_writable(tmp_path):
     """ADR-0084: the permission on the socket is the authorisation."""
     async with Harness(tmp_path) as h:
         assert h.path.stat().st_mode & 0o007 == 0
+
+
+@pytest.mark.asyncio
+async def test_a_unit_that_matches_the_manifest_is_fine(tmp_path):
+    """Saying it is allowed; disagreeing is not. A plugin author who writes it
+    twice should not be punished for agreeing with themselves."""
+    async with Harness(tmp_path) as h:
+        reader, writer = await h.connect()
+        await _say(writer, {"t": "hello", "contract": CONTRACT, "id": "plexamp",
+                            "unit": h.server._installed["plexamp"].unit})
+        assert (await _hear(reader))["t"] == "welcome"
+        writer.close()
+
+
+@pytest.mark.asyncio
+async def test_on_connect_can_refuse_the_connection(tmp_path):
+    """**ADR-0089.** The daemon builds a renderer's adapter in `on_connect`,
+    and a declaration it cannot act on has to cost the plugin its connection
+    rather than its arbitration - a renderer registered with wrong capabilities
+    would be offered on the panel, chosen, and then fail to do what it said.
+
+    So it runs **before** `welcome`, and this module still knows nothing about
+    adapters: it calls a callable and reports what came back.
+    """
+    async with Harness(tmp_path) as h:
+        def refuse(session):
+            raise ValueError("unknown controls: ['fly']")
+
+        h.server._on_connect = refuse
+        reader, writer = await h.connect()
+        await _say(writer, {"t": "hello", "contract": CONTRACT, "id": "plexamp"})
+        answer = await _hear(reader)
+        assert answer["t"] == "refused"
+        assert "unknown controls" in answer["reason"]
+        # And it left nothing behind: a refused plugin is not connected.
+        assert "plexamp" not in h.server.sessions
+        writer.close()

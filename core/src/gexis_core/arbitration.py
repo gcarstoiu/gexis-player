@@ -106,7 +106,10 @@ class Supervisor:
         """
         if not adapters:
             raise ValueError("supervisor needs at least one adapter")
-        self._adapters = adapters
+        # Copied, not aliased: `register` and `forget` mutate this (ADR-0089)
+        # and the caller's dict is its own - `__main__`'s `adapters` is read
+        # elsewhere for the three built-ins' wiring.
+        self._adapters = dict(adapters)
         self._device_busy = device_busy
         self._ladder = ladder or TimeoutLadder()
         self._restore_volume = restore_volume
@@ -132,6 +135,50 @@ class Supervisor:
         # distinction is called out rather than left to the type.
         self._active: str | None = None
         self._lock = asyncio.Lock()
+
+    def register(self, adapter: Adapter) -> None:
+        """**Add a renderer after construction** (ADR-0089).
+
+        A plugin arrives minutes after this object is built and can leave at
+        any moment; the three built-ins are passed in at construction and never
+        move. Everything else about the supervisor is unchanged - the lock, the
+        ladder, the ADR-0077 gate, `device_busy`.
+
+        **A duplicate id is refused, not replaced.** ADR-0084's handshake
+        already refuses a second session for one plugin id; this is the same
+        rule stated where the consequence would be worst, because replacing the
+        adapter of a renderer that currently holds the device would leave the
+        release ladder talking to a connection that never acquired anything.
+        """
+        if adapter.renderer_id in self._adapters:
+            raise ValueError(f"{adapter.renderer_id!r} is already registered")
+        self._adapters[adapter.renderer_id] = adapter
+        logger.info("arbitration: %s registered", adapter.renderer_id)
+
+    def forget(self, renderer_id: str) -> None:
+        """**The renderer is gone** (ADR-0089) - its plugin disconnected.
+
+        Not `unregister`, because the word that matters is what happens to the
+        device: a renderer that is no longer here cannot be the active one, so
+        this clears `active` if it was, which publishes the change the way any
+        other release does.
+
+        **A plugin disconnecting is not the same as its renderer stopping.** If
+        the plugin process dies while its renderer plays on, this makes the
+        published state wrong until the next acquisition - at which point
+        `device_held_by` still attributes the device to that unit and the
+        ladder escalates against it. ADR-0089 takes that deliberately: the
+        alternative is polling the device to second-guess our own model.
+
+        Unknown ids are ignored. A session that is refused during the handshake
+        never registered, and the disconnect path must not care.
+        """
+        if self._adapters.pop(renderer_id, None) is None:
+            return
+        logger.info("arbitration: %s is gone", renderer_id)
+        if self._active == renderer_id:
+            self._active = None
+            self._notify_active_change()
 
     @property
     def active(self) -> str | None:
