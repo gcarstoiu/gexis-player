@@ -114,11 +114,6 @@
         "surfaced": false
       },
       {
-        "type": "group",
-        "label": "Pictures from fanart.tv",
-        "accent": "#7ed6bc"
-      },
-      {
         "key": "sweep_portraits",
         "type": "action",
         "label": "Update artist portraits",
