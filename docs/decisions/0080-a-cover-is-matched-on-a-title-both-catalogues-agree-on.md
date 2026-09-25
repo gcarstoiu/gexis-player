@@ -1,6 +1,8 @@
 # ADR-0080 — A cover is matched on a title both catalogues agree on
 
-**Status:** Accepted
+**Status:** Accepted, **amended the same day on the device** — see
+*Amendment* below. The modifiers George named are real and are the smaller
+half; the query was also being *folded*, which was costing more.
 **Date:** 2026-09-25
 **Relates to:** [ADR-0040](0040-enrichment-providers.md) §2 (the cover
 providers), [ADR-0012](0012-enrichment-additive-only.md) (a wrong cover is worse
@@ -87,6 +89,47 @@ panel must display and look up by. Reduction is *for matching only* — the
 sweep's own docstring says so, and it is the reason the sweep stores what it
 finds under the library's title rather than the catalogue's.
 
+## Amendment, 2026-09-25 — the query was folded
+
+**Written after this record was implemented and tested on the device**, where
+the fix did not work and the reason was not the modifiers.
+
+`TrackKey.album` is **folded** — that is what it is for, a cache key that two
+spellings cannot split. It was also what went into the query, as a quoted
+phrase, against an index that holds the title's own characters. Measured
+against MusicBrainz directly:
+
+| query | result |
+|---|---|
+| `artist:"Sting" AND releasegroup:"57th & 9th"` | **100**, exact |
+| `artist:"sting" AND releasegroup:"57th 9th"` | **nothing** |
+
+Folding removes the `&`, and the phrase then matches nothing at all. Worse,
+folding is ASCII-only: `100 Jahre Strauß` becomes `100 jahre strau` — the `ß`
+is dropped rather than transliterated.
+
+**On George's library, 1,423 of 4,567 albums (31.2 %) carry a character
+folding removes**, against 506 (11.1 %) carrying a modifier. The two overlap
+very little: 1,435 albums, **31.4 %**, are affected by one or the other.
+
+So the decision above stands with one correction running through it: **both
+asks carry the title's own characters.**
+
+- `TrackKey` gains `raw_artist` as well as `raw_album` — `AC/DC` folds to
+  `ac dc` for the same reason and at the same cost.
+- The first ask uses the raw album and the raw artist.
+- The second uses **`trim_title`**, a new sibling of `match_title` that strips
+  the brackets and the edition phrase **without folding**, so `57th & 9th
+  (Deluxe Edition)` becomes `57th & 9th` and keeps the ampersand that makes it
+  findable.
+- `match_title` keeps its job unchanged: comparing two catalogues, where
+  folding is right because both sides get it. It is what verifies the second
+  answer.
+
+**This is why the record says what it says about verification.** The check was
+added for the trimming; it turns out to be carrying the heavier load, because
+the raw query is exact and the trimmed one is where all the risk now lives.
+
 ## Consequences
 
 - An album that already resolves is unaffected: it is found on the first ask,
@@ -100,4 +143,5 @@ finds under the library's title rather than the catalogue's.
 
 - **The hit rate.** This record says the matcher was asking the wrong
   question; it does not predict how many more covers the right question finds.
-  That needs a measurement against George's own library.
+  Measured separately against George's own library — see
+  [Finding 072](../findings/072-the-album-titles-the-matcher-could-not-use.md).

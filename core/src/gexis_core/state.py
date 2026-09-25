@@ -12,6 +12,7 @@ active does not spam a broadcast nobody's screen would show.
 from __future__ import annotations
 
 import logging
+from dataclasses import replace
 from typing import Callable, Mapping
 
 from gexis_core.adapters.base import Capabilities
@@ -59,6 +60,14 @@ class StateStore:
         self._settings_revision = 0
         self._pictures_revision = 0
         self._pairing: dict | None = None
+        #: **ADR-0081: the cover the daemon found for a renderer that sent
+        #: none.** `renderer_id -> (track, url)`, applied in `state` below
+        #: only where the renderer's own artwork is absent. Keyed on the
+        #: track, not just the renderer: held per renderer and applied blind,
+        #: a found cover would attach to the *next* Bluetooth track for as
+        #: long as the next lookup took, and a wrong cover on screen is worse
+        #: than none (ADR-0012).
+        self._found_artwork: dict[str, tuple[tuple[str, str, str], str]] = {}
         self._subscribers: list[Callable[[PlaybackState], None]] = []
 
     def subscribe(self, callback: Callable[[PlaybackState], None]) -> None:
@@ -69,9 +78,21 @@ class StateStore:
         """
         self._subscribers.append(callback)
 
+    @staticmethod
+    def _track_of(metadata: TrackMetadata) -> tuple[str, str, str]:
+        """What `_found_artwork` is keyed on - enough to say "this is still
+        the same track" and nothing that ticks while it plays."""
+        return (metadata.artist or "", metadata.album or "", metadata.title or "")
+
     @property
     def state(self) -> PlaybackState:
         metadata = self._metadata.get(self._active, BLANK_METADATA) if self._active else BLANK_METADATA
+        # ADR-0081. The renderer's own cover always wins; this fills the hole
+        # where there is one, and only for the track it was found for.
+        if self._active and metadata.artwork is None:
+            found = self._found_artwork.get(self._active)
+            if found is not None and found[0] == self._track_of(metadata):
+                metadata = replace(metadata, artwork=found[1])
         return PlaybackState(
             active=self._active,
             queue=self._queues.get(self._active) if self._active else None,
@@ -114,6 +135,35 @@ class StateStore:
         if self._queues.get(renderer_id) == queue:
             return
         self._queues[renderer_id] = queue
+        if renderer_id == self._active:
+            self._notify()
+
+    def set_found_artwork(self, renderer_id: str, metadata: TrackMetadata, url: str | None) -> None:
+        """**A cover found for a track the renderer sent none for**
+        (ADR-0081). Remembered against that track, so it cannot outlive it.
+
+        `None` forgets, which is what a lookup that found nothing says: it
+        stops a previous track's cover from applying if the metadata ever
+        folds back to it.
+        """
+        if renderer_id not in self._available:
+            raise ValueError(f"unknown renderer {renderer_id!r}")
+        track = self._track_of(metadata)
+        was = self._found_artwork.get(renderer_id)
+        if url is None:
+            if was is None:
+                return
+            del self._found_artwork[renderer_id]
+        else:
+            if was == (track, url):
+                return
+            self._found_artwork[renderer_id] = (track, url)
+        logger.info(
+            "state: %s cover for %s - %s",
+            "found a" if url else "forgot the",
+            track[2] or "nothing playing",
+            url or "",
+        )
         if renderer_id == self._active:
             self._notify()
 

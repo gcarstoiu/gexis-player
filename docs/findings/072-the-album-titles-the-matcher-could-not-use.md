@@ -4,6 +4,8 @@
 **Question:** George, 2026-09-25: *"not that many album arts are found. Might
 be that the album name contains modifiers that could be excluded."* How many
 of his albums carry one?
+**Amended the same day**, on the device: the modifiers are the *smaller*
+half. See §2.
 **Scope:** every album LMS holds for George — **4,567** — read from
 `slim.request ["albums","0","30000"]` on 2026-09-25 and put through `fold`
 (what the cover provider asked with until today) and `match_title` (what it
@@ -11,7 +13,7 @@ asks with now, per [ADR-0080](../decisions/0080-a-cover-is-matched-on-a-title-bo
 **A count of titles, not of covers**: it measures the gap the matcher could
 not reach, not how many covers exist behind it.
 
-## Result
+## 1. The modifiers George named
 
 | | albums | share |
 |---|---|---|
@@ -38,7 +40,7 @@ A sample of what changes:
 went and every modifier word stayed, and that is what was sent to MusicBrainz
 as a quoted phrase.
 
-## Where the reduction over-reaches
+### Where the reduction over-reaches
 
 `_EDITION` cuts from the first edition word to the end of the title, which is
 right for `Nevermind Deluxe Edition` and wrong here:
@@ -60,11 +62,70 @@ them discs of one release (`A Boy from Tupelo - CD 1/2/3`), case variants, or
 an edition beside its plain issue. Those collide onto the same cover, which is
 the right cover.
 
+## 2. The bigger half: the query was folded
+
+**Found by testing the fix on the device, where it did not work.** The album
+went into MusicBrainz as a *quoted phrase* built from `TrackKey.album`, which
+is **folded** — that is what the field is for, a cache key two spellings
+cannot split. The index holds the title's own characters. Asked directly:
+
+| query | result |
+|---|---|
+| `artist:"Sting" AND releasegroup:"57th & 9th"` | **100**, exact |
+| `artist:"sting" AND releasegroup:"57th 9th"` | **nothing** |
+| `artist:"sting" AND releasegroup:(57th 9th)` | 100 (unquoted, so not a phrase) |
+
+Folding removes the `&` and the phrase then matches nothing. And folding is
+ASCII-only, so it does worse than remove punctuation:
+
+```
+'100 Jahre Strauß'      -> '100 jahre strau'      (the ß is dropped, not transliterated)
+'1,039/Smoothed Out Slappy Hours' -> '1 039 smoothed out slappy hours'
+'100%'                  -> '100'
+```
+
+| | albums | share |
+|---|---|---|
+| folding changes more than case | **1,423** | **31.2 %** |
+| carries a modifier (§1) | 506 | 11.1 % |
+| **one or the other** | **1,435** | **31.4 %** |
+
+The two barely overlap. **The modifiers are 11 % and the folding is 31 %**,
+and the folding was invisible because nobody had asked MusicBrainz what it
+does with a phrase.
+
+## 3. What it is worth: 40 albums, old query against new
+
+A random sample of 40 artist/album pairs from the library (seeded, so it can
+be repeated), each asked both ways against the live MusicBrainz and Cover Art
+Archive.
+
+| | found |
+|---|---|
+| old: one ask, both fields folded | **27 / 40** |
+| new: raw, then trimmed and verified | **32 / 40** |
+
+**Five gained, none lost.** The one album that came back `UNAVAILABLE` on the
+new path — David Bowie's *Hours* — was a transient, and is `FOUND` on a
+re-ask; it is counted here as found.
+
+What was gained says which half did the work:
+
+```
+Above & Beyond           Common Ground                    ampersand in the artist
+Nick Cave & The Bad Se…  The Good Son                     ampersand in the artist
+Snap!                    Snap! Attack: The Best of Snap!… punctuation
+blink-182                California                       hyphen in the artist
+Black Sabbath            Sabotage (2021 - Remaster)       a modifier, George's own case
+```
+
+**Four of the five are the artist or the punctuation, not the modifier.**
+
 ## What this does not tell us
 
-- **How many more covers this finds.** That needs the lookups run, and
-  MusicBrainz is rate-limited to one request a second. 11.1 % is the share of
-  titles that were being asked about wrongly — the ceiling, not the yield.
+- **Whether 40 is enough.** It is a sample, seeded and repeatable, not the
+  library. 5 of 40 is a wide interval; the direction is not in doubt and the
+  size is.
 - **Anything about the library sweep.** The sweep has had `match_title` since
   2026-09-24 and already matches this way; this finding is about the
   *enrichment* path, which is what a Bluetooth or Spotify track uses.

@@ -768,6 +768,26 @@ building the screen that had to render that state to see it.
 **What to add to a pass that switches something off: ask what the thing now
 says about itself**, not only whether it stopped.
 
+**40. The query was folded, and nobody had asked the catalogue** (2026-09-25).
+George reported that few album covers were found and offered a diagnosis -
+the album names carry modifiers. He was right, and acting on it alone would
+have fixed the smaller half and closed the question. The modifiers are
+**11.1 %** of his albums. What was costing **31.2 %** sat next to it: the
+album went to MusicBrainz as a *quoted phrase* built from the folded title,
+and `releasegroup:"57th & 9th"` scores 100 where `"57th 9th"` returns nothing
+at all.
+
+**It was invisible because nobody had asked MusicBrainz what it does with a
+phrase.** The reasoning about modifiers was sound, the code change followed
+from it, the unit tests passed against a fake that answered on whatever
+string it was given - and the fake could not have caught it, because the fake
+was not MusicBrainz. It took one throwaway request to the real service.
+
+**A user's diagnosis is a report of a symptom plus a hypothesis.** The
+symptom is evidence; the hypothesis is a lead, and confirming it is not the
+same as exhausting it. Ask the external thing what it actually does before
+concluding the story is the one you were handed.
+
 ## Common shape
 
 Every case had a *plausible* substitute for the real target — the build

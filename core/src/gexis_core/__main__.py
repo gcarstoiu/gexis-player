@@ -119,6 +119,14 @@ SCREEN_UNITS = (
     ("gexis-peppy.service", True),
 )
 
+#: **ADR-0081: how many times the daemon looks for a cover.** `for_track`
+#: answers with what it has after its own wait and lets a slow provider finish
+#: behind it, caching the result - so one ask can return nothing for a track
+#: whose cover arrives a second later. Three looks, six seconds apart, which
+#: is the panel's own shape in `enrichment.js` for the same reason.
+COVER_LOOKS = 3
+COVER_LOOK_BACK_S = 6.0
+
 #: `bt_enabled` off powers the radio down as well as stopping the audio path,
 #: and this is the unit that unblocks rfkill and powers it up at boot - so it
 #: goes with it, or a reboot turns Bluetooth back on behind the row's back.
@@ -1388,6 +1396,44 @@ async def main() -> None:
 
     previous_active = state_store.state.active
 
+    async def _find_cover(renderer_id: str, metadata) -> None:
+        """**The cover for a track the renderer sent none for** (ADR-0081).
+
+        Through the same `EnrichmentService` and cache the panel's
+        `/enrichment` route uses, so the panel's own request - which arrives a
+        moment later for the same track and asks every provider - is answered
+        from the cache rather than repeating this.
+        """
+        key = TrackKey.of(metadata)
+        for attempt in range(COVER_LOOKS):
+            # The track may have changed while the last look was in flight.
+            # `set_found_artwork` keys on the track so a late answer cannot
+            # apply to the wrong one, but there is no point asking again.
+            current = state_store.state
+            if current.active != renderer_id or TrackKey.of(current.metadata) != key:
+                return
+            pending: list[str] = []
+            try:
+                found = await enrichment.for_track(key, renderer=renderer_id,
+                                                   only=ARTWORK_PROVIDERS,
+                                                   pending=pending)
+            except Exception as exc:  # noqa: BLE001 - a lookup is never fatal
+                logger.warning("cover: could not look one up for %r: %s", key.title, exc)
+                return
+            # **`for_track` answers with what it has after `WAIT_S` and lets
+            # the slow ones finish behind it.** Found on the device
+            # 2026-09-25: the first ask returned nothing and logged "coverart
+            # is still going", the provider cached its answer a moment later,
+            # and nobody ever asked again - so the cover existed on this
+            # device and the meter still drew none. The panel already looks
+            # back for exactly this reason (`enrichment.js`); the daemon has
+            # to as well, or it is the panel's fallback all over again.
+            if found.album_art or not pending:
+                break
+            if attempt + 1 < COVER_LOOKS:
+                await asyncio.sleep(COVER_LOOK_BACK_S)
+        state_store.set_found_artwork(renderer_id, metadata, found.album_art)
+
     def follow_playback(state) -> None:
         nonlocal previous_active
         # ADR-0018/0046: a mode change waits for playback to stop, and this
@@ -1526,6 +1572,20 @@ async def main() -> None:
             # Long enough that a skipped track never costs a lookup.
             await asyncio.sleep(PREFETCH_AFTER_S)
             await enrichment.prefetch(key, renderer=state.active)
+            # **ADR-0081: and the cover, for a renderer that sent none.**
+            # Bluetooth over AVRCP, a radio stream. Here rather than when a
+            # panel happens to ask, because PeppyMeter is another process
+            # with no client for `/state` (ADR-0014) and its artwork cannot
+            # depend on a browser page being alive and un-occluded - which is
+            # exactly what raising the meter over the panel makes unlikely.
+            #
+            # **Not speculative, so `prefetch`'s local-only rule does not
+            # bind it** (Finding 036): this is a track that demonstrably has
+            # no cover, and the panel's own `/enrichment` asks these same two
+            # providers for it moments later anyway. It rides this debounce
+            # so that skipping through an album still costs nothing.
+            if state.active and state.metadata.artwork is None:
+                await _find_cover(state.active, state.metadata)
 
         prefetch_task = asyncio.ensure_future(warm())
         prefetch_task.gexis_key = key
