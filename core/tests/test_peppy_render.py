@@ -305,3 +305,41 @@ def test_the_same_artwork_is_rescaled_when_the_skin_changes(screen, tmp_path):
     layer.set_skin({**SKIN, "albumart.pos": "0,15", "albumart.dimension": "770,770"})
     layer.draw(full(artwork="http://art/"))
     assert layer._painted[0].size == (770, 770)
+
+
+def test_a_plugin_renderer_gets_the_mark_its_manifest_shipped(layer, tmp_path, monkeypatch):
+    """**The third place this had to be learned** (ADR-0086). The panel's
+    `SourceMark` and its handoff screen each drew a plugin renderer as an empty
+    space, for the same reason: a map of the three built-ins and no fallback to
+    the glyph the plugin shipped. Here it was a guard rather than a crash, so
+    the visualiser simply had no badge and said nothing about it.
+    """
+    import gexis_peppy_render as module
+
+    marks = tmp_path / "plugins"
+    (marks / "plexamp").mkdir(parents=True)
+    glyph = pygame.Surface((64, 64), pygame.SRCALPHA)
+    glyph.fill((229, 160, 13, 255))
+    pygame.image.save(glyph, str(marks / "plexamp" / "mark.png"))
+    monkeypatch.setattr(module, "PLUGIN_MARKS", marks)
+
+    badge = layer._badge("plexamp", (50, 50))
+    assert badge is not None
+    assert badge.get_width() <= 50 and badge.get_height() <= 50
+
+
+def test_a_plugin_with_no_mark_is_quiet_not_broken(layer, tmp_path, monkeypatch):
+    """LMS ships no mark either. A renderer without one is the ordinary case,
+    and the visualiser draws the rest of the screen."""
+    import gexis_peppy_render as module
+
+    monkeypatch.setattr(module, "PLUGIN_MARKS", tmp_path / "nothing-here")
+    assert layer._badge("qobuz", (50, 50)) is None
+
+
+def test_the_three_built_ins_still_use_the_designs_own_artwork(layer):
+    """Their marks are three different techniques - a tinted figure and two
+    images - and belong to the design rather than to a manifest."""
+    from gexis_peppy_render import BADGES
+
+    assert set(BADGES) == {"lms", "spotify", "bluetooth"}

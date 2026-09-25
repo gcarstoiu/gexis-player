@@ -61,6 +61,18 @@ BADGES = {
     # (--accent-lms); it is drawn the same way here.
     "lms": ("icon-lyrion.svg", (126, 214, 188)),
 }
+
+#: **Where a plugin's mark lives** (ADR-0086). `BADGES` above is the three
+#: built-ins, whose artwork is three different techniques the design owns - a
+#: tinted figure and two images. Anything else brought its own glyph with its
+#: manifest, and this is the path it was installed at.
+#:
+#: **The third place this had to be learned.** The panel's `SourceMark` and its
+#: handoff screen each drew a plugin renderer as an empty space for the same
+#: reason: a map of the three, and no fallback to the thing the plugin shipped.
+#: Here it was a guard rather than a crash - `source not in BADGES` returned
+#: None - so the visualiser simply had no badge and said nothing about it.
+PLUGIN_MARKS = Path("/usr/share/gexis/plugins")
 ARTWORK_TIMEOUT_S = 5
 
 
@@ -273,7 +285,7 @@ class MetadataLayer:
         """The renderer's mark, fitted inside the square the skin reserves for
         it (`playinfo.type.pos`, `playinfo.type.dimension`)."""
         position = parse_size(self._skin.get("playinfo.type.pos"))
-        if position is None or source not in BADGES:
+        if position is None or source is None:
             return None
         box = parse_size(self._skin.get("playinfo.type.dimension")) or (50, 50)
         badge = self._badge(source, box)
@@ -287,11 +299,20 @@ class MetadataLayer:
     def _badge(self, source: str, box: tuple[int, int]) -> pygame.Surface | None:
         key = (source, box)
         if key not in self._badges:
-            filename, tint = BADGES[source]
+            if source in BADGES:
+                filename, tint = BADGES[source]
+                path = self._icon_dir / filename
+            else:
+                # A plugin renderer: its mark came with its manifest.
+                tint = None
+                path = PLUGIN_MARKS / source / "mark.png"
             try:
-                image = pygame.image.load(str(self._icon_dir / filename)).convert_alpha()
+                image = pygame.image.load(str(path)).convert_alpha()
             except (pygame.error, OSError) as exc:
-                logger.warning("render: no badge for %s: %s", source, exc)
+                # A plugin that ships no mark is the ordinary case, not a fault -
+                # LMS ships none either. Said at debug so a skin without a badge
+                # does not fill the journal on every frame.
+                logger.debug("render: no badge for %s: %s", source, exc)
                 self._badges[key] = None
                 return None
             scale = min(box[0] / image.get_width(), box[1] / image.get_height())
