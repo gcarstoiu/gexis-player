@@ -93,7 +93,24 @@ that is pure boot cost with no kiosk to warm for. Turning it on from the panel
 closes the panel; it is reversible from a phone, and only from a phone. 12 s
 to the panel gone, 20 s to it back.
 
+7. **[ADR-0079](docs/decisions/0079-with-lms-off-the-panel-is-two-screens.md):
+   with LMS off, the panel is two screens.** George's answer to the question
+   ADR-0077 left open — *"Library, browse and radio go with it."* Nothing
+   playing is the waiting marks at 1.8× with a settings icon in the corner;
+   something playing is Now Playing as the root, Home button become Settings,
+   artist line inert, no mini strip. **The row decides it, not
+   `availability.lms`**, which also goes false when the server is merely
+   unreachable. Six states on the panel
+   ([Finding 070](docs/findings/070-the-panel-with-lms-off.md)).
+
 **Both dots are gone**, and no surfaced row carries a `?` any more.
+
+**And building screen 7 found a bug in ADR-0077**: switching off the *active*
+renderer left it active forever, because cancelling its watch is also how the
+release event stops arriving. The panel showed a stopped Spotify's track,
+artwork and progress bar indefinitely, while the same payload said the renderer
+was unavailable. Fixed with one `relinquish`; [LESSONS](docs/LESSONS.md) 39 is
+the part worth keeping.
 
 ### Where it stands right now
 
@@ -117,10 +134,10 @@ under *Things that will bite if forgotten*, below.
 
 **Three decisions are open and labelled in the ADRs**, none blocking:
 
-- **Do the Library, Browse and Radio screens go with `lms_enabled`?** They are
-  LMS's screens and they read the server directly rather than through the
-  renderer, so today they keep working with LMS off — a library you can browse
-  and cannot play to.
+- **Is 1.8× the right scale for the waiting screen?** A judgement, not a
+  measurement: two services come to 680 px of the width and about 300 px of the
+  height. George asked for *"not the entire height and width of the screen"*
+  and this is the reading of it.
 - **Should turning `headless` on hand tty1 back to a getty?** Today the screen
   goes blank until the next boot, which then reaches a login prompt normally
   (the kiosk's `Conflicts=getty@tty1` stops the getty and systemd does not
