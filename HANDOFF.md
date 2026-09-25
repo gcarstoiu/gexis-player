@@ -125,12 +125,21 @@ the part worth keeping.
 
 ### Where it stands right now
 
-- **PR #25 is open** on `phase-8-plan`, and carries Phase 8 and the whole of
-  Phase 9.
-- **A fresh image is building** from the completed phase. The previous one,
-  `2026-09-25-…-489-gc25a7b1.img`, predates every criterion-1-to-4 commit.
-- **The core on the device is rsynced, not installed from the branch.** It is
-  the current tree and 1,039 tests pass, but a reflash is what makes it real.
+- **`gexis` runs the flashed image**, not an rsynced tree —
+  `2026-09-25-gexis-player-v0.2.1-513-g8cbff39.img`, on a **new card**. The old
+  one is kept intact and untouched, which is a better fallback than any
+  archive. **Phase 9 holds on it**: no orange dots, no visible-and-unwired row,
+  and `version` finally reports the build instead of `unknown`
+  ([Finding 076](docs/findings/076-the-first-flash-since-the-settings-work.md)).
+- **George's state was restored onto it** from the pre-flash copy: 41 settings,
+  3,664 enrichment rows, the phone's pairing, and `idle_url`. Checked usable
+  rather than merely present — 8 of 8 artist portraits served from the cache.
+- **PR #26** is open with everything: https://github.com/gcarstoiu/gexis-player/pull/26
+- **[ADR-0083](docs/decisions/0083-a-backup-leaves-the-device.md) is rsynced on
+  top, not in the image.** Backup, the share and a restore round trip are all
+  verified on the hardware; the image *stage* that installs the share has not
+  run. **The next build is what proves it** - and until then a flash still
+  needs the hand copy above.
 - **The album-cover sweep has not been re-run** since the raw-name and
   collaboration fixes. 82 newly placed artists would now find release groups.
   George's low-cover report turned out to be the Bluetooth path (ADR-0080), so
