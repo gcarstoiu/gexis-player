@@ -862,7 +862,7 @@
         "key": "version",
         "type": "readonly",
         "label": "Version",
-        "marks": "R?",
+        "marks": "R",
         "note": null,
         "default": null
       },
@@ -900,7 +900,7 @@
         "key": "image_build",
         "type": "readonly",
         "label": "Image build",
-        "marks": "R?",
+        "marks": "R",
         "note": "Nothing else on a running device reports which build it is.",
         "default": null,
         "surfaced": false

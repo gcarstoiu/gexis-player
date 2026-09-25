@@ -8,6 +8,7 @@ from __future__ import annotations
 import asyncio
 import functools
 import logging
+import re
 from pathlib import Path
 
 import aiohttp
@@ -917,16 +918,32 @@ async def main() -> None:
         `key=value` a line, because it is read by a shell during the build
         as readily as by this. Unreadable or absent is not a failure: a
         device flashed before the stage existed simply does not know.
+
+        **`built` falls back to `/etc/rpi-issue`**, which pi-gen writes on
+        every image it makes, ours included - so a device flashed before the
+        stage existed still reports the date its image was built, which is
+        what the row asks. There is no equivalent for `version`: the git
+        describe is ours and nothing else on the device carries it, so that
+        one stays honest and says it does not know.
         """
+        out = {}
         try:
             text = Path("/etc/gexis/image.info").read_text()
         except OSError:
-            return {}
-        out = {}
+            text = ""
         for line in text.splitlines():
             name, _, value = line.partition("=")
             if value:
                 out[name.strip()] = value.strip()
+        if not out.get("built"):
+            try:
+                # "Raspberry Pi reference 2026-09-19" on its first line.
+                first = Path("/etc/rpi-issue").read_text().splitlines()[0]
+            except (OSError, IndexError):
+                first = ""
+            stamp = re.search(r"\d{4}-\d{2}-\d{2}", first)
+            if stamp:
+                out["built"] = stamp.group(0)
         return out
 
     # ADR-0035. Defaults are what is true of this deployment today. A wired
