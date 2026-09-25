@@ -5,7 +5,7 @@ takes some time before it clears all the tracks."*
 **Date:** 2026-09-25
 **Relates to:** [ADR-0038](0038-library-and-radio-on-the-panel.md) §1 (the
 rail), [ADR-0062](0062-the-queue-removes-by-swipe.md) (the swipe, whose
-animation this changed), [Finding 029](../findings/029-what-lms-answers.md)
+animation this changed), [Finding 029](../findings/029-library-and-radio-against-lms.md)
 §1a (`playlist_timestamp` says when the queue is worth re-reading)
 
 ## Context

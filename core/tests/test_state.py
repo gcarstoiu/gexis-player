@@ -1,6 +1,8 @@
 """Unit tests for StateStore (Phase 3 criterion 1's aggregator)."""
 from __future__ import annotations
 
+from dataclasses import replace
+
 from gexis_core.adapters.base import Capabilities, VolumeMechanism
 from gexis_core.model import BLANK_METADATA, TrackMetadata
 from gexis_core.state import StateStore
@@ -304,3 +306,97 @@ def test_meters_say_whether_the_visualiser_can_have_levels():
     store.set_meters(False)
 
     assert store.state.to_json()["meters"] is False
+
+
+# ---------------------------------------------------------------------------
+# ADR-0081: the daemon owns the cover it found.
+# ---------------------------------------------------------------------------
+
+
+def _bt_store():
+    return StateStore(_caps("bluetooth", "lms"))
+
+
+BT_TRACK = TrackMetadata(artist="Sting", album="57th & 9th", title="I Can't Stop Thinking About You")
+
+
+def test_a_found_cover_fills_the_hole_a_renderer_left():
+    """George, 2026-09-25: the Bluetooth album art is not loaded into peppy
+    once available. It was resolved in the browser, so the published state -
+    which is all PeppyMeter and the moOde file ever see - stayed null."""
+    store = _bt_store()
+    store.set_active("bluetooth")
+    store.set_metadata("bluetooth", BT_TRACK)
+    assert store.state.metadata.artwork is None
+
+    store.set_found_artwork("bluetooth", BT_TRACK, "http://caa/front-500.jpg")
+    assert store.state.metadata.artwork == "http://caa/front-500.jpg"
+
+
+def test_the_renderers_own_cover_always_wins():
+    """ADR-0012 is additive-only: a cover looked up from a fuzzy AVRCP string
+    must never replace one the renderer supplied."""
+    store = _bt_store()
+    store.set_active("bluetooth")
+    store.set_metadata("bluetooth", BT_TRACK)
+    store.set_found_artwork("bluetooth", BT_TRACK, "http://caa/found.jpg")
+
+    supplied = replace(BT_TRACK, artwork="http://renderer/own.jpg")
+    store.set_metadata("bluetooth", supplied)
+    assert store.state.metadata.artwork == "http://renderer/own.jpg"
+
+
+def test_a_found_cover_does_not_outlive_its_track():
+    """**The reason it is keyed on the track.** Held per renderer and applied
+    blind, it would sit on the next Bluetooth track for as long as the next
+    lookup took, and a wrong cover on screen is worse than none."""
+    store = _bt_store()
+    store.set_active("bluetooth")
+    store.set_metadata("bluetooth", BT_TRACK)
+    store.set_found_artwork("bluetooth", BT_TRACK, "http://caa/found.jpg")
+
+    store.set_metadata("bluetooth", TrackMetadata(artist="Sting", album="Nothing Like the Sun", title="Englishman in New York"))
+    assert store.state.metadata.artwork is None
+
+
+def test_a_position_update_keeps_the_cover():
+    """The track key is artist/album/title - nothing that ticks while it
+    plays - so a position push must not drop the cover and re-ask."""
+    store = _bt_store()
+    store.set_active("bluetooth")
+    store.set_metadata("bluetooth", BT_TRACK)
+    store.set_found_artwork("bluetooth", BT_TRACK, "http://caa/found.jpg")
+
+    store.set_metadata("bluetooth", replace(BT_TRACK, position=42.0))
+    assert store.state.metadata.artwork == "http://caa/found.jpg"
+
+
+def test_a_cover_found_for_another_renderer_is_not_shown():
+    store = _bt_store()
+    store.set_active("bluetooth")
+    store.set_metadata("bluetooth", BT_TRACK)
+    store.set_found_artwork("lms", BT_TRACK, "http://caa/found.jpg")
+    assert store.state.metadata.artwork is None
+
+
+def test_finding_nothing_forgets_what_was_there():
+    store = _bt_store()
+    store.set_active("bluetooth")
+    store.set_metadata("bluetooth", BT_TRACK)
+    store.set_found_artwork("bluetooth", BT_TRACK, "http://caa/found.jpg")
+
+    store.set_found_artwork("bluetooth", BT_TRACK, None)
+    assert store.state.metadata.artwork is None
+
+
+def test_a_found_cover_broadcasts():
+    """Nothing else pushes a state after the lookup returns, so this is what
+    reaches PeppyMeter's file and the panel."""
+    store = _bt_store()
+    store.set_active("bluetooth")
+    store.set_metadata("bluetooth", BT_TRACK)
+    seen = []
+    store.subscribe(lambda s: seen.append(s.metadata.artwork))
+
+    store.set_found_artwork("bluetooth", BT_TRACK, "http://caa/found.jpg")
+    assert seen == ["http://caa/found.jpg"]

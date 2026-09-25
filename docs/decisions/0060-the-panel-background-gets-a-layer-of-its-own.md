@@ -3,7 +3,7 @@
 **Status:** **Accepted**, 2026-09-24. George: *"Go for a"*, having seen the
 before/after and the pixel difference.
 **Date:** 2026-09-24
-**Relates to:** [ADR-0041](0041-no-live-blur-behind-a-sheet.md) (no live
+**Relates to:** [ADR-0041](0041-scrims-dim-but-do-not-blur.md) (no live
 blur behind a sheet — the same cost, found in a different place),
 [Finding 059](../findings/059-what-the-panel-pays-for-its-blur.md) (the
 blurs are what every scroll pays for),

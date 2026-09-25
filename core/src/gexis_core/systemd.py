@@ -55,3 +55,44 @@ def start_unit(unit: str) -> None:
     they actually stopped it first before calling this."""
     logger.info("systemctl start %s", unit)
     subprocess.run(["systemctl", "start", unit], check=False, capture_output=True)
+
+
+def set_enabled(unit: str, enabled: bool, *, now: bool = True) -> None:
+    """**ADR-0077: a source that is off is not running, and stays off across a
+    reboot.**
+
+    `enable --now` / `disable --now` rather than `start`/`stop`: a row whose
+    effect ends at the next boot is a row that lies the second time you look
+    at it. `--now` folds the start or stop in, so this is one call rather than
+    two that can disagree.
+
+    `now=False` for a unit that only makes sense at boot - the panel's warm-up
+    reads the kiosk's binaries into the page cache and says so in its own unit
+    file: "if the kiosk has already started, warming is pointless". Enabling it
+    mid-session should ask for it at the next boot, not run it now.
+
+    `disable --now` stops, it does not kill, which is what `stop_unit` above
+    is careful about for the same reason - systemd does not restart a unit it
+    was asked to stop, so nothing races the ALSA device on the way out.
+
+    Not `mask`: masking is for a unit that must never run and leaves a symlink
+    to `/dev/null` for a later image update to reason about. Nothing in this
+    image pulls these units in as a dependency, so `disable` says the same
+    thing reversibly (ADR-0077's reversal condition is exactly that changing).
+    """
+    verb = "enable" if enabled else "disable"
+    argv = ["systemctl", verb] + (["--now"] if now else []) + [unit]
+    logger.info("%s", " ".join(argv))
+    result = subprocess.run(
+        argv,
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    if result.returncode != 0:
+        logger.warning(
+            "%s failed (%s): %s",
+            " ".join(argv),
+            result.returncode,
+            (result.stderr or "").strip(),
+        )

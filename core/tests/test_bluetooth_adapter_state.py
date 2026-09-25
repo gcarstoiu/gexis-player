@@ -149,3 +149,43 @@ async def test_every_mode_the_registry_offers_is_implemented():
     )
     assert set(row["options"]) == set(state.MODES)
     assert row["default"] in state.MODES
+
+
+# ---------------------------------------------------------------------------
+# ADR-0077: Bluetooth off is the radio off, not just the audio path.
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_powering_off_stops_advertising_first():
+    """A radio that comes back up still advertising is a radio that ignored
+    the row for as long as it was off. Discoverable and Pairable go down
+    before Powered so there is nothing left set to come back to."""
+    bus = FakeBus()
+    assert await state.set_powered(bus, False) is True
+    names = [name for name, _ in bus.calls]
+    assert names.index("Discoverable") < names.index("Powered")
+    assert names.index("Pairable") < names.index("Powered")
+    assert bus.props["Powered"] is False
+    assert bus.props["Discoverable"] is False
+    assert bus.props["Pairable"] is False
+
+
+@pytest.mark.asyncio
+async def test_powering_on_touches_powered_and_nothing_else():
+    """Discoverability is the other row's business (`bt_discoverable`), and
+    `_apply_renderer` applies it after this. Setting it here as well would
+    make Always mean three minutes again by writing `Discoverable` without
+    its timeout."""
+    bus = FakeBus()
+    assert await state.set_powered(bus, True) is True
+    assert [name for name, _ in bus.calls] == ["Powered"]
+    assert bus.props["Powered"] is True
+
+
+@pytest.mark.asyncio
+async def test_no_adapter_on_the_bus_is_reported_not_raised():
+    """A device with the radio removed or rfkill-blocked hard: the row is
+    still written, and the daemon does not come down over it."""
+    bus = FakeBus(adapters=())
+    assert await state.set_powered(bus, False) is False

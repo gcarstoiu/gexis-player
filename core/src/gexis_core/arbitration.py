@@ -71,6 +71,7 @@ class Supervisor:
         restore_volume=None,
         on_active_change=None,
         on_handoff_change=None,
+        enabled=None,
     ) -> None:
         """`device_busy` is a one-arg callable (sync or async), taking a
         renderer_id and returning whether *that specific renderer* still
@@ -116,6 +117,16 @@ class Supervisor:
         #: disappear on. Same sync, non-blocking contract as
         #: `on_active_change`.
         self._on_handoff_change = on_handoff_change
+        #: **ADR-0077.** A one-arg predicate taking a renderer_id and saying
+        #: whether that source is switched on. `None` means every renderer is,
+        #: which is what the tests and every caller before ADR-0077 assume.
+        #:
+        #: Checked here rather than at the callers because arbitration is the
+        #: one place every route into taking the device passes through - an
+        #: acquisition event, `activate` from the panel, the reclaim after a
+        #: session ends - and a gate at three callers is a gate missing from
+        #: the fourth.
+        self._enabled = enabled
         # None means *nobody* holds the device (ADR-0027). Until
         # 2026-09-12 this same None meant "LMS", which is why the
         # distinction is called out rather than left to the type.
@@ -143,6 +154,13 @@ class Supervisor:
         """
         if renderer_id not in self._adapters:
             raise ValueError(f"unknown renderer {renderer_id!r}")
+        # ADR-0077: a renderer that is switched off does not take the device,
+        # whatever fired. Refused outside the lock and before anything is
+        # published: nothing about this is a takeover, so there is no handoff
+        # to report and nobody is released.
+        if self._enabled is not None and not self._enabled(renderer_id):
+            logger.info("acquire: %s is switched off, refusing", renderer_id)
+            return
         async with self._lock:
             if renderer_id == self._active:
                 logger.debug("acquire: %s already current, ignoring", renderer_id)

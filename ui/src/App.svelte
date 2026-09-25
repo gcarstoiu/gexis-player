@@ -4,6 +4,7 @@
   import { connect, active, metadata, volume, handoff, handoffExemptPairs, capabilities, available, availability, shuffle, repeat, queue, pairing, fixedOutput } from './lib/state.js';
   import NowPlaying from './screens/NowPlaying.svelte';
   import Library from './screens/Library.svelte';
+  import WaitingHome from './screens/WaitingHome.svelte';
   import PanelBackground from './screens/PanelBackground.svelte';
   import IdleScreen from './screens/IdleScreen.svelte';
   import VolumeDrawer from './screens/VolumeDrawer.svelte';
@@ -49,21 +50,59 @@
 
   // Criterion 4: shown for the takeover itself unless the pair is measured
   // fast enough to be exempt, and held long enough not to flash.
-  const HANDOFF_MIN_MS = 1400;
+  //
+  // **Both are settings now** (ADR-0022's `show_transition` and
+  // `handoff_duration`, wired 2026-09-25). The fallback is the 1.4s this
+  // shipped with, so wiring the row changed nothing until somebody moves
+  // it - the registry's own default was raised to match rather than the
+  // screen being quietly lengthened.
+  const HANDOFF_MIN_MS = $derived(($settingValues.handoff_duration ?? 1.4) * 1000);
+  // **ADR-0078: the threshold is how long a takeover has to be in flight
+  // before the panel explains it.** ADR-0010 set 1s and nothing ever read it -
+  // the exempt list was compared against it once, by hand. A takeover that
+  // finishes inside the wait is never announced, which is what stops the
+  // screen being "a flicker - noise, not information". 0 announces every one
+  // immediately, exactly as this behaved before.
+  const HANDOFF_WAIT_MS = $derived(($settingValues.handoff_threshold ?? 1) * 1000);
   let shownHandoff = $state.raw(null);
   let handoffShownAt = 0;
+  // Two timers, not one: the wait before the screen appears and the hold that
+  // stops it flashing are both in flight at different moments, and a single
+  // handle let the hold cancel a wait that had not fired yet.
+  let handoffWait;
   let handoffTimer;
   $effect(() => {
     const h = $handoff;
     const exempt = h && $handoffExemptPairs.some(([a, b]) => a === h.from && b === h.to);
     untrack(() => {
       clearTimeout(handoffTimer);
+      if ($settingValues.show_transition === false) {
+        clearTimeout(handoffWait);
+        shownHandoff = null;
+        return;
+      }
       if (h && !exempt) {
-        if (!shownHandoff) handoffShownAt = performance.now();
-        shownHandoff = h;
-      } else if (shownHandoff) {
-        const remaining = HANDOFF_MIN_MS - (performance.now() - handoffShownAt);
-        handoffTimer = setTimeout(() => (shownHandoff = null), Math.max(0, remaining));
+        if (shownHandoff) {
+          // Already up: a second takeover replaces what it says rather than
+          // restarting the wait.
+          shownHandoff = h;
+          return;
+        }
+        clearTimeout(handoffWait);
+        const show = () => {
+          handoffShownAt = performance.now();
+          shownHandoff = h;
+        };
+        if (HANDOFF_WAIT_MS <= 0) show();
+        else handoffWait = setTimeout(show, HANDOFF_WAIT_MS);
+      } else {
+        // The takeover is over. Anything still waiting is cancelled - it
+        // finished inside the threshold and is not announced at all.
+        clearTimeout(handoffWait);
+        if (shownHandoff) {
+          const remaining = HANDOFF_MIN_MS - (performance.now() - handoffShownAt);
+          handoffTimer = setTimeout(() => (shownHandoff = null), Math.max(0, remaining));
+        }
       }
     });
   });
@@ -136,7 +175,17 @@
   // nothing is connected; otherwise now playing's Home button opens it and
   // the mini strip closes it.
   let libraryRequested = $state(false);
-  const libraryOpen = $derived(!$active || libraryRequested);
+  // **ADR-0079: with LMS off there is no library, so the panel is two
+  // screens.** Nothing playing is the waiting marks; something playing is now
+  // playing, as the root.
+  //
+  // **The row decides it, not `availability.lms`.** Availability is also false
+  // when the server is merely unreachable, and a library that vanished on a
+  // Wi-Fi blip and grew back a few seconds later would be two different
+  // products in one minute. A row somebody set is a stable fact.
+  const lmsOff = $derived($settingValues.lms_enabled === false);
+  const libraryOpen = $derived(!lmsOff && (!$active || libraryRequested));
+  const waitingOpen = $derived(lmsOff && !$active);
   let previousActive = null;
   $effect(() => {
     const now = $active;
@@ -178,8 +227,10 @@
   onMount(() => {
     connect();
     loadSettings();
-    // Ahead of the first time Home opens (see lib/library.js).
-    loadLibraryRoot();
+    // Ahead of the first time Home opens (see lib/library.js). Not with LMS
+    // off: there is no home to be ahead of, and the read would be three
+    // requests to a server this device is not using (ADR-0079).
+    if ($settingValues.lms_enabled !== false) loadLibraryRoot();
     fetch('/surface')
       .then((r) => r.json())
       .then((body) => (surface = body.surface))
@@ -216,6 +267,10 @@
     <div class="screen-layer">
       <Settings onback={() => (settingsOpen = false)} embedded />
     </div>
+  {:else if waitingOpen}
+    <div class="screen-layer">
+      <WaitingHome availability={$availability} onsettings={openSettings} />
+    </div>
   {:else if libraryOpen}
     <div class="screen-layer">
       <Library
@@ -232,8 +287,13 @@
     </div>
   {:else if $active}
     <div class="screen-layer">
-      <NowPlaying active={$active} metadata={$metadata} volume={$volume} controls={$capabilities[$active]?.controls ?? []} available={$available} shuffle={$shuffle} repeat={$repeat} queue={$queue} onvolume={openVolume} onvisualisation={showVisualisation} onhome={() => (libraryRequested = true)}
-        onartist={(name) => { libraryArtist = name; libraryRequested = true; }} />
+      <!-- ADR-0079: with LMS off the Home button is a Settings button and
+           `onartist` is not passed at all, so the artist line is a name rather
+           than a link that leads nowhere. -->
+      <NowPlaying active={$active} metadata={$metadata} volume={$volume} controls={$capabilities[$active]?.controls ?? []} available={$available} shuffle={$shuffle} repeat={$repeat} queue={$queue} onvolume={openVolume} onvisualisation={showVisualisation}
+        rootless={lmsOff}
+        onhome={lmsOff ? openSettings : () => (libraryRequested = true)}
+        onartist={lmsOff ? undefined : (name) => { libraryArtist = name; libraryRequested = true; }} />
     </div>
   {/if}
 

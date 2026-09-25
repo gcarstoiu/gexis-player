@@ -26,7 +26,17 @@ The daemon serves **74 rows**:
 not shown because nothing would happen. They are Settings' own scoped-out
 list, already written down.
 
-**The 14 visible ones are criterion 1's work.** Each shows today's value and
+**Two of the fourteen were over-reported, and George caught it.** A `list`
+row does not take a value: `wifi` and `bt_trusted` are worked through
+`POST /settings/<key>/items` — join, forget — and never through `set`, so
+`wired: false` describes a route they do not use. Both function today.
+George, 2026-09-25: *"WiFi already works - nothing to add there."*
+
+**So the generated list is honest about the mechanism and not about the
+feature.** `wired` means "something is listening for a new value", which is
+the right question for twelve of these rows and the wrong one for two.
+
+**The remaining twelve are criterion 1's work.** Each shows today's value and
 each refuses to change it — the panel marks them `data-unwired="settings"`
 and says *"not wired yet"* when tapped, which is the 2026-09-15 convention
 that makes them greppable. They are tracked, not forgotten. They are also
@@ -36,30 +46,51 @@ not wired.
 
 | group | row | mark | what it would take |
 | --- | --- | --- | --- |
-| sources | `lms_enabled` | R | stop arbitrating and starting a renderer that is off (ADR-0013) |
-| sources | `spotify_enabled` | R | as above |
-| sources | `bt_enabled` | R | as above |
+| sources | `lms_enabled` | R | ~~stop arbitrating and starting a renderer that is off (ADR-0013)~~ **wired 2026-09-25, [ADR-0077](../decisions/0077-a-source-that-is-off-is-not-running.md)** |
+| sources | `spotify_enabled` | R | ~~as above~~ **wired 2026-09-25** |
+| sources | `bt_enabled` | R | ~~as above~~ **wired 2026-09-25**, and it powers the radio down as well |
 | sources | `bt_pairing` | R | PIN-free vs confirmation. ADR-0024 leaves this `[?]` — **a decision is owed before wiring** |
 | sources | `bt_trusted` | R | view and forget remembered devices; clearing breaks reconnection |
 | sources | `bt_autotrust` | H | today `gexis-bluetooth-trust.service` does it unconditionally |
 | handoff | `restore_transport` | R H | ADR-0027 plays only if it was playing |
 | handoff | `reclaim_lms` | N | ADR-0027 deliberately never does this; the row is the opt-in |
 | handoff | `show_transition` | N | whether the takeover screen appears at all |
-| handoff | `handoff_threshold` | R H ? | ADR-0010's 1 s. The inventory calls it **evidence-gated rather than preference** |
+| handoff | `handoff_threshold` | R H ? | ~~ADR-0010's 1 s. The inventory calls it **evidence-gated rather than preference**~~ **wired 2026-09-25, [ADR-0078](../decisions/0078-the-transition-screen-waits-for-the-threshold.md)** — George asked for the bar and the `?` is answered |
 | handoff | `handoff_duration` | N | how long the takeover animation stays |
-| display | `headless` | R | disable the local screen entirely — Must tier |
-| device | `wifi` | R | joining a network. Overlaps **Phase 13**, which raises an access point for exactly this |
-| device | `version` | R ? | readonly and reporting **nothing**; the smallest of the fourteen |
+| display | `headless` | R | ~~disable the local screen entirely — Must tier~~ **wired 2026-09-25**, three units |
+| device | `version` | R ? | readonly and reporting **nothing**; the smallest of them |
+
+**Not on the list after all:** `wifi` and `bt_trusted`, which work through
+their own route.
 
 ## What this does not settle
 
-- **Which of them should be wired and which scoped out.** Three are
-  candidates for scoping — `handoff_threshold` because the inventory says
-  the number is evidence's to set, `wifi` because Phase 13 owns network
-  setup, and `bt_pairing` because ADR-0024 owes a decision first. **That is
-  George's call, not this record's.**
+- ~~**Which of them should be wired and which scoped out.**~~ **Settled by
+  George, 2026-09-25:** Wi-Fi already works; `handoff_threshold` stays as it
+  is, unwired, because the number is evidence's to set; and `bt_pairing` has
+  its decision — **confirmation by default, PIN-free as a viable option** —
+  so it is wired rather than scoped out. The other ten are to be wired.
 - **What wiring each costs.** The table says what it would take, not how
   long.
 - **The phone.** The criterion says panel *and* phone (ADR-0035); this was
   read from the daemon, which serves both, but nothing was tried in a
   browser.
+
+---
+
+## Closed
+
+**Phase 9 criterion 1 closed 2026-09-25.** George: *"I think this concludes
+criterion 1."* Every row this finding listed is wired or was ruled on, and the
+list was re-generated from the running daemon to say so rather than ticked off
+here: of 74 rows the 18 reporting `wired: false` are the 14 that are
+`surfaced: false`, plus `wifi` and `bt_trusted`, which work through their own
+`/settings/{key}/items` route and were never unwired. **No surfaced row is
+unwired, and none carries a `?`.**
+
+`handoff_threshold` — the one row this finding recorded as *"evidence-gated
+rather than preference"* and therefore possibly not to be wired at all — was
+wired after George asked for its slider
+([ADR-0078](../decisions/0078-the-transition-screen-waits-for-the-threshold.md)).
+`lms_enabled` grew a screen rather than a switch
+([ADR-0079](../decisions/0079-with-lms-off-the-panel-is-two-screens.md)).

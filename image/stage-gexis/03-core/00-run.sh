@@ -98,3 +98,15 @@ install -D -m 644 files/gexis-smb.service \
 # upgrade cannot quietly re-enable them.
 ln -sf /dev/null "${ROOTFS_DIR}/etc/systemd/system/nmbd.service"
 ln -sf /dev/null "${ROOTFS_DIR}/etc/systemd/system/samba-ad-dc.service"
+
+# **What build this is** (ADR-0022's `version` row). Nothing on a running
+# device reported it: the `.info` file the Makefile writes sits beside the
+# image in `deploy/`, where a device cannot read it. `IMG_SUFFIX` is the
+# git-describe version with a leading dash, which is how the Makefile
+# already names the image (see its `IMAGE_VERSION`).
+install -d -m 755 "${ROOTFS_DIR}/etc/gexis"
+printf 'version=%s\nbuilt=%s\n' \
+	"${IMG_SUFFIX#-}" \
+	"$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+	> "${ROOTFS_DIR}/etc/gexis/image.info"
+chmod 644 "${ROOTFS_DIR}/etc/gexis/image.info"

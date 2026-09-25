@@ -139,6 +139,52 @@ async def test_release_records_that_it_was_playing_and_device_freed_resumes(monk
 
 
 @pytest.mark.asyncio
+async def test_always_play_brings_a_paused_player_back_playing(monkeypatch):
+    """ADR-0022's `restore_transport`, wired 2026-09-25. ADR-0027's rule is
+    the default; this is somebody choosing otherwise."""
+    adapter, rpc = _adapter(monkeypatch, mode="pause")
+    adapter.on_restore_transport(lambda: "Always play")
+    await adapter.release()
+    rpc.commands.clear()
+
+    await adapter.device_freed()
+
+    assert ["play"] in rpc.commands
+
+
+@pytest.mark.asyncio
+async def test_always_pause_leaves_a_playing_player_paused(monkeypatch):
+    adapter, rpc = _adapter(monkeypatch, mode="play")
+    adapter.on_restore_transport(lambda: "Always pause")
+    await adapter.release()
+    rpc.mode = "pause"
+    rpc.commands.clear()
+
+    await adapter.device_freed()
+
+    assert ["play"] not in rpc.commands
+
+
+@pytest.mark.asyncio
+async def test_a_setting_that_cannot_be_read_is_adr_0027s_rule(monkeypatch):
+    """A row nobody has answered, or a reading that throws, must not change
+    what the device does."""
+    adapter, rpc = _adapter(monkeypatch, mode="play")
+
+    def broken():
+        raise RuntimeError("settings are not up yet")
+
+    adapter.on_restore_transport(broken)
+    await adapter.release()
+    rpc.mode = "pause"
+    rpc.commands.clear()
+
+    await adapter.device_freed()
+
+    assert ["play"] in rpc.commands
+
+
+@pytest.mark.asyncio
 async def test_a_player_left_paused_comes_back_paused(monkeypatch):
     """George, 2026-09-12: the transport state on return is whatever the
     user left, never something we impose. A paused player gets no play."""

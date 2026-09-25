@@ -5,14 +5,14 @@ it should as otherwise the fix turns into a 30 seconds wait which is worse
 than before."*
 **Date:** 2026-09-25
 **Relates to:** [Finding 065](../findings/065-one-artist-stalls-a-batch-for-thirty-seconds.md)
-(the measurement), [Finding 036](../findings/036-a-provider-that-could-not-be-asked-has-not-answered.md)
+(the measurement), [Finding 036](../findings/036-key-free-providers-against-real-tracks.md)
 (the rule this bends and keeps),
 [ADR-0068](0068-the-sweeps-portrait-is-asked-for-first.md) (which walks into
 it)
 
 ## Context
 
-[Finding 036](../findings/036-a-provider-that-could-not-be-asked-has-not-answered.md)
+[Finding 036](../findings/036-key-free-providers-against-real-tracks.md)
 settled that **a provider that could not be asked has not said there is
 nothing**, so nothing is written down. `artistinfo` follows it: a photo
 lookup that never comes back sets an in-memory cooldown and stores nothing.
@@ -45,7 +45,7 @@ that turns into a thirty-second wait is not a fix.
   written off. The in-process cooldown stays five minutes.
 - **A rescan drops it**, with the photos, because a renumbered id is a
   different artist and what the old one cost says nothing about the new one
-  ([Finding 029](../findings/029-what-lms-answers.md) §4).
+  ([Finding 029](../findings/029-library-and-radio-against-lms.md) §4).
 
 | asking for all 917 portraits | before | after |
 | --- | --- | --- |

@@ -3,7 +3,7 @@
 **Status:** **Accepted**, 2026-09-24. George: *"Go for 1 and 2."*
 **Date:** 2026-09-24
 **Relates to:** [ADR-0059](0059-artist-portraits-in-the-list.md) (which said
-fanart first and LMS as the fallback), [ADR-0040](0040-what-the-panel-shows-for-an-artist.md)
+fanart first and LMS as the fallback), [ADR-0040](0040-enrichment-providers.md)
 §1 (LMS's own plugin), [ADR-0067](0067-only-what-is-on-screen-is-built.md)
 (the windowed grid this feeds)
 
@@ -57,7 +57,7 @@ already, instead of initials that become a picture.
 - **The per-card observers stay.** With the grid windowed there are a few
   dozen, not 917, and they remain the route for an artist the prefetch has
   not covered — a new one, or one whose id LMS renumbered on a rescan
-  ([Finding 029](../findings/029-what-lms-answers.md) §4).
+  ([Finding 029](../findings/029-library-and-radio-against-lms.md) §4).
 - **This does not prefetch the images**, only their URLs. The bytes come
   from Chromium's own cache after the first sight of each — measured: a
   reopened grid makes **zero** network requests, because LMS serves the

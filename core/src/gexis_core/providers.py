@@ -27,7 +27,7 @@ from urllib.parse import quote
 
 import aiohttp
 
-from gexis_core.enrichment import Answer, Enrichment, Limiter, Outcome, fold
+from gexis_core.enrichment import Answer, Enrichment, Limiter, Outcome, fold, match_title, trim_title
 
 logger = logging.getLogger("gexis_core.providers")
 
@@ -677,19 +677,57 @@ class CoverArtProvider:
     def serves(self, renderer) -> bool:
         return True
 
+    async def _search(self, artist: str, album: str):
+        """MusicBrainz's best release group for one spelling of the album."""
+        return await self._http.json(
+            "https://musicbrainz.org/ws/2/release-group/",
+            {"query": f'artist:"{artist}" AND releasegroup:"{album}"',
+             "fmt": "json", "limit": "1"},
+        )
+
     async def fetch(self, key) -> Answer:
         if not (key.artist and key.album):
             return Answer(Outcome.MISSING)
-        found = await self._http.json(
-            "https://musicbrainz.org/ws/2/release-group/",
-            {"query": f'artist:"{key.artist}" AND releasegroup:"{key.album}"',
-             "fmt": "json", "limit": "1"},
-        )
+        # **Asked with the title's own characters, not the folded one**
+        # (ADR-0080 as amended 2026-09-25, on the device). Folding is right
+        # for a cache key and wrong for a query: this is a quoted phrase
+        # against an index that holds the real title, so `57th & 9th` folded
+        # to `57th 9th` matched *nothing* - measured against MusicBrainz -
+        # and `100 Jahre Strauss` lost its `ss` altogether. 31.2% of George's
+        # albums carry a character folding removes.
+        artist = key.raw_artist or key.artist
+        album = key.raw_album or key.album
+        # **The title as it is, first.** An exact hit is the best evidence
+        # there is, and trimming loses information: `Greatest Hits Volume 2`
+        # trims to `Greatest Hits`, which a search will happily answer with
+        # the first volume's cover.
+        found = await self._search(artist, album)
         if found is None:
             return Answer(Outcome.UNAVAILABLE)
         groups = found.get("release-groups") or []
         if not groups:
-            return Answer(Outcome.MISSING)
+            # **Then the title reduced.** George, 2026-09-25: *"not that many
+            # album arts are found. Might be that the album name contains
+            # modifiers that could be excluded."* Comparing tagged titles
+            # against a catalogue's as they stand missed 43% of his albums
+            # (Finding 054 §9); this is the reduction that fixed the sweep.
+            trimmed = trim_title(album)
+            if trimmed == album:
+                return Answer(Outcome.MISSING)
+            found = await self._search(artist, trimmed)
+            if found is None:
+                return Answer(Outcome.UNAVAILABLE)
+            groups = found.get("release-groups") or []
+            if not groups:
+                return Answer(Outcome.MISSING)
+            # **Verified on the title, not only on the score.** A reduced
+            # query is a looser query, and MusicBrainz will score a confident
+            # match on a release group whose title merely contains the words.
+            # Both sides through the same function, which is what the sweep
+            # does on both sides of its own comparison.
+            if match_title(groups[0].get("title") or "") != match_title(trimmed):
+                return Answer(Outcome.MISSING,
+                              confidence=int(groups[0].get("score") or 0))
         group = groups[0]
         score = int(group.get("score") or 0)
         # The archive answers 404 for a release group it has no art for,

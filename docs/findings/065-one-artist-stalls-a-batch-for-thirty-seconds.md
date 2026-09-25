@@ -42,7 +42,7 @@ Asked one at a time, the same ids are 5 ms — they come from the store.
 `artistinfo` already knows about this artist. A call that does not come back
 sets `_slow_until[artist_id]`, so it is left alone for `SLOW_COOLDOWN_S`
 (300 s) — and that is deliberately **not** written to the store, because
-[Finding 036](036-a-provider-that-could-not-be-asked-has-not-answered.md)'s
+[Finding 036](036-key-free-providers-against-real-tracks.md)'s
 rule says a provider that could not be asked has not told us there is
 nothing.
 

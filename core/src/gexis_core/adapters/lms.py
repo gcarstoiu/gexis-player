@@ -57,6 +57,11 @@ QUEUE_LIMIT = 100
 #: limit at all, and a queue read happens on every queue change.
 QUEUE_CEILING = 2500
 
+#: ADR-0022's `restore_transport` options, as the registry words them.
+#: Anything else means ADR-0027's rule: play only if it was playing.
+RESTORE_ALWAYS_PLAY = "Always play"
+RESTORE_ALWAYS_PAUSE = "Always pause"
+
 #: The size asked of LMS for the *current* track's artwork. The design's now
 #: playing well is 500x500 (`design/data-contract.md`) and the Peppy screen
 #: scales down from this too; `_o.jpg` is always a JPEG, where the bare
@@ -249,6 +254,11 @@ class LmsAdapter(Adapter):
         self._queue_stamp: tuple | None = None
         #: LMS's `maxPlaylistLength`, read once per run (ADR-0063).
         self._max_queue: int | None = None
+        #: **What to do with the transport on the way back** (ADR-0022's
+        #: `restore_transport`, wired 2026-09-25). ADR-0027's rule - play
+        #: only if it was playing - is what this answers when nobody has
+        #: said otherwise, and it stays the default.
+        self._restore_transport = None
         self._artist_id: int | None = None
         self._album_id: int | None = None
         self._on_availability: Callable[[bool], None] | None = None
@@ -289,6 +299,15 @@ class LmsAdapter(Adapter):
         """The transport this adapter last reported: 'playing', 'paused',
         'stopped', or None before the first report."""
         return self._last_transport
+
+    def on_restore_transport(self, reading) -> None:
+        """A callable answering ADR-0022's `restore_transport` row.
+
+        A callable rather than a value, because a setting can change between
+        one takeover and the next and the adapter should not hold a stale
+        copy of it.
+        """
+        self._restore_transport = reading
 
     def on_queue_change(self, callback) -> None:
         """The queue rail's contents (ADR-0038 §1). Read only when LMS says
@@ -979,6 +998,19 @@ class LmsAdapter(Adapter):
         self._resume_timestamp = None
         if self._player_id is None:
             return
+        # **What the user asked for, where they have asked** (ADR-0022's
+        # `restore_transport`). Anything but the two explicit answers is
+        # ADR-0027's rule, including a reading that fails.
+        wanted = None
+        if self._restore_transport is not None:
+            try:
+                wanted = self._restore_transport()
+            except Exception as exc:
+                logger.info("lms: could not read restore_transport (%s)", exc)
+        resume_playing = {
+            RESTORE_ALWAYS_PLAY: True,
+            RESTORE_ALWAYS_PAUSE: False,
+        }.get(wanted, resume_playing)
         if not resume_playing and resume_position is None:
             return
         async with aiohttp.ClientSession() as session:

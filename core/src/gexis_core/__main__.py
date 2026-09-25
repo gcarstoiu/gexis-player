@@ -6,7 +6,9 @@ supervisor and every adapter for the process lifetime - this is
 from __future__ import annotations
 
 import asyncio
+import functools
 import logging
+import re
 from pathlib import Path
 
 import aiohttp
@@ -66,6 +68,7 @@ from gexis_core.settings_registry import Settings
 from gexis_core.splash import Splash
 from gexis_core.state import StateStore
 from gexis_core import bluealsa_volume, outputs
+from gexis_core.systemd import set_enabled as _set_unit_enabled
 from gexis_core.artwork_sweep import ArtworkSweep
 from gexis_core.bluealsa_volume import BluealsaVolume
 from gexis_core.remote_volume import RemoteVolume
@@ -93,7 +96,56 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(levelname
 #: How a renderer is named to a person. Only where the id is not simply its
 #: name capitalised, which today is LMS alone.
 RENDERER_LABELS = {"lms": "LMS"}
+
+#: **ADR-0077.** Which Settings row switches each source on and off. The three
+#: rows are `R` in ADR-0022's inventory - the design has always had them - and
+#: until 2026-09-25 they stored a value and switched nothing off.
+RENDERER_ROWS = {
+    "lms": "lms_enabled",
+    "spotify": "spotify_enabled",
+    "bluetooth": "bt_enabled",
+}
+
+#: **ADR-0077: `headless` turns off three units, not one.** The kiosk is the
+#: screen; the warm-up exists only to read the kiosk's binaries into the page
+#: cache and is pure boot cost without it; PeppyMeter has nowhere to draw. The
+#: core, the phone UI and audio are untouched.
+#: `now` is False for the warm-up: its own unit file says warming is pointless
+#: once the kiosk has started, so enabling it asks for it at the next boot
+#: rather than running it here.
+SCREEN_UNITS = (
+    ("gexis-kiosk.service", True),
+    ("gexis-panel-warmup.service", False),
+    ("gexis-peppy.service", True),
+)
+
+#: **ADR-0081: how many times the daemon looks for a cover.** `for_track`
+#: answers with what it has after its own wait and lets a slow provider finish
+#: behind it, caching the result - so one ask can return nothing for a track
+#: whose cover arrives a second later. Three looks, six seconds apart, which
+#: is the panel's own shape in `enrichment.js` for the same reason.
+COVER_LOOKS = 3
+COVER_LOOK_BACK_S = 6.0
+
+#: `bt_enabled` off powers the radio down as well as stopping the audio path,
+#: and this is the unit that unblocks rfkill and powers it up at boot - so it
+#: goes with it, or a reboot turns Bluetooth back on behind the row's back.
+BLUETOOTH_SETUP_UNIT = "gexis-bluetooth-setup.service"
+
 logger = logging.getLogger("gexis_core")
+
+
+async def set_unit_enabled(unit: str, enabled: bool, *, now: bool = True) -> None:
+    """`systemd.set_enabled` off the event loop.
+
+    Measured on the device 2026-09-25: `systemctl disable --now
+    go-librespot.service` took **7.0 s**, all of it stopping the unit, and run
+    inline that is 7 s in which the daemon answers nothing - no state pushes,
+    no panel, no phone. The renderer being switched off is the one thing that
+    is *expected* to take time, so this is the one call that must not be made
+    inline.
+    """
+    await asyncio.to_thread(functools.partial(_set_unit_enabled, unit, enabled, now=now))
 
 
 def _chosen_server(config: Config, store: SettingsStore) -> Config:
@@ -656,12 +708,39 @@ async def main() -> None:
             raw = slider_percent_to_raw(volume.percent)
         asyncio.ensure_future(volume_bridge.write_hardware(raw))
 
+    async def _reclaim_lms() -> None:
+        """**Take the device back for LMS when a session ends** (ADR-0022's
+        `reclaim_lms`, wired 2026-09-25).
+
+        **Off by design and opt-in by row.** ADR-0027 declines to do this:
+        nothing is restored because nothing was stored, and the reclaims
+        that were measured were spurious - a Spotify session ending because
+        the phone locked would drag LMS back on. Somebody who wants it can
+        have it; nobody gets it by accident.
+        """
+        lms_adapter = adapters.get("lms")
+        if lms_adapter is None or not hasattr(lms_adapter, "activate"):
+            return
+        # ADR-0077: nothing reclaims the device for a source that is off.
+        if not renderer_enabled("lms"):
+            return
+        try:
+            await lms_adapter.activate()
+            logger.info("reclaim: LMS taken back after the session ended")
+        except Exception as exc:
+            # Whoever released the device has already released it; failing
+            # to take it back is not that renderer's problem.
+            logger.warning("reclaim: could not take the device back for LMS: %s", exc)
+
     def on_active_change(renderer_id: str | None) -> None:
         state_store.set_active(renderer_id)
         # ADR-0053: the number on the panel belongs to whoever holds the
         # device, so a takeover changes what it means - from one renderer's
         # scale to another's, or to the hardware's own with nobody active.
         publish_volume()
+        # Nobody holds it, and somebody asked for LMS to step in.
+        if renderer_id is None and settings.value("reclaim_lms"):
+            asyncio.ensure_future(_reclaim_lms())
 
     # ADR-0054 §1. Constructed before the supervisor because
     # `restore_volume` reaches it through `acquire_volume`; its own watch is
@@ -676,6 +755,10 @@ async def main() -> None:
         restore_volume=restore_volume,
         on_active_change=lambda renderer_id: on_active_change(renderer_id),
         on_handoff_change=state_store.set_handoff,
+        # ADR-0077: a source that is switched off does not take the device,
+        # whatever fired - an event from an instance that had not died yet,
+        # `activate` from a phone, the reclaim above.
+        enabled=lambda renderer_id: renderer_enabled(renderer_id),
     )
 
     # ADR-0053's three channels. A renderer with a `set_volume` is driven
@@ -725,6 +808,12 @@ async def main() -> None:
     # wsserver.py so that module stays transport-only and knows nothing
     # about adapters or mixer scales.
     async def activate(renderer_id: str) -> bool:
+        # ADR-0077. The supervisor refuses it too, but refusing here means a
+        # renderer that is off is not woken up first and then ignored - LMS's
+        # `activate` powers a player on.
+        if not renderer_enabled(renderer_id):
+            logger.info("command: %s is switched off, not activating", renderer_id)
+            return False
         adapter = adapters[renderer_id]
         activate_method = getattr(adapter, "activate", None)
         if activate_method is None:
@@ -831,6 +920,40 @@ async def main() -> None:
         else:
             publish_visualisation()
 
+    def image_info() -> dict[str, str]:
+        """What the image stage wrote about this build, or nothing.
+
+        `key=value` a line, because it is read by a shell during the build
+        as readily as by this. Unreadable or absent is not a failure: a
+        device flashed before the stage existed simply does not know.
+
+        **`built` falls back to `/etc/rpi-issue`**, which pi-gen writes on
+        every image it makes, ours included - so a device flashed before the
+        stage existed still reports the date its image was built, which is
+        what the row asks. There is no equivalent for `version`: the git
+        describe is ours and nothing else on the device carries it, so that
+        one stays honest and says it does not know.
+        """
+        out = {}
+        try:
+            text = Path("/etc/gexis/image.info").read_text()
+        except OSError:
+            text = ""
+        for line in text.splitlines():
+            name, _, value = line.partition("=")
+            if value:
+                out[name.strip()] = value.strip()
+        if not out.get("built"):
+            try:
+                # "Raspberry Pi reference 2026-09-19" on its first line.
+                first = Path("/etc/rpi-issue").read_text().splitlines()[0]
+            except (OSError, IndexError):
+                first = ""
+            stamp = re.search(r"\d{4}-\d{2}-\d{2}", first)
+            if stamp:
+                out["built"] = stamp.group(0)
+        return out
+
     # ADR-0035. Defaults are what is true of this deployment today. A wired
     # row is read where it is used - the idle page probe here, the rest by
     # the UI - so none needs a callback.
@@ -860,6 +983,14 @@ async def main() -> None:
             # ADR-0059. George's own wording: "X out of Y processed (searched
             # for), Z artist portraits found."
             "sweep_status": lambda: sweep.progress.sentence,
+            # **Which build this is** (ADR-0022's `version` row, wired
+            # 2026-09-25). The image writes `/etc/gexis/image.info` because
+            # nothing on a running device reported it: the `.info` beside
+            # the image in `deploy/` is on the build host, not here. A
+            # device flashed before that stage existed says so rather than
+            # showing an empty row.
+            "version": lambda: image_info().get("version") or "unknown",
+            "image_build": lambda: image_info().get("built") or "unknown",
         },
         # ADR-0051 §4: which skins there are depends on where they are
         # installed and on what `skin_corpus` holds, neither of which the
@@ -894,6 +1025,39 @@ async def main() -> None:
                "weather_location": None, "idle_forecast": None,
                "idle_icons": None,
                "viz_timeout": None, "viz_stop": None,
+               # ADR-0022's handoff rows, wired 2026-09-25. Read where they
+               # are used - the adapter at a takeover, the panel for the
+               # transition screen - so none needs a callback.
+               "restore_transport": None, "reclaim_lms": None,
+               # ADR-0078: read by the panel, which is where the screen is
+               # drawn and therefore where the wait belongs. Nothing in the
+               # daemon has an opinion on it.
+               "handoff_threshold": None,
+               # The agent reads both per request; `bt_pairing` also needs
+               # BlueZ told, because the capability is fixed when the agent
+               # registers and `NoInputNoOutput` means BlueZ never asks.
+               "bt_pairing": lambda mode: asyncio.ensure_future(_apply_pairing(mode)),
+               "bt_autotrust": None,
+               # ADR-0077's three source toggles, wired 2026-09-25. Off stops
+               # and disables the renderer's unit, stops its adapter watching,
+               # reports it unavailable and makes arbitration refuse it - a row
+               # that only the panel honoured would not be a switch, because
+               # all three sources are reachable without the panel.
+               "lms_enabled": lambda _=None: asyncio.ensure_future(
+                   _apply_renderer("lms")
+               ),
+               "spotify_enabled": lambda _=None: asyncio.ensure_future(
+                   _apply_renderer("spotify")
+               ),
+               "bt_enabled": lambda _=None: asyncio.ensure_future(
+                   _apply_renderer("bluetooth")
+               ),
+               # ADR-0077. Turning this on from the panel closes the panel; it
+               # is reversible from a phone, and only from a phone.
+               "headless": lambda value: asyncio.ensure_future(
+                   _apply_headless(value)
+               ),
+               "show_transition": None, "handoff_duration": None,
                # ADR-0052 §3: read on every map between a position and a
                # level, and re-applied here when it changes so the level
                # comes down at once if it is now above the ceiling.
@@ -935,7 +1099,18 @@ async def main() -> None:
                "sweep_portraits": lambda _=None: _start_sweep("portraits"),
                "sweep_covers": lambda _=None: _start_sweep("covers"),
                "sweep_status": None,
+               # Readonly, and listed here for the same reason
+               # `volume_managed` is: it is how a row says it reports
+               # something rather than nothing (ADR-0022's `version`).
+               "version": None, "image_build": None,
                "reboot": lambda _: asyncio.ensure_future(_reboot())},
+        # **Phase 9 criterion 2.** These two act through
+        # `POST /settings/{key}/items`, not through `set` - joining a network
+        # and forgetting a device - so they are wired, and saying otherwise
+        # made the panel mark two working rows `data-unwired`. `lms_server`
+        # is a list too and is already in `wired` above, because something
+        # also reads its value.
+        lists={"wifi", "bt_trusted"},
         on_change=state_store.bump_settings_revision,
     )
 
@@ -1000,11 +1175,166 @@ async def main() -> None:
         if request is not None and request.state == "asking":
             peppy.request("hide")
 
-    async def _bluetooth_setup() -> None:
-        await _apply_discoverable(
-            settings.value("bt_discoverable") or "3 min after boot", attempts=10
+    #: The agent's own bus, kept so the capability can be changed without a
+    #: restart (ADR-0022's `bt_pairing`).
+    pairing_bus: list = []
+
+    async def _apply_pairing(mode: str) -> None:
+        """Confirmation or PIN-free, applied now rather than at next boot.
+
+        The capability is fixed when the agent registers, so this
+        unregisters and registers again. George, 2026-09-25: *"confirmation
+        is default, pin free as viable option."*
+        """
+        if not pairing_bus:
+            return
+        bus = pairing_bus[0]
+        await bluetooth_agent.unregister(bus)
+        await bluetooth_agent.register(
+            bus, pairing_agent, bluetooth_agent.capability_for(mode)
         )
+
+    def renderer_enabled(renderer_id: str) -> bool:
+        """**ADR-0077.** Whether that source is switched on.
+
+        Unset reads as on: the rows default to true and an absent value is a
+        device that has never been to Settings, not a device with no sources.
+        A row that is not in `RENDERER_ROWS` - a plugin renderer, one day - has
+        no switch and is always on.
+        """
+        row = RENDERER_ROWS.get(renderer_id)
+        if row is None:
+            return True
+        return settings.value(row) is not False
+
+    #: Set when a source row flips, so the run gates below re-read rather than
+    #: poll. One event for all three: a wakeup is cheap and a gate that finds
+    #: its own row unchanged goes straight back to waiting.
+    sources_changed = asyncio.Event()
+
+    async def _run_renderer(renderer_id: str, adapter, on_acquire, on_release) -> None:
+        """**Run the adapter while its row is on, and not while it is off**
+        (ADR-0077).
+
+        The gate is here rather than inside the adapter because ADR-0013 says
+        the three defaults implement the public plugin contract and are not
+        special-cased - a plugin that read a settings row named after itself to
+        decide whether to run would put that row in the contract. Whether a
+        renderer runs at all is the core's business.
+
+        Cancellation is the mechanism and it is safe to use: all three `run()`
+        methods catch `Exception`, not `BaseException`, so a cancel propagates
+        out of their retry loops instead of being swallowed and retried, and
+        each holds its connection in an `async with` that closes on the way
+        out. It also settles what would otherwise be permanent noise - with
+        `go-librespot` stopped, the Spotify adapter's watch retries every five
+        seconds forever, logging a warning each time.
+        """
+        task: asyncio.Task | None = None
+        try:
+            while True:
+                wanted = renderer_enabled(renderer_id)
+                if wanted and task is None:
+                    logger.info("sources: %s is on, watching", renderer_id)
+                    task = asyncio.ensure_future(adapter.run(on_acquire, on_release))
+                elif not wanted and task is not None:
+                    logger.info("sources: %s is off, stopping its watch", renderer_id)
+                    task.cancel()
+                    # The adapter is gone, so nothing will report this itself.
+                    # Said here rather than left at whatever it was, or the
+                    # panel keeps offering a source that is switched off.
+                    state_store.set_available(renderer_id, False)
+                    task = None
+                sources_changed.clear()
+                await sources_changed.wait()
+        finally:
+            if task is not None:
+                task.cancel()
+
+    async def _apply_renderer(renderer_id: str) -> None:
+        """A source row was written: make the device match it (ADR-0077)."""
+        on = renderer_enabled(renderer_id)
+        adapter = adapters.get(renderer_id)
+        if adapter is None:
+            return
+        # The unit first. Off, this stops the renderer and keeps it stopped
+        # across a reboot; on, it starts it and asks for it at the next boot
+        # too. Both are idempotent, so a row rewritten to the value it already
+        # had is a no-op rather than a restart.
+        await set_unit_enabled(adapter.unit_name, on)
+        if renderer_id == "bluetooth":
+            await set_unit_enabled(BLUETOOTH_SETUP_UNIT, on)
+            bus = await MessageBus(bus_type=BusType.SYSTEM).connect()
+            try:
+                await bluetooth_adapter_state.set_powered(bus, on)
+                if on:
+                    # Powering up does not restore what the row asked for, and
+                    # `gexis-bluetooth-setup.service` may not have re-run yet.
+                    await bluetooth_adapter_state.apply_discoverable(
+                        bus, settings.value("bt_discoverable") or "3 min after boot"
+                    )
+            finally:
+                bus.disconnect()
+        if not on:
+            # **The renderer that was switched off must not stay the active
+            # one** (found on the panel 2026-09-25, building ADR-0079: with
+            # Spotify switched off mid-track, Now Playing went on showing its
+            # track indefinitely). Its adapter's watch is cancelled below, so
+            # the `inactive` event that would normally release the device
+            # never arrives - nobody is left to report it. Said here instead,
+            # which is what the adapter would have said.
+            #
+            # `relinquish` is ignored unless this renderer is still the active
+            # one, so this is safe whatever was holding the device.
+            await supervisor.relinquish(renderer_id)
+            state_store.set_available(renderer_id, False)
+        # Last, so the watch starts against a unit that is already running and
+        # stops after the unit it was watching has gone.
+        sources_changed.set()
+
+    async def _apply_headless(headless) -> None:
+        """**ADR-0077: `headless` turns off three units, not one.**
+
+        Turning this on from the panel closes the panel - that is the row doing
+        what it says, and it is reversible from a phone. The kiosk unit's own
+        `ExecStopPost` puts the text console back, so the screen shows a
+        console rather than a black panel nobody can tell from a failed boot.
+        """
+        wanted = not headless
+        logger.info("display: headless=%s, local screen %s", bool(headless), "on" if wanted else "off")
+        for unit, now in SCREEN_UNITS:
+            await set_unit_enabled(unit, wanted, now=now)
+
+    async def _reconcile_sources() -> None:
+        """**Make the device match the rows at startup** (ADR-0077).
+
+        Only the rows that are *off* are enforced. A row that is on wants what
+        the image ships - the unit enabled - so there is nothing to do, and
+        `enable --now` on every boot would re-run Bluetooth's power-up and
+        discoverability on top of `_bluetooth_setup` for no reason.
+
+        Off is enforced because the two can drift: the settings DB survives an
+        image update that re-enables the unit, and then the row would say off
+        while the renderer ran.
+        """
+        for renderer_id in RENDERER_ROWS:
+            if renderer_id in adapters and not renderer_enabled(renderer_id):
+                logger.info("sources: %s is off at startup, enforcing", renderer_id)
+                await _apply_renderer(renderer_id)
+        if settings.value("headless"):
+            await _apply_headless(True)
+
+    async def _bluetooth_setup() -> None:
+        # ADR-0077: nothing advertises a radio the row says is off. The agent
+        # below still registers - it costs nothing, and turning the row back on
+        # then has one rather than pairing falling back to whatever BlueZ's
+        # default answers.
+        if renderer_enabled("bluetooth"):
+            await _apply_discoverable(
+                settings.value("bt_discoverable") or "3 min after boot", attempts=10
+            )
         bus = await MessageBus(bus_type=BusType.SYSTEM).connect()
+        pairing_bus.append(bus)
         await bluetooth_agent.register(
             bus,
             pairing_agent,
@@ -1015,6 +1345,7 @@ async def main() -> None:
         # to whatever answered before.
         await bus.wait_for_disconnect()
 
+    asyncio.ensure_future(_reconcile_sources())
     asyncio.ensure_future(_bluetooth_setup())
 
     # Phase 5 criteria 6 and 8 (ADR-0036). The meter process keeps running
@@ -1065,6 +1396,44 @@ async def main() -> None:
 
     previous_active = state_store.state.active
 
+    async def _find_cover(renderer_id: str, metadata) -> None:
+        """**The cover for a track the renderer sent none for** (ADR-0081).
+
+        Through the same `EnrichmentService` and cache the panel's
+        `/enrichment` route uses, so the panel's own request - which arrives a
+        moment later for the same track and asks every provider - is answered
+        from the cache rather than repeating this.
+        """
+        key = TrackKey.of(metadata)
+        for attempt in range(COVER_LOOKS):
+            # The track may have changed while the last look was in flight.
+            # `set_found_artwork` keys on the track so a late answer cannot
+            # apply to the wrong one, but there is no point asking again.
+            current = state_store.state
+            if current.active != renderer_id or TrackKey.of(current.metadata) != key:
+                return
+            pending: list[str] = []
+            try:
+                found = await enrichment.for_track(key, renderer=renderer_id,
+                                                   only=ARTWORK_PROVIDERS,
+                                                   pending=pending)
+            except Exception as exc:  # noqa: BLE001 - a lookup is never fatal
+                logger.warning("cover: could not look one up for %r: %s", key.title, exc)
+                return
+            # **`for_track` answers with what it has after `WAIT_S` and lets
+            # the slow ones finish behind it.** Found on the device
+            # 2026-09-25: the first ask returned nothing and logged "coverart
+            # is still going", the provider cached its answer a moment later,
+            # and nobody ever asked again - so the cover existed on this
+            # device and the meter still drew none. The panel already looks
+            # back for exactly this reason (`enrichment.js`); the daemon has
+            # to as well, or it is the panel's fallback all over again.
+            if found.album_art or not pending:
+                break
+            if attempt + 1 < COVER_LOOKS:
+                await asyncio.sleep(COVER_LOOK_BACK_S)
+        state_store.set_found_artwork(renderer_id, metadata, found.album_art)
+
     def follow_playback(state) -> None:
         nonlocal previous_active
         # ADR-0018/0046: a mode change waits for playback to stop, and this
@@ -1094,6 +1463,10 @@ async def main() -> None:
     # ADR-0071: a queue this daemon changed is re-read at once, instead of
     # waiting about 1.2s for LMS to report back something we just did.
     library.on_queue_changed(lms.queue_changed_by_us)
+    # ADR-0022's `restore_transport`, wired 2026-09-25. Read at the moment
+    # of the takeover rather than held, so a change takes effect without a
+    # restart. `settings` is built below, hence the late binding.
+    lms.on_restore_transport(lambda: settings.value("restore_transport"))
     artistinfo = LmsArtistInfo(library.rpc, f"http://{config.lms_host}:{config.lms_port}",
                                store=enrichment_cache)
     # ADR-0040 §1: LMS's own plugin first where it answers, the key-free
@@ -1199,11 +1572,71 @@ async def main() -> None:
             # Long enough that a skipped track never costs a lookup.
             await asyncio.sleep(PREFETCH_AFTER_S)
             await enrichment.prefetch(key, renderer=state.active)
+            # **ADR-0081: and the cover, for a renderer that sent none.**
+            # Bluetooth over AVRCP, a radio stream. Here rather than when a
+            # panel happens to ask, because PeppyMeter is another process
+            # with no client for `/state` (ADR-0014) and its artwork cannot
+            # depend on a browser page being alive and un-occluded - which is
+            # exactly what raising the meter over the panel makes unlikely.
+            #
+            # **Not speculative, so `prefetch`'s local-only rule does not
+            # bind it** (Finding 036): this is a track that demonstrably has
+            # no cover, and the panel's own `/enrichment` asks these same two
+            # providers for it moments later anyway. It rides this debounce
+            # so that skipping through an album still costs nothing.
+            if state.active and state.metadata.artwork is None:
+                await _find_cover(state.active, state.metadata)
 
         prefetch_task = asyncio.ensure_future(warm())
         prefetch_task.gexis_key = key
 
     state_store.subscribe(warm_enrichment)
+
+    async def _check_lms_volume_control() -> None:
+        """**Say so when LMS's player is on fixed volume** (Phase 9 criterion
+        4, from the handoff's issues list).
+
+        `digitalVolumeControl` at 0 means LMS moves its own number and always
+        sends full level, so **no LMS volume change ever reaches the device**.
+        George hit it on 2026-09-16 as *"phone volume does nothing while the
+        panel is muted, and LMS's volume bar is frozen"* - and mute became a
+        trap, because the one change that ends it (ADR-0034) never arrived.
+        Nothing in this repository sets it and nobody set it by hand; the
+        cause is still unknown.
+
+        **This only says so.** Writing a pref on somebody's music server
+        because we disagree with it is not ours to do, and the value is a
+        real choice for anybody driving the DAC from elsewhere. A line in the
+        journal turns an unexplainable symptom into a greppable one, which is
+        the whole of what was missing.
+        """
+        for _ in range(15):
+            if lms.player_id:
+                break
+            await asyncio.sleep(2)
+        else:
+            return
+        try:
+            answer = await library.rpc(
+                ["playerpref", "digitalVolumeControl", "?"], lms.player_id
+            )
+        except Exception as exc:  # noqa: BLE001 - a check is never fatal
+            logger.info("lms: could not read digitalVolumeControl: %s", exc)
+            return
+        value = str((answer or {}).get("_p2", ""))
+        if value == "0":
+            logger.warning(
+                "lms: player %s has digitalVolumeControl=0 (fixed volume). LMS will "
+                "move its own number and always send full level, so no volume change "
+                "from LMS or a phone reaches this device, and mute cannot be ended "
+                "from there. Set it to 1 in LMS's player settings.",
+                lms.player_id,
+            )
+        elif value:
+            logger.info("lms: digitalVolumeControl=%s on %s", value, lms.player_id)
+
+    if renderer_enabled("lms"):
+        asyncio.ensure_future(_check_lms_volume_control())
 
     state_server = StateServer(
         state_store,
@@ -1300,8 +1733,10 @@ async def main() -> None:
 
     logger.info("gexis-core starting: adapters=%s", list(adapters))
     await asyncio.gather(
+        # ADR-0077: through the gate, not directly - an adapter runs while its
+        # source row is on and not while it is off.
         *(
-            adapter.run(make_on_acquire(rid), make_on_release(rid))
+            _run_renderer(rid, adapter, make_on_acquire(rid), make_on_release(rid))
             for rid, adapter in adapters.items()
         ),
         volume_bridge.run(),

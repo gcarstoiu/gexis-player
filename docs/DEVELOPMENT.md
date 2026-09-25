@@ -1414,7 +1414,13 @@ was considered and rejected on measurement:** it would spend 30-45 minutes
 of that allowance to improve pictures that already exist and find no new
 ones.
 
-### Phase 9 — Settings wiring and UI polish
+### Phase 9 — Settings wiring and UI polish — **COMPLETE, 2026-09-25**
+
+**All five acceptance criteria are closed** (0–4 below), each on George's own
+word and each recorded where it was written. Criterion 0 carries a revisit:
+**before Phase 13 is implemented**, because a floor waived on the judgement of
+the person who knows what the device is doing should not survive the phase
+where the panel stops being his.
 
 **Added 2026-09-16 (George):** dedicated time after Phase 8 for wiring settings
 and for general UI checks and small improvements. **Phases renumbered the same
@@ -1546,10 +1552,61 @@ ADRs were updated.
    than UI polish: the artist grid is a 917-item list and letter buckets
    have to come from the core.
 
-1. **Every row in ADR-0022's settings inventory is wired end to end** (panel
-   and phone, ADR-0035), or marked out of scope with the reason.
-2. **No unwired UI remains, or each survivor is explicitly justified.** Added
-   2026-09-13; moved here from the plugin-contract phase 2026-09-16, where
+1. ~~**Every row in ADR-0022's settings inventory is wired end to end**~~ —
+   **closed 2026-09-25.** George: *"I think this concludes criterion 1."*
+
+   **Checked against the running daemon, not against a reading of the code.**
+   `/settings` reports `wired` and `visible` per row and
+   `SettingsRegistry.set` raises `NotWired` for a row nothing listens to, so
+   the answer is in the device ([Finding 068](findings/068-what-is-left-unwired-in-settings.md)).
+   Of **74 rows**, the 18 reporting `wired: false` are 14 that are
+   `surfaced: false` — inventoried and deliberately not offered — plus `wifi`
+   and `bt_trusted`, which work through their own `/settings/{key}/items`
+   route and were never unwired. **No surfaced row is unwired, and none
+   carries a `?` any more.**
+
+   The last eight rows, each landed on its own and checked on the panel:
+   `version` and `image_build` ([ADR-0022](decisions/0022-settings.md)'s build
+   rows, with `/etc/rpi-issue` as the build-date fallback), `restore_transport`,
+   `show_transition`, `handoff_duration`, `reclaim_lms`, `bt_pairing`,
+   `bt_autotrust`, the three source toggles and `headless`
+   ([ADR-0077](decisions/0077-a-source-that-is-off-is-not-running.md)), and
+   `handoff_threshold` ([ADR-0078](decisions/0078-the-transition-screen-waits-for-the-threshold.md),
+   [Finding 069](findings/069-the-transition-screen-against-the-threshold.md)).
+
+   **`lms_enabled` grew a screen** rather than only a switch:
+   [ADR-0079](decisions/0079-with-lms-off-the-panel-is-two-screens.md) is
+   George's answer to what the panel is without a library
+   ([Finding 070](findings/070-the-panel-with-lms-off.md)).
+
+   *Original text:* **Every row in ADR-0022's settings inventory is wired end
+   to end** (panel and phone, ADR-0035), or marked out of scope with the
+   reason.
+2. ~~**No unwired UI remains, or each survivor is explicitly justified.**~~ —
+   **closed 2026-09-25.** George: *"Close criterion 2 and move to 3."*
+
+   **Four generated lists, not an audit**
+   ([Finding 071](findings/071-what-the-panel-shows-that-does-nothing.md)).
+   It should ideally find nothing and it found one thing — **the check
+   itself**. Settings marks a row `data-unwired` when the daemon reports
+   `wired: false`, and `wifi` and `bt_trusted` reported that while working:
+   they act through `POST /settings/{key}/items`, not through `set`, and the
+   flag only knew about `set`. `Settings` now takes a `lists={...}`
+   declaration. **No visible row is marked unwired.**
+
+   The survivors, justified: **17 controls that can be disabled**, every one
+   conditional and with a real handler — "cannot work right now", which
+   ADR-0037 §3 requires rather than forbids — each tabulated with its reason
+   in the finding. And nothing else: **0** optional callbacks no parent
+   supplies, **0** empty handlers, **0** clickable non-buttons, and all **20**
+   paths the UI fetches matched against the daemon's **33** routes.
+
+   **Not covered, and left to criterion 3 where it belongs:** a control that
+   works and arrives somewhere empty, gestures, the visualiser's own surface,
+   and whether an enabled control does what its label says.
+
+   *Original text:* **No unwired UI remains, or each survivor is explicitly
+   justified.** Added 2026-09-13; moved here from the plugin-contract phase 2026-09-16, where
    the polish happens. From Phase 4 the UI is imported from complete designs while the
    backend is wired a phase at a time, so screens legitimately carry controls
    that do nothing yet (`decisions/README.md`'s scope note on unusable
@@ -1562,10 +1619,55 @@ ADRs were updated.
    revisited — a control designed for a feature that was quietly dropped —
    and should ideally find nothing. Unwired UI is marked in code, so checking
    is a generated list rather than an audit.
-3. **A review pass on the panel with George:** every issue found is fixed or
-   explicitly deferred.
-4. **The handoff's "issues to look at later" are triaged:** fixed, scheduled,
-   or dropped.
+3. ~~**A review pass on the panel with George:** every issue found is fixed
+   or explicitly deferred.~~ — **closed 2026-09-25.** George: *"Then we are
+   done with this criterion as well."*
+
+   Three issues found, all three fixed and checked on the panel:
+
+   - **The Bluetooth cover never reached PeppyMeter.** The fallback lived in
+     the browser, so the published state said `null` and the meter — another
+     process with no client for `/state` — drew nothing, as did the moOde
+     file ([ADR-0081](decisions/0081-the-daemon-owns-the-cover-it-found.md),
+     [Finding 073](findings/073-the-cover-that-never-reached-the-meter.md)).
+   - **Few album covers were found.** George's diagnosis — modifiers in the
+     album name — was right and was the smaller half: the query was also
+     being *folded*, and `releasegroup:"57th & 9th"` scores 100 where
+     `"57th 9th"` returns nothing. **31.2 % of his 4,567 albums** carry a
+     character folding removes, against 11.1 % carrying a modifier. Measured
+     old against new on 40 albums: **27 found → 32, none lost**
+     ([ADR-0080](decisions/0080-a-cover-is-matched-on-a-title-both-catalogues-agree-on.md),
+     [Finding 072](findings/072-the-album-titles-the-matcher-could-not-use.md)).
+   - **The fanart rows were in the wrong place.** They are LMS's, so they are
+     in the LMS group and hide with it.
+
+   **And one defect the review surfaced indirectly**: building
+   [ADR-0079](decisions/0079-with-lms-off-the-panel-is-two-screens.md)'s
+   screens showed that switching off the *active* renderer left it active
+   for ever — the published state carried `available: false` and
+   `active: "spotify"` at once and nothing objected
+   ([LESSONS](LESSONS.md) 39).
+
+   *Original text:* **A review pass on the panel with George:** every issue
+   found is fixed or explicitly deferred.
+4. ~~**The handoff's "issues to look at later" are triaged:**~~ — **closed
+   2026-09-25**, George ruling on the three that were open: the fixed-volume
+   warning stays in the journal (*"No."*), items 5 and e are dropped as
+   *"non reproducible"*, and Plexamp goes to Phase 11 (*"Ok"*).
+
+   Ten items ([Finding 074](findings/074-the-handoffs-issues-triaged.md)).
+   Four were already fixed and said so, four were statements of fact rather
+   than issues, one is scheduled, and one needed work: **the LMS player on
+   fixed volume**. `digitalVolumeControl` at 0 means LMS moves its own number
+   and always sends full level, so no volume change reaches the device and
+   mute becomes a trap. What was missing was not a fix but a name — the
+   daemon now reads the pref and says what it found. Both branches exercised
+   on the device. **It says so and does not act**: writing a pref on
+   somebody's music server is not ours to do, and 0 is a real choice for
+   anybody driving the DAC from elsewhere.
+
+   *Original text:* **The handoff's "issues to look at later" are triaged:**
+   fixed, scheduled, or dropped.
 
 **Plan, agreed with George 2026-09-18** — in this order, and the order is
 the point:

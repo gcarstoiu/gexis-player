@@ -731,6 +731,63 @@ The paragraphs' own heights answer it.
 that cannot return false is not a test, and this one had already been
 deployed and measured as working.
 
+**38. The panel was still running the bundle from before the deploy**
+(2026-09-25). ADR-0078's threshold was probed on the device and reported
+**shown** for a handoff that should have been too short to announce - the
+change appearing not to work. `ui/dist` had been rsynced to `/opt/gexis-ui`
+and `gexis-core` restarted, but **restarting the daemon does not reload the
+page**: Chromium was still running the JavaScript it had loaded before the
+deploy, so the probe measured the old behaviour faithfully.
+
+**A restart of the thing that serves the panel is not a restart of the
+panel.** One `Page.navigate` to the same URL and all five cases came out as
+designed.
+
+This is case 36 from the other side. There, the change *was* in the panel and
+I explained away the residual; here, the residual was real and the change was
+not in the panel. Both are answered by the same question, which is now the
+first step of the probe rather than an afterthought: **is the code I am
+measuring the code I deployed?**
+
+**39. The renderer was switched off and stayed the active one** (2026-09-25).
+ADR-0077's hardware pass checked the unit, the radio, the availability and the
+arbitration refusal, and every one of them passed. It did not check what the
+panel said afterwards, and the panel said Spotify was still playing - artwork,
+title and a progress bar - for a renderer whose process had been stopped.
+
+**The cause was the gate itself.** Cancelling the adapter's watch is how a
+source that is off stops watching, and it is also how the `inactive` event
+that releases the device stops arriving. **Nobody was left to report the
+release.**
+
+**The state payload was happy to carry a contradiction**: `available: false`
+and `active: "spotify"` at the same time. Nothing asserted that a renderer
+which is unavailable cannot be the active one, so nothing caught it - it took
+building the screen that had to render that state to see it.
+
+**What to add to a pass that switches something off: ask what the thing now
+says about itself**, not only whether it stopped.
+
+**40. The query was folded, and nobody had asked the catalogue** (2026-09-25).
+George reported that few album covers were found and offered a diagnosis -
+the album names carry modifiers. He was right, and acting on it alone would
+have fixed the smaller half and closed the question. The modifiers are
+**11.1 %** of his albums. What was costing **31.2 %** sat next to it: the
+album went to MusicBrainz as a *quoted phrase* built from the folded title,
+and `releasegroup:"57th & 9th"` scores 100 where `"57th 9th"` returns nothing
+at all.
+
+**It was invisible because nobody had asked MusicBrainz what it does with a
+phrase.** The reasoning about modifiers was sound, the code change followed
+from it, the unit tests passed against a fake that answered on whatever
+string it was given - and the fake could not have caught it, because the fake
+was not MusicBrainz. It took one throwaway request to the real service.
+
+**A user's diagnosis is a report of a symptom plus a hypothesis.** The
+symptom is evidence; the hypothesis is a lead, and confirming it is not the
+same as exhausting it. Ask the external thing what it actually does before
+concluding the story is the one you were handed.
+
 ## Common shape
 
 Every case had a *plausible* substitute for the real target — the build

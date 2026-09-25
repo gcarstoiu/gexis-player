@@ -6,7 +6,7 @@ be like it is now?"* and, on the proposal: *"Both should follow… Let's do
 both and see."*
 **Date:** 2026-09-23
 **Relates to:** [ADR-0011](0011-meter-data-three-transports.md) (the relay),
-[ADR-0009](0009-alsa-device-indirection.md) (`pcm.output`),
+[ADR-0009](0009-logical-output-device.md) (`pcm.output`),
 [ADR-0046](0046-fixed-output-hides-the-slider.md) (fixed output),
 [ADR-0054](0054-one-curve-and-the-renderers-own-number.md) (the 60 dB curve)
 

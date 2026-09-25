@@ -104,6 +104,37 @@ async def apply_discoverable(bus: MessageBus, mode: str) -> bool:
     return True
 
 
+async def set_powered(bus: MessageBus, powered: bool) -> bool:
+    """**ADR-0077: Bluetooth off is the radio off.**
+
+    `bluealsa-aplay` stopped removes the audio path and leaves the adapter
+    discoverable, which is worse than either half: the phone pairs, connects,
+    and gets silence. Powering the adapter down is what "Bluetooth is off"
+    means on every device that has the switch.
+
+    `Powered = false` drops existing connections, which is the point - a
+    source that is off is not playing. Nothing is forgotten: pairings live in
+    BlueZ's own store and come back with the radio.
+    """
+    path = await find_adapter(bus)
+    if path is None:
+        logger.warning("bluetooth: no adapter on the bus; powered=%s not applied", powered)
+        return False
+    try:
+        if not powered:
+            # Before Powered, not after: an adapter powered down with
+            # Discoverable still true advertises again the moment it comes
+            # back up, whatever the row said in between.
+            await _set(bus, path, "Discoverable", Variant("b", False))
+            await _set(bus, path, "Pairable", Variant("b", False))
+        await _set(bus, path, "Powered", Variant("b", powered))
+    except Exception as exc:  # dbus_next raises DBusError and friends
+        logger.warning("bluetooth: could not set powered=%s: %s", powered, exc)
+        return False
+    logger.info("bluetooth: powered=%s on %s", powered, path)
+    return True
+
+
 async def read_state(bus: MessageBus) -> dict:
     """What the adapter actually reports, for checking the above rather than
     trusting it."""

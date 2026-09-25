@@ -318,6 +318,25 @@ class Agent(ServiceInterface):
             logger.warning("bt-agent: could not trust %s: %s", path, exc)
 
 
+async def unregister(bus: MessageBus) -> bool:
+    """Give up being BlueZ's default agent, so a new capability can be
+    registered in its place (ADR-0022's `bt_pairing`, 2026-09-25).
+
+    **The capability is fixed at registration**, so changing between
+    confirmation and PIN-free means unregistering and registering again.
+    BlueZ allows one agent per path, and re-registering without this fails
+    with `AlreadyExists`.
+    """
+    try:
+        introspection = await bus.introspect(BLUEZ_SERVICE, "/org/bluez")
+        obj = bus.get_proxy_object(BLUEZ_SERVICE, "/org/bluez", introspection)
+        await obj.get_interface(AGENT_MANAGER_IFACE).call_unregister_agent(AGENT_PATH)
+        return True
+    except DBusError as exc:
+        logger.warning("bt-agent: could not unregister: %s", exc)
+        return False
+
+
 async def register(bus: MessageBus, agent: Agent, capability: str) -> bool:
     """Export the agent and make it BlueZ's default.
 
@@ -326,7 +345,11 @@ async def register(bus: MessageBus, agent: Agent, capability: str) -> bool:
     called, which looks exactly like pairing silently not asking.
     """
     agent._bus = bus
-    bus.export(AGENT_PATH, agent)
+    # Exporting a path twice raises; re-registering with a new capability
+    # goes through here again with the same agent.
+    if not getattr(agent, "_exported", False):
+        bus.export(AGENT_PATH, agent)
+        agent._exported = True
     introspection = await bus.introspect(BLUEZ_SERVICE, "/org/bluez")
     obj = bus.get_proxy_object(BLUEZ_SERVICE, "/org/bluez", introspection)
     manager = obj.get_interface(AGENT_MANAGER_IFACE)

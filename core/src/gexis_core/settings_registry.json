@@ -114,6 +114,42 @@
         "surfaced": false
       },
       {
+        "key": "sweep_portraits",
+        "type": "action",
+        "label": "Update artist portraits",
+        "marks": "R",
+        "note": "Looks up every album artist on fanart.tv and keeps LMS's picture where fanart has none. Checks all of them, every time. Runs in the background; playback is not interrupted.",
+        "default": null,
+        "onlyWhen": [
+          "lms_enabled",
+          true
+        ]
+      },
+      {
+        "key": "sweep_covers",
+        "type": "action",
+        "label": "Update album covers",
+        "marks": "R",
+        "note": "The same walk, for every album rather than only the ones with no cover. One of the two runs at a time.",
+        "default": null,
+        "onlyWhen": [
+          "lms_enabled",
+          true
+        ]
+      },
+      {
+        "key": "sweep_status",
+        "type": "readonly",
+        "label": "Progress",
+        "marks": "R",
+        "note": "What the last or current run has done.",
+        "default": null,
+        "onlyWhen": [
+          "lms_enabled",
+          true
+        ]
+      },
+      {
         "type": "group",
         "label": "Spotify Connect",
         "accent": "#7ed6bc"
@@ -262,10 +298,11 @@
         "key": "handoff_threshold",
         "type": "number",
         "label": "Transition screen threshold",
-        "marks": "RH?",
-        "note": "Pairs earn exemption by measurement rather than preference.",
+        "marks": "R",
+        "note": "How long a takeover has to be in flight before the panel explains it. A takeover that finishes first is never announced. Zero announces every one immediately.",
         "min": 0,
-        "max": 5,
+        "max": 3,
+        "step": 0.5,
         "unit": "s",
         "default": 1,
         "onlyWhen": [
@@ -278,12 +315,12 @@
         "type": "number",
         "label": "Transition screen length",
         "marks": "N",
-        "note": "How long the takeover animation stays up once it is shown.",
+        "note": "How long the takeover animation stays up once it is shown. 1.4s is what the panel shipped with, so the row starts where the behaviour was.",
         "min": 1,
         "max": 5,
         "step": 0.5,
         "unit": "s",
-        "default": 2.5,
+        "default": 1.4,
         "onlyWhen": [
           "show_transition",
           true
@@ -384,7 +421,11 @@
           "Most played artists",
           "Recently played artists"
         ],
-        "default": "New music"
+        "default": "New music",
+        "onlyWhen": [
+          "lms_enabled",
+          true
+        ]
       },
       {
         "key": "home_strip_count",
@@ -395,7 +436,11 @@
         "min": 4,
         "max": 20,
         "unit": "",
-        "default": 10
+        "default": 10,
+        "onlyWhen": [
+          "lms_enabled",
+          true
+        ]
       },
       {
         "type": "group",
@@ -768,35 +813,6 @@
         "default": null
       },
       {
-        "type": "group",
-        "label": "Pictures from fanart.tv",
-        "accent": "#e8a0b4"
-      },
-      {
-        "key": "sweep_portraits",
-        "type": "action",
-        "label": "Update artist portraits",
-        "marks": "R",
-        "note": "Looks up every album artist on fanart.tv and keeps LMS's picture where fanart has none. Checks all of them, every time. Runs in the background; playback is not interrupted.",
-        "default": null
-      },
-      {
-        "key": "sweep_covers",
-        "type": "action",
-        "label": "Update album covers",
-        "marks": "R",
-        "note": "The same walk, for every album rather than only the ones with no cover. One of the two runs at a time.",
-        "default": null
-      },
-      {
-        "key": "sweep_status",
-        "type": "readonly",
-        "label": "Progress",
-        "marks": "R",
-        "note": "What the last or current run has done.",
-        "default": null
-      },
-      {
         "key": "confidence",
         "type": "number",
         "label": "Confidence threshold",
@@ -862,7 +878,7 @@
         "key": "version",
         "type": "readonly",
         "label": "Version",
-        "marks": "R?",
+        "marks": "R",
         "note": null,
         "default": null
       },
@@ -900,7 +916,7 @@
         "key": "image_build",
         "type": "readonly",
         "label": "Image build",
-        "marks": "R?",
+        "marks": "R",
         "note": "Nothing else on a running device reports which build it is.",
         "default": null,
         "surfaced": false

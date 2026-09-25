@@ -7,8 +7,8 @@ now as it should be."*
 open question — *"Where on-device wallpapers live, and how they get there"* —
 which `idle_background: Wallpapers on device` needs an answer to before it
 is a option anyone can use.
-**Relates to:** [ADR-0028](0028-one-daemon-one-origin.md) (the API is
-unauthenticated on the LAN), [ADR-0031](0031-first-boot-without-a-network.md)
+**Relates to:** [ADR-0028](0028-ui-serving-and-command-channel.md) (the API is
+unauthenticated on the LAN), [ADR-0031](0031-first-boot-setup-access-point.md)
 
 ## Context
 

@@ -24,11 +24,10 @@ from __future__ import annotations
 
 import asyncio
 import logging
-import re
 import time
 from dataclasses import dataclass, replace
 
-from gexis_core.enrichment import fold
+from gexis_core.enrichment import fold, match_title
 
 logger = logging.getLogger("gexis_core.artwork_sweep")
 
@@ -70,37 +69,6 @@ ARTIST_KINDS = ("artistthumb", "artistbackground")
 
 #: fanart's album images.
 ALBUM_KINDS = ("albumcover",)
-
-
-#: Everything an edition adds to a title. LMS shows what the tagger wrote -
-#: `12 x 5 (2006, Japan Mini LP)`, `[1997] MTV Unplugged [EP]`,
-#: `57th & 9th (Deluxe Edition)` - and MusicBrainz's release group is called
-#: `12 X 5`, `MTV Unplugged`, `57th & 9th`. Comparing them as they stand
-#: matched nothing for **43% of George's albums** (measured 2026-09-24), and
-#: that was the matcher falling short rather than fanart having no cover.
-_BRACKETS = re.compile(r"[\(\[\{][^\)\]\}]*[\)\]\}]")
-
-#: Words an edition is usually announced with, when there are no brackets to
-#: strip - `Abbey Road Remastered`, `Nevermind Deluxe Edition`.
-_EDITION = re.compile(
-    r"\b(deluxe|expanded|remaster(ed)?|anniversary|edition|version|reissue|"
-    r"mono|stereo|bonus|disc \d+|cd \d+|vol(ume)? \d+)\b.*$"
-)
-
-
-def match_title(title: str) -> str:
-    """A title reduced to what two catalogues can agree on.
-
-    Brackets first, then a trailing edition phrase, then the ordinary fold.
-    **Only for matching** - what is stored and looked up is still the folded
-    title as the library has it, so the panel finds it by the name it knows.
-    """
-    folded = fold(_BRACKETS.sub(" ", title or "")) or fold(title)
-    # **Never empty.** A title that is nothing *but* an edition phrase -
-    # `(Deluxe Edition)` - would reduce to "", and an empty key matches every
-    # other album that reduced to "" as well. Each step falls back to the one
-    # before it rather than to nothing.
-    return fold(_EDITION.sub("", folded)) or folded
 
 
 @dataclass(frozen=True)

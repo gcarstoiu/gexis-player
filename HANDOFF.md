@@ -1,175 +1,169 @@
 # Handoff
 
-Last updated: 2026-09-24 (twenty-third session, on R2D2 — **Phase 9: 9a
-through 9j are done and passed on the device. The visualiser's four faults
-are fixed and measured, its ballistics are three settings, and 9k — the
-library's pictures from fanart — is built, with the portrait sweep run on
-George's own library. Criterion 0 has the panel measured: the still screens
-are at 0.00 %, and every scroll's cost is the background's two blurs. The
-image predates all of it**)
+Last updated: 2026-09-25 (twenty-fourth session, on R2D2 — **Phase 9 is
+COMPLETE. All five criteria closed on George's own word, in one session:
+criterion 0 on lived judgement with the opens below the floor, 1 with every
+surfaced settings row acting, 2 with the check that was lying about two rows
+fixed, 3 with his review's three findings, 4 with the handoff's own list
+triaged. Next is Phase 10, the plugin contract.**)
 
 ## Start here
 
-**Phase 9's volume work is done and passed.** 9i (the level) and 9j (which
-output) were built, checked on the device by George and merged into the
-branch; the narrative is in
-[`docs/HANDOFF-ARCHIVE.md`](docs/HANDOFF-ARCHIVE.md) under 2026-09-23.
-**Everything since is the visualiser and 9k.**
+**Criterion 0 is closed** and
+[ADR-0076](docs/decisions/0076-criterion-0-closes-with-the-opens-below-the-floor.md)
+says so honestly: the scrolls reach 56.9–59.5 drawn/s at 0.00 % dropped, and
+**the screen opens are 30–53 fps at 2.5–5.6 %, below Phase 7a's floor of 55
+and 2 %** ([Finding 067](docs/findings/067-what-the-panel-presents-at-the-end-of-criterion-0.md)).
+George closed it on lived use — *"the panel feels fast based on current
+interaction"* — not on the numbers. **Revisit before Phase 13**, the setup
+phase, when the panel stops being his.
 
-### What happened after his pass, and what it cost to find
+**Phase 9 is complete**, and the five closures are recorded where they were
+written — `docs/DEVELOPMENT.md`, each struck through with the closure above it
+and the original text kept below.
 
-**The visualisation had four faults, three of them one symptom.** George
-kept reporting "the spectrum is flashing" and each fix was correct,
-measured, and not the whole answer — [LESSONS](docs/LESSONS.md) cases 22–26
-are the record of that, and case 25 is the one to read.
+- **0 — the panel meets Phase 7a's target.** Closed on lived judgement, not on
+  the numbers: scrolls reach 56.9–59.5 drawn/s at 0.00 % dropped, **the opens
+  are 30–53 and 2.5–5.6 % against a floor of 55 and 2 %**
+  ([ADR-0076](docs/decisions/0076-criterion-0-closes-with-the-opens-below-the-floor.md)).
+  **Revisit before Phase 13.**
+- **1 — every ADR-0022 row wired or scoped out.** Checked against the running
+  daemon: of 74 rows, no surfaced row is unwired and none carries a `?`.
+- **2 — no unwired UI remains.** Four generated lists. It found one thing, and
+  the thing was the check
+  ([Finding 071](docs/findings/071-what-the-panel-shows-that-does-nothing.md)).
+- **3 — the review pass with George.** Three issues, all fixed.
+- **4 — the handoff's issues triaged.** Ten items
+  ([Finding 074](docs/findings/074-the-handoffs-issues-triaged.md)).
 
-1. **The bars overflowed their frame**
-   ([Finding 049](docs/findings/049-the-spectrum-draws-more-bars-than-it-has-room-for.md)).
-   The engine draws one global bar count for every skin. **`steps` is not
-   the bar count** — ADR-0015 said it was and it is the *vertical*
-   quantisation — so the count is now what the artwork holds, `origin.x`
-   mirrored on the right because the picture has a frame, **one number for
-   the whole corpus** because the engine reads it once and the relay
-   re-reads it.
-2. **Two skins drew the spectrum's blank panel as their dial**
-   ([Finding 050](docs/findings/050-two-skins-name-the-wrong-background.md)).
-   `111G5_Teletronix S+M` and `107G5_Marantz S+M` named the wrong file. The
-   image corrects both and a build check refuses any skin that repeats it.
-   **`skins.BROKEN` is empty**; `108G5_Kenwood Rev S+M` was never broken.
-3. **The pipe had no frames in it**
-   ([Finding 052](docs/findings/052-the-spectrum-pipe-had-no-frames-in-it.md)).
-   peppyalsa wrote the thirty bands as thirty separate writes, so a poll
-   landing mid-frame spliced two frames together. **The image now patches
-   peppyalsa to write each frame in one call.** Measured: 1 read in 239
-   ended mid-frame before, 0 of 891 after.
-4. **The meters follow the volume**
-   ([ADR-0057](docs/decisions/0057-the-meters-follow-the-volume.md)), at a
-   third of the dB — the volume's 60 dB onto a dial drawn for 20. The tap is
-   upstream of the DAC, so the daemon publishes what it is cutting and the
-   relay applies it.
+### What was wired this session
 
-**And [ADR-0058](docs/decisions/0058-the-visualisations-ballistics-are-settings.md):
-three rows** under *Meters and spectrum tweaks* — spectrum smoothing 90%,
-needle fall 400 ms, needle smoothing 240 ms — each note opening with the
-value to come back to. **Those three defaults are where the tuning ended,
-not where George has settled.**
+Three commits, in this order, each verified on the hardware before the next:
 
-**[Finding 053](docs/findings/053-fixed-output-crashed-the-daemon.md): fixed
-output crashed the daemon.** Found by a check George asked for on a detail.
-Deleting the per-renderer volume memory left one call behind, on the one
-path only fixed output takes. Fixed and verified; the mode works.
+1. **The device says which build it is.** `version` and `image_build` read
+   `/etc/gexis/image.info`, which the image now writes — nothing on a running
+   device could report it, because the `.info` beside the image is on the
+   build host. A device flashed before that stage existed says `unknown`
+   rather than showing an empty row.
+2. **Three handoff rows** — `restore_transport`, `show_transition`,
+   `handoff_duration` — read where they are used, so none needs a callback.
+3. **Reclaim, and the two Bluetooth rows.** `reclaim_lms` takes the device
+   back for LMS when a session ends, **off by default and opt-in by row**:
+   ADR-0027 declines to do it, and the reclaims that were measured were
+   spurious — a Spotify session ending because a phone locked would drag LMS
+   back on. `bt_pairing` needed more than storing, because the capability is
+   fixed when the BlueZ agent registers and `NoInputNoOutput` means BlueZ
+   never asks at all — so a change unregisters and registers again.
+   `bt_autotrust` was read per request already and simply was not settable.
+   **ADR-0022's note for it was stale**: there is no
+   `gexis-bluetooth-trust.service` in the image; the agent does the trusting.
+4. **[ADR-0077](docs/decisions/0077-a-source-that-is-off-is-not-running.md):
+   a source that is off is not running.** The last four rows — the three
+   `Enabled` toggles and `headless`.
+5. **The two orange dots**, both found by George reading the screen. The dot
+   means a row's marks carry `?`, a decision still owed. `version` and
+   `image_build` were still asking one that had been answered when they were
+   wired; `version` says `unknown` correctly on this image, and `built` now
+   falls back to `/etc/rpi-issue`, which pi-gen writes on every image, so it
+   reads **2026-09-19**.
+6. **[ADR-0078](docs/decisions/0078-the-transition-screen-waits-for-the-threshold.md):
+   the transition screen waits for the threshold.** `handoff_threshold` showed
+   `1` with no slider because a `number` row only draws one once it is wired —
+   and it had stayed unwired because **nothing had ever read it**. It now means
+   how long a takeover has to be in flight before the panel explains it; 0–3 s
+   in 0.5 s steps, 0 being the old behaviour. Five runs on the panel
+   ([Finding 069](docs/findings/069-the-transition-screen-against-the-threshold.md)).
 
-### 9k — the library's pictures, built 2026-09-24
+### ADR-0077, because it is the one with teeth
 
-[ADR-0059](docs/decisions/0059-artist-portraits-in-the-list.md), on
-[Finding 054](docs/findings/054-what-lms-knows-about-artist-identity.md).
-**Two buttons in Settings → Enrichment**, fanart first with LMS as the
-fallback, everything re-asked on every press, progress in George's own
-words.
+Off means the renderer's unit is stopped **and disabled**, its adapter is not
+watching, the state reports it unavailable, and arbitration refuses it. Three
+things worth carrying forward:
 
-- **The portrait sweep is measured and done on his library: 917 of 917 in
-  seven minutes, 525 found.** 759 distinct answers stored, 492 with a
-  picture — so **about 43% keep LMS's photo**, which is fanart's coverage
-  and not a fault. The grid will look mixed.
-- **One walk serves both buttons.** fanart returns an artist's albums in the
-  artist call, so a cover sweep makes no per-album request, and the
-  release-group ids come from a 145 ms *lookup* rather than the search
-  endpoint that 503s.
-- **LMS cannot hold the MusicBrainz ids for us** (Finding 054 §10): no write
-  path in its API, and the plugins in that space import tags rather than
-  write them. A household that wants this shared tags its files with Picard.
-- **Enrichment's four dead rows are wired** — the master toggle, lyrics and
-  artwork each became a reason not to *ask* a provider; the confidence
-  threshold is read on every ask and now gates the sweep too.
+- **Disabled, not just stopped.** A row whose effect ends at the next boot is
+  a row that lies the second time you look at it.
+- **A row only the panel honoured would not be a switch.** Spotify Connect is
+  advertised on the network, squeezelite is a player in the LMS app, and a
+  Bluetooth device is in a phone's settings screen. So Bluetooth off **powers
+  the radio down** as well as stopping `bluealsa-aplay`, and disables the unit
+  that unblocks rfkill at boot.
+- **The gate is in the core, not the adapters.** ADR-0013 says the three
+  defaults implement the public plugin contract; a plugin that read a settings
+  row named after itself would put that row in the contract. The adapter's
+  `run()` is wrapped instead. That also ends what would have been permanent
+  noise — with go-librespot stopped, the Spotify watch retried every five
+  seconds forever.
+
+**`systemctl disable --now go-librespot.service` measured 7.0 s**, all of it
+stopping the unit, so the call goes through `asyncio.to_thread`. Inline it was
+seven seconds in which the daemon answered nothing. After: the row's own `PUT`
+returns in 18 ms and the next request in 5 ms while the unit is still stopping.
+
+**`headless` stops three units** — kiosk, visualiser, and the panel warm-up
+that is pure boot cost with no kiosk to warm for. Turning it on from the panel
+closes the panel; it is reversible from a phone, and only from a phone. 12 s
+to the panel gone, 20 s to it back.
+
+7. **[ADR-0079](docs/decisions/0079-with-lms-off-the-panel-is-two-screens.md):
+   with LMS off, the panel is two screens.** George's answer to the question
+   ADR-0077 left open — *"Library, browse and radio go with it."* Nothing
+   playing is the waiting marks at 1.8× with a settings icon in the corner;
+   something playing is Now Playing as the root, Home button become Settings,
+   artist line inert, no mini strip. **The row decides it, not
+   `availability.lms`**, which also goes false when the server is merely
+   unreachable. Six states on the panel
+   ([Finding 070](docs/findings/070-the-panel-with-lms-off.md)).
+
+**Both dots are gone**, and no surfaced row carries a `?` any more.
+
+**And building screen 7 found a bug in ADR-0077**: switching off the *active*
+renderer left it active forever, because cancelling its watch is also how the
+release event stops arriving. The panel showed a stopped Spotify's track,
+artwork and progress bar indefinitely, while the same payload said the renderer
+was unavailable. Fixed with one `relinquish`; [LESSONS](docs/LESSONS.md) 39 is
+the part worth keeping.
 
 ### Where it stands right now
 
-- **The album-cover sweep was still running** when this was written — ~917
-  artists at about 3 s each, so **45–50 minutes**, more than the 25–30 first
-  estimated. Its number is in the settings row.
-- **The image is a long way behind.** It predates all of the above.
-- **Waiting on George:** whether the mixed look of the artist grid is
-  acceptable. **The ballistics are closed** (George, 2026-09-25: the three
-  settings are there for him to fine-tune, so the defaults need no verdict).
-- **Criterion 0 is closed** with the screen opens below Phase 7a's floor
-  ([ADR-0076](docs/decisions/0076-criterion-0-closes-with-the-opens-below-the-floor.md)),
-  **to be revisited before Phase 13**.
+- **PR #25 is open** on `phase-8-plan`, and carries Phase 8 and the whole of
+  Phase 9.
+- **A fresh image is building** from the completed phase. The previous one,
+  `2026-09-25-…-489-gc25a7b1.img`, predates every criterion-1-to-4 commit.
+- **The core on the device is rsynced, not installed from the branch.** It is
+  the current tree and 1,039 tests pass, but a reflash is what makes it real.
+- **The album-cover sweep has not been re-run** since the raw-name and
+  collaboration fixes. 82 newly placed artists would now find release groups.
+  George's low-cover report turned out to be the Bluetooth path (ADR-0080), so
+  this is still owed and still unmeasured.
 
-### Criterion 0 — the panel measured, 2026-09-24
+### Next — Phase 10, the plugin contract
 
-**Steps 1 and 2 are done: the still screens are at 0.00 %.** A pulsing badge
-and a progress bar animated with `width` were what an untouched panel was
-paying for (Findings 056 and 057); both are gone.
+ADR-0013 says the three default renderers are implemented against the public
+plugin contract and are not special-cased; Phase 10 is where that claim is
+tested by something outside the repository. Qobuz is the fourth-renderer test
+and a Beszel agent is the test that the contract carries a **non-renderer**
+(George, 2026-09-18).
 
-**Step 3, the scrolls, is answered — and it cost two retractions.**
+**Three decisions are open and labelled in the ADRs**, none blocking:
 
-- **[Finding 058](docs/findings/058-what-the-scrolls-are-not.md) withdraws
-  two of Finding 055's numbers.** The instrument counted dropped frames the
-  compositor had marked as not affecting smoothness, so **every figure it
-  had ever printed was high by roughly a factor of two**; and
-  `queue-rail-scroll` was measured on a sixteen-track queue that **moved
-  0 px**, which makes the claim that ADR-0041 took the rail from 13.9 fps to
-  50.0 unsupported. `albums-scroll` moved 191 px against the grid's 574.
-  **Finding 055's table needs re-taking** — a corrected one is in 059.
-- **The harness now refuses both mistakes**, swipes the same 170 px in every
-  scene, and prints how far each run actually travelled.
-- **[Finding 059](docs/findings/059-what-the-panel-pays-for-its-blur.md)
-  names the cause: `filter: blur()` on `PanelBackground`.** A blur is
-  re-evaluated over whatever area a frame damages, so the cost is the
-  scroller's *area* and nothing about its contents — which is why Finding
-  058's eight candidates were all negative. Suppress both blurs and the
-  artist grid goes **25.6 fps / 33.81 % → 54.4 fps / 1.61 %**. The queue
-  rail, which sits on an opaque plate that occludes the blur, does not move.
-- **Layer promotion does not help and a smaller radius does not help**: a
-  9 px blur costs nearly what 70 px costs. Only `filter: none` does.
-
-**The fix that works, measured: hand the browser a small picture instead of
-a filter.** The artwork URL carries its own size, so a 16 px cover stretched
-over the panel *is* a blur, with no filter at all — **44.7 fps / 6.50 %** on
-the artist grid, within 1 fps of removing the background altogether.
-
-**This is a product decision, not a build task.** It changes the look twice:
-`saturate(1.7)` is a filter too (keeping it costs ~2 fps), and the weave
-loses its blur unless it is baked into an image — it is static, so baking
-keeps it exactly. Nothing is implemented; **an ADR comes first, and George
-has not yet ruled**.
-
-**[Finding 060](docs/findings/060-the-queue-rails-own-cost.md): the rail's
-own 17.9 % is two decorations.** Its plate's `box-shadow: -30px 0 80px` —
-an 80 px blur, the same family again — and `.qrow__remove`, a 44 × 44 box
-with a border and two rotated bars on every row. About eight frames each:
-38.2 → 46.1 → **53.5 fps and 0.00 % dropped**, with artwork and text still
-drawn. Measured in eight interleaved rounds after a block-by-block pass
-drifted.
-
-**[Finding 061](docs/findings/061-the-background-wants-a-layer-of-its-own.md):
-the fix is one line and it is invisible.** `.bg { will-change: transform }`
-takes the artist grid from **27.8 fps to 52.9**, as good as deleting the
-background, and is pixel-identical — max difference 2 of 255, photographed
-paused. **It also corrects Finding 059 and a report to George**: three of
-059's rows used `[aria-hidden='true'] .bg`, which matches nothing, so
-"layer promotion does nothing" was three more control runs.
-
-**And `kNotOpaqueForTextAndLCDText` is confirmed.** With
-`--disable-lcd-text` every scroll reads `SCROLL_COMPOSITOR_THREAD` and the
-display draws **~58 frames a second** on both the grid and the rail. The
-first reading of that flag was wrong: `PipelineReporter` under-counts a
-scroll the compositor drives, said 11.7 fps, and George was told the cure
-was worse than the disease. The harness now reports `drawn/s` beside it.
-**The flag was tested and reverted; the device is back as it was.**
-
-### Next
-
-**Four decisions are with George**, with numbers and pictures: the one-line
-background layer, the flag, the rail's shadow and the rail's remove button.
-Nothing is implemented and each needs an ADR first.
+- **Is 1.8× the right scale for the waiting screen?** A judgement, not a
+  measurement: two services come to 680 px of the width and about 300 px of the
+  height. George asked for *"not the entire height and width of the screen"*
+  and this is the reading of it.
+- **Should turning `headless` on hand tty1 back to a getty?** Today the screen
+  goes blank until the next boot, which then reaches a login prompt normally
+  (the kiosk's `Conflicts=getty@tty1` stops the getty and systemd does not
+  start it again). Measured on the device.
+- **Should `handoff_exempt_pairs` survive?** With a working threshold it
+  changes no outcome — both its pairs are far under any value the bar offers.
+  It stays because it is measured evidence and because removing published
+  state is Phase 4 criterion 4's business (ADR-0078).
 
 **And the device has a hardware flag worth George's eye.** `vcgencmd
-get_throttled` reads `0xd0000`: under-voltage, frequency capping and the
-soft temperature limit have all *occurred* during this uptime — historical
-bits, none current, at 74.5 °C and a full 1.8 GHz. Not a UI measurement,
-but it is the kind of thing that makes measurements wander.
-
+get_throttled` read `0xd0000` last session: under-voltage, frequency capping
+and the soft temperature limit have all *occurred* during that uptime —
+historical bits, none current, at 74.5 °C and a full 1.8 GHz. Not a UI
+measurement, but it is the kind of thing that makes measurements wander.
 
 ## Build environment (2026-09-13) — read this before the next build
 
@@ -325,14 +319,14 @@ reverted, currently-flashed image predates this fix.
                                             own scrutiny, and a baseline
                                             (Finding 034). Reaching the target
                                             is Phase 9 criterion 0
-8  enrichment + lyrics                    <- next. Additive only, cannot break
-                                            playback.
-                                            Needs an ADR choosing the providers
-                                            first (Finding 030)
-9  settings wiring + UI polish            <- next. Every ADR-0022 row wired or
-                                            scoped out; criterion 0 is the
-                                            panel reaching Phase 7a's target
-10 plugin contract + themes               Qobuz is the fourth-renderer test;
+8  enrichment + lyrics                  * done 2026-09-18, checked by George
+                                            on the panel. ADR-0040, twice
+                                            amended by what the work measured
+9  settings wiring + UI polish          * COMPLETE 2026-09-25 - all five
+                                            criteria closed. 0 carries a
+                                            revisit before 13
+10 plugin contract + themes               <- next
+                                          Qobuz is the fourth-renderer test;
                                             a Beszel agent is the test that
                                             the contract carries a non-renderer
                                             (George, 2026-09-18)
@@ -349,6 +343,12 @@ Phases 9-13 were renumbered on 2026-09-16 (George). `docs/DEVELOPMENT.md`
 holds each phase's acceptance criteria; this list is only the order.
 
 ## Things that will bite if forgotten
+
+- **Restarting `gexis-core` does not reload the panel.** `ui/dist` rsynced to
+  `/opt/gexis-ui` reaches Chromium only on a page load, so a probe run after a
+  daemon restart measures the *old* bundle faithfully and reports that the
+  change does not work. `Page.navigate` to the same URL over CDP on 9222.
+  [LESSONS](docs/LESSONS.md) 38, and it cost a wrong result on 2026-09-25.
 
 - **A reflashed card only has R2D2's SSH key.** `make provision` writes the
   one key in `image/provision.local.env`; C3PO's

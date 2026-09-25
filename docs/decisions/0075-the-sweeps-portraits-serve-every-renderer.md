@@ -7,9 +7,9 @@ already holds it: *"Agreed to the improvement. Go for it."*
 **Relates to:** [ADR-0059](0059-artist-portraits-in-the-list.md) (the sweep
 that gathered them), [ADR-0068](0068-the-sweeps-portrait-is-asked-for-first.md)
 (the same correction, for the library's grid),
-[Finding 030](../findings/030-what-fanart-answers.md) (fanart's own request
+[Finding 030](../findings/030-free-enrichment-providers.md) (fanart's own request
 that it not be asked twice),
-[Finding 036](../findings/036-a-provider-that-could-not-be-asked-has-not-answered.md)
+[Finding 036](../findings/036-key-free-providers-against-real-tracks.md)
 (why "could not ask" is never cached)
 
 ## Context

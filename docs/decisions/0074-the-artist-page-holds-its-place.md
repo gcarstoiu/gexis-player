@@ -5,7 +5,7 @@ height of the right side with the biography, most Popular songs and
 discography can't we hold it into place until information is populated?
 Otherwise it moves content down once the artist info arrives."*
 **Date:** 2026-09-25
-**Relates to:** [ADR-0040](0040-what-the-panel-shows-for-an-artist.md) §2
+**Relates to:** [ADR-0040](0040-enrichment-providers.md) §2
 (About and Similar), [ADR-0073](0073-an-artist-page-does-not-wait-for-its-covers.md)
 (which made the page arrive before its biography, and so made this visible)
 

@@ -102,6 +102,71 @@ def fold(text: str | None) -> str:
     return re.sub(r"[^a-z0-9]+", " ", folded.lower()).strip()
 
 
+#: Everything an edition adds to a title. LMS shows what the tagger wrote -
+#: `12 x 5 (2006, Japan Mini LP)`, `[1997] MTV Unplugged [EP]`,
+#: `57th & 9th (Deluxe Edition)` - and MusicBrainz's release group is called
+#: `12 X 5`, `MTV Unplugged`, `57th & 9th`. Comparing them as they stand
+#: matched nothing for **43% of George's albums** (measured 2026-09-24), and
+#: that was the matcher falling short rather than fanart having no cover.
+_BRACKETS = re.compile(r"[\(\[\{][^\)\]\}]*[\)\]\}]")
+
+#: Words an edition is usually announced with, when there are no brackets to
+#: strip - `Abbey Road Remastered`, `Nevermind Deluxe Edition`.
+_EDITION = re.compile(
+    r"\b(deluxe|expanded|remaster(ed)?|anniversary|edition|version|reissue|"
+    r"mono|stereo|bonus|disc \d+|cd \d+|vol(ume)? \d+)\b.*$"
+)
+
+
+#: The same edition phrase, matched in a title that has *not* been folded -
+#: with whatever separator announces it, so `A Boy from Tupelo - CD 1` loses
+#: the dash along with the disc.
+_EDITION_RAW = re.compile(
+    r"\s*[\-\u2013\u2014:,;]?\s*\b(deluxe|expanded|remaster(ed)?|anniversary|edition|"
+    r"version|reissue|mono|stereo|bonus|disc \d+|cd \d+|vol(ume)? \d+)\b.*$",
+    re.IGNORECASE,
+)
+
+
+def trim_title(title: str) -> str:
+    """`match_title`'s reduction **without the fold** (ADR-0080, amended
+    2026-09-25).
+
+    For asking a catalogue rather than for comparing two of them. Folding is
+    right for a cache key and wrong for a query: MusicBrainz indexes the
+    title's own characters, so a quoted phrase built from a folded title
+    misses every album whose name carries one - `57th & 9th` folds to
+    `57th 9th` and matches nothing, and `100 Jahre Strauss` loses the `ss`
+    entirely. Measured on George's library: **31.2% of 4,567 albums**.
+
+    **Never empty**, for the same reason `match_title` is not.
+    """
+    trimmed = _BRACKETS.sub(" ", title or "")
+    trimmed = _EDITION_RAW.sub("", trimmed)
+    trimmed = re.sub(r"\s+", " ", trimmed).strip(" -\u2013\u2014:,;/")
+    return trimmed or (title or "").strip()
+
+
+def match_title(title: str) -> str:
+    """A title reduced to what two catalogues can agree on.
+
+    Brackets first, then a trailing edition phrase, then the ordinary fold.
+    **Only for matching** - what is stored and looked up is still the folded
+    title as the library has it, so the panel finds it by the name it knows.
+    """
+    folded = fold(_BRACKETS.sub(" ", title or "")) or fold(title)
+    # **Never empty.** A title that is nothing *but* an edition phrase -
+    # `(Deluxe Edition)` - would reduce to "", and an empty key matches every
+    # other album that reduced to "" as well. Each step falls back to the one
+    # before it rather than to nothing.
+    return fold(_EDITION.sub("", folded)) or folded
+
+
+# **Moved here from `artwork_sweep` on 2026-09-25** (ADR-0080). The sweep
+# had it first; the cover providers need the same reduction, and a second
+# copy of these two regexes would drift from this one.
+
+
 @dataclass(frozen=True)
 class TrackKey:
     """What a track is, for cache purposes. Duration is rounded to the second
@@ -118,6 +183,14 @@ class TrackKey:
     #: invisible once folded, and they are exactly what has to come off a
     #: title before a lyrics site will recognise it.
     raw_title: str = field(default="", compare=False)
+    #: The album as the renderer gave it, brackets and all. Not part of the
+    #: key, for the same reason as `raw_title` - and needed for the same kind
+    #: of reason: `(Deluxe Edition)` and `[EP]` are invisible once folded,
+    #: and they are exactly what has to come off before a catalogue
+    #: recognises the title (ADR-0080).
+    raw_album: str = field(default="", compare=False)
+    #: And the artist, for the same reason: `AC/DC` folds to `ac dc`.
+    raw_artist: str = field(default="", compare=False)
 
     @classmethod
     def of(cls, metadata) -> "TrackKey":
@@ -128,6 +201,8 @@ class TrackKey:
             title=fold(getattr(metadata, "title", None)),
             duration=int(duration) if duration else None,
             raw_title=str(getattr(metadata, "title", None) or ""),
+            raw_album=str(getattr(metadata, "album", None) or ""),
+            raw_artist=str(getattr(metadata, "artist", None) or ""),
         )
 
     def as_text(self) -> str:
