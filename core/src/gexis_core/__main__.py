@@ -831,6 +831,24 @@ async def main() -> None:
         else:
             publish_visualisation()
 
+    def image_info() -> dict[str, str]:
+        """What the image stage wrote about this build, or nothing.
+
+        `key=value` a line, because it is read by a shell during the build
+        as readily as by this. Unreadable or absent is not a failure: a
+        device flashed before the stage existed simply does not know.
+        """
+        try:
+            text = Path("/etc/gexis/image.info").read_text()
+        except OSError:
+            return {}
+        out = {}
+        for line in text.splitlines():
+            name, _, value = line.partition("=")
+            if value:
+                out[name.strip()] = value.strip()
+        return out
+
     # ADR-0035. Defaults are what is true of this deployment today. A wired
     # row is read where it is used - the idle page probe here, the rest by
     # the UI - so none needs a callback.
@@ -860,6 +878,14 @@ async def main() -> None:
             # ADR-0059. George's own wording: "X out of Y processed (searched
             # for), Z artist portraits found."
             "sweep_status": lambda: sweep.progress.sentence,
+            # **Which build this is** (ADR-0022's `version` row, wired
+            # 2026-09-25). The image writes `/etc/gexis/image.info` because
+            # nothing on a running device reported it: the `.info` beside
+            # the image in `deploy/` is on the build host, not here. A
+            # device flashed before that stage existed says so rather than
+            # showing an empty row.
+            "version": lambda: image_info().get("version") or "unknown",
+            "image_build": lambda: image_info().get("built") or "unknown",
         },
         # ADR-0051 §4: which skins there are depends on where they are
         # installed and on what `skin_corpus` holds, neither of which the
@@ -935,6 +961,10 @@ async def main() -> None:
                "sweep_portraits": lambda _=None: _start_sweep("portraits"),
                "sweep_covers": lambda _=None: _start_sweep("covers"),
                "sweep_status": None,
+               # Readonly, and listed here for the same reason
+               # `volume_managed` is: it is how a row says it reports
+               # something rather than nothing (ADR-0022's `version`).
+               "version": None, "image_build": None,
                "reboot": lambda _: asyncio.ensure_future(_reboot())},
         on_change=state_store.bump_settings_revision,
     )

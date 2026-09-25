@@ -26,7 +26,17 @@ The daemon serves **74 rows**:
 not shown because nothing would happen. They are Settings' own scoped-out
 list, already written down.
 
-**The 14 visible ones are criterion 1's work.** Each shows today's value and
+**Two of the fourteen were over-reported, and George caught it.** A `list`
+row does not take a value: `wifi` and `bt_trusted` are worked through
+`POST /settings/<key>/items` — join, forget — and never through `set`, so
+`wired: false` describes a route they do not use. Both function today.
+George, 2026-09-25: *"WiFi already works - nothing to add there."*
+
+**So the generated list is honest about the mechanism and not about the
+feature.** `wired` means "something is listening for a new value", which is
+the right question for twelve of these rows and the wrong one for two.
+
+**The remaining twelve are criterion 1's work.** Each shows today's value and
 each refuses to change it — the panel marks them `data-unwired="settings"`
 and says *"not wired yet"* when tapped, which is the 2026-09-15 convention
 that makes them greppable. They are tracked, not forgotten. They are also
@@ -48,16 +58,18 @@ not wired.
 | handoff | `handoff_threshold` | R H ? | ADR-0010's 1 s. The inventory calls it **evidence-gated rather than preference** |
 | handoff | `handoff_duration` | N | how long the takeover animation stays |
 | display | `headless` | R | disable the local screen entirely — Must tier |
-| device | `wifi` | R | joining a network. Overlaps **Phase 13**, which raises an access point for exactly this |
-| device | `version` | R ? | readonly and reporting **nothing**; the smallest of the fourteen |
+| device | `version` | R ? | readonly and reporting **nothing**; the smallest of them |
+
+**Not on the list after all:** `wifi` and `bt_trusted`, which work through
+their own route.
 
 ## What this does not settle
 
-- **Which of them should be wired and which scoped out.** Three are
-  candidates for scoping — `handoff_threshold` because the inventory says
-  the number is evidence's to set, `wifi` because Phase 13 owns network
-  setup, and `bt_pairing` because ADR-0024 owes a decision first. **That is
-  George's call, not this record's.**
+- ~~**Which of them should be wired and which scoped out.**~~ **Settled by
+  George, 2026-09-25:** Wi-Fi already works; `handoff_threshold` stays as it
+  is, unwired, because the number is evidence's to set; and `bt_pairing` has
+  its decision — **confirmation by default, PIN-free as a viable option** —
+  so it is wired rather than scoped out. The other ten are to be wired.
 - **What wiring each costs.** The table says what it would take, not how
   long.
 - **The phone.** The criterion says panel *and* phone (ADR-0035); this was

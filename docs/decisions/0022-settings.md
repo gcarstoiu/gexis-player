@@ -170,7 +170,7 @@ Almost entirely new. That this group barely existed is itself worth noticing.
 | Factory reset | [R] | `README.md`'s deferred table — implied by configuration persistence, specified nowhere |
 | Settings backup / restore | [N] | |
 | Log level / diagnostics | [N] | |
-| Show image version and build info | [R][?] | The build self-identification gap: nothing on a running device says which build it is, and `DEVELOPMENT.md`'s tier-3 rule expects the runner to assert against the manifest |
+| Show image version and build info | [R] | **Wired 2026-09-25**, and the gap it describes is closed: the image stage writes `/etc/gexis/image.info` with the git-describe version and the build time, because the `.info` the Makefile writes sits beside the image in `deploy/` where a device cannot read it. **Version** is the surfaced row; **Image build** carries the timestamp and stays unsurfaced. A device flashed before the stage existed reports `unknown` rather than an empty row |
 | Reboot / shut down | [N] | LMS's own menu already offers "Turn Off gexis", so the panel carrying it is consistent rather than novel |
 | CPU governor | [H] | The OS default `ondemand`. `performance` was tried and reverted on 2026-09-17 ([ADR-0039](0039-cpu-governor-performance.md)): ~10 °C hotter, no visible improvement. Exposing it means exposing heat and idle power with it |
 
