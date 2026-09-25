@@ -4540,3 +4540,129 @@ soft temperature limit have all *occurred* during this uptime — historical
 bits, none current, at 74.5 °C and a full 1.8 GHz. Not a UI measurement,
 but it is the kind of thing that makes measurements wander.
 
+## From HANDOFF, 2026-09-25 (twenty-fourth session) — Phase 9 closing, all five criteria, as it carried them
+
+# Handoff
+
+Last updated: 2026-09-25 (twenty-fourth session, on R2D2 — **Phase 9 is
+COMPLETE. All five criteria closed on George's own word, in one session:
+criterion 0 on lived judgement with the opens below the floor, 1 with every
+surfaced settings row acting, 2 with the check that was lying about two rows
+fixed, 3 with his review's three findings, 4 with the handoff's own list
+triaged. Next is Phase 10, the plugin contract.**)
+
+## Start here
+
+**Criterion 0 is closed** and
+[ADR-0076](docs/decisions/0076-criterion-0-closes-with-the-opens-below-the-floor.md)
+says so honestly: the scrolls reach 56.9–59.5 drawn/s at 0.00 % dropped, and
+**the screen opens are 30–53 fps at 2.5–5.6 %, below Phase 7a's floor of 55
+and 2 %** ([Finding 067](docs/findings/067-what-the-panel-presents-at-the-end-of-criterion-0.md)).
+George closed it on lived use — *"the panel feels fast based on current
+interaction"* — not on the numbers. **Revisit before Phase 13**, the setup
+phase, when the panel stops being his.
+
+**Phase 9 is complete**, and the five closures are recorded where they were
+written — `docs/DEVELOPMENT.md`, each struck through with the closure above it
+and the original text kept below.
+
+- **0 — the panel meets Phase 7a's target.** Closed on lived judgement, not on
+  the numbers: scrolls reach 56.9–59.5 drawn/s at 0.00 % dropped, **the opens
+  are 30–53 and 2.5–5.6 % against a floor of 55 and 2 %**
+  ([ADR-0076](docs/decisions/0076-criterion-0-closes-with-the-opens-below-the-floor.md)).
+  **Revisit before Phase 13.**
+- **1 — every ADR-0022 row wired or scoped out.** Checked against the running
+  daemon: of 74 rows, no surfaced row is unwired and none carries a `?`.
+- **2 — no unwired UI remains.** Four generated lists. It found one thing, and
+  the thing was the check
+  ([Finding 071](docs/findings/071-what-the-panel-shows-that-does-nothing.md)).
+- **3 — the review pass with George.** Three issues, all fixed.
+- **4 — the handoff's issues triaged.** Ten items
+  ([Finding 074](docs/findings/074-the-handoffs-issues-triaged.md)).
+
+### What was wired this session
+
+Three commits, in this order, each verified on the hardware before the next:
+
+1. **The device says which build it is.** `version` and `image_build` read
+   `/etc/gexis/image.info`, which the image now writes — nothing on a running
+   device could report it, because the `.info` beside the image is on the
+   build host. A device flashed before that stage existed says `unknown`
+   rather than showing an empty row.
+2. **Three handoff rows** — `restore_transport`, `show_transition`,
+   `handoff_duration` — read where they are used, so none needs a callback.
+3. **Reclaim, and the two Bluetooth rows.** `reclaim_lms` takes the device
+   back for LMS when a session ends, **off by default and opt-in by row**:
+   ADR-0027 declines to do it, and the reclaims that were measured were
+   spurious — a Spotify session ending because a phone locked would drag LMS
+   back on. `bt_pairing` needed more than storing, because the capability is
+   fixed when the BlueZ agent registers and `NoInputNoOutput` means BlueZ
+   never asks at all — so a change unregisters and registers again.
+   `bt_autotrust` was read per request already and simply was not settable.
+   **ADR-0022's note for it was stale**: there is no
+   `gexis-bluetooth-trust.service` in the image; the agent does the trusting.
+4. **[ADR-0077](docs/decisions/0077-a-source-that-is-off-is-not-running.md):
+   a source that is off is not running.** The last four rows — the three
+   `Enabled` toggles and `headless`.
+5. **The two orange dots**, both found by George reading the screen. The dot
+   means a row's marks carry `?`, a decision still owed. `version` and
+   `image_build` were still asking one that had been answered when they were
+   wired; `version` says `unknown` correctly on this image, and `built` now
+   falls back to `/etc/rpi-issue`, which pi-gen writes on every image, so it
+   reads **2026-09-19**.
+6. **[ADR-0078](docs/decisions/0078-the-transition-screen-waits-for-the-threshold.md):
+   the transition screen waits for the threshold.** `handoff_threshold` showed
+   `1` with no slider because a `number` row only draws one once it is wired —
+   and it had stayed unwired because **nothing had ever read it**. It now means
+   how long a takeover has to be in flight before the panel explains it; 0–3 s
+   in 0.5 s steps, 0 being the old behaviour. Five runs on the panel
+   ([Finding 069](docs/findings/069-the-transition-screen-against-the-threshold.md)).
+
+### ADR-0077, because it is the one with teeth
+
+Off means the renderer's unit is stopped **and disabled**, its adapter is not
+watching, the state reports it unavailable, and arbitration refuses it. Three
+things worth carrying forward:
+
+- **Disabled, not just stopped.** A row whose effect ends at the next boot is
+  a row that lies the second time you look at it.
+- **A row only the panel honoured would not be a switch.** Spotify Connect is
+  advertised on the network, squeezelite is a player in the LMS app, and a
+  Bluetooth device is in a phone's settings screen. So Bluetooth off **powers
+  the radio down** as well as stopping `bluealsa-aplay`, and disables the unit
+  that unblocks rfkill at boot.
+- **The gate is in the core, not the adapters.** ADR-0013 says the three
+  defaults implement the public plugin contract; a plugin that read a settings
+  row named after itself would put that row in the contract. The adapter's
+  `run()` is wrapped instead. That also ends what would have been permanent
+  noise — with go-librespot stopped, the Spotify watch retried every five
+  seconds forever.
+
+**`systemctl disable --now go-librespot.service` measured 7.0 s**, all of it
+stopping the unit, so the call goes through `asyncio.to_thread`. Inline it was
+seven seconds in which the daemon answered nothing. After: the row's own `PUT`
+returns in 18 ms and the next request in 5 ms while the unit is still stopping.
+
+**`headless` stops three units** — kiosk, visualiser, and the panel warm-up
+that is pure boot cost with no kiosk to warm for. Turning it on from the panel
+closes the panel; it is reversible from a phone, and only from a phone. 12 s
+to the panel gone, 20 s to it back.
+
+7. **[ADR-0079](docs/decisions/0079-with-lms-off-the-panel-is-two-screens.md):
+   with LMS off, the panel is two screens.** George's answer to the question
+   ADR-0077 left open — *"Library, browse and radio go with it."* Nothing
+   playing is the waiting marks at 1.8× with a settings icon in the corner;
+   something playing is Now Playing as the root, Home button become Settings,
+   artist line inert, no mini strip. **The row decides it, not
+   `availability.lms`**, which also goes false when the server is merely
+   unreachable. Six states on the panel
+   ([Finding 070](docs/findings/070-the-panel-with-lms-off.md)).
+
+**Both dots are gone**, and no surfaced row carries a `?` any more.
+
+**And building screen 7 found a bug in ADR-0077**: switching off the *active*
+renderer left it active forever, because cancelling its watch is also how the
+release event stops arriving. The panel showed a stopped Spotify's track,
+artwork and progress bar indefinitely, while the same payload said the renderer
+was unavailable. Fixed with one `relinquish`; [LESSONS](docs/LESSONS.md) 39 is
+the part worth keeping.

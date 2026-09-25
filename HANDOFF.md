@@ -1,127 +1,98 @@
 # Handoff
 
-Last updated: 2026-09-25 (twenty-fourth session, on R2D2 — **Phase 9 is
-COMPLETE. All five criteria closed on George's own word, in one session:
-criterion 0 on lived judgement with the opens below the floor, 1 with every
-surfaced settings row acting, 2 with the check that was lying about two rows
-fixed, 3 with his review's three findings, 4 with the handoff's own list
-triaged. Next is Phase 10, the plugin contract.**)
+Last updated: 2026-09-25 (twenty-fifth session, on R2D2 — **Phase 10. The
+plugin contract now carries a plugin that is not a renderer: the Beszel agent
+ships as a manifest, a unit and a binary, with its own entry on the settings
+screen and its keys behind its switch. Two defects were found by putting it on
+the device rather than by writing it. Enrolment is the one thing blocked, and it
+is blocked on George.**)
 
 ## Start here
 
-**Criterion 0 is closed** and
-[ADR-0076](docs/decisions/0076-criterion-0-closes-with-the-opens-below-the-floor.md)
-says so honestly: the scrolls reach 56.9–59.5 drawn/s at 0.00 % dropped, and
-**the screen opens are 30–53 fps at 2.5–5.6 %, below Phase 7a's floor of 55
-and 2 %** ([Finding 067](docs/findings/067-what-the-panel-presents-at-the-end-of-criterion-0.md)).
-George closed it on lived use — *"the panel feels fast based on current
-interaction"* — not on the numbers. **Revisit before Phase 13**, the setup
-phase, when the panel stops being his.
+**Criterion 3 is built and criterion 1 is one step from closing.** The Beszel
+agent is the non-renderer Phase 10 exists to test — *"if the contract cannot
+express that, it is a renderer API wearing a plugin's name"* — and it now needs
+**nothing from the core that names it**. It is
+[ADR-0087](docs/decisions/0087-the-beszel-agent-is-the-first-service-plugin.md)
+and [ADR-0088](docs/decisions/0088-a-plugins-settings-reach-its-unit-as-environment.md),
+verified in [Finding 079](docs/findings/079-what-the-plugin-contract-carries-to-a-unit.md).
 
-**Phase 9 is complete**, and the five closures are recorded where they were
-written — `docs/DEVELOPMENT.md`, each struck through with the closure above it
-and the original text kept below.
+**What is blocked, and it is the only thing:** the agent cannot be enrolled
+without the **token and the hub's public key** from George's hub's Add System
+dialog (`http://192.168.178.69:8090/`). `…/api/beszel/getkey` returns 401
+unauthenticated, so this cannot be read from here. Until then the agent is
+installed, switched off, and has never spoken to a hub — every run in Finding
+079 ends in a 401 from a fake token.
 
-- **0 — the panel meets Phase 7a's target.** Closed on lived judgement, not on
-  the numbers: scrolls reach 56.9–59.5 drawn/s at 0.00 % dropped, **the opens
-  are 30–53 and 2.5–5.6 % against a floor of 55 and 2 %**
-  ([ADR-0076](docs/decisions/0076-criterion-0-closes-with-the-opens-below-the-floor.md)).
-  **Revisit before Phase 13.**
-- **1 — every ADR-0022 row wired or scoped out.** Checked against the running
-  daemon: of 74 rows, no surfaced row is unwired and none carries a `?`.
-- **2 — no unwired UI remains.** Four generated lists. It found one thing, and
-  the thing was the check
-  ([Finding 071](docs/findings/071-what-the-panel-shows-that-does-nothing.md)).
-- **3 — the review pass with George.** Three issues, all fixed.
-- **4 — the handoff's issues triaged.** Ten items
-  ([Finding 074](docs/findings/074-the-handoffs-issues-triaged.md)).
+**What George sees on the settings screen**, as the API publishes it:
 
-### What was wired this session
+```
+  group [System] -> heading 'Beszel'
+  beszel.enabled   visible=True  value=False
+  beszel.hub       visible=False onlyWhen=['beszel.enabled', True]
+  beszel.token     visible=False onlyWhen=[...]  secret=True
+  beszel.key       visible=False onlyWhen=[...]  secret=True
+```
 
-Three commits, in this order, each verified on the hardware before the next:
+which is his own sentence: *"visible in the settings under a plugin entry. Then
+beszel could be enabled or disabled from there. When enabled fields appear that
+allow keys to be provided."*
 
-1. **The device says which build it is.** `version` and `image_build` read
-   `/etc/gexis/image.info`, which the image now writes — nothing on a running
-   device could report it, because the `.info` beside the image is on the
-   build host. A device flashed before that stage existed says `unknown`
-   rather than showing an empty row.
-2. **Three handoff rows** — `restore_transport`, `show_transition`,
-   `handoff_duration` — read where they are used, so none needs a callback.
-3. **Reclaim, and the two Bluetooth rows.** `reclaim_lms` takes the device
-   back for LMS when a session ends, **off by default and opt-in by row**:
-   ADR-0027 declines to do it, and the reclaims that were measured were
-   spurious — a Spotify session ending because a phone locked would drag LMS
-   back on. `bt_pairing` needed more than storing, because the capability is
-   fixed when the BlueZ agent registers and `NoInputNoOutput` means BlueZ
-   never asks at all — so a change unregisters and registers again.
-   `bt_autotrust` was read per request already and simply was not settable.
-   **ADR-0022's note for it was stale**: there is no
-   `gexis-bluetooth-trust.service` in the image; the agent does the trusting.
-4. **[ADR-0077](docs/decisions/0077-a-source-that-is-off-is-not-running.md):
-   a source that is off is not running.** The last four rows — the three
-   `Enabled` toggles and `headless`.
-5. **The two orange dots**, both found by George reading the screen. The dot
-   means a row's marks carry `?`, a decision still owed. `version` and
-   `image_build` were still asking one that had been answered when they were
-   wired; `version` says `unknown` correctly on this image, and `built` now
-   falls back to `/etc/rpi-issue`, which pi-gen writes on every image, so it
-   reads **2026-09-19**.
-6. **[ADR-0078](docs/decisions/0078-the-transition-screen-waits-for-the-threshold.md):
-   the transition screen waits for the threshold.** `handoff_threshold` showed
-   `1` with no slider because a `number` row only draws one once it is wired —
-   and it had stayed unwired because **nothing had ever read it**. It now means
-   how long a takeover has to be in flight before the panel explains it; 0–3 s
-   in 0.5 s steps, 0 being the old behaviour. Five runs on the panel
-   ([Finding 069](docs/findings/069-the-transition-screen-against-the-threshold.md)).
+### The two defects the device found, because they are the reason to read this
 
-### ADR-0077, because it is the one with teeth
+Both looked fine in a unit test and both would have shipped.
 
-Off means the renderer's unit is stopped **and disabled**, its adapter is not
-watching, the state reports it unavailable, and arbitration refuses it. Three
-things worth carrying forward:
+1. **The switch was lying.** ADR-0086's amendment synthesised a plugin's
+   `Enabled` row with `default: True`, while ADR-0087 has the image install
+   Beszel's unit **disabled**. Two statements of one fact, and they disagreed:
+   the screen would have read **Enabled** for something neither running nor
+   going to start. It now asks systemd — `systemd.is_enabled`, once at startup —
+   because a declared default is a copy that nothing would notice going stale.
+2. **A credential arrived and nothing used it.** The restart on a changed value
+   was `systemctl try-restart`, which touches a unit that is *active*. Switched
+   on before anything was typed in — which is what anyone does, since the fields
+   only appear once it is on — the agent refuses to start and sits in `failed`.
+   `try-restart` does nothing to a failed unit. **In the first test the agent had
+   been started by hand and the mechanism looked correct.** The gate is now
+   `is-enabled`, with `reset-failed` first, because a unit that spent its
+   `StartLimitBurst` while unconfigured is the expected path here.
 
-- **Disabled, not just stopped.** A row whose effect ends at the next boot is
-  a row that lies the second time you look at it.
-- **A row only the panel honoured would not be a switch.** Spotify Connect is
-  advertised on the network, squeezelite is a player in the LMS app, and a
-  Bluetooth device is in a phone's settings screen. So Bluetooth off **powers
-  the radio down** as well as stopping `bluealsa-aplay`, and disables the unit
-  that unblocks rfkill at boot.
-- **The gate is in the core, not the adapters.** ADR-0013 says the three
-  defaults implement the public plugin contract; a plugin that read a settings
-  row named after itself would put that row in the contract. The adapter's
-  `run()` is wrapped instead. That also ends what would have been permanent
-  noise — with go-librespot stopped, the Spotify watch retried every five
-  seconds forever.
+The second one is the entry for `docs/LESSONS.md` if it earns one: the temporary
+test plugin could not find it, because a throwaway plugin is never left in the
+state a real one starts in.
 
-**`systemctl disable --now go-librespot.service` measured 7.0 s**, all of it
-stopping the unit, so the call goes through `asyncio.to_thread`. Inline it was
-seven seconds in which the daemon answered nothing. After: the row's own `PUT`
-returns in 18 ms and the next request in 5 ms while the unit is still stopping.
+### What was built this session
 
-**`headless` stops three units** — kiosk, visualiser, and the panel warm-up
-that is pure boot cost with no kiosk to warm for. Turning it on from the panel
-closes the panel; it is reversible from a phone, and only from a phone. 12 s
-to the panel gone, 20 s to it back.
+Four commits, in this order:
 
-7. **[ADR-0079](docs/decisions/0079-with-lms-off-the-panel-is-two-screens.md):
-   with LMS off, the panel is two screens.** George's answer to the question
-   ADR-0077 left open — *"Library, browse and radio go with it."* Nothing
-   playing is the waiting marks at 1.8× with a settings icon in the corner;
-   something playing is Now Playing as the root, Home button become Settings,
-   artist line inert, no mini strip. **The row decides it, not
-   `availability.lms`**, which also goes false when the server is merely
-   unreachable. Six states on the panel
-   ([Finding 070](docs/findings/070-the-panel-with-lms-off.md)).
+1. **[ADR-0086's amendment, verified](docs/decisions/0086-a-plugin-declares-itself-in-a-manifest.md)** —
+   every plugin gets an `Enabled` toggle. The three built-ins name their
+   existing row with `enabled_row` and keep one switch each; a plugin that names
+   none gets `<id>.enabled` wired to `systemctl enable/disable --now`.
+2. **[Finding 078](docs/findings/078-what-the-beszel-agent-costs-and-listens-on.md)** —
+   three of criterion 3's four open questions, measured before anything was
+   built. **The agent opens an inbound SSH port on 45876 even when given a hub
+   URL and a token**; `--listen -1` leaves it owning no listening socket at all,
+   so **ADR-0028's "unauthenticated on the LAN" stance needs no extending**.
+   14.3 MB RSS and 0.84 % of one core, as an unconnected floor.
+3. **[ADR-0088](docs/decisions/0088-a-plugins-settings-reach-its-unit-as-environment.md)** —
+   a manifest row may name an `env` variable, exported to
+   `/run/gexis/plugins/<id>.env` at 0600, which the unit reads with
+   `EnvironmentFile=-`. The case it exists for is a third-party binary that will
+   **never** speak ADR-0084's protocol. Also: a manifest's `onlyWhen` names the
+   plugin's own rows and is prefixed like `key`, which is what makes the fields
+   appear. **The quoting was checked against real systemd**, not against its
+   manual — seven values through a live unit, byte for byte.
+4. **`image/stage-gexis/07-beszel/`** — the binary pinned at **v0.20.0** with
+   the checksum agreed three ways, the unit, the `beszel` system user, the
+   manifest, and `beszel-agent-listen-check.sh`, which asserts after every start
+   that nothing is listening on 45876 and refuses to run a build where `-1` has
+   stopped working. `var/lib/beszel-agent` joined ADR-0083's backup members: the
+   fingerprint there is the identity the hub binds this system to, which is the
+   Spotify pairing's lesson applied before it could be learned twice.
 
-**Both dots are gone**, and no surfaced row carries a `?` any more.
-
-**And building screen 7 found a bug in ADR-0077**: switching off the *active*
-renderer left it active forever, because cancelling its watch is also how the
-release event stops arriving. The panel showed a stopped Spotify's track,
-artwork and progress bar indefinitely, while the same payload said the renderer
-was unavailable. Fixed with one `relinquish`; [LESSONS](docs/LESSONS.md) 39 is
-the part worth keeping.
+**1158 tests pass.** The device is left with the plugin installed exactly as the
+stage installs it, switched **off**, with no stored values.
 
 ### Where it stands right now
 
@@ -135,6 +106,12 @@ the part worth keeping.
   3,664 enrichment rows, the phone's pairing, and `idle_url`. Checked usable
   rather than merely present — 8 of 8 artist portraits served from the cache.
 - **PR #26** is open with everything: https://github.com/gcarstoiu/gexis-player/pull/26
+- **The image is now four commits behind the branch in ways a flash would
+  notice**: ADR-0083's `[backups]` share, ADR-0085's ALSA default, the plugin
+  manifests, and now the whole `07-beszel` stage. **Nothing in that stage has
+  been through `make image`** — its files were installed by hand at the same
+  paths, modes and user, so the download, the checksum and the chroot step are
+  untested.
 - **[ADR-0083](docs/decisions/0083-a-backup-leaves-the-device.md) is rsynced on
   top, not in the image.** Backup, the share and a restore round trip are all
   verified on the hardware; the image *stage* that installs the share has not
@@ -192,16 +169,29 @@ they are the contract's **source**, not its consumers, and
    modules outside `adapters/`** and **ten UI files**, so "no core changes"
    means a manifest, a scanned directory, and settings rows and source artwork
    arriving from the plugin. The unsurfaced `plugins` row is where it lands.
-5. The **Beszel agent** against the draft, *before* freezing it — it is the
-   test that the contract carries something with no metadata, no transport and
-   no claim on the audio device. **The machinery it needs is built**: a
-   service connects over the socket, is welcomed, and appears in the payload
-   as `kind: "service"` with no accent, status or mark — checked on the device
-   with a throwaway manifest. What is left is the agent itself and the
-   question of where its hub lives.
-6. Freeze v1. Criterion 2 closes in Phase 11.
+5. ~~The **Beszel agent** against the draft, *before* freezing it.~~ —
+   **built 2026-09-25**, and it did its job twice over: it found that a plugin
+   could declare rows but nothing could switch it off (ADR-0086's amendment),
+   and then that a plugin's settings could not reach a third-party binary at all
+   (ADR-0088). Both were holes in the contract, found by the plugin written to
+   look for them, which is what this criterion is for.
 
-**Settings rows are done** (2026-09-25). A manifest's `settings` are merged
+   **All four of the questions the record said were owed are answered.** The
+   hub is George's. The agent listens on nothing. It costs 14 MB and under 1 %
+   of a core. It ships in the image, defaulting off — George's call.
+
+   **What is left is the enrolment**, and only George can unblock it: the
+   **token and the hub's public key** from the Add System dialog. Then the
+   things nobody has measured — what the hub actually reports, **whether
+   throttle state is among it** (ADR-0087 claims temperature, clocks, throttle
+   and load; only temperature and load are certain), and the cost while
+   connected, re-measured under a scroll against Finding 067.
+6. **Freeze v1** — the last step, and it must stay last. This criterion's plugin
+   has now amended the contract **twice**; freezing before it was built would
+   have frozen a contract that its first real consumer broke.
+
+**Settings rows are done** (2026-09-25), and a plugin's now reach a process
+that cannot speak to us: see ADR-0088 above. A manifest's `settings` are merged
 into the registry — a renderer's under a sub-heading in Sources, the shape the
 three built-ins already have — with keys prefixed by the plugin's id so two
 plugins shipping `enabled` cannot collide. Rows go through the registry's own
