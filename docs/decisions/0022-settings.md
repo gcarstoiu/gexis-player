@@ -122,7 +122,7 @@ background that is a picture — which is the negated form
 | Trusted device list — view and forget | [R] | ADR-0010 requires a recently-connected list for reconnection. Clearing it is one of this record's two named accepted risks |
 | Auto-trust on pair | [R] | **Wired 2026-09-25.** The agent has read this per request for some time - what was missing was the row being settable. **The note here was stale**: there is no `gexis-bluetooth-trust.service` in the image; the agent does the trusting |
 | Spotify Connect device name | [R] | Follows the single device name below |
-| Plugin management | [R] | Should tier, ADR-0016 |
+| Plugin management | [R] | Should tier, ADR-0016. **Answered 2026-09-25 by the Plugins category below**, which is what this row would have opened. The registry keeps the row unsurfaced with a note rather than deleting it |
 
 ### Identity and network
 
@@ -174,6 +174,47 @@ Almost entirely new. That this group barely existed is itself worth noticing.
 | Show image version and build info | [R] | **Wired 2026-09-25**, and the gap it describes is closed: the image stage writes `/etc/gexis/image.info` with the git-describe version and the build time, because the `.info` the Makefile writes sits beside the image in `deploy/` where a device cannot read it. **Version** is the surfaced row; **Image build** carries the timestamp and stays unsurfaced. A device flashed before the stage existed reports `unknown` rather than an empty row - except for the build date, which falls back to `/etc/rpi-issue` (pi-gen writes it on every image, ours included), so **Image build** reads `2026-09-19` on the device today while **Version** honestly does not know. **The `?` came off both on 2026-09-25**: the decision they carried was *"readonly and reporting nothing"*, and they now report something |
 | Reboot / shut down | [N] | LMS's own menu already offers "Turn Off gexis", so the panel carrying it is consistent rather than novel |
 | CPU governor | [H] | The OS default `ondemand`. `performance` was tried and reverted on 2026-09-17 ([ADR-0039](0039-cpu-governor-performance.md)): ~10 °C hotter, no visible improvement. Exposing it means exposing heat and idle power with it |
+
+### Plugins — appended 2026-09-25
+
+**George, 2026-09-25:** *"Add the settings to the inventory, but under
+plugins."* A category of its own, given on the same day he said why:
+*"we need to separate a plugin from default functionality for a user."*
+
+**This group is not a fixed list.** Every other table here is written down in
+advance; this one is whatever is installed. A plugin declares its rows in
+`plugin.json`, the core merges them, and **one row per plugin appears here
+automatically** — the switch, named after the plugin
+([ADR-0086](0086-a-plugin-declares-itself-in-a-manifest.md) as amended). The
+three built-in renderers are deliberately **not** in it: they name an existing
+row with `enabled_row`, which is how a default says it is part of the furniture
+rather than something the user added.
+
+| Setting | Mark | Notes |
+|---|---|---|
+| A plugin's switch, one per installed plugin | [N] | **Synthesised, not declared** — `<id>.enabled`, labelled with the plugin's name, wired to `systemctl enable/disable --now` on the unit its manifest names. A plugin that could not be switched off is what `docs/DEVELOPMENT.md` calls *"a renderer API wearing a plugin's name"*. Its default is **not** written down: it is whatever `systemctl is-enabled` says about the unit at startup, because a declared default is a copy of something the system already knows and nothing would notice it going stale ([Finding 079](../findings/079-what-the-plugin-contract-carries-to-a-unit.md)) |
+| Beszel — `beszel.enabled` | [N] | The agent that monitors this device ([ADR-0087](0087-the-beszel-agent-is-the-first-service-plugin.md)). **Off on a fresh image**, because the stage installs the unit disabled and an unenrolled device should run nothing |
+| Beszel — `beszel.hub` | [N] | The hub's address. Not on this device; George runs one already. Exported to the unit as `HUB_URL` ([ADR-0088](0088-a-plugins-settings-reach-its-unit-as-environment.md)) |
+| Beszel — `beszel.token` | [N] | From the hub's Add System dialog. `secret`, exported as `TOKEN` |
+| Beszel — `beszel.key` | [N] | The hub's own public key, same dialog. `secret`, exported as `KEY` |
+
+**The three Beszel rows are not in this category.** They live in **System**,
+under a sub-heading carrying the plugin's name, and **they disappear with the
+switch** — George's shape: *"when enabled then the config fields show up in
+system like now in the Beszel subgroup. When the toggle is off the entire
+subgroup is off."* A renderer plugin's rows land in **Sources** the same way.
+
+**`secret` is a mask, not a protection.** `GET /settings` serves these values in
+full to anyone on the LAN, exactly as it already does for the three API keys
+above — stated outright in
+[ADR-0083](0083-a-backup-leaves-the-device.md) and unchanged by this.
+
+**Superseded by this category:** *Plugin management* in *Renderers and sources*
+above — inventoried [R] from ADR-0016, carried in the registry as an unsurfaced
+`plugins` action row, and never built. What it would have opened is this. The
+row is kept unsurfaced rather than deleted, with a note in the registry saying
+so, because removing an inventoried row is George's call and he has not been
+asked for one.
 
 ### Four decisions this inventory is waiting on
 
