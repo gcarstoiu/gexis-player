@@ -2056,12 +2056,18 @@ the exercise.
 
 **Acceptance**
 
-1. ~~Contract documented and versioned.~~ — **Done, and deliberately not
-   frozen.** [`docs/PLUGIN-CONTRACT.md`](PLUGIN-CONTRACT.md) is version 1,
-   derived from `Adapter` and `Capabilities` rather than designed, with
+1. ~~Contract documented and versioned.~~ — **Done, and FROZEN 2026-09-25**
+   (George: *"Freeze now and do metadata. If we need to adapt it's v2."*).
+   [`docs/PLUGIN-CONTRACT.md`](PLUGIN-CONTRACT.md) is version 1, derived from
+   `Adapter` and `Capabilities` rather than designed, with
    `core/tests/test_contract_surface.py` pinning the document against the
-   objects so the two cannot drift in silence. **The freeze moves to Phase 11**
-   with criterion 2, for the reason below.
+   objects so the two cannot drift in silence.
+
+   **The freeze waited for criterion 2, and criterion 2 was worth waiting
+   for**: between them, the two plugins built against this contract forced
+   **four** amendments, every one of them found by building rather than reading.
+   Freezing before either would have frozen a contract its first real consumer
+   broke.
 2. ~~A fourth renderer built against it, in a separate repository, with no
    changes to the core.~~ — **CLOSED 2026-09-25**, on hardware, with audio
    ([Finding 082](findings/082-a-renderer-from-another-repository.md)).
@@ -2178,6 +2184,10 @@ evidence.** Freezing v1 here would freeze a renderer protocol no renderer has
 ever used — and this phase's own plugin amended the contract **twice**, both
 times from building the thing rather than reading the document. Doing it in the
 other order is the mistake the ordering was chosen to avoid.
+
+**It was worth it: criterion 2 forced two more amendments**, and the contract
+was frozen on 2026-09-25 once it had closed
+([Finding 082](findings/082-a-renderer-from-another-repository.md)).
 
 Criterion 1 as written asks for *documented and versioned*, and that is done.
 The freeze was a discipline added on top of it, and it belongs with the proof.

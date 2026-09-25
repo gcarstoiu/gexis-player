@@ -1,22 +1,39 @@
 # The Gexis plugin contract
 
-**Version:** `1` — **draft, not frozen.**
+**Version:** `1` — **frozen 2026-09-25.**
 **Status:** derived from the three default renderers, per
 [ADR-0013](decisions/0013-defaults-implement-public-contract.md) as amended.
 **Carried by:** a Unix socket at `/run/gexis/plugins.sock`, one JSON object per
 line ([ADR-0084](decisions/0084-plugins-speak-json-lines-over-a-unix-socket.md)).
 
-> **Why it is still a draft.** Phase 10 required a non-renderer built against
-> this before freezing — *"if the contract cannot express that, it is a renderer
-> API wearing a plugin's name."* **The Beszel agent was that test and it passed,
-> having first forced two amendments**: every plugin gets a switch (ADR-0086),
-> and a plugin's settings reach its unit as environment (ADR-0088).
+> **Frozen 2026-09-25**, on George's word — *"Freeze now and do metadata. If we
+> need to adapt it's v2."* — and on the evidence Phase 10 required before
+> anyone was allowed to freeze it:
 >
-> **The freeze moved to Phase 11 with criterion 2**, because the *renderer* half
-> of this document has never been spoken by a renderer. Freezing it here would
-> freeze a protocol nothing has used, which is the same mistake in the other
-> direction. Everything about a `service` is settled; everything about a
-> `renderer` is provisional until Plexamp has used it.
+> - **A non-renderer was built against it** and forced two amendments first:
+>   every plugin gets a switch ([ADR-0086](decisions/0086-a-plugin-declares-itself-in-a-manifest.md)),
+>   and a plugin's settings reach its unit as environment
+>   ([ADR-0088](decisions/0088-a-plugins-settings-reach-its-unit-as-environment.md)).
+> - **A renderer was built against it, in another repository**, and took the
+>   audio device from LMS and gave it back inside its own declared release
+>   grace ([Finding 082](findings/082-a-renderer-from-another-repository.md)).
+>   It forced two more: the socket authorised nobody but root
+>   ([ADR-0084](decisions/0084-plugins-speak-json-lines-over-a-unix-socket.md)
+>   amended), and arbitration carried a renderer the published state had no
+>   slot for ([ADR-0089](decisions/0089-arbitration-carries-a-plugin-renderer.md)
+>   amended).
+>
+> **What frozen means here**: within version 1, fields are added and never
+> removed or repurposed, and a plugin ignores what it does not know. A change
+> that cannot be made that way is version **2**, and the core says which
+> versions it serves rather than guessing.
+>
+> **One half of this is still unexercised from outside**, and it is written
+> down rather than glossed: **metadata**. The renderer that proved the
+> arbitration half sends position, duration and transport state and nothing
+> else, because title and artist live on a Plex server rather than on the
+> player. If completing that forces a change, George's instruction covers it:
+> *"If we need to adapt it's v2."*
 
 ## What this is, and what it is not
 
