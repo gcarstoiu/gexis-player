@@ -19,6 +19,8 @@ def _device(root):
     (root / "var/lib/gexis-core").mkdir(parents=True)
     (root / "etc/gexis").mkdir(parents=True)
     (root / "var/lib/bluetooth/11:22").mkdir(parents=True)
+    (root / "var/lib/go-librespot").mkdir(parents=True)
+    (root / "var/lib/go-librespot/state.json").write_text('{"credentials": {}}')
     (root / "var/lib/gexis-core/settings.db").write_text("settings")
     (root / "var/lib/gexis-core/enrichment.db").write_text("enrichment")
     (root / "etc/gexis/core.toml").write_text('idle_url = "secret"')
@@ -35,6 +37,18 @@ def test_it_holds_what_a_flash_destroys(tmp_path):
         held = set(archive.getnames())
     for member in backups.MEMBERS:
         assert any(n == member or n.startswith(member + "/") for n in held), member
+
+
+def test_it_holds_the_spotify_pairing(tmp_path):
+    """**The one the first backup missed.** George reflashed, the restore put
+    everything else back, and the device came up as a brand-new never-paired
+    Spotify player - `credentials: {username: "", data: null}`."""
+    root, out = _device(tmp_path / "root"), tmp_path / "out"
+    name = backups.create("gexis", out, root)
+
+    with tarfile.open(out / name) as archive:
+        held = set(archive.getnames())
+    assert "var/lib/go-librespot/state.json" in held
 
 
 def test_a_missing_member_is_skipped_not_fatal(tmp_path):

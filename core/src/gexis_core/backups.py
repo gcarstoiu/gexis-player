@@ -35,6 +35,17 @@ MEMBERS = (
     "etc/gexis/core.toml",
     "etc/gexis/device-name.env",
     "var/lib/bluetooth",
+    # **The Spotify pairing** (added 2026-09-25). go-librespot stores the
+    # credentials a phone handed it here (`persist_credentials: true`), and
+    # the first backup missed it: the card was flashed, the restore put
+    # everything else back, and the device came up advertising itself as a
+    # brand-new never-paired player. George found it as "I am not seeing the
+    # gexis device in Spotify".
+    #
+    # Deliberately not listed: `/var/lib/gexis-kiosk`, 62 MB of Chromium
+    # profile that ADR-0043 keeps off the default path precisely so wiping it
+    # is one directory, and samba's own tdb state, which is not anybody's.
+    "var/lib/go-librespot",
 )
 
 #: `gexis-<name>-<stamp>.tgz`. The name is the device's, so an archive says
