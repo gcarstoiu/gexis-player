@@ -90,29 +90,37 @@ tell"* is no.
 
 ### What is left in Phase 11
 
-Its own acceptance list, none of which is contract work any more:
+- **Claiming** from the `claim_token` row. The row exists, the plugin accepts
+  it and does nothing with it; Plexamp's own setup wants a token *and* a name in
+  one session ([Finding 077](docs/findings/077-plexamp-on-gexis.md)), and the
+  name should come from ADR-0048's device name rather than being typed twice.
+- **Takeover gaps and cross-rate**, Phase 11's own criterion 2. The cross-rate
+  half has been blocked since Phase 9 for a reason that has not changed: a
+  60,974-track library scan found **zero** non-44.1 kHz files, so testing it
+  means sourcing content first.
+- **The waiting screen and the Peppy badge** with Plexamp as a party. Neither
+  has been seen. The waiting screen is where the 48px mark is stretched to 68px.
+- **A boot.** Nothing built from `08-plexamp` has been run, which is the same
+  sentence Beszel's stage earned and is George's to close by flashing.
 
-- ~~**Volume.**~~ — **done**
-  ([Finding 084](docs/findings/084-a-plugins-volume.md)). The panel's slider
-  drives Plexamp and a change made on the player reaches the DAC through the
-  same single curve every renderer uses. It needed `remote.forget`, which did
-  not exist, and the echo guard this project has now written three times.
-- **Claiming** from the `claim_token` row, rather than Plexamp's own setup.
-- ~~**The panel.**~~ — Now Playing is **right**, and **the mark is drawn**:
-  Plexamp's own icon, which George approved taking. Finding that work needed
-  [ADR-0086 amended](docs/decisions/0086-a-plugin-declares-itself-in-a-manifest.md):
-  the manifest's glyph reached the payload and **only the waiting screen ever
-  passed it down**, so a plugin renderer drew an empty span on Now Playing. The
-  lookup now lives in `SourceMark` itself.
+### What was done in Phase 11, in order
 
-  **Still unchecked on the panel:** the handoff screen and the Peppy badge with
-  Plexamp as a party, and the waiting screen, where the 48px mark is stretched
-  to 68px — 48px is all the resolution that exists for it.
-- **Takeover gaps and cross-rate**, criterion 2 of Phase 11's own list.
-- **`08-plexamp`**, the image stage from
-  [ADR-0090](docs/decisions/0090-plexamp-ships-the-way-beszel-does.md). Nothing
-  of this plugin is in the image; it was installed by hand at
-  `/opt/gexis-plexamp`.
+1. **[ADR-0089](docs/decisions/0089-arbitration-carries-a-plugin-renderer.md)** —
+   arbitration carries a plugin renderer.
+2. **The plugin**, `gcarstoiu/gexis-plexamp`, public, v0.1.0 released.
+3. **Criterion 2 closed** with audio
+   ([Finding 082](docs/findings/082-a-renderer-from-another-repository.md)), and
+   **contract v1 frozen** on that evidence.
+4. **Metadata** ([083](docs/findings/083-metadata-from-a-plugin.md)) and
+   **volume** ([084](docs/findings/084-a-plugins-volume.md)), both directions.
+5. **The mark and the handoff screen**, which cost ADR-0086 an amendment: the
+   manifest's glyph reached the payload and **two of the three screens that draw
+   a mark never looked it up**.
+6. **`08-plexamp`**, the image stage, with a `verify-image.sh` section.
+
+**Five amendments came out of the two plugins and one out of me**, every one
+found by building rather than reading. That is the argument for the ordering,
+and it is the reason v1 was not frozen a week earlier.
 
 ### The two defects the device found, because they are the reason to read this
 
