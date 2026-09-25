@@ -1,9 +1,11 @@
 # Handoff
 
-Last updated: 2026-09-25 (twenty-fourth session, on R2D2 — **Phase 9:
-criterion 0 is closed on George's judgement, and criterion 1 is finished —
-every surfaced settings row now acts. What is left of Phase 9 is criteria 2,
-3 and 4, all of them review rather than build.**)
+Last updated: 2026-09-25 (twenty-fourth session, on R2D2 — **Phase 9 is
+COMPLETE. All five criteria closed on George's own word, in one session:
+criterion 0 on lived judgement with the opens below the floor, 1 with every
+surfaced settings row acting, 2 with the check that was lying about two rows
+fixed, 3 with his review's three findings, 4 with the handoff's own list
+triaged. Next is Phase 10, the plugin contract.**)
 
 ## Start here
 
@@ -16,14 +18,23 @@ George closed it on lived use — *"the panel feels fast based on current
 interaction"* — not on the numbers. **Revisit before Phase 13**, the setup
 phase, when the panel stops being his.
 
-**Criterion 1 is finished.** Every row in Settings that is shown to a user
-either does something or is one George has ruled on. Checked against the
-device, not against a list: of 74 rows, the 18 that report `wired: false` are
-14 that are `surfaced: false` (scoped out in
-[Finding 068](docs/findings/068-what-is-left-unwired-in-settings.md)), `wifi`
-and `bt_trusted` — which work through their own `/settings/{key}/items` route
-and were never unwired — and `handoff_threshold`, which **George decided
-stays as it is** (evidence-gated, not a preference).
+**Phase 9 is complete**, and the five closures are recorded where they were
+written — `docs/DEVELOPMENT.md`, each struck through with the closure above it
+and the original text kept below.
+
+- **0 — the panel meets Phase 7a's target.** Closed on lived judgement, not on
+  the numbers: scrolls reach 56.9–59.5 drawn/s at 0.00 % dropped, **the opens
+  are 30–53 and 2.5–5.6 % against a floor of 55 and 2 %**
+  ([ADR-0076](docs/decisions/0076-criterion-0-closes-with-the-opens-below-the-floor.md)).
+  **Revisit before Phase 13.**
+- **1 — every ADR-0022 row wired or scoped out.** Checked against the running
+  daemon: of 74 rows, no surfaced row is unwired and none carries a `?`.
+- **2 — no unwired UI remains.** Four generated lists. It found one thing, and
+  the thing was the check
+  ([Finding 071](docs/findings/071-what-the-panel-shows-that-does-nothing.md)).
+- **3 — the review pass with George.** Three issues, all fixed.
+- **4 — the handoff's issues triaged.** Ten items
+  ([Finding 074](docs/findings/074-the-handoffs-issues-triaged.md)).
 
 ### What was wired this session
 
@@ -114,23 +125,24 @@ the part worth keeping.
 
 ### Where it stands right now
 
-- **PR #25 is open** on `phase-8-plan`. The four commits above are on it.
-- **The image is behind again.** `2026-09-25-gexis-player-v0.2.1-489-gc25a7b1.img`
-  was built and verified clean; everything in *What was wired* postdates it.
+- **PR #25 is open** on `phase-8-plan`, and carries Phase 8 and the whole of
+  Phase 9.
+- **A fresh image is building** from the completed phase. The previous one,
+  `2026-09-25-…-489-gc25a7b1.img`, predates every criterion-1-to-4 commit.
 - **The core on the device is rsynced, not installed from the branch.** It is
-  the current tree and 1015 tests pass, but a reflash is what makes it real.
+  the current tree and 1,039 tests pass, but a reflash is what makes it real.
 - **The album-cover sweep has not been re-run** since the raw-name and
   collaboration fixes. 82 newly placed artists would now find release groups.
+  George's low-cover report turned out to be the Bluetooth path (ADR-0080), so
+  this is still owed and still unmeasured.
 
-### Next — what is left of Phase 9
+### Next — Phase 10, the plugin contract
 
-**Criterion 2: no unwired UI remains.** Broader than criterion 1, which was
-settings rows. Anything on any screen that looks like a control and is not one.
-
-**Criterion 3: a review pass with George**, screen by screen.
-
-**Criterion 4: triage the handoff's own "issues to look at later"** — the list
-under *Things that will bite if forgotten*, below.
+ADR-0013 says the three default renderers are implemented against the public
+plugin contract and are not special-cased; Phase 10 is where that claim is
+tested by something outside the repository. Qobuz is the fourth-renderer test
+and a Beszel agent is the test that the contract carries a **non-renderer**
+(George, 2026-09-18).
 
 **Three decisions are open and labelled in the ADRs**, none blocking:
 
@@ -152,7 +164,6 @@ get_throttled` read `0xd0000` last session: under-voltage, frequency capping
 and the soft temperature limit have all *occurred* during that uptime —
 historical bits, none current, at 74.5 °C and a full 1.8 GHz. Not a UI
 measurement, but it is the kind of thing that makes measurements wander.
-
 
 ## Build environment (2026-09-13) — read this before the next build
 
@@ -308,14 +319,14 @@ reverted, currently-flashed image predates this fix.
                                             own scrutiny, and a baseline
                                             (Finding 034). Reaching the target
                                             is Phase 9 criterion 0
-8  enrichment + lyrics                    <- next. Additive only, cannot break
-                                            playback.
-                                            Needs an ADR choosing the providers
-                                            first (Finding 030)
-9  settings wiring + UI polish            <- here. Criteria 0 and 1 are done
-                                            (ADR-0076, ADR-0077); 2, 3 and 4
-                                            are review, not build
-10 plugin contract + themes               Qobuz is the fourth-renderer test;
+8  enrichment + lyrics                  * done 2026-09-18, checked by George
+                                            on the panel. ADR-0040, twice
+                                            amended by what the work measured
+9  settings wiring + UI polish          * COMPLETE 2026-09-25 - all five
+                                            criteria closed. 0 carries a
+                                            revisit before 13
+10 plugin contract + themes               <- next
+                                          Qobuz is the fourth-renderer test;
                                             a Beszel agent is the test that
                                             the contract carries a non-renderer
                                             (George, 2026-09-18)

@@ -1414,7 +1414,13 @@ was considered and rejected on measurement:** it would spend 30-45 minutes
 of that allowance to improve pictures that already exist and find no new
 ones.
 
-### Phase 9 — Settings wiring and UI polish
+### Phase 9 — Settings wiring and UI polish — **COMPLETE, 2026-09-25**
+
+**All five acceptance criteria are closed** (0–4 below), each on George's own
+word and each recorded where it was written. Criterion 0 carries a revisit:
+**before Phase 13 is implemented**, because a floor waived on the judgement of
+the person who knows what the device is doing should not survive the phase
+where the panel stops being his.
 
 **Added 2026-09-16 (George):** dedicated time after Phase 8 for wiring settings
 and for general UI checks and small improvements. **Phases renumbered the same
@@ -1644,8 +1650,24 @@ ADRs were updated.
 
    *Original text:* **A review pass on the panel with George:** every issue
    found is fixed or explicitly deferred.
-4. **The handoff's "issues to look at later" are triaged:** fixed, scheduled,
-   or dropped.
+4. ~~**The handoff's "issues to look at later" are triaged:**~~ — **closed
+   2026-09-25**, George ruling on the three that were open: the fixed-volume
+   warning stays in the journal (*"No."*), items 5 and e are dropped as
+   *"non reproducible"*, and Plexamp goes to Phase 11 (*"Ok"*).
+
+   Ten items ([Finding 074](findings/074-the-handoffs-issues-triaged.md)).
+   Four were already fixed and said so, four were statements of fact rather
+   than issues, one is scheduled, and one needed work: **the LMS player on
+   fixed volume**. `digitalVolumeControl` at 0 means LMS moves its own number
+   and always sends full level, so no volume change reaches the device and
+   mute becomes a trap. What was missing was not a fix but a name — the
+   daemon now reads the pref and says what it found. Both branches exercised
+   on the device. **It says so and does not act**: writing a pref on
+   somebody's music server is not ours to do, and 0 is a real choice for
+   anybody driving the DAC from elsewhere.
+
+   *Original text:* **The handoff's "issues to look at later" are triaged:**
+   fixed, scheduled, or dropped.
 
 **Plan, agreed with George 2026-09-18** — in this order, and the order is
 the point:

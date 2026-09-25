@@ -14,11 +14,11 @@ non-reproduction**, which is stated rather than dressed up.
 
 | # | item | disposition |
 |---|---|---|
-| 1 | **Plexamp over Bluetooth reports pauses 4.5–6 s late, or never** | **Scheduled — Phase 11.** Plexamp is that phase's named renderer, and the open next step ("with the speakers on: does Plexamp's audio stop at the tap?") wants the device and the app in hand at once |
+| 1 | **Plexamp over Bluetooth reports pauses 4.5–6 s late, or never** | **Scheduled — Phase 11**, confirmed by George 2026-09-25. Plexamp is that phase's named renderer, and the open next step ("with the speakers on: does Plexamp's audio stop at the tap?") wants the device and the app in hand at once |
 | 2 | **LMS player on fixed volume (`digitalVolumeControl` 0), nothing warns** | **Fixed 2026-09-25.** See below |
 | 3 | **Pausing LMS moved the DAC slightly** (dummy −47 → −50 dB, DAC 152 → 150) | **Explained, and the mechanism is handled.** LMS fades the player out on pause by sending volume steps — found independently on 2026-09-17, when mirroring them published the user's volume as 0 %. `DummyMixerBridge` takes an `is_playing` and waits for the control to settle. **The original measurement was never re-taken**, so this is an explanation that fits, not a re-test |
 | 4 | **After a `gexis-core` restart, a connected phone is not active** | **Fixed 2026-09-18**, both halves — the entry says so itself. Spotify reads `/status` on connect, Bluetooth acquires from the startup scan when `Status` is playing. Neither acquires for a *paused* session, deliberately |
-| 5 | **LMS once reported a position ~5 s ahead on resume** | **Dropped.** One sighting, not reproduced on the second try, never seen since. A new finding if it returns |
+| 5 | **LMS once reported a position ~5 s ahead on resume** | **Dropped**, George's ruling 2026-09-25: *"non reproducible"*. One sighting, not reproduced on the second try, never seen since. A new finding if it returns |
 
 ## Follow-ups
 
@@ -28,7 +28,7 @@ non-reproduction**, which is stated rather than dressed up.
 | b | The stock skins are Volumio-branded; Gelo5's are the image default | **Dropped — not an issue.** A statement of what ships |
 | c | Long titles are cut with `…`; the wrapper scrolls them | **Dropped — a statement of behaviour**, and the behaviour is wanted |
 | d | Fonts: DejaVu, DSEG7; PeppyFont not vendored | **Dropped — a statement of fact** |
-| e | The spectrum once overlapped the remaining time on `dash-spectrum` | **Dropped, very probably already fixed.** [Finding 049](049-the-spectrum-draws-more-bars-than-it-has-room-for.md) is *the spectrum draws more bars than the skin has room for*, corrected 2026-09-23, and an overflowing spectrum landing on neighbouring text is what that looks like. **Not proven to be the same sighting** — it was never reproduced, so there is nothing to compare against |
+| e | The spectrum once overlapped the remaining time on `dash-spectrum` | **Dropped** on the same ruling, *"non reproducible"*, and very probably already fixed. [Finding 049](049-the-spectrum-draws-more-bars-than-it-has-room-for.md) is *the spectrum draws more bars than the skin has room for*, corrected 2026-09-23, and an overflowing spectrum landing on neighbouring text is what that looks like. **Not proven to be the same sighting** — it was never reproduced, so there is nothing to compare against |
 
 ## Item 2, the one that needed work
 
@@ -66,10 +66,9 @@ anybody driving the DAC from elsewhere.
 
 ## What this does not settle
 
-- **Whether the warning should be visible anywhere but the journal.** A
-  person meeting this symptom is looking at a panel, not at `journalctl`. A
-  readonly row, or a notice, would reach them. **George's call**; not built on
-  speculation.
+- ~~**Whether the warning should be visible anywhere but the journal.**~~
+  **Settled 2026-09-25: no.** George, asked whether a readonly row or a notice
+  should carry it: *"No."* The journal is where it lives.
 - **Item 1's answer.** Scheduling is not diagnosing.
 - **Item 3's numbers.** The explanation fits and the mechanism is handled; the
   measurement that raised it has not been repeated.
