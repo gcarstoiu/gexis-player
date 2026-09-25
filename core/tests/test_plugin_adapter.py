@@ -192,3 +192,40 @@ def test_defaults_are_the_quiet_ones():
     assert caps.volume_managed is False
     assert caps.controls == frozenset()
     assert caps.audio_connection == "output"
+
+
+# --- ADR-0037's transport, which the core dispatches by method name ----------
+
+
+@pytest.mark.parametrize("command, argument, wire", [
+    ("play", None, ("transport", {"command": "play", "argument": None})),
+    ("pause", None, ("transport", {"command": "pause", "argument": None})),
+    ("next", None, ("transport", {"command": "next", "argument": None})),
+    ("previous", None, ("transport", {"command": "previous", "argument": None})),
+    ("shuffle", True, ("transport", {"command": "shuffle", "argument": True})),
+    ("repeat", "all", ("transport", {"command": "repeat", "argument": "all"})),
+])
+async def test_each_declared_control_is_a_method_the_core_can_call(command, argument, wire):
+    """**Found by pressing them** (Phase 11 criterion 5). `__main__.transport`
+    does `getattr(adapter, command)`; the three built-ins each define these, and
+    a plugin renderer without them declares controls the panel offers and then
+    answers *"declares next but implements none"* with a 502."""
+    adapter, session, _ = _adapter({})
+    method = getattr(adapter, command)
+    assert await (method() if argument is None else method(argument)) is True
+    assert session.sent == [wire]
+
+
+async def test_activate_is_its_own_message_not_a_transport_command():
+    """The contract has `activate` at the top level, beside `transport`, because
+    taking the device is not the same kind of act as changing what is playing."""
+    adapter, session, _ = _adapter({})
+    assert await adapter.activate() is True
+    assert session.sent == [("activate", {})]
+
+
+async def test_a_refusal_is_an_answer_not_an_exception():
+    """The panel asked a renderer to do something and it would not. That is a
+    502 at the route, not a traceback in the daemon."""
+    adapter, _, _ = _adapter({}, gone=True)
+    assert await adapter.next() is False

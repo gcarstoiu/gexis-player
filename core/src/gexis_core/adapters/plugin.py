@@ -203,6 +203,54 @@ class PluginAdapter(Adapter):
         except PluginGone as exc:
             logger.info("plugins: %s did not take a volume (%s)", self.renderer_id, exc)
 
+    # **A method per command, because that is how the core dispatches them.**
+    # `__main__.transport` does `getattr(adapter, command)` - the three
+    # built-ins each define `play`, `pause`, `next` and the rest, and a plugin
+    # renderer without them is one that declares controls the panel offers and
+    # then answers *"declares next but implements none"* with a 502. Found by
+    # pressing them (Phase 11 criterion 5).
+    #
+    # Written out rather than generated: the contract's `controls` set is fixed
+    # and small, and six named methods say what this renderer can be asked to do
+    # where a `__getattr__` would say nothing at all.
+
+    async def play(self) -> bool:
+        return await self._transport("play")
+
+    async def pause(self) -> bool:
+        return await self._transport("pause")
+
+    async def next(self) -> bool:
+        return await self._transport("next")
+
+    async def previous(self) -> bool:
+        return await self._transport("previous")
+
+    async def shuffle(self, on: bool) -> bool:
+        return await self._transport("shuffle", on)
+
+    async def repeat(self, mode: str) -> bool:
+        return await self._transport("repeat", mode)
+
+    async def activate(self) -> bool:
+        """ADR-0027's deliberate acquisition, asked for from the panel."""
+        return await self._transport("activate")
+
+    async def _transport(self, command: str, argument=None) -> bool:
+        """One command on the wire. **A refusal is the plugin's answer**, not an
+        exception here: the panel asked a renderer to do something and the
+        honest report is that it would not, which is what `False` becomes at the
+        route (502) rather than a traceback in the daemon.
+        """
+        message = {"command": command, "argument": argument} if command != "activate" else {}
+        try:
+            return bool(await self._session.send(
+                "activate" if command == "activate" else "transport", **message
+            ))
+        except PluginGone as exc:
+            logger.info("plugins: %s did not take %s (%s)", self.renderer_id, command, exc)
+            return False
+
     async def device_freed(self) -> None:
         await self._tell("device_freed")
 
