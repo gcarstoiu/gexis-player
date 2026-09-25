@@ -49,7 +49,13 @@
 
   // Criterion 4: shown for the takeover itself unless the pair is measured
   // fast enough to be exempt, and held long enough not to flash.
-  const HANDOFF_MIN_MS = 1400;
+  //
+  // **Both are settings now** (ADR-0022's `show_transition` and
+  // `handoff_duration`, wired 2026-09-25). The fallback is the 1.4s this
+  // shipped with, so wiring the row changed nothing until somebody moves
+  // it - the registry's own default was raised to match rather than the
+  // screen being quietly lengthened.
+  const HANDOFF_MIN_MS = $derived(($settingValues.handoff_duration ?? 1.4) * 1000);
   let shownHandoff = $state.raw(null);
   let handoffShownAt = 0;
   let handoffTimer;
@@ -58,6 +64,10 @@
     const exempt = h && $handoffExemptPairs.some(([a, b]) => a === h.from && b === h.to);
     untrack(() => {
       clearTimeout(handoffTimer);
+      if ($settingValues.show_transition === false) {
+        shownHandoff = null;
+        return;
+      }
       if (h && !exempt) {
         if (!shownHandoff) handoffShownAt = performance.now();
         shownHandoff = h;

@@ -278,12 +278,12 @@
         "type": "number",
         "label": "Transition screen length",
         "marks": "N",
-        "note": "How long the takeover animation stays up once it is shown.",
+        "note": "How long the takeover animation stays up once it is shown. 1.4s is what the panel shipped with, so the row starts where the behaviour was.",
         "min": 1,
         "max": 5,
         "step": 0.5,
         "unit": "s",
-        "default": 2.5,
+        "default": 1.4,
         "onlyWhen": [
           "show_transition",
           true

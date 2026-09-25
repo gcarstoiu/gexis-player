@@ -66,7 +66,7 @@ Phase 2 and ADR-0027.
 |---|---|---|
 | Enable / disable each renderer | [R] | implied by ADR-0013 |
 | Re-activate LMS automatically when another session ends | [N] | ADR-0027 deliberately never does this — the reason Phase 4 criterion 7 existed at all (withdrawn 2026-09-15). Plausible opt-in, but it would reintroduce the spurious-reclaim failure that record measured, so not a free toggle |
-| Restore transport state on return | [R][H] | ADR-0027: play only if it was playing |
+| Restore transport state on return | [R] | **Wired 2026-09-25.** Three answers - *Play only if playing* (ADR-0027's rule and the default), *Always play*, *Always pause*. Read at the moment of the takeover rather than held, so a change needs no restart, and a reading that fails is ADR-0027's rule |
 | Seek re-anchor on return | [R][?] | Deferred twice in ADR-0027's Open, which then found a second argument for it: pressing play on a deactivated player loses the position entirely |
 | Timeout ladder: polite / SIGTERM / SIGKILL grace | [H] | `TimeoutLadder` defaults |
 | squeezelite `-C` idle close | [R][H] | Currently 1. Drove the whole release-timing result (Finding 018) |
@@ -94,7 +94,7 @@ Phase 2 and ADR-0027.
 | Headless — disable the local screen | [R] | Must |
 | Screen brightness | [N] | The panel never sleeps by decision (ADR-0019); brightness is a separate question that record does not answer |
 | Elapsed vs remaining time | [N] | Both are published |
-| Show the transition screen at all | [N] | |
+| Show the transition screen at all | [R] | **Wired 2026-09-25**, with the screen's length beside it. Off means a takeover changes screen with no announcement |
 | Idle screen: built-in or external URL | [R] | [ADR-0047](0047-the-idle-screen-gains-backgrounds-and-weather.md). ADR-0033's external page, demoted from *the* answer to one of two |
 | Idle background: artist pictures / wallpapers online / wallpapers on device / black | [N] | ADR-0047 §1 |
 | Wallpaper API key | [N] | **Pixabay**, chosen by George on 2026-09-21 ([Finding 043](../findings/043-the-idle-screens-two-providers.md)). A key per owner: its guidelines allow this use but not a shipped credential |

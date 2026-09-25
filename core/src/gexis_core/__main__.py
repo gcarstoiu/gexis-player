@@ -920,6 +920,11 @@ async def main() -> None:
                "weather_location": None, "idle_forecast": None,
                "idle_icons": None,
                "viz_timeout": None, "viz_stop": None,
+               # ADR-0022's handoff rows, wired 2026-09-25. Read where they
+               # are used - the adapter at a takeover, the panel for the
+               # transition screen - so none needs a callback.
+               "restore_transport": None,
+               "show_transition": None, "handoff_duration": None,
                # ADR-0052 §3: read on every map between a position and a
                # level, and re-applied here when it changes so the level
                # comes down at once if it is now above the ceiling.
@@ -1124,6 +1129,10 @@ async def main() -> None:
     # ADR-0071: a queue this daemon changed is re-read at once, instead of
     # waiting about 1.2s for LMS to report back something we just did.
     library.on_queue_changed(lms.queue_changed_by_us)
+    # ADR-0022's `restore_transport`, wired 2026-09-25. Read at the moment
+    # of the takeover rather than held, so a change takes effect without a
+    # restart. `settings` is built below, hence the late binding.
+    lms.on_restore_transport(lambda: settings.value("restore_transport"))
     artistinfo = LmsArtistInfo(library.rpc, f"http://{config.lms_host}:{config.lms_port}",
                                store=enrichment_cache)
     # ADR-0040 §1: LMS's own plugin first where it answers, the key-free
