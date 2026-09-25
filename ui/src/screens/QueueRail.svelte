@@ -13,6 +13,7 @@
 -->
 <script>
   import { libraryAction, loadPlaylists } from '../lib/library.js';
+  import { inView, watchScroller } from '../lib/window.svelte.js';
 
   let { open, queue, onclose } = $props();
 
@@ -60,6 +61,51 @@
   const sourceKicker = $derived(hasSource ? (queue.modified ? 'Started from' : 'Playing from') : 'Play from');
   const sourceName = $derived(hasSource ? queue.name : 'Choose a playlist');
   const sourceAction = $derived(hasSource ? 'Change' : 'Browse');
+
+  //: **The rail builds only the rows on screen** (ADR-0067, extended to the
+  //: rail on 2026-09-25). Removing one row renumbers every row below it -
+  //: `.qrow__num` is the queue position - so taking a track out of a
+  //: 458-track queue rewrote 465 pieces of text and dropped 10-19 % of the
+  //: frames, where the same gesture on a 16-track queue drops none.
+  const OVERSCAN = 400;
+  const railScroll = watchScroller();
+
+  let list = $state(null);
+  let pitch = $state(null);
+  //: Plain, not state: an effect that reads what it writes wakes itself
+  //: (LESSONS 31).
+  let pitched = false;
+
+  function measurePitch() {
+    const row = list?.querySelector('.qrow');
+    if (!row) return;
+    // The gap counts: the list is a flex column with 3px between rows, so
+    // 458 rows are 1,374px taller than 458 row heights.
+    const gap = parseFloat(getComputedStyle(list).rowGap) || 0;
+    pitch = row.offsetHeight + gap;
+    pitched = true;
+  }
+
+  $effect(() => {
+    void keyed.length;
+    void railScroll.view;
+    if (!list) return;
+    if (!pitched) requestAnimationFrame(() => setTimeout(measurePitch, 0));
+  });
+
+  const railWindow = $derived.by(() => {
+    if (!pitch || !keyed.length) {
+      return { rows: keyed.slice(0, 14), above: 0, below: 0 };
+    }
+    const blocks = keyed.map((row, at) => ({ top: at * pitch, height: pitch, row }));
+    const { from, to, above, below } = inView(
+      blocks,
+      railScroll.top,
+      railScroll.view || 600,
+      OVERSCAN,
+    );
+    return { rows: blocks.slice(from, to + 1).map((b) => b.row), above, below };
+  });
 
   const pad = (n) => String(n).padStart(2, '0');
 
@@ -256,8 +302,9 @@
 
   <!-- A list, said out loud: the rows carry the swipe handlers, and a
        handler on a bare <div> has no role for anything but a mouse. -->
-  <div class="rail__list" role="list">
-    {#each keyed as { item, offset, at, key } (key)}
+  <div class="rail__list" role="list" bind:this={list} use:railScroll.attach>
+    <div class="qrow__space" style:height="{railWindow.above}px"></div>
+    {#each railWindow.rows as { item, offset, at, key } (key)}
       <div
         class="qrow"
         role="listitem"
@@ -303,6 +350,7 @@
         <div class="empty__text">Pick a playlist or add tracks from the library and they will line up here.</div>
       </div>
     {/each}
+    <div class="qrow__space" style:height="{railWindow.below}px"></div>
   </div>
 </div>
 
@@ -691,6 +739,10 @@
     color: var(--ink-strong);
   }
 
+  /* What stands in for the rows that are not built (ADR-0067). */
+  .qrow__space {
+    flex-shrink: 0;
+  }
   .qrow__behind {
     position: absolute;
     inset: 0;

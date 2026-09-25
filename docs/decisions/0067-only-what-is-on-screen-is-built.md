@@ -99,6 +99,38 @@ before any of this. The scroll listener costs nothing measurable.
   ([ADR-0065](0065-long-lists-are-built-a-screenful-at-a-time.md)) and paints
   in 104 ms, and the queue rail builds everything.
 
+## Extended to the queue rail, 2026-09-25
+
+George: *"There is still some choppiness there. Can you have a thorough look
+and make it smooth?"* — on removing a track by swiping it
+([ADR-0062](0062-the-queue-removes-by-swipe.md)).
+
+**A queue row shows its position**, so taking one out renumbers every row
+below it. Measured on his 458-track queue: removing the fourth row rewrote
+**465 pieces of text** and dropped 10.6–19.4 % of the frames. The same
+gesture on a 16-track queue rewrote 21 and dropped none — it scales with the
+queue, which is what named the cause.
+
+The rail now windows by row, the simple case: one pitch (60 px plus the
+list's 3 px gap), measured rather than assumed.
+
+| removing one row from a 467-track queue | before | after |
+| --- | --- | --- |
+| frames drawn a second | 42.3–52.9 | **54.5–58.6** |
+| dropped | 10.6–19.4 % | **2.0–2.9 %** |
+| main thread blocked | up to 102 ms | **0 ms** |
+| pieces of text rewritten | 463–465 | **24–25** |
+| rows built | 467 | **16** |
+
+Checked the same way as the grid: 463 rows give a scroll height of 29,172 px
+at a 63 px pitch, scrolling to a quarter shows rows 109–131 and to the end
+shows 447–462, and 28,575 plus a 597 px window is exactly the height. The
+rail scrolls at 58.2 frames a second and opens at 50.9.
+
+**The rail was the last of the long lists.** A playlist keeps
+[ADR-0065](0065-long-lists-are-built-a-screenful-at-a-time.md)'s chunking and
+paints in 104 ms.
+
 ## Alternatives
 
 - **Keep ADR-0065 and make cards cheaper** — measured and rejected: five
