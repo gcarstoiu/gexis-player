@@ -287,8 +287,10 @@ else
 fi
 # **A restarted Plexamp must come back idle** (ADR-0091, amended 2026-09-26).
 # It restores a saved paused queue by opening the ALSA device, unasked; a kill
-# that lands before it has saved its stop leaves exactly that queue behind.
-if grep -q "^ExecStartPre=.*rm -f .*/Plexamp/Settings/%%40Plexamp%%3Astate\*" "$OUT/unit"; then
+# that lands before it has saved its stop leaves exactly that queue behind. The
+# helper keeps the volume, so it has to be there and executable, not only named.
+if grep -q '^ExecStartPre=/usr/local/lib/gexis/plexamp-start-idle$' "$OUT/unit" \
+	&& dfs "stat /usr/local/lib/gexis/plexamp-start-idle" | grep -q 'Mode: *0755'; then
 	ok "plexamp.service clears the saved queue a killed player would restore"
 else
 	bad "plexamp.service lets Plexamp restore a queue and take the device unasked"

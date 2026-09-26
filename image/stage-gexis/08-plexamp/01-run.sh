@@ -52,6 +52,9 @@ chown -R 1000:1000 "${ROOTFS_DIR}/home/pi/plexamp"
 # release ladder escalates against.
 install -D -m 644 files/plexamp.service \
 	"${ROOTFS_DIR}/etc/systemd/system/plexamp.service"
+# Run from its `ExecStartPre`: the saved queue goes, the volume stays.
+install -D -m 755 files/plexamp-start-idle \
+	"${ROOTFS_DIR}/usr/local/lib/gexis/plexamp-start-idle"
 
 # The plugin: source, manifest, mark and unit, from the release tarball rather
 # than copied out of this repository - what ships is what that repository
