@@ -7,6 +7,16 @@ panel still shows as if it's connected."* Is that a defect?
 across the event: Plexamp's own timeline, the DAC's `hw_params` (card resolved
 by name), the core's `active` and published `transport`, and the count of
 established connections to `:32500`. George's own phone, his own disconnect.
+**Partly corrected, 2026-09-26** by
+[Finding 088 §4](088-making-plexamp-behave-like-the-other-renderers.md): the
+claim below that *"the phone never connects to Plexamp at all"* is **wrong** —
+Plexamp's own HTTP log records hundreds of requests from the phone's address
+straight to the player. The conclusion that an instantaneous connection count
+cannot carry a presence signal **stands**, but for a different reason: the
+phone's requests are short-lived, so a snapshot almost always misses them. One
+lead this record closed too early is reopened there — whether the phone *polls*
+the timeline while attached is still unmeasured, because that route is not
+logged.
 
 ## What happens
 

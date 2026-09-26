@@ -4775,3 +4775,189 @@ the adapter reads its own polite stop as a user disconnect.
 
 The finding also carries two smaller things — our `output.conf` pins no sample
 format, and peppyalsa gave moOde an all-zero meter FIFO for S32_LE.
+
+---
+
+## From HANDOFF.md, 2026-09-26 (was the twenty-fifth session's narrative) — Phase 10 and Phase 11 complete, the contract frozen at v1
+
+## Start here
+
+**Phase 11 is complete**, all six criteria, and **Phase 10's criterion 2 with
+it**. The contract is frozen at v1.
+
+**The one number that describes this renderer**: taking the device from LMS
+costs **0.2 s**; giving it back costs **12.6–14.2 s**, because a commanded stop
+confirms at once and Plexamp's native layer holds the device until its own timer
+expires. The plugin declares a **16 s** polite grace for itself and the ladder
+honoured it in all six takeovers — no SIGTERM, no SIGKILL, for a renderer the
+core knows nothing about
+([Finding 085](docs/findings/085-the-takeover-gaps-and-the-controls.md)).
+
+### Six amendments, every one found by building
+
+This is the argument for the ordering, and the reason v1 was not frozen a week
+earlier. Two plugins written against the contract broke it six times:
+
+| | what could not be expressed |
+|---|---|
+| ADR-0086 | a plugin could declare rows and **nothing could switch it off** |
+| ADR-0088 | a plugin's settings **could not reach a third-party binary** |
+| ADR-0084 | the socket **authorised nobody but root** |
+| ADR-0089 | arbitration carried a renderer **the published state had no slot for** |
+| ADR-0089 | the supervisor had a **copy** of the adapter map, so the release ladder could not ask whether a plugin still held the device |
+| ADR-0086 | the manifest's glyph reached the payload and **three screens never looked it up** |
+
+**The fifth was mine**, written down deliberately with a reason that turned out
+to be wrong, and it crashed the first real takeover with `KeyError: 'plexamp'`
+from inside `_release_with_ladder`.
+
+### What is not done, and is named rather than implied
+
+- **Cross-rate takeover gaps.** Blocked since Phase 9 for a reason that has not
+  changed: a 60,974-track scan found **zero** non-44.1 kHz files.
+- **Gaps against Spotify and Bluetooth.** Neither can be made to take the device
+  on request — they answer 409 to `activate`, correctly — so measuring them
+  needs a phone.
+- **Claiming** from the `claim_token` row. The row exists and the plugin accepts
+  it; Plexamp's own setup still does the claiming. **Not one of Phase 11's
+  criteria** — something added to the list here.
+- **`next`/`previous` moving between tracks.** Both reached Plexamp and were
+  accepted, but the test queue held one track.
+- **A boot.** The image carries everything; nothing built from it has been run.
+
+### The two defects the device found, because they are the reason to read this
+
+Both looked fine in a unit test and both would have shipped.
+
+1. **The switch was lying.** ADR-0086's amendment synthesised a plugin's
+   `Enabled` row with `default: True`, while ADR-0087 has the image install
+   Beszel's unit **disabled**. Two statements of one fact, and they disagreed:
+   the screen would have read **Enabled** for something neither running nor
+   going to start. It now asks systemd — `systemd.is_enabled`, once at startup —
+   because a declared default is a copy that nothing would notice going stale.
+2. **A credential arrived and nothing used it.** The restart on a changed value
+   was `systemctl try-restart`, which touches a unit that is *active*. Switched
+   on before anything was typed in — which is what anyone does, since the fields
+   only appear once it is on — the agent refuses to start and sits in `failed`.
+   `try-restart` does nothing to a failed unit. **In the first test the agent had
+   been started by hand and the mechanism looked correct.** The gate is now
+   `is-enabled`, with `reset-failed` first, because a unit that spent its
+   `StartLimitBurst` while unconfigured is the expected path here.
+
+The second one is **[LESSONS 41](docs/LESSONS.md)**: a test double built to work
+does not visit the states the real subject starts in. The throwaway plugin's unit
+was a shell script that always started, so the mechanism was measured against a
+*running* unit six times out of six.
+
+### What was built this session
+
+Four commits, in this order:
+
+1. **[ADR-0086's amendment, verified](docs/decisions/0086-a-plugin-declares-itself-in-a-manifest.md)** —
+   every plugin gets an `Enabled` toggle. The three built-ins name their
+   existing row with `enabled_row` and keep one switch each; a plugin that names
+   none gets `<id>.enabled` wired to `systemctl enable/disable --now`.
+2. **[Finding 078](docs/findings/078-what-the-beszel-agent-costs-and-listens-on.md)** —
+   three of criterion 3's four open questions, measured before anything was
+   built. **The agent opens an inbound SSH port on 45876 even when given a hub
+   URL and a token**; `--listen -1` leaves it owning no listening socket at all,
+   so **ADR-0028's "unauthenticated on the LAN" stance needs no extending**.
+   14.3 MB RSS and 0.84 % of one core, as an unconnected floor.
+3. **[ADR-0088](docs/decisions/0088-a-plugins-settings-reach-its-unit-as-environment.md)** —
+   a manifest row may name an `env` variable, exported to
+   `/run/gexis/plugins/<id>.env` at 0600, which the unit reads with
+   `EnvironmentFile=-`. The case it exists for is a third-party binary that will
+   **never** speak ADR-0084's protocol. Also: a manifest's `onlyWhen` names the
+   plugin's own rows and is prefixed like `key`, which is what makes the fields
+   appear. **The quoting was checked against real systemd**, not against its
+   manual — seven values through a live unit, byte for byte.
+4. **`image/stage-gexis/07-beszel/`** — the binary pinned at **v0.20.0** with
+   the checksum agreed three ways, the unit, the `beszel` system user, the
+   manifest, and `beszel-agent-listen-check.sh`, which asserts after every start
+   that nothing is listening on 45876 and refuses to run a build where `-1` has
+   stopped working. `var/lib/beszel-agent` joined ADR-0083's backup members: the
+   fingerprint there is the identity the hub binds this system to, which is the
+   Spotify pairing's lesson applied before it could be learned twice.
+
+5. **The Plugins category**, after George corrected the placement, and
+   **Finding 080** once he had entered his keys: the connected cost, the
+   throttle gap, and a backup read back out of its own archive to show it
+   carries the enrolment. The three keys needed nothing added — they are
+   settings — and the fingerprint, added earlier, is there.
+
+**1160 tests pass.** The device is left with the agent **installed, enrolled and
+running**, and one current backup from 18:57 that contains the enrolment.
+
+### Where it stands right now
+
+- **`gexis` runs the flashed image**, not an rsynced tree —
+  `2026-09-25-gexis-player-v0.2.1-513-g8cbff39.img`, on a **new card**. The old
+  one is kept intact and untouched, which is a better fallback than any
+  archive. **Phase 9 holds on it**: no orange dots, no visible-and-unwired row,
+  and `version` finally reports the build instead of `unknown`
+  ([Finding 076](docs/findings/076-the-first-flash-since-the-settings-work.md)).
+- **George's state was restored onto it** from the pre-flash copy: 41 settings,
+  3,664 enrichment rows, the phone's pairing, and `idle_url`. Checked usable
+  rather than merely present — 8 of 8 artist portraits served from the cache.
+- **PR #26** is open with everything: https://github.com/gcarstoiu/gexis-player/pull/26
+- **A new image is built and verified as a file**:
+  `2026-09-25-gexis-player-v0.2.1-559-gf475cfa.img`, from `main` at the merge of
+  PR #27 — so it carries all of Phase 10 and **none** of Phase 11
+  ([Finding 081](docs/findings/081-the-first-image-with-the-plugin-stage.md)).
+  `07-beszel` ran for the first time, `verify-image.sh` gained a section for it
+  and passes, and the agent binary in the image is asserted to be the one that
+  was enrolled and measured. **Nothing has been booted** — every statement about
+  it is about a file. **Not flashed.**
+- ~~**[ADR-0083](docs/decisions/0083-a-backup-leaves-the-device.md) is rsynced on
+  top, not in the image.**~~ — **it is in the image now**, along with ADR-0085's
+  ALSA default and the four plugin manifests. Backup, the share and a restore
+  round trip were verified on the hardware before this; what the build settles is
+  that the *stage* installs them.
+- **The album-cover sweep has not been re-run** since the raw-name and
+  collaboration fixes. 82 newly placed artists would now find release groups.
+  George's low-cover report turned out to be the Bluetooth path (ADR-0080), so
+  this is still owed and still unmeasured.
+
+### Phase 11's order, and where it stands
+
+**George, 2026-09-25:** *"start 11, with the aim as having plexamp as the new
+renderer as a plugin."*
+
+1. ~~**The adapter.**~~ — **done**, [ADR-0089](docs/decisions/0089-arbitration-carries-a-plugin-renderer.md),
+   with the detail at the top of this file. It came first because everything
+   else in the phase is written against it.
+2. **Plexamp in its own repository**, speaking the contract, with **no core
+   changes** — which is Phase 10's criterion 2, and the only thing that proves
+   the renderer half of the contract is right. **Blocked on George**: see
+   "Next, and it needs George" above.
+3. **Freeze contract v1**, last, on that evidence.
+
+### Still open, and none of it blocking
+
+**Three decisions are labelled in the ADRs:**
+
+- **Is 1.8× the right scale for the waiting screen?** A judgement, not a
+  measurement: two services come to 680 px of the width and about 300 px of the
+  height. George asked for *"not the entire height and width of the screen"*
+  and this is the reading of it.
+- **Should turning `headless` on hand tty1 back to a getty?** Today the screen
+  goes blank until the next boot, which then reaches a login prompt normally
+  (the kiosk's `Conflicts=getty@tty1` stops the getty and systemd does not
+  start it again). Measured on the device.
+- **Should `handoff_exempt_pairs` survive?** With a working threshold it
+  changes no outcome — both its pairs are far under any value the bar offers.
+  It stays because it is measured evidence and because removing published
+  state is Phase 4 criterion 4's business (ADR-0078).
+
+**And the device has a hardware flag worth George's eye.** `vcgencmd
+get_throttled` read `0xd0000` last session: under-voltage, frequency capping
+and the soft temperature limit have all *occurred* during that uptime —
+historical bits, none current, at 74.5 °C and a full 1.8 GHz. Not a UI
+measurement, but it is the kind of thing that makes measurements wander.
+
+**The Beszel agent does not close this.** It cannot read those bits at all
+([Finding 080](docs/findings/080-the-agent-enrolled.md)) — they come from
+`vcgencmd get_throttled` over `/dev/vcio`, which it never opens. George gets
+temperature and CPU over time, which is two of the four parts he asked for on
+2026-09-18. **Whether something small should sample the bits themselves is a
+decision nobody has taken.**
