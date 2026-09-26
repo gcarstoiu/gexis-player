@@ -87,11 +87,15 @@ def test_a_true_boolean_is_not_a_number_of_seconds():
 # --- what it takes -----------------------------------------------------------
 
 def test_plexamps_own_declaration():
-    """The shape Finding 077 says Plexamp needs: 14 s of hold after a stop its
-    own API confirms instantly, so a polite grace longer than the default 3 s."""
+    """The shape Plexamp actually declares. **This was `polite_grace: 16.0`
+    until ADR-0091** - wider than the 14 s hold Finding 077 measured, so the
+    ladder would never escalate against a renderer that was going to let go by
+    itself. Finding 088 §2 priced that: the player is left running, registered
+    and claimed for all fourteen seconds. Now the grace covers only Plexamp's
+    own bookkeeping and the kill does the rest."""
     adapter = PluginAdapter(FakeSession({
         "release_action": "disconnect",
-        "release_ladder": {"polite_grace": 16.0},
+        "release_ladder": {"polite_grace": 0.5},
         "capabilities": {
             "audio_connection": "output",
             "acquisition_events": ["play from a Plex controller"],
@@ -102,7 +106,7 @@ def test_plexamps_own_declaration():
     }))
     assert adapter.renderer_id == "plexamp"
     assert adapter.release_action is ReleaseAction.DISCONNECT
-    assert adapter.release_ladder == TimeoutLadder(polite_grace=16.0)
+    assert adapter.release_ladder == TimeoutLadder(polite_grace=0.5)
     assert adapter.capabilities.volume_mechanism is VolumeMechanism.SOFTWARE_API
     assert adapter.capabilities.supports_artwork is True
     assert "next" in adapter.capabilities.controls

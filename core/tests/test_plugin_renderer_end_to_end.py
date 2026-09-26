@@ -292,11 +292,14 @@ async def test_a_renderer_with_a_bad_declaration_never_becomes_one(tmp_path):
 
 @pytest.mark.asyncio
 async def test_a_declared_ladder_is_the_one_used(tmp_path):
-    """Plexamp's 14 s hold is the case: a polite grace longer than the default,
-    declared by the plugin and honoured by the supervisor."""
+    """A grace that is not the supervisor's default, declared by the plugin and
+    honoured. Plexamp is the case, and **which direction it differs in has
+    changed**: it declared 16.0 to outlast its own 14 s hold until ADR-0091, and
+    now declares a fraction of a second so the ladder escalates instead of
+    waiting."""
     async with Wiring(tmp_path, killed=[]) as w:
         reader, writer = await asyncio.open_unix_connection(str(w.path))
         plugin = FakePlexamp(reader, writer)
-        await plugin.hello(release_ladder={"polite_grace": 16.0})
-        assert w.adapters["plexamp"].release_ladder == TimeoutLadder(polite_grace=16.0)
+        await plugin.hello(release_ladder={"polite_grace": 0.5})
+        assert w.adapters["plexamp"].release_ladder == TimeoutLadder(polite_grace=0.5)
         writer.close()
