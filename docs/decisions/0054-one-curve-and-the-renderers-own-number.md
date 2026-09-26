@@ -1,6 +1,7 @@
 # ADR-0054 — One volume curve, ours, applied to each renderer's own number
 
-**Status:** Accepted — George, 2026-09-23: *"All three at once. Let's try the
+**Status:** Accepted, **§5 amended 2026-09-26** (Spotify is told the level, not
+asked) — George, 2026-09-23: *"All three at once. Let's try the
 fix in order to still have hardware attenuation. If it doesn't work we might
 need to reconsider the software volume path."*
 **Date:** 2026-09-23
@@ -159,6 +160,29 @@ the remembered level is used only when the renderer has none to give.
 
 This is George's first finding in its general form, and it is what makes
 every control agree at the moment of connection rather than a second later.
+
+> **Amended 2026-09-26: Spotify is told, not asked.** George: *"the Spotify
+> renderer always defaults to 100% volume which shouldn't be the case."* Every
+> acquisition in his reproduction logged `spotify says it is at 100`, and
+> **the answer was never a measurement.** With `external_volume: true` ([ADR-0052](0052-the-volume-path.md) §6,
+> which keeps the attenuation in hardware) go-librespot
+> v0.9.0 starts every session at 65535 and never reads `initial_volume` or its
+> own `last_volume` (`daemon/player_state.go:185`, `daemon/player.go:166`); a
+> transfer carries no volume from the phone (`connectstate/transfer.proto`). So
+> "asking" Spotify returns a constant, and the constant is full scale.
+>
+> George chose, of two: **the level already playing carries across.** When
+> Spotify takes the device, the DAC's current level - the one unmuting would
+> restore, if muted - goes to go-librespot through
+> `hardware_raw_to_renderer_value`, the inverse of this record's §3 curve, and
+> the phone's slider follows it. A renderer declares this about itself
+> (`reports_real_volume = False`); LMS and Bluetooth report real levels and
+> are still asked. **Fixed output is unchanged**: the DAC is at full scale
+> there by design and there is nothing to carry.
+>
+> **Rejected: remember Spotify's last level ourselves.** It is the
+> per-renderer memory this section deleted three days earlier, for a renderer
+> whose own memory we would be standing in for because it does not keep one.
 
 ### 6. The panel's own change does not wait for the round trip
 
