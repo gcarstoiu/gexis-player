@@ -1,28 +1,59 @@
 # Handoff
 
 Last updated: 2026-09-26 (twenty-sixth session, on R2D2 — **Phase 11 stays
-complete and the contract stays frozen at v1. This session built nothing: it
-answered why Plexamp does not behave like the other three renderers, and George
-took the decision that fixes it.
-[ADR-0091](docs/decisions/0091-a-plugin-renderer-is-taken-off-the-device.md) is
-accepted and unbuilt, and building it is the next action.**)
+complete and the contract stays frozen at v1. This session answered why Plexamp
+did not behave like the other three renderers, George took the decision, and it
+is built and measured: a takeover costs 0.9 s where it cost fourteen seconds.
+Not in an image, and George's regression pass has not been run — those are the
+next two things.**)
 
 ## Start here
 
-**Next action: build [ADR-0091](docs/decisions/0091-a-plugin-renderer-is-taken-off-the-device.md).**
-Four steps, in this order:
+**[ADR-0091](docs/decisions/0091-a-plugin-renderer-is-taken-off-the-device.md) is
+built and measured** ([Finding 089](docs/findings/089-the-takeover-after-adr-0091.md)).
+Five commits, all landed separately so each can be reviewed on its own:
 
-| | where | change |
+| | where | what |
 |---|---|---|
-| 1 | `core/src/gexis_core/arbitration.py` | the `sigterm_grace` and `sigkill_grace` rungs **poll** instead of `asyncio.sleep`ing blind — [Finding 016](docs/findings/016-polite-grace-blind-sleep.md)'s fix, which was only ever applied to the polite rung |
-| 2 | `core/src/gexis_core/adapters/plugin.py` | `PluginAdapter.signal_stop` ignores `force` and always sends **SIGKILL**, the way `LmsAdapter.signal_stop` already does, for the reason measured below |
-| 3 | `gexis-plexamp` | `RELEASE_LADDER`'s `polite_grace`, **16.0 → short** |
-| 4 | the device | measure the takeover and write the number down |
+| 1 | `arbitration.py` | the `sigterm_grace` and `sigkill_grace` rungs **poll** instead of sleeping blind — [Finding 016](docs/findings/016-polite-grace-blind-sleep.md)'s fix, which had only ever been applied to the polite rung |
+| 2 | `adapters/plugin.py` | `PluginAdapter.signal_stop` always sends **SIGKILL** — a SIGTERM death is not a failure to systemd, so `Restart=on-failure` never fires and the renderer would not come back |
+| 3 | `gexis-plexamp` | `polite_grace` **16.0 → 0.5** |
+| 4 | `arbitration.py` | the ladder logs the **rung**, not a signal it no longer chooses |
+| 5 | `plexamp.service` | `Wants=` moved to `[Unit]`, `StartLimitBurst` 5 → 20, `RestartSec` 5 → 1, and two `verify-image.sh` checks |
 
-**Steps 1 and 2 are inert until step 3.** The ladder never escalates for Plexamp
-today, because the declared 16 s grace always outlasts the ~14 s hold — so 1 and
-2 can land, be reviewed and be regression-tested without changing any observed
-behaviour, and step 3 is the one that turns them on. That is why this order.
+**Next action, and it needs George: the regression pass.** Everything below was
+measured by this session driving the core's own `activate` endpoint, with **no
+phone in the loop** — and the complaint that started the work is about what a
+phone shows.
+
+**Then, to ship it:** the image pins the plugin at `v0.2.0` by checksum, so
+nothing measured here is in a build. It needs a `v0.2.1` release of
+`gcarstoiu/gexis-plexamp` and `PLUGIN_VERSION`/`PLUGIN_SHA256` bumped in
+`image/stage-gexis/08-plexamp/01-run.sh`. **Not done — a public release is
+George's call**, and it should follow his pass rather than precede it.
+
+### What it costs and what it bought
+
+| | before | after |
+|---|---|---|
+| takeover, by the ladder's own clock | 12.6–14.2 s | **0.9 s** |
+| device freed after the signal | — | **143 ms** |
+| player answering again | never went away | **4.04 s** |
+| six back-to-back takeovers | — | **nothing failed**, one restart each |
+
+**The fifth commit is the one to read.** `Wants=gexis-plexamp.service` had sat
+under `[Service]` since the stage was written, where systemd's answer is *"Unknown
+key 'Wants' in section [Service], ignoring"* — so ADR-0090's *"one switch controls
+the pair"* had never actually worked, and nothing noticed until a release ladder
+started stopping the player for real. `verify-image.sh` now checks it **by
+position**, because the key being present was never the part that was wrong.
+
+**One claim was corrected the same day it was written.** ADR-0091 said the stale
+"connected" clears because plex.tv's `presence` flips within ≤10.5 s. That was
+measured on a unit that *stayed stopped*; with `Restart=on-failure` the player is
+back in about a second and `presence` never flips — correctly, since a player you
+cannot see is one you cannot cast back to. What changes is that the PMS session is
+gone and the player reports `state="stopped"`.
 
 ### Why, in one paragraph
 
@@ -60,8 +91,8 @@ absent by measurement.
 
 | | status |
 |---|---|
-| 14 s takeover | **fixed by ADR-0091.** Expect ~0.7 s; measure it |
-| phone still shows it connected after LMS takes over | **fixed by ADR-0091.** plex.tv `presence` clears in ≤10.5 s, the PMS client table in ~3 min |
+| 14 s takeover | **fixed and measured: 0.9 s** (Finding 089) |
+| phone still shows it connected after LMS takes over | **the cause is fixed** - the player is no longer left running and claimed. But `presence` does *not* flip (the restart beats the timeout); what changes is that the session is gone and the player reports stopped. **Whether the phone's chrome follows is unobserved** |
 | panel waits for renderers until playback starts | **not fixable.** Nothing reaches the player when a controller selects it; ADR-0027 already says acquisition is deliberate |
 | panel does not follow a phone disconnect | **not fixable, and not a defect.** A disconnect does not even stop playback, so the panel showing Plexamp as active is correct |
 
@@ -107,7 +138,7 @@ started**, and ADR-0091 does not pre-empt it.
   sampled, unexplained.
 - **A boot.** The image carries everything; **nothing built from it has been
   run.**
-- **36 commits unpushed** on `phase-11-plexamp-plugin`.
+- **42 commits unpushed** on `phase-11-plexamp-plugin`, and one on `gexis-plexamp` (`main`) that is not released.
 
 ## Build environment (2026-09-13) — read this before the next build
 

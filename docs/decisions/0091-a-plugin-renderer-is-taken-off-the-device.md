@@ -1,7 +1,16 @@
 # ADR-0091 — A plugin renderer is taken off the device, not asked to leave
 
-**Status:** **Accepted**, 2026-09-26 — George, after the sweep he asked for:
-*"Decision 1."* **Not built yet.**
+**Status:** **Accepted and built**, 2026-09-26 — George, after the sweep he asked
+for: *"Decision 1."* Built and measured the same day
+([Finding 089](../findings/089-the-takeover-after-adr-0091.md)): **a takeover
+costs 0.9 s where it cost 12.6–14.2 s**, the player comes back by itself in about
+four seconds, and six back-to-back takeovers failed nothing. **Deployed by hand
+to `gexis`, not into an image** — the stage still pins the plugin at `v0.2.0` by
+checksum, so shipping needs a plugin release and a stage bump. **George's
+regression pass has not been run.**
+**Amended the same day:** one consequence below was wrong — plex.tv's `presence`
+does *not* flip during a takeover, because the restart beats the timeout. See
+**Consequences**.
 **Date:** 2026-09-26
 **Raised by:** George, 2026-09-26: *"There are two issues that are making the
 plexamp plugin less attractive now. The biggest is the 14 seconds takeover time
@@ -121,16 +130,30 @@ work we already own.
 
 ## Consequences
 
-- **Takeover should cost about 0.7 s** instead of ~14 s — `polite_grace` plus the
-  169 ms the device took to free under a kill in
-  [Finding 077](../findings/077-plexamp-on-gexis.md). **To be measured, not
-  assumed**; the number above is arithmetic on two separate measurements.
-- **Plexamp becomes briefly unavailable on every takeover**: `/resources`
-  answering again at 3.13 s, plex.tv `presence` back at 9.1 s. This is the price
-  George accepted.
-- **The stale "connected" clears on its own**: plex.tv `presence` within ≤10.5 s,
-  the PMS client table within roughly three minutes. What the phone's UI does with
-  that is unmeasured and is George's to observe.
+- **A takeover costs 0.9 s**, against 12.6–14.2 s — measured, Finding 089. The
+  estimate here was 0.7 s, arithmetic on two separate measurements; the extra
+  fifth of a second is `release()`'s own round trip to the plugin and to Plexamp.
+  The device frees **143 ms** after the signal, against Finding 077's 169 ms.
+- **Plexamp becomes briefly unavailable on every takeover**: the player answers
+  again **4.04 s** later on the unit the image now ships. This is the price George
+  accepted.
+- **Three things about the unit followed, and one of them was already broken.**
+  `Wants=gexis-plexamp.service` had been under `[Service]` since the stage was
+  written, where systemd ignores it — so ADR-0090's "one switch controls the pair"
+  had never actually worked, and it surfaced only once a ladder started stopping
+  the player for real. `StartLimitBurst` went 5 → 20, because legitimate
+  arbitration now spends restarts and 5 is what squeezelite had when Finding
+  013 §1 exhausted it. `RestartSec` went 5 → 1, because there is nothing to wait
+  for. `verify-image.sh` checks the first two, the `Wants=` one by position.
+- **The stale "connected" does not clear the way this record first claimed.**
+  Finding 088 measured plex.tv's `presence` flipping within ≤10.5 s — **of a unit
+  that stayed stopped.** With `Restart=on-failure` the player is back in about a
+  second, so `presence` stays `True` right through a takeover, and that is
+  correct: a player you cannot see is one you cannot cast back to. What does
+  change is that the PMS session is gone (`/status/sessions` `size=0`) and the
+  player reports `state="stopped"` with no queue — the same state squeezelite is
+  left in. **Whether a phone's own chrome stops saying "connected" on that is
+  still unmeasured**, and is George's to observe.
 - **Two of the four symptoms are not addressed and cannot be.** The panel cannot
   switch when the phone *selects* Plexamp, and cannot follow a disconnect, because
   nothing reaches the player on either event — established across five places and
@@ -148,6 +171,11 @@ work we already own.
   measurement that licences this decision is *"`pcm` stayed `closed` across both
   signal tests and a full restart"*, and it is a property of Plexamp, not of the
   contract.
+- **`squeezelite.service` failing into `start request repeated too quickly`
+  again**, or `plexamp.service` doing it for the first time. Six back-to-back
+  takeovers failed nothing (Finding 089), but Finding 013 §1's recurrence appeared
+  *two hours* into ordinary use after 35 clean scripted rounds. **Six rounds is
+  not evidence against that**, and this is the shape to watch for.
 - **A Plexamp release that exposes its device-close timeout**, or admits
   `remoteControl` to the headless settings gate, would make step 1 sufficient on
   its own and the kill unnecessary.
