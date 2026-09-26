@@ -162,9 +162,21 @@
   //: Nothing found means no pills. **The region blanks, never the screen**
   //: (ADR-0014): a renderer whose artist is not in this library - anything
   //: over Bluetooth or Spotify - simply has none.
+  //: **Depended on by name, not by the metadata object** (2026-09-26). The
+  //: daemon republishes `metadata` every second because the position moved, so
+  //: an effect reading `metadata?.artist` re-ran once a second: it blanked the
+  //: pills, re-fetched them, and put them back. The row vanished and returned
+  //: at 1 Hz and everything below it - About, Similar artists - moved with it.
+  //: George caught it on video: *"the artist tab in now playing jumps up and
+  //: down."*
+  //:
+  //: A `$derived` is memoised by value, so the same artist name does not
+  //: retrigger anything. This is the whole fix; the blanking below is correct
+  //: once it only happens when the artist actually changes.
+  const artistName = $derived(metadata?.artist ?? null);
   let genres = $state([]);
   $effect(() => {
-    const name = metadata?.artist ?? null;
+    const name = artistName;
     const open = tab === 'artist';
     genres = [];
     if (!name || !open) return;
