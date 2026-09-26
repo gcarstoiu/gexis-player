@@ -194,16 +194,15 @@ started**, and ADR-0091 does not pre-empt it.
   run.**
 - **Everything is pushed.** `gexis-plexamp` `main` is pushed and released as
   **v0.2.1**, and `gexis-plexamp` has nothing outstanding.
-- **PRs [#28](https://github.com/gcarstoiu/gexis-player/pull/28) (at `f1eef30`)
-  and [#29](https://github.com/gcarstoiu/gexis-player/pull/29) (at `d29ee48`) are
-  merged.** [**PR #30**](https://github.com/gcarstoiu/gexis-player/pull/30) is the
-  last of this session and carries what landed after #29 was merged: the
-  phase-queue move, the build result, and the verifier's stale `daemon fallback`
-  grep. **Merge it, then `git checkout main && git pull`** - R2D2 still has
-  `phase-11-plexamp-plugin` checked out and `main` has not been pulled since.
-- **Three PRs for one session** because each merge happened while work continued
-  on the same branch. Nothing is lost, but the next session should start from a
-  pulled `main` rather than this branch.
+- **Nothing outstanding.** PRs [#28](https://github.com/gcarstoiu/gexis-player/pull/28),
+  [#29](https://github.com/gcarstoiu/gexis-player/pull/29) and
+  [#30](https://github.com/gcarstoiu/gexis-player/pull/30) are all merged, R2D2 is
+  **on `main` at the #30 merge**, the tree is clean, and
+  `phase-11-plexamp-plugin` is fully merged and can be deleted whenever somebody
+  wants to. `gexis-plexamp` `main` is pushed and released as **v0.2.1**.
+- **Three PRs for one session**, because each merge landed while work continued on
+  the same branch. Worth avoiding next time by branching again after a merge
+  rather than pushing onto a branch whose PR has already gone in.
 
 ## Build environment (2026-09-13) — read this before the next build
 
