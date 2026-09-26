@@ -285,6 +285,14 @@ if grep -q '^StartLimitBurst=20' "$OUT/unit"; then
 else
 	bad "plexamp.service is back to a restart burst that arbitration can exhaust"
 fi
+# **A restarted Plexamp must come back idle** (ADR-0091, amended 2026-09-26).
+# It restores a saved paused queue by opening the ALSA device, unasked; a kill
+# that lands before it has saved its stop leaves exactly that queue behind.
+if grep -q "^ExecStartPre=.*rm -f .*/Plexamp/Settings/%%40Plexamp%%3Astate\*" "$OUT/unit"; then
+	ok "plexamp.service clears the saved queue a killed player would restore"
+else
+	bad "plexamp.service lets Plexamp restore a queue and take the device unasked"
+fi
 rm -f "$OUT/unit"
 
 # The manifest is the plugin repository's, so this checks what it must say

@@ -18,8 +18,9 @@ Wants=network-online.target
 #
 # **This is headroom, not a cure**, and it is cheaper here than it was there:
 # Finding 088 section 3 measured that a restarted Plexamp does not touch the
-# ALSA device until it is told to play, so it cannot fail-and-retry against a
-# still-busy device the way squeezelite did. One takeover spends one restart.
+# ALSA device until it is told to play - true only of one with no saved queue,
+# which `ExecStartPre` below now guarantees - so it cannot fail-and-retry against
+# a still-busy device the way squeezelite did. One takeover spends one restart.
 StartLimitIntervalSec=60
 StartLimitBurst=20
 
@@ -39,6 +40,21 @@ Wants=gexis-plexamp.service
 Type=simple
 User=pi
 WorkingDirectory=/home/pi/plexamp
+# **Plexamp starts with no saved queue** (ADR-0091, amended 2026-09-26; George
+# chose it). It persists its queue and state to `@Plexamp:state` and restores it
+# on every start - and a queue restored as *paused* opens the ALSA device
+# (`PREPARED`) without anybody having asked it to play. Measured: a kill that
+# landed before Plexamp had saved its stop brought it back holding the device,
+# with the core knowing nothing, so the next renderer could not open it. That is
+# Finding 013 section 1's precondition, which the notes below rely on being
+# absent. Removing the file makes it absent by construction rather than by the
+# order two processes happen to finish in. The glob takes the `state.<n>`
+# temporaries a kill leaves mid-write. `%%` is systemd's escape for `%`.
+#
+# What it costs: Plexamp never resumes a queue by itself - after a reboot, a
+# restore or a takeover it waits to be told to play, as every renderer here does
+# (ADR-0027).
+ExecStartPre=/bin/sh -c 'rm -f /home/pi/.local/share/Plexamp/Settings/%%40Plexamp%%3Astate*'
 ExecStart=/usr/bin/node /home/pi/plexamp/js/index.js
 Restart=on-failure
 # **5 -> 1, 2026-09-26 (ADR-0091).** This is the path back from every takeover
