@@ -56,6 +56,70 @@ establishes is narrower than it looks: **a sustained zero over tens of seconds
 distinguished "the controller left" cleanly on this occasion.** One session, one
 phone, one app state. An instantaneous zero remains untrustworthy.
 
+## Correction and conclusion, 2026-09-26 — there is no controller signal
+
+George chose the middle option below — *"normally 2 is the answer"* — so the
+question became: **is a sustained zero on that connection count trustworthy?**
+The answer is that the count was never measuring what it appeared to.
+
+### The count was measuring the wrong thing, twice
+
+**First**, `ss ... sport = :32500` counts *every* connection to Plexamp's port,
+and the watchers measuring it poll that port themselves. The "controller
+attached, 0.4 s, every 9 s" pattern reported live on 2026-09-26 was **loopback —
+the instrument measuring itself.** A `tcpdump` of the same window: 55
+connections, all from `127.0.0.1`, none from the LAN.
+
+**Second**, with loopback excluded, the remaining connections were not the phone
+either. **The phone never connects to Plexamp at all:**
+
+```
+ss -tn state established sport = :32500   ->   header only, no rows
+192.168.178.131:51542 -> 192.168.178.191:32400   (this device, talking to the server)
+```
+
+A Plex controller talks to the **server**, which relays commands to the player.
+So the occasional connection on `:32500` is a server→player delivery. **This is
+almost certainly what Finding 077 was measuring** when it recorded zeros "while
+playing and connected" — and its conclusion, that the count cannot serve as
+`on_release`, was right for a reason neither record had identified.
+
+### The server does not record who is controlling either
+
+With the phone connected and playing, the server shows it: `/clients` gains
+`Android[Plexamp]`. **It does not lose it on a disconnect** — checked live, the
+entry persisted unchanged while George confirmed *"music is still playing and it
+went to the next song."*
+
+And the session itself names only the **player**:
+
+```
+=== session on Gexis: Whitney Houston - Where Do Broken Hearts Go
+    <User>   {'title': 'george.carstoiu'}
+    <Player> {'address': '192.168.178.131', 'platform': 'Linux',
+              'product': 'Plexamp', 'state': 'playing', 'title': 'Gexis'}
+```
+
+`address` is this device. There is no field anywhere in the session for the
+client that started it.
+
+**So the signal does not exist in any of the three places it could:** not on the
+player's port, not in the server's client list, not in the session. A window,
+however sized, has nothing to be a window over.
+
+### What that leaves
+
+**Option 2 cannot be built.** Not "is risky" — there is nothing to build it on.
+That returns the decision to leaving it, or to a rule that is not
+presence-based: the queue ending already releases the device, which is the
+behaviour observed at 09:00:00 above.
+
+**One more thing the disconnect did**, and it is George's phone rather than this
+device: Plexamp on the phone became a player in its own right, with its own
+paused session (`Android[Plexamp]`, `192.168.178.61`). So "disconnect" in the
+Plex app means *take playback back*, not *end the session* — which is why the
+Gexis session simply carried on.
+
 ## The decision, which is George's
 
 **Should disconnecting the controller stop Plexamp?**
