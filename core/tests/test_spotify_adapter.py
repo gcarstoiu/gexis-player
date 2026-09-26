@@ -297,3 +297,61 @@ async def test_a_status_that_cannot_be_read_acquires_nothing():
         FakeStatus({}, status=500), lambda: acquired.append(True))
 
     assert acquired == []
+
+
+async def _fake_librespot(pause_status=200):
+    """A go-librespot that records what it was asked, and when."""
+    import time
+
+    from aiohttp import web
+    from aiohttp.test_utils import TestServer
+
+    calls = []
+
+    def handler(status):
+        async def handle(request):
+            calls.append((request.path, time.monotonic()))
+            return web.Response(status=status)
+        return handle
+
+    app = web.Application()
+    app.router.add_post("/player/pause", handler(pause_status))
+    app.router.add_post("/player/stop", handler(200))
+    server = TestServer(app)
+    await server.start_server()
+    return server, calls
+
+
+@pytest.mark.asyncio
+async def test_release_pauses_and_lets_the_state_go_out_before_stopping():
+    """**Found by George, 2026-09-26.** A stop alone leaves Spotify's servers
+    with *playing at X as of T*, and the phone counts on from it: the next
+    transfer back began tens of seconds ahead, or past the end of the track and
+    on to the next. The pause's push must leave before the stop, and
+    go-librespot defers a push within 200 ms of the last one."""
+    from gexis_core.adapters import spotify
+
+    server, calls = await _fake_librespot()
+    try:
+        adapter = spotify.SpotifyAdapter(server.host, server.port)
+        assert await adapter.release() is True
+    finally:
+        await server.close()
+    assert [path for path, _ in calls] == ["/player/pause", "/player/stop"]
+    assert calls[1][1] - calls[0][1] >= 0.2
+
+
+@pytest.mark.asyncio
+async def test_a_session_with_nothing_to_pause_is_still_stopped():
+    """go-librespot answers a pause with an error when there is no stream; the
+    stop is what frees the device and must not depend on it."""
+    from gexis_core.adapters import spotify
+
+    server, calls = await _fake_librespot(pause_status=500)
+    try:
+        adapter = spotify.SpotifyAdapter(server.host, server.port)
+        assert await adapter.release() is True
+    finally:
+        await server.close()
+    assert [path for path, _ in calls] == ["/player/pause", "/player/stop"]
+    assert calls[1][1] - calls[0][1] < 0.2
