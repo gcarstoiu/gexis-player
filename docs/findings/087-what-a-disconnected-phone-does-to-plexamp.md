@@ -103,6 +103,17 @@ And the session itself names only the **player**:
 `address` is this device. There is no field anywhere in the session for the
 client that started it.
 
+Nor does the entry expire. Polled every ten seconds for **4.3 minutes** after
+the disconnect:
+
+```
+  t+0s     ['Android', 'Gexis', 'Living TV', 'ShelvesPi']
+  t+261s   ['Android', 'Gexis', 'Living TV', 'ShelvesPi']
+```
+
+Identical. No timeout, no expiry, while the Gexis session played on through a
+track change - so the list does not carry the signal on a delay either.
+
 **So the signal does not exist in any of the three places it could:** not on the
 player's port, not in the server's client list, not in the session. A window,
 however sized, has nothing to be a window over.
