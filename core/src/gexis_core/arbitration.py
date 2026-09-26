@@ -230,11 +230,17 @@ class Supervisor:
                 logger.debug("acquire: %s already current, ignoring", renderer_id)
                 return
             outgoing = self._active
-            self._active = renderer_id
-            self._notify_active_change()
-            logger.info(
-                "acquire: %s takes the device (was %s)", renderer_id, outgoing or "nobody"
-            )
+            # **The takeover is announced before the new renderer is**
+            # (George, 2026-09-26: the transition screen should *"start showing
+            # before the artwork is changed as otherwise we end up with a
+            # blinking effect"*). Each notification is its own broadcast, and
+            # the panel painted the incoming renderer's artwork on the first
+            # and covered it with the screen on the second.
+            #
+            # Everything after the announcement is inside the `try` below, so
+            # the `finally` that clears it covers the active change as well.
+            if outgoing is not None:
+                self._notify_handoff(outgoing, renderer_id)
             # ADR-0010: "release, uniformly" - no renderer is skipped.
             # Whoever was current gets released, full stop. `outgoing` is
             # None only when nobody held the device, and then there is
@@ -263,9 +269,12 @@ class Supervisor:
             # unaccountable state ADR-0010 exists to prevent. Only a
             # takeover has a pair: a cold acquisition with nobody holding
             # the device reports nothing.
-            if outgoing is not None:
-                self._notify_handoff(outgoing, renderer_id)
             try:
+                self._active = renderer_id
+                self._notify_active_change()
+                logger.info(
+                    "acquire: %s takes the device (was %s)", renderer_id, outgoing or "nobody"
+                )
                 await self._acquire_sequence(outgoing, renderer_id)
             finally:
                 if outgoing is not None:

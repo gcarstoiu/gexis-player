@@ -700,6 +700,58 @@ async def test_handoff_reports_the_pair_at_both_edges():
 
 
 @pytest.mark.asyncio
+async def test_the_takeover_is_announced_before_the_new_renderer():
+    """**George, 2026-09-26:** the screen should *"start showing before the
+    artwork is changed as otherwise we end up with a blinking effect"*. Each
+    notification is its own broadcast, so the order is what the panel paints."""
+    holder = {"who": "lms"}
+    adapters = {
+        "lms": FakeAdapter("lms", ReleaseAction.PAUSE, holder),
+        "spotify": FakeAdapter("spotify", ReleaseAction.DISCONNECT, holder),
+    }
+    order: list[str] = []
+    supervisor = Supervisor(
+        adapters,
+        device_busy=lambda renderer_id: holder["who"] == renderer_id,
+        ladder=FAST_LADDER,
+        on_handoff_change=lambda f, t: order.append(f"handoff {f}->{t}"),
+        on_active_change=lambda r: order.append(f"active {r}"),
+    )
+    supervisor._active = "lms"
+
+    await supervisor.acquire("spotify")
+
+    assert order[:2] == ["handoff lms->spotify", "active spotify"]
+    assert order[-1] == "handoff None->None"
+
+
+@pytest.mark.asyncio
+async def test_a_failing_active_change_does_not_leave_the_screen_up():
+    holder = {"who": "lms"}
+    adapters = {
+        "lms": FakeAdapter("lms", ReleaseAction.PAUSE, holder),
+        "spotify": FakeAdapter("spotify", ReleaseAction.DISCONNECT, holder),
+    }
+    seen: list[tuple] = []
+
+    def explode(_):
+        raise RuntimeError("publish failed")
+
+    supervisor = Supervisor(
+        adapters,
+        device_busy=lambda renderer_id: holder["who"] == renderer_id,
+        ladder=FAST_LADDER,
+        on_handoff_change=lambda f, t: seen.append((f, t)),
+        on_active_change=explode,
+    )
+    supervisor._active = "lms"
+
+    with pytest.raises(RuntimeError):
+        await supervisor.acquire("spotify")
+    assert seen == [("lms", "spotify"), (None, None)]
+
+
+@pytest.mark.asyncio
 async def test_a_cold_acquisition_is_not_a_handoff():
     """Nobody holding the device is not a takeover - there is no pair, so
     nothing should be published for a transition screen to show."""

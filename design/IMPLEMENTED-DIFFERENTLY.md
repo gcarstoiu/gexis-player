@@ -214,3 +214,10 @@ instantaneous. The length of the visualisation is to be dictated by the
 Transition screen length setting."* The `handoff_threshold` row is gone, and
 **Transition screen length** defaults to **1.5 s** (ADR-0094). The pairs that
 used to be exempt for being fast (LMS ↔ Spotify) are shown too.
+
+**[U] The transition screen appears at once and only fades out.** The design
+fades it in over 260 ms; the incoming renderer's artwork changed underneath
+while it was still mostly transparent, which George saw as a blink: it should
+*"start showing before the artwork is changed"*. The core now announces the
+takeover before the new renderer, and the screen is opaque from its first
+frame. Its contents still rise in as drawn.
