@@ -144,8 +144,16 @@ async def test_signal_stop_tells_the_plugin_and_then_acts_itself():
     adapter, session, killed = _adapter({})
     await adapter.signal_stop(force=False)
     await adapter.signal_stop(force=True)
+    # `force` still reaches the plugin, so it can tell the two rungs apart.
     assert session.sent == [("signal_stop", {"force": False}), ("signal_stop", {"force": True})]
-    assert killed == [("plexamp.service", False), ("plexamp.service", True)]
+    # **But the signal is SIGKILL on both** (ADR-0091). This asserted
+    # `(unit, False)` first - a real SIGTERM - until Finding 088 §3 measured
+    # what that does: the unit goes `inactive` with `Result=success` and
+    # `NRestarts=0`, because systemd does not count a SIGTERM death as a
+    # failure, so `Restart=on-failure` never fires and the renderer does not
+    # come back at all. `LmsAdapter.signal_stop` reached the same conclusion
+    # for squeezelite.
+    assert killed == [("plexamp.service", True), ("plexamp.service", True)]
 
 
 async def test_a_gone_plugin_is_still_escalatable():

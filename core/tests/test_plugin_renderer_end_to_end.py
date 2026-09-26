@@ -235,7 +235,12 @@ async def test_a_plugin_that_will_not_let_go_is_escalated_against_its_unit(tmp_p
         await w.supervisor.acquire("lms")
         await _settle(40)
 
-        assert ("plexamp.service", False) in killed
+        # Both rungs, and **both SIGKILL** (ADR-0091). This asserted
+        # `("plexamp.service", False)` - a SIGTERM on the first rung - until
+        # Finding 088 §3 measured that a SIGTERM death is not a failure as far
+        # as systemd is concerned, so `Restart=on-failure` never fires and the
+        # renderer stays dead instead of coming back idle.
+        assert killed == [("plexamp.service", True), ("plexamp.service", True)]
         serving.cancel()
         writer.close()
 

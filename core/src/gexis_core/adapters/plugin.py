@@ -178,12 +178,33 @@ class PluginAdapter(Adapter):
         unit regardless. Not either/or: a plugin that answered `true` and did
         nothing would otherwise leave the device held with the ladder believing
         it had escalated.
+
+        **The signal is always SIGKILL, whatever rung we are on** (ADR-0091).
+        `force` still reaches the plugin, so it can tell the rungs apart, but it
+        does not choose the signal, and `LmsAdapter.signal_stop` made the same
+        call for squeezelite for the same reason.
+
+        Measured on the device, Finding 088 §3: `systemctl kill -s SIGTERM`
+        against Plexamp leaves the unit `inactive` with `Result=success` and
+        `NRestarts=0`, because **systemd does not count a SIGTERM death as a
+        failure** - so `Restart=on-failure` never fires and the renderer simply
+        does not come back. The same signal under SIGKILL had it running again
+        0.6 s later with `NRestarts=1`. So for any unit that relies on
+        `Restart=on-failure`, the SIGTERM rung is not a gentler escalation; it
+        is the rung that *prevents* recovery.
+
+        SIGKILL is never worse here. A unit with no `Restart=` stays down under
+        either signal, `Restart=always` comes back from either, and
+        `Restart=on-failure` comes back from this one only. What is given up is
+        a graceful shutdown, and that is what `release()` above is for - it has
+        already run, and for Plexamp it has already stopped the audio and let
+        the player persist its position.
         """
         try:
             await self._session.send("signal_stop", force=force)
         except PluginGone:
             pass
-        self._signal_unit(self.unit_name, force=force)
+        self._signal_unit(self.unit_name, force=True)
 
     #: The scale `set_volume` is sent on. The contract carries `value` and
     #: `steps` together, so a plugin never has to guess which scale a number is
