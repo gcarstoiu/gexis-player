@@ -44,6 +44,31 @@ LMS's device. Two commits in `gexis-plexamp`, none in the core.
 **George has tried it from his phone** — *"Seems to work."* — which is the path
 none of the measurements could reach.
 
+### The image: built and verified, 2026-09-26
+
+**`2026-09-26-gexis-player-v0.2.1-608-gd29ee48.img`**, 4.8 GiB, 700 s, manifest
+annotated. `image/verify-image.sh` — **all checks passed**, including the four
+that are new today:
+
+```
+ok   plexamp.service pulls the plugin in, from [Unit] where it counts
+ok   the plugin tree is not nested
+ok   the plugin in the image is the release it pins (a816fc5e7670)
+ok   plexamp.service has the restart headroom a killed renderer needs
+```
+
+**The first attempt at this build was thrown away**, and it is the reason two of
+those checks exist. `cp -a SRC DEST` copies *into* `DEST` when `DEST` exists, and
+builds here run `CONTINUE=1` over a preserved rootfs — so the warm rebuild left
+v0.2.0 in place and hid v0.2.1 at `src/gexis_plexamp/gexis_plexamp/`, which
+`PYTHONPATH` does not import. The stage reported success in a second and the
+verifier passed, because the file it looked for existed. Found by reading the
+rootfs rather than the exit status; stopped at `export-image`, so no artefact
+escaped.
+
+**Still nothing booted.** The artefact is checked as a file, which
+`docs/LESSONS.md` case 5 is explicit is not the same thing.
+
 ### Shipped: v0.2.1 is published and the stage pins it
 
 `gcarstoiu/gexis-plexamp` **v0.2.1** is released, and

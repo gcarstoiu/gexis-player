@@ -129,7 +129,13 @@ for c in gelo5 stock; do
 	[ "$n" -ge 10 ] && ok "$c templates: $n images" || bad "$c templates: $n images"
 done
 echo "  viz_timeout default in shipped registry: $(python3 -c "import json; r=json.load(open('$OUT/gexis_core/settings_registry.json')); s=[x for sec in r for x in sec.get('rows',[]) if x.get('key')=='viz_timeout']; print(repr(s[0].get('default')) if s else 'not found')" 2>&1)"
-echo "  daemon fallback: $(grep -o 'settings.value("viz_timeout") or [0-9]*' "$OUT/gexis_core/__main__.py")"
+# **This printed nothing from the refactor that introduced `minutes()` until
+# 2026-09-26**, because it grepped a shape the daemon had stopped having. An
+# informational line that silently says nothing is the same family as the two
+# defects found today, so it now reports when it cannot find the fallback at all
+# rather than printing an empty value and looking answered.
+fallback=$(grep -oE 'minutes\("viz_timeout", *[0-9]+\)' "$OUT/gexis_core/__main__.py")
+echo "  daemon fallback: ${fallback:-NOT FOUND - this grep no longer matches the daemon}"
 
 echo "== Beszel (ADR-0087), the first plugin that is not part of the core"
 # The binary is pinned in the stage and verified there against a checksum agreed
