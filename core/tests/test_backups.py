@@ -28,6 +28,8 @@ def _device(root):
     (root / "var/lib/bluetooth/11:22/info").write_text("paired")
     (root / "var/lib/beszel-agent").mkdir(parents=True)
     (root / "var/lib/beszel-agent/fingerprint").write_text("ec4c41e0")
+    (root / "home/pi/.local/share/Plexamp/Settings").mkdir(parents=True)
+    (root / "home/pi/.local/share/Plexamp/Settings/%40Plexamp%3Auser%3Atoken").write_text("Stoken")
     return root
 
 
@@ -64,6 +66,25 @@ def test_it_holds_the_beszel_fingerprint(tmp_path):
     with tarfile.open(out / name) as archive:
         held = set(archive.getnames())
     assert "var/lib/beszel-agent/fingerprint" in held
+
+
+def test_it_holds_the_plexamp_claim_and_puts_it_back(tmp_path):
+    """**The third of these, and the one that was not caught in time.** George
+    reflashed, restored, and Plexamp came up unclaimed and missing from the
+    Plex player list; the claim token that made it is single-use. This one
+    goes round the whole loop, because it is the first member under a home
+    directory rather than /var/lib."""
+    root, out = _device(tmp_path / "root"), tmp_path / "out"
+    name = backups.create("gexis", out, root)
+    token = "home/pi/.local/share/Plexamp/Settings/%40Plexamp%3Auser%3Atoken"
+
+    with tarfile.open(out / name) as archive:
+        assert token in set(archive.getnames())
+
+    fresh = tmp_path / "fresh"
+    fresh.mkdir()
+    backups.restore(name, out, fresh)
+    assert (fresh / token).read_text() == "Stoken"
 
 
 def test_a_missing_member_is_skipped_not_fatal(tmp_path):

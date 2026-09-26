@@ -52,6 +52,15 @@ MEMBERS = (
     # reflash that loses it is a device the hub no longer recognises. Absent
     # until the plugin has run, and `create` skips a member that is not there.
     "var/lib/beszel-agent",
+    # **Plexamp's claim** (added 2026-09-26, ADR-0090). The third time for the
+    # same lesson, and this one was learned the hard way: the card was
+    # flashed, the restore put the settings back with `plexamp.enabled` on,
+    # and Plexamp came up unclaimed - not in the Plex player list at all. The
+    # player's identity and the token that signs it in live in `Settings/`
+    # here, one file per key (Finding 077); the claim token that made them is
+    # single-use and minutes-lived, so it cannot stand in. Runs as `pi`,
+    # hence under the home directory. ~200 KB.
+    "home/pi/.local/share/Plexamp",
 )
 
 #: `gexis-<name>-<stamp>.tgz`. The name is the device's, so an archive says
