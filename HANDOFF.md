@@ -192,10 +192,14 @@ started**, and ADR-0091 does not pre-empt it.
   sampled, unexplained.
 - **A boot.** The image carries everything; **nothing built from it has been
   run.**
-- **Everything is pushed.** `phase-11-plexamp-plugin` is on the remote and
-  **[PR #28](https://github.com/gcarstoiu/gexis-player/pull/28) is open** - it was
-  already open from the previous session, so it was retitled and extended rather
-  than duplicated. `gexis-plexamp` `main` is pushed and released as **v0.2.1**.
+- **Everything is pushed.** `gexis-plexamp` `main` is pushed and released as
+  **v0.2.1**, and `gexis-plexamp` has nothing outstanding.
+- **[PR #28](https://github.com/gcarstoiu/gexis-player/pull/28) is merged** (at
+  `f1eef30`). **[PR #29](https://github.com/gcarstoiu/gexis-player/pull/29) is
+  open** on the same branch and carries what came after it: the nesting fix, the
+  three verifier checks, the phase-queue move, and the build result. **Merge that
+  before starting phase 12** - `phase-11-plexamp-plugin` is still the checked-out
+  branch on R2D2, and `main` has not been pulled since the merge.
 
 ## Build environment (2026-09-13) — read this before the next build
 
