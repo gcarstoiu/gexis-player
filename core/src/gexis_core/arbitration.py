@@ -42,7 +42,15 @@ logger = logging.getLogger("gexis_core.arbitration")
 # ~polite_grace regardless of how fast the device actually freed. Polling
 # at this cadence makes that log line - and the time it feeds into
 # criterion 8's numbers - an actual measurement instead.
-POLITE_POLL_INTERVAL = 0.1
+#
+# **Renamed from POLITE_POLL_INTERVAL, 2026-09-26 (ADR-0091): all three
+# rungs poll now.** Finding 016's fix was only ever applied to the first
+# one, and the other two were still blind sleeps - which is why the name
+# said "polite". Finding 088 is what made that matter: Plexamp's device is
+# free 169 ms after a kill (Finding 077) and the ladder would not have
+# looked for the full `sigterm_grace`, so a takeover would have cost three
+# seconds to save eleven rather than costing a fifth of one.
+LADDER_POLL_INTERVAL = 0.1
 
 
 @dataclass(frozen=True)
@@ -106,6 +114,18 @@ class Supervisor:
         """
         if not adapters:
             raise ValueError("supervisor needs at least one adapter")
+        # **Shared, not copied** (ADR-0089 as amended 2026-09-25). The first
+        # version copied it, reasoning that the caller's dict was its own. It is
+        # not: `__main__` looks renderers up in that same dict at runtime - the
+        # release ladder's own `device_busy` does, and so does transport
+        # dispatch - so a copy meant a plugin renderer the supervisor knew about
+        # and the caller did not.
+        #
+        # It crashed on the hardware the first time a plugin renderer was asked
+        # to give up the device: `KeyError: 'plexamp'` from inside
+        # `_release_with_ladder`, which is the worst possible place for it.
+        # One map, one source of truth; `register` and `forget` maintain it for
+        # everyone.
         self._adapters = adapters
         self._device_busy = device_busy
         self._ladder = ladder or TimeoutLadder()
@@ -132,6 +152,50 @@ class Supervisor:
         # distinction is called out rather than left to the type.
         self._active: str | None = None
         self._lock = asyncio.Lock()
+
+    def register(self, adapter: Adapter) -> None:
+        """**Add a renderer after construction** (ADR-0089).
+
+        A plugin arrives minutes after this object is built and can leave at
+        any moment; the three built-ins are passed in at construction and never
+        move. Everything else about the supervisor is unchanged - the lock, the
+        ladder, the ADR-0077 gate, `device_busy`.
+
+        **A duplicate id is refused, not replaced.** ADR-0084's handshake
+        already refuses a second session for one plugin id; this is the same
+        rule stated where the consequence would be worst, because replacing the
+        adapter of a renderer that currently holds the device would leave the
+        release ladder talking to a connection that never acquired anything.
+        """
+        if adapter.renderer_id in self._adapters:
+            raise ValueError(f"{adapter.renderer_id!r} is already registered")
+        self._adapters[adapter.renderer_id] = adapter
+        logger.info("arbitration: %s registered", adapter.renderer_id)
+
+    def forget(self, renderer_id: str) -> None:
+        """**The renderer is gone** (ADR-0089) - its plugin disconnected.
+
+        Not `unregister`, because the word that matters is what happens to the
+        device: a renderer that is no longer here cannot be the active one, so
+        this clears `active` if it was, which publishes the change the way any
+        other release does.
+
+        **A plugin disconnecting is not the same as its renderer stopping.** If
+        the plugin process dies while its renderer plays on, this makes the
+        published state wrong until the next acquisition - at which point
+        `device_held_by` still attributes the device to that unit and the
+        ladder escalates against it. ADR-0089 takes that deliberately: the
+        alternative is polling the device to second-guess our own model.
+
+        Unknown ids are ignored. A session that is refused during the handshake
+        never registered, and the disconnect path must not care.
+        """
+        if self._adapters.pop(renderer_id, None) is None:
+            return
+        logger.info("arbitration: %s is gone", renderer_id)
+        if self._active == renderer_id:
+            self._active = None
+            self._notify_active_change()
 
     @property
     def active(self) -> str | None:
@@ -292,52 +356,78 @@ class Supervisor:
             )
             return ReleaseOutcome.POLITE
 
-        if ladder.polite_grace > 0:
-            deadline = time.monotonic() + ladder.polite_grace
-            while True:
-                remaining = deadline - time.monotonic()
-                if remaining <= 0:
-                    break
-                await asyncio.sleep(min(POLITE_POLL_INTERVAL, remaining))
-                if not await self._busy(renderer_id):
-                    logger.info(
-                        "release[%s]: freed within polite grace (%.1fs)",
-                        renderer_id,
-                        time.monotonic() - t0,
-                    )
-                    return ReleaseOutcome.POLITE
+        if await self._freed_within(renderer_id, ladder.polite_grace):
+            logger.info(
+                "release[%s]: freed within polite grace (%.1fs)",
+                renderer_id,
+                time.monotonic() - t0,
+            )
+            return ReleaseOutcome.POLITE
 
+        # **The rung, not the signal** (ADR-0091). These used to say "sending
+        # SIGTERM" and "freed after SIGTERM", which stopped being true when the
+        # adapter got to choose: `PluginAdapter` and `LmsAdapter` both send
+        # SIGKILL on this rung, because a SIGTERM death is not a failure as far
+        # as systemd is concerned and `Restart=on-failure` would never fire.
+        # What was actually sent is logged by `systemd.kill_unit` itself, which
+        # prints the signal - so naming it here as well was a second statement
+        # of the same fact, and the wrong one.
         logger.warning(
-            "release[%s]: still holds the device after polite stop, sending SIGTERM",
+            "release[%s]: still holds the device after polite stop, signalling it",
             renderer_id,
         )
         await adapter.signal_stop(force=False)
-        await asyncio.sleep(ladder.sigterm_grace)
-        if not await self._busy(renderer_id):
+        if await self._freed_within(renderer_id, ladder.sigterm_grace):
             logger.warning(
-                "release[%s]: freed after SIGTERM (%.1fs)",
+                "release[%s]: freed after the first signal (%.1fs)",
                 renderer_id,
                 time.monotonic() - t0,
             )
             return ReleaseOutcome.SIGTERM
 
         logger.error(
-            "release[%s]: still holds the device after SIGTERM, sending SIGKILL",
+            "release[%s]: still holds the device after the first signal, signalling harder",
             renderer_id,
         )
         await adapter.signal_stop(force=True)
-        await asyncio.sleep(ladder.sigkill_grace)
-        if await self._busy(renderer_id):
+        if not await self._freed_within(renderer_id, ladder.sigkill_grace):
             logger.error(
-                "release[%s]: STILL holds the device after SIGKILL (%.1fs)",
+                "release[%s]: STILL holds the device after the second signal (%.1fs)",
                 renderer_id,
                 time.monotonic() - t0,
             )
             return ReleaseOutcome.STILL_HELD
         logger.error(
-            "release[%s]: freed after SIGKILL (%.1fs)", renderer_id, time.monotonic() - t0
+            "release[%s]: freed after the second signal (%.1fs)", renderer_id, time.monotonic() - t0
         )
         return ReleaseOutcome.SIGKILL
+
+    async def _freed_within(self, renderer_id: str, grace: float) -> bool:
+        """Whether `renderer_id` lets go of the device inside `grace` seconds.
+
+        **Every rung of the ladder waits through this, and none of them
+        sleeps the grace blind.** That was Finding 016's defect in the
+        polite rung - the "freed within polite grace" line was timing the
+        sleep rather than the renderer - and the fix was only ever applied
+        there. ADR-0091 carries it to the other two, because Finding 088
+        made the difference material: a killed Plexamp frees the device in
+        169 ms, and a blind `sigterm_grace` sleep would have made a takeover
+        cost three seconds to save eleven.
+
+        Sleeps *then* checks, so a caller that has already asked can call
+        this without paying for a duplicate check - the polite rung does
+        exactly that. **A grace of 0 therefore waits and checks nothing**,
+        which is the reading George asked for when LMS stopped waiting out
+        squeezelite's `-C` timer: escalate now, do not look first.
+        """
+        deadline = time.monotonic() + grace
+        while True:
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                return False
+            await asyncio.sleep(min(LADDER_POLL_INTERVAL, remaining))
+            if not await self._busy(renderer_id):
+                return True
 
     async def _busy(self, renderer_id: str) -> bool:
         result = self._device_busy(renderer_id)

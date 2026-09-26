@@ -197,6 +197,8 @@ rather than something the user added.
 | Beszel — `beszel.hub` | [N] | The hub's address. Not on this device; George runs one already. Exported to the unit as `HUB_URL` ([ADR-0088](0088-a-plugins-settings-reach-its-unit-as-environment.md)) |
 | Beszel — `beszel.token` | [N] | From the hub's Add System dialog. `secret`, exported as `TOKEN` |
 | Beszel — `beszel.key` | [N] | The hub's own public key, same dialog. `secret`, exported as `KEY` |
+| Plexamp — `plexamp.enabled` | [N] | The renderer ([ADR-0090](0090-plexamp-ships-the-way-beszel-does.md)). Off on a fresh image; the switch starts the player and our plugin together |
+| Plexamp — `plexamp.claim_token` | [N] | Confirmed by George, 2026-09-25. A Plex claim token, pasted once: the plugin claims the player with it and **the token is consumed**, so the row's value is dead afterwards and its note says so. `secret`. **The player's name is deliberately not a row** — [ADR-0048](0048-how-the-device-name-reaches-four-services.md) already writes one device name to four services and this makes a fifth; a second place to type it is a second place for it to disagree |
 
 **The three Beszel rows are not in this category.** They live in **System**,
 under a sub-heading carrying the plugin's name, and **they disappear with the

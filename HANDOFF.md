@@ -1,208 +1,170 @@
 # Handoff
 
-Last updated: 2026-09-25 (twenty-fifth session, on R2D2 — **Phase 10 is
-CLOSED. The plugin contract carries a plugin that is not a renderer: the Beszel
-agent ships in the image, enrols from the settings screen and runs on George's
-hub, and the core contains nothing that names it. Next is Phase 11 — Plexamp as
-a renderer, as a plugin — which carries Phase 10's criterion 2 and the freeze
-with it.**)
+Last updated: 2026-09-26 (twenty-sixth session, on R2D2 — **Phase 11 stays
+complete and the contract stays frozen at v1. Two decisions were taken and built
+today. ADR-0091: a takeover from Plexamp costs 0.9 s where it cost fourteen
+seconds. ADR-0092: Plexamp can now take the device from a renderer that is
+holding it, which it could never do — 0.55 s, from never. **George confirmed both
+from his phone: *"Seems to work."*** Phase 11 stays closed; the next phase is
+11a.**)
 
 ## Start here
 
-**Criterion 3 is done.** The Beszel agent runs on the device, reporting to
-George's hub, configured entirely through the settings screen — and **the core
-contains nothing that names it**. It is
-[ADR-0087](docs/decisions/0087-the-beszel-agent-is-the-first-service-plugin.md)
-and [ADR-0088](docs/decisions/0088-a-plugins-settings-reach-its-unit-as-environment.md),
-measured in Findings [078](docs/findings/078-what-the-beszel-agent-costs-and-listens-on.md),
-[079](docs/findings/079-what-the-plugin-contract-carries-to-a-unit.md) and
-[080](docs/findings/080-the-agent-enrolled.md).
+**[ADR-0091](docs/decisions/0091-a-plugin-renderer-is-taken-off-the-device.md) is
+built and measured** ([Finding 089](docs/findings/089-the-takeover-after-adr-0091.md)).
+Five commits, all landed separately so each can be reviewed on its own:
 
-**Where a plugin lives on the screen is George's shape**, given 2026-09-25 after
-seeing the first attempt put everything in System: *"we need to separate a plugin
-from default functionality for a user… create the plugin category in settings and
-add in there only Beszel toggle. When enabled then the config fields show up in
-system like now in the Beszel subgroup. When the toggle is off the entire
-subgroup is off."*
+| | where | what |
+|---|---|---|
+| 1 | `arbitration.py` | the `sigterm_grace` and `sigkill_grace` rungs **poll** instead of sleeping blind — [Finding 016](docs/findings/016-polite-grace-blind-sleep.md)'s fix, which had only ever been applied to the polite rung |
+| 2 | `adapters/plugin.py` | `PluginAdapter.signal_stop` always sends **SIGKILL** — a SIGTERM death is not a failure to systemd, so `Restart=on-failure` never fires and the renderer would not come back |
+| 3 | `gexis-plexamp` | `polite_grace` **16.0 → 0.5** |
+| 4 | `arbitration.py` | the ladder logs the **rung**, not a signal it no longer chooses |
+| 5 | `plexamp.service` | `Wants=` moved to `[Unit]`, `StartLimitBurst` 5 → 20, `RestartSec` 5 → 1, and two `verify-image.sh` checks |
 
-- **Plugins** — one row per installed plugin, named after it, carrying its switch.
-- **Sources / System** — that plugin's own rows, under a sub-heading with its
-  name, hidden with the heading when the switch is off. The core applies that to
-  every plugin row rather than leaving it to a manifest that might forget.
-- The three built-ins are untouched: they name an existing row with
-  `enabled_row`, which is how a default says it is furniture rather than
-  something the user added.
+### Then ADR-0092, which George found by using it
 
-**Two things are owed to George and neither blocks anything:**
+He reported *"Cannot takeover with plexamp. The plexamp mobile app fails to
+playback"* — and it was not ADR-0091. **Plexamp could not take the device from a
+renderer that was holding it at all**, reproduced against LMS as well as Spotify.
+The circle: Plexamp must open the ALSA device to start playing, and the plugin's
+only evidence of an acquisition *was* playback starting.
+[Finding 085](docs/findings/085-the-takeover-gaps-and-the-controls.md)'s
+*"LMS → Plexamp, 0.2 s, five times"* was measured against an LMS that had already
+let go, so this had never been tested.
 
-- **ADR-0022's inventory** has not gained the Plugins category or Beszel's four
-  rows. They are proposed in ADR-0087 and wait on his word, as the rule says.
-- **The agent cannot see throttling.** ADR-0087 claimed it gave him the throttle
-  log he asked for on 2026-09-18; the binary has no `vcgencmd`, `vcio` or
-  `throttl` string at all, because the Pi's throttle bits are not a Linux sensor.
-  He gets temperature and CPU over time — two of the four parts he asked for.
-  **Whether something small should sample `vcgencmd get_throttled` is a decision
-  nobody has taken.**
+[ADR-0092](docs/decisions/0092-a-play-queue-is-an-acquisition.md): a `playQueueID`
+the plugin has not seen is the deliberate act, the refused timeline carries
+everything needed to ask again, and `device_freed` — the hook ADR-0089 already had
+for this — issues the play once the device is free. **No contract change.**
+Measured at **0.55 s** from the controller's request to Plexamp holding a playing
+LMS's device. Two commits in `gexis-plexamp`, none in the core.
 
-**The costs, now that they are real:** **0.02 % of one core and 14.2 MB**
-connected, against an 0.84 % *unconnected* floor — reconnecting was the expensive
-case, so nothing here needs re-measuring against the panel's frame budget.
+**George has tried it from his phone** — *"Seems to work."* — which is the path
+none of the measurements could reach.
 
-### The two defects the device found, because they are the reason to read this
+### Shipped: v0.2.1 is published and the stage pins it
 
-Both looked fine in a unit test and both would have shipped.
+`gcarstoiu/gexis-plexamp` **v0.2.1** is released, and
+`image/stage-gexis/08-plexamp/01-run.sh` pins
+`a816fc5e7670766a38288207a5add56ecf4d6df061e907011b9d5e799128553c`. **The pin was
+verified against the published asset**, not assumed: downloaded after release and
+compared, and separately `git archive --format=tar.gz --prefix=gexis-plexamp/` at
+v0.2.0 was shown to reproduce *that* release byte-identically, so the command is
+the release process rather than a guess at it.
 
-1. **The switch was lying.** ADR-0086's amendment synthesised a plugin's
-   `Enabled` row with `default: True`, while ADR-0087 has the image install
-   Beszel's unit **disabled**. Two statements of one fact, and they disagreed:
-   the screen would have read **Enabled** for something neither running nor
-   going to start. It now asks systemd — `systemd.is_enabled`, once at startup —
-   because a declared default is a copy that nothing would notice going stale.
-2. **A credential arrived and nothing used it.** The restart on a changed value
-   was `systemctl try-restart`, which touches a unit that is *active*. Switched
-   on before anything was typed in — which is what anyone does, since the fields
-   only appear once it is on — the agent refuses to start and sits in `failed`.
-   `try-restart` does nothing to a failed unit. **In the first test the agent had
-   been started by hand and the mechanism looked correct.** The gate is now
-   `is-enabled`, with `reset-failed` first, because a unit that spent its
-   `StartLimitBurst` while unconfigured is the expected path here.
+Seeding the build cache to stand in for an unpublished asset was considered and
+rejected on the way: `fetch-cached.sh`'s own comment says *"A build that has never
+seen the cache has to work, or the cache becomes a hidden build dependency."*
 
-The second one is **[LESSONS 41](docs/LESSONS.md)**: a test double built to work
-does not visit the states the real subject starts in. The throwaway plugin's unit
-was a shell script that always started, so the mechanism was measured against a
-*running* unit six times out of six.
+### What it costs and what it bought
 
-### What was built this session
+| | before | after |
+|---|---|---|
+| takeover, by the ladder's own clock | 12.6–14.2 s | **0.9 s** |
+| device freed after the signal | — | **143 ms** |
+| player answering again | never went away | **4.04 s** |
+| six back-to-back takeovers | — | **nothing failed**, one restart each |
 
-Four commits, in this order:
+**The fifth commit is the one to read.** `Wants=gexis-plexamp.service` had sat
+under `[Service]` since the stage was written, where systemd's answer is *"Unknown
+key 'Wants' in section [Service], ignoring"* — so ADR-0090's *"one switch controls
+the pair"* had never actually worked, and nothing noticed until a release ladder
+started stopping the player for real. `verify-image.sh` now checks it **by
+position**, because the key being present was never the part that was wrong.
 
-1. **[ADR-0086's amendment, verified](docs/decisions/0086-a-plugin-declares-itself-in-a-manifest.md)** —
-   every plugin gets an `Enabled` toggle. The three built-ins name their
-   existing row with `enabled_row` and keep one switch each; a plugin that names
-   none gets `<id>.enabled` wired to `systemctl enable/disable --now`.
-2. **[Finding 078](docs/findings/078-what-the-beszel-agent-costs-and-listens-on.md)** —
-   three of criterion 3's four open questions, measured before anything was
-   built. **The agent opens an inbound SSH port on 45876 even when given a hub
-   URL and a token**; `--listen -1` leaves it owning no listening socket at all,
-   so **ADR-0028's "unauthenticated on the LAN" stance needs no extending**.
-   14.3 MB RSS and 0.84 % of one core, as an unconnected floor.
-3. **[ADR-0088](docs/decisions/0088-a-plugins-settings-reach-its-unit-as-environment.md)** —
-   a manifest row may name an `env` variable, exported to
-   `/run/gexis/plugins/<id>.env` at 0600, which the unit reads with
-   `EnvironmentFile=-`. The case it exists for is a third-party binary that will
-   **never** speak ADR-0084's protocol. Also: a manifest's `onlyWhen` names the
-   plugin's own rows and is prefixed like `key`, which is what makes the fields
-   appear. **The quoting was checked against real systemd**, not against its
-   manual — seven values through a live unit, byte for byte.
-4. **`image/stage-gexis/07-beszel/`** — the binary pinned at **v0.20.0** with
-   the checksum agreed three ways, the unit, the `beszel` system user, the
-   manifest, and `beszel-agent-listen-check.sh`, which asserts after every start
-   that nothing is listening on 45876 and refuses to run a build where `-1` has
-   stopped working. `var/lib/beszel-agent` joined ADR-0083's backup members: the
-   fingerprint there is the identity the hub binds this system to, which is the
-   Spotify pairing's lesson applied before it could be learned twice.
+**One claim was corrected the same day it was written.** ADR-0091 said the stale
+"connected" clears because plex.tv's `presence` flips within ≤10.5 s. That was
+measured on a unit that *stayed stopped*; with `Restart=on-failure` the player is
+back in about a second and `presence` never flips — correctly, since a player you
+cannot see is one you cannot cast back to. What changes is that the PMS session is
+gone and the player reports `state="stopped"`.
 
-5. **The Plugins category**, after George corrected the placement, and
-   **Finding 080** once he had entered his keys: the connected cost, the
-   throttle gap, and a backup read back out of its own archive to show it
-   carries the enrolment. The three keys needed nothing added — they are
-   settings — and the fingerprint, added earlier, is there.
+### Why, in one paragraph
 
-**1160 tests pass.** The device is left with the agent **installed, enrolled and
-running**, and one current backup from 18:57 that contains the enrolment.
+Plexamp gives the device back in ~14 s where LMS takes 0.4 s.
+[Finding 088](docs/findings/088-making-plexamp-behave-like-the-other-renderers.md)
+decomposed it: the stop is immediate (`BASS: Stopped in 0 ms`), output is
+suspended at +3 s, and **the open PCM is held in `SETUP` for a further ~11 s**.
+That is squeezelite's own behaviour — which is why `squeezelite.service` carries
+`-C 1` — except that Plexamp exposes no `-C`, and **no runtime lever inside it
+releases the device**: `audioDeviceUuid` re-initialises BASS and plays on,
+`setSinksForSource` needs a mesh, `remoteControl` is not settable over HTTP at
+all. The second complaint, the phone still showing the player as connected after
+LMS takes over, has the **same single cause and it is ours**: the polite rung
+polls for the whole of `polite_grace` and returns `POLITE` the moment the device
+frees, so the rung always wins and the player is left running, registered and
+claimed.
 
-### Where it stands right now
+### The measurement that licences the design
 
-- **`gexis` runs the flashed image**, not an rsynced tree —
-  `2026-09-25-gexis-player-v0.2.1-513-g8cbff39.img`, on a **new card**. The old
-  one is kept intact and untouched, which is a better fallback than any
-  archive. **Phase 9 holds on it**: no orange dots, no visible-and-unwired row,
-  and `version` finally reports the build instead of `unknown`
-  ([Finding 076](docs/findings/076-the-first-flash-since-the-settings-work.md)).
-- **George's state was restored onto it** from the pre-flash copy: 41 settings,
-  3,664 enrichment rows, the phone's pairing, and `idle_url`. Checked usable
-  rather than merely present — 8 of 8 artist portraits served from the cache.
-- **PR #26** is open with everything: https://github.com/gcarstoiu/gexis-player/pull/26
-- **The image is behind the branch in ways a flash would notice**: ADR-0083's `[backups]` share, ADR-0085's ALSA default, the plugin
-  manifests, and now the whole `07-beszel` stage. **Nothing in that stage has
-  been through `make image`** — its files were installed by hand at the same
-  paths, modes and user, so the download, the checksum and the chroot step are
-  untested.
-- **[ADR-0083](docs/decisions/0083-a-backup-leaves-the-device.md) is rsynced on
-  top, not in the image.** Backup, the share and a restore round trip are all
-  verified on the hardware; the image *stage* that installs the share has not
-  run. **The next build is what proves it** - and until then a flash still
-  needs the hand copy above.
-- **The album-cover sweep has not been re-run** since the raw-name and
-  collaboration fixes. 82 newly placed artists would now find release groups.
-  George's low-cover report turned out to be the Bluetooth path (ADR-0080), so
-  this is still owed and still unmeasured.
+| signal, `systemctl kill -s` | what systemd does |
+|---|---|
+| **SIGTERM** | unit `inactive`, `ExecMainStatus=15`, `Result=success`, `NRestarts=0` — **it does not come back** |
+| **SIGKILL** | back by itself at t+0.6 s, `NRestarts=1`, plugin unit with it |
 
-### Next — Phase 11: Plexamp as a renderer, as a plugin
+`pcm` stayed `closed` throughout both, and after a full restart: **Plexamp opens
+the ALSA device when it plays, not when it starts.** That sentence is what makes
+this safe. [Finding 013 §1](docs/findings/013-phase2c-attack-test-and-spotify-reliability-defects.md)'s
+restart storm — shipped and reverted twice — needed a renderer that grabs the
+device the moment it is back, and `LmsAdapter` carries the warning *"before
+proposing a third."* **This is not a third attempt**: there is no restart hook,
+`Restart=on-failure` is the only path back, and the storm's precondition is
+absent by measurement.
 
-**George, 2026-09-25:** *"start 11, with the aim as having plexamp as the new
-renderer as a plugin."*
+### The four symptoms, and which of them are actually fixable
 
-**The first work is not Plexamp.** It is the thing
-[`docs/PLUGIN-CONTRACT.md`](docs/PLUGIN-CONTRACT.md) names in its own open list:
-**arbitration does not carry plugins.** A `renderer` that connects is welcomed,
-logged and left idle, because the adapter built around a session and registered
-with the supervisor does not exist. **Nothing has ever played audio through this
-contract.** Everything else in Phase 11 is written against that adapter, so it
-comes first.
+| | status |
+|---|---|
+| 14 s takeover | **fixed and measured: 0.9 s** (Finding 089) |
+| phone still shows it connected after LMS takes over | **the cause is fixed** - the player is no longer left running and claimed. But `presence` does *not* flip (the restart beats the timeout); what changes is that the session is gone and the player reports stopped. **Whether the phone's chrome follows is unobserved** |
+| panel waits for renderers until playback starts | **not fixable.** Nothing reaches the player when a controller selects it; ADR-0027 already says acquisition is deliberate |
+| panel does not follow a phone disconnect | **not fixable, and not a defect.** A disconnect does not even stop playback, so the panel showing Plexamp as active is correct |
+| *(found while testing)* could not take the device from a renderer holding it | **fixed and measured: 0.55 s**, from never (ADR-0092) |
 
-Then, in order:
+The two "not fixable" rows are established across five places — the player's HTTP
+routes, its timeline subscriber list, the PMS client table, the PMS session, and
+pubsub — and corroborated by an independent implementation of the player side,
+whose own source says *"Plexamp clients do not subscribe nor send wait=1."*
+**Nobody needs to sweep this again.**
 
-1. **The adapter** — an `Adapter` whose acquire, release and commands are
-   ADR-0084 messages on a session, registered with the supervisor like the three
-   built-ins. Needs an ADR before it is built.
-2. **Plexamp in its own repository**, speaking the contract, with **no core
-   changes** — which is Phase 10's criterion 2, and the only thing that proves
-   the renderer half of the contract is right.
-3. **Freeze contract v1**, last, on that evidence.
+### The one lead still open
 
-**What Finding 077 already measured, and the phase has to build around:**
+`/player/timeline/poll` is logged **zero** times by Plexamp, for any address,
+including our own plugin which polls it every second. So the log shows commands
+and not polls, and it cannot say whether the phone polls the timeline while it is
+attached. **If it does, a sustained absence of polls is a real presence signal**
+and the fourth row above stops being impossible. Answering it needs one
+`tcpdump` on `:32500` while George's phone is attached — a minute of his time,
+not a session's.
 
-- **A commanded stop works, and the device is held for a deterministic 14 s
-  afterwards.** So this renderer's `release_ladder` needs a polite grace longer
-  than that, exactly as LMS overrides it for squeezelite's idle tick.
-- **It frees the device and keeps running**, so ADR-0008's reversal condition is
-  **not** triggered.
-- **It opens `hw:5,0` in S32_LE**, not `pcm.output`, which is why
-  [ADR-0085](docs/decisions/0085-the-alsa-default-is-our-output.md) made our
-  output the ALSA default. Whether the meters then work is **unverified** — moOde
-  measured peppyalsa giving an all-zero FIFO for S32_LE.
-- **The TCP count at `:32500` is not a release signal.** `alsa.device_held_by` is.
+### Decision 2 is still George's, and independent of this one
+
+The **Squeeze Plex Hub** route reaches the same DAC bit-identically
+(`S32_LE 192000Hz 2ch` both ways, LMS handed the original `file.flac` from the
+PMS, no transcode) and hands the device back in 1.0 s. It already advertises this
+device's own squeezelite as a Plex target over GDM — it has been in George's
+player list all along. The cost is that Plexamp's playback engine is replaced by
+LMS's and Phase 11's plugin becomes a metadata shim. **Not rejected, not
+started**, and ADR-0091 does not pre-empt it.
 
 ### Still open, and none of it blocking
 
-**Three decisions are labelled in the ADRs:**
-
-- **Is 1.8× the right scale for the waiting screen?** A judgement, not a
-  measurement: two services come to 680 px of the width and about 300 px of the
-  height. George asked for *"not the entire height and width of the screen"*
-  and this is the reading of it.
-- **Should turning `headless` on hand tty1 back to a getty?** Today the screen
-  goes blank until the next boot, which then reaches a login prompt normally
-  (the kiosk's `Conflicts=getty@tty1` stops the getty and systemd does not
-  start it again). Measured on the device.
-- **Should `handoff_exempt_pairs` survive?** With a working threshold it
-  changes no outcome — both its pairs are far under any value the bar offers.
-  It stays because it is measured evidence and because removing published
-  state is Phase 4 criterion 4's business (ADR-0078).
-
-**And the device has a hardware flag worth George's eye.** `vcgencmd
-get_throttled` read `0xd0000` last session: under-voltage, frequency capping
-and the soft temperature limit have all *occurred* during that uptime —
-historical bits, none current, at 74.5 °C and a full 1.8 GHz. Not a UI
-measurement, but it is the kind of thing that makes measurements wander.
-
-**The Beszel agent does not close this.** It cannot read those bits at all
-([Finding 080](docs/findings/080-the-agent-enrolled.md)) — they come from
-`vcgencmd get_throttled` over `/dev/vcio`, which it never opens. George gets
-temperature and CPU over time, which is two of the four parts he asked for on
-2026-09-18. **Whether something small should sample the bits themselves is a
-decision nobody has taken.**
+- **Cross-rate takeover gaps.** Blocked since Phase 9, unchanged: a
+  60,974-track scan found **zero** non-44.1 kHz files.
+- **Gaps against Spotify and Bluetooth.** Neither can be made to take the device
+  on request — they answer 409 to `activate`, correctly — so measuring them needs
+  a phone.
+- **Claiming** from the `claim_token` row. The row exists and the plugin accepts
+  it; Plexamp's own setup still does the claiming. Not a Phase 11 criterion.
+- **Phase 11a** (Plex metadata, to cut the dependency on internet providers) is
+  drafted and not started. It still needs an ADR for where the Plex credential
+  lives.
+- **Plex lyrics.** `/library/streams/<id>` 404s for every one of 40 `lrc` streams
+  sampled, unexplained.
+- **A boot.** The image carries everything; **nothing built from it has been
+  run.**
+- **42 commits unpushed** on `phase-11-plexamp-plugin`, and one on `gexis-plexamp` (`main`) that is not released.
 
 ## Build environment (2026-09-13) — read this before the next build
 
@@ -262,6 +224,27 @@ Two traps here, both of which cost time this session:
 anything already present at the right size, and appends the manifest
 annotation `image` would have. Verified: recovered image byte-identical,
 manifest reporting the true 749s.
+
+**5. The build bind-mounts the live working tree — do not edit `core/` while one
+runs.** `PIGEN_DOCKER_OPTS` mounts `core`, `ui/dist`, `skins` and
+`stage-gexis` **read-only into the container, not copies**, and each stage reads
+them when it runs. An edit landing between two stages produces an image that is
+half one commit and half another, **and the `.info` still reports the git-describe
+version it started with**, so the artefact would name a commit whose contents it
+does not have.
+
+Nearly hit on 2026-09-25: `03-core` finished at container 17:22:06 and the first
+edit of that session's next piece of work landed 25 seconds later on the host
+clock. **The clocks are not the same** — the container runs two hours behind —
+so the arithmetic proved nothing. What settled it was looking:
+
+```
+docker exec pigen_work_cont sh -c 'ls /pi-gen/work/*/stage-gexis/rootfs/opt/gexis-core/venv/lib/python3*/site-packages/gexis_core/adapters/'
+```
+
+The new module was absent, so the image held exactly the merged commit. **Check
+that way, not by comparing timestamps**, and prefer starting a build from a
+clean tree you then leave alone.
 
 **Current warm-build baseline: 12m29s** (cold ~40m), 2026-09-13, with prune
 and no compression. Latest artefact:
@@ -374,11 +357,36 @@ reverted, currently-flashed image predates this fix.
                                             the Beszel agent was the test that
                                             it carries a non-renderer, and it
                                             amended the contract twice
-11 Plexamp as a renderer, as a plugin     <- next. ALSO the fourth-renderer proof
+11 Plexamp as a renderer, as a plugin   * COMPLETE 2026-09-25 - all six
+                                            criteria, and Phase 10's criterion
+                                            2 with them. ALSO the proof
                                             for 10, replacing Qobuz. Its
                                             hardware check is pulled forward
                                             into 10 - Finding 075 says moOde
-                                            built a Plexamp route and parked it
+                                            built a Plexamp route and parked it.
+                                            **Four defects closed 2026-09-26
+                                            after George used it** (ADR-0091,
+                                            ADR-0092): the 14 s handback, the
+                                            phone still showing it connected,
+                                            `activate` implemented but never
+                                            declared, and - the one that matters
+                                            - it could not take the device from
+                                            a renderer that was holding it AT
+                                            ALL. Criterion 2's *"takeover gaps
+                                            measured against the other
+                                            renderers"* was closed on Finding
+                                            085, which turns out to have
+                                            measured an LMS that had already let
+                                            go; the criterion is better
+                                            satisfied now than when it was
+                                            signed off, and that record is
+                                            corrected rather than left to read
+                                            as if it had been right
+11a the library answers for itself        <- next, added 2026-09-25 (George):
+                                            leverage the Plex server's own
+                                            metadata, internet providers kept
+                                            as fallbacks. Measured first:
+                                            Finding 086
 12 Qobuz Connect as a renderer            a second plugin against a contract
                                             already proved; keeps the private
                                             repository out of the critical path

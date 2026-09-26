@@ -63,11 +63,13 @@ from gexis_core.peppy import (
     set_meter_smoothing,
 )
 from gexis_core.peppy_metadata import PeppyMetadataWriter
+from gexis_core.model import BLANK_METADATA, TrackMetadata
 from gexis_core.settings import SettingsStore
 from gexis_core.settings_registry import Settings, load_registry
 from gexis_core.splash import Splash
 from gexis_core.state import StateStore
 from gexis_core import backups, bluealsa_volume, outputs, plugin_env, plugins
+from gexis_core.adapters.plugin import PluginAdapter
 from gexis_core.plugin_server import PluginServer
 from gexis_core.systemd import is_enabled as _unit_is_enabled
 from gexis_core.systemd import set_enabled as _set_unit_enabled
@@ -991,6 +993,40 @@ async def main() -> None:
     # ADR-0035. Defaults are what is true of this deployment today. A wired
     # row is read where it is used - the idle page probe here, the rest by
     # the UI - so none needs a callback.
+    def plugin_metadata(renderer_id: str, raw) -> TrackMetadata:
+        """**A plugin's metadata line, as the model** (contract v1).
+
+        Generic: it reads the fields the contract names and ignores everything
+        else. A plugin is written by somebody who cannot test against this
+        device, so a bad value is dropped rather than raised - a renderer that
+        sends a string where a number belongs should lose that field, not take
+        the daemon down mid-track.
+
+        `source_type` is **ours to set**, not the plugin's: it says which
+        renderer supplied the metadata, and a plugin naming a different one
+        would be lying about attribution the panel draws.
+        """
+        raw = raw if isinstance(raw, dict) else {}
+        text = ("track_id", "title", "artist", "album", "year", "artwork",
+                "artwork_small", "codec", "transport", "repeat")
+        fields = {k: str(raw[k]) for k in text if raw.get(k) is not None}
+        for number, cast in (("position", float), ("duration", float),
+                             ("sample_rate", int)):
+            try:
+                if raw.get(number) is not None:
+                    fields[number] = cast(raw[number])
+            except (TypeError, ValueError):
+                logger.warning(
+                    "plugins: %s sent %s=%r, which is not a number",
+                    renderer_id, number, raw.get(number),
+                )
+        if isinstance(raw.get("shuffle"), bool):
+            fields["shuffle"] = raw["shuffle"]
+        unavailable = raw.get("unavailable")
+        if isinstance(unavailable, list):
+            fields["unavailable"] = frozenset(str(u) for u in unavailable)
+        return replace(BLANK_METADATA, source_type=renderer_id, **fields)
+
     def _plugin_env(plugin) -> bool:
         """**Export what this plugin's rows say to its unit** (ADR-0088).
 
@@ -1921,19 +1957,69 @@ async def main() -> None:
         and not adapter.capabilities.volume_over_bluealsa
     }
 
+    #: A connected renderer plugin's adapter, by id (ADR-0089). Only ever holds
+    #: what is connected right now: a plugin that goes away is forgotten by the
+    #: supervisor in the same breath.
+    plugin_adapters: dict[str, PluginAdapter] = {}
+
     def _plugin_connected(session) -> None:
-        """**ADR-0084/0086.** A plugin said it is running.
+        """**ADR-0084/0086/0089.** A plugin said it is running.
 
         A `service` needs nothing further - being connected is the whole of
-        what it does, which is the point of the `kind` split. A `renderer`
-        will need an adapter built around this session and registered with the
-        supervisor; that is the next piece and is deliberately not faked here.
+        what it does, which is the point of the `kind` split. A `renderer` gets
+        an adapter built around this session and registered with the
+        supervisor, which is what makes it a renderer rather than a connection.
+
+        **A declaration this core cannot act on costs the plugin its
+        connection**, not its arbitration: a renderer that was registered with
+        wrong capabilities would be offered on the panel, chosen, and then fail
+        to do what it said.
         """
-        if session.kind == "renderer":
-            logger.info(
-                "plugins: %s is a renderer and arbitration does not carry plugins "
-                "yet - it is connected and idle", session.id,
+        if session.kind != "renderer":
+            return
+        # Raising here refuses the connection and puts the reason on the wire:
+        # the server calls this before `welcome` precisely so it can.
+        adapter = PluginAdapter(session)
+        supervisor.register(adapter)
+        # **And a slot in the published state** (ADR-0089 as amended): without
+        # one the panel cannot draw this source and `set_available` refuses it
+        # by name, which is how the first external plugin failed after
+        # everything else about it worked.
+        state_store.add_renderer(session.id, adapter.capabilities)
+        if adapter.capabilities.volume_managed:
+            # **ADR-0053: the panel is a remote for what is playing.** The three
+            # built-ins are registered at startup from this same shape; a plugin
+            # arrives later and is registered here, and forgotten on the way out
+            # so the panel stops offering a slider for a renderer that is gone.
+            remote.register(
+                session.id, steps=adapter.VOLUME_STEPS, send=adapter.set_volume,
             )
+        plugin_adapters[session.id] = adapter
+        # The adapter parks - the socket is its watch - but `run` is still what
+        # holds its callbacks, and the supervisor's lifecycle is written around
+        # a task per renderer.
+        adapter.task = asyncio.ensure_future(
+            adapter.run(make_on_acquire(session.id), make_on_release(session.id))
+        )
+        state_store.set_available(session.id, True)
+        logger.info("plugins: %s is a renderer and arbitration carries it", session.id)
+
+    def _plugin_disconnected(session) -> None:
+        """**The renderer is gone** (ADR-0089).
+
+        Forgotten by the supervisor, which clears `active` if it was the active
+        one, and marked unavailable - the panel must not keep offering a source
+        whose process has left.
+        """
+        adapter = plugin_adapters.pop(session.id, None)
+        if adapter is None:
+            return
+        task = getattr(adapter, "task", None)
+        if task is not None:
+            task.cancel()
+        supervisor.forget(session.id)
+        remote.forget(session.id)
+        state_store.drop_renderer(session.id)
 
     def _plugin_event(session, kind: str, message: dict) -> None:
         # Availability is the one event that means something without an
@@ -1942,12 +2028,50 @@ async def main() -> None:
         if kind == "available" and session.id in state_store.state.available:
             state_store.set_available(session.id, bool(message.get("available")))
             return
+        adapter = plugin_adapters.get(session.id)
+        if adapter is not None:
+            # **ADR-0089: the socket is the watch.** These two are the edges
+            # every other adapter finds by watching D-Bus or a WebSocket, and
+            # they go the same place - `supervisor.acquire` and `relinquish`,
+            # through the same callbacks `run` was handed.
+            if kind == "acquire":
+                adapter.on_acquire()
+                return
+            if kind == "release":
+                adapter.on_release()
+                return
+            if kind == "metadata":
+                # **What is playing** (`docs/PLUGIN-CONTRACT.md`). The three
+                # built-ins reach the same call through `on_metadata_change`;
+                # this is the same destination by a different road.
+                state_store.set_metadata(
+                    session.id, plugin_metadata(session.id, message.get("metadata")),
+                )
+                return
+            if kind == "queue":
+                queue = message.get("queue")
+                state_store.set_queue(session.id, queue if isinstance(queue, list) else None)
+                return
+            if kind == "volume":
+                # The renderer's own level changed - somebody turned it up in
+                # the Plex app, or Plexamp restored what it had. Same
+                # destination as every other renderer's report.
+                try:
+                    value = int(message["value"])
+                    steps = int(message.get("steps") or adapter.VOLUME_STEPS)
+                except (KeyError, TypeError, ValueError):
+                    logger.warning("plugins: %s sent an unusable volume: %r",
+                                   session.id, message)
+                    return
+                report_renderer_volume(session.id, value, steps)
+                return
         logger.debug("plugins: %s sent %s", session.id, kind)
 
     plugin_server = PluginServer(
         installed_plugins,
         on_event=_plugin_event,
         on_connect=_plugin_connected,
+        on_disconnect=_plugin_disconnected,
         # ADR-0086: a plugin's rows outlive its process, so it is handed
         # their current values rather than coming up on its own defaults.
         settings_for=lambda plugin_id: {

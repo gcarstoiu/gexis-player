@@ -8,6 +8,7 @@
 <script>
   import spotifyMark from '../assets/icon-spotify.png';
   import bluetoothMark from '../assets/icon-bluetooth.png';
+  import { sources } from './state.js';
 
   //: **ADR-0086: `mark` is a manifest's own glyph**, served by the daemon at
   //: `/plugins/<id>/mark`. It wins where there is one, which is how a source
@@ -17,12 +18,23 @@
   //: design rather than to a manifest.
   let { source, mark = null, size = 18, color = 'currentColor', opacity = 1 } = $props();
 
+  //: **A plugin's mark, looked up rather than passed** (ADR-0086). The
+  //: manifest's glyph is published in `sources`, and until 2026-09-25 only the
+  //: waiting screen passed it down - so a plugin renderer drew *nothing* on Now
+  //: Playing and the mini strip, because the chain below has no final `else`.
+  //: Found with Plexamp, whose mark the daemon was serving correctly at
+  //: `/plugins/plexamp/mark` while the panel showed an empty space.
+  //:
+  //: A caller may still pass one, and it wins: the waiting screen does, and a
+  //: screen that knows better than the store should not be argued with.
+  const glyph = $derived(mark ?? $sources[source]?.mark ?? null);
+
   const bar = $derived(Math.max(3, Math.round(size * 0.15)));
   const gap = $derived(Math.max(2, Math.round(size * 0.11)));
 </script>
 
-{#if mark && source !== 'lms' && source !== 'spotify' && source !== 'bluetooth'}
-  <img class="mark" src={mark} alt="" style:height={`${size}px`} style:opacity />
+{#if glyph && source !== 'lms' && source !== 'spotify' && source !== 'bluetooth'}
+  <img class="mark" src={glyph} alt="" style:height={`${size}px`} style:opacity />
 {:else if source === 'lms'}
   <span class="bars" style:height={`${size}px`} style:gap={`${gap}px`} style:opacity>
     {#each [0.5, 1, 0.72, 0.88] as h}

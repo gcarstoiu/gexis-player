@@ -814,6 +814,29 @@ thing under test is "what happens after X", check the states X actually reaches 
 including the one where X refuses to run because it is not configured yet, which
 for anything needing a credential is its **first** state, not an edge case.
 
+**42. The probe changed the device and left it changed** (2026-09-26). A probe
+for the idle screen navigated the panel to `?idle_seconds=8`, because waiting
+out the real five-minute timeout in a test is not practical. It never navigated
+back. **George found it, not the probe and not me**: he deactivated LMS and the
+idle screen appeared almost at once, and asked *"did you leave any
+instrumentation on?"*
+
+**Everything observed on that panel afterwards was of a modified device** — his
+observations and mine both — and nothing in the process would have noticed. The
+override lives in the URL, so it survives reloads, is invisible on screen, and
+does not appear in any log.
+
+**The same session had already done this twice in smaller ways**: an
+instrumented core deployed over the installed one, and a temporary `beszel`
+manifest left in `/usr/share/gexis/plugins`. Those were both cleaned up because
+they were *files* and the cleanup was a `rm`. This one was state, and state has
+no obvious leftovers to sweep.
+
+**A probe that changes the system owns putting it back**, in the same script
+that changed it, not in a later step that can be forgotten — and the check
+afterwards is *"what is this device's configuration now"*, not *"did I remember
+to undo it"*. Memory is the thing that failed.
+
 ## Common shape
 
 Every case had a *plausible* substitute for the real target — the build
@@ -823,7 +846,8 @@ device for a booting one, a comment for the machine it describes, a
 summary line for the rule it summarises, a directory listing for the design
 itself, a log line for the screen it describes, a lucky memory layout for
 the one the daemon would get, a unit that always starts for one that refuses
-to — and the check quietly accepted the substitute. None of these failed loudly. Each
+to, a panel with the test's own timeout still set for the one the user has —
+and the check quietly accepted the substitute. None of these failed loudly. Each
 produced an answer that looked like a normal result, not an error.
 
 **And a corollary from case 41.** A probe built to exercise a mechanism will be

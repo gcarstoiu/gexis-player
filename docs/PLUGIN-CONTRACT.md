@@ -1,16 +1,39 @@
 # The Gexis plugin contract
 
-**Version:** `1` — **draft, not frozen.**
+**Version:** `1` — **frozen 2026-09-25.**
 **Status:** derived from the three default renderers, per
 [ADR-0013](decisions/0013-defaults-implement-public-contract.md) as amended.
 **Carried by:** a Unix socket at `/run/gexis/plugins.sock`, one JSON object per
 line ([ADR-0084](decisions/0084-plugins-speak-json-lines-over-a-unix-socket.md)).
 
-> **Why it is a draft.** Phase 10 freezes this **after** a non-renderer has
-> been built against it, not before. `docs/DEVELOPMENT.md`: *"If the contract
-> cannot express that, it is a renderer API wearing a plugin's name."* A
-> Beszel agent is that test. Until it has been written, every field below is
-> provisional.
+> **Frozen 2026-09-25**, on George's word — *"Freeze now and do metadata. If we
+> need to adapt it's v2."* — and on the evidence Phase 10 required before
+> anyone was allowed to freeze it:
+>
+> - **A non-renderer was built against it** and forced two amendments first:
+>   every plugin gets a switch ([ADR-0086](decisions/0086-a-plugin-declares-itself-in-a-manifest.md)),
+>   and a plugin's settings reach its unit as environment
+>   ([ADR-0088](decisions/0088-a-plugins-settings-reach-its-unit-as-environment.md)).
+> - **A renderer was built against it, in another repository**, and took the
+>   audio device from LMS and gave it back inside its own declared release
+>   grace ([Finding 082](findings/082-a-renderer-from-another-repository.md)).
+>   It forced two more: the socket authorised nobody but root
+>   ([ADR-0084](decisions/0084-plugins-speak-json-lines-over-a-unix-socket.md)
+>   amended), and arbitration carried a renderer the published state had no
+>   slot for ([ADR-0089](decisions/0089-arbitration-carries-a-plugin-renderer.md)
+>   amended).
+>
+> **What frozen means here**: within version 1, fields are added and never
+> removed or repurposed, and a plugin ignores what it does not know. A change
+> that cannot be made that way is version **2**, and the core says which
+> versions it serves rather than guessing.
+>
+> **One half of this is still unexercised from outside**, and it is written
+> down rather than glossed: **metadata**. The renderer that proved the
+> arbitration half sends position, duration and transport state and nothing
+> else, because title and artist live on a Plex server rather than on the
+> player. If completing that forces a change, George's instruction covers it:
+> *"If we need to adapt it's v2."*
 
 ## What this is, and what it is not
 
@@ -30,6 +53,8 @@ Both use the same handshake; a renderer simply declares more.
 - **Socket:** `/run/gexis/plugins.sock`, Unix domain, stream.
 - **Framing:** one JSON object per line, `\n`-terminated, UTF-8. No length
   prefix, no envelope.
+- **Permissions:** `root:gexis-plugins`, mode `0660`. Your user joins that
+  group; running as root is not the answer.
 - **Direction:** the core listens, the plugin connects. A plugin may reconnect
   freely; the core treats a closed connection as the plugin being gone.
 - **Ordering:** messages are processed in the order they arrive on a
@@ -267,12 +292,31 @@ configuration from the environment like most daemons do.
   writable plugin directory, a checksummed download and a rule about who may
   ask. ADR-0016's lifecycle consequence survives as *installation*, not as
   *starting*.
-- **Arbitration for a plugin renderer.** The socket carries `acquire`,
-  `release` and the commands; what does not exist yet is the adapter built
-  around a session and registered with the supervisor. A `renderer` that
-  connects today is welcomed and idle, and the log says so. A `service` is
-  complete — and a service that only wants a unit managed and some values
-  exported never opens this socket at all.
-- **Authentication.** The socket's permissions are the model (ADR-0084).
+- ~~**Arbitration for a plugin renderer.**~~ **Built**
+  ([ADR-0089](decisions/0089-arbitration-carries-a-plugin-renderer.md)): a
+  `renderer` that connects gets an adapter built around its session and
+  registered with the supervisor, and its `acquire` and `release` reach
+  arbitration the way the three built-ins' events do. **Not yet exercised by a
+  real renderer** — that is Phase 11's Plexamp, and until it has happened this
+  document stays a draft.
+
+  Three things worth knowing before writing one:
+
+  - **Your `hello` is validated and a bad one costs you the connection**, with
+    the reason on the wire. A renderer registered with wrong capabilities would
+    be offered on the panel, chosen, and then fail to do what it said.
+  - **The manifest owns your unit name.** You may repeat it in `hello`; you may
+    not disagree with it.
+  - **`signal_stop` is a command and a core-side action**, not either/or. You
+    are told first, and the core then acts on your unit regardless — so
+    disconnecting cannot strand the audio device, and answering `true` without
+    doing anything does not fool the ladder.
+- **Authentication.** The socket's permissions are the model (ADR-0084 as
+  amended). Concretely: `/run/gexis/plugins.sock` is `root:gexis-plugins 0660`,
+  so **your unit's user must be in the `gexis-plugins` group** or the kernel
+  refuses you before you can say `hello`. Do not run as root to get around
+  this — a plugin with its own unprivileged account joining that group is the
+  shape this expects, and the first plugin written outside the core is what
+  established it.
 - **Anything about themes.** ADR-0016 lists them as plugins and a theme has no
   process; Phase 14 settles that before anything is built.

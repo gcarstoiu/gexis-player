@@ -129,6 +129,42 @@ class StateStore:
         self._active = renderer_id
         self._notify()
 
+    def add_renderer(self, renderer_id: str, capabilities) -> None:
+        """**A renderer that arrived after this store was built** (ADR-0089).
+
+        The three built-ins are passed in at construction and never move; a
+        plugin renderer connects minutes later. Until it has a slot here the
+        panel cannot draw it and `set_available` refuses it by name - which is
+        how the first plugin written outside this repository failed, with
+        `unknown renderer 'plexamp'`, after everything else about it worked.
+
+        Idempotent, because a plugin that reconnects is the ordinary case and
+        not an error. Its availability starts **false**: connecting says the
+        plugin is running, not that its renderer is ready.
+        """
+        if renderer_id in self._capabilities:
+            return
+        self._capabilities[renderer_id] = capabilities
+        self._available[renderer_id] = False
+        logger.info("state: %s has a slot", renderer_id)
+        self._notify()
+
+    def drop_renderer(self, renderer_id: str) -> None:
+        """Its plugin went away.
+
+        **What it leaves behind is deliberate.** The slot goes, so the panel
+        stops offering a source nothing is behind; the *source description* from
+        the manifest stays, because a plugin that is installed and not running
+        is still installed (ADR-0086), and that is what the manifest is for.
+        """
+        if self._capabilities.pop(renderer_id, None) is None:
+            return
+        self._available.pop(renderer_id, None)
+        self._metadata.pop(renderer_id, None)
+        self._queues.pop(renderer_id, None)
+        logger.info("state: %s no longer has a slot", renderer_id)
+        self._notify()
+
     def set_available(self, renderer_id: str, available: bool) -> None:
         if renderer_id not in self._available:
             raise ValueError(f"unknown renderer {renderer_id!r}")

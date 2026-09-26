@@ -161,3 +161,25 @@ started, or stopped and kept stopped, for the same reason that record gives.
   a visualiser. Nothing has asked.
 - **Versioning of the manifest itself**, as distinct from the contract version
   in `hello`. One number until something needs two.
+
+## Amendment, 2026-09-25 — the mark reached the payload and not the screen
+
+**The manifest's glyph was published and almost never drawn.** `sources` carried
+`"mark": "/plugins/<id>/mark"`, the daemon served it, and **only the waiting
+screen passed it down** to `SourceMark`. Now Playing and the mini strip pass the
+renderer's id and nothing else, and that component's branch chain has no final
+`else` — so a plugin renderer drew an **empty span**.
+
+Found with Plexamp: the payload was right, the route answered 200 with the file,
+and the panel showed a blank where the mark goes.
+
+`SourceMark` now looks the glyph up from the `sources` store when a caller does
+not pass one. A caller's own value still wins — the waiting screen passes one,
+and a screen that knows better than the store should not be argued with.
+
+**Why this counts as an amendment to this record** rather than a UI bug fix:
+ADR-0086's claim is *"a screen that reads this draws a renderer it has never
+heard of without being edited"*. That was not true. It required every screen
+drawing a mark to have been edited to pass one, and two of the three had not
+been. The claim is true now because the lookup lives in the one component that
+draws marks.

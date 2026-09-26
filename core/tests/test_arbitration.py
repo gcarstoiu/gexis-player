@@ -248,9 +248,13 @@ async def test_adapter_specific_ladder_skips_the_polite_wait(monkeypatch):
     await supervisor.acquire("spotify")  # takeover: lms is released, using its own ladder
 
     assert lms.signals == ["SIGTERM"]  # escalated, frees_at="sigterm" resolves it there
-    # Only the sigterm_grace sleep happened - no 0.0 polite sleep, and no
-    # sigkill_grace sleep since SIGTERM already freed it.
-    assert slept == [5.0]
+    # No 0.0 polite sleep, and no sigkill_grace sleep since SIGTERM already
+    # freed it. **This asserted `[5.0]` until ADR-0091** - one blind sleep of
+    # the whole sigterm_grace - which is the defect Finding 016 had already
+    # fixed one rung higher. Now it polls, so the ladder notices the release
+    # on the first 0.1s tick instead of waiting out a ceiling it was nowhere
+    # near.
+    assert slept == [pytest.approx(0.1)]
 
 
 @pytest.mark.asyncio
@@ -294,6 +298,63 @@ async def test_polite_grace_polls_instead_of_sleeping_blind(monkeypatch):
     # 1.0s ceiling, which a blind sleep would have waited out regardless.
     assert slept == [pytest.approx(0.1), pytest.approx(0.1)]
     assert lms.signals == []  # never escalated - polling caught the release
+
+
+@pytest.mark.asyncio
+async def test_signal_rungs_poll_instead_of_sleeping_blind(monkeypatch):
+    """ADR-0091: Finding 016's fix was only ever applied to the polite rung,
+    and the two below it still slept their whole grace blind before looking.
+
+    Finding 088 is what made that matter. A killed Plexamp frees the device in
+    169 ms (Finding 077), so a 3 s blind `sigterm_grace` would have made every
+    takeover cost three seconds to save eleven - most of the win thrown away
+    inside the ladder. Here the renderer holds on through the polite rung *and*
+    through SIGTERM, lets go shortly after SIGKILL, and the ladder must notice
+    on a poll rather than at the ceiling.
+    """
+    # A fake clock, advanced by the patched sleep, so the graces below can be
+    # realistic seconds without the test taking them. The other tests here
+    # leave the clock alone and keep their graces tiny, which is why they can
+    # only ever assert "a short sleep happened" - with a grace smaller than
+    # the poll interval, a blind sleep and a poll are the same call.
+    clock = {"t": 1_000.0}
+    slept: list[float] = []
+    real_sleep = asyncio.sleep
+
+    async def recording_sleep(seconds):
+        slept.append(seconds)
+        clock["t"] += seconds
+        await real_sleep(0)  # yield control without actually waiting
+
+    monkeypatch.setattr("gexis_core.arbitration.asyncio.sleep", recording_sleep)
+    monkeypatch.setattr("gexis_core.arbitration.time.monotonic", lambda: clock["t"])
+
+    holder = {"who": None}
+    # Holds the device through release() and through SIGTERM; lets go on the
+    # SIGKILL, which is Plexamp's measured shape (Finding 088 §3: SIGTERM
+    # leaves the unit dead without freeing anything useful, SIGKILL is what
+    # works and what it comes back from).
+    lms = FakeAdapter("lms", ReleaseAction.PAUSE, holder, frees_at="sigkill")
+    spotify = FakeAdapter("spotify", ReleaseAction.DISCONNECT, holder)
+    bluetooth = FakeAdapter("bluetooth", ReleaseAction.DISCONNECT, holder)
+    supervisor = Supervisor(
+        {"lms": lms, "spotify": spotify, "bluetooth": bluetooth},
+        device_busy=lambda renderer_id: holder["who"] == renderer_id,
+        ladder=TimeoutLadder(polite_grace=0.5, sigterm_grace=3.0, sigkill_grace=2.0),
+    )
+    holder["who"] = "lms"
+    supervisor._active = "lms"  # ADR-0027: no implicit base, say so explicitly
+
+    await supervisor.acquire("spotify")
+
+    assert lms.signals == ["SIGTERM", "SIGKILL"]
+    # **Every wait is one poll interval.** A blind implementation reads
+    # [0.5, 3.0, 2.0] here; before ADR-0091 it read [0.1 x 5, 3.0, 2.0],
+    # because only the first rung had been fixed.
+    assert {round(s, 6) for s in slept} == {0.1}
+    # 0.5s of polite grace and 3.0s of sigterm grace waited out a tick at a
+    # time, then freed on the very first sigkill poll.
+    assert len(slept) == 5 + 30 + 1
 
 
 @pytest.mark.asyncio
@@ -799,3 +860,110 @@ async def test_switching_off_the_active_renderer_leaves_nobody_holding_it():
     # must not swallow it: `relinquish` is release, not acquisition.
     await supervisor.relinquish("spotify")
     assert supervisor.active is None
+
+
+# --- ADR-0089: a renderer that arrives after construction --------------------
+
+
+@pytest.mark.asyncio
+async def test_a_plugin_renderer_can_be_registered_and_then_acquires():
+    """**ADR-0089.** The supervisor's adapters used to be fixed at
+    construction, and `acquire` raised `ValueError` for anything else - which
+    is where a plugin renderer stopped being a renderer."""
+    supervisor, _, holder = build()
+    plexamp = FakeAdapter("plexamp", ReleaseAction.DISCONNECT, holder)
+
+    with pytest.raises(ValueError):
+        await supervisor.acquire("plexamp")
+
+    supervisor.register(plexamp)
+    await supervisor.acquire("plexamp")
+    assert supervisor.active == "plexamp"
+
+
+@pytest.mark.asyncio
+async def test_a_duplicate_id_is_refused_not_replaced():
+    """Replacing the adapter of a renderer that currently holds the device
+    would leave the release ladder talking to a connection that never acquired
+    anything."""
+    supervisor, adapters, holder = build()
+    with pytest.raises(ValueError):
+        supervisor.register(FakeAdapter("lms", ReleaseAction.PAUSE, holder))
+    assert supervisor._adapters["lms"] is adapters["lms"]
+
+
+@pytest.mark.asyncio
+async def test_a_plugin_that_goes_away_stops_being_active():
+    """A renderer that is no longer here cannot be the active one. The change
+    is published the way any other release is."""
+    seen = []
+    supervisor, _, holder = build()
+    supervisor._on_active_change = lambda who: seen.append(who)
+    supervisor.register(FakeAdapter("plexamp", ReleaseAction.DISCONNECT, holder))
+    await supervisor.acquire("plexamp")
+    seen.clear()
+
+    supervisor.forget("plexamp")
+    assert supervisor.active is None
+    assert seen == [None]
+    with pytest.raises(ValueError):
+        await supervisor.acquire("plexamp")
+
+
+@pytest.mark.asyncio
+async def test_forgetting_a_renderer_that_is_not_active_leaves_the_active_one_alone():
+    supervisor, _, holder = build(active="lms")
+    supervisor.register(FakeAdapter("plexamp", ReleaseAction.DISCONNECT, holder))
+    supervisor.forget("plexamp")
+    assert supervisor.active == "lms"
+
+
+@pytest.mark.asyncio
+async def test_forgetting_something_that_was_never_registered_is_quiet():
+    """A session refused during the handshake never registered, and the
+    disconnect path must not care."""
+    supervisor, _, _ = build(active="lms")
+    supervisor.forget("never-here")
+    assert supervisor.active == "lms"
+
+
+@pytest.mark.asyncio
+async def test_the_callers_adapter_dict_is_the_same_one():
+    """**Amended after it crashed on the device, 2026-09-25.**
+
+    The first version copied the caller's dict, reasoning that it was the
+    caller's own. It is not: `__main__` looks renderers up in that same dict at
+    runtime - `device_busy` does, and so does transport dispatch - so a copy
+    meant a plugin renderer the supervisor knew about and the caller did not.
+    The first takeover from a real plugin renderer raised `KeyError: 'plexamp'`
+    from inside the release ladder.
+    """
+    supervisor, adapters, holder = build()
+    supervisor.register(FakeAdapter("plexamp", ReleaseAction.DISCONNECT, holder))
+    assert set(adapters) == {"lms", "spotify", "bluetooth", "plexamp"}
+    supervisor.forget("plexamp")
+    assert set(adapters) == {"lms", "spotify", "bluetooth"}
+
+
+@pytest.mark.asyncio
+async def test_the_ladder_can_ask_whether_a_plugin_renderer_still_holds_it():
+    """The specific thing that crashed: `device_busy` is a callback the caller
+    writes, and it looks the renderer up by id. If registration does not reach
+    that lookup, the ladder cannot ask its central question."""
+    holder = {"who": None}
+    adapters = {"lms": FakeAdapter("lms", ReleaseAction.PAUSE, holder)}
+    asked = []
+
+    def device_busy(renderer_id):
+        # Exactly `__main__`'s shape: the unit name comes out of the map.
+        asked.append(adapters[renderer_id].unit_name)
+        return holder["who"] == renderer_id
+
+    supervisor = Supervisor(adapters, device_busy=device_busy, ladder=FAST_LADDER)
+    supervisor.register(FakeAdapter("plexamp", ReleaseAction.DISCONNECT, holder))
+    await supervisor.acquire("plexamp")
+    holder["who"] = "plexamp"
+    await supervisor.acquire("lms")
+
+    assert "plexamp.service" in asked
+    assert supervisor.active == "lms"

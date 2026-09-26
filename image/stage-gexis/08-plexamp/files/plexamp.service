@@ -1,0 +1,54 @@
+[Unit]
+Description=Plexamp (headless)
+Documentation=https://plexamp.com
+After=network-online.target sound.target
+Wants=network-online.target
+# A misconfigured renderer restarting forever buries the real error in noise -
+# the same limit go-librespot's unit carries, for the reason found there.
+#
+# **Raised 5 -> 20, 2026-09-26 (ADR-0091).** Since that decision this unit is
+# SIGKILLed on *every* takeover and comes back by `Restart=on-failure`, which is
+# the whole path back - so legitimate arbitration now spends restarts, and a
+# burst of 5 is what `squeezelite.service` had when Finding 013 section 1
+# exhausted it and left the unit permanently failed, silently dropping the
+# renderer until a manual `systemctl reset-failed`. That unit carries 20 for
+# exactly this reason; so does this one now. A genuinely misconfigured Plexamp
+# (no node, bad bundle) still gives up in about two seconds at RestartSec=5's
+# floor, well inside the window.
+#
+# **This is headroom, not a cure**, and it is cheaper here than it was there:
+# Finding 088 section 3 measured that a restarted Plexamp does not touch the
+# ALSA device until it is told to play, so it cannot fail-and-retry against a
+# still-busy device the way squeezelite did. One takeover spends one restart.
+StartLimitIntervalSec=60
+StartLimitBurst=20
+
+# **ADR-0090: one switch controls the pair.** The manifest names *this* unit,
+# because this is the process that opens the audio device and the release ladder
+# attributes a busy device to it. The plugin that speaks the contract is a
+# second unit, pulled in here and `PartOf=` this one, so enabling this starts
+# both and stopping it stops both.
+#
+# **This line lived under `[Service]` until 2026-09-26, where `Wants=` is not a
+# valid key** - so systemd ignored it and the pair was never actually wired.
+# Found while measuring ADR-0091, when stopping the player left the plugin
+# running and starting it again did not bring the plugin back.
+Wants=gexis-plexamp.service
+
+[Service]
+Type=simple
+User=pi
+WorkingDirectory=/home/pi/plexamp
+ExecStart=/usr/bin/node /home/pi/plexamp/js/index.js
+Restart=on-failure
+# **5 -> 1, 2026-09-26 (ADR-0091).** This is the path back from every takeover
+# now, not just from a genuine failure, so the wait is dead time in which the
+# player is missing from a phone's list. There is nothing to wait *for*: Finding
+# 088 section 3 measured that a restarted Plexamp leaves the ALSA device alone
+# until it is told to play, so unlike squeezelite it cannot spin failing to open
+# a device the incoming renderer still holds. The guard against a real crash
+# loop is StartLimitBurst above, which still gives up inside its window.
+RestartSec=1
+
+[Install]
+WantedBy=multi-user.target

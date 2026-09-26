@@ -2056,14 +2056,42 @@ the exercise.
 
 **Acceptance**
 
-1. ~~Contract documented and versioned.~~ — **Done, and deliberately not
-   frozen.** [`docs/PLUGIN-CONTRACT.md`](PLUGIN-CONTRACT.md) is version 1,
-   derived from `Adapter` and `Capabilities` rather than designed, with
+1. ~~Contract documented and versioned.~~ — **Done, and FROZEN 2026-09-25**
+   (George: *"Freeze now and do metadata. If we need to adapt it's v2."*).
+   [`docs/PLUGIN-CONTRACT.md`](PLUGIN-CONTRACT.md) is version 1, derived from
+   `Adapter` and `Capabilities` rather than designed, with
    `core/tests/test_contract_surface.py` pinning the document against the
-   objects so the two cannot drift in silence. **The freeze moves to Phase 11**
-   with criterion 2, for the reason below.
-2. A fourth renderer built against it, in a separate repository, with no changes
-   to the core. ~~**Qobuz Connect (Phase 12) is that renderer**~~ — **Plexamp
+   objects so the two cannot drift in silence.
+
+   **The freeze waited for criterion 2, and criterion 2 was worth waiting
+   for**: between them, the two plugins built against this contract forced
+   **four** amendments, every one of them found by building rather than reading.
+   Freezing before either would have frozen a contract its first real consumer
+   broke.
+2. ~~A fourth renderer built against it, in a separate repository, with no
+   changes to the core.~~ — **CLOSED 2026-09-25**, on hardware, with audio
+   ([Finding 082](findings/082-a-renderer-from-another-repository.md)).
+   **`gcarstoiu/gexis-plexamp`** took the device from LMS and gave it back:
+
+   ```
+   acquire: plexamp takes the device (was lms)
+   release[lms]: polite stop freed the device (0.1s)
+   acquire: lms takes the device (was plexamp)
+   release[plexamp]: freed within polite grace (14.1s)
+   ```
+
+   The 14.1 s is Plexamp's measured hold, absorbed by the 16 s polite grace
+   **the plugin declared for itself** — no SIGTERM, no SIGKILL. And *"no changes
+   to the core"* holds in the sense that matters: every occurrence of the
+   renderer's name in `core/src/` is a comment explaining why something is the
+   way it is. No branch, no map, no special case.
+
+   **It failed three times first, and that is the criterion working** — the
+   socket authorised nobody but root, the published state had no slot for a
+   plugin renderer, and the supervisor had been given a *copy* of the adapter
+   map so the release ladder could not ask whether a plugin still held the
+   device. None of the three could have been found by a test in this
+   repository. ~~**Qobuz Connect (Phase 12) is that renderer**~~ — **Plexamp
    (Phase 11) is**, George 2026-09-25: *"If qobuz is too expensive now,
    especially because it requires a private project, we give it a go with
    plexamp."* Qobuz needs a partnership and a private repository
@@ -2157,6 +2185,10 @@ ever used — and this phase's own plugin amended the contract **twice**, both
 times from building the thing rather than reading the document. Doing it in the
 other order is the mistake the ordering was chosen to avoid.
 
+**It was worth it: criterion 2 forced two more amendments**, and the contract
+was frozen on 2026-09-25 once it had closed
+([Finding 082](findings/082-a-renderer-from-another-repository.md)).
+
 Criterion 1 as written asks for *documented and versioned*, and that is done.
 The freeze was a discipline added on top of it, and it belongs with the proof.
 
@@ -2172,6 +2204,23 @@ installer needs a writable plugin directory, a checksummed download and a rule
 about who may ask, and that is a phase of its own if it is ever wanted.
 
 ### Phase 11 — Plexamp as a renderer, and the contract's proof
+
+> **COMPLETE 2026-09-25.** All six criteria closed, **and Phase 10's criterion 2
+> with them** — a renderer in its own repository, `gcarstoiu/gexis-plexamp`,
+> taking the audio device from LMS and giving it back inside its own declared
+> grace. **Contract v1 is frozen** on that evidence.
+>
+> **Six amendments came out of this phase and the one before it**, every single
+> one found by building rather than reading: a switch for every plugin;
+> settings reaching a unit as environment; a socket that authorised nobody but
+> root; a published state with no slot for a plugin renderer; an adapter map the
+> supervisor was given a *copy* of, so the release ladder could not ask its own
+> question; and a manifest glyph that three screens never looked up.
+>
+> **What is not done, and is named rather than implied:** cross-rate takeover
+> gaps (blocked on content that does not exist in George's library), the gaps
+> against Spotify and Bluetooth (which need a phone), claiming from the settings
+> row, and a boot of the image that carries all of it.
 
 **Added 2026-09-16 (George).** ~~Same shape as Spotify and LMS.~~ — **not the
 same shape**, and that is the point of it now.
@@ -2240,6 +2289,7 @@ the ALSA default.
    for S32_LE on moOde, which is why its `.asoundrc` pins S24_LE *because of
    Plexamp*. `image/stage-gexis/00-alsa/files/output.conf` pins **no format at
    all**, so the visualiser would go flat with nothing on screen to say why.
+   **Answered: it does not happen here** — see the fourth bullet below.
 
    **All four were answered by the same install, 2026-09-25**
    ([Finding 077](findings/077-plexamp-on-gexis.md)), and three of the four
@@ -2251,16 +2301,32 @@ the ALSA default.
      overrides it for squeezelite's idle tick.
    - **It frees the device and keeps running**, so **ADR-0008's reversal
      condition is not triggered.**
-   - **The audio path is the problem.** It opens `hw:5,0` directly, so
-     `pcm.output` and peppyalsa are not in the path, and the format is
+   - ~~**The audio path is the problem.**~~ — **solved the same day by
+     [ADR-0085](decisions/0085-the-alsa-default-is-our-output.md)**, on
+     George's question: *"why aren't we setting the default for the device to
+     our hat and let plexamp use it?"* It opened `hw:5,0` directly, so
+     `pcm.output` and peppyalsa were not in the path, and the format is
      **S32_LE** — the one moOde measured as giving an all-zero meter FIFO.
      `output` is an ALSA PCM and `aplay -L` lists it, but Plexamp's own
-     enumeration does not, and setting it is silently ignored.
+     enumeration does not, and setting it is silently ignored — hence
+     `pcm.!default`.
+
+     **With that in place the meters work**, measured with a control: the FIFO
+     reads `25 23 25 24 26 25 …` while playing and has no writer at all when
+     stopped, and the spectrum FIFO carries bands. **moOde's all-zero symptom
+     does not reproduce here.**
    - **The TCP signal is still unanswered**: the count was 0 throughout,
      including while playing, because no phone was attached. It reflects a
      *controller* being connected, not audio.
-2. Acquisition and release fit the arbitration model (ADR-0010); takeover gaps
-   measured against the other renderers.
+2. ~~Acquisition and release fit the arbitration model (ADR-0010); takeover gaps
+   measured against the other renderers.~~ — **Done for LMS, and the other two
+   need a phone** ([Finding 085](findings/085-the-takeover-gaps-and-the-controls.md)).
+   Six takeovers: **LMS lets go in 0.2 s**, five times with no variance;
+   **Plexamp takes 12.6–14.2 s**, every one inside the 16 s grace it declares
+   for itself, so the ladder never escalated. Spotify and Bluetooth answer
+   **409** to `activate` and correctly so — neither can be made to take the
+   device on request. **Cross-rate remains blocked** on content that does not
+   exist in George's library.
 
    **The ladder is already designed, from Finding 077's numbers.** The API
    stop frees the device in **14 s**; stopping the unit frees it in **169 ms**
@@ -2271,11 +2337,107 @@ the ALSA default.
    uses for squeezelite. **A takeover then costs a little over a second**,
    against LMS's measured 3.1 s. George raised this as a user-experience
    concern and it is answered by sizing the grace, not by waiting.
-3. Metadata from Plexamp's local API: title, artist, album, artwork, position,
-   duration, transport.
-4. Volume mechanism derived and measured.
-5. Transport commands measured and declared (ADR-0037).
-6. Source pill, handoff screen, Peppy badge; design assets from Claude Design.
+3. ~~Metadata from Plexamp's local API: title, artist, album, artwork, position,
+   duration, transport.~~ — **Done**
+   ([Finding 083](findings/083-metadata-from-a-plugin.md)). Not from the local
+   API alone: the player's timeline says *what is happening* and the Plex server
+   says *what is playing*, fetched once per track. **The core was dropping a
+   plugin's metadata entirely** until this criterion made someone send some.
+4. ~~Volume mechanism derived and measured.~~ — **Done**, both directions
+   ([Finding 084](findings/084-a-plugins-volume.md)). It needed `remote.forget`,
+   which did not exist, and the echo guard this project has now written three
+   times.
+5. ~~Transport commands measured and declared (ADR-0037).~~ — **Done**, and it
+   found the defect it exists to find: every control was **declared and not
+   implemented**, answering 502 (Finding 085). All act now.
+6. ~~Source pill, handoff screen, Peppy badge; design assets from Claude
+   Design.~~ — **Done**, and it cost
+   [ADR-0086 an amendment](decisions/0086-a-plugin-declares-itself-in-a-manifest.md):
+   the manifest's glyph reached the payload and **three separate places drew a
+   plugin renderer as an empty space** — `SourceMark`, the handoff screen and
+   the Peppy renderer — each with a map of the three built-ins and no fallback.
+   The design asset is Plexamp's own mark, George's call: *"You can use their
+   logo for plexamp."*
+
+### Phase 11a — The library answers for itself
+
+**Added 2026-09-25 (George):** *"Let's introduce another phase before qobuz,
+which should tackle the question of how we can we leverage the plexamp/Plex
+server metadata that is available. Anything that can reduce the dependency on
+internet providers is a good thing. They can be kept as fallbacks, not
+removed."*
+
+**Numbered `11a`, not 12.** Phase 7a set the precedent for a phase inserted
+beside one that is finished, and renumbering 12, 13 and 14 for this would churn
+every record that names them.
+
+**The case is measured, not assumed**
+([Finding 086](findings/086-what-the-plex-server-could-answer.md)). For the
+**51.7 %** of looked-up artists that George's Plex server knows, it is more
+complete than every internet provider we ask:
+
+| what | the internet, today | Plex |
+|---|---|---|
+| Album cover | **50 %** | **100 %** — 3,908 of 3,908 |
+| Artist picture | **61 %**, needs a key | **100 %** |
+| Biography | **73 %** | **97 %** |
+| Similar artists | **80 %** | 59 of the first 60 artists |
+
+**One thing that is *not* the case for it**, written down so nobody argues it
+later: **it is not faster.** The internet providers answered in ~110 ms, the
+same as Plex on the LAN.
+
+**And one correction already**, made the day after this phase was drafted
+([Finding 086](findings/086-what-the-plex-server-could-answer.md)): this text
+first said Plex had no timed lyrics and that LRCLIB therefore stayed regardless.
+**George said otherwise and he was right** — 25 of 120 tracks carry `lrc`
+streams with `[mm:ss.xx]` timestamps, the shape ADR-0040's synced strip already
+consumes. **Popular tracks do remain ListenBrainz's**, 404 on that server.
+
+**Acceptance**
+
+1. **An ADR on where the Plex credential lives.** The core would be asking a
+   Plex server for metadata about whatever is playing, **including tracks
+   playing on LMS, Spotify or Bluetooth** — so this belongs in the core's
+   provider chain, not in the Plexamp plugin, which only knows what Plexamp
+   plays. But the only Plex token on this device belongs to that plugin, and
+   the core reading a plugin's private files is the coupling
+   [ADR-0016](decisions/0016-plugins-as-separate-processes.md) exists to
+   prevent. **Decide before building**: a second credential in ADR-0022's
+   inventory, a claim-token exchange the core performs itself, or something
+   else.
+2. **A Plex provider in the existing chain, ahead of the internet ones.**
+   [ADR-0040](decisions/0040-enrichment-providers.md)'s merge is already
+   field-by-field and first-wins — which is exactly *"kept as fallbacks, not
+   removed"*, with no new architecture. Nothing is deleted and no provider is
+   reordered relative to the others.
+3. **Matching stated and measured.** 51.7 % is one folding rule over names. A
+   real strategy — MusicBrainz ids where both sides carry them, names where they
+   do not — must report its own hit rate on this library, and the number goes in
+   a finding rather than in a hope.
+4. **It degrades when the server is not there.** The Plex server is another
+   machine; if it sleeps, every lookup must fall through to the internet
+   providers at the cost of one timeout, not hang the enrichment path. **What
+   that timeout is, measured.**
+5. **Album covers first.** The single largest win and the cheapest to verify:
+   the sweep that reports *"X of Y processed, Z found"* should improve, and by
+   how much is the measurement that closes this criterion.
+6. **Lyrics, and the question the survey could not answer.** Timed lyrics are
+   in the library — **and `/library/streams/<id>` served one fetch and has
+   returned 404 on every attempt since**, for `lrc` and `txt` alike and for the
+   waveform endpoint too, while files, covers and metadata serve normally.
+   Plexamp displays them, so there is a way. **Find it before building a
+   provider**; a lyrics source that works once an evening is worse than none,
+   because it would win the merge and then fail.
+7. **Decided in this phase, not before:** whether the three things Plex has and
+   this project does not — **sonic similarity with distances**, **moods and
+   styles**, and **ReplayGain** — are worth model changes, or are noted and left.
+   They are not enrichment as ADR-0040 defines it, and one of them (ReplayGain)
+   is an audio decision rather than a metadata one.
+
+**Out of scope, and named:** Plex's `UltraBlurColors`, its album reviews, and
+its own catalogue groupings (*Singles & EPs*, *Live Albums*, *Compilations*).
+All are there; none is asked for by anything today.
 
 ### Phase 12 — Qobuz Connect as a renderer
 

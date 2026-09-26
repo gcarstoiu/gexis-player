@@ -162,9 +162,30 @@
   //: Nothing found means no pills. **The region blanks, never the screen**
   //: (ADR-0014): a renderer whose artist is not in this library - anything
   //: over Bluetooth or Spotify - simply has none.
+  //: **Depended on by name, not by the metadata object** (2026-09-26). An
+  //: effect reading `metadata?.artist` depends on the whole object, so any
+  //: renderer that republishes it often re-ran this: it blanked the pills,
+  //: re-fetched them and put them back, and the row vanishing and returning
+  //: moved everything below it. George caught it on video: *"the artist tab in
+  //: now playing jumps up and down."*
+  //:
+  //: **It only showed with Plexamp, and that is measured, not assumed.** The
+  //: daemon does not tick: LMS pushed state **0.1 times a second** while
+  //: playing, and the panel interpolates the playhead between reports. The
+  //: Plexamp plugin was pushing **1.1 times a second** because its position had
+  //: moved - twenty times the traffic - so the effect re-ran once a second
+  //: there and effectively never for LMS. Measured with the old bundle and
+  //: Plexamp playing: `pills=5/0`, `bioTop=271/242`, `similarTop=470/441`;
+  //: with this fix, one value each. **The plugin was fixed too**, so neither
+  //: half depends on the other.
+  //:
+  //: A `$derived` is memoised by value, so the same artist name does not
+  //: retrigger anything. This is the whole fix; the blanking below is correct
+  //: once it only happens when the artist actually changes.
+  const artistName = $derived(metadata?.artist ?? null);
   let genres = $state([]);
   $effect(() => {
-    const name = metadata?.artist ?? null;
+    const name = artistName;
     const open = tab === 'artist';
     genres = [];
     if (!name || !open) return;

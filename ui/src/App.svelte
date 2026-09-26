@@ -147,6 +147,36 @@
     return () => clearTimeout(id);
   });
 
+  //: **A takeover wakes the panel** (George, 2026-09-26, reproduced: *"when
+  //: plexamp takes over, idle screen doesn't go away"*, and then *"the idle
+  //: screen was shown then the transition screen and then the idle I think and
+  //: then now playing"*).
+  //:
+  //: Until this, `idle` was cleared by exactly one thing - a renderer reporting
+  //: `playing` - and a takeover can be a long way from that. Measured on the
+  //: panel: starting Plexamp from idle left the idle screen up for **2.1 s**,
+  //: and activating LMS while Plexamp held the device left it up for the whole
+  //: **30 s** the probe watched, because the incoming renderer was paused and
+  //: never said `playing` at all. The handoff screen draws *over* the idle one,
+  //: which is the flicker George described: idle, transition, idle again.
+  //:
+  //: **A renderer taking the device is attention** - ADR-0027 makes every
+  //: acquisition a deliberate act, so somebody just did something. Counted as a
+  //: touch as well as cleared, exactly as the pairing frame below is, so the
+  //: panel does not drop back to idle the moment the takeover finishes.
+  //:
+  //: `untrack` for the same reason it is used below: `touches += 1` reads
+  //: `touches`, and without it the effect depends on what it writes.
+  $effect(() => {
+    const who = $active;
+    const takeover = $handoff;
+    if (who === null && !takeover) return;
+    untrack(() => {
+      idle = false;
+      touches += 1;
+    });
+  });
+
   //: **A pairing request wakes the panel.** It lapses in thirty seconds and
   //: a question nobody can see cannot be answered - and the frame is only
   //: 95% opaque, so over the idle screen the clock reads through it

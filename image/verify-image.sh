@@ -46,6 +46,9 @@ image/stage-gexis/05-peppy/files/gexis-peppy-driver.py /opt/gexis-peppy/driver.p
 image/stage-gexis/05-peppy/files/gexis_peppy_render.py /opt/gexis-peppy/gexis_peppy_render.py
 image/stage-gexis/05-peppy/files/peppy-meter.txt /opt/gexis-peppy/peppymeter/config.txt
 image/stage-gexis/05-peppy/files/peppy-spectrum.txt /opt/gexis-peppy/spectrum/config.txt
+image/stage-gexis/07-beszel/files/beszel-agent.service /etc/systemd/system/beszel-agent.service
+image/stage-gexis/07-beszel/files/beszel-agent-listen-check.sh /usr/local/lib/gexis/beszel-agent-listen-check.sh
+image/stage-gexis/07-beszel/files/plugin.json /usr/share/gexis/plugins/beszel/plugin.json
 skins/templates/meters.txt /opt/gexis-peppy/skins/gelo5/templates/1280x800/meters.txt
 skins/templates_spectrum/spectrum.txt /opt/gexis-peppy/skins/gelo5/templates_spectrum/1280x800/spectrum.txt
 EOF
@@ -127,6 +130,132 @@ for c in gelo5 stock; do
 done
 echo "  viz_timeout default in shipped registry: $(python3 -c "import json; r=json.load(open('$OUT/gexis_core/settings_registry.json')); s=[x for sec in r for x in sec.get('rows',[]) if x.get('key')=='viz_timeout']; print(repr(s[0].get('default')) if s else 'not found')" 2>&1)"
 echo "  daemon fallback: $(grep -o 'settings.value("viz_timeout") or [0-9]*' "$OUT/gexis_core/__main__.py")"
+
+echo "== Beszel (ADR-0087), the first plugin that is not part of the core"
+# The binary is pinned in the stage and verified there against a checksum agreed
+# three ways; this asserts the *image* got that exact build, which the stage's
+# own check cannot say anything about once it has exited.
+want_sha="$(grep -oE 'BESZEL_SHA256="[0-9a-f]+"' "$REPO/image/stage-gexis/07-beszel/00-run.sh" | cut -d'"' -f2)"
+dfs "dump /usr/local/bin/beszel-agent $OUT/agent" >/dev/null
+if [ ! -s "$OUT/agent" ]; then
+	bad "/usr/local/bin/beszel-agent missing"
+else
+	size=$(stat -c%s "$OUT/agent")
+	[ "$size" -gt 1000000 ] && ok "beszel-agent installed ($size bytes)" \
+		|| bad "beszel-agent is $size bytes"
+	# The tarball's checksum is what the stage pins; the extracted binary has its
+	# own, and this is it - taken from the first image built with this stage
+	# (2026-09-25) and confirmed identical to the binary that was run, enrolled
+	# and measured on `gexis` before the stage existed (Findings 078 and 080).
+	# So this asserts the image ships the build that was actually tested.
+	BESZEL_BINARY_SHA256="4c95b91e7c07912c8f8b6ea4286a6be926cc0616ba49b079082120bea3b203ed"
+	got="$(sha256sum "$OUT/agent" | cut -d' ' -f1)"
+	[ "$got" = "$BESZEL_BINARY_SHA256" ] && ok "beszel-agent is the build that was tested" \
+		|| bad "beszel-agent sha256 is $got, expected $BESZEL_BINARY_SHA256"
+	[ -n "$want_sha" ] || bad "no BESZEL_SHA256 pin found in the stage"
+fi
+rm -f "$OUT/agent"
+
+# **Not enabled.** An unenrolled device runs nothing, and the switch on the
+# settings screen reads the unit's real state (ADR-0086 as amended) - so a unit
+# enabled here would put a row on screen claiming something nobody asked for.
+if dfs "stat /etc/systemd/system/multi-user.target.wants/beszel-agent.service" | grep -q 'Inode:'; then
+	bad "beszel-agent is enabled in the image - ADR-0087 ships it off"
+else
+	ok "beszel-agent not enabled (ADR-0087: an unenrolled device runs nothing)"
+fi
+
+# The unit runs as its own account and the stage creates it in the chroot.
+if dfs "dump /etc/passwd $OUT/passwd" >/dev/null && grep -q '^beszel:' "$OUT/passwd"; then
+	ok "the beszel system account exists"
+else
+	bad "no beszel account - the unit names User=beszel and would fail to start"
+fi
+rm -f "$OUT/passwd"
+
+# Every built-in manifest plus this one. A plugin the core cannot read is a
+# source the panel cannot draw (ADR-0086).
+# **Whatever is installed, not a list written here.** The first version of this
+# grepped for the four names it knew, so `plexamp` could not appear in its
+# output even with its manifest sitting beside the others - a check that could
+# only ever confirm what it already believed.
+plugins=$(dfs "ls -l /usr/share/gexis/plugins" | awk '{print $NF}' \
+	| grep -vE '^(\.|\.\.)?$' | sort -u | tr '\n' ' ')
+missing=""
+for want in beszel lms spotify bluetooth; do
+	case " $plugins " in *" $want "*) ;; *) missing="$missing $want" ;; esac
+done
+if [ -n "$missing" ]; then
+	bad "plugin manifests missing:$missing (found: $plugins)"
+else
+	ok "plugin manifests: $plugins"
+fi
+
+echo "== Plexamp (ADR-0090), a renderer from another repository"
+for f in /etc/systemd/system/plexamp.service \
+         /etc/systemd/system/gexis-plexamp.service \
+         /usr/share/gexis/plugins/plexamp/plugin.json \
+         /usr/share/gexis/plugins/plexamp/mark.png \
+         /opt/gexis-plexamp/src/gexis_plexamp/main.py \
+         /home/pi/plexamp/js/index.js; do
+	dfs "stat $f" | grep -q 'Inode:' && ok "$f" || bad "$f missing"
+done
+# Node is the runtime Plexamp needs and nothing else here uses. Its absence
+# would be a renderer that cannot start, with the reason two layers down.
+dfs "stat /usr/bin/node" | grep -q 'Inode:' && ok "node installed" || bad "node missing"
+# **Neither unit enabled.** An unclaimed Plexamp cannot play anything, and the
+# Plugins row reads the unit's real state.
+for u in plexamp gexis-plexamp; do
+	if dfs "stat /etc/systemd/system/multi-user.target.wants/$u.service" | grep -q 'Inode:'; then
+		bad "$u is enabled in the image - ADR-0090 ships it off"
+	else
+		ok "$u not enabled"
+	fi
+done
+# **The pair, actually wired** (ADR-0090's design, ADR-0091's discovery).
+# `Wants=gexis-plexamp.service` sat under `[Service]` from the day the stage was
+# written until 2026-09-26, and systemd says exactly what it did with it:
+# "Unknown key 'Wants' in section [Service], ignoring." So one switch did not
+# control both, nothing here noticed, and it surfaced only when a release ladder
+# started stopping the player for real. Checked by *position*, because the key
+# being present was never the part that was wrong.
+dfs "dump /etc/systemd/system/plexamp.service $OUT/unit" >/dev/null
+service_at=$(grep -n '^\[Service\]' "$OUT/unit" | head -1 | cut -d: -f1)
+wants_at=$(grep -n '^Wants=gexis-plexamp\.service' "$OUT/unit" | head -1 | cut -d: -f1)
+if [ -n "$wants_at" ] && [ -n "$service_at" ] && [ "$wants_at" -lt "$service_at" ]; then
+	ok "plexamp.service pulls the plugin in, from [Unit] where it counts"
+else
+	bad "plexamp.service does not Wants= the plugin from its [Unit] section"
+fi
+# **ADR-0091 kills this unit on every takeover** and `Restart=on-failure` is the
+# only way back, so the restart burst is spent by ordinary arbitration now. A
+# burst of 5 is what squeezelite had when Finding 013 section 1 exhausted it and
+# left that unit permanently failed.
+if grep -q '^StartLimitBurst=20' "$OUT/unit"; then
+	ok "plexamp.service has the restart headroom a killed renderer needs"
+else
+	bad "plexamp.service is back to a restart burst that arbitration can exhaust"
+fi
+rm -f "$OUT/unit"
+
+# The manifest is the plugin repository's, so this checks what it must say
+# rather than that it matches a copy here - there is no copy here.
+dfs "dump /usr/share/gexis/plugins/plexamp/plugin.json $OUT/one" >/dev/null
+if grep -q '"unit": *"plexamp.service"' "$OUT/one" && grep -q '"kind": *"renderer"' "$OUT/one"; then
+	ok "the manifest names the unit the release ladder escalates against"
+else
+	bad "plexamp's manifest does not name plexamp.service as a renderer"
+fi
+rm -f "$OUT/one"
+
+echo "== ADR-0085: the ALSA default is our output"
+dfs "dump /etc/alsa/conf.d/zz-gexis-default.conf $OUT/one" >/dev/null
+if grep -q 'pcm.!default' "$OUT/one" 2>/dev/null; then
+	ok "zz-gexis-default.conf points the ALSA default at our output"
+else
+	bad "zz-gexis-default.conf missing or does not set pcm.!default"
+fi
+rm -f "$OUT/one"
 
 echo
 [ $fail -eq 0 ] && echo "RESULT: all checks passed" || echo "RESULT: FAILURES above"

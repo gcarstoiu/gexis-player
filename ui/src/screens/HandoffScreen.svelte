@@ -39,6 +39,13 @@
       style:height={`${source === 'bluetooth' ? size * 1.12 : size}px`}
       style:opacity
     />
+  {:else if $sources[source]?.mark}
+    <!-- **ADR-0086, the same gap as `SourceMark` had one layer down.** This
+         file already takes the *name* and the *accent* from the manifest, so a
+         takeover to a renderer it has never heard of is announced by name -
+         and then drew an empty ring, because the glyph was the one thing it
+         still looked up in a map of the three it knows. -->
+    <img class="mark" src={$sources[source].mark} alt="" style:height={`${size}px`} style:opacity />
   {/if}
 {/snippet}
 
