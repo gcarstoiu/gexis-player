@@ -364,33 +364,41 @@ class Supervisor:
             )
             return ReleaseOutcome.POLITE
 
+        # **The rung, not the signal** (ADR-0091). These used to say "sending
+        # SIGTERM" and "freed after SIGTERM", which stopped being true when the
+        # adapter got to choose: `PluginAdapter` and `LmsAdapter` both send
+        # SIGKILL on this rung, because a SIGTERM death is not a failure as far
+        # as systemd is concerned and `Restart=on-failure` would never fire.
+        # What was actually sent is logged by `systemd.kill_unit` itself, which
+        # prints the signal - so naming it here as well was a second statement
+        # of the same fact, and the wrong one.
         logger.warning(
-            "release[%s]: still holds the device after polite stop, sending SIGTERM",
+            "release[%s]: still holds the device after polite stop, signalling it",
             renderer_id,
         )
         await adapter.signal_stop(force=False)
         if await self._freed_within(renderer_id, ladder.sigterm_grace):
             logger.warning(
-                "release[%s]: freed after SIGTERM (%.1fs)",
+                "release[%s]: freed after the first signal (%.1fs)",
                 renderer_id,
                 time.monotonic() - t0,
             )
             return ReleaseOutcome.SIGTERM
 
         logger.error(
-            "release[%s]: still holds the device after SIGTERM, sending SIGKILL",
+            "release[%s]: still holds the device after the first signal, signalling harder",
             renderer_id,
         )
         await adapter.signal_stop(force=True)
         if not await self._freed_within(renderer_id, ladder.sigkill_grace):
             logger.error(
-                "release[%s]: STILL holds the device after SIGKILL (%.1fs)",
+                "release[%s]: STILL holds the device after the second signal (%.1fs)",
                 renderer_id,
                 time.monotonic() - t0,
             )
             return ReleaseOutcome.STILL_HELD
         logger.error(
-            "release[%s]: freed after SIGKILL (%.1fs)", renderer_id, time.monotonic() - t0
+            "release[%s]: freed after the second signal (%.1fs)", renderer_id, time.monotonic() - t0
         )
         return ReleaseOutcome.SIGKILL
 
