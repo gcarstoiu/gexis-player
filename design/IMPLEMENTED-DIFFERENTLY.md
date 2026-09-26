@@ -204,3 +204,13 @@ only takes place after a restart of the device."*
 moves `--t-artist` 25 → 35 and `--t-lead` 22 → 25 for the Track header, and
 the Artist tab's name and the Release tab's title used those tokens. The
 drop changes neither panel, so both keep the size they had.
+
+## Changed on 2026-09-26
+
+**[U] No transition screen threshold; every takeover is shown.** George:
+*"remove the Transition screen threshold setting. Basically the handoff
+visualisation is to be shown at all times even when the takeover is nearly
+instantaneous. The length of the visualisation is to be dictated by the
+Transition screen length setting."* The `handoff_threshold` row is gone, and
+**Transition screen length** defaults to **1.5 s** (ADR-0094). The pairs that
+used to be exempt for being fast (LMS ↔ Spotify) are shown too.
