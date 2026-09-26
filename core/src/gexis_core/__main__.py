@@ -87,6 +87,8 @@ from gexis_core.volume import (
     get_raw,
     Mute,
     renderer_value_to_hardware_raw,
+    hardware_raw_to_renderer_value,
+    fixed_output as volume_fixed_output,
     HARDWARE_MAX,
     set_ceiling_reader,
     set_curve_reader,
@@ -514,6 +516,8 @@ async def main() -> None:
             logger.info("volume: bluetooth says it is at %s on acquisition", value)
             report_renderer_volume(renderer_id, value, steps)
             return True
+        if adapter is not None and not getattr(adapter, "reports_real_volume", True):
+            return await hand_level_to(renderer_id, adapter)
         getter = getattr(adapter, "get_volume", None)
         if getter is None:
             return False
@@ -524,6 +528,34 @@ async def main() -> None:
         report_renderer_volume(
             renderer_id, value, getattr(adapter, "VOLUME_STEPS", 100)
         )
+        return True
+
+    async def hand_level_to(renderer_id: str, adapter) -> bool:
+        """**ADR-0054 §5, amended 2026-09-26: the level already playing carries
+        across.** For a renderer whose own answer is not a measurement -
+        go-librespot under `external_volume` says 100 whatever the phone shows -
+        the DAC's level goes to it instead, and the phone's slider follows.
+
+        The DAC is not written: it is already there. What comes back is the
+        renderer's echo of its new value, which lands within a rounding step of
+        where the DAC already is. **Fixed output is left alone** - the DAC is at
+        full scale there by design, and there is nothing to carry.
+        """
+        if volume_fixed_output():
+            return False
+        volume = state_store.state.volume
+        raw = mute.audible_raw(volume.raw if volume is not None else None)
+        if raw is None:
+            return False
+        steps = await adapter.get_volume_steps()
+        value = hardware_raw_to_renderer_value(raw, steps)
+        logger.info(
+            "volume: %s cannot say where it is; handing it the level playing (%s/240 -> %s/%s)",
+            renderer_id, raw, value, steps,
+        )
+        remote.set_steps(renderer_id, steps)
+        remote.report(renderer_id, value)
+        await adapter.set_volume(value)
         return True
 
     # ADR-0052 §3, amended: the ceiling is the top of every scale, so the

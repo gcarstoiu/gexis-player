@@ -87,6 +87,12 @@ class SpotifyAdapter(Adapter):
     renderer_id = "spotify"
     release_action = ReleaseAction.DISCONNECT
     unit_name = UNIT_NAME
+    #: **What `/status` says about volume is not a measurement** (ADR-0054 §5,
+    #: amended 2026-09-26). With `external_volume` go-librespot v0.9.0 starts
+    #: every session at full scale and never reads `initial_volume` or its own
+    #: `last_volume` (`daemon/player.go:166`), so on acquisition it is told
+    #: the level already playing instead of being asked for one.
+    reports_real_volume = False
     # Phase 3 criterion 2. Both "active" and "will_play" are treated as
     # acquisition (Finding 010/014 - "will_play" is upstream's earlier,
     # device-independent signal, needed because "active" can arrive too

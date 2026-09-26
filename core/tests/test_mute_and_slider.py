@@ -111,3 +111,17 @@ async def test_mute_route_answers_503_when_not_wired():
     server = StateServer(StateStore({}))
     async with TestClient(TestServer(server.make_app())) as client:
         assert (await client.post("/volume/mute", json={"muted": True})).status == 503
+
+
+@pytest.mark.asyncio
+async def test_the_audible_level_while_muted_is_the_one_unmute_restores():
+    """**ADR-0054 §5 as amended 2026-09-26.** Spotify is handed the level
+    already playing when it takes the device; handing a muted device's 0 would
+    set the phone's slider to nothing and leave it there after unmuting."""
+    hw = _Hardware(180)
+    mute = Mute(hw.write, lambda: hw.raw)
+    assert mute.audible_raw(180) == 180
+    await mute.set(True)
+    assert mute.audible_raw(0) == 180
+    await mute.set(False)
+    assert mute.audible_raw(180) == 180
