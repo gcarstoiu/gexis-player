@@ -8,6 +8,7 @@ card id string every time.
 from __future__ import annotations
 
 import logging
+import os
 import re
 import subprocess
 from pathlib import Path
@@ -19,6 +20,9 @@ logger = logging.getLogger("gexis_core.alsa")
 #: the user can send the audio somewhere else, and arbitration has to ask
 #: about wherever that is.
 CARD_ID = "sndrpihifiberry"
+
+#: Where systemd keeps each unit's processes (cgroup v2, unified hierarchy).
+CGROUP_ROOT = Path("/sys/fs/cgroup")
 
 #: The card the device is actually playing to. Every function below
 #: defaults to it rather than to `CARD_ID`.
@@ -129,6 +133,38 @@ def device_held_by(unit: str, card_id: str | None = None) -> bool:
     node = playback_pcm_node(card_id)
     if not node.exists():
         return False
+    # **Read the unit's own file descriptors rather than ask `fuser`**
+    # (2026-09-26). `fuser` scans every process on the system and took 0.10 s
+    # on the device, plus 0.02 s for `systemctl show` - blocking the event
+    # loop, and on the release ladder's critical path twice before it
+    # escalates. That 0.12 s was what lost a Plexamp -> Spotify takeover:
+    # go-librespot opens the device as little as 0.26 s after announcing it
+    # and does not retry. Every process in the unit's cgroup counts, which is
+    # what "held by this unit" means; `fuser` is kept for a system without
+    # the cgroup file, where the answer is the same and only slower.
+    procs = CGROUP_ROOT / "system.slice" / unit / "cgroup.procs"
+    try:
+        pids = [int(p) for p in procs.read_text().split()]
+    except (OSError, ValueError):
+        return _held_by_main_pid(unit, node)
+    target = str(node)
+    for pid in pids:
+        fd_dir = Path(f"/proc/{pid}/fd")
+        try:
+            fds = list(fd_dir.iterdir())
+        except OSError:
+            continue
+        for fd in fds:
+            try:
+                if os.readlink(fd) == target:
+                    return True
+            except OSError:
+                continue
+    return False
+
+
+def _held_by_main_pid(unit: str, node: Path) -> bool:
+    """The `fuser` answer: slower, and only the unit's MainPID."""
     pid = _unit_main_pid(unit)
     if pid is None:
         return False
