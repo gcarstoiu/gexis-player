@@ -248,9 +248,13 @@ async def test_adapter_specific_ladder_skips_the_polite_wait(monkeypatch):
     await supervisor.acquire("spotify")  # takeover: lms is released, using its own ladder
 
     assert lms.signals == ["SIGTERM"]  # escalated, frees_at="sigterm" resolves it there
-    # Only the sigterm_grace sleep happened - no 0.0 polite sleep, and no
-    # sigkill_grace sleep since SIGTERM already freed it.
-    assert slept == [5.0]
+    # No 0.0 polite sleep, and no sigkill_grace sleep since SIGTERM already
+    # freed it. **This asserted `[5.0]` until ADR-0091** - one blind sleep of
+    # the whole sigterm_grace - which is the defect Finding 016 had already
+    # fixed one rung higher. Now it polls, so the ladder notices the release
+    # on the first 0.1s tick instead of waiting out a ceiling it was nowhere
+    # near.
+    assert slept == [pytest.approx(0.1)]
 
 
 @pytest.mark.asyncio
@@ -294,6 +298,63 @@ async def test_polite_grace_polls_instead_of_sleeping_blind(monkeypatch):
     # 1.0s ceiling, which a blind sleep would have waited out regardless.
     assert slept == [pytest.approx(0.1), pytest.approx(0.1)]
     assert lms.signals == []  # never escalated - polling caught the release
+
+
+@pytest.mark.asyncio
+async def test_signal_rungs_poll_instead_of_sleeping_blind(monkeypatch):
+    """ADR-0091: Finding 016's fix was only ever applied to the polite rung,
+    and the two below it still slept their whole grace blind before looking.
+
+    Finding 088 is what made that matter. A killed Plexamp frees the device in
+    169 ms (Finding 077), so a 3 s blind `sigterm_grace` would have made every
+    takeover cost three seconds to save eleven - most of the win thrown away
+    inside the ladder. Here the renderer holds on through the polite rung *and*
+    through SIGTERM, lets go shortly after SIGKILL, and the ladder must notice
+    on a poll rather than at the ceiling.
+    """
+    # A fake clock, advanced by the patched sleep, so the graces below can be
+    # realistic seconds without the test taking them. The other tests here
+    # leave the clock alone and keep their graces tiny, which is why they can
+    # only ever assert "a short sleep happened" - with a grace smaller than
+    # the poll interval, a blind sleep and a poll are the same call.
+    clock = {"t": 1_000.0}
+    slept: list[float] = []
+    real_sleep = asyncio.sleep
+
+    async def recording_sleep(seconds):
+        slept.append(seconds)
+        clock["t"] += seconds
+        await real_sleep(0)  # yield control without actually waiting
+
+    monkeypatch.setattr("gexis_core.arbitration.asyncio.sleep", recording_sleep)
+    monkeypatch.setattr("gexis_core.arbitration.time.monotonic", lambda: clock["t"])
+
+    holder = {"who": None}
+    # Holds the device through release() and through SIGTERM; lets go on the
+    # SIGKILL, which is Plexamp's measured shape (Finding 088 §3: SIGTERM
+    # leaves the unit dead without freeing anything useful, SIGKILL is what
+    # works and what it comes back from).
+    lms = FakeAdapter("lms", ReleaseAction.PAUSE, holder, frees_at="sigkill")
+    spotify = FakeAdapter("spotify", ReleaseAction.DISCONNECT, holder)
+    bluetooth = FakeAdapter("bluetooth", ReleaseAction.DISCONNECT, holder)
+    supervisor = Supervisor(
+        {"lms": lms, "spotify": spotify, "bluetooth": bluetooth},
+        device_busy=lambda renderer_id: holder["who"] == renderer_id,
+        ladder=TimeoutLadder(polite_grace=0.5, sigterm_grace=3.0, sigkill_grace=2.0),
+    )
+    holder["who"] = "lms"
+    supervisor._active = "lms"  # ADR-0027: no implicit base, say so explicitly
+
+    await supervisor.acquire("spotify")
+
+    assert lms.signals == ["SIGTERM", "SIGKILL"]
+    # **Every wait is one poll interval.** A blind implementation reads
+    # [0.5, 3.0, 2.0] here; before ADR-0091 it read [0.1 x 5, 3.0, 2.0],
+    # because only the first rung had been fixed.
+    assert {round(s, 6) for s in slept} == {0.1}
+    # 0.5s of polite grace and 3.0s of sigterm grace waited out a tick at a
+    # time, then freed on the very first sigkill poll.
+    assert len(slept) == 5 + 30 + 1
 
 
 @pytest.mark.asyncio

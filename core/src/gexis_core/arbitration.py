@@ -42,7 +42,15 @@ logger = logging.getLogger("gexis_core.arbitration")
 # ~polite_grace regardless of how fast the device actually freed. Polling
 # at this cadence makes that log line - and the time it feeds into
 # criterion 8's numbers - an actual measurement instead.
-POLITE_POLL_INTERVAL = 0.1
+#
+# **Renamed from POLITE_POLL_INTERVAL, 2026-09-26 (ADR-0091): all three
+# rungs poll now.** Finding 016's fix was only ever applied to the first
+# one, and the other two were still blind sleeps - which is why the name
+# said "polite". Finding 088 is what made that matter: Plexamp's device is
+# free 169 ms after a kill (Finding 077) and the ladder would not have
+# looked for the full `sigterm_grace`, so a takeover would have cost three
+# seconds to save eleven rather than costing a fifth of one.
+LADDER_POLL_INTERVAL = 0.1
 
 
 @dataclass(frozen=True)
@@ -348,28 +356,20 @@ class Supervisor:
             )
             return ReleaseOutcome.POLITE
 
-        if ladder.polite_grace > 0:
-            deadline = time.monotonic() + ladder.polite_grace
-            while True:
-                remaining = deadline - time.monotonic()
-                if remaining <= 0:
-                    break
-                await asyncio.sleep(min(POLITE_POLL_INTERVAL, remaining))
-                if not await self._busy(renderer_id):
-                    logger.info(
-                        "release[%s]: freed within polite grace (%.1fs)",
-                        renderer_id,
-                        time.monotonic() - t0,
-                    )
-                    return ReleaseOutcome.POLITE
+        if await self._freed_within(renderer_id, ladder.polite_grace):
+            logger.info(
+                "release[%s]: freed within polite grace (%.1fs)",
+                renderer_id,
+                time.monotonic() - t0,
+            )
+            return ReleaseOutcome.POLITE
 
         logger.warning(
             "release[%s]: still holds the device after polite stop, sending SIGTERM",
             renderer_id,
         )
         await adapter.signal_stop(force=False)
-        await asyncio.sleep(ladder.sigterm_grace)
-        if not await self._busy(renderer_id):
+        if await self._freed_within(renderer_id, ladder.sigterm_grace):
             logger.warning(
                 "release[%s]: freed after SIGTERM (%.1fs)",
                 renderer_id,
@@ -382,8 +382,7 @@ class Supervisor:
             renderer_id,
         )
         await adapter.signal_stop(force=True)
-        await asyncio.sleep(ladder.sigkill_grace)
-        if await self._busy(renderer_id):
+        if not await self._freed_within(renderer_id, ladder.sigkill_grace):
             logger.error(
                 "release[%s]: STILL holds the device after SIGKILL (%.1fs)",
                 renderer_id,
@@ -394,6 +393,33 @@ class Supervisor:
             "release[%s]: freed after SIGKILL (%.1fs)", renderer_id, time.monotonic() - t0
         )
         return ReleaseOutcome.SIGKILL
+
+    async def _freed_within(self, renderer_id: str, grace: float) -> bool:
+        """Whether `renderer_id` lets go of the device inside `grace` seconds.
+
+        **Every rung of the ladder waits through this, and none of them
+        sleeps the grace blind.** That was Finding 016's defect in the
+        polite rung - the "freed within polite grace" line was timing the
+        sleep rather than the renderer - and the fix was only ever applied
+        there. ADR-0091 carries it to the other two, because Finding 088
+        made the difference material: a killed Plexamp frees the device in
+        169 ms, and a blind `sigterm_grace` sleep would have made a takeover
+        cost three seconds to save eleven.
+
+        Sleeps *then* checks, so a caller that has already asked can call
+        this without paying for a duplicate check - the polite rung does
+        exactly that. **A grace of 0 therefore waits and checks nothing**,
+        which is the reading George asked for when LMS stopped waiting out
+        squeezelite's `-C` timer: escalate now, do not look first.
+        """
+        deadline = time.monotonic() + grace
+        while True:
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                return False
+            await asyncio.sleep(min(LADDER_POLL_INTERVAL, remaining))
+            if not await self._busy(renderer_id):
+                return True
 
     async def _busy(self, renderer_id: str) -> bool:
         result = self._device_busy(renderer_id)
