@@ -83,6 +83,9 @@ DESIGN_KEYS_NOT_YET_IN_THE_REGISTRY: set[str] = set()
 #: renderer itself (Finding 047 §10). ADR-0018's boot level is amended out.
 DESIGN_KEYS_WE_DECLINED = {
     "weather_key", "idle_minmax", "per_renderer_volume", "boot_volume",
+    # ADR-0094, George 2026-09-26: "remove the Transition screen threshold
+    # setting" - every takeover is shown, for the length the user sets.
+    "handoff_threshold",
 }
 
 
@@ -504,12 +507,13 @@ def test_the_shipped_registry_hides_twenty_rows_and_shows_the_rest():
     # that decide how the visualisation moves, which George asked for by
     # name on 2026-09-23. Plus ADR-0059's two buttons and their progress
     # row, on 2026-09-24.
-    # 75 since 2026-09-25: `restore` (ADR-0083).
-    assert len(rows) == 75
+    # 75 since 2026-09-25: `restore` (ADR-0083). **74 since 2026-09-26**:
+    # `handoff_threshold`, removed by George (ADR-0094).
+    assert len(rows) == 74
     # 59 since 2026-09-25: `backup` was surfaced and `restore` arrived with
     # it (ADR-0083), so the shown count gains two while the hidden one loses
-    # one.
-    assert len(rows) - len(kept) == 59
+    # one. **58 since 2026-09-26**, less the threshold row.
+    assert len(rows) - len(kept) == 58
 
 
 def test_the_clock_can_be_turned_off_without_taking_the_screen_with_it():
@@ -689,7 +693,17 @@ def test_the_payload_carries_visibility_per_row(store):
     assert by["log_level"]["type"] == "choice"
     # Conditional: show_transition defaults on, so its dependant is drawn.
     assert by["show_transition"]["value"] is True
-    assert by["handoff_threshold"]["visible"] is True
+    assert by["handoff_duration"]["visible"] is True
+
+
+def test_the_transition_screen_has_a_length_and_no_threshold(store):
+    """**ADR-0094, George 2026-09-26:** every takeover is shown, however quick,
+    for the length the user sets; the threshold row is gone and the length
+    defaults to 1.5 s."""
+    settings = Settings(store)
+    by = {r["key"]: r for g in settings.to_json() for r in g["rows"] if r.get("key")}
+    assert "handoff_threshold" not in by
+    assert by["handoff_duration"]["value"] == 1.5
 
 
 # ── the derived options the picker lists (ADR-0051 §4) ───────────────────
