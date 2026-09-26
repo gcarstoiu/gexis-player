@@ -212,6 +212,32 @@ for u in plexamp gexis-plexamp; do
 		ok "$u not enabled"
 	fi
 done
+# **The pair, actually wired** (ADR-0090's design, ADR-0091's discovery).
+# `Wants=gexis-plexamp.service` sat under `[Service]` from the day the stage was
+# written until 2026-09-26, and systemd says exactly what it did with it:
+# "Unknown key 'Wants' in section [Service], ignoring." So one switch did not
+# control both, nothing here noticed, and it surfaced only when a release ladder
+# started stopping the player for real. Checked by *position*, because the key
+# being present was never the part that was wrong.
+dfs "dump /etc/systemd/system/plexamp.service $OUT/unit" >/dev/null
+service_at=$(grep -n '^\[Service\]' "$OUT/unit" | head -1 | cut -d: -f1)
+wants_at=$(grep -n '^Wants=gexis-plexamp\.service' "$OUT/unit" | head -1 | cut -d: -f1)
+if [ -n "$wants_at" ] && [ -n "$service_at" ] && [ "$wants_at" -lt "$service_at" ]; then
+	ok "plexamp.service pulls the plugin in, from [Unit] where it counts"
+else
+	bad "plexamp.service does not Wants= the plugin from its [Unit] section"
+fi
+# **ADR-0091 kills this unit on every takeover** and `Restart=on-failure` is the
+# only way back, so the restart burst is spent by ordinary arbitration now. A
+# burst of 5 is what squeezelite had when Finding 013 section 1 exhausted it and
+# left that unit permanently failed.
+if grep -q '^StartLimitBurst=20' "$OUT/unit"; then
+	ok "plexamp.service has the restart headroom a killed renderer needs"
+else
+	bad "plexamp.service is back to a restart burst that arbitration can exhaust"
+fi
+rm -f "$OUT/unit"
+
 # The manifest is the plugin repository's, so this checks what it must say
 # rather than that it matches a copy here - there is no copy here.
 dfs "dump /usr/share/gexis/plugins/plexamp/plugin.json $OUT/one" >/dev/null
