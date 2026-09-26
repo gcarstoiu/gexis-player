@@ -26,6 +26,7 @@ from gexis_peppy_render import (  # noqa: E402
     parse_size,
     remaining_time,
     load_badge_slots,
+    BADGE_FILL,
 )
 
 SLOTS = load_badge_slots(STAGE / "badge-slots.json")
@@ -261,7 +262,7 @@ def test_remaining_time_turns_red_for_the_last_ten_seconds(layer):
 def test_the_badge_is_the_mark_alone(layer):
     """George, 2026-09-18, reversing his 2026-09-16 call: no name beside it.
     The name was the only thing drawn outside the square the skin reserves."""
-    plain = layer._badge("spotify", (50, 50))
+    plain = layer._badge("spotify", (round(50 * BADGE_FILL), round(50 * BADGE_FILL)))
     rect = layer._badge_rect("spotify")
     assert rect.size == plain.get_size(), "the badge is the mark and nothing else"
 
@@ -398,7 +399,7 @@ def test_the_badge_is_centred_in_the_slot_at_its_declared_size(screen):
     rect = layer._badge_rect("spotify")
     x0, y0, x1, y1 = SLOTS["101G5_Free S+M"]
     assert abs(rect.centerx - (x0 + x1) / 2) <= 1 and abs(rect.centery - (y0 + y1) / 2) <= 1
-    assert rect.size == layer._badge("spotify", (40, 40)).get_size()
+    assert rect.size == layer._badge("spotify", (32, 32)).get_size()
 
 
 def test_a_skin_without_a_slot_keeps_its_declared_box(screen):
@@ -409,3 +410,31 @@ def test_a_skin_without_a_slot_keeps_its_declared_box(screen):
     position = parse_size(skin["playinfo.type.pos"])
     box = parse_size(skin["playinfo.type.dimension"])
     assert rect.center == (position[0] + box[0] // 2, position[1] + box[1] // 2)
+
+
+@pytest.mark.parametrize("source", ["lms", "spotify", "bluetooth"])
+def test_every_badge_leaves_a_margin_to_its_field(screen, source):
+    """**George, 2026-09-26:** *"it fits too snuggly vertically ... Some small
+    border should be left to the edges of the field."* On every skin, every
+    mark stays at least 8% of the field clear of each edge of it - the field
+    being the measured slot where there is one, else the declared box."""
+    layer = MetadataLayer(screen, CORPUS_DIR)
+    tight = []
+    for skin in all_corpus_skins():
+        position = parse_size(skin.get("playinfo.type.pos"))
+        if position is None:
+            continue
+        box = parse_size(skin.get("playinfo.type.dimension")) or (50, 50)
+        field = pygame.Rect(position[0], position[1], box[0], box[1])
+        slot = SLOTS.get(skin["name"])
+        if slot is not None:
+            field = pygame.Rect(slot[0], slot[1], slot[2] - slot[0], slot[3] - slot[1])
+        layer._skin, layer._skin_name = skin, skin["name"]
+        rect = layer._badge_rect(source)
+        if rect is None:
+            continue
+        mx, my = 0.08 * min(box[0], field.width), 0.08 * min(box[1], field.height)
+        if (rect.left - field.left < mx or field.right - rect.right < mx
+                or rect.top - field.top < my or field.bottom - rect.bottom < my):
+            tight.append((skin["name"], tuple(rect), tuple(field)))
+    assert not tight, f"{len(tight)} skins fit the badge edge to edge: {tight[:4]}"

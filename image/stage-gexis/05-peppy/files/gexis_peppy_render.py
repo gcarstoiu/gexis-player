@@ -84,6 +84,13 @@ PLUGIN_MARKS = Path("/usr/share/gexis/plugins")
 #: other skin already centres correctly.
 BADGE_SLOTS = Path(__file__).with_name("badge-slots.json")
 
+#: **The badge fills 80% of its field**, leaving a tenth of it clear on every
+#: side (George, 2026-09-26: *"it fits too snuggly vertically so it needs to be
+#: slightly smaller ... Some small border should be left to the edges of the
+#: field"* - for every renderer's mark, not only Plex's). The field is the
+#: slot where one is measured, otherwise the box the skin declares.
+BADGE_FILL = 0.8
+
 
 def load_badge_slots(path: Path = BADGE_SLOTS) -> dict[str, tuple[int, int, int, int]]:
     try:
@@ -315,7 +322,9 @@ class MetadataLayer:
             # Never larger than the slot: 59G5_Yamaha M85 declares a 95 px box
             # in a 94 px window.
             box = (min(box[0], slot[2] - slot[0]), min(box[1], slot[3] - slot[1]))
-        badge = self._badge(source, box)
+        # The size only: centring below still uses the whole field.
+        fit = (max(1, round(box[0] * BADGE_FILL)), max(1, round(box[1] * BADGE_FILL)))
+        badge = self._badge(source, fit)
         if badge is None:
             return None
         if slot is not None:
