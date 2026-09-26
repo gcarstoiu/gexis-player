@@ -128,6 +128,9 @@ class PluginAdapter(Adapter):
         # attributes a still-busy device to this name, so a renderer that could
         # name its own could point the escalation at any process on the device.
         self.unit_name = session.plugin.unit
+        #: The last level this renderer reported, on `VOLUME_STEPS` - see
+        #: `get_volume`.
+        self._last_volume: int | None = None
         try:
             self.release_action = ReleaseAction(
                 declaration.get("release_action", "disconnect")
@@ -211,6 +214,29 @@ class PluginAdapter(Adapter):
     #: on - and 100 is what every renderer here is normalised to before the
     #: hardware curve is applied (ADR-0054).
     VOLUME_STEPS = 100
+
+    def note_volume(self, value: int, steps: int) -> None:
+        """A `volume` event arrived: keep it, on our own scale.
+
+        The contract has the plugin report its level **on a change**, including
+        while it is not the active renderer - and until 2026-09-26 the core used
+        that report and forgot it, so on acquisition there was nothing to ask.
+        """
+        if steps > 0:
+            self._last_volume = round(max(0, min(value, steps)) * self.VOLUME_STEPS / steps)
+
+    async def get_volume(self) -> int | None:
+        """**Where this renderer says its level is** (ADR-0054 §5: a renderer is
+        asked on acquisition). Answered from the last `volume` event rather than
+        a request, so the contract gains nothing: the plugin has already said.
+
+        Found by George, 2026-09-26: Plexamp took the device with the DAC left at
+        the previous renderer's level, and the first press of a volume key on the
+        phone moved it a long way - to Plexamp's own level, reported at last.
+        None when the plugin has not reported one, which leaves the level alone
+        exactly as before.
+        """
+        return self._last_volume
 
     async def set_volume(self, value: int) -> None:
         """Drive this renderer's own volume (ADR-0053: the panel is a remote).

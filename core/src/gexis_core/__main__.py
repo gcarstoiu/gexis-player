@@ -2117,6 +2117,7 @@ async def main() -> None:
                     logger.warning("plugins: %s sent an unusable volume: %r",
                                    session.id, message)
                     return
+                adapter.note_volume(value, steps)
                 report_renderer_volume(session.id, value, steps)
                 return
         logger.debug("plugins: %s sent %s", session.id, kind)

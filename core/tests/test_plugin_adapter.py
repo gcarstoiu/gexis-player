@@ -241,3 +241,24 @@ async def test_a_refusal_is_an_answer_not_an_exception():
     502 at the route, not a traceback in the daemon."""
     adapter, _, _ = _adapter({}, gone=True)
     assert await adapter.next() is False
+
+
+@pytest.mark.asyncio
+async def test_a_reported_level_is_what_it_answers_on_acquisition():
+    """**ADR-0054 §5, found by George 2026-09-26.** Plexamp took the device
+    with the DAC left at the previous renderer's level, because the core used
+    the plugin's `volume` report and forgot it; the first key press on the phone
+    then moved the DAC a long way. The report is the answer."""
+    adapter, _, _ = _adapter()
+    assert await adapter.get_volume() is None
+    adapter.note_volume(40, 100)
+    assert await adapter.get_volume() == 40
+
+
+@pytest.mark.asyncio
+async def test_a_level_on_another_scale_is_answered_on_ours():
+    adapter, _, _ = _adapter()
+    adapter.note_volume(64, 128)
+    assert await adapter.get_volume() == 50
+    adapter.note_volume(200, 128)
+    assert await adapter.get_volume() == 100
