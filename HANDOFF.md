@@ -1,11 +1,11 @@
 # Handoff
 
 Last updated: 2026-09-26 (twenty-sixth session, on R2D2 — **Phase 11 stays
-complete and the contract stays frozen at v1. This session answered why Plexamp
-did not behave like the other three renderers, George took the decision, and it
-is built and measured: a takeover costs 0.9 s where it cost fourteen seconds.
-Not in an image, and George's regression pass has not been run — those are the
-next two things.**)
+complete and the contract stays frozen at v1. Two decisions were taken and built
+today. ADR-0091: a takeover from Plexamp costs 0.9 s where it cost fourteen
+seconds. ADR-0092: Plexamp can now take the device from a renderer that is
+holding it, which it could never do — 0.55 s, from never. Neither is in an image,
+and George's regression pass has not been run.**)
 
 ## Start here
 
@@ -21,10 +21,28 @@ Five commits, all landed separately so each can be reviewed on its own:
 | 4 | `arbitration.py` | the ladder logs the **rung**, not a signal it no longer chooses |
 | 5 | `plexamp.service` | `Wants=` moved to `[Unit]`, `StartLimitBurst` 5 → 20, `RestartSec` 5 → 1, and two `verify-image.sh` checks |
 
-**Next action, and it needs George: the regression pass.** Everything below was
-measured by this session driving the core's own `activate` endpoint, with **no
-phone in the loop** — and the complaint that started the work is about what a
-phone shows.
+### Then ADR-0092, which George found by using it
+
+He reported *"Cannot takeover with plexamp. The plexamp mobile app fails to
+playback"* — and it was not ADR-0091. **Plexamp could not take the device from a
+renderer that was holding it at all**, reproduced against LMS as well as Spotify.
+The circle: Plexamp must open the ALSA device to start playing, and the plugin's
+only evidence of an acquisition *was* playback starting.
+[Finding 085](docs/findings/085-the-takeover-gaps-and-the-controls.md)'s
+*"LMS → Plexamp, 0.2 s, five times"* was measured against an LMS that had already
+let go, so this had never been tested.
+
+[ADR-0092](docs/decisions/0092-a-play-queue-is-an-acquisition.md): a `playQueueID`
+the plugin has not seen is the deliberate act, the refused timeline carries
+everything needed to ask again, and `device_freed` — the hook ADR-0089 already had
+for this — issues the play once the device is free. **No contract change.**
+Measured at **0.55 s** from the controller's request to Plexamp holding a playing
+LMS's device. Two commits in `gexis-plexamp`, none in the core.
+
+**Next action, and it needs George: the regression pass.** Everything was measured
+by this session driving the player's own port and the core's `activate` endpoint,
+with **no phone in the loop** — and the complaint that started all of it is about
+what a phone does.
 
 **Then, to ship it:** the image pins the plugin at `v0.2.0` by checksum, so
 nothing measured here is in a build. It needs a `v0.2.1` release of
@@ -95,6 +113,7 @@ absent by measurement.
 | phone still shows it connected after LMS takes over | **the cause is fixed** - the player is no longer left running and claimed. But `presence` does *not* flip (the restart beats the timeout); what changes is that the session is gone and the player reports stopped. **Whether the phone's chrome follows is unobserved** |
 | panel waits for renderers until playback starts | **not fixable.** Nothing reaches the player when a controller selects it; ADR-0027 already says acquisition is deliberate |
 | panel does not follow a phone disconnect | **not fixable, and not a defect.** A disconnect does not even stop playback, so the panel showing Plexamp as active is correct |
+| *(found while testing)* could not take the device from a renderer holding it | **fixed and measured: 0.55 s**, from never (ADR-0092) |
 
 The two "not fixable" rows are established across five places — the player's HTTP
 routes, its timeline subscriber list, the PMS client table, the PMS session, and
