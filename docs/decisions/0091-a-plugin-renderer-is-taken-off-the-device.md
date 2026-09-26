@@ -5,9 +5,10 @@ for: *"Decision 1."* Built and measured the same day
 ([Finding 089](../findings/089-the-takeover-after-adr-0091.md)): **a takeover
 costs 0.9 s where it cost 12.6–14.2 s**, the player comes back by itself in about
 four seconds, and six back-to-back takeovers failed nothing. **Deployed by hand
-to `gexis`, not into an image** — the stage still pins the plugin at `v0.2.0` by
-checksum, so shipping needs a plugin release and a stage bump. **George's
-regression pass has not been run.**
+to `gexis`, not into an image** — the stage pinned `v0.2.0` when this landed, and
+was bumped to `v0.2.1` once ADR-0092 landed with it. **George tried both from his
+phone the same day: *"Seems to work."*** That is his word on it, not a
+measurement.
 **Amended the same day:** one consequence below was wrong — plex.tv's `presence`
 does *not* flip during a takeover, because the restart beats the timeout. See
 **Consequences**.

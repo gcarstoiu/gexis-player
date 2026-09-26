@@ -23,10 +23,10 @@ PLEXAMP_SHA256="86e5ede3d852a87099a106f2cc6b83e4ec1350000176d83fbcedb83950c48041
 # Our plugin, from its own release rather than from a tag's auto-generated
 # archive: GitHub does not promise those are byte-stable, and a checksum that
 # changes under you is worse than none because it fails a build nobody touched.
-PLUGIN_VERSION="0.2.0"
+PLUGIN_VERSION="0.2.1"
 PLUGIN_ASSET="gexis-plexamp-${PLUGIN_VERSION}.tar.gz"
 PLUGIN_URL="https://github.com/gcarstoiu/gexis-plexamp/releases/download/v${PLUGIN_VERSION}/${PLUGIN_ASSET}"
-PLUGIN_SHA256="b386681d4490a82216163b5d9b19575444163dc8eeaa1da6429b0d8b20581036"
+PLUGIN_SHA256="a816fc5e7670766a38288207a5add56ecf4d6df061e907011b9d5e799128553c"
 
 WORK="$(mktemp -d)"
 trap 'rm -rf "${WORK}"' EXIT

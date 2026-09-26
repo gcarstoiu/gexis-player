@@ -3,8 +3,10 @@
 **Status:** **Accepted and built**, 2026-09-26 — George, given two shapes for the
 fix: *"Go for the second."* Built and measured the same day: **Plexamp took the
 device from a playing LMS 0.55 s after the controller's request**, where before it
-never took it at all. **Deployed by hand to `gexis`, not into an image**, and
-**George's regression pass has not been run.**
+never took it at all. **George then tried it from his phone, which is the path
+none of the measurements could reach: *"Seems to work."*** Deployed by hand to
+`gexis`; the image stage is pinned to `v0.2.1`, which **still has to be
+published** - see HANDOFF.
 **Date:** 2026-09-26
 **Raised by:** George, 2026-09-26: *"Cannot takeover with plexamp. The plexamp
 mobile app fails to playback."*

@@ -135,8 +135,10 @@ checked for a double play and has none: one acquire, no re-issue, playing in
 - **The diagnosis above was taken before the fix**; the section immediately above
   is the only part measured after it, and it is one takeover in one direction.
 - **Not from George's phone**, except the first log quoted. Every deliberate
-  reproduction used this session's `playMedia` against the player's own port. The
-  phone's `createPlayQueue` may differ in ways that matter.
+  reproduction used this session's `playMedia` against the player's own port, and
+  the phone's `createPlayQueue` may differ in ways that matter. He did try the
+  fix from his phone afterwards — *"Seems to work."* — which is confirmation that
+  it is not broken, not a measurement of it.
 - **One holder at a time, one direction.** LMS holding, then Spotify holding, both
   losing to Plexamp; nothing about Bluetooth, and nothing about two attempts at
   once.

@@ -4,8 +4,9 @@ Last updated: 2026-09-26 (twenty-sixth session, on R2D2 — **Phase 11 stays
 complete and the contract stays frozen at v1. Two decisions were taken and built
 today. ADR-0091: a takeover from Plexamp costs 0.9 s where it cost fourteen
 seconds. ADR-0092: Plexamp can now take the device from a renderer that is
-holding it, which it could never do — 0.55 s, from never. Neither is in an image,
-and George's regression pass has not been run.**)
+holding it, which it could never do — 0.55 s, from never. **George confirmed both
+from his phone: *"Seems to work."*** Phase 11 stays closed; the next phase is
+11a.**)
 
 ## Start here
 
@@ -39,16 +40,43 @@ for this — issues the play once the device is free. **No contract change.**
 Measured at **0.55 s** from the controller's request to Plexamp holding a playing
 LMS's device. Two commits in `gexis-plexamp`, none in the core.
 
-**Next action, and it needs George: the regression pass.** Everything was measured
-by this session driving the player's own port and the core's `activate` endpoint,
-with **no phone in the loop** — and the complaint that started all of it is about
-what a phone does.
+**George has tried it from his phone** — *"Seems to work."* — which is the path
+none of the measurements could reach.
 
-**Then, to ship it:** the image pins the plugin at `v0.2.0` by checksum, so
-nothing measured here is in a build. It needs a `v0.2.1` release of
-`gcarstoiu/gexis-plexamp` and `PLUGIN_VERSION`/`PLUGIN_SHA256` bumped in
-`image/stage-gexis/08-plexamp/01-run.sh`. **Not done — a public release is
-George's call**, and it should follow his pass rather than precede it.
+### Next action: three commands George has to run, then a build
+
+This session could not push: the sandbox refuses to create public surface. So
+`gexis-plexamp` has **three commits and a local `v0.2.1` tag** that exist only on
+R2D2, and until that release is published `make image` will fail in stage 08
+fetching a URL that does not resolve.
+
+```
+cd ~/projects/gexis-plexamp
+git push origin main && git push origin v0.2.1
+git archive --format=tar.gz --prefix=gexis-plexamp/ v0.2.1 -o /tmp/gexis-plexamp-0.2.1.tar.gz
+gh release create v0.2.1 /tmp/gexis-plexamp-0.2.1.tar.gz \
+  --title "v0.2.1 — a held device can be taken" --notes-file <(cat <<'EOF'
+Plexamp gives the audio device back in 0.9 s instead of fourteen, and can take it
+from a renderer that is holding it - which it could not do at all.
+
+`activate` is declared, so the core stops refusing it with 409.
+
+The tarball attached here is what the Gexis image pins by checksum.
+EOF
+)
+```
+
+**The checksum is already committed and verified.**
+`image/stage-gexis/08-plexamp/01-run.sh` pins
+`a816fc5e7670766a38288207a5add56ecf4d6df061e907011b9d5e799128553c`, and
+`git archive` at that tag is byte-reproducible — checked by rebuilding v0.2.0's
+asset and matching the published checksum exactly. So the release will satisfy the
+pin without anything further.
+
+**Seeding the build cache instead was considered and rejected.**
+`fetch-cached.sh` says why in its own comment: *"A build that has never seen the
+cache has to work, or the cache becomes a hidden build dependency."* An image
+built against an unpublished asset is exactly that.
 
 ### What it costs and what it bought
 
@@ -356,7 +384,25 @@ reverted, currently-flashed image predates this fix.
                                             for 10, replacing Qobuz. Its
                                             hardware check is pulled forward
                                             into 10 - Finding 075 says moOde
-                                            built a Plexamp route and parked it
+                                            built a Plexamp route and parked it.
+                                            **Four defects closed 2026-09-26
+                                            after George used it** (ADR-0091,
+                                            ADR-0092): the 14 s handback, the
+                                            phone still showing it connected,
+                                            `activate` implemented but never
+                                            declared, and - the one that matters
+                                            - it could not take the device from
+                                            a renderer that was holding it AT
+                                            ALL. Criterion 2's *"takeover gaps
+                                            measured against the other
+                                            renderers"* was closed on Finding
+                                            085, which turns out to have
+                                            measured an LMS that had already let
+                                            go; the criterion is better
+                                            satisfied now than when it was
+                                            signed off, and that record is
+                                            corrected rather than left to read
+                                            as if it had been right
 11a the library answers for itself        <- next, added 2026-09-25 (George):
                                             leverage the Plex server's own
                                             metadata, internet providers kept
