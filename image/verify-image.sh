@@ -239,6 +239,37 @@ else
 	ok "the plugin tree is not nested"
 fi
 
+# **And the whole tree against the release it is pinned to**, the way the venv is
+# checked against `core/src` rather than being counted. The nesting check above
+# names one failure; this one would have caught it without knowing its shape,
+# which is the difference that let it through.
+#
+# Opportunistic on the build cache, because the plugin deliberately lives in
+# another repository and there is no copy here to compare with. Skipped, loudly,
+# when the pinned tarball is not cached - the alternative is a verifier that
+# fetches from the network, and this script's whole point is checking a file.
+plugin_sum=$(grep -oE '^PLUGIN_SHA256="[a-f0-9]+"' \
+	"$REPO/image/stage-gexis/08-plexamp/01-run.sh" | cut -d'"' -f2)
+plugin_tar="${GEXIS_BUILD_CACHE:-$HOME/.cache/gexis-player/downloads}/${plugin_sum}"
+if [ -r "$plugin_tar" ]; then
+	mkdir -p "$OUT/pinned" "$OUT/shipped"
+	tar -xzf "$plugin_tar" -C "$OUT/pinned"
+	dfs "rdump /opt/gexis-plexamp/src/gexis_plexamp $OUT/shipped" >/dev/null
+	d=$(diff -r -x __pycache__ \
+		"$OUT/pinned/gexis-plexamp/src/gexis_plexamp" \
+		"$OUT/shipped/gexis_plexamp" 2>&1)
+	if [ -z "$d" ]; then
+		ok "the plugin in the image is the release it pins (${plugin_sum:0:12})"
+	else
+		bad "the plugin differs from the release it pins:"
+		echo "$d" | head -10
+	fi
+	rm -rf "$OUT/pinned" "$OUT/shipped"
+else
+	echo "  --   the pinned plugin tarball is not in the build cache, so its"
+	echo "       contents were not compared - only the nesting check above ran"
+fi
+
 # **ADR-0091 kills this unit on every takeover** and `Restart=on-failure` is the
 # only way back, so the restart burst is spent by ordinary arbitration now. A
 # burst of 5 is what squeezelite had when Finding 013 section 1 exhausted it and
