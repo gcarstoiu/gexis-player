@@ -2,7 +2,9 @@
 
 **Status:** **Accepted** — George, 2026-09-26: *"Option A - the recommended
 one for alsa."* **Amends [ADR-0009](0009-logical-output-device.md).** Built and
-measured against the plan below before it ships.
+measured the same day - **and not shipped: the measurement found a deadlock**
+(see *Measured after building*). The device was put back on `output`; the
+`output_wait` definition is in place and unused.
 **Date:** 2026-09-26
 **Raised by:** [Finding 091](../findings/091-play-on-a-powered-off-lms-player.md)
 (LMS: 5.5 s of silence after *play* on a powered-off player) and
@@ -102,7 +104,36 @@ A temporary PCM of exactly this shape, Plexamp holding the DAC:
 5. `systemctl stop` of a renderer while it waits: under `TimeoutStopSec`.
 6. `aplay -D hw:<card>` on a busy card still fails at once (`needs_plug`).
 
-## Not in this record
+## Measured after building (2026-09-26, `gexis`)
+
+| # | check | result |
+|---|---|---|
+| 1 | open flags | both renderers open `output_wait` **without `O_NONBLOCK`** |
+| 2 | Finding 091, *play* on a powered-off LMS, Plexamp holding | **audio at +2.2 s, from 5.5 s**; no `alsa_open` busy errors (two before). The remaining 1.45 s is LMS's status-push filter. Positions still jump (0 → 14.1 → 0 → 15.3) until the stream starts |
+| 3 | Plexamp → Spotify via go-librespot's API ×10 | **10 of 10**, no busy errors, device free after each |
+| 6 | `aplay -D hw:<card>` on a busy card | fails in 0.055 s - `needs_plug` cannot hang |
+| 4 | **two waiters: LMS *play* and a Spotify load at the same moment** | **deadlock**, below |
+
+**The deadlock.** Plexamp held the device; LMS's *play* and a Spotify load
+arrived together, so squeezelite and go-librespot both waited. The core acquired
+Spotify (`will_play` came first) and freed the device - and **the kernel gave it
+to squeezelite**, whichever waiter it wakes first, not the one the core chose.
+go-librespot went on waiting, and **its whole API stalls while it waits**. The
+core, still inside Spotify's acquisition, was handing Spotify its volume over
+that API (ADR-0054 §5 as amended) with no timeout, so it hung - holding the
+arbitration lock. LMS's power-on arrived 0.4 s later and could not be acquired.
+It stayed that way for **68 s**, until LMS was powered off by hand; `aiohttp`'s
+default would have held it for five minutes.
+
+Two defects, both introduced by waiting rather than failing:
+
+1. **The core calls a renderer's API while holding the lock, without a timeout**,
+   and a waiting renderer does not answer.
+2. **The kernel, not the core, decides which waiter gets the device.** Risk 1
+   above said this needed two waiters at once; it does, and pressing play in two
+   apps within a second or two is enough.
+
+Neither is answered here. **Nothing ships until both are.**
 
 **Hearing LMS's power-on sooner.** The core learns of it 1.45-1.5 s after the
 press, which is LMS's own status-push filter; with this record, that delay is

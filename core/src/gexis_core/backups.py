@@ -45,7 +45,12 @@ MEMBERS = (
     # Deliberately not listed: `/var/lib/gexis-kiosk`, 62 MB of Chromium
     # profile that ADR-0043 keeps off the default path precisely so wiping it
     # is one directory, and samba's own tdb state, which is not anybody's.
-    "var/lib/go-librespot",
+    #
+    # **The file, not the directory** (narrowed 2026-09-26, ADR-0095). The
+    # directory also holds `config.yml`, which the image owns: a restore after
+    # an image update put the old one back, and would have undone ADR-0095's
+    # `audio_device: output_wait` without a word.
+    "var/lib/go-librespot/state.json",
     # **The Beszel agent's fingerprint** (added 2026-09-25, ADR-0087). Same
     # lesson as the line above, applied before it could be learned twice: the
     # agent's `DATA_DIR` holds the identity the hub binds this system to, and a
@@ -62,6 +67,12 @@ MEMBERS = (
     # hence under the home directory. ~200 KB.
     "home/pi/.local/share/Plexamp",
 )
+
+#: **Paths older archives hold and this one no longer writes.** Skipped on
+#: restore rather than refused: every backup made before 2026-09-26 holds all of
+#: `/var/lib/go-librespot`, and refusing them would make them unrestorable for
+#: the sake of one image-owned file.
+FORMERLY_BACKED_UP = ("var/lib/go-librespot",)
 
 #: `gexis-<name>-<stamp>.tgz`. The name is the device's, so an archive says
 #: where it came from - ADR-0083 does not prevent restoring one device's
@@ -164,12 +175,18 @@ def restore(name: str, directory: Path = DEFAULT_DIR, root: Path = Path("/")) ->
         raise FileNotFoundError(str(path))
     allowed = tuple(MEMBERS)
     with tarfile.open(path, "r:gz") as archive:
-        members = archive.getmembers()
-        for member in members:
-            if not member.name.startswith(allowed):
-                raise ValueError(f"{name}: refuses to write {member.name!r}")
+        members = []
+        for member in archive.getmembers():
             if member.issym() or member.islnk():
                 raise ValueError(f"{name}: refuses a link, {member.name!r}")
+            if member.name.startswith(allowed):
+                members.append(member)
+            elif member.name.startswith(FORMERLY_BACKED_UP):
+                # An archive from before a member was narrowed: skipped, not
+                # refused, so a backup taken the day before is still one.
+                logger.info("backup: %s: leaving %s to the image", name, member.name)
+            else:
+                raise ValueError(f"{name}: refuses to write {member.name!r}")
         archive.extractall(root, members=members)
     logger.warning("backup: restored %s over %d path(s); a reboot follows", name, len(members))
 

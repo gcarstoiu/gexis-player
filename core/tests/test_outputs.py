@@ -47,6 +47,18 @@ class TestTheConfigItWrites:
         )
         assert outputs.render(HIFIBERRY, plug=False).rstrip() == shipped.read_text().rstrip()
 
+    def test_the_waiting_head_follows_the_card_on_both_chains(self, tmp_path):
+        """**ADR-0095.** `output_wait` is `output` with an open that waits, so
+        it must follow the chosen output exactly as `output` does - metered or
+        converted - and must never be what `configured()` reads back."""
+        for output, plug in ((JACK, False), (HDMI1, True)):
+            rendered = outputs.render(output, plug=plug)
+            assert f"slave.pcm {{ type hw card {output.card} nonblock 0 }}" in rendered
+            assert rendered.index("pcm.output {") < rendered.index("pcm.output_wait {")
+            conf = tmp_path / f"{output.card}.conf"
+            conf.write_text(rendered)
+            assert outputs.configured(conf) == output.card
+
     def test_the_card_lands_in_both_places(self):
         """The PCM's slave *and* the ctl's card. Missing the second is the
         bug ADR-0009's own comment in this file is about: squeezelite would

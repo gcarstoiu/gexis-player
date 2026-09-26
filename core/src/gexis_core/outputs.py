@@ -302,13 +302,32 @@ def render(output: Output, plug: bool, tuning: Tuning = Tuning()) -> str:
     type plug
     slave.pcm "hw:{output.card}"
 }}'''
+        wait = f'''pcm.output_wait {{
+    type plug
+    slave.pcm {{ type hw card {output.card} nonblock 0 }}
+}}'''
     else:
         head = f'''pcm.output {{
     type meter
     slave.pcm "hw:{output.card}"
     scopes.0 peppyalsa
 }}'''
+        wait = f'''pcm.output_wait {{
+    type meter
+    slave.pcm {{ type hw card {output.card} nonblock 0 }}
+    scopes.0 peppyalsa
+}}'''
     return f'''{head}
+
+# **ADR-0095: the same chain, with an open that waits.** alsa-lib opens a hw
+# device non-blocking by default (`defaults.pcm.nonblock 1`) even when the
+# application asked to block, so a busy DAC fails at once: squeezelite then
+# sleeps a fixed 5 s, and go-librespot gives up on the track. `nonblock 0` on
+# the slave lets the kernel hold the open until the renderer being released
+# lets go. Only squeezelite and go-librespot use this name; `output` above is
+# unchanged for everything else, and must stay first - `configured()` reads the
+# card back from the first slave in this file.
+{wait}
 
 # squeezelite's mixer resolution (-V <name>) goes through the ctl device
 # matching the PCM name it was given (-O defaults to -o's value), not
