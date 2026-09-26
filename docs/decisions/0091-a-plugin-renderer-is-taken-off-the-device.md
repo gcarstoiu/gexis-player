@@ -246,10 +246,25 @@ two `state.<n>` temporaries showed kills landing mid-write. That is Finding 013
 §1's restart-storm precondition, which this record's safety rests on being
 absent.
 
-**Decision (George, 2026-09-26, *"this one"*):** `plexamp.service` removes
-`@Plexamp:state*` in `ExecStartPre`. The precondition is now absent by
-construction, not by the order two processes happen to finish in.
-`verify-image.sh` checks for the line.
+**Decision (George, 2026-09-26, *"this one"*):** `plexamp.service` clears the
+saved queue in `ExecStartPre`. The precondition is now absent by construction,
+not by the order two processes happen to finish in. `verify-image.sh` checks
+for the line and that the helper is executable.
+
+**Revised the same evening: the volume is kept.** Plexamp stores its own level
+in the same file, so deleting it brought Plexamp back at **100** after every
+takeover - and George had already reported the symptom: *"upon connection the
+volume was high, but then as soon as I pressed the volume key on the phone it
+went way lower."* `plexamp-start-idle` rewrites the file to
+`{"state": "stopped", "volume": <what it was>}` instead. Measured on the device:
+a saved paused queue at 55 came back **stopped, at 55**, with the device left
+alone; a corrupt file and a missing one both came back stopped at Plexamp's
+default. **The core half of that symptom was separate**: the plugin reports its
+level on every change, even while inactive, and the core used the report and
+forgot it - so on acquisition `plexamp did not say where it is` and the DAC
+stayed at the previous renderer's level. `PluginAdapter` now keeps the last
+report and answers `get_volume` with it; ADR-0054 §5 as written, no contract
+change.
 
 **What it costs:** Plexamp never resumes a queue by itself - after a reboot, a
 restore or a takeover it waits to be told to play, as every renderer here does
