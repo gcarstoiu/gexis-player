@@ -43,7 +43,17 @@ def test_the_mark_is_found_beside_the_manifest(tmp_path):
     _install(tmp_path, GOOD, with_mark=True)
     plugin = plugins.installed(tmp_path)[0]
     assert plugin.mark is not None
-    assert plugin.to_json()["mark"] == "/plugins/plexamp/mark"
+    assert plugin.to_json()["mark"].startswith("/plugins/plexamp/mark?v=")
+
+
+def test_a_replaced_mark_is_a_new_url(tmp_path):
+    """**Found 2026-09-26.** The mark is cached for a day; swapped under the
+    same URL, the panel and a phone went on drawing the old one."""
+    d = _install(tmp_path, GOOD, with_mark=True)
+    before = plugins.installed(tmp_path)[0].to_json()["mark"]
+    (d / "mark.png").write_bytes(b"\x89PNG\r\n\x1a\nanother picture")
+    after = plugins.installed(tmp_path)[0].to_json()["mark"]
+    assert before != after
 
 
 def test_no_mark_is_not_an_error(tmp_path):
