@@ -231,6 +231,40 @@ before the kernel closes its files, and Plexamp's heap is the bulk of the 0.15 s
 that (issue #128), so it would be a patch we carry. Not decided; George's call if
 the symptom survives on the phone.
 
+### And a restarted Plexamp starts with no saved queue
+
+**The amendment above broke this record's own premise, and a probe caught it the
+same evening.** *"Plexamp opens the ALSA device when it plays, not when it
+starts"* was measured on a Plexamp whose saved state said `stopped`. Plexamp
+persists its queue to `@Plexamp:state` and restores it on every start, and a
+queue restored as **paused opens the device** (`PREPARED`) without anyone asking.
+While the plugin waited for Plexamp to answer the stop, Plexamp had always saved
+`stopped` before the kill; once `release` stopped waiting, a kill could land
+first. Observed on the device at 20:34: the restarted player held the device
+with `"state":"paused","time":5370`, the core had recorded no acquisition, and
+two `state.<n>` temporaries showed kills landing mid-write. That is Finding 013
+§1's restart-storm precondition, which this record's safety rests on being
+absent.
+
+**Decision (George, 2026-09-26, *"this one"*):** `plexamp.service` removes
+`@Plexamp:state*` in `ExecStartPre`. The precondition is now absent by
+construction, not by the order two processes happen to finish in.
+`verify-image.sh` checks for the line.
+
+**What it costs:** Plexamp never resumes a queue by itself - after a reboot, a
+restore or a takeover it waits to be told to play, as every renderer here does
+([ADR-0027](0027-lms-power-as-arbitration-mechanism.md)). It also protects a
+restore: ADR-0083's backup now holds Plexamp's settings directory, state file
+included.
+
+**Rejected: wait for Plexamp to answer the stop again.** It gives back
+0.16-0.34 s, and the race is lost about half the time.
+
+**Measured:** a paused queue planted in the state file came back `stopped` with
+the device `closed`; then ten takeovers, each followed by stopping Spotify and
+waiting for Plexamp to return - **10 of 10 won the race, and the device was
+free after every one.**
+
 ## Reversal conditions
 
 - **A plugin renderer that opens the ALSA device at startup** makes Finding
