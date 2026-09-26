@@ -5,8 +5,9 @@ complete and the contract stays frozen at v1. Two decisions were taken and built
 today. ADR-0091: a takeover from Plexamp costs 0.9 s where it cost fourteen
 seconds. ADR-0092: Plexamp can now take the device from a renderer that is
 holding it, which it could never do — 0.55 s, from never. **George confirmed both
-from his phone: *"Seems to work."*** Phase 11 stays closed; the next phase is
-11a.**)
+from his phone: *"Seems to work."*** Phase 11 stays closed, and the next phase is
+12 - Qobuz - because George moved the Plex-metadata work to the end of the
+queue.**)
 
 ## Start here
 
@@ -42,6 +43,31 @@ LMS's device. Two commits in `gexis-plexamp`, none in the core.
 
 **George has tried it from his phone** — *"Seems to work."* — which is the path
 none of the measurements could reach.
+
+### The image: built and verified, 2026-09-26
+
+**`2026-09-26-gexis-player-v0.2.1-608-gd29ee48.img`**, 4.8 GiB, 700 s, manifest
+annotated. `image/verify-image.sh` — **all checks passed**, including the four
+that are new today:
+
+```
+ok   plexamp.service pulls the plugin in, from [Unit] where it counts
+ok   the plugin tree is not nested
+ok   the plugin in the image is the release it pins (a816fc5e7670)
+ok   plexamp.service has the restart headroom a killed renderer needs
+```
+
+**The first attempt at this build was thrown away**, and it is the reason two of
+those checks exist. `cp -a SRC DEST` copies *into* `DEST` when `DEST` exists, and
+builds here run `CONTINUE=1` over a preserved rootfs — so the warm rebuild left
+v0.2.0 in place and hid v0.2.1 at `src/gexis_plexamp/gexis_plexamp/`, which
+`PYTHONPATH` does not import. The stage reported success in a second and the
+verifier passed, because the file it looked for existed. Found by reading the
+rootfs rather than the exit status; stopped at `export-image`, so no artefact
+escaped.
+
+**Still nothing booted.** The artefact is checked as a file, which
+`docs/LESSONS.md` case 5 is explicit is not the same thing.
 
 ### Shipped: v0.2.1 is published and the stage pins it
 
@@ -157,17 +183,27 @@ started**, and ADR-0091 does not pre-empt it.
   a phone.
 - **Claiming** from the `claim_token` row. The row exists and the plugin accepts
   it; Plexamp's own setup still does the claiming. Not a Phase 11 criterion.
-- **Phase 11a** (Plex metadata, to cut the dependency on internet providers) is
-  drafted and not started. It still needs an ADR for where the Plex credential
-  lives.
+- **The Plex-metadata work is now phase 15**, last in the queue, after themes -
+  George moved it there on 2026-09-26. It was 11a, sitting immediately next. It is
+  drafted and not started, and still needs an ADR for where the Plex credential
+  lives. [Finding 086](docs/findings/086-what-the-plex-server-could-answer.md) is
+  the measurement it would be built on.
 - **Plex lyrics.** `/library/streams/<id>` 404s for every one of 40 `lrc` streams
   sampled, unexplained.
 - **A boot.** The image carries everything; **nothing built from it has been
   run.**
-- **Everything is pushed.** `phase-11-plexamp-plugin` is on the remote and
-  **[PR #28](https://github.com/gcarstoiu/gexis-player/pull/28) is open** - it was
-  already open from the previous session, so it was retitled and extended rather
-  than duplicated. `gexis-plexamp` `main` is pushed and released as **v0.2.1**.
+- **Everything is pushed.** `gexis-plexamp` `main` is pushed and released as
+  **v0.2.1**, and `gexis-plexamp` has nothing outstanding.
+- **PRs [#28](https://github.com/gcarstoiu/gexis-player/pull/28) (at `f1eef30`)
+  and [#29](https://github.com/gcarstoiu/gexis-player/pull/29) (at `d29ee48`) are
+  merged.** [**PR #30**](https://github.com/gcarstoiu/gexis-player/pull/30) is the
+  last of this session and carries what landed after #29 was merged: the
+  phase-queue move, the build result, and the verifier's stale `daemon fallback`
+  grep. **Merge it, then `git checkout main && git pull`** - R2D2 still has
+  `phase-11-plexamp-plugin` checked out and `main` has not been pulled since.
+- **Three PRs for one session** because each merge happened while work continued
+  on the same branch. Nothing is lost, but the next session should start from a
+  pulled `main` rather than this branch.
 
 ## Build environment (2026-09-13) — read this before the next build
 
@@ -385,14 +421,10 @@ reverted, currently-flashed image predates this fix.
                                             signed off, and that record is
                                             corrected rather than left to read
                                             as if it had been right
-11a the library answers for itself        <- next, added 2026-09-25 (George):
-                                            leverage the Plex server's own
-                                            metadata, internet providers kept
-                                            as fallbacks. Measured first:
-                                            Finding 086
-12 Qobuz Connect as a renderer            a second plugin against a contract
-                                            already proved; keeps the private
-                                            repository out of the critical path
+12 Qobuz Connect as a renderer            <- next. a second plugin against a
+                                            contract already proved; keeps the
+                                            private repository out of the
+                                            critical path
 13 first boot without a network           setup access point; pull forward the
                                             moment a non-developer gets a device
                                             (ADR-0031)
@@ -400,6 +432,18 @@ reverted, currently-flashed image predates this fix.
                                             plugins and plugins processes; a
                                             theme has no process - settle that
                                             first
+15 the library answers for itself         moved here 2026-09-26 (George): "the
+                                            entire discussion and in between
+                                            phase for enrichment via Plex server
+                                            gets [moved] to its own phase at the
+                                            end of the phase queue after themes".
+                                            Was 11a, inserted before Qobuz on
+                                            2026-09-25. Leverage the Plex
+                                            server's own metadata; internet
+                                            providers stay as fallbacks, not
+                                            removed. Measured first:
+                                            Finding 086, which is what it has
+                                            instead of a plan
 ```
 
 Phases 9-13 were renumbered on 2026-09-16 (George). `docs/DEVELOPMENT.md`
