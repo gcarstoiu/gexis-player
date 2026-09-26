@@ -1,7 +1,7 @@
-# ADR-0095 — squeezelite and go-librespot wait for a busy device instead of failing
+# ADR-0095 — squeezelite waits for a busy device instead of failing
 
-**Status:** **Accepted** — George, 2026-09-26: *"Option A - the recommended
-one for alsa."* **Amends [ADR-0009](0009-logical-output-device.md).** Built and
+**Status:** **Accepted, amended the same day to squeezelite only** — George, 2026-09-26: *"Option A - the recommended
+one for alsa"*, then *"Let's go with c"*. **Amends [ADR-0009](0009-logical-output-device.md).** Built and
 measured the same day - **and not shipped: the measurement found a deadlock**
 (see *Measured after building*). The device was put back on `output`; the
 `output_wait` definition is in place and unused.
