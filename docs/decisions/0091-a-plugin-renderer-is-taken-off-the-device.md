@@ -1,7 +1,8 @@
 # ADR-0091 — A plugin renderer is taken off the device, not asked to leave
 
-**Status:** **Accepted and built**, 2026-09-26 — George, after the sweep he asked
-for: *"Decision 1."* Built and measured the same day
+**Status:** **Accepted and built**, 2026-09-26, **amended the same day** — no
+polite grace, and a busy check that does not cost the race (see *Amendment*).
+Originally George, after the sweep he asked for: *"Decision 1."* Built and measured the same day
 ([Finding 089](../findings/089-the-takeover-after-adr-0091.md)): **a takeover
 costs 0.9 s where it cost 12.6–14.2 s**, the player comes back by itself in about
 four seconds, and six back-to-back takeovers failed nothing. **Deployed by hand
@@ -164,6 +165,63 @@ work we already own.
 - **Nothing to inventory.** This introduces no setting: `polite_grace` is a
   manifest declaration, not a user-facing row, so ADR-0022's inventory is
   unchanged.
+
+## Amendment, 2026-09-26 — no polite grace, and a busy check that does not cost the race
+
+**Found by George using it:** after taking the device from Plexamp, Spotify
+played and the phone's progress bar stayed at 0:00 until the next track. Two of
+three takeovers in his reproduction logged, from go-librespot,
+`failed loading current track (transfer): … snd_pcm_open: Device or resource
+busy`.
+
+**The cause is a race this record's 0.9 s lost.** go-librespot announces a
+transfer (`will_play`) and opens the device **0.26–0.52 s** later, and does not
+retry: the load fails, the state it published last - playing, buffering, speed
+0, position frozen - is what the phone draws, and a skip fixes it because a skip
+loads again (go-librespot v0.9.0 source, `daemon/controls.go:392-397`,
+`:484-486`; upstream issue #128 settled on returning the error). The ladder freed
+Plexamp at 0.8–1.0 s. Its budget, measured on the device:
+
+| step | cost |
+|---|---|
+| the plugin's `release` answering | 0.16–0.34 s - it waited for Plexamp's own HTTP answer to the stop |
+| `polite_grace` | 0.5 s |
+| `device_held_by` before escalating | **0.12 s** - `fuser` (0.10 s, scans every process) and `systemctl show`, synchronous |
+| SIGKILL to the device free | ~0.15 s |
+
+**Decision (George, 2026-09-26: *"A"*):**
+
+1. **`polite_grace` 0.5 → 0**, and the plugin answers `release` **at once**,
+   sending Plexamp's stop in the background. Section 1's reason for the grace -
+   18 ms for Plexamp to post the position it stopped at - is given up: Plexamp
+   may resume from slightly earlier next time. That is the price, and it was
+   chosen.
+2. **`device_held_by` reads the unit's own descriptors** - every PID in its
+   cgroup, `/proc/<pid>/fd` - instead of running `fuser`: **~2 ms against ~98 ms**,
+   agreeing with `fuser` on the device both while Plexamp held the PCM and after.
+   `fuser` remains the fallback where the cgroup file is absent. This is a change
+   to the core and helps every takeover, not only Plexamp's.
+
+**Measured**, a probe playing Plexamp through the Plex server and then asking
+go-librespot to play through its own API (the same load and the same device
+open as a phone's transfer, without the phone):
+
+| | lost the race | Plexamp freed after |
+|---|---|---|
+| before | **3 of 3** | 0.9 s |
+| (1) alone | 5 of 10 | 0.3–0.4 s |
+| (1) and (2) | **0 of 10** | 0.1–0.2 s |
+
+**Rejected: rescue a lost race with `POST /player/resume`.** It repairs every
+field of go-librespot's state and did so four times out of four on this probe -
+and it is the rescue Finding 014 shipped and **reverted on 2026-09-11**, because
+on a real phone it resumes local playback without the Connect handshake: the app
+shows "gexis disconnected" while audio plays, and "next" goes to the phone. The
+probe cannot see a phone, which is exactly how that one passed testing.
+
+**The margin is small and it is named.** The shortest window seen is 0.26 s and
+the kill now lands the free at 0.1–0.2 s. A slower teardown, or a go-librespot
+that opens sooner, loses again - and the symptom will be this one.
 
 ## Reversal conditions
 
