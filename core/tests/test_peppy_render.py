@@ -25,7 +25,10 @@ from gexis_peppy_render import (  # noqa: E402
     parse_point,
     parse_size,
     remaining_time,
+    load_badge_slots,
 )
+
+SLOTS = load_badge_slots(STAGE / "badge-slots.json")
 
 #: The shipped corpus: its config files are in this repository even though its
 #: 82MB of images are fetched at build time, so the geometry is checkable here.
@@ -279,10 +282,15 @@ def test_no_skin_draws_the_source_outside_the_box_it_reserved(screen, source):
             continue
         box = parse_size(skin.get("playinfo.type.dimension")) or (50, 50)
         layer._skin = skin
+        layer._skin_name = skin["name"]
         rect = layer._badge_rect(source)
         if rect is None:
             continue
         reserved = pygame.Rect(position[0], position[1], box[0], box[1])
+        # A skin with a measured slot reserves the slot (see below).
+        slot = SLOTS.get(skin["name"])
+        if slot is not None:
+            reserved = pygame.Rect(slot[0], slot[1], slot[2] - slot[0], slot[3] - slot[1])
         if not reserved.contains(rect) or not screen.get_rect().contains(rect):
             offenders.append((skin["name"], tuple(rect), tuple(reserved)))
     assert not offenders, f"{len(offenders)} skins draw the source outside their box: {offenders[:5]}"
@@ -343,3 +351,61 @@ def test_the_three_built_ins_still_use_the_designs_own_artwork(layer):
     from gexis_peppy_render import BADGES
 
     assert set(BADGES) == {"lms", "spotify", "bluetooth"}
+
+
+def all_corpus_skins() -> list[dict]:
+    """Both repository corpora - the meters and the spectrum templates."""
+    found = []
+    for folder in ("templates", "templates_spectrum"):
+        current = None
+        for line in (CORPUS_DIR.parent / folder / "meters.txt").read_text().splitlines():
+            line = line.strip()
+            if line.startswith("[") and line.endswith("]"):
+                current = {"name": line[1:-1]}
+                found.append(current)
+            elif current is not None and "=" in line and not line.startswith("#"):
+                key, _, value = line.partition("=")
+                current[key.strip()] = value.strip()
+    return found
+
+
+def test_every_measured_slot_holds_the_box_its_skin_declared():
+    """**George, 2026-09-26: the logo is not centred on some skins.** Each slot
+    was measured from the skin's artwork; a slot that does not contain the box
+    the skin declared would be a measurement of something else. The stock
+    skins (`emerald`, `orange`, `black-*`) are fetched at build time and are
+    not in this repository, so only the Gelo5 ones are checked here."""
+    assert SLOTS, "the slot table must load"
+    skins = {skin["name"]: skin for skin in all_corpus_skins()}
+    checked = 0
+    for name, (x0, y0, x1, y1) in SLOTS.items():
+        assert x0 < x1 and y0 < y1, name
+        skin = skins.get(name)
+        if skin is None:
+            continue
+        position = parse_size(skin.get("playinfo.type.pos"))
+        box = parse_size(skin.get("playinfo.type.dimension")) or (50, 50)
+        assert x0 <= position[0] + 2 and y0 <= position[1] + 2, name
+        assert x1 >= position[0] + box[0] - 2 and y1 >= position[1] + box[1] - 2, name
+        checked += 1
+    assert checked >= 10, f"only {checked} slot names matched the corpus"
+
+
+def test_the_badge_is_centred_in_the_slot_at_its_declared_size(screen):
+    layer = MetadataLayer(screen, CORPUS_DIR)
+    skin = next(s for s in all_corpus_skins() if s["name"] == "101G5_Free S+M")
+    layer._skin, layer._skin_name = skin, skin["name"]
+    rect = layer._badge_rect("spotify")
+    x0, y0, x1, y1 = SLOTS["101G5_Free S+M"]
+    assert abs(rect.centerx - (x0 + x1) / 2) <= 1 and abs(rect.centery - (y0 + y1) / 2) <= 1
+    assert rect.size == layer._badge("spotify", (40, 40)).get_size()
+
+
+def test_a_skin_without_a_slot_keeps_its_declared_box(screen):
+    layer = MetadataLayer(screen, CORPUS_DIR)
+    skin = next(s for s in all_corpus_skins() if s["name"] == "03G5_Berlant")
+    layer._skin, layer._skin_name = skin, skin["name"]
+    rect = layer._badge_rect("spotify")
+    position = parse_size(skin["playinfo.type.pos"])
+    box = parse_size(skin["playinfo.type.dimension"])
+    assert rect.center == (position[0] + box[0] // 2, position[1] + box[1] // 2)

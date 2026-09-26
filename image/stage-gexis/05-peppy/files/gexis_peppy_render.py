@@ -73,6 +73,25 @@ BADGES = {
 #: Here it was a guard rather than a crash - `source not in BADGES` returned
 #: None - so the visualiser simply had no badge and said nothing about it.
 PLUGIN_MARKS = Path("/usr/share/gexis/plugins")
+
+#: **Where a skin's badge slot really is**, for the skins whose declared
+#: `playinfo.type` box sits off-centre in the slot they draw (George,
+#: 2026-09-26: *"sometimes the logo is not centered on the allocated space"*).
+#: Those boxes held a format icon with the sample rate beside it, and the
+#: sample rate is never drawn here, so the badge sat at one end of an empty
+#: slot. Measured from each skin's own artwork and reviewed tile by tile; a
+#: skin absent from the file keeps its declared box, which is what every
+#: other skin already centres correctly.
+BADGE_SLOTS = Path(__file__).with_name("badge-slots.json")
+
+
+def load_badge_slots(path: Path = BADGE_SLOTS) -> dict[str, tuple[int, int, int, int]]:
+    try:
+        raw = json.loads(path.read_text()).get("slots", {})
+        return {name: tuple(int(v) for v in rect[:4]) for name, rect in raw.items()}
+    except (OSError, ValueError, TypeError, AttributeError) as exc:
+        logger.warning("render: no badge slots from %s: %s", path, exc)
+        return {}
 ARTWORK_TIMEOUT_S = 5
 
 
@@ -116,6 +135,8 @@ class MetadataLayer:
         self._icon_dir = icon_dir
         self._badges: dict[tuple, pygame.Surface | None] = {}
         self._skin: dict[str, str] = {}
+        self._skin_name: str | None = None
+        self._slots = load_badge_slots()
         self._background: pygame.Surface | None = None
         self._painted: list[pygame.Rect] = []
         self._fonts: dict[tuple[str, int], pygame.font.Font] = {}
@@ -130,7 +151,7 @@ class MetadataLayer:
 
     # ---- skin ----------------------------------------------------------
 
-    def set_skin(self, skin: dict[str, str], directory=None) -> None:
+    def set_skin(self, skin: dict[str, str], directory=None, name: str | None = None) -> None:
         """A clean copy of the skin's own background, so a field that
         disappears can be erased back to it rather than smeared.
 
@@ -140,6 +161,7 @@ class MetadataLayer:
         if directory is not None:
             self._corpus = directory
         self._skin = skin
+        self._skin_name = name
         self._painted = []
         self._last_drawn = None
         self._background = None
@@ -288,11 +310,21 @@ class MetadataLayer:
         if position is None or source is None:
             return None
         box = parse_size(self._skin.get("playinfo.type.dimension")) or (50, 50)
+        slot = self._slots.get(self._skin_name or "")
+        if slot is not None:
+            # Never larger than the slot: 59G5_Yamaha M85 declares a 95 px box
+            # in a 94 px window.
+            box = (min(box[0], slot[2] - slot[0]), min(box[1], slot[3] - slot[1]))
         badge = self._badge(source, box)
         if badge is None:
             return None
-        x = position[0] + (box[0] - badge.get_width()) // 2
-        y = position[1] + (box[1] - badge.get_height()) // 2
+        if slot is not None:
+            # Same size as the declared box gives it; centred in the slot.
+            x = (slot[0] + slot[2] - badge.get_width()) // 2
+            y = (slot[1] + slot[3] - badge.get_height()) // 2
+        else:
+            x = position[0] + (box[0] - badge.get_width()) // 2
+            y = position[1] + (box[1] - badge.get_height()) // 2
         self._screen.blit(badge, (x, y))
         return pygame.Rect(x, y, badge.get_width(), badge.get_height())
 

@@ -1,0 +1,107 @@
+{
+ "_about": "The slot each skin draws around its badge, where the declared playinfo.type box sits off-centre inside it - the box held a format icon with the sample rate beside it, and the sample rate is never drawn here. Measured 2026-09-26 by flood-filling each skin's composed background from inside the box, then reviewed tile by tile; a skin absent here keeps its declared box. [x0, y0, x1, y1], screen pixels.",
+ "slots": {
+  "101G5_Free S+M": [
+   366,
+   653,
+   498,
+   705
+  ],
+  "105G5_Kenwood Spectrum": [
+   38,
+   494,
+   316,
+   602
+  ],
+  "106G5_OldPipe Spectrum": [
+   509,
+   718,
+   725,
+   764
+  ],
+  "108G5_Kenwood Rev S+M": [
+   1123,
+   422,
+   1202,
+   467
+  ],
+  "112G5_KeySlight S+M": [
+   1075,
+   232,
+   1265,
+   281
+  ],
+  "41G5_Yellowkidney": [
+   332,
+   653,
+   603,
+   727
+  ],
+  "59G5_Yamaha M85": [
+   1015,
+   13,
+   1259,
+   107
+  ],
+  "black-white": [
+   999,
+   77,
+   1250,
+   158
+  ],
+  "black-white-spectrum": [
+   999,
+   77,
+   1250,
+   158
+  ],
+  "black-blue": [
+   999,
+   82,
+   1140,
+   154
+  ],
+  "black-blue-spectrum": [
+   999,
+   82,
+   1139,
+   153
+  ],
+  "emerald": [
+   146,
+   89,
+   376,
+   130
+  ],
+  "emerald-spectrum": [
+   146,
+   89,
+   376,
+   130
+  ],
+  "orange": [
+   33,
+   351,
+   255,
+   389
+  ],
+  "68G5_Reher Tube": [
+   1087,
+   83,
+   1191,
+   173
+  ],
+  "22G5_Dark Spotify": [
+   963,
+   493,
+   1167,
+   628
+  ],
+  "26G5_Marantz Black": [
+   589,
+   641,
+   686,
+   728
+  ]
+ }
+}
