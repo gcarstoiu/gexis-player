@@ -227,6 +227,18 @@ if [ -n "$wants_at" ] && [ -n "$service_at" ] && [ "$wants_at" -lt "$service_at"
 else
 	bad "plexamp.service does not Wants= the plugin from its [Unit] section"
 fi
+# **The plugin tree is not nested.** `cp -a SRC DEST` copies *into* DEST when
+# DEST exists, and builds here run `CONTINUE=1` over a preserved rootfs - so a
+# warm rebuild used to leave the previous release in place and hide the new one
+# at `src/gexis_plexamp/gexis_plexamp/`, which PYTHONPATH does not import. The
+# file-exists check above passed throughout, which is exactly why this one looks
+# for the wrong shape rather than for a file.
+if dfs "stat /opt/gexis-plexamp/src/gexis_plexamp/gexis_plexamp" | grep -q 'Inode:'; then
+	bad "the plugin is nested - a warm rebuild copied into the old tree instead of replacing it"
+else
+	ok "the plugin tree is not nested"
+fi
+
 # **ADR-0091 kills this unit on every takeover** and `Restart=on-failure` is the
 # only way back, so the restart burst is spent by ordinary arbitration now. A
 # burst of 5 is what squeezelite had when Finding 013 section 1 exhausted it and

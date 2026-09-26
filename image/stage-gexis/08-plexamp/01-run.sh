@@ -58,6 +58,20 @@ install -D -m 644 files/plexamp.service \
 # published, which is the whole point of criterion 2.
 tar -xzf "${WORK}/${PLUGIN_ASSET}" -C "${WORK}"
 PLUGIN_SRC="${WORK}/gexis-plexamp"
+# **`rm -rf` first, or a warm rebuild nests instead of replacing.** `cp -a SRC
+# DEST` copies *into* DEST when DEST already exists as a directory, and every
+# build here runs `CONTINUE=1` against a preserved rootfs - so the second build
+# left the previous release exactly where it was and hid the new one at
+# `src/gexis_plexamp/gexis_plexamp/`, which `PYTHONPATH=/opt/gexis-plexamp/src`
+# does not import.
+#
+# Found 2026-09-26 by reading the rootfs instead of the exit status. The stage
+# reported success in one second, `verify-image.sh` passed because the file it
+# looks for existed, and the image would have shipped v0.2.0 under a manifest
+# that said v0.2.1. The Plexamp copy twenty lines up already did this; the
+# plugin copy never did. Same shape as the `Wants=` defect found the same day:
+# something was checked for existing and never for being right.
+rm -rf "${ROOTFS_DIR}/opt/gexis-plexamp/src/gexis_plexamp"
 mkdir -p "${ROOTFS_DIR}/opt/gexis-plexamp/src"
 cp -a "${PLUGIN_SRC}/src/gexis_plexamp" "${ROOTFS_DIR}/opt/gexis-plexamp/src/gexis_plexamp"
 install -D -m 644 "${PLUGIN_SRC}/gexis-plexamp.service" \
