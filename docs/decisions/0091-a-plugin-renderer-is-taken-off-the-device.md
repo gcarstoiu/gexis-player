@@ -219,9 +219,17 @@ on a real phone it resumes local playback without the Connect handshake: the app
 shows "gexis disconnected" while audio plays, and "next" goes to the phone. The
 probe cannot see a phone, which is exactly how that one passed testing.
 
-**The margin is small and it is named.** The shortest window seen is 0.26 s and
-the kill now lands the free at 0.1–0.2 s. A slower teardown, or a go-librespot
-that opens sooner, loses again - and the symptom will be this one.
+**The margin is small and it is named.** The kill now lands the free at
+0.1–0.2 s, and **one of the next two takeovers lost anyway**: go-librespot opened
+at 0.22 s, 56 ms after the device freed by the ladder's own reading - so across
+twelve runs since (2), **one was lost**. The probe replays one Spotify track, which
+go-librespot has cached, so its window is likely shorter than a phone's transfer
+of a new track; that is a reason to expect better on a phone, not a measurement
+of it. The kill cannot go faster from here: a killed process releases its memory
+before the kernel closes its files, and Plexamp's heap is the bulk of the 0.15 s.
+**What would close it is go-librespot retrying the open** - upstream declined
+that (issue #128), so it would be a patch we carry. Not decided; George's call if
+the symptom survives on the phone.
 
 ## Reversal conditions
 
