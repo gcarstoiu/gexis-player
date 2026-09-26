@@ -2383,11 +2383,16 @@ complete than every internet provider we ask:
 | Biography | **73 %** | **97 %** |
 | Similar artists | **80 %** | 59 of the first 60 artists |
 
-**Two things that are *not* the case for it**, written down so nobody argues
-them later: **it is not faster** — the internet providers answered in ~110 ms,
-the same as Plex on the LAN — and **it does not replace anything.** Popular
-tracks are 404 on that server and timed lyrics do not exist there, so
-ListenBrainz and LRCLIB stay regardless.
+**One thing that is *not* the case for it**, written down so nobody argues it
+later: **it is not faster.** The internet providers answered in ~110 ms, the
+same as Plex on the LAN.
+
+**And one correction already**, made the day after this phase was drafted
+([Finding 086](findings/086-what-the-plex-server-could-answer.md)): this text
+first said Plex had no timed lyrics and that LRCLIB therefore stayed regardless.
+**George said otherwise and he was right** — 25 of 120 tracks carry `lrc`
+streams with `[mm:ss.xx]` timestamps, the shape ADR-0040's synced strip already
+consumes. **Popular tracks do remain ListenBrainz's**, 404 on that server.
 
 **Acceptance**
 
@@ -2417,7 +2422,14 @@ ListenBrainz and LRCLIB stay regardless.
 5. **Album covers first.** The single largest win and the cheapest to verify:
    the sweep that reports *"X of Y processed, Z found"* should improve, and by
    how much is the measurement that closes this criterion.
-6. **Decided in this phase, not before:** whether the three things Plex has and
+6. **Lyrics, and the question the survey could not answer.** Timed lyrics are
+   in the library — **and `/library/streams/<id>` served one fetch and has
+   returned 404 on every attempt since**, for `lrc` and `txt` alike and for the
+   waveform endpoint too, while files, covers and metadata serve normally.
+   Plexamp displays them, so there is a way. **Find it before building a
+   provider**; a lyrics source that works once an evening is worse than none,
+   because it would win the merge and then fail.
+7. **Decided in this phase, not before:** whether the three things Plex has and
    this project does not — **sonic similarity with distances**, **moods and
    styles**, and **ReplayGain** — are worth model changes, or are noted and left.
    They are not enrichment as ADR-0040 defines it, and one of them (ReplayGain)

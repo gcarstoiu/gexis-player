@@ -28,10 +28,10 @@ music is on. Everything below is the **server**.
 
 **Not there:** `popularLeaves` answers **404** on this server, and
 `includePopularLeaves=1` adds nothing — so popular tracks look like a
-plex.tv/Discover feature rather than a local one. A **lyrics** stream exists on
-the track's Part (`streamType=4`, provider `com.plexapp.agents.lyricfind`) and
-fetching `/library/streams/<id>` returned 1,782 bytes of **plain, untimed**
-text; **a second attempt the same evening returned 404 and that is unexplained.**
+plex.tv/Discover feature rather than a local one.
+
+**Lyrics: see the correction below.** This record first said they were plain and
+untimed. That was one sample and it was wrong.
 
 ## How much of this library it covers
 
@@ -107,3 +107,65 @@ has neither limit.
   use MusicBrainz ids where both sides have them.
 - **The LMS library was off**, so the comparison is against what the daemon has
   looked up (855 artists), not against the 917 the panel reports.
+
+---
+
+## Correction, 2026-09-26 — the lyrics are timed, and George said so
+
+**George:** *"Lyrics should be synced as this is how I see them in plexamp. Can
+you check again?"* He is right, and the original entry above was a
+generalisation from **one track**.
+
+Across **120 tracks**, surveyed rather than sampled:
+
+```
+  formats:  {'txt': 56, 'lrc': 25}
+  providers: {'com.plexapp.agents.lyricfind': 81}
+```
+
+**81 of 120 tracks carry lyrics (68 %), and 25 of those are `lrc`** — standard
+timed LRC, which is exactly the shape ADR-0040's synced strip already consumes:
+
+```
+[au:Filipe De Wilde, Jean Paul De Coster, Raymond Slijngaard, Simon Harris]
+[00:15.45]Ya'll ready for this?
+[00:32.39]Get down with the style
+```
+
+A track can carry **three** lyric streams at once — one `lrc` and two `txt`.
+
+**So LRCLIB is not untouchable after all.** This record and Phase 11a both said
+timed lyrics did not exist on Plex and that LRCLIB therefore stayed regardless.
+Wrong: Plex may answer first for the tracks it has, with LRCLIB behind it —
+which is George's own model, not an exception to it.
+
+### But fetching them is not reliable, and that is unexplained
+
+The 2,375-byte timed fetch above happened once, at about 22:45. **Every attempt
+since has returned 404**, including:
+
+- all **40** `lrc` streams in the library listing, each with ids re-read fresh
+  from the server, with two retries apiece — `first try 200: 0, recovered on
+  retry: 0, never: 40`;
+- the same stream id that had just served, `441471`;
+- both `txt` streams on that same track;
+- **`/library/streams/<id>/levels`**, the waveform endpoint Plexamp's own bundle
+  calls — so this is not lyrics-specific, it is that whole endpoint family.
+
+Everything else on the server is healthy at the same moment: the **audio file
+serves** (`/library/parts/…/file.mp3` → 200), the **cover serves**, the
+transcoder serves, `/identity` answers and `/activities` is empty.
+
+Tried and made no difference: Plexamp-style `X-Plex-Product`/`Version`/
+`Platform` headers, `format=lrc`, `includeLyrics=1`, a `/library/metadata/<key>/lyrics`
+path, playing the track through Plexamp first and waiting 16 s, and two waits of
+45 s after a library refresh.
+
+**Plexamp displays these lyrics**, so there is a way to get them and this
+survey did not find it. That is the question Phase 11a's lyrics criterion has to
+answer before anything is built.
+
+**One side effect to own:** the probe that established storage was healthy hit
+`/library/sections/4/refresh`, which **started a library scan** on George's
+server. Unintended, benign, and not the cause — the 404s predate it and
+`/activities` reported nothing running afterwards.
