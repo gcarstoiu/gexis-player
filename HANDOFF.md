@@ -164,7 +164,10 @@ started**, and ADR-0091 does not pre-empt it.
   sampled, unexplained.
 - **A boot.** The image carries everything; **nothing built from it has been
   run.**
-- **42 commits unpushed** on `phase-11-plexamp-plugin`, and one on `gexis-plexamp` (`main`) that is not released.
+- **Everything is pushed.** `phase-11-plexamp-plugin` is on the remote and
+  **[PR #28](https://github.com/gcarstoiu/gexis-player/pull/28) is open** - it was
+  already open from the previous session, so it was retitled and extended rather
+  than duplicated. `gexis-plexamp` `main` is pushed and released as **v0.2.1**.
 
 ## Build environment (2026-09-13) — read this before the next build
 
