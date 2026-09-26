@@ -43,40 +43,19 @@ LMS's device. Two commits in `gexis-plexamp`, none in the core.
 **George has tried it from his phone** — *"Seems to work."* — which is the path
 none of the measurements could reach.
 
-### Next action: three commands George has to run, then a build
+### Shipped: v0.2.1 is published and the stage pins it
 
-This session could not push: the sandbox refuses to create public surface. So
-`gexis-plexamp` has **three commits and a local `v0.2.1` tag** that exist only on
-R2D2, and until that release is published `make image` will fail in stage 08
-fetching a URL that does not resolve.
-
-```
-cd ~/projects/gexis-plexamp
-git push origin main && git push origin v0.2.1
-git archive --format=tar.gz --prefix=gexis-plexamp/ v0.2.1 -o /tmp/gexis-plexamp-0.2.1.tar.gz
-gh release create v0.2.1 /tmp/gexis-plexamp-0.2.1.tar.gz \
-  --title "v0.2.1 — a held device can be taken" --notes-file <(cat <<'EOF'
-Plexamp gives the audio device back in 0.9 s instead of fourteen, and can take it
-from a renderer that is holding it - which it could not do at all.
-
-`activate` is declared, so the core stops refusing it with 409.
-
-The tarball attached here is what the Gexis image pins by checksum.
-EOF
-)
-```
-
-**The checksum is already committed and verified.**
+`gcarstoiu/gexis-plexamp` **v0.2.1** is released, and
 `image/stage-gexis/08-plexamp/01-run.sh` pins
-`a816fc5e7670766a38288207a5add56ecf4d6df061e907011b9d5e799128553c`, and
-`git archive` at that tag is byte-reproducible — checked by rebuilding v0.2.0's
-asset and matching the published checksum exactly. So the release will satisfy the
-pin without anything further.
+`a816fc5e7670766a38288207a5add56ecf4d6df061e907011b9d5e799128553c`. **The pin was
+verified against the published asset**, not assumed: downloaded after release and
+compared, and separately `git archive --format=tar.gz --prefix=gexis-plexamp/` at
+v0.2.0 was shown to reproduce *that* release byte-identically, so the command is
+the release process rather than a guess at it.
 
-**Seeding the build cache instead was considered and rejected.**
-`fetch-cached.sh` says why in its own comment: *"A build that has never seen the
-cache has to work, or the cache becomes a hidden build dependency."* An image
-built against an unpublished asset is exactly that.
+Seeding the build cache to stand in for an unpublished asset was considered and
+rejected on the way: `fetch-cached.sh`'s own comment says *"A build that has never
+seen the cache has to work, or the cache becomes a hidden build dependency."*
 
 ### What it costs and what it bought
 

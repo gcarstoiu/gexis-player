@@ -5,8 +5,8 @@ fix: *"Go for the second."* Built and measured the same day: **Plexamp took the
 device from a playing LMS 0.55 s after the controller's request**, where before it
 never took it at all. **George then tried it from his phone, which is the path
 none of the measurements could reach: *"Seems to work."*** Deployed by hand to
-`gexis`; the image stage is pinned to `v0.2.1`, which **still has to be
-published** - see HANDOFF.
+`gexis`, and shipped: `gexis-plexamp` **v0.2.1** is released and the image stage
+pins its checksum, verified against the published asset.
 **Date:** 2026-09-26
 **Raised by:** George, 2026-09-26: *"Cannot takeover with plexamp. The plexamp
 mobile app fails to playback."*
