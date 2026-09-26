@@ -2,9 +2,9 @@
 
 **Status:** **Accepted, amended the same day to squeezelite only** — George, 2026-09-26: *"Option A - the recommended
 one for alsa"*, then *"Let's go with c"*. **Amends [ADR-0009](0009-logical-output-device.md).** Built and
-measured the same day - **and not shipped: the measurement found a deadlock**
-(see *Measured after building*). The device was put back on `output`; the
-`output_wait` definition is in place and unused.
+measured the same day. The first build (both renderers waiting) deadlocked on a
+double press and was withdrawn; **the amended build (squeezelite only) is
+measured below and deployed to `gexis`.**
 **Date:** 2026-09-26
 **Raised by:** [Finding 091](../findings/091-play-on-a-powered-off-lms-player.md)
 (LMS: 5.5 s of silence after *play* on a powered-off player) and
