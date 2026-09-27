@@ -13,13 +13,13 @@ not pushed.** George, 2026-09-27, after trying it: *"Everything seems in order
 including Bluetooth."* Phase 11 stays closed; the next phase is still **12,
 Qobuz**, once this branch is a PR and merged.
 
-**Before anything else, two things this branch cannot ship without:**
+**Before this branch ships:**
 
-1. **`gexis-plexamp` has two unreleased commits** - `9e8111d` (the ladder does not
-   wait for Plexamp to answer the stop) and `0851615` (the mark is Plex's
-   chevron). Release **v0.2.2**, then update the pinned checksum in
-   `image/stage-gexis/08-plexamp/01-run.sh` against the *published* asset, the
-   way v0.2.1 was pinned.
+1. ~~`gexis-plexamp` has two unreleased commits~~ **Released as v0.2.2**
+   (2026-09-27): `9e8111d` (the ladder does not wait for Plexamp) and `0851615`
+   (Plex's chevron). Pinned in `image/stage-gexis/08-plexamp/01-run.sh` at
+   `83aed15c…`, **checked against the published asset** through both `gh` and the
+   public URL the build fetches; `git archive` at the tag reproduces it.
 2. **`gexis` runs all of this by hand, not from an image.** Core modules, Peppy's
    renderer and driver, the UI bundle, `plexamp.service` and its helper,
    `squeezelite.service` and `output.conf` were installed over the
