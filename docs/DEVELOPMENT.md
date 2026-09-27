@@ -2444,17 +2444,32 @@ All are there; none is asked for by anything today.
 **Added 2026-09-16 (George).** Same shape as Spotify and LMS, delivered as a
 plugin ([ADR-0016](decisions/0016-plugins-as-separate-processes.md)).
 
-**Acceptance**
+**Acceptance** (**rewritten 2026-09-27**, [ADR-0098](decisions/0098-qobuz-connect-is-installed-by-the-user.md):
+George, *"It is up to the user to decide whether to install it or not. We give
+the possibility but not retain any code that could leave the entire player into
+trouble."* [Finding 093](findings/093-qobuz-connect-in-september-2026.md) has why.)
 
-1. **Client chosen, licence checked:** the open-source client ARCHITECTURE.md
-   §9 points at.
-2. **Delivered as an optional plugin from a separate repository, with no core
-   changes.** ~~this is Phase 10 criterion 2~~ — **Phase 11's Plexamp is now
-   that proof** (2026-09-25); Qobuz is a second plugin against a contract
-   already proved, which is a cheaper place for a private repository to sit.
-3. Acquisition ("device selected in the app"), release (disconnect), metadata,
-   volume and transport, as for Plexamp.
-4. Source pill, handoff screen, Peppy badge; design assets from Claude Design.
+1. **Client chosen, licence checked:** Pibuz (MIT), what moOde uses. Measured on
+   `gexis` in a Finding before anything is built on it.
+2. **No Qobuz code in our repositories or image.** The receiver is fetched on
+   the device, when the user asks, from its author's release, verified against
+   a pinned checksum. The user confirms an unofficial-software notice first.
+   Uninstall removes it all.
+3. **A public `gexis-qobuz` adapter plugin**, shipped inert: acquisition
+   ("device selected in the app"), release (disconnect), metadata, volume and
+   transport, as for Plexamp.
+4. Source pill, handoff screen, Peppy badge.
+
+### Phase 12b — Legal and credits
+
+**Added 2026-09-27 (George)** - [ADR-0099](decisions/0099-legal-and-credits-in-settings.md).
+
+1. *Legal* and *Credits* rows in Settings → System, each opening a page to read.
+2. Both are generated from one inventory file in the repository. The build fails
+   when something the image installs is missing from it.
+3. Legal covers the player's licence and warranty, every third-party licence,
+   downloaded proprietary software, unofficial clients, trademarks and the
+   services contacted. **George approves the wording.**
 
 ### Phase 13 — First boot without a network
 

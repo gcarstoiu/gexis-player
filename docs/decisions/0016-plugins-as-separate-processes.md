@@ -23,8 +23,11 @@ music, this is the stronger argument.
 Python (ADR-0017); in-process modules would bind every future renderer adapter
 to that choice.
 
-**Repository independence.** The Qobuz Connect plugin is planned for a private
-repository. Qobuz Connect launched in May 2025 developed with StreamUnlimited,
+**Repository independence.** ~~The Qobuz Connect plugin is planned for a private
+repository.~~ **Superseded 2026-09-27 by
+[ADR-0098](0098-qobuz-connect-is-installed-by-the-user.md):** the receiver is
+installed by the user from its author's release, and our adapter is public.
+What follows is the May 2025 reasoning, kept for the record. Qobuz Connect launched in May 2025 developed with StreamUnlimited,
 and the official integration route is partnership, a proprietary SDK, and a
 certification self-test — incompatible with a public repository. moOde reached
 the same conclusion in May 2025 and found no FOSS-licensed code to integrate;

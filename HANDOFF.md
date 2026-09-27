@@ -66,8 +66,13 @@ real image build.** The first image built from here is its first test.
 codebase the open-source receivers descend from, shut down in September 2026;
 moOde now points at Pibuz (MIT), which users install themselves; every open client
 uses scraped web-player credentials, against Qobuz's terms. Every client's
-licence permits a public repository. **Route, client, repo visibility and
-install model are George's decisions, not yet taken.**
+licence permits a public repository. **George, 2026-09-27: follow moOde - the user
+installs it; we keep no Qobuz code.** Planned in
+[ADR-0098](docs/decisions/0098-qobuz-connect-is-installed-by-the-user.md) (Pibuz
+fetched on the device from its author's release, after a notice; public inert
+`gexis-qobuz` adapter) and
+[ADR-0099](docs/decisions/0099-legal-and-credits-in-settings.md) (*Legal* and
+*Credits* pages). Branch `phase-12`, off `peppy-next`.
 
 **Then, branch `peppy-next` (PR #33, pushed):** **Image built from it:**
 `image/deploy/2026-09-27-gexis-player-v0.2.1-680-g1a0042d.img` (735 s); rootfs
