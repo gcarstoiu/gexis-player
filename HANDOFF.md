@@ -107,7 +107,8 @@ fetched on the device from its author's release, after a notice; public inert
       [PhilipVinc/pibuz#3](https://github.com/PhilipVinc/pibuz/issues/3).
     - **Plexamp applies its volume twice**
       ([Finding 095](docs/findings/095-plexamp-applies-its-volume-twice.md),
-      measured before the DAC). **A decision for George.**
+      measured before the DAC). Plexamp has no full-scale mode. **George kept it
+      as it is (C)**: one shared number between the Plexamp app and the panel.
     - No image built from `phase-12` yet.
 - **The Qobuz spike stopped after part 1.** Pibuz 2.5.0 was verified, ran, and
   opened our `output` as soon as it was configured. The auto-mode classifier then

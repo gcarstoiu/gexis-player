@@ -67,3 +67,10 @@ What remains is on our side:
   the DAC. Bit-perfect, one level, but the Plexamp app's slider then reads 100
   and snaps back.
 - **(c)** Leave it as it is: applied twice.
+
+**Decided (George, 2026-09-27): (c), leave it as it is.** *"Let's keep C as it
+is more likely for users to use their phones to decrease or increase
+volume."* One number, shared by the Plexamp app and the panel, is worth more
+than loudness matching the other sources or being bit-perfect below 100. The
+known cost stays: Plexamp at a given number is quieter than Spotify or LMS at
+the same number, increasingly so toward the bottom of the slider.
