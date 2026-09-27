@@ -500,6 +500,10 @@ class MetadataLayer:
                 return int(screen_width * CENTRED_BOX_SHARE)
             return max(0, screen_width - point[0] - RIGHT_MARGIN)
 
+        def clock_weight(key: str) -> str:
+            value = skin.get(key) or ""
+            return value.split(",")[2].strip() if value.count(",") >= 2 else "digi"
+
         def own_size(key: str | None) -> int:
             try:
                 return int(skin.get(key) or 0) if key else 0
@@ -552,6 +556,15 @@ class MetadataLayer:
                 # Sansui cassette's digits ran into its meter at 45 px.
                 size_key="time.remaining.fontsize",
             ),
+            # ADR-0097: elapsed and total, as upstream draws them - top-left
+            # at the position, the digi face unless the position names a
+            # weight, white unless the skin says otherwise. A stream has no
+            # duration and so no total: absent is absent.
+            *(field(
+                f"time.{which}.pos", text, weight=clock_weight(f"time.{which}.pos"),
+                override_colour=parse_colour(skin.get(f"time.{which}.color"), (255, 255, 255)),
+                stratum="meta", size_key=f"time.{which}.fontsize",
+            ) for which, text in (("elapsed", elapsed_time(metadata)), ("total", total_time(metadata)))),
             # The source is a badge, not text: see _badge_rect.
             # playinfo.samplerate.pos is never filled: no sample rate and no
             # codec renders anywhere (ADR-0036). The skins keep the position;
@@ -715,6 +728,34 @@ def remaining_seconds(metadata: dict, default: int | None = None) -> int | None:
     if metadata.get("transport") == "playing":
         position += max(0.0, time.time() - metadata.get("written_at", time.time()))
     return max(0, int(duration - position))
+
+
+def elapsed_seconds(metadata: dict) -> int | None:
+    """Position, advanced from the last write like the time remaining."""
+    position, duration = metadata.get("position"), metadata.get("duration")
+    if position is None:
+        return None
+    if metadata.get("transport") == "playing":
+        position += max(0.0, time.time() - metadata.get("written_at", time.time()))
+    if duration:
+        position = min(position, duration)
+    return max(0, int(position))
+
+
+def clock(seconds: int | None) -> str | None:
+    """Upstream's `MM:SS`: minutes are not wrapped into hours."""
+    if seconds is None:
+        return None
+    return f"{seconds // 60:02d}:{seconds % 60:02d}"
+
+
+def elapsed_time(metadata: dict) -> str | None:
+    return clock(elapsed_seconds(metadata))
+
+
+def total_time(metadata: dict) -> str | None:
+    duration = metadata.get("duration")
+    return clock(int(duration)) if duration else None
 
 
 def remaining_time(metadata: dict) -> str | None:

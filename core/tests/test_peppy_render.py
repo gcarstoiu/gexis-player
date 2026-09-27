@@ -608,3 +608,20 @@ def test_the_next_track_is_drawn_where_the_skin_places_it(screen, tmp_path):
     assert any((r.x, r.y) == (700, 600) for r in drawn)
     empty = {f[1][:2]: f[0] for f in made._fields(full())}
     assert empty[(700, 600)] is None, "no next track, nothing drawn"
+
+
+def test_elapsed_and_total_are_drawn_as_upstream_does(screen, tmp_path):
+    """ADR-0097: MM:SS, top-left, digi face at the skin's size, white by
+    default; no total for a stream."""
+    from gexis_peppy_render import elapsed_time, total_time
+    assert elapsed_time(full(position=75.4, transport="paused")) == "01:15"
+    assert total_time(full(duration=4503.0)) == "75:03", "minutes are not wrapped"
+    assert total_time(full(duration=None)) is None
+    pygame.image.save(pygame.Surface((1280, 800)), str(tmp_path / "bgr.png"))
+    made = MetadataLayer(screen, tmp_path)
+    made.set_skin(SKIN | {"time.elapsed.pos": "20,700", "time.elapsed.fontsize": "21",
+                          "time.total.pos": "1100,700,bold", "time.total.color": "9,9,9"})
+    at = {f[1][:2]: f for f in made._fields(full(position=30.0, duration=200.0, transport="paused"))}
+    assert at[(20, 700)][0] == "00:30" and at[(20, 700)][1][2] == "digi" and at[(20, 700)][3] == 21
+    assert at[(20, 700)][2] == (255, 255, 255) and at[(20, 700)][5] == "meta"
+    assert at[(1100, 700)][0] == "03:20" and at[(1100, 700)][1][2] == "bold" and at[(1100, 700)][2] == (9, 9, 9)

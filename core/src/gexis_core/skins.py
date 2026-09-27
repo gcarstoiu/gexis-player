@@ -144,6 +144,8 @@ ANIMATED_TEXT_KEYS = {
     # ADR-0097: the ticker scrolls.
     "playinfo.ticker.speed", "playinfo.ticker.direction", "playinfo.ticker.end_spaces",
     "playinfo.ticker.space_between", "playinfo.ticker.append_next", "playinfo.ticker.replace",
+    # ADR-0097: elapsed and total time.
+    *(f"time.{which}.{part}" for which in ("elapsed", "total") for part in ("pos", "color", "fontsize")),
     # ADR-0097: the next track.
     *(f"playinfo.next.{field}.{part}" for field in ("title", "artist", "album") for part in ("pos", "color", "maxwidth")),
 }
@@ -153,10 +155,13 @@ ANIMATED_TEXT_KEYS = {
 #: deferred still fails the build. Matched by prefix.
 DEFERRED_PREFIXES = (
     "progress.", "volume.", "mute.", "playstate.", "repeat.", "shuffle.",
-    "time.elapsed.", "time.total.",
+
 )
 DEFERRED_KEYS = {
     "time.remaining.font",
+    # Drawn, in our digi face: the fonts these name are not in the packs,
+    # and upstream falls back to the same face without them (ADR-0097).
+    "time.total.font", "time.elapsed.font",
     "playinfo.samplerate.color", "playinfo.samplerate.maxwidth",
 }
 
