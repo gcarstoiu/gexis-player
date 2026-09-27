@@ -89,7 +89,13 @@ A research pass over everything the image contains (2026-09-27) found:
    - go-librespot ships with no licence text.
 
    Shipping the texts under `/usr/share/doc/gexis-player/` would cure these.
-5. **The Spotify, Bluetooth and Lyrion marks** came from Claude Design with no
+5. **Sourced 2026-09-27 (George: "Source them")**, recorded in
+   `design/assets/SOURCES.md`. Spotify's icon is the official 2024 icon, and
+   Lyrion's is its official logo file. **Bluetooth's is a redraw** of a mark
+   Bluetooth SIG licenses only to its members' qualified products, and that
+   stays open with George. The two sample photos were replaced with public-domain
+   ones (Kandinsky, 1926; Gottlieb, 1947). The originals are still in git history.
+   Originally: **The Spotify, Bluetooth and Lyrion marks** came from Claude Design with no
    recorded source.
 6. **`design/assets/album-art.webp` and `artist-photo.webp`** are photographs
    of real people with no recorded source. They are committed to the public

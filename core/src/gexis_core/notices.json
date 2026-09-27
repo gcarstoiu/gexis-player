@@ -445,12 +445,32 @@
       "arrives": "Rendered into a picture when the boot screen was made"
     },
     {
-      "name": "Spotify, Bluetooth and Lyrion marks",
+      "name": "Spotify icon",
       "group": "marks",
-      "role": "Show which source is playing.",
-      "author": "Spotify AB; Bluetooth SIG; the Lyrion project",
-      "licence": "Trademarks of their owners, used only to name them",
-      "url": "https://github.com/gcarstoiu/gexis-player",
+      "role": "Shows that Spotify is playing.",
+      "author": "Spotify AB",
+      "licence": "Trademark of Spotify AB; the official icon, used to name Spotify",
+      "url": "https://developer.spotify.com/documentation/design",
+      "arrives": "Included in the player",
+      "credit": false
+    },
+    {
+      "name": "Lyrion logo",
+      "group": "marks",
+      "role": "Shows that Lyrion Music Server is playing.",
+      "author": "The Lyrion Music Server community",
+      "licence": "Lyrion's brand asset, used in combination with its software (lyrion.org/terms, section 6b)",
+      "url": "https://github.com/LMS-Community/lms-community.github.io",
+      "arrives": "Included in the player",
+      "credit": false
+    },
+    {
+      "name": "Bluetooth mark",
+      "group": "marks",
+      "role": "Shows that a phone is playing over Bluetooth.",
+      "author": "Bluetooth SIG, Inc.",
+      "licence": "The Bluetooth word mark and logos are registered trademarks owned by Bluetooth SIG, Inc.",
+      "url": "https://www.bluetooth.com/develop-with-bluetooth/marketing-branding/",
       "arrives": "Included in the player",
       "credit": false
     },
