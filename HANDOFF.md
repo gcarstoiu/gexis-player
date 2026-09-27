@@ -40,7 +40,29 @@ Qobuz**, once this branch is a PR and merged.
 | ADR-0093 | **immovable: squeezelite and go-librespot are never built or patched by us** |
 | transition screen | shown on **every** takeover for `handoff_duration` (default **1.5 s**; the threshold row and ADR-0010's exempt pairs are gone - ADR-0094), announced **before** the new renderer, and appears at once instead of fading in |
 | Plex mark | Plex's chevron at 512 px from the public-domain Commons SVG; the mark URL carries the file's hash, because a day's cache kept the old one on every panel surface |
-| Peppy | badge **centred in the slot the skin draws** for 17 skins (`badge-slots.json`, measured and reviewed), and **80% of its field** on every skin |
+| Peppy | badge **centred in the slot the skin draws** for 23 skins (`badge-slots.json`, from rendering all 99), **80% of its field** on every skin, a dark edge so LMS's mark holds on light skins |
+
+### Then: branch `peppy-animated-skins`, stacked on the one above
+
+**Turntable and cassette skins that move** (ADR-0096, George's six decisions,
+all "recommended"): 90 more skins - 48 turntables, 20 tape recorders, 15
+cassettes, 7 from `t1800` - fetched at build time and pinned by sha256; the
+1280x720 packs letterboxed to 1280x800. Deployed on `gexis` by hand; **the
+build stage (`05-peppy/01-run.sh`, new `02-run-chroot.sh`) has never run in a
+real image build.** The first image built from here is its first test.
+
+| | |
+|---|---|
+| motion | vinyl with the art on it, tonearm, reels - `gexis_peppy_motion.py`, 6° steps at 8 fps |
+| drawing | **what moves repaints everything over it, in upstream's z-order** - the first cut flashed titles, half-drew art and "masked" the arm (George) |
+| memory | PeppyMeter's needle cache **off**: it had grown the driver to 1.4 GB across the skins, rotation or not |
+| text | the clock at the skin's own size; **27 ticker-only skins get a still "Title • Artist • Album" line** (George's choice A; the scroll stays deferred) |
+| cost | 12-38% of one core vs 35% for George's static spectrum skin, 349-489 MB - [Finding 092](docs/findings/092-what-the-animated-skins-cost.md) |
+
+Open here: smooth rotation is not built (stepped only, as measured); the
+deferred keys (progress, elapsed/total time, volume, the ticker's scroll and
+next track) leave their room empty; no rotation setting proposed - the numbers
+did not call for one.
 
 ### Open, none blocking
 
@@ -54,8 +76,6 @@ Qobuz**, once this branch is a PR and merged.
 - **Bluetooth "Not provided", once**, 2026-09-26 22:08: `MediaPlayer1` appeared and
   no track information ever followed. George could not reproduce it the next
   morning and suspects the phone's battery saver. Not explained.
-- **LMS's mint badge is faint on the light skins** (`101G5_Free S+M`) - its tint,
-  not its size. Seen, not raised by George.
 - **A paused Spotify is not an acquisition after a core restart**, and a later
   resume sends no `active` - so the core does not know Spotify took the device.
   Needs a restart during a pause to happen. Seen, not fixed.
