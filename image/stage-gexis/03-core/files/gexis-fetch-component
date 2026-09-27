@@ -6,51 +6,126 @@
 # the image. Run as gexis-fetch@<name>.service before that software's own unit.
 #
 # Reads /usr/share/gexis/components/<name>.env:
-#   URL     where the maker publishes it
-#   SHA256  the pinned checksum; nothing that fails it is unpacked
-#   FORMAT  tar.bz2 | tar.gz
-#   DEST    the directory it lives in once unpacked (the archive's top folder)
-#   OWNER   user:group that owns it
-# and records what it installed in /var/lib/gexis/components/<name>.sha256, so
-# a start after the first is a comparison, not a download.
-set -euo pipefail
+#   URL      where the maker publishes it
+#   SHA256   the pinned checksum; nothing that fails it is unpacked
+#   FORMAT   tar.bz2 | tar.gz
+#   DEST     the directory it lives in once unpacked (the archive's top folder)
+#   OWNER    user:group that owns it
+#   LABEL    what the user is told it is ("Plexamp 4.13.2")
+#   FROM     who it comes from ("Plex")
+#
+# **The user is told what is happening, all the way** (George, 2026-09-27: "Even
+# if it's extremely fast, feedback is a must. Also retry in case of failure and
+# a general status."). Every step is written to
+# /run/gexis/components/<name>.json, which the core publishes to the panel:
+# preparing, downloading (bytes of total, attempt n of N), verifying,
+# installing, installed - or failed, with the reason. A failed download is
+# retried ATTEMPTS times with a growing wait before it gives up.
+#
+# /var/lib/gexis/components/<name>.sha256 records what is installed, so a start
+# after the first is a comparison, not a download.
+set -uo pipefail
 
 name="${1:?usage: gexis-fetch-component <name>}"
 pin="/usr/share/gexis/components/${name}.env"
 stamp_dir=/var/lib/gexis/components
 stamp="${stamp_dir}/${name}.sha256"
+status_dir=/run/gexis/components
+status="${status_dir}/${name}.json"
+ATTEMPTS=3
 
 # shellcheck source=/dev/null
 . "${pin}"
 : "${URL:?} ${SHA256:?} ${FORMAT:?} ${DEST:?} ${OWNER:?}"
+LABEL="${LABEL:-${name}}"
+FROM="${FROM:-its maker}"
+
+mkdir -p "${status_dir}" "${stamp_dir}"
+chmod 755 "${status_dir}"
+
+# One JSON object, written whole and renamed, so the core never reads half.
+say() {  # state received total attempt error
+	local tmp="${status}.tmp"
+	printf '{"name":"%s","label":"%s","from":"%s","state":"%s","received":%s,"total":%s,"attempt":%s,"attempts":%s,"error":%s,"updated":%s}\n' \
+		"${name}" "${LABEL}" "${FROM}" "$1" "${2:-null}" "${3:-null}" "${4:-null}" "${ATTEMPTS}" \
+		"$(if [ -n "${5:-}" ]; then printf '"%s"' "${5//\"/\'}"; else printf null; fi)" \
+		"$(date +%s)" > "${tmp}"
+	chmod 644 "${tmp}"
+	mv "${tmp}" "${status}"
+}
 
 if [ -d "${DEST}" ] && [ "$(cat "${stamp}" 2>/dev/null)" = "${SHA256}" ]; then
+	say installed
 	exit 0
 fi
 
-echo "gexis-fetch: ${name}: downloading ${URL}"
 work="$(mktemp -d)"
 trap 'rm -rf "${work}"' EXIT
-curl -fsSL --retry 3 --retry-delay 5 -o "${work}/archive" "${URL}"
-echo "${SHA256}  ${work}/archive" | sha256sum -c --quiet - || {
+say preparing
+
+# The size first, so progress can be a fraction. A server that will not say is
+# not a failure: the panel then shows bytes received without a total.
+total="$(curl -fsSLI --max-time 15 "${URL}" 2>/dev/null \
+	| tr -d '\r' | awk 'tolower($1)=="content-length:" {n=$2} END {print n}')"
+[[ "${total}" =~ ^[0-9]+$ ]] || total=""
+
+error=""
+for attempt in $(seq 1 "${ATTEMPTS}"); do
+	rm -f "${work}/archive"
+	say downloading 0 "${total:-null}" "${attempt}"
+	curl -fsSL --connect-timeout 15 --speed-limit 1024 --speed-time 30 \
+		-o "${work}/archive" "${URL}" 2> "${work}/curl.err" &
+	pid=$!
+	while kill -0 "${pid}" 2>/dev/null; do
+		say downloading "$(stat -c %s "${work}/archive" 2>/dev/null || echo 0)" "${total:-null}" "${attempt}"
+		sleep 0.5
+	done
+	if wait "${pid}"; then
+		error=""
+		break
+	fi
+	error="$(tail -1 "${work}/curl.err" | sed 's/^curl: ([0-9]*) //')"
+	error="${error:-the download stopped}"
+	echo "gexis-fetch: ${name}: attempt ${attempt} of ${ATTEMPTS} failed: ${error}" >&2
+	if [ "${attempt}" -lt "${ATTEMPTS}" ]; then
+		wait_s=$((attempt * 5))
+		say retrying "$(stat -c %s "${work}/archive" 2>/dev/null || echo 0)" "${total:-null}" "${attempt}" "${error}; trying again in ${wait_s} s"
+		sleep "${wait_s}"
+	fi
+done
+if [ -n "${error}" ]; then
+	say failed null "${total:-null}" "${ATTEMPTS}" "Could not download from ${FROM}: ${error}"
+	exit 1
+fi
+
+size="$(stat -c %s "${work}/archive")"
+say verifying "${size}" "${total:-${size}}" "${attempt}"
+if ! echo "${SHA256}  ${work}/archive" | sha256sum -c --quiet - 2>/dev/null; then
+	say failed "${size}" "${total:-${size}}" "${attempt}" "What ${FROM} sent does not match the expected checksum, so it was not installed"
 	echo "gexis-fetch: ${name}: checksum mismatch, not installed" >&2
 	exit 1
-}
+fi
+
+say installing "${size}" "${total:-${size}}" "${attempt}"
 mkdir "${work}/unpacked"
 case "${FORMAT}" in
 	tar.bz2) tar -xjf "${work}/archive" -C "${work}/unpacked" ;;
 	tar.gz) tar -xzf "${work}/archive" -C "${work}/unpacked" ;;
-	*) echo "gexis-fetch: ${name}: unknown format ${FORMAT}" >&2; exit 1 ;;
-esac
+	*) say failed null null null "Unknown archive format ${FORMAT}"; exit 1 ;;
+esac || { say failed null null null "The download could not be unpacked"; exit 1; }
 top="${work}/unpacked/$(basename "${DEST}")"
-[ -d "${top}" ] || { echo "gexis-fetch: ${name}: archive has no $(basename "${DEST}")/" >&2; exit 1; }
+if [ ! -d "${top}" ]; then
+	say failed null null null "The download does not contain $(basename "${DEST}")"
+	exit 1
+fi
 chown -R "${OWNER}" "${top}"
 
 # Swapped in whole: a half-unpacked tree is never what a unit starts from.
-mkdir -p "$(dirname "${DEST}")" "${stamp_dir}"
+mkdir -p "$(dirname "${DEST}")"
 rm -rf "${DEST}.old"
 [ -d "${DEST}" ] && mv "${DEST}" "${DEST}.old"
 mv "${top}" "${DEST}"
 rm -rf "${DEST}.old"
 echo "${SHA256}" > "${stamp}"
+say installed "${size}" "${total:-${size}}" "${attempt}"
 echo "gexis-fetch: ${name}: installed at ${DEST}"

@@ -324,7 +324,7 @@ class Settings:
     own default."""
 
     @staticmethod
-    def with_plugins(registry: list[dict], plugins) -> list[dict]:
+    def with_plugins(registry: list[dict], plugins, downloads=None) -> list[dict]:
         """**A plugin's rows, merged into the registry** (ADR-0086).
 
         **Two places, and the split is George's** (2026-09-25): *"create the
@@ -381,6 +381,16 @@ class Settings:
                 switch = f"{plugin.id}.enabled"
                 switches.append({"key": switch, "type": "toggle",
                                  "label": plugin.name, "default": True})
+            # **ADR-0100 as amended: a plugin that downloads its software says
+            # so, right under its switch** - where it is from, how far along it
+            # is, and Retry when it failed (George, 2026-09-27: "feedback is a
+            # must"). An action row carrying `component`, which the panel draws
+            # from the live `components` state rather than as a button alone.
+            component = (downloads or {}).get(plugin.id)
+            if component is not None:
+                switches.append({"key": f"{plugin.id}.download", "type": "action",
+                                 "label": "Download", "component": component,
+                                 "note": None})
             if switches and switch_group is None:
                 # A registry with no `plugins` category cannot hold the switch,
                 # and a plugin with no switch is the thing ADR-0086's amendment

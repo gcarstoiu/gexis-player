@@ -8,6 +8,7 @@
 <script>
   import { onMount } from 'svelte';
   import { pressing } from '../lib/press.svelte.js';
+  import { components } from '../lib/state.js';
   import {
     settingsGroups,
     settingsDevice,
@@ -275,6 +276,39 @@
     } catch (e) {
       docError = 'This page could not be loaded.';
     }
+  }
+
+  // ADR-0100 as amended: a plugin's download in words.
+  const MB = (n) => (n / 1048576).toFixed(1);
+  function downloadShare(c) {
+    if (c.state === 'verifying' || c.state === 'installing') return 1;
+    return c.received != null && c.total ? Math.min(1, c.received / c.total) : null;
+  }
+  function downloadLine(c) {
+    const from = c.from ?? 'its maker';
+    const label = c.label ?? 'it';
+    switch (c.state) {
+      case 'preparing': return `Starting the download from ${from}…`;
+      case 'downloading': {
+        const share = downloadShare(c);
+        return `Downloading ${label} from ${from}` + (share != null ? ` · ${Math.round(share * 100)}%` : '…');
+      }
+      case 'retrying': return `The download was interrupted: ${c.error ?? 'retrying'}`;
+      case 'verifying': return `Checking ${label}…`;
+      case 'installing': return `Installing ${label}…`;
+      case 'installed': {
+        const recent = c.updated && Date.now() / 1000 - c.updated < 120;
+        return recent ? `Downloaded and installed just now · ${label}` : `Installed · ${label}`;
+      }
+      case 'failed': return c.error ?? `The download from ${from} failed`;
+      default: return `Not installed · downloaded from ${from} when you switch it on`;
+    }
+  }
+  function downloadDetail(c) {
+    const parts = [];
+    if (c.received != null) parts.push(c.total ? `${MB(c.received)} of ${MB(c.total)} MB` : `${MB(c.received)} MB`);
+    if (c.attempt && c.attempts && (c.attempt > 1 || c.state === 'retrying')) parts.push(`attempt ${c.attempt} of ${c.attempts}`);
+    return parts.join(' · ');
   }
 
   function tap(row) {
@@ -664,6 +698,28 @@
                   <span class="subhead__dot" style:background={r.accent}></span>
                   <span class="subhead__label" style:color={r.accent}>{r.label}</span>
                   <span class="subhead__rule"></span>
+                </div>
+              {:else if r.component}
+                <!-- ADR-0100 as amended (George, 2026-09-27: "Even if it's
+                     extremely fast, feedback is a must. Also retry in case of
+                     failure and a general status."). What the plugin's download
+                     is doing, live from the core, with Retry when it failed. -->
+                {@const c = $components[r.component] ?? { state: 'absent' }}
+                <div class="dl" class:dl--failed={c.state === 'failed'}>
+                  <div class="dl__text">
+                    <span class="dl__line">{downloadLine(c)}</span>
+                    {#if c.state === 'downloading' || c.state === 'retrying'}
+                      <span class="dl__sub">{downloadDetail(c)}</span>
+                    {/if}
+                  </div>
+                  {#if c.state === 'failed'}
+                    <button class="btn dl__retry" type="button" onclick={() => runSetting(r.key)}>Retry</button>
+                  {/if}
+                  {#if ['preparing', 'downloading', 'retrying', 'verifying', 'installing'].includes(c.state)}
+                    <div class="dl__bar" class:dl__bar--busy={!downloadShare(c)}>
+                      <span style:width={`${Math.round((downloadShare(c) ?? 0) * 100)}%`}></span>
+                    </div>
+                  {/if}
                 </div>
               {:else}
                 <!-- A readonly row takes no tap and draws no chevron: there
@@ -2066,6 +2122,41 @@
     display: flex;
     flex-direction: column;
     overflow: hidden;
+  }
+  /* ADR-0100 as amended: a plugin's download, under its switch. */
+  .dl {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px 14px;
+    padding: 6px 18px 14px 18px;
+  }
+  .dl__text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+  .dl__line { font-size: 14px; color: var(--ink); }
+  .dl__sub { font-size: 12px; color: var(--ink-quiet); font-family: var(--font-mono); }
+  .dl--failed .dl__line { color: var(--accent-warn); }
+  .dl__retry { flex-shrink: 0; }
+  .dl__bar {
+    flex-basis: 100%;
+    height: 4px;
+    border-radius: 2px;
+    background: rgba(233, 238, 242, 0.12);
+    overflow: hidden;
+  }
+  .dl__bar span {
+    display: block;
+    height: 100%;
+    background: var(--accent-lms);
+    transition: width 0.4s ease;
+  }
+  /* No total known yet: a sliver that moves, so it never looks stuck. */
+  .dl__bar--busy span {
+    width: 30% !important;
+    animation: dl-busy 1.2s ease-in-out infinite;
+  }
+  @keyframes dl-busy {
+    from { transform: translateX(-100%); }
+    to { transform: translateX(340%); }
   }
   /* ADR-0099: Legal and Credits, read on the panel as on a phone. Links
      are shown, not followed: the kiosk has nowhere to go. */

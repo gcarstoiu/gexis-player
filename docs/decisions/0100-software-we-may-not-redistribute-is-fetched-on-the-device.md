@@ -49,3 +49,45 @@ record here held Plex's terms.
   download. Plexamp needs Plex's servers anyway.
 - **A restore brings Plexamp's claim back, not Plexamp.** The next start fetches
   it again.
+
+## Amended 2026-09-27: the user is told what is happening, all the way
+
+George, before he would try it: *"Even if it's extremely fast, feedback is a
+must. Also retry in case of failure and a general status. This goes for all
+plugins which require a download."* So it is built into the mechanism, not
+into Plexamp:
+
+- **The helper reports every step** to `/run/gexis/components/<name>.json`:
+  preparing, downloading (bytes of total, attempt n of 3), retrying (with the
+  reason and the wait), verifying, installing, installed, failed (with a
+  sentence a person can read). **A failed download is tried three times**, 5 s
+  and then 10 s apart, before it gives up.
+- **The core publishes it live** as `components` in the state the panel already
+  subscribes to. It polls twice a second while a download is busy, and every
+  2 s otherwise. It says *preparing* the moment the switch goes on, before
+  systemd has started anything.
+- **A pin names its plugin** (`PLUGIN=`), its label and its source. The plugin
+  gets a row under its switch, with the status, a progress bar with megabytes
+  while downloading, and **Retry** with the reason when it failed. At rest it
+  reads *"Not installed · downloaded from Plex when you switch it on"* or
+  *"Installed · Plexamp 4.13.2"*.
+- Switching off stops the finished download unit, so the next switch-on checks
+  what is on disk again.
+
+**Measured on gexis**, recording the state the panel receives while Plexamp was
+switched on:
+
+| Time | Status |
+|---|---|
+| 1.0 s | Switch flipped; *preparing* at the same instant |
+| 3.2 s | 0 % of 14.6 MB |
+| 3.7 s | 1 % |
+| 4.2 s | 31 % |
+| 4.7 s | 77 % |
+| 5.2 s | Verifying |
+| 5.7 s | Installing (unpacking takes 6 s) |
+| 11.8 s | Installed |
+
+An unreachable test component failed three times, at 5 s and then 10 s apart,
+and ended *"Could not download from Nowhere: Could not resolve host"*. Retry
+through the API restarted it.

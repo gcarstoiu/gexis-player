@@ -9,6 +9,7 @@ import asyncio
 import functools
 import logging
 import re
+import subprocess
 from pathlib import Path
 
 import aiohttp
@@ -68,7 +69,7 @@ from gexis_core.settings import SettingsStore
 from gexis_core.settings_registry import Settings, load_registry
 from gexis_core.splash import Splash
 from gexis_core.state import StateStore
-from gexis_core import backups, bluealsa_volume, outputs, plugin_env, plugins
+from gexis_core import backups, bluealsa_volume, components, outputs, plugin_env, plugins
 from gexis_core.adapters.plugin import PluginAdapter
 from gexis_core.plugin_server import PluginServer
 from gexis_core.systemd import is_enabled as _unit_is_enabled
@@ -1115,6 +1116,49 @@ async def main() -> None:
 
         asyncio.ensure_future(tell())
 
+    #: **ADR-0100 as amended: which plugins download their software** when
+    #: switched on, and under which component name. Read once: the pins are
+    #: part of the image.
+    downloads = {
+        plugin.id: name for plugin in installed_plugins
+        if (name := components.for_plugin(plugin.id)) is not None
+    }
+
+    def _publish_components() -> None:
+        state_store.set_components(components.all_status())
+
+    async def _watch_components() -> None:
+        """What each download is doing, to the panel. Twice a second while one
+        is busy, so a fast download still shows every phase it passes through;
+        every two seconds otherwise."""
+        while True:
+            try:
+                status = await asyncio.to_thread(components.all_status)
+                state_store.set_components(status)
+                busy = any(s.get("state") in components.BUSY for s in status.values())
+            except Exception:  # noqa: BLE001 - a watcher that dies tells nobody anything
+                logger.exception("components: status read failed")
+                busy = False
+            await asyncio.sleep(0.5 if busy else 2.0)
+
+    async def _retry_download(plugin) -> None:
+        """The Retry under a failed download: clear the failure and start
+        again. With the switch on that is the plugin's own unit, which pulls
+        the download in; with it off, the download alone."""
+        name = downloads[plugin.id]
+        components.preparing(name, components.pins().get(name))
+        _publish_components()
+        fetch = f"gexis-fetch@{name}.service"
+
+        def go() -> None:
+            subprocess.run(["systemctl", "reset-failed", fetch, plugin.unit], check=False, capture_output=True)
+            if settings.value(f"{plugin.id}.enabled") is not False:
+                subprocess.run(["systemctl", "restart", plugin.unit], check=False, capture_output=True)
+            else:
+                subprocess.run(["systemctl", "start", fetch], check=False, capture_output=True)
+
+        await asyncio.to_thread(go)
+
     async def _apply_plugin_unit(plugin, on: bool) -> None:
         """**A plugin switched on or off** (ADR-0086 as amended).
 
@@ -1129,7 +1173,18 @@ async def main() -> None:
         """
         if on:
             _plugin_env(plugin)
+            if plugin.id in downloads:
+                # Told at once, before systemd has even begun: the user flipped
+                # a switch and must see that something started.
+                components.preparing(downloads[plugin.id], components.pins().get(downloads[plugin.id]))
+                _publish_components()
         await set_unit_enabled(plugin.unit, on)
+        if not on and plugin.id in downloads:
+            # A finished download stays "active (exited)", which would make the
+            # next switch-on skip checking what is on disk.
+            fetch = f"gexis-fetch@{downloads[plugin.id]}.service"
+            await asyncio.to_thread(subprocess.run, ["systemctl", "stop", fetch], check=False,
+                                    capture_output=True)
 
     def _plugin_switch(plugin):
         return lambda on, p=plugin: asyncio.ensure_future(
@@ -1173,7 +1228,7 @@ async def main() -> None:
 
     settings = Settings(
         settings_store,
-        registry=Settings.with_plugins(load_registry(), installed_plugins),
+        registry=Settings.with_plugins(load_registry(), installed_plugins, downloads),
         defaults={
             "lms_server": lambda: f"{config.lms_host}:{config.lms_port}",
             "lms_player": lambda: config.lms_player_name,
@@ -1332,7 +1387,10 @@ async def main() -> None:
                # ADR-0086: whatever the installed plugins brought. Wired
                # like any other row - something acts on it - and the thing
                # that acts is the plugin.
-               **plugin_switches, **plugin_rows},
+               **plugin_switches, **plugin_rows,
+               # ADR-0100 as amended: Retry under a failed download.
+               **{f"{plugin.id}.download": (lambda _value=None, p=plugin: asyncio.ensure_future(_retry_download(p)))
+                  for plugin in installed_plugins if plugin.id in downloads}},
         # **Phase 9 criterion 2.** These two act through
         # `POST /settings/{key}/items`, not through `set` - joining a network
         # and forgetting a device - so they are wired, and saying otherwise
@@ -1623,6 +1681,7 @@ async def main() -> None:
         await bus.wait_for_disconnect()
 
     asyncio.ensure_future(_reconcile_sources())
+    asyncio.ensure_future(_watch_components())
     asyncio.ensure_future(_bluetooth_setup())
 
     # Phase 5 criteria 6 and 8 (ADR-0036). The meter process keeps running
