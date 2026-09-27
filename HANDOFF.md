@@ -87,7 +87,26 @@ fetched on the device from its author's release, after a notice; public inert
   - **Source offer and licence texts: done.** A new `09-legal` stage installs
     COPYING, SOURCE.md and packages.txt, plus the licence notices;
     `verify-image.sh` checks them.
-  - **Marks and sample photos: being sourced.**
+  - **Marks and sample photos: sourced** (`design/assets/SOURCES.md`).
+    Bluetooth has our own icon (B1). Qobuz has a neutral disc (Q3). Spotify's
+    green-on-dark is kept for now, and history is kept.
+- **Plugin downloads show their progress** (ADR-0100 as amended, George: "feedback
+  is a must"): the phase, bytes of total, three attempts, the reason and Retry,
+  inside the plugin's own row. The Plugins page is grouped under Sources and
+  System.
+- **Qobuz Connect works end to end on gexis, installed by hand from the real
+  flow:** notice → confirm → Pibuz download (2.5.0's re-published asset was
+  refused by the pin; 2.5.1 pinned) → receiver on loopback → adapter connected.
+  - `gcarstoiu/gexis-qobuz` v0.1.0 is **published**. Stage `08-qobuz` pins it.
+  - Pibuz bug filed:
+    [PhilipVinc/pibuz#2](https://github.com/PhilipVinc/pibuz/issues/2).
+  - **Owed:**
+    - George's takeover tests with the adapter.
+    - **The Qobuz volume decision** (A two volumes / B locked, panel in charge /
+      C ask upstream).
+    - Measuring whether Plexamp applies its volume twice. It needs a track played
+      through the speakers, so it was deferred while George tests.
+    - No image built from `phase-12` yet.
 - **The Qobuz spike stopped after part 1.** Pibuz 2.5.0 was verified, ran, and
   opened our `output` as soon as it was configured. The auto-mode classifier then
   blocked further downloading and running of it. `/tmp/pibuz-spike` may still be
