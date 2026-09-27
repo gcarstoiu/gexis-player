@@ -5,7 +5,7 @@ ticker and smooth rotation *"agreed with your recommendation"*; the extra fields
 *"fine also with the recommended"*, and then: *"You can do the later ones now
 too, but keep in mind the distinction I just made."* **Amends
 [ADR-0096](0096-turntable-and-cassette-skins.md) decision 3**, which deferred all
-of this. **Building.**
+of this. **Built; smooth rotation's setting owed to George.**
 **Date:** 2026-09-27
 **Raised by:** ADR-0096's first cut, which drew the motion and what the renderer
 already drew (title, artist, album, artwork, badge, time remaining) and left the
@@ -76,9 +76,35 @@ Counted over the packs as pinned:
   The skins keep their positions; nothing fills them.
 - Which of the rotation settings ships is decision 2's measurement.
 
-## How (as built - filled in when it is)
+## How (as built, 2026-09-27)
 
-Not yet built.
+- **`nowplaying.json`** gains `volume` (none on fixed output), `muted`,
+  `shuffle`, `repeat` (the active renderer's, where declared) and `next` (LMS's
+  queue item after the one playing).
+- **Ticker:** a `Ticker` in `MetadataLayer` - the line rendered once with the
+  skin's end gap, twice side by side, a box-wide window sliding at the skin's
+  speed (leftward for `ltr`) and wrapping without a seam; a line that fits
+  stands still (upstream draws three copies there). Its box is composed each
+  frame it moves a whole pixel, so what turns beneath stays whole. The text is
+  George's order, Title • Artist • Album, with the skin's separator and
+  spacing, then "Next: artist - title" where LMS has one.
+- **Next track, elapsed and total:** drawn like the fields already there;
+  elapsed and total in the digi face at the skin's size (the fonts the skins
+  name are not in the packs; upstream falls back to the same face), and no
+  total for a stream.
+- **Progress, volume and the icons:** `gexis_peppy_gauges.py`, reimplementing
+  upstream's `SliderIndicator` (bar, tip on a travel, knob, anti-aliased arc,
+  markers, head) and `IconIndicator` (picture per state, glow). Progress is a
+  whole percentage, as upstream truncates it. The mute pictures were looked at:
+  `m_on` is the speaker sounding, so upstream's order stands. `progress.border`
+  is parsed by upstream and never drawn; it is not drawn here either.
+- **Smooth rotation:** built, off, not a setting. Measured on `gexis`, one 20 s
+  window per skin while LMS played, % of one core, stepped → smooth: Vertere
+  44 → 87, SME60 40 → 80, Revox B77 40 → 74, TDK 40 → 74, Pioneer Cassette
+  18 → 32, ReelTape 22 → 25; the whole machine about 15 → 28 % busy, the SoC
+  75 °C, no throttling. The ticker alone added about 10 points on the skins
+  that carry one (30-32 → 40-44 stepped). **Proposed to George as a setting;
+  not added until he confirms.**
 
 ## Reversal conditions
 

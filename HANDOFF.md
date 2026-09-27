@@ -61,6 +61,16 @@ real image build.** The first image built from here is its first test.
 | settings | corpora **Turntables** (48) and **Tapes** (39), by what a skin declares; **Animate turntables and tapes** and **Record speed** 33/45 (ADR-0022 [N], George's choice) |
 | fixed after George looked | previews for all 189; 18 turntables' records (`album,theme` file names); Peppy's warnings, which upstream's `use.logging = False` silenced (LESSONS 43) |
 
+**Then, branch `peppy-next` (not pushed):** nine more badge slots (George's
+Naim S+M and Kenwood Rev S+M among them); the animated skins' rows moved into
+**Visualisation tweaks** (renamed from *Meters and spectrum tweaks*); and
+[ADR-0097](docs/decisions/0097-what-the-visualiser-shows-beyond-the-title.md) -
+the ticker scrolls, and progress, volume, mute/play/shuffle/repeat icons,
+elapsed/total time and the next track are drawn. **Display only - George: the
+visualiser is never actionable.** Smooth rotation is built and off: it doubles
+the cost (Vertere 44 → 87 % of a core); **a setting is owed to George's
+decision.** All 90 animated skins swept on the panel after it, three frames each.
+
 **Done 2026-09-27:** gexis-plexamp **v0.2.2** released and pinned; **PR #31**
 (the fixes, into `main`) and **PR #32** (this branch, into the fixes branch -
 retarget to `main` once #31 merges); **one image with everything**,
