@@ -72,3 +72,36 @@ def test_a_directory_that_cannot_be_written_is_not_fatal(tmp_path):
     unwritable = tmp_path / "ro"
     unwritable.mkdir(mode=0o500)
     PeppyMetadataWriter(unwritable / "sub" / "nowplaying.json").write(state(title="T"))
+
+
+def test_it_carries_what_the_animated_skins_show(tmp_path):
+    """ADR-0097: volume, mute, shuffle, repeat and the next track - shown by
+    the visualiser, never acted on from it."""
+    from gexis_core.adapters.base import Capabilities, VolumeMechanism
+    from gexis_core.model import Queue, VolumeState
+
+    path = tmp_path / "nowplaying.json"
+    queue = Queue(items=(TrackMetadata(title="Now"), TrackMetadata(title="Next", artist="Who", album="What")), index=0)
+    caps = {"lms": Capabilities(
+        audio_connection="output", acquisition_events=frozenset({"acquired"}), supports_artwork=True,
+        supports_sample_rate=False, volume_managed=True, volume_mechanism=VolumeMechanism.SOFTWARE_API,
+        controls=frozenset({"play", "pause", "shuffle", "repeat"}))}
+    PeppyMetadataWriter(path).write(PlaybackState(
+        active="lms", metadata=TrackMetadata(title="Now", shuffle=True, repeat="all"), capabilities=caps,
+        volume=VolumeState(raw=100, db=-10.0, percent=62, muted=True), queue=queue))
+    written = read(path)
+    assert (written["volume"], written["muted"]) == (62, True)
+    assert (written["shuffle"], written["repeat"]) == (True, "all")
+    assert written["next"] == {"title": "Next", "artist": "Who", "album": "What"}
+
+
+def test_a_stream_has_no_next_track_and_fixed_output_no_level(tmp_path):
+    from gexis_core.model import Queue, VolumeState
+
+    path = tmp_path / "nowplaying.json"
+    PeppyMetadataWriter(path).write(PlaybackState(
+        active="lms", metadata=TrackMetadata(title="Last"), fixed_output=True,
+        volume=VolumeState(raw=0, db=0.0, percent=100), queue=Queue(items=(TrackMetadata(title="Last"),), index=0)))
+    written = read(path)
+    assert written["next"] is None and written["volume"] is None
+    assert written["shuffle"] is None and written["repeat"] is None
