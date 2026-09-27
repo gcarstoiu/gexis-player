@@ -67,6 +67,19 @@ things move (upstream's vinyl, tonearm and reel classes, which depend only on
 pygame), driven from `nowplaying.json`. Not the whole Volumio handler: it owns
 the frame, runs the meter itself and brings its own text and badge path.
 
+As built (2026-09-27): `gexis_peppy_motion.py` - a spinner for the vinyl (with
+the art composited onto it) and for each reel, pre-rendered at 6° and redrawn 8
+times a second; a tonearm rotated when it moves rather than pre-rendered. The
+1280x720 packs are letterboxed at build time (`letterbox.py`). **Whatever moves
+is repainted whole, in upstream's z-order** - background, what turns, artwork,
+needles, title fields, tonearm, time and badge, foreground - and the text
+layer's own changes go through the same compose; the first cut repainted only
+the background and what moved, and George saw titles flash and art half drawn.
+The clock takes the skin's `time.remaining.fontsize`. Measured in
+[Finding 092](../findings/092-what-the-animated-skins-cost.md): 12-38% of one
+core against 35% for George's static spectrum skin, and PeppyMeter's needle
+cache turned off, which had grown the driver to 1.4 GB across the skins.
+
 ## Reversal conditions
 
 If the measured cost does not fit beside the panel - ADR-0065's responsiveness
