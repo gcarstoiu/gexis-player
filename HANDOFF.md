@@ -74,6 +74,17 @@ fetched on the device from its author's release, after a notice; public inert
 [ADR-0099](docs/decisions/0099-legal-and-credits-in-settings.md) (*Legal* and
 *Credits* pages). Branch `phase-12`, off `peppy-next`.
 
+**State on `phase-12`, 2026-09-27:**
+- **Legal and Credits are built and deployed on gexis.** They come from
+  `notices.json` (45 components) and a build-time check. The wording is a draft
+  for George, and the reader has not been seen on the panel.
+- **ADR-0099 records six findings for George.** The first: **Plexamp is included
+  in the image without an established right to redistribute it.**
+- **The Qobuz spike stopped after part 1.** Pibuz 2.5.0 was verified, ran, and
+  opened our `output` as soon as it was configured. The auto-mode classifier then
+  blocked further downloading and running of it. `/tmp/pibuz-spike` may still be
+  on gexis; it is not running. It waits on George's approval.
+
 **Then, branch `peppy-next` (PR #33, pushed):** **Image built from it:**
 `image/deploy/2026-09-27-gexis-player-v0.2.1-680-g1a0042d.img` (735 s); rootfs
 read and `verify-image.sh` passed, now covering the motion and gauge modules and
