@@ -125,8 +125,14 @@ MOTION_KEYS = {
     "reel.right.center", "reel.right.filename", "reel.right.pos",
 }
 #: **Keys only the animated packs use, drawn as the skin says**: the clock's
-#: own size, which 66 of their 90 skins set apart from the digi face.
-ANIMATED_TEXT_KEYS = {"time.remaining.fontsize"}
+#: own size, which 66 of their 90 skins set apart from the digi face; and the
+#: ticker's box, drawn as a still line (ADR-0096, George's choice A) - its
+#: scrolling keys stay deferred below.
+ANIMATED_TEXT_KEYS = {
+    "time.remaining.fontsize",
+    "playinfo.ticker", "playinfo.ticker.pos", "playinfo.ticker.color",
+    "playinfo.ticker.maxwidth", "playinfo.ticker.separator",
+}
 #: **Keys the animated packs use and the renderer knowingly does not draw
 #: yet** - George's decision 3 in ADR-0096: the motion first, these later.
 #: Listed rather than waved through, so a key that is neither drawn nor

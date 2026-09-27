@@ -90,8 +90,9 @@ into its meter. Now honoured; none of the 99 other skins sets the key.
 
 ## Still open
 
-- **27 of the 90 show no title at all.** Their only title field is the scrolling
-  ticker (`playinfo.ticker.*`), which ADR-0096's first cut deferred. A decision
-  for George.
+- ~~**27 of the 90 show no title at all.**~~ Their only title field is the
+  scrolling ticker, which ADR-0096's first cut deferred. George chose a still
+  line in the ticker's box (ADR-0096 decision 3, amended); all 27 checked on
+  `gexis` the same day, three frames each.
 - The clock's own face (`time.remaining.font`, e.g. `fonts/MyDigi.ttf`) is not
   used; it is drawn in ours. Not seen to clip after the size fix.

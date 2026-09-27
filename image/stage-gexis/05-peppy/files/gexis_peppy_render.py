@@ -409,6 +409,7 @@ class MetadataLayer:
             )
 
         entries = [
+            self._ticker_line(metadata, field),
             field("playinfo.title.pos", metadata.get("title"), "playinfo.title.color", "playinfo.title.maxwidth"),
             field("playinfo.artist.pos", metadata.get("artist"), "playinfo.artist.color", "playinfo.artist.maxwidth"),
             field("playinfo.album.pos", metadata.get("album"), "playinfo.album.color", "playinfo.album.maxwidth"),
@@ -432,6 +433,22 @@ class MetadataLayer:
             # we keep it empty, which is this criterion's own rule.
         ]
         return tuple(entry for entry in entries if entry is not None)
+
+    def _ticker_line(self, metadata: dict, field):
+        """**A ticker skin's title, standing still** (ADR-0096, George's
+        choice A, 2026-09-27). 27 of the animated skins place their title only
+        as upstream's scrolling ticker; without this they showed none. Drawn
+        once as "Title • Artist • Album" in the ticker's own box, colour and
+        separator, trimmed like any field. The scroll, and the next track it
+        appends, stay deferred. A skin with a title field of its own keeps
+        that one: nine have both, and would show the title twice."""
+        skin = self._skin
+        if (skin.get("playinfo.ticker") or "").strip().lower() != "true" or "playinfo.title.pos" in skin:
+            return None
+        separator = (skin.get("playinfo.ticker.separator") or "").strip() or "•"
+        parts = [metadata.get(key) for key in ("title", "artist", "album")]
+        line = f" {separator} ".join(str(part) for part in parts if part) or None
+        return field("playinfo.ticker.pos", line, "playinfo.ticker.color", "playinfo.ticker.maxwidth")
 
     def _text(self, text, point, colour, size, maxwidth, stratum="text") -> pygame.Rect | None:
         font = self.font(point[2], size)

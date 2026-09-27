@@ -529,3 +529,33 @@ def test_the_time_takes_the_skins_own_size_when_it_gives_one(screen, tmp_path):
         made.draw(full(position=30.0, duration=200.0))
         heights[size] = next(r for r in made._painted if (r.x, r.y) == (900, 500)).height
     assert heights["20"] < heights[None]
+
+
+TICKER = {
+    "playinfo.ticker": "True",
+    "playinfo.ticker.pos": "20,638,bold",
+    "playinfo.ticker.color": "210,210,210",
+    "playinfo.ticker.maxwidth": "1233",
+    "playinfo.ticker.separator": "***",
+}
+
+
+def test_a_ticker_skin_shows_its_title_as_a_still_line(screen, tmp_path):
+    """ADR-0096, George's choice A: 27 animated skins place their title only
+    as a scrolling ticker, and showed none."""
+    pygame.image.save(pygame.Surface((1280, 800)), str(tmp_path / "bgr.png"))
+    skin = {k: v for k, v in SKIN.items() if not k.startswith("playinfo.")} | TICKER
+    made = MetadataLayer(screen, tmp_path)
+    made.set_skin(skin)
+    lines = [f for f in made._fields(full()) if f[1][:2] == (20, 638)]
+    assert [f[0] for f in lines] == ["Title *** Artist *** Album"]
+    assert lines[0][2] == (210, 210, 210) and lines[0][4] == 1233
+    missing = made._fields(full(album=None, artist=None))
+    assert [f[0] for f in missing if f[1][:2] == (20, 638)] == ["Title"]
+
+
+def test_a_skin_with_its_own_title_field_does_not_draw_the_ticker_too(screen, tmp_path):
+    pygame.image.save(pygame.Surface((1280, 800)), str(tmp_path / "bgr.png"))
+    made = MetadataLayer(screen, tmp_path)
+    made.set_skin(SKIN | TICKER)
+    assert not [f for f in made._fields(full()) if f[1][:2] == (20, 638)]

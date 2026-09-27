@@ -44,6 +44,13 @@ research itself lived in a session scratchpad.
    room for more (a progress bar, elapsed and total time, volume, mute, shuffle,
    repeat, the next track); those are a follow-up, and until then the room is
    empty.
+   **Amended 2026-09-27 (George, choice A of three):** 27 of the 90 place their
+   title only as upstream's scrolling ticker, and showed none. Their ticker
+   box now carries a still line - "Title • Artist • Album" in the ticker's own
+   colour and separator, trimmed with "…" - drawn only where the skin has no
+   title field of its own (nine have both). The scroll, and the next track it
+   appends, stay deferred. Rejected: building the scroll now (a per-frame
+   redraw, a new cost to measure), and leaving the 27 out of rotation.
 4. **Measured on `gexis` before it reaches an image.** Upstream quotes 85-95% of
    a Pi 4 for a turntable skin at 1280x720 against 30-40% for a plain one; this
    device measured plain skins far below upstream (Finding 023, 12-17% of one
