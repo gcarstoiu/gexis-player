@@ -58,6 +58,14 @@ real image build.** The first image built from here is its first test.
 | memory | PeppyMeter's needle cache **off**: it had grown the driver to 1.4 GB across the skins, rotation or not |
 | text | the clock at the skin's own size; **27 ticker-only skins get a still "Title • Artist • Album" line** (George's choice A; the scroll stays deferred) |
 | cost | 12-38% of one core vs 35% for George's static spectrum skin, 349-489 MB - [Finding 092](docs/findings/092-what-the-animated-skins-cost.md) |
+| settings | corpora **Turntables** (48) and **Tapes** (39), by what a skin declares; **Animate turntables and tapes** and **Record speed** 33/45 (ADR-0022 [N], George's choice) |
+| fixed after George looked | previews for all 189; 18 turntables' records (`album,theme` file names); Peppy's warnings, which upstream's `use.logging = False` silenced (LESSONS 43) |
+
+**Next, agreed with George 2026-09-27:** release gexis-plexamp v0.2.2 and pin it
+on `backup-plexamp-claim`; **two PRs** - the fixes, then this branch on top;
+**one image build with everything**. The ticker's scroll, smooth rotation and the
+extra fields come after the build, on a new branch. Release notes and both PR
+descriptions are drafted; publishing waits on George's go-ahead.
 
 Open here: smooth rotation is not built (stepped only, as measured); the
 deferred keys (progress, elapsed/total time, volume, the ticker's scroll and
