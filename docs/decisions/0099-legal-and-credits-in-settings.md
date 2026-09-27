@@ -95,6 +95,11 @@ A research pass over everything the image contains (2026-09-27) found:
    Bluetooth SIG licenses only to its members' qualified products, and that
    stays open with George. The two sample photos were replaced with public-domain
    ones (Kandinsky, 1926; Gottlieb, 1947). The originals are still in git history.
+   **George, 2026-09-27:** keep the history. They were used briefly in
+   development, by mistake, and were never part of the product. Spotify's
+   green-on-dark icon stays as it is for now ("we might need to get back to
+   it"). Bluetooth gets our own icon and Qobuz a neutral one; the options are
+   with George.
    Originally: **The Spotify, Bluetooth and Lyrion marks** came from Claude Design with no
    recorded source.
 6. **`design/assets/album-art.webp` and `artist-photo.webp`** are photographs
