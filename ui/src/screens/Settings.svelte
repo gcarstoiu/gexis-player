@@ -305,6 +305,8 @@
     }
   }
   function downloadDetail(c) {
+    // Only while it is moving: once installed or failed, the size is noise.
+    if (c.state !== 'downloading' && c.state !== 'retrying') return '';
     const parts = [];
     if (c.received != null) parts.push(c.total ? `${MB(c.received)} of ${MB(c.total)} MB` : `${MB(c.received)} MB`);
     if (c.attempt && c.attempts && (c.attempt > 1 || c.state === 'retrying')) parts.push(`attempt ${c.attempt} of ${c.attempts}`);
@@ -699,28 +701,6 @@
                   <span class="subhead__label" style:color={r.accent}>{r.label}</span>
                   <span class="subhead__rule"></span>
                 </div>
-              {:else if r.component}
-                <!-- ADR-0100 as amended (George, 2026-09-27: "Even if it's
-                     extremely fast, feedback is a must. Also retry in case of
-                     failure and a general status."). What the plugin's download
-                     is doing, live from the core, with Retry when it failed. -->
-                {@const c = $components[r.component] ?? { state: 'absent' }}
-                <div class="dl" class:dl--failed={c.state === 'failed'}>
-                  <div class="dl__text">
-                    <span class="dl__line">{downloadLine(c)}</span>
-                    {#if c.state === 'downloading' || c.state === 'retrying'}
-                      <span class="dl__sub">{downloadDetail(c)}</span>
-                    {/if}
-                  </div>
-                  {#if c.state === 'failed'}
-                    <button class="btn dl__retry" type="button" onclick={() => runSetting(r.key)}>Retry</button>
-                  {/if}
-                  {#if ['preparing', 'downloading', 'retrying', 'verifying', 'installing'].includes(c.state)}
-                    <div class="dl__bar" class:dl__bar--busy={!downloadShare(c)}>
-                      <span style:width={`${Math.round((downloadShare(c) ?? 0) * 100)}%`}></span>
-                    </div>
-                  {/if}
-                </div>
               {:else}
                 <!-- A readonly row takes no tap and draws no chevron: there
                      is nothing to change, and a chevron promises a sheet that
@@ -731,6 +711,7 @@
                   class="row"
                   class:row--danger={r.danger}
                   class:row--readonly={r.type === 'readonly'}
+                  class:row--dl={!!r.component}
                   type="button"
                   disabled={r.type === 'readonly'}
                   data-unwired={r.wired ? undefined : 'settings'}
@@ -743,9 +724,33 @@
                         {#if pending(r)}<span class="dot dot--sm"></span>{/if}
                       </span>
                       {#if r.note}<span class="row__note">{r.note}</span>{/if}
+                      {#if r.component}
+                        <!-- ADR-0100 as amended: the plugin's download, inside
+                             its own row (George: "part of the pill itself
+                             otherwise it floats"). -->
+                        {@const c = $components[r.component] ?? { state: 'absent' }}
+                        <span class="row__note dl__line" class:dl--failed={c.state === 'failed'}>
+                          {downloadLine(c)}{#if downloadDetail(c)}<span class="dl__sub"> · {downloadDetail(c)}</span>{/if}
+                        </span>
+                        {#if c.state === 'failed'}
+                          <span
+                            class="dl__retry"
+                            role="button"
+                            tabindex="0"
+                            onclick={(e) => { e.stopPropagation(); runSetting(r.key.replace(/\.enabled$/, '.download')); }}
+                            onkeydown={(e) => { if (e.key === 'Enter') { e.stopPropagation(); runSetting(r.key.replace(/\.enabled$/, '.download')); } }}
+                          >Retry</span>
+                        {/if}
+                      {/if}
                     </span>
                     {#if r.type !== 'toggle' && shown(r)}
                       <span class="row__value" class:is-pending={pending(r)}>{shown(r)}</span>
+                    {/if}
+                    {#if r.component && ['preparing', 'downloading', 'retrying', 'verifying', 'installing'].includes(($components[r.component] ?? {}).state)}
+                      {@const c = $components[r.component]}
+                      <span class="dl__bar" class:dl__bar--busy={!downloadShare(c)}>
+                        <span style:width={`${Math.round((downloadShare(c) ?? 0) * 100)}%`}></span>
+                      </span>
                     {/if}
                     {#if r.type === 'toggle'}
                       <span class="toggle" class:is-on={!!r.value}><span></span></span>
@@ -2123,22 +2128,26 @@
     flex-direction: column;
     overflow: hidden;
   }
-  /* ADR-0100 as amended: a plugin's download, under its switch. */
-  .dl {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 6px 14px;
-    padding: 6px 18px 14px 18px;
+  /* ADR-0100 as amended: a plugin's download, inside its own row. */
+  .row--dl { position: relative; }
+  .dl__line { color: var(--ink); }
+  .dl__sub { color: var(--ink-quiet); font-family: var(--font-mono); }
+  .dl--failed { color: var(--accent-warn); }
+  .dl__retry {
+    display: inline-block;
+    margin-top: 6px;
+    padding: 4px 14px;
+    border-radius: var(--r-pill, 999px);
+    border: 1px solid var(--accent-warn);
+    color: var(--accent-warn);
+    font-size: 13px;
   }
-  .dl__text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
-  .dl__line { font-size: 14px; color: var(--ink); }
-  .dl__sub { font-size: 12px; color: var(--ink-quiet); font-family: var(--font-mono); }
-  .dl--failed .dl__line { color: var(--accent-warn); }
-  .dl__retry { flex-shrink: 0; }
   .dl__bar {
-    flex-basis: 100%;
-    height: 4px;
+    position: absolute;
+    left: 18px;
+    right: 18px;
+    bottom: 6px;
+    height: 3px;
     border-radius: 2px;
     background: rgba(233, 238, 242, 0.12);
     overflow: hidden;

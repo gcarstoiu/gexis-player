@@ -73,9 +73,23 @@ def test_a_plugin_that_downloads_gets_a_row_under_its_switch():
 
     groups = Settings.with_plugins(load_registry(), [P()], {"player": "player"})
     rows = next(g for g in groups if g["id"] == "plugins")["rows"]
-    keys = [r["key"] for r in rows]
-    assert keys.index("player.download") == keys.index("player.enabled") + 1
-    row = next(r for r in rows if r["key"] == "player.download")
-    assert row["type"] == "action" and row["component"] == "player"
+    switch = next(r for r in rows if r.get("key") == "player.enabled")
+    assert switch["component"] == "player", "the status lives on the switch itself"
+    retry = next(r for r in rows if r.get("key") == "player.download")
+    assert retry["type"] == "action" and retry["surfaced"] is False, "Retry is reachable, not a row"
     none = Settings.with_plugins(load_registry(), [P()])
-    assert "player.download" not in [r["key"] for r in next(g for g in none if g["id"] == "plugins")["rows"]]
+    assert "player.download" not in [r.get("key") for r in next(g for g in none if g["id"] == "plugins")["rows"]]
+
+
+def test_plugins_are_grouped_by_the_area_they_work_in():
+    """George: "beszel is system, plexamp in sources"."""
+    class Plex:
+        id, name, kind, accent, settings, enabled_row, unit = "plex", "Plex", "renderer", "#fff", [], None, "a"
+
+    class Monitor:
+        id, name, kind, accent, settings, enabled_row, unit = "mon", "Monitor", "service", "#fff", [], None, "b"
+
+    rows = next(g for g in Settings.with_plugins(load_registry(), [Monitor(), Plex()])
+                if g["id"] == "plugins")["rows"]
+    order = [(r["type"], r.get("label") if r["type"] == "group" else r["key"]) for r in rows]
+    assert order == [("group", "Sources"), ("toggle", "plex.enabled"), ("group", "System"), ("toggle", "mon.enabled")]

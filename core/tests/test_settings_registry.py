@@ -969,8 +969,10 @@ def test_a_renderers_rows_land_in_sources_under_its_own_name():
     # functionality for a user."* LMS's own `Enabled` stays in Sources; the
     # plugin's switch is a row in the Plugins list, named after the plugin.
     plugins = next(g for g in merged if g["id"] == "plugins")
-    assert [(r["key"], r["label"]) for r in plugins["rows"]] == [
-        ("plexamp.enabled", "Plexamp")]
+    # Under a "Sources" heading since 2026-09-27 (George: "group the plugins
+    # based on the area they operate in").
+    assert [(r.get("key"), r["label"]) for r in plugins["rows"]] == [
+        (None, "Sources"), ("plexamp.enabled", "Plexamp")]
 
 
 def test_keys_are_prefixed_so_two_plugins_cannot_collide():
@@ -1002,7 +1004,7 @@ def test_a_plugin_declaring_enabled_keeps_the_switch_and_its_other_rows():
     # The core's, not the plugin's - the label gives it away: the plugin called
     # its row "On" and the switch is named after the plugin.
     plugins = next(g for g in merged if g["id"] == "plugins")
-    assert plugins["rows"][0]["label"] == "Plexamp"
+    assert plugins["rows"][1]["label"] == "Plexamp", "after its area's heading"
 
 
 def test_a_service_does_not_land_in_sources():

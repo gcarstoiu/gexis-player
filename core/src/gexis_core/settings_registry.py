@@ -356,6 +356,11 @@ class Settings:
         """
         merged = [dict(g, rows=list(g["rows"])) for g in registry]
         by_id = {g.get("id"): g for g in merged}
+        #: **The Plugins page, sorted by where each plugin works** (George,
+        #: 2026-09-27: "Let's group the plugins based on the area they operate
+        #: in - i.e. beszel is system, plexamp in sources"). Its kind decides
+        #: it, the same way it decides where the plugin's own settings go.
+        by_area: dict[str, list[dict]] = {"sources": [], "system": []}
         for plugin in plugins:
             if not plugin.settings and plugin.enabled_row is not None:
                 # Nothing to add: its rows are the registry's already.
@@ -382,15 +387,18 @@ class Settings:
                 switches.append({"key": switch, "type": "toggle",
                                  "label": plugin.name, "default": True})
             # **ADR-0100 as amended: a plugin that downloads its software says
-            # so, right under its switch** - where it is from, how far along it
-            # is, and Retry when it failed (George, 2026-09-27: "feedback is a
-            # must"). An action row carrying `component`, which the panel draws
-            # from the live `components` state rather than as a button alone.
+            # so on its own switch** - where it is from, how far along it is,
+            # and Retry when it failed, all inside the row (George, 2026-09-27:
+            # "The status and the download need to be part of the pill itself
+            # otherwise it floats"). Retry is an action row the API keeps and
+            # the screen does not draw on its own.
             component = (downloads or {}).get(plugin.id)
             if component is not None:
+                if switches:
+                    switches[0]["component"] = component
                 switches.append({"key": f"{plugin.id}.download", "type": "action",
-                                 "label": "Download", "component": component,
-                                 "note": None})
+                                 "label": "Retry download", "component": component,
+                                 "surfaced": False, "note": None})
             if switches and switch_group is None:
                 # A registry with no `plugins` category cannot hold the switch,
                 # and a plugin with no switch is the thing ADR-0086's amendment
@@ -454,8 +462,15 @@ class Settings:
                 logger.warning("plugins: %s's settings are not usable: %s", plugin.id, exc)
                 continue
             if switch_group is not None:
-                switch_group["rows"].extend(switches)
+                by_area["sources" if plugin.kind == "renderer" else "system"].extend(switches)
             target["rows"].extend(rows)
+        switch_group = by_id.get("plugins")
+        if switch_group is not None:
+            accent = switch_group.get("accent")
+            for area, label in (("sources", "Sources"), ("system", "System")):
+                if by_area[area]:
+                    switch_group["rows"].append({"type": "group", "label": label, "accent": accent})
+                    switch_group["rows"].extend(by_area[area])
         return merged
 
     def __init__(

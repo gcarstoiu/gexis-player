@@ -91,3 +91,12 @@ switched on:
 An unreachable test component failed three times, at 5 s and then 10 s apart,
 and ended *"Could not download from Nowhere: Could not resolve host"*. Retry
 through the API restarted it.
+
+**Amended again the same day (George):** *"The status and the download need
+to be part of the pill itself otherwise it floats and the connection is not
+clear."* The status line, the progress bar and Retry now sit inside the
+plugin's own switch row. Retry is a hidden action row the API keeps. *"Let's
+group the plugins based on the area they operate in"*: the Plugins page lists
+switches under *Sources* (renderers) and *System* (services). Every state was
+drawn in Plexamp's row on the panel and photographed: starting, downloading,
+interrupted, installing, failed with Retry, installed.
