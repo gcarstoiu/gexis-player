@@ -313,7 +313,10 @@
       "author": "George Carstoiu",
       "licence": "GPL-3.0-or-later",
       "url": "https://github.com/gcarstoiu/gexis-qobuz",
-      "arrives": "Included in the player; does nothing until Qobuz Connect is switched on"
+      "arrives": "Fetched from its release when the image is built, checked against a pinned checksum; does nothing until Qobuz Connect is switched on",
+      "sources": [
+        "github.com/gcarstoiu/gexis-qobuz"
+      ]
     },
     {
       "name": "Beszel agent",

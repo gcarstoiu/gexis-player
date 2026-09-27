@@ -326,6 +326,29 @@ else
 fi
 rm -f "$OUT/one"
 
+echo "== Qobuz Connect (ADR-0098): our adapter only, the receiver not shipped"
+for f in /etc/systemd/system/pibuz.service \
+         /etc/systemd/system/gexis-qobuz.service \
+         /opt/gexis-qobuz/src/gexis_qobuz/main.py \
+         /opt/gexis-qobuz/pibuz-configure \
+         /usr/share/gexis/plugins/qobuz/plugin.json \
+         /usr/share/gexis/plugins/qobuz/mark.png \
+         /usr/share/gexis/components/pibuz.env; do
+	dfs "stat $f" | grep -q 'Inode:' && ok "$f" || bad "$f missing"
+done
+if dfs "stat /opt/gexis-qobuz/receiver" | grep -q 'Inode:'; then
+	bad "the Pibuz receiver is in the image - ADR-0098 downloads it on the device"
+else
+	ok "the Pibuz receiver is not shipped"
+fi
+if dfs "stat /etc/systemd/system/multi-user.target.wants/pibuz.service" | grep -q 'Inode:'; then
+	bad "pibuz is enabled in the image - it is the user's to switch on, behind the notice"
+else
+	ok "pibuz not enabled"
+fi
+dfs "dump /usr/share/gexis/plugins/qobuz/plugin.json $OUT/qobuz.json" >/dev/null
+grep -q '"notice"' "$OUT/qobuz.json" && ok "the manifest carries the notice" || bad "the manifest has no notice"
+
 echo "== ADR-0099: licences and the source offer reach the device"
 for f in /usr/share/doc/gexis-player/COPYING \
          /usr/share/doc/gexis-player/SOURCE.md \
