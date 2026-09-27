@@ -176,6 +176,8 @@ implementation requirements for `gexis-peppy.service`:
 
 ## Scope
 
+> **Amended 2026-09-27 by [ADR-0096](0096-turntable-and-cassette-skins.md):** George ruled - he wants the turntable and cassette skins. The motion is added to our own renderer; the handlers below still are not vendored whole.
+
 **Meters and spectrum only**, per the original brief and unchanged here.
 `volumio_turntable.py`, `volumio_cassette.py`, their tonearm/reel state
 machines, and the backing-buffer management they need are **not**
