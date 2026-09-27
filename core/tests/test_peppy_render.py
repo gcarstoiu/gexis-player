@@ -438,3 +438,14 @@ def test_every_badge_leaves_a_margin_to_its_field(screen, source):
                 or rect.top - field.top < my or field.bottom - rect.bottom < my):
             tight.append((skin["name"], tuple(rect), tuple(field)))
     assert not tight, f"{len(tight)} skins fit the badge edge to edge: {tight[:4]}"
+
+
+def test_the_skins_found_off_centre_by_eye_are_in_the_table():
+    """**George, 2026-09-27**, photographing `113G5_Old Spectrum S+M` with its
+    badge at the left of its window: it had been re-measured and judged to move
+    the day before, and left out of the table when the file was written. The
+    rest were found the same morning by rendering all 99 skins and looking at
+    each one. A skin in this list leaving the table is a regression."""
+    for name in ("113G5_Old Spectrum S+M", "19G5_Sansui 2V", "37G5_TURN Vinyl Green",
+                 "38G5_TURN Vinyl Green 2", "39G5_TURN Vinyl Silver", "40G5_TURN Vinyl Black"):
+        assert name in SLOTS, name
