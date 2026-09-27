@@ -998,6 +998,10 @@ def main() -> int:
                 dirty = layer.draw(metadata)
                 if dirty:
                     pygame.display.update(dirty)
+        # ADR-0097: the ticker moves every frame it has moved a whole pixel.
+        ticked = layer.tick()
+        if ticked:
+            pygame.display.update(motion.compose(ticked) if motion.active else layer.repaint(ticked))
         # ADR-0096: every frame, from the last metadata read - the spin has its
         # own rate gate, so most frames draw nothing.
         if motion.active:

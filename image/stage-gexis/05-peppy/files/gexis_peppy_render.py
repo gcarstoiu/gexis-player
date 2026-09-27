@@ -120,6 +120,13 @@ def parse_point(value: str | None) -> tuple[int, int, str] | None:
         return None
 
 
+def _float(value, default: float) -> float:
+    try:
+        return float(str(value).strip()) if value not in (None, "") else default
+    except ValueError:
+        return default
+
+
 def parse_colour(value: str | None, fallback=(255, 255, 255)) -> tuple[int, int, int]:
     if not value:
         return fallback
@@ -189,6 +196,68 @@ def _lyrion_reduction(box: tuple[int, int], colour) -> pygame.Surface:
     return mark
 
 
+class Ticker:
+    """**A ticker skin's line, scrolling** (ADR-0097; upstream's
+    `ScrollingLabel` in ticker mode, volumio_turntable.py:448-659).
+
+    The line is rendered once with the skin's `end_spaces` after it, twice
+    side by side, and a box-wide window slides across that strip at `speed`
+    pixels a second - leftward for `ltr`, every shipped skin's direction, and
+    rightward for `rtl` - wrapping seamlessly. A line that fits its box stands
+    still (upstream draws three copies of it there, which reads as a bug)."""
+
+    def __init__(self, speed: float, rightward: bool, end_spaces: int) -> None:
+        self.speed = speed
+        self.rightward = rightward
+        self.end_spaces = end_spaces
+        self.box: pygame.Rect | None = None
+        self._key: tuple | None = None
+        self._strip: pygame.Surface | None = None
+        self._segment = 1
+        self.scrolls = False
+        self.offset = 0.0
+        self._last: float | None = None
+        self._shown = -1
+
+    def show(self, font: pygame.font.Font, text: str, point, colour, width: int) -> pygame.Rect:
+        key = (text, tuple(point), tuple(colour), width, id(font))
+        if key == self._key and self.box is not None:
+            return self.box
+        self._key = key
+        line = font.render(text, True, colour)
+        self.box = pygame.Rect(point[0], point[1], width, line.get_height())
+        self.scrolls = line.get_width() > width
+        if self.scrolls:
+            segment = font.render(text + " " * self.end_spaces, True, colour)
+            self._segment = max(1, segment.get_width())
+            self._strip = pygame.Surface((self._segment * 2, line.get_height()), pygame.SRCALPHA)
+            self._strip.blit(segment, (0, 0))
+            self._strip.blit(segment, (self._segment, 0))
+        else:
+            self._strip = line
+        # Offset 0 is what `picture` draws first, so it counts as shown.
+        self.offset, self._last, self._shown = 0.0, None, 0
+        return self.box
+
+    def picture(self) -> pygame.Surface:
+        window = pygame.Surface(self.box.size, pygame.SRCALPHA)
+        window.blit(self._strip, (-int(self.offset), 0))
+        return window
+
+    def advance(self, now: float) -> bool:
+        """True when the window has moved by a whole pixel."""
+        if not self.scrolls or self.box is None:
+            return False
+        if self._last is not None:
+            step = self.speed * min(0.5, max(0.0, now - self._last))
+            self.offset = (self.offset + (-step if self.rightward else step)) % self._segment
+        self._last = now
+        if int(self.offset) == self._shown:
+            return False
+        self._shown = int(self.offset)
+        return True
+
+
 class MetadataLayer:
     def __init__(self, screen: pygame.Surface, corpus: Path, icon_dir: Path = ICON_DIR) -> None:
         self._screen = screen
@@ -217,6 +286,8 @@ class MetadataLayer:
         self._artwork_url: str | None = None
         self._last_drawn: tuple | None = None
         self._art_spins = False
+        self._ticker: Ticker | None = None
+        self._ticker_item: int | None = None
 
     # ---- skin ----------------------------------------------------------
 
@@ -240,6 +311,14 @@ class MetadataLayer:
         self._items = []
         self._last_drawn = None
         self._background = None
+        self._ticker = None
+        self._ticker_item = None
+        if (skin.get("playinfo.ticker") or "").strip().lower() == "true":
+            self._ticker = Ticker(
+                speed=_float(skin.get("playinfo.ticker.speed"), 40.0),
+                rightward=(skin.get("playinfo.ticker.direction") or "ltr").strip().lower() == "rtl",
+                end_spaces=int(_float(skin.get("playinfo.ticker.end_spaces"), 8)),
+            )
         picture = (skin.get("screen.bgr") or "").strip()
         if not picture:
             self._background = self._meter_background(skin)
@@ -311,7 +390,7 @@ class MetadataLayer:
         if self._background is None:
             return []
         fields = self._fields(metadata)
-        fingerprint = (fields, metadata.get("source"), metadata.get("artwork"))
+        fingerprint = (fields, metadata.get("source"), metadata.get("artwork"), repr(metadata.get("next")))
         if fingerprint == self._last_drawn:
             return []
         self._last_drawn = fingerprint
@@ -322,6 +401,7 @@ class MetadataLayer:
                 self._screen.blit(self._background, rect, rect)
         self._painted = []
         self._items = []
+        self._ticker_item = None
         self._painting = paint
 
         # Artwork first, text last: some skins deliberately place the text
@@ -338,7 +418,10 @@ class MetadataLayer:
         for text, point, colour, size, maxwidth, stratum in fields:
             if not text:
                 continue  # criterion 7: nothing for this field, nothing drawn
-            rect = self._text(text, point, colour, size, maxwidth, stratum)
+            if stratum == "ticker":
+                rect = self._ticker_rect(text, point, colour, size, maxwidth)
+            else:
+                rect = self._text(text, point, colour, size, maxwidth, stratum)
             if rect is not None:
                 self._painted.append(rect)
                 dirty.append(rect)
@@ -354,6 +437,39 @@ class MetadataLayer:
             if stratum in strata:
                 self._screen.blit(picture, where)
         self._screen.set_clip(clip)
+
+    def tick(self, now: float | None = None) -> list[pygame.Rect]:
+        """Every frame: the ticker's box when it has moved, for the caller
+        to compose (a moving skin) or `repaint` (a still one)."""
+        if self._ticker is None or self._ticker_item is None:
+            return []
+        if not self._ticker.advance(time.monotonic() if now is None else now):
+            return []
+        box = self._ticker.box
+        self._items[self._ticker_item] = ("text", self._ticker.picture(), box.topleft)
+        return [box.copy()]
+
+    def repaint(self, rects: list[pygame.Rect]) -> list[pygame.Rect]:
+        """A still skin's own compose: the background, then what this layer
+        drew, inside each rectangle."""
+        if self._background is None:
+            return []
+        clip = self._screen.get_clip()
+        for rect in rects:
+            self._screen.set_clip(rect)
+            self._screen.blit(self._background, rect, rect)
+            self.paint(("art", "text", "meta"), rect)
+        self._screen.set_clip(clip)
+        return rects
+
+    def _ticker_rect(self, text, point, colour, size, width) -> pygame.Rect | None:
+        if self._ticker is None:
+            return None
+        room = self._screen.get_width() - point[0]
+        width = min(width or room - RIGHT_MARGIN, room)
+        box = self._ticker.show(self.font(point[2], size), str(text), point, colour, width)
+        self._ticker_item = len(self._items)
+        return self._put("text", self._ticker.picture(), box.topleft)
 
     def _put(self, stratum: str, picture: pygame.Surface, where: tuple[int, int]) -> pygame.Rect:
         self._items.append((stratum, picture, where))
@@ -435,20 +551,29 @@ class MetadataLayer:
         return tuple(entry for entry in entries if entry is not None)
 
     def _ticker_line(self, metadata: dict, field):
-        """**A ticker skin's title, standing still** (ADR-0096, George's
-        choice A, 2026-09-27). 27 of the animated skins place their title only
-        as upstream's scrolling ticker; without this they showed none. Drawn
-        once as "Title • Artist • Album" in the ticker's own box, colour and
-        separator, trimmed like any field. The scroll, and the next track it
-        appends, stay deferred. A skin with a title field of its own keeps
-        that one: nine have both, and would show the title twice."""
+        """**A ticker skin's title** (ADR-0096 as amended, ADR-0097): 27 of
+        the animated skins place their title only as upstream's scrolling
+        ticker. "Title • Artist • Album" - George's order - with the skin's
+        separator and spacing, then the next track where LMS reports one;
+        `Ticker` scrolls it. A skin with a title field of its own keeps that
+        one: nine have both, and would show the title twice."""
         skin = self._skin
-        if (skin.get("playinfo.ticker") or "").strip().lower() != "true" or "playinfo.title.pos" in skin:
+        if self._ticker is None or "playinfo.title.pos" in skin:
             return None
         separator = (skin.get("playinfo.ticker.separator") or "").strip() or "•"
+        gap = " " * max(1, int(_float(skin.get("playinfo.ticker.space_between"), 1)))
+        between = f"{gap}{separator}{gap}"
         parts = [metadata.get(key) for key in ("title", "artist", "album")]
-        line = f" {separator} ".join(str(part) for part in parts if part) or None
-        return field("playinfo.ticker.pos", line, "playinfo.ticker.color", "playinfo.ticker.maxwidth")
+        line = between.join(str(part) for part in parts if part)
+        # ADR-0097: the next track where the source reports one - LMS's
+        # queue - in upstream's words, "Next: artist - title".
+        upcoming = metadata.get("next") or {}
+        if line and (skin.get("playinfo.ticker.append_next") or "").strip().lower() == "true":
+            coming = " - ".join(str(v) for v in (upcoming.get("artist"), upcoming.get("title")) if v)
+            if coming:
+                line += f"{between}Next: {coming}"
+        return field("playinfo.ticker.pos", line or None, "playinfo.ticker.color", "playinfo.ticker.maxwidth",
+                     stratum="ticker")
 
     def _text(self, text, point, colour, size, maxwidth, stratum="text") -> pygame.Rect | None:
         font = self.font(point[2], size)

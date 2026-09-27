@@ -559,3 +559,36 @@ def test_a_skin_with_its_own_title_field_does_not_draw_the_ticker_too(screen, tm
     made = MetadataLayer(screen, tmp_path)
     made.set_skin(SKIN | TICKER)
     assert not [f for f in made._fields(full()) if f[1][:2] == (20, 638)]
+
+
+def test_the_ticker_scrolls_leftward_and_wraps(screen):
+    """ADR-0097: `ltr` moves the text left at `speed` px/s, seamlessly."""
+    from gexis_peppy_render import Ticker
+    font = pygame.font.Font(None, 20)
+    t = Ticker(speed=40.0, rightward=False, end_spaces=6)
+    box = t.show(font, "a line far too long for the little box it has been given", (10, 10, "bold"), (255, 255, 255), 100)
+    assert t.scrolls and box == pygame.Rect(10, 10, 100, box.height)
+    assert t.advance(0.0) is False, "the first frame only starts the clock"
+    assert t.advance(0.5) is True and t.offset == pytest.approx(20.0)
+    t.offset = t._segment - 1
+    t.advance(0.55)
+    assert 0 <= t.offset < 2, "it wraps to the start of the next copy"
+
+
+def test_a_ticker_line_that_fits_stands_still(screen):
+    from gexis_peppy_render import Ticker
+    t = Ticker(speed=40.0, rightward=False, end_spaces=6)
+    t.show(pygame.font.Font(None, 20), "short", (0, 0, "bold"), (255, 255, 255), 400)
+    assert not t.scrolls and t.advance(1.0) is False
+
+
+def test_the_ticker_line_appends_the_next_track_where_there_is_one(screen, tmp_path):
+    pygame.image.save(pygame.Surface((1280, 800)), str(tmp_path / "bgr.png"))
+    skin = {k: v for k, v in SKIN.items() if not k.startswith("playinfo.")} | TICKER | {
+        "playinfo.ticker.space_between": "1", "playinfo.ticker.append_next": "True"}
+    made = MetadataLayer(screen, tmp_path)
+    made.set_skin(skin)
+    nxt = {"title": "Song", "artist": "Band", "album": "LP"}
+    line = [f[0] for f in made._fields(full(next=nxt)) if f[5] == "ticker"]
+    assert line == ["Title *** Artist *** Album *** Next: Band - Song"]
+    assert [f[0] for f in made._fields(full()) if f[5] == "ticker"] == ["Title *** Artist *** Album"]
