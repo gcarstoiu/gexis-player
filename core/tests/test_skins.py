@@ -360,3 +360,17 @@ def test_an_animated_pack_still_fails_on_a_key_nobody_placed():
     with pytest.raises(SkinError, match="unknown key 'sparkle'"):
         validate([Skin("x", {"meter.type": CIRCULAR, "sparkle": "1", "tonearm.filename": "a"})],
                  animated=True)
+
+
+def test_a_skin_with_no_screen_background_is_previewed_by_its_meters(tmp_path):
+    """ADR-0096: 80 of the 90 animated skins set no `screen.bgr` and showed
+    as blank tiles. Their meter's background is the full picture."""
+    directory = _pack(tmp_path / "pack", "templates",
+                      "[turntable]\nbgr.filename = deck.png\n"
+                      "[both]\nscreen.bgr = ok.jpg\nbgr.filename = deck.png\n"
+                      "[sneaky]\nbgr.filename = ../../../etc/shadow\n",
+                      ["ok.jpg", "deck.png"])
+    by_name = {skin.name: skin for skin, _ in installed(tmp_path, pack="pack")}
+    assert preview_of(by_name["turntable"], directory).name == "deck.png"
+    assert preview_of(by_name["both"], directory).name == "ok.jpg"
+    assert preview_of(by_name["sneaky"], directory) is None

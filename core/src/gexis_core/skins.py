@@ -381,17 +381,27 @@ def write_selection(
 
 
 def preview_of(skin: Skin, directory: Path) -> Path | None:
-    """The picture this skin already is (ADR-0050): its `screen.bgr`.
+    """The picture this skin already is (ADR-0050): its `screen.bgr`, or,
+    for a skin with none, its meter's background (`bgr.filename`).
 
     **Nothing is rendered and nothing is cached.** The file is on the device
     because the skin is, so a preview is a file lookup and a new pack brings
     its own by existing.
+
+    The fallback is for the animated packs (ADR-0096): 80 of their 90 skins
+    set no `screen.bgr` and are drawn by the meter's background alone, a full
+    frame once letterboxed - so the picker showed them as blank tiles. All
+    99 of the others set one, and keep it.
     """
-    name = (skin.options.get("screen.bgr") or "").strip()
-    if not name or name != Path(name).name:
-        return None
-    path = directory / name
-    return path if path.is_file() else None
+    for key in ("screen.bgr", "bgr.filename"):
+        name = (skin.options.get(key) or "").strip()
+        if not name:
+            continue
+        if name != Path(name).name:
+            return None
+        path = directory / name
+        return path if path.is_file() else None
+    return None
 
 
 def main(argv: list[str] | None = None) -> int:
