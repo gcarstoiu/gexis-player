@@ -211,7 +211,31 @@ def test_the_lyrion_badge_is_tinted_not_black(layer):
         if badge.get_at((x, y)).a > 200
     ]
     assert opaque, "the mark has visible pixels"
-    assert all(pixel.g > 150 for pixel in opaque)  # the LMS accent is green-teal
+    # The LMS accent is green-teal. Since 2026-09-27 the mark carries a dark
+    # edge on purpose (George: "Change it up so it's more visible"), so not
+    # every pixel is the accent - but the mark must still be mostly accent,
+    # which is what a mark drawn black (the original bug) is not.
+    accent = [pixel for pixel in opaque if pixel.g > 150]
+    assert len(accent) > 0.35 * len(opaque)
+
+
+def test_a_small_lyrion_badge_is_the_four_bar_reduction(layer):
+    """**2026-09-27.** Below `LYRION_REDUCTION_BELOW` the ten thin bars became a
+    dark smudge once they had an edge; the panel's `SourceMark` already draws
+    four bars below 40 px for the same reason. Four accent runs across the
+    middle row, not ten."""
+    from gexis_peppy_render import LYRION_REDUCTION_BELOW
+
+    small = layer._badge("lms", (32, 32))
+    assert small.get_height() < LYRION_REDUCTION_BELOW
+    row = small.get_height() // 2
+    runs, inside = 0, False
+    for x in range(small.get_width()):
+        pixel = small.get_at((x, row))
+        on = pixel.a > 200 and pixel.g > 150
+        runs += on and not inside
+        inside = on
+    assert runs == 4
 
 
 def test_an_unknown_source_draws_no_badge(layer):
