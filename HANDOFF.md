@@ -102,10 +102,12 @@ fetched on the device from its author's release, after a notice; public inert
     [PhilipVinc/pibuz#2](https://github.com/PhilipVinc/pibuz/issues/2).
   - **Owed:**
     - George's takeover tests with the adapter.
-    - **The Qobuz volume decision** (A two volumes / B locked, panel in charge /
-      C ask upstream).
-    - Measuring whether Plexamp applies its volume twice. It needs a track played
-      through the speakers, so it was deferred while George tests.
+    - Qobuz volume: **decided, A** (two separate volumes). An `external` mode was
+      requested upstream,
+      [PhilipVinc/pibuz#3](https://github.com/PhilipVinc/pibuz/issues/3).
+    - **Plexamp applies its volume twice**
+      ([Finding 095](docs/findings/095-plexamp-applies-its-volume-twice.md),
+      measured before the DAC). **A decision for George.**
     - No image built from `phase-12` yet.
 - **The Qobuz spike stopped after part 1.** Pibuz 2.5.0 was verified, ran, and
   opened our `output` as soon as it was configured. The auto-mode classifier then

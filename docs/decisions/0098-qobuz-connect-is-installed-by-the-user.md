@@ -105,9 +105,12 @@ directions, because the core did not know Pibuz existed. The adapter fixes this:
   player's name. `gexis-qobuz` connected to the core, which registered it as a
   renderer. The adapter is `BindsTo=` the receiver, so it does not poll a
   receiver that never started.
-- **Volume is a decision owed to George.** For now the core does not manage it
-  (`volume_managed: false`): the Qobuz app's slider moves Pibuz's digital level,
-  and the panel's moves the DAC.
+- **Volume: George kept this arrangement (2026-09-27, "we keep it as it is set
+  now").** The core does not manage it (`volume_managed: false`): the Qobuz
+  app's slider moves Pibuz's digital level, and the panel's moves the DAC.
+  Nothing is applied twice. An `external` mode (report the level, do not apply
+  it, as go-librespot's `external_volume`) was requested upstream:
+  [PhilipVinc/pibuz#3](https://github.com/PhilipVinc/pibuz/issues/3).
 
 ## Not decided here
 
