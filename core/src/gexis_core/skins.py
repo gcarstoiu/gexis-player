@@ -31,6 +31,13 @@ SECTION = re.compile(r"^\[(?P<name>.+?)\]\s*$")
 METERS = "meters"
 SPECTRUM = "spectrum"
 BOTH = "both"
+#: **What moves** (ADR-0096 as amended): a skin with a record or a tonearm is
+#: a turntable, one with reels a tape deck - cassette or reel-to-reel. George,
+#: 2026-09-27, asked where they were in the setting: *"One for turntables and
+#: another for tapes."* 48 and 39 of the animated packs; their other three
+#: skins move nothing and are meters.
+TURNTABLE = "turntable"
+TAPE = "tape"
 
 #: The `skin_corpus` setting's words, and the kinds each one draws from.
 #: George, 2026-09-21: *"There should be 3 types of skins instead of just
@@ -71,8 +78,10 @@ CORPUS = {
     "VU meters": (METERS,),
     "Spectrum": (SPECTRUM,),
     "VU meters + spectrum": (BOTH,),
-    ALL: (METERS, SPECTRUM, BOTH),
-    "Random": (METERS, SPECTRUM, BOTH),
+    "Turntables": (TURNTABLE,),
+    "Tapes": (TAPE,),
+    ALL: (METERS, SPECTRUM, BOTH, TURNTABLE, TAPE),
+    "Random": (METERS, SPECTRUM, BOTH, TURNTABLE, TAPE),
 }
 
 
@@ -201,6 +210,10 @@ class Skin:
         on the directory would hand a spectrum to someone who asked for a
         needle.
         """
+        if any(key.startswith(("vinyl.", "tonearm.")) for key in self.options):
+            return TURNTABLE
+        if any(key.startswith("reel.") for key in self.options):
+            return TAPE
         if self.spectrum_visible:
             return BOTH if self.visible else SPECTRUM
         return METERS
@@ -343,7 +356,7 @@ def installed(root: Path, pack: str | None = None) -> list[tuple[Skin, Path]]:
 
 #: ADR-0051 §1. The daemon writes it, the driver polls it beside
 #: `nowplaying.json`, and neither one restarts for a change. It is a
-#: projection of three settings, not a record: the database is the record,
+#: projection of five settings, not a record: the database is the record,
 #: and a missing file means the driver keeps what it already has.
 SELECTION_PATH = Path("/run/gexis/visualisation.json")
 
@@ -354,8 +367,18 @@ def names(root: Path, corpus: str, pack: str | None = None) -> list[str]:
     return [skin.name for skin in in_corpus((s for s, _ in installed(root, pack)), corpus)]
 
 
+def record_rpm(word: object) -> float:
+    """`record_speed`'s word as a number: "45 rpm" is 45. Anything else is the
+    speed the skins are drawn for."""
+    try:
+        return float(str(word).split()[0])
+    except (ValueError, IndexError):
+        return 33.0
+
+
 def write_selection(
-    corpus: str, skin: str | None, rotate: bool, path: Path = SELECTION_PATH
+    corpus: str, skin: str | None, rotate: bool, path: Path = SELECTION_PATH,
+    motion: bool = True, record_rpm: float = 33.0,
 ) -> bool:
     """Publish the selection for the renderer. Written through a temporary
     file and renamed, like the metadata file: the driver reads this on a
@@ -367,7 +390,8 @@ def write_selection(
     """
     import json
 
-    payload = json.dumps({"corpus": corpus, "skin": skin, "rotate": bool(rotate)})
+    payload = json.dumps({"corpus": corpus, "skin": skin, "rotate": bool(rotate),
+                          "motion": bool(motion), "record_rpm": float(record_rpm)})
     tmp = path.with_name(path.name + ".tmp")
     try:
         path.parent.mkdir(parents=True, exist_ok=True)

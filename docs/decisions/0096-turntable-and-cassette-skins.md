@@ -66,6 +66,16 @@ research itself lived in a session scratchpad.
    ones earn a row is decided on the numbers, and proposed to George before any
    is added.
 
+**Amended 2026-09-27 - where they sit, and the two settings.** George found
+the 90 nowhere in the visualiser's settings: they had been counted as *VU
+meters*, so his *VU meters + spectrum* never offered one, and decision 6's
+settings had been dropped on the argument that the cost was low. He chose
+**two corpus words, Turntables (48) and Tapes (39)**, by what a skin declares
+- a record or a tonearm, or reels; the three t1800 skins with neither stay
+meters - and **a toggle plus a record speed** (33 or 45 rpm, the record only).
+Both settings are ADR-0022 [N] rows, carried in the selection file with the
+corpus and the skin.
+
 ## How (as built - filled in when it is)
 
 The intent, from the research: keep our driver and `MetadataLayer` - the badge,

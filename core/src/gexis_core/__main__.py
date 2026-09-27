@@ -970,6 +970,8 @@ async def main() -> None:
             str(settings.value("skin_corpus") or skins.ALL),
             settings.value("skin"),
             settings.value("skin_rotate") is not False,
+            motion=settings.value("skin_motion") is not False,
+            record_rpm=skins.record_rpm(settings.value("record_speed")),
         )
 
     def apply_corpus(word: object) -> None:
@@ -1291,6 +1293,9 @@ async def main() -> None:
                # ADR-0051: read by the driver, through the file these write.
                "skin": publish_visualisation,
                "skin_rotate": publish_visualisation,
+               # ADR-0096 as amended: the same file carries both.
+               "skin_motion": publish_visualisation,
+               "record_speed": publish_visualisation,
                "skin_corpus": apply_corpus,
                # ADR-0058. Two of the three are peppyalsa's and go in
                # `output.conf`; the third is PeppyMeter's own.

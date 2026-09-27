@@ -260,6 +260,11 @@ class MotionLayer:
         #: the meter's needles inside a rectangle; either may be absent.
         self.layer = layer
         self.needles = needles
+        #: George's two settings (ADR-0096 as amended, ADR-0022 [N]): whether
+        #: anything moves at all, and a record's speed in place of the skin's.
+        self.animate = True
+        self.record_rpm: float | None = None
+        self._record: Spinner | None = None
         self.spinners: list[Spinner] = []
         self.arm: Tonearm | None = None
         self._background: pygame.Surface | None = None
@@ -271,6 +276,15 @@ class MotionLayer:
         self._last_tick = 0.0
         self._last_arm = 0.0
 
+    def configure(self, animate: bool, record_rpm: float | None) -> None:
+        """Off, nothing advances: the record and the reels stand, and the arm
+        lifts to its rest as it does on a pause. The record's speed applies to
+        the record only - a tape's reels keep the skin's own."""
+        self.animate = bool(animate)
+        self.record_rpm = record_rpm if record_rpm and record_rpm > 0 else None
+        if self._record is not None and self.record_rpm is not None:
+            self._record.rpm = self.record_rpm
+
     @property
     def active(self) -> bool:
         return bool(self.spinners or self.arm)
@@ -278,6 +292,7 @@ class MotionLayer:
     def set_skin(self, skin: dict[str, str], directory: Path,
                  background: pygame.Surface | None) -> None:
         self.spinners, self.arm = [], None
+        self._record = None
         self._label_spinner = self._label_source = None
         self._label_size = None
         self._background = self._foreground = None
@@ -311,14 +326,16 @@ class MotionLayer:
             # on it: `albumart.rotation` says only where the art goes, as in
             # upstream. Read as "still", it left 27 turntables' records
             # standing - every `_03` variant among them.
-            self._label_spinner = Spinner(vinyl, center, rpm, clockwise)
+            self._label_spinner = Spinner(vinyl, center, self.record_rpm or rpm, clockwise)
+            self._record = self._label_spinner
             self.spinners.append(self._label_spinner)
         elif spins and art_pos and art_dim:
             # No vinyl picture: the album art itself is the record (ten of the
             # turntables), turning where the layer would have drawn it still.
             blank = pygame.Surface(art_dim, pygame.SRCALPHA)
             spot = (art_pos[0] + art_dim[0] // 2, art_pos[1] + art_dim[1] // 2)
-            self._label_spinner = Spinner(blank, spot, rpm, clockwise)
+            self._label_spinner = Spinner(blank, spot, self.record_rpm or rpm, clockwise)
+            self._record = self._label_spinner
             self.spinners.append(self._label_spinner)
         if self._label_spinner is not None and spins and art_dim:
             self._label_size = art_dim
@@ -357,7 +374,8 @@ class MotionLayer:
         if not self.active or self._background is None:
             return []
         now = time.monotonic() if now is None else now
-        playing = metadata.get("transport") == "playing"
+        # Motion off is a pause as far as anything that moves is concerned.
+        playing = metadata.get("transport") == "playing" and self.animate
         self._set_label(artwork)
         for spinner in self.spinners:
             spinner.build_some()

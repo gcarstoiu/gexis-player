@@ -186,9 +186,10 @@ would store nothing and gate on nothing; the rows hang off `idle_weather`.
 in settings you can remove as it is not needed."* Both forecast layouts draw
 the day's high and low unconditionally now.
 
-**[U] `skin_corpus` is four words about what a skin shows**, not two about
+**[U] `skin_corpus` is six words about what a skin shows**, not two about
 which directory it lives in: VU meters / Spectrum / VU meters + spectrum /
-**All**. Counted on the device, `templates/` is 71 meters and no spectrum at
+**Turntables** / **Tapes** / **All** (the two that move since 2026-09-27,
+ADR-0096 as amended). Counted on the device, `templates/` is 71 meters and no spectrum at
 all, so a directory-shaped option would have handed a spectrum to someone
 who asked for a needle — and two of the four words would have offered
 nothing (ADR-0019 as amended, ADR-0051). The fourth word was `Random` until

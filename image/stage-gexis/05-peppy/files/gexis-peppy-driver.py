@@ -57,6 +57,8 @@ def meter_sections(path: Path) -> dict[str, dict[str, str]]:
 SELECTION_PATH = Path("/run/gexis/visualisation.json")
 
 METERS, SPECTRUM, BOTH = "meters", "spectrum", "both"
+#: What moves (ADR-0096 as amended), as `gexis_core.skins` decides it.
+TURNTABLE, TAPE = "turntable", "tape"
 
 #: The `skin_corpus` words and the kinds each one draws from. The same table
 #: as `gexis_core.skins.CORPUS`; the two processes share no code, so they
@@ -66,16 +68,23 @@ CORPUS = {
     "VU meters": (METERS,),
     "Spectrum": (SPECTRUM,),
     "VU meters + spectrum": (BOTH,),
-    ALL: (METERS, SPECTRUM, BOTH),
+    "Turntables": (TURNTABLE,),
+    "Tapes": (TAPE,),
+    ALL: (METERS, SPECTRUM, BOTH, TURNTABLE, TAPE),
     # Understood, for a selection written before the 2026-09-22 rename.
-    "Random": (METERS, SPECTRUM, BOTH),
+    "Random": (METERS, SPECTRUM, BOTH, TURNTABLE, TAPE),
 }
 
 
 def kind_of(skin: dict[str, str]) -> str:
     """What a skin shows, from what it declares - never from which directory
     it lives in (ADR-0019 as amended). An absent `spectrum.visible` means no
-    spectrum; an absent `meter.visible` means a meter."""
+    spectrum; an absent `meter.visible` means a meter. A record, a tonearm or
+    reels make it a turntable or a tape deck first (ADR-0096 as amended)."""
+    if any(key.startswith(("vinyl.", "tonearm.")) for key in skin):
+        return TURNTABLE
+    if any(key.startswith("reel.") for key in skin):
+        return TAPE
     spectrum = skin.get("spectrum.visible", "False").strip().lower() == "true"
     if not spectrum:
         return METERS
@@ -95,6 +104,8 @@ class Selection:
         self.corpus = ALL
         self.skin: str | None = None
         self.rotate = True
+        self.motion = True
+        self.record_rpm = 33.0
         self._stamp: int | None = None
 
     def reload(self) -> bool:
@@ -111,12 +122,17 @@ class Selection:
         except (OSError, ValueError) as exc:
             print(f"peppy: {self.path} unreadable: {exc}", file=sys.stderr)
             return False
-        was = (self.corpus, self.skin, self.rotate)
+        was = (self.corpus, self.skin, self.rotate, self.motion, self.record_rpm)
         self.corpus = str(data.get("corpus") or ALL)
         skin = data.get("skin")
         self.skin = str(skin) if skin else None
         self.rotate = data.get("rotate") is not False
-        return was != (self.corpus, self.skin, self.rotate)
+        self.motion = data.get("motion") is not False
+        try:
+            self.record_rpm = float(data.get("record_rpm") or 33.0)
+        except (TypeError, ValueError):
+            self.record_rpm = 33.0
+        return was != (self.corpus, self.skin, self.rotate, self.motion, self.record_rpm)
 
     def pool(self, skins: dict[str, dict[str, str]]) -> list[str]:
         """The names this corpus offers. An empty pool is not a corpus: a
@@ -937,6 +953,7 @@ def main() -> int:
 
     motion = MotionLayer(util.PYGAME_SCREEN, layer, redraw_needles)
     rotation.motion = motion
+    motion.configure(selection.motion, selection.record_rpm)
     if first in homes:
         motion.set_skin(skins[first], homes[first], layer.background)
     rotation.prepare_next()
@@ -963,6 +980,7 @@ def main() -> int:
                     f"peppy: selection -> {selection.corpus!r}, "
                     f"{selection.skin!r}, rotation {'on' if selection.rotate else 'off'}"
                 )
+                motion.configure(selection.motion, selection.record_rpm)
                 rotation.follow_selection()
             playing = current_track()
             if playing is not None and playing != track:

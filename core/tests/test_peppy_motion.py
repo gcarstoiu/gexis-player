@@ -215,3 +215,33 @@ def test_a_record_named_album_comma_theme_is_the_theme(screen, tmp_path):
     motion.set_skin({"vinyl.filename": "cdart.png,theme.bmp", "vinyl.center": "300,300",
                      "albumart.rotation.speed": "33"}, tmp_path, pygame.Surface((1280, 800)))
     assert motion.spinners, "the record is there"
+
+
+def _record_and_reel(tmp_path):
+    picture = pygame.Surface((100, 100), pygame.SRCALPHA)
+    pygame.image.save(picture, str(tmp_path / "p.bmp"))
+    return {"vinyl.filename": "p.bmp", "vinyl.center": "300,300", "albumart.rotation.speed": "33",
+            "reel.left.filename": "p.bmp", "reel.left.center": "800,300", "reel.rotation.speed": "25"}
+
+
+def test_motion_off_stands_everything_still(screen, tmp_path):
+    motion = MotionLayer(screen)
+    motion.configure(False, None)
+    motion.set_skin(_record_and_reel(tmp_path), tmp_path, pygame.Surface((1280, 800)))
+    assert motion.tick({"transport": "playing"}, None, now=1.0), "drawn once, still"
+    angles = [s.angle for s in motion.spinners]
+    motion.tick({"transport": "playing"}, None, now=1.5)
+    assert [s.angle for s in motion.spinners] == angles
+    motion.configure(True, None)
+    motion.tick({"transport": "playing"}, None, now=2.0)
+    assert [s.angle for s in motion.spinners] != angles, "and turns again when it is on"
+
+
+def test_record_speed_turns_the_record_and_not_the_reels(screen, tmp_path):
+    motion = MotionLayer(screen)
+    motion.configure(True, 45.0)
+    motion.set_skin(_record_and_reel(tmp_path), tmp_path, pygame.Surface((1280, 800)))
+    record, reel = motion.spinners
+    assert (record.rpm, reel.rpm) == (45.0, 25.0)
+    motion.configure(True, 33.0)
+    assert (record.rpm, reel.rpm) == (33.0, 25.0), "changed in place, no new skin needed"
