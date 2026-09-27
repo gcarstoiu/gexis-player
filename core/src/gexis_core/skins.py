@@ -154,9 +154,11 @@ ANIMATED_TEXT_KEYS = {
 #: Listed rather than waved through, so a key that is neither drawn nor
 #: deferred still fails the build. Matched by prefix.
 DEFERRED_PREFIXES = (
-    "progress.", "volume.", "mute.", "playstate.", "repeat.", "shuffle.",
-
+    "mute.", "playstate.", "repeat.", "shuffle.",
 )
+#: **Families the animated packs use and the renderer draws** (ADR-0097),
+#: matched by prefix because their markers are numbered.
+ANIMATED_PREFIXES = ("progress.", "volume.")
 DEFERRED_KEYS = {
     "time.remaining.font",
     # Drawn, in our digi face: the fonts these name are not in the packs,
@@ -282,7 +284,7 @@ def validate(meters: list[Skin], spectrum: list[Skin] | None = None,
             allowed = allowed | MOTION_KEYS | ANIMATED_TEXT_KEYS
         unknown = set(skin.options) - allowed
         if animated:
-            unknown = {key for key in unknown if not deferred(key)}
+            unknown = {key for key in unknown if not deferred(key) and not key.startswith(ANIMATED_PREFIXES)}
         for key in sorted(unknown):
             problems.append(f"{skin.name}: unknown key {key!r} for a {skin.meter_type} meter")
 

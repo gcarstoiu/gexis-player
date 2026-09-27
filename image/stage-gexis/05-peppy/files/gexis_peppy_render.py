@@ -24,6 +24,8 @@ from pathlib import Path
 
 import pygame
 
+from gexis_peppy_gauges import Gauge
+
 logger = logging.getLogger("peppy.render")
 
 METADATA_PATH = Path("/run/gexis/nowplaying.json")
@@ -288,6 +290,7 @@ class MetadataLayer:
         self._art_spins = False
         self._ticker: Ticker | None = None
         self._ticker_item: int | None = None
+        self._gauges: list[tuple[str, Gauge]] = []
 
     # ---- skin ----------------------------------------------------------
 
@@ -313,6 +316,14 @@ class MetadataLayer:
         self._background = None
         self._ticker = None
         self._ticker_item = None
+        # ADR-0097: shown, never acted on. Volume before progress, as upstream.
+        regular = int(_float(skin.get("font.size.regular"), 35))
+        self._gauges = [
+            (which, gauge) for which, gauge in (
+                (which, Gauge(which, skin, self._corpus, FONTS["regular"], regular))
+                for which in ("volume", "progress") if skin.get(f"{which}.pos"))
+            if gauge.ok
+        ]
         if (skin.get("playinfo.ticker") or "").strip().lower() == "true":
             self._ticker = Ticker(
                 speed=_float(skin.get("playinfo.ticker.speed"), 40.0),
@@ -390,7 +401,8 @@ class MetadataLayer:
         if self._background is None:
             return []
         fields = self._fields(metadata)
-        fingerprint = (fields, metadata.get("source"), metadata.get("artwork"), repr(metadata.get("next")))
+        readings = self._readings(metadata)
+        fingerprint = (fields, metadata.get("source"), metadata.get("artwork"), repr(metadata.get("next")), readings)
         if fingerprint == self._last_drawn:
             return []
         self._last_drawn = fingerprint
@@ -412,6 +424,12 @@ class MetadataLayer:
             self._badge_rect(metadata.get("source")),
         ):
             if rect is not None:
+                self._painted.append(rect)
+                dirty.append(rect)
+
+        for which, gauge in self._gauges:
+            for picture, where in gauge.pieces(readings.get(which)):
+                rect = self._put("meta", picture, where)
                 self._painted.append(rect)
                 dirty.append(rect)
 
@@ -437,6 +455,17 @@ class MetadataLayer:
             if stratum in strata:
                 self._screen.blit(picture, where)
         self._screen.set_clip(clip)
+
+    def _readings(self, metadata: dict) -> dict:
+        """The values the gauges show, as whole percentages - upstream
+        truncates, so a bar moves in steps of one per cent."""
+        if not self._gauges:
+            return {}
+        elapsed, duration = elapsed_seconds(metadata), metadata.get("duration")
+        return {
+            "progress": min(100, int(elapsed / duration * 100)) if elapsed is not None and duration else None,
+            "volume": metadata.get("volume"),
+        }
 
     def tick(self, now: float | None = None) -> list[pygame.Rect]:
         """Every frame: the ticker's box when it has moved, for the caller
