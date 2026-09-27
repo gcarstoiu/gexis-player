@@ -78,8 +78,16 @@ fetched on the device from its author's release, after a notice; public inert
 - **Legal and Credits are built and deployed on gexis.** They come from
   `notices.json` (45 components) and a build-time check. The wording is a draft
   for George, and the reader has not been seen on the panel.
-- **ADR-0099 records six findings for George.** The first: **Plexamp is included
-  in the image without an established right to redistribute it.**
+- **ADR-0099's findings, George's answers (2026-09-27):**
+  - **Plexamp: 1A.** [ADR-0100](docs/decisions/0100-software-we-may-not-redistribute-is-fetched-on-the-device.md):
+    it is fetched from Plex on the device when switched on, and is no longer in
+    the image. Measured on gexis: the fetched tree is identical to the one the
+    image shipped.
+  - **go-librespot stays in the image**, "we might need to come back to this one".
+  - **Source offer and licence texts: done.** A new `09-legal` stage installs
+    COPYING, SOURCE.md and packages.txt, plus the licence notices;
+    `verify-image.sh` checks them.
+  - **Marks and sample photos: being sourced.**
 - **The Qobuz spike stopped after part 1.** Pibuz 2.5.0 was verified, ran, and
   opened our `output` as soon as it was configured. The auto-mode classifier then
   blocked further downloading and running of it. `/tmp/pibuz-spike` may still be
