@@ -269,7 +269,8 @@ class MotionLayer:
         #: ADR-0097 decision 2: redraw a turning part every frame its
         #: picture changes, rather than eight times a second. The angle still
         #: moves in SPIN_STEP_DEG steps - upstream's smooth mode smooths the
-        #: timing, not the angle. Measured before it is offered as a setting.
+        #: timing, not the angle. George's `rotation_mode` row; stepped by
+        #: default, since smooth doubles the cost.
         self.smooth = False
         self.record_rpm: float | None = None
         self._record: Spinner | None = None

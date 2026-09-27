@@ -274,7 +274,7 @@ def test_the_selection_is_published_whole_or_not_at_all(tmp_path):
     assert write_selection("Spectrum", "101G5_Bars", False, path) is True
     assert json.loads(path.read_text()) == {
         "corpus": "Spectrum", "skin": "101G5_Bars", "rotate": False,
-        "motion": True, "record_rpm": 33.0,
+        "motion": True, "record_rpm": 33.0, "smooth": False,
     }
     assert not list(path.parent.glob("*.tmp"))
 

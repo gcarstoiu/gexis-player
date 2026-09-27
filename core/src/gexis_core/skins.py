@@ -366,7 +366,7 @@ def installed(root: Path, pack: str | None = None) -> list[tuple[Skin, Path]]:
 
 #: ADR-0051 §1. The daemon writes it, the driver polls it beside
 #: `nowplaying.json`, and neither one restarts for a change. It is a
-#: projection of five settings, not a record: the database is the record,
+#: projection of six settings, not a record: the database is the record,
 #: and a missing file means the driver keeps what it already has.
 SELECTION_PATH = Path("/run/gexis/visualisation.json")
 
@@ -388,7 +388,7 @@ def record_rpm(word: object) -> float:
 
 def write_selection(
     corpus: str, skin: str | None, rotate: bool, path: Path = SELECTION_PATH,
-    motion: bool = True, record_rpm: float = 33.0,
+    motion: bool = True, record_rpm: float = 33.0, smooth: bool = False,
 ) -> bool:
     """Publish the selection for the renderer. Written through a temporary
     file and renamed, like the metadata file: the driver reads this on a
@@ -401,7 +401,8 @@ def write_selection(
     import json
 
     payload = json.dumps({"corpus": corpus, "skin": skin, "rotate": bool(rotate),
-                          "motion": bool(motion), "record_rpm": float(record_rpm)})
+                          "motion": bool(motion), "record_rpm": float(record_rpm),
+                          "smooth": bool(smooth)})
     tmp = path.with_name(path.name + ".tmp")
     try:
         path.parent.mkdir(parents=True, exist_ok=True)

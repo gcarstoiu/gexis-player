@@ -769,6 +769,22 @@
           true
         ],
         "default": "33 rpm"
+      },
+      {
+        "key": "rotation_mode",
+        "type": "choice",
+        "label": "Rotation",
+        "marks": "N",
+        "note": "Stepped redraws a turning record or reel eight times a second; smooth redraws it every frame it moves. Smooth roughly doubles what the visualiser costs - measured on a turntable skin, 44 % of one processor core stepped against 87 % smooth.",
+        "options": [
+          "Stepped",
+          "Smooth"
+        ],
+        "onlyWhen": [
+          "skin_motion",
+          true
+        ],
+        "default": "Stepped"
       }
     ]
   },
