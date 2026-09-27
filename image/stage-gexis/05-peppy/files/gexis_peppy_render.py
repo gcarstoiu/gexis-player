@@ -524,11 +524,20 @@ class MetadataLayer:
                 stratum,
             )
 
+        # A ticker that `replace`s the fields takes their place (upstream's
+        # `playinfo.ticker.replace`; every shipped skin says False).
+        replaced = self._ticker is not None and (skin.get("playinfo.ticker.replace") or "").strip().lower() == "true"
+        shown = {} if replaced else metadata
+        upcoming = {} if replaced else (metadata.get("next") or {})
         entries = [
             self._ticker_line(metadata, field),
-            field("playinfo.title.pos", metadata.get("title"), "playinfo.title.color", "playinfo.title.maxwidth"),
-            field("playinfo.artist.pos", metadata.get("artist"), "playinfo.artist.color", "playinfo.artist.maxwidth"),
-            field("playinfo.album.pos", metadata.get("album"), "playinfo.album.color", "playinfo.album.maxwidth"),
+            field("playinfo.title.pos", shown.get("title"), "playinfo.title.color", "playinfo.title.maxwidth"),
+            field("playinfo.artist.pos", shown.get("artist"), "playinfo.artist.color", "playinfo.artist.maxwidth"),
+            field("playinfo.album.pos", shown.get("album"), "playinfo.album.color", "playinfo.album.maxwidth"),
+            # ADR-0097: the track after this one, where the source has a
+            # queue (LMS); blank otherwise and at the end of it.
+            *(field(f"playinfo.next.{key}.pos", upcoming.get(key), f"playinfo.next.{key}.color",
+                    f"playinfo.next.{key}.maxwidth") for key in ("title", "artist", "album")),
             # Not a text box: drawn top-left at the position in the digi face,
             # like the wrapper, so it lines up with the label the skin paints.
             field(

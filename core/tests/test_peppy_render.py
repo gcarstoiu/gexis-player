@@ -592,3 +592,19 @@ def test_the_ticker_line_appends_the_next_track_where_there_is_one(screen, tmp_p
     line = [f[0] for f in made._fields(full(next=nxt)) if f[5] == "ticker"]
     assert line == ["Title *** Artist *** Album *** Next: Band - Song"]
     assert [f[0] for f in made._fields(full()) if f[5] == "ticker"] == ["Title *** Artist *** Album"]
+
+
+def test_the_next_track_is_drawn_where_the_skin_places_it(screen, tmp_path):
+    """ADR-0097: `playinfo.next.*`, from LMS's queue; nothing without one."""
+    pygame.image.save(pygame.Surface((1280, 800)), str(tmp_path / "bgr.png"))
+    made = MetadataLayer(screen, tmp_path)
+    made.set_skin(SKIN | {"playinfo.next.title.pos": "700,600,bold", "playinfo.next.title.color": "1,2,3",
+                          "playinfo.next.artist.pos": "700,630"})
+    nxt = {"title": "Song", "artist": "Band", "album": "LP"}
+    at = {f[1][:2]: f for f in made._fields(full(next=nxt))}
+    assert at[(700, 600)][0] == "Song" and at[(700, 600)][2] == (1, 2, 3) and at[(700, 600)][1][2] == "bold"
+    assert at[(700, 630)][0] == "Band"
+    drawn = made.draw(full(next=nxt))
+    assert any((r.x, r.y) == (700, 600) for r in drawn)
+    empty = {f[1][:2]: f[0] for f in made._fields(full())}
+    assert empty[(700, 600)] is None, "no next track, nothing drawn"

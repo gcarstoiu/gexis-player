@@ -144,6 +144,8 @@ ANIMATED_TEXT_KEYS = {
     # ADR-0097: the ticker scrolls.
     "playinfo.ticker.speed", "playinfo.ticker.direction", "playinfo.ticker.end_spaces",
     "playinfo.ticker.space_between", "playinfo.ticker.append_next", "playinfo.ticker.replace",
+    # ADR-0097: the next track.
+    *(f"playinfo.next.{field}.{part}" for field in ("title", "artist", "album") for part in ("pos", "color", "maxwidth")),
 }
 #: **Keys the animated packs use and the renderer knowingly does not draw
 #: yet** - George's decision 3 in ADR-0096: the motion first, these later.
@@ -151,7 +153,7 @@ ANIMATED_TEXT_KEYS = {
 #: deferred still fails the build. Matched by prefix.
 DEFERRED_PREFIXES = (
     "progress.", "volume.", "mute.", "playstate.", "repeat.", "shuffle.",
-    "playinfo.next.", "time.elapsed.", "time.total.",
+    "time.elapsed.", "time.total.",
 )
 DEFERRED_KEYS = {
     "time.remaining.font",
