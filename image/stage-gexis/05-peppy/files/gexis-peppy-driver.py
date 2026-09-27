@@ -484,6 +484,9 @@ class Rotation:
         self.selection = selection or Selection()
         self.spectrum = spectrum_state
         self.layer = layer
+        #: ADR-0096: what moves on a turntable or a tape deck, given each new
+        #: skin right after the text layer (it paints over that background).
+        self.motion = None
         self.unseen: list[str] = []
         self.current: str | None = None
         self.prepared: tuple[str, object] | None = None
@@ -618,6 +621,8 @@ class Rotation:
         self.spectrum.follow(skin, self.homes.get(name))
         if self.layer is not None:
             self.layer.set_skin(skin, self.homes.get(name), name)
+            if self.motion is not None and self.homes.get(name) is not None:
+                self.motion.set_skin(skin, self.homes[name], self.layer.background)
         pygame.display.update()
         self.prepare_next()
 
@@ -884,6 +889,7 @@ def main() -> int:
         os.chdir(METER_DIR)
 
     from gexis_peppy_render import MetadataLayer, read_metadata
+    from gexis_peppy_motion import MotionLayer
 
     rotation = Rotation(peppy, skins, spectrum_state, None, homes, selection)
     rotation.spectrum_ready = spectrum_state.spectrum is not None
@@ -910,6 +916,10 @@ def main() -> int:
     peppy.meter.random_meter = False
     peppy.meter.list_meter = False
     layer.set_skin(skins[first], homes.get(first), first)
+    motion = MotionLayer(util.PYGAME_SCREEN)
+    rotation.motion = motion
+    if first in homes:
+        motion.set_skin(skins[first], homes[first], layer.background)
     rotation.prepare_next()
     print(
         f"peppy: {len(skins)} skins, {len(pool)} in {selection.corpus!r}, "
@@ -917,13 +927,14 @@ def main() -> int:
     )
 
     track = current_track()
+    metadata = read_metadata()
     # Polled rather than watched: at a tenth of a second the check is a stat
     # and a small read, and it costs nothing to be a little late to a skin.
     poll_every = max(1, int(peppy.util.meter_config[FRAME_RATE] / 10))
     frames = 0
 
     def per_frame() -> None:
-        nonlocal track, frames
+        nonlocal track, frames, metadata
         frames += 1
         if frames % poll_every == 0:
             # The same poll carries both files: which track is playing, and
@@ -939,9 +950,16 @@ def main() -> int:
                 track = playing
                 if rotation.rotating:
                     rotation.switch()
-            dirty = layer.draw(read_metadata())
+            metadata = read_metadata()
+            dirty = layer.draw(metadata)
             if dirty:
                 pygame.display.update(dirty)
+        # ADR-0096: every frame, from the last metadata read - the spin has its
+        # own rate gate, so most frames draw nothing.
+        if motion.active:
+            moved = motion.tick(metadata, layer.artwork_source)
+            if moved:
+                pygame.display.update(moved)
 
         if not spectrum_state.active:
             return

@@ -209,6 +209,7 @@ class MetadataLayer:
         self._artwork_source: pygame.Surface | None = None
         self._artwork_url: str | None = None
         self._last_drawn: tuple | None = None
+        self._art_spins = False
 
     # ---- skin ----------------------------------------------------------
 
@@ -223,6 +224,11 @@ class MetadataLayer:
             self._corpus = directory
         self._skin = skin
         self._skin_name = name
+        # ADR-0096: art that turns with the record is the motion layer's to
+        # draw; drawn here as well, a still copy would sit on the spinning one.
+        speed = (skin.get("albumart.rotation.speed") or "0").strip()
+        self._art_spins = (skin.get("albumart.rotation") or "").strip().lower() == "true" \
+            and speed not in ("", "0", "0.0")
         self._painted = []
         self._last_drawn = None
         self._background = None
@@ -263,6 +269,17 @@ class MetadataLayer:
             origin = (0, 0)
         canvas.blit(image, origin)
         return canvas
+
+    @property
+    def background(self) -> pygame.Surface | None:
+        """The clean picture this layer erases back to (ADR-0096's motion
+        layer paints over the same one)."""
+        return self._background
+
+    @property
+    def artwork_source(self) -> pygame.Surface | None:
+        """This track's artwork at full size, fetched once for both layers."""
+        return self._artwork_source
 
     def font(self, weight: str, size: int) -> pygame.font.Font:
         key = (weight, size)
@@ -472,7 +489,7 @@ class MetadataLayer:
             self._artwork_url = url
             self._artwork_source = self._fetch(url)
             self._artwork_key = None
-        if self._artwork_source is None:
+        if self._artwork_source is None or self._art_spins:
             return None
         if self._artwork_key != (url, dimension):
             self._artwork = pygame.transform.smoothscale(self._artwork_source, dimension)
