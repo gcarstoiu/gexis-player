@@ -206,9 +206,25 @@ for f in /etc/systemd/system/plexamp.service \
          /usr/share/gexis/plugins/plexamp/plugin.json \
          /usr/share/gexis/plugins/plexamp/mark.png \
          /opt/gexis-plexamp/src/gexis_plexamp/main.py \
-         /home/pi/plexamp/js/index.js; do
+         /usr/local/lib/gexis/gexis-fetch-component \
+         /etc/systemd/system/gexis-fetch@.service \
+         /usr/share/gexis/components/plexamp.env; do
 	dfs "stat $f" | grep -q 'Inode:' && ok "$f" || bad "$f missing"
 done
+# **ADR-0100: Plex's software is not in the image.** It is fetched on the device
+# when Plexamp is switched on; a copy here would be a redistribution nobody has
+# established a right to.
+if dfs "stat /home/pi/plexamp" | grep -q 'Inode:'; then
+	bad "/home/pi/plexamp is in the image - ADR-0100 fetches it on the device"
+else
+	ok "Plexamp itself is not shipped"
+fi
+dfs "dump /etc/systemd/system/plexamp.service $OUT/unit-fetch" >/dev/null
+if grep -q '^Requires=gexis-fetch@plexamp\.service' "$OUT/unit-fetch" && grep -q '^After=gexis-fetch@plexamp\.service' "$OUT/unit-fetch"; then
+	ok "plexamp.service fetches Plexamp before it starts"
+else
+	bad "plexamp.service does not require gexis-fetch@plexamp.service"
+fi
 # Node is the runtime Plexamp needs and nothing else here uses. Its absence
 # would be a renderer that cannot start, with the reason two layers down.
 dfs "stat /usr/bin/node" | grep -q 'Inode:' && ok "node installed" || bad "node missing"

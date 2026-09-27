@@ -11,14 +11,12 @@
 # repository, and is what speaks the contract - which is Phase 10's criterion 2
 # and the reason any of this exists.
 
-# Plexamp headless. Pinned to the version every measurement in Findings 077 and
-# 082 was taken against, not to "latest": `plexamp.plex.tv/headless/version.json`
-# names the current one and it happens to be this today, which is exactly why
-# the version is written down here rather than followed.
-PLEXAMP_VERSION="4.13.2"
-PLEXAMP_ASSET="Plexamp-Linux-headless-v${PLEXAMP_VERSION}.tar.bz2"
-PLEXAMP_URL="https://plexamp.plex.tv/headless/${PLEXAMP_ASSET}"
-PLEXAMP_SHA256="86e5ede3d852a87099a106f2cc6b83e4ec1350000176d83fbcedb83950c48041"
+# **Plexamp itself is not in the image** (ADR-0100, George 2026-09-27: 1A). It
+# is Plex's proprietary software, and our right to redistribute it was never
+# established. `plexamp.service` requires `gexis-fetch@plexamp.service`, which
+# downloads it from Plex, checks the pin in
+# `03-core/files/components/plexamp.env` and unpacks it to /home/pi/plexamp -
+# on the device, the first time the user switches Plexamp on.
 
 # Our plugin, from its own release rather than from a tag's auto-generated
 # archive: GitHub does not promise those are byte-stable, and a checksum that
@@ -34,18 +32,13 @@ trap 'rm -rf "${WORK}"' EXIT
 # shellcheck source=../fetch-cached.sh
 . /pi-gen/stage-gexis/fetch-cached.sh
 
-fetch_cached "${PLEXAMP_URL}" "${PLEXAMP_SHA256}" "${WORK}/${PLEXAMP_ASSET}"
 fetch_cached "${PLUGIN_URL}" "${PLUGIN_SHA256}" "${WORK}/${PLUGIN_ASSET}"
 
-# **Plexamp lives in `pi`'s home, not in /opt**, and that is not a preference:
-# it keeps its settings - including the Plex token the plugin reads - under
-# `~/.local/share/Plexamp`, and its own service file assumes the layout. Fighting
-# that would mean patching an upstream tree on every upgrade.
-tar -xjf "${WORK}/${PLEXAMP_ASSET}" -C "${WORK}"
+# **Plexamp lives in `pi`'s home, not in /opt** (the fetch puts it there): it
+# keeps its settings - including the Plex token the plugin reads - under
+# `~/.local/share/Plexamp`, and its own service file assumes the layout.
+# A rebuild over a rootfs that still holds the old copy must not keep it.
 rm -rf "${ROOTFS_DIR}/home/pi/plexamp"
-mkdir -p "${ROOTFS_DIR}/home/pi"
-cp -a "${WORK}/plexamp" "${ROOTFS_DIR}/home/pi/plexamp"
-chown -R 1000:1000 "${ROOTFS_DIR}/home/pi/plexamp"
 
 # Its unit is ours, not the tarball's: the one it ships hardcodes a user and a
 # path, and this one has to match what the manifest names as the unit the

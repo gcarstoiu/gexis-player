@@ -54,8 +54,9 @@ be credited and acknowledged for their work."* **Built; wording and six findings
 
 A research pass over everything the image contains (2026-09-27) found:
 
-1. **Plexamp is included in the image, and our right to redistribute it is not
-   established.** The stage copies Plex's proprietary tarball, BASS libraries
+1. ~~**Plexamp is included in the image, and our right to redistribute it is not
+   established.**~~ **Resolved by ADR-0100 (George: "1A"):** it is fetched from
+   Plex on the device when switched on. The stage copies Plex's proprietary tarball, BASS libraries
    and all, into `/home/pi/plexamp`. No licence or EULA comes with it, and no
    record here has Plex's terms. The Legal page says truthfully that it is
    included. The alternatives are Plex's permission, or installing it on the

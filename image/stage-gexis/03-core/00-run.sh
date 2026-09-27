@@ -50,6 +50,14 @@ rm -f "${ROOTFS_DIR}/etc/systemd/system/gexis-boot-volume.service" \
 install -D -m 644 files/gexis-meter.service \
 	"${ROOTFS_DIR}/etc/systemd/system/gexis-meter.service"
 
+# ADR-0100: software that is not ours to redistribute is fetched on the device,
+# from its maker, when the user switches it on. The helper, its template unit,
+# and one pin per component (URL, checksum, where it goes).
+install -D -m 755 files/gexis-fetch-component "${ROOTFS_DIR}/usr/local/lib/gexis/gexis-fetch-component"
+install -D -m 644 files/gexis-fetch@.service "${ROOTFS_DIR}/etc/systemd/system/gexis-fetch@.service"
+install -d "${ROOTFS_DIR}/usr/share/gexis/components"
+install -m 644 files/components/*.env "${ROOTFS_DIR}/usr/share/gexis/components/"
+
 # ADR-0018: "alsactl state is not used to restore volume across boots."
 # The stock image ships alsa-restore.service (ExecStart=alsactl restore,
 # ExecStop=alsactl store) enabled by default, which does exactly the

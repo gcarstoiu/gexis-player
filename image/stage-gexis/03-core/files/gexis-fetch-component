@@ -1,0 +1,56 @@
+#!/bin/bash
+# SPDX-License-Identifier: GPL-3.0-or-later
+#
+# ADR-0100: third-party software that is not ours to redistribute is fetched on
+# the device, from its maker, when the user switches it on - never shipped in
+# the image. Run as gexis-fetch@<name>.service before that software's own unit.
+#
+# Reads /usr/share/gexis/components/<name>.env:
+#   URL     where the maker publishes it
+#   SHA256  the pinned checksum; nothing that fails it is unpacked
+#   FORMAT  tar.bz2 | tar.gz
+#   DEST    the directory it lives in once unpacked (the archive's top folder)
+#   OWNER   user:group that owns it
+# and records what it installed in /var/lib/gexis/components/<name>.sha256, so
+# a start after the first is a comparison, not a download.
+set -euo pipefail
+
+name="${1:?usage: gexis-fetch-component <name>}"
+pin="/usr/share/gexis/components/${name}.env"
+stamp_dir=/var/lib/gexis/components
+stamp="${stamp_dir}/${name}.sha256"
+
+# shellcheck source=/dev/null
+. "${pin}"
+: "${URL:?} ${SHA256:?} ${FORMAT:?} ${DEST:?} ${OWNER:?}"
+
+if [ -d "${DEST}" ] && [ "$(cat "${stamp}" 2>/dev/null)" = "${SHA256}" ]; then
+	exit 0
+fi
+
+echo "gexis-fetch: ${name}: downloading ${URL}"
+work="$(mktemp -d)"
+trap 'rm -rf "${work}"' EXIT
+curl -fsSL --retry 3 --retry-delay 5 -o "${work}/archive" "${URL}"
+echo "${SHA256}  ${work}/archive" | sha256sum -c --quiet - || {
+	echo "gexis-fetch: ${name}: checksum mismatch, not installed" >&2
+	exit 1
+}
+mkdir "${work}/unpacked"
+case "${FORMAT}" in
+	tar.bz2) tar -xjf "${work}/archive" -C "${work}/unpacked" ;;
+	tar.gz) tar -xzf "${work}/archive" -C "${work}/unpacked" ;;
+	*) echo "gexis-fetch: ${name}: unknown format ${FORMAT}" >&2; exit 1 ;;
+esac
+top="${work}/unpacked/$(basename "${DEST}")"
+[ -d "${top}" ] || { echo "gexis-fetch: ${name}: archive has no $(basename "${DEST}")/" >&2; exit 1; }
+chown -R "${OWNER}" "${top}"
+
+# Swapped in whole: a half-unpacked tree is never what a unit starts from.
+mkdir -p "$(dirname "${DEST}")" "${stamp_dir}"
+rm -rf "${DEST}.old"
+[ -d "${DEST}" ] && mv "${DEST}" "${DEST}.old"
+mv "${top}" "${DEST}"
+rm -rf "${DEST}.old"
+echo "${SHA256}" > "${stamp}"
+echo "gexis-fetch: ${name}: installed at ${DEST}"

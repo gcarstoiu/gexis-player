@@ -32,8 +32,10 @@ def test_every_component_says_what_it_is(data):
 def test_every_fetch_in_the_build_is_accounted_for(data):
     """A URL a stage downloads from is matched by a component's `sources`."""
     urls = set()
-    for script in STAGES.glob("*/0*-run*.sh"):
-        urls |= set(re.findall(r"https://[^\"' ]+", script.read_text()))
+    # The stages' own downloads, and what a user's switch fetches on the
+    # device (ADR-0100) - both are ours to account for.
+    for script in [*STAGES.glob("*/0*-run*.sh"), *STAGES.glob("*/files/components/*.env")]:
+        urls |= set(re.findall(r"https://[^\"' \n]+", script.read_text()))
     assert urls, "the stages fetch something"
     missing = sorted(u for u in urls if not any(
         s in u for c in data["components"] for s in c.get("sources", [])))

@@ -41,7 +41,7 @@ list is on the player, under Settings → System → Legal and Credits.
 | [Pygame and Pillow](https://www.pygame.org) | Draw the visualiser. | See /usr/share/doc/python3-pygame/copyright on the device | The pygame community; Jeffrey A. Clark and the Pillow contributors | Debian packages |
 | [pi-gen](https://github.com/RPi-Distro/pi-gen) | Builds the image. | BSD-3-Clause | Raspberry Pi Ltd | Used to build |
 | [Claude](https://www.anthropic.com/claude) | Designed the screens with George, and wrote much of the code. | Output owned by the project | Anthropic | Used to design and build |
-| [Plexamp](https://www.plex.tv/plexamp/) | Plays Plex and Plexamp music. | Proprietary; Plex's terms. Includes BASS audio libraries by Un4seen Developments | Plex, Inc. | Downloaded from Plex when the image is built and included in it |
+| [Plexamp](https://www.plex.tv/plexamp/) | Plays Plex and Plexamp music. | Proprietary; Plex's terms. Includes BASS audio libraries by Un4seen Developments | Plex, Inc. | Not in the image. Downloaded from Plex on the device when you switch Plexamp on, checked against a pinned checksum |
 | [Pibuz](https://github.com/PhilipVinc/pibuz) | Qobuz Connect, only if you install it from Settings. | MIT | Filippo Vicentini, from QBZ by vicrodh | Not included. Downloaded from its author's release when you choose to install it |
 | [MusicBrainz and the Cover Art Archive](https://musicbrainz.org) | Album, artist and cover information. | Core data CC0; covers belong to their owners | The MetaBrainz Foundation | Contacted at run time |
 | [ListenBrainz](https://listenbrainz.org) | What is popular in your library. | Its terms | The MetaBrainz Foundation | Contacted at run time |

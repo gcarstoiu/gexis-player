@@ -36,6 +36,12 @@ StartLimitBurst=20
 # running and starting it again did not bring the plugin back.
 Wants=gexis-plexamp.service
 
+# **ADR-0100: Plexamp is fetched from Plex here, not shipped.** The first start
+# downloads the pinned release; every later one finds it in place. A failed or
+# mismatched download fails this unit rather than starting something unchecked.
+Requires=gexis-fetch@plexamp.service
+After=gexis-fetch@plexamp.service
+
 [Service]
 Type=simple
 User=pi

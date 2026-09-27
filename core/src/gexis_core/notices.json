@@ -36,9 +36,9 @@
           ]
         },
         {
-          "heading": "Proprietary software",
+          "heading": "Downloaded when you switch it on",
           "paragraphs": [
-            "Plexamp is Plex's own software, not free software. It is downloaded from Plex when the image is built, is included in it, and is used under Plex's terms, not under the player's licence."
+            "Plexamp is Plex's own software, not free software, and it is not part of the player or its image. When you switch Plexamp on, the player downloads it from Plex, checks it against a pinned checksum, and runs it. It is used under Plex's terms, not under the player's licence. Switching it off stops it."
           ],
           "components": [
             "downloaded"
@@ -542,7 +542,7 @@
       "author": "Plex, Inc.",
       "licence": "Proprietary; Plex's terms. Includes BASS audio libraries by Un4seen Developments",
       "url": "https://www.plex.tv/plexamp/",
-      "arrives": "Downloaded from Plex when the image is built and included in it",
+      "arrives": "Not in the image. Downloaded from Plex on the device when you switch Plexamp on, checked against a pinned checksum",
       "sources": [
         "plexamp.plex.tv"
       ]
