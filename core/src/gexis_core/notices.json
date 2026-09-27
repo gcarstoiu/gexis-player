@@ -13,6 +13,14 @@
           ]
         },
         {
+          "heading": "Source code",
+          "paragraphs": [
+            "The player's source is at github.com/gcarstoiu/gexis-player. For the other free software in the image, its source is at the upstreams listed below; Debian and Raspberry Pi OS packages are listed with their exact versions on the device in /usr/share/doc/gexis-player/packages.txt.",
+            "For at least three years after an image is published, the complete corresponding source for any GPL- or LGPL-licensed program in it is available on request, for no more than the cost of providing it. Ask by opening an issue at github.com/gcarstoiu/gexis-player/issues. The same offer is in /usr/share/doc/gexis-player/SOURCE.md.",
+            "The full licence texts are on the device in /usr/share/doc/gexis-player (the player's own is COPYING) and in the folders each component installed."
+          ]
+        },
+        {
           "heading": "What it is built from",
           "paragraphs": [
             "The player is assembled from other people's work, each under its own licence. Each is listed below with its licence and where it comes from. Where a licence asks for its notice to be kept, it is kept in the component's own files on the device."

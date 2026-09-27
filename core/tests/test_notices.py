@@ -77,3 +77,8 @@ def test_an_unknown_document_is_none():
 def test_the_repositorys_third_party_list_is_current():
     """Regenerate with `python -m gexis_core.notices` from the repository root."""
     assert (ROOT / "THIRD-PARTY.md").read_text() == notices.third_party_markdown()
+
+
+def test_the_image_ships_the_repositorys_own_licence():
+    """The stages cannot see the repository root, so 09-legal keeps a copy."""
+    assert (STAGES / "09-legal" / "files" / "COPYING").read_bytes() == (ROOT / "LICENSE").read_bytes()

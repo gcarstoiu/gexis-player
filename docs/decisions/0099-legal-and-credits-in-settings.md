@@ -63,10 +63,26 @@ A research pass over everything the image contains (2026-09-27) found:
    device when the user asks, as ADR-0098 does for Qobuz.
 2. **go-librespot** is an unofficial Spotify client shipped in the image. That
    is the ground on which ADR-0098 kept Qobuz's receiver out.
-3. **The image's GPL obligations have no written offer of source.** That covers
+3. ~~**The image's GPL obligations have no written offer of source.**~~
+   **Resolved 2026-09-27 (George: "Fine"):** the Legal page and
+   `/usr/share/doc/gexis-player/SOURCE.md` carry a three-year written offer,
+   handled through the repository's issues. `packages.txt` records every
+   package and its source version. peppyalsa's modification is named there.
+   Originally: That covers
    the kernel, squeezelite, Samba, go-librespot, and our modified peppyalsa
    (which also needs its GPL §5a "modified" notice, now on the Legal page).
-4. **Some licence texts do not reach the device:**
+4. ~~**Some licence texts do not reach the device.**~~ **Resolved 2026-09-27
+   (George: "Agree"):**
+   - The UI's bundled licences go to `/opt/gexis-ui/licenses/`.
+   - The screensaver, templates and Beszel MIT notices go to
+     `/usr/share/doc/gexis-player/licenses/`, and so do go-librespot's and
+     peppyalsa's GPL notes.
+   - The player's `COPYING` ships beside them.
+   - yarl's and propcache's NOTICE files were already in the venv; checked on
+     gexis.
+   - `verify-image.sh` checks all of it.
+
+   Originally:
    - OFL for Nunito Sans and IBM Plex Mono
    - MIT for Svelte, Beszel, and foonerd's screensaver and templates
    - Apache NOTICE files for yarl and propcache

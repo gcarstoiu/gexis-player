@@ -326,6 +326,21 @@ else
 fi
 rm -f "$OUT/one"
 
+echo "== ADR-0099: licences and the source offer reach the device"
+for f in /usr/share/doc/gexis-player/COPYING \
+         /usr/share/doc/gexis-player/SOURCE.md \
+         /usr/share/doc/gexis-player/packages.txt \
+         /usr/share/doc/gexis-player/licenses/peppy_screensaver/LICENSE \
+         /usr/share/doc/gexis-player/licenses/peppy_templates/LICENSE \
+         /usr/share/doc/gexis-player/licenses/beszel/LICENSE \
+         /usr/share/doc/gexis-player/licenses/go-librespot/README \
+         /usr/share/doc/gexis-player/licenses/peppyalsa/README \
+         /opt/gexis-ui/licenses/svelte/LICENSE.md \
+         /opt/gexis-ui/licenses/@fontsource-variable__nunito-sans/LICENSE \
+         /opt/gexis-ui/licenses/@fontsource__ibm-plex-mono/LICENSE; do
+	dfs "stat $f" | grep -q 'Inode:' && ok "$f" || bad "$f missing"
+done
+
 echo "== ADR-0085: the ALSA default is our output"
 dfs "dump /etc/alsa/conf.d/zz-gexis-default.conf $OUT/one" >/dev/null
 if grep -q 'pcm.!default' "$OUT/one" 2>/dev/null; then
