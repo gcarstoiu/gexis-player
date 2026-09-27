@@ -8,11 +8,8 @@ device and through our audio path?
 Pibuz 2.5.0 `linux-aarch64` was run by hand from `/tmp`, with scratch
 configuration under `/tmp`. George cast to it from the Qobuz app on his phone,
 on his own account. Observations come from Pibuz's log and `/proc`. **Not
-tested yet:**
-- takeover in either direction
-- disconnecting from the app
-- a 24/192 track
-- another account in the household
+tested:** another household account (there is none); a gapless album (George
+ran out of time).
 
 ## Setup
 
@@ -46,3 +43,21 @@ tested yet:**
   (no metadata, no volume screen): as expected, since there is no adapter.
 - **A harmless warning repeats:** `login1 Inhibit` fails, because it runs as
   `pi` without polkit.
+
+## George's second round (18:30-19:00)
+
+| Test | Result | Why, from the logs |
+|---|---|---|
+| 1. Qobuz playing, Spotify takes over | **Fails.** Spotify does not play; the transition screen shows | go-librespot: `failed starting playback: ALSA error at snd_pcm_open: Device or resource busy`, five times from 18:31:01. The core does not know Pibuz holds the card, so no release was sent. |
+| 2. Spotify playing, cast to Qobuz | **Fails.** Spotify keeps playing; the Qobuz app shows time advancing with no sound | Pibuz: `Device busy` → nine retries (18:34:23-29) → `Backend system init failed for Play`. **It tells the app it is playing anyway.** |
+| 3. Qobuz paused, Spotify plays, Qobuz resumes | Works | A paused Pibuz holds no descriptors on the card. |
+| 4. Disconnect in the app, then Spotify | Works | — |
+| 5. 24/192 | **Works** | `format_id=27`, `Hardware configured: 192000 Hz`. Across the session: 44.1, 88.2, 96 and 192 kHz, each at its own rate. |
+| 6. Seek, next, previous | Work | Gapless not tried. |
+
+**What this means for the adapter** (ADR-0098 step 3): it is what makes Pibuz
+a renderer the arbitration knows about. Test 1 needs a release - pause, which
+frees the card (test 3), then stop. Test 2 needs Pibuz's intent to play reported
+to the core as an acquisition, *before* it opens the card. Its hook script and
+JSON events are the candidates. Pibuz reporting "playing" to the app while it
+has no device is a bug to report upstream.
