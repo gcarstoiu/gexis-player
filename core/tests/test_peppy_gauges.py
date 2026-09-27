@@ -83,3 +83,32 @@ def test_markers_sit_on_the_bar(tmp_path):
 def test_the_arc_helper_draws_a_half_ring():
     half = arc((100, 100), (255, 255, 255), 0, 180, 10)
     assert half.get_at((50, 4))[3] > 200 and half.get_at((50, 96))[3] < 50
+
+
+def test_each_icon_state_is_upstreams_picture():
+    from gexis_peppy_gauges import icon_state
+    assert [icon_state("mute", m) for m in ({"volume": 50}, {"muted": True, "volume": 50}, {"volume": 0})] == [0, 1, 2]
+    assert [icon_state("repeat", {"repeat": r}) for r in (None, "off", "all", "one")] == [0, 0, 1, 2]
+    assert [icon_state("shuffle", {"shuffle": s}) for s in (None, False, True)] == [0, 0, 1]
+    assert [icon_state("playstate", {"transport": t}) for t in ("stopped", "paused", "playing", None)] == [0, 1, 2, 0]
+
+
+def test_an_icon_is_centred_in_its_box_and_glows(tmp_path):
+    from gexis_peppy_gauges import Icon
+    if not pygame.image.get_extended():
+        pytest.skip("this pygame cannot save PNG files")  # the device's can
+    on = pygame.Surface((10, 10), pygame.SRCALPHA)
+    on.fill((255, 255, 255, 255))
+    off = pygame.Surface((20, 20), pygame.SRCALPHA)
+    off.fill((0, 0, 0, 255))
+    pygame.image.save(on, str(tmp_path / "on.png"))
+    pygame.image.save(off, str(tmp_path / "off.png"))
+    icon = Icon("mute", {"mute.pos": "100,100", "mute.icon": "on.png,off.png", "mute.icon.glow": "3",
+                         "mute.icon.glow.color": "255,0,0,0,0,255"}, tmp_path)
+    assert icon.ok and icon.box == (32, 32), "the largest picture, grown by twice the glow each side"
+    (drawn, where), = icon.pieces(0)
+    assert where == (100, 100)
+    assert drawn.get_at((16, 16))[:3] == (255, 255, 255), "the picture, centred"
+    halo = drawn.get_at((16, 9))
+    assert halo[3] > 0 and halo[0] > halo[2], "a red glow just outside it"
+    assert icon.pieces(5) == icon.pieces(1), "an out-of-range state is the last picture"

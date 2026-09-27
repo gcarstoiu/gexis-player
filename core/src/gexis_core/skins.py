@@ -153,12 +153,10 @@ ANIMATED_TEXT_KEYS = {
 #: yet** - George's decision 3 in ADR-0096: the motion first, these later.
 #: Listed rather than waved through, so a key that is neither drawn nor
 #: deferred still fails the build. Matched by prefix.
-DEFERRED_PREFIXES = (
-    "mute.", "playstate.", "repeat.", "shuffle.",
-)
+DEFERRED_PREFIXES: tuple[str, ...] = ()
 #: **Families the animated packs use and the renderer draws** (ADR-0097),
-#: matched by prefix because their markers are numbered.
-ANIMATED_PREFIXES = ("progress.", "volume.")
+#: matched by prefix because their markers and glows vary.
+ANIMATED_PREFIXES = ("progress.", "volume.", "mute.", "playstate.", "repeat.", "shuffle.")
 DEFERRED_KEYS = {
     "time.remaining.font",
     # Drawn, in our digi face: the fonts these name are not in the packs,

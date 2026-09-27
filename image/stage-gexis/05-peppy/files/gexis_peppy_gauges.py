@@ -236,3 +236,78 @@ class Gauge:
             ox, oy = self.head_offset
             out.append((self.head, (px - self.head.get_width() // 2 + ox, py - self.head.get_height() // 2 + oy)))
         return out
+
+
+class Icon:
+    """One of `mute`, `playstate`, `repeat` or `shuffle`: the skin's picture
+    for the state, as upstream's `IconIndicator` places it - centred in a box
+    as large as the largest picture, grown by twice the glow on every side,
+    with `pos` its top-left. The glow is the picture's own shape in the
+    state's glow colour (white without one), blurred by `glow` pixels, behind
+    it."""
+
+    def __init__(self, prefix: str, skin: dict[str, str], directory: Path) -> None:
+        self.pos = _pair(skin.get(f"{prefix}.pos"))
+        names = [n.strip() for n in (skin.get(f"{prefix}.icon") or "").split(",") if n.strip()]
+        self.pictures = [_load(directory, n) for n in names]
+        self.ok = self.pos is not None and bool(self.pictures) and all(p is not None for p in self.pictures)
+        if not self.ok:
+            return
+        self.glow = max(0, int(_number(skin.get(f"{prefix}.icon.glow"), 0)))
+        self.intensity = max(0.0, min(1.0, _number(skin.get(f"{prefix}.icon.glow.intensity"), 0.5)))
+        colours = [int(v) for v in (skin.get(f"{prefix}.icon.glow.color") or "").replace(" ", "").split(",") if v]
+        # Exactly two colours or none, as upstream parses it.
+        self.glow_colours = [tuple(colours[0:3]), tuple(colours[3:6])] if len(colours) == 6 else None
+        pad = 2 * self.glow if self.glow > 0 and ImageFilter is not None else 0
+        self.box = (max(p.get_width() for p in self.pictures) + 2 * pad,
+                    max(p.get_height() for p in self.pictures) + 2 * pad)
+        self._drawn: dict[int, pygame.Surface] = {}
+
+    def _glow(self, picture: pygame.Surface, colour) -> pygame.Surface:
+        r = self.glow
+        w, h = picture.get_size()
+        alpha = Image.frombytes("RGBA", (w, h), pygame.image.tostring(picture, "RGBA")).getchannel("A")
+        strength = int(255 * self.intensity)
+        shape = alpha.point(lambda a: a * strength // 255)
+        canvas = Image.new("RGBA", (w + 4 * r, h + 4 * r), tuple(colour) + (0,))
+        tinted = Image.new("RGBA", (w, h), tuple(colour) + (255,))
+        tinted.putalpha(shape)
+        canvas.paste(tinted, (2 * r, 2 * r))
+        canvas = canvas.filter(ImageFilter.GaussianBlur(radius=r))
+        return pygame.image.fromstring(canvas.tobytes(), canvas.size, "RGBA").convert_alpha()
+
+    def pieces(self, state: int | None) -> list[tuple[pygame.Surface, tuple[int, int]]]:
+        if not self.ok or state is None:
+            return []
+        state = max(0, min(len(self.pictures) - 1, state))
+        drawn = self._drawn.get(state)
+        if drawn is None:
+            drawn = pygame.Surface(self.box, pygame.SRCALPHA)
+            picture = self.pictures[state]
+            spot = picture.get_rect(center=(self.box[0] // 2, self.box[1] // 2))
+            if self.glow > 0 and ImageFilter is not None:
+                colours = self.glow_colours
+                colour = colours[min(state, len(colours) - 1)] if colours else (255, 255, 255)
+                halo = self._glow(picture, colour)
+                drawn.blit(halo, halo.get_rect(center=spot.center))
+            drawn.blit(picture, spot)
+            self._drawn[state] = drawn
+        return [(drawn, self.pos)]
+
+
+def icon_state(which: str, metadata: dict) -> int | None:
+    """Which of the skin's pictures a state is, in upstream's order: mute
+    (sound on, muted, silent), shuffle (off, on), repeat (off, all, one),
+    playstate (stop, pause, play). A renderer without shuffle or repeat shows
+    them off, as upstream does for a source with none."""
+    if which == "mute":
+        if metadata.get("muted"):
+            return 1
+        return 2 if metadata.get("volume") == 0 else 0
+    if which == "shuffle":
+        return 1 if metadata.get("shuffle") else 0
+    if which == "repeat":
+        return {"all": 1, "one": 2}.get(metadata.get("repeat") or "", 0)
+    if which == "playstate":
+        return {"paused": 1, "playing": 2}.get(metadata.get("transport") or "", 0)
+    return None

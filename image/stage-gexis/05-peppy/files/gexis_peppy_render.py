@@ -24,7 +24,7 @@ from pathlib import Path
 
 import pygame
 
-from gexis_peppy_gauges import Gauge
+from gexis_peppy_gauges import Gauge, Icon, icon_state
 
 logger = logging.getLogger("peppy.render")
 
@@ -290,7 +290,7 @@ class MetadataLayer:
         self._art_spins = False
         self._ticker: Ticker | None = None
         self._ticker_item: int | None = None
-        self._gauges: list[tuple[str, Gauge]] = []
+        self._gauges: list[tuple[str, Gauge | Icon]] = []
 
     # ---- skin ----------------------------------------------------------
 
@@ -316,14 +316,18 @@ class MetadataLayer:
         self._background = None
         self._ticker = None
         self._ticker_item = None
-        # ADR-0097: shown, never acted on. Volume before progress, as upstream.
+        # ADR-0097: shown, never acted on - in upstream's order: volume,
+        # mute, shuffle, repeat, play state, progress.
         regular = int(_float(skin.get("font.size.regular"), 35))
-        self._gauges = [
-            (which, gauge) for which, gauge in (
-                (which, Gauge(which, skin, self._corpus, FONTS["regular"], regular))
-                for which in ("volume", "progress") if skin.get(f"{which}.pos"))
-            if gauge.ok
-        ]
+        built = []
+        for which in ("volume", "mute", "shuffle", "repeat", "playstate", "progress"):
+            if not skin.get(f"{which}.pos"):
+                continue
+            if which in ("volume", "progress"):
+                built.append((which, Gauge(which, skin, self._corpus, FONTS["regular"], regular)))
+            else:
+                built.append((which, Icon(which, skin, self._corpus)))
+        self._gauges = [(which, drawn) for which, drawn in built if drawn.ok]
         if (skin.get("playinfo.ticker") or "").strip().lower() == "true":
             self._ticker = Ticker(
                 speed=_float(skin.get("playinfo.ticker.speed"), 40.0),
@@ -462,10 +466,13 @@ class MetadataLayer:
         if not self._gauges:
             return {}
         elapsed, duration = elapsed_seconds(metadata), metadata.get("duration")
-        return {
+        readings = {
             "progress": min(100, int(elapsed / duration * 100)) if elapsed is not None and duration else None,
             "volume": metadata.get("volume"),
         }
+        for which in ("mute", "shuffle", "repeat", "playstate"):
+            readings[which] = icon_state(which, metadata)
+        return readings
 
     def tick(self, now: float | None = None) -> list[pygame.Rect]:
         """Every frame: the ticker's box when it has moved, for the caller
