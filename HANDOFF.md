@@ -61,11 +61,15 @@ real image build.** The first image built from here is its first test.
 | settings | corpora **Turntables** (48) and **Tapes** (39), by what a skin declares; **Animate turntables and tapes** and **Record speed** 33/45 (ADR-0022 [N], George's choice) |
 | fixed after George looked | previews for all 189; 18 turntables' records (`album,theme` file names); Peppy's warnings, which upstream's `use.logging = False` silenced (LESSONS 43) |
 
-**Next, agreed with George 2026-09-27:** release gexis-plexamp v0.2.2 and pin it
-on `backup-plexamp-claim`; **two PRs** - the fixes, then this branch on top;
-**one image build with everything**. The ticker's scroll, smooth rotation and the
-extra fields come after the build, on a new branch. Release notes and both PR
-descriptions are drafted; publishing waits on George's go-ahead.
+**Done 2026-09-27:** gexis-plexamp **v0.2.2** released and pinned; **PR #31**
+(the fixes, into `main`) and **PR #32** (this branch, into the fixes branch -
+retarget to `main` once #31 merges); **one image with everything**,
+`image/deploy/2026-09-27-gexis-player-v0.2.1-664-gc0d64ed.img`, 735 s warm.
+The new stage ran for the first time and letterboxed all three 720p packs; the
+rootfs was read, not trusted (every change present, pictures 1280x800, no
+`skins-letterbox` left behind); `verify-image.sh` passed - **it has no checks
+for the animated packs yet**. **Not flashed.** Next: George flashes it; then the
+ticker's scroll, smooth rotation and the extra fields, on a new branch.
 
 Open here: smooth rotation is not built (stepped only, as measured); the
 deferred keys (progress, elapsed/total time, volume, the ticker's scroll and
