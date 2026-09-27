@@ -184,3 +184,34 @@ def test_a_title_under_a_turning_reel_survives_the_spin(screen, tmp_path):
     for now in (1.0, 1.2, 1.4):
         motion.tick({"transport": "playing"}, None, now=now)
         assert screen.get_at((300, 300))[:3] == (255, 0, 0)
+
+
+def test_the_record_turns_when_the_art_stays_off_it(screen, tmp_path):
+    """`albumart.rotation = false` puts the art beside the record, as
+    upstream reads it; it does not stop the record."""
+    vinyl = pygame.Surface((200, 200), pygame.SRCALPHA)
+    pygame.image.save(vinyl, str(tmp_path / "v.bmp"))
+    skin = {"vinyl.filename": "v.bmp", "vinyl.center": "300,300", "albumart.rotation": "false",
+            "albumart.rotation.speed": "33", "albumart.dimension": "80,80"}
+    motion = MotionLayer(screen)
+    motion.set_skin(skin, tmp_path, pygame.Surface((1280, 800)))
+    motion.tick({"transport": "playing"}, None, now=1.0)
+    angle = motion.spinners[0].angle
+    motion.tick({"transport": "playing"}, None, now=1.2)
+    assert motion.spinners[0].angle != angle
+    assert motion._label_size is None, "and the art is not put on it"
+
+
+def test_a_record_named_album_comma_theme_is_the_theme(screen, tmp_path):
+    """18 turntables name their record `cdart.png,<theme>.png`: the album's
+    disc art when the music folder has one, which we never see."""
+    from gexis_peppy_motion import _theme
+    assert _theme("cdart.png,Vertere DG1_vinyl.png") == "Vertere DG1_vinyl.png"
+    assert _theme(",theme.png") == "theme.png"
+    assert _theme("plain.png") == "plain.png"
+    vinyl = pygame.Surface((200, 200), pygame.SRCALPHA)
+    pygame.image.save(vinyl, str(tmp_path / "theme.bmp"))
+    motion = MotionLayer(screen)
+    motion.set_skin({"vinyl.filename": "cdart.png,theme.bmp", "vinyl.center": "300,300",
+                     "albumart.rotation.speed": "33"}, tmp_path, pygame.Surface((1280, 800)))
+    assert motion.spinners, "the record is there"

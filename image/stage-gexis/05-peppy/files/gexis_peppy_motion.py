@@ -71,6 +71,19 @@ def _load(directory: Path, name: str | None) -> pygame.Surface | None:
         return None
 
 
+def _theme(value: str | None) -> str | None:
+    """The record's own picture from upstream's `album,theme` form.
+
+    `cdart.png,Vertere DG1_vinyl.png` means: the album's disc art, from the
+    music folder, when it has one - otherwise this picture. We never see the
+    music folder, so it is always the second. Loaded as one name, it drew no
+    record at all on 18 turntables."""
+    if not value or "," not in value:
+        return value
+    parts = [part.strip() for part in value.split(",")]
+    return parts[1] or parts[0] or None
+
+
 def _disc(surface: pygame.Surface, size: tuple[int, int]) -> pygame.Surface:
     """`surface` scaled to `size` and cut to a circle - a record label."""
     scaled = pygame.transform.smoothscale(surface.convert_alpha(), size)
@@ -288,13 +301,17 @@ class MotionLayer:
         clockwise = (skin.get("vinyl.direction") or skin.get("reel.direction") or "cw").strip().lower() != "ccw"
         art_pos, art_dim = _point(skin.get("albumart.pos")), _point(skin.get("albumart.dimension"))
 
-        vinyl = _load(directory, skin.get("vinyl.filename"))
+        vinyl = _load(directory, _theme(skin.get("vinyl.filename")))
         center = _point(skin.get("vinyl.center"))
         if vinyl is not None and center is not None:
             size = _point(skin.get("vinyl.dimension"))
             if size:
                 vinyl = pygame.transform.smoothscale(vinyl, size)
-            self._label_spinner = Spinner(vinyl, center, rpm if spins else 0.0, clockwise)
+            # The record turns at the skin's speed whether or not the art is
+            # on it: `albumart.rotation` says only where the art goes, as in
+            # upstream. Read as "still", it left 27 turntables' records
+            # standing - every `_03` variant among them.
+            self._label_spinner = Spinner(vinyl, center, rpm, clockwise)
             self.spinners.append(self._label_spinner)
         elif spins and art_pos and art_dim:
             # No vinyl picture: the album art itself is the record (ten of the
