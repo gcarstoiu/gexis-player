@@ -69,7 +69,10 @@ uses scraped web-player credentials, against Qobuz's terms. Every client's
 licence permits a public repository. **Route, client, repo visibility and
 install model are George's decisions, not yet taken.**
 
-**Then, branch `peppy-next` (PR #33, pushed):** nine more badge slots (George's
+**Then, branch `peppy-next` (PR #33, pushed):** **Image built from it:**
+`image/deploy/2026-09-27-gexis-player-v0.2.1-680-g1a0042d.img` (735 s); rootfs
+read and `verify-image.sh` passed, now covering the motion and gauge modules and
+the badge slots. **Not flashed.** nine more badge slots (George's
 Naim S+M and Kenwood Rev S+M among them); the animated skins' rows moved into
 **Visualisation tweaks** (renamed from *Meters and spectrum tweaks*); and
 [ADR-0097](docs/decisions/0097-what-the-visualiser-shows-beyond-the-title.md) -
