@@ -226,10 +226,11 @@ class MetadataLayer:
         self._painted = []
         self._last_drawn = None
         self._background = None
-        name = skin.get("screen.bgr")
-        if not name:
+        picture = (skin.get("screen.bgr") or "").strip()
+        if not picture:
+            self._background = self._meter_background(skin)
             return
-        path = self._corpus / name
+        path = self._corpus / picture
         try:
             image = pygame.image.load(str(path)).convert()
         except (pygame.error, OSError) as exc:
@@ -238,6 +239,30 @@ class MetadataLayer:
         if image.get_size() != self._screen.get_size():
             image = pygame.transform.smoothscale(image, self._screen.get_size())
         self._background = image
+
+    def _meter_background(self, skin: dict[str, str]) -> pygame.Surface | None:
+        """**A skin with no `screen.bgr` is drawn by its meter's background
+        alone** (ADR-0096) - 41 of the 48 turntables. Without this the layer had
+        nothing to erase back to and drew no title, art or badge at all. The
+        picture the engine paints is `bgr.filename` at the meter's origin, over
+        whatever was there - black, here."""
+        picture = (skin.get("bgr.filename") or "").strip()
+        if not picture:
+            return None
+        path = self._corpus / picture
+        try:
+            image = pygame.image.load(str(path)).convert_alpha()
+        except (pygame.error, OSError) as exc:
+            logger.warning("render: no meter background %s: %s", path, exc)
+            return None
+        canvas = pygame.Surface(self._screen.get_size())
+        canvas.fill((0, 0, 0))
+        try:
+            origin = (int(skin.get("meter.x") or 0), int(skin.get("meter.y") or 0))
+        except ValueError:
+            origin = (0, 0)
+        canvas.blit(image, origin)
+        return canvas
 
     def font(self, weight: str, size: int) -> pygame.font.Font:
         key = (weight, size)

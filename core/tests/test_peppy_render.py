@@ -473,3 +473,25 @@ def test_the_skins_found_off_centre_by_eye_are_in_the_table():
     for name in ("113G5_Old Spectrum S+M", "19G5_Sansui 2V", "37G5_TURN Vinyl Green",
                  "38G5_TURN Vinyl Green 2", "39G5_TURN Vinyl Silver", "40G5_TURN Vinyl Black"):
         assert name in SLOTS, name
+
+
+def test_a_skin_with_no_screen_background_still_draws_its_text(screen, tmp_path):
+    """**ADR-0096.** 41 of the 48 turntables leave `screen.bgr` empty and are
+    drawn by the meter's own background; the layer returned before drawing
+    anything, so those skins showed no title, art or badge at all."""
+    meter = pygame.Surface((1280, 800))
+    meter.fill((60, 50, 40))
+    pygame.image.save(meter, str(tmp_path / "deck_bgr.png"))
+    skin = dict(SKIN, **{"screen.bgr": "", "bgr.filename": "deck_bgr.png", "meter.x": "0", "meter.y": "0"})
+    layer = MetadataLayer(screen, tmp_path)
+    layer.set_skin(skin)
+
+    assert layer._background is not None
+    assert layer._background.get_at((640, 400))[:3] == (60, 50, 40)
+    assert layer.draw(full()), "the title and the rest are drawn"
+
+
+def test_a_skin_with_neither_background_draws_nothing_rather_than_smear(screen, tmp_path):
+    layer = MetadataLayer(screen, tmp_path)
+    layer.set_skin(dict(SKIN, **{"screen.bgr": "", "bgr.filename": ""}))
+    assert layer.draw(full()) == []
