@@ -1,6 +1,7 @@
 # ADR-0077 — A source that is off is not running
 
-**Status:** Accepted
+**Status:** Accepted, **amended 2026-09-26** — at startup every switch is
+made true in both directions, plugins included. See *Amendment*.
 **Date:** 2026-09-25
 **Relates to:** [ADR-0013](0013-defaults-implement-public-contract.md)
 (the three defaults are plugins, and a plugin does not need to know it can be
@@ -155,6 +156,53 @@ and the next request is answered in **5 ms** while the unit is still stopping.
 - **Whether the rows should warn before acting.** `headless` in particular is
   a toggle that removes the surface it was pressed on. Left as it is, on the
   grounds that the note under the row says what it does.
+
+## Amendment, 2026-09-26 — at startup, the switch wins in both directions
+
+**Found by a restore.** George reflashed the card and restored a backup
+(ADR-0083). The settings came back with `plexamp.enabled` and `beszel.enabled`
+on; the image installs both units disabled (ADR-0090, ADR-0087); and nothing
+brought the two together. The switches read *Enabled* for units that were
+neither running nor going to start, and Plexamp was missing as a renderer
+until the switch was flipped off and on by hand.
+
+Startup reconciliation, as first written, enforced **off only, and only for the
+three built-ins** — on the reasoning that *"a row that is on wants what the
+image ships"*. That was true of the built-ins and was never true of a plugin,
+which ships off. A restore is exactly the case it names in its own rationale,
+*"the two can drift"*, with the direction reversed: **the settings travel in
+the backup and the unit's enablement does not**, because it lives in
+`/etc/systemd`.
+
+**So at startup, every switch is compared with its unit and, where they
+disagree, the switch wins** — `enable --now` or `disable --now`, through the
+same path the row takes when it is written:
+
+- the three built-in sources, against their renderer's unit;
+- every plugin with a synthesised switch (ADR-0086 as amended), against the
+  unit in its manifest — with its environment written first (ADR-0088);
+- `headless`, against `gexis-kiosk.service`.
+
+**Only where they disagree.** The first version's reason for not enforcing
+*on* still stands: `enable --now` on every boot would re-run Bluetooth's power-up
+and discoverability on top of `_bluetooth_setup`. Asking `systemctl is-enabled`
+first costs one subprocess per switch, off the event loop, and a device whose
+switches already agree does nothing at all.
+
+**A plugin switch nobody has touched cannot disagree.** It has no stored value
+and reads the unit's own state (ADR-0086 as amended), so a fresh image with no
+restore stays exactly as it ships.
+
+**Rejected: have the restore enable the units.** It would fix the one path
+that found this and leave every other way the two can part — a unit disabled by
+hand over SSH, an image update that ships one differently — to be found the
+same way. The switch is the record of what was asked; startup is the one moment
+guaranteed to follow every such event, including a restore's reboot.
+
+**Rejected: put systemd's enablement in the backup.** Copying symlinks out of
+`/etc/systemd/system/*.wants` restores a second statement of what the settings
+already say, and ADR-0083's restore refuses links on a guest-writable share for
+good reason.
 
 ## Reversal conditions
 

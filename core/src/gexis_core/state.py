@@ -33,7 +33,6 @@ class StateStore:
         self,
         capabilities: Mapping[str, Capabilities],
         *,
-        handoff_exempt_pairs: tuple[tuple[str, str], ...] = (),
         sources: tuple[dict, ...] = (),
     ) -> None:
         """`capabilities` is the single source of truth for which
@@ -42,11 +41,6 @@ class StateStore:
         lifetime: every adapter declares the same contract regardless of
         configuration, so this is captured once here rather than re-read
         per broadcast.
-
-        `handoff_exempt_pairs` is published, not applied here (Phase 4
-        criterion 4) - this store has no opinion on whether a transition
-        screen is shown; it only carries the evidence-gated list the UI
-        decides from.
         """
         self._capabilities = dict(capabilities)
         #: **ADR-0086.** How each source presents itself - name, accent,
@@ -56,7 +50,6 @@ class StateStore:
         #: built-ins are in here on the same footing as any plugin, which is
         #: the point: the generic path is the one exercised on every boot.
         self._sources = tuple(sources)
-        self._handoff_exempt_pairs = tuple(tuple(p) for p in handoff_exempt_pairs)
         self._available: dict[str, bool] = {rid: False for rid in capabilities}
         self._metadata: dict[str, TrackMetadata] = {}
         self._queues: dict[str, object] = {}
@@ -111,7 +104,6 @@ class StateStore:
             volume=self._volume,
             fixed_output=self._fixed_output,
             meters=self._meters,
-            handoff_exempt_pairs=self._handoff_exempt_pairs,
             sources=self._sources,
             settings_revision=self._settings_revision,
             pictures_revision=self._pictures_revision,

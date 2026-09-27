@@ -75,7 +75,6 @@ export const fixedOutput = derived(playback, ($s) => $s?.fixed_output === true);
 // Absent (an older core) means yes, which is what every output but HDMI is.
 export const meters = derived(playback, ($s) => $s?.meters !== false);
 export const handoff = derived(playback, ($s) => $s?.handoff ?? null);
-export const handoffExemptPairs = derived(playback, ($s) => $s?.handoff_exempt_pairs ?? []);
 /** What each renderer has (ADR-0037 §2's static layer), by renderer id. */
 export const capabilities = derived(playback, ($s) => $s?.capabilities ?? {});
 

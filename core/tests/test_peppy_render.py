@@ -25,7 +25,11 @@ from gexis_peppy_render import (  # noqa: E402
     parse_point,
     parse_size,
     remaining_time,
+    load_badge_slots,
+    BADGE_FILL,
 )
+
+SLOTS = load_badge_slots(STAGE / "badge-slots.json")
 
 #: The shipped corpus: its config files are in this repository even though its
 #: 82MB of images are fetched at build time, so the geometry is checkable here.
@@ -207,7 +211,31 @@ def test_the_lyrion_badge_is_tinted_not_black(layer):
         if badge.get_at((x, y)).a > 200
     ]
     assert opaque, "the mark has visible pixels"
-    assert all(pixel.g > 150 for pixel in opaque)  # the LMS accent is green-teal
+    # The LMS accent is green-teal. Since 2026-09-27 the mark carries a dark
+    # edge on purpose (George: "Change it up so it's more visible"), so not
+    # every pixel is the accent - but the mark must still be mostly accent,
+    # which is what a mark drawn black (the original bug) is not.
+    accent = [pixel for pixel in opaque if pixel.g > 150]
+    assert len(accent) > 0.35 * len(opaque)
+
+
+def test_a_small_lyrion_badge_is_the_four_bar_reduction(layer):
+    """**2026-09-27.** Below `LYRION_REDUCTION_BELOW` the ten thin bars became a
+    dark smudge once they had an edge; the panel's `SourceMark` already draws
+    four bars below 40 px for the same reason. Four accent runs across the
+    middle row, not ten."""
+    from gexis_peppy_render import LYRION_REDUCTION_BELOW
+
+    small = layer._badge("lms", (32, 32))
+    assert small.get_height() < LYRION_REDUCTION_BELOW
+    row = small.get_height() // 2
+    runs, inside = 0, False
+    for x in range(small.get_width()):
+        pixel = small.get_at((x, row))
+        on = pixel.a > 200 and pixel.g > 150
+        runs += on and not inside
+        inside = on
+    assert runs == 4
 
 
 def test_an_unknown_source_draws_no_badge(layer):
@@ -258,7 +286,7 @@ def test_remaining_time_turns_red_for_the_last_ten_seconds(layer):
 def test_the_badge_is_the_mark_alone(layer):
     """George, 2026-09-18, reversing his 2026-09-16 call: no name beside it.
     The name was the only thing drawn outside the square the skin reserves."""
-    plain = layer._badge("spotify", (50, 50))
+    plain = layer._badge("spotify", (round(50 * BADGE_FILL), round(50 * BADGE_FILL)))
     rect = layer._badge_rect("spotify")
     assert rect.size == plain.get_size(), "the badge is the mark and nothing else"
 
@@ -279,10 +307,15 @@ def test_no_skin_draws_the_source_outside_the_box_it_reserved(screen, source):
             continue
         box = parse_size(skin.get("playinfo.type.dimension")) or (50, 50)
         layer._skin = skin
+        layer._skin_name = skin["name"]
         rect = layer._badge_rect(source)
         if rect is None:
             continue
         reserved = pygame.Rect(position[0], position[1], box[0], box[1])
+        # A skin with a measured slot reserves the slot (see below).
+        slot = SLOTS.get(skin["name"])
+        if slot is not None:
+            reserved = pygame.Rect(slot[0], slot[1], slot[2] - slot[0], slot[3] - slot[1])
         if not reserved.contains(rect) or not screen.get_rect().contains(rect):
             offenders.append((skin["name"], tuple(rect), tuple(reserved)))
     assert not offenders, f"{len(offenders)} skins draw the source outside their box: {offenders[:5]}"
@@ -343,3 +376,100 @@ def test_the_three_built_ins_still_use_the_designs_own_artwork(layer):
     from gexis_peppy_render import BADGES
 
     assert set(BADGES) == {"lms", "spotify", "bluetooth"}
+
+
+def all_corpus_skins() -> list[dict]:
+    """Both repository corpora - the meters and the spectrum templates."""
+    found = []
+    for folder in ("templates", "templates_spectrum"):
+        current = None
+        for line in (CORPUS_DIR.parent / folder / "meters.txt").read_text().splitlines():
+            line = line.strip()
+            if line.startswith("[") and line.endswith("]"):
+                current = {"name": line[1:-1]}
+                found.append(current)
+            elif current is not None and "=" in line and not line.startswith("#"):
+                key, _, value = line.partition("=")
+                current[key.strip()] = value.strip()
+    return found
+
+
+def test_every_measured_slot_holds_the_box_its_skin_declared():
+    """**George, 2026-09-26: the logo is not centred on some skins.** Each slot
+    was measured from the skin's artwork; a slot that does not contain the box
+    the skin declared would be a measurement of something else. The stock
+    skins (`emerald`, `orange`, `black-*`) are fetched at build time and are
+    not in this repository, so only the Gelo5 ones are checked here."""
+    assert SLOTS, "the slot table must load"
+    skins = {skin["name"]: skin for skin in all_corpus_skins()}
+    checked = 0
+    for name, (x0, y0, x1, y1) in SLOTS.items():
+        assert x0 < x1 and y0 < y1, name
+        skin = skins.get(name)
+        if skin is None:
+            continue
+        position = parse_size(skin.get("playinfo.type.pos"))
+        box = parse_size(skin.get("playinfo.type.dimension")) or (50, 50)
+        assert x0 <= position[0] + 2 and y0 <= position[1] + 2, name
+        assert x1 >= position[0] + box[0] - 2 and y1 >= position[1] + box[1] - 2, name
+        checked += 1
+    assert checked >= 10, f"only {checked} slot names matched the corpus"
+
+
+def test_the_badge_is_centred_in_the_slot_at_its_declared_size(screen):
+    layer = MetadataLayer(screen, CORPUS_DIR)
+    skin = next(s for s in all_corpus_skins() if s["name"] == "101G5_Free S+M")
+    layer._skin, layer._skin_name = skin, skin["name"]
+    rect = layer._badge_rect("spotify")
+    x0, y0, x1, y1 = SLOTS["101G5_Free S+M"]
+    assert abs(rect.centerx - (x0 + x1) / 2) <= 1 and abs(rect.centery - (y0 + y1) / 2) <= 1
+    assert rect.size == layer._badge("spotify", (32, 32)).get_size()
+
+
+def test_a_skin_without_a_slot_keeps_its_declared_box(screen):
+    layer = MetadataLayer(screen, CORPUS_DIR)
+    skin = next(s for s in all_corpus_skins() if s["name"] == "03G5_Berlant")
+    layer._skin, layer._skin_name = skin, skin["name"]
+    rect = layer._badge_rect("spotify")
+    position = parse_size(skin["playinfo.type.pos"])
+    box = parse_size(skin["playinfo.type.dimension"])
+    assert rect.center == (position[0] + box[0] // 2, position[1] + box[1] // 2)
+
+
+@pytest.mark.parametrize("source", ["lms", "spotify", "bluetooth"])
+def test_every_badge_leaves_a_margin_to_its_field(screen, source):
+    """**George, 2026-09-26:** *"it fits too snuggly vertically ... Some small
+    border should be left to the edges of the field."* On every skin, every
+    mark stays at least 8% of the field clear of each edge of it - the field
+    being the measured slot where there is one, else the declared box."""
+    layer = MetadataLayer(screen, CORPUS_DIR)
+    tight = []
+    for skin in all_corpus_skins():
+        position = parse_size(skin.get("playinfo.type.pos"))
+        if position is None:
+            continue
+        box = parse_size(skin.get("playinfo.type.dimension")) or (50, 50)
+        field = pygame.Rect(position[0], position[1], box[0], box[1])
+        slot = SLOTS.get(skin["name"])
+        if slot is not None:
+            field = pygame.Rect(slot[0], slot[1], slot[2] - slot[0], slot[3] - slot[1])
+        layer._skin, layer._skin_name = skin, skin["name"]
+        rect = layer._badge_rect(source)
+        if rect is None:
+            continue
+        mx, my = 0.08 * min(box[0], field.width), 0.08 * min(box[1], field.height)
+        if (rect.left - field.left < mx or field.right - rect.right < mx
+                or rect.top - field.top < my or field.bottom - rect.bottom < my):
+            tight.append((skin["name"], tuple(rect), tuple(field)))
+    assert not tight, f"{len(tight)} skins fit the badge edge to edge: {tight[:4]}"
+
+
+def test_the_skins_found_off_centre_by_eye_are_in_the_table():
+    """**George, 2026-09-27**, photographing `113G5_Old Spectrum S+M` with its
+    badge at the left of its window: it had been re-measured and judged to move
+    the day before, and left out of the table when the file was written. The
+    rest were found the same morning by rendering all 99 skins and looking at
+    each one. A skin in this list leaving the table is a regression."""
+    for name in ("113G5_Old Spectrum S+M", "19G5_Sansui 2V", "37G5_TURN Vinyl Green",
+                 "38G5_TURN Vinyl Green 2", "39G5_TURN Vinyl Silver", "40G5_TURN Vinyl Black"):
+        assert name in SLOTS, name

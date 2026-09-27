@@ -72,6 +72,7 @@ from gexis_core import backups, bluealsa_volume, outputs, plugin_env, plugins
 from gexis_core.adapters.plugin import PluginAdapter
 from gexis_core.plugin_server import PluginServer
 from gexis_core.systemd import is_enabled as _unit_is_enabled
+from gexis_core.systemd import disagreeing as disagreeing_units
 from gexis_core.systemd import set_enabled as _set_unit_enabled
 from gexis_core.systemd import restart_if_enabled as _restart_if_enabled
 from gexis_core.artwork_sweep import ArtworkSweep
@@ -86,6 +87,8 @@ from gexis_core.volume import (
     get_raw,
     Mute,
     renderer_value_to_hardware_raw,
+    hardware_raw_to_renderer_value,
+    fixed_output as volume_fixed_output,
     HARDWARE_MAX,
     set_ceiling_reader,
     set_curve_reader,
@@ -332,7 +335,6 @@ async def main() -> None:
 
     state_store = StateStore(
         {rid: adapter.capabilities for rid, adapter in adapters.items()},
-        handoff_exempt_pairs=config.handoff_exempt_pairs,
         sources=tuple(p.to_json() for p in installed_plugins),
     )
 
@@ -513,6 +515,8 @@ async def main() -> None:
             logger.info("volume: bluetooth says it is at %s on acquisition", value)
             report_renderer_volume(renderer_id, value, steps)
             return True
+        if adapter is not None and not getattr(adapter, "reports_real_volume", True):
+            return await hand_level_to(renderer_id, adapter)
         getter = getattr(adapter, "get_volume", None)
         if getter is None:
             return False
@@ -523,6 +527,34 @@ async def main() -> None:
         report_renderer_volume(
             renderer_id, value, getattr(adapter, "VOLUME_STEPS", 100)
         )
+        return True
+
+    async def hand_level_to(renderer_id: str, adapter) -> bool:
+        """**ADR-0054 §5, amended 2026-09-26: the level already playing carries
+        across.** For a renderer whose own answer is not a measurement -
+        go-librespot under `external_volume` says 100 whatever the phone shows -
+        the DAC's level goes to it instead, and the phone's slider follows.
+
+        The DAC is not written: it is already there. What comes back is the
+        renderer's echo of its new value, which lands within a rounding step of
+        where the DAC already is. **Fixed output is left alone** - the DAC is at
+        full scale there by design, and there is nothing to carry.
+        """
+        if volume_fixed_output():
+            return False
+        volume = state_store.state.volume
+        raw = mute.audible_raw(volume.raw if volume is not None else None)
+        if raw is None:
+            return False
+        steps = await adapter.get_volume_steps()
+        value = hardware_raw_to_renderer_value(raw, steps)
+        logger.info(
+            "volume: %s cannot say where it is; handing it the level playing (%s/240 -> %s/%s)",
+            renderer_id, raw, value, steps,
+        )
+        remote.set_steps(renderer_id, steps)
+        remote.report(renderer_id, value)
+        await adapter.set_volume(value)
         return True
 
     # ADR-0052 §3, amended: the ceiling is the top of every scale, so the
@@ -1212,10 +1244,6 @@ async def main() -> None:
                # are used - the adapter at a takeover, the panel for the
                # transition screen - so none needs a callback.
                "restore_transport": None, "reclaim_lms": None,
-               # ADR-0078: read by the panel, which is where the screen is
-               # drawn and therefore where the wait belongs. Nothing in the
-               # daemon has an opinion on it.
-               "handoff_threshold": None,
                # The agent reads both per request; `bt_pairing` also needs
                # BlueZ told, because the capability is fixed when the agent
                # registers and `NoInputNoOutput` means BlueZ never asks.
@@ -1527,23 +1555,44 @@ async def main() -> None:
             await set_unit_enabled(unit, wanted, now=now)
 
     async def _reconcile_sources() -> None:
-        """**Make the device match the rows at startup** (ADR-0077).
+        """**Make the device match the rows at startup** (ADR-0077, as amended
+        2026-09-26).
 
-        Only the rows that are *off* are enforced. A row that is on wants what
-        the image ships - the unit enabled - so there is nothing to do, and
-        `enable --now` on every boot would re-run Bluetooth's power-up and
-        discoverability on top of `_bluetooth_setup` for no reason.
+        **In both directions, and only where they disagree.** The settings and
+        the units' enablement are stored in different places - the database and
+        `/etc/systemd` - and a restore brings back only the first. Found when
+        one did: `plexamp.enabled` came back on beside a unit the image ships
+        disabled, and Plexamp was missing until the switch was flipped by hand.
+        The first version enforced *off* only, reasoning that *on* is what the
+        image ships; that was never true of a plugin.
 
-        Off is enforced because the two can drift: the settings DB survives an
-        image update that re-enables the unit, and then the row would say off
-        while the renderer ran.
+        Only a disagreement is acted on, because the switch's own path does
+        more than `enable --now` - Bluetooth's re-runs power-up and
+        discoverability on top of `_bluetooth_setup`. A plugin switch nobody
+        has touched reads the unit's own state, so it cannot disagree, and a
+        fresh image stays as it ships.
         """
+        wanted: dict[str, tuple[bool, object]] = {}
         for renderer_id in RENDERER_ROWS:
-            if renderer_id in adapters and not renderer_enabled(renderer_id):
-                logger.info("sources: %s is off at startup, enforcing", renderer_id)
-                await _apply_renderer(renderer_id)
-        if settings.value("headless"):
-            await _apply_headless(True)
+            adapter = adapters.get(renderer_id)
+            if adapter is not None:
+                wanted[adapter.unit_name] = (
+                    renderer_enabled(renderer_id),
+                    lambda r=renderer_id: _apply_renderer(r),
+                )
+        for plugin in installed_plugins:
+            if plugin.enabled_row is None:
+                on = settings.value(f"{plugin.id}.enabled") is not False
+                wanted[plugin.unit] = (on, lambda p=plugin, on=on: _apply_plugin_unit(p, on))
+        headless = bool(settings.value("headless"))
+        wanted[SCREEN_UNITS[0][0]] = (not headless, lambda h=headless: _apply_headless(h))
+
+        units = {unit: on for unit, (on, _) in wanted.items()}
+        for unit in await asyncio.to_thread(disagreeing_units, units):
+            on, apply = wanted[unit]
+            logger.info("sources: %s is %s at startup and its switch says %s, enforcing",
+                        unit, "disabled" if on else "enabled", "on" if on else "off")
+            await apply()
 
     async def _bluetooth_setup() -> None:
         # ADR-0077: nothing advertises a radio the row says is off. The agent
@@ -2063,6 +2112,7 @@ async def main() -> None:
                     logger.warning("plugins: %s sent an unusable volume: %r",
                                    session.id, message)
                     return
+                adapter.note_volume(value, steps)
                 report_renderer_volume(session.id, value, steps)
                 return
         logger.debug("plugins: %s sent %s", session.id, kind)

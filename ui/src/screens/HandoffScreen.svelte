@@ -49,7 +49,10 @@
   {/if}
 {/snippet}
 
-<div class="handoff" style:--to-accent={accent} transition:fade={{ duration: 260 }}>
+<!-- **Appears at once, fades out** (George, 2026-09-26). The design fades it in
+  over 260 ms, and the incoming renderer's artwork changed underneath while it
+  was still mostly transparent - a blink. Its contents still rise in. -->
+<div class="handoff" style:--to-accent={accent} out:fade={{ duration: 260 }}>
   <div class="caption">Handing off</div>
 
   <div class="pair">

@@ -9,6 +9,7 @@ This one covers both, in the same file, so that can't happen again.
 from __future__ import annotations
 
 import subprocess
+import os
 from pathlib import Path
 
 import pytest
@@ -60,7 +61,41 @@ def pcm_node(tmp_path: Path, monkeypatch) -> Path:
     node = tmp_path / "pcmC1D0p"
     node.touch()
     monkeypatch.setattr(alsa, "playback_pcm_node", lambda card_id=alsa.CARD_ID: node)
+    # No cgroup file, so these take the `fuser` path whatever host runs them.
+    monkeypatch.setattr(alsa, "CGROUP_ROOT", tmp_path / "no-cgroup")
     return node
+
+
+def _cgroup(root: Path, unit: str, *pids: int) -> None:
+    procs = root / "system.slice" / unit / "cgroup.procs"
+    procs.parent.mkdir(parents=True)
+    procs.write_text("".join(f"{p}\n" for p in pids))
+
+
+def test_the_units_own_descriptors_answer_without_fuser(pcm_node, tmp_path, monkeypatch):
+    """**2026-09-26: `fuser` cost 0.10 s and lost a takeover.** go-librespot
+    opens the device as little as 0.26 s after announcing it; the ladder asked
+    `fuser` before it escalated. The unit's own descriptors answer the same
+    question in about a millisecond, and nothing is run."""
+    monkeypatch.setattr(alsa, "CGROUP_ROOT", tmp_path / "cg")
+    _cgroup(tmp_path / "cg", "plexamp.service", os.getpid())
+
+    def run(cmd, **kw):
+        raise AssertionError(f"ran {cmd!r}")
+
+    monkeypatch.setattr(subprocess, "run", run)
+    with open(pcm_node):
+        assert alsa.device_held_by("plexamp.service") is True
+    assert alsa.device_held_by("plexamp.service") is False
+
+
+def test_another_units_hold_is_not_this_ones(pcm_node, tmp_path, monkeypatch):
+    """Same question as the `fuser` test below: the incoming renderer may
+    already hold the device while the outgoing one's ladder is checking."""
+    monkeypatch.setattr(alsa, "CGROUP_ROOT", tmp_path / "cg")
+    _cgroup(tmp_path / "cg", "plexamp.service")  # empty: its process is gone
+    with open(pcm_node):
+        assert alsa.device_held_by("plexamp.service") is False
 
 
 def test_device_held_by_true_when_units_own_pid_is_a_holder(pcm_node, monkeypatch):

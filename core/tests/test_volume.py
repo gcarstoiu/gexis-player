@@ -1109,3 +1109,27 @@ class TestAnUnexpectedHardwareChangeWithARendererActive:
             pass
 
         assert adapter.set_to == 100, "the external change never reached the adapter"
+
+
+def test_spotify_says_its_level_is_not_a_measurement():
+    """**ADR-0054 §5 as amended 2026-09-26.** Under `external_volume`
+    go-librespot starts every session at full scale and reads neither
+    `initial_volume` nor `last_volume`, so on acquisition it is told the level
+    playing rather than asked. The other two report real levels."""
+    from gexis_core.adapters.bluetooth import BluetoothAdapter
+    from gexis_core.adapters.lms import LmsAdapter
+    from gexis_core.adapters.spotify import SpotifyAdapter
+
+    assert SpotifyAdapter.reports_real_volume is False
+    for adapter in (LmsAdapter, BluetoothAdapter):
+        assert getattr(adapter, "reports_real_volume", True) is True
+
+
+@pytest.mark.parametrize("value", range(1, 101))
+def test_a_level_handed_to_a_renderer_comes_back_where_it_was(value):
+    """The level handed over is the DAC's, and go-librespot echoes it back as
+    its own; the echo reaches the DAC through the one curve. Round-tripping
+    must land on the same level or its neighbour - never a jump."""
+    raw = renderer_value_to_hardware_raw(value, 100)
+    back = renderer_value_to_hardware_raw(hardware_raw_to_renderer_value(raw, 100), 100)
+    assert abs(back - raw) <= 1

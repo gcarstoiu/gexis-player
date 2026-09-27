@@ -617,7 +617,7 @@ class Rotation:
         skin = self.skins.get(name, {})
         self.spectrum.follow(skin, self.homes.get(name))
         if self.layer is not None:
-            self.layer.set_skin(skin, self.homes.get(name))
+            self.layer.set_skin(skin, self.homes.get(name), name)
         pygame.display.update()
         self.prepare_next()
 
@@ -909,7 +909,7 @@ def main() -> int:
     # and been given an Electrocompaniet.
     peppy.meter.random_meter = False
     peppy.meter.list_meter = False
-    layer.set_skin(skins[first], homes.get(first))
+    layer.set_skin(skins[first], homes.get(first), first)
     rotation.prepare_next()
     print(
         f"peppy: {len(skins)} skins, {len(pool)} in {selection.corpus!r}, "

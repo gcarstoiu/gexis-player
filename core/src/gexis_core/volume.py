@@ -567,6 +567,11 @@ class Mute:
             await self._write_hardware(restore)
         return True
 
+    def audible_raw(self, current: int | None) -> int | None:
+        """The level this device is at, as a listener means it: the one
+        unmuting would restore while muted, `current` otherwise."""
+        return self._restore if self.muted else current
+
     def observe(self, raw: int) -> None:
         if self.muted and raw != 0:
             self.muted = False

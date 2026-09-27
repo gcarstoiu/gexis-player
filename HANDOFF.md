@@ -1,208 +1,70 @@
 # Handoff
 
-Last updated: 2026-09-26 (twenty-sixth session, on R2D2 — **Phase 11 stays
-complete and the contract stays frozen at v1. Two decisions were taken and built
-today. ADR-0091: a takeover from Plexamp costs 0.9 s where it cost fourteen
-seconds. ADR-0092: Plexamp can now take the device from a renderer that is
-holding it, which it could never do — 0.55 s, from never. **George confirmed both
-from his phone: *"Seems to work."*** Phase 11 stays closed, and the next phase is
-12 - Qobuz - because George moved the Plex-metadata work to the end of the
-queue.**)
+Last updated: 2026-09-27 (twenty-seventh session, on R2D2 — **a round of fixes
+from George's own use of Plexamp, Spotify, LMS and the panel, all measured on
+`gexis` and deployed there by hand. George, after trying them: *"Everything
+seems in order including Bluetooth."* Not pushed, not in an image. Phase 11
+stays closed; next is 12, Qobuz.**)
 
 ## Start here
 
-**[ADR-0091](docs/decisions/0091-a-plugin-renderer-is-taken-off-the-device.md) is
-built and measured** ([Finding 089](docs/findings/089-the-takeover-after-adr-0091.md)).
-Five commits, all landed separately so each can be reviewed on its own:
+**A round of fixes from George's own use, on branch `backup-plexamp-claim`,
+not pushed.** George, 2026-09-27, after trying it: *"Everything seems in order
+including Bluetooth."* Phase 11 stays closed; the next phase is still **12,
+Qobuz**, once this branch is a PR and merged.
 
-| | where | what |
-|---|---|---|
-| 1 | `arbitration.py` | the `sigterm_grace` and `sigkill_grace` rungs **poll** instead of sleeping blind — [Finding 016](docs/findings/016-polite-grace-blind-sleep.md)'s fix, which had only ever been applied to the polite rung |
-| 2 | `adapters/plugin.py` | `PluginAdapter.signal_stop` always sends **SIGKILL** — a SIGTERM death is not a failure to systemd, so `Restart=on-failure` never fires and the renderer would not come back |
-| 3 | `gexis-plexamp` | `polite_grace` **16.0 → 0.5** |
-| 4 | `arbitration.py` | the ladder logs the **rung**, not a signal it no longer chooses |
-| 5 | `plexamp.service` | `Wants=` moved to `[Unit]`, `StartLimitBurst` 5 → 20, `RestartSec` 5 → 1, and two `verify-image.sh` checks |
+**Before this branch ships:**
 
-### Then ADR-0092, which George found by using it
+1. ~~`gexis-plexamp` has two unreleased commits~~ **Released as v0.2.2**
+   (2026-09-27): `9e8111d` (the ladder does not wait for Plexamp) and `0851615`
+   (Plex's chevron). Pinned in `image/stage-gexis/08-plexamp/01-run.sh` at
+   `83aed15c…`, **checked against the published asset** through both `gh` and the
+   public URL the build fetches; `git archive` at the tag reproduces it.
+2. **`gexis` runs all of this by hand, not from an image.** Core modules, Peppy's
+   renderer and driver, the UI bundle, `plexamp.service` and its helper,
+   `squeezelite.service` and `output.conf` were installed over the
+   `v0.2.1-608-gd29ee48` image. **Reflashing that image undoes every fix below.**
+   The next image has to be built from this branch.
 
-He reported *"Cannot takeover with plexamp. The plexamp mobile app fails to
-playback"* — and it was not ADR-0091. **Plexamp could not take the device from a
-renderer that was holding it at all**, reproduced against LMS as well as Spotify.
-The circle: Plexamp must open the ALSA device to start playing, and the plugin's
-only evidence of an acquisition *was* playback starting.
-[Finding 085](docs/findings/085-the-takeover-gaps-and-the-controls.md)'s
-*"LMS → Plexamp, 0.2 s, five times"* was measured against an LMS that had already
-let go, so this had never been tested.
+### What changed, one line each (ADR or commit)
 
-[ADR-0092](docs/decisions/0092-a-play-queue-is-an-acquisition.md): a `playQueueID`
-the plugin has not seen is the deliberate act, the refused timeline carries
-everything needed to ask again, and `device_freed` — the hook ADR-0089 already had
-for this — issues the play once the device is free. **No contract change.**
-Measured at **0.55 s** from the controller's request to Plexamp holding a playing
-LMS's device. Two commits in `gexis-plexamp`, none in the core.
-
-**George has tried it from his phone** — *"Seems to work."* — which is the path
-none of the measurements could reach.
-
-### The image: built and verified, 2026-09-26
-
-**`2026-09-26-gexis-player-v0.2.1-608-gd29ee48.img`**, 4.8 GiB, 700 s, manifest
-annotated. `image/verify-image.sh` — **all checks passed**, including the four
-that are new today:
-
-```
-ok   plexamp.service pulls the plugin in, from [Unit] where it counts
-ok   the plugin tree is not nested
-ok   the plugin in the image is the release it pins (a816fc5e7670)
-ok   plexamp.service has the restart headroom a killed renderer needs
-```
-
-**The first attempt at this build was thrown away**, and it is the reason two of
-those checks exist. `cp -a SRC DEST` copies *into* `DEST` when `DEST` exists, and
-builds here run `CONTINUE=1` over a preserved rootfs — so the warm rebuild left
-v0.2.0 in place and hid v0.2.1 at `src/gexis_plexamp/gexis_plexamp/`, which
-`PYTHONPATH` does not import. The stage reported success in a second and the
-verifier passed, because the file it looked for existed. Found by reading the
-rootfs rather than the exit status; stopped at `export-image`, so no artefact
-escaped.
-
-**Still nothing booted.** The artefact is checked as a file, which
-`docs/LESSONS.md` case 5 is explicit is not the same thing.
-
-### Shipped: v0.2.1 is published and the stage pins it
-
-`gcarstoiu/gexis-plexamp` **v0.2.1** is released, and
-`image/stage-gexis/08-plexamp/01-run.sh` pins
-`a816fc5e7670766a38288207a5add56ecf4d6df061e907011b9d5e799128553c`. **The pin was
-verified against the published asset**, not assumed: downloaded after release and
-compared, and separately `git archive --format=tar.gz --prefix=gexis-plexamp/` at
-v0.2.0 was shown to reproduce *that* release byte-identically, so the command is
-the release process rather than a guess at it.
-
-Seeding the build cache to stand in for an unpublished asset was considered and
-rejected on the way: `fetch-cached.sh`'s own comment says *"A build that has never
-seen the cache has to work, or the cache becomes a hidden build dependency."*
-
-### What it costs and what it bought
-
-| | before | after |
-|---|---|---|
-| takeover, by the ladder's own clock | 12.6–14.2 s | **0.9 s** |
-| device freed after the signal | — | **143 ms** |
-| player answering again | never went away | **4.04 s** |
-| six back-to-back takeovers | — | **nothing failed**, one restart each |
-
-**The fifth commit is the one to read.** `Wants=gexis-plexamp.service` had sat
-under `[Service]` since the stage was written, where systemd's answer is *"Unknown
-key 'Wants' in section [Service], ignoring"* — so ADR-0090's *"one switch controls
-the pair"* had never actually worked, and nothing noticed until a release ladder
-started stopping the player for real. `verify-image.sh` now checks it **by
-position**, because the key being present was never the part that was wrong.
-
-**One claim was corrected the same day it was written.** ADR-0091 said the stale
-"connected" clears because plex.tv's `presence` flips within ≤10.5 s. That was
-measured on a unit that *stayed stopped*; with `Restart=on-failure` the player is
-back in about a second and `presence` never flips — correctly, since a player you
-cannot see is one you cannot cast back to. What changes is that the PMS session is
-gone and the player reports `state="stopped"`.
-
-### Why, in one paragraph
-
-Plexamp gives the device back in ~14 s where LMS takes 0.4 s.
-[Finding 088](docs/findings/088-making-plexamp-behave-like-the-other-renderers.md)
-decomposed it: the stop is immediate (`BASS: Stopped in 0 ms`), output is
-suspended at +3 s, and **the open PCM is held in `SETUP` for a further ~11 s**.
-That is squeezelite's own behaviour — which is why `squeezelite.service` carries
-`-C 1` — except that Plexamp exposes no `-C`, and **no runtime lever inside it
-releases the device**: `audioDeviceUuid` re-initialises BASS and plays on,
-`setSinksForSource` needs a mesh, `remoteControl` is not settable over HTTP at
-all. The second complaint, the phone still showing the player as connected after
-LMS takes over, has the **same single cause and it is ours**: the polite rung
-polls for the whole of `polite_grace` and returns `POLITE` the moment the device
-frees, so the rung always wins and the player is left running, registered and
-claimed.
-
-### The measurement that licences the design
-
-| signal, `systemctl kill -s` | what systemd does |
+| | |
 |---|---|
-| **SIGTERM** | unit `inactive`, `ExecMainStatus=15`, `Result=success`, `NRestarts=0` — **it does not come back** |
-| **SIGKILL** | back by itself at t+0.6 s, `NRestarts=1`, plugin unit with it |
+| backup | holds Plexamp's claim; go-librespot's **`state.json` only** - `config.yml` is the image's, and older archives still restore (it is skipped, not refused). Measured against the real 18:10 archive |
+| startup | every unit is brought in line with its switch, **both ways, plugins included** (ADR-0077 amended) - a restore used to leave Plexamp and Beszel switched on and not running |
+| Plexamp → Spotify | stuck progress bar: `polite_grace` 0, `release` answered at once, `device_held_by` reads `/proc` instead of `fuser` (2 ms vs 98) - ADR-0091 amended. **1 in 12 still loses** on the probe; accepted under ADR-0095 C |
+| Plexamp restart | **starts idle, keeps its volume**: `plexamp-start-idle` rewrites `@Plexamp:state` before every start. Without it a killed Plexamp came back holding the DAC unasked (Finding 013 §1's precondition) or at volume 100 |
+| volume | Spotify is **told** the level playing on takeover (go-librespot's answer is a constant 100 under `external_volume`); a plugin answers with its last reported level - ADR-0054 §5 amended |
+| Spotify release | **pause, 0.25 s, stop** - a bare stop left Spotify's servers counting, so a transfer back jumped ahead or skipped the track |
+| LMS | squeezelite plays through **`output_wait`** - an open that waits for a busy DAC: audio 5.5 → 2.3 s after *play* on a powered-off player (Finding 091, ADR-0095 as amended). **go-librespot stays on `output`** - two waiters deadlocked the core for 68 s. Every renderer call under the arbitration lock is bounded to 2 s |
+| ADR-0093 | **immovable: squeezelite and go-librespot are never built or patched by us** |
+| transition screen | shown on **every** takeover for `handoff_duration` (default **1.5 s**; the threshold row and ADR-0010's exempt pairs are gone - ADR-0094), announced **before** the new renderer, and appears at once instead of fading in |
+| Plex mark | Plex's chevron at 512 px from the public-domain Commons SVG; the mark URL carries the file's hash, because a day's cache kept the old one on every panel surface |
+| Peppy | badge **centred in the slot the skin draws** for 17 skins (`badge-slots.json`, measured and reviewed), and **80% of its field** on every skin |
 
-`pcm` stayed `closed` throughout both, and after a full restart: **Plexamp opens
-the ALSA device when it plays, not when it starts.** That sentence is what makes
-this safe. [Finding 013 §1](docs/findings/013-phase2c-attack-test-and-spotify-reliability-defects.md)'s
-restart storm — shipped and reverted twice — needed a renderer that grabs the
-device the moment it is back, and `LmsAdapter` carries the warning *"before
-proposing a third."* **This is not a third attempt**: there is no restart hook,
-`Restart=on-failure` is the only path back, and the storm's precondition is
-absent by measurement.
+### Open, none blocking
 
-### The four symptoms, and which of them are actually fixable
-
-| | status |
-|---|---|
-| 14 s takeover | **fixed and measured: 0.9 s** (Finding 089) |
-| phone still shows it connected after LMS takes over | **the cause is fixed** - the player is no longer left running and claimed. But `presence` does *not* flip (the restart beats the timeout); what changes is that the session is gone and the player reports stopped. **Whether the phone's chrome follows is unobserved** |
-| panel waits for renderers until playback starts | **not fixable.** Nothing reaches the player when a controller selects it; ADR-0027 already says acquisition is deliberate |
-| panel does not follow a phone disconnect | **not fixable, and not a defect.** A disconnect does not even stop playback, so the panel showing Plexamp as active is correct |
-| *(found while testing)* could not take the device from a renderer holding it | **fixed and measured: 0.55 s**, from never (ADR-0092) |
-
-The two "not fixable" rows are established across five places — the player's HTTP
-routes, its timeline subscriber list, the PMS client table, the PMS session, and
-pubsub — and corroborated by an independent implementation of the player side,
-whose own source says *"Plexamp clients do not subscribe nor send wait=1."*
-**Nobody needs to sweep this again.**
-
-### The one lead still open
-
-`/player/timeline/poll` is logged **zero** times by Plexamp, for any address,
-including our own plugin which polls it every second. So the log shows commands
-and not polls, and it cannot say whether the phone polls the timeline while it is
-attached. **If it does, a sustained absence of polls is a real presence signal**
-and the fourth row above stops being impossible. Answering it needs one
-`tcpdump` on `:32500` while George's phone is attached — a minute of his time,
-not a session's.
-
-### Decision 2 is still George's, and independent of this one
-
-The **Squeeze Plex Hub** route reaches the same DAC bit-identically
-(`S32_LE 192000Hz 2ch` both ways, LMS handed the original `file.flac` from the
-PMS, no transcode) and hands the device back in 1.0 s. It already advertises this
-device's own squeezelite as a Plex target over GDM — it has been in George's
-player list all along. The cost is that Plexamp's playback engine is replaced by
-LMS's and Phase 11's plugin becomes a metadata shim. **Not rejected, not
-started**, and ADR-0091 does not pre-empt it.
-
-### Still open, and none of it blocking
-
-- **Cross-rate takeover gaps.** Blocked since Phase 9, unchanged: a
-  60,974-track scan found **zero** non-44.1 kHz files.
-- **Gaps against Spotify and Bluetooth.** Neither can be made to take the device
-  on request — they answer 409 to `activate`, correctly — so measuring them needs
-  a phone.
-- **Claiming** from the `claim_token` row. The row exists and the plugin accepts
-  it; Plexamp's own setup still does the claiming. Not a Phase 11 criterion.
-- **The Plex-metadata work is now phase 15**, last in the queue, after themes -
-  George moved it there on 2026-09-26. It was 11a, sitting immediately next. It is
-  drafted and not started, and still needs an ADR for where the Plex credential
-  lives. [Finding 086](docs/findings/086-what-the-plex-server-could-answer.md) is
-  the measurement it would be built on.
-- **Plex lyrics.** `/library/streams/<id>` 404s for every one of 40 `lrc` streams
-  sampled, unexplained.
-- **A boot.** The image carries everything; **nothing built from it has been
-  run.**
-- **Everything is pushed.** `gexis-plexamp` `main` is pushed and released as
-  **v0.2.1**, and `gexis-plexamp` has nothing outstanding.
-- **Nothing outstanding.** PRs [#28](https://github.com/gcarstoiu/gexis-player/pull/28),
-  [#29](https://github.com/gcarstoiu/gexis-player/pull/29) and
-  [#30](https://github.com/gcarstoiu/gexis-player/pull/30) are all merged, R2D2 is
-  **on `main` at the #30 merge**, the tree is clean, and
-  `phase-11-plexamp-plugin` is fully merged and can be deleted whenever somebody
-  wants to. `gexis-plexamp` `main` is pushed and released as **v0.2.1**.
-- **Three PRs for one session**, because each merge landed while work continued on
-  the same branch. Worth avoiding next time by branching again after a merge
-  rather than pushing onto a branch whose PR has already gone in.
+- **LMS's power-on reaches the core 1.45-1.5 s after the press** - LMS's own
+  status-push filter, now most of what is left of Finding 091's gap. A plain
+  CometD subscription or the CLI's `listen` would be immediate (ADR-0095, *Not in
+  this record*). Proposed, not started.
+- **Decision owed: a persistent journal.** It is RAM-only, and a reboot on
+  2026-09-26 destroyed the logs of a bug George had just reproduced. Offered
+  as a one-line image change; George has not answered.
+- **Bluetooth "Not provided", once**, 2026-09-26 22:08: `MediaPlayer1` appeared and
+  no track information ever followed. George could not reproduce it the next
+  morning and suspects the phone's battery saver. Not explained.
+- **LMS's mint badge is faint on the light skins** (`101G5_Free S+M`) - its tint,
+  not its size. Seen, not raised by George.
+- **A paused Spotify is not an acquisition after a core restart**, and a later
+  resume sends no `active` - so the core does not know Spotify took the device.
+  Needs a restart during a pause to happen. Seen, not fixed.
+- **Hand-installed on `gexis`, not in the image:** `grim` (screenshots - LESSONS
+  15) and `python3-pytest` (Peppy's tests only pass where pygame has fonts, which
+  is the device). Keep until the next image; George's call whether `grim` joins it.
+- Everything from before this session that is still open is in the archive's
+  2026-09-27 block: the Squeeze Plex Hub route (decision 2), the timeline-poll
+  lead, cross-rate gaps, Plex lyrics.
 
 ## Build environment (2026-09-13) — read this before the next build
 
@@ -453,58 +315,54 @@ holds each phase's acceptance criteria; this list is only the order.
 - **Restarting `gexis-core` does not reload the panel.** `ui/dist` rsynced to
   `/opt/gexis-ui` reaches Chromium only on a page load, so a probe run after a
   daemon restart measures the *old* bundle faithfully and reports that the
-  change does not work. `Page.navigate` to the same URL over CDP on 9222.
-  [LESSONS](docs/LESSONS.md) 38, and it cost a wrong result on 2026-09-25.
+  change does not work. **Port 9222 is not open on the image** (checked
+  2026-09-26), so reload with `systemctl restart gexis-kiosk` and confirm the
+  panel fetched the new bundle: `journalctl -u gexis-core | grep 'GET
+  /assets/index-'` names it by hash. [LESSONS](docs/LESSONS.md) 10 and 38.
 
-- **A flash wipes everything the device learned.** Both databases live on the
-  card — `/var/lib/gexis-core/settings.db` and `enrichment.db` — as do BlueZ's
-  pairings. **ADR-0022's `backup` row is inventoried and unwired**, so nothing
-  on the device exports either. **A manual copy was taken 2026-09-25**, and it
-  is the shape to repeat before every flash:
+- **A flash wipes everything the device learned - back up first, from
+  Settings.** *Back up now* (ADR-0083) writes an archive to the Backups share:
+  both databases, `core.toml` and `device-name.env`, BlueZ's pairings, the
+  Spotify pairing (go-librespot's `state.json` only - its `config.yml` is the
+  image's), the Beszel fingerprint and **Plexamp's claim**
+  (`~/.local/share/Plexamp`). **Copy it off the device** before flashing, and
+  keep it **outside the repository** - `core.toml` carries `idle_url`, a
+  per-display identifier that must never be committed.
 
-  ```
-  ssh pi@gexis.local 'sudo tar -czf /tmp/gexis-state.tgz -C / \
-      var/lib/gexis-core/settings.db var/lib/gexis-core/enrichment.db \
-      etc/gexis/core.toml etc/gexis/device-name.env
-    sudo tar -czf /tmp/gexis-bt.tgz -C / var/lib/bluetooth
-    sudo chown pi /tmp/gexis-*.tgz'
-  scp pi@gexis.local:/tmp/gexis-{state,bt}.tgz <somewhere outside this repo>
-  ```
+  **After a flash:** copy the archive back into the share, *Restore* it, and let
+  it reboot. Startup brings every unit in line with its switch (ADR-0077 as
+  amended), so Plexamp and Beszel come back running and claimed - measured
+  2026-09-26 with the units disabled as a fresh image ships them. Then:
+  **re-pair the phone** only if the pairing was not in the archive, and
+  **append C3PO's SSH key** (below). The sweeps are not needed: `enrichment.db`
+  comes back with everything else.
 
-  **Outside the repository, always.** `core.toml` carries `idle_url`, a
-  per-display identifier that must never be committed. The 2026-09-25 copy is
-  in `~/gexis-backups/2026-09-25-pre-flash/`: 41 stored settings including all
-  three secrets, 3,664 enrichment rows, 7,061 notes, and the phone's pairing.
+  **Archives from before 2026-09-26 still restore.** They hold all of
+  `/var/lib/go-librespot`; the restore takes `state.json` and skips the rest
+  rather than refusing the archive.
 
-  **After a flash, in this order:**
+  **Restoring wholesale carries dead keys** - `per_renderer_volume`,
+  `boot_volume`, `idle_brightness`, `handoff_threshold`. Harmless:
+  `Settings.value` reads the registry, not the store.
 
-  1. **The two keys and the token**, which have no default and nothing can
-     guess: `fanart_key` (without it, portraits come from LMS only),
-     `wallpaper_key` (Pixabay, ADR-0047), `listenbrainz_token`.
-  2. **`idle_url`** — deliberately *not* in the image's `core.toml` because it
-     carries a per-display identifier and this repository is public. Until it
-     is set, the idle screen falls back to the built-in clock.
-  3. **`weather_location`**, **`timezone`**, **`device_name`** if not `gexis`.
-  4. **Re-pair the phone.** BlueZ's store went with the card.
-  5. **Run both sweeps** — artist portraits and album covers. `enrichment.db`
-     held every one and it is gone, so the library starts with LMS's pictures
-     and nothing else. Roughly seven minutes and 45–50 minutes respectively,
-     measured 2026-09-24.
-  6. **Append C3PO's SSH key** — see below.
+- **The journal is in RAM.** A reboot - including the one a restore does -
+  destroys every log since boot. On 2026-09-26 that cost the logs of a bug
+  George had just reproduced. Capture before rebooting (`ssh ... journalctl -f >
+  file`); whether to make it persistent is a decision still owed.
 
-  **What survives without being touched:** `lms_server`, baked into the
-  image's `core.toml`, and any row George never moved off its default.
-  **That is fewer than it looks.** The 2026-09-25 backup shows
-  `spectrum_smoothing` at **62** against a registry default of 90 — so
-  ADR-0058's ballistics are *not* all at their defaults, and an earlier note
-  here claiming they were was wrong. `meter_fall` (400 ms) and
-  `meter_smoothing` (240 ms) do match.
+- **Only squeezelite may use `output_wait`** (ADR-0095 as amended). Two renderers
+  waiting for the DAC at once deadlocked the core for 68 s: the kernel hands a
+  freed device to whichever waiter it wakes first, not the one arbitration chose.
+  Do not move go-librespot, Plexamp or bluealsa onto it without answering that.
 
-  **Restoring wholesale carries dead keys.** That DB still holds
-  `per_renderer_volume` and `boot_volume`, rows deleted on 2026-09-23 with the
-  machinery behind them, and `idle_brightness`, which the registry now calls
-  `background_brightness`. Harmless — `Settings.value` reads the registry, not
-  the store — but a restore is not a reason to stop reading what it contains.
+- **Plexamp restores its queue on every start** - `plexamp-start-idle` exists
+  because a restored *paused* queue opens the DAC with nobody asking. Anything
+  that restarts Plexamp outside `plexamp.service` (running `node js/index.js` by
+  hand, as the claim does) bypasses it.
+
+- **A plugin's mark is cached for a day**, which is safe only because its URL
+  carries the file's hash (`Plugin.mark_url`). Anything that serves a picture
+  under a fixed URL with a long `max-age` will be shown stale after it changes.
 
 - **A reflashed card only has R2D2's SSH key.** `make provision` writes the
   one key in `image/provision.local.env`; C3PO's

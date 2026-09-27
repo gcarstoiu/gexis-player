@@ -73,6 +73,32 @@ BADGES = {
 #: Here it was a guard rather than a crash - `source not in BADGES` returned
 #: None - so the visualiser simply had no badge and said nothing about it.
 PLUGIN_MARKS = Path("/usr/share/gexis/plugins")
+
+#: **Where a skin's badge slot really is**, for the skins whose declared
+#: `playinfo.type` box sits off-centre in the slot they draw (George,
+#: 2026-09-26: *"sometimes the logo is not centered on the allocated space"*).
+#: Those boxes held a format icon with the sample rate beside it, and the
+#: sample rate is never drawn here, so the badge sat at one end of an empty
+#: slot. Measured from each skin's own artwork and reviewed tile by tile; a
+#: skin absent from the file keeps its declared box, which is what every
+#: other skin already centres correctly.
+BADGE_SLOTS = Path(__file__).with_name("badge-slots.json")
+
+#: **The badge fills 80% of its field**, leaving a tenth of it clear on every
+#: side (George, 2026-09-26: *"it fits too snuggly vertically so it needs to be
+#: slightly smaller ... Some small border should be left to the edges of the
+#: field"* - for every renderer's mark, not only Plex's). The field is the
+#: slot where one is measured, otherwise the box the skin declares.
+BADGE_FILL = 0.8
+
+
+def load_badge_slots(path: Path = BADGE_SLOTS) -> dict[str, tuple[int, int, int, int]]:
+    try:
+        raw = json.loads(path.read_text()).get("slots", {})
+        return {name: tuple(int(v) for v in rect[:4]) for name, rect in raw.items()}
+    except (OSError, ValueError, TypeError, AttributeError) as exc:
+        logger.warning("render: no badge slots from %s: %s", path, exc)
+        return {}
 ARTWORK_TIMEOUT_S = 5
 
 
@@ -109,6 +135,60 @@ def parse_size(value: str | None) -> tuple[int, int] | None:
     return (point[0], point[1]) if point else None
 
 
+#: The edge's colour and how far it reaches, as a share of the mark's height.
+EDGE_RGBA = (0, 0, 0, 170)
+EDGE_SHARE = 0.05
+
+
+def _with_edge(image: pygame.Surface) -> pygame.Surface:
+    """`image` on a dark silhouette of itself grown by a few pixels."""
+    reach = max(1, round(image.get_height() * EDGE_SHARE))
+    w, h = image.get_size()
+    silhouette = image.copy()
+    # Black, and the mark's own alpha scaled by the edge's: transparent stays
+    # transparent. (Raising alpha with BLEND_RGBA_MAX would paint the whole
+    # square.)
+    silhouette.fill(EDGE_RGBA, special_flags=pygame.BLEND_RGBA_MULT)
+    out = pygame.Surface((w + 2 * reach, h + 2 * reach), pygame.SRCALPHA)
+    for dx in range(-reach, reach + 1):
+        for dy in range(-reach, reach + 1):
+            if dx * dx + dy * dy <= reach * reach:
+                out.blit(silhouette, (reach + dx, reach + dy))
+    out.blit(image, (reach, reach))
+    return out
+
+
+#: **Below this height LMS's mark is the panel's four-bar reduction**, not the
+#: ten-bar picture: the panel's `SourceMark` does the same below 40 px because
+#: the ten thin bars antialias to a smear, and with the dark edge added they
+#: became a dark smudge on the smaller skins (checked 2026-09-27 on
+#: 101G5_Free S+M, gold, black-blue and emerald). **72, not 48**: rendered
+#: side by side on a cream skin at 40-72 px, the ten bars only read as bars from
+#: 72 px up; below that the edge swallows them.
+LYRION_REDUCTION_BELOW = 72
+#: The panel's own proportions (`SourceMark.svelte`): bar heights, width and gap.
+LYRION_BARS = (0.5, 1.0, 0.72, 0.88)
+
+
+def _lyrion_reduction(box: tuple[int, int], colour) -> pygame.Surface:
+    """The four-bar mark, `box[1]` tall, with the dark edge, fitted in `box`."""
+    size = max(8, box[1])
+    bar = max(3, round(size * 0.15))
+    gap = max(2, round(size * 0.11))
+    width = 4 * bar + 3 * gap
+    mark = pygame.Surface((width, size), pygame.SRCALPHA)
+    for i, share in enumerate(LYRION_BARS):
+        h = max(bar, round(size * share))
+        rect = pygame.Rect(i * (bar + gap), (size - h) // 2, bar, h)
+        pygame.draw.rect(mark, (*colour, 255), rect, border_radius=max(1, bar // 2))
+    mark = _with_edge(mark)
+    shrink = min(box[0] / mark.get_width(), box[1] / mark.get_height(), 1.0)
+    if shrink < 1.0:
+        mark = pygame.transform.smoothscale(
+            mark, (max(1, round(mark.get_width() * shrink)), max(1, round(mark.get_height() * shrink))))
+    return mark
+
+
 class MetadataLayer:
     def __init__(self, screen: pygame.Surface, corpus: Path, icon_dir: Path = ICON_DIR) -> None:
         self._screen = screen
@@ -116,6 +196,8 @@ class MetadataLayer:
         self._icon_dir = icon_dir
         self._badges: dict[tuple, pygame.Surface | None] = {}
         self._skin: dict[str, str] = {}
+        self._skin_name: str | None = None
+        self._slots = load_badge_slots()
         self._background: pygame.Surface | None = None
         self._painted: list[pygame.Rect] = []
         self._fonts: dict[tuple[str, int], pygame.font.Font] = {}
@@ -130,7 +212,7 @@ class MetadataLayer:
 
     # ---- skin ----------------------------------------------------------
 
-    def set_skin(self, skin: dict[str, str], directory=None) -> None:
+    def set_skin(self, skin: dict[str, str], directory=None, name: str | None = None) -> None:
         """A clean copy of the skin's own background, so a field that
         disappears can be erased back to it rather than smeared.
 
@@ -140,6 +222,7 @@ class MetadataLayer:
         if directory is not None:
             self._corpus = directory
         self._skin = skin
+        self._skin_name = name
         self._painted = []
         self._last_drawn = None
         self._background = None
@@ -288,11 +371,23 @@ class MetadataLayer:
         if position is None or source is None:
             return None
         box = parse_size(self._skin.get("playinfo.type.dimension")) or (50, 50)
-        badge = self._badge(source, box)
+        slot = self._slots.get(self._skin_name or "")
+        if slot is not None:
+            # Never larger than the slot: 59G5_Yamaha M85 declares a 95 px box
+            # in a 94 px window.
+            box = (min(box[0], slot[2] - slot[0]), min(box[1], slot[3] - slot[1]))
+        # The size only: centring below still uses the whole field.
+        fit = (max(1, round(box[0] * BADGE_FILL)), max(1, round(box[1] * BADGE_FILL)))
+        badge = self._badge(source, fit)
         if badge is None:
             return None
-        x = position[0] + (box[0] - badge.get_width()) // 2
-        y = position[1] + (box[1] - badge.get_height()) // 2
+        if slot is not None:
+            # Same size as the declared box gives it; centred in the slot.
+            x = (slot[0] + slot[2] - badge.get_width()) // 2
+            y = (slot[1] + slot[3] - badge.get_height()) // 2
+        else:
+            x = position[0] + (box[0] - badge.get_width()) // 2
+            y = position[1] + (box[1] - badge.get_height()) // 2
         self._screen.blit(badge, (x, y))
         return pygame.Rect(x, y, badge.get_width(), badge.get_height())
 
@@ -306,6 +401,9 @@ class MetadataLayer:
                 # A plugin renderer: its mark came with its manifest.
                 tint = None
                 path = PLUGIN_MARKS / source / "mark.png"
+            if source == "lms" and box[1] < LYRION_REDUCTION_BELOW:
+                self._badges[key] = _lyrion_reduction(box, tint)
+                return self._badges[key]
             try:
                 image = pygame.image.load(str(path)).convert_alpha()
             except (pygame.error, OSError) as exc:
@@ -323,6 +421,19 @@ class MetadataLayer:
                 # white, then multiply by the accent.
                 image.fill((255, 255, 255, 0), special_flags=pygame.BLEND_RGBA_MAX)
                 image.fill((*tint, 255), special_flags=pygame.BLEND_RGBA_MULT)
+                # **A dark edge, so thin mint bars hold on a light skin**
+                # (George, 2026-09-27, of LMS's mark on 113G5_Old Spectrum:
+                # "Change it up so it's more visible"). The same idea as the
+                # Plex mark's contour: invisible on a dark panel, the edge
+                # of the shape on a cream one.
+                image = _with_edge(image)
+                # The edge grows it; fit it back inside the box it was sized
+                # for, so the margin to the field holds.
+                shrink = min(box[0] / image.get_width(), box[1] / image.get_height(), 1.0)
+                if shrink < 1.0:
+                    image = pygame.transform.smoothscale(
+                        image, (max(1, round(image.get_width() * shrink)),
+                                max(1, round(image.get_height() * shrink))))
             self._badges[key] = image
         return self._badges[key]
 

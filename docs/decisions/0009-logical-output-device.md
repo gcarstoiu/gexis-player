@@ -3,7 +3,10 @@
 **Status:** Accepted
 **Date:** 2026-09-04
 **Amended:** 2026-09-05 — the definition was incomplete, not just its
-implementation. See "The `ctl` half" below.
+implementation. See "The `ctl` half" below. **Amended 2026-09-26 by
+[ADR-0095](0095-a-renderer-waits-for-a-busy-device.md)**: a second name,
+`output_wait`, over the same chain with a blocking open, for squeezelite and
+go-librespot only. `output` stays the contract name.
 
 ## Context
 

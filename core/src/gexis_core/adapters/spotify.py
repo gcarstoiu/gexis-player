@@ -83,10 +83,21 @@ TRANSPORT_EVENTS = {
 FLAG_EVENTS = ("shuffle_context", "repeat_context", "repeat_track")
 
 
+#: Longer than go-librespot's `statePutMinInterval` (200 ms), so the paused
+#: state a release pushes has gone out before the stop - see `release`.
+PAUSE_SETTLES_S = 0.25
+
+
 class SpotifyAdapter(Adapter):
     renderer_id = "spotify"
     release_action = ReleaseAction.DISCONNECT
     unit_name = UNIT_NAME
+    #: **What `/status` says about volume is not a measurement** (ADR-0054 §5,
+    #: amended 2026-09-26). With `external_volume` go-librespot v0.9.0 starts
+    #: every session at full scale and never reads `initial_volume` or its own
+    #: `last_volume` (`daemon/player.go:166`), so on acquisition it is told
+    #: the level already playing instead of being asked for one.
+    reports_real_volume = False
     # Phase 3 criterion 2. Both "active" and "will_play" are treated as
     # acquisition (Finding 010/014 - "will_play" is upstream's earlier,
     # device-independent signal, needed because "active" can arrive too
@@ -417,12 +428,33 @@ class SpotifyAdapter(Adapter):
         return ok
 
     async def release(self) -> bool:
+        """**Pause, then stop** (found by George, 2026-09-26).
+
+        A stop alone tells Spotify only that this device went inactive -
+        go-librespot v0.9.0 sends `PutConnectStateInactive` with no player
+        state (`daemon/player_state.go:260`). Spotify's servers then keep the
+        last state they had, *playing at X as of T*, and the phone goes on
+        counting from it: the next transfer back started tens of seconds
+        ahead, and past the end of the track it skipped to the next one
+        (loaded at 243,733 ms of a 207,426 ms track). A pause first pushes
+        *paused at X*, which is where a transfer back should start.
+
+        **The wait between them is go-librespot's own rate limit.** A state
+        push within 200 ms of the previous one is deferred to a timer
+        (`statePutMinInterval`); a stop that overtook it would leave the
+        paused state unsent and the timer pushing a reset one instead. What it
+        costs is that much on every takeover from Spotify.
+        """
         try:
             async with aiohttp.ClientSession() as session:
+                async with session.post(f"{self._base}/player/pause") as resp:
+                    paused = resp.status < 300
+                if paused:
+                    await asyncio.sleep(PAUSE_SETTLES_S)
                 async with session.post(f"{self._base}/player/stop") as resp:
                     return resp.status < 300
         except (aiohttp.ClientError, asyncio.TimeoutError) as exc:
-            logger.warning("spotify: /player/stop failed: %s", exc)
+            logger.warning("spotify: releasing failed: %s", exc)
             return False
 
     async def get_volume_steps(self) -> int:

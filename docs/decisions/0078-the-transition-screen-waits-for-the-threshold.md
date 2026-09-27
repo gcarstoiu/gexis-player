@@ -1,6 +1,6 @@
 # ADR-0078 — The transition screen waits for the threshold
 
-**Status:** Accepted
+**Status:** **Superseded** 2026-09-26 by [ADR-0094](0094-every-takeover-shows-the-transition-screen.md) — George removed the threshold; every takeover is shown.
 **Date:** 2026-09-25
 **Relates to:** [ADR-0010](0010-arbitration-slot-model.md) (which set the 1 s
 threshold and what it is for), [Finding 020](../findings/020-criterion8-takeover-gap-adr0027.md)

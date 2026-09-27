@@ -38,7 +38,8 @@ ExecStartPre=/usr/local/lib/gexis/squeezelite-mixer-check.sh
 # playing (confirmed on hardware: raising LMS's volume audibly changed
 # an active Bluetooth stream). -O points the *mixer* at a private
 # snd-dummy control instead - -o (the actual audio path) is unchanged,
-# still "output"/hw:sndrpihifiberry. gexis-core mirrors this dummy
+# still the logical device on hw:sndrpihifiberry (`output_wait` since
+# ADR-0095). gexis-core mirrors this dummy
 # control onto the real DAC only while LMS is active
 # (volume.py's DummyMixerBridge) - see image/stage-gexis/00-alsa's
 # modprobe config for where hw:gexislmsvol comes from.
@@ -49,7 +50,15 @@ ExecStartPre=/usr/local/lib/gexis/squeezelite-mixer-check.sh
 # and the default below is what a device that has never been renamed uses.
 Environment=GEXIS_DEVICE_NAME=gexis
 EnvironmentFile=-/etc/gexis/device-name.env
-ExecStart=/usr/bin/squeezelite -o output -O hw:gexislmsvol -V Master -C 1 -n ${GEXIS_DEVICE_NAME}
+# **`-o output_wait`, not `output`** (ADR-0095). The same chain with an open
+# that waits for a busy DAC instead of failing: squeezelite sleeps a fixed 5 s
+# after a failed open, which was Finding 091's gap after *play* on a
+# powered-off player. The mixer is named by -O, so no ctl.output_wait is needed.
+ExecStart=/usr/bin/squeezelite -o output_wait -O hw:gexislmsvol -V Master -C 1 -n ${GEXIS_DEVICE_NAME}
+# A squeezelite waiting for the device does not exit on SIGTERM - its handler
+# restarts the interrupted open - so a stop would otherwise wait out systemd's
+# 90 s default before the SIGKILL that ends the wait at once (ADR-0095).
+TimeoutStopSec=10
 Restart=on-failure
 RestartSec=2
 User=pi

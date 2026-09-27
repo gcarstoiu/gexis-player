@@ -1,7 +1,7 @@
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
 <script>
   import { onMount, untrack } from 'svelte';
-  import { connect, active, metadata, volume, handoff, handoffExemptPairs, capabilities, available, availability, shuffle, repeat, queue, pairing, fixedOutput } from './lib/state.js';
+  import { connect, active, metadata, volume, handoff, capabilities, available, availability, shuffle, repeat, queue, pairing, fixedOutput } from './lib/state.js';
   import NowPlaying from './screens/NowPlaying.svelte';
   import Library from './screens/Library.svelte';
   import WaitingHome from './screens/WaitingHome.svelte';
@@ -48,61 +48,34 @@
 
   let volumeOpen = $state(false);
 
-  // Criterion 4: shown for the takeover itself unless the pair is measured
-  // fast enough to be exempt, and held long enough not to flash.
-  //
-  // **Both are settings now** (ADR-0022's `show_transition` and
-  // `handoff_duration`, wired 2026-09-25). The fallback is the 1.4s this
-  // shipped with, so wiring the row changed nothing until somebody moves
-  // it - the registry's own default was raised to match rather than the
-  // screen being quietly lengthened.
-  const HANDOFF_MIN_MS = $derived(($settingValues.handoff_duration ?? 1.4) * 1000);
-  // **ADR-0078: the threshold is how long a takeover has to be in flight
-  // before the panel explains it.** ADR-0010 set 1s and nothing ever read it -
-  // the exempt list was compared against it once, by hand. A takeover that
-  // finishes inside the wait is never announced, which is what stops the
-  // screen being "a flicker - noise, not information". 0 announces every one
-  // immediately, exactly as this behaved before.
-  const HANDOFF_WAIT_MS = $derived(($settingValues.handoff_threshold ?? 1) * 1000);
+  // **Every takeover is shown, however quick, for the length the user set**
+  // (ADR-0094, George 2026-09-26: *"handoff visualisation is to be shown at
+  // all times even when the takeover is nearly instantaneous. The length of
+  // the visualisation is to be dictated by the Transition screen length
+  // setting"*). This replaced ADR-0078's threshold - a takeover that finished
+  // inside it was never announced - and ADR-0010's list of pairs exempt for
+  // being fast. A takeover still in flight when the length runs out keeps the
+  // screen up until it finishes. Nothing here touches the takeover itself.
+  const HANDOFF_MIN_MS = $derived(($settingValues.handoff_duration ?? 1.5) * 1000);
   let shownHandoff = $state.raw(null);
   let handoffShownAt = 0;
-  // Two timers, not one: the wait before the screen appears and the hold that
-  // stops it flashing are both in flight at different moments, and a single
-  // handle let the hold cancel a wait that had not fired yet.
-  let handoffWait;
   let handoffTimer;
   $effect(() => {
     const h = $handoff;
-    const exempt = h && $handoffExemptPairs.some(([a, b]) => a === h.from && b === h.to);
     untrack(() => {
       clearTimeout(handoffTimer);
       if ($settingValues.show_transition === false) {
-        clearTimeout(handoffWait);
         shownHandoff = null;
         return;
       }
-      if (h && !exempt) {
-        if (shownHandoff) {
-          // Already up: a second takeover replaces what it says rather than
-          // restarting the wait.
-          shownHandoff = h;
-          return;
-        }
-        clearTimeout(handoffWait);
-        const show = () => {
-          handoffShownAt = performance.now();
-          shownHandoff = h;
-        };
-        if (HANDOFF_WAIT_MS <= 0) show();
-        else handoffWait = setTimeout(show, HANDOFF_WAIT_MS);
-      } else {
-        // The takeover is over. Anything still waiting is cancelled - it
-        // finished inside the threshold and is not announced at all.
-        clearTimeout(handoffWait);
-        if (shownHandoff) {
-          const remaining = HANDOFF_MIN_MS - (performance.now() - handoffShownAt);
-          handoffTimer = setTimeout(() => (shownHandoff = null), Math.max(0, remaining));
-        }
+      if (h) {
+        // A second takeover while the screen is up replaces what it says
+        // without restarting the clock.
+        if (!shownHandoff) handoffShownAt = performance.now();
+        shownHandoff = h;
+      } else if (shownHandoff) {
+        const remaining = HANDOFF_MIN_MS - (performance.now() - handoffShownAt);
+        handoffTimer = setTimeout(() => (shownHandoff = null), Math.max(0, remaining));
       }
     });
   });

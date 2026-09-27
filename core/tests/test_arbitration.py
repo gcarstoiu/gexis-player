@@ -700,6 +700,58 @@ async def test_handoff_reports_the_pair_at_both_edges():
 
 
 @pytest.mark.asyncio
+async def test_the_takeover_is_announced_before_the_new_renderer():
+    """**George, 2026-09-26:** the screen should *"start showing before the
+    artwork is changed as otherwise we end up with a blinking effect"*. Each
+    notification is its own broadcast, so the order is what the panel paints."""
+    holder = {"who": "lms"}
+    adapters = {
+        "lms": FakeAdapter("lms", ReleaseAction.PAUSE, holder),
+        "spotify": FakeAdapter("spotify", ReleaseAction.DISCONNECT, holder),
+    }
+    order: list[str] = []
+    supervisor = Supervisor(
+        adapters,
+        device_busy=lambda renderer_id: holder["who"] == renderer_id,
+        ladder=FAST_LADDER,
+        on_handoff_change=lambda f, t: order.append(f"handoff {f}->{t}"),
+        on_active_change=lambda r: order.append(f"active {r}"),
+    )
+    supervisor._active = "lms"
+
+    await supervisor.acquire("spotify")
+
+    assert order[:2] == ["handoff lms->spotify", "active spotify"]
+    assert order[-1] == "handoff None->None"
+
+
+@pytest.mark.asyncio
+async def test_a_failing_active_change_does_not_leave_the_screen_up():
+    holder = {"who": "lms"}
+    adapters = {
+        "lms": FakeAdapter("lms", ReleaseAction.PAUSE, holder),
+        "spotify": FakeAdapter("spotify", ReleaseAction.DISCONNECT, holder),
+    }
+    seen: list[tuple] = []
+
+    def explode(_):
+        raise RuntimeError("publish failed")
+
+    supervisor = Supervisor(
+        adapters,
+        device_busy=lambda renderer_id: holder["who"] == renderer_id,
+        ladder=FAST_LADDER,
+        on_handoff_change=lambda f, t: seen.append((f, t)),
+        on_active_change=explode,
+    )
+    supervisor._active = "lms"
+
+    with pytest.raises(RuntimeError):
+        await supervisor.acquire("spotify")
+    assert seen == [("lms", "spotify"), (None, None)]
+
+
+@pytest.mark.asyncio
 async def test_a_cold_acquisition_is_not_a_handoff():
     """Nobody holding the device is not a takeover - there is no pair, so
     nothing should be published for a transition screen to show."""
@@ -967,3 +1019,53 @@ async def test_the_ladder_can_ask_whether_a_plugin_renderer_still_holds_it():
 
     assert "plexamp.service" in asked
     assert supervisor.active == "lms"
+
+
+# --- ADR-0095 as amended: no renderer can hold the lock hostage ------------
+
+
+@pytest.mark.asyncio
+async def test_a_renderer_that_never_answers_cannot_hang_the_supervisor(monkeypatch):
+    """**Found 2026-09-26:** a renderer waiting for the device stopped
+    answering its API, the supervisor waited on it with the lock held, and the
+    next takeover queued behind it for 68 s. Every call the supervisor makes to
+    a renderer's API under the lock is now bounded."""
+    from gexis_core import arbitration
+
+    monkeypatch.setattr(arbitration, "RENDERER_CALL_TIMEOUT_S", 0.05)
+    holder = {"who": "lms"}
+
+    class Mute(FakeAdapter):
+        async def device_freed(self):
+            await asyncio.sleep(3600)
+
+        async def restart_after_release(self):
+            await asyncio.sleep(3600)
+
+    class Silent(FakeAdapter):
+        async def release(self):
+            await asyncio.sleep(3600)
+
+    async def restore_volume(_):
+        await asyncio.sleep(3600)
+
+    adapters = {
+        "lms": Silent("lms", ReleaseAction.PAUSE, holder, frees_at="sigterm"),
+        "spotify": Mute("spotify", ReleaseAction.DISCONNECT, holder),
+        "bluetooth": FakeAdapter("bluetooth", ReleaseAction.DISCONNECT, holder),
+    }
+    supervisor = Supervisor(
+        adapters,
+        device_busy=lambda renderer_id: holder["who"] == renderer_id,
+        ladder=FAST_LADDER,
+        restore_volume=restore_volume,
+    )
+    supervisor._active = "lms"
+
+    await asyncio.wait_for(supervisor.acquire("spotify"), 2)
+    assert supervisor.active == "spotify"
+    assert adapters["lms"].signals, "a release that never answered still escalated"
+
+    # And the lock is free for the next one.
+    await asyncio.wait_for(supervisor.acquire("bluetooth"), 2)
+    assert supervisor.active == "bluetooth"

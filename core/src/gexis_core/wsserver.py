@@ -833,8 +833,9 @@ class StateServer:
         plugin = self._plugins.get(request.match_info["id"])
         if plugin is None or plugin.mark is None:
             return web.json_response({"error": "no mark for that source"}, status=404)
-        # Immutable for the life of an install: a mark changes when a package
-        # does, and the panel reloads on a new build anyway.
+        # Cached for a day, which is safe only because the URL the panel is
+        # given carries the file's hash (`Plugin.mark_url`): a replaced mark is
+        # a different URL. The query string is not read here.
         return web.FileResponse(
             plugin.mark, headers={"Cache-Control": "public, max-age=86400"}
         )

@@ -210,14 +210,6 @@ class PlaybackState:
     #: The shared hardware mixer's level, or None before it has been read
     #: once (a real startup window, not an error).
     volume: VolumeState | None = None
-    #: Renderer pairs whose measured takeover gap is fast enough that a
-    #: transition state would be a flicker rather than information
-    #: (ADR-0010: threshold 1s, currently same-rate LMS<->Spotify at
-    #: 224.6/335.2ms medians, Finding 020). **Published rather than
-    #: hardcoded in the UI** because the criterion is explicit that this
-    #: is "data, not a constant" - a pair earns exemption by being
-    #: measured and loses it if a later measurement moves it back.
-    handoff_exempt_pairs: tuple[tuple[str, str], ...] = ()
     #: **ADR-0086.** One entry per installed source: id, name, kind, accent,
     #: status line and mark URL. Static for the process, like `capabilities`,
     #: and the reason the panel can draw a renderer it has never heard of.
@@ -279,9 +271,6 @@ class PlaybackState:
         # is needed because the dataclass is frozen.
         object.__setattr__(self, "available", dict(self.available))
         object.__setattr__(self, "capabilities", dict(self.capabilities))
-        object.__setattr__(
-            self, "handoff_exempt_pairs", tuple(tuple(p) for p in self.handoff_exempt_pairs)
-        )
 
     def to_json(self) -> dict:
         return {
@@ -293,7 +282,6 @@ class PlaybackState:
             "volume": self.volume.to_json() if self.volume else None,
             "fixed_output": self.fixed_output,
             "meters": self.meters,
-            "handoff_exempt_pairs": [list(pair) for pair in self.handoff_exempt_pairs],
             "sources": [dict(s) for s in self.sources],
             "settings_revision": self.settings_revision,
             "pictures_revision": self.pictures_revision,

@@ -121,3 +121,49 @@ def test_only_the_warm_up_skips_now():
     assert all(
         now for unit, now in SCREEN_UNITS if unit != "gexis-panel-warmup.service"
     )
+
+
+def test_startup_acts_only_where_a_switch_and_its_unit_disagree():
+    """**ADR-0077 as amended 2026-09-26, found by a restore.** The settings
+    came back with Plexamp switched on and the image had shipped its unit
+    disabled. Both directions count; a unit that already agrees is left alone,
+    because the switch's own path does more than `enable --now`."""
+    enabled = {
+        "plexamp.service": False,        # restored on, shipped off -> enable
+        "go-librespot.service": True,    # switched off, image re-enabled -> disable
+        "squeezelite.service": True,     # on and enabled -> nothing
+        "beszel-agent.service": False,   # off and disabled -> nothing
+    }
+    wanted = {
+        "plexamp.service": True,
+        "go-librespot.service": False,
+        "squeezelite.service": True,
+        "beszel-agent.service": False,
+    }
+
+    assert systemd.disagreeing(wanted, probe=enabled.__getitem__) == [
+        "plexamp.service", "go-librespot.service",
+    ]
+
+
+def test_a_device_that_already_agrees_asks_nothing_of_systemd_but_is_enabled():
+    asked = []
+
+    def probe(unit):
+        asked.append(unit)
+        return True
+
+    assert systemd.disagreeing({"a.service": True, "b.service": True}, probe=probe) == []
+    assert asked == ["a.service", "b.service"]
+
+
+def test_reconciliation_covers_every_kind_of_switch():
+    """The first version enforced the three built-ins only, and only *off*. A
+    reconciliation that forgets plugins is the defect, so the source is read
+    for all three kinds rather than trusted."""
+    source = (REPO / "core/src/gexis_core/__main__.py").read_text()
+    body = source.split("async def _reconcile_sources", 1)[1].split("\n    async def ", 1)[0]
+    body = body.split("\n    def ", 1)[0]
+    for needle in ("RENDERER_ROWS", "installed_plugins", "_apply_plugin_unit",
+                   "headless", "disagreeing_units"):
+        assert needle in body, needle

@@ -261,12 +261,12 @@ def test_setting_the_same_volume_does_not_rebroadcast():
     assert seen == []
 
 
-def test_handoff_exempt_pairs_are_published_not_applied():
-    """Criterion 4 is explicit that the exempt list is data, not a
-    constant - the store carries it and has no opinion about it."""
-    store = StateStore(_caps("lms", "spotify"), handoff_exempt_pairs=(("lms", "spotify"),))
+def test_no_takeover_is_exempt_from_the_transition_screen():
+    """**ADR-0094**, replacing Phase 4 criterion 4's exempt list: every
+    takeover is shown, so the state no longer carries pairs to skip."""
+    store = StateStore(_caps("lms", "spotify"))
 
-    assert store.state.to_json()["handoff_exempt_pairs"] == [["lms", "spotify"]]
+    assert "handoff_exempt_pairs" not in store.state.to_json()
 
 
 def test_fixed_output_is_published_rather_than_inferred():

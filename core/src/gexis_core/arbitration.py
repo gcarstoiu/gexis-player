@@ -53,6 +53,26 @@ logger = logging.getLogger("gexis_core.arbitration")
 LADDER_POLL_INTERVAL = 0.1
 
 
+#: **How long the supervisor waits on a renderer's own API while it holds the
+#: lock** (ADR-0095 as amended). Found 2026-09-26: a renderer waiting for the
+#: device stopped answering, the supervisor waited on it with no limit while
+#: holding the lock, and every later takeover queued behind it - 68 s, until
+#: the device was freed by hand. A call that runs out is treated as having
+#: failed, which each caller already handles. `signal_stop` is not bounded: it
+#: is a local `systemctl kill` for the built-ins and has its own reply timeout
+#: for a plugin, and cancelling it could skip the kill the ladder depends on.
+RENDERER_CALL_TIMEOUT_S = 2.0
+
+
+async def _bounded(what: str, call, fallback=None):
+    try:
+        return await asyncio.wait_for(call, RENDERER_CALL_TIMEOUT_S)
+    except asyncio.TimeoutError:
+        logger.warning("arbitration: %s did not answer within %.0f s, going on without it",
+                       what, RENDERER_CALL_TIMEOUT_S)
+        return fallback
+
+
 @dataclass(frozen=True)
 class TimeoutLadder:
     """Escalation timings for release (criterion 4), in seconds."""
@@ -230,11 +250,17 @@ class Supervisor:
                 logger.debug("acquire: %s already current, ignoring", renderer_id)
                 return
             outgoing = self._active
-            self._active = renderer_id
-            self._notify_active_change()
-            logger.info(
-                "acquire: %s takes the device (was %s)", renderer_id, outgoing or "nobody"
-            )
+            # **The takeover is announced before the new renderer is**
+            # (George, 2026-09-26: the transition screen should *"start showing
+            # before the artwork is changed as otherwise we end up with a
+            # blinking effect"*). Each notification is its own broadcast, and
+            # the panel painted the incoming renderer's artwork on the first
+            # and covered it with the screen on the second.
+            #
+            # Everything after the announcement is inside the `try` below, so
+            # the `finally` that clears it covers the active change as well.
+            if outgoing is not None:
+                self._notify_handoff(outgoing, renderer_id)
             # ADR-0010: "release, uniformly" - no renderer is skipped.
             # Whoever was current gets released, full stop. `outgoing` is
             # None only when nobody held the device, and then there is
@@ -263,9 +289,12 @@ class Supervisor:
             # unaccountable state ADR-0010 exists to prevent. Only a
             # takeover has a pair: a cold acquisition with nobody holding
             # the device reports nothing.
-            if outgoing is not None:
-                self._notify_handoff(outgoing, renderer_id)
             try:
+                self._active = renderer_id
+                self._notify_active_change()
+                logger.info(
+                    "acquire: %s takes the device (was %s)", renderer_id, outgoing or "nobody"
+                )
                 await self._acquire_sequence(outgoing, renderer_id)
             finally:
                 if outgoing is not None:
@@ -278,7 +307,7 @@ class Supervisor:
         if outgoing is not None:
             await self._release_with_ladder(outgoing)
         if self._restore_volume is not None:
-            await self._restore_volume(renderer_id)
+            await _bounded(f"{renderer_id}'s volume", self._restore_volume(renderer_id))
         # Finding 014: give the incoming renderer a chance to retry its
         # own acquisition now that the device is confirmed free - by
         # default a no-op (adapters/base.py's device_freed docstring),
@@ -286,7 +315,7 @@ class Supervisor:
         # restored first so a renderer whose retry actually starts
         # audible playback here does so at the right level from the
         # first sample, not a beat later.
-        await self._adapters[renderer_id].device_freed()
+        await _bounded(f"{renderer_id}'s device_freed", self._adapters[renderer_id].device_freed())
         # Finding 013 §1's recurrence, 2026-09-11: give the outgoing
         # renderer a chance to come back under our own control if it
         # had to be stopped rather than relying on systemd's automatic
@@ -297,7 +326,8 @@ class Supervisor:
         # residual risk), just because it's the best available
         # ordering.
         if outgoing is not None:
-            await self._adapters[outgoing].restart_after_release()
+            await _bounded(f"{outgoing}'s restart_after_release",
+                           self._adapters[outgoing].restart_after_release())
 
     async def relinquish(self, renderer_id: str) -> None:
         """`renderer_id` gave up the device without anyone taking it over -
@@ -342,7 +372,7 @@ class Supervisor:
         ladder = adapter.release_ladder or self._ladder
         t0 = time.monotonic()
 
-        confirmed = await adapter.release()
+        confirmed = await _bounded(f"{renderer_id}'s release", adapter.release(), fallback=False)
         if not confirmed:
             logger.warning(
                 "release[%s]: adapter's own API did not confirm the action",

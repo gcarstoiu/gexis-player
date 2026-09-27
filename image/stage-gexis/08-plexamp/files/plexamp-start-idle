@@ -1,0 +1,46 @@
+#!/usr/bin/python3
+# SPDX-License-Identifier: GPL-3.0-or-later
+"""Plexamp starts with no saved queue, and keeps its volume (ADR-0091, amended
+2026-09-26).
+
+Plexamp persists its queue, transport and volume to one file and restores all
+three on start. A queue restored as *paused* opens the ALSA device without
+anyone having asked it to play - measured, after a takeover's kill landed
+before Plexamp had saved its stop - so the queue has to go. The volume must
+not: it is the player's own level, the one a phone's slider is set against,
+and without it every takeover brought Plexamp back at 100 and the DAC with it.
+
+Measured on the device: `{"state": "stopped", "volume": 40}` comes back
+stopped, at 40, with the device left alone.
+
+Runs as `pi`, from `ExecStartPre`. Never fails the start: a file it cannot
+read is removed, which is exactly the state before this existed.
+"""
+import json
+import sys
+from pathlib import Path
+
+SETTINGS = Path("/home/pi/.local/share/Plexamp/Settings")
+STATE = SETTINGS / "%40Plexamp%3Astate"
+
+
+def main() -> int:
+    # The temporaries a kill leaves mid-write: `@Plexamp:state.<n>`.
+    for partial in SETTINGS.glob(STATE.name + ".*"):
+        partial.unlink(missing_ok=True)
+    try:
+        saved = json.loads(STATE.read_text())
+        volume = saved.get("volume")
+    except (OSError, ValueError, AttributeError):
+        STATE.unlink(missing_ok=True)
+        return 0
+    kept = {"state": "stopped"}
+    if isinstance(volume, (int, float)) and 0 <= volume <= 100:
+        kept["volume"] = volume
+    STATE.write_text(json.dumps(kept))
+    print(f"plexamp: saved queue cleared, volume kept at {kept.get('volume')}")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

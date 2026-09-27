@@ -1,0 +1,143 @@
+{
+ "_about": "The slot each skin draws around its badge, where the declared playinfo.type box sits off-centre inside it - the box held a format icon with the sample rate beside it, and the sample rate is never drawn here. Measured 2026-09-26 by flood-filling each skin's composed artwork from inside the box (17 skins); six more measured by eye on 2026-09-27 after every one of the 99 skins was rendered and reviewed: 113G5_Old Spectrum S+M (found by George), 19G5_Sansui 2V and the four TURN Vinyl skins. Left alone on purpose: a slot that also holds the time (48G5_Vertical blue, 28/29G5_Technics), and badges placed on an open background. A skin absent here keeps its declared box. [x0, y0, x1, y1], screen pixels.",
+ "slots": {
+  "101G5_Free S+M": [
+   366,
+   653,
+   498,
+   705
+  ],
+  "105G5_Kenwood Spectrum": [
+   38,
+   494,
+   316,
+   602
+  ],
+  "106G5_OldPipe Spectrum": [
+   509,
+   718,
+   725,
+   764
+  ],
+  "108G5_Kenwood Rev S+M": [
+   1123,
+   422,
+   1202,
+   467
+  ],
+  "112G5_KeySlight S+M": [
+   1075,
+   232,
+   1265,
+   281
+  ],
+  "41G5_Yellowkidney": [
+   332,
+   653,
+   603,
+   727
+  ],
+  "59G5_Yamaha M85": [
+   1015,
+   13,
+   1259,
+   107
+  ],
+  "black-white": [
+   999,
+   77,
+   1250,
+   158
+  ],
+  "black-white-spectrum": [
+   999,
+   77,
+   1250,
+   158
+  ],
+  "black-blue": [
+   999,
+   82,
+   1140,
+   154
+  ],
+  "black-blue-spectrum": [
+   999,
+   82,
+   1139,
+   153
+  ],
+  "emerald": [
+   146,
+   89,
+   376,
+   130
+  ],
+  "emerald-spectrum": [
+   146,
+   89,
+   376,
+   130
+  ],
+  "orange": [
+   33,
+   351,
+   255,
+   389
+  ],
+  "68G5_Reher Tube": [
+   1087,
+   83,
+   1191,
+   173
+  ],
+  "22G5_Dark Spotify": [
+   963,
+   493,
+   1167,
+   628
+  ],
+  "26G5_Marantz Black": [
+   589,
+   641,
+   686,
+   728
+  ],
+  "113G5_Old Spectrum S+M": [
+   600,
+   462,
+   887,
+   554
+  ],
+  "19G5_Sansui 2V": [
+   551,
+   520,
+   730,
+   570
+  ],
+  "37G5_TURN Vinyl Green": [
+   818,
+   285,
+   968,
+   338
+  ],
+  "38G5_TURN Vinyl Green 2": [
+   818,
+   285,
+   968,
+   338
+  ],
+  "39G5_TURN Vinyl Silver": [
+   818,
+   285,
+   968,
+   338
+  ],
+  "40G5_TURN Vinyl Black": [
+   818,
+   285,
+   968,
+   338
+  ]
+ }
+}

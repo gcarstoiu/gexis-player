@@ -147,3 +147,15 @@ def is_enabled(unit: str) -> bool:
     )
     state = (result.stdout or "").strip()
     return state in ("enabled", "enabled-runtime")
+
+
+def disagreeing(wanted: dict[str, bool], probe=is_enabled) -> list[str]:
+    """**The units whose enablement is not what their switch says** (ADR-0077
+    as amended 2026-09-26).
+
+    Asked at startup, because the switch and the unit are stored in different
+    places and a restore brings back only one of them. A unit that already
+    agrees is left alone: `enable --now` is idempotent for systemd but not for
+    everything the core does around it, Bluetooth's power-up above all.
+    """
+    return [unit for unit, on in wanted.items() if probe(unit) != bool(on)]

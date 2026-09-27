@@ -14,6 +14,8 @@ code nothing else runs is how the first external plugin finds a hole
 """
 from __future__ import annotations
 
+import hashlib
+
 import json
 import logging
 import re
@@ -82,8 +84,23 @@ class Plugin:
             "kind": self.kind,
             "accent": self.accent,
             "status": self.status,
-            "mark": f"/plugins/{self.id}/mark" if self.mark else None,
+            "mark": self.mark_url(),
         }
+
+    def mark_url(self) -> str | None:
+        """**The URL names the file's content, not just the plugin** (found
+        2026-09-26). The mark is served with a day's `max-age`, so a mark
+        replaced under the same URL stayed cached on the panel and on phones:
+        George's panel went on drawing the old Plexamp arrow after the file was
+        swapped for Plex's chevron. A new file is a new URL, so the long cache is
+        safe and nothing has to be told to reload."""
+        if self.mark is None:
+            return None
+        try:
+            digest = hashlib.sha256(self.mark.read_bytes()).hexdigest()[:12]
+        except OSError:
+            return f"/plugins/{self.id}/mark"
+        return f"/plugins/{self.id}/mark?v={digest}"
 
 
 class BadManifest(ValueError):

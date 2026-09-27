@@ -28,6 +28,8 @@ def _device(root):
     (root / "var/lib/bluetooth/11:22/info").write_text("paired")
     (root / "var/lib/beszel-agent").mkdir(parents=True)
     (root / "var/lib/beszel-agent/fingerprint").write_text("ec4c41e0")
+    (root / "home/pi/.local/share/Plexamp/Settings").mkdir(parents=True)
+    (root / "home/pi/.local/share/Plexamp/Settings/%40Plexamp%3Auser%3Atoken").write_text("Stoken")
     return root
 
 
@@ -53,6 +55,46 @@ def test_it_holds_the_spotify_pairing(tmp_path):
     assert "var/lib/go-librespot/state.json" in held
 
 
+def test_it_leaves_go_librespots_config_to_the_image(tmp_path):
+    """**ADR-0095.** `config.yml` is the image's; restored over a newer image it
+    would name the device the renderer used to use."""
+    root, out = _device(tmp_path / "root"), tmp_path / "out"
+    (root / "var/lib/go-librespot/config.yml").write_text("audio_device: output")
+    name = backups.create("gexis", out, root)
+
+    with tarfile.open(out / name) as archive:
+        held = set(archive.getnames())
+    assert "var/lib/go-librespot/config.yml" not in held
+
+
+def test_an_old_archive_restores_the_pairing_and_not_the_config(tmp_path):
+    """Every backup made before this change holds the whole directory. It must
+    still restore - the pairing is why it exists - without the config."""
+    root, out = _device(tmp_path / "root"), tmp_path / "out"
+    (root / "var/lib/go-librespot/config.yml").write_text("audio_device: output")
+    out.mkdir()
+    old = out / "gexis-gexis-20260925-120000.tgz"
+    with tarfile.open(old, "w:gz") as archive:
+        archive.add(root / "var/lib/go-librespot", arcname="var/lib/go-librespot")
+        archive.add(root / "var/lib/gexis-core/settings.db", arcname="var/lib/gexis-core/settings.db")
+    fresh = tmp_path / "fresh"
+    backups.restore(old.name, out, fresh)
+    assert (fresh / "var/lib/go-librespot/state.json").exists()
+    assert not (fresh / "var/lib/go-librespot/config.yml").exists()
+    assert (fresh / "var/lib/gexis-core/settings.db").exists()
+
+
+def test_anything_else_outside_the_list_is_still_refused(tmp_path):
+    out = tmp_path / "out"
+    out.mkdir()
+    (tmp_path / "evil").write_text("x")
+    bad = out / "gexis-gexis-20260925-120001.tgz"
+    with tarfile.open(bad, "w:gz") as archive:
+        archive.add(tmp_path / "evil", arcname="etc/sudoers.d/evil")
+    with pytest.raises(ValueError):
+        backups.restore(bad.name, out, tmp_path / "fresh")
+
+
 def test_it_holds_the_beszel_fingerprint(tmp_path):
     """**The same lesson, applied before it could be learned twice** (ADR-0087).
     The agent's fingerprint is the identity the hub binds this system to, so a
@@ -64,6 +106,25 @@ def test_it_holds_the_beszel_fingerprint(tmp_path):
     with tarfile.open(out / name) as archive:
         held = set(archive.getnames())
     assert "var/lib/beszel-agent/fingerprint" in held
+
+
+def test_it_holds_the_plexamp_claim_and_puts_it_back(tmp_path):
+    """**The third of these, and the one that was not caught in time.** George
+    reflashed, restored, and Plexamp came up unclaimed and missing from the
+    Plex player list; the claim token that made it is single-use. This one
+    goes round the whole loop, because it is the first member under a home
+    directory rather than /var/lib."""
+    root, out = _device(tmp_path / "root"), tmp_path / "out"
+    name = backups.create("gexis", out, root)
+    token = "home/pi/.local/share/Plexamp/Settings/%40Plexamp%3Auser%3Atoken"
+
+    with tarfile.open(out / name) as archive:
+        assert token in set(archive.getnames())
+
+    fresh = tmp_path / "fresh"
+    fresh.mkdir()
+    backups.restore(name, out, fresh)
+    assert (fresh / token).read_text() == "Stoken"
 
 
 def test_a_missing_member_is_skipped_not_fatal(tmp_path):
