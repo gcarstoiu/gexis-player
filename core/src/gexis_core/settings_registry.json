@@ -671,11 +671,13 @@
         "type": "choice",
         "label": "Skins",
         "marks": "R",
-        "note": "What the visualiser draws from: needles, bars, or both together. All takes any of the three. Which skin, and whether it changes with the track, is the row below.",
+        "note": "What the visualiser draws from: needles, bars, both together, a turntable or a tape deck. All takes any of them. Which skin, and whether it changes with the track, is the row below.",
         "options": [
           "VU meters",
           "Spectrum",
           "VU meters + spectrum",
+          "Turntables",
+          "Tapes",
           "All"
         ],
         "default": "VU meters"
@@ -702,6 +704,30 @@
           false
         ],
         "default": null
+      },
+      {
+        "key": "skin_motion",
+        "type": "toggle",
+        "label": "Animate turntables and tapes",
+        "marks": "N",
+        "note": "The record turns and the tonearm follows the track; the reels of a cassette or a tape recorder turn. Off, they are drawn still.",
+        "default": true
+      },
+      {
+        "key": "record_speed",
+        "type": "choice",
+        "label": "Record speed",
+        "marks": "N",
+        "note": "How fast a turntable's record turns. The skins are drawn for 33; a tape's reels keep their own speed.",
+        "options": [
+          "33 rpm",
+          "45 rpm"
+        ],
+        "onlyWhen": [
+          "skin_motion",
+          true
+        ],
+        "default": "33 rpm"
       },
       {
         "type": "group",

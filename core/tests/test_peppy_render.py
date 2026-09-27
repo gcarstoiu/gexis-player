@@ -473,3 +473,89 @@ def test_the_skins_found_off_centre_by_eye_are_in_the_table():
     for name in ("113G5_Old Spectrum S+M", "19G5_Sansui 2V", "37G5_TURN Vinyl Green",
                  "38G5_TURN Vinyl Green 2", "39G5_TURN Vinyl Silver", "40G5_TURN Vinyl Black"):
         assert name in SLOTS, name
+
+
+def test_a_skin_with_no_screen_background_still_draws_its_text(screen, tmp_path):
+    """**ADR-0096.** 41 of the 48 turntables leave `screen.bgr` empty and are
+    drawn by the meter's own background; the layer returned before drawing
+    anything, so those skins showed no title, art or badge at all."""
+    meter = pygame.Surface((1280, 800))
+    meter.fill((60, 50, 40))
+    pygame.image.save(meter, str(tmp_path / "deck_bgr.png"))
+    skin = dict(SKIN, **{"screen.bgr": "", "bgr.filename": "deck_bgr.png", "meter.x": "0", "meter.y": "0"})
+    layer = MetadataLayer(screen, tmp_path)
+    layer.set_skin(skin)
+
+    assert layer._background is not None
+    assert layer._background.get_at((640, 400))[:3] == (60, 50, 40)
+    assert layer.draw(full()), "the title and the rest are drawn"
+
+
+def test_a_skin_with_neither_background_draws_nothing_rather_than_smear(screen, tmp_path):
+    layer = MetadataLayer(screen, tmp_path)
+    layer.set_skin(dict(SKIN, **{"screen.bgr": "", "bgr.filename": ""}))
+    assert layer.draw(full()) == []
+
+
+def test_laid_out_for_the_motion_layer_it_leaves_the_screen_alone(layer, screen):
+    """ADR-0096: on an animated skin the motion layer composes; erasing a
+    title to this layer's background would wipe the record under it."""
+    screen.fill((1, 2, 3))
+    before = pygame.image.tostring(screen, "RGB")
+    dirty = layer.draw(full(), paint=False)
+    assert len(dirty) == 5
+    assert pygame.image.tostring(screen, "RGB") == before
+    strata = [stratum for stratum, _, _ in layer._items]
+    assert strata.count("text") == 3 and strata.count("meta") == 2
+    layer.paint(("text",), pygame.Rect(0, 0, 1280, 800))
+    assert pygame.image.tostring(screen, "RGB") != before
+    # And the next ordinary draw paints again.
+    layer.draw(full(title="Another"))
+    assert layer._painting
+
+
+def test_the_time_takes_the_skins_own_size_when_it_gives_one(screen, tmp_path):
+    """66 of the animated skins size their clock apart from the digi face;
+    at the face's 45 px the Sansui cassette's digits ran into its meter."""
+    background = pygame.Surface((1280, 800))
+    pygame.image.save(background, str(tmp_path / "bgr.png"))
+    heights = {}
+    for size in (None, "20"):
+        skin = dict(SKIN, **{"font.size.digi": "45", "time.remaining.pos": "900,500"})
+        if size:
+            skin["time.remaining.fontsize"] = size
+        made = MetadataLayer(screen, tmp_path)
+        made.set_skin(skin)
+        made.draw(full(position=30.0, duration=200.0))
+        heights[size] = next(r for r in made._painted if (r.x, r.y) == (900, 500)).height
+    assert heights["20"] < heights[None]
+
+
+TICKER = {
+    "playinfo.ticker": "True",
+    "playinfo.ticker.pos": "20,638,bold",
+    "playinfo.ticker.color": "210,210,210",
+    "playinfo.ticker.maxwidth": "1233",
+    "playinfo.ticker.separator": "***",
+}
+
+
+def test_a_ticker_skin_shows_its_title_as_a_still_line(screen, tmp_path):
+    """ADR-0096, George's choice A: 27 animated skins place their title only
+    as a scrolling ticker, and showed none."""
+    pygame.image.save(pygame.Surface((1280, 800)), str(tmp_path / "bgr.png"))
+    skin = {k: v for k, v in SKIN.items() if not k.startswith("playinfo.")} | TICKER
+    made = MetadataLayer(screen, tmp_path)
+    made.set_skin(skin)
+    lines = [f for f in made._fields(full()) if f[1][:2] == (20, 638)]
+    assert [f[0] for f in lines] == ["Title *** Artist *** Album"]
+    assert lines[0][2] == (210, 210, 210) and lines[0][4] == 1233
+    missing = made._fields(full(album=None, artist=None))
+    assert [f[0] for f in missing if f[1][:2] == (20, 638)] == ["Title"]
+
+
+def test_a_skin_with_its_own_title_field_does_not_draw_the_ticker_too(screen, tmp_path):
+    pygame.image.save(pygame.Surface((1280, 800)), str(tmp_path / "bgr.png"))
+    made = MetadataLayer(screen, tmp_path)
+    made.set_skin(SKIN | TICKER)
+    assert not [f for f in made._fields(full()) if f[1][:2] == (20, 638)]

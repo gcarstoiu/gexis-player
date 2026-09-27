@@ -30,7 +30,7 @@ output.i2c = False
 output.pwm = False
 output.http = False
 use.logging = False
-use.cache = True
+use.cache = False
 cache.size = 20
 frame.rate = 30
 

@@ -21,6 +21,7 @@ from __future__ import annotations
 
 import configparser
 import json
+import logging
 import os
 import random
 import sys
@@ -56,6 +57,8 @@ def meter_sections(path: Path) -> dict[str, dict[str, str]]:
 SELECTION_PATH = Path("/run/gexis/visualisation.json")
 
 METERS, SPECTRUM, BOTH = "meters", "spectrum", "both"
+#: What moves (ADR-0096 as amended), as `gexis_core.skins` decides it.
+TURNTABLE, TAPE = "turntable", "tape"
 
 #: The `skin_corpus` words and the kinds each one draws from. The same table
 #: as `gexis_core.skins.CORPUS`; the two processes share no code, so they
@@ -65,16 +68,23 @@ CORPUS = {
     "VU meters": (METERS,),
     "Spectrum": (SPECTRUM,),
     "VU meters + spectrum": (BOTH,),
-    ALL: (METERS, SPECTRUM, BOTH),
+    "Turntables": (TURNTABLE,),
+    "Tapes": (TAPE,),
+    ALL: (METERS, SPECTRUM, BOTH, TURNTABLE, TAPE),
     # Understood, for a selection written before the 2026-09-22 rename.
-    "Random": (METERS, SPECTRUM, BOTH),
+    "Random": (METERS, SPECTRUM, BOTH, TURNTABLE, TAPE),
 }
 
 
 def kind_of(skin: dict[str, str]) -> str:
     """What a skin shows, from what it declares - never from which directory
     it lives in (ADR-0019 as amended). An absent `spectrum.visible` means no
-    spectrum; an absent `meter.visible` means a meter."""
+    spectrum; an absent `meter.visible` means a meter. A record, a tonearm or
+    reels make it a turntable or a tape deck first (ADR-0096 as amended)."""
+    if any(key.startswith(("vinyl.", "tonearm.")) for key in skin):
+        return TURNTABLE
+    if any(key.startswith("reel.") for key in skin):
+        return TAPE
     spectrum = skin.get("spectrum.visible", "False").strip().lower() == "true"
     if not spectrum:
         return METERS
@@ -94,6 +104,8 @@ class Selection:
         self.corpus = ALL
         self.skin: str | None = None
         self.rotate = True
+        self.motion = True
+        self.record_rpm = 33.0
         self._stamp: int | None = None
 
     def reload(self) -> bool:
@@ -110,12 +122,17 @@ class Selection:
         except (OSError, ValueError) as exc:
             print(f"peppy: {self.path} unreadable: {exc}", file=sys.stderr)
             return False
-        was = (self.corpus, self.skin, self.rotate)
+        was = (self.corpus, self.skin, self.rotate, self.motion, self.record_rpm)
         self.corpus = str(data.get("corpus") or ALL)
         skin = data.get("skin")
         self.skin = str(skin) if skin else None
         self.rotate = data.get("rotate") is not False
-        return was != (self.corpus, self.skin, self.rotate)
+        self.motion = data.get("motion") is not False
+        try:
+            self.record_rpm = float(data.get("record_rpm") or 33.0)
+        except (TypeError, ValueError):
+            self.record_rpm = 33.0
+        return was != (self.corpus, self.skin, self.rotate, self.motion, self.record_rpm)
 
     def pool(self, skins: dict[str, dict[str, str]]) -> list[str]:
         """The names this corpus offers. An empty pool is not a corpus: a
@@ -484,6 +501,9 @@ class Rotation:
         self.selection = selection or Selection()
         self.spectrum = spectrum_state
         self.layer = layer
+        #: ADR-0096: what moves on a turntable or a tape deck, given each new
+        #: skin right after the text layer (it paints over that background).
+        self.motion = None
         self.unseen: list[str] = []
         self.current: str | None = None
         self.prepared: tuple[str, object] | None = None
@@ -618,6 +638,8 @@ class Rotation:
         self.spectrum.follow(skin, self.homes.get(name))
         if self.layer is not None:
             self.layer.set_skin(skin, self.homes.get(name), name)
+            if self.motion is not None and self.homes.get(name) is not None:
+                self.motion.set_skin(skin, self.homes[name], self.layer.background)
         pygame.display.update()
         self.prepare_next()
 
@@ -780,6 +802,13 @@ def main() -> int:
     from peppymeter import Peppymeter
 
     peppy = Peppymeter(standalone=True, timer_controlled_random_meter=False, quit_pygame_on_stop=False)
+    # **Upstream's `use.logging = False` is `logging.disable(CRITICAL)`**
+    # (peppymeter.py:75), which silences every logger in the process - ours
+    # too. Nothing the renderer or the motion layer warned about ever reached
+    # the journal; 18 turntables drew no record, and said nothing. Warnings
+    # and worse come back, to stderr, which the journal keeps.
+    logging.disable(logging.NOTSET)
+    logging.basicConfig(level=logging.WARNING, stream=sys.stderr, format="peppy: %(name)s: %(message)s")
     # The constructor does not create the display: upstream's own entry point
     # calls this afterwards (peppymeter.py:289), and until it runs there is no
     # surface for either engine to draw on.
@@ -884,6 +913,7 @@ def main() -> int:
         os.chdir(METER_DIR)
 
     from gexis_peppy_render import MetadataLayer, read_metadata
+    from gexis_peppy_motion import MotionLayer
 
     rotation = Rotation(peppy, skins, spectrum_state, None, homes, selection)
     rotation.spectrum_ready = spectrum_state.spectrum is not None
@@ -910,6 +940,22 @@ def main() -> int:
     peppy.meter.random_meter = False
     peppy.meter.list_meter = False
     layer.set_skin(skins[first], homes.get(first), first)
+    def redraw_needles(area: pygame.Rect) -> None:
+        """The meter's needles as they last stood, inside the clip the motion
+        layer has set: each needle component replays its last blit, and the
+        meter's own background and foreground are the motion layer's."""
+        meter = rotation.vumeter.meter
+        if meter is None:
+            return
+        for component in meter.components:
+            if component is not None and component is not meter.bgr and component is not meter.fgr:
+                component.draw()
+
+    motion = MotionLayer(util.PYGAME_SCREEN, layer, redraw_needles)
+    rotation.motion = motion
+    motion.configure(selection.motion, selection.record_rpm)
+    if first in homes:
+        motion.set_skin(skins[first], homes[first], layer.background)
     rotation.prepare_next()
     print(
         f"peppy: {len(skins)} skins, {len(pool)} in {selection.corpus!r}, "
@@ -917,13 +963,14 @@ def main() -> int:
     )
 
     track = current_track()
+    metadata = read_metadata()
     # Polled rather than watched: at a tenth of a second the check is a stat
     # and a small read, and it costs nothing to be a little late to a skin.
     poll_every = max(1, int(peppy.util.meter_config[FRAME_RATE] / 10))
     frames = 0
 
     def per_frame() -> None:
-        nonlocal track, frames
+        nonlocal track, frames, metadata
         frames += 1
         if frames % poll_every == 0:
             # The same poll carries both files: which track is playing, and
@@ -933,15 +980,30 @@ def main() -> int:
                     f"peppy: selection -> {selection.corpus!r}, "
                     f"{selection.skin!r}, rotation {'on' if selection.rotate else 'off'}"
                 )
+                motion.configure(selection.motion, selection.record_rpm)
                 rotation.follow_selection()
             playing = current_track()
             if playing is not None and playing != track:
                 track = playing
                 if rotation.rotating:
                     rotation.switch()
-            dirty = layer.draw(read_metadata())
-            if dirty:
-                pygame.display.update(dirty)
+            metadata = read_metadata()
+            if motion.active:
+                # Laid out, not painted: erasing a title to the layer's own
+                # background would wipe the record or the reels under it.
+                dirty = layer.draw(metadata, paint=False)
+                if dirty:
+                    pygame.display.update(motion.compose(dirty))
+            else:
+                dirty = layer.draw(metadata)
+                if dirty:
+                    pygame.display.update(dirty)
+        # ADR-0096: every frame, from the last metadata read - the spin has its
+        # own rate gate, so most frames draw nothing.
+        if motion.active:
+            moved = motion.tick(metadata, layer.artwork_source)
+            if moved:
+                pygame.display.update(moved)
 
         if not spectrum_state.active:
             return

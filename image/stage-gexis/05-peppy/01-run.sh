@@ -167,6 +167,47 @@ for pack in gelo5 stock; do
 	done
 done
 
+# **The animated packs** (ADR-0096): turntables, tape recorders and cassette
+# decks. Fetched from foonerd/peppy_templates at a pinned commit and checked
+# against its own catalogue's sha256 (skins/README.md). Each pack's meters.txt
+# must match the validated copy in skins/animated byte for byte, exactly as the
+# Gelo5 corpus above is held to - or `make skins` proved nothing about it.
+TEMPLATES_COMMIT="f80c166a"
+TEMPLATES_RAW="https://raw.githubusercontent.com/foonerd/peppy_templates/${TEMPLATES_COMMIT}/template_peppy"
+install -d -m 755 "${PEPPY_DIR}/skins-letterbox"
+while read -r path pack sha name; do
+	fetch "${TEMPLATES_RAW}/${path}/${pack}.zip" "${sha}" "${WORK}/${pack}.zip"
+	mkdir -p "${WORK}/anim/${pack}"
+	bsdtar -xf "${WORK}/${pack}.zip" -C "${WORK}/anim/${pack}"
+	src="${WORK}/anim/${pack}/${pack}"
+	if [ ! -f "${src}/meters.txt" ]; then
+		echo "ERROR: ${pack}.zip has no ${pack}/meters.txt" >&2
+		exit 1
+	fi
+	if ! cmp -s "/pi-gen/gexis-skins/animated/${pack}/meters.txt" "${src}/meters.txt"; then
+		echo "ERROR: ${pack}'s meters.txt differs from the validated skins/animated copy" >&2
+		exit 1
+	fi
+	case "${pack}" in
+	1280x800_*)
+		# Native to this panel: installed as it ships.
+		install -d -m 755 "${PEPPY_DIR}/skins/${name}/templates/1280x800"
+		cp -r "${src}/." "${PEPPY_DIR}/skins/${name}/templates/1280x800/"
+		;;
+	*)
+		# 1280x720: letterboxed by 02-run-chroot.sh, which has python3 and
+		# Pillow where this container has neither.
+		cp -r "${src}" "${PEPPY_DIR}/skins-letterbox/${name}"
+		;;
+	esac
+done <<'PACKS'
+1280/720 1280x720_g5_710_Turntables e134e35c0f13ffa62d19f476ffe6ee90de185ae63128830f73f34a23e34c913e g5-turntables
+1280/720 1280x720_g5_711_Tape_Recorder 9c0d0161efd3d1886d29f2d185d06f4ec11b45cecc323a2bfc95a10dd10a52fc g5-tape
+1280/720 1280x720_g5_712_Cassette 8e2d79fce2eb55cfea8628dc0c466226181495b7d3939b1923b7afcf2a85f798 g5-cassette
+1280/800 1280x800_t1800_pack7 d3874b563a44406ece770ab1278cb785b92c787f46e1d0ef122ef515173cb8ec t1800
+PACKS
+install -D -m 644 files/letterbox.py "${PEPPY_DIR}/letterbox.py"
+
 # PeppyMeter has no --config option: it reads ./config.txt relative to the
 # working directory (configfileparser.py:174-176), so the file goes in the
 # engine's own folder and the launcher cds there.
@@ -181,6 +222,7 @@ install -D -m 644 files/peppy-meter.txt "${PEPPY_DIR}/peppymeter/config.txt"
 install -D -m 644 -o 1000 -g 1000 files/peppy-spectrum.txt "${PEPPY_DIR}/spectrum/config.txt"
 install -D -m 755 files/gexis-peppy-driver.py "${PEPPY_DIR}/driver.py"
 install -D -m 644 files/gexis_peppy_render.py "${PEPPY_DIR}/gexis_peppy_render.py"
+install -D -m 644 files/gexis_peppy_motion.py "${PEPPY_DIR}/gexis_peppy_motion.py"
 install -D -m 644 files/badge-slots.json "${PEPPY_DIR}/badge-slots.json"
 mkdir -p "${WORK}/dseg"
 bsdtar -xf "${WORK}/dseg.zip" -C "${WORK}/dseg"

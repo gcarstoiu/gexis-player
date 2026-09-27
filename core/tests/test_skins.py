@@ -169,13 +169,14 @@ def test_the_shipped_corpus_has_all_three_kinds(corpus):
     assert counted == {METERS: 71, SPECTRUM: 3, BOTH: 10}
 
 
-def test_the_registry_offers_exactly_those_four():
-    """Four words, and `Random` is not one of them any more - it survives in
+def test_the_registry_offers_exactly_those_six():
+    """Six words since 2026-09-27 - turntables and tapes are their own (ADR-0096
+    as amended) - and `Random` is not one of them any more: it survives in
     `CORPUS` only so a value stored before the rename still resolves."""
     from gexis_core.settings_registry import load_registry
 
     row = next(r for g in load_registry() for r in g["rows"] if r.get("key") == "skin_corpus")
-    assert row["options"] == ["VU meters", "Spectrum", "VU meters + spectrum", "All"]
+    assert row["options"] == ["VU meters", "Spectrum", "VU meters + spectrum", "Turntables", "Tapes", "All"]
     assert row["default"] == "VU meters"
     assert set(row["options"]) < set(CHOICES)
 
@@ -272,7 +273,8 @@ def test_the_selection_is_published_whole_or_not_at_all(tmp_path):
     path = tmp_path / "run" / "visualisation.json"
     assert write_selection("Spectrum", "101G5_Bars", False, path) is True
     assert json.loads(path.read_text()) == {
-        "corpus": "Spectrum", "skin": "101G5_Bars", "rotate": False
+        "corpus": "Spectrum", "skin": "101G5_Bars", "rotate": False,
+        "motion": True, "record_rpm": 33.0,
     }
     assert not list(path.parent.glob("*.tmp"))
 
@@ -325,3 +327,78 @@ def test_the_broken_list_says_why_for_each(tmp_path):
     from gexis_core import skins
 
     assert all(len(why) > 20 for why in skins.BROKEN.values())
+
+
+# --- ADR-0096: the animated packs ------------------------------------------
+
+ANIMATED_PACKS = sorted((CORPUS / "animated").glob("*/meters.txt"))
+
+
+def test_the_four_animated_packs_are_here_and_validate():
+    """48 turntables, 20 tape recorders and 15 cassette decks at 1280x720, and
+    Pakit S's seven at 1280x800 - kept exactly as upstream ships them."""
+    counts = {p.parent.name: len(parse(p.read_text(encoding="utf-8", errors="replace")))
+              for p in ANIMATED_PACKS}
+    assert counts == {
+        "1280x720_g5_710_Turntables": 48,
+        "1280x720_g5_711_Tape_Recorder": 20,
+        "1280x720_g5_712_Cassette": 15,
+        "1280x800_t1800_pack7": 7,
+    }
+    for pack in ANIMATED_PACKS:
+        validate(parse(pack.read_text(encoding="utf-8", errors="replace")), animated=True)
+
+
+def test_the_static_corpus_is_still_held_to_what_it_was():
+    """The motion and deferred keys are admitted for the animated packs only."""
+    with pytest.raises(SkinError, match="unknown key 'vinyl.filename'"):
+        validate([Skin("x", {"meter.type": CIRCULAR, "vinyl.filename": "v.png"})])
+    with pytest.raises(SkinError, match="unknown key 'progress.pos'"):
+        validate([Skin("x", {"meter.type": CIRCULAR, "progress.pos": "1,2"})])
+
+
+def test_an_animated_pack_still_fails_on_a_key_nobody_placed():
+    """Admitting the deferred families by prefix must not admit everything."""
+    with pytest.raises(SkinError, match="unknown key 'sparkle'"):
+        validate([Skin("x", {"meter.type": CIRCULAR, "sparkle": "1", "tonearm.filename": "a"})],
+                 animated=True)
+
+
+def test_a_skin_with_no_screen_background_is_previewed_by_its_meters(tmp_path):
+    """ADR-0096: 80 of the 90 animated skins set no `screen.bgr` and showed
+    as blank tiles. Their meter's background is the full picture."""
+    directory = _pack(tmp_path / "pack", "templates",
+                      "[turntable]\nbgr.filename = deck.png\n"
+                      "[both]\nscreen.bgr = ok.jpg\nbgr.filename = deck.png\n"
+                      "[sneaky]\nbgr.filename = ../../../etc/shadow\n",
+                      ["ok.jpg", "deck.png"])
+    by_name = {skin.name: skin for skin, _ in installed(tmp_path, pack="pack")}
+    assert preview_of(by_name["turntable"], directory).name == "deck.png"
+    assert preview_of(by_name["both"], directory).name == "ok.jpg"
+    assert preview_of(by_name["sneaky"], directory) is None
+
+
+def test_a_record_or_reels_make_a_turntable_or_a_tape(tmp_path):
+    """ADR-0096 as amended, George: "One for turntables and another for
+    tapes." By what a skin declares, never by its directory."""
+    _pack(tmp_path / "pack", "templates",
+          "[deck]\nmeter.type = circular\nvinyl.filename = v.png\n"
+          "[arm only]\nmeter.type = circular\ntonearm.filename = a.png\n"
+          "[reels]\nmeter.type = linear\nreel.left.filename = r.png\n"
+          "[needles]\nmeter.type = circular\n",
+          [])
+    kinds = {s.name: s.kind for s, _ in installed(tmp_path, pack="pack")}
+    assert kinds == {"deck": "turntable", "arm only": "turntable", "reels": "tape", "needles": "meters"}
+    found = [s for s, _ in installed(tmp_path, pack="pack")]
+    from gexis_core.skins import in_corpus
+    assert [s.name for s in in_corpus(found, "Turntables")] == ["deck", "arm only"]
+    assert [s.name for s in in_corpus(found, "Tapes")] == ["reels"]
+    assert [s.name for s in in_corpus(found, "VU meters")] == ["needles"]
+    assert len(in_corpus(found, "All")) == 4
+
+
+def test_the_record_speed_word_is_a_number():
+    from gexis_core.skins import record_rpm
+    assert record_rpm("45 rpm") == 45.0
+    assert record_rpm("33 rpm") == 33.0
+    assert record_rpm(None) == 33.0

@@ -142,6 +142,9 @@ def test_registry_keys_are_the_designs_keys_apart_from_recorded_deviations():
         # design has no row for it because the design predates the device
         # holding anything worth losing.
         "restore",
+        # ADR-0096 as amended, 2026-09-27: the animated skins' two rows, which
+        # George chose from a proposal - the design predates skins that move.
+        "skin_motion", "record_speed",
     }
 
 
@@ -508,12 +511,14 @@ def test_the_shipped_registry_hides_twenty_rows_and_shows_the_rest():
     # name on 2026-09-23. Plus ADR-0059's two buttons and their progress
     # row, on 2026-09-24.
     # 75 since 2026-09-25: `restore` (ADR-0083). **74 since 2026-09-26**:
-    # `handoff_threshold`, removed by George (ADR-0094).
-    assert len(rows) == 74
+    # `handoff_threshold`, removed by George (ADR-0094). **76 since
+    # 2026-09-27**: `skin_motion` and `record_speed` (ADR-0096 as amended).
+    assert len(rows) == 76
     # 59 since 2026-09-25: `backup` was surfaced and `restore` arrived with
     # it (ADR-0083), so the shown count gains two while the hidden one loses
-    # one. **58 since 2026-09-26**, less the threshold row.
-    assert len(rows) - len(kept) == 58
+    # one. **58 since 2026-09-26**, less the threshold row. **60 since
+    # 2026-09-27**, with the animated skins' two.
+    assert len(rows) - len(kept) == 60
 
 
 def test_the_clock_can_be_turned_off_without_taking_the_screen_with_it():

@@ -837,6 +837,19 @@ that changed it, not in a later step that can be forgotten — and the check
 afterwards is *"what is this device's configuration now"*, not *"did I remember
 to undo it"*. Memory is the thing that failed.
 
+**43. "No warnings in the journal" while warnings were switched off**
+(2026-09-27). The Peppy driver was swept through all 90 animated skins and the
+journal read clean. **18 turntables were drawing no record at all**: they name
+it `cdart.png,<theme>.png`, the motion layer tried that as one file name, and
+its `logger.warning` went nowhere - upstream's `use.logging = False` is
+`logging.disable(CRITICAL)`, which silences every logger in the process, ours
+included. It was found by looking at screenshots of the skins, after George
+asked why the corpus did not show them.
+
+**A quiet log is evidence only if something can be heard in it.** Before
+counting "no warnings" as a result, make one warning happen on purpose and see
+it arrive - here, a skin naming a file that does not exist.
+
 ## Common shape
 
 Every case had a *plausible* substitute for the real target — the build

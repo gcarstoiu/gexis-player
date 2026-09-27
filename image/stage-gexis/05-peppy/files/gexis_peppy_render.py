@@ -200,6 +200,13 @@ class MetadataLayer:
         self._slots = load_badge_slots()
         self._background: pygame.Surface | None = None
         self._painted: list[pygame.Rect] = []
+        # What `_painted` holds, as drawn: (stratum, picture, where), so an
+        # animated skin can put it back over what moved (ADR-0096). The
+        # strata are upstream's z-order - artwork under the needles, the
+        # title and its fields over them, the time and the badge over the
+        # tonearm too.
+        self._items: list[tuple[str, pygame.Surface, tuple[int, int]]] = []
+        self._painting = True
         self._fonts: dict[tuple[str, int], pygame.font.Font] = {}
         # Keyed on the skin's dimension as well as the URL: the same track
         # across a skin change needs the art rescaled, and reusing the old
@@ -209,6 +216,7 @@ class MetadataLayer:
         self._artwork_source: pygame.Surface | None = None
         self._artwork_url: str | None = None
         self._last_drawn: tuple | None = None
+        self._art_spins = False
 
     # ---- skin ----------------------------------------------------------
 
@@ -223,13 +231,20 @@ class MetadataLayer:
             self._corpus = directory
         self._skin = skin
         self._skin_name = name
+        # ADR-0096: art that turns with the record is the motion layer's to
+        # draw; drawn here as well, a still copy would sit on the spinning one.
+        speed = (skin.get("albumart.rotation.speed") or "0").strip()
+        self._art_spins = (skin.get("albumart.rotation") or "").strip().lower() == "true" \
+            and speed not in ("", "0", "0.0")
         self._painted = []
+        self._items = []
         self._last_drawn = None
         self._background = None
-        name = skin.get("screen.bgr")
-        if not name:
+        picture = (skin.get("screen.bgr") or "").strip()
+        if not picture:
+            self._background = self._meter_background(skin)
             return
-        path = self._corpus / name
+        path = self._corpus / picture
         try:
             image = pygame.image.load(str(path)).convert()
         except (pygame.error, OSError) as exc:
@@ -238,6 +253,41 @@ class MetadataLayer:
         if image.get_size() != self._screen.get_size():
             image = pygame.transform.smoothscale(image, self._screen.get_size())
         self._background = image
+
+    def _meter_background(self, skin: dict[str, str]) -> pygame.Surface | None:
+        """**A skin with no `screen.bgr` is drawn by its meter's background
+        alone** (ADR-0096) - 41 of the 48 turntables. Without this the layer had
+        nothing to erase back to and drew no title, art or badge at all. The
+        picture the engine paints is `bgr.filename` at the meter's origin, over
+        whatever was there - black, here."""
+        picture = (skin.get("bgr.filename") or "").strip()
+        if not picture:
+            return None
+        path = self._corpus / picture
+        try:
+            image = pygame.image.load(str(path)).convert_alpha()
+        except (pygame.error, OSError) as exc:
+            logger.warning("render: no meter background %s: %s", path, exc)
+            return None
+        canvas = pygame.Surface(self._screen.get_size())
+        canvas.fill((0, 0, 0))
+        try:
+            origin = (int(skin.get("meter.x") or 0), int(skin.get("meter.y") or 0))
+        except ValueError:
+            origin = (0, 0)
+        canvas.blit(image, origin)
+        return canvas
+
+    @property
+    def background(self) -> pygame.Surface | None:
+        """The clean picture this layer erases back to (ADR-0096's motion
+        layer paints over the same one)."""
+        return self._background
+
+    @property
+    def artwork_source(self) -> pygame.Surface | None:
+        """This track's artwork at full size, fetched once for both layers."""
+        return self._artwork_source
 
     def font(self, weight: str, size: int) -> pygame.font.Font:
         key = (weight, size)
@@ -251,8 +301,13 @@ class MetadataLayer:
 
     # ---- drawing -------------------------------------------------------
 
-    def draw(self, metadata: dict) -> list[pygame.Rect]:
-        """Returns the rectangles that changed, for the caller to present."""
+    def draw(self, metadata: dict, paint: bool = True) -> list[pygame.Rect]:
+        """Returns the rectangles that changed, for the caller to present.
+
+        With `paint` false nothing reaches the screen: the fields are laid out
+        and the rectangles returned, for ADR-0096's motion layer to compose -
+        erasing to this layer's background there would wipe the record or
+        the reels under a title."""
         if self._background is None:
             return []
         fields = self._fields(metadata)
@@ -262,9 +317,12 @@ class MetadataLayer:
         self._last_drawn = fingerprint
 
         dirty = list(self._painted)
-        for rect in self._painted:
-            self._screen.blit(self._background, rect, rect)
+        if paint:
+            for rect in self._painted:
+                self._screen.blit(self._background, rect, rect)
         self._painted = []
+        self._items = []
+        self._painting = paint
 
         # Artwork first, text last: some skins deliberately place the text
         # over the artwork (dash-spectrum puts title, artist and album inside
@@ -277,15 +335,31 @@ class MetadataLayer:
                 self._painted.append(rect)
                 dirty.append(rect)
 
-        for text, point, colour, size, maxwidth in fields:
+        for text, point, colour, size, maxwidth, stratum in fields:
             if not text:
                 continue  # criterion 7: nothing for this field, nothing drawn
-            rect = self._text(text, point, colour, size, maxwidth)
+            rect = self._text(text, point, colour, size, maxwidth, stratum)
             if rect is not None:
                 self._painted.append(rect)
                 dirty.append(rect)
 
+        self._painting = True
         return dirty
+
+    def paint(self, strata: tuple[str, ...], area: pygame.Rect) -> None:
+        """Put back what this layer last drew in `strata`, inside `area`."""
+        clip = self._screen.get_clip()
+        self._screen.set_clip(area)
+        for stratum, picture, where in self._items:
+            if stratum in strata:
+                self._screen.blit(picture, where)
+        self._screen.set_clip(clip)
+
+    def _put(self, stratum: str, picture: pygame.Surface, where: tuple[int, int]) -> pygame.Rect:
+        self._items.append((stratum, picture, where))
+        if self._painting:
+            self._screen.blit(picture, where)
+        return pygame.Rect(where, picture.get_size())
 
     def _fields(self, metadata: dict) -> tuple:
         skin = self._skin
@@ -310,8 +384,15 @@ class MetadataLayer:
                 return int(screen_width * CENTRED_BOX_SHARE)
             return max(0, screen_width - point[0] - RIGHT_MARGIN)
 
+        def own_size(key: str | None) -> int:
+            try:
+                return int(skin.get(key) or 0) if key else 0
+            except ValueError:
+                return 0
+
         def field(key: str, text: str | None, colour_key: str | None = None, width_key: str | None = None,
-                  weight: str | None = None, override_colour=None):
+                  weight: str | None = None, override_colour=None, stratum: str = "text",
+                  size_key: str | None = None):
             point = parse_point(skin.get(key))
             if point is None:
                 return None
@@ -322,11 +403,13 @@ class MetadataLayer:
                 text,
                 point,
                 override_colour or (parse_colour(skin.get(colour_key), colour) if colour_key else colour),
-                sizes.get(point[2], sizes["regular"]),
+                own_size(size_key) or sizes.get(point[2], sizes["regular"]),
                 box_width(point, own_width) if width_key else 0,
+                stratum,
             )
 
         entries = [
+            self._ticker_line(metadata, field),
             field("playinfo.title.pos", metadata.get("title"), "playinfo.title.color", "playinfo.title.maxwidth"),
             field("playinfo.artist.pos", metadata.get("artist"), "playinfo.artist.color", "playinfo.artist.maxwidth"),
             field("playinfo.album.pos", metadata.get("album"), "playinfo.album.color", "playinfo.album.maxwidth"),
@@ -338,6 +421,11 @@ class MetadataLayer:
                 "time.remaining.color",
                 weight="digi",
                 override_colour=FINAL_SECONDS_COLOUR if 0 < remaining_seconds(metadata, -1) <= FINAL_SECONDS else None,
+                stratum="meta",
+                # The turntable and tape skins size their clock apart from
+                # the digi face (66 of the 90; none of the 99 others): the
+                # Sansui cassette's digits ran into its meter at 45 px.
+                size_key="time.remaining.fontsize",
             ),
             # The source is a badge, not text: see _badge_rect.
             # playinfo.samplerate.pos is never filled: no sample rate and no
@@ -346,7 +434,23 @@ class MetadataLayer:
         ]
         return tuple(entry for entry in entries if entry is not None)
 
-    def _text(self, text, point, colour, size, maxwidth) -> pygame.Rect | None:
+    def _ticker_line(self, metadata: dict, field):
+        """**A ticker skin's title, standing still** (ADR-0096, George's
+        choice A, 2026-09-27). 27 of the animated skins place their title only
+        as upstream's scrolling ticker; without this they showed none. Drawn
+        once as "Title • Artist • Album" in the ticker's own box, colour and
+        separator, trimmed like any field. The scroll, and the next track it
+        appends, stay deferred. A skin with a title field of its own keeps
+        that one: nine have both, and would show the title twice."""
+        skin = self._skin
+        if (skin.get("playinfo.ticker") or "").strip().lower() != "true" or "playinfo.title.pos" in skin:
+            return None
+        separator = (skin.get("playinfo.ticker.separator") or "").strip() or "•"
+        parts = [metadata.get(key) for key in ("title", "artist", "album")]
+        line = f" {separator} ".join(str(part) for part in parts if part) or None
+        return field("playinfo.ticker.pos", line, "playinfo.ticker.color", "playinfo.ticker.maxwidth")
+
+    def _text(self, text, point, colour, size, maxwidth, stratum="text") -> pygame.Rect | None:
         font = self.font(point[2], size)
         surface = font.render(str(text), True, colour)
         if maxwidth and surface.get_width() > maxwidth:
@@ -361,8 +465,7 @@ class MetadataLayer:
             # wrapper does - not around the position, which slid text left by
             # half its width and onto the artwork (George, 2026-09-16).
             x += (maxwidth - surface.get_width()) // 2
-        self._screen.blit(surface, (x, y))
-        return pygame.Rect(x, y, surface.get_width(), surface.get_height())
+        return self._put(stratum, surface, (x, y))
 
     def _badge_rect(self, source: str | None) -> pygame.Rect | None:
         """The renderer's mark, fitted inside the square the skin reserves for
@@ -388,8 +491,7 @@ class MetadataLayer:
         else:
             x = position[0] + (box[0] - badge.get_width()) // 2
             y = position[1] + (box[1] - badge.get_height()) // 2
-        self._screen.blit(badge, (x, y))
-        return pygame.Rect(x, y, badge.get_width(), badge.get_height())
+        return self._put("meta", badge, (x, y))
 
     def _badge(self, source: str, box: tuple[int, int]) -> pygame.Surface | None:
         key = (source, box)
@@ -447,13 +549,12 @@ class MetadataLayer:
             self._artwork_url = url
             self._artwork_source = self._fetch(url)
             self._artwork_key = None
-        if self._artwork_source is None:
+        if self._artwork_source is None or self._art_spins:
             return None
         if self._artwork_key != (url, dimension):
             self._artwork = pygame.transform.smoothscale(self._artwork_source, dimension)
             self._artwork_key = (url, dimension)
-        self._screen.blit(self._artwork, position)
-        return pygame.Rect(position, self._artwork.get_size())
+        return self._put("art", self._artwork, position)
 
     @staticmethod
     def _fetch(url: str) -> pygame.Surface | None:

@@ -31,6 +31,13 @@ SECTION = re.compile(r"^\[(?P<name>.+?)\]\s*$")
 METERS = "meters"
 SPECTRUM = "spectrum"
 BOTH = "both"
+#: **What moves** (ADR-0096 as amended): a skin with a record or a tonearm is
+#: a turntable, one with reels a tape deck - cassette or reel-to-reel. George,
+#: 2026-09-27, asked where they were in the setting: *"One for turntables and
+#: another for tapes."* 48 and 39 of the animated packs; their other three
+#: skins move nothing and are meters.
+TURNTABLE = "turntable"
+TAPE = "tape"
 
 #: The `skin_corpus` setting's words, and the kinds each one draws from.
 #: George, 2026-09-21: *"There should be 3 types of skins instead of just
@@ -71,8 +78,10 @@ CORPUS = {
     "VU meters": (METERS,),
     "Spectrum": (SPECTRUM,),
     "VU meters + spectrum": (BOTH,),
-    ALL: (METERS, SPECTRUM, BOTH),
-    "Random": (METERS, SPECTRUM, BOTH),
+    "Turntables": (TURNTABLE,),
+    "Tapes": (TAPE,),
+    ALL: (METERS, SPECTRUM, BOTH, TURNTABLE, TAPE),
+    "Random": (METERS, SPECTRUM, BOTH, TURNTABLE, TAPE),
 }
 
 
@@ -111,6 +120,46 @@ LINEAR_KEYS = {
     "position.regular", "right.x", "right.y", "step.width.overload",
     "step.width.regular",
 }
+#: **Keys that make an animated skin move** (ADR-0096): the spinning vinyl
+#: and the art on it, the tonearm, the cassette and tape reels. Drawn by the
+#: renderer's motion layer.
+MOTION_KEYS = {
+    "albumart.rotation", "albumart.rotation.speed",
+    "vinyl.center", "vinyl.dimension", "vinyl.direction", "vinyl.filename", "vinyl.pos",
+    "tonearm.angle.end", "tonearm.angle.rest", "tonearm.angle.start",
+    "tonearm.drop.duration", "tonearm.filename", "tonearm.lift.duration",
+    "tonearm.pivot.image", "tonearm.pivot.screen",
+    "reel.direction", "reel.rotation.speed",
+    "reel.left.center", "reel.left.filename", "reel.left.pos",
+    "reel.right.center", "reel.right.filename", "reel.right.pos",
+}
+#: **Keys only the animated packs use, drawn as the skin says**: the clock's
+#: own size, which 66 of their 90 skins set apart from the digi face; and the
+#: ticker's box, drawn as a still line (ADR-0096, George's choice A) - its
+#: scrolling keys stay deferred below.
+ANIMATED_TEXT_KEYS = {
+    "time.remaining.fontsize",
+    "playinfo.ticker", "playinfo.ticker.pos", "playinfo.ticker.color",
+    "playinfo.ticker.maxwidth", "playinfo.ticker.separator",
+}
+#: **Keys the animated packs use and the renderer knowingly does not draw
+#: yet** - George's decision 3 in ADR-0096: the motion first, these later.
+#: Listed rather than waved through, so a key that is neither drawn nor
+#: deferred still fails the build. Matched by prefix.
+DEFERRED_PREFIXES = (
+    "progress.", "volume.", "mute.", "playstate.", "repeat.", "shuffle.",
+    "playinfo.next.", "playinfo.ticker", "time.elapsed.", "time.total.",
+)
+DEFERRED_KEYS = {
+    "time.remaining.font",
+    "playinfo.samplerate.color", "playinfo.samplerate.maxwidth",
+}
+
+
+def deferred(key: str) -> bool:
+    return key in DEFERRED_KEYS or key.startswith(DEFERRED_PREFIXES)
+
+
 SPECTRUM_KEYS = {
     "bar.color", "bar.filename", "bar.gap", "bar.gradient", "bar.height",
     "bar.type", "bar.width", "bgr.color", "bgr.filename", "bgr.gradient",
@@ -161,6 +210,10 @@ class Skin:
         on the directory would hand a spectrum to someone who asked for a
         needle.
         """
+        if any(key.startswith(("vinyl.", "tonearm.")) for key in self.options):
+            return TURNTABLE
+        if any(key.startswith("reel.") for key in self.options):
+            return TAPE
         if self.spectrum_visible:
             return BOTH if self.visible else SPECTRUM
         return METERS
@@ -195,7 +248,10 @@ def parse(text: str) -> list[Skin]:
     return skins
 
 
-def validate(meters: list[Skin], spectrum: list[Skin] | None = None) -> None:
+def validate(meters: list[Skin], spectrum: list[Skin] | None = None,
+             animated: bool = False) -> None:
+    """`animated` admits ADR-0096's motion and deferred keys - for the animated
+    packs only, so the static corpus is held to exactly what it was."""
     spectrum = spectrum or []
     problems: list[str] = []
     spectrum_names = {s.name for s in spectrum}
@@ -212,7 +268,12 @@ def validate(meters: list[Skin], spectrum: list[Skin] | None = None) -> None:
             )
             continue
         allowed = COMMON_KEYS | (CIRCULAR_KEYS if skin.meter_type == CIRCULAR else LINEAR_KEYS)
-        for key in sorted(set(skin.options) - allowed):
+        if animated:
+            allowed = allowed | MOTION_KEYS | ANIMATED_TEXT_KEYS
+        unknown = set(skin.options) - allowed
+        if animated:
+            unknown = {key for key in unknown if not deferred(key)}
+        for key in sorted(unknown):
             problems.append(f"{skin.name}: unknown key {key!r} for a {skin.meter_type} meter")
 
         linked = skin.spectrum_name
@@ -225,6 +286,11 @@ def validate(meters: list[Skin], spectrum: list[Skin] | None = None) -> None:
 
     if problems:
         raise SkinError(f"{len(problems)} problem(s):\n  " + "\n  ".join(problems))
+
+
+#: ADR-0096's packs, one directory each under `skins/`, `meters.txt` exactly as
+#: upstream ships it.
+ANIMATED = "animated"
 
 
 def load(directory: Path) -> tuple[list[Skin], list[Skin]]:
@@ -290,7 +356,7 @@ def installed(root: Path, pack: str | None = None) -> list[tuple[Skin, Path]]:
 
 #: ADR-0051 §1. The daemon writes it, the driver polls it beside
 #: `nowplaying.json`, and neither one restarts for a change. It is a
-#: projection of three settings, not a record: the database is the record,
+#: projection of five settings, not a record: the database is the record,
 #: and a missing file means the driver keeps what it already has.
 SELECTION_PATH = Path("/run/gexis/visualisation.json")
 
@@ -301,8 +367,18 @@ def names(root: Path, corpus: str, pack: str | None = None) -> list[str]:
     return [skin.name for skin in in_corpus((s for s, _ in installed(root, pack)), corpus)]
 
 
+def record_rpm(word: object) -> float:
+    """`record_speed`'s word as a number: "45 rpm" is 45. Anything else is the
+    speed the skins are drawn for."""
+    try:
+        return float(str(word).split()[0])
+    except (ValueError, IndexError):
+        return 33.0
+
+
 def write_selection(
-    corpus: str, skin: str | None, rotate: bool, path: Path = SELECTION_PATH
+    corpus: str, skin: str | None, rotate: bool, path: Path = SELECTION_PATH,
+    motion: bool = True, record_rpm: float = 33.0,
 ) -> bool:
     """Publish the selection for the renderer. Written through a temporary
     file and renamed, like the metadata file: the driver reads this on a
@@ -314,7 +390,8 @@ def write_selection(
     """
     import json
 
-    payload = json.dumps({"corpus": corpus, "skin": skin, "rotate": bool(rotate)})
+    payload = json.dumps({"corpus": corpus, "skin": skin, "rotate": bool(rotate),
+                          "motion": bool(motion), "record_rpm": float(record_rpm)})
     tmp = path.with_name(path.name + ".tmp")
     try:
         path.parent.mkdir(parents=True, exist_ok=True)
@@ -328,17 +405,27 @@ def write_selection(
 
 
 def preview_of(skin: Skin, directory: Path) -> Path | None:
-    """The picture this skin already is (ADR-0050): its `screen.bgr`.
+    """The picture this skin already is (ADR-0050): its `screen.bgr`, or,
+    for a skin with none, its meter's background (`bgr.filename`).
 
     **Nothing is rendered and nothing is cached.** The file is on the device
     because the skin is, so a preview is a file lookup and a new pack brings
     its own by existing.
+
+    The fallback is for the animated packs (ADR-0096): 80 of their 90 skins
+    set no `screen.bgr` and are drawn by the meter's background alone, a full
+    frame once letterboxed - so the picker showed them as blank tiles. All
+    99 of the others set one, and keep it.
     """
-    name = (skin.options.get("screen.bgr") or "").strip()
-    if not name or name != Path(name).name:
-        return None
-    path = directory / name
-    return path if path.is_file() else None
+    for key in ("screen.bgr", "bgr.filename"):
+        name = (skin.options.get(key) or "").strip()
+        if not name:
+            continue
+        if name != Path(name).name:
+            return None
+        path = directory / name
+        return path if path.is_file() else None
+    return None
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -354,6 +441,15 @@ def main(argv: list[str] | None = None) -> int:
         print(f"ERROR: {directory}: {exc}", file=sys.stderr)
         return 1
     print(f"{directory}: {len(meters)} skins and {len(spectrum)} spectrum sections validate")
+    # ADR-0096: each animated pack on its own, so a problem names its pack.
+    for pack in sorted((directory / ANIMATED).glob("*/meters.txt")):
+        pack_skins = parse(pack.read_text(encoding="utf-8", errors="replace"))
+        try:
+            validate(pack_skins, animated=True)
+        except SkinError as exc:
+            print(f"ERROR: {pack}: {exc}", file=sys.stderr)
+            return 1
+        print(f"{pack.parent.name}: {len(pack_skins)} animated-pack skins validate")
     return 0
 
 

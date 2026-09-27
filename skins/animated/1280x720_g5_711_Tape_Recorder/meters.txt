@@ -1,0 +1,1874 @@
+#-----------------------151 AKAI --------------------------
+[151G5_Akai77 black]
+meter.type = linear
+channels = 2
+direction = bottom-top
+ui.refresh.period = 0.033
+bgr.filename = Akai77_bgr.png
+fgr.filename = Akai77_fgr.png
+indicator.filename = Akai77_indica.png
+left.x = 560
+left.y = 231
+right.x = 620
+right.y = 231
+position.regular = 13
+position.overload = 3
+step.width.regular = 14
+step.width.overload = 14
+meter.x = 0
+meter.y = 0
+screen.bgr = Akai77.jpg
+# --- volumio optional entries -------
+config.extend = True
+# Reel configuration
+reel.left.filename = Akai_left.png
+reel.left.pos = 5,13
+reel.left.center = 263,271
+reel.right.filename = Akai_right.png
+reel.right.pos = 761,13
+reel.right.center = 1017,271
+reel.rotation.speed = 25.0
+albumart.pos = 304,612
+albumart.dimension = 107,107
+albumart.border = 1
+playinfo.title.pos = 416,669,bold
+playinfo.title.maxwidth = 447
+playinfo.artist.pos = 416,627,regular
+playinfo.artist.maxwidth = 447
+playinfo.album.pos = 416,648,regular
+playinfo.album.maxwidth = 447
+playinfo.next.title.pos = 428,35,bold
+playinfo.next.title.color = 180,180,180
+playinfo.next.title.maxwidth = 427
+playinfo.center = True
+playinfo.type.pos = 553,474
+playinfo.type.color = 61,189,48
+playinfo.type.dimension = 44,44
+playinfo.samplerate.pos = 612,495,light
+playinfo.samplerate.maxwidth = 67
+time.remaining.pos = 585,145
+time.remaining.color = 61,189,48
+time.remaining.font = fonts/MyDigi.ttf
+time.remaining.fontsize = 20
+time.elapsed.pos = 447,581
+time.elapsed.fontsize = 11
+time.elapsed.color = 255,255,255
+time.total.font = fonts/Another.ttf
+time.total.fontsize = 11
+time.total.pos = 797,581
+time.total.color = 255,255,255
+# --- PROGRESS BAR ---
+progress.pos = 462,605
+progress.dim = 358,12
+progress.color = 190,190,190
+progress.bg.color = 54,54,54
+progress.border = 0
+progress.border.color = 80,80,80
+# --- VOLUME INDICATOR (Slider style) ---
+volume.pos = 697,232
+volume.dim = 22,220
+volume.color = 142,142,142
+volume.bg.color = 0,0,0
+volume.style = slider
+# Mute indicator
+mute.pos = 1091,674
+mute.icon = icons/Akai_m_on.png,icons/Akai_m_off.png
+mute.icon.glow = 3
+mute.icon.glow.intensity = 0.5
+#mute.icon.glow.color = 255,80,80,100,100,100
+# Play/Pause/Stop
+playstate.pos = 1092,621
+playstate.icon = icons/Akai_stop.png,icons/Akai_pause.png,icons/Akai_play.png
+playstate.icon.glow = 3
+playstate.icon.glow.intensity = 0.5
+# Repeat indicator
+repeat.pos = 1174,621
+repeat.icon = icons/Akai_repeat_off.png,icons/Akai_repeat_all.png,icons/Akai_repeat_single.png
+repeat.icon.glow = 3
+repeat.icon.glow.intensity = 0.5
+# Shuffle indicator 
+shuffle.pos = 1173,674
+shuffle.icon = icons/Akai_shuffle_off.png,icons/Akai_shuffle_on.png,icons/Akai_shuffle_infinity.png
+shuffle.icon.glow = 3
+shuffle.icon.glow.intensity = 0.5
+font.size.digi = 20
+font.size.light = 11
+font.size.regular = 15
+font.size.bold = 25
+font.color = 201,201,201
+
+#-----------------------152 AKAI Silver --------------------------
+[152G5_Akai77_silver]
+meter.type = linear
+channels = 2
+direction = bottom-top
+ui.refresh.period = 0.033
+bgr.filename = Akai Gx77 silver_bgr.png
+fgr.filename = Akai Gx77 silver_fgr.png
+indicator.filename = Akai Gx77 silver_indic.png
+left.x = 23
+left.y = 83
+right.x = 63
+right.y = 83
+position.regular = 13
+position.overload = 3
+step.width.regular = 30
+step.width.overload = 30
+meter.x = 0
+meter.y = 0
+screen.bgr = 
+# --- volumio optional entries -------
+config.extend = True
+# Reel configuration
+reel.left.filename = Akai Gx77 silver_left.png
+reel.left.pos = 121,33
+reel.left.center = 346,259
+reel.right.filename = Akai Gx77 silver_right.png
+reel.right.pos = 784,33
+reel.right.center = 1010,259
+reel.rotation.speed = 25.0
+albumart.pos = 592,24
+albumart.dimension = 173,173
+albumart.border = 1
+playinfo.title.pos = 418,648,bold
+playinfo.title.maxwidth = 517
+playinfo.artist.pos = 418,590,bold
+playinfo.artist.maxwidth = 517
+playinfo.album.pos = 418,619,regular
+playinfo.album.maxwidth = 517
+playinfo.center = True
+playinfo.type.pos = 137,447
+playinfo.type.color = 0,0,0
+playinfo.type.dimension = 44,44
+playinfo.samplerate.pos = 505,467,light
+playinfo.samplerate.maxwidth = 67
+time.remaining.pos = 613,483
+time.remaining.color = 255,255,255
+# --- PROGRESS BAR ---
+progress.pos = 1245,86
+progress.dim = 29,444
+progress.color = 109,25,11
+progress.bg.color = 180,180,180
+progress.border = 0
+progress.border.color = 80,80,80
+progress.slider.orientation = vertical
+# Volume - Vertical Fader
+volume.pos = 650,218
+volume.dim = 55,43
+volume.style = slider
+volume.slider.track = 
+volume.slider.tip = Akai Gx77 silver_slider.png
+volume.slider.orientation = vertical
+volume.slider.travel = 3,202
+volume.slider.tip.offset = -7,0
+# Mute indicator
+mute.pos = 1165,582
+mute.icon = icons/Akai2_m_on.png,icons/Akai2_m_off.png
+# Play/Pause/Stop
+playstate.pos = 1060,639
+playstate.icon = icons/Akai2_stop.png,icons/Akai2_pause.png,icons/Akai2_play.png
+playstate.icon.glow = 3
+playstate.icon.glow.intensity = 0.5
+# Repeat indicator
+repeat.pos = 1061,585
+repeat.icon = icons/Akai2_repeat_off.png,icons/Akai2_repeat_all.png,icons/Akai2_repeat_single.png
+# Shuffle indicator 
+shuffle.pos = 1111,585
+shuffle.icon = icons/Akai2_shuffle_off.png,icons/Akai2_shuffle_on.png,icons/Akai2_shuffle_infinity.png
+shuffle.icon.glow = 3
+shuffle.icon.glow.intensity = 0.5
+font.size.digi = 37
+font.size.light = 11
+font.size.regular = 17
+font.size.bold = 25
+font.color = 201,201,201
+
+
+#-----------------------153 Studer --------------------------
+[153G5_Studer A810]
+meter.type = circular
+meter.visible = True
+channels = 2
+ui.refresh.period = 0.033
+bgr.filename = Studer A810_bgr.png
+fgr.filename = Studer A810_fgr.png
+indicator.filename = Studer A810_needle.png
+steps.per.degree = 4
+start.angle = 42
+stop.angle = -43
+distance = 60
+left.origin.x = 962
+left.origin.y = 733
+right.origin.x = 1190
+right.origin.y = 733
+meter.x = 0
+meter.y = 0
+screen.bgr = 
+# --- volumio optional entries -------
+config.extend = True
+# Reel configuration
+reel.left.filename = Studer A810_Left.png
+reel.left.pos = 11,9
+reel.left.center = 222,225
+reel.right.filename = Studer A810_Right.png
+reel.right.pos = 461,9
+reel.right.center = 673,225
+reel.rotation.speed = 25.0
+albumart.pos = 943,111
+albumart.dimension = 223,223
+#albumart.border = 1
+playinfo.title.pos = 853,523,bold
+playinfo.title.maxwidth = 403
+playinfo.artist.pos = 853,408,regular
+playinfo.artist.maxwidth = 403
+playinfo.album.pos = 853,467,regular
+playinfo.album.maxwidth = 403
+playinfo.center = True
+playinfo.type.pos = 375,392
+playinfo.type.color = 255,255,255
+playinfo.type.dimension = 40,40
+playinfo.samplerate.pos = 435,409,light
+playinfo.samplerate.maxwidth = 67
+time.remaining.pos = 393,535
+time.remaining.color = 67,66,72
+# --- VOLUME INDICATOR (Slider style) ---
+volume.pos = 20,434
+volume.dim = 32,271
+volume.color = 142,142,142
+volume.bg.color = 65,64,68
+volume.style = slider
+# --- PROGRESS BAR ---
+progress.pos = 845,580
+progress.dim = 421,13
+progress.color = 205,131,65
+progress.bg.color = 65,64,68
+progress.border = 1
+progress.border.color = 80,80,80
+# Mute indicator
+mute.pos = 143,656
+mute.icon = icons/Studer_m_on.png,icons/Studer_m_off.png
+mute.icon.glow = 1
+mute.icon.glow.intensity = 0.5
+mute.icon.glow.color = 255,80,80,100,100,100
+# Play/Pause/Stop 
+playstate.pos = 177,651
+playstate.icon = icons/Studer_stop.png,icons/Studer_pause.png,icons/Studer_play.png
+playstate.icon.glow = 3
+playstate.icon.glow.intensity = 0.5
+# Repeat indicator
+repeat.pos = 211,651
+repeat.icon = icons/Studer_repeat_off.png,icons/Studer_repeat_all.png,icons/Studer_repeat_single.png
+repeat.icon.glow = 3
+repeat.icon.glow.intensity = 0.5
+# Shuffle indicator
+shuffle.pos = 247,651
+shuffle.icon = icons/Studer_shuffle_off.png,icons/Studer_shuffle_on.png,icons/Studer_shuffle_infinity.png
+shuffle.icon.glow = 3
+shuffle.icon.glow.intensity = 0.5
+font.size.digi = 24
+font.size.light = 13
+font.size.regular = 15
+font.size.bold = 25
+font.color = 201,201,201
+
+
+#-----------------------154 Pioneer Silver --------------------------
+[154G5_PioneerRT707_silver]
+meter.type = circular
+channels = 2
+ui.refresh.period = 0.033
+bgr.filename = Pioneer RT707_bgr.png
+fgr.filename = Pioneer RT707_fgr.png
+indicator.filename = Pioneer RT707_needle.png
+steps.per.degree = 2
+left.start.angle = -131
+left.stop.angle = -48
+right.start.angle = 131
+right.stop.angle = 48
+distance = 73
+left.origin.x = 489
+left.origin.y = 307
+right.origin.x = 789
+right.origin.y = 304
+meter.x = 0
+meter.y = 0
+screen.bgr = 
+# --- volumio optional entries -------
+config.extend = True
+# Reel configuration
+reel.left.filename = Pioneer RT707_left.png
+reel.left.pos = 59,105
+reel.left.center = 267,310
+reel.right.filename = Pioneer RT707_right.png
+reel.right.pos = 807,105
+reel.right.center = 1015,312
+reel.rotation.speed = 25.0
+albumart.pos = 42,537
+albumart.dimension = 140,140
+#albumart.border = 1
+playinfo.title.pos = 67,59,bold
+playinfo.title.maxwidth = 1148
+playinfo.artist.pos = 67,14,bold
+playinfo.artist.maxwidth = 1148
+playinfo.album.pos = 67,39,regular
+playinfo.album.maxwidth = 1148
+playinfo.center = True
+playinfo.type.pos = 533,569
+playinfo.type.color = 0,0,0
+playinfo.type.dimension = 30,30
+playinfo.samplerate.pos = 680,580,regular
+playinfo.samplerate.maxwidth = 67
+time.remaining.pos = 519,431
+time.remaining.color = 255,255,255
+# --- PROGRESS BAR ---
+progress.pos = 470,673
+progress.dim = 347,7
+progress.color = 24,221,11
+progress.bg.color = 0,0,0
+#progress.border = 0
+progress.border.color = 80,80,80
+progress.slider.orientation = hotizontal
+# --- VOLUME INDICATOR (Slider style) ---
+volume.pos = 632,214
+volume.dim = 17,112
+volume.color = 245,216,54
+volume.bg.color = 8,8,8
+volume.style = slider
+volume.slider.orientation = vertical
+# Mute indicator
+mute.pos = 632,333
+mute.icon = icons/Pionee_m_on.png,icons/Pionee_m_off.png
+# Play/Pause/Stop
+playstate.pos = 1045,611
+playstate.icon = icons/Pionee_stop.png,icons/Pionee_pause.png,icons/Pionee_play.png
+# Repeat indicator
+repeat.pos = 1139,547
+repeat.icon = icons/Pionee_repeat_off.png,icons/Pionee_repeat_all.png,icons/Pionee_repeat_single.png
+# Shuffle indicator 
+shuffle.pos = 952,611
+shuffle.icon = icons/Pionee_shuffle_off.png,icons/Pionee_shuffle_on.png,icons/Pionee_shuffle_infinity.png
+font.size.digi = 27
+font.size.light = 11
+font.size.regular = 15
+font.size.bold = 25
+font.color = 10,10,10
+
+
+#-----------------------155 Antelope --------------------------
+[155G5_Antelope Reel]
+meter.type = circular
+channels = 2
+ui.refresh.period = 0.033
+bgr.filename = Antelope_bgr.png
+fgr.filename = Antelope_fgr.png
+indicator.filename = Antelope_indic.png
+steps.per.degree = 2
+left.start.angle = 44
+left.stop.angle = -44
+right.start.angle = 44
+right.stop.angle = -44
+distance = 67
+left.origin.x = 641
+left.origin.y = 323
+right.origin.x = 641
+right.origin.y = 551
+meter.x = 0
+meter.y = 0
+screen.bgr = 
+# --- volumio optional entries -------
+config.extend = True
+# Reel configuration
+reel.left.filename = Antelope_left.png
+reel.left.pos = 6,135
+reel.left.center = 229,359
+reel.right.filename = Antelope_right.png
+reel.right.pos = 833,135
+reel.right.center = 1056,359
+reel.rotation.speed = 25.0
+albumart.pos = 385,35
+albumart.dimension = 124,124
+#albumart.border = 1
+playinfo.title.pos = 533,36,bold
+playinfo.title.maxwidth = 647
+playinfo.artist.pos = 533,133,bold
+playinfo.artist.maxwidth = 375
+playinfo.album.pos = 533,84,bold
+playinfo.album.maxwidth = 523
+playinfo.center = False
+playinfo.type.pos = 133,63
+playinfo.type.color = 255,255,255
+playinfo.type.dimension = 63,63
+playinfo.samplerate.pos = 217,92,regular
+playinfo.samplerate.maxwidth = 67
+time.remaining.pos = 581,350
+time.remaining.color = 255,255,255
+time.remaining.font = fonts/MyDigi.ttf
+time.remaining.fontsize = 37
+time.elapsed.pos = 20,4
+time.elapsed.fontsize = 15
+time.elapsed.color = 255,255,255
+time.total.font = fonts/Another.ttf
+time.total.fontsize = 15
+time.total.pos = 1213,4
+time.total.color = 255,255,255
+# --- PROGRESS BAR ---
+progress.pos = 73,5
+progress.dim = 1141,9
+progress.color = 50,154,235
+progress.bg.color = 127,75,28
+#progress.border = 0
+progress.border.color = 80,80,80
+#progress.slider.orientation = horizontal
+# --- VOLUME INDICATOR (Slider style) ---
+volume.pos = 27,553
+volume.dim = 10,153
+volume.color = 245,216,54
+volume.bg.color = 8,8,8
+volume.style = slider
+volume.slider.orientation = vertical
+# Mute indicator
+mute.pos = 597,574
+mute.icon = icons/Ante_m_on.png,icons/Ante_m_off.png
+# Play/Pause/Stop
+playstate.pos = 551,574
+playstate.icon = icons/Ante_stop.png,icons/Ante_pause.png,icons/Ante_play.png
+# Repeat indicator
+repeat.pos = 643,574
+repeat.icon = icons/Ante_repeat_off.png,icons/Ante_repeat_all.png,icons/Ante_repeat_single.png
+# Shuffle indicator 
+shuffle.pos = 688,574
+shuffle.icon = icons/Ante_shuffle_off.png,icons/Ante_shuffle_on.png,icons/Ante_shuffle_infinity.png
+font.size.digi = 37
+font.size.light = 11
+font.size.regular = 15
+font.size.bold = 25
+font.color = 180,180,180
+
+#-----------------------156 Otari --------------------------
+[156G5_Otari Reel]
+meter.type = linear
+channels = 2
+direction = bottom-top
+ui.refresh.period = 0.033
+bgr.filename = Otari515_bgr.png
+fgr.filename = Otari515_fgr.png
+indicator.filename = Otari515_indic.png
+left.x = 360
+left.y = 236
+right.x = 845
+right.y = 236
+position.regular = 13
+position.overload = 3
+step.width.regular = 13
+step.width.overload = 13
+meter.x = 0
+meter.y = 0
+screen.bgr = 
+# --- volumio optional entries -------
+config.extend = True
+# Reel configuration
+reel.left.filename = Otari515_left.png
+reel.left.pos = 8,198
+reel.left.center = 168,360
+reel.right.filename = Otari515_right.png
+reel.right.pos = 956,203
+reel.right.center = 1113,362
+reel.rotation.speed = 20.0
+albumart.pos = 543,246
+albumart.dimension = 189,189
+playinfo.ticker = True
+playinfo.ticker.replace = False
+playinfo.ticker.direction = ltr
+playinfo.ticker.append_next = True
+playinfo.ticker.pos = 18,87,bold
+playinfo.ticker.color = 160,160,160
+playinfo.ticker.maxwidth = 1247
+playinfo.ticker.speed = 40
+playinfo.ticker.separator = •
+playinfo.ticker.space_between = 4
+playinfo.ticker.end_spaces = 6
+playinfo.center = True
+playinfo.type.pos = 1110,628
+playinfo.type.color = 206,145,32
+playinfo.type.dimension = 40,40
+playinfo.samplerate.pos = 1167,643,regular
+playinfo.samplerate.maxwidth = 93
+time.remaining.pos = 153,624
+time.remaining.color = 206,145,32
+# --- PROGRESS BAR ---
+progress.pos = 457,237
+progress.dim = 20,207
+progress.color = 20,143,230
+progress.bg.color = 13,13,13
+progress.border = 0
+progress.border.color = 80,80,80
+progress.slider.orientation = vertical
+# --- VOLUME INDICATOR (Slider style) ---
+volume.pos = 803,237
+volume.dim = 20,207
+volume.color = 245,12,12
+volume.bg.color = 0,0,0
+volume.style = slider
+volume.slider.orientation = vertical
+# Mute indicator
+mute.pos = 475,528
+mute.icon = icons/Otari_m_on.png,icons/Otari_m_off.png
+# Play/Pause/Stop
+playstate.pos = 541,528
+playstate.icon = icons/Otari_stop.png,icons/Otari_pause.png,icons/Otari_play.png
+# Repeat indicator
+repeat.pos = 749,528
+repeat.icon = icons/Otari_repeat_off.png,icons/Otari_repeat_all.png,icons/Otari_repeat_single.png
+# Shuffle indicator 
+shuffle.pos = 800,528
+shuffle.icon = icons/Otari_shuffle_off.png,icons/Otari_shuffle_on.png,icons/Otari_shuffle_infinity.png
+font.size.digi = 37
+font.size.light = 19
+font.size.regular = 13
+font.size.bold = 37
+font.color = 201,201,201
+
+#-----------------------157 Revox B77 --------------------------
+[157G5_Revox B77]
+meter.type = linear
+channels = 2
+direction = bottom-top
+ui.refresh.period = 0.033
+bgr.filename = Revox_bgr.png
+indicator.filename = Revox_indi.png
+indicator.type = single
+left.x = 0
+left.y = 420
+right.x = 1214
+right.y = 420
+position.regular = 620
+step.width.regular = 1
+meter.x = 0
+meter.y = 0
+screen.bgr = 
+# --- volumio optional entries -------
+config.extend = True
+# Reel configuration
+reel.left.filename = Revox_left.png
+reel.left.pos = 83,3
+reel.left.center = 357,278
+reel.right.filename = Revox_right.png
+reel.right.pos = 647,3
+reel.right.center = 921,278
+reel.rotation.speed = 28.0
+albumart.pos = 591,9
+albumart.dimension = 96,96
+albumart.border = 1
+playinfo.ticker = True
+playinfo.ticker.replace = False
+playinfo.ticker.direction = ltr
+playinfo.ticker.append_next = True
+playinfo.ticker.pos = 5,667,bold
+playinfo.ticker.color = 180,180,180
+playinfo.ticker.maxwidth = 1267
+playinfo.ticker.speed = 40
+playinfo.ticker.separator = •
+playinfo.ticker.space_between = 4
+playinfo.ticker.end_spaces = 6
+playinfo.center = True
+playinfo.type.pos = 190,580
+playinfo.type.color = 180,180,180
+playinfo.type.dimension = 73,73
+playinfo.samplerate.pos = 267,617,regular
+playinfo.samplerate.maxwidth = 147
+time.remaining.pos = 580,507
+time.remaining.color = 18,191,202
+time.remaining.font = fonts/MyDigi.ttf
+time.remaining.fontsize = 28
+time.elapsed.pos = 453,591
+time.elapsed.fontsize = 9
+time.elapsed.color = 255,255,255
+time.total.font = fonts/Another.ttf
+time.total.fontsize = 9
+time.total.pos = 797,591
+time.total.color = 255,255,255
+# --- PROGRESS BAR ---
+progress.pos = 493,591
+progress.dim = 298,10
+progress.color = 18,191,202
+progress.bg.color = 19,19,19
+progress.border = 0
+progress.border.color = 80,80,80
+# --- VOLUME INDICATOR (Slider style) ---
+volume.pos = 572,473
+volume.dim = 141,11
+volume.color = 142,142,142
+volume.bg.color = 0,0,0
+volume.style = slider
+volume.slider.orientation = horizontal
+# Mute indicator
+mute.pos = 1048,571
+mute.icon = icons/Revox_m_on.png,icons/Revox_m_off.png
+# Play/Pause/Stop
+playstate.pos = 844,571
+playstate.icon = icons/Revox_stop.png,icons/Revox_pause.png,icons/Revox_play.png
+# Repeat indicator
+repeat.pos = 969,571
+repeat.icon = icons/Revox_repeat_off.png,icons/Revox_repeat_all.png,icons/Revox_repeat_single.png
+# Shuffle indicator 
+shuffle.pos = 1007,571
+shuffle.icon = icons/Revox_shuffle_off.png,icons/Revox_shuffle_on.png,icons/Revox_shuffle_infinity.png
+font.size.digi = 20
+font.size.light = 11
+font.size.regular = 15
+font.size.bold = 27
+font.color = 201,201,201
+
+
+#-----------------------158 Tascam--------------------------
+[158G5_Tascam Rec]
+meter.type = linear
+channels = 2
+direction = bottom-top
+ui.refresh.period = 0.033
+bgr.filename = Tascam_reel._bgr.png
+fgr.filename = Tascam_reel._fgr.png
+indicator.filename = Tascam_reel._indic.png
+left.x = 9
+left.y = 429
+right.x = 791
+right.y = 429
+position.regular = 12
+position.overload = 3
+step.width.regular = 19
+step.width.overload = 19
+meter.x = 0
+meter.y = 0
+screen.bgr = 
+# --- volumio optional entries -------
+config.extend = True
+# Reel configuration
+reel.left.filename = Tascam_left.png
+reel.left.pos = 9,7
+reel.left.center = 229,227
+reel.right.filename = Tascam_right.png
+reel.right.pos = 459,7
+reel.right.center = 680,227
+reel.rotation.speed = 25.0
+albumart.pos = 910,55
+albumart.dimension = 357,357
+playinfo.title.pos = 920,627,bold
+playinfo.title.maxwidth = 360
+playinfo.artist.pos = 920,567,bold
+playinfo.artist.maxwidth = 360
+playinfo.album.pos = 920,600,regular
+playinfo.album.maxwidth = 360
+playinfo.next.title.pos = 920,687,regular
+playinfo.next.title.color = 206,145,32
+playinfo.next.title.maxwidth = 360
+playinfo.center = True
+playinfo.type.pos = 1010,501
+playinfo.type.color = 206,145,32
+playinfo.type.dimension = 67,67
+playinfo.samplerate.pos = 1097,530,regular
+playinfo.samplerate.maxwidth = 93
+time.remaining.pos = 1000,440
+time.remaining.color = 206,145,32
+time.remaining.font = fonts/MyDigi.ttf
+time.remaining.fontsize = 57
+time.elapsed.pos = 307,663
+time.elapsed.fontsize = 9
+time.elapsed.color = 255,255,255
+time.total.font = fonts/Another.ttf
+time.total.fontsize = 9
+time.total.pos = 589,663
+time.total.color = 255,255,255
+# --- PROGRESS BAR ---
+progress.pos = 345,663
+progress.dim = 239,9
+progress.color = 20,143,230
+progress.bg.color = 13,13,13
+progress.border = 0
+progress.border.color = 80,80,80
+progress.slider.orientation = horizontal
+# --- VOLUME INDICATOR (Slider style) ---
+volume.pos = 347,699
+volume.dim = 239,9
+volume.color = 245,12,12
+volume.bg.color = 0,0,0
+volume.style = slider
+volume.slider.orientation = horizontal
+# Mute indicator
+mute.pos = 311,693
+mute.icon = icons/Tascam_m_on.png,icons/Tascam_m_off.png
+font.size.digi = 57
+font.size.light = 19
+font.size.regular = 13
+font.size.bold = 27
+font.color = 201,201,201
+
+
+
+#-----------------------159 Technics--------------------------
+[159G5_Technics Rec]
+meter.type = linear
+channels = 2
+direction = bottom-top
+ui.refresh.period = 0.033
+bgr.filename = Technics_Reel_bgr.png
+fgr.filename = Technics_Reel_fgr.png
+indicator.filename = Technics_Reel_indic.png
+left.x = 11
+left.y = 524
+right.x = 1063
+right.y = 524
+position.regular = 12
+position.overload = 3
+step.width.regular = 13
+step.width.overload = 13
+meter.x = 0
+meter.y = 0
+screen.bgr = 
+# --- volumio optional entries -------
+config.extend = True
+# Reel configuration
+reel.left.filename = Technics_Reel_left.png
+reel.left.pos = 123,89
+reel.left.center = 359,326
+reel.right.filename = Technics_Reel_right.png
+reel.right.pos = 680,83
+reel.right.center = 920,323
+reel.rotation.speed = 25.0
+albumart.pos = 565,63
+albumart.dimension = 137,137
+playinfo.ticker = True
+playinfo.ticker.replace = False
+playinfo.ticker.direction = ltr
+playinfo.ticker.append_next = True
+playinfo.ticker.pos = 3,13,bold
+playinfo.ticker.color = 173,143,99
+playinfo.ticker.maxwidth = 1273
+playinfo.ticker.speed = 40
+playinfo.ticker.separator = •
+playinfo.ticker.space_between = 4
+playinfo.ticker.end_spaces = 6
+playinfo.center = True
+playinfo.type.pos = 817,611
+playinfo.type.color = 255,255,255
+playinfo.type.dimension = 30,30
+playinfo.samplerate.pos = 805,645,regular
+playinfo.samplerate.maxwidth = 56
+time.remaining.pos = 877,611
+time.remaining.color = 206,145,32
+time.remaining.font = fonts/MyDigi.ttf
+time.remaining.fontsize = 23
+time.elapsed.pos = 742,657
+time.elapsed.fontsize = 9
+time.elapsed.color = 255,255,255
+time.total.font = fonts/Another.ttf
+time.total.fontsize = 9
+time.total.pos = 955,657
+time.total.color = 255,255,255
+# --- PROGRESS BAR ---
+progress.pos = 742,669
+progress.dim = 248,7
+progress.color = 20,143,230
+progress.bg.color = 13,13,13
+progress.border = 0
+progress.border.color = 80,80,80
+progress.slider.orientation = horizontal
+# --- VOLUME INDICATOR (Slider style) ---
+volume.pos = 291,701
+volume.dim = 253,11
+volume.color = 245,12,12
+volume.bg.color = 0,0,0
+volume.style = slider
+volume.slider.orientation = horizontal
+# Mute indicator
+mute.pos = 262,698
+mute.icon = icons/Tech_m_on.png,icons/Tech_m_off.png
+font.size.digi = 57
+font.size.light = 19
+font.size.regular = 9
+font.size.bold = 33
+font.color = 201,201,201
+
+
+#-----------------------160 Metaxas--------------------------
+[159G5_Metaxas Rec]
+meter.type = linear
+channels = 2
+direction = left-right
+ui.refresh.period = 0.033
+bgr.filename = Metaxas_Rec_bgr.png
+fgr.filename = Metaxas_Rec_fgr.png
+indicator.filename = Metaxas_Rec_indic.png
+left.x = 675
+left.y = 439
+right.x = 675
+right.y = 567
+position.regular = 46
+position.overload = 7
+step.width.regular = 11
+step.width.overload = 11
+meter.x = 0
+meter.y = 0
+screen.bgr = 
+# --- volumio optional entries -------
+config.extend = True
+# Reel configuration
+reel.left.filename = Metaxas_Rec_left.png
+reel.left.pos = 17,18
+reel.left.center = 214,215
+reel.right.filename = Metaxas_Rec_right.png
+reel.right.pos = 427,18
+reel.right.center = 625,215
+reel.rotation.speed = 30.0
+albumart.pos = 839,18
+albumart.dimension = 420,420
+playinfo.ticker = True
+playinfo.ticker.replace = False
+playinfo.ticker.direction = ltr
+playinfo.ticker.append_next = True
+playinfo.ticker.pos = 3,680,bold
+playinfo.ticker.color = 173,143,99
+playinfo.ticker.maxwidth = 1273
+playinfo.ticker.speed = 40
+playinfo.ticker.separator = •
+playinfo.ticker.space_between = 4
+playinfo.ticker.end_spaces = 6
+playinfo.center = True
+playinfo.type.pos = 403,364
+playinfo.type.color = 255,255,255
+playinfo.type.dimension = 43,43
+playinfo.samplerate.pos = 393,407,regular
+playinfo.samplerate.maxwidth = 56
+time.remaining.pos = 365,544
+time.remaining.color = 206,145,32
+time.remaining.font = fonts/MyDigi.ttf
+time.remaining.fontsize = 30
+time.elapsed.pos = 683,545
+time.elapsed.fontsize = 12
+time.elapsed.color = 255,255,255
+time.total.font = fonts/Another.ttf
+time.total.fontsize = 12
+time.total.pos = 1210,545
+time.total.color = 255,255,255
+# --- PROGRESS BAR ---
+progress.pos = 733,545
+progress.dim = 473,13
+progress.color = 20,143,230
+progress.bg.color = 13,13,13
+progress.border = 0
+progress.border.color = 80,80,80
+progress.slider.orientation = horizontal
+# --- VOLUME INDICATOR (Slider style) ---
+volume.pos = 330,512
+volume.dim = 180,10
+volume.color = 245,12,12
+volume.bg.color = 0,0,0
+volume.style = slider
+volume.slider.orientation = horizontal
+# Mute indicator
+mute.pos = 296,508
+mute.icon = icons/Metax_m_on.png,icons/Metax_m_off.png
+# Play/Pause/Stop
+playstate.pos = 51,434
+playstate.icon = icons/Metax_stop.png,icons/Metax_pause.png,icons/Metax_play.png
+font.size.digi = 57
+font.size.light = 19
+font.size.regular = 15
+font.size.bold = 33
+font.color = 201,201,201
+
+
+
+#-----------------------210 Sony --------------------------
+[210G5_Sony TC730]
+meter.type = circular
+meter.visible = True
+channels = 2
+ui.refresh.period = 0.033
+bgr.filename = Sony TC730Reel_bgr.png
+fgr.filename = Sony TC730Reel_fgr.png
+indicator.filename = Sony TC730Reel_needle.png
+steps.per.degree = 4
+start.angle = 44
+stop.angle = -44
+distance = 60
+left.origin.x = 171
+left.origin.y = 697
+right.origin.x = 468
+right.origin.y = 697
+meter.x = 0
+meter.y = 0
+screen.bgr = 
+# --- volumio optional entries -------
+config.extend = True
+# Reel configuration
+reel.left.filename = Sony TC730Reel_left.png
+reel.left.pos = 31,30
+reel.left.center = 171,171
+reel.right.filename = Sony TC730Reel_right.png
+reel.right.pos = 343,30
+reel.right.center = 483,171
+reel.rotation.speed = 25.0
+albumart.pos = 853,60
+albumart.dimension = 317,317
+#albumart.border = 1
+playinfo.title.pos = 775,500,bold
+playinfo.title.maxwidth = 497
+playinfo.artist.pos = 775,423,bold
+playinfo.artist.maxwidth = 497
+playinfo.album.pos = 775,467,regular
+playinfo.album.maxwidth = 497
+playinfo.center = True
+playinfo.next.title.pos = 775,657,bold
+playinfo.next.title.color = 120,140,140
+playinfo.next.title.maxwidth = 497
+playinfo.next.artist.pos = 775,580,bold
+playinfo.next.artist.color = 120,140,140
+playinfo.next.artist.maxwidth = 497
+playinfo.next.album.pos = 775,623,regular
+playinfo.next.album.color = 120,140,140
+playinfo.next.album.maxwidth = 497
+playinfo.type.pos = 50,451
+playinfo.type.color = 255,255,255
+playinfo.type.dimension = 40,40
+playinfo.samplerate.pos = 101,467,light
+playinfo.samplerate.maxwidth = 80
+time.remaining.pos = 272,365
+time.remaining.color = 200,200,200
+time.remaining.font = fonts/MyDigi.ttf
+time.remaining.fontsize = 31
+time.elapsed.pos = 237,427
+time.elapsed.fontsize = 13
+time.elapsed.color = 220,220,220
+time.total.font = fonts/Another.ttf
+time.total.fontsize = 13
+time.total.pos = 370,427
+time.total.color = 220,220,220
+# --- PROGRESS BAR ---
+progress.pos = 304,419
+progress.dim = 49,49
+progress.style = arc
+progress.color = 0,255,100
+progress.bg.color = 50,50,50
+progress.arc.width = 6
+progress.arc.angle.start = 90
+progress.arc.angle.end = -270
+# Mute indicator
+mute.pos = 171,425
+mute.icon = icons/SON_m_on.png,icons/SON_m_off.png
+# Play/Pause/Stop 
+playstate.pos = 528,493
+playstate.icon = icons/SON_stop.png,icons/SON_pause.png,icons/SON_play.png
+font.size.digi = 31
+font.size.light = 11
+font.size.regular = 17
+font.size.bold = 33
+font.color = 201,201,201
+
+
+
+#-----------------------211 AKAI REVERSE------------------------
+[211G5_Akai GX635]
+meter.type = circular
+channels = 2
+ui.refresh.period = 0.033
+bgr.filename = Akai Gx635D_bgr.png
+fgr.filename = Akai Gx635D_fgr.png
+indicator.filename = Akai Gx635D_needle.png
+steps.per.degree = 4
+start.angle = -231
+stop.angle = -129
+distance = 140
+left.origin.x = 1035
+left.origin.y = 228
+right.origin.x = 1035
+right.origin.y = 413
+meter.x = 0
+meter.y = 0
+screen.bgr = 
+
+# --- volumio optional entries -------
+config.extend = True
+# Reel configuration
+reel.left.filename = Akai Gx635D_left.png
+reel.left.pos = 18,13
+reel.left.center = 211,205
+reel.right.filename = Akai Gx635D_right.png
+reel.right.pos = 411,13
+reel.right.center = 603,205
+reel.rotation.speed = 30.0
+albumart.pos = 895,1
+albumart.dimension = 268,268
+playinfo.ticker = True
+playinfo.ticker.replace = False
+playinfo.ticker.direction = ltr
+playinfo.ticker.append_next = True
+playinfo.ticker.pos = 17,653,bold
+playinfo.ticker.color = 200,200,200
+playinfo.ticker.maxwidth = 1248
+playinfo.ticker.speed = 40
+playinfo.ticker.separator = •
+playinfo.ticker.space_between = 4
+playinfo.ticker.end_spaces = 6
+playinfo.center = True
+playinfo.type.pos = 390,7
+playinfo.type.color = 255,255,255
+playinfo.type.dimension = 50,50
+playinfo.samplerate.pos = 383,53,regular
+playinfo.samplerate.maxwidth = 56
+time.remaining.pos = 350,395
+time.remaining.color = 255,255,255
+time.remaining.font = fonts/MyDigi.ttf
+time.remaining.fontsize = 23
+time.elapsed.pos = 284,500
+time.elapsed.fontsize = 12
+time.elapsed.color = 0,0,0
+time.total.font = fonts/Another.ttf
+time.total.fontsize = 12
+time.total.pos = 480,500
+time.total.color = 0,0,0
+# --- PROGRESS BAR ---
+progress.pos = 300,520
+progress.dim = 203,10
+progress.color = 22,22,22
+progress.bg.color = 188,193,195
+#progress.border = 1
+progress.border.color = 
+progress.marker.1.pos = 0
+progress.marker.1.label = .
+progress.marker.2.pos = 25
+progress.marker.2.label = .
+progress.marker.3.pos = 50
+progress.marker.3.label = .
+progress.marker.4.pos = 75
+progress.marker.4.label = .
+progress.marker.5.pos = 100
+progress.marker.5.label = .
+progress.head.image = Akai Gx635D_Progre.png
+progress.head.offset = 0,0
+# --- VOLUME INDICATOR (Slider style) ---
+volume.pos = 291,457
+volume.dim = 222,5
+volume.color = 245,12,12
+volume.bg.color = 0,0,0
+volume.style = slider
+volume.slider.orientation = horizontal
+# Mute indicator
+mute.pos = 613,549
+mute.icon = icons/AKA_m_on.png,icons/AKA_m_off.png
+# Play/Pause/Stop
+playstate.pos = 554,605
+playstate.icon = icons/AKA_stop.png,icons/AKA_pause.png,icons/AKA_play.png
+# Repeat indicator
+repeat.pos = 582,549
+repeat.icon = icons/AKA_repeat_off.png,icons/AKA_repeat_all.png,icons/AKA_repeat_single.png
+font.size.digi = 57
+font.size.light = 19
+font.size.regular = 13
+font.size.bold = 33
+font.color = 201,201,201
+
+
+
+#-----------------------212 TapeAK --------------------------
+[212G5_TapeAK]
+meter.type = circular
+meter.visible = True
+channels = 2
+ui.refresh.period = 0.033
+bgr.filename = Tape_bgr.png
+fgr.filename = Tape_fgr.png
+indicator.filename = Tape_needle.png
+steps.per.degree = 4
+start.angle = 44
+stop.angle = -44
+distance = 60
+left.origin.x = 835
+left.origin.y = 713
+right.origin.x = 1127
+right.origin.y = 713
+meter.x = 0
+meter.y = 0
+screen.bgr = 
+# --- volumio optional entries -------
+config.extend = True
+# Reel configuration
+reel.left.filename = Tape_left.png
+reel.left.pos = 11,37
+reel.left.center = 183,209
+reel.right.filename = Tape_right.png
+reel.right.pos = 394,37
+reel.right.center = 565,209
+reel.rotation.speed = 25.0
+albumart.pos = 205,15
+albumart.dimension = 348,348
+#albumart.border = 1
+playinfo.title.pos = 761,207,bold
+playinfo.title.maxwidth = 502
+playinfo.artist.pos = 761,40,bold
+playinfo.artist.maxwidth = 502
+playinfo.album.pos = 761,123,regular
+playinfo.album.maxwidth = 502
+playinfo.center = False
+playinfo.next.title.pos = 761,482,bold
+playinfo.next.title.color = 160,121,64
+playinfo.next.title.maxwidth = 502
+playinfo.next.artist.pos = 761,313,bold
+playinfo.next.artist.color = 160,121,64
+playinfo.next.artist.maxwidth = 502
+playinfo.next.album.pos = 761,397,regular
+playinfo.next.album.color = 160,121,64
+playinfo.next.album.maxwidth = 502
+
+playinfo.type.pos = 406,457
+playinfo.type.color = 255,255,255
+playinfo.type.dimension = 41,41
+playinfo.samplerate.pos = 343,409,light
+playinfo.samplerate.maxwidth = 73
+time.remaining.pos = 169,623
+time.remaining.color = 200,200,200
+time.remaining.font = fonts/MyDigi.ttf
+time.remaining.fontsize = 53
+time.elapsed.pos = 137,702
+time.elapsed.fontsize = 13
+time.elapsed.color = 220,220,220
+time.total.font = fonts/Another.ttf
+time.total.fontsize = 13
+time.total.pos = 570,702
+time.total.color = 220,220,220
+
+# --- PROGRESS BAR ---
+progress.pos = 197,705
+progress.dim = 360,10
+progress.color = 188,193,195
+progress.bg.color = 22,22,22
+#progress.border = 1
+progress.border.color = 
+progress.marker.1.pos = 0
+progress.marker.1.label = .
+progress.marker.2.pos = 25
+progress.marker.2.label = .
+progress.marker.3.pos = 50
+progress.marker.3.label = .
+progress.marker.4.pos = 75
+progress.marker.4.label = .
+progress.marker.5.pos = 100
+progress.marker.5.label = .
+progress.head.image = Tape_prog.png
+# Mute indicator
+mute.pos = 518,535
+mute.icon = icons/Tape_m_on.png,icons/Tape_m_off.png
+# Play/Pause/Stop 
+playstate.pos = 519,567
+playstate.icon = icons/Tape_stop.png,icons/Tape_pause.png,icons/Tape_play.png
+# Repeat indicator
+repeat.pos = 574,536
+repeat.icon = icons/Tape_repeat_off.png,icons/Tape_repeat_all.png,icons/Tape_repeat_single.png
+# Shuffle indicator 
+shuffle.pos = 605,537
+shuffle.icon = icons/Tape_shuffle_off.png,icons/Tape_shuffle_on.png,icons/Tape_shuffle_infinity.png
+# Volume - Vertical Fader
+volume.pos = 697,353
+volume.dim = 40,32
+volume.style = slider
+volume.slider.track = 
+volume.slider.tip = Tape_slider.png
+volume.slider.orientation = vertical
+volume.slider.travel = 3,147
+volume.slider.tip.offset = -7,0
+font.size.digi = 31
+font.size.light = 10
+font.size.regular = 25
+font.size.bold = 27
+font.color = 201,201,201
+
+
+
+
+#-----------------------213 Fostex--------------------------
+[213G5_Fostex Rec]
+meter.type = linear
+channels = 2
+direction = bottom-top
+ui.refresh.period = 0.033
+bgr.filename = Fostex_bgr.png
+fgr.filename = Fostex_fgr.png
+indicator.filename = Fostex_indi.png
+left.x = 63
+left.y = 119
+right.x = 187
+right.y = 119
+position.regular = 40
+position.overload = 8
+step.width.regular = 11
+step.width.overload = 11
+meter.x = 0
+meter.y = 0
+screen.bgr = 
+# --- volumio optional entries -------
+config.extend = True
+# Reel configuration
+reel.left.filename = Fostex_left.png
+reel.left.pos = 234,9
+reel.left.center = 492,269
+reel.right.filename = Fostex_right.png
+reel.right.pos = 779,20
+reel.right.center = 1028,269
+reel.rotation.speed = 25.0
+albumart.pos = 660,8
+albumart.dimension = 200,200
+albumart.border = 1
+playinfo.ticker = True
+playinfo.ticker.replace = False
+playinfo.ticker.direction = ltr
+playinfo.ticker.append_next = True
+playinfo.ticker.pos = 265,673,bold
+playinfo.ticker.color = 200,200,180
+playinfo.ticker.maxwidth = 1011
+playinfo.ticker.speed = 40
+playinfo.ticker.separator = •
+playinfo.ticker.space_between = 4
+playinfo.ticker.end_spaces = 6
+playinfo.center = True
+playinfo.type.pos = 737,378
+playinfo.type.color = 255,255,255
+playinfo.type.dimension = 47,47
+playinfo.samplerate.pos = 703,427,regular
+playinfo.samplerate.maxwidth = 120
+time.remaining.pos = 667,543
+time.remaining.color = 255,255,255
+time.remaining.font = fonts/MyDigi.ttf
+time.remaining.fontsize = 30
+time.elapsed.pos = 474,581
+time.elapsed.fontsize = 10
+time.elapsed.color = 255,255,255
+time.total.font = fonts/Another.ttf
+time.total.fontsize = 10
+time.total.pos = 474,597
+time.total.color = 255,255,255
+# --- PROGRESS BAR ---
+progress.pos = 460,562
+progress.dim = 65,65
+progress.style = arc
+progress.color = 0,255,100
+progress.bg.color = 50,50,50
+progress.arc.width = 8
+progress.arc.angle.start = 90
+progress.arc.angle.end = -270
+# --- VOLUME INDICATOR (Slider style) ---
+volume.pos = 668,479
+volume.dim = 151,7
+volume.color = 245,12,12
+volume.bg.color = 0,0,0
+volume.style = slider
+volume.slider.orientation = horizontal
+# Mute indicator
+mute.pos = 1111,607
+mute.icon = icons/FOS_m_on.png,icons/FOS_m_off.png
+# Play/Pause/Stop 
+playstate.pos = 983,557
+playstate.icon = icons/FOS_stop.png,icons/FOS_pause.png,icons/FOS_play.png
+font.size.digi = 57
+font.size.light = 19
+font.size.regular = 13
+font.size.bold = 33
+font.color = 201,201,201
+
+
+
+
+#-----------------------214 TapeAmp --------------------------
+[214G5_TapeAMP]
+meter.type = circular
+meter.visible = True
+channels = 2
+ui.refresh.period = 0.033
+bgr.filename = AMP_bgr.png
+fgr.filename = AMP_fgr.png
+indicator.filename = AMP_infic.png
+steps.per.degree = 4
+start.angle = 53
+stop.angle = -54
+distance = 153
+left.origin.x = 323
+left.origin.y = 760
+right.origin.x = 957
+right.origin.y = 760
+meter.x = 0
+meter.y = 0
+screen.bgr = 
+# --- volumio optional entries -------
+config.extend = True
+# Reel configuration
+reel.left.filename = AMP_left.png
+reel.left.pos = 86,55
+reel.left.center = 326,295
+reel.right.filename = AMP_right.png
+reel.right.pos = 719,55
+reel.right.center = 960,295
+reel.rotation.speed = 25.0
+
+albumart.pos = 545,100
+albumart.dimension = 203,203
+albumart.border = 1
+
+playinfo.ticker = True
+playinfo.ticker.replace = False
+playinfo.ticker.direction = ltr
+playinfo.ticker.append_next = True
+playinfo.ticker.pos = 8,3,bold
+playinfo.ticker.color = 160,160,160
+playinfo.ticker.maxwidth = 1267
+playinfo.ticker.speed = 40
+playinfo.ticker.separator = •
+playinfo.ticker.space_between = 4
+playinfo.ticker.end_spaces = 6
+playinfo.center = True
+playinfo.type.pos = 605,333
+playinfo.type.color = 255,255,255
+playinfo.type.dimension = 68,68
+playinfo.samplerate.pos = 553,435,light
+playinfo.samplerate.maxwidth = 173
+time.remaining.pos = 562,623
+time.remaining.color = 200,200,200
+time.remaining.font = fonts/MyDigi.ttf
+time.remaining.fontsize = 46
+time.elapsed.pos = 490,55
+time.elapsed.fontsize = 13
+time.elapsed.color = 220,220,220
+time.total.font = fonts/Another.ttf
+time.total.fontsize = 13
+time.total.pos = 763,55
+time.total.color = 220,220,220
+# --- PROGRESS BAR ---
+progress.pos = 548,56
+progress.dim = 200,13
+progress.color = 188,193,195
+progress.bg.color = 22,22,22
+#progress.border = 1
+progress.border.color = 
+progress.marker.1.pos = 0
+progress.marker.1.label = .
+progress.marker.2.pos = 25
+progress.marker.2.label = 25
+progress.marker.2.fontsize = 10
+progress.marker.3.pos = 50
+progress.marker.3.label = 50
+progress.marker.3.fontsize = 10
+progress.marker.4.pos = 75
+progress.marker.4.label = 75
+progress.marker.4.fontsize = 10
+progress.marker.5.pos = 100
+progress.marker.5.label = .
+progress.head.image = AMP_prog.png
+# Mute indicator
+mute.pos = 577,320
+mute.icon = icons/AMP_m_on.png,icons/AMP_m_off.png
+
+# Play/Pause/Stop 
+playstate.pos = 628,523
+playstate.icon = icons/AMP_stop.png,icons/AMP_pause.png,icons/AMP_play.png
+font.size.digi = 31
+font.size.light = 13
+font.size.regular = 25
+font.size.bold = 27
+font.color = 201,201,201
+
+
+
+
+#-----------------------215 Koncert --------------------------
+[215G5_Koncert M3401]
+meter.type = circular
+meter.visible = True
+channels = 2
+ui.refresh.period = 0.033
+bgr.filename = Koncert_bgr.png
+fgr.filename = Koncert_fgr.png
+indicator.filename = Koncert_needle.png
+steps.per.degree = 4
+start.angle = 35
+stop.angle = -35
+distance = 40
+left.origin.x = 306
+left.origin.y = 600
+right.origin.x = 414
+right.origin.y = 600
+meter.x = 0
+meter.y = 0
+screen.bgr = 
+# --- volumio optional entries -------
+config.extend = True
+# Reel configuration
+reel.left.filename = Koncert_left.png
+reel.left.pos = 7,3
+reel.left.center = 185,180
+reel.right.filename = Koncert_right.png
+reel.right.pos = 370,3
+reel.right.center = 547,181
+reel.rotation.speed = 25.0
+albumart.pos = 760,13
+albumart.dimension = 424,424
+#albumart.border = 1
+playinfo.title.pos = 680,500,bold
+playinfo.title.maxwidth = 573
+playinfo.artist.pos = 680,423,bold
+playinfo.artist.maxwidth = 573
+playinfo.album.pos = 680,467,regular
+playinfo.album.maxwidth = 573
+playinfo.center = True
+playinfo.next.title.pos = 680,657,bold
+playinfo.next.title.color = 120,140,140
+playinfo.next.title.maxwidth = 573
+playinfo.next.artist.pos = 680,580,bold
+playinfo.next.artist.color = 120,140,140
+playinfo.next.artist.maxwidth = 573
+playinfo.next.album.pos = 680,623,regular
+playinfo.next.album.color = 120,140,140
+playinfo.next.album.maxwidth = 573
+playinfo.type.pos = 339,300
+playinfo.type.color = 255,255,255
+playinfo.type.dimension = 47,47
+playinfo.samplerate.pos = 335,350,light
+playinfo.samplerate.maxwidth = 57
+time.remaining.pos = 305,413
+time.remaining.color = 200,200,200
+time.remaining.font = fonts/MyDigi.ttf
+time.remaining.fontsize = 31
+time.elapsed.pos = 237,460
+time.elapsed.fontsize = 13
+time.elapsed.color = 220,220,220
+time.total.font = fonts/Another.ttf
+time.total.fontsize = 13
+time.total.pos = 442,460
+time.total.color = 220,220,220
+# --- PROGRESS BAR ---
+progress.pos = 283,464
+progress.dim = 157,8
+progress.color = 190,190,190
+progress.bg.color = 54,54,54
+progress.border = 0
+progress.border.color = 80,80,80
+font.size.digi = 31
+font.size.light = 11
+font.size.regular = 17
+font.size.bold = 33
+font.color = 201,201,201
+
+
+#-----------------------216 Akai Pro1000 --------------------------
+[216G5_Akai PRO1000]
+meter.type = circular
+meter.visible = True
+channels = 2
+ui.refresh.period = 0.033
+bgr.filename = Akai_PRO1000_bgr.png
+fgr.filename = Akai_PRO1000_fgr.png
+indicator.filename = Akai_PRO1000_needle.png
+steps.per.degree = 4
+start.angle = 45
+stop.angle = -46
+distance = 100
+left.origin.x = 149
+left.origin.y = 647
+right.origin.x = 1129
+right.origin.y = 647
+meter.x = 0
+meter.y = 0
+screen.bgr = 
+# --- volumio optional entries -------
+config.extend = True
+# Reel configuration
+reel.left.filename = Akai_PRO1000_left.png
+reel.left.pos = 221,58
+reel.left.center = 429,266
+reel.right.filename = Akai_PRO1000_right.png
+reel.right.pos = 647,58
+reel.right.center = 856,266
+reel.rotation.speed = 25.0
+
+albumart.pos = 583,513
+albumart.dimension = 113,113
+albumart.border = 1
+
+playinfo.title.pos = 3,3,bold
+playinfo.title.maxwidth = 612
+
+playinfo.artist.pos = 3,400,regular
+playinfo.artist.maxwidth = 253
+playinfo.album.pos = 3,427,regular
+playinfo.album.maxwidth = 253
+playinfo.center = True
+
+playinfo.next.title.pos = 654,3,bold
+playinfo.next.title.color = 120,140,140
+playinfo.next.title.maxwidth = 612
+playinfo.next.artist.pos = 1015,400,regular
+playinfo.next.artist.color = 120,140,140
+playinfo.next.artist.maxwidth = 253
+playinfo.next.album.pos = 1015,427,regular
+playinfo.next.album.color = 120,140,140
+playinfo.next.album.maxwidth = 253
+
+playinfo.type.pos = 569,433
+playinfo.type.color = 0,0,0
+playinfo.type.dimension = 43,43
+playinfo.samplerate.pos = 629,451,light
+playinfo.samplerate.maxwidth = 80
+
+time.remaining.pos = 593,403
+time.remaining.color = 10,10,10
+time.remaining.font = fonts/MyDigi.ttf
+time.remaining.fontsize = 27
+
+time.elapsed.pos = 119,373
+time.elapsed.fontsize = 13
+time.elapsed.color = 255,255,255
+time.total.font = fonts/Another.ttf
+time.total.fontsize = 13
+time.total.pos = 119,57
+time.total.color = 255,255,255
+
+# --- PROGRESS BAR ---
+progress.pos = 127,83
+progress.dim = 31,280
+progress.color = 22,22,22
+progress.bg.color = 188,193,195
+#progress.border = 1
+progress.border.color = 
+progress.marker.1.pos = 0
+progress.marker.1.label = .
+progress.marker.2.pos = 25
+progress.marker.2.label = 25
+progress.marker.2.fontsize = 13
+progress.marker.3.pos = 50
+progress.marker.3.label = 50
+progress.marker.3.fontsize = 13
+progress.marker.4.pos = 75
+progress.marker.4.label = 75
+progress.marker.4.fontsize = 13
+progress.marker.5.pos = 100
+progress.marker.5.label = .
+progress.head.image = Akai_PRO1000_pip.png
+progress.head.offset = 0,0
+progress.slider.orientation = vertical
+# Mute indicator
+mute.pos = 490,660
+mute.icon = icons/T1000_m_on.png,icons/T1000_m_off.png
+
+# Play/Pause/Stop 
+playstate.pos = 911,657
+playstate.icon = icons/T1000_stop.png,icons/T1000_pause.png,icons/T1000_play.png
+
+# Repeat indicator
+repeat.pos = 822,673
+repeat.icon = icons/T1000_repeat_off.png,icons/T1000_repeat_all.png,icons/T1000_repeat_single.png
+
+# Shuffle indicator 
+shuffle.pos = 708,661
+shuffle.icon = icons/T1000_shuffle_off.png,icons/T1000_shuffle_on.png,icons/T1000_shuffle_infinity.png
+
+
+# Volume - Vertical Fader
+volume.pos = 1111,83
+volume.dim = 55,43
+volume.style = slider
+volume.slider.track = 
+volume.slider.tip = Akai_PRO1000_dlider.png
+volume.slider.orientation = vertical
+volume.slider.travel = 0,231
+volume.slider.tip.offset = -7,0
+
+font.size.digi = 31
+font.size.light = 13
+font.size.regular = 19
+font.size.bold = 31
+font.color = 201,201,201
+
+
+
+
+#-----------------------217 Omni --------------------------
+[217G5_MION24]
+meter.type = linear
+channels = 2
+direction = left-right
+ui.refresh.period = 0.033
+bgr.filename = OMNI_bgr.png
+fgr.filename = OMNI_fgr.png
+indicator.filename = OMNI_needle.png
+indicator.type = single
+left.x = 858
+left.y = 33
+right.x = 858
+right.y = 469
+position.regular = 461
+step.width.regular = 1
+meter.x = 0
+meter.y = 0
+screen.bgr = 
+
+# --- volumio optional entries -------
+config.extend = True
+# Reel configuration
+reel.left.filename = OMNI_left.png
+reel.left.pos = 63,67
+reel.left.center = 201,206
+reel.right.filename = OMNI_right.png
+reel.right.pos = 403,67
+reel.right.center = 541,205
+reel.rotation.speed = 28.0
+albumart.pos = 889,214
+albumart.dimension = 235,235
+albumart.border = 1
+playinfo.ticker = True
+playinfo.ticker.replace = False
+playinfo.ticker.direction = ltr
+playinfo.ticker.append_next = True
+playinfo.ticker.pos = 23,672,bold
+playinfo.ticker.color = 200,200,200
+playinfo.ticker.maxwidth = 1238
+playinfo.ticker.speed = 40
+playinfo.ticker.separator = •
+playinfo.ticker.space_between = 4
+playinfo.ticker.end_spaces = 6
+playinfo.center = True
+playinfo.type.pos = 330,547
+playinfo.type.color = 12,12,12
+playinfo.type.dimension = 73,73
+playinfo.samplerate.pos = 299,363,regular
+playinfo.samplerate.maxwidth = 131
+time.remaining.pos = 325,403
+time.remaining.color = 18,191,202
+time.remaining.font = fonts/MyDigi.ttf
+time.remaining.fontsize = 25
+time.elapsed.pos = 29,510
+time.elapsed.fontsize = 9
+time.elapsed.color = 255,255,255
+time.total.font = fonts/Another.ttf
+time.total.fontsize = 9
+time.total.pos = 670,510
+time.total.color = 255,255,255
+# --- PROGRESS BAR ---
+progress.pos = 67,511
+progress.dim = 600,10
+progress.color = 18,191,202
+progress.bg.color = 19,19,19
+progress.border = 0
+progress.border.color = 80,80,80
+# --- VOLUME INDICATOR (Slider style) ---
+volume.pos = 543,477
+volume.dim = 141,11
+volume.color = 142,142,142
+volume.bg.color = 0,0,0
+volume.style = slider
+volume.slider.orientation = horizontal
+# Mute indicator
+mute.pos = 563,453
+mute.icon = icons/MON_m_on.png,icons/MON_m_off.png
+font.size.digi = 20
+font.size.light = 11
+font.size.regular = 14
+font.size.bold = 27
+font.color = 201,201,201
+
+
+#-----------------------218 TEAC --------------------------
+[218G5_Teac X2000]
+meter.type = circular
+channels = 2
+ui.refresh.period = 0.033
+bgr.filename = Teac_X2000_bgr.png
+fgr.filename = Teac_X2000_fgr.png
+indicator.filename = Teac_X2000_needle.png
+steps.per.degree = 2
+start.angle = 57
+stop.angle = -57
+distance = 93
+left.origin.x = 977
+left.origin.y = 480
+right.origin.x = 977
+right.origin.y = 660
+meter.x = 0
+meter.y = 0
+screen.bgr = 
+
+# --- volumio optional entries -------
+config.extend = True
+# Reel configuration
+reel.left.filename = Teac_X2000_left.png
+reel.left.pos = 23,9
+reel.left.center = 201,188
+reel.right.filename = Teac_X2000_right.png
+reel.right.pos = 409,12
+reel.right.center = 587,191
+reel.rotation.speed = 28.0
+albumart.pos = 857,13
+albumart.dimension = 275,275
+albumart.border = 1
+
+playinfo.ticker = True
+playinfo.ticker.replace = False
+playinfo.ticker.direction = ltr
+playinfo.ticker.append_next = True
+playinfo.ticker.pos = 5,680,bold
+playinfo.ticker.color = 200,200,200
+playinfo.ticker.maxwidth = 1267
+playinfo.ticker.speed = 40
+playinfo.ticker.separator = •
+playinfo.ticker.space_between = 4
+playinfo.ticker.end_spaces = 6
+playinfo.center = True
+
+playinfo.type.pos = 373,20
+playinfo.type.color = 255,255,255
+playinfo.type.dimension = 40,40
+playinfo.samplerate.pos = 351,60,regular
+playinfo.samplerate.maxwidth = 85
+time.remaining.pos = 191,593
+time.remaining.color = 18,191,202
+time.remaining.font = fonts/MyDigi.ttf
+time.remaining.fontsize = 45
+time.elapsed.pos = 343,443
+time.elapsed.fontsize = 12
+time.elapsed.color = 255,255,255
+time.total.font = fonts/Another.ttf
+time.total.fontsize = 12
+time.total.pos = 397,443
+time.total.color = 255,255,255
+# --- PROGRESS BAR ---
+progress.pos = 97,487
+progress.dim = 593,10
+progress.color = 18,191,202
+progress.bg.color = 19,19,19
+progress.border = 0
+progress.border.color = 80,80,80
+# --- VOLUME INDICATOR (Slider style) ---
+volume.pos = 349,323
+volume.dim = 87,16
+volume.color = 247,255,255
+volume.bg.color = 0,0,0
+volume.style = slider
+volume.slider.orientation = horizontal
+
+# Mute indicator
+mute.pos = 331,325
+mute.icon = icons/Teac_m_on.png,icons/Teac_m_off.png
+# Play/Pause/Stop
+playstate.pos = 398,532
+playstate.icon = icons/Teac_stop.png,icons/Teac_pause.png,icons/Teac_play.png
+
+# Repeat indicator
+repeat.pos = 561,535
+repeat.icon = icons/Teac_repeat_off.png,icons/Teac_repeat_all.png,icons/Teac_repeat_single.png
+
+font.size.digi = 20
+font.size.light = 11
+font.size.regular = 11
+font.size.bold = 27
+font.color = 201,201,201
+
+
+#-----------------------219 Tanberg------------------------
+[219G5_Tandberg OLD]
+meter.type = circular
+channels = 2
+ui.refresh.period = 0.033
+bgr.filename = Tandberg_bgr.png
+fgr.filename = Tandberg_fgr.png
+indicator.filename = Tandberg_needle.png
+steps.per.degree = 4
+start.angle = -228
+stop.angle = -130
+distance = 140
+left.origin.x = 203
+left.origin.y = 568
+right.origin.x = 616
+right.origin.y = 568
+meter.x = 0
+meter.y = 0
+screen.bgr = 
+
+# --- volumio optional entries -------
+config.extend = True
+# Reel configuration
+reel.left.filename = Tandberg_left.png
+reel.left.pos = 24,35
+reel.left.center = 212,224
+reel.right.filename = Tandberg_right.png
+reel.right.pos = 420,35
+reel.right.center = 608,223
+reel.rotation.speed = 30.0
+albumart.pos = 937,75
+albumart.dimension = 233,233
+
+playinfo.title.pos = 823,460,bold
+playinfo.title.maxwidth = 449
+playinfo.artist.pos = 823,393,bold
+playinfo.artist.maxwidth = 449
+playinfo.album.pos = 823,435,regular
+playinfo.album.maxwidth = 449
+
+
+
+playinfo.next.artist.pos = 823,547,bold
+playinfo.next.artist.maxwidth = 449
+playinfo.next.artist.color = 120,180,180
+playinfo.next.album.pos = 823,587,regular
+playinfo.next.album.maxwidth = 449
+playinfo.next.album.color = 120,180,180
+playinfo.next.title.pos = 823,613,bold
+playinfo.next.title.color = 120,180,180
+playinfo.next.title.maxwidth = 449
+playinfo.center = True
+
+
+
+playinfo.type.pos = 293,563
+playinfo.type.color = 255,255,255
+playinfo.type.dimension = 47,47
+playinfo.samplerate.pos = 445,580,light
+playinfo.samplerate.maxwidth = 110
+
+time.remaining.pos = 365,425
+time.remaining.color = 255,255,255
+time.remaining.font = fonts/MyDigi.ttf
+time.remaining.fontsize = 27
+time.elapsed.pos = 206,447
+time.elapsed.fontsize = 17
+time.elapsed.color = 255,255,255
+time.total.font = fonts/Another.ttf
+time.total.fontsize = 17
+time.total.pos = 561,447
+time.total.color = 255,255,255
+# --- PROGRESS BAR ---
+progress.pos = 205,471
+progress.dim = 413,5
+progress.color = 22,22,22
+progress.bg.color = 188,193,195
+#progress.border = 1
+progress.border.color = 
+progress.marker.1.pos = 0
+progress.marker.1.label = .
+progress.marker.2.pos = 25
+progress.marker.2.label = .
+progress.marker.3.pos = 50
+progress.marker.3.label = .
+progress.marker.4.pos = 75
+progress.marker.4.label = .
+progress.marker.5.pos = 100
+progress.marker.5.label = .
+progress.head.image = 
+progress.head.offset = 0,0
+# --- VOLUME INDICATOR (Slider style) ---
+volume.pos = 298,518
+volume.dim = 220,5
+volume.color = 245,12,12
+volume.bg.color = 0,0,0
+volume.style = slider
+volume.slider.orientation = horizontal
+
+font.size.digi = 57
+font.size.light = 14
+font.size.regular = 17
+font.size.bold = 33
+font.color = 201,201,201
