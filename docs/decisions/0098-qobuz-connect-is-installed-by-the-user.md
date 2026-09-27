@@ -54,6 +54,35 @@ credentials, which Qobuz's terms forbid.
    ADR-0099).
 5. George's regression pass.
 
+## How (design, 2026-09-27, after Finding 094)
+
+The spike worked. George cast from the Qobuz app, played up to 24/192 at native
+rates through `output`, and used volume, seek and next. Takeover failed in both
+directions, because the core did not know Pibuz existed. The adapter fixes this:
+
+- **Install (step 2)** uses ADR-0100's mechanism. `components/pibuz.env` pins
+  the `linux-aarch64` release, and `gexis-fetch@pibuz` fetches it. The Plugins
+  switch is guarded by the notice in decision 2: the switch is refused until
+  the notice has been confirmed once, and the confirmation is stored.
+- **The receiver runs as `pibuz.service`** (a system unit, `User=pi`), with its
+  config under `/var/lib/gexis-qobuz`. `audio.device output`,
+  `audio.cache_to_disk false`, and the control API bound to `127.0.0.1`,
+  because Pibuz's default is the whole LAN (Finding 094). Device name: the
+  player's name (ADR-0048).
+- **The adapter** (`gexis-qobuz`, public, the ADR-0084 contract) reads
+  `GET /api/events` (SSE) for state, track, volume and session, and drives
+  `/api/playback/*`:
+  - **Acquisition** is Pibuz going `loading` or `playing`. It is reported to the
+    core at once. Pibuz retries a busy card for about six seconds, which is the
+    window in which the core releases the current holder. This fixes test 2.
+  - **Release** is pause, which frees the card (test 3), then stop. This fixes
+    test 1.
+  - **Metadata** comes from `TrackStarted` (title, artist, album, cover, rate,
+    depth) and position updates.
+  - **Volume** is the level `VolumeChanged` reports.
+  - **Mark:** Gexis's own disc, Q3 (`design/marks/qobuz.svg`), never Qobuz's
+    logo.
+
 ## Not decided here
 
 - Whether a backup carries the receiver's login. Probably not: re-pairing is
