@@ -1000,6 +1000,22 @@
         "surfaced": false
       },
       {
+        "key": "legal",
+        "type": "document",
+        "document": "legal",
+        "label": "Legal",
+        "marks": "R",
+        "note": "The player's licence, the licences of everything it is built from, and what it is not responsible for."
+      },
+      {
+        "key": "credits",
+        "type": "document",
+        "document": "credits",
+        "label": "Credits",
+        "marks": "R",
+        "note": "Everyone whose work is in the player."
+      },
+      {
         "key": "power",
         "type": "action",
         "label": "Reboot or shut down",

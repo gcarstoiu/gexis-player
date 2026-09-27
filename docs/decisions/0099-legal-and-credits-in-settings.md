@@ -4,7 +4,7 @@
 settings: 1. Legal disclaimer -> that covers not only this, but in general the
 entire player, the license scheme, what we took from other repository based on
 their licenses etc. 2. Credits -> whatever contributed to the player needs to
-be credited and acknowledged for their work."* **Building.**
+be credited and acknowledged for their work."* **Built; wording and six findings with George.**
 **Date:** 2026-09-27
 
 ## Decision
@@ -33,6 +33,47 @@ be credited and acknowledged for their work."* **Building.**
 5. **The wording is George's to approve, and it is not legal advice.** Claude
    drafts it; George reviews it before it ships.
 
-## How (as built - filled in when it is)
+## How (as built, 2026-09-27)
 
-Not yet built.
+- **`core/src/gexis_core/notices.json`** holds 45 components, each with a name,
+  role, author, licence, link, how it arrives, and a group. It also holds both
+  pages' prose, which is **drafted and awaiting George's approval**.
+  `notices.py` builds each page from it and serves it at `/notices/legal` and
+  `/notices/credits`. `python -m gexis_core.notices` writes `THIRD-PARTY.md`.
+- **A `document` row type** opens a full-screen reader on the panel, built like
+  the skin picker. It has been checked through the API and the build; **nobody
+  has seen it on the panel yet.**
+- **`core/tests/test_notices.py` fails the build** when a stage fetches a URL,
+  installs a Debian package, or bundles a UI or Python dependency that has no
+  entry, or when `THIRD-PARTY.md` is stale. To prove it can fail, go-librespot
+  and Samba were removed from a copy; both were caught.
+- Licences nobody read, mostly Debian packages, say *"see
+  /usr/share/doc/<package>/copyright"* rather than a name.
+
+## Found while building it: open, and George's to decide
+
+A research pass over everything the image contains (2026-09-27) found:
+
+1. **Plexamp is included in the image, and our right to redistribute it is not
+   established.** The stage copies Plex's proprietary tarball, BASS libraries
+   and all, into `/home/pi/plexamp`. No licence or EULA comes with it, and no
+   record here has Plex's terms. The Legal page says truthfully that it is
+   included. The alternatives are Plex's permission, or installing it on the
+   device when the user asks, as ADR-0098 does for Qobuz.
+2. **go-librespot** is an unofficial Spotify client shipped in the image. That
+   is the ground on which ADR-0098 kept Qobuz's receiver out.
+3. **The image's GPL obligations have no written offer of source.** That covers
+   the kernel, squeezelite, Samba, go-librespot, and our modified peppyalsa
+   (which also needs its GPL §5a "modified" notice, now on the Legal page).
+4. **Some licence texts do not reach the device:**
+   - OFL for Nunito Sans and IBM Plex Mono
+   - MIT for Svelte, Beszel, and foonerd's screensaver and templates
+   - Apache NOTICE files for yarl and propcache
+   - go-librespot ships with no licence text.
+
+   Shipping the texts under `/usr/share/doc/gexis-player/` would cure these.
+5. **The Spotify, Bluetooth and Lyrion marks** came from Claude Design with no
+   recorded source.
+6. **`design/assets/album-art.webp` and `artist-photo.webp`** are photographs
+   of real people with no recorded source. They are committed to the public
+   repository, though not shipped.

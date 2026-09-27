@@ -27,7 +27,9 @@ SEED_PATH = Path("/etc/gexis/settings-seed.json")
 #: - except for `kind: "server"`, which `validate` admits on its own; see
 #: there for why one shape of list stores a value and the others do not.
 SETTABLE = {"toggle", "choice", "number", "text", "multi"}
-TYPES = SETTABLE | {"readonly", "action", "group", "list"}
+#: `document` opens a page to read and holds no value (ADR-0099): Legal and
+#: Credits, whose text the core serves at `/notices/<document>`.
+TYPES = SETTABLE | {"readonly", "action", "group", "list", "document"}
 TEXT_MAX = 500
 
 #: `onlyWhen: [key, value]` hides a row unless that key holds that value.

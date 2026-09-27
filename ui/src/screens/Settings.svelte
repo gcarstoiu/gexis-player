@@ -39,6 +39,10 @@
   // A full-screen chooser instead of a sheet, for a choice too large for
   // 560px (ADR-0044 §5). Holds the row's key, like `sheetKey`.
   let pickerKey = $state(null);
+  // ADR-0099: a `document` row opens a page to read (Legal, Credits).
+  let docKey = $state(null);
+  let docPage = $state(null);
+  let docError = $state(null);
   //: Which row the pane is showing. **Not the value**: tapping a row in the
   //: picker previews it and nothing else, and the write happens on the
   //: button under the preview (design, 2026-09-22). On a wide screen the
@@ -241,7 +245,7 @@
       const n = (row.items ?? []).length;
       return n ? `${n} paired` : 'None';
     }
-    if (v === null || v === undefined) return row.type === 'action' ? '' : '—';
+    if (v === null || v === undefined) return row.type === 'action' || row.type === 'document' ? '' : '—';
     if (row.type === 'number') {
       return withUnit(numeral(Number(v), row.step).replace('-', MINUS), row.unit);
     }
@@ -260,8 +264,22 @@
     );
   }
 
+  async function openDocument(row) {
+    docKey = row.key;
+    docPage = null;
+    docError = null;
+    try {
+      const res = await fetch(`/notices/${encodeURIComponent(row.document)}`);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      docPage = await res.json();
+    } catch (e) {
+      docError = 'This page could not be loaded.';
+    }
+  }
+
   function tap(row) {
-    if (row.type === 'toggle') write(row, !row.value);
+    if (row.type === 'document') openDocument(row);
+    else if (row.type === 'toggle') write(row, !row.value);
     // 84 visual things cannot be chosen from a 560px list, so a `picker` row
     // opens full screen instead of a sheet (ADR-0044 §5).
     else if (row.picker) {
@@ -693,6 +711,58 @@
        four-across grid it replaces made 84 tiles too small to judge and too
        large to scan, and drew every preview at once. Here one is fetched,
        when a row is tapped. -->
+  {#if docKey}
+    {@const docRow = rowOf(docKey)}
+    <div class="picker">
+      <div class="weave"></div>
+      <div class="veil"></div>
+      <div class="picker__head" class:head--wide={wide}>
+        <button
+          class="back"
+          class:is-pressed={press.is('doc-back')}
+          type="button"
+          aria-label="Back"
+          onpointerdown={() => press.down('doc-back')}
+          onpointerup={press.up}
+          onpointercancel={press.up}
+          onclick={() => press.act(() => (docKey = null))}
+        ><span></span></button>
+        <div class="head__text">
+          <div class="title" class:title--wide={wide}>{docPage?.title ?? docRow?.label}</div>
+          {#if docPage?.updated}<div class="subtitle">Updated {docPage.updated}</div>{/if}
+        </div>
+      </div>
+      <div class="picker__body">
+        <div class="doc" class:doc--wide={wide} data-noscrollbar>
+          {#if docError}
+            <p class="doc__p">{docError}</p>
+          {:else if !docPage}
+            <p class="doc__p">Loading…</p>
+          {:else}
+            {#each docPage.sections as section, i (i)}
+              {#if section.heading}<h2 class="doc__h">{section.heading}</h2>{/if}
+              {#each section.paragraphs as paragraph, j (j)}
+                <p class="doc__p">{paragraph}</p>
+              {/each}
+              {#if section.entries}
+                <ul class="doc__list">
+                  {#each section.entries as entry, k (k)}
+                    <li class="doc__entry">
+                      <div class="doc__name">{entry.name}{#if entry.licence}<span class="doc__licence">{entry.licence}</span>{/if}</div>
+                      {#if entry.role}<div class="doc__line">{entry.role}</div>{/if}
+                      {#if entry.author}<div class="doc__line doc__muted">{entry.author}</div>{/if}
+                      {#if entry.url}<div class="doc__line doc__muted doc__url">{entry.url}</div>{/if}
+                    </li>
+                  {/each}
+                </ul>
+              {/if}
+            {/each}
+          {/if}
+        </div>
+      </div>
+    </div>
+  {/if}
+
   {#if picker}
     {@const options = picker.options ?? []}
     {@const inUse = picker.value == null ? null : String(picker.value)}
@@ -1997,6 +2067,40 @@
     flex-direction: column;
     overflow: hidden;
   }
+  /* ADR-0099: Legal and Credits, read on the panel as on a phone. Links
+     are shown, not followed: the kiosk has nowhere to go. */
+  .doc {
+    width: 100%;
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding: 12px 24px 32px;
+    box-sizing: border-box;
+    color: var(--ink);
+  }
+  .doc--wide { padding: 18px 64px 40px; }
+  .doc__h {
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--ink);
+    margin: 22px 0 8px;
+  }
+  .doc__p { font-size: 15px; line-height: 1.5; margin: 0 0 10px; }
+  .doc__list { list-style: none; margin: 0; padding: 0; }
+  .doc__entry {
+    padding: 10px 0;
+    border-bottom: 1px solid rgba(233, 238, 242, 0.07);
+  }
+  .doc__name { font-size: 15px; font-weight: 600; color: var(--ink); }
+  .doc__licence {
+    margin-left: 10px;
+    font-size: 12px;
+    font-weight: 500;
+    opacity: 0.7;
+  }
+  .doc__line { font-size: 13px; line-height: 1.45; }
+  .doc__muted { color: var(--ink-quiet); }
+  .doc__url { word-break: break-all; }
   .picker__head {
     position: relative;
     flex-shrink: 0;

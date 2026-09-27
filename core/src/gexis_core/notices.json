@@ -1,0 +1,632 @@
+{
+  "_about": "ADR-0099: the one source for Settings -> Legal and Settings -> Credits, and for THIRD-PARTY.md. Every component the image ships, fetches, lets the user install, or was reimplemented from has an entry; core/tests/test_notices.py fails the build when one is missing. The prose is a draft until George approves it; it is not legal advice.",
+  "updated": "2026-09-27",
+  "documents": {
+    "legal": {
+      "title": "Legal",
+      "sections": [
+        {
+          "heading": "Gexis Player",
+          "paragraphs": [
+            "Gexis Player is free software: you can redistribute it and modify it under the terms of the GNU General Public License, version 3 or (at your option) any later version, as published by the Free Software Foundation. Its source is at github.com/gcarstoiu/gexis-player.",
+            "It is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for details. You use it at your own risk, including any risk to your equipment and your hearing."
+          ]
+        },
+        {
+          "heading": "What it is built from",
+          "paragraphs": [
+            "The player is assembled from other people's work, each under its own licence. Each is listed below with its licence and where it comes from. Where a licence asks for its notice to be kept, it is kept in the component's own files on the device."
+          ],
+          "components": [
+            "system",
+            "renderer",
+            "visualiser",
+            "ui",
+            "core",
+            "build"
+          ]
+        },
+        {
+          "heading": "Skins, fonts and pictures",
+          "paragraphs": [],
+          "components": [
+            "skins",
+            "fonts",
+            "marks"
+          ]
+        },
+        {
+          "heading": "Proprietary software",
+          "paragraphs": [
+            "Plexamp is Plex's own software, not free software. It is downloaded from Plex when the image is built, is included in it, and is used under Plex's terms, not under the player's licence."
+          ],
+          "components": [
+            "downloaded"
+          ]
+        },
+        {
+          "heading": "Unofficial clients",
+          "paragraphs": [
+            "Qobuz Connect is not part of the player. If you choose to install it, Settings downloads Pibuz, an independent open-source receiver, from its author's own release. Pibuz is not made, affiliated with, endorsed or certified by Qobuz. It may stop working at any time. Using it may not be permitted by Qobuz's terms of service. You install and use it at your own risk and on your own Qobuz account. Uninstalling it removes it from the device."
+          ],
+          "components": [
+            "user-installed"
+          ]
+        },
+        {
+          "heading": "Services the player contacts",
+          "paragraphs": [
+            "To show pictures, weather and information about what you play, the player asks the services below. It sends only what each request needs, such as an artist's name or your approximate location for the weather. It sends no account details of yours to any of them."
+          ],
+          "components": [
+            "services"
+          ]
+        },
+        {
+          "heading": "Trademarks",
+          "paragraphs": [
+            "Names and logos such as Spotify, Qobuz, Plex and Plexamp, Bluetooth, Lyrion, Raspberry Pi and HiFiBerry are trademarks of their owners. They are used here only to name the service or product they belong to. Their use does not mean that any of their owners endorses this player, or is affiliated with it."
+          ]
+        }
+      ]
+    },
+    "credits": {
+      "title": "Credits",
+      "sections": [
+        {
+          "heading": null,
+          "paragraphs": [
+            "Gexis Player stands on the work of many people who gave it away. Thank you."
+          ]
+        },
+        {
+          "heading": "Sound",
+          "paragraphs": [],
+          "components": [
+            "renderer",
+            "system"
+          ]
+        },
+        {
+          "heading": "The visualiser",
+          "paragraphs": [],
+          "components": [
+            "visualiser",
+            "skins",
+            "fonts"
+          ]
+        },
+        {
+          "heading": "The screens",
+          "paragraphs": [],
+          "components": [
+            "ui",
+            "marks"
+          ]
+        },
+        {
+          "heading": "Under the hood",
+          "paragraphs": [],
+          "components": [
+            "core",
+            "build"
+          ]
+        },
+        {
+          "heading": "Pictures and information",
+          "paragraphs": [],
+          "components": [
+            "services"
+          ]
+        }
+      ]
+    }
+  },
+  "components": [
+    {
+      "name": "Raspberry Pi OS Lite (Debian trixie)",
+      "group": "system",
+      "role": "The operating system: kernel, firmware, drivers, networking, Bluetooth.",
+      "author": "Raspberry Pi Ltd and the Debian project",
+      "licence": "Many; each package's own, in /usr/share/doc/<package>/copyright",
+      "url": "https://www.raspberrypi.com/software/",
+      "arrives": "The base of the image, built by pi-gen",
+      "packages": []
+    },
+    {
+      "name": "ALSA utilities and library",
+      "group": "system",
+      "role": "The sound system's tools and library; volume control.",
+      "author": "The ALSA project",
+      "licence": "See /usr/share/doc/alsa-utils/copyright on the device",
+      "url": "https://www.alsa-project.org",
+      "arrives": "Debian package",
+      "packages": [
+        "alsa-utils"
+      ]
+    },
+    {
+      "name": "bluez-alsa",
+      "group": "system",
+      "role": "Plays music sent from a phone over Bluetooth.",
+      "author": "Arkadiusz Bokowy and contributors",
+      "licence": "See /usr/share/doc/bluez-alsa-utils/copyright on the device",
+      "url": "https://github.com/arkq/bluez-alsa",
+      "arrives": "Debian package",
+      "packages": [
+        "bluez-alsa-utils"
+      ]
+    },
+    {
+      "name": "BlueZ tools and rfkill",
+      "group": "system",
+      "role": "Bluetooth pairing and radio control.",
+      "author": "The BlueZ project and util-linux",
+      "licence": "See /usr/share/doc/bluez-tools/copyright on the device",
+      "url": "https://www.bluez.org",
+      "arrives": "Debian packages",
+      "packages": [
+        "bluez-tools",
+        "rfkill"
+      ]
+    },
+    {
+      "name": "Samba",
+      "group": "system",
+      "role": "Shares the pictures folder on the network.",
+      "author": "The Samba Team",
+      "licence": "See /usr/share/doc/samba/copyright on the device",
+      "url": "https://www.samba.org",
+      "arrives": "Debian package",
+      "packages": [
+        "samba"
+      ]
+    },
+    {
+      "name": "labwc",
+      "group": "system",
+      "role": "The window compositor behind the panel.",
+      "author": "Johan Malm and contributors",
+      "licence": "See /usr/share/doc/labwc/copyright on the device",
+      "url": "https://labwc.github.io",
+      "arrives": "Debian package",
+      "packages": [
+        "labwc"
+      ]
+    },
+    {
+      "name": "swaybg and wlrctl",
+      "group": "system",
+      "role": "The panel's background, and window control for the visualiser.",
+      "author": "The Sway project; Aleksei Bavshin",
+      "licence": "See /usr/share/doc/swaybg/copyright on the device",
+      "url": "https://github.com/swaywm/swaybg",
+      "arrives": "Debian packages",
+      "packages": [
+        "swaybg",
+        "wlrctl"
+      ]
+    },
+    {
+      "name": "Chromium",
+      "group": "system",
+      "role": "Draws the panel's screens.",
+      "author": "The Chromium authors",
+      "licence": "See /usr/share/doc/chromium/copyright on the device",
+      "url": "https://www.chromium.org",
+      "arrives": "Raspberry Pi OS package",
+      "packages": [
+        "chromium"
+      ]
+    },
+    {
+      "name": "Plymouth",
+      "group": "system",
+      "role": "The boot screen.",
+      "author": "The Plymouth authors",
+      "licence": "See /usr/share/doc/plymouth/copyright on the device",
+      "url": "https://www.freedesktop.org/wiki/Software/Plymouth/",
+      "arrives": "Debian packages",
+      "packages": [
+        "plymouth",
+        "plymouth-themes"
+      ]
+    },
+    {
+      "name": "Node.js",
+      "group": "system",
+      "role": "Runs Plexamp.",
+      "author": "The Node.js project",
+      "licence": "See /usr/share/doc/nodejs/copyright on the device",
+      "url": "https://nodejs.org",
+      "arrives": "Debian package",
+      "packages": [
+        "nodejs"
+      ]
+    },
+    {
+      "name": "Build tools left in the image",
+      "group": "system",
+      "role": "Compile peppyalsa on the device image: GCC, make, autotools, git, ALSA and FFTW headers.",
+      "author": "The GNU project, FFTW and others",
+      "licence": "Each package's own, in /usr/share/doc/<package>/copyright",
+      "url": "https://www.debian.org",
+      "arrives": "Debian packages",
+      "packages": [
+        "build-essential",
+        "automake",
+        "libtool",
+        "git",
+        "libasound2-dev",
+        "libfftw3-dev"
+      ],
+      "credit": false
+    },
+    {
+      "name": "squeezelite",
+      "group": "renderer",
+      "role": "Plays what Lyrion Music Server sends.",
+      "author": "Adrian Smith, Ralph Irving and contributors",
+      "licence": "See /usr/share/doc/squeezelite/copyright on the device",
+      "url": "https://github.com/ralph-irving/squeezelite",
+      "arrives": "Debian package",
+      "packages": [
+        "squeezelite"
+      ]
+    },
+    {
+      "name": "go-librespot",
+      "group": "renderer",
+      "role": "Makes the player a Spotify Connect device.",
+      "author": "devgianlu and contributors",
+      "licence": "GPL-3.0",
+      "url": "https://github.com/devgianlu/go-librespot",
+      "arrives": "Fetched from its release when the image is built, checked against a pinned checksum",
+      "sources": [
+        "github.com/devgianlu/go-librespot"
+      ]
+    },
+    {
+      "name": "gexis-plexamp",
+      "group": "renderer",
+      "role": "Connects Plexamp to the player.",
+      "author": "George Carstoiu",
+      "licence": "GPL-3.0-or-later",
+      "url": "https://github.com/gcarstoiu/gexis-plexamp",
+      "arrives": "Fetched from its release when the image is built, checked against a pinned checksum",
+      "sources": [
+        "github.com/gcarstoiu/gexis-plexamp"
+      ]
+    },
+    {
+      "name": "Beszel agent",
+      "group": "system",
+      "role": "Optional system monitoring, off unless you switch it on.",
+      "author": "henrygd",
+      "licence": "MIT",
+      "url": "https://github.com/henrygd/beszel",
+      "arrives": "Fetched from its release when the image is built, checked against a pinned checksum",
+      "sources": [
+        "github.com/henrygd/beszel"
+      ]
+    },
+    {
+      "name": "PeppyMeter",
+      "group": "visualiser",
+      "role": "The needle meters of the visualiser.",
+      "author": "project-owner (Peppy), with the foonerd fork",
+      "licence": "GPL-3.0-or-later",
+      "url": "https://github.com/foonerd/PeppyMeter",
+      "arrives": "Fetched at a pinned commit when the image is built",
+      "sources": [
+        "codeload.github.com/foonerd/PeppyMeter"
+      ]
+    },
+    {
+      "name": "PeppySpectrum",
+      "group": "visualiser",
+      "role": "The spectrum bars of the visualiser.",
+      "author": "project-owner (Peppy), with the foonerd fork",
+      "licence": "GPL-3.0",
+      "url": "https://github.com/foonerd/PeppySpectrum",
+      "arrives": "Fetched at a pinned commit when the image is built",
+      "sources": [
+        "codeload.github.com/foonerd/PeppySpectrum"
+      ]
+    },
+    {
+      "name": "peppyalsa",
+      "group": "visualiser",
+      "role": "Feeds the music's levels to the visualiser. Modified here: one write per frame.",
+      "author": "project-owner (Peppy)",
+      "licence": "GPL-3.0 (modified by Gexis Player; the change is in image/stage-gexis/00-alsa/files)",
+      "url": "https://github.com/project-owner/peppyalsa",
+      "arrives": "Built from a pinned commit with our patch when the image is built",
+      "sources": [
+        "github.com/project-owner/peppyalsa"
+      ]
+    },
+    {
+      "name": "PeppyMeter screensaver for Volumio",
+      "group": "visualiser",
+      "role": "The turntable, tape, progress and icon behaviour our visualiser reimplements, and the stock skins.",
+      "author": "foonerd; originally 2aCD; with Wheaten",
+      "licence": "MIT (2aCD's original ISC)",
+      "url": "https://github.com/foonerd/peppy_screensaver",
+      "arrives": "Fetched at a pinned commit when the image is built; its designs reimplemented in our own code",
+      "sources": [
+        "codeload.github.com/foonerd/peppy_screensaver"
+      ]
+    },
+    {
+      "name": "Gelo5 skins",
+      "group": "skins",
+      "role": "The 84 meter and spectrum skins.",
+      "author": "Gelo5",
+      "licence": "No terms of their own; distributed under their hosting repository's GPL-3.0",
+      "url": "https://github.com/project-owner/PeppyMeter.doc",
+      "arrives": "Fetched from a pinned release when the image is built",
+      "sources": [
+        "github.com/project-owner/PeppyMeter.doc"
+      ]
+    },
+    {
+      "name": "Turntable, tape and cassette skins",
+      "group": "skins",
+      "role": "The 90 animated skins.",
+      "author": "Gelo5 and Pakit S, collected by foonerd",
+      "licence": "No terms of their own; distributed under their hosting repository's MIT licence",
+      "url": "https://github.com/foonerd/peppy_templates",
+      "arrives": "Fetched at a pinned commit when the image is built, letterboxed to the panel",
+      "sources": [
+        "raw.githubusercontent.com/foonerd/peppy_templates"
+      ]
+    },
+    {
+      "name": "DSEG7",
+      "group": "fonts",
+      "role": "The seven-segment digits of the visualiser's clocks.",
+      "author": "keshikan",
+      "licence": "OFL-1.1",
+      "url": "https://github.com/keshikan/DSEG",
+      "arrives": "Fetched from its release when the image is built",
+      "sources": [
+        "github.com/keshikan/DSEG"
+      ]
+    },
+    {
+      "name": "Nunito Sans",
+      "group": "fonts",
+      "role": "The panel's text.",
+      "author": "The Nunito Sans Project Authors",
+      "licence": "OFL-1.1",
+      "url": "https://fonts.google.com/specimen/Nunito+Sans",
+      "arrives": "Bundled into the panel's screens",
+      "packages": [
+        "@fontsource-variable/nunito-sans"
+      ]
+    },
+    {
+      "name": "IBM Plex Mono",
+      "group": "fonts",
+      "role": "The panel's figures and labels.",
+      "author": "IBM Corp.",
+      "licence": "OFL-1.1",
+      "url": "https://github.com/IBM/plex",
+      "arrives": "Bundled into the panel's screens",
+      "packages": [
+        "@fontsource/ibm-plex-mono"
+      ]
+    },
+    {
+      "name": "DejaVu fonts",
+      "group": "fonts",
+      "role": "The visualiser's titles.",
+      "author": "The DejaVu fonts team",
+      "licence": "See /usr/share/doc/fonts-dejavu-core/copyright on the device",
+      "url": "https://dejavu-fonts.github.io",
+      "arrives": "Debian package"
+    },
+    {
+      "name": "Bricolage Grotesque and DM Mono",
+      "group": "fonts",
+      "role": "Drawn into the boot screen.",
+      "author": "The Bricolage Grotesque Project Authors; Colophon Foundry",
+      "licence": "OFL-1.1",
+      "url": "https://fonts.google.com",
+      "arrives": "Rendered into a picture when the boot screen was made"
+    },
+    {
+      "name": "Spotify, Bluetooth and Lyrion marks",
+      "group": "marks",
+      "role": "Show which source is playing.",
+      "author": "Spotify AB; Bluetooth SIG; the Lyrion project",
+      "licence": "Trademarks of their owners, used only to name them",
+      "url": "https://github.com/gcarstoiu/gexis-player",
+      "arrives": "Included in the player",
+      "credit": false
+    },
+    {
+      "name": "Plex chevron",
+      "group": "marks",
+      "role": "Shows that Plexamp is playing.",
+      "author": "Plex, Inc.; drawn from the Wikimedia Commons file 'Plex logo 2022.svg'",
+      "licence": "Trademark of Plex, Inc.; the drawing is public domain as a text logo",
+      "url": "https://commons.wikimedia.org/wiki/File:Plex_logo_2022.svg",
+      "arrives": "Included in gexis-plexamp",
+      "credit": false
+    },
+    {
+      "name": "Svelte",
+      "group": "ui",
+      "role": "The framework the panel's screens are written in.",
+      "author": "The Svelte contributors",
+      "licence": "MIT",
+      "url": "https://svelte.dev",
+      "arrives": "Bundled into the panel's screens",
+      "packages": [
+        "svelte"
+      ]
+    },
+    {
+      "name": "Vite",
+      "group": "build",
+      "role": "Builds the panel's screens.",
+      "author": "Evan You and the Vite contributors",
+      "licence": "MIT",
+      "url": "https://vite.dev",
+      "arrives": "Used to build; a small part is bundled",
+      "packages": [
+        "vite"
+      ]
+    },
+    {
+      "name": "aiohttp",
+      "group": "core",
+      "role": "The player's web server and its connections to services.",
+      "author": "The aio-libs team",
+      "licence": "Apache-2.0 and MIT (llhttp); with yarl, multidict, frozenlist, aiosignal and propcache (Apache-2.0), aiohappyeyeballs (PSF-2.0), attrs (MIT) and idna (BSD-3-Clause)",
+      "url": "https://github.com/aio-libs/aiohttp",
+      "arrives": "Installed from PyPI when the image is built",
+      "packages": [
+        "aiohttp"
+      ]
+    },
+    {
+      "name": "dbus-next",
+      "group": "core",
+      "role": "Talks to Bluetooth.",
+      "author": "Tony Crisci",
+      "licence": "MIT",
+      "url": "https://github.com/altdesktop/python-dbus-next",
+      "arrives": "Installed from PyPI when the image is built",
+      "packages": [
+        "dbus-next"
+      ]
+    },
+    {
+      "name": "Pygame and Pillow",
+      "group": "core",
+      "role": "Draw the visualiser.",
+      "author": "The pygame community; Jeffrey A. Clark and the Pillow contributors",
+      "licence": "See /usr/share/doc/python3-pygame/copyright on the device",
+      "url": "https://www.pygame.org",
+      "arrives": "Debian packages",
+      "packages": [
+        "python3-pygame",
+        "python3-pil"
+      ]
+    },
+    {
+      "name": "pi-gen",
+      "group": "build",
+      "role": "Builds the image.",
+      "author": "Raspberry Pi Ltd",
+      "licence": "BSD-3-Clause",
+      "url": "https://github.com/RPi-Distro/pi-gen",
+      "arrives": "Used to build"
+    },
+    {
+      "name": "Claude",
+      "group": "build",
+      "role": "Designed the screens with George, and wrote much of the code.",
+      "author": "Anthropic",
+      "licence": "Output owned by the project",
+      "url": "https://www.anthropic.com/claude",
+      "arrives": "Used to design and build"
+    },
+    {
+      "name": "Plexamp",
+      "group": "downloaded",
+      "role": "Plays Plex and Plexamp music.",
+      "author": "Plex, Inc.",
+      "licence": "Proprietary; Plex's terms. Includes BASS audio libraries by Un4seen Developments",
+      "url": "https://www.plex.tv/plexamp/",
+      "arrives": "Downloaded from Plex when the image is built and included in it",
+      "sources": [
+        "plexamp.plex.tv"
+      ]
+    },
+    {
+      "name": "Pibuz",
+      "group": "user-installed",
+      "role": "Qobuz Connect, only if you install it from Settings.",
+      "author": "Filippo Vicentini, from QBZ by vicrodh",
+      "licence": "MIT",
+      "url": "https://github.com/PhilipVinc/pibuz",
+      "arrives": "Not included. Downloaded from its author's release when you choose to install it"
+    },
+    {
+      "name": "MusicBrainz and the Cover Art Archive",
+      "group": "services",
+      "role": "Album, artist and cover information.",
+      "author": "The MetaBrainz Foundation",
+      "licence": "Core data CC0; covers belong to their owners",
+      "url": "https://musicbrainz.org",
+      "arrives": "Contacted at run time"
+    },
+    {
+      "name": "ListenBrainz",
+      "group": "services",
+      "role": "What is popular in your library.",
+      "author": "The MetaBrainz Foundation",
+      "licence": "Its terms",
+      "url": "https://listenbrainz.org",
+      "arrives": "Contacted at run time"
+    },
+    {
+      "name": "Wikipedia and Wikidata",
+      "group": "services",
+      "role": "Artist biographies.",
+      "author": "Wikipedia's editors",
+      "licence": "Text CC BY-SA; Wikidata CC0",
+      "url": "https://www.wikipedia.org",
+      "arrives": "Contacted at run time"
+    },
+    {
+      "name": "LRCLIB",
+      "group": "services",
+      "role": "Lyrics.",
+      "author": "The LRCLIB contributors",
+      "licence": "No licence stated for the lyrics",
+      "url": "https://lrclib.net",
+      "arrives": "Contacted at run time"
+    },
+    {
+      "name": "fanart.tv",
+      "group": "services",
+      "role": "Artist portraits and album covers, with your own key.",
+      "author": "The fanart.tv community",
+      "licence": "Its terms",
+      "url": "https://fanart.tv",
+      "arrives": "Contacted at run time"
+    },
+    {
+      "name": "Open-Meteo",
+      "group": "services",
+      "role": "The weather on the idle screen.",
+      "author": "Open-Meteo.com",
+      "licence": "CC BY 4.0",
+      "url": "https://open-meteo.com",
+      "arrives": "Contacted at run time"
+    },
+    {
+      "name": "Pixabay",
+      "group": "services",
+      "role": "Wallpapers, with your own key.",
+      "author": "Pixabay and its photographers",
+      "licence": "Its content licence",
+      "url": "https://pixabay.com",
+      "arrives": "Contacted at run time"
+    },
+    {
+      "name": "Lyrion Music Server",
+      "group": "services",
+      "role": "Your music library, on your own server.",
+      "author": "The Lyrion community",
+      "licence": "GPL-2.0, not included",
+      "url": "https://lyrion.org",
+      "arrives": "Contacted at run time"
+    }
+  ]
+}
