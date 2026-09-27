@@ -124,6 +124,9 @@ MOTION_KEYS = {
     "reel.left.center", "reel.left.filename", "reel.left.pos",
     "reel.right.center", "reel.right.filename", "reel.right.pos",
 }
+#: **Keys only the animated packs use, drawn as the skin says**: the clock's
+#: own size, which 66 of their 90 skins set apart from the digi face.
+ANIMATED_TEXT_KEYS = {"time.remaining.fontsize"}
 #: **Keys the animated packs use and the renderer knowingly does not draw
 #: yet** - George's decision 3 in ADR-0096: the motion first, these later.
 #: Listed rather than waved through, so a key that is neither drawn nor
@@ -133,7 +136,7 @@ DEFERRED_PREFIXES = (
     "playinfo.next.", "playinfo.ticker", "time.elapsed.", "time.total.",
 )
 DEFERRED_KEYS = {
-    "time.remaining.font", "time.remaining.fontsize",
+    "time.remaining.font",
     "playinfo.samplerate.color", "playinfo.samplerate.maxwidth",
 }
 
@@ -247,7 +250,7 @@ def validate(meters: list[Skin], spectrum: list[Skin] | None = None,
             continue
         allowed = COMMON_KEYS | (CIRCULAR_KEYS if skin.meter_type == CIRCULAR else LINEAR_KEYS)
         if animated:
-            allowed = allowed | MOTION_KEYS
+            allowed = allowed | MOTION_KEYS | ANIMATED_TEXT_KEYS
         unknown = set(skin.options) - allowed
         if animated:
             unknown = {key for key in unknown if not deferred(key)}

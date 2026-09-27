@@ -384,8 +384,15 @@ class MetadataLayer:
                 return int(screen_width * CENTRED_BOX_SHARE)
             return max(0, screen_width - point[0] - RIGHT_MARGIN)
 
+        def own_size(key: str | None) -> int:
+            try:
+                return int(skin.get(key) or 0) if key else 0
+            except ValueError:
+                return 0
+
         def field(key: str, text: str | None, colour_key: str | None = None, width_key: str | None = None,
-                  weight: str | None = None, override_colour=None, stratum: str = "text"):
+                  weight: str | None = None, override_colour=None, stratum: str = "text",
+                  size_key: str | None = None):
             point = parse_point(skin.get(key))
             if point is None:
                 return None
@@ -396,7 +403,7 @@ class MetadataLayer:
                 text,
                 point,
                 override_colour or (parse_colour(skin.get(colour_key), colour) if colour_key else colour),
-                sizes.get(point[2], sizes["regular"]),
+                own_size(size_key) or sizes.get(point[2], sizes["regular"]),
                 box_width(point, own_width) if width_key else 0,
                 stratum,
             )
@@ -414,6 +421,10 @@ class MetadataLayer:
                 weight="digi",
                 override_colour=FINAL_SECONDS_COLOUR if 0 < remaining_seconds(metadata, -1) <= FINAL_SECONDS else None,
                 stratum="meta",
+                # The turntable and tape skins size their clock apart from
+                # the digi face (66 of the 90; none of the 99 others): the
+                # Sansui cassette's digits ran into its meter at 45 px.
+                size_key="time.remaining.fontsize",
             ),
             # The source is a badge, not text: see _badge_rect.
             # playinfo.samplerate.pos is never filled: no sample rate and no

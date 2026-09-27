@@ -512,3 +512,20 @@ def test_laid_out_for_the_motion_layer_it_leaves_the_screen_alone(layer, screen)
     # And the next ordinary draw paints again.
     layer.draw(full(title="Another"))
     assert layer._painting
+
+
+def test_the_time_takes_the_skins_own_size_when_it_gives_one(screen, tmp_path):
+    """66 of the animated skins size their clock apart from the digi face;
+    at the face's 45 px the Sansui cassette's digits ran into its meter."""
+    background = pygame.Surface((1280, 800))
+    pygame.image.save(background, str(tmp_path / "bgr.png"))
+    heights = {}
+    for size in (None, "20"):
+        skin = dict(SKIN, **{"font.size.digi": "45", "time.remaining.pos": "900,500"})
+        if size:
+            skin["time.remaining.fontsize"] = size
+        made = MetadataLayer(screen, tmp_path)
+        made.set_skin(skin)
+        made.draw(full(position=30.0, duration=200.0))
+        heights[size] = next(r for r in made._painted if (r.x, r.y) == (900, 500)).height
+    assert heights["20"] < heights[None]
