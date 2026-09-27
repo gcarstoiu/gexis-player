@@ -133,8 +133,11 @@ class Spinner:
     def advance(self, seconds: float) -> None:
         self.angle = (self.angle + self.rpm * 6.0 * seconds * self.sign) % 360.0
 
+    def frame_index(self) -> int:
+        return int(self.angle // SPIN_STEP_DEG) % len(self._frames)
+
     def draw(self, screen: pygame.Surface) -> None:
-        index = int(self.angle // SPIN_STEP_DEG) % len(self._frames)
+        index = self.frame_index()
         frame = self._frames[index]
         if frame is None:
             frame = pygame.transform.rotate(self.picture, -self.angle)
@@ -263,6 +266,12 @@ class MotionLayer:
         #: George's two settings (ADR-0096 as amended, ADR-0022 [N]): whether
         #: anything moves at all, and a record's speed in place of the skin's.
         self.animate = True
+        #: ADR-0097 decision 2: redraw a turning part every frame its
+        #: picture changes, rather than eight times a second. The angle still
+        #: moves in SPIN_STEP_DEG steps - upstream's smooth mode smooths the
+        #: timing, not the angle. George's `rotation_mode` row; stepped by
+        #: default, since smooth doubles the cost.
+        self.smooth = False
         self.record_rpm: float | None = None
         self._record: Spinner | None = None
         self.spinners: list[Spinner] = []
@@ -276,11 +285,13 @@ class MotionLayer:
         self._last_tick = 0.0
         self._last_arm = 0.0
 
-    def configure(self, animate: bool, record_rpm: float | None) -> None:
+    def configure(self, animate: bool, record_rpm: float | None, smooth: bool | None = None) -> None:
         """Off, nothing advances: the record and the reels stand, and the arm
         lifts to its rest as it does on a pause. The record's speed applies to
         the record only - a tape's reels keep the skin's own."""
         self.animate = bool(animate)
+        if smooth is not None:
+            self.smooth = bool(smooth)
         self.record_rpm = record_rpm if record_rpm and record_rpm > 0 else None
         if self._record is not None and self.record_rpm is not None:
             self._record.rpm = self.record_rpm
@@ -381,13 +392,16 @@ class MotionLayer:
             spinner.build_some()
 
         regions: list[pygame.Rect] = []
-        spin_due = now - self._last_spin >= 1.0 / SPIN_FPS
+        spin_due = self.smooth or now - self._last_spin >= 1.0 / SPIN_FPS
         if spin_due and (playing or self._last_spin == 0.0):
             elapsed = min(0.5, now - self._last_spin) if self._last_spin else 0.0
             for spinner in self.spinners:
+                shown = spinner.frame_index()
                 if playing:
                     spinner.advance(elapsed)
-                regions.append(spinner.region)
+                # Smooth: only a part whose picture changed is redrawn.
+                if not self.smooth or self._last_spin == 0.0 or spinner.frame_index() != shown:
+                    regions.append(spinner.region)
             self._last_spin = now
 
         if self.arm is not None:

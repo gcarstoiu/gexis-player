@@ -24,6 +24,8 @@ from pathlib import Path
 
 import pygame
 
+from gexis_peppy_gauges import Gauge, Icon, icon_state
+
 logger = logging.getLogger("peppy.render")
 
 METADATA_PATH = Path("/run/gexis/nowplaying.json")
@@ -120,6 +122,13 @@ def parse_point(value: str | None) -> tuple[int, int, str] | None:
         return None
 
 
+def _float(value, default: float) -> float:
+    try:
+        return float(str(value).strip()) if value not in (None, "") else default
+    except ValueError:
+        return default
+
+
 def parse_colour(value: str | None, fallback=(255, 255, 255)) -> tuple[int, int, int]:
     if not value:
         return fallback
@@ -189,6 +198,68 @@ def _lyrion_reduction(box: tuple[int, int], colour) -> pygame.Surface:
     return mark
 
 
+class Ticker:
+    """**A ticker skin's line, scrolling** (ADR-0097; upstream's
+    `ScrollingLabel` in ticker mode, volumio_turntable.py:448-659).
+
+    The line is rendered once with the skin's `end_spaces` after it, twice
+    side by side, and a box-wide window slides across that strip at `speed`
+    pixels a second - leftward for `ltr`, every shipped skin's direction, and
+    rightward for `rtl` - wrapping seamlessly. A line that fits its box stands
+    still (upstream draws three copies of it there, which reads as a bug)."""
+
+    def __init__(self, speed: float, rightward: bool, end_spaces: int) -> None:
+        self.speed = speed
+        self.rightward = rightward
+        self.end_spaces = end_spaces
+        self.box: pygame.Rect | None = None
+        self._key: tuple | None = None
+        self._strip: pygame.Surface | None = None
+        self._segment = 1
+        self.scrolls = False
+        self.offset = 0.0
+        self._last: float | None = None
+        self._shown = -1
+
+    def show(self, font: pygame.font.Font, text: str, point, colour, width: int) -> pygame.Rect:
+        key = (text, tuple(point), tuple(colour), width, id(font))
+        if key == self._key and self.box is not None:
+            return self.box
+        self._key = key
+        line = font.render(text, True, colour)
+        self.box = pygame.Rect(point[0], point[1], width, line.get_height())
+        self.scrolls = line.get_width() > width
+        if self.scrolls:
+            segment = font.render(text + " " * self.end_spaces, True, colour)
+            self._segment = max(1, segment.get_width())
+            self._strip = pygame.Surface((self._segment * 2, line.get_height()), pygame.SRCALPHA)
+            self._strip.blit(segment, (0, 0))
+            self._strip.blit(segment, (self._segment, 0))
+        else:
+            self._strip = line
+        # Offset 0 is what `picture` draws first, so it counts as shown.
+        self.offset, self._last, self._shown = 0.0, None, 0
+        return self.box
+
+    def picture(self) -> pygame.Surface:
+        window = pygame.Surface(self.box.size, pygame.SRCALPHA)
+        window.blit(self._strip, (-int(self.offset), 0))
+        return window
+
+    def advance(self, now: float) -> bool:
+        """True when the window has moved by a whole pixel."""
+        if not self.scrolls or self.box is None:
+            return False
+        if self._last is not None:
+            step = self.speed * min(0.5, max(0.0, now - self._last))
+            self.offset = (self.offset + (-step if self.rightward else step)) % self._segment
+        self._last = now
+        if int(self.offset) == self._shown:
+            return False
+        self._shown = int(self.offset)
+        return True
+
+
 class MetadataLayer:
     def __init__(self, screen: pygame.Surface, corpus: Path, icon_dir: Path = ICON_DIR) -> None:
         self._screen = screen
@@ -217,6 +288,9 @@ class MetadataLayer:
         self._artwork_url: str | None = None
         self._last_drawn: tuple | None = None
         self._art_spins = False
+        self._ticker: Ticker | None = None
+        self._ticker_item: int | None = None
+        self._gauges: list[tuple[str, Gauge | Icon]] = []
 
     # ---- skin ----------------------------------------------------------
 
@@ -240,6 +314,26 @@ class MetadataLayer:
         self._items = []
         self._last_drawn = None
         self._background = None
+        self._ticker = None
+        self._ticker_item = None
+        # ADR-0097: shown, never acted on - in upstream's order: volume,
+        # mute, shuffle, repeat, play state, progress.
+        regular = int(_float(skin.get("font.size.regular"), 35))
+        built = []
+        for which in ("volume", "mute", "shuffle", "repeat", "playstate", "progress"):
+            if not skin.get(f"{which}.pos"):
+                continue
+            if which in ("volume", "progress"):
+                built.append((which, Gauge(which, skin, self._corpus, FONTS["regular"], regular)))
+            else:
+                built.append((which, Icon(which, skin, self._corpus)))
+        self._gauges = [(which, drawn) for which, drawn in built if drawn.ok]
+        if (skin.get("playinfo.ticker") or "").strip().lower() == "true":
+            self._ticker = Ticker(
+                speed=_float(skin.get("playinfo.ticker.speed"), 40.0),
+                rightward=(skin.get("playinfo.ticker.direction") or "ltr").strip().lower() == "rtl",
+                end_spaces=int(_float(skin.get("playinfo.ticker.end_spaces"), 8)),
+            )
         picture = (skin.get("screen.bgr") or "").strip()
         if not picture:
             self._background = self._meter_background(skin)
@@ -311,7 +405,8 @@ class MetadataLayer:
         if self._background is None:
             return []
         fields = self._fields(metadata)
-        fingerprint = (fields, metadata.get("source"), metadata.get("artwork"))
+        readings = self._readings(metadata)
+        fingerprint = (fields, metadata.get("source"), metadata.get("artwork"), repr(metadata.get("next")), readings)
         if fingerprint == self._last_drawn:
             return []
         self._last_drawn = fingerprint
@@ -322,6 +417,7 @@ class MetadataLayer:
                 self._screen.blit(self._background, rect, rect)
         self._painted = []
         self._items = []
+        self._ticker_item = None
         self._painting = paint
 
         # Artwork first, text last: some skins deliberately place the text
@@ -335,10 +431,19 @@ class MetadataLayer:
                 self._painted.append(rect)
                 dirty.append(rect)
 
+        for which, gauge in self._gauges:
+            for picture, where in gauge.pieces(readings.get(which)):
+                rect = self._put("meta", picture, where)
+                self._painted.append(rect)
+                dirty.append(rect)
+
         for text, point, colour, size, maxwidth, stratum in fields:
             if not text:
                 continue  # criterion 7: nothing for this field, nothing drawn
-            rect = self._text(text, point, colour, size, maxwidth, stratum)
+            if stratum == "ticker":
+                rect = self._ticker_rect(text, point, colour, size, maxwidth)
+            else:
+                rect = self._text(text, point, colour, size, maxwidth, stratum)
             if rect is not None:
                 self._painted.append(rect)
                 dirty.append(rect)
@@ -354,6 +459,53 @@ class MetadataLayer:
             if stratum in strata:
                 self._screen.blit(picture, where)
         self._screen.set_clip(clip)
+
+    def _readings(self, metadata: dict) -> dict:
+        """The values the gauges show, as whole percentages - upstream
+        truncates, so a bar moves in steps of one per cent."""
+        if not self._gauges:
+            return {}
+        elapsed, duration = elapsed_seconds(metadata), metadata.get("duration")
+        readings = {
+            "progress": min(100, int(elapsed / duration * 100)) if elapsed is not None and duration else None,
+            "volume": metadata.get("volume"),
+        }
+        for which in ("mute", "shuffle", "repeat", "playstate"):
+            readings[which] = icon_state(which, metadata)
+        return readings
+
+    def tick(self, now: float | None = None) -> list[pygame.Rect]:
+        """Every frame: the ticker's box when it has moved, for the caller
+        to compose (a moving skin) or `repaint` (a still one)."""
+        if self._ticker is None or self._ticker_item is None:
+            return []
+        if not self._ticker.advance(time.monotonic() if now is None else now):
+            return []
+        box = self._ticker.box
+        self._items[self._ticker_item] = ("text", self._ticker.picture(), box.topleft)
+        return [box.copy()]
+
+    def repaint(self, rects: list[pygame.Rect]) -> list[pygame.Rect]:
+        """A still skin's own compose: the background, then what this layer
+        drew, inside each rectangle."""
+        if self._background is None:
+            return []
+        clip = self._screen.get_clip()
+        for rect in rects:
+            self._screen.set_clip(rect)
+            self._screen.blit(self._background, rect, rect)
+            self.paint(("art", "text", "meta"), rect)
+        self._screen.set_clip(clip)
+        return rects
+
+    def _ticker_rect(self, text, point, colour, size, width) -> pygame.Rect | None:
+        if self._ticker is None:
+            return None
+        room = self._screen.get_width() - point[0]
+        width = min(width or room - RIGHT_MARGIN, room)
+        box = self._ticker.show(self.font(point[2], size), str(text), point, colour, width)
+        self._ticker_item = len(self._items)
+        return self._put("text", self._ticker.picture(), box.topleft)
 
     def _put(self, stratum: str, picture: pygame.Surface, where: tuple[int, int]) -> pygame.Rect:
         self._items.append((stratum, picture, where))
@@ -384,6 +536,10 @@ class MetadataLayer:
                 return int(screen_width * CENTRED_BOX_SHARE)
             return max(0, screen_width - point[0] - RIGHT_MARGIN)
 
+        def clock_weight(key: str) -> str:
+            value = skin.get(key) or ""
+            return value.split(",")[2].strip() if value.count(",") >= 2 else "digi"
+
         def own_size(key: str | None) -> int:
             try:
                 return int(skin.get(key) or 0) if key else 0
@@ -408,11 +564,20 @@ class MetadataLayer:
                 stratum,
             )
 
+        # A ticker that `replace`s the fields takes their place (upstream's
+        # `playinfo.ticker.replace`; every shipped skin says False).
+        replaced = self._ticker is not None and (skin.get("playinfo.ticker.replace") or "").strip().lower() == "true"
+        shown = {} if replaced else metadata
+        upcoming = {} if replaced else (metadata.get("next") or {})
         entries = [
             self._ticker_line(metadata, field),
-            field("playinfo.title.pos", metadata.get("title"), "playinfo.title.color", "playinfo.title.maxwidth"),
-            field("playinfo.artist.pos", metadata.get("artist"), "playinfo.artist.color", "playinfo.artist.maxwidth"),
-            field("playinfo.album.pos", metadata.get("album"), "playinfo.album.color", "playinfo.album.maxwidth"),
+            field("playinfo.title.pos", shown.get("title"), "playinfo.title.color", "playinfo.title.maxwidth"),
+            field("playinfo.artist.pos", shown.get("artist"), "playinfo.artist.color", "playinfo.artist.maxwidth"),
+            field("playinfo.album.pos", shown.get("album"), "playinfo.album.color", "playinfo.album.maxwidth"),
+            # ADR-0097: the track after this one, where the source has a
+            # queue (LMS); blank otherwise and at the end of it.
+            *(field(f"playinfo.next.{key}.pos", upcoming.get(key), f"playinfo.next.{key}.color",
+                    f"playinfo.next.{key}.maxwidth") for key in ("title", "artist", "album")),
             # Not a text box: drawn top-left at the position in the digi face,
             # like the wrapper, so it lines up with the label the skin paints.
             field(
@@ -427,6 +592,15 @@ class MetadataLayer:
                 # Sansui cassette's digits ran into its meter at 45 px.
                 size_key="time.remaining.fontsize",
             ),
+            # ADR-0097: elapsed and total, as upstream draws them - top-left
+            # at the position, the digi face unless the position names a
+            # weight, white unless the skin says otherwise. A stream has no
+            # duration and so no total: absent is absent.
+            *(field(
+                f"time.{which}.pos", text, weight=clock_weight(f"time.{which}.pos"),
+                override_colour=parse_colour(skin.get(f"time.{which}.color"), (255, 255, 255)),
+                stratum="meta", size_key=f"time.{which}.fontsize",
+            ) for which, text in (("elapsed", elapsed_time(metadata)), ("total", total_time(metadata)))),
             # The source is a badge, not text: see _badge_rect.
             # playinfo.samplerate.pos is never filled: no sample rate and no
             # codec renders anywhere (ADR-0036). The skins keep the position;
@@ -435,20 +609,29 @@ class MetadataLayer:
         return tuple(entry for entry in entries if entry is not None)
 
     def _ticker_line(self, metadata: dict, field):
-        """**A ticker skin's title, standing still** (ADR-0096, George's
-        choice A, 2026-09-27). 27 of the animated skins place their title only
-        as upstream's scrolling ticker; without this they showed none. Drawn
-        once as "Title • Artist • Album" in the ticker's own box, colour and
-        separator, trimmed like any field. The scroll, and the next track it
-        appends, stay deferred. A skin with a title field of its own keeps
-        that one: nine have both, and would show the title twice."""
+        """**A ticker skin's title** (ADR-0096 as amended, ADR-0097): 27 of
+        the animated skins place their title only as upstream's scrolling
+        ticker. "Title • Artist • Album" - George's order - with the skin's
+        separator and spacing, then the next track where LMS reports one;
+        `Ticker` scrolls it. A skin with a title field of its own keeps that
+        one: nine have both, and would show the title twice."""
         skin = self._skin
-        if (skin.get("playinfo.ticker") or "").strip().lower() != "true" or "playinfo.title.pos" in skin:
+        if self._ticker is None or "playinfo.title.pos" in skin:
             return None
         separator = (skin.get("playinfo.ticker.separator") or "").strip() or "•"
+        gap = " " * max(1, int(_float(skin.get("playinfo.ticker.space_between"), 1)))
+        between = f"{gap}{separator}{gap}"
         parts = [metadata.get(key) for key in ("title", "artist", "album")]
-        line = f" {separator} ".join(str(part) for part in parts if part) or None
-        return field("playinfo.ticker.pos", line, "playinfo.ticker.color", "playinfo.ticker.maxwidth")
+        line = between.join(str(part) for part in parts if part)
+        # ADR-0097: the next track where the source reports one - LMS's
+        # queue - in upstream's words, "Next: artist - title".
+        upcoming = metadata.get("next") or {}
+        if line and (skin.get("playinfo.ticker.append_next") or "").strip().lower() == "true":
+            coming = " - ".join(str(v) for v in (upcoming.get("artist"), upcoming.get("title")) if v)
+            if coming:
+                line += f"{between}Next: {coming}"
+        return field("playinfo.ticker.pos", line or None, "playinfo.ticker.color", "playinfo.ticker.maxwidth",
+                     stratum="ticker")
 
     def _text(self, text, point, colour, size, maxwidth, stratum="text") -> pygame.Rect | None:
         font = self.font(point[2], size)
@@ -581,6 +764,34 @@ def remaining_seconds(metadata: dict, default: int | None = None) -> int | None:
     if metadata.get("transport") == "playing":
         position += max(0.0, time.time() - metadata.get("written_at", time.time()))
     return max(0, int(duration - position))
+
+
+def elapsed_seconds(metadata: dict) -> int | None:
+    """Position, advanced from the last write like the time remaining."""
+    position, duration = metadata.get("position"), metadata.get("duration")
+    if position is None:
+        return None
+    if metadata.get("transport") == "playing":
+        position += max(0.0, time.time() - metadata.get("written_at", time.time()))
+    if duration:
+        position = min(position, duration)
+    return max(0, int(position))
+
+
+def clock(seconds: int | None) -> str | None:
+    """Upstream's `MM:SS`: minutes are not wrapped into hours."""
+    if seconds is None:
+        return None
+    return f"{seconds // 60:02d}:{seconds % 60:02d}"
+
+
+def elapsed_time(metadata: dict) -> str | None:
+    return clock(elapsed_seconds(metadata))
+
+
+def total_time(metadata: dict) -> str | None:
+    duration = metadata.get("duration")
+    return clock(int(duration)) if duration else None
 
 
 def remaining_time(metadata: dict) -> str | None:

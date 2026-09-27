@@ -1,5 +1,5 @@
 {
- "_about": "The slot each skin draws around its badge, where the declared playinfo.type box sits off-centre inside it - the box held a format icon with the sample rate beside it, and the sample rate is never drawn here. Measured 2026-09-26 by flood-filling each skin's composed artwork from inside the box (17 skins); six more measured by eye on 2026-09-27 after every one of the 99 skins was rendered and reviewed: 113G5_Old Spectrum S+M (found by George), 19G5_Sansui 2V and the four TURN Vinyl skins. Left alone on purpose: a slot that also holds the time (48G5_Vertical blue, 28/29G5_Technics), and badges placed on an open background. A skin absent here keeps its declared box. [x0, y0, x1, y1], screen pixels.",
+ "_about": "The slot each skin draws around its badge, where the declared playinfo.type box sits off-centre inside it - the box held a format icon with the sample rate beside it, and the sample rate is never drawn here. Measured 2026-09-26 by flood-filling each skin's composed artwork from inside the box (17 skins); six more measured by eye on 2026-09-27 after every one of the 99 skins was rendered and reviewed: 113G5_Old Spectrum S+M (found by George), 19G5_Sansui 2V and the four TURN Vinyl skins. Nine more on 2026-09-27 after George photographed 102G5_Naim S+M and 108G5_Kenwood Rev S+M (whose first measurement stopped at a shading change, 67 px short): all 189 skins, animated included, rendered through the renderer and reviewed, then each window read from a ruled 2x zoom. Left alone on purpose: a slot that also holds the time (48G5_Vertical blue, 28/29G5_Technics, 168G5_Philips, 163G5_TEAC, 159G5_Technics Rec, 145G5_McIntosh MTI100, 148G5_Reloop RL7000, 144G5_Naim Turntable, 170G5_SonyK770) or the logo (06/08G5_McIntosh), and badges placed on an open background. A skin absent here keeps its declared box. [x0, y0, x1, y1], screen pixels.",
  "slots": {
   "101G5_Free S+M": [
    366,
@@ -20,9 +20,9 @@
    764
   ],
   "108G5_Kenwood Rev S+M": [
-   1123,
-   422,
-   1202,
+   1122,
+   415,
+   1269,
    467
   ],
   "112G5_KeySlight S+M": [
@@ -138,6 +138,60 @@
    285,
    968,
    338
+  ],
+  "102G5_Naim S+M": [
+   350,
+   120,
+   533,
+   180
+  ],
+  "244G5_Pioneer CT_F1250": [
+   846,
+   205,
+   1013,
+   261
+  ],
+  "151G5_Akai77 black": [
+   549,
+   511,
+   686,
+   560
+  ],
+  "155G5_Antelope Reel": [
+   82,
+   104,
+   368,
+   159
+  ],
+  "151G5_01_Technics Silver": [
+   912,
+   663,
+   1280,
+   717
+  ],
+  "151G5_02_Technics Silver": [
+   912,
+   663,
+   1280,
+   717
+  ],
+  "109G5_475A Oscil S+M": [
+   1046,
+   104,
+   1208,
+   245
+  ],
+  "142G5_01_Pioneer Gold": [
+   928,
+   554,
+   1280,
+   612
+  ],
+  "142G5_02_Pioneer Gold": [
+   928,
+   554,
+   1280,
+   612
   ]
  }
 }

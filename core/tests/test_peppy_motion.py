@@ -245,3 +245,19 @@ def test_record_speed_turns_the_record_and_not_the_reels(screen, tmp_path):
     assert (record.rpm, reel.rpm) == (45.0, 25.0)
     motion.configure(True, 33.0)
     assert (record.rpm, reel.rpm) == (33.0, 25.0), "changed in place, no new skin needed"
+
+
+def test_smooth_redraws_whenever_the_picture_changes_and_not_otherwise(screen, tmp_path):
+    """ADR-0097 decision 2: every frame the step changes, rather than 8 a
+    second; a part whose picture has not moved is not redrawn."""
+    picture = pygame.Surface((50, 50), pygame.SRCALPHA)
+    pygame.image.save(picture, str(tmp_path / "r.bmp"))
+    skin = {"reel.left.filename": "r.bmp", "reel.left.center": "300,300", "reel.rotation.speed": "33"}
+    motion = MotionLayer(screen)
+    motion.configure(True, None, smooth=True)
+    motion.set_skin(skin, tmp_path, pygame.Surface((1280, 800)))
+    playing = {"transport": "playing"}
+    assert motion.tick(playing, None, now=1.0)
+    # 33 rpm is 198 deg/s: 1/30 s is 6.6 deg, past a 6 deg step.
+    assert motion.tick(playing, None, now=1.0 + 1 / 30), "a new step at frame rate, not held to 8 a second"
+    assert motion.tick(playing, None, now=1.0 + 1 / 30 + 0.001) == [], "the same step is not redrawn"

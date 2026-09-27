@@ -559,3 +559,69 @@ def test_a_skin_with_its_own_title_field_does_not_draw_the_ticker_too(screen, tm
     made = MetadataLayer(screen, tmp_path)
     made.set_skin(SKIN | TICKER)
     assert not [f for f in made._fields(full()) if f[1][:2] == (20, 638)]
+
+
+def test_the_ticker_scrolls_leftward_and_wraps(screen):
+    """ADR-0097: `ltr` moves the text left at `speed` px/s, seamlessly."""
+    from gexis_peppy_render import Ticker
+    font = pygame.font.Font(None, 20)
+    t = Ticker(speed=40.0, rightward=False, end_spaces=6)
+    box = t.show(font, "a line far too long for the little box it has been given", (10, 10, "bold"), (255, 255, 255), 100)
+    assert t.scrolls and box == pygame.Rect(10, 10, 100, box.height)
+    assert t.advance(0.0) is False, "the first frame only starts the clock"
+    assert t.advance(0.5) is True and t.offset == pytest.approx(20.0)
+    t.offset = t._segment - 1
+    t.advance(0.55)
+    assert 0 <= t.offset < 2, "it wraps to the start of the next copy"
+
+
+def test_a_ticker_line_that_fits_stands_still(screen):
+    from gexis_peppy_render import Ticker
+    t = Ticker(speed=40.0, rightward=False, end_spaces=6)
+    t.show(pygame.font.Font(None, 20), "short", (0, 0, "bold"), (255, 255, 255), 400)
+    assert not t.scrolls and t.advance(1.0) is False
+
+
+def test_the_ticker_line_appends_the_next_track_where_there_is_one(screen, tmp_path):
+    pygame.image.save(pygame.Surface((1280, 800)), str(tmp_path / "bgr.png"))
+    skin = {k: v for k, v in SKIN.items() if not k.startswith("playinfo.")} | TICKER | {
+        "playinfo.ticker.space_between": "1", "playinfo.ticker.append_next": "True"}
+    made = MetadataLayer(screen, tmp_path)
+    made.set_skin(skin)
+    nxt = {"title": "Song", "artist": "Band", "album": "LP"}
+    line = [f[0] for f in made._fields(full(next=nxt)) if f[5] == "ticker"]
+    assert line == ["Title *** Artist *** Album *** Next: Band - Song"]
+    assert [f[0] for f in made._fields(full()) if f[5] == "ticker"] == ["Title *** Artist *** Album"]
+
+
+def test_the_next_track_is_drawn_where_the_skin_places_it(screen, tmp_path):
+    """ADR-0097: `playinfo.next.*`, from LMS's queue; nothing without one."""
+    pygame.image.save(pygame.Surface((1280, 800)), str(tmp_path / "bgr.png"))
+    made = MetadataLayer(screen, tmp_path)
+    made.set_skin(SKIN | {"playinfo.next.title.pos": "700,600,bold", "playinfo.next.title.color": "1,2,3",
+                          "playinfo.next.artist.pos": "700,630"})
+    nxt = {"title": "Song", "artist": "Band", "album": "LP"}
+    at = {f[1][:2]: f for f in made._fields(full(next=nxt))}
+    assert at[(700, 600)][0] == "Song" and at[(700, 600)][2] == (1, 2, 3) and at[(700, 600)][1][2] == "bold"
+    assert at[(700, 630)][0] == "Band"
+    drawn = made.draw(full(next=nxt))
+    assert any((r.x, r.y) == (700, 600) for r in drawn)
+    empty = {f[1][:2]: f[0] for f in made._fields(full())}
+    assert empty[(700, 600)] is None, "no next track, nothing drawn"
+
+
+def test_elapsed_and_total_are_drawn_as_upstream_does(screen, tmp_path):
+    """ADR-0097: MM:SS, top-left, digi face at the skin's size, white by
+    default; no total for a stream."""
+    from gexis_peppy_render import elapsed_time, total_time
+    assert elapsed_time(full(position=75.4, transport="paused")) == "01:15"
+    assert total_time(full(duration=4503.0)) == "75:03", "minutes are not wrapped"
+    assert total_time(full(duration=None)) is None
+    pygame.image.save(pygame.Surface((1280, 800)), str(tmp_path / "bgr.png"))
+    made = MetadataLayer(screen, tmp_path)
+    made.set_skin(SKIN | {"time.elapsed.pos": "20,700", "time.elapsed.fontsize": "21",
+                          "time.total.pos": "1100,700,bold", "time.total.color": "9,9,9"})
+    at = {f[1][:2]: f for f in made._fields(full(position=30.0, duration=200.0, transport="paused"))}
+    assert at[(20, 700)][0] == "00:30" and at[(20, 700)][1][2] == "digi" and at[(20, 700)][3] == 21
+    assert at[(20, 700)][2] == (255, 255, 255) and at[(20, 700)][5] == "meta"
+    assert at[(1100, 700)][0] == "03:20" and at[(1100, 700)][1][2] == "bold" and at[(1100, 700)][2] == (9, 9, 9)

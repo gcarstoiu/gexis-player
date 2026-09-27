@@ -141,17 +141,27 @@ ANIMATED_TEXT_KEYS = {
     "time.remaining.fontsize",
     "playinfo.ticker", "playinfo.ticker.pos", "playinfo.ticker.color",
     "playinfo.ticker.maxwidth", "playinfo.ticker.separator",
+    # ADR-0097: the ticker scrolls.
+    "playinfo.ticker.speed", "playinfo.ticker.direction", "playinfo.ticker.end_spaces",
+    "playinfo.ticker.space_between", "playinfo.ticker.append_next", "playinfo.ticker.replace",
+    # ADR-0097: elapsed and total time.
+    *(f"time.{which}.{part}" for which in ("elapsed", "total") for part in ("pos", "color", "fontsize")),
+    # ADR-0097: the next track.
+    *(f"playinfo.next.{field}.{part}" for field in ("title", "artist", "album") for part in ("pos", "color", "maxwidth")),
 }
 #: **Keys the animated packs use and the renderer knowingly does not draw
 #: yet** - George's decision 3 in ADR-0096: the motion first, these later.
 #: Listed rather than waved through, so a key that is neither drawn nor
 #: deferred still fails the build. Matched by prefix.
-DEFERRED_PREFIXES = (
-    "progress.", "volume.", "mute.", "playstate.", "repeat.", "shuffle.",
-    "playinfo.next.", "playinfo.ticker", "time.elapsed.", "time.total.",
-)
+DEFERRED_PREFIXES: tuple[str, ...] = ()
+#: **Families the animated packs use and the renderer draws** (ADR-0097),
+#: matched by prefix because their markers and glows vary.
+ANIMATED_PREFIXES = ("progress.", "volume.", "mute.", "playstate.", "repeat.", "shuffle.")
 DEFERRED_KEYS = {
     "time.remaining.font",
+    # Drawn, in our digi face: the fonts these name are not in the packs,
+    # and upstream falls back to the same face without them (ADR-0097).
+    "time.total.font", "time.elapsed.font",
     "playinfo.samplerate.color", "playinfo.samplerate.maxwidth",
 }
 
@@ -272,7 +282,7 @@ def validate(meters: list[Skin], spectrum: list[Skin] | None = None,
             allowed = allowed | MOTION_KEYS | ANIMATED_TEXT_KEYS
         unknown = set(skin.options) - allowed
         if animated:
-            unknown = {key for key in unknown if not deferred(key)}
+            unknown = {key for key in unknown if not deferred(key) and not key.startswith(ANIMATED_PREFIXES)}
         for key in sorted(unknown):
             problems.append(f"{skin.name}: unknown key {key!r} for a {skin.meter_type} meter")
 
@@ -356,7 +366,7 @@ def installed(root: Path, pack: str | None = None) -> list[tuple[Skin, Path]]:
 
 #: ADR-0051 §1. The daemon writes it, the driver polls it beside
 #: `nowplaying.json`, and neither one restarts for a change. It is a
-#: projection of five settings, not a record: the database is the record,
+#: projection of six settings, not a record: the database is the record,
 #: and a missing file means the driver keeps what it already has.
 SELECTION_PATH = Path("/run/gexis/visualisation.json")
 
@@ -378,7 +388,7 @@ def record_rpm(word: object) -> float:
 
 def write_selection(
     corpus: str, skin: str | None, rotate: bool, path: Path = SELECTION_PATH,
-    motion: bool = True, record_rpm: float = 33.0,
+    motion: bool = True, record_rpm: float = 33.0, smooth: bool = False,
 ) -> bool:
     """Publish the selection for the renderer. Written through a temporary
     file and renamed, like the metadata file: the driver reads this on a
@@ -391,7 +401,8 @@ def write_selection(
     import json
 
     payload = json.dumps({"corpus": corpus, "skin": skin, "rotate": bool(rotate),
-                          "motion": bool(motion), "record_rpm": float(record_rpm)})
+                          "motion": bool(motion), "record_rpm": float(record_rpm),
+                          "smooth": bool(smooth)})
     tmp = path.with_name(path.name + ".tmp")
     try:
         path.parent.mkdir(parents=True, exist_ok=True)

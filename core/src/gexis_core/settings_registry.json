@@ -706,32 +706,8 @@
         "default": null
       },
       {
-        "key": "skin_motion",
-        "type": "toggle",
-        "label": "Animate turntables and tapes",
-        "marks": "N",
-        "note": "The record turns and the tonearm follows the track; the reels of a cassette or a tape recorder turn. Off, they are drawn still.",
-        "default": true
-      },
-      {
-        "key": "record_speed",
-        "type": "choice",
-        "label": "Record speed",
-        "marks": "N",
-        "note": "How fast a turntable's record turns. The skins are drawn for 33; a tape's reels keep their own speed.",
-        "options": [
-          "33 rpm",
-          "45 rpm"
-        ],
-        "onlyWhen": [
-          "skin_motion",
-          true
-        ],
-        "default": "33 rpm"
-      },
-      {
         "type": "group",
-        "label": "Meters and spectrum tweaks",
+        "label": "Visualisation tweaks",
         "accent": "#c8a2d8"
       },
       {
@@ -769,6 +745,46 @@
         "note": "Recommended: 240 ms. How long a stretch of the music each needle is averaged over. Short twitches with every beat, long is a real VU movement and arrives late. Rounded to the nearest 40 ms, which is how often the meter reads its level. The visualiser restarts to apply it.",
         "default": 240,
         "warn": "Changing this restarts the visualiser."
+      },
+      {
+        "key": "skin_motion",
+        "type": "toggle",
+        "label": "Animate turntables and tapes",
+        "marks": "N",
+        "note": "The record turns and the tonearm follows the track; the reels of a cassette or a tape recorder turn. Off, they are drawn still.",
+        "default": true
+      },
+      {
+        "key": "record_speed",
+        "type": "choice",
+        "label": "Record speed",
+        "marks": "N",
+        "note": "How fast a turntable's record turns. The skins are drawn for 33; a tape's reels keep their own speed.",
+        "options": [
+          "33 rpm",
+          "45 rpm"
+        ],
+        "onlyWhen": [
+          "skin_motion",
+          true
+        ],
+        "default": "33 rpm"
+      },
+      {
+        "key": "rotation_mode",
+        "type": "choice",
+        "label": "Rotation",
+        "marks": "N",
+        "note": "Stepped redraws a turning record or reel eight times a second; smooth redraws it every frame it moves. Smooth roughly doubles what the visualiser costs - measured on a turntable skin, 44 % of one processor core stepped against 87 % smooth.",
+        "options": [
+          "Stepped",
+          "Smooth"
+        ],
+        "onlyWhen": [
+          "skin_motion",
+          true
+        ],
+        "default": "Stepped"
       }
     ]
   },

@@ -61,6 +61,24 @@ real image build.** The first image built from here is its first test.
 | settings | corpora **Turntables** (48) and **Tapes** (39), by what a skin declares; **Animate turntables and tapes** and **Record speed** 33/45 (ADR-0022 [N], George's choice) |
 | fixed after George looked | previews for all 189; 18 turntables' records (`album,theme` file names); Peppy's warnings, which upstream's `use.logging = False` silenced (LESSONS 43) |
 
+**Phase 12 (Qobuz) is next, and its premise has moved** - [Finding
+093](docs/findings/093-qobuz-connect-in-september-2026.md): Qobuz had QBZ, the
+codebase the open-source receivers descend from, shut down in September 2026;
+moOde now points at Pibuz (MIT), which users install themselves; every open client
+uses scraped web-player credentials, against Qobuz's terms. Every client's
+licence permits a public repository. **Route, client, repo visibility and
+install model are George's decisions, not yet taken.**
+
+**Then, branch `peppy-next` (PR #33, pushed):** nine more badge slots (George's
+Naim S+M and Kenwood Rev S+M among them); the animated skins' rows moved into
+**Visualisation tweaks** (renamed from *Meters and spectrum tweaks*); and
+[ADR-0097](docs/decisions/0097-what-the-visualiser-shows-beyond-the-title.md) -
+the ticker scrolls, and progress, volume, mute/play/shuffle/repeat icons,
+elapsed/total time and the next track are drawn. **Display only - George: the
+visualiser is never actionable.** Smooth rotation is a setting, **Rotation:
+Stepped (default) / Smooth** - George chose it after the numbers (Vertere 44 →
+84-87 % of a core). All 90 animated skins swept on the panel after it, three frames each.
+
 **Done 2026-09-27:** gexis-plexamp **v0.2.2** released and pinned; **PR #31**
 (the fixes, into `main`) and **PR #32** (this branch, into the fixes branch -
 retarget to `main` once #31 merges); **one image with everything**,

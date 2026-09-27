@@ -106,6 +106,7 @@ class Selection:
         self.rotate = True
         self.motion = True
         self.record_rpm = 33.0
+        self.smooth = False
         self._stamp: int | None = None
 
     def reload(self) -> bool:
@@ -122,7 +123,7 @@ class Selection:
         except (OSError, ValueError) as exc:
             print(f"peppy: {self.path} unreadable: {exc}", file=sys.stderr)
             return False
-        was = (self.corpus, self.skin, self.rotate, self.motion, self.record_rpm)
+        was = (self.corpus, self.skin, self.rotate, self.motion, self.record_rpm, self.smooth)
         self.corpus = str(data.get("corpus") or ALL)
         skin = data.get("skin")
         self.skin = str(skin) if skin else None
@@ -132,7 +133,8 @@ class Selection:
             self.record_rpm = float(data.get("record_rpm") or 33.0)
         except (TypeError, ValueError):
             self.record_rpm = 33.0
-        return was != (self.corpus, self.skin, self.rotate, self.motion, self.record_rpm)
+        self.smooth = data.get("smooth") is True
+        return was != (self.corpus, self.skin, self.rotate, self.motion, self.record_rpm, self.smooth)
 
     def pool(self, skins: dict[str, dict[str, str]]) -> list[str]:
         """The names this corpus offers. An empty pool is not a corpus: a
@@ -953,7 +955,7 @@ def main() -> int:
 
     motion = MotionLayer(util.PYGAME_SCREEN, layer, redraw_needles)
     rotation.motion = motion
-    motion.configure(selection.motion, selection.record_rpm)
+    motion.configure(selection.motion, selection.record_rpm, selection.smooth)
     if first in homes:
         motion.set_skin(skins[first], homes[first], layer.background)
     rotation.prepare_next()
@@ -980,7 +982,7 @@ def main() -> int:
                     f"peppy: selection -> {selection.corpus!r}, "
                     f"{selection.skin!r}, rotation {'on' if selection.rotate else 'off'}"
                 )
-                motion.configure(selection.motion, selection.record_rpm)
+                motion.configure(selection.motion, selection.record_rpm, selection.smooth)
                 rotation.follow_selection()
             playing = current_track()
             if playing is not None and playing != track:
@@ -998,6 +1000,10 @@ def main() -> int:
                 dirty = layer.draw(metadata)
                 if dirty:
                     pygame.display.update(dirty)
+        # ADR-0097: the ticker moves every frame it has moved a whole pixel.
+        ticked = layer.tick()
+        if ticked:
+            pygame.display.update(motion.compose(ticked) if motion.active else layer.repaint(ticked))
         # ADR-0096: every frame, from the last metadata read - the spin has its
         # own rate gate, so most frames draw nothing.
         if motion.active:

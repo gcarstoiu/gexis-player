@@ -32,6 +32,17 @@ logger = logging.getLogger("gexis_core.peppy_metadata")
 DEFAULT_PATH = Path("/run/gexis/nowplaying.json")
 
 
+def next_track(state: PlaybackState) -> dict | None:
+    """The item after the one playing, where the renderer has a queue - LMS
+    alone (ADR-0038). None at the end of the queue and everywhere else: a
+    stream has no next track to show (ADR-0097)."""
+    queue = state.queue
+    if queue is None or not (0 <= queue.index + 1 < len(queue.items)):
+        return None
+    item = queue.items[queue.index + 1]
+    return {"title": item.title, "artist": item.artist, "album": item.album}
+
+
 class PeppyMetadataWriter:
     """Subscribed to `StateStore`, like `MetadataFileWriter`."""
 
@@ -41,6 +52,8 @@ class PeppyMetadataWriter:
 
     def write(self, state: PlaybackState) -> None:
         metadata = state.metadata
+        controls = state.controls or {}
+        volume = state.volume
         payload = json.dumps(
             {
                 "source": state.active,
@@ -51,6 +64,16 @@ class PeppyMetadataWriter:
                 "position": metadata.position,
                 "duration": metadata.duration,
                 "transport": metadata.transport,
+                # ADR-0097: shown, never acted on. The level playing, whoever
+                # set it; null before the mixer has been read and on fixed
+                # output, which has no level to show.
+                "volume": None if volume is None or state.fixed_output else volume.percent,
+                "muted": None if volume is None else volume.muted,
+                # The active renderer's own, where it declares them
+                # (ADR-0037); null for one that has no such thing.
+                "shuffle": controls.get("shuffle"),
+                "repeat": controls.get("repeat"),
+                "next": next_track(state),
                 # The reader advances position itself between writes, so it
                 # needs to know how old this one is.
                 "written_at": time.time(),
