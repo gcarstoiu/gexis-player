@@ -1,0 +1,5106 @@
+
+#-----------------------141 Vertere-----------------------
+[141G5_01_Vertere Turn]
+meter.type = linear
+direction = bottom-top
+channels = 2
+ui.refresh.period = 0.033
+bgr.filename = Vertere DG1_bgr.png
+fgr.filename = Vertere DG1_fgr.png
+indicator.filename = Vertere DG1_indic.png
+left.x = 907
+left.y = 67
+right.x = 1181
+right.y = 67
+position.regular = 35
+position.overload = 5
+step.width.regular = 11
+step.width.overload = 11
+meter.x = 0
+meter.y = 0
+screen.bgr = 
+# --- volumio optional entries -------
+config.extend = True
+meter.visible = True
+albumart.pos = 195,235
+albumart.dimension = 198,198
+albumart.rotation = True
+albumart.rotation.speed = 33
+playinfo.ticker = True
+playinfo.ticker.replace = False
+playinfo.ticker.direction = ltr
+playinfo.ticker.append_next = True
+playinfo.ticker.pos = 20,638,bold
+playinfo.ticker.color = 210,210,210
+playinfo.ticker.maxwidth = 1233
+playinfo.ticker.speed = 40
+playinfo.ticker.separator = ***
+playinfo.ticker.space_between = 4
+playinfo.ticker.end_spaces = 10
+playinfo.center = True
+playinfo.type.pos = 1020,193
+playinfo.type.color = 20,20,20
+playinfo.type.dimension = 80,80
+playinfo.samplerate.pos = 993,270,light
+playinfo.samplerate.maxwidth = 127
+time.remaining.pos = 1000,487
+time.remaining.color = 176,255,2
+time.remaining.font = fonts/MyDigi.ttf
+time.remaining.fontsize = 37
+time.elapsed.pos = 15,688
+time.elapsed.fontsize = 21
+time.elapsed.color = 160,160,160
+time.total.font = fonts/Another.ttf
+time.total.fontsize = 21
+time.total.pos = 1186,688
+time.total.color = 160,160,160
+# Tonearm configuration
+tonearm.filename = Vertere DG1_arm.png
+tonearm.pivot.screen = 629,166
+tonearm.pivot.image = 57,129
+tonearm.angle.rest = 0
+tonearm.angle.start = -27
+tonearm.angle.end = -47
+tonearm.drop.duration = 1.8
+tonearm.lift.duration = 1.2
+# Mute indicator
+mute.pos = 1218,581
+mute.icon = icons/Vev_m_on.png,icons/Vev_m_off.png
+# Play/Pause/Stop 
+playstate.pos = 881,583
+playstate.icon = icons/Vev_stop.png,icons/Vev_pause.png,icons/Vev_play.png
+# Repeat indicator
+repeat.pos = 1083,581
+repeat.icon = icons/Vev_repeat_off.png,icons/Vev_repeat_all.png,icons/Vev_repeat_single.png
+# Shuffle indicator
+shuffle.pos = 1155,585
+shuffle.icon = icons/Vev_shuffle_off.png,icons/Vev_shuffle_on.png,icons/Vev_shuffle_infinity.png
+# --- PROGRESS BAR ---
+progress.pos = 111,683
+progress.dim = 1050,29
+progress.color = 22,22,22
+progress.bg.color = 112,110,110
+#progress.border = 1
+progress.border.color = 80,80,80
+progress.marker.1.pos = 0
+progress.marker.1.label = .
+progress.marker.2.pos = 25
+progress.marker.2.label = .
+progress.marker.3.pos = 50
+progress.marker.3.label = .
+progress.marker.4.pos = 75
+progress.marker.4.label = .
+progress.marker.5.pos = 100
+progress.marker.5.label = .
+progress.head.image = Vertere DG1_pipek.png
+progress.head.offset = 0,0
+# Vinyl disc 
+vinyl.filename = Vertere DG1_vinyl.png
+vinyl.pos = 50,92
+vinyl.center = 293,334
+vinyl.direction = cw
+font.size.digi = 45
+font.size.light = 16
+font.size.regular = 20
+font.size.bold = 22
+font.color = 253,172,103
+
+
+#-----------------------141 Vertere-----------------------
+[141G5_02_Vertere Turn]
+meter.type = linear
+direction = bottom-top
+channels = 2
+ui.refresh.period = 0.033
+bgr.filename = Vertere DG1_bgr.png
+fgr.filename = Vertere DG1_fgr.png
+indicator.filename = Vertere DG1_indic.png
+left.x = 907
+left.y = 67
+right.x = 1181
+right.y = 67
+position.regular = 35
+position.overload = 5
+step.width.regular = 11
+step.width.overload = 11
+meter.x = 0
+meter.y = 0
+screen.bgr = 
+# --- volumio optional entries -------
+config.extend = True
+meter.visible = True
+albumart.pos = 52,94
+albumart.dimension = 485,485
+albumart.rotation = True
+albumart.rotation.speed = 33
+albumart.mask = Verte_mask.jpg
+playinfo.ticker = True
+playinfo.ticker.replace = False
+playinfo.ticker.direction = ltr
+playinfo.ticker.append_next = True
+playinfo.ticker.pos = 20,638,bold
+playinfo.ticker.color = 210,210,210
+playinfo.ticker.maxwidth = 1233
+playinfo.ticker.speed = 40
+playinfo.ticker.separator = ***
+playinfo.ticker.space_between = 4
+playinfo.ticker.end_spaces = 10
+playinfo.center = True
+playinfo.type.pos = 1020,193
+playinfo.type.color = 20,20,20
+playinfo.type.dimension = 80,80
+playinfo.samplerate.pos = 993,270,light
+playinfo.samplerate.maxwidth = 127
+time.remaining.pos = 1000,487
+time.remaining.color = 176,255,2
+time.remaining.font = fonts/MyDigi.ttf
+time.remaining.fontsize = 37
+time.elapsed.pos = 15,688
+time.elapsed.fontsize = 21
+time.elapsed.color = 160,160,160
+time.total.font = fonts/Another.ttf
+time.total.fontsize = 21
+time.total.pos = 1186,688
+time.total.color = 160,160,160
+# Tonearm configuration
+tonearm.filename = Vertere DG1_arm.png
+tonearm.pivot.screen = 629,166
+tonearm.pivot.image = 57,129
+tonearm.angle.rest = 0
+tonearm.angle.start = -27
+tonearm.angle.end = -47
+tonearm.drop.duration = 1.8
+tonearm.lift.duration = 1.2
+# Mute indicator
+mute.pos = 1218,581
+mute.icon = icons/Vev_m_on.png,icons/Vev_m_off.png
+# Play/Pause/Stop 
+playstate.pos = 881,583
+playstate.icon = icons/Vev_stop.png,icons/Vev_pause.png,icons/Vev_play.png
+# Repeat indicator
+repeat.pos = 1083,581
+repeat.icon = icons/Vev_repeat_off.png,icons/Vev_repeat_all.png,icons/Vev_repeat_single.png
+# Shuffle indicator
+shuffle.pos = 1155,585
+shuffle.icon = icons/Vev_shuffle_off.png,icons/Vev_shuffle_on.png,icons/Vev_shuffle_infinity.png
+# --- PROGRESS BAR ---
+progress.pos = 111,683
+progress.dim = 1050,29
+progress.color = 22,22,22
+progress.bg.color = 112,110,110
+#progress.border = 1
+progress.border.color = 80,80,80
+progress.marker.1.pos = 0
+progress.marker.1.label = .
+progress.marker.2.pos = 25
+progress.marker.2.label = .
+progress.marker.3.pos = 50
+progress.marker.3.label = .
+progress.marker.4.pos = 75
+progress.marker.4.label = .
+progress.marker.5.pos = 100
+progress.marker.5.label = .
+progress.head.image = Vertere DG1_pipek.png
+progress.head.offset = 0,0
+font.size.digi = 45
+font.size.light = 16
+font.size.regular = 20
+font.size.bold = 22
+font.color = 253,172,103
+
+
+#-----------------------143 Vertere-----------------------
+[141G5_03_Vertere Turn]
+meter.type = linear
+direction = bottom-top
+channels = 2
+ui.refresh.period = 0.033
+bgr.filename = Vertere DG1_bgr.png
+fgr.filename = Vertere DG1_fgr.png
+indicator.filename = Vertere DG1_indic.png
+left.x = 907
+left.y = 67
+right.x = 1181
+right.y = 67
+position.regular = 35
+position.overload = 5
+step.width.regular = 11
+step.width.overload = 11
+meter.x = 0
+meter.y = 0
+screen.bgr = 
+# --- volumio optional entries -------
+config.extend = True
+meter.visible = True
+albumart.pos = 996,319
+albumart.dimension = 137,137
+albumart.rotation = False
+albumart.rotation.speed = 33
+playinfo.ticker = True
+playinfo.ticker.replace = False
+playinfo.ticker.direction = ltr
+playinfo.ticker.append_next = True
+playinfo.ticker.pos = 20,638,bold
+playinfo.ticker.color = 210,210,210
+playinfo.ticker.maxwidth = 1233
+playinfo.ticker.speed = 40
+playinfo.ticker.separator = ***
+playinfo.ticker.space_between = 4
+playinfo.ticker.end_spaces = 10
+playinfo.center = True
+playinfo.type.pos = 1020,193
+playinfo.type.color = 20,20,20
+playinfo.type.dimension = 80,80
+playinfo.samplerate.pos = 993,270,light
+playinfo.samplerate.maxwidth = 127
+time.remaining.pos = 1000,487
+time.remaining.color = 255,255,255
+time.remaining.font = fonts/MyDigi.ttf
+time.remaining.fontsize = 37
+time.elapsed.pos = 15,688
+time.elapsed.fontsize = 21
+time.elapsed.color = 160,160,160
+time.total.font = fonts/Another.ttf
+time.total.fontsize = 21
+time.total.pos = 1186,688
+time.total.color = 160,160,160
+# Tonearm configuration
+tonearm.filename = Vertere DG1_arm.png
+tonearm.pivot.screen = 629,166
+tonearm.pivot.image = 57,129
+tonearm.angle.rest = 0
+tonearm.angle.start = -27
+tonearm.angle.end = -47
+tonearm.drop.duration = 1.8
+tonearm.lift.duration = 1.2
+# Mute indicator
+mute.pos = 1218,581
+mute.icon = icons/Vev_m_on.png,icons/Vev_m_off.png
+# Play/Pause/Stop 
+playstate.pos = 881,583
+playstate.icon = icons/Vev_stop.png,icons/Vev_pause.png,icons/Vev_play.png
+# Repeat indicator
+repeat.pos = 1083,581
+repeat.icon = icons/Vev_repeat_off.png,icons/Vev_repeat_all.png,icons/Vev_repeat_single.png
+# Shuffle indicator
+shuffle.pos = 1155,585
+shuffle.icon = icons/Vev_shuffle_off.png,icons/Vev_shuffle_on.png,icons/Vev_shuffle_infinity.png
+# --- PROGRESS BAR ---
+progress.pos = 111,683
+progress.dim = 1050,29
+progress.color = 22,22,22
+progress.bg.color = 112,110,110
+#progress.border = 1
+progress.border.color = 80,80,80
+progress.marker.1.pos = 0
+progress.marker.1.label = .
+progress.marker.2.pos = 25
+progress.marker.2.label = .
+progress.marker.3.pos = 50
+progress.marker.3.label = .
+progress.marker.4.pos = 75
+progress.marker.4.label = .
+progress.marker.5.pos = 100
+progress.marker.5.label = .
+progress.head.image = Vertere DG1_pipek.png
+progress.head.offset = 0,0
+# Vinyl disc 
+vinyl.filename = cdart.png,Vertere DG1_vinyl.png
+vinyl.pos = 50,92
+vinyl.center = 294,335
+vinyl.dimension = 485,485
+vinyl.direction = cw
+font.size.digi = 45
+font.size.light = 16
+font.size.regular = 20
+font.size.bold = 22
+font.color = 253,172,103
+
+
+#-----------------------142A Pioneer------------------------
+[142G5_01_Pioneer Gold]
+meter.type = circular
+channels = 2
+ui.refresh.period = 0.033
+bgr.filename = PioneerDJ_bgr.png
+fgr.filename = PioneerDJ_fgr.png
+indicator.filename = PioneerDJ_needle.png
+steps.per.degree = 4
+start.angle = -225
+stop.angle = -135
+distance = 107
+left.origin.x = 1105
+left.origin.y = -19
+right.origin.x = 1105
+right.origin.y = 160
+meter.x = 0
+meter.y = 0
+screen.bgr = 
+# --- volumio optional entries -------
+config.extend = True
+meter.visible = True
+albumart.pos = 257,248
+albumart.dimension = 224,224
+albumart.rotation = true
+albumart.rotation.speed = 33
+playinfo.title.pos = 933,667,bold
+playinfo.title.color = 98,56,30
+playinfo.title.maxwidth = 342
+playinfo.artist.pos = 933,590,regular
+playinfo.artist.color = 98,56,30
+playinfo.artist.maxwidth = 342
+playinfo.album.pos = 933,627,regular
+playinfo.album.maxwidth = 342
+playinfo.center = True
+playinfo.type.pos = 995,507
+playinfo.type.color = 98,56,30
+playinfo.type.dimension = 73,73
+playinfo.samplerate.pos = 1095,537,light
+playinfo.samplerate.maxwidth = 100
+time.remaining.pos = 755,617
+time.remaining.color = 253,172,103
+time.remaining.font = fonts/MyDigi.ttf
+time.remaining.fontsize = 19
+time.elapsed.pos = 931,494
+time.elapsed.fontsize = 13
+time.elapsed.color = 0,0,0
+time.total.font = fonts/Another.ttf
+time.total.fontsize = 13
+time.total.pos = 1227,494
+time.total.color = 0,0,0
+# Vinyl disc 
+vinyl.filename = PioneerDJ_Vinyl.png
+vinyl.pos = 90,82
+vinyl.center = 369,359
+vinyl.direction = cw
+# Tonearm configuration
+tonearm.filename = PioneerDJ_arm.png
+#tonearm.pos = 1056,11
+tonearm.pivot.screen = 778,189
+tonearm.pivot.image = 171,123
+tonearm.angle.rest = 0
+tonearm.angle.start = -14
+tonearm.angle.end = -32
+tonearm.drop.duration = 1.8
+tonearm.lift.duration = 1.2
+# Volume - Vertical Fader
+volume.pos = 843,425
+volume.dim = 55,41
+volume.style = slider
+volume.slider.track = 
+volume.slider.tip = PioneerDJ_slider.png
+volume.slider.orientation = vertical
+volume.slider.travel = 3,202
+volume.slider.tip.offset = -7,0
+# Mute indicator
+mute.pos = 930,374
+mute.icon = icons/Pioneer_m.on.png,icons/Pioneer_m.off.png
+# Play/Pause/Stop 
+playstate.pos = 1020,374
+playstate.icon = icons/Pioneer_stop.png,icons/Pioneer_pause.png,icons/Pioneer_play.png
+# Repeat indicator
+repeat.pos = 1108,374
+repeat.icon = icons/Pioneer_repeat_off.png,icons/Pioneer_repeat_all.png,icons/Pioneer_repeat_single.png
+# Shuffle indicator
+shuffle.pos = 1197,374
+shuffle.icon = icons/Pioneer_shuffle_off.png,icons/Pioneer_shuffle_on.png,icons/Pioneer_shuffle_infinity.png
+# --- PROGRESS BAR ---
+progress.pos = 947,466
+progress.dim = 315,17
+progress.color = 22,22,22
+progress.bg.color = 173,143,99
+progress.border = 1
+progress.border.color = 173,143,99
+font.size.digi = 19
+font.size.light = 20
+font.size.regular = 27
+font.size.bold = 27
+font.color = 98,56,30
+
+
+#-----------------------142 Pioneer------------------------
+[142G5_02_Pioneer Gold]
+meter.type = circular
+channels = 2
+ui.refresh.period = 0.033
+bgr.filename = PioneerDJ_bgr.png
+fgr.filename = PioneerDJ_fgr.png
+indicator.filename = PioneerDJ_needle.png
+steps.per.degree = 4
+start.angle = -225
+stop.angle = -135
+distance = 107
+left.origin.x = 1105
+left.origin.y = -19
+right.origin.x = 1105
+right.origin.y = 160
+meter.x = 0
+meter.y = 0
+screen.bgr = 
+# --- volumio optional entries -------
+config.extend = True
+meter.visible = True
+albumart.pos = 90,82
+albumart.dimension = 556,556
+albumart.rotation = true
+albumart.rotation.speed = 33
+albumart.mask = Pion_mask.jpg
+playinfo.title.pos = 933,667,bold
+playinfo.title.color = 98,56,30
+playinfo.title.maxwidth = 342
+playinfo.artist.pos = 933,590,regular
+playinfo.artist.color = 98,56,30
+playinfo.artist.maxwidth = 342
+playinfo.album.pos = 933,627,regular
+playinfo.album.maxwidth = 342
+playinfo.center = True
+playinfo.type.pos = 995,507
+playinfo.type.color = 98,56,30
+playinfo.type.dimension = 73,73
+playinfo.samplerate.pos = 1095,537,light
+playinfo.samplerate.maxwidth = 100
+time.remaining.pos = 755,617
+time.remaining.color = 253,172,103
+time.remaining.font = fonts/MyDigi.ttf
+time.remaining.fontsize = 19
+time.elapsed.pos = 931,494
+time.elapsed.fontsize = 13
+time.elapsed.color = 0,0,0
+time.total.font = fonts/Another.ttf
+time.total.fontsize = 13
+time.total.pos = 1227,494
+time.total.color = 0,0,0
+# Tonearm configuration
+tonearm.filename = PioneerDJ_arm.png
+#tonearm.pos = 1056,11
+tonearm.pivot.screen = 778,189
+tonearm.pivot.image = 171,123
+tonearm.angle.rest = 0
+tonearm.angle.start = -14
+tonearm.angle.end = -32
+tonearm.drop.duration = 1.8
+tonearm.lift.duration = 1.2
+# Volume - Vertical Fader
+volume.pos = 843,425
+volume.dim = 55,41
+volume.style = slider
+volume.slider.track = 
+volume.slider.tip = PioneerDJ_slider.png
+volume.slider.orientation = vertical
+volume.slider.travel = 3,202
+volume.slider.tip.offset = -7,0
+# Mute indicator
+mute.pos = 930,374
+mute.icon = icons/Pioneer_m.on.png,icons/Pioneer_m.off.png
+# Play/Pause/Stop 
+playstate.pos = 1020,374
+playstate.icon = icons/Pioneer_stop.png,icons/Pioneer_pause.png,icons/Pioneer_play.png
+# Repeat indicator
+repeat.pos = 1108,374
+repeat.icon = icons/Pioneer_repeat_off.png,icons/Pioneer_repeat_all.png,icons/Pioneer_repeat_single.png
+# Shuffle indicator
+shuffle.pos = 1197,374
+shuffle.icon = icons/Pioneer_shuffle_off.png,icons/Pioneer_shuffle_on.png,icons/Pioneer_shuffle_infinity.png
+# --- PROGRESS BAR ---
+progress.pos = 947,466
+progress.dim = 315,17
+progress.color = 22,22,22
+progress.bg.color = 173,143,99
+progress.border = 1
+progress.border.color = 173,143,99
+font.size.digi = 19
+font.size.light = 20
+font.size.regular = 27
+font.size.bold = 27
+font.color = 98,56,30
+
+
+#-----------------------142 Pioneer------------------------
+[142G5_03_Pioneer Gold]
+meter.type = circular
+channels = 2
+ui.refresh.period = 0.033
+bgr.filename = PioneerDJ_bgr.png
+fgr.filename = PioneerDJ_fgr.png
+indicator.filename = PioneerDJ_needle.png
+steps.per.degree = 4
+start.angle = -225
+stop.angle = -135
+distance = 107
+left.origin.x = 1105
+left.origin.y = -19
+right.origin.x = 1105
+right.origin.y = 160
+meter.x = 0
+meter.y = 0
+screen.bgr = 
+# --- volumio optional entries -------
+config.extend = True
+meter.visible = True
+albumart.pos = 1032,515
+albumart.dimension = 147,147
+albumart.rotation = false
+albumart.rotation.speed = 33
+albumart.border = 1
+playinfo.ticker = True
+playinfo.ticker.replace = False
+playinfo.ticker.direction = ltr
+playinfo.ticker.append_next = True
+playinfo.ticker.pos = 933,671,bold
+playinfo.ticker.color = 98,56,30
+playinfo.ticker.maxwidth = 343
+playinfo.ticker.speed = 40
+playinfo.ticker.separator = •
+playinfo.ticker.space_between = 4
+playinfo.ticker.end_spaces = 6
+playinfo.center = True
+playinfo.type.pos = 935,540
+playinfo.type.color = 98,56,30
+playinfo.type.dimension = 73,73
+playinfo.samplerate.pos = 1180,580,regular
+playinfo.samplerate.maxwidth = 100
+time.remaining.pos = 755,617
+time.remaining.color = 253,172,103
+time.remaining.font = fonts/MyDigi.ttf
+time.remaining.fontsize = 19
+time.elapsed.pos = 931,494
+time.elapsed.fontsize = 13
+time.elapsed.color = 0,0,0
+time.total.font = fonts/Another.ttf
+time.total.fontsize = 13
+time.total.pos = 1227,494
+time.total.color = 0,0,0
+# Vinyl disc 
+vinyl.filename = cdart.png,PioneerDJ_Vinyl.png
+vinyl.pos = 90,82
+vinyl.center = 369,359
+vinyl.direction = cw
+vinyl.dimension = 556,556
+# Tonearm configuration
+tonearm.filename = PioneerDJ_arm.png
+#tonearm.pos = 1056,11
+tonearm.pivot.screen = 778,189
+tonearm.pivot.image = 171,123
+tonearm.angle.rest = 0
+tonearm.angle.start = -14
+tonearm.angle.end = -32
+tonearm.drop.duration = 1.8
+tonearm.lift.duration = 1.2
+# Volume - Vertical Fader
+volume.pos = 843,425
+volume.dim = 55,41
+volume.style = slider
+volume.slider.track = 
+volume.slider.tip = PioneerDJ_slider.png
+volume.slider.orientation = vertical
+volume.slider.travel = 3,202
+volume.slider.tip.offset = -7,0
+# Mute indicator
+mute.pos = 930,374
+mute.icon = icons/Pioneer_m.on.png,icons/Pioneer_m.off.png
+# Play/Pause/Stop 
+playstate.pos = 1020,374
+playstate.icon = icons/Pioneer_stop.png,icons/Pioneer_pause.png,icons/Pioneer_play.png
+# Repeat indicator
+repeat.pos = 1108,374
+repeat.icon = icons/Pioneer_repeat_off.png,icons/Pioneer_repeat_all.png,icons/Pioneer_repeat_single.png
+# Shuffle indicator
+shuffle.pos = 1197,374
+shuffle.icon = icons/Pioneer_shuffle_off.png,icons/Pioneer_shuffle_on.png,icons/Pioneer_shuffle_infinity.png
+# --- PROGRESS BAR ---
+progress.pos = 947,466
+progress.dim = 315,17
+progress.color = 22,22,22
+progress.bg.color = 173,143,99
+progress.border = 1
+progress.border.color = 173,143,99
+font.size.digi = 19
+font.size.light = 20
+font.size.regular = 13
+font.size.bold = 27
+font.color = 98,56,30
+
+#-----------------------143 TURNTABLE BLACK ---------------------------
+[143G5_TURN Vinyl Black]
+meter.type = circular
+channels = 2
+ui.refresh.period = 0.033
+bgr.filename = Klanghelm_Turnable4_bgr.png
+fgr.filename = Klanghelm_Turnable4_fgr.png
+indicator.filename = Klanghelm_Turnable4_needle.png
+steps.per.degree = 2
+start.angle = 57
+stop.angle = -57
+distance = 93
+left.origin.x = 320
+left.origin.y = 700
+right.origin.x = 980
+right.origin.y = 700
+meter.x = 0
+meter.y = 0
+screen.bgr = Klanghelm_Turnable4.jpg
+# --- volumio optional entries -------
+config.extend = True
+albumart.pos = 27,25
+albumart.dimension = 431,431
+albumart.rotation = false
+albumart.rotation.speed = 33
+playinfo.title.pos = 830,207,bold
+playinfo.title.maxwidth = 433
+playinfo.artist.pos = 830,43,bold
+playinfo.artist.maxwidth = 433
+playinfo.album.pos = 830,125,bold
+playinfo.album.maxwidth = 433
+playinfo.center = False
+playinfo.type.pos = 867,283
+playinfo.type.color = 204,176,97
+playinfo.type.dimension = 57,43
+playinfo.samplerate.pos = 1020,297,bold
+playinfo.samplerate.maxwidth = 167
+time.remaining.pos = 580,597
+time.remaining.color = 255,255,255
+# Tonearm configuration
+tonearm.filename = Klanghelm_Turnable4_arm.png
+#tonearm.pos = 1119,11
+tonearm.pivot.screen = 740,118
+tonearm.pivot.image = 71,95
+tonearm.angle.rest = 0
+tonearm.angle.start = -18
+tonearm.angle.end = -40
+tonearm.drop.duration = 1.8
+tonearm.lift.duration = 1.2
+# Vinyl disc 
+vinyl.filename = cdart.png,Klanghelm_Turnable4_vinyl.png
+vinyl.pos = 268,422
+vinyl.center = 467,241
+vinyl.direction = cw
+vinyl.dimension = 399,399
+# --- PROGRESS BAR ---
+progress.pos = 824,237
+progress.dim = 441,7
+progress.color = 20,185,229
+progress.bg.color = 31,1,3
+progress.border = 1
+progress.border.color = 80,80,80
+# Volume - Vertical Fader
+volume.pos = 777,261
+volume.dim = 45,35
+volume.style = slider
+volume.slider.track = 
+volume.slider.tip = Klanghelm_Turnable4_slider.png
+volume.slider.orientation = vertical
+volume.slider.travel = 3,169
+volume.slider.tip.offset = -7,0
+# Mute indicator
+mute.pos = 869,396
+mute.icon = icons/KL_m_on.png,icons/KL_m_off.png
+# Play/Pause/Stop 
+playstate.pos = 975,396
+playstate.icon = icons/KL_stop.png,icons/KL_pause.png,icons/KL_play.png
+# Repeat indicator
+repeat.pos = 1077,396
+repeat.icon = icons/KL_repeat_off.png,icons/KL_repeat_all.png,icons/KL_repeat_single.png
+# Shuffle indicator
+shuffle.pos = 1183,396
+shuffle.icon = icons/KL_shuffle_off.png,icons/KL_shuffle_on.png,icons/KL_shuffle_infinity.png
+font.size.digi = 33
+font.size.light = 21
+font.size.regular = 17
+font.size.bold = 24
+font.color = 255,255,255
+
+#-----------------------144 Naim
+[144G5_01_Naim Turntable]
+meter.type = circular
+channels = 2
+ui.refresh.period = 0.033
+bgr.filename = Naim Soltice_bgr.png
+fgr.filename = Naim Soltice2_fgr.png
+indicator.filename = Naim Soltice_needle.png
+steps.per.degree = 4
+start.angle = 57
+stop.angle = -59
+distance = 73
+left.origin.x = 1005
+left.origin.y = 231
+right.origin.x = 1003
+right.origin.y = 543
+meter.x = 0
+meter.y = 0
+screen.bgr = 
+# --- volumio optional entries -------
+config.extend = True
+meter.visible = True
+albumart.rotation = true
+albumart.rotation.speed = 33
+albumart.pos = 182,176
+albumart.dimension = 208,208
+albumart.mask = Naim_mask.jpg
+playinfo.title.pos = 18,660,bold
+playinfo.title.color = 121,229,44
+playinfo.title.maxwidth = 700
+playinfo.artist.pos = 18,607,regular
+playinfo.artist.color = 121,229,44
+playinfo.artist.maxwidth = 700
+playinfo.album.pos = 18,633,regular
+playinfo.album.color = 121,229,44
+playinfo.album.maxwidth = 700
+playinfo.center = True
+playinfo.type.pos = 1000,608
+playinfo.type.color = 121,229,44
+playinfo.type.dimension = 67,67
+playinfo.samplerate.pos = 1113,636,light
+playinfo.samplerate.maxwidth = 103
+time.remaining.pos = 803,613
+time.remaining.color = 121,229,44
+# Tonearm configuration
+tonearm.filename = Naim Soltice_arm.png
+#tonearm.pos = 1119,11
+tonearm.pivot.screen = 631,105
+tonearm.pivot.image = 30,97
+tonearm.angle.rest = 0
+tonearm.angle.start = -26
+tonearm.angle.end = -47
+tonearm.drop.duration = 1.8
+tonearm.lift.duration = 1.2
+# --- PROGRESS BAR ---
+progress.pos = 27,705
+progress.dim = 1240,9
+progress.color = 20,185,229
+progress.bg.color = 31,1,3
+progress.border = 1
+progress.border.color = 80,80,80
+# --- VOLUME INDICATOR (Slider style) ---
+volume.pos = 957,292
+volume.dim = 97,6
+volume.color = 121,229,44
+volume.bg.color = 43,48,54
+volume.style = slider
+volume.slider.orientation = horizontal
+# Mute indicator
+mute.pos = 1063,275
+mute.icon = icons/Naim_m_on.png,icons/Naim_m_off.png
+# Play/Pause/Stop 
+playstate.pos = 784,275
+playstate.icon = icons/Naim_stop.png,icons/Naim_pause.png,icons/Naim_play.png
+# Repeat indicator
+repeat.pos = 1123,275
+repeat.icon = icons/Naim_repeat_off.png,icons/Naim_repeat_all.png,icons/Naim_repeat_single.png
+# Shuffle indicator
+shuffle.pos = 1183,275
+shuffle.icon = icons/Naim_shuffle_off.png,icons/Naim_shuffle_on.png,icons/Naim_shuffle_infinity.png
+# Vinyl disc 
+vinyl.filename = Naim Soltice2_vinyl.png
+vinyl.pos = 28,22
+vinyl.center = 287,282
+vinyl.dimension = 521,521
+vinyl.direction = cw
+font.size.digi = 50
+font.size.light = 17
+font.size.regular = 21
+font.size.bold = 25
+font.color = 20,185,229
+
+#-----------------------144  Naim
+[144G5_02_Naim Turntable]
+meter.type = circular
+channels = 2
+ui.refresh.period = 0.033
+bgr.filename = Naim Soltice2_bgr.png
+fgr.filename = Naim Soltice_fgr.png
+indicator.filename = Naim Soltice_needle.png
+steps.per.degree = 4
+start.angle = 57
+stop.angle = -59
+distance = 73
+left.origin.x = 1005
+left.origin.y = 231
+right.origin.x = 1003
+right.origin.y = 543
+meter.x = 0
+meter.y = 0
+screen.bgr = 
+# --- volumio optional entries -------
+config.extend = True
+meter.visible = True
+albumart.rotation = true
+albumart.rotation.speed = 33
+albumart.pos = 27,24
+albumart.dimension = 518,518
+albumart.mask = Naim_mask.jpg
+playinfo.ticker = True
+playinfo.ticker.replace = False
+playinfo.ticker.direction = ltr
+playinfo.ticker.append_next = True
+playinfo.ticker.pos = 14,623,bold
+playinfo.ticker.color = 121,229,44
+playinfo.ticker.maxwidth = 697
+playinfo.ticker.speed = 40
+playinfo.ticker.separator = ***
+playinfo.ticker.space_between = 4
+playinfo.ticker.end_spaces = 6
+playinfo.center = True
+playinfo.type.pos = 1000,608
+playinfo.type.color = 121,229,44
+playinfo.type.dimension = 67,67
+playinfo.samplerate.pos = 1113,636,light
+playinfo.samplerate.maxwidth = 103
+time.remaining.pos = 803,613
+time.remaining.color = 121,229,44
+time.remaining.font = fonts/MyDigi.ttf
+time.remaining.fontsize = 50
+time.elapsed.pos = 17,680,regular
+time.elapsed.fontsize = 23
+time.elapsed.color = 20,185,229
+time.total.fontsize = 23
+time.total.pos = 645,680,regular
+time.total.color = 20,185,229
+# Tonearm configuration
+tonearm.filename = Naim Soltice_arm.png
+tonearm.pivot.screen = 631,105
+tonearm.pivot.image = 30,97
+tonearm.angle.rest = 0
+tonearm.angle.start = -26
+tonearm.angle.end = -50
+tonearm.drop.duration = 1.8
+tonearm.lift.duration = 1.2
+# --- PROGRESS BAR ---
+progress.pos = 94,687
+progress.dim = 536,7
+progress.color = 20,185,229
+progress.bg.color = 31,1,3
+progress.border = 1
+progress.border.color = 80,80,80
+progress.marker.1.pos = 0
+progress.marker.1.label = .
+progress.marker.2.pos = 25
+progress.marker.2.label = .
+progress.marker.3.pos = 50
+progress.marker.3.label = .
+progress.marker.4.pos = 75
+progress.marker.4.label = .
+progress.marker.5.pos = 100
+progress.marker.5.label = .
+progress.head.image = Pipek.png
+progress.head.offset = 0,0
+# --- VOLUME INDICATOR (Slider style) ---
+volume.pos = 957,292
+volume.dim = 97,6
+volume.color = 121,229,44
+volume.bg.color = 43,48,54
+volume.style = slider
+volume.slider.orientation = horizontal
+# Mute indicator
+mute.pos = 1063,275
+mute.icon = icons/Naim_m_on.png,icons/Naim_m_off.png
+# Play/Pause/Stop 
+playstate.pos = 784,275
+playstate.icon = icons/Naim_stop.png,icons/Naim_pause.png,icons/Naim_play.png
+# Repeat indicator
+repeat.pos = 1123,275
+repeat.icon = icons/Naim_repeat_off.png,icons/Naim_repeat_all.png,icons/Naim_repeat_single.png
+# Shuffle indicator
+shuffle.pos = 1183,275
+shuffle.icon = icons/Naim_shuffle_off.png,icons/Naim_shuffle_on.png,icons/Naim_shuffle_infinity.png
+font.size.digi = 50
+font.size.light = 17
+font.size.regular = 21
+font.size.bold = 28
+font.color = 20,185,229
+
+
+#-----------------------144  Naim
+[144G5_03_Naim Turntable]
+meter.type = circular
+channels = 2
+ui.refresh.period = 0.033
+bgr.filename = Naim Soltice3_bgr.png
+fgr.filename = Naim Soltice2_fgr.png
+indicator.filename = Naim Soltice_needle.png
+steps.per.degree = 4
+start.angle = 57
+stop.angle = -59
+distance = 73
+left.origin.x = 1005
+left.origin.y = 231
+right.origin.x = 1003
+right.origin.y = 543
+meter.x = 0
+meter.y = 0
+screen.bgr = 
+# --- volumio optional entries -------
+config.extend = True
+meter.visible = True
+albumart.rotation = false
+albumart.rotation.speed = 33
+albumart.pos = 592,458
+albumart.dimension = 101,101
+albumart.border = 1
+playinfo.ticker = True
+playinfo.ticker.replace = False
+playinfo.ticker.direction = ltr
+playinfo.ticker.append_next = True
+playinfo.ticker.pos = 14,623,bold
+playinfo.ticker.color = 121,229,44
+playinfo.ticker.maxwidth = 697
+playinfo.ticker.speed = 40
+playinfo.ticker.separator = ***
+playinfo.ticker.space_between = 4
+playinfo.ticker.end_spaces = 6
+playinfo.center = True
+playinfo.type.pos = 1000,608
+playinfo.type.color = 121,229,44
+playinfo.type.dimension = 67,67
+playinfo.samplerate.pos = 1113,636,light
+playinfo.samplerate.maxwidth = 103
+time.remaining.pos = 803,613
+time.remaining.color = 121,229,44
+time.remaining.font = fonts/MyDigi.ttf
+time.remaining.fontsize = 50
+time.elapsed.pos = 17,680,regular
+time.elapsed.fontsize = 23
+time.elapsed.color = 20,185,229
+time.total.fontsize = 23
+time.total.pos = 645,680,regular
+time.total.color = 20,185,229
+# Tonearm configuration
+tonearm.filename = Naim Soltice_arm.png
+tonearm.pivot.screen = 631,105
+tonearm.pivot.image = 30,97
+tonearm.angle.rest = 0
+tonearm.angle.start = -26
+tonearm.angle.end = -47
+tonearm.drop.duration = 1.8
+tonearm.lift.duration = 1.2
+# --- PROGRESS BAR ---
+progress.pos = 94,687
+progress.dim = 536,7
+progress.color = 20,185,229
+progress.bg.color = 31,1,3
+progress.border = 1
+progress.border.color = 80,80,80
+progress.marker.1.pos = 0
+progress.marker.1.label = .
+progress.marker.2.pos = 25
+progress.marker.2.label = .
+progress.marker.3.pos = 50
+progress.marker.3.label = .
+progress.marker.4.pos = 75
+progress.marker.4.label = .
+progress.marker.5.pos = 100
+progress.marker.5.label = .
+progress.head.image = Pipek.png
+progress.head.offset = 0,0
+# --- VOLUME INDICATOR (Slider style) ---
+volume.pos = 957,292
+volume.dim = 97,6
+volume.color = 121,229,44
+volume.bg.color = 43,48,54
+volume.style = slider
+volume.slider.orientation = horizontal
+# Mute indicator
+mute.pos = 1063,275
+mute.icon = icons/Naim_m_on.png,icons/Naim_m_off.png
+# Play/Pause/Stop 
+playstate.pos = 784,275
+playstate.icon = icons/Naim_stop.png,icons/Naim_pause.png,icons/Naim_play.png
+# Repeat indicator
+repeat.pos = 1123,275
+repeat.icon = icons/Naim_repeat_off.png,icons/Naim_repeat_all.png,icons/Naim_repeat_single.png
+# Shuffle indicator
+shuffle.pos = 1183,275
+shuffle.icon = icons/Naim_shuffle_off.png,icons/Naim_shuffle_on.png,icons/Naim_shuffle_infinity.png
+# Vinyl disc 
+vinyl.filename = cdart.png,Naim Soltice2_vinyl.png
+vinyl.pos = 28,22
+vinyl.center = 287,282
+vinyl.dimension = 521,521
+vinyl.direction = cw
+font.size.digi = 50
+font.size.light = 17
+font.size.regular = 21
+font.size.bold = 28
+font.color = 180,180,180
+
+#-----------------------145 McIntosh
+[145G5_01_McIntosh MTI100]
+meter.type = circular
+channels = 2
+ui.refresh.period = 0.033
+bgr.filename = McIntosh_MTI100_bgr.png
+fgr.filename = McIntosh_MTI100_fgr.png
+indicator.filename = McIntosh_MTI100_needle.png
+steps.per.degree = 4
+start.angle = 55
+stop.angle = -57
+distance = 73
+left.origin.x = 1063
+left.origin.y = 222
+right.origin.x = 1063
+right.origin.y = 573
+meter.x = 0
+meter.y = 0
+screen.bgr = 
+# --- volumio optional entries -------
+config.extend = True
+meter.visible = True
+albumart.rotation = true
+albumart.rotation.speed = 33
+albumart.pos = 284,189
+albumart.dimension = 197,197
+playinfo.title.pos = 18,667,bold
+playinfo.title.color = 121,229,44
+playinfo.title.maxwidth = 849
+playinfo.artist.pos = 18,607,regular
+playinfo.artist.color = 121,229,44
+playinfo.artist.maxwidth = 849
+playinfo.album.pos = 18,633,regular
+playinfo.album.color = 121,229,44
+playinfo.album.maxwidth = 849
+playinfo.center = True
+playinfo.type.pos = 1080,619
+playinfo.type.color = 121,229,44
+playinfo.type.dimension = 60,60
+playinfo.samplerate.pos = 1173,647,light
+playinfo.samplerate.maxwidth = 70
+time.remaining.pos = 893,623
+time.remaining.color = 121,229,44
+time.remaining.font = fonts/MyDigi.ttf
+time.remaining.fontsize = 50
+time.elapsed.pos = 887,330
+time.elapsed.fontsize = 12
+time.elapsed.color = 121,229,44
+time.total.font = fonts/Another.ttf
+time.total.fontsize = 12
+time.total.pos = 1221,330
+time.total.color = 121,229,44
+# Vinyl disc 
+vinyl.filename = McIntosh_MTI100_vinyl.png
+vinyl.pos = 117,22
+vinyl.center = 380,285
+vinyl.direction = cw
+# Tonearm configuration
+tonearm.filename = McIntosh_MTI100_arm.png
+#tonearm.pos = 1119,11
+tonearm.pivot.screen = 745,105
+tonearm.pivot.image = 32,87
+tonearm.angle.rest = 0
+tonearm.angle.start = -28
+tonearm.angle.end = -47
+tonearm.drop.duration = 1.8
+tonearm.lift.duration = 1.2
+
+# --- PROGRESS BAR ---
+progress.pos = 941,333
+progress.dim = 275,9
+progress.color = 121,229,44
+progress.bg.color = 31,1,3
+progress.border = 1
+progress.border.color = 80,80,80
+# --- VOLUME INDICATOR (Slider style) ---
+volume.pos = 999,705
+volume.dim = 147,7
+volume.color = 20,185,229
+volume.bg.color = 43,48,54
+volume.style = slider
+volume.slider.orientation = horizontal
+# Mute indicator
+mute.pos = 1216,262
+mute.icon = icons/McIn_m_on.png,icons/McIn_m_off.png
+# Play/Pause/Stop 
+playstate.pos = 887,262
+playstate.icon = icons/McIn_stop.png,icons/McIn_pause.png,icons/McIn_play.png
+# Repeat indicator
+repeat.pos = 1083,262
+repeat.icon = icons/McIn_repeat_off.png,icons/McIn_repeat_all.png,icons/McIn_repeat_single.png
+# Shuffle indicator
+shuffle.pos = 1149,262
+shuffle.icon = icons/McIn_shuffle_off.png,icons/McIn_shuffle_on.png,icons/McIn_shuffle_infinity.png
+font.size.digi = 50
+font.size.light = 17
+font.size.regular = 23
+font.size.bold = 27
+font.color = 20,185,229
+
+
+#-----------------------145 McIntosh
+[145G5_02_McIntosh MTI100]
+meter.type = circular
+channels = 2
+ui.refresh.period = 0.033
+bgr.filename = McIntosh_MTI100_bgr.png
+fgr.filename = McIntosh_MTI100_fgr.png
+indicator.filename = McIntosh_MTI100_needle.png
+steps.per.degree = 4
+start.angle = 55
+stop.angle = -57
+distance = 73
+left.origin.x = 1063
+left.origin.y = 222
+right.origin.x = 1063
+right.origin.y = 573
+meter.x = 0
+meter.y = 0
+screen.bgr = 
+# --- volumio optional entries -------
+config.extend = True
+meter.visible = True
+albumart.rotation = true
+albumart.rotation.speed = 33
+albumart.pos = 117,22
+albumart.dimension = 529,529
+albumart.mask = McIn_mask.jpg
+playinfo.title.pos = 18,667,bold
+playinfo.title.color = 121,229,44
+playinfo.title.maxwidth = 849
+playinfo.artist.pos = 18,607,regular
+playinfo.artist.color = 121,229,44
+playinfo.artist.maxwidth = 849
+playinfo.album.pos = 18,633,regular
+playinfo.album.color = 121,229,44
+playinfo.album.maxwidth = 849
+playinfo.center = True
+playinfo.type.pos = 1080,619
+playinfo.type.color = 121,229,44
+playinfo.type.dimension = 60,60
+playinfo.samplerate.pos = 1173,647,light
+playinfo.samplerate.maxwidth = 70
+time.remaining.pos = 893,623
+time.remaining.color = 121,229,44
+time.remaining.font = fonts/MyDigi.ttf
+time.remaining.fontsize = 50
+time.elapsed.pos = 887,330
+time.elapsed.fontsize = 12
+time.elapsed.color = 121,229,44
+time.total.font = fonts/Another.ttf
+time.total.fontsize = 12
+time.total.pos = 1221,330
+time.total.color = 121,229,44
+# Tonearm configuration
+tonearm.filename = McIntosh_MTI100_arm.png
+#tonearm.pos = 1119,11
+tonearm.pivot.screen = 745,105
+tonearm.pivot.image = 32,87
+tonearm.angle.rest = 0
+tonearm.angle.start = -28
+tonearm.angle.end = -47
+tonearm.drop.duration = 1.8
+tonearm.lift.duration = 1.2
+# --- PROGRESS BAR ---
+progress.pos = 941,333
+progress.dim = 275,9
+progress.color = 121,229,44
+progress.bg.color = 31,1,3
+progress.border = 1
+progress.border.color = 80,80,80
+# --- VOLUME INDICATOR (Slider style) ---
+volume.pos = 999,705
+volume.dim = 147,7
+volume.color = 20,185,229
+volume.bg.color = 43,48,54
+volume.style = slider
+volume.slider.orientation = horizontal
+# Mute indicator
+mute.pos = 1216,262
+mute.icon = icons/McIn_m_on.png,icons/McIn_m_off.png
+# Play/Pause/Stop 
+playstate.pos = 887,262
+playstate.icon = icons/McIn_stop.png,icons/McIn_pause.png,icons/McIn_play.png
+# Repeat indicator
+repeat.pos = 1083,262
+repeat.icon = icons/McIn_repeat_off.png,icons/McIn_repeat_all.png,icons/McIn_repeat_single.png
+# Shuffle indicator
+shuffle.pos = 1149,262
+shuffle.icon = icons/McIn_shuffle_off.png,icons/McIn_shuffle_on.png,icons/McIn_shuffle_infinity.png
+font.size.digi = 50
+font.size.light = 17
+font.size.regular = 23
+font.size.bold = 27
+font.color = 20,185,229
+
+#-----------------------145 McIntosh
+[145G5_03_McIntosh MTI100]
+meter.type = circular
+channels = 2
+ui.refresh.period = 0.033
+bgr.filename = McIntosh_MTI100_2bgr.png
+fgr.filename = McIntosh_MTI100_fgr.png
+indicator.filename = McIntosh_MTI100_needle.png
+steps.per.degree = 4
+start.angle = 55
+stop.angle = -57
+distance = 73
+left.origin.x = 1063
+left.origin.y = 222
+right.origin.x = 1063
+right.origin.y = 573
+meter.x = 0
+meter.y = 0
+screen.bgr = 
+# --- volumio optional entries -------
+config.extend = True
+meter.visible = True
+albumart.rotation = false
+albumart.rotation.speed = 33
+albumart.pos = 731,420
+albumart.dimension = 143,143
+albumart.border = 1
+# Vinyl disc 
+vinyl.filename = cdart.png,McIntosh_MTI100_vinyl.png
+vinyl.pos = 117,22
+vinyl.center = 380,285
+vinyl.direction = cw
+vinyl.dimension = 529,529
+playinfo.title.pos = 18,667,bold
+playinfo.title.color = 121,229,44
+playinfo.title.maxwidth = 849
+playinfo.artist.pos = 18,607,regular
+playinfo.artist.color = 121,229,44
+playinfo.artist.maxwidth = 849
+playinfo.album.pos = 18,633,regular
+playinfo.album.color = 121,229,44
+playinfo.album.maxwidth = 849
+playinfo.center = True
+playinfo.type.pos = 1080,619
+playinfo.type.color = 121,229,44
+playinfo.type.dimension = 60,60
+playinfo.samplerate.pos = 1173,647,light
+playinfo.samplerate.maxwidth = 70
+time.remaining.pos = 893,623
+time.remaining.color = 121,229,44
+time.remaining.font = fonts/MyDigi.ttf
+time.remaining.fontsize = 50
+time.elapsed.pos = 887,330
+time.elapsed.fontsize = 12
+time.elapsed.color = 121,229,44
+time.total.font = fonts/Another.ttf
+time.total.fontsize = 12
+time.total.pos = 1221,330
+time.total.color = 121,229,44
+# Tonearm configuration
+tonearm.filename = McIntosh_MTI100_arm.png
+#tonearm.pos = 1119,11
+tonearm.pivot.screen = 745,105
+tonearm.pivot.image = 32,87
+tonearm.angle.rest = 0
+tonearm.angle.start = -28
+tonearm.angle.end = -47
+tonearm.drop.duration = 1.8
+tonearm.lift.duration = 1.2
+# --- PROGRESS BAR ---
+progress.pos = 941,333
+progress.dim = 275,9
+progress.color = 121,229,44
+progress.bg.color = 31,1,3
+progress.border = 1
+progress.border.color = 80,80,80
+# --- VOLUME INDICATOR (Slider style) ---
+volume.pos = 999,705
+volume.dim = 147,7
+volume.color = 20,185,229
+volume.bg.color = 43,48,54
+volume.style = slider
+volume.slider.orientation = horizontal
+# Mute indicator
+mute.pos = 1216,262
+mute.icon = icons/McIn_m_on.png,icons/McIn_m_off.png
+# Play/Pause/Stop 
+playstate.pos = 887,262
+playstate.icon = icons/McIn_stop.png,icons/McIn_pause.png,icons/McIn_play.png
+# Repeat indicator
+repeat.pos = 1083,262
+repeat.icon = icons/McIn_repeat_off.png,icons/McIn_repeat_all.png,icons/McIn_repeat_single.png
+# Shuffle indicator
+shuffle.pos = 1149,262
+shuffle.icon = icons/McIn_shuffle_off.png,icons/McIn_shuffle_on.png,icons/McIn_shuffle_infinity.png
+font.size.digi = 50
+font.size.light = 17
+font.size.regular = 23
+font.size.bold = 27
+font.color = 20,185,229
+
+
+#-----------------------146 Denon------------------------
+[146G5_01_Denon DP62]
+meter.type = circular
+channels = 2
+ui.refresh.period = 0.033
+bgr.filename = denon-dp-62l_bgr.png
+fgr.filename = denon-dp-62l_fgr.png
+indicator.filename = denon-dp-62l_needle.png
+steps.per.degree = 4
+start.angle = 39
+stop.angle = -41
+distance = 127
+left.origin.x = 1090
+left.origin.y = 220
+right.origin.x = 1090
+right.origin.y = 432
+meter.x = 0
+meter.y = 0
+screen.bgr = denon-dp-62l.jpg
+# --- volumio optional entries -------
+config.extend = True
+meter.visible = True
+albumart.rotation = true
+albumart.rotation.speed = 33
+albumart.pos = 240,220
+albumart.dimension = 219,219
+playinfo.title.pos = 907,610,bold
+playinfo.title.color = 197,167,123
+playinfo.title.maxwidth = 361
+playinfo.artist.pos = 907,520,regular
+playinfo.artist.color = 197,167,123
+playinfo.artist.maxwidth = 361
+playinfo.album.pos = 907,563,regular
+playinfo.album.color = 197,167,123
+playinfo.album.maxwidth = 361
+playinfo.next.title.pos = 907,640,light
+playinfo.next.title.color = 197,167,123
+playinfo.next.title.maxwidth = 361
+playinfo.center = True
+playinfo.type.pos = 1105,448
+playinfo.type.color = 255,255,255
+playinfo.type.dimension = 23,23
+playinfo.samplerate.pos = 1084,487,light
+playinfo.samplerate.maxwidth = 70
+time.remaining.pos = 313,667
+time.remaining.color = 255,255,255
+time.remaining.font = fonts/MyDigi.ttf
+time.remaining.fontsize = 24
+time.elapsed.pos = 757,693
+time.elapsed.fontsize = 12
+time.elapsed.color = 197,167,123
+time.total.font = fonts/Another.ttf
+time.total.fontsize = 12
+time.total.pos = 1231,693
+time.total.color = 197,167,123
+# Vinyl disc 
+vinyl.filename = denon-dp-62l_vinyl.png
+vinyl.pos = 53,34
+vinyl.center = 348,330
+vinyl.direction = cw
+# Tonearm configuration
+tonearm.filename = denon-dp-62l_arm.png
+#tonearm.pos = 1056,11
+tonearm.pivot.screen = 774,180
+tonearm.pivot.image = 71,164
+tonearm.angle.rest = 0
+tonearm.angle.start = -33
+tonearm.angle.end = -52
+tonearm.drop.duration = 1.8
+tonearm.lift.duration = 1.2
+# --- PROGRESS BAR ---
+progress.pos = 811,684
+progress.dim = 415,30
+progress.color = 197,167,123
+progress.bg.color = 31,1,3
+progress.border = 1
+progress.border.color = 80,80,80
+# Volume - Vertical Fader (image-based slider)
+volume.pos = 873,354
+volume.dim = 32,161
+volume.style = slider
+volume.slider.track = 
+volume.slider.tip = denon-dp-62l_tip.png
+volume.slider.orientation = vertical
+volume.slider.travel = 3,147
+volume.slider.tip.offset = -7,0
+# Mute indicator
+mute.pos = 825,485
+mute.icon = icons/Denon1_mute_on.png,icons/Denon1_mute_off.png
+mute.icon.glow = 3
+mute.icon.glow.intensity = 0.5
+mute.icon.glow.color = 255,80,80,100,100,100
+# Play/Pause/Stop 
+playstate.pos = 1007,441
+playstate.icon = icons/Denon1_stop.png,icons/Denon1_pause.png,icons/Denon1_play.png
+playstate.icon.glow = 3
+playstate.icon.glow.intensity = 0.5
+# Repeat indicator
+repeat.pos = 957,441
+repeat.icon = icons/Denon1_repeat_off.png,icons/Denon1_repeat_all.png,icons/Denon1_repeat_single.png
+repeat.icon.glow = 3
+repeat.icon.glow.intensity = 0.5
+# Shuffle indicator
+shuffle.pos = 905,441
+shuffle.icon = icons/Denon1_shuffle_off.png,icons/Denon1_shuffle_on.png,icons/Denon1_shuffle_infinity.png
+shuffle.icon.glow = 3
+shuffle.icon.glow.intensity = 0.5
+font.size.digi = 24
+font.size.light = 10
+font.size.regular = 27
+font.size.bold = 25
+font.color = 0,0,0
+
+
+
+#-----------------------146 Denon------------------------
+[146G5_02_Denon DP62]
+meter.type = circular
+channels = 2
+ui.refresh.period = 0.033
+bgr.filename = denon-dp-62l_bgr.png
+fgr.filename = denon-dp-62l_fgr.png
+indicator.filename = denon-dp-62l_needle.png
+steps.per.degree = 4
+start.angle = 39
+stop.angle = -41
+distance = 127
+left.origin.x = 1090
+left.origin.y = 220
+right.origin.x = 1090
+right.origin.y = 432
+meter.x = 0
+meter.y = 0
+screen.bgr = denon-dp-62l.jpg
+# --- volumio optional entries -------
+config.extend = True
+meter.visible = True
+albumart.rotation = true
+albumart.rotation.speed = 33
+albumart.pos = 54,36
+albumart.dimension = 589,589
+albumart.mask = Denon_DPL_mask.jpg
+playinfo.title.pos = 907,610,bold
+playinfo.title.color = 197,167,123
+playinfo.title.maxwidth = 361
+playinfo.artist.pos = 907,520,regular
+playinfo.artist.color = 197,167,123
+playinfo.artist.maxwidth = 361
+playinfo.album.pos = 907,563,regular
+playinfo.album.color = 197,167,123
+playinfo.album.maxwidth = 361
+playinfo.next.title.pos = 907,647,light
+playinfo.next.title.color = 197,167,123
+playinfo.next.title.maxwidth = 361
+playinfo.center = True
+playinfo.type.pos = 1105,448
+playinfo.type.color = 255,255,255
+playinfo.type.dimension = 23,23
+playinfo.samplerate.pos = 1084,487,light
+playinfo.samplerate.maxwidth = 70
+time.remaining.pos = 313,667
+time.remaining.color = 255,255,255
+time.remaining.font = fonts/MyDigi.ttf
+time.remaining.fontsize = 24
+time.elapsed.pos = 757,693
+time.elapsed.fontsize = 12
+time.elapsed.color = 197,167,123
+time.total.font = fonts/Another.ttf
+time.total.fontsize = 12
+time.total.pos = 1231,693
+time.total.color = 197,167,123
+# Tonearm configuration
+tonearm.filename = denon-dp-62l_arm.png
+#tonearm.pos = 1056,11
+tonearm.pivot.screen = 774,180
+tonearm.pivot.image = 71,164
+tonearm.angle.rest = 0
+tonearm.angle.start = -33
+tonearm.angle.end = -52
+tonearm.drop.duration = 1.8
+tonearm.lift.duration = 1.2
+# --- PROGRESS BAR ---
+progress.pos = 811,684
+progress.dim = 415,30
+progress.color = 197,167,123
+progress.bg.color = 31,1,3
+progress.border = 1
+progress.border.color = 80,80,80
+# Volume - Vertical Fader (image-based slider)
+volume.pos = 873,354
+volume.dim = 32,161
+volume.style = slider
+volume.slider.track = 
+volume.slider.tip = denon-dp-62l_tip.png
+volume.slider.orientation = vertical
+volume.slider.travel = 3,147
+volume.slider.tip.offset = -7,0
+# Mute indicator
+mute.pos = 825,485
+mute.icon = icons/Denon1_mute_on.png,icons/Denon1_mute_off.png
+mute.icon.glow = 3
+mute.icon.glow.intensity = 0.5
+mute.icon.glow.color = 255,80,80,100,100,100
+# Play/Pause/Stop 
+playstate.pos = 1007,441
+playstate.icon = icons/Denon1_stop.png,icons/Denon1_pause.png,icons/Denon1_play.png
+playstate.icon.glow = 3
+playstate.icon.glow.intensity = 0.5
+# Repeat indicator
+repeat.pos = 957,441
+repeat.icon = icons/Denon1_repeat_off.png,icons/Denon1_repeat_all.png,icons/Denon1_repeat_single.png
+repeat.icon.glow = 3
+repeat.icon.glow.intensity = 0.5
+# Shuffle indicator
+shuffle.pos = 905,441
+shuffle.icon = icons/Denon1_shuffle_off.png,icons/Denon1_shuffle_on.png,icons/Denon1_shuffle_infinity.png
+shuffle.icon.glow = 3
+shuffle.icon.glow.intensity = 0.5
+font.size.digi = 24
+font.size.light = 10
+font.size.regular = 27
+font.size.bold = 25
+font.color = 0,0,0
+
+
+
+#-----------------------146 Denon------------------------
+[146G5_03_Denon DP62]
+meter.type = circular
+channels = 2
+ui.refresh.period = 0.033
+bgr.filename = denon-dp-62l_bgr.png
+fgr.filename = denon-dp-62l_fgr.png
+indicator.filename = denon-dp-62l_needle.png
+steps.per.degree = 4
+start.angle = 39
+stop.angle = -41
+distance = 127
+left.origin.x = 1090
+left.origin.y = 220
+right.origin.x = 1090
+right.origin.y = 432
+meter.x = 0
+meter.y = 0
+screen.bgr = denon-dp-62l.jpg
+# --- volumio optional entries -------
+config.extend = True
+meter.visible = True
+albumart.rotation = false
+albumart.rotation.speed = 33
+albumart.pos = 759,535
+albumart.dimension = 127,127
+albumart.border = 1
+# Vinyl disc 
+vinyl.filename = cdart.png,denon-dp-62l_vinyl.png
+vinyl.pos = 54,36
+vinyl.center = 348,330
+vinyl.direction = cw
+vinyl.dimension = 589,589
+playinfo.title.pos = 907,610,bold
+playinfo.title.color = 197,167,123
+playinfo.title.maxwidth = 361
+playinfo.artist.pos = 907,520,regular
+playinfo.artist.color = 197,167,123
+playinfo.artist.maxwidth = 361
+playinfo.album.pos = 907,563,regular
+playinfo.album.color = 197,167,123
+playinfo.album.maxwidth = 361
+playinfo.next.title.pos = 907,647,light
+playinfo.next.title.color = 197,167,123
+playinfo.next.title.maxwidth = 361
+playinfo.center = True
+playinfo.type.pos = 1105,448
+playinfo.type.color = 255,255,255
+playinfo.type.dimension = 23,23
+playinfo.samplerate.pos = 1084,487,light
+playinfo.samplerate.maxwidth = 70
+time.remaining.pos = 313,667
+time.remaining.color = 255,255,255
+time.remaining.font = fonts/MyDigi.ttf
+time.remaining.fontsize = 24
+time.elapsed.pos = 757,693
+time.elapsed.fontsize = 12
+time.elapsed.color = 197,167,123
+time.total.font = fonts/Another.ttf
+time.total.fontsize = 12
+time.total.pos = 1231,693
+time.total.color = 197,167,123
+# Tonearm configuration
+tonearm.filename = denon-dp-62l_arm.png
+#tonearm.pos = 1056,11
+tonearm.pivot.screen = 774,180
+tonearm.pivot.image = 71,164
+tonearm.angle.rest = 0
+tonearm.angle.start = -33
+tonearm.angle.end = -52
+tonearm.drop.duration = 1.8
+tonearm.lift.duration = 1.2
+# --- PROGRESS BAR ---
+progress.pos = 811,684
+progress.dim = 415,30
+progress.color = 197,167,123
+progress.bg.color = 31,1,3
+progress.border = 1
+progress.border.color = 80,80,80
+# Volume - Vertical Fader (image-based slider)
+volume.pos = 873,354
+volume.dim = 32,161
+volume.style = slider
+volume.slider.track = 
+volume.slider.tip = denon-dp-62l_tip.png
+volume.slider.orientation = vertical
+volume.slider.travel = 3,147
+volume.slider.tip.offset = -7,0
+# Mute indicator
+mute.pos = 825,485
+mute.icon = icons/Denon1_mute_on.png,icons/Denon1_mute_off.png
+mute.icon.glow = 3
+mute.icon.glow.intensity = 0.5
+mute.icon.glow.color = 255,80,80,100,100,100
+# Play/Pause/Stop 
+playstate.pos = 1007,441
+playstate.icon = icons/Denon1_stop.png,icons/Denon1_pause.png,icons/Denon1_play.png
+playstate.icon.glow = 3
+playstate.icon.glow.intensity = 0.5
+# Repeat indicator
+repeat.pos = 957,441
+repeat.icon = icons/Denon1_repeat_off.png,icons/Denon1_repeat_all.png,icons/Denon1_repeat_single.png
+repeat.icon.glow = 3
+repeat.icon.glow.intensity = 0.5
+# Shuffle indicator
+shuffle.pos = 905,441
+shuffle.icon = icons/Denon1_shuffle_off.png,icons/Denon1_shuffle_on.png,icons/Denon1_shuffle_infinity.png
+shuffle.icon.glow = 3
+shuffle.icon.glow.intensity = 0.5
+font.size.digi = 24
+font.size.light = 10
+font.size.regular = 27
+font.size.bold = 25
+font.color = 0,0,0
+
+#-----------------------147 Denon DP400------------------------
+[147G5_01_Denon DP400]
+meter.type = circular
+channels = 2
+ui.refresh.period = 0.033
+bgr.filename = Denon_DP400_bgr.png
+fgr.filename = Denon_DP400_fgr.png
+indicator.filename = Denon_DP400_needle.png
+steps.per.degree = 4
+start.angle = 40
+stop.angle = -42
+distance = 93
+left.origin.x = 1069
+left.origin.y = 501
+right.origin.x = 1069
+right.origin.y = 684
+meter.x = 0
+meter.y = 0
+screen.bgr = 
+# --- volumio optional entries -------
+config.extend = True
+meter.visible = True
+albumart.rotation = true
+albumart.rotation.speed = 33
+albumart.pos = 231,252
+albumart.dimension = 227,227
+# Vinyl disc 
+vinyl.filename = denon-dp-62l_vinyl.png
+vinyl.pos = 38,59
+vinyl.center = 344,365
+vinyl.direction = cw
+vinyl.dimension = 612,612
+
+
+playinfo.title.pos = 881,100,bold
+playinfo.title.color = 197,167,123
+playinfo.title.maxwidth = 364
+playinfo.artist.pos = 881,27,regular
+playinfo.artist.color = 197,167,123
+playinfo.artist.maxwidth = 364
+playinfo.album.pos = 881,60,regular
+playinfo.album.color = 197,167,123
+playinfo.album.maxwidth = 364
+playinfo.next.title.pos = 881,160,regular
+playinfo.next.title.color = 150,150,150
+playinfo.next.title.maxwidth = 364
+
+playinfo.center = True
+playinfo.type.pos = 1055,263
+playinfo.type.color = 180,180,180
+playinfo.type.dimension = 47,47
+playinfo.samplerate.pos = 1117,283,light
+playinfo.samplerate.maxwidth = 70
+time.remaining.pos = 953,272
+time.remaining.color = 180,180,180
+
+# Tonearm configuration
+tonearm.filename = Denon_DP400_arm.png
+#tonearm.pos = 1056,11
+tonearm.pivot.screen = 718,151
+tonearm.pivot.image = 45,128
+tonearm.angle.rest = 0
+tonearm.angle.start = -18
+tonearm.angle.end = -41
+tonearm.drop.duration = 1.8
+tonearm.lift.duration = 1.2
+# --- PROGRESS BAR ---
+progress.pos = 1253,264
+progress.dim = 17,419
+progress.color = 197,167,123
+progress.bg.color = 31,1,3
+progress.border = 1
+progress.border.color = 80,80,80
+progress.slider.orientation = vertical
+# --- VOLUME INDICATOR (Slider style) ---
+volume.pos = 855,267
+volume.dim = 27,425
+volume.color = 197,167,123
+volume.bg.color = 0,0,0
+volume.style = slider
+# Mute indicator
+mute.pos = 863,193
+mute.icon = icons/Denon_m_on.png,icons/Denon_m_off.png
+mute.icon.glow = 1
+mute.icon.glow.intensity = 0.5
+mute.icon.glow.color = 255,80,80,100,100,100
+# Play/Pause/Stop 
+playstate.pos = 963,193
+playstate.icon = icons/Denon_stop.png,icons/Denon_pause.png,icons/Denon_play.png
+playstate.icon.glow = 1
+playstate.icon.glow.intensity = 0.5
+# Repeat indicator
+repeat.pos = 1068,193
+repeat.icon = icons/Denon_repeat_off.png,icons/Denon_repeat_all.png,icons/Denon_repeat_single.png
+repeat.icon.glow = 1
+repeat.icon.glow.intensity = 0.5
+# Shuffle indicator
+shuffle.pos = 1173,193
+shuffle.icon = icons/Denon_shuffle_off.png,icons/Denon_shuffle_on.png,icons/Denon_shuffle_infinity.png
+shuffle.icon.glow = 1
+shuffle.icon.glow.intensity = 0.5
+font.size.digi = 27
+font.size.light = 11
+font.size.regular = 27
+font.size.bold = 25
+font.color = 197,167,123
+
+
+
+
+
+#-----------------------147 Denon DP400------------------------
+[147G5_02_Denon DP400]
+meter.type = circular
+channels = 2
+ui.refresh.period = 0.033
+bgr.filename = Denon_DP400_bgr.png
+fgr.filename = Denon_DP400_fgr.png
+indicator.filename = Denon_DP400_needle.png
+steps.per.degree = 4
+start.angle = 40
+stop.angle = -42
+distance = 93
+left.origin.x = 1069
+left.origin.y = 501
+right.origin.x = 1069
+right.origin.y = 684
+meter.x = 0
+meter.y = 0
+screen.bgr = 
+# --- volumio optional entries -------
+config.extend = True
+meter.visible = True
+albumart.rotation = true
+albumart.rotation.speed = 33
+albumart.pos = 34,53
+albumart.dimension = 620,620
+albumart.mask = Denon_DP400_mask.jpg
+playinfo.title.pos = 881,100,bold
+playinfo.title.color = 197,167,123
+playinfo.title.maxwidth = 364
+playinfo.artist.pos = 881,27,regular
+playinfo.artist.color = 197,167,123
+playinfo.artist.maxwidth = 364
+playinfo.album.pos = 881,60,regular
+playinfo.album.color = 197,167,123
+playinfo.album.maxwidth = 364
+playinfo.next.title.pos = 881,160,regular
+playinfo.next.title.color = 150,150,150
+playinfo.next.title.maxwidth = 364
+
+playinfo.center = True
+playinfo.type.pos = 1055,263
+playinfo.type.color = 180,180,180
+playinfo.type.dimension = 47,47
+playinfo.samplerate.pos = 1117,283,light
+playinfo.samplerate.maxwidth = 70
+time.remaining.pos = 953,272
+time.remaining.color = 180,180,180
+vinyl.direction = cw
+# Tonearm configuration
+tonearm.filename = Denon_DP400_arm.png
+#tonearm.pos = 1056,11
+tonearm.pivot.screen = 718,151
+tonearm.pivot.image = 45,128
+tonearm.angle.rest = 0
+tonearm.angle.start = -18
+tonearm.angle.end = -41
+tonearm.drop.duration = 1.8
+tonearm.lift.duration = 1.2
+# --- PROGRESS BAR ---
+progress.pos = 1253,264
+progress.dim = 17,419
+progress.color = 197,167,123
+progress.bg.color = 31,1,3
+progress.border = 1
+progress.border.color = 80,80,80
+progress.slider.orientation = vertical
+# --- VOLUME INDICATOR (Slider style) ---
+volume.pos = 855,267
+volume.dim = 27,425
+volume.color = 197,167,123
+volume.bg.color = 0,0,0
+volume.style = slider
+# Mute indicator
+mute.pos = 863,193
+mute.icon = icons/Denon_m_on.png,icons/Denon_m_off.png
+mute.icon.glow = 1
+mute.icon.glow.intensity = 0.5
+mute.icon.glow.color = 255,80,80,100,100,100
+# Play/Pause/Stop 
+playstate.pos = 963,193
+playstate.icon = icons/Denon_stop.png,icons/Denon_pause.png,icons/Denon_play.png
+playstate.icon.glow = 1
+playstate.icon.glow.intensity = 0.5
+# Repeat indicator
+repeat.pos = 1068,193
+repeat.icon = icons/Denon_repeat_off.png,icons/Denon_repeat_all.png,icons/Denon_repeat_single.png
+repeat.icon.glow = 1
+repeat.icon.glow.intensity = 0.5
+# Shuffle indicator
+shuffle.pos = 1173,193
+shuffle.icon = icons/Denon_shuffle_off.png,icons/Denon_shuffle_on.png,icons/Denon_shuffle_infinity.png
+shuffle.icon.glow = 1
+shuffle.icon.glow.intensity = 0.5
+font.size.digi = 27
+font.size.light = 11
+font.size.regular = 27
+font.size.bold = 25
+font.color = 197,167,123
+
+
+#-----------------------147 Denon DP400------------------------
+[147G5_03_Denon DP400]
+meter.type = circular
+channels = 2
+ui.refresh.period = 0.033
+bgr.filename = Denon_DP400_bgr.png
+fgr.filename = Denon_DP400_fgr.png
+indicator.filename = Denon_DP400_needle.png
+steps.per.degree = 4
+start.angle = 40
+stop.angle = -42
+distance = 93
+left.origin.x = 1069
+left.origin.y = 501
+right.origin.x = 1069
+right.origin.y = 684
+meter.x = 0
+meter.y = 0
+screen.bgr = 
+# --- volumio optional entries -------
+config.extend = True
+meter.visible = True
+albumart.rotation = false
+albumart.rotation.speed = 33
+albumart.pos = 716,535
+albumart.dimension = 107,107
+albumart.border = 1
+# Vinyl disc 
+vinyl.filename = cdart.png,denon-dp-62l_vinyl.png
+vinyl.pos = 38,59
+vinyl.center = 344,365
+vinyl.direction = cw
+vinyl.dimension = 612,612
+playinfo.title.pos = 881,100,bold
+playinfo.title.color = 197,167,123
+playinfo.title.maxwidth = 364
+playinfo.artist.pos = 881,27,bold
+playinfo.artist.color = 197,167,123
+playinfo.artist.maxwidth = 364
+playinfo.album.pos = 881,60,regular
+playinfo.album.color = 197,167,123
+playinfo.album.maxwidth = 364
+playinfo.next.title.pos = 881,160,regular
+playinfo.next.title.color = 150,150,150
+playinfo.next.title.maxwidth = 364
+playinfo.center = True
+playinfo.type.pos = 1055,263
+playinfo.type.color = 180,180,180
+playinfo.type.dimension = 47,47
+playinfo.samplerate.pos = 1117,283,light
+playinfo.samplerate.maxwidth = 70
+time.remaining.pos = 953,272
+time.remaining.color = 180,180,180
+# Tonearm configuration
+tonearm.filename = Denon_DP400_arm.png
+#tonearm.pos = 1056,11
+tonearm.pivot.screen = 718,151
+tonearm.pivot.image = 45,128
+tonearm.angle.rest = 0
+tonearm.angle.start = -18
+tonearm.angle.end = -41
+tonearm.drop.duration = 1.8
+tonearm.lift.duration = 1.2
+# --- PROGRESS BAR ---
+progress.pos = 1253,264
+progress.dim = 17,419
+progress.color = 197,167,123
+progress.bg.color = 31,1,3
+progress.border = 1
+progress.border.color = 80,80,80
+progress.slider.orientation = vertical
+# --- VOLUME INDICATOR (Slider style) ---
+volume.pos = 855,267
+volume.dim = 27,425
+volume.color = 197,167,123
+volume.bg.color = 0,0,0
+volume.style = slider
+# Mute indicator
+mute.pos = 863,193
+mute.icon = icons/Denon_m_on.png,icons/Denon_m_off.png
+mute.icon.glow = 1
+mute.icon.glow.intensity = 0.5
+mute.icon.glow.color = 255,80,80,100,100,100
+# Play/Pause/Stop 
+playstate.pos = 963,193
+playstate.icon = icons/Denon_stop.png,icons/Denon_pause.png,icons/Denon_play.png
+playstate.icon.glow = 1
+playstate.icon.glow.intensity = 0.5
+# Repeat indicator
+repeat.pos = 1068,193
+repeat.icon = icons/Denon_repeat_off.png,icons/Denon_repeat_all.png,icons/Denon_repeat_single.png
+repeat.icon.glow = 1
+repeat.icon.glow.intensity = 0.5
+# Shuffle indicator
+shuffle.pos = 1173,193
+shuffle.icon = icons/Denon_shuffle_off.png,icons/Denon_shuffle_on.png,icons/Denon_shuffle_infinity.png
+shuffle.icon.glow = 1
+shuffle.icon.glow.intensity = 0.5
+font.size.digi = 27
+font.size.light = 11
+font.size.regular = 27
+font.size.bold = 25
+font.color = 197,167,123
+
+
+#-----------------------148 Reloop------------------------
+[148G5_01_Reloop RL7000]
+meter.type = circular
+channels = 2
+ui.refresh.period = 0.033
+bgr.filename = Reloop_RL7000_black_bgr.png
+fgr.filename = Reloop_RL7000_black_fgr.png
+indicator.filename = Reloop_RL7000_black_needle.png
+steps.per.degree = 4
+start.angle = 73
+stop.angle = -74
+distance = 43
+left.origin.x = 1103
+left.origin.y = 181
+right.origin.x = 1103
+right.origin.y = 664
+meter.x = 0
+meter.y = 0
+screen.bgr = Reloop_RL7000_black.jpg
+# --- volumio optional entries -------
+config.extend = True
+meter.visible = True
+albumart.rotation = true
+albumart.rotation.speed = 33
+albumart.pos = 304,246
+albumart.dimension = 227,227
+playinfo.title.pos = 937,467,bold
+playinfo.title.color = 180,180,180
+playinfo.title.maxwidth = 334
+playinfo.artist.pos = 937,417,regular
+playinfo.artist.color = 180,180,180
+playinfo.artist.maxwidth = 334
+playinfo.album.pos = 937,440,regular
+playinfo.album.color = 180,180,180
+playinfo.album.maxwidth = 334
+playinfo.center = True
+playinfo.type.pos = 1096,247
+playinfo.type.color = 255,255,255
+playinfo.type.dimension = 53,53
+playinfo.samplerate.pos = 1164,276,light
+playinfo.samplerate.maxwidth = 70
+time.remaining.pos = 982,257
+time.remaining.color = 255,255,255
+time.remaining.font = fonts/MyDigi.ttf
+time.remaining.fontsize = 30
+time.elapsed.pos = 943,307
+time.elapsed.fontsize = 8
+time.elapsed.color = 121,229,44
+time.total.font = fonts/Another.ttf
+time.total.fontsize = 8
+time.total.pos = 1233,307
+time.total.color = 121,229,44
+# Vinyl disc 
+vinyl.filename = Reloop_vinyl.png
+vinyl.pos = 103,52
+vinyl.center = 410,358
+vinyl.direction = cw
+# Tonearm configuration
+tonearm.filename = Reloop_ARM.png
+#tonearm.pos = 1056,11
+tonearm.pivot.screen = 827,187
+tonearm.pivot.image = 112,139
+tonearm.angle.rest = 0
+tonearm.angle.start = -16
+tonearm.angle.end = -38
+tonearm.drop.duration = 1.8
+tonearm.lift.duration = 1.2
+# --- PROGRESS BAR ---
+progress.pos = 977,305
+progress.dim = 252,11
+progress.color = 197,167,123
+progress.bg.color = 31,1,3
+progress.border = 1
+progress.border.color = 80,80,80
+# Volume - Vertical Fader (image-based slider)
+volume.pos = 883,436
+volume.dim = 32,161
+volume.style = slider
+volume.slider.track = 
+volume.slider.tip = Reloop_tip.png
+volume.slider.orientation = vertical
+volume.slider.travel = 3,230
+volume.slider.tip.offset = -7,0
+# Mute indicator
+mute.pos = 937,337
+mute.icon = icons/Relop_mute_on.png,icons/Relop_mute_off.png
+mute.icon.glow = 3
+mute.icon.glow.intensity = 0.5
+mute.icon.glow.color = 255,80,80,100,100,100
+# Play/Pause/Stop 
+playstate.pos = 1025,337
+playstate.icon = icons/Relop_stop.png,icons/Relop_pause.png,icons/Relop_play.png
+playstate.icon.glow = 3
+playstate.icon.glow.intensity = 0.5
+# Repeat indicator
+repeat.pos = 1112,337
+repeat.icon = icons/Relop_repeat_off.png,icons/Relop_repeat_all.png,icons/Relop_repeat_single.png
+repeat.icon.glow = 3
+repeat.icon.glow.intensity = 0.5
+# Shuffle indicator
+shuffle.pos = 1199,337
+shuffle.icon = icons/Relop_shuffle_off.png,icons/Relop_shuffle_on.png,icons/Relop_shuffle_infinity.png
+shuffle.icon.glow = 3
+shuffle.icon.glow.intensity = 0.5
+font.size.digi = 30
+font.size.light = 10
+font.size.regular = 18
+font.size.bold = 19
+font.color = 0,0,0
+
+
+#-----------------------148 Reloop------------------------
+[148G5_02_Reloop RL7000]
+meter.type = circular
+channels = 2
+ui.refresh.period = 0.033
+bgr.filename = Reloop_RL7000_black_bgr.png
+fgr.filename = Reloop_RL7000_black_fgr.png
+indicator.filename = Reloop_RL7000_black_needle.png
+steps.per.degree = 4
+start.angle = 73
+stop.angle = -74
+distance = 43
+left.origin.x = 1103
+left.origin.y = 181
+right.origin.x = 1103
+right.origin.y = 664
+meter.x = 0
+meter.y = 0
+screen.bgr = Reloop_RL7000_black.jpg
+# --- volumio optional entries -------
+config.extend = True
+meter.visible = True
+albumart.rotation = true
+albumart.rotation.speed = 33
+albumart.pos = 99,51
+albumart.dimension = 621,621
+albumart.mask = Reloop_mask.jpg
+playinfo.title.pos = 937,467,bold
+playinfo.title.color = 180,180,180
+playinfo.title.maxwidth = 334
+playinfo.artist.pos = 937,417,regular
+playinfo.artist.color = 180,180,180
+playinfo.artist.maxwidth = 334
+playinfo.album.pos = 937,440,regular
+playinfo.album.color = 180,180,180
+playinfo.album.maxwidth = 334
+playinfo.center = True
+playinfo.type.pos = 1096,247
+playinfo.type.color = 255,255,255
+playinfo.type.dimension = 53,53
+playinfo.samplerate.pos = 1164,276,light
+playinfo.samplerate.maxwidth = 70
+time.remaining.pos = 982,257
+time.remaining.color = 255,255,255
+time.remaining.font = fonts/MyDigi.ttf
+time.remaining.fontsize = 30
+time.elapsed.pos = 943,307
+time.elapsed.fontsize = 8
+time.elapsed.color = 121,229,44
+time.total.font = fonts/Another.ttf
+time.total.fontsize = 8
+time.total.pos = 1233,307
+time.total.color = 121,229,44
+# Tonearm configuration
+tonearm.filename = Reloop_ARM.png
+#tonearm.pos = 1056,11
+tonearm.pivot.screen = 827,187
+tonearm.pivot.image = 112,139
+tonearm.angle.rest = 0
+tonearm.angle.start = -16
+tonearm.angle.end = -38
+tonearm.drop.duration = 1.8
+tonearm.lift.duration = 1.2
+# --- PROGRESS BAR ---
+progress.pos = 977,305
+progress.dim = 252,11
+progress.color = 197,167,123
+progress.bg.color = 31,1,3
+progress.border = 1
+progress.border.color = 80,80,80
+# Volume - Vertical Fader (image-based slider)
+volume.pos = 883,436
+volume.dim = 32,161
+volume.style = slider
+volume.slider.track = 
+volume.slider.tip = Reloop_tip.png
+volume.slider.orientation = vertical
+volume.slider.travel = 3,230
+volume.slider.tip.offset = -7,0
+# Mute indicator
+mute.pos = 937,337
+mute.icon = icons/Relop_mute_on.png,icons/Relop_mute_off.png
+mute.icon.glow = 3
+mute.icon.glow.intensity = 0.5
+mute.icon.glow.color = 255,80,80,100,100,100
+# Play/Pause/Stop 
+playstate.pos = 1025,337
+playstate.icon = icons/Relop_stop.png,icons/Relop_pause.png,icons/Relop_play.png
+playstate.icon.glow = 3
+playstate.icon.glow.intensity = 0.5
+# Repeat indicator
+repeat.pos = 1112,337
+repeat.icon = icons/Relop_repeat_off.png,icons/Relop_repeat_all.png,icons/Relop_repeat_single.png
+repeat.icon.glow = 3
+repeat.icon.glow.intensity = 0.5
+# Shuffle indicator
+shuffle.pos = 1199,337
+shuffle.icon = icons/Relop_shuffle_off.png,icons/Relop_shuffle_on.png,icons/Relop_shuffle_infinity.png
+shuffle.icon.glow = 3
+shuffle.icon.glow.intensity = 0.5
+font.size.digi = 30
+font.size.light = 10
+font.size.regular = 18
+font.size.bold = 19
+font.color = 0,0,0
+
+#-----------------------148 Reloop------------------------
+[148G5_03_Reloop RL7000]
+meter.type = circular
+channels = 2
+ui.refresh.period = 0.033
+bgr.filename = Reloop_RL7000_black_bgr.png
+fgr.filename = Reloop_RL7000_black_fgr.png
+indicator.filename = Reloop_RL7000_black_needle.png
+steps.per.degree = 4
+start.angle = 73
+stop.angle = -74
+distance = 43
+left.origin.x = 1103
+left.origin.y = 181
+right.origin.x = 1103
+right.origin.y = 664
+meter.x = 0
+meter.y = 0
+screen.bgr = Reloop_RL7000_black.jpg
+# --- volumio optional entries -------
+config.extend = True
+meter.visible = True
+albumart.rotation = false
+albumart.rotation.speed = 33
+albumart.pos = 744,573
+albumart.dimension = 97,97
+albumart.border = 1
+playinfo.title.pos = 937,467,bold
+playinfo.title.color = 180,180,180
+playinfo.title.maxwidth = 334
+playinfo.artist.pos = 937,417,regular
+playinfo.artist.color = 180,180,180
+playinfo.artist.maxwidth = 334
+playinfo.album.pos = 937,440,regular
+playinfo.album.color = 180,180,180
+playinfo.album.maxwidth = 334
+playinfo.center = True
+playinfo.type.pos = 1096,247
+playinfo.type.color = 255,255,255
+playinfo.type.dimension = 53,53
+playinfo.samplerate.pos = 1164,276,light
+playinfo.samplerate.maxwidth = 70
+time.remaining.pos = 982,257
+time.remaining.color = 255,255,255
+time.remaining.font = fonts/MyDigi.ttf
+time.remaining.fontsize = 30
+time.elapsed.pos = 943,307
+time.elapsed.fontsize = 8
+time.elapsed.color = 121,229,44
+time.total.font = fonts/Another.ttf
+time.total.fontsize = 8
+time.total.pos = 1233,307
+time.total.color = 121,229,44
+# Vinyl disc 
+vinyl.filename = cdart.png,Reloop_vinyl.png
+vinyl.pos = 100,51
+vinyl.center = 410,358
+vinyl.direction = cw
+vinyl.dimension = 621,621
+# Tonearm configuration
+tonearm.filename = Reloop_ARM.png
+#tonearm.pos = 1056,11
+tonearm.pivot.screen = 827,187
+tonearm.pivot.image = 112,139
+tonearm.angle.rest = 0
+tonearm.angle.start = -16
+tonearm.angle.end = -38
+tonearm.drop.duration = 1.8
+tonearm.lift.duration = 1.2
+# --- PROGRESS BAR ---
+progress.pos = 977,305
+progress.dim = 252,11
+progress.color = 197,167,123
+progress.bg.color = 31,1,3
+progress.border = 1
+progress.border.color = 80,80,80
+# Volume - Vertical Fader (image-based slider)
+volume.pos = 883,436
+volume.dim = 32,161
+volume.style = slider
+volume.slider.track = 
+volume.slider.tip = Reloop_tip.png
+volume.slider.orientation = vertical
+volume.slider.travel = 3,230
+volume.slider.tip.offset = -7,0
+# Mute indicator
+mute.pos = 937,337
+mute.icon = icons/Relop_mute_on.png,icons/Relop_mute_off.png
+mute.icon.glow = 3
+mute.icon.glow.intensity = 0.5
+mute.icon.glow.color = 255,80,80,100,100,100
+# Play/Pause/Stop 
+playstate.pos = 1025,337
+playstate.icon = icons/Relop_stop.png,icons/Relop_pause.png,icons/Relop_play.png
+playstate.icon.glow = 3
+playstate.icon.glow.intensity = 0.5
+# Repeat indicator
+repeat.pos = 1112,337
+repeat.icon = icons/Relop_repeat_off.png,icons/Relop_repeat_all.png,icons/Relop_repeat_single.png
+repeat.icon.glow = 3
+repeat.icon.glow.intensity = 0.5
+# Shuffle indicator
+shuffle.pos = 1199,337
+shuffle.icon = icons/Relop_shuffle_off.png,icons/Relop_shuffle_on.png,icons/Relop_shuffle_infinity.png
+shuffle.icon.glow = 3
+shuffle.icon.glow.intensity = 0.5
+font.size.digi = 30
+font.size.light = 10
+font.size.regular = 18
+font.size.bold = 19
+font.color = 180,180,180
+
+
+
+
+
+
+#-----------------------149 Thorens------------------------
+[149G5_01_Thorens]
+meter.type = circular
+channels = 2
+ui.refresh.period = 0.033
+bgr.filename = Thorens_bgr.png
+fgr.filename = Thorens_fgr.png
+indicator.filename = Thorens_needle.png
+steps.per.degree = 4
+start.angle = 41
+stop.angle = -44
+distance = 113
+left.origin.x = 1088
+left.origin.y = 322
+right.origin.x = 1088
+right.origin.y = 689
+meter.x = 0
+meter.y = 0
+screen.bgr = 
+# --- volumio optional entries -------
+config.extend = True
+meter.visible = True
+albumart.rotation = true
+albumart.rotation.speed = 33
+albumart.pos = 228,256
+albumart.dimension = 249,249
+playinfo.title.pos = 917,387,bold
+playinfo.title.color = 197,167,123
+playinfo.title.maxwidth = 341
+playinfo.artist.pos = 917,313,regular
+playinfo.artist.color = 197,167,123
+playinfo.artist.maxwidth = 341
+playinfo.album.pos = 917,347,regular
+playinfo.album.color = 197,167,123
+playinfo.album.maxwidth = 341
+playinfo.center = True
+playinfo.type.pos = 857,584
+playinfo.type.color = 180,180,180
+playinfo.type.dimension = 29,29
+playinfo.samplerate.pos = 1053,427,light
+playinfo.samplerate.maxwidth = 70
+time.remaining.pos = 850,643
+time.remaining.color = 44,178,17
+# Vinyl disc 
+vinyl.filename = Thorens_vinyl.png
+vinyl.pos = 37,63
+vinyl.center = 352,377
+vinyl.dimension = 624,624
+vinyl.direction = cw
+# Tonearm configuration
+tonearm.filename = Thorens_arm.png
+#tonearm.pos = 1056,11
+tonearm.pivot.screen = 793,155
+tonearm.pivot.image = 173,149
+tonearm.angle.rest = 0
+tonearm.angle.start = -12
+tonearm.angle.end = -31
+tonearm.drop.duration = 1.8
+tonearm.lift.duration = 1.2
+# --- PROGRESS BAR ---
+progress.pos = 903,675
+progress.dim = 350,32
+progress.color = 197,167,123
+progress.bg.color = 31,1,3
+progress.border = 1
+progress.border.color = 80,80,80
+# Mute indicator
+mute.pos = 843,270
+mute.icon = icons/Thorens_m_on.png,icons/Thorens_m_off.png
+mute.icon.glow = 3
+mute.icon.glow.intensity = 0.5
+mute.icon.glow.color = 255,80,80,100,100,100
+# Play/Pause/Stop 
+playstate.pos = 843,348
+playstate.icon = icons/Thorens_stop.png,icons/Thorens_pause.png,icons/Thorens_play.png
+playstate.icon.glow = 3
+playstate.icon.glow.intensity = 0.5
+# Repeat indicator
+repeat.pos = 843,428
+repeat.icon = icons/Thorens_repeat_off.png,icons/Thorens_repeat_all.png,icons/Thorens_repeat_single.png
+repeat.icon.glow = 3
+repeat.icon.glow.intensity = 0.5
+# Shuffle indicator
+shuffle.pos = 843,508
+shuffle.icon = icons/Thorens_shuffle_off.png,icons/Thorens_shuffle_on.png,icons/Thorens_shuffle_infinity.png
+shuffle.icon.glow = 3
+shuffle.icon.glow.intensity = 0.5
+# --- VOLUME INDICATOR (Slider style) ---
+volume.pos = 855,106
+volume.dim = 33,141
+volume.color = 197,167,123
+volume.bg.color = 0,0,0
+volume.style = slider
+font.size.digi = 14
+font.size.light = 13
+font.size.regular = 27
+font.size.bold = 25
+font.color = 197,167,123
+
+
+#-----------------------149 Thorens------------------------
+[149G5_02_Thorens]
+meter.type = circular
+channels = 2
+ui.refresh.period = 0.033
+bgr.filename = Thorens_bgr.png
+fgr.filename = Thorens_fgr.png
+indicator.filename = Thorens_needle.png
+steps.per.degree = 4
+start.angle = 41
+stop.angle = -44
+distance = 113
+left.origin.x = 1088
+left.origin.y = 322
+right.origin.x = 1088
+right.origin.y = 689
+meter.x = 0
+meter.y = 0
+screen.bgr = 
+# --- volumio optional entries -------
+config.extend = True
+meter.visible = True
+albumart.rotation = true
+albumart.rotation.speed = 33
+albumart.pos = 39,65
+albumart.dimension = 624,624
+albumart.mask = Thor_mask.jpg
+vinyl.direction = cw
+playinfo.title.pos = 917,387,bold
+playinfo.title.color = 197,167,123
+playinfo.title.maxwidth = 341
+playinfo.artist.pos = 917,313,regular
+playinfo.artist.color = 197,167,123
+playinfo.artist.maxwidth = 341
+playinfo.album.pos = 917,347,regular
+playinfo.album.color = 197,167,123
+playinfo.album.maxwidth = 341
+playinfo.center = True
+playinfo.type.pos = 857,584
+playinfo.type.color = 180,180,180
+playinfo.type.dimension = 29,29
+playinfo.samplerate.pos = 1053,427,light
+playinfo.samplerate.maxwidth = 70
+time.remaining.pos = 850,643
+time.remaining.color = 44,178,17
+# Tonearm configuration
+tonearm.filename = Thorens_arm.png
+#tonearm.pos = 1056,11
+tonearm.pivot.screen = 793,155
+tonearm.pivot.image = 173,149
+tonearm.angle.rest = 0
+tonearm.angle.start = -12
+tonearm.angle.end = -31
+tonearm.drop.duration = 1.8
+tonearm.lift.duration = 1.2
+# --- PROGRESS BAR ---
+progress.pos = 903,675
+progress.dim = 350,32
+progress.color = 197,167,123
+progress.bg.color = 31,1,3
+progress.border = 1
+progress.border.color = 80,80,80
+# Mute indicator
+mute.pos = 843,270
+mute.icon = icons/Thorens_m_on.png,icons/Thorens_m_off.png
+mute.icon.glow = 3
+mute.icon.glow.intensity = 0.5
+mute.icon.glow.color = 255,80,80,100,100,100
+# Play/Pause/Stop 
+playstate.pos = 843,348
+playstate.icon = icons/Thorens_stop.png,icons/Thorens_pause.png,icons/Thorens_play.png
+playstate.icon.glow = 3
+playstate.icon.glow.intensity = 0.5
+# Repeat indicator
+repeat.pos = 843,428
+repeat.icon = icons/Thorens_repeat_off.png,icons/Thorens_repeat_all.png,icons/Thorens_repeat_single.png
+repeat.icon.glow = 3
+repeat.icon.glow.intensity = 0.5
+# Shuffle indicator
+shuffle.pos = 843,508
+shuffle.icon = icons/Thorens_shuffle_off.png,icons/Thorens_shuffle_on.png,icons/Thorens_shuffle_infinity.png
+shuffle.icon.glow = 3
+shuffle.icon.glow.intensity = 0.5
+# --- VOLUME INDICATOR (Slider style) ---
+volume.pos = 855,106
+volume.dim = 33,141
+volume.color = 197,167,123
+volume.bg.color = 0,0,0
+volume.style = slider
+font.size.digi = 14
+font.size.light = 13
+font.size.regular = 27
+font.size.bold = 25
+font.color = 197,167,123
+
+
+
+
+#-----------------------149 Thorens------------------------
+[149G5_03_Thorens]
+meter.type = circular
+channels = 2
+ui.refresh.period = 0.033
+bgr.filename = Thorens_bgr.png
+fgr.filename = Thorens_fgr.png
+indicator.filename = Thorens_needle.png
+steps.per.degree = 4
+start.angle = 41
+stop.angle = -44
+distance = 113
+left.origin.x = 1088
+left.origin.y = 322
+right.origin.x = 1088
+right.origin.y = 689
+meter.x = 0
+meter.y = 0
+screen.bgr = 
+# --- volumio optional entries -------
+config.extend = True
+meter.visible = True
+albumart.rotation = False
+albumart.pos = 45,85
+albumart.dimension = 178,178
+albumart.rotation.speed = 33
+albumart.border = 1
+playinfo.title.pos = 917,387,bold
+playinfo.title.color = 197,167,123
+playinfo.title.maxwidth = 341
+playinfo.artist.pos = 917,313,regular
+playinfo.artist.color = 197,167,123
+playinfo.artist.maxwidth = 341
+playinfo.album.pos = 917,347,regular
+playinfo.album.color = 197,167,123
+playinfo.album.maxwidth = 341
+playinfo.center = True
+playinfo.type.pos = 857,584
+playinfo.type.color = 180,180,180
+playinfo.type.dimension = 29,29
+playinfo.samplerate.pos = 1053,427,light
+playinfo.samplerate.maxwidth = 70
+time.remaining.pos = 850,643
+time.remaining.color = 44,178,17
+# Vinyl disc 
+vinyl.filename = cdart.png,Thorens_vinyl.png
+vinyl.pos = 37,63
+vinyl.center = 352,377
+vinyl.dimension = 624,624
+vinyl.direction = cw
+# Tonearm configuration
+tonearm.filename = Thorens_arm.png
+#tonearm.pos = 1056,11
+tonearm.pivot.screen = 793,155
+tonearm.pivot.image = 173,149
+tonearm.angle.rest = 0
+tonearm.angle.start = -12
+tonearm.angle.end = -31
+tonearm.drop.duration = 1.8
+tonearm.lift.duration = 1.2
+# --- PROGRESS BAR ---
+progress.pos = 903,675
+progress.dim = 350,32
+progress.color = 197,167,123
+progress.bg.color = 31,1,3
+progress.border = 1
+progress.border.color = 80,80,80
+# Mute indicator
+mute.pos = 843,270
+mute.icon = icons/Thorens_m_on.png,icons/Thorens_m_off.png
+mute.icon.glow = 3
+mute.icon.glow.intensity = 0.5
+mute.icon.glow.color = 255,80,80,100,100,100
+# Play/Pause/Stop 
+playstate.pos = 843,348
+playstate.icon = icons/Thorens_stop.png,icons/Thorens_pause.png,icons/Thorens_play.png
+playstate.icon.glow = 3
+playstate.icon.glow.intensity = 0.5
+# Repeat indicator
+repeat.pos = 843,428
+repeat.icon = icons/Thorens_repeat_off.png,icons/Thorens_repeat_all.png,icons/Thorens_repeat_single.png
+repeat.icon.glow = 3
+repeat.icon.glow.intensity = 0.5
+# Shuffle indicator
+shuffle.pos = 843,508
+shuffle.icon = icons/Thorens_shuffle_off.png,icons/Thorens_shuffle_on.png,icons/Thorens_shuffle_infinity.png
+shuffle.icon.glow = 3
+shuffle.icon.glow.intensity = 0.5
+# --- VOLUME INDICATOR (Slider style) ---
+volume.pos = 855,106
+volume.dim = 33,141
+volume.color = 197,167,123
+volume.bg.color = 0,0,0
+volume.style = slider
+font.size.digi = 14
+font.size.light = 13
+font.size.regular = 27
+font.size.bold = 25
+font.color = 197,167,123
+
+
+#-----------------------150 AMG------------------------
+[150G5_02_AMG Turntable]
+meter.type = linear
+channels = 2
+direction = left-right
+ui.refresh.period = 0.033
+bgr.filename = AMG_turntable_bgr.png
+fgr.filename = AMG_turntable_fgr.png
+indicator.filename = AMG_turntable_ind.png
+left.x = 1017
+left.y = 37
+right.x = 1017
+right.y = 578
+position.regular = 9
+position.overload = 4
+step.width.regular = 20
+step.width.overload = 20
+meter.x = 0
+meter.y = 0
+screen.bgr = 
+# --- volumio optional entries -------
+config.extend = True
+meter.visible = True
+albumart.rotation = true
+albumart.rotation.speed = 33
+albumart.pos = 24,23
+albumart.dimension = 593,593
+albumart.mask = AMG_turntable_mask.jpg
+playinfo.ticker = True
+playinfo.ticker.replace = False
+playinfo.ticker.direction = ltr
+playinfo.ticker.append_next = True
+playinfo.ticker.pos = 13,653,bold
+playinfo.ticker.color = 197,167,123
+playinfo.ticker.maxwidth = 1253
+playinfo.ticker.speed = 40
+playinfo.ticker.separator = ••
+playinfo.ticker.space_between = 4
+playinfo.ticker.end_spaces = 10
+playinfo.center = True
+playinfo.type.pos = 1067,343
+playinfo.type.color = 180,180,180
+playinfo.type.dimension = 47,47
+playinfo.samplerate.pos = 1127,361,light
+playinfo.samplerate.maxwidth = 70
+time.remaining.pos = 1064,273
+time.remaining.color = 180,180,180
+vinyl.direction = cw
+# Tonearm configuration
+tonearm.filename = AMG_turntable_arm.png
+#tonearm.pos = 618,130
+tonearm.pivot.screen = 881,183
+tonearm.pivot.image = 469,95
+tonearm.angle.rest = 0
+tonearm.angle.start = -2
+tonearm.angle.end = -21
+tonearm.drop.duration = 1.8
+tonearm.lift.duration = 1.2
+# --- PROGRESS BAR ---
+progress.pos = 991,470
+progress.dim = 275,11
+progress.color = 39,151,238
+progress.bg.color = 31,1,3
+#progress.border = 1
+progress.border.color = 80,80,80
+progress.marker.1.pos = 0
+progress.marker.1.label = .
+progress.marker.2.pos = 25
+progress.marker.2.label = .
+progress.marker.3.pos = 50
+progress.marker.3.label = .
+progress.marker.4.pos = 75
+progress.marker.4.label = .
+progress.marker.5.pos = 100
+progress.marker.5.label = .
+progress.head.image = Pipek.png
+progress.head.offset = 0,0
+# --- VOLUME INDICATOR (Slider style) ---
+volume.pos = 991,424
+volume.dim = 275,11
+volume.color = 197,167,123
+volume.bg.color = 0,0,0
+volume.style = slider
+volume.slider.orientation = horizontal
+# Mute indicator
+mute.pos = 977,513
+mute.icon = icons/AMG_m_on.png,icons/AMG_m_off.png
+# Play/Pause/Stop 
+playstate.pos = 1037,513
+playstate.icon = icons/AMG_stop.png,icons/AMG_pause.png,icons/AMG_play.png
+# Repeat indicator
+repeat.pos = 1217,513
+repeat.icon = icons/AMG_repeat_off.png,icons/AMG_repeat_all.png,icons/AMG_repeat_single.png
+font.size.digi = 38
+font.size.light = 11
+font.size.regular = 27
+font.size.bold = 37
+font.color = 197,167,123
+
+
+#-----------------------150 AMG------------------------
+[150G5_03_AMG Turntable]
+meter.type = linear
+channels = 2
+direction = left-right
+ui.refresh.period = 0.033
+bgr.filename = AMG_turntable_bgr.png
+fgr.filename = AMG_turntable2_fgr.png
+indicator.filename = AMG_turntable_ind.png
+left.x = 1017
+left.y = 37
+right.x = 1017
+right.y = 578
+position.regular = 9
+position.overload = 4
+step.width.regular = 20
+step.width.overload = 20
+meter.x = 0
+meter.y = 0
+screen.bgr = 
+# --- volumio optional entries -------
+config.extend = True
+meter.visible = True
+albumart.rotation = false
+albumart.rotation.speed = 33
+albumart.pos = 1054,79
+albumart.dimension = 155,155
+albumart.border = 1
+# Vinyl disc 
+vinyl.filename = cdart.png,AMG_vinyl.png
+vinyl.pos = 21,23
+vinyl.center = 325,323
+vinyl.direction = cw
+vinyl.dimension = 607,607
+playinfo.ticker = True
+playinfo.ticker.replace = False
+playinfo.ticker.direction = ltr
+playinfo.ticker.append_next = True
+playinfo.ticker.pos = 13,653,bold
+playinfo.ticker.color = 197,167,123
+playinfo.ticker.maxwidth = 1253
+playinfo.ticker.speed = 40
+playinfo.ticker.separator = ••
+playinfo.ticker.space_between = 4
+playinfo.ticker.end_spaces = 10
+playinfo.center = True
+playinfo.type.pos = 1067,343
+playinfo.type.color = 180,180,180
+playinfo.type.dimension = 47,47
+playinfo.samplerate.pos = 1127,361,light
+playinfo.samplerate.maxwidth = 70
+time.remaining.pos = 1064,273
+time.remaining.color = 180,180,180
+
+# Tonearm configuration
+tonearm.filename = AMG_turntable_arm.png
+#tonearm.pos = 618,130
+tonearm.pivot.screen = 881,183
+tonearm.pivot.image = 469,95
+tonearm.angle.rest = 0
+tonearm.angle.start = -2
+tonearm.angle.end = -21
+tonearm.drop.duration = 1.8
+tonearm.lift.duration = 1.2
+# --- PROGRESS BAR ---
+progress.pos = 991,470
+progress.dim = 275,11
+progress.color = 39,151,238
+progress.bg.color = 31,1,3
+#progress.border = 1
+progress.border.color = 80,80,80
+progress.marker.1.pos = 0
+progress.marker.1.label = .
+progress.marker.2.pos = 25
+progress.marker.2.label = .
+progress.marker.3.pos = 50
+progress.marker.3.label = .
+progress.marker.4.pos = 75
+progress.marker.4.label = .
+progress.marker.5.pos = 100
+progress.marker.5.label = .
+progress.head.image = Pipek.png
+progress.head.offset = 0,0
+# --- VOLUME INDICATOR (Slider style) ---
+volume.pos = 991,424
+volume.dim = 275,11
+volume.color = 197,167,123
+volume.bg.color = 0,0,0
+volume.style = slider
+volume.slider.orientation = horizontal
+# Mute indicator
+mute.pos = 977,513
+mute.icon = icons/AMG_m_on.png,icons/AMG_m_off.png
+# Play/Pause/Stop 
+playstate.pos = 1037,513
+playstate.icon = icons/AMG_stop.png,icons/AMG_pause.png,icons/AMG_play.png
+# Repeat indicator
+repeat.pos = 1217,513
+repeat.icon = icons/AMG_repeat_off.png,icons/AMG_repeat_all.png,icons/AMG_repeat_single.png
+font.size.digi = 38
+font.size.light = 11
+font.size.regular = 27
+font.size.bold = 37
+font.color = 197,167,123
+
+#-----------------------151 Technics------------------------
+[151G5_01_Technics Silver]
+meter.type = circular
+channels = 2
+ui.refresh.period = 0.033
+bgr.filename = Technics_bgr2.png
+fgr.filename = Technics_fgr.png
+indicator.filename = Technics_needle.png
+steps.per.degree = 4
+start.angle = 43
+stop.angle = -43
+distance = 127
+left.origin.x = 1096
+left.origin.y = 208
+right.origin.x = 1096
+right.origin.y = 381
+meter.x = 0
+meter.y = 0
+screen.bgr = 
+# --- volumio optional entries -------
+config.extend = True
+meter.visible = True
+albumart.rotation = true
+albumart.rotation.speed = 33
+albumart.pos = 247,243
+albumart.dimension = 228,228
+# Vinyl disc 
+vinyl.filename = Technics_vinyl.png
+vinyl.pos = 53,50
+vinyl.center = 360,357
+vinyl.direction = cw
+vinyl.dimension = 613,613
+playinfo.title.pos = 915,457,bold
+playinfo.title.color = 98,56,30
+playinfo.title.maxwidth = 361
+playinfo.artist.pos = 915,390,bold
+playinfo.artist.color = 98,56,30
+playinfo.artist.maxwidth = 361
+playinfo.album.pos = 915,420,regular
+playinfo.album.maxwidth = 361
+playinfo.next.title.pos = 915,513,bold
+playinfo.next.title.color = 140,140,140
+playinfo.next.title.maxwidth = 361
+playinfo.center = True
+playinfo.type.pos = 1017,617
+playinfo.type.color = 0,0,0
+playinfo.type.dimension = 67,67
+playinfo.samplerate.pos = 1100,647,light
+playinfo.samplerate.maxwidth = 80
+time.remaining.pos = 1013,567
+time.remaining.color = 0,0,0
+time.remaining.font = fonts/MyDigi.ttf
+time.remaining.fontsize = 50
+time.elapsed.pos = 915,700
+time.elapsed.fontsize = 13
+time.elapsed.color = 255,255,255
+time.total.font = fonts/Another.ttf
+time.total.fontsize = 13
+time.total.pos = 1223,700
+time.total.color = 255,255,255
+# Tonearm configuration
+tonearm.filename = Technics_arm.png
+#tonearm.pos = 618,130
+tonearm.pivot.screen = 778,159
+tonearm.pivot.image = 107,145
+tonearm.angle.rest = 0
+tonearm.angle.start = -17
+tonearm.angle.end = -39
+tonearm.drop.duration = 1.8
+tonearm.lift.duration = 1.2
+# --- PROGRESS BAR ---
+progress.pos = 970,696
+progress.dim = 240,20
+progress.color = 0,0,0
+progress.bg.color = 125,117,113
+#progress.border = 1
+progress.border.color = 173,143,99
+# Volume - Vertical Fader
+volume.pos = 837,380
+volume.dim = 59,45
+volume.style = slider
+volume.slider.track = 
+volume.slider.tip = Technics_slider.png
+volume.slider.orientation = vertical
+volume.slider.travel = 3,213
+volume.slider.tip.offset = -7,0
+# Mute indicator
+mute.pos = 767,618
+mute.icon = icons/Tech_mute_on.png,icons/Tech_mute_off.png
+font.size.digi = 33
+font.size.light = 13
+font.size.regular = 23
+font.size.bold = 27
+font.color = 0,0,0
+
+
+
+#-----------------------151 Technics------------------------
+[151G5_02_Technics Silver]
+meter.type = circular
+channels = 2
+ui.refresh.period = 0.033
+bgr.filename = Technics_bgr2.png
+fgr.filename = Technics_fgr.png
+indicator.filename = Technics_needle.png
+steps.per.degree = 4
+start.angle = 43
+stop.angle = -43
+distance = 127
+left.origin.x = 1096
+left.origin.y = 208
+right.origin.x = 1096
+right.origin.y = 381
+meter.x = 0
+meter.y = 0
+screen.bgr = 
+# --- volumio optional entries -------
+config.extend = True
+meter.visible = True
+albumart.rotation = true
+albumart.rotation.speed = 33
+albumart.pos = 53,50
+albumart.dimension = 613,613
+albumart.mask = Tech_mask.jpg
+playinfo.title.pos = 915,457,bold
+playinfo.title.color = 98,56,30
+playinfo.title.maxwidth = 361
+playinfo.artist.pos = 915,390,bold
+playinfo.artist.color = 98,56,30
+playinfo.artist.maxwidth = 361
+playinfo.album.pos = 915,420,regular
+playinfo.album.maxwidth = 361
+playinfo.next.title.pos = 915,513,bold
+playinfo.next.title.color = 140,140,140
+playinfo.next.title.maxwidth = 361
+playinfo.center = True
+playinfo.type.pos = 1017,617
+playinfo.type.color = 0,0,0
+playinfo.type.dimension = 67,67
+playinfo.samplerate.pos = 1100,647,light
+playinfo.samplerate.maxwidth = 80
+time.remaining.pos = 1013,567
+time.remaining.color = 0,0,0
+time.remaining.font = fonts/MyDigi.ttf
+time.remaining.fontsize = 50
+time.elapsed.pos = 915,700
+time.elapsed.fontsize = 13
+time.elapsed.color = 255,255,255
+time.total.font = fonts/Another.ttf
+time.total.fontsize = 13
+time.total.pos = 1223,700
+time.total.color = 255,255,255
+# Tonearm configuration
+tonearm.filename = Technics_arm.png
+#tonearm.pos = 618,130
+tonearm.pivot.screen = 778,159
+tonearm.pivot.image = 107,145
+tonearm.angle.rest = 0
+tonearm.angle.start = -17
+tonearm.angle.end = -39
+tonearm.drop.duration = 1.8
+tonearm.lift.duration = 1.2
+# --- PROGRESS BAR ---
+progress.pos = 970,696
+progress.dim = 240,20
+progress.color = 0,0,0
+progress.bg.color = 125,117,113
+#progress.border = 1
+progress.border.color = 173,143,99
+# Volume - Vertical Fader
+volume.pos = 837,380
+volume.dim = 59,45
+volume.style = slider
+volume.slider.track = 
+volume.slider.tip = Technics_slider.png
+volume.slider.orientation = vertical
+volume.slider.travel = 3,213
+volume.slider.tip.offset = -7,0
+# Mute indicator
+mute.pos = 767,618
+mute.icon = icons/Tech_mute_on.png,icons/Tech_mute_off.png
+font.size.digi = 33
+font.size.light = 13
+font.size.regular = 23
+font.size.bold = 27
+font.color = 0,0,0
+
+
+
+
+
+#-----------------------151 Technics------------------------
+[151G5_03_Technics Silver]
+meter.type = circular
+channels = 2
+ui.refresh.period = 0.033
+bgr.filename = Technics_bgr.png
+fgr.filename = Technics_fgr.png
+indicator.filename = Technics_needle.png
+steps.per.degree = 4
+start.angle = 43
+stop.angle = -43
+distance = 127
+left.origin.x = 1096
+left.origin.y = 208
+right.origin.x = 1096
+right.origin.y = 381
+meter.x = 0
+meter.y = 0
+screen.bgr = 
+# --- volumio optional entries -------
+config.extend = True
+meter.visible = True
+albumart.rotation = false
+albumart.rotation.speed = 33
+albumart.pos = 979,361
+albumart.dimension = 221,221
+# Vinyl disc 
+vinyl.filename = cdart.png,Technics_vinyl.png
+vinyl.pos = 53,50
+vinyl.center = 360,357
+vinyl.direction = cw
+vinyl.dimension = 613,613
+playinfo.title.pos = 915,660,bold
+playinfo.title.color = 98,56,30
+playinfo.title.maxwidth = 361
+playinfo.artist.pos = 915,593,bold
+playinfo.artist.color = 98,56,30
+playinfo.artist.maxwidth = 361
+playinfo.album.pos = 915,623,regular
+playinfo.album.maxwidth = 361
+playinfo.center = True
+playinfo.type.pos = 837,662
+playinfo.type.color = 0,0,0
+playinfo.type.dimension = 40,40
+playinfo.samplerate.pos = 816,703,light
+playinfo.samplerate.maxwidth = 80
+time.remaining.pos = 637,651
+time.remaining.color = 0,0,0
+time.remaining.font = fonts/MyDigi.ttf
+time.remaining.fontsize = 27
+time.elapsed.pos = 915,700
+time.elapsed.fontsize = 13
+time.elapsed.color = 255,255,255
+time.total.font = fonts/Another.ttf
+time.total.fontsize = 13
+time.total.pos = 1223,700
+time.total.color = 255,255,255
+# Tonearm configuration
+tonearm.filename = Technics_arm.png
+#tonearm.pos = 618,130
+tonearm.pivot.screen = 778,159
+tonearm.pivot.image = 107,145
+tonearm.angle.rest = 0
+tonearm.angle.start = -17
+tonearm.angle.end = -39
+tonearm.drop.duration = 1.8
+tonearm.lift.duration = 1.2
+# --- PROGRESS BAR ---
+progress.pos = 970,696
+progress.dim = 240,20
+progress.color = 0,0,0
+progress.bg.color = 125,117,113
+#progress.border = 1
+progress.border.color = 173,143,99
+# Volume - Vertical Fader
+volume.pos = 837,380
+volume.dim = 59,45
+volume.style = slider
+volume.slider.track = 
+volume.slider.tip = Technics_slider.png
+volume.slider.orientation = vertical
+volume.slider.travel = 3,213
+volume.slider.tip.offset = -7,0
+# Mute indicator
+mute.pos = 767,618
+mute.icon = icons/Tech_mute_on.png,icons/Tech_mute_off.png
+font.size.digi = 27
+font.size.light = 11
+font.size.regular = 23
+font.size.bold = 27
+font.color = 0,0,0
+
+
+#-----------------------190 Grandioso------------------------
+[190G5_03_Grandioso]
+meter.type = linear
+channels = 2
+direction = left-right
+ui.refresh.period = 0.033
+bgr.filename = Grandioso_bgr.png
+fgr.filename = Grandioso_fgr.png
+indicator.filename = Grandioso_indic.png
+left.x = 222
+left.y = 604
+right.x = 222
+right.y = 625
+position.regular = 17
+position.overload = 3
+step.width.regular = 14
+step.width.overload = 14
+meter.x = 0
+meter.y = 0
+screen.bgr = 
+# --- volumio optional entries -------
+config.extend = True
+meter.visible = True
+albumart.rotation = false
+albumart.rotation.speed = 33
+albumart.pos = 840,64
+albumart.dimension = 313,313
+albumart.border = 1
+# Vinyl disc 
+vinyl.filename = cdart.png,Grandioso_Vinyl.png
+vinyl.pos = 212,139
+vinyl.center = 379,305
+vinyl.direction = cw
+vinyl.dimension = 333,333
+playinfo.ticker = True
+playinfo.title.pos = 725,503,bold
+playinfo.title.color = 200,200,200
+playinfo.title.maxwidth = 545
+playinfo.artist.pos = 725,433,bold
+playinfo.artist.color = 200,200,200
+playinfo.artist.maxwidth = 545
+playinfo.album.pos = 725,477,regular
+playinfo.album.color = 200,200,200
+playinfo.album.maxwidth = 545
+playinfo.center = True
+playinfo.next.title.pos = 725,648,bold
+playinfo.next.title.color = 120,140,140
+playinfo.next.title.maxwidth = 545
+playinfo.next.artist.pos = 725,578,bold
+playinfo.next.artist.color = 120,140,140
+playinfo.next.artist.maxwidth = 545
+playinfo.next.album.pos = 725,621,regular
+playinfo.next.album.color = 120,140,140
+playinfo.next.album.maxwidth = 545
+playinfo.type.pos = 582,29
+playinfo.type.color = 180,180,180
+playinfo.type.dimension = 47,47
+playinfo.samplerate.pos = 642,48,light
+playinfo.samplerate.maxwidth = 70
+time.remaining.pos = 341,521
+time.remaining.color = 200,200,200
+time.remaining.font = fonts/MyDigi.ttf
+time.remaining.fontsize = 21
+time.elapsed.pos = 736,351
+time.elapsed.fontsize = 17
+time.elapsed.color = 220,220,220
+time.total.font = fonts/Another.ttf
+time.total.fontsize = 17
+time.total.pos = 1198,351
+time.total.color = 220,220,220
+# Tonearm configuration
+tonearm.filename = Grandioso_arm.png
+tonearm.pivot.screen = 625,213
+tonearm.pivot.image = 49,85
+tonearm.angle.rest = 0
+tonearm.angle.start = -28
+tonearm.angle.end = -48
+tonearm.drop.duration = 1.8
+tonearm.lift.duration = 1.2
+# --- PROGRESS BAR ---
+progress.pos = 731,390
+progress.dim = 530,16
+progress.color = 45,103,255
+progress.bg.color = 31,1,3
+#progress.border = 1
+progress.border.color = 80,80,80
+progress.marker.1.pos = 0
+progress.marker.1.label = .
+progress.marker.2.pos = 25
+progress.marker.2.label = .
+progress.marker.3.pos = 50
+progress.marker.3.label = .
+progress.marker.4.pos = 75
+progress.marker.4.label = .
+progress.marker.5.pos = 100
+progress.marker.5.label = .
+progress.head.image = 
+progress.head.offset = 0,0
+# --- VOLUME INDICATOR (Slider style) ---
+volume.pos = 713,257
+volume.dim = 8,57
+volume.color = 197,167,123
+volume.bg.color = 0,0,0
+volume.style = slider
+volume.slider.orientation = vertical
+# Mute indicator
+mute.pos = 729,257
+mute.icon = icons/GR_m_on.png,icons/GR_m_off.png
+# Play/Pause/Stop 
+playstate.pos = 729,66
+playstate.icon = icons/GR_stop.png,icons/GR_pause.png,icons/GR_play.png
+# Repeat indicator
+repeat.pos = 1209,66
+repeat.icon = icons/GR_repeat_off.png,icons/GR_repeat_all.png,icons/GR_repeat_single.png
+# Shuffle indicator
+shuffle.pos = 1209,192
+shuffle.icon = icons/GR_shuffle_off.png,icons/GR_shuffle_on.png,icons/GR_shuffle_infinity.png
+font.size.digi = 38
+font.size.light = 11
+font.size.regular = 20
+font.size.bold = 37
+font.color = 45,103,255
+
+
+#-----------------------191 Crosley------------------------
+[191G5_01_Crosley Turntable]
+meter.type = circular
+channels = 2
+ui.refresh.period = 0.033
+bgr.filename = Crosley_bgr2.png
+fgr.filename = Crosley_fgr.png
+indicator.filename = Crosley_needle.png
+steps.per.degree = 4
+start.angle = 35
+stop.angle = -35
+distance = 127
+left.origin.x = 187
+left.origin.y = 218
+right.origin.x = 1093
+right.origin.y = 218
+meter.x = 0
+meter.y = 0
+screen.bgr = 
+# --- volumio optional entries -------
+config.extend = True
+meter.visible = True
+albumart.rotation = True
+albumart.rotation.speed = 33
+albumart.pos = 557,165
+albumart.dimension = 170,170
+# Vinyl disc 
+vinyl.filename = Crosley_vinyl.png
+vinyl.pos = 399,8
+vinyl.center = 641,249
+vinyl.direction = cw
+vinyl.dimension = 482,482
+playinfo.ticker = True
+playinfo.ticker.replace = False
+playinfo.ticker.direction = ltr
+playinfo.ticker.append_next = True
+playinfo.ticker.pos = 4,670,bold
+playinfo.ticker.color = 160,180,180
+playinfo.ticker.maxwidth = 1273
+playinfo.ticker.speed = 40
+playinfo.ticker.separator = ••
+playinfo.ticker.space_between = 4
+playinfo.ticker.end_spaces = 10
+playinfo.center = True
+playinfo.type.pos = 161,593
+playinfo.type.color = 180,180,180
+playinfo.type.dimension = 47,47
+playinfo.samplerate.pos = 221,612,light
+playinfo.samplerate.maxwidth = 70
+time.remaining.pos = 585,522
+time.remaining.color = 180,180,180
+time.remaining.font = fonts/MyDigi.ttf
+time.remaining.fontsize = 33
+time.elapsed.pos = 1187,637
+time.elapsed.fontsize = 17
+time.elapsed.color = 140,160,160
+time.total.font = fonts/Another.ttf
+time.total.fontsize = 17
+time.total.pos = 1187,397
+time.total.color = 140,160,160
+# Tonearm configuration
+tonearm.filename = Crosley_arm.png
+#tonearm.pos = 618,130
+tonearm.pivot.screen = 431,555
+tonearm.pivot.image = 167,363
+tonearm.angle.rest = 0
+tonearm.angle.start = -20
+tonearm.angle.end = -48
+tonearm.drop.duration = 1.8
+tonearm.lift.duration = 1.2
+# --- PROGRESS BAR ---
+progress.pos = 1150,403
+progress.dim = 13,257
+progress.color = 39,151,238
+progress.bg.color = 31,1,3
+#progress.border = 1
+progress.border.color = 80,80,80
+progress.slider.orientation = vertical
+progress.marker.1.pos = 15
+progress.marker.1.label = .
+progress.marker.2.pos = 25
+progress.marker.2.label = .
+progress.marker.3.pos = 50
+progress.marker.3.label = .
+progress.marker.4.pos = 75
+progress.marker.4.label = .
+progress.marker.5.pos = 100
+progress.marker.5.label = .
+progress.head.image = Crosley_pip.png
+progress.head.offset = 0,0
+# --- VOLUME INDICATOR (Slider style) ---
+volume.pos = 113,403
+volume.dim = 13,257
+volume.color = 197,167,123
+volume.bg.color = 0,0,0
+volume.style = slider
+volume.slider.orientation = vertical
+# Mute indicator
+mute.pos = 47,402
+mute.icon = icons/Cros_m_on.png,icons/Cros_m_off.png
+font.size.digi = 33
+font.size.light = 11
+font.size.regular = 27
+font.size.bold = 35
+font.color = 197,167,123
+
+
+#-----------------------191 Crosley------------------------
+[191G5_02_Crosley Turntable]
+meter.type = circular
+channels = 2
+ui.refresh.period = 0.033
+bgr.filename = Crosley_bgr2.png
+fgr.filename = Crosley_fgr.png
+indicator.filename = Crosley_needle.png
+steps.per.degree = 4
+start.angle = 35
+stop.angle = -35
+distance = 127
+left.origin.x = 187
+left.origin.y = 218
+right.origin.x = 1093
+right.origin.y = 218
+meter.x = 0
+meter.y = 0
+screen.bgr = 
+# --- volumio optional entries -------
+config.extend = True
+meter.visible = True
+albumart.rotation = True
+albumart.rotation.speed = 33
+albumart.pos = 399,8
+albumart.dimension = 482,482
+albumart.mask = Crosley_mask.jpg
+# Vinyl disc 
+vinyl.filename = 
+vinyl.pos = 399,8
+vinyl.center = 641,249
+vinyl.direction = cw
+vinyl.dimension = 482,482
+playinfo.ticker = True
+playinfo.ticker.replace = False
+playinfo.ticker.direction = ltr
+playinfo.ticker.append_next = True
+playinfo.ticker.pos = 4,670,bold
+playinfo.ticker.color = 160,180,180
+playinfo.ticker.maxwidth = 1273
+playinfo.ticker.speed = 40
+playinfo.ticker.separator = ••
+playinfo.ticker.space_between = 4
+playinfo.ticker.end_spaces = 10
+playinfo.center = True
+playinfo.type.pos = 161,593
+playinfo.type.color = 180,180,180
+playinfo.type.dimension = 47,47
+playinfo.samplerate.pos = 221,612,light
+playinfo.samplerate.maxwidth = 70
+time.remaining.pos = 585,522
+time.remaining.color = 180,180,180
+time.remaining.font = fonts/MyDigi.ttf
+time.remaining.fontsize = 33
+time.elapsed.pos = 1187,637
+time.elapsed.fontsize = 17
+time.elapsed.color = 140,160,160
+time.total.font = fonts/Another.ttf
+time.total.fontsize = 17
+time.total.pos = 1187,397
+time.total.color = 140,160,160
+# Tonearm configuration
+tonearm.filename = Crosley_arm.png
+#tonearm.pos = 618,130
+tonearm.pivot.screen = 431,555
+tonearm.pivot.image = 167,363
+tonearm.angle.rest = 0
+tonearm.angle.start = -20
+tonearm.angle.end = -48
+tonearm.drop.duration = 1.8
+tonearm.lift.duration = 1.2
+# --- PROGRESS BAR ---
+progress.pos = 1150,403
+progress.dim = 13,257
+progress.color = 39,151,238
+progress.bg.color = 31,1,3
+#progress.border = 1
+progress.border.color = 80,80,80
+progress.slider.orientation = vertical
+progress.marker.1.pos = 15
+progress.marker.1.label = .
+progress.marker.2.pos = 25
+progress.marker.2.label = .
+progress.marker.3.pos = 50
+progress.marker.3.label = .
+progress.marker.4.pos = 75
+progress.marker.4.label = .
+progress.marker.5.pos = 100
+progress.marker.5.label = .
+progress.head.image = Crosley_pip.png
+progress.head.offset = 0,0
+# --- VOLUME INDICATOR (Slider style) ---
+volume.pos = 113,403
+volume.dim = 13,257
+volume.color = 197,167,123
+volume.bg.color = 0,0,0
+volume.style = slider
+volume.slider.orientation = vertical
+# Mute indicator
+mute.pos = 47,402
+mute.icon = icons/Cros_m_on.png,icons/Cros_m_off.png
+font.size.digi = 33
+font.size.light = 11
+font.size.regular = 27
+font.size.bold = 35
+font.color = 197,167,123
+
+
+#-----------------------191 Crosley------------------------
+[191G5_03_Crosley Turntable]
+meter.type = circular
+channels = 2
+ui.refresh.period = 0.033
+bgr.filename = Crosley_bgr.png
+fgr.filename = Crosley_fgr.png
+indicator.filename = Crosley_needle.png
+steps.per.degree = 4
+start.angle = 35
+stop.angle = -35
+distance = 127
+left.origin.x = 187
+left.origin.y = 218
+right.origin.x = 1093
+right.origin.y = 218
+meter.x = 0
+meter.y = 0
+screen.bgr = 
+# --- volumio optional entries -------
+config.extend = True
+meter.visible = True
+albumart.rotation = false
+albumart.rotation.speed = 33
+albumart.pos = 889,430
+albumart.dimension = 195,195
+albumart.border = 1
+# Vinyl disc 
+vinyl.filename = cdart.png,Crosley_vinyl.png
+vinyl.pos = 399,8
+vinyl.center = 641,249
+vinyl.direction = cw
+vinyl.dimension = 482,482
+playinfo.ticker = True
+playinfo.ticker.replace = False
+playinfo.ticker.direction = ltr
+playinfo.ticker.append_next = True
+playinfo.ticker.pos = 4,670,bold
+playinfo.ticker.color = 160,180,180
+playinfo.ticker.maxwidth = 1273
+playinfo.ticker.speed = 40
+playinfo.ticker.separator = ••
+playinfo.ticker.space_between = 4
+playinfo.ticker.end_spaces = 10
+playinfo.center = True
+playinfo.type.pos = 161,593
+playinfo.type.color = 180,180,180
+playinfo.type.dimension = 47,47
+playinfo.samplerate.pos = 221,612,light
+playinfo.samplerate.maxwidth = 70
+time.remaining.pos = 585,522
+time.remaining.color = 180,180,180
+time.remaining.font = fonts/MyDigi.ttf
+time.remaining.fontsize = 33
+time.elapsed.pos = 1187,637
+time.elapsed.fontsize = 17
+time.elapsed.color = 140,160,160
+time.total.font = fonts/Another.ttf
+time.total.fontsize = 17
+time.total.pos = 1187,397
+time.total.color = 140,160,160
+# Tonearm configuration
+tonearm.filename = Crosley_arm.png
+#tonearm.pos = 618,130
+tonearm.pivot.screen = 431,555
+tonearm.pivot.image = 167,363
+tonearm.angle.rest = 0
+tonearm.angle.start = -20
+tonearm.angle.end = -40
+tonearm.drop.duration = 1.8
+tonearm.lift.duration = 1.2
+# --- PROGRESS BAR ---
+progress.pos = 1150,403
+progress.dim = 13,257
+progress.color = 39,151,238
+progress.bg.color = 31,1,3
+#progress.border = 1
+progress.border.color = 80,80,80
+progress.slider.orientation = vertical
+progress.marker.1.pos = 15
+progress.marker.1.label = .
+progress.marker.2.pos = 25
+progress.marker.2.label = .
+progress.marker.3.pos = 50
+progress.marker.3.label = .
+progress.marker.4.pos = 75
+progress.marker.4.label = .
+progress.marker.5.pos = 100
+progress.marker.5.label = .
+progress.head.image = Crosley_pip.png
+progress.head.offset = 0,0
+
+# --- VOLUME INDICATOR (Slider style) ---
+volume.pos = 113,403
+volume.dim = 13,257
+volume.color = 197,167,123
+volume.bg.color = 0,0,0
+volume.style = slider
+volume.slider.orientation = vertical
+# Mute indicator
+mute.pos = 47,402
+mute.icon = icons/Cros_m_on.png,icons/Cros_m_off.png
+font.size.digi = 33
+font.size.light = 11
+font.size.regular = 27
+font.size.bold = 35
+font.color = 197,167,123
+
+
+#-----------------------192 Korg------------------------
+[192G5_01_Korg Handy]
+meter.type = circular
+channels = 2
+ui.refresh.period = 0.033
+bgr.filename = Korg_handy_bgr2.png
+fgr.filename = Korg_handy_fgr.png
+indicator.filename = Korg_handy_indic.png
+steps.per.degree = 4
+start.angle = 49
+stop.angle = -49
+distance = 100
+left.origin.x = 1112
+left.origin.y = 448
+right.origin.x = 1112
+right.origin.y = 687
+meter.x = 0
+meter.y = 0
+screen.bgr = 
+# --- volumio optional entries -------
+config.extend = True
+meter.visible = True
+albumart.pos = 207,275
+albumart.dimension = 135,135
+albumart.rotation = true
+albumart.rotation.speed = 33
+albumart.border = 
+# Vinyl disc 
+vinyl.filename = Korg_handy_vinyl.png
+vinyl.pos = 60,133
+vinyl.center = 273,347
+vinyl.direction = cw
+vinyl.dimension = 426,426
+playinfo.title.pos = 149,657,bold
+playinfo.title.color = 12,12,12
+playinfo.title.maxwidth = 576
+playinfo.artist.pos = 149,597,bold
+playinfo.artist.color = 12,12,12
+playinfo.artist.maxwidth = 576
+playinfo.album.pos = 149,633,regular
+playinfo.album.maxwidth = 576
+playinfo.center = true
+playinfo.next.title.pos = 943,150,bold
+playinfo.next.title.color = 130,200,200
+playinfo.next.title.maxwidth = 333
+playinfo.next.artist.pos = 943,67,bold
+playinfo.next.artist.color = 130,200,200
+playinfo.next.artist.maxwidth = 333
+playinfo.next.album.pos = 943,107,regular
+playinfo.next.album.color = 130,200,200
+playinfo.next.album.maxwidth = 333
+playinfo.type.pos = 847,155
+playinfo.type.color = 200,200,200
+playinfo.type.dimension = 40,40
+playinfo.samplerate.pos = 773,666,light
+playinfo.samplerate.maxwidth = 120
+time.remaining.pos = 773,613
+time.remaining.color = 253,172,103
+time.remaining.font = fonts/MyDigi.ttf
+time.remaining.fontsize = 32
+time.elapsed.pos = 51,52
+time.elapsed.fontsize = 10
+time.elapsed.color = 255,255,255
+time.total.font = fonts/Another.ttf
+time.total.fontsize = 10
+time.total.pos = 685,52
+time.total.color = 255,255,255
+# Tonearm configuration
+tonearm.filename = Korg_handy_arm.png
+#tonearm.pos = 1056,11
+tonearm.pivot.screen = 679,183
+tonearm.pivot.image = 53,81
+tonearm.angle.rest = 0
+tonearm.angle.start = -36
+tonearm.angle.end = -51
+tonearm.drop.duration = 1.8
+tonearm.lift.duration = 1.2
+# Volume - Vertical Fader
+volume.pos = 772,410
+volume.dim = 52,22
+volume.style = slider
+volume.slider.track = 
+volume.slider.tip = Korg_handy_volum.png
+volume.slider.orientation = vertical
+volume.slider.travel = 3,140
+volume.slider.tip.offset = -7,0
+# Mute indicator
+mute.pos = 862,435
+mute.icon = icons/Korg_m_on.png,icons/Korg_m_off.png
+# Play/Pause/Stop 
+playstate.pos = 774,291
+playstate.icon = icons/Korg_stop.png,icons/Korg_pause.png,icons/Korg_play.png
+# Repeat indicator
+repeat.pos = 767,353
+repeat.icon = icons/Korg_repeat_off.png,icons/Korg_repeat_all.png,icons/Korg_repeat_single.png
+# --- PROGRESS BAR ---
+progress.pos = 113,53
+progress.dim = 550,8
+progress.color = 0,0,0
+progress.bg.color = 196,196,196
+#progress.border = 1
+progress.border.color = 
+progress.marker.1.pos = 0
+progress.marker.1.label = .
+progress.marker.2.pos = 25
+progress.marker.2.label = .
+progress.marker.3.pos = 50
+progress.marker.3.label = .
+progress.marker.4.pos = 75
+progress.marker.4.label = .
+progress.marker.5.pos = 100
+progress.marker.5.label = .
+progress.head.image = Korg_handy_suw.png
+progress.head.offset = 0,0
+font.size.digi = 32
+font.size.light = 12
+font.size.regular = 17
+font.size.bold = 29
+font.color = 12,12,12
+
+#-----------------------192 Korg------------------------
+[192G5_02_Korg Handy]
+meter.type = circular
+channels = 2
+ui.refresh.period = 0.033
+bgr.filename = Korg_handy_bgr2.png
+fgr.filename = Korg_handy_fgr.png
+indicator.filename = Korg_handy_indic.png
+steps.per.degree = 4
+start.angle = 49
+stop.angle = -49
+distance = 100
+left.origin.x = 1112
+left.origin.y = 448
+right.origin.x = 1112
+right.origin.y = 687
+meter.x = 0
+meter.y = 0
+screen.bgr = 
+# --- volumio optional entries -------
+config.extend = True
+meter.visible = True
+albumart.pos = 60,133
+albumart.dimension = 426,426
+albumart.rotation = true
+albumart.rotation.speed = 33
+albumart.border = 
+# Vinyl disc 
+vinyl.filename = 
+vinyl.pos = 60,133
+vinyl.center = 273,347
+vinyl.direction = cw
+vinyl.dimension = 426,426
+playinfo.title.pos = 149,657,bold
+playinfo.title.color = 12,12,12
+playinfo.title.maxwidth = 576
+playinfo.artist.pos = 149,597,bold
+playinfo.artist.color = 12,12,12
+playinfo.artist.maxwidth = 576
+playinfo.album.pos = 149,633,regular
+playinfo.album.maxwidth = 576
+playinfo.center = true
+playinfo.next.title.pos = 943,150,bold
+playinfo.next.title.color = 130,200,200
+playinfo.next.title.maxwidth = 333
+playinfo.next.artist.pos = 943,67,bold
+playinfo.next.artist.color = 130,200,200
+playinfo.next.artist.maxwidth = 333
+playinfo.next.album.pos = 943,107,regular
+playinfo.next.album.color = 130,200,200
+playinfo.next.album.maxwidth = 333
+playinfo.type.pos = 847,155
+playinfo.type.color = 200,200,200
+playinfo.type.dimension = 40,40
+playinfo.samplerate.pos = 787,666,light
+playinfo.samplerate.maxwidth = 120
+time.remaining.pos = 773,613
+time.remaining.color = 253,172,103
+time.remaining.font = fonts/MyDigi.ttf
+time.remaining.fontsize = 32
+time.elapsed.pos = 51,52
+time.elapsed.fontsize = 10
+time.elapsed.color = 255,255,255
+time.total.font = fonts/Another.ttf
+time.total.fontsize = 10
+time.total.pos = 685,52
+time.total.color = 255,255,255
+# Tonearm configuration
+tonearm.filename = Korg_handy_arm.png
+#tonearm.pos = 1056,11
+tonearm.pivot.screen = 679,183
+tonearm.pivot.image = 53,81
+tonearm.angle.rest = 0
+tonearm.angle.start = -36
+tonearm.angle.end = -51
+tonearm.drop.duration = 1.8
+tonearm.lift.duration = 1.2
+# Volume - Vertical Fader
+volume.pos = 772,410
+volume.dim = 52,22
+volume.style = slider
+volume.slider.track = 
+volume.slider.tip = Korg_handy_volum.png
+volume.slider.orientation = vertical
+volume.slider.travel = 3,140
+volume.slider.tip.offset = -7,0
+# Mute indicator
+mute.pos = 862,435
+mute.icon = icons/Korg_m_on.png,icons/Korg_m_off.png
+# Play/Pause/Stop 
+playstate.pos = 774,291
+playstate.icon = icons/Korg_stop.png,icons/Korg_pause.png,icons/Korg_play.png
+# Repeat indicator
+repeat.pos = 767,353
+repeat.icon = icons/Korg_repeat_off.png,icons/Korg_repeat_all.png,icons/Korg_repeat_single.png
+# --- PROGRESS BAR ---
+progress.pos = 113,53
+progress.dim = 550,8
+progress.color = 0,0,0
+progress.bg.color = 196,196,196
+#progress.border = 1
+progress.border.color = 
+progress.marker.1.pos = 0
+progress.marker.1.label = .
+progress.marker.2.pos = 25
+progress.marker.2.label = .
+progress.marker.3.pos = 50
+progress.marker.3.label = .
+progress.marker.4.pos = 75
+progress.marker.4.label = .
+progress.marker.5.pos = 100
+progress.marker.5.label = .
+progress.head.image = Korg_handy_suw.png
+progress.head.offset = 0,0
+font.size.digi = 32
+font.size.light = 12
+font.size.regular = 17
+font.size.bold = 29
+font.color = 12,12,12
+
+#-----------------------192 Korg------------------------
+[192G5_03_Korg Handy]
+meter.type = circular
+channels = 2
+ui.refresh.period = 0.033
+bgr.filename = Korg_handy_bgr.png
+fgr.filename = Korg_handy_fgr.png
+indicator.filename = Korg_handy_indic.png
+steps.per.degree = 4
+start.angle = 49
+stop.angle = -49
+distance = 100
+left.origin.x = 1112
+left.origin.y = 448
+right.origin.x = 1112
+right.origin.y = 687
+meter.x = 0
+meter.y = 0
+screen.bgr = 
+# --- volumio optional entries -------
+config.extend = True
+meter.visible = True
+albumart.pos = 1001,11
+albumart.dimension = 222,222
+albumart.rotation = false
+albumart.rotation.speed = 33
+albumart.border = 1
+playinfo.title.pos = 149,657,bold
+playinfo.title.color = 12,12,12
+playinfo.title.maxwidth = 578
+playinfo.artist.pos = 149,589,bold
+playinfo.artist.color = 12,12,12
+playinfo.artist.maxwidth = 467
+playinfo.album.pos = 149,628,regular
+playinfo.album.maxwidth = 527
+playinfo.center = False
+playinfo.type.pos = 847,155
+playinfo.type.color = 200,200,200
+playinfo.type.dimension = 40,40
+playinfo.samplerate.pos = 787,666,light
+playinfo.samplerate.maxwidth = 120
+time.remaining.pos = 773,613
+time.remaining.color = 253,172,103
+time.remaining.font = fonts/MyDigi.ttf
+time.remaining.fontsize = 32
+time.elapsed.pos = 51,52
+time.elapsed.fontsize = 10
+time.elapsed.color = 255,255,255
+time.total.font = fonts/Another.ttf
+time.total.fontsize = 10
+time.total.pos = 685,52
+time.total.color = 255,255,255
+# Vinyl disc 
+vinyl.filename = cdart.png,Korg_handy_vinyl.png
+vinyl.pos = 60,133
+vinyl.center = 273,347
+vinyl.direction = cw
+vinyl.dimension = 426,426
+# Tonearm configuration
+tonearm.filename = Korg_handy_arm.png
+#tonearm.pos = 1056,11
+tonearm.pivot.screen = 679,183
+tonearm.pivot.image = 53,81
+tonearm.angle.rest = 0
+tonearm.angle.start = -36
+tonearm.angle.end = -51
+tonearm.drop.duration = 1.8
+tonearm.lift.duration = 1.2
+# Volume - Vertical Fader
+volume.pos = 772,410
+volume.dim = 52,22
+volume.style = slider
+volume.slider.track = 
+volume.slider.tip = Korg_handy_volum.png
+volume.slider.orientation = vertical
+volume.slider.travel = 3,140
+volume.slider.tip.offset = -7,0
+# Mute indicator
+mute.pos = 862,435
+mute.icon = icons/Korg_m_on.png,icons/Korg_m_off.png
+# Play/Pause/Stop 
+playstate.pos = 774,291
+playstate.icon = icons/Korg_stop.png,icons/Korg_pause.png,icons/Korg_play.png
+# Repeat indicator
+repeat.pos = 767,353
+repeat.icon = icons/Korg_repeat_off.png,icons/Korg_repeat_all.png,icons/Korg_repeat_single.png
+
+# --- PROGRESS BAR ---
+progress.pos = 113,53
+progress.dim = 550,8
+progress.color = 0,0,0
+progress.bg.color = 196,196,196
+#progress.border = 1
+progress.border.color = 
+progress.marker.1.pos = 0
+progress.marker.1.label = .
+progress.marker.2.pos = 25
+progress.marker.2.label = .
+progress.marker.3.pos = 50
+progress.marker.3.label = .
+progress.marker.4.pos = 75
+progress.marker.4.label = .
+progress.marker.5.pos = 100
+progress.marker.5.label = .
+progress.head.image = Korg_handy_suw.png
+progress.head.offset = 0,0
+font.size.digi = 32
+font.size.light = 12
+font.size.regular = 17
+font.size.bold = 29
+font.color = 12,12,12
+
+
+#-----------------------193 Tech------------------------
+[193G5_01_TechDas]
+meter.type = circular
+channels = 2
+ui.refresh.period = 0.033
+bgr.filename = TechDas_bgr2.png
+fgr.filename = TechDas_fgr2.png
+indicator.filename = TechDas_needle.png
+steps.per.degree = 4
+start.angle = 48
+stop.angle = -48
+distance = 120
+left.origin.x = 1055
+left.origin.y = 290
+right.origin.x = 1055
+right.origin.y = 567
+meter.x = 0
+meter.y = 0
+screen.bgr = 
+# --- volumio optional entries -------
+config.extend = True
+meter.visible = True
+albumart.pos = 365,345
+albumart.dimension = 131,131
+albumart.rotation = true
+albumart.rotation.speed = 33
+albumart.border = 
+playinfo.title.pos = 841,657,bold
+playinfo.title.color = 180,180,180
+playinfo.title.maxwidth = 430
+playinfo.artist.pos = 841,589,bold
+playinfo.artist.color = 180,180,180
+playinfo.artist.maxwidth = 430
+playinfo.album.pos = 841,621,regular
+playinfo.album.maxwidth = 430
+playinfo.center = true
+playinfo.next.title.pos = 331,31,bold
+playinfo.next.title.color = 180,200,200
+playinfo.next.title.maxwidth = 499
+playinfo.next.artist.pos = 331,63,regular
+playinfo.next.artist.color = 180,200,200
+playinfo.next.artist.maxwidth = 499
+playinfo.type.pos = 63,182
+playinfo.type.color = 200,200,200
+playinfo.type.dimension = 67,67
+playinfo.samplerate.pos = 383,640,light
+playinfo.samplerate.maxwidth = 95
+time.remaining.pos = 69,412
+time.remaining.color = 255,255,255
+time.remaining.font = fonts/MyDigi.ttf
+time.remaining.fontsize = 21
+time.elapsed.pos = 85,386
+time.elapsed.fontsize = 13
+time.elapsed.color = 255,130,35
+time.total.font = fonts/Another.ttf
+time.total.fontsize = 13
+time.total.pos = 85,447
+time.total.color = 255,130,35
+# Vinyl disc 
+vinyl.filename = cdart.png,TechDas_Vinyl.png
+vinyl.pos = 237,219
+vinyl.center = 430,412
+vinyl.direction = cw
+vinyl.dimension = 386,386
+# Tonearm configuration
+tonearm.filename = TechDas_arm.png
+#tonearm.pos = 1056,11
+tonearm.pivot.screen = 723,270
+tonearm.pivot.image = 104,85
+tonearm.angle.rest = 0
+tonearm.angle.start = -23
+tonearm.angle.end = -42
+tonearm.drop.duration = 1.8
+tonearm.lift.duration = 1.2
+# Mute indicator
+mute.pos = 749,403
+mute.icon = icons/TechD_m_on.png,icons/TechD_m_off.png
+# Play/Pause/Stop 
+playstate.pos = 693,558
+playstate.icon = icons/TechD_stop.png,icons/TechD_pause.png,icons/TechD_play.png
+# Repeat indicator
+repeat.pos = 179,573
+repeat.icon = icons/TechD_repeat_off.png,icons/TechD_repeat_all.png,icons/TechD_repeat_single.png
+# Shuffle indicator
+shuffle.pos = 187,215
+shuffle.icon = icons/TechD_shuffle_off.png,icons/TechD_shuffle_on.png,icons/TechD_shuffle_infinity.png
+# --- PROGRESS BAR ---
+progress.pos = 38,353
+progress.dim = 133,133
+progress.style = arc
+progress.color = 0,255,100
+progress.bg.color = 50,50,50
+progress.arc.width = 20
+progress.arc.angle.start = 90
+progress.arc.angle.end = -270
+font.size.digi = 32
+font.size.light = 12
+font.size.regular = 17
+font.size.bold = 24
+font.color = 180,180,180
+
+
+
+
+
+#-----------------------193 Tech------------------------
+[193G5_02_TechDas]
+meter.type = circular
+channels = 2
+ui.refresh.period = 0.033
+bgr.filename = TechDas_bgr2.png
+fgr.filename = TechDas_fgr2.png
+indicator.filename = TechDas_needle.png
+steps.per.degree = 4
+start.angle = 48
+stop.angle = -48
+distance = 120
+left.origin.x = 1055
+left.origin.y = 290
+right.origin.x = 1055
+right.origin.y = 567
+meter.x = 0
+meter.y = 0
+screen.bgr = 
+# --- volumio optional entries -------
+config.extend = True
+meter.visible = True
+albumart.pos = 237,219
+albumart.dimension = 386,386
+albumart.rotation = true
+albumart.rotation.speed = 33
+albumart.border = 
+playinfo.title.pos = 841,657,bold
+playinfo.title.color = 180,180,180
+playinfo.title.maxwidth = 430
+playinfo.artist.pos = 841,589,bold
+playinfo.artist.color = 180,180,180
+playinfo.artist.maxwidth = 430
+playinfo.album.pos = 841,621,regular
+playinfo.album.maxwidth = 430
+playinfo.center = true
+playinfo.next.title.pos = 331,31,bold
+playinfo.next.title.color = 180,200,200
+playinfo.next.title.maxwidth = 499
+playinfo.next.artist.pos = 331,63,regular
+playinfo.next.artist.color = 180,200,200
+playinfo.next.artist.maxwidth = 499
+playinfo.type.pos = 63,182
+playinfo.type.color = 200,200,200
+playinfo.type.dimension = 67,67
+playinfo.samplerate.pos = 383,640,light
+playinfo.samplerate.maxwidth = 95
+
+time.remaining.pos = 69,412
+time.remaining.color = 255,255,255
+time.remaining.font = fonts/MyDigi.ttf
+time.remaining.fontsize = 21
+time.elapsed.pos = 85,386
+time.elapsed.fontsize = 13
+time.elapsed.color = 255,130,35
+time.total.font = fonts/Another.ttf
+time.total.fontsize = 13
+time.total.pos = 85,447
+time.total.color = 255,130,35
+# Vinyl disc 
+vinyl.filename = TechDas_Vinyl.png
+vinyl.pos = 237,219
+vinyl.center = 430,412
+vinyl.direction = cw
+vinyl.dimension = 386,386
+# Tonearm configuration
+tonearm.filename = TechDas_arm.png
+#tonearm.pos = 1056,11
+tonearm.pivot.screen = 723,270
+tonearm.pivot.image = 104,85
+tonearm.angle.rest = 0
+tonearm.angle.start = -23
+tonearm.angle.end = -42
+tonearm.drop.duration = 1.8
+tonearm.lift.duration = 1.2
+# Mute indicator
+mute.pos = 749,403
+mute.icon = icons/TechD_m_on.png,icons/TechD_m_off.png
+# Play/Pause/Stop 
+playstate.pos = 693,558
+playstate.icon = icons/TechD_stop.png,icons/TechD_pause.png,icons/TechD_play.png
+# Repeat indicator
+repeat.pos = 179,573
+repeat.icon = icons/TechD_repeat_off.png,icons/TechD_repeat_all.png,icons/TechD_repeat_single.png
+# Shuffle indicator
+shuffle.pos = 187,215
+shuffle.icon = icons/TechD_shuffle_off.png,icons/TechD_shuffle_on.png,icons/TechD_shuffle_infinity.png
+# --- PROGRESS BAR ---
+progress.pos = 38,353
+progress.dim = 133,133
+progress.style = arc
+progress.color = 0,255,100
+progress.bg.color = 50,50,50
+progress.arc.width = 20
+progress.arc.angle.start = 90
+progress.arc.angle.end = -270
+font.size.digi = 32
+font.size.light = 12
+font.size.regular = 17
+font.size.bold = 24
+font.color = 180,180,180
+
+
+
+#-----------------------193 Tech------------------------
+[193G5_03_TechDas]
+meter.type = circular
+channels = 2
+ui.refresh.period = 0.033
+bgr.filename = TechDas_bgr.png
+fgr.filename = TechDas_fgr2.png
+indicator.filename = TechDas_needle.png
+steps.per.degree = 4
+start.angle = 48
+stop.angle = -48
+distance = 120
+left.origin.x = 1055
+left.origin.y = 290
+right.origin.x = 1055
+right.origin.y = 567
+meter.x = 0
+meter.y = 0
+screen.bgr = 
+# --- volumio optional entries -------
+config.extend = True
+meter.visible = True
+albumart.pos = 841,579
+albumart.dimension = 127,127
+albumart.rotation = false
+albumart.rotation.speed = 33
+albumart.border = 1
+playinfo.title.pos = 974,657,bold
+playinfo.title.color = 180,180,180
+playinfo.title.maxwidth = 302
+playinfo.artist.pos = 974,589,bold
+playinfo.artist.color = 180,180,180
+playinfo.artist.maxwidth = 302
+playinfo.album.pos = 974,621,regular
+playinfo.album.maxwidth = 302
+playinfo.center = False
+playinfo.next.title.pos = 331,31,bold
+playinfo.next.title.color = 180,200,200
+playinfo.next.title.maxwidth = 499
+playinfo.next.artist.pos = 331,63,regular
+playinfo.next.artist.color = 180,200,200
+playinfo.next.artist.maxwidth = 499
+playinfo.type.pos = 63,182
+playinfo.type.color = 200,200,200
+playinfo.type.dimension = 67,67
+playinfo.samplerate.pos = 383,640,light
+playinfo.samplerate.maxwidth = 95
+time.remaining.pos = 69,412
+time.remaining.color = 255,255,255
+time.remaining.font = fonts/MyDigi.ttf
+time.remaining.fontsize = 21
+time.elapsed.pos = 85,386
+time.elapsed.fontsize = 13
+time.elapsed.color = 255,130,35
+time.total.font = fonts/Another.ttf
+time.total.fontsize = 13
+time.total.pos = 85,447
+time.total.color = 255,130,35
+# Vinyl disc 
+vinyl.filename = cdart.png,TechDas_Vinyl.png
+vinyl.pos = 237,219
+vinyl.center = 430,412
+vinyl.direction = cw
+vinyl.dimension = 386,386
+# Tonearm configuration
+tonearm.filename = TechDas_arm.png
+#tonearm.pos = 1056,11
+tonearm.pivot.screen = 723,270
+tonearm.pivot.image = 104,85
+tonearm.angle.rest = 0
+tonearm.angle.start = -23
+tonearm.angle.end = -42
+tonearm.drop.duration = 1.8
+tonearm.lift.duration = 1.2
+# Mute indicator
+mute.pos = 749,403
+mute.icon = icons/TechD_m_on.png,icons/TechD_m_off.png
+# Play/Pause/Stop 
+playstate.pos = 693,558
+playstate.icon = icons/TechD_stop.png,icons/TechD_pause.png,icons/TechD_play.png
+# Repeat indicator
+repeat.pos = 179,573
+repeat.icon = icons/TechD_repeat_off.png,icons/TechD_repeat_all.png,icons/TechD_repeat_single.png
+# Shuffle indicator
+shuffle.pos = 187,215
+shuffle.icon = icons/TechD_shuffle_off.png,icons/TechD_shuffle_on.png,icons/TechD_shuffle_infinity.png
+# --- PROGRESS BAR ---
+progress.pos = 38,353
+progress.dim = 133,133
+progress.style = arc
+progress.color = 0,255,100
+progress.bg.color = 50,50,50
+progress.arc.width = 20
+progress.arc.angle.start = 90
+progress.arc.angle.end = -270
+font.size.digi = 32
+font.size.light = 13
+font.size.regular = 17
+font.size.bold = 24
+font.color = 180,180,180
+
+
+#-----------------------194 DJ------------------------
+[194G5_02_PioneerNew]
+meter.type = linear
+channels = 2
+direction = bottom-top
+ui.refresh.period = 0.033
+bgr.filename = Pioneer DJnew_bgr2.png
+fgr.filename = Pioneer DJnew_fgr2.png
+indicator.filename = Pioneer DJnew_indic.png
+left.x = 615
+left.y = 40
+right.x = 982
+right.y = 40
+position.regular = 5
+position.overload = 5
+step.width.regular = 37
+step.width.overload = 37
+meter.x = 0
+meter.y = 0
+screen.bgr = 
+# --- volumio optional entries -------
+config.extend = True
+meter.visible = True
+albumart.rotation = true
+albumart.rotation.speed = 33
+albumart.pos = 45,195
+albumart.dimension = 473,473
+albumart.border = 
+# Vinyl disc 
+vinyl.filename = 
+vinyl.pos = 45,195
+vinyl.center = 282,430
+vinyl.direction = cw
+vinyl.dimension = 473,473
+playinfo.ticker = True
+playinfo.title.pos = 570,520,bold
+playinfo.title.color = 200,200,200
+playinfo.title.maxwidth = 697
+playinfo.artist.pos = 570,460,bold
+playinfo.artist.color = 200,200,200
+playinfo.artist.maxwidth = 697
+playinfo.album.pos = 570,497,regular
+playinfo.album.color = 200,200,200
+playinfo.album.maxwidth = 697
+playinfo.center = True
+playinfo.next.title.pos = 570,673,bold
+playinfo.next.title.color = 120,140,140
+playinfo.next.title.maxwidth = 697
+playinfo.next.artist.pos = 570,610,bold
+playinfo.next.artist.color = 120,140,140
+playinfo.next.artist.maxwidth = 697
+playinfo.next.album.pos = 570,647,regular
+playinfo.next.album.color = 120,140,140
+playinfo.next.album.maxwidth = 697
+playinfo.type.pos = 1017,422
+playinfo.type.color = 180,180,180
+playinfo.type.dimension = 23,23
+playinfo.samplerate.pos = 810,435,light
+playinfo.samplerate.maxwidth = 95
+time.remaining.pos = 801,393
+time.remaining.color = 200,200,200
+time.remaining.font = fonts/MyDigi.ttf
+time.remaining.fontsize = 33
+time.elapsed.pos = 577,351
+time.elapsed.fontsize = 17
+time.elapsed.color = 220,220,220
+time.total.font = fonts/Another.ttf
+time.total.fontsize = 17
+time.total.pos = 1207,351
+time.total.color = 220,220,220
+# Tonearm configuration
+tonearm.filename = Pioneer DJnew_arm.png
+tonearm.pivot.screen = 146,118
+tonearm.pivot.image = 111,33
+tonearm.angle.rest = 0
+tonearm.angle.start = -20
+tonearm.angle.end = -40
+tonearm.drop.duration = 1.8
+tonearm.lift.duration = 1.2
+# --- PROGRESS BAR ---
+progress.pos = 679,359
+progress.dim = 488,3
+progress.color = 45,103,255
+progress.bg.color = 31,1,3
+#progress.border = 1
+progress.border.color = 80,80,80
+progress.marker.1.pos = 0
+progress.marker.1.label = .
+progress.marker.2.pos = 25
+progress.marker.2.label = .
+progress.marker.3.pos = 50
+progress.marker.3.label = .
+progress.marker.4.pos = 75
+progress.marker.4.label = .
+progress.marker.5.pos = 100
+progress.marker.5.label = .
+progress.head.image = Pioneer DJnew_prog_slid.png
+progress.head.offset = 0,0
+# Volume - Vertical Fader
+volume.pos = 345,40
+volume.dim = 167,7
+volume.style = slider
+volume.slider.track = 
+volume.slider.tip = Pioneer DJnew_vol_slid.png
+volume.slider.orientation = horizontal
+volume.slider.travel = 3,160
+volume.slider.tip.offset = -7,0
+# Mute indicator
+mute.pos = 327,73
+mute.icon = icons/PDJ_m_on.png,icons/PDJ_m_off.png
+# Play/Pause/Stop 
+playstate.pos = 492,645
+playstate.icon = icons/PDJ_stop.png,icons/PDJ_pause.png,icons/PDJ_play.png
+font.size.digi = 45
+font.size.light = 15
+font.size.regular = 17
+font.size.bold = 30
+font.color = 45,103,255
+
+
+#-----------------------194 DJ------------------------
+[194G5_03_PioneerNew]
+meter.type = linear
+channels = 2
+direction = bottom-top
+ui.refresh.period = 0.033
+bgr.filename = Pioneer DJnew_bgr.png
+fgr.filename = Pioneer DJnew_fgr.png
+indicator.filename = Pioneer DJnew_indic.png
+left.x = 615
+left.y = 40
+right.x = 982
+right.y = 40
+position.regular = 5
+position.overload = 5
+step.width.regular = 37
+step.width.overload = 37
+meter.x = 0
+meter.y = 0
+screen.bgr = 
+# --- volumio optional entries -------
+config.extend = True
+meter.visible = True
+albumart.rotation = false
+albumart.rotation.speed = 33
+albumart.pos = 801,454
+albumart.dimension = 237,237
+albumart.border = 
+# Vinyl disc 
+vinyl.filename = cdart.png,Pioneer DJnew_vinyl.png
+vinyl.pos = 45,195
+vinyl.center = 282,430
+vinyl.direction = cw
+vinyl.dimension = 473,473
+playinfo.ticker = True
+playinfo.title.pos = 570,600,bold
+playinfo.title.color = 200,200,200
+playinfo.title.maxwidth = 228
+playinfo.artist.pos = 570,527,bold
+playinfo.artist.color = 200,200,200
+playinfo.artist.maxwidth = 228
+playinfo.album.pos = 570,570,regular
+playinfo.album.color = 200,200,200
+playinfo.album.maxwidth = 228
+playinfo.center = True
+playinfo.next.title.pos = 1041,600,bold
+playinfo.next.title.color = 120,140,140
+playinfo.next.title.maxwidth = 235
+playinfo.next.artist.pos = 1041,527,bold
+playinfo.next.artist.color = 120,140,140
+playinfo.next.artist.maxwidth = 235
+playinfo.next.album.pos = 1041,570,regular
+playinfo.next.album.color = 120,140,140
+playinfo.next.album.maxwidth = 235
+playinfo.type.pos = 1017,422
+playinfo.type.color = 180,180,180
+playinfo.type.dimension = 23,23
+playinfo.samplerate.pos = 810,435,light
+playinfo.samplerate.maxwidth = 95
+time.remaining.pos = 801,393
+time.remaining.color = 200,200,200
+time.remaining.font = fonts/MyDigi.ttf
+time.remaining.fontsize = 33
+time.elapsed.pos = 577,351
+time.elapsed.fontsize = 17
+time.elapsed.color = 220,220,220
+time.total.font = fonts/Another.ttf
+time.total.fontsize = 17
+time.total.pos = 1207,351
+time.total.color = 220,220,220
+# Tonearm configuration
+tonearm.filename = Pioneer DJnew_arm.png
+tonearm.pivot.screen = 146,118
+tonearm.pivot.image = 111,33
+tonearm.angle.rest = 0
+tonearm.angle.start = -20
+tonearm.angle.end = -40
+tonearm.drop.duration = 1.8
+tonearm.lift.duration = 1.2
+# --- PROGRESS BAR ---
+progress.pos = 679,359
+progress.dim = 488,3
+progress.color = 45,103,255
+progress.bg.color = 31,1,3
+#progress.border = 1
+progress.border.color = 80,80,80
+progress.marker.1.pos = 0
+progress.marker.1.label = .
+progress.marker.2.pos = 25
+progress.marker.2.label = .
+progress.marker.3.pos = 50
+progress.marker.3.label = .
+progress.marker.4.pos = 75
+progress.marker.4.label = .
+progress.marker.5.pos = 100
+progress.marker.5.label = .
+progress.head.image = Pioneer DJnew_prog_slid.png
+progress.head.offset = 0,0
+# Volume - Vertical Fader
+volume.pos = 345,40
+volume.dim = 167,7
+volume.style = slider
+volume.slider.track = 
+volume.slider.tip = Pioneer DJnew_vol_slid.png
+volume.slider.orientation = horizontal
+volume.slider.travel = 3,160
+volume.slider.tip.offset = -7,0
+# Mute indicator
+mute.pos = 327,73
+mute.icon = icons/PDJ_m_on.png,icons/PDJ_m_off.png
+# Play/Pause/Stop 
+playstate.pos = 492,645
+playstate.icon = icons/PDJ_stop.png,icons/PDJ_pause.png,icons/PDJ_play.png
+font.size.digi = 45
+font.size.light = 15
+font.size.regular = 13
+font.size.bold = 23
+font.color = 45,103,255
+
+
+#-----------------------195 Gramovox------------------------
+[195G5_01_Gramovox]
+meter.type = linear
+channels = 2
+direction = left-right
+ui.refresh.period = 0.033
+bgr.filename = Gramovox_bgr2.png
+fgr.filename = Gramovox_fgr.png
+indicator.filename = Gramovox_indic.png
+left.x = 834
+left.y = 570
+right.x = 834
+right.y = 637
+position.regular = 9
+position.overload = 4
+step.width.regular = 34
+step.width.overload = 34
+meter.x = 0
+meter.y = 0
+screen.bgr = 
+# --- volumio optional entries -------
+config.extend = True
+meter.visible = True
+albumart.rotation = true
+albumart.rotation.speed = 33
+albumart.pos = 321,197
+albumart.dimension = 189,189
+albumart.border = 
+# Vinyl disc 
+vinyl.filename = Gramovox_vinyl.png
+vinyl.pos = 147,27
+vinyl.center = 414,294
+vinyl.direction = cw
+vinyl.dimension = 536,536
+playinfo.ticker = True
+playinfo.title.pos = 834,110,bold
+playinfo.title.color = 200,200,200
+playinfo.title.maxwidth = 437
+playinfo.artist.pos = 834,40,bold
+playinfo.artist.color = 200,200,200
+playinfo.artist.maxwidth = 437
+playinfo.album.pos = 834,83,regular
+playinfo.album.color = 200,200,200
+playinfo.album.maxwidth = 437
+playinfo.center = True
+playinfo.next.title.pos = 834,510,bold
+playinfo.next.title.color = 120,140,140
+playinfo.next.title.maxwidth = 437
+playinfo.next.artist.pos = 834,440,bold
+playinfo.next.artist.color = 120,140,140
+playinfo.next.artist.maxwidth = 437
+playinfo.next.album.pos = 834,483,regular
+playinfo.next.album.color = 120,140,140
+playinfo.next.album.maxwidth = 437
+playinfo.type.pos = 1043,213
+playinfo.type.color = 250,238,39
+playinfo.type.dimension = 73,73
+playinfo.samplerate.pos = 1127,247,light
+playinfo.samplerate.maxwidth = 117
+time.remaining.pos = 873,230
+time.remaining.color = 250,238,39
+time.remaining.font = fonts/MyDigi.ttf
+time.remaining.fontsize = 43
+time.elapsed.pos = 834,373
+time.elapsed.fontsize = 13
+time.elapsed.color = 220,220,220
+time.total.font = fonts/Another.ttf
+time.total.fontsize = 13
+time.total.pos = 1213,373
+time.total.color = 220,220,220
+# Tonearm configuration
+tonearm.filename = Gramovox_arm.png
+tonearm.pivot.screen = 219,621
+tonearm.pivot.image = 210,407
+tonearm.angle.rest = 0
+tonearm.angle.start = -11
+tonearm.angle.end = -33
+tonearm.drop.duration = 1.8
+tonearm.lift.duration = 1.2
+# --- PROGRESS BAR ---
+progress.pos = 890,373
+progress.dim = 310,13
+progress.color = 45,103,255
+progress.bg.color = 31,1,3
+#progress.border = 1
+progress.border.color = 80,80,80
+progress.marker.1.pos = 0
+progress.marker.1.label = .
+progress.marker.2.pos = 25
+progress.marker.2.label = .
+progress.marker.3.pos = 50
+progress.marker.3.label = .
+progress.marker.4.pos = 75
+progress.marker.4.label = .
+progress.marker.5.pos = 100
+progress.marker.5.label = .
+progress.head.image = 
+progress.head.offset = 0,0
+# --- VOLUME INDICATOR (Knob style) ---
+volume.pos = 551,610
+volume.dim = 52,52
+volume.style = knob
+volume.knob.image = Gramovox_knob.png
+volume.knob.angle.start = 35
+volume.knob.angle.end = -228
+font.size.light = 15
+font.size.regular = 20
+font.size.bold = 35
+font.color = 0,0,0
+
+#-----------------------195 Gramovox------------------------
+[195G5_02_Gramovox]
+meter.type = linear
+channels = 2
+direction = left-right
+ui.refresh.period = 0.033
+bgr.filename = Gramovox_bgr2.png
+fgr.filename = Gramovox_fgr2.png
+indicator.filename = Gramovox_indic.png
+left.x = 834
+left.y = 570
+right.x = 834
+right.y = 637
+position.regular = 9
+position.overload = 4
+step.width.regular = 34
+step.width.overload = 34
+meter.x = 0
+meter.y = 0
+screen.bgr = 
+# --- volumio optional entries -------
+config.extend = True
+meter.visible = True
+albumart.rotation = true
+albumart.rotation.speed = 33
+albumart.pos = 147,27
+albumart.dimension = 536,536
+albumart.border = 
+# Vinyl disc 
+vinyl.filename = Gramovox_vinyl.png
+vinyl.pos = 147,27
+vinyl.center = 414,294
+vinyl.direction = cw
+vinyl.dimension = 536,536
+playinfo.ticker = True
+playinfo.title.pos = 834,110,bold
+playinfo.title.color = 200,200,200
+playinfo.title.maxwidth = 437
+playinfo.artist.pos = 834,40,bold
+playinfo.artist.color = 200,200,200
+playinfo.artist.maxwidth = 437
+playinfo.album.pos = 834,83,regular
+playinfo.album.color = 200,200,200
+playinfo.album.maxwidth = 437
+playinfo.center = True
+playinfo.next.title.pos = 834,510,bold
+playinfo.next.title.color = 120,140,140
+playinfo.next.title.maxwidth = 437
+playinfo.next.artist.pos = 834,440,bold
+playinfo.next.artist.color = 120,140,140
+playinfo.next.artist.maxwidth = 437
+playinfo.next.album.pos = 834,483,regular
+playinfo.next.album.color = 120,140,140
+playinfo.next.album.maxwidth = 437
+playinfo.type.pos = 1043,213
+playinfo.type.color = 250,238,39
+playinfo.type.dimension = 73,73
+playinfo.samplerate.pos = 1127,247,light
+playinfo.samplerate.maxwidth = 117
+time.remaining.pos = 873,230
+time.remaining.color = 250,238,39
+time.remaining.font = fonts/MyDigi.ttf
+time.remaining.fontsize = 43
+time.elapsed.pos = 834,373
+time.elapsed.fontsize = 13
+time.elapsed.color = 220,220,220
+time.total.font = fonts/Another.ttf
+time.total.fontsize = 13
+time.total.pos = 1213,373
+time.total.color = 220,220,220
+# Tonearm configuration
+tonearm.filename = Gramovox_arm.png
+tonearm.pivot.screen = 219,621
+tonearm.pivot.image = 210,407
+tonearm.angle.rest = 0
+tonearm.angle.start = -11
+tonearm.angle.end = -41
+tonearm.drop.duration = 1.8
+tonearm.lift.duration = 1.2
+# --- PROGRESS BAR ---
+progress.pos = 890,373
+progress.dim = 310,13
+progress.color = 45,103,255
+progress.bg.color = 31,1,3
+#progress.border = 1
+progress.border.color = 80,80,80
+progress.marker.1.pos = 0
+progress.marker.1.label = .
+progress.marker.2.pos = 25
+progress.marker.2.label = .
+progress.marker.3.pos = 50
+progress.marker.3.label = .
+progress.marker.4.pos = 75
+progress.marker.4.label = .
+progress.marker.5.pos = 100
+progress.marker.5.label = .
+progress.head.image = 
+progress.head.offset = 0,0
+# --- VOLUME INDICATOR (Knob style) ---
+volume.pos = 551,610
+volume.dim = 52,52
+volume.style = knob
+volume.knob.image = Gramovox_knob.png
+volume.knob.angle.start = 35
+volume.knob.angle.end = -228
+font.size.light = 15
+font.size.regular = 20
+font.size.bold = 35
+font.color = 45,103,255
+
+#-----------------------195 Gramovox------------------------
+[195G5_03_Gramovox]
+meter.type = linear
+channels = 2
+direction = left-right
+ui.refresh.period = 0.033
+bgr.filename = Gramovox_bgr.png
+fgr.filename = Gramovox_fgr.png
+indicator.filename = Gramovox_indic.png
+left.x = 834
+left.y = 570
+right.x = 834
+right.y = 637
+position.regular = 9
+position.overload = 4
+step.width.regular = 34
+step.width.overload = 34
+meter.x = 0
+meter.y = 0
+screen.bgr = 
+# --- volumio optional entries -------
+config.extend = True
+meter.visible = True
+albumart.rotation = false
+albumart.rotation.speed = 33
+albumart.pos = 843,21
+albumart.dimension = 429,429
+albumart.border = 
+# Vinyl disc 
+vinyl.filename = cdart.png,Gramovox_vinyl.png
+vinyl.pos = 147,27
+vinyl.center = 414,294
+vinyl.direction = cw
+vinyl.dimension = 536,536
+playinfo.ticker = True
+playinfo.title.pos = 834,510,bold
+playinfo.title.color = 200,200,200
+playinfo.title.maxwidth = 437
+playinfo.artist.pos = 834,440,bold
+playinfo.artist.color = 200,200,200
+playinfo.artist.maxwidth = 437
+playinfo.album.pos = 834,483,regular
+playinfo.album.color = 200,200,200
+playinfo.album.maxwidth = 437
+playinfo.center = True
+playinfo.type.pos = 33,489
+playinfo.type.color = 180,180,180
+playinfo.type.dimension = 53,53
+playinfo.samplerate.pos = 5,544,light
+playinfo.samplerate.maxwidth = 117
+time.remaining.pos = 371,668
+time.remaining.color = 250,238,39
+time.remaining.font = fonts/MyDigi.ttf
+time.remaining.fontsize = 23
+time.elapsed.pos = 147,702
+time.elapsed.fontsize = 13
+time.elapsed.color = 220,220,220
+time.total.font = fonts/Another.ttf
+time.total.fontsize = 13
+time.total.pos = 640,702
+time.total.color = 220,220,220
+# Tonearm configuration
+tonearm.filename = Gramovox_arm.png
+tonearm.pivot.screen = 219,621
+tonearm.pivot.image = 210,407
+tonearm.angle.rest = 0
+tonearm.angle.start = -11
+tonearm.angle.end = -33
+tonearm.drop.duration = 1.8
+tonearm.lift.duration = 1.2
+# --- PROGRESS BAR ---
+progress.pos = 190,707
+progress.dim = 447,7
+progress.color = 45,103,255
+progress.bg.color = 31,1,3
+#progress.border = 1
+progress.border.color = 80,80,80
+progress.marker.1.pos = 0
+progress.marker.1.label = .
+progress.marker.2.pos = 25
+progress.marker.2.label = .
+progress.marker.3.pos = 50
+progress.marker.3.label = .
+progress.marker.4.pos = 75
+progress.marker.4.label = .
+progress.marker.5.pos = 100
+progress.marker.5.label = .
+progress.head.image = 
+progress.head.offset = 0,0
+# --- VOLUME INDICATOR (Knob style) ---
+volume.pos = 551,610
+volume.dim = 52,52
+volume.style = knob
+volume.knob.image = Gramovox_knob.png
+volume.knob.angle.start = 35
+volume.knob.angle.end = -228
+font.size.light = 11
+font.size.regular = 20
+font.size.bold = 35
+font.color = 45,103,255
+
+
+#-----------------------196 SME------------------------
+[196G5_01_SME60]
+meter.type = linear
+channels = 2
+direction = left-right
+ui.refresh.period = 0.033
+bgr.filename = SME60_bgr2.png
+fgr.filename = SME60_fgr.png
+indicator.filename = SME60_indic.png
+left.x = 232
+left.y = 6
+right.x = 232
+right.y = 665
+position.regular = 89
+position.overload = 9
+step.width.regular = 5
+step.width.overload = 5
+meter.x = 0
+meter.y = 0
+screen.bgr = 
+# --- volumio optional entries -------
+config.extend = True
+meter.visible = True
+albumart.rotation = true
+albumart.rotation.speed = 33
+albumart.pos = 277,255
+albumart.dimension = 187,187
+albumart.border = 
+# Vinyl disc 
+vinyl.filename = SME60_vinyl.png
+vinyl.pos = 89,68
+vinyl.center = 370,349
+vinyl.direction = cw
+vinyl.dimension = 562,562
+playinfo.ticker = True
+playinfo.title.pos = 956,110,bold
+playinfo.title.color = 200,200,200
+playinfo.title.maxwidth = 314
+playinfo.artist.pos = 956,40,bold
+playinfo.artist.color = 200,200,200
+playinfo.artist.maxwidth = 314
+playinfo.album.pos = 956,83,regular
+playinfo.album.color = 200,200,200
+playinfo.album.maxwidth = 314
+playinfo.center = True
+playinfo.next.title.pos = 956,617,bold
+playinfo.next.title.color = 120,140,140
+playinfo.next.title.maxwidth = 314
+playinfo.next.artist.pos = 956,547,bold
+playinfo.next.artist.color = 120,140,140
+playinfo.next.artist.maxwidth = 314
+playinfo.next.album.pos = 956,590,regular
+playinfo.next.album.color = 120,140,140
+playinfo.next.album.maxwidth = 314
+playinfo.type.pos = 598,612
+playinfo.type.color = 180,180,180
+playinfo.type.dimension = 32,32
+playinfo.samplerate.pos = 632,623,light
+playinfo.samplerate.maxwidth = 73
+time.remaining.pos = 598,550
+time.remaining.color = 190,190,190
+time.remaining.font = fonts/MyDigi.ttf
+time.remaining.fontsize = 30
+time.elapsed.pos = 840,513
+time.elapsed.fontsize = 13
+time.elapsed.color = 220,220,220
+time.total.font = fonts/Another.ttf
+time.total.fontsize = 13
+time.total.pos = 840,666
+time.total.color = 220,220,220
+# Tonearm configuration
+tonearm.filename = SME60_arm.png
+tonearm.pivot.screen = 734,209
+tonearm.pivot.image = 145,96
+tonearm.angle.rest = 0
+tonearm.angle.start = -10
+tonearm.angle.end = -33
+tonearm.drop.duration = 1.8
+tonearm.lift.duration = 1.2
+# --- PROGRESS BAR ---
+progress.pos = 807,543
+progress.dim = 109,109
+progress.style = knob
+progress.knob.image = SME60_progr_slid.png
+progress.knob.angle.start = 180
+progress.knob.angle.end = 0
+# --- VOLUME INDICATOR (Knob style) ---
+volume.pos = 807,46
+volume.dim = 109,109
+volume.style = knob
+volume.knob.image = SME60_vol_slid.png
+volume.knob.angle.start = 6
+volume.knob.angle.end = -220
+# Mute indicator
+mute.pos = 892,399
+mute.icon = icons/SMA_m_on.png,icons/SMA_m_off.png
+# Play/Pause/Stop 
+playstate.pos = 892,219
+playstate.icon = icons/SMA_stop.png,icons/SMA_pause.png,icons/SMA_play.png
+# Repeat indicator
+repeat.pos = 892,459
+repeat.icon = icons/SMA_repeat_off.png,icons/SMA_repeat_all.png,icons/SMA
+font.size.light = 10
+font.size.regular = 17
+font.size.bold = 25
+font.color = 0,0,0
+
+
+
+
+
+#-----------------------196 SME------------------------
+[196G5_02_SME60]
+meter.type = linear
+channels = 2
+direction = left-right
+ui.refresh.period = 0.033
+bgr.filename = SME60_bgr2.png
+fgr.filename = SME60_fgr2.png
+indicator.filename = SME60_indic.png
+left.x = 232
+left.y = 6
+right.x = 232
+right.y = 665
+position.regular = 89
+position.overload = 9
+step.width.regular = 5
+step.width.overload = 5
+meter.x = 0
+meter.y = 0
+screen.bgr = 
+# --- volumio optional entries -------
+config.extend = True
+meter.visible = True
+albumart.rotation = true
+albumart.rotation.speed = 33
+albumart.pos = 89,68
+albumart.dimension = 562,562
+albumart.border = 
+# Vinyl disc 
+vinyl.filename = 
+vinyl.pos = 89,68
+vinyl.center = 370,349
+vinyl.direction = cw
+vinyl.dimension = 562,562
+playinfo.ticker = True
+playinfo.title.pos = 956,110,bold
+playinfo.title.color = 200,200,200
+playinfo.title.maxwidth = 314
+playinfo.artist.pos = 956,40,bold
+playinfo.artist.color = 200,200,200
+playinfo.artist.maxwidth = 314
+playinfo.album.pos = 956,83,regular
+playinfo.album.color = 200,200,200
+playinfo.album.maxwidth = 314
+playinfo.center = True
+playinfo.next.title.pos = 956,617,bold
+playinfo.next.title.color = 120,140,140
+playinfo.next.title.maxwidth = 314
+playinfo.next.artist.pos = 956,547,bold
+playinfo.next.artist.color = 120,140,140
+playinfo.next.artist.maxwidth = 314
+playinfo.next.album.pos = 956,590,regular
+playinfo.next.album.color = 120,140,140
+playinfo.next.album.maxwidth = 314
+playinfo.type.pos = 598,612
+playinfo.type.color = 180,180,180
+playinfo.type.dimension = 32,32
+playinfo.samplerate.pos = 632,623,light
+playinfo.samplerate.maxwidth = 73
+time.remaining.pos = 598,550
+time.remaining.color = 190,190,190
+time.remaining.font = fonts/MyDigi.ttf
+time.remaining.fontsize = 30
+time.elapsed.pos = 840,513
+time.elapsed.fontsize = 13
+time.elapsed.color = 220,220,220
+time.total.font = fonts/Another.ttf
+time.total.fontsize = 13
+time.total.pos = 840,666
+time.total.color = 220,220,220
+# Tonearm configuration
+tonearm.filename = SME60_arm.png
+tonearm.pivot.screen = 734,209
+tonearm.pivot.image = 145,96
+tonearm.angle.rest = 0
+tonearm.angle.start = -10
+tonearm.angle.end = -39
+tonearm.drop.duration = 1.8
+tonearm.lift.duration = 1.2
+# --- PROGRESS BAR ---
+progress.pos = 807,543
+progress.dim = 109,109
+progress.style = knob
+progress.knob.image = SME60_progr_slid.png
+progress.knob.angle.start = 180
+progress.knob.angle.end = 0
+# --- VOLUME INDICATOR (Knob style) ---
+volume.pos = 807,46
+volume.dim = 109,109
+volume.style = knob
+volume.knob.image = SME60_vol_slid.png
+volume.knob.angle.start = 6
+volume.knob.angle.end = -220
+# Mute indicator
+mute.pos = 892,399
+mute.icon = icons/SMA_m_on.png,icons/SMA_m_off.png
+# Play/Pause/Stop 
+playstate.pos = 892,219
+playstate.icon = icons/SMA_stop.png,icons/SMA_pause.png,icons/SMA_play.png
+# Repeat indicator
+repeat.pos = 892,459
+repeat.icon = icons/SMA_repeat_off.png,icons/SMA_repeat_all.png,icons/SMA
+font.size.light = 10
+font.size.regular = 17
+font.size.bold = 25
+font.color = 45,103,255
+
+
+
+
+
+
+#-----------------------196 SME------------------------
+[196G5_03_SME60]
+meter.type = linear
+channels = 2
+direction = left-right
+ui.refresh.period = 0.033
+bgr.filename = SME60_bgr.png
+fgr.filename = SME60_fgr.png
+indicator.filename = SME60_indic.png
+left.x = 232
+left.y = 6
+right.x = 232
+right.y = 665
+position.regular = 89
+position.overload = 9
+step.width.regular = 5
+step.width.overload = 5
+meter.x = 0
+meter.y = 0
+screen.bgr = 
+# --- volumio optional entries -------
+config.extend = True
+meter.visible = True
+albumart.rotation = false
+albumart.rotation.speed = 33
+albumart.pos = 956,202
+albumart.dimension = 302,302
+albumart.border = 
+# Vinyl disc 
+vinyl.filename = cdart.png,SME60_vinyl.png
+vinyl.pos = 89,68
+vinyl.center = 370,349
+vinyl.direction = cw
+vinyl.dimension = 562,562
+playinfo.ticker = True
+playinfo.title.pos = 956,110,bold
+playinfo.title.color = 200,200,200
+playinfo.title.maxwidth = 314
+playinfo.artist.pos = 956,40,bold
+playinfo.artist.color = 200,200,200
+playinfo.artist.maxwidth = 314
+playinfo.album.pos = 956,83,regular
+playinfo.album.color = 200,200,200
+playinfo.album.maxwidth = 314
+playinfo.center = True
+playinfo.next.title.pos = 956,617,bold
+playinfo.next.title.color = 120,140,140
+playinfo.next.title.maxwidth = 314
+playinfo.next.artist.pos = 956,547,bold
+playinfo.next.artist.color = 120,140,140
+playinfo.next.artist.maxwidth = 314
+playinfo.next.album.pos = 956,590,regular
+playinfo.next.album.color = 120,140,140
+playinfo.next.album.maxwidth = 314
+playinfo.type.pos = 598,612
+playinfo.type.color = 180,180,180
+playinfo.type.dimension = 32,32
+playinfo.samplerate.pos = 632,623,light
+playinfo.samplerate.maxwidth = 73
+time.remaining.pos = 598,550
+time.remaining.color = 190,190,190
+time.remaining.font = fonts/MyDigi.ttf
+time.remaining.fontsize = 30
+time.elapsed.pos = 840,513
+time.elapsed.fontsize = 13
+time.elapsed.color = 220,220,220
+time.total.font = fonts/Another.ttf
+time.total.fontsize = 13
+time.total.pos = 840,666
+time.total.color = 220,220,220
+# Tonearm configuration
+tonearm.filename = SME60_arm.png
+tonearm.pivot.screen = 734,209
+tonearm.pivot.image = 145,96
+tonearm.angle.rest = 0
+tonearm.angle.start = -10
+tonearm.angle.end = -33
+tonearm.drop.duration = 1.8
+tonearm.lift.duration = 1.2
+# --- PROGRESS BAR ---
+progress.pos = 807,543
+progress.dim = 109,109
+progress.style = knob
+progress.knob.image = SME60_progr_slid.png
+progress.knob.angle.start = 180
+progress.knob.angle.end = 0
+# --- VOLUME INDICATOR (Knob style) ---
+volume.pos = 807,46
+volume.dim = 109,109
+volume.style = knob
+volume.knob.image = SME60_vol_slid.png
+volume.knob.angle.start = 6
+volume.knob.angle.end = -220
+# Mute indicator
+mute.pos = 892,399
+mute.icon = icons/SMA_m_on.png,icons/SMA_m_off.png
+# Play/Pause/Stop 
+playstate.pos = 892,219
+playstate.icon = icons/SMA_stop.png,icons/SMA_pause.png,icons/SMA_play.png
+# Repeat indicator
+repeat.pos = 892,459
+repeat.icon = icons/SMA_repeat_off.png,icons/SMA_repeat_all.png,icons/SMA
+font.size.light = 10
+font.size.regular = 17
+font.size.bold = 25
+font.color = 45,103,255
+

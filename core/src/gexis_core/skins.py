@@ -111,6 +111,37 @@ LINEAR_KEYS = {
     "position.regular", "right.x", "right.y", "step.width.overload",
     "step.width.regular",
 }
+#: **Keys that make an animated skin move** (ADR-0096): the spinning vinyl
+#: and the art on it, the tonearm, the cassette and tape reels. Drawn by the
+#: renderer's motion layer.
+MOTION_KEYS = {
+    "albumart.rotation", "albumart.rotation.speed",
+    "vinyl.center", "vinyl.dimension", "vinyl.direction", "vinyl.filename", "vinyl.pos",
+    "tonearm.angle.end", "tonearm.angle.rest", "tonearm.angle.start",
+    "tonearm.drop.duration", "tonearm.filename", "tonearm.lift.duration",
+    "tonearm.pivot.image", "tonearm.pivot.screen",
+    "reel.direction", "reel.rotation.speed",
+    "reel.left.center", "reel.left.filename", "reel.left.pos",
+    "reel.right.center", "reel.right.filename", "reel.right.pos",
+}
+#: **Keys the animated packs use and the renderer knowingly does not draw
+#: yet** - George's decision 3 in ADR-0096: the motion first, these later.
+#: Listed rather than waved through, so a key that is neither drawn nor
+#: deferred still fails the build. Matched by prefix.
+DEFERRED_PREFIXES = (
+    "progress.", "volume.", "mute.", "playstate.", "repeat.", "shuffle.",
+    "playinfo.next.", "playinfo.ticker", "time.elapsed.", "time.total.",
+)
+DEFERRED_KEYS = {
+    "time.remaining.font", "time.remaining.fontsize",
+    "playinfo.samplerate.color", "playinfo.samplerate.maxwidth",
+}
+
+
+def deferred(key: str) -> bool:
+    return key in DEFERRED_KEYS or key.startswith(DEFERRED_PREFIXES)
+
+
 SPECTRUM_KEYS = {
     "bar.color", "bar.filename", "bar.gap", "bar.gradient", "bar.height",
     "bar.type", "bar.width", "bgr.color", "bgr.filename", "bgr.gradient",
@@ -195,7 +226,10 @@ def parse(text: str) -> list[Skin]:
     return skins
 
 
-def validate(meters: list[Skin], spectrum: list[Skin] | None = None) -> None:
+def validate(meters: list[Skin], spectrum: list[Skin] | None = None,
+             animated: bool = False) -> None:
+    """`animated` admits ADR-0096's motion and deferred keys - for the animated
+    packs only, so the static corpus is held to exactly what it was."""
     spectrum = spectrum or []
     problems: list[str] = []
     spectrum_names = {s.name for s in spectrum}
@@ -212,7 +246,12 @@ def validate(meters: list[Skin], spectrum: list[Skin] | None = None) -> None:
             )
             continue
         allowed = COMMON_KEYS | (CIRCULAR_KEYS if skin.meter_type == CIRCULAR else LINEAR_KEYS)
-        for key in sorted(set(skin.options) - allowed):
+        if animated:
+            allowed = allowed | MOTION_KEYS
+        unknown = set(skin.options) - allowed
+        if animated:
+            unknown = {key for key in unknown if not deferred(key)}
+        for key in sorted(unknown):
             problems.append(f"{skin.name}: unknown key {key!r} for a {skin.meter_type} meter")
 
         linked = skin.spectrum_name
@@ -225,6 +264,11 @@ def validate(meters: list[Skin], spectrum: list[Skin] | None = None) -> None:
 
     if problems:
         raise SkinError(f"{len(problems)} problem(s):\n  " + "\n  ".join(problems))
+
+
+#: ADR-0096's packs, one directory each under `skins/`, `meters.txt` exactly as
+#: upstream ships it.
+ANIMATED = "animated"
 
 
 def load(directory: Path) -> tuple[list[Skin], list[Skin]]:
@@ -354,6 +398,15 @@ def main(argv: list[str] | None = None) -> int:
         print(f"ERROR: {directory}: {exc}", file=sys.stderr)
         return 1
     print(f"{directory}: {len(meters)} skins and {len(spectrum)} spectrum sections validate")
+    # ADR-0096: each animated pack on its own, so a problem names its pack.
+    for pack in sorted((directory / ANIMATED).glob("*/meters.txt")):
+        pack_skins = parse(pack.read_text(encoding="utf-8", errors="replace"))
+        try:
+            validate(pack_skins, animated=True)
+        except SkinError as exc:
+            print(f"ERROR: {pack}: {exc}", file=sys.stderr)
+            return 1
+        print(f"{pack.parent.name}: {len(pack_skins)} animated-pack skins validate")
     return 0
 
 

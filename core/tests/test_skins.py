@@ -325,3 +325,38 @@ def test_the_broken_list_says_why_for_each(tmp_path):
     from gexis_core import skins
 
     assert all(len(why) > 20 for why in skins.BROKEN.values())
+
+
+# --- ADR-0096: the animated packs ------------------------------------------
+
+ANIMATED_PACKS = sorted((CORPUS / "animated").glob("*/meters.txt"))
+
+
+def test_the_four_animated_packs_are_here_and_validate():
+    """48 turntables, 20 tape recorders and 15 cassette decks at 1280x720, and
+    Pakit S's seven at 1280x800 - kept exactly as upstream ships them."""
+    counts = {p.parent.name: len(parse(p.read_text(encoding="utf-8", errors="replace")))
+              for p in ANIMATED_PACKS}
+    assert counts == {
+        "1280x720_g5_710_Turntables": 48,
+        "1280x720_g5_711_Tape_Recorder": 20,
+        "1280x720_g5_712_Cassette": 15,
+        "1280x800_t1800_pack7": 7,
+    }
+    for pack in ANIMATED_PACKS:
+        validate(parse(pack.read_text(encoding="utf-8", errors="replace")), animated=True)
+
+
+def test_the_static_corpus_is_still_held_to_what_it_was():
+    """The motion and deferred keys are admitted for the animated packs only."""
+    with pytest.raises(SkinError, match="unknown key 'vinyl.filename'"):
+        validate([Skin("x", {"meter.type": CIRCULAR, "vinyl.filename": "v.png"})])
+    with pytest.raises(SkinError, match="unknown key 'progress.pos'"):
+        validate([Skin("x", {"meter.type": CIRCULAR, "progress.pos": "1,2"})])
+
+
+def test_an_animated_pack_still_fails_on_a_key_nobody_placed():
+    """Admitting the deferred families by prefix must not admit everything."""
+    with pytest.raises(SkinError, match="unknown key 'sparkle'"):
+        validate([Skin("x", {"meter.type": CIRCULAR, "sparkle": "1", "tonearm.filename": "a"})],
+                 animated=True)
