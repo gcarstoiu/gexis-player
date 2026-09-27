@@ -67,9 +67,9 @@ Naim S+M and Kenwood Rev S+M among them); the animated skins' rows moved into
 [ADR-0097](docs/decisions/0097-what-the-visualiser-shows-beyond-the-title.md) -
 the ticker scrolls, and progress, volume, mute/play/shuffle/repeat icons,
 elapsed/total time and the next track are drawn. **Display only - George: the
-visualiser is never actionable.** Smooth rotation is built and off: it doubles
-the cost (Vertere 44 → 87 % of a core); **a setting is owed to George's
-decision.** All 90 animated skins swept on the panel after it, three frames each.
+visualiser is never actionable.** Smooth rotation is a setting, **Rotation:
+Stepped (default) / Smooth** - George chose it after the numbers (Vertere 44 →
+84-87 % of a core). All 90 animated skins swept on the panel after it, three frames each.
 
 **Done 2026-09-27:** gexis-plexamp **v0.2.2** released and pinned; **PR #31**
 (the fixes, into `main`) and **PR #32** (this branch, into the fixes branch -

@@ -5,7 +5,8 @@ ticker and smooth rotation *"agreed with your recommendation"*; the extra fields
 *"fine also with the recommended"*, and then: *"You can do the later ones now
 too, but keep in mind the distinction I just made."* **Amends
 [ADR-0096](0096-turntable-and-cassette-skins.md) decision 3**, which deferred all
-of this. **Built; smooth rotation's setting owed to George.**
+of this. **Built.** Smooth rotation became a setting on George's word:
+*"Agree with recommendation. Add setting"*.
 **Date:** 2026-09-27
 **Raised by:** ADR-0096's first cut, which drew the motion and what the renderer
 already drew (title, artist, album, artwork, badge, time remaining) and left the
@@ -103,8 +104,10 @@ Counted over the packs as pinned:
   44 → 87, SME60 40 → 80, Revox B77 40 → 74, TDK 40 → 74, Pioneer Cassette
   18 → 32, ReelTape 22 → 25; the whole machine about 15 → 28 % busy, the SoC
   75 °C, no throttling. The ticker alone added about 10 points on the skins
-  that carry one (30-32 → 40-44 stepped). **Proposed to George as a setting;
-  not added until he confirms.**
+  that carry one (30-32 → 40-44 stepped). **A setting since George confirmed
+  it**: *Rotation*, Stepped (default) or Smooth, in *Visualisation tweaks*
+  (ADR-0022 [N]); switched on the panel, the Vertere measured 44 % stepped and
+  84 % smooth.
 
 ## Reversal conditions
 
