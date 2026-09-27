@@ -38,3 +38,32 @@ and the DAC sets the level, does not hold for Plexamp.
 - **Plexamp needs the same kind of decision.** The candidates are its own
   settings, if any give a fixed or external volume (not yet looked for), or
   the Qobuz arrangement.
+
+## Is there a way to keep Plexamp at full scale? (George: "option B")
+
+**No, not through Plexamp.** Looked for on the device, in Plexamp 4.13.2's own
+files, the same day:
+
+- **Its settings:** none about the player's output volume.
+  - Its stored settings (`~/.local/share/Plexamp/Settings`) hold the volume only
+    as state.
+  - Its interface labels about volume are *Show Volume Control* (a flag on the
+    controller's screen, `playerShowVolume`), *Use Hardware Volume* / *Link
+    hardware volume to remote volume* (`remoteControlUseHardwareVolume`, a
+    controller linking its own volume keys to a remote player), *Loudness
+    Leveling*, *Equalizer Preamp Gain* and *DSD Gain*.
+- **Its code path:** the headless player's `setVolume` calls a native module.
+  In `treble.node` that is `Mixer::setVolume`, which is
+  `BASS_ChannelSlideAttribute(m_mixer, BASS_ATTRIB_VOL | BASS_SLIDE_LOG, volume/100.0, ms)`,
+  **a gain on its own mixer channel: sample scaling, always.** `libbass`
+  carries ALSA mixer code, but this path does not use it.
+- **Checked on the device:** a Plexamp volume change moved **no** control on
+  the HiFiBerry card (`amixer contents`, before and after, identical).
+
+What remains is on our side:
+
+- **(a)** Leave Plexamp's volume to Plexamp, as Qobuz is now.
+- **(b)** The plugin holds Plexamp's own level at 100 and puts every change on
+  the DAC. Bit-perfect, one level, but the Plexamp app's slider then reads 100
+  and snaps back.
+- **(c)** Leave it as it is: applied twice.
