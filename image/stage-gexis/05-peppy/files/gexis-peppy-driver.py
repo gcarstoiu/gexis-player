@@ -916,7 +916,18 @@ def main() -> int:
     peppy.meter.random_meter = False
     peppy.meter.list_meter = False
     layer.set_skin(skins[first], homes.get(first), first)
-    motion = MotionLayer(util.PYGAME_SCREEN)
+    def redraw_needles(area: pygame.Rect) -> None:
+        """The meter's needles as they last stood, inside the clip the motion
+        layer has set: each needle component replays its last blit, and the
+        meter's own background and foreground are the motion layer's."""
+        meter = rotation.vumeter.meter
+        if meter is None:
+            return
+        for component in meter.components:
+            if component is not None and component is not meter.bgr and component is not meter.fgr:
+                component.draw()
+
+    motion = MotionLayer(util.PYGAME_SCREEN, layer, redraw_needles)
     rotation.motion = motion
     if first in homes:
         motion.set_skin(skins[first], homes[first], layer.background)
@@ -951,9 +962,16 @@ def main() -> int:
                 if rotation.rotating:
                     rotation.switch()
             metadata = read_metadata()
-            dirty = layer.draw(metadata)
-            if dirty:
-                pygame.display.update(dirty)
+            if motion.active:
+                # Laid out, not painted: erasing a title to the layer's own
+                # background would wipe the record or the reels under it.
+                dirty = layer.draw(metadata, paint=False)
+                if dirty:
+                    pygame.display.update(motion.compose(dirty))
+            else:
+                dirty = layer.draw(metadata)
+                if dirty:
+                    pygame.display.update(dirty)
         # ADR-0096: every frame, from the last metadata read - the spin has its
         # own rate gate, so most frames draw nothing.
         if motion.active:

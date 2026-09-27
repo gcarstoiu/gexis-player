@@ -495,3 +495,20 @@ def test_a_skin_with_neither_background_draws_nothing_rather_than_smear(screen, 
     layer = MetadataLayer(screen, tmp_path)
     layer.set_skin(dict(SKIN, **{"screen.bgr": "", "bgr.filename": ""}))
     assert layer.draw(full()) == []
+
+
+def test_laid_out_for_the_motion_layer_it_leaves_the_screen_alone(layer, screen):
+    """ADR-0096: on an animated skin the motion layer composes; erasing a
+    title to this layer's background would wipe the record under it."""
+    screen.fill((1, 2, 3))
+    before = pygame.image.tostring(screen, "RGB")
+    dirty = layer.draw(full(), paint=False)
+    assert len(dirty) == 5
+    assert pygame.image.tostring(screen, "RGB") == before
+    strata = [stratum for stratum, _, _ in layer._items]
+    assert strata.count("text") == 3 and strata.count("meta") == 2
+    layer.paint(("text",), pygame.Rect(0, 0, 1280, 800))
+    assert pygame.image.tostring(screen, "RGB") != before
+    # And the next ordinary draw paints again.
+    layer.draw(full(title="Another"))
+    assert layer._painting

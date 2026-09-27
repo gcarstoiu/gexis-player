@@ -191,13 +191,15 @@ class Tonearm:
             return True
         return abs(self.angle - self.drawn_angle) >= 0.1
 
-    def placed(self) -> tuple[pygame.Surface, pygame.Rect]:
-        """The arm rotated by `angle` and placed so `pivot_image` lands on
-        `pivot_screen` (pygame rotates counter-clockwise, y down)."""
-        rotated = pygame.transform.rotate(self.picture, self.angle)
+    def placed(self, angle: float | None = None) -> tuple[pygame.Surface, pygame.Rect]:
+        """The arm rotated by `angle` (its current one unless given) and
+        placed so `pivot_image` lands on `pivot_screen` (pygame rotates
+        counter-clockwise, y down)."""
+        angle = self.angle if angle is None else angle
+        rotated = pygame.transform.rotate(self.picture, angle)
         w, h = self.picture.get_size()
         dx, dy = self.pivot_image[0] - w / 2, self.pivot_image[1] - h / 2
-        a = math.radians(-self.angle)
+        a = math.radians(-angle)
         rx, ry = dx * math.cos(a) - dy * math.sin(a), dx * math.sin(a) + dy * math.cos(a)
         rw, rh = rotated.get_size()
         left = int(self.pivot_screen[0] - (rw / 2 + rx))
@@ -205,11 +207,46 @@ class Tonearm:
         return rotated, pygame.Rect(left, top, rw, rh)
 
 
-class MotionLayer:
-    """Everything that moves on the current skin, or nothing."""
+def merged(rects: list[pygame.Rect], bounds: pygame.Rect) -> list[pygame.Rect]:
+    """`rects` inside `bounds`, those that touch joined into one. Only those:
+    one rectangle round both reels of a cassette covered the title between
+    them, and repainted it eight times a second."""
+    out: list[pygame.Rect] = []
+    for rect in rects:
+        rect = rect.clip(bounds)
+        if not rect.width or not rect.height:
+            continue
+        joined = True
+        while joined:
+            joined = False
+            for other in out:
+                if other.colliderect(rect):
+                    out.remove(other)
+                    rect = rect.union(other)
+                    joined = True
+                    break
+        out.append(rect)
+    return out
 
-    def __init__(self, screen: pygame.Surface) -> None:
+
+class MotionLayer:
+    """Everything that moves on the current skin, or nothing.
+
+    **Whatever it repaints, it repaints whole** (ADR-0096), in upstream's
+    z-order: the static picture, what turns, the artwork, the needles, the
+    title and its fields, the tonearm, the time and the badge, the
+    foreground. Repainting only the background and what moves wiped
+    whatever else was there until it next changed - the title flashed, the
+    art was half painted, the arm seemed to carry a mask (George, on the
+    panel, 2026-09-27).
+    """
+
+    def __init__(self, screen: pygame.Surface, layer=None, needles=None) -> None:
         self._screen = screen
+        #: The text layer (`MetadataLayer.paint`), and a callable that redraws
+        #: the meter's needles inside a rectangle; either may be absent.
+        self.layer = layer
+        self.needles = needles
         self.spinners: list[Spinner] = []
         self.arm: Tonearm | None = None
         self._background: pygame.Surface | None = None
@@ -332,25 +369,38 @@ class MotionLayer:
                 if self.arm.drawn_rect is not None:
                     regions.append(self.arm.drawn_rect)
                 regions.append(rect)
+                self.arm.drawn_angle, self.arm.drawn_rect = self.arm.angle, rect
                 self._last_arm = now
-            elif regions:
-                # The spin repainted under the arm: it has to go back on top.
-                if self.arm.drawn_rect is not None and any(r.colliderect(self.arm.drawn_rect) for r in regions):
-                    regions.append(self.arm.drawn_rect)
 
         if not regions:
             return []
-        area = regions[0].unionall(regions[1:]).clip(self._screen.get_rect())
-        self._screen.blit(self._background, area, area)
+        return self.compose(regions)
+
+    def compose(self, rects: list[pygame.Rect]) -> list[pygame.Rect]:
+        """Repaint `rects` from the bottom up; the rectangles to present."""
+        if self._background is None:
+            return []
+        areas = merged(rects, self._screen.get_rect())
         clip = self._screen.get_clip()
-        self._screen.set_clip(area)
-        for spinner in self.spinners:
-            spinner.draw(self._screen)
-        if self.arm is not None:
-            arm, rect = self.arm.placed()
-            self._screen.blit(arm, rect)
-            self.arm.drawn_angle, self.arm.drawn_rect = self.arm.angle, rect
-        if self._foreground is not None:
-            self._screen.blit(self._foreground, area, area)
+        for area in areas:
+            self._screen.set_clip(area)
+            self._screen.blit(self._background, area, area)
+            for spinner in self.spinners:
+                spinner.draw(self._screen)
+            if self.layer is not None:
+                self.layer.paint(("art",), area)
+            if self.needles is not None:
+                self.needles(area)
+            if self.layer is not None:
+                self.layer.paint(("text",), area)
+            if self.arm is not None and self.arm.drawn_angle is not None:
+                # At the angle it was last drawn at in full: a spin repainting
+                # a corner of the arm must not draw that corner somewhere new.
+                arm, rect = self.arm.placed(self.arm.drawn_angle)
+                self._screen.blit(arm, rect)
+            if self.layer is not None:
+                self.layer.paint(("meta",), area)
+            if self._foreground is not None:
+                self._screen.blit(self._foreground, area, area)
         self._screen.set_clip(clip)
-        return [area]
+        return areas

@@ -124,3 +124,63 @@ def test_a_static_skin_has_no_motion(screen, tmp_path):
     motion.set_skin({"meter.type": "circular"}, tmp_path, pygame.Surface((1280, 800)))
     assert not motion.active
     assert motion.tick({"transport": "playing"}, None) == []
+
+
+def test_rectangles_that_do_not_touch_are_repainted_apart(screen):
+    """One rectangle round both reels of a cassette covered the title
+    between them."""
+    from gexis_peppy_motion import merged
+    bounds = pygame.Rect(0, 0, 1280, 800)
+    left, right = pygame.Rect(100, 300, 200, 200), pygame.Rect(900, 300, 200, 200)
+    assert merged([left, right], bounds) == [left, right]
+    touching = pygame.Rect(250, 450, 100, 100)
+    assert merged([left, right, touching], bounds) == [right, left.union(touching)]
+    assert merged([pygame.Rect(1200, 700, 200, 200)], bounds) == [pygame.Rect(1200, 700, 80, 100)]
+
+
+class Recorder:
+    """A stand-in for the text layer and the needles, noting the order."""
+
+    def __init__(self):
+        self.calls = []
+
+    def paint(self, strata, area):
+        self.calls.append(strata[0])
+
+    def needles(self, area):
+        self.calls.append("needles")
+
+
+def test_a_repaint_puts_everything_back_in_upstreams_order(screen, tmp_path):
+    record = Recorder()
+    motion = MotionLayer(screen, record, record.needles)
+    arm_picture = pygame.Surface((100, 20), pygame.SRCALPHA)
+    pygame.image.save(arm_picture, str(tmp_path / "arm.bmp"))
+    skin = {"reel.left.filename": "arm.bmp", "reel.left.center": "300,300",
+            "reel.rotation.speed": "10", "tonearm.filename": "arm.bmp",
+            "tonearm.pivot.screen": "320,300", "tonearm.pivot.image": "90,10"}
+    motion.set_skin(skin, tmp_path, pygame.Surface((1280, 800)))
+    assert motion.tick({"transport": "playing"}, None, now=1.0)
+    assert record.calls[:4] == ["art", "needles", "text", "meta"]
+
+
+def test_a_title_under_a_turning_reel_survives_the_spin(screen, tmp_path):
+    """The flashing title: the spin repainted the background over it and
+    nothing put it back until the next second's redraw."""
+    class Title:
+        def paint(self, strata, area):
+            if "text" in strata:
+                clip = screen.get_clip()
+                screen.set_clip(area)
+                screen.fill((255, 0, 0), pygame.Rect(280, 290, 40, 20))
+                screen.set_clip(clip)
+
+    reel = pygame.Surface((100, 100), pygame.SRCALPHA)
+    pygame.draw.circle(reel, (0, 0, 255, 255), (50, 50), 50)
+    pygame.image.save(reel, str(tmp_path / "reel.bmp"))
+    motion = MotionLayer(screen, Title())
+    motion.set_skin({"reel.left.filename": "reel.bmp", "reel.left.center": "300,300",
+                     "reel.rotation.speed": "10"}, tmp_path, pygame.Surface((1280, 800)))
+    for now in (1.0, 1.2, 1.4):
+        motion.tick({"transport": "playing"}, None, now=now)
+        assert screen.get_at((300, 300))[:3] == (255, 0, 0)
