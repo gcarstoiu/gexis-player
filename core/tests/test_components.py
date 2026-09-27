@@ -93,3 +93,36 @@ def test_plugins_are_grouped_by_the_area_they_work_in():
                 if g["id"] == "plugins")["rows"]
     order = [(r["type"], r.get("label") if r["type"] == "group" else r["key"]) for r in rows]
     assert order == [("group", "Sources"), ("toggle", "plex.enabled"), ("group", "System"), ("toggle", "mon.enabled")]
+
+
+def test_a_plugins_notice_is_asked_before_its_switch_turns_on():
+    """ADR-0098: the unofficial-software notice, as the switch's warning."""
+    class Q:
+        id, name, kind, accent, settings, enabled_row, unit = "qobuz", "Qobuz Connect", "renderer", "#fff", [], None, "q"
+        notice = "Not part of the player."
+
+    rows = next(g for g in Settings.with_plugins(load_registry(), [Q()]) if g["id"] == "plugins")["rows"]
+    switch = next(r for r in rows if r.get("key") == "qobuz.enabled")
+    assert switch["warn"] == "Not part of the player."
+
+
+def test_a_preparing_that_never_went_anywhere_is_a_failure(tmp_path):
+    """Found on the panel: Retry failed silently and the row said "Starting
+    the download" for as long as anyone watched."""
+    import time as _time
+    pins, status, installed = setup(tmp_path)
+    pin = components.pins(pins)["player"]
+    status.mkdir()
+    (status / "player.json").write_text(json.dumps({"state": "preparing", "updated": int(_time.time()) - 120}))
+    s = components.status("player", pin, status_dir=status, installed_dir=installed)
+    assert s["state"] == "failed" and s["error"] == "The download did not start"
+    (status / "player.json").write_text(json.dumps({"state": "preparing", "updated": int(_time.time())}))
+    assert components.status("player", pin, status_dir=status, installed_dir=installed)["state"] == "preparing"
+
+
+def test_a_failure_the_helper_never_saw_is_written(tmp_path):
+    pins, status, installed = setup(tmp_path)
+    pin = components.pins(pins)["player"]
+    components.failed("player", pin, "could not start", status_dir=status)
+    s = components.status("player", pin, status_dir=status, installed_dir=installed)
+    assert (s["state"], s["error"]) == ("failed", "could not start")

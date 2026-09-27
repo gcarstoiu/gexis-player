@@ -1146,18 +1146,28 @@ async def main() -> None:
         again. With the switch on that is the plugin's own unit, which pulls
         the download in; with it off, the download alone."""
         name = downloads[plugin.id]
-        components.preparing(name, components.pins().get(name))
+        pin = components.pins().get(name)
+        components.preparing(name, pin)
         _publish_components()
         fetch = f"gexis-fetch@{name}.service"
+        # **Read here, on the loop's thread**: the settings store is SQLite, and
+        # reading it from the worker below raised - which left the row saying
+        # "Starting the download" over nothing (found on the panel, 2026-09-27).
+        switched_on = settings.value(f"{plugin.id}.enabled") is not False
 
         def go() -> None:
             subprocess.run(["systemctl", "reset-failed", fetch, plugin.unit], check=False, capture_output=True)
-            if settings.value(f"{plugin.id}.enabled") is not False:
+            if switched_on:
                 subprocess.run(["systemctl", "restart", plugin.unit], check=False, capture_output=True)
             else:
                 subprocess.run(["systemctl", "start", fetch], check=False, capture_output=True)
 
-        await asyncio.to_thread(go)
+        try:
+            await asyncio.to_thread(go)
+        except Exception as exc:  # noqa: BLE001 - said on the row, not swallowed
+            logger.exception("components: retrying %s failed", name)
+            components.failed(name, pin, f"The download could not be started again: {exc}")
+            _publish_components()
 
     async def _apply_plugin_unit(plugin, on: bool) -> None:
         """**A plugin switched on or off** (ADR-0086 as amended).

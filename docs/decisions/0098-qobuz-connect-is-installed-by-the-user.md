@@ -83,6 +83,32 @@ directions, because the core did not know Pibuz existed. The adapter fixes this:
   - **Mark:** Gexis's own disc, Q3 (`design/marks/qobuz.svg`), never Qobuz's
     logo.
 
+## Built on gexis (2026-09-27, by hand; not yet in an image)
+
+- **The switch asks first.** Qobuz Connect's manifest carries the notice, the
+  core puts it on the switch as a `warn`, and the panel shows it when the
+  switch is turned on: *"I understand, switch it on"* or Cancel. Nothing is
+  fetched before that. Off never asks.
+- **The download goes through ADR-0100**, with its progress in the row. The
+  first attempt **refused Pibuz 2.5.0**: its author had re-published that
+  release's asset with different bytes after we pinned it. The row said the
+  checksum did not match, and nothing was installed. It is pinned to **2.5.1**
+  now; its checksum is the author's own, cross-checked by a separate download.
+- **Retry had a bug, found on the panel.** It read a setting from a worker
+  thread, SQLite refused, and the row said *"Starting the download"* over
+  nothing. Now it is read on the loop's thread. A failed Retry says so. A
+  *preparing* standing more than a minute becomes *"The download did not
+  start"*.
+- **Running:** `pibuz.service` as `pi`, with its state in `/var/lib/gexis-qobuz`.
+  Its control API is on `127.0.0.1:8182` only; the pairing listener on `:8183`
+  is the one port on the LAN, because casting needs it. It advertises as the
+  player's name. `gexis-qobuz` connected to the core, which registered it as a
+  renderer. The adapter is `BindsTo=` the receiver, so it does not poll a
+  receiver that never started.
+- **Volume is a decision owed to George.** For now the core does not manage it
+  (`volume_managed: false`): the Qobuz app's slider moves Pibuz's digital level,
+  and the panel's moves the DAC.
+
 ## Not decided here
 
 - Whether a backup carries the receiver's login. Probably not: re-pairing is

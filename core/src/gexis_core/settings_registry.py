@@ -386,6 +386,9 @@ class Settings:
                 switch = f"{plugin.id}.enabled"
                 switches.append({"key": switch, "type": "toggle",
                                  "label": plugin.name, "default": True})
+                if getattr(plugin, "notice", None):
+                    # ADR-0098: read and confirmed before it turns on.
+                    switches[-1]["warn"] = plugin.notice
             # **ADR-0100 as amended: a plugin that downloads its software says
             # so on its own switch** - where it is from, how far along it is,
             # and Retry when it failed, all inside the row (George, 2026-09-27:

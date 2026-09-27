@@ -315,6 +315,10 @@
 
   function tap(row) {
     if (row.type === 'document') openDocument(row);
+    // ADR-0098: a switch with a warning asks before it turns ON - the
+    // unofficial-software notice before Qobuz Connect is downloaded. Off
+    // never asks.
+    else if (row.type === 'toggle' && row.warn && !row.value) openSheet(row);
     else if (row.type === 'toggle') write(row, !row.value);
     // 84 visual things cannot be chosen from a 560px list, so a `picker` row
     // opens full screen instead of a sheet (ADR-0044 §5).
@@ -548,6 +552,12 @@
     }
     if (joinItem) {
       doJoin(joinItem.name, draft);
+      return;
+    }
+    if (row.type === 'toggle') {
+      // The warned switch, confirmed (ADR-0098).
+      closeSheet();
+      await write(row, true);
       return;
     }
     // The escape out of a discovery list: type the address. It changes what
@@ -1184,7 +1194,7 @@
             Cancel
           {/if}
         </button>
-        {#if join === 'error' || joinItem || restorePending || choicePending !== null || sheet.type === 'action' || sheet.type === 'text' || (sheet.type === 'number' && !sheet.wired) || (sheet.type === 'list' && sheet.manual && !searching)}
+        {#if join === 'error' || joinItem || restorePending || choicePending !== null || sheet.type === 'action' || sheet.type === 'toggle' || sheet.type === 'text' || (sheet.type === 'number' && !sheet.wired) || (sheet.type === 'list' && sheet.manual && !searching)}
           <button
             class="btn btn--confirm"
             class:btn--danger={sheet.danger || restorePending || choicePending !== null}
@@ -1204,6 +1214,8 @@
               {sheet.confirm ?? 'Confirm'}
             {:else if sheet.type === 'list'}
               {sheet.manual}
+            {:else if sheet.type === 'toggle'}
+              {sheet.confirm ?? 'I understand, switch it on'}
             {:else}
               {sheet.confirm ?? (sheet.type === 'action' ? 'Continue' : sheet.wired ? 'Save' : 'Edit')}
             {/if}

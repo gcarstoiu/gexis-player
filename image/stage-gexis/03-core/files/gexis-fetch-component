@@ -9,7 +9,8 @@
 #   URL      where the maker publishes it
 #   SHA256   the pinned checksum; nothing that fails it is unpacked
 #   FORMAT   tar.bz2 | tar.gz
-#   DEST     the directory it lives in once unpacked (the archive's top folder)
+#   DEST     the directory it lives in once unpacked
+#   TOP      the archive's top folder, when it is not DEST's own name
 #   OWNER    user:group that owns it
 #   LABEL    what the user is told it is ("Plexamp 4.13.2")
 #   FROM     who it comes from ("Plex")
@@ -113,9 +114,9 @@ case "${FORMAT}" in
 	tar.gz) tar -xzf "${work}/archive" -C "${work}/unpacked" ;;
 	*) say failed null null null "Unknown archive format ${FORMAT}"; exit 1 ;;
 esac || { say failed null null null "The download could not be unpacked"; exit 1; }
-top="${work}/unpacked/$(basename "${DEST}")"
+top="${work}/unpacked/${TOP:-$(basename "${DEST}")}"
 if [ ! -d "${top}" ]; then
-	say failed null null null "The download does not contain $(basename "${DEST}")"
+	say failed null null null "The download does not contain ${TOP:-$(basename "${DEST}")}"
 	exit 1
 fi
 chown -R "${OWNER}" "${top}"

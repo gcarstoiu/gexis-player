@@ -307,6 +307,15 @@
       ]
     },
     {
+      "name": "gexis-qobuz",
+      "group": "renderer",
+      "role": "Connects the Qobuz Connect receiver to the player.",
+      "author": "George Carstoiu",
+      "licence": "GPL-3.0-or-later",
+      "url": "https://github.com/gcarstoiu/gexis-qobuz",
+      "arrives": "Included in the player; does nothing until Qobuz Connect is switched on"
+    },
+    {
       "name": "Beszel agent",
       "group": "system",
       "role": "Optional system monitoring, off unless you switch it on.",
@@ -582,7 +591,10 @@
       "author": "Filippo Vicentini, from QBZ by vicrodh",
       "licence": "MIT",
       "url": "https://github.com/PhilipVinc/pibuz",
-      "arrives": "Not included. Downloaded from its author's release when you choose to install it"
+      "arrives": "Not in the image. Downloaded on the device from its author's release, checked against a pinned checksum, only after you switch Qobuz Connect on and confirm the notice",
+      "sources": [
+        "github.com/PhilipVinc/pibuz"
+      ]
     },
     {
       "name": "MusicBrainz and the Cover Art Archive",

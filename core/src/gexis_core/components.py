@@ -78,7 +78,14 @@ def status(name: str, pin: dict[str, str] | None = None, *, status_dir: Path = S
     try:
         live = json.loads((status_dir / f"{name}.json").read_text())
         if isinstance(live, dict):
-            return {**base, **live}
+            merged = {**base, **live}
+            # **Never a "Starting…" over nothing.** The helper replaces
+            # `preparing` within seconds; one still standing a minute on means
+            # the download never began, and the row must say so.
+            updated = merged.get("updated")
+            if merged["state"] == "preparing" and updated and time.time() - updated > STALLED_S:
+                merged.update(state="failed", error="The download did not start")
+            return merged
     except (OSError, ValueError):
         pass
     try:
@@ -100,6 +107,25 @@ def preparing(name: str, pin: dict[str, str] | None = None, *, status_dir: Path 
     payload = {"name": name, "label": pin.get("LABEL", name), "from": pin.get("FROM", "its maker"),
                "state": "preparing", "received": None, "total": None, "attempt": None,
                "attempts": None, "error": None, "updated": int(time.time())}
+    try:
+        status_dir.mkdir(parents=True, exist_ok=True)
+        tmp = status_dir / f"{name}.json.tmp"
+        tmp.write_text(json.dumps(payload))
+        tmp.replace(status_dir / f"{name}.json")
+    except OSError as exc:
+        logger.warning("components: cannot write %s's status: %s", name, exc)
+
+
+#: A `preparing` older than this with nothing after it did not start.
+STALLED_S = 60
+
+
+def failed(name: str, pin: dict[str, str] | None, reason: str, *, status_dir: Path = STATUS) -> None:
+    """Say it failed, and why - for a failure the helper itself never saw."""
+    pin = pin or {}
+    payload = {"name": name, "label": pin.get("LABEL", name), "from": pin.get("FROM", "its maker"),
+               "state": "failed", "received": None, "total": None, "attempt": None,
+               "attempts": None, "error": reason, "updated": int(time.time())}
     try:
         status_dir.mkdir(parents=True, exist_ok=True)
         tmp = status_dir / f"{name}.json.tmp"
