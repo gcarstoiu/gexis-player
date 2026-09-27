@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <!-- Gexis's own neutral mark for Qobuz Connect (George, 2026-09-27: option
+       Q3, a disc). Not Qobuz's logo, which may not be reproduced without its
+       consent (ADR-0099). -->
+  <g fill="none" stroke="#e9eef2" stroke-width="4.5">
+    <circle cx="32" cy="32" r="25"/>
+    <circle cx="32" cy="32" r="15" stroke-width="2.5" opacity="0.55"/>
+  </g>
+  <circle cx="32" cy="32" r="5" fill="#e9eef2"/>
+</svg>

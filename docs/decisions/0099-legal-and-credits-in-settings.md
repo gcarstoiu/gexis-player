@@ -98,8 +98,9 @@ A research pass over everything the image contains (2026-09-27) found:
    **George, 2026-09-27:** keep the history. They were used briefly in
    development, by mistake, and were never part of the product. Spotify's
    green-on-dark icon stays as it is for now ("we might need to get back to
-   it"). Bluetooth gets our own icon and Qobuz a neutral one; the options are
-   with George.
+   it"). Bluetooth gets our own icon and Qobuz a neutral one: George chose **B1**
+   (a phone sending sound) and **Q3** (a disc). Both are in `design/marks/`,
+   and B1 has replaced the redraw everywhere.
    Originally: **The Spotify, Bluetooth and Lyrion marks** came from Claude Design with no
    recorded source.
 6. **`design/assets/album-art.webp` and `artist-photo.webp`** are photographs

@@ -58,7 +58,10 @@ ICON_DIR = Path(__file__).with_name("icons")
 #: `playinfo.type.*` keeps every pixel inside space the skin author reserved.
 BADGES = {
     "spotify": ("icon-spotify.png", None),
-    "bluetooth": ("icon-bluetooth.png", None),
+    # Gexis's own mark (ADR-0099), in the panel's Bluetooth accent - drawn as a
+    # tinted figure so it gets the same dark edge as Lyrion's and holds on the
+    # light skins (it was faint on 101G5_Free S+M without it).
+    "bluetooth": ("icon-bluetooth.png", (159, 180, 232)),
     # Lyrion's mark is a single-colour figure the UI tints with its LMS accent
     # (--accent-lms); it is drawn the same way here.
     "lms": ("icon-lyrion.svg", (126, 214, 188)),

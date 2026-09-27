@@ -21,4 +21,10 @@ Claude Design with no recorded source. Those are still in the repository's histo
 |---|---|---|---|
 | `icon-spotify.png` | Spotify AB | Spotify's 2024 icon, [developer.spotify.com/documentation/design](https://developer.spotify.com/documentation/design) (`2024-spotify-logo-icon.zip`) | A raster of the official green icon: under 1 % of pixels differ, all on edges. Spotify's guidelines ask for the green icon only on black or white. |
 | `icon-lyrion.svg` | Lyrion Music Server | [LMS-Community/lms-community.github.io @ 07325bf](https://github.com/LMS-Community/lms-community.github.io/blob/07325bf6c9b8db4bd1409de29706d0a56f7034c2/assets/icon/Lyrion%20-%20logo%20-%20lime.svg), the lime logo | The official file, minified: all ten path starts match. Lyrion's terms (§6b) allow its digital assets in combination with its software. |
-| `icon-bluetooth.png` | Bluetooth SIG, Inc. | **A redraw, not the official file.** The oval matches Bluetooth SIG's figure mark; the Runic B, its colours and the ® do not | Bluetooth SIG licenses its marks to members' qualified products and forbids redrawing them. Open with George. |
+| `icon-bluetooth.png` | **Gexis's own**, not Bluetooth SIG's mark | Drawn 2026-09-27 from `design/marks/bluetooth.svg` (George: option B1, a phone sending sound), in the panel's `--accent-bluetooth` | Replaces a redraw of Bluetooth SIG's figure mark, which it licenses only to members' qualified products. |
+
+## Gexis's own marks
+
+`design/marks/` holds the SVG sources of marks drawn for the player, GPL-3.0
+like the rest of it: `bluetooth.svg` (B1) and `qobuz.svg` (Q3, a neutral disc
+for Qobuz Connect, whose logo may not be reproduced without Qobuz's consent).

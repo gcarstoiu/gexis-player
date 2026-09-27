@@ -465,12 +465,12 @@
       "credit": false
     },
     {
-      "name": "Bluetooth mark",
+      "name": "Bluetooth icon",
       "group": "marks",
       "role": "Shows that a phone is playing over Bluetooth.",
-      "author": "Bluetooth SIG, Inc.",
-      "licence": "The Bluetooth word mark and logos are registered trademarks owned by Bluetooth SIG, Inc.",
-      "url": "https://www.bluetooth.com/develop-with-bluetooth/marketing-branding/",
+      "author": "Gexis Player",
+      "licence": "Gexis's own drawing, GPL-3.0-or-later; not the Bluetooth logo",
+      "url": "https://github.com/gcarstoiu/gexis-player/tree/main/design/marks",
       "arrives": "Included in the player",
       "credit": false
     },

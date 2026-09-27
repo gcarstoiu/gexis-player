@@ -2,8 +2,8 @@
 <!--
   A renderer's mark at a given size: the design's sourceIcon(). Lyrion below
   40px is its four-bar reduction, because the ten-bar SVG antialiases to a
-  smear there; Spotify and Bluetooth are their image marks, Bluetooth drawn
-  12% taller as the design does.
+  smear there; Spotify and Bluetooth are their image marks. Bluetooth's is
+  Gexis's own (design/marks/bluetooth.svg, ADR-0099), square like Spotify's.
 -->
 <script>
   import spotifyMark from '../assets/icon-spotify.png';
@@ -46,7 +46,7 @@
     class="mark"
     src={source === 'bluetooth' ? bluetoothMark : spotifyMark}
     alt=""
-    style:height={`${source === 'bluetooth' ? size * 1.12 : size}px`}
+    style:height={`${size}px`}
     style:opacity
   />
 {/if}

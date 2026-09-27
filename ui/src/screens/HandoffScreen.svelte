@@ -36,7 +36,7 @@
       class="mark"
       src={IMAGES[source]}
       alt=""
-      style:height={`${source === 'bluetooth' ? size * 1.12 : size}px`}
+      style:height={`${size}px`}
       style:opacity
     />
   {:else if $sources[source]?.mark}
