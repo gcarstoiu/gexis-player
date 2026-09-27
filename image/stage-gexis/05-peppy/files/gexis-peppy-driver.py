@@ -21,6 +21,7 @@ from __future__ import annotations
 
 import configparser
 import json
+import logging
 import os
 import random
 import sys
@@ -785,6 +786,13 @@ def main() -> int:
     from peppymeter import Peppymeter
 
     peppy = Peppymeter(standalone=True, timer_controlled_random_meter=False, quit_pygame_on_stop=False)
+    # **Upstream's `use.logging = False` is `logging.disable(CRITICAL)`**
+    # (peppymeter.py:75), which silences every logger in the process - ours
+    # too. Nothing the renderer or the motion layer warned about ever reached
+    # the journal; 18 turntables drew no record, and said nothing. Warnings
+    # and worse come back, to stderr, which the journal keeps.
+    logging.disable(logging.NOTSET)
+    logging.basicConfig(level=logging.WARNING, stream=sys.stderr, format="peppy: %(name)s: %(message)s")
     # The constructor does not create the display: upstream's own entry point
     # calls this afterwards (peppymeter.py:289), and until it runs there is no
     # surface for either engine to draw on.
