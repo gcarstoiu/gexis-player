@@ -132,6 +132,11 @@ class Capabilities:
     #: `dummy_mixer_card` because `bluealsa-aplay` is given one; nothing
     #: writes it now, and nothing reads it.
     volume_over_bluealsa: bool = False
+    #: **ADR-0054 §5, amended 2026-09-28: this renderer is handed its level on
+    #: acquisition.** Its own level at a takeover is only what its app last
+    #: had (Qobuz Connect reports 1.0 on a cast), so the core gives it the
+    #: DAC's level, capped by `start_max`, as it does Spotify.
+    volume_handed: bool = False
     #: Transport commands accepted through our own control channel right
     #: now - deliberately empty on all three built-ins today. No adapter
     #: currently exposes a way to send play/pause/seek/etc on a user's

@@ -42,6 +42,17 @@
         "default": null
       },
       {
+        "key": "start_max",
+        "type": "number",
+        "label": "Starting volume",
+        "marks": "R",
+        "note": "The loudest Spotify or Qobuz Connect starts at when it takes over, whatever its app was last set to. A lower level stays where it is; a higher one comes down to this.",
+        "min": 10,
+        "max": 100,
+        "unit": "%",
+        "default": 60
+      },
+      {
         "key": "volume_managed",
         "type": "readonly",
         "label": "Volume-managed renderers",
@@ -161,21 +172,6 @@
         "marks": "R",
         "note": null,
         "default": true
-      },
-      {
-        "key": "spotify_start_max",
-        "type": "number",
-        "label": "Starting volume",
-        "marks": "R",
-        "note": "The loudest Spotify starts at when it takes over. A lower level stays where it is; a higher one comes down to this. Qobuz Connect and Plexamp keep their own volume, so they can leave the device loud.",
-        "min": 10,
-        "max": 100,
-        "unit": "%",
-        "default": 60,
-        "onlyWhen": [
-          "spotify_enabled",
-          true
-        ]
       },
       {
         "key": "spotify_name",

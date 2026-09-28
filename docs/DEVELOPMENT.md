@@ -2467,6 +2467,13 @@ never built. Switching off stops the receiver, and the download stays. That is
 a decision owed to George, and the Legal page says what happens today. **Not
 closed until that is decided.**
 
+**Updated later on 2026-09-28:**
+- Uninstall is decided and built as Remove (ADR-0100, amended), and it was
+  tried on gexis.
+- **A new blocker:** Pibuz's author now publishes source only (Finding 097), so
+  no install can succeed. How Pibuz reaches a player is a decision owed to
+  George.
+
 ### Phase 12b — Legal and credits
 
 **Added 2026-09-27 (George)** - [ADR-0099](decisions/0099-legal-and-credits-in-settings.md).
@@ -2482,6 +2489,9 @@ closed until that is decided.**
 gexis, and `notices.py` fails the build on a missing component. Criterion 3
 waits on George's approval of the wording. One sentence changed on
 2026-09-28: the Qobuz paragraph claimed an uninstall that does not exist.
+**Approved 2026-09-28 (George: "Agree with the legal text... Pending on
+decision about qobuz though"),** except the Qobuz paragraph. That waits on how
+Pibuz reaches a player, since its author now publishes source only (Finding 097).
 
 ### Phase 13 — First boot without a network
 
