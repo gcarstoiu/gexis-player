@@ -222,3 +222,113 @@ while it was still mostly transparent, which George saw as a blink: it should
 *"start showing before the artwork is changed"*. The core now announces the
 takeover before the new renderer, and the screen is opaque from its first
 frame. Its contents still rise in as drawn.
+
+## Changed since 2026-09-26
+
+**For Claude Design, 2026-09-28.** Pictures are in [`implemented/`](implemented/),
+photographed from the device (panel at 1280×800; phone at 412×915, 2×). The
+setup pictures come from scripted trials at half size; **the setup password
+and the join QR code are hidden in them**, and personal values (a location, a
+network address) are blanked in two Settings pictures. The phone's setup page
+has no pictures yet: they come from the first full test on a blank card.
+First-time setup is on branch `phase-13` (PR #37) until it merges.
+
+### Settings
+
+**[S] New rows.** Each is in `core/src/gexis_core/settings_registry.json`:
+- **Audio → Starting volume** (`start_max`): the loudest Spotify starts at when
+  it takes over (ADR-0054 §5). *settings-audio-starting-volume.png*
+- **Display → Clock format** (`clock_format`), 24 h / 12 h, under Clock
+  (George, 2026-09-28). In 12 h the idle clock drops the leading zero and puts
+  am/pm after the seconds, at their size. *settings-display-clock-format.png*
+- **Display → the animated skins' rows**: `skin_motion`, `record_speed`
+  (ADR-0096) and `rotation_mode`, Stepped / Smooth (ADR-0097), in
+  **Visualisation tweaks**, which was *Meters and spectrum tweaks*.
+- **System → Debug logs** (`debug_logs`), a switch, off by default (ADR-0103).
+- **System → Legal** and **System → Credits** (ADR-0099): document rows that
+  open a full-screen reader, generated from one inventory
+  (`core/src/gexis_core/notices.json`). *settings-system-debug-legal-credits.png,
+  settings-legal.png, settings-credits.png*
+
+**[U] Plugins sit under their area** (George: *"beszel is system, plexamp in
+sources"*): the Plugins page is headed **Sources** and **System**, by the
+plugin's kind. *settings-plugins.png*
+
+**[U] A plugin's download lives inside its own row** (George: *"The status
+and the download need to be part of the pill itself otherwise it floats"*).
+Under the switch: a status line (preparing, downloading, retrying with the
+reason, verifying, installing, installed with the version, failed with the
+reason), a progress bar with megabytes while downloading, and **Retry** after a
+failure (ADR-0100 as amended). The picture shows the settled state,
+*"Installed · Plexamp 4.13.2"*.
+
+**[U] Remove, separate from off** (George, 2026-09-28, option C): switching a
+plugin off stops it; **Remove** appears inside its row only while it is off
+and installed, asks first, and says what goes (the download) and what stays
+(settings and sign-in).
+
+**[U] Bluetooth has gexis's own mark** (George: B1): a phone sending sound, in
+the Bluetooth accent, in place of a redraw of the Bluetooth figure mark, which
+is licensed only to the SIG's members. On the panel, the transition screen and
+the visualiser's badge. It is square.
+
+### The phone
+
+**[S] A mini player pinned under the phone's Settings** (ADR-0101, George:
+*"Option C - mini player. Only for phone."*): the source mark and title (tap
+for a larger sheet), the panel's volume slider with its percentage, and two
+toggles that act on the panel and show what it shows: the visualiser and the
+idle screen. *phone-settings-mini-player.png, phone-system.png*
+
+**[S] Settings as a bookmark with the gexis mark** (ADR-0102): a web manifest
+and the gexis sound mark as the icon; Android offers a bookmark, not an
+installed app, and George kept it.
+
+### First-time setup (ADR-0031 as amended, ADR-0104)
+
+**[S] The panel has a setup screen the design does not draw.** Setup is the
+phone's (George: *"It is meant only for phone as the setting up device"*); the
+panel shows the way in and follows along. Built from the design's parts:
+- a header (the gexis mark, a mono crumb, *Over gexis-setup*);
+- **a hero**: a 124 px circular icon beside a title at the track title's size
+  and one line under it, in four versions (George: *"Larger text, more visual,
+  better design"*, and a large icon on an error):
+  - **new device**: the gexis mark, *Set up gexis*;
+  - **can't reach its Wi-Fi**: Wi-Fi struck through, amber;
+    *panel-setup-cannot-reach-wifi.png*
+  - **joining**: a pulsing Wi-Fi, *Joining <network>*, where the phone goes
+    next; *panel-setup-joining.png*
+  - **could not join**: a warning triangle, amber, *Could not join <network>*
+    with the reason; *panel-setup-could-not-join.png*
+- **two cards**: *1 · Join this Wi-Fi* (a QR code, the network and its
+  password; under it *"Your phone may say this network has no internet. Stay
+  connected."*) and *2 · Open the setup page* (a QR code and the address,
+  shown as `10.42.0.1:8090`).
+- **QR codes are dark on light**, the one light element on the panel: an
+  inverted code is one some phone cameras do not read.
+- A new device on Ethernet shows one card: the page's address on the home
+  network.
+
+**[S] The phone's steps, against `Setup.dc.html`:**
+- **Network saves the choice and does not test it.** With one radio the join
+  can only happen after the setup network is down, which is after the page is
+  gone (amendment 5). The design's *Join network* / *Credentials accepted* pair
+  is not drawn; Continue saves. A wrong password brings setup back within about
+  15 s, and the page opens on Network with *"Could not join <network>. The
+  password was not accepted. Type the password again."*, every other answer
+  kept. **Continue then goes straight to Review** (George).
+- **Music has no server discovery** (amendment 4): over the setup network the
+  player cannot see the home one. An optional *Lyrion server* address field,
+  then the Spotify Connect and Bluetooth switches.
+- **Time**: the zone is read from the phone; *Choose by hand* goes region then
+  city from the device's full list. **Clock format (24 h / 12 h) is kept** and
+  now writes the setting above.
+- **Output** lists the device's real outputs by name, current one selected.
+- **Display**: *Panel attached* / *Headless*, **side by side and short at every
+  width** (George: two options should not need a scroll to reach Continue); the
+  design's proportions from 720 px up. Headless is the existing Settings row.
+- **Review**, then *Finish and connect*: the page shows *"<name> is joining
+  your network"*, the address `http://<name>.local:8090`, and what happens if
+  the password is wrong.
+- The phone gets the setup page in place of Settings for as long as setup is
+  on.
