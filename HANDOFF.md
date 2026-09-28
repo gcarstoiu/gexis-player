@@ -5,8 +5,13 @@ Last updated: 2026-09-28 (twenty-ninth session, on R2D2).
 ## Start here
 
 **Phase 13 (first-boot setup, ADR-0031, ADR-0104) is built through step 3 on
-`phase-13`, pushed, and every step was run on gexis with George.** Step 4 is
-next: an image from `phase-13` on a card flashed with nothing pre-seeded (the
+`phase-13`, PR #37, and every step was run on gexis with George.** The image
+for step 4 is built and verified:
+`image/deploy/2026-09-28-gexis-player-v0.2.1-746-g14b1a95.img`, sha256
+`989cdb17…7bed`, 81 `verify-image.sh` checks, the setup modules and the UI
+bundle identical to the branch, no `/var/lib/gexis`, no saved Wi-Fi, no `wlan`
+rfkill state. **George flashes it on a second card** (gexis's own card stays).
+Step 4 is next: an image from `phase-13` on a card flashed with nothing pre-seeded (the
 new-device path: setup network after 15 s, the "Set up gexis" hero, the name
 reaching all four places, the Wi-Fi country on a card that never had one).
 
