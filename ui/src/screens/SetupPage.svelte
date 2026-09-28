@@ -48,6 +48,9 @@
   let showPw = $state(false);
   let hasPassword = $state(false);
   let joinError = $state(null);
+  //: Back after a failed join: only the network was wrong, so Continue on
+  //: Network goes straight to Review (George, 2026-09-28).
+  let retrying = $state(false);
   let name = $state('gexis');
   let tz = $state(null);
   let tzMode = $state('auto');
@@ -160,6 +163,7 @@
         if (hidden) manualSsid = saved.ssid;
       }
       const at = STEPS.findIndex((s) => s[0] === saved.step);
+      retrying = !!joinError;
       step = joinError ? 0 : at >= 0 ? at : -1;
       loaded = true;
       rescan();
@@ -217,7 +221,8 @@
       await finish();
       return;
     }
-    if (await saveStep(step + 1)) step += 1;
+    const to = retrying && id === 'wifi' ? last - 1 : step + 1;
+    if (await saveStep(to)) step = to;
   }
 
   async function finish() {
