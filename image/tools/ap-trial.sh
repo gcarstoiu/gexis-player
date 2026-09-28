@@ -20,7 +20,8 @@ mkdir -p "$LOGDIR"
 LOG="$LOGDIR/ap-$(date +%Y%m%d-%H%M%S).log"
 exec >>"$LOG" 2>&1
 t0=$(date +%s.%N)
-# Only what the image has: no bc, no iw (checked on gexis, 2026-09-28).
+# Only what the image has: no bc. iw is there, in /usr/sbin (not on pi's PATH;
+# this runs as root).
 since() { awk -v a="$1" -v b="$(date +%s.%N)" 'BEGIN { printf "%.2f", b - a }'; }
 say() { printf '%7ss %s\n' "$(since "$t0")" "$*"; }
 
@@ -43,6 +44,7 @@ say "raising the AP"
 nmcli connection delete "$AP" >/dev/null 2>&1
 if nmcli device wifi hotspot ifname wlan0 con-name "$AP" ssid "$SSID" password "$PASSWORD"; then
 	say "AP up: $(nmcli -g IP4.ADDRESS device show wlan0)"
+	say "radio: $(iw dev wlan0 info | awk '/channel/{$1=$1; print}')"
 else
 	say "AP FAILED to come up"
 fi
@@ -52,7 +54,8 @@ scanned=0
 while [ "$(date +%s)" -lt "$end" ]; do
 	stations=$(ip neigh show dev wlan0 2>/dev/null | grep -c -E 'REACHABLE|STALE|DELAY')
 	leases=$(cat /var/lib/NetworkManager/dnsmasq-wlan0.leases 2>/dev/null | awk '{print $3" "$4}' | tr '\n' ';')
-	say "clients: ${stations}; leases: ${leases:-none}"
+	assoc=$(iw dev wlan0 station dump 2>/dev/null | grep -c '^Station')
+	say "associated: ${assoc}; neighbours: ${stations}; leases: ${leases:-none}"
 	# Once, mid-way: can a scan run while the radio is hosting?
 	if [ "$scanned" = 0 ] && [ "$(date +%s)" -gt $(( end - DURATION / 2 )) ]; then
 		scanned=1
