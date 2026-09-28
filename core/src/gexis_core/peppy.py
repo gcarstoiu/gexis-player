@@ -67,6 +67,9 @@ class PeppyScreen:
             "WAYLAND_DISPLAY": wayland_display,
         }
         self.visible = False
+        #: ADR-0101: told whenever the screen goes up or down, so the phone's
+        #: toggle can say what the panel shows.
+        self.on_change = None
         if self._wlrctl is None:
             logger.warning("peppy: wlrctl not found; the Peppy screen cannot be raised")
 
@@ -93,6 +96,8 @@ class PeppyScreen:
         if self._run("focus"):
             self.visible = True
             logger.info("peppy: shown")
+            if self.on_change:
+                self.on_change(True)
             return True
         return False
 
@@ -100,6 +105,8 @@ class PeppyScreen:
         if self._run("minimize"):
             self.visible = False
             logger.info("peppy: hidden")
+            if self.on_change:
+                self.on_change(False)
             return True
         return False
 

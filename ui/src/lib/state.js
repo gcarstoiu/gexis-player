@@ -103,6 +103,8 @@ export const queue = derived(playback, ($s) => $s?.queue ?? null);
 export const pairing = derived(playback, ($s) => $s?.pairing ?? null);
 // ADR-0100 as amended: what each plugin's download is doing, live.
 export const components = derived(playback, ($s) => $s?.components ?? {});
+//: ADR-0101: what the panel shows, and the phone's last idle request.
+export const panel = derived(playback, ($s) => $s?.panel ?? { visualiser: false, idle: false, idle_request: null });
 
 /**
  * Commands go over REST, never the socket (ADR-0028). Returns the parsed
@@ -131,6 +133,10 @@ export const sendTransport = (command, body) => post(`/transport/${command}`, bo
 
 /** Phase 5 criterion 8: the Visualization button raises the Peppy screen. */
 export const showPeppy = () => post('/peppy/show');
+export const hidePeppy = () => post('/peppy/hide');
+//: ADR-0101: the phone's idle toggle, and the panel saying what it shows.
+export const requestIdle = (show) => post(`/panel/idle/${show ? 'show' : 'hide'}`);
+export const reportShown = (idle) => post('/panel/shown', { idle });
 
 /** Accept or reject the open pairing request. A 409 means the window closed
  *  while the finger was moving - the answer did not land, and the frame has

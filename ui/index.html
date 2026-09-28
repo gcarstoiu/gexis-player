@@ -9,6 +9,16 @@
          boot animation and the UI (ADR-0043). --tokens.css sets the same
          value as --bg-base. -->
     <meta name="color-scheme" content="dark" />
+    <!-- ADR-0102 (a test): installable from a phone's browser, opening
+         without a URL bar. The panel loads the same page and ignores it. -->
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="icon" href="/app-icon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <meta name="theme-color" content="#101a21" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="gexis" />
     <style>
       html,
       body {

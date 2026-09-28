@@ -1769,11 +1769,14 @@ async def main() -> None:
             return float(value) * 60 if value else fallback
         return read
 
+    peppy_screen = PeppyScreen(
+        runtime_dir=config.peppy_runtime_dir,
+        wayland_display=config.peppy_wayland_display,
+    )
+    # ADR-0101: the phone's visualiser toggle says what the panel shows.
+    peppy_screen.on_change = lambda shown: state_store.set_panel(visualiser=shown)
     peppy = PeppyController(
-        PeppyScreen(
-            runtime_dir=config.peppy_runtime_dir,
-            wayland_display=config.peppy_wayland_display,
-        ),
+        peppy_screen,
         UnattendedPlayback(
             minutes("viz_timeout", 600),
             stop_after_s=minutes("viz_stop", 300),

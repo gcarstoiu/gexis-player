@@ -1,7 +1,7 @@
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
 <script>
   import { onMount, untrack } from 'svelte';
-  import { connect, active, metadata, volume, handoff, capabilities, available, availability, shuffle, repeat, queue, pairing, fixedOutput } from './lib/state.js';
+  import { connect, active, metadata, volume, handoff, capabilities, available, availability, shuffle, repeat, queue, pairing, fixedOutput, panel } from './lib/state.js';
   import NowPlaying from './screens/NowPlaying.svelte';
   import Library from './screens/Library.svelte';
   import WaitingHome from './screens/WaitingHome.svelte';
@@ -11,9 +11,10 @@
   import HandoffScreen from './screens/HandoffScreen.svelte';
   import PairingFrame from './screens/PairingFrame.svelte';
   import Settings from './screens/Settings.svelte';
+  import MiniPlayer from './screens/MiniPlayer.svelte';
   import { loadSettings, settingValues } from './lib/settings.js';
   import { loadLibraryRoot } from './lib/library.js';
-  import { reportTouch, showPeppy, reportPainted } from './lib/state.js';
+  import { reportTouch, showPeppy, reportPainted, reportShown } from './lib/state.js';
 
   // ADR-0033: idle is "not playing and not touched", one timeout everywhere.
   // From settings (idle_timeout, minutes); `?idle_seconds=` overrides it for testing.
@@ -21,6 +22,11 @@
   const IDLE_MS = $derived((IDLE_OVERRIDE_S ?? ($settingValues.idle_timeout ?? 5) * 60) * 1000);
 
   let idle = $state(false);
+  //: **ADR-0101: asked for from a phone.** An idle screen somebody asked for
+  //: stays up while music plays, until it is turned off or the panel is
+  //: touched - the ask is explicit, which is why it beats ADR-0033's "not
+  //: playing".
+  let askedIdle = $state(false);
 
   // Reported to the daemon at most once a second: it only needs to know the
   // panel was touched, not how often (ADR-0036).
@@ -113,7 +119,7 @@
   $effect(() => {
     touches;
     if (playing) {
-      idle = false;
+      if (!untrack(() => askedIdle)) idle = false;
       return;
     }
     const id = setTimeout(() => (idle = true), IDLE_MS);
@@ -146,6 +152,7 @@
     if (who === null && !takeover) return;
     untrack(() => {
       idle = false;
+      askedIdle = false;
       touches += 1;
     });
   });
@@ -169,8 +176,45 @@
     if (!$pairing) return;
     untrack(() => {
       idle = false;
+      askedIdle = false;
       touches += 1;
     });
+  });
+
+  //: **ADR-0101: the phone's idle toggle.** Each ask is numbered and applied
+  //: once; one older than a minute is history, not an ask (a panel that
+  //: reloads must not replay it). Hiding it is attention like a touch, so
+  //: the countdown restarts from that moment (George: "Timers would restart
+  //: from that point").
+  let appliedIdleAsk = null;
+  $effect(() => {
+    const ask = $panel.idle_request;
+    if (surface !== 'panel' || !ask || ask.seq === appliedIdleAsk) return;
+    appliedIdleAsk = ask.seq;
+    if (ask.at && Date.now() / 1000 - ask.at > 60) return;
+    untrack(() => {
+      idle = ask.show;
+      askedIdle = ask.show;
+      if (!ask.show) touches += 1;
+    });
+  });
+
+  //: The panel has one screen: the visualiser coming up takes the idle
+  //: screen down, whoever asked for it.
+  $effect(() => {
+    if (!$panel.visualiser) return;
+    untrack(() => {
+      idle = false;
+      askedIdle = false;
+    });
+  });
+
+  //: ...and says whether its idle screen is up, so the phone's toggle shows
+  //: what is on the glass, whatever changed it.
+  $effect(() => {
+    const shown = idle;
+    if (surface !== 'panel') return;
+    reportShown(shown).catch(() => {});
   });
 
   // The library is a layer over now playing (source/Now Playing.dc.html). It
@@ -250,7 +294,9 @@
 <svelte:window onpointerdowncapture={onPointerDown} />
 
 {#if surface === 'remote'}
-  <div class="remote"><Settings /></div>
+  <!-- ADR-0101: on a phone, Settings and the mini player under it. -->
+  <div class="remote remote--mini"><Settings /></div>
+  <MiniPlayer />
 {:else if surface === 'panel'}
 
 <div class="panel">
@@ -320,7 +366,7 @@
     <!-- ADR-0047: the screen reads eight rows, so it takes the values
          rather than fetching /settings for itself - one loader, one place
          a revision bump lands. -->
-    <IdleScreen ondismiss={() => (idle = false)} settings={$settingValues} />
+    <IdleScreen ondismiss={() => { idle = false; askedIdle = false; }} settings={$settingValues} />
   {/if}
 
   {#if shownHandoff}
@@ -359,6 +405,12 @@
 
   .remote {
     height: 100%;
+  }
+  /* ADR-0101: room for the mini player, so the last rows are not under it.
+     Its closed height plus the phone's home-indicator inset. */
+  .remote--mini {
+    box-sizing: border-box;
+    padding-bottom: calc(112px + env(safe-area-inset-bottom, 0px));
   }
 
   .panel {

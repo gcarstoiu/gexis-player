@@ -254,6 +254,11 @@ class PlaybackState:
     #: component name - phase, bytes of total, attempt, error. Published so
     #: the user is told what is happening while it happens.
     components: dict = field(default_factory=dict)
+    #: **ADR-0101: what the panel shows, for the phone's mini player.**
+    #: `visualiser` and `idle` say whether each is up; `idle_request` is the
+    #: last ask from a phone - `{"show": bool, "seq": int}` - which the panel
+    #: applies once per `seq`, so a panel that connects late still gets it.
+    panel: dict = field(default_factory=lambda: {"visualiser": False, "idle": False, "idle_request": None})
 
     @property
     def controls(self) -> dict | None:
@@ -293,4 +298,5 @@ class PlaybackState:
             "queue": self.queue.to_json() if self.queue else None,
             "pairing": self.pairing,
             "components": dict(self.components),
+            "panel": dict(self.panel),
         }
