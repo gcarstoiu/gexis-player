@@ -102,9 +102,9 @@ def test_one_bad_manifest_does_not_take_the_others_down(tmp_path):
     broken = tmp_path / "broken"
     broken.mkdir()
     (broken / "plugin.json").write_text("{ this is not json")
-    _install(tmp_path, {**GOOD, "id": "qobuz", "name": "Qobuz", "unit": "qobuz.service"})
+    _install(tmp_path, {**GOOD, "id": "example", "name": "Example", "unit": "example.service"})
 
-    assert sorted(p.id for p in plugins.installed(tmp_path)) == ["plexamp", "qobuz"]
+    assert sorted(p.id for p in plugins.installed(tmp_path)) == ["example", "plexamp"]
 
 
 def test_a_directory_without_a_manifest_is_not_a_plugin(tmp_path):

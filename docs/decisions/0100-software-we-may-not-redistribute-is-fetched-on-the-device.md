@@ -3,9 +3,7 @@
 **Status:** **Accepted and built** — George, 2026-09-27: *"1A"*, on Plexamp
 being included in the image with no established right to redistribute it.
 **Amends [ADR-0090](0090-plexamp-ships-the-way-beszel-does.md)**, which put
-Plexamp in the image. Qobuz's receiver
-([ADR-0098](0098-qobuz-connect-is-installed-by-the-user.md)) will use the same
-mechanism.
+Plexamp in the image.
 **Date:** 2026-09-27
 **Raised by:** the inventory behind [ADR-0099](0099-legal-and-credits-in-settings.md).
 The Plexamp stage copied Plex's proprietary tarball, with Un4seen's BASS
@@ -27,8 +25,8 @@ record here held Plex's terms.
    - A new pin means one new download.
 3. **Switching the software on is the consent.** For Plexamp that is the
    existing Plugins switch: turning it on starts `plexamp.service`, which pulls
-   the fetch in. The core does not change. For Qobuz, ADR-0098 puts a notice to
-   confirm in front of the switch.
+   the fetch in. The core does not change. A plugin whose manifest carries a
+   `notice` has it confirmed in front of the switch.
 4. **The image build checks both ways.** `verify-image.sh` fails if
    `/home/pi/plexamp` is in the image, and fails if `plexamp.service` does not
    require the fetch. `core/tests/test_notices.py` accounts for every URL in a
@@ -103,9 +101,8 @@ interrupted, installing, failed with Retry, installed.
 
 ## Amended 2026-09-28: switching off stops it; removing is a separate action
 
-ADR-0098 §2 promised "Uninstall removes the receiver and everything it wrote",
-and it was never built. Switching a plugin off stopped its software and left the
-download where it was, for Plexamp and Pibuz alike. **Decided (George,
+Switching a plugin off stopped its software and left the download where it
+was, and nothing removed it. **Decided (George,
 2026-09-28), option C of three:** *"Option C that you recommended for turning
 it off and deleting separately. This should be reflected in the legal text
 too."* The other two were leaving it as it was, and deleting on every switch-off.
@@ -119,17 +116,16 @@ too."* The other two were leaving it as it was, and deleting on every switch-off
   `DEST.old`), its installed-version stamp, and its status. The row then reads
   *Not installed*, and switching on downloads it again.
 - **What it keeps:** the plugin's settings and whatever the software wrote
-  outside `DEST`: Plexamp's sign-in (its claim), and Pibuz's configuration,
-  which `pibuz-configure` rewrites at every start anyway. George's principle
+  outside `DEST`: Plexamp's sign-in (its claim). George's principle
   was about code that could get the player into trouble, and a sign-in is not
   code. Keeping it means a re-download carries on where it was, where losing it
   would mean claiming Plexamp again. *This is Claude's call and easy to reverse.
   It is put to George with the change.*
 - **Refused while the plugin is on**, in the core as well as on the screen. The
   core runs as root and deletes directly. It deletes only a path the image's own
-  pin names, and never one shorter than four parts: both are, `/home/pi/plexamp`
-  and `/opt/gexis-qobuz/receiver`, and `/opt/x` is refused.
+  pin names, and never one shorter than four parts: `/home/pi/plexamp` is, and
+  `/opt/x` is refused.
 - A hidden action row, `<plugin>.remove`, beside `<plugin>.download` (Retry).
   It is an action, not a setting, so it adds no ADR-0022 row.
-- **The Legal page says it** for both Plexamp and Qobuz Connect.
+- **The Legal page says it** for Plexamp.
 

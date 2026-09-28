@@ -53,15 +53,6 @@
           ]
         },
         {
-          "heading": "Unofficial clients",
-          "paragraphs": [
-            "Qobuz Connect is not part of the player. If you choose to install it, Settings downloads Pibuz, an independent open-source receiver, from its author's own release. Pibuz is not made, affiliated with, endorsed or certified by Qobuz. It may stop working at any time. Using it may not be permitted by Qobuz's terms of service. You install and use it at your own risk and on your own Qobuz account. Switching it off stops it. Remove, in its row in Settings, deletes the downloaded receiver from the device; switching it on again downloads it again."
-          ],
-          "components": [
-            "user-installed"
-          ]
-        },
-        {
           "heading": "Services the player contacts",
           "paragraphs": [
             "To show pictures, weather and information about what you play, the player asks the services below. It sends only what each request needs, such as an artist's name or your approximate location for the weather. It sends no account details of yours to any of them."
@@ -73,7 +64,7 @@
         {
           "heading": "Trademarks",
           "paragraphs": [
-            "Names and logos such as Spotify, Qobuz, Plex and Plexamp, Bluetooth, Lyrion, Raspberry Pi and HiFiBerry are trademarks of their owners. They are used here only to name the service or product they belong to. Their use does not mean that any of their owners endorses this player, or is affiliated with it."
+            "Names and logos such as Spotify, Plex and Plexamp, Bluetooth, Lyrion, Raspberry Pi and HiFiBerry are trademarks of their owners. They are used here only to name the service or product they belong to. Their use does not mean that any of their owners endorses this player, or is affiliated with it."
           ]
         }
       ]
@@ -304,18 +295,6 @@
       "arrives": "Fetched from its release when the image is built, checked against a pinned checksum",
       "sources": [
         "github.com/gcarstoiu/gexis-plexamp"
-      ]
-    },
-    {
-      "name": "gexis-qobuz",
-      "group": "renderer",
-      "role": "Connects the Qobuz Connect receiver to the player.",
-      "author": "George Carstoiu",
-      "licence": "GPL-3.0-or-later",
-      "url": "https://github.com/gcarstoiu/gexis-qobuz",
-      "arrives": "Fetched from its release when the image is built, checked against a pinned checksum; does nothing until Qobuz Connect is switched on",
-      "sources": [
-        "github.com/gcarstoiu/gexis-qobuz"
       ]
     },
     {
@@ -585,18 +564,6 @@
       "arrives": "Not in the image. Downloaded from Plex on the device when you switch Plexamp on, checked against a pinned checksum",
       "sources": [
         "plexamp.plex.tv"
-      ]
-    },
-    {
-      "name": "Pibuz",
-      "group": "user-installed",
-      "role": "Qobuz Connect, only if you install it from Settings.",
-      "author": "Filippo Vicentini, from QBZ by vicrodh",
-      "licence": "MIT",
-      "url": "https://github.com/PhilipVinc/pibuz",
-      "arrives": "Not in the image. Downloaded on the device from its author's release, checked against a pinned checksum, only after you switch Qobuz Connect on and confirm the notice",
-      "sources": [
-        "github.com/PhilipVinc/pibuz"
       ]
     },
     {

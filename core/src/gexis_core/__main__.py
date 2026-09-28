@@ -546,7 +546,7 @@ async def main() -> None:
         since the same day neither does a plugin that declares `volume_handed`
         (George: *"60 is the max. If the previous renderer had less than 60 it
         stays to what the renderer had. If more than 60, then it comes down to
-        60"*). Qobuz and Plexamp keep their own volume and can leave the DAC at
+        60"*). Sources that keep their own volume can leave the DAC at
         full scale. Lowering is the one case where the DAC *is* written, and
         first: the acquisition's next step is `device_freed`, Spotify's retry,
         which must not start at the level being taken away.
@@ -561,7 +561,7 @@ async def main() -> None:
         value = hardware_raw_to_renderer_value(raw, steps)
         # Every renderer handed its level, not one named here (ADR-0054 §5,
         # amended again 2026-09-28): Spotify, and a plugin that declares
-        # `volume_handed` - Qobuz Connect.
+        # `volume_handed`.
         start_max = _number("start_max")
         if start_max is not None and value > renderer_percent_to_value(start_max, steps):
             value = renderer_percent_to_value(start_max, steps)

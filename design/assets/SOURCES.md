@@ -26,5 +26,4 @@ Claude Design with no recorded source. Those are still in the repository's histo
 ## Gexis's own marks
 
 `design/marks/` holds the SVG sources of marks drawn for the player, GPL-3.0
-like the rest of it: `bluetooth.svg` (B1) and `qobuz.svg` (Q3, a neutral disc
-for Qobuz Connect, whose logo may not be reproduced without Qobuz's consent).
+like the rest of it: `bluetooth.svg` (B1).

@@ -326,52 +326,6 @@ else
 fi
 rm -f "$OUT/one"
 
-echo "== Qobuz Connect (ADR-0098): our adapter only, the receiver not shipped"
-for f in /etc/systemd/system/pibuz.service \
-         /etc/systemd/system/gexis-qobuz.service \
-         /opt/gexis-qobuz/src/gexis_qobuz/main.py \
-         /opt/gexis-qobuz/pibuz-configure \
-         /usr/share/gexis/plugins/qobuz/plugin.json \
-         /usr/share/gexis/plugins/qobuz/mark.png \
-         /usr/share/gexis/components/pibuz.env; do
-	dfs "stat $f" | grep -q 'Inode:' && ok "$f" || bad "$f missing"
-done
-if dfs "stat /opt/gexis-qobuz/receiver" | grep -q 'Inode:'; then
-	bad "the Pibuz receiver is in the image - ADR-0098 downloads it on the device"
-else
-	ok "the Pibuz receiver is not shipped"
-fi
-if dfs "stat /etc/systemd/system/multi-user.target.wants/pibuz.service" | grep -q 'Inode:'; then
-	bad "pibuz is enabled in the image - it is the user's to switch on, behind the notice"
-else
-	ok "pibuz not enabled"
-fi
-dfs "dump /usr/share/gexis/plugins/qobuz/plugin.json $OUT/qobuz.json" >/dev/null
-grep -q '"notice"' "$OUT/qobuz.json" && ok "the manifest carries the notice" || bad "the manifest has no notice"
-# The adapter in the image is the release the stage pins - the same check as
-# Plexamp's above, and opportunistic on the build cache for the same reason.
-qobuz_sum=$(grep -oE '^PLUGIN_SHA256="[a-f0-9]+"' \
-	"$REPO/image/stage-gexis/08-qobuz/01-run.sh" | cut -d'"' -f2)
-qobuz_tar="${GEXIS_BUILD_CACHE:-$HOME/.cache/gexis-player/downloads}/${qobuz_sum}"
-if [ -r "$qobuz_tar" ]; then
-	mkdir -p "$OUT/pinned" "$OUT/shipped"
-	tar -xzf "$qobuz_tar" -C "$OUT/pinned"
-	dfs "rdump /opt/gexis-qobuz/src/gexis_qobuz $OUT/shipped" >/dev/null
-	d=$(diff -r -x __pycache__ \
-		"$OUT/pinned/gexis-qobuz/src/gexis_qobuz" \
-		"$OUT/shipped/gexis_qobuz" 2>&1)
-	if [ -z "$d" ]; then
-		ok "the adapter in the image is the release it pins (${qobuz_sum:0:12})"
-	else
-		bad "the adapter differs from the release it pins:"
-		echo "$d" | head -10
-	fi
-	rm -rf "$OUT/pinned" "$OUT/shipped"
-else
-	echo "  --   the pinned adapter tarball is not in the build cache, so its"
-	echo "       contents were not compared"
-fi
-
 echo "== ADR-0099: licences and the source offer reach the device"
 for f in /usr/share/doc/gexis-player/COPYING \
          /usr/share/doc/gexis-player/SOURCE.md \

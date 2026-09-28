@@ -73,7 +73,7 @@ class Plugin:
     #: they have always had rather than growing a second switch each.
     enabled_row: str | None = None
     #: **ADR-0098: what the user must read before switching it on**, shown as
-    #: a confirmation by the panel. Qobuz Connect's unofficial-software notice.
+    #: a confirmation by the panel.
     notice: str | None = None
     #: True for the three this repository ships. They are not special in how
     #: they are read - only in who wrote them.

@@ -134,7 +134,7 @@ class Capabilities:
     volume_over_bluealsa: bool = False
     #: **ADR-0054 §5, amended 2026-09-28: this renderer is handed its level on
     #: acquisition.** Its own level at a takeover is only what its app last
-    #: had (Qobuz Connect reports 1.0 on a cast), so the core gives it the
+    #: had (an app's leftover), so the core gives it the
     #: DAC's level, capped by `start_max`, as it does Spotify.
     volume_handed: bool = False
     #: Transport commands accepted through our own control channel right

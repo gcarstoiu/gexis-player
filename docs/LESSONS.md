@@ -851,8 +851,9 @@ counting "no warnings" as a result, make one warning happen on purpose and see
 it arrive - here, a skin naming a file that does not exist.
 
 **44. One lookup fixed, the same cause left one step earlier** (2026-09-28).
-A Spotify takeover from Qobuz raised `KeyError: 'qobuz'`. The SIGKILL takes the
-adapter down with Pibuz, and the core forgets the plugin mid-acquisition.
+A Spotify takeover from a plugin renderer raised `KeyError`. The plugin's
+release was a SIGKILL of the unit it drives; its adapter is bound to that unit
+and went down with it, and the core forgot the plugin mid-acquisition.
 Claude fixed the line in the traceback - the acquisition's last step - and
 tested exactly that. The same cause hit an earlier lookup, the ladder's poll
 of whether the unit had let go, whenever the disconnect beat the poll. There

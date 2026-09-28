@@ -121,10 +121,10 @@ async def test_acquire_takes_the_device_and_releases_the_previous_one():
 
 @pytest.mark.asyncio
 async def test_an_outgoing_renderer_gone_during_its_release_does_not_break_the_takeover():
-    """Finding 096: Qobuz's release is a SIGKILL, and its adapter's connection
-    goes with Pibuz (`BindsTo=`), so the core forgets it mid-acquisition. The
+    """A plugin whose release is a SIGKILL of the unit it drives goes down with
+    that unit (`BindsTo=`), so the core forgets it mid-acquisition. The
     last step then looked it up and raised KeyError, on every takeover from
-    Qobuz."""
+    such a plugin."""
     supervisor, adapters, holder = build(active="lms")
     lms = adapters["lms"]
 
@@ -142,9 +142,9 @@ async def test_an_outgoing_renderer_gone_during_its_release_does_not_break_the_t
 
 @pytest.mark.asyncio
 async def test_a_renderer_forgotten_while_the_ladder_polls_is_still_checked_by_its_unit():
-    """George, 2026-09-28: Spotify took over from Qobuz, the SIGKILL took
-    gexis-qobuz down with Pibuz, and the core forgot it while the ladder was
-    still polling. The poll looked the unit up through the adapters, raised
+    """George, 2026-09-28: Spotify took over from a plugin renderer, the
+    SIGKILL took the plugin down with the unit it drives, and the core forgot
+    it while the ladder was still polling. The poll looked the unit up through the adapters, raised
     KeyError, and the acquisition died before its volume step: no starting
     cap, and the phone's next press took the DAC to full scale.
 
@@ -448,7 +448,7 @@ async def test_signal_rungs_poll_instead_of_sleeping_blind(monkeypatch):
 async def test_unknown_renderer_rejected():
     supervisor, _, _ = build()
     with pytest.raises(ValueError):
-        await supervisor.acquire("qobuz")
+        await supervisor.acquire("example")
 
 
 @pytest.mark.asyncio
@@ -679,7 +679,7 @@ async def test_relinquish_from_a_renderer_that_is_not_current_is_ignored():
 async def test_relinquish_rejects_an_unknown_renderer():
     supervisor, _, _ = build()
     with pytest.raises(ValueError):
-        await supervisor.relinquish("qobuz")
+        await supervisor.relinquish("example")
 
 
 # --- Phase 3 criterion 1: state store notification ------------------------

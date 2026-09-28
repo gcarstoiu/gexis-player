@@ -23,22 +23,8 @@ music, this is the stronger argument.
 Python (ADR-0017); in-process modules would bind every future renderer adapter
 to that choice.
 
-**Repository independence.** ~~The Qobuz Connect plugin is planned for a private
-repository.~~ **Superseded 2026-09-27 by
-[ADR-0098](0098-qobuz-connect-is-installed-by-the-user.md):** the receiver is
-installed by the user from its author's release, and our adapter is public.
-What follows is the May 2025 reasoning, kept for the record. Qobuz Connect launched in May 2025 developed with StreamUnlimited,
-and the official integration route is partnership, a proprietary SDK, and a
-certification self-test — incompatible with a public repository. moOde reached
-the same conclusion in May 2025 and found no FOSS-licensed code to integrate;
-Volumio has it via partnership.
-
-The unofficial route is reverse-engineered clients. `ahcm/qconnect` exists, and
-roderickvd — maintainer of librespot and pleezer — has been reverse-engineering
-the protocol since May 2025.
-
-A plugin in a different repository makes the contract real rather than a
-convention inside one codebase.
+**Repository independence.** A plugin in a different repository makes the
+contract real rather than a convention inside one codebase.
 
 ## Consequences
 
@@ -47,11 +33,3 @@ convention inside one codebase.
   what happens when a plugin stops responding.
 - The contract must be versioned, because plugins in other repositories will lag
   the core.
-- Qobuz Connect is delivered as an **optional plugin the user installs**, not
-  something the base image ships.
-
-## Note
-
-Qobuz Connect does not replace Plexamp as the ADR-0008 reversal test.
-`qconnect` is open source and writes to ALSA, so it is cooperative and will not
-stress the PipeWire question at all. Plexamp keeps that role.

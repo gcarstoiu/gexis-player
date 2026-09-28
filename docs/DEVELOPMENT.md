@@ -539,8 +539,7 @@ Still no UI. Tested with a WebSocket client.
    [ADR-0016](decisions/0016-plugins-as-separate-processes.md)'s IPC
    model. George chose the former — the built-ins stay in-process Python
    classes; ADR-0016's separate-process architecture is not attempted
-   here and remains open for whenever a real second plugin (Qobuz
-   Connect) needs it.
+   here and remains open for whenever a real second plugin needs it.
 
    Found by grep, not hypothetical: `renderer_volume.py` hardcoded
    `MANAGED_RENDERERS = ("lms", "spotify")`, `volume.py` branched on
@@ -1425,7 +1424,7 @@ where the panel stops being his.
 **Added 2026-09-16 (George):** dedicated time after Phase 8 for wiring settings
 and for general UI checks and small improvements. **Phases renumbered the same
 day:** the plugin contract moved from 9 to 10, first boot from 10 to 13, and
-Plexamp (11) and Qobuz Connect (12) were added between them. References in the
+Plexamp (11) and a twelfth phase were added between them. References in the
 ADRs were updated.
 
 **Acceptance**
@@ -2091,13 +2090,8 @@ the exercise.
    plugin renderer, and the supervisor had been given a *copy* of the adapter
    map so the release ladder could not ask whether a plugin still held the
    device. None of the three could have been found by a test in this
-   repository. ~~**Qobuz Connect (Phase 12) is that renderer**~~ — **Plexamp
-   (Phase 11) is**, George 2026-09-25: *"If qobuz is too expensive now,
-   especially because it requires a private project, we give it a go with
-   plexamp."* Qobuz needs a partnership and a private repository
-   ([ADR-0016](decisions/0016-plugins-as-separate-processes.md)), which put the
-   contract's only renderer proof two phases out; Plexamp is public, already
-   planned, and one phase out.
+   repository. **Plexamp (Phase 11) is that renderer** (George, 2026-09-25):
+   it is public, already planned, and one phase out.
 
    **This criterion therefore closes in Phase 11, not here**, and it couples
    two risks that were separate: *is the contract right* and *does this
@@ -2145,7 +2139,7 @@ the exercise.
 
    The original text, which is what was asked:
 
-   Qobuz alone tests the contract with the thing it was drawn
+   A renderer alone tests the contract with the thing it was drawn
    for; a monitoring agent tests whether the contract can carry anything
    else - something with no metadata, no transport and no claim on the audio
    device, that only wants to be installed, started, kept running and
@@ -2228,10 +2222,7 @@ same shape**, and that is the point of it now.
 **George, 2026-09-25, opening the phase:** *"start 11, with the aim as having
 plexamp as the new renderer as a plugin."* So this phase carries **Phase 10's
 criterion 2** as well as its own: *a fourth renderer built against the contract,
-in a separate repository, with no changes to the core.* Plexamp replaced Qobuz
-in that role on his word the same week, because Qobuz needs a partnership and a
-private repository and that put the contract's only renderer proof two phases
-out.
+in a separate repository, with no changes to the core.*
 
 **Three things therefore have to be true at the end of this phase**, and the
 first two are not about Plexamp at all:
@@ -2361,8 +2352,7 @@ the ALSA default.
 
 ### Phase 11a — The library answers for itself
 
-**Added 2026-09-25 (George):** *"Let's introduce another phase before qobuz,
-which should tackle the question of how we can we leverage the plexamp/Plex
+**Added 2026-09-25 (George):** *"Let's introduce another phase … which should tackle the question of how we can we leverage the plexamp/Plex
 server metadata that is available. Anything that can reduce the dependency on
 internet providers is a good thing. They can be kept as fallbacks, not
 removed."*
@@ -2439,40 +2429,29 @@ consumes. **Popular tracks do remain ListenBrainz's**, 404 on that server.
 its own catalogue groupings (*Singles & EPs*, *Live Albums*, *Compilations*).
 All are there; none is asked for by anything today.
 
-### Phase 12 — Qobuz Connect as a renderer
+### Phase 12 — Plugins that fetch their software on the device
 
-**Added 2026-09-16 (George).** Same shape as Spotify and LMS, delivered as a
-plugin ([ADR-0016](decisions/0016-plugins-as-separate-processes.md)).
+**Defined 2026-09-28 from what the phase delivered**
+([ADR-0100](decisions/0100-software-we-may-not-redistribute-is-fetched-on-the-device.md)).
+Software the player may not redistribute is not in the image. It is fetched on
+the device when its plugin is switched on.
 
-**Acceptance** (**rewritten 2026-09-27**, [ADR-0098](decisions/0098-qobuz-connect-is-installed-by-the-user.md):
-George, *"It is up to the user to decide whether to install it or not. We give
-the possibility but not retain any code that could leave the entire player into
-trouble."* [Finding 093](findings/093-qobuz-connect-in-september-2026.md) has why.)
+1. **Plexamp is not shipped.** Its pin names the maker's URL and a checksum;
+   `gexis-fetch@plexamp` downloads and verifies it before `plexamp.service`
+   starts. `verify-image.sh` fails if it is in the image.
+2. **The user is told, all the way** (George: *"feedback is a must. Also retry
+   in case of failure and a general status"*): status, progress and Retry sit
+   inside the plugin's own switch row. The Plugins page is grouped into Sources
+   and System.
+3. **Off stops it; Remove deletes it.** Remove is offered in the row while the
+   plugin is off and installed, asks first, and keeps the plugin's settings and
+   sign-in.
+4. **A plugin's notice is confirmed before its switch turns on**, when its
+   manifest carries one.
 
-1. **Client chosen, licence checked:** Pibuz (MIT), what moOde uses. Measured on
-   `gexis` in a Finding before anything is built on it.
-2. **No Qobuz code in our repositories or image.** The receiver is fetched on
-   the device, when the user asks, from its author's release, verified against
-   a pinned checksum. The user confirms an unofficial-software notice first.
-   Uninstall removes it all.
-3. **A public `gexis-qobuz` adapter plugin**, shipped inert: acquisition
-   ("device selected in the app"), release (disconnect), metadata, volume and
-   transport, as for Plexamp.
-4. Source pill, handoff screen, Peppy badge.
-
-**State, 2026-09-28.** Criteria 1, 3 and 4 are met: Findings 094 and 096,
-gexis-qobuz v0.2.0 pinned, George's regression rounds passed. The Peppy badge
-is the plugin's own mark. Criterion 2 is met except **uninstall**, which was
-never built. Switching off stops the receiver, and the download stays. That is
-a decision owed to George, and the Legal page says what happens today. **Not
-closed until that is decided.**
-
-**Updated later on 2026-09-28:**
-- Uninstall is decided and built as Remove (ADR-0100, amended), and it was
-  tried on gexis.
-- **A new blocker:** Pibuz's author now publishes source only (Finding 097), so
-  no install can succeed. How Pibuz reaches a player is a decision owed to
-  George.
+**State, 2026-09-28: met.** All four were seen on the panel on gexis: the
+download states in Plexamp's row, a failure with Retry, and Remove followed by
+a fresh download.
 
 ### Phase 12b — Legal and credits
 
@@ -2482,16 +2461,12 @@ closed until that is decided.**
 2. Both are generated from one inventory file in the repository. The build fails
    when something the image installs is missing from it.
 3. Legal covers the player's licence and warranty, every third-party licence,
-   downloaded proprietary software, unofficial clients, trademarks and the
-   services contacted. **George approves the wording.**
+   downloaded proprietary software, trademarks and the services contacted.
+   **George approves the wording.**
 
-**State, 2026-09-28.** Criteria 1 and 2 are met: the rows and pages are on
-gexis, and `notices.py` fails the build on a missing component. Criterion 3
-waits on George's approval of the wording. One sentence changed on
-2026-09-28: the Qobuz paragraph claimed an uninstall that does not exist.
-**Approved 2026-09-28 (George: "Agree with the legal text... Pending on
-decision about qobuz though"),** except the Qobuz paragraph. That waits on how
-Pibuz reaches a player, since its author now publishes source only (Finding 097).
+**State, 2026-09-28: met.** The rows and pages are on gexis, `notices.py` fails
+the build on a missing component, and George approved the wording (*"Agree with
+the legal text"*).
 
 ### Phase 13 — First boot without a network
 

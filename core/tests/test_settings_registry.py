@@ -150,7 +150,7 @@ def test_registry_keys_are_the_designs_keys_apart_from_recorded_deviations():
         # ADR-0099, 2026-09-27: George asked for both pages.
         "legal", "credits",
         # ADR-0054 §5, amended 2026-09-28: George's cap on the starting level
-        # of a renderer that is handed one (Spotify, Qobuz Connect). The design
+        # of a renderer that is handed one (Spotify, and a plugin that declares `volume_handed`). The design
         # predates sources that keep their own.
         "start_max",
     }
@@ -985,10 +985,10 @@ def test_keys_are_prefixed_so_two_plugins_cannot_collide():
     error nobody could act on."""
     row = {"key": "quality", "type": "toggle", "label": "Quality"}
     merged = Settings.with_plugins(
-        _groups(), [_plugin("plexamp", settings=[row]), _plugin("qobuz", settings=[row])])
+        _groups(), [_plugin("plexamp", settings=[row]), _plugin("example", settings=[row])])
     assert _keys(merged) == {
-        "sources": ["lms_enabled", "plexamp.quality", "qobuz.quality"],
-        "plugins": ["plexamp.enabled", "qobuz.enabled"],
+        "sources": ["lms_enabled", "plexamp.quality", "example.quality"],
+        "plugins": ["plexamp.enabled", "example.enabled"],
         "system": [],
     }
 
@@ -1034,12 +1034,12 @@ def test_rows_go_through_the_registrys_own_validation():
 
 
 def test_one_bad_plugin_does_not_cost_the_others():
-    good = _plugin("qobuz", settings=[{"key": "quality", "type": "toggle", "label": "Q"}])
+    good = _plugin("example", settings=[{"key": "quality", "type": "toggle", "label": "Q"}])
     bad = _plugin("plexamp", settings=[{"key": "size", "type": "number", "label": "S"}])
     merged = Settings.with_plugins(_groups(), [bad, good])
     assert _keys(merged) == {
-        "sources": ["lms_enabled", "qobuz.quality"],
-        "plugins": ["qobuz.enabled"],
+        "sources": ["lms_enabled", "example.quality"],
+        "plugins": ["example.enabled"],
         "system": [],
     }
     # **Including its switch.** A plugin dropped for a bad row must not leave a

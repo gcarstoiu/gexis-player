@@ -79,7 +79,6 @@ Each adapter declares its acquisition events:
 | LMS | explicit play or resume — no connect event exists, it is always connected |
 | Spotify Connect | device selected in the app |
 | Bluetooth | A2DP profile connect |
-| Qobuz Connect | device selected in the app |
 
 ### Release — disconnect, uniformly
 
@@ -96,7 +95,6 @@ pauses instead, because it is the base.**
 | LMS | pause, stay connected |
 | Bluetooth | disconnect |
 | Spotify Connect | disconnect |
-| Qobuz Connect | disconnect |
 
 ### Rules
 

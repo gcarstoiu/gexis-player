@@ -104,7 +104,7 @@ async def test_a_service_needs_nothing_a_renderer_needs(tmp_path):
 @pytest.mark.parametrize("hello, because", [
     ({"t": "hello", "contract": 2, "id": "plexamp"}, "not served here"),
     ({"t": "hello", "id": "plexamp"}, "not served here"),
-    ({"t": "hello", "contract": CONTRACT, "id": "qobuz"}, "not installed"),
+    ({"t": "hello", "contract": CONTRACT, "id": "example"}, "not installed"),
     ({"t": "acquire"}, "not 'hello'"),
     ({"t": "hello", "contract": CONTRACT, "id": "plexamp", "kind": "service"},
      "its manifest says"),

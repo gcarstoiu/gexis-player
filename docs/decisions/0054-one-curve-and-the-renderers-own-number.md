@@ -1,7 +1,7 @@
 # ADR-0054 — One volume curve, ours, applied to each renderer's own number
 
 **Status:** Accepted, **§5 amended 2026-09-26** (Spotify is told the level, not
-asked) **and 2026-09-28** (Spotify, then Qobuz Connect, start no louder than a setting) — George, 2026-09-23: *"All three at once. Let's try the
+asked) **and 2026-09-28** (a renderer handed its level starts no louder than a setting) — George, 2026-09-23: *"All three at once. Let's try the
 fix in order to still have hardware attenuation. If it doesn't work we might
 need to reconsider the software volume path."*
 **Date:** 2026-09-23
@@ -241,11 +241,11 @@ outward, which is the direction the model is for.
 ## Amended 2026-09-28: Spotify starts no louder than *Starting volume*
 
 **The problem.** §5 as amended hands Spotify the level already on the DAC. That
-was safe while every source moved the DAC. Since Qobuz Connect (ADR-0098) and
-then Plexamp (Finding 095, revised) keep their own volume, the DAC stays wherever
-the panel left it, often high, with the app turning the sound down inside the
-stream. The core's log of George's test on 2026-09-28 shows the consequence:
-Qobuz had left the DAC at 240/240, and Spotify took over at 100%.
+was safe while every source moved the DAC. Since Plexamp (Finding 095, revised)
+keeps its own volume, the DAC stays wherever the panel left it, often high, with
+the app turning the sound down inside the stream. The core's log of George's
+test on 2026-09-28 shows the consequence: a source keeping its own volume had
+left the DAC at 240/240, and Spotify took over at 100%.
 
 **Decided (George, 2026-09-28).** He took Claude's proposal (a cap that only
 ever lowers) and widened it: *"Spotify specific setting. Default is 60 applied
@@ -263,14 +263,13 @@ to 60. I use 60 as example, it should follow the setting value."*
   release → volume → `device_freed`, so the cap lands before Spotify's retry, and
   alongside its first open (0.26 s after it announces) at worst.
 - **Spotify only.** It is the one renderer handed a level. The others report
-  their own on acquisition (LMS, Bluetooth), or keep their own (Qobuz, Plexamp).
+  their own on acquisition (LMS, Bluetooth), or keep their own (Plexamp).
 - Fixed output is untouched, as before: nothing is handed there.
 
 ### Amended again 2026-09-28: the cap covers every renderer that is handed its level
 
-Qobuz Connect moved to one volume number (ADR-0098, amended). Like Spotify, its
-level at a takeover is only the app's leftover, and George chose the cap for it
-too (*"We do B with the starting cap"*).
+A plugin can have what Spotify has: a level at a takeover that is only its
+app's leftover. George chose the cap for such a renderer too, the same day.
 
 - **The row moves and is renamed:** `start_max`, *Starting volume*, under Audio
   beside *Maximum volume*. Same range, same default of 60 %. It left Spotify's
@@ -278,6 +277,6 @@ too (*"We do B with the starting cap"*).
   old key.
 - **Which renderers:** every one the core hands a level on acquisition, not one
   named in code. Spotify is handed one (`reports_real_volume = False`), and so
-  is any plugin that declares the new capability **`volume_handed`**.
-  gexis-qobuz 0.3.0 declares it.
+  is any plugin that declares the new capability **`volume_handed`**
+  (PLUGIN-CONTRACT.md).
 

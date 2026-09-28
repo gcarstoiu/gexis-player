@@ -19,7 +19,6 @@ be credited and acknowledged for their work."* **Built; wording and six findings
      time, installed by the user, or reimplemented from.
    - The proprietary pieces that are downloaded, not shipped (Plexamp), and
      under whose terms.
-   - Unofficial clients: the Qobuz receiver (ADR-0098) and any like it.
    - Trademarks, which are used only to name what they belong to.
    - The external services contacted, and what is sent to them.
 3. **Credits** acknowledges every person and project whose work is in the
@@ -60,9 +59,8 @@ A research pass over everything the image contains (2026-09-27) found:
    and all, into `/home/pi/plexamp`. No licence or EULA comes with it, and no
    record here has Plex's terms. The Legal page says truthfully that it is
    included. The alternatives are Plex's permission, or installing it on the
-   device when the user asks, as ADR-0098 does for Qobuz.
-2. **go-librespot** is an unofficial Spotify client shipped in the image. That
-   is the ground on which ADR-0098 kept Qobuz's receiver out.
+   device when the user asks.
+2. **go-librespot** is an unofficial Spotify client shipped in the image.
 3. ~~**The image's GPL obligations have no written offer of source.**~~
    **Resolved 2026-09-27 (George: "Fine"):** the Legal page and
    `/usr/share/doc/gexis-player/SOURCE.md` carry a three-year written offer,
@@ -98,9 +96,8 @@ A research pass over everything the image contains (2026-09-27) found:
    **George, 2026-09-27:** keep the history. They were used briefly in
    development, by mistake, and were never part of the product. Spotify's
    green-on-dark icon stays as it is for now ("we might need to get back to
-   it"). Bluetooth gets our own icon and Qobuz a neutral one: George chose **B1**
-   (a phone sending sound) and **Q3** (a disc). Both are in `design/marks/`,
-   and B1 has replaced the redraw everywhere.
+   it"). Bluetooth gets our own icon: George chose **B1** (a phone sending
+   sound). It is in `design/marks/`, and has replaced the redraw everywhere.
    Originally: **The Spotify, Bluetooth and Lyrion marks** came from Claude Design with no
    recorded source.
 6. **`design/assets/album-art.webp` and `artist-photo.webp`** are photographs
