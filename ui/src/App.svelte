@@ -1,7 +1,7 @@
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
 <script>
   import { onMount, untrack } from 'svelte';
-  import { connect, active, metadata, volume, handoff, capabilities, available, availability, shuffle, repeat, queue, pairing, fixedOutput, panel } from './lib/state.js';
+  import { connect, active, metadata, volume, handoff, capabilities, available, availability, shuffle, repeat, queue, pairing, fixedOutput, panel, setup } from './lib/state.js';
   import NowPlaying from './screens/NowPlaying.svelte';
   import Library from './screens/Library.svelte';
   import WaitingHome from './screens/WaitingHome.svelte';
@@ -12,6 +12,7 @@
   import PairingFrame from './screens/PairingFrame.svelte';
   import Settings from './screens/Settings.svelte';
   import MiniPlayer from './screens/MiniPlayer.svelte';
+  import SetupScreen from './screens/SetupScreen.svelte';
   import { loadSettings, settingValues } from './lib/settings.js';
   import { loadLibraryRoot } from './lib/library.js';
   import { reportTouch, showPeppy, reportPainted, reportShown } from './lib/state.js';
@@ -260,6 +261,17 @@
     volumeOpen = true;
   };
 
+  //: **ADR-0104 §5: the panel during setup.** While the setup network is up,
+  //: or a new device waits to be set up, the glass shows the way in and
+  //: nothing else. A configured device waiting its 90 s at boot shows its
+  //: ordinary screens: most boots end with the Wi-Fi back, and a setup
+  //: screen flashing on every one would be a fault in itself.
+  const setupShown = $derived(
+    !!$setup &&
+      (['open', 'failed', 'joining'].includes($setup.network) ||
+        ($setup.needed && ['waiting', 'online'].includes($setup.network)))
+  );
+
   // ADR-0032: the panel renders everything; a remote browser only settings.
   let surface = $state(null);
   async function showVisualisation() {
@@ -378,6 +390,10 @@
        takes the screen from the visualiser or the idle screen rather than
        waiting politely behind them. It is also the only layer here with no
        dismiss of its own: the agent takes it away. -->
+  {#if setupShown}
+    <SetupScreen setup={$setup} />
+  {/if}
+
   {#if $pairing}
     <PairingFrame request={$pairing} />
   {/if}

@@ -2068,7 +2068,7 @@ async def main() -> None:
     if renderer_enabled("lms"):
         asyncio.ensure_future(_check_lms_volume_control())
 
-    setup_network = SetupNetwork()
+    setup_network = SetupNetwork(on_change=state_store.set_setup)
     state_server = StateServer(
         state_store,
         host=config.state_host,

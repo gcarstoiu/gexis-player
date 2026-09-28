@@ -64,6 +64,7 @@ class StateStore:
         self._pairing: dict | None = None
         self._components: dict = {}
         self._panel: dict = {"visualiser": False, "idle": False, "idle_request": None}
+        self._setup: dict | None = None
         #: **ADR-0081: the cover the daemon found for a renderer that sent
         #: none.** `renderer_id -> (track, url)`, applied in `state` below
         #: only where the renderer's own artwork is absent. Keyed on the
@@ -113,6 +114,7 @@ class StateStore:
             pairing=self._pairing,
             components=dict(self._components),
             panel=dict(self._panel),
+            setup=dict(self._setup) if self._setup else None,
         )
 
     def set_active(self, renderer_id: str | None) -> None:
@@ -325,6 +327,15 @@ class StateStore:
         if components == self._components:
             return
         self._components = dict(components)
+        self._notify()
+
+    def set_setup(self, setup: dict | None) -> None:
+        """ADR-0104: the setup network's public status, on a change only."""
+        if setup is not None and "password" in setup and setup["password"] is not None:
+            raise ValueError("the setup password is never broadcast (ADR-0104 §5)")
+        if setup == self._setup:
+            return
+        self._setup = dict(setup) if setup is not None else None
         self._notify()
 
     def set_panel(self, **changes) -> None:

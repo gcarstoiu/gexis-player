@@ -892,10 +892,13 @@ class StateServer:
 
     async def _handle_setup_status(self, request: web.Request) -> web.Response:
         """ADR-0104 §5: whether setup is needed and the setup network's state.
-        The password is in it only while the network is open."""
+        **The password goes to the panel only** - it arrives on loopback
+        (ADR-0035 §6) - because it is on the glass for anyone in the room and
+        nowhere else."""
         if self._setup is None:
             return web.json_response({"needed": False, "network": "unmanaged"})
-        return web.json_response(self._setup.status())
+        panel = request.remote in ("127.0.0.1", "::1")
+        return web.json_response(self._setup.status() if panel else self._setup.public_status())
 
     async def _handle_painted(self, request: web.Request) -> web.Response:
         """The panel reporting its first painted frame, which is what ends

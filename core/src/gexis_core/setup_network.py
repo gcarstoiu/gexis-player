@@ -185,6 +185,7 @@ class SetupNetwork:
         drm: Path = DRM,
         net_root: Path = Path("/sys/class/net"),
         stations=None,
+        on_change=None,
     ) -> None:
         self._nmcli = run or wifi._run
         self._count_stations = stations or self._stations
@@ -201,22 +202,47 @@ class SetupNetwork:
         self._panel = False
         self._reason: str | None = None
         self._opened_at: float | None = None
+        #: ADR-0031 amendment 8: a new device on Ethernet is set up over it,
+        #: at this address, and there is no setup network.
+        self._lan_address: str | None = None
+        #: Called with `public_status()` whenever it changes: the state
+        #: broadcast, which every phone reads too, so never the password.
+        self._on_change = on_change
+        self._published: dict | None = None
 
     # -- what the panel and the phone read ---------------------------------
 
     def status(self) -> dict:
-        """ADR-0104 §5's inputs. The password only while the network is open:
-        it is on the panel for anyone in the room, and nowhere else."""
+        """ADR-0104 §5's inputs, the password among them while the network is
+        open. **For the panel only**: `/setup/status` hands this to a loopback
+        caller and `public_status` to anyone else."""
         open_ = self._state == "open"
+        if open_:
+            address = f"http://{ADDRESS}:8090/"
+        elif self._needed and self._state == "online" and self._lan_address:
+            address = f"http://{self._lan_address}:8090/"
+        else:
+            address = None
         return {
             "needed": self._needed,
             "network": self._state,
             "ssid": SSID if open_ else None,
             "password": self._password if open_ else None,
-            "address": f"http://{ADDRESS}:8090/" if open_ else None,
+            "address": address,
             "panel": self._panel,
             "reason": self._reason,
         }
+
+    def public_status(self) -> dict:
+        return {**self.status(), "password": None}
+
+    def _publish(self) -> None:
+        if self._on_change is None:
+            return
+        now = self.public_status()
+        if now != self._published:
+            self._published = now
+            self._on_change(now)
 
     @property
     def needed(self) -> bool:
@@ -259,6 +285,13 @@ class SetupNetwork:
             return 1
         return sum(1 for line in out.decode("utf-8", "replace").splitlines() if line.startswith("Station"))
 
+    async def _address_of(self, device: str) -> str | None:
+        """The IPv4 address a phone on the same network would open, without
+        its prefix length."""
+        rc, out, _ = await self._nmcli("-g", "IP4.ADDRESS", "device", "show", device)
+        first = out.strip().split("|")[0].strip() if rc == 0 else ""
+        return first.split("/")[0] or None
+
     async def delete_leftover(self) -> None:
         """A profile a crash left behind. It is `autoconnect no`, but a profile
         nobody meant to keep is one nobody will think to look for."""
@@ -287,9 +320,11 @@ class SetupNetwork:
             self._state = "failed"
             self._reason = err.splitlines()[-1] if err else f"nmcli exited {rc}"
             logger.warning("setup: the setup network did not come up: %s", self._reason)
+            self._publish()
             return False
         self._state = "open"
         self._opened_at = self._clock()
+        self._publish()
         logger.info(
             "setup: %s is open at %s (%s password; autoconnect %s)",
             SSID, ADDRESS, "the panel's" if self._panel else "the fixed",
@@ -334,9 +369,13 @@ class SetupNetwork:
 
         if not trial:
             self._state = "waiting"
+            self._publish()
             where = await self._wait_for_network()
             if where is not None:
                 self._state = "online"
+                if self._needed:
+                    self._lan_address = await self._address_of(where)
+                self._publish()
                 logger.info("setup: on the network through %s; no setup network", where)
                 return
         await self.open()
@@ -380,10 +419,12 @@ class SetupNetwork:
             logger.info("setup: %s is in range; leaving %s to join it", found, SSID)
             await self.close()
             self._state = "joining"
+            self._publish()
             rc, _, err = await self._nmcli("connection", "up", saved[found], timeout=wifi.JOIN_TIMEOUT_S)
             if rc == 0:
                 self._state = "online"
                 self._reason = None
+                self._publish()
                 logger.info("setup: back on %s", found)
                 return
             self._reason = f"Could not join {found}: " + (err.splitlines()[-1] if err else f"exit {rc}")

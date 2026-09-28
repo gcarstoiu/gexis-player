@@ -38,6 +38,7 @@ list is on the player, under Settings → System → Legal and Credits.
 | [Bluetooth icon](https://github.com/gcarstoiu/gexis-player/tree/main/design/marks) | Shows that a phone is playing over Bluetooth. | Gexis's own drawing, GPL-3.0-or-later; not the Bluetooth logo | Gexis Player | Included in the player |
 | [Plex chevron](https://commons.wikimedia.org/wiki/File:Plex_logo_2022.svg) | Shows that Plexamp is playing. | Trademark of Plex, Inc.; the drawing is public domain as a text logo | Plex, Inc.; drawn from the Wikimedia Commons file 'Plex logo 2022.svg' | Included in gexis-plexamp |
 | [Svelte](https://svelte.dev) | The framework the panel's screens are written in. | MIT | The Svelte contributors | Bundled into the panel's screens |
+| [uqr](https://github.com/unjs/uqr) | Draws the QR codes on the panel's setup screen. | MIT | The unjs contributors | Bundled into the panel's screens |
 | [Vite](https://vite.dev) | Builds the panel's screens. | MIT | Evan You and the Vite contributors | Used to build; a small part is bundled |
 | [aiohttp](https://github.com/aio-libs/aiohttp) | The player's web server and its connections to services. | Apache-2.0 and MIT (llhttp); with yarl, multidict, frozenlist, aiosignal and propcache (Apache-2.0), aiohappyeyeballs (PSF-2.0), attrs (MIT) and idna (BSD-3-Clause) | The aio-libs team | Installed from PyPI when the image is built |
 | [dbus-next](https://github.com/altdesktop/python-dbus-next) | Talks to Bluetooth. | MIT | Tony Crisci | Installed from PyPI when the image is built |

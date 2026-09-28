@@ -106,6 +106,18 @@ export const components = derived(playback, ($s) => $s?.components ?? {});
 //: ADR-0101: what the panel shows, and the phone's last idle request.
 export const panel = derived(playback, ($s) => $s?.panel ?? { visualiser: false, idle: false, idle_request: null });
 
+/** ADR-0104: first-boot setup and the setup network, or null before the core
+ *  has decided. Never carries the password: the panel asks `/setup/status`
+ *  for that over loopback (`setupPassword`). */
+export const setup = derived(playback, ($s) => $s?.setup ?? null);
+
+/** The setup network's password, which the core gives to the panel only. */
+export async function setupPassword() {
+  const r = await fetch('/setup/status');
+  if (!r.ok) throw new Error(`setup status ${r.status}`);
+  return (await r.json()).password ?? null;
+}
+
 /**
  * Commands go over REST, never the socket (ADR-0028). Returns the parsed
  * body on success and throws with the server's own message on failure -

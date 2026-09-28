@@ -40,6 +40,8 @@ class FakeNM:
             return 0, f"802-11-wireless.ssid:{ssid}", ""
         if args[:4] == ("-t", "-f", "NAME", "connection"):
             return 0, "\n".join(sorted(self.profiles | set(self.saved.values()))), ""
+        if args[:2] == ("-g", "IP4.ADDRESS"):
+            return 0, "192.168.1.50/24\n", ""
         if args[:3] == ("device", "wifi", "hotspot"):
             if self.hotspot_at is None and self.clock is not None:
                 self.hotspot_at = self.clock()
@@ -130,6 +132,7 @@ def test_a_provisioned_card_on_its_wifi_never_opens_the_network(tmp_path):
     run(net.run())
     assert not net.needed and net.status()["network"] == "online"
     assert not nm.did("device", "wifi", "hotspot")
+    assert net.status()["address"] is None, "nothing to show a configured device"
     assert net.status()["panel"], "known from the start, not only once the network opens"
 
 
@@ -140,6 +143,7 @@ def test_ethernet_with_an_address_never_opens_the_network_even_when_setup_is_nee
     run(net.run())
     assert net.needed and net.status()["network"] == "online"
     assert not nm.did("device", "wifi", "hotspot")
+    assert net.status()["address"] == "http://192.168.1.50:8090/", "the page is on the LAN"
 
 
 def test_a_new_device_without_a_cable_opens_after_15_s_not_90(tmp_path):
@@ -326,3 +330,27 @@ def test_online_ignores_loopback_and_the_setup_network():
     assert sn.online([("wlan0", "wifi", "connected", sn.PROFILE)]) is None
     assert sn.online([("wlan0", "wifi", "connecting (getting IP configuration)", "Home")]) is None
     assert sn.online(ETH_UP) == "eth0"
+
+
+# -- what is published (§5) --------------------------------------------------
+
+
+def test_the_broadcast_follows_the_network_and_never_carries_the_password(tmp_path):
+    nm = FakeNM(devices=NOTHING, saved={"Home": "preconfigured"}, in_range={"Home"})
+    seen = []
+    net, clock = setup(tmp_path, nm, stations=0)
+    net._on_change = seen.append
+    hold(net, nm, clock, lambda: net.status()["network"] == "online")
+    assert [s["network"] for s in seen] == ["waiting", "open", "joining", "online"]
+    assert all(s["password"] is None for s in seen)
+    assert seen[1]["ssid"] == sn.SSID and seen[1]["address"] == "http://10.42.0.1:8090/"
+
+
+def test_the_state_store_refuses_a_password():
+    from gexis_core.state import StateStore
+
+    store = StateStore({})
+    with pytest.raises(ValueError):
+        store.set_setup({"network": "open", "password": "naccw4n2"})
+    store.set_setup({"network": "open", "password": None})
+    assert store.state.to_json()["setup"]["network"] == "open"
