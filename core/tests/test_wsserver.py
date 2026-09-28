@@ -538,3 +538,57 @@ async def test_a_daemon_with_no_splash_still_answers_the_panel():
         response = await client.post("/panel/painted")
 
     assert response.status == 200
+
+
+class _Peppy:
+    def __init__(self):
+        self.touches = 0
+
+    def on_touch(self):
+        self.touches += 1
+
+
+@pytest.mark.asyncio
+async def test_the_phones_idle_toggle_reaches_the_panel_and_restarts_the_timers():
+    """ADR-0101 (George: "Idle screen should toggle the idle screen on or off.
+    Timers would restart from that point")."""
+    store = StateStore(_caps("lms"))
+    peppy = _Peppy()
+    server = StateServer(store, peppy=peppy)
+    async with TestClient(TestServer(server.make_app())) as client:
+        assert (await client.post("/panel/idle/show")).status == 200
+        first = store.state.panel["idle_request"]
+        assert first["show"] is True and peppy.touches == 1
+        assert (await client.post("/panel/idle/show")).status == 200
+        assert store.state.panel["idle_request"]["seq"] == first["seq"] + 1, "the same ask twice is two asks"
+        assert (await client.post("/panel/idle/hide")).status == 200
+        assert store.state.panel["idle_request"]["show"] is False and peppy.touches == 3
+        assert (await client.post("/panel/idle/sideways")).status == 404
+
+
+@pytest.mark.asyncio
+async def test_the_panel_says_whether_its_idle_screen_is_up():
+    store = StateStore(_caps("lms"))
+    server = StateServer(store)
+    async with TestClient(TestServer(server.make_app())) as client:
+        assert (await client.post("/panel/shown", json={"idle": True})).status == 200
+        assert store.state.panel["idle"] is True
+        assert (await client.post("/panel/shown", json={})).status == 400
+        async with client.ws_connect("/state") as ws:
+            assert (await ws.receive_json())["panel"]["idle"] is True
+
+
+@pytest.mark.asyncio
+async def test_the_web_app_manifest_and_icons_are_served_at_the_root(tmp_path):
+    """ADR-0102 (a test): a phone installs Settings from these."""
+    from gexis_core.wsserver import APP_FILES
+    ui = _ui_build(tmp_path)
+    for name in APP_FILES:
+        (ui / name).write_bytes(b"x")
+    server = StateServer(StateStore({}), ui_dir=ui)
+    async with TestClient(TestServer(server.make_app())) as client:
+        response = await client.get("/manifest.webmanifest")
+        assert response.status == 200
+        assert response.headers["Content-Type"].startswith("application/manifest+json")
+        assert (await client.get("/app-icon-192.png")).headers["Content-Type"] == "image/png"
+        assert (await client.get("/anything-else.png")).status == 404, "named, not a catch-all"

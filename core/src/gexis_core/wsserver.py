@@ -73,6 +73,16 @@ POPULAR_ROWS = 5
 
 logger = logging.getLogger("gexis_core.wsserver")
 
+#: ADR-0102 (a test): the web-app manifest and its icons, at the site root
+#: where browsers look for them, with the types they expect.
+APP_FILES = {
+    "manifest.webmanifest": "application/manifest+json",
+    "app-icon.svg": "image/svg+xml",
+    "app-icon-192.png": "image/png",
+    "app-icon-512.png": "image/png",
+    "apple-touch-icon.png": "image/png",
+}
+
 DEFAULT_HOST = "0.0.0.0"
 DEFAULT_PORT = 8090
 
@@ -852,6 +862,31 @@ class StateServer:
             self._peppy.on_touch()
         return web.json_response({"touched": True})
 
+    async def _handle_idle_request(self, request: web.Request) -> web.Response:
+        """**ADR-0101: the phone's idle-screen toggle.** Attention first, as a
+        touch on the panel is (George: "Timers would restart from that
+        point") - which also takes the visualiser down, because the panel has
+        one screen. Then the request goes to the panel in the state it
+        already listens to."""
+        action = request.match_info["action"]
+        if action not in ("show", "hide"):
+            return web.json_response({"error": f"unknown action {action}"}, status=404)
+        if self._peppy is not None:
+            self._peppy.on_touch()
+        self._store.request_idle(action == "show")
+        return web.json_response({"idle": action})
+
+    async def _handle_panel_shown(self, request: web.Request) -> web.Response:
+        """ADR-0101: the panel reporting whether its idle screen is up, so the
+        phone's toggle says what the panel shows - whatever changed it."""
+        try:
+            body = await request.json()
+            idle = bool(body["idle"])
+        except (ValueError, KeyError, TypeError):
+            return web.json_response({"error": 'body must be {"idle": <bool>}'}, status=400)
+        self._store.set_panel(idle=idle)
+        return web.json_response({"idle": idle})
+
     async def _handle_painted(self, request: web.Request) -> web.Response:
         """The panel reporting its first painted frame, which is what ends
         the boot animation (ADR-0043 §3).
@@ -1166,6 +1201,9 @@ class StateServer:
         app.router.add_get("/surface", self._handle_surface)
         app.router.add_post("/touch", self._handle_touch)
         app.router.add_post("/panel/painted", self._handle_painted)
+        # ADR-0101: the phone's idle toggle, and the panel saying what it shows.
+        app.router.add_post("/panel/idle/{action}", self._handle_idle_request)
+        app.router.add_post("/panel/shown", self._handle_panel_shown)
         app.router.add_post("/peppy/{action}", self._handle_peppy)
         app.router.add_get("/settings", self._handle_settings)
         app.router.add_get("/notices/{name}", self._handle_notice)
@@ -1197,7 +1235,15 @@ class StateServer:
         if self._ui_dir is not None:
             app.router.add_get("/", self._handle_index)
             app.router.add_static("/assets", self._ui_dir / "assets")
+            # ADR-0102 (a test): what a phone reads to install Settings as an
+            # app. Named one by one, for the reason above.
+            for name in APP_FILES:
+                app.router.add_get(f"/{name}", self._handle_app_file)
         return app
+
+    async def _handle_app_file(self, request: web.Request) -> web.FileResponse:
+        name = request.path.lstrip("/")
+        return web.FileResponse(self._ui_dir / name, headers={"Content-Type": APP_FILES[name]})
 
     async def _handle_index(self, request: web.Request) -> web.FileResponse:
         # Never cached. Everything it references is content-hashed, so the

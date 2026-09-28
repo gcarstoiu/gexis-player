@@ -9,6 +9,12 @@ made for a dark ground and would not read on GitHub's light theme.
 
     python3 design/brand/scripts/logo_svg.py '#e9eef2' 20 > docs/assets/gexis-sound.svg
 
+`mark` as a third argument draws the tiles alone on a square of the ground:
+the app icon of ADR-0102's installed Settings (a favicon-like use, which is
+what the brand guide gives the mark).
+
+    python3 design/brand/scripts/logo_svg.py '#e9eef2' 0 mark > ui/public/app-icon.svg
+
 Needs fontTools and brotli (Plex Mono ships as woff2).
 """
 import math, sys
@@ -42,6 +48,7 @@ box=math.sqrt(2)*(tile*2+gap)
 UNLIT='#2c404f'; UNLIT_INK='#7690a0'; S_FILL='#f2a48f'; S_INK='#3d1509'
 ink=sys.argv[1] if len(sys.argv)>1 else '#e9eef2'
 pad=float(sys.argv[2]) if len(sys.argv)>2 else 0
+mark_only = len(sys.argv) > 3 and sys.argv[3] == "mark"
 
 tiles_font=inst(800,glyph); word_font=inst(600,size*0.4)
 wf=size*0.4; lf=max(11,size*0.115)
@@ -73,4 +80,16 @@ lt=top+word_h+col_gap
 d,_=text_path(MONO,'SOUND',lf,x0,lt+mg/2+ma,0.20); out.append(f'<path d="{d}" fill="{S_FILL}"/>')
 TW=W+2*pad; TH=H+2*pad
 bg=f'<rect width="{TW:.3f}" height="{TH:.3f}" rx="18" fill="#101a21"/>' if pad else ''
+if mark_only:
+    # The tiles alone, centred on a square of the ground with a fifth of it
+    # to spare on every side - the safe zone a maskable icon needs.
+    side = box / 0.6
+    shift = (side - box) / 2
+    # `out` opens with the rotated tile group and closes it with a bare
+    # `</g>`; each glyph is one self-contained string inside it.
+    tiles = "".join(out[: out.index('</g>') + 1])
+    print(f'<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 {side:.3f} {side:.3f}" role="img" aria-label="gexis sound">'
+          f'<rect width="{side:.3f}" height="{side:.3f}" fill="#101a21"/>'
+          f'<g transform="translate({shift:.3f},{shift - (H - box) / 2:.3f})">{tiles}</g></svg>')
+    sys.exit(0)
 print(f'<svg xmlns="http://www.w3.org/2000/svg" width="{TW:.0f}" height="{TH:.0f}" viewBox="0 0 {TW:.3f} {TH:.3f}" role="img" aria-label="gexis sound">{bg}{"".join(out)}</svg>')

@@ -12,6 +12,7 @@ active does not spam a broadcast nobody's screen would show.
 from __future__ import annotations
 
 import logging
+import time
 from dataclasses import replace
 from typing import Callable, Mapping
 
@@ -62,6 +63,7 @@ class StateStore:
         self._pictures_revision = 0
         self._pairing: dict | None = None
         self._components: dict = {}
+        self._panel: dict = {"visualiser": False, "idle": False, "idle_request": None}
         #: **ADR-0081: the cover the daemon found for a renderer that sent
         #: none.** `renderer_id -> (track, url)`, applied in `state` below
         #: only where the renderer's own artwork is absent. Keyed on the
@@ -110,6 +112,7 @@ class StateStore:
             pictures_revision=self._pictures_revision,
             pairing=self._pairing,
             components=dict(self._components),
+            panel=dict(self._panel),
         )
 
     def set_active(self, renderer_id: str | None) -> None:
@@ -323,6 +326,22 @@ class StateStore:
             return
         self._components = dict(components)
         self._notify()
+
+    def set_panel(self, **changes) -> None:
+        """ADR-0101: what the panel shows (`visualiser`, `idle`) and the last
+        idle request from a phone. Published on a change only."""
+        panel = {**self._panel, **changes}
+        if panel == self._panel:
+            return
+        self._panel = panel
+        self._notify()
+
+    def request_idle(self, show: bool) -> None:
+        """ADR-0101: a phone asks the panel to show or hide its idle screen.
+        Numbered, so the same ask twice is two asks."""
+        seq = ((self._panel.get("idle_request") or {}).get("seq") or 0) + 1
+        # `at` so a panel that reloads later does not act on an old ask.
+        self.set_panel(idle_request={"show": bool(show), "seq": seq, "at": time.time()})
 
     def bump_settings_revision(self) -> None:
         self._settings_revision += 1

@@ -2517,6 +2517,41 @@ set the device up without it, so it is a hard gate on anyone else owning one.
 
 ---
 
+### Phase 13a — Plugins you install and update
+
+**Added 2026-09-28 (George):** plugin updates and uploads are *"a phase set
+before themes"*. The upload question arose when a plugin's author stopped
+publishing binaries: what a user builds and uploads is their choice, not
+ours. Updates were decided the same day (option B: *"we need to check them
+before allowing an update"*). **Its ADR comes first.**
+
+**Acceptance**
+
+1. **A plugin can be uploaded** from a phone or computer, in Settings →
+   Plugins: a package holding a `plugin.json` (id, name, kind - renderer or
+   service - and what to run) and its files, built for the Pi (aarch64, Debian
+   13). The core checks it before installing it under its own folder in
+   `/var/lib/gexis/plugins/`, never in the image. The panel has no file picker
+   and does not offer it.
+2. **It runs sandboxed** (George: *"based on your recommendation"*). The player
+   writes the unit from the manifest and never takes one supplied: an
+   unprivileged user, the system read-only, only its own folder writable, the
+   sound card only for a renderer, memory limits. Never root. Arbitration can
+   still take the device from it, as from any renderer.
+3. **A notice before installing** - it is not part of Gexis Player, installed
+   and run at the user's own risk - and **Remove** deletes it. Uploading a newer
+   version updates it.
+4. **Backups keep an uploaded plugin's settings and data, not its package**
+   (George: *"Agree with your suggestion"*). After a restore the package is
+   uploaded again.
+5. **Updates for the plugins we ship come from versions we have tested**
+   (option B): a catalogue published by us, which the device checks. The
+   plugin's row says an update is available, and it installs with the
+   download row's progress and Retry. The previous version is kept for
+   rollback. Beszel and the adapters move to the download mechanism. The
+   `updates` (Manual/Automatic) row is confirmed with George before it is
+   surfaced.
+
 ### Phase 14 — Themes
 
 **Cut out of Phase 10 on 2026-09-25** (George): *"Themes to be cut out and have

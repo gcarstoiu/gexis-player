@@ -460,3 +460,18 @@ class TestTheNeedleSmoothingSetting:
         from gexis_core.peppy import set_meter_smoothing
 
         assert set_meter_smoothing(240, tmp_path / "nope.txt") is False
+
+
+def test_the_screen_says_when_it_goes_up_or_down(monkeypatch):
+    """ADR-0101: the phone's visualiser toggle shows what the panel shows."""
+    class Result:
+        returncode = 0
+        stderr = b""
+
+    monkeypatch.setattr("gexis_core.peppy.subprocess.run", lambda *a, **k: Result())
+    screen = PeppyScreen(wlrctl="/usr/bin/wlrctl")
+    seen = []
+    screen.on_change = seen.append
+    screen.show()
+    screen.hide()
+    assert seen == [True, False]
