@@ -88,6 +88,7 @@ from gexis_core.volume import (
     get_raw,
     Mute,
     renderer_value_to_hardware_raw,
+    renderer_percent_to_value,
     hardware_raw_to_renderer_value,
     fixed_output as volume_fixed_output,
     HARDWARE_MAX,
@@ -540,6 +541,14 @@ async def main() -> None:
         renderer's echo of its new value, which lands within a rounding step of
         where the DAC already is. **Fixed output is left alone** - the DAC is at
         full scale there by design, and there is nothing to carry.
+
+        **Amended 2026-09-28: Spotify starts no louder than `spotify_start_max`**
+        (George: *"60 is the max. If the previous renderer had less than 60 it
+        stays to what the renderer had. If more than 60, then it comes down to
+        60"*). Qobuz and Plexamp keep their own volume and can leave the DAC at
+        full scale. Lowering is the one case where the DAC *is* written, and
+        first: the acquisition's next step is `device_freed`, Spotify's retry,
+        which must not start at the level being taken away.
         """
         if volume_fixed_output():
             return False
@@ -549,10 +558,19 @@ async def main() -> None:
             return False
         steps = await adapter.get_volume_steps()
         value = hardware_raw_to_renderer_value(raw, steps)
-        logger.info(
-            "volume: %s cannot say where it is; handing it the level playing (%s/240 -> %s/%s)",
-            renderer_id, raw, value, steps,
-        )
+        start_max = _number("spotify_start_max") if renderer_id == "spotify" else None
+        if start_max is not None and value > renderer_percent_to_value(start_max, steps):
+            value = renderer_percent_to_value(start_max, steps)
+            logger.info(
+                "volume: %s starts no louder than %s%%; the DAC comes down (%s/240 -> %s/%s)",
+                renderer_id, int(start_max), raw, value, steps,
+            )
+            await volume_bridge.write_hardware(renderer_value_to_hardware_raw(value, steps))
+        else:
+            logger.info(
+                "volume: %s cannot say where it is; handing it the level playing (%s/240 -> %s/%s)",
+                renderer_id, raw, value, steps,
+            )
         remote.set_steps(renderer_id, steps)
         remote.report(renderer_id, value)
         await adapter.set_volume(value)
@@ -1337,6 +1355,8 @@ async def main() -> None:
                    _apply_headless(value)
                ),
                "show_transition": None, "handoff_duration": None,
+               # ADR-0054 §5, amended 2026-09-28: read at each Spotify takeover.
+               "spotify_start_max": None,
                # ADR-0052 §3: read on every map between a position and a
                # level, and re-applied here when it changes so the level
                # comes down at once if it is now above the ceiling.

@@ -116,10 +116,13 @@ fetched on the device from its author's release, after a notice; public inert
     own repos. Release and bump the stage pins after the retest.
   - **Plexamp volume: revised to A** (George, 2026-09-28; Finding 095). The
     core does not manage it; the Plexamp app and the panel keep separate levels.
-  - **Decision owed: the level after a takeover.** George: *"it is safer to set
-    an initial volume of 60% … than keeping whatever the previous renderer
-    left."* Open: a cap or a set level; which takeovers; a setting or
-    hardcoded. An ADR-0054 §5 amendment first, then possibly an ADR-0022 row.
+  - **Spotify's starting volume: decided and built** (George, 2026-09-28;
+    ADR-0054 §5 amended; ADR-0022 row). `spotify_start_max`, default 60 %.
+    Every Spotify takeover starts at the lower of the DAC's level and the
+    setting. Deployed by hand and verified at 30 %.
+  - **Owed on gexis:** the `arbitration.py` fix for a `KeyError` on Spotify
+    takeovers from Qobuz (Finding 096). It restarts the core, so it waits
+    until George is not testing.
   - No image built from `phase-12` yet.
 - **`README.md` published on `phase-12`** (d219e55; the branch's first push),
   approved by George. It has the gexis sound mark at the top

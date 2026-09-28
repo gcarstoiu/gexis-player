@@ -117,6 +117,24 @@ it played.
   the device list, and a cast to it plays.
 - Tests: 13 pass, including one case for each of findings 1, 3, 4 and 5.
 
+## Found while testing the Spotify cap (2026-09-28)
+
+- **Every Spotify takeover from Qobuz raised `KeyError: 'qobuz'`** in the core.
+  The SIGKILL takes gexis-qobuz down with Pibuz (`BindsTo=`), and the core
+  forgets the plugin before the acquisition's last step, which then looked it
+  up. Spotify had already been given the device, so it played. Fixed in
+  `arbitration.py` with a test that fails without the fix. **Not yet deployed**,
+  because deploying restarts the core.
+- **Spotify's starting cap** (ADR-0054 §5, amended 2026-09-28) was verified
+  with the setting at 30 %:
+  - DAC at 50 %: the DAC came down to 30 % (209 → 188) before Spotify played;
+  - DAC at 20 %: it stayed at 20 %.
+
+  The setting is back at 60 %.
+- **The test interrupted George**, who cast Qobuz at 10:33:51 and was
+  retesting. The core restart (10:34:35) and the Spotify takeover (10:35:03)
+  were Claude's.
+
 ## Still owed
 
 - George's retest of all five.

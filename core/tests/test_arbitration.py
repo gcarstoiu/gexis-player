@@ -120,6 +120,27 @@ async def test_acquire_takes_the_device_and_releases_the_previous_one():
 
 
 @pytest.mark.asyncio
+async def test_an_outgoing_renderer_gone_during_its_release_does_not_break_the_takeover():
+    """Finding 096: Qobuz's release is a SIGKILL, and its adapter's connection
+    goes with Pibuz (`BindsTo=`), so the core forgets it mid-acquisition. The
+    last step then looked it up and raised KeyError, on every takeover from
+    Qobuz."""
+    supervisor, adapters, holder = build(active="lms")
+    lms = adapters["lms"]
+
+    async def killed(force):
+        holder["who"] = None
+        supervisor.forget("lms")
+
+    lms.signal_stop = killed
+    lms._frees_at = "sigkill"
+    await supervisor.acquire("spotify")
+    assert supervisor.active == "spotify"
+    assert adapters["spotify"].device_freed_calls == 1
+    assert lms.restart_after_release_calls == 0, "nobody left to restart"
+
+
+@pytest.mark.asyncio
 async def test_reacquiring_the_current_renderer_is_a_noop():
     supervisor, adapters, holder = build(active="lms")
     await supervisor.acquire("spotify")

@@ -325,9 +325,15 @@ class Supervisor:
         # guarantees success (see adapters/base.py's docstring on the
         # residual risk), just because it's the best available
         # ordering.
-        if outgoing is not None:
+        # **The outgoing renderer may be gone by now** (Finding 096): a plugin
+        # released by SIGKILL takes its adapter's connection with it
+        # (gexis-qobuz is `BindsTo=pibuz`), and the core forgets it before
+        # this line. It raised KeyError here, after Spotify was already
+        # playing, on every takeover from Qobuz.
+        outgoing_adapter = self._adapters.get(outgoing) if outgoing is not None else None
+        if outgoing_adapter is not None:
             await _bounded(f"{outgoing}'s restart_after_release",
-                           self._adapters[outgoing].restart_after_release())
+                           outgoing_adapter.restart_after_release())
 
     async def relinquish(self, renderer_id: str) -> None:
         """`renderer_id` gave up the device without anyone taking it over -
