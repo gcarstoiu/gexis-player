@@ -359,6 +359,12 @@ reverted, currently-flashed image predates this fix.
                                             phone or computer, run it sandboxed,
                                             Remove it; updates from versions we
                                             have tested. ADR first
+13b other screens                        added 2026-09-28 (George): 800x480 to
+                                            1920x1080, bars 1280x400 and 1480x320
+                                            (landscape); two layout families;
+                                            skins per resolution; recognise the
+                                            screen in setup. Finding 100. ADR
+                                            first; designs from Claude Design
 14 themes                                 cut out of 10. ADR-0016 calls themes
                                             plugins and plugins processes; a
                                             theme has no process - settle that

@@ -2582,6 +2582,58 @@ before allowing an update"*). **Its ADR comes first.**
    `updates` (Manual/Automatic) row is confirmed with George before it is
    surfaced.
 
+### Phase 13b — Other screens: sizes, bars, and knowing which one is attached
+
+**Added 2026-09-28 (George):** support touch screens from 800×480 to
+1920×1080 (13.3" at most), and the bars 1280×400 and 1480×320, both used
+**landscape**, and sizes in between; detect the screen during setup. What is
+already known is in
+[Finding 100](findings/100-screens-what-the-pi-can-learn-and-what-exists.md).
+**Its ADR comes first**, and the designs for the two families come from
+Claude Design: the brief George hands over is
+[design/briefs/13b-screen-families.md](../design/briefs/13b-screen-families.md).
+
+**The shape of it, as discussed:**
+- **Two layout families, chosen by aspect, not per resolution.** *Standard*
+  (1.5–1.8: 800×480, 1280×800, 1920×1080 and between): today's screens,
+  scaled to a logical width of 1280, with one region per screen absorbing the
+  height (711–853 logical). *Bar* (3–5: 1280×400, 1480×320): a reduced panel
+  of strips.
+- **Touch targets in millimetres**, checked at the smallest screen (800×480
+  at 7" makes a 64 px target about 9 mm).
+- **Skins per resolution**: bitmaps do not scale, so each screen gets the set
+  drawn for it (or the nearest, letterboxed, as the 1280×720 packs are
+  today); the picker offers only the current screen's. Every catalog pack's
+  licence checked before it ships.
+- **Recognition:** EDID (maker, name, modes) and the USB touch ID suggest a
+  model; EDID's physical size is not trusted (gexis's disagrees with itself).
+  The user confirms or picks on the phone, which works when the panel shows
+  nothing yet. A **table of screens we support** is seeded from
+  `foonerd/pi_screen_setup` (MIT, credited), **translated to KMS and tried on
+  the hardware** — its `hdmi_timings` are not copied as they are.
+
+**Acceptance (draft, to be settled with the ADR)**
+
+1. **A Screen step in setup** and a **Screen** row in Settings → Display: the
+   detected model suggested, a list to pick from, the choice applied with a
+   restart, and a way back if the screen shows nothing afterwards (the phone
+   still reaches the device).
+2. **The standard family** on 800×480, 1280×800 and 1920×1080: every screen
+   at each, photographed, with no target under the agreed millimetre floor.
+3. **The bar family** on 1280×400 and 1480×320: Now Playing, the transition
+   screen, idle, and setup's network/password/QR, as designed; the
+   visualiser with the bar skins.
+4. **Skins by resolution** in the image or fetched, their licences in Legal
+   and Credits.
+5. **Each supported screen tried on hardware** before it is in the table.
+
+**Decisions owed:**
+- **Browse and Settings on a bar** (George asked what was meant; not yet
+  answered): phone-only on bars, or a one-row Browse on the bar itself.
+- **Settings inventory** (not appended until George confirms): **[N] Screen**
+  (model; sets the family and the skin set) and **[N] Rotation**.
+- **Which hardware** is bought or borrowed to test the bars and the 800×480.
+
 ### Phase 14 — Themes
 
 **Cut out of Phase 10 on 2026-09-25** (George): *"Themes to be cut out and have
