@@ -16,7 +16,7 @@ import aiohttp
 from dbus_next import BusType
 from dbus_next.aio import MessageBus
 
-from gexis_core import alsa, bluetooth_adapter_state, bluetooth_agent, device_name, meters, skins, wifi
+from gexis_core import alsa, bluetooth_adapter_state, bluetooth_agent, device_name, journal, meters, skins, wifi
 from gexis_core.adapters.base import VolumeMechanism
 from gexis_core.adapters.bluetooth import BluetoothAdapter
 from gexis_core.adapters.lms import LmsAdapter
@@ -1388,6 +1388,10 @@ async def main() -> None:
                "headless": lambda value: asyncio.ensure_future(
                    _apply_headless(value)
                ),
+               # ADR-0103: the journal kept on the card, or not.
+               "debug_logs": lambda value: asyncio.ensure_future(
+                   _apply_debug_logs(bool(value))
+               ),
                "show_transition": None, "handoff_duration": None,
                # ADR-0054 §5, amended 2026-09-28: read at each takeover that
                # hands a renderer its level.
@@ -1687,6 +1691,23 @@ async def main() -> None:
         for unit, now in SCREEN_UNITS:
             await set_unit_enabled(unit, wanted, now=now)
 
+    async def _apply_debug_logs(on: bool) -> None:
+        """**ADR-0103.** Keep the journal on the card, or stop and delete it.
+        Off the loop: it restarts `systemd-journald` and may delete a folder."""
+        try:
+            await asyncio.to_thread(journal.apply, on)
+        except Exception:  # noqa: BLE001 - a switch that failed says so in the log
+            logger.exception("journal: could not apply debug_logs=%s", on)
+
+    async def _reconcile_debug_logs() -> None:
+        """At startup the device follows the switch (ADR-0103 §4, as ADR-0077
+        does for the others): a restore brings back the setting, not the file.
+        Only a disagreement is acted on, so a fresh image restarts nothing."""
+        on = settings.value("debug_logs") is True
+        if not journal.matches(on):
+            logger.info("journal: debug_logs is %s and the device disagrees; applying", on)
+            await _apply_debug_logs(on)
+
     async def _reconcile_sources() -> None:
         """**Make the device match the rows at startup** (ADR-0077, as amended
         2026-09-26).
@@ -1749,6 +1770,7 @@ async def main() -> None:
         await bus.wait_for_disconnect()
 
     asyncio.ensure_future(_reconcile_sources())
+    asyncio.ensure_future(_reconcile_debug_logs())
     asyncio.ensure_future(_watch_components())
     asyncio.ensure_future(_bluetooth_setup())
 

@@ -38,12 +38,13 @@ it. The withdrawn plugin's work is kept locally only; the pointer is in
 
 ### Decided, not started
 
-- **Debug logs** (George, 2026-09-28: *"Persistent logs based on debug setting
-  in Settings -> System. Off by default."*). One switch, **Debug logs**. On, the
-  journal is kept on the card across restarts, capped at 100 MB; off, it is kept
-  in memory as today, and the kept logs are deleted. ADR-0103 first, and an
-  ADR-0022 row (George asked for it). The unsurfaced `log_level` row is left as
-  it is unless George wants more detail as well.
+- **Debug logs: built on branch `debug-logs`** (ADR-0103; George: *"Persistent
+  logs based on debug setting in Settings -> System. Off by default."*).
+  Verified on gexis: on keeps the journal on the card and flushes memory into
+  it; the logs **survived a reboot**; off removes the drop-in and the files
+  and leaves systemd's folder. The startup check once took the image's empty
+  `/var/log/journal` for kept logs and restarted journald for nothing; fixed
+  (files, not the folder) before the PR.
 - **Phase 13a, plugins you install and update** (George, 2026-09-28: a phase
   set before themes). Criteria in DEVELOPMENT.md. Its ADR comes first.
 - **Settings as an installed app: not now** (ADR-0102). The HTTPS routes are
@@ -67,6 +68,8 @@ it. The withdrawn plugin's work is kept locally only; the pointer is in
   only pass where pygame has fonts, which is the device). `grim` joins the image
   with the `phone-remote` PR (George: *"Keep grim in the image"*); until that
   image, reinstall it by hand after a flash.
+- **The Restore row reads "4 paired"** (seen 2026-09-28): a list row's count is
+  labelled "paired", Bluetooth's word, for backups too. Cosmetic, not fixed.
 - Everything from before this session that is still open is in the archive's
   2026-09-27 block: the Squeeze Plex Hub route (decision 2), the timeline-poll
   lead, cross-rate gaps, Plex lyrics.
