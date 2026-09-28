@@ -1,6 +1,6 @@
 # ADR-0102 — Settings as an app on the phone, without a URL bar
 
-**Status:** **Tested 2026-09-28: Android offers a bookmark only. The route to HTTPS is a decision owed.** George, 2026-09-28: *"the settings need
+**Status:** **Decided 2026-09-28: keep the bookmark.** George: *"Let's keep the bookmark. It is fine for now. Later we can reconsider if needed."* George, 2026-09-28: *"the settings need
 to become a web app installed by the browser and showing up as an app in the
 phone, without a URL bar when opening."* He agreed to test first, then decide.
 **Date:** 2026-09-28
@@ -69,4 +69,15 @@ predicts: from `http://gexis.local`, Chrome makes a shortcut, not an app.
    seamless for the user, and it is a service we would run for as long as
    players exist, with DNS and certificates at our cost.
 3. **Keep the bookmark.** Nothing changes; the URL bar stays.
+
+## Decided (George, 2026-09-28): route 3, keep the bookmark
+
+*"Let's keep the bookmark. It is fine for now. Later we can reconsider if
+needed."*
+
+- **The manifest and icons stay.** On the phone they make the bookmark's
+  home-screen shortcut the gexis sound mark with the name *gexis*, rather
+  than a page screenshot, and they cost nothing.
+- Routes 1 and 2 are kept above for when this is reconsidered. Route 1 has
+  its two checks still to do.
 
