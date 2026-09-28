@@ -122,6 +122,9 @@ the design against the hardware, and the answers close them.
 2. **QR codes, no captive portal.** The panel shows a QR code that joins the
    setup network, with the password written under it, and a second one that
    opens the setup page, with its address under it.
+   Under the join code the panel says the phone may call the network one with
+   no internet, and to stay connected (George, 2026-09-28, after the first AP
+   trial: Android warned exactly that).
 3. **The phone drives setup, and only the phone.** The panel, when there is
    one, shows helping information (how to join, the address, progress). It does
    not run the steps.
