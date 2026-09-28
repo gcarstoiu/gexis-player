@@ -1,6 +1,6 @@
 # ADR-0102 — Settings as an app on the phone, without a URL bar
 
-**Status:** **Proposed: a test first.** George, 2026-09-28: *"the settings need
+**Status:** **Tested 2026-09-28: Android offers a bookmark only. The route to HTTPS is a decision owed.** George, 2026-09-28: *"the settings need
 to become a web app installed by the browser and showing up as an app in the
 phone, without a URL bar when opening."* He agreed to test first, then decide.
 **Date:** 2026-09-28
@@ -41,3 +41,32 @@ whether it opens without the URL bar.
    it works everywhere, and needs a service run by us.
 
 Nothing is decided here until the test reports.
+
+## Result (George, 2026-09-28, Android)
+
+*"Installing settings doesn't work. Only URL bookmark possible."* The manifest,
+icons and page were served correctly (checked on gexis:
+`application/manifest+json`, `image/png`). This is what the secure-origin rule
+predicts: from `http://gexis.local`, Chrome makes a shortcut, not an app.
+
+## The decision owed, with Claude's reading of each route
+
+1. **A certificate authority of the device's own**, installed once on each
+   phone.
+   - The device makes a CA, restricted by *name constraints* to its own names
+     (`gexis.local`, its address), and a certificate signed by it. Settings
+     offers the CA to download.
+   - The restriction matters: without it, a CA on the phone could vouch for
+     any site, and its key sits on the device.
+   - It needs no service of ours.
+   - It costs the user one fiddly step per phone. On Android that is Settings
+     → Security → Install a certificate, which shows a "network may be
+     monitored" warning.
+   - **Two things to verify before committing to it:** that Chrome installs a
+     web app from an origin trusted only by a user-installed CA, and that it
+     honours the name constraints.
+2. **A public name with a real certificate**, as `plex.direct` does. It is
+   seamless for the user, and it is a service we would run for as long as
+   players exist, with DNS and certificates at our cost.
+3. **Keep the bookmark.** Nothing changes; the URL bar stays.
+

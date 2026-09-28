@@ -69,3 +69,15 @@ bare bar pinned to the bottom, and a strip in the Settings header.
   and a POST, as the panel's touch report already does (ADR-0036).
 - The panel has to be running for the idle toggle to mean anything. With
   the kiosk down, the request is kept and applied when it connects.
+
+## Verified (2026-09-28)
+
+- **On the panel, through the same calls the phone makes** (Claude):
+  - idle on, then off;
+  - visualiser on, then off;
+  - one screen at a time, both ways (idle then visualiser; visualiser then
+    idle);
+  - each change reported back in `panel`, which is what the toggles draw.
+- **On George's phone:** *"Phone mini player works as expected."*
+- **Not tried:** an idle screen asked for while music plays.
+
