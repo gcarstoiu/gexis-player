@@ -128,14 +128,17 @@ fetched on the device from its author's release, after a notice; public inert
       word.
   - **Released:** gexis-qobuz v0.2.0 and gexis-plexamp v0.3.0, pinned in the
     stages.
-  - **Remove: decided (C) and built** (ADR-0100 amended; commit 535ade7).
-    Off stops the software; Remove, inside the row while the plugin is off,
-    deletes the download and keeps settings and sign-in. The Legal page says
-    so for Plexamp and Qobuz Connect. **Not yet tried on gexis: George was
-    listening.** Try it with Qobuz: switch off, Remove, switch on (it
-    downloads again).
-  - **Owed before Phase 12/12b close:** that test, and George's approval of
-    the Legal wording.
+  - **Remove: decided (C), built, and tried on gexis.** Switching off made it
+    appear; the sheet asked; the receiver, its stamp and its status went. On
+    switch-on, the notice came first, then the download.
+  - **Then the download failed with 404.** Pibuz's author publishes source
+    only since 2026-09-27 23:08 (Finding 097). **Decision owed to George:** we
+    build and publish it (A), each player builds it (B), or ask the author
+    first (C, recommended). Until then, no Qobuz install can succeed. gexis's
+    own copy went with the Remove test; a dev build of 2.5.1 from its tag is
+    being installed by hand (George allowed it).
+  - **Legal wording approved** (George, 2026-09-28), except the Qobuz
+    paragraph, which waits on that decision.
   - Image built from 7424d8d (before Remove): `image/deploy/2026-09-28-gexis-player-v0.2.1-710-g7424d8d.img`. `verify-image.sh` passed apart from the core differing from the working tree, which by then held Remove. Rebuild after the Remove test.
   - **Next branch `phone-remote`** (pushed, from 535ade7): ADR-0101's phone mini player, and ADR-0102's web-app test. Not deployed.
 - **`README.md` published on `phase-12`** (d219e55; the branch's first push),
