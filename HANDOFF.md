@@ -110,6 +110,20 @@ fetched on the device from its author's release, after a notice; public inert
       measured before the DAC). Plexamp has no full-scale mode. **George kept it
       as it is (C)**: one shared number between the Plexamp app and the panel.
     - No image built from `phase-12` yet.
+- **`README.md` published on `phase-12`** (d219e55; the branch's first push),
+  approved by George. It has the gexis sound mark at the top
+  (`docs/assets/gexis-sound.svg`, made by `design/brand/scripts/logo_svg.py`),
+  on a dark ground. George is checking the mark on GitHub. Screenshots and a demo
+  are to come from him.
+- **Decision owed: how plugins update.** Everything is pinned in the image today:
+  Beszel, both adapters, and the Plexamp/Pibuz download pins. So a new upstream
+  release reaches a player only with a new image. The `updates` setting is
+  unsurfaced and unwired. Options given to George:
+  - A: images only.
+  - B (recommended): a catalogue of vetted pins we publish, with "update
+    available" in the plugin row using the download UI, keeping the previous
+    version for rollback.
+  - C: follow upstream latest (rejected on the Pibuz re-publish).
 - **The Qobuz spike stopped after part 1.** Pibuz 2.5.0 was verified, ran, and
   opened our `output` as soon as it was configured. The auto-mode classifier then
   blocked further downloading and running of it. `/tmp/pibuz-spike` may still be
