@@ -5,8 +5,8 @@
   panel - its visualiser and its idle screen - and say what it shows.
 
   George, 2026-09-28: "Option C - mini player. Only for phone." The volume
-  is the panel's own slider (POST /volume), which is what Qobuz Connect and
-  Plexamp need now that their apps keep a volume of their own.
+  is the panel's own slider (POST /volume), which is what Plexamp needs now
+  that its app keeps a volume of its own.
 -->
 <script>
   import { active, metadata, volume, fixedOutput, meters, panel, setVolume, showPeppy, hidePeppy, requestIdle } from '../lib/state.js';

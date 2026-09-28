@@ -15,7 +15,7 @@ has **not** verified on George's phone:
   ordinary tab, URL bar and all.
 - **Safari on iOS** is more lenient about home-screen apps.
 
-George's phone is Android (a Pixel, from the Qobuz pairing logs).
+George's phone is Android (a Pixel, from its logs on gexis).
 
 ## The test (built on branch `phone-remote`)
 

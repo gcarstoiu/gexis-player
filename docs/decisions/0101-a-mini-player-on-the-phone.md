@@ -4,8 +4,8 @@
 phone. Idle screen should toggle the idle screen on or off. Timers would
 restart from that point. [Same] with the visualization."*
 **Date:** 2026-09-28
-**Raised by:** George, once Qobuz Connect and then Plexamp kept their own volume
-(ADR-0098, Finding 095 revised): *"the user might need a basic control from
+**Raised by:** George, once Plexamp kept its own volume (Finding 095
+revised): *"the user might need a basic control from
 inside the settings page - i.e. volume bar, toggle visualization, toggle idle
 screen. These would be always visible when navigating the settings."*
 **Amends:** [ADR-0032](0032-one-page-two-surfaces.md) (a remote browser
@@ -15,7 +15,7 @@ also "asked for").
 
 ## Context
 
-With Qobuz and Plexamp, the app's volume slider no longer moves the DAC. On a
+With Plexamp, the app's volume slider no longer moves the DAC. On a
 phone, the only way to reach the DAC's level was the panel. The visualiser can
 already be shown from outside (`POST /peppy/show|hide`). The idle screen cannot:
 the panel decides it on its own timer, and nothing outside the panel knows
@@ -63,7 +63,7 @@ bare bar pinned to the bottom, and a strip in the Settings header.
 ## Consequences
 
 - The phone can put music on and turn it down without going to the panel,
-  which is what Qobuz and Plexamp need.
+  which is what Plexamp needs.
 - One new command channel from the core to the panel (the idle request) and
   one report back (the idle state). Both ride the existing state WebSocket
   and a POST, as the panel's touch report already does (ADR-0036).
