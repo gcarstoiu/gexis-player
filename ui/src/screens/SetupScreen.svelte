@@ -65,13 +65,25 @@
   const joinQr = $derived(joinText ? qrPath(joinText) : null);
   const pageQr = $derived(setup?.address ? qrPath(setup.address) : null);
 
+  //: **Three heroes** (George, 2026-09-28: "Larger text, more visual,
+  //: better design", and "when an error display a large icon"). What the
+  //: glass says first is why it is showing this at all.
+  const kind = $derived(
+    setup?.network === 'joining' ? 'joining' : setup?.failed ? 'failed' : setup?.needed ? 'new' : 'lost'
+  );
   const heading = $derived(
-    setup?.needed ? 'Set up' : 'gexis cannot reach its Wi-Fi'
+    kind === 'joining'
+      ? `Joining ${setup.target ?? 'your Wi-Fi'}`
+      : kind === 'failed' ? `Could not join ${setup.failed}` : kind === 'new' ? 'Set up gexis' : 'gexis can’t reach its Wi-Fi'
   );
   const lead = $derived(
-    setup?.needed
-      ? 'Setup runs on your phone. This screen only shows it the way in.'
-      : 'Join its setup network from your phone to choose another. It also looks for yours every five minutes.'
+    kind === 'joining'
+      ? `The setup network is closing. Put your phone back on ${setup.target ?? 'your Wi-Fi'} too.`
+      : kind === 'failed'
+      ? `${setup.reason ?? ''} Scan the codes to try again — everything else you entered is kept.`
+      : kind === 'new'
+        ? 'Setup runs on your phone. Scan the two codes below to begin.'
+        : 'Join its setup network from your phone to choose another. It also looks for yours every five minutes.'
   );
 </script>
 
@@ -82,13 +94,39 @@
     {#if open}<span class="over">Over {setup.ssid}</span>{/if}
   </header>
 
-  <h1>{heading}{#if setup?.needed}&nbsp;<span class="word">gexis</span>{/if}</h1>
-  <p class="lead">{lead}</p>
-  {#if open && setup?.reason}
-    <!-- ADR-0031 amendment 5: a join that failed brought setup back, and
-         says why here as well as on the phone. -->
-    <p class="reason">{setup.reason}</p>
-  {/if}
+  <div class="hero hero--{kind}">
+    <div class="icon" aria-hidden="true">
+      {#if kind === 'new'}
+        <img src={mark} alt="" width="84" height="84" />
+      {:else if kind === 'joining'}
+        <svg viewBox="0 0 64 64" width="76" height="76" class="pulse">
+          <path d="M6 25 A37 37 0 0 1 58 25" fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round" />
+          <path d="M15 34 A24 24 0 0 1 49 34" fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round" />
+          <path d="M24 43 A12 12 0 0 1 40 43" fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round" />
+          <circle cx="32" cy="52" r="4" fill="currentColor" />
+        </svg>
+      {:else if kind === 'failed'}
+        <!-- ADR-0031 amendment 5: a join that failed brought setup back. -->
+        <svg viewBox="0 0 64 64" width="72" height="72">
+          <path d="M32 7 L60 56 H4 Z" fill="none" stroke="currentColor" stroke-width="5" stroke-linejoin="round" />
+          <path d="M32 24 V39" stroke="currentColor" stroke-width="5.5" stroke-linecap="round" />
+          <circle cx="32" cy="47.5" r="3.4" fill="currentColor" />
+        </svg>
+      {:else}
+        <svg viewBox="0 0 64 64" width="76" height="76">
+          <path d="M6 25 A37 37 0 0 1 58 25" fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round" />
+          <path d="M15 34 A24 24 0 0 1 49 34" fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round" />
+          <path d="M24 43 A12 12 0 0 1 40 43" fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round" />
+          <circle cx="32" cy="52" r="4" fill="currentColor" />
+          <path d="M10 8 L54 58" stroke="currentColor" stroke-width="5" stroke-linecap="round" />
+        </svg>
+      {/if}
+    </div>
+    <div class="words">
+      <h1>{heading}</h1>
+      <p class="lead">{lead}</p>
+    </div>
+  </div>
 
   {#if open}
     <div class="cards">
@@ -157,7 +195,7 @@
       </section>
     </div>
   {:else if setup?.network === 'joining'}
-    <p class="state">Joining {setup.target ?? 'your Wi-Fi'}…</p>
+    <!-- The hero says it all. -->
   {:else if setup?.network === 'failed'}
     <p class="state state--warn">The setup network did not start{setup.reason ? `: ${setup.reason}` : '.'}</p>
   {:else}
@@ -172,7 +210,7 @@
     /* Above the handoff (30), below a pairing request (32), which is the one
        thing that still has to be answered on this glass. */
     z-index: 31;
-    padding: 44px 56px;
+    padding: 36px 56px 40px;
     display: flex;
     flex-direction: column;
     color: var(--ink);
@@ -207,26 +245,59 @@
     flex: 1;
   }
 
+  .hero {
+    margin-top: 26px;
+    display: flex;
+    align-items: center;
+    gap: 30px;
+    --tone: var(--accent-lms);
+  }
+  .hero--lost,
+  .hero--failed {
+    --tone: var(--accent-warn);
+  }
+  .icon {
+    width: 124px;
+    height: 124px;
+    flex-shrink: 0;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--tone);
+    background: color-mix(in srgb, var(--tone) 14%, transparent);
+    border: 2px solid color-mix(in srgb, var(--tone) 45%, transparent);
+  }
+  .pulse {
+    animation: pulse 1.6s ease-in-out infinite;
+  }
+  @keyframes pulse {
+    50% { opacity: 0.45; }
+  }
+  .words {
+    min-width: 0;
+  }
   h1 {
-    margin: 30px 0 0;
-    font-size: 40px;
+    margin: 0;
+    font-size: var(--t-title);
     font-weight: 800;
     letter-spacing: -0.02em;
-    line-height: 1.1;
-  }
-  .word {
-    font-weight: 600;
+    line-height: 1.05;
+    overflow-wrap: anywhere;
   }
   .lead {
     margin: 12px 0 0;
-    font-size: var(--t-body);
-    line-height: 1.5;
-    color: var(--ink-muted);
-    max-width: 60ch;
+    font-size: 23px;
+    line-height: 1.4;
+    color: var(--ink-body);
+    max-width: 58ch;
+  }
+  .hero--failed .lead {
+    color: var(--ink);
   }
 
   .cards {
-    margin-top: 30px;
+    margin-top: 28px;
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 22px;
@@ -267,8 +338,8 @@
     align-items: center;
   }
   .qr {
-    width: 236px;
-    height: 236px;
+    width: 220px;
+    height: 220px;
     flex-shrink: 0;
     border-radius: var(--r-md);
   }
@@ -301,13 +372,6 @@
     font-size: var(--t-body-sm);
     line-height: 1.45;
     color: var(--ink-quiet);
-  }
-
-  .reason {
-    margin: 14px 0 0;
-    font-size: var(--t-body);
-    font-weight: 600;
-    color: var(--accent-warn);
   }
 
   .state {
