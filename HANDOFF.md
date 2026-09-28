@@ -4,28 +4,39 @@ Last updated: 2026-09-28 (twenty-ninth session, on R2D2).
 
 ## Start here
 
-**Phase 13 (first-boot setup, ADR-0031) is next, on branch `phase-13`.**
-George's answers are in ADR-0031's 2026-09-28 amendment and DEVELOPMENT.md
-criteria 8-9; the Setup design is `design/source/Setup.dc.html` and
-`design/screens.md` §13. **Finding 099** measured the setup network on gexis's
-one radio before the build: up in ~1 s on 2.4 GHz channel 6, a phone joins and
-reaches the page on `10.42.0.1:8090`, a scan while hosting keeps the client,
-home Wi-Fi back in ~6 s. Build from it: filter `gexis-setup` out of the scan,
-and make the page survive its WebSocket dropping (it did once, in the first
-minute, on George's Pixel).
+**Phase 13 (first-boot setup, ADR-0031, ADR-0104) is built through step 3 on
+`phase-13`, pushed, and every step was run on gexis with George.** Step 4 is
+next: an image from `phase-13` on a card flashed with nothing pre-seeded (the
+new-device path: setup network after 15 s, the "Set up gexis" hero, the name
+reaching all four places, the Wi-Fi country on a card that never had one).
 
-**gexis has no Ethernet.** Anything that raises the setup network runs as a
-timed script on the device (`image/tools/ap-trial.sh`, installed by hand at
-`/usr/local/lib/gexis/`, not in the image), with a transient timer that gives
-the home Wi-Fi back regardless. George joins from his phone; Claude reads
-`/var/lib/gexis-trials/` afterwards.
+| Step | Commits | On gexis |
+|---|---|---|
+| 1. The core decides on setup, holds the setup network, retries every 5 min | 931e4d8 | open in 3.9 s; a phone on it left alone; home Wi-Fi back 3.6 s after the scan |
+| 2. The panel shows the way in: network, password, two QR codes | 44dd4de | George joined and opened the page from both codes |
+| 3. The phone's setup page; the core keeps the answers and applies them | cfa30d0 | wrong password refused in 14 s, setup back 0.7 s later with the reason, page resumed on Network; right password joined in 10 s |
+| After George's review | b0e403c, 8de9e51, 4280626, 96337ff, da803f6 | Continue on Network goes to Review after a failed join; `clock_format` setting (Settings and setup); compact Display tiles; the panel's hero with a large icon (photographed: open, joining, failed); the reason from NM's `Error:` line, not its hint |
+
+**Testing on gexis (no Ethernet):** a file `/run/gexis-setup-trial` with
+`retry=<s>`, then restart `gexis-core`: the core opens the setup network over
+the working Wi-Fi, and its own retry gives the Wi-Fi back once no phone is on.
+Arm a transient guard timer as well (`image/tools/ap-trial.sh` shows the
+shape). Screenshots during a trial: `systemd-run --uid=pi --on-active=N` with
+`XDG_RUNTIME_DIR=/run/user/1000 WAYLAND_DISPLAY=wayland-0 grim`. **A trial that
+finishes setup leaves a profile named after the network and `setup-done`;
+remove both** (done after each run today).
+
+**Not tested yet:** the new-device path and its hero; a rename (restarts the
+device); changed time zone, output or Headless through setup; hidden and open
+networks; Ethernet; the page on an iPhone. The phone page was seen by George
+only, not photographed.
 
 ### Branches and PRs
 
 | Branch | State | What is on it |
 |---|---|---|
 | `main` | 66d931e | Everything to PR #36: Phase 12/12b, the phone mini player and grim (PR #35), Debug logs (PR #36, ADR-0103) |
-| `phase-13` | ahead of `main`, docs and tools only | ADR-0031 amended (George's answers, the no-internet line on the panel); `image/tools/ap-trial.sh`; Finding 099 |
+| `phase-13` | ahead of `main`, pushed | ADR-0031 amended; ADR-0104; Finding 099; `ap-trial.sh`; Phase 13 steps 1-3 and George's review (above); ADR-0022 rows: Run setup again [N], thresholds [H], Wi-Fi country [H], clock format [N] |
 
 ### gexis
 
@@ -34,8 +45,12 @@ the home Wi-Fi back regardless. George joins from his phone; Claude reads
   George's backup restored. **Restore, then download worked**: Plexamp was
   fetched at boot in 31 s and runs. Not yet checked: that it came back signed
   in, and Remove on Plexamp.
-- `ap-trial.sh` installed by hand. `python3-pytest` is not reinstalled yet
-  (Peppy's tests need it on the device).
+- Runs `phase-13`'s core and UI **installed by hand** (not in an image), and
+  `ap-trial.sh`. On its Wi-Fi it behaves as before: setup not needed. Its
+  setup password is `naccw4n2` (in `/var/lib/gexis/setup-password`).
+  `python3-pytest` is not reinstalled yet.
+- The core's tests run on R2D2 from a venv: `python3 -m venv <dir>` and
+  `pip install -e 'core[test]'` (none existed this session).
 - It holds a saved connection "Pixel 10 Pro Network" from the restore - one of
   the configured networks ADR-0031's 5-minute retry would look for.
 
