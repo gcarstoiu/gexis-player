@@ -191,7 +191,7 @@ async def test_activating_an_unknown_renderer_is_a_404():
 
     server = StateServer(store, activate=activate)
     async with TestClient(TestServer(server.make_app())) as client:
-        resp = await client.post("/renderer/qobuz/activate")
+        resp = await client.post("/renderer/example/activate")
 
     assert resp.status == 404
 

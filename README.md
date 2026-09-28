@@ -8,8 +8,8 @@
 plays whatever you send it — from your phone, your music server or the streaming
 apps you already use — and hands the DAC cleanly from one to the next.**
 
-🎧 Bit-perfect up to 24-bit / 192 kHz · 🔀 Spotify, Lyrion, Plexamp, Bluetooth and
-Qobuz Connect on one device · 🖥️ A 1280×800 touchscreen that shows what's playing,
+🎧 Bit-perfect up to 24-bit / 192 kHz · 🔀 Spotify, Lyrion, Plexamp and
+Bluetooth on one device · 🖥️ A 1280×800 touchscreen that shows what's playing,
 whoever is playing it · 📈 VU meters, spectrum and turning turntables when you just
 want to watch the music
 
@@ -27,9 +27,8 @@ You put a Raspberry Pi 4 with a HiFiBerry DAC and a touchscreen next to your
 amplifier, flash the Gexis image, and it becomes a streamer with a face:
 
 - **Cast to it from the apps you already have.** It appears as a speaker in the
-  Spotify app, as a player in Lyrion (Logitech Media Server) and Plexamp, as a
-  Bluetooth speaker on your phone, and, if you choose to install it, as a Qobuz
-  Connect device.
+  Spotify app, as a player in Lyrion (Logitech Media Server) and Plexamp, and as a
+  Bluetooth speaker on your phone.
 - **Switch sources without thinking about it.** Start playing from another app
   and it takes over: the previous source is stopped politely, a short transition
   screen shows who is taking over, and the new one plays. You never have to
@@ -50,15 +49,15 @@ amplifier, flash the Gexis image, and it becomes a streamer with a face:
 
 | | |
 |---|---|
-| 🔊 **Sources** | Spotify Connect · Lyrion / Logitech Media Server (squeezelite) · Bluetooth (A2DP) · Plexamp · Qobuz Connect (optional, installed by you) |
-| 🎚️ **Sound** | Bit-perfect to the DAC up to 24/192. One volume, applied in the DAC's own hardware attenuator. A maximum-volume limit that holds for every source |
+| 🔊 **Sources** | Spotify Connect · Lyrion / Logitech Media Server (squeezelite) · Bluetooth (A2DP) · Plexamp |
+| 🎚️ **Sound** | Bit-perfect to the DAC up to 24/192. One volume, applied in the DAC's own hardware attenuator. A maximum-volume limit that holds for every source, and a starting volume Spotify never exceeds when it takes over |
 | 🔀 **Handover** | One source at a time, never mixed. Takeover in any direction. The previous source is released before the next one plays |
 | 🖼️ **Now playing** | Artwork, track info, synced or plain lyrics, artist info and photos, queue for Lyrion |
 | 📚 **Library** | Browse Lyrion by album, artist, playlist and radio, from the touchscreen |
 | 📈 **Visualiser** | 189 skins: VU meters, spectrum, and animated turntables and tape decks with progress, time, volume and play-state shown in each skin's own style. Skins can rotate per track |
 | 🌤️ **Idle screen** | Clock, weather and wallpapers when nothing is playing |
 | 📱 **Settings anywhere** | The full settings screen on the panel and on any phone or computer on your network |
-| 🔌 **Plugins** | Extra sources and services as plugins, switched on or off in Settings, with progress and retry shown in the switch itself when one downloads software. Today: Plexamp and Qobuz Connect (sources), Beszel monitoring (system) |
+| 🔌 **Plugins** | Extra sources and services as plugins, switched on or off in Settings, with progress and retry shown in the switch itself when one downloads software. Today: Plexamp (source), Beszel monitoring (system). Remove deletes what a plugin downloaded |
 | 💾 **Backup & restore** | Your settings, pairings and source logins in one archive on a network share, restored onto a freshly flashed card |
 | 🙈 **Headless** | Run it without the screen; everything else keeps working |
 
@@ -94,13 +93,9 @@ We'd rather you knew these up front:
   is the remote.
 - **The first setup needs a network.** Setting up Wi-Fi on first boot, without
   one, is on the roadmap.
-- **Plexamp's volume is its own.** Plexamp scales the sound itself as well as
-  the DAC, so Plexamp at a given number is a little quieter than other sources
-  at the same number. We chose this so the Plexamp app and the panel always
-  agree on one number.
-- **Qobuz Connect uses an unofficial receiver.** It has played up to 24/192 in
-  our tests, but it is not certified by Qobuz. It may stop working, and its
-  volume is separate from the panel's for now. See the legal section.
+- **Plexamp's volume is its own.** Plexamp scales the sound inside its own
+  engine, so the Plexamp app's slider sets Plexamp's level and the panel's sets
+  the DAC's. The two are separate numbers.
 - **Not a store product.** It's a hobby project, built carefully with the help
   of AI and tested on real hardware, but without a support team behind it.
 
@@ -108,12 +103,12 @@ We'd rather you knew these up front:
 
 Rough, and subject to change:
 
-- 🟢 **Now:** Qobuz Connect as an optional, user-installed source. Legal and
-  Credits pages in Settings. Plugins that download software, with progress and
-  retry. Animated skins with scrolling tickers, smooth rotation, and progress,
+- 🟢 **Now:** Legal and Credits pages in Settings. Plugins that download
+  software, with progress, retry and remove. A mini player on the phone. Animated skins with scrolling tickers, smooth rotation, and progress,
   volume and play-state in each skin's own style.
 - 🔜 **Next:** a first public release image. First boot without a network (the
-  player offers its own Wi-Fi setup). Keeping plugins up to date.
+  player offers its own Wi-Fi setup). Installing your own plugins from Settings.
+  Keeping plugins up to date.
 - 🎨 **Later:** themes. Artist and album information from your own Plex server.
 - 💭 **Maybe:** a visual equaliser, room correction with a phone as the
   microphone, the DAC's own filter and polarity options.
@@ -134,21 +129,17 @@ Legal and Credits.
 from its maker only when you switch it on. It is used under its maker's terms:
 
 - **Plexamp** is Plex, Inc.'s proprietary software.
-- **Pibuz**, the receiver behind Qobuz Connect, is an independent open-source
-  project. It is not made, affiliated with, endorsed or certified by Qobuz, and
-  using it may not be permitted by Qobuz's terms of service. Switching it on is
-  your choice, at your own risk and on your own account.
 
 Spotify Connect is provided through go-librespot, an independent open-source
 client that ships in the image. It is not made or endorsed by Spotify.
 
 **Gexis Player is not affiliated with, endorsed or sponsored by** Spotify,
-Qobuz, Plex, Lyrion, the Bluetooth SIG, Raspberry Pi or HiFiBerry. Their names
+Plex, Lyrion, the Bluetooth SIG, Raspberry Pi or HiFiBerry. Their names
 and logos are trademarks of their owners and are used only to name what works
 with what.
 
 ## 🙏 Credits
 
 Gexis Player stands on the shoulders of PeppyMeter and its skin artists,
-squeezelite, go-librespot, bluez-alsa, Pibuz, Raspberry Pi OS and many more,
+squeezelite, go-librespot, bluez-alsa, Raspberry Pi OS and many more,
 all listed in [THIRD-PARTY.md](THIRD-PARTY.md). Thank you.

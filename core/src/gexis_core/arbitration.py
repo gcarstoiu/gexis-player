@@ -149,10 +149,10 @@ class Supervisor:
         self._adapters = adapters
         #: **Every renderer's unit, kept after it is forgotten** (Finding 096).
         #: A plugin released by SIGKILL disconnects while the ladder is still
-        #: polling whether its unit let go (gexis-qobuz is `BindsTo=pibuz`).
+        #: polling whether its unit let go (a plugin bound to the unit it drives).
         #: Looking the unit up through `_adapters` then raised KeyError and
         #: aborted the acquisition before its volume step - which let Spotify
-        #: start at the level Qobuz had left, and a phone's next press send it
+        #: start at the level the previous renderer had left, and a phone's next press send it
         #: to full scale (George, 2026-09-28).
         self._units = {rid: getattr(a, "unit_name", None) for rid, a in adapters.items()}
         self._device_busy = device_busy
@@ -323,7 +323,7 @@ class Supervisor:
             # step is a safety step - Spotify's starting cap (ADR-0054 §5 as
             # amended) - and `device_freed` is the incoming renderer's retry.
             # An acquisition that died in the ladder once left Spotify at the
-            # level Qobuz had left, and a phone's next press took the DAC to
+            # level the previous renderer had left, and a phone's next press took the DAC to
             # full scale (Finding 096).
             try:
                 await self._release_with_ladder(outgoing)
@@ -352,9 +352,9 @@ class Supervisor:
         # ordering.
         # **The outgoing renderer may be gone by now** (Finding 096): a plugin
         # released by SIGKILL takes its adapter's connection with it
-        # (gexis-qobuz is `BindsTo=pibuz`), and the core forgets it before
+        # (a plugin bound to the unit it drives), and the core forgets it before
         # this line. It raised KeyError here, after Spotify was already
-        # playing, on every takeover from Qobuz.
+        # playing, on every takeover from such a plugin.
         outgoing_adapter = self._adapters.get(outgoing) if outgoing is not None else None
         if outgoing_adapter is not None:
             await _bounded(f"{outgoing}'s restart_after_release",

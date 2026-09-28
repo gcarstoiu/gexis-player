@@ -26,8 +26,7 @@ expensive.
 Deriving the contract from three working implementations is the right order. The
 error is skipping the derivation, not doing it late.
 
-The Qobuz Connect plugin is planned for a separate private repository
-(ADR-0016), which makes the boundary physical rather than a convention inside
+A plugin in a separate repository (ADR-0016) makes the boundary physical rather than a convention inside
 one codebase. Any implicit coupling surfaces immediately.
 
 ## Contract fields

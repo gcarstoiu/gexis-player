@@ -266,9 +266,9 @@ async def test_a_level_on_another_scale_is_answered_on_ours():
 
 @pytest.mark.asyncio
 async def test_a_plugin_that_declares_volume_handed_is_handed_its_level():
-    """ADR-0054 §5, amended 2026-09-28: Qobuz Connect's level on a cast is the
-    app's leftover (1.0 on George's), so the core hands it one, capped by
-    `start_max`, as it does Spotify - rather than asking."""
+    """ADR-0054 §5, amended 2026-09-28: a plugin whose level on a cast is only
+    its app's leftover is handed one by the core, capped by `start_max`, as
+    Spotify is - rather than asked."""
     handed = PluginAdapter(FakeSession({"capabilities": {"volume_managed": True, "volume_handed": True}}))
     assert handed.reports_real_volume is False
     assert await handed.get_volume_steps() == PluginAdapter.VOLUME_STEPS

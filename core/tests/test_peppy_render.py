@@ -367,7 +367,7 @@ def test_a_plugin_with_no_mark_is_quiet_not_broken(layer, tmp_path, monkeypatch)
     import gexis_peppy_render as module
 
     monkeypatch.setattr(module, "PLUGIN_MARKS", tmp_path / "nothing-here")
-    assert layer._badge("qobuz", (50, 50)) is None
+    assert layer._badge("example", (50, 50)) is None
 
 
 def test_the_three_built_ins_still_use_the_designs_own_artwork(layer):

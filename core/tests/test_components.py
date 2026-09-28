@@ -102,11 +102,11 @@ def test_plugins_are_grouped_by_the_area_they_work_in():
 def test_a_plugins_notice_is_asked_before_its_switch_turns_on():
     """ADR-0098: the unofficial-software notice, as the switch's warning."""
     class Q:
-        id, name, kind, accent, settings, enabled_row, unit = "qobuz", "Qobuz Connect", "renderer", "#fff", [], None, "q"
+        id, name, kind, accent, settings, enabled_row, unit = "example", "Example", "renderer", "#fff", [], None, "q"
         notice = "Not part of the player."
 
     rows = next(g for g in Settings.with_plugins(load_registry(), [Q()]) if g["id"] == "plugins")["rows"]
-    switch = next(r for r in rows if r.get("key") == "qobuz.enabled")
+    switch = next(r for r in rows if r.get("key") == "example.enabled")
     assert switch["warn"] == "Not part of the player."
 
 

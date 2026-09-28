@@ -6,7 +6,9 @@ done its job. `HANDOFF.md` is what the next session reads; this is what it
 reads only when it needs to know *why* something ended up the way it did.
 
 **Nothing here was edited.** The blocks below are verbatim, in their original
-order, so a `git log -p` trail still matches. What was removed from
+order, so a `git log -p` trail still matches. *One exception, 2026-09-28: at
+George's request, mentions of a plugin the project withdrew were taken out of
+a few lines. No link was touched.* What was removed from
 `HANDOFF.md` is exactly what appears here — the split was line-counted, not
 eyeballed.
 
@@ -1983,8 +1985,7 @@ renderer-name branching already in the codebase (`renderer_volume.py`'s
 `__main__.py`'s by-name construction of two `DummyMixerBridge` instances
 and one `VolumeBridge`). **George's call: remove that hardcoded
 branching, keep the built-ins in-process** — the separate-process
-question stays open for whenever Qobuz Connect (or another real plugin)
-needs it. Fixed by extending `Capabilities` with `volume_managed`,
+question stays open for whenever a real plugin needs it. Fixed by extending `Capabilities` with `volume_managed`,
 `volume_mechanism` (`DUMMY_MIXER`/`SOFTWARE_API`), and
 `dummy_mixer_card`, so `__main__.py`'s wiring derives everything from
 each adapter's own declaration. Verified on `gexis`: clean restart,
@@ -2980,7 +2981,7 @@ Bluetooth get shuffle and repeat.
 the measurements.
 
 **Phases renumbered 2026-09-16:** 9 is settings wiring and UI polish (new);
-10 is the plugin contract; 11 Plexamp and 12 Qobuz Connect (new); 13 is first
+10 is the plugin contract; 11 Plexamp and 12 (new); 13 is first
 boot.
 
 **Issues to look at later (Phase 6 hardware rounds, 2026-09-16):**
@@ -3104,7 +3105,7 @@ Bluetooth get shuffle and repeat.
 the measurements.
 
 **Phases renumbered 2026-09-16:** 9 is settings wiring and UI polish (new);
-10 is the plugin contract; 11 Plexamp and 12 Qobuz Connect (new); 13 is first
+10 is the plugin contract; 11 Plexamp and 12 (new); 13 is first
 boot.
 
 **Issues to look at later (Phase 6 hardware rounds, 2026-09-16):**
@@ -4305,7 +4306,7 @@ afterwards: expected, leave it.
 deleted once George is happy.
 
 **Phases renumbered 2026-09-16:** 9 is settings wiring and UI polish (new);
-10 is the plugin contract; 11 Plexamp and 12 Qobuz Connect (new); 13 is first
+10 is the plugin contract; 11 Plexamp and 12 (new); 13 is first
 boot.
 
 **Issues to look at later (Phase 6 hardware rounds, 2026-09-16):**
@@ -4673,9 +4674,7 @@ the part worth keeping.
 
 **Planned 2026-09-25 and reshaped by three of George's decisions**: themes
 leave for Phase 14, the three default renderers **stay in the core process**,
-and **Plexamp replaces Qobuz** as the contract's fourth-renderer proof, because
-Qobuz needs a partnership and a private repository and that put the only proof
-two phases out.
+and **Plexamp is** the contract's fourth-renderer proof.
 
 Keeping the defaults in place makes ADR-0013's claim — *"implemented against
 the public plugin contract, not special-cased"* — untrue as written, so
@@ -5159,3 +5158,84 @@ started**, and ADR-0091 does not pre-empt it.
   the same branch. Worth avoiding next time by branching again after a merge
   rather than pushing onto a branch whose PR has already gone in.
 
+## 2026-09-27 blocks, moved 2026-09-28
+
+The fixes branch that became PR #31, and the two Peppy branches (PRs #32 and
+#33), all merged on 2026-09-27.
+
+**Before this branch ships:**
+
+1. ~~`gexis-plexamp` has two unreleased commits~~ **Released as v0.2.2**
+   (2026-09-27): `9e8111d` (the ladder does not wait for Plexamp) and `0851615`
+   (Plex's chevron). Pinned in `image/stage-gexis/08-plexamp/01-run.sh` at
+   `83aed15c…`, **checked against the published asset** through both `gh` and the
+   public URL the build fetches; `git archive` at the tag reproduces it.
+2. **`gexis` runs all of this by hand, not from an image.** Core modules, Peppy's
+   renderer and driver, the UI bundle, `plexamp.service` and its helper,
+   `squeezelite.service` and `output.conf` were installed over the
+   `v0.2.1-608-gd29ee48` image. **Reflashing that image undoes every fix below.**
+   The next image has to be built from this branch.
+
+### What changed, one line each (ADR or commit)
+
+| | |
+|---|---|
+| backup | holds Plexamp's claim; go-librespot's **`state.json` only** - `config.yml` is the image's, and older archives still restore (it is skipped, not refused). Measured against the real 18:10 archive |
+| startup | every unit is brought in line with its switch, **both ways, plugins included** (ADR-0077 amended) - a restore used to leave Plexamp and Beszel switched on and not running |
+| Plexamp → Spotify | stuck progress bar: `polite_grace` 0, `release` answered at once, `device_held_by` reads `/proc` instead of `fuser` (2 ms vs 98) - ADR-0091 amended. **1 in 12 still loses** on the probe; accepted under ADR-0095 C |
+| Plexamp restart | **starts idle, keeps its volume**: `plexamp-start-idle` rewrites `@Plexamp:state` before every start. Without it a killed Plexamp came back holding the DAC unasked (Finding 013 §1's precondition) or at volume 100 |
+| volume | Spotify is **told** the level playing on takeover (go-librespot's answer is a constant 100 under `external_volume`); a plugin answers with its last reported level - ADR-0054 §5 amended |
+| Spotify release | **pause, 0.25 s, stop** - a bare stop left Spotify's servers counting, so a transfer back jumped ahead or skipped the track |
+| LMS | squeezelite plays through **`output_wait`** - an open that waits for a busy DAC: audio 5.5 → 2.3 s after *play* on a powered-off player (Finding 091, ADR-0095 as amended). **go-librespot stays on `output`** - two waiters deadlocked the core for 68 s. Every renderer call under the arbitration lock is bounded to 2 s |
+| ADR-0093 | **immovable: squeezelite and go-librespot are never built or patched by us** |
+| transition screen | shown on **every** takeover for `handoff_duration` (default **1.5 s**; the threshold row and ADR-0010's exempt pairs are gone - ADR-0094), announced **before** the new renderer, and appears at once instead of fading in |
+| Plex mark | Plex's chevron at 512 px from the public-domain Commons SVG; the mark URL carries the file's hash, because a day's cache kept the old one on every panel surface |
+| Peppy | badge **centred in the slot the skin draws** for 23 skins (`badge-slots.json`, from rendering all 99), **80% of its field** on every skin, a dark edge so LMS's mark holds on light skins |
+
+### Then: branch `peppy-animated-skins`, stacked on the one above
+
+**Turntable and cassette skins that move** (ADR-0096, George's six decisions,
+all "recommended"): 90 more skins - 48 turntables, 20 tape recorders, 15
+cassettes, 7 from `t1800` - fetched at build time and pinned by sha256; the
+1280x720 packs letterboxed to 1280x800. Deployed on `gexis` by hand; **the
+build stage (`05-peppy/01-run.sh`, new `02-run-chroot.sh`) has never run in a
+real image build.** The first image built from here is its first test.
+
+| | |
+|---|---|
+| motion | vinyl with the art on it, tonearm, reels - `gexis_peppy_motion.py`, 6° steps at 8 fps |
+| drawing | **what moves repaints everything over it, in upstream's z-order** - the first cut flashed titles, half-drew art and "masked" the arm (George) |
+| memory | PeppyMeter's needle cache **off**: it had grown the driver to 1.4 GB across the skins, rotation or not |
+| text | the clock at the skin's own size; **27 ticker-only skins get a still "Title • Artist • Album" line** (George's choice A; the scroll stays deferred) |
+| cost | 12-38% of one core vs 35% for George's static spectrum skin, 349-489 MB - [Finding 092](docs/findings/092-what-the-animated-skins-cost.md) |
+| settings | corpora **Turntables** (48) and **Tapes** (39), by what a skin declares; **Animate turntables and tapes** and **Record speed** 33/45 (ADR-0022 [N], George's choice) |
+| fixed after George looked | previews for all 189; 18 turntables' records (`album,theme` file names); Peppy's warnings, which upstream's `use.logging = False` silenced (LESSONS 43) |
+
+
+**Then, branch `peppy-next` (PR #33, pushed):** **Image built from it:**
+`image/deploy/2026-09-27-gexis-player-v0.2.1-680-g1a0042d.img` (735 s); rootfs
+read and `verify-image.sh` passed, now covering the motion and gauge modules and
+the badge slots. **Not flashed.** nine more badge slots (George's
+Naim S+M and Kenwood Rev S+M among them); the animated skins' rows moved into
+**Visualisation tweaks** (renamed from *Meters and spectrum tweaks*); and
+[ADR-0097](docs/decisions/0097-what-the-visualiser-shows-beyond-the-title.md) -
+the ticker scrolls, and progress, volume, mute/play/shuffle/repeat icons,
+elapsed/total time and the next track are drawn. **Display only - George: the
+visualiser is never actionable.** Smooth rotation is a setting, **Rotation:
+Stepped (default) / Smooth** - George chose it after the numbers (Vertere 44 →
+84-87 % of a core). All 90 animated skins swept on the panel after it, three frames each.
+
+**Done 2026-09-27:** gexis-plexamp **v0.2.2** released and pinned; **PR #31**
+(the fixes, into `main`) and **PR #32** (this branch, into the fixes branch -
+retarget to `main` once #31 merges); **one image with everything**,
+`image/deploy/2026-09-27-gexis-player-v0.2.1-664-gc0d64ed.img`, 735 s warm.
+The new stage ran for the first time and letterboxed all three 720p packs; the
+rootfs was read, not trusted (every change present, pictures 1280x800, no
+`skins-letterbox` left behind); `verify-image.sh` passed - **it has no checks
+for the animated packs yet**. **Not flashed.** Next: George flashes it; then the
+ticker's scroll, smooth rotation and the extra fields, on a new branch.
+
+Open here: smooth rotation is not built (stepped only, as measured); the
+deferred keys (progress, elapsed/total time, volume, the ticker's scroll and
+next track) leave their room empty; no rotation setting proposed - the numbers
+did not call for one.

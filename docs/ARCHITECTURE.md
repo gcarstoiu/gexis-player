@@ -60,10 +60,9 @@ their OS.
 
 ### Should
 
-1. Qobuz Connect (via an open-source client — see §9)
-2. Plexamp
-3. Spotify account navigation and control
-4. Theme engine
+1. Plexamp
+2. Spotify account navigation and control
+3. Theme engine
 5. Plugin extensibility: renderers, idle screens, meters, themes
 
 ### Could
@@ -251,7 +250,6 @@ different shapes:
 | LMS | explicit play or resume (no connect event exists — always connected) |
 | Spotify Connect | device selected in the app |
 | Bluetooth | A2DP profile connect |
-| Qobuz Connect | device selected in the app |
 
 ### Release — disconnect, uniformly
 
@@ -268,7 +266,6 @@ pauses, because its connection is structural rather than a user session.**
 | LMS | pause, stay connected (base slot) |
 | Bluetooth | disconnect |
 | Spotify Connect | disconnect |
-| Qobuz Connect | disconnect |
 
 Disconnect is self-explaining: the phone shows the device gone rather than
 showing "playing" into a silent room. No invisible state anywhere.
@@ -409,7 +406,8 @@ carrying their own types and actions — it describes its own navigation. So the
 UI renders one **generic browser** driven by whatever the server returns, rather
 than having a screen per category.
 
-This is what makes the Qobuz navigation Should tractable: it maps onto the same
+This is what makes a streaming service's menus in LMS (its Qobuz app, say)
+tractable: they map onto the same
 generic browser, and LMS plugin menus we have never heard of work without us
 knowing they exist.
 
@@ -495,8 +493,8 @@ Python. One core daemon plus three services.
 > only for radio. The rationale below assumed one normalised browse API would
 > make Qobuz cheap; it would not, and Qobuz is no longer rendered.
 
-Rationale is the Qobuz navigation Should. If the browser learns LMS's API,
-adding Qobuz means teaching it a second one, and the two screens will diverge in
+Rationale is browsing a streaming service's own catalogue. If the browser learns
+LMS's API, adding such a service means teaching it a second one, and the two screens will diverge in
 behaviour no matter how carefully they are designed. A normalised browse API
 means "navigate a source" is one thing the UI knows how to do, regardless of
 source.
@@ -572,8 +570,8 @@ Two reasons:
 
 1. A crashing plugin cannot take down playback or the UI.
 2. Plugins can be written in any language, and a plugin can live in a different
-   repository. The Qobuz Connect plugin is planned for a **private** repo, which
-   makes the contract real rather than a convention inside one codebase.
+   repository, which makes the contract real rather than a convention inside
+   one codebase.
 
 ### Contract fields
 
@@ -589,26 +587,6 @@ Minimum, derived from the three defaults:
 **The three default renderers are implemented against the public contract**, not
 special-cased. If the built-ins are privileged, the contract will be incomplete
 and the first external plugin will discover it.
-
-### Qobuz Connect
-
-Qobuz Connect launched May 2025, developed with StreamUnlimited. The official
-route is partnership, a proprietary SDK and a certification self-test. That is
-incompatible with a public repository. moOde reached the same conclusion in May
-2025 and found no FOSS-licensed code to integrate; Volumio has it via
-partnership.
-
-The unofficial route is reverse-engineered clients — `ahcm/qconnect` exists, and
-roderickvd (librespot, pleezer maintainer) has been working on an
-implementation since May 2025.
-
-Therefore Qobuz Connect is a **Should, delivered as an optional plugin the user
-installs**, not something the base image ships. It is also the first external
-test of the plugin contract.
-
-It does not replace Plexamp as the ADR-0008 reversal test: `qconnect` is open
-source and writes to ALSA, so it is cooperative and will not stress the PipeWire
-question at all.
 
 ---
 

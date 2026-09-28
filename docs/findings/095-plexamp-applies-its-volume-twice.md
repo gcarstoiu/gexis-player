@@ -1,7 +1,7 @@
 # Finding 095 — Plexamp applies its volume twice
 
 **Date:** 2026-09-27
-**Question:** Raised while deciding Qobuz's volume (ADR-0098). Finding 084
+**Question:** Finding 084
 showed Plexamp's level and the core's agree in both directions, but it never
 measured the output. Does Plexamp attenuate digitally as well as having its
 level applied on the DAC?
@@ -32,12 +32,9 @@ and the DAC sets the level, does not hold for Plexamp.
 
 ## What it bears on
 
-- **Qobuz (ADR-0098):** George kept option A. The core does not manage Pibuz's
-  volume, so nothing is applied twice there. The app's slider moves Pibuz's
-  digital level, and the panel's moves the DAC.
-- **Plexamp needs the same kind of decision.** The candidates are its own
-  settings, if any give a fixed or external volume (not yet looked for), or
-  the Qobuz arrangement.
+- **Plexamp needs a decision.** The candidates are its own settings, if any
+  give a fixed or external volume (not yet looked for), or leaving its volume
+  to Plexamp and the DAC's to the panel.
 
 ## Is there a way to keep Plexamp at full scale? (George: "option B")
 
@@ -62,7 +59,7 @@ files, the same day:
 
 What remains is on our side:
 
-- **(a)** Leave Plexamp's volume to Plexamp, as Qobuz is now.
+- **(a)** Leave Plexamp's volume to Plexamp, and the DAC's to the panel.
 - **(b)** The plugin holds Plexamp's own level at 100 and puts every change on
   the DAC. Bit-perfect, one level, but the Plexamp app's slider then reads 100
   and snaps back.
@@ -75,12 +72,11 @@ than loudness matching the other sources or being bit-perfect below 100. The
 known cost stays: Plexamp at a given number is quieter than Spotify or LMS at
 the same number, increasingly so toward the bottom of the slider.
 
-**Revised (George, 2026-09-28): (a).** After living with Qobuz's two separate
-levels: *"Volume is fine like this and we should do the same for plexamp
+**Revised (George, 2026-09-28): (a).** *"…we should do the same for plexamp
 actually as well. My bad with the previous decision."* gexis-plexamp now
 declares `volume_managed: false`, reports no level and refuses `set_volume`.
 The Plexamp app's slider moves Plexamp's own gain; the panel's moves the DAC.
-Deployed by hand on 2026-09-28, where the core's state shows `plexamp`
-unmanaged. Not released. The consequence George raised with it, a takeover
-landing at a level the app-controlled source left on the DAC, is a decision
-still owed (HANDOFF).
+Released as gexis-plexamp v0.3.0 and pinned in stage `08-plexamp`. The
+consequence George raised with it, a takeover landing at a level an
+app-controlled source left on the DAC, was answered by *Starting volume*
+(ADR-0054 §5, amended 2026-09-28).

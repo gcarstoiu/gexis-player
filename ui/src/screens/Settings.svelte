@@ -316,7 +316,7 @@
   function tap(row) {
     if (row.type === 'document') openDocument(row);
     // ADR-0098: a switch with a warning asks before it turns ON - the
-    // unofficial-software notice before Qobuz Connect is downloaded. Off
+    // notice before a plugin's software is downloaded. Off
     // never asks.
     else if (row.type === 'toggle' && row.warn && !row.value) openSheet(row);
     else if (row.type === 'toggle') write(row, !row.value);
