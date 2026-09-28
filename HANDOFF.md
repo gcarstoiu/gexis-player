@@ -135,8 +135,16 @@ fetched on the device from its author's release, after a notice; public inert
     only since 2026-09-27 23:08 (Finding 097). **Decision owed to George:** we
     build and publish it (A), each player builds it (B), or ask the author
     first (C, recommended). Until then, no Qobuz install can succeed. gexis's
-    own copy went with the Remove test; a dev build of 2.5.1 from its tag is
-    being installed by hand (George allowed it).
+    own copy went with the Remove test.
+  - **gexis runs a dev build of Pibuz 2.5.1** (George: *"You can build 2.5.1 for
+    dev purposes"*):
+    - built from tag v2.5.1 (commit 465e21b) by `image/tools/build-pibuz-dev.sh`;
+    - installed through the normal path: Retry in the row read it from
+      `/var/lib/gexis-dev/`, verified it, and installed it.
+    - **The device's pin differs from the image's**
+      (`/usr/share/gexis/components/pibuz.env`; the original is beside it as
+      `pibuz.env.image`). Put it back when the decision lands.
+    - Not published anywhere.
   - **Legal wording approved** (George, 2026-09-28), except the Qobuz
     paragraph, which waits on that decision.
   - Image built from 7424d8d (before Remove): `image/deploy/2026-09-28-gexis-player-v0.2.1-710-g7424d8d.img`. `verify-image.sh` passed apart from the core differing from the working tree, which by then held Remove. Rebuild after the Remove test.
