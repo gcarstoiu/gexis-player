@@ -878,6 +878,15 @@ class StateServer:
             return web.json_response({"error": "no Peppy screen window to act on"}, status=409)
         return web.json_response({"peppy": action})
 
+    async def _handle_notice(self, request: web.Request) -> web.Response:
+        """ADR-0099: the Legal and Credits pages, from `notices.json`."""
+        from gexis_core import notices
+
+        page = notices.document(request.match_info["name"])
+        if page is None:
+            return web.json_response({"error": "no such document"}, status=404)
+        return web.json_response(page)
+
     async def _handle_settings(self, request: web.Request) -> web.Response:
         if self._settings is None:
             return web.json_response({"error": "settings are not wired up"}, status=503)
@@ -1159,6 +1168,7 @@ class StateServer:
         app.router.add_post("/panel/painted", self._handle_painted)
         app.router.add_post("/peppy/{action}", self._handle_peppy)
         app.router.add_get("/settings", self._handle_settings)
+        app.router.add_get("/notices/{name}", self._handle_notice)
         app.router.add_put("/settings/{key}", self._handle_setting_write)
         app.router.add_post("/settings/{key}", self._handle_setting_action)
         app.router.add_get("/settings/{key}/items", self._handle_list_items)

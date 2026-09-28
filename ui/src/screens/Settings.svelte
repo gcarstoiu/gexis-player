@@ -8,6 +8,7 @@
 <script>
   import { onMount } from 'svelte';
   import { pressing } from '../lib/press.svelte.js';
+  import { components } from '../lib/state.js';
   import {
     settingsGroups,
     settingsDevice,
@@ -39,6 +40,10 @@
   // A full-screen chooser instead of a sheet, for a choice too large for
   // 560px (ADR-0044 §5). Holds the row's key, like `sheetKey`.
   let pickerKey = $state(null);
+  // ADR-0099: a `document` row opens a page to read (Legal, Credits).
+  let docKey = $state(null);
+  let docPage = $state(null);
+  let docError = $state(null);
   //: Which row the pane is showing. **Not the value**: tapping a row in the
   //: picker previews it and nothing else, and the write happens on the
   //: button under the preview (design, 2026-09-22). On a wide screen the
@@ -241,7 +246,7 @@
       const n = (row.items ?? []).length;
       return n ? `${n} paired` : 'None';
     }
-    if (v === null || v === undefined) return row.type === 'action' ? '' : '—';
+    if (v === null || v === undefined) return row.type === 'action' || row.type === 'document' ? '' : '—';
     if (row.type === 'number') {
       return withUnit(numeral(Number(v), row.step).replace('-', MINUS), row.unit);
     }
@@ -260,8 +265,61 @@
     );
   }
 
+  async function openDocument(row) {
+    docKey = row.key;
+    docPage = null;
+    docError = null;
+    try {
+      const res = await fetch(`/notices/${encodeURIComponent(row.document)}`);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      docPage = await res.json();
+    } catch (e) {
+      docError = 'This page could not be loaded.';
+    }
+  }
+
+  // ADR-0100 as amended: a plugin's download in words.
+  const MB = (n) => (n / 1048576).toFixed(1);
+  function downloadShare(c) {
+    if (c.state === 'verifying' || c.state === 'installing') return 1;
+    return c.received != null && c.total ? Math.min(1, c.received / c.total) : null;
+  }
+  function downloadLine(c) {
+    const from = c.from ?? 'its maker';
+    const label = c.label ?? 'it';
+    switch (c.state) {
+      case 'preparing': return `Starting the download from ${from}…`;
+      case 'downloading': {
+        const share = downloadShare(c);
+        return `Downloading ${label} from ${from}` + (share != null ? ` · ${Math.round(share * 100)}%` : '…');
+      }
+      case 'retrying': return `The download was interrupted: ${c.error ?? 'retrying'}`;
+      case 'verifying': return `Checking ${label}…`;
+      case 'installing': return `Installing ${label}…`;
+      case 'installed': {
+        const recent = c.updated && Date.now() / 1000 - c.updated < 120;
+        return recent ? `Downloaded and installed just now · ${label}` : `Installed · ${label}`;
+      }
+      case 'failed': return c.error ?? `The download from ${from} failed`;
+      default: return `Not installed · downloaded from ${from} when you switch it on`;
+    }
+  }
+  function downloadDetail(c) {
+    // Only while it is moving: once installed or failed, the size is noise.
+    if (c.state !== 'downloading' && c.state !== 'retrying') return '';
+    const parts = [];
+    if (c.received != null) parts.push(c.total ? `${MB(c.received)} of ${MB(c.total)} MB` : `${MB(c.received)} MB`);
+    if (c.attempt && c.attempts && (c.attempt > 1 || c.state === 'retrying')) parts.push(`attempt ${c.attempt} of ${c.attempts}`);
+    return parts.join(' · ');
+  }
+
   function tap(row) {
-    if (row.type === 'toggle') write(row, !row.value);
+    if (row.type === 'document') openDocument(row);
+    // ADR-0098: a switch with a warning asks before it turns ON - the
+    // notice before a plugin's software is downloaded. Off
+    // never asks.
+    else if (row.type === 'toggle' && row.warn && !row.value) openSheet(row);
+    else if (row.type === 'toggle') write(row, !row.value);
     // 84 visual things cannot be chosen from a 560px list, so a `picker` row
     // opens full screen instead of a sheet (ADR-0044 §5).
     else if (row.picker) {
@@ -496,6 +554,12 @@
       doJoin(joinItem.name, draft);
       return;
     }
+    if (row.type === 'toggle') {
+      // The warned switch, confirmed (ADR-0098).
+      closeSheet();
+      await write(row, true);
+      return;
+    }
     // The escape out of a discovery list: type the address. It changes what
     // the sheet is, so it happens before anything is written.
     if (row.type === 'list' && row.manual) {
@@ -657,6 +721,7 @@
                   class="row"
                   class:row--danger={r.danger}
                   class:row--readonly={r.type === 'readonly'}
+                  class:row--dl={!!r.component}
                   type="button"
                   disabled={r.type === 'readonly'}
                   data-unwired={r.wired ? undefined : 'settings'}
@@ -669,9 +734,44 @@
                         {#if pending(r)}<span class="dot dot--sm"></span>{/if}
                       </span>
                       {#if r.note}<span class="row__note">{r.note}</span>{/if}
+                      {#if r.component}
+                        <!-- ADR-0100 as amended: the plugin's download, inside
+                             its own row (George: "part of the pill itself
+                             otherwise it floats"). -->
+                        {@const c = $components[r.component] ?? { state: 'absent' }}
+                        <span class="row__note dl__line" class:dl--failed={c.state === 'failed'}>
+                          {downloadLine(c)}{#if downloadDetail(c)}<span class="dl__sub"> · {downloadDetail(c)}</span>{/if}
+                        </span>
+                        {#if c.state === 'installed' && !r.value && rowOf(r.key.replace(/\.enabled$/, '.remove'))}
+                          <!-- ADR-0100, amended 2026-09-28: off stops it; Remove
+                               deletes the download, after asking. -->
+                          <span
+                            class="dl__retry"
+                            role="button"
+                            tabindex="0"
+                            onclick={(e) => { e.stopPropagation(); openSheet(rowOf(r.key.replace(/\.enabled$/, '.remove'))); }}
+                            onkeydown={(e) => { if (e.key === 'Enter') { e.stopPropagation(); openSheet(rowOf(r.key.replace(/\.enabled$/, '.remove'))); } }}
+                          >Remove</span>
+                        {/if}
+                        {#if c.state === 'failed'}
+                          <span
+                            class="dl__retry"
+                            role="button"
+                            tabindex="0"
+                            onclick={(e) => { e.stopPropagation(); runSetting(r.key.replace(/\.enabled$/, '.download')); }}
+                            onkeydown={(e) => { if (e.key === 'Enter') { e.stopPropagation(); runSetting(r.key.replace(/\.enabled$/, '.download')); } }}
+                          >Retry</span>
+                        {/if}
+                      {/if}
                     </span>
                     {#if r.type !== 'toggle' && shown(r)}
                       <span class="row__value" class:is-pending={pending(r)}>{shown(r)}</span>
+                    {/if}
+                    {#if r.component && ['preparing', 'downloading', 'retrying', 'verifying', 'installing'].includes(($components[r.component] ?? {}).state)}
+                      {@const c = $components[r.component]}
+                      <span class="dl__bar" class:dl__bar--busy={!downloadShare(c)}>
+                        <span style:width={`${Math.round((downloadShare(c) ?? 0) * 100)}%`}></span>
+                      </span>
                     {/if}
                     {#if r.type === 'toggle'}
                       <span class="toggle" class:is-on={!!r.value}><span></span></span>
@@ -693,6 +793,58 @@
        four-across grid it replaces made 84 tiles too small to judge and too
        large to scan, and drew every preview at once. Here one is fetched,
        when a row is tapped. -->
+  {#if docKey}
+    {@const docRow = rowOf(docKey)}
+    <div class="picker">
+      <div class="weave"></div>
+      <div class="veil"></div>
+      <div class="picker__head" class:head--wide={wide}>
+        <button
+          class="back"
+          class:is-pressed={press.is('doc-back')}
+          type="button"
+          aria-label="Back"
+          onpointerdown={() => press.down('doc-back')}
+          onpointerup={press.up}
+          onpointercancel={press.up}
+          onclick={() => press.act(() => (docKey = null))}
+        ><span></span></button>
+        <div class="head__text">
+          <div class="title" class:title--wide={wide}>{docPage?.title ?? docRow?.label}</div>
+          {#if docPage?.updated}<div class="subtitle">Updated {docPage.updated}</div>{/if}
+        </div>
+      </div>
+      <div class="picker__body">
+        <div class="doc" class:doc--wide={wide} data-noscrollbar>
+          {#if docError}
+            <p class="doc__p">{docError}</p>
+          {:else if !docPage}
+            <p class="doc__p">Loading…</p>
+          {:else}
+            {#each docPage.sections as section, i (i)}
+              {#if section.heading}<h2 class="doc__h">{section.heading}</h2>{/if}
+              {#each section.paragraphs as paragraph, j (j)}
+                <p class="doc__p">{paragraph}</p>
+              {/each}
+              {#if section.entries}
+                <ul class="doc__list">
+                  {#each section.entries as entry, k (k)}
+                    <li class="doc__entry">
+                      <div class="doc__name">{entry.name}{#if entry.licence}<span class="doc__licence">{entry.licence}</span>{/if}</div>
+                      {#if entry.role}<div class="doc__line">{entry.role}</div>{/if}
+                      {#if entry.author}<div class="doc__line doc__muted">{entry.author}</div>{/if}
+                      {#if entry.url}<div class="doc__line doc__muted doc__url">{entry.url}</div>{/if}
+                    </li>
+                  {/each}
+                </ul>
+              {/if}
+            {/each}
+          {/if}
+        </div>
+      </div>
+    </div>
+  {/if}
+
   {#if picker}
     {@const options = picker.options ?? []}
     {@const inUse = picker.value == null ? null : String(picker.value)}
@@ -1053,7 +1205,7 @@
             Cancel
           {/if}
         </button>
-        {#if join === 'error' || joinItem || restorePending || choicePending !== null || sheet.type === 'action' || sheet.type === 'text' || (sheet.type === 'number' && !sheet.wired) || (sheet.type === 'list' && sheet.manual && !searching)}
+        {#if join === 'error' || joinItem || restorePending || choicePending !== null || sheet.type === 'action' || sheet.type === 'toggle' || sheet.type === 'text' || (sheet.type === 'number' && !sheet.wired) || (sheet.type === 'list' && sheet.manual && !searching)}
           <button
             class="btn btn--confirm"
             class:btn--danger={sheet.danger || restorePending || choicePending !== null}
@@ -1073,6 +1225,8 @@
               {sheet.confirm ?? 'Confirm'}
             {:else if sheet.type === 'list'}
               {sheet.manual}
+            {:else if sheet.type === 'toggle'}
+              {sheet.confirm ?? 'I understand, switch it on'}
             {:else}
               {sheet.confirm ?? (sheet.type === 'action' ? 'Continue' : sheet.wired ? 'Save' : 'Edit')}
             {/if}
@@ -1997,6 +2151,79 @@
     flex-direction: column;
     overflow: hidden;
   }
+  /* ADR-0100 as amended: a plugin's download, inside its own row. */
+  .row--dl { position: relative; }
+  .dl__line { color: var(--ink); }
+  .dl__sub { color: var(--ink-quiet); font-family: var(--font-mono); }
+  .dl--failed { color: var(--accent-warn); }
+  .dl__retry {
+    display: inline-block;
+    margin-top: 6px;
+    padding: 4px 14px;
+    border-radius: var(--r-pill, 999px);
+    border: 1px solid var(--accent-warn);
+    color: var(--accent-warn);
+    font-size: 13px;
+  }
+  .dl__bar {
+    position: absolute;
+    left: 18px;
+    right: 18px;
+    bottom: 6px;
+    height: 3px;
+    border-radius: 2px;
+    background: rgba(233, 238, 242, 0.12);
+    overflow: hidden;
+  }
+  .dl__bar span {
+    display: block;
+    height: 100%;
+    background: var(--accent-lms);
+    transition: width 0.4s ease;
+  }
+  /* No total known yet: a sliver that moves, so it never looks stuck. */
+  .dl__bar--busy span {
+    width: 30% !important;
+    animation: dl-busy 1.2s ease-in-out infinite;
+  }
+  @keyframes dl-busy {
+    from { transform: translateX(-100%); }
+    to { transform: translateX(340%); }
+  }
+  /* ADR-0099: Legal and Credits, read on the panel as on a phone. Links
+     are shown, not followed: the kiosk has nowhere to go. */
+  .doc {
+    width: 100%;
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding: 12px 24px 32px;
+    box-sizing: border-box;
+    color: var(--ink);
+  }
+  .doc--wide { padding: 18px 64px 40px; }
+  .doc__h {
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--ink);
+    margin: 22px 0 8px;
+  }
+  .doc__p { font-size: 15px; line-height: 1.5; margin: 0 0 10px; }
+  .doc__list { list-style: none; margin: 0; padding: 0; }
+  .doc__entry {
+    padding: 10px 0;
+    border-bottom: 1px solid rgba(233, 238, 242, 0.07);
+  }
+  .doc__name { font-size: 15px; font-weight: 600; color: var(--ink); }
+  .doc__licence {
+    margin-left: 10px;
+    font-size: 12px;
+    font-weight: 500;
+    opacity: 0.7;
+  }
+  .doc__line { font-size: 13px; line-height: 1.45; }
+  .doc__muted { color: var(--ink-quiet); }
+  .doc__url { word-break: break-all; }
   .picker__head {
     position: relative;
     flex-shrink: 0;

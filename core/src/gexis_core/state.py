@@ -61,6 +61,7 @@ class StateStore:
         self._settings_revision = 0
         self._pictures_revision = 0
         self._pairing: dict | None = None
+        self._components: dict = {}
         #: **ADR-0081: the cover the daemon found for a renderer that sent
         #: none.** `renderer_id -> (track, url)`, applied in `state` below
         #: only where the renderer's own artwork is absent. Keyed on the
@@ -108,6 +109,7 @@ class StateStore:
             settings_revision=self._settings_revision,
             pictures_revision=self._pictures_revision,
             pairing=self._pairing,
+            components=dict(self._components),
         )
 
     def set_active(self, renderer_id: str | None) -> None:
@@ -312,6 +314,14 @@ class StateStore:
         if pairing == self._pairing:
             return
         self._pairing = pairing
+        self._notify()
+
+    def set_components(self, components: dict) -> None:
+        """ADR-0100 as amended: what each download is doing. Published on a
+        change only - the watcher reads twice a second while one is busy."""
+        if components == self._components:
+            return
+        self._components = dict(components)
         self._notify()
 
     def bump_settings_revision(self) -> None:

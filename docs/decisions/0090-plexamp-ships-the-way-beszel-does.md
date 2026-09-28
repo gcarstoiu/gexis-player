@@ -1,5 +1,11 @@
 # ADR-0090 — Plexamp ships the way Beszel does
 
+> **Amended 2026-09-27 by [ADR-0100](0100-software-we-may-not-redistribute-is-fetched-on-the-device.md):
+> Plexamp itself is no longer in the image.** It is Plex's proprietary software
+> and our right to redistribute it was never established; it is fetched from
+> Plex on the device when the user switches it on. Our plugin still ships as
+> below.
+
 **Status:** **Accepted and built**, 2026-09-25 — the stage is
 `image/stage-gexis/08-plexamp` and `verify-image.sh` has a section for it;
 **nothing built from it has been booted.** George, 2026-09-25: *"Present in the image just like

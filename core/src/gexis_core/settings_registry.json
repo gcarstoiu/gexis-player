@@ -42,6 +42,17 @@
         "default": null
       },
       {
+        "key": "start_max",
+        "type": "number",
+        "label": "Starting volume",
+        "marks": "R",
+        "note": "The loudest Spotify starts at when it takes over, whatever its app was last set to. A lower level stays where it is; a higher one comes down to this.",
+        "min": 10,
+        "max": 100,
+        "unit": "%",
+        "default": 60
+      },
+      {
         "key": "volume_managed",
         "type": "readonly",
         "label": "Volume-managed renderers",
@@ -998,6 +1009,22 @@
         "danger": true,
         "default": null,
         "surfaced": false
+      },
+      {
+        "key": "legal",
+        "type": "document",
+        "document": "legal",
+        "label": "Legal",
+        "marks": "R",
+        "note": "The player's licence, the licences of everything it is built from, and what it is not responsible for."
+      },
+      {
+        "key": "credits",
+        "type": "document",
+        "document": "credits",
+        "label": "Credits",
+        "marks": "R",
+        "note": "Everyone whose work is in the player."
       },
       {
         "key": "power",

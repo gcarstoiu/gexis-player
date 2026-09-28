@@ -1,98 +1,47 @@
 # Handoff
 
-Last updated: 2026-09-27 (twenty-seventh session, on R2D2 — **a round of fixes
-from George's own use of Plexamp, Spotify, LMS and the panel, all measured on
-`gexis` and deployed there by hand. George, after trying them: *"Everything
-seems in order including Bluetooth."* Not pushed, not in an image. Phase 11
-stays closed; next is 12, Qobuz.**)
+Last updated: 2026-09-28 (twenty-eighth session, on R2D2).
 
 ## Start here
 
-**A round of fixes from George's own use, on branch `backup-plexamp-claim`,
-not pushed.** George, 2026-09-27, after trying it: *"Everything seems in order
-including Bluetooth."* Phase 11 stays closed; the next phase is still **12,
-Qobuz**, once this branch is a PR and merged.
+**Phase 12 and 12b are met; PR #34 is open.** A plugin withdrawn at George's
+request on 2026-09-28 was taken out of the repositories, the image and gexis.
+Its work is kept locally only; the pointer is in `docs/SESSIONS.local.md`.
 
-**Before this branch ships:**
+### Branches and PRs
 
-1. ~~`gexis-plexamp` has two unreleased commits~~ **Released as v0.2.2**
-   (2026-09-27): `9e8111d` (the ladder does not wait for Plexamp) and `0851615`
-   (Plex's chevron). Pinned in `image/stage-gexis/08-plexamp/01-run.sh` at
-   `83aed15c…`, **checked against the published asset** through both `gh` and the
-   public URL the build fetches; `git archive` at the tag reproduces it.
-2. **`gexis` runs all of this by hand, not from an image.** Core modules, Peppy's
-   renderer and driver, the UI bundle, `plexamp.service` and its helper,
-   `squeezelite.service` and `output.conf` were installed over the
-   `v0.2.1-608-gd29ee48` image. **Reflashing that image undoes every fix below.**
-   The next image has to be built from this branch.
+| Branch | State | What is on it |
+|---|---|---|
+| `main` | 83d56ed | Everything to PR #33 (animated skins, ADR-0097) |
+| `phase-12` | **PR #34 open** | Phase 12 (plugins fetch their software on the device: status, progress, Retry and **Remove** in the row, a notice before switch-on - ADR-0100 as amended) and 12b (Legal and Credits, ADR-0099, wording approved). Also: the README with the gexis sound mark; Plexamp's volume is its own (Finding 095 revised, gexis-plexamp **v0.3.0** pinned); **Starting volume** (`start_max`, Audio, default 60 %; ADR-0054 §5 amended); the `volume_handed` contract field; two takeover fixes (a renderer that disconnects mid-release, and a release that fails, can no longer skip the volume step; LESSONS 44) |
+| `phone-remote` | pushed, no PR | Stacked on `phase-12`. ADR-0101's **phone mini player** (verified on George's phone) and ADR-0102 (Settings stays a bookmark; the manifest gives it the gexis mark) |
 
-### What changed, one line each (ADR or commit)
+**Before PR #34 merges:** an image built from `phase-12` after the removal, with
+`verify-image.sh` passing. The last image
+(`2026-09-28-gexis-player-v0.2.1-710-g7424d8d.img`) predates Remove and the
+removal, so it must not be flashed.
 
-| | |
-|---|---|
-| backup | holds Plexamp's claim; go-librespot's **`state.json` only** - `config.yml` is the image's, and older archives still restore (it is skipped, not refused). Measured against the real 18:10 archive |
-| startup | every unit is brought in line with its switch, **both ways, plugins included** (ADR-0077 amended) - a restore used to leave Plexamp and Beszel switched on and not running |
-| Plexamp → Spotify | stuck progress bar: `polite_grace` 0, `release` answered at once, `device_held_by` reads `/proc` instead of `fuser` (2 ms vs 98) - ADR-0091 amended. **1 in 12 still loses** on the probe; accepted under ADR-0095 C |
-| Plexamp restart | **starts idle, keeps its volume**: `plexamp-start-idle` rewrites `@Plexamp:state` before every start. Without it a killed Plexamp came back holding the DAC unasked (Finding 013 §1's precondition) or at volume 100 |
-| volume | Spotify is **told** the level playing on takeover (go-librespot's answer is a constant 100 under `external_volume`); a plugin answers with its last reported level - ADR-0054 §5 amended |
-| Spotify release | **pause, 0.25 s, stop** - a bare stop left Spotify's servers counting, so a transfer back jumped ahead or skipped the track |
-| LMS | squeezelite plays through **`output_wait`** - an open that waits for a busy DAC: audio 5.5 → 2.3 s after *play* on a powered-off player (Finding 091, ADR-0095 as amended). **go-librespot stays on `output`** - two waiters deadlocked the core for 68 s. Every renderer call under the arbitration lock is bounded to 2 s |
-| ADR-0093 | **immovable: squeezelite and go-librespot are never built or patched by us** |
-| transition screen | shown on **every** takeover for `handoff_duration` (default **1.5 s**; the threshold row and ADR-0010's exempt pairs are gone - ADR-0094), announced **before** the new renderer, and appears at once instead of fading in |
-| Plex mark | Plex's chevron at 512 px from the public-domain Commons SVG; the mark URL carries the file's hash, because a day's cache kept the old one on every panel surface |
-| Peppy | badge **centred in the slot the skin draws** for 23 skins (`badge-slots.json`, from rendering all 99), **80% of its field** on every skin, a dark edge so LMS's mark holds on light skins |
+### gexis
 
-### Then: branch `peppy-animated-skins`, stacked on the one above
+- Runs `phone-remote`'s core and UI, installed by hand, not from an image.
+- The withdrawn plugin's files, units, pins and settings are gone from it.
 
-**Turntable and cassette skins that move** (ADR-0096, George's six decisions,
-all "recommended"): 90 more skins - 48 turntables, 20 tape recorders, 15
-cassettes, 7 from `t1800` - fetched at build time and pinned by sha256; the
-1280x720 packs letterboxed to 1280x800. Deployed on `gexis` by hand; **the
-build stage (`05-peppy/01-run.sh`, new `02-run-chroot.sh`) has never run in a
-real image build.** The first image built from here is its first test.
+### Decided, not started
 
-| | |
-|---|---|
-| motion | vinyl with the art on it, tonearm, reels - `gexis_peppy_motion.py`, 6° steps at 8 fps |
-| drawing | **what moves repaints everything over it, in upstream's z-order** - the first cut flashed titles, half-drew art and "masked" the arm (George) |
-| memory | PeppyMeter's needle cache **off**: it had grown the driver to 1.4 GB across the skins, rotation or not |
-| text | the clock at the skin's own size; **27 ticker-only skins get a still "Title • Artist • Album" line** (George's choice A; the scroll stays deferred) |
-| cost | 12-38% of one core vs 35% for George's static spectrum skin, 349-489 MB - [Finding 092](docs/findings/092-what-the-animated-skins-cost.md) |
-| settings | corpora **Turntables** (48) and **Tapes** (39), by what a skin declares; **Animate turntables and tapes** and **Record speed** 33/45 (ADR-0022 [N], George's choice) |
-| fixed after George looked | previews for all 189; 18 turntables' records (`album,theme` file names); Peppy's warnings, which upstream's `use.logging = False` silenced (LESSONS 43) |
-
-**Phase 12 (Qobuz) is next, and its premise has moved** - [Finding
-093](docs/findings/093-qobuz-connect-in-september-2026.md): Qobuz had QBZ, the
-codebase the open-source receivers descend from, shut down in September 2026;
-moOde now points at Pibuz (MIT), which users install themselves; every open client
-uses scraped web-player credentials, against Qobuz's terms. Every client's
-licence permits a public repository. **Route, client, repo visibility and
-install model are George's decisions, not yet taken.**
-
-**Then, branch `peppy-next` (PR #33, pushed):** nine more badge slots (George's
-Naim S+M and Kenwood Rev S+M among them); the animated skins' rows moved into
-**Visualisation tweaks** (renamed from *Meters and spectrum tweaks*); and
-[ADR-0097](docs/decisions/0097-what-the-visualiser-shows-beyond-the-title.md) -
-the ticker scrolls, and progress, volume, mute/play/shuffle/repeat icons,
-elapsed/total time and the next track are drawn. **Display only - George: the
-visualiser is never actionable.** Smooth rotation is a setting, **Rotation:
-Stepped (default) / Smooth** - George chose it after the numbers (Vertere 44 →
-84-87 % of a core). All 90 animated skins swept on the panel after it, three frames each.
-
-**Done 2026-09-27:** gexis-plexamp **v0.2.2** released and pinned; **PR #31**
-(the fixes, into `main`) and **PR #32** (this branch, into the fixes branch -
-retarget to `main` once #31 merges); **one image with everything**,
-`image/deploy/2026-09-27-gexis-player-v0.2.1-664-gc0d64ed.img`, 735 s warm.
-The new stage ran for the first time and letterboxed all three 720p packs; the
-rootfs was read, not trusted (every change present, pictures 1280x800, no
-`skins-letterbox` left behind); `verify-image.sh` passed - **it has no checks
-for the animated packs yet**. **Not flashed.** Next: George flashes it; then the
-ticker's scroll, smooth rotation and the extra fields, on a new branch.
-
-Open here: smooth rotation is not built (stepped only, as measured); the
-deferred keys (progress, elapsed/total time, volume, the ticker's scroll and
-next track) leave their room empty; no rotation setting proposed - the numbers
-did not call for one.
+- **Plugins a user uploads** (George, 2026-09-28). Renderers or services like
+  Beszel, uploaded from a phone or computer in Settings → Plugins, as a package
+  with a `plugin.json`. The unit is generated by the player, never supplied: an
+  unprivileged, sandboxed user, the system read-only, its own folder writable,
+  the sound card only for renderers, memory limits. A notice before install.
+  Backups keep their settings and data, not the packages. **An ADR comes
+  first.**
+- **Plugin updates: B** (George, 2026-09-28): a catalogue of versions we have
+  tested, published by us; "update available" in the plugin row, with the
+  download UI; the previous version kept for rollback. **An ADR comes first**;
+  the `updates` (Manual/Automatic) row is confirmed with George before it is
+  surfaced.
+- **Settings as an installed app: not now** (ADR-0102). The HTTPS routes are
+  kept there for later.
 
 ### Open, none blocking
 
@@ -310,7 +259,7 @@ reverted, currently-flashed image predates this fix.
 11 Plexamp as a renderer, as a plugin   * COMPLETE 2026-09-25 - all six
                                             criteria, and Phase 10's criterion
                                             2 with them. ALSO the proof
-                                            for 10, replacing Qobuz. Its
+                                            for 10. Its
                                             hardware check is pulled forward
                                             into 10 - Finding 075 says moOde
                                             built a Plexamp route and parked it.
@@ -332,10 +281,10 @@ reverted, currently-flashed image predates this fix.
                                             signed off, and that record is
                                             corrected rather than left to read
                                             as if it had been right
-12 Qobuz Connect as a renderer            <- next. a second plugin against a
-                                            contract already proved; keeps the
-                                            private repository out of the
-                                            critical path
+12 plugins fetch their software on the  * COMPLETE 2026-09-28 (PR #34 open)
+   device; 12b Legal and Credits            Plexamp fetched from Plex, status /
+                                            progress / Retry / Remove in its row;
+                                            Legal and Credits approved
 13 first boot without a network           setup access point; pull forward the
                                             moment a non-developer gets a device
                                             (ADR-0031)
@@ -348,7 +297,7 @@ reverted, currently-flashed image predates this fix.
                                             phase for enrichment via Plex server
                                             gets [moved] to its own phase at the
                                             end of the phase queue after themes".
-                                            Was 11a, inserted before Qobuz on
+                                            Was 11a, inserted on
                                             2026-09-25. Leverage the Plex
                                             server's own metadata; internet
                                             providers stay as fallbacks, not

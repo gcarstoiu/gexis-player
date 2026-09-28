@@ -72,6 +72,9 @@ class Plugin:
     #: that already exists, which is how the three built-ins keep the keys
     #: they have always had rather than growing a second switch each.
     enabled_row: str | None = None
+    #: **ADR-0098: what the user must read before switching it on**, shown as
+    #: a confirmation by the panel.
+    notice: str | None = None
     #: True for the three this repository ships. They are not special in how
     #: they are read - only in who wrote them.
     built_in: bool = False
@@ -140,6 +143,7 @@ def parse(raw: dict, *, directory: Path | None = None, built_in: bool = False) -
         enabled_row=raw.get("enabled_row"),
         accent=raw.get("accent"),
         status=raw.get("status"),
+        notice=raw.get("notice"),
         mark=mark,
         settings=tuple(settings),
         built_in=built_in,

@@ -27,7 +27,9 @@ SEED_PATH = Path("/etc/gexis/settings-seed.json")
 #: - except for `kind: "server"`, which `validate` admits on its own; see
 #: there for why one shape of list stores a value and the others do not.
 SETTABLE = {"toggle", "choice", "number", "text", "multi"}
-TYPES = SETTABLE | {"readonly", "action", "group", "list"}
+#: `document` opens a page to read and holds no value (ADR-0099): Legal and
+#: Credits, whose text the core serves at `/notices/<document>`.
+TYPES = SETTABLE | {"readonly", "action", "group", "list", "document"}
 TEXT_MAX = 500
 
 #: `onlyWhen: [key, value]` hides a row unless that key holds that value.
@@ -144,8 +146,11 @@ def check(groups: list[dict]) -> list[dict]:
                 # option and appears when that option is picked, which only
                 # a choice has.
                 if isinstance(warn, str):
-                    if kind not in SETTABLE:
-                        raise ValueError(f"{key}: warn is for a row that takes a value")
+                    # **And an action** (ADR-0100, amended 2026-09-28): Remove
+                    # deletes a download, and its sheet says what goes and what
+                    # stays before the button is pressed.
+                    if kind not in SETTABLE and kind != "action":
+                        raise ValueError(f"{key}: warn is for a row that takes a value or an action")
                 elif kind != "choice":
                     raise ValueError(f"{key}: a per-option warn is only for a choice row")
                 else:
@@ -322,7 +327,7 @@ class Settings:
     own default."""
 
     @staticmethod
-    def with_plugins(registry: list[dict], plugins) -> list[dict]:
+    def with_plugins(registry: list[dict], plugins, downloads=None) -> list[dict]:
         """**A plugin's rows, merged into the registry** (ADR-0086).
 
         **Two places, and the split is George's** (2026-09-25): *"create the
@@ -354,6 +359,11 @@ class Settings:
         """
         merged = [dict(g, rows=list(g["rows"])) for g in registry]
         by_id = {g.get("id"): g for g in merged}
+        #: **The Plugins page, sorted by where each plugin works** (George,
+        #: 2026-09-27: "Let's group the plugins based on the area they operate
+        #: in - i.e. beszel is system, plexamp in sources"). Its kind decides
+        #: it, the same way it decides where the plugin's own settings go.
+        by_area: dict[str, list[dict]] = {"sources": [], "system": []}
         for plugin in plugins:
             if not plugin.settings and plugin.enabled_row is not None:
                 # Nothing to add: its rows are the registry's already.
@@ -379,6 +389,31 @@ class Settings:
                 switch = f"{plugin.id}.enabled"
                 switches.append({"key": switch, "type": "toggle",
                                  "label": plugin.name, "default": True})
+                if getattr(plugin, "notice", None):
+                    # ADR-0098: read and confirmed before it turns on.
+                    switches[-1]["warn"] = plugin.notice
+            # **ADR-0100 as amended: a plugin that downloads its software says
+            # so on its own switch** - where it is from, how far along it is,
+            # and Retry when it failed, all inside the row (George, 2026-09-27:
+            # "The status and the download need to be part of the pill itself
+            # otherwise it floats"). Retry is an action row the API keeps and
+            # the screen does not draw on its own.
+            component = (downloads or {}).get(plugin.id)
+            if component is not None:
+                if switches:
+                    switches[0]["component"] = component
+                switches.append({"key": f"{plugin.id}.download", "type": "action",
+                                 "label": "Retry download", "component": component,
+                                 "surfaced": False, "note": None})
+                # ADR-0100, amended 2026-09-28: Remove, offered in the same row
+                # while the switch is off. It asks first, and says what stays.
+                switches.append({"key": f"{plugin.id}.remove", "type": "action",
+                                 "label": f"Remove {plugin.name}", "component": component,
+                                 "surfaced": False, "danger": True, "confirm": "Remove",
+                                 "note": None,
+                                 "warn": f"This deletes the software {plugin.name} downloaded. "
+                                         f"Its settings and sign-in stay on the device. "
+                                         f"Switching {plugin.name} on again downloads it again."})
             if switches and switch_group is None:
                 # A registry with no `plugins` category cannot hold the switch,
                 # and a plugin with no switch is the thing ADR-0086's amendment
@@ -442,8 +477,15 @@ class Settings:
                 logger.warning("plugins: %s's settings are not usable: %s", plugin.id, exc)
                 continue
             if switch_group is not None:
-                switch_group["rows"].extend(switches)
+                by_area["sources" if plugin.kind == "renderer" else "system"].extend(switches)
             target["rows"].extend(rows)
+        switch_group = by_id.get("plugins")
+        if switch_group is not None:
+            accent = switch_group.get("accent")
+            for area, label in (("sources", "Sources"), ("system", "System")):
+                if by_area[area]:
+                    switch_group["rows"].append({"type": "group", "label": label, "accent": accent})
+                    switch_group["rows"].extend(by_area[area])
         return merged
 
     def __init__(

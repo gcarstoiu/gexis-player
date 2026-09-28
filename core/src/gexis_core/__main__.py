@@ -9,6 +9,7 @@ import asyncio
 import functools
 import logging
 import re
+import subprocess
 from pathlib import Path
 
 import aiohttp
@@ -68,7 +69,7 @@ from gexis_core.settings import SettingsStore
 from gexis_core.settings_registry import Settings, load_registry
 from gexis_core.splash import Splash
 from gexis_core.state import StateStore
-from gexis_core import backups, bluealsa_volume, outputs, plugin_env, plugins
+from gexis_core import backups, bluealsa_volume, components, outputs, plugin_env, plugins
 from gexis_core.adapters.plugin import PluginAdapter
 from gexis_core.plugin_server import PluginServer
 from gexis_core.systemd import is_enabled as _unit_is_enabled
@@ -87,6 +88,7 @@ from gexis_core.volume import (
     get_raw,
     Mute,
     renderer_value_to_hardware_raw,
+    renderer_percent_to_value,
     hardware_raw_to_renderer_value,
     fixed_output as volume_fixed_output,
     HARDWARE_MAX,
@@ -539,6 +541,15 @@ async def main() -> None:
         renderer's echo of its new value, which lands within a rounding step of
         where the DAC already is. **Fixed output is left alone** - the DAC is at
         full scale there by design, and there is nothing to carry.
+
+        **Amended 2026-09-28: Spotify starts no louder than `start_max`**, and
+        since the same day neither does a plugin that declares `volume_handed`
+        (George: *"60 is the max. If the previous renderer had less than 60 it
+        stays to what the renderer had. If more than 60, then it comes down to
+        60"*). Sources that keep their own volume can leave the DAC at
+        full scale. Lowering is the one case where the DAC *is* written, and
+        first: the acquisition's next step is `device_freed`, Spotify's retry,
+        which must not start at the level being taken away.
         """
         if volume_fixed_output():
             return False
@@ -548,10 +559,22 @@ async def main() -> None:
             return False
         steps = await adapter.get_volume_steps()
         value = hardware_raw_to_renderer_value(raw, steps)
-        logger.info(
-            "volume: %s cannot say where it is; handing it the level playing (%s/240 -> %s/%s)",
-            renderer_id, raw, value, steps,
-        )
+        # Every renderer handed its level, not one named here (ADR-0054 §5,
+        # amended again 2026-09-28): Spotify, and a plugin that declares
+        # `volume_handed`.
+        start_max = _number("start_max")
+        if start_max is not None and value > renderer_percent_to_value(start_max, steps):
+            value = renderer_percent_to_value(start_max, steps)
+            logger.info(
+                "volume: %s starts no louder than %s%%; the DAC comes down (%s/240 -> %s/%s)",
+                renderer_id, int(start_max), raw, value, steps,
+            )
+            await volume_bridge.write_hardware(renderer_value_to_hardware_raw(value, steps))
+        else:
+            logger.info(
+                "volume: %s cannot say where it is; handing it the level playing (%s/240 -> %s/%s)",
+                renderer_id, raw, value, steps,
+            )
         remote.set_steps(renderer_id, steps)
         remote.report(renderer_id, value)
         await adapter.set_volume(value)
@@ -819,7 +842,12 @@ async def main() -> None:
 
     supervisor = Supervisor(
         adapters,
-        device_busy=lambda renderer_id: alsa.device_held_by(adapters[renderer_id].unit_name),
+        # By unit, which the supervisor keeps after a renderer is forgotten:
+        # a plugin killed on release disconnects while this is still being
+        # asked (Finding 096).
+        device_busy=lambda renderer_id: (
+            (unit := supervisor.unit_of(renderer_id)) is not None and alsa.device_held_by(unit)
+        ),
         restore_volume=restore_volume,
         on_active_change=lambda renderer_id: on_active_change(renderer_id),
         on_handoff_change=state_store.set_handoff,
@@ -1115,6 +1143,84 @@ async def main() -> None:
 
         asyncio.ensure_future(tell())
 
+    #: **ADR-0100 as amended: which plugins download their software** when
+    #: switched on, and under which component name. Read once: the pins are
+    #: part of the image.
+    downloads = {
+        plugin.id: name for plugin in installed_plugins
+        if (name := components.for_plugin(plugin.id)) is not None
+    }
+
+    def _publish_components() -> None:
+        state_store.set_components(components.all_status())
+
+    async def _watch_components() -> None:
+        """What each download is doing, to the panel. Twice a second while one
+        is busy, so a fast download still shows every phase it passes through;
+        every two seconds otherwise."""
+        while True:
+            try:
+                status = await asyncio.to_thread(components.all_status)
+                state_store.set_components(status)
+                busy = any(s.get("state") in components.BUSY for s in status.values())
+            except Exception:  # noqa: BLE001 - a watcher that dies tells nobody anything
+                logger.exception("components: status read failed")
+                busy = False
+            await asyncio.sleep(0.5 if busy else 2.0)
+
+    async def _retry_download(plugin) -> None:
+        """The Retry under a failed download: clear the failure and start
+        again. With the switch on that is the plugin's own unit, which pulls
+        the download in; with it off, the download alone."""
+        name = downloads[plugin.id]
+        pin = components.pins().get(name)
+        components.preparing(name, pin)
+        _publish_components()
+        fetch = f"gexis-fetch@{name}.service"
+        # **Read here, on the loop's thread**: the settings store is SQLite, and
+        # reading it from the worker below raised - which left the row saying
+        # "Starting the download" over nothing (found on the panel, 2026-09-27).
+        switched_on = settings.value(f"{plugin.id}.enabled") is not False
+
+        def go() -> None:
+            subprocess.run(["systemctl", "reset-failed", fetch, plugin.unit], check=False, capture_output=True)
+            if switched_on:
+                subprocess.run(["systemctl", "restart", plugin.unit], check=False, capture_output=True)
+            else:
+                subprocess.run(["systemctl", "start", fetch], check=False, capture_output=True)
+
+        try:
+            await asyncio.to_thread(go)
+        except Exception as exc:  # noqa: BLE001 - said on the row, not swallowed
+            logger.exception("components: retrying %s failed", name)
+            components.failed(name, pin, f"The download could not be started again: {exc}")
+            _publish_components()
+
+    async def _remove_download(plugin) -> None:
+        """**Remove** (ADR-0100, amended 2026-09-28): delete what a switched-off
+        plugin downloaded. Refused while it is on - the screen only offers it
+        then, and this is the same rule where it cannot be skipped. The fetch
+        unit is stopped too: it stays `active (exited)` after it ran, and a
+        switch-on that finds it active would start the software without
+        downloading it again."""
+        name = downloads[plugin.id]
+        pin = components.pins().get(name) or {}
+        if settings.value(f"{plugin.id}.enabled") is not False:
+            logger.warning("components: %s is on; switch it off before removing %s", plugin.id, name)
+            return
+        fetch = f"gexis-fetch@{name}.service"
+
+        def go() -> None:
+            subprocess.run(["systemctl", "stop", plugin.unit, fetch], check=False, capture_output=True)
+            subprocess.run(["systemctl", "reset-failed", fetch], check=False, capture_output=True)
+            components.remove(name, pin)
+
+        try:
+            await asyncio.to_thread(go)
+        except Exception:  # noqa: BLE001 - the row keeps saying what is on disk
+            logger.exception("components: removing %s failed", name)
+        _publish_components()
+
     async def _apply_plugin_unit(plugin, on: bool) -> None:
         """**A plugin switched on or off** (ADR-0086 as amended).
 
@@ -1129,7 +1235,18 @@ async def main() -> None:
         """
         if on:
             _plugin_env(plugin)
+            if plugin.id in downloads:
+                # Told at once, before systemd has even begun: the user flipped
+                # a switch and must see that something started.
+                components.preparing(downloads[plugin.id], components.pins().get(downloads[plugin.id]))
+                _publish_components()
         await set_unit_enabled(plugin.unit, on)
+        if not on and plugin.id in downloads:
+            # A finished download stays "active (exited)", which would make the
+            # next switch-on skip checking what is on disk.
+            fetch = f"gexis-fetch@{downloads[plugin.id]}.service"
+            await asyncio.to_thread(subprocess.run, ["systemctl", "stop", fetch], check=False,
+                                    capture_output=True)
 
     def _plugin_switch(plugin):
         return lambda on, p=plugin: asyncio.ensure_future(
@@ -1173,7 +1290,7 @@ async def main() -> None:
 
     settings = Settings(
         settings_store,
-        registry=Settings.with_plugins(load_registry(), installed_plugins),
+        registry=Settings.with_plugins(load_registry(), installed_plugins, downloads),
         defaults={
             "lms_server": lambda: f"{config.lms_host}:{config.lms_port}",
             "lms_player": lambda: config.lms_player_name,
@@ -1272,6 +1389,9 @@ async def main() -> None:
                    _apply_headless(value)
                ),
                "show_transition": None, "handoff_duration": None,
+               # ADR-0054 §5, amended 2026-09-28: read at each takeover that
+               # hands a renderer its level.
+               "start_max": None,
                # ADR-0052 §3: read on every map between a position and a
                # level, and re-applied here when it changes so the level
                # comes down at once if it is now above the ceiling.
@@ -1332,7 +1452,13 @@ async def main() -> None:
                # ADR-0086: whatever the installed plugins brought. Wired
                # like any other row - something acts on it - and the thing
                # that acts is the plugin.
-               **plugin_switches, **plugin_rows},
+               **plugin_switches, **plugin_rows,
+               # ADR-0100 as amended: Retry under a failed download.
+               **{f"{plugin.id}.download": (lambda _value=None, p=plugin: asyncio.ensure_future(_retry_download(p)))
+                  for plugin in installed_plugins if plugin.id in downloads},
+               # ADR-0100, amended 2026-09-28: Remove, beside Retry.
+               **{f"{plugin.id}.remove": (lambda _value=None, p=plugin: asyncio.ensure_future(_remove_download(p)))
+                  for plugin in installed_plugins if plugin.id in downloads}},
         # **Phase 9 criterion 2.** These two act through
         # `POST /settings/{key}/items`, not through `set` - joining a network
         # and forgetting a device - so they are wired, and saying otherwise
@@ -1623,6 +1749,7 @@ async def main() -> None:
         await bus.wait_for_disconnect()
 
     asyncio.ensure_future(_reconcile_sources())
+    asyncio.ensure_future(_watch_components())
     asyncio.ensure_future(_bluetooth_setup())
 
     # Phase 5 criteria 6 and 8 (ADR-0036). The meter process keeps running

@@ -101,6 +101,8 @@ export const queue = derived(playback, ($s) => $s?.queue ?? null);
  *  **The frame lives and dies by this**, not by its own countdown: the agent
  *  is holding BlueZ's handshake open and it is the one that lets go. */
 export const pairing = derived(playback, ($s) => $s?.pairing ?? null);
+// ADR-0100 as amended: what each plugin's download is doing, live.
+export const components = derived(playback, ($s) => $s?.components ?? {});
 
 /**
  * Commands go over REST, never the socket (ADR-0028). Returns the parsed

@@ -147,6 +147,12 @@ def test_registry_keys_are_the_designs_keys_apart_from_recorded_deviations():
         "skin_motion", "record_speed",
         # ADR-0097, 2026-09-27: George chose the setting after the numbers.
         "rotation_mode",
+        # ADR-0099, 2026-09-27: George asked for both pages.
+        "legal", "credits",
+        # ADR-0054 §5, amended 2026-09-28: George's cap on the starting level
+        # of a renderer that is handed one (Spotify, and a plugin that declares `volume_handed`). The design
+        # predates sources that keep their own.
+        "start_max",
     }
 
 
@@ -515,13 +521,15 @@ def test_the_shipped_registry_hides_twenty_rows_and_shows_the_rest():
     # 75 since 2026-09-25: `restore` (ADR-0083). **74 since 2026-09-26**:
     # `handoff_threshold`, removed by George (ADR-0094). **76 since
     # 2026-09-27**: `skin_motion` and `record_speed` (ADR-0096 as amended).
-    # **77**: `rotation_mode` (ADR-0097).
-    assert len(rows) == 77
+    # **77**: `rotation_mode` (ADR-0097). **79**: `legal` and `credits`
+    # (ADR-0099). **80**: `start_max` (ADR-0054 §5, 2026-09-28; first as Spotify's own row).
+    assert len(rows) == 80
     # 59 since 2026-09-25: `backup` was surfaced and `restore` arrived with
     # it (ADR-0083), so the shown count gains two while the hidden one loses
     # one. **58 since 2026-09-26**, less the threshold row. **60 since
-    # 2026-09-27**, with the animated skins' two.
-    assert len(rows) - len(kept) == 61
+    # 2026-09-27**, with the animated skins' two. **64 since 2026-09-28**,
+    # with Spotify's starting volume.
+    assert len(rows) - len(kept) == 64
 
 
 def test_the_clock_can_be_turned_off_without_taking_the_screen_with_it():
@@ -966,8 +974,10 @@ def test_a_renderers_rows_land_in_sources_under_its_own_name():
     # functionality for a user."* LMS's own `Enabled` stays in Sources; the
     # plugin's switch is a row in the Plugins list, named after the plugin.
     plugins = next(g for g in merged if g["id"] == "plugins")
-    assert [(r["key"], r["label"]) for r in plugins["rows"]] == [
-        ("plexamp.enabled", "Plexamp")]
+    # Under a "Sources" heading since 2026-09-27 (George: "group the plugins
+    # based on the area they operate in").
+    assert [(r.get("key"), r["label"]) for r in plugins["rows"]] == [
+        (None, "Sources"), ("plexamp.enabled", "Plexamp")]
 
 
 def test_keys_are_prefixed_so_two_plugins_cannot_collide():
@@ -975,10 +985,10 @@ def test_keys_are_prefixed_so_two_plugins_cannot_collide():
     error nobody could act on."""
     row = {"key": "quality", "type": "toggle", "label": "Quality"}
     merged = Settings.with_plugins(
-        _groups(), [_plugin("plexamp", settings=[row]), _plugin("qobuz", settings=[row])])
+        _groups(), [_plugin("plexamp", settings=[row]), _plugin("example", settings=[row])])
     assert _keys(merged) == {
-        "sources": ["lms_enabled", "plexamp.quality", "qobuz.quality"],
-        "plugins": ["plexamp.enabled", "qobuz.enabled"],
+        "sources": ["lms_enabled", "plexamp.quality", "example.quality"],
+        "plugins": ["plexamp.enabled", "example.enabled"],
         "system": [],
     }
 
@@ -999,7 +1009,7 @@ def test_a_plugin_declaring_enabled_keeps_the_switch_and_its_other_rows():
     # The core's, not the plugin's - the label gives it away: the plugin called
     # its row "On" and the switch is named after the plugin.
     plugins = next(g for g in merged if g["id"] == "plugins")
-    assert plugins["rows"][0]["label"] == "Plexamp"
+    assert plugins["rows"][1]["label"] == "Plexamp", "after its area's heading"
 
 
 def test_a_service_does_not_land_in_sources():
@@ -1024,12 +1034,12 @@ def test_rows_go_through_the_registrys_own_validation():
 
 
 def test_one_bad_plugin_does_not_cost_the_others():
-    good = _plugin("qobuz", settings=[{"key": "quality", "type": "toggle", "label": "Q"}])
+    good = _plugin("example", settings=[{"key": "quality", "type": "toggle", "label": "Q"}])
     bad = _plugin("plexamp", settings=[{"key": "size", "type": "number", "label": "S"}])
     merged = Settings.with_plugins(_groups(), [bad, good])
     assert _keys(merged) == {
-        "sources": ["lms_enabled", "qobuz.quality"],
-        "plugins": ["qobuz.enabled"],
+        "sources": ["lms_enabled", "example.quality"],
+        "plugins": ["example.enabled"],
         "system": [],
     }
     # **Including its switch.** A plugin dropped for a bad row must not leave a

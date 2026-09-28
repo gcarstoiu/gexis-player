@@ -206,9 +206,25 @@ for f in /etc/systemd/system/plexamp.service \
          /usr/share/gexis/plugins/plexamp/plugin.json \
          /usr/share/gexis/plugins/plexamp/mark.png \
          /opt/gexis-plexamp/src/gexis_plexamp/main.py \
-         /home/pi/plexamp/js/index.js; do
+         /usr/local/lib/gexis/gexis-fetch-component \
+         /etc/systemd/system/gexis-fetch@.service \
+         /usr/share/gexis/components/plexamp.env; do
 	dfs "stat $f" | grep -q 'Inode:' && ok "$f" || bad "$f missing"
 done
+# **ADR-0100: Plex's software is not in the image.** It is fetched on the device
+# when Plexamp is switched on; a copy here would be a redistribution nobody has
+# established a right to.
+if dfs "stat /home/pi/plexamp" | grep -q 'Inode:'; then
+	bad "/home/pi/plexamp is in the image - ADR-0100 fetches it on the device"
+else
+	ok "Plexamp itself is not shipped"
+fi
+dfs "dump /etc/systemd/system/plexamp.service $OUT/unit-fetch" >/dev/null
+if grep -q '^Requires=gexis-fetch@plexamp\.service' "$OUT/unit-fetch" && grep -q '^After=gexis-fetch@plexamp\.service' "$OUT/unit-fetch"; then
+	ok "plexamp.service fetches Plexamp before it starts"
+else
+	bad "plexamp.service does not require gexis-fetch@plexamp.service"
+fi
 # Node is the runtime Plexamp needs and nothing else here uses. Its absence
 # would be a renderer that cannot start, with the reason two layers down.
 dfs "stat /usr/bin/node" | grep -q 'Inode:' && ok "node installed" || bad "node missing"
@@ -309,6 +325,21 @@ else
 	bad "plexamp's manifest does not name plexamp.service as a renderer"
 fi
 rm -f "$OUT/one"
+
+echo "== ADR-0099: licences and the source offer reach the device"
+for f in /usr/share/doc/gexis-player/COPYING \
+         /usr/share/doc/gexis-player/SOURCE.md \
+         /usr/share/doc/gexis-player/packages.txt \
+         /usr/share/doc/gexis-player/licenses/peppy_screensaver/LICENSE \
+         /usr/share/doc/gexis-player/licenses/peppy_templates/LICENSE \
+         /usr/share/doc/gexis-player/licenses/beszel/LICENSE \
+         /usr/share/doc/gexis-player/licenses/go-librespot/README \
+         /usr/share/doc/gexis-player/licenses/peppyalsa/README \
+         /opt/gexis-ui/licenses/svelte/LICENSE.md \
+         /opt/gexis-ui/licenses/@fontsource-variable__nunito-sans/LICENSE \
+         /opt/gexis-ui/licenses/@fontsource__ibm-plex-mono/LICENSE; do
+	dfs "stat $f" | grep -q 'Inode:' && ok "$f" || bad "$f missing"
+done
 
 echo "== ADR-0085: the ALSA default is our output"
 dfs "dump /etc/alsa/conf.d/zz-gexis-default.conf $OUT/one" >/dev/null

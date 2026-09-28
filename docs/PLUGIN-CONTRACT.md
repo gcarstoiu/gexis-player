@@ -80,6 +80,7 @@ Every message has a `t` (type). Everything else depends on `t`.
    "volume_mechanism": "software_api",
    "dummy_mixer_card": null,
    "volume_over_bluealsa": false,
+   "volume_handed": false,
    "controls": ["play", "pause", "next", "previous", "repeat", "shuffle"]
  },
  "release_ladder": {"polite_grace": 1.0, "sigterm_grace": 2.0, "sigkill_grace": 2.0}}
@@ -146,6 +147,7 @@ Taken from `Adapter` and `Capabilities` as they are. The prose for each is in
 | `capabilities.volume_mechanism` | `dummy_mixer` \| `software_api` | ADR-0053 |
 | `capabilities.dummy_mixer_card` | string or null | Only for `dummy_mixer` |
 | `capabilities.volume_over_bluealsa` | bool | ADR-0054 §1 |
+| `capabilities.volume_handed` | bool, optional | **Added 2026-09-28, within version 1.** True when the level the plugin would report at a takeover is only its app's leftover. The core then *hands* it a level (the DAC's, capped by `start_max`) through `set_volume` instead of applying its report. A plugin that declares it should hold back its `volume` reports from its acquisition until that `set_volume` arrives. ADR-0054 §5, as amended |
 | `capabilities.controls` | array | Subset of `play`, `pause`, `next`, `previous`, `repeat`, `shuffle`, plus `activate` |
 
 ## Plugin → core

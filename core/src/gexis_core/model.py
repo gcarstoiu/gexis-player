@@ -250,6 +250,10 @@ class PlaybackState:
     #: is dismissed by this going away, not by the panel's own countdown
     #: reaching zero.
     pairing: dict | None = None
+    #: **ADR-0100 as amended: downloads a plugin makes when switched on**, by
+    #: component name - phase, bytes of total, attempt, error. Published so
+    #: the user is told what is happening while it happens.
+    components: dict = field(default_factory=dict)
 
     @property
     def controls(self) -> dict | None:
@@ -288,4 +292,5 @@ class PlaybackState:
             "controls": self.controls,
             "queue": self.queue.to_json() if self.queue else None,
             "pairing": self.pairing,
+            "components": dict(self.components),
         }

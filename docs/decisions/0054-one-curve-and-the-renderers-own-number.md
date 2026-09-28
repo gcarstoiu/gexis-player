@@ -1,7 +1,7 @@
 # ADR-0054 — One volume curve, ours, applied to each renderer's own number
 
 **Status:** Accepted, **§5 amended 2026-09-26** (Spotify is told the level, not
-asked) — George, 2026-09-23: *"All three at once. Let's try the
+asked) **and 2026-09-28** (a renderer handed its level starts no louder than a setting) — George, 2026-09-23: *"All three at once. Let's try the
 fix in order to still have hardware attenuation. If it doesn't work we might
 need to reconsider the software volume path."*
 **Date:** 2026-09-23
@@ -237,3 +237,46 @@ outward, which is the direction the model is for.
   makes it moot rather than answering it.
 - **Whether 60 dB is right.** It is a measured starting point, not a
   measured answer, and it needs George at the amplifier.
+
+## Amended 2026-09-28: Spotify starts no louder than *Starting volume*
+
+**The problem.** §5 as amended hands Spotify the level already on the DAC. That
+was safe while every source moved the DAC. Since Plexamp (Finding 095, revised)
+keeps its own volume, the DAC stays wherever the panel left it, often high, with
+the app turning the sound down inside the stream. The core's log of George's
+test on 2026-09-28 shows the consequence: a source keeping its own volume had
+left the DAC at 240/240, and Spotify took over at 100%.
+
+**Decided (George, 2026-09-28).** He took Claude's proposal (a cap that only
+ever lowers) and widened it: *"Spotify specific setting. Default is 60 applied
+everywhere on all takeovers. 60 is the max. If the previous renderer had less
+than 60 it stays to what the renderer had. If more than 60, then it comes down
+to 60. I use 60 as example, it should follow the setting value."*
+
+- **A setting in Spotify Connect's group:** `spotify_start_max`,
+  *Starting volume*, 10-100 %, default 60.
+- **On every takeover by Spotify, from any source**, the level handed to it is
+  the lower of the DAC's level and the setting, both on the panel's percentage
+  scale. It never raises a level.
+- **When it lowers, the DAC is written first**, through `write_hardware` (a ramp
+  of at most 0.12 s, ADR-0052 §4), then Spotify is told. The acquisition runs
+  release → volume → `device_freed`, so the cap lands before Spotify's retry, and
+  alongside its first open (0.26 s after it announces) at worst.
+- **Spotify only.** It is the one renderer handed a level. The others report
+  their own on acquisition (LMS, Bluetooth), or keep their own (Plexamp).
+- Fixed output is untouched, as before: nothing is handed there.
+
+### Amended again 2026-09-28: the cap covers every renderer that is handed its level
+
+A plugin can have what Spotify has: a level at a takeover that is only its
+app's leftover. George chose the cap for such a renderer too, the same day.
+
+- **The row moves and is renamed:** `start_max`, *Starting volume*, under Audio
+  beside *Maximum volume*. Same range, same default of 60 %. It left Spotify's
+  group because it is no longer Spotify's alone. Nothing had shipped with the
+  old key.
+- **Which renderers:** every one the core hands a level on acquisition, not one
+  named in code. Spotify is handed one (`reports_real_volume = False`), and so
+  is any plugin that declares the new capability **`volume_handed`**
+  (PLUGIN-CONTRACT.md).
+

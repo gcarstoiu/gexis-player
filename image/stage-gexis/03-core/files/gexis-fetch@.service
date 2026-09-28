@@ -1,0 +1,14 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# ADR-0100: fetch <name> from its maker before the unit that needs it starts.
+# A unit `Requires=` and `After=` this; the first start downloads, every later
+# one finds the pinned version already in place.
+[Unit]
+Description=Fetch %i from its maker (ADR-0100)
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/local/lib/gexis/gexis-fetch-component %i
+TimeoutStartSec=600

@@ -81,7 +81,7 @@ def test_set_available_to_same_value_does_not_notify():
 def test_set_available_rejects_unknown_renderer():
     store = StateStore(_caps("lms"))
     try:
-        store.set_available("qobuz", True)
+        store.set_available("example", True)
     except ValueError:
         return
     raise AssertionError("expected ValueError")

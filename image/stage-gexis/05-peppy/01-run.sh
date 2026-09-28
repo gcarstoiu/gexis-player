@@ -67,6 +67,10 @@ tar -xzf "${WORK}/peppyspectrum.tar.gz" -C "${PEPPY_DIR}/spectrum" --strip-compo
 # Both skin corpora, side by side (George, 2026-09-16: keep the stock ones).
 mkdir -p "${WORK}/screensaver" "${WORK}/gelo5"
 tar -xzf "${WORK}/screensaver.tar.gz" -C "${WORK}/screensaver" --strip-components=1
+# ADR-0099: the MIT notice travels with the stock skins and the designs our
+# renderer reimplements from this repository.
+install -D -m 644 "${WORK}/screensaver/LICENSE" \
+	"${ROOTFS_DIR}/usr/share/doc/gexis-player/licenses/peppy_screensaver/LICENSE"
 # bsdtar, not unzip: the pi-gen build container has no unzip and no python3
 # (checked 2026-09-16, after a build failed here on exactly that).
 bsdtar -xf "${WORK}/gelo5.zip" -C "${WORK}/gelo5"
@@ -206,6 +210,11 @@ done <<'PACKS'
 1280/720 1280x720_g5_712_Cassette 8e2d79fce2eb55cfea8628dc0c466226181495b7d3939b1923b7afcf2a85f798 g5-cassette
 1280/800 1280x800_t1800_pack7 d3874b563a44406ece770ab1278cb785b92c787f46e1d0ef122ef515173cb8ec t1800
 PACKS
+# ADR-0099: the packs carry no licence of their own; their hosting
+# repository's MIT notice goes with them, fetched at the same commit.
+fetch "https://raw.githubusercontent.com/foonerd/peppy_templates/f80c166a9682467f0631c374b6ed4eb088fc6e3c/LICENSE" \
+	"32f33fd11a3263acf22e759fc4482c21cc9296f9d2e3a402639a0fb3a7b3a654" "${WORK}/templates-LICENSE"
+install -D -m 644 "${WORK}/templates-LICENSE" "${ROOTFS_DIR}/usr/share/doc/gexis-player/licenses/peppy_templates/LICENSE"
 install -D -m 644 files/letterbox.py "${PEPPY_DIR}/letterbox.py"
 
 # PeppyMeter has no --config option: it reads ./config.txt relative to the

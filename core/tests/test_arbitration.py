@@ -120,6 +120,93 @@ async def test_acquire_takes_the_device_and_releases_the_previous_one():
 
 
 @pytest.mark.asyncio
+async def test_an_outgoing_renderer_gone_during_its_release_does_not_break_the_takeover():
+    """A plugin whose release is a SIGKILL of the unit it drives goes down with
+    that unit (`BindsTo=`), so the core forgets it mid-acquisition. The
+    last step then looked it up and raised KeyError, on every takeover from
+    such a plugin."""
+    supervisor, adapters, holder = build(active="lms")
+    lms = adapters["lms"]
+
+    async def killed(force):
+        holder["who"] = None
+        supervisor.forget("lms")
+
+    lms.signal_stop = killed
+    lms._frees_at = "sigkill"
+    await supervisor.acquire("spotify")
+    assert supervisor.active == "spotify"
+    assert adapters["spotify"].device_freed_calls == 1
+    assert lms.restart_after_release_calls == 0, "nobody left to restart"
+
+
+@pytest.mark.asyncio
+async def test_a_renderer_forgotten_while_the_ladder_polls_is_still_checked_by_its_unit():
+    """George, 2026-09-28: Spotify took over from a plugin renderer, the
+    SIGKILL took the plugin down with the unit it drives, and the core forgot
+    it while the ladder was still polling. The poll looked the unit up through the adapters, raised
+    KeyError, and the acquisition died before its volume step: no starting
+    cap, and the phone's next press took the DAC to full scale.
+
+    Here `device_busy` looks units up the way `__main__` does, and the
+    renderer is forgotten between the signal and the poll."""
+    holder = {"unit": "lms.service"}
+    adapters = {
+        "lms": FakeAdapter("lms", ReleaseAction.PAUSE, holder, frees_at="never"),
+        "spotify": FakeAdapter("spotify", ReleaseAction.DISCONNECT, holder),
+    }
+    restored = []
+
+    async def restore(renderer_id):
+        restored.append(renderer_id)
+
+    supervisor = None
+
+    def device_busy(renderer_id):
+        unit = supervisor.unit_of(renderer_id)
+        return unit is not None and holder["unit"] == unit
+
+    supervisor = Supervisor(adapters, device_busy=device_busy, ladder=FAST_LADDER,
+                            restore_volume=restore)
+    supervisor._active = "lms"
+
+    async def killed(force):
+        holder["unit"] = None
+        supervisor.forget("lms")
+
+    adapters["lms"].signal_stop = killed
+    lms = adapters["lms"]
+    await supervisor.acquire("spotify")
+    assert supervisor.active == "spotify"
+    assert restored == ["spotify"], "the volume step ran"
+    assert adapters["spotify"].device_freed_calls == 1
+    assert supervisor.unit_of("lms") == "lms.service", "remembered after it was forgotten"
+    assert lms.restart_after_release_calls == 0
+
+
+@pytest.mark.asyncio
+async def test_a_release_that_raises_does_not_skip_the_volume_step():
+    """Whatever goes wrong in the ladder, the incoming renderer's volume step
+    and its retry still run: the volume step is Spotify's starting cap."""
+    supervisor, adapters, holder = build(active="lms")
+    restored = []
+
+    async def restore(renderer_id):
+        restored.append(renderer_id)
+
+    supervisor._restore_volume = restore
+
+    async def broken():
+        raise RuntimeError("something nobody foresaw")
+
+    adapters["lms"].release = broken
+    await supervisor.acquire("spotify")
+    assert supervisor.active == "spotify"
+    assert restored == ["spotify"]
+    assert adapters["spotify"].device_freed_calls == 1
+
+
+@pytest.mark.asyncio
 async def test_reacquiring_the_current_renderer_is_a_noop():
     supervisor, adapters, holder = build(active="lms")
     await supervisor.acquire("spotify")
@@ -361,7 +448,7 @@ async def test_signal_rungs_poll_instead_of_sleeping_blind(monkeypatch):
 async def test_unknown_renderer_rejected():
     supervisor, _, _ = build()
     with pytest.raises(ValueError):
-        await supervisor.acquire("qobuz")
+        await supervisor.acquire("example")
 
 
 @pytest.mark.asyncio
@@ -592,7 +679,7 @@ async def test_relinquish_from_a_renderer_that_is_not_current_is_ignored():
 async def test_relinquish_rejects_an_unknown_renderer():
     supervisor, _, _ = build()
     with pytest.raises(ValueError):
-        await supervisor.relinquish("qobuz")
+        await supervisor.relinquish("example")
 
 
 # --- Phase 3 criterion 1: state store notification ------------------------
@@ -787,10 +874,13 @@ async def test_handoff_is_cleared_even_if_the_release_raises():
     )
     supervisor._active = "lms"
 
-    with pytest.raises(RuntimeError):
-        await supervisor.acquire("spotify")
+    # **It no longer propagates** (Finding 096): a release that raises is
+    # logged and the takeover goes on to its volume step, because that step
+    # is Spotify's starting cap. The screen is still cleared.
+    await supervisor.acquire("spotify")
 
     assert seen == [("lms", "spotify"), (None, None)]
+    assert supervisor.active == "spotify"
 
 
 # ---------------------------------------------------------------------------

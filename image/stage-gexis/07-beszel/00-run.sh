@@ -37,7 +37,9 @@ trap 'rm -rf "${WORK}"' EXIT
 
 fetch_cached "${BESZEL_URL}" "${BESZEL_SHA256}" "${WORK}/${BESZEL_ASSET}"
 
-tar -xzf "${WORK}/${BESZEL_ASSET}" -C "${WORK}" beszel-agent
+tar -xzf "${WORK}/${BESZEL_ASSET}" -C "${WORK}" beszel-agent LICENSE
+# ADR-0099: the MIT notice goes with the binary.
+install -D -m 644 "${WORK}/LICENSE" "${ROOTFS_DIR}/usr/share/doc/gexis-player/licenses/beszel/LICENSE"
 
 install -D -m 755 "${WORK}/beszel-agent" "${ROOTFS_DIR}/usr/local/bin/beszel-agent"
 

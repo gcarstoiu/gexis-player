@@ -59,7 +59,7 @@ the authorisation**. Nothing on the network can reach it, and nothing has to
 be invented.
 
 It also costs nothing that matters. ADR-0016 said separate *processes*, not
-separate machines, and no plugin this project has planned — Plexamp, Qobuz, a
+separate machines, and no plugin this project has planned — Plexamp, a
 Beszel agent — runs anywhere but here.
 
 ### Why JSON lines
