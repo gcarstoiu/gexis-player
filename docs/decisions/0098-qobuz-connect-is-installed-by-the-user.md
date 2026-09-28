@@ -151,3 +151,23 @@ removal, and in what form, was a decision owed to George. **Decided
 2026-09-28: switching off stops it, and a separate Remove deletes the download**
 (ADR-0100's amendment of that date, which covers Plexamp too).
 
+## Amended 2026-09-28: one volume number, with a starting cap
+
+Pibuz 2.6.0 adds `qconnect.volume_mode external` (Finding 098: the signal is
+untouched, 34.7 against 35.0), so the reason for two separate levels (option A)
+is gone. **Decided (George, 2026-09-28): *"We do B with the starting cap."***
+
+- `pibuz-configure` sets `volume_mode external`: Pibuz plays at full scale and
+  reports the app's level without applying it. **gexis-qobuz 0.3.0 needs Pibuz
+  2.6.0 or later**, which exists as source only (Finding 097).
+- The adapter declares `volume_managed` and the new capability `volume_handed`.
+  It reports Pibuz's level on a change, and sets it through
+  `/api/playback/volume` when the core asks. The app's slider then moves the DAC
+  through the core, as Spotify's does, and the panel shows the same number.
+- **On a takeover the core hands Qobuz its level**, as it does Spotify
+  (ADR-0054 §5): the DAC's level, capped by *Starting volume*. The app's own
+  level arrives on a cast, 1.0 on George's; taken as it came, it would put the
+  DAC at full scale. The adapter holds back its reports from the moment it
+  acquires until the core has set the level, so the app's leftover never
+  reaches the DAC first.
+

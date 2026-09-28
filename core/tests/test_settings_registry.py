@@ -149,9 +149,10 @@ def test_registry_keys_are_the_designs_keys_apart_from_recorded_deviations():
         "rotation_mode",
         # ADR-0099, 2026-09-27: George asked for both pages.
         "legal", "credits",
-        # ADR-0054 §5, amended 2026-09-28: George's cap on Spotify's
-        # starting level. The design predates sources that keep their own.
-        "spotify_start_max",
+        # ADR-0054 §5, amended 2026-09-28: George's cap on the starting level
+        # of a renderer that is handed one (Spotify, Qobuz Connect). The design
+        # predates sources that keep their own.
+        "start_max",
     }
 
 
@@ -521,7 +522,7 @@ def test_the_shipped_registry_hides_twenty_rows_and_shows_the_rest():
     # `handoff_threshold`, removed by George (ADR-0094). **76 since
     # 2026-09-27**: `skin_motion` and `record_speed` (ADR-0096 as amended).
     # **77**: `rotation_mode` (ADR-0097). **79**: `legal` and `credits`
-    # (ADR-0099). **80**: `spotify_start_max` (ADR-0054 §5, 2026-09-28).
+    # (ADR-0099). **80**: `start_max` (ADR-0054 §5, 2026-09-28; first as Spotify's own row).
     assert len(rows) == 80
     # 59 since 2026-09-25: `backup` was surfaced and `restore` arrived with
     # it (ADR-0083), so the shown count gains two while the hidden one loses

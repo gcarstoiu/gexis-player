@@ -101,6 +101,7 @@ def capabilities_from(raw) -> Capabilities:
         volume_mechanism=mechanism,
         dummy_mixer_card=raw.get("dummy_mixer_card"),
         volume_over_bluealsa=bool(raw.get("volume_over_bluealsa", False)),
+        volume_handed=bool(raw.get("volume_handed", False)),
         controls=frozenset(controls),
     )
 
@@ -214,6 +215,16 @@ class PluginAdapter(Adapter):
     #: on - and 100 is what every renderer here is normalised to before the
     #: hardware curve is applied (ADR-0054).
     VOLUME_STEPS = 100
+
+    @property
+    def reports_real_volume(self) -> bool:
+        """False for a plugin that declares `volume_handed` (ADR-0054 §5, as
+        amended 2026-09-28): its level on acquisition is the app's leftover,
+        so the core hands it one - capped - rather than asking."""
+        return not self.capabilities.volume_handed
+
+    async def get_volume_steps(self) -> int:
+        return self.VOLUME_STEPS
 
     def note_volume(self, value: int, steps: int) -> None:
         """A `volume` event arrived: keep it, on our own scale.

@@ -542,7 +542,8 @@ async def main() -> None:
         where the DAC already is. **Fixed output is left alone** - the DAC is at
         full scale there by design, and there is nothing to carry.
 
-        **Amended 2026-09-28: Spotify starts no louder than `spotify_start_max`**
+        **Amended 2026-09-28: Spotify starts no louder than `start_max`**, and
+        since the same day neither does a plugin that declares `volume_handed`
         (George: *"60 is the max. If the previous renderer had less than 60 it
         stays to what the renderer had. If more than 60, then it comes down to
         60"*). Qobuz and Plexamp keep their own volume and can leave the DAC at
@@ -558,7 +559,10 @@ async def main() -> None:
             return False
         steps = await adapter.get_volume_steps()
         value = hardware_raw_to_renderer_value(raw, steps)
-        start_max = _number("spotify_start_max") if renderer_id == "spotify" else None
+        # Every renderer handed its level, not one named here (ADR-0054 §5,
+        # amended again 2026-09-28): Spotify, and a plugin that declares
+        # `volume_handed` - Qobuz Connect.
+        start_max = _number("start_max")
         if start_max is not None and value > renderer_percent_to_value(start_max, steps):
             value = renderer_percent_to_value(start_max, steps)
             logger.info(
@@ -1385,8 +1389,9 @@ async def main() -> None:
                    _apply_headless(value)
                ),
                "show_transition": None, "handoff_duration": None,
-               # ADR-0054 §5, amended 2026-09-28: read at each Spotify takeover.
-               "spotify_start_max": None,
+               # ADR-0054 §5, amended 2026-09-28: read at each takeover that
+               # hands a renderer its level.
+               "start_max": None,
                # ADR-0052 §3: read on every map between a position and a
                # level, and re-applied here when it changes so the level
                # comes down at once if it is now above the ceiling.

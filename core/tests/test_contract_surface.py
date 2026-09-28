@@ -39,6 +39,9 @@ DECLARED = {
     "volume_mechanism",
     "dummy_mixer_card",
     "volume_over_bluealsa",
+    # Added 2026-09-28, within contract version 1: a plugin whose level at a
+    # takeover is its app's leftover is handed one (ADR-0054 §5, amended).
+    "volume_handed",
     "controls",
 }
 
