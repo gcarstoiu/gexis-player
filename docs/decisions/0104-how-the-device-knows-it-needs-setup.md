@@ -1,6 +1,6 @@
 # ADR-0104 — How the device knows it needs setup, and what it does about it
 
-**Status:** Accepted, 2026-09-28 (George's answers below; one still owed)
+**Status:** Accepted, 2026-09-28 (George's answers below)
 **Date:** 2026-09-28
 **Implements:** [0031](0031-first-boot-setup-access-point.md) and its 2026-09-28
 amendment — Phase 13, criteria 1, 5-8
@@ -93,13 +93,13 @@ input (ADR-0029).
    page and follows its progress, and it is drawn from the design's parts (the
    gexis mark, the step accents, its type) because nothing draws it.
 2. **Headless** (*"A headless setup means also stopping some services that are
-   not needed right?"*). Yes. Only the panel uses `gexis-kiosk` (labwc and
-   Chromium), `gexis-peppy` (`PartOf` the kiosk), `gexis-panel-warmup` and the
-   boot splash. `gexis-meter` feeds the panel's meters and Peppy, and its
-   WebSocket is also open to remote clients; no phone page uses it today (read
-   from `ui/src`, not measured). **Owed:** the list to stop, and whether
-   Headless is a row after setup as well (ADR-0022, marked [?]). The step stays
-   in the phone's flow, preselected from the connector.
+   not needed right?"*). Yes, and that already exists: the **Headless** row
+   (ADR-0077, wired 2026-09-25) stops `gexis-kiosk`, `gexis-panel-warmup` and
+   `gexis-peppy`, and leaves the core, the phone page and audio alone. The
+   design's Display step sets that row; nothing new is built for it. The step
+   is preselected from the connector. *(A first draft of this answer said the
+   list was still owed, and put a duplicate [?] row in ADR-0022. It was not
+   searched for first; corrected the same day.)*
 3. **A running device that loses its Wi-Fi: restarting is the way back** (*"Restarting is
    the way"*). The setup network opens at boot only, as §3 says.
 4. **Settings inventory:** agreed, and appended to ADR-0022. The Wi-Fi country

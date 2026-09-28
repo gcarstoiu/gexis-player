@@ -245,15 +245,15 @@ down here rather than discovered later in the registry.
 ### Appended 2026-09-28 — Phase 13's rows
 
 Proposed with [ADR-0104](0104-how-the-device-knows-it-needs-setup.md) and
-confirmed by George, 2026-09-28 (*"agree. WiFi country not shown."*), except
-where marked [?].
+confirmed by George, 2026-09-28 (*"agree. WiFi country not shown."*). The
+design's Display step is not a new row: it sets **Headless**, which is [R] and
+wired above (ADR-0077).
 
 | Setting | Mark | Notes |
 |---|---|---|
 | Run setup again | [N] | An action in System. Takes the device back to first-boot setup (ADR-0031) with its current answers filled in |
 | Setup network: 90 s at boot, 5 min retry, the name `gexis-setup` | [H] | George's thresholds (ADR-0031 amendment 7). Fixed values, not rows |
 | Wi-Fi country | [H] | Taken from the time zone when setup is applied (ADR-0104 §4). **Not shown**, George |
-| Headless | [?] | The design's Display step. George, 2026-09-28: headless should also stop what only the panel needs. Which services, and whether it is a row after setup as well, is still owed |
 
 ## Settled by prior records
 
