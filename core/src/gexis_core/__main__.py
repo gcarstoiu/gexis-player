@@ -70,6 +70,7 @@ from gexis_core.settings_registry import Settings, load_registry
 from gexis_core.splash import Splash
 from gexis_core.state import StateStore
 from gexis_core import backups, bluealsa_volume, components, outputs, plugin_env, plugins
+from gexis_core.setup_network import SetupNetwork
 from gexis_core.adapters.plugin import PluginAdapter
 from gexis_core.plugin_server import PluginServer
 from gexis_core.systemd import is_enabled as _unit_is_enabled
@@ -2067,6 +2068,7 @@ async def main() -> None:
     if renderer_enabled("lms"):
         asyncio.ensure_future(_check_lms_volume_control())
 
+    setup_network = SetupNetwork()
     state_server = StateServer(
         state_store,
         host=config.state_host,
@@ -2099,6 +2101,8 @@ async def main() -> None:
         # ADR-0043: the panel reports its first painted frame and the boot
         # animation ends there, not when the kiosk unit goes active.
         splash=Splash(),
+        # ADR-0104: first-boot setup and the setup network.
+        setup=setup_network,
         # ADR-0047: the idle screen's two providers.
         weather=forecast,
         wallpapers=wallpapers,
@@ -2305,6 +2309,9 @@ async def main() -> None:
         # The `wifi` row's value, kept current from here rather than read on
         # the request path - where it measured 3.2 s and blocked everything.
         wifi.watch_connected(),
+        # ADR-0104: decided once at boot; holds the setup network while it is
+        # needed and gives the radio back to a saved network when one returns.
+        setup_network.run(),
         # ADR-0084: the socket plugins connect to. Served for the life of the
         # process, beside the one the browser uses.
         plugin_server.run(),

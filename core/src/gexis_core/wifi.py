@@ -154,14 +154,15 @@ def _bars(signal: str) -> int:
     return 1
 
 
-async def saved_ssids() -> dict[str, str]:
+async def saved_ssids(run=None) -> dict[str, str]:
     """SSID -> the name of the saved connection that carries it.
 
     **A saved connection is not named after its network.** This image ships
     one called `preconfigured`, so matching by connection name would report
     every known network as unknown and offer to forget nothing.
     """
-    rc, out, _ = await _run(
+    run = run or _run
+    rc, out, _ = await run(
         "-t", "-f", "NAME,UUID,TYPE", "connection", "show"
     )
     if rc != 0:
@@ -172,7 +173,7 @@ async def saved_ssids() -> dict[str, str]:
         if len(parts) < 3 or "wireless" not in parts[2]:
             continue
         name, uuid = parts[0], parts[1]
-        rc2, ssid_out, _ = await _run(
+        rc2, ssid_out, _ = await run(
             "-t", "-f", "802-11-wireless.ssid", "connection", "show", uuid
         )
         if rc2 != 0:

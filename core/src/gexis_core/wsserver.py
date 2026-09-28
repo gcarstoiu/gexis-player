@@ -110,6 +110,7 @@ class StateServer:
         restore=None,
         plugins=(),
         splash=None,
+        setup=None,
         weather=None,
         wallpapers=None,
         skins_dir: Path | None = None,
@@ -157,6 +158,8 @@ class StateServer:
         #: watch it without one.
         self._restore = restore
         self._splash = splash
+        #: ADR-0104: the setup network's status, for the panel and the phone.
+        self._setup = setup
         self._weather = weather
         self._wallpapers = wallpapers
         #: Where the skin packs live (ADR-0050). Read per request rather
@@ -887,6 +890,13 @@ class StateServer:
         self._store.set_panel(idle=idle)
         return web.json_response({"idle": idle})
 
+    async def _handle_setup_status(self, request: web.Request) -> web.Response:
+        """ADR-0104 §5: whether setup is needed and the setup network's state.
+        The password is in it only while the network is open."""
+        if self._setup is None:
+            return web.json_response({"needed": False, "network": "unmanaged"})
+        return web.json_response(self._setup.status())
+
     async def _handle_painted(self, request: web.Request) -> web.Response:
         """The panel reporting its first painted frame, which is what ends
         the boot animation (ADR-0043 §3).
@@ -1201,6 +1211,7 @@ class StateServer:
         app.router.add_get("/surface", self._handle_surface)
         app.router.add_post("/touch", self._handle_touch)
         app.router.add_post("/panel/painted", self._handle_painted)
+        app.router.add_get("/setup/status", self._handle_setup_status)
         # ADR-0101: the phone's idle toggle, and the panel saying what it shows.
         app.router.add_post("/panel/idle/{action}", self._handle_idle_request)
         app.router.add_post("/panel/shown", self._handle_panel_shown)
