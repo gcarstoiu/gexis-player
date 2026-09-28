@@ -365,6 +365,14 @@ reverted, currently-flashed image predates this fix.
                                             skins per resolution; recognise the
                                             screen in setup. Finding 100. ADR
                                             first; designs from Claude Design
+13c updates over the network             added 2026-09-28 (George: "Agreed to
+                                            do before"): the first public release
+                                            image waits on it. ADR-0021's in-place
+                                            apt updates, never built: our parts as
+                                            .debs, a signed repository, OS updates
+                                            as they come or a tested snapshot
+                                            (decide), backup before each update.
+                                            ADR first
 14 themes                                 cut out of 10. ADR-0016 calls themes
                                             plugins and plugins processes; a
                                             theme has no process - settle that

@@ -2634,6 +2634,60 @@ Claude Design: the brief George hands over is
   (model; sets the family and the skin set) and **[N] Rotation**.
 - **Which hardware** is bought or borrowed to test the bars and the 800×480.
 
+### Phase 13c — Updates over the network
+
+**Added 2026-09-28 (George):** *"Agreed to do before"* - **the first public
+release image waits on this phase**, so a device in a user's hands can be
+reached with a fix without reflashing. 13b (other screens) does not hold the
+release; the order between them is George's to set.
+
+**Already decided, not built:** [ADR-0021](decisions/0021-deployment-flashable-image.md)
+*"Updates are in-place package updates"* (2026-09-05): no reflash, no A/B
+partitions, a signed repository we host, settings kept on the writable root,
+`alsa-lib` pinned and held, the `output` definition a packaged file with a
+known checksum, each build recording what it pinned. ADR-0021 left the
+repository *"not specified"* and deferred archive snapshot pinning (its Q3).
+Today the only trace is the `updates` row (Manual / Automatic), unsurfaced and
+unwired. **Its ADR comes first**, settling the two questions below marked
+*decide*.
+
+**Acceptance (draft)**
+
+1. **Our parts are Debian packages**: the core with its Python environment,
+   the UI, our units and ALSA files, the skins and marks, the image's own
+   configuration. The image is built from them, so an image and an update are
+   the same bytes. (Today the image-build stages install these directly; this
+   is the largest piece.)
+2. **A signed repository we host** (GitHub Releases or Pages are candidates),
+   its key trusted by the image and by nothing else for our packages. How the
+   key is kept and rotated is written down.
+3. **The operating system's packages - *decide*:** the device takes
+   Raspberry Pi OS and Debian updates as they come with `alsa-lib` held, or it
+   moves only to a **tested set** frozen in a dated snapshot (ADR-0021 Q3),
+   which is George's rule for plugins in 13a applied to the whole device: *"we
+   need to check them before allowing an update"*.
+4. **Settings migrate with the code**: a release that adds, renames or
+   removes a setting carries what moves the stored value, and the registry
+   tests prove it (LESSONS 19-20).
+5. **Safety without A/B - *decide* the set:** an automatic backup before every
+   update (ADR-0083's archive); updating only when nothing is playing; one
+   version back available; after a failed update the device still boots, the
+   phone still reaches it, and it says what happened. The last resort, which
+   works today: reflash, then Restore.
+6. **Settings → System → Updates**: what version is installed, check now,
+   update now, what changed, and **Manual / Automatic** - the existing row,
+   confirmed with George before it is surfaced (as 13a says).
+7. **What still needs a reflash** is named: a new Debian release, a new boot
+   layout. Rare, and announced in the update screen.
+8. **Measured on gexis**: an update from the release image to a newer package
+   set, with the device playing before and after, settings and pairings kept,
+   `alsa-lib` still the pinned version, and the audio chain's checksums as
+   the build recorded them.
+
+**Shares with 13a:** a catalogue of versions we have tested, signed, which the
+device checks; 13a's plugin updates and this phase's system updates can be one
+mechanism, and the ADR should say whether they are.
+
 ### Phase 14 — Themes
 
 **Cut out of Phase 10 on 2026-09-25** (George): *"Themes to be cut out and have
