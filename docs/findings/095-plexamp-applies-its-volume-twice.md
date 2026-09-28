@@ -74,3 +74,13 @@ volume."* One number, shared by the Plexamp app and the panel, is worth more
 than loudness matching the other sources or being bit-perfect below 100. The
 known cost stays: Plexamp at a given number is quieter than Spotify or LMS at
 the same number, increasingly so toward the bottom of the slider.
+
+**Revised (George, 2026-09-28): (a).** After living with Qobuz's two separate
+levels: *"Volume is fine like this and we should do the same for plexamp
+actually as well. My bad with the previous decision."* gexis-plexamp now
+declares `volume_managed: false`, reports no level and refuses `set_volume`.
+The Plexamp app's slider moves Plexamp's own gain; the panel's moves the DAC.
+Deployed by hand on 2026-09-28, where the core's state shows `plexamp`
+unmanaged. Not released. The consequence George raised with it, a takeover
+landing at a level the app-controlled source left on the DAC, is a decision
+still owed (HANDOFF).

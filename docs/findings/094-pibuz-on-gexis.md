@@ -36,7 +36,9 @@ ran out of time).
 - **Quality falls back.** It asks Qobuz for UltraHiRes first. For one track
   that tier was "restricted", and it took HiRes.
 - **It holds no sound-card file descriptors while paused.** The card is free for
-  another renderer without stopping it.
+  another renderer without stopping it. **Corrected 2026-09-28
+  ([Finding 096](096-qobuz-connect-with-the-adapter.md)): only 2.06 s after
+  the pause.** Too late for go-librespot, which needs the card within 0.26 s.
 - **It reports state to Qobuz's servers** about every 1.8 s: position,
   duration and playing state. Volume changes are logged. Its MPRIS and JSON
   events are what the adapter will read. **Nothing on the panel shows it yet**
@@ -50,7 +52,7 @@ ran out of time).
 |---|---|---|
 | 1. Qobuz playing, Spotify takes over | **Fails.** Spotify does not play; the transition screen shows | go-librespot: `failed starting playback: ALSA error at snd_pcm_open: Device or resource busy`, five times from 18:31:01. The core does not know Pibuz holds the card, so no release was sent. |
 | 2. Spotify playing, cast to Qobuz | **Fails.** Spotify keeps playing; the Qobuz app shows time advancing with no sound | Pibuz: `Device busy` → nine retries (18:34:23-29) → `Backend system init failed for Play`. **It tells the app it is playing anyway.** |
-| 3. Qobuz paused, Spotify plays, Qobuz resumes | Works | A paused Pibuz holds no descriptors on the card. |
+| 3. Qobuz paused, Spotify plays, Qobuz resumes | Works | A paused Pibuz holds no descriptors on the card - **2.06 s after the pause** (Finding 096). Here the pause came well before Spotify. |
 | 4. Disconnect in the app, then Spotify | Works | — |
 | 5. 24/192 | **Works** | `format_id=27`, `Hardware configured: 192000 Hz`. Across the session: 44.1, 88.2, 96 and 192 kHz, each at its own rate. |
 | 6. Seek, next, previous | Work | Gapless not tried. |

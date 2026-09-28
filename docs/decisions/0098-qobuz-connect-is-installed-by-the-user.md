@@ -123,3 +123,20 @@ directions, because the core did not know Pibuz existed. The adapter fixes this:
 
 A request from Qobuz, or Pibuz's author withdrawing it: the install action is
 removed in the next image, and anything installed stops at the next start.
+
+## Amended 2026-09-28: the adapter asks, and a release is a kill
+
+[Finding 096](../findings/096-qobuz-connect-with-the-adapter.md), from George's
+first round with the adapter. Two lines above no longer hold:
+
+- **"reads `GET /api/events` (SSE)"**: the stream arrives in bursts, seconds
+  late, and missed a skip's `TrackStarted`. The adapter now polls
+  `/api/status` every 0.5 s, and `/api/now-playing` when the track changes or
+  every 2 s. A position more than 3 s from where the playhead should be is
+  sent at once, which is the seek George saw the panel miss.
+- **"Release is pause, which frees the card"**: it frees it after 2.06 s,
+  whatever the buffer. go-librespot needs the card within 0.26 s, so
+  Spotify's first track was lost. The ladder's polite grace is now 0, as for
+  Plexamp (ADR-0091): the core checks once and kills. Pibuz comes back in
+  2 s, stopped, and still visible in the Qobuz app, which can cast to it again.
+

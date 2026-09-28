@@ -100,30 +100,39 @@ fetched on the device from its author's release, after a notice; public inert
   - `gcarstoiu/gexis-qobuz` v0.1.0 is **published**. Stage `08-qobuz` pins it.
   - Pibuz bug filed:
     [PhilipVinc/pibuz#2](https://github.com/PhilipVinc/pibuz/issues/2).
-  - **Owed:**
-    - George's takeover tests with the adapter.
-    - Qobuz volume: **decided, A** (two separate volumes). An `external` mode was
-      requested upstream,
-      [PhilipVinc/pibuz#3](https://github.com/PhilipVinc/pibuz/issues/3).
-    - **Plexamp applies its volume twice**
-      ([Finding 095](docs/findings/095-plexamp-applies-its-volume-twice.md),
-      measured before the DAC). Plexamp has no full-scale mode. **George kept it
-      as it is (C)**: one shared number between the Plexamp app and the panel.
-    - No image built from `phase-12` yet.
+  - **George's first round with the adapter found five things**
+    ([Finding 096](docs/findings/096-qobuz-connect-with-the-adapter.md)). Four
+    are fixed by hand on gexis, awaiting his retest:
+    - Pibuz's event stream is late and missed a skip, so the adapter now polls
+      (findings 1 and 5).
+    - A seek is sent at once (finding 3).
+    - Release is a kill (polite grace 0), because Pibuz holds the card 2.06 s
+      after a pause (finding 4).
+    - The fifth, volume, he kept as A. Pibuz issue
+      [#3](https://github.com/PhilipVinc/pibuz/issues/3) asks upstream for an
+      `external` mode.
+  - **Not released or committed upstream yet:** the gexis-qobuz rework, and
+    gexis-plexamp's change to unmanaged volume. Both are local commits in their
+    own repos. Release and bump the stage pins after the retest.
+  - **Plexamp volume: revised to A** (George, 2026-09-28; Finding 095). The
+    core does not manage it; the Plexamp app and the panel keep separate levels.
+  - **Decision owed: the level after a takeover.** George: *"it is safer to set
+    an initial volume of 60% … than keeping whatever the previous renderer
+    left."* Open: a cap or a set level; which takeovers; a setting or
+    hardcoded. An ADR-0054 §5 amendment first, then possibly an ADR-0022 row.
+  - No image built from `phase-12` yet.
 - **`README.md` published on `phase-12`** (d219e55; the branch's first push),
   approved by George. It has the gexis sound mark at the top
   (`docs/assets/gexis-sound.svg`, made by `design/brand/scripts/logo_svg.py`),
   on a dark ground. George is checking the mark on GitHub. Screenshots and a demo
   are to come from him.
-- **Decision owed: how plugins update.** Everything is pinned in the image today:
-  Beszel, both adapters, and the Plexamp/Pibuz download pins. So a new upstream
-  release reaches a player only with a new image. The `updates` setting is
-  unsurfaced and unwired. Options given to George:
-  - A: images only.
-  - B (recommended): a catalogue of vetted pins we publish, with "update
-    available" in the plugin row using the download UI, keeping the previous
-    version for rollback.
-  - C: follow upstream latest (rejected on the Pibuz re-publish).
+- **Plugin updates: decided, B** (George, 2026-09-28): *"we need to check them
+  before allowing an update. Only with the image might take too long so not an
+  option."* A catalogue of pins we have tested, published by us. The device
+  checks it, and the plugin row shows "update available" using the download
+  UI. The previous version is kept for rollback. Beszel and the adapters move
+  to the fetch mechanism. **An ADR comes first**, and the `updates`
+  (Manual/Automatic) row is confirmed with George before it is surfaced.
 - **The Qobuz spike stopped after part 1.** Pibuz 2.5.0 was verified, ran, and
   opened our `output` as soon as it was configured. The auto-mode classifier then
   blocked further downloading and running of it. `/tmp/pibuz-spike` may still be
