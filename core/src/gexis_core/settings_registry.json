@@ -1000,6 +1000,14 @@
         "kind": "backup"
       },
       {
+        "key": "debug_logs",
+        "type": "toggle",
+        "label": "Debug logs",
+        "marks": "R",
+        "note": "Keeps the device's logs on the card across restarts, up to 100 MB, for tracking down a problem. Off, they are kept in memory and lost at a restart, and switching off deletes the ones kept.",
+        "default": false
+      },
+      {
         "key": "factory_reset",
         "type": "action",
         "label": "Factory reset",
