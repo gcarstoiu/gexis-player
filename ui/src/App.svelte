@@ -13,6 +13,7 @@
   import Settings from './screens/Settings.svelte';
   import MiniPlayer from './screens/MiniPlayer.svelte';
   import SetupScreen from './screens/SetupScreen.svelte';
+  import SetupPage from './screens/SetupPage.svelte';
   import { loadSettings, settingValues } from './lib/settings.js';
   import { loadLibraryRoot } from './lib/library.js';
   import { reportTouch, showPeppy, reportPainted, reportShown } from './lib/state.js';
@@ -272,6 +273,19 @@
         ($setup.needed && ['waiting', 'online'].includes($setup.network)))
   );
 
+  //: **...and on a phone, the setup page** in place of Settings while setup
+  //: is on (ADR-0104). Held once shown: finishing takes the network down
+  //: under the page, and it must keep its last screen - where to go next -
+  //: rather than swap to Settings as the state changes behind it.
+  let setupPageHeld = $state(false);
+  const setupPage = $derived(
+    setupPageHeld ||
+      (!!$setup && (['open', 'failed', 'joining'].includes($setup.network) || $setup.needed))
+  );
+  $effect(() => {
+    if (setupPage && surface === 'remote') untrack(() => (setupPageHeld = true));
+  });
+
   // ADR-0032: the panel renders everything; a remote browser only settings.
   let surface = $state(null);
   async function showVisualisation() {
@@ -305,7 +319,9 @@
 
 <svelte:window onpointerdowncapture={onPointerDown} />
 
-{#if surface === 'remote'}
+{#if surface === 'remote' && setupPage}
+  <SetupPage setup={$setup} />
+{:else if surface === 'remote'}
   <!-- ADR-0101: on a phone, Settings and the mini player under it. -->
   <div class="remote remote--mini"><Settings /></div>
   <MiniPlayer />

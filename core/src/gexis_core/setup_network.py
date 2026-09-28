@@ -84,6 +84,43 @@ def panel_attached(drm: Path = DRM) -> bool:
     return False
 
 
+#: Between the phone being told setup is finishing and the radio leaving it,
+#: so the page's last screen - where to go next - arrives before the page
+#: can no longer be reached.
+HANDOVER_S = 3.0
+
+
+def join_reason(rc: int, err: str) -> str:
+    """NetworkManager's refusal, as the page and the panel say it."""
+    text = (err or "").lower()
+    if rc == 124:
+        return "It took too long. The network may be out of range."
+    if "secrets were required" in text or "no secrets" in text:
+        return "The password was not accepted."
+    if "no network with ssid" in text or "not found" in text:
+        return "No network with that name is in range."
+    return (err.splitlines()[-1] if err else "The network refused the connection.")
+
+
+def country_for(timezone: str | None, zone_tab: Path = Path("/usr/share/zoneinfo/zone.tab")) -> str | None:
+    """The Wi-Fi country for a time zone, from tzdata's own table (ADR-0104
+    §4). `zone.tab`, not `zone1970.tab`: the latter lists several countries
+    for one zone (`Europe/Berlin` is `DE,DK,NO,SE,SJ` there)."""
+    if not timezone:
+        return None
+    try:
+        lines = zone_tab.read_text().splitlines()
+    except OSError:
+        return None
+    for line in lines:
+        if line.startswith("#"):
+            continue
+        parts = line.split("\t")
+        if len(parts) >= 3 and parts[2] == timezone:
+            return parts[0]
+    return None
+
+
 def make_password() -> str:
     return "".join(secrets.choice(PASSWORD_ALPHABET) for _ in range(PASSWORD_LENGTH))
 
@@ -205,6 +242,10 @@ class SetupNetwork:
         #: ADR-0031 amendment 8: a new device on Ethernet is set up over it,
         #: at this address, and there is no setup network.
         self._lan_address: str | None = None
+        #: The network a join is going for, shown on the panel while it runs.
+        self._target: str | None = None
+        #: A join from setup is running: the retry keeps its hands off.
+        self._busy = False
         #: Called with `public_status()` whenever it changes: the state
         #: broadcast, which every phone reads too, so never the password.
         self._on_change = on_change
@@ -231,6 +272,7 @@ class SetupNetwork:
             "address": address,
             "panel": self._panel,
             "reason": self._reason,
+            "target": self._target if self._state == "joining" else None,
         }
 
     def public_status(self) -> dict:
@@ -332,6 +374,62 @@ class SetupNetwork:
         )
         return True
 
+    def done(self) -> None:
+        """Setup finished (ADR-0104 §2): the marker is written by the caller;
+        this device no longer needs setup."""
+        self._needed = False
+        self._lan_address = None
+        self._publish()
+
+    async def join_new(self, ssid: str, password: str | None, hidden: bool = False) -> tuple[bool, str | None]:
+        """Save the network typed on the phone and join it (ADR-0104 §4).
+
+        With one radio the setup network comes down first, so the phone loses
+        the page here; the pause lets its last screen arrive. **A join that
+        fails deletes what it saved** - a wrong password kept would be retried
+        by NetworkManager for ever - and brings the setup network back, with
+        the reason on the panel and the page (ADR-0031 amendment 5).
+        """
+        self._busy = True
+        try:
+            hosting = self._state == "open"
+            self._state, self._target, self._reason = "joining", ssid, None
+            self._publish()
+            await self._sleep(HANDOVER_S)
+            if hosting:
+                await self.close()
+            # A profile named after the network is ours to replace. Any other
+            # profile for the same network is left alone: on a configured
+            # device it may hold the right password while this one is wrong.
+            await self._nmcli("connection", "delete", ssid)
+            args = ["connection", "add", "type", "wifi", "ifname", IFACE,
+                    "con-name", ssid, "ssid", ssid, "connection.autoconnect", "yes"]
+            if hidden:
+                args += ["802-11-wireless.hidden", "yes"]
+            if password:
+                args += ["wifi-sec.key-mgmt", "wpa-psk", "wifi-sec.psk", password]
+            rc, _, err = await self._nmcli(*args)
+            if rc == 0:
+                rc, _, err = await self._nmcli("connection", "up", ssid, timeout=wifi.JOIN_TIMEOUT_S)
+            if rc == 0:
+                self._state, self._target = "online", None
+                logger.info("setup: joined %s", ssid)
+                self._publish()
+                return True, None
+            reason = join_reason(rc, err)
+            logger.warning("setup: could not join %s: %s (%s)", ssid, reason, err or rc)
+            await self._nmcli("connection", "delete", ssid)
+            self._target = None
+            if hosting or self._needed:
+                await self.open()
+            else:
+                self._state = "online"
+            self._reason = f"Could not join {ssid}. {reason}"
+            self._publish()
+            return False, reason
+        finally:
+            self._busy = False
+
     async def close(self) -> None:
         await self._nmcli("connection", "down", PROFILE)
         await self._nmcli("connection", "delete", PROFILE)
@@ -399,9 +497,15 @@ class SetupNetwork:
     async def _hold(self, retry: float) -> None:
         """While open: every `retry` seconds with nobody on it, look for a
         saved network and go back to it. A join that fails brings the setup
-        network back."""
-        while self._state in ("open", "failed"):
+        network back.
+
+        **Until the device is online, not while the network is open**: a
+        join from setup takes the network down and may bring it back, and a
+        loop that ended when it went down would never retry again."""
+        while self._state != "online":
             await self._sleep(retry)
+            if self._busy or self._state not in ("open", "failed"):
+                continue
             if self._state == "failed":
                 await self.open()
                 continue
@@ -419,6 +523,7 @@ class SetupNetwork:
             logger.info("setup: %s is in range; leaving %s to join it", found, SSID)
             await self.close()
             self._state = "joining"
+            self._target = found
             self._publish()
             rc, _, err = await self._nmcli("connection", "up", saved[found], timeout=wifi.JOIN_TIMEOUT_S)
             if rc == 0:

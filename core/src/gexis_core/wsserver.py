@@ -111,6 +111,7 @@ class StateServer:
         plugins=(),
         splash=None,
         setup=None,
+        setup_flow=None,
         weather=None,
         wallpapers=None,
         skins_dir: Path | None = None,
@@ -160,6 +161,7 @@ class StateServer:
         self._splash = splash
         #: ADR-0104: the setup network's status, for the panel and the phone.
         self._setup = setup
+        self._setup_flow = setup_flow
         self._weather = weather
         self._wallpapers = wallpapers
         #: Where the skin packs live (ADR-0050). Read per request rather
@@ -900,6 +902,54 @@ class StateServer:
         panel = request.remote in ("127.0.0.1", "::1")
         return web.json_response(self._setup.status() if panel else self._setup.public_status())
 
+    def _setup_closed(self) -> web.Response | None:
+        """ADR-0104: the setup routes answer only while setup is on - the
+        setup network is up, or a new device waits to be set up. A configured
+        device on its Wi-Fi has Settings for all of this."""
+        if self._setup is None or self._setup_flow is None:
+            return web.json_response({"error": "setup is not wired up"}, status=503)
+        status = self._setup.status()
+        if status["network"] in ("open", "failed", "joining") or status["needed"]:
+            return None
+        return web.json_response({"error": "setup is not running"}, status=409)
+
+    async def _handle_setup_answers(self, request: web.Request) -> web.Response:
+        closed = self._setup_closed()
+        if closed is not None:
+            return closed
+        return web.json_response(self._setup_flow.answers())
+
+    async def _handle_setup_save(self, request: web.Request) -> web.Response:
+        closed = self._setup_closed()
+        if closed is not None:
+            return closed
+        try:
+            body = await request.json()
+            return web.json_response(self._setup_flow.save(body))
+        except ValueError as exc:
+            return web.json_response({"error": str(exc)}, status=400)
+
+    async def _handle_setup_networks(self, request: web.Request) -> web.Response:
+        """A scan, read while hosting (Finding 099: the phone stays on), less
+        the setup network itself, which sees itself."""
+        closed = self._setup_closed()
+        if closed is not None:
+            return closed
+        from gexis_core import setup_network, wifi
+
+        items = [i for i in await wifi.scan() if i["name"] != setup_network.SSID]
+        return web.json_response({"items": items})
+
+    async def _handle_setup_finish(self, request: web.Request) -> web.Response:
+        closed = self._setup_closed()
+        if closed is not None:
+            return closed
+        try:
+            self._setup_flow.finish()
+        except ValueError as exc:
+            return web.json_response({"error": str(exc)}, status=400)
+        return web.json_response({"finishing": True}, status=202)
+
     async def _handle_painted(self, request: web.Request) -> web.Response:
         """The panel reporting its first painted frame, which is what ends
         the boot animation (ADR-0043 §3).
@@ -1215,6 +1265,10 @@ class StateServer:
         app.router.add_post("/touch", self._handle_touch)
         app.router.add_post("/panel/painted", self._handle_painted)
         app.router.add_get("/setup/status", self._handle_setup_status)
+        app.router.add_get("/setup/answers", self._handle_setup_answers)
+        app.router.add_post("/setup/answers", self._handle_setup_save)
+        app.router.add_get("/setup/networks", self._handle_setup_networks)
+        app.router.add_post("/setup/finish", self._handle_setup_finish)
         # ADR-0101: the phone's idle toggle, and the panel saying what it shows.
         app.router.add_post("/panel/idle/{action}", self._handle_idle_request)
         app.router.add_post("/panel/shown", self._handle_panel_shown)

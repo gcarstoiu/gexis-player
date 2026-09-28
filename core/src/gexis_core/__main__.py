@@ -71,6 +71,7 @@ from gexis_core.splash import Splash
 from gexis_core.state import StateStore
 from gexis_core import backups, bluealsa_volume, components, outputs, plugin_env, plugins
 from gexis_core.setup_network import SetupNetwork
+from gexis_core.setup_flow import SetupFlow
 from gexis_core.adapters.plugin import PluginAdapter
 from gexis_core.plugin_server import PluginServer
 from gexis_core.systemd import is_enabled as _unit_is_enabled
@@ -2069,6 +2070,7 @@ async def main() -> None:
         asyncio.ensure_future(_check_lms_volume_control())
 
     setup_network = SetupNetwork(on_change=state_store.set_setup)
+    setup_flow = SetupFlow(setup_network, settings, reboot=_reboot)
     state_server = StateServer(
         state_store,
         host=config.state_host,
@@ -2103,6 +2105,7 @@ async def main() -> None:
         splash=Splash(),
         # ADR-0104: first-boot setup and the setup network.
         setup=setup_network,
+        setup_flow=setup_flow,
         # ADR-0047: the idle screen's two providers.
         weather=forecast,
         wallpapers=wallpapers,

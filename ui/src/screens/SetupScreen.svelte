@@ -84,6 +84,11 @@
 
   <h1>{heading}{#if setup?.needed}&nbsp;<span class="word">gexis</span>{/if}</h1>
   <p class="lead">{lead}</p>
+  {#if open && setup?.reason}
+    <!-- ADR-0031 amendment 5: a join that failed brought setup back, and
+         says why here as well as on the phone. -->
+    <p class="reason">{setup.reason}</p>
+  {/if}
 
   {#if open}
     <div class="cards">
@@ -152,7 +157,7 @@
       </section>
     </div>
   {:else if setup?.network === 'joining'}
-    <p class="state">Your Wi-Fi is back in range. Joining it…</p>
+    <p class="state">Joining {setup.target ?? 'your Wi-Fi'}…</p>
   {:else if setup?.network === 'failed'}
     <p class="state state--warn">The setup network did not start{setup.reason ? `: ${setup.reason}` : '.'}</p>
   {:else}
@@ -296,6 +301,13 @@
     font-size: var(--t-body-sm);
     line-height: 1.45;
     color: var(--ink-quiet);
+  }
+
+  .reason {
+    margin: 14px 0 0;
+    font-size: var(--t-body);
+    font-weight: 600;
+    color: var(--accent-warn);
   }
 
   .state {
