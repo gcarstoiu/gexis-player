@@ -2482,6 +2482,30 @@ development flashes cards and pre-seeds `firstrun.sh`. But no non-developer can
 set the device up without it, so it is a hard gate on anyone else owning one.
 **Pull it forward the moment a device goes to someone who did not build it.**
 
+**Status, 2026-09-28: built through step 3 of 4 on branch `phase-13`**
+([ADR-0104](decisions/0104-how-the-device-knows-it-needs-setup.md) for how,
+[Finding 099](findings/099-the-setup-access-point-on-one-radio.md) for the radio).
+Each step was run on `gexis` with George, over timed trials because it has no
+Ethernet: (1) the core decides on setup and holds the setup network, with the
+five-minute retry; (2) the panel shows the network, its password and two QR
+codes; (3) the phone's setup page, the answers kept by the core, and applying
+them, with a wrong password tested and recovered from. **Step 4, the full test
+on a card flashed with nothing pre-seeded, is what closes the phase** — it is
+the only place the new-device path, criterion 4's name check and the Wi-Fi
+country on a card that never had one can be seen.
+
+| Criterion | State |
+|---|---|
+| 1. AP, and the panel shows name, password, address | Met on gexis (trial mode); the new-device hero not yet seen |
+| 2. NM AP mode, no new packages | Met (Finding 099; `dnsmasq-base` and `iw` were already in the image) |
+| 3. Served by `gexis-core` | Met |
+| 4. SSID, password, name; the name reaches all consumers | Collected and applied; **the name's reach is step 4's** |
+| 5. Applying tears the AP down and joins | Met on gexis: joined in 10 s; a wrong password is back in setup in 15 s |
+| 6. A working network means no AP | Met on gexis at every restart; Ethernet by unit test only |
+| 7. Pre-seeded configuration wins | Met: a provisioned card has a saved Wi-Fi and never sees setup |
+| 8. Back to setup without a network | 90 s at boot and the 5-minute retry: unit tests, and the retry on gexis. George: at boot only |
+| 9. George's decisions | Built as decided; the panel says to stay on a network with no internet |
+
 **Acceptance**
 
 1. **With no configuration, the device raises an access point** and the panel

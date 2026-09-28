@@ -99,6 +99,11 @@ view.
 
 ## Unverified
 
+- **Answered 2026-09-28 by [Finding 099](../findings/099-the-setup-access-point-on-one-radio.md):**
+  the AP comes up in about a second on 2.4 GHz channel 6, a phone joins and
+  reaches the page, a scan while hosting keeps the phone, and the home Wi-Fi is
+  back about six seconds after the AP goes. The bullet below is the record as
+  it stood.
 - AP mode has **not** been exercised on this hardware — only the capability bit
   was read. Whether `wlan0` raises a stable AP on a Pi 4 under this NM version,
   and how long the station↔AP transition takes, is untested.

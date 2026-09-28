@@ -42,6 +42,10 @@ amplifier, flash the Gexis image, and it becomes a streamer with a face:
 - **Watch it.** A visualiser with nearly 190 skins: classic needle VU meters,
   spectrum analysers, and turntables and tape decks whose records and reels turn
   as the music plays.
+- **Set it up from your phone.** On first boot with no network it opens its own
+  Wi-Fi. The panel shows two QR codes, one to join that network and one to open
+  the setup page, and your phone walks you through the rest: your Wi-Fi, a name,
+  the time, the output, your music and the screen.
 - **Control it from your phone's browser.** Every setting on the panel is also
   on your phone. The panel and the phone take the same input.
 
@@ -55,7 +59,8 @@ amplifier, flash the Gexis image, and it becomes a streamer with a face:
 | 🖼️ **Now playing** | Artwork, track info, synced or plain lyrics, artist info and photos, queue for Lyrion |
 | 📚 **Library** | Browse Lyrion by album, artist, playlist and radio, from the touchscreen |
 | 📈 **Visualiser** | 189 skins: VU meters, spectrum, and animated turntables and tape decks with progress, time, volume and play-state shown in each skin's own style. Skins can rotate per track |
-| 🌤️ **Idle screen** | Clock, weather and wallpapers when nothing is playing |
+| 🧭 **First-time setup** | No network at first boot: the player opens its own Wi-Fi (WPA2, password on the panel) and a setup page for your phone, reached by QR code. A wrong Wi-Fi password brings setup back with the reason, keeping everything else you entered. A player that starts without its Wi-Fi opens setup again after 90 seconds, and rejoins its own network when it returns |
+| 🌤️ **Idle screen** | Clock (24 or 12 hour), weather and wallpapers when nothing is playing |
 | 📱 **Settings anywhere** | The full settings screen on the panel and on any phone or computer on your network |
 | 🔌 **Plugins** | Extra sources and services as plugins, switched on or off in Settings, with progress and retry shown in the switch itself when one downloads software. Today: Plexamp (source), Beszel monitoring (system). Remove deletes what a plugin downloaded |
 | 💾 **Backup & restore** | Your settings, pairings and source logins in one archive on a network share, restored onto a freshly flashed card |
@@ -91,8 +96,12 @@ We'd rather you knew these up front:
 - **On a phone you get Settings, not the whole player.** Now playing, the
   library and the visualiser live on the panel; on a phone, your streaming app
   is the remote.
-- **The first setup needs a network.** Setting up Wi-Fi on first boot, without
-  one, is on the roadmap.
+- **Setup takes a phone, and its Wi-Fi only.** The player has one radio, so it
+  either hosts its setup network or joins yours, never both: your phone loses
+  the setup page at the moment the player moves over, and says the setup
+  network has no internet while you are on it (stay connected). It opens that
+  network only when it starts: a player that loses its Wi-Fi while running is
+  reached again by restarting it.
 - **Plexamp's volume is its own.** Plexamp scales the sound inside its own
   engine, so the Plexamp app's slider sets Plexamp's level and the panel's sets
   the DAC's. The two are separate numbers.
@@ -103,11 +112,11 @@ We'd rather you knew these up front:
 
 Rough, and subject to change:
 
-- 🟢 **Now:** Legal and Credits pages in Settings. Plugins that download
+- 🟢 **Now:** first boot without a network, set up from your phone over the
+  player's own Wi-Fi. Legal and Credits pages in Settings. Plugins that download
   software, with progress, retry and remove. A mini player on the phone. Animated skins with scrolling tickers, smooth rotation, and progress,
   volume and play-state in each skin's own style.
-- 🔜 **Next:** a first public release image. First boot without a network (the
-  player offers its own Wi-Fi setup). Installing your own plugins from Settings.
+- 🔜 **Next:** a first public release image. Installing your own plugins from Settings.
   Keeping plugins up to date.
 - 🎨 **Later:** themes. Artist and album information from your own Plex server.
 - 💭 **Maybe:** a visual equaliser, room correction with a phone as the
