@@ -838,7 +838,12 @@ async def main() -> None:
 
     supervisor = Supervisor(
         adapters,
-        device_busy=lambda renderer_id: alsa.device_held_by(adapters[renderer_id].unit_name),
+        # By unit, which the supervisor keeps after a renderer is forgotten:
+        # a plugin killed on release disconnects while this is still being
+        # asked (Finding 096).
+        device_busy=lambda renderer_id: (
+            (unit := supervisor.unit_of(renderer_id)) is not None and alsa.device_held_by(unit)
+        ),
         restore_volume=restore_volume,
         on_active_change=lambda renderer_id: on_active_change(renderer_id),
         on_handoff_change=state_store.set_handoff,

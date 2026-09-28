@@ -135,6 +135,29 @@ it played.
   retesting. The core restart (10:34:35) and the Spotify takeover (10:35:03)
   were Claude's.
 
+## George's retest (2026-09-28, after 10:40)
+
+Everything worked except one thing, which was dangerous. **After a Spotify
+takeover from Qobuz, the first volume press on the phone took the DAC to full
+scale** (`spotify -> hardware (100/100 -> 240/240)` at 10:42:44). George
+turned it down before he could tell how loud it was.
+
+The cause is the `KeyError` above, one step earlier. The SIGKILL went out at
+10:42:33.249, and gexis-qobuz disconnected at .479. The ladder's poll then
+looked up the forgotten renderer's unit, raised, and **the acquisition died
+before its volume step.** Spotify was never capped or told a level, so its
+slider stayed at go-librespot's 100. At 10:35 the same takeover had worked,
+because the card was confirmed free before the disconnect. It is a race.
+
+**Fixed** (LESSONS 44):
+- the supervisor keeps every renderer's unit after it is forgotten, and the
+  ladder polls by unit;
+- a release that fails in any way is logged, and the takeover goes on to the
+  volume step and the incoming renderer's retry.
+
+Two tests reproduce the sequence and fail without the fix. **Not deployed at
+the time of writing: George was listening.**
+
 ## Still owed
 
 - George's retest of all five.

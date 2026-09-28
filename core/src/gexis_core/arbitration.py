@@ -147,6 +147,14 @@ class Supervisor:
         # One map, one source of truth; `register` and `forget` maintain it for
         # everyone.
         self._adapters = adapters
+        #: **Every renderer's unit, kept after it is forgotten** (Finding 096).
+        #: A plugin released by SIGKILL disconnects while the ladder is still
+        #: polling whether its unit let go (gexis-qobuz is `BindsTo=pibuz`).
+        #: Looking the unit up through `_adapters` then raised KeyError and
+        #: aborted the acquisition before its volume step - which let Spotify
+        #: start at the level Qobuz had left, and a phone's next press send it
+        #: to full scale (George, 2026-09-28).
+        self._units = {rid: getattr(a, "unit_name", None) for rid, a in adapters.items()}
         self._device_busy = device_busy
         self._ladder = ladder or TimeoutLadder()
         self._restore_volume = restore_volume
@@ -190,7 +198,13 @@ class Supervisor:
         if adapter.renderer_id in self._adapters:
             raise ValueError(f"{adapter.renderer_id!r} is already registered")
         self._adapters[adapter.renderer_id] = adapter
+        self._units[adapter.renderer_id] = getattr(adapter, "unit_name", None)
         logger.info("arbitration: %s registered", adapter.renderer_id)
+
+    def unit_of(self, renderer_id: str) -> str | None:
+        """The systemd unit a renderer plays through - still known after the
+        renderer is forgotten, which is when a release ladder may be asking."""
+        return self._units.get(renderer_id)
 
     def forget(self, renderer_id: str) -> None:
         """**The renderer is gone** (ADR-0089) - its plugin disconnected.
@@ -305,7 +319,16 @@ class Supervisor:
         `acquire` only so the handoff edges above can bracket it in a
         `finally` without indenting the whole body."""
         if outgoing is not None:
-            await self._release_with_ladder(outgoing)
+            # **Nothing in the release may skip what follows.** The volume
+            # step is a safety step - Spotify's starting cap (ADR-0054 §5 as
+            # amended) - and `device_freed` is the incoming renderer's retry.
+            # An acquisition that died in the ladder once left Spotify at the
+            # level Qobuz had left, and a phone's next press took the DAC to
+            # full scale (Finding 096).
+            try:
+                await self._release_with_ladder(outgoing)
+            except Exception:  # noqa: BLE001 - logged, and the takeover goes on
+                logger.exception("release[%s] failed; the takeover goes on", outgoing)
         if self._restore_volume is not None:
             await _bounded(f"{renderer_id}'s volume", self._restore_volume(renderer_id))
         # Finding 014: give the incoming renderer a chance to retry its
@@ -315,7 +338,9 @@ class Supervisor:
         # restored first so a renderer whose retry actually starts
         # audible playback here does so at the right level from the
         # first sample, not a beat later.
-        await _bounded(f"{renderer_id}'s device_freed", self._adapters[renderer_id].device_freed())
+        incoming_adapter = self._adapters.get(renderer_id)
+        if incoming_adapter is not None:
+            await _bounded(f"{renderer_id}'s device_freed", incoming_adapter.device_freed())
         # Finding 013 §1's recurrence, 2026-09-11: give the outgoing
         # renderer a chance to come back under our own control if it
         # had to be stopped rather than relying on systemd's automatic

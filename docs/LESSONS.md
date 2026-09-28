@@ -850,6 +850,21 @@ asked why the corpus did not show them.
 counting "no warnings" as a result, make one warning happen on purpose and see
 it arrive - here, a skin naming a file that does not exist.
 
+**44. One lookup fixed, the same cause left one step earlier** (2026-09-28).
+A Spotify takeover from Qobuz raised `KeyError: 'qobuz'`. The SIGKILL takes the
+adapter down with Pibuz, and the core forgets the plugin mid-acquisition.
+Claude fixed the line in the traceback - the acquisition's last step - and
+tested exactly that. The same cause hit an earlier lookup, the ladder's poll
+of whether the unit had let go, whenever the disconnect beat the poll. There
+the acquisition died **before its volume step**. Spotify skipped its starting
+cap, and George's first press on the phone took the DAC to full scale.
+
+**Fix the cause, not the line.** When a traceback shows a state the code did
+not expect ("this renderer is gone"), find every place that state can reach,
+not the one that happened to crash. And a step that exists for safety must not
+sit behind steps that can fail: the volume step now runs whatever the release
+did.
+
 ## Common shape
 
 Every case had a *plausible* substitute for the real target — the build

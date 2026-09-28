@@ -120,9 +120,11 @@ fetched on the device from its author's release, after a notice; public inert
     ADR-0054 §5 amended; ADR-0022 row). `spotify_start_max`, default 60 %.
     Every Spotify takeover starts at the lower of the DAC's level and the
     setting. Deployed by hand and verified at 30 %.
-  - **Owed on gexis:** the `arbitration.py` fix for a `KeyError` on Spotify
-    takeovers from Qobuz (Finding 096). It restarts the core, so it waits
-    until George is not testing.
+  - **George's retest passed, except a full-scale jump** after a Spotify
+    takeover from Qobuz (Finding 096, LESSONS 44): the acquisition died before
+    its volume step. **Fixed in the repo; deploy it (it restarts the core) when
+    George is not listening.** Then release gexis-qobuz and gexis-plexamp, and
+    bump the stage pins.
   - No image built from `phase-12` yet.
 - **`README.md` published on `phase-12`** (d219e55; the branch's first push),
   approved by George. It has the gexis sound mark at the top
