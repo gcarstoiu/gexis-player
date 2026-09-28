@@ -145,6 +145,12 @@ fetched on the device from its author's release, after a notice; public inert
       (`/usr/share/gexis/components/pibuz.env`; the original is beside it as
       `pibuz.env.image`). Put it back when the decision lands.
     - Not published anywhere.
+  - **Then Pibuz 2.6.0 (dev build, `main` at 8184ba3): both fixes verified**
+    (Finding 098). A busy card now fails honestly: paused, with a reason.
+    `external` volume leaves the signal alone (34.7 against 35.0). **gexis is left
+    on 2.6.0 with `volume_mode external` and the panel at 35 %.** Decision owed:
+    one shared volume number for Qobuz (it needs a starting cap like Spotify's),
+    or keep two levels.
   - **Legal wording approved** (George, 2026-09-28), except the Qobuz
     paragraph, which waits on that decision.
   - Image built from 7424d8d (before Remove): `image/deploy/2026-09-28-gexis-player-v0.2.1-710-g7424d8d.img`. `verify-image.sh` passed apart from the core differing from the working tree, which by then held Remove. Rebuild after the Remove test.
