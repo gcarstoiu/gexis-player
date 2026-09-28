@@ -147,6 +147,7 @@ The plugin switch stops Pibuz, and the download stays in
 `/opt/gexis-qobuz/receiver` with its data under `/var/lib/gexis-qobuz`. The
 Legal page said *"Uninstalling it removes it from the device"*. It now says
 what happens: switching off stops it, and the download stays. Whether to build
-removal, and in what form, is a decision owed to George (HANDOFF). Plexamp's
-download under ADR-0100 is in the same position.
+removal, and in what form, was a decision owed to George. **Decided
+2026-09-28: switching off stops it, and a separate Remove deletes the download**
+(ADR-0100's amendment of that date, which covers Plexamp too).
 

@@ -18,6 +18,7 @@ from __future__ import annotations
 import json
 import logging
 import shlex
+import shutil
 import time
 from pathlib import Path
 
@@ -139,3 +140,30 @@ def all_status(directory: Path = PINS, *, status_dir: Path = STATUS,
                installed_dir: Path = INSTALLED) -> dict[str, dict]:
     return {name: status(name, pin, status_dir=status_dir, installed_dir=installed_dir)
             for name, pin in pins(directory).items()}
+
+
+def remove(name: str, pin: dict[str, str], *, status_dir: Path = STATUS,
+           installed_dir: Path = INSTALLED) -> Path:
+    """**Remove** (ADR-0100, amended 2026-09-28): delete the downloaded software,
+    its installed-version stamp and its status, so the row reads *Not
+    installed* and switching on downloads it again.
+
+    The caller refuses while the plugin is on. Here the only guard is the path:
+    it must be the one the image's own pin names, absolute, and at least three
+    parts long, so an empty or mangled pin cannot become `rm -rf /opt`.
+    Settings and whatever the software wrote outside `DEST` stay (Plexamp's
+    sign-in among them)."""
+    raw = (pin or {}).get("DEST", "")
+    dest = Path(raw)
+    if not raw or not dest.is_absolute() or len(dest.parts) < 4 or ".." in dest.parts:
+        raise ValueError(f"{name}: refusing to remove {raw!r}")
+    for path in (dest, dest.with_name(dest.name + ".old")):
+        if path.is_symlink() or path.is_file():
+            path.unlink()
+        elif path.is_dir():
+            shutil.rmtree(path)
+    for stale in (installed_dir / f"{name}.sha256", status_dir / f"{name}.json"):
+        stale.unlink(missing_ok=True)
+    logger.info("components: %s removed from %s", name, dest)
+    return dest
+

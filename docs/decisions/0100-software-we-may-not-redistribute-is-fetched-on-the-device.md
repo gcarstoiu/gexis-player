@@ -100,3 +100,36 @@ group the plugins based on the area they operate in"*: the Plugins page lists
 switches under *Sources* (renderers) and *System* (services). Every state was
 drawn in Plexamp's row on the panel and photographed: starting, downloading,
 interrupted, installing, failed with Retry, installed.
+
+## Amended 2026-09-28: switching off stops it; removing is a separate action
+
+ADR-0098 §2 promised "Uninstall removes the receiver and everything it wrote",
+and it was never built. Switching a plugin off stopped its software and left the
+download where it was, for Plexamp and Pibuz alike. **Decided (George,
+2026-09-28), option C of three:** *"Option C that you recommended for turning
+it off and deleting separately. This should be reflected in the legal text
+too."* The other two were leaving it as it was, and deleting on every switch-off.
+
+- **Off stops the software.** The download stays, so switching back on is
+  immediate, with no second download.
+- **Remove** appears inside the plugin's own row, beside the status line, where
+  Retry sits. It is shown only while the plugin is **off** and its software is
+  **installed**. It asks first, in a sheet that says what goes and what stays.
+- **What Remove deletes:** the downloaded software (the pin's `DEST`, and any
+  `DEST.old`), its installed-version stamp, and its status. The row then reads
+  *Not installed*, and switching on downloads it again.
+- **What it keeps:** the plugin's settings and whatever the software wrote
+  outside `DEST`: Plexamp's sign-in (its claim), and Pibuz's configuration,
+  which `pibuz-configure` rewrites at every start anyway. George's principle
+  was about code that could get the player into trouble, and a sign-in is not
+  code. Keeping it means a re-download carries on where it was, where losing it
+  would mean claiming Plexamp again. *This is Claude's call and easy to reverse.
+  It is put to George with the change.*
+- **Refused while the plugin is on**, in the core as well as on the screen. The
+  core runs as root and deletes directly. It deletes only a path the image's own
+  pin names, and never one shorter than four parts: both are, `/home/pi/plexamp`
+  and `/opt/gexis-qobuz/receiver`, and `/opt/x` is refused.
+- A hidden action row, `<plugin>.remove`, beside `<plugin>.download` (Retry).
+  It is an action, not a setting, so it adds no ADR-0022 row.
+- **The Legal page says it** for both Plexamp and Qobuz Connect.
+

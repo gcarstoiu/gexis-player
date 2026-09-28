@@ -742,6 +742,17 @@
                         <span class="row__note dl__line" class:dl--failed={c.state === 'failed'}>
                           {downloadLine(c)}{#if downloadDetail(c)}<span class="dl__sub"> · {downloadDetail(c)}</span>{/if}
                         </span>
+                        {#if c.state === 'installed' && !r.value && rowOf(r.key.replace(/\.enabled$/, '.remove'))}
+                          <!-- ADR-0100, amended 2026-09-28: off stops it; Remove
+                               deletes the download, after asking. -->
+                          <span
+                            class="dl__retry"
+                            role="button"
+                            tabindex="0"
+                            onclick={(e) => { e.stopPropagation(); openSheet(rowOf(r.key.replace(/\.enabled$/, '.remove'))); }}
+                            onkeydown={(e) => { if (e.key === 'Enter') { e.stopPropagation(); openSheet(rowOf(r.key.replace(/\.enabled$/, '.remove'))); } }}
+                          >Remove</span>
+                        {/if}
                         {#if c.state === 'failed'}
                           <span
                             class="dl__retry"

@@ -77,8 +77,12 @@ def test_a_plugin_that_downloads_gets_a_row_under_its_switch():
     assert switch["component"] == "player", "the status lives on the switch itself"
     retry = next(r for r in rows if r.get("key") == "player.download")
     assert retry["type"] == "action" and retry["surfaced"] is False, "Retry is reachable, not a row"
+    remove = next(r for r in rows if r.get("key") == "player.remove")
+    assert remove["type"] == "action" and remove["surfaced"] is False and remove["danger"] is True
+    assert "sign-in stay" in remove["warn"] and "downloads it again" in remove["warn"], "it says what stays"
     none = Settings.with_plugins(load_registry(), [P()])
-    assert "player.download" not in [r.get("key") for r in next(g for g in none if g["id"] == "plugins")["rows"]]
+    keys = [r.get("key") for r in next(g for g in none if g["id"] == "plugins")["rows"]]
+    assert "player.download" not in keys and "player.remove" not in keys
 
 
 def test_plugins_are_grouped_by_the_area_they_work_in():
@@ -126,3 +130,39 @@ def test_a_failure_the_helper_never_saw_is_written(tmp_path):
     components.failed("player", pin, "could not start", status_dir=status)
     s = components.status("player", pin, status_dir=status, installed_dir=installed)
     assert (s["state"], s["error"]) == ("failed", "could not start")
+
+
+def test_remove_deletes_the_download_its_stamp_and_its_status(tmp_path):
+    """ADR-0100, amended 2026-09-28 (George: "turning it off and deleting
+    separately")."""
+    _, status, installed = setup(tmp_path)
+    dest = tmp_path / "opt" / "player" / "bin"
+    (dest / "lib").mkdir(parents=True)
+    (dest / "lib" / "player.js").write_text("code")
+    old = dest.with_name("bin.old")
+    old.mkdir()
+    status.mkdir(); installed.mkdir()
+    (installed / "player.sha256").write_text("abc123")
+    (status / "player.json").write_text("{}")
+    sign_in = tmp_path / "opt" / "player" / "settings.json"
+    sign_in.write_text("kept")
+    components.remove("player", {"DEST": str(dest)}, status_dir=status, installed_dir=installed)
+    assert not dest.exists() and not old.exists()
+    assert not (installed / "player.sha256").exists() and not (status / "player.json").exists()
+    assert sign_in.read_text() == "kept", "what the software wrote outside DEST stays"
+    assert components.status("player", {"SHA256": "abc123"}, status_dir=status,
+                             installed_dir=installed)["state"] == "absent"
+
+
+def test_remove_refuses_a_path_it_should_never_touch(tmp_path):
+    for dest in ("", "relative/path", "/opt", "/opt/x", "/opt/x/../../etc"):
+        try:
+            components.remove("player", {"DEST": dest}, status_dir=tmp_path, installed_dir=tmp_path)
+        except ValueError:
+            continue
+        raise AssertionError(f"{dest!r} was not refused")
+
+
+def test_removing_what_is_not_there_is_not_an_error(tmp_path):
+    components.remove("player", {"DEST": str(tmp_path / "a" / "b" / "c")},
+                      status_dir=tmp_path, installed_dir=tmp_path)

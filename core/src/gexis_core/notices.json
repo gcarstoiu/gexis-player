@@ -46,7 +46,7 @@
         {
           "heading": "Downloaded when you switch it on",
           "paragraphs": [
-            "Plexamp is Plex's own software, not free software, and it is not part of the player or its image. When you switch Plexamp on, the player downloads it from Plex, checks it against a pinned checksum, and runs it. It is used under Plex's terms, not under the player's licence. Switching it off stops it."
+            "Plexamp is Plex's own software, not free software, and it is not part of the player or its image. When you switch Plexamp on, the player downloads it from Plex, checks it against a pinned checksum, and runs it. It is used under Plex's terms, not under the player's licence. Switching it off stops it. Remove, in its row in Settings, deletes the downloaded software from the device; its sign-in stays, and switching it on again downloads it again."
           ],
           "components": [
             "downloaded"
@@ -55,7 +55,7 @@
         {
           "heading": "Unofficial clients",
           "paragraphs": [
-            "Qobuz Connect is not part of the player. If you choose to install it, Settings downloads Pibuz, an independent open-source receiver, from its author's own release. Pibuz is not made, affiliated with, endorsed or certified by Qobuz. It may stop working at any time. Using it may not be permitted by Qobuz's terms of service. You install and use it at your own risk and on your own Qobuz account. Switching it off stops it. What was downloaded stays on the device, so switching it back on does not download it again."
+            "Qobuz Connect is not part of the player. If you choose to install it, Settings downloads Pibuz, an independent open-source receiver, from its author's own release. Pibuz is not made, affiliated with, endorsed or certified by Qobuz. It may stop working at any time. Using it may not be permitted by Qobuz's terms of service. You install and use it at your own risk and on your own Qobuz account. Switching it off stops it. Remove, in its row in Settings, deletes the downloaded receiver from the device; switching it on again downloads it again."
           ],
           "components": [
             "user-installed"

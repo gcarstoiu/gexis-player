@@ -1192,6 +1192,31 @@ async def main() -> None:
             components.failed(name, pin, f"The download could not be started again: {exc}")
             _publish_components()
 
+    async def _remove_download(plugin) -> None:
+        """**Remove** (ADR-0100, amended 2026-09-28): delete what a switched-off
+        plugin downloaded. Refused while it is on - the screen only offers it
+        then, and this is the same rule where it cannot be skipped. The fetch
+        unit is stopped too: it stays `active (exited)` after it ran, and a
+        switch-on that finds it active would start the software without
+        downloading it again."""
+        name = downloads[plugin.id]
+        pin = components.pins().get(name) or {}
+        if settings.value(f"{plugin.id}.enabled") is not False:
+            logger.warning("components: %s is on; switch it off before removing %s", plugin.id, name)
+            return
+        fetch = f"gexis-fetch@{name}.service"
+
+        def go() -> None:
+            subprocess.run(["systemctl", "stop", plugin.unit, fetch], check=False, capture_output=True)
+            subprocess.run(["systemctl", "reset-failed", fetch], check=False, capture_output=True)
+            components.remove(name, pin)
+
+        try:
+            await asyncio.to_thread(go)
+        except Exception:  # noqa: BLE001 - the row keeps saying what is on disk
+            logger.exception("components: removing %s failed", name)
+        _publish_components()
+
     async def _apply_plugin_unit(plugin, on: bool) -> None:
         """**A plugin switched on or off** (ADR-0086 as amended).
 
@@ -1425,6 +1450,9 @@ async def main() -> None:
                **plugin_switches, **plugin_rows,
                # ADR-0100 as amended: Retry under a failed download.
                **{f"{plugin.id}.download": (lambda _value=None, p=plugin: asyncio.ensure_future(_retry_download(p)))
+                  for plugin in installed_plugins if plugin.id in downloads},
+               # ADR-0100, amended 2026-09-28: Remove, beside Retry.
+               **{f"{plugin.id}.remove": (lambda _value=None, p=plugin: asyncio.ensure_future(_remove_download(p)))
                   for plugin in installed_plugins if plugin.id in downloads}},
         # **Phase 9 criterion 2.** These two act through
         # `POST /settings/{key}/items`, not through `set` - joining a network

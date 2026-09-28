@@ -146,8 +146,11 @@ def check(groups: list[dict]) -> list[dict]:
                 # option and appears when that option is picked, which only
                 # a choice has.
                 if isinstance(warn, str):
-                    if kind not in SETTABLE:
-                        raise ValueError(f"{key}: warn is for a row that takes a value")
+                    # **And an action** (ADR-0100, amended 2026-09-28): Remove
+                    # deletes a download, and its sheet says what goes and what
+                    # stays before the button is pressed.
+                    if kind not in SETTABLE and kind != "action":
+                        raise ValueError(f"{key}: warn is for a row that takes a value or an action")
                 elif kind != "choice":
                     raise ValueError(f"{key}: a per-option warn is only for a choice row")
                 else:
@@ -402,6 +405,15 @@ class Settings:
                 switches.append({"key": f"{plugin.id}.download", "type": "action",
                                  "label": "Retry download", "component": component,
                                  "surfaced": False, "note": None})
+                # ADR-0100, amended 2026-09-28: Remove, offered in the same row
+                # while the switch is off. It asks first, and says what stays.
+                switches.append({"key": f"{plugin.id}.remove", "type": "action",
+                                 "label": f"Remove {plugin.name}", "component": component,
+                                 "surfaced": False, "danger": True, "confirm": "Remove",
+                                 "note": None,
+                                 "warn": f"This deletes the software {plugin.name} downloaded. "
+                                         f"Its settings and sign-in stay on the device. "
+                                         f"Switching {plugin.name} on again downloads it again."})
             if switches and switch_group is None:
                 # A registry with no `plugins` category cannot hold the switch,
                 # and a plugin with no switch is the thing ADR-0086's amendment
