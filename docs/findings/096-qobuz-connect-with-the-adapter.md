@@ -158,6 +158,37 @@ because the card was confirmed free before the disconnect. It is a race.
 Two tests reproduce the sequence and fail without the fix. **Not deployed at
 the time of writing: George was listening.**
 
+## George's retest, second part (2026-09-28, 10:47)
+
+**Spotify → Qobuz failed:** the app showed Qobuz playing and advancing, but
+Spotify stayed on the speakers. The core received no acquisition from
+Qobuz at all. Pibuz retried the busy card 9 times over 6 s, gave up, and
+told the app it was playing.
+
+**Measured, card held by a stand-in playing silence:** for the whole 6 s of
+retries, `/api/status` said `paused`, `/api/now-playing` said not playing,
+and the event stream sent nothing. The one sign was
+`audio.command_in_flight: "PlayStreaming"`, from 11 ms after the play until
+Pibuz gave up. The event-stream adapter (0.1.0) would have missed this too.
+Pibuz's engine commands, read from its binary: `PlayStreaming`, `Pause`,
+`Resume`, `SetVolume`, `ReinitDevice`, `ReleaseDevice`.
+
+**Fixed:** a `PlayStreaming` or `Resume` in flight reads as `loading`. The
+same stand-in test afterwards: `acquire: qobuz` **0.52 s after the play.**
+
+**The artwork going back and forth while skipping** ("something from David
+Bowie"), which George was not sure was ours:
+- The panel shows the adapter's artwork, and when that is absent, the
+  enrichment's `album_art`. A stale or wrongly matched lookup there would
+  look exactly like this.
+- The adapter also had a weakness: just after a skip, `/api/status` can name
+  the new track while `/api/now-playing` still has the old one. It then took
+  the old detail for up to 2 s.
+- Fixed: a detail is taken only when it names the status's track.
+- **Not yet established which of the two George saw.** A recorder on gexis
+  logs every picture the panel receives next to Pibuz's own answer, while
+  George skips.
+
 ## Still owed
 
 - George's retest of all five.
