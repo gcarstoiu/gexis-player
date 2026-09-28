@@ -89,10 +89,12 @@ def test_finishing_writes_the_settings_then_joins_and_marks_the_device_set_up(tm
     settings = FakeSettings()
     flow, net, _, countries, reboots = make(tmp_path, nm, settings)
     flow.save({"ssid": "Home", "password": "hunter22", "name": "gexis", "timezone": "Europe/Berlin",
-               "spotify": False, "bluetooth": True, "headless": False, "output": "HiFiBerry DAC+ HD"})
+               "spotify": False, "bluetooth": True, "headless": False, "output": "HiFiBerry DAC+ HD",
+               "clock": "12 h"})
     finish(flow, net)
     keys = [k for k, _ in settings.sets]
     assert "timezone" in keys and "spotify_enabled" in keys and "output_device" in keys
+    assert ("clock_format", "12 h") in settings.sets
     assert "device_name" not in keys, "an unchanged value is not written again"
     assert countries == ["DE"]
     add = nm.did("connection", "add")[0]

@@ -55,6 +55,7 @@
   let tz = $state(null);
   let tzMode = $state('auto');
   let tzRegion = $state(null);
+  let clock24 = $state(true);
   let out = $state(null);
   let lms = $state('');
   let spotify = $state(true);
@@ -150,6 +151,7 @@
       tz = saved.timezone ?? (setup?.needed ? phoneTz : rows.timezone?.value) ?? phoneTz;
       if (tz && zones.length && !zones.includes(tz)) tz = null;
       tzMode = tz ? 'auto' : 'region';
+      clock24 = (saved.clock ?? rows.clock_format?.value ?? '24 h') !== '12 h';
       out = saved.output ?? rows.output_device?.value ?? outputs[0] ?? null;
       lms = saved.lms ?? (setup?.needed ? '' : (rows.lms_server?.value ?? ''));
       spotify = saved.spotify ?? rows.spotify_enabled?.value ?? true;
@@ -180,7 +182,7 @@
         return a;
       }
       case 'name': return { name: (name || '').trim() };
-      case 'tz': return { timezone: tz };
+      case 'tz': return { timezone: tz, clock: clock24 ? '24 h' : '12 h' };
       case 'out': return { output: out };
       case 'music': return { lms: lms.trim() || null, spotify, bluetooth: bt };
       case 'display': return { headless };
@@ -240,7 +242,7 @@
 
   const fmt = (d, zone) => {
     try {
-      return new Intl.DateTimeFormat('en-GB', { hour: '2-digit', minute: '2-digit', timeZone: zone }).format(d);
+      return new Intl.DateTimeFormat('en-GB', { hour: '2-digit', minute: '2-digit', hour12: !clock24, timeZone: zone }).format(d);
     } catch {
       return '--:--';
     }
@@ -254,7 +256,7 @@
   const review = $derived([
     ['Network', picked || (overLan ? 'Ethernet only' : 'Not set'), 0],
     ['Name', `${shownName} · ${slug}.local`, 1],
-    ['Time zone', tz || 'Not set', 2],
+    ['Time zone', `${tz || 'Not set'} · ${clock24 ? '24 h' : '12 h'}`, 2],
     ['Output', out || 'Not set', 3],
     ['Library', lms.trim() || 'Found once on your network', 4],
     ['Services', [spotify ? 'Spotify Connect' : null, bt ? 'Bluetooth' : null].filter(Boolean).join(' · ') || 'Lyrion only', 4],
@@ -431,6 +433,13 @@
                   {/each}
                 </div>
               {/if}
+              <div class="tz">
+                <span class="grow nm">Clock format</span>
+                <span class="seg">
+                  <button class:on={clock24} onclick={() => (clock24 = true)}>24 h</button>
+                  <button class:on={!clock24} onclick={() => (clock24 = false)}>12 h</button>
+                </span>
+              </div>
             </section>
           {:else if id === 'out'}
             <section class="pane">
@@ -647,6 +656,13 @@
   .tz { display: flex; align-items: center; flex-wrap: wrap; gap: 16px; padding: 20px; border-radius: 16px; background: rgba(255, 255, 255, 0.05); border: 1px solid var(--ink-line); }
   .tz-name { font-size: 22px; font-weight: 700; margin-top: 8px; word-break: break-word; }
   .clock { font-family: var(--font-mono); font-size: 28px; font-weight: 600; }
+
+  .seg { display: flex; gap: 6px; flex-shrink: 0; }
+  .seg button {
+    all: unset; cursor: pointer; padding: 10px 18px; border-radius: 999px; font-size: 15px; font-weight: 700;
+    background: var(--ink-fill); border: 1px solid rgba(233, 238, 242, 0.16);
+  }
+  .seg button.on { background: #c8a2d8; border-color: #c8a2d8; color: var(--ink-on-accent); }
 
   .radio, .toggle { flex-shrink: 0; display: flex; align-items: center; }
   .radio { width: 24px; height: 24px; border-radius: 50%; border: 2px solid rgba(233, 238, 242, 0.42); justify-content: center; }

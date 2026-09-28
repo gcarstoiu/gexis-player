@@ -33,13 +33,14 @@ ANSWERS = setup_network.STATE_DIR / "setup-answers.json"
 SETTINGS = {
     "name": "device_name",
     "timezone": "timezone",
+    "clock": "clock_format",
     "output": "output_device",
     "lms": "lms_server",
     "spotify": "spotify_enabled",
     "bluetooth": "bt_enabled",
     "headless": "headless",
 }
-TEXT = ("ssid", "password", "name", "timezone", "output", "lms")
+TEXT = ("ssid", "password", "name", "timezone", "clock", "output", "lms")
 FLAGS = ("hidden", "spotify", "bluetooth", "headless")
 
 

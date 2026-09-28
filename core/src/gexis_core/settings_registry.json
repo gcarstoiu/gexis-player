@@ -593,6 +593,22 @@
         ]
       },
       {
+        "key": "clock_format",
+        "type": "choice",
+        "label": "Clock format",
+        "marks": "N",
+        "note": "How the idle screen's clock tells the time. Also asked in first-time setup.",
+        "options": [
+          "24 h",
+          "12 h"
+        ],
+        "default": "24 h",
+        "onlyWhen": [
+          "idle_screen",
+          "Built in"
+        ]
+      },
+      {
         "key": "idle_weather",
         "type": "toggle",
         "label": "Weather",

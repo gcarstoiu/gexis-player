@@ -1432,6 +1432,8 @@ async def main() -> None:
                "meter_smoothing": _apply_meter_smoothing,
                "home_strip": None, "home_strip_count": None,
                "idle_clock": None,
+               # George, 2026-09-28: read by the idle screen, asked in setup.
+               "clock_format": None,
                "device_name": apply_device_name,
                "bt_discoverable": lambda mode: asyncio.ensure_future(
                    _apply_discoverable(mode)
