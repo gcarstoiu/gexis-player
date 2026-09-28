@@ -11,6 +11,25 @@ for step 4 is built and verified:
 `989cdb17…7bed`, 81 `verify-image.sh` checks, the setup modules and the UI
 bundle identical to the branch, no `/var/lib/gexis`, no saved Wi-Fi, no `wlan`
 rfkill state. **George flashes it on a second card** (gexis's own card stays).
+
+**Step 4's card: Option A (George, 2026-09-28).** Only Claude's SSH key goes
+on it, **by hand** into the card's `firstrun.sh` (`SSH_PUBKEY=`, from
+`image/provision.local.env`) - no Wi-Fi, name or time zone. `make provision`
+cannot do that: it writes every field of its env file. The card is left in
+R2D2 after flashing; **identify it with `lsblk` and tell George which device
+before writing anything.** SSH on is the one way the card is not blank; setup
+still sees a new device (no saved Wi-Fi), and the Wi-Fi country stays unset.
+Without the key nothing could be read afterwards: not criterion 4's name, not
+the country.
+
+**Decision owed (George, no hurry):** make `outputs.resolve`'s fallback prefer
+a HAT over the Pi's own outputs. Today a card whose DAC is not the
+`sndrpihifiberry` the shipped `output.conf` names falls back to the first output
+with a volume control, likely the headphone jack; setup's Output step lists the
+DAC but starts on the jack. George asked whether a HiFiBerry/IQaudIO DAC+ would
+be recognised: listed by its own name if its EEPROM identifies it, read from
+the code, never tried.
+
 Step 4 is next: an image from `phase-13` on a card flashed with nothing pre-seeded (the
 new-device path: setup network after 15 s, the "Set up gexis" hero, the name
 reaching all four places, the Wi-Fi country on a card that never had one).
