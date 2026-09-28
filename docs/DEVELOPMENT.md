@@ -1435,7 +1435,8 @@ ADRs were updated.
    [Finding 067](findings/067-what-the-panel-presents-at-the-end-of-criterion-0.md)).
    The scrolls reach **56.9-59.5 frames a second at 0.00 % dropped**; the
    opens are **30-53 and 2.5-5.6 %**, against a floor of 55 and 2 %.
-   **Revisit before Phase 13 is implemented** - the setup phase is where
+   **Revisit before Phase 13 is implemented** *(missed when Phase 13 was
+   started; George, 2026-09-28: done before Phase 13's PR, #37, merges)* - the setup phase is where
    the panel stops being George's and starts being a stranger's, and a floor
    waived on the judgement of the person who knows what the device is doing
    should not survive that unexamined. The measured lever is the home

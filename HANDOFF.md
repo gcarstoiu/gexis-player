@@ -22,6 +22,15 @@ still sees a new device (no saved Wi-Fi), and the Wi-Fi country stays unset.
 Without the key nothing could be read afterwards: not criterion 4's name, not
 the country.
 
+**Owed before PR #37 merges (George, 2026-09-28: "Before"): Phase 9
+criterion 0's revisit.** Phase 9 closed with the panel's screen *opens* below
+the floor on George's judgement (30-53 fps and 2.5-5.6 % dropped against 55 and
+2 %; ADR-0076, Finding 067), and DEVELOPMENT.md says to revisit it *before
+Phase 13 is implemented*, because setup is where the panel becomes a
+stranger's. **It was missed when Phase 13 started** - Phase 13's own section was
+read, not the obligation Phase 9 attached to it. The measured lever is the home
+screen's teardown, ~190 ms of a ~280 ms transition.
+
 **Decision owed (George, no hurry):** make `outputs.resolve`'s fallback prefer
 a HAT over the Pi's own outputs. Today a card whose DAC is not the
 `sndrpihifiberry` the shipped `output.conf` names falls back to the first output
