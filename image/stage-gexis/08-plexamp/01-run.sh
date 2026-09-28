@@ -21,10 +21,10 @@
 # Our plugin, from its own release rather than from a tag's auto-generated
 # archive: GitHub does not promise those are byte-stable, and a checksum that
 # changes under you is worse than none because it fails a build nobody touched.
-PLUGIN_VERSION="0.2.2"
+PLUGIN_VERSION="0.3.0"
 PLUGIN_ASSET="gexis-plexamp-${PLUGIN_VERSION}.tar.gz"
 PLUGIN_URL="https://github.com/gcarstoiu/gexis-plexamp/releases/download/v${PLUGIN_VERSION}/${PLUGIN_ASSET}"
-PLUGIN_SHA256="83aed15ca0e5f1aeec295475cfade995a06d89689a515276a1812f44cf3f7b03"
+PLUGIN_SHA256="9e773aa1cc9ca0cc62b525599b86ef3a749b31923318e3dcc5aea23379cbd6e1"
 
 WORK="$(mktemp -d)"
 trap 'rm -rf "${WORK}"' EXIT

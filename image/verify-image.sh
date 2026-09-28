@@ -348,6 +348,29 @@ else
 fi
 dfs "dump /usr/share/gexis/plugins/qobuz/plugin.json $OUT/qobuz.json" >/dev/null
 grep -q '"notice"' "$OUT/qobuz.json" && ok "the manifest carries the notice" || bad "the manifest has no notice"
+# The adapter in the image is the release the stage pins - the same check as
+# Plexamp's above, and opportunistic on the build cache for the same reason.
+qobuz_sum=$(grep -oE '^PLUGIN_SHA256="[a-f0-9]+"' \
+	"$REPO/image/stage-gexis/08-qobuz/01-run.sh" | cut -d'"' -f2)
+qobuz_tar="${GEXIS_BUILD_CACHE:-$HOME/.cache/gexis-player/downloads}/${qobuz_sum}"
+if [ -r "$qobuz_tar" ]; then
+	mkdir -p "$OUT/pinned" "$OUT/shipped"
+	tar -xzf "$qobuz_tar" -C "$OUT/pinned"
+	dfs "rdump /opt/gexis-qobuz/src/gexis_qobuz $OUT/shipped" >/dev/null
+	d=$(diff -r -x __pycache__ \
+		"$OUT/pinned/gexis-qobuz/src/gexis_qobuz" \
+		"$OUT/shipped/gexis_qobuz" 2>&1)
+	if [ -z "$d" ]; then
+		ok "the adapter in the image is the release it pins (${qobuz_sum:0:12})"
+	else
+		bad "the adapter differs from the release it pins:"
+		echo "$d" | head -10
+	fi
+	rm -rf "$OUT/pinned" "$OUT/shipped"
+else
+	echo "  --   the pinned adapter tarball is not in the build cache, so its"
+	echo "       contents were not compared"
+fi
 
 echo "== ADR-0099: licences and the source offer reach the device"
 for f in /usr/share/doc/gexis-player/COPYING \

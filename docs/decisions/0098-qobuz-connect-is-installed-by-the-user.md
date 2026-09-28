@@ -140,3 +140,13 @@ first round with the adapter. Two lines above no longer hold:
   Plexamp (ADR-0091): the core checks once and kills. Pibuz comes back in
   2 s, stopped, and still visible in the Qobuz app, which can cast to it again.
 
+## Not built: uninstall (found 2026-09-28, closing Phase 12)
+
+§2's "Uninstall removes the receiver and everything it wrote" was never built.
+The plugin switch stops Pibuz, and the download stays in
+`/opt/gexis-qobuz/receiver` with its data under `/var/lib/gexis-qobuz`. The
+Legal page said *"Uninstalling it removes it from the device"*. It now says
+what happens: switching off stops it, and the download stays. Whether to build
+removal, and in what form, is a decision owed to George (HANDOFF). Plexamp's
+download under ADR-0100 is in the same position.
+

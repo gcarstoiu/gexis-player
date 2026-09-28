@@ -2460,6 +2460,13 @@ trouble."* [Finding 093](findings/093-qobuz-connect-in-september-2026.md) has wh
    transport, as for Plexamp.
 4. Source pill, handoff screen, Peppy badge.
 
+**State, 2026-09-28.** Criteria 1, 3 and 4 are met: Findings 094 and 096,
+gexis-qobuz v0.2.0 pinned, George's regression rounds passed. The Peppy badge
+is the plugin's own mark. Criterion 2 is met except **uninstall**, which was
+never built. Switching off stops the receiver, and the download stays. That is
+a decision owed to George, and the Legal page says what happens today. **Not
+closed until that is decided.**
+
 ### Phase 12b — Legal and credits
 
 **Added 2026-09-27 (George)** - [ADR-0099](decisions/0099-legal-and-credits-in-settings.md).
@@ -2470,6 +2477,11 @@ trouble."* [Finding 093](findings/093-qobuz-connect-in-september-2026.md) has wh
 3. Legal covers the player's licence and warranty, every third-party licence,
    downloaded proprietary software, unofficial clients, trademarks and the
    services contacted. **George approves the wording.**
+
+**State, 2026-09-28.** Criteria 1 and 2 are met: the rows and pages are on
+gexis, and `notices.py` fails the build on a missing component. Criterion 3
+waits on George's approval of the wording. One sentence changed on
+2026-09-28: the Qobuz paragraph claimed an uninstall that does not exist.
 
 ### Phase 13 — First boot without a network
 

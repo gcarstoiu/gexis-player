@@ -8,10 +8,10 @@
 # only after the user switches Qobuz Connect on and confirms the notice the
 # manifest carries. What ships here is ours, from `gcarstoiu/gexis-qobuz`: the
 # adapter, the receiver's unit and configuration, the manifest and the mark.
-PLUGIN_VERSION="0.1.0"
+PLUGIN_VERSION="0.2.0"
 PLUGIN_ASSET="gexis-qobuz-${PLUGIN_VERSION}.tar.gz"
 PLUGIN_URL="https://github.com/gcarstoiu/gexis-qobuz/releases/download/v${PLUGIN_VERSION}/${PLUGIN_ASSET}"
-PLUGIN_SHA256="1dd12f75733e117af1518caf28cc9d86d4f490ff6459111ff9db16b5572de4fa"
+PLUGIN_SHA256="c96779163642db46166b1b3ecce50554ee47b89a79441f1e0cd4131e63a3d54c"
 
 WORK="$(mktemp -d)"
 trap 'rm -rf "${WORK}"' EXIT

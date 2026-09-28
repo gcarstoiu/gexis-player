@@ -189,10 +189,40 @@ Bowie"), which George was not sure was ours:
   logs every picture the panel receives next to Pibuz's own answer, while
   George skips.
 
+## The artwork while skipping: Pibuz's own (George's third round, 11:05-11:11)
+
+**Everything else worked.** Spotify → Qobuz now takes over, and the rest held.
+
+The artwork still went back and forth while skipping. The recorder showed why.
+In three bursts after skips, **Pibuz itself** swapped its current track between
+two tracks for a few seconds. Both `/api/status` and `/api/now-playing` named
+each swap, and the panel followed them:
+
+```
+11:08:33.74  Cool Heat        11:08:37.79  SOMEWHERE ELSE
+11:08:35.27  SOMEWHERE ELSE   11:08:39.31  Ktafi Bardine
+11:08:36.78  Cool Heat        11:08:39.81  SOMEWHERE ELSE
+```
+
+The adapter's artwork was never absent, so the enrichment fallback played no
+part. It matches the `QueueUpdated` back-and-forth in Pibuz's stream the
+morning before. George, 2026-09-28: *"We can mark it as a strange behaviour and
+close it."* **Closed as Pibuz's.** Hiding it would mean holding back every track
+change until it had lasted a second or two, which delays every real skip too.
+
+## Released (2026-09-28)
+
+- gexis-qobuz **v0.2.0** and gexis-plexamp **v0.3.0**, pinned in stages
+  `08-qobuz` and `08-plexamp` by the checksums of the tarballs GitHub serves.
+- `verify-image.sh` now compares the adapter in the image with the pinned
+  release, as it already did for Plexamp.
+
 ## Still owed
 
-- George's retest of all five.
-- A release of gexis-qobuz and the pin bump in stage `08-qobuz`.
-- Upstream (Pibuz): the late, bursty event stream, the missing `TrackStarted`,
-  and a release of the card on pause without the 2 s. Worth reporting once the
-  retest confirms the rest.
+- Upstream (Pibuz), worth reporting:
+  - the late, bursty event stream, and the missing `TrackStarted`;
+  - `paused` while a play retries a busy card;
+  - the card held 2 s after a pause;
+  - the current track swapping back and forth after a skip.
+- **Uninstall** (ADR-0098 §2) was never built. It is a decision owed, and the
+  Legal page no longer claims it.

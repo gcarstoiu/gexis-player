@@ -55,7 +55,7 @@
         {
           "heading": "Unofficial clients",
           "paragraphs": [
-            "Qobuz Connect is not part of the player. If you choose to install it, Settings downloads Pibuz, an independent open-source receiver, from its author's own release. Pibuz is not made, affiliated with, endorsed or certified by Qobuz. It may stop working at any time. Using it may not be permitted by Qobuz's terms of service. You install and use it at your own risk and on your own Qobuz account. Uninstalling it removes it from the device."
+            "Qobuz Connect is not part of the player. If you choose to install it, Settings downloads Pibuz, an independent open-source receiver, from its author's own release. Pibuz is not made, affiliated with, endorsed or certified by Qobuz. It may stop working at any time. Using it may not be permitted by Qobuz's terms of service. You install and use it at your own risk and on your own Qobuz account. Switching it off stops it. What was downloaded stays on the device, so switching it back on does not download it again."
           ],
           "components": [
             "user-installed"
