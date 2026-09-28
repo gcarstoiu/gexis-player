@@ -2507,13 +2507,18 @@ set the device up without it, so it is a hard gate on anyone else owning one.
    exactly as they do today; the AP is what happens when there is none. A
    developer's workflow must not change.
 8. **The device returns to setup mode when it cannot reach any configured
-   network**, so a replaced router does not lock the owner out. **Specify the
-   threshold as part of this phase** — too eager and the AP flaps on every
-   router reboot, too reluctant and the device is bricked from the user's point
-   of view.
-9. **Decided here, not before:** AP security (recommended: WPA2, password shown
-   on the panel) and whether a captive portal is implemented (recommended: not
-   in the first cut).
+   network**, so a replaced router does not lock the owner out. **Threshold
+   (George, 2026-09-28):** 90 s at boot with no Ethernet and no configured Wi-Fi;
+   while the setup network is open and nobody is on it, the configured networks
+   are tried every 5 minutes.
+9. **Decided 2026-09-28** ([ADR-0031](decisions/0031-first-boot-setup-access-point.md),
+   amended). WPA2: a password made up per device and shown on the panel, or
+   `gexis-setup` when no panel is attached. QR codes to join and to open the
+   page, and no captive portal. The phone drives setup; the panel only helps.
+   No server discovery during setup, an optional Lyrion address instead. A wrong
+   password brings setup back, keeping the other answers. The Wi-Fi country
+   comes from the time zone. First boot on Ethernet runs the same setup, with
+   Wi-Fi offered.
 
 ---
 
