@@ -673,13 +673,21 @@
   .toggle.on { background: #7ed6bc; border-color: #7ed6bc; }
   .toggle.on span { left: 31px; background: #0d151c; }
 
-  .disp { display: grid; gap: 12px; grid-template-columns: minmax(0, 1fr); }
-  @media (min-width: 720px) { .disp { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-  .dcard { all: unset; box-sizing: border-box; cursor: pointer; padding: 22px; border-radius: 18px; background: rgba(255, 255, 255, 0.05); border: 1px solid var(--ink-line); }
+  /* Side by side at every width, and short (George, 2026-09-28: two options
+     should not need a scroll to reach Continue). The design's 16:10 art
+     stacked on a phone was most of a screen. */
+  .disp { display: grid; gap: 10px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .dcard { all: unset; box-sizing: border-box; cursor: pointer; padding: 14px; border-radius: 16px; background: rgba(255, 255, 255, 0.05); border: 1px solid var(--ink-line); }
   .dcard.sel { background: rgba(143, 217, 168, 0.12); border-color: rgba(143, 217, 168, 0.5); }
-  .dcard b { display: block; font-size: 19px; font-weight: 700; margin-top: 18px; }
-  .dcard small { display: block; font-size: 15px; line-height: 1.45; color: rgba(233, 238, 242, 0.66); margin-top: 7px; }
-  .art { width: 100%; aspect-ratio: 16 / 10; border-radius: 10px; background: rgba(8, 12, 16, 0.5); border: 2px solid rgba(233, 238, 242, 0.22); display: flex; align-items: center; justify-content: center; }
+  .dcard b { display: block; font-size: 17px; font-weight: 700; margin-top: 12px; }
+  .dcard small { display: block; font-size: 14px; line-height: 1.4; color: rgba(233, 238, 242, 0.66); margin-top: 5px; }
+  .art { width: 100%; aspect-ratio: 16 / 7; border-radius: 8px; background: rgba(8, 12, 16, 0.5); border: 2px solid rgba(233, 238, 242, 0.22); display: flex; align-items: center; justify-content: center; }
+  @media (min-width: 720px) {
+    .dcard { padding: 22px; }
+    .dcard b { font-size: 19px; margin-top: 18px; }
+    .dcard small { font-size: 15px; }
+    .art { aspect-ratio: 16 / 10; }
+  }
   .dcard.sel .art { border-color: #8fd9a8; }
   .art-panel { width: 42%; height: 6px; border-radius: 3px; background: currentColor; opacity: 0.4; }
   .art-off { width: 34px; height: 2px; border-radius: 2px; background: currentColor; opacity: 0.4; transform: rotate(-38deg); }
