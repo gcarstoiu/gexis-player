@@ -207,6 +207,18 @@
       ]
     },
     {
+      "name": "grim",
+      "group": "system",
+      "role": "Screenshots of the panel, for checking what it shows.",
+      "author": "Simon Ser",
+      "licence": "MIT (Expat); see /usr/share/doc/grim/copyright on the device",
+      "url": "https://github.com/emersion/grim",
+      "arrives": "Debian package",
+      "packages": [
+        "grim"
+      ]
+    },
+    {
       "name": "Chromium",
       "group": "system",
       "role": "Draws the panel's screens.",

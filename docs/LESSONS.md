@@ -866,6 +866,18 @@ not the one that happened to crash. And a step that exists for safety must not
 sit behind steps that can fail: the volume step now runs whatever the release
 did.
 
+**45. The check was removed in the same change that needed it** (2026-09-28).
+A stage was deleted from the image build, and its section of `verify-image.sh`
+with it, since there was nothing left to check. The next image passed every
+check - and still carried everything that stage had installed. The build is
+warm: `stage-gexis` keeps its rootfs from the previous build, and a stage that
+no longer runs removes nothing. Only a look inside the image found it.
+
+**Removing something is a change to check like any other.** When a feature
+leaves, the check that it is present becomes a check that it is absent, not no
+check at all. And a warm build carries forward whatever a deleted stage left:
+clear `stage-gexis`'s work directory so it starts again from stage 2.
+
 ## Common shape
 
 Every case had a *plausible* substitute for the real target — the build

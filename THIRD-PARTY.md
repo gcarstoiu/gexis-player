@@ -13,6 +13,7 @@ list is on the player, under Settings → System → Legal and Credits.
 | [Samba](https://www.samba.org) | Shares the pictures folder on the network. | See /usr/share/doc/samba/copyright on the device | The Samba Team | Debian package |
 | [labwc](https://labwc.github.io) | The window compositor behind the panel. | See /usr/share/doc/labwc/copyright on the device | Johan Malm and contributors | Debian package |
 | [swaybg and wlrctl](https://github.com/swaywm/swaybg) | The panel's background, and window control for the visualiser. | See /usr/share/doc/swaybg/copyright on the device | The Sway project; Aleksei Bavshin | Debian packages |
+| [grim](https://github.com/emersion/grim) | Screenshots of the panel, for checking what it shows. | MIT (Expat); see /usr/share/doc/grim/copyright on the device | Simon Ser | Debian package |
 | [Chromium](https://www.chromium.org) | Draws the panel's screens. | See /usr/share/doc/chromium/copyright on the device | The Chromium authors | Raspberry Pi OS package |
 | [Plymouth](https://www.freedesktop.org/wiki/Software/Plymouth/) | The boot screen. | See /usr/share/doc/plymouth/copyright on the device | The Plymouth authors | Debian packages |
 | [Node.js](https://nodejs.org) | Runs Plexamp. | See /usr/share/doc/nodejs/copyright on the device | The Node.js project | Debian package |

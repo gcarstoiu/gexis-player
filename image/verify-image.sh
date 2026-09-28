@@ -123,6 +123,9 @@ if [ -d "$OUT/gexis-ui" ]; then
 	[ -z "$d" ] && ok "/opt/gexis-ui ($(find "$OUT/gexis-ui" -type f | wc -l) files)" || { bad "UI differs:"; echo "$d" | head; }
 else bad "/opt/gexis-ui missing"; fi
 
+# George, 2026-09-28: "Keep grim in the image" - the panel's screenshots.
+dfs "stat /usr/bin/grim" | grep -q 'Inode:' && ok "grim installed" || bad "grim missing"
+
 echo "== Peppy"
 for f in peppymeter/peppymeter.py spectrum/spectrum.py fonts/DSEG7Classic-Italic.ttf icons/icon-spotify.png; do
 	dfs "stat /opt/gexis-peppy/$f" | grep -q 'Inode:' && ok "/opt/gexis-peppy/$f" || bad "/opt/gexis-peppy/$f missing"
