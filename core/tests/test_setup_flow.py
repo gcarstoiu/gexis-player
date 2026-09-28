@@ -123,7 +123,7 @@ def test_a_wrong_password_keeps_every_answer_but_the_password_and_reopens_setup(
     assert kept["error"] == {"ssid": "Home", "reason": "The password was not accepted."}
     assert nm.did("connection", "delete", "Home")[-1], "the wrong password is not kept by NetworkManager"
     assert net.status()["network"] == "open", "the setup network is back"
-    assert "password was not accepted" in net.status()["reason"]
+    assert net.status()["reason"] == "The password was not accepted." and net.status()["failed"] == "Home"
     assert not (tmp_path / "setup-done").exists() and reboots == []
 
 

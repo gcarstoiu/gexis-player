@@ -301,7 +301,8 @@ def test_a_failed_rejoin_opens_the_setup_network_again_with_the_reason(tmp_path)
     net, clock = setup(tmp_path, nm, stations=0)
     hold(net, nm, clock, lambda: len(nm.did("connection", "up")) == 1 and net.status()["network"] == "open")
     assert net.status()["network"] == "open"
-    assert "secrets were required" in net.status()["reason"]
+    assert net.status()["reason"] == "The password was not accepted."
+    assert net.status()["failed"] == "Home"
 
 
 # -- the trial ---------------------------------------------------------------
@@ -354,3 +355,17 @@ def test_the_state_store_refuses_a_password():
         store.set_setup({"network": "open", "password": "naccw4n2"})
     store.set_setup({"network": "open", "password": None})
     assert store.state.to_json()["setup"]["network"] == "open"
+
+
+def test_the_reason_is_networkmanagers_error_line_not_its_hint():
+    """Found on gexis, 2026-09-28: the last line is a hint to run journalctl."""
+    err = ("Error: Connection activation failed: The Wi-Fi network could not be found\n"
+           "Hint: use 'journalctl -xe NM_CONNECTION=c936 + NM_DEVICE=wlan0' to get more details.")
+    assert sn.join_reason(4, err) == "No network with that name is in range."
+    err = ("Error: Connection activation failed: The base network connection was interrupted\n"
+           "Hint: use 'journalctl -xe NM_CONNECTION=c936 + NM_DEVICE=wlan0' to get more details.")
+    assert sn.join_reason(4, err) == "The base network connection was interrupted."
+    wrong = ("Warning: password for '802-11-wireless-security.psk' not given in 'passwd-file' and nmcli cannot ask without '--ask' option.\n"
+             "Error: Connection activation failed: Secrets were required, but not provided")
+    assert sn.join_reason(4, wrong) == "The password was not accepted."
+    assert sn.join_reason(124, "") == "It took too long. The network may be out of range."

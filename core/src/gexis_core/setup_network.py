@@ -97,9 +97,17 @@ def join_reason(rc: int, err: str) -> str:
         return "It took too long. The network may be out of range."
     if "secrets were required" in text or "no secrets" in text:
         return "The password was not accepted."
-    if "no network with ssid" in text or "not found" in text:
+    if "no network with ssid" in text or "not found" in text or "could not be found" in text:
         return "No network with that name is in range."
-    return (err.splitlines()[-1] if err else "The network refused the connection.")
+    # The `Error:` line, not the last one: NetworkManager follows it with a
+    # `Hint: use 'journalctl -xe ...'` line, which reached the panel as the
+    # reason on the first scripted trial.
+    for line in (err or "").splitlines():
+        if line.startswith("Error:"):
+            said = line.removeprefix("Error:").strip().removeprefix("Connection activation failed:").strip()
+            if said:
+                return said[0].upper() + said[1:].rstrip(".") + "."
+    return "The network refused the connection."
 
 
 def country_for(timezone: str | None, zone_tab: Path = Path("/usr/share/zoneinfo/zone.tab")) -> str | None:
@@ -244,6 +252,9 @@ class SetupNetwork:
         self._lan_address: str | None = None
         #: The network a join is going for, shown on the panel while it runs.
         self._target: str | None = None
+        #: The network the last join failed on; `_reason` says why. Apart,
+        #: so the panel can put the name in its title and the reason under it.
+        self._failed: str | None = None
         #: A join from setup is running: the retry keeps its hands off.
         self._busy = False
         #: Called with `public_status()` whenever it changes: the state
@@ -272,6 +283,7 @@ class SetupNetwork:
             "address": address,
             "panel": self._panel,
             "reason": self._reason,
+            "failed": self._failed,
             "target": self._target if self._state == "joining" else None,
         }
 
@@ -393,7 +405,8 @@ class SetupNetwork:
         self._busy = True
         try:
             hosting = self._state == "open"
-            self._state, self._target, self._reason = "joining", ssid, None
+            self._state, self._target = "joining", ssid
+            self._reason = self._failed = None
             self._publish()
             await self._sleep(HANDOVER_S)
             if hosting:
@@ -420,11 +433,11 @@ class SetupNetwork:
             logger.warning("setup: could not join %s: %s (%s)", ssid, reason, err or rc)
             await self._nmcli("connection", "delete", ssid)
             self._target = None
+            self._failed, self._reason = ssid, reason
             if hosting or self._needed:
                 await self.open()
             else:
                 self._state = "online"
-            self._reason = f"Could not join {ssid}. {reason}"
             self._publish()
             return False, reason
         finally:
@@ -528,10 +541,10 @@ class SetupNetwork:
             rc, _, err = await self._nmcli("connection", "up", saved[found], timeout=wifi.JOIN_TIMEOUT_S)
             if rc == 0:
                 self._state = "online"
-                self._reason = None
+                self._reason = self._failed = None
                 self._publish()
                 logger.info("setup: back on %s", found)
                 return
-            self._reason = f"Could not join {found}: " + (err.splitlines()[-1] if err else f"exit {rc}")
-            logger.warning("setup: %s; opening %s again", self._reason, SSID)
+            self._failed, self._reason = found, join_reason(rc, err)
+            logger.warning("setup: could not join %s: %s (%s); opening %s again", found, self._reason, err or rc, SSID)
             await self.open()
