@@ -49,7 +49,27 @@ DAC but starts on the jack. George asked whether a HiFiBerry/IQaudIO DAC+ would
 be recognised: listed by its own name if its EEPROM identifies it, read from
 the code, never tried.
 
-Step 4 is next: an image from `phase-13` on a card flashed with nothing pre-seeded (the
+**Step 4 ran on 2026-09-29** on the second card (now `sofapi4`, 192.168.178.131;
+gexis's own card is out of the Pi). What it found and what was fixed, all on
+`phase-13`, each deployed by hand and run with George:
+- the radio is blocked on a blank card (6eb6439), then a race (3d38d11) -
+  ADR-0104's 2026-09-29 section, LESSONS 46;
+- **a rename left LMS unavailable since Phase 9e** (the core looked for
+  `gexis`) - 84d0985, ADR-0048 amended;
+- George's review: the panel as one step at a time readable from 2 m, "Phone
+  connected" only with a DHCP lease, mobile-data warnings, the last screen
+  with the Lyrion outcome apart, no idle clock or home screen during or at the
+  end of setup, Change from Review returns to Review, the phone page's
+  blurred backdrop, and **Lyrion only on the user's explicit choice** (find /
+  address / off).
+Seen on the last run (18:03): Joining → "SofaPi4 is on H@l" + "Found your
+Lyrion server" → restart, no home screen between; the name in all four places
+after it. **Not yet seen:** image 759's first-try setup network on a blank
+card (the device's radio is long unblocked); the Music step with nothing
+preselected on a new device; the scroll band on the phone (fix 6eaf8bd,
+untested). The next image carries all of it.
+
+Step 4's original plan: an image from `phase-13` on a card flashed with nothing pre-seeded (the
 new-device path: setup network after 15 s, the "Set up gexis" hero, the name
 reaching all four places, the Wi-Fi country on a card that never had one).
 
