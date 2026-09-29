@@ -392,6 +392,11 @@ class Settings:
                 if getattr(plugin, "notice", None):
                     # ADR-0098: read and confirmed before it turns on.
                     switches[-1]["warn"] = plugin.notice
+                if getattr(plugin, "uploaded", False):
+                    # ADR-0106: an upload arrives off, and says what it is.
+                    switches[-1]["default"] = False
+                    switches[-1]["uploaded"] = True
+                    switches[-1]["note"] = "Uploaded. Not part of Gexis Player; it runs at your own risk."
             # **ADR-0100 as amended: a plugin that downloads its software says
             # so on its own switch** - where it is from, how far along it is,
             # and Retry when it failed, all inside the row (George, 2026-09-27:

@@ -609,3 +609,38 @@ async def test_park_pauses_through_the_callable():
         resp = await client.post("/renderers/park")
         body = await resp.json()
     assert resp.status == 200 and body == {"parked": True} and called == [True]
+
+
+@pytest.mark.asyncio
+async def test_a_plugin_upload_reaches_the_installer_and_a_refusal_says_why():
+    """ADR-0106: the package is the request body; a refusal comes back as
+    words a person can act on."""
+    from gexis_core import uploads
+    got = []
+
+    async def upload(data):
+        got.append(data)
+        if data == b"bad":
+            raise uploads.Refused("plugin.json is not at the top of the package")
+        return {"installed": "radiofoo", "version": "1.0.0", "kind": "renderer", "restarting": True}
+
+    server = StateServer(StateStore({}), upload_plugin=upload)
+    async with TestClient(TestServer(server.make_app())) as client:
+        ok = await client.post("/plugins/upload", data=b"tarball-bytes")
+        ok_body = await ok.json()
+        bad = await client.post("/plugins/upload", data=b"bad")
+        bad_body = await bad.json()
+    assert ok.status == 200 and ok_body["installed"] == "radiofoo" and got[0] == b"tarball-bytes"
+    assert bad.status == 400 and "plugin.json is not at the top" in bad_body["error"]
+
+
+@pytest.mark.asyncio
+async def test_uninstall_is_only_for_uploaded_plugins():
+    async def uninstall(plugin_id):
+        return plugin_id == "radiofoo"
+
+    server = StateServer(StateStore({}), uninstall_plugin=uninstall)
+    async with TestClient(TestServer(server.make_app())) as client:
+        ok = await client.post("/plugins/radiofoo/uninstall")
+        ours = await client.post("/plugins/lms/uninstall")
+    assert ok.status == 200 and ours.status == 404

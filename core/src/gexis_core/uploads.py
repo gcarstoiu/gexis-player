@@ -23,7 +23,7 @@ import logging
 import re
 import shutil
 import tarfile
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path, PurePosixPath
 
 from gexis_core import plugins
@@ -196,7 +196,22 @@ def _installed_versions(root: Path) -> list[tuple[plugins.Plugin, str]]:
 def installed(root: Path = UPLOADS) -> list[plugins.Plugin]:
     """Every uploaded plugin whose current version reads, with the unit the
     player gives it."""
-    return [p for p, _ in _installed_versions(root)]
+    return [replace(p, uploaded=True) for p, _ in _installed_versions(root)]
+
+
+#: Where systemd keeps a `DynamicUser` unit's `StateDirectory`, and the link
+#: it makes to it.
+STATE_PRIVATE = Path("/var/lib/private/gexis-uploaded")
+STATE_LINK = Path("/var/lib/gexis-uploaded")
+
+
+def remove_data(plugin_id: str, private: Path = STATE_PRIVATE, link: Path = STATE_LINK) -> None:
+    """The plugin's own data, which Remove takes with it (ADR-0106)."""
+    for place in (private / plugin_id, link / plugin_id):
+        if place.is_symlink():
+            place.unlink()
+        elif place.is_dir():
+            shutil.rmtree(place, ignore_errors=True)
 
 
 def remove(plugin_id: str, root: Path = UPLOADS) -> bool:

@@ -78,6 +78,9 @@ class Plugin:
     #: True for the three this repository ships. They are not special in how
     #: they are read - only in who wrote them.
     built_in: bool = False
+    #: **ADR-0106: uploaded by the user**, not part of Gexis Player. Run under
+    #: the player's own sandboxed unit; the screen tags it so.
+    uploaded: bool = False
 
     def to_json(self) -> dict:
         """What the panel needs to draw this source without knowing it."""

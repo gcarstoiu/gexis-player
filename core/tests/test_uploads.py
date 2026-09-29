@@ -104,3 +104,13 @@ def test_remove_deletes_every_version(tmp_path):
     assert uploads.remove("radiofoo", tmp_path)
     assert not (tmp_path / "radiofoo").exists() and uploads.installed(tmp_path) == []
     assert not uploads.remove("radiofoo", tmp_path)
+
+
+def test_an_uploaded_plugins_switch_starts_off_and_says_it_was_uploaded(tmp_path):
+    from gexis_core.settings_registry import Settings, load_registry
+    uploads.install(package(), ours=set(), root=tmp_path)
+    [plugin] = uploads.installed(tmp_path)
+    registry = Settings.with_plugins(load_registry(), [plugin], {})
+    rows = [r for g in registry for r in g.get("rows", []) if r.get("key") == "radiofoo.enabled"]
+    assert rows and rows[0]["default"] is False and rows[0]["uploaded"] is True
+    assert "Not part of Gexis Player" in rows[0]["note"]

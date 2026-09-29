@@ -113,6 +113,8 @@ class StateServer:
         setup=None,
         setup_flow=None,
         park=None,
+        upload_plugin=None,
+        uninstall_plugin=None,
         weather=None,
         wallpapers=None,
         skins_dir: Path | None = None,
@@ -167,6 +169,9 @@ class StateServer:
         #: reboot? It's a fresh start." Called by gexis-park.service as the
         #: device shuts down.
         self._park = park
+        #: ADR-0106: a package from a phone or computer, and taking one away.
+        self._upload_plugin = upload_plugin
+        self._uninstall_plugin = uninstall_plugin
         self._weather = weather
         self._wallpapers = wallpapers
         #: Where the skin packs live (ADR-0050). Read per request rather
@@ -918,6 +923,31 @@ class StateServer:
             return None
         return web.json_response({"error": "setup is not running"}, status=409)
 
+    async def _handle_plugin_upload(self, request: web.Request) -> web.Response:
+        """ADR-0106: the package as the request body. Read here with its own
+        cap rather than aiohttp's 1 MB `client_max_size`, which is for forms."""
+        if self._upload_plugin is None:
+            return web.json_response({"error": "uploads are not wired up"}, status=503)
+        from gexis_core import uploads
+        chunks, size = [], 0
+        async for chunk in request.content.iter_chunked(1 << 16):
+            size += len(chunk)
+            if size > uploads.MAX_BYTES:
+                return web.json_response({"error": "It is larger than 200 MB."}, status=413)
+            chunks.append(chunk)
+        try:
+            return web.json_response(await self._upload_plugin(b"".join(chunks)))
+        except uploads.Refused as exc:
+            return web.json_response({"error": f"Not installed: {exc}."}, status=400)
+
+    async def _handle_plugin_uninstall(self, request: web.Request) -> web.Response:
+        if self._uninstall_plugin is None:
+            return web.json_response({"error": "uploads are not wired up"}, status=503)
+        plugin_id = request.match_info["id"]
+        if not await self._uninstall_plugin(plugin_id):
+            return web.json_response({"error": f"{plugin_id} is not an uploaded plugin"}, status=404)
+        return web.json_response({"uninstalled": plugin_id})
+
     async def _handle_park(self, request: web.Request) -> web.Response:
         """**The device is going down: leave nothing to resume.** Loopback
         only - it is the shutdown's, not a phone's."""
@@ -1282,6 +1312,8 @@ class StateServer:
         app.router.add_post("/panel/painted", self._handle_painted)
         app.router.add_get("/setup/status", self._handle_setup_status)
         app.router.add_post("/renderers/park", self._handle_park)
+        app.router.add_post("/plugins/upload", self._handle_plugin_upload)
+        app.router.add_post("/plugins/{id}/uninstall", self._handle_plugin_uninstall)
         app.router.add_get("/setup/answers", self._handle_setup_answers)
         app.router.add_post("/setup/answers", self._handle_setup_save)
         app.router.add_get("/setup/networks", self._handle_setup_networks)
