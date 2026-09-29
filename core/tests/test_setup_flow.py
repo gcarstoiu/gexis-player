@@ -252,3 +252,17 @@ def test_an_unknown_lms_mode_is_refused(tmp_path):
     flow, *_ = make(tmp_path, FakeNM(devices=NOTHING))
     with pytest.raises(ValueError):
         flow.save({"lms_mode": "maybe"})
+
+
+def test_the_panel_never_leaves_setup_between_the_join_and_the_last_screen(tmp_path):
+    """George, 2026-09-29: the home screen showed between the join and the
+    last setup screen, for as long as the Lyrion search took."""
+    nm = FakeNM(devices=NOTHING)
+    flow, net, *_ = make(tmp_path, nm, servers=[{"address": "a:9000", "name": "one"}])
+    seen = []
+    net._on_change = seen.append
+    flow.save({"ssid": "Home", "password": "hunter22", "lms_mode": "find"})
+    finish(flow, net)
+    states = [s["network"] for s in seen]
+    assert states.index("done") == states.index("joining") + 1, states
+    assert states[-1] == "online"

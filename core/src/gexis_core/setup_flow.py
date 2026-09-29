@@ -171,7 +171,7 @@ class SetupFlow:
 
         ssid = data.get("ssid")
         if ssid:
-            joined, reason = await self._network.join_new(ssid, data.get("password"), bool(data.get("hidden")))
+            joined, reason = await self._network.join_new(ssid, data.get("password"), bool(data.get("hidden")), hold=True)
         else:
             joined, reason = True, None
         if not joined:

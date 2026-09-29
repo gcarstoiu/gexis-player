@@ -548,7 +548,8 @@ class SetupNetwork:
         self._finished = None
         self._publish()
 
-    async def join_new(self, ssid: str, password: str | None, hidden: bool = False) -> tuple[bool, str | None]:
+    async def join_new(self, ssid: str, password: str | None, hidden: bool = False,
+                       hold: bool = False) -> tuple[bool, str | None]:
         """Save the network typed on the phone and join it (ADR-0104 §4).
 
         With one radio the setup network comes down first, so the phone loses
@@ -580,8 +581,14 @@ class SetupNetwork:
             if rc == 0:
                 rc, _, err = await self._nmcli("connection", "up", ssid, timeout=wifi.JOIN_TIMEOUT_S)
             if rc == 0:
-                self._state, self._target = "online", None
                 logger.info("setup: joined %s", ssid)
+                if hold:
+                    # **Setup is not over at the join** (George, 2026-09-29:
+                    # the home screen showed between the join and the last
+                    # setup screen, for as long as the Lyrion search took).
+                    # The caller ends it, with `finished` and `done`.
+                    return True, None
+                self._state, self._target = "online", None
                 self._publish()
                 return True, None
             reason = join_reason(rc, err)
