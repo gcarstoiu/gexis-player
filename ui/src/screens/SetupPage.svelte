@@ -531,13 +531,35 @@
 </div>
 
 <style>
+  /* The design's backdrop: the diagonal weave **blurred by 70 px and scaled**,
+     under the radial scrim (Setup.dc.html). Drawn unblurred it read as a
+     "hash of colours" (George, 2026-09-28). The panel bans blur for its GPU
+     (IMPLEMENTED-DIFFERENTLY, the whole panel); a phone does not have that
+     limit, and this page is only ever on a phone. Fixed layers, so the page
+     scrolls over them. */
   .page {
     min-height: 100%;
     color: var(--ink);
-    background:
-      radial-gradient(130% 105% at 20% 42%, rgba(20, 33, 42, 0.72), rgba(13, 21, 28, 0.96)),
-      repeating-linear-gradient(38deg, var(--bg-weave-a) 0 48px, var(--bg-weave-b) 48px 96px);
-    background-attachment: fixed;
+    background: var(--bg-base);
+    position: relative;
+    isolation: isolate;
+  }
+  .page::before,
+  .page::after {
+    content: '';
+    position: fixed;
+    pointer-events: none;
+    z-index: -1;
+  }
+  .page::before {
+    inset: -90px;
+    background: repeating-linear-gradient(38deg, var(--bg-weave-a) 0 48px, var(--bg-weave-b) 48px 96px);
+    filter: blur(70px);
+    transform: scale(1.14);
+  }
+  .page::after {
+    inset: 0;
+    background: radial-gradient(130% 105% at 20% 42%, rgba(20, 33, 42, 0.72), rgba(13, 21, 28, 0.96));
   }
   .shell {
     max-width: 1000px;
