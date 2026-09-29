@@ -349,6 +349,15 @@ echo "== ADR-0095 as amended: LMS paused as the device goes down"
 dfs "stat /etc/systemd/system/gexis-park.service" | grep -q 'Inode:' && ok "gexis-park.service installed" || bad "gexis-park.service missing"
 dfs "stat /etc/systemd/system/multi-user.target.wants/gexis-park.service" | grep -q 'Inode:' && ok "gexis-park.service enabled" || bad "gexis-park.service not enabled"
 
+echo "== ADR-0106: uploaded plugins run under the player's own sandboxed units"
+for u in gexis-uploaded-renderer@.service gexis-uploaded-service@.service; do
+	dfs "dump /etc/systemd/system/$u $OUT/one" >/dev/null
+	if grep -q '^DynamicUser=yes' "$OUT/one" && grep -q '^ProtectSystem=strict' "$OUT/one"; then ok "$u sandboxed"
+	else bad "$u missing or not sandboxed"; fi
+	rm -f "$OUT/one"
+done
+dfs "stat /usr/local/lib/gexis/gexis-run-uploaded" | grep -q 'Mode:  0755' && ok "gexis-run-uploaded executable" || bad "gexis-run-uploaded missing or not executable"
+
 echo "== ADR-0085: the ALSA default is our output"
 dfs "dump /etc/alsa/conf.d/zz-gexis-default.conf $OUT/one" >/dev/null
 if grep -q 'pcm.!default' "$OUT/one" 2>/dev/null; then

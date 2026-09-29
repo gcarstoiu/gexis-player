@@ -53,6 +53,14 @@ install -D -m 644 files/gexis-meter.service \
 # device goes down, so its server has nothing to resume.
 install -D -m 644 files/gexis-park.service \
 	"${ROOTFS_DIR}/etc/systemd/system/gexis-park.service"
+# ADR-0106: the units an uploaded plugin runs under - written by the player,
+# never brought by the package - and the launcher they start.
+install -D -m 644 files/gexis-uploaded-renderer@.service \
+	"${ROOTFS_DIR}/etc/systemd/system/gexis-uploaded-renderer@.service"
+install -D -m 644 files/gexis-uploaded-service@.service \
+	"${ROOTFS_DIR}/etc/systemd/system/gexis-uploaded-service@.service"
+install -D -m 755 files/gexis-run-uploaded \
+	"${ROOTFS_DIR}/usr/local/lib/gexis/gexis-run-uploaded"
 
 # ADR-0100: software that is not ours to redistribute is fetched on the device,
 # from its maker, when the user switches it on. The helper, its template unit,

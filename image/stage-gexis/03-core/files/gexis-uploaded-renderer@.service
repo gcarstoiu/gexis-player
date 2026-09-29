@@ -1,0 +1,55 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# ADR-0106: an uploaded renderer, run by a unit the player writes - never one the
+# package brings. Not part of Gexis Player; installed and run at the user's
+# own risk. Switched on and off by its row in Settings -> Plugins.
+[Unit]
+Description=Uploaded plugin %i (renderer; not part of Gexis Player)
+After=gexis-core.service network-online.target sound.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+ExecStart=/usr/local/lib/gexis/gexis-run-uploaded %i
+# ADR-0088: its settings, written by the core and read here before the
+# privileges go.
+EnvironmentFile=-/run/gexis/plugins/%i.env
+Environment=GEXIS_PLUGIN_SOCKET=/run/gexis/plugins.sock
+Environment=GEXIS_PLUGIN_DATA=/var/lib/gexis-uploaded/%i
+Restart=on-failure
+RestartSec=3
+
+# A temporary user for each run, never root (George: "temporary").
+DynamicUser=yes
+# Its own data, kept across versions and restarts; removed with the plugin.
+StateDirectory=gexis-uploaded/%i
+# Everything else read-only; no home directories; its own /tmp.
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+NoNewPrivileges=yes
+CapabilityBoundingSet=
+AmbientCapabilities=
+RestrictSUIDSGID=yes
+LockPersonality=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectKernelLogs=yes
+ProtectControlGroups=yes
+ProtectClock=yes
+ProtectHostname=yes
+RestrictNamespaces=yes
+SystemCallArchitectures=native
+# A renderer plays: the sound devices and nothing else from /dev.
+PrivateDevices=no
+DevicePolicy=closed
+DeviceAllow=char-alsa rw
+SupplementaryGroups=gexis-plugins audio
+# The network open (George: "open"): a streaming renderer needs it.
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6 AF_NETLINK
+# Limits, to be tuned against Plexamp, the heaviest renderer the device runs.
+MemoryMax=512M
+CPUQuota=150%
+TasksMax=128
+
+[Install]
+WantedBy=multi-user.target
