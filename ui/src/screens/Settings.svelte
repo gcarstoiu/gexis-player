@@ -165,12 +165,9 @@
   const placeLabel = (option) => option.split('/').slice(1).join('/').replace(/_/g, ' ');
 
   //: **ADR-0106: uploading a plugin, from a phone or computer only** - the
-  //: panel has no file picker. The notice below is a DRAFT for George to
-  //: approve, as the Legal page's wording was.
+  //: panel has no file picker. George's wording, 2026-09-29.
   const UPLOAD_NOTICE =
-    'This plugin is not part of Gexis Player. It is installed and run at your own risk. ' +
-    'It runs in a sandbox - its own user, the system read-only, the sound card only if it plays - ' +
-    'but nobody at Gexis Player has checked what it does.';
+    'This plugin is not part of Gexis Player. It is installed and run at your own risk and responsibility.';
   let pluginFile = $state(null);
   //: One confirm for both upload and remove: a title, what it means, and
   //: what happens on yes.

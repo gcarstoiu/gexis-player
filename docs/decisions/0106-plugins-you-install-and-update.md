@@ -1,8 +1,9 @@
 # ADR-0106 — Plugins you install and update
 
 **Status:** **Accepted** — George, 2026-09-29, the four decisions below (each
-marked **Decided**). **Still owed:** the wording of the notice shown before an
-upload, which is George's to approve.
+marked **Decided**), and the notice shown before an upload, in his words:
+*"This plugin is not part of Gexis Player. It is installed and run at your own
+risk and responsibility."*
 **Date:** 2026-09-29
 **Phase:** 13a ([DEVELOPMENT.md](../DEVELOPMENT.md), whose criteria this
 answers). The first public release waits on it.
@@ -63,9 +64,8 @@ sandbox exists to prevent.
 
 From **Settings → Plugins → Upload a plugin**, on a phone or computer only (the
 panel has no file picker and does not offer it):
-1. **A notice first**: the plugin is not part of Gexis Player, and is installed
-   and run at the user's own risk. **The wording is George's to approve**, as
-   the Legal page's was.
+1. **A notice first** (George's words): *"This plugin is not part of Gexis
+   Player. It is installed and run at your own risk and responsibility."*
 2. **The core checks it before anything is written**: the manifest parses and
    passes the contract's validation; its id is not one of ours or another
    installed plugin's; no path escapes the package (no `..`, no absolute paths,
