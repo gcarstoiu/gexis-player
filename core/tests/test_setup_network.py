@@ -96,12 +96,15 @@ def setup(tmp_path, nm, *, panel=True, carrier=False, stations=0, trial=None):
     async def count():
         return stations() if callable(stations) else stations
 
-    return sn.SetupNetwork(
+    net = sn.SetupNetwork(
         run=nm, clock=clock, sleep=clock.sleep,
         marker=tmp_path / "setup-done", password_file=tmp_path / "setup-password",
         trial_file=trial_file, drm=drm, net_root=net, stations=count,
         unblock=nm.unblock,
-    ), clock
+    )
+    # Never the build machine's own radios.
+    net._rfkill = tmp_path / "no-rfkill"
+    return net, clock
 
 
 WIFI_UP = [("wlan0", "wifi", "connected", "preconfigured"), ("lo", "loopback", "connected (externally)", "lo")]
@@ -388,3 +391,46 @@ def test_the_radio_is_switched_on_before_the_network_on_2_4_ghz(tmp_path):
     assert order.index(("radio", "wifi", "on")) < order.index(("device", "wifi", "hotspot"))
     hotspot = nm.did("device", "wifi", "hotspot")[0]
     assert hotspot[hotspot.index("band") + 1] == "bg", "nothing on 5 GHz before a country is known"
+
+
+UNAVAILABLE = [("wlan0", "wifi", "unavailable", "--"), ("eth0", "ethernet", "unavailable", "--")]
+
+
+def test_the_hotspot_waits_for_wlan0_to_become_available(tmp_path):
+    """The second blank card, 2026-09-29: unblocked is not ready."""
+    nm = FakeNM(devices=[UNAVAILABLE, UNAVAILABLE, UNAVAILABLE, NOTHING])
+    net, clock = setup(tmp_path, nm)
+    run(net.open())
+    assert net.status()["network"] == "open"
+    assert nm.hotspot_at == pytest.approx(3.0), "asked only once wlan0 was out of unavailable"
+
+
+def test_a_radio_that_never_comes_says_so_on_the_panel(tmp_path):
+    nm = FakeNM(devices=UNAVAILABLE, hotspot_rc=10)
+    net, clock = setup(tmp_path, nm)
+    rf = tmp_path / "rfkill" / "rfkill1"
+    rf.mkdir(parents=True)
+    (rf / "type").write_text("wlan\n"); (rf / "soft").write_text("1\n"); (rf / "hard").write_text("0\n")
+    net._rfkill = tmp_path / "rfkill"
+    run(net.open())
+    assert clock.now == pytest.approx(sn.WLAN_READY_S)
+    assert net.status()["network"] == "failed"
+    assert "[wlan0 unavailable; rfkill soft=1 hard=0]" in net.status()["reason"]
+
+
+def test_a_setup_network_that_did_not_start_is_tried_again_within_seconds(tmp_path):
+    nm = FakeNM(devices=NOTHING, hotspot_rc=10)
+    net, clock = setup(tmp_path, nm, stations=0)
+
+    async def go():
+        task = asyncio.create_task(net.run())
+        for _ in range(10_000):
+            await asyncio.sleep(0)
+            if len(nm.did("device", "wifi", "hotspot")) == 2:
+                break
+        task.cancel()
+
+    run(go())
+    first, second = [i for i, c in enumerate(nm.calls) if c[:3] == ("device", "wifi", "hotspot")][:2]
+    assert len(nm.did("device", "wifi", "hotspot")) == 2
+    assert clock.now < sn.NEW_WAIT_S + 3 * sn.FAILED_RETRY_S < sn.RETRY_S, "not the five-minute retry"

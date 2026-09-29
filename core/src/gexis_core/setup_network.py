@@ -60,6 +60,13 @@ NEW_WAIT_S = 15.0
 #: While open and nobody is on it, look for the saved networks this often.
 RETRY_S = 300.0
 POLL_S = 2.0
+#: After switching the radio on: how long to wait for NetworkManager to call
+#: `wlan0` usable before asking it for the hotspot anyway.
+WLAN_READY_S = 20.0
+#: A setup network that did not start is tried again this soon, not at the
+#: five-minute retry: nobody can set the device up until it is up.
+FAILED_RETRY_S = 15.0
+RFKILL = Path("/sys/class/rfkill")
 
 
 def needs_setup(saved_wifi: int, marker: Path = DONE_MARKER) -> bool:
@@ -143,6 +150,19 @@ async def _rfkill_unblock_wifi() -> None:
         return
     if process.returncode:
         logger.warning("setup: rfkill unblock wifi: %s", err.decode(errors="replace").strip())
+
+
+def rfkill_state(root: Path = RFKILL) -> str:
+    """The Wi-Fi radio's rfkill switches, as `rfkill soft=1 hard=0`."""
+    try:
+        for entry in sorted(root.iterdir()):
+            if (entry / "type").read_text().strip() == "wlan":
+                soft = (entry / "soft").read_text().strip()
+                hard = (entry / "hard").read_text().strip()
+                return f"rfkill soft={soft} hard={hard}"
+    except OSError:
+        pass
+    return "rfkill unknown"
 
 
 def make_password() -> str:
@@ -252,6 +272,7 @@ class SetupNetwork:
         self._nmcli = run or wifi._run
         self._count_stations = stations or self._stations
         self._unblock = unblock or _rfkill_unblock_wifi
+        self._rfkill = RFKILL
         self._clock = clock
         self._sleep = sleep
         self._marker = marker
@@ -390,6 +411,10 @@ class SetupNetwork:
         # sets the real country, which lifts it for good.
         await self._unblock()
         await self._nmcli("radio", "wifi", "on")
+        # **Then wait for it.** Unblocking is not the chip being ready: on the
+        # second blank card the hotspot was still refused with "device is
+        # not available" (2026-09-29).
+        ready = await self._wait_for_wlan()
         rc, _, err = await self._nmcli(
             "device", "wifi", "hotspot", "ifname", IFACE, "con-name", PROFILE,
             "ssid", SSID, "band", "bg", "password", self._password,
@@ -401,7 +426,10 @@ class SetupNetwork:
         _, autoconnect, _ = await self._nmcli("-g", "connection.autoconnect", "connection", "show", PROFILE)
         if rc != 0:
             self._state = "failed"
-            self._reason = err.splitlines()[-1] if err else f"nmcli exited {rc}"
+            said = err.splitlines()[-1] if err else f"nmcli exited {rc}"
+            # What the radio was doing goes with the reason: on a blank card
+            # the panel is the only place anyone can read it.
+            self._reason = f"{said} [wlan0 {ready}; {rfkill_state(self._rfkill)}]"
             logger.warning("setup: the setup network did not come up: %s", self._reason)
             self._publish()
             return False
@@ -471,6 +499,22 @@ class SetupNetwork:
             return False, reason
         finally:
             self._busy = False
+
+    async def _wait_for_wlan(self) -> str:
+        """Poll NetworkManager until `wlan0` is out of `unavailable`, for at
+        most `WLAN_READY_S`. Returns the state it last saw."""
+        start, state = self._clock(), "missing"
+        while True:
+            state = next((st for dev, kind, st, _ in await self._devices() if dev == IFACE), "missing")
+            if state not in ("unavailable", "unmanaged", "missing"):
+                waited = self._clock() - start
+                if waited > 0:
+                    logger.info("setup: %s became %s after %.1f s", IFACE, state, waited)
+                return state
+            if self._clock() - start >= WLAN_READY_S:
+                logger.warning("setup: %s still %s after %.0f s", IFACE, state, WLAN_READY_S)
+                return state
+            await self._sleep(1.0)
 
     async def close(self) -> None:
         await self._nmcli("connection", "down", PROFILE)
@@ -545,7 +589,7 @@ class SetupNetwork:
         join from setup takes the network down and may bring it back, and a
         loop that ended when it went down would never retry again."""
         while self._state != "online":
-            await self._sleep(retry)
+            await self._sleep(FAILED_RETRY_S if self._state == "failed" else retry)
             if self._busy or self._state not in ("open", "failed"):
                 continue
             if self._state == "failed":
