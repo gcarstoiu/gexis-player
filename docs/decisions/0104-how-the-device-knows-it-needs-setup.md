@@ -136,6 +136,6 @@ and is pinned to **2.4 GHz** (`band bg`; the world domain allows channels 1-11),
 so nothing radiates on 5 GHz before a country is known. Finish sets the country
 from the time zone with `raspi-config`, as §4 says, which lifts the block for
 good. The alternative, a country built into the image, was offered to George on
-2026-09-29; the world domain is the recommendation (a built-in country would
-declare one country for a device used anywhere), **pending his word**.
+2026-09-29, and he chose the world domain: *"world domain for sure"* (a
+built-in country would declare one country for a device used anywhere).
 LESSONS 46.
