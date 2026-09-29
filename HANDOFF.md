@@ -8,6 +8,20 @@ Last updated: 2026-09-28 (twenty-ninth session, on R2D2).
 > repository; checked gone (not in the account's list, API "could not
 > resolve", public page 404). The local archive is untouched.
 
+**PR #37's image, built from its head (ee6a365):**
+`image/deploy/2026-09-29-gexis-player-v0.2.1-789-gee6a365.img`, sha256
+`74dc726c…a045`, 83 `verify-image.sh` checks (the shutdown pause unit among
+them), the core files identical to the commit. It includes the fresh start
+(LMS paused as the device goes down, ADR-0095's 2026-09-29 measurements).
+
+**Phase 13a is under way on `phase-13ac`, in a second worktree at
+`~/projects/gexis-player-13a`** (kept apart so an image build here cannot pick it
+up). Steps 1-3 and `tools/sample-plugin/`: tested on the device (then `sofa-pi`)
+- the sample uploaded, listed, switched on under a temporary user, refused
+everywhere outside its data folder, removed with nothing left. **The upload
+notice's wording is a draft for George.** The device runs 13a's core and UI by
+hand; the image above does not have them.
+
 **Phase 13 (first-boot setup, ADR-0031, ADR-0104) is built through step 3 on
 `phase-13`, PR #37, and every step was run on gexis with George.** The image
 for step 4 is built and verified:
