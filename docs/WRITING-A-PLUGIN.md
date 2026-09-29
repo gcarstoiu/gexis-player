@@ -71,7 +71,7 @@ Every uploaded plugin runs under `gexis-uploaded-<kind>@<id>.service`:
 | **User** | A temporary user made for each run - never root, never `pi` |
 | **Can write** | Only its own data folder, `$STATE_DIRECTORY` (also `$GEXIS_PLUGIN_DATA`), kept across restarts and versions and deleted with the plugin. Plus its own `/tmp` |
 | **Can read** | The system, read-only. **Not** `/home` |
-| **Devices** | A **renderer** gets the sound cards and nothing else in `/dev`; a **service** gets no devices |
+| **Devices** | A **renderer** gets the sound cards (and the basics every program has, like `/dev/null`); a **service** gets no devices beyond those basics |
 | **Network** | Open |
 | **The player** | The plugin socket, `$GEXIS_PLUGIN_SOCKET` (`/run/gexis/plugins.sock`) |
 | **Limits** | 512 MB of memory, 1.5 CPU cores, 128 tasks |
