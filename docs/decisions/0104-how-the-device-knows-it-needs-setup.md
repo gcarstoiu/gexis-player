@@ -139,3 +139,11 @@ good. The alternative, a country built into the image, was offered to George on
 2026-09-29, and he chose the world domain: *"world domain for sure"* (a
 built-in country would declare one country for a device used anywhere).
 LESSONS 46.
+
+**Then a race (same day, second blank card, image 755-g6eb6439).** With the
+radio switched on first, the panel still showed *"device is not available"*;
+**five minutes later, at the retry, the QR codes appeared** (George). So the
+unblock worked and the hotspot was asked for before `wlan0` was ready. Image
+759-g3d38d11 waits up to 20 s for NetworkManager to call `wlan0` usable,
+retries a failed start in 15 s, and puts the radio's state beside any reason
+on the panel. Its first-try start is still to be seen on hardware.
