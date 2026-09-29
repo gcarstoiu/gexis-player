@@ -29,6 +29,7 @@
 <script>
   import { encode } from 'uqr';
   import mark from '../assets/gexis-mark.svg';
+  import lyrionMark from '../assets/icon-lyrion.svg';
   import { setupPassword } from '../lib/state.js';
 
   let { setup } = $props();
@@ -196,19 +197,27 @@
         </svg>
       </div>
       <h1 class="huge">{f.name ?? 'gexis'} is on {f.ssid ?? 'your network'}</h1>
-      <!-- George, 2026-09-29: the Lyrion server, looked for once the player
-           can see the home network. -->
-      <p class="lead" class:lead--warn={lib.state === 'none' || lib.state === 'several'}
-         hidden={lib.state === 'unchanged'}>
-        {#if lib.state === 'found'}Found your Lyrion server, {lib.name}.
-        {:else if lib.state === 'given'}Lyrion: {lib.address}
-        {:else if lib.state === 'several'}Found {lib.names?.length} Lyrion servers ({lib.names?.join(', ')}). Choose one in Settings.
-        {:else if lib.state === 'off'}Lyrion is off. Switch it on in Settings any time.
-        {:else if lib.state === 'unchanged'}
-        {:else}No Lyrion server found. Choose one in Settings when it is running.
-        {/if}
-      </p>
       {#if f.restarting}<p class="lead">Restarting to take its new name…</p>{/if}
+      <!-- George, 2026-09-29: the Lyrion outcome apart from the joining, with
+           its own mark and the server's address, so nobody is lost in it. -->
+      {#if lib.state && lib.state !== 'unchanged'}
+        <div class="lib" class:lib--warn={lib.state === 'none' || lib.state === 'several'}>
+          <img src={lyrionMark} alt="" width="97" height="72" />
+          <div>
+            {#if lib.state === 'found'}
+              <b>Found your Lyrion server</b><span>{lib.name}{lib.name !== lib.address ? ` · ${lib.address}` : ''}</span>
+            {:else if lib.state === 'given'}
+              <b>Lyrion server</b><span>{lib.address}</span>
+            {:else if lib.state === 'several'}
+              <b>{lib.names?.length} Lyrion servers found</b><span>Choose one in Settings: {lib.names?.join(', ')}</span>
+            {:else if lib.state === 'off'}
+              <b>Lyrion is off</b><span>Switch it on in Settings any time.</span>
+            {:else}
+              <b>No Lyrion server found</b><span>Choose one in Settings when it is running.</span>
+            {/if}
+          </div>
+        </div>
+      {/if}
     {:else if step === 'lan'}
       <h1>Set up gexis</h1>
       <p class="lead">Scan with a phone on the same network as this player</p>
@@ -288,7 +297,21 @@
     color: var(--ink-body);
     text-wrap: balance;
   }
-  .lead--warn { color: var(--accent-warn); }
+  .lib {
+    margin-top: 18px;
+    display: flex;
+    align-items: center;
+    gap: 26px;
+    padding: 24px 34px;
+    text-align: left;
+    border-radius: var(--r-card);
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--ink-line);
+  }
+  .lib img { flex-shrink: 0; }
+  .lib b { display: block; font-size: 34px; font-weight: 700; }
+  .lib span { display: block; margin-top: 6px; font-family: var(--font-mono); font-size: 28px; color: var(--ink-body); }
+  .lib--warn b { color: var(--accent-warn); }
   .detail {
     margin: 0;
     font-family: var(--font-mono);
