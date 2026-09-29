@@ -230,7 +230,7 @@ photographed from the device (panel at 1280×800; phone at 412×915, 2×). The
 setup pictures come from scripted trials at half size; **the setup password
 and the join QR code are hidden in them**, and personal values (a location, a
 network address) are blanked in two Settings pictures. The phone's setup page
-has no pictures yet: they come from the first full test on a blank card.
+has one picture, from George's phone (2026-09-29).
 First-time setup is on branch `phase-13` (PR #37) until it merges.
 
 ### Settings
@@ -284,51 +284,90 @@ idle screen. *phone-settings-mini-player.png, phone-system.png*
 and the gexis sound mark as the icon; Android offers a bookmark, not an
 installed app, and George kept it.
 
-### First-time setup (ADR-0031 as amended, ADR-0104)
+### First-time setup (ADR-0031 as amended, ADR-0104) - as of 2026-09-29
 
-**[S] The panel has a setup screen the design does not draw.** Setup is the
+Rewritten after the first full test on a blank card and George's review of it.
+It supersedes the version of this subsection from 2026-09-28. The code is on
+branch `phase-13` (PR #37) until it merges.
+
+**[S] The panel has setup screens the design does not draw.** Setup is the
 phone's (George: *"It is meant only for phone as the setting up device"*); the
-panel shows the way in and follows along. Built from the design's parts:
-- a header (the gexis mark, a mono crumb, *Over gexis-setup*);
-- **a hero**: a 124 px circular icon beside a title at the track title's size
-  and one line under it, in four versions (George: *"Larger text, more visual,
-  better design"*, and a large icon on an error):
-  - **new device**: the gexis mark, *Set up gexis*;
-  - **can't reach its Wi-Fi**: Wi-Fi struck through, amber;
-    *panel-setup-cannot-reach-wifi.png*
-  - **joining**: a pulsing Wi-Fi, *Joining <network>*, where the phone goes
-    next; *panel-setup-joining.png*
-  - **could not join**: a warning triangle, amber, *Could not join <network>*
-    with the reason; *panel-setup-could-not-join.png*
-- **two cards**: *1 · Join this Wi-Fi* (a QR code, the network and its
-  password; under it *"Your phone may say this network has no internet. Stay
-  connected."*) and *2 · Open the setup page* (a QR code and the address,
-  shown as `10.42.0.1:8090`).
+panel shows the way in and follows along, and takes no input.
+
+**[U] One step at a time, readable from 1-2 m** (George, 2026-09-29: *"2 QR
+codes on the same screen is a bit much … center each on the screen with larger
+text"*; *"what we display on the panel should be visible at 1 or 2 meters. Not
+scratch your retina with the size, but decent enough to be visible while still
+stylish"*). Everything centred; titles 60-72 px, lines 32 px, the network name
+and password in mono at 48 px, QR codes at 340 px, **nothing that has to be read
+under 30 px**; generous gaps between parts (*"everything is a bit compressed"*
+was the first verdict). The header keeps the gexis mark and a mono crumb. The
+steps follow what the device sees:
+
+1. **Join** - nobody on the setup network yet: title (*"Set up gexis"* on a new
+   device, *"gexis can't reach its Wi-Fi"* on one that lost its network), *"Scan
+   with your phone to join the player's Wi-Fi"*, the join QR code beside the
+   network name and password, and an amber **"Turn off mobile data on your phone
+   while you set up"** box. *panel-setup-1-join.png*
+2. **Phone connected** - a 220 px circle with a check and *"Phone connected"* at
+   72 px, for 2.5 s, **once the phone has an address from the setup network**
+   (not on association, which came before the phone itself showed it was
+   connected).
+3. **Open the page** - *"Now open the setup page"*, *"Scan with the same
+   phone"*, the page QR code beside `10.42.0.1:8090` and *"Your phone may say
+   'No internet'. Stay connected."*, and the mobile-data box again.
+   *panel-setup-2-open-the-page.png*
+4. **Carry on on your phone** - a phone icon in the circle, once the phone has
+   loaded the page. *panel-setup-3-carry-on-on-your-phone.png*
+5. **Joining <network>** - a pulsing Wi-Fi icon in the circle, 72 px title,
+   *"Put your phone back on <network> too."*; it stays up while the player looks
+   for a Lyrion server. *panel-setup-4-joining.png*
+6. **Done** - a check in the circle, *"<name> is on <network>"*, *"Restarting to
+   take its new name…"* when renaming, and **below it, apart, a card with the
+   Lyrion mark**: *Found your Lyrion server* with the server's name and address,
+   or the address given, *N Lyrion servers found - choose one in Settings*,
+   *Lyrion is off*, or *No Lyrion server found*. 10 s, then the panel's own
+   screens - or straight to the restart, with nothing in between (George: the
+   home screen must not blink first). *panel-setup-5-done-with-lyrion.png*
+
+- **Could not join** - the join step headed by a 64 px warning triangle and
+  *"Could not join <network>"* with the reason and *"Everything else you
+  entered is kept."* *panel-setup-could-not-join.png* (taken before the spacing
+  was loosened).
+- **The setup network did not start** - the triangle in the circle, the reason
+  in mono, and *"Trying again in a moment."*
+- **Starting setup…** - the gexis mark pulsing in the circle.
+- **A new device on Ethernet** - one step: the page's QR code and its address on
+  the home network.
 - **QR codes are dark on light**, the one light element on the panel: an
   inverted code is one some phone cameras do not read.
-- A new device on Ethernet shows one card: the page's address on the home
-  network.
+- **No idle screen during setup**, and setup ending counts as a touch (the idle
+  clock had appeared at the end, *"completely out of place"*).
 
 **[S] The phone's steps, against `Setup.dc.html`:**
-- **Network saves the choice and does not test it.** With one radio the join
-  can only happen after the setup network is down, which is after the page is
-  gone (amendment 5). The design's *Join network* / *Credentials accepted* pair
-  is not drawn; Continue saves. A wrong password brings setup back within about
-  15 s, and the page opens on Network with *"Could not join <network>. The
-  password was not accepted. Type the password again."*, every other answer
-  kept. **Continue then goes straight to Review** (George).
-- **Music has no server discovery** (amendment 4): over the setup network the
-  player cannot see the home one. An optional *Lyrion server* address field,
-  then the Spotify Connect and Bluetooth switches.
-- **Time**: the zone is read from the phone; *Choose by hand* goes region then
-  city from the device's full list. **Clock format (24 h / 12 h) is kept** and
-  now writes the setting above.
-- **Output** lists the device's real outputs by name, current one selected.
-- **Display**: *Panel attached* / *Headless*, **side by side and short at every
-  width** (George: two options should not need a scroll to reach Continue); the
-  design's proportions from 720 px up. Headless is the existing Settings row.
-- **Review**, then *Finish and connect*: the page shows *"<name> is joining
-  your network"*, the address `http://<name>.local:8090`, and what happens if
-  the password is wrong.
-- The phone gets the setup page in place of Settings for as long as setup is
-  on.
+- **Backdrop as designed**: the blurred diagonal weave under the radial scrim.
+  Drawn unblurred it read as *"this hash of colours"*.
+- **Welcome** adds an amber card, *"Keep mobile data off - until setup
+  finishes…"* (George could not reach the page until he turned it off).
+- **Network saves the choice and does not test it** (one radio: the join can
+  only happen after the page is gone). A wrong password brings setup back
+  within about 15 s; the page opens on Network with *"Could not join <network>.
+  The password was not accepted. Type the password again."*, every other answer
+  kept, and **Continue goes straight to Review**.
+- **Time**: the zone read from the phone, region then city by hand, and **Clock
+  format (24 h / 12 h)**, now a real setting.
+- **Music: Lyrion only on the user's say-so** (George: a server found and shown
+  without being asked for *"looks as though we went behind the user's back"*).
+  Three choices, **Continue disabled until one is picked** on a new device:
+  *Find my Lyrion server* (searched once the player is on the home network; one
+  found is used, several are left to Settings), *Enter an address* (the field
+  appears), *I don't use Lyrion* (switches LMS off). No discovery list over the
+  setup network. Then the Spotify Connect and Bluetooth switches.
+  *phone-setup-music.png* (George's phone; the green slider on the right is
+  Android's volume panel, and the lighter band at the bottom was a backdrop
+  bug, fixed since).
+- **Display**: *Panel attached* / *Headless* side by side and short at every
+  width.
+- **Review → Change → Continue returns to Review** for every step.
+- **Finish** shows *"<name> is joining your network"*, the address
+  `http://<name>.local:8090`, and what happens if the password is wrong.
