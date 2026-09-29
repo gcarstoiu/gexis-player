@@ -140,3 +140,29 @@ press, which is LMS's own status-push filter; with this record, that delay is
 most of what remains of Finding 091's gap. A plain CometD subscription or the
 CLI's `listen` would report it at once. A separate change, after this one is
 measured.
+
+## Measured 2026-09-29: why neither obvious way stops LMS resuming at boot
+
+After a restart LMS carried on playing (George: *"I was expecting it paused"*).
+The core pauses a player the Lyrion server resumed, at its first start after a
+boot (ADR-0022's [H] row "Playback when the device starts"). George asked for the
+check to come first and squeezelite after it. **Both ways of doing that were
+tried on the device and neither works**; this is kept so nobody tries them
+again:
+
+1. **Pause at the server before squeezelite connects.** With squeezelite
+   stopped, the server still lists the player, takes `pause` and reports `mode
+   pause` - and **when squeezelite reconnects the server sets it playing again**,
+   within 1.5 s, the DAC running. The server restores what the player was doing
+   when it dropped, whatever it was told in between.
+2. **Hold the DAC at boot so squeezelite's blocking open (this record) waits.**
+   squeezelite opens the device **when it starts, before it connects to the
+   server** (its startup probe), so while the DAC was held it never connected,
+   the core never saw it connect, and the two waited on each other until the
+   hold's 30 s cap - after which the server resumed it and the core paused it
+   about 1 s later. Worse than no hold; removed the same day.
+
+**What stands:** the core waits until squeezelite **has connected** before it
+pauses (a pause sent earlier is undone), then pauses. What reaches the speakers
+in between is open, and George decides the next step (a DAC held at volume 0
+until the check is the candidate).
