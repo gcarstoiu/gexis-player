@@ -51,6 +51,9 @@
   //: Back after a failed join: only the network was wrong, so Continue on
   //: Network goes straight to Review (George, 2026-09-28).
   let retrying = $state(false);
+  //: A step opened with Change from Review returns to Review on Continue
+  //: (George, 2026-09-29: changing the name meant walking every step again).
+  let fromReview = $state(false);
   let name = $state('gexis');
   let tz = $state(null);
   let tzMode = $state('auto');
@@ -223,7 +226,8 @@
       await finish();
       return;
     }
-    const to = retrying && id === 'wifi' ? last - 1 : step + 1;
+    const to = fromReview || (retrying && id === 'wifi') ? last - 1 : step + 1;
+    if (to === last - 1) fromReview = false;
     if (await saveStep(to)) step = to;
   }
 
@@ -511,7 +515,7 @@
               </div>
               <div class="table">
                 {#each review as r}
-                  <div class="trow"><span class="what">{r[0]}</span><span class="val grow">{r[1]}</span><button class="chip" onclick={() => (step = r[2])}>Change</button></div>
+                  <div class="trow"><span class="what">{r[0]}</span><span class="val grow">{r[1]}</span><button class="chip" onclick={() => { fromReview = true; step = r[2]; }}>Change</button></div>
                 {/each}
               </div>
             </section>
