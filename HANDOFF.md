@@ -378,8 +378,9 @@ reverted, currently-flashed image predates this fix.
                                             screen in setup. Finding 100. ADR
                                             first; designs from Claude Design
 13c updates over the network             added 2026-09-28 (George: "Agreed to
-                                            do before"): the first public release
-                                            image waits on it. ADR-0021's in-place
+                                            do before"). **The first public release
+                                            image waits on 13a, 13b and 13c**
+                                            (George, 2026-09-29). ADR-0021's in-place
                                             apt updates, never built: our parts as
                                             .debs, a signed repository, OS updates
                                             as they come or a tested snapshot

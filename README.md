@@ -116,8 +116,10 @@ Rough, and subject to change:
   player's own Wi-Fi. Legal and Credits pages in Settings. Plugins that download
   software, with progress, retry and remove. A mini player on the phone. Animated skins with scrolling tickers, smooth rotation, and progress,
   volume and play-state in each skin's own style.
-- 🔜 **Next:** a first public release image. Installing your own plugins from Settings.
-  Keeping plugins up to date.
+- 🔜 **Next:** installing your own plugins from Settings and keeping plugins up
+  to date; touchscreens from 7" to 13.3", including bar displays, recognised
+  during setup; updates over the network, so a new release never needs a
+  reflash. Then a first public release image.
 - 🎨 **Later:** themes. Artist and album information from your own Plex server.
 - 💭 **Maybe:** a visual equaliser, room correction with a phone as the
   microphone, the DAC's own filter and polarity options.

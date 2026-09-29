@@ -2587,6 +2587,9 @@ before allowing an update"*). **Its ADR comes first.**
 
 ### Phase 13b — Other screens: sizes, bars, and knowing which one is attached
 
+**Before the first public release** (George, 2026-09-29: *"13a, b and c all
+needed before release"*).
+
 **Added 2026-09-28 (George):** support touch screens from 800×480 to
 1920×1080 (13.3" at most), and the bars 1280×400 and 1480×320, both used
 **landscape**, and sizes in between; detect the screen during setup. What is
@@ -2641,8 +2644,8 @@ Claude Design: the brief George hands over is
 
 **Added 2026-09-28 (George):** *"Agreed to do before"* - **the first public
 release image waits on this phase**, so a device in a user's hands can be
-reached with a fix without reflashing. 13b (other screens) does not hold the
-release; the order between them is George's to set.
+reached with a fix without reflashing. **George, 2026-09-29: *"13a, b and c all
+needed before release"*** - the release waits on all three.
 
 **Already decided, not built:** [ADR-0021](decisions/0021-deployment-flashable-image.md)
 *"Updates are in-place package updates"* (2026-09-05): no reflash, no A/B
