@@ -917,6 +917,8 @@ class StateServer:
         closed = self._setup_closed()
         if closed is not None:
             return closed
+        # The page loading is how the panel knows a phone reached it.
+        self._setup.page_opened()
         return web.json_response(self._setup_flow.answers())
 
     async def _handle_setup_save(self, request: web.Request) -> web.Response:

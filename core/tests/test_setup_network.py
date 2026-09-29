@@ -323,7 +323,9 @@ def test_a_trial_opens_the_network_over_working_wifi_and_is_read_once(tmp_path):
     hold(net, nm, clock, lambda: net.status()["network"] == "online")
     assert nm.did("device", "wifi", "hotspot"), "the trial opens it with the Wi-Fi up"
     assert nm.did("connection", "up", "preconfigured"), "the retry gives the Wi-Fi back"
-    assert clock.now == pytest.approx(60.0)
+    # The fake clock is advanced by every task's sleep, the phone watcher's
+    # included, so it runs a little ahead of a real one.
+    assert clock.now == pytest.approx(60.0, abs=2 * sn.PHONES_EVERY_S)
     assert not (tmp_path / "trial").exists()
 
 
@@ -434,3 +436,35 @@ def test_a_setup_network_that_did_not_start_is_tried_again_within_seconds(tmp_pa
     first, second = [i for i, c in enumerate(nm.calls) if c[:3] == ("device", "wifi", "hotspot")][:2]
     assert len(nm.did("device", "wifi", "hotspot")) == 2
     assert clock.now < sn.NEW_WAIT_S + 3 * sn.FAILED_RETRY_S < sn.RETRY_S, "not the five-minute retry"
+
+
+def test_the_panel_follows_phones_joining_and_the_page_opening(tmp_path):
+    """George, 2026-09-29: a step for joining, a moment for "connected", a
+    step for the page. The core says which: phones on, page opened."""
+    on = {"n": 0}
+    nm = FakeNM(devices=NOTHING)
+    net, clock = setup(tmp_path, nm, stations=lambda: on["n"])
+    seen = []
+    net._on_change = seen.append
+
+    async def go():
+        task = asyncio.create_task(net.run())
+        async def until(pred):
+            for _ in range(10_000):
+                await asyncio.sleep(0)
+                if pred():
+                    return
+            raise AssertionError("never")
+        await until(lambda: net.status()["network"] == "open")
+        assert net.status()["phones"] == 0 and not net.status()["page_opened"]
+        on["n"] = 1
+        await until(lambda: net.status()["phones"] == 1)
+        net.page_opened()
+        assert net.status()["page_opened"]
+        on["n"] = 0
+        await until(lambda: net.status()["phones"] == 0)
+        assert not net.status()["page_opened"], "the last phone leaving starts over"
+        task.cancel()
+
+    run(go())
+    assert all(s["password"] is None for s in seen)

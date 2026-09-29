@@ -323,6 +323,11 @@
               <div class="info"><span class="bar" style="background:#8fc4d8"></span><span><b>About two minutes</b><small>Six questions. Every one of them can be changed later in Settings.</small></span></div>
               {#if !overLan}
                 <div class="info"><span class="bar" style="background:#7ed6bc"></span><span><b>Keep this phone handy</b><small>When setup finishes, the player leaves its own Wi-Fi for yours and this page stops working. That is by design, not a fault.</small></span></div>
+                <!-- George, 2026-09-29: the page would not load until he
+                     turned mobile data off. The setup network has no
+                     internet, so a phone may send the page's requests over
+                     mobile data instead, where the player is not. -->
+                <div class="info info--warn"><span class="bar" style="background:#e0a758"></span><span><b>Keep mobile data off</b><small>Until setup finishes. With it on, your phone may try to reach this page over mobile data, where the player cannot be found.</small></span></div>
               {/if}
             </div>
           </section>
@@ -623,6 +628,7 @@
     background: rgba(255, 255, 255, 0.05); border: 1px solid var(--ink-line);
   }
   .info b { display: block; font-size: 17px; font-weight: 600; }
+  .info--warn { border-color: rgba(224, 167, 88, 0.45); background: rgba(224, 167, 88, 0.08); }
   .info small { display: block; font-size: 15px; line-height: 1.45; color: var(--ink-quiet); margin-top: 5px; }
   .bar { width: 4px; align-self: stretch; border-radius: 2px; flex-shrink: 0; background: var(--bar, #7ed6bc); }
   .note-card { font-size: 15px; line-height: 1.5; color: var(--ink-muted); }

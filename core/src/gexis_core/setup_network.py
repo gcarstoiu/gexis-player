@@ -66,6 +66,8 @@ WLAN_READY_S = 20.0
 #: A setup network that did not start is tried again this soon, not at the
 #: five-minute retry: nobody can set the device up until it is up.
 FAILED_RETRY_S = 15.0
+#: How often the panel's step follows the phones on the setup network.
+PHONES_EVERY_S = 2.0
 RFKILL = Path("/sys/class/rfkill")
 
 
@@ -296,6 +298,12 @@ class SetupNetwork:
         self._failed: str | None = None
         #: A join from setup is running: the retry keeps its hands off.
         self._busy = False
+        #: Phones on the setup network, and whether one has opened the setup
+        #: page: the panel's steps follow these (George, 2026-09-29: "We know
+        #: once an user connects so we can show a success join briefly and
+        #: move to the next step").
+        self._phones = 0
+        self._page_opened = False
         #: Called with `public_status()` whenever it changes: the state
         #: broadcast, which every phone reads too, so never the password.
         self._on_change = on_change
@@ -324,6 +332,8 @@ class SetupNetwork:
             "reason": self._reason,
             "failed": self._failed,
             "target": self._target if self._state == "joining" else None,
+            "phones": self._phones if open_ else 0,
+            "page_opened": self._page_opened and open_,
         }
 
     def public_status(self) -> dict:
@@ -442,6 +452,29 @@ class SetupNetwork:
             autoconnect.strip() or "unknown",
         )
         return True
+
+    def page_opened(self) -> None:
+        """A phone loaded the setup page (`/setup/answers`): the panel moves
+        from "open the page" to "carry on on your phone"."""
+        if not self._page_opened:
+            self._page_opened = True
+            self._publish()
+
+    async def _watch_phones(self) -> None:
+        """Keep `phones` current while the setup network is open. The last
+        phone leaving takes the panel back to the first step."""
+        while True:
+            if self._state == "open":
+                count = await self._count_stations()
+                if count != self._phones:
+                    self._phones = count
+                    if count == 0:
+                        self._page_opened = False
+                    logger.info("setup: %d phone(s) on %s", count, SSID)
+                    self._publish()
+            elif self._phones:
+                self._phones, self._page_opened = 0, False
+            await self._sleep(PHONES_EVERY_S)
 
     def done(self) -> None:
         """Setup finished (ADR-0104 §2): the marker is written by the caller;
@@ -563,7 +596,11 @@ class SetupNetwork:
                 logger.info("setup: on the network through %s; no setup network", where)
                 return
         await self.open()
-        await self._hold(retry)
+        phones = asyncio.ensure_future(self._watch_phones())
+        try:
+            await self._hold(retry)
+        finally:
+            phones.cancel()
 
     async def _wait_for_network(self) -> str | None:
         """ADR-0104 §3. A configured device gets 90 s. A new one gets 15 s for
