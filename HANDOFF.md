@@ -11,8 +11,11 @@ Last updated: 2026-09-28 (twenty-ninth session, on R2D2).
 **Phase 13 (first-boot setup, ADR-0031, ADR-0104) is built through step 3 on
 `phase-13`, PR #37, and every step was run on gexis with George.** The image
 for step 4 is built and verified:
-`image/deploy/2026-09-29-gexis-player-v0.2.1-755-g6eb6439.img`, sha256
-`322e1d8e…0a96`, with the radio fix (6eb6439; the first blank card, from
+`image/deploy/2026-09-29-gexis-player-v0.2.1-759-g3d38d11.img`, sha256
+`2d57de1a…7b8b`: it waits up to 20 s for wlan0 after switching the radio on,
+retries a failed start in 15 s, and shows the radio's state with the reason.
+(755-g6eb6439, the radio fix alone, failed the same way on the second blank
+card.) The radio fix is 6eb6439 ( the first blank card, from
 746-g14b1a95, could not raise the setup network - Wi-Fi is rfkill-blocked until
 a country is set, ADR-0104's 2026-09-29 section, LESSONS 46). 81
 `verify-image.sh` checks, the setup modules and the UI
