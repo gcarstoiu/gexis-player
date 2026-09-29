@@ -69,6 +69,8 @@ FAILED_RETRY_S = 15.0
 #: How often the panel's step follows the phones on the setup network.
 PHONES_EVERY_S = 2.0
 RFKILL = Path("/sys/class/rfkill")
+#: NetworkManager's dnsmasq writes the setup network's leases here.
+LEASES = Path("/var/lib/NetworkManager/dnsmasq-wlan0.leases")
 
 
 def needs_setup(saved_wifi: int, marker: Path = DONE_MARKER) -> bool:
@@ -152,6 +154,27 @@ async def _rfkill_unblock_wifi() -> None:
         return
     if process.returncode:
         logger.warning("setup: rfkill unblock wifi: %s", err.decode(errors="replace").strip())
+
+
+def leased_macs(path: Path, now: float) -> set[str]:
+    """MACs with a lease that has not expired. dnsmasq's line is `expiry mac
+    ip hostname client-id`; an expiry of 0 means infinite."""
+    try:
+        lines = path.read_text().splitlines()
+    except OSError:
+        return set()
+    found = set()
+    for line in lines:
+        parts = line.split()
+        if len(parts) < 3:
+            continue
+        try:
+            expiry = int(parts[0])
+        except ValueError:
+            continue
+        if expiry == 0 or expiry > now:
+            found.add(parts[1].lower())
+    return found
 
 
 def rfkill_state(root: Path = RFKILL) -> str:
@@ -270,9 +293,14 @@ class SetupNetwork:
         stations=None,
         on_change=None,
         unblock=None,
+        ready=None,
     ) -> None:
         self._nmcli = run or wifi._run
         self._count_stations = stations or self._stations
+        #: Phones the panel counts as joined. A test that fakes the stations
+        #: fakes these too.
+        self._count_ready = ready or (stations if stations is not None else self._ready_phones)
+        self._leases = LEASES
         self._unblock = unblock or _rfkill_unblock_wifi
         self._rfkill = RFKILL
         self._clock = clock
@@ -392,6 +420,30 @@ class SetupNetwork:
             return 1
         return sum(1 for line in out.decode("utf-8", "replace").splitlines() if line.startswith("Station"))
 
+    async def _station_macs(self) -> set[str] | None:
+        try:
+            process = await asyncio.create_subprocess_exec(
+                "iw", "dev", IFACE, "station", "dump",
+                stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.DEVNULL,
+            )
+            out, _ = await asyncio.wait_for(process.communicate(), 10)
+        except (OSError, asyncio.TimeoutError):
+            return None
+        return {line.split()[1].lower() for line in out.decode("utf-8", "replace").splitlines()
+                if line.startswith("Station") and len(line.split()) > 1}
+
+    async def _ready_phones(self) -> int:
+        """**Phones that are associated and have been given an address.**
+        Association alone came too early (George, 2026-09-29: "we show phone
+        connected before the phone itself shows that it's connected", and a
+        fast user would open the page before the phone could reach it). The
+        lease is the setup network's own dnsmasq answering the phone, the
+        step after which the phone can open the page."""
+        macs = await self._station_macs()
+        if not macs:
+            return 0
+        return len(macs & leased_macs(self._leases, time.time()))
+
     async def _address_of(self, device: str) -> str | None:
         """The IPv4 address a phone on the same network would open, without
         its prefix length."""
@@ -469,7 +521,7 @@ class SetupNetwork:
         phone leaving takes the panel back to the first step."""
         while True:
             if self._state == "open":
-                count = await self._count_stations()
+                count = await self._count_ready()
                 if count != self._phones:
                     self._phones = count
                     if count == 0:

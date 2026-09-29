@@ -468,3 +468,26 @@ def test_the_panel_follows_phones_joining_and_the_page_opening(tmp_path):
 
     run(go())
     assert all(s["password"] is None for s in seen)
+
+
+def test_a_phone_counts_as_joined_only_once_it_has_an_address(tmp_path):
+    """George, 2026-09-29: "Phone connected" showed before the phone itself
+    did. Associated is not enough; a lease is."""
+    leases = tmp_path / "leases"
+    leases.write_text("1790000000 aa:bb:cc:dd:ee:01 10.42.0.228 Pixel-10-Pro 01:aa\n"
+                      "0 aa:bb:cc:dd:ee:02 10.42.0.9 Laptop *\n")
+    assert sn.leased_macs(leases, now=1789999999) == {"aa:bb:cc:dd:ee:01", "aa:bb:cc:dd:ee:02"}
+    assert sn.leased_macs(leases, now=1790000001) == {"aa:bb:cc:dd:ee:02"}, "an expired lease is no one"
+    assert sn.leased_macs(tmp_path / "missing", now=0) == set()
+
+    net, _ = setup(tmp_path, FakeNM(devices=NOTHING))
+    net._leases = leases
+    async def macs(): return {"aa:bb:cc:dd:ee:01", "aa:bb:cc:dd:ee:03"}
+    net._station_macs = macs
+    import time as _t
+    orig = _t.time
+    try:
+        _t.time = lambda: 1789999999
+        assert run(net._ready_phones()) == 1, "associated without a lease is not yet joined"
+    finally:
+        _t.time = orig
