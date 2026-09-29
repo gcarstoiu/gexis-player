@@ -2556,7 +2556,10 @@ card's radio had been unblocked.
 before themes"*. The upload question arose when a plugin's author stopped
 publishing binaries: what a user builds and uploads is their choice, not
 ours. Updates were decided the same day (option B: *"we need to check them
-before allowing an update"*). **Its ADR comes first.**
+before allowing an update"*). **[ADR-0106](decisions/0106-plugins-you-install-and-update.md)
+accepted 2026-09-29**: ours update with the release; uploads are a checked
+`.tar.gz`, run under a unit the player writes with a temporary user per run and
+the network open. The upload notice's wording is still George's to approve.
 
 **Acceptance**
 
@@ -2654,8 +2657,10 @@ partitions, a signed repository we host, settings kept on the writable root,
 known checksum, each build recording what it pinned. ADR-0021 left the
 repository *"not specified"* and deferred archive snapshot pinning (its Q3).
 Today the only trace is the `updates` row (Manual / Automatic), unsurfaced and
-unwired. **Its ADR comes first**, settling the two questions below marked
-*decide*.
+unwired. **[ADR-0105](decisions/0105-updates-over-the-network.md) accepted
+2026-09-29** with George's answers: the signing key on R2D2, a tested set of OS
+packages (measured in a prototype first), the safety set without A/B, Manual by
+default. The criteria below are read through it.
 
 **Acceptance (draft)**
 
