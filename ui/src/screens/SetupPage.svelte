@@ -585,8 +585,11 @@
     filter: blur(70px);
     transform: scale(1.14);
   }
+  /* The same overhang as the weave: a phone's browser bar hiding on scroll
+     grows the viewport, and a tint cut at the old edge left a band of
+     untinted weave across the bottom (George's screenshot, 2026-09-29). */
   .page::after {
-    inset: 0;
+    inset: -90px;
     background: radial-gradient(130% 105% at 20% 42%, rgba(20, 33, 42, 0.72), rgba(13, 21, 28, 0.96));
   }
   .shell {
