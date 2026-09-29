@@ -196,7 +196,7 @@
     };
   }
   function uninstallPlugin(row) {
-    const id = row.key.replace(/\.enabled$/, '');
+    const id = row.key.replace(/\.(enabled|missing)$/, '');
     ask = {
       title: `Remove ${row.label}?`,
       text: 'Its package, its data and its settings are deleted. Upload it again to reinstall it.',
@@ -785,7 +785,7 @@
                         {#if pending(r)}<span class="dot dot--sm"></span>{/if}
                       </span>
                       {#if r.note}<span class="row__note">{r.note}</span>{/if}
-                      {#if r.uploaded && !r.value && !embedded}
+                      {#if r.uploaded && (r.key.endsWith('.missing') || !r.value) && !embedded}
                         <!-- ADR-0106: an uploaded plugin is removed from here,
                              switched off first. -->
                         <span

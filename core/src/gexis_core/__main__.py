@@ -335,6 +335,14 @@ async def main() -> None:
     # upload, and this refuses it again if one was placed by hand.
     shipped_ids = {p.id for p in shipped_plugins}
     installed_plugins = shipped_plugins + [p for p in uploads.installed() if p.id not in shipped_ids]
+    # ADR-0106: what backups need to know, kept current at every start.
+    try:
+        uploads.remember()
+    except OSError as exc:
+        logger.warning("uploads: cannot record the uploaded plugins: %s", exc)
+    restored_missing = [m for m in uploads.missing() if m["id"] not in shipped_ids]
+    if restored_missing:
+        logger.info("uploads: restored without a package: %s", ", ".join(m["id"] for m in restored_missing))
     if installed_plugins:
         logger.info(
             "plugins: %s", ", ".join(f"{p.id} ({p.kind})" for p in installed_plugins)
@@ -1300,7 +1308,8 @@ async def main() -> None:
 
     settings = Settings(
         settings_store,
-        registry=Settings.with_plugins(load_registry(), installed_plugins, downloads),
+        registry=Settings.with_plugins(load_registry(), installed_plugins, downloads,
+                                       missing=restored_missing),
         defaults={
             "lms_server": lambda: f"{config.lms_host}:{config.lms_port}",
             "lms_player": lambda: lms_player_name,
@@ -2093,11 +2102,20 @@ async def main() -> None:
 
     async def _uninstall_plugin(plugin_id: str) -> bool:
         plugin = next((p for p in installed_plugins if p.id == plugin_id and p.uploaded), None)
+        if plugin is None and any(m["id"] == plugin_id for m in restored_missing):
+            # Restored without its package, and not wanted any more: its data,
+            # its place in the list and its switch go.
+            await asyncio.to_thread(uploads.remove_data, plugin_id)
+            await asyncio.to_thread(uploads.forget, plugin_id)
+            settings_store.delete(f"{plugin_id}.enabled")
+            asyncio.ensure_future(_restart_core_soon())
+            return True
         if plugin is None:
             return False
         await asyncio.to_thread(_set_unit_enabled, plugin.unit, False)
         await asyncio.to_thread(uploads.remove, plugin_id)
         await asyncio.to_thread(uploads.remove_data, plugin_id)
+        await asyncio.to_thread(uploads.forget, plugin_id)
         for row in plugin.settings:
             if row.get("key"):
                 settings_store.delete(f"{plugin_id}.{row['key']}")

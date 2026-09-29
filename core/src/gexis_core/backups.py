@@ -66,6 +66,14 @@ MEMBERS = (
     # single-use and minutes-lived, so it cannot stand in. Runs as `pi`,
     # hence under the home directory. ~200 KB.
     "home/pi/.local/share/Plexamp",
+    # **Uploaded plugins: their data and the list of them, not their
+    # packages** (ADR-0106; George, 13a criterion 4: "Agree with your
+    # suggestion"). What an uploaded plugin runs is the user's to bring back;
+    # what it learned, and that it was here, is ours to keep. systemd keeps a
+    # temporary user's `StateDirectory` under `private/`, and fixes its owner
+    # at the next start.
+    "var/lib/private/gexis-uploaded",
+    "var/lib/gexis/plugins-known.json",
 )
 
 #: **Paths older archives hold and this one no longer writes.** Skipped on

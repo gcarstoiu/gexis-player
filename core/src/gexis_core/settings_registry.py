@@ -327,7 +327,7 @@ class Settings:
     own default."""
 
     @staticmethod
-    def with_plugins(registry: list[dict], plugins, downloads=None) -> list[dict]:
+    def with_plugins(registry: list[dict], plugins, downloads=None, missing=()) -> list[dict]:
         """**A plugin's rows, merged into the registry** (ADR-0086).
 
         **Two places, and the split is George's** (2026-09-25): *"create the
@@ -484,6 +484,16 @@ class Settings:
             if switch_group is not None:
                 by_area["sources" if plugin.kind == "renderer" else "system"].extend(switches)
             target["rows"].extend(rows)
+        # **ADR-0106: uploaded plugins a restore brought back without their
+        # package.** Not plugins - nothing runs, nothing is switched - only a
+        # row saying what to upload again, under its kind.
+        for gone in missing:
+            by_area["sources" if gone.get("kind") == "renderer" else "system"].append({
+                "key": f"{gone['id']}.missing", "type": "readonly", "label": gone.get("name", gone["id"]),
+                "default": "Upload again", "uploaded": True,
+                "note": f"Restored from a backup. Upload version {gone.get('version', '?')} again "
+                        "to use it; its settings and data are waiting.",
+            })
         switch_group = by_id.get("plugins")
         if switch_group is not None:
             accent = switch_group.get("accent")

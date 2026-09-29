@@ -199,6 +199,49 @@ def installed(root: Path = UPLOADS) -> list[plugins.Plugin]:
     return [replace(p, uploaded=True) for p, _ in _installed_versions(root)]
 
 
+#: **Which uploaded plugins this device has**, for backups (ADR-0106): a
+#: backup keeps an uploaded plugin's settings and data, not its package, and
+#: this is how a restored device knows what to ask for again.
+KNOWN = Path("/var/lib/gexis/plugins-known.json")
+
+
+def _read_known(path: Path) -> dict:
+    try:
+        data = json.loads(path.read_text())
+        return data if isinstance(data, dict) else {}
+    except (OSError, ValueError):
+        return {}
+
+
+def _write_known(path: Path, known: dict) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp = path.with_name(path.name + ".tmp")
+    tmp.write_text(json.dumps(known, indent=1, sort_keys=True))
+    tmp.replace(path)
+
+
+def remember(root: Path = UPLOADS, path: Path = KNOWN) -> None:
+    """Record every uploaded plugin now on the card, keeping the ones a
+    restore brought back without their package."""
+    known = _read_known(path)
+    for plugin, version in _installed_versions(root):
+        known[plugin.id] = {"name": plugin.name, "kind": plugin.kind, "version": version}
+    _write_known(path, known)
+
+
+def forget(plugin_id: str, path: Path = KNOWN) -> None:
+    known = _read_known(path)
+    if known.pop(plugin_id, None) is not None:
+        _write_known(path, known)
+
+
+def missing(root: Path = UPLOADS, path: Path = KNOWN) -> list[dict]:
+    """Plugins the device knew and whose package is not here: after a
+    restore, what has to be uploaded again. Settings and data are waiting."""
+    here = {p.id for p, _ in _installed_versions(root)}
+    return [{"id": pid, **info} for pid, info in sorted(_read_known(path).items()) if pid not in here]
+
+
 #: Where systemd keeps a `DynamicUser` unit's `StateDirectory`, and the link
 #: it makes to it.
 STATE_PRIVATE = Path("/var/lib/private/gexis-uploaded")

@@ -114,3 +114,36 @@ def test_an_uploaded_plugins_switch_starts_off_and_says_it_was_uploaded(tmp_path
     rows = [r for g in registry for r in g.get("rows", []) if r.get("key") == "radiofoo.enabled"]
     assert rows and rows[0]["default"] is False and rows[0]["uploaded"] is True
     assert "Not part of Gexis Player" in rows[0]["note"]
+
+
+def test_a_restore_without_the_package_is_listed_as_needing_it_again(tmp_path):
+    """ADR-0106 / 13a criterion 4: a backup keeps settings and data, not the
+    package, and the restored device says what to upload again."""
+    root, known = tmp_path / "plugins", tmp_path / "known.json"
+    uploads.install(package(), ours=set(), root=root)
+    uploads.remember(root, known)
+    assert uploads.missing(root, known) == []
+    uploads.remove("radiofoo", root)            # a new card: the package is gone
+    gone = uploads.missing(root, known)
+    assert gone == [{"id": "radiofoo", "name": "Radio Foo", "kind": "renderer", "version": "1.0.0"}]
+    uploads.remember(root, known)                # a start does not forget it
+    assert uploads.missing(root, known) == gone
+    uploads.forget("radiofoo", known)
+    assert uploads.missing(root, known) == []
+
+
+def test_the_missing_plugin_is_a_row_not_a_plugin(tmp_path):
+    from gexis_core.settings_registry import Settings, load_registry
+    registry = Settings.with_plugins(load_registry(), [], {}, missing=[
+        {"id": "radiofoo", "name": "Radio Foo", "kind": "renderer", "version": "1.0.0"}])
+    rows = [r for g in registry for r in g.get("rows", []) if r.get("key", "").startswith("radiofoo.")]
+    assert [r["key"] for r in rows] == ["radiofoo.missing"]
+    assert rows[0]["type"] == "readonly" and "Upload version 1.0.0 again" in rows[0]["note"]
+
+
+def test_backups_hold_uploaded_plugins_data_and_list_not_packages():
+    from gexis_core import backups
+    assert "var/lib/private/gexis-uploaded" in backups.MEMBERS
+    assert "var/lib/gexis/plugins-known.json" in backups.MEMBERS
+    assert not any(m.startswith("var/lib/gexis/plugins") and m != "var/lib/gexis/plugins-known.json"
+                   for m in backups.MEMBERS), "never the packages"
