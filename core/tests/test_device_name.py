@@ -179,3 +179,21 @@ def test_the_unit_reads_the_env_file_this_module_writes():
     ).read_text()
     assert f"EnvironmentFile=-{device_name.ENV_PATH}" in unit
     assert "-n ${%s}" % device_name.ENV_KEY in unit
+
+
+def test_the_core_looks_for_the_lms_player_squeezelite_announces(tmp_path):
+    """The first blank card, 2026-09-29: renamed to "Living Room Sofa",
+    squeezelite announced that and the core kept looking for "gexis"."""
+    env = tmp_path / "device-name.env"
+    env.write_text("GEXIS_DEVICE_NAME=Living Room Sofa\n")
+    assert device_name.lms_player("gexis", env) == "Living Room Sofa"
+    assert device_name.lms_player("gexis", tmp_path / "missing.env") == "gexis"
+    env.write_text("GEXIS_DEVICE_NAME=\n")
+    assert device_name.lms_player("gexis", env) == "gexis"
+
+
+def test_a_rename_writes_the_name_the_core_then_looks_for(tmp_path, monkeypatch):
+    env = tmp_path / "device-name.env"
+    monkeypatch.setattr(device_name, "ENV_PATH", env)
+    device_name._write_env("Den Pi")
+    assert device_name.lms_player("gexis") == "Den Pi"

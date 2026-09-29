@@ -311,7 +311,9 @@ async def main() -> None:
         # visualiser has nothing to draw and its button is not offered.
         meters_available = outputs.needs_plug(chosen_output.card) is not True
 
-    lms = LmsAdapter(config.lms_host, config.lms_port, config.lms_player_name)
+    # The player squeezelite announces, which a rename changes (ADR-0048).
+    lms_player_name = device_name.lms_player(config.lms_player_name)
+    lms = LmsAdapter(config.lms_host, config.lms_port, lms_player_name)
     spotify = SpotifyAdapter(config.go_librespot_host, config.go_librespot_port)
     bluetooth = BluetoothAdapter()
     adapters = {"lms": lms, "spotify": spotify, "bluetooth": bluetooth}
@@ -1295,7 +1297,7 @@ async def main() -> None:
         registry=Settings.with_plugins(load_registry(), installed_plugins, downloads),
         defaults={
             "lms_server": lambda: f"{config.lms_host}:{config.lms_port}",
-            "lms_player": lambda: config.lms_player_name,
+            "lms_player": lambda: lms_player_name,
             "idle_url": lambda: config.idle_url or None,
             "device_name": device_name.hostname,
             "timezone": read_timezone,

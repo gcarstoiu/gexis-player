@@ -170,3 +170,20 @@ answers `127.0.1.1` on a Debian-derived image, which is true and useless.
   holding back. Not extended here: one use is not a mechanic.
 - **Whether a rename should offer the restart.** The `reboot` row is two
   categories away in Device, so the two are at least on the same screen.
+
+## Amended 2026-09-29: the core has to find its own LMS player by the new name
+
+The first blank card, set up as *Living Room Sofa* (Phase 13 step 4), showed no
+LMS on the panel. squeezelite announced *Living Room Sofa*, as this record
+intends; **the core kept looking for a player named `gexis`**, the configured
+`lms_player_name`, found none, and left LMS unavailable. Every rename since
+Phase 9e did the same; on gexis the name was always `gexis`, so the two never
+disagreed. The 9e gate checked that the four services advertised the new name,
+not that the core could still find its own player (LESSONS 39: ask what the
+thing says about itself).
+
+The core now takes the player's name from `device-name.env`, the file
+squeezelite's `-n` reads and a rename writes (`device_name.lms_player`), falling
+back to `lms_player_name` only without it. Both are read at start and a rename
+applies at the next restart, so they cannot disagree. Measured on the device:
+*"lms: resolved player 'Living Room Sofa' to id 88:a2:9e:79:e1:32"*.
