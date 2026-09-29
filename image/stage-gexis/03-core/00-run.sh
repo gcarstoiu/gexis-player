@@ -49,6 +49,10 @@ rm -f "${ROOTFS_DIR}/etc/systemd/system/gexis-boot-volume.service" \
 	"${ROOTFS_DIR}/etc/systemd/system/multi-user.target.wants/gexis-boot-volume.service"
 install -D -m 644 files/gexis-meter.service \
 	"${ROOTFS_DIR}/etc/systemd/system/gexis-meter.service"
+# George, 2026-09-29: a fresh start after every restart - LMS paused as the
+# device goes down, so its server has nothing to resume.
+install -D -m 644 files/gexis-park.service \
+	"${ROOTFS_DIR}/etc/systemd/system/gexis-park.service"
 
 # ADR-0100: software that is not ours to redistribute is fetched on the device,
 # from its maker, when the user switches it on. The helper, its template unit,

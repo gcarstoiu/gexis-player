@@ -2074,6 +2074,22 @@ async def main() -> None:
     if renderer_enabled("lms"):
         asyncio.ensure_future(_check_lms_volume_control())
 
+    async def _park_renderers() -> bool:
+        """**A fresh start after every restart** (George, 2026-09-29). The one
+        renderer that resumes by itself is LMS: its server carries on when
+        the player reconnects, whatever it is told while the player is away
+        (ADR-0095's 2026-09-29 measurements). So as the device goes down its
+        player is paused - queue and position kept. Spotify, Bluetooth and
+        Plexamp do not resume by themselves. A power cut skips this; the
+        first start after the boot pauses what the server resumed."""
+        try:
+            await lms.pause()
+            logger.info("park: the device is going down; LMS paused")
+            return True
+        except Exception as exc:  # the shutdown must not wait on the server
+            logger.warning("park: LMS not paused: %s", exc)
+            return False
+
     setup_network = SetupNetwork(on_change=state_store.set_setup)
     setup_flow = SetupFlow(setup_network, settings, reboot=_reboot)
     state_server = StateServer(
@@ -2111,6 +2127,7 @@ async def main() -> None:
         # ADR-0104: first-boot setup and the setup network.
         setup=setup_network,
         setup_flow=setup_flow,
+        park=_park_renderers,
         # ADR-0047: the idle screen's two providers.
         weather=forecast,
         wallpapers=wallpapers,

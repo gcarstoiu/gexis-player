@@ -112,6 +112,7 @@ class StateServer:
         splash=None,
         setup=None,
         setup_flow=None,
+        park=None,
         weather=None,
         wallpapers=None,
         skins_dir: Path | None = None,
@@ -162,6 +163,10 @@ class StateServer:
         #: ADR-0104: the setup network's status, for the panel and the phone.
         self._setup = setup
         self._setup_flow = setup_flow
+        #: George, 2026-09-29: "Why don't we disconnect all renderers upon
+        #: reboot? It's a fresh start." Called by gexis-park.service as the
+        #: device shuts down.
+        self._park = park
         self._weather = weather
         self._wallpapers = wallpapers
         #: Where the skin packs live (ADR-0050). Read per request rather
@@ -913,6 +918,15 @@ class StateServer:
             return None
         return web.json_response({"error": "setup is not running"}, status=409)
 
+    async def _handle_park(self, request: web.Request) -> web.Response:
+        """**The device is going down: leave nothing to resume.** Loopback
+        only - it is the shutdown's, not a phone's."""
+        if request.remote not in ("127.0.0.1", "::1"):
+            return web.json_response({"error": "loopback only"}, status=403)
+        if self._park is None:
+            return web.json_response({"parked": False})
+        return web.json_response({"parked": bool(await self._park())})
+
     async def _handle_setup_answers(self, request: web.Request) -> web.Response:
         closed = self._setup_closed()
         if closed is not None:
@@ -1267,6 +1281,7 @@ class StateServer:
         app.router.add_post("/touch", self._handle_touch)
         app.router.add_post("/panel/painted", self._handle_painted)
         app.router.add_get("/setup/status", self._handle_setup_status)
+        app.router.add_post("/renderers/park", self._handle_park)
         app.router.add_get("/setup/answers", self._handle_setup_answers)
         app.router.add_post("/setup/answers", self._handle_setup_save)
         app.router.add_get("/setup/networks", self._handle_setup_networks)

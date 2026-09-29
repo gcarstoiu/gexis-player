@@ -162,7 +162,18 @@ again:
    hold's 30 s cap - after which the server resumed it and the core paused it
    about 1 s later. Worse than no hold; removed the same day.
 
-**What stands:** the core waits until squeezelite **has connected** before it
-pauses (a pause sent earlier is undone), then pauses. What reaches the speakers
-in between is open, and George decides the next step (a DAC held at volume 0
-until the check is the candidate).
+3. **LMS's own "Power On Resume" preference** (`powerOnResume`, this player's
+   was `PauseOff-PlayOn`) set to `PauseOff-NoneOn`: the server resumed all the
+   same. It is its reconnect handling, which has no preference. Restored.
+
+**What stands - George's own answer, *"Why don't we disconnect all renderers
+upon reboot? It's a fresh start. User needs to decide what to do."*:**
+- **As the device goes down, LMS is paused** (`gexis-park.service`, ordered to
+  stop before the core and the network, calling the core's loopback-only
+  `/renderers/park`). Measured on the device: a clean restart while playing
+  came back with *"nothing playing after the device started"* - the server had
+  nothing to resume. Spotify, Bluetooth and Plexamp do not resume by themselves.
+- **A power cut skips the shutdown**, so the core's first start after a boot
+  still pauses what the server resumed - once squeezelite **has connected** (a
+  pause sent earlier is undone). About a second of sound can reach the
+  speakers in that case.
