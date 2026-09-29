@@ -120,6 +120,14 @@
 
   $effect(() => {
     touches;
+    // **No idle screen while setup is showing** (George, 2026-09-28: the
+    // clock appeared at the end of setup, "completely out of place"). The
+    // timer ran under the setup screen, and whoever finished setup on the
+    // phone had not touched the panel for minutes.
+    if (setupShown) {
+      untrack(() => { idle = false; askedIdle = false; });
+      return;
+    }
     if (playing) {
       if (!untrack(() => askedIdle)) idle = false;
       return;
@@ -284,6 +292,15 @@
   );
   $effect(() => {
     if (setupPage && surface === 'remote') untrack(() => (setupPageHeld = true));
+  });
+
+  //: Setup ending is attention, like a touch: the panel comes back to its
+  //: own screens and the idle timer starts from there.
+  let setupWasShown = false;
+  $effect(() => {
+    const now = setupShown;
+    if (setupWasShown && !now) untrack(() => (touches += 1));
+    setupWasShown = now;
   });
 
   // ADR-0032: the panel renders everything; a remote browser only settings.
