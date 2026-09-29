@@ -164,6 +164,60 @@
   );
   const placeLabel = (option) => option.split('/').slice(1).join('/').replace(/_/g, ' ');
 
+  //: **ADR-0106: uploading a plugin, from a phone or computer only** - the
+  //: panel has no file picker. The notice below is a DRAFT for George to
+  //: approve, as the Legal page's wording was.
+  const UPLOAD_NOTICE =
+    'This plugin is not part of Gexis Player. It is installed and run at your own risk. ' +
+    'It runs in a sandbox - its own user, the system read-only, the sound card only if it plays - ' +
+    'but nobody at Gexis Player has checked what it does.';
+  let pluginFile = $state(null);
+  //: One confirm for both upload and remove: a title, what it means, and
+  //: what happens on yes.
+  let ask = $state(null);
+  function pickPlugin() {
+    pluginFile?.click();
+  }
+  function onPluginPicked(event) {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file) return;
+    ask = {
+      title: `Install ${file.name}?`,
+      text: UPLOAD_NOTICE,
+      confirm: 'Install',
+      run: async () => {
+        flash('Uploading…');
+        const res = await fetch('/plugins/upload', {
+          method: 'POST',
+          body: file,
+          headers: { 'Content-Type': 'application/gzip' }
+        });
+        const body = await res.json().catch(() => ({}));
+        flash(res.ok ? `${body.installed} ${body.version} installed — the player is restarting` : (body.error ?? `HTTP ${res.status}`));
+      }
+    };
+  }
+  function uninstallPlugin(row) {
+    const id = row.key.replace(/\.enabled$/, '');
+    ask = {
+      title: `Remove ${row.label}?`,
+      text: 'Its package, its data and its settings are deleted. Upload it again to reinstall it.',
+      confirm: 'Remove',
+      danger: true,
+      run: async () => {
+        const res = await fetch(`/plugins/${encodeURIComponent(id)}/uninstall`, { method: 'POST' });
+        const body = await res.json().catch(() => ({}));
+        flash(res.ok ? `${row.label} removed — the player is restarting` : (body.error ?? `HTTP ${res.status}`));
+      }
+    };
+  }
+  async function answerAsk(yes) {
+    const pending = ask;
+    ask = null;
+    if (yes && pending) await pending.run();
+  }
+
   function rowOf(key) {
     for (const g of groups) for (const r of g.rows) if (r.key === key) return r;
     return null;
@@ -734,6 +788,17 @@
                         {#if pending(r)}<span class="dot dot--sm"></span>{/if}
                       </span>
                       {#if r.note}<span class="row__note">{r.note}</span>{/if}
+                      {#if r.uploaded && !r.value && !embedded}
+                        <!-- ADR-0106: an uploaded plugin is removed from here,
+                             switched off first. -->
+                        <span
+                          class="dl__retry"
+                          role="button"
+                          tabindex="0"
+                          onclick={(e) => { e.stopPropagation(); uninstallPlugin(r); }}
+                          onkeydown={(e) => { if (e.key === 'Enter') { e.stopPropagation(); uninstallPlugin(r); } }}
+                        >Remove</span>
+                      {/if}
                       {#if r.component}
                         <!-- ADR-0100 as amended: the plugin's download, inside
                              its own row (George: "part of the pill itself
@@ -782,6 +847,20 @@
                 </button>
               {/if}
             {/each}
+            {#if current?.id === 'plugins' && !embedded}
+              <!-- ADR-0106: a phone or computer only; the panel has no file
+                   picker and does not offer it. -->
+              <button class="row" type="button" onclick={pickPlugin}>
+                <span class="row__body">
+                  <span class="row__text">
+                    <span class="row__label"><span class="row__name">Upload a plugin</span></span>
+                    <span class="row__note">A package built for this player (.tar.gz). Not part of Gexis Player.</span>
+                  </span>
+                  <span class="chev"></span>
+                </span>
+              </button>
+              <input class="upload__input" type="file" accept=".tar.gz,.tgz,application/gzip" bind:this={pluginFile} onchange={onPluginPicked} />
+            {/if}
           </div>
         {/if}
       </div>
@@ -1238,6 +1317,23 @@
   {/if}
 
   <div class="toast" class:is-shown={toast}>{toast ?? ''}</div>
+
+  {#if ask}
+    <!-- ADR-0106: the confirm before an upload or a removal. -->
+    <div class="ask" role="dialog" aria-modal="true" aria-label={ask.title}>
+      <div class="ask__card">
+        <div class="ask__title">{ask.title}</div>
+        <div class="warn">
+          <span class="warn__mark">!</span>
+          <span class="warn__text">{ask.text}</span>
+        </div>
+        <div class="ask__buttons">
+          <button type="button" class="btn" onclick={() => answerAsk(false)}>Cancel</button>
+          <button type="button" class="btn btn--confirm" class:btn--danger={ask.danger} onclick={() => answerAsk(true)}>{ask.confirm}</button>
+        </div>
+      </div>
+    </div>
+  {/if}
 </div>
 
 <style>
@@ -2502,6 +2598,37 @@
     background: rgba(224, 167, 88, 0.2);
     border-color: rgba(224, 167, 88, 0.5);
     color: var(--accent-warn);
+  }
+
+  .upload__input {
+    display: none;
+  }
+  .ask {
+    position: fixed;
+    inset: 0;
+    z-index: 60;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    background: var(--bg-scrim);
+  }
+  .ask__card {
+    width: min(560px, 100%);
+    padding: 24px 22px 28px;
+    border-radius: var(--r-xl) var(--r-xl) 0 0;
+    background: var(--bg-panel);
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+  }
+  .ask__title {
+    font-size: 20px;
+    font-weight: 700;
+  }
+  .ask__buttons {
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
   }
 
   .toast {
