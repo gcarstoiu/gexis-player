@@ -61,6 +61,16 @@ install -D -m 644 files/gexis-uploaded-service@.service \
 	"${ROOTFS_DIR}/etc/systemd/system/gexis-uploaded-service@.service"
 install -D -m 755 files/gexis-run-uploaded \
 	"${ROOTFS_DIR}/usr/local/lib/gexis/gexis-run-uploaded"
+# Their MemoryMax needs the kernel's memory controller, which Raspberry Pi OS
+# leaves off (the device listed only cpuset, cpu, io and pids, 2026-09-29).
+# Inserted after `rootwait`, not appended: firstrun.sh cuts everything from
+# its own `systemd.run` entry to the end of the line.
+CMDLINE="${ROOTFS_DIR}/boot/firmware/cmdline.txt"
+grep -qw 'cgroup_enable=memory' "${CMDLINE}" || sed -i 's/\brootwait\b/rootwait cgroup_enable=memory/' "${CMDLINE}"
+grep -qw 'cgroup_enable=memory' "${CMDLINE}" || {
+	echo "ERROR: cgroup_enable=memory missing from cmdline.txt; plugin memory limits would not hold" >&2
+	exit 1
+}
 
 # ADR-0100: software that is not ours to redistribute is fetched on the device,
 # from its maker, when the user switches it on. The helper, its template unit,

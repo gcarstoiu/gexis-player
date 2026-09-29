@@ -95,8 +95,11 @@ plugin runs under the same template, `gexis-uploaded@<id>.service`:
   devices allowed for `kind: renderer`; a service gets none);
 - **the plugin socket** through its group (ADR-0084's `SupplementaryGroups`),
   which is how it talks to the core, and nothing else of ours;
-- **memory and CPU limits** (`MemoryMax`, `CPUQuota`; values to be measured
-  against Plexamp, the heaviest renderer we run);
+- **memory and CPU limits**: **1 GB of memory** (**Decided**, George,
+  2026-09-29: *"Limit of 1gb"*; a streaming receiver tried on the device ran at about
+  410 MB), 1.5 CPU cores, 128 tasks. Raspberry Pi OS ships with the kernel's
+  memory controller off, so `MemoryMax` did nothing until the image set
+  `cgroup_enable=memory` on the kernel command line;
 - **the network: open** (**Decided**, George: *"open"*): a streaming renderer
   needs the internet, and the device is on a home network anyway.
 

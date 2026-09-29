@@ -44,8 +44,9 @@ PrivateDevices=yes
 SupplementaryGroups=gexis-plugins
 # The network open (George: "open"): a streaming renderer needs it.
 RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6 AF_NETLINK
-# Limits, to be tuned against Plexamp, the heaviest renderer the device runs.
-MemoryMax=512M
+# Limits (George, 2026-09-29: "Limit of 1gb"). MemoryMax holds only with
+# cgroup_enable=memory on the kernel command line, which the image sets.
+MemoryMax=1G
 CPUQuota=150%
 TasksMax=128
 

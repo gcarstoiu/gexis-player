@@ -74,7 +74,7 @@ Every uploaded plugin runs under `gexis-uploaded-<kind>@<id>.service`:
 | **Devices** | A **renderer** gets the sound cards (and the basics every program has, like `/dev/null`); a **service** gets no devices beyond those basics |
 | **Network** | Open |
 | **The player** | The plugin socket, `$GEXIS_PLUGIN_SOCKET` (`/run/gexis/plugins.sock`) |
-| **Limits** | 512 MB of memory, 1.5 CPU cores, 128 tasks |
+| **Limits** | 1 GB of memory (past it, the kernel ends your plugin and it restarts), 1.5 CPU cores, 128 tasks |
 | **Restart** | Restarted 3 s after it exits with an error |
 
 Your process starts **in its package folder** (`current/`), so relative paths
