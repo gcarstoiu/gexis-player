@@ -262,11 +262,14 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 22px;
+    /* George, 2026-09-29: "everything is a bit compressed". */
+    gap: 34px;
     text-align: center;
     min-height: 0;
   }
-  .stage--join, .stage--page { gap: 18px; }
+  .stage--join, .stage--page { gap: 30px; }
+  /* A title and the line under it belong together; the rest stands apart. */
+  h1 + .lead, .banner + .lead { margin-top: -18px; }
   h1 {
     margin: 0;
     font-size: 60px;
@@ -280,6 +283,7 @@
     font-size: 32px;
     line-height: 1.3;
     color: var(--ink-body);
+    text-wrap: balance;
   }
   .lead--warn { color: var(--accent-warn); }
   .detail {
@@ -293,7 +297,7 @@
   .pair {
     display: flex;
     align-items: center;
-    gap: 44px;
+    gap: 56px;
     text-align: left;
   }
   .qr {
@@ -319,14 +323,16 @@
     letter-spacing: 0.02em;
   }
   dd:last-child { margin-bottom: 0; }
-  dd.small { font-family: var(--font-ui); font-size: 30px; font-weight: 600; letter-spacing: 0; max-width: 16ch; }
+  /* No width cap: it wrapped with room to spare (George, 2026-09-29). */
+  dd.small { font-family: var(--font-ui); font-size: 30px; font-weight: 600; letter-spacing: 0; white-space: nowrap; }
   .nowrap { white-space: nowrap; }
 
   .warn {
+    margin-top: 8px;
     display: flex;
     align-items: center;
     gap: 18px;
-    padding: 14px 26px;
+    padding: 18px 30px;
     border-radius: var(--r-lg);
     font-size: 30px;
     color: var(--accent-warn);
