@@ -115,3 +115,27 @@ input (ADR-0029).
   `wlan` rfkill state and `firstrun.sh` sets a country only with an SSID. Whether
   the radio is usable on an unprovisioned first boot is measured by the full
   test, not assumed.
+
+## Answered 2026-09-29, on the first blank card: the radio is off
+
+The full test answered the last bullet above: **no**. The panel showed *"The
+setup network did not start: … Connection 'gexis-setup' is not available on
+device wlan0 because device is not available"*. Read from the card afterwards,
+read-only: `/var/lib/systemd/rfkill/platform-fe300000.mmcnr:wlan` = `1`
+(blocked; every Bluetooth entry `0`), and the image ships
+`/var/lib/NetworkManager/NetworkManager.state` with `WirelessEnabled=false`.
+Both are Raspberry Pi OS's by design: `raspberrypi-sys-mods` sets
+`rfkill.default_state=0` and pi-gen's `stage2/02-net-tweaks` keeps NetworkManager
+from lifting it when the build sets no country, *"to prevent radiating on 5GHz
+bands until the WLAN regulatory domain is set"*.
+
+**So the image has no default country, and ADR-0031 amendment 6's "starts on
+the image's default" means the world regulatory domain.** The setup network
+lifts the block for itself only (`rfkill unblock wifi`, `nmcli radio wifi on`)
+and is pinned to **2.4 GHz** (`band bg`; the world domain allows channels 1-11),
+so nothing radiates on 5 GHz before a country is known. Finish sets the country
+from the time zone with `raspi-config`, as §4 says, which lifts the block for
+good. The alternative, a country built into the image, was offered to George on
+2026-09-29; the world domain is the recommendation (a built-in country would
+declare one country for a device used anywhere), **pending his word**.
+LESSONS 46.
