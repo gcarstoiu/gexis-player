@@ -28,6 +28,7 @@ end-to-end.
 from __future__ import annotations
 
 import asyncio
+from pathlib import Path
 import itertools
 import logging
 from typing import Callable
@@ -178,6 +179,25 @@ def _unavailable_controls(result: dict) -> frozenset[str]:
     return frozenset(unavailable)
 
 
+#: How long the first start after a boot waits for squeezelite to connect
+#: before it gives up and lets the DAC go (gexis-boot-hold caps it too).
+BOOT_CHECK_S = 25.0
+
+
+def boot_check_due(marker: Path | None) -> bool:
+    """Whether this is the first start since the device booted: the marker is
+    in `/run`, which only a boot empties."""
+    return marker is not None and not marker.exists()
+
+
+def mark_boot_checked(marker: Path) -> None:
+    try:
+        marker.parent.mkdir(parents=True, exist_ok=True)
+        marker.touch()
+    except OSError as exc:
+        logger.warning("lms: cannot record the boot check: %s", exc)
+
+
 class LmsAdapter(Adapter):
     renderer_id = "lms"
     release_action = ReleaseAction.PAUSE
@@ -234,8 +254,17 @@ class LmsAdapter(Adapter):
     #: adapter as a remote-control channel.
     VOLUME_STEPS = VOLUME_STEPS
 
-    def __init__(self, host: str, port: int, player_name: str) -> None:
+    def __init__(self, host: str, port: int, player_name: str,
+                 boot_marker: Path | None = None) -> None:
         self._base = f"http://{host}:{port}"
+        #: **Nothing resumes by itself when the device starts** (George,
+        #: 2026-09-29: after a restart LMS was playing, *"I was expecting it
+        #: paused"*). The server remembers a player that was playing when the
+        #: power went and carries on when it reconnects. At the first start
+        #: after a boot - this file absent; `/run` is emptied at every boot -
+        #: a playing player is paused, queue and position kept. A core that
+        #: merely restarts does not touch what is playing.
+        self._boot_marker = boot_marker
         self._player_name = player_name
         self._player_id: str | None = None
         #: Both set by `release()` from the player's own state and consumed
@@ -582,6 +611,34 @@ class LmsAdapter(Adapter):
             artwork = f"{self._base}/{artwork_url.lstrip('/')}"
         return title, album, artwork
 
+    async def _check_after_boot(self, session: aiohttp.ClientSession, sleep=asyncio.sleep) -> None:
+        """**Pause what the server resumed, once squeezelite is connected**
+        (ADR-0095 as amended 2026-09-29). A pause sent while squeezelite is
+        still away is undone when it reconnects - the server restores what the
+        player was doing when it dropped (measured). gexis-boot-hold keeps the
+        DAC busy meanwhile, so squeezelite connects but cannot play; the marker
+        this writes is what lets the hold go."""
+        waited = 0.0
+        try:
+            while waited < BOOT_CHECK_S:
+                status = (await self._rpc(session, self._player_id, ["status", "-", 1])).get("result", {})
+                if status.get("player_connected"):
+                    # The server sets it playing as the handshake completes;
+                    # read again a moment later so that is what gets seen.
+                    await sleep(1.0)
+                    status = (await self._rpc(session, self._player_id, ["status", "-", 1])).get("result", {})
+                    if status.get("mode") == "play":
+                        await self._rpc(session, self._player_id, ["pause", 1])
+                        logger.info("lms: the server resumed playback after the device started; paused it")
+                    else:
+                        logger.info("lms: nothing playing after the device started")
+                    return
+                await sleep(0.5)
+                waited += 0.5
+            logger.warning("lms: squeezelite did not connect within %.0f s of start; not checked", BOOT_CHECK_S)
+        finally:
+            mark_boot_checked(self._boot_marker)
+
     async def _rpc(self, session: aiohttp.ClientSession, player: str, command: list) -> dict:
         body = {"id": next(_id_counter), "method": "slim.request", "params": [player, command]}
         async with session.post(f"{self._base}/jsonrpc.js", json=body) as resp:
@@ -733,6 +790,8 @@ class LmsAdapter(Adapter):
             if last_power:
                 logger.info("lms: player already powered on at startup (acquisition)")
                 on_acquire()
+            if boot_check_due(self._boot_marker):
+                await self._check_after_boot(session)
 
             while True:
                 frames = await self._cometd_post(

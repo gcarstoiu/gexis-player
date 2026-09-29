@@ -9,6 +9,8 @@ ln -sf /etc/systemd/system/gexis-core.service \
 # until 2026-09-16 it had only ever been started by hand.
 ln -sf /etc/systemd/system/gexis-meter.service \
 	"${ROOTFS_DIR}/etc/systemd/system/multi-user.target.wants/gexis-meter.service"
+ln -sf /etc/systemd/system/gexis-park.service \
+	"${ROOTFS_DIR}/etc/systemd/system/multi-user.target.wants/gexis-park.service"
 
 # Build-time assertion: the venv actually landed and the src copy this
 # stage used to install from didn't linger (00-run-chroot.sh's rm -rf

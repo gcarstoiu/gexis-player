@@ -592,3 +592,20 @@ async def test_the_web_app_manifest_and_icons_are_served_at_the_root(tmp_path):
         assert response.headers["Content-Type"].startswith("application/manifest+json")
         assert (await client.get("/app-icon-192.png")).headers["Content-Type"] == "image/png"
         assert (await client.get("/anything-else.png")).status == 404, "named, not a catch-all"
+
+
+@pytest.mark.asyncio
+async def test_park_pauses_through_the_callable():
+    """George, 2026-09-29: a fresh start after every restart. The shutdown's
+    unit calls this over loopback."""
+    called = []
+
+    async def park():
+        called.append(True)
+        return True
+
+    server = StateServer(StateStore({}), park=park)
+    async with TestClient(TestServer(server.make_app())) as client:
+        resp = await client.post("/renderers/park")
+        body = await resp.json()
+    assert resp.status == 200 and body == {"parked": True} and called == [True]
