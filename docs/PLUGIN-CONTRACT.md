@@ -288,7 +288,11 @@ configuration from the environment like most daemons do.
   `/usr/share/gexis/plugins/<id>/`, and its id must match one before it may
   connect. Connecting says a plugin is *running*, not that it exists.
 
-  **What is still open is who puts it there.** Every plugin so far arrives in
+  **Who puts it there is answered for uploads** by
+  [ADR-0106](decisions/0106-plugins-you-install-and-update.md): a user uploads a
+  package from a phone, and it runs under a unit the player writes, in a
+  sandbox. [WRITING-A-PLUGIN.md](WRITING-A-PLUGIN.md) is the guide. What follows
+  is the record as it stood before: **what is still open is who puts it there.** Every plugin so far arrives in
   the image ([ADR-0087](decisions/0087-the-beszel-agent-is-the-first-service-plugin.md),
   George's call), and nothing installs one on a running device: that needs a
   writable plugin directory, a checksummed download and a rule about who may
