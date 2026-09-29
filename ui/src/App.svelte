@@ -277,7 +277,7 @@
   //: screen flashing on every one would be a fault in itself.
   const setupShown = $derived(
     !!$setup &&
-      (['open', 'failed', 'joining'].includes($setup.network) ||
+      (['open', 'failed', 'joining', 'done'].includes($setup.network) ||
         ($setup.needed && ['waiting', 'online'].includes($setup.network)))
   );
 

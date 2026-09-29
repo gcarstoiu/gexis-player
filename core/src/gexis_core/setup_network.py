@@ -304,6 +304,9 @@ class SetupNetwork:
         #: move to the next step").
         self._phones = 0
         self._page_opened = False
+        #: The last word, shown on the panel for a few seconds after a
+        #: successful join: where the device went and what it found.
+        self._finished: dict | None = None
         #: Called with `public_status()` whenever it changes: the state
         #: broadcast, which every phone reads too, so never the password.
         self._on_change = on_change
@@ -333,6 +336,7 @@ class SetupNetwork:
             "failed": self._failed,
             "target": self._target if self._state == "joining" else None,
             "phones": self._phones if open_ else 0,
+            "finished": self._finished if self._state == "done" else None,
             "page_opened": self._page_opened and open_,
         }
 
@@ -476,11 +480,20 @@ class SetupNetwork:
                 self._phones, self._page_opened = 0, False
             await self._sleep(PHONES_EVERY_S)
 
+    def finished(self, ssid: str | None, library: dict, restarting: bool, name: str | None = None) -> None:
+        """The panel's last setup screen (George, 2026-09-29): the network it
+        joined, what became of Lyrion, and whether it is restarting."""
+        self._state = "done"
+        self._finished = {"ssid": ssid, "library": library, "restarting": restarting, "name": name}
+        self._publish()
+
     def done(self) -> None:
         """Setup finished (ADR-0104 §2): the marker is written by the caller;
         this device no longer needs setup."""
         self._needed = False
         self._lan_address = None
+        self._state = "online"
+        self._finished = None
         self._publish()
 
     async def join_new(self, ssid: str, password: str | None, hidden: bool = False) -> tuple[bool, str | None]:

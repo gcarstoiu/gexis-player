@@ -70,6 +70,7 @@
 
   const step = $derived.by(() => {
     tick;
+    if (setup?.network === 'done') return 'done';
     if (setup?.network === 'joining') return 'joining';
     if (setup?.network === 'failed') return 'failed-start';
     if (overLan) return 'lan';
@@ -186,6 +187,25 @@
       </div>
       <h1 class="huge">Joining {setup?.target ?? 'your Wi-Fi'}</h1>
       <p class="lead">Put your phone back on {setup?.target ?? 'your Wi-Fi'} too.</p>
+    {:else if step === 'done'}
+      {@const f = setup.finished ?? {}}
+      {@const lib = f.library ?? {}}
+      <div class="big-icon">
+        <svg viewBox="0 0 64 64" width="120" height="120" aria-hidden="true">
+          <path d="M16 33 L28 45 L49 21" fill="none" stroke="currentColor" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
+      </div>
+      <h1 class="huge">{f.name ?? 'gexis'} is on {f.ssid ?? 'your network'}</h1>
+      <!-- George, 2026-09-29: the Lyrion server, looked for once the player
+           can see the home network. -->
+      <p class="lead" class:lead--warn={lib.state === 'none' || lib.state === 'several'}>
+        {#if lib.state === 'found'}Found your Lyrion server, {lib.name}.
+        {:else if lib.state === 'given'}Lyrion: {lib.address}
+        {:else if lib.state === 'several'}Found {lib.names?.length} Lyrion servers ({lib.names?.join(', ')}). Choose one in Settings.
+        {:else}No Lyrion server found. Spotify Connect and Bluetooth work without one; choose a server in Settings later.
+        {/if}
+      </p>
+      {#if f.restarting}<p class="lead">Restarting to take its new name…</p>{/if}
     {:else if step === 'lan'}
       <h1>Set up gexis</h1>
       <p class="lead">Scan with a phone on the same network as this player</p>
@@ -261,6 +281,7 @@
     line-height: 1.3;
     color: var(--ink-body);
   }
+  .lead--warn { color: var(--accent-warn); }
   .detail {
     margin: 0;
     font-family: var(--font-mono);

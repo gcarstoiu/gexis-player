@@ -28,6 +28,7 @@ class FakeSettings:
 
 
 def make(tmp_path, nm, settings=None, **kw):
+    kw_servers = {"servers": kw.pop("servers", [])}
     net, clock = setup(tmp_path, nm, **kw)
     countries, reboots = [], []
 
@@ -37,10 +38,15 @@ def make(tmp_path, nm, settings=None, **kw):
     async def reboot():
         reboots.append(True)
 
+    servers = kw_servers.pop("servers", [])
+
+    async def find():
+        return list(servers)
+
     flow = SetupFlow(
         net, settings or FakeSettings(), reboot=reboot,
         answers=tmp_path / "answers.json", marker=tmp_path / "setup-done",
-        set_country=country,
+        set_country=country, find_servers=find, sleep=clock.sleep,
     )
     return flow, net, clock, countries, reboots
 
@@ -165,3 +171,53 @@ def test_the_retry_keeps_running_after_a_failed_join_from_setup(tmp_path):
     asyncio.run(go())
     assert net.status()["network"] == "online"
     assert nm.did("connection", "up", "preconfigured")
+
+
+def test_without_an_address_one_lyrion_server_found_after_joining_is_used(tmp_path):
+    nm = FakeNM(devices=NOTHING)
+    settings = FakeSettings()
+    flow, net, clock, *_ = make(tmp_path, nm, settings,
+                                servers=[{"address": "192.168.1.10:9000", "name": "den-lms"}])
+    seen = []
+    net._on_change = seen.append
+    flow.save({"ssid": "Home", "password": "hunter22"})
+    finish(flow, net)
+    assert ("lms_server", "192.168.1.10:9000") in settings.sets
+    done = [s for s in seen if s["network"] == "done"][0]
+    assert done["finished"] == {"ssid": "Home", "restarting": False, "name": "gexis",
+                                "library": {"state": "found", "name": "den-lms", "address": "192.168.1.10:9000"}}
+    assert net.status()["network"] == "online" and not net.status()["finished"]
+
+
+def test_several_servers_are_named_and_none_is_chosen(tmp_path):
+    nm = FakeNM(devices=NOTHING)
+    settings = FakeSettings()
+    flow, net, *_ = make(tmp_path, nm, settings,
+                         servers=[{"address": "a:9000", "name": "one"}, {"address": "b:9000", "name": "two"}])
+    seen = []
+    net._on_change = seen.append
+    flow.save({"ssid": "Home", "password": "hunter22"})
+    finish(flow, net)
+    assert not [k for k, _ in settings.sets if k == "lms_server"]
+    assert [s for s in seen if s["network"] == "done"][0]["finished"]["library"] == {"state": "several", "names": ["one", "two"]}
+
+
+def test_an_address_given_in_setup_is_not_searched_over(tmp_path):
+    nm = FakeNM(devices=NOTHING)
+    flow, net, *_ = make(tmp_path, nm, servers=[{"address": "x:9000", "name": "x"}])
+    seen = []
+    net._on_change = seen.append
+    flow.save({"ssid": "Home", "password": "hunter22", "lms": "192.168.1.5:9000"})
+    finish(flow, net)
+    assert [s for s in seen if s["network"] == "done"][0]["finished"]["library"] == {"state": "given", "address": "192.168.1.5:9000"}
+
+
+def test_the_last_screen_says_a_rename_restarts(tmp_path):
+    nm = FakeNM(devices=NOTHING)
+    flow, net, _, _, reboots = make(tmp_path, nm)
+    seen = []
+    net._on_change = seen.append
+    flow.save({"ssid": "Home", "password": "hunter22", "name": "Den"})
+    finish(flow, net)
+    assert [s for s in seen if s["network"] == "done"][0]["finished"]["restarting"] is True
+    assert reboots == [True]

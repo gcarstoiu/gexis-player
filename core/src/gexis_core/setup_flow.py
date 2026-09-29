@@ -22,11 +22,13 @@ import logging
 import os
 from pathlib import Path
 
-from gexis_core import setup_network
+from gexis_core import discovery, setup_network
 
 logger = logging.getLogger(__name__)
 
 ANSWERS = setup_network.STATE_DIR / "setup-answers.json"
+#: How long the panel shows where the device went, before its own screens.
+DONE_S = 10.0
 
 #: Answer -> the setting it becomes. The Wi-Fi is not a setting; it is a
 #: NetworkManager profile, made last.
@@ -54,6 +56,8 @@ class SetupFlow:
         answers: Path = ANSWERS,
         marker: Path = setup_network.DONE_MARKER,
         set_country=None,
+        find_servers=None,
+        sleep=asyncio.sleep,
     ) -> None:
         self._network = network
         self._settings = settings
@@ -61,6 +65,8 @@ class SetupFlow:
         self._path = answers
         self._marker = marker
         self._set_country = set_country or _raspi_config_country
+        self._find_servers = find_servers or discovery.find_servers
+        self._sleep = sleep
         self._task: asyncio.Task | None = None
 
     # -- the answers ---------------------------------------------------------
@@ -165,13 +171,44 @@ class SetupFlow:
         self._marker.parent.mkdir(parents=True, exist_ok=True)
         self._marker.touch()
         self._path.unlink(missing_ok=True)
-        self._network.done()
-        logger.info("setup: finished")
+        library = await self._library(data)
         # ADR-0048: a rename takes effect at a restart, and the page's last
         # screen has already sent the phone to the new name.
-        if data.get("name") and data["name"] != old_name and self._reboot is not None:
+        renaming = bool(data.get("name") and data["name"] != old_name and self._reboot is not None)
+        self._network.finished(ssid, library, renaming, data.get("name") or old_name)
+        logger.info("setup: finished; library %s", library)
+        await self._sleep(DONE_S)
+        self._network.done()
+        if renaming:
             logger.info("setup: the name changed; restarting to take it")
             await self._reboot()
+
+    async def _library(self, data: dict) -> dict:
+        """**Lyrion, once the device is on the home network** (George,
+        2026-09-29: *"If we can stop and start the WiFi to check the network,
+        why can't we do the same for the Lms server?"*). Over the setup
+        network there is nothing to find (amendment 4); after the join there
+        is. An address typed in setup is kept as it is. Without one: exactly
+        one server found is used; several are named and left to Settings;
+        none is said."""
+        if data.get("lms"):
+            return {"state": "given", "address": data["lms"]}
+        try:
+            servers = await self._find_servers()
+        except Exception as exc:  # the search is a courtesy, never a failure
+            logger.warning("setup: Lyrion search failed: %s", exc)
+            servers = []
+        if len(servers) == 1:
+            server = servers[0]
+            try:
+                self._settings.set("lms_server", server["address"])
+            except Exception as exc:
+                logger.warning("setup: lms_server not set: %s", exc)
+                return {"state": "none"}
+            return {"state": "found", "name": server.get("name") or server["address"], "address": server["address"]}
+        if servers:
+            return {"state": "several", "names": [s.get("name") or s["address"] for s in servers]}
+        return {"state": "none"}
 
 
 async def _raspi_config_country(country: str) -> None:
