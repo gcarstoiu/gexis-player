@@ -4,18 +4,9 @@ Last updated: 2026-09-28 (twenty-ninth session, on R2D2).
 
 ## Start here
 
-> **First thing, before anything else: remind George to run these two, then
-> check the repository is gone (`gh repo list gcarstoiu`).** He asked for the
-> reminder on 2026-09-28. The code, both tags and both releases are in the
-> local archive (bundle verified, tarballs match GitHub's sizes); see
-> `docs/SESSIONS.local.md`. Deleting cannot be undone, so George runs it:
->
-> ```
-> ! gh auth refresh -h github.com -s delete_repo
-> ! gh repo delete gcarstoiu/gexis-<the withdrawn plugin's repo> --yes
-> ```
->
-> The repository's name is in `docs/SESSIONS.local.md` (this file is public).
+> **Done 2026-09-29:** George deleted the withdrawn plugin's public GitHub
+> repository; checked gone (not in the account's list, API "could not
+> resolve", public page 404). The local archive is untouched.
 
 **Phase 13 (first-boot setup, ADR-0031, ADR-0104) is built through step 3 on
 `phase-13`, PR #37, and every step was run on gexis with George.** The image
