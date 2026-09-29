@@ -198,11 +198,14 @@
       <h1 class="huge">{f.name ?? 'gexis'} is on {f.ssid ?? 'your network'}</h1>
       <!-- George, 2026-09-29: the Lyrion server, looked for once the player
            can see the home network. -->
-      <p class="lead" class:lead--warn={lib.state === 'none' || lib.state === 'several'}>
+      <p class="lead" class:lead--warn={lib.state === 'none' || lib.state === 'several'}
+         hidden={lib.state === 'unchanged'}>
         {#if lib.state === 'found'}Found your Lyrion server, {lib.name}.
         {:else if lib.state === 'given'}Lyrion: {lib.address}
         {:else if lib.state === 'several'}Found {lib.names?.length} Lyrion servers ({lib.names?.join(', ')}). Choose one in Settings.
-        {:else}No Lyrion server found. Spotify Connect and Bluetooth work without one; choose a server in Settings later.
+        {:else if lib.state === 'off'}Lyrion is off. Switch it on in Settings any time.
+        {:else if lib.state === 'unchanged'}
+        {:else}No Lyrion server found. Choose one in Settings when it is running.
         {/if}
       </p>
       {#if f.restarting}<p class="lead">Restarting to take its new name…</p>{/if}

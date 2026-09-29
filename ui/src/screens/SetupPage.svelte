@@ -61,6 +61,9 @@
   let clock24 = $state(true);
   let out = $state(null);
   let lms = $state('');
+  //: George, 2026-09-29: Lyrion only with the user's say-so. `find`, `address`
+  //: or `off`; nothing chosen blocks Continue.
+  let lmsMode = $state(null);
   let spotify = $state(true);
   let bt = $state(true);
   let headless = $state(false);
@@ -103,6 +106,7 @@
       case 'wifi': return wifiValid;
       case 'name': return slugOf(name).length > 1;
       case 'tz': return !!tz;
+      case 'music': return lmsMode === 'find' || lmsMode === 'off' || (lmsMode === 'address' && lms.trim().length > 2);
       default: return true;
     }
   }
@@ -157,6 +161,9 @@
       clock24 = (saved.clock ?? rows.clock_format?.value ?? '24 h') !== '12 h';
       out = saved.output ?? rows.output_device?.value ?? outputs[0] ?? null;
       lms = saved.lms ?? (setup?.needed ? '' : (rows.lms_server?.value ?? ''));
+      // Set up again: start on what the device does now. New: nothing chosen.
+      lmsMode = saved.lms_mode ?? (setup?.needed ? null
+        : rows.lms_enabled?.value === false ? 'off' : (lms ? 'address' : null));
       spotify = saved.spotify ?? rows.spotify_enabled?.value ?? true;
       bt = saved.bluetooth ?? rows.bt_enabled?.value ?? true;
       headless = saved.headless ?? (setup?.needed ? !setup?.panel : !!rows.headless?.value);
@@ -187,7 +194,7 @@
       case 'name': return { name: (name || '').trim() };
       case 'tz': return { timezone: tz, clock: clock24 ? '24 h' : '12 h' };
       case 'out': return { output: out };
-      case 'music': return { lms: lms.trim() || null, spotify, bluetooth: bt };
+      case 'music': return { lms_mode: lmsMode, lms: lmsMode === 'address' ? (lms.trim() || null) : null, spotify, bluetooth: bt };
       case 'display': return { headless };
       default: return {};
     }
@@ -262,7 +269,7 @@
     ['Name', `${shownName} · ${slug}.local`, 1],
     ['Time zone', `${tz || 'Not set'} · ${clock24 ? '24 h' : '12 h'}`, 2],
     ['Output', out || 'Not set', 3],
-    ['Library', lms.trim() || 'Found once on your network', 4],
+    ['Library', lmsMode === 'off' ? 'Not used' : lmsMode === 'address' ? lms.trim() : lmsMode === 'find' ? 'Found once on your network' : 'Not chosen', 4],
     ['Services', [spotify ? 'Spotify Connect' : null, bt ? 'Bluetooth' : null].filter(Boolean).join(' · ') || 'Lyrion only', 4],
     ['Display', headless ? 'Headless' : 'Panel attached', 5]
   ]);
@@ -469,14 +476,26 @@
             <section class="pane">
               <div>
                 <h1>Find your library</h1>
-                <p class="sub">{overLan
-                  ? 'The player finds Lyrion servers on your network by itself. Typing an address is the fallback.'
-                  : 'Over its own Wi-Fi the player cannot see your network, so it looks for servers once it is on it. If you know the address, it can go here.'}</p>
+                <p class="sub">Your own music comes through a Lyrion server on your network. Choose what the player should do; nothing is added without it.</p>
               </div>
-              <label class="field"><span class="label">Lyrion server (optional)</span>
-                <input type="text" bind:value={lms} placeholder="192.168.1.10:9000" autocomplete="off" spellcheck="false" inputmode="url" />
-                <span class="hint">No server yet? Leave this alone. Spotify Connect and Bluetooth work without one.</span>
-              </label>
+              <div class="list">
+                <div class="label pad">Lyrion (Logitech Media Server)</div>
+                {#each [
+                  ['find', 'Find my Lyrion server', overLan ? 'The player looks on your network when you finish.' : 'The player looks once it is on your network, and uses it if it finds one.'],
+                  ['address', 'Enter an address', 'If you know where your server is.'],
+                  ['off', "I don't use Lyrion", 'No library on the panel. Spotify Connect and Bluetooth work without it; switch it on in Settings any time.']
+                ] as o}
+                  <button class="net" class:sel={lmsMode === o[0]} onclick={() => (lmsMode = o[0])}>
+                    <span class="radio" class:on={lmsMode === o[0]}><span></span></span>
+                    <span class="grow"><span class="nm">{o[1]}</span><span class="meta plain">{o[2]}</span></span>
+                  </button>
+                {/each}
+              </div>
+              {#if lmsMode === 'address'}
+                <label class="field"><span class="label">Server address</span>
+                  <input type="text" bind:value={lms} placeholder="192.168.1.10:9000" autocomplete="off" spellcheck="false" inputmode="url" />
+                </label>
+              {/if}
               <div class="list">
                 <div class="label pad">Also switch on</div>
                 {#each [['Spotify Connect', `The player appears in Spotify as ${shownName}.`, spotify, () => (spotify = !spotify)], ['Bluetooth', 'Phones can pair and send audio directly.', bt, () => (bt = !bt)]] as v}

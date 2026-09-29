@@ -43,6 +43,9 @@ SETTINGS = {
     "headless": "headless",
 }
 TEXT = ("ssid", "password", "name", "timezone", "clock", "output", "lms")
+#: George, 2026-09-29: a server nobody asked for must not appear. The Music
+#: step asks: find it once on the network, this address, or not at all.
+LMS_MODES = ("find", "address", "off")
 FLAGS = ("hidden", "spotify", "bluetooth", "headless")
 
 
@@ -109,6 +112,10 @@ class SetupFlow:
                 if not isinstance(value, bool):
                     raise ValueError(f"{key} must be true or false")
                 data[key] = value
+            elif key == "lms_mode":
+                if value is not None and value not in LMS_MODES:
+                    raise ValueError(f"lms_mode must be one of {', '.join(LMS_MODES)}")
+                data[key] = value
             elif key == "step":
                 if not isinstance(value, str):
                     raise ValueError("step must be text")
@@ -142,8 +149,13 @@ class SetupFlow:
 
     async def _apply(self, data: dict) -> None:
         old_name = self._settings.value("device_name")
+        mode = data.get("lms_mode")
         for answer, key in SETTINGS.items():
             if answer not in data or data[answer] in (None, ""):
+                continue
+            # The typed address only counts when "Enter an address" is the
+            # answer; a field left filled under another choice is not one.
+            if answer == "lms" and mode not in (None, "address"):
                 continue
             try:
                 if self._settings.value(key) != data[answer]:
@@ -191,8 +203,17 @@ class SetupFlow:
         is. An address typed in setup is kept as it is. Without one: exactly
         one server found is used; several are named and left to Settings;
         none is said."""
-        if data.get("lms"):
+        mode = data.get("lms_mode") or ("address" if data.get("lms") else None)
+        if mode == "off":
+            self._set_quietly("lms_enabled", False)
+            return {"state": "off"}
+        if mode == "address" and data.get("lms"):
+            self._set_quietly("lms_enabled", True)
             return {"state": "given", "address": data["lms"]}
+        if mode != "find":
+            # No choice recorded (an answers file from before this): nothing
+            # is looked for and nothing is changed.
+            return {"state": "unchanged"}
         try:
             servers = await self._find_servers()
         except Exception as exc:  # the search is a courtesy, never a failure
@@ -205,10 +226,19 @@ class SetupFlow:
             except Exception as exc:
                 logger.warning("setup: lms_server not set: %s", exc)
                 return {"state": "none"}
+            self._set_quietly("lms_enabled", True)
             return {"state": "found", "name": server.get("name") or server["address"], "address": server["address"]}
         if servers:
             return {"state": "several", "names": [s.get("name") or s["address"] for s in servers]}
         return {"state": "none"}
+
+
+    def _set_quietly(self, key: str, value) -> None:
+        try:
+            if self._settings.value(key) != value:
+                self._settings.set(key, value)
+        except Exception as exc:
+            logger.warning("setup: %s not set: %s", key, exc)
 
 
 async def _raspi_config_country(country: str) -> None:

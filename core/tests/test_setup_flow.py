@@ -180,7 +180,7 @@ def test_without_an_address_one_lyrion_server_found_after_joining_is_used(tmp_pa
                                 servers=[{"address": "192.168.1.10:9000", "name": "den-lms"}])
     seen = []
     net._on_change = seen.append
-    flow.save({"ssid": "Home", "password": "hunter22"})
+    flow.save({"ssid": "Home", "password": "hunter22", "lms_mode": "find"})
     finish(flow, net)
     assert ("lms_server", "192.168.1.10:9000") in settings.sets
     done = [s for s in seen if s["network"] == "done"][0]
@@ -196,7 +196,7 @@ def test_several_servers_are_named_and_none_is_chosen(tmp_path):
                          servers=[{"address": "a:9000", "name": "one"}, {"address": "b:9000", "name": "two"}])
     seen = []
     net._on_change = seen.append
-    flow.save({"ssid": "Home", "password": "hunter22"})
+    flow.save({"ssid": "Home", "password": "hunter22", "lms_mode": "find"})
     finish(flow, net)
     assert not [k for k, _ in settings.sets if k == "lms_server"]
     assert [s for s in seen if s["network"] == "done"][0]["finished"]["library"] == {"state": "several", "names": ["one", "two"]}
@@ -207,7 +207,7 @@ def test_an_address_given_in_setup_is_not_searched_over(tmp_path):
     flow, net, *_ = make(tmp_path, nm, servers=[{"address": "x:9000", "name": "x"}])
     seen = []
     net._on_change = seen.append
-    flow.save({"ssid": "Home", "password": "hunter22", "lms": "192.168.1.5:9000"})
+    flow.save({"ssid": "Home", "password": "hunter22", "lms": "192.168.1.5:9000", "lms_mode": "address"})
     finish(flow, net)
     assert [s for s in seen if s["network"] == "done"][0]["finished"]["library"] == {"state": "given", "address": "192.168.1.5:9000"}
 
@@ -221,3 +221,33 @@ def test_the_last_screen_says_a_rename_restarts(tmp_path):
     finish(flow, net)
     assert [s for s in seen if s["network"] == "done"][0]["finished"]["restarting"] is True
     assert reboots == [True]
+
+
+def test_nothing_is_searched_for_or_adopted_without_being_asked(tmp_path):
+    """George, 2026-09-29: a server the user did not ask for, found behind
+    his back, is the thing to avoid."""
+    nm = FakeNM(devices=NOTHING)
+    settings = FakeSettings()
+    flow, net, *_ = make(tmp_path, nm, settings, servers=[{"address": "x:9000", "name": "x"}])
+    seen = []
+    net._on_change = seen.append
+    flow.save({"ssid": "Home", "password": "hunter22"})
+    finish(flow, net)
+    assert not [k for k, _ in settings.sets if k.startswith("lms")]
+    assert [s for s in seen if s["network"] == "done"][0]["finished"]["library"] == {"state": "unchanged"}
+
+
+def test_i_dont_use_lyrion_switches_it_off_and_ignores_a_typed_address(tmp_path):
+    nm = FakeNM(devices=NOTHING)
+    settings = FakeSettings(lms_enabled=True)
+    flow, net, *_ = make(tmp_path, nm, settings)
+    flow.save({"ssid": "Home", "password": "hunter22", "lms": "1.2.3.4:9000", "lms_mode": "off"})
+    finish(flow, net)
+    assert ("lms_enabled", False) in settings.sets
+    assert not [k for k, _ in settings.sets if k == "lms_server"], "the field is not the answer"
+
+
+def test_an_unknown_lms_mode_is_refused(tmp_path):
+    flow, *_ = make(tmp_path, FakeNM(devices=NOTHING))
+    with pytest.raises(ValueError):
+        flow.save({"lms_mode": "maybe"})
