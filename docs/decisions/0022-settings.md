@@ -255,6 +255,7 @@ wired above (ADR-0077).
 | Setup network: 90 s at boot, 5 min retry, the name `gexis-setup` | [H] | George's thresholds (ADR-0031 amendment 7). Fixed values, not rows |
 | Wi-Fi country | [H] | Taken from the time zone when setup is applied (ADR-0104 §4). **Not shown**, George |
 | Clock format — `clock_format` | [N] | 24 h / 12 h, for the idle screen's clock. **George, 2026-09-28:** *"Add the clock setting and also put it into the panel settings, not only setup."* The design's Time step drew it with nothing behind it. In Display, under Clock |
+| Playback when the device starts | [H] | **Paused.** George, 2026-09-29, after LMS carried on playing across a restart (*"I was expecting it paused"*; then *"Yes. Agree with your assessment"*). At the first start after a boot the core pauses a player the Lyrion server resumed, queue and position kept; a core restart alone does not touch what is playing. Plexamp does not resume by itself (ADR-0091), and Spotify and Bluetooth need a phone to start. Fixed, not a row |
 
 ## Settled by prior records
 

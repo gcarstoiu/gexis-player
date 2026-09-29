@@ -28,6 +28,7 @@ end-to-end.
 from __future__ import annotations
 
 import asyncio
+from pathlib import Path
 import itertools
 import logging
 from typing import Callable
@@ -178,6 +179,21 @@ def _unavailable_controls(result: dict) -> frozenset[str]:
     return frozenset(unavailable)
 
 
+def pause_after_boot(marker: Path | None, status: dict) -> bool:
+    """Whether this start is the first since the device booted and the player
+    is playing. Marks the boot as handled either way, so only the first
+    successful read after a boot can pause."""
+    if marker is None or marker.exists():
+        return False
+    try:
+        marker.parent.mkdir(parents=True, exist_ok=True)
+        marker.touch()
+    except OSError as exc:
+        logger.warning("lms: cannot record the boot check (%s); not pausing", exc)
+        return False
+    return status.get("mode") == "play"
+
+
 class LmsAdapter(Adapter):
     renderer_id = "lms"
     release_action = ReleaseAction.PAUSE
@@ -234,8 +250,17 @@ class LmsAdapter(Adapter):
     #: adapter as a remote-control channel.
     VOLUME_STEPS = VOLUME_STEPS
 
-    def __init__(self, host: str, port: int, player_name: str) -> None:
+    def __init__(self, host: str, port: int, player_name: str,
+                 boot_marker: Path | None = None) -> None:
         self._base = f"http://{host}:{port}"
+        #: **Nothing resumes by itself when the device starts** (George,
+        #: 2026-09-29: after a restart LMS was playing, *"I was expecting it
+        #: paused"*). The server remembers a player that was playing when the
+        #: power went and carries on when it reconnects. At the first start
+        #: after a boot - this file absent; `/run` is emptied at every boot -
+        #: a playing player is paused, queue and position kept. A core that
+        #: merely restarts does not touch what is playing.
+        self._boot_marker = boot_marker
         self._player_name = player_name
         self._player_id: str | None = None
         #: Both set by `release()` from the player's own state and consumed
@@ -733,6 +758,9 @@ class LmsAdapter(Adapter):
             if last_power:
                 logger.info("lms: player already powered on at startup (acquisition)")
                 on_acquire()
+            if pause_after_boot(self._boot_marker, result):
+                await self._rpc(session, self._player_id, ["pause", 1])
+                logger.info("lms: the server resumed playback after the device started; paused it")
 
             while True:
                 frames = await self._cometd_post(

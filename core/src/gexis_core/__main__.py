@@ -313,7 +313,8 @@ async def main() -> None:
 
     # The player squeezelite announces, which a rename changes (ADR-0048).
     lms_player_name = device_name.lms_player(config.lms_player_name)
-    lms = LmsAdapter(config.lms_host, config.lms_port, lms_player_name)
+    lms = LmsAdapter(config.lms_host, config.lms_port, lms_player_name,
+                     boot_marker=Path("/run/gexis/lms-boot-checked"))
     spotify = SpotifyAdapter(config.go_librespot_host, config.go_librespot_port)
     bluetooth = BluetoothAdapter()
     adapters = {"lms": lms, "spotify": spotify, "bluetooth": bluetooth}

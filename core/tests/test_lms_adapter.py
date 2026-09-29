@@ -1046,3 +1046,23 @@ async def test_the_current_artist_id_is_a_value_not_a_method(monkeypatch):
     })
 
     assert adapter.current_artist_id == 12316
+
+
+def test_the_first_start_after_a_boot_pauses_a_player_the_server_resumed(tmp_path):
+    """George, 2026-09-29: after a restart LMS was playing; he expected it
+    paused. Only the first read after a boot pauses; a core restart does not."""
+    from gexis_core.adapters.lms import pause_after_boot
+
+    marker = tmp_path / "run" / "lms-boot-checked"
+    assert pause_after_boot(marker, {"mode": "play"}) is True
+    assert marker.exists()
+    assert pause_after_boot(marker, {"mode": "play"}) is False, "a core restart leaves the music alone"
+
+
+def test_a_boot_with_nothing_playing_pauses_nothing_and_is_still_marked(tmp_path):
+    from gexis_core.adapters.lms import pause_after_boot
+
+    marker = tmp_path / "lms-boot-checked"
+    assert pause_after_boot(marker, {"mode": "stop"}) is False
+    assert marker.exists(), "a later start in the same boot must not pause either"
+    assert pause_after_boot(None, {"mode": "play"}) is False
