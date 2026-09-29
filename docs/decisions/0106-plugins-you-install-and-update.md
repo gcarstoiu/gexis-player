@@ -1,7 +1,8 @@
 # ADR-0106 — Plugins you install and update
 
-**Status:** **Proposed** — a draft for George, 2026-09-29. Decisions owed are
-marked **Decide**; nothing is built until they are made.
+**Status:** **Accepted** — George, 2026-09-29, the four decisions below (each
+marked **Decided**). **Still owed:** the wording of the notice shown before an
+upload, which is George's to approve.
 **Date:** 2026-09-29
 **Phase:** 13a ([DEVELOPMENT.md](../DEVELOPMENT.md), whose criteria this
 answers). The first public release waits on it.
@@ -38,9 +39,9 @@ download row. They do not share trust.
 3. **The plugin's row says an update is waiting**, installs it with the
    download row's progress and Retry, and keeps the previous version for one
    step back.
-4. **When ours update**: with the release (ADR-0105) - one catalogue, one
-   *Updates* screen. **Decide 1: or separately, a plugin at a time?**
-   *Recommendation: with the release. A tested set is tested together.*
+4. **When ours update: with the release** (ADR-0105) - one catalogue, one
+   *Updates* screen. **Decided** (George: *"With the release. Might be less
+   complicated than individual updates."*).
 
 ## Proposed: uploaded plugins
 
@@ -54,9 +55,9 @@ A `.tar.gz` holding, at its top level:
 - `mark.png` - its mark, as for ours;
 - its files, **built for the Pi** (aarch64, Debian 13).
 
-**Decide 2: `.tar.gz` of our own shape, or a `.deb`?** *Recommendation: the
-`.tar.gz`. A `.deb` runs its maintainer scripts as root before anything of ours
-can check it, which is exactly what the sandbox exists to prevent.*
+**Decided: the `.tar.gz`** (George: *"tar.gz"*). A `.deb` runs its maintainer
+scripts as root before anything of ours can check it, which is exactly what the
+sandbox exists to prevent.
 
 ### Installing
 
@@ -84,8 +85,8 @@ panel has no file picker and does not offer it):
 **The player writes the unit, and never takes one supplied.** Every uploaded
 plugin runs under the same template, `gexis-uploaded@<id>.service`:
 
-- **its own unprivileged user** (`DynamicUser=yes`, or a fixed user per plugin -
-  **Decide 3**, *recommendation: `DynamicUser`, nothing left behind by Remove*),
+- **its own unprivileged user, made for each run** (`DynamicUser=yes`; **Decided**,
+  George: *"temporary"*; nothing is left behind by Remove),
   **never root**, `NoNewPrivileges`, no capabilities;
 - **the system read-only** (`ProtectSystem=strict`, `ProtectHome=yes`,
   `PrivateTmp`), and **only its own data folder writable**
@@ -96,9 +97,8 @@ plugin runs under the same template, `gexis-uploaded@<id>.service`:
   which is how it talks to the core, and nothing else of ours;
 - **memory and CPU limits** (`MemoryMax`, `CPUQuota`; values to be measured
   against Plexamp, the heaviest renderer we run);
-- **the network** - **Decide 4**: open (a streaming renderer needs it), or
-  loopback only unless the manifest asks. *Recommendation: open; a renderer
-  without the internet is rare, and the device is on a home network anyway.*
+- **the network: open** (**Decided**, George: *"open"*): a streaming renderer
+  needs the internet, and the device is on a home network anyway.
 
 **Arbitration takes the device from it as from any renderer** (ADR-0027): an
 uploaded renderer gets no special standing.
