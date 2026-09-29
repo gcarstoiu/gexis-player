@@ -221,6 +221,7 @@ def test_the_last_screen_says_a_rename_restarts(tmp_path):
     finish(flow, net)
     assert [s for s in seen if s["network"] == "done"][0]["finished"]["restarting"] is True
     assert reboots == [True]
+    assert seen[-1]["network"] == "done", "no ordinary screen between setup and the restart"
 
 
 def test_nothing_is_searched_for_or_adopted_without_being_asked(tmp_path):

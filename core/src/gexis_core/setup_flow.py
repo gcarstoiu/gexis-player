@@ -190,10 +190,15 @@ class SetupFlow:
         self._network.finished(ssid, library, renaming, data.get("name") or old_name)
         logger.info("setup: finished; library %s", library)
         await self._sleep(DONE_S)
-        self._network.done()
         if renaming:
+            # **Straight from setup to the restart** (George, 2026-09-29: the
+            # home screen blinked in between). The panel keeps the last setup
+            # screen, "Restarting to take its new name", until the restart
+            # takes it down; the next boot starts as a configured device.
             logger.info("setup: the name changed; restarting to take it")
             await self._reboot()
+            return
+        self._network.done()
 
     async def _library(self, data: dict) -> dict:
         """**Lyrion, once the device is on the home network** (George,
