@@ -129,6 +129,22 @@ def country_for(timezone: str | None, zone_tab: Path = Path("/usr/share/zoneinfo
     return None
 
 
+async def _rfkill_unblock_wifi() -> None:
+    """`rfkill unblock wifi`, logged when it had anything to do. Never fatal:
+    a device without rfkill has nothing blocked."""
+    try:
+        process = await asyncio.create_subprocess_exec(
+            "rfkill", "unblock", "wifi",
+            stdout=asyncio.subprocess.DEVNULL, stderr=asyncio.subprocess.PIPE,
+        )
+        _, err = await asyncio.wait_for(process.communicate(), 10)
+    except (OSError, asyncio.TimeoutError) as exc:
+        logger.info("setup: rfkill unblock not run: %s", exc)
+        return
+    if process.returncode:
+        logger.warning("setup: rfkill unblock wifi: %s", err.decode(errors="replace").strip())
+
+
 def make_password() -> str:
     return "".join(secrets.choice(PASSWORD_ALPHABET) for _ in range(PASSWORD_LENGTH))
 
@@ -231,9 +247,11 @@ class SetupNetwork:
         net_root: Path = Path("/sys/class/net"),
         stations=None,
         on_change=None,
+        unblock=None,
     ) -> None:
         self._nmcli = run or wifi._run
         self._count_stations = stations or self._stations
+        self._unblock = unblock or _rfkill_unblock_wifi
         self._clock = clock
         self._sleep = sleep
         self._marker = marker
@@ -361,9 +379,20 @@ class SetupNetwork:
         self._panel = panel_attached(self._drm)
         self._password = password(self._panel, self._password_file)
         await self.delete_leftover()
+        # **The radio may be off.** Raspberry Pi OS starts every radio blocked
+        # (`rfkill.default_state=0`) and pi-gen ships NetworkManager with
+        # `WirelessEnabled=false` when the build sets no country, "to prevent
+        # radiating on 5GHz bands until the WLAN regulatory domain is set". A
+        # provisioned card lifts both by setting a country; a new one has
+        # none, and the setup network failed with "device is not available"
+        # on the first blank card (2026-09-29). Lifted here for the setup
+        # network only, on 2.4 GHz, under the world domain; setup's Finish
+        # sets the real country, which lifts it for good.
+        await self._unblock()
+        await self._nmcli("radio", "wifi", "on")
         rc, _, err = await self._nmcli(
             "device", "wifi", "hotspot", "ifname", IFACE, "con-name", PROFILE,
-            "ssid", SSID, "password", self._password,
+            "ssid", SSID, "band", "bg", "password", self._password,
             timeout=wifi.JOIN_TIMEOUT_S,
         )
         await self._nmcli("connection", "modify", PROFILE, "connection.autoconnect", "no")

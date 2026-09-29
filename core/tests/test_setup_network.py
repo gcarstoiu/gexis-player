@@ -21,6 +21,7 @@ class FakeNM:
         self.up_rc = up_rc
         self.calls: list[tuple] = []
         self.profiles: set[str] = set()
+        self.unblocked = 0
         #: Set by `setup`, so the hotspot's moment can be read off the clock.
         self.clock = None
         self.hotspot_at = None
@@ -56,6 +57,10 @@ class FakeNM:
         if "list" in args and "--rescan" in args:
             return 0, "\n".join(sorted(self.in_range | {sn.SSID})), ""
         return 0, "", ""
+
+    async def unblock(self):
+        self.unblocked += 1
+        self.calls.append(("rfkill", "unblock", "wifi"))
 
     def did(self, *prefix):
         return [c for c in self.calls if c[: len(prefix)] == prefix]
@@ -95,6 +100,7 @@ def setup(tmp_path, nm, *, panel=True, carrier=False, stations=0, trial=None):
         run=nm, clock=clock, sleep=clock.sleep,
         marker=tmp_path / "setup-done", password_file=tmp_path / "setup-password",
         trial_file=trial_file, drm=drm, net_root=net, stations=count,
+        unblock=nm.unblock,
     ), clock
 
 
@@ -369,3 +375,16 @@ def test_the_reason_is_networkmanagers_error_line_not_its_hint():
              "Error: Connection activation failed: Secrets were required, but not provided")
     assert sn.join_reason(4, wrong) == "The password was not accepted."
     assert sn.join_reason(124, "") == "It took too long. The network may be out of range."
+
+
+def test_the_radio_is_switched_on_before_the_network_on_2_4_ghz(tmp_path):
+    """Found on the first blank card, 2026-09-29: Raspberry Pi OS keeps Wi-Fi
+    blocked until a country is set, and a new device has none."""
+    nm = FakeNM(devices=NOTHING)
+    net, _ = setup(tmp_path, nm)
+    run(net.open())
+    order = [c[:3] for c in nm.calls]
+    assert order.index(("rfkill", "unblock", "wifi")) < order.index(("device", "wifi", "hotspot"))
+    assert order.index(("radio", "wifi", "on")) < order.index(("device", "wifi", "hotspot"))
+    hotspot = nm.did("device", "wifi", "hotspot")[0]
+    assert hotspot[hotspot.index("band") + 1] == "bg", "nothing on 5 GHz before a country is known"
