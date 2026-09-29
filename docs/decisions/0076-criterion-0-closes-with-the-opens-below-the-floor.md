@@ -4,7 +4,7 @@
 criterion 0 and have more time of actual usage to see whether further
 optimisation is needed. The panel feels fast based on current interaction."*
 **Date:** 2026-09-25
-**Revisit:** **before Phase 13 is implemented** — see below.
+**Revisit:** before Phase 13 — **done 2026-09-29, the waiver stands** (see the end).
 **Relates to:** [Finding 067](../findings/067-what-the-panel-presents-at-the-end-of-criterion-0.md)
 (the measurement this closes on), Phase 7a criterion 4 (the target),
 [ADR-0067](0067-only-what-is-on-screen-is-built.md) and
@@ -79,3 +79,15 @@ survive that transition unexamined.
 - **`tools/panel-frames.py` is the instrument either way**, so the
   comparison will be like for like — with the corrections it has taken
   since (LESSONS 27, 30, 32, 35).
+
+## Revisited 2026-09-29: the waiver stands
+
+Both inputs, as this record asked
+([Finding 101](../findings/101-the-panel-before-phase-13-closes.md)): the
+scrolls still at the ceiling with nothing dropped, the opens still below the
+floor by about what they were (26-55 drawn/s, 1.3-12 % dropped, within
+run-to-run spread of Finding 067), and George after four days of use:
+*"Everything seems really snappy. Quite happy."* Offered keeping the waiver or
+pulling the lever (keeping home mounted), George chose to keep it (*"We go with
+A"*). **Settings open** is the one to watch: the lowest drawn/s both times, on
+the thinnest sample.

@@ -1,6 +1,6 @@
 {
   "_about": "ADR-0099: the one source for Settings -> Legal and Settings -> Credits, and for THIRD-PARTY.md. Every component the image ships, fetches, lets the user install, or was reimplemented from has an entry; core/tests/test_notices.py fails the build when one is missing. The prose is a draft until George approves it; it is not legal advice.",
-  "updated": "2026-09-27",
+  "updated": "2026-09-28",
   "documents": {
     "legal": {
       "title": "Legal",
@@ -497,6 +497,18 @@
       "arrives": "Bundled into the panel's screens",
       "packages": [
         "svelte"
+      ]
+    },
+    {
+      "name": "uqr",
+      "group": "ui",
+      "role": "Draws the QR codes on the panel's setup screen.",
+      "author": "The unjs contributors",
+      "licence": "MIT",
+      "url": "https://github.com/unjs/uqr",
+      "arrives": "Bundled into the panel's screens",
+      "packages": [
+        "uqr"
       ]
     },
     {

@@ -161,6 +161,30 @@ def apply(name: str) -> Written:
     return Written(hostname=host, failed=tuple(failed))
 
 
+def lms_player(fallback: str, path: Path | None = None) -> str:
+    """The name squeezelite announces to LMS: what `squeezelite.service`
+    reads from `device-name.env` for its `-n`, which is what a rename writes.
+
+    **The core finds its own player by this name**, so it has to be the same
+    string squeezelite used. It was the configured `lms_player_name`
+    ("gexis") until 2026-09-29, and every rename left LMS unavailable: the
+    first blank card, set up as "Living Room Sofa", announced that name and the
+    core kept looking for "gexis". Phase 9e's rename gate checked that the four
+    services *advertised* the new name, not that the core could still find
+    its own player (LESSONS 39). Both are read at start, and a rename applies
+    at the next restart, so the two cannot disagree.
+    """
+    path = path or ENV_PATH
+    try:
+        for line in path.read_text().splitlines():
+            key, _, value = line.partition("=")
+            if key.strip() == ENV_KEY and value.strip():
+                return value.strip().strip('"')
+    except OSError:
+        pass
+    return fallback
+
+
 def hostname() -> str:
     return socket.gethostname()
 

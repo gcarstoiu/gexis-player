@@ -70,6 +70,8 @@ from gexis_core.settings_registry import Settings, load_registry
 from gexis_core.splash import Splash
 from gexis_core.state import StateStore
 from gexis_core import backups, bluealsa_volume, components, outputs, plugin_env, plugins
+from gexis_core.setup_network import SetupNetwork
+from gexis_core.setup_flow import SetupFlow
 from gexis_core.adapters.plugin import PluginAdapter
 from gexis_core.plugin_server import PluginServer
 from gexis_core.systemd import is_enabled as _unit_is_enabled
@@ -309,7 +311,10 @@ async def main() -> None:
         # visualiser has nothing to draw and its button is not offered.
         meters_available = outputs.needs_plug(chosen_output.card) is not True
 
-    lms = LmsAdapter(config.lms_host, config.lms_port, config.lms_player_name)
+    # The player squeezelite announces, which a rename changes (ADR-0048).
+    lms_player_name = device_name.lms_player(config.lms_player_name)
+    lms = LmsAdapter(config.lms_host, config.lms_port, lms_player_name,
+                     boot_marker=Path("/run/gexis/lms-boot-checked"))
     spotify = SpotifyAdapter(config.go_librespot_host, config.go_librespot_port)
     bluetooth = BluetoothAdapter()
     adapters = {"lms": lms, "spotify": spotify, "bluetooth": bluetooth}
@@ -1293,7 +1298,7 @@ async def main() -> None:
         registry=Settings.with_plugins(load_registry(), installed_plugins, downloads),
         defaults={
             "lms_server": lambda: f"{config.lms_host}:{config.lms_port}",
-            "lms_player": lambda: config.lms_player_name,
+            "lms_player": lambda: lms_player_name,
             "idle_url": lambda: config.idle_url or None,
             "device_name": device_name.hostname,
             "timezone": read_timezone,
@@ -1430,6 +1435,8 @@ async def main() -> None:
                "meter_smoothing": _apply_meter_smoothing,
                "home_strip": None, "home_strip_count": None,
                "idle_clock": None,
+               # George, 2026-09-28: read by the idle screen, asked in setup.
+               "clock_format": None,
                "device_name": apply_device_name,
                "bt_discoverable": lambda mode: asyncio.ensure_future(
                    _apply_discoverable(mode)
@@ -2067,6 +2074,24 @@ async def main() -> None:
     if renderer_enabled("lms"):
         asyncio.ensure_future(_check_lms_volume_control())
 
+    async def _park_renderers() -> bool:
+        """**A fresh start after every restart** (George, 2026-09-29). The one
+        renderer that resumes by itself is LMS: its server carries on when
+        the player reconnects, whatever it is told while the player is away
+        (ADR-0095's 2026-09-29 measurements). So as the device goes down its
+        player is paused - queue and position kept. Spotify, Bluetooth and
+        Plexamp do not resume by themselves. A power cut skips this; the
+        first start after the boot pauses what the server resumed."""
+        try:
+            await lms.pause()
+            logger.info("park: the device is going down; LMS paused")
+            return True
+        except Exception as exc:  # the shutdown must not wait on the server
+            logger.warning("park: LMS not paused: %s", exc)
+            return False
+
+    setup_network = SetupNetwork(on_change=state_store.set_setup)
+    setup_flow = SetupFlow(setup_network, settings, reboot=_reboot)
     state_server = StateServer(
         state_store,
         host=config.state_host,
@@ -2099,6 +2124,10 @@ async def main() -> None:
         # ADR-0043: the panel reports its first painted frame and the boot
         # animation ends there, not when the kiosk unit goes active.
         splash=Splash(),
+        # ADR-0104: first-boot setup and the setup network.
+        setup=setup_network,
+        setup_flow=setup_flow,
+        park=_park_renderers,
         # ADR-0047: the idle screen's two providers.
         weather=forecast,
         wallpapers=wallpapers,
@@ -2305,6 +2334,9 @@ async def main() -> None:
         # The `wifi` row's value, kept current from here rather than read on
         # the request path - where it measured 3.2 s and blocked everything.
         wifi.watch_connected(),
+        # ADR-0104: decided once at boot; holds the setup network while it is
+        # needed and gives the radio back to a saved network when one returns.
+        setup_network.run(),
         # ADR-0084: the socket plugins connect to. Served for the life of the
         # process, beside the one the browser uses.
         plugin_server.run(),

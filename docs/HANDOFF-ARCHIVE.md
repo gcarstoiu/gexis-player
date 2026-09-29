@@ -5239,3 +5239,80 @@ Open here: smooth rotation is not built (stepped only, as measured); the
 deferred keys (progress, elapsed/total time, volume, the ticker's scroll and
 next track) leave their room empty; no rotation setting proposed - the numbers
 did not call for one.
+
+---
+
+## From HANDOFF.md, 2026-09-28 (was the twenty-eighth session's narrative) — PR #34 merged, the image after it
+
+## Start here
+
+**PR #34 is merged** (a807110; George's comment on it records why a plugin was
+withdrawn). **The image from it is built, verified and cleared for George to
+flash:** `image/deploy/2026-09-28-gexis-player-v0.2.1-717-g44bad0a.img`,
+sha256 `5bdcd871…1843`. 79 `verify-image.sh` checks pass, and a walk of 10,587
+entries in the image found nothing of the withdrawn plugin; the same walk found
+8 in the previous image (LESSONS 45). `stage-gexis` was rebuilt from stage 2 for
+it. The withdrawn plugin's work is kept locally only; the pointer is in
+`docs/SESSIONS.local.md`.
+
+### Branches and PRs
+
+| Branch | State | What is on it |
+|---|---|---|
+| `main` | a807110 | Everything to PR #34: Phase 12 (plugins fetch their software on the device, Remove) and 12b (Legal and Credits) |
+| `phone-remote` | PR for review | ADR-0101's **phone mini player** (verified on George's phone); ADR-0102 (Settings stays a bookmark, with the gexis mark as its icon); **grim in the image** (`04-ui/00-packages`, checked by `verify-image.sh`); Phase 13a in DEVELOPMENT.md; LESSONS 45 |
+
+### After George flashes
+
+1. Restore his backup onto the fresh card. It is the first test of **restore,
+   then download**: Plexamp's switch comes back on, Plexamp is downloaded at
+   boot with its progress in the row, and starts signed in (its claim is in the
+   backup). Then Remove on Plexamp.
+2. The `phone-remote` PR, then an image with it.
+3. **Debug logs** (below), on its own branch and PR.
+4. Phase 13, then 13a, then 14.
+
+### gexis
+
+- Runs `phone-remote`'s core and UI, installed by hand. The flash replaces it
+  with `main`; the mini player comes back with the next image.
+- The withdrawn plugin's files, units, pins and settings are gone from it.
+
+### Decided, not started
+
+- **Debug logs: built on branch `debug-logs`** (ADR-0103; George: *"Persistent
+  logs based on debug setting in Settings -> System. Off by default."*).
+  Verified on gexis: on keeps the journal on the card and flushes memory into
+  it; the logs **survived a reboot**; off removes the drop-in and the files
+  and leaves systemd's folder. The startup check once took the image's empty
+  `/var/log/journal` for kept logs and restarted journald for nothing; fixed
+  (files, not the folder) before the PR.
+- **Phase 13a, plugins you install and update** (George, 2026-09-28: a phase
+  set before themes). Criteria in DEVELOPMENT.md. Its ADR comes first.
+- **Settings as an installed app: not now** (ADR-0102). The HTTPS routes are
+  kept there for later.
+
+### Open, none blocking
+
+- **LMS's power-on reaches the core 1.45-1.5 s after the press** - LMS's own
+  status-push filter, now most of what is left of Finding 091's gap. A plain
+  CometD subscription or the CLI's `listen` would be immediate (ADR-0095, *Not in
+  this record*). **George, 2026-09-28: recorded, no action; he will watch for it
+  in normal use.**
+- **Bluetooth "Not provided", once**, 2026-09-26 22:08: `MediaPlayer1` appeared and
+  no track information ever followed. George could not reproduce it the next
+  morning and suspects the phone's battery saver. Not explained.
+- **A paused Spotify is not an acquisition after a core restart**, and a later
+  resume sends no `active` - so the core does not know Spotify took the device.
+  Needs a restart during a pause to happen. Seen, not fixed. **George,
+  2026-09-28: recorded, no action; he will watch for it in normal use.**
+- **Hand-installed on `gexis`, not in the image:** `python3-pytest` (Peppy's tests
+  only pass where pygame has fonts, which is the device). `grim` joins the image
+  with the `phone-remote` PR (George: *"Keep grim in the image"*); until that
+  image, reinstall it by hand after a flash.
+- **The Restore row reads "4 paired"** (seen 2026-09-28): a list row's count is
+  labelled "paired", Bluetooth's word, for backups too. Cosmetic, not fixed.
+- Everything from before this session that is still open is in the archive's
+  2026-09-27 block: the Squeeze Plex Hub route (decision 2), the timeline-poll
+  lead, cross-rate gaps, Plex lyrics.
+

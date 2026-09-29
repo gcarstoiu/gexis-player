@@ -147,6 +147,9 @@ def test_registry_keys_are_the_designs_keys_apart_from_recorded_deviations():
         "skin_motion", "record_speed",
         # ADR-0097, 2026-09-27: George chose the setting after the numbers.
         "rotation_mode",
+        # George, 2026-09-28: the Setup design drew a clock format with
+        # nothing behind it; he asked for it in Settings as well as setup.
+        "clock_format",
         # ADR-0099, 2026-09-27: George asked for both pages.
         "legal", "credits",
         # ADR-0054 §5, amended 2026-09-28: George's cap on the starting level
@@ -526,15 +529,16 @@ def test_the_shipped_registry_hides_twenty_rows_and_shows_the_rest():
     # 2026-09-27**: `skin_motion` and `record_speed` (ADR-0096 as amended).
     # **77**: `rotation_mode` (ADR-0097). **79**: `legal` and `credits`
     # (ADR-0099). **80**: `start_max` (ADR-0054 §5, 2026-09-28; first as Spotify's own row).
-    # **81**: `debug_logs` (ADR-0103, 2026-09-28).
-    assert len(rows) == 81
+    # **81**: `debug_logs` (ADR-0103, 2026-09-28). **82**: `clock_format`
+    # (George, 2026-09-28, with Phase 13's setup).
+    assert len(rows) == 82
     # 59 since 2026-09-25: `backup` was surfaced and `restore` arrived with
     # it (ADR-0083), so the shown count gains two while the hidden one loses
     # one. **58 since 2026-09-26**, less the threshold row. **60 since
     # 2026-09-27**, with the animated skins' two. **64 since 2026-09-28**,
     # with Spotify's starting volume.
-    # **65**, with Debug logs.
-    assert len(rows) - len(kept) == 65
+    # **65**, with Debug logs. **66**, with the clock format.
+    assert len(rows) - len(kept) == 66
 
 
 def test_the_clock_can_be_turned_off_without_taking_the_screen_with_it():

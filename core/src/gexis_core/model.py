@@ -259,6 +259,10 @@ class PlaybackState:
     #: last ask from a phone - `{"show": bool, "seq": int}` - which the panel
     #: applies once per `seq`, so a panel that connects late still gets it.
     panel: dict = field(default_factory=lambda: {"visualiser": False, "idle": False, "idle_request": None})
+    #: **ADR-0104: first-boot setup and the setup network**, as
+    #: `SetupNetwork.public_status` - never the password, which the panel
+    #: reads from `/setup/status` over loopback. None until it has decided.
+    setup: dict | None = None
 
     @property
     def controls(self) -> dict | None:
@@ -299,4 +303,5 @@ class PlaybackState:
             "pairing": self.pairing,
             "components": dict(self.components),
             "panel": dict(self.panel),
+            "setup": dict(self.setup) if self.setup else None,
         }

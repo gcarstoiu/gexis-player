@@ -1046,3 +1046,66 @@ async def test_the_current_artist_id_is_a_value_not_a_method(monkeypatch):
     })
 
     assert adapter.current_artist_id == 12316
+
+
+def _boot_adapter(tmp_path, statuses):
+    from gexis_core.adapters.lms import LmsAdapter
+
+    marker = tmp_path / "run" / "lms-boot-checked"
+    adapter = LmsAdapter("h", 9000, "Sofa PI", boot_marker=marker)
+    adapter._player_id = "88:a2"
+    sent = []
+    queue = list(statuses)
+
+    async def rpc(session, player, command):
+        sent.append(command)
+        if command[0] == "status":
+            return {"result": queue.pop(0) if len(queue) > 1 else queue[0]}
+        return {"result": {}}
+
+    adapter._rpc = rpc
+    return adapter, marker, sent
+
+
+async def _no_sleep(_):
+    return None
+
+
+def test_the_first_start_after_a_boot_waits_for_squeezelite_then_pauses(tmp_path):
+    """George, 2026-09-29: after a restart LMS was playing. A pause sent while
+    squeezelite is away is undone when it reconnects (measured), so the check
+    waits for it to connect, then pauses, then lets the DAC go."""
+    import asyncio
+    adapter, marker, sent = _boot_adapter(tmp_path, [
+        {"player_connected": 0, "mode": "play"},
+        {"player_connected": 0, "mode": "play"},
+        {"player_connected": 1, "mode": "play"},
+        {"player_connected": 1, "mode": "play"},
+    ])
+    asyncio.run(adapter._check_after_boot(None, sleep=_no_sleep))
+    assert ["pause", 1] in sent
+    assert sent.index(["pause", 1]) > 2, "not before squeezelite has connected"
+    assert marker.exists(), "the hold is released only after the check"
+
+
+def test_nothing_playing_at_boot_pauses_nothing_and_still_releases(tmp_path):
+    import asyncio
+    adapter, marker, sent = _boot_adapter(tmp_path, [{"player_connected": 1, "mode": "stop"}])
+    asyncio.run(adapter._check_after_boot(None, sleep=_no_sleep))
+    assert ["pause", 1] not in sent and marker.exists()
+
+
+def test_squeezelite_that_never_connects_releases_the_dac_anyway(tmp_path):
+    import asyncio
+    adapter, marker, sent = _boot_adapter(tmp_path, [{"player_connected": 0, "mode": "play"}])
+    asyncio.run(adapter._check_after_boot(None, sleep=_no_sleep))
+    assert ["pause", 1] not in sent and marker.exists()
+
+
+def test_a_core_restart_is_not_a_boot(tmp_path):
+    from gexis_core.adapters.lms import boot_check_due
+    marker = tmp_path / "lms-boot-checked"
+    assert boot_check_due(marker)
+    marker.touch()
+    assert not boot_check_due(marker)
+    assert not boot_check_due(None)

@@ -1,6 +1,6 @@
 # ADR-0031 — First-boot setup over a temporary access point
 
-**Status:** Accepted
+**Status:** Accepted; **amended 2026-09-28** with George's answers to the open questions, before Phase 13's build
 **Date:** 2026-09-14
 **Raised by:** George — give credentials a phase, *"with an initial hotspot
 creation upon the first boot for setting up the device — so basically not only
@@ -99,9 +99,76 @@ view.
 
 ## Unverified
 
+- **Answered 2026-09-28 by [Finding 099](../findings/099-the-setup-access-point-on-one-radio.md):**
+  the AP comes up in about a second on 2.4 GHz channel 6, a phone joins and
+  reaches the page, a scan while hosting keeps the phone, and the home Wi-Fi is
+  back about six seconds after the AP goes. The bullet below is the record as
+  it stood.
 - AP mode has **not** been exercised on this hardware — only the capability bit
   was read. Whether `wlan0` raises a stable AP on a Pi 4 under this NM version,
   and how long the station↔AP transition takes, is untested.
 - Whether hostname changes propagate cleanly to Spotify Connect and Bluetooth
   without a reboot. ADR-0022 requires one name; whether all three consumers pick
   it up live is unknown.
+
+## Amended 2026-09-28: George's answers, before the build
+
+Planned against the design (`design/source/Setup.dc.html`, `design/screens.md`
+§13). Every answer below is George's, 2026-09-28. Five gaps were found reading
+the design against the hardware, and the answers close them.
+
+### Security and joining
+
+1. **WPA2.** A player **with a panel** makes up its own password and shows it on
+   the panel. A player **without one** uses the fixed password **`gexis-setup`**,
+   the same as the network's name. The first idea was `gexis`, but WPA2 needs 8
+   to 63 characters. Whether a panel is attached is read from the display
+   connector, not assumed.
+2. **QR codes, no captive portal.** The panel shows a QR code that joins the
+   setup network, with the password written under it, and a second one that
+   opens the setup page, with its address under it.
+   Under the join code the panel says the phone may call the network one with
+   no internet, and to stay connected (George, 2026-09-28, after the first AP
+   trial: Android warned exactly that).
+3. **The phone drives setup, and only the phone.** The panel, when there is
+   one, shows helping information (how to join, the address, progress). It does
+   not run the steps.
+
+### The steps
+
+4. **Music:** no server discovery during setup. Over the setup network the
+   device cannot see the home network, so a scan would always come back empty.
+   An empty, optional Lyrion address field stays, with the Spotify Connect and
+   Bluetooth switches. Discovery works as it does today once the device is on
+   the home network.
+5. **A wrong Wi-Fi password:** with one radio the join can only be tested after
+   the setup network is down, so the phone has already lost the page. The
+   device returns to setup mode within about a minute, **keeping every other
+   answer**, and the panel and the page say it could not join and why.
+6. **Wi-Fi country:** taken from the time zone. The setup network needs a
+   country before anything can be asked, so it starts on the image's default
+   and switches to the chosen one when the answers are applied.
+7. **Re-entry** (criterion 8's threshold):
+   - at boot, if there is no Ethernet link and no configured Wi-Fi is joined
+     within **90 s**, the setup network opens;
+   - while it is open **and no client is connected to it**, the device looks for
+     its configured networks every **5 minutes** and rejoins one that is back.
+
+   So a router reboot does not strand the device, and nobody's setup is cut off
+   mid-way.
+8. **First boot on Ethernet** runs the same setup over the ordinary network.
+   The Network step shows the Ethernet connection, and offers Wi-Fi as well
+   for anyone who wants it.
+
+### Testing (George: no Ethernet on gexis)
+
+Raising the setup network on gexis takes down the Wi-Fi Claude reaches it
+through. So every test runs as a **timed script on the device**:
+- it raises the setup network for a set time and logs to the card (Debug logs,
+  ADR-0103);
+- then it tears the network down and rejoins the home Wi-Fi. That happens
+  whatever the script did, through a timer that does not depend on it.
+
+George joins from his phone during the window, and Claude reads the logs
+afterwards. The full test is a card flashed with nothing pre-seeded.
+

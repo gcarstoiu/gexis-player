@@ -58,6 +58,9 @@
   //: actually use the panel as a photo frame only"*. The date goes with
   //: it - they are one block and one thought.
   const wantsClock = $derived(settings.idle_clock !== false && !external);
+  //: George, 2026-09-28: a 12-hour clock drops the leading zero and says am
+  //: or pm after the seconds, at their size.
+  const twelve = $derived(settings.clock_format === '12 h');
   const background = $derived(settings.idle_background ?? 'Artist pictures');
   const black = $derived(background === 'Black' || !shown);
 
@@ -303,8 +306,13 @@
       >
         {#if wantsClock}
           <div class="clock">
-            <span class="clock__hm ink">{pad(now.getHours())}:{pad(now.getMinutes())}</span>
-            <span class="clock__s ink">{pad(now.getSeconds())}</span>
+            {#if twelve}
+              <span class="clock__hm ink">{now.getHours() % 12 || 12}:{pad(now.getMinutes())}</span>
+              <span class="clock__s ink">{pad(now.getSeconds())} {now.getHours() < 12 ? 'am' : 'pm'}</span>
+            {:else}
+              <span class="clock__hm ink">{pad(now.getHours())}:{pad(now.getMinutes())}</span>
+              <span class="clock__s ink">{pad(now.getSeconds())}</span>
+            {/if}
           </div>
           <div class="date ink">{date}</div>
         {/if}

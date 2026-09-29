@@ -53,11 +53,16 @@ def test_every_package_the_stages_install_is_accounted_for(data):
 
 def test_every_runtime_dependency_is_accounted_for(data):
     listed = {p for c in data["components"] for p in c.get("packages", [])}
-    package = json.loads((ROOT / "ui" / "package.json").read_text())
     # The panel's build has no runtime dependencies in name: everything is a
-    # devDependency, and what is bundled into it is the framework and fonts.
-    ui = {n for n in {**package.get("dependencies", {}), **package.get("devDependencies", {})}
-          if n == "svelte" or n.startswith("@fontsource")}
+    # devDependency. What is bundled into it is what `ui/scripts/licenses.mjs`
+    # ships a licence for, so that list is read here rather than kept twice -
+    # a hand-kept filter here once admitted only Svelte and the fonts, and a
+    # new bundled library would have passed with no entry.
+    script = (ROOT / "ui" / "scripts" / "licenses.mjs").read_text()
+    bundled = re.search(r"const BUNDLED = \[([^\]]*)\]", script)
+    assert bundled, "the bundled list was not found in licenses.mjs"
+    ui = set(re.findall(r"'([^']+)'", bundled.group(1))) - {"vite"}
+    assert "svelte" in ui, "read something, not nothing"
     core = tomllib.loads((ROOT / "core" / "pyproject.toml").read_text())["project"].get("dependencies", [])
     names = set(ui) | {re.split(r"[<>=!~\[; ]", d, maxsplit=1)[0] for d in core}
     assert not sorted(names - listed), f"a dependency with no entry: {sorted(names - listed)}"

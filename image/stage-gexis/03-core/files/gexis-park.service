@@ -1,0 +1,16 @@
+[Unit]
+Description=Pause LMS as the device goes down, so nothing resumes by itself (George, 2026-09-29)
+# Stopped before the core and the network go down: units stop in the reverse
+# of their start order. Not bound to the core, so a core restart leaves it be.
+After=gexis-core.service network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/bin/true
+ExecStop=/usr/bin/curl -s -m 5 -X POST http://127.0.0.1:8090/renderers/park
+TimeoutStopSec=8
+
+[Install]
+WantedBy=multi-user.target

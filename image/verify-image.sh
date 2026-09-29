@@ -340,9 +340,14 @@ for f in /usr/share/doc/gexis-player/COPYING \
          /usr/share/doc/gexis-player/licenses/peppyalsa/README \
          /opt/gexis-ui/licenses/svelte/LICENSE.md \
          /opt/gexis-ui/licenses/@fontsource-variable__nunito-sans/LICENSE \
-         /opt/gexis-ui/licenses/@fontsource__ibm-plex-mono/LICENSE; do
+         /opt/gexis-ui/licenses/@fontsource__ibm-plex-mono/LICENSE \
+         /opt/gexis-ui/licenses/uqr/LICENSE; do
 	dfs "stat $f" | grep -q 'Inode:' && ok "$f" || bad "$f missing"
 done
+
+echo "== ADR-0095 as amended: LMS paused as the device goes down"
+dfs "stat /etc/systemd/system/gexis-park.service" | grep -q 'Inode:' && ok "gexis-park.service installed" || bad "gexis-park.service missing"
+dfs "stat /etc/systemd/system/multi-user.target.wants/gexis-park.service" | grep -q 'Inode:' && ok "gexis-park.service enabled" || bad "gexis-park.service not enabled"
 
 echo "== ADR-0085: the ALSA default is our output"
 dfs "dump /etc/alsa/conf.d/zz-gexis-default.conf $OUT/one" >/dev/null

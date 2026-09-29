@@ -167,6 +167,10 @@ the image alone:
 An apt repository, signed, hosted, and maintained. That is real infrastructure
 and it did not exist as a requirement before this decision. Not specified here.
 
+**2026-09-28: planned as Phase 13c** (`docs/DEVELOPMENT.md`), before the first
+public release image, on George's word. Nothing of this section was built
+before then; the phase's ADR specifies the repository and settles Q3.
+
 ### Configuration survives updates on the root filesystem
 
 Follows from in-place updates: `apt` does not delete application data, so

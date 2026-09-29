@@ -878,6 +878,29 @@ leaves, the check that it is present becomes a check that it is absent, not no
 check at all. And a warm build carries forward whatever a deleted stage left:
 clear `stage-gexis`'s work directory so it starts again from stage 2.
 
+**46. Every trial ran on a card that had already been given a country**
+(2026-09-29, Phase 13 step 4). The setup network was measured (Finding 099),
+built, and run on gexis five times with George - joined, left, refused a
+wrong password, came back - and worked every time. On the first blank card it
+never came up: *"device is not available"*. Raspberry Pi OS starts every radio
+blocked and ships NetworkManager with Wi-Fi off until a Wi-Fi country is set;
+`make provision` sets one along with the Wi-Fi, so gexis's radio had been
+unblocked since the day it was first flashed.
+
+**The substitute was the device itself**: a configured player standing in for
+a new one, with a trial file to make it behave as if it needed setup. The
+trial reproduced the behaviour and not the starting state, and the one thing
+a new device lacks - a country - was the thing that mattered. ADR-0104 even
+named it under *Not in this record*, as the unknown step 4 would answer; the
+record was right to name it, and five green runs made it easy to read as
+settled.
+
+**A mode entered by a switch is not the state it pretends to be.** When the
+subject is "what a new device does", only a new device answers; the switch
+answers "what this code does on a configured one". This is case 41's shape -
+a test double that never visits the real subject's first state - on the
+hardware side.
+
 ## Common shape
 
 Every case had a *plausible* substitute for the real target — the build

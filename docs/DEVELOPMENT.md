@@ -1435,7 +1435,10 @@ ADRs were updated.
    [Finding 067](findings/067-what-the-panel-presents-at-the-end-of-criterion-0.md)).
    The scrolls reach **56.9-59.5 frames a second at 0.00 % dropped**; the
    opens are **30-53 and 2.5-5.6 %**, against a floor of 55 and 2 %.
-   **Revisit before Phase 13 is implemented** - the setup phase is where
+   **Revisited 2026-09-29: the waiver stands** ([Finding 101](findings/101-the-panel-before-phase-13-closes.md);
+   George: *"Everything seems really snappy"*, then *"We go with A"*). Settings
+   open is the one to watch. The original note: **Revisit before Phase 13 is implemented** *(missed when Phase 13 was
+   started; George, 2026-09-28: done before Phase 13's PR, #37, merges)* - the setup phase is where
    the panel stops being George's and starts being a stranger's, and a floor
    waived on the judgement of the person who knows what the device is doing
    should not survive that unexamined. The measured lever is the home
@@ -2482,6 +2485,31 @@ development flashes cards and pre-seeds `firstrun.sh`. But no non-developer can
 set the device up without it, so it is a hard gate on anyone else owning one.
 **Pull it forward the moment a device goes to someone who did not build it.**
 
+**Status, 2026-09-29: built and tested through step 4 on branch `phase-13`**
+([ADR-0104](decisions/0104-how-the-device-knows-it-needs-setup.md) for how,
+[Finding 099](findings/099-the-setup-access-point-on-one-radio.md) for the radio).
+Steps 1-3 ran on `gexis` in timed trials (it has no Ethernet); **step 4 ran on a
+blank card** and found three faults, all fixed and retested on it: the Wi-Fi
+radio blocked until a country is set, then a race bringing it up (LESSONS 46),
+and every rename since Phase 9e leaving LMS unavailable (ADR-0048 amended).
+George's review reshaped the panel into one step at a time readable from 2 m
+and made Lyrion an explicit choice. **Left: one flash of image
+`775-gaa05758` on a blank card**, to see the first-try setup network and the
+Music step with nothing chosen on a new device - both built after the blank
+card's radio had been unblocked.
+
+| Criterion | State |
+|---|---|
+| 1. AP, and the panel shows name, password, address | Met on the blank card, as steps readable from 2 m |
+| 2. NM AP mode, no new packages | Met (Finding 099; `dnsmasq-base` and `iw` were already in the image) |
+| 3. Served by `gexis-core` | Met |
+| 4. SSID, password, name; the name reaches all consumers | Met: three renames on the blank card, all four places each time, and LMS found under the new name |
+| 5. Applying tears the AP down and joins | Met: joined in about 10 s; a wrong password is back in setup in about 15 s |
+| 6. A working network means no AP | Met on gexis at every restart; Ethernet by unit test only |
+| 7. Pre-seeded configuration wins | Met: a provisioned card has a saved Wi-Fi and never sees setup |
+| 8. Back to setup without a network | 90 s at boot and the 5-minute retry: unit tests, and the retry on gexis. George: at boot only |
+| 9. George's decisions | Built as decided; the panel says to stay on a network with no internet |
+
 **Acceptance**
 
 1. **With no configuration, the device raises an access point** and the panel
@@ -2507,13 +2535,18 @@ set the device up without it, so it is a hard gate on anyone else owning one.
    exactly as they do today; the AP is what happens when there is none. A
    developer's workflow must not change.
 8. **The device returns to setup mode when it cannot reach any configured
-   network**, so a replaced router does not lock the owner out. **Specify the
-   threshold as part of this phase** — too eager and the AP flaps on every
-   router reboot, too reluctant and the device is bricked from the user's point
-   of view.
-9. **Decided here, not before:** AP security (recommended: WPA2, password shown
-   on the panel) and whether a captive portal is implemented (recommended: not
-   in the first cut).
+   network**, so a replaced router does not lock the owner out. **Threshold
+   (George, 2026-09-28):** 90 s at boot with no Ethernet and no configured Wi-Fi;
+   while the setup network is open and nobody is on it, the configured networks
+   are tried every 5 minutes.
+9. **Decided 2026-09-28** ([ADR-0031](decisions/0031-first-boot-setup-access-point.md),
+   amended). WPA2: a password made up per device and shown on the panel, or
+   `gexis-setup` when no panel is attached. QR codes to join and to open the
+   page, and no captive portal. The phone drives setup; the panel only helps.
+   No server discovery during setup, an optional Lyrion address instead. A wrong
+   password brings setup back, keeping the other answers. The Wi-Fi country
+   comes from the time zone. First boot on Ethernet runs the same setup, with
+   Wi-Fi offered.
 
 ---
 
@@ -2553,6 +2586,9 @@ before allowing an update"*). **Its ADR comes first.**
    surfaced.
 
 ### Phase 13b — Other screens: sizes, bars, and knowing which one is attached
+
+**Before the first public release** (George, 2026-09-29: *"13a, b and c all
+needed before release"*).
 
 **Added 2026-09-28 (George):** support touch screens from 800×480 to
 1920×1080 (13.3" at most), and the bars 1280×400 and 1480×320, both used
@@ -2603,6 +2639,60 @@ Claude Design: the brief George hands over is
 - **Settings inventory** (not appended until George confirms): **[N] Screen**
   (model; sets the family and the skin set) and **[N] Rotation**.
 - **Which hardware** is bought or borrowed to test the bars and the 800×480.
+
+### Phase 13c — Updates over the network
+
+**Added 2026-09-28 (George):** *"Agreed to do before"* - **the first public
+release image waits on this phase**, so a device in a user's hands can be
+reached with a fix without reflashing. **George, 2026-09-29: *"13a, b and c all
+needed before release"*** - the release waits on all three.
+
+**Already decided, not built:** [ADR-0021](decisions/0021-deployment-flashable-image.md)
+*"Updates are in-place package updates"* (2026-09-05): no reflash, no A/B
+partitions, a signed repository we host, settings kept on the writable root,
+`alsa-lib` pinned and held, the `output` definition a packaged file with a
+known checksum, each build recording what it pinned. ADR-0021 left the
+repository *"not specified"* and deferred archive snapshot pinning (its Q3).
+Today the only trace is the `updates` row (Manual / Automatic), unsurfaced and
+unwired. **Its ADR comes first**, settling the two questions below marked
+*decide*.
+
+**Acceptance (draft)**
+
+1. **Our parts are Debian packages**: the core with its Python environment,
+   the UI, our units and ALSA files, the skins and marks, the image's own
+   configuration. The image is built from them, so an image and an update are
+   the same bytes. (Today the image-build stages install these directly; this
+   is the largest piece.)
+2. **A signed repository we host** (GitHub Releases or Pages are candidates),
+   its key trusted by the image and by nothing else for our packages. How the
+   key is kept and rotated is written down.
+3. **The operating system's packages - *decide*:** the device takes
+   Raspberry Pi OS and Debian updates as they come with `alsa-lib` held, or it
+   moves only to a **tested set** frozen in a dated snapshot (ADR-0021 Q3),
+   which is George's rule for plugins in 13a applied to the whole device: *"we
+   need to check them before allowing an update"*.
+4. **Settings migrate with the code**: a release that adds, renames or
+   removes a setting carries what moves the stored value, and the registry
+   tests prove it (LESSONS 19-20).
+5. **Safety without A/B - *decide* the set:** an automatic backup before every
+   update (ADR-0083's archive); updating only when nothing is playing; one
+   version back available; after a failed update the device still boots, the
+   phone still reaches it, and it says what happened. The last resort, which
+   works today: reflash, then Restore.
+6. **Settings → System → Updates**: what version is installed, check now,
+   update now, what changed, and **Manual / Automatic** - the existing row,
+   confirmed with George before it is surfaced (as 13a says).
+7. **What still needs a reflash** is named: a new Debian release, a new boot
+   layout. Rare, and announced in the update screen.
+8. **Measured on gexis**: an update from the release image to a newer package
+   set, with the device playing before and after, settings and pairings kept,
+   `alsa-lib` still the pinned version, and the audio chain's checksums as
+   the build recorded them.
+
+**Shares with 13a:** a catalogue of versions we have tested, signed, which the
+device checks; 13a's plugin updates and this phase's system updates can be one
+mechanism, and the ADR should say whether they are.
 
 ### Phase 14 — Themes
 
