@@ -181,6 +181,29 @@ to be offered. `SOURCE.md` covers our own code only. Debian and Raspberry Pi
 publish their source packages; whether pointing at them suffices or we mirror
 them too is to be checked, not assumed.
 
+## Amendment, 2026-09-30 — where a new device's image comes from
+
+Updates keep a device current; a device starts from a flashed image, and
+nothing said where a user gets one. **Decided (George: *"A now with B
+later"*):**
+
+- **A, now: each stable release carries its image.** Promoting a release to
+  stable attaches the image it was built from - `gexis-player.img.xz`, with
+  `.sha256` and a signature by the release key (`.asc`) - to that release, and
+  marks it GitHub's *latest*, so
+  `https://github.com/gcarstoiu/gexis-player/releases/latest/download/gexis-player.img.xz`
+  is always stable's image. Measured on image 852: 5.1 GB becomes **1.14 GiB**
+  (`xz -6`, 2 min 16 s on R2D2), under GitHub's 2 GiB a file. Testing releases
+  carry no image: the devices that follow testing update.
+- **B, with the first public release: a Raspberry Pi Imager listing**, so the
+  player appears in Imager's own menu, pointing at A's image.
+
+Because an image and an update are built from the same packages (ADR-0107), a
+device flashed with release X is the device an update brings to X. Before the
+first public release the image loses its development settings (passwordless
+`sudo`, ADR-0107 decision 3; the first-boot SSH key) and the source offer is
+confirmed.
+
 ## Not in this record
 
 - **Plugins' own updates** — ADR-0106. The repository is shared.

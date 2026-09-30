@@ -44,9 +44,23 @@ EOF
 if [ "${1:-}" = --promote ]; then
 	tag="${2:?usage: publish.sh --promote <tag>}"
 	gh release view "$tag" --repo "$REPO" >/dev/null || { echo "ERROR: $tag is not published" >&2; exit 1; }
+	# **The image a new device starts from** (ADR-0105 as amended 2026-09-30,
+	# George: "A now with B later"): the one this release was built from,
+	# compressed, with its checksum and a signature by the release key. Fixed
+	# names, and this half marked GitHub's latest, so
+	# .../releases/latest/download/gexis-player.img.xz is always stable's image.
+	DEST=packaging/release/out/$tag
+	[ -f "$DEST/image.txt" ] || { echo "ERROR: $DEST/image.txt does not name the release's image" >&2; exit 1; }
+	img=$(cat "$DEST/image.txt"); [ -f "$img" ] || { echo "ERROR: $img is not here" >&2; exit 1; }
+	work=$(mktemp -d)
+	xz -T0 -6 -c "$img" > "$work/gexis-player.img.xz"
+	(cd "$work" && sha256sum gexis-player.img.xz > gexis-player.img.xz.sha256)
+	gpg --batch --yes -u "$SIGNER" -abs -o "$work/gexis-player.img.xz.asc" "$work/gexis-player.img.xz"
+	gh release upload "$tag" --repo "$REPO" --clobber "$work"/gexis-player.img.xz "$work"/gexis-player.img.xz.sha256 "$work"/gexis-player.img.xz.asc
+	rm -rf "$work"
 	channel_file stable "$tag"
-	gh release edit "$tag" --repo "$REPO" --prerelease=false
-	gh release edit "$tag-debian" --repo "$REPO" --prerelease=false
+	gh release edit "$tag" --repo "$REPO" --prerelease=false --latest
+	gh release edit "$tag-debian" --repo "$REPO" --prerelease=false --latest=false
 	exit 0
 fi
 

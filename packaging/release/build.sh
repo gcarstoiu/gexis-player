@@ -95,4 +95,7 @@ for pinned in libasound2t64; do
 	ls "$DEST"/main/"${pinned}"_*.deb >/dev/null 2>&1 || { echo "ERROR: the pinned $pinned is not in the release" >&2; exit 1; }
 done
 du -sh "$DEST/main" "$DEST/debian" | sed 's/^/  /'
+# Which image this release is (ADR-0105 as amended 2026-09-30): promoting it to
+# stable attaches that image, so a new device starts from what an updated one has.
+printf '%s\n' "$(realpath "$IMG")" > "$DEST/image.txt"
 echo "built $DEST ($TAG, gexis-player $VERSION); nothing uploaded"
