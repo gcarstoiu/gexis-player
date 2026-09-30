@@ -65,6 +65,7 @@ from gexis_core.peppy import (
 )
 from gexis_core.peppy_metadata import PeppyMetadataWriter
 from gexis_core.model import BLANK_METADATA, TrackMetadata
+from gexis_core import settings_migrations
 from gexis_core.settings import SettingsStore
 from gexis_core.settings_registry import Settings, load_registry
 from gexis_core.splash import Splash
@@ -269,6 +270,9 @@ async def main() -> None:
     # is exercised for real here, not just in unit tests: this is what
     # proves the DB file and schema actually come up clean on the image.
     settings_store = SettingsStore()
+    # ADR-0105 §5: what an update or a restored backup brings forward, before
+    # anything reads a setting.
+    settings_migrations.migrate(settings_store)
     logger.info("settings: store ready at %s", settings_store.path)
 
     # A server chosen from the Settings sheet (ADR-0044 §1's `kind: server`)
