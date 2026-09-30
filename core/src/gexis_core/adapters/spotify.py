@@ -106,7 +106,7 @@ class SpotifyAdapter(Adapter):
     # "metadata" event (API.md) - confirmed live, 2026-09-12.
     capabilities = Capabilities(
         audio_connection="output",
-        acquisition_events=frozenset({"active", "will_play"}),
+        acquisition_events=frozenset({"active", "will_play", "playing"}),
         supports_artwork=True,
         supports_sample_rate=True,
         volume_managed=True,
@@ -216,6 +216,18 @@ class SpotifyAdapter(Adapter):
                     elif event_type in FLAG_EVENTS:
                         self._handle_flag_event(event_type, frame.get("data") or {})
                     elif event_type in TRANSPORT_EVENTS:
+                        if event_type == "playing":
+                            # **A resume is an acquisition too** (reproduced
+                            # 2026-09-30): a session paused when the core
+                            # started - after a plugin upload, say - and then
+                            # resumed from the phone sends `playing` and
+                            # nothing else. The core went on believing nobody
+                            # held the card, gave it to the next renderer
+                            # without releasing Spotify, and that renderer
+                            # found it busy. Re-acquiring the current renderer
+                            # is a no-op, so every other `playing` costs
+                            # nothing.
+                            on_acquire()
                         position_ms = await self._current_position_ms(session)
                         self._handle_transport_event(event_type, position_ms)
 
