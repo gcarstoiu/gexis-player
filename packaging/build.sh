@@ -11,14 +11,19 @@ if [ -n "$(git status --porcelain -- core ui packaging)" ]; then
 	VERSION="$VERSION.dirty"
 fi
 
-docker image inspect gexis-deb-builder >/dev/null 2>&1 \
-	|| docker build -q --platform linux/arm64 -t gexis-deb-builder -f packaging/builder.Dockerfile packaging
+# Rebuilt when the Dockerfile changes: its hash is the image's label.
+want=$(sha256sum packaging/builder.Dockerfile | cut -c1-12)
+have=$(docker image inspect -f '{{index .Config.Labels "gexis.dockerfile"}}' gexis-deb-builder 2>/dev/null || true)
+[ "$want" = "$have" ] \
+	|| docker build --label "gexis.dockerfile=$want" -q --platform linux/arm64 -t gexis-deb-builder -f packaging/builder.Dockerfile packaging
 
 mkdir -p packaging/out
 for pkg in ${*:-core ui}; do
 	docker run --rm --platform linux/arm64 \
 		-v "$PWD":/src:ro -v "$PWD/packaging/out":/out \
-		gexis-deb-builder sh "/src/packaging/$pkg/build.sh" "$VERSION"
+		-v "${GEXIS_BUILD_CACHE:-$HOME/.cache/gexis-player/downloads}":/cache \
+		-e GEXIS_BUILD_CACHE=/cache \
+		gexis-deb-builder bash "/src/packaging/$pkg/build.sh" "$VERSION"
 done
 # The container writes as root; hand the results back.
 docker run --rm -v "$PWD/packaging/out":/out alpine chown -R "$(id -u):$(id -g)" /out
