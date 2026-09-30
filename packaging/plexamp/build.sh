@@ -14,7 +14,7 @@
 set -eu
 
 STAGE_DIR=/src/image/stage-gexis/08-plexamp
-eval "$(grep -E '^PLUGIN_(VERSION|ASSET|URL|SHA256)=' "$STAGE_DIR/01-run.sh")"
+. /src/packaging/plexamp/pins.sh
 : "${PLUGIN_VERSION:?} ${PLUGIN_ASSET:?} ${PLUGIN_URL:?} ${PLUGIN_SHA256:?}"
 VERSION="${PLUGIN_VERSION}-1"
 

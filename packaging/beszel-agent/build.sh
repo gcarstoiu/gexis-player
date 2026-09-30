@@ -12,7 +12,7 @@
 set -eu
 
 STAGE_DIR=/src/image/stage-gexis/07-beszel
-eval "$(grep -E '^BESZEL_(VERSION|ASSET|URL|SHA256)=' "$STAGE_DIR/00-run.sh")"
+. /src/packaging/beszel-agent/pins.sh
 : "${BESZEL_VERSION:?} ${BESZEL_ASSET:?} ${BESZEL_URL:?} ${BESZEL_SHA256:?}"
 VERSION="${BESZEL_VERSION#v}-1"
 

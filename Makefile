@@ -9,9 +9,9 @@ SKINS_DIR := $(CURDIR)/skins
 BUILD_CACHE_DIR := $(if $(GEXIS_BUILD_CACHE),$(GEXIS_BUILD_CACHE),$(HOME)/.cache/gexis-player/downloads)
 IMG_NAME := $(shell grep -oP '^IMG_NAME="\K[^"]+' image/config)
 PEPPYALSA_REPO := https://github.com/project-owner/peppyalsa
-PEPPYALSA_COMMIT := $(shell grep -oP 'git checkout \K[0-9a-f]{40}' image/stage-gexis/00-alsa/01-run-chroot.sh)
+PEPPYALSA_COMMIT := $(shell grep -oP '^COMMIT=\K[0-9a-f]{40}' packaging/peppyalsa/build.sh)
 GO_LIBRESPOT_REPO := https://github.com/devgianlu/go-librespot
-GO_LIBRESPOT_VERSION := $(shell grep -oP 'GO_LIBRESPOT_VERSION="\K[^"]+' image/stage-gexis/02-renderers/01-run.sh)
+GO_LIBRESPOT_VERSION := $(shell grep -oP 'GO_LIBRESPOT_VERSION="\K[^"]+' packaging/go-librespot/pins.sh)
 # Every build gets a version, tagged or not. `--tags --always --dirty`:
 # an annotated/lightweight tag on HEAD gives a clean "vX.Y.Z"; without
 # one, falls back to the short commit hash rather than failing the
@@ -19,7 +19,7 @@ GO_LIBRESPOT_VERSION := $(shell grep -oP 'GO_LIBRESPOT_VERSION="\K[^"]+' image/s
 # so a manifest can never claim a version it wasn't actually built from.
 IMAGE_VERSION := $(shell git describe --tags --always --dirty)
 
-.PHONY: image ui skins prune fetch-deploy clean provision
+.PHONY: image packages fresh-stage-gexis ui skins prune fetch-deploy clean provision
 
 # Builds via pi-gen's own build-docker.sh, unmodified. Our custom stage lives
 # outside the pinned pi-gen submodule and is bind-mounted in at build time
@@ -146,11 +146,28 @@ prune:
 skins:
 	python3 -c "import sys; sys.path.insert(0, 'core/src'); from gexis_core.skins import main; raise SystemExit(main(['skins']))"
 
-image: ui skins prune
+# ADR-0107: our parts as Debian packages, built in the arm64 builder into
+# packaging/out/ (packaging/build.sh). The image installs these, so an image
+# and an update are the same bytes.
+packages: ui
+	rm -f packaging/out/*.deb
+	packaging/build.sh
+
+# **The image stage starts from a fresh copy of stage 2 every time**
+# (ADR-0107). Its work used to be warm: a later build kept whatever an earlier
+# one wrote, which is how compilers and a home-folder labwc config would have
+# outlived the stages that put them there. The OS stages stay warm.
+fresh-stage-gexis:
+	@if docker container inspect pigen_work >/dev/null 2>&1; then \
+		docker run --rm --volumes-from pigen_work pi-gen:latest sh -c 'rm -rf /pi-gen/work/*/stage-gexis'; \
+		echo "stage-gexis will start from a fresh copy of stage 2"; \
+	fi
+
+image: packages skins prune fresh-stage-gexis
 	@rm -f image/pi-gen/stage2/EXPORT_IMAGE; \
 	mkdir -p "$(BUILD_CACHE_DIR)"; \
 	start=$$(date +%s); \
-	( cd image && CONTINUE=1 PRESERVE_CONTAINER=1 PIGEN_DOCKER_OPTS="--volume $(STAGE_GEXIS_DIR):/pi-gen/stage-gexis:ro --volume $(CORE_SRC_DIR):/pi-gen/gexis-core-src:ro --volume $(UI_DIST_DIR):/pi-gen/gexis-ui-dist:ro --volume $(SKINS_DIR):/pi-gen/gexis-skins:ro --volume $(BUILD_CACHE_DIR):/pi-gen/gexis-cache -e IMG_SUFFIX=-$(IMAGE_VERSION)" \
+	( cd image && CONTINUE=1 PRESERVE_CONTAINER=1 PIGEN_DOCKER_OPTS="--volume $(STAGE_GEXIS_DIR):/pi-gen/stage-gexis:ro --volume $(CURDIR)/packaging/out:/pi-gen/gexis-debs:ro --volume $(BUILD_CACHE_DIR):/pi-gen/gexis-cache -e IMG_SUFFIX=-$(IMAGE_VERSION)" \
 		./pi-gen/build-docker.sh -c config ); \
 	status=$$?; \
 	git -C image/pi-gen checkout -- stage2/EXPORT_IMAGE 2>/dev/null || true; \

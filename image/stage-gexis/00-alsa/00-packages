@@ -1,7 +1,0 @@
-alsa-utils
-libasound2-dev
-libfftw3-dev
-git
-build-essential
-automake
-libtool

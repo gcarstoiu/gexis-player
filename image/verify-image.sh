@@ -39,7 +39,7 @@ image/stage-gexis/03-core/files/gexis-meter.service /usr/lib/systemd/system/gexi
 image/stage-gexis/04-ui/files/gexis-kiosk.service /usr/lib/systemd/system/gexis-kiosk.service
 image/stage-gexis/04-ui/files/gexis-kiosk-start /usr/bin/gexis-kiosk-start
 image/stage-gexis/04-ui/files/kiosk.env /etc/gexis/kiosk.env
-image/stage-gexis/04-ui/files/labwc-rc.xml /home/pi/.config/labwc/rc.xml
+image/stage-gexis/04-ui/files/labwc-rc.xml /etc/xdg/labwc/rc.xml
 image/stage-gexis/05-peppy/files/gexis-peppy.service /usr/lib/systemd/system/gexis-peppy.service
 image/stage-gexis/05-peppy/files/gexis-peppy-start /usr/bin/gexis-peppy-start
 image/stage-gexis/05-peppy/files/gexis-peppy-driver.py /opt/gexis-peppy/driver.py

@@ -12,7 +12,7 @@
 set -eu
 
 STAGE_DIR=/src/image/stage-gexis/02-renderers
-eval "$(grep -E '^GO_LIBRESPOT_(VERSION|ASSET|URL|SHA256)=' "$STAGE_DIR/01-run.sh")"
+. /src/packaging/go-librespot/pins.sh
 : "${GO_LIBRESPOT_VERSION:?} ${GO_LIBRESPOT_ASSET:?} ${GO_LIBRESPOT_URL:?} ${GO_LIBRESPOT_SHA256:?}"
 VERSION="${GO_LIBRESPOT_VERSION#v}-1"
 
