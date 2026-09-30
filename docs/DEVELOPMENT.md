@@ -2562,7 +2562,14 @@ accepted 2026-09-29**: ours update with the release; uploads are a checked
 the network open. The upload notice is George's own wording (2026-09-29).
 
 **Status 2026-09-30: criteria 1-4 built on `phase-13ac` and run on the device
-with George; criterion 5 waits on Phase 13c's repository.** Tested with the
+with George. Criterion 5 is met by 13c's releases** (ADR-0107, ADR-0108): the
+Beszel agent, go-librespot and the Plexamp adapter are packages in every
+release, at the versions it was tested with, so a release updates them.
+Plexamp itself stays fetched on the device (ADR-0100) and is re-fetched when a
+release changes its pin: the fetcher compares the pin's checksum with the one
+it recorded, and the updater restarts the changed package's units, Plexamp's
+among them. **Read from the code, not yet shown with a changed pin.** No
+per-plugin update row: the release is the update. Tested with the
 sample service and renderer (`tools/`) and with a real streaming receiver
 packaged as an uploaded plugin, which found five bugs in 13a (all fixed;
 LESSONS 47) and gave the guide its *What a real renderer taught us*. Memory is
