@@ -3,13 +3,13 @@
 # No running systemd inside this chroot to talk to (same reasoning as
 # 02-renderers/01-run.sh) - symlinked directly rather than via systemctl.
 mkdir -p "${ROOTFS_DIR}/etc/systemd/system/multi-user.target.wants"
-ln -sf /etc/systemd/system/gexis-core.service \
+ln -sf /usr/lib/systemd/system/gexis-core.service \
 	"${ROOTFS_DIR}/etc/systemd/system/multi-user.target.wants/gexis-core.service"
 # Phase 5: without this the Peppy screen gets no levels on a fresh image -
 # until 2026-09-16 it had only ever been started by hand.
-ln -sf /etc/systemd/system/gexis-meter.service \
+ln -sf /usr/lib/systemd/system/gexis-meter.service \
 	"${ROOTFS_DIR}/etc/systemd/system/multi-user.target.wants/gexis-meter.service"
-ln -sf /etc/systemd/system/gexis-park.service \
+ln -sf /usr/lib/systemd/system/gexis-park.service \
 	"${ROOTFS_DIR}/etc/systemd/system/multi-user.target.wants/gexis-park.service"
 
 # Build-time assertion: the venv actually landed and the src copy this
@@ -26,7 +26,7 @@ ln -sf /etc/systemd/system/gexis-park.service \
 for f in \
 	"${ROOTFS_DIR}/opt/gexis-core/venv/bin/pip" \
 	"${ROOTFS_DIR}/etc/gexis/core.toml" \
-	"${ROOTFS_DIR}/etc/systemd/system/gexis-core.service"
+	"${ROOTFS_DIR}/usr/lib/systemd/system/gexis-core.service"
 do
 	if [ ! -e "${f}" ]; then
 		echo "ERROR: ${f} missing after install" >&2

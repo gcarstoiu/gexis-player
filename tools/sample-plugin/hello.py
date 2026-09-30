@@ -26,7 +26,7 @@ print("hello: wrote its own data folder", flush=True)
 
 # What the sandbox should refuse (ADR-0106): anywhere outside that folder.
 for place in ("/etc/gexis/hello-was-here", "/home/pi/hello-was-here",
-              "/var/lib/gexis/hello-was-here", "/usr/local/lib/gexis/hello-was-here"):
+              "/var/lib/gexis/hello-was-here", "/usr/lib/gexis/hello-was-here"):
     try:
         with open(place, "w") as f:
             f.write("x")

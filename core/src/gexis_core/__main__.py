@@ -279,6 +279,8 @@ async def main() -> None:
     # and the switch happens on the next start**, which is what the panel
     # says when a server is picked.
     config = _chosen_server(config, settings_store)
+    if not config.lms_host:
+        logger.info("lms: no server address yet; LMS stays off until setup or Settings gives one")
 
     # **ADR-0055: the output decides the mixer control's name.** `DAC` on
     # this HAT, `PCM` on the Pi's own jack, none at all on HDMI - and the
@@ -1609,6 +1611,11 @@ async def main() -> None:
         A row that is not in `RENDERER_ROWS` - a plugin renderer, one day - has
         no switch and is always on.
         """
+        if renderer_id == "lms" and not config.lms_host:
+            # **No server, no LMS** (ADR-0107): nothing to connect to, and a
+            # squeezelite left running would find a server by itself that the
+            # core knows nothing about. Setup or Settings gives it one.
+            return False
         row = RENDERER_ROWS.get(renderer_id)
         if row is None:
             return True

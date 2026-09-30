@@ -6,7 +6,7 @@ Before=bluealsa.service bluealsa-aplay.service
 [Service]
 Type=oneshot
 RemainAfterExit=yes
-ExecStart=/usr/local/lib/gexis/bluetooth-setup.sh
+ExecStart=/usr/lib/gexis/bluetooth-setup.sh
 
 [Install]
 WantedBy=multi-user.target

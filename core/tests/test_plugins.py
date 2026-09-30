@@ -291,8 +291,8 @@ def test_the_listen_check_runs_after_the_agent_has_started():
     actually bound, not what it was asked to bind - `-1` is a value the flag
     parser happens to accept and an upgrade could start ignoring it."""
     unit = (BESZEL / "beszel-agent.service").read_text()
-    assert "ExecStartPost=/usr/local/lib/gexis/beszel-agent-listen-check.sh" in unit
-    assert "ExecStartPre=/usr/local/lib/gexis/beszel-agent-listen-check.sh" not in unit
+    assert "ExecStartPost=/usr/lib/gexis/beszel-agent-listen-check.sh" in unit
+    assert "ExecStartPre=/usr/lib/gexis/beszel-agent-listen-check.sh" not in unit
     check = (BESZEL / "beszel-agent-listen-check.sh").read_text()
     assert "45876" in check
 

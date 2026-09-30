@@ -44,10 +44,10 @@ rm -rf "${ROOTFS_DIR}/home/pi/plexamp"
 # path, and this one has to match what the manifest names as the unit the
 # release ladder escalates against.
 install -D -m 644 files/plexamp.service \
-	"${ROOTFS_DIR}/etc/systemd/system/plexamp.service"
+	"${ROOTFS_DIR}/usr/lib/systemd/system/plexamp.service"
 # Run from its `ExecStartPre`: the saved queue goes, the volume stays.
 install -D -m 755 files/plexamp-start-idle \
-	"${ROOTFS_DIR}/usr/local/lib/gexis/plexamp-start-idle"
+	"${ROOTFS_DIR}/usr/lib/gexis/plexamp-start-idle"
 
 # The plugin: source, manifest, mark and unit, from the release tarball rather
 # than copied out of this repository - what ships is what that repository
@@ -71,7 +71,7 @@ rm -rf "${ROOTFS_DIR}/opt/gexis-plexamp/src/gexis_plexamp"
 mkdir -p "${ROOTFS_DIR}/opt/gexis-plexamp/src"
 cp -a "${PLUGIN_SRC}/src/gexis_plexamp" "${ROOTFS_DIR}/opt/gexis-plexamp/src/gexis_plexamp"
 install -D -m 644 "${PLUGIN_SRC}/gexis-plexamp.service" \
-	"${ROOTFS_DIR}/etc/systemd/system/gexis-plexamp.service"
+	"${ROOTFS_DIR}/usr/lib/systemd/system/gexis-plexamp.service"
 
 # ADR-0086: the manifest and its glyph, at the same path as every other
 # plugin's. **The plugin's repository owns these**, unlike Beszel's, whose

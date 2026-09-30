@@ -242,8 +242,8 @@ install -m 644 "${WORK}/dseg/fonts-DSEG_v046/DSEG-LICENSE.txt" "${PEPPY_DIR}/fon
 install -d -m 755 "${PEPPY_DIR}/icons"
 install -m 644 files/icons/* "${PEPPY_DIR}/icons/"
 install -D -m 644 files/gexis-peppy.service \
-	"${ROOTFS_DIR}/etc/systemd/system/gexis-peppy.service"
-install -D -m 755 files/gexis-peppy-start "${ROOTFS_DIR}/usr/local/bin/gexis-peppy-start"
+	"${ROOTFS_DIR}/usr/lib/systemd/system/gexis-peppy.service"
+install -D -m 755 files/gexis-peppy-start "${ROOTFS_DIR}/usr/bin/gexis-peppy-start"
 
 # Enabled by symlink, the same way 04-ui enables the kiosk: `systemctl
 # enable` cannot run in a chroot with no running systemd.
@@ -252,7 +252,7 @@ install -D -m 755 files/gexis-peppy-start "${ROOTFS_DIR}/usr/local/bin/gexis-pep
 # wanted by graphical.target then never starts (Finding 022, the defect that
 # shipped in the first flashed image).
 install -d -m 755 "${ROOTFS_DIR}/etc/systemd/system/multi-user.target.wants"
-ln -sf /etc/systemd/system/gexis-peppy.service \
+ln -sf /usr/lib/systemd/system/gexis-peppy.service \
 	"${ROOTFS_DIR}/etc/systemd/system/multi-user.target.wants/gexis-peppy.service"
 rm -f "${ROOTFS_DIR}/etc/systemd/system/graphical.target.wants/gexis-peppy.service"
 

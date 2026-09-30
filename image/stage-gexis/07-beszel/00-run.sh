@@ -41,13 +41,13 @@ tar -xzf "${WORK}/${BESZEL_ASSET}" -C "${WORK}" beszel-agent LICENSE
 # ADR-0099: the MIT notice goes with the binary.
 install -D -m 644 "${WORK}/LICENSE" "${ROOTFS_DIR}/usr/share/doc/gexis-player/licenses/beszel/LICENSE"
 
-install -D -m 755 "${WORK}/beszel-agent" "${ROOTFS_DIR}/usr/local/bin/beszel-agent"
+install -D -m 755 "${WORK}/beszel-agent" "${ROOTFS_DIR}/usr/bin/beszel-agent"
 
 install -D -m 755 files/beszel-agent-listen-check.sh \
-	"${ROOTFS_DIR}/usr/local/lib/gexis/beszel-agent-listen-check.sh"
+	"${ROOTFS_DIR}/usr/lib/gexis/beszel-agent-listen-check.sh"
 
 install -D -m 644 files/beszel-agent.service \
-	"${ROOTFS_DIR}/etc/systemd/system/beszel-agent.service"
+	"${ROOTFS_DIR}/usr/lib/systemd/system/beszel-agent.service"
 
 # ADR-0086: the same path and the same shape as the three built-in manifests.
 # Nothing in the core knows this plugin's name.

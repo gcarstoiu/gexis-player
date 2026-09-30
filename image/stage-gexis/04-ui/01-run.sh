@@ -18,7 +18,7 @@
 # will reset it again; the unit's own [Install] section carries the full
 # reasoning.
 mkdir -p "${ROOTFS_DIR}/etc/systemd/system/multi-user.target.wants"
-ln -sf /etc/systemd/system/gexis-kiosk.service \
+ln -sf /usr/lib/systemd/system/gexis-kiosk.service \
 	"${ROOTFS_DIR}/etc/systemd/system/multi-user.target.wants/gexis-kiosk.service"
 
 # Undo what earlier versions of this stage wrote. CONTINUE=1 reuses the
@@ -45,11 +45,11 @@ rmdir --ignore-fail-on-non-empty \
 for f in \
 	"${ROOTFS_DIR}/opt/gexis-ui/index.html" \
 	"${ROOTFS_DIR}/etc/gexis/kiosk.env" \
-	"${ROOTFS_DIR}/usr/local/bin/gexis-kiosk-start" \
-	"${ROOTFS_DIR}/etc/systemd/system/gexis-kiosk.service" \
+	"${ROOTFS_DIR}/usr/bin/gexis-kiosk-start" \
+	"${ROOTFS_DIR}/usr/lib/systemd/system/gexis-kiosk.service" \
 	"${ROOTFS_DIR}/home/pi/.config/labwc/rc.xml" \
-	"${ROOTFS_DIR}/usr/local/bin/gexis-panel-warmup" \
-	"${ROOTFS_DIR}/etc/systemd/system/gexis-panel-warmup.service"
+	"${ROOTFS_DIR}/usr/bin/gexis-panel-warmup" \
+	"${ROOTFS_DIR}/usr/lib/systemd/system/gexis-panel-warmup.service"
 do
 	if [ ! -e "${f}" ]; then
 		echo "ERROR: ${f} missing after install" >&2
@@ -79,7 +79,7 @@ fi
 # checked here where it costs nothing instead of after a 35-minute build and
 # a reflash.
 if ! grep -q '^Conflicts=getty@tty1\.service$' \
-	"${ROOTFS_DIR}/etc/systemd/system/gexis-kiosk.service"; then
+	"${ROOTFS_DIR}/usr/lib/systemd/system/gexis-kiosk.service"; then
 	echo "ERROR: gexis-kiosk.service must Conflicts= getty@tty1.service, or labwc exits 0 with tty1 taken" >&2
 	exit 1
 fi

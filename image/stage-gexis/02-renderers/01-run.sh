@@ -26,7 +26,7 @@ fetch_cached "${GO_LIBRESPOT_URL}" "${GO_LIBRESPOT_SHA256}" \
 
 tar -xzf "${WORK}/${GO_LIBRESPOT_ASSET}" -C "${WORK}" go-librespot
 
-install -D -m 755 "${WORK}/go-librespot" "${ROOTFS_DIR}/usr/local/bin/go-librespot"
+install -D -m 755 "${WORK}/go-librespot" "${ROOTFS_DIR}/usr/bin/go-librespot"
 
 # go-librespot: config under systemd's StateDirectory= (/var/lib/go-
 # librespot), not ~/.config - see go-librespot.service for why. systemd
@@ -36,12 +36,12 @@ install -D -m 755 "${WORK}/go-librespot" "${ROOTFS_DIR}/usr/local/bin/go-libresp
 install -D -m 644 -o 1000 -g 1000 files/go-librespot-config.yml \
 	"${ROOTFS_DIR}/var/lib/go-librespot/config.yml"
 install -D -m 644 files/go-librespot.service \
-	"${ROOTFS_DIR}/etc/systemd/system/go-librespot.service"
+	"${ROOTFS_DIR}/usr/lib/systemd/system/go-librespot.service"
 
 # squeezelite: package ships a SysV init script, not a systemd unit -
 # criterion 2's ExecStartPre guard needs a real one, written from scratch.
 install -D -m 644 files/squeezelite.service \
-	"${ROOTFS_DIR}/etc/systemd/system/squeezelite.service"
+	"${ROOTFS_DIR}/usr/lib/systemd/system/squeezelite.service"
 
 # The unit reads the player's name from here (ADR-0048 §1). Shipped with the
 # build-time name rather than left to the unit's fallback, so the file the
@@ -50,19 +50,19 @@ install -d -m 755 "${ROOTFS_DIR}/etc/gexis"
 printf 'GEXIS_DEVICE_NAME=gexis\n' \
 	> "${ROOTFS_DIR}/etc/gexis/device-name.env"
 install -D -m 755 files/squeezelite-mixer-check.sh \
-	"${ROOTFS_DIR}/usr/local/lib/gexis/squeezelite-mixer-check.sh"
+	"${ROOTFS_DIR}/usr/lib/gexis/squeezelite-mixer-check.sh"
 
 # bluealsa-aplay: bluez-alsa-utils already ships and auto-enables this
 # unit (WantedBy=bluetooth.target); override its ExecStart rather than
 # replace the unit, per upstream's own documented customisation path.
 install -D -m 644 files/bluealsa-aplay-override.conf \
-	"${ROOTFS_DIR}/etc/systemd/system/bluealsa-aplay.service.d/override.conf"
+	"${ROOTFS_DIR}/usr/lib/systemd/system/bluealsa-aplay.service.d/override.conf"
 
 # bluealsa (the daemon): same override pattern, dropping the a2dp-source
 # profile its shipped default advertises unasked (see the override's own
 # comment - confirmed running on gexis, not something we configured).
 install -D -m 644 files/bluealsa-override.conf \
-	"${ROOTFS_DIR}/etc/systemd/system/bluealsa.service.d/override.conf"
+	"${ROOTFS_DIR}/usr/lib/systemd/system/bluealsa.service.d/override.conf"
 
 # BlueZ's adapter name comes from /etc/machine-info's PRETTY_HOSTNAME,
 # which is where the settings screen writes it (ADR-0048 §4a).
@@ -83,9 +83,9 @@ printf 'PRETTY_HOSTNAME=gexis\n' > "${ROOTFS_DIR}/etc/machine-info"
 # main.conf can't override on its own, power on, and register a
 # PIN-free pairing agent. See the two units' own comments.
 install -D -m 755 files/gexis-bluetooth-setup.sh \
-	"${ROOTFS_DIR}/usr/local/lib/gexis/bluetooth-setup.sh"
+	"${ROOTFS_DIR}/usr/lib/gexis/bluetooth-setup.sh"
 install -D -m 644 files/gexis-bluetooth-setup.service \
-	"${ROOTFS_DIR}/etc/systemd/system/gexis-bluetooth-setup.service"
+	"${ROOTFS_DIR}/usr/lib/systemd/system/gexis-bluetooth-setup.service"
 # `gexis-bt-agent.service` is gone (ADR-0045). It ran `bt-agent
 # --capability=NoInputNoOutput` from bluez-tools, which answers the pairing
 # handshake on its own console and has no route to a screen - so pairing
@@ -96,25 +96,25 @@ install -D -m 644 files/gexis-bluetooth-setup.service \
 # Enable our own units. Symlinked directly rather than via systemctl -
 # there is no running systemd inside this chroot to talk to.
 mkdir -p "${ROOTFS_DIR}/etc/systemd/system/multi-user.target.wants"
-ln -sf /etc/systemd/system/go-librespot.service \
+ln -sf /usr/lib/systemd/system/go-librespot.service \
 	"${ROOTFS_DIR}/etc/systemd/system/multi-user.target.wants/go-librespot.service"
-ln -sf /etc/systemd/system/squeezelite.service \
+ln -sf /usr/lib/systemd/system/squeezelite.service \
 	"${ROOTFS_DIR}/etc/systemd/system/multi-user.target.wants/squeezelite.service"
-ln -sf /etc/systemd/system/gexis-bluetooth-setup.service \
+ln -sf /usr/lib/systemd/system/gexis-bluetooth-setup.service \
 	"${ROOTFS_DIR}/etc/systemd/system/multi-user.target.wants/gexis-bluetooth-setup.service"
 
 # Build-time assertion: every file this stage installs actually landed
 # where the systemd units expect it, and pi owns what it needs to own.
 for f in \
-	"${ROOTFS_DIR}/usr/local/bin/go-librespot" \
+	"${ROOTFS_DIR}/usr/bin/go-librespot" \
 	"${ROOTFS_DIR}/var/lib/go-librespot/config.yml" \
-	"${ROOTFS_DIR}/etc/systemd/system/go-librespot.service" \
-	"${ROOTFS_DIR}/etc/systemd/system/squeezelite.service" \
-	"${ROOTFS_DIR}/usr/local/lib/gexis/squeezelite-mixer-check.sh" \
-	"${ROOTFS_DIR}/etc/systemd/system/bluealsa-aplay.service.d/override.conf" \
-	"${ROOTFS_DIR}/etc/systemd/system/bluealsa.service.d/override.conf" \
-	"${ROOTFS_DIR}/usr/local/lib/gexis/bluetooth-setup.sh" \
-	"${ROOTFS_DIR}/etc/systemd/system/gexis-bluetooth-setup.service" \
+	"${ROOTFS_DIR}/usr/lib/systemd/system/go-librespot.service" \
+	"${ROOTFS_DIR}/usr/lib/systemd/system/squeezelite.service" \
+	"${ROOTFS_DIR}/usr/lib/gexis/squeezelite-mixer-check.sh" \
+	"${ROOTFS_DIR}/usr/lib/systemd/system/bluealsa-aplay.service.d/override.conf" \
+	"${ROOTFS_DIR}/usr/lib/systemd/system/bluealsa.service.d/override.conf" \
+	"${ROOTFS_DIR}/usr/lib/gexis/bluetooth-setup.sh" \
+	"${ROOTFS_DIR}/usr/lib/systemd/system/gexis-bluetooth-setup.service" \
 	"${ROOTFS_DIR}/etc/gexis/device-name.env"
 do
 	if [ ! -e "${f}" ]; then
@@ -126,12 +126,12 @@ done
 # reading it would silently pin every device to one name again - visible
 # only as "the rename did nothing", which is the hardest kind to trace.
 if ! grep -q 'EnvironmentFile=-/etc/gexis/device-name.env' \
-	"${ROOTFS_DIR}/etc/systemd/system/squeezelite.service"; then
+	"${ROOTFS_DIR}/usr/lib/systemd/system/squeezelite.service"; then
 	echo "ERROR: squeezelite.service no longer reads /etc/gexis/device-name.env" >&2
 	exit 1
 fi
 if ! grep -q -- '-n \${GEXIS_DEVICE_NAME}' \
-	"${ROOTFS_DIR}/etc/systemd/system/squeezelite.service"; then
+	"${ROOTFS_DIR}/usr/lib/systemd/system/squeezelite.service"; then
 	echo "ERROR: squeezelite.service's -n is not the device name variable" >&2
 	exit 1
 fi
@@ -143,7 +143,7 @@ if ! grep -q "^PRETTY_HOSTNAME=gexis$" "${ROOTFS_DIR}/etc/machine-info"; then
 	echo "ERROR: /etc/machine-info does not carry the device name" >&2
 	exit 1
 fi
-# These two are symlinks to an absolute path (/etc/systemd/system/...)
+# These are symlinks to an absolute path (/usr/lib/systemd/system/...)
 # that only resolves once ${ROOTFS_DIR} is the real root, i.e. after boot -
 # not from here. -e follows the link and fails against the build host's
 # filesystem; -L only checks the link itself exists, which is what's
@@ -164,11 +164,11 @@ do
 		exit 1
 	fi
 done
-if [ ! -x "${ROOTFS_DIR}/usr/local/bin/go-librespot" ]; then
+if [ ! -x "${ROOTFS_DIR}/usr/bin/go-librespot" ]; then
 	echo "ERROR: go-librespot binary not executable" >&2
 	exit 1
 fi
-if [ ! -x "${ROOTFS_DIR}/usr/local/lib/gexis/bluetooth-setup.sh" ]; then
+if [ ! -x "${ROOTFS_DIR}/usr/lib/gexis/bluetooth-setup.sh" ]; then
 	echo "ERROR: gexis bluetooth-setup.sh not executable" >&2
 	exit 1
 fi

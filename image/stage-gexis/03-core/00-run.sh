@@ -22,7 +22,7 @@ find "${ROOTFS_DIR}/opt/gexis-core/src" -name "__pycache__" -exec rm -rf {} +
 
 install -D -m 644 files/core.toml "${ROOTFS_DIR}/etc/gexis/core.toml"
 install -D -m 644 files/gexis-core.service \
-	"${ROOTFS_DIR}/etc/systemd/system/gexis-core.service"
+	"${ROOTFS_DIR}/usr/lib/systemd/system/gexis-core.service"
 # `gexis-bluetooth-trust.service` is gone (ADR-0045). It polled every two
 # seconds and trusted *every* paired-but-untrusted device, which would grant
 # exactly what a human had just been asked about and might have refused -
@@ -48,19 +48,19 @@ rm -f "${ROOTFS_DIR}/etc/systemd/system/gexis-bluetooth-trust.service" \
 rm -f "${ROOTFS_DIR}/etc/systemd/system/gexis-boot-volume.service" \
 	"${ROOTFS_DIR}/etc/systemd/system/multi-user.target.wants/gexis-boot-volume.service"
 install -D -m 644 files/gexis-meter.service \
-	"${ROOTFS_DIR}/etc/systemd/system/gexis-meter.service"
+	"${ROOTFS_DIR}/usr/lib/systemd/system/gexis-meter.service"
 # George, 2026-09-29: a fresh start after every restart - LMS paused as the
 # device goes down, so its server has nothing to resume.
 install -D -m 644 files/gexis-park.service \
-	"${ROOTFS_DIR}/etc/systemd/system/gexis-park.service"
+	"${ROOTFS_DIR}/usr/lib/systemd/system/gexis-park.service"
 # ADR-0106: the units an uploaded plugin runs under - written by the player,
 # never brought by the package - and the launcher they start.
 install -D -m 644 files/gexis-uploaded-renderer@.service \
-	"${ROOTFS_DIR}/etc/systemd/system/gexis-uploaded-renderer@.service"
+	"${ROOTFS_DIR}/usr/lib/systemd/system/gexis-uploaded-renderer@.service"
 install -D -m 644 files/gexis-uploaded-service@.service \
-	"${ROOTFS_DIR}/etc/systemd/system/gexis-uploaded-service@.service"
+	"${ROOTFS_DIR}/usr/lib/systemd/system/gexis-uploaded-service@.service"
 install -D -m 755 files/gexis-run-uploaded \
-	"${ROOTFS_DIR}/usr/local/lib/gexis/gexis-run-uploaded"
+	"${ROOTFS_DIR}/usr/lib/gexis/gexis-run-uploaded"
 # Their MemoryMax needs the kernel's memory controller, which Raspberry Pi OS
 # leaves off (the device listed only cpuset, cpu, io and pids, 2026-09-29).
 # Inserted after `rootwait`, not appended: firstrun.sh cuts everything from
@@ -75,8 +75,8 @@ grep -qw 'cgroup_enable=memory' "${CMDLINE}" || {
 # ADR-0100: software that is not ours to redistribute is fetched on the device,
 # from its maker, when the user switches it on. The helper, its template unit,
 # and one pin per component (URL, checksum, where it goes).
-install -D -m 755 files/gexis-fetch-component "${ROOTFS_DIR}/usr/local/lib/gexis/gexis-fetch-component"
-install -D -m 644 files/gexis-fetch@.service "${ROOTFS_DIR}/etc/systemd/system/gexis-fetch@.service"
+install -D -m 755 files/gexis-fetch-component "${ROOTFS_DIR}/usr/lib/gexis/gexis-fetch-component"
+install -D -m 644 files/gexis-fetch@.service "${ROOTFS_DIR}/usr/lib/systemd/system/gexis-fetch@.service"
 install -d "${ROOTFS_DIR}/usr/share/gexis/components"
 install -m 644 files/components/*.env "${ROOTFS_DIR}/usr/share/gexis/components/"
 

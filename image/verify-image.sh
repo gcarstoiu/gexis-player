@@ -34,14 +34,14 @@ while read -r src dst; do
 	rm -f "$OUT/one"
 done <<'EOF'
 image/stage-gexis/03-core/files/core.toml /etc/gexis/core.toml
-image/stage-gexis/03-core/files/gexis-core.service /etc/systemd/system/gexis-core.service
-image/stage-gexis/03-core/files/gexis-meter.service /etc/systemd/system/gexis-meter.service
-image/stage-gexis/04-ui/files/gexis-kiosk.service /etc/systemd/system/gexis-kiosk.service
-image/stage-gexis/04-ui/files/gexis-kiosk-start /usr/local/bin/gexis-kiosk-start
+image/stage-gexis/03-core/files/gexis-core.service /usr/lib/systemd/system/gexis-core.service
+image/stage-gexis/03-core/files/gexis-meter.service /usr/lib/systemd/system/gexis-meter.service
+image/stage-gexis/04-ui/files/gexis-kiosk.service /usr/lib/systemd/system/gexis-kiosk.service
+image/stage-gexis/04-ui/files/gexis-kiosk-start /usr/bin/gexis-kiosk-start
 image/stage-gexis/04-ui/files/kiosk.env /etc/gexis/kiosk.env
 image/stage-gexis/04-ui/files/labwc-rc.xml /home/pi/.config/labwc/rc.xml
-image/stage-gexis/05-peppy/files/gexis-peppy.service /etc/systemd/system/gexis-peppy.service
-image/stage-gexis/05-peppy/files/gexis-peppy-start /usr/local/bin/gexis-peppy-start
+image/stage-gexis/05-peppy/files/gexis-peppy.service /usr/lib/systemd/system/gexis-peppy.service
+image/stage-gexis/05-peppy/files/gexis-peppy-start /usr/bin/gexis-peppy-start
 image/stage-gexis/05-peppy/files/gexis-peppy-driver.py /opt/gexis-peppy/driver.py
 image/stage-gexis/05-peppy/files/gexis_peppy_render.py /opt/gexis-peppy/gexis_peppy_render.py
 image/stage-gexis/05-peppy/files/gexis_peppy_motion.py /opt/gexis-peppy/gexis_peppy_motion.py
@@ -49,8 +49,8 @@ image/stage-gexis/05-peppy/files/gexis_peppy_gauges.py /opt/gexis-peppy/gexis_pe
 image/stage-gexis/05-peppy/files/badge-slots.json /opt/gexis-peppy/badge-slots.json
 image/stage-gexis/05-peppy/files/peppy-meter.txt /opt/gexis-peppy/peppymeter/config.txt
 image/stage-gexis/05-peppy/files/peppy-spectrum.txt /opt/gexis-peppy/spectrum/config.txt
-image/stage-gexis/07-beszel/files/beszel-agent.service /etc/systemd/system/beszel-agent.service
-image/stage-gexis/07-beszel/files/beszel-agent-listen-check.sh /usr/local/lib/gexis/beszel-agent-listen-check.sh
+image/stage-gexis/07-beszel/files/beszel-agent.service /usr/lib/systemd/system/beszel-agent.service
+image/stage-gexis/07-beszel/files/beszel-agent-listen-check.sh /usr/lib/gexis/beszel-agent-listen-check.sh
 image/stage-gexis/07-beszel/files/plugin.json /usr/share/gexis/plugins/beszel/plugin.json
 skins/templates/meters.txt /opt/gexis-peppy/skins/gelo5/templates/1280x800/meters.txt
 skins/templates_spectrum/spectrum.txt /opt/gexis-peppy/skins/gelo5/templates_spectrum/1280x800/spectrum.txt
@@ -85,10 +85,22 @@ echo "== files the services must be able to write"
 own=$(dfs "stat /opt/gexis-peppy/spectrum/config.txt" | grep -o 'User: *[0-9]*' | tr -s ' ')
 [ "$own" = "User: 1000" ] && ok "spectrum config owned by uid 1000" || bad "spectrum config ownership: '${own:-missing}'"
 
+echo "== ADR-0107: nothing of ours left in the old places"
+# A unit in /etc/systemd/system overrides the one in /usr/lib/systemd/system of
+# the same name, so a copy a warm build left there would win silently.
+for old in /etc/systemd/system/gexis-core.service /etc/systemd/system/gexis-kiosk.service \
+	/etc/systemd/system/gexis-peppy.service /etc/systemd/system/go-librespot.service \
+	/etc/systemd/system/squeezelite.service /etc/systemd/system/beszel-agent.service \
+	/etc/systemd/system/plexamp.service /etc/systemd/system/gexis-uploaded-renderer@.service \
+	/etc/systemd/system/bluealsa.service.d/override.conf \
+	/usr/local/bin/go-librespot /usr/local/bin/gexis-kiosk-start /usr/local/lib/gexis; do
+	dfs "stat $old" | grep -q 'Inode:' && bad "$old still there" || ok "$old gone"
+done
+
 echo "== units enabled (symlink targets)"
 for u in gexis-core gexis-meter gexis-kiosk gexis-peppy; do
 	t=$(dfs "stat /etc/systemd/system/multi-user.target.wants/$u.service" | grep -o 'Fast link dest: ".*"')
-	[ "$t" = "Fast link dest: \"/etc/systemd/system/$u.service\"" ] && ok "$u -> $t" || bad "$u enablement: '${t:-missing}'"
+	[ "$t" = "Fast link dest: \"/usr/lib/systemd/system/$u.service\"" ] && ok "$u -> $t" || bad "$u enablement: '${t:-missing}'"
 done
 # Units a decision removed. A warm build keeps what an earlier build wrote,
 # and gexis-bluetooth-trust shipped enabled with its module already deleted -
@@ -148,9 +160,9 @@ echo "== Beszel (ADR-0087), the first plugin that is not part of the core"
 # three ways; this asserts the *image* got that exact build, which the stage's
 # own check cannot say anything about once it has exited.
 want_sha="$(grep -oE 'BESZEL_SHA256="[0-9a-f]+"' "$REPO/image/stage-gexis/07-beszel/00-run.sh" | cut -d'"' -f2)"
-dfs "dump /usr/local/bin/beszel-agent $OUT/agent" >/dev/null
+dfs "dump /usr/bin/beszel-agent $OUT/agent" >/dev/null
 if [ ! -s "$OUT/agent" ]; then
-	bad "/usr/local/bin/beszel-agent missing"
+	bad "/usr/bin/beszel-agent missing"
 else
 	size=$(stat -c%s "$OUT/agent")
 	[ "$size" -gt 1000000 ] && ok "beszel-agent installed ($size bytes)" \
@@ -204,13 +216,13 @@ else
 fi
 
 echo "== Plexamp (ADR-0090), a renderer from another repository"
-for f in /etc/systemd/system/plexamp.service \
-         /etc/systemd/system/gexis-plexamp.service \
+for f in /usr/lib/systemd/system/plexamp.service \
+         /usr/lib/systemd/system/gexis-plexamp.service \
          /usr/share/gexis/plugins/plexamp/plugin.json \
          /usr/share/gexis/plugins/plexamp/mark.png \
          /opt/gexis-plexamp/src/gexis_plexamp/main.py \
-         /usr/local/lib/gexis/gexis-fetch-component \
-         /etc/systemd/system/gexis-fetch@.service \
+         /usr/lib/gexis/gexis-fetch-component \
+         /usr/lib/systemd/system/gexis-fetch@.service \
          /usr/share/gexis/components/plexamp.env; do
 	dfs "stat $f" | grep -q 'Inode:' && ok "$f" || bad "$f missing"
 done
@@ -222,7 +234,7 @@ if dfs "stat /home/pi/plexamp" | grep -q 'Inode:'; then
 else
 	ok "Plexamp itself is not shipped"
 fi
-dfs "dump /etc/systemd/system/plexamp.service $OUT/unit-fetch" >/dev/null
+dfs "dump /usr/lib/systemd/system/plexamp.service $OUT/unit-fetch" >/dev/null
 if grep -q '^Requires=gexis-fetch@plexamp\.service' "$OUT/unit-fetch" && grep -q '^After=gexis-fetch@plexamp\.service' "$OUT/unit-fetch"; then
 	ok "plexamp.service fetches Plexamp before it starts"
 else
@@ -247,7 +259,7 @@ done
 # control both, nothing here noticed, and it surfaced only when a release ladder
 # started stopping the player for real. Checked by *position*, because the key
 # being present was never the part that was wrong.
-dfs "dump /etc/systemd/system/plexamp.service $OUT/unit" >/dev/null
+dfs "dump /usr/lib/systemd/system/plexamp.service $OUT/unit" >/dev/null
 service_at=$(grep -n '^\[Service\]' "$OUT/unit" | head -1 | cut -d: -f1)
 wants_at=$(grep -n '^Wants=gexis-plexamp\.service' "$OUT/unit" | head -1 | cut -d: -f1)
 if [ -n "$wants_at" ] && [ -n "$service_at" ] && [ "$wants_at" -lt "$service_at" ]; then
@@ -311,8 +323,8 @@ fi
 # It restores a saved paused queue by opening the ALSA device, unasked; a kill
 # that lands before it has saved its stop leaves exactly that queue behind. The
 # helper keeps the volume, so it has to be there and executable, not only named.
-if grep -q '^ExecStartPre=/usr/local/lib/gexis/plexamp-start-idle$' "$OUT/unit" \
-	&& dfs "stat /usr/local/lib/gexis/plexamp-start-idle" | grep -q 'Mode: *0755'; then
+if grep -q '^ExecStartPre=/usr/lib/gexis/plexamp-start-idle$' "$OUT/unit" \
+	&& dfs "stat /usr/lib/gexis/plexamp-start-idle" | grep -q 'Mode: *0755'; then
 	ok "plexamp.service clears the saved queue a killed player would restore"
 else
 	bad "plexamp.service lets Plexamp restore a queue and take the device unasked"
@@ -346,17 +358,17 @@ for f in /usr/share/doc/gexis-player/COPYING \
 done
 
 echo "== ADR-0095 as amended: LMS paused as the device goes down"
-dfs "stat /etc/systemd/system/gexis-park.service" | grep -q 'Inode:' && ok "gexis-park.service installed" || bad "gexis-park.service missing"
+dfs "stat /usr/lib/systemd/system/gexis-park.service" | grep -q 'Inode:' && ok "gexis-park.service installed" || bad "gexis-park.service missing"
 dfs "stat /etc/systemd/system/multi-user.target.wants/gexis-park.service" | grep -q 'Inode:' && ok "gexis-park.service enabled" || bad "gexis-park.service not enabled"
 
 echo "== ADR-0106: uploaded plugins run under the player's own sandboxed units"
 for u in gexis-uploaded-renderer@.service gexis-uploaded-service@.service; do
-	dfs "dump /etc/systemd/system/$u $OUT/one" >/dev/null
+	dfs "dump /usr/lib/systemd/system/$u $OUT/one" >/dev/null
 	if grep -q '^DynamicUser=yes' "$OUT/one" && grep -q '^ProtectSystem=strict' "$OUT/one"; then ok "$u sandboxed"
 	else bad "$u missing or not sandboxed"; fi
 	rm -f "$OUT/one"
 done
-dfs "stat /usr/local/lib/gexis/gexis-run-uploaded" | grep -q 'Mode:  0755' && ok "gexis-run-uploaded executable" || bad "gexis-run-uploaded missing or not executable"
+dfs "stat /usr/lib/gexis/gexis-run-uploaded" | grep -q 'Mode:  0755' && ok "gexis-run-uploaded executable" || bad "gexis-run-uploaded missing or not executable"
 
 echo "== ADR-0085: the ALSA default is our output"
 dfs "dump /etc/alsa/conf.d/zz-gexis-default.conf $OUT/one" >/dev/null

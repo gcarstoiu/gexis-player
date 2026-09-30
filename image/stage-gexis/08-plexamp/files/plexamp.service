@@ -61,7 +61,7 @@ WorkingDirectory=/home/pi/plexamp
 # What it costs: Plexamp never resumes a queue by itself - after a reboot, a
 # restore or a takeover it waits to be told to play, as every renderer here does
 # (ADR-0027).
-ExecStartPre=/usr/local/lib/gexis/plexamp-start-idle
+ExecStartPre=/usr/lib/gexis/plexamp-start-idle
 ExecStart=/usr/bin/node /home/pi/plexamp/js/index.js
 Restart=on-failure
 # **5 -> 1, 2026-09-26 (ADR-0091).** This is the path back from every takeover
