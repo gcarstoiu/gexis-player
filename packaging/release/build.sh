@@ -20,7 +20,8 @@ players=( "$OUT_DEBS"/gexis-player_*.deb )
 VERSION=$(basename "${players[0]}" | sed -E 's/^gexis-player_(.*)_all\.deb$/\1/')
 TAG="r${VERSION//+/-}"
 DEST=packaging/release/out/$TAG
-rm -rf "$DEST"; mkdir -p "$DEST/main" "$DEST/debian" "$CACHE"
+KINDS="ours skins rpi debian"   # ADR-0108 as amended: a release is parts
+rm -rf "$DEST"; mkdir -p "$CACHE"; for k in $KINDS; do mkdir -p "$DEST/$k"; done
 WORK=$(mktemp -d); trap 'rm -rf "$WORK"' EXIT
 # Readable by apt's own unprivileged user, which checks the signatures: it
 # holds only public keyrings and a package list.
@@ -60,41 +61,62 @@ docker run --rm --platform linux/arm64 \
 	-v "$PWD/packaging/release/fetch-tested-set.py":/fetch.py:ro \
 	gexis-deb-builder python3 /fetch.py
 
-# Ours, beside Raspberry Pi's half: exactly the versions the image has.
+# Ours: exactly the versions the image has, the skins apart - 176 MB that
+# rarely change, their own part so they are not uploaded again with ours.
 while read -r name version arch; do
 	f="$OUT_DEBS/${name}_${version}_${arch}.deb"
 	[ -f "$f" ] || { echo "ERROR: the image has $name $version, not in $OUT_DEBS" >&2; exit 1; }
-	cp "$f" "$DEST/main/"
+	case "$name" in gexis-skins) cp "$f" "$DEST/skins/";; *) cp "$f" "$DEST/ours/";; esac
 done < "$WORK/ours.txt"
 
-# The indexes, then the signatures (on this machine: the key never enters a container).
-for half in main debian; do
-	docker run --rm --platform linux/arm64 -v "$PWD/$DEST/$half":/r gexis-deb-builder sh -c "
-		cd /r && apt-ftparchive packages . > Packages && gzip -9kn Packages &&
-		apt-ftparchive -o APT::FTPArchive::Release::Origin='Gexis Player' \
+# Each part: its index, its name from that index, then its signatures (on this
+# machine - the key never enters a container). **Named by content**
+# (ADR-0108 as amended): the same packages give the same Packages file and so
+# the same name, and a part already on GitHub is not uploaded again. The name
+# is the part's suite, so apt can prefer it when going back.
+mkdir -p "$DEST/parts"
+: > "$DEST/parts.txt"
+for kind in $KINDS; do
+	docker run --rm --platform linux/arm64 -v "$PWD/$DEST/$kind":/r gexis-deb-builder sh -c "
+		cd /r && apt-ftparchive packages . > Packages && gzip -9kn Packages"
+	docker run --rm -v "$PWD/$DEST":/o alpine chown -R "$(id -u):$(id -g)" /o
+	name="$kind-$(sha256sum "$DEST/$kind/Packages" | cut -c1-12)"
+	docker run --rm --platform linux/arm64 -v "$PWD/$DEST/$kind":/r gexis-deb-builder sh -c "
+		cd /r && apt-ftparchive -o APT::FTPArchive::Release::Origin='Gexis Player' \
 			-o APT::FTPArchive::Release::Label='Gexis Player' \
-			-o APT::FTPArchive::Release::Suite='$TAG' -o APT::FTPArchive::Release::Codename='$TAG' \
+			-o APT::FTPArchive::Release::Suite='$name' -o APT::FTPArchive::Release::Codename='$name' \
 			release . > Release"
 	docker run --rm -v "$PWD/$DEST":/o alpine chown -R "$(id -u):$(id -g)" /o
-	gpg --batch --yes -u "$SIGNER" --clearsign -o "$DEST/$half/InRelease" "$DEST/$half/Release"
-	gpg --batch --yes -u "$SIGNER" -abs -o "$DEST/$half/Release.gpg" "$DEST/$half/Release"
+	gpg --batch --yes -u "$SIGNER" --clearsign -o "$DEST/$kind/InRelease" "$DEST/$kind/Release"
+	gpg --batch --yes -u "$SIGNER" -abs -o "$DEST/$kind/Release.gpg" "$DEST/$kind/Release"
+	mv "$DEST/$kind" "$DEST/parts/$name"
+	printf '%s %s\n' "$kind" "$name" >> "$DEST/parts.txt"
 done
 
 # Checks: counts under GitHub's limit, the set complete, the signatures good.
-for half in main debian; do
-	n=$(find "$DEST/$half" -type f | wc -l)
-	[ "$n" -lt 1000 ] || { echo "ERROR: $half has $n files; a GitHub release holds 1,000" >&2; exit 1; }
-	gpg --batch --verify "$DEST/$half/InRelease" 2>/dev/null || { echo "ERROR: $half's InRelease does not verify" >&2; exit 1; }
+for part in "$DEST"/parts/*/; do
+	n=$(find "$part" -type f | wc -l)
+	[ "$n" -lt 1000 ] || { echo "ERROR: $(basename "$part") has $n files; a GitHub release holds 1,000" >&2; exit 1; }
+	gpg --batch --verify "$part/InRelease" 2>/dev/null || { echo "ERROR: $(basename "$part")'s InRelease does not verify" >&2; exit 1; }
 done
 # Counted from the image's status on its own terms - every record dpkg calls
 # installed, whatever the selection - so a filter above cannot hide a package.
 image_count=$(grep -cE '^Status: [a-z]+ ok installed$' "$WORK/status")
-release_count=$(( $(ls "$DEST"/main/*.deb | wc -l) + $(ls "$DEST"/debian/*.deb | wc -l) ))
+release_count=$(ls "$DEST"/parts/*/*.deb | wc -l)
 [ "$release_count" -eq "$image_count" ] || { echo "ERROR: $release_count packages in the release, the image has $image_count installed" >&2; exit 1; }
 for pinned in libasound2t64; do
-	ls "$DEST"/main/"${pinned}"_*.deb >/dev/null 2>&1 || { echo "ERROR: the pinned $pinned is not in the release" >&2; exit 1; }
+	ls "$DEST"/parts/rpi-*/"${pinned}"_*.deb >/dev/null 2>&1 || { echo "ERROR: the pinned $pinned is not in the release" >&2; exit 1; }
 done
-du -sh "$DEST/main" "$DEST/debian" | sed 's/^/  /'
+
+# The release's own list of its parts, signed: what the updater reads to go
+# back to this release once a later one is installed.
+{
+	printf 'Release: %s\n' "$VERSION"
+	printf 'Parts: %s\n' "$(awk '{print $2}' "$DEST/parts.txt" | tr '\n' ' ' | sed 's/ $//')"
+} > "$DEST/parts.plain"
+gpg --batch --yes -u "$SIGNER" --clearsign -o "$DEST/parts" "$DEST/parts.plain"
+rm "$DEST/parts.plain"
+du -sh "$DEST"/parts/* | sed 's|packaging/release/out/[^/]*/parts/||; s/^/  /'
 # Which image this release is (ADR-0105 as amended 2026-09-30): promoting it to
 # stable attaches that image, so a new device starts from what an updated one has.
 printf '%s\n' "$(realpath "$IMG")" > "$DEST/image.txt"

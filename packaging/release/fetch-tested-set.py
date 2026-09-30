@@ -6,7 +6,7 @@ Runs inside gexis-deb-builder, with:
   /in/installed.txt   name version arch, one per line (the image's dpkg status)
   /in/keyrings/       the image's archive keyrings (Debian, Raspberry Pi)
   /cache              a cache of .deb files kept between releases
-  /out/main, /out/debian   where each half's files go
+  /out/rpi, /out/debian    where each part's files go (ADR-0108 as amended)
 
 `apt-get update` fetches the archives' indexes and checks their signatures;
 everything after reads those indexes directly. (The first version asked apt
@@ -109,12 +109,12 @@ def main() -> int:
             print("ERROR: " + e, file=sys.stderr)
         return 1
 
-    placed = {"main": 0, "debian": 0}
+    placed = {"rpi": 0, "debian": 0}
     for url, filename, _sha, cached in jobs:
-        half = "main" if "archive.raspberrypi.com" in url else "debian"
+        half = "rpi" if "archive.raspberrypi.com" in url else "debian"
         shutil.copy2(cached, Path("/out") / half / filename)
         placed[half] += 1
-    print(f"tested set: {len(wanted)} packages, {placed['main']} from Raspberry Pi, {placed['debian']} from Debian")
+    print(f"tested set: {len(wanted)} packages, {placed['rpi']} from Raspberry Pi, {placed['debian']} from Debian")
     return 0
 
 

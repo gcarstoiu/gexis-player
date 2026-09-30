@@ -77,26 +77,51 @@ def test_the_plan_reads_what_apt_would_change(monkeypatch, up):
     ]
 
 
-def test_apt_sees_only_the_release_and_prefers_it_when_going_back(up):
-    opts = up.apt_env(["r1"], pin_tag="r1")
-    view = up.STATE / "apt" / "r1@r1"
+def view_of(up, opts):
+    lists = next(o for o in opts if o.startswith("Dir::State::lists="))
+    return Path(lists.split("=", 1)[1]).parent
+
+
+def test_apt_sees_only_the_listed_repositories_and_prefers_them_when_going_back(up):
+    opts = up.apt_env(["ours-aaa", "debian-bbb"], pins=["ours-aaa", "debian-bbb"])
+    view = view_of(up, opts)
     sources = (view / "sources.list").read_text()
-    assert sources.count("deb [signed-by=") == 2 and "/r1/ ./" in sources and "/r1-debian/ ./" in sources
+    assert sources.count("deb [signed-by=") == 2 and "/ours-aaa/ ./" in sources and "/debian-bbb/ ./" in sources
     parts = view / "sources.list.d"
     assert f"Dir::Etc::sourceparts={parts}" in opts and not any(parts.iterdir()), \
         "the device's own sources are not read: the parts folder is ours, and empty"
-    assert "Pin-Priority: 1001" in (view / "preferences").read_text()
+    prefs = (view / "preferences").read_text()
+    assert prefs.count("Pin-Priority: 1001") == 2 and "a=debian-bbb" in prefs
 
 
 def test_the_release_kept_for_going_back_does_not_replace_the_one_going_in(up):
     """Found on the device, 2026-09-30: one shared index, and the install
     found no gexis-player - the going-back fetch had replaced it."""
-    going_in = up.apt_env(["r2"])
-    going_back = up.apt_env(["r1"], pin_tag="r1")
-    lists = lambda opts: next(o for o in opts if o.startswith("Dir::State::lists="))
+    going_in = up.apt_env(["ours-new", "debian-same"])
+    going_back = up.apt_env(["ours-old", "debian-same"], pins=["ours-old", "debian-same"])
     cache = lambda opts: next(o for o in opts if o.startswith("Dir::Cache::archives="))
-    assert lists(going_in) != lists(going_back)
+    assert view_of(up, going_in) != view_of(up, going_back)
     assert cache(going_in) == cache(going_back), "one cache: a file is the same file"
+
+
+def test_a_release_with_a_parts_file_goes_back_to_its_parts(up, monkeypatch):
+    """ADR-0108 as amended: a release is parts, named by content."""
+    serve(monkeypatch, up, "Release: 0.2.1+git900.abc\nParts: ours-111 skins-222 rpi-333 debian-444\n")
+    assert up.parts_of("0.2.1+git900.abc") == (["ours-111", "skins-222", "rpi-333", "debian-444"],) * 2
+
+
+def test_a_release_from_before_parts_is_read_the_old_way(up, monkeypatch):
+    def gone(url, timeout=0):
+        raise OSError("404")
+    monkeypatch.setattr(up.urllib.request, "urlopen", gone)
+    assert up.parts_of("0.2.1+git852.13f1359") == (["r0.2.1-git852.13f1359", "r0.2.1-git852.13f1359-debian"],
+                                                  ["r0.2.1-git852.13f1359"])
+
+
+def test_an_unsigned_parts_file_is_refused(up, monkeypatch):
+    serve(monkeypatch, up, "Release: 1\nParts: ours-x\n", verified=False)
+    with pytest.raises(up.Stop, match="not signed"):
+        up.parts_of("1")
 
 
 def test_stable_is_the_channel_when_nothing_was_chosen(up, tmp_path, monkeypatch):

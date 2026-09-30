@@ -90,16 +90,29 @@ George's say-so, as every outward step is.
 - The GPL source offer for the OS packages we publish (ADR-0105, to confirm
   before the first public release).
 
-## Open
+## Amendment, 2026-09-30 — a release is parts, and an unchanged part is not uploaded again
 
-- **Each release uploads its whole Debian half again**, 876 files, even when
-  not one changed (identical in 852 and 856). The second release in an hour
-  hit GitHub's secondary rate limit; `publish.sh` is now resumable and paced,
-  which makes it work, not cheap. Better: a release whose Debian half is the
-  same as an earlier one's names that earlier half in its channel file. The
-  updater then has to learn each release's repositories from where it was
-  told them, not from the `<tag>-debian` convention - including the release
-  it goes back to - so it is its own change.
+**Why:** every release uploaded its whole tested set again, about 1,030 files
+and 1 GB, even when nothing but our own packages changed. The second release
+in an hour (856) hit GitHub's secondary rate limit. George: *"You should do
+it otherwise this can take a long time."*
+
+**Decided (technical):**
+
+- **A release is four parts**, each a flat apt repository in a GitHub release
+  of its own: `ours` (our packages but the skins), `skins`, `rpi` (the Raspberry
+  Pi archive's part of the tested set), `debian`.
+- **A part is named by its content**: `<kind>-<first 12 hex of its Packages'
+  sha256>`, and its `Release` says that name as its suite. The same packages give
+  the same name, so a part that did not change is already on GitHub and is not
+  uploaded again. A typical release uploads only `ours`.
+- **The release** is `r<version>`: its notes, a clearsigned `parts` file listing
+  its parts, and - once promoted to stable - its image. The channel file's
+  `Repositories` names the parts.
+- **The updater reads the parts it is told about** - the channel's for the
+  release going in, the installed release's `parts` file (verified) for the one
+  going back - and no longer derives `<tag>-debian`. A release published before
+  this (852, 856) has no `parts` file, and is read the old way.
 
 ## Unverified
 

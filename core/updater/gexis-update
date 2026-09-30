@@ -22,6 +22,7 @@ before a word of it is believed.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import os
 import re
@@ -119,6 +120,27 @@ def remember_serial(channel: str, serial: int) -> None:
     (STATE / f"serial-{channel}").write_text(str(serial))
 
 
+def parts_of(version: str) -> tuple[list[str], list[str]]:
+    """The repositories of a release, and the suites that pin it: from its
+    signed `parts` file (ADR-0108 as amended), or - for a release published
+    before parts - its `<tag>` and `<tag>-debian`, whose suite is the tag."""
+    tag = tag_of(version)
+    try:
+        with urllib.request.urlopen(f"{BASE}/{tag}/parts", timeout=60) as r:
+            signed = r.read()
+    except OSError:
+        return [tag, f"{tag}-debian"], [tag]
+    verified = subprocess.run(["gpgv", "--keyring", str(KEY_GPG), "--output", "-", "-"],
+                              input=signed, capture_output=True)
+    if verified.returncode != 0:
+        raise Stop(f"{tag}'s parts file is not signed by the release key")
+    fields = dict(line.split(": ", 1) for line in verified.stdout.decode().splitlines() if ": " in line)
+    if fields.get("Release") != version:
+        raise Stop(f"{tag}'s parts file is for {fields.get('Release')!r}")
+    parts = fields["Parts"].split()
+    return parts, parts
+
+
 def installed(package: str) -> str | None:
     out = run("dpkg-query", "-W", "-f", "${Version}", package, check=False)
     return out.stdout.strip() or None
@@ -130,28 +152,26 @@ def tag_of(version: str) -> str:
 
 # --- apt, privately --------------------------------------------------------
 
-def apt_env(tags: list[str], pin_tag: str | None = None) -> list[str]:
-    """Options that make apt see only these releases, in its own lists and
-    cache. With `pin_tag`, that release is preferred even over newer versions,
-    which is how the release before is put back."""
+def apt_env(repos: list[str], pins: list[str] | None = None) -> list[str]:
+    """Options that make apt see only these repositories, in their own lists
+    and a shared cache. `repos` are GitHub release names as the channel or a
+    `parts` file gives them (ADR-0108 as amended: a release is parts, named by
+    content). With `pins`, those suites are preferred even over newer
+    versions, which is how the release before is put back."""
     # **Each release its own view** (found on the device, 2026-09-30): one
     # folder shared by the release going in and the release kept for going
     # back meant fetching the second replaced the first's index, and the
     # install then found no gexis-player at all. The downloaded packages
     # share one cache, which is right: a file is the same file.
-    apt = STATE / "apt" / ("+".join(tags) + (f"@{pin_tag}" if pin_tag else ""))
+    key = hashlib.sha256((" ".join(repos) + "@" + " ".join(pins or [])).encode()).hexdigest()[:16]
+    apt = STATE / "apt" / key
     cache = STATE / "apt" / "archives"
     (cache / "partial").mkdir(parents=True, exist_ok=True)
     for d in ("lists/partial", "sources.list.d", "preferences.d"):
         (apt / d).mkdir(parents=True, exist_ok=True)
-    lines = []
-    for tag in tags:
-        for half in (tag, f"{tag}-debian"):
-            lines.append(f"deb [signed-by={KEY_ASC}] {BASE}/{half}/ ./")
+    lines = [f"deb [signed-by={KEY_ASC}] {BASE}/{repo}/ ./" for repo in repos]
     (apt / "sources.list").write_text("\n".join(lines) + "\n")
-    prefs = ""
-    if pin_tag:
-        prefs = f"Package: *\nPin: release a={pin_tag}\nPin-Priority: 1001\n"
+    prefs = "".join(f"Package: *\nPin: release a={suite}\nPin-Priority: 1001\n\n" for suite in pins or [])
     (apt / "preferences").write_text(prefs)
     # The parts folders point at empty ones of our own: "-" was read as a
     # folder named "-" under /etc/apt.
@@ -296,13 +316,15 @@ def install(args) -> int:
         return 0
     channel, ch = found
     target, current = ch["Release"], installed("gexis-player")
-    tags = ch["Repositories"].split()
-    target_tag, current_tag = tags[0], tag_of(current)
+    # The channel names the repositories to install from; the installed
+    # release's own parts file names what to go back to.
+    repos = ch["Repositories"].split()
+    back_repos, back_pins = parts_of(current)
 
     report("downloading", channel=channel, release=target, message=f"fetching {target}")
-    opts = apt_env([target_tag])
+    opts = apt_env(repos)
     if apt(opts, "update").returncode:
-        raise Stop(f"apt could not read {target_tag}")
+        raise Stop(f"apt could not read {' '.join(repos)}")
     changes = plan(opts, target)
     for step in (["--download-only", "--allow-change-held-packages", "dist-upgrade"],
                  ["--download-only", "--allow-change-held-packages", "install", f"gexis-player={target}"]):
@@ -310,7 +332,7 @@ def install(args) -> int:
         if r.returncode:
             raise Stop("download failed: " + why(r))
     # The versions installed now, for going back: from the release that has them.
-    back = apt_env([current_tag], pin_tag=current_tag)
+    back = apt_env(back_repos, back_pins)
     if apt(back, "update").returncode == 0:
         olds = [f"{p}={old}" for p, old, _ in changes if old]
         if olds:
@@ -318,7 +340,7 @@ def install(args) -> int:
                 "--allow-change-held-packages", "install", *olds)
     else:
         report("downloading", channel=channel, release=target,
-               message=f"{current_tag} is not reachable; going back will not be possible")
+               message=f"{current}'s repositories are not reachable; going back will not be possible")
 
     report("backing-up", channel=channel, release=target, message="backing up first")
     backup = back_up()
@@ -326,7 +348,7 @@ def install(args) -> int:
     wait_for_silence()
 
     report("installing", channel=channel, release=target, backup=backup, message=f"installing {target}")
-    opts = apt_env([target_tag])
+    opts = apt_env(repos)
     inhibit = ["systemd-inhibit", "--what=shutdown:sleep", "--who=gexis-update",
                f"--why=Installing {target}", "--mode=block"]
     steps = [["--no-download", "--allow-change-held-packages", "dist-upgrade"],
@@ -339,7 +361,7 @@ def install(args) -> int:
         verify(target)
     except Stop as failure:
         report("going-back", channel=channel, release=current, message=f"{failure}; putting {current} back")
-        back = apt_env([current_tag], pin_tag=current_tag)
+        back = apt_env(back_repos, back_pins)
         apt(back, "--no-download", "--allow-downgrades", "--allow-change-held-packages",
             "dist-upgrade", prefix=inhibit)
         run("dpkg", "--configure", "-a", check=False)
