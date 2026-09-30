@@ -90,6 +90,17 @@ George's say-so, as every outward step is.
 - The GPL source offer for the OS packages we publish (ADR-0105, to confirm
   before the first public release).
 
+## Open
+
+- **Each release uploads its whole Debian half again**, 876 files, even when
+  not one changed (identical in 852 and 856). The second release in an hour
+  hit GitHub's secondary rate limit; `publish.sh` is now resumable and paced,
+  which makes it work, not cheap. Better: a release whose Debian half is the
+  same as an earlier one's names that earlier half in its channel file. The
+  updater then has to learn each release's repositories from where it was
+  told them, not from the `<tag>-debian` convention - including the release
+  it goes back to - so it is its own change.
+
 ## Unverified
 
 - A full-size release: 1,037 files in two releases, and apt fetching a few
