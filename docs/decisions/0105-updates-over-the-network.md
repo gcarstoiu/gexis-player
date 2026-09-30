@@ -154,6 +154,16 @@ testing"*). A release goes to testing first, which George's devices follow;
 promoting it to stable points stable at the same release; nothing is
 rebuilt. Everyone else follows stable.
 
+**The key, in practice (George, 2026-09-30).** No passphrase: Claude signs
+unattended, so a passphrase would sit on R2D2 beside the key and add nothing;
+R2D2 itself is the protection. **No expiry** (George: *"No expiry"*): a key
+that expires needs the master backup to extend it, and losing every backup
+would then stop updates at the date. **The revocation certificate is printed**
+and kept by George with the master key's backup, off R2D2 (*"I'll print
+it"*). Losing the backup alone changes nothing; losing R2D2's key alone stops
+signed updates until devices are reflashed with a new one; losing both
+while the key is stolen is the case the printed certificate exists for.
+
 **To confirm before the first public release: the source code offer.**
 Publishing Debian's and Raspberry Pi's packages ourselves is redistributing
 them, much of it under the GPL, whose terms ask for the corresponding source
