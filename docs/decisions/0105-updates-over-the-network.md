@@ -151,8 +151,8 @@ first thing step 2 proves, with a test release George approves first.
 
 **Decided: two channels, testing and stable** (George: *"Agree with stable and
 testing"*). A release goes to testing first, which George's devices follow;
-promoting it to stable points stable at the same release, rebuilt from
-nothing. Everyone else follows stable.
+promoting it to stable points stable at the same release; nothing is
+rebuilt. Everyone else follows stable.
 
 **To confirm before the first public release: the source code offer.**
 Publishing Debian's and Raspberry Pi's packages ourselves is redistributing
