@@ -1,0 +1,11 @@
+[Unit]
+Description=Gexis Player: install the release this device's channel names (ADR-0105)
+After=network-online.target
+Wants=network-online.target
+# Not part of gexis-core: an update restarts the core, and must outlive it.
+
+[Service]
+Type=oneshot
+ExecStart=/usr/lib/gexis/gexis-update install
+# An update downloads and installs a whole release; it is never cut short.
+TimeoutStartSec=infinity

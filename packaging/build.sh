@@ -12,7 +12,7 @@ cd "$(dirname "$0")/.."
 # (gexis-player) is the repository as a whole.
 inputs() {
 	case "$1" in
-		core) echo core packaging/core image/stage-gexis/03-core/files ;;
+		core) echo core packaging/core packaging/keys image/stage-gexis/03-core/files ;;
 		ui) echo ui packaging/ui ;;
 		system) echo image/stage-gexis packaging/system ;;
 		skins) echo skins packaging/skins image/stage-gexis/fetch-cached.sh \

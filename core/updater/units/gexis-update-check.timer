@@ -1,0 +1,11 @@
+[Unit]
+Description=Gexis Player: check for a release once a day (ADR-0105)
+
+[Timer]
+OnBootSec=15min
+OnUnitActiveSec=1d
+RandomizedDelaySec=2h
+Persistent=true
+
+[Install]
+WantedBy=timers.target

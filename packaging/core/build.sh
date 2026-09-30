@@ -48,6 +48,17 @@ for plugin in "$F"/plugins/*/; do
 	install -D -m 644 "${plugin}plugin.json" "$STAGE/usr/share/gexis/plugins/$id/plugin.json"
 	[ -f "${plugin}mark.png" ] && install -D -m 644 "${plugin}mark.png" "$STAGE/usr/share/gexis/plugins/$id/mark.png"
 done
+# The updater (ADR-0105 section 4): standalone, on the system's Python, so it
+# outlives the environment it replaces. Its key in both forms: armoured for
+# apt's signed-by, binary for gpgv, which checks the channel file.
+install -D -m 755 /src/core/updater/gexis-update "$STAGE/usr/lib/gexis/gexis-update"
+for unit in gexis-update-check.service gexis-update-check.timer gexis-update-install.service; do
+	install -D -m 644 "/src/core/updater/units/$unit" "$U/$unit"
+done
+install -D -m 644 /src/packaging/keys/gexis-release.asc "$STAGE/usr/share/gexis/keys/gexis-release.asc"
+gpg --dearmor < /src/packaging/keys/gexis-release.asc > "$STAGE/usr/share/gexis/keys/gexis-release.gpg"
+chmod 644 "$STAGE/usr/share/gexis/keys/gexis-release.gpg"
+
 # A default, placed once: setup, a restore and first boot all write this file.
 install -D -m 644 "$F/core.toml" "$STAGE/usr/share/gexis/defaults/core.toml"
 
@@ -82,6 +93,10 @@ if [ -z "$2" ]; then
 		echo "gexis-core: no systemctl here; units not enabled" >&2
 	fi
 fi
+# The daily check only reads the channel and reports (installing is a separate
+# unit, ADR-0105 section 4), so it is on for every device - one updating from
+# a release that had none included, which a first-install-only enable missed.
+if command -v systemctl >/dev/null; then systemctl enable gexis-update-check.timer; fi
 # Restarts are the updater's (the core may be the one running it); only tell
 # a running systemd the unit files changed.
 if [ -d /run/systemd/system ]; then systemctl daemon-reload || true; fi
@@ -94,7 +109,7 @@ Package: gexis-core
 Version: $VERSION
 Architecture: arm64
 Maintainer: Gexis Player <noreply@github.com>
-Depends: python3 (>= $PYV), python3 (<< $NEXT), adduser
+Depends: python3 (>= $PYV), python3 (<< $NEXT), adduser, gpgv
 Section: sound
 Priority: optional
 Description: Gexis Player's core, in its own Python environment

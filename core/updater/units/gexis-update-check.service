@@ -1,0 +1,8 @@
+[Unit]
+Description=Gexis Player: is a release waiting on this device's channel? (ADR-0108)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/lib/gexis/gexis-update check
