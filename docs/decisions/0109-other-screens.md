@@ -129,23 +129,20 @@ found seven things that were George's to settle. His answers:
    - A selector in Visualiser picks the size in use. Its default follows the
      screen: the exact size, or the largest installed set that fits,
      letterboxed.
-   - The selector is proposed for ADR-0022's inventory. Two parts of this are
-     still owed; see *Still owed* below.
+   - The selector is ADR-0022's *Skin size*; see *Settled the same day*.
 9. **Ethernet as a choice (`connection`, `eth_ip`) is struck** from the
    design docs. George: *"strike it. We will need to consider the ethernet
    later."*
 10. **The Network step keeps saving without testing** (IMPLEMENTED-DIFFERENTLY,
     phone steps). *"yes"*.
 
-### Still owed
+### Settled the same day
 
-- **Is 1280 × 800 a plugin too?**
-  - *"All of them"* would mean the image carries no skins.
-  - Recommended: the 1280 × 800 set is a plugin that comes **preinstalled**,
-    so a panel shows meters with no network; it can be removed like any
-    other.
-- **The selector row's wording** for ADR-0022. It is appended only once
-  George confirms it.
+- **1280 × 800 is a plugin too, preinstalled**, so a panel shows meters with
+  no network; it is removed like any other. George: *"Agree"*.
+- **Skin size** is in ADR-0022's inventory: *Match the screen* (default) or
+  any installed set's size; the picker offers only that size's skins.
+  George: *"Agree"*.
 
 ## Not in this record
 
