@@ -96,7 +96,14 @@ fi
 # The daily check only reads the channel and reports (installing is a separate
 # unit, ADR-0105 section 4), so it is on for every device - one updating from
 # a release that had none included, which a first-install-only enable missed.
-if command -v systemctl >/dev/null; then systemctl enable gexis-update-check.timer; fi
+# Started too, on a running system: enabled alone waits for the next boot, and a
+# device that updates rather than reboots had no nightly check (found on
+# sofa-pi, 2026-09-30: enabled, inactive, no next run). A timer starting is
+# harmless - it only schedules.
+if command -v systemctl >/dev/null; then
+	systemctl enable gexis-update-check.timer
+	if [ -d /run/systemd/system ]; then systemctl start gexis-update-check.timer; fi
+fi
 # Restarts are the updater's (the core may be the one running it); only tell
 # a running systemd the unit files changed.
 if [ -d /run/systemd/system ]; then systemctl daemon-reload || true; fi
