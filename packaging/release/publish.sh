@@ -34,6 +34,10 @@ gh_retry() {  # a gh call that waits out a refusal: 5, 10, 15 ... minutes
 	done
 }
 
+exists() {  # whether a release exists - asked once: "no" is an answer, not a refusal
+	gh release view "$1" --repo "$REPO" >/dev/null 2>&1
+}
+
 upload_all() {  # release-tag directory: upload what is not there yet, packages first
 	local rel="$1" dir="$2" have f
 	have=$(gh_retry gh release view "$rel" --repo "$REPO" --json assets --jq '.assets[] | select(.state == "uploaded") | .name')
@@ -75,7 +79,7 @@ Repositories: $parts
 Notes: https://github.com/$REPO/releases/tag/$tag
 EOF
 	gpg --batch --yes -u "$SIGNER" --clearsign -o "$work/$channel" "$work/$channel.txt"
-	gh_retry gh release view channels --repo "$REPO" >/dev/null 2>&1 \
+	exists channels \
 		|| gh_retry gh release create channels --repo "$REPO" --target main --title "Update channels" \
 			--notes "The signed files devices read to find their channel's release (ADR-0108). Not a release of the player."
 	gh_retry gh release upload channels "$work/$channel" --repo "$REPO" --clobber
@@ -115,7 +119,7 @@ version=$(gpg --batch --decrypt "$DEST/parts" 2>/dev/null | sed -n 's/^Release: 
 for part in "$DEST"/repos/*/; do
 	name=$(basename "$part")
 	gpg --batch --verify "$part/InRelease" 2>/dev/null || { echo "ERROR: $name's InRelease does not verify" >&2; exit 1; }
-	gh_retry gh release view "$name" --repo "$REPO" >/dev/null 2>&1 \
+	exists "$name" \
 		|| gh_retry gh release create "$name" --repo "$REPO" --target main --prerelease --latest=false \
 			--title "Part $name" \
 			--notes "A part of Gexis Player releases: a signed apt repository, named by its content (ADR-0108). Shared by every release whose part is the same."
@@ -123,7 +127,7 @@ for part in "$DEST"/repos/*/; do
 done
 
 # The release's page: its notes and its signed list of parts.
-gh_retry gh release view "$tag" --repo "$REPO" >/dev/null 2>&1 \
+exists "$tag" \
 	|| gh_retry gh release create "$tag" --repo "$REPO" --target main --prerelease --latest=false \
 		--title "gexis-player $version" \
 		--notes "Gexis Player $version. Its packages are in the parts its signed parts file lists (ADR-0108)."
