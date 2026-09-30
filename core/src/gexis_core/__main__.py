@@ -2097,6 +2097,12 @@ async def main() -> None:
 
     async def _upload_plugin(archive: bytes) -> dict:
         checked = await asyncio.to_thread(uploads.install, archive, ours=shipped_ids)
+        # **A new version replaces the running one** (found 2026-09-30: the
+        # renderer under test had its test3 installed and test2 went on
+        # running - the unit had been started from the old folder, and
+        # nothing restarted it). Only if switched on: an upload
+        # never starts a plugin.
+        await restart_if_enabled(uploads.unit_for(checked.id, checked.kind))
         asyncio.ensure_future(_restart_core_soon())
         return {"installed": checked.id, "version": checked.version, "kind": checked.kind, "restarting": True}
 
