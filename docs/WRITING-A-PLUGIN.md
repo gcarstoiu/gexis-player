@@ -152,15 +152,17 @@ level meter tapped from it.
 |---|---|---|
 | Your user starts playing | send `{"t": "acquire"}` | Before you open `output`. The core stops whoever had the device first |
 | You stop with nobody taking over | send `{"t": "release"}` | Safe to send any time |
-| Another source takes over | receive `{"t": "release", "id": n}` | Stop playing, **close `output`**, answer `{"t": "ok", "id": n, "result": true}` |
+| Another source takes over | receive `{"t": "release", "id": n}` | Pause - keep your place - **close `output`**, answer `{"t": "ok", "id": n, "result": true}` |
 | The panel's source button | receive `{"t": "activate", "id": n}` | Start playing if you can (then `acquire`), answer `ok` |
 
 Every message from the player carries an `id` and wants **exactly one** answer,
 `ok` or `error`. Answer `true` to the ones you have nothing to do for
 (`device_freed`, `restart_after_release`, `signal_stop`).
 
-**If you do not let go**, the player escalates: SIGTERM, then SIGKILL, on your
-unit, and your unit restarts. Let go promptly and it never needs to.
+**If you do not let go**, the player kills your unit - **every process in it**,
+with SIGKILL - and systemd starts it again 3 s later. The player checks whether
+any of your unit's processes still has the card open, not only the first one,
+so a helper process holding it counts. Let go promptly and it never needs to.
 
 **What the panel shows** comes from `{"t": "metadata", "metadata": {...}}`:
 `title`, `artist`, `album`, `artwork` (a URL), `position` and `duration`
@@ -175,6 +177,35 @@ before you decide how yours behaves.
 `tools/sample-renderer/` is a complete renderer in about a hundred lines of
 Python: it plays a generated tone through `output` when the panel's button is
 pressed, and stops when another source takes over.
+
+### What a real renderer taught us
+
+The first streaming receiver packaged as an uploaded plugin (2026-09-30) took
+six test rounds to hand over cleanly. Each of these cost one:
+
+- **Send `acquire` however playback starts.** A receiver usually has more than
+  one way to start sound - streaming, playing from its own cache, resuming a
+  pause. Ours noticed the first and not the second, so a cached track retried
+  a busy card for six seconds and never asked the player for it.
+- **On `release`, pause; do not stop.** A stop can throw away the position,
+  and the next play starts the track from the beginning. Pause, close the
+  card, and keep your place.
+- **Do not start playing because you were handed the card.** `device_freed`
+  tells you the card is free, not that anyone wants sound. If your controller
+  (a phone app, say) sent you its session paused, starting it anyway leaves the
+  two disagreeing, and the controller's next command - a seek - can put it
+  back to paused. Play when your controller or `activate` says play.
+- **A kill takes all of you.** Receiver and adapter are one unit, so a kill
+  restarts both; the source is gone for about four seconds and comes back
+  without its state. Keep what must survive in `$STATE_DIRECTORY`, and let
+  your controller's session carry the position.
+- **Your caches count against your memory.** 1 GB is everything your unit
+  holds, including in-memory caches. A receiver measured at 380-410 MB before
+  its track cache filled reached 507 MB; a cache allowed 512 MB of its own
+  would take it close to the limit. Size caches for the cap.
+- **Test the handover both ways, from paused and from playing.** Most of the
+  above only showed when the other source took over from a paused session, or
+  when the phone took the music away.
 
 ## 6. Settings
 
