@@ -257,6 +257,20 @@ wired above (ADR-0077).
 | Clock format — `clock_format` | [N] | 24 h / 12 h, for the idle screen's clock. **George, 2026-09-28:** *"Add the clock setting and also put it into the panel settings, not only setup."* The design's Time step drew it with nothing behind it. In Display, under Clock |
 | Playback when the device starts | [H] | **Paused.** George, 2026-09-29, after LMS carried on playing across a restart (*"I was expecting it paused"*; then *"Yes. Agree with your assessment"*). As the device goes down LMS is paused (`gexis-park.service`, George: *"disconnect all renderers upon reboot. It's a fresh start"*); after a power cut, the first start after the boot pauses what the server resumed, once squeezelite has connected. Queue and position kept; a core restart alone does not touch what is playing. Plexamp does not resume by itself (ADR-0091), and Spotify and Bluetooth need a phone to start. Fixed, not a row |
 
+### Appended 2026-09-30 — Phase 13b's rows
+
+Drawn by Claude Design in the 2026-09-30 handoff (`design/source/Settings.dc.html`,
+Display → Panel, the first two rows; `design/BUNDLE-README.md`, Phase 13b) and
+confirmed by George, 2026-09-30: *"add them to the settings inventory. We will
+need them"*. Named apart from the idle screen's *Screen* row and the
+turntables' *Rotation* row. Not built yet: they come with Phase 13b's screen
+recognition.
+
+| Setting | Mark | Notes |
+|---|---|---|
+| Attached screen | [N] | A choice from the list of supported screens (grouped by maker, from `foonerd/pi_screen_setup`'s presets, Finding 100). Sets the layout family (Standard or Bar) and the visualiser's skin set. The same list as setup's Screen step, where a recognised screen is confirmed or another chosen. Applies at the next restart |
+| Screen rotation | [N] | 0° / 90° / 180° / 270°. The two bar screens are portrait panels used sideways (Finding 100). Applies at the next restart |
+
 ## Settled by prior records
 
 - **Output mode switching is not instantaneous.** Confirmation dialogue, and the
