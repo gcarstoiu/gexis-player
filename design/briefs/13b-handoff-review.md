@@ -59,6 +59,13 @@ for Claude Design. Section 3 is ours to fix.
 ## 2. Back to Claude Design
 
 ### Errors
+
+*Fixed on our side, 2026-09-30 (George: "A for standard"):* the home cards
+now take their share of the height but are never shorter than their content,
+and the artist and album columns grow with their pictures. These two
+Standard items need nothing from Claude Design except to take them back into
+the design. Everything else below still stands.
+
 - **The Standard family's height numbers.**
   - 711 is aspect 1.8, not 16:9.
   - 16:9 is **720**, which is George's 13.3″.
