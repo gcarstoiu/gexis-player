@@ -18,7 +18,7 @@ have=$(docker image inspect -f '{{index .Config.Labels "gexis.dockerfile"}}' gex
 	|| docker build --label "gexis.dockerfile=$want" -q --platform linux/arm64 -t gexis-deb-builder -f packaging/builder.Dockerfile packaging
 
 mkdir -p packaging/out
-for pkg in ${*:-core ui}; do
+for pkg in ${*:-core ui system skins peppyalsa peppy-engines go-librespot beszel-agent plexamp player}; do
 	docker run --rm --platform linux/arm64 \
 		-v "$PWD":/src:ro -v "$PWD/packaging/out":/out \
 		-v "${GEXIS_BUILD_CACHE:-$HOME/.cache/gexis-player/downloads}":/cache \
