@@ -140,8 +140,26 @@ the prototype decision 3 asked for:
   (no total or bandwidth limit, 2 GiB a file), but 1,000 files a release is
   fewer than the set's 1,027.
 
-**Decision owed (George): where the tested set lives.** The signing and the
-device side do not change with the answer.
+**Decided (George, 2026-09-30): GitHub Releases** (*"A"*). Each release is
+published as GitHub releases on the public repository - two per release while a
+set exceeds 1,000 files - holding our packages and the whole tested set, with a
+signed index. A device talks only to GitHub; every past release stays
+downloadable, so going back is always possible. About 0.9 GB is uploaded per
+release; a device downloads only what changed. Not yet shown: apt reading a
+repository from a release (behind GitHub's redirect to its storage) - the
+first thing step 2 proves, with a test release George approves first.
+
+**Decided: two channels, testing and stable** (George: *"Agree with stable and
+testing"*). A release goes to testing first, which George's devices follow;
+promoting it to stable points stable at the same release, rebuilt from
+nothing. Everyone else follows stable.
+
+**To confirm before the first public release: the source code offer.**
+Publishing Debian's and Raspberry Pi's packages ourselves is redistributing
+them, much of it under the GPL, whose terms ask for the corresponding source
+to be offered. `SOURCE.md` covers our own code only. Debian and Raspberry Pi
+publish their source packages; whether pointing at them suffices or we mirror
+them too is to be checked, not assumed.
 
 ## Not in this record
 

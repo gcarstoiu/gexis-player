@@ -128,6 +128,16 @@ first builds' `0.0.0+git…`. peppyalsa's build checks the date against its
 clone; the engines' tarballs carry none, so their dates sit beside their pins
 and move with them.
 
+## Skins per screen, when 13b adds them
+
+George, 2026-09-30: *"Once we support other resolutions then we will have
+more files coming from peppy and gelo5 for the different breakpoints."* Skins
+are bitmaps drawn for one resolution (Finding 100): 1280×800 alone is 176 MB.
+With several screen sizes, **one package per skin set** (`gexis-skins-1280x800`,
+`gexis-skins-800x480`, …) lets a device install only its own screen's skins,
+and `gexis-player` names them without forcing all of them. Decided with
+Phase 13b, not here.
+
 ## Unverified
 
 - The core's environment built under qemu at `/opt/gexis-core/venv` and
