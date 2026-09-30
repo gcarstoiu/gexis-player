@@ -1,54 +1,36 @@
 # Handoff
 
-Last updated: 2026-09-28 (twenty-ninth session, on R2D2).
+Last updated: 2026-09-30 (thirtieth session, on R2D2).
 
 ## Start here
 
-> **Done 2026-09-29:** George deleted the withdrawn plugin's public GitHub
-> repository; checked gone (not in the account's list, API "could not
-> resolve", public page 404). The local archive is untouched.
+**Phase 13a (plugins you install and update) is built through criterion 4 on
+`phase-13ac`**, in its own worktree at `~/projects/gexis-player-13a`, and run on
+`sofa-pi` (the second card, 192.168.178.131) with George. Upload from a phone
+with progress and a result, a sandbox under the player's own unit (1 GB,
+enforced - Finding 102), updates that restart a running plugin and keep its
+switch, backups of settings and data, an optional manifest `area`
+(ADR-0086 amended). **Criterion 5 - our own plugins updating from tested
+versions - waits on 13c's repository.** The device runs this branch's core and
+UI by hand; no image has them yet.
 
-**PR #37's image, built from its head (ee6a365):**
+**A real streaming receiver was packaged and uploaded as a test plugin** (local
+only, never on GitHub; its files stay in the local archive). It found five bugs in 13a, all
+fixed; the costly one was the release ladder looking for a template unit's
+processes in the wrong cgroup and answering "free" (LESSONS 47). What a
+renderer author should do differently is in `docs/WRITING-A-PLUGIN.md`,
+*What a real renderer taught us*. `tools/handover-check.py` repeats the
+takeover-and-return check on the device (makes sound; 9 of 9 on 2026-09-30).
+
+**Decided 2026-09-30 (George):** installing or removing a plugin keeps
+restarting the core (ADR-0106); a cast a controller sends paused stays paused;
+the DAC's click on a sample-rate change is recorded and accepted (Finding 103),
+a driver-level mute not investigated.
+
+**Phase 13 (first-boot setup) is merged (PR #37).** Its step-4 narrative is in
+the archive's 2026-09-30 block. Its image:
 `image/deploy/2026-09-29-gexis-player-v0.2.1-789-gee6a365.img`, sha256
-`74dc726c…a045`, 83 `verify-image.sh` checks (the shutdown pause unit among
-them), the core files identical to the commit. It includes the fresh start
-(LMS paused as the device goes down, ADR-0095's 2026-09-29 measurements).
-
-**Phase 13a is under way on `phase-13ac`, in a second worktree at
-`~/projects/gexis-player-13a`** (kept apart so an image build here cannot pick it
-up). Steps 1-3 and `tools/sample-plugin/`: tested on the device (then `sofa-pi`)
-- the sample uploaded, listed, switched on under a temporary user, refused
-everywhere outside its data folder, removed with nothing left. **The upload
-notice's wording is a draft for George.** The device runs 13a's core and UI by
-hand; the image above does not have them.
-
-**Phase 13 (first-boot setup, ADR-0031, ADR-0104) is built through step 3 on
-`phase-13`, PR #37, and every step was run on gexis with George.** The image
-for step 4 is built and verified:
-`image/deploy/2026-09-29-gexis-player-v0.2.1-759-g3d38d11.img`, sha256
-`2d57de1a…7b8b`: it waits up to 20 s for wlan0 after switching the radio on,
-retries a failed start in 15 s, and shows the radio's state with the reason.
-(755-g6eb6439, the radio fix alone, failed the same way on the second blank
-card.) The radio fix is 6eb6439 ( the first blank card, from
-746-g14b1a95, could not raise the setup network - Wi-Fi is rfkill-blocked until
-a country is set, ADR-0104's 2026-09-29 section, LESSONS 46). 81
-`verify-image.sh` checks, the setup modules and the UI
-bundle identical to the branch, no `/var/lib/gexis`, no saved Wi-Fi, no `wlan`
-rfkill state. **George flashes it on a second card** (gexis's own card stays).
-
-**Step 4's card: Option A (George, 2026-09-28).** Only Claude's SSH key goes
-on it, **by hand** into the card's `firstrun.sh` (`SSH_PUBKEY=`, from
-`image/provision.local.env`) - no Wi-Fi, name or time zone. `make provision`
-cannot do that: it writes every field of its env file. The card is left in
-R2D2 after flashing; **identify it with `lsblk` and tell George which device
-before writing anything.** SSH on is the one way the card is not blank; setup
-still sees a new device (no saved Wi-Fi), and the Wi-Fi country stays unset.
-Without the key nothing could be read afterwards: not criterion 4's name, not
-the country.
-
-**Phase 9 criterion 0's revisit: done 2026-09-29, the waiver stands**
-(Finding 101; George: *"really snappy"*, then *"We go with A"*). Settings open is
-the one to watch.
+`74dc726c…a045`, 83 `verify-image.sh` checks.
 
 **Decision owed (George, no hurry):** make `outputs.resolve`'s fallback prefer
 a HAT over the Pi's own outputs. Today a card whose DAC is not the
@@ -58,60 +40,24 @@ DAC but starts on the jack. George asked whether a HiFiBerry/IQaudIO DAC+ would
 be recognised: listed by its own name if its EEPROM identifies it, read from
 the code, never tried.
 
-**Step 4 ran on 2026-09-29** on the second card (now `sofapi4`, 192.168.178.131;
-gexis's own card is out of the Pi). What it found and what was fixed, all on
-`phase-13`, each deployed by hand and run with George:
-- the radio is blocked on a blank card (6eb6439), then a race (3d38d11) -
-  ADR-0104's 2026-09-29 section, LESSONS 46;
-- **a rename left LMS unavailable since Phase 9e** (the core looked for
-  `gexis`) - 84d0985, ADR-0048 amended;
-- George's review: the panel as one step at a time readable from 2 m, "Phone
-  connected" only with a DHCP lease, mobile-data warnings, the last screen
-  with the Lyrion outcome apart, no idle clock or home screen during or at the
-  end of setup, Change from Review returns to Review, the phone page's
-  blurred backdrop, and **Lyrion only on the user's explicit choice** (find /
-  address / off).
-Seen on the last run (18:03): Joining → "SofaPi4 is on H@l" + "Found your
-Lyrion server" → restart, no home screen between; the name in all four places
-after it. **Not yet seen:** image 759's first-try setup network on a blank
-card (the device's radio is long unblocked); the Music step with nothing
-preselected on a new device; the scroll band on the phone (fix 6eaf8bd,
-untested). The next image carries all of it.
-
-Step 4's original plan: an image from `phase-13` on a card flashed with nothing pre-seeded (the
-new-device path: setup network after 15 s, the "Set up gexis" hero, the name
-reaching all four places, the Wi-Fi country on a card that never had one).
-
-| Step | Commits | On gexis |
-|---|---|---|
-| 1. The core decides on setup, holds the setup network, retries every 5 min | 931e4d8 | open in 3.9 s; a phone on it left alone; home Wi-Fi back 3.6 s after the scan |
-| 2. The panel shows the way in: network, password, two QR codes | 44dd4de | George joined and opened the page from both codes |
-| 3. The phone's setup page; the core keeps the answers and applies them | cfa30d0 | wrong password refused in 14 s, setup back 0.7 s later with the reason, page resumed on Network; right password joined in 10 s |
-| After George's review | b0e403c, 8de9e51, 4280626, 96337ff, da803f6 | Continue on Network goes to Review after a failed join; `clock_format` setting (Settings and setup); compact Display tiles; the panel's hero with a large icon (photographed: open, joining, failed); the reason from NM's `Error:` line, not its hint |
-
-**Testing on gexis (no Ethernet):** a file `/run/gexis-setup-trial` with
-`retry=<s>`, then restart `gexis-core`: the core opens the setup network over
-the working Wi-Fi, and its own retry gives the Wi-Fi back once no phone is on.
-Arm a transient guard timer as well (`image/tools/ap-trial.sh` shows the
-shape). Screenshots during a trial: `systemd-run --uid=pi --on-active=N` with
-`XDG_RUNTIME_DIR=/run/user/1000 WAYLAND_DISPLAY=wayland-0 grim`. **A trial that
-finishes setup leaves a profile named after the network and `setup-done`;
-remove both** (done after each run today).
-
-**Not tested yet:** the new-device path and its hero; a rename (restarts the
-device); changed time zone, output or Headless through setup; hidden and open
-networks; Ethernet; the page on an iPhone. The phone page was seen by George
-only, not photographed.
+**Phase 9 criterion 0's revisit: done 2026-09-29, the waiver stands**
+(Finding 101; George: *"really snappy"*, then *"We go with A"*).
 
 ### Branches and PRs
 
 | Branch | State | What is on it |
 |---|---|---|
-| `main` | 66d931e | Everything to PR #36: Phase 12/12b, the phone mini player and grim (PR #35), Debug logs (PR #36, ADR-0103) |
-| `phase-13` | ahead of `main`, pushed | ADR-0031 amended; ADR-0104; Finding 099; `ap-trial.sh`; Phase 13 steps 1-3 and George's review (above); ADR-0022 rows: Run setup again [N], thresholds [H], Wi-Fi country [H], clock format [N] |
+| `main` | f073fc2 | Everything to PR #37 (Phase 13, first-boot setup), and the design and brief PRs #38-#40 |
+| `phase-13ac` | ahead of `main`, PR open | ADR-0105 and ADR-0106 accepted; Phase 13a criteria 1-4; ADR-0086 amended (`area`); Findings 102, 103; LESSONS 47; `docs/WRITING-A-PLUGIN.md`; `tools/sample-plugin`, `tools/sample-renderer`, `tools/handover-check.py`; the Spotify resume fix |
 
 ### gexis
 
+- **Its own card is out of the Pi.** The Pi runs the second card as
+  `sofa-pi` (192.168.178.131), with `phase-13ac`'s core and UI by hand, the
+  memory controller on (`cgroup_enable=memory` added to `cmdline.txt` by hand,
+  the original kept as `cmdline.txt.before-memcg`), the test plugin and the
+  sample `tone` renderer (off). gexis's card needs a reflash and restore
+  before it goes back. What follows is gexis's card as it was left.
 - Flashed 2026-09-28 with `image/deploy/2026-09-28-gexis-player-v0.2.1-730-g66d931e.img`
   (sha256 `942d8582…eb79`, 80 `verify-image.sh` checks pass), provisioned, and
   George's backup restored. **Restore, then download worked**: Plexamp was
@@ -128,8 +74,9 @@ only, not photographed.
 
 ### Decided, not started
 
-- **Phase 13a, plugins you install and update** (George, 2026-09-28: a phase
-  set before themes). Criteria in DEVELOPMENT.md. Its ADR comes first.
+- **Phase 13c, updates over the network** (ADR-0105 accepted). 13a's
+  criterion 5 rides on its repository. Then **13b, other screens**, waiting on
+  Claude Design (`design/briefs/13b-screen-families.md`).
 - **Settings as an installed app: not now** (ADR-0102). The HTTPS routes are
   kept there for later.
 
@@ -143,10 +90,9 @@ only, not photographed.
 - **Bluetooth "Not provided", once**, 2026-09-26 22:08: `MediaPlayer1` appeared and
   no track information ever followed. George could not reproduce it the next
   morning and suspects the phone's battery saver. Not explained.
-- **A paused Spotify is not an acquisition after a core restart**, and a later
-  resume sends no `active` - so the core does not know Spotify took the device.
-  Needs a restart during a pause to happen. Seen, not fixed. **George,
-  2026-09-28: recorded, no action; he will watch for it in normal use.**
+- ~~A paused Spotify is not an acquisition after a core restart~~ - **fixed
+  2026-09-30** on `phase-13ac`: George hit it (a plugin upload restarts the
+  core), it was reproduced on `sofa-pi`, and `playing` now acquires.
 - **The Restore row reads "4 paired"** (seen 2026-09-28): a list row's count is
   labelled "paired", Bluetooth's word, for backups too. Cosmetic, not fixed.
 - **A phone that opens `/` posts `/panel/painted`** (seen in Finding 099's

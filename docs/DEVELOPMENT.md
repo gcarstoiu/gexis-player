@@ -2559,7 +2559,15 @@ ours. Updates were decided the same day (option B: *"we need to check them
 before allowing an update"*). **[ADR-0106](decisions/0106-plugins-you-install-and-update.md)
 accepted 2026-09-29**: ours update with the release; uploads are a checked
 `.tar.gz`, run under a unit the player writes with a temporary user per run and
-the network open. The upload notice's wording is still George's to approve.
+the network open. The upload notice is George's own wording (2026-09-29).
+
+**Status 2026-09-30: criteria 1-4 built on `phase-13ac` and run on the device
+with George; criterion 5 waits on Phase 13c's repository.** Tested with the
+sample service and renderer (`tools/`) and with a real streaming receiver
+packaged as an uploaded plugin, which found five bugs in 13a (all fixed;
+LESSONS 47) and gave the guide its *What a real renderer taught us*. Memory is
+capped at 1 GB and enforced (Finding 102). Added on the way: upload progress
+and result, a manifest `area` (ADR-0086 amended), `tools/handover-check.py`.
 
 **Acceptance**
 
