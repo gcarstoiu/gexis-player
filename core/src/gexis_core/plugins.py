@@ -33,6 +33,18 @@ DEFAULT_DIR = Path("/usr/share/gexis/plugins")
 ID = re.compile(r"^[a-z][a-z0-9-]{1,30}$")
 
 KINDS = ("renderer", "service")
+#: **Where a plugin's rows go in Settings** (George, 2026-09-30: "Let's add
+#: it. It would keep things organised"): a Settings page, as its name reads,
+#: to the registry's id for it. Optional in a manifest; absent, the kind
+#: decides, as it always did - a renderer in Sources, a service in System.
+AREAS = {
+    "audio": "audio", "sources": "sources", "handoff": "handoff",
+    "display": "display", "enrichment": "enrich", "device": "device", "system": "system",
+}
+
+
+def default_area(kind: str) -> str:
+    return "sources" if kind == "renderer" else "system"
 
 #: What a row's `env` may be named (ADR-0088). Duplicated from
 #: `plugin_env.NAME` deliberately: importing it here would make the manifest
@@ -50,6 +62,8 @@ class Plugin:
     name: str
     kind: str
     unit: str
+    #: The registry id of the Settings page its rows go to (`AREAS`).
+    area: str = ""
     #: The moOde-compatible status line (`metadata_file.py`). Absent means the
     #: file says nothing for this renderer, which is what it did before any of
     #: this existed.
@@ -78,6 +92,9 @@ class Plugin:
     #: True for the three this repository ships. They are not special in how
     #: they are read - only in who wrote them.
     built_in: bool = False
+    #: **ADR-0106: uploaded by the user**, not part of Gexis Player. Run under
+    #: the player's own sandboxed unit; the screen tags it so.
+    uploaded: bool = False
 
     def to_json(self) -> dict:
         """What the panel needs to draw this source without knowing it."""
@@ -119,6 +136,9 @@ def parse(raw: dict, *, directory: Path | None = None, built_in: bool = False) -
         raise BadManifest(f"{raw['id']!r} is not a usable id")
     if raw["kind"] not in KINDS:
         raise BadManifest(f"{raw['kind']!r} is not one of {KINDS}")
+    area = raw.get("area")
+    if area is not None and area not in AREAS:
+        raise BadManifest(f"{area!r} is not one of {tuple(AREAS)}")
     settings = raw.get("settings") or []
     if not isinstance(settings, list) or any(not isinstance(r, dict) for r in settings):
         raise BadManifest("settings must be a list of rows")
@@ -139,6 +159,7 @@ def parse(raw: dict, *, directory: Path | None = None, built_in: bool = False) -
         name=raw["name"],
         kind=raw["kind"],
         unit=raw["unit"],
+        area=AREAS[area] if area is not None else default_area(raw["kind"]),
         label=raw.get("label"),
         enabled_row=raw.get("enabled_row"),
         accent=raw.get("accent"),

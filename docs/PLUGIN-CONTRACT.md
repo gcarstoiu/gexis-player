@@ -213,7 +213,11 @@ Each carries an `id`; the plugin answers exactly once:
 ### A plugin's own settings
 
 A manifest may carry `settings`, and those rows are merged into the registry
-(ADR-0086). **Their keys are prefixed with the plugin's id** — a plugin
+(ADR-0086), on the Settings page its optional **`area`** names - `audio`,
+`sources`, `handoff`, `display`, `enrichment`, `device` or `system`; absent,
+`renderer` → Sources and `service` → System (ADR-0086 as amended 2026-09-30).
+Its switch sits under the same heading on the Plugins page. `area` places a
+plugin; it grants nothing. **Their keys are prefixed with the plugin's id** — a plugin
 declaring `enabled` is stored as `plexamp.enabled` — because two plugins
 shipping the same obvious key would otherwise collide and the second would be
 refused. On the wire the prefix is not used: a plugin says and hears its own
@@ -288,7 +292,11 @@ configuration from the environment like most daemons do.
   `/usr/share/gexis/plugins/<id>/`, and its id must match one before it may
   connect. Connecting says a plugin is *running*, not that it exists.
 
-  **What is still open is who puts it there.** Every plugin so far arrives in
+  **Who puts it there is answered for uploads** by
+  [ADR-0106](decisions/0106-plugins-you-install-and-update.md): a user uploads a
+  package from a phone, and it runs under a unit the player writes, in a
+  sandbox. [WRITING-A-PLUGIN.md](WRITING-A-PLUGIN.md) is the guide. What follows
+  is the record as it stood before: **what is still open is who puts it there.** Every plugin so far arrives in
   the image ([ADR-0087](decisions/0087-the-beszel-agent-is-the-first-service-plugin.md),
   George's call), and nothing installs one on a running device: that needs a
   writable plugin directory, a checksummed download and a rule about who may

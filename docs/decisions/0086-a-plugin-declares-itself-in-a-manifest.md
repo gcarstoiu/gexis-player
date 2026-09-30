@@ -2,6 +2,8 @@
 
 **Status:** Accepted, **amended the same day** — every plugin gets an
 `Enabled` switch, which is the gap a Beszel agent found. See *Amendment*.
+**Amended 2026-09-30:** an optional `area` names the Settings page a plugin
+belongs on. See *Amendment, 2026-09-30*.
 **Date:** 2026-09-25
 **Relates to:** [ADR-0016](0016-plugins-as-separate-processes.md) (separate
 processes; lifecycle left open), [ADR-0084](0084-plugins-speak-json-lines-over-a-unix-socket.md)
@@ -183,3 +185,32 @@ heard of without being edited"*. That was not true. It required every screen
 drawing a mark to have been edited to pass one, and two of the three had not
 been. The claim is true now because the lookup lives in the one component that
 draws marks.
+
+## Amendment, 2026-09-30 — a plugin says which Settings page it belongs on
+
+**The kind was deciding two things.** `kind` says what a plugin *does* - a
+renderer takes part in arbitration and gets the sound card, a service does
+neither - and it also decided *where it appears*: a renderer's rows under
+Sources, a service's under System, and its switch under the same heading on
+the Plugins page. A lyrics or artwork plugin is a service and belongs under
+Enrichment; a screen dimmer belongs under Display. With only `kind`, both land
+in System.
+
+George asked (2026-09-30) whether a manifest must announce its type - device,
+system, enrichment, display, source audio, handoff - and, offered an optional
+field: *"Let's add it. It would keep things organised."*
+
+**Decision.** A manifest may carry **`area`**, one of the Settings pages:
+`audio`, `sources`, `handoff`, `display`, `enrichment`, `device`, `system`.
+
+- **Optional.** Absent, the kind decides as before: `renderer` → Sources,
+  `service` → System. No manifest in the tree changes.
+- **It decides placement only.** The plugin's own rows go to that page under
+  its name, and its switch under that page's heading on the Plugins page.
+  `kind` still alone decides behaviour: an `area: "audio"` service gets no
+  sound card.
+- **Anything else is refused** at load and at upload, with the list, so a typo
+  is heard rather than filed under System. `plugins` is not an area: that page
+  holds switches, not settings.
+- **A restored plugin waiting for its package** keeps its area in
+  `plugins-known.json`, so its row sits where the plugin will.

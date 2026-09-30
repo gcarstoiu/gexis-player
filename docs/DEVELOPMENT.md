@@ -2556,7 +2556,18 @@ card's radio had been unblocked.
 before themes"*. The upload question arose when a plugin's author stopped
 publishing binaries: what a user builds and uploads is their choice, not
 ours. Updates were decided the same day (option B: *"we need to check them
-before allowing an update"*). **Its ADR comes first.**
+before allowing an update"*). **[ADR-0106](decisions/0106-plugins-you-install-and-update.md)
+accepted 2026-09-29**: ours update with the release; uploads are a checked
+`.tar.gz`, run under a unit the player writes with a temporary user per run and
+the network open. The upload notice is George's own wording (2026-09-29).
+
+**Status 2026-09-30: criteria 1-4 built on `phase-13ac` and run on the device
+with George; criterion 5 waits on Phase 13c's repository.** Tested with the
+sample service and renderer (`tools/`) and with a real streaming receiver
+packaged as an uploaded plugin, which found five bugs in 13a (all fixed;
+LESSONS 47) and gave the guide its *What a real renderer taught us*. Memory is
+capped at 1 GB and enforced (Finding 102). Added on the way: upload progress
+and result, a manifest `area` (ADR-0086 amended), `tools/handover-check.py`.
 
 **Acceptance**
 
@@ -2654,8 +2665,10 @@ partitions, a signed repository we host, settings kept on the writable root,
 known checksum, each build recording what it pinned. ADR-0021 left the
 repository *"not specified"* and deferred archive snapshot pinning (its Q3).
 Today the only trace is the `updates` row (Manual / Automatic), unsurfaced and
-unwired. **Its ADR comes first**, settling the two questions below marked
-*decide*.
+unwired. **[ADR-0105](decisions/0105-updates-over-the-network.md) accepted
+2026-09-29** with George's answers: the signing key on R2D2, a tested set of OS
+packages (measured in a prototype first), the safety set without A/B, Manual by
+default. The criteria below are read through it.
 
 **Acceptance (draft)**
 

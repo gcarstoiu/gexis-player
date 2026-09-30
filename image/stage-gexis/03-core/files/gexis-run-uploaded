@@ -1,0 +1,18 @@
+#!/usr/bin/python3
+# SPDX-License-Identifier: GPL-3.0-or-later
+"""Start an uploaded plugin (ADR-0106): the command its manifest names,
+from inside its own package, under the unit the player wrote. Runs as the
+unit's temporary user, so it can read the package and nothing it should not."""
+import json
+import os
+import sys
+
+plugin_id = sys.argv[1]
+home = os.path.join("/var/lib/gexis/plugins", plugin_id, "current")
+with open(os.path.join(home, "plugin.json")) as f:
+    run = json.load(f)["run"]
+command = os.path.realpath(os.path.join(home, run))
+if not command.startswith(os.path.realpath(home) + os.sep):
+    sys.exit(f"gexis-run-uploaded: {run!r} is outside {plugin_id}'s package")
+os.chdir(os.path.realpath(home))
+os.execv(command, [command])

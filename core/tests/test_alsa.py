@@ -89,6 +89,47 @@ def test_the_units_own_descriptors_answer_without_fuser(pcm_node, tmp_path, monk
     assert alsa.device_held_by("plexamp.service") is False
 
 
+def test_a_template_instance_is_found_in_its_own_slice(pcm_node, tmp_path, monkeypatch):
+    """Found 2026-09-30: an uploaded renderer's receiver held the card, the
+    core looked in `system.slice/<unit>` - which does not exist for a template
+    instance - and asked the launcher script instead. Spotify then found the
+    card busy."""
+    unit = "gexis-uploaded-renderer@radiofoo.service"
+    assert alsa.unit_cgroup(unit) == (
+        "system.slice/system-gexis\\x2duploaded\\x2drenderer.slice/" + unit)
+    procs = tmp_path / "cg" / alsa.unit_cgroup(unit) / "cgroup.procs"
+    procs.parent.mkdir(parents=True)
+    procs.write_text(f"{os.getpid()}\n")
+    monkeypatch.setattr(alsa, "CGROUP_ROOT", tmp_path / "cg")
+    with open(pcm_node):
+        assert alsa.device_held_by(unit) is True
+    assert alsa.device_held_by(unit) is False
+
+
+def test_a_running_unit_whose_cgroup_is_missing_is_said_once(pcm_node, tmp_path, monkeypatch, caplog):
+    """LESSONS 47: the fallback answered "free" for two days without a word."""
+    (tmp_path / "cg").mkdir()
+    monkeypatch.setattr(alsa, "CGROUP_ROOT", tmp_path / "cg")
+    monkeypatch.setattr(alsa, "_unfound", set())
+    monkeypatch.setattr(alsa, "_unit_main_pid", lambda unit: 4242)
+    monkeypatch.setattr(subprocess, "run", lambda *a, **kw: subprocess.CompletedProcess(a, 0, "", ""))
+    with caplog.at_level("WARNING", logger="gexis_core.alsa"):
+        assert alsa.device_held_by("somewhere-else.service") is False
+        assert alsa.device_held_by("somewhere-else.service") is False
+    warned = [r for r in caplog.records if "no cgroup for running" in r.getMessage()]
+    assert len(warned) == 1, "once per unit, not per poll"
+
+
+def test_a_stopped_unit_is_not_warned_about(pcm_node, tmp_path, monkeypatch, caplog):
+    (tmp_path / "cg").mkdir()
+    monkeypatch.setattr(alsa, "CGROUP_ROOT", tmp_path / "cg")
+    monkeypatch.setattr(alsa, "_unfound", set())
+    monkeypatch.setattr(alsa, "_unit_main_pid", lambda unit: None)
+    with caplog.at_level("WARNING", logger="gexis_core.alsa"):
+        assert alsa.device_held_by("stopped.service") is False
+    assert not caplog.records
+
+
 def test_another_units_hold_is_not_this_ones(pcm_node, tmp_path, monkeypatch):
     """Same question as the `fuser` test below: the incoming renderer may
     already hold the device while the outgoing one's ladder is checking."""

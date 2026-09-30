@@ -30,6 +30,11 @@ def _device(root):
     (root / "var/lib/beszel-agent/fingerprint").write_text("ec4c41e0")
     (root / "home/pi/.local/share/Plexamp/Settings").mkdir(parents=True)
     (root / "home/pi/.local/share/Plexamp/Settings/%40Plexamp%3Auser%3Atoken").write_text("Stoken")
+    # ADR-0106: an uploaded plugin's data and the list of them.
+    (root / "var/lib/private/gexis-uploaded/radiofoo").mkdir(parents=True)
+    (root / "var/lib/private/gexis-uploaded/radiofoo/state").write_text("learned")
+    (root / "var/lib/gexis").mkdir(parents=True, exist_ok=True)
+    (root / "var/lib/gexis/plugins-known.json").write_text('{"radiofoo": {"version": "1.0.0"}}')
     return root
 
 

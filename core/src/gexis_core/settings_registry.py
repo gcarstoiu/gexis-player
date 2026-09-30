@@ -327,7 +327,7 @@ class Settings:
     own default."""
 
     @staticmethod
-    def with_plugins(registry: list[dict], plugins, downloads=None) -> list[dict]:
+    def with_plugins(registry: list[dict], plugins, downloads=None, missing=()) -> list[dict]:
         """**A plugin's rows, merged into the registry** (ADR-0086).
 
         **Two places, and the split is George's** (2026-09-25): *"create the
@@ -361,14 +361,20 @@ class Settings:
         by_id = {g.get("id"): g for g in merged}
         #: **The Plugins page, sorted by where each plugin works** (George,
         #: 2026-09-27: "Let's group the plugins based on the area they operate
-        #: in - i.e. beszel is system, plexamp in sources"). Its kind decides
-        #: it, the same way it decides where the plugin's own settings go.
-        by_area: dict[str, list[dict]] = {"sources": [], "system": []}
+        #: in - i.e. beszel is system, plexamp in sources"). Its `area`
+        #: decides it (George, 2026-09-30), the same one that decides where
+        #: the plugin's own settings go; absent, its kind does.
+        by_area: dict[str, list[dict]] = {}
+
+        def area_of(kind, area=None) -> str:
+            area = area or ("sources" if kind == "renderer" else "system")
+            return area if area in by_id and area != "plugins" else ("sources" if kind == "renderer" else "system")
         for plugin in plugins:
             if not plugin.settings and plugin.enabled_row is not None:
                 # Nothing to add: its rows are the registry's already.
                 continue
-            target = by_id.get("sources" if plugin.kind == "renderer" else "system")
+            area = area_of(plugin.kind, getattr(plugin, "area", None))
+            target = by_id.get(area)
             if target is None:
                 continue
             switch_group = by_id.get("plugins")
@@ -392,6 +398,11 @@ class Settings:
                 if getattr(plugin, "notice", None):
                     # ADR-0098: read and confirmed before it turns on.
                     switches[-1]["warn"] = plugin.notice
+                if getattr(plugin, "uploaded", False):
+                    # ADR-0106: an upload arrives off, and says what it is.
+                    switches[-1]["default"] = False
+                    switches[-1]["uploaded"] = True
+                    switches[-1]["note"] = "Uploaded. Not part of Gexis Player; it runs at your own risk."
             # **ADR-0100 as amended: a plugin that downloads its software says
             # so on its own switch** - where it is from, how far along it is,
             # and Retry when it failed, all inside the row (George, 2026-09-27:
@@ -477,15 +488,25 @@ class Settings:
                 logger.warning("plugins: %s's settings are not usable: %s", plugin.id, exc)
                 continue
             if switch_group is not None:
-                by_area["sources" if plugin.kind == "renderer" else "system"].extend(switches)
+                by_area.setdefault(area, []).extend(switches)
             target["rows"].extend(rows)
+        # **ADR-0106: uploaded plugins a restore brought back without their
+        # package.** Not plugins - nothing runs, nothing is switched - only a
+        # row saying what to upload again, under its kind.
+        for gone in missing:
+            by_area.setdefault(area_of(gone.get("kind"), gone.get("area")), []).append({
+                "key": f"{gone['id']}.missing", "type": "readonly", "label": gone.get("name", gone["id"]),
+                "default": "Upload again", "uploaded": True,
+                "note": f"Restored from a backup. Upload version {gone.get('version', '?')} again "
+                        "to use it; its settings and data are waiting.",
+            })
         switch_group = by_id.get("plugins")
         if switch_group is not None:
             accent = switch_group.get("accent")
-            for area, label in (("sources", "Sources"), ("system", "System")):
-                if by_area[area]:
-                    switch_group["rows"].append({"type": "group", "label": label, "accent": accent})
-                    switch_group["rows"].extend(by_area[area])
+            for group in merged:
+                if by_area.get(group.get("id")):
+                    switch_group["rows"].append({"type": "group", "label": group["label"], "accent": accent})
+                    switch_group["rows"].extend(by_area[group["id"]])
         return merged
 
     def __init__(

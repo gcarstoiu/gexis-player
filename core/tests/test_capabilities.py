@@ -81,11 +81,13 @@ def test_lms_declares_full_metadata_support():
     assert LmsAdapter.capabilities.supports_sample_rate is True
 
 
-def test_spotify_declares_both_of_its_acquisition_events():
+def test_spotify_declares_its_acquisition_events():
     # Finding 010/014: "will_play" is needed alongside "active" because
     # "active" can arrive too late (or never) when the ALSA open races
     # another renderer's release.
-    assert SpotifyAdapter.capabilities.acquisition_events == frozenset({"active", "will_play"})
+    # 2026-09-30: and "playing", a resume after the core started - otherwise
+    # nothing tells the core a paused session took the card back.
+    assert SpotifyAdapter.capabilities.acquisition_events == frozenset({"active", "will_play", "playing"})
 
 
 def test_spotify_declares_full_metadata_support():

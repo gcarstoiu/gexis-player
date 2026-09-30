@@ -5316,3 +5316,110 @@ it. The withdrawn plugin's work is kept locally only; the pointer is in
   2026-09-27 block: the Squeeze Plex Hub route (decision 2), the timeline-poll
   lead, cross-rate gaps, Plex lyrics.
 
+## From HANDOFF.md, 2026-09-30 — Phase 13 (first-boot setup), step 4 and George's review; merged as PR #37
+
+# Handoff
+
+Last updated: 2026-09-28 (twenty-ninth session, on R2D2).
+
+## Start here
+
+> **Done 2026-09-29:** George deleted the withdrawn plugin's public GitHub
+> repository; checked gone (not in the account's list, API "could not
+> resolve", public page 404). The local archive is untouched.
+
+**PR #37's image, built from its head (ee6a365):**
+`image/deploy/2026-09-29-gexis-player-v0.2.1-789-gee6a365.img`, sha256
+`74dc726c…a045`, 83 `verify-image.sh` checks (the shutdown pause unit among
+them), the core files identical to the commit. It includes the fresh start
+(LMS paused as the device goes down, ADR-0095's 2026-09-29 measurements).
+
+**Phase 13a is under way on `phase-13ac`, in a second worktree at
+`~/projects/gexis-player-13a`** (kept apart so an image build here cannot pick it
+up). Steps 1-3 and `tools/sample-plugin/`: tested on the device (then `sofa-pi`)
+- the sample uploaded, listed, switched on under a temporary user, refused
+everywhere outside its data folder, removed with nothing left. **The upload
+notice's wording is a draft for George.** The device runs 13a's core and UI by
+hand; the image above does not have them.
+
+
+**Phase 13 (first-boot setup, ADR-0031, ADR-0104) is built through step 3 on
+`phase-13`, PR #37, and every step was run on gexis with George.** The image
+for step 4 is built and verified:
+`image/deploy/2026-09-29-gexis-player-v0.2.1-759-g3d38d11.img`, sha256
+`2d57de1a…7b8b`: it waits up to 20 s for wlan0 after switching the radio on,
+retries a failed start in 15 s, and shows the radio's state with the reason.
+(755-g6eb6439, the radio fix alone, failed the same way on the second blank
+card.) The radio fix is 6eb6439 ( the first blank card, from
+746-g14b1a95, could not raise the setup network - Wi-Fi is rfkill-blocked until
+a country is set, ADR-0104's 2026-09-29 section, LESSONS 46). 81
+`verify-image.sh` checks, the setup modules and the UI
+bundle identical to the branch, no `/var/lib/gexis`, no saved Wi-Fi, no `wlan`
+rfkill state. **George flashes it on a second card** (gexis's own card stays).
+
+**Step 4's card: Option A (George, 2026-09-28).** Only Claude's SSH key goes
+on it, **by hand** into the card's `firstrun.sh` (`SSH_PUBKEY=`, from
+`image/provision.local.env`) - no Wi-Fi, name or time zone. `make provision`
+cannot do that: it writes every field of its env file. The card is left in
+R2D2 after flashing; **identify it with `lsblk` and tell George which device
+before writing anything.** SSH on is the one way the card is not blank; setup
+still sees a new device (no saved Wi-Fi), and the Wi-Fi country stays unset.
+Without the key nothing could be read afterwards: not criterion 4's name, not
+the country.
+
+**Phase 9 criterion 0's revisit: done 2026-09-29, the waiver stands**
+(Finding 101; George: *"really snappy"*, then *"We go with A"*). Settings open is
+the one to watch.
+
+**Decision owed (George, no hurry):** make `outputs.resolve`'s fallback prefer
+a HAT over the Pi's own outputs. Today a card whose DAC is not the
+`sndrpihifiberry` the shipped `output.conf` names falls back to the first output
+with a volume control, likely the headphone jack; setup's Output step lists the
+DAC but starts on the jack. George asked whether a HiFiBerry/IQaudIO DAC+ would
+be recognised: listed by its own name if its EEPROM identifies it, read from
+the code, never tried.
+
+**Step 4 ran on 2026-09-29** on the second card (now `sofapi4`, 192.168.178.131;
+gexis's own card is out of the Pi). What it found and what was fixed, all on
+`phase-13`, each deployed by hand and run with George:
+- the radio is blocked on a blank card (6eb6439), then a race (3d38d11) -
+  ADR-0104's 2026-09-29 section, LESSONS 46;
+- **a rename left LMS unavailable since Phase 9e** (the core looked for
+  `gexis`) - 84d0985, ADR-0048 amended;
+- George's review: the panel as one step at a time readable from 2 m, "Phone
+  connected" only with a DHCP lease, mobile-data warnings, the last screen
+  with the Lyrion outcome apart, no idle clock or home screen during or at the
+  end of setup, Change from Review returns to Review, the phone page's
+  blurred backdrop, and **Lyrion only on the user's explicit choice** (find /
+  address / off).
+Seen on the last run (18:03): Joining → "SofaPi4 is on H@l" + "Found your
+Lyrion server" → restart, no home screen between; the name in all four places
+after it. **Not yet seen:** image 759's first-try setup network on a blank
+card (the device's radio is long unblocked); the Music step with nothing
+preselected on a new device; the scroll band on the phone (fix 6eaf8bd,
+untested). The next image carries all of it.
+
+Step 4's original plan: an image from `phase-13` on a card flashed with nothing pre-seeded (the
+new-device path: setup network after 15 s, the "Set up gexis" hero, the name
+reaching all four places, the Wi-Fi country on a card that never had one).
+
+| Step | Commits | On gexis |
+|---|---|---|
+| 1. The core decides on setup, holds the setup network, retries every 5 min | 931e4d8 | open in 3.9 s; a phone on it left alone; home Wi-Fi back 3.6 s after the scan |
+| 2. The panel shows the way in: network, password, two QR codes | 44dd4de | George joined and opened the page from both codes |
+| 3. The phone's setup page; the core keeps the answers and applies them | cfa30d0 | wrong password refused in 14 s, setup back 0.7 s later with the reason, page resumed on Network; right password joined in 10 s |
+| After George's review | b0e403c, 8de9e51, 4280626, 96337ff, da803f6 | Continue on Network goes to Review after a failed join; `clock_format` setting (Settings and setup); compact Display tiles; the panel's hero with a large icon (photographed: open, joining, failed); the reason from NM's `Error:` line, not its hint |
+
+**Testing on gexis (no Ethernet):** a file `/run/gexis-setup-trial` with
+`retry=<s>`, then restart `gexis-core`: the core opens the setup network over
+the working Wi-Fi, and its own retry gives the Wi-Fi back once no phone is on.
+Arm a transient guard timer as well (`image/tools/ap-trial.sh` shows the
+shape). Screenshots during a trial: `systemd-run --uid=pi --on-active=N` with
+`XDG_RUNTIME_DIR=/run/user/1000 WAYLAND_DISPLAY=wayland-0 grim`. **A trial that
+finishes setup leaves a profile named after the network and `setup-done`;
+remove both** (done after each run today).
+
+**Not tested yet:** the new-device path and its hero; a rename (restarts the
+device); changed time zone, output or Headless through setup; hidden and open
+networks; Ethernet; the page on an iPhone. The phone page was seen by George
+only, not photographed.

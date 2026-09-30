@@ -1,0 +1,7 @@
+{
+  "id": "hello",
+  "name": "Hello (sample)",
+  "kind": "service",
+  "version": "0.1.0",
+  "run": "hello.py"
+}

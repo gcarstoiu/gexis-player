@@ -1,0 +1,8 @@
+{
+  "id": "tone",
+  "name": "Tone (sample)",
+  "kind": "renderer",
+  "version": "0.1.0",
+  "run": "tone.py",
+  "status": "Press to play a tone"
+}

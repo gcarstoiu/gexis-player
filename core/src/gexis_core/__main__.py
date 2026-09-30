@@ -69,7 +69,7 @@ from gexis_core.settings import SettingsStore
 from gexis_core.settings_registry import Settings, load_registry
 from gexis_core.splash import Splash
 from gexis_core.state import StateStore
-from gexis_core import backups, bluealsa_volume, components, outputs, plugin_env, plugins
+from gexis_core import backups, bluealsa_volume, components, outputs, plugin_env, plugins, uploads
 from gexis_core.setup_network import SetupNetwork
 from gexis_core.setup_flow import SetupFlow
 from gexis_core.adapters.plugin import PluginAdapter
@@ -329,7 +329,20 @@ async def main() -> None:
     # **ADR-0086: every source describes itself in a manifest**, the three
     # built-ins included, so the panel's generic path is the one exercised on
     # every boot rather than a fallback nothing runs.
-    installed_plugins = plugins.installed()
+    shipped_plugins = plugins.installed()
+    # ADR-0106: what the user uploaded, beside what the player ships. An
+    # uploaded id can never shadow one of ours; the check refuses it at
+    # upload, and this refuses it again if one was placed by hand.
+    shipped_ids = {p.id for p in shipped_plugins}
+    installed_plugins = shipped_plugins + [p for p in uploads.installed() if p.id not in shipped_ids]
+    # ADR-0106: what backups need to know, kept current at every start.
+    try:
+        uploads.remember()
+    except OSError as exc:
+        logger.warning("uploads: cannot record the uploaded plugins: %s", exc)
+    restored_missing = [m for m in uploads.missing() if m["id"] not in shipped_ids]
+    if restored_missing:
+        logger.info("uploads: restored without a package: %s", ", ".join(m["id"] for m in restored_missing))
     if installed_plugins:
         logger.info(
             "plugins: %s", ", ".join(f"{p.id} ({p.kind})" for p in installed_plugins)
@@ -1295,7 +1308,8 @@ async def main() -> None:
 
     settings = Settings(
         settings_store,
-        registry=Settings.with_plugins(load_registry(), installed_plugins, downloads),
+        registry=Settings.with_plugins(load_registry(), installed_plugins, downloads,
+                                       missing=restored_missing),
         defaults={
             "lms_server": lambda: f"{config.lms_host}:{config.lms_port}",
             "lms_player": lambda: lms_player_name,
@@ -2074,6 +2088,54 @@ async def main() -> None:
     if renderer_enabled("lms"):
         asyncio.ensure_future(_check_lms_volume_control())
 
+    async def _restart_core_soon() -> None:
+        """The plugin list and its settings rows are read at start, so a
+        plugin arriving or leaving restarts the core - after the answer has
+        gone back, as a restore does (ADR-0083)."""
+        await asyncio.sleep(1.5)
+        await asyncio.create_subprocess_exec("systemctl", "restart", "gexis-core")
+
+    async def _upload_plugin(archive: bytes) -> dict:
+        checked = await asyncio.to_thread(uploads.install, archive, ours=shipped_ids)
+        # **A new version replaces the running one** (found 2026-09-30: the
+        # renderer under test had its test3 installed and test2 went on
+        # running - the unit had been started from the old folder, and
+        # nothing restarted it). Only if switched on: an upload
+        # never starts a plugin.
+        unit = uploads.unit_for(checked.id, checked.kind)
+        await restart_if_enabled(unit)
+        asyncio.ensure_future(_restart_core_soon())
+        # What the page tells the user: a first install arrives off; an update
+        # keeps the switch as it was (George, 2026-09-30: the page said
+        # "switched off" of an update that was running).
+        return {"installed": checked.id, "version": checked.version, "kind": checked.kind,
+                "previous": checked.previous,
+                "enabled": await asyncio.to_thread(_unit_is_enabled, unit),
+                "restarting": True}
+
+    async def _uninstall_plugin(plugin_id: str) -> bool:
+        plugin = next((p for p in installed_plugins if p.id == plugin_id and p.uploaded), None)
+        if plugin is None and any(m["id"] == plugin_id for m in restored_missing):
+            # Restored without its package, and not wanted any more: its data,
+            # its place in the list and its switch go.
+            await asyncio.to_thread(uploads.remove_data, plugin_id)
+            await asyncio.to_thread(uploads.forget, plugin_id)
+            settings_store.delete(f"{plugin_id}.enabled")
+            asyncio.ensure_future(_restart_core_soon())
+            return True
+        if plugin is None:
+            return False
+        await asyncio.to_thread(_set_unit_enabled, plugin.unit, False)
+        await asyncio.to_thread(uploads.remove, plugin_id)
+        await asyncio.to_thread(uploads.remove_data, plugin_id)
+        await asyncio.to_thread(uploads.forget, plugin_id)
+        for row in plugin.settings:
+            if row.get("key"):
+                settings_store.delete(f"{plugin_id}.{row['key']}")
+        settings_store.delete(plugin.enabled_row or f"{plugin_id}.enabled")
+        asyncio.ensure_future(_restart_core_soon())
+        return True
+
     async def _park_renderers() -> bool:
         """**A fresh start after every restart** (George, 2026-09-29). The one
         renderer that resumes by itself is LMS: its server carries on when
@@ -2128,6 +2190,8 @@ async def main() -> None:
         setup=setup_network,
         setup_flow=setup_flow,
         park=_park_renderers,
+        upload_plugin=_upload_plugin,
+        uninstall_plugin=_uninstall_plugin,
         # ADR-0047: the idle screen's two providers.
         weather=forecast,
         wallpapers=wallpapers,
