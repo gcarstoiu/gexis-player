@@ -32,13 +32,14 @@ the archive's 2026-09-30 block. Its image:
 `image/deploy/2026-09-29-gexis-player-v0.2.1-789-gee6a365.img`, sha256
 `74dc726c…a045`, 83 `verify-image.sh` checks.
 
-**Decision owed (George, no hurry):** make `outputs.resolve`'s fallback prefer
-a HAT over the Pi's own outputs. Today a card whose DAC is not the
-`sndrpihifiberry` the shipped `output.conf` names falls back to the first output
-with a volume control, likely the headphone jack; setup's Output step lists the
-DAC but starts on the jack. George asked whether a HiFiBerry/IQaudIO DAC+ would
-be recognised: listed by its own name if its EEPROM identifies it, read from
-the code, never tried.
+**Decided 2026-09-30 (George): the output fallback stays as it is** - *"no.
+The user gets to select"*. A card whose DAC is not the `sndrpihifiberry` the
+shipped `output.conf` names falls back to the first output with a volume
+control (likely the headphone jack), and setup's Output step, which lists the
+DAC by name, is where the user picks it. Not built: a preference for a HAT.
+
+**The `pi` user's passwordless `sudo`** is decided when the first release is
+made, not before (George, 2026-09-30; ADR-0107 decision 3).
 
 **Phase 9 criterion 0's revisit: done 2026-09-29, the waiver stands**
 (Finding 101; George: *"really snappy"*, then *"We go with A"*).
