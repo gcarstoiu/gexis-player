@@ -58,7 +58,7 @@ EOF
 
 # The spectrum pack's meters.txt is the one file the build does not install
 # verbatim: two sections named the *spectrum's* blank panel as their meter
-# background, and 05-peppy/01-run.sh corrects them (Finding 050). So it is
+# background, and the gexis-skins build corrects them (Finding 050). So it is
 # compared against the upstream copy *with that correction applied* - the
 # same sed, run here, rather than the check being dropped.
 sm_src="$OUT/meters-expected.txt"
@@ -159,7 +159,7 @@ echo "== Beszel (ADR-0087), the first plugin that is not part of the core"
 # The binary is pinned in the stage and verified there against a checksum agreed
 # three ways; this asserts the *image* got that exact build, which the stage's
 # own check cannot say anything about once it has exited.
-want_sha="$(grep -oE 'BESZEL_SHA256="[0-9a-f]+"' "$REPO/image/stage-gexis/07-beszel/00-run.sh" | cut -d'"' -f2)"
+want_sha="$(grep -oE 'BESZEL_SHA256="[0-9a-f]+"' "$REPO/packaging/beszel-agent/pins.sh" | cut -d'"' -f2)"
 dfs "dump /usr/bin/beszel-agent $OUT/agent" >/dev/null
 if [ ! -s "$OUT/agent" ]; then
 	bad "/usr/bin/beszel-agent missing"
@@ -176,7 +176,7 @@ else
 	got="$(sha256sum "$OUT/agent" | cut -d' ' -f1)"
 	[ "$got" = "$BESZEL_BINARY_SHA256" ] && ok "beszel-agent is the build that was tested" \
 		|| bad "beszel-agent sha256 is $got, expected $BESZEL_BINARY_SHA256"
-	[ -n "$want_sha" ] || bad "no BESZEL_SHA256 pin found in the stage"
+	[ -n "$want_sha" ] || bad "no BESZEL_SHA256 pin found in packaging/beszel-agent/pins.sh"
 fi
 rm -f "$OUT/agent"
 
@@ -289,7 +289,7 @@ fi
 # when the pinned tarball is not cached - the alternative is a verifier that
 # fetches from the network, and this script's whole point is checking a file.
 plugin_sum=$(grep -oE '^PLUGIN_SHA256="[a-f0-9]+"' \
-	"$REPO/image/stage-gexis/08-plexamp/01-run.sh" | cut -d'"' -f2)
+	"$REPO/packaging/plexamp/pins.sh" | cut -d'"' -f2)
 plugin_tar="${GEXIS_BUILD_CACHE:-$HOME/.cache/gexis-player/downloads}/${plugin_sum}"
 if [ -r "$plugin_tar" ]; then
 	mkdir -p "$OUT/pinned" "$OUT/shipped"
