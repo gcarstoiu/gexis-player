@@ -70,7 +70,7 @@
   // The contour's colour; its *width* is per element, below. Transparent
   // rather than zero so the widths stay harmless when there is no picture.
   //: **Fill, unless filling would cost too much of the picture.**
-  //: `cover` crops whatever does not match 1280x800, which is right for a
+  //: `cover` crops whatever does not match the panel, which is right for a
   //: photograph taken in landscape and brutal for one taken in portrait: a
   //: phone picture loses about two thirds of its height, centred, and the
   //: screen gives no sign that anything is missing.
@@ -82,7 +82,9 @@
   //: 10%, 4:3 17% - while a square (38%) and anything portrait (65%+) fall
   //: on the other. The shapes that were composed to be looked at wide stay
   //: edge to edge.
-  const PANEL_RATIO = 1280 / 800;
+  // ADR-0109: the panel's shape, 1280 logical px by the screen's height.
+  let panelHeight = $state(800);
+  const PANEL_RATIO = $derived(1280 / panelHeight);
   const CROP_LIMIT = 0.25;
   const cropped = $derived(
     ratio === null ? 0 : 1 - (ratio < PANEL_RATIO ? ratio / PANEL_RATIO : PANEL_RATIO / ratio)
@@ -266,6 +268,8 @@
   </div>
 {/snippet}
 
+<svelte:window bind:innerHeight={panelHeight} />
+
 <div class="idle" transition:fade={{ duration: 520 }} style:--stroke={stroke}>
   {#if shown && !external}
     {#key shown}
@@ -408,7 +412,7 @@
     top: 0;
     left: 0;
     width: 1280px;
-    height: 800px;
+    height: 100vh;
     z-index: 20;
     overflow: hidden;
     background: #0b1218;

@@ -462,10 +462,15 @@
     padding-bottom: calc(112px + env(safe-area-inset-bottom, 0px));
   }
 
+  /* ADR-0109, Standard family: Chromium's scale factor makes every screen
+     1280 logical px wide; the height is whatever that leaves, and the tokens
+     that follow it are recomputed here, where it is known. */
   .panel {
+    --panel-h: 100vh;
+    --art: calc(var(--panel-h) - 300px);
     position: relative;
     width: 1280px;
-    height: 800px;
+    height: var(--panel-h);
     overflow: hidden;
   }
 

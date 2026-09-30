@@ -732,7 +732,7 @@
   .screen {
     position: relative;
     width: 1280px;
-    height: 800px;
+    height: var(--panel-h);
     overflow: hidden;
     user-select: none;
   }
