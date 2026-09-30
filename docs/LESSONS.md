@@ -901,6 +901,25 @@ answers "what this code does on a configured one". This is case 41's shape -
 a test double that never visits the real subject's first state - on the
 hardware side.
 
+**47. "Polite stop freed the device (0.1s)" was the check failing to look**
+(2026-09-30, Phase 13a). The first uploaded renderer was tested against
+Spotify for two days. Every release it gave logged *"polite stop freed the
+device (0.1s)"*, the best line the ladder writes, and Spotify then found the
+card busy. The core asks whether the unit's processes hold the card by reading
+`system.slice/<unit>/cgroup.procs`. A template's instance lives in
+`system.slice/system-<template>.slice/<unit>/`, so the file was not there, and
+the fallback asked about the unit's MainPID. For an uploaded plugin, that is
+its launcher script, which never opens the card. The answer was always "free".
+
+**A check that cannot find its subject answered the question anyway**, and
+its answer was the one that ends the escalation. The receiver's adapter had
+been written around the kill that never came (Finding 096), so the symptoms
+arrived one layer up and looked like the adapter's bugs: two of them were
+fixed first, correctly, and neither was the cause. Case 17's corollary again:
+a probe that cannot say *"I found nothing to look at"* is indistinguishable
+from one that found nothing held. And a fast "success" deserves the same
+suspicion as a failure when the thing released is known to hold on for 2 s.
+
 ## Common shape
 
 Every case had a *plausible* substitute for the real target — the build

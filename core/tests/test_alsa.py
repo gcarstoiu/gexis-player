@@ -89,6 +89,23 @@ def test_the_units_own_descriptors_answer_without_fuser(pcm_node, tmp_path, monk
     assert alsa.device_held_by("plexamp.service") is False
 
 
+def test_a_template_instance_is_found_in_its_own_slice(pcm_node, tmp_path, monkeypatch):
+    """Found 2026-09-30: an uploaded renderer's receiver held the card, the
+    core looked in `system.slice/<unit>` - which does not exist for a template
+    instance - and asked the launcher script instead. Spotify then found the
+    card busy."""
+    unit = "gexis-uploaded-renderer@radiofoo.service"
+    assert alsa.unit_cgroup(unit) == (
+        "system.slice/system-gexis\\x2duploaded\\x2drenderer.slice/" + unit)
+    procs = tmp_path / "cg" / alsa.unit_cgroup(unit) / "cgroup.procs"
+    procs.parent.mkdir(parents=True)
+    procs.write_text(f"{os.getpid()}\n")
+    monkeypatch.setattr(alsa, "CGROUP_ROOT", tmp_path / "cg")
+    with open(pcm_node):
+        assert alsa.device_held_by(unit) is True
+    assert alsa.device_held_by(unit) is False
+
+
 def test_another_units_hold_is_not_this_ones(pcm_node, tmp_path, monkeypatch):
     """Same question as the `fuser` test below: the incoming renderer may
     already hold the device while the outgoing one's ladder is checking."""
