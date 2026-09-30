@@ -12,14 +12,19 @@ flashes from there; name the full file when asking, and check
 
 | Step | State |
 |---|---|
-| 0. Tested set measured | Finding 104: 1,027 packages, 880 MB; Pages cannot hold it |
-| 1. Our parts as Debian packages | **ADR-0107.** Ten packages built by `packaging/build.sh` in an arm64 container; `make image` installs them (`01-packages`). Image **833** (`…-v0.2.1-833-g1006239.img`): 98 checks, every file of ours owned by a package but two intended. **Waiting for George to flash it.** 825 (paths moved, no LMS address) ran on sofa-pi |
-| 2. Releases and the key | **ADR-0108**, George's decisions in ADR-0105: GitHub Releases, testing and stable, key on R2D2 with no expiry. Key `E63B…ABB7` created; R2D2 holds the signing subkey only (`~/.gnupg-gexis-release`). **`~/gexis-release-key-backup/` waits for George to print and copy it, then is deleted.** Test release `repo-test-1` published and installed from GitHub in a container; **delete it after sofa-pi has installed from it too.** `packaging/release/build.sh` builds a release locally; `publish.sh` uploads (run on George's say-so) |
-| 3. The updater on the device | Not started |
-| 4. Settings migrations | Built: `settings_migrations.py`, and tests that fail when a key leaves the registry without one |
-| 5. Settings → System → Updates | Not started; rows confirmed: Updates (Manual/Automatic), Update channel (Stable/Testing) |
-| 6. Our plugins updating | Not started (13a criterion 5) |
-| 7. One update measured on the device | Not started |
+| 0. Tested set measured | Finding 104 |
+| 1. Our parts as Debian packages | **ADR-0107.** Images 833 (first from packages), 849, 852, 856 built; 833 ran on sofa-pi |
+| 2. Releases and the key | **ADR-0108** (amended: a release is four parts - ours, skins, rpi, debian - each a GitHub pre-release **named by its content**, so an unchanged part is never uploaded again; a signed `parts` file on the release page). Key `E63B…ABB7`, subkey only on R2D2, backup printed and on USB, deleted from R2D2. `packaging/release/build.sh` / `publish.sh` (paced ~450 uploads/h after GitHub's secondary rate limit blocked the account for ~20 min on 2026-09-30) |
+| 3. The updater | **Built and shown on sofa-pi** (Finding 105): 833→849→852 updates, a deliberately broken release put back. `gexis-update check / install / scheduled` |
+| 4. Settings migrations | Built |
+| 5. Settings → System → Updates | **Built**, delivered to sofa-pi as the 849→852 update; Automatic runs at 03:00, never retries a release that failed there |
+| 6. Our plugins updating | Met by releases (13a criterion 5, read from the code; a changed Plexamp pin not yet shown) |
+| 7. One update from GitHub | **Under way**: 852 published old-style (two halves) on testing; 856 being published as parts (first parts upload, ~2 h), then testing -> 856 and sofa-pi updates from GitHub. sofa-pi: release 852, channel **Testing** |
+
+**New users start from an image** (ADR-0105 amended, George: *"A now with B
+later"*): promoting a release to stable attaches `gexis-player.img.xz` (1.14 GiB,
+signed) at `/releases/latest/download/gexis-player.img.xz`; a Raspberry Pi
+Imager listing with the first public release.
 
 **After 13c, decided (George, 2026-09-30: *"After 13c"*): go-librespot
 0.9.0 -> 0.10.2** (four releases behind: 0.9.1, 0.10.0, 0.10.1, 0.10.2). Read
