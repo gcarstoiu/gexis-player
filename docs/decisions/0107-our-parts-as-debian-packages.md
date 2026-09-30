@@ -1,7 +1,7 @@
 # ADR-0107 — Our parts as Debian packages
 
-**Status:** Proposed — 2026-09-30. Decisions 1-3 are George's (marked
-**Decide**); the rest follow from ADR-0105 and the inventory.
+**Status:** **Accepted** — George, 2026-09-30: *"agree with all 3
+decisions"* (below, each marked **Decided**).
 **Phase:** 13c step 1 ([DEVELOPMENT.md](../DEVELOPMENT.md)).
 **Builds on:** [ADR-0105](0105-updates-over-the-network.md) §1 (*"Our parts
 become Debian packages, and the image is built from them"*), which named five
@@ -88,11 +88,11 @@ From the installed `gexis-player` package, not a build stamp. `image.info`
 keeps only the image's build date; `packages.txt` is generated after every
 install, not frozen at build.
 
-## Decide
+## Decided (George, 2026-09-30)
 
 1. **Move our programs and units to where packages belong** -
    `/usr/lib/gexis/`, `/usr/bin/`, `/lib/systemd/system/` - out of
-   `/usr/local` and `/etc/systemd/system`. *Recommendation: yes, now.* Nothing
+   `/usr/local` and `/etc/systemd/system`. **Decided: yes, now.** Nothing
    of a user's lives in those paths; `/etc/systemd/system` is where a user's
    own overrides belong, and a package that owns files there fights them.
    `verify-image.sh` and the core's references move with them, checked by the
@@ -101,14 +101,14 @@ install, not frozen at build.
 2. **`core.toml` ships without an LMS address.** Today every image points at
    `192.168.178.188:9000`, George's server, as its default. First-boot setup
    already asks (*find / address / off*, ADR-0104), and the `lms_server`
-   setting overrides the file. *Recommendation: ship none; a device with no
-   answer has LMS off until setup gives it one.* George's own card keeps its
+   setting overrides the file. **Decided: ship none**; a device with no
+   answer has LMS off until setup gives it one. George's own card keeps its
    address through setup or a restore.
 3. **`pi` may use `sudo` without a password**
    (`/etc/sudoers.d/010_pi-nopasswd`). Convenient for development over SSH;
    on a device in someone's home it means anything that gets a shell as `pi`
-   owns the device. *Recommendation: keep it in development images, and decide
-   before the first public release* - a release-blocking item in
+   owns the device. **Decided: kept in development images, decided
+   before the first public release** - a release-blocking item in
    DEVELOPMENT.md, not part of this step.
 
 ## Not in this record

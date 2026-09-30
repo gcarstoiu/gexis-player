@@ -2703,6 +2703,10 @@ default. The criteria below are read through it.
    `alsa-lib` still the pinned version, and the audio chain's checksums as
    the build recorded them.
 
+**Release-blocking, not part of 13c** (ADR-0107, George 2026-09-30): the
+`pi` user's passwordless `sudo` (`/etc/sudoers.d/010_pi-nopasswd`) is kept in
+development images and decided before the first public release.
+
 **Shares with 13a:** a catalogue of versions we have tested, signed, which the
 device checks; 13a's plugin updates and this phase's system updates can be one
 mechanism, and the ADR should say whether they are.
