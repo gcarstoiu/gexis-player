@@ -23,6 +23,8 @@ CARD_ID = "sndrpihifiberry"
 
 #: Where systemd keeps each unit's processes (cgroup v2, unified hierarchy).
 CGROUP_ROOT = Path("/sys/fs/cgroup")
+#: Units already warned about by `device_held_by` - once each, not per poll.
+_unfound: set[str] = set()
 
 #: The card the device is actually playing to. Every function below
 #: defaults to it rather than to `CARD_ID`.
@@ -146,6 +148,19 @@ def device_held_by(unit: str, card_id: str | None = None) -> bool:
     try:
         pids = [int(p) for p in procs.read_text().split()]
     except (OSError, ValueError):
+        # **Say so when a running unit's processes cannot be found** (LESSONS
+        # 47). The fallback asks about the MainPID only, and for a unit whose
+        # MainPID is a launcher that answer is always "free": that silence
+        # hid a wrong path for two days. A stopped unit has no cgroup and no
+        # MainPID, and is not worth a word.
+        if (unit not in _unfound and CGROUP_ROOT.is_dir()
+                and _unit_main_pid(unit) is not None):
+            _unfound.add(unit)
+            logger.warning(
+                "alsa: no cgroup for running %s at %s; asking about its main "
+                "process only, which misses any child that holds the card",
+                unit, procs.parent,
+            )
         return _held_by_main_pid(unit, node)
     target = str(node)
     for pid in pids:
