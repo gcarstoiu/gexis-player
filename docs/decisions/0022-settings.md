@@ -271,7 +271,7 @@ recognition.
 | Setting | Mark | Notes |
 |---|---|---|
 | Attached screen | [N] | A choice from the list of supported screens (grouped by maker, from `foonerd/pi_screen_setup`'s presets, Finding 100). Sets the layout family (Standard or Bar) and the visualiser's skin set. The same list as setup's Screen step, where a recognised screen is confirmed or another chosen. Applies at the next restart |
-| Screen rotation | [N] | 0° / 90° / 180° / 270°. The two bar screens are portrait panels used sideways (Finding 100). Applies at the next restart |
+| Screen rotation | [N] | 0° / 180° (ADR-0109 decision 6, George 2026-09-30: portrait is not designed). 0° is the model's landscape: the two bar screens are portrait panels used sideways (Finding 100), and their list entry carries that turn. Applies at the next restart |
 
 ## Settled by prior records
 
