@@ -117,6 +117,14 @@ install, not frozen at build.
   decision owed).
 - Signing (ADR-0105 §2) and the updater (§4) - later steps of 13c.
 
+## Open
+
+- **Versions for components pinned by commit** (peppyalsa, the Peppy engines)
+  are `0.0.0+git<commit>-1`, which do not sort by age: a later commit can
+  compare lower. Harmless until one of those pins moves; before the first
+  update of either, they take a sortable form (upstream version where there
+  is one - peppyalsa's `configure.ac` says 0.44 - plus the commit date).
+
 ## Unverified
 
 - The core's environment built under qemu at `/opt/gexis-core/venv` and
