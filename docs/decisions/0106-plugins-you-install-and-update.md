@@ -80,6 +80,16 @@ panel has no file picker and does not offer it):
 **Uploading a newer version updates it**; the same `version` is refused;
 **Remove** deletes the folder, its unit and its settings rows.
 
+**An update keeps the switch as it was** and restarts a plugin that is on, so
+the new version is the one running (found 2026-09-30: a running plugin went
+on running the version before). **Installing or removing restarts the core**,
+which reads the plugin list and its settings rows at start - as a restore
+does (ADR-0083). **Decided, kept** (George, 2026-09-30: *"we keep the
+restart"*), after the restart exposed a renderer state the core did not
+re-read (a Spotify session paused across it, then resumed - fixed in the
+Spotify adapter). Loading a plugin into the running core was the alternative,
+and was not sized.
+
 ### The sandbox
 
 **The player writes the unit, and never takes one supplied.** Every uploaded
