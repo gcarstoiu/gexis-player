@@ -920,6 +920,23 @@ a probe that cannot say *"I found nothing to look at"* is indistinguishable
 from one that found nothing held. And a fast "success" deserves the same
 suspicion as a failure when the thing released is known to hold on for 2 s.
 
+
+**48. The release's completeness check counted from the list it was checking**
+(2026-09-30, Phase 13c). The first local release was built from image 833 and
+reported *"tested set of 1010 OS packages"*, every one fetched and every count
+equal. It left out alsa-lib - the one package the pin, ADR-0021 and a whole
+decision exist to protect. alsa-lib is held (`apt-mark hold`), dpkg writes that
+as `Status: hold ok installed`, and the script took only `install ok
+installed`. Its check compared the release against the same filtered list, so
+the two agreed. Found only because a clean container was then asked to
+install the release on its own, and apt said the pinned version *"is not
+installable"*.
+
+**A completeness check has to count from the source on its own terms**, not
+from the output of the step it checks. The fix counts every record dpkg calls
+installed, whatever its selection, and names the pinned package outright.
+Case 17 again: a check that cannot see what it was built to exclude.
+
 ## Common shape
 
 Every case had a *plausible* substitute for the real target — the build
