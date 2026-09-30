@@ -1,7 +1,8 @@
 # ADR-0109 — Other screens: two families, a known list, and the skins per size
 
-**Status:** Proposed — 2026-09-30. Decisions 1-3 are George's (marked
-**Decide**).
+**Status:** **Accepted** — George, 2026-09-30: *"1. All as you said.
+2. agreed 3. Those are the default ones. More available from gelo5"* (each
+marked **Decided** below).
 **Phase:** 13b ([DEVELOPMENT.md](../DEVELOPMENT.md)); before the first public
 release (George, 2026-09-29: *"13a, b and c all needed before release"*).
 **Builds on:** Claude Design's 2026-09-30 handoff
@@ -70,25 +71,26 @@ setup's Screen step or in Settings. EDID sizes are not trusted (Finding 100:
 the panel on `gexis` claims a 55″ television). Physical size, which the 7 mm
 touch floor needs, comes from the list.
 
-## Decide
+## Decided (George, 2026-09-30)
 
 1. **Which screens the list offers.** foonerd's presets (MIT) name 197 models.
-   *Recommendation: all of them, credited, with the four George owns marked
+   **Decided: all of them, credited, with the four George owns marked
    tested; recognition only suggests a tested model, and an untested one says
-   so when chosen.* The alternative is the tested four only - honest, and
+   so when chosen.** The alternative is the tested four only - honest, and
    small.
 2. **Where the other sizes' skins come from.** Each size's skin set is
    hundreds of megabytes (1280 × 800 alone is 168 MB), so one image with every
-   size's set grows by gigabytes. *Recommendation: one package per skin set
+   size's set grows by gigabytes. **Decided: one package per skin set
    (`gexis-skins-1920x1080`, …), part of every release (ADR-0108), and
    installed when a screen of that size is chosen - from the same signed
-   repository an update uses. The image carries the 1280 × 800 set only.* The
+   repository an update uses. The image carries the 1280 × 800 set only.** The
    alternative is every set in the image.
-3. **Which skins each size gets.** Finding 100 counts, from foonerd's catalog,
-   17 packs at 1920 × 1080, 35 at 1280 × 400, 8 at 1480 × 320 (licences per
-   pack not checked). *Recommendation: a selection per size, chosen with George
-   the way the 1280 × 800 set was, each pack's licence checked before it
-   ships.*
+3. **Which skins each size gets. Decided:** the catalog's packs for that size
+   are its default set, **and Gelo5's set for that size** is added - Gelo5
+   publishes one for every size George has (PeppyMeter.doc release
+   2024.03.02: 1920 × 1080 120 skins, 1280 × 400 120, 1480 × 320 116, 800 × 480
+   60; Finding 100 as corrected), from the same source as the 1280 × 800 set
+   shipped today. Each catalog pack's licence is checked before it ships.
 
 ## Not in this record
 
