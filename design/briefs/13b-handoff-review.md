@@ -17,6 +17,8 @@ for Claude Design. Section 3 is ours to fix.
 
 ## 1. Decisions for George
 
+**Answered 2026-09-30**; recorded in ADR-0109 as decisions 4-10.
+
 1. **Touch floor.** The design says "7 mm on every screen". On the 7″
    800 × 480 that means at least 59 logical px. The design's own study and
    today's panel use 36–58 px targets in about 20 places, for example:

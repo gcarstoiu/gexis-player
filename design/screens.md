@@ -249,7 +249,7 @@ rail shows them:
 
 | id | Rail label | Accent | What it collects |
 |---|---|---|---|
-| `wifi` | Network | `#8fc4d8` | Ethernet or Wi-Fi, one at a time — see below |
+| `wifi` | Network | `#8fc4d8` | The Wi-Fi network — see below |
 | `name` | Name | `#e8a0b4` | Device name, with the `.local` address previewed live underneath |
 | `tz` | Time | `#c8a2d8` | Time zone: auto-detected from the network, overridable through region then city, each city showing its current time |
 | `out` | Output | `#7ed6bc` | Audio output, with a tag on the recommended one. Droppable — `askOutput: false` removes the step and the rail entry |
@@ -257,26 +257,16 @@ rail shows them:
 | `display` | Display | `#8fd9a8` | Headless mode, and the panel's own display options |
 | `review` | Review | `#f2a48f` | Everything above, editable by tapping back to its step |
 
-### The network step carries both interfaces
+### The network step
 
-Two cards at the top of the step, Ethernet and Wi-Fi, and picking one is
-picking which interface carries the player — only one is active at a time,
-and the choice sticks. The cards show their own state: Ethernet reads "Cable
-connected" or "No cable", Wi-Fi reads the joined SSID or "Not set up". With
-no cable the Ethernet card sits at 45% opacity and ignores taps, and Wi-Fi is
-the default; with a cable, Ethernet is the default.
+The scan, the network list, then the password form with show/hide. **The step
+saves the choice and does not test it** (`IMPLEMENTED-DIFFERENTLY.md`, phone
+steps; kept by George, 2026-09-30): there is one radio, so the join can only
+happen after the setup page is gone. A wrong password brings setup back within
+about 15 s, opened on Network with the reason and every other answer kept.
+Review reports the SSID.
 
-- **Ethernet picked** — a confirmation block, "Connected over Ethernet" with
-  the address under it. Nothing to fill in, and the step validates
-  immediately.
-- **Wi-Fi picked** — the scan, the network list, then the password form with
-  show/hide, a connecting state and an error that keeps the password so it
-  can be corrected. The step validates when the credentials are accepted.
-
-The intro copy changes with the cable rather than describing both cases at
-once, and Review reports either `Ethernet · <address>` or the SSID. The
-third of the four finishing tasks reads "Connecting over Ethernet" or
-"Joining <SSID>" to match. Addressing is DHCP only.
+~~Two cards, Ethernet and Wi-Fi, one interface at a time~~ — struck by George, 2026-09-30: *"strike it. We will need to consider the ethernet later."* (`briefs/13b-handoff-review.md`).
 
 The rail is tappable backwards only: a step that has not been reached does
 nothing. The footer's action reads Start on the welcome pane, Continue

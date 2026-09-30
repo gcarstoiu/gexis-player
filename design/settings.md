@@ -231,18 +231,7 @@ categories, 6 wired.
 - **`idle_days` became `idle_forecast`.** It was a 0–5 number; it is now a
   choice of `3 days` or `None`, because those are the only two the idle
   screen draws and they are two different layouts.
-- **Ethernet joins Wi-Fi under Device.** A new `connection` choice —
-  `Ethernet` or `Wi-Fi` — sits above both, and the rows for the interface
-  that is not carrying the player are **absent**, on `onlyWhen`, rather than
-  shown inert. `Ethernet` reveals one readonly `eth_ip`; `Wi-Fi` reveals the
-  existing network list unchanged. Both keys are new.
-
-  The rule is that the choice is the user's and it sticks: a cable being
-  plugged in does not switch the device over, and the row's note says so.
-  Addressing is DHCP only — there is no static form on either interface.
-
-  With `connection` settable and `eth_ip` readonly, the count above becomes
-  **50 settable rows**.
+- ~~Ethernet joins Wi-Fi under Device (`connection`, `eth_ip`)~~ — struck by George, 2026-09-30: *"strike it. We will need to consider the ethernet later."* (`briefs/13b-handoff-review.md`).
 
 ---
 

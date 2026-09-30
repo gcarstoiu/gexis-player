@@ -92,11 +92,67 @@ touch floor needs, comes from the list.
    60; Finding 100 as corrected), from the same source as the 1280 × 800 set
    shipped today. Each catalog pack's licence is checked before it ships.
 
+## Decided on the handoff review (George, 2026-09-30)
+
+The review of Claude Design's handoff ([`design/briefs/13b-handoff-review.md`](../../design/briefs/13b-handoff-review.md))
+found seven things that were George's to settle. His answers:
+
+4. **Touch floor: 44 logical px, and nothing grows.** The design's "7 mm on
+   every screen" would need 59 px on a 7″ 800 × 480, where today's panel has
+   about twenty targets of 36-58 px. On the screens George owns, 44 px is
+   6.6 mm (1280 × 400) to 10 mm (13.3″). The 7″ is below 7 mm and is not on
+   the bench. *"Agree"*.
+5. **A screen is confirmed before setup trusts it.**
+   - Until a screen is confirmed, the setup network uses the fixed password.
+     Today, anything connected to HDMI switches to a made-up password shown
+     only on the panel, which a dark screen hides.
+   - After a screen is chosen, the panel asks **Keep this screen?** If it is
+     not touched within about 30 s, the player goes back to the previous
+     screen. A touch proves both the picture and the touch input.
+
+   *"agree"*.
+6. **Rotation: 0° and 180° only.** 0° is the model's landscape (the bars are
+   portrait panels by nature; their list entry carries the turn). Portrait is
+   not designed, and 90° on a bar gives an aspect in no family. *"fine"*.
+7. **What a bar drops is dropped by design.** Artist and release info, the
+   biography, top tracks, similar artists and per-row actions are on a
+   Standard screen only. The brief's *nothing only the panel can do* does not
+   hold on a bar. George: *"the losing is by design and was considered due
+   to bar limitations"*.
+8. **Skins become plugins.** This replaces decision 2's *installed when a
+   screen of that size is chosen*. George: *"Maybe all of them become
+   plugins, with a selector for choosing the resolution set by default to the
+   Displays resolution or nearest neighbour that would work."*
+   - Each skin set, for one size and one source (a catalog pack or Gelo5's),
+     is a plugin in our repository. It is installed and removed on the
+     Plugins screen and updated with the release (ADR-0106).
+   - A selector in Visualiser picks the size in use. Its default follows the
+     screen: the exact size, or the largest installed set that fits,
+     letterboxed.
+   - The selector is proposed for ADR-0022's inventory. Two parts of this are
+     still owed; see *Still owed* below.
+9. **Ethernet as a choice (`connection`, `eth_ip`) is struck** from the
+   design docs. George: *"strike it. We will need to consider the ethernet
+   later."*
+10. **The Network step keeps saving without testing** (IMPLEMENTED-DIFFERENTLY,
+    phone steps). *"yes"*.
+
+### Still owed
+
+- **Is 1280 × 800 a plugin too?**
+  - *"All of them"* would mean the image carries no skins.
+  - Recommended: the 1280 × 800 set is a plugin that comes **preinstalled**,
+    so a panel shows meters with no network; it can be removed like any
+    other.
+- **The selector row's wording** for ADR-0022. It is appended only once
+  George confirms it.
+
 ## Not in this record
 
 - The 800 × 480 on real hardware: designed and built, not tested until one is
   on the bench.
-- Portrait use of a Standard screen.
+- Portrait use of any screen (see decision 6).
+- Ethernet as a user's choice (decision 9).
 
 ## Unverified (to be shown on George's three screens)
 

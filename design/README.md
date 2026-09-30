@@ -322,12 +322,7 @@ the weather in the `None` state.
 **The skin picker is a list with a preview**, not a thumbnail grid, and
 tapping a row previews without writing the value — see `settings.md`.
 
-**Ethernet joins Wi-Fi on both network screens.** Setup's first step is two
-cards, Ethernet and Wi-Fi, and Settings gains a `connection` choice above
-the network rows. Only one interface is active at a time, the choice is the
-user's and it sticks — a cable being plugged in does not switch the device
-over. Ethernet reports one thing, its IP address, and addressing is DHCP only
-on both. Details in `screens.md` §13 and `settings.md`.
+~~Ethernet as a choice on both network screens~~ — struck by George, 2026-09-30: *"strike it. We will need to consider the ethernet later."* (`briefs/13b-handoff-review.md`).
 
 **Setup is documented** as `screens.md` §13 and its source is in `source/`.
 It is the second screen the phone sees, and the first thing a new device
