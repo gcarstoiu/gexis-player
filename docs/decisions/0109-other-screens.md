@@ -1,0 +1,107 @@
+# ADR-0109 — Other screens: two families, a known list, and the skins per size
+
+**Status:** Proposed — 2026-09-30. Decisions 1-3 are George's (marked
+**Decide**).
+**Phase:** 13b ([DEVELOPMENT.md](../DEVELOPMENT.md)); before the first public
+release (George, 2026-09-29: *"13a, b and c all needed before release"*).
+**Builds on:** Claude Design's 2026-09-30 handoff
+(`design/source/13b/Screen Families Chosen.dc.html`, `design/BUNDLE-README.md`
+*Phase 13b*, settled with George that day: Settings stays a tile on bars; the
+copy is accepted as drawn), [Finding 100](../findings/100-screens-what-the-pi-can-learn-and-what-exists.md),
+[ADR-0022](0022-settings.md) (*Attached screen*, *Screen rotation*, confirmed
+2026-09-30), [ADR-0107](0107-our-parts-as-debian-packages.md) and
+[ADR-0108](0108-how-a-release-is-published-and-found.md) (packages, parts).
+
+## Context
+
+Everything so far is drawn for one screen: `App.svelte`, `NowPlaying.svelte`
+and `IdleScreen.svelte` fix the panel at 1280 × 800, and the visualiser's skins
+are bitmaps for 1280 × 800. George has, besides the 10.1″ 1280 × 800 on
+`sofa-pi`: **a 13.3″ 1920 × 1080, a 1280 × 400 bar and a 1480 × 320 bar**
+(2026-09-30). An 800 × 480 is in the design but not on the bench.
+
+## Decided by the design (recorded here, not reopened)
+
+- **Two families by aspect, not resolution**: Standard (1.5-1.8) and Bar
+  (3-5). One token set for both.
+- **Standard** lays out at a logical width of 1280; the height left over
+  (711-853 logical) goes to one element per screen (Now Playing: the
+  artwork, H - 300; library cards × (H - 424) / 376; lists: more rows). Type
+  scales with the screen; nothing is capped; the touch floor is 7 mm.
+- **Bar** lays out at a logical height of 400, width = aspect × 400 (1280 or
+  1850); a strip per screen, a pull-down tray on Now Playing, the library's
+  rail and six cards, full-screen moments as strips; what is dropped is listed
+  in the handoff.
+- **The Screen step** in setup (recognised / uncertain / nothing shown yet /
+  Headless) and **Attached screen** and **Screen rotation** in Display.
+- **The visualiser**: a screen uses skins drawn for its exact size; with none,
+  the largest set that fits, centred at 1 : 1 on black.
+
+## Proposed (technical)
+
+### How a family is applied: Chromium's zoom, not our CSS
+
+The kiosk starts Chromium with `--force-device-scale-factor` = screen width ÷
+1280 (Standard) or screen height ÷ 400 (Bar). The page then always sees a
+logical width of 1280 (or a logical height of 400) and Chromium renders it at
+the screen's real resolution - crisp text, no bitmap scaling. The UI reads its
+logical height from the viewport and applies the family's rule; the fixed
+1280 × 800 goes. The panel keeps 1280 × 800 exactly (factor 1).
+
+### How a screen is applied: at boot, from one file
+
+The chosen screen is written to `/etc/gexis/screen.env` (model, family, mode,
+rotation). At boot:
+- the **mode** by the kernel's `video=` on the command line - this image runs
+  full KMS, where the firmware's `hdmi_timings` / `hdmi_mode` from the presets
+  do not apply (Finding 100); a preset's timings become a `video=` mode;
+- the **rotation** by the compositor (`wlr-randr --transform` before Chromium
+  starts), and the **touchscreen tied to that output** in labwc's config, so
+  touch turns with the picture;
+- the **Chromium factor** and the family from the same file.
+
+Changing screen or rotation restarts the device (the rows are marked R).
+
+### How a screen is recognised
+
+EDID's maker, name and modes (`/sys/class/drm/card*-HDMI-A-*/edid`) and the
+touch controller's USB ID suggest a model from our list; the user confirms in
+setup's Screen step or in Settings. EDID sizes are not trusted (Finding 100:
+the panel on `gexis` claims a 55″ television). Physical size, which the 7 mm
+touch floor needs, comes from the list.
+
+## Decide
+
+1. **Which screens the list offers.** foonerd's presets (MIT) name 197 models.
+   *Recommendation: all of them, credited, with the four George owns marked
+   tested; recognition only suggests a tested model, and an untested one says
+   so when chosen.* The alternative is the tested four only - honest, and
+   small.
+2. **Where the other sizes' skins come from.** Each size's skin set is
+   hundreds of megabytes (1280 × 800 alone is 168 MB), so one image with every
+   size's set grows by gigabytes. *Recommendation: one package per skin set
+   (`gexis-skins-1920x1080`, …), part of every release (ADR-0108), and
+   installed when a screen of that size is chosen - from the same signed
+   repository an update uses. The image carries the 1280 × 800 set only.* The
+   alternative is every set in the image.
+3. **Which skins each size gets.** Finding 100 counts, from foonerd's catalog,
+   17 packs at 1920 × 1080, 35 at 1280 × 400, 8 at 1480 × 320 (licences per
+   pack not checked). *Recommendation: a selection per size, chosen with George
+   the way the 1280 × 800 set was, each pack's licence checked before it
+   ships.*
+
+## Not in this record
+
+- The 800 × 480 on real hardware: designed and built, not tested until one is
+  on the bench.
+- Portrait use of a Standard screen.
+
+## Unverified (to be shown on George's three screens)
+
+- `--force-device-scale-factor` on this Chromium under labwc: crisp at 1.5,
+  touch coordinates right.
+- `wlr-randr --transform` with labwc, and touch following it; the boot
+  animation and the splash on a rotated panel (Plymouth draws before the
+  compositor exists).
+- Each bar's mode reaching KMS through `video=` from a preset's timings.
+- What each screen's EDID and touch controller actually say.
