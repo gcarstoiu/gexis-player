@@ -79,12 +79,45 @@ def test_the_plan_reads_what_apt_would_change(monkeypatch, up):
 
 def test_apt_sees_only_the_release_and_prefers_it_when_going_back(up):
     opts = up.apt_env(["r1"], pin_tag="r1")
-    sources = (up.STATE / "apt" / "sources.list").read_text()
+    view = up.STATE / "apt" / "r1@r1"
+    sources = (view / "sources.list").read_text()
     assert sources.count("deb [signed-by=") == 2 and "/r1/ ./" in sources and "/r1-debian/ ./" in sources
-    assert "Dir::Etc::sourceparts=-" in opts, "the device's own sources are not read"
-    assert "Pin-Priority: 1001" in (up.STATE / "apt" / "preferences").read_text()
+    parts = view / "sources.list.d"
+    assert f"Dir::Etc::sourceparts={parts}" in opts and not any(parts.iterdir()), \
+        "the device's own sources are not read: the parts folder is ours, and empty"
+    assert "Pin-Priority: 1001" in (view / "preferences").read_text()
+
+
+def test_the_release_kept_for_going_back_does_not_replace_the_one_going_in(up):
+    """Found on the device, 2026-09-30: one shared index, and the install
+    found no gexis-player - the going-back fetch had replaced it."""
+    going_in = up.apt_env(["r2"])
+    going_back = up.apt_env(["r1"], pin_tag="r1")
+    lists = lambda opts: next(o for o in opts if o.startswith("Dir::State::lists="))
+    cache = lambda opts: next(o for o in opts if o.startswith("Dir::Cache::archives="))
+    assert lists(going_in) != lists(going_back)
+    assert cache(going_in) == cache(going_back), "one cache: a file is the same file"
 
 
 def test_stable_is_the_channel_when_nothing_was_chosen(up, tmp_path, monkeypatch):
     monkeypatch.setattr(up, "SETTINGS_DB", tmp_path / "missing.db")
     assert up.channel_name(None) == "stable"
+
+
+def test_an_update_never_restarts_itself_or_the_shutdown_pause(up, monkeypatch):
+    """The first update on the device listed both: restarting the unit the
+    updater runs as ends it mid-update, and stopping gexis-park pauses LMS."""
+    files = "\n".join(f"/usr/lib/systemd/system/{u}" for u in
+                      ("gexis-core.service", "gexis-park.service", "gexis-update-install.service",
+                       "gexis-update-check.service", "gexis-update-check.timer"))
+    restarted = []
+    def fake_run(*args, check=True, env=None):
+        if args[:2] == ("dpkg", "-L"):
+            return subprocess.CompletedProcess(args, 0, files, "")
+        if args[:2] == ("systemctl", "try-restart"):
+            restarted.append(args[2])
+        return subprocess.CompletedProcess(args, 0, "", "")
+    monkeypatch.setattr(up, "run", fake_run)
+    monkeypatch.setattr(up, "REBOOT_MARKER", up.STATE / "no-marker")
+    up.restart([("gexis-core", "1", "2")])
+    assert restarted == ["gexis-core.service"]

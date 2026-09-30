@@ -38,6 +38,10 @@ SETTINGS_DB = Path("/var/lib/gexis-core/settings.db")
 BACKUPS = Path("/var/lib/gexis-core/backups")
 CORE = "http://127.0.0.1:8090"
 REBOOT_MARKER = Path("/var/lib/gexis/reboot-required")
+#: Units an update must not restart: the updater's own (restarting the unit
+#: it runs as would end it mid-update), and the shutdown pause, whose stop
+#: pauses LMS (ADR-0095). Found in the first update on the device, 2026-09-30.
+NEVER_RESTART = {"gexis-update-install.service", "gexis-update-check.service", "gexis-park.service"}
 #: Packages whose new version only takes effect at a boot.
 REBOOT_PACKAGES = re.compile(r"^(linux-image-|raspi-firmware|raspberrypi-sys-mods|libc6|systemd|initramfs-tools)")
 SILENCE_S = 20      # the card closed this long counts as nothing playing
@@ -125,8 +129,15 @@ def apt_env(tags: list[str], pin_tag: str | None = None) -> list[str]:
     """Options that make apt see only these releases, in its own lists and
     cache. With `pin_tag`, that release is preferred even over newer versions,
     which is how the release before is put back."""
-    apt = STATE / "apt"
-    for d in ("lists/partial", "archives/partial"):
+    # **Each release its own view** (found on the device, 2026-09-30): one
+    # folder shared by the release going in and the release kept for going
+    # back meant fetching the second replaced the first's index, and the
+    # install then found no gexis-player at all. The downloaded packages
+    # share one cache, which is right: a file is the same file.
+    apt = STATE / "apt" / ("+".join(tags) + (f"@{pin_tag}" if pin_tag else ""))
+    cache = STATE / "apt" / "archives"
+    (cache / "partial").mkdir(parents=True, exist_ok=True)
+    for d in ("lists/partial", "sources.list.d", "preferences.d"):
         (apt / d).mkdir(parents=True, exist_ok=True)
     lines = []
     for tag in tags:
@@ -137,17 +148,32 @@ def apt_env(tags: list[str], pin_tag: str | None = None) -> list[str]:
     if pin_tag:
         prefs = f"Package: *\nPin: release a={pin_tag}\nPin-Priority: 1001\n"
     (apt / "preferences").write_text(prefs)
-    return ["-o", f"Dir::Etc::sourcelist={apt}/sources.list", "-o", "Dir::Etc::sourceparts=-",
-            "-o", f"Dir::State::lists={apt}/lists", "-o", f"Dir::Cache::archives={apt}/archives",
-            "-o", f"Dir::Etc::preferences={apt}/preferences", "-o", "Dir::Etc::preferencesparts=-",
+    # The parts folders point at empty ones of our own: "-" was read as a
+    # folder named "-" under /etc/apt.
+    return ["-o", f"Dir::Etc::sourcelist={apt}/sources.list", "-o", f"Dir::Etc::sourceparts={apt}/sources.list.d",
+            "-o", f"Dir::State::lists={apt}/lists", "-o", f"Dir::Cache::archives={cache}",
+            "-o", f"Dir::Etc::preferences={apt}/preferences", "-o", f"Dir::Etc::preferencesparts={apt}/preferences.d",
             "-o", "Dpkg::Options::=--force-confdef", "-o", "Dpkg::Options::=--force-confold"]
 
 
 APT_ENV = {"DEBIAN_FRONTEND": "noninteractive"}
 
 
-def apt(opts: list[str], *args: str) -> subprocess.CompletedProcess:
-    return run("apt-get", "-q", "-y", *opts, *args, env=APT_ENV, check=False)
+def apt(opts: list[str], *args: str, prefix: list[str] | None = None) -> subprocess.CompletedProcess:
+    """apt-get, its whole output kept in STATE/apt.log for the record."""
+    r = run(*(prefix or []), "apt-get", "-q", "-y", *opts, *args, env=APT_ENV, check=False)
+    with (STATE / "apt.log").open("a") as log:
+        log.write(f"\n=== {time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime())} apt-get {' '.join(args)} -> {r.returncode}\n")
+        log.write(r.stdout + r.stderr)
+    return r
+
+
+def why(r: subprocess.CompletedProcess) -> str:
+    """apt's own last words - its E: lines, else its last lines - not those
+    of whatever ran it (systemd-inhibit only says apt-get exited 100)."""
+    lines = [l for l in (r.stdout + r.stderr).splitlines() if l.strip()]
+    errors = [l for l in lines if l.startswith(("E:", "dpkg:"))]
+    return " | ".join((errors or lines)[-3:])[:400] or f"exit {r.returncode}"
 
 
 def plan(opts: list[str], version: str) -> list[tuple[str, str | None, str]]:
@@ -251,7 +277,7 @@ def restart(changes: list[tuple[str, str | None, str]]) -> str:
     for package, _, _ in changes:
         for path in run("dpkg", "-L", package, check=False).stdout.splitlines():
             m = re.match(r"^/usr/lib/systemd/system/([^@/]+\.service)$", path)
-            if m:
+            if m and m.group(1) not in NEVER_RESTART:
                 units.add(m.group(1))
     run("systemctl", "daemon-reload", check=False)
     for unit in sorted(units):
@@ -277,7 +303,7 @@ def install(args) -> int:
                  ["--download-only", "--allow-change-held-packages", "install", f"gexis-player={target}"]):
         r = apt(opts, *step)
         if r.returncode:
-            raise Stop("download failed: " + (r.stderr.strip().splitlines() or ["?"])[-1])
+            raise Stop("download failed: " + why(r))
     # The versions installed now, for going back: from the release that has them.
     back = apt_env([current_tag], pin_tag=current_tag)
     if apt(back, "update").returncode == 0:
@@ -302,15 +328,15 @@ def install(args) -> int:
              ["--no-download", "--allow-change-held-packages", "install", f"gexis-player={target}"]]
     try:
         for step in steps:
-            r = run(*inhibit, "apt-get", "-q", "-y", *opts, *step, env=APT_ENV, check=False)
+            r = apt(opts, *step, prefix=inhibit)
             if r.returncode:
-                raise Stop("install failed: " + (r.stderr.strip().splitlines() or ["?"])[-1])
+                raise Stop("install failed: " + why(r))
         verify(target)
     except Stop as failure:
         report("going-back", channel=channel, release=current, message=f"{failure}; putting {current} back")
         back = apt_env([current_tag], pin_tag=current_tag)
-        r = run(*inhibit, "apt-get", "-q", "-y", *back, "--no-download", "--allow-downgrades",
-                "--allow-change-held-packages", "dist-upgrade", env=APT_ENV, check=False)
+        apt(back, "--no-download", "--allow-downgrades", "--allow-change-held-packages",
+            "dist-upgrade", prefix=inhibit)
         run("dpkg", "--configure", "-a", check=False)
         ok = installed("gexis-player") == current
         report("failed", channel=channel, release=installed("gexis-player"), backup=backup,
