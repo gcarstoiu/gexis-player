@@ -161,6 +161,19 @@ def apply(name: str) -> Written:
     return Written(hostname=host, failed=tuple(failed))
 
 
+def apply_restored() -> Written | None:
+    """**A restore brings the name back, everywhere** (George, 2026-09-30:
+    *"For sure the backup name"*). A backup carries `device-name.env` - the
+    name LMS and Spotify are announced by - and not the hostname or
+    `machine-info`, which a rename also writes. Restoring gexis's backup onto
+    a card set up as "Sofa PI" left LMS calling it `gexis` and the network
+    calling it `sofa-pi`. So the restored name goes through `apply`, to all
+    four, and lands at the reboot that follows every restore. None when the
+    archive held no name."""
+    name = lms_player("")
+    return apply(name) if name else None
+
+
 def lms_player(fallback: str, path: Path | None = None) -> str:
     """The name squeezelite announces to LMS: what `squeezelite.service`
     reads from `device-name.env` for its `-n`, which is what a rename writes.
