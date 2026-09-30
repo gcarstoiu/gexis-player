@@ -21,6 +21,13 @@ flashes from there; name the full file when asking, and check
 | 6. Our plugins updating | Not started (13a criterion 5) |
 | 7. One update measured on the device | Not started |
 
+**After 13c, decided (George, 2026-09-30: *"After 13c"*): go-librespot
+0.9.0 -> 0.10.2** (four releases behind: 0.9.1, 0.10.0, 0.10.1, 0.10.2). Read
+their notes for events, audio output and volume; change
+`packaging/go-librespot/pins.sh`; test takeovers both ways, resume and
+volume on the device; publish to testing - the first real use of the update
+path for a component.
+
 **Also 2026-09-30:** a restore brings the backup's device name back in all
 four places (it had left LMS and the network disagreeing); a resumed Spotify
 after a core restart is an acquisition; Claude Design's 13b handoff is stored
