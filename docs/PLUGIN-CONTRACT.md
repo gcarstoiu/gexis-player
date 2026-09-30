@@ -213,7 +213,11 @@ Each carries an `id`; the plugin answers exactly once:
 ### A plugin's own settings
 
 A manifest may carry `settings`, and those rows are merged into the registry
-(ADR-0086). **Their keys are prefixed with the plugin's id** — a plugin
+(ADR-0086), on the Settings page its optional **`area`** names - `audio`,
+`sources`, `handoff`, `display`, `enrichment`, `device` or `system`; absent,
+`renderer` → Sources and `service` → System (ADR-0086 as amended 2026-09-30).
+Its switch sits under the same heading on the Plugins page. `area` places a
+plugin; it grants nothing. **Their keys are prefixed with the plugin's id** — a plugin
 declaring `enabled` is stored as `plexamp.enabled` — because two plugins
 shipping the same obvious key would otherwise collide and the second would be
 refused. On the wire the prefix is not used: a plugin says and hears its own

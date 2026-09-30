@@ -225,7 +225,7 @@ def remember(root: Path = UPLOADS, path: Path = KNOWN) -> None:
     restore brought back without their package."""
     known = _read_known(path)
     for plugin, version in _installed_versions(root):
-        known[plugin.id] = {"name": plugin.name, "kind": plugin.kind, "version": version}
+        known[plugin.id] = {"name": plugin.name, "kind": plugin.kind, "area": plugin.area, "version": version}
     _write_known(path, known)
 
 

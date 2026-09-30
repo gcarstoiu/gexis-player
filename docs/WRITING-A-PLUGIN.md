@@ -54,6 +54,7 @@ brings one is refused.
 | `kind` | yes | `renderer` or `service` |
 | `version` | yes | Letters, digits and `. + ~ -`, up to 40 characters. Uploading a different version updates the plugin; the same version again is refused |
 | `run` | yes | The command to start, **relative to the package**. An **aarch64** program (the Pi 4 on a 64-bit system) or a script with a `#!` line |
+| `area` | no | The Settings page your plugin belongs on: `audio`, `sources`, `handoff`, `display`, `enrichment`, `device` or `system`. Absent: `sources` for a renderer, `system` for a service. It places your plugin; it does not change what it may do |
 | `label` | no | A renderer's status line for the moOde-compatible metadata file (`"Radio Foo Active"` style) |
 | `accent` | no | A CSS colour for the panel's accent when your renderer plays |
 | `status` | no | The waiting screen's second line under your mark (`"Ready"`, `"Pairable"`) |
@@ -177,8 +178,9 @@ pressed, and stops when another source takes over.
 
 ## 6. Settings
 
-A plugin can add rows to **Settings**. They appear under Sources (a renderer)
-or System (a service), under your name:
+A plugin can add rows to **Settings**. They appear on the page your `area`
+names (Sources for a renderer, System for a service, if you give none), under
+your name. Your switch sits under the same heading on the Plugins page:
 
 ```json
 "settings": [

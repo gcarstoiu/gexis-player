@@ -125,7 +125,7 @@ def test_a_restore_without_the_package_is_listed_as_needing_it_again(tmp_path):
     assert uploads.missing(root, known) == []
     uploads.remove("radiofoo", root)            # a new card: the package is gone
     gone = uploads.missing(root, known)
-    assert gone == [{"id": "radiofoo", "name": "Radio Foo", "kind": "renderer", "version": "1.0.0"}]
+    assert gone == [{"id": "radiofoo", "name": "Radio Foo", "kind": "renderer", "area": "sources", "version": "1.0.0"}]
     uploads.remember(root, known)                # a start does not forget it
     assert uploads.missing(root, known) == gone
     uploads.forget("radiofoo", known)
@@ -147,3 +147,26 @@ def test_backups_hold_uploaded_plugins_data_and_list_not_packages():
     assert "var/lib/gexis/plugins-known.json" in backups.MEMBERS
     assert not any(m.startswith("var/lib/gexis/plugins") and m != "var/lib/gexis/plugins-known.json"
                    for m in backups.MEMBERS), "never the packages"
+
+
+def test_a_manifest_can_say_which_settings_page_it_belongs_on(tmp_path):
+    """George, 2026-09-30: an optional `area`; absent, the kind decides."""
+    from gexis_core.settings_registry import Settings, load_registry
+    m = {"id": "lyrics", "name": "Lyrics", "kind": "service", "version": "1.0.0",
+         "run": "bin/radiofoo", "area": "enrichment",
+         "settings": [{"key": "lang", "type": "text", "label": "Language", "default": None}]}
+    uploads.install(package(m), ours=set(), root=tmp_path)
+    [plugin] = uploads.installed(tmp_path)
+    assert plugin.area == "enrich"
+    registry = Settings.with_plugins(load_registry(), [plugin], {})
+    where = {g["id"]: [r.get("key") or r["label"] for r in g["rows"]] for g in registry}
+    assert "lyrics.lang" in where["enrich"] and "lyrics.lang" not in where["system"]
+    plugins_page = where["plugins"]
+    assert plugins_page.index("Enrichment") < plugins_page.index("lyrics.enabled"), "its switch under Enrichment"
+
+
+def test_an_area_that_is_not_a_settings_page_is_refused(tmp_path):
+    m = {"id": "radiofoo", "name": "Radio Foo", "kind": "renderer", "version": "1.0.0",
+         "run": "bin/radiofoo", "area": "plugins"}
+    with pytest.raises(uploads.Refused, match="is not one of"):
+        uploads.install(package(m), ours=set(), root=tmp_path)
