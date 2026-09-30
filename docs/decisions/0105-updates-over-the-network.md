@@ -122,6 +122,27 @@ exists.
 A new Debian release (13 → 14), a new partition layout, a new boot mechanism.
 Named in the release notes when it happens; rare.
 
+## Amendment, 2026-09-30 — the tested set, measured
+
+[Finding 104](../findings/104-what-a-tested-set-weighs-and-where-it-can-live.md),
+the prototype decision 3 asked for:
+
+- **1,027 packages, 880 MB** of package files: 140 from Raspberry Pi (497 MB -
+  Chromium, kernels, firmware), 887 from Debian (383 MB).
+- **The Raspberry Pi archive indexes only the newest version**; its pool keeps
+  the old files (alsa-lib's back to Debian 10), undocumented how long. Section 3
+  said the archive *"dropped the pinned `alsa-lib`"*: it dropped it **from the
+  index** (ADR-0021's amendment says the same), which is what makes apt unable
+  to install it. **No Raspberry Pi snapshot service exists**; Debian's does.
+- **GitHub Pages cannot hold it** (1 GB per site; one set is 880 MB; git
+  refuses Chromium's 122 MB file). Section 2's candidate stands for nothing
+  larger than our own packages. **GitHub Releases can**, per its documentation
+  (no total or bandwidth limit, 2 GiB a file), but 1,000 files a release is
+  fewer than the set's 1,027.
+
+**Decision owed (George): where the tested set lives.** The signing and the
+device side do not change with the answer.
+
 ## Not in this record
 
 - **Plugins' own updates** — ADR-0106. The repository is shared.
