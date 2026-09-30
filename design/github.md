@@ -3,6 +3,63 @@ branch: main
 
 ## Last sync
 
+- 2026-09-30: Settings unlocked by George for two rows (Attached screen, Screen rotation) and they are in `Settings.dc.html`; the Screen step is merged into `Setup.dc.html`; `data-contract.md` brought up to date.
+
+date: 2026-09-30T10:40:00Z
+commit: 403d582330
+
+### Updated in this project
+
+- **design/ export refreshed**: `source/` carries the current Now Playing,
+  Setup and Panel Setup, plus `source/13b/` with the chosen 13b designs.
+  The plain slice now matches the source for Home, shuffle/repeat, the
+  volume glyph and the right-group gap. README, screens.md and settings.md
+  gained a "Changed 2026-09-30" section. `verify.html` is still to run on a
+  local server.
+- **13b settled** (George): Settings stays a tile on bars; Attached screen
+  and Rotation confirmed; copy accepted as drawn.
+
+## Sync 2026-09-30T10:02:38Z
+
+### Updated in this project
+
+- **Phase 13b, turns 3–9** (`design/briefs/13b-screen-families.md`, Finding
+  100, ADR-0019, ADR-0036, `05-peppy/files/letterbox.py`): the Bar family
+  (`Bar Frame`, `Bar Library`, `Bar Panels`), the visualiser surround, the
+  phone's Screen step (`Setup Screen Step.dc.html`) and the Screen / Rotation
+  rows (`Settings Screen Row.dc.html`), all in `Screen Families.dc.html`.
+  Chosen so far: 1b, 1d, 7 mm floor, 5s (4b pulled down), 5c rail on the
+  right, 7b, 7e, 8b, 8f.
+
+## Sync 2026-09-30T06:16:52Z
+
+### Updated in this project
+
+- **Phase 13b, turn 1** (`design/briefs/13b-screen-families.md`, Finding
+  100): `Screen Families.dc.html` with three height rules for the Standard
+  family, two large-screen type treatments and the touch-target table.
+  Artboards come from `Family Frame.dc.html`; the locked files are unchanged.
+
+## Sync 2026-09-30T05:50:00Z
+
+Incremental from `bddc817007...403d582330` (phase-13).
+
+### Updated in this project
+
+- **Queue rail**: no X; swipe a row left past 96px to remove it, with
+  *Remove* uncovered behind it, and a one-time hint on first open
+  (`QueueRail.svelte`, ADR-0062). Row press is opacity 0.62, as the panel.
+- **Panel Setup** rebuilt from `SetupScreen.svelte`: one step at a time at
+  two-metre sizes (join, phone connected, open the page, carry on, joining,
+  done with the Lyrion card, could not join, Ethernet, did not start,
+  starting). Old two-card version kept as `Panel Setup (two cards,
+  2026-09-29).dc.html`.
+- **Setup (phone)** from `SetupPage.svelte`: blurred weave backdrop, the
+  mobile-data card on Welcome, Music as three Lyrion choices that gate
+  Continue, Review's Library line, and Change returning to Review.
+
+## Previous sync
+
 date: 2026-09-29T11:25:00Z
 
 Source: all of `design/IMPLEMENTED-DIFFERENTLY.md` and the pictures in
@@ -73,11 +130,15 @@ artist pages, Play album + Add to queue, singular counts, no row press, no
 station count on Radio, waiting marks 38/38/41 in 100px rings, no New
 playlist.
 
-**Found on the panel and not drawn:** the home screen with LMS off
-(ADR-0079, `WaitingHome.svelte`: the waiting marks full-screen, a Settings
-button top right, and "No sources" when every renderer is off), and with it
-Now Playing's home button becoming Settings and the artist line no longer a
-link. Queue rail swipe-to-remove and its one-time hint are behaviour only.
+**Drawn 2026-09-29T14:55Z on George's confirmation:** the home screen with
+LMS off (ADR-0079, `WaitingHome.svelte`, `WaitingServices.svelte` `full`):
+the marks at 1.8× (180px rings, 162px discs, 68/74px marks, 310px columns,
+60px gap) with the manifest's names and statuses (Spotify · Listening,
+Bluetooth · Pairable), a 64px Settings button 26px from the top right, and
+"No sources" when every renderer is off. Now Playing's home button becomes
+the 22×16 sliders glyph and opens Settings (`NowPlaying.svelte` `rootless`);
+the artist line is inert. Tweak: `lms` = on / off / all off. Queue rail
+swipe-to-remove and its one-time hint are behaviour only.
 
 ### Not carried, and why
 
@@ -90,6 +151,13 @@ link. Queue rail swipe-to-remove and its one-time hint are behaviour only.
   `design/verify.html` running.
 
 ## Sync history
+
+date: 2026-09-20T21:20:00Z
+
+### Updated in this project
+
+- Designed the first-boot setup page (`Setup.dc.html`) against ADR-0031.
+- Vendored the brand package into `brand/`; the committed Plymouth frames predate the lettered mark and must be re-rendered.
 
 date: 2026-09-19T06:38:47Z
 
@@ -112,10 +180,11 @@ date: 2026-09-18T20:41:29Z
 
 | Project screen | Repo files |
 |---|---|
-| Now Playing (`Now Playing.dc.html`, `design/now-playing.html`) | `ui/src/App.svelte`, `ui/src/lib/state.js`, `design/marks/bluetooth.svg` |
+| Now Playing (`Now Playing.dc.html`, `design/now-playing.html`) | `ui/src/screens/QueueRail.svelte`, `ui/src/App.svelte`, `ui/src/lib/state.js`, `design/marks/bluetooth.svg` |
 | Settings (`Settings.dc.html`) | `core/src/gexis_core/settings_registry.json` (phase-13), `ui/src/screens/Settings.svelte`, `ui/src/screens/MiniPlayer.svelte`, `core/src/gexis_core/notices.json` (Legal, Credits), `core/src/gexis_core/skins.py` + `skins/templates*/meters.txt` |
-| Setup, phone (`Setup.dc.html`) | ADR-0031 as amended, ADR-0104; branch `phase-13` (PR #37) |
+| Setup, phone (`Setup.dc.html`) | ADR-0031 as amended, ADR-0104, `ui/src/screens/SetupPage.svelte` (phase-13); Screen step from the 13b brief |
 | Panel Setup (`Panel Setup.dc.html`) | `ui/src/screens/SetupScreen.svelte` (phase-13) |
+| Phase 13b families (`Screen Families Chosen.dc.html`, `Screen Families.dc.html`, `Now Playing Height Study`, `Family Frame`, `Bar Frame`, `Bar Library`, `Bar Panels`, `Settings Screen Row`; exported to `design/source/13b/`) | `design/briefs/13b-screen-families.md`, `docs/findings/100-screens-what-the-pi-can-learn-and-what-exists.md`, ADR-0019, ADR-0036, `image/stage-gexis/05-peppy/files/letterbox.py`, `ui/src/screens/QueueRail.svelte`, `ui/src/screens/SetupScreen.svelte` |
 | Design tokens (`design/tokens.css`) | none yet — `App.svelte` carries its own throwaway styles |
 | Data contract (`design/data-contract.md`) | `ui/src/lib/state.js`, `ui/vite.config.js` |
 | Brand package (`brand/`) | none yet — the Plymouth boot frames in the image build predate the lettered mark |

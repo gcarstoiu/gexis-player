@@ -224,6 +224,26 @@ proposals:
 That makes it **49 settable rows** under 7 group separators, across 6
 categories, 6 wired.
 
+### Changed 2026-09-22
+
+- **The skin picker is a list with a preview**, not a thumbnail grid, and a
+  tap previews without writing. See "Picking a skin" above.
+- **`idle_days` became `idle_forecast`.** It was a 0–5 number; it is now a
+  choice of `3 days` or `None`, because those are the only two the idle
+  screen draws and they are two different layouts.
+- **Ethernet joins Wi-Fi under Device.** A new `connection` choice —
+  `Ethernet` or `Wi-Fi` — sits above both, and the rows for the interface
+  that is not carrying the player are **absent**, on `onlyWhen`, rather than
+  shown inert. `Ethernet` reveals one readonly `eth_ip`; `Wi-Fi` reveals the
+  existing network list unchanged. Both keys are new.
+
+  The rule is that the choice is the user's and it sticks: a cable being
+  plugged in does not switch the device over, and the row's note says so.
+  Addressing is DHCP only — there is no static form on either interface.
+
+  With `connection` settable and `eth_ip` readonly, the count above becomes
+  **50 settable rows**.
+
 ---
 
 ## Two behaviours to preserve
@@ -294,3 +314,19 @@ both opportunities are now taken:
 Two `list` kinds now exist. `kind: 'server'` items are
 `[address, description, state]` with `state: 'current' | 'found'`, no signal
 bars and no forget action; Wi-Fi items stay `[ssid, meta, bars, state]`.
+
+---
+
+## Changed 2026-09-30
+
+`source/Settings.dc.html` is generated from `core/src/gexis_core/settings_registry.json`
+(phase-13): every surfaced row in the registry's order with its copy. Where
+this file and the source disagree, the source is right; this file has not
+been rewritten row by row.
+
+Confirmed by George for Phase 13b, drawn in `source/13b/Settings Screen Row.dc.html`:
+
+| key | type | group | note |
+|---|---|---|---|
+| `screen` | choice | Display → Panel | Label **Attached screen**. The model, from the supported-screens table. Sets the family (Standard or Bar) and the skin set. Restarts the player. |
+| `rotation` | choice | Display → Panel | Label **Screen rotation**. 0° / 90° / 180° / 270°. Restarts the player. |

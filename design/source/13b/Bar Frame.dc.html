@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Nunito+Sans:ital,opsz,wght@0,6..12,300..800&family=IBM+Plex+Mono:wght@400;600;700&display=swap" rel="stylesheet" />
+<style>html,body{margin:0;padding:0;background:#0c1014;}a{color:#7ed6bc;}a:hover{color:#a8e5d3;}</style>
+</helmet>
+<div style="width:{{ wPx }};height:400px;position:relative;overflow:hidden;font-family:'Nunito Sans','Avenir Next','Segoe UI',system-ui,sans-serif;color:#e9eef2;background:#101a21;">
+  <div style="position:absolute;inset:0;background:#37505f;"></div>
+  <div style="position:absolute;inset:0;background:radial-gradient(130% 105% at 20% 42%,rgba(22,36,46,0.3),rgba(14,23,30,0.86));"></div>
+  <div style="position:absolute;left:0;right:0;top:0;height:3px;background:#7ed6bc;z-index:3;"></div>
+
+  <sc-if value="{{ isA }}" hint-placeholder-val="{{ true }}">
+    <div style="position:absolute;inset:0;display:flex;">
+      <div style="width:400px;height:400px;border-radius:0px;position:relative;overflow:hidden;background:#17242d;flex-shrink:0;box-shadow:none;"><img src="album-art.webp" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;" /><div style="position:absolute;inset:0;border-radius:0px;box-shadow:inset 0 0 0 1px rgba(255,255,255,0.08);"></div></div>
+      <div style="flex:1;min-width:0;display:flex;flex-direction:column;padding:36px 40px 30px;box-sizing:border-box;">
+        <div style="display:flex;align-items:flex-start;gap:24px;">
+          <div style="flex:1;min-width:0;"><div style="min-width:0;"><div style="font-size:46px;line-height:1.06;font-weight:700;letter-spacing:-0.015em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Rempompi</div><div style="display:flex;align-items:baseline;gap:12px;margin-top:10px;min-width:0;"><span style="font-size:30px;font-weight:600;white-space:nowrap;color:#f2a48f;flex-shrink:0;">Gasca Zurli</span><span style="font-size:26px;color:rgba(233,238,242,0.6);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Atentiune, Acceleram!</span></div></div></div>
+          <div style="display:flex;align-items:center;gap:3px;height:30px;flex-shrink:0;"><div style="width:5px;height:15px;border-radius:2px;background:#7ed6bc;flex-shrink:0;"></div><div style="width:5px;height:30px;border-radius:2px;background:#7ed6bc;flex-shrink:0;"></div><div style="width:5px;height:22px;border-radius:2px;background:#7ed6bc;flex-shrink:0;"></div><div style="width:5px;height:26px;border-radius:2px;background:#7ed6bc;flex-shrink:0;"></div></div>
+        </div>
+        <div style="margin-top:auto;"><div style="position:relative;height:10px;border-radius:999px;background:rgba(233,238,242,0.13);overflow:hidden;"><div style="position:absolute;left:0;top:0;bottom:0;width:38%;border-radius:999px;background:#7ed6bc;"></div></div><div style="display:flex;justify-content:space-between;font-family:'IBM Plex Mono','Courier New',monospace;font-size:16px;color:rgba(233,238,242,0.62);margin-top:10px;letter-spacing:0.04em;"><span>0:44</span><span>-1:11</span></div></div>
+        <div style="display:flex;align-items:center;gap:20px;margin-top:14px;">
+          <div style="width:68px;height:68px;border-radius:50%;background:rgba(233,238,242,0.09);display:flex;align-items:center;justify-content:center;flex-shrink:0;"><div style="width:3px;height:19px;background:#e9eef2;border-radius:2px;"></div><div style="width:0;height:0;border-right:13px solid #e9eef2;border-top:10px solid transparent;border-bottom:10px solid transparent;margin-left:3px;"></div></div><div style="width:92px;height:92px;border-radius:50%;background:#f2a48f;display:flex;align-items:center;justify-content:center;gap:9px;flex-shrink:0;box-shadow:0 0 22px rgba(242,164,143,0.22),0 12px 30px rgba(242,164,143,0.35);"><div style="width:9px;height:34px;border-radius:2px;background:#16232c;"></div><div style="width:9px;height:34px;border-radius:2px;background:#16232c;"></div></div><div style="width:68px;height:68px;border-radius:50%;background:rgba(233,238,242,0.09);display:flex;align-items:center;justify-content:center;flex-shrink:0;"><div style="width:0;height:0;border-left:13px solid #e9eef2;border-top:10px solid transparent;border-bottom:10px solid transparent;margin-right:3px;"></div><div style="width:3px;height:19px;background:#e9eef2;border-radius:2px;"></div></div>
+          <div style="flex:1;"></div>
+          <div style="width:60px;height:60px;border-radius:50%;background:rgba(233,238,242,0.07);display:{{ libBtnDisplay }};align-items:center;justify-content:center;flex-shrink:0;"><div style="width:24px;height:24px;display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:4px;"><div style="border-radius:3px;background:rgba(233,238,242,0.85);"></div><div style="border-radius:3px;background:rgba(233,238,242,0.85);"></div><div style="border-radius:3px;background:rgba(233,238,242,0.85);"></div><div style="border-radius:3px;background:rgba(233,238,242,0.85);"></div></div></div><div style="width:60px;height:60px;border-radius:50%;background:rgba(233,238,242,0.07);display:flex;align-items:flex-end;justify-content:center;gap:4px;padding-bottom:20px;box-sizing:border-box;flex-shrink:0;"><span style="width:4px;height:12px;border-radius:2px;background:rgba(233,238,242,0.82);display:block;"></span><span style="width:4px;height:22px;border-radius:2px;background:rgba(233,238,242,0.82);display:block;"></span><span style="width:4px;height:16px;border-radius:2px;background:rgba(233,238,242,0.82);display:block;"></span><span style="width:4px;height:8px;border-radius:2px;background:rgba(233,238,242,0.82);display:block;"></span></div><div style="width:60px;height:60px;border-radius:50%;background:rgba(159,180,232,0.12);border:1px solid rgba(159,180,232,0.3);box-sizing:border-box;position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;flex-shrink:0;"><div style="width:26px;height:3px;border-radius:2px;background:#9fb4e8;"></div><div style="width:26px;height:3px;border-radius:2px;background:#9fb4e8;"></div><div style="width:15px;height:3px;border-radius:2px;background:#9fb4e8;"></div><span style="position:absolute;top:-3px;right:-3px;min-width:24px;height:24px;padding:0 6px;border-radius:999px;background:#9fb4e8;color:#0d151c;font-family:'IBM Plex Mono','Courier New',monospace;font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center;box-sizing:border-box;">8</span></div>
+        </div>
+      </div>
+      <div style="width:112px;flex-shrink:0;display:flex;flex-direction:column;align-items:center;padding:28px 0 26px;box-sizing:border-box;gap:16px;border-left:1px solid rgba(233,238,242,0.1);background:rgba(13,21,28,0.35);">
+        <div style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:18px;font-weight:600;color:#e9eef2;">62</div>
+        <div style="flex:1;width:56px;border-radius:18px;background:rgba(233,238,242,0.09);position:relative;overflow:hidden;">
+          <div style="position:absolute;left:0;right:0;bottom:0;height:62%;background:rgba(233,238,242,0.82);border-radius:0 0 18px 18px;"></div>
+          <div style="position:absolute;left:10px;right:10px;bottom:calc(62% - 3px);height:6px;border-radius:3px;background:#101a21;opacity:0.5;"></div>
+        </div>
+        <span style="position:relative;width:30px;height:30px;flex-shrink:0;display:block;"><span style="position:absolute;left:0;top:50%;transform:translateY(-50%);width:15px;height:26px;background:rgba(233,238,242,0.85);clip-path:polygon(0 27%,42% 27%,100% 0,100% 100%,42% 73%,0 73%);display:block;"></span><span style="position:absolute;left:5px;top:50%;width:16px;height:16px;margin-top:-8px;border-radius:50%;box-sizing:border-box;border:2.5px solid rgba(233,238,242,0.85);clip-path:polygon(50% 10%,100% 0,100% 100%,50% 90%);display:block;"></span><span style="position:absolute;left:1px;top:50%;width:24px;height:24px;margin-top:-12px;border-radius:50%;box-sizing:border-box;border:2.5px solid rgba(233,238,242,0.85);clip-path:polygon(50% 10%,100% 0,100% 100%,50% 90%);display:block;"></span><span style="position:absolute;left:-2px;top:50%;width:30px;height:30px;margin-top:-15px;border-radius:50%;box-sizing:border-box;border:2.5px solid rgba(233,238,242,0.18);clip-path:polygon(50% 10%,100% 0,100% 100%,50% 90%);display:block;"></span></span>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ isB }}" hint-placeholder-val="{{ false }}">
+    <div style="position:absolute;inset:0;display:flex;gap:36px;padding:32px 40px;box-sizing:border-box;">
+      <div style="width:336px;height:336px;border-radius:20px;position:relative;overflow:hidden;background:#17242d;flex-shrink:0;box-shadow:0 20px 48px rgba(0,0,0,0.5);"><img src="album-art.webp" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;" /><div style="position:absolute;inset:0;border-radius:20px;box-shadow:inset 0 0 0 1px rgba(255,255,255,0.08);"></div></div>
+      <div style="flex:1;min-width:0;display:flex;flex-direction:column;">
+        <div style="display:flex;align-items:flex-start;gap:24px;">
+          <div style="flex:1;min-width:0;"><div style="min-width:0;"><div style="font-size:42px;line-height:1.06;font-weight:700;letter-spacing:-0.015em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Rempompi</div><div style="display:flex;align-items:baseline;gap:12px;margin-top:10px;min-width:0;"><span style="font-size:28px;font-weight:600;white-space:nowrap;color:#f2a48f;flex-shrink:0;">Gasca Zurli</span><span style="font-size:24px;color:rgba(233,238,242,0.6);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Atentiune, Acceleram!</span></div></div></div>
+          <div style="display:flex;align-items:center;gap:3px;height:30px;flex-shrink:0;"><div style="width:5px;height:15px;border-radius:2px;background:#7ed6bc;flex-shrink:0;"></div><div style="width:5px;height:30px;border-radius:2px;background:#7ed6bc;flex-shrink:0;"></div><div style="width:5px;height:22px;border-radius:2px;background:#7ed6bc;flex-shrink:0;"></div><div style="width:5px;height:26px;border-radius:2px;background:#7ed6bc;flex-shrink:0;"></div></div>
+        </div>
+        <div style="margin-top:auto;display:flex;align-items:center;gap:16px;">
+          <span style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:16px;color:rgba(233,238,242,0.62);flex-shrink:0;">0:44</span>
+          <div style="flex:1;"><div style="position:relative;height:10px;border-radius:999px;background:rgba(233,238,242,0.13);overflow:hidden;"><div style="position:absolute;left:0;top:0;bottom:0;width:38%;border-radius:999px;background:#7ed6bc;"></div></div></div>
+          <span style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:16px;color:rgba(233,238,242,0.62);flex-shrink:0;">-1:11</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:18px;margin-top:22px;">
+          <div style="width:60px;height:60px;border-radius:50%;background:rgba(233,238,242,0.07);display:{{ libBtnDisplay }};align-items:center;justify-content:center;flex-shrink:0;"><div style="width:24px;height:24px;display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:4px;"><div style="border-radius:3px;background:rgba(233,238,242,0.85);"></div><div style="border-radius:3px;background:rgba(233,238,242,0.85);"></div><div style="border-radius:3px;background:rgba(233,238,242,0.85);"></div><div style="border-radius:3px;background:rgba(233,238,242,0.85);"></div></div></div>
+          <div style="flex:1;"></div>
+          <div style="width:68px;height:68px;border-radius:50%;background:rgba(233,238,242,0.09);display:flex;align-items:center;justify-content:center;flex-shrink:0;"><div style="width:3px;height:19px;background:#e9eef2;border-radius:2px;"></div><div style="width:0;height:0;border-right:13px solid #e9eef2;border-top:10px solid transparent;border-bottom:10px solid transparent;margin-left:3px;"></div></div><div style="width:92px;height:92px;border-radius:50%;background:#f2a48f;display:flex;align-items:center;justify-content:center;gap:9px;flex-shrink:0;box-shadow:0 0 22px rgba(242,164,143,0.22),0 12px 30px rgba(242,164,143,0.35);"><div style="width:9px;height:34px;border-radius:2px;background:#16232c;"></div><div style="width:9px;height:34px;border-radius:2px;background:#16232c;"></div></div><div style="width:68px;height:68px;border-radius:50%;background:rgba(233,238,242,0.09);display:flex;align-items:center;justify-content:center;flex-shrink:0;"><div style="width:0;height:0;border-left:13px solid #e9eef2;border-top:10px solid transparent;border-bottom:10px solid transparent;margin-right:3px;"></div><div style="width:3px;height:19px;background:#e9eef2;border-radius:2px;"></div></div>
+          <div style="flex:1;"></div>
+          <div style="display:flex;align-items:center;gap:14px;height:60px;padding:0 20px 0 16px;border-radius:999px;background:rgba(233,238,242,0.07);box-sizing:border-box;width:{{ bVolW }};flex-shrink:0;">
+            <span style="position:relative;width:30px;height:30px;flex-shrink:0;display:block;"><span style="position:absolute;left:0;top:50%;transform:translateY(-50%);width:15px;height:26px;background:rgba(233,238,242,0.85);clip-path:polygon(0 27%,42% 27%,100% 0,100% 100%,42% 73%,0 73%);display:block;"></span><span style="position:absolute;left:5px;top:50%;width:16px;height:16px;margin-top:-8px;border-radius:50%;box-sizing:border-box;border:2.5px solid rgba(233,238,242,0.85);clip-path:polygon(50% 10%,100% 0,100% 100%,50% 90%);display:block;"></span><span style="position:absolute;left:1px;top:50%;width:24px;height:24px;margin-top:-12px;border-radius:50%;box-sizing:border-box;border:2.5px solid rgba(233,238,242,0.85);clip-path:polygon(50% 10%,100% 0,100% 100%,50% 90%);display:block;"></span><span style="position:absolute;left:-2px;top:50%;width:30px;height:30px;margin-top:-15px;border-radius:50%;box-sizing:border-box;border:2.5px solid rgba(233,238,242,0.18);clip-path:polygon(50% 10%,100% 0,100% 100%,50% 90%);display:block;"></span></span>
+            <div style="flex:1;height:8px;border-radius:999px;background:rgba(233,238,242,0.15);position:relative;">
+              <div style="position:absolute;left:0;top:0;bottom:0;width:62%;border-radius:999px;background:rgba(233,238,242,0.82);"></div>
+              <div style="position:absolute;left:62%;top:50%;width:28px;height:28px;margin:-14px 0 0 -14px;border-radius:50%;background:#e9eef2;box-shadow:0 2px 8px rgba(0,0,0,0.4);"></div>
+            </div>
+            <span style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:16px;color:rgba(233,238,242,0.75);width:28px;text-align:right;">62</span>
+          </div>
+          <div style="width:60px;height:60px;border-radius:50%;background:rgba(159,180,232,0.12);border:1px solid rgba(159,180,232,0.3);box-sizing:border-box;position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;flex-shrink:0;"><div style="width:26px;height:3px;border-radius:2px;background:#9fb4e8;"></div><div style="width:26px;height:3px;border-radius:2px;background:#9fb4e8;"></div><div style="width:15px;height:3px;border-radius:2px;background:#9fb4e8;"></div><span style="position:absolute;top:-3px;right:-3px;min-width:24px;height:24px;padding:0 6px;border-radius:999px;background:#9fb4e8;color:#0d151c;font-family:'IBM Plex Mono','Courier New',monospace;font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center;box-sizing:border-box;">8</span></div>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ isC }}" hint-placeholder-val="{{ false }}">
+    <div style="position:absolute;left:0;top:0;bottom:0;width:38%;background:linear-gradient(90deg,rgba(126,214,188,0.04),rgba(126,214,188,0.16));border-right:3px solid rgba(126,214,188,0.75);"></div>
+    <div style="position:absolute;inset:0;display:flex;align-items:center;gap:40px;padding:32px 44px 32px 32px;box-sizing:border-box;">
+      <div style="width:336px;height:336px;border-radius:20px;position:relative;overflow:hidden;background:#17242d;flex-shrink:0;box-shadow:0 20px 48px rgba(0,0,0,0.5);"><img src="album-art.webp" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;" /><div style="position:absolute;inset:0;border-radius:20px;box-shadow:inset 0 0 0 1px rgba(255,255,255,0.08);"></div></div>
+      <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:18px;">
+        <div style="min-width:0;"><div style="font-size:54px;line-height:1.06;font-weight:700;letter-spacing:-0.015em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Rempompi</div><div style="display:flex;align-items:baseline;gap:12px;margin-top:10px;min-width:0;"><span style="font-size:32px;font-weight:600;white-space:nowrap;color:#f2a48f;flex-shrink:0;">Gasca Zurli</span><span style="font-size:28px;color:rgba(233,238,242,0.6);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Atentiune, Acceleram!</span></div></div>
+        <div style="display:flex;align-items:center;gap:14px;"><div style="display:flex;align-items:center;gap:3px;height:24px;flex-shrink:0;"><div style="width:4px;height:12px;border-radius:2px;background:#7ed6bc;flex-shrink:0;"></div><div style="width:4px;height:24px;border-radius:2px;background:#7ed6bc;flex-shrink:0;"></div><div style="width:4px;height:17px;border-radius:2px;background:#7ed6bc;flex-shrink:0;"></div><div style="width:4px;height:21px;border-radius:2px;background:#7ed6bc;flex-shrink:0;"></div></div><span style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:17px;color:rgba(233,238,242,0.7);letter-spacing:0.04em;">0:44 / 1:55</span></div>
+      </div>
+      <div style="display:flex;align-items:center;gap:24px;flex-shrink:0;">
+        <div style="width:76px;height:76px;border-radius:50%;background:rgba(233,238,242,0.09);display:flex;align-items:center;justify-content:center;flex-shrink:0;"><div style="width:3px;height:19px;background:#e9eef2;border-radius:2px;"></div><div style="width:0;height:0;border-right:13px solid #e9eef2;border-top:10px solid transparent;border-bottom:10px solid transparent;margin-left:3px;"></div></div><div style="width:120px;height:120px;border-radius:50%;background:#f2a48f;display:flex;align-items:center;justify-content:center;gap:12px;flex-shrink:0;box-shadow:0 0 22px rgba(242,164,143,0.22),0 12px 30px rgba(242,164,143,0.35);"><div style="width:12px;height:44px;border-radius:2px;background:#16232c;"></div><div style="width:12px;height:44px;border-radius:2px;background:#16232c;"></div></div><div style="width:76px;height:76px;border-radius:50%;background:rgba(233,238,242,0.09);display:flex;align-items:center;justify-content:center;flex-shrink:0;"><div style="width:0;height:0;border-left:13px solid #e9eef2;border-top:10px solid transparent;border-bottom:10px solid transparent;margin-right:3px;"></div><div style="width:3px;height:19px;background:#e9eef2;border-radius:2px;"></div></div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:16px;flex-shrink:0;"><div style="width:60px;height:60px;border-radius:50%;background:rgba(233,238,242,0.07);display:flex;align-items:center;justify-content:center;flex-shrink:0;"><span style="position:relative;width:30px;height:30px;flex-shrink:0;display:block;"><span style="position:absolute;left:0;top:50%;transform:translateY(-50%);width:15px;height:26px;background:rgba(233,238,242,0.85);clip-path:polygon(0 27%,42% 27%,100% 0,100% 100%,42% 73%,0 73%);display:block;"></span><span style="position:absolute;left:5px;top:50%;width:16px;height:16px;margin-top:-8px;border-radius:50%;box-sizing:border-box;border:2.5px solid rgba(233,238,242,0.85);clip-path:polygon(50% 10%,100% 0,100% 100%,50% 90%);display:block;"></span><span style="position:absolute;left:1px;top:50%;width:24px;height:24px;margin-top:-12px;border-radius:50%;box-sizing:border-box;border:2.5px solid rgba(233,238,242,0.85);clip-path:polygon(50% 10%,100% 0,100% 100%,50% 90%);display:block;"></span><span style="position:absolute;left:-2px;top:50%;width:30px;height:30px;margin-top:-15px;border-radius:50%;box-sizing:border-box;border:2.5px solid rgba(233,238,242,0.18);clip-path:polygon(50% 10%,100% 0,100% 100%,50% 90%);display:block;"></span></span></div><div style="width:60px;height:60px;border-radius:50%;background:rgba(233,238,242,0.07);display:flex;align-items:flex-end;justify-content:center;gap:4px;padding-bottom:20px;box-sizing:border-box;flex-shrink:0;"><span style="width:4px;height:12px;border-radius:2px;background:rgba(233,238,242,0.82);display:block;"></span><span style="width:4px;height:22px;border-radius:2px;background:rgba(233,238,242,0.82);display:block;"></span><span style="width:4px;height:16px;border-radius:2px;background:rgba(233,238,242,0.82);display:block;"></span><span style="width:4px;height:8px;border-radius:2px;background:rgba(233,238,242,0.82);display:block;"></span></div></div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ isDrawer }}" hint-placeholder-val="{{ false }}">
+    <div style="position:absolute;inset:0;background:rgba(8,12,16,0.62);"></div>
+    <div style="position:absolute;left:32px;right:32px;top:50%;height:176px;margin-top:-88px;border-radius:24px;background:#16232c;border:1px solid rgba(233,238,242,0.12);box-shadow:0 24px 60px rgba(0,0,0,0.55);display:flex;align-items:center;gap:32px;padding:0 40px;box-sizing:border-box;">
+      <div style="transform:scale(1.4);transform-origin:center;"><span style="position:relative;width:30px;height:30px;flex-shrink:0;display:block;"><span style="position:absolute;left:0;top:50%;transform:translateY(-50%);width:15px;height:26px;background:rgba(233,238,242,0.85);clip-path:polygon(0 27%,42% 27%,100% 0,100% 100%,42% 73%,0 73%);display:block;"></span><span style="position:absolute;left:5px;top:50%;width:16px;height:16px;margin-top:-8px;border-radius:50%;box-sizing:border-box;border:2.5px solid rgba(233,238,242,0.85);clip-path:polygon(50% 10%,100% 0,100% 100%,50% 90%);display:block;"></span><span style="position:absolute;left:1px;top:50%;width:24px;height:24px;margin-top:-12px;border-radius:50%;box-sizing:border-box;border:2.5px solid rgba(233,238,242,0.85);clip-path:polygon(50% 10%,100% 0,100% 100%,50% 90%);display:block;"></span><span style="position:absolute;left:-2px;top:50%;width:30px;height:30px;margin-top:-15px;border-radius:50%;box-sizing:border-box;border:2.5px solid rgba(233,238,242,0.18);clip-path:polygon(50% 10%,100% 0,100% 100%,50% 90%);display:block;"></span></span></div>
+      <div style="flex:1;height:14px;border-radius:999px;background:rgba(233,238,242,0.15);position:relative;">
+        <div style="position:absolute;left:0;top:0;bottom:0;width:62%;border-radius:999px;background:#e9eef2;"></div>
+        <div style="position:absolute;left:62%;top:50%;width:52px;height:52px;margin:-26px 0 0 -26px;border-radius:50%;background:#e9eef2;box-shadow:0 4px 14px rgba(0,0,0,0.45);"></div>
+      </div>
+      <div style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:44px;font-weight:700;width:90px;text-align:right;">62</div>
+      <div style="width:64px;height:64px;border-radius:50%;background:rgba(233,238,242,0.07);display:flex;align-items:center;justify-content:center;flex-shrink:0;"><div style="position:relative;width:22px;height:22px;"><div style="position:absolute;left:50%;top:0;width:3px;height:22px;margin-left:-1.5px;border-radius:2px;background:#e9eef2;transform:rotate(45deg);"></div><div style="position:absolute;left:50%;top:0;width:3px;height:22px;margin-left:-1.5px;border-radius:2px;background:#e9eef2;transform:rotate(-45deg);"></div></div></div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ isBrowse }}" hint-placeholder-val="{{ false }}">
+    <div style="position:absolute;inset:0;background:rgba(13,21,28,0.55);"></div>
+    <div style="position:absolute;inset:0;display:flex;">
+      <div style="width:300px;flex-shrink:0;display:flex;flex-direction:column;gap:10px;padding:28px 24px;box-sizing:border-box;border-right:1px solid rgba(233,238,242,0.1);">
+        <div style="display:flex;align-items:center;gap:14px;height:76px;padding:0 12px;border-radius:18px;background:rgba(126,214,188,0.12);border:1px solid rgba(126,214,188,0.32);box-sizing:border-box;">
+          <div style="width:52px;height:52px;border-radius:10px;position:relative;overflow:hidden;background:#17242d;flex-shrink:0;box-shadow:0 20px 48px rgba(0,0,0,0.5);"><img src="album-art.webp" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;" /><div style="position:absolute;inset:0;border-radius:10px;box-shadow:inset 0 0 0 1px rgba(255,255,255,0.08);"></div></div>
+          <div style="min-width:0;flex:1;"><div style="font-size:17px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Rempompi</div><div style="font-size:14px;color:#7ed6bc;margin-top:2px;">Now playing</div></div>
+        </div>
+        <sc-for list="{{ cats }}" as="c" hint-placeholder-count="4">
+          <div style="height:60px;display:flex;align-items:center;gap:14px;padding:0 16px;border-radius:14px;box-sizing:border-box;background:{{ c.bg }};border:1px solid {{ c.line }};">
+            <span style="width:10px;height:10px;border-radius:50%;flex-shrink:0;background:{{ c.ink }};"></span>
+            <span style="font-size:19px;font-weight:700;">{{ c.name }}</span>
+          </div>
+        </sc-for>
+      </div>
+      <div style="flex:1;min-width:0;display:flex;flex-direction:column;padding:28px 0 24px 32px;box-sizing:border-box;">
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;padding-right:32px;">
+          <span style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:13px;letter-spacing:0.22em;text-transform:uppercase;color:rgba(233,238,242,0.62);">New Music</span>
+          <span style="flex:1;height:1px;background:rgba(233,238,242,0.12);"></span>
+        </div>
+        <div style="display:flex;gap:22px;overflow:hidden;-webkit-mask-image:linear-gradient(90deg,#000 0,#000 calc(100% - 88px),transparent 100%);mask-image:linear-gradient(90deg,#000 0,#000 calc(100% - 88px),transparent 100%);">
+          <sc-for list="{{ albums }}" as="a" hint-placeholder-count="8">
+            <div style="width:236px;flex-shrink:0;">
+              <div style="width:236px;height:236px;border-radius:16px;overflow:hidden;position:relative;background:#17242d;border:1px solid rgba(233,238,242,0.1);"><img src="album-art.webp" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;" /></div>
+              <div style="font-size:18px;font-weight:600;margin-top:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ a.title }}</div>
+              <div style="font-size:15px;color:rgba(233,238,242,0.6);margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ a.artist }}</div>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ isStrip }}" hint-placeholder-val="{{ false }}">
+    <div style="position:absolute;inset:0;display:flex;gap:36px;padding:32px 40px;box-sizing:border-box;">
+      <div style="width:336px;height:336px;border-radius:20px;position:relative;overflow:hidden;background:#17242d;flex-shrink:0;box-shadow:0 20px 48px rgba(0,0,0,0.5);"><img src="album-art.webp" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;" /><div style="position:absolute;inset:0;border-radius:20px;box-shadow:inset 0 0 0 1px rgba(255,255,255,0.08);"></div></div>
+      <div style="flex:1;min-width:0;display:flex;flex-direction:column;">
+        <div style="display:flex;align-items:flex-start;gap:20px;">
+          <div style="flex:1;min-width:0;">
+            <sc-if value="{{ metaOn }}" hint-placeholder-val="{{ true }}">
+              <div style="font-size:42px;line-height:1.06;font-weight:700;letter-spacing:-0.015em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Rempompi</div>
+              <div style="display:flex;align-items:baseline;gap:12px;margin-top:10px;min-width:0;"><span style="font-size:28px;font-weight:600;white-space:nowrap;color:#f2a48f;flex-shrink:0;">Gasca Zurli</span><span style="font-size:24px;color:rgba(233,238,242,0.6);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Atentiune, Acceleram!</span><span style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:21px;color:rgba(233,238,242,0.6);white-space:nowrap;flex-shrink:0;">2014</span></div>
+            </sc-if>
+            <sc-if value="{{ lyricsOn }}" hint-placeholder-val="{{ false }}">
+              <div style="display:flex;align-items:baseline;gap:12px;min-width:0;"><span style="font-size:24px;font-weight:700;white-space:nowrap;">Rempompi</span><span style="font-size:20px;font-weight:600;color:#f2a48f;white-space:nowrap;">Gasca Zurli</span></div>
+              <div style="margin-top:10px;display:flex;flex-direction:column;gap:4px;">
+                <div style="font-size:26px;line-height:1.3;font-weight:500;color:rgba(233,238,242,0.85);opacity:0.42;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">So we drive</div>
+                <div style="font-size:26px;line-height:1.3;font-weight:700;color:#f2a48f;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Past the turning, past the town that raised us</div>
+                <div style="font-size:26px;line-height:1.3;font-weight:500;color:rgba(233,238,242,0.85);opacity:0.42;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Radio half a station out of reach</div>
+              </div>
+            </sc-if>
+          </div>
+          <div style="display:flex;align-items:center;gap:3px;height:30px;flex-shrink:0;"><div style="width:5px;height:15px;border-radius:2px;background:#7ed6bc;flex-shrink:0;"></div><div style="width:5px;height:30px;border-radius:2px;background:#7ed6bc;flex-shrink:0;"></div><div style="width:5px;height:22px;border-radius:2px;background:#7ed6bc;flex-shrink:0;"></div><div style="width:5px;height:26px;border-radius:2px;background:#7ed6bc;flex-shrink:0;"></div></div>
+          <div style="width:60px;height:60px;border-radius:50%;box-sizing:border-box;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;flex-shrink:0;background:{{ lyrBg }};border:1px solid {{ lyrLine }};">
+            <div style="width:24px;height:3px;border-radius:2px;background:{{ lyrInk }};"></div>
+            <div style="width:18px;height:3px;border-radius:2px;background:{{ lyrInk }};"></div>
+            <div style="width:24px;height:3px;border-radius:2px;background:{{ lyrInk }};"></div>
+          </div>
+        </div>
+        <div style="margin-top:auto;display:flex;align-items:center;gap:16px;">
+          <span style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:16px;color:rgba(233,238,242,0.62);flex-shrink:0;">0:44</span>
+          <div style="flex:1;position:relative;height:10px;border-radius:999px;background:rgba(233,238,242,0.13);overflow:hidden;"><div style="position:absolute;left:0;top:0;bottom:0;width:38%;border-radius:999px;background:#7ed6bc;"></div></div>
+          <span style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:16px;color:rgba(233,238,242,0.62);flex-shrink:0;">-1:11</span>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr auto 1fr;align-items:center;margin-top:22px;">
+          <div></div>
+          <div style="display:flex;align-items:center;gap:22px;">
+            <sc-if value="{{ srMain }}" hint-placeholder-val="{{ false }}"><div style="width:60px;height:60px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;box-sizing:border-box;background:rgba(233,238,242,0.07);border:1px solid rgba(233,238,242,0.12);"><span style="position:relative;width:32px;height:28px;display:block;"><span style="position:absolute;left:0.5px;top:13.5px;width:17px;height:3px;border-radius:2px;transform:rotate(-54.5deg);display:block;background:rgba(233,238,242,0.66);"></span><span style="position:absolute;left:0.5px;top:13.5px;width:17px;height:3px;border-radius:2px;transform:rotate(54.5deg);display:block;background:rgba(233,238,242,0.66);"></span><span style="position:absolute;left:13px;top:6.5px;width:11px;height:3px;display:block;background:rgba(233,238,242,0.66);"></span><span style="position:absolute;left:13px;top:20.5px;width:11px;height:3px;display:block;background:rgba(233,238,242,0.66);"></span><span style="position:absolute;left:24px;top:3px;width:0;height:0;display:block;border-left:8px solid rgba(233,238,242,0.66);border-top:5px solid transparent;border-bottom:5px solid transparent;"></span><span style="position:absolute;left:24px;top:17px;width:0;height:0;display:block;border-left:8px solid rgba(233,238,242,0.66);border-top:5px solid transparent;border-bottom:5px solid transparent;"></span></span></div></sc-if>
+            <div style="width:68px;height:68px;border-radius:50%;background:rgba(233,238,242,0.09);display:flex;align-items:center;justify-content:center;flex-shrink:0;"><div style="width:3px;height:19px;background:#e9eef2;border-radius:2px;"></div><div style="width:0;height:0;border-right:13px solid #e9eef2;border-top:10px solid transparent;border-bottom:10px solid transparent;margin-left:3px;"></div></div><div style="width:92px;height:92px;border-radius:50%;background:#f2a48f;display:flex;align-items:center;justify-content:center;gap:9px;flex-shrink:0;box-shadow:0 0 22px rgba(242,164,143,0.22),0 12px 30px rgba(242,164,143,0.35);"><div style="width:9px;height:34px;border-radius:2px;background:#16232c;"></div><div style="width:9px;height:34px;border-radius:2px;background:#16232c;"></div></div><div style="width:68px;height:68px;border-radius:50%;background:rgba(233,238,242,0.09);display:flex;align-items:center;justify-content:center;flex-shrink:0;"><div style="width:0;height:0;border-left:13px solid #e9eef2;border-top:10px solid transparent;border-bottom:10px solid transparent;margin-right:3px;"></div><div style="width:3px;height:19px;background:#e9eef2;border-radius:2px;"></div></div>
+            <sc-if value="{{ srMain }}" hint-placeholder-val="{{ false }}"><div style="width:60px;height:60px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;position:relative;box-sizing:border-box;background:rgba(233,238,242,0.07);border:1px solid rgba(233,238,242,0.12);"><span style="position:relative;width:26px;height:26px;display:block;"><span style="position:absolute;left:3px;top:3px;width:15px;height:3px;border-radius:1px;background:rgba(233,238,242,0.66);display:block;"></span><span style="position:absolute;left:3px;top:3px;width:3px;height:14px;border-radius:1px;background:rgba(233,238,242,0.66);display:block;"></span><span style="position:absolute;left:20px;top:9px;width:3px;height:14px;border-radius:1px;background:rgba(233,238,242,0.66);display:block;"></span><span style="position:absolute;left:8px;top:20px;width:15px;height:3px;border-radius:1px;background:rgba(233,238,242,0.66);display:block;"></span><span style="position:absolute;left:17.5px;top:2px;width:0;height:0;border-top:7px solid rgba(233,238,242,0.66);border-left:4px solid transparent;border-right:4px solid transparent;display:block;"></span><span style="position:absolute;left:0.5px;top:17px;width:0;height:0;border-bottom:7px solid rgba(233,238,242,0.66);border-left:4px solid transparent;border-right:4px solid transparent;display:block;"></span></span></div></sc-if>
+          </div>
+          <div style="justify-self:end;"><div style="width:60px;height:60px;border-radius:50%;background:rgba(159,180,232,0.12);border:1px solid rgba(159,180,232,0.3);box-sizing:border-box;position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;flex-shrink:0;"><div style="width:26px;height:3px;border-radius:2px;background:#9fb4e8;"></div><div style="width:26px;height:3px;border-radius:2px;background:#9fb4e8;"></div><div style="width:15px;height:3px;border-radius:2px;background:#9fb4e8;"></div><span style="position:absolute;top:-3px;right:-3px;min-width:24px;height:24px;padding:0 6px;border-radius:999px;background:#9fb4e8;color:#0d151c;font-family:'IBM Plex Mono','Courier New',monospace;font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center;box-sizing:border-box;">8</span></div></div>
+        </div>
+      </div>
+    </div>
+    <div style="position:absolute;left:50%;width:88px;height:6px;margin-left:-44px;border-radius:3px;background:rgba(233,238,242,0.42);z-index:4;top:{{ hTop }};bottom:{{ hBottom }};"></div>
+
+    <sc-if value="{{ queueOn }}" hint-placeholder-val="{{ false }}">
+      <div style="position:absolute;inset:0;z-index:7;background:rgba(8,12,16,0.62);"></div>
+      <div style="position:absolute;z-index:8;top:0;bottom:0;right:0;width:470px;background:#16232c;border-left:1px solid rgba(159,180,232,0.22);padding:22px 26px 16px;box-sizing:border-box;box-shadow:-30px 0 80px rgba(0,0,0,0.5);display:flex;flex-direction:column;">
+        <div style="flex-shrink:0;margin-bottom:12px;"><div style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:12px;letter-spacing:0.2em;text-transform:uppercase;color:rgba(233,238,242,0.62);">Up next</div><div style="font-size:22px;font-weight:700;margin-top:4px;">7 tracks  ·  33 min left</div></div>
+        <div style="flex:1;min-height:0;overflow:hidden;display:flex;flex-direction:column;gap:3px;-webkit-mask-image:linear-gradient(180deg,#000 80%,transparent 100%);mask-image:linear-gradient(180deg,#000 80%,transparent 100%);">
+          <sc-for list="{{ qItems }}" as="q" hint-placeholder-count="5"><div style="height:60px;flex-shrink:0;display:flex;align-items:center;gap:15px;padding:0 14px;border-radius:12px;background:{{ q.bg }};">
+            <span style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:14px;width:24px;flex-shrink:0;color:{{ q.numInk }};">{{ q.num }}</span>
+            <span style="width:42px;height:42px;border-radius:8px;overflow:hidden;position:relative;flex-shrink:0;background:#17242d;box-shadow:inset 0 0 0 1px rgba(233,238,242,0.1);display:block;"><img src="album-art.webp" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;" /></span>
+            <span style="flex:1;min-width:0;"><span style="font-size:18px;font-weight:600;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:{{ q.ink }};">{{ q.title }}</span><span style="font-size:14px;color:rgba(233,238,242,0.55);display:block;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ q.artist }}</span></span>
+            <span style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:14px;color:rgba(233,238,242,0.5);flex-shrink:0;">{{ q.dur }}</span>
+          </div></sc-for>
+        </div>
+      </div>
+    </sc-if>
+    <sc-if value="{{ trayOn }}" hint-placeholder-val="{{ false }}">
+      <div style="position:absolute;inset:0;background:rgba(8,12,16,0.55);z-index:5;"></div>
+      <div style="position:absolute;left:0;right:0;height:136px;z-index:6;background:#16232c;box-shadow:0 18px 44px rgba(0,0,0,0.5);display:flex;align-items:center;gap:20px;box-sizing:border-box;top:{{ tTop }};bottom:{{ tBottom }};border-radius:{{ tRadius }};padding:{{ tPad }};border-bottom:1px solid rgba(233,238,242,0.12);">
+        <div style="position:absolute;left:50%;width:88px;height:6px;margin-left:-44px;border-radius:3px;background:rgba(233,238,242,0.42);top:{{ thTop }};bottom:{{ thBottom }};"></div>
+        <div style="width:64px;height:64px;border-radius:50%;background:rgba(233,238,242,0.07);display:flex;align-items:center;justify-content:center;flex-shrink:0;"><div style="width:24px;height:24px;display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:4px;"><div style="border-radius:3px;background:rgba(233,238,242,0.85);"></div><div style="border-radius:3px;background:rgba(233,238,242,0.85);"></div><div style="border-radius:3px;background:rgba(233,238,242,0.85);"></div><div style="border-radius:3px;background:rgba(233,238,242,0.85);"></div></div></div><div style="width:60px;height:60px;border-radius:50%;background:rgba(233,238,242,0.07);display:flex;align-items:flex-end;justify-content:center;gap:4px;padding-bottom:20px;box-sizing:border-box;flex-shrink:0;"><span style="width:4px;height:12px;border-radius:2px;background:rgba(233,238,242,0.82);display:block;"></span><span style="width:4px;height:22px;border-radius:2px;background:rgba(233,238,242,0.82);display:block;"></span><span style="width:4px;height:16px;border-radius:2px;background:rgba(233,238,242,0.82);display:block;"></span><span style="width:4px;height:8px;border-radius:2px;background:rgba(233,238,242,0.82);display:block;"></span></div>
+        <sc-if value="{{ srTray }}" hint-placeholder-val="{{ true }}">
+          <div style="width:1px;height:44px;background:rgba(233,238,242,0.14);flex-shrink:0;"></div>
+          <div style="width:60px;height:60px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;box-sizing:border-box;background:rgba(233,238,242,0.07);border:1px solid rgba(233,238,242,0.12);"><span style="position:relative;width:32px;height:28px;display:block;"><span style="position:absolute;left:0.5px;top:13.5px;width:17px;height:3px;border-radius:2px;transform:rotate(-54.5deg);display:block;background:rgba(233,238,242,0.66);"></span><span style="position:absolute;left:0.5px;top:13.5px;width:17px;height:3px;border-radius:2px;transform:rotate(54.5deg);display:block;background:rgba(233,238,242,0.66);"></span><span style="position:absolute;left:13px;top:6.5px;width:11px;height:3px;display:block;background:rgba(233,238,242,0.66);"></span><span style="position:absolute;left:13px;top:20.5px;width:11px;height:3px;display:block;background:rgba(233,238,242,0.66);"></span><span style="position:absolute;left:24px;top:3px;width:0;height:0;display:block;border-left:8px solid rgba(233,238,242,0.66);border-top:5px solid transparent;border-bottom:5px solid transparent;"></span><span style="position:absolute;left:24px;top:17px;width:0;height:0;display:block;border-left:8px solid rgba(233,238,242,0.66);border-top:5px solid transparent;border-bottom:5px solid transparent;"></span></span></div><div style="width:60px;height:60px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;position:relative;box-sizing:border-box;background:rgba(233,238,242,0.07);border:1px solid rgba(233,238,242,0.12);"><span style="position:relative;width:26px;height:26px;display:block;"><span style="position:absolute;left:3px;top:3px;width:15px;height:3px;border-radius:1px;background:rgba(233,238,242,0.66);display:block;"></span><span style="position:absolute;left:3px;top:3px;width:3px;height:14px;border-radius:1px;background:rgba(233,238,242,0.66);display:block;"></span><span style="position:absolute;left:20px;top:9px;width:3px;height:14px;border-radius:1px;background:rgba(233,238,242,0.66);display:block;"></span><span style="position:absolute;left:8px;top:20px;width:15px;height:3px;border-radius:1px;background:rgba(233,238,242,0.66);display:block;"></span><span style="position:absolute;left:17.5px;top:2px;width:0;height:0;border-top:7px solid rgba(233,238,242,0.66);border-left:4px solid transparent;border-right:4px solid transparent;display:block;"></span><span style="position:absolute;left:0.5px;top:17px;width:0;height:0;border-bottom:7px solid rgba(233,238,242,0.66);border-left:4px solid transparent;border-right:4px solid transparent;display:block;"></span></span></div>
+        </sc-if>
+        <div style="width:1px;height:44px;background:rgba(233,238,242,0.14);flex-shrink:0;"></div>
+        <span style="position:relative;width:30px;height:30px;flex-shrink:0;display:block;"><span style="position:absolute;left:0;top:50%;transform:translateY(-50%);width:15px;height:26px;background:rgba(233,238,242,0.85);clip-path:polygon(0 27%,42% 27%,100% 0,100% 100%,42% 73%,0 73%);display:block;"></span><span style="position:absolute;left:5px;top:50%;width:16px;height:16px;margin-top:-8px;border-radius:50%;box-sizing:border-box;border:2.5px solid rgba(233,238,242,0.85);clip-path:polygon(50% 10%,100% 0,100% 100%,50% 90%);display:block;"></span><span style="position:absolute;left:1px;top:50%;width:24px;height:24px;margin-top:-12px;border-radius:50%;box-sizing:border-box;border:2.5px solid rgba(233,238,242,0.85);clip-path:polygon(50% 10%,100% 0,100% 100%,50% 90%);display:block;"></span><span style="position:absolute;left:-2px;top:50%;width:30px;height:30px;margin-top:-15px;border-radius:50%;box-sizing:border-box;border:2.5px solid rgba(233,238,242,0.18);clip-path:polygon(50% 10%,100% 0,100% 100%,50% 90%);display:block;"></span></span>
+        <div style="flex:1;height:10px;border-radius:999px;background:rgba(233,238,242,0.15);position:relative;">
+          <div style="position:absolute;left:0;top:0;bottom:0;border-radius:999px;background:#e9eef2;width:{{ trayVolPct }};"></div>
+          <div style="position:absolute;top:50%;width:40px;height:40px;left:{{ trayVolPct }};margin:-20px 0 0 -20px;border-radius:50%;background:#e9eef2;box-shadow:0 3px 10px rgba(0,0,0,0.45);"></div>
+        </div>
+        <div style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:26px;font-weight:700;width:56px;text-align:right;flex-shrink:0;">{{ trayVol }}</div>
+      </div>
+    </sc-if>
+  </sc-if>
+
+  <sc-if value="{{ isHome }}" hint-placeholder-val="{{ false }}">
+    <div style="position:absolute;inset:0;background:radial-gradient(130% 105% at 20% 42%,rgba(20,33,42,0.62),rgba(13,21,28,0.93));"></div>
+    <div style="position:absolute;inset:0;display:flex;flex-direction:column;">
+      <div style="flex:1;min-height:0;display:flex;flex-direction:column;justify-content:center;padding:0 40px;box-sizing:border-box;">
+        <div style="display:grid;gap:20px;flex-shrink:0;grid-template-columns:repeat(6,minmax(0,1fr));">
+          <div style="border-radius:24px;background:rgba(126,214,188,0.1);border:1px solid rgba(126,214,188,0.3);display:flex;flex-direction:column;justify-content:space-between;padding:22px 20px;box-sizing:border-box;height:174px;">
+            <div style="height:44px;display:flex;align-items:flex-end;gap:7px;">
+              <div style="width:8px;height:26px;border-radius:3px;background:#7ed6bc;"></div>
+              <div style="width:8px;height:44px;border-radius:3px;background:#7ed6bc;"></div>
+              <div style="width:8px;height:32px;border-radius:3px;background:#7ed6bc;"></div>
+              <div style="width:8px;height:39px;border-radius:3px;background:#7ed6bc;"></div>
+            </div>
+            <div>
+              <div style="font-size:26px;font-weight:700;letter-spacing:-0.015em;color:#e9eef2;">Browse</div>
+              <div style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:14px;letter-spacing:0.06em;color:rgba(126,214,188,0.85);margin-top:8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">4554 albums</div>
+            </div>
+          </div>
+
+          <div style="border-radius:24px;background:rgba(159,180,232,0.1);border:1px solid rgba(159,180,232,0.3);display:flex;flex-direction:column;justify-content:space-between;padding:22px 20px;box-sizing:border-box;height:174px;">
+            <div style="height:44px;display:flex;align-items:center;gap:0;">
+              <div style="width:34px;height:34px;border-radius:50%;background:rgba(159,180,232,0.95);flex-shrink:0;"></div>
+              <div style="width:34px;height:34px;border-radius:50%;background:rgba(159,180,232,0.6);flex-shrink:0;margin-left:-11px;"></div>
+              <div style="width:34px;height:34px;border-radius:50%;background:rgba(159,180,232,0.32);flex-shrink:0;margin-left:-11px;"></div>
+            </div>
+            <div>
+              <div style="font-size:26px;font-weight:700;letter-spacing:-0.015em;color:#e9eef2;">Artists</div>
+              <div style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:14px;letter-spacing:0.06em;color:rgba(159,180,232,0.9);margin-top:8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">7293 artists</div>
+            </div>
+          </div>
+
+          <div style="border-radius:24px;background:rgba(242,164,143,0.1);border:1px solid rgba(242,164,143,0.3);display:flex;flex-direction:column;justify-content:space-between;padding:22px 20px;box-sizing:border-box;height:174px;">
+            <div style="height:44px;display:flex;align-items:center;gap:10px;">
+              <div style="display:flex;flex-direction:column;gap:6px;">
+                <div style="display:flex;align-items:center;gap:8px;"><div style="width:6px;height:6px;border-radius:50%;background:#f2a48f;"></div><div style="width:44px;height:4px;border-radius:2px;background:#f2a48f;"></div></div>
+                <div style="display:flex;align-items:center;gap:8px;"><div style="width:6px;height:6px;border-radius:50%;background:rgba(242,164,143,0.7)"></div><div style="width:32px;height:4px;border-radius:2px;background:rgba(242,164,143,0.7);"></div></div>
+                <div style="display:flex;align-items:center;gap:8px;"><div style="width:6px;height:6px;border-radius:50%;background:rgba(242,164,143,0.45)"></div><div style="width:38px;height:4px;border-radius:2px;background:rgba(242,164,143,0.45);"></div></div>
+              </div>
+            </div>
+            <div>
+              <div style="font-size:26px;font-weight:700;letter-spacing:-0.015em;color:#e9eef2;">Playlists</div>
+              <div style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:14px;letter-spacing:0.06em;color:rgba(242,164,143,0.9);margin-top:8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">3 playlists</div>
+            </div>
+          </div>
+
+          <div style="border-radius:24px;background:rgba(233,238,242,0.055);border:1px solid rgba(233,238,242,0.16);display:flex;flex-direction:column;justify-content:space-between;padding:22px 20px;box-sizing:border-box;height:174px;">
+            <div style="height:44px;display:flex;align-items:center;">
+              <div style="position:relative;width:46px;height:36px;flex-shrink:0;">
+                <div style="position:absolute;left:0;top:6px;width:28px;height:28px;border-radius:6px;border:2.5px solid rgba(233,238,242,0.34);box-sizing:border-box;"></div>
+                <div style="position:absolute;left:10px;top:2px;width:28px;height:28px;border-radius:6px;border:2.5px solid rgba(233,238,242,0.6);box-sizing:border-box;background:rgba(16,26,33,0.6);"></div>
+                <div style="position:absolute;left:20px;top:0;width:28px;height:28px;border-radius:6px;background:rgba(233,238,242,0.85);"></div>
+              </div>
+            </div>
+            <div>
+              <div style="font-size:26px;font-weight:700;letter-spacing:-0.015em;color:#e9eef2;">New Music</div>
+              <div aria-hidden="true" style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:14px;letter-spacing:0.06em;margin-top:8px;white-space:nowrap;visibility:hidden;">&#8203;</div>
+            </div>
+          </div>
+
+          <div style="border-radius:24px;background:rgba(233,238,242,0.055);border:1px solid rgba(233,238,242,0.16);display:flex;flex-direction:column;justify-content:space-between;padding:22px 20px;box-sizing:border-box;height:174px;">
+            <div style="height:44px;display:flex;align-items:center;gap:7px;">
+              <div style="width:14px;height:14px;border-radius:50%;background:rgba(233,238,242,0.85);flex-shrink:0;"></div>
+              <div style="width:14px;height:26px;border-right:3px solid rgba(233,238,242,0.6);border-radius:0 26px 26px 0;flex-shrink:0;"></div>
+              <div style="width:14px;height:38px;border-right:3px solid rgba(233,238,242,0.34);border-radius:0 38px 38px 0;flex-shrink:0;margin-left:-2px;"></div>
+            </div>
+            <div>
+              <div style="font-size:26px;font-weight:700;letter-spacing:-0.015em;color:#e9eef2;">Radio</div>
+              <div aria-hidden="true" style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:14px;letter-spacing:0.06em;margin-top:8px;white-space:nowrap;visibility:hidden;">&#8203;</div>
+            </div>
+          </div>
+
+          <div style="border-radius:24px;background:rgba(233,238,242,0.04);border:1px solid rgba(233,238,242,0.12);display:flex;flex-direction:column;justify-content:space-between;padding:22px 20px;box-sizing:border-box;height:174px;">
+            <div style="height:44px;display:flex;align-items:center;">
+              <span style="width:30px;height:30px;position:relative;flex-shrink:0;display:block;">
+                <span style="position:absolute;left:0;right:0;top:7px;height:3px;border-radius:2px;background:rgba(233,238,242,0.38);display:block;"></span>
+                <span style="position:absolute;left:17px;top:4px;width:9px;height:9px;border-radius:50%;background:rgba(233,238,242,0.92);display:block;"></span>
+                <span style="position:absolute;left:0;right:0;top:20px;height:3px;border-radius:2px;background:rgba(233,238,242,0.38);display:block;"></span>
+                <span style="position:absolute;left:4px;top:17px;width:9px;height:9px;border-radius:50%;background:rgba(233,238,242,0.92);display:block;"></span>
+              </span>
+            </div>
+            <div>
+              <div style="font-size:26px;font-weight:700;letter-spacing:-0.015em;color:#e9eef2;">Settings</div>
+              <div style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:14px;letter-spacing:0.06em;color:rgba(233,238,242,0.6);margin-top:8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Device and sources</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div style="position:relative;height:104px;flex-shrink:0;border-top:1px solid rgba(233,238,242,0.09);display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:20px;padding:0 40px;">
+        <div style="position:absolute;left:0;right:0;top:0;height:2px;background:rgba(233,238,242,0.08);"><div style="position:absolute;left:0;top:0;bottom:0;width:38%;background:#7ed6bc;opacity:0.6;"></div></div>
+        <div style="display:flex;align-items:center;gap:20px;min-width:0;">
+          <div style="width:64px;height:64px;border-radius:12px;overflow:hidden;position:relative;flex-shrink:0;"><img src="album-art.webp" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;" /></div>
+          <div style="min-width:0;"><div style="font-size:20px;font-weight:700;">Rempompi</div><div style="font-size:16px;color:#f2a48f;margin-top:4px;">Gasca Zurli</div></div>
+        </div>
+        <div style="display:flex;align-items:center;gap:4px;height:38px;flex-shrink:0;"><div style="width:6px;height:19px;border-radius:2px;background:#7ed6bc;flex-shrink:0;"></div><div style="width:6px;height:38px;border-radius:2px;background:#7ed6bc;flex-shrink:0;"></div><div style="width:6px;height:27px;border-radius:2px;background:#7ed6bc;flex-shrink:0;"></div><div style="width:6px;height:33px;border-radius:2px;background:#7ed6bc;flex-shrink:0;"></div></div>
+        <div style="display:flex;align-items:center;gap:20px;justify-self:end;">
+          <div style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:16px;color:rgba(233,238,242,0.5);">0:44</div>
+          <div style="width:64px;height:64px;border-radius:50%;background:#f2a48f;display:flex;align-items:center;justify-content:center;gap:6px;"><div style="width:6px;height:23px;border-radius:2px;background:#16232c;"></div><div style="width:6px;height:23px;border-radius:2px;background:#16232c;"></div></div>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  
+  <sc-if value="{{ isHome2 }}" hint-placeholder-val="{{ false }}">
+    <div style="position:absolute;inset:0;background:radial-gradient(130% 105% at 20% 42%,rgba(20,33,42,0.62),rgba(13,21,28,0.93));"></div>
+    <div style="position:absolute;inset:0;display:flex;">
+      <sc-if value="{{ colLeftB }}" hint-placeholder-val="{{ false }}"><div style="width:236px;flex-shrink:0;display:flex;flex-direction:column;gap:14px;padding:30px 24px 28px;box-sizing:border-box;border-right:1px solid rgba(233,238,242,0.09);background:rgba(13,21,28,0.35);">
+          <div style="display:flex;align-items:center;justify-content:space-between;"><div style="display:flex;align-items:center;gap:3px;height:26px;flex-shrink:0;"><div style="width:4px;height:13px;border-radius:2px;background:#7ed6bc;flex-shrink:0;"></div><div style="width:4px;height:26px;border-radius:2px;background:#7ed6bc;flex-shrink:0;"></div><div style="width:4px;height:19px;border-radius:2px;background:#7ed6bc;flex-shrink:0;"></div><div style="width:4px;height:23px;border-radius:2px;background:#7ed6bc;flex-shrink:0;"></div></div><span style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:15px;color:rgba(233,238,242,0.55);">0:44</span></div>
+          <div style="width:188px;height:188px;border-radius:14px;overflow:hidden;position:relative;flex-shrink:0;background:#17242d;box-shadow:inset 0 0 0 1px rgba(255,255,255,0.08);"><img src="album-art.webp" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;" /></div>
+          <div style="min-width:0;"><div style="font-size:20px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Rempompi</div><div style="font-size:16px;color:#f2a48f;margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Gasca Zurli</div></div>
+        </div></sc-if>
+      
+      <div style="flex:1;min-width:0;display:flex;flex-direction:column;justify-content:center;padding:{{ gPad }};box-sizing:border-box;">
+        <div style="display:grid;gap:20px;flex-shrink:0;grid-template-columns:{{ gCols }};height:{{ gH }};">
+          <div style="border-radius:24px;background:rgba(126,214,188,0.1);border:1px solid rgba(126,214,188,0.3);display:flex;flex-direction:column;justify-content:space-between;box-sizing:border-box;height:100%;padding:{{ tPadC }};">
+            <div style="height:44px;display:flex;align-items:flex-end;gap:7px;">
+              <div style="width:8px;height:26px;border-radius:3px;background:#7ed6bc;"></div>
+              <div style="width:8px;height:44px;border-radius:3px;background:#7ed6bc;"></div>
+              <div style="width:8px;height:32px;border-radius:3px;background:#7ed6bc;"></div>
+              <div style="width:8px;height:39px;border-radius:3px;background:#7ed6bc;"></div>
+            </div>
+            <div>
+              <div style="font-size:{{ tTitle }};font-weight:700;letter-spacing:-0.015em;color:#e9eef2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Browse</div>
+              <div style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:{{ tSub }};letter-spacing:0.02em;color:rgba(126,214,188,0.85);margin-top:8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">4554 albums</div>
+            </div>
+          </div>
+
+          <div style="border-radius:24px;background:rgba(159,180,232,0.1);border:1px solid rgba(159,180,232,0.3);display:flex;flex-direction:column;justify-content:space-between;box-sizing:border-box;height:100%;padding:{{ tPadC }};">
+            <div style="height:44px;display:flex;align-items:center;gap:0;">
+              <div style="width:34px;height:34px;border-radius:50%;background:rgba(159,180,232,0.95);flex-shrink:0;"></div>
+              <div style="width:34px;height:34px;border-radius:50%;background:rgba(159,180,232,0.6);flex-shrink:0;margin-left:-11px;"></div>
+              <div style="width:34px;height:34px;border-radius:50%;background:rgba(159,180,232,0.32);flex-shrink:0;margin-left:-11px;"></div>
+            </div>
+            <div>
+              <div style="font-size:{{ tTitle }};font-weight:700;letter-spacing:-0.015em;color:#e9eef2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Artists</div>
+              <div style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:{{ tSub }};letter-spacing:0.02em;color:rgba(159,180,232,0.9);margin-top:8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">7293 artists</div>
+            </div>
+          </div>
+
+          <div style="border-radius:24px;background:rgba(242,164,143,0.1);border:1px solid rgba(242,164,143,0.3);display:flex;flex-direction:column;justify-content:space-between;box-sizing:border-box;height:100%;padding:{{ tPadC }};">
+            <div style="height:44px;display:flex;align-items:center;gap:10px;">
+              <div style="display:flex;flex-direction:column;gap:6px;">
+                <div style="display:flex;align-items:center;gap:8px;"><div style="width:6px;height:6px;border-radius:50%;background:#f2a48f;"></div><div style="width:44px;height:4px;border-radius:2px;background:#f2a48f;"></div></div>
+                <div style="display:flex;align-items:center;gap:8px;"><div style="width:6px;height:6px;border-radius:50%;background:rgba(242,164,143,0.7)"></div><div style="width:32px;height:4px;border-radius:2px;background:rgba(242,164,143,0.7);"></div></div>
+                <div style="display:flex;align-items:center;gap:8px;"><div style="width:6px;height:6px;border-radius:50%;background:rgba(242,164,143,0.45)"></div><div style="width:38px;height:4px;border-radius:2px;background:rgba(242,164,143,0.45);"></div></div>
+              </div>
+            </div>
+            <div>
+              <div style="font-size:{{ tTitle }};font-weight:700;letter-spacing:-0.015em;color:#e9eef2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Playlists</div>
+              <div style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:{{ tSub }};letter-spacing:0.02em;color:rgba(242,164,143,0.9);margin-top:8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">3 playlists</div>
+            </div>
+          </div>
+
+          <div style="border-radius:24px;background:rgba(233,238,242,0.055);border:1px solid rgba(233,238,242,0.16);display:flex;flex-direction:column;justify-content:space-between;box-sizing:border-box;height:100%;padding:{{ tPadC }};">
+            <div style="height:44px;display:flex;align-items:center;">
+              <div style="position:relative;width:46px;height:36px;flex-shrink:0;">
+                <div style="position:absolute;left:0;top:6px;width:28px;height:28px;border-radius:6px;border:2.5px solid rgba(233,238,242,0.34);box-sizing:border-box;"></div>
+                <div style="position:absolute;left:10px;top:2px;width:28px;height:28px;border-radius:6px;border:2.5px solid rgba(233,238,242,0.6);box-sizing:border-box;background:rgba(16,26,33,0.6);"></div>
+                <div style="position:absolute;left:20px;top:0;width:28px;height:28px;border-radius:6px;background:rgba(233,238,242,0.85);"></div>
+              </div>
+            </div>
+            <div>
+              <div style="font-size:{{ tTitle }};font-weight:700;letter-spacing:-0.015em;color:#e9eef2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">New Music</div>
+              <div aria-hidden="true" style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:{{ tSub }};letter-spacing:0.02em;margin-top:8px;white-space:nowrap;visibility:hidden;">&#8203;</div>
+            </div>
+          </div>
+
+          <div style="border-radius:24px;background:rgba(233,238,242,0.055);border:1px solid rgba(233,238,242,0.16);display:flex;flex-direction:column;justify-content:space-between;box-sizing:border-box;height:100%;padding:{{ tPadC }};">
+            <div style="height:44px;display:flex;align-items:center;gap:7px;">
+              <div style="width:14px;height:14px;border-radius:50%;background:rgba(233,238,242,0.85);flex-shrink:0;"></div>
+              <div style="width:14px;height:26px;border-right:3px solid rgba(233,238,242,0.6);border-radius:0 26px 26px 0;flex-shrink:0;"></div>
+              <div style="width:14px;height:38px;border-right:3px solid rgba(233,238,242,0.34);border-radius:0 38px 38px 0;flex-shrink:0;margin-left:-2px;"></div>
+            </div>
+            <div>
+              <div style="font-size:{{ tTitle }};font-weight:700;letter-spacing:-0.015em;color:#e9eef2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Radio</div>
+              <div aria-hidden="true" style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:{{ tSub }};letter-spacing:0.02em;margin-top:8px;white-space:nowrap;visibility:hidden;">&#8203;</div>
+            </div>
+          </div>
+
+          <div style="border-radius:24px;background:rgba(233,238,242,0.04);border:1px solid rgba(233,238,242,0.12);display:flex;flex-direction:column;justify-content:space-between;box-sizing:border-box;height:100%;padding:{{ tPadC }};">
+            <div style="height:44px;display:flex;align-items:center;">
+              <span style="width:30px;height:30px;position:relative;flex-shrink:0;display:block;">
+                <span style="position:absolute;left:0;right:0;top:7px;height:3px;border-radius:2px;background:rgba(233,238,242,0.38);display:block;"></span>
+                <span style="position:absolute;left:17px;top:4px;width:9px;height:9px;border-radius:50%;background:rgba(233,238,242,0.92);display:block;"></span>
+                <span style="position:absolute;left:0;right:0;top:20px;height:3px;border-radius:2px;background:rgba(233,238,242,0.38);display:block;"></span>
+                <span style="position:absolute;left:4px;top:17px;width:9px;height:9px;border-radius:50%;background:rgba(233,238,242,0.92);display:block;"></span>
+              </span>
+            </div>
+            <div>
+              <div style="font-size:{{ tTitle }};font-weight:700;letter-spacing:-0.015em;color:#e9eef2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Settings</div>
+              <div style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:{{ tSub }};letter-spacing:0.02em;color:rgba(233,238,242,0.6);margin-top:8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Device and sources</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <sc-if value="{{ colRightC }}" hint-placeholder-val="{{ false }}"><div style="width:124px;flex-shrink:0;display:flex;flex-direction:column;align-items:center;gap:16px;padding:28px 0 26px;box-sizing:border-box;border-left:1px solid rgba(233,238,242,0.09);background:rgba(13,21,28,0.35);position:relative;">
+          <div style="position:absolute;left:-1px;top:0;bottom:0;width:3px;background:rgba(233,238,242,0.08);"><div style="position:absolute;left:0;right:0;bottom:0;height:38%;background:#7ed6bc;opacity:0.8;"></div></div>
+          <div style="width:84px;height:84px;border-radius:12px;overflow:hidden;position:relative;flex-shrink:0;background:#17242d;box-shadow:inset 0 0 0 1px rgba(255,255,255,0.08);"><img src="album-art.webp" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;" /></div>
+          <div style="flex:1;display:flex;align-items:center;justify-content:center;"><div style="display:flex;align-items:center;gap:3px;height:26px;flex-shrink:0;"><div style="width:4px;height:13px;border-radius:2px;background:#7ed6bc;flex-shrink:0;"></div><div style="width:4px;height:26px;border-radius:2px;background:#7ed6bc;flex-shrink:0;"></div><div style="width:4px;height:19px;border-radius:2px;background:#7ed6bc;flex-shrink:0;"></div><div style="width:4px;height:23px;border-radius:2px;background:#7ed6bc;flex-shrink:0;"></div></div></div>
+          <div><div style="width:64px;height:64px;border-radius:50%;background:#f2a48f;display:flex;align-items:center;justify-content:center;gap:6px;flex-shrink:0;box-shadow:0 0 18px rgba(242,164,143,0.22),0 8px 20px rgba(242,164,143,0.32);"><div style="width:6px;height:23px;border-radius:2px;background:#16232c;"></div><div style="width:6px;height:23px;border-radius:2px;background:#16232c;"></div></div></div>
+        </div></sc-if>
+      <sc-if value="{{ colRightA }}" hint-placeholder-val="{{ true }}"><div style="width:236px;flex-shrink:0;display:flex;flex-direction:column;align-items:center;gap:14px;padding:30px 24px 28px;box-sizing:border-box;border-left:1px solid rgba(233,238,242,0.09);background:rgba(13,21,28,0.35);">
+          <div style="width:150px;height:150px;border-radius:14px;overflow:hidden;position:relative;flex-shrink:0;background:#17242d;box-shadow:inset 0 0 0 1px rgba(255,255,255,0.08);"><img src="album-art.webp" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;" /></div>
+          <div style="width:100%;text-align:center;min-width:0;"><div style="font-size:20px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Rempompi</div><div style="font-size:16px;color:#f2a48f;margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Gasca Zurli</div></div>
+          <div style="position:relative;height:4px;border-radius:2px;background:rgba(233,238,242,0.13);overflow:hidden;width:100%;"><div style="position:absolute;left:0;top:0;bottom:0;width:38%;background:#7ed6bc;"></div></div>
+          <div style="display:flex;align-items:center;gap:16px;margin-top:auto;"><div style="display:flex;align-items:center;gap:3px;height:30px;flex-shrink:0;"><div style="width:5px;height:15px;border-radius:2px;background:#7ed6bc;flex-shrink:0;"></div><div style="width:5px;height:30px;border-radius:2px;background:#7ed6bc;flex-shrink:0;"></div><div style="width:5px;height:22px;border-radius:2px;background:#7ed6bc;flex-shrink:0;"></div><div style="width:5px;height:26px;border-radius:2px;background:#7ed6bc;flex-shrink:0;"></div></div><div style="width:64px;height:64px;border-radius:50%;background:#f2a48f;display:flex;align-items:center;justify-content:center;gap:6px;flex-shrink:0;box-shadow:0 0 18px rgba(242,164,143,0.22),0 8px 20px rgba(242,164,143,0.32);"><div style="width:6px;height:23px;border-radius:2px;background:#16232c;"></div><div style="width:6px;height:23px;border-radius:2px;background:#16232c;"></div></div></div>
+        </div></sc-if>
+    </div>
+  </sc-if>
+<sc-if value="{{ isNew }}" hint-placeholder-val="{{ false }}">
+    <div style="position:absolute;inset:0;background:radial-gradient(130% 105% at 20% 42%,rgba(20,33,42,0.62),rgba(13,21,28,0.93));"></div>
+    <div style="position:absolute;inset:0;display:flex;">
+      <div style="width:260px;flex-shrink:0;display:flex;flex-direction:column;gap:14px;padding:28px 24px;box-sizing:border-box;border-right:1px solid rgba(233,238,242,0.09);">
+        <div style="width:60px;height:60px;border-radius:50%;background:rgba(233,238,242,0.07);display:flex;align-items:center;justify-content:center;flex-shrink:0;"><div style="width:14px;height:14px;border-left:3px solid #e9eef2;border-bottom:3px solid #e9eef2;transform:rotate(45deg);margin-left:11px;"></div></div>
+        <div style="font-size:26px;font-weight:700;letter-spacing:-0.01em;margin-top:6px;">New Music</div>
+        <div style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:15px;letter-spacing:0.08em;color:rgba(233,238,242,0.6);">20 albums</div>
+        <div style="margin-top:auto;display:flex;align-items:center;gap:12px;height:72px;padding:0 12px;border-radius:18px;background:rgba(126,214,188,0.12);border:1px solid rgba(126,214,188,0.32);box-sizing:border-box;">
+          <div style="width:52px;height:52px;border-radius:10px;position:relative;overflow:hidden;background:#17242d;flex-shrink:0;box-shadow:0 20px 48px rgba(0,0,0,0.5);"><img src="album-art.webp" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;" /><div style="position:absolute;inset:0;border-radius:10px;box-shadow:inset 0 0 0 1px rgba(255,255,255,0.08);"></div></div>
+          <div style="min-width:0;flex:1;"><div style="font-size:16px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Rempompi</div><div style="font-size:14px;color:#7ed6bc;margin-top:2px;">Now playing</div></div>
+        </div>
+      </div>
+      <div style="flex:1;min-width:0;display:flex;align-items:center;padding-left:32px;">
+        <div style="display:flex;gap:22px;overflow:hidden;width:100%;-webkit-mask-image:linear-gradient(90deg,#000 0,#000 calc(100% - 88px),transparent 100%);mask-image:linear-gradient(90deg,#000 0,#000 calc(100% - 88px),transparent 100%);">
+          <sc-for list="{{ albums }}" as="a" hint-placeholder-count="8">
+            <div style="width:250px;flex-shrink:0;">
+              <div style="width:250px;height:250px;border-radius:16px;overflow:hidden;position:relative;background:#17242d;border:1px solid rgba(233,238,242,0.1);"><img src="album-art.webp" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;" /></div>
+              <div style="font-size:18px;font-weight:600;margin-top:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ a.title }}</div>
+              <div style="font-size:15px;color:rgba(233,238,242,0.6);margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ a.artist }}</div>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ isWait }}" hint-placeholder-val="{{ false }}">
+    <div style="position:absolute;inset:0;background:radial-gradient(130% 105% at 20% 42%,rgba(20,33,42,0.62),rgba(13,21,28,0.93));"></div>
+    <div style="position:absolute;top:26px;right:26px;width:64px;height:64px;border-radius:18px;border:1px solid rgba(233,238,242,0.14);background:rgba(233,238,242,0.07);box-sizing:border-box;display:flex;align-items:center;justify-content:center;z-index:2;">
+      <span style="position:relative;width:26px;height:18px;display:block;"><span style="position:absolute;left:0;top:4px;width:26px;height:2px;border-radius:1px;background:#e9eef2;opacity:0.55;display:block;"></span><span style="position:absolute;top:1.5px;left:6px;width:7px;height:7px;border-radius:50%;background:#e9eef2;display:block;"></span><span style="position:absolute;left:0;top:12px;width:26px;height:2px;border-radius:1px;background:#e9eef2;opacity:0.55;display:block;"></span><span style="position:absolute;top:9.5px;left:15px;width:7px;height:7px;border-radius:50%;background:#e9eef2;display:block;"></span></span>
+    </div>
+    <sc-if value="{{ waitSvc }}" hint-placeholder-val="{{ true }}">
+      <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;gap:{{ waitGap }};">
+        <div style="display:flex;align-items:center;gap:24px;">
+          <div style="position:relative;width:150px;height:150px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+            <div style="position:absolute;width:150px;height:150px;border-radius:50%;border:2px solid rgba(233,238,242,0.3);box-sizing:border-box;"></div>
+            <div style="width:136px;height:136px;border-radius:50%;background:rgba(233,238,242,0.07);border:1px solid rgba(233,238,242,0.16);box-sizing:border-box;display:flex;align-items:center;justify-content:center;"><img src="icon-spotify.png" alt="" style="width:56px;height:56px;display:block;opacity:0.72;" /></div>
+          </div>
+          <div><div style="font-size:27px;font-weight:700;white-space:nowrap;">Spotify</div><div style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:15px;letter-spacing:0.16em;text-transform:uppercase;color:rgba(233,238,242,0.6);margin-top:4px;white-space:nowrap;">Listening</div></div>
+        </div>
+        <div style="display:flex;align-items:center;gap:24px;">
+          <div style="position:relative;width:150px;height:150px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+            <div style="position:absolute;width:150px;height:150px;border-radius:50%;border:2px solid rgba(233,238,242,0.3);box-sizing:border-box;"></div>
+            <div style="width:136px;height:136px;border-radius:50%;background:rgba(233,238,242,0.07);border:1px solid rgba(233,238,242,0.16);box-sizing:border-box;display:flex;align-items:center;justify-content:center;"><img src="icon-bluetooth.png" alt="" style="width:62px;height:62px;display:block;opacity:0.72;" /></div>
+          </div>
+          <div><div style="font-size:27px;font-weight:700;white-space:nowrap;">Bluetooth</div><div style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:15px;letter-spacing:0.16em;text-transform:uppercase;color:rgba(233,238,242,0.6);margin-top:4px;white-space:nowrap;">Pairable</div></div>
+        </div>
+      </div>
+    </sc-if>
+    <sc-if value="{{ waitNone }}" hint-placeholder-val="{{ false }}">
+      <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;">
+        <div style="font-size:30px;font-weight:700;">No sources</div>
+        <div style="margin-top:12px;font-size:17px;color:rgba(233,238,242,0.6);">Every source is switched off. Settings, top right.</div>
+      </div>
+    </sc-if>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1280,&quot;height&quot;:400},&quot;variant&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;a&quot;,&quot;b&quot;,&quot;c&quot;,&quot;drawer&quot;,&quot;browse&quot;,&quot;strip&quot;,&quot;home&quot;,&quot;newmusic&quot;,&quot;home2&quot;,&quot;wait&quot;,&quot;wait-none&quot;],&quot;default&quot;:&quot;a&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;w&quot;:{&quot;editor&quot;:&quot;int&quot;,&quot;default&quot;:1280,&quot;tsType&quot;:&quot;number&quot;},&quot;sr&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;tray&quot;,&quot;main&quot;],&quot;default&quot;:&quot;tray&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;tray&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;},&quot;lyrics&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;},&quot;pull&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;up&quot;,&quot;down&quot;],&quot;default&quot;:&quot;up&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;layout&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;a&quot;,&quot;b&quot;,&quot;c&quot;],&quot;default&quot;:&quot;a&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;queue&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;},&quot;trayVol&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;62&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;library&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;}}">
+// Phase 13b, Bar family studies. Logical height is fixed at 400; the
+// logical width is the screen's aspect × 400 (1280 for 1280×400, 1850 for
+// 1480×320 shown at 0.8). Glyphs are copied from Now Playing.dc.html.
+const ALBUMS = [
+  ['Neconditionat', 'Andra'], ['Zurli Band Party', 'Zurli Band'], ['Bime Live', 'Bime'],
+  ['Vine Vine Primavara', 'Gasca Zurli'], ['Andra Live', 'Andra'], ['Zurli Mania', 'Gasca Zurli'],
+  ['Ghita', 'Cleopatra Stratan'], ['Cantece Mici Vol 2', 'Cantece Mici']
+];
+const CATS = [['New Music', '#7ed6bc', true], ['Artists', '#9fb4e8'], ['Playlists', '#f2a48f'], ['Radio', 'rgba(233,238,242,0.85)']];
+class Component extends DCLogic {
+  renderVals() {
+    const W = this.props.w || 1280;
+    const v = this.props.variant || 'a';
+    const narrow = v === 'home2' && this.props.layout !== 'b' && W < 1500;
+    return {
+      wPx: W + 'px',
+      isA: v === 'a', isB: v === 'b', isC: v === 'c' || v === 'drawer', isDrawer: v === 'drawer', isBrowse: v === 'browse',
+      libBtnDisplay: this.props.library ? 'flex' : 'none',
+      isStrip: v === 'strip', isWait: v === 'wait' || v === 'wait-none', waitSvc: v === 'wait', waitNone: v === 'wait-none', waitGap: W > 1500 ? '160px' : '96px',
+      queueOn: !!this.props.queue,
+      qItems: [['Rempompi', 'Gasca Zurli', '1:55', true], ['Somn Usor', 'Cantece Mici', '2:41'], ['Blue Rooms', 'Bime', '5:12'], ['Late Set', 'Bime', '6:38'], ['Mama', 'Cleopatra Stratan', '3:22'], ['Corner Light', 'Bime', '4:55']].map((x, i) => ({
+        num: i === 0 ? '\u25b6' : String(i).padStart(2, '0'), title: x[0], artist: x[1], dur: i === 0 ? 'Playing' : x[2],
+        bg: i === 0 ? 'rgba(126,214,188,0.14)' : 'transparent', ink: i === 0 ? '#7ed6bc' : '#e9eef2', numInk: i === 0 ? '#7ed6bc' : 'rgba(233,238,242,0.55)'
+      })),
+      trayVol: this.props.trayVol || '62', trayVolPct: (this.props.trayVol || '62') + '%', isHome: v === 'home', isNew: v === 'newmusic', isHome2: v === 'home2',
+      colRightA: v === 'home2' && (this.props.layout || 'a') === 'a',
+      colLeftB: v === 'home2' && this.props.layout === 'b',
+      colRightC: v === 'home2' && this.props.layout === 'c',
+      gCols: this.props.layout === 'b' ? 'repeat(3,minmax(0,1fr))' : 'repeat(6,minmax(0,1fr))',
+      gH: this.props.layout === 'b' ? '336px' : this.props.layout === 'c' ? '220px' : '336px',
+      gPad: this.props.layout === 'c' ? '0 36px' : '0 32px',
+      // six across at 1280 leaves ~105-122px inside a card: step the tile type down
+      tTitle: narrow ? '21px' : '26px', tSub: narrow ? '12px' : '14px', tPadC: narrow ? '20px 14px' : '22px 20px',
+      hTop: this.props.pull === 'down' ? '12px' : 'auto', hBottom: this.props.pull === 'down' ? 'auto' : '10px',
+      tTop: this.props.pull === 'down' ? '0' : 'auto', tBottom: this.props.pull === 'down' ? 'auto' : '0',
+      tRadius: this.props.pull === 'down' ? '0 0 24px 24px' : '24px 24px 0 0',
+      tPad: this.props.pull === 'down' ? '0 40px 14px' : '14px 40px 0',
+      thTop: this.props.pull === 'down' ? 'auto' : '10px', thBottom: this.props.pull === 'down' ? '10px' : 'auto',
+      srMain: v === 'strip' && this.props.sr === 'main', srTray: this.props.sr !== 'main',
+      trayOn: !!this.props.tray, lyricsOn: !!this.props.lyrics, metaOn: !this.props.lyrics,
+      lyrBg: this.props.lyrics ? 'rgba(242,164,143,0.16)' : 'rgba(233,238,242,0.07)',
+      lyrLine: this.props.lyrics ? 'rgba(242,164,143,0.45)' : 'rgba(233,238,242,0.12)',
+      lyrInk: this.props.lyrics ? '#f2a48f' : 'rgba(233,238,242,0.66)',
+      bVolW: W > 1500 ? '380px' : '300px',
+      albums: ALBUMS.map(a => ({ title: a[0], artist: a[1] })),
+      cats: CATS.map(c => ({ name: c[0], ink: c[1], bg: c[2] ? 'rgba(126,214,188,0.1)' : 'rgba(233,238,242,0.05)', line: c[2] ? 'rgba(126,214,188,0.3)' : 'rgba(233,238,242,0.1)' }))
+    };
+  }
+}
+</script>
+</body>
+</html>

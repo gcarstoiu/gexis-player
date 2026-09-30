@@ -76,7 +76,8 @@ Absent entirely when `active` is null.
 | external page | `NEW` — idle screen URL, from settings |
 | background | `NEW` — `idle_background`: artist pictures from the library, wallpapers from an online service or from local storage, or black |
 | wallpaper service key | `NEW` — `wallpaper_key`, only for the online source |
-| weather | `NEW` — provider keyed by `weather_key`; `weather_location` names the place |
+| weather | Open-Meteo, which needs no key; `weather_location` names the place. Credited on screen as "Weather data by Open-Meteo.com" |
+| clock | `idle_clock`: off leaves the background and its credits only (a picture frame) |
 
 Needs a fallback for unreachable, unconfigured, **and reachable-but-refuses-framing**.
 
@@ -84,8 +85,8 @@ Neither wallpaper service is chosen. The online one may or may not need a
 key, and the on-device one needs a folder the device owns. Both are open
 questions for implementation, not design.
 
-Without `weather_key` the idle screen shows the clock alone, and Settings
-hides every row that shapes a forecast.
+`idle_weather` off shows the clock alone, and Settings hides every row that
+shapes a forecast. (`weather_key` is gone: Open-Meteo needs none.)
 
 ---
 
@@ -190,3 +191,26 @@ Named here so they are not forgotten:
 
 - artwork URL present but 404 — should fall back to the pending glyph.
 - a playlist that exists on the server but holds no tracks.
+
+---
+
+## Changed 2026-09-30
+
+Fields the panel code on `phase-13` already carries are named as it names them.
+
+| Screen / element | Field |
+|---|---|
+| home with LMS off (ADR-0079) | `lms_enabled` false: no library; nothing playing shows the waiting marks for the enabled renderers (`spotify_enabled`, `bt_enabled`) with their manifest status, or "No sources" when none is on. Home opens Settings; the artist line is not a link |
+| queue row removal | the queue action `remove` at the row's index, as `QueueRail.svelte` calls it. The row leaves before the queue returns |
+| setup, Music step | `lms_mode`: `find`, `address` or `off`; `lms` only with `address` |
+| panel setup, done | `setup.finished.library.state`: `found`, `given`, `several`, `off`, `none` or `unchanged`, with `name`, `address`, `names` |
+
+**Phase 13b** — `NEW`, needed before the families can be built:
+
+| Needs | For |
+|---|---|
+| the attached screen's model, from the supported-screens table (Setup's Screen step, Settings → Display → Attached screen) | the family (Standard 1.5–1.8, Bar 3–5), the logical size, and the skin set |
+| what the screen reported: EDID maker, name and modes, and the USB touch ID | the Screen step's "Recognised" and "Seen, not certain" states; EDID physical size is not used (Finding 100) |
+| `rotation`: 0, 90, 180 or 270 | Settings → Display → Screen rotation |
+| whether the model was confirmed, and whether anything is showing yet | choosing between the three Screen step states |
+| the skin set for the current screen, and whether it is exact or the nearest that fits | the visualiser's letterbox (opaque black around it) and the skin picker, which offers only that set |

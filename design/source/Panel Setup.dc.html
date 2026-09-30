@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Nunito+Sans:ital,opsz,wght@0,6..12,300..800&family=IBM+Plex+Mono:wght@400;600;700&display=swap" rel="stylesheet" />
+<style>
+  html,body{margin:0;padding:0;background:#0c1014;}
+  a{color:#7ed6bc;}a:hover{color:#a8e5d3;}
+  @keyframes psPulse{50%{opacity:0.5;}}
+</style>
+</helmet>
+<div data-screen-label="Panel setup" style="width:1280px;height:800px;position:relative;overflow:hidden;box-sizing:border-box;font-family:'Nunito Sans','Avenir Next','Segoe UI',system-ui,sans-serif;color:#e9eef2;background:radial-gradient(130% 105% at 20% 42%,rgba(20,33,42,0.72),rgba(13,21,28,0.96)),#101a21;padding:30px 56px 36px;display:flex;flex-direction:column;">
+
+  <div style="display:flex;align-items:center;gap:16px;">
+    <img src="gexis-mark.svg" alt="" width="40" height="40" style="width:40px;height:40px;flex-shrink:0;display:block;" />
+    <span style="flex:1;font-family:'IBM Plex Mono','Courier New',monospace;font-size:16px;letter-spacing:0.2em;text-transform:uppercase;color:rgba(233,238,242,0.6);">{{ crumb }}</span>
+    <span style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:16px;letter-spacing:0.2em;text-transform:uppercase;color:rgba(233,238,242,0.6);display:{{ overDisplay }};">Over gexis-setup</span>
+  </div>
+
+  <div style="flex:1;min-height:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:{{ stageGap }};">
+
+    <sc-if value="{{ isJoin }}" hint-placeholder-val="{{ true }}">
+      <sc-if value="{{ isFailed }}" hint-placeholder-val="{{ false }}">
+        <div style="display:flex;align-items:center;gap:24px;text-align:left;color:#e0a758;">
+          <svg viewBox="0 0 64 64" width="64" height="64" style="flex-shrink:0;"><path d="M32 7 L60 56 H4 Z" fill="none" stroke="currentColor" stroke-width="5" stroke-linejoin="round"></path><path d="M32 24 V39" stroke="currentColor" stroke-width="5.5" stroke-linecap="round"></path><circle cx="32" cy="47.5" r="3.4" fill="currentColor"></circle></svg>
+          <div>
+            <div style="font-size:54px;font-weight:800;color:#e9eef2;line-height:1.05;">Could not join Home</div>
+            <div style="font-size:30px;color:rgba(233,238,242,0.82);margin-top:6px;">No network with that name is in range. Everything else you entered is kept.</div>
+          </div>
+        </div>
+      </sc-if>
+      <sc-if value="{{ joinTitle }}" hint-placeholder-val="{{ true }}">
+        <div style="font-size:60px;font-weight:800;letter-spacing:-0.02em;line-height:1.05;">{{ joinHeading }}</div>
+      </sc-if>
+      <div style="margin-top:-18px;font-size:32px;line-height:1.3;color:rgba(233,238,242,0.82);text-wrap:balance;">Scan with your phone to join the player’s Wi-Fi</div>
+      <div style="display:flex;align-items:center;gap:56px;text-align:left;">
+        <div style="width:340px;height:340px;flex-shrink:0;border-radius:16px;background:#e9eef2;display:flex;align-items:center;justify-content:center;font-family:'IBM Plex Mono','Courier New',monospace;font-size:18px;letter-spacing:0.14em;text-transform:uppercase;color:#101a21;">QR code</div>
+        <div>
+          <div style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:18px;letter-spacing:0.2em;text-transform:uppercase;color:rgba(233,238,242,0.6);">Network</div>
+          <div style="margin:6px 0 26px;font-family:'IBM Plex Mono','Courier New',monospace;font-size:48px;font-weight:700;letter-spacing:0.02em;">gexis-setup</div>
+          <div style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:18px;letter-spacing:0.2em;text-transform:uppercase;color:rgba(233,238,242,0.6);">Password</div>
+          <div style="margin-top:6px;font-family:'IBM Plex Mono','Courier New',monospace;font-size:48px;font-weight:700;letter-spacing:0.02em;">k7qm-4hx2</div>
+        </div>
+      </div>
+      <div style="margin-top:8px;display:flex;align-items:center;gap:18px;padding:18px 30px;border-radius:16px;font-size:30px;color:#e0a758;background:rgba(224,167,88,0.12);border:2px solid rgba(224,167,88,0.45);">
+        <svg viewBox="0 0 64 64" width="44" height="44" style="flex-shrink:0;"><path d="M32 7 L60 56 H4 Z" fill="none" stroke="currentColor" stroke-width="5" stroke-linejoin="round"></path><path d="M32 24 V39" stroke="currentColor" stroke-width="5.5" stroke-linecap="round"></path><circle cx="32" cy="47.5" r="3.4" fill="currentColor"></circle></svg>
+        <span>Turn off <b style="color:#e9eef2;">mobile data</b> on your phone while you set up</span>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ isJoined }}" hint-placeholder-val="{{ false }}">
+      <div style="width:220px;height:220px;border-radius:50%;box-sizing:border-box;display:flex;align-items:center;justify-content:center;color:#7ed6bc;background:rgba(126,214,188,0.14);border:3px solid rgba(126,214,188,0.45);">
+        <svg viewBox="0 0 64 64" width="120" height="120"><path d="M16 33 L28 45 L49 21" fill="none" stroke="currentColor" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+      </div>
+      <div style="font-size:72px;font-weight:800;letter-spacing:-0.02em;line-height:1.05;">Phone connected</div>
+    </sc-if>
+
+    <sc-if value="{{ isPage }}" hint-placeholder-val="{{ false }}">
+      <div style="font-size:60px;font-weight:800;letter-spacing:-0.02em;line-height:1.05;">Now open the setup page</div>
+      <div style="margin-top:-18px;font-size:32px;line-height:1.3;color:rgba(233,238,242,0.82);">Scan with the same phone</div>
+      <div style="display:flex;align-items:center;gap:56px;text-align:left;">
+        <div style="width:340px;height:340px;flex-shrink:0;border-radius:16px;background:#e9eef2;display:flex;align-items:center;justify-content:center;font-family:'IBM Plex Mono','Courier New',monospace;font-size:18px;letter-spacing:0.14em;text-transform:uppercase;color:#101a21;">QR code</div>
+        <div>
+          <div style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:18px;letter-spacing:0.2em;text-transform:uppercase;color:rgba(233,238,242,0.6);">Or type</div>
+          <div style="margin:6px 0 26px;font-family:'IBM Plex Mono','Courier New',monospace;font-size:48px;font-weight:700;letter-spacing:0.02em;white-space:nowrap;">10.42.0.1:8090</div>
+          <div style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:18px;letter-spacing:0.2em;text-transform:uppercase;color:rgba(233,238,242,0.6);">Your phone may say</div>
+          <div style="margin-top:6px;font-size:30px;font-weight:600;white-space:nowrap;">“No internet”. Stay connected.</div>
+        </div>
+      </div>
+      <div style="margin-top:8px;display:flex;align-items:center;gap:18px;padding:18px 30px;border-radius:16px;font-size:30px;color:#e0a758;background:rgba(224,167,88,0.12);border:2px solid rgba(224,167,88,0.45);">
+        <svg viewBox="0 0 64 64" width="44" height="44" style="flex-shrink:0;"><path d="M32 7 L60 56 H4 Z" fill="none" stroke="currentColor" stroke-width="5" stroke-linejoin="round"></path><path d="M32 24 V39" stroke="currentColor" stroke-width="5.5" stroke-linecap="round"></path><circle cx="32" cy="47.5" r="3.4" fill="currentColor"></circle></svg>
+        <span>Turn off <b style="color:#e9eef2;">mobile data</b> on your phone while you set up</span>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ isPhone }}" hint-placeholder-val="{{ false }}">
+      <div style="width:220px;height:220px;border-radius:50%;box-sizing:border-box;display:flex;align-items:center;justify-content:center;color:#7ed6bc;background:rgba(126,214,188,0.14);border:3px solid rgba(126,214,188,0.45);">
+        <svg viewBox="0 0 64 64" width="110" height="110"><rect x="18" y="5" width="28" height="54" rx="6" fill="none" stroke="currentColor" stroke-width="5"></rect><path d="M28 51 H36" stroke="currentColor" stroke-width="5" stroke-linecap="round"></path></svg>
+      </div>
+      <div style="font-size:72px;font-weight:800;letter-spacing:-0.02em;line-height:1.05;">Carry on on your phone</div>
+      <div style="margin-top:-18px;font-size:32px;line-height:1.3;color:rgba(233,238,242,0.82);">This screen shows when the player moves to your network.</div>
+    </sc-if>
+
+    <sc-if value="{{ isJoining }}" hint-placeholder-val="{{ false }}">
+      <div style="width:220px;height:220px;border-radius:50%;box-sizing:border-box;display:flex;align-items:center;justify-content:center;color:#7ed6bc;background:rgba(126,214,188,0.14);border:3px solid rgba(126,214,188,0.45);animation:psPulse 1.6s ease-in-out infinite;">
+        <svg viewBox="0 0 64 64" width="120" height="120"><path d="M6 25 A37 37 0 0 1 58 25" fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round"></path><path d="M15 34 A24 24 0 0 1 49 34" fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round"></path><path d="M24 43 A12 12 0 0 1 40 43" fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round"></path><circle cx="32" cy="52" r="4" fill="currentColor"></circle></svg>
+      </div>
+      <div style="font-size:72px;font-weight:800;letter-spacing:-0.02em;line-height:1.05;">Joining Home</div>
+      <div style="margin-top:-18px;font-size:32px;line-height:1.3;color:rgba(233,238,242,0.82);">Put your phone back on Home too.</div>
+    </sc-if>
+
+    <sc-if value="{{ isDone }}" hint-placeholder-val="{{ false }}">
+      <div style="width:220px;height:220px;border-radius:50%;box-sizing:border-box;display:flex;align-items:center;justify-content:center;color:#7ed6bc;background:rgba(126,214,188,0.14);border:3px solid rgba(126,214,188,0.45);">
+        <svg viewBox="0 0 64 64" width="120" height="120"><path d="M16 33 L28 45 L49 21" fill="none" stroke="currentColor" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+      </div>
+      <div style="font-size:72px;font-weight:800;letter-spacing:-0.02em;line-height:1.05;">{{ doneHeading }}</div>
+      <sc-if value="{{ restarting }}" hint-placeholder-val="{{ true }}">
+        <div style="margin-top:-18px;font-size:32px;line-height:1.3;color:rgba(233,238,242,0.82);">Restarting to take its new name…</div>
+      </sc-if>
+      <sc-if value="{{ libShown }}" hint-placeholder-val="{{ true }}">
+        <div style="margin-top:18px;display:flex;align-items:center;gap:26px;padding:24px 34px;text-align:left;border-radius:24px;background:rgba(255,255,255,0.05);border:1px solid rgba(233,238,242,0.1);">
+          <img src="icon-lyrion.svg" alt="" width="97" height="72" style="width:97px;height:72px;flex-shrink:0;display:block;" />
+          <div>
+            <div style="font-size:34px;font-weight:700;color:{{ libInk }};">{{ libTitle }}</div>
+            <div style="margin-top:6px;font-family:'IBM Plex Mono','Courier New',monospace;font-size:28px;color:rgba(233,238,242,0.82);">{{ libLine }}</div>
+          </div>
+        </div>
+      </sc-if>
+    </sc-if>
+
+    <sc-if value="{{ isLan }}" hint-placeholder-val="{{ false }}">
+      <div style="font-size:60px;font-weight:800;letter-spacing:-0.02em;line-height:1.05;">Set up gexis</div>
+      <div style="margin-top:-18px;font-size:32px;line-height:1.3;color:rgba(233,238,242,0.82);">Scan with a phone on the same network as this player</div>
+      <div style="display:flex;align-items:center;gap:56px;text-align:left;">
+        <div style="width:340px;height:340px;flex-shrink:0;border-radius:16px;background:#e9eef2;display:flex;align-items:center;justify-content:center;font-family:'IBM Plex Mono','Courier New',monospace;font-size:18px;letter-spacing:0.14em;text-transform:uppercase;color:#101a21;">QR code</div>
+        <div>
+          <div style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:18px;letter-spacing:0.2em;text-transform:uppercase;color:rgba(233,238,242,0.6);">Or type</div>
+          <div style="margin-top:6px;font-family:'IBM Plex Mono','Courier New',monospace;font-size:48px;font-weight:700;letter-spacing:0.02em;white-space:nowrap;">192.168.178.54:8090</div>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ isFailedStart }}" hint-placeholder-val="{{ false }}">
+      <div style="width:220px;height:220px;border-radius:50%;box-sizing:border-box;display:flex;align-items:center;justify-content:center;color:#e0a758;background:rgba(224,167,88,0.14);border:3px solid rgba(224,167,88,0.45);">
+        <svg viewBox="0 0 64 64" width="110" height="110"><path d="M32 7 L60 56 H4 Z" fill="none" stroke="currentColor" stroke-width="5" stroke-linejoin="round"></path><path d="M32 24 V39" stroke="currentColor" stroke-width="5.5" stroke-linecap="round"></path><circle cx="32" cy="47.5" r="3.4" fill="currentColor"></circle></svg>
+      </div>
+      <div style="font-size:60px;font-weight:800;letter-spacing:-0.02em;line-height:1.05;">The setup network did not start</div>
+      <div style="margin-top:-18px;font-size:32px;line-height:1.3;color:rgba(233,238,242,0.82);">Trying again in a moment.</div>
+      <div style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:20px;color:rgba(233,238,242,0.6);max-width:60ch;">wlan0 did not come up within 15 s</div>
+    </sc-if>
+
+    <sc-if value="{{ isStarting }}" hint-placeholder-val="{{ false }}">
+      <div style="width:220px;height:220px;border-radius:50%;box-sizing:border-box;display:flex;align-items:center;justify-content:center;background:rgba(126,214,188,0.14);border:3px solid rgba(126,214,188,0.45);animation:psPulse 1.6s ease-in-out infinite;">
+        <img src="gexis-mark.svg" alt="" width="110" height="110" style="width:110px;height:110px;display:block;" />
+      </div>
+      <div style="font-size:72px;font-weight:800;letter-spacing:-0.02em;line-height:1.05;">Starting setup…</div>
+    </sc-if>
+
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1280,&quot;height&quot;:800},&quot;state&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;starting&quot;,&quot;join (new)&quot;,&quot;join (lost)&quot;,&quot;could not join&quot;,&quot;joined&quot;,&quot;page&quot;,&quot;phone&quot;,&quot;joining&quot;,&quot;done&quot;,&quot;ethernet&quot;,&quot;setup network failed&quot;],&quot;default&quot;:&quot;join (new)&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Setup&quot;},&quot;lyrion&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;found&quot;,&quot;given&quot;,&quot;several&quot;,&quot;off&quot;,&quot;none&quot;,&quot;unchanged&quot;],&quot;default&quot;:&quot;found&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Done&quot;},&quot;renamed&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Done&quot;}}">
+// Ported from ui/src/screens/SetupScreen.svelte (phase-13 @403d582, ADR-0104 §5).
+// One step at a time, readable from two metres; nothing to read under 30px.
+// QR codes are dark on light: an inverted code is one some cameras do not read.
+const LIB = {
+  found: ['Found your Lyrion server', 'Lyrion Music Server · 192.168.1.10:9000', false],
+  given: ['Lyrion server', '192.168.1.10:9000', false],
+  several: ['2 Lyrion servers found', 'Choose one in Settings: Lyrion Music Server, NAS', true],
+  off: ['Lyrion is off', 'Switch it on in Settings any time.', false],
+  none: ['No Lyrion server found', 'Choose one in Settings when it is running.', true]
+};
+
+class Component extends DCLogic {
+  renderVals() {
+    const s = this.props.state || 'join (new)';
+    const join = s === 'join (new)' || s === 'join (lost)' || s === 'could not join';
+    const lib = this.props.lyrion || 'found';
+    const l = LIB[lib];
+    const open = join || s === 'joined' || s === 'page' || s === 'phone';
+    return {
+      crumb: s === 'join (lost)' || s === 'could not join' ? 'Setup network' : 'First-time setup',
+      overDisplay: open ? 'block' : 'none',
+      stageGap: join || s === 'page' ? '30px' : '34px',
+      isJoin: join,
+      isFailed: s === 'could not join',
+      joinTitle: s !== 'could not join',
+      joinHeading: s === 'join (lost)' ? 'gexis can\u2019t reach its Wi-Fi' : 'Set up gexis',
+      isJoined: s === 'joined',
+      isPage: s === 'page',
+      isPhone: s === 'phone',
+      isJoining: s === 'joining',
+      isDone: s === 'done',
+      doneHeading: 'Living room is on Home',
+      restarting: this.props.renamed ?? true,
+      libShown: !!l,
+      libTitle: l ? l[0] : '',
+      libLine: l ? l[1] : '',
+      libInk: l && l[2] ? '#e0a758' : '#e9eef2',
+      isLan: s === 'ethernet',
+      isFailedStart: s === 'setup network failed',
+      isStarting: s === 'starting'
+    };
+  }
+}
+</script>
+</body>
+</html>

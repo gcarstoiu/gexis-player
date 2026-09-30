@@ -435,25 +435,25 @@ body {
 /* ── volume ───────────────────────────────────────────────────────────────
    A cone plus three arcs. The number of lit arcs tracks the level, so the
    icon reports volume rather than merely labelling the control. */
-.i-volume { position: relative; width: 26px; height: 26px; flex-shrink: 0; display: block; }
+.i-volume { position: relative; width: 30px; height: 30px; flex-shrink: 0; display: block; }
 .i-volume .cone {
   position: absolute; left: 0; top: 50%; transform: translateY(-50%);
-  width: 13px; height: 22px; display: block;
-  background: var(--ink);
+  width: 15px; height: 26px; display: block;
+  background: rgba(233, 238, 242, 0.85);
   clip-path: polygon(0 27%, 42% 27%, 100% 0, 100% 100%, 42% 73%, 0 73%);
 }
 .i-volume .arc {
   position: absolute; top: 50%; border-radius: var(--r-circle);
-  box-sizing: border-box; border: 2px solid var(--ink-body); display: block;
+  box-sizing: border-box; border: 2.5px solid rgba(233, 238, 242, 0.85); display: block;
   clip-path: polygon(50% 10%, 100% 0, 100% 100%, 50% 90%);
 }
-.i-volume .arc:nth-of-type(1) { left: 4px;   width: 14px; height: 14px; margin-top: -7px; }
-.i-volume .arc:nth-of-type(2) { left: 0.5px; width: 21px; height: 21px; margin-top: -10.5px; }
-.i-volume .arc:nth-of-type(3) { left: -2px;  width: 26px; height: 26px; margin-top: -13px; }
-/* dimmed arcs read as headroom rather than as disabled controls */
+.i-volume .arc:nth-of-type(1) { left: 5px;  width: 16px; height: 16px; margin-top: -8px; }
+.i-volume .arc:nth-of-type(2) { left: 1px;  width: 24px; height: 24px; margin-top: -12px; }
+.i-volume .arc:nth-of-type(3) { left: -2px; width: 30px; height: 30px; margin-top: -15px; }
+/* unlit arcs read as headroom: lit past 0, 34 and 67 percent */
 .i-volume[data-level="low"]  .arc:nth-of-type(2),
 .i-volume[data-level="low"]  .arc:nth-of-type(3),
-.i-volume[data-level="mid"]  .arc:nth-of-type(3) { border-color: rgba(233, 238, 242, 0.22); }
+.i-volume[data-level="mid"]  .arc:nth-of-type(3) { border-color: rgba(233, 238, 242, 0.18); }
 
 /* ── queue ────────────────────────────────────────────────────────────── */
 .btn--queue {
@@ -511,3 +511,13 @@ body {
 }
 .caption b { color: var(--accent-lms); font-weight: 600; }
 .caption em { color: var(--accent-warn); font-style: normal; }
+
+/* ── home, shuffle, repeat (from source/Now Playing.dc.html, 2026-09-30) ── */
+.btn--home { width: 64px; height: 64px; }
+.i-home { width: 24px; height: 24px; display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; gap: 4px; }
+.i-home i { border-radius: 3px; background: rgba(233, 238, 242, 0.85); }
+.btn--toggle { box-sizing: border-box; border: 1px solid rgba(233, 238, 242, 0.12); }
+.btn--toggle .i-shuffle i, .btn--toggle .i-repeat i { background: rgba(233, 238, 242, 0.66); }
+.btn--toggle .i-shuffle b { border-left-color: rgba(233, 238, 242, 0.66); }
+.btn--toggle .i-repeat b:nth-child(5) { border-top-color: rgba(233, 238, 242, 0.66); }
+.btn--toggle .i-repeat b:nth-child(6) { border-bottom-color: rgba(233, 238, 242, 0.66); }
