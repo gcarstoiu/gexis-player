@@ -4,6 +4,33 @@ Last updated: 2026-09-30 (thirtieth session, on R2D2).
 
 ## Start here
 
+**Phase 13c (updates over the network) is under way on `phase-13c`**, in the
+worktree `~/projects/gexis-player-13a` (13a merged as PR #41). Images built
+there are hard-linked into `~/projects/gexis-player/image/deploy/` - George
+flashes from there; name the full file when asking, and check
+`/etc/gexis/image.info` after boot before testing anything.
+
+| Step | State |
+|---|---|
+| 0. Tested set measured | Finding 104: 1,027 packages, 880 MB; Pages cannot hold it |
+| 1. Our parts as Debian packages | **ADR-0107.** Ten packages built by `packaging/build.sh` in an arm64 container; `make image` installs them (`01-packages`). Image **833** (`…-v0.2.1-833-g1006239.img`): 98 checks, every file of ours owned by a package but two intended. **Waiting for George to flash it.** 825 (paths moved, no LMS address) ran on sofa-pi |
+| 2. Releases and the key | **ADR-0108**, George's decisions in ADR-0105: GitHub Releases, testing and stable, key on R2D2 with no expiry. Key `E63B…ABB7` created; R2D2 holds the signing subkey only (`~/.gnupg-gexis-release`). **`~/gexis-release-key-backup/` waits for George to print and copy it, then is deleted.** Test release `repo-test-1` published and installed from GitHub in a container; **delete it after sofa-pi has installed from it too.** `packaging/release/build.sh` builds a release locally; `publish.sh` uploads (run on George's say-so) |
+| 3. The updater on the device | Not started |
+| 4. Settings migrations | Built: `settings_migrations.py`, and tests that fail when a key leaves the registry without one |
+| 5. Settings → System → Updates | Not started; rows confirmed: Updates (Manual/Automatic), Update channel (Stable/Testing) |
+| 6. Our plugins updating | Not started (13a criterion 5) |
+| 7. One update measured on the device | Not started |
+
+**Also 2026-09-30:** a restore brings the backup's device name back in all
+four places (it had left LMS and the network disagreeing); a resumed Spotify
+after a core restart is an acquisition; Claude Design's 13b handoff is stored
+on branch `design-13b` (its stale `IMPLEMENTED-DIFFERENTLY.md` not taken), and
+Attached screen / Screen rotation are in ADR-0022's inventory for 13b.
+**Decided:** the output fallback stays (the user picks); passwordless `sudo`
+decided when the first release is made; the GPL source offer for the OS
+packages we publish is checked before then.
+
+
 **Phase 13a (plugins you install and update) is built through criterion 4 on
 `phase-13ac`**, in its own worktree at `~/projects/gexis-player-13a`, and run on
 `sofa-pi` (the second card, 192.168.178.131) with George. Upload from a phone

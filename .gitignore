@@ -30,3 +30,4 @@ build/
 
 # ADR-0107: built packages
 packaging/out/
+packaging/release/out/
