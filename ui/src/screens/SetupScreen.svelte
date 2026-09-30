@@ -326,9 +326,12 @@
     gap: 56px;
     text-align: left;
   }
+  /* ADR-0109: the QR code is what gives up height on a shorter screen (260
+     at 720, the 13.3"); at 800 and taller it is the design's 340. The
+     tallest step, *Could not join*, just fits at 800. */
   .qr {
-    width: 340px;
-    height: 340px;
+    width: min(340px, calc(var(--panel-h) - 460px));
+    height: min(340px, calc(var(--panel-h) - 460px));
     border-radius: var(--r-lg);
     flex-shrink: 0;
   }

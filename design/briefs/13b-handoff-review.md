@@ -109,8 +109,10 @@ for Claude Design. Section 3 is ours to fix.
 
 ### Not drawn
 - **Standard:**
-  - panel setup at 720: the join step is about 605 px against about 598
-    available;
+  - panel setup at 720. *Rendered afterwards:* the join step fits; the
+    tallest step, *Could not join*, ran into the header by about 60 px. It
+    is fixed on our side: the QR code gives up the height (260 at 720, 340
+    from 800 up);
   - the LMS-off waiting home;
   - the add-to-playlist sheet;
   - which part of the artist page takes the "more rows".
