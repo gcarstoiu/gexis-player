@@ -37,6 +37,8 @@
   let page = $state(null);
   let pageLoaded = $state(false);
   let now = $state(new Date());
+  // ADR-0109: the panel's shape, 1280 logical px by the screen's height.
+  let panelHeight = $state(window.innerHeight || 800);
   let spot = $state(randomSpot());
   let weather = $state(null);
   let picture = $state(null);
@@ -82,8 +84,6 @@
   //: 10%, 4:3 17% - while a square (38%) and anything portrait (65%+) fall
   //: on the other. The shapes that were composed to be looked at wide stay
   //: edge to edge.
-  // ADR-0109: the panel's shape, 1280 logical px by the screen's height.
-  let panelHeight = $state(800);
   const PANEL_RATIO = $derived(1280 / panelHeight);
   const CROP_LIMIT = 0.25;
   const cropped = $derived(
@@ -102,11 +102,17 @@
   //: The design's own two drift boxes. With the band below, the clock group
   //: is about 640x226 and roams widely; with the weather riding along it is
   //: about 1180x400, so the box tightens to keep that off the edges.
+  //: ADR-0109: the boxes were drawn at 800 tall. On another height the top
+  //: of the box stays where it was and its bottom moves with the screen's
+  //: bottom edge, so the group keeps the 800 margins (720 on the 13.3").
   function randomSpot() {
     const wide = (settings.idle_forecast ?? '3 days') !== 'None';
+    const [top, bottom] = wide ? [17, 55] : [36, 56];
+    const low = (top / 100) * 800;
+    const high = (bottom / 100) * 800 + (panelHeight - 800);
     return {
       x: Math.round(wide ? 29 + Math.random() * 42 : 41 + Math.random() * 14),
-      y: Math.round(wide ? 17 + Math.random() * 38 : 36 + Math.random() * 20),
+      y: Math.round(((low + Math.random() * (high - low)) / panelHeight) * 100),
     };
   }
 
