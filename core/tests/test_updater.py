@@ -121,3 +121,26 @@ def test_an_update_never_restarts_itself_or_the_shutdown_pause(up, monkeypatch):
     monkeypatch.setattr(up, "REBOOT_MARKER", up.STATE / "no-marker")
     up.restart([("gexis-core", "1", "2")])
     assert restarted == ["gexis-core.service"]
+
+
+def test_manual_never_installs_at_night(up, monkeypatch):
+    monkeypatch.setattr(up, "check", lambda args: ("testing", {"Release": "2", "_serial": 2}))
+    monkeypatch.setattr(up, "setting", lambda key: "Manual" if key == "updates" else None)
+    monkeypatch.setattr(up, "install", lambda args: (_ for _ in ()).throw(AssertionError("installed")))
+    assert up.scheduled(None) == 0
+
+
+def test_automatic_skips_a_release_that_failed_here_and_takes_a_newer_one(up, monkeypatch):
+    """Finding 105: without this, a broken release is tried every night."""
+    up.STATE.mkdir(parents=True, exist_ok=True)
+    (up.STATE / "failed-testing").write_text("2")
+    monkeypatch.setattr(up, "setting", lambda key: "Automatic" if key == "updates" else None)
+    monkeypatch.setattr(up, "installed", lambda p: "1")
+    installs = []
+    monkeypatch.setattr(up, "install", lambda args: installs.append(1) or 0)
+    monkeypatch.setattr(up, "check", lambda args: ("testing", {"Release": "2", "_serial": 2}))
+    up.scheduled(None)
+    assert installs == [], "the failed release is not retried by itself"
+    monkeypatch.setattr(up, "check", lambda args: ("testing", {"Release": "3", "_serial": 3}))
+    up.scheduled(None)
+    assert installs == [1], "a newer release is"

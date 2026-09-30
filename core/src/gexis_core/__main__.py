@@ -65,7 +65,7 @@ from gexis_core.peppy import (
 )
 from gexis_core.peppy_metadata import PeppyMetadataWriter
 from gexis_core.model import BLANK_METADATA, TrackMetadata
-from gexis_core import settings_migrations
+from gexis_core import settings_migrations, updates
 from gexis_core.settings import SettingsStore
 from gexis_core.settings_registry import Settings, load_registry
 from gexis_core.splash import Splash
@@ -1346,7 +1346,12 @@ async def main() -> None:
             # the image in `deploy/` is on the build host, not here. A
             # device flashed before that stage existed says so rather than
             # showing an empty row.
-            "version": lambda: image_info().get("version") or "unknown",
+            # **The release, from the installed gexis-player** (ADR-0107):
+            # an update changes it and the image stamp does not. The stamp
+            # stays the answer on a device older than packages.
+            "version": lambda: updates.installed_release() or image_info().get("version") or "unknown",
+            # ADR-0105 section 6: what the updater last said.
+            "update_status": lambda: updates.sentence(),
             "image_build": lambda: image_info().get("built") or "unknown",
             # ADR-0086 as amended: a synthesised switch reads what systemd says
             # about the unit until somebody uses it.
@@ -1472,6 +1477,13 @@ async def main() -> None:
                # `volume_managed` is: it is how a row says it reports
                # something rather than nothing (ADR-0022's `version`).
                "version": None, "image_build": None,
+               # ADR-0105 section 6. The updater runs in units of its own -
+               # an install restarts the core - and reads `updates` and
+               # `update_channel` itself; the core only starts it.
+               "update_status": None,
+               "update_check": lambda _=None: updates.start(updates.CHECK_UNIT),
+               "update_install": lambda _=None: updates.start(updates.INSTALL_UNIT),
+               "updates": None, "update_channel": None,
                "reboot": lambda _: asyncio.ensure_future(_reboot()),
                # **ADR-0083.** A backup that stays on the device does not
                # survive the event it exists for, so this writes into a share
@@ -2098,6 +2110,24 @@ async def main() -> None:
 
     if renderer_enabled("lms"):
         asyncio.ensure_future(_check_lms_volume_control())
+
+    async def _follow_updates() -> None:
+        """**An update's progress reaches the screen** (ADR-0105 section 6).
+        The updater writes its status file as it goes; Settings is told when
+        that file changes, so the Release row follows along without a reload.
+        Every 3 s: a stat, nothing more."""
+        last = None
+        while True:
+            try:
+                now = updates.STATUS.stat().st_mtime
+            except OSError:
+                now = None
+            if now != last and last is not None:
+                state_store.bump_settings_revision()
+            last = now
+            await asyncio.sleep(3)
+
+    asyncio.ensure_future(_follow_updates())
 
     async def _restart_core_soon() -> None:
         """The plugin list and its settings rows are read at start, so a

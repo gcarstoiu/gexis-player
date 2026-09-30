@@ -159,6 +159,11 @@ def test_registry_keys_are_the_designs_keys_apart_from_recorded_deviations():
         # ADR-0103, 2026-09-28: George asked for persistent logs behind a
         # debug switch. The design predates a device worth debugging.
         "debug_logs",
+        # ADR-0105 section 6, Phase 13c step 5: the Updates screen George
+        # accepted with the ADR (installed version, check, update now,
+        # Manual / Automatic), and the channel he confirmed on 2026-09-30.
+        # The design predates updates over the network.
+        "update_status", "update_check", "update_install", "update_channel",
     }
 
 
@@ -489,7 +494,7 @@ def test_the_device_name_warning_says_what_this_device_does():
     assert row["warn"] == "Change only takes place after a restart of the device."
 
 
-def test_the_shipped_registry_hides_twenty_rows_and_shows_the_rest():
+def test_the_shipped_registry_hides_the_inventoried_rows_and_shows_the_rest():
     rows = _rows()
     kept = [r for r in rows if r.get("surfaced") is False]
     # 17 since 2026-09-24: George asked to see the confidence threshold,
@@ -500,7 +505,11 @@ def test_the_shipped_registry_hides_twenty_rows_and_shows_the_rest():
     # having been inventoried and unwired since ADR-0022 - which cost a hand
     # copy over SSH the day the card was reflashed. `restore` arrived with it
     # and was surfaced from the start, so it never appears in this count.
-    assert len(kept) == 16, "ADR-0022's amendment: inventoried, not surfaced"
+    #
+    # **15 since 2026-09-30**: `updates` (Manual / Automatic) is surfaced
+    # with the mechanism it names (ADR-0105 section 6: "surfaced when the
+    # mechanism exists").
+    assert len(kept) == 15, "ADR-0022's amendment: inventoried, not surfaced"
     # Every one of them is still served by the API.
     assert all(r.get("key") for r in kept)
     # 54 at the start of 9d, plus the two rows the design has and the plan
@@ -530,15 +539,18 @@ def test_the_shipped_registry_hides_twenty_rows_and_shows_the_rest():
     # **77**: `rotation_mode` (ADR-0097). **79**: `legal` and `credits`
     # (ADR-0099). **80**: `start_max` (ADR-0054 §5, 2026-09-28; first as Spotify's own row).
     # **81**: `debug_logs` (ADR-0103, 2026-09-28). **82**: `clock_format`
-    # (George, 2026-09-28, with Phase 13's setup).
-    assert len(rows) == 82
+    # (George, 2026-09-28, with Phase 13's setup). **86 since 2026-09-30**:
+    # the Updates rows (ADR-0105 section 6) - Release, Check now, Update now,
+    # and the channel.
+    assert len(rows) == 86
     # 59 since 2026-09-25: `backup` was surfaced and `restore` arrived with
     # it (ADR-0083), so the shown count gains two while the hidden one loses
     # one. **58 since 2026-09-26**, less the threshold row. **60 since
     # 2026-09-27**, with the animated skins' two. **64 since 2026-09-28**,
     # with Spotify's starting volume.
-    # **65**, with Debug logs. **66**, with the clock format.
-    assert len(rows) - len(kept) == 66
+    # **65**, with Debug logs. **66**, with the clock format. **71**, with
+    # the four Updates rows and `updates` surfaced (2026-09-30).
+    assert len(rows) - len(kept) == 71
 
 
 def test_the_clock_can_be_turned_off_without_taking_the_screen_with_it():

@@ -6,6 +6,8 @@
     gexis-update check     read the channel, say whether a release is waiting
     gexis-update install   check, download, back up, wait for silence, install,
                            verify - and go back to the release before on failure
+    gexis-update scheduled the nightly run: check, and install only when
+                           Updates is Automatic and the release has not failed here
 
 **Standalone, on the system's Python and the standard library only.** An
 update replaces the core's own environment; this has to outlive what it
@@ -71,18 +73,21 @@ def run(*args: str, check: bool = True, env: dict | None = None) -> subprocess.C
 
 # --- the channel -------------------------------------------------------------
 
+def setting(key: str):
+    """A row's stored value, read-only, or None - the core owns the store."""
+    try:
+        with sqlite3.connect(f"file:{SETTINGS_DB}?mode=ro", uri=True) as db:
+            row = db.execute("SELECT value FROM settings WHERE key = ?", (key,)).fetchone()
+        return json.loads(row[0]) if row else None
+    except (sqlite3.Error, ValueError):
+        return None
+
+
 def channel_name(given: str | None) -> str:
     if given:
         return given
     # The Update channel row (ADR-0022, 2026-09-30); Stable when never set.
-    try:
-        with sqlite3.connect(f"file:{SETTINGS_DB}?mode=ro", uri=True) as db:
-            row = db.execute("SELECT value FROM settings WHERE key = 'update_channel'").fetchone()
-        if row and json.loads(row[0]) == "Testing":
-            return "testing"
-    except sqlite3.Error:
-        pass
-    return "stable"
+    return "testing" if setting("update_channel") == "Testing" else "stable"
 
 
 def read_channel(channel: str) -> dict:
@@ -339,6 +344,9 @@ def install(args) -> int:
             "dist-upgrade", prefix=inhibit)
         run("dpkg", "--configure", "-a", check=False)
         ok = installed("gexis-player") == current
+        # Remembered, so a night's Automatic run does not try it again
+        # (Finding 105); "Update now" still does - it is asked for.
+        (STATE / f"failed-{channel}").write_text(target)
         report("failed", channel=channel, release=installed("gexis-player"), backup=backup,
                message=f"{failure}. " + (f"Back on {current}." if ok else "Going back did not complete: restore the backup."))
         return 1
@@ -354,15 +362,34 @@ def install(args) -> int:
     return 0
 
 
+def scheduled(args) -> int:
+    """The nightly run (gexis-update-check.timer): check, and with Automatic
+    chosen install what is waiting - unless that release already failed here
+    (Finding 105: it would be tried, and taken back, every night)."""
+    found = check(args)
+    if not found or setting("updates") != "Automatic":
+        return 0
+    channel, ch = found
+    failed = STATE / f"failed-{channel}"
+    if failed.exists() and failed.read_text().strip() == ch["Release"]:
+        report("available", channel=channel, release=ch["Release"], installed=installed("gexis-player"),
+               notes=ch.get("Notes"),
+               message=f"{ch['Release']} failed here before; it waits for Update now or a newer release")
+        return 0
+    return install(args)
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
-    parser.add_argument("action", choices=["check", "install"])
+    parser.add_argument("action", choices=["check", "install", "scheduled"])
     parser.add_argument("--channel", choices=["stable", "testing"])
     args = parser.parse_args()
     try:
         if args.action == "check":
             check(args)
             return 0
+        if args.action == "scheduled":
+            return scheduled(args)
         return install(args)
     except Stop as stop:
         report("failed", message=str(stop))

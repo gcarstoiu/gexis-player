@@ -2,9 +2,10 @@
 Description=Gexis Player: check for a release once a day (ADR-0105)
 
 [Timer]
-OnBootSec=15min
-OnUnitActiveSec=1d
-RandomizedDelaySec=2h
+# At night (ADR-0105 section 6: Automatic runs at night, never while
+# playing - the updater also waits for silence).
+OnCalendar=*-*-* 03:00
+RandomizedDelaySec=90min
 Persistent=true
 
 [Install]

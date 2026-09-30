@@ -1,8 +1,10 @@
 [Unit]
-Description=Gexis Player: is a release waiting on this device's channel? (ADR-0108)
+Description=Gexis Player: check the channel, and install at night if Updates is Automatic (ADR-0105)
 After=network-online.target
 Wants=network-online.target
 
 [Service]
 Type=oneshot
-ExecStart=/usr/lib/gexis/gexis-update check
+ExecStart=/usr/lib/gexis/gexis-update scheduled
+# Automatic installs from here and an install is never cut short.
+TimeoutStartSec=infinity
