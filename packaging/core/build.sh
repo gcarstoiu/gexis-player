@@ -32,6 +32,61 @@ python3 -m venv "$VENV"
 
 mkdir -p "$STAGE/DEBIAN" "$STAGE/opt/gexis-core"
 cp -a "$VENV" "$STAGE/opt/gexis-core/"
+
+# What the core stage installs besides the environment (image/stage-gexis/
+# 03-core), from the same files - one source of truth until the stages go.
+F=/src/image/stage-gexis/03-core/files
+U="$STAGE/usr/lib/systemd/system"
+for unit in gexis-core.service gexis-meter.service gexis-park.service \
+	gexis-uploaded-renderer@.service gexis-uploaded-service@.service gexis-fetch@.service; do
+	install -D -m 644 "$F/$unit" "$U/$unit"
+done
+install -D -m 755 "$F/gexis-run-uploaded" "$STAGE/usr/lib/gexis/gexis-run-uploaded"
+install -D -m 755 "$F/gexis-fetch-component" "$STAGE/usr/lib/gexis/gexis-fetch-component"
+for plugin in "$F"/plugins/*/; do
+	id=$(basename "$plugin")
+	install -D -m 644 "${plugin}plugin.json" "$STAGE/usr/share/gexis/plugins/$id/plugin.json"
+	[ -f "${plugin}mark.png" ] && install -D -m 644 "${plugin}mark.png" "$STAGE/usr/share/gexis/plugins/$id/mark.png"
+done
+# A default, placed once: setup, a restore and first boot all write this file.
+install -D -m 644 "$F/core.toml" "$STAGE/usr/share/gexis/defaults/core.toml"
+
+cat > "$STAGE/DEBIAN/postinst" <<'POSTINST'
+#!/bin/sh
+# ADR-0107: gexis-core. Idempotent; never overwrites what the device wrote.
+set -e
+[ "$1" = configure ] || exit 0
+
+# The default config, only where there is none (setup, restore and first
+# boot write it; an update must not undo them).
+if [ ! -e /etc/gexis/core.toml ]; then
+	install -D -m 644 /usr/share/gexis/defaults/core.toml /etc/gexis/core.toml
+fi
+
+# The group that may connect to the plugin socket (ADR-0084 as amended).
+getent group gexis-plugins >/dev/null || addgroup --system gexis-plugins
+if getent passwd pi >/dev/null; then adduser pi gexis-plugins >/dev/null; fi
+
+# The pictures and backups shares (ADR-0049, ADR-0083), the stock user's.
+install -d -o 1000 -g 1000 -m 2775 /var/lib/gexis-core/pictures /var/lib/gexis-core/backups
+
+if [ -z "$2" ]; then
+	# First install: on at boot, as the image has always had them. An update
+	# leaves the enable state alone.
+	# Not `|| true`: an enable that fails must fail the install, not leave a
+	# device that does not start its core. Only a system without systemctl
+	# at all (a test container) skips it, and says so.
+	if command -v systemctl >/dev/null; then
+		systemctl enable gexis-core.service gexis-meter.service gexis-park.service
+	else
+		echo "gexis-core: no systemctl here; units not enabled" >&2
+	fi
+fi
+# Restarts are the updater's (the core may be the one running it); only tell
+# a running systemd the unit files changed.
+if [ -d /run/systemd/system ]; then systemctl daemon-reload || true; fi
+POSTINST
+chmod 755 "$STAGE/DEBIAN/postinst"
 PYV=$(python3 -c 'import sys; print(f"{sys.version_info[0]}.{sys.version_info[1]}")')
 NEXT=$(python3 -c 'import sys; print(f"{sys.version_info[0]}.{sys.version_info[1] + 1}")')
 cat > "$STAGE/DEBIAN/control" <<EOF
@@ -39,7 +94,7 @@ Package: gexis-core
 Version: $VERSION
 Architecture: arm64
 Maintainer: Gexis Player <noreply@github.com>
-Depends: python3 (>= $PYV), python3 (<< $NEXT)
+Depends: python3 (>= $PYV), python3 (<< $NEXT), adduser
 Section: sound
 Priority: optional
 Description: Gexis Player's core, in its own Python environment
