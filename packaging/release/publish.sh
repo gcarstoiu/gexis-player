@@ -1,10 +1,19 @@
 #!/bin/bash
-# ADR-0108: put a built release on GitHub, and move a channel. The one step
-# here that reaches outside R2D2 - run on George's say-so, never by a build.
+# ADR-0108 (as amended): put a built release on GitHub, and move a channel. The
+# one step here that reaches outside R2D2 - run on George's say-so, never by a
+# build.
 #
-#   packaging/release/publish.sh <tag>                 upload the release only
+#   packaging/release/publish.sh <tag>                     upload the release only
 #   packaging/release/publish.sh <tag> --channel testing   upload, then point testing at it
-#   packaging/release/publish.sh --promote <tag>       point stable at a release already up
+#   packaging/release/publish.sh --promote <tag>           point stable at it, with its image
+#
+# **A release is parts, named by content**: a part already on GitHub is not
+# uploaded again. A typical release uploads its `ours` part and its page.
+#
+# **Paced for GitHub's limits** (2026-09-30: two whole releases in an hour hit
+# the secondary rate limit, and then the API refused everything for a while).
+# GitHub documents about 500 content-creating requests an hour: 10 files, then
+# a pause, keeps under it; a refusal waits minutes, never hammers.
 set -euo pipefail
 cd "$(dirname "$0")/../.."
 
@@ -12,9 +21,39 @@ REPO=gcarstoiu/gexis-player
 export GNUPGHOME="${GEXIS_RELEASE_GNUPGHOME:-$HOME/.gnupg-gexis-release}"
 SIGNER='B6643AE345702FBA!'
 BASE="https://github.com/$REPO/releases/download"
+BATCH=10
+PAUSE=80
+
+gh_retry() {  # a gh call that waits out a refusal: 5, 10, 15 ... minutes
+	local tries=0
+	until "$@"; do
+		tries=$((tries + 1))
+		[ "$tries" -le 6 ] || { echo "ERROR: gh kept refusing: $*" >&2; exit 1; }
+		echo "  GitHub refused; waiting $((tries * 5)) min" >&2
+		sleep $((tries * 300))
+	done
+}
+
+upload_all() {  # release-tag directory: upload what is not there yet, packages first
+	local rel="$1" dir="$2" have f
+	have=$(gh_retry gh release view "$rel" --repo "$REPO" --json assets --jq '.assets[] | select(.state == "uploaded") | .name')
+	local debs=() idx=()
+	for f in "$dir"/*; do
+		grep -qxF "$(basename "$f")" <<<"$have" && continue
+		case "$f" in *.deb) debs+=("$f");; *) idx+=("$f");; esac
+	done
+	# The indexes last: a part is not usable until every package it lists is up.
+	local todo=("${debs[@]}" "${idx[@]}")
+	echo "$rel: ${#todo[@]} of $(ls "$dir" | wc -l) files to upload"
+	while [ "${#todo[@]}" -gt 0 ]; do
+		gh_retry gh release upload "$rel" --repo "$REPO" --clobber "${todo[@]:0:$BATCH}" >/dev/null
+		todo=("${todo[@]:$BATCH}")
+		[ "${#todo[@]}" -eq 0 ] || sleep "$PAUSE"
+	done
+}
 
 channel_file() {  # channel tag -> writes, signs and uploads channels/<channel>
-	local channel="$1" tag="$2" work serial version
+	local channel="$1" tag="$2" work serial version parts
 	work=$(mktemp -d)
 	# The serial only increases (ADR-0108): read what is published, add one.
 	if curl -fsSL -o "$work/current" "$BASE/channels/$channel" 2>/dev/null; then
@@ -23,31 +62,34 @@ channel_file() {  # channel tag -> writes, signs and uploads channels/<channel>
 	else
 		serial=1
 	fi
-	version=$(gh release view "$tag" --repo "$REPO" --json name --jq .name | sed 's/^gexis-player //')
+	curl -fsSL -o "$work/parts" "$BASE/$tag/parts" || { echo "ERROR: $tag has no parts file" >&2; exit 1; }
+	gpg --batch --verify "$work/parts" 2>/dev/null || { echo "ERROR: $tag's parts file does not verify" >&2; exit 1; }
+	version=$(gpg --batch --decrypt "$work/parts" 2>/dev/null | sed -n 's/^Release: //p')
+	parts=$(gpg --batch --decrypt "$work/parts" 2>/dev/null | sed -n 's/^Parts: //p')
 	cat > "$work/$channel.txt" <<EOF
 Channel: $channel
 Serial: $serial
 Date: $(date -u +%Y-%m-%dT%H:%M:%SZ)
 Release: $version
-Repositories: $tag $tag-debian
+Repositories: $parts
 Notes: https://github.com/$REPO/releases/tag/$tag
 EOF
 	gpg --batch --yes -u "$SIGNER" --clearsign -o "$work/$channel" "$work/$channel.txt"
-	gh release view channels --repo "$REPO" >/dev/null 2>&1 \
-		|| gh release create channels --repo "$REPO" --target main --title "Update channels" \
+	gh_retry gh release view channels --repo "$REPO" >/dev/null 2>&1 \
+		|| gh_retry gh release create channels --repo "$REPO" --target main --title "Update channels" \
 			--notes "The signed files devices read to find their channel's release (ADR-0108). Not a release of the player."
-	gh release upload channels "$work/$channel" --repo "$REPO" --clobber
-	echo "$channel -> $tag (serial $serial)"
+	gh_retry gh release upload channels "$work/$channel" --repo "$REPO" --clobber
+	echo "$channel -> $tag (serial $serial): $parts"
 	rm -rf "$work"
 }
 
 if [ "${1:-}" = --promote ]; then
 	tag="${2:?usage: publish.sh --promote <tag>}"
-	gh release view "$tag" --repo "$REPO" >/dev/null || { echo "ERROR: $tag is not published" >&2; exit 1; }
+	gh_retry gh release view "$tag" --repo "$REPO" >/dev/null
 	# **The image a new device starts from** (ADR-0105 as amended 2026-09-30,
 	# George: "A now with B later"): the one this release was built from,
 	# compressed, with its checksum and a signature by the release key. Fixed
-	# names, and this half marked GitHub's latest, so
+	# names, and the release page marked GitHub's latest (parts never are), so
 	# .../releases/latest/download/gexis-player.img.xz is always stable's image.
 	DEST=packaging/release/out/$tag
 	[ -f "$DEST/image.txt" ] || { echo "ERROR: $DEST/image.txt does not name the release's image" >&2; exit 1; }
@@ -56,59 +98,36 @@ if [ "${1:-}" = --promote ]; then
 	xz -T0 -6 -c "$img" > "$work/gexis-player.img.xz"
 	(cd "$work" && sha256sum gexis-player.img.xz > gexis-player.img.xz.sha256)
 	gpg --batch --yes -u "$SIGNER" -abs -o "$work/gexis-player.img.xz.asc" "$work/gexis-player.img.xz"
-	gh release upload "$tag" --repo "$REPO" --clobber "$work"/gexis-player.img.xz "$work"/gexis-player.img.xz.sha256 "$work"/gexis-player.img.xz.asc
+	gh_retry gh release upload "$tag" --repo "$REPO" --clobber "$work"/gexis-player.img.xz "$work"/gexis-player.img.xz.sha256 "$work"/gexis-player.img.xz.asc
 	rm -rf "$work"
 	channel_file stable "$tag"
-	gh release edit "$tag" --repo "$REPO" --prerelease=false --latest
-	gh release edit "$tag-debian" --repo "$REPO" --prerelease=false --latest=false
+	gh_retry gh release edit "$tag" --repo "$REPO" --prerelease=false --latest
 	exit 0
 fi
 
 tag="${1:?usage: publish.sh <tag> [--channel testing]}"
 DEST=packaging/release/out/$tag
-[ -f "$DEST/main/InRelease" ] && [ -f "$DEST/debian/InRelease" ] || { echo "ERROR: $DEST is not a built release" >&2; exit 1; }
-for half in main debian; do
-	gpg --batch --verify "$DEST/$half/InRelease" 2>/dev/null || { echo "ERROR: $half's InRelease does not verify" >&2; exit 1; }
+[ -f "$DEST/parts" ] || { echo "ERROR: $DEST has no parts file; build it with packaging/release/build.sh" >&2; exit 1; }
+gpg --batch --verify "$DEST/parts" 2>/dev/null || { echo "ERROR: $DEST/parts does not verify" >&2; exit 1; }
+version=$(gpg --batch --decrypt "$DEST/parts" 2>/dev/null | sed -n 's/^Release: //p')
+
+# The parts: each a pre-release of its own, never GitHub's "latest".
+for part in "$DEST"/parts/*/; do
+	name=$(basename "$part")
+	gpg --batch --verify "$part/InRelease" 2>/dev/null || { echo "ERROR: $name's InRelease does not verify" >&2; exit 1; }
+	gh_retry gh release view "$name" --repo "$REPO" >/dev/null 2>&1 \
+		|| gh_retry gh release create "$name" --repo "$REPO" --target main --prerelease --latest=false \
+			--title "Part $name" \
+			--notes "A part of Gexis Player releases: a signed apt repository, named by its content (ADR-0108). Shared by every release whose part is the same."
+	upload_all "$name" "$part"
 done
-version=$(sed -n 's/^gexis-player_\(.*\)_all\.deb$/\1/p' <(ls "$DEST/main"))
-# **Resumable and paced** (2026-09-30: the second release in an hour hit
-# GitHub's secondary rate limit 150 files into its 1,031). A release that
-# exists is completed rather than refused; files already up are skipped; the
-# rest go in batches, and a rate-limit answer waits and tries again.
-upload_all() {  # release-tag directory
-	local rel="$1" dir="$2" have todo batch=() f tries
-	have=$(gh release view "$rel" --repo "$REPO" --json assets --jq '.assets[].name')
-	todo=()
-	for f in "$dir"/*; do
-		grep -qxF "$(basename "$f")" <<<"$have" || todo+=("$f")
-	done
-	echo "$rel: ${#todo[@]} of $(ls "$dir" | wc -l) files to upload"
-	# The indexes last: a half is not usable until every package it lists is up.
-	local debs=() idx=()
-	for f in "${todo[@]}"; do case "$f" in *.deb) debs+=("$f");; *) idx+=("$f");; esac; done
-	todo=("${debs[@]}" "${idx[@]}")
-	while [ "${#todo[@]}" -gt 0 ]; do
-		batch=("${todo[@]:0:20}")
-		tries=0
-		until gh release upload "$rel" --repo "$REPO" --clobber "${batch[@]}" >/dev/null 2>&1; do
-			tries=$((tries + 1))
-			[ "$tries" -le 8 ] || { echo "ERROR: $rel: upload kept failing" >&2; exit 1; }
-			echo "  waiting $((tries * 60)) s (GitHub rate limit or network), then again"
-			sleep $((tries * 60))
-		done
-		todo=("${todo[@]:20}")
-		sleep 10
-	done
-}
-# Published as pre-releases: stable is what a promotion makes of them.
-gh release view "$tag" --repo "$REPO" >/dev/null 2>&1 || gh release create "$tag" --repo "$REPO" --target main --prerelease \
-	--title "gexis-player $version" \
-	--notes "Gexis Player $version: our packages and the Raspberry Pi part of the tested set, as a signed apt repository (ADR-0108). The Debian part is $tag-debian."
-upload_all "$tag" "$DEST/main"
-gh release view "$tag-debian" --repo "$REPO" >/dev/null 2>&1 || gh release create "$tag-debian" --repo "$REPO" --target main --prerelease \
-	--title "gexis-player $version (Debian packages)" \
-	--notes "The Debian part of $tag's tested set, as a signed apt repository (ADR-0108)."
-upload_all "$tag-debian" "$DEST/debian"
+
+# The release's page: its notes and its signed list of parts.
+gh_retry gh release view "$tag" --repo "$REPO" >/dev/null 2>&1 \
+	|| gh_retry gh release create "$tag" --repo "$REPO" --target main --prerelease --latest=false \
+		--title "gexis-player $version" \
+		--notes "Gexis Player $version. Its packages are in the parts its signed parts file lists (ADR-0108)."
+gh_retry gh release upload "$tag" --repo "$REPO" --clobber "$DEST/parts"
 if [ "${2:-}" = --channel ]; then
 	channel_file "${3:?--channel needs testing or stable}" "$tag"
 fi
