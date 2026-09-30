@@ -175,6 +175,55 @@
   function pickPlugin() {
     pluginFile?.click();
   }
+  //: **What an upload or a removal is doing, until it is over** (George,
+  //: 2026-09-30: "no feedback given on the upload itself"). `sending` has a
+  //: share of the bytes; `checking` and `restarting` have none to give.
+  let task = $state(null);
+  function send(file) {
+    // XMLHttpRequest, not fetch: only it reports an upload's progress.
+    return new Promise((resolve) => {
+      const xhr = new XMLHttpRequest();
+      xhr.open('POST', '/plugins/upload');
+      xhr.setRequestHeader('Content-Type', 'application/gzip');
+      xhr.upload.onprogress = (e) => {
+        if (e.lengthComputable && task) task.share = e.loaded / e.total;
+      };
+      xhr.upload.onload = () => {
+        if (task) task.phase = 'checking';
+      };
+      xhr.onload = () => {
+        let body = {};
+        try { body = JSON.parse(xhr.responseText); } catch { /* not JSON */ }
+        resolve({ ok: xhr.status >= 200 && xhr.status < 300, status: xhr.status, body });
+      };
+      xhr.onerror = () => resolve({ ok: false, status: 0, body: { error: 'The upload did not reach the player.' } });
+      xhr.send(file);
+    });
+  }
+  //: The core restarts 1.5 s after it answers. Back is a `/settings` that
+  //: answers after one that did not - or, if the restart was never seen,
+  //: after 10 s.
+  async function waitForRestart() {
+    const started = Date.now();
+    let seenDown = false;
+    while (Date.now() - started < 90000) {
+      await new Promise((r) => setTimeout(r, 1000));
+      const up = await fetch('/settings', { cache: 'no-store' }).then((r) => r.ok, () => false);
+      if (!up) seenDown = true;
+      else if (seenDown || Date.now() - started > 10000) {
+        await loadSettings();
+        return true;
+      }
+    }
+    return false;
+  }
+  async function restarted(done) {
+    task.phase = 'restarting';
+    const back = await waitForRestart();
+    task = back
+      ? { ...task, phase: 'done', text: done }
+      : { ...task, phase: 'failed', text: 'The player has not come back yet. Reload this page in a minute.' };
+  }
   function onPluginPicked(event) {
     const file = event.target.files?.[0];
     event.target.value = '';
@@ -184,14 +233,14 @@
       text: UPLOAD_NOTICE,
       confirm: 'Install',
       run: async () => {
-        flash('Uploading…');
-        const res = await fetch('/plugins/upload', {
-          method: 'POST',
-          body: file,
-          headers: { 'Content-Type': 'application/gzip' }
-        });
-        const body = await res.json().catch(() => ({}));
-        flash(res.ok ? `${body.installed} ${body.version} installed — the player is restarting` : (body.error ?? `HTTP ${res.status}`));
+        task = { title: file.name, phase: 'sending', share: 0 };
+        const res = await send(file);
+        if (!res.ok) {
+          task = { ...task, phase: 'failed', text: res.body.error ?? `The player answered HTTP ${res.status}.` };
+          return;
+        }
+        task.title = `${res.body.installed} ${res.body.version}`;
+        await restarted('Installed, and switched off. Its switch is on this page.');
       }
     };
   }
@@ -203,9 +252,14 @@
       confirm: 'Remove',
       danger: true,
       run: async () => {
+        task = { title: row.label, phase: 'checking' };
         const res = await fetch(`/plugins/${encodeURIComponent(id)}/uninstall`, { method: 'POST' });
         const body = await res.json().catch(() => ({}));
-        flash(res.ok ? `${row.label} removed — the player is restarting` : (body.error ?? `HTTP ${res.status}`));
+        if (!res.ok) {
+          task = { ...task, phase: 'failed', text: body.error ?? `The player answered HTTP ${res.status}.` };
+          return;
+        }
+        await restarted('Removed.');
       }
     };
   }
@@ -755,6 +809,26 @@
           </div>
         {:else}
           <div class="list" class:list--wide={wide} data-noscrollbar>
+            {#if current?.id === 'plugins' && !embedded}
+              <!-- ADR-0106: a phone or computer only; the panel has no file
+                   picker and does not offer it. **First and on its own**, in
+                   no group (George, 2026-09-30), and a file icon rather than
+                   a chevron: it opens the device's files, not a page. -->
+              <button class="row row--upload" type="button" onclick={pickPlugin}>
+                <span class="row__body">
+                  <span class="row__text">
+                    <span class="row__label"><span class="row__name">Upload a plugin</span></span>
+                    <span class="row__note">Opens your files to choose a package (.tar.gz). Not part of Gexis Player.</span>
+                  </span>
+                  <svg class="upload__icon" viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z" />
+                    <path d="M14 3v5h5" />
+                    <path d="M12 17v-6m-3 3 3-3 3 3" />
+                  </svg>
+                </span>
+              </button>
+              <input class="upload__input" type="file" accept=".tar.gz,.tgz,application/gzip" bind:this={pluginFile} onchange={onPluginPicked} />
+            {/if}
             {#each rows as r, i (r.key ?? `group-${i}`)}
               {#if r.type === 'group'}
                 <div class="subhead">
@@ -844,20 +918,6 @@
                 </button>
               {/if}
             {/each}
-            {#if current?.id === 'plugins' && !embedded}
-              <!-- ADR-0106: a phone or computer only; the panel has no file
-                   picker and does not offer it. -->
-              <button class="row" type="button" onclick={pickPlugin}>
-                <span class="row__body">
-                  <span class="row__text">
-                    <span class="row__label"><span class="row__name">Upload a plugin</span></span>
-                    <span class="row__note">A package built for this player (.tar.gz). Not part of Gexis Player.</span>
-                  </span>
-                  <span class="chev"></span>
-                </span>
-              </button>
-              <input class="upload__input" type="file" accept=".tar.gz,.tgz,application/gzip" bind:this={pluginFile} onchange={onPluginPicked} />
-            {/if}
           </div>
         {/if}
       </div>
@@ -1316,7 +1376,9 @@
   <div class="toast" class:is-shown={toast}>{toast ?? ''}</div>
 
   {#if ask}
-    <!-- ADR-0106: the confirm before an upload or a removal. -->
+    <!-- ADR-0106: the confirm before an upload or a removal. Centred, not a
+         bottom sheet: on a tall phone it sat at the foot of the screen
+         (George, 2026-09-30). -->
     <div class="ask" role="dialog" aria-modal="true" aria-label={ask.title}>
       <div class="ask__card">
         <div class="ask__title">{ask.title}</div>
@@ -1328,6 +1390,34 @@
           <button type="button" class="btn" onclick={() => answerAsk(false)}>Cancel</button>
           <button type="button" class="btn btn--confirm" class:btn--danger={ask.danger} onclick={() => answerAsk(true)}>{ask.confirm}</button>
         </div>
+      </div>
+    </div>
+  {:else if task}
+    <div class="ask" role="dialog" aria-modal="true" aria-live="polite" aria-label={task.title}>
+      <div class="ask__card">
+        <div class="ask__title">{task.title}</div>
+        {#if task.phase === 'failed'}
+          <div class="warn">
+            <span class="warn__mark">!</span>
+            <span class="warn__text">{task.text}</span>
+          </div>
+        {:else if task.phase === 'done'}
+          <div class="task__text">{task.text}</div>
+        {:else}
+          <div class="task__text">
+            {#if task.phase === 'sending'}Uploading… {Math.round((task.share ?? 0) * 100)} %
+            {:else if task.phase === 'checking'}Checking and installing…
+            {:else}The player is restarting…{/if}
+          </div>
+          <span class="task__bar" class:task__bar--busy={task.phase !== 'sending'}>
+            <span style:width={`${Math.round((task.share ?? 0) * 100)}%`}></span>
+          </span>
+        {/if}
+        {#if task.phase === 'done' || task.phase === 'failed'}
+          <div class="ask__buttons">
+            <button type="button" class="btn btn--confirm" onclick={() => (task = null)}>OK</button>
+          </div>
+        {/if}
       </div>
     </div>
   {/if}
@@ -2600,19 +2690,35 @@
   .upload__input {
     display: none;
   }
+  .row--upload {
+    margin-bottom: 18px;
+    border-style: dashed;
+    border-color: rgba(233, 238, 242, 0.28);
+  }
+  .upload__icon {
+    width: 28px;
+    height: 28px;
+    flex-shrink: 0;
+    fill: none;
+    stroke: rgba(233, 238, 242, 0.7);
+    stroke-width: 1.8;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
   .ask {
     position: fixed;
     inset: 0;
     z-index: 60;
     display: flex;
-    align-items: flex-end;
+    align-items: center;
     justify-content: center;
+    padding: 16px;
     background: var(--bg-scrim);
   }
   .ask__card {
     width: min(560px, 100%);
     padding: 24px 22px 28px;
-    border-radius: var(--r-xl) var(--r-xl) 0 0;
+    border-radius: var(--r-xl);
     background: var(--bg-panel);
     display: flex;
     flex-direction: column;
@@ -2621,6 +2727,28 @@
   .ask__title {
     font-size: 20px;
     font-weight: 700;
+  }
+  .task__text {
+    font-size: 17px;
+    line-height: 1.4;
+  }
+  .task__bar {
+    display: block;
+    height: 6px;
+    border-radius: 3px;
+    background: rgba(233, 238, 242, 0.12);
+    overflow: hidden;
+  }
+  .task__bar span {
+    display: block;
+    height: 100%;
+    background: var(--accent-lms);
+    transition: width 0.2s ease;
+  }
+  /* Nothing to measure: a sliver that moves, as .dl__bar--busy. */
+  .task__bar--busy span {
+    width: 30% !important;
+    animation: dl-busy 1.2s ease-in-out infinite;
   }
   .ask__buttons {
     display: flex;
