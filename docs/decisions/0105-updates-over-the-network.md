@@ -164,6 +164,16 @@ it"*). Losing the backup alone changes nothing; losing R2D2's key alone stops
 signed updates until devices are reflashed with a new one; losing both
 while the key is stolen is the case the printed certificate exists for.
 
+**The key, created 2026-09-30:** *Gexis Player releases*, master
+`E63B 2631 0A28 F1EC C866  05E4 2B4E 3F53 73EE ABB7` (Ed25519, certify only),
+signing subkey `B664 3AE3 4570 2FBA`. Its public half is
+`packaging/keys/gexis-release.asc`; R2D2's keyring
+(`~/.gnupg-gexis-release`) holds the signing subkey and **not the master's
+secret** (`sec#`), so R2D2 can sign releases but cannot make or revoke keys.
+The master, the revocation certificate and a note were given to George to
+print and keep; a restore from that backup was shown to hold both secret keys
+and to sign.
+
 **To confirm before the first public release: the source code offer.**
 Publishing Debian's and Raspberry Pi's packages ourselves is redistributing
 them, much of it under the GPL, whose terms ask for the corresponding source
