@@ -18,6 +18,11 @@ set -eu
 
 VERSION_ARG="$1"   # the repository's version: unused, peppyalsa has its own
 COMMIT=7dcb0c5e783e0c86315a0f655684613affd3e9d2
+# The commit's own date, so a later pin sorts later (ADR-0107: a version made
+# of the ID alone does not - 3a1f... can compare below 7dcb...). Checked
+# against the clone below. 0.44 is upstream's own version (configure.ac).
+COMMIT_DATE=20260726
+UPSTREAM=0.44
 # A checksum of the checked-out source, independent of git: sha256 of every
 # tracked file, sorted by name. The commit hash already names the content,
 # but through SHA-1; this pins it by sha256 as every download here is pinned.
@@ -25,7 +30,7 @@ SOURCE_SHA256=a2e9fc0d0ea6b9cbb52bb9a959899c0bb9568a20d0e44d1b11afe5012960ba23
 PATCH=/src/image/stage-gexis/00-alsa/files/peppyalsa-one-write-per-frame.patch
 PATCH_SHA256=$(sha256sum "$PATCH" | cut -d' ' -f1)
 SHORT=$(printf '%s' "$COMMIT" | cut -c1-7)
-VERSION="0.0.0+git${SHORT}-1"
+VERSION="${UPSTREAM}+git${COMMIT_DATE}.${SHORT}-1"
 # Staged where dpkg-shlibdeps expects a package's files: debian/<package>.
 STAGE=/tmp/pkg/debian/gexis-peppyalsa
 
@@ -34,6 +39,8 @@ git clone -q https://github.com/project-owner/peppyalsa.git /tmp/peppyalsa
 cd /tmp/peppyalsa
 git checkout -q "$COMMIT"
 [ "$(git rev-parse HEAD)" = "$COMMIT" ] || { echo "ERROR: HEAD is not $COMMIT" >&2; exit 1; }
+got_date=$(TZ=UTC git log -1 --format=%cd --date=format-local:%Y%m%d)
+[ "$got_date" = "$COMMIT_DATE" ] || { echo "ERROR: $COMMIT is dated $got_date, the pin says $COMMIT_DATE" >&2; exit 1; }
 have=$(git ls-files -z | LC_ALL=C sort -z | xargs -0 sha256sum | sha256sum | cut -d' ' -f1)
 if [ "$have" != "$SOURCE_SHA256" ]; then
 	echo "ERROR: peppyalsa $COMMIT source is $have, pinned $SOURCE_SHA256" >&2

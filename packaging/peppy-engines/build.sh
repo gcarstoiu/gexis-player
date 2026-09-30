@@ -20,13 +20,18 @@ PEPPYMETER_COMMIT="ee2de2882669f62604ce568f4aa3959501b313d6"
 PEPPYMETER_SHA256="ce4bddb4a7fa33469411a463505c92fab0bd894d0017373d957c0a092c42a4f9"
 PEPPYSPECTRUM_COMMIT="c8be00dcacf9d27b0b0dc254a440a1b86ea89f6e"
 PEPPYSPECTRUM_SHA256="e0c4c27ac21dc6d1175cbe80ddc9edd28f9274a90b9b84c39df1c7ee5bc84c6b"
+# Each commit's date (committer, UTC, read from GitHub on 2026-09-30), so a
+# later pin of either sorts later: the tarballs carry no date to check it by,
+# so a moved pin moves its date with it.
+PEPPYMETER_DATE=20260724
+PEPPYSPECTRUM_DATE=20251228
 DSEG_URL="https://github.com/keshikan/DSEG/releases/download/v0.46/fonts-DSEG_v046.zip"
 DSEG_SHA256="a6c2f43520971ca8067262e78d49025e605f749bf716ec5394bad9a0ee1c238c"
 
 VERSION_ARG="$1"   # the repository's version: unused, the engines have their own pins
 M=$(printf '%s' "$PEPPYMETER_COMMIT" | cut -c1-7)
 S=$(printf '%s' "$PEPPYSPECTRUM_COMMIT" | cut -c1-7)
-VERSION="0.0.0+git${M}.${S}-1"
+VERSION="0.1+meter${PEPPYMETER_DATE}.${M}+spectrum${PEPPYSPECTRUM_DATE}.${S}-1"
 STAGE=/tmp/stage/gexis-peppy-engines
 PEPPY_DIR="$STAGE/opt/gexis-peppy"
 WORK=/tmp/work-engines

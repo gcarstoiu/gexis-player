@@ -117,13 +117,16 @@ install, not frozen at build.
   decision owed).
 - Signing (ADR-0105 §2) and the updater (§4) - later steps of 13c.
 
-## Open
+## Versions for components pinned by commit (settled 2026-09-30)
 
-- **Versions for components pinned by commit** (peppyalsa, the Peppy engines)
-  are `0.0.0+git<commit>-1`, which do not sort by age: a later commit can
-  compare lower. Harmless until one of those pins moves; before the first
-  update of either, they take a sortable form (upstream version where there
-  is one - peppyalsa's `configure.ac` says 0.44 - plus the commit date).
+peppyalsa and the Peppy engines are pinned by commit, and a version made of
+the commit ID does not sort by age. They carry the commit's date instead
+(George: *"technical choice"*): `0.44+git20260726.7dcb0c5-1` (upstream's
+own 0.44, then the date) and
+`0.1+meter20260724.ee2de28+spectrum20251228.c8be00d-1`. Both sort above the
+first builds' `0.0.0+git…`. peppyalsa's build checks the date against its
+clone; the engines' tarballs carry none, so their dates sit beside their pins
+and move with them.
 
 ## Unverified
 
