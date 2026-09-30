@@ -2102,9 +2102,16 @@ async def main() -> None:
         # running - the unit had been started from the old folder, and
         # nothing restarted it). Only if switched on: an upload
         # never starts a plugin.
-        await restart_if_enabled(uploads.unit_for(checked.id, checked.kind))
+        unit = uploads.unit_for(checked.id, checked.kind)
+        await restart_if_enabled(unit)
         asyncio.ensure_future(_restart_core_soon())
-        return {"installed": checked.id, "version": checked.version, "kind": checked.kind, "restarting": True}
+        # What the page tells the user: a first install arrives off; an update
+        # keeps the switch as it was (George, 2026-09-30: the page said
+        # "switched off" of an update that was running).
+        return {"installed": checked.id, "version": checked.version, "kind": checked.kind,
+                "previous": checked.previous,
+                "enabled": await asyncio.to_thread(_unit_is_enabled, unit),
+                "restarting": True}
 
     async def _uninstall_plugin(plugin_id: str) -> bool:
         plugin = next((p for p in installed_plugins if p.id == plugin_id and p.uploaded), None)

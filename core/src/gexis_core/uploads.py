@@ -52,6 +52,8 @@ class Checked:
     version: str
     kind: str
     run: str
+    #: The version it replaced, or None for a first install.
+    previous: str | None = None
 
 
 def unit_for(plugin_id: str, kind: str) -> str:
@@ -165,7 +167,7 @@ def install(archive: bytes, *, ours: set[str], root: Path = UPLOADS) -> Checked:
         if old.is_dir():
             shutil.rmtree(old, ignore_errors=True)
     logger.info("uploads: %s %s installed (previous %s)", checked.id, checked.version, previous)
-    return checked
+    return replace(checked, previous=previous)
 
 
 def _installed_versions(root: Path) -> list[tuple[plugins.Plugin, str]]:

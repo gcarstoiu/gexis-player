@@ -240,7 +240,14 @@
           return;
         }
         task.title = `${res.body.installed} ${res.body.version}`;
-        await restarted('Installed, and switched off. Its switch is on this page.');
+        const b = res.body;
+        await restarted(
+          !b.previous
+            ? 'Installed, and switched off. Its switch is on this page.'
+            : b.enabled
+              ? `Updated from ${b.previous}, and restarted with the new version.`
+              : `Updated from ${b.previous}. It stays switched off.`
+        );
       }
     };
   }

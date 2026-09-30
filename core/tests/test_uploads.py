@@ -39,6 +39,7 @@ def package(manifest=None, files=None, extra=None) -> bytes:
 def test_a_good_package_installs_under_var_lib_with_current_pointing_at_it(tmp_path):
     checked = uploads.install(package(), ours={"lms"}, root=tmp_path)
     assert (checked.id, checked.version, checked.kind) == ("radiofoo", "1.0.0", "renderer")
+    assert checked.previous is None, "a first install"
     assert (tmp_path / "radiofoo" / "current").resolve() == tmp_path / "radiofoo" / "1.0.0"
     assert (tmp_path / "radiofoo" / "current" / "bin" / "radiofoo").stat().st_mode & 0o111
     [plugin] = uploads.installed(tmp_path)
@@ -48,7 +49,8 @@ def test_a_good_package_installs_under_var_lib_with_current_pointing_at_it(tmp_p
 def test_a_newer_version_updates_and_keeps_one_step_back(tmp_path):
     for v in ("1.0.0", "1.1.0", "1.2.0"):
         m = {"id": "radiofoo", "name": "Radio Foo", "kind": "renderer", "version": v, "run": "bin/radiofoo"}
-        uploads.install(package(m), ours=set(), root=tmp_path)
+        checked = uploads.install(package(m), ours=set(), root=tmp_path)
+    assert checked.previous == "1.1.0", "the page says what it updated from"
     kept = sorted(p.name for p in (tmp_path / "radiofoo").iterdir() if not p.name.startswith("."))
     assert kept == ["1.1.0", "1.2.0", "current"]
     assert (tmp_path / "radiofoo" / "current").resolve().name == "1.2.0"
