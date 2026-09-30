@@ -112,7 +112,7 @@ gpg --batch --verify "$DEST/parts" 2>/dev/null || { echo "ERROR: $DEST/parts doe
 version=$(gpg --batch --decrypt "$DEST/parts" 2>/dev/null | sed -n 's/^Release: //p')
 
 # The parts: each a pre-release of its own, never GitHub's "latest".
-for part in "$DEST"/parts/*/; do
+for part in "$DEST"/repos/*/; do
 	name=$(basename "$part")
 	gpg --batch --verify "$part/InRelease" 2>/dev/null || { echo "ERROR: $name's InRelease does not verify" >&2; exit 1; }
 	gh_retry gh release view "$name" --repo "$REPO" >/dev/null 2>&1 \
