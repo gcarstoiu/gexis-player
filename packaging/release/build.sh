@@ -76,6 +76,9 @@ done < "$WORK/ours.txt"
 # is the part's suite, so apt can prefer it when going back.
 mkdir -p "$DEST/repos"
 : > "$DEST/parts.txt"
+# **Each file is uploaded once, ever** (ADR-0108 as amended 2026-10-01): what
+# every published part already holds, asked of GitHub once.
+packaging/release/reuse.py assets "$WORK/assets.json"
 for kind in $KINDS; do
 	# **Named as GitHub will name them** (found 2026-10-01): GitHub renames an
 	# uploaded file, `~` becoming `.`, and 73 of the tested set's packages
@@ -92,6 +95,10 @@ for kind in $KINDS; do
 	docker run --rm --platform linux/arm64 -v "$PWD/$DEST/$kind":/r gexis-deb-builder sh -c "
 		cd /r && apt-ftparchive packages . > Packages && gzip -9kn Packages"
 	docker run --rm -v "$PWD/$DEST":/o alpine chown -R "$(id -u):$(id -g)" /o
+	# A file a published part already holds, byte for byte, is fetched from
+	# there (`Filename: ../<part>/<file>`) and this part does not carry it.
+	packaging/release/reuse.py part "$DEST/$kind" "$WORK/assets.json" packaging/release/out > "$WORK/reused-$kind"
+	gzip -9kn -f "$DEST/$kind/Packages"
 	name="$kind-$(sha256sum "$DEST/$kind/Packages" | cut -c1-12)"
 	docker run --rm --platform linux/arm64 -v "$PWD/$DEST/$kind":/r gexis-deb-builder sh -c "
 		cd /r && apt-ftparchive -o APT::FTPArchive::Release::Origin='Gexis Player' \
@@ -101,6 +108,8 @@ for kind in $KINDS; do
 	docker run --rm -v "$PWD/$DEST":/o alpine chown -R "$(id -u):$(id -g)" /o
 	gpg --batch --yes -u "$SIGNER" --clearsign -o "$DEST/$kind/InRelease" "$DEST/$kind/Release"
 	gpg --batch --yes -u "$SIGNER" -abs -o "$DEST/$kind/Release.gpg" "$DEST/$kind/Release"
+	while read -r f; do rm "$DEST/$kind/$f"; done < "$WORK/reused-$kind"
+	echo "  $kind: $(grep -c '^Package:' "$DEST/$kind/Packages") packages, $(wc -l < "$WORK/reused-$kind") already on GitHub, $(ls "$DEST/$kind"/*.deb 2>/dev/null | wc -l) to upload"
 	mv "$DEST/$kind" "$DEST/repos/$name"
 	printf '%s %s\n' "$kind" "$name" >> "$DEST/parts.txt"
 done
@@ -114,10 +123,10 @@ done
 # Counted from the image's status on its own terms - every record dpkg calls
 # installed, whatever the selection - so a filter above cannot hide a package.
 image_count=$(grep -cE '^Status: [a-z]+ ok installed$' "$WORK/status")
-release_count=$(ls "$DEST"/repos/*/*.deb | wc -l)
+release_count=$(cat "$DEST"/repos/*/Packages | grep -c '^Package:')
 [ "$release_count" -eq "$image_count" ] || { echo "ERROR: $release_count packages in the release, the image has $image_count installed" >&2; exit 1; }
 for pinned in libasound2t64; do
-	ls "$DEST"/repos/rpi-*/"${pinned}"_*.deb >/dev/null 2>&1 || { echo "ERROR: the pinned $pinned is not in the release" >&2; exit 1; }
+	grep -qx "Package: $pinned" "$DEST"/repos/rpi-*/Packages || { echo "ERROR: the pinned $pinned is not in the release" >&2; exit 1; }
 done
 
 # The release's own list of its parts, signed: what the updater reads to go

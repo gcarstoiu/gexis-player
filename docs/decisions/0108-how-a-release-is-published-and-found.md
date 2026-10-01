@@ -116,8 +116,24 @@ it otherwise this can take a long time."*
 
 ## Amendment, 2026-10-01 — each file is uploaded once, ever (proposed)
 
-**Status:** **Proposed** for George's decision (he agreed on 2026-10-01 to
-the test and to this write-up).
+**Status:** **Accepted** - George, 2026-10-01 (*"Let's do A"*), when 0.3.2 would
+otherwise have uploaded the whole Raspberry Pi part again for one day's
+updates. **Built simpler than proposed:** no separate `pool-*` releases. Every
+part already published *is* the pool:
+- a new part's index points a file it shares with any published part at
+  that part (`../rpi-fb9dbd9a915f/…`);
+- the new part carries only files no published part holds.
+
+`packaging/release/reuse.py` asks GitHub which files each part holds, and
+reuses one only when the copy built here has the same SHA256 as the file
+indexed. Measured on the published 0.3.1 before 0.3.2:
+- Debian: 833 of 876 files found published, byte for byte;
+- Raspberry Pi: 105 of 135;
+- skins from before reproducible builds: correctly not reused (different
+  bytes).
+
+Two files from each OS part were fetched from GitHub through such paths,
+each from a part that does not exist yet, and matched their SHA256.
 
 **Why:** naming parts by content saves uploads only while a part stays
 unchanged. Our parts (`ours` 14 files) are cheap to re-upload. The OS parts
