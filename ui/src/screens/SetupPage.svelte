@@ -11,8 +11,9 @@
   - **Music** has no server discovery: over the setup network the player
     cannot see the home network (amendment 4). An optional address instead.
   - **Time** has no clock format: nothing in Settings stores one yet.
-  - **Display** sets the existing Headless row (ADR-0077); it starts on what
-    the display connector says.
+  - **Screen** (ADR-0109; Phase 13b) offers the model the screen and its
+    touch controller suggest, or the list of every model gexis knows, or
+    Headless (ADR-0077). Its answer is Settings' Attached screen.
 
   **The core keeps the answers.** Each Continue saves the step, so a page that
   drops (Finding 099 saw one) or a phone that comes back after a failed join
@@ -30,7 +31,7 @@
     ['tz', 'Time', '#c8a2d8'],
     ['out', 'Output', '#7ed6bc'],
     ['music', 'Music', '#9fb4e8'],
-    ['display', 'Display', '#8fd9a8'],
+    ['display', 'Screen', '#8fd9a8'],
     ['review', 'Review', '#f2a48f']
   ];
   const last = STEPS.length;
@@ -67,6 +68,15 @@
   let spotify = $state(true);
   let bt = $state(true);
   let headless = $state(false);
+  //: ADR-0109's Screen step. `screenInfo` is `/setup/screen`: what the screen
+  //: reports, the tested model that suggests, every model. `scPick` is a
+  //: model's label ("Maker/Model", as Settings stores it).
+  let screenInfo = $state(null);
+  let scPick = $state(null);
+  let scChoose = $state(false);
+  let scConfirmed = $state(false);
+  let scQuery = $state('');
+  let scOpen = $state({});
 
   // What the device offers.
   let nets = $state([]);
@@ -107,6 +117,8 @@
       case 'name': return slugOf(name).length > 1;
       case 'tz': return !!tz;
       case 'music': return lmsMode === 'find' || lmsMode === 'off' || (lmsMode === 'address' && lms.trim().length > 2);
+      // A choice, unless the screen was recognised: then that model is one.
+      case 'display': return headless || !!chosen;
       default: return true;
     }
   }
@@ -148,6 +160,12 @@
       let rows = {};
       try { saved = await json('/setup/answers'); } catch { /* a fresh start */ }
       try { rows = rowsOf(await json('/settings')); } catch { /* defaults below */ }
+      try {
+        screenInfo = await json('/setup/screen');
+      } catch {
+        // Without the list only Headless can be chosen; say why.
+        screenInfo = { seen: { connected: false }, suggested: null, models: [], failed: true };
+      }
       outputs = rows.output_device?.options ?? [];
       zones = rows.timezone?.options ?? [];
       let phoneTz = null;
@@ -166,7 +184,15 @@
         : rows.lms_enabled?.value === false ? 'off' : (lms ? 'address' : null));
       spotify = saved.spotify ?? rows.spotify_enabled?.value ?? true;
       bt = saved.bluetooth ?? rows.bt_enabled?.value ?? true;
-      headless = saved.headless ?? (setup?.needed ? !setup?.panel : !!rows.headless?.value);
+      // A new device chooses (Continue waits); one set up again starts on
+      // what it has.
+      headless = saved.headless ?? (setup?.needed ? false : !!rows.headless?.value);
+      scPick = headless ? null : (saved.screen ?? (setup?.needed ? null : (rows.screen?.value ?? null)));
+      if (scPick && scPick === screenInfo.suggested?.label) scConfirmed = true;
+      else if (scPick && screenInfo.suggested) scChoose = true;
+      // A device set up again opens on its own screen's maker.
+      const had = scPick && screenInfo.models.find((m) => m.label === scPick);
+      if (had) scOpen = { [had.maker]: true };
       hidden = !!saved.hidden;
       hasPassword = !!saved.has_password;
       joinError = saved.error ?? null;
@@ -195,7 +221,7 @@
       case 'tz': return { timezone: tz, clock: clock24 ? '24 h' : '12 h' };
       case 'out': return { output: out };
       case 'music': return { lms_mode: lmsMode, lms: lmsMode === 'address' ? (lms.trim() || null) : null, spotify, bluetooth: bt };
-      case 'display': return { headless };
+      case 'display': return headless ? { headless: true } : { headless: false, screen: chosen };
       default: return {};
     }
   }
@@ -251,6 +277,60 @@
     }
   }
 
+  // -- the Screen step (ADR-0109) -------------------------------------------
+  const models = $derived(screenInfo?.models ?? []);
+  const suggested = $derived(screenInfo?.suggested ?? null);
+  const seenScreen = $derived(screenInfo?.seen ?? { connected: false });
+  const scState = $derived(suggested ? 'recognised' : seenScreen.connected ? 'uncertain' : 'none');
+  const recOk = $derived(scState === 'recognised' && !scChoose);
+  //: The model setup will set: a pick, or, recognised, the suggestion.
+  const chosen = $derived(headless ? null : scPick ?? (recOk ? suggested.label : null));
+  const chosenModel = $derived(models.find((m) => m.label === chosen) ?? (suggested?.label === chosen ? suggested : null));
+  const pickNote = $derived(
+    (chosenModel && !chosenModel.tested ? 'This model has not been tested with gexis. ' : '') +
+      'When setup finishes the player restarts on this screen and asks Keep this screen? on it. If nobody touches Keep within 30 seconds, it goes back.'
+  );
+  //: The preset names carry the panel's own resolution, which the row's note
+  //: already gives the way the screen is used ("(400x1280)" on a bar).
+  const shortOf = (m) => m.model.replace(/\s*\(\d+x\d+\)\s*$/, '') || m.model;
+  const sizeOf = (m) => `${m.width} × ${m.height}`;
+  const familyOf = (m) => (m.family === 'bar' ? 'Bar' : 'Standard');
+  const aspectOf = (m) => {
+    const r = m.width / m.height;
+    if (m.family === 'bar') return `${r.toFixed(1).replace(/\.0$/, '')}:1`;
+    const known = [[16, 9], [16, 10], [5, 3], [4, 3], [3, 2]];
+    const [a, b] = known.reduce((best, k) => (Math.abs(k[0] / k[1] - r) < Math.abs(best[0] / best[1] - r) ? k : best));
+    return `${a}:${b}`;
+  };
+  const reported = $derived.by(() => {
+    const p = seenScreen.preferred ? seenScreen.preferred.split('x').map(Number) : null;
+    return { size: p, usb: seenScreen.usb ?? [] };
+  });
+  const scGroups = $derived.by(() => {
+    const q = scQuery.trim().toLowerCase();
+    const hay = (m) => `${m.maker} ${m.model} ${m.width}x${m.height} ${sizeOf(m)} ${familyOf(m)} ${m.tested ? 'tested' : 'untested'}`.toLowerCase();
+    const rows = q ? models.filter((m) => hay(m).includes(q)) : models;
+    const out = [];
+    // Uncertain: the models of the reported size first; nothing is hidden.
+    const size = reported.size;
+    if (scState === 'uncertain' && !scChoose && !q && size) {
+      const match = rows.filter((m) => (m.width === size[0] && m.height === size[1]) || (m.width === size[1] && m.height === size[0]));
+      // Tested first; rows from every maker, so each names its maker.
+      match.sort((a, b) => Number(b.tested) - Number(a.tested));
+      if (match.length) out.push({ key: '__match', title: `Matching ${size[0]} × ${size[1]}`, rows: match, fixed: true, makers: true });
+    }
+    for (const maker of [...new Set(rows.map((m) => m.maker))]) {
+      out.push({ key: maker, title: maker, rows: rows.filter((m) => m.maker === maker), fixed: !!q });
+    }
+    return out;
+  });
+  const groupOpen = (g) => g.fixed || !!scOpen[g.key];
+  function pickScreen(m) {
+    scPick = m.label;
+    headless = false;
+    scConfirmed = false;
+  }
+
   const fmt = (d, zone) => {
     try {
       return new Intl.DateTimeFormat('en-GB', { hour: '2-digit', minute: '2-digit', hour12: !clock24, timeZone: zone }).format(d);
@@ -271,7 +351,7 @@
     ['Output', out || 'Not set', 3],
     ['Library', lmsMode === 'off' ? 'Not used' : lmsMode === 'address' ? lms.trim() : lmsMode === 'find' ? 'Found once on your network' : 'Not chosen', 4],
     ['Services', [spotify ? 'Spotify Connect' : null, bt ? 'Bluetooth' : null].filter(Boolean).join(' · ') || 'Lyrion only', 4],
-    ['Display', headless ? 'Headless' : 'Panel attached', 5]
+    ['Screen', headless ? 'Headless' : chosenModel ? `${chosenModel.maker} ${shortOf(chosenModel)} · ${chosenModel.width} × ${chosenModel.height}` : 'Not chosen', 5]
   ]);
 </script>
 
@@ -509,22 +589,90 @@
           {:else if id === 'display'}
             <section class="pane">
               <div>
-                <h1>Is a screen attached?</h1>
-                <p class="sub">The panel is the player's own display. Without one, everything runs from a phone or a browser.</p>
+                <h1>{recOk ? 'Is this your screen?' : scState === 'none' ? 'Nothing on the screen yet?' : scChoose ? 'Choose your screen' : 'Which screen is this?'}</h1>
+                <p class="sub">{recOk
+                  ? 'What the screen reports matches this model. It sets the layout and the visualiser skins.'
+                  : scState === 'none' ? 'Some screens need their settings before they show anything. Choose yours and the player will try it.'
+                  : scChoose ? 'Every model gexis knows, by maker.'
+                  : 'The screen said who made it and its resolution, but not which model. Choose it from the list.'}</p>
               </div>
-              <div class="disp">
-                <button class="dcard" class:sel={!headless} onclick={() => (headless = false)}>
-                  <span class="art"><span class="art-panel"></span></span>
-                  <b>Panel attached</b><small>Now Playing, browse and settings run on the device's own screen.</small>
-                </button>
-                <button class="dcard" class:sel={headless} onclick={() => (headless = true)}>
-                  <span class="art"><span class="art-off"></span></span>
-                  <b>Headless</b><small>No local screen. The display stays off and nothing is drawn.</small>
-                </button>
-              </div>
-              {#if headless}
-                <div class="warn"><span class="bang">!</span><span>Without a screen, the setup network always uses the password <b>gexis-setup</b>. If gexis starts and cannot reach your Wi-Fi, it opens that network again: join it from your phone, then open <b>10.42.0.1:8090</b>.</span></div>
+
+              {#if recOk}
+                <div class="sc-rec" class:on={scConfirmed && !headless}>
+                  <span class="sc-art" style="aspect-ratio:{suggested.width} / {suggested.height}"><span>{aspectOf(suggested)}</span></span>
+                  <span class="grow">
+                    <b>{suggested.maker} {shortOf(suggested)}</b>
+                    <span class="sc-size">{sizeOf(suggested)} · {familyOf(suggested)} layout</span>
+                    <span class="sc-why">Suggested from what the screen and its touch controller report</span>
+                  </span>
+                  <span class="tag" class:untested={!suggested.tested}>{suggested.tested ? 'Tested' : 'Untested'}</span>
+                </div>
+                <div class="sc-pair">
+                  <button class="sc-btn" class:on={scConfirmed && !headless} onclick={() => { scPick = null; scConfirmed = true; headless = false; }}>This is right</button>
+                  <button class="sc-btn other" onclick={() => { scChoose = true; scConfirmed = false; }}>Choose another</button>
+                </div>
+                {#if !headless}
+                  <div class="warn"><span class="bang">!</span><span>{pickNote}</span></div>
+                {/if}
+              {:else}
+                {#if scState === 'uncertain' && !scChoose}
+                  <div class="sc-seen">
+                    <div class="label">What the screen reported</div>
+                    <div class="sc-grid">
+                      <span>Maker</span><span class="mono">{seenScreen.edid_maker ?? 'Not reported'}</span>
+                      <span>Name</span><span class="mono">{seenScreen.edid_name ?? 'Not reported'}</span>
+                      <span>Resolution</span><span class="mono">{reported.size ? `${reported.size[0]} × ${reported.size[1]}` : 'Not reported'}</span>
+                      <span>Touch</span><span class="mono">{reported.usb.length ? reported.usb.map((u) => `USB ${u}`).join(', ') : 'No USB device'}</span>
+                    </div>
+                  </div>
+                {/if}
+                {#if screenInfo?.failed}
+                  <div class="warn"><span class="bang">!</span><span>The player could not list the screens it knows. Go back and try again, or choose Headless.</span></div>
+                {:else}
+                  <label class="field">
+                    <input type="text" class="search" style="--c:#8fd9a8" bind:value={scQuery} placeholder="Search by maker, size or resolution" autocomplete="off" spellcheck="false" />
+                  </label>
+                  {#each scGroups as g (g.key)}
+                    <div class="list">
+                      {#if g.fixed}
+                        <div class="label pad">{g.title}</div>
+                      {:else}
+                        <button class="sc-maker" aria-expanded={groupOpen(g)} onclick={() => (scOpen = { ...scOpen, [g.key]: !groupOpen(g) })}>
+                          <span class="label grow">{g.title}</span>
+                          <span class="sc-count">{g.rows.length} {g.rows.length === 1 ? 'model' : 'models'}</span>
+                          <span class="chev" class:down={groupOpen(g)}></span>
+                        </button>
+                      {/if}
+                      {#if groupOpen(g)}
+                        {#each g.rows as m (m.id)}
+                          {@const on = !headless && chosen === m.label}
+                          <button class="net" class:sel={on} onclick={() => pickScreen(m)}>
+                            <span class="radio" class:on><span></span></span>
+                            <span class="grow"><span class="nm wrap">{g.makers ? `${m.maker} ${shortOf(m)}` : shortOf(m)}</span><span class="meta">{sizeOf(m)} · {familyOf(m)}</span></span>
+                            <span class="tag" class:untested={!m.tested}>{m.tested ? 'Tested' : 'Untested'}</span>
+                          </button>
+                          {#if on}
+                            <div class="warn"><span class="bang">!</span><span>{pickNote}</span></div>
+                          {/if}
+                        {/each}
+                      {/if}
+                    </div>
+                  {:else}
+                    <p class="hint">No model matches “{scQuery.trim()}”.</p>
+                  {/each}
+                {/if}
               {/if}
+
+              <div class="list">
+                <div class="label pad">Or</div>
+                <button class="net" class:sel={headless} onclick={() => { headless = true; scConfirmed = false; scPick = null; }}>
+                  <span class="radio" class:on={headless}><span></span></span>
+                  <span class="grow"><span class="nm">Headless</span><span class="meta plain">No local screen. The display stays off and nothing is drawn.</span></span>
+                </button>
+                {#if headless}
+                  <div class="warn"><span class="bang">!</span><span>Without a screen, the setup network always uses the password <b>gexis-setup</b>. If gexis starts and cannot reach your Wi-Fi, it opens that network again: join it from your phone, then open <b>10.42.0.1:8090</b>.</span></div>
+                {/if}
+              </div>
             </section>
           {:else if id === 'review'}
             <section class="pane">
@@ -727,25 +875,50 @@
   .toggle.on { background: #7ed6bc; border-color: #7ed6bc; }
   .toggle.on span { left: 31px; background: #0d151c; }
 
-  /* Side by side at every width, and short (George, 2026-09-28: two options
-     should not need a scroll to reach Continue). The design's 16:10 art
-     stacked on a phone was most of a screen. */
-  .disp { display: grid; gap: 10px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .dcard { all: unset; box-sizing: border-box; cursor: pointer; padding: 14px; border-radius: 16px; background: rgba(255, 255, 255, 0.05); border: 1px solid var(--ink-line); }
-  .dcard.sel { background: rgba(143, 217, 168, 0.12); border-color: rgba(143, 217, 168, 0.5); }
-  .dcard b { display: block; font-size: 17px; font-weight: 700; margin-top: 12px; }
-  .dcard small { display: block; font-size: 14px; line-height: 1.4; color: rgba(233, 238, 242, 0.66); margin-top: 5px; }
-  .art { width: 100%; aspect-ratio: 16 / 7; border-radius: 8px; background: rgba(8, 12, 16, 0.5); border: 2px solid rgba(233, 238, 242, 0.22); display: flex; align-items: center; justify-content: center; }
-  @media (min-width: 720px) {
-    .dcard { padding: 22px; }
-    .dcard b { font-size: 19px; margin-top: 18px; }
-    .dcard small { font-size: 15px; }
-    .art { aspect-ratio: 16 / 10; }
+  /* ADR-0109's Screen step (Setup.dc.html step 6). */
+  .sc-rec {
+    display: flex; align-items: center; gap: 18px; padding: 20px; border-radius: 16px;
+    background: rgba(255, 255, 255, 0.05); border: 1px solid var(--ink-line);
   }
-  .dcard.sel .art { border-color: #8fd9a8; }
-  .art-panel { width: 42%; height: 6px; border-radius: 3px; background: currentColor; opacity: 0.4; }
-  .art-off { width: 34px; height: 2px; border-radius: 2px; background: currentColor; opacity: 0.4; transform: rotate(-38deg); }
-  .dcard.sel .art-panel, .dcard.sel .art-off { background: #8fd9a8; opacity: 1; }
+  .sc-rec.on { background: rgba(143, 217, 168, 0.1); border-color: rgba(143, 217, 168, 0.45); }
+  .sc-rec b { display: block; font-size: 19px; font-weight: 700; }
+  .sc-art {
+    width: 96px; max-height: 64px; flex-shrink: 0; border-radius: 8px; background: rgba(8, 12, 16, 0.5);
+    border: 2px solid #8fd9a8; box-sizing: border-box; display: flex; align-items: center; justify-content: center;
+    font-family: var(--font-mono); font-size: 11px; color: #8fd9a8;
+  }
+  .sc-size { display: block; font-size: 15px; color: rgba(233, 238, 242, 0.72); margin-top: 4px; }
+  .sc-why { display: block; font-family: var(--font-mono); font-size: 12px; color: rgba(233, 238, 242, 0.5); margin-top: 8px; }
+  .tag {
+    font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase;
+    padding: 4px 8px; border-radius: 6px; flex-shrink: 0; align-self: center;
+    background: rgba(126, 214, 188, 0.14); color: #7ed6bc;
+  }
+  .sc-rec .tag { align-self: flex-start; }
+  .tag.untested { background: rgba(224, 167, 88, 0.14); color: #e0a758; }
+  .sc-pair { display: grid; gap: 10px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .sc-btn {
+    all: unset; box-sizing: border-box; cursor: pointer; padding: 15px 18px; border-radius: 999px; text-align: center;
+    font-size: 16px; font-weight: 800; background: var(--ink-fill); border: 1px solid rgba(233, 238, 242, 0.16);
+  }
+  .sc-btn.other { font-weight: 700; }
+  .sc-btn.on { background: #8fd9a8; border-color: #8fd9a8; color: var(--ink-on-accent); }
+  .sc-btn:active { transform: scale(0.98); }
+  .sc-seen { padding: 16px 18px; border-radius: 16px; background: rgba(255, 255, 255, 0.05); border: 1px solid var(--ink-line); }
+  .sc-seen .label { padding: 0 0 10px; }
+  .sc-grid { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 6px 16px; font-size: 15px; }
+  .sc-grid > span:nth-child(odd) { color: var(--ink-quiet); }
+  .mono { font-family: var(--font-mono); word-break: break-word; }
+  /* A maker's heading opens its models: 181 rows, all open, are some
+     thirteen thousand pixels of phone between the search and Continue. */
+  .sc-maker { all: unset; box-sizing: border-box; cursor: pointer; display: flex; align-items: center; gap: 12px; min-height: 48px; padding: 4px 6px 4px 2px; }
+  .sc-maker .label { padding: 0; }
+  .sc-count { font-family: var(--font-mono); font-size: 12px; color: var(--ink-quiet); }
+  .chev.down { transform: rotate(135deg); margin-top: -4px; }
+  .nm.wrap { white-space: normal; overflow: visible; }
+  /* The design's search field is in the page's face, not the mono of the
+     fields that take addresses and passwords. */
+  input.search { font-family: var(--font-ui); }
 
   .warn {
     display: flex; align-items: flex-start; gap: 14px; padding: 14px 16px; border-radius: 14px;
