@@ -38,8 +38,15 @@ version_for() {
 # version is the same file (measured: two builds of gexis-system identical
 # with it, different without).
 epoch_for() {
-	# shellcheck disable=SC2046
-	git log -1 --format=%ct -- $(inputs "$1")
+	# A component that carries its own version (peppyalsa, go-librespot,
+	# Plexamp's pin...) has "." as its inputs, so the newest commit's time
+	# gave it new bytes at every commit (found 2026-10-01: five of them
+	# uploaded again with 0.3.2 at unchanged versions). Its own folder says
+	# when it last changed. The player's "." is right: it is the release.
+	local paths; paths=$(inputs "$1")
+	if [ "$paths" = "." ] && [ "$1" != player ]; then paths="packaging/$1"; fi
+	# shellcheck disable=SC2086
+	git log -1 --format=%ct -- $paths
 }
 
 # Rebuilt when the Dockerfile changes: its hash is the image's label.
