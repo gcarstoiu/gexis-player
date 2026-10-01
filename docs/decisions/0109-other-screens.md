@@ -155,6 +155,20 @@ found seven things that were George's to settle. His answers:
 - **The list is 181 models.** foonerd's 197 entries, less *Auto Detect* and
   *Custom timings* (not screens), less 3 without a size, less those 11.
 
+### Settled 2026-10-01: setup's Screen step
+
+- **The full list folds by maker on the phone** ("Waveshare · 91 models").
+  181 open rows would be about 13,000 px; the search and the
+  resolution-matching models stay open.
+- **If the list cannot be loaded, the step says so and offers Retry.** The
+  list comes from the player over the setup Wi-Fi, so a failure means the
+  phone dropped off it for a moment. Offering only Headless would turn the
+  screen off with one tap (*"I agree"*).
+- **Nothing is preselected when no screen is detected.** Today the step
+  starts on Headless in that case, but a DSI screen (67 of the 181) never
+  shows on the HDMI check, and nor does one plugged in late. Continue waits
+  for a choice (*"yes, it makes sense"*).
+
 ### Amended 2026-10-01: the bar library keeps the row reveal
 
 George, after the bar library was built: *"We keep the behaviour from
