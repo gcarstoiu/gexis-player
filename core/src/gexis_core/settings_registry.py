@@ -53,7 +53,7 @@ ONLY_WHEN_NOT = "not"
 #: Sources a `choice` may draw its options from instead of a literal list
 #: (ADR-0044 §4). Adding one is a code change, not a registry edit, which is
 #: the point: an unknown name is a typo and must fail the load.
-OPTION_SOURCES = {"skin_corpus", "timezones", "output_device"}
+OPTION_SOURCES = {"skin_corpus", "timezones", "output_device", "screens"}
 
 
 @lru_cache(maxsize=1)
@@ -85,7 +85,25 @@ def _timezones() -> tuple[str, ...]:
 #: `tuple` is "nothing, until the daemon injects a real resolver" - a
 #: device that cannot read its corpus or its sound cards gets an empty
 #: picker rather than a crash (ADR-0044 §4).
-OPTION_RESOLVERS = {"timezones": _timezones, "skin_corpus": tuple, "output_device": tuple}
+def _screens() -> tuple[str, ...]:
+    """ADR-0109: the screens gexis offers, as `Maker/Model` for the grouped
+    picker (makers, then that maker's models)."""
+    from . import screens
+    return tuple(s.label for s in screens.all_screens())
+
+
+def _screen_tags() -> dict[str, str]:
+    """ADR-0109 decision 1: each model marked Tested or Untested."""
+    from . import screens
+    return {s.label: "Tested" if s.tested else "Untested" for s in screens.all_screens()}
+
+
+OPTION_RESOLVERS = {"timezones": _timezones, "skin_corpus": tuple, "output_device": tuple,
+                    "screens": _screens}
+
+#: A word beside an option in the picker, by source (round 2's Attached
+#: screen: *Tested* / *Untested* on every model).
+OPTION_TAGS = {"screens": _screen_tags}
 
 logger = logging.getLogger("gexis_core.settings_registry")
 
@@ -633,6 +651,8 @@ class Settings:
                 source = row.get("optionsFrom")
                 if source is not None:
                     public["options"] = list(self._options.get(source, tuple)())
+                    if source in OPTION_TAGS:
+                        public["optionTags"] = OPTION_TAGS[source]()
                 public["value"] = self.value(row["key"])
                 if row["key"] in self._notes:
                     note = self._notes[row["key"]]()

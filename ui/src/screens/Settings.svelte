@@ -345,6 +345,8 @@
   function shown(row) {
     const v = row.value;
     if (row.type === 'toggle') return '';
+    // A screen reads as its maker and model, not the picker's `Maker/Model`.
+    if (row.optionTags && typeof v === 'string') return v.replace('/', ' ');
     // "Not set" is derived from an empty value, never stored as one, so it
     // can never be pre-filled into the field and saved as the real thing. A
     // secret that is set reports only that, never the value (ADR-0044).
@@ -1165,6 +1167,11 @@
             <button class="option" class:is-selected={selected} type="button" onclick={() => chooseRegion(name)}>
               <span class="radio"><span></span></span>
               <span class="option__label">{name.replace(/_/g, ' ')}</span>
+              {#if sheet.optionTags}
+                <!-- Round 2's Attached screen: how many models a maker has. -->
+                {@const n = grouped.filter((o) => o.split('/')[0] === name).length}
+                <span class="option__meta">{n} {n === 1 ? 'model' : 'models'}</span>
+              {/if}
               <span class="chev"></span>
             </button>
           {/each}
@@ -1176,6 +1183,10 @@
             <button class="option" class:is-selected={selected} type="button" onclick={() => choose(option)}>
               <span class="radio"><span></span></span>
               <span class="option__label">{placeLabel(option)}</span>
+              {#if sheet.optionTags?.[option]}
+                <!-- ADR-0109 decision 1: every model says whether it was tested. -->
+                <span class="option__tag" class:option__tag--tested={sheet.optionTags[option] === 'Tested'}>{sheet.optionTags[option]}</span>
+              {/if}
             </button>
           {/each}
         </div>
@@ -2030,6 +2041,27 @@
     text-align: right;
   }
 
+  .option__meta {
+    flex-shrink: 0;
+    font-family: var(--font-mono);
+    font-size: 13px;
+    color: var(--ink-muted);
+  }
+  .option__tag {
+    flex-shrink: 0;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: var(--track-label);
+    text-transform: uppercase;
+    color: var(--ink-quiet);
+    padding: 4px 8px;
+    border-radius: 6px;
+    border: 1px solid rgba(233, 238, 242, 0.14);
+  }
+  .option__tag--tested {
+    color: var(--accent-lms);
+    border-color: rgba(126, 214, 188, 0.4);
+  }
   .option__label {
     flex: 1;
     min-width: 0;

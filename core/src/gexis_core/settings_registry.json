@@ -335,6 +335,31 @@
         "accent": "#c8a2d8"
       },
       {
+        "key": "screen",
+        "type": "choice",
+        "label": "Attached screen",
+        "marks": "N",
+        "note": "Sets the layout, Standard or Bar, and which visualiser skins are offered.",
+        "warn": "Changing it restarts the player on the new screen and asks Keep this screen? there. If nobody touches Keep within 30 seconds, it goes back.",
+        "options": [],
+        "default": null,
+        "optionsFrom": "screens",
+        "grouped": true
+      },
+      {
+        "key": "rotation",
+        "type": "choice",
+        "label": "Screen rotation",
+        "marks": "N",
+        "note": "For a screen mounted the other way up.",
+        "warn": "Changing it restarts the player and asks Keep this rotation? on the panel. If nobody touches Keep within 30 seconds, it goes back.",
+        "options": [
+          "0°",
+          "180°"
+        ],
+        "default": "0°"
+      },
+      {
         "key": "theme",
         "type": "choice",
         "label": "Theme",

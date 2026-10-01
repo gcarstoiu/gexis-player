@@ -54,7 +54,7 @@ def test_the_shipped_registry_loads_and_every_number_is_bounded():
 #: (ADR-0051 §4).
 #: Phase 13b's rows (ADR-0109, ADR-0022 inventory), built with the screen
 #: and the skin plugins.
-DESIGN_KEYS_NOT_YET_IN_THE_REGISTRY: set[str] = {"screen", "rotation", "skin_size"}
+DESIGN_KEYS_NOT_YET_IN_THE_REGISTRY: set[str] = {"skin_size"}
 
 #: A design key the registry **deliberately** does not have, which is a
 #: different statement from "not yet" and has to be said out loud: ADR-0022's
@@ -573,8 +573,9 @@ def test_the_shipped_registry_hides_the_inventoried_rows_and_shows_the_rest():
     # (George, 2026-09-28, with Phase 13's setup). **86 since 2026-09-30**:
     # the Updates rows (ADR-0105 section 6) - Release, Check now, Update now,
     # and the channel.
-    # **87**: Software update, its own tile (George, 2026-10-01).
-    assert len(rows) == 87
+    # **87**: Software update, its own tile (George, 2026-10-01). **89**:
+    # Attached screen and Screen rotation (ADR-0109, Phase 13b).
+    assert len(rows) == 89
     # 59 since 2026-09-25: `backup` was surfaced and `restore` arrived with
     # it (ADR-0083), so the shown count gains two while the hidden one loses
     # one. **58 since 2026-09-26**, less the threshold row. **60 since
@@ -583,8 +584,9 @@ def test_the_shipped_registry_hides_the_inventoried_rows_and_shows_the_rest():
     # **65**, with Debug logs. **66**, with the clock format. **71**, with
     # the four Updates rows and `updates` surfaced (2026-09-30).
     # 69 when ADR-0110 folded Check now and Update now into the Release
-    # tile; 70 with Software update (George, 2026-10-01).
-    assert len(rows) - len(kept) == 70
+    # tile; 70 with Software update (George, 2026-10-01); 72 with Attached
+    # screen and Screen rotation.
+    assert len(rows) - len(kept) == 72
 
 
 def test_the_clock_can_be_turned_off_without_taking_the_screen_with_it():
