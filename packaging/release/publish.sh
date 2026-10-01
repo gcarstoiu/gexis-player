@@ -130,6 +130,12 @@ DEST=packaging/release/out/$tag
 # by George before this runs. The device shows them under Settings' Release
 # row; the release page carries the same text.
 [ -s "$DEST/notes.txt" ] || { echo "ERROR: $DEST/notes.txt is missing: write the release's notes, approved, first" >&2; exit 1; }
+# **Sections and bullets** (George, 2026-10-01: not "one big blob of text"):
+# a heading on its own line - New, Fixed, Good to know - then lines starting
+# "• ". The device parses them; the release page gets them as Markdown.
+grep -qxE 'New|Fixed|Good to know' "$DEST/notes.txt" && grep -q '^• ' "$DEST/notes.txt" \
+	|| { echo "ERROR: notes.txt needs sections (New / Fixed / Good to know) with lines starting '• '" >&2; exit 1; }
+sed -E 's/^(New|Fixed|Good to know)$/### \1/; s/^• /- /' "$DEST/notes.txt" > "$DEST/notes.md"
 gpg --batch --yes -u "$SIGNER" --clearsign -o "$DEST/notes" "$DEST/notes.txt"
 gpg --batch --verify "$DEST/parts" 2>/dev/null || { echo "ERROR: $DEST/parts does not verify" >&2; exit 1; }
 version=$(gpg --batch --decrypt "$DEST/parts" 2>/dev/null | sed -n 's/^Release: //p')
@@ -153,8 +159,8 @@ done
 exists "$tag" \
 	|| gh_retry gh release create "$tag" --repo "$REPO" --target main --prerelease --latest=false \
 		--title "gexis-player $version" \
-		--notes-file "$DEST/notes.txt"
-gh_retry gh release edit "$tag" --repo "$REPO" --notes-file "$DEST/notes.txt" >/dev/null
+		--notes-file "$DEST/notes.md"
+gh_retry gh release edit "$tag" --repo "$REPO" --notes-file "$DEST/notes.md" >/dev/null
 gh_retry gh release upload "$tag" --repo "$REPO" --clobber "$DEST/parts" "$DEST/notes"
 if [ "${2:-}" = --channel ]; then
 	channel_file "${3:?--channel needs testing or stable}" "$tag"

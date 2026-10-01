@@ -9,6 +9,7 @@
 <script>
   import mark from '../assets/gexis-mark.svg';
   import UpdateSteps from './UpdateSteps.svelte';
+  import ReleaseNotes from './ReleaseNotes.svelte';
 
   //: `outcome` is null while it runs, then `done` or `failed` for the few
   //: seconds App shows it before going on.
@@ -33,6 +34,7 @@
   <div class="lock__main">
     {#if outcome === 'done'}
       <h1>Updated to {update?.installed}</h1>
+      {#if update?.whats_new}<div class="lock__notes"><ReleaseNotes text={update.whats_new} large /></div>{/if}
       <p class="lead">Everything is paused or disconnected.</p>
     {:else if outcome === 'failed'}
       <h1>Did not update</h1>
@@ -97,6 +99,7 @@
     text-align: left;
     min-width: 520px;
   }
+  .lock__notes { max-width: 900px; }
   .lead {
     margin: 0;
     font-size: 30px;

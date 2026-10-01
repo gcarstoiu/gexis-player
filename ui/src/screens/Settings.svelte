@@ -10,6 +10,7 @@
   import { pressing } from '../lib/press.svelte.js';
   import { components, update } from '../lib/state.js';
   import UpdateModal from './UpdateModal.svelte';
+  import ReleaseNotes from './ReleaseNotes.svelte';
   import {
     settingsGroups,
     settingsDevice,
@@ -867,7 +868,10 @@
                     <span class="row__text">
                       <span class="row__label"><span class="row__name">{r.label}</span></span>
                       <span class="row__value row__value--tile">{r.value}</span>
-                      {#if r.note}<span class="row__note">{r.note}</span>{/if}
+                      {#if $update?.whats_new && ['available', 'done'].includes($update?.state)}
+                        <span class="row__note">What's new in {$update.release}</span>
+                        <span class="tile__notes"><ReleaseNotes text={$update.whats_new} /></span>
+                      {:else if r.note}<span class="row__note">{r.note}</span>{/if}
                     </span>
                     <button
                       type="button"
@@ -1741,6 +1745,7 @@
     color: var(--accent-lms);
   }
   .tile__btn:disabled { opacity: 0.6; }
+  .tile__notes { display: block; margin-top: 8px; color: var(--ink-body); }
   .row--readonly:active { transform: none; }
 
   .chev {

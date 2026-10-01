@@ -13,6 +13,7 @@
   import { update, metadata, connection } from '../lib/state.js';
   import { runSetting } from '../lib/settings.js';
   import UpdateSteps from './UpdateSteps.svelte';
+  import ReleaseNotes from './ReleaseNotes.svelte';
 
   //: `check` runs a check first; `available` opens on the waiting release
   //: (the tile's *Update…*); `progress` reopens an install already running.
@@ -88,8 +89,7 @@
         <div class="ask__title">{u.release} is available</div>
         {#if u.whats_new}
           <div class="notes">
-            <div class="notes__head">What's new</div>
-            <div class="notes__text">{u.whats_new}</div>
+            <ReleaseNotes text={u.whats_new} />
           </div>
         {/if}
         <div class="task__text task__text--quiet">This device has {u.installed}.</div>
@@ -128,8 +128,7 @@
         <div class="ask__title">Updated to {u.installed}</div>
         {#if u.whats_new}
           <div class="notes">
-            <div class="notes__head">What's new</div>
-            <div class="notes__text">{u.whats_new}</div>
+            <ReleaseNotes text={u.whats_new} />
           </div>
         {/if}
         <div class="task__text task__text--quiet">Everything is paused or disconnected.</div>
@@ -203,18 +202,6 @@
     display: flex;
     flex-direction: column;
     gap: 6px;
-  }
-  .notes__head {
-    font-family: var(--font-mono);
-    font-size: 12px;
-    letter-spacing: var(--track-label);
-    text-transform: uppercase;
-    color: var(--ink-muted);
-  }
-  .notes__text {
-    font-size: 15px;
-    line-height: 1.45;
-    white-space: pre-line;
   }
   .warn {
     display: flex;
