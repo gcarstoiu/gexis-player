@@ -1,4 +1,4 @@
-# Handoff: gexis panel UI — revision 2026-09-30
+# Handoff: gexis panel UI — revision 2026-10-01 (Phase 13b round 2)
 
 ## Overview
 
@@ -13,7 +13,9 @@ own touch panel. It covers:
   under it, and first-time Setup;
 - **Phase 13b, other screens**: two layout families, Standard (aspect 1.5–1.8)
   and Bar (aspect 3–5), derived from the panel by stated rules, plus the Screen
-  step in Setup and the Attached screen / Screen rotation rows in Settings.
+  step in Setup and the Attached screen / Screen rotation rows in Settings;
+- **Phase 13b round 2 (2026-10-01)**: the answer to `design/briefs/13b-bar-gaps.md`
+  and `design/briefs/13b-corrections.md` (see *Round 2* below).
 
 Target repo: `gcarstoiu/gexis-player`, a Svelte 5 UI over a Python core. The
 designs were synced against branch `phase-13` at commit `403d582330`.
@@ -43,6 +45,90 @@ Not final, and marked so: the QR codes (placeholders), the setup password
 name; the animated skins are not in the repo), and the screen models in the
 Screen step's list (samples from `foonerd/pi_screen_setup`, Finding 100).
 
+## Round 2 — what changed on 2026-10-01
+
+Open `13b/Screen Families Round 2.dc.html`. Its width buttons put every bar
+board at 1200, 1280, 1850 or 2000. Where it differs from the round-1 section
+further down, round 2 wins.
+
+**Bars** (`Bar Frame`, `Bar Panels`, new `Bar States`):
+- **Forecast:** `days = floor((W − 1112) / 136)`, clamped 0–3. None below 1248,
+  one from 1248, two from 1384, three from 1520. Same rule in both files.
+- **Idle:** padding 48 and drift ±24 each side; clock 523; separator and gaps
+  81; today 360 (icon 100, gap 20, condition max 240, two lines, clamped);
+  then 40, and 100 + 36 per day. The clock group drifts sideways only.
+- **Queue:** the panel rail's header with **Clear** (44 tall) and the 66 px
+  **Playing from** row; three 60 px rows plus part of a fourth, scrolling.
+- **Targets ≥ 44:** tray volume is a 60 px mute button; slider knob 44; the
+  slider takes touches across the tray's height; the handle's drag zone is a
+  full-width 44 px band at the strip's top edge (the tray's bottom 44 when
+  open). Tray slider fill is the source accent, not ink.
+- **Tray:** fixed output shows the panel's padlock row in place of mute and
+  slider; muted is amber (cone crossed, fill 0, *Mute*); no meters hides the
+  visualiser button; LMS off turns Home into Settings; a volume change from
+  elsewhere brings the tray down over any screen, including the library.
+- **Strip:** artwork pending (panel placeholder); Bluetooth has no progress,
+  times, shuffle, repeat or queue; long title ellipsised, artist ≤ 62% of its
+  line, album the rest, year kept; Spotify / Bluetooth marks at 30, a plugin's
+  initial in a ring; lyrics loading (three skeleton lines), plain (static, no
+  highlight), synced, with the credit *From LMS* 13px mono; no lyrics hides the
+  switch (instrumental is the same as none).
+- **Library:** rail with nothing playing (empty slot, no mark, no progress,
+  play at 0.3 and inert); Artists jump strip of 13 two-letter steps, each ≥ 44
+  wide, 52 tall; playlist detail like the album page; radio folders and
+  stations in one grid (folders with a chevron); toast at the bottom centre of
+  the content area; a sheet on a bar is full height less 12 px, and Attached
+  screen shows makers and models side by side with no search box.
+- **Moments:** pairing outcomes (tick or cross, *Paired* / *Not paired* /
+  *Request expired*); a request with no code shows the device name at 48;
+  LMS off with 4+ renderers stands them in 200 px columns, gap 48, names
+  under the marks; a long transition name wraps to two lines at 52 (64 from
+  1500) in a 340 (520) box, the line keeping ≥ 120; idle clock off = weather
+  alone, centred; weather off = clock alone; External URL fills W × 400.
+- **Setup:** starting, phone connected, open the page, carry on on your phone,
+  done with the Lyrion card, could not join (keeps network and password),
+  setup network did not start, and over Ethernet (the page's code only).
+- **Ends:** strip, idle, library home and pairing checked at 1200 and 2000.
+  Home tiles step their type down when a tile is under 190 px wide (W < 1436).
+
+**Standard** (`13b/Now Playing Height Study.dc.html`, `Panel Setup.dc.html`):
+- Heights shown: 711 (aspect 1.8), **720** (16:9, the 13.3″), **768** (the 7″),
+  800, 853.
+- The repo's three fixes are in the design: home cards
+  `max(200 × k, 164)`; artist and album columns as wide as their picture;
+  Panel Setup's QR code 260 below 800 logical, 340 from 800 (prop `h`).
+- The artist page's extra height goes to the albums.
+- Corrected claims (Chosen): touch floor 44 px; smallest type 11–12 px mono;
+  rule 1b written out.
+
+**New: Keep this screen?** (`13b/Keep This Screen.dc.html`, props `family`,
+`w`, `h`, `left`, `untested`, `model`). Shown on the panel after a screen or
+rotation is chosen and the player has restarted on it. Title 72/800 (56 on a
+bar); model line; **Keep** 96 tall (110 on a bar), `#7ed6bc` on `#0d151c`
+ink, radius 24; **Go back now** 74; *Going back to {previous} in {n} s* 20px
+mono; an 8 px bar along the bottom drains over 30 s; at 0 the player reverts.
+Until Keep, the setup network keeps its fixed password (ADR-0109 decision 5).
+
+**Setup Screen step** (`Setup.dc.html`): *Is this your screen?* / *What the
+screen reports matches this model*, a **Tested** tag, and *Suggested from
+what the screen and its touch controller report*; Choose another opens the
+full list (no reported block, no filter); in the uncertain state models
+matching the reported resolution come first, then every maker; every row is
+Tested or Untested; an untested pick says so; any pick says the player
+restarts on it and asks Keep this screen?; Headless shows its warning.
+
+**Settings** (`Settings.dc.html`; rows in `design/settings.md`, *Changed
+2026-10-01*): System → **Updates** (Release, Check now, Update now, Updates
+Manual/Automatic, Update channel Stable/Testing) then **Maintenance**;
+Plugins → **Upload a plugin** (`noPanel`: hidden when embedded on the panel);
+Attached screen is the Time zone two-step picker (maker → model, Tested /
+Untested); Screen rotation 0° / 180°; Visualization → **Skin size**.
+
+**Not done:** the Settings sheet's 82% cap on short screens (drawn full height
+on bars, not changed in `Settings.dc.html`); skin sets as rows on the Plugins
+screen. Copy written without a repo source, to confirm: the Headless warning,
+the Testing warning, the Updates rows' notes.
+
 ## First task: run verify.html
 
 `design/verify.html` checks the plain slice against the prototype. It needs an
@@ -70,7 +156,8 @@ is unchanged. **A failure means the export drifted from the prototype: fix
 | `design/settings.md` | Settings' row vocabulary. `source/Settings.dc.html` is the inventory; it follows `settings_registry.json` row for row. |
 | `design/data-contract.md` | Fields per screen, mapped to `/state`; `NEW` marks what the backend does not publish. **Changed 2026-09-30** lists LMS-off, queue remove, setup and 13b fields. |
 | `design/IMPLEMENTED-DIFFERENTLY.md` | The repo's own record of where the panel departs from the design, taken as the point of truth. |
-| `13b/Screen Families Chosen.dc.html` | Phase 13b, the chosen designs, one page. |
+| `design/source/13b/Screen Families Round 2.dc.html` | Phase 13b round 2 (2026-10-01): the answer to `13b-bar-gaps.md` and `13b-corrections.md`. |
+| `design/source/13b/Screen Families Chosen.dc.html` | Phase 13b round 1, the chosen designs, one page. |
 
 ## What changed since the last handoff (2026-09-22)
 
@@ -119,8 +206,13 @@ Each item is in `source/` and documented in `design/`. In implementation order:
 
 ## Phase 13b — other screens
 
+**Round 2, 2026-10-01:** `design/source/13b/Screen Families Round 2.dc.html`
+supersedes the numbers below where they differ: touch floor 44 px; forecast
+days = floor((W − 1112) / 136), 0 to 3; tray mute 60, knob 44, slider fill in
+the source accent; rotation 0° / 180°. The rest of this section is round 1.
+
 Answer to `design/briefs/13b-screen-families.md`. Everything is on
-`13b/Screen Families Chosen.dc.html`; open it in a browser. A switch at the top
+`design/source/13b/Screen Families Chosen.dc.html`; open it in a browser. A switch at the top
 shows every bar board at 1280 × 400 or 1480 × 320. Settled by George on
 2026-09-30: Settings stays a tile on bars; Attached screen and Screen rotation
 are in the inventory; the copy is accepted as drawn.
@@ -134,7 +226,8 @@ and between), **Bar** 3–5 (1280×400, 1480×320). One token set for both.
 
 - Lay out at a **logical width of 1280**; scale = screen width ÷ 1280 (0.625
   on 800×480, 1 on 1280×800, 1.5 on 1920×1080). Logical height H =
-  screen height ÷ scale, **711 to 853**.
+  screen height ÷ scale, **711 (aspect 1.8) to 853 (1.5)**; 16:9 (the 13.3″)
+  is **720** and the 7″ 800×480 is **768**.
 - One element per screen takes H − 800; margins, gaps, type and controls keep
   their 800 values:
   - Now Playing: artwork = **H − 300** (411 / 500 / 553), square; grid rows
@@ -147,10 +240,10 @@ and between), **Bar** 3–5 (1280×400, 1480×320). One token set for both.
   - Idle, transition, pairing, volume drawer: nothing; centred.
 - **Type is uniform**: it scales with the screen, 1.5× on 1920×1080. Nothing
   is capped.
-- **Touch floor 7 mm; nothing grows.** Physical size is taken from the
-  published panel width, never EDID (Finding 100). 60px is 7.2 mm on 7″
-  800×480 (0.120 mm per logical px), 10.2 mm on 10.1″ 1280×800, 13.8 mm on
-  13.3″ 1920×1080.
+- **Touch floor 44 logical px; nothing grows** (ADR-0109 decision 4). 44 px
+  is 5.2 mm on the 7″ 800×480, 7.5 mm on 10.1″ 1280×800, 10 mm on the 13.3″.
+  Physical size is taken from the published panel width, never EDID
+  (Finding 100).
 - `13b/Now Playing Height Study.dc.html` is the panel prototype with this rule
   applied (`view`, `h` props) — a study copy; `source/Now Playing.dc.html` is
   unchanged.
@@ -160,7 +253,7 @@ and between), **Bar** 3–5 (1280×400, 1480×320). One token set for both.
 - Lay out at a **logical height of 400**; logical width = aspect × 400 (1280
   on 1280×400; 1850 on 1480×320, shown at 0.8). One region per strip takes
   the width.
-- Touch: 60px = 8.9 mm on 7.9″ 1280×400, 9.4 mm on 11.9″ 1480×320.
+- Touch: 44 px = 6.6 mm on 7.9″ 1280×400, 7.0 mm on 11.9″ 1480×320.
 - **Now Playing strip** (`Bar Frame`, `variant="strip" sr="main" pull="down"`):
   padding 32 40; artwork 336 radius 20, gap 36; title 42/700 one line; artist
   28/600 `#f2a48f`, album 24 at 0.6, year 21 mono; source mark 30 (four-bar
@@ -259,9 +352,10 @@ offers only the current screen's set.
     dark.
   - **Headless** is the last choice on all three. Continue waits for a choice
     unless the screen was recognised. Review reads *Screen* with the model.
-- `source/Settings.dc.html`, Display → Panel, first two rows, both marked R
-  (restart): **Attached screen** (choice; the same list; sets the family and
-  the skin set) and **Screen rotation** (0° / 90° / 180° / 270°). Named apart
+- `source/Settings.dc.html`, Display → Panel, first two rows, both [N] (new;
+  R in ADR-0022 means *recorded*), both restarting the player: **Attached
+  screen** (a two-step picker, maker then model, tested marked; sets the
+  family and the skin set) and **Screen rotation** (0° / 180°). Named apart
   from the idle *Screen* row and the turntable *Rotation* row.
 - `design/data-contract.md` lists the new fields: the model, what the screen
   reported (EDID maker, name, modes; USB touch ID), `rotation`, confirmation,
@@ -269,8 +363,7 @@ offers only the current screen's set.
 
 ## Interactions and behaviour (cross-cutting)
 
-- Touch only; every target ≥ 44×44 on the panel, ≥ 7 mm physical on every
-  screen. Several targets get their size from padding plus a negative margin;
+- Touch only; every target ≥ 44×44 logical px on every screen. Several targets get their size from padding plus a negative margin;
   re-measure if restructured.
 - No long press, no on-screen keyboard, no creating playlists on the device.
 - Unsupported controls are removed, not disabled (Spotify and Bluetooth have
@@ -317,8 +410,10 @@ Setup.dc.html                phone setup, with the Screen step
 Panel Setup.dc.html          the panel during setup, one step at a time
 support.js                   prototype runtime, required by every .dc.html
 *.webp / *.png / *.svg       images the prototypes load
-13b/                         Phase 13b — open Screen Families Chosen.dc.html
-  Screen Families Chosen.dc.html   the chosen designs, one page
+design/source/13b/           Phase 13b — open Screen Families Round 2.dc.html
+  Screen Families Round 2.dc.html  round 2, 2026-10-01
+  Bar States / Keep This Screen .dc.html   round 2 boards
+  Screen Families Chosen.dc.html   round 1, the chosen designs, one page
   Now Playing Height Study.dc.html Standard family study copy of the panel
   Bar Frame / Bar Library / Bar Panels .dc.html   the bar strips
   Settings Screen Row.dc.html      Settings opened on Display
@@ -343,5 +438,5 @@ brand/                       brand package
    panel's own behaviour taken back into the design.
 4. Add `screen` and `rotation` to `settings_registry.json` (George confirmed
    them 2026-09-30) and the Screen step to `SetupPage.svelte`.
-5. Write Phase 13b's ADR from `13b/Screen Families Chosen.dc.html` and this
+5. Port round 2 (above), then write Phase 13b's ADR from `design/source/13b/Screen Families Round 2.dc.html`, `Screen Families Chosen.dc.html` and this
    README's 13b section, then build the families.

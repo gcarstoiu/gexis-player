@@ -355,25 +355,36 @@ Bluetooth mark are the repo's current files (`assets/SOURCES.md`).
 
 **Settings** follows `settings_registry.json` (phase-13) row for row; the
 source file is the inventory. Confirmed for Phase 13b and drawn in
-`source/13b/Settings Screen Row.dc.html` (not yet in `Settings.dc.html`):
-**[N] Attached screen** and **[N] Screen rotation** in Display → Panel, both
-restarting the player.
+`Settings.dc.html` (the study copy `source/13b/Settings Screen Row.dc.html` is
+superseded): **[N] Attached screen** and **[N] Screen rotation** in Display →
+Panel, both restarting the player. [N] is a new row; R means *recorded* in
+ADR-0022, not *restart*.
 
 **Setup (phone)** from `SetupPage.svelte`: the blurred weave, the
 mobile-data card on Welcome, Music as three Lyrion choices that gate
 Continue, and Change on Review returning to Review. Phase 13b replaces
-"Is a screen attached?" with a **Screen** step
-(`source/13b/Setup Screen Step.dc.html`).
+"Is a screen attached?" with a **Screen** step, in `Setup.dc.html` itself
+(there is no separate Setup Screen Step file).
 
 **Panel Setup** from `SetupScreen.svelte`: one step at a time, nothing to
 read under 30px.
 
 **Phase 13b, other screens** — `source/13b/Screen Families Chosen.dc.html`
 is the answer to `briefs/13b-screen-families.md`: the two families, their
-rules, the touch floor (7 mm; nothing grows), the type rule (uniform),
+rules, the touch floor (44 px; nothing grows; ADR-0109 decision 4), the type rule (uniform),
 every bar screen, the visualiser's surround, what is dropped, and the
 decisions George settled on 2026-09-30. The Canvas section below still
 describes the 1280 × 800 panel; 13b is how other sizes derive from it.
+
+**Round 2 (2026-10-01)** — `source/13b/Screen Families Round 2.dc.html` answers
+`briefs/13b-bar-gaps.md` and `briefs/13b-corrections.md`: one rule for the
+bar forecast, idle fit and drift, the queue with Clear and Playing from,
+every bar target at 44 px or more, the bar states never drawn
+(`Bar States.dc.html`), the 1200 and 2000 ends, Standard at 720 and 768 with
+the repo's three fixes taken back, the Screen step corrections, the new
+*Keep this screen?* (`Keep This Screen.dc.html`), and Settings: the Updates
+group, Upload a plugin, Attached screen as a two-step picker with tested
+marks, rotation 0° / 180°, and Skin size.
 
 **`verify.html` has not been run against this revision.** It needs a local
 HTTP server. The slice was re-extracted by hand for the changes above;

@@ -381,8 +381,8 @@ const INV = [
   ]],
   ["display", "Display", "Screen and idle", "#c8a2d8", [
     {type: "group",label: "Panel",accent: "#c8a2d8"},
-    {k: "screen",type: "choice",label: "Attached screen",value: "Waveshare 10.1\u2033 HDMI LCD (B) \u00b7 1280 \u00d7 800",marks: "R",options: ["Waveshare 10.1\u2033 HDMI LCD (B) \u00b7 1280 \u00d7 800","Waveshare 13.3\u2033 HDMI LCD (H) \u00b7 1920 \u00d7 1080","Waveshare 7\u2033 HDMI LCD (C) \u00b7 800 \u00d7 480","Waveshare 7.9\u2033 HDMI LCD \u00b7 1280 \u00d7 400","Waveshare 11.9\u2033 HDMI LCD \u00b7 1480 \u00d7 320","Joy-IT 10.1\u2033 \u00b7 1280 \u00d7 800"],note: "Sets the layout, Standard or Bar, and which visualiser skins are offered. Changing it restarts the player; if the screen stays dark, change it back from the phone."},
-    {k: "rotation",type: "choice",label: "Screen rotation",value: "0\u00b0",marks: "R",options: ["0\u00b0","90\u00b0","180\u00b0","270\u00b0"],note: "For a screen mounted another way up. Restarts the player."},
+    {k: "screen",type: "choice",label: "Attached screen",value: "Waveshare 10.1\u2033 HDMI LCD (B) \u00b7 1280 \u00d7 800",marks: "R",groups: true,options: [],note: "Sets the layout, Standard or Bar, and which visualiser skins are offered. Changing it restarts the player; if the screen stays dark, change it back from the phone."},
+    {k: "rotation",type: "choice",label: "Screen rotation",value: "0\u00b0",marks: "R",options: ["0\u00b0","180\u00b0"],note: "For a screen mounted another way up. Restarts the player."},
     
     {k: "headless",type: "toggle",label: "Headless",value: false,marks: "R",note: "Disables the local screen entirely."},
     {k: "drawer_on_external",type: "toggle",label: "Show volume when changed elsewhere",value: true,marks: "N",note: "A phone’s volume change opens the drawer; the panel’s own changes do not."},
@@ -408,6 +408,7 @@ const INV = [
     {type: "group",label: "Visualization",accent: "#c8a2d8"},
     {k: "viz_timeout",type: "number",label: "Timeout",value: "10 min",marks: "R",unit: "min",min: 1,max: 60,note: "How long music plays untouched before the visualiser takes the screen."},
     {k: "viz_stop",type: "number",label: "Stop when nothing is playing",value: "5 min",marks: "N",unit: "min",min: 1,max: 60,note: "How long silence lasts before the visualiser gives the screen back. Without it the meter sits over the idle screen until somebody taps it."},
+    {k: "skin_size",type: "choice",label: "Skin size",value: "Match the screen",marks: "N",options: ["Match the screen","1280 \u00d7 800","1280 \u00d7 720"],note: "Which size of skins the visualiser draws from. Match the screen takes the screen's own size, or the largest installed set that fits, centred on black. Each size is a plugin, installed on the Plugins screen. The picker offers only this size's skins."},
     {k: "skin_corpus",type: "choice",label: "Skins",value: "VU meters",marks: "R",options: ["VU meters","Spectrum","VU meters + spectrum","Turntables","Tapes","All"],note: "What the visualiser draws from: needles, bars, both together, a turntable or a tape deck. All takes any of them. Which skin, and whether it changes with the track, is the row below."},
     {k: "skin_rotate",type: "toggle",label: "Rotate skin per track",value: true,marks: "N"},
     {k: "skin",type: "choice",label: "Skin",value: "01G5_Accuphase",marks: "N",options: [],onlyWhen: ["skin_rotate",false],picker: true,note: "Which one the visualiser draws. Tapping a skin shows it; nothing changes until Use this skin.",optionsFrom: "skin_corpus"},
@@ -438,9 +439,18 @@ const INV = [
     {type: "group",label: "Sources",accent: "#a8d68f"},
     {k: "plugin_plexamp",type: "plugin",label: "Plexamp",version: "4.13.2",size: 112,from: "Plex",download: true,marks: "R"},
     {type: "group",label: "System",accent: "#a8d68f"},
-    {k: "plugin_beszel",type: "plugin",label: "Beszel",download: false,marks: "R"}
+    {k: "plugin_beszel",type: "plugin",label: "Beszel",download: false,marks: "R"},
+    {type: "group",label: "Add",accent: "#a8d68f"},
+    {k: "plugin_upload",type: "action",label: "Upload a plugin",value: "",marks: "N",noPanel: true,confirm: "Upload",note: "Opens your files to choose a package (.tar.gz). Not part of Gexis Player.",warn: "This plugin is not part of Gexis Player. It is installed and run at your own risk and responsibility."}
   ]],
   ["system", "System", "Updates and maintenance", "#b0bcc4", [
+    {type: "group",label: "Updates",accent: "#b0bcc4"},
+    {k: "release",type: "readonly",label: "Release",value: "v0.3.0 \u00b7 up to date",marks: "N",note: "The installed release, and whether a newer one is waiting."},
+    {k: "check_now",type: "action",label: "Check now",value: "",marks: "N",confirm: "Check now",note: "Asks the repository for a newer release. The device also checks once a day."},
+    {k: "update_now",type: "action",label: "Update now",value: "",marks: "N",confirm: "Update now",note: "Downloads the whole release first, backs up, waits until nothing is playing, then installs and checks the device. If the check fails, it goes back to the release it had."},
+    {k: "updates",type: "choice",label: "Updates",value: "Manual",marks: "N",options: ["Manual","Automatic"],note: "Manual tells you on the panel and the phone when an update is waiting. Automatic installs at night, never while playing."},
+    {k: "update_channel",type: "choice",label: "Update channel",value: "Stable",marks: "N",options: ["Stable","Testing"],warn: {Testing: "Testing installs releases before they are marked stable."}},
+    {type: "group",label: "Maintenance",accent: "#b0bcc4"},
     {k: "backup",type: "action",label: "Back up now",value: "",marks: "R",confirm: "Back up",note: "Writes the settings, the library's pictures, the paired devices and this device's own configuration into the Backups share."},
     {k: "restore",type: "list",label: "Restore",value: "",marks: "N",kind: "backup",empty: "No backups yet. Back up first, or copy one into the Backups share.",note: "Replaces everything a backup holds and restarts the device. Backups are read from the Backups share, so one copied there from another machine is offered too.",items: [["gexis · 2026-09-27 21:04","This device"]]},
     {k: "debug_logs",type: "toggle",label: "Debug logs",value: false,marks: "R",note: "Keeps the device's logs on the card across restarts, up to 100 MB, for tracking down a problem. Off, they are kept in memory and lost at a restart, and switching off deletes the ones kept."},
@@ -499,6 +509,12 @@ const hostOf = (name) => (String(name || '')
   .replace(/^-+|-+$/g, '')
   .slice(0, 63) || 'gexis') + '.local';
 
+// Attached screen: foonerd's presets, 197 models by maker (ADR-0109 decision 1).
+// Only the makers drawn so far; the four George owns are tested.
+const SCREEN_GROUPS = {
+  "Joy-IT": [["Joy-IT 10.1\u2033 RB-LCD-10-2 \u00b7 1280 \u00d7 800", false]],
+  "Waveshare": [["Waveshare 7\u2033 HDMI LCD (C) \u00b7 800 \u00d7 480", false], ["Waveshare 7.9\u2033 HDMI LCD \u00b7 1280 \u00d7 400", true], ["Waveshare 10.1\u2033 HDMI LCD (B) \u00b7 1280 \u00d7 800", true], ["Waveshare 11.9\u2033 HDMI LCD \u00b7 1480 \u00d7 320", true], ["Waveshare 13.3\u2033 HDMI LCD (H) \u00b7 1920 \u00d7 1080", true]]
+};
 class Component extends DCLogic {
   state = { w: 0, cat: 'audio', drilled: null, vals: {}, sheet: null, toast: null, forgotten: [], draft: null, picker: null, pickerView: null, join: null, scan: null, doc: null, plug: {}, plugMB: {}, miniVol: 40, miniViz: false, miniIdle: true };
 
@@ -801,6 +817,7 @@ class Component extends DCLogic {
     // dependency is itself hidden is hidden too, so a parent switching off
     // takes its whole subtree with it rather than orphaning it.
     const visible = (r, seen) => {
+      if (r && r.noPanel && this.props.onBack) return false;
       if (!r || !r.onlyWhen) return true;
       const [dep, want] = r.onlyWhen;
       if (seen.indexOf(dep) >= 0) return true;
@@ -819,12 +836,16 @@ class Component extends DCLogic {
     const tzRegion = this.state.tzRegion;
     const tzOptions = sheet && sheet.tz ? (tzRegion
       ? TZ[tzRegion].map(c => ({ label: c.replace(/_/g, ' '), value: tzRegion + '/' + c }))
-      : Object.keys(TZ).map(r => ({ label: r, value: null, region: r }))) : [];
-    const sheetOptions = sheet && sheet.tz ? tzOptions.map(o => {
+      : Object.keys(TZ).map(r => ({ label: r, value: null, region: r })))
+      : sheet && sheet.groups ? (tzRegion
+      ? SCREEN_GROUPS[tzRegion].map(c => ({ label: c[0].slice(tzRegion.length + 1), value: c[0], ord: c[1] ? 'Tested' : 'Untested' }))
+      : Object.keys(SCREEN_GROUPS).map(r => ({ label: r, value: null, region: r, ord: SCREEN_GROUPS[r].length + (SCREEN_GROUPS[r].length === 1 ? ' model' : ' models') }))) : [];
+    const sheetOptions = sheet && (sheet.tz || sheet.groups) ? tzOptions.map(o => {
       const sel = o.value ? String(this.val(sheet)) === o.value
+                          : sheet.groups ? SCREEN_GROUPS[o.region].some(c => c[0] === String(this.val(sheet)))
                           : String(this.val(sheet)).split('/')[0] === o.region;
       return {
-        label: o.label, ord: '', ordDisplay: 'none',
+        label: o.label, ord: o.ord || '', ordDisplay: o.ord ? 'block' : 'none',
         bg: sel ? 'rgba(126,214,188,0.14)' : 'rgba(255,255,255,0.04)',
         border: sel ? 'rgba(126,214,188,0.4)' : 'rgba(233,238,242,0.1)',
         ink: sel ? '#e9eef2' : 'rgba(233,238,242,0.82)',
@@ -912,7 +933,7 @@ class Component extends DCLogic {
       sheetDisplay: sheet ? 'flex' : 'none',
       sheetScrim: sheet ? '1' : '0',
       sheetPointer: sheet ? 'auto' : 'none',
-      sheetTitle: sheet && sheet.tz && tzRegion ? tzRegion : (sheet ? sheet.label : ''),
+      sheetTitle: sheet && (sheet.tz || sheet.groups) && tzRegion ? tzRegion : (sheet ? sheet.label : ''),
       sheetNote: sheet && sheet.note ? sheet.note : '',
       sheetNoteDisplay: sheet && sheet.note && !join ? 'block' : 'none',
       sheetOptions,
@@ -1043,7 +1064,7 @@ class Component extends DCLogic {
       sheetPlaceholder: sheet && sheet.placeholder ? sheet.placeholder : '',
       onSheetInput: (e) => this.setState({ draft: e.target.value }),
       sheetActionsDisplay: sheet && join !== 'connecting' && join !== 'ok' ? 'flex' : 'none',
-      sheetCancelLabel: join === 'error' ? 'Give up' : (sheet && sheet.tz && tzRegion) ? 'Back' : isChoice ? 'Close' : 'Cancel',
+      sheetCancelLabel: join === 'error' ? 'Give up' : (sheet && (sheet.tz || sheet.groups) && tzRegion) ? 'Back' : isChoice ? 'Close' : 'Cancel',
       sheetConfirmDisplay: sheet && (isAction || sheet.type === 'text' || sheet.type === 'number' || (isList && sheet.manual)) ? 'flex' : 'none',
       sheetConfirmLabel: join === 'error' ? 'Try again' : sheet ? (sheet.manual || sheet.confirm || (isAction ? 'Continue' : typing ? 'Save' : 'Set')) : '',
       sheetConfirmBg: sheet && sheet.danger ? 'rgba(224,167,88,0.2)' : 'rgba(126,214,188,0.16)',
@@ -1051,7 +1072,7 @@ class Component extends DCLogic {
       sheetConfirmInk: sheet && sheet.danger ? '#e0a758' : '#7ed6bc',
       onSheetClose: () => {
         // inside the picker the same button steps back a level before it closes
-        if (sheet && sheet.tz && tzRegion) { this.setState({ tzRegion: null }); return; }
+        if (sheet && (sheet.tz || sheet.groups) && tzRegion) { this.setState({ tzRegion: null }); return; }
         clearTimeout(this._join); clearTimeout(this._scan);
         this.setState({ sheet: null, draft: null, join: null, scan: null, tzRegion: null });
       },

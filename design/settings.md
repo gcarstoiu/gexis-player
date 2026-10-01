@@ -313,9 +313,24 @@ bars and no forget action; Wi-Fi items stay `[ssid, meta, bars, state]`.
 this file and the source disagree, the source is right; this file has not
 been rewritten row by row.
 
-Confirmed by George for Phase 13b, drawn in `source/13b/Settings Screen Row.dc.html`:
+Confirmed by George for Phase 13b, in `source/Settings.dc.html` (marked [N], new):
 
 | key | type | group | note |
 |---|---|---|---|
 | `screen` | choice | Display → Panel | Label **Attached screen**. The model, from the supported-screens table. Sets the family (Standard or Bar) and the skin set. Restarts the player. |
-| `rotation` | choice | Display → Panel | Label **Screen rotation**. 0° / 90° / 180° / 270°. Restarts the player. |
+| `rotation` | choice | Display → Panel | Label **Screen rotation**. 0° / 180° (ADR-0109 decision 6). Restarts the player. |
+
+## Changed 2026-10-01 (Phase 13b round 2, `briefs/13b-corrections.md` §4)
+
+| key | type | group | note |
+|---|---|---|---|
+| `screen` | choice, `groups: true` | Display → Panel | Now the two-step picker Time zone uses: makers, then that maker's models, each marked Tested or Untested (ADR-0109 decision 1: foonerd's 197 models, George's four tested). |
+| `skin_size` | choice | Display → Visualization | **Skin size**: *Match the screen* (default) or any installed set's size. Each size is a plugin. |
+| `release` | readonly | System → Updates | The installed release and whether a newer one is waiting. |
+| `check_now` | action | System → Updates | Asks the repository; the device also checks daily (ADR-0105 §4). |
+| `update_now` | action, confirmed | System → Updates | Download, back up, wait for silence, install, check, go back on failure (ADR-0105 §4). |
+| `updates` | choice | System → Updates | Manual (default) or Automatic (ADR-0105 §6). |
+| `update_channel` | choice | System → Updates | Stable or Testing; Testing carries a warning. |
+| `plugin_upload` | action, `noPanel` | Plugins → Add | **Upload a plugin**, with `Settings.svelte`'s note and warning. Hidden when Settings is embedded on the panel. |
+
+The rest of System is now headed **Maintenance**.

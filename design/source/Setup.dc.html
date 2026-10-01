@@ -271,8 +271,9 @@
               <div style="flex:1;min-width:0;">
                 <div style="font-size:19px;font-weight:700;">Waveshare 13.3″ HDMI LCD (H)</div>
                 <div style="font-size:15px;color:rgba(233,238,242,0.72);margin-top:4px;">1920 × 1080 · Standard layout</div>
-                <div style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:12px;color:rgba(233,238,242,0.5);margin-top:8px;">Read from the screen and its touch controller</div>
-              </div>
+                <div style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:12px;color:rgba(233,238,242,0.5);margin-top:8px;">Suggested from what the screen and its touch controller report</div>
+  </div>
+  <span style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:11px;letter-spacing:0.14em;text-transform:uppercase;padding:4px 8px;border-radius:6px;flex-shrink:0;align-self:flex-start;background:rgba(126,214,188,0.14);color:#7ed6bc;">Tested</span>
             </div>
             <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;">
               <div onClick="{{ onScRight }}" style="padding:15px 18px;border-radius:999px;text-align:center;font-size:16px;font-weight:800;box-sizing:border-box;background:{{ scRightBg }};color:{{ scRightInk }};border:1px solid {{ scRightBorder }};" style-active="transform:scale(0.98)">This is right</div>
@@ -281,8 +282,8 @@
           </sc-if>
 
           <sc-if value="{{ scUnc }}" hint-placeholder-val="{{ false }}">
-            <div style="padding:16px 18px;border-radius:16px;background:rgba(255,255,255,0.05);border:1px solid rgba(233,238,242,0.1);box-sizing:border-box;">
-              <div style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:12px;letter-spacing:0.2em;text-transform:uppercase;color:rgba(233,238,242,0.6);padding:0 0 10px;">What the screen reported</div>
+            <div style="padding:16px 18px;border-radius:16px;background:rgba(255,255,255,0.05);border:1px solid rgba(233,238,242,0.1);box-sizing:border-box;display:{{ scReportedDisplay }};">
+  <div style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:12px;letter-spacing:0.2em;text-transform:uppercase;color:rgba(233,238,242,0.6);padding:0 0 10px;">What the screen reported</div>
               <div style="display:grid;grid-template-columns:auto 1fr;gap:6px 16px;font-size:15px;">
                 <span style="color:rgba(233,238,242,0.6);">Maker</span><span style="font-family:'IBM Plex Mono','Courier New',monospace;">WAV (Waveshare)</span>
                 <span style="color:rgba(233,238,242,0.6);">Resolution</span><span style="font-family:'IBM Plex Mono','Courier New',monospace;">1280 × 800</span>
@@ -302,8 +303,9 @@
                 <span style="flex:1;min-width:0;">
                   <span style="display:block;font-size:17px;font-weight:600;">{{ o.label }}</span>
                   <span style="display:block;font-family:'IBM Plex Mono','Courier New',monospace;font-size:13px;color:rgba(233,238,242,0.6);margin-top:4px;">{{ o.note }}</span>
-                </span>
-              </div></sc-for>
+  </span>
+  <span style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:11px;letter-spacing:0.14em;text-transform:uppercase;padding:4px 8px;border-radius:6px;flex-shrink:0;background:{{ o.tagBg }};color:{{ o.tagInk }};">{{ o.tag }}</span>
+  </div></sc-for>
             </div>
           </sc-for>
           </sc-if>
@@ -322,22 +324,33 @@
                 <span style="flex:1;min-width:0;">
                   <span style="display:block;font-size:17px;font-weight:600;">{{ o.label }}</span>
                   <span style="display:block;font-family:'IBM Plex Mono','Courier New',monospace;font-size:13px;color:rgba(233,238,242,0.6);margin-top:4px;">{{ o.note }}</span>
-                </span>
-              </div></sc-for>
+  </span>
+  <span style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:11px;letter-spacing:0.14em;text-transform:uppercase;padding:4px 8px;border-radius:6px;flex-shrink:0;background:{{ o.tagBg }};color:{{ o.tagInk }};">{{ o.tag }}</span>
+  </div></sc-for>
             </div>
           </sc-for>
             <div style="align-items:flex-start;gap:14px;padding:14px 16px;border-radius:14px;background:rgba(224,167,88,0.1);border:1px solid rgba(224,167,88,0.4);box-sizing:border-box;font-size:15px;line-height:1.45;display:{{ scPickedDisplay }};">
               <span style="width:22px;height:22px;border-radius:50%;background:#e0a758;color:#0d151c;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;">!</span>
-              <span style="flex:1;min-width:0;text-wrap:pretty;">When setup finishes the player restarts and tries this screen. If it stays dark, open the address on the last page from this phone and choose another in Settings → Display.</span>
-            </div>
-          </sc-if>
+              <span style="flex:1;min-width:0;text-wrap:pretty;">{{ scPickNote }}</span>
+  </div>
+  </sc-if>
+  <sc-if value="{{ scUnc }}" hint-placeholder-val="{{ false }}">
+  <div style="align-items:flex-start;gap:14px;padding:14px 16px;border-radius:14px;background:rgba(224,167,88,0.1);border:1px solid rgba(224,167,88,0.4);box-sizing:border-box;font-size:15px;line-height:1.45;display:{{ scUntestedDisplay }};">
+  <span style="width:22px;height:22px;border-radius:50%;background:#e0a758;color:#0d151c;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;">!</span>
+  <span style="flex:1;min-width:0;text-wrap:pretty;">{{ scPickNote }}</span>
+  </div>
+  </sc-if>
 
           <div style="display:flex;flex-direction:column;gap:6px;">
             <div style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:12px;letter-spacing:0.2em;text-transform:uppercase;color:rgba(233,238,242,0.6);padding:8px 2px 4px;">Or</div>
             <div onClick="{{ onScHeadless }}" style="display:flex;align-items:center;gap:16px;min-height:66px;padding:12px 18px;border-radius:14px;box-sizing:border-box;background:{{ scHeadBg }};border:1px solid {{ scHeadBorder }};" style-active="transform:scale(0.99)">
             <span style="width:24px;height:24px;border-radius:50%;flex-shrink:0;box-sizing:border-box;display:flex;align-items:center;justify-content:center;border:2px solid {{ scHeadRing }};"><span style="width:11px;height:11px;border-radius:50%;background:#7ed6bc;display:{{ scHeadDot }};"></span></span>
             <span style="flex:1;min-width:0;"><span style="display:block;font-size:17px;font-weight:600;">Headless</span><span style="display:block;font-size:14px;line-height:1.4;color:rgba(233,238,242,0.6);margin-top:4px;">No local screen. The display stays off and nothing is drawn.</span></span>
-          </div>
+  </div>
+  <div style="align-items:flex-start;gap:14px;padding:14px 16px;border-radius:14px;background:rgba(224,167,88,0.1);border:1px solid rgba(224,167,88,0.4);box-sizing:border-box;font-size:15px;line-height:1.45;display:{{ scHeadWarn }};">
+  <span style="width:22px;height:22px;border-radius:50%;background:#e0a758;color:#0d151c;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;">!</span>
+  <span style="flex:1;min-width:0;text-wrap:pretty;">Without a screen there is no fallback setup network. If gexis cannot reach your Wi-Fi later, connect it to your router with a cable to open its page.</span>
+  </div>
           </div>
         </div>
 
@@ -402,13 +415,15 @@ const TZ = {
   Pacific: ['Auckland', 'Honolulu'],
   UTC: ['UTC']
 };
+// [maker, model, resolution, family, tested]. The full list is foonerd's 197
+// presets (ADR-0109 decision 1); the four George owns are marked tested.
 const SCREENS = [
-  ['Waveshare', '7\u2033 HDMI LCD (C)', '800 \u00d7 480', 'Standard'],
-  ['Waveshare', '7.9\u2033 HDMI LCD', '1280 \u00d7 400', 'Bar'],
-  ['Waveshare', '10.1\u2033 HDMI LCD (B)', '1280 \u00d7 800', 'Standard'],
-  ['Waveshare', '11.9\u2033 HDMI LCD', '1480 \u00d7 320', 'Bar'],
-  ['Waveshare', '13.3\u2033 HDMI LCD (H)', '1920 \u00d7 1080', 'Standard'],
-  ['Joy-IT', '10.1\u2033 RB-LCD-10-2', '1280 \u00d7 800', 'Standard']
+  ['Waveshare', '7\u2033 HDMI LCD (C)', '800 \u00d7 480', 'Standard', false],
+  ['Waveshare', '7.9\u2033 HDMI LCD', '1280 \u00d7 400', 'Bar', true],
+  ['Waveshare', '10.1\u2033 HDMI LCD (B)', '1280 \u00d7 800', 'Standard', true],
+  ['Waveshare', '11.9\u2033 HDMI LCD', '1480 \u00d7 320', 'Bar', true],
+  ['Waveshare', '13.3\u2033 HDMI LCD (H)', '1920 \u00d7 1080', 'Standard', true],
+  ['Joy-IT', '10.1\u2033 RB-LCD-10-2', '1280 \u00d7 800', 'Standard', false]
 ];
 const STEPS = [
   ['wifi', 'Network', '#8fc4d8'],
@@ -493,16 +508,28 @@ class Component extends DCLogic {
     const st = this.state, s = this.screenState();
     const q = st.scQuery.trim().toLowerCase();
     const reported = s === 'uncertain';
-    const rows = SCREENS.filter(r => !q || (r.join(' ').toLowerCase().indexOf(q) >= 0))
-      .filter(r => !reported || r[2] === '1280 \u00d7 800' || q);
+    // nothing is hidden: models matching the reported resolution come first
+    const rows = SCREENS.filter(r => !q || (r.join(' ').toLowerCase().indexOf(q) >= 0));
+    const match = reported && !q ? rows.filter(r => r[2] === '1280 \u00d7 800') : [];
     const makers = [...new Set(rows.map(r => r[0]))];
     const pick = st.scPick;
     const recOk = s === 'recognised' && !st.scChoose;
+    const picked = SCREENS.find(r => pick === r[0] + ' ' + r[1]);
+    const untested = !!(picked && !picked[4] && !st.headless);
+    const rowOf = r => {
+      const key = r[0] + ' ' + r[1], on = pick === key && !st.headless, c = sel(on);
+      return { label: r[1], note: r[2] + ' \u00b7 ' + r[3], bg: c.bg, border: c.border, ring: on ? '#7ed6bc' : 'rgba(233,238,242,0.42)', dotDisplay: on ? 'block' : 'none', tag: r[4] ? 'Tested' : 'Untested', tagBg: r[4] ? 'rgba(126,214,188,0.14)' : 'rgba(224,167,88,0.14)', tagInk: r[4] ? '#7ed6bc' : '#e0a758', onTap: () => this.setState({ scPick: key, headless: false }) };
+    };
     return {
-      scTitle: recOk ? 'Your screen' : s === 'none' ? 'Nothing on the screen yet?' : 'Which screen is this?',
-      scSub: recOk ? 'The player recognised the screen it is driving. It sets the layout and the visualiser skins.'
+      scTitle: recOk ? 'Is this your screen?' : s === 'none' ? 'Nothing on the screen yet?' : st.scChoose ? 'Choose your screen' : 'Which screen is this?',
+      scSub: recOk ? 'What the screen reports matches this model. It sets the layout and the visualiser skins.'
         : s === 'none' ? 'Some screens need their settings before they show anything. Choose yours and the player will try it.'
+        : st.scChoose ? 'Every model gexis knows, by maker.'
         : 'The screen said who made it and its resolution, but not which model. Choose it from the list.',
+      scReportedDisplay: s === 'uncertain' && !st.scChoose ? 'block' : 'none',
+      scUntestedDisplay: untested ? 'flex' : 'none',
+      scPickNote: (untested ? 'This model has not been tested with gexis. ' : '') + 'When setup finishes the player restarts on this screen and asks Keep this screen? on it. If nobody touches Keep within 30 seconds, it goes back.',
+      scHeadWarn: st.headless ? 'flex' : 'none',
       scRec: recOk, scUnc: s === 'uncertain' || (s === 'recognised' && st.scChoose), scNone: s === 'none',
       scRecBg: st.scConfirmed ? 'rgba(143,217,168,0.1)' : 'rgba(255,255,255,0.05)',
       scRecBorder: st.scConfirmed ? 'rgba(143,217,168,0.45)' : 'rgba(233,238,242,0.1)',
@@ -513,13 +540,10 @@ class Component extends DCLogic {
       onScOther: () => this.setState({ scChoose: true, scConfirmed: false }),
       scQuery: st.scQuery,
       onScQuery: e => this.setState({ scQuery: e.target.value }),
-      scGroups: makers.map(m => ({
-        maker: m,
-        rows: rows.filter(r => r[0] === m).map(r => {
-          const key = r[0] + ' ' + r[1], on = pick === key && !st.headless, c = sel(on);
-          return { label: r[1], note: r[2] + ' \u00b7 ' + r[3], bg: c.bg, border: c.border, ring: on ? '#7ed6bc' : 'rgba(233,238,242,0.42)', dotDisplay: on ? 'block' : 'none', onTap: () => this.setState({ scPick: key, headless: false }) };
-        })
-      })),
+      scGroups: (match.length ? [{ maker: 'Matching 1280 \u00d7 800', rows: match.map(rowOf) }] : []).concat(makers.map(m => ({
+        maker: match.length ? m + ' \u00b7 all models' : m,
+        rows: rows.filter(r => r[0] === m).map(rowOf)
+      }))),
       scPickedDisplay: pick && !st.headless ? 'flex' : 'none',
       scHeadBg: st.headless ? 'rgba(126,214,188,0.1)' : 'rgba(255,255,255,0.05)',
       scHeadBorder: st.headless ? 'rgba(126,214,188,0.45)' : 'rgba(233,238,242,0.1)',

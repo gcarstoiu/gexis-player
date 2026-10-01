@@ -211,6 +211,6 @@ Fields the panel code on `phase-13` already carries are named as it names them.
 |---|---|
 | the attached screen's model, from the supported-screens table (Setup's Screen step, Settings → Display → Attached screen) | the family (Standard 1.5–1.8, Bar 3–5), the logical size, and the skin set |
 | what the screen reported: EDID maker, name and modes, and the USB touch ID | the Screen step's "Recognised" and "Seen, not certain" states; EDID physical size is not used (Finding 100) |
-| `rotation`: 0, 90, 180 or 270 | Settings → Display → Screen rotation |
+| `rotation`: 0 or 180 | Settings → Display → Screen rotation |
 | whether the model was confirmed, and whether anything is showing yet | choosing between the three Screen step states |
 | the skin set for the current screen, and whether it is exact or the nearest that fits | the visualiser's letterbox (opaque black around it) and the skin picker, which offers only that set |
