@@ -83,6 +83,12 @@
     return setup?.page_opened ? 'phone' : 'page';
   });
 
+  //: Why setup's end restarts: a new name, a chosen screen (ADR-0109), or both.
+  const restartLine = (f) =>
+    f.restart_for === 'screen' ? 'Restarting on the chosen screen…'
+      : f.restart_for === 'both' ? 'Restarting with its new name, on the chosen screen…'
+        : 'Restarting to take its new name…';
+
   const esc = (v) => String(v ?? '').replace(/([\\;,:"])/g, '\\$1');
   const joinText = $derived(open && password ? `WIFI:T:WPA;S:${esc(setup.ssid)};P:${esc(password)};;` : null);
   function qrPath(text) {
@@ -248,7 +254,7 @@
     {@render barHero('wifi', `Joining ${setup?.target ?? 'your Wi-Fi'}`, 64, `Put your phone back on ${setup?.target ?? 'your Wi-Fi'} too.`)}
   {:else if step === 'done'}
     {@const f = setup.finished ?? {}}
-    {@render barHero('tick', `${f.name ?? 'gexis'} is on ${f.ssid ?? 'your network'}`, wide ? 56 : 44, f.restarting ? 'Restarting to take its new name…' : null)}
+    {@render barHero('tick', `${f.name ?? 'gexis'} is on ${f.ssid ?? 'your network'}`, wide ? 56 : 44, f.restarting ? restartLine(f) : null)}
   {:else if step === 'failed-start'}
     {@render barHero('warn', 'The setup network did not start', 48, 'Trying again in a moment.')}
   {:else}
@@ -329,7 +335,7 @@
         </svg>
       </div>
       <h1 class="huge">{f.name ?? 'gexis'} is on {f.ssid ?? 'your network'}</h1>
-      {#if f.restarting}<p class="lead">Restarting to take its new name…</p>{/if}
+      {#if f.restarting}<p class="lead">{restartLine(f)}</p>{/if}
       <!-- George, 2026-09-29: the Lyrion outcome apart from the joining, with
            its own mark and the server's address, so nobody is lost in it. -->
       {#if lib.state && lib.state !== 'unchanged'}

@@ -184,7 +184,7 @@ def test_without_an_address_one_lyrion_server_found_after_joining_is_used(tmp_pa
     finish(flow, net)
     assert ("lms_server", "192.168.1.10:9000") in settings.sets
     done = [s for s in seen if s["network"] == "done"][0]
-    assert done["finished"] == {"ssid": "Home", "restarting": False, "name": "gexis",
+    assert done["finished"] == {"ssid": "Home", "restarting": False, "restart_for": None, "name": "gexis",
                                 "library": {"state": "found", "name": "den-lms", "address": "192.168.1.10:9000"}}
     assert net.status()["network"] == "online" and not net.status()["finished"]
 
@@ -266,3 +266,14 @@ def test_the_panel_never_leaves_setup_between_the_join_and_the_last_screen(tmp_p
     states = [s["network"] for s in seen]
     assert states.index("done") == states.index("joining") + 1, states
     assert states[-1] == "online"
+
+
+def test_a_screen_chosen_in_setup_restarts_at_the_end_where_keep_is_asked(tmp_path):
+    """ADR-0109 decision 5: the screen is written during setup and the
+    restart that ends it is where the panel asks Keep this screen?."""
+    from gexis_core import setup_network as sn
+    net = sn.SetupNetwork()
+    net.finished("Home", {"state": "off"}, "screen", "gexis")
+    assert net.status()["finished"]["restart_for"] == "screen" and net.status()["finished"]["restarting"]
+    net.finished("Home", {"state": "off"}, True, "gexis")
+    assert net.status()["finished"]["restart_for"] == "name"

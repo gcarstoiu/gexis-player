@@ -543,11 +543,14 @@ class SetupNetwork:
                 self._phones, self._page_opened = 0, False
             await self._sleep(PHONES_EVERY_S)
 
-    def finished(self, ssid: str | None, library: dict, restarting: bool, name: str | None = None) -> None:
+    def finished(self, ssid: str | None, library: dict, restarting, name: str | None = None) -> None:
         """The panel's last setup screen (George, 2026-09-29): the network it
-        joined, what became of Lyrion, and whether it is restarting."""
+        joined, what became of Lyrion, and whether it is restarting - and
+        why: `name`, `screen` (ADR-0109) or `both`; True reads as `name`."""
         self._state = "done"
-        self._finished = {"ssid": ssid, "library": library, "restarting": restarting, "name": name}
+        restart_for = "name" if restarting is True else (restarting or None)
+        self._finished = {"ssid": ssid, "library": library, "restarting": bool(restart_for),
+                          "restart_for": restart_for, "name": name}
         self._publish()
 
     def done(self) -> None:
