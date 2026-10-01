@@ -20,7 +20,7 @@ target drawn on a bar is now 44 px or more.
 2 panel only; 3 and 4 agreed; **5: no** - *"it should have progress when
 information is provided via bluetooth. Just like it is now"*, so the bar
 shows progress exactly as the panel does; 6 the bar matches the panel; 7 keep
-teal; 8 to 12 agreed; 13 keep ours; **14 asked to explain** (open); 15 keep
+teal; 8 to 12 agreed; 13 keep ours; 14 keep ours (ADR-0074), after an explanation; 15 keep
 ours; 16 keep *Device*; 17 keep the layout.
 
 | # | Question | Recommendation |
