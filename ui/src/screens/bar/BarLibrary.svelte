@@ -1792,7 +1792,9 @@
     display: grid;
     grid-auto-flow: column;
     grid-template-rows: repeat(6, 52px);
-    grid-auto-columns: 300px;
+    /* 420, not the design's 300: a revealed row's three 44 px actions left
+       the title about five characters (George, 2026-10-01: "Let's do A"). */
+    grid-auto-columns: 420px;
     gap: 2px 16px;
     padding-right: 32px;
   }
