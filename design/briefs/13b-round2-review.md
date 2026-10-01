@@ -53,6 +53,15 @@ ours; 16 keep *Device*; 17 keep the layout.
 3. **Browse's album rows reveal the same actions** (*"Same as standard. We
    show reveal."*), so a whole album plays from Browse too.
 
+### The bar's moments (George, 2026-10-01, after seeing them)
+
+1. **Idle on a cold day:** at −14° with a −12/−18 day, a 1280 bar drops its
+   forecast day rather than let it collide; 1850 keeps all three. Accepted
+   as built (*"I'll go with your recommendations for both"*).
+2. **Setup's join line on a bar** keeps the design's wording, *Scan to join,
+   then open 10.42.0.1:8090*: a bar has one QR code, so the address is
+   written out.
+
 ## 2. Back to Claude Design (round 3)
 
 ### Errors
