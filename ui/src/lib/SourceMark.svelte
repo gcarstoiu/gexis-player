@@ -29,6 +29,15 @@
   //: screen that knows better than the store should not be argued with.
   const glyph = $derived(mark ?? $sources[source]?.mark ?? null);
 
+  //: **A plugin with no mark: its initial in a ring** (design round 2,
+  //: George 2026-10-01, decision 8 of the review: *"adopt it on both"*). Until
+  //: then the chain below ended without an `else`, and a renderer whose
+  //: manifest carries no glyph drew nothing at all. The name is the
+  //: manifest's, so the letter is the one the user knows it by.
+  const initial = $derived(
+    (($sources[source]?.name ?? source ?? '').trim()[0] ?? '?').toUpperCase(),
+  );
+
   const bar = $derived(Math.max(3, Math.round(size * 0.15)));
   const gap = $derived(Math.max(2, Math.round(size * 0.11)));
 </script>
@@ -49,6 +58,15 @@
     style:height={`${size}px`}
     style:opacity
   />
+{:else if source}
+  <span
+    class="ring"
+    style:width={`${size}px`}
+    style:height={`${size}px`}
+    style:border-width={`${Math.max(1.5, Math.round(size / 15))}px`}
+    style:font-size={`${Math.round(size / 2)}px`}
+    style:opacity
+  >{initial}</span>
 {/if}
 
 <style>
@@ -60,6 +78,20 @@
   .bars i {
     border-radius: 2px;
     flex-shrink: 0;
+  }
+  /* The design's ring: ink at 0.7, the letter at full ink, 800. */
+  .ring {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    box-sizing: border-box;
+    border-style: solid;
+    border-color: rgba(233, 238, 242, 0.7);
+    border-radius: 50%;
+    font-weight: 800;
+    line-height: 1;
+    color: var(--ink);
   }
   .mark {
     width: auto;
