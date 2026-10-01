@@ -18,6 +18,8 @@
   import SetupScreen from './screens/SetupScreen.svelte';
   import SetupPage from './screens/SetupPage.svelte';
   import { screen } from './lib/family.svelte.js';
+  import UpdateScreen from './screens/UpdateScreen.svelte';
+  import { update, connection, hidePeppy } from './lib/state.js';
   import { loadSettings, settingValues } from './lib/settings.js';
   import { loadLibraryRoot } from './lib/library.js';
   import { reportTouch, showPeppy, reportPainted, reportShown } from './lib/state.js';
@@ -309,6 +311,37 @@
 
   // ADR-0032: the panel renders everything; a remote browser only settings.
   let surface = $state(null);
+
+  //: **ADR-0110 §6: the panel is locked while it updates.** Up from the
+  //: moment an install runs; kept up while the core restarts and the socket
+  //: reconnects (nothing else shows in between); then the outcome for a few
+  //: seconds, and a reload when the release changed the page's own files.
+  const OUTCOME_MS = 6000;
+  let updateLock = $state(false);
+  let updateOutcome = $state(null);
+  let loadedRelease = null;
+  $effect(() => {
+    const u = $update;
+    if (loadedRelease === null && u?.installed) loadedRelease = u.installed;
+    if (u?.active) {
+      if (!untrack(() => updateLock)) hidePeppy();
+      updateLock = true;
+      updateOutcome = null;
+      return;
+    }
+    if (!untrack(() => updateLock) || untrack(() => updateOutcome) || $connection !== 'open') return;
+    if (u && ['done', 'failed'].includes(u.state)) {
+      updateOutcome = u.state;
+      const changed = u.state === 'done' && u.installed && u.installed !== loadedRelease;
+      setTimeout(() => {
+        if (changed) location.reload();
+        else {
+          updateLock = false;
+          updateOutcome = null;
+        }
+      }, OUTCOME_MS);
+    }
+  });
   async function showVisualisation() {
     try {
       await showPeppy();
@@ -474,6 +507,12 @@
 
   {#if $pairing}
     <PairingFrame request={$pairing} />
+  {/if}
+
+  <!-- ADR-0110 §6: above even setup and pairing - nothing on this panel is
+       usable while its software is being replaced. -->
+  {#if updateLock}
+    <UpdateScreen update={$update} reconnecting={$connection !== 'open'} outcome={updateOutcome} />
   {/if}
 </div>
 {/if}

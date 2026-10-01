@@ -28,7 +28,7 @@ StateDirectory=go-librespot
 # is exactly the "invalid config override format: onfig_dir" failure
 # found on gexis. Confirmed against go-librespot's own documented -c
 # usage, not just inferred from the error text.
-ExecStart=/usr/local/bin/go-librespot --config_dir /var/lib/go-librespot
+ExecStart=/usr/bin/go-librespot --config_dir /var/lib/go-librespot
 Restart=on-failure
 RestartSec=2
 User=pi

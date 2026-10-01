@@ -363,9 +363,11 @@ class TestTheAlsaDefault:
         assert "hw:" not in body
 
     def test_the_image_installs_it_separately_from_output_conf(self):
-        run = (self._repo() / "image" / "stage-gexis" / "00-alsa" / "02-run.sh").read_text()
-        assert "zz-gexis-default.conf" in run
-        assert "/etc/alsa/conf.d/zz-gexis-default.conf" in run
+        # ADR-0107: gexis-system installs it, as its own file - output.conf
+        # is only a default placed once, because an output change rewrites it.
+        build = (self._repo() / "packaging" / "system" / "build.sh").read_text()
+        assert 'zz-gexis-default.conf" /etc/alsa/conf.d/zz-gexis-default.conf' in build
+        assert '"$DEF/output.conf"' in build
 
     def test_the_regenerated_output_conf_does_not_carry_it(self):
         """If this ever moves into the template, an output change silently

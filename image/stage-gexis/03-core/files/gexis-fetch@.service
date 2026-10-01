@@ -10,5 +10,5 @@ After=network-online.target
 [Service]
 Type=oneshot
 RemainAfterExit=yes
-ExecStart=/usr/local/lib/gexis/gexis-fetch-component %i
+ExecStart=/usr/lib/gexis/gexis-fetch-component %i
 TimeoutStartSec=600

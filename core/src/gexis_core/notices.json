@@ -394,6 +394,16 @@
       ]
     },
     {
+      "name": "Screen presets",
+      "group": "core",
+      "role": "The list of screens Attached screen and setup's Screen step offer: makers, models, resolutions, rotations.",
+      "author": "foonerd (\"Just a nerd\")",
+      "licence": "MIT",
+      "url": "https://github.com/foonerd/pi_screen_setup",
+      "arrives": "display_presets.json 1.5.9 at commit 8c0896b3, kept with its licence in core/src/gexis_core/screens_data/",
+      "sources": []
+    },
+    {
       "name": "DSEG7",
       "group": "fonts",
       "role": "The seven-segment digits of the visualiser's clocks.",

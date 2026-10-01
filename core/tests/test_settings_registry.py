@@ -52,7 +52,9 @@ def test_the_shipped_registry_loads_and_every_number_is_bounded():
 #: **It is empty now, and it can only shrink.** `skin` was the last entry:
 #: the picker arrived in the 2026-09-22 drop and the row with it
 #: (ADR-0051 §4).
-DESIGN_KEYS_NOT_YET_IN_THE_REGISTRY: set[str] = set()
+#: Phase 13b's rows (ADR-0109, ADR-0022 inventory), built with the screen
+#: and the skin plugins.
+DESIGN_KEYS_NOT_YET_IN_THE_REGISTRY: set[str] = {"screen", "rotation", "skin_size"}
 
 #: A design key the registry **deliberately** does not have, which is a
 #: different statement from "not yet" and has to be said out loud: ADR-0022's
@@ -91,18 +93,37 @@ DESIGN_KEYS_WE_DECLINED = {
 
 #: Not a row. The Wi-Fi password sheet builds its key at runtime from the
 #: network name - `k: 'wifi_pass_' + it[0]` - and the literal prefix is all
-#: the regex below can see. It will never be a registry key.
-DESIGN_KEYS_THAT_ARE_NOT_ROWS = {"wifi_pass_"}
+#: the regex below can see. It will never be a registry key. Nor is *Upload
+#: a plugin*: Settings draws it itself on a phone (ADR-0106).
+DESIGN_KEYS_THAT_ARE_NOT_ROWS = {"wifi_pass_", "plugin_upload"}
+
+#: The design's own names for rows we named first (round 2 drew the Updates
+#: group after 13c had built it; the review asked Claude Design to adopt
+#: ours).
+DESIGN_KEYS_NAMED_OTHERWISE = {"release": "update_status", "check_now": "update_check",
+                               "update_now": "update_install"}
+
+#: Rows a plugin's manifest brings (ADR-0086), not the registry: the design
+#: draws Beszel's and Plexamp's.
+DESIGN_KEYS_FROM_MANIFESTS = {"plugin_beszel", "plugin_plexamp", "beszel_hub", "beszel_token"}
 
 
 def test_registry_keys_are_the_designs_keys_apart_from_recorded_deviations():
+    # Quoted either way: round 2 (2026-10-01) writes `k: "idle_timeout"`, and a
+    # pattern for single quotes alone found no keys at all - the guard passed
+    # by seeing nothing.
     design_keys = set(
-        re.findall(r"\bk:\s*'([a-z_0-9]+)'", DESIGN.read_text())
+        re.findall(r"\bk:\s*['\"]([a-z_0-9]+)['\"]", DESIGN.read_text())
     ) - DESIGN_KEYS_THAT_ARE_NOT_ROWS
+    assert len(design_keys) > 50, "the design's keys were not found: the pattern no longer matches"
+    design_keys = {DESIGN_KEYS_NAMED_OTHERWISE.get(k, k) for k in design_keys} - DESIGN_KEYS_FROM_MANIFESTS
     ours = {r["key"] for r in _rows()}
     # `idle_grace` was merged into `idle_timeout` (ADR-0033) and is gone
     # from the drop, so every outstanding gap belongs to 9g or 9h.
-    assert design_keys - ours == DESIGN_KEYS_NOT_YET_IN_THE_REGISTRY | DESIGN_KEYS_WE_DECLINED
+    # The declined rows are gone from the design since round 2; none may
+    # come back.
+    assert not design_keys & DESIGN_KEYS_WE_DECLINED
+    assert design_keys - ours == DESIGN_KEYS_NOT_YET_IN_THE_REGISTRY
     # Every row below is one the 2026-09-20 drop stopped surfacing.
     # ADR-0022's amendment keeps them inventoried - George: "decisions. They
     # should still be kept on a list, but not used at this point in the
@@ -118,7 +139,11 @@ def test_registry_keys_are_the_designs_keys_apart_from_recorded_deviations():
     # (2026-09-21): Pixabay takes one category per request and the drop has
     # no row for which ones, for how often the picture changes, or for how
     # bright it is.
-    assert ours - design_keys == {
+    # Round 2 (2026-10-01) drew several of these (the Updates group, Legal,
+    # the visualiser's record speed...), so the rows only we have are a
+    # subset of this recorded list: a new row of ours the design lacks must
+    # be added here, with its reason.
+    assert ours - design_keys <= {
         "api_loopback", "backup", "brightness",
         "confidence", "factory_reset", "idle_close", "image_build",
         "lms_player", "log_level", "plugins", "power", "release_ladder",
@@ -159,6 +184,13 @@ def test_registry_keys_are_the_designs_keys_apart_from_recorded_deviations():
         # ADR-0103, 2026-09-28: George asked for persistent logs behind a
         # debug switch. The design predates a device worth debugging.
         "debug_logs",
+        # ADR-0105 section 6, Phase 13c step 5: the Updates screen George
+        # accepted with the ADR (installed version, check, update now,
+        # Manual / Automatic), and the channel he confirmed on 2026-09-30.
+        # The design predates updates over the network.
+        "update_status", "update_check", "update_install", "update_channel",
+        # George, 2026-10-01: the update gets its own tile.
+        "software_update",
     }
 
 
@@ -489,7 +521,7 @@ def test_the_device_name_warning_says_what_this_device_does():
     assert row["warn"] == "Change only takes place after a restart of the device."
 
 
-def test_the_shipped_registry_hides_twenty_rows_and_shows_the_rest():
+def test_the_shipped_registry_hides_the_inventoried_rows_and_shows_the_rest():
     rows = _rows()
     kept = [r for r in rows if r.get("surfaced") is False]
     # 17 since 2026-09-24: George asked to see the confidence threshold,
@@ -500,7 +532,15 @@ def test_the_shipped_registry_hides_twenty_rows_and_shows_the_rest():
     # having been inventoried and unwired since ADR-0022 - which cost a hand
     # copy over SSH the day the card was reflashed. `restore` arrived with it
     # and was surfaced from the start, so it never appears in this count.
-    assert len(kept) == 16, "ADR-0022's amendment: inventoried, not surfaced"
+    #
+    # **15 since 2026-09-30**: `updates` (Manual / Automatic) is surfaced
+    # with the mechanism it names (ADR-0105 section 6: "surfaced when the
+    # mechanism exists").
+    #
+    # **17 since 2026-10-01**: `update_check` and `update_install` stop being
+    # rows (ADR-0110 §2) - the Release tile's button and the update modal
+    # run them, through the same action route.
+    assert len(kept) == 17, "ADR-0022's amendment: inventoried, not surfaced"
     # Every one of them is still served by the API.
     assert all(r.get("key") for r in kept)
     # 54 at the start of 9d, plus the two rows the design has and the plan
@@ -530,15 +570,21 @@ def test_the_shipped_registry_hides_twenty_rows_and_shows_the_rest():
     # **77**: `rotation_mode` (ADR-0097). **79**: `legal` and `credits`
     # (ADR-0099). **80**: `start_max` (ADR-0054 §5, 2026-09-28; first as Spotify's own row).
     # **81**: `debug_logs` (ADR-0103, 2026-09-28). **82**: `clock_format`
-    # (George, 2026-09-28, with Phase 13's setup).
-    assert len(rows) == 82
+    # (George, 2026-09-28, with Phase 13's setup). **86 since 2026-09-30**:
+    # the Updates rows (ADR-0105 section 6) - Release, Check now, Update now,
+    # and the channel.
+    # **87**: Software update, its own tile (George, 2026-10-01).
+    assert len(rows) == 87
     # 59 since 2026-09-25: `backup` was surfaced and `restore` arrived with
     # it (ADR-0083), so the shown count gains two while the hidden one loses
     # one. **58 since 2026-09-26**, less the threshold row. **60 since
     # 2026-09-27**, with the animated skins' two. **64 since 2026-09-28**,
     # with Spotify's starting volume.
-    # **65**, with Debug logs. **66**, with the clock format.
-    assert len(rows) - len(kept) == 66
+    # **65**, with Debug logs. **66**, with the clock format. **71**, with
+    # the four Updates rows and `updates` surfaced (2026-09-30).
+    # 69 when ADR-0110 folded Check now and Update now into the Release
+    # tile; 70 with Software update (George, 2026-10-01).
+    assert len(rows) - len(kept) == 70
 
 
 def test_the_clock_can_be_turned_off_without_taking_the_screen_with_it():

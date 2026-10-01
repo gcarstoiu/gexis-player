@@ -519,6 +519,7 @@ class Settings:
         lists: set[str] | None = None,
         on_change: Callable[[], None] | None = None,
         options: dict[str, Callable[[], Any]] | None = None,
+        notes: dict[str, Callable[[], str | None]] | None = None,
         seed_path: Path = SEED_PATH,
     ) -> None:
         self._store = store
@@ -551,8 +552,12 @@ class Settings:
         if unknown_sources:
             raise ValueError(f"not an option source: {sorted(unknown_sources)}")
         self._on_change = on_change
+        #: key -> the row's note as it is now, for a note that changes with
+        #: the device (the Release row's *What's new*). None keeps the
+        #: registry's own note.
+        self._notes = notes or {}
         self._seed = load_seed(self._rows, seed_path)
-        unknown = (set(self._defaults) | set(self._wired) | self._lists) - set(self._rows)
+        unknown = (set(self._defaults) | set(self._wired) | self._lists | set(self._notes)) - set(self._rows)
         if unknown:
             raise ValueError(f"not in the registry: {sorted(unknown)}")
         not_lists = {k for k in self._lists if self._rows[k]["type"] != "list"}
@@ -629,6 +634,10 @@ class Settings:
                 if source is not None:
                     public["options"] = list(self._options.get(source, tuple)())
                 public["value"] = self.value(row["key"])
+                if row["key"] in self._notes:
+                    note = self._notes[row["key"]]()
+                    if note:
+                        public["note"] = note
                 # A row is wired when something acts on it. For most that is
                 # a `set` callback; for a `list` it is the items route.
                 public["wired"] = row["key"] in self._wired or row["key"] in self._lists

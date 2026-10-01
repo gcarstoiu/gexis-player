@@ -65,6 +65,7 @@ from gexis_core.peppy import (
 )
 from gexis_core.peppy_metadata import PeppyMetadataWriter
 from gexis_core.model import BLANK_METADATA, TrackMetadata
+from gexis_core import settings_migrations, updates
 from gexis_core.settings import SettingsStore
 from gexis_core.settings_registry import Settings, load_registry
 from gexis_core.splash import Splash
@@ -269,6 +270,9 @@ async def main() -> None:
     # is exercised for real here, not just in unit tests: this is what
     # proves the DB file and schema actually come up clean on the image.
     settings_store = SettingsStore()
+    # ADR-0105 §5: what an update or a restored backup brings forward, before
+    # anything reads a setting.
+    settings_migrations.migrate(settings_store)
     logger.info("settings: store ready at %s", settings_store.path)
 
     # A server chosen from the Settings sheet (ADR-0044 §1's `kind: server`)
@@ -279,6 +283,8 @@ async def main() -> None:
     # and the switch happens on the next start**, which is what the panel
     # says when a server is picked.
     config = _chosen_server(config, settings_store)
+    if not config.lms_host:
+        logger.info("lms: no server address yet; LMS stays off until setup or Settings gives one")
 
     # **ADR-0055: the output decides the mixer control's name.** `DAC` on
     # this HAT, `PCM` on the Pi's own jack, none at all on HDMI - and the
@@ -1340,8 +1346,18 @@ async def main() -> None:
             # the image in `deploy/` is on the build host, not here. A
             # device flashed before that stage existed says so rather than
             # showing an empty row.
-            "version": lambda: image_info().get("version") or "unknown",
-            "image_build": lambda: image_info().get("built") or "unknown",
+            # **The release, from the installed gexis-player** (ADR-0107):
+            # an update changes it and the image stamp does not. The stamp
+            # stays the answer on a device older than packages.
+            # ADR-0110 §1: the number (`0.2.4`); the long form is on the
+            # Image build row, for support.
+            "version": lambda: updates.short(updates.installed_release()) or image_info().get("version") or "unknown",
+            # ADR-0105 section 6: what the updater last said.
+            # George, 2026-10-01: Release only says what runs here, and on
+            # which channel; Software update holds the rest.
+            "update_status": lambda: updates.release_line(settings_store.get("update_channel") or "Stable"),
+            "software_update": lambda: updates.sentence(),
+            "image_build": lambda: " · ".join(x for x in (image_info().get("built"), updates.installed_release()) if x) or "unknown",
             # ADR-0086 as amended: a synthesised switch reads what systemd says
             # about the unit until somebody uses it.
             **plugin_switch_defaults,
@@ -1356,6 +1372,9 @@ async def main() -> None:
             # without a restart.
             "output_device": lambda: [o.option for o in outputs.discover()],
         },
+        # The Release row's note: what the waiting or just-installed release
+        # says changed (2026-10-01, George).
+        notes={"software_update": updates.whats_new},
         # Wired = something reads it (ADR-0035). The token is read on every
         # Popular lookup, so it takes effect as soon as it is typed.
         # Wired = something reads it, or something happens. `lms_server` is
@@ -1466,6 +1485,13 @@ async def main() -> None:
                # `volume_managed` is: it is how a row says it reports
                # something rather than nothing (ADR-0022's `version`).
                "version": None, "image_build": None,
+               # ADR-0105 section 6. The updater runs in units of its own -
+               # an install restarts the core - and reads `updates` and
+               # `update_channel` itself; the core only starts it.
+               "update_status": None,
+               "update_check": lambda _=None: updates.start(updates.CHECK_UNIT),
+               "update_install": lambda _=None: updates.start(updates.INSTALL_UNIT),
+               "updates": None, "update_channel": None,
                "reboot": lambda _: asyncio.ensure_future(_reboot()),
                # **ADR-0083.** A backup that stays on the device does not
                # survive the event it exists for, so this writes into a share
@@ -1609,6 +1635,11 @@ async def main() -> None:
         A row that is not in `RENDERER_ROWS` - a plugin renderer, one day - has
         no switch and is always on.
         """
+        if renderer_id == "lms" and not config.lms_host:
+            # **No server, no LMS** (ADR-0107): nothing to connect to, and a
+            # squeezelite left running would find a server by itself that the
+            # core knows nothing about. Setup or Settings gives it one.
+            return False
         row = RENDERER_ROWS.get(renderer_id)
         if row is None:
             return True
@@ -2087,6 +2118,26 @@ async def main() -> None:
 
     if renderer_enabled("lms"):
         asyncio.ensure_future(_check_lms_volume_control())
+
+    async def _follow_updates() -> None:
+        """**An update's progress reaches the screen** (ADR-0105 section 6,
+        ADR-0110). The updater writes its status file as it goes; `/state`
+        carries what it says as `update` (the modal, the panel's lock), and
+        Settings is told when its *state* changes - not on every second of a
+        download's progress, which only `update` follows. Read at start too,
+        so a core the install restarted comes back still showing it. Every
+        3 s, every second while an install runs."""
+        last_state = None
+        while True:
+            view = await asyncio.to_thread(updates.view)
+            state_store.set_update(view)
+            key = (view.get("state"), view.get("release"), view.get("installed"))
+            if last_state is not None and key != last_state:
+                state_store.bump_settings_revision()
+            last_state = key
+            await asyncio.sleep(1 if view.get("active") else 3)
+
+    asyncio.ensure_future(_follow_updates())
 
     async def _restart_core_soon() -> None:
         """The plugin list and its settings rows are read at start, so a

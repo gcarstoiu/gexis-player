@@ -29,8 +29,8 @@ EnvironmentFile=-/run/gexis/plugins/beszel.env
 # not documented Beszel behaviour, so the check below asserts it on every start
 # rather than trusting it across an upgrade - *after* the agent has started,
 # because what matters is what it actually bound, not what it was asked to.
-ExecStart=/usr/local/bin/beszel-agent --listen -1
-ExecStartPost=/usr/local/lib/gexis/beszel-agent-listen-check.sh
+ExecStart=/usr/bin/beszel-agent --listen -1
+ExecStartPost=/usr/lib/gexis/beszel-agent-listen-check.sh
 # The agent's `fingerprint` lives here, and it is the identity the hub binds
 # this system to - lose it and the hub no longer recognises the device.
 # StateDirectory rather than an install-time mkdir, for the reason

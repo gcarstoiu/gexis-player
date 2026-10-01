@@ -81,15 +81,15 @@ EnvironmentFile=/etc/gexis/kiosk.env
 # helper is missing entirely. On its own it is a race it loses about half the
 # time, which is why the console text was intermittent.
 ExecStartPre=-+/bin/sh -c 'printf "\033c" > /dev/tty1'
-ExecStartPre=-+/usr/local/bin/gexis-splash-fb handover /usr/share/gexis/panel-background.png
-ExecStart=/usr/bin/labwc -s /usr/local/bin/gexis-kiosk-start
+ExecStartPre=-+/usr/bin/gexis-splash-fb handover /usr/share/gexis/panel-background.png
+ExecStart=/usr/bin/labwc -s /usr/bin/gexis-kiosk-start
 
 # Put the console back when this unit stops - including when it FAILS.
 # Without it a failed boot sits on the boot screen looking exactly like a
 # slow one, which is a worse failure than a black panel: it hides that
 # anything is wrong. Measured 2026-09-20: a KD_GRAPHICS set with no
 # compositor running persists indefinitely, so nothing reclaims it on its own.
-ExecStopPost=-+/usr/local/bin/gexis-splash-fb text
+ExecStopPost=-+/usr/bin/gexis-splash-fb text
 
 # Phase 4 criterion 1: "starting on boot, never restarting". Restart=no is
 # the literal reading and the right one - a compositor that respawns in a

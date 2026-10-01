@@ -9,7 +9,7 @@ Wants=network-online.target
 
 [Service]
 Type=simple
-ExecStart=/usr/local/lib/gexis/gexis-run-uploaded %i
+ExecStart=/usr/lib/gexis/gexis-run-uploaded %i
 # ADR-0088: its settings, written by the core and read here before the
 # privileges go.
 EnvironmentFile=-/run/gexis/plugins/%i.env

@@ -920,6 +920,75 @@ a probe that cannot say *"I found nothing to look at"* is indistinguishable
 from one that found nothing held. And a fast "success" deserves the same
 suspicion as a failure when the thing released is known to hold on for 2 s.
 
+
+**48. The release's completeness check counted from the list it was checking**
+(2026-09-30, Phase 13c). The first local release was built from image 833 and
+reported *"tested set of 1010 OS packages"*, every one fetched and every count
+equal. It left out alsa-lib - the one package the pin, ADR-0021 and a whole
+decision exist to protect. alsa-lib is held (`apt-mark hold`), dpkg writes that
+as `Status: hold ok installed`, and the script took only `install ok
+installed`. Its check compared the release against the same filtered list, so
+the two agreed. Found only because a clean container was then asked to
+install the release on its own, and apt said the pinned version *"is not
+installable"*.
+
+**A completeness check has to count from the source on its own terms**, not
+from the output of the step it checks. The fix counts every record dpkg calls
+installed, whatever its selection, and names the pinned package outright.
+Case 17 again: a check that cannot see what it was built to exclude.
+
+**49. The release was published in a layout its own updater could not read**
+(2026-09-30 to 10-01, Phase 13c).
+- **What went wrong.** Release 856 was built from commit 11ef485. The parts
+  layout and the updater that reads it came 45 minutes later, in b784e93.
+  856 was then published in the parts layout.
+- **What it looked like.** A device on 852 found 856 and failed at once: its
+  updater read the channel the old way and asked GitHub for
+  `ours-fb5139447456-debian`, which got 404.
+- **The second mistake.** The fix copied "856's updater" onto the device,
+  checked byte for byte against 856's package. It failed the same way. The
+  copy was faithful; the package was simply older than the format. The check
+  answered *is this the file the release ships?* when the question was *can
+  this file read how the release is published?*
+- **Who it reached.** Only test devices. Nothing is public yet.
+
+**A format change has to arrive through a release its old reader can still
+read, and a release is published only in a format its own updater reads.**
+The next release is built from the code that has the parts updater. The
+channel file should say which updater it needs, so a device that is too old
+reports *needs a newer updater* instead of a 404.
+
+**50. Our own release tags renamed the build** (2026-10-01, Phase 13c).
+- **What went wrong.** `gh release create` makes a git tag on GitHub for
+  every part, every release page and `channels`. Once fetched, `git describe
+  --tags` took the nearest of them.
+- **What it looked like.** The image after 856 was about to call itself
+  `channels-46-g71f1e11`, and its packages would have been versioned from
+  `ours-…` tags, which sort nowhere near `0.2.1+git…`.
+- **How it was caught.** By reading `git describe` before the build, not by
+  the build.
+
+**Name the tags a version may come from** (`--match 'v[0-9]*'`), wherever a
+version is described.
+
+**51. The revert restored a file the running script was no longer reading**
+(2026-10-01, Phase 13c).
+- **What went wrong.** A one-line edit was made to `publish.sh` while a
+  2½-hour publish was running it. The edit rewrote the file in place, which
+  is the file bash had open. `git checkout` then "reverted" it by writing a
+  new file under the same name, while bash kept reading the edited one.
+- **What it looked like.** `git diff` was clean, so it looked safe. The
+  upload loop had already been read whole, so it ran to the end, every part
+  complete. Then bash read past the loop from the old position in the longer
+  file: `line 147: syntax error near unexpected token '('`. That left no
+  release page and no channel move.
+- **Who it reached.** Nothing was lost: the parts were complete and the next
+  release used them.
+
+**Never change a script that is running.** Stage the change in a copy and
+swap it in after the run ends. *The file on disk is right* is not
+*the file the process reads is right*.
+
 ## Common shape
 
 Every case had a *plausible* substitute for the real target — the build

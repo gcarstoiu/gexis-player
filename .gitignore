@@ -27,3 +27,7 @@ build/
 # are readable by anyone else was never established. The mapping lives here
 # instead - see docs/SESSIONS.local.md's own header.
 /docs/SESSIONS.local.md
+
+# ADR-0107: built packages
+packaging/out/
+packaging/release/out/

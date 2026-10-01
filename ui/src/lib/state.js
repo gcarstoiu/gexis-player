@@ -110,6 +110,9 @@ export const panel = derived(playback, ($s) => $s?.panel ?? { visualiser: false,
  *  has decided. Never carries the password: the panel asks `/setup/status`
  *  for that over loopback (`setupPassword`). */
 export const setup = derived(playback, ($s) => $s?.setup ?? null);
+//: ADR-0110: what the updater is doing - the modal's steps, and `active`,
+//: which locks the panel while an install runs.
+export const update = derived(playback, ($s) => $s?.update ?? null);
 
 /** The setup network's password, which the core gives to the panel only. */
 export async function setupPassword() {
