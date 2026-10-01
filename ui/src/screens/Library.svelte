@@ -1915,10 +1915,10 @@
     box-sizing: border-box;
     /* ADR-0109: on the library home the cards (200) and the New Music
        strip (176) take the height beyond 800 between them, in that
-       proportion: 157 / 200 / 229 at 720 / 800 / 853. **Never shorter than
-       what they hold** - the design's own 157 at 720 is about 6 px less than
-       the icon, name and count need (the handoff review). */
-    min-height: calc(200px + (var(--panel-h) - 800px) * 200 / 376);
+       proportion: 200 / 229 at 800 / 853. **Never under 164**, what the icon,
+       name and count need - the rule alone gives 157 at 720 (the handoff
+       review; round 2 took it back as max(200k, 164)). */
+    height: max(164px, calc(200px + (var(--panel-h) - 800px) * 200 / 376));
     transition:
       transform 110ms cubic-bezier(0.2, 0.8, 0.2, 1),
       background 110ms linear,

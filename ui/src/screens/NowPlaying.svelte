@@ -1521,7 +1521,7 @@
   }
   .bar__left { justify-self: start; display: flex; align-items: center; gap: 14px; }
   .bar__mid { justify-self: center; display: flex; align-items: center; gap: 22px; }
-  .bar__right { justify-self: end; display: flex; align-items: center; gap: 20px; }
+  .bar__right { justify-self: end; display: flex; align-items: center; gap: 14px; }
 
   .btn {
     width: var(--ctl);
