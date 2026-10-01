@@ -18,6 +18,7 @@
   import { onDestroy } from 'svelte';
   import SourceMark from '../lib/SourceMark.svelte';
   import { answerPairing } from '../lib/state.js';
+  import { screen } from '../lib/family.svelte.js';
 
   let { request } = $props();
 
@@ -79,7 +80,85 @@
   $effect(() => {
     if (asking) answering = false;
   });
+
+  //: ADR-0109, Bar family (design `Bar Panels` p2; round 2 `Bar States`
+  //: pair-*): one row - who, the code, the answer - and the countdown as a
+  //: bar draining along the bottom edge. The same countdown as the panel's
+  //: words, so it decides nothing either.
+  const bar = $derived(screen.family === 'bar');
+  const windowS = $derived(request?.window ?? 30);
 </script>
+
+{#snippet answers()}
+  <div class="pb__actions">
+    <button class="pair__btn pb__btn" type="button" disabled={answering} onclick={() => answer(false)}>
+      Reject
+    </button>
+    <button class="pair__btn pair__btn--accept pb__btn" type="button" disabled={answering} onclick={() => answer(true)}>
+      Accept
+    </button>
+  </div>
+{/snippet}
+
+{#snippet who()}
+  <div class="pb__who">
+    <SourceMark source="bluetooth" size={56} color="var(--accent-bluetooth)" />
+    <div class="pb__whotext">
+      <div class="pair__kicker">Pairing request</div>
+      <div class="pb__device">{request?.device ?? ''}</div>
+    </div>
+  </div>
+{/snippet}
+
+{#if bar}
+<div class="pair pair--bar" role="dialog" aria-label="Pairing request">
+  {#if asking}
+    <div class="pb__drain" aria-label="Expires in {left}s">
+      <div class="pb__left" style:width={`${Math.max(0, Math.min(100, (left / windowS) * 100))}%`}></div>
+    </div>
+  {/if}
+  {#if asking && grouped}
+    <div class="pb pb--code">
+      {@render who()}
+      <div class="pb__code">
+        <div class="pair__codelabel">Code on your phone</div>
+        <div class="pb__digits" class:pb__digits--wide={screen.width > 1500}>{grouped}</div>
+      </div>
+      {@render answers()}
+    </div>
+  {:else if asking}
+    <!-- Round 2, pair-nocode: nothing to compare, so the device is the
+         subject - its disc and its name at 48. -->
+    <div class="pb pb--nocode">
+      <div class="pair__disc">
+        <span class="pair__ring"></span>
+        <span class="pair__ring pair__ring--late"></span>
+        <span class="pair__face">
+          <SourceMark source="bluetooth" size={52} color="var(--accent-bluetooth)" />
+        </span>
+      </div>
+      <div class="pb__whotext pb__grow">
+        <div class="pair__kicker">Pairing request</div>
+        <div class="pb__device pb__device--big">{request?.device ?? ''}</div>
+      </div>
+      {@render answers()}
+    </div>
+  {:else}
+    <div class="pb pb--done">
+      {@render who()}
+      <div class="pair__done">
+        {#if accepted}
+          <span class="pair__tick"><i></i><i></i></span>
+        {:else}
+          <span class="pair__cross"><i></i><i></i></span>
+        {/if}
+        <span class="pair__donelabel" class:is-paired={accepted}>{label}</span>
+      </div>
+      <div></div>
+    </div>
+  {/if}
+</div>
+{:else}
 
 <div class="pair" role="dialog" aria-label="Pairing request">
   <div class="pair__kicker">Pairing request</div>
@@ -131,6 +210,7 @@
     </div>
   {/if}
 </div>
+{/if}
 
 <style>
   .pair {
@@ -343,5 +423,102 @@
   }
   .pair__donelabel.is-paired {
     color: var(--accent-bluetooth);
+  }
+
+  /* ADR-0109, Bar family: `Bar Panels` p2, `Bar States` pair-*. */
+  .pair--bar {
+    display: block;
+  }
+  .pb {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    align-items: center;
+    padding: 0 56px;
+    gap: 40px;
+  }
+  .pb--code {
+    grid-template-columns: minmax(0, 1fr) auto auto;
+  }
+  .pb--done {
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  }
+  .pb--nocode {
+    display: flex;
+  }
+  .pb__who {
+    display: flex;
+    align-items: center;
+    gap: 22px;
+    min-width: 0;
+  }
+  .pb__whotext {
+    min-width: 0;
+  }
+  .pb__whotext .pair__kicker {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .pb__grow {
+    flex: 1;
+  }
+  .pb__device {
+    margin-top: 8px;
+    font-size: 30px;
+    font-weight: 700;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .pb__device--big {
+    margin-top: 10px;
+    font-size: 48px;
+    font-weight: 800;
+    letter-spacing: -0.015em;
+  }
+  .pb__code {
+    text-align: center;
+  }
+  .pb__code .pair__codelabel {
+    display: block;
+  }
+  .pb__digits {
+    margin-top: 12px;
+    font-family: var(--font-mono);
+    font-size: 88px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    color: var(--accent-bluetooth);
+    line-height: 1;
+    white-space: nowrap;
+  }
+  .pb__digits--wide {
+    font-size: 110px;
+  }
+  .pb__actions {
+    display: flex;
+    gap: 14px;
+    justify-self: end;
+    flex-shrink: 0;
+  }
+  .pb__btn {
+    padding: 0 36px;
+  }
+  .pb__drain {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 6px;
+    background: rgba(233, 238, 242, 0.08);
+  }
+  .pb__left {
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    background: var(--accent-bluetooth);
+    transition: width 1s linear;
   }
 </style>
