@@ -80,3 +80,32 @@ def test_two_choices_without_a_keep_go_back_to_the_last_kept_one(tmp_path):
     screen_apply.choose(Applied("waveshare-11.9-hdmi", 0), **f, now=3)
     screen_apply.revert(**f)
     assert env_of(f["env"])["GEXIS_SCREEN_ID"] == "waveshare-10.1-hdmi-b"
+
+
+def test_the_question_names_the_model_and_the_one_it_goes_back_to(tmp_path):
+    from gexis_core.__main__ import screen_question
+    f = files(tmp_path)
+    screen_apply.choose(Applied("waveshare-10.1-hdmi-b", 0), **f, now=1)
+    screen_apply.keep(state=f["state"])
+    screen_apply.choose(Applied("waveshare-7.9-hdmi", 0), **f, now=2)
+    q = screen_question(screen_apply.read_state(f["state"]))
+    assert q["model"].startswith("Waveshare 7.9") and q["previous"].startswith("Waveshare 10.1")
+    assert not q["untested"] and not q["rotation_only"] and q["deadline"] is None
+
+
+def test_a_rotation_only_change_asks_about_the_rotation(tmp_path):
+    from gexis_core.__main__ import screen_question
+    f = files(tmp_path)
+    screen_apply.choose(Applied("waveshare-10.1-hdmi-b", 0), **f, now=1)
+    screen_apply.keep(state=f["state"])
+    screen_apply.choose(Applied("waveshare-10.1-hdmi-b", 180), **f, now=2)
+    q = screen_question(screen_apply.read_state(f["state"]))
+    assert q["rotation_only"] and q["previous_rotation"] == "0°"
+
+
+def test_a_kept_screen_asks_nothing(tmp_path):
+    from gexis_core.__main__ import screen_question
+    f = files(tmp_path)
+    screen_apply.choose(Applied("waveshare-10.1-hdmi-b", 0), **f, now=1)
+    screen_apply.keep(state=f["state"])
+    assert screen_question(screen_apply.read_state(f["state"])) is None

@@ -66,6 +66,7 @@ class StateStore:
         self._panel: dict = {"visualiser": False, "idle": False, "idle_request": None}
         self._setup: dict | None = None
         self._update: dict | None = None
+        self._screen_confirm: dict | None = None
         #: **ADR-0081: the cover the daemon found for a renderer that sent
         #: none.** `renderer_id -> (track, url)`, applied in `state` below
         #: only where the renderer's own artwork is absent. Keyed on the
@@ -117,6 +118,7 @@ class StateStore:
             panel=dict(self._panel),
             setup=dict(self._setup) if self._setup else None,
             update=dict(self._update) if self._update else None,
+            screen_confirm=dict(self._screen_confirm) if self._screen_confirm else None,
         )
 
     def set_active(self, renderer_id: str | None) -> None:
@@ -361,6 +363,13 @@ class StateStore:
         if update == self._update:
             return
         self._update = dict(update) if update is not None else None
+        self._notify()
+
+    def set_screen_confirm(self, confirm: dict | None) -> None:
+        """ADR-0109 decision 5: the question the panel shows, on a change only."""
+        if confirm == self._screen_confirm:
+            return
+        self._screen_confirm = dict(confirm) if confirm is not None else None
         self._notify()
 
     def bump_settings_revision(self) -> None:

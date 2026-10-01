@@ -113,6 +113,10 @@ export const setup = derived(playback, ($s) => $s?.setup ?? null);
 //: ADR-0110: what the updater is doing - the modal's steps, and `active`,
 //: which locks the panel while an install runs.
 export const update = derived(playback, ($s) => $s?.update ?? null);
+//: ADR-0109 decision 5: Keep this screen? - asked while a newly chosen
+//: screen waits for a touch on the panel.
+export const screenConfirm = derived(playback, ($s) => $s?.screen_confirm ?? null);
+export const answerScreen = (answer) => post(`/screen/${answer}`);
 
 /** The setup network's password, which the core gives to the panel only. */
 export async function setupPassword() {

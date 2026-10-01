@@ -10,6 +10,7 @@ import functools
 import logging
 import re
 import subprocess
+import time
 from pathlib import Path
 
 import aiohttp
@@ -17,6 +18,7 @@ from dbus_next import BusType
 from dbus_next.aio import MessageBus
 
 from gexis_core import alsa, bluetooth_adapter_state, bluetooth_agent, device_name, journal, meters, skins, wifi
+from gexis_core import screen_apply, screens
 from gexis_core.adapters.base import VolumeMechanism
 from gexis_core.adapters.bluetooth import BluetoothAdapter
 from gexis_core.adapters.lms import LmsAdapter
@@ -250,6 +252,37 @@ async def _restore_done() -> None:
 async def _reboot() -> None:
     logger.info("reboot: requested from settings")
     await asyncio.create_subprocess_exec("systemctl", "reboot")
+
+
+#: ADR-0109 decision 5: how long the panel asks *Keep this screen?*, from its
+#: first frame; and how long a panel that never draws gets before the device
+#: goes back by itself (a dark screen never says it is dark).
+KEEP_S = 30.0
+NEVER_DRAWN_S = 120.0
+
+
+def _setup_running(setup: dict | None) -> bool:
+    return bool(setup and setup.get("network") in ("open", "joining", "failed"))
+
+
+def screen_question(state: dict, now: float | None = None) -> dict | None:
+    """What the panel shows while a screen waits for Keep, or None."""
+    if not state.get("pending") or not state.get("current"):
+        return None
+    current = state["current"]
+    previous = state.get("previous") or None
+    model = screens.by_id(current["screen"])
+    before = screens.by_id(previous["screen"]) if previous else None
+    rotation_only = bool(previous and previous["screen"] == current["screen"])
+    return {
+        "model": f"{model.maker} {model.model}" if model else current["screen"],
+        "untested": bool(model and not model.tested),
+        "previous": (f"{before.maker} {before.model}" if before else None),
+        "rotation_only": rotation_only,
+        "previous_rotation": f"{previous.get('rotation', 0)}°" if previous else "0°",
+        "deadline": None,
+        "total": KEEP_S,
+    }
 
 
 def read_timezone(localtime: Path = Path("/etc/localtime")) -> str | None:
@@ -1312,6 +1345,26 @@ async def main() -> None:
         if row.get("key")
     }
 
+    def _choose_screen(label: str | None = None, rotation: str | None = None) -> None:
+        """ADR-0109: write the chosen screen and rotation for the next start
+        (screen.env, and video= for a bar), then restart on it - unless
+        setup is under way, which restarts when it finishes."""
+        chosen = label if label is not None else settings.value("screen")
+        model = screens.by_label(chosen) if chosen else None
+        if model is None:
+            logger.warning("screen: %r is not a screen gexis knows; nothing applied", chosen)
+            return
+        turn = screen_apply.parse_rotation(rotation if rotation is not None else settings.value("rotation"))
+        screen_apply.choose(screen_apply.Applied(model.id, turn))
+        logger.info("screen: %s at %d° chosen; it waits for Keep on the panel", model.id, turn)
+        if _setup_running(state_store.state.setup):
+            return
+
+        async def _restart() -> None:
+            await asyncio.sleep(2.0)
+            await asyncio.create_subprocess_exec("systemctl", "reboot")
+        asyncio.ensure_future(_restart())
+
     settings = Settings(
         settings_store,
         registry=Settings.with_plugins(load_registry(), installed_plugins, downloads,
@@ -1493,6 +1546,11 @@ async def main() -> None:
                "update_install": lambda _=None: updates.start(updates.INSTALL_UNIT),
                "updates": None, "update_channel": None,
                "reboot": lambda _: asyncio.ensure_future(_reboot()),
+               # ADR-0109: a screen or rotation chosen is written for the
+               # next start, and the device restarts on it - unless setup is
+               # under way, which restarts by itself when it finishes.
+               "screen": lambda value: _choose_screen(label=value),
+               "rotation": lambda value: _choose_screen(rotation=value),
                # **ADR-0083.** A backup that stays on the device does not
                # survive the event it exists for, so this writes into a share
                # of its own. `restore` is the other half and is a `list` row -
@@ -2139,6 +2197,49 @@ async def main() -> None:
 
     asyncio.ensure_future(_follow_updates())
 
+    # **ADR-0109 decision 5: Keep this screen?** A screen chosen before this
+    # start waits for a touch on the panel. The countdown starts at the
+    # panel's first frame; a panel that never draws goes back by itself.
+    screen_wait = {"task": None}
+
+    async def _screen_go_back(reason: str) -> None:
+        logger.warning("screen: %s; going back to the screen before", reason)
+        await asyncio.to_thread(screen_apply.revert)
+        state_store.set_screen_confirm(None)
+        await asyncio.sleep(1.5)
+        await asyncio.create_subprocess_exec("systemctl", "reboot")
+
+    async def _screen_countdown(seconds: float, reason: str) -> None:
+        await asyncio.sleep(seconds)
+        if screen_apply.read_state().get("pending"):
+            await _screen_go_back(reason)
+
+    def _screen_painted() -> None:
+        question = state_store.state.screen_confirm
+        if question is None or question.get("deadline") is not None:
+            return
+        state_store.set_screen_confirm({**question, "deadline": time.time() + KEEP_S})
+        if screen_wait["task"] is not None:
+            screen_wait["task"].cancel()
+        screen_wait["task"] = asyncio.ensure_future(_screen_countdown(KEEP_S, "nobody kept it within 30 s"))
+
+    async def _screen_answer(action: str) -> dict:
+        if action == "keep":
+            await asyncio.to_thread(screen_apply.keep)
+            if screen_wait["task"] is not None:
+                screen_wait["task"].cancel()
+            state_store.set_screen_confirm(None)
+            logger.info("screen: kept")
+            return {"kept": True}
+        asyncio.ensure_future(_screen_go_back("the panel asked to go back"))
+        return {"going_back": True}
+
+    _question = screen_question(screen_apply.read_state())
+    if _question is not None:
+        state_store.set_screen_confirm(_question)
+        screen_wait["task"] = asyncio.ensure_future(
+            _screen_countdown(NEVER_DRAWN_S, "the panel never drew on the new screen"))
+
     async def _restart_core_soon() -> None:
         """The plugin list and its settings rows are read at start, so a
         plugin arriving or leaving restarts the core - after the answer has
@@ -2241,6 +2342,8 @@ async def main() -> None:
         setup=setup_network,
         setup_flow=setup_flow,
         park=_park_renderers,
+        screen_answer=_screen_answer,
+        on_painted=_screen_painted,
         upload_plugin=_upload_plugin,
         uninstall_plugin=_uninstall_plugin,
         # ADR-0047: the idle screen's two providers.

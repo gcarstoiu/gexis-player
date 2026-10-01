@@ -113,6 +113,8 @@ class StateServer:
         setup=None,
         setup_flow=None,
         park=None,
+        screen_answer=None,
+        on_painted=None,
         upload_plugin=None,
         uninstall_plugin=None,
         weather=None,
@@ -169,6 +171,11 @@ class StateServer:
         #: reboot? It's a fresh start." Called by gexis-park.service as the
         #: device shuts down.
         self._park = park
+        #: ADR-0109 decision 5: *Keep this screen?* - `keep` or `revert`,
+        #: from the panel only.
+        self._screen_answer = screen_answer
+        #: The panel's first frame starts that question's countdown.
+        self._on_painted = on_painted
         #: ADR-0106: a package from a phone or computer, and taking one away.
         self._upload_plugin = upload_plugin
         self._uninstall_plugin = uninstall_plugin
@@ -1009,7 +1016,20 @@ class StateServer:
         reloads reports a first frame again, and a development machine has
         no plymouth at all. Neither is the panel's problem."""
         dropped = self._splash.drop() if self._splash is not None else False
+        if self._on_painted is not None and request.remote in ("127.0.0.1", "::1"):
+            self._on_painted()
         return web.json_response({"painted": True, "splash_dropped": dropped})
+
+    async def _handle_screen_answer(self, request: web.Request) -> web.Response:
+        """**ADR-0109 decision 2: Keep is pressed on the panel only** - a touch
+        there proves both the picture and the touch input. Loopback: the
+        panel's Chromium is on this device; a phone is not."""
+        if request.remote not in ("127.0.0.1", "::1"):
+            return web.json_response({"error": "only the panel answers this"}, status=403)
+        action = request.match_info["action"]
+        if action not in ("keep", "revert") or self._screen_answer is None:
+            return web.json_response({"error": f"unknown answer {action}"}, status=404)
+        return web.json_response(await self._screen_answer(action))
 
     async def _handle_peppy(self, request: web.Request) -> web.Response:
         action = request.match_info["action"]
@@ -1315,6 +1335,7 @@ class StateServer:
         app.router.add_get("/surface", self._handle_surface)
         app.router.add_post("/touch", self._handle_touch)
         app.router.add_post("/panel/painted", self._handle_painted)
+        app.router.add_post("/screen/{action}", self._handle_screen_answer)
         app.router.add_get("/setup/status", self._handle_setup_status)
         app.router.add_post("/renderers/park", self._handle_park)
         app.router.add_post("/plugins/upload", self._handle_plugin_upload)

@@ -19,7 +19,8 @@
   import SetupPage from './screens/SetupPage.svelte';
   import { screen } from './lib/family.svelte.js';
   import UpdateScreen from './screens/UpdateScreen.svelte';
-  import { update, connection, hidePeppy } from './lib/state.js';
+  import { update, connection, hidePeppy, screenConfirm, answerScreen } from './lib/state.js';
+  import KeepScreen from './screens/KeepScreen.svelte';
   import { loadSettings, settingValues } from './lib/settings.js';
   import { loadLibraryRoot } from './lib/library.js';
   import { reportTouch, showPeppy, reportPainted, reportShown } from './lib/state.js';
@@ -312,6 +313,19 @@
   // ADR-0032: the panel renders everything; a remote browser only settings.
   let surface = $state(null);
 
+  //: **ADR-0109 decision 5: Keep this screen?** The core asks while a newly
+  //: chosen screen waits; its countdown runs from the panel's first frame
+  //: (`deadline`, this device's clock). Only the panel answers (decision 2).
+  let keepNow = $state(Date.now());
+  $effect(() => {
+    if (!$screenConfirm) return;
+    const id = setInterval(() => (keepNow = Date.now()), 250);
+    return () => clearInterval(id);
+  });
+  const keepLeft = $derived(
+    $screenConfirm?.deadline ? ($screenConfirm.deadline * 1000 - keepNow) / 1000 : ($screenConfirm?.total ?? 30)
+  );
+
   //: **ADR-0110 §6: the panel is locked while it updates.** Up from the
   //: moment an install runs; kept up while the core restarts and the socket
   //: reconnects (nothing else shows in between); then the outcome for a few
@@ -507,6 +521,21 @@
 
   {#if $pairing}
     <PairingFrame request={$pairing} />
+  {/if}
+
+  <!-- ADR-0109 decision 5: above everything but the update lock - the
+       question is whether this screen works at all. -->
+  {#if $screenConfirm && !updateLock}
+    <KeepScreen
+      model={$screenConfirm.model}
+      previous={$screenConfirm.rotation_only ? $screenConfirm.previous_rotation : ($screenConfirm.previous ?? "the screen's own settings")}
+      untested={$screenConfirm.untested}
+      rotationOnly={$screenConfirm.rotation_only}
+      secondsLeft={keepLeft}
+      total={$screenConfirm.total ?? 30}
+      onkeep={() => answerScreen('keep')}
+      onrevert={() => answerScreen('revert')}
+    />
   {/if}
 
   <!-- ADR-0110 §6: above even setup and pairing - nothing on this panel is

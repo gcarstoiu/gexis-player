@@ -268,6 +268,10 @@ class PlaybackState:
     #: `active` while an install runs, which locks the panel. Read from the
     #: updater's status file, so it survives the core's own restart.
     update: dict | None = None
+    #: **ADR-0109: Keep this screen?** - the model now in use, the one it
+    #: goes back to, whether it is untested or only a rotation, and when the
+    #: countdown ends (epoch seconds; None until the panel has drawn).
+    screen_confirm: dict | None = None
 
     @property
     def controls(self) -> dict | None:
@@ -310,4 +314,5 @@ class PlaybackState:
             "panel": dict(self.panel),
             "setup": dict(self.setup) if self.setup else None,
             "update": dict(self.update) if self.update else None,
+            "screen_confirm": dict(self.screen_confirm) if self.screen_confirm else None,
         }

@@ -190,6 +190,11 @@ def rfkill_state(root: Path = RFKILL) -> str:
     return "rfkill unknown"
 
 
+def _screen_kept() -> bool:
+    from . import screen_apply
+    return screen_apply.confirmed()
+
+
 def make_password() -> str:
     return "".join(secrets.choice(PASSWORD_ALPHABET) for _ in range(PASSWORD_LENGTH))
 
@@ -294,8 +299,14 @@ class SetupNetwork:
         on_change=None,
         unblock=None,
         ready=None,
+        screen_kept=None,
     ) -> None:
         self._nmcli = run or wifi._run
+        #: **ADR-0109 decision 5: a screen is confirmed before setup trusts
+        #: it.** Until one has been kept on the panel, the setup network uses
+        #: the fixed password: a screen that is connected but dark would hide
+        #: a made-up one.
+        self._screen_kept = screen_kept or _screen_kept
         self._count_stations = stations or self._stations
         #: Phones the panel counts as joined. A test that fakes the stations
         #: fakes these too.
@@ -464,7 +475,7 @@ class SetupNetwork:
         `autoconnect no` so the profile can never come up by itself at boot in
         place of the home Wi-Fi."""
         self._panel = panel_attached(self._drm)
-        self._password = password(self._panel, self._password_file)
+        self._password = password(self._panel and self._screen_kept(), self._password_file)
         await self.delete_leftover()
         # **The radio may be off.** Raspberry Pi OS starts every radio blocked
         # (`rfkill.default_state=0`) and pi-gen ships NetworkManager with

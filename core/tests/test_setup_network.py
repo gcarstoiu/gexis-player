@@ -228,13 +228,25 @@ def test_a_leftover_profile_is_deleted_at_startup(tmp_path):
 def test_with_a_panel_the_password_is_made_up_and_kept(tmp_path):
     nm = FakeNM(devices=NOTHING)
     net, _ = setup(tmp_path, nm, panel=True)
+    net._screen_kept = lambda: True
     run(net.open())
     first = net.status()["password"]
     assert len(first) == 8 and set(first) <= set(sn.PASSWORD_ALPHABET)
     net2, _ = setup(tmp_path / "again", nm, panel=True)
+    net2._screen_kept = lambda: True
     net2._password_file = tmp_path / "setup-password"
     run(net2.open())
     assert net2.status()["password"] == first, "a restart keeps the password on the screen"
+
+
+def test_a_panel_whose_screen_was_never_kept_uses_the_fixed_password(tmp_path):
+    """ADR-0109 decision 5: a connected but dark screen would hide a made-up
+    one, so until a screen has been kept on the panel the password is fixed."""
+    nm = FakeNM(devices=NOTHING)
+    net, _ = setup(tmp_path, nm, panel=True)
+    net._screen_kept = lambda: False
+    run(net.open())
+    assert net.status()["password"] == "gexis-setup"
 
 
 def test_without_a_panel_the_password_is_the_fixed_one(tmp_path):
