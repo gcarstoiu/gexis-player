@@ -8,9 +8,11 @@ core only starts those units and reads the status file the updater writes.
 """
 from __future__ import annotations
 
+import calendar
 import json
 import logging
 import subprocess
+import time
 from pathlib import Path
 
 logger = logging.getLogger("gexis_core.updates")
@@ -51,25 +53,53 @@ INSTALLING = frozenset({"downloading", "backing-up", "stopping", "installing", "
                         "checking-device", "going-back", "waiting"})
 
 
-def sentence(path: Path = STATUS, installed: str | None = None) -> str:
-    """The Release tile's line (ADR-0110 §2): the installed number and its
-    state, or the number that is waiting."""
+def checked_when(at: str | None, now: float | None = None) -> str | None:
+    """`today 03:12`, `yesterday 03:12`, or `28 Sep`: when the updater last
+    answered, in the device's time."""
+    if not at:
+        return None
+    try:
+        then = calendar.timegm(time.strptime(at, "%Y-%m-%dT%H:%M:%SZ"))
+    except ValueError:
+        return None
+    local = time.localtime(then)
+    today = time.localtime(now if now is not None else time.time())
+    day = (today.tm_year, today.tm_yday)
+    if (local.tm_year, local.tm_yday) == day:
+        return time.strftime("today %H:%M", local)
+    yesterday = time.localtime((now if now is not None else time.time()) - 86400)
+    if (local.tm_year, local.tm_yday) == (yesterday.tm_year, yesterday.tm_yday):
+        return time.strftime("yesterday %H:%M", local)
+    return time.strftime("%-d %b", local)
+
+
+def release_line(channel: str | None, installed: str | None = None) -> str:
+    """The Release row (George, 2026-10-01): only what this device runs, and
+    the channel it follows - `0.3.1 · Testing`."""
+    here = short(installed if installed is not None else installed_release()) or "unknown"
+    return f"{here} · {channel}" if channel else here
+
+
+def sentence(path: Path = STATUS, installed: str | None = None, now: float | None = None) -> str:
+    """The Software update tile's line (George, 2026-10-01; ADR-0110 §2 as
+    amended): what the updater last found, and when."""
     doc = status(path)
     state = doc.get("state")
     here = short(installed if installed is not None else installed_release()) or "unknown"
     release = short(doc.get("release")) or ""
     if not state:
-        return f"{here} · Not checked yet"
+        return "Not checked yet"
     if state == "checking":
-        return f"{here} · Checking…"
+        return "Checking…"
     if state == "current":
-        return f"{here} · Up to date"
+        when = checked_when(doc.get("at"), now)
+        return f"Up to date · checked {when}" if when else "Up to date"
     if state == "available":
         return f"{release} available"
     if state == "done":
-        return f"{here} · Updated"
+        return f"Updated to {here}"
     if state == "failed":
-        return f"{here} · Did not update"
+        return "Did not update"
     if state == "going-back":
         return f"Going back to {short(doc.get('previous')) or here}…"
     return f"Updating to {release}…"

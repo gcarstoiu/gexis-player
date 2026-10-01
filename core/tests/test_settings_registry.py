@@ -164,6 +164,8 @@ def test_registry_keys_are_the_designs_keys_apart_from_recorded_deviations():
         # Manual / Automatic), and the channel he confirmed on 2026-09-30.
         # The design predates updates over the network.
         "update_status", "update_check", "update_install", "update_channel",
+        # George, 2026-10-01: the update gets its own tile.
+        "software_update",
     }
 
 
@@ -546,7 +548,8 @@ def test_the_shipped_registry_hides_the_inventoried_rows_and_shows_the_rest():
     # (George, 2026-09-28, with Phase 13's setup). **86 since 2026-09-30**:
     # the Updates rows (ADR-0105 section 6) - Release, Check now, Update now,
     # and the channel.
-    assert len(rows) == 86
+    # **87**: Software update, its own tile (George, 2026-10-01).
+    assert len(rows) == 87
     # 59 since 2026-09-25: `backup` was surfaced and `restore` arrived with
     # it (ADR-0083), so the shown count gains two while the hidden one loses
     # one. **58 since 2026-09-26**, less the threshold row. **60 since
@@ -554,7 +557,9 @@ def test_the_shipped_registry_hides_the_inventoried_rows_and_shows_the_rest():
     # with Spotify's starting volume.
     # **65**, with Debug logs. **66**, with the clock format. **71**, with
     # the four Updates rows and `updates` surfaced (2026-09-30).
-    assert len(rows) - len(kept) == 69  # 71 until ADR-0110 folded Check now and Update now into the Release tile
+    # 69 when ADR-0110 folded Check now and Update now into the Release
+    # tile; 70 with Software update (George, 2026-10-01).
+    assert len(rows) - len(kept) == 70
 
 
 def test_the_clock_can_be_turned_off_without_taking_the_screen_with_it():

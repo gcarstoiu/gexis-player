@@ -858,10 +858,11 @@
                   <span class="subhead__label" style:color={r.accent}>{r.label}</span>
                   <span class="subhead__rule"></span>
                 </div>
-              {:else if r.key === 'update_status'}
-                <!-- ADR-0110 §2: the Release tile - the number, its state,
-                     the release's notes when there are any, and one button.
-                     Check now and Update now are no longer rows. -->
+              {:else if r.key === 'software_update'}
+                <!-- ADR-0110 §2 as amended (George, 2026-10-01): the
+                     Software update tile - what the updater found and when,
+                     the waiting release's notes, and one button. Release,
+                     above it, only says what this device runs. -->
                 {@const waiting = $update?.state === 'available'}
                 <div class="row row--tile">
                   <span class="row__body">

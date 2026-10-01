@@ -1353,7 +1353,10 @@ async def main() -> None:
             # Image build row, for support.
             "version": lambda: updates.short(updates.installed_release()) or image_info().get("version") or "unknown",
             # ADR-0105 section 6: what the updater last said.
-            "update_status": lambda: updates.sentence(),
+            # George, 2026-10-01: Release only says what runs here, and on
+            # which channel; Software update holds the rest.
+            "update_status": lambda: updates.release_line(settings_store.get("update_channel") or "Stable"),
+            "software_update": lambda: updates.sentence(),
             "image_build": lambda: " · ".join(x for x in (image_info().get("built"), updates.installed_release()) if x) or "unknown",
             # ADR-0086 as amended: a synthesised switch reads what systemd says
             # about the unit until somebody uses it.
@@ -1371,7 +1374,7 @@ async def main() -> None:
         },
         # The Release row's note: what the waiting or just-installed release
         # says changed (2026-10-01, George).
-        notes={"update_status": updates.whats_new},
+        notes={"software_update": updates.whats_new},
         # Wired = something reads it (ADR-0035). The token is read on every
         # Popular lookup, so it takes effect as soon as it is typed.
         # Wired = something reads it, or something happens. `lms_server` is

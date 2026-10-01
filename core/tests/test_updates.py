@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import time
 
 from gexis_core import updates
 
@@ -12,18 +13,26 @@ def write(tmp_path, **doc):
     return path
 
 
-def test_the_release_tile_says_the_number_and_its_state(tmp_path):
-    """ADR-0110 §1-2: the number, not 0.2.1+git871.c73ea29, and its state."""
-    here = "0.2.4+git3.abc1234"
-    line = lambda **doc: updates.sentence(write(tmp_path, **doc), installed=here)
-    assert updates.sentence(tmp_path / "none.json", installed="0.2.4") == "0.2.4 · Not checked yet"
-    assert line(state="current", channel="testing") == "0.2.4 · Up to date"
-    assert line(state="checking") == "0.2.4 · Checking…"
-    assert line(state="available", release="0.2.5") == "0.2.5 available"
-    assert line(state="installing", release="0.2.5") == "Updating to 0.2.5…"
-    assert line(state="done", release="0.2.5") == "0.2.4 · Updated"
-    assert line(state="failed", message="x") == "0.2.4 · Did not update"
-    assert line(state="going-back", previous="0.2.3+git1.a") == "Going back to 0.2.3…"
+def test_release_says_only_what_runs_here_and_the_channel():
+    """George, 2026-10-01: Release is read-only - the number and the channel."""
+    assert updates.release_line("Testing", installed="0.3.1") == "0.3.1 · Testing"
+    assert updates.release_line("Stable", installed="0.2.1+git871.c73ea29") == "0.2.1 · Stable"
+
+
+def test_the_software_update_tile_says_what_was_found_and_when(tmp_path):
+    here = "0.3.1"
+    noon = time.mktime((2026, 10, 1, 12, 0, 0, 0, 0, -1))
+    line = lambda **doc: updates.sentence(write(tmp_path, **doc), installed=here, now=noon)
+    stamp = lambda t_: time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(t_))
+    assert updates.sentence(tmp_path / "none.json", installed=here) == "Not checked yet"
+    assert line(state="current", at=stamp(noon - 3600)) == "Up to date · checked today 11:00"
+    assert line(state="current", at=stamp(noon - 86400)) == "Up to date · checked yesterday 12:00"
+    assert line(state="current", at=stamp(noon - 4 * 86400)) == "Up to date · checked 27 Sep"
+    assert line(state="checking") == "Checking…"
+    assert line(state="available", release="0.3.2") == "0.3.2 available"
+    assert line(state="installing", release="0.3.2") == "Updating to 0.3.2…"
+    assert line(state="done", release="0.3.2") == "Updated to 0.3.1"
+    assert line(state="failed", message="x") == "Did not update"
 
 
 def test_the_published_update_locks_the_panel_only_while_the_install_runs(tmp_path):

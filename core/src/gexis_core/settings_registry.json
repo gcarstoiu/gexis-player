@@ -973,6 +973,14 @@
         "default": null
       },
       {
+        "key": "software_update",
+        "type": "readonly",
+        "label": "Software update",
+        "marks": "N",
+        "note": null,
+        "default": null
+      },
+      {
         "key": "update_check",
         "type": "action",
         "label": "Check now",

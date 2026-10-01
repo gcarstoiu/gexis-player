@@ -126,6 +126,25 @@ the boot splash.
 styles), not sent to Claude Design. **Decided** (*"You build it based on our
 design system"*).
 
+### §2 amended, 2026-10-01 — Release and Software update are two rows
+
+George, after seeing the tile: *"the release field becomes read-only and it
+only shows the current release running on the panel; the check for updates
+button is added to another tile"*. He confirmed it, the name and the
+channel shown on Release together (*"i confirm the 4 entries from above"*).
+- **Release** is read-only: the number this device runs and the channel it
+  follows, `0.3.1 · Testing`.
+- **Software update** is the tile:
+  - what the updater last found and when (*Up to date · checked today
+    03:12*, or *0.3.2 available*);
+  - the waiting release's notes;
+  - the button.
+
+**Testing and Stable share one number** (George asked, 2026-10-01). The
+build tested on Testing is the one Stable gets, so a separate *beta* number
+would need a second build. The channel on Release, and GitHub's *Pre-release*
+mark, say which one a release is on.
+
 ## What changes underneath
 
 - **The updater:**
