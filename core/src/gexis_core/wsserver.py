@@ -112,6 +112,7 @@ class StateServer:
         splash=None,
         setup=None,
         setup_flow=None,
+        screen_seen=None,
         park=None,
         upload_plugin=None,
         uninstall_plugin=None,
@@ -165,6 +166,9 @@ class StateServer:
         #: ADR-0104: the setup network's status, for the panel and the phone.
         self._setup = setup
         self._setup_flow = setup_flow
+        #: ADR-0109: `() -> screen_detect.Seen`, what the attached screen
+        #: reports, for setup's Screen step. Injected so a test needs no sysfs.
+        self._screen_seen = screen_seen
         #: George, 2026-09-29: "Why don't we disconnect all renderers upon
         #: reboot? It's a fresh start." Called by gexis-park.service as the
         #: device shuts down.
@@ -986,6 +990,19 @@ class StateServer:
         items = [i for i in await wifi.scan() if i["name"] != setup_network.SSID]
         return web.json_response({"items": items})
 
+    async def _handle_setup_screen(self, request: web.Request) -> web.Response:
+        """ADR-0109: the Screen step - what the screen reports, the tested
+        model that suggests, and every model gexis knows."""
+        closed = self._setup_closed()
+        if closed is not None:
+            return closed
+        if self._screen_seen is None:
+            return web.json_response({"error": "screen detection is not wired up"}, status=503)
+        from gexis_core import setup_flow
+
+        report = await asyncio.to_thread(self._screen_seen)
+        return web.json_response(setup_flow.screen_choices(report))
+
     async def _handle_setup_finish(self, request: web.Request) -> web.Response:
         closed = self._setup_closed()
         if closed is not None:
@@ -1322,6 +1339,7 @@ class StateServer:
         app.router.add_get("/setup/answers", self._handle_setup_answers)
         app.router.add_post("/setup/answers", self._handle_setup_save)
         app.router.add_get("/setup/networks", self._handle_setup_networks)
+        app.router.add_get("/setup/screen", self._handle_setup_screen)
         app.router.add_post("/setup/finish", self._handle_setup_finish)
         # ADR-0101: the phone's idle toggle, and the panel saying what it shows.
         app.router.add_post("/panel/idle/{action}", self._handle_idle_request)

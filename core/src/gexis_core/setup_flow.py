@@ -22,7 +22,7 @@ import logging
 import os
 from pathlib import Path
 
-from gexis_core import discovery, setup_network
+from gexis_core import discovery, screen_detect, screens, setup_network
 
 logger = logging.getLogger(__name__)
 
@@ -41,8 +41,11 @@ SETTINGS = {
     "spotify": "spotify_enabled",
     "bluetooth": "bt_enabled",
     "headless": "headless",
+    #: ADR-0109: the Screen step's model, as Settings stores it ("Maker/Model").
+    #: After `headless`, so a device leaving Headless is then given its screen.
+    "screen": "screen",
 }
-TEXT = ("ssid", "password", "name", "timezone", "clock", "output", "lms")
+TEXT = ("ssid", "password", "name", "timezone", "clock", "output", "lms", "screen")
 #: George, 2026-09-29: a server nobody asked for must not appear. The Music
 #: step asks: find it once on the network, this address, or not at all.
 LMS_MODES = ("find", "address", "off")
@@ -122,6 +125,17 @@ class SetupFlow:
                 data[key] = value
             else:
                 raise ValueError(f"unknown answer {key}")
+        # ADR-0109's Screen step: a screen and Headless are one choice. A
+        # model must be one gexis knows and ends Headless; Headless drops it.
+        screen = changes.get("screen")
+        if screen:
+            if screens.by_label(screen) is None:
+                raise ValueError(f"unknown screen {screen}")
+            if changes.get("headless") is True:
+                raise ValueError("choose a screen or headless, not both")
+            data["headless"] = False
+        if changes.get("headless") is True:
+            data.pop("screen", None)
         # A new password for the network, or another network, is a new try:
         # the last one's error no longer describes anything.
         if "password" in changes or "ssid" in changes:
@@ -244,6 +258,32 @@ class SetupFlow:
                 self._settings.set(key, value)
         except Exception as exc:
             logger.warning("setup: %s not set: %s", key, exc)
+
+
+def _screen_json(screen: screens.Screen) -> dict:
+    return {
+        "id": screen.id,
+        "label": screen.label,
+        "maker": screen.maker,
+        "model": screen.model,
+        "width": screen.width,
+        "height": screen.height,
+        "family": screen.family,
+        "tested": screen.tested,
+    }
+
+
+def screen_choices(report: screen_detect.Seen) -> dict:
+    """**The Screen step's page** (ADR-0109): what the screen reports, the
+    tested model that suggests (or nothing), and every model. The page tells
+    its three states apart from this: a suggestion is *recognised*, a screen
+    connected without one is *uncertain*, nothing connected is *none*."""
+    suggested = screen_detect.suggest(report)
+    return {
+        "seen": report.to_json(),
+        "suggested": _screen_json(suggested) if suggested else None,
+        "models": [_screen_json(s) for s in screens.all_screens()],
+    }
 
 
 async def _raspi_config_country(country: str) -> None:

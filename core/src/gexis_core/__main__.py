@@ -16,7 +16,7 @@ import aiohttp
 from dbus_next import BusType
 from dbus_next.aio import MessageBus
 
-from gexis_core import alsa, bluetooth_adapter_state, bluetooth_agent, device_name, journal, meters, skins, wifi
+from gexis_core import alsa, bluetooth_adapter_state, bluetooth_agent, device_name, journal, meters, screen_detect, skins, wifi
 from gexis_core.adapters.base import VolumeMechanism
 from gexis_core.adapters.bluetooth import BluetoothAdapter
 from gexis_core.adapters.lms import LmsAdapter
@@ -2240,6 +2240,8 @@ async def main() -> None:
         # ADR-0104: first-boot setup and the setup network.
         setup=setup_network,
         setup_flow=setup_flow,
+        # ADR-0109: what the attached screen reports, for the Screen step.
+        screen_seen=screen_detect.seen,
         park=_park_renderers,
         upload_plugin=_upload_plugin,
         uninstall_plugin=_uninstall_plugin,
