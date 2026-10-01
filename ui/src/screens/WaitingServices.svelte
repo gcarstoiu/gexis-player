@@ -57,7 +57,10 @@
   //: four or more stand in 200 px columns, 48 apart, the name under the
   //: mark, and the columns narrow until they fit (five need 1412 px).
   const bar = $derived(full && screen.family === 'bar');
-  const many = $derived(bar && shown.length >= 4);
+  //: Four or more renderers (plugins add them) shrink their columns to fit -
+  //: on a bar (round 2), and on the panel's full-screen waiting home, where
+  //: four 310 px columns ran off both edges at 1280 (found 2026-10-01).
+  const many = $derived((bar || full) && shown.length >= 4);
   const BAR_MARK = { spotify: 56, bluetooth: 62 };
 </script>
 
@@ -229,6 +232,13 @@
     --wait-gap: 48px;
     --wait-name: 24px;
     --wait-stack: 16px;
+  }
+  /* The panel's full-screen waiting home with four or more: held to the
+     panel's width, so the columns shrink to fit as on a bar. */
+  .waiting.is-full.is-many:not(.is-bar) {
+    width: 100%;
+    min-width: 0;
+    --wait-gap: 40px;
   }
   .is-many .row {
     width: 100%;
