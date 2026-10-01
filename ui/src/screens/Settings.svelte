@@ -8,7 +8,8 @@
 <script>
   import { onMount } from 'svelte';
   import { pressing } from '../lib/press.svelte.js';
-  import { components } from '../lib/state.js';
+  import { components, update } from '../lib/state.js';
+  import UpdateModal from './UpdateModal.svelte';
   import {
     settingsGroups,
     settingsDevice,
@@ -172,6 +173,19 @@
   //: One confirm for both upload and remove: a title, what it means, and
   //: what happens on yes.
   let ask = $state(null);
+  //: ADR-0110: the update modal - `check`, `available` or `progress` - and
+  //: whether the user hid a running install's. A running install reopens
+  //: it until hidden (closing it on the phone leaves the update running).
+  let updateModal = $state(null);
+  let updateHidden = $state(false);
+  $effect(() => {
+    if ($update?.active && !updateHidden && !updateModal) updateModal = 'progress';
+    if (!$update?.active) updateHidden = false;
+  });
+  function closeUpdate() {
+    if ($update?.active) updateHidden = true;
+    updateModal = null;
+  }
   function pickPlugin() {
     pluginFile?.click();
   }
@@ -843,6 +857,27 @@
                   <span class="subhead__label" style:color={r.accent}>{r.label}</span>
                   <span class="subhead__rule"></span>
                 </div>
+              {:else if r.key === 'update_status'}
+                <!-- ADR-0110 §2: the Release tile - the number, its state,
+                     the release's notes when there are any, and one button.
+                     Check now and Update now are no longer rows. -->
+                {@const waiting = $update?.state === 'available'}
+                <div class="row row--tile">
+                  <span class="row__body">
+                    <span class="row__text">
+                      <span class="row__label"><span class="row__name">{r.label}</span></span>
+                      <span class="row__value row__value--tile">{r.value}</span>
+                      {#if r.note}<span class="row__note">{r.note}</span>{/if}
+                    </span>
+                    <button
+                      type="button"
+                      class="tile__btn"
+                      class:tile__btn--go={waiting}
+                      disabled={$update?.active}
+                      onclick={() => (updateModal = $update?.active ? 'progress' : waiting ? 'available' : 'check')}
+                    >{$update?.active ? 'Updating…' : waiting ? 'Update…' : 'Check for updates'}</button>
+                  </span>
+                </div>
               {:else}
                 <!-- A readonly row takes no tap and draws no chevron: there
                      is nothing to change, and a chevron promises a sheet that
@@ -1382,6 +1417,10 @@
 
   <div class="toast" class:is-shown={toast}>{toast ?? ''}</div>
 
+  {#if updateModal}
+    <UpdateModal start={updateModal} onclose={closeUpdate} />
+  {/if}
+
   {#if ask}
     <!-- ADR-0106: the confirm before an upload or a removal. Centred, not a
          bottom sheet: on a tall phone it sat at the foot of the screen
@@ -1672,6 +1711,36 @@
   /* Not dimmed: the value is the point of the row and stays fully legible.
      Only the affordance goes. */
   .row--readonly { opacity: 1; }
+  /* ADR-0110 §2: the Release tile. A row that holds a button, so a div. */
+  .row--tile { cursor: default; }
+  .row--tile:active { transform: none; }
+  .row__value--tile {
+    display: block;
+    margin-top: 4px;
+    font-family: var(--font-mono);
+    font-size: 15px;
+    color: var(--ink-body);
+  }
+  .tile__btn {
+    flex-shrink: 0;
+    height: 44px;
+    padding: 0 18px;
+    border-radius: 13px;
+    background: rgba(233, 238, 242, 0.07);
+    border: 1px solid rgba(233, 238, 242, 0.14);
+    color: var(--ink);
+    font-size: 15px;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+  .tile__btn:active { background: rgba(233, 238, 242, 0.2); }
+  .tile__btn--go {
+    font-weight: 700;
+    background: rgba(126, 214, 188, 0.16);
+    border-color: rgba(126, 214, 188, 0.4);
+    color: var(--accent-lms);
+  }
+  .tile__btn:disabled { opacity: 0.6; }
   .row--readonly:active { transform: none; }
 
   .chev {
