@@ -17,7 +17,7 @@ GO_LIBRESPOT_VERSION := $(shell grep -oP 'GO_LIBRESPOT_VERSION="\K[^"]+' packagi
 # one, falls back to the short commit hash rather than failing the
 # build outright; "-dirty" if the working tree has uncommitted changes,
 # so a manifest can never claim a version it wasn't actually built from.
-IMAGE_VERSION := $(shell git describe --tags --always --dirty)
+IMAGE_VERSION := $(shell git describe --tags --match 'v[0-9]*' --always --dirty)
 
 .PHONY: image packages fresh-stage-gexis ui skins prune fetch-deploy clean provision
 
@@ -65,7 +65,7 @@ IMAGE_VERSION := $(shell git describe --tags --always --dirty)
 #    Idempotent - safe whether or not the file is already gone.
 #
 #    **Put back when the build ends** (2026-09-25). `IMAGE_VERSION` is a
-#    simple variable, so `git describe --tags --always --dirty` runs when
+#    simple variable, so `git describe --tags --match 'v[0-9]*' --always --dirty` runs when
 #    make parses this file - before the recipe. Leaving the file deleted
 #    therefore made *every build after the first* report `-dirty` and name
 #    its image so, with nothing uncommitted in the repository at all. The
