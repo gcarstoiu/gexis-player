@@ -14,6 +14,7 @@
   import MiniPlayer from './screens/MiniPlayer.svelte';
   import SetupScreen from './screens/SetupScreen.svelte';
   import SetupPage from './screens/SetupPage.svelte';
+  import { screen } from './lib/family.svelte.js';
   import { loadSettings, settingValues } from './lib/settings.js';
   import { loadLibraryRoot } from './lib/library.js';
   import { reportTouch, showPeppy, reportPainted, reportShown } from './lib/state.js';
@@ -344,7 +345,7 @@
   <MiniPlayer />
 {:else if surface === 'panel'}
 
-<div class="panel">
+<div class="panel" class:panel--bar={screen.family === 'bar'} data-family={screen.family}>
   <!-- One backdrop for the whole panel, so a screen change does not build
        two large blurred layers again (George, 2026-09-17). Exactly one
        screen is mounted over it at a time: the screens are transparent now,
@@ -465,6 +466,11 @@
   /* ADR-0109, Standard family: Chromium's scale factor makes every screen
      1280 logical px wide; the height is whatever that leaves, and the tokens
      that follow it are recomputed here, where it is known. */
+  /* ADR-0109, Bar family: 400 logical px tall and as wide as the screen
+     makes it (1280 on 1280x400, 1850 on 1480x320). */
+  .panel--bar {
+    width: 100vw !important;
+  }
   .panel {
     --panel-h: 100vh;
     --art: calc(var(--panel-h) - 300px);
