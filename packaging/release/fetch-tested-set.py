@@ -7,6 +7,7 @@ Runs inside gexis-deb-builder, with:
   /in/keyrings/       the image's archive keyrings (Debian, Raspberry Pi)
   /cache              a cache of .deb files kept between releases
   /out/rpi, /out/debian    where each part's files go (ADR-0108 as amended)
+  /prev               earlier releases built here (packaging/release/out)
 
 `apt-get update` fetches the archives' indexes and checks their signatures;
 everything after reads those indexes directly. (The first version asked apt
@@ -15,6 +16,13 @@ packages in forty minutes.) Every file is checked against the SHA256 its
 signed index gives before it is used - a cached one too - so a file here is
 exactly what the archive published. A version no index lists stops the
 release with its name: a tested set that cannot be fetched is not one.
+
+**Unless we already hold it** (2026-10-01): the Raspberry Pi archive keeps
+only the latest version of a package, and replaced libgtk-3 `+rpt8` with
+`+rpt9` hours after two images had been built with `+rpt8` - exactly the
+risk ADR-0105 §3 named. A version no archive lists any more is taken from an
+earlier release of ours that carries it, checked against the SHA256 our own
+index recorded for it when it was fetched and verified from the archive.
 """
 from __future__ import annotations
 
@@ -70,13 +78,34 @@ def read_indexes() -> dict[tuple[str, str, str], tuple[str, str, str]]:
     return index
 
 
+def read_ours(prev: Path) -> dict[tuple[str, str, str], tuple[str, str, str, str]]:
+    """(name, version, arch) -> (file:// path, filename, sha256, half), from
+    the parts of releases already built here."""
+    ours: dict[tuple[str, str, str], tuple[str, str, str, str]] = {}
+    for packages in sorted(prev.glob("*/repos/*/Packages")):
+        half = packages.parent.name.split("-", 1)[0]
+        if half not in ("rpi", "debian"):
+            continue
+        for record in packages.read_text().split("\n\n"):
+            fields = dict(l.split(": ", 1) for l in record.splitlines() if l and not l[0].isspace() and ": " in l)
+            if {"Package", "Version", "Architecture", "Filename", "SHA256"} <= set(fields):
+                path = packages.parent / fields["Filename"]
+                if path.exists():
+                    ours.setdefault((fields["Package"], fields["Version"], fields["Architecture"]),
+                                    ("file://" + str(path), path.name, fields["SHA256"], half))
+    return ours
+
+
 def fetch(job: tuple[str, str, str, Path]) -> str | None:
     url, filename, expected, cached = job
     if cached.exists() and sha256(cached) == expected:
         return None
     partial = cached.with_suffix(".partial")
-    with urllib.request.urlopen(url, timeout=120) as response, partial.open("wb") as out:
-        shutil.copyfileobj(response, out)
+    if url.startswith("file://"):
+        shutil.copyfile(url[len("file://"):], partial)
+    else:
+        with urllib.request.urlopen(url, timeout=120) as response, partial.open("wb") as out:
+            shutil.copyfileobj(response, out)
     if sha256(partial) != expected:
         partial.unlink()
         return f"{filename} does not match its archive's index"
@@ -93,6 +122,14 @@ def main() -> int:
     index = read_indexes()
 
     wanted = [tuple(line.split()) for line in Path("/in/installed.txt").read_text().splitlines() if line.strip()]
+    ours = read_ours(Path("/prev"))
+    halves = {}
+    for w in wanted:
+        if w not in index and w in ours:
+            url, filename, sha, half = ours[w]
+            index[w] = (url, filename, sha)
+            halves[w] = half
+            print(f"  {' '.join(w)}: no archive lists it any more; from our own earlier release", flush=True)
     missing = [w for w in wanted if w not in index]
     if missing:
         print(f"ERROR: {len(missing)} package(s) of the tested set are in no archive's index:", file=sys.stderr)
@@ -102,6 +139,7 @@ def main() -> int:
 
     cache = Path("/cache")
     jobs = [(index[w][0], index[w][1], index[w][2], cache / index[w][1]) for w in wanted]
+    half_of = {index[w][0]: halves.get(w) for w in wanted}
     with ThreadPoolExecutor(max_workers=8) as pool:
         errors = [e for e in pool.map(fetch, jobs) if e]
     if errors:
@@ -111,7 +149,7 @@ def main() -> int:
 
     placed = {"rpi": 0, "debian": 0}
     for url, filename, _sha, cached in jobs:
-        half = "rpi" if "archive.raspberrypi.com" in url else "debian"
+        half = half_of.get(url) or ("rpi" if "archive.raspberrypi.com" in url else "debian")
         shutil.copy2(cached, Path("/out") / half / filename)
         placed[half] += 1
     print(f"tested set: {len(wanted)} packages, {placed['rpi']} from Raspberry Pi, {placed['debian']} from Debian")

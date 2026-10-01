@@ -57,7 +57,7 @@ echo "release $TAG: tested set of $(wc -l < "$WORK/installed.txt") OS packages, 
 
 # The tested set, each file checked against its archive's signed index.
 docker run --rm --platform linux/arm64 \
-	-v "$WORK":/in:ro -v "$CACHE":/cache -v "$PWD/$DEST":/out \
+	-v "$WORK":/in:ro -v "$CACHE":/cache -v "$PWD/$DEST":/out -v "$PWD/packaging/release/out":/prev:ro \
 	-v "$PWD/packaging/release/fetch-tested-set.py":/fetch.py:ro \
 	gexis-deb-builder python3 /fetch.py
 
