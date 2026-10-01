@@ -68,6 +68,17 @@ while read -r name version arch; do
 	[ -f "$f" ] || { echo "ERROR: the image has $name $version, not in $OUT_DEBS" >&2; exit 1; }
 	case "$name" in gexis-skins) cp "$f" "$DEST/skins/";; *) cp "$f" "$DEST/ours/";; esac
 done < "$WORK/ours.txt"
+# **Every size's skin pack, though the image has none** (ADR-0111 decisions 5
+# and 9): a device installs its own from the release, with consent. One
+# version of each: two would leave the device to choose between builds.
+packs=0
+for size in 1920x1080 1280x400 1480x320 800x480 1280x800; do
+	found=( "$OUT_DEBS"/gexis-skins-"$size"_*_all.deb )
+	[ "${#found[@]}" -eq 1 ] && [ -f "${found[0]}" ] \
+		|| { echo "ERROR: need exactly one gexis-skins-$size in $OUT_DEBS, found ${#found[@]}" >&2; exit 1; }
+	cp "${found[0]}" "$DEST/skins/"
+	packs=$((packs + 1))
+done
 
 # Each part: its index, its name from that index, then its signatures (on this
 # machine - the key never enters a container). **Named by content**
@@ -122,9 +133,16 @@ for part in "$DEST"/repos/*/; do
 done
 # Counted from the image's status on its own terms - every record dpkg calls
 # installed, whatever the selection - so a filter above cannot hide a package.
+# The skin packs are counted apart: they are in the release and not in the
+# image (ADR-0111), so the image's count plus the packs is the release's.
 image_count=$(grep -cE '^Status: [a-z]+ ok installed$' "$WORK/status")
 release_count=$(cat "$DEST"/repos/*/Packages | grep -c '^Package:')
-[ "$release_count" -eq "$image_count" ] || { echo "ERROR: $release_count packages in the release, the image has $image_count installed" >&2; exit 1; }
+pack_count=$(cat "$DEST"/repos/skins-*/Packages | grep -cE '^Package: gexis-skins-[0-9]+x[0-9]+$')
+[ "$pack_count" -eq "$packs" ] || { echo "ERROR: $pack_count skin packs in the skins part, $packs copied" >&2; exit 1; }
+if grep -qE '^Package: gexis-skins-[0-9]+x[0-9]+$' "$WORK/status"; then
+	echo "ERROR: the image has a skin pack installed (ADR-0111 decision 9)" >&2; exit 1
+fi
+[ "$release_count" -eq "$((image_count + pack_count))" ] || { echo "ERROR: $release_count packages in the release, the image has $image_count installed and $pack_count skin packs go beside them" >&2; exit 1; }
 for pinned in libasound2t64; do
 	grep -qx "Package: $pinned" "$DEST"/repos/rpi-*/Packages || { echo "ERROR: the pinned $pinned is not in the release" >&2; exit 1; }
 done
