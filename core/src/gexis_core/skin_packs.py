@@ -77,3 +77,38 @@ def plan(screen: tuple[int, int], have: list[tuple[int, int]]) -> tuple[tuple[in
     install = want if want is not None and want not in have else None
     remove = [s for s in have if s != want]
     return install, remove
+
+
+#: What the updater last said about a pack (gexis-update pack-install).
+PACK_STATUS = Path("/var/lib/gexis/updates/pack.json")
+
+
+def status(path: Path = PACK_STATUS, packs: Path = PACKS, legacy: Path = LEGACY) -> dict:
+    """The pack's download line, in the shape ADR-0100's rows read
+    (Settings' `downloadLine`): state, label, where from, and the share."""
+    try:
+        doc = json.loads(path.read_text())
+    except (OSError, ValueError):
+        doc = {}
+    have = installed(packs, legacy)
+    label = f"the {have[0][0]} × {have[0][1]} skins" if have else "the skins"
+    state = doc.get("state")
+    if state in ("downloading", "installing"):
+        size = (doc.get("package") or "").removeprefix("gexis-skins-").replace("x", " × ")
+        return {"state": state, "label": f"the {size} skins" if size else label,
+                "from": "the release", "share": doc.get("progress")}
+    if state == "failed":
+        return {"state": "failed", "label": label, "from": "the release",
+                "error": f"The skins were not installed: {doc.get('message', 'see the log')}"}
+    if have:
+        return {"state": "installed", "label": label, "from": "the release"}
+    return {"state": "absent", "label": "the skins for this screen", "from": "the release"}
+
+
+def screen_size(env: Path = Path("/etc/gexis/screen.env")) -> tuple[int, int]:
+    """The attached screen's size (ADR-0109's screen.env), or the panel's."""
+    try:
+        fields = dict(l.split("=", 1) for l in env.read_text().splitlines() if "=" in l and not l.startswith("#"))
+        return int(fields["GEXIS_SCREEN_WIDTH"]), int(fields["GEXIS_SCREEN_HEIGHT"])
+    except (OSError, KeyError, ValueError):
+        return DEFAULT_SCREEN

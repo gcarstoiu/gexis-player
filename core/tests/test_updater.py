@@ -297,6 +297,9 @@ def test_only_a_skin_pack_is_installed_or_removed_this_way(up):
     for bad in ("gexis-core", "gexis-skins", "gexis-skins-1920x1080; rm -rf /", None):
         with pytest.raises(up.Stop):
             up.pack_install(bad)
+    # Removing also takes today's gexis-skins, which kept devices have
+    # (ADR-0111 decision 10); nothing else.
+    for bad in ("gexis-core", "gexis-skins-1920x1080; rm -rf /", None):
         with pytest.raises(up.Stop):
             up.pack_remove(bad)
 

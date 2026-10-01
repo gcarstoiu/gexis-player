@@ -50,3 +50,24 @@ def test_the_kept_gexis_skins_counts_as_the_1280x800_pack(tmp_path):
 
 def test_package_names():
     assert sp.package((1480, 320)) == "gexis-skins-1480x320"
+
+
+def test_the_download_line_follows_the_updater(tmp_path):
+    packs, legacy, status = tmp_path / "packs", tmp_path / "none", tmp_path / "pack.json"
+    assert sp.status(status, packs, legacy)["state"] == "absent"
+    status.write_text(json.dumps({"state": "downloading", "package": "gexis-skins-1920x1080", "progress": 0.4}))
+    line = sp.status(status, packs, legacy)
+    assert line["state"] == "downloading" and line["share"] == 0.4 and "1920 × 1080" in line["label"]
+    status.write_text(json.dumps({"state": "failed", "message": "apt could not read ours-x"}))
+    assert sp.status(status, packs, legacy)["state"] == "failed"
+    (packs / "1920x1080").mkdir(parents=True)
+    (packs / "1920x1080" / "pack.json").write_text(json.dumps({"size": "1920x1080"}))
+    status.write_text(json.dumps({"state": "installed", "package": "gexis-skins-1920x1080"}))
+    assert sp.status(status, packs, legacy) == {"state": "installed", "label": "the 1920 × 1080 skins", "from": "the release"}
+
+
+def test_the_screen_size_comes_from_screen_env(tmp_path):
+    env = tmp_path / "screen.env"
+    assert sp.screen_size(env) == (1280, 800)
+    env.write_text("# x\nGEXIS_SCREEN_WIDTH=1480\nGEXIS_SCREEN_HEIGHT=320\n")
+    assert sp.screen_size(env) == (1480, 320)

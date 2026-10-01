@@ -976,7 +976,22 @@
     "label": "Plugins",
     "subtitle": "What is installed beyond the player itself",
     "accent": "#a8d68f",
-    "rows": []
+    "rows": [
+      {
+        "type": "group",
+        "label": "Visualiser",
+        "accent": "#c8a2d8"
+      },
+      {
+        "key": "visualiser_skins",
+        "type": "toggle",
+        "label": "Visualiser skins",
+        "marks": "N",
+        "note": "The meters and spectra drawn for this screen's size. Off removes them, and the visualiser with them.",
+        "default": false,
+        "component": "skins"
+      }
+    ]
   },
   {
     "id": "system",

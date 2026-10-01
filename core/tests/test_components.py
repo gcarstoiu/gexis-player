@@ -96,7 +96,9 @@ def test_plugins_are_grouped_by_the_area_they_work_in():
     rows = next(g for g in Settings.with_plugins(load_registry(), [Monitor(), Plex()])
                 if g["id"] == "plugins")["rows"]
     order = [(r["type"], r.get("label") if r["type"] == "group" else r["key"]) for r in rows]
-    assert order == [("group", "Sources"), ("toggle", "plex.enabled"), ("group", "System"), ("toggle", "mon.enabled")]
+    # ADR-0111: the visualiser's skins head the screen, as a plugin of ours.
+    assert order == [("group", "Visualiser"), ("toggle", "visualiser_skins"),
+                     ("group", "Sources"), ("toggle", "plex.enabled"), ("group", "System"), ("toggle", "mon.enabled")]
 
 
 def test_a_plugins_notice_is_asked_before_its_switch_turns_on():

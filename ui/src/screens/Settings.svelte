@@ -411,6 +411,8 @@
   const MB = (n) => (n / 1048576).toFixed(1);
   function downloadShare(c) {
     if (c.state === 'verifying' || c.state === 'installing') return 1;
+    // A skin pack (ADR-0111) reports its share as the updater measures it.
+    if (c.share != null) return Math.min(1, Math.max(0, c.share));
     return c.received != null && c.total ? Math.min(1, c.received / c.total) : null;
   }
   function downloadLine(c) {

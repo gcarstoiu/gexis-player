@@ -558,7 +558,9 @@ def pack_install(name: str) -> int:
 
 
 def pack_remove(name: str) -> int:
-    if not PACK.match(name or ""):
+    # Also today's gexis-skins, which the devices that had it keep until the
+    # switch goes off (ADR-0111 decisions 3 and 10).
+    if not (PACK.match(name or "") or name == "gexis-skins"):
         raise Stop(f"{name!r} is not a skin pack")
     report_pack("removing", package=name, message=f"removing {name}")
     r = run("apt-get", "-q", "-y", "remove", name, check=False, env=APT_ENV)

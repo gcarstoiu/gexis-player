@@ -18,7 +18,7 @@ from dbus_next import BusType
 from dbus_next.aio import MessageBus
 
 from gexis_core import alsa, bluetooth_adapter_state, bluetooth_agent, device_name, journal, meters, screen_detect, skins, wifi
-from gexis_core import screen_apply, screens
+from gexis_core import screen_apply, screens, skin_packs
 from gexis_core.adapters.base import VolumeMechanism
 from gexis_core.adapters.bluetooth import BluetoothAdapter
 from gexis_core.adapters.lms import LmsAdapter
@@ -392,6 +392,8 @@ async def main() -> None:
             "without names or marks", plugins.DEFAULT_DIR,
         )
 
+    #: Whether the chosen output can feed the visualiser (ADR-0055 §6).
+    meters_chain = {"ok": True}
     state_store = StateStore(
         {rid: adapter.capabilities for rid, adapter in adapters.items()},
         sources=tuple(p.to_json() for p in installed_plugins),
@@ -734,7 +736,8 @@ async def main() -> None:
         # The monitor watches one card and was spawned for the old one; its
         # own loop restarts it, so ending it is enough to move it.
         volume_bridge.restart_monitor()
-        state_store.set_meters(outputs.needs_plug(chosen.card) is not True)
+        meters_chain["ok"] = outputs.needs_plug(chosen.card) is not True
+        _publish_meters()
         _choose_output_mode()
         state_store.bump_settings_revision()
 
@@ -1208,8 +1211,13 @@ async def main() -> None:
         if (name := components.for_plugin(plugin.id)) is not None
     }
 
+    def _all_components() -> dict:
+        status = components.all_status()
+        status["skins"] = skins_status()
+        return status
+
     def _publish_components() -> None:
-        state_store.set_components(components.all_status())
+        state_store.set_components(_all_components())
 
     async def _watch_components() -> None:
         """What each download is doing, to the panel. Twice a second while one
@@ -1217,7 +1225,7 @@ async def main() -> None:
         every two seconds otherwise."""
         while True:
             try:
-                status = await asyncio.to_thread(components.all_status)
+                status = await asyncio.to_thread(_all_components)
                 state_store.set_components(status)
                 busy = any(s.get("state") in components.BUSY for s in status.values())
             except Exception:  # noqa: BLE001 - a watcher that dies tells nobody anything
@@ -1345,6 +1353,68 @@ async def main() -> None:
         if row.get("key")
     }
 
+    # **ADR-0111: the visualiser's skins follow the screen.** One pack per
+    # device; the switch (`visualiser_skins`) says whether there is one. The
+    # updater installs and removes it as root, from the release's own parts;
+    # this only decides what is wanted and starts it. A failed download (no
+    # network yet, during setup) is tried again every few minutes.
+    SKINS_RETRY_S = 300.0
+    UPDATER = "/usr/lib/gexis/gexis-update"
+    skins_state = {"busy": False, "task": None}
+
+    def _publish_meters() -> None:
+        """ADR-0055 §6 and ADR-0111: the visualiser is there when the output
+        can feed it and a skin pack is installed."""
+        state_store.set_meters(bool(meters_chain["ok"]) and bool(skin_packs.installed()))
+
+    def skins_status() -> dict:
+        return skin_packs.status()
+
+    async def _run_updater(*args: str) -> int:
+        proc = await asyncio.create_subprocess_exec(UPDATER, *args)
+        return await proc.wait()
+
+    async def _skins_ensure() -> None:
+        if skins_state["busy"]:
+            return
+        skins_state["busy"] = True
+        try:
+            have = await asyncio.to_thread(skin_packs.installed)
+            if settings.value("visualiser_skins"):
+                want, extra = skin_packs.plan(skin_packs.screen_size(), have)
+                if want is not None:
+                    logger.info("skins: installing %s", skin_packs.package(want))
+                    if await _run_updater("pack-install", skin_packs.package(want)) != 0:
+                        return
+                    have = await asyncio.to_thread(skin_packs.installed)
+                    _, extra = skin_packs.plan(skin_packs.screen_size(), have)
+                if skin_packs.for_screen(*skin_packs.screen_size()) in have:
+                    for size in extra:
+                        await _run_updater("pack-remove", _package_on_disk(size))
+            else:
+                for size in have:
+                    await _run_updater("pack-remove", _package_on_disk(size))
+        finally:
+            skins_state["busy"] = False
+            _publish_meters()
+            _publish_components()
+
+    def _package_on_disk(size: tuple[int, int]) -> str:
+        """A size's package: its pack, or the gexis-skins a device kept."""
+        own = skin_packs.PACKS / f"{size[0]}x{size[1]}" / "pack.json"
+        return skin_packs.package(size) if own.exists() else "gexis-skins"
+
+    def _skins_kick() -> None:
+        asyncio.ensure_future(_skins_ensure())
+
+    async def _skins_loop() -> None:
+        while True:
+            await asyncio.sleep(SKINS_RETRY_S)
+            try:
+                await _skins_ensure()
+            except Exception:  # noqa: BLE001 - a watcher that dies tells nobody anything
+                logger.exception("skins: ensure failed")
+
     def _choose_screen(label: str | None = None, rotation: str | None = None) -> None:
         """ADR-0109: write the chosen screen and rotation for the next start
         (screen.env, and video= for a bar), then restart on it - unless
@@ -1410,6 +1480,9 @@ async def main() -> None:
             # which channel; Software update holds the rest.
             "update_status": lambda: updates.release_line(settings_store.get("update_channel") or "Stable"),
             "software_update": lambda: updates.sentence(),
+            # ADR-0111: on where a pack is already installed - the devices
+            # that had gexis-skins keep it, unasked (decision 10).
+            "visualiser_skins": lambda: bool(skin_packs.installed()),
             "image_build": lambda: " · ".join(x for x in (image_info().get("built"), updates.installed_release()) if x) or "unknown",
             # ADR-0086 as amended: a synthesised switch reads what systemd says
             # about the unit until somebody uses it.
@@ -1480,6 +1553,8 @@ async def main() -> None:
                    _apply_headless(value)
                ),
                # ADR-0103: the journal kept on the card, or not.
+               # ADR-0111: the pack for this screen, in or out.
+               "visualiser_skins": lambda value: _skins_kick(),
                "debug_logs": lambda value: asyncio.ensure_future(
                    _apply_debug_logs(bool(value))
                ),
@@ -1931,7 +2006,8 @@ async def main() -> None:
     if forced_fixed:
         asyncio.ensure_future(_apply_output_mode())
 
-    state_store.set_meters(meters_available)
+    meters_chain["ok"] = meters_available
+    _publish_meters()
 
     previous_active = state_store.state.active
 
@@ -2196,6 +2272,9 @@ async def main() -> None:
             await asyncio.sleep(1 if view.get("active") else 3)
 
     asyncio.ensure_future(_follow_updates())
+    # ADR-0111: the pack this screen wants, now and every few minutes.
+    _skins_kick()
+    asyncio.ensure_future(_skins_loop())
 
     # **ADR-0109 decision 5: Keep this screen?** A screen chosen before this
     # start waits for a touch on the panel. The countdown starts at the
@@ -2230,6 +2309,8 @@ async def main() -> None:
                 screen_wait["task"].cancel()
             state_store.set_screen_confirm(None)
             logger.info("screen: kept")
+            # ADR-0111 decision 2: the kept screen's pack, the old one out.
+            _skins_kick()
             return {"kept": True}
         asyncio.ensure_future(_screen_go_back("the panel asked to go back"))
         return {"going_back": True}
