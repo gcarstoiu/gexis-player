@@ -91,6 +91,13 @@ def channel_name(given: str | None) -> str:
     return "testing" if setting("update_channel") == "Testing" else "stable"
 
 
+# **The channel file says how it is laid out** (LESSONS 49): a release
+# published in a layout an older updater cannot read must say so on the
+# device, not fail with a 404. 2 is parts (ADR-0108 as amended); a file with
+# no Format predates the field and is read as this updater reads it.
+FORMAT = 2
+
+
 def read_channel(channel: str) -> dict:
     """The channel file, verified; refused if its serial went down."""
     url = f"{BASE}/channels/{channel}"
@@ -106,6 +113,10 @@ def read_channel(channel: str) -> dict:
     fields = dict(line.split(": ", 1) for line in verified.stdout.decode().splitlines() if ": " in line)
     if fields.get("Channel") != channel:
         raise Stop(f"the {channel} file says it is for {fields.get('Channel')!r}")
+    fmt = int(fields.get("Format", str(FORMAT)))
+    if fmt > FORMAT:
+        raise Stop(f"{fields.get('Release', 'the new release')} needs a newer updater than this device has "
+                   f"(channel format {fmt}, this one reads {FORMAT}); install a newer image")
     serial = int(fields.get("Serial", "0"))
     seen_path = STATE / f"serial-{channel}"
     seen = int(seen_path.read_text()) if seen_path.exists() else 0

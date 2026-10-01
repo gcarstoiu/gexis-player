@@ -56,6 +56,19 @@ def test_a_serial_that_went_down_is_refused(monkeypatch, up):
         up.read_channel("testing")
 
 
+def test_a_channel_in_a_newer_format_says_the_updater_is_too_old(monkeypatch, up):
+    """LESSONS 49: a layout this updater cannot read is named, not a 404."""
+    serve(monkeypatch, up, "Format: 3\n" + channel_text())
+    with pytest.raises(up.Stop, match="needs a newer updater"):
+        up.read_channel("testing")
+
+
+def test_a_channel_in_this_format_or_none_is_read(monkeypatch, up):
+    for text in ("Format: 2\n" + channel_text(), channel_text()):
+        serve(monkeypatch, up, text)
+        assert up.read_channel("testing")["Release"] == "0.2.1+git900.abc1234"
+
+
 def test_a_file_for_the_other_channel_is_refused(monkeypatch, up):
     serve(monkeypatch, up, channel_text(channel="stable"))
     with pytest.raises(up.Stop, match="says it is for"):

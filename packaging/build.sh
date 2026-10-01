@@ -31,6 +31,17 @@ version_for() {
 	printf '%s' "$v"
 }
 
+# **Reproducible** (found 2026-10-01): dpkg-deb stamps the build time into
+# the package, so a package rebuilt unchanged got new bytes, a new hash, and
+# its part was uploaded again - 168 MB of skins every release. With
+# SOURCE_DATE_EPOCH, the time of the commit the version names, the same
+# version is the same file (measured: two builds of gexis-system identical
+# with it, different without).
+epoch_for() {
+	# shellcheck disable=SC2046
+	git log -1 --format=%ct -- $(inputs "$1")
+}
+
 # Rebuilt when the Dockerfile changes: its hash is the image's label.
 want=$(sha256sum packaging/builder.Dockerfile | cut -c1-12)
 have=$(docker image inspect -f '{{index .Config.Labels "gexis.dockerfile"}}' gexis-deb-builder 2>/dev/null || true)
@@ -42,7 +53,7 @@ for pkg in ${*:-core ui system skins peppyalsa peppy-engines go-librespot beszel
 	docker run --rm --platform linux/arm64 \
 		-v "$PWD":/src:ro -v "$PWD/packaging/out":/out \
 		-v "${GEXIS_BUILD_CACHE:-$HOME/.cache/gexis-player/downloads}":/cache \
-		-e GEXIS_BUILD_CACHE=/cache \
+		-e GEXIS_BUILD_CACHE=/cache -e SOURCE_DATE_EPOCH="$(epoch_for "$pkg")" \
 		gexis-deb-builder bash "/src/packaging/$pkg/build.sh" "$(version_for "$pkg")"
 done
 # The container writes as root; hand the results back.
