@@ -11,6 +11,9 @@
 # through fetch_cached. assemble.py decides what a skin is and what repeats;
 # describe.py writes pack.json, the plugin manifest and the licence files.
 set -euo pipefail
+# Some archives name files outside ASCII (`... — kopia.png` in
+# 1280x800_g5_420_meters.zip): bsdtar refuses those in the C locale.
+export LC_ALL=C.UTF-8
 
 VERSION="$1"
 SIZE="$2"
