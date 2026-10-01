@@ -3,6 +3,8 @@
   import { onMount, untrack } from 'svelte';
   import { connect, active, metadata, volume, handoff, capabilities, available, availability, shuffle, repeat, queue, pairing, fixedOutput, panel, setup } from './lib/state.js';
   import NowPlaying from './screens/NowPlaying.svelte';
+  import BarNowPlaying from './screens/bar/BarNowPlaying.svelte';
+  import BarTray from './screens/bar/BarTray.svelte';
   import Library from './screens/Library.svelte';
   import WaitingHome from './screens/WaitingHome.svelte';
   import PanelBackground from './screens/PanelBackground.svelte';
@@ -385,10 +387,18 @@
       <!-- ADR-0079: with LMS off the Home button is a Settings button and
            `onartist` is not passed at all, so the artist line is a name rather
            than a link that leads nowhere. -->
+      {#if screen.family === 'bar'}
+        <!-- ADR-0109, Bar family: the strip, with the same props. -->
+        <BarNowPlaying active={$active} metadata={$metadata} volume={$volume} controls={$capabilities[$active]?.controls ?? []} available={$available} shuffle={$shuffle} repeat={$repeat} queue={$queue} onvolume={openVolume} onvisualisation={showVisualisation}
+          rootless={lmsOff}
+          onhome={lmsOff ? openSettings : () => (libraryRequested = true)}
+          onartist={lmsOff ? undefined : (name) => { libraryArtist = name; libraryRequested = true; }} />
+      {:else}
       <NowPlaying active={$active} metadata={$metadata} volume={$volume} controls={$capabilities[$active]?.controls ?? []} available={$available} shuffle={$shuffle} repeat={$repeat} queue={$queue} onvolume={openVolume} onvisualisation={showVisualisation}
         rootless={lmsOff}
         onhome={lmsOff ? openSettings : () => (libraryRequested = true)}
         onartist={lmsOff ? undefined : (name) => { libraryArtist = name; libraryRequested = true; }} />
+      {/if}
     </div>
   {/if}
 
@@ -396,7 +406,24 @@
        The drawer is where the sentence lives - "the answer is where the
        question is asked" - and `{#if $volume}` alone left the padlock
        opening nothing at all. -->
-  {#if $volume || $fixedOutput}
+  {#if screen.family === 'bar'}
+    <!-- ADR-0109, Bar family: the pull-down tray stands where the drawer
+         stands, over every screen. Always mounted: it carries Home and the
+         visualiser as well as the level, so it is needed with no level to
+         show. -->
+    <BarTray
+      open={volumeOpen}
+      volume={$volume}
+      active={$active}
+      onclose={closeVolume}
+      onexternal={openFromExternal}
+      onactivity={keepVolumeOpen}
+      onsettled={armAutoHide}
+      rootless={lmsOff}
+      onhome={lmsOff ? openSettings : () => (libraryRequested = true)}
+      onvisualisation={showVisualisation}
+    />
+  {:else if $volume || $fixedOutput}
     <VolumeDrawer
       open={volumeOpen}
       volume={$volume}
