@@ -1718,6 +1718,10 @@
   .row--readonly { opacity: 1; }
   /* ADR-0110 §2: the Release tile. A row that holds a button, so a div. */
   .row--tile { cursor: default; }
+  /* The button under the text, not beside it: beside it, a phone's width
+     broke "Up to date · checked today 13:20" mid-word. */
+  .row--tile .row__body { flex-direction: column; align-items: stretch; gap: 14px; }
+  .row--tile .tile__btn { align-self: flex-start; }
   .row--tile:active { transform: none; }
   .row__value--tile {
     display: block;
