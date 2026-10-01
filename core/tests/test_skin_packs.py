@@ -97,3 +97,13 @@ def test_after_a_change_of_screen_the_old_pack_shows_until_the_new_one_is_in(tmp
     assert sp.current((1024, 600), packs, legacy) == (small, "800x480")
     # none fits a 480x320 screen: it still draws what it has
     assert sp.current((480, 320), packs, legacy) is not None
+
+
+def test_peppymeter_starts_on_gelo5_s_folder_when_the_pack_has_one(tmp_path):
+    for name in ("catalog-a", "gelo5", "stock"):
+        d = tmp_path / name / "templates" / "800x480"
+        d.mkdir(parents=True)
+        (d / "meters.txt").write_text("[x]\n")
+    assert sp.first_folder(tmp_path, "800x480") == tmp_path / "gelo5" / "templates"
+    assert sp.first_folder(tmp_path, "1920x1080") is None
+    assert sp.first_folder(tmp_path / "absent", "800x480") is None

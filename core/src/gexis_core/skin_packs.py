@@ -96,6 +96,16 @@ def current(screen: tuple[int, int] | None = None, packs: Path = PACKS,
     return (root, f"{size[0]}x{size[1]}") if root else None
 
 
+def first_folder(root: Path, resolution: str) -> Path | None:
+    """The `templates` folder PeppyMeter is configured with - one of the
+    pack's, since the driver reads the others beside it. Gelo5's when there
+    is one, so a device starts on the skin it always has; else the first."""
+    folders = sorted(p for p in root.iterdir() if (p / "templates" / resolution / "meters.txt").is_file()) \
+        if root.is_dir() else []
+    folders.sort(key=lambda p: p.name != "gelo5")
+    return folders[0] / "templates" if folders else None
+
+
 def plan(screen: tuple[int, int], have: list[tuple[int, int]]) -> tuple[tuple[int, int] | None, list[tuple[int, int]]]:
     """(the pack to install, the packs to remove once it is in) for this
     screen. One pack per device (decision 2)."""

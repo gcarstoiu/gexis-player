@@ -252,3 +252,14 @@ def test_a_source_with_no_pipe_is_left_alone():
     original = source.get_latest_pipe_data
     driver.hold_the_last_frame(source)
     assert source.get_latest_pipe_data is original
+
+
+def test_the_spectrum_engine_reads_the_pack_s_own_resolution(tmp_path, monkeypatch):
+    """ADR-0111: `spectrum.folder` follows the skin's home, not 1280x800."""
+    monkeypatch.setattr(driver, "SPECTRUM_DIR", tmp_path)
+    (tmp_path / "config.txt").write_text("[current]\nspectrum = x\nbase.folder = /old\nspectrum.folder = 1280x800\n")
+    home = tmp_path / "packs" / "800x480" / "gelo5" / "templates_spectrum" / "800x480"
+    driver.select_spectrum_section("s", driver.spectrum_base(home), home.name)
+    text = (tmp_path / "config.txt").read_text()
+    assert "spectrum.folder = 800x480" in text
+    assert f"base.folder = {home.parent.parent / 'templates_spectrum'}" in text

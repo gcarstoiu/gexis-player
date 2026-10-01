@@ -63,6 +63,7 @@ from gexis_core.peppy import (
     PeppyController,
     PeppyScreen,
     UnattendedPlayback,
+    set_meter_skins,
     set_meter_smoothing,
 )
 from gexis_core.peppy_metadata import PeppyMetadataWriter
@@ -1391,6 +1392,8 @@ async def main() -> None:
                     if await _run_updater("pack-install", skin_packs.package(want)) != 0:
                         return
                     have = await asyncio.to_thread(skin_packs.installed)
+                    # Onto the new pack before the old one goes from under it.
+                    await _configure_visualiser()
                     _, extra = skin_packs.plan(skin_packs.screen_size(), have)
                 if skin_packs.for_screen(*skin_packs.screen_size()) in have:
                     for size in extra:
@@ -1400,8 +1403,22 @@ async def main() -> None:
                     await _run_updater("pack-remove", _package_on_disk(size))
         finally:
             skins_state["busy"] = False
+            await _configure_visualiser()
             _publish_meters()
             _publish_components()
+
+    async def _configure_visualiser() -> None:
+        """ADR-0111: PeppyMeter draws the pack skins_at() names, at its size.
+        Restarted only when its config changed."""
+        at = skins_at()
+        if at is None:
+            return
+        base = await asyncio.to_thread(skin_packs.first_folder, at[0], at[1])
+        if base is None:
+            return
+        width, height = (int(n) for n in at[1].split("x"))
+        if await asyncio.to_thread(set_meter_skins, Path(config.meter_consumer_config), base, at[1], width, height):
+            await asyncio.create_subprocess_exec("systemctl", "restart", "gexis-peppy.service")
 
     def _package_on_disk(size: tuple[int, int]) -> str:
         """A size's package: its pack, or the gexis-skins a device kept."""

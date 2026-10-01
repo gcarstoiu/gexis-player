@@ -330,7 +330,7 @@ def png_width(path: Path) -> int | None:
     return int.from_bytes(header[16:20], "big")
 
 
-def select_spectrum_section(name: str, base_folder: Path | None = None) -> None:
+def select_spectrum_section(name: str, base_folder: Path | None = None, folder: str | None = None) -> None:
     """Point the spectrum engine's own config at one section. Rewritten in
     place: configparser fails hard on a duplicate key, and an appended one
     would stop the process starting.
@@ -348,6 +348,9 @@ def select_spectrum_section(name: str, base_folder: Path | None = None) -> None:
     parser["current"]["spectrum"] = name
     if base_folder is not None:
         parser["current"]["base.folder"] = str(base_folder)
+    # ADR-0111: the pack's resolution folder - `1280x800` only in that pack.
+    if folder:
+        parser["current"]["spectrum.folder"] = folder
     # The engine resolves its sections under `base.folder/spectrum.folder`,
     # so the bar count is read from the same place it will read the rest.
     # The cap is what the *pipe* carries, which is the band count peppyalsa
@@ -671,6 +674,7 @@ class SpectrumState:
             BASE_FOLDER,
             SCREEN_HEIGHT,
             SCREEN_WIDTH,
+            SPECTRUM_FOLDER,
             SPECTRUM_X,
             SPECTRUM_Y,
         )
@@ -678,7 +682,7 @@ class SpectrumState:
         here = Path.cwd()
         os.chdir(SPECTRUM_DIR)
         try:
-            select_spectrum_section(name, spectrum_base(home) if home else None)
+            select_spectrum_section(name, spectrum_base(home) if home else None, home.name if home else None)
             spectrum = self.spectrum
             spectrum.config[SCREEN_WIDTH] = width
             spectrum.config[SCREEN_HEIGHT] = height
@@ -690,6 +694,7 @@ class SpectrumState:
             # engine looked for it in Gelo5's.
             if home is not None:
                 spectrum.config[BASE_FOLDER] = str(spectrum_base(home))
+                spectrum.config[SPECTRUM_FOLDER] = home.name
             spectrum.spectrum_configs = spectrum.config_parser.get_spectrum_configs()
             if not spectrum.spectrum_configs:
                 print(f"peppy: spectrum {name!r} missing from the corpus; meters only", file=sys.stderr)
@@ -874,7 +879,11 @@ def main() -> int:
             util.pygame_screen = util.PYGAME_SCREEN
             util.image_util = SpectrumUtil()
 
-            select_spectrum_section(name, spectrum_base(spectrum_home) if spectrum_home else None)
+            select_spectrum_section(
+                name,
+                spectrum_base(spectrum_home) if spectrum_home else None,
+                spectrum_home.name if spectrum_home else None,
+            )
             os.chdir(SPECTRUM_DIR)  # its config parser reads ./config.txt too
             install_screensaver_shim(name, width, height)
             # `spectrum`, not `spectrum.spectrum`: the engine's own directory
