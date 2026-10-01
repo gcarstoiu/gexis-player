@@ -523,7 +523,7 @@
                 </button>
               </div>
               {#if headless}
-                <div class="warn"><span class="bang">!</span><span>The panel is where the player shows its setup network if it starts without one. Headless, that fallback is gone — write down the address on the last page.</span></div>
+                <div class="warn"><span class="bang">!</span><span>Without a screen, the setup network always uses the password <b>gexis-setup</b>. If gexis starts and cannot reach your Wi-Fi, it opens that network again: join it from your phone, then open <b>10.42.0.1:8090</b>.</span></div>
               {/if}
             </section>
           {:else if id === 'review'}
