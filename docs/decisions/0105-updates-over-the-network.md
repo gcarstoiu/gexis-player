@@ -122,6 +122,88 @@ exists.
 A new Debian release (13 → 14), a new partition layout, a new boot mechanism.
 Named in the release notes when it happens; rare.
 
+## Amendment, 2026-09-30 — the tested set, measured
+
+[Finding 104](../findings/104-what-a-tested-set-weighs-and-where-it-can-live.md),
+the prototype decision 3 asked for:
+
+- **1,027 packages, 880 MB** of package files: 140 from Raspberry Pi (497 MB -
+  Chromium, kernels, firmware), 887 from Debian (383 MB).
+- **The Raspberry Pi archive indexes only the newest version**; its pool keeps
+  the old files (alsa-lib's back to Debian 10), undocumented how long. Section 3
+  said the archive *"dropped the pinned `alsa-lib`"*: it dropped it **from the
+  index** (ADR-0021's amendment says the same), which is what makes apt unable
+  to install it. **No Raspberry Pi snapshot service exists**; Debian's does.
+- **GitHub Pages cannot hold it** (1 GB per site; one set is 880 MB; git
+  refuses Chromium's 122 MB file). Section 2's candidate stands for nothing
+  larger than our own packages. **GitHub Releases can**, per its documentation
+  (no total or bandwidth limit, 2 GiB a file), but 1,000 files a release is
+  fewer than the set's 1,027.
+
+**Decided (George, 2026-09-30): GitHub Releases** (*"A"*). Each release is
+published as GitHub releases on the public repository - two per release while a
+set exceeds 1,000 files - holding our packages and the whole tested set, with a
+signed index. A device talks only to GitHub; every past release stays
+downloadable, so going back is always possible. About 0.9 GB is uploaded per
+release; a device downloads only what changed. Not yet shown: apt reading a
+repository from a release (behind GitHub's redirect to its storage) - the
+first thing step 2 proves, with a test release George approves first.
+
+**Decided: two channels, testing and stable** (George: *"Agree with stable and
+testing"*). A release goes to testing first, which George's devices follow;
+promoting it to stable points stable at the same release; nothing is
+rebuilt. Everyone else follows stable.
+
+**The key, in practice (George, 2026-09-30).** No passphrase: Claude signs
+unattended, so a passphrase would sit on R2D2 beside the key and add nothing;
+R2D2 itself is the protection. **No expiry** (George: *"No expiry"*): a key
+that expires needs the master backup to extend it, and losing every backup
+would then stop updates at the date. **The revocation certificate is printed**
+and kept by George with the master key's backup, off R2D2 (*"I'll print
+it"*). Losing the backup alone changes nothing; losing R2D2's key alone stops
+signed updates until devices are reflashed with a new one; losing both
+while the key is stolen is the case the printed certificate exists for.
+
+**The key, created 2026-09-30:** *Gexis Player releases*, master
+`E63B 2631 0A28 F1EC C866  05E4 2B4E 3F53 73EE ABB7` (Ed25519, certify only),
+signing subkey `B664 3AE3 4570 2FBA`. Its public half is
+`packaging/keys/gexis-release.asc`; R2D2's keyring
+(`~/.gnupg-gexis-release`) holds the signing subkey and **not the master's
+secret** (`sec#`), so R2D2 can sign releases but cannot make or revoke keys.
+The master, the revocation certificate and a note were given to George to
+print and keep; a restore from that backup was shown to hold both secret keys
+and to sign.
+
+**To confirm before the first public release: the source code offer.**
+Publishing Debian's and Raspberry Pi's packages ourselves is redistributing
+them, much of it under the GPL, whose terms ask for the corresponding source
+to be offered. `SOURCE.md` covers our own code only. Debian and Raspberry Pi
+publish their source packages; whether pointing at them suffices or we mirror
+them too is to be checked, not assumed.
+
+## Amendment, 2026-09-30 — where a new device's image comes from
+
+Updates keep a device current; a device starts from a flashed image, and
+nothing said where a user gets one. **Decided (George: *"A now with B
+later"*):**
+
+- **A, now: each stable release carries its image.** Promoting a release to
+  stable attaches the image it was built from - `gexis-player.img.xz`, with
+  `.sha256` and a signature by the release key (`.asc`) - to that release, and
+  marks it GitHub's *latest*, so
+  `https://github.com/gcarstoiu/gexis-player/releases/latest/download/gexis-player.img.xz`
+  is always stable's image. Measured on image 852: 5.1 GB becomes **1.14 GiB**
+  (`xz -6`, 2 min 16 s on R2D2), under GitHub's 2 GiB a file. Testing releases
+  carry no image: the devices that follow testing update.
+- **B, with the first public release: a Raspberry Pi Imager listing**, so the
+  player appears in Imager's own menu, pointing at A's image.
+
+Because an image and an update are built from the same packages (ADR-0107), a
+device flashed with release X is the device an update brings to X. Before the
+first public release the image loses its development settings (passwordless
+`sudo`, ADR-0107 decision 3; the first-boot SSH key) and the source offer is
+confirmed.
+
 ## Not in this record
 
 - **Plugins' own updates** — ADR-0106. The repository is shared.

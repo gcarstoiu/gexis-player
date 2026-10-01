@@ -4,6 +4,45 @@ Last updated: 2026-09-30 (thirtieth session, on R2D2).
 
 ## Start here
 
+**Phase 13c (updates over the network) is under way on `phase-13c`**, in the
+worktree `~/projects/gexis-player-13a` (13a merged as PR #41). Images built
+there are hard-linked into `~/projects/gexis-player/image/deploy/` - George
+flashes from there; name the full file when asking, and check
+`/etc/gexis/image.info` after boot before testing anything.
+
+| Step | State |
+|---|---|
+| 0. Tested set measured | Finding 104 |
+| 1. Our parts as Debian packages | **ADR-0107.** Images 833 (first from packages), 849, 852, 856 built; 833 ran on sofa-pi |
+| 2. Releases and the key | **ADR-0108** (amended: a release is four parts - ours, skins, rpi, debian - each a GitHub pre-release **named by its content**, so an unchanged part is never uploaded again; a signed `parts` file on the release page). Key `E63B…ABB7`, subkey only on R2D2, backup printed and on USB, deleted from R2D2. `packaging/release/build.sh` / `publish.sh` (paced ~450 uploads/h after GitHub's secondary rate limit blocked the account for ~20 min on 2026-09-30) |
+| 3. The updater | **Built and shown on sofa-pi** (Finding 105): 833→849→852 updates, a deliberately broken release put back. `gexis-update check / install / scheduled` |
+| 4. Settings migrations | Built |
+| 5. Settings → System → Updates | **Rebuilt to ADR-0110** (George's findings after running an update himself, 2026-10-01): release numbers `x.y.z` from a `v` tag, approved with the notes; the Release tile with one button; the update modal with every step and a download bar; playback stops on consent (no silence wait), nothing resumes; the panel locked behind a full-screen message; night runs 03:00-04:00, only when nothing plays. Release notes signed on each release, shown under Release |
+| 6. Our plugins updating | Met by releases (13a criterion 5, read from the code; a changed Plexamp pin not yet shown) |
+| 7. One update from GitHub | **Done**: sofa-pi 852 → 867 in 56 s (by hand-placed updater, LESSONS 49), 867 → 871 by George himself. Found on the way and fixed: release tags hijacking versions (LESSONS 50), GitHub renaming `~` in 73 file names, packages not reproducible, editing a running publish script (LESSONS 51). **0.3.0** (ADR-0110) published to testing 2026-10-01; **0.3.1** follows once sofa-pi is on 0.3.0, so George sees the new screens. Proposed, not decided: each package file uploaded once, into pools (ADR-0108 amendment, apt and GitHub each tested) |
+
+**New users start from an image** (ADR-0105 amended, George: *"A now with B
+later"*): promoting a release to stable attaches `gexis-player.img.xz` (1.14 GiB,
+signed) at `/releases/latest/download/gexis-player.img.xz`; a Raspberry Pi
+Imager listing with the first public release.
+
+**After 13c, decided (George, 2026-09-30: *"After 13c"*): go-librespot
+0.9.0 -> 0.10.2** (four releases behind: 0.9.1, 0.10.0, 0.10.1, 0.10.2). Read
+their notes for events, audio output and volume; change
+`packaging/go-librespot/pins.sh`; test takeovers both ways, resume and
+volume on the device; publish to testing - the first real use of the update
+path for a component.
+
+**Also 2026-09-30:** a restore brings the backup's device name back in all
+four places (it had left LMS and the network disagreeing); a resumed Spotify
+after a core restart is an acquisition; Claude Design's 13b handoff is stored
+on branch `design-13b` (its stale `IMPLEMENTED-DIFFERENTLY.md` not taken), and
+Attached screen / Screen rotation are in ADR-0022's inventory for 13b.
+**Decided:** the output fallback stays (the user picks); passwordless `sudo`
+decided when the first release is made; the GPL source offer for the OS
+packages we publish is checked before then.
+
+
 **Phase 13a (plugins you install and update) is built through criterion 4 on
 `phase-13ac`**, in its own worktree at `~/projects/gexis-player-13a`, and run on
 `sofa-pi` (the second card, 192.168.178.131) with George. Upload from a phone
@@ -32,13 +71,14 @@ the archive's 2026-09-30 block. Its image:
 `image/deploy/2026-09-29-gexis-player-v0.2.1-789-gee6a365.img`, sha256
 `74dc726c…a045`, 83 `verify-image.sh` checks.
 
-**Decision owed (George, no hurry):** make `outputs.resolve`'s fallback prefer
-a HAT over the Pi's own outputs. Today a card whose DAC is not the
-`sndrpihifiberry` the shipped `output.conf` names falls back to the first output
-with a volume control, likely the headphone jack; setup's Output step lists the
-DAC but starts on the jack. George asked whether a HiFiBerry/IQaudIO DAC+ would
-be recognised: listed by its own name if its EEPROM identifies it, read from
-the code, never tried.
+**Decided 2026-09-30 (George): the output fallback stays as it is** - *"no.
+The user gets to select"*. A card whose DAC is not the `sndrpihifiberry` the
+shipped `output.conf` names falls back to the first output with a volume
+control (likely the headphone jack), and setup's Output step, which lists the
+DAC by name, is where the user picks it. Not built: a preference for a HAT.
+
+**The `pi` user's passwordless `sudo`** is decided when the first release is
+made, not before (George, 2026-09-30; ADR-0107 decision 3).
 
 **Phase 9 criterion 0's revisit: done 2026-09-29, the waiver stands**
 (Finding 101; George: *"really snappy"*, then *"We go with A"*).

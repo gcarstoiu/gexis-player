@@ -1,0 +1,10 @@
+[Unit]
+Description=Gexis Player: check the channel, and install at night if Updates is Automatic (ADR-0105)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/lib/gexis/gexis-update scheduled
+# Automatic installs from here and an install is never cut short.
+TimeoutStartSec=infinity

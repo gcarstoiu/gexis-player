@@ -11,7 +11,7 @@ User=pi
 Group=pi
 Environment=XDG_RUNTIME_DIR=/run/user/1000
 Environment=WAYLAND_DISPLAY=wayland-0
-ExecStart=/usr/local/bin/gexis-peppy-start
+ExecStart=/usr/bin/gexis-peppy-start
 # Restart=no, like the kiosk unit and for the same reason: a failure that
 # restarts in a loop is a failure nobody sees. journalctl -u gexis-peppy.
 Restart=no

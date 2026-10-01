@@ -197,3 +197,24 @@ def test_a_rename_writes_the_name_the_core_then_looks_for(tmp_path, monkeypatch)
     monkeypatch.setattr(device_name, "ENV_PATH", env)
     device_name._write_env("Den Pi")
     assert device_name.lms_player("gexis") == "Den Pi"
+
+
+def test_a_restore_puts_the_backups_name_in_all_four_places(paths):
+    """George, 2026-09-30: gexis's backup restored onto a card set up as
+    "Sofa PI" left LMS on `gexis` and the network on `sofa-pi`."""
+    paths["ENV_PATH"].parent.mkdir(parents=True, exist_ok=True)
+    paths["ENV_PATH"].write_text("GEXIS_DEVICE_NAME=gexis\n")  # what the archive wrote
+    paths["MACHINE_INFO_PATH"].write_text("PRETTY_HOSTNAME=Sofa PI\n")
+    paths["HOSTNAME_PATH"].write_text("sofa-pi\n")
+    paths["LIBRESPOT_PATH"].write_text("device_name: Sofa PI\n")
+    written = device_name.apply_restored()
+    assert written is not None and written.hostname == "gexis" and not written.failed
+    assert paths["HOSTNAME_PATH"].read_text().strip() == "gexis"
+    assert "PRETTY_HOSTNAME=gexis" in paths["MACHINE_INFO_PATH"].read_text()
+    assert "device_name: gexis" in paths["LIBRESPOT_PATH"].read_text()
+
+
+def test_a_restore_without_a_name_changes_nothing(paths):
+    paths["MACHINE_INFO_PATH"].write_text("PRETTY_HOSTNAME=Sofa PI\n")
+    assert device_name.apply_restored() is None
+    assert "Sofa PI" in paths["MACHINE_INFO_PATH"].read_text()

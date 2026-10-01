@@ -263,6 +263,11 @@ class PlaybackState:
     #: `SetupNetwork.public_status` - never the password, which the panel
     #: reads from `/setup/status` over loopback. None until it has decided.
     setup: dict | None = None
+    #: **ADR-0110: an update the user can see** - the installed release, what
+    #: the updater is doing (state, steps, the download's share), and
+    #: `active` while an install runs, which locks the panel. Read from the
+    #: updater's status file, so it survives the core's own restart.
+    update: dict | None = None
 
     @property
     def controls(self) -> dict | None:
@@ -304,4 +309,5 @@ class PlaybackState:
             "components": dict(self.components),
             "panel": dict(self.panel),
             "setup": dict(self.setup) if self.setup else None,
+            "update": dict(self.update) if self.update else None,
         }

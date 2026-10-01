@@ -1253,6 +1253,11 @@ class StateServer:
             except (OSError, ValueError, tarfile.TarError) as exc:
                 logger.warning("restore: %s failed: %s", name, exc)
                 return web.json_response({"ok": False, "error": str(exc)})
+            # The backup's name, in all four places, before the reboot reads
+            # them (device_name.apply_restored).
+            written = await asyncio.to_thread(device_name.apply_restored)
+            if written is not None:
+                logger.info("restore: device name applied everywhere (%s)", written.hostname)
             asyncio.ensure_future(self._restore())
             return web.json_response({"ok": True, "error": None})
         if key != "wifi":

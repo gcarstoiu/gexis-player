@@ -960,17 +960,74 @@
     "accent": "#b0bcc4",
     "rows": [
       {
+        "type": "group",
+        "label": "Updates",
+        "accent": "#b0bcc4"
+      },
+      {
+        "key": "update_status",
+        "type": "readonly",
+        "label": "Release",
+        "marks": "N",
+        "note": null,
+        "default": null
+      },
+      {
+        "key": "software_update",
+        "type": "readonly",
+        "label": "Software update",
+        "marks": "N",
+        "note": null,
+        "default": null
+      },
+      {
+        "key": "update_check",
+        "type": "action",
+        "label": "Check now",
+        "marks": "N",
+        "note": "Reads this device's channel for a newer release. Installs nothing. ADR-0110: the Release tile's button and the update modal run it; not a row of its own.",
+        "surfaced": false
+      },
+      {
+        "key": "update_install",
+        "type": "action",
+        "label": "Update now",
+        "marks": "N",
+        "note": "ADR-0110: started from the update modal, which asks before stopping playback. Downloads, backs up, stops playback, installs, restarts the player and checks it; goes back to this release if the new one fails.",
+        "confirm": "Update now",
+        "surfaced": false
+      },
+      {
         "key": "updates",
         "type": "choice",
         "label": "Updates",
         "marks": "RN",
-        "note": null,
+        "note": "Automatic installs a waiting release at night, never while playing, and does not retry one that failed.",
         "options": [
           "Manual",
           "Automatic"
         ],
-        "default": null,
-        "surfaced": false
+        "default": "Manual"
+      },
+      {
+        "key": "update_channel",
+        "type": "choice",
+        "label": "Update channel",
+        "marks": "N",
+        "options": [
+          "Stable",
+          "Testing"
+        ],
+        "default": "Stable",
+        "note": "Testing gets each release first; Stable gets it once it has been tried.",
+        "warn": {
+          "Testing": "Testing releases reach this device before everyone else's, and may have problems. Going back to Stable does not downgrade: the device stays where it is until Stable passes it."
+        }
+      },
+      {
+        "type": "group",
+        "label": "Device",
+        "accent": "#b0bcc4"
       },
       {
         "key": "image_build",

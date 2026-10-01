@@ -1,6 +1,6 @@
 [Unit]
 Description=Read the panel's binaries into the page cache before the kiosk needs them
-Documentation=file:///usr/local/bin/gexis-panel-warmup
+Documentation=file:///usr/bin/gexis-panel-warmup
 
 # As early as the filesystem allows, and explicitly NOT after the network:
 # the whole point is to use the ~17s the boot spends waiting on
@@ -26,7 +26,7 @@ Type=simple
 # the boot it is meant to help would be worse than nothing.
 Nice=19
 IOSchedulingClass=idle
-ExecStart=/usr/local/bin/gexis-panel-warmup
+ExecStart=/usr/bin/gexis-panel-warmup
 # A stuck read must not leave this running into the session it was meant to
 # speed up.
 TimeoutStartSec=60

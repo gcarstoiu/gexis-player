@@ -20,7 +20,7 @@ StartLimitBurst=20
 
 [Service]
 Type=simple
-ExecStartPre=/usr/local/lib/gexis/squeezelite-mixer-check.sh
+ExecStartPre=/usr/lib/gexis/squeezelite-mixer-check.sh
 # -C 1, not the 10s default: measured on hardware, 2026-09-08 - a
 # commanded pause releases the ALSA device in ~700ms at -C 1 versus
 # ~8500ms at -C 10, with no audible clicks/pops/dropouts across track

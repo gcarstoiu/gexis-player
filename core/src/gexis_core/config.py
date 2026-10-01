@@ -23,11 +23,11 @@ class Config:
     mixer_name: str = "DAC"
 
     # LMS runs on its own machine, not on gexis - there is no sane
-    # localhost default here (unlike go-librespot, which is local).
-    # image/stage-gexis/03-core/files/core.toml overrides this for the
-    # actual deployment; the class default below is only a fallback for
-    # ad hoc/test use off the image.
-    lms_host: str = "192.168.178.188"
+    # localhost default here (unlike go-librespot, which is local). **None
+    # at all** (ADR-0107, George 2026-09-30): this used to be one household's
+    # server, shipped in every image. The address comes from setup or
+    # Settings (`lms_server`); with none, LMS is off.
+    lms_host: str = ""
     lms_port: int = 9000
     lms_player_name: str = "gexis"
 

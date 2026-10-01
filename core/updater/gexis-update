@@ -1,0 +1,534 @@
+#!/usr/bin/python3
+# SPDX-License-Identifier: GPL-3.0-or-later
+"""gexis-update: move this device to the release its channel names
+(ADR-0105 §4, ADR-0108; Phase 13c step 3).
+
+    gexis-update check     read the channel, say whether a release is waiting
+    gexis-update install   check, download, back up, stop playback, install,
+                           verify - and go back to the release before on failure
+                           (ADR-0110: started is finished; no silence wait)
+    gexis-update scheduled the nightly run: check, and install only when
+                           Updates is Automatic, nothing is playing, and the
+                           release has not failed here
+
+**Standalone, on the system's Python and the standard library only.** An
+update replaces the core's own environment; this has to outlive what it
+installs, including a release it must take back.
+
+**apt with a private configuration**: the release's two repositories are the
+only sources it sees, in its own lists and cache under STATE; the device's own
+/etc/apt is not touched. Every file apt fetches is checked against an index
+signed by the release key; the channel file is checked against the same key
+before a word of it is believed.
+"""
+from __future__ import annotations
+
+import argparse
+import hashlib
+import json
+import os
+import re
+import sqlite3
+import subprocess
+import sys
+import time
+import urllib.request
+from pathlib import Path
+
+STATE = Path(os.environ.get("GEXIS_UPDATE_STATE", "/var/lib/gexis/updates"))
+BASE = os.environ.get("GEXIS_UPDATE_BASE", "https://github.com/gcarstoiu/gexis-player/releases/download")
+KEY_ASC = Path("/usr/share/gexis/keys/gexis-release.asc")
+KEY_GPG = Path("/usr/share/gexis/keys/gexis-release.gpg")
+SETTINGS_DB = Path("/var/lib/gexis-core/settings.db")
+BACKUPS = Path("/var/lib/gexis-core/backups")
+CORE = "http://127.0.0.1:8090"
+REBOOT_MARKER = Path("/var/lib/gexis/reboot-required")
+#: Units an update must not restart: the updater's own (restarting the unit
+#: it runs as would end it mid-update), and the shutdown pause, whose stop
+#: pauses LMS (ADR-0095). Found in the first update on the device, 2026-09-30.
+NEVER_RESTART = {"gexis-update-install.service", "gexis-update-check.service", "gexis-park.service"}
+#: Packages whose new version only takes effect at a boot.
+REBOOT_PACKAGES = re.compile(r"^(linux-image-|raspi-firmware|raspberrypi-sys-mods|libc6|systemd|initramfs-tools)")
+BACKUP_S = 120      # how long a backup may take to appear
+#: **ADR-0110 §3: every step listed from the start**, each pending, active,
+#: done or failed, so the modal and the panel can say what comes next.
+STEPS = ("download", "backup", "stop", "install", "restart", "check")
+#: What every report carries while an install runs: the steps, and the
+#: download's share done (0-1).
+PROGRESS: dict = {}
+
+
+# --- reporting ---------------------------------------------------------------
+
+def report(state: str, **fields) -> None:
+    """status.json, which the core reads and the Updates screen shows."""
+    STATE.mkdir(parents=True, exist_ok=True)
+    doc = {"state": state, "at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()), **PROGRESS, **fields}
+    tmp = STATE / "status.json.tmp"
+    tmp.write_text(json.dumps(doc, indent=1))
+    tmp.replace(STATE / "status.json")
+    print(f"{state}: {fields.get('message', '')}".rstrip(": "), flush=True)
+
+
+class Stop(Exception):
+    """An update that stops, with a reason a person can read."""
+
+
+def step(name: str, state: str = "active") -> None:
+    """Move one step on; the next report carries it."""
+    PROGRESS.setdefault("steps", {s: "pending" for s in STEPS})[name] = state
+
+
+def active_step() -> str | None:
+    return next((s for s, v in PROGRESS.get("steps", {}).items() if v == "active"), None)
+
+
+def run(*args: str, check: bool = True, env: dict | None = None) -> subprocess.CompletedProcess:
+    return subprocess.run(args, check=check, text=True, capture_output=True,
+                          env={**os.environ, **(env or {})})
+
+
+# --- the channel -------------------------------------------------------------
+
+def setting(key: str):
+    """A row's stored value, read-only, or None - the core owns the store."""
+    try:
+        with sqlite3.connect(f"file:{SETTINGS_DB}?mode=ro", uri=True) as db:
+            row = db.execute("SELECT value FROM settings WHERE key = ?", (key,)).fetchone()
+        return json.loads(row[0]) if row else None
+    except (sqlite3.Error, ValueError):
+        return None
+
+
+def channel_name(given: str | None) -> str:
+    if given:
+        return given
+    # The Update channel row (ADR-0022, 2026-09-30); Stable when never set.
+    return "testing" if setting("update_channel") == "Testing" else "stable"
+
+
+# **The channel file says how it is laid out** (LESSONS 49): a release
+# published in a layout an older updater cannot read must say so on the
+# device, not fail with a 404. 2 is parts (ADR-0108 as amended); a file with
+# no Format predates the field and is read as this updater reads it.
+FORMAT = 2
+
+
+def read_channel(channel: str) -> dict:
+    """The channel file, verified; refused if its serial went down."""
+    url = f"{BASE}/channels/{channel}"
+    try:
+        with urllib.request.urlopen(url, timeout=60) as r:
+            signed = r.read()
+    except OSError as exc:
+        raise Stop(f"could not reach {url}: {exc}") from exc
+    verified = subprocess.run(["gpgv", "--keyring", str(KEY_GPG), "--output", "-", "-"],
+                              input=signed, capture_output=True)
+    if verified.returncode != 0:
+        raise Stop(f"the {channel} channel file is not signed by the release key")
+    fields = dict(line.split(": ", 1) for line in verified.stdout.decode().splitlines() if ": " in line)
+    if fields.get("Channel") != channel:
+        raise Stop(f"the {channel} file says it is for {fields.get('Channel')!r}")
+    fmt = int(fields.get("Format", str(FORMAT)))
+    if fmt > FORMAT:
+        raise Stop(f"{fields.get('Release', 'the new release')} needs a newer updater than this device has "
+                   f"(channel format {fmt}, this one reads {FORMAT}); install a newer image")
+    serial = int(fields.get("Serial", "0"))
+    seen_path = STATE / f"serial-{channel}"
+    seen = int(seen_path.read_text()) if seen_path.exists() else 0
+    if serial < seen:
+        raise Stop(f"the {channel} file's serial went down ({serial} after {seen}); refused")
+    fields["_serial"] = serial
+    return fields
+
+
+def remember_serial(channel: str, serial: int) -> None:
+    STATE.mkdir(parents=True, exist_ok=True)
+    (STATE / f"serial-{channel}").write_text(str(serial))
+
+
+def parts_of(version: str) -> tuple[list[str], list[str]]:
+    """The repositories of a release, and the suites that pin it: from its
+    signed `parts` file (ADR-0108 as amended), or - for a release published
+    before parts - its `<tag>` and `<tag>-debian`, whose suite is the tag."""
+    tag = tag_of(version)
+    try:
+        with urllib.request.urlopen(f"{BASE}/{tag}/parts", timeout=60) as r:
+            signed = r.read()
+    except OSError:
+        return [tag, f"{tag}-debian"], [tag]
+    verified = subprocess.run(["gpgv", "--keyring", str(KEY_GPG), "--output", "-", "-"],
+                              input=signed, capture_output=True)
+    if verified.returncode != 0:
+        raise Stop(f"{tag}'s parts file is not signed by the release key")
+    fields = dict(line.split(": ", 1) for line in verified.stdout.decode().splitlines() if ": " in line)
+    if fields.get("Release") != version:
+        raise Stop(f"{tag}'s parts file is for {fields.get('Release')!r}")
+    parts = fields["Parts"].split()
+    return parts, parts
+
+
+def installed(package: str) -> str | None:
+    out = run("dpkg-query", "-W", "-f", "${Version}", package, check=False)
+    return out.stdout.strip() or None
+
+
+def tag_of(version: str) -> str:
+    return "r" + version.replace("+", "-")
+
+
+# --- apt, privately --------------------------------------------------------
+
+def apt_env(repos: list[str], pins: list[str] | None = None) -> list[str]:
+    """Options that make apt see only these repositories, in their own lists
+    and a shared cache. `repos` are GitHub release names as the channel or a
+    `parts` file gives them (ADR-0108 as amended: a release is parts, named by
+    content). With `pins`, those suites are preferred even over newer
+    versions, which is how the release before is put back."""
+    # **Each release its own view** (found on the device, 2026-09-30): one
+    # folder shared by the release going in and the release kept for going
+    # back meant fetching the second replaced the first's index, and the
+    # install then found no gexis-player at all. The downloaded packages
+    # share one cache, which is right: a file is the same file.
+    key = hashlib.sha256((" ".join(repos) + "@" + " ".join(pins or [])).encode()).hexdigest()[:16]
+    apt = STATE / "apt" / key
+    cache = STATE / "apt" / "archives"
+    (cache / "partial").mkdir(parents=True, exist_ok=True)
+    for d in ("lists/partial", "sources.list.d", "preferences.d"):
+        (apt / d).mkdir(parents=True, exist_ok=True)
+    lines = [f"deb [signed-by={KEY_ASC}] {BASE}/{repo}/ ./" for repo in repos]
+    (apt / "sources.list").write_text("\n".join(lines) + "\n")
+    prefs = "".join(f"Package: *\nPin: release a={suite}\nPin-Priority: 1001\n\n" for suite in pins or [])
+    (apt / "preferences").write_text(prefs)
+    # The parts folders point at empty ones of our own: "-" was read as a
+    # folder named "-" under /etc/apt.
+    return ["-o", f"Dir::Etc::sourcelist={apt}/sources.list", "-o", f"Dir::Etc::sourceparts={apt}/sources.list.d",
+            "-o", f"Dir::State::lists={apt}/lists", "-o", f"Dir::Cache::archives={cache}",
+            "-o", f"Dir::Etc::preferences={apt}/preferences", "-o", f"Dir::Etc::preferencesparts={apt}/preferences.d",
+            "-o", "Dpkg::Options::=--force-confdef", "-o", "Dpkg::Options::=--force-confold"]
+
+
+APT_ENV = {"DEBIAN_FRONTEND": "noninteractive"}
+
+
+def apt(opts: list[str], *args: str, prefix: list[str] | None = None) -> subprocess.CompletedProcess:
+    """apt-get, its whole output kept in STATE/apt.log for the record."""
+    r = run(*(prefix or []), "apt-get", "-q", "-y", *opts, *args, env=APT_ENV, check=False)
+    with (STATE / "apt.log").open("a") as log:
+        log.write(f"\n=== {time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime())} apt-get {' '.join(args)} -> {r.returncode}\n")
+        log.write(r.stdout + r.stderr)
+    return r
+
+
+def apt_download(opts: list[str], *args: str, report_as: dict) -> subprocess.CompletedProcess:
+    """apt-get --download-only, reading its progress as it goes (ADR-0110 §3:
+    a bar for the download). apt writes `dlstatus:<n>:<percent>:<what>` on its
+    status descriptor; the share is reported at most once a second."""
+    cmd = ["apt-get", "-q", "-y", "-o", "APT::Status-Fd=1", *opts, *args]
+    proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
+                            env={**os.environ, **APT_ENV})
+    out, last = [], 0.0
+    for line in proc.stdout:
+        out.append(line)
+        if line.startswith("dlstatus:"):
+            try:
+                share = float(line.split(":")[2]) / 100
+            except (IndexError, ValueError):
+                continue
+            PROGRESS["progress"] = round(min(max(share, 0.0), 1.0), 3)
+            if time.monotonic() - last >= 1:
+                last = time.monotonic()
+                report("downloading", **report_as)
+    err = proc.stderr.read()
+    proc.wait()
+    r = subprocess.CompletedProcess(cmd, proc.returncode, "".join(out), err)
+    with (STATE / "apt.log").open("a") as log:
+        log.write(f"\n=== {time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime())} apt-get {' '.join(args)} -> {r.returncode}\n")
+        log.write(r.stdout + r.stderr)
+    return r
+
+
+def why(r: subprocess.CompletedProcess) -> str:
+    """apt's own last words - its E: lines, else its last lines - not those
+    of whatever ran it (systemd-inhibit only says apt-get exited 100)."""
+    lines = [l for l in (r.stdout + r.stderr).splitlines() if l.strip()]
+    errors = [l for l in lines if l.startswith(("E:", "dpkg:"))]
+    return " | ".join((errors or lines)[-3:])[:400] or f"exit {r.returncode}"
+
+
+def plan(opts: list[str], version: str) -> list[tuple[str, str | None, str]]:
+    """What installing `version` would change: (package, from, to)."""
+    sim = apt(opts, "-s", "--allow-change-held-packages", "dist-upgrade")
+    sim2 = apt(opts, "-s", "--allow-change-held-packages", "install", f"gexis-player={version}")
+    changes = {}
+    for line in (sim.stdout + sim2.stdout).splitlines():
+        m = re.match(r"^Inst (\S+) (?:\[(\S+)\] )?\((\S+)", line)
+        if m:
+            changes[m.group(1)] = (m.group(1), m.group(2), m.group(3))
+    return list(changes.values())
+
+
+# --- the steps ---------------------------------------------------------------
+
+def release_notes(version: str) -> str | None:
+    """What a release says changed (2026-10-01, George: release notes on the
+    device): `r<tag>/notes`, clearsigned by the release key like the channel.
+    Optional - a release without notes, or notes that do not verify, update
+    all the same and show none."""
+    tag = tag_of(version)
+    try:
+        with urllib.request.urlopen(f"{BASE}/{tag}/notes", timeout=60) as r:
+            signed = r.read()
+    except OSError:
+        return None
+    verified = subprocess.run(["gpgv", "--keyring", str(KEY_GPG), "--output", "-", "-"],
+                              input=signed, capture_output=True)
+    if verified.returncode != 0:
+        print(f"{tag}'s notes are not signed by the release key; not shown", flush=True)
+        return None
+    text = verified.stdout.decode(errors="replace").strip()
+    return text[:1200] or None
+
+
+def check(args) -> tuple[str, dict] | None:
+    channel = channel_name(args.channel)
+    report("checking", channel=channel, message=f"reading the {channel} channel")
+    ch = read_channel(channel)
+    current = installed("gexis-player")
+    target = ch["Release"]
+    if current == target:
+        remember_serial(channel, ch["_serial"])
+        report("current", channel=channel, release=current, message=f"{current} is {channel}'s release")
+        return None
+    newer = run("dpkg", "--compare-versions", target, "gt", current or "0", check=False).returncode == 0
+    if not newer:
+        # Back to Stable from Testing does not downgrade (ADR-0022): stay
+        # until the channel passes this device.
+        report("current", channel=channel, release=current,
+               message=f"{channel} names {target}, older than {current}; staying until it passes")
+        return None
+    ch["_whats_new"] = release_notes(target)
+    report("available", channel=channel, release=target, installed=current,
+           notes=ch.get("Notes"), whats_new=ch["_whats_new"], message=f"{target} is waiting")
+    return channel, ch
+
+
+def playing() -> bool:
+    """Whether any sound card is open for playback now."""
+    return any("RUNNING" in p.read_text(errors="ignore")
+               for p in Path("/proc/asound").glob("card*/pcm*p/sub*/status"))
+
+
+def stop_playback() -> None:
+    """ADR-0110 §4: playback stops on consent, not by waiting. The core's park
+    - the shutdown's own way of leaving nothing to resume - pauses or
+    disconnects every source; nothing resumes afterwards."""
+    req = urllib.request.Request(f"{CORE}/renderers/park", method="POST", data=b"")
+    try:
+        urllib.request.urlopen(req, timeout=30).read()
+    except OSError as exc:
+        # Not a reason to stop: the install restarts the players anyway.
+        print(f"could not ask the core to stop playback: {exc}", flush=True)
+
+
+def back_up() -> str:
+    before = {p.name for p in BACKUPS.glob("*.tgz")}
+    req = urllib.request.Request(f"{CORE}/settings/backup", method="POST")
+    try:
+        urllib.request.urlopen(req, timeout=20).read()
+    except OSError as exc:
+        raise Stop(f"the core did not take the backup request: {exc}") from exc
+    deadline = time.monotonic() + BACKUP_S
+    while time.monotonic() < deadline:
+        new = {p.name for p in BACKUPS.glob("*.tgz")} - before
+        if new:
+            return sorted(new)[-1]
+        time.sleep(2)
+    raise Stop("no backup appeared; not updating without one")
+
+
+def verify(version: str) -> None:
+    if installed("gexis-player") != version:
+        raise Stop(f"gexis-player is {installed('gexis-player')}, not {version}")
+    audit = run("dpkg", "--audit", check=False)
+    if audit.stdout.strip():
+        raise Stop("dpkg reports half-installed packages: " + audit.stdout.strip()[:300])
+    depends = run("dpkg-query", "-W", "-f", "${Depends}", "gexis-player").stdout
+    pin = re.search(r"libasound2t64 \(= ([^)]+)\)", depends)
+    if pin and installed("libasound2t64") != pin.group(1):
+        raise Stop(f"alsa-lib is {installed('libasound2t64')}, the release pins {pin.group(1)}")
+
+
+def core_answers(timeout: float = 120) -> bool:
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        try:
+            urllib.request.urlopen(f"{CORE}/settings", timeout=5).read()
+            return True
+        except OSError:
+            time.sleep(3)
+    return False
+
+
+def restart(changes: list[tuple[str, str | None, str]]) -> str:
+    """Restart what changed; the device, when a change only lands at a boot."""
+    if REBOOT_MARKER.exists() or any(REBOOT_PACKAGES.match(p) for p, _, _ in changes):
+        REBOOT_MARKER.unlink(missing_ok=True)
+        return "reboot"
+    units = set()
+    for package, _, _ in changes:
+        for path in run("dpkg", "-L", package, check=False).stdout.splitlines():
+            m = re.match(r"^/usr/lib/systemd/system/([^@/]+\.service)$", path)
+            if m and m.group(1) not in NEVER_RESTART:
+                units.add(m.group(1))
+    run("systemctl", "daemon-reload", check=False)
+    for unit in sorted(units):
+        run("systemctl", "try-restart", unit, check=False)
+    return "services: " + (", ".join(sorted(units)) or "none")
+
+
+def install(args) -> int:
+    found = check(args)
+    if not found:
+        return 0
+    channel, ch = found
+    target, current = ch["Release"], installed("gexis-player")
+    # The channel names the repositories to install from; the installed
+    # release's own parts file names what to go back to.
+    repos = ch["Repositories"].split()
+    back_repos, back_pins = parts_of(current)
+
+    about = dict(channel=channel, release=target, previous=current, whats_new=ch.get("_whats_new"))
+    PROGRESS.clear()
+    PROGRESS.update(steps={s: "pending" for s in STEPS}, progress=0.0)
+    step("download")
+    report("downloading", **about, message=f"fetching {target}")
+    opts = apt_env(repos)
+    if apt(opts, "update").returncode:
+        raise Stop(f"apt could not read {' '.join(repos)}")
+    changes = plan(opts, target)
+    for args_ in (["--download-only", "--allow-change-held-packages", "dist-upgrade"],
+                  ["--download-only", "--allow-change-held-packages", "install", f"gexis-player={target}"]):
+        r = apt_download(opts, *args_, report_as={**about, "message": f"fetching {target}"})
+        if r.returncode:
+            raise Stop("download failed: " + why(r))
+    # The versions installed now, for going back: from the release that has them.
+    back = apt_env(back_repos, back_pins)
+    if apt(back, "update").returncode == 0:
+        olds = [f"{p}={old}" for p, old, _ in changes if old]
+        if olds:
+            apt(back, "--download-only", "--reinstall", "--allow-downgrades",
+                "--allow-change-held-packages", "install", *olds)
+    else:
+        report("downloading", **about,
+               message=f"{current}'s repositories are not reachable; going back will not be possible")
+    PROGRESS["progress"] = 1.0
+    step("download", "done")
+
+    step("backup")
+    report("backing-up", **about, message="backing up first")
+    backup = back_up()
+    step("backup", "done")
+
+    step("stop")
+    report("stopping", **about, backup=backup, message="stopping playback")
+    stop_playback()
+    step("stop", "done")
+
+    step("install")
+    report("installing", **about, backup=backup, message=f"installing {target}")
+    opts = apt_env(repos)
+    inhibit = ["systemd-inhibit", "--what=shutdown:sleep", "--who=gexis-update",
+               f"--why=Installing {target}", "--mode=block"]
+    apt_steps = [["--no-download", "--allow-change-held-packages", "dist-upgrade"],
+                 ["--no-download", "--allow-change-held-packages", "install", f"gexis-player={target}"]]
+    try:
+        for apt_step in apt_steps:
+            r = apt(opts, *apt_step, prefix=inhibit)
+            if r.returncode:
+                raise Stop("install failed: " + why(r))
+        verify(target)
+    except Stop as failure:
+        step(active_step() or "install", "failed")
+        report("going-back", **{**about, "release": current}, message=f"{failure}; putting {current} back")
+        back = apt_env(back_repos, back_pins)
+        apt(back, "--no-download", "--allow-downgrades", "--allow-change-held-packages",
+            "dist-upgrade", prefix=inhibit)
+        run("dpkg", "--configure", "-a", check=False)
+        ok = installed("gexis-player") == current
+        # Remembered, so a night's Automatic run does not try it again
+        # (Finding 105); "Update now" still does - it is asked for.
+        (STATE / f"failed-{channel}").write_text(target)
+        report("failed", **{**about, "release": installed("gexis-player")}, backup=backup, attempted=target,
+               message=f"{failure}. " + (f"Back on {current}." if ok else "Going back did not complete: restore the backup."))
+        return 1
+    step("install", "done")
+    remember_serial(channel, ch["_serial"])
+    step("restart")
+    reboot = REBOOT_MARKER.exists() or any(REBOOT_PACKAGES.match(p) for p, _, _ in changes)
+    report("restarting", **about, backup=backup, reboot=reboot,
+           message="restarting the device" if reboot else "restarting the player")
+    how = restart(changes)
+    if how == "reboot":
+        step("restart", "done")
+        step("check", "done")
+        report("done", **about, backup=backup, changed=len(changes), restart=how,
+               message=f"{target} installed ({how})")
+        run("systemctl", "reboot", check=False)
+        return 0
+    step("restart", "done")
+    step("check")
+    report("checking-device", **about, backup=backup, message="checking the player answers")
+    if not core_answers():
+        step("check", "failed")
+        report("failed", **about, message="the core did not answer after the update")
+        return 1
+    step("check", "done")
+    report("done", **about, backup=backup, changed=len(changes), restart=how,
+           message=f"{target} installed ({how})")
+    return 0
+
+
+def scheduled(args) -> int:
+    """The nightly run (gexis-update-check.timer): check, and with Automatic
+    chosen install what is waiting - unless that release already failed here
+    (Finding 105: it would be tried, and taken back, every night)."""
+    found = check(args)
+    if not found or setting("updates") != "Automatic":
+        return 0
+    channel, ch = found
+    if playing():
+        # ADR-0110 §4: at night nobody can be asked, so a night that finds
+        # music playing does not wait - it tries again the next night.
+        report("available", channel=channel, release=ch["Release"], installed=installed("gexis-player"),
+               notes=ch.get("Notes"), whats_new=ch.get("_whats_new"),
+               message="something was playing; trying again tomorrow night")
+        return 0
+    failed = STATE / f"failed-{channel}"
+    if failed.exists() and failed.read_text().strip() == ch["Release"]:
+        report("available", channel=channel, release=ch["Release"], installed=installed("gexis-player"),
+               notes=ch.get("Notes"),
+               message=f"{ch['Release']} failed here before; it waits for Update now or a newer release")
+        return 0
+    return install(args)
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
+    parser.add_argument("action", choices=["check", "install", "scheduled"])
+    parser.add_argument("--channel", choices=["stable", "testing"])
+    args = parser.parse_args()
+    try:
+        if args.action == "check":
+            check(args)
+            return 0
+        if args.action == "scheduled":
+            return scheduled(args)
+        return install(args)
+    except Stop as stop:
+        report("failed", message=str(stop))
+        return 1
+
+
+if __name__ == "__main__":
+    sys.exit(main())
