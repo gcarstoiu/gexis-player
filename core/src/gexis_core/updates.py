@@ -72,6 +72,17 @@ def notes(path: Path = STATUS) -> str | None:
     return status(path).get("notes")
 
 
+def whats_new(path: Path = STATUS) -> str | None:
+    """The Release row's note: what the waiting or just-installed release
+    says changed, in its own words (2026-10-01, George). None when the
+    release has no notes, or the state is anything else."""
+    doc = status(path)
+    text = doc.get("whats_new")
+    if not text or doc.get("state") not in ("available", "done"):
+        return None
+    return f"What's new in {doc.get('release', 'this release')}: {text}"
+
+
 def start(unit: str) -> None:
     """Start the updater's unit and return at once: an install takes minutes
     and restarts the core, so nothing here waits for it."""

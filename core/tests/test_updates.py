@@ -32,3 +32,24 @@ def test_the_updates_rows_are_in_system_and_the_channel_warns_on_testing():
     assert rows["update_channel"]["default"] == "Stable"
     assert "does not downgrade" in rows["update_channel"]["warn"]["Testing"]
     assert rows["update_install"].get("confirm")
+
+
+def test_the_release_row_s_note_says_what_is_new_while_waiting_and_after(tmp_path):
+    """2026-10-01, George: the release's own notes under the Release row."""
+    text = "Release notes on the device."
+    assert updates.whats_new(write(tmp_path, state="available", release="0.2.2", whats_new=text)) \
+        == "What's new in 0.2.2: Release notes on the device."
+    assert updates.whats_new(write(tmp_path, state="done", release="0.2.2", whats_new=text)).startswith("What's new in 0.2.2")
+    assert updates.whats_new(write(tmp_path, state="current", release="0.2.2", whats_new=text)) is None
+    assert updates.whats_new(write(tmp_path, state="available", release="0.2.2")) is None
+
+
+def test_a_row_s_note_can_follow_the_device(tmp_path):
+    from gexis_core.settings import SettingsStore
+    from gexis_core.settings_registry import Settings
+    note = {"text": None}
+    s = Settings(SettingsStore(tmp_path / "s.json"), notes={"update_status": lambda: note["text"]})
+    row = lambda: next(r for g in s.to_json() for r in g["rows"] if r.get("key") == "update_status")
+    assert row().get("note") is None
+    note["text"] = "What's new in 0.2.2: something"
+    assert row()["note"] == "What's new in 0.2.2: something"

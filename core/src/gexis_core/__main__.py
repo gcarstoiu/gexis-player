@@ -1367,6 +1367,9 @@ async def main() -> None:
             # without a restart.
             "output_device": lambda: [o.option for o in outputs.discover()],
         },
+        # The Release row's note: what the waiting or just-installed release
+        # says changed (2026-10-01, George).
+        notes={"update_status": updates.whats_new},
         # Wired = something reads it (ADR-0035). The token is read on every
         # Popular lookup, so it takes effect as soon as it is typed.
         # Wired = something reads it, or something happens. `lms_server` is

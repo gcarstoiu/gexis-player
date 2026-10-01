@@ -226,6 +226,26 @@ def plan(opts: list[str], version: str) -> list[tuple[str, str | None, str]]:
 
 # --- the steps ---------------------------------------------------------------
 
+def release_notes(version: str) -> str | None:
+    """What a release says changed (2026-10-01, George: release notes on the
+    device): `r<tag>/notes`, clearsigned by the release key like the channel.
+    Optional - a release without notes, or notes that do not verify, update
+    all the same and show none."""
+    tag = tag_of(version)
+    try:
+        with urllib.request.urlopen(f"{BASE}/{tag}/notes", timeout=60) as r:
+            signed = r.read()
+    except OSError:
+        return None
+    verified = subprocess.run(["gpgv", "--keyring", str(KEY_GPG), "--output", "-", "-"],
+                              input=signed, capture_output=True)
+    if verified.returncode != 0:
+        print(f"{tag}'s notes are not signed by the release key; not shown", flush=True)
+        return None
+    text = verified.stdout.decode(errors="replace").strip()
+    return text[:1200] or None
+
+
 def check(args) -> tuple[str, dict] | None:
     channel = channel_name(args.channel)
     report("checking", channel=channel, message=f"reading the {channel} channel")
@@ -243,8 +263,9 @@ def check(args) -> tuple[str, dict] | None:
         report("current", channel=channel, release=current,
                message=f"{channel} names {target}, older than {current}; staying until it passes")
         return None
+    ch["_whats_new"] = release_notes(target)
     report("available", channel=channel, release=target, installed=current,
-           notes=ch.get("Notes"), message=f"{target} is waiting")
+           notes=ch.get("Notes"), whats_new=ch["_whats_new"], message=f"{target} is waiting")
     return channel, ch
 
 
@@ -386,7 +407,8 @@ def install(args) -> int:
     remember_serial(channel, ch["_serial"])
     how = restart(changes)
     report("done", channel=channel, release=target, previous=current, backup=backup,
-           changed=len(changes), restart=how, message=f"{target} installed ({how})")
+           changed=len(changes), restart=how, whats_new=ch.get("_whats_new"),
+           message=f"{target} installed ({how})")
     if how == "reboot":
         run("systemctl", "reboot", check=False)
     elif not core_answers():

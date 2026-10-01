@@ -182,3 +182,21 @@ def test_automatic_skips_a_release_that_failed_here_and_takes_a_newer_one(up, mo
     monkeypatch.setattr(up, "check", lambda args: ("testing", {"Release": "3", "_serial": 3}))
     up.scheduled(None)
     assert installs == [1], "a newer release is"
+
+
+def test_a_release_s_signed_notes_are_read(up, monkeypatch):
+    """2026-10-01: the release says what changed, signed like the channel."""
+    serve(monkeypatch, up, "New: release notes.\n")
+    assert up.release_notes("0.2.1+git900.abc1234") == "New: release notes."
+
+
+def test_notes_that_do_not_verify_are_not_shown(up, monkeypatch):
+    serve(monkeypatch, up, "anything", verified=False)
+    assert up.release_notes("0.2.1+git900.abc1234") is None
+
+
+def test_a_release_without_notes_updates_all_the_same(up, monkeypatch):
+    def missing(url, timeout=0):
+        raise OSError("404")
+    monkeypatch.setattr(up.urllib.request, "urlopen", missing)
+    assert up.release_notes("0.2.1+git900.abc1234") is None
