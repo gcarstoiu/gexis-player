@@ -136,6 +136,8 @@ found seven things that were George's to settle. His answers:
 10. **The Network step keeps saving without testing** (IMPLEMENTED-DIFFERENTLY,
     phone steps). *"yes"*.
 
+**Superseded in part by [ADR-0111](0111-skin-sets-follow-the-screen.md)** (2026-10-01): one pack per device, chosen by the screen, with consent in setup; no *Skin size* selector; the image ships no skins.
+
 ### Settled the same day
 
 - **1280 × 800 is a plugin too, preinstalled**, so a panel shows meters with
