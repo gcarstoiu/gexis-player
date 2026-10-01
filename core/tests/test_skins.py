@@ -402,3 +402,14 @@ def test_the_record_speed_word_is_a_number():
     assert record_rpm("45 rpm") == 45.0
     assert record_rpm("33 rpm") == 33.0
     assert record_rpm(None) == 33.0
+
+
+def test_a_pack_of_another_size_is_read_from_its_own_folder(tmp_path):
+    """ADR-0111: `<root>/<folder>/templates/<W>x<H>`, not always 1280x800."""
+    from gexis_core import skins
+
+    folder = tmp_path / "gelo5" / "templates" / "800x480"
+    folder.mkdir(parents=True)
+    (folder / "meters.txt").write_text("[small]\nmeter.type = linear\nscreen.bgr = bg.png\n")
+    assert [s.name for s, _ in skins.installed(tmp_path, resolution="800x480")] == ["small"]
+    assert skins.installed(tmp_path) == []

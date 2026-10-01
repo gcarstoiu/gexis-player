@@ -1044,10 +1044,14 @@ async def main() -> None:
     # re-reading one small file, on the same poll that already carries the
     # track. `settings` is assigned by this very statement and read only when
     # one of these is called, which is after it exists.
-    skins_root = Path(config.peppy_skins_dir)
+    # ADR-0111: the installed pack this screen uses; `peppy_skins_dir` is
+    # where a device that kept today's gexis-skins has it.
+    def skins_at() -> tuple[Path, str] | None:
+        return skin_packs.current(legacy=Path(config.peppy_skins_dir))
 
     def skins_offered() -> list[str]:
-        return skins.names(skins_root, str(settings.value("skin_corpus") or skins.ALL))
+        at = skins_at()
+        return skins.names(at[0], str(settings.value("skin_corpus") or skins.ALL), resolution=at[1]) if at else []
 
     def first_skin() -> str | None:
         offered = skins_offered()
@@ -2433,7 +2437,7 @@ async def main() -> None:
         weather=forecast,
         wallpapers=wallpapers,
         # ADR-0050: the picker's previews are the skins' own pictures.
-        skins_dir=Path(config.peppy_skins_dir),
+        skins_at=skins_at,
         ui_dir=ui_dir,
     )
 

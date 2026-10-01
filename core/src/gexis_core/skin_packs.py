@@ -33,12 +33,13 @@ def package(size: tuple[int, int]) -> str:
     return f"gexis-skins-{size[0]}x{size[1]}"
 
 
-def for_screen(width: int, height: int) -> tuple[int, int] | None:
+def for_screen(width: int, height: int, sizes=SIZES) -> tuple[int, int] | None:
     """The pack this screen gets: its own size, or the largest that fits
-    inside it uncropped (by area); None if none fits."""
-    if (width, height) in SIZES:
+    inside it uncropped (by area); None if none fits. `sizes` narrows the
+    choice, to the packs a device has."""
+    if (width, height) in sizes:
         return (width, height)
-    fitting = [s for s in SIZES if s[0] <= width and s[1] <= height]
+    fitting = [s for s in sizes if s[0] <= width and s[1] <= height]
     # A bar's pack on a Standard screen (or the reverse) would leave most of
     # it black: the screen's own family first, then the largest by area.
     same = [s for s in fitting if family(*s) == family(width, height)]
@@ -73,6 +74,26 @@ def root_of(size: tuple[int, int], packs: Path = PACKS, legacy: Path = LEGACY) -
     if size == DEFAULT_SCREEN and legacy.is_dir():
         return legacy
     return None
+
+
+def current(screen: tuple[int, int] | None = None, packs: Path = PACKS,
+            legacy: Path = LEGACY) -> tuple[Path, str] | None:
+    """**The skins the visualiser draws now**: the installed pack this screen
+    uses, as (its root, its resolution folder) - the root holding one folder
+    per source, each with `templates{,_spectrum}/<resolution>`.
+
+    The screen's own pack when it is in; otherwise, while that one is still
+    being fetched after a change of screen, the installed pack that fits best
+    (decision 2: the old one shows, letterboxed), and failing that whichever
+    the device has. None when it has none.
+    """
+    have = installed(packs, legacy)
+    if not have:
+        return None
+    width, height = screen or screen_size()
+    size = for_screen(width, height, tuple(have)) or have[0]
+    root = root_of(size, packs, legacy)
+    return (root, f"{size[0]}x{size[1]}") if root else None
 
 
 def plan(screen: tuple[int, int], have: list[tuple[int, int]]) -> tuple[tuple[int, int] | None, list[tuple[int, int]]]:

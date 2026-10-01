@@ -27,6 +27,7 @@ import json
 import logging
 import random
 import tarfile
+from collections.abc import Callable
 from urllib.parse import quote
 from pathlib import Path
 
@@ -120,7 +121,7 @@ class StateServer:
         uninstall_plugin=None,
         weather=None,
         wallpapers=None,
-        skins_dir: Path | None = None,
+        skins_at: Callable[[], tuple[Path, str] | None] | None = None,
         ui_dir: Path | None = None,
     ) -> None:
         """`activate(renderer_id) -> bool` and `set_volume(percent) -> bool`
@@ -188,7 +189,9 @@ class StateServer:
         #: Where the skin packs live (ADR-0050). Read per request rather
         #: than at start: a pack could be added under a running daemon, and
         #: parsing 99 sections costs less than the request that asked.
-        self._skins_dir = Path(skins_dir) if skins_dir else None
+        #: ADR-0111: where the skins are now (root, resolution), asked each
+        #: time - a pack arrives or goes while the core runs.
+        self._skins_at = skins_at
         #: What the idle screen is showing, so the next change is a change.
         #: One value for three sources, because only one of them is on
         #: screen at a time: a file name, a Pixabay id, or an artist.
@@ -516,7 +519,8 @@ class StateServer:
         return web.FileResponse(path)
 
     def _skins(self) -> list[tuple]:
-        return skins.installed(self._skins_dir) if self._skins_dir else []
+        at = self._skins_at() if self._skins_at else None
+        return skins.installed(at[0], resolution=at[1]) if at else []
 
     async def _handle_skins(self, request: web.Request) -> web.Response:
         """Every skin the device has, with what it shows (ADR-0050).
@@ -525,7 +529,7 @@ class StateServer:
         declares `meter.visible` and `spectrum.visible`, and 77 of the 99 on
         this device declare neither - which means a meter.
         """
-        if self._skins_dir is None:
+        if self._skins_at is None:
             return web.json_response({"error": "skins are not wired up"}, status=503)
         chosen = str(self._setting_or_none("skin_corpus") or skins.ALL)
         wanted = skins.CORPUS.get(chosen) or skins.CORPUS[skins.ALL]
@@ -548,7 +552,7 @@ class StateServer:
         declares, beside that skin's own `meters.txt`. A name that is a path
         is simply not a skin.
         """
-        if self._skins_dir is None:
+        if self._skins_at is None:
             return web.json_response({"error": "skins are not wired up"}, status=503)
         wanted = request.match_info["name"]
         for skin, directory in self._skins():

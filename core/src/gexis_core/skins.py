@@ -317,10 +317,11 @@ def load(directory: Path) -> tuple[list[Skin], list[Skin]]:
 RESOLUTION = "1280x800"
 
 
-def installed(root: Path, pack: str | None = None) -> list[tuple[Skin, Path]]:
+def installed(root: Path, pack: str | None = None, resolution: str = RESOLUTION) -> list[tuple[Skin, Path]]:
     """Every skin under `root`, with the directory its files live in.
 
-    **A pack at a time** - `<root>/<pack>/templates{,_spectrum}/1280x800` -
+    **A pack at a time** - `<root>/<pack>/templates{,_spectrum}/<resolution>`
+    (1280x800 in today's gexis-skins; a size's own in ADR-0111's packs) -
     because the device carries more than one and a skin's `screen.bgr` is
     named relative to its own. Order is the corpus's; a pack that does not
     parse is skipped rather than fatal, since a screen with most of its
@@ -343,7 +344,7 @@ def installed(root: Path, pack: str | None = None) -> list[tuple[Skin, Path]]:
     seen: set[str] = set()
     for pack_dir in (p for p in packs if p.is_dir()):
         for templates in ("templates", "templates_spectrum"):
-            meters = pack_dir / templates / RESOLUTION / "meters.txt"
+            meters = pack_dir / templates / resolution / "meters.txt"
             if not meters.is_file():
                 continue
             try:
@@ -371,10 +372,10 @@ def installed(root: Path, pack: str | None = None) -> list[tuple[Skin, Path]]:
 SELECTION_PATH = Path("/run/gexis/visualisation.json")
 
 
-def names(root: Path, corpus: str, pack: str | None = None) -> list[str]:
+def names(root: Path, corpus: str, pack: str | None = None, resolution: str = RESOLUTION) -> list[str]:
     """The skin names a `skin_corpus` word offers, in corpus order - what the
     `skin` row's picker lists (ADR-0051 §4)."""
-    return [skin.name for skin in in_corpus((s for s, _ in installed(root, pack)), corpus)]
+    return [skin.name for skin in in_corpus((s for s, _ in installed(root, pack, resolution)), corpus)]
 
 
 def record_rpm(word: object) -> float:

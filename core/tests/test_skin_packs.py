@@ -71,3 +71,29 @@ def test_the_screen_size_comes_from_screen_env(tmp_path):
     assert sp.screen_size(env) == (1280, 800)
     env.write_text("# x\nGEXIS_SCREEN_WIDTH=1480\nGEXIS_SCREEN_HEIGHT=320\n")
     assert sp.screen_size(env) == (1480, 320)
+
+
+def _pack(packs, w, h):
+    d = packs / f"{w}x{h}"
+    d.mkdir(parents=True)
+    (d / "pack.json").write_text(json.dumps({"size": f"{w}x{h}"}))
+    return d
+
+
+def test_the_visualiser_draws_the_screen_s_own_pack(tmp_path):
+    packs, legacy = tmp_path / "packs", tmp_path / "skins"
+    assert sp.current((1280, 800), packs, legacy) is None
+    own = _pack(packs, 1920, 1080)
+    assert sp.current((1920, 1080), packs, legacy) == (own, "1920x1080")
+
+
+def test_after_a_change_of_screen_the_old_pack_shows_until_the_new_one_is_in(tmp_path):
+    """Decision 2: the old one shows, letterboxed."""
+    packs, legacy = tmp_path / "packs", tmp_path / "skins"
+    legacy.mkdir()
+    assert sp.current((1920, 1080), packs, legacy) == (legacy, "1280x800")
+    small = _pack(packs, 800, 480)
+    assert sp.current((1920, 1080), packs, legacy) == (legacy, "1280x800"), "the larger of the two that fit"
+    assert sp.current((1024, 600), packs, legacy) == (small, "800x480")
+    # none fits a 480x320 screen: it still draws what it has
+    assert sp.current((480, 320), packs, legacy) is not None
