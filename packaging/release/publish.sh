@@ -84,6 +84,7 @@ channel_file() {  # channel tag -> writes, signs and uploads channels/<channel>
 	parts=$(gpg --batch --decrypt "$work/parts" 2>/dev/null | sed -n 's/^Parts: //p')
 	cat > "$work/$channel.txt" <<EOF
 Channel: $channel
+Format: 2
 Serial: $serial
 Date: $(date -u +%Y-%m-%dT%H:%M:%SZ)
 Release: $version
@@ -124,6 +125,12 @@ fi
 tag="${1:?usage: publish.sh <tag> [--channel testing]}"
 DEST=packaging/release/out/$tag
 [ -f "$DEST/parts" ] || { echo "ERROR: $DEST has no parts file; build it with packaging/release/build.sh" >&2; exit 1; }
+# **Its notes** (2026-10-01, George): a few plain sentences - what is new,
+# what is fixed, whether it restarts - drafted from the commits and approved
+# by George before this runs. The device shows them under Settings' Release
+# row; the release page carries the same text.
+[ -s "$DEST/notes.txt" ] || { echo "ERROR: $DEST/notes.txt is missing: write the release's notes, approved, first" >&2; exit 1; }
+gpg --batch --yes -u "$SIGNER" --clearsign -o "$DEST/notes" "$DEST/notes.txt"
 gpg --batch --verify "$DEST/parts" 2>/dev/null || { echo "ERROR: $DEST/parts does not verify" >&2; exit 1; }
 version=$(gpg --batch --decrypt "$DEST/parts" 2>/dev/null | sed -n 's/^Release: //p')
 
@@ -142,8 +149,9 @@ done
 exists "$tag" \
 	|| gh_retry gh release create "$tag" --repo "$REPO" --target main --prerelease --latest=false \
 		--title "gexis-player $version" \
-		--notes "Gexis Player $version. Its packages are in the parts its signed parts file lists (ADR-0108)."
-gh_retry gh release upload "$tag" --repo "$REPO" --clobber "$DEST/parts"
+		--notes-file "$DEST/notes.txt"
+gh_retry gh release edit "$tag" --repo "$REPO" --notes-file "$DEST/notes.txt" >/dev/null
+gh_retry gh release upload "$tag" --repo "$REPO" --clobber "$DEST/parts" "$DEST/notes"
 if [ "${2:-}" = --channel ]; then
 	channel_file "${3:?--channel needs testing or stable}" "$tag"
 fi
