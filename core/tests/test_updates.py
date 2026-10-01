@@ -12,14 +12,29 @@ def write(tmp_path, **doc):
     return path
 
 
-def test_the_release_row_says_what_the_updater_last_said(tmp_path):
-    assert updates.sentence(tmp_path / "none.json") == "Not checked yet"
-    assert updates.sentence(write(tmp_path, state="current", channel="testing")) == "Up to date (testing)"
-    assert updates.sentence(write(tmp_path, state="available", release="0.2.2")) == "0.2.2 is waiting"
-    assert updates.sentence(write(tmp_path, state="installing", release="0.2.2")) == "Installing 0.2.2…"
-    assert updates.sentence(write(tmp_path, state="done", release="0.2.2")) == "Updated to 0.2.2"
-    failed = updates.sentence(write(tmp_path, state="failed", message="install failed. Back on 0.2.1."))
-    assert failed.startswith("Did not update: ") and "Back on 0.2.1" in failed
+def test_the_release_tile_says_the_number_and_its_state(tmp_path):
+    """ADR-0110 §1-2: the number, not 0.2.1+git871.c73ea29, and its state."""
+    here = "0.2.4+git3.abc1234"
+    line = lambda **doc: updates.sentence(write(tmp_path, **doc), installed=here)
+    assert updates.sentence(tmp_path / "none.json", installed="0.2.4") == "0.2.4 · Not checked yet"
+    assert line(state="current", channel="testing") == "0.2.4 · Up to date"
+    assert line(state="checking") == "0.2.4 · Checking…"
+    assert line(state="available", release="0.2.5") == "0.2.5 available"
+    assert line(state="installing", release="0.2.5") == "Updating to 0.2.5…"
+    assert line(state="done", release="0.2.5") == "0.2.4 · Updated"
+    assert line(state="failed", message="x") == "0.2.4 · Did not update"
+    assert line(state="going-back", previous="0.2.3+git1.a") == "Going back to 0.2.3…"
+
+
+def test_the_published_update_locks_the_panel_only_while_the_install_runs(tmp_path):
+    """ADR-0110 §6, and a stale file never locks it: `active` needs the unit."""
+    path = write(tmp_path, state="installing", release="0.2.5+git1.a", previous="0.2.4",
+                 steps={"download": "done", "install": "active"}, progress=1.0)
+    v = updates.view(path, installed="0.2.4", running=True)
+    assert v["active"] and v["release"] == "0.2.5" and v["steps"]["install"] == "active"
+    assert not updates.view(path, installed="0.2.4", running=False)["active"]
+    done = write(tmp_path, state="done", release="0.2.5")
+    assert not updates.view(done, installed="0.2.5", running=True)["active"]
 
 
 def test_the_updates_rows_are_in_system_and_the_channel_warns_on_testing():

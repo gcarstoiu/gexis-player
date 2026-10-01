@@ -65,6 +65,7 @@ class StateStore:
         self._components: dict = {}
         self._panel: dict = {"visualiser": False, "idle": False, "idle_request": None}
         self._setup: dict | None = None
+        self._update: dict | None = None
         #: **ADR-0081: the cover the daemon found for a renderer that sent
         #: none.** `renderer_id -> (track, url)`, applied in `state` below
         #: only where the renderer's own artwork is absent. Keyed on the
@@ -115,6 +116,7 @@ class StateStore:
             components=dict(self._components),
             panel=dict(self._panel),
             setup=dict(self._setup) if self._setup else None,
+            update=dict(self._update) if self._update else None,
         )
 
     def set_active(self, renderer_id: str | None) -> None:
@@ -353,6 +355,13 @@ class StateStore:
         seq = ((self._panel.get("idle_request") or {}).get("seq") or 0) + 1
         # `at` so a panel that reloads later does not act on an old ask.
         self.set_panel(idle_request={"show": bool(show), "seq": seq, "at": time.time()})
+
+    def set_update(self, update: dict | None) -> None:
+        """ADR-0110: what the updater is doing, on a change only."""
+        if update == self._update:
+            return
+        self._update = dict(update) if update is not None else None
+        self._notify()
 
     def bump_settings_revision(self) -> None:
         self._settings_revision += 1

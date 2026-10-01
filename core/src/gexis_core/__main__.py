@@ -1349,10 +1349,12 @@ async def main() -> None:
             # **The release, from the installed gexis-player** (ADR-0107):
             # an update changes it and the image stamp does not. The stamp
             # stays the answer on a device older than packages.
-            "version": lambda: updates.installed_release() or image_info().get("version") or "unknown",
+            # ADR-0110 §1: the number (`0.2.4`); the long form is on the
+            # Image build row, for support.
+            "version": lambda: updates.short(updates.installed_release()) or image_info().get("version") or "unknown",
             # ADR-0105 section 6: what the updater last said.
             "update_status": lambda: updates.sentence(),
-            "image_build": lambda: image_info().get("built") or "unknown",
+            "image_build": lambda: " · ".join(x for x in (image_info().get("built"), updates.installed_release()) if x) or "unknown",
             # ADR-0086 as amended: a synthesised switch reads what systemd says
             # about the unit until somebody uses it.
             **plugin_switch_defaults,
@@ -2115,20 +2117,22 @@ async def main() -> None:
         asyncio.ensure_future(_check_lms_volume_control())
 
     async def _follow_updates() -> None:
-        """**An update's progress reaches the screen** (ADR-0105 section 6).
-        The updater writes its status file as it goes; Settings is told when
-        that file changes, so the Release row follows along without a reload.
-        Every 3 s: a stat, nothing more."""
-        last = None
+        """**An update's progress reaches the screen** (ADR-0105 section 6,
+        ADR-0110). The updater writes its status file as it goes; `/state`
+        carries what it says as `update` (the modal, the panel's lock), and
+        Settings is told when its *state* changes - not on every second of a
+        download's progress, which only `update` follows. Read at start too,
+        so a core the install restarted comes back still showing it. Every
+        3 s, every second while an install runs."""
+        last_state = None
         while True:
-            try:
-                now = updates.STATUS.stat().st_mtime
-            except OSError:
-                now = None
-            if now != last and last is not None:
+            view = await asyncio.to_thread(updates.view)
+            state_store.set_update(view)
+            key = (view.get("state"), view.get("release"), view.get("installed"))
+            if last_state is not None and key != last_state:
                 state_store.bump_settings_revision()
-            last = now
-            await asyncio.sleep(3)
+            last_state = key
+            await asyncio.sleep(1 if view.get("active") else 3)
 
     asyncio.ensure_future(_follow_updates())
 

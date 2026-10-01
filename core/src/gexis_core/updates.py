@@ -38,33 +38,77 @@ def status(path: Path = STATUS) -> dict:
         return {}
 
 
-#: The updater's states, in the words the row shows.
-_WORDS = {
-    "checking": "Checking…",
-    "downloading": "Downloading {release}…",
-    "backing-up": "Backing up before {release}…",
-    "waiting": "{release} is ready: waiting until nothing plays",
-    "installing": "Installing {release}…",
-    "going-back": "Putting the release before back…",
-}
+def short(version: str | None) -> str | None:
+    """ADR-0110 §1: a release is shown by its number - `0.2.4`, not
+    `0.2.1+git871.c73ea29`. A build without a number shows the part before
+    `+`; the long form stays on the Image build row."""
+    return version.split("+", 1)[0] if version else version
 
 
-def sentence(path: Path = STATUS) -> str:
-    """One line for the Release row: what the updater last said."""
+#: The updater's states while an install runs (ADR-0110 §6: the panel is
+#: locked for all of them).
+INSTALLING = frozenset({"downloading", "backing-up", "stopping", "installing", "restarting",
+                        "checking-device", "going-back", "waiting"})
+
+
+def sentence(path: Path = STATUS, installed: str | None = None) -> str:
+    """The Release tile's line (ADR-0110 §2): the installed number and its
+    state, or the number that is waiting."""
     doc = status(path)
     state = doc.get("state")
-    release = doc.get("release") or ""
+    here = short(installed if installed is not None else installed_release()) or "unknown"
+    release = short(doc.get("release")) or ""
     if not state:
-        return "Not checked yet"
+        return f"{here} · Not checked yet"
+    if state == "checking":
+        return f"{here} · Checking…"
     if state == "current":
-        return f"Up to date ({doc.get('channel', '')})".replace(" ()", "")
+        return f"{here} · Up to date"
     if state == "available":
-        return f"{release} is waiting"
+        return f"{release} available"
     if state == "done":
-        return f"Updated to {release}"
+        return f"{here} · Updated"
     if state == "failed":
-        return "Did not update: " + (doc.get("message") or "see the device's log")
-    return _WORDS.get(state, state).format(release=release)
+        return f"{here} · Did not update"
+    if state == "going-back":
+        return f"Going back to {short(doc.get('previous')) or here}…"
+    return f"Updating to {release}…"
+
+
+def view(path: Path = STATUS, installed: str | None = None, running: bool | None = None) -> dict:
+    """What `/state` publishes as `update` (ADR-0110): enough for the modal
+    and for the panel's lock, read from the updater's file - so it survives
+    the core's restart in the middle of an install.
+
+    **`active` needs the install unit running**, not only the file saying so:
+    an updater killed mid-way would otherwise leave the panel locked for
+    ever behind a stale *installing*."""
+    doc = status(path)
+    state = doc.get("state")
+    if running is None:
+        running = state in INSTALLING and unit_running(INSTALL_UNIT)
+    return {
+        "installed": short(installed if installed is not None else installed_release()),
+        "state": state,
+        "release": short(doc.get("release")),
+        "previous": short(doc.get("previous")),
+        "attempted": short(doc.get("attempted")),
+        "steps": doc.get("steps"),
+        "progress": doc.get("progress"),
+        "whats_new": doc.get("whats_new"),
+        "message": doc.get("message"),
+        "reboot": bool(doc.get("reboot")),
+        "at": doc.get("at"),
+        "active": bool(running and state in INSTALLING),
+    }
+
+
+def unit_running(unit: str) -> bool:
+    try:
+        out = subprocess.run(["systemctl", "is-active", unit], capture_output=True, text=True, timeout=5)
+    except (OSError, subprocess.SubprocessError):
+        return False
+    return out.stdout.strip() in ("active", "activating")
 
 
 def notes(path: Path = STATUS) -> str | None:
@@ -80,7 +124,7 @@ def whats_new(path: Path = STATUS) -> str | None:
     text = doc.get("whats_new")
     if not text or doc.get("state") not in ("available", "done"):
         return None
-    return f"What's new in {doc.get('release', 'this release')}: {text}"
+    return f"What's new in {short(doc.get('release')) or 'this release'}: {text}"
 
 
 def start(unit: str) -> None:

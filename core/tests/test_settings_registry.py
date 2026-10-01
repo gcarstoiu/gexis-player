@@ -509,7 +509,11 @@ def test_the_shipped_registry_hides_the_inventoried_rows_and_shows_the_rest():
     # **15 since 2026-09-30**: `updates` (Manual / Automatic) is surfaced
     # with the mechanism it names (ADR-0105 section 6: "surfaced when the
     # mechanism exists").
-    assert len(kept) == 15, "ADR-0022's amendment: inventoried, not surfaced"
+    #
+    # **17 since 2026-10-01**: `update_check` and `update_install` stop being
+    # rows (ADR-0110 §2) - the Release tile's button and the update modal
+    # run them, through the same action route.
+    assert len(kept) == 17, "ADR-0022's amendment: inventoried, not surfaced"
     # Every one of them is still served by the API.
     assert all(r.get("key") for r in kept)
     # 54 at the start of 9d, plus the two rows the design has and the plan
@@ -550,7 +554,7 @@ def test_the_shipped_registry_hides_the_inventoried_rows_and_shows_the_rest():
     # with Spotify's starting volume.
     # **65**, with Debug logs. **66**, with the clock format. **71**, with
     # the four Updates rows and `updates` surfaced (2026-09-30).
-    assert len(rows) - len(kept) == 71
+    assert len(rows) - len(kept) == 69  # 71 until ADR-0110 folded Check now and Update now into the Release tile
 
 
 def test_the_clock_can_be_turned_off_without_taking_the_screen_with_it():

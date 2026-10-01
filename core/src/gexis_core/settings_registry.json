@@ -977,15 +977,17 @@
         "type": "action",
         "label": "Check now",
         "marks": "N",
-        "note": "Reads this device's channel for a newer release. Installs nothing."
+        "note": "Reads this device's channel for a newer release. Installs nothing. ADR-0110: the Release tile's button and the update modal run it; not a row of its own.",
+        "surfaced": false
       },
       {
         "key": "update_install",
         "type": "action",
         "label": "Update now",
         "marks": "N",
-        "note": "Backs up first, waits until nothing plays, and goes back to this release if the new one fails. The device may restart.",
-        "confirm": "Update now"
+        "note": "ADR-0110: started from the update modal, which asks before stopping playback. Downloads, backs up, stops playback, installs, restarts the player and checks it; goes back to this release if the new one fails.",
+        "confirm": "Update now",
+        "surfaced": false
       },
       {
         "key": "updates",
