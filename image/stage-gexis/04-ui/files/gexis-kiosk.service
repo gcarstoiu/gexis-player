@@ -37,6 +37,9 @@ StandardInput=tty-fail
 StandardOutput=journal
 StandardError=journal
 EnvironmentFile=/etc/gexis/kiosk.env
+# ADR-0109: the attached screen, written by the core when one is chosen.
+# Absent until then: the screen's own mode, Standard at its own size.
+EnvironmentFile=-/etc/gexis/screen.env
 # ADR-0043, corrected 2026-09-19 on the first device that ever booted it.
 #
 # Plymouth is DRM master for as long as it runs. The original design held

@@ -22,4 +22,9 @@
        there is a touchscreen, and "no bindings at all" is the state this
        panel should be in. -->
   <keyboard/>
+  <!-- ADR-0109: the touchscreen tied to the panel's output, so a turned
+       output (the bars are portrait panels used sideways) turns touch with
+       it. One output, HDMI-A-1, on every screen gexis drives. **Unverified
+       until a bar is turned on the hardware** (ADR-0109, Unverified). -->
+  <touch mapToOutput="HDMI-A-1"/>
 </labwc_config>

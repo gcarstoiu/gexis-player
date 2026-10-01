@@ -34,7 +34,7 @@ done
 ALSA="libasound2t64 (= 1.2.14-1+rpt1+deb13u1)"
 # The operating system's packages the device runs (the stages' lists), minus
 # the five that only compiled peppyalsa, which now arrives built.
-OS="alsa-utils, bluez-alsa-utils, bluez-tools, chromium, grim, labwc, nodejs, plymouth, plymouth-themes, python3-pil, python3-pygame, rfkill, samba, squeezelite, swaybg, wlrctl"
+OS="alsa-utils, bluez-alsa-utils, bluez-tools, chromium, grim, labwc, nodejs, plymouth, plymouth-themes, python3-pil, python3-pygame, rfkill, samba, squeezelite, swaybg, wlr-randr, wlrctl"
 
 install -D -m 644 /src/image/stage-gexis/09-legal/files/COPYING "$STAGE/usr/share/doc/gexis-player/COPYING"
 install -D -m 644 /src/image/stage-gexis/09-legal/files/SOURCE.md "$STAGE/usr/share/doc/gexis-player/SOURCE.md"
