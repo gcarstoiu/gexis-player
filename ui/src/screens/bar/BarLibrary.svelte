@@ -16,10 +16,15 @@
     toast and a sheet on a bar.
 
   **What a bar drops is dropped by design** (ADR-0109 decision 7, George
-  2026-09-30): the biography, Popular, similar artists, the artist's tags and
-  every per-row action (Add to queue, Add to playlist). Round 2's artist page
-  still drew *Top tracks* and tags; neither is drawn here. A row that the
-  panel would open into actions plays instead (see `playTrack`).
+  2026-09-30): the biography, Popular, similar artists and the artist's tags.
+  Round 2's artist page still drew *Top tracks* and tags; neither is drawn
+  here.
+
+  **Per-row actions are the panel's** (George, 2026-10-01, revising decision
+  7's per-row part): a tap on a row reveals Play now, Add to queue and Add to
+  playlist, one row at a time, as Library.svelte does - Browse's artist,
+  album and track rows, the album page's tracks and a playlist's tracks. Add
+  to playlist opens Library.svelte's playlist picker, drawn as a bar's sheet.
 -->
 <script>
   import { untrack } from 'svelte';
@@ -40,6 +45,7 @@
     browseRadio,
     radioPlay,
     libraryAction,
+    loadPlaylists,
   } from '../../lib/library.js';
   import { afterPaint, revealing } from '../../lib/chunks.svelte.js';
   import { screen } from '../../lib/family.svelte.js';
@@ -76,6 +82,12 @@
 
   const here = $derived(path.length ? path[path.length - 1] : null);
   const where = $derived(path.map((p) => `${p.kind}:${p.id ?? p.handle ?? p.label}`).join('/'));
+  //: Navigation clears a revealed row (Library.svelte clears it in each
+  //: opener; here every change of page does, Back and Home included).
+  $effect(() => {
+    where;
+    untrack(() => (revealed = null));
+  });
 
   //: Library.svelte's: arriving from Now Playing's artist name is two
   //: fetches away, and the home must not paint in between.
@@ -156,9 +168,12 @@
     toastTimer = setTimeout(() => (toast = null), 2600);
   }
 
-  async function act(kind, id, action, label) {
+  async function act(kind, id, action, label, playlistId = null) {
+    // Library.svelte's: adding to a playlist is one LMS call per track (87
+    // tracks took 8 s, 2026-09-18), so say it is working.
+    if (action === 'playlist') flash(`Adding ${label}…`);
     try {
-      await libraryAction(kind, id, action);
+      await libraryAction(kind, id, action, playlistId);
       flash(action === 'play' ? `Playing ${label}` : action === 'add' ? `${label} added to the queue` : `${label} added`);
     } catch (err) {
       // LMS unreachable, or a rescan took the id away (Library.svelte).
@@ -167,11 +182,33 @@
     }
   }
   const play = (kind, id, label = '') => act(kind, id, 'play', label);
-  //: **A track row plays.** The panel opens a row into Play / Add to queue /
-  //: Add to playlist; a bar has no per-row actions (decision 7), and a row
-  //: that did nothing at all would read as broken. Playing is the first of
-  //: the panel's three, and the one a single touch most often means.
-  const playTrack = (track) => play('track', track.id, track.title);
+
+  // ---- a row's actions, and the playlist picker (Library.svelte) ------------
+  //: Which row has its actions showing - one at a time, as on the panel.
+  let revealed = $state(null);
+  const toggle = (key) => (revealed = revealed === key ? null : key);
+  let picker = $state(null); // { kind, id, label } while choosing a playlist
+
+  async function openPicker(kind, id, label) {
+    picker = { kind, id, label };
+    try {
+      playlists = await loadPlaylists();
+    } catch (err) {
+      console.info('library:', err.message);
+    }
+  }
+
+  async function addToPlaylist(entry) {
+    const target = picker;
+    picker = null;
+    if (!target) return;
+    await act(target.kind, target.id, 'playlist', `${target.label} → ${entry.name}`, entry.id);
+    // The chooser's counts are stale once something has been added.
+    loadPlaylists()
+      .then((rows) => (playlists = rows))
+      .catch(() => {});
+  }
+
   const isPlaying = (track) => active === 'lms' && metadata?.track_id != null && String(track.id) === String(metadata.track_id);
 
   // ---- artists ---------------------------------------------------------------
@@ -270,6 +307,7 @@
   }
 
   async function chooseArtist(entry) {
+    revealed = `artist-${entry.id}`;
     chosenArtist = entry;
     chosenAlbum = null;
     browseTracks = [];
@@ -281,6 +319,7 @@
   }
 
   async function chooseAlbum(entry) {
+    revealed = `album-${entry.id}`;
     chosenAlbum = entry;
     try {
       browseTracks = (await loadAlbumTracks(entry.id)).tracks;
@@ -762,9 +801,18 @@
             <div class="pane__list" use:watchPane use:fromTop={where}>
               <div style:height="{paneWindow.above}px" class="pane__space"></div>
               {#each paneWindow.rows as entry (entry.id)}
-                <button class="prow" class:is-on={chosenArtist?.id === entry.id} type="button" onclick={() => chooseArtist(entry)}>
-                  <span class="prow__label">{entry.name}</span>
-                </button>
+                <div class="prow" class:is-on={chosenArtist?.id === entry.id}>
+                  <button class="prow__hit" type="button" onclick={() => chooseArtist(entry)}>
+                    <span class="prow__label">{entry.name}</span>
+                  </button>
+                  {#if revealed === `artist-${entry.id}`}
+                    <span class="acts">
+                      <button class="act act--play" type="button" aria-label="Play now" onclick={() => play('artist', entry.id, entry.name)}><span class="act__play"></span></button>
+                      <button class="act" type="button" aria-label="Add to queue" onclick={() => act('artist', entry.id, 'add', entry.name)}><span class="act__queue"><i></i><i></i><i></i></span></button>
+                      <button class="act" type="button" aria-label="Add to playlist" onclick={() => openPicker('artist', entry.id, entry.name)}><span class="act__plus"></span></button>
+                    </span>
+                  {/if}
+                </div>
               {/each}
               <div style:height="{paneWindow.below}px" class="pane__space"></div>
             </div>
@@ -773,10 +821,19 @@
             <div class="pane__head"><span class="pane__label">Albums</span></div>
             <div class="pane__list" use:fromTop={chosenArtist?.id ?? where}>
               {#each browseAlbums as entry (entry.id)}
-                <button class="prow" class:is-on={chosenAlbum?.id === entry.id} type="button" onclick={() => chooseAlbum(entry)}>
-                  <span class="prow__label">{entry.title}</span>
-                  {#if entry.year}<span class="prow__meta">{entry.year}</span>{/if}
-                </button>
+                <div class="prow" class:is-on={chosenAlbum?.id === entry.id}>
+                  <button class="prow__hit" type="button" onclick={() => chooseAlbum(entry)}>
+                    <span class="prow__label">{entry.title}</span>
+                    {#if entry.year && revealed !== `album-${entry.id}`}<span class="prow__meta">{entry.year}</span>{/if}
+                  </button>
+                  {#if revealed === `album-${entry.id}`}
+                    <span class="acts">
+                      <button class="act act--play" type="button" aria-label="Play now" onclick={() => play('album', entry.id, entry.title)}><span class="act__play"></span></button>
+                      <button class="act" type="button" aria-label="Add to queue" onclick={() => act('album', entry.id, 'add', entry.title)}><span class="act__queue"><i></i><i></i><i></i></span></button>
+                      <button class="act" type="button" aria-label="Add to playlist" onclick={() => openPicker('album', entry.id, entry.title)}><span class="act__plus"></span></button>
+                    </span>
+                  {/if}
+                </div>
               {:else}
                 <div class="pane__empty">{chosenArtist ? 'No albums' : 'Pick an artist'}</div>
               {/each}
@@ -786,10 +843,19 @@
             <div class="pane__head"><span class="pane__label">Tracks</span></div>
             <div class="pane__list" use:fromTop={chosenAlbum?.id ?? where}>
               {#each browseTracks as entry (entry.id)}
-                <button class="prow" class:is-on={isPlaying(entry)} type="button" onclick={() => playTrack(entry)}>
-                  <span class="prow__label">{entry.title}</span>
-                  {#if entry.duration}<span class="prow__meta">{mmss(entry.duration)}</span>{/if}
-                </button>
+                <div class="prow" class:is-on={isPlaying(entry)}>
+                  <button class="prow__hit" type="button" onclick={() => toggle(`track-${entry.id}`)}>
+                    <span class="prow__label">{entry.title}</span>
+                    {#if entry.duration && revealed !== `track-${entry.id}`}<span class="prow__meta">{mmss(entry.duration)}</span>{/if}
+                  </button>
+                  {#if revealed === `track-${entry.id}`}
+                    <span class="acts">
+                      <button class="act act--play" type="button" aria-label="Play now" onclick={() => play('track', entry.id, entry.title)}><span class="act__play"></span></button>
+                      <button class="act" type="button" aria-label="Add to queue" onclick={() => act('track', entry.id, 'add', entry.title)}><span class="act__queue"><i></i><i></i><i></i></span></button>
+                      <button class="act" type="button" aria-label="Add to playlist" onclick={() => openPicker('track', entry.id, entry.title)}><span class="act__plus"></span></button>
+                    </span>
+                  {/if}
+                </div>
               {:else}
                 <div class="pane__empty">{chosenAlbum ? 'No tracks' : 'Pick an album'}</div>
               {/each}
@@ -833,14 +899,25 @@
           <div class="mask" style:mask-image={mask} style:-webkit-mask-image={mask}>
             <div class="sideways sideways--grid" use:side.attach use:dragScroll use:fromTop={where}>
               {#each playlist.items.slice(0, playlistReveal.shown) as entry, index (`${index}:${entry.id}`)}
-                <button class="trow trow--two" class:is-on={isPlaying(entry)} type="button" onclick={() => playTrack(entry)}>
-                  <span class="trow__num">{String(index + 1).padStart(2, '0')}</span>
-                  <span class="trow__text">
-                    <span class="trow__title">{entry.title}</span>
-                    <span class="trow__artist">{entry.artist ?? ''}</span>
-                  </span>
-                  <span class="trow__dur">{entry.duration ? mmss(entry.duration) : ''}</span>
-                </button>
+                <div class="trow trow--two" class:is-on={isPlaying(entry)}>
+                  <button class="trow__hit" type="button" onclick={() => toggle(`pltrack-${index}`)}>
+                    <span class="trow__num">{String(index + 1).padStart(2, '0')}</span>
+                    <span class="trow__text">
+                      <span class="trow__title">{entry.title}</span>
+                      <span class="trow__artist">{entry.artist ?? ''}</span>
+                    </span>
+                    {#if revealed !== `pltrack-${index}`}
+                      <span class="trow__dur">{entry.duration ? mmss(entry.duration) : ''}</span>
+                    {/if}
+                  </button>
+                  {#if revealed === `pltrack-${index}`}
+                    <span class="acts">
+                      <button class="act act--play" type="button" aria-label="Play now" onclick={() => play('track', entry.id, entry.title)}><span class="act__play"></span></button>
+                      <button class="act" type="button" aria-label="Add to queue" onclick={() => act('track', entry.id, 'add', entry.title)}><span class="act__queue"><i></i><i></i><i></i></span></button>
+                      <button class="act" type="button" aria-label="Add to playlist" onclick={() => openPicker('track', entry.id, entry.title)}><span class="act__plus"></span></button>
+                    </span>
+                  {/if}
+                </div>
               {/each}
             </div>
           </div>
@@ -922,11 +999,22 @@
           </div>
           <div class="tracks" use:fromTop={where}>
             {#each album.tracks as track (track.id)}
-              <button class="trow" class:is-on={isPlaying(track)} type="button" onclick={() => playTrack(track)}>
-                <span class="trow__num">{track.tracknum ? String(track.tracknum).padStart(2, '0') : ''}</span>
-                <span class="trow__title trow__title--19">{track.title ?? ''}</span>
-                <span class="trow__dur trow__dur--16">{track.duration ? mmss(track.duration) : ''}</span>
-              </button>
+              <div class="trow" class:is-on={isPlaying(track)}>
+                <button class="trow__hit" type="button" onclick={() => toggle(`albumtrack-${track.id}`)}>
+                  <span class="trow__num">{track.tracknum ? String(track.tracknum).padStart(2, '0') : ''}</span>
+                  <span class="trow__title trow__title--19">{track.title ?? ''}</span>
+                  {#if revealed !== `albumtrack-${track.id}`}
+                    <span class="trow__dur trow__dur--16">{track.duration ? mmss(track.duration) : ''}</span>
+                  {/if}
+                </button>
+                {#if revealed === `albumtrack-${track.id}`}
+                  <span class="acts">
+                    <button class="act act--play" type="button" aria-label="Play now" onclick={() => play('track', track.id, track.title)}><span class="act__play"></span></button>
+                    <button class="act" type="button" aria-label="Add to queue" onclick={() => act('track', track.id, 'add', track.title)}><span class="act__queue"><i></i><i></i><i></i></span></button>
+                    <button class="act" type="button" aria-label="Add to playlist" onclick={() => openPicker('track', track.id, track.title)}><span class="act__plus"></span></button>
+                  </span>
+                {/if}
+              </div>
             {/each}
           </div>
         </div>
@@ -938,6 +1026,32 @@
     </div>
 
     <BarRail {active} {metadata} {controls} onopen={onclose} />
+
+    {#if picker}
+      <!-- Library.svelte's playlist picker, as a bar's sheet: over the
+           content area beside the rail, full height less 12 px, min(760,
+           width - 48) wide (Settings.svelte's `.panel--bar` sheet). -->
+      <div class="over">
+        <div class="sheet__scrim" role="presentation" onclick={() => (picker = null)}></div>
+        <div class="sheet" role="dialog" aria-label="Add to playlist">
+          <div class="sheet__head">
+            <div class="sheet__kicker">Add to playlist</div>
+            <div class="sheet__title">{picker.label}</div>
+          </div>
+          <div class="sheet__list">
+            <!-- Creating playlists is not supported (ADR-0038 §3). -->
+            {#each playlists as entry (entry.id)}
+              <button class="sheet__row" type="button" onclick={() => addToPlaylist(entry)}>
+                <span class="sheet__name">{entry.name}</span>
+                <span class="sheet__count">{entry.tracks}</span>
+              </button>
+            {:else}
+              <div class="empty">No playlists in the library</div>
+            {/each}
+          </div>
+        </div>
+      </div>
+    {/if}
   </div>
 </div>
 
@@ -1514,6 +1628,16 @@
     flex-shrink: 0;
     display: flex;
     align-items: center;
+    border-radius: 10px;
+    min-width: 0;
+  }
+  /* The row is the hit target; its actions sit beside it when revealed. */
+  .prow__hit {
+    flex: 1;
+    min-width: 0;
+    height: 100%;
+    display: flex;
+    align-items: center;
     gap: 14px;
     padding: 0 12px;
     border-radius: 10px;
@@ -1522,7 +1646,7 @@
     background: rgba(126, 214, 188, 0.14);
     color: var(--accent-lms);
   }
-  .prow:active { background: rgba(233, 238, 242, 0.08); }
+  .prow__hit:active { background: rgba(233, 238, 242, 0.08); }
   .prow__label {
     flex: 1;
     min-width: 0;
@@ -1677,17 +1801,25 @@
     flex-shrink: 0;
     display: flex;
     align-items: center;
-    gap: 16px;
-    padding: 0 14px;
     border-radius: 10px;
     min-width: 0;
   }
-  .trow--two { gap: 14px; padding: 0 12px; }
+  .trow__hit {
+    flex: 1;
+    min-width: 0;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 0 14px;
+    border-radius: 10px;
+  }
+  .trow--two .trow__hit { gap: 14px; padding: 0 12px; }
   .trow.is-on {
     background: rgba(126, 214, 188, 0.14);
     color: var(--accent-lms);
   }
-  .trow:active { background: rgba(233, 238, 242, 0.08); }
+  .trow__hit:active { background: rgba(233, 238, 242, 0.08); }
   .trow__num {
     width: 26px;
     flex-shrink: 0;
@@ -1909,6 +2041,161 @@
   .skel span:nth-child(1) { width: 62%; }
   .skel span:nth-child(2) { width: 80%; animation-delay: 150ms; }
   .skel span:nth-child(3) { width: 48%; animation-delay: 300ms; }
+
+  /* ---- a row's actions: Library.svelte's, 44 px rather than the panel's
+     40 so each is a bar's touch target ---- */
+  .acts {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+    padding-right: 4px;
+  }
+  .act {
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    background: rgba(233, 238, 242, 0.06);
+    border: 1px solid rgba(233, 238, 242, 0.14);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    box-sizing: border-box;
+  }
+  .act:active { transform: scale(0.95); }
+  .act--play {
+    background: rgba(126, 214, 188, 0.13);
+    border-color: rgba(126, 214, 188, 0.32);
+  }
+  .act__play {
+    width: 0;
+    height: 0;
+    border-left: 11px solid var(--accent-lms);
+    border-top: 7px solid transparent;
+    border-bottom: 7px solid transparent;
+    margin-left: 2px;
+  }
+  .act__queue {
+    width: 15px;
+    height: 12px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+  }
+  .act__queue i {
+    height: 2.5px;
+    border-radius: 2px;
+    background: rgba(233, 238, 242, 0.9);
+  }
+  .act__queue i:last-child { width: 9px; }
+  .act__plus {
+    width: 15px;
+    height: 15px;
+    position: relative;
+  }
+  .act__plus::before,
+  .act__plus::after {
+    content: '';
+    position: absolute;
+    border-radius: 2px;
+    background: rgba(233, 238, 242, 0.9);
+  }
+  .act__plus::before { left: 0; top: 6px; width: 15px; height: 2.5px; }
+  .act__plus::after { left: 6px; top: 0; width: 2.5px; height: 15px; }
+
+  /* ---- the playlist picker (Library.svelte's sheet), as a bar's sheet:
+     the content area beside the 124 px rail, full height less 12 px above
+     and below, min(760, width - 48) wide (Settings.svelte, .panel--bar) ---- */
+  .over {
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    right: 124px;
+    z-index: 20;
+  }
+  .sheet__scrim {
+    position: absolute;
+    inset: 0;
+    background: var(--bg-scrim);
+  }
+  .sheet {
+    position: absolute;
+    left: 50%;
+    top: 12px;
+    bottom: 12px;
+    transform: translateX(-50%);
+    width: min(760px, 100% - 48px);
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    background: var(--bg-panel);
+    border: 1px solid rgba(126, 214, 188, 0.22);
+    border-radius: 20px;
+    padding: 18px 20px 14px;
+    box-sizing: border-box;
+    box-shadow: 0 34px 90px rgba(0, 0, 0, 0.6);
+  }
+  .sheet__head {
+    flex-shrink: 0;
+    min-width: 0;
+  }
+  .sheet__kicker {
+    font-family: var(--font-mono);
+    font-size: var(--t-label-sm);
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--ink-quiet);
+  }
+  .sheet__title {
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--ink);
+    margin-top: 5px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .sheet__list {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    scrollbar-width: none;
+    touch-action: pan-y;
+    overscroll-behavior: contain;
+  }
+  .sheet__list::-webkit-scrollbar { display: none; }
+  .sheet__row {
+    height: 62px;
+    flex-shrink: 0;
+    border-radius: 14px;
+    background: rgba(233, 238, 242, 0.06);
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 0 22px;
+  }
+  .sheet__row:active { background: rgba(233, 238, 242, 0.16); }
+  .sheet__name {
+    flex: 1;
+    min-width: 0;
+    font-size: var(--t-body);
+    font-weight: 600;
+    color: var(--ink);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .sheet__count {
+    font-family: var(--font-mono);
+    font-size: 14px;
+    color: var(--ink-quiet);
+    flex-shrink: 0;
+  }
 
   /* ---- the toast: bottom centre of the content area (Bar States) ---- */
   .toast {
