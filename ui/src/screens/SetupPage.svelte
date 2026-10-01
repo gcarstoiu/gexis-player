@@ -72,6 +72,25 @@
   //: reports, the tested model that suggests, every model. `scPick` is a
   //: model's label ("Maker/Model", as Settings stores it).
   let screenInfo = $state(null);
+  let screenRetrying = $state(false);
+
+  //: The list comes from the player over the setup Wi-Fi. It fails only when
+  //: the phone has dropped off that network for a moment, so the answer is
+  //: Retry - never only Headless, where one tap turns the screen off
+  //: (George, 2026-10-01).
+  async function loadScreens() {
+    try {
+      screenInfo = await json('/setup/screen');
+    } catch {
+      screenInfo = { seen: { connected: false }, suggested: null, models: [], failed: true };
+    }
+  }
+
+  async function retryScreens() {
+    screenRetrying = true;
+    await loadScreens();
+    screenRetrying = false;
+  }
   let scPick = $state(null);
   let scChoose = $state(false);
   let scConfirmed = $state(false);
@@ -160,12 +179,7 @@
       let rows = {};
       try { saved = await json('/setup/answers'); } catch { /* a fresh start */ }
       try { rows = rowsOf(await json('/settings')); } catch { /* defaults below */ }
-      try {
-        screenInfo = await json('/setup/screen');
-      } catch {
-        // Without the list only Headless can be chosen; say why.
-        screenInfo = { seen: { connected: false }, suggested: null, models: [], failed: true };
-      }
+      await loadScreens();
       outputs = rows.output_device?.options ?? [];
       zones = rows.timezone?.options ?? [];
       let phoneTz = null;
@@ -627,7 +641,8 @@
                   </div>
                 {/if}
                 {#if screenInfo?.failed}
-                  <div class="warn"><span class="bang">!</span><span>The player could not list the screens it knows. Go back and try again, or choose Headless.</span></div>
+                  <div class="warn"><span class="bang">!</span><span>Couldn't load the list of screens. Your phone may have dropped off the player's Wi-Fi for a moment.</span></div>
+                  <button class="sc-btn" onclick={retryScreens} disabled={screenRetrying}>{screenRetrying ? 'Trying again…' : 'Retry'}</button>
                 {:else}
                   <label class="field">
                     <input type="text" class="search" style="--c:#8fd9a8" bind:value={scQuery} placeholder="Search by maker, size or resolution" autocomplete="off" spellcheck="false" />
