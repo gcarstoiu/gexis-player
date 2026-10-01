@@ -31,6 +31,8 @@
   import mark from '../assets/gexis-mark.svg';
   import lyrionMark from '../assets/icon-lyrion.svg';
   import { setupPassword } from '../lib/state.js';
+  import { screen } from '../lib/family.svelte.js';
+  import { fitText } from '../lib/fit.js';
 
   let { setup } = $props();
 
@@ -96,6 +98,16 @@
   const shown = (url) => String(url ?? '').replace(/^https?:\/\//, '').replace(/\/$/, '');
 
   const crumb = $derived(setup?.needed ? 'First-time setup' : 'Setup network');
+
+  //: ADR-0109, Bar family (design `Bar Panels` s-new, s-lost, s-fail,
+  //: s-joining; round 2 `Bar States` s-*): the same steps as strips. One QR
+  //: code at 300 at the left, the facts beside it, the words at the right;
+  //: or a 176 px circle with the title beside it.
+  const bar = $derived(screen.family === 'bar');
+  const wide = $derived(screen.width > 1500);
+  //: A value that must be typed is never cut: it steps down until it fits
+  //: its column, and wraps only past the last step.
+  const valueSizes = [[44, 1], [40, 1], [36, 1], [32, 1], [28, 1], [24, 1], [22, 1]];
 </script>
 
 {#snippet qr(code, label)}
@@ -124,6 +136,126 @@
   </div>
 {/snippet}
 
+{#snippet barMobileData()}
+  <div class="bs__warn">
+    {@render warnIcon(28)}
+    <span>Turn off <b>mobile data</b> while you set up</span>
+  </div>
+{/snippet}
+
+{#snippet barHero(icon, title, size, sub)}
+  <div class="bs__stage bs__stage--hero">
+    <div class="bs__circle" class:bs__circle--warn={icon === 'warn'} class:pulse={icon === 'wifi' || icon === 'mark'}>
+      {#if icon === 'tick'}
+        <svg viewBox="0 0 64 64" width="96" height="96" aria-hidden="true"><path d="M16 33 L28 45 L49 21" fill="none" stroke="currentColor" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" /></svg>
+      {:else if icon === 'phone'}
+        <svg viewBox="0 0 64 64" width="88" height="88" aria-hidden="true"><rect x="18" y="5" width="28" height="54" rx="6" fill="none" stroke="currentColor" stroke-width="5" /><path d="M28 51 H36" stroke="currentColor" stroke-width="5" stroke-linecap="round" /></svg>
+      {:else if icon === 'wifi'}
+        <svg viewBox="0 0 64 64" width="96" height="96" aria-hidden="true">
+          <path d="M6 25 A37 37 0 0 1 58 25" fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round" />
+          <path d="M15 34 A24 24 0 0 1 49 34" fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round" />
+          <path d="M24 43 A12 12 0 0 1 40 43" fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round" />
+          <circle cx="32" cy="52" r="4" fill="currentColor" />
+        </svg>
+      {:else if icon === 'warn'}
+        {@render warnIcon(88)}
+      {:else}
+        <img src={mark} alt="" width="88" height="88" />
+      {/if}
+    </div>
+    <div class="bs__herotext">
+      <h1 class="bs__herotitle" style:font-size={`${size}px`}>{title}</h1>
+      {#if sub}<p class="bs__herosub">{sub}</p>{/if}
+      {#if icon === 'warn' && setup?.reason}<p class="bs__detail">{setup.reason}</p>{/if}
+    </div>
+    {#if step === 'done'}
+      {@const lib = setup.finished?.library ?? {}}
+      {#if lib.state && lib.state !== 'unchanged'}
+        <div class="bs__lib" class:bs__lib--warn={lib.state === 'none' || lib.state === 'several'}>
+          <img src={lyrionMark} alt="" width="78" height="58" />
+          <div>
+            {#if lib.state === 'found'}
+              <b>Found your Lyrion server</b><span>{lib.name}{lib.name !== lib.address ? ` · ${lib.address}` : ''}</span>
+            {:else if lib.state === 'given'}
+              <b>Lyrion server</b><span>{lib.address}</span>
+            {:else if lib.state === 'several'}
+              <b>{lib.names?.length} Lyrion servers found</b><span>Choose one in Settings: {lib.names?.join(', ')}</span>
+            {:else if lib.state === 'off'}
+              <b>Lyrion is off</b><span>Switch it on in Settings any time.</span>
+            {:else}
+              <b>No Lyrion server found</b><span>Choose one in Settings when it is running.</span>
+            {/if}
+          </div>
+        </div>
+      {/if}
+    {/if}
+  </div>
+{/snippet}
+
+{#if bar}
+<div class="setup setup--bar" role="status" aria-live="polite">
+  <header class="bs__head">
+    <img class="bs__mark" src={mark} alt="" width="32" height="32" />
+    <span class="crumb bs__crumb grow">{crumb}</span>
+    {#if open}<span class="crumb bs__crumb">Over {setup.ssid}</span>{/if}
+  </header>
+
+  {#if step === 'join' || step === 'page' || step === 'lan'}
+    <div class="bs__stage">
+      <div class="bs__qr">
+        {#if step === 'join'}
+          {@render qr(joinQr, `QR code to join ${setup?.ssid ?? ''}`)}
+        {:else}
+          {@render qr(pageQr, `QR code to open ${setup?.address ?? ''}`)}
+        {/if}
+      </div>
+      <dl class="bs__facts">
+        {#if step === 'join'}
+          <dt>Network</dt><dd use:fitText={{ sizes: valueSizes, key: setup?.ssid, nowrapBreak: true }}>{setup?.ssid}</dd>
+          <dt>Password</dt><dd use:fitText={{ sizes: valueSizes, key: password, nowrapBreak: true }}>{password ?? '…'}</dd>
+        {:else}
+          <dt>Or type</dt><dd use:fitText={{ sizes: valueSizes, key: setup?.address, nowrapBreak: true }}>{shown(setup?.address)}</dd>
+          {#if step === 'page'}
+            <dt>Your phone may say</dt><dd class="bs__small">“No internet”. Stay connected.</dd>
+          {/if}
+        {/if}
+      </dl>
+      <div class="bs__words">
+        {#if step === 'join' && setup?.failed}
+          <div class="bs__failhead">
+            {@render warnIcon(64)}
+            <h1>Could not join {setup.failed}</h1>
+          </div>
+          <p>{setup.reason ?? ''} Everything else you entered is kept.</p>
+        {:else if step === 'join'}
+          <h1>{setup?.needed ? 'Set up gexis' : 'gexis can’t reach its Wi-Fi'}</h1>
+          <p>Scan to join{#if setup?.address}, then open <span class="bs__addr">{shown(setup.address)}</span>{/if}</p>
+        {:else if step === 'page'}
+          <h1>Now open the setup page</h1>
+          <p>Scan with the same phone</p>
+        {:else}
+          <h1>Set up gexis</h1>
+          <p>Scan with a phone on the same network as this player</p>
+        {/if}
+        {#if step !== 'lan'}{@render barMobileData()}{/if}
+      </div>
+    </div>
+  {:else if step === 'joined'}
+    {@render barHero('tick', 'Phone connected', 64, null)}
+  {:else if step === 'phone'}
+    {@render barHero('phone', 'Carry on on your phone', 64, 'This screen shows when the player moves to your network.')}
+  {:else if step === 'joining'}
+    {@render barHero('wifi', `Joining ${setup?.target ?? 'your Wi-Fi'}`, 64, `Put your phone back on ${setup?.target ?? 'your Wi-Fi'} too.`)}
+  {:else if step === 'done'}
+    {@const f = setup.finished ?? {}}
+    {@render barHero('tick', `${f.name ?? 'gexis'} is on ${f.ssid ?? 'your network'}`, wide ? 56 : 44, f.restarting ? 'Restarting to take its new name…' : null)}
+  {:else if step === 'failed-start'}
+    {@render barHero('warn', 'The setup network did not start', 48, 'Trying again in a moment.')}
+  {:else}
+    {@render barHero('mark', 'Starting setup…', 64, null)}
+  {/if}
+</div>
+{:else}
 <div class="setup" role="status" aria-live="polite">
   <header>
     <img class="mark" src={mark} alt="" width="40" height="40" />
@@ -238,6 +370,7 @@
     {/if}
   </main>
 </div>
+{/if}
 
 <style>
   .setup {
@@ -394,5 +527,165 @@
   }
   .big-icon--warn { --tone: var(--accent-warn); }
   .pulse { animation: pulse 1.6s ease-in-out infinite; }
+
+  /* ADR-0109, Bar family: `Bar Panels` s-*, `Bar States` s-*. */
+  .setup--bar {
+    padding: 0;
+    display: block;
+  }
+  .bs__head {
+    position: absolute;
+    left: 40px;
+    right: 40px;
+    top: 22px;
+    gap: 14px;
+    z-index: 2;
+  }
+  .bs__mark { width: 32px; height: 32px; display: block; }
+  .bs__crumb { font-size: 15px; }
+  .bs__stage {
+    position: absolute;
+    inset: 66px 40px 24px;
+    display: flex;
+    align-items: center;
+    gap: 48px;
+  }
+  .bs__qr {
+    margin-top: -10px;
+    flex-shrink: 0;
+  }
+  .bs__qr .qr {
+    width: 300px;
+    height: 300px;
+    display: block;
+  }
+  /* Shrinks only as far as its values let it: they step down to fit. */
+  .bs__facts {
+    flex: 0 1 auto;
+    min-width: 0;
+  }
+  .bs__facts dd {
+    margin: 6px 0 22px;
+    font-size: 44px;
+    line-height: 1.1;
+    white-space: nowrap;
+  }
+  .bs__facts dd:last-child { margin-bottom: 0; }
+  .bs__facts dd.bs__small {
+    font-family: var(--font-ui);
+    font-size: 26px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+  }
+  /* The words keep enough room that "Set up gexis" stays on one line. */
+  .bs__words {
+    flex: 1 0 260px;
+    min-width: 260px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+  .bs__words h1 {
+    font-size: 40px;
+    line-height: 1.08;
+  }
+  .bs__words p {
+    margin: 0;
+    font-size: 24px;
+    line-height: 1.35;
+    color: var(--ink-body);
+  }
+  .bs__addr {
+    font-family: var(--font-mono);
+    font-weight: 700;
+    color: var(--ink);
+    white-space: nowrap;
+  }
+  .bs__failhead {
+    display: flex;
+    align-items: flex-start;
+    gap: 18px;
+    color: var(--accent-warn);
+  }
+  .bs__failhead :global(svg) { flex-shrink: 0; }
+  .bs__failhead h1 { color: var(--ink); }
+  .bs__warn {
+    align-self: flex-start;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 12px 18px;
+    border-radius: 14px;
+    font-size: 20px;
+    color: var(--accent-warn);
+    background: color-mix(in srgb, var(--accent-warn) 12%, transparent);
+    border: 2px solid color-mix(in srgb, var(--accent-warn) 45%, transparent);
+  }
+  .bs__warn :global(svg) { flex-shrink: 0; }
+  .bs__warn b { color: var(--ink); }
+
+  .bs__stage--hero {
+    justify-content: center;
+    text-align: left;
+  }
+  .bs__circle {
+    width: 176px;
+    height: 176px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    --tone: var(--accent-lms);
+    color: var(--tone);
+    background: color-mix(in srgb, var(--tone) 14%, transparent);
+    border: 3px solid color-mix(in srgb, var(--tone) 45%, transparent);
+  }
+  .bs__circle--warn { --tone: var(--accent-warn); }
+  .bs__herotext {
+    min-width: 0;
+    flex-shrink: 1;
+  }
+  .bs__herotitle {
+    font-size: 64px;
+    line-height: 1.05;
+  }
+  .bs__herosub {
+    margin: 12px 0 0;
+    font-size: 28px;
+    line-height: 1.3;
+    color: var(--ink-body);
+  }
+  .bs__detail {
+    margin: 12px 0 0;
+    font-family: var(--font-mono);
+    font-size: 18px;
+    color: var(--ink-quiet);
+  }
+  .bs__lib {
+    display: flex;
+    align-items: center;
+    gap: 22px;
+    padding: 22px 28px;
+    border-radius: var(--r-card);
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--ink-line);
+    flex-shrink: 0;
+    max-width: 440px;
+  }
+  .bs__lib img { flex-shrink: 0; }
+  .bs__lib div { min-width: 0; }
+  .bs__lib b { display: block; font-size: 28px; font-weight: 700; }
+  .bs__lib span {
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    margin-top: 6px;
+    font-family: var(--font-mono);
+    font-size: 20px;
+    color: var(--ink-body);
+  }
+  .bs__lib--warn b { color: var(--accent-warn); }
   @keyframes pulse { 50% { opacity: 0.5; } }
 </style>
