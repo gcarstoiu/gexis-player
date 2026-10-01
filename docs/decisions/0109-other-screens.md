@@ -144,6 +144,17 @@ found seven things that were George's to settle. His answers:
   any installed set's size; the picker offers only that size's skins.
   George: *"Agree"*.
 
+### Settled 2026-10-01: which screens, and which are tested
+
+- **George's four are Waveshare HDMI screens:** *"All of them are waveshare
+  with hdmi inputs"*. Tested, as decision 1 has it: the 10.1" HDMI LCD (B),
+  the 13.3" HDMI LCD (H), the 7.9" HDMI and the 11.9" HDMI. Step 6 tries the
+  three not yet on a device before a release offers them.
+- **Square and round screens are left out:** *"Leave them out"*. That is 11
+  models, 480×480 to 1080×1080, which no family lays out.
+- **The list is 181 models.** foonerd's 197 entries, less *Auto Detect* and
+  *Custom timings* (not screens), less 3 without a size, less those 11.
+
 ### Amended 2026-10-01: the bar library keeps the row reveal
 
 George, after the bar library was built: *"We keep the behaviour from

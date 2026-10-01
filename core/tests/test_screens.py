@@ -10,7 +10,8 @@ def test_every_model_is_listed_and_the_two_modes_are_not():
     """Decision 1: all of them. *Auto Detect* and *Custom HDMI Timings* are
     not screens."""
     listed = screens.all_screens()
-    assert len(listed) == 192
+    # 192 models, less the 11 square and round ones George left out.
+    assert len(listed) == 181
     assert not {s.id for s in listed} & screens.NOT_MODELS
     assert len({s.label for s in listed}) == len(listed), "the picker's labels are unique"
 
@@ -29,7 +30,7 @@ def test_the_standard_screens_are_standard():
 
 def test_nothing_is_offered_upright():
     """Decision 6: portrait is not designed; 0° is the model's landscape."""
-    assert all(s.width >= s.height for s in screens.all_screens())
+    assert all(s.width / s.height >= screens.SQUARE_BELOW for s in screens.all_screens())
 
 
 def test_a_maker_never_contains_the_picker_s_separator():
@@ -38,6 +39,8 @@ def test_a_maker_never_contains_the_picker_s_separator():
     assert makers["Waveshare"] > 90 and "GeeekPi" in makers and "Generic" in makers
 
 
-def test_nothing_is_marked_tested_until_george_has_tried_it():
-    """Decision 1: tested is earned on the hardware."""
-    assert {s.id for s in screens.all_screens() if s.tested} == set(screens.TESTED)
+def test_george_s_four_are_the_tested_ones():
+    """Decision 1: the four Waveshare HDMI screens George owns."""
+    tested = {s.id for s in screens.all_screens() if s.tested}
+    assert tested == set(screens.TESTED) and len(tested) == 4
+    assert all(screens.by_id(i).maker == "Waveshare" and screens.by_id(i).interface == "hdmi" for i in tested)

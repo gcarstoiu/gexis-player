@@ -23,9 +23,16 @@ from pathlib import Path
 
 PRESETS = Path(__file__).with_name("screens_data") / "display_presets.json"
 
-#: ADR-0109 decision 1: the models George owns, tested on the device. Filled
-#: in as each is confirmed on the hardware - empty until then.
-TESTED: frozenset[str] = frozenset()
+#: ADR-0109 decision 1: the models George owns, marked tested. George,
+#: 2026-10-01: *"All of them are waveshare with hdmi inputs"* - the 10.1" (B)
+#: that sofa-pi runs, and the 13.3" and two bars that step 6 tries on the
+#: hardware before a release offers them.
+TESTED: frozenset[str] = frozenset({
+    "waveshare-10.1-hdmi-b",
+    "waveshare-13.3-hdmi-h",
+    "waveshare-7.9-hdmi",
+    "waveshare-11.9-hdmi",
+})
 
 #: The aspect ratio from which a screen is a bar (lib/family.svelte.js: the
 #: same boundary).
@@ -33,6 +40,10 @@ BAR_FROM = 2.4
 
 #: Not screens: a mode that asks the screen, and one that wants timings typed.
 NOT_MODELS = frozenset({"auto", "custom"})
+
+#: Below this a screen is square or round, which no family lays out. George,
+#: 2026-10-01: *"Leave them out"* (11 models, 480x480 to 1080x1080).
+SQUARE_BELOW = 1.3
 
 #: The maker as the picker shows it, where the preset's first word is not one.
 _MAKER_NAMES = {
@@ -104,6 +115,8 @@ def all_screens(path: Path = PRESETS) -> tuple[Screen, ...]:
             # its entry carries the turn. Untested, so it says so when chosen.
             used = (used[1], used[0])
             rotation = (rotation + 90) % 360
+        if used[0] / used[1] < SQUARE_BELOW:
+            continue
         maker, model = _maker_and_model(preset["name"])
         out.append(Screen(
             id=key,
