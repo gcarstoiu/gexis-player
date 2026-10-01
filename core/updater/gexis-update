@@ -220,7 +220,7 @@ def apt(opts: list[str], *args: str, prefix: list[str] | None = None) -> subproc
     return r
 
 
-def apt_download(opts: list[str], *args: str, report_as: dict) -> subprocess.CompletedProcess:
+def apt_download(opts: list[str], *args: str, report_as: dict, reporter=None) -> subprocess.CompletedProcess:
     """apt-get --download-only, reading its progress as it goes (ADR-0110 §3:
     a bar for the download). apt writes `dlstatus:<n>:<percent>:<what>` on its
     status descriptor; the share is reported at most once a second."""
@@ -238,7 +238,7 @@ def apt_download(opts: list[str], *args: str, report_as: dict) -> subprocess.Com
             PROGRESS["progress"] = round(min(max(share, 0.0), 1.0), 3)
             if time.monotonic() - last >= 1:
                 last = time.monotonic()
-                report("downloading", **report_as)
+                (reporter or report)("downloading", **report_as)
     err = proc.stderr.read()
     proc.wait()
     r = subprocess.CompletedProcess(cmd, proc.returncode, "".join(out), err)
@@ -513,11 +513,73 @@ def scheduled(args) -> int:
     return install(args)
 
 
+# --- a skin pack (ADR-0111) -------------------------------------------------
+
+#: The visualiser's packs: one per screen size, from the installed release's
+#: own repositories, verified as an update is.
+PACK = re.compile(r"^gexis-skins-[0-9]+x[0-9]+$")
+
+
+def report_pack(state: str, **fields) -> None:
+    """pack.json: what the core shows on the pack's row."""
+    STATE.mkdir(parents=True, exist_ok=True)
+    doc = {"state": state, "at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()), **PROGRESS, **fields}
+    tmp = STATE / "pack.json.tmp"
+    tmp.write_text(json.dumps(doc, indent=1))
+    tmp.replace(STATE / "pack.json")
+    print(f"pack {state}: {fields.get('message', '')}".rstrip(": "), flush=True)
+
+
+def pack_install(name: str) -> int:
+    """Install one skin pack from the installed release's parts."""
+    if not PACK.match(name or ""):
+        raise Stop(f"{name!r} is not a skin pack")
+    release = installed("gexis-player")
+    if not release:
+        raise Stop("no release installed to take the pack from")
+    repos, pins = parts_of(release)
+    opts = apt_env(repos, pins)
+    PROGRESS.clear()
+    PROGRESS["progress"] = 0.0
+    report_pack("downloading", package=name, message=f"fetching {name}")
+    if apt(opts, "update").returncode:
+        raise Stop(f"apt could not read {' '.join(repos)}")
+    r = apt_download(opts, "--download-only", "install", name,
+                     report_as={"package": name, "message": f"fetching {name}"}, reporter=report_pack)
+    if r.returncode:
+        raise Stop("download failed: " + why(r))
+    PROGRESS["progress"] = 1.0
+    report_pack("installing", package=name, message=f"installing {name}")
+    r = apt(opts, "--no-download", "install", name)
+    if r.returncode:
+        raise Stop("install failed: " + why(r))
+    report_pack("installed", package=name, version=installed(name), message=f"{name} installed")
+    return 0
+
+
+def pack_remove(name: str) -> int:
+    if not PACK.match(name or ""):
+        raise Stop(f"{name!r} is not a skin pack")
+    report_pack("removing", package=name, message=f"removing {name}")
+    r = run("apt-get", "-q", "-y", "remove", name, check=False, env=APT_ENV)
+    if r.returncode:
+        raise Stop("remove failed: " + why(r))
+    report_pack("removed", package=name, message=f"{name} removed")
+    return 0
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
-    parser.add_argument("action", choices=["check", "install", "scheduled"])
+    parser.add_argument("action", choices=["check", "install", "scheduled", "pack-install", "pack-remove"])
+    parser.add_argument("package", nargs="?")
     parser.add_argument("--channel", choices=["stable", "testing"])
     args = parser.parse_args()
+    if args.action.startswith("pack-"):
+        try:
+            return (pack_install if args.action == "pack-install" else pack_remove)(args.package)
+        except Stop as stop:
+            report_pack("failed", package=args.package, message=str(stop))
+            return 1
     try:
         if args.action == "check":
             check(args)

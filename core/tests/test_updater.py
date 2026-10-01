@@ -290,3 +290,34 @@ def test_apt_s_download_status_becomes_the_share_done(up, monkeypatch):
     r = up.apt_download([], "--download-only", "dist-upgrade", report_as={})
     assert r.returncode == 0 and up.PROGRESS["progress"] == 1.0
     assert 0.425 in shares
+
+
+def test_only_a_skin_pack_is_installed_or_removed_this_way(up):
+    """ADR-0111: the helper installs gexis-skins-<W>x<H> and nothing else."""
+    for bad in ("gexis-core", "gexis-skins", "gexis-skins-1920x1080; rm -rf /", None):
+        with pytest.raises(up.Stop):
+            up.pack_install(bad)
+        with pytest.raises(up.Stop):
+            up.pack_remove(bad)
+
+
+def test_a_pack_comes_from_the_installed_release_s_own_parts(up, monkeypatch):
+    calls = []
+    monkeypatch.setattr(up, "installed", lambda p: "0.4.0" if p == "gexis-player" else "0.4.0")
+    monkeypatch.setattr(up, "parts_of", lambda v: (["ours-a", "skins-b"], ["ours-a", "skins-b"]) if v == "0.4.0" else None)
+    monkeypatch.setattr(up, "apt_env", lambda repos, pins=None: calls.append(("env", repos, pins)) or ["opts"])
+    monkeypatch.setattr(up, "apt", lambda opts, *a, **k: calls.append(("apt",) + a) or subprocess.CompletedProcess(a, 0, "", ""))
+    def dl(opts, *a, report_as, reporter=None):
+        up.PROGRESS["progress"] = 0.5
+        reporter("downloading", **report_as)
+        calls.append(("download",) + a)
+        return subprocess.CompletedProcess(a, 0, "", "")
+    monkeypatch.setattr(up, "apt_download", dl)
+    up.STATE.mkdir(parents=True, exist_ok=True)
+    assert up.pack_install("gexis-skins-1920x1080") == 0
+    assert calls[0] == ("env", ["ours-a", "skins-b"], ["ours-a", "skins-b"])
+    assert ("download", "--download-only", "install", "gexis-skins-1920x1080") in calls
+    assert ("apt", "--no-download", "install", "gexis-skins-1920x1080") in calls
+    doc = json.loads((up.STATE / "pack.json").read_text())
+    assert doc["state"] == "installed" and doc["package"] == "gexis-skins-1920x1080"
+    assert not (up.STATE / "status.json").exists(), "a pack never writes the update's status"
