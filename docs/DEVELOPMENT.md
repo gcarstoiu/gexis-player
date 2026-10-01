@@ -2718,6 +2718,38 @@ development images and decided before the first public release.
 device checks; 13a's plugin updates and this phase's system updates can be one
 mechanism, and the ADR should say whether they are.
 
+### Phase 13d — DACs we have not tested
+
+**Decided 2026-10-01** (George): its own phase, after 13b, seeded from
+Volumio's list (GPL-3.0-only, so the combined work stays at GPL-3.0), with
+the DAC2 HD and the IQaudio DAC+ as the two tested boards. What is known, and
+what the device can learn by itself:
+[Finding 106](findings/106-what-is-known-about-dacs-without-owning-them.md).
+
+**An ADR before anything is built.** It must settle three things:
+- how detection and the list divide the work;
+- the three states a DAC can be in;
+- the board picker, as a setting for ADR-0022's inventory, proposed to George
+  first.
+
+**Acceptance (draft, for the ADR):**
+
+1. **The volume scale is read from the card,** not the DAC2 HD's constants
+   in `volume.py`. Both boards are driven correctly, as measured, not
+   assumed.
+2. **A board that names itself is recognised**
+   (`/proc/device-tree/hat/product`). A board that does not can be chosen
+   from the list; its overlay is written, the device restarts, and the card
+   appears.
+3. **Every DAC shows one of three states:**
+   - *Tested*: George's two, each with a finding;
+   - *Known*: in the list;
+   - *Detected*: not in the list, working by discovery.
+4. **The IQaudio DAC+ plays bit-perfect through every renderer,** with its
+   own mixer, as the DAC2 HD does today.
+5. **A USB DAC is tried once,** if one is to hand. Otherwise its state is
+   *Detected*, untried.
+
 ### Phase 14 — Themes
 
 **Cut out of Phase 10 on 2026-09-25** (George): *"Themes to be cut out and have
