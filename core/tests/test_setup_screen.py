@@ -74,7 +74,7 @@ def test_the_screen_step_s_three_states():
     none = screen_choices(screen_detect.Seen())
     assert none["suggested"] is None and not none["seen"]["connected"]
     models = none["models"]
-    assert len(models) == len(screens.all_screens()) == 181
+    assert len(models) == len(screens.all_screens()) == 110
     assert set(models[0]) == {"id", "label", "maker", "model", "width", "height", "family", "tested"}
     assert sum(m["tested"] for m in models) == 4
 
@@ -102,7 +102,7 @@ async def test_the_screen_route_answers_only_while_setup_is_open(tmp_path):
         r = await client.get("/setup/screen")
         assert r.status == 200
         body = await r.json()
-        assert body["suggested"] is None and not body["seen"]["connected"] and len(body["models"]) == 181
+        assert body["suggested"] is None and not body["seen"]["connected"] and len(body["models"]) == 110
         fake.state = {"network": "online", "needed": False}
         assert (await client.get("/setup/screen")).status == 409
 

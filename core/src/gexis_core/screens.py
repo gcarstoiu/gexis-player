@@ -45,6 +45,12 @@ NOT_MODELS = frozenset({"auto", "custom"})
 #: 2026-10-01: *"Leave them out"* (11 models, 480x480 to 1080x1080).
 SQUARE_BELOW = 1.3
 
+#: Only HDMI screens for now (George, 2026-10-01: *"B it is and I will try
+#: to get my hands on one"*). A DSI or DPI screen needs its own dtoverlay in
+#: config.txt, which applying does not write and nobody here can test; they
+#: come back when one can be.
+INTERFACES = frozenset({"hdmi"})
+
 #: The maker as the picker shows it, where the preset's first word is not one.
 _MAKER_NAMES = {
     "GeeekPi/52Pi": "GeeekPi",
@@ -116,6 +122,8 @@ def all_screens(path: Path = PRESETS) -> tuple[Screen, ...]:
             used = (used[1], used[0])
             rotation = (rotation + 90) % 360
         if used[0] / used[1] < SQUARE_BELOW:
+            continue
+        if preset.get("type", "hdmi") not in INTERFACES:
             continue
         maker, model = _maker_and_model(preset["name"])
         out.append(Screen(

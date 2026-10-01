@@ -10,8 +10,10 @@ def test_every_model_is_listed_and_the_two_modes_are_not():
     """Decision 1: all of them. *Auto Detect* and *Custom HDMI Timings* are
     not screens."""
     listed = screens.all_screens()
-    # 192 models, less the 11 square and round ones George left out.
-    assert len(listed) == 181
+    # 192 models, less the 11 square and round ones George left out, less
+    # the DSI and DPI screens (HDMI only for now, 2026-10-01): 110.
+    assert len(listed) == 110
+    assert {s.interface for s in listed} == {"hdmi"}
     assert not {s.id for s in listed} & screens.NOT_MODELS
     assert len({s.label for s in listed}) == len(listed), "the picker's labels are unique"
 
@@ -36,7 +38,7 @@ def test_nothing_is_offered_upright():
 def test_a_maker_never_contains_the_picker_s_separator():
     assert all("/" not in s.maker and "/" not in s.model for s in screens.all_screens())
     makers = collections.Counter(s.maker for s in screens.all_screens())
-    assert makers["Waveshare"] > 90 and "GeeekPi" in makers and "Generic" in makers
+    assert makers["Waveshare"] > 30 and "GeeekPi" in makers and "Generic" in makers
 
 
 def test_george_s_four_are_the_tested_ones():

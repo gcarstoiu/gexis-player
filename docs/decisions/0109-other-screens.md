@@ -154,6 +154,10 @@ found seven things that were George's to settle. His answers:
   models, 480×480 to 1080×1080, which no family lays out.
 - **The list is 181 models.** foonerd's 197 entries, less *Auto Detect* and
   *Custom timings* (not screens), less 3 without a size, less those 11.
+- **HDMI only, for now: 110 models.** George, 2026-10-01: *"B it is and I
+  will try to get my hands on one"*. A DSI or DPI screen needs its own
+  `dtoverlay` in `config.txt`, which applying does not write and nothing
+  here can test. They come back when one can be tested.
 
 ### Settled 2026-10-01: setup's Screen step
 
