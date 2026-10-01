@@ -1847,6 +1847,22 @@
     flex-direction: column;
     gap: 18px;
   }
+  /* ADR-0109, Bar family: a sheet is the full height less 12 px above and
+     below, min(760, W - 172) wide on the library's content area (W - 124),
+     centred on it (design/source/13b/Bar States.dc.html, lib-sheet). On a
+     400 px screen the panel's 82% cap leaves a sheet too short to hold a
+     list. */
+  :global(.panel--bar) .sheet {
+    top: 12px;
+    bottom: 12px;
+    transform: translateX(-50%);
+    width: min(760px, 100% - 48px);
+    max-width: none;
+    max-height: none;
+    border-radius: 20px;
+    padding: 18px 20px 14px;
+    gap: 12px;
+  }
   .sheet__head {
     flex-shrink: 0;
     min-width: 0;

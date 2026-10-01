@@ -6,6 +6,7 @@
   import BarNowPlaying from './screens/bar/BarNowPlaying.svelte';
   import BarTray from './screens/bar/BarTray.svelte';
   import Library from './screens/Library.svelte';
+  import BarLibrary from './screens/bar/BarLibrary.svelte';
   import WaitingHome from './screens/WaitingHome.svelte';
   import PanelBackground from './screens/PanelBackground.svelte';
   import IdleScreen from './screens/IdleScreen.svelte';
@@ -370,6 +371,21 @@
     </div>
   {:else if libraryOpen}
     <div class="screen-layer">
+      {#if screen.family === 'bar'}
+      <!-- ADR-0109, Bar family: the library as strips and a rail, with
+           Library's props. -->
+      <BarLibrary
+        active={$active}
+        metadata={$metadata}
+        volume={$volume}
+        controls={$active ? ($capabilities[$active]?.controls ?? []) : []}
+        availability={$availability}
+        openArtistNamed={libraryArtist}
+        onclose={() => { libraryRequested = false; libraryArtist = null; }}
+        onsettings={openSettings}
+        onvolume={openVolume}
+      />
+      {:else}
       <Library
         active={$active}
         metadata={$metadata}
@@ -381,6 +397,7 @@
         onsettings={openSettings}
         onvolume={openVolume}
       />
+      {/if}
     </div>
   {:else if $active}
     <div class="screen-layer">
