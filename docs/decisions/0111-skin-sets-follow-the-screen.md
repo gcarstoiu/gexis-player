@@ -108,6 +108,24 @@ An audit of every pack this would ship, on 2026-10-01 (125 catalog packs at
     (*"It is fine. This should go into the minimum and recommended hardware
     requirements"*).
 
+### Settled after the packs were first built (George, 2026-10-01)
+
+The first build of the five packs (branch `skin-packs`) raised three
+questions; each answer is quoted.
+
+13. **A name that two different skins share keeps both, under separate
+    names** (*"Keep under separate name"*). The visualiser chooses a skin by
+    its name, so without this one of the two could never be shown. 11, 102,
+    105, 117 and 74 names (800×480, 1280×400, 1480×320, 1280×800, 1920×1080)
+    share a name in the first build.
+14. **The 1280×800 pack includes `peppy_screensaver`'s stock skins** (15;
+    *"Yes"*), as today's `gexis-skins` does. Their source is a third, under
+    its MIT licence.
+15. **The 1280×720 packs that could not be letterboxed are letterboxed**
+    (*"Extend the tool"*): `letterbox.py` learns meters that do not start at
+    the top-left corner, and spectra. In the first build it refused seven
+    packs (102 skins).
+
 ## How it is built (technical, in order)
 
 1. **Packages:** one per size, from Gelo5's set and the catalog's packs for
