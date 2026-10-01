@@ -144,6 +144,13 @@ found seven things that were George's to settle. His answers:
   any installed set's size; the picker offers only that size's skins.
   George: *"Agree"*.
 
+### Amended 2026-10-01: the bar library keeps the row reveal
+
+George, after the bar library was built: *"We keep the behaviour from
+standard, showing the reveal"*. A library row on a bar reveals Play now, Add
+to queue and Add to playlist, as on Standard. The other drops in decision 7
+stand: artist and release info, biography, top tracks, similar artists.
+
 ## Not in this record
 
 - The 800 × 480 on real hardware: designed and built, not tested until one is

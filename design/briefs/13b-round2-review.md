@@ -43,6 +43,16 @@ ours; 16 keep *Device*; 17 keep the layout.
 | 16 | **System's "Device" heading becomes "Maintenance"** in the design, which also leaves out four of its rows. | Keep *Device*. |
 | 17 | **Upload a plugin.** The design puts it last, as a sheet. Ours is first, with a file icon and a centred dialog (George, 2026-09-30). | Keep ours, and record it in IMPLEMENTED-DIFFERENTLY. |
 
+### The bar library (George, 2026-10-01, after it was built)
+
+1. **A row reveals its actions, as on Standard** (*"We keep the behaviour
+   from standard, showing the reveal"*): Play now, Add to queue, Add to
+   playlist, one row at a time. This takes back, for the library's rows,
+   ADR-0109 decision 7's *per-row actions dropped on a bar*.
+2. **Radio scrolls sideways** (*"Yes"*).
+3. **Browse's album rows reveal the same actions** (*"Same as standard. We
+   show reveal."*), so a whole album plays from Browse too.
+
 ## 2. Back to Claude Design (round 3)
 
 ### Errors
