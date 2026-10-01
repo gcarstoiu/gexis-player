@@ -133,6 +133,10 @@ DEST=packaging/release/out/$tag
 gpg --batch --yes -u "$SIGNER" --clearsign -o "$DEST/notes" "$DEST/notes.txt"
 gpg --batch --verify "$DEST/parts" 2>/dev/null || { echo "ERROR: $DEST/parts does not verify" >&2; exit 1; }
 version=$(gpg --batch --decrypt "$DEST/parts" 2>/dev/null | sed -n 's/^Release: //p')
+# **A release has a number** (ADR-0110 §1): built from a commit tagged
+# v<x.y.z>, so gexis-player is exactly x.y.z. A build between tags is not
+# published.
+[[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "ERROR: $version is not a release number: tag the commit v<x.y.z> (approved with the notes) and build from it" >&2; exit 1; }
 
 # The parts: each a pre-release of its own, never GitHub's "latest".
 for part in "$DEST"/repos/*/; do
