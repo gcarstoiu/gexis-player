@@ -937,6 +937,40 @@ from the output of the step it checks. The fix counts every record dpkg calls
 installed, whatever its selection, and names the pinned package outright.
 Case 17 again: a check that cannot see what it was built to exclude.
 
+**49. The release was published in a layout its own updater could not read**
+(2026-09-30 to 10-01, Phase 13c).
+- **What went wrong.** Release 856 was built from commit 11ef485. The parts
+  layout and the updater that reads it came 45 minutes later, in b784e93.
+  856 was then published in the parts layout.
+- **What it looked like.** A device on 852 found 856 and failed at once: its
+  updater read the channel the old way and asked GitHub for
+  `ours-fb5139447456-debian`, which got 404.
+- **The second mistake.** The fix copied "856's updater" onto the device,
+  checked byte for byte against 856's package. It failed the same way. The
+  copy was faithful; the package was simply older than the format. The check
+  answered *is this the file the release ships?* when the question was *can
+  this file read how the release is published?*
+- **Who it reached.** Only test devices. Nothing is public yet.
+
+**A format change has to arrive through a release its old reader can still
+read, and a release is published only in a format its own updater reads.**
+The next release is built from the code that has the parts updater. The
+channel file should say which updater it needs, so a device that is too old
+reports *needs a newer updater* instead of a 404.
+
+**50. Our own release tags renamed the build** (2026-10-01, Phase 13c).
+- **What went wrong.** `gh release create` makes a git tag on GitHub for
+  every part, every release page and `channels`. Once fetched, `git describe
+  --tags` took the nearest of them.
+- **What it looked like.** The image after 856 was about to call itself
+  `channels-46-g71f1e11`, and its packages would have been versioned from
+  `ours-…` tags, which sort nowhere near `0.2.1+git…`.
+- **How it was caught.** By reading `git describe` before the build, not by
+  the build.
+
+**Name the tags a version may come from** (`--match 'v[0-9]*'`), wherever a
+version is described.
+
 ## Common shape
 
 Every case had a *plausible* substitute for the real target — the build
