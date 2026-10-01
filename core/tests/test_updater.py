@@ -4,6 +4,7 @@ from __future__ import annotations
 import importlib.machinery
 import importlib.util
 import io
+import json
 import subprocess
 from pathlib import Path
 
@@ -174,6 +175,7 @@ def test_automatic_skips_a_release_that_failed_here_and_takes_a_newer_one(up, mo
     (up.STATE / "failed-testing").write_text("2")
     monkeypatch.setattr(up, "setting", lambda key: "Automatic" if key == "updates" else None)
     monkeypatch.setattr(up, "installed", lambda p: "1")
+    monkeypatch.setattr(up, "playing", lambda: False)
     installs = []
     monkeypatch.setattr(up, "install", lambda args: installs.append(1) or 0)
     monkeypatch.setattr(up, "check", lambda args: ("testing", {"Release": "2", "_serial": 2}))
@@ -200,3 +202,91 @@ def test_a_release_without_notes_updates_all_the_same(up, monkeypatch):
         raise OSError("404")
     monkeypatch.setattr(up.urllib.request, "urlopen", missing)
     assert up.release_notes("0.2.1+git900.abc1234") is None
+
+
+def test_a_night_that_finds_music_does_not_wait_and_tries_tomorrow(up, monkeypatch):
+    """ADR-0110 §4: nobody can be asked at night, so nothing is stopped."""
+    monkeypatch.setattr(up, "setting", lambda key: "Automatic" if key == "updates" else None)
+    monkeypatch.setattr(up, "installed", lambda p: "1")
+    monkeypatch.setattr(up, "check", lambda args: ("testing", {"Release": "2", "_serial": 2}))
+    monkeypatch.setattr(up, "playing", lambda: True)
+    monkeypatch.setattr(up, "install", lambda args: (_ for _ in ()).throw(AssertionError("installed")))
+    assert up.scheduled(None) == 0
+    doc = json.loads((up.STATE / "status.json").read_text())
+    assert doc["state"] == "available" and "tomorrow night" in doc["message"]
+
+
+def fake_install(up, monkeypatch, *, fail_install=False, answers=True):
+    """An install with apt, the core and the network replaced: what it
+    reports, step by step."""
+    seen, order = [], []
+    real_report = up.report
+    def report(state, **fields):
+        real_report(state, **fields)
+        seen.append(json.loads((up.STATE / "status.json").read_text()))
+    monkeypatch.setattr(up, "report", report)
+    monkeypatch.setattr(up, "check", lambda args: ("testing", {"Release": "2", "_serial": 2,
+                                                                "Repositories": "ours-x", "_whats_new": "New."}))
+    monkeypatch.setattr(up, "installed", lambda p: "1")
+    monkeypatch.setattr(up, "parts_of", lambda v: (["ours-old"], ["ours-old"]))
+    monkeypatch.setattr(up, "apt_env", lambda repos, pins=None: [])
+    monkeypatch.setattr(up, "plan", lambda opts, v: [("gexis-core", "1", "2")])
+    def apt(opts, *args, prefix=None):
+        if fail_install and "--no-download" in args and "dist-upgrade" in args and prefix and "--allow-downgrades" not in args:
+            return subprocess.CompletedProcess(args, 100, "", "E: broken")
+        return subprocess.CompletedProcess(args, 0, "", "")
+    monkeypatch.setattr(up, "apt", apt)
+    def apt_download(opts, *args, report_as):
+        up.PROGRESS["progress"] = 0.5
+        up.report("downloading", **report_as)
+        return subprocess.CompletedProcess(args, 0, "", "")
+    monkeypatch.setattr(up, "apt_download", apt_download)
+    monkeypatch.setattr(up, "back_up", lambda: order.append("backup") or "b.tgz")
+    monkeypatch.setattr(up, "stop_playback", lambda: order.append("stop"))
+    monkeypatch.setattr(up, "verify", lambda v: None)
+    monkeypatch.setattr(up, "restart", lambda changes: order.append("restart") or "services: gexis-core.service")
+    monkeypatch.setattr(up, "core_answers", lambda timeout=120: answers)
+    monkeypatch.setattr(up, "run", lambda *a, **k: subprocess.CompletedProcess(a, 0, "", ""))
+    up.STATE.mkdir(parents=True, exist_ok=True)
+    return seen, order
+
+
+def test_an_install_reports_every_step_and_the_download_s_share(up, monkeypatch):
+    """ADR-0110 §3: every step listed from the start, each marked as it goes."""
+    seen, order = fake_install(up, monkeypatch)
+    assert up.install(None) == 0
+    first = next(s for s in seen if "steps" in s)
+    assert list(first["steps"]) == list(up.STEPS) and set(first["steps"].values()) <= {"pending", "active"}
+    assert any(s["state"] == "downloading" and s.get("progress") == 0.5 for s in seen)
+    assert order == ["backup", "stop", "restart"], "playback stops after the backup, before the install"
+    last = seen[-1]
+    assert last["state"] == "done" and set(last["steps"].values()) == {"done"}
+    assert last["whats_new"] == "New." and last["previous"] == "1"
+
+
+def test_a_failed_install_marks_its_step_and_goes_back(up, monkeypatch):
+    seen, order = fake_install(up, monkeypatch, fail_install=True)
+    assert up.install(None) == 1
+    last = seen[-1]
+    assert last["state"] == "failed" and last["steps"]["install"] == "failed"
+    assert last["attempted"] == "2"
+
+
+def test_apt_s_download_status_becomes_the_share_done(up, monkeypatch):
+    lines = ["dlstatus:1:0.0000:Retrieving file 1 of 3\n", "dlstatus:2:42.5:Retrieving file 2 of 3\n",
+             "Get:1 http://x y [1 kB]\n", "dlstatus:3:100:Done\n"]
+    class Proc:
+        def __init__(self, *a, **k):
+            self.stdout = iter(lines)
+            self.stderr = io.StringIO("")
+            self.returncode = 0
+        def wait(self):
+            return 0
+    monkeypatch.setattr(up.subprocess, "Popen", Proc)
+    up.STATE.mkdir(parents=True, exist_ok=True)
+    shares = []
+    monkeypatch.setattr(up, "report", lambda state, **f: shares.append(up.PROGRESS.get("progress")))
+    monkeypatch.setattr(up.time, "monotonic", iter(range(0, 100, 2)).__next__)
+    r = up.apt_download([], "--download-only", "dist-upgrade", report_as={})
+    assert r.returncode == 0 and up.PROGRESS["progress"] == 1.0
+    assert 0.425 in shares

@@ -2,10 +2,11 @@
 Description=Gexis Player: check for a release once a day (ADR-0105)
 
 [Timer]
-# At night (ADR-0105 section 6: Automatic runs at night, never while
-# playing - the updater also waits for silence).
+# At night, between 03:00 and 04:00 (ADR-0110 section 4, George: "make it
+# at night somewhere around 3 or 4"). Automatic installs only when nothing
+# is playing; a night that finds music tries again the next night.
 OnCalendar=*-*-* 03:00
-RandomizedDelaySec=90min
+RandomizedDelaySec=1h
 Persistent=true
 
 [Install]

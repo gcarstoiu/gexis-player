@@ -4,10 +4,12 @@
 (ADR-0105 §4, ADR-0108; Phase 13c step 3).
 
     gexis-update check     read the channel, say whether a release is waiting
-    gexis-update install   check, download, back up, wait for silence, install,
+    gexis-update install   check, download, back up, stop playback, install,
                            verify - and go back to the release before on failure
+                           (ADR-0110: started is finished; no silence wait)
     gexis-update scheduled the nightly run: check, and install only when
-                           Updates is Automatic and the release has not failed here
+                           Updates is Automatic, nothing is playing, and the
+                           release has not failed here
 
 **Standalone, on the system's Python and the standard library only.** An
 update replaces the core's own environment; this has to outlive what it
@@ -47,8 +49,13 @@ REBOOT_MARKER = Path("/var/lib/gexis/reboot-required")
 NEVER_RESTART = {"gexis-update-install.service", "gexis-update-check.service", "gexis-park.service"}
 #: Packages whose new version only takes effect at a boot.
 REBOOT_PACKAGES = re.compile(r"^(linux-image-|raspi-firmware|raspberrypi-sys-mods|libc6|systemd|initramfs-tools)")
-SILENCE_S = 20      # the card closed this long counts as nothing playing
 BACKUP_S = 120      # how long a backup may take to appear
+#: **ADR-0110 §3: every step listed from the start**, each pending, active,
+#: done or failed, so the modal and the panel can say what comes next.
+STEPS = ("download", "backup", "stop", "install", "restart", "check")
+#: What every report carries while an install runs: the steps, and the
+#: download's share done (0-1).
+PROGRESS: dict = {}
 
 
 # --- reporting ---------------------------------------------------------------
@@ -56,7 +63,7 @@ BACKUP_S = 120      # how long a backup may take to appear
 def report(state: str, **fields) -> None:
     """status.json, which the core reads and the Updates screen shows."""
     STATE.mkdir(parents=True, exist_ok=True)
-    doc = {"state": state, "at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()), **fields}
+    doc = {"state": state, "at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()), **PROGRESS, **fields}
     tmp = STATE / "status.json.tmp"
     tmp.write_text(json.dumps(doc, indent=1))
     tmp.replace(STATE / "status.json")
@@ -65,6 +72,15 @@ def report(state: str, **fields) -> None:
 
 class Stop(Exception):
     """An update that stops, with a reason a person can read."""
+
+
+def step(name: str, state: str = "active") -> None:
+    """Move one step on; the next report carries it."""
+    PROGRESS.setdefault("steps", {s: "pending" for s in STEPS})[name] = state
+
+
+def active_step() -> str | None:
+    return next((s for s, v in PROGRESS.get("steps", {}).items() if v == "active"), None)
 
 
 def run(*args: str, check: bool = True, env: dict | None = None) -> subprocess.CompletedProcess:
@@ -204,6 +220,34 @@ def apt(opts: list[str], *args: str, prefix: list[str] | None = None) -> subproc
     return r
 
 
+def apt_download(opts: list[str], *args: str, report_as: dict) -> subprocess.CompletedProcess:
+    """apt-get --download-only, reading its progress as it goes (ADR-0110 §3:
+    a bar for the download). apt writes `dlstatus:<n>:<percent>:<what>` on its
+    status descriptor; the share is reported at most once a second."""
+    cmd = ["apt-get", "-q", "-y", "-o", "APT::Status-Fd=1", *opts, *args]
+    proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
+                            env={**os.environ, **APT_ENV})
+    out, last = [], 0.0
+    for line in proc.stdout:
+        out.append(line)
+        if line.startswith("dlstatus:"):
+            try:
+                share = float(line.split(":")[2]) / 100
+            except (IndexError, ValueError):
+                continue
+            PROGRESS["progress"] = round(min(max(share, 0.0), 1.0), 3)
+            if time.monotonic() - last >= 1:
+                last = time.monotonic()
+                report("downloading", **report_as)
+    err = proc.stderr.read()
+    proc.wait()
+    r = subprocess.CompletedProcess(cmd, proc.returncode, "".join(out), err)
+    with (STATE / "apt.log").open("a") as log:
+        log.write(f"\n=== {time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime())} apt-get {' '.join(args)} -> {r.returncode}\n")
+        log.write(r.stdout + r.stderr)
+    return r
+
+
 def why(r: subprocess.CompletedProcess) -> str:
     """apt's own last words - its E: lines, else its last lines - not those
     of whatever ran it (systemd-inhibit only says apt-get exited 100)."""
@@ -269,21 +313,22 @@ def check(args) -> tuple[str, dict] | None:
     return channel, ch
 
 
-def wait_for_silence() -> None:
-    """Until no sound card has been open for SILENCE_S (ADR-0105 §4: never
-    while playing)."""
-    quiet_since = None
-    while True:
-        playing = any("RUNNING" in p.read_text(errors="ignore")
-                      for p in Path("/proc/asound").glob("card*/pcm*p/sub*/status"))
-        now = time.monotonic()
-        if playing:
-            quiet_since = None
-        elif quiet_since is None:
-            quiet_since = now
-        elif now - quiet_since >= SILENCE_S:
-            return
-        time.sleep(2)
+def playing() -> bool:
+    """Whether any sound card is open for playback now."""
+    return any("RUNNING" in p.read_text(errors="ignore")
+               for p in Path("/proc/asound").glob("card*/pcm*p/sub*/status"))
+
+
+def stop_playback() -> None:
+    """ADR-0110 §4: playback stops on consent, not by waiting. The core's park
+    - the shutdown's own way of leaving nothing to resume - pauses or
+    disconnects every source; nothing resumes afterwards."""
+    req = urllib.request.Request(f"{CORE}/renderers/park", method="POST", data=b"")
+    try:
+        urllib.request.urlopen(req, timeout=30).read()
+    except OSError as exc:
+        # Not a reason to stop: the install restarts the players anyway.
+        print(f"could not ask the core to stop playback: {exc}", flush=True)
 
 
 def back_up() -> str:
@@ -353,14 +398,18 @@ def install(args) -> int:
     repos = ch["Repositories"].split()
     back_repos, back_pins = parts_of(current)
 
-    report("downloading", channel=channel, release=target, message=f"fetching {target}")
+    about = dict(channel=channel, release=target, previous=current, whats_new=ch.get("_whats_new"))
+    PROGRESS.clear()
+    PROGRESS.update(steps={s: "pending" for s in STEPS}, progress=0.0)
+    step("download")
+    report("downloading", **about, message=f"fetching {target}")
     opts = apt_env(repos)
     if apt(opts, "update").returncode:
         raise Stop(f"apt could not read {' '.join(repos)}")
     changes = plan(opts, target)
-    for step in (["--download-only", "--allow-change-held-packages", "dist-upgrade"],
-                 ["--download-only", "--allow-change-held-packages", "install", f"gexis-player={target}"]):
-        r = apt(opts, *step)
+    for args_ in (["--download-only", "--allow-change-held-packages", "dist-upgrade"],
+                  ["--download-only", "--allow-change-held-packages", "install", f"gexis-player={target}"]):
+        r = apt_download(opts, *args_, report_as={**about, "message": f"fetching {target}"})
         if r.returncode:
             raise Stop("download failed: " + why(r))
     # The versions installed now, for going back: from the release that has them.
@@ -371,28 +420,37 @@ def install(args) -> int:
             apt(back, "--download-only", "--reinstall", "--allow-downgrades",
                 "--allow-change-held-packages", "install", *olds)
     else:
-        report("downloading", channel=channel, release=target,
+        report("downloading", **about,
                message=f"{current}'s repositories are not reachable; going back will not be possible")
+    PROGRESS["progress"] = 1.0
+    step("download", "done")
 
-    report("backing-up", channel=channel, release=target, message="backing up first")
+    step("backup")
+    report("backing-up", **about, message="backing up first")
     backup = back_up()
-    report("waiting", channel=channel, release=target, backup=backup, message="waiting until nothing plays")
-    wait_for_silence()
+    step("backup", "done")
 
-    report("installing", channel=channel, release=target, backup=backup, message=f"installing {target}")
+    step("stop")
+    report("stopping", **about, backup=backup, message="stopping playback")
+    stop_playback()
+    step("stop", "done")
+
+    step("install")
+    report("installing", **about, backup=backup, message=f"installing {target}")
     opts = apt_env(repos)
     inhibit = ["systemd-inhibit", "--what=shutdown:sleep", "--who=gexis-update",
                f"--why=Installing {target}", "--mode=block"]
-    steps = [["--no-download", "--allow-change-held-packages", "dist-upgrade"],
-             ["--no-download", "--allow-change-held-packages", "install", f"gexis-player={target}"]]
+    apt_steps = [["--no-download", "--allow-change-held-packages", "dist-upgrade"],
+                 ["--no-download", "--allow-change-held-packages", "install", f"gexis-player={target}"]]
     try:
-        for step in steps:
-            r = apt(opts, *step, prefix=inhibit)
+        for apt_step in apt_steps:
+            r = apt(opts, *apt_step, prefix=inhibit)
             if r.returncode:
                 raise Stop("install failed: " + why(r))
         verify(target)
     except Stop as failure:
-        report("going-back", channel=channel, release=current, message=f"{failure}; putting {current} back")
+        step(active_step() or "install", "failed")
+        report("going-back", **{**about, "release": current}, message=f"{failure}; putting {current} back")
         back = apt_env(back_repos, back_pins)
         apt(back, "--no-download", "--allow-downgrades", "--allow-change-held-packages",
             "dist-upgrade", prefix=inhibit)
@@ -401,19 +459,33 @@ def install(args) -> int:
         # Remembered, so a night's Automatic run does not try it again
         # (Finding 105); "Update now" still does - it is asked for.
         (STATE / f"failed-{channel}").write_text(target)
-        report("failed", channel=channel, release=installed("gexis-player"), backup=backup,
+        report("failed", **{**about, "release": installed("gexis-player")}, backup=backup, attempted=target,
                message=f"{failure}. " + (f"Back on {current}." if ok else "Going back did not complete: restore the backup."))
         return 1
+    step("install", "done")
     remember_serial(channel, ch["_serial"])
+    step("restart")
+    reboot = REBOOT_MARKER.exists() or any(REBOOT_PACKAGES.match(p) for p, _, _ in changes)
+    report("restarting", **about, backup=backup, reboot=reboot,
+           message="restarting the device" if reboot else "restarting the player")
     how = restart(changes)
-    report("done", channel=channel, release=target, previous=current, backup=backup,
-           changed=len(changes), restart=how, whats_new=ch.get("_whats_new"),
-           message=f"{target} installed ({how})")
     if how == "reboot":
+        step("restart", "done")
+        step("check", "done")
+        report("done", **about, backup=backup, changed=len(changes), restart=how,
+               message=f"{target} installed ({how})")
         run("systemctl", "reboot", check=False)
-    elif not core_answers():
-        report("failed", channel=channel, release=target, message="the core did not answer after the update")
+        return 0
+    step("restart", "done")
+    step("check")
+    report("checking-device", **about, backup=backup, message="checking the player answers")
+    if not core_answers():
+        step("check", "failed")
+        report("failed", **about, message="the core did not answer after the update")
         return 1
+    step("check", "done")
+    report("done", **about, backup=backup, changed=len(changes), restart=how,
+           message=f"{target} installed ({how})")
     return 0
 
 
@@ -425,6 +497,13 @@ def scheduled(args) -> int:
     if not found or setting("updates") != "Automatic":
         return 0
     channel, ch = found
+    if playing():
+        # ADR-0110 §4: at night nobody can be asked, so a night that finds
+        # music playing does not wait - it tries again the next night.
+        report("available", channel=channel, release=ch["Release"], installed=installed("gexis-player"),
+               notes=ch.get("Notes"), whats_new=ch.get("_whats_new"),
+               message="something was playing; trying again tomorrow night")
+        return 0
     failed = STATE / f"failed-{channel}"
     if failed.exists() and failed.read_text().strip() == ch["Release"]:
         report("available", channel=channel, release=ch["Release"], installed=installed("gexis-player"),
