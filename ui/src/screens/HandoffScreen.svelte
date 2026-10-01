@@ -104,7 +104,9 @@
 
   <div class="pair">
     <div class="side">
-      <div class="ring ring--from">{@render mark(from, 44, 'var(--ink)', 0.42)}</div>
+      <div class="ring ring--from">
+        {#if drawable(from)}{@render mark(from, 44, 'var(--ink)', 0.42)}{:else}<span class="letter letter--from">{initial(from)}</span>{/if}
+      </div>
       <span class="label label--from">{label(from)}</span>
     </div>
 
@@ -116,7 +118,9 @@
     </div>
 
     <div class="side">
-      <div class="ring ring--to">{@render mark(to, 50, 'var(--to-accent)', 1)}</div>
+      <div class="ring ring--to">
+        {#if drawable(to)}{@render mark(to, 50, 'var(--to-accent)', 1)}{:else}<span class="letter">{initial(to)}</span>{/if}
+      </div>
       <span class="label label--to">{label(to)}</span>
     </div>
   </div>
@@ -294,6 +298,19 @@
     display: flex;
     align-items: center;
     justify-content: center;
+  }
+  /* Standard: a renderer with no mark shows its initial inside the ring it
+     already has (decision 8: both families), at the mark's size. */
+  .letter {
+    font-size: 40px;
+    font-weight: 800;
+    line-height: 1;
+    color: var(--to-accent);
+  }
+  .letter--from {
+    font-size: 34px;
+    color: var(--ink);
+    opacity: 0.42;
   }
   /* A renderer with no mark: its initial, in the accent (round 2 t-long
      draws a plugin whose accent is ink). */
