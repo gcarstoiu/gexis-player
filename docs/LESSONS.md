@@ -971,6 +971,24 @@ reports *needs a newer updater* instead of a 404.
 **Name the tags a version may come from** (`--match 'v[0-9]*'`), wherever a
 version is described.
 
+**51. The revert restored a file the running script was no longer reading**
+(2026-10-01, Phase 13c).
+- **What went wrong.** A one-line edit was made to `publish.sh` while a
+  2½-hour publish was running it. The edit rewrote the file in place, which
+  is the file bash had open. `git checkout` then "reverted" it by writing a
+  new file under the same name, while bash kept reading the edited one.
+- **What it looked like.** `git diff` was clean, so it looked safe. The
+  upload loop had already been read whole, so it ran to the end, every part
+  complete. Then bash read past the loop from the old position in the longer
+  file: `line 147: syntax error near unexpected token '('`. That left no
+  release page and no channel move.
+- **Who it reached.** Nothing was lost: the parts were complete and the next
+  release used them.
+
+**Never change a script that is running.** Stage the change in a copy and
+swap it in after the run ends. *The file on disk is right* is not
+*the file the process reads is right*.
+
 ## Common shape
 
 Every case had a *plausible* substitute for the real target — the build
