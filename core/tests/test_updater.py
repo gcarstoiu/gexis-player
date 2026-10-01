@@ -324,3 +324,12 @@ def test_a_pack_comes_from_the_installed_release_s_own_parts(up, monkeypatch):
     doc = json.loads((up.STATE / "pack.json").read_text())
     assert doc["state"] == "installed" and doc["package"] == "gexis-skins-1920x1080"
     assert not (up.STATE / "status.json").exists(), "a pack never writes the update's status"
+
+
+def test_a_kept_gexis_skins_is_marked_installed_by_hand(up, monkeypatch):
+    """ADR-0111 decision 10: no release depends on it any more."""
+    fake_install(up, monkeypatch)
+    calls = []
+    monkeypatch.setattr(up, "run", lambda *a, **k: calls.append(a) or subprocess.CompletedProcess(a, 0, "", ""))
+    assert up.install(None) == 0
+    assert ("apt-mark", "manual", "gexis-skins") in calls

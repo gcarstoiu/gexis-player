@@ -440,6 +440,12 @@ def install(args) -> int:
     opts = apt_env(repos)
     inhibit = ["systemd-inhibit", "--what=shutdown:sleep", "--who=gexis-update",
                f"--why=Installing {target}", "--mode=block"]
+    # ADR-0111 decision 10: a device that has gexis-skins keeps it. Releases
+    # since 0.4 no longer depend on it, so apt would call it "no longer
+    # required" and an autoremove - ours never runs one, a person might -
+    # would take it. Installed by hand, it stays until the switch removes it.
+    if installed("gexis-skins"):
+        run("apt-mark", "manual", "gexis-skins", check=False)
     apt_steps = [["--no-download", "--allow-change-held-packages", "dist-upgrade"],
                  ["--no-download", "--allow-change-held-packages", "install", f"gexis-player={target}"]]
     try:
