@@ -225,3 +225,9 @@ def test_the_release_does_not_depend_on_skins():
     assert "gexis-skins" not in names
     assert "Replaces: gexis-skins" in player
     assert "licenses/peppy_screensaver/LICENSE" in player
+
+
+def test_the_release_carries_every_pack():
+    release = (REPO / "packaging/release/build.sh").read_text()
+    assert "for size in " + " ".join(SIZES) + "; do" in release
+    assert "image_count + pack_count" in release
