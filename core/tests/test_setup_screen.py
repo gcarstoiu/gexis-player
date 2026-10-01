@@ -75,7 +75,7 @@ def test_the_screen_step_s_three_states():
     assert none["suggested"] is None and not none["seen"]["connected"]
     models = none["models"]
     assert len(models) == len(screens.all_screens()) == 110
-    assert set(models[0]) == {"id", "label", "maker", "model", "width", "height", "family", "tested"}
+    assert set(models[0]) == {"id", "label", "maker", "model", "width", "height", "family", "tested", "skins"}
     assert sum(m["tested"] for m in models) == 4
 
 
@@ -113,3 +113,27 @@ async def test_the_screen_route_without_detection_says_so(tmp_path):
     server = StateServer(StateStore({}), setup=FakeSetup(), setup_flow=flow)
     async with TestClient(TestServer(server.make_app())) as client:
         assert (await client.get("/setup/screen")).status == 503
+
+
+def test_each_screen_names_its_skin_pack():
+    """ADR-0111: the Visualiser step names the pack the screen gets."""
+    by_label = {m["label"]: m for m in screen_choices(screen_detect.Seen())["models"]}
+    assert by_label[PANEL]["skins"] == "1280x800"
+    for m in by_label.values():
+        assert m["skins"] is None or m["skins"].count("x") == 1
+
+
+def test_the_visualiser_answer_becomes_the_setting(tmp_path):
+    settings = FakeSettings()
+    flow, net, *_ = make(tmp_path, FakeNM(devices=NOTHING), settings)
+    flow.save({"ssid": "Home", "password": "hunter22", "screen": PANEL, "visualiser": True})
+    finish(flow, net)
+    assert ("visualiser_skins", True) in settings.sets
+
+
+def test_headless_drops_the_visualiser_answer(tmp_path):
+    flow, *_ = make(tmp_path, FakeNM(devices=NOTHING))
+    flow.save({"screen": PANEL, "visualiser": True})
+    assert flow.save({"headless": True}).get("visualiser") is None
+    with pytest.raises(ValueError):
+        flow.save({"visualiser": "yes"})

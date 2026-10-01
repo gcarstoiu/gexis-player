@@ -32,6 +32,7 @@
     ['out', 'Output', '#7ed6bc'],
     ['music', 'Music', '#9fb4e8'],
     ['display', 'Screen', '#8fd9a8'],
+    ['visualiser', 'Visualiser', '#e8c27e'],
     ['review', 'Review', '#f2a48f']
   ];
   const last = STEPS.length;
@@ -68,6 +69,8 @@
   let spotify = $state(true);
   let bt = $state(true);
   let headless = $state(false);
+  //: ADR-0111 decision 4: asked, never assumed. null until answered.
+  let visualiser = $state(null);
   //: ADR-0109's Screen step. `screenInfo` is `/setup/screen`: what the screen
   //: reports, the tested model that suggests, every model. `scPick` is a
   //: model's label ("Maker/Model", as Settings stores it).
@@ -138,6 +141,7 @@
       case 'music': return lmsMode === 'find' || lmsMode === 'off' || (lmsMode === 'address' && lms.trim().length > 2);
       // A choice, unless the screen was recognised: then that model is one.
       case 'display': return headless || !!chosen;
+      case 'visualiser': return visualiser !== null;
       default: return true;
     }
   }
@@ -207,6 +211,8 @@
       // A device set up again opens on its own screen's maker.
       const had = scPick && screenInfo.models.find((m) => m.label === scPick);
       if (had) scOpen = { [had.maker]: true };
+      // Set up again: what the device has (a kept gexis-skins counts).
+      visualiser = saved.visualiser ?? (setup?.needed ? null : (rows.visualiser_skins?.value ?? null));
       hidden = !!saved.hidden;
       hasPassword = !!saved.has_password;
       joinError = saved.error ?? null;
@@ -236,6 +242,7 @@
       case 'out': return { output: out };
       case 'music': return { lms_mode: lmsMode, lms: lmsMode === 'address' ? (lms.trim() || null) : null, spotify, bluetooth: bt };
       case 'display': return headless ? { headless: true } : { headless: false, screen: chosen };
+      case 'visualiser': return { visualiser };
       default: return {};
     }
   }
@@ -273,9 +280,21 @@
       await finish();
       return;
     }
-    const to = fromReview || (retrying && id === 'wifi') ? last - 1 : step + 1;
+    let to = fromReview || (retrying && id === 'wifi') ? last - 1 : step + 1;
+    if (skipped(to)) to += 1;
     if (to === last - 1) fromReview = false;
     if (await saveStep(to)) step = to;
+  }
+
+  //: A headless player has no screen to draw on, and seven small screens
+  //: (480 × 320 and the like) fit no pack: their Visualiser step is passed
+  //: over, and the setting left as it is.
+  const noVisualiser = $derived(headless || !chosenModel?.skins);
+  function skipped(n) {
+    return noVisualiser && STEPS[n]?.[0] === 'visualiser';
+  }
+  function back() {
+    step -= skipped(step - 1) ? 2 : 1;
   }
 
   async function finish() {
@@ -300,6 +319,8 @@
   //: The model setup will set: a pick, or, recognised, the suggestion.
   const chosen = $derived(headless ? null : scPick ?? (recOk ? suggested.label : null));
   const chosenModel = $derived(models.find((m) => m.label === chosen) ?? (suggested?.label === chosen ? suggested : null));
+  //: The pack the chosen screen gets (the core's skin_packs.for_screen).
+  const packLabel = $derived(chosenModel?.skins ? `${chosenModel.skins.replace('x', ' × ')} screens` : '');
   const pickNote = $derived(
     (chosenModel && !chosenModel.tested ? 'This model has not been tested with gexis. ' : '') +
       'When setup finishes the player restarts on this screen and asks Keep this screen? on it. If nobody touches Keep within 30 seconds, it goes back.'
@@ -365,7 +386,8 @@
     ['Output', out || 'Not set', 3],
     ['Library', lmsMode === 'off' ? 'Not used' : lmsMode === 'address' ? lms.trim() : lmsMode === 'find' ? 'Found once on your network' : 'Not chosen', 4],
     ['Services', [spotify ? 'Spotify Connect' : null, bt ? 'Bluetooth' : null].filter(Boolean).join(' · ') || 'Lyrion only', 4],
-    ['Screen', headless ? 'Headless' : chosenModel ? `${chosenModel.maker} ${shortOf(chosenModel)} · ${chosenModel.width} × ${chosenModel.height}` : 'Not chosen', 5]
+    ['Screen', headless ? 'Headless' : chosenModel ? `${chosenModel.maker} ${shortOf(chosenModel)} · ${chosenModel.width} × ${chosenModel.height}` : 'Not chosen', 5],
+    ...(noVisualiser ? [] : [['Visualiser', visualiser === true ? `Install · ${packLabel}` : visualiser === false ? 'None' : 'Not chosen', 6]])
   ]);
 </script>
 
@@ -387,7 +409,7 @@
       {#if step >= 0 && step < last && !finished}
         <nav class="rail">
           {#each STEPS as s, n}
-            <button class="rail-item" class:cur={n === step} disabled={n > step} onclick={() => (step = n)}>
+            <button class="rail-item" class:cur={n === step} disabled={n > step || skipped(n)} onclick={() => (step = n)}>
               <span class="rail-bar" style="background:{s[2]}; opacity:{n <= step ? 1 : 0.45}"></span>
               <span class="rail-label">{s[1]}</span>
               {#if n < step}<span class="tick"></span>{/if}
@@ -689,6 +711,28 @@
                 {/if}
               </div>
             </section>
+          {:else if id === 'visualiser'}
+            <section class="pane">
+              <div>
+                <h1>A visualiser for the screen?</h1>
+                <p class="sub">While music plays, the screen can show VU meters and spectrum analysers instead of the cover. They are drawn for one screen size, so the player fetches the set for {packLabel}.</p>
+              </div>
+              <div class="list">
+                {#each [
+                  [true, 'Install the visualiser', 'Downloaded once the player is on your home network. Remove it any time under Plugins.'],
+                  [false, 'No visualiser', 'Nothing is downloaded. Plugins can install it later.']
+                ] as o}
+                  <button class="net" class:sel={visualiser === o[0]} onclick={() => (visualiser = o[0])}>
+                    <span class="radio" class:on={visualiser === o[0]}><span></span></span>
+                    <span class="grow"><span class="nm">{o[1]}</span><span class="meta plain">{o[2]}</span></span>
+                  </button>
+                {/each}
+              </div>
+              <div class="note-card" style="--bar: #e8c27e">
+                <span class="bar"></span>
+                <span>The designs are made by the PeppyMeter community, and many show the faces of real hi-fi equipment.</span>
+              </div>
+            </section>
           {:else if id === 'review'}
             <section class="pane">
               <div>
@@ -710,7 +754,7 @@
 
         {#if loaded && !finished}
           <div class="foot">
-            {#if step > 0}<button class="ghost" onclick={() => (step -= 1)}>Back</button>{/if}
+            {#if step > 0}<button class="ghost" onclick={back}>Back</button>{/if}
             <button class="primary" style="--c:{accent}" disabled={!valid() || saving} onclick={next}>
               {step < 0 ? 'Start' : id === 'review' ? 'Finish and connect' : 'Continue'}
             </button>
@@ -867,8 +911,11 @@
   .table { display: flex; flex-direction: column; gap: 1px; border-radius: 16px; overflow: hidden; border: 1px solid var(--ink-line); }
   .thead { padding: 14px 18px; background: rgba(255, 255, 255, 0.05); }
   .trow { display: flex; align-items: center; flex-wrap: wrap; gap: 16px; padding: 14px 18px; background: rgba(255, 255, 255, 0.03); min-height: 34px; }
-  .what { flex-shrink: 0; width: 132px; font-size: 15px; color: var(--ink-quiet); }
-  .val { font-size: 17px; font-weight: 600; word-break: break-word; }
+  /* A phone: the label above its value, which then has the row's width
+     rather than a column a few letters wide ("Wavesh / are"). */
+  .what { flex: 0 0 100%; margin-bottom: -10px; font-size: 15px; color: var(--ink-quiet); }
+  .val { font-size: 17px; font-weight: 600; overflow-wrap: break-word; }
+  @media (min-width: 720px) { .what { flex: 0 0 132px; margin-bottom: 0; } }
 
   .tz { display: flex; align-items: center; flex-wrap: wrap; gap: 16px; padding: 20px; border-radius: 16px; background: rgba(255, 255, 255, 0.05); border: 1px solid var(--ink-line); }
   .tz-name { font-size: 22px; font-weight: 700; margin-top: 8px; word-break: break-word; }

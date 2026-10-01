@@ -22,7 +22,7 @@ import logging
 import os
 from pathlib import Path
 
-from gexis_core import discovery, screen_detect, screens, setup_network
+from gexis_core import discovery, screen_detect, screens, setup_network, skin_packs
 
 logger = logging.getLogger(__name__)
 
@@ -44,12 +44,15 @@ SETTINGS = {
     #: ADR-0109: the Screen step's model, as Settings stores it ("Maker/Model").
     #: After `headless`, so a device leaving Headless is then given its screen.
     "screen": "screen",
+    #: ADR-0111 decision 4. Setting it starts the pack's download, which waits
+    #: for the home network (the core retries every five minutes).
+    "visualiser": "visualiser_skins",
 }
 TEXT = ("ssid", "password", "name", "timezone", "clock", "output", "lms", "screen")
 #: George, 2026-09-29: a server nobody asked for must not appear. The Music
 #: step asks: find it once on the network, this address, or not at all.
 LMS_MODES = ("find", "address", "off")
-FLAGS = ("hidden", "spotify", "bluetooth", "headless")
+FLAGS = ("hidden", "spotify", "bluetooth", "headless", "visualiser")
 
 
 class SetupFlow:
@@ -136,6 +139,8 @@ class SetupFlow:
             data["headless"] = False
         if changes.get("headless") is True:
             data.pop("screen", None)
+            # No screen, no visualiser: its step is passed over (ADR-0111).
+            data.pop("visualiser", None)
         # A new password for the network, or another network, is a new try:
         # the last one's error no longer describes anything.
         if "password" in changes or "ssid" in changes:
@@ -275,7 +280,15 @@ def _screen_json(screen: screens.Screen) -> dict:
         "height": screen.height,
         "family": screen.family,
         "tested": screen.tested,
+        #: ADR-0111: the skin pack this screen gets, which the Visualiser
+        #: step names ("1280x800"), or None if no pack fits it.
+        "skins": _pack_name(screen.width, screen.height),
     }
+
+
+def _pack_name(width: int, height: int) -> str | None:
+    size = skin_packs.for_screen(width, height)
+    return f"{size[0]}x{size[1]}" if size else None
 
 
 def screen_choices(report: screen_detect.Seen) -> dict:
