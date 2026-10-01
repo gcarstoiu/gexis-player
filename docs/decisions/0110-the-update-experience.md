@@ -145,6 +145,21 @@ build tested on Testing is the one Stable gets, so a separate *beta* number
 would need a second build. The channel on Release, and GitHub's *Pre-release*
 mark, say which one a release is on.
 
+### Restarts are not in the notes (2026-10-01)
+
+0.3.2's notes said *"No reboot"*, and `sofa-pi` rebooted. Its first
+`gexis-system` update put back a boot option that Raspberry Pi's first boot
+strips from every device: every `systemd.*` option in `cmdline.txt`.
+- **Whether an update restarts the device depends on the device,** so the
+  notes cannot promise it either way. **Decided (George: "Let's go for A"):**
+  the notes leave it out.
+- **The modal says it before the update starts:** *"Installing stops
+  playback. The player restarts, and the device too if the system needs
+  it."*
+- **`publish.sh` refuses notes that say it.**
+- **The option itself moved** to `/etc/systemd/system.conf.d/`
+  (`ShowStatus=no`), where nothing strips it and no reboot is needed.
+
 ## What changes underneath
 
 - **The updater:**

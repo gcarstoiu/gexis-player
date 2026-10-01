@@ -135,6 +135,11 @@ DEST=packaging/release/out/$tag
 # "• ". The device parses them; the release page gets them as Markdown.
 grep -qxE 'New|Fixed|Good to know' "$DEST/notes.txt" && grep -q '^• ' "$DEST/notes.txt" \
 	|| { echo "ERROR: notes.txt needs sections (New / Fixed / Good to know) with lines starting '• '" >&2; exit 1; }
+# **Notes do not promise a restart or its absence** (ADR-0110, George,
+# 2026-10-01): 0.3.2's said "No reboot" and the device rebooted. Whether it
+# does depends on the device; the modal says so before an update starts.
+! grep -qiE 'reboot|restarts? the (player|device)' "$DEST/notes.txt" \
+	|| { echo "ERROR: notes.txt says whether the update restarts; leave that to the update modal (ADR-0110)" >&2; exit 1; }
 sed -E 's/^(New|Fixed|Good to know)$/### \1/; s/^• /- /' "$DEST/notes.txt" > "$DEST/notes.md"
 gpg --batch --yes -u "$SIGNER" --clearsign -o "$DEST/notes" "$DEST/notes.txt"
 gpg --batch --verify "$DEST/parts" 2>/dev/null || { echo "ERROR: $DEST/parts does not verify" >&2; exit 1; }

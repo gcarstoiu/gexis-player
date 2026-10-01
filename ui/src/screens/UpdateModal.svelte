@@ -92,7 +92,10 @@
             <ReleaseNotes text={u.whats_new} />
           </div>
         {/if}
-        <div class="task__text task__text--quiet">This device has {u.installed}.</div>
+        <div class="task__text task__text--quiet">
+          This device has {u.installed}. Installing stops playback. The player restarts, and the device too
+          if the system needs it.
+        </div>
         <div class="ask__buttons">
           <button type="button" class="btn" onclick={close}>Not now</button>
           <button type="button" class="btn btn--confirm" onclick={choose}>Update</button>

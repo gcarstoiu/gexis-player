@@ -21,6 +21,9 @@ DEF=/usr/share/gexis/defaults
 
 # --- ALSA (00-alsa) ----------------------------------------------------------
 put 644 "$S/00-alsa/files/zz-gexis-default.conf" /etc/alsa/conf.d/zz-gexis-default.conf
+# Boot status off through systemd's own configuration, not cmdline.txt,
+# which Raspberry Pi's first boot strips of systemd.* options (2026-10-01).
+put 644 "$S/06-splash/files/gexis-show-status.conf" /etc/systemd/system.conf.d/gexis-show-status.conf
 put 644 "$S/00-alsa/files/gexis-dummy-mixers-load.conf" /etc/modules-load.d/gexis-dummy-mixers.conf
 put 644 "$S/00-alsa/files/gexis-dummy-mixers-modprobe.conf" /etc/modprobe.d/gexis-dummy-mixers.conf
 # Rewritten when the output is chosen (outputs.py): a default, placed once.
@@ -117,7 +120,7 @@ if [ -f "$CMDLINE" ]; then
 	grep -qw 'cgroup_enable=memory' "$CMDLINE" || sed -i 's/\brootwait\b/rootwait cgroup_enable=memory/' "$CMDLINE"
 	sed -i 's/\bconsole=tty1\b/console=tty3/' "$CMDLINE"
 	for option in quiet loglevel=0 logo.nologo vt.global_cursor_default=0 \
-		systemd.show_status=false plymouth.ignore-serial-consoles splash; do
+		plymouth.ignore-serial-consoles splash; do
 		grep -qw -- "$option" "$CMDLINE" || sed -i "$ s#\$# ${option}#" "$CMDLINE"
 	done
 	[ "$before" = "$(cat "$CMDLINE")" ] || changed=1
