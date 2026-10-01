@@ -10,6 +10,8 @@
   import bluetoothMark from '../assets/icon-bluetooth.png';
   import lyrionMark from '../assets/icon-lyrion.svg';
   import { sources } from '../lib/state.js';
+  import { screen } from '../lib/family.svelte.js';
+  import { fitText } from '../lib/fit.js';
 
   let { from, to } = $props();
 
@@ -19,6 +21,22 @@
   //: The id is the fallback, which is what it always was for an unknown one.
   const label = (id) => $sources[id]?.name ?? id;
   const accent = $derived($sources[to]?.accent ?? `var(--accent-${to}, var(--accent-lms))`);
+
+  //: ADR-0109, Bar family (design `Bar Panels` t2, round 2 `Bar States`
+  //: t-long): one strip - the old source small at the left, a line that
+  //: takes the width, the new one in its ring with the name beside it.
+  const bar = $derived(screen.family === 'bar');
+  const wide = $derived(screen.width > 1500);
+  //: The name is 64 on one line; a name that needs two lines is 52 in a
+  //: 340 px box (64 in 520 from 1500 wide). Smaller only when a single word
+  //: is wider than the box, so it never leaves it.
+  const nameSizes = $derived(
+    wide ? [[64, 2], [56, 2], [48, 2], [40, 2], [34, 2]] : [[64, 1], [52, 2], [46, 2], [40, 2], [34, 2]],
+  );
+  //: Decision 8 of the round-2 review: a renderer with no mark shows its
+  //: initial in a ring.
+  const initial = (id) => ((label(id) ?? '').trim()[0] ?? '?').toUpperCase();
+  const drawable = (id) => id === 'lms' || !!IMAGES[id] || !!$sources[id]?.mark;
 </script>
 
 {#snippet mark(source, size, color, opacity)}
@@ -49,6 +67,35 @@
   {/if}
 {/snippet}
 
+{#if bar}
+<div class="handoff handoff--bar" style:--to-accent={accent} out:fade={{ duration: 260 }}>
+  <div class="hb__wash"></div>
+  <div class="hb">
+    <div class="hb__from">
+      {#if drawable(from)}
+        {@render mark(from, 44, 'var(--ink)', 1)}
+      {:else}
+        <span class="hb__letter hb__letter--from">{initial(from)}</span>
+      {/if}
+      <span class="hb__fromname">{label(from)}</span>
+    </div>
+    <div class="hb__line"></div>
+    <div class="hb__to">
+      <div class="hb__ring">
+        {#if drawable(to)}
+          {@render mark(to, 70, 'var(--to-accent)', 1)}
+        {:else}
+          <span class="hb__letter">{initial(to)}</span>
+        {/if}
+      </div>
+      <div class="hb__text" class:hb__text--wide={wide}>
+        <div class="hb__kicker">Handing off to</div>
+        <div class="hb__name" use:fitText={{ sizes: nameSizes, key: label(to) }}>{label(to)}</div>
+      </div>
+    </div>
+  </div>
+</div>
+{:else}
 <!-- **Appears at once, fades out** (George, 2026-09-26). The design fades it in
   over 260 ms, and the incoming renderer's artwork changed underneath while it
   was still mostly transparent - a blink. Its contents still rise in. -->
@@ -74,6 +121,7 @@
     </div>
   </div>
 </div>
+{/if}
 
 <style>
   .handoff {
@@ -182,6 +230,115 @@
   .note--1 { margin-top: -42px; margin-left: -44px; font-size: 40px; animation: march 1400ms linear infinite; }
   .note--2 { margin-top: -4px; margin-left: -10px; font-size: 32px; animation: march 1400ms linear 320ms infinite; }
   .note--3 { margin-top: -52px; margin-left: 14px; font-size: 28px; animation: march 1400ms linear 700ms infinite; }
+
+  /* ADR-0109, Bar family: `Bar Panels` t2 and `Bar States` t-long. */
+  .handoff--bar {
+    display: block;
+  }
+  .hb__wash {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    right: 0;
+    width: 62%;
+    background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--to-accent) 20%, transparent));
+  }
+  .hb {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    padding: 0 72px;
+    gap: 40px;
+    animation: rise 380ms ease both;
+  }
+  .hb__from {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    opacity: 0.55;
+    flex-shrink: 0;
+    min-width: 0;
+    max-width: 280px;
+  }
+  .hb__fromname {
+    font-size: 26px;
+    font-weight: 600;
+    color: rgba(233, 238, 242, 0.7);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    min-width: 0;
+  }
+  .hb__line {
+    flex: 1;
+    min-width: 120px;
+    height: 2px;
+    background: linear-gradient(90deg, rgba(233, 238, 242, 0.12), var(--to-accent));
+  }
+  .hb__to {
+    display: flex;
+    align-items: center;
+    gap: 28px;
+    flex-shrink: 0;
+  }
+  .hb__ring {
+    width: 176px;
+    height: 176px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    box-sizing: border-box;
+    border: 3px solid var(--to-accent);
+    background: color-mix(in srgb, var(--to-accent) 14%, transparent);
+    box-shadow: 0 0 60px color-mix(in srgb, var(--to-accent) 25%, transparent);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  /* A renderer with no mark: its initial, in the accent (round 2 t-long
+     draws a plugin whose accent is ink). */
+  .hb__letter {
+    font-size: 84px;
+    font-weight: 800;
+    line-height: 1;
+    color: var(--to-accent);
+  }
+  .hb__letter--from {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    border: 2px solid rgba(233, 238, 242, 0.7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+    color: var(--ink);
+    flex-shrink: 0;
+  }
+  .hb__text {
+    max-width: 340px;
+    min-width: 0;
+  }
+  .hb__text--wide {
+    max-width: 520px;
+  }
+  .hb__kicker {
+    font-family: var(--font-mono);
+    font-size: 15px;
+    letter-spacing: 0.34em;
+    text-transform: uppercase;
+    color: rgba(233, 238, 242, 0.55);
+    white-space: nowrap;
+  }
+  .hb__name {
+    margin-top: 6px;
+    font-size: 64px;
+    line-height: 1.02;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    color: var(--to-accent);
+    text-wrap: balance;
+  }
 
   @keyframes rise {
     from { opacity: 0; transform: translateY(14px); }
