@@ -17,7 +17,8 @@
   review decision 7: keep the panel's), not the source accent round 2 drew.
 -->
 <script>
-  import { setVolume, setMute, fixedOutput, meters } from '../../lib/state.js';
+  import { fixedOutput, meters } from '../../lib/state.js';
+  import { VolumeControl } from '../../lib/volumeControl.svelte.js';
   import { pressing } from '../../lib/press.svelte.js';
   import LockIcon from '../../lib/LockIcon.svelte';
   import VolumeIcon from '../../lib/VolumeIcon.svelte';
@@ -27,110 +28,24 @@
 
   const press = pressing();
 
-  // ---- the level: VolumeDrawer.svelte's logic, unchanged --------------------
-  // Copied rather than shared so the panel's drawer is not touched by the
-  // bar's arrival. If one changes, change both.
-  let dragging = $state(false);
-  let settling = $state(false);
-  let local = $state(0);
-  let toast = $state(null);
-  let toastTimer;
-
-  const muted = $derived(!!volume?.muted);
-  const shown = $derived(dragging || settling ? local : (volume?.percent ?? 0));
-  const pct = $derived(muted ? 0 : shown);
-
-  // A level change the panel did not cause opens the tray; ours are known by
-  // a short window after each command, and a takeover restoring a renderer's
-  // level is not a user action.
-  const OWN_WINDOW_MS = 1500;
-  let ownUntil = 0;
-  let activeChangedAt = 0;
-  let last = null;
-  let lastActive;
-  $effect(() => {
-    if (active !== lastActive) {
-      if (lastActive !== undefined) activeChangedAt = performance.now();
-      lastActive = active;
-    }
+  // ---- the level: one copy, shared with the panel's drawer -----------------
+  //: lib/volumeControl.svelte.js. The level is measured against the rail,
+  //: not the touch area, which is taller and wider.
+  const vol = new VolumeControl({
+    volume: () => volume,
+    active: () => active,
+    onexternal: () => onexternal,
+    onsettled: () => onsettled,
   });
-  $effect(() => {
-    const current = volume ? `${volume.percent}/${volume.muted}` : null;
-    const previous = last;
-    last = current;
-    if (previous === null || current === previous) return;
-    const now = performance.now();
-    if (now < ownUntil || dragging || now - activeChangedAt < 3000) return;
-    onexternal?.();
-  });
-  const markOwn = () => (ownUntil = performance.now() + OWN_WINDOW_MS);
-
-  function flash(text) {
-    toast = text;
-    clearTimeout(toastTimer);
-    toastTimer = setTimeout(() => (toast = null), 2200);
-  }
-
-  let inFlight = false;
-  let queued = null;
-  async function send(percent) {
-    if (inFlight) {
-      queued = percent;
-      return;
-    }
-    inFlight = true;
-    markOwn();
-    try {
-      await setVolume(percent);
-      markOwn();
-    } catch (err) {
-      flash(`Volume not changed: ${err.message}`);
-    } finally {
-      inFlight = false;
-    }
-    if (queued !== null) {
-      const next = queued;
-      queued = null;
-      await send(next);
-    } else if (!dragging) {
-      settling = false;
-    }
-  }
-
-  //: The level follows the finger across the rail, measured against the
-  //: rail rather than the touch area, which is taller and wider.
+  const muted = $derived(vol.muted);
+  const shown = $derived(vol.shown);
+  const pct = $derived(vol.pct);
+  const toast = $derived(vol.toast);
   let rail = $state(null);
-  function fromPointer(event) {
-    const r = rail.getBoundingClientRect();
-    local = Math.round(Math.min(1, Math.max(0, (event.clientX - r.left) / r.width)) * 100);
-    send(local);
-  }
-  function down(event) {
-    dragging = true;
-    settling = true;
-    event.currentTarget.setPointerCapture?.(event.pointerId);
-    fromPointer(event);
-  }
-  function move(event) {
-    if (dragging) fromPointer(event);
-  }
-  function up() {
-    dragging = false;
-    if (!inFlight && queued === null) settling = false;
-    onsettled?.();
-  }
-
-  async function toggleMute() {
-    const next = !muted;
-    markOwn();
-    try {
-      await setMute(next);
-      markOwn();
-      flash(next ? 'Muted' : 'Unmuted');
-    } catch (err) {
-      flash(`Mute not changed: ${err.message}`);
-    }
-  }
+  const down = (event) => vol.down(event, rail);
+  const move = (event) => vol.move(event, rail);
+  const up = () => vol.up();
+  const toggleMute = () => vol.toggleMute();
 
   // ---- open, closed and in between -------------------------------------------
   //: How far the tray is from closed, 0 to TRAY_H: the strip's band while it

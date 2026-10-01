@@ -1,9 +1,15 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //
-// The bar strip's lyrics, worked out exactly as now playing works them out
-// (NowPlaying.svelte: `synced`, `sungLines`, `anchor`, `singing`). Kept as
-// plain functions here rather than lifted out of NowPlaying, so the panel's
-// screen is not touched by the bar's arrival; if one changes, change both.
+// Synced lyrics, followed: shared by the panel's Now Playing and the bar's
+// strip (one copy since 2026-10-01).
+//
+// **A stamped line with no words is timing, not a lyric.** LRC bodies use
+// them for the run-in, for instrumental breaks and for the outro, and
+// following them literally leaves the screen blank in the middle of a song
+// and again at the end - which reads as a fault rather than as silence
+// (George, on the panel, 2026-09-20). So the words are kept apart from the
+// timing (`sungOf`), each remembering where it sat so the clock can still be
+// followed, and the screen rests on the last line sung (`anchorOf`).
 
 // An LRC body is `[mm:ss.xx] text` per line; unstamped lines are headers.
 const LRC = /^\[(\d+):(\d+(?:\.\d+)?)\]\s?(.*)$/;

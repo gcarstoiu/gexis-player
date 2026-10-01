@@ -27,7 +27,7 @@
   import { sendTransport } from '../../lib/state.js';
   import { playhead, mmss } from '../../lib/playhead.svelte.js';
   import { playToggle } from '../../lib/playToggle.svelte.js';
-  import { parseSynced, sungOf, activeAt, anchorOf } from './lyrics.js';
+  import { parseSynced, sungOf, activeAt, anchorOf } from '../../lib/lyrics.js';
   import { pull, bandDrag, TRAY_H } from './tray.svelte.js';
 
   // The props App.svelte gives NowPlaying, so the two are interchangeable.
