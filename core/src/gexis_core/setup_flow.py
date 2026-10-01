@@ -283,6 +283,7 @@ def _screen_json(screen: screens.Screen) -> dict:
         #: ADR-0111: the skin pack this screen gets, which the Visualiser
         #: step names ("1280x800"), or None if no pack fits it.
         "skins": _pack_name(screen.width, screen.height),
+        "skin_count": skin_packs.COUNTS.get(_pack_name(screen.width, screen.height) or ""),
     }
 
 

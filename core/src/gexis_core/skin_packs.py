@@ -24,6 +24,11 @@ SIZES: tuple[tuple[int, int], ...] = ((1920, 1080), (1280, 800), (1280, 400), (1
 DEFAULT_SCREEN = (1280, 800)
 
 
+#: How many skins each pack holds, which setup names before anything is
+#: downloaded. The pack build refuses a pack that disagrees.
+COUNTS: dict[str, int] = json.loads((Path(__file__).parent / "skin_counts.json").read_text())
+
+
 def package(size: tuple[int, int]) -> str:
     return f"gexis-skins-{size[0]}x{size[1]}"
 

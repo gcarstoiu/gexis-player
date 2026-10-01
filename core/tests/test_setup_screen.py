@@ -75,7 +75,7 @@ def test_the_screen_step_s_three_states():
     assert none["suggested"] is None and not none["seen"]["connected"]
     models = none["models"]
     assert len(models) == len(screens.all_screens()) == 110
-    assert set(models[0]) == {"id", "label", "maker", "model", "width", "height", "family", "tested", "skins"}
+    assert set(models[0]) == {"id", "label", "maker", "model", "width", "height", "family", "tested", "skins", "skin_count"}
     assert sum(m["tested"] for m in models) == 4
 
 
@@ -118,9 +118,10 @@ async def test_the_screen_route_without_detection_says_so(tmp_path):
 def test_each_screen_names_its_skin_pack():
     """ADR-0111: the Visualiser step names the pack the screen gets."""
     by_label = {m["label"]: m for m in screen_choices(screen_detect.Seen())["models"]}
-    assert by_label[PANEL]["skins"] == "1280x800"
+    assert by_label[PANEL]["skins"] == "1280x800" and by_label[PANEL]["skin_count"] == 310
     for m in by_label.values():
         assert m["skins"] is None or m["skins"].count("x") == 1
+        assert (m["skin_count"] is None) == (m["skins"] is None)
 
 
 def test_the_visualiser_answer_becomes_the_setting(tmp_path):

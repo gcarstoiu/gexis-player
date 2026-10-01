@@ -89,6 +89,16 @@ python3 "$HERE/assemble.py" --size "$SIZE" --index "$WORK/index.json" \
 	--catalog "$WORK/cat" --gelo5 "$WORK/gelo5" --out "$ROOT" --work "$WORK/assemble" \
 	--report "$WORK/report.json" --letterbox "$FILES/letterbox.py"
 python3 "$HERE/describe.py" "$WORK/report.json" "$HERE/pins.json" "$STAGE"
+# Setup names how many skins a screen gets before the device can download
+# anything (ADR-0111 decision 4), from the core's own copy of the counts: a
+# pack that disagrees with it is not built.
+python3 - "$WORK/report.json" /src/core/src/gexis_core/skin_counts.json "$SIZE" <<'PY'
+import json, sys
+built = json.load(open(sys.argv[1]))["skins"]
+said = json.load(open(sys.argv[2])).get(sys.argv[3])
+if built != said:
+    sys.exit(f"ERROR: the pack has {built} skins; core/src/gexis_core/skin_counts.json says {said}")
+PY
 install -m 644 "$WORK/LICENSE.peppy_templates" "$WORK/LICENSE.PeppyMeter.doc" "$STAGE/usr/share/doc/$PACKAGE/"
 
 # The 1280x800 set holds what gexis-skins carried, folder for folder.

@@ -320,7 +320,9 @@
   const chosen = $derived(headless ? null : scPick ?? (recOk ? suggested.label : null));
   const chosenModel = $derived(models.find((m) => m.label === chosen) ?? (suggested?.label === chosen ? suggested : null));
   //: The pack the chosen screen gets (the core's skin_packs.for_screen).
-  const packLabel = $derived(chosenModel?.skins ? `${chosenModel.skins.replace('x', ' × ')} screens` : '');
+  //: Non-breaking: "1280 ×" and "800" must not part at a line's end.
+  const packSize = $derived(chosenModel?.skins?.replace('x', '\u00a0×\u00a0') ?? '');
+  const packLabel = $derived(chosenModel?.skin_count ? `the ${chosenModel.skin_count} skins drawn for ${packSize} screens` : `the set for ${packSize} screens`);
   const pickNote = $derived(
     (chosenModel && !chosenModel.tested ? 'This model has not been tested with gexis. ' : '') +
       'When setup finishes the player restarts on this screen and asks Keep this screen? on it. If nobody touches Keep within 30 seconds, it goes back.'
@@ -387,7 +389,7 @@
     ['Library', lmsMode === 'off' ? 'Not used' : lmsMode === 'address' ? lms.trim() : lmsMode === 'find' ? 'Found once on your network' : 'Not chosen', 4],
     ['Services', [spotify ? 'Spotify Connect' : null, bt ? 'Bluetooth' : null].filter(Boolean).join(' · ') || 'Lyrion only', 4],
     ['Screen', headless ? 'Headless' : chosenModel ? `${chosenModel.maker} ${shortOf(chosenModel)} · ${chosenModel.width} × ${chosenModel.height}` : 'Not chosen', 5],
-    ...(noVisualiser ? [] : [['Visualiser', visualiser === true ? `Install · ${packLabel}` : visualiser === false ? 'None' : 'Not chosen', 6]])
+    ...(noVisualiser ? [] : [['Visualiser', visualiser === true ? `Install · ${chosenModel?.skin_count ? `${chosenModel.skin_count} skins, ` : ''}${packSize}` : visualiser === false ? 'None' : 'Not chosen', 6]])
   ]);
 </script>
 
@@ -715,7 +717,7 @@
             <section class="pane">
               <div>
                 <h1>A visualiser for the screen?</h1>
-                <p class="sub">While music plays, the screen can show VU meters and spectrum analysers instead of the cover. They are drawn for one screen size, so the player fetches the set for {packLabel}.</p>
+                <p class="sub">While music plays, the screen can show VU meters and spectrum analysers instead of the cover. They are drawn for one screen size, so the player fetches {packLabel}.</p>
               </div>
               <div class="list">
                 {#each [
