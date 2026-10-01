@@ -205,3 +205,23 @@ def test_packaging_builds_every_pack_by_default():
     line = re.search(r'^SKIN_PACKS="([^"]+)"', build, re.M).group(1).split()
     assert line == [f"skins-{s}" for s in SIZES]
     assert "$SKIN_PACKS" in re.search(r"^for pkg in \$\{\*:-([^}]+)\}", build, re.M).group(1)
+
+
+def test_the_image_installs_no_skins():
+    """ADR-0111 decision 9: the stage copies every package but the skins."""
+    stage = (REPO / "image/stage-gexis/01-packages/00-run.sh").read_text()
+    assert 'cp "${DEBS}"/*.deb' not in stage
+    assert "gexis-skins_*|gexis-skins-*)" in stage
+    verify = (REPO / "image/verify-image.sh").read_text()
+    assert "/opt/gexis-peppy/skins /opt/gexis-peppy/packs" in verify
+
+
+def test_the_release_does_not_depend_on_skins():
+    """Decisions 9 and 10: nothing pulls a pack in, and a device that has
+    gexis-skins keeps it - it hands over the one file gexis-player now
+    carries, the screensaver's licence."""
+    player = (REPO / "packaging/player/build.sh").read_text()
+    names = re.search(r"^for pkg in (.+?); do", player, re.M | re.S).group(1)
+    assert "gexis-skins" not in names
+    assert "Replaces: gexis-skins" in player
+    assert "licenses/peppy_screensaver/LICENSE" in player
