@@ -263,3 +263,18 @@ def test_the_spectrum_engine_reads_the_pack_s_own_resolution(tmp_path, monkeypat
     text = (tmp_path / "config.txt").read_text()
     assert "spectrum.folder = 800x480" in text
     assert f"base.folder = {home.parent.parent / 'templates_spectrum'}" in text
+
+
+def test_a_smaller_pack_is_centred_and_a_larger_one_left_alone():
+    """ADR-0111 decision 2: the largest pack that fits, centred on black."""
+    assert driver.centring((800, 480), (1024, 600)) == (112, 60)
+    assert driver.centring((1280, 800), (1280, 800)) is None
+    assert driver.centring((1280, 800), (1024, 600)) is None, "too large: drawn as before"
+    assert driver.centring((1280, 800), None) is None
+
+
+def test_the_screen_size_comes_from_screen_env(tmp_path):
+    env = tmp_path / "screen.env"
+    env.write_text("# ADR-0109\nGEXIS_SCREEN_WIDTH=1920\nGEXIS_SCREEN_HEIGHT=1080\n")
+    assert driver.screen_size(env) == (1920, 1080)
+    assert driver.screen_size(tmp_path / "absent") is None

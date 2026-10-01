@@ -726,6 +726,67 @@ class SpectrumState:
             os.chdir(here)
 
 
+#: ADR-0109: the attached screen's size, written when a screen is chosen.
+SCREEN_ENV = Path("/etc/gexis/screen.env")
+
+
+def screen_size(env: Path = SCREEN_ENV) -> tuple[int, int] | None:
+    """The attached screen, or None when the file says nothing usable."""
+    try:
+        fields = dict(l.split("=", 1) for l in env.read_text().splitlines() if "=" in l and not l.startswith("#"))
+        return int(fields["GEXIS_SCREEN_WIDTH"]), int(fields["GEXIS_SCREEN_HEIGHT"])
+    except (OSError, KeyError, ValueError):
+        return None
+
+
+def centring(pack: tuple[int, int], screen: tuple[int, int] | None) -> tuple[int, int] | None:
+    """Where a pack smaller than the screen sits, centred (ADR-0111
+    decision 2), or None when it fills the screen - or would not fit, in
+    which case it is drawn as it always was, from the corner."""
+    if screen is None or screen == pack or screen[0] < pack[0] or screen[1] < pack[1]:
+        return None
+    return (screen[0] - pack[0]) // 2, (screen[1] - pack[1]) // 2
+
+
+def moved(rects, dx: int, dy: int):
+    """`pygame.display.update`'s argument, in the window's coordinates:
+    a rect, a list of them (a None in it stays None), or nothing at all."""
+    if rects is None:
+        return None
+    if isinstance(rects, (list, tuple)) and rects and not isinstance(rects[0], (int, float)):
+        return [None if r is None else pygame.Rect(r).move(dx, dy) for r in rects]
+    return pygame.Rect(rects).move(dx, dy)
+
+
+def centre_on_black(util, screen: tuple[int, int] | None) -> tuple[int, int] | None:
+    """**A pack smaller than the screen, centred on black** (ADR-0111).
+
+    The window becomes the whole screen, painted black once, and both
+    engines - and our layers - are handed the pack-sized middle of it as
+    their screen: a subsurface, so whatever they draw lands in place. What
+    they ask to be shown is in their coordinates, so `display.update` is
+    wrapped to move it. Called right after `init_display`, before any meter
+    or spectrum component takes the surface (component.py reads it once).
+    """
+    pack = util.PYGAME_SCREEN.get_size()
+    offset = centring(pack, screen)
+    if offset is None:
+        return None
+    window = pygame.display.set_mode(screen, pygame.NOFRAME)
+    window.fill((0, 0, 0))
+    pygame.display.update()
+    util.PYGAME_SCREEN = window.subsurface(pygame.Rect(offset, pack))
+    real = pygame.display.update
+    dx, dy = offset
+
+    def update(rects=None):
+        return real() if rects is None else real(moved(rects, dx, dy))
+
+    pygame.display.update = update
+    print(f"peppy: {pack[0]}x{pack[1]} centred on a {screen[0]}x{screen[1]} screen")
+    return offset
+
+
 def hold_the_last_frame(data_source) -> None:
     """**"No frame this tick" is not "silence".**
 
@@ -821,6 +882,7 @@ def main() -> int:
     # surface for either engine to draw on.
     peppy.init_display()
     util = peppy.util
+    centre_on_black(util, screen_size())
 
     # The engine parsed its own directory; the other one is adopted into the
     # same config so the factory can build from either.
