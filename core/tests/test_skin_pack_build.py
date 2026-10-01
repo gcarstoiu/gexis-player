@@ -35,24 +35,30 @@ def write(folder: Path, files: dict[str, bytes | str]) -> None:
         path.write_bytes(data.encode() if isinstance(data, str) else data)
 
 
-def run(tmp_path, gelo5: dict, catalog: dict[str, tuple[list, dict]], size="800x480"):
+def run(tmp_path, gelo5: dict, catalog: dict[str, tuple[list, dict]], size="800x480",
+        stock: dict | None = None):
     """`gelo5`: {"<top>/<folder>/<file>": data}. `catalog`: name -> (units,
-    files), the units as catalog/index.json has them."""
+    files), the units as catalog/index.json has them; a name starting with
+    another size is that size's pack. `stock`: peppy_screensaver's files."""
     g = tmp_path / "gelo5"
     write(g, gelo5)
     cat = tmp_path / "cat"
     templates = []
     for name, (units, files) in catalog.items():
         write(cat / name, files)
-        w, h = size.split("x")
+        w, h = (name.split("_")[0] if re.match(r"^\d+x\d+_", name) else size).split("x")
         templates.append({"name": name, "width": int(w), "height": int(h), "sha256": "0" * 64,
                           "units": units})
     (tmp_path / "index.json").write_text(json.dumps({"templates": templates}))
     out = tmp_path / "out" / size
+    extra = ["--letterbox", str(REPO / "image/stage-gexis/05-peppy/files/letterbox.py")]
+    if stock is not None:
+        write(tmp_path / "stock", stock)
+        extra += ["--stock", str(tmp_path / "stock")]
     rc = assemble.main([
         "--size", size, "--index", str(tmp_path / "index.json"), "--catalog", str(cat),
         "--gelo5", str(g), "--out", str(out), "--work", str(tmp_path / "work"),
-        "--report", str(tmp_path / "report.json"),
+        "--report", str(tmp_path / "report.json"), *extra,
     ])
     report = json.loads((tmp_path / "report.json").read_text()) if rc == 0 else None
     return rc, out, report
@@ -99,7 +105,24 @@ def test_a_skin_is_its_values_and_its_pictures_not_its_name(tmp_path):
     assert not (out / "800x480_g5_copy").exists()
     assert (out / "800x480_g5_revised/templates/800x480/b.png").read_bytes() == b"B2"
     assert {d["pack"] for d in report["dropped_packs"]} == {"gelo5-1001", "800x480_g5_copy"}
-    assert report["name_clashes"] == [{"skin": "02G5_B", "in": ["800x480_g5_revised/templates", "gelo5/templates"]}]
+    assert report["renamed"] == [{"pack": "800x480_g5_revised", "file": "templates/meters.txt",
+                                  "from": "02G5_B", "to": "02G5_B (g5 revised)"}]
+
+
+def test_a_shared_name_keeps_both_skins_and_renames_the_later(tmp_path):
+    """Decision 13. Gelo5 keeps its names; the catalog's copy is renamed
+    after its pack, with a number when that is taken too, and only the
+    section header changes - its spectrum link stays."""
+    revised = {"meters.txt": meter("02G5_B", "b.png", "spectrum.name = S") + meter("02G5_B (g5 x)", "c.png"),
+               "b.png": b"B2", "c.png": b"C", "n.png": b"N"}
+    rc, out, report = run(tmp_path, GELO, {
+        "800x480_g5_x": ([unit("800x480_g5_x")], {f"800x480_g5_x/{k}": v for k, v in revised.items()}),
+    })
+    assert rc == 0
+    text = (out / "800x480_g5_x/templates/800x480/meters.txt").read_text()
+    assert "[02G5_B (g5 x 2)]\nmeter.type = circular\nbgr.filename = b.png" in text
+    assert "spectrum.name = S" in text and "[02G5_B (g5 x)]" in text
+    assert [r["to"] for r in report["renamed"]] == ["02G5_B (g5 x 2)"]
 
 
 def test_a_partly_repeated_pack_keeps_its_new_skins_and_loses_the_rest(tmp_path):
@@ -170,6 +193,47 @@ def test_a_meter_that_draws_a_spectrum_panel_fails_the_build(tmp_path, capsys):
     assert "draws Marantz_bgr.png, the panel of spectrum Marantz" in capsys.readouterr().err
 
 
+def test_the_stock_skins_are_a_pack_of_their_own(tmp_path):
+    """Decision 14: peppy_screensaver's `<size>_custom_<n>` folders, meters
+    and spectra apart, as gexis-skins has them."""
+    rc, out, report = run(tmp_path, GELO, {}, stock={
+        "templates/800x480_custom_10/meters.txt": meter("gold", "g.png", "spectrum.name = s.1"),
+        "templates/800x480_custom_10/g.png": b"G", "templates/800x480_custom_10/n.png": b"N",
+        "templates/1280x800_custom_4/meters.txt": meter("other size", "g.png"),
+        "templates_spectrum/800x480_custom_10/spectrum.txt": "[s.1]\nbgr.filename = p.png\n",
+        "templates_spectrum/800x480_custom_10/p.png": b"P",
+    })
+    assert rc == 0
+    assert (out / "stock/templates/800x480/meters.txt").read_text().startswith("[gold]")
+    assert (out / "stock/templates_spectrum/800x480/spectrum.txt").is_file()
+    assert [p for p in report["packs"] if p["dir"] == "stock"] == [
+        {"dir": "stock", "source": "foonerd/peppy_screensaver", "skins": 1}]
+    assert report["skins"] == 3
+
+
+def test_a_1280x720_pack_with_a_spectrum_is_letterboxed_into_1280x800(tmp_path):
+    """Decision 15: each unit is letterboxed in its own folder - the meter
+    moved by its origin, the spectrum by its position."""
+    pytest.importorskip("PIL.Image")   # letterbox.py measures the pictures
+    gelo = {k.replace("800x480", "1280x800").replace("_1000", "_400"): v for k, v in GELO.items()
+            if "01-20" not in k}
+    name = "1280x720_g5_sm"
+    rc, out, report = run(tmp_path, gelo, {
+        name: ([unit(name, src=f"{name}/templates/{name}"),
+                {**unit(name, "templates_spectrum", src=f"{name}/templates_spectrum/{name}"), "kind": "spectrum"}], {
+            f"{name}/templates/{name}/meters.txt": "[SM]\nmeter.type = circular\nmeter.x = 10\nmeter.y = 10\n"
+                                                    "bgr.filename = d.png\nspectrum.name = S\n",
+            f"{name}/templates/{name}/d.png": b"D",
+            f"{name}/templates_spectrum/{name}/spectrum.txt": "[S]\nspectrum.x = 5\nspectrum.y = 300\n",
+        }),
+    }, size="1280x800")
+    assert rc == 0
+    pack = out / name
+    assert "meter.y = 50" in (pack / "templates/1280x800/meters.txt").read_text()
+    assert "spectrum.y = 340" in (pack / "templates_spectrum/1280x800/spectrum.txt").read_text()
+    assert [p["letterboxed_from"] for p in report["packs"] if p["dir"] == name] == ["1280x720"]
+
+
 def test_describe_writes_the_pack_and_the_credits(tmp_path):
     rc, out, report = run(tmp_path, GELO, {})
     assert rc == 0
@@ -184,6 +248,7 @@ def test_describe_writes_the_pack_and_the_credits(tmp_path):
     doc = stage / "usr/share/doc/gexis-skins-800x480"
     assert "GPL-3.0" in (doc / "copyright").read_text()
     assert "gelo5-1001: 01G5_A  =  gelo5: 01G5_A" in (doc / "dropped.txt").read_text()
+    assert "Renamed (0):" in (doc / "renamed.txt").read_text()
 
 
 def test_pins_cover_the_five_sizes_and_nothing_else():

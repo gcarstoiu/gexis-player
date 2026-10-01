@@ -8,6 +8,15 @@
   "licence_sha256": "32f33fd11a3263acf22e759fc4482c21cc9296f9d2e3a402639a0fb3a7b3a654",
   "credit": "Copyright (c) 2025 Just a nerd; each pack's authors per the repository's history"
  },
+ "screensaver": {
+  "name": "foonerd/peppy_screensaver",
+  "url": "https://github.com/foonerd/peppy_screensaver",
+  "commit": "efbd0adf7d527dfed1aeb04fe1541c85b6d3175e",
+  "sha256": "9513bc5e43d38cc5a04b06c166de161604847da449e8db1859b6b299cd6c30b3",
+  "licence": "MIT",
+  "licence_sha256": "32f33fd11a3263acf22e759fc4482c21cc9296f9d2e3a402639a0fb3a7b3a654",
+  "credit": "Copyright (c) 2025 Just a nerd; the stock skins of the PeppyMeter screensaver for Volumio (1280x800 only, ADR-0111 decision 14)"
+ },
  "gelo5": {
   "name": "Gelo5 (Grzegorz Pietrzak), from project-owner/PeppyMeter.doc",
   "url": "https://github.com/project-owner/PeppyMeter.doc/releases/tag/2024.03.02",

@@ -118,7 +118,7 @@ async def test_the_screen_route_without_detection_says_so(tmp_path):
 def test_each_screen_names_its_skin_pack():
     """ADR-0111: the Visualiser step names the pack the screen gets."""
     by_label = {m["label"]: m for m in screen_choices(screen_detect.Seen())["models"]}
-    assert by_label[PANEL]["skins"] == "1280x800" and by_label[PANEL]["skin_count"] == 310
+    assert by_label[PANEL]["skins"] == "1280x800" and by_label[PANEL]["skin_count"] == 432
     for m in by_label.values():
         assert m["skins"] is None or m["skins"].count("x") == 1
         assert (m["skin_count"] is None) == (m["skins"] is None)

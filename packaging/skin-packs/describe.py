@@ -6,8 +6,9 @@ report and pins.json:
 - `<pack root>/pack.json`, for the visualiser and the core: the size, the
   skin count, the sources with their pins and licences, and each folder;
 - `/usr/share/doc/gexis-skins-<WxH>/copyright`, each source and the licence it
-  is taken under (decision 6), and `dropped.txt`, every skin, pack and file
-  left out and why (decision 8).
+  is taken under (decision 6), `dropped.txt`, every skin, pack and file
+  left out and why (decision 8), and `renamed.txt`, every skin renamed so
+  that no two share a name (decision 13).
 
     describe.py <report.json> <pins.json> <stage root>
 
@@ -38,6 +39,11 @@ def sources(report: dict, pins: dict) -> list[dict]:
         out.append({"name": gelo["name"], "url": f"{gelo['release']}/{s['file']}",
                     "pin": f"sha256:{s['sha256']}", "licence": gelo["licence"],
                     "credit": gelo["credit"]})
+    stock = pins["screensaver"]
+    if stock["name"] in used:
+        out.append({"name": stock["name"], "url": f"{stock['url']}/tree/{stock['commit']}",
+                    "pin": f"sha256:{stock['sha256']} (the commit's tarball)",
+                    "licence": stock["licence"], "credit": stock["credit"]})
     if cat["name"] in used:
         out.append({"name": cat["name"], "url": f"{cat['url']}/tree/{cat['commit']}",
                     "pin": f"commit:{cat['commit']}; each zip by catalog/index.json's sha256",
@@ -53,6 +59,7 @@ def main(argv: list[str]) -> int:
     width, height = (int(v) for v in size.split("x"))
     package = f"gexis-skins-{size}"
     src = sources(report, pins)
+    stock_name, cat_name = pins["screensaver"]["name"], pins["catalog"]["name"]
 
     dump(stage / PACKS.lstrip("/") / size / "pack.json", {
         "size": size,
@@ -82,17 +89,21 @@ def main(argv: list[str]) -> int:
     for s in src:
         lines += [f"Source:  {s['name']}", f"URL:     {s['url']}", f"Pin:     {s['pin']}",
                   f"Licence: {s['licence']}", f"Credit:  {s['credit']}", ""]
+    texts = {"Gelo5": "LICENSE.PeppyMeter.doc (GPL-3.0)",
+             stock_name: "LICENSE.peppy_screensaver (MIT)",
+             cat_name: "LICENSE.peppy_templates (MIT)"}
+    named = [texts[k] for k in texts if any(s["name"].startswith(k) or s["name"] == k for s in src)]
     lines += [
-        "The licence texts are beside this file: LICENSE.peppy_templates (MIT)",
-        "and LICENSE.PeppyMeter.doc (GPL-3.0).",
+        "The licence texts are beside this file: " + ", ".join(named) + ".",
         "",
         "Many skins show a manufacturer's name, logo or product, and some show",
         "other third-party artwork (Finding 107). Those marks belong to their",
         "owners; their appearance here implies no endorsement.",
         "",
         "Gexis Player's own changes: previews and repeated skins left out (see",
-        "dropped.txt), and the 1280x720 packs of the 1280x800 set letterboxed",
-        "by letterbox.py (ADR-0096).",
+        "dropped.txt), skins that shared a name renamed (renamed.txt), and the",
+        "1280x720 packs of the 1280x800 set letterboxed by letterbox.py",
+        "(ADR-0096, ADR-0111 decision 15).",
     ]
     (doc / "copyright").write_text("\n".join(lines) + "\n")
 
@@ -105,10 +116,15 @@ def main(argv: list[str]) -> int:
     d += [f"  {s['pack']}: {s['skin']}  =  {s['same_as']}" for s in report["dropped_skins"]] or ["  none"]
     d += ["", f"Files left out ({len(report['dropped_files'])}):"]
     d += [f"  {f['pack']}: {f['file']} ({f['reason']})" for f in report["dropped_files"]] or ["  none"]
-    d += ["", f"Names two folders share, with different skins behind them ({len(report['name_clashes'])}):",
-          "  (shipped, since they are not repeats; a name resolves to one of them)"]
-    d += [f"  {c['skin']}: {', '.join(c['in'])}" for c in report["name_clashes"]] or ["  none"]
     (doc / "dropped.txt").write_text("\n".join(d) + "\n")
+
+    r = [f"Skins {package} renames (ADR-0111 decision 13).", "",
+         "Two different skins under one name both ship: the visualiser chooses a",
+         "skin by its name, so the later one (Gelo5's come first, then the stock",
+         "skins, then the catalog by pack name, letterboxed packs last) is renamed.", "",
+         f"Renamed ({len(report['renamed'])}):"]
+    r += [f"  {x['pack']}/{x['file']}: {x['from']}  ->  {x['to']}" for x in report["renamed"]] or ["  none"]
+    (doc / "renamed.txt").write_text("\n".join(r) + "\n")
     return 0
 
 
