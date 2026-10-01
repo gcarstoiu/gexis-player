@@ -48,11 +48,23 @@ upload_all() {  # release-tag directory: upload what is not there yet, packages 
 	done
 	# The indexes last: a part is not usable until every package it lists is up.
 	local todo=("${debs[@]}" "${idx[@]}")
+	# GitHub renames what it does not like (`~` became `.`, 2026-10-01); a
+	# name it would change is never "there", and apt would ask for the name
+	# the index gives. release/build.sh names them safely; refuse otherwise.
+	for f in "${todo[@]}"; do
+		case "$(basename "$f")" in *[!A-Za-z0-9._+-]*) echo "ERROR: GitHub would rename $(basename "$f"); rebuild the release" >&2; exit 1;; esac
+	done
 	echo "$rel: ${#todo[@]} of $(ls "$dir" | wc -l) files to upload"
 	while [ "${#todo[@]}" -gt 0 ]; do
 		gh_retry gh release upload "$rel" --repo "$REPO" --clobber "${todo[@]:0:$BATCH}" >/dev/null
 		todo=("${todo[@]:$BATCH}")
 		[ "${#todo[@]}" -eq 0 ] || sleep "$PAUSE"
+	done
+	# Every file there under its own name, or the part is not usable.
+	have=$(gh_retry gh api --paginate "repos/$REPO/releases/tags/$rel" --jq '.id' | head -1 \
+		| xargs -I{} gh api --paginate "repos/$REPO/releases/{}/assets?per_page=100" --jq '.[] | select(.state == "uploaded") | .name')
+	for f in "$dir"/*; do
+		grep -qxF "$(basename "$f")" <<<"$have" || { echo "ERROR: $rel has no $(basename "$f") after upload" >&2; exit 1; }
 	done
 }
 

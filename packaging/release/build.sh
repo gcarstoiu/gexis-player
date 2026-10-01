@@ -77,6 +77,18 @@ done < "$WORK/ours.txt"
 mkdir -p "$DEST/repos"
 : > "$DEST/parts.txt"
 for kind in $KINDS; do
+	# **Named as GitHub will name them** (found 2026-10-01): GitHub renames an
+	# uploaded file, `~` becoming `.`, and 73 of the tested set's packages
+	# have a `~` in their version - `chromium_154.0.8037.57-1~deb13u1+rpt1`.
+	# apt asks for the name its index gives, so the index has to give the name
+	# the file will have: renamed here, before indexing. Anything outside
+	# letters, digits and `._+-` is renamed the same way.
+	for f in "$DEST/$kind"/*.deb; do
+		b=$(basename "$f"); safe=$(printf '%s' "$b" | sed 's/[^A-Za-z0-9._+-]/./g')
+		[ "$b" = "$safe" ] && continue
+		[ -e "$DEST/$kind/$safe" ] && { echo "ERROR: $b and $safe would be one file on GitHub" >&2; exit 1; }
+		mv "$f" "$DEST/$kind/$safe"
+	done
 	docker run --rm --platform linux/arm64 -v "$PWD/$DEST/$kind":/r gexis-deb-builder sh -c "
 		cd /r && apt-ftparchive packages . > Packages && gzip -9kn Packages"
 	docker run --rm -v "$PWD/$DEST":/o alpine chown -R "$(id -u):$(id -g)" /o
