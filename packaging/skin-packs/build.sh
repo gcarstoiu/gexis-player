@@ -65,6 +65,21 @@ while IFS=$'\t' read -r name sha path; do
 done < "$WORK/catalog.tsv"
 rm -rf "$WORK/zips" "$WORK/gelo5.zip"
 
+# Decision 14: the 1280x800 pack has peppy_screensaver's stock skins, as
+# gexis-skins does - the commit's tarball, its 1280x800 folders only.
+stock=()
+if [ "$SIZE" = 1280x800 ]; then
+	fetch_cached "https://codeload.github.com/foonerd/peppy_screensaver/tar.gz/$(pin screensaver commit)" \
+		"$(pin screensaver sha256)" "$WORK/screensaver.tar.gz"
+	mkdir -p "$WORK/stock"
+	tar -xzf "$WORK/screensaver.tar.gz" -C "$WORK/stock" --strip-components=1 --no-same-owner \
+		--wildcards '*/LICENSE' '*/templates/1280x800_custom_*' '*/templates_spectrum/1280x800_custom_*'
+	echo "$(pin screensaver licence_sha256)  $WORK/stock/LICENSE" | sha256sum -c - >/dev/null \
+		|| { echo "ERROR: peppy_screensaver's LICENSE is not the pinned one" >&2; exit 1; }
+	rm "$WORK/screensaver.tar.gz"
+	stock=(--stock "$WORK/stock")
+fi
+
 # The corpora the repository validates (`make skins`) must be what ships,
 # as gexis-skins holds them: Gelo5's 1280x800 configuration files, and the
 # four animated packs' meters.txt before letterboxing (skins/README.md).
@@ -87,7 +102,7 @@ fi
 ROOT="$STAGE/opt/gexis-peppy/packs/$SIZE"
 python3 "$HERE/assemble.py" --size "$SIZE" --index "$WORK/index.json" \
 	--catalog "$WORK/cat" --gelo5 "$WORK/gelo5" --out "$ROOT" --work "$WORK/assemble" \
-	--report "$WORK/report.json" --letterbox "$FILES/letterbox.py"
+	--report "$WORK/report.json" --letterbox "$FILES/letterbox.py" "${stock[@]}"
 python3 "$HERE/describe.py" "$WORK/report.json" "$HERE/pins.json" "$STAGE"
 # Setup names how many skins a screen gets before the device can download
 # anything (ADR-0111 decision 4), from the core's own copy of the counts: a
@@ -100,10 +115,11 @@ if built != said:
     sys.exit(f"ERROR: the pack has {built} skins; core/src/gexis_core/skin_counts.json says {said}")
 PY
 install -m 644 "$WORK/LICENSE.peppy_templates" "$WORK/LICENSE.PeppyMeter.doc" "$STAGE/usr/share/doc/$PACKAGE/"
+[ "$SIZE" != 1280x800 ] || install -m 644 "$WORK/stock/LICENSE" "$STAGE/usr/share/doc/$PACKAGE/LICENSE.peppy_screensaver"
 
 # The 1280x800 set holds what gexis-skins carried, folder for folder.
 if [ "$SIZE" = 1280x800 ]; then
-	for want in gelo5/templates gelo5-420/templates gelo5-420/templates_spectrum \
+	for want in gelo5/templates gelo5-420/templates gelo5-420/templates_spectrum stock/templates \
 		1280x720_g5_710_Turntables/templates 1280x720_g5_711_Tape_Recorder/templates \
 		1280x720_g5_712_Cassette/templates 1280x800_t1800_pack7/templates; do
 		[ -s "$ROOT/$want/1280x800/meters.txt" ] || [ -s "$ROOT/$want/1280x800/spectrum.txt" ] \
@@ -120,7 +136,8 @@ find "$STAGE" -type f -exec chmod 644 {} +
 
 skins=$(python3 -c 'import json, sys; print(json.load(open(sys.argv[1]))["skins"])' "$ROOT/pack.json")
 letterboxed=""
-[ "$SIZE" = 1280x800 ] && letterboxed=", the 1280x720 ones letterboxed"
+[ "$SIZE" = 1280x800 ] && letterboxed=", the 1280x720 ones letterboxed, with
+ peppy_screensaver's stock skins"
 mkdir -p "$STAGE/DEBIAN"
 cat > "$STAGE/DEBIAN/control" <<CTL
 Package: $PACKAGE

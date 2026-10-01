@@ -20,8 +20,12 @@ a spectrum (`spectrum.name`), that spectrum section taken the same way. The
 section's own name is not part of it: two names for byte-identical pictures
 and numbers are one skin shown twice. Two skins with the same identity are
 shipped once - the first met, in this order: Gelo5's merged folders, Gelo5's
-split folders, then the catalog by name - and the rest are listed in the
-report with the skin they repeat.
+split folders, peppy_screensaver's stock skins (1280x800 only), then the
+catalog by name, the letterboxed 1280x720 packs last - and the rest are
+listed in the report with the skin they repeat.
+
+**Two different skins under one name both ship** (ADR-0111 decision 13): the
+later is renamed `<name> (<pack>)`, since the visualiser chooses by name.
 
 **The layout is the one the visualiser already reads**, under a root of its own
 per size so several sizes never collide (`gexis-peppy-driver.py`'s
@@ -320,13 +324,33 @@ def assemble(args) -> dict:
             copy_unit(folder, pack_dir / kind / size, a.dropped_files, name)
         a.admit(name, pack_dir, gelo)
 
+    # -- peppy_screensaver's stock skins (decision 14) ---------------------
+    # Its `templates*/<W>x<H>_custom_<n>/` folders, as gexis-skins installs
+    # them at 1280x800: meters in one, spectra in the other.
+    if args.stock is not None:
+        stock = {"name": "foonerd/peppy_screensaver", "extra": {}}
+        pack_dir = a.stage("stock")
+        found = False
+        for kind in TEMPLATES:
+            folders = sorted((args.stock / kind).glob(f"{size}_custom_*"))
+            if len(folders) > 1:
+                raise PackError(f"peppy_screensaver has {len(folders)} {kind} folders for {size}")
+            for folder in folders:
+                copy_unit(folder, pack_dir / kind / size, a.dropped_files, "stock")
+                found = True
+        if not found:
+            raise PackError(f"peppy_screensaver has no {size} folder")
+        a.admit("stock", pack_dir, stock)
+
     # -- the catalog ---------------------------------------------------------
     index = json.loads(Path(args.index).read_text())
     wanted = {size}
     if size == "1280x800":
         wanted.add("1280x720")   # letterboxed, as gexis-skins does (ADR-0096)
+    # The screen's own size first, then the letterboxed: a skin drawn for
+    # the screen keeps its name over one moved onto it.
     entries = sorted((t for t in index["templates"] if f"{t['width']}x{t['height']}" in wanted),
-                     key=lambda t: t["name"])
+                     key=lambda t: (f"{t['width']}x{t['height']}" != size, t["name"]))
     for t in entries:
         tsize = f"{t['width']}x{t['height']}"
         src = args.catalog / t["name"]
@@ -338,10 +362,6 @@ def assemble(args) -> dict:
         if tsize != size:
             source["extra"]["letterboxed_from"] = tsize
         units = t["units"]
-        if tsize != size and any(u["install"] != "templates" for u in units):
-            a.dropped_packs.append({"pack": name, "source": source["name"],
-                                    "reason": f"{tsize} with a spectrum: letterbox.py moves meters.txt only"})
-            continue
         pack_dir = a.stage(name)
         for u in units:
             unit_src = src / u["from"] if u["from"] else src
@@ -352,7 +372,7 @@ def assemble(args) -> dict:
             if tsize == size:
                 copy_unit(unit_src, pack_dir / u["install"] / size, a.dropped_files, name)
                 continue
-            staged = work / name
+            staged = work / name / u["install"]
             copy_unit(unit_src, staged, a.dropped_files, name)
             result = subprocess.run(
                 [sys.executable, str(args.letterbox), str(staged), str(pack_dir / u["install"] / size),
@@ -376,6 +396,10 @@ def assemble(args) -> dict:
 
     # -- Finding 050, held ------------------------------------------------
     check_backgrounds(a)
+    renamed = rename_clashes(a)
+    left = clashes(a)
+    if left:
+        raise PackError(f"names still shared after renaming: {left[:5]}")
 
     report = {
         "size": size,
@@ -384,7 +408,7 @@ def assemble(args) -> dict:
         "dropped_packs": a.dropped_packs,
         "dropped_skins": a.dropped_skins,
         "dropped_files": a.dropped_files,
-        "name_clashes": clashes(a),
+        "renamed": renamed,
     }
     return report
 
@@ -418,6 +442,64 @@ def check_backgrounds(a: Assembly) -> None:
         raise PackError("a meter draws a spectrum panel (Finding 050):\n  " + "\n  ".join(failures))
 
 
+def label(pack: dict) -> str:
+    """A pack's short name for a renamed skin: the catalog's name without
+    its size or a trailing `_meters` (`1280x800_g5_420_meters` -> `g5 420`),
+    `Gelo5 <id>` or `stock`."""
+    name = pack.get("catalog") or pack["dir"]
+    if pack["source"] == "Gelo5":
+        return "Gelo5 " + name.removeprefix("gelo5-") if name != "gelo5" else "Gelo5"
+    name = re.sub(r"^\d+x\d+_", "", name)
+    name = re.sub(r"_meters$", "", name)
+    return name.replace("_", " ").strip() or pack["dir"]
+
+
+def rename_clashes(a: Assembly) -> list[dict]:
+    """**Decision 13: a name two different skins share keeps both.** The
+    visualiser chooses a skin by its section name, so the later of two
+    (Gelo5 first, then the stock skins, then the catalog by name, the
+    letterboxed packs last) becomes
+    `<name> (<pack>)`, with a number if that is taken too. Only the section
+    header changes: a skin's own keys never name a meter section, and its
+    `spectrum.name` points into its own pack's spectrum.txt, which keeps its
+    names."""
+    # A new name must not be any skin's own name either, even one met later.
+    own: set[str] = set()
+    for pack in a.packs:
+        for templates in TEMPLATES:
+            meters = a.out / pack["dir"] / templates / a.size / "meters.txt"
+            if meters.is_file():
+                own |= {name for name, _l in blocks(read_text(meters)) if name}
+    taken: set[str] = set()
+    renamed = []
+    for pack in a.packs:
+        for templates in TEMPLATES:
+            meters = a.out / pack["dir"] / templates / a.size / "meters.txt"
+            if not meters.is_file():
+                continue
+            parsed = blocks(read_text(meters))
+            changed = False
+            for i, (name, lines) in enumerate(parsed):
+                if name is None:
+                    continue
+                new = name
+                if new in taken:
+                    new = f"{name} ({label(pack)})"
+                    n = 2
+                    while new in taken or new in own:
+                        new = f"{name} ({label(pack)} {n})"
+                        n += 1
+                    head = lines[0]
+                    lines[0] = head.replace(f"[{name}]", f"[{new}]", 1)
+                    renamed.append({"pack": pack["dir"], "file": f"{templates}/meters.txt",
+                                    "from": name, "to": new})
+                    changed = True
+                taken.add(new)
+            if changed:
+                meters.write_bytes("".join("".join(l) for _n, l in parsed).encode("utf-8", "surrogateescape"))
+    return renamed
+
+
 def clashes(a: Assembly) -> list[dict]:
     """Skin names two packs share. The visualiser resolves a name to the
     first pack that has it, so the later one cannot be chosen by name."""
@@ -442,6 +524,7 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--work", type=Path, required=True)
     p.add_argument("--report", type=Path, required=True)
     p.add_argument("--letterbox", type=Path)
+    p.add_argument("--stock", type=Path, help="peppy_screensaver, extracted (1280x800 only)")
     args = p.parse_args(argv)
     try:
         report = assemble(args)
@@ -451,7 +534,7 @@ def main(argv: list[str] | None = None) -> int:
     args.report.write_text(json.dumps(report, indent=1, sort_keys=True) + "\n")
     print(f"{args.size}: {report['skins']} skins in {len(report['packs'])} packs; "
           f"{len(report['dropped_skins'])} repeated skins and {len(report['dropped_packs'])} packs dropped, "
-          f"{len(report['dropped_files'])} files left out")
+          f"{len(report['dropped_files'])} files left out, {len(report['renamed'])} renamed")
     return 0
 
 

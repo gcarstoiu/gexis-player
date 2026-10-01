@@ -13,7 +13,7 @@ import pytest
 STAGE = Path(__file__).parents[2] / "image" / "stage-gexis" / "05-peppy" / "files"
 sys.path.insert(0, str(STAGE))
 
-from letterbox import LetterboxError, letterbox_pack, letterbox_text  # noqa: E402
+from letterbox import LetterboxError, letterbox_pack, letterbox_spectrum_text, letterbox_text  # noqa: E402
 
 SECTION = """[T]
 meter.type = linear
@@ -72,12 +72,48 @@ def test_line_endings_comments_and_order_are_kept():
     assert out == "# a comment\r\n[T]\r\nmeter.x = 0\r\nalbumart.pos = 1,42\r\n; another\r\n"
 
 
-def test_a_meter_away_from_the_origin_is_refused():
-    """PeppyMeter adds the meter origin to a bar's bounding box twice, so the
-    letterbox cannot move the origin - and a pack that already has one is not
-    one this script can shift correctly."""
-    with pytest.raises(LetterboxError, match="origin must be 0,0"):
-        letterbox_text("[T]\nmeter.y = 280\n", 40)
+OFF_CORNER = """[M]
+meter.type = circular
+meter.x = 147
+meter.y = 280
+left.origin.y = 100
+bgr.filename = m_bgr.png
+fgr.filename = m_fgr.png
+screen.bgr = m.jpg
+albumart.pos = 10,20
+"""
+
+
+def test_a_meter_away_from_the_corner_moves_by_its_origin():
+    """ADR-0111 decision 15. Everything drawn relative to the meter goes
+    with `meter.y`, so its own positions stay; the screen's positions move."""
+    out, pictures = letterbox_text(OFF_CORNER, 40)
+    got = dict(line.split(" = ", 1) for line in out.splitlines() if " = " in line)
+    assert got["meter.y"] == "320" and got["meter.x"] == "147"
+    assert got["left.origin.y"] == "100", "meter-relative: moves with the origin"
+    assert got["albumart.pos"] == "10,60"
+    assert pictures == {"m.jpg": {"screen.bgr"}}, "only the whole frame is padded"
+
+
+def test_a_meter_at_the_corner_drawn_on_a_strip_moves_by_its_origin_too():
+    """A `bgr` that is not a whole frame cannot be padded into one; the
+    section is told to move by its origin instead."""
+    text = "[S]\nmeter.x = 0\nmeter.y = 0\nleft.y = 67\nbgr.filename = strip.png\n"
+    out, pictures = letterbox_text(text, 40, moved={"S"})
+    assert "meter.y = 40" in out and "left.y = 67" in out
+    assert pictures == {}
+
+
+def test_a_moved_section_must_have_a_meter_y():
+    with pytest.raises(LetterboxError, match="no meter.y"):
+        letterbox_text("[T]\nmeter.x = 5\n", 40)
+
+
+def test_a_spectrum_moves_by_its_position_only():
+    text = "[Free]\r\norigin.x = 84\r\norigin.y = 140\r\nspectrum.x = 342\r\nspectrum.y = 384\r\nbgr.filename = F.png\r\n"
+    assert letterbox_spectrum_text(text, 40) == text.replace("spectrum.y = 384", "spectrum.y = 424")
+    with pytest.raises(LetterboxError, match="without spectrum.y"):
+        letterbox_spectrum_text("[S]\nspectrum.x = 1\n", 40)
 
 
 def test_the_full_frame_pictures_are_named_with_their_role():
@@ -105,11 +141,50 @@ def test_a_pack_is_padded_opaque_behind_and_clear_in_front(tmp_path):
         "the source pack is not touched"
 
 
-def test_a_picture_that_is_not_a_full_frame_is_refused(tmp_path):
+def test_a_strip_at_the_corner_is_left_as_it_is_and_its_meter_moved(tmp_path):
     Image = pytest.importorskip("PIL.Image")
     source = tmp_path / "pack"
     source.mkdir()
-    (source / "meters.txt").write_text("[T]\nmeter.x = 0\nbgr.filename = small.png\n")
+    (source / "meters.txt").write_text("[T]\nmeter.x = 0\nmeter.y = 0\nleft.y = 67\nbgr.filename = small.png\n")
+    Image.new("RGB", (400, 300)).save(source / "small.png")
+    assert letterbox_pack(source, tmp_path / "out", (1280, 720), (1280, 800)) == 0
+    assert Image.open(tmp_path / "out" / "small.png").size == (400, 300)
+    text = (tmp_path / "out" / "meters.txt").read_text()
+    assert "meter.y = 40" in text and "left.y = 67" in text
+
+
+def test_a_screen_background_that_is_not_a_frame_is_still_refused(tmp_path):
+    Image = pytest.importorskip("PIL.Image")
+    source = tmp_path / "pack"
+    source.mkdir()
+    (source / "meters.txt").write_text("[T]\nmeter.x = 3\nmeter.y = 3\nscreen.bgr = small.png\n")
     Image.new("RGB", (400, 300)).save(source / "small.png")
     with pytest.raises(LetterboxError, match="not a full 1280x720 frame"):
         letterbox_pack(source, tmp_path / "out", (1280, 720), (1280, 800))
+
+
+def test_a_spectrum_folder_alone_is_letterboxed(tmp_path):
+    source = tmp_path / "pack"
+    source.mkdir()
+    (source / "spectrum.txt").write_text("[S]\nspectrum.x = 1\nspectrum.y = 2\nbgr.filename = s.png\n")
+    (source / "s.png").write_bytes(b"not opened")
+    assert letterbox_pack(source, tmp_path / "out", (1280, 720), (1280, 800)) == 0
+    assert "spectrum.y = 42" in (tmp_path / "out" / "spectrum.txt").read_text()
+    assert (tmp_path / "out" / "s.png").read_bytes() == b"not opened"
+    assert not (tmp_path / "out" / "meters.txt").exists()
+
+
+def test_a_frame_taller_than_the_screen_is_cut_to_it_before_padding(tmp_path):
+    """`1280x720_g5_701_meters` draws a 1280x743 background at 0,0: the 23
+    rows below the screen were never seen, and must not fill the lower band."""
+    Image = pytest.importorskip("PIL.Image")
+    source = tmp_path / "pack"
+    source.mkdir()
+    (source / "meters.txt").write_text("[T]\nmeter.x = 5\nmeter.y = 5\nscreen.bgr = tall.png\n")
+    tall = Image.new("RGB", (1280, 743), (200, 0, 0))
+    tall.paste((0, 200, 0), (0, 720, 1280, 743))
+    tall.save(source / "tall.png")
+    assert letterbox_pack(source, tmp_path / "out", (1280, 720), (1280, 800)) == 1
+    out = Image.open(tmp_path / "out" / "tall.png")
+    assert out.size == (1280, 800)
+    assert out.getpixel((5, 759)) == (200, 0, 0) and out.getpixel((5, 770)) == (0, 0, 0)
