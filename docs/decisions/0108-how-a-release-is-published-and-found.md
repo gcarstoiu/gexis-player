@@ -114,6 +114,47 @@ it otherwise this can take a long time."*
   going back - and no longer derives `<tag>-debian`. A release published before
   this (852, 856) has no `parts` file, and is read the old way.
 
+## Amendment, 2026-10-01 — each file is uploaded once, ever (proposed)
+
+**Status:** **Proposed** for George's decision (he agreed on 2026-10-01 to
+the test and to this write-up).
+
+**Why:** naming parts by content saves uploads only while a part stays
+unchanged. Our parts (`ours` 14 files) are cheap to re-upload. The OS parts
+are not: one Debian security update renames `debian` (881 files), and the
+whole part goes up again, about 2½ hours under GitHub's pace. Most new images
+carry OS updates, so most releases would cost that.
+
+**Proposed:**
+
+- **Package files live in pools**, GitHub releases holding files only:
+  `pool-001`, `pool-002`, …, each kept under GitHub's 1,000 files per
+  release.
+- **A file is uploaded once.** Publishing asks GitHub which pool already
+  holds a file of that name and uploads only those no pool has, into the
+  newest pool with room.
+  - A name carries the version, so the same name is the same package.
+  - Since 2026-10-01 our builds are reproducible, so this holds for ours too.
+  - The index's sha256 still checks every file a device downloads.
+- **A part keeps only its index**: `Packages`, `Release` and its signatures.
+  Each `Filename` points into a pool: `../pool-003/chromium_….deb`.
+- **What a release then costs:**
+  - its few new or changed files, a handful even with OS updates;
+  - four small index sets;
+  - the `parts` file and the channel.
+
+**Tested (2026-10-01):**
+- **apt:** given a part whose index says `Filename: ../poolB/x.deb`, apt
+  (Debian 13, arm64) requested `GET /download/partA/../poolB/x.deb` as
+  written and downloaded the file (a local server; `apt-get download`, not
+  an install).
+- **GitHub:** serves a path of that shape: `curl --path-as-is
+  …/releases/download/debian-707d3696e181/../ours-7f178bdea06e/Packages`
+  gave 200, through the usual redirect.
+
+**Unverified:** the two together, on GitHub, at the size of a release. The
+first pool release is that test.
+
 ## Unverified
 
 - A full-size release: 1,037 files in two releases, and apt fetching a few
