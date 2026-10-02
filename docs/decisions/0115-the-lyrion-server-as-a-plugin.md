@@ -72,12 +72,32 @@ network share**; and **it ships in our releases**.
    slideshow (ADR-0040, ADR-0112). Each at a pinned version, enabled, its
    licence in Legal and Credits.
 
+### Settled the same evening (George)
+
+6. **The preinstalled plugins are installed by Lyrion itself** from its own
+   plugin list, the first time the server starts with the internet - as any
+   Lyrion user installs them (*"A"*). Music & Artist Information states no
+   licence anywhere (its repository, README and source, read 2026-10-02), so
+   it is not redistributed; Material Skin (MIT) is installed the same way,
+   one mechanism for both.
+7. **A network share may be SMB or NFS** (*"Both"*): SMB with an address, a
+   user and a password; NFS with an address.
+8. **The share's rows are in a Lyrion subcategory, shown only while the
+   Lyrion server is on** (*"These should be part of the lyrion subcategory
+   and available only when the user turn on the lyrion server"*).
+9. **More than one music location** (*"Can we support multiple paths in case
+   the user has music folders spread?"*): the network shares are a list -
+   each its own address (and user and password for SMB) - beside the USB
+   disks and the Music folder, every one offered to the server as a music
+   folder.
+
 ## Open
 
-- **NFS beside SMB** for the network share: a NAS offers both; NFS needs an
-  address and no password.
-- **Any other plugin George's own server runs** that should come
-  preinstalled.
+- **Which of George's server's add-ons come preinstalled** beyond the two
+  above. His server runs, besides Lyrion's own: Radio Now Playing 0.0.56 and
+  Squeeze Plex Hub 1.0.1 (read from its plugin page, 2026-10-02).
+- **The settings rows** for the network shares, as a list, for ADR-0022's
+  inventory - appended after George confirms their final shape.
 
 ## Not settled here
 
