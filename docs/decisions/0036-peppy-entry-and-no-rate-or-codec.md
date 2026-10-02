@@ -1,6 +1,6 @@
 # ADR-0036 — Peppy screen entry: the button, or five minutes of unattended playback; and no sample rate or codec anywhere
 
-**Status:** Accepted
+**Status:** Accepted; §2 amended 2026-10-02 (the visualiser shows LMS's sample rate)
 **Date:** 2026-09-16
 **Raised by:** George, settling Phase 5's two open questions before it starts
 **Amends:** [0019](0019-peppy-screen-lifecycle.md) — renames its implicit entry
@@ -44,6 +44,22 @@ criterion 7's existing rule ("absent fields do not render their layer") rather
 than a new exception. The `sample_rate` and `codec` fields stay in `/state`:
 they cost nothing, and removing published data to match a rendering decision
 would be the wrong direction.
+
+### Amended 2026-10-02: the visualiser shows LMS's sample rate
+
+George, on a skin whose renderer mark sat off-centre in its box: *"Wouldn't
+it be easier to add the actual sample rate? I know it would go back on a
+previous decision, but might be helpful for the user"*; then *"Let's do A"*.
+
+- **On the visualiser only, where the skin reserves a place for it**
+  (`playinfo.samplerate.pos`), **and only for LMS**, whose rate is the file's
+  own. Every other screen keeps §2.
+- **Spotify is not shown:** its 44.1 kHz is the decoder's rate for a lossy
+  stream, which ADR-0015 calls true and misleading. Bluetooth and plugins
+  report none.
+- **Where the rate is drawn, the renderer's mark sits in the skin's own box**,
+  as the skin was designed (an icon with the rate beside it). Where it is
+  not, the mark is centred in the slot measured for the skin.
 
 ## Open — needs George
 
