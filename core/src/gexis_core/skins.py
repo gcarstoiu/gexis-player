@@ -74,12 +74,18 @@ ALL = "All"
 #: photograph.
 BROKEN: dict[str, str] = {}
 
+#: Not a kind but a feature (ADR-0112): a skin with a frame for the artist's
+#: photos, whatever else it is - most are turntables and tapes. George,
+#: 2026-10-02: "The fanart ones I cannot identify ... a separate Corpus".
+FANART = "fanart"
+
 CORPUS = {
     "VU meters": (METERS,),
     "Spectrum": (SPECTRUM,),
     "VU meters + spectrum": (BOTH,),
     "Turntables": (TURNTABLE,),
     "Tapes": (TAPE,),
+    "Fanart": (FANART,),
     ALL: (METERS, SPECTRUM, BOTH, TURNTABLE, TAPE),
     "Random": (METERS, SPECTRUM, BOTH, TURNTABLE, TAPE),
 }
@@ -88,6 +94,8 @@ CORPUS = {
 def in_corpus(skins, corpus: str):
     """The skins a `skin_corpus` choice selects, in corpus order."""
     wanted = CORPUS.get(corpus) or CORPUS[ALL]
+    if wanted == (FANART,):
+        return [skin for skin in skins if skin.options.get("fanart.pos")]
     return [skin for skin in skins if skin.kind in wanted]
 
 

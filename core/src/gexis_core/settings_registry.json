@@ -723,13 +723,14 @@
         "type": "choice",
         "label": "Skins",
         "marks": "R",
-        "note": "What the visualiser draws from: needles, bars, both together, a turntable or a tape deck. All takes any of them. Which skin, and whether it changes with the track, is the row below.",
+        "note": "What the visualiser draws from: needles, bars, both together, a turntable or a tape deck, or the skins that show the artist's photos (Fanart). All takes any of them. Which skin, and whether it changes with the track, is the row below.",
         "options": [
           "VU meters",
           "Spectrum",
           "VU meters + spectrum",
           "Turntables",
           "Tapes",
+          "Fanart",
           "All"
         ],
         "default": "VU meters"

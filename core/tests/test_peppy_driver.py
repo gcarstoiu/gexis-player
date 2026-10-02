@@ -278,3 +278,13 @@ def test_the_screen_size_comes_from_screen_env(tmp_path):
     env.write_text("# ADR-0109\nGEXIS_SCREEN_WIDTH=1920\nGEXIS_SCREEN_HEIGHT=1080\n")
     assert driver.screen_size(env) == (1920, 1080)
     assert driver.screen_size(tmp_path / "absent") is None
+
+
+def test_the_driver_s_fanart_pool_matches_the_core_s():
+    """The two processes share words, not code (ADR-0112)."""
+    sel = driver.Selection.__new__(driver.Selection)
+    sel.corpus = "Fanart"
+    skins = {"t": {"vinyl.filename": "v.png", "fanart.pos": "1,2"}, "p": {"vinyl.filename": "v.png"}}
+    assert sel.pool(skins) == ["t"]
+    from gexis_core import skins as core_skins
+    assert set(driver.CORPUS) == set(core_skins.CORPUS)

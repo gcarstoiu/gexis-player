@@ -169,14 +169,15 @@ def test_the_shipped_corpus_has_all_three_kinds(corpus):
     assert counted == {METERS: 71, SPECTRUM: 3, BOTH: 10}
 
 
-def test_the_registry_offers_exactly_those_six():
+def test_the_registry_offers_exactly_those_seven():
     """Six words since 2026-09-27 - turntables and tapes are their own (ADR-0096
-    as amended) - and `Random` is not one of them any more: it survives in
-    `CORPUS` only so a value stored before the rename still resolves."""
+    as amended) - Fanart the seventh since 2026-10-02 (ADR-0112), and `Random`
+    is not one of them any more: it survives in `CORPUS` only so a value
+    stored before the rename still resolves."""
     from gexis_core.settings_registry import load_registry
 
     row = next(r for g in load_registry() for r in g["rows"] if r.get("key") == "skin_corpus")
-    assert row["options"] == ["VU meters", "Spectrum", "VU meters + spectrum", "Turntables", "Tapes", "All"]
+    assert row["options"] == ["VU meters", "Spectrum", "VU meters + spectrum", "Turntables", "Tapes", "Fanart", "All"]
     assert row["default"] == "VU meters"
     assert set(row["options"]) < set(CHOICES)
 
@@ -413,3 +414,14 @@ def test_a_pack_of_another_size_is_read_from_its_own_folder(tmp_path):
     (folder / "meters.txt").write_text("[small]\nmeter.type = linear\nscreen.bgr = bg.png\n")
     assert [s.name for s, _ in skins.installed(tmp_path, resolution="800x480")] == ["small"]
     assert skins.installed(tmp_path) == []
+
+
+def test_fanart_is_the_skins_with_a_frame_for_the_artist_whatever_they_are():
+    """ADR-0112: a feature, not a kind - most are turntables and tapes."""
+    from gexis_core import skins
+
+    turn = skins.Skin("t", {"vinyl.filename": "v.png", "fanart.pos": "1,2"})
+    plain_turn = skins.Skin("p", {"vinyl.filename": "v.png"})
+    meter = skins.Skin("m", {"meter.type": "circular"})
+    assert [s.name for s in skins.in_corpus([turn, plain_turn, meter], "Fanart")] == ["t"]
+    assert [s.name for s in skins.in_corpus([turn, plain_turn, meter], "Turntables")] == ["t", "p"]

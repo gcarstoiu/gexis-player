@@ -59,6 +59,7 @@ SELECTION_PATH = Path("/run/gexis/visualisation.json")
 METERS, SPECTRUM, BOTH = "meters", "spectrum", "both"
 #: What moves (ADR-0096 as amended), as `gexis_core.skins` decides it.
 TURNTABLE, TAPE = "turntable", "tape"
+FANART = "fanart"
 
 #: The `skin_corpus` words and the kinds each one draws from. The same table
 #: as `gexis_core.skins.CORPUS`; the two processes share no code, so they
@@ -70,6 +71,9 @@ CORPUS = {
     "VU meters + spectrum": (BOTH,),
     "Turntables": (TURNTABLE,),
     "Tapes": (TAPE,),
+    # A feature, not a kind (ADR-0112): any skin with a frame for the
+    # artist's photos. As `gexis_core.skins.FANART`.
+    "Fanart": (FANART,),
     ALL: (METERS, SPECTRUM, BOTH, TURNTABLE, TAPE),
     # Understood, for a selection written before the 2026-09-22 rename.
     "Random": (METERS, SPECTRUM, BOTH, TURNTABLE, TAPE),
@@ -141,7 +145,10 @@ class Selection:
         word we do not know, or one that selects nothing on this pack, falls
         back to everything rather than to a blank screen."""
         wanted = CORPUS.get(self.corpus) or CORPUS[ALL]
-        chosen = [name for name, skin in skins.items() if kind_of(skin) in wanted]
+        if wanted == (FANART,):
+            chosen = [name for name, skin in skins.items() if skin.get("fanart.pos")]
+        else:
+            chosen = [name for name, skin in skins.items() if kind_of(skin) in wanted]
         return chosen or list(skins)
 
 
