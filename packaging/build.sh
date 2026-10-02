@@ -32,6 +32,10 @@ version_for() {
 	# shellcheck disable=SC2046
 	local paths; paths=$(inputs "$1")
 	local commit; commit=$(git log -1 --format=%H -- $paths)
+	# **"." is the whole tree, so its commit is HEAD** (found 2026-10-02):
+	# `git log -- .` simplifies away a merge whose tree equals one parent's,
+	# and v0.6.0, tagged on such a merge, built gexis-player 0.5.0+git21.
+	if [ "$paths" = "." ]; then commit=$(git rev-parse HEAD); fi
 	local v; v=$(git describe --tags --match 'v[0-9]*' --always "$commit" | sed -E 's/^v//; s/-([0-9]+)-g([0-9a-f]+)$/+git\1.\2/')
 	# shellcheck disable=SC2046
 	if [ -n "$(git status --porcelain -- $paths)" ]; then v="$v.dirty"; fi

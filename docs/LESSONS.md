@@ -989,6 +989,26 @@ version is described.
 swap it in after the run ends. *The file on disk is right* is not
 *the file the process reads is right*.
 
+**52. A merge's version came from the commit it merged** (2026-10-02,
+Phase 13b).
+- **What went wrong.** `v0.6.0` was tagged on a merge whose tree equals its
+  second parent's. `packaging/build.sh` versions a package from
+  `git log -1 -- <its inputs>`, and git's history simplification drops a
+  merge that changes nothing against one parent. For the player, whose
+  input is `.`, the commit found was the untagged one below the merge.
+- **What it looked like.** Every check was green. The image was named
+  `v0.6.0` (that comes from `git describe` of HEAD) and passed all 97
+  `verify-image.sh` checks. Inside it, `gexis-player` was
+  `0.5.0+git21.a64768a`.
+- **How it was caught.** By reading the release build's own line,
+  `gexis-player 0.5.0+git21`, before publishing. `publish.sh` would have
+  refused it as "not a release number", but only after the image had been
+  handed over.
+
+**The whole tree's commit is HEAD.** For `.`, `version_for` uses HEAD. An
+image's name and its player's version are two answers to one question;
+compare them.
+
 ## Common shape
 
 Every case had a *plausible* substitute for the real target — the build
