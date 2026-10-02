@@ -394,6 +394,10 @@ def assemble(args) -> dict:
                 a.dropped_files.append({"pack": name, "file": str(path.relative_to(src)),
                                         "reason": debris(path.relative_to(src)) or "outside the install units"})
 
+    # -- reviewed: duplicates left out, keys corrected ----------------------
+    reviewed = apply_removals(a, args.removed) if args.removed else []
+    fixed = apply_overrides(a, args.overrides) if args.overrides else []
+
     # -- Finding 050, held ------------------------------------------------
     check_backgrounds(a)
     renamed = rename_clashes(a)
@@ -407,6 +411,8 @@ def assemble(args) -> dict:
         "packs": a.packs,
         "dropped_packs": a.dropped_packs,
         "dropped_skins": a.dropped_skins,
+        "reviewed": reviewed,
+        "fixed": fixed,
         "dropped_files": a.dropped_files,
         "renamed": renamed,
     }
@@ -452,6 +458,117 @@ def label(pack: dict) -> str:
     name = re.sub(r"^\d+x\d+_", "", name)
     name = re.sub(r"_meters$", "", name)
     return name.replace("_", " ").strip() or pack["dir"]
+
+
+def table_rows(path: Path, size: str, width: int) -> list[list[str]]:
+    rows = []
+    lines = [l for l in read_text(path).splitlines() if l.strip() and not l.startswith("#")]
+    for line in lines[1:]:   # the header
+        cells = line.split("\t")
+        if len(cells) != width:
+            raise PackError(f"{path.name}: {width} columns wanted: {line!r}")
+        if cells[0] == size:
+            rows.append(cells)
+    return rows
+
+
+def remove_sections(meters: Path, names: set[str]) -> None:
+    """Take whole sections out of a meters.txt, and every file only they
+    named."""
+    directory = meters.parent
+    parsed = blocks(read_text(meters))
+    orphan = set()
+    for section, lines in parsed:
+        if section in names:
+            orphan |= named_files(options(lines), directory)
+    keep = [(s, l) for s, l in parsed if s not in names]
+    if any(s for s, _l in keep):
+        meters.write_bytes("".join("".join(l) for _s, l in keep).encode("utf-8", "surrogateescape"))
+    else:
+        meters.unlink()
+    referenced = set()
+    for txt in ("meters.txt", "spectrum.txt"):
+        if (directory / txt).is_file():
+            for section, lines in blocks(read_text(directory / txt)):
+                if section:
+                    referenced |= named_files(options(lines), directory)
+    for f in sorted(orphan - referenced):
+        (directory / f).unlink()
+
+
+def apply_removals(a: Assembly, table: Path) -> list[dict]:
+    """**Duplicates left out after review** (ADR-0111, George 2026-10-02):
+    a skin that another copy draws as well or better - identical renders,
+    a letterboxed copy of a native one, Gelo5's skin and the catalog's
+    revision of it - each row naming the copy kept. A row that matches
+    nothing fails the build: a moved pin must not bring a duplicate back."""
+    by_file: dict[Path, set[str]] = {}
+    out = []
+    for size, folder, kind, skin, cls, kept, reason in table_rows(table, a.size, 7):
+        meters = a.out / folder / kind / a.size / "meters.txt"
+        names = {n for n, _l in blocks(read_text(meters)) if n} if meters.is_file() else set()
+        if skin not in names:
+            raise PackError(f"removed.tsv: {folder}/{kind}: no skin {skin!r}")
+        by_file.setdefault(meters, set()).add(skin)
+        out.append({"pack": folder, "skin": skin, "class": cls, "kept": kept, "reason": reason})
+    for meters, names in sorted(by_file.items()):
+        remove_sections(meters, names)
+    for pack in list(a.packs):
+        root = a.out / pack["dir"]
+        count = 0
+        for kind in TEMPLATES:
+            meters = root / kind / a.size / "meters.txt"
+            if meters.is_file():
+                count += sum(1 for n, _l in blocks(read_text(meters)) if n)
+        if count == 0:
+            shutil.rmtree(root)
+            a.packs.remove(pack)
+            a.dropped_packs.append({"pack": pack["dir"], "source": pack["source"],
+                                    "reason": "every skin left out after review (removed.tsv)"})
+        else:
+            pack["skins"] = count
+    return out
+
+
+def apply_overrides(a: Assembly, table: Path) -> list[dict]:
+    """**Per-skin corrections** (ADR-0111, George 2026-10-02): one key of
+    one section, from the value upstream ships to ours, each with its
+    reason. The old value must be what the pack holds, or the build fails -
+    an upstream change is to be looked at, not overwritten."""
+    out = []
+    for size, folder, kind, skin, key, old, new, reason in table_rows(table, a.size, 8):
+        meters = a.out / folder / kind / a.size / "meters.txt"
+        if not meters.is_file():
+            raise PackError(f"overrides.tsv: no {folder}/{kind}/meters.txt")
+        parsed = blocks(read_text(meters))
+        hits = 0
+        for name, lines in parsed:
+            if name != skin:
+                continue
+            if old == "-":
+                # A key the skin does not have: added after its last setting.
+                if key in options(lines):
+                    raise PackError(f"overrides.tsv: {folder} [{skin}] already has {key}")
+                last = max(i for i, l in enumerate(lines) if "=" in l and not l.lstrip().startswith(("#", ";")))
+                ending = "\r\n" if lines[0].endswith("\r\n") else "\n"
+                if not lines[last].endswith("\n"):
+                    lines[last] += ending
+                lines.insert(last + 1, f"{key} = {new}{ending}")
+                hits += 1
+                continue
+            for i, line in enumerate(lines):
+                m = re.match(r"^(\s*)([^=#;\[]+?)(\s*=\s*)(.*?)(\s*)$", line.rstrip("\r\n"))
+                if m and m.group(2) == key:
+                    if m.group(4) != old:
+                        raise PackError(f"overrides.tsv: {folder} [{skin}] {key} is {m.group(4)!r}, not {old!r}")
+                    ending = line[len(line.rstrip("\r\n")):]
+                    lines[i] = f"{m.group(1)}{key}{m.group(3)}{new}{ending}"
+                    hits += 1
+        if hits != 1:
+            raise PackError(f"overrides.tsv: {folder} [{skin}] {key} matched {hits} lines")
+        meters.write_bytes("".join("".join(l) for _n, l in parsed).encode("utf-8", "surrogateescape"))
+        out.append({"pack": folder, "skin": skin, "key": key, "from": old, "to": new, "reason": reason})
+    return out
 
 
 def rename_clashes(a: Assembly) -> list[dict]:
@@ -525,6 +642,8 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--report", type=Path, required=True)
     p.add_argument("--letterbox", type=Path)
     p.add_argument("--stock", type=Path, help="peppy_screensaver, extracted (1280x800 only)")
+    p.add_argument("--removed", type=Path, help="removed.tsv: duplicates left out after review")
+    p.add_argument("--overrides", type=Path, help="overrides.tsv: per-skin key corrections")
     args = p.parse_args(argv)
     try:
         report = assemble(args)

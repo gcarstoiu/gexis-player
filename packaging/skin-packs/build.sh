@@ -8,8 +8,10 @@
 #
 # Every download is pinned by SHA256 (pins.json; the catalog's own
 # catalog/index.json for each of its zips, the index itself pinned) and goes
-# through fetch_cached. assemble.py decides what a skin is and what repeats;
-# describe.py writes pack.json and the licence files.
+# through fetch_cached. assemble.py decides what a skin is and what repeats,
+# and applies removed.tsv and overrides.tsv (George's review, 2026-10-02);
+# describe.py writes pack.json and the licence files; slots.py measures each
+# skin's badge slot into the pack's badge-slots.json.
 set -euo pipefail
 # Some archives name files outside ASCII (`... — kopia.png` in
 # 1280x800_g5_420_meters.zip): bsdtar refuses those in the C locale.
@@ -102,8 +104,12 @@ fi
 ROOT="$STAGE/opt/gexis-peppy/packs/$SIZE"
 python3 "$HERE/assemble.py" --size "$SIZE" --index "$WORK/index.json" \
 	--catalog "$WORK/cat" --gelo5 "$WORK/gelo5" --out "$ROOT" --work "$WORK/assemble" \
-	--report "$WORK/report.json" --letterbox "$FILES/letterbox.py" "${stock[@]}"
+	--report "$WORK/report.json" --letterbox "$FILES/letterbox.py" "${stock[@]}" \
+	--removed "$HERE/removed.tsv" --overrides "$HERE/overrides.tsv"
 python3 "$HERE/describe.py" "$WORK/report.json" "$HERE/pins.json" "$STAGE"
+# Each skin's badge slot, measured here in this pack's pixels; the reviewed
+# 1280x800 table stands for the skins it was reviewed on (slots.py).
+python3 "$HERE/slots.py" "$ROOT" "$SIZE" - "$FILES/badge-slots.json"
 # Setup names how many skins a screen gets before the device can download
 # anything (ADR-0111 decision 4), from the core's own copy of the counts: a
 # pack that disagrees with it is not built.

@@ -36,7 +36,7 @@ def write(folder: Path, files: dict[str, bytes | str]) -> None:
 
 
 def run(tmp_path, gelo5: dict, catalog: dict[str, tuple[list, dict]], size="800x480",
-        stock: dict | None = None):
+        stock: dict | None = None, removed: list[str] | None = None, overrides: list[str] | None = None):
     """`gelo5`: {"<top>/<folder>/<file>": data}. `catalog`: name -> (units,
     files), the units as catalog/index.json has them; a name starting with
     another size is that size's pack. `stock`: peppy_screensaver's files."""
@@ -55,6 +55,11 @@ def run(tmp_path, gelo5: dict, catalog: dict[str, tuple[list, dict]], size="800x
     if stock is not None:
         write(tmp_path / "stock", stock)
         extra += ["--stock", str(tmp_path / "stock")]
+    for flag, rows in (("--removed", removed), ("--overrides", overrides)):
+        if rows is not None:
+            table = tmp_path / f"{flag[2:]}.tsv"
+            table.write_text("# a comment\nheader\n" + "".join(f"{r}\n" for r in rows))
+            extra += [flag, str(table)]
     rc = assemble.main([
         "--size", size, "--index", str(tmp_path / "index.json"), "--catalog", str(cat),
         "--gelo5", str(g), "--out", str(out), "--work", str(tmp_path / "work"),
@@ -293,3 +298,73 @@ def test_the_release_carries_every_pack():
     release = (REPO / "packaging/release/build.sh").read_text()
     assert "for size in " + " ".join(SIZES) + "; do" in release
     assert "image_count + pack_count" in release
+
+
+GELO_TWO = {k: v for k, v in GELO.items() if "01-20" not in k}
+
+
+def test_a_reviewed_duplicate_is_left_out_with_what_only_it_named(tmp_path):
+    """removed.tsv (George, 2026-10-02): the row's skin goes, and a picture
+    only it named goes with it; the report names the copy kept."""
+    rc, out, report = run(tmp_path, GELO_TWO, {}, removed=[
+        "800x480\tgelo5\ttemplates\t02G5_B\ta\tgelo5: 01G5_A\trenders the same as the kept copy"])
+    assert rc == 0
+    folder = out / "gelo5/templates/800x480"
+    assert "[02G5_B]" not in (folder / "meters.txt").read_text()
+    assert not (folder / "b.png").exists() and (folder / "a.png").exists() and (folder / "n.png").exists()
+    assert report["skins"] == 1
+    assert report["reviewed"] == [{"pack": "gelo5", "skin": "02G5_B", "class": "a",
+                                   "kept": "gelo5: 01G5_A", "reason": "renders the same as the kept copy"}]
+
+
+def test_a_reviewed_row_that_matches_nothing_fails_the_build(tmp_path, capsys):
+    rc, _, _ = run(tmp_path, GELO_TWO, {}, removed=[
+        "800x480\tgelo5\ttemplates\tNo such skin\ta\tgelo5: 01G5_A\twhy"])
+    assert rc == 1
+    assert "no skin 'No such skin'" in capsys.readouterr().err
+
+
+def test_an_override_changes_one_key_and_can_add_one(tmp_path):
+    rc, out, report = run(tmp_path, GELO_TWO, {}, overrides=[
+        "800x480\tgelo5\ttemplates\t01G5_A\tbgr.filename\ta.png\tb.png\ta typo",
+        "800x480\tgelo5\ttemplates\t02G5_B\tplayinfo.artist.color\t-\t60,60,60\tfaint"])
+    assert rc == 0
+    sections = {n: assemble.options(l) for n, l in
+                assemble.blocks((out / "gelo5/templates/800x480/meters.txt").read_text()) if n}
+    assert sections["01G5_A"]["bgr.filename"] == "b.png"
+    assert sections["02G5_B"]["playinfo.artist.color"] == "60,60,60"
+    assert [f["key"] for f in report["fixed"]] == ["bgr.filename", "playinfo.artist.color"]
+
+
+def test_an_override_whose_old_value_moved_fails_the_build(tmp_path, capsys):
+    rc, _, _ = run(tmp_path, GELO_TWO, {}, overrides=[
+        "800x480\tgelo5\ttemplates\t01G5_A\tbgr.filename\tother.png\tb.png\ta typo"])
+    assert rc == 1
+    assert "is 'a.png', not 'other.png'" in capsys.readouterr().err
+
+
+def test_the_tables_name_skins_of_the_five_sizes_only():
+    for name, width in (("removed.tsv", 7), ("overrides.tsv", 8)):
+        lines = [l for l in (HERE / name).read_text().splitlines() if l and not l.startswith("#")]
+        assert lines[0].split("\t")[0] == "size"
+        for line in lines[1:]:
+            cells = line.split("\t")
+            assert len(cells) == width and cells[0] in SIZES, line
+
+
+def test_a_badge_slot_is_measured_from_the_picture(tmp_path):
+    """slots.py: the window around the declared box, by flood fill."""
+    Image = pytest.importorskip("PIL.Image")
+    import slots
+    picture = Image.new("RGB", (800, 480), (120, 90, 60))
+    picture.paste((10, 10, 10), (100, 100, 300, 160))       # a dark window, 200x60
+    picture.save(tmp_path / "bg.png")
+    skin = {"screen.bgr": "bg.png", "playinfo.type.pos": "110,105", "playinfo.type.dimension": "50,50"}
+    assert slots.measure(skin, tmp_path, (800, 480)) == ([100, 100, 300, 160], "measured")
+    # The time in the same window: the skin's own layout, left alone.
+    slot, why = slots.measure({**skin, "time.remaining.pos": "200,110"}, tmp_path, (800, 480))
+    assert slot is None and "shares the window" in why
+    # Open background: no window to centre in.
+    Image.new("RGB", (800, 480), (120, 90, 60)).save(tmp_path / "plain.png")
+    slot, why = slots.measure({**skin, "screen.bgr": "plain.png"}, tmp_path, (800, 480))
+    assert slot is None
