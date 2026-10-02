@@ -499,3 +499,25 @@ size	folder	kind	skin	class	kept	reason
 1920x1080	gelo5-720	templates	114G5_Dorrought Spectrum	b	1920x1080_20g5: 114G5_Dorrought Spectrum	draws 1 of the 2 text fields the kept copy draws
 1920x1080	gelo5	templates	38G5_TURN Vinyl Black	b	1920x1080_g5_710_Turntables: 143G5_TURN Vinyl Black	the still copy of the animated one
 1920x1080	gelo5	templates	58G5_Burmaster	b	1920x1080_g5_703_meters: 58G5_Burmaster	1 text(s) nearly invisible
+# George, 2026-10-02 ("We leave it out"): 800x480_g5_711_Tape_Recorder is laid out in
+# 1920x1080 positions on 800x480 pictures upstream - reels misplaced, no metadata.
+800x480	800x480_g5_711_Tape_Recorder	templates	151G5_Akai77 black	george	-	broken upstream: 1920x1080 positions on 800x480 pictures
+800x480	800x480_g5_711_Tape_Recorder	templates	152G5_Akai77_silver	george	-	broken upstream: 1920x1080 positions on 800x480 pictures
+800x480	800x480_g5_711_Tape_Recorder	templates	153G5_Studer A810	george	-	broken upstream: 1920x1080 positions on 800x480 pictures
+800x480	800x480_g5_711_Tape_Recorder	templates	154G5_PioneerRT707_silver	george	-	broken upstream: 1920x1080 positions on 800x480 pictures
+800x480	800x480_g5_711_Tape_Recorder	templates	155G5_Antelope Reel	george	-	broken upstream: 1920x1080 positions on 800x480 pictures
+800x480	800x480_g5_711_Tape_Recorder	templates	156G5_Otari Reel	george	-	broken upstream: 1920x1080 positions on 800x480 pictures
+800x480	800x480_g5_711_Tape_Recorder	templates	157G5_Revox B77	george	-	broken upstream: 1920x1080 positions on 800x480 pictures
+800x480	800x480_g5_711_Tape_Recorder	templates	158G5_Tascam Rec	george	-	broken upstream: 1920x1080 positions on 800x480 pictures
+800x480	800x480_g5_711_Tape_Recorder	templates	159G5_Technics Rec	george	-	broken upstream: 1920x1080 positions on 800x480 pictures
+800x480	800x480_g5_711_Tape_Recorder	templates	159G5_Metaxas Rec	george	-	broken upstream: 1920x1080 positions on 800x480 pictures
+800x480	800x480_g5_711_Tape_Recorder	templates	210G5_Sony TC730	george	-	broken upstream: 1920x1080 positions on 800x480 pictures
+800x480	800x480_g5_711_Tape_Recorder	templates	211G5_Akai GX635	george	-	broken upstream: 1920x1080 positions on 800x480 pictures
+800x480	800x480_g5_711_Tape_Recorder	templates	212G5_TapeAK	george	-	broken upstream: 1920x1080 positions on 800x480 pictures
+800x480	800x480_g5_711_Tape_Recorder	templates	213G5_Fostex Rec	george	-	broken upstream: 1920x1080 positions on 800x480 pictures
+800x480	800x480_g5_711_Tape_Recorder	templates	214G5_TapeAMP	george	-	broken upstream: 1920x1080 positions on 800x480 pictures
+800x480	800x480_g5_711_Tape_Recorder	templates	215G5_Koncert M3401	george	-	broken upstream: 1920x1080 positions on 800x480 pictures
+800x480	800x480_g5_711_Tape_Recorder	templates	216G5_Akai PRO1000	george	-	broken upstream: 1920x1080 positions on 800x480 pictures
+800x480	800x480_g5_711_Tape_Recorder	templates	217G5_MION24	george	-	broken upstream: 1920x1080 positions on 800x480 pictures
+800x480	800x480_g5_711_Tape_Recorder	templates	218G5_Teac X2000	george	-	broken upstream: 1920x1080 positions on 800x480 pictures
+800x480	800x480_g5_711_Tape_Recorder	templates	219G5_Tandberg OLD	george	-	broken upstream: 1920x1080 positions on 800x480 pictures
