@@ -310,9 +310,9 @@
       ]
     },
     {
-      "name": "Beszel agent",
+      "name": "Beszel agent and hub",
       "group": "system",
-      "role": "Optional system monitoring, off unless you switch it on.",
+      "role": "Optional system monitoring: the agent reports, the hub keeps the history. Both off unless you switch them on.",
       "author": "henrygd",
       "licence": "MIT",
       "url": "https://github.com/henrygd/beszel",

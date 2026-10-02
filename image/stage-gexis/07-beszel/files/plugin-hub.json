@@ -1,0 +1,9 @@
+{
+  "id": "beszel-hub",
+  "name": "Beszel hub",
+  "kind": "service",
+  "area": "system",
+  "unit": "beszel-hub.service",
+  "port": 8095,
+  "settings": []
+}

@@ -28,6 +28,9 @@ def _device(root):
     (root / "var/lib/bluetooth/11:22/info").write_text("paired")
     (root / "var/lib/beszel-agent").mkdir(parents=True)
     (root / "var/lib/beszel-agent/fingerprint").write_text("ec4c41e0")
+    # ADR-0114: the hub's history, systems and account.
+    (root / "var/lib/beszel-hub").mkdir(parents=True)
+    (root / "var/lib/beszel-hub/data.db").write_bytes(b"hub")
     (root / "home/pi/.local/share/Plexamp/Settings").mkdir(parents=True)
     (root / "home/pi/.local/share/Plexamp/Settings/%40Plexamp%3Auser%3Atoken").write_text("Stoken")
     # ADR-0106: an uploaded plugin's data and the list of them.

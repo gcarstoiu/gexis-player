@@ -57,6 +57,8 @@ MEMBERS = (
     # reflash that loses it is a device the hub no longer recognises. Absent
     # until the plugin has run, and `create` skips a member that is not there.
     "var/lib/beszel-agent",
+    # ADR-0114: the hub's history, systems and account.
+    "var/lib/beszel-hub",
     # **Plexamp's claim** (added 2026-09-26, ADR-0090). The third time for the
     # same lesson, and this one was learned the hard way: the card was
     # flashed, the restore put the settings back with `plexamp.enabled` on,
