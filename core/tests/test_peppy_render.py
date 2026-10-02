@@ -684,3 +684,20 @@ def test_a_mask_that_cannot_be_read_leaves_the_art_square(screen, tmp_path):
     layer.draw(full(artwork="http://art/"))
 
     assert all(abs(a - b) <= 4 for a, b in zip(screen.get_at((561, 71)), (200, 10, 10)))
+
+
+def test_lms_s_sample_rate_is_drawn_and_the_mark_keeps_its_own_box(screen, tmp_path):
+    """ADR-0036 as amended 2026-10-02: the rate where the skin reserves it,
+    the renderer's mark back in the skin's declared box beside it."""
+    from gexis_peppy_render import sample_text
+
+    assert sample_text({"sample_rate": 44100}) == "44.1 kHz"
+    assert sample_text({"sample_rate": 96000, "bit_depth": 24}) == "96 kHz 24 bit"
+    assert sample_text({"sample_rate": None}) is None
+    background = pygame.Surface((1280, 800))
+    pygame.image.save(background, str(tmp_path / "bgr.png"))
+    layer = MetadataLayer(screen, tmp_path)
+    layer.set_skin({**SKIN, "playinfo.samplerate.pos": "700,520,regular"})
+    fields = layer._fields(full(sample_rate=44100))
+    assert any(f[0] == "44.1 kHz" and f[1][:2] == (700, 520) for f in fields)
+    assert not any(f[0] and f[1][:2] == (700, 520) for f in layer._fields(full())), "absent is absent"

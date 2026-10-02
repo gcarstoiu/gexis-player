@@ -15,6 +15,7 @@ def test_blank_metadata_is_all_none():
         "artwork": None,
         "artwork_small": None,
         "sample_rate": None,
+        "bit_depth": None,
         "codec": None,
         "remaining_time": None,
         "source_type": None,

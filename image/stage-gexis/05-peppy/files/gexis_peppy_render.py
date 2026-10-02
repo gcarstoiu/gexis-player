@@ -272,6 +272,7 @@ class MetadataLayer:
         self._skin: dict[str, str] = {}
         self._skin_name: str | None = None
         self._slots = load_badge_slots()
+        self._rate_shown = False
         #: Each skin pack's own slots, by pack root (ADR-0111): read once.
         self._pack_slots: dict[Path, dict[str, tuple[int, int, int, int]] | None] = {}
         self._background: pygame.Surface | None = None
@@ -592,6 +593,9 @@ class MetadataLayer:
         replaced = self._ticker is not None and (skin.get("playinfo.ticker.replace") or "").strip().lower() == "true"
         shown = {} if replaced else metadata
         upcoming = {} if replaced else (metadata.get("next") or {})
+        sample = self._sample_field(shown, sizes, colour, maxwidth)
+        #: The mark keeps the skin's own box beside a drawn rate (_badge_rect).
+        self._rate_shown = sample is not None
         entries = [
             self._ticker_line(metadata, field),
             field("playinfo.title.pos", shown.get("title"), "playinfo.title.color", "playinfo.title.maxwidth"),
@@ -624,12 +628,33 @@ class MetadataLayer:
                 override_colour=parse_colour(skin.get(f"time.{which}.color"), (255, 255, 255)),
                 stratum="meta", size_key=f"time.{which}.fontsize",
             ) for which, text in (("elapsed", elapsed_time(metadata)), ("total", total_time(metadata)))),
-            # The source is a badge, not text: see _badge_rect.
-            # playinfo.samplerate.pos is never filled: no sample rate and no
-            # codec renders anywhere (ADR-0036). The skins keep the position;
-            # we keep it empty, which is this criterion's own rule.
+            # The source is a badge, not text: see _badge_rect. Beside it,
+            # LMS's sample rate (ADR-0036 as amended 2026-10-02), in the
+            # skin's own colour for it, else its badge colour, as upstream.
+            sample,
         ]
         return tuple(entry for entry in entries if entry is not None)
+
+    def _sample_field(self, metadata: dict, sizes: dict, colour, maxwidth: int):
+        """**The sample rate, as upstream places it** (volumio_basic.py): at
+        `playinfo.samplerate.pos`, light unless the position names a weight,
+        in the skin's sample-rate colour or else its badge colour - and
+        **never cut short**: the box only aligns the text, and is at least
+        what "-44.1 kHz 24 bit-" needs. Upstream draws nothing for a skin
+        with neither its own width nor a global one; nor does this."""
+        skin = self._skin
+        value = skin.get("playinfo.samplerate.pos") or ""
+        point = parse_point(value)
+        text = sample_text(metadata)
+        own = int(skin.get("playinfo.samplerate.maxwidth", 0) or 0) or maxwidth
+        if point is None or not text or not own:
+            return None
+        if value.count(",") < 2:
+            point = (point[0], point[1], "light")
+        size = sizes.get(point[2], sizes["regular"])
+        width = max(own, self.font(point[2], size).size("-44.1 kHz 24 bit-")[0])
+        tint = parse_colour(skin.get("playinfo.samplerate.color"), parse_colour(skin.get("playinfo.type.color"), colour))
+        return (text, point, tint, size, width, "meta")
 
     def _ticker_line(self, metadata: dict, field):
         """**A ticker skin's title** (ADR-0096 as amended, ADR-0097): 27 of
@@ -680,7 +705,10 @@ class MetadataLayer:
         if position is None or source is None:
             return None
         box = parse_size(self._skin.get("playinfo.type.dimension")) or (50, 50)
-        slot = self._slot_for(self._skin_name)
+        # Where the rate is drawn beside it, the mark keeps the skin's own
+        # box, as the skin was designed; otherwise it is centred in the
+        # window measured for it (ADR-0036 as amended 2026-10-02).
+        slot = None if self._rate_shown else self._slot_for(self._skin_name)
         if slot is not None:
             # Never larger than the slot: 59G5_Yamaha M85 declares a 95 px box
             # in a 94 px window.
@@ -837,6 +865,18 @@ def elapsed_time(metadata: dict) -> str | None:
 def total_time(metadata: dict) -> str | None:
     duration = metadata.get("duration")
     return clock(int(duration)) if duration else None
+
+
+def sample_text(metadata: dict) -> str | None:
+    """**LMS's sample rate, as upstream writes it** ("44.1 kHz 16 bit";
+    ADR-0036 as amended 2026-10-02). The core writes a rate only for LMS;
+    bit depth only where the file says (not MP3)."""
+    rate = metadata.get("sample_rate")
+    if not rate:
+        return None
+    text = f"{rate / 1000:g} kHz"
+    bits = metadata.get("bit_depth")
+    return f"{text} {bits} bit" if bits else text
 
 
 def remaining_time(metadata: dict) -> str | None:

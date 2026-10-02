@@ -105,3 +105,13 @@ def test_a_stream_has_no_next_track_and_fixed_output_no_level(tmp_path):
     written = read(path)
     assert written["next"] is None and written["volume"] is None
     assert written["shuffle"] is None and written["repeat"] is None
+
+
+def test_only_lms_s_sample_rate_reaches_the_visualiser(tmp_path):
+    """ADR-0036 as amended 2026-10-02: LMS's rate is the file's own;
+    Spotify's 44.1 kHz is a decoder's, for a lossy stream."""
+    path = tmp_path / "nowplaying.json"
+    PeppyMetadataWriter(path).write(state(title="T", sample_rate=96000, bit_depth=24))
+    assert read(path)["sample_rate"] == 96000 and read(path)["bit_depth"] == 24
+    PeppyMetadataWriter(path).write(state(active="spotify", title="T", sample_rate=44100))
+    assert read(path)["sample_rate"] is None and read(path)["bit_depth"] is None
