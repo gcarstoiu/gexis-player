@@ -109,3 +109,22 @@ def test_a_kept_screen_asks_nothing(tmp_path):
     screen_apply.choose(Applied("waveshare-10.1-hdmi-b", 0), **f, now=1)
     screen_apply.keep(state=f["state"])
     assert screen_question(screen_apply.read_state(f["state"])) is None
+
+
+def test_settings_name_the_screen_gone_back_to(tmp_path):
+    """ADR-0109 as amended 2026-10-02: Settings no longer names a screen undone."""
+    f = files(tmp_path)
+    screen_apply.choose(Applied("waveshare-10.1-hdmi-b", 180), **f, now=1)
+    screen_apply.keep(state=f["state"])
+    screen_apply.choose(Applied("waveshare-7.9-hdmi", 0), **f, now=2)
+    screen_apply.revert(**f)
+    assert screen_apply.settings_of(f["state"]) == {
+        "screen": screens.by_id("waveshare-10.1-hdmi-b").label, "rotation": "180°"}
+
+
+def test_at_first_setup_settings_go_back_to_no_screen(tmp_path):
+    f = files(tmp_path)
+    assert screen_apply.settings_of(f["state"]) == {"screen": None, "rotation": None}
+    screen_apply.choose(Applied("waveshare-7.9-hdmi", 0), **f, now=1)
+    screen_apply.revert(**f)
+    assert screen_apply.settings_of(f["state"]) == {"screen": None, "rotation": None}

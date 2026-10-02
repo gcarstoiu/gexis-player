@@ -2305,6 +2305,15 @@ async def main() -> None:
     async def _screen_go_back(reason: str) -> None:
         logger.warning("screen: %s; going back to the screen before", reason)
         await asyncio.to_thread(screen_apply.revert)
+        # Settings follows: straight to the store, since writing the rows
+        # through Settings would choose the screen again (ADR-0109 as amended
+        # 2026-10-02). None is the row's default: no screen chosen.
+        for key, value in screen_apply.settings_of().items():
+            if value is None:
+                settings_store.delete(key)
+            else:
+                settings_store.set(key, value)
+        state_store.bump_settings_revision()
         state_store.set_screen_confirm(None)
         await asyncio.sleep(1.5)
         await asyncio.create_subprocess_exec("systemctl", "reboot")

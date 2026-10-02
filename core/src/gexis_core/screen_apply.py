@@ -161,6 +161,17 @@ def revert(*, state: Path = STATE, env: Path = SCREEN_ENV, cmdline: Path = CMDLI
     write_state({"current": previous, "previous": None, "pending": False, "reverted": data.get("current")}, state)
 
 
+def settings_of(path: Path = STATE) -> dict[str, str | None]:
+    """What Settings' *Attached screen* and *Screen rotation* say for the
+    current screen - after a go-back, the screen before, or none (ADR-0109
+    as amended 2026-10-02: Settings no longer names a screen undone)."""
+    current = read_state(path).get("current")
+    screen = screens.by_id(current["screen"]) if current else None
+    turn = int(current.get("rotation", 0)) if current else 0
+    return {"screen": screen.label if screen else None,
+            "rotation": next(k for k, v in ROTATIONS.items() if v == turn) if screen else None}
+
+
 def parse_rotation(value: str | None) -> int:
     return ROTATIONS.get(value or "0°", 0)
 
