@@ -509,6 +509,10 @@ class Rotation:
         #: ADR-0096: what moves on a turntable or a tape deck, given each new
         #: skin right after the text layer (it paints over that background).
         self.motion = None
+        #: ADR-0112: the artist's photos in a skin's fanart frame, given each
+        #: new skin after the text and motion layers (it is put into their
+        #: backgrounds and the engine's).
+        self.fanart = None
         self.unseen: list[str] = []
         self.current: str | None = None
         self.prepared: tuple[str, object] | None = None
@@ -645,6 +649,9 @@ class Rotation:
             self.layer.set_skin(skin, self.homes.get(name), name)
             if self.motion is not None and self.homes.get(name) is not None:
                 self.motion.set_skin(skin, self.homes[name], self.layer.background)
+        if self.fanart is not None:
+            self.fanart.attach(skin, meter, self.layer, self.motion,
+                               self.peppy.util.PYGAME_SCREEN.get_size())
         pygame.display.update()
         self.prepare_next()
 
@@ -987,6 +994,7 @@ def main() -> int:
 
     from gexis_peppy_render import MetadataLayer, read_metadata
     from gexis_peppy_motion import MotionLayer
+    from gexis_peppy_fanart import FanartFrame
 
     rotation = Rotation(peppy, skins, spectrum_state, None, homes, selection)
     rotation.spectrum_ready = spectrum_state.spectrum is not None
@@ -1029,6 +1037,10 @@ def main() -> int:
     motion.configure(selection.motion, selection.record_rpm, selection.smooth)
     if first in homes:
         motion.set_skin(skins[first], homes[first], layer.background)
+    fanart = FanartFrame()
+    rotation.fanart = fanart
+    motion.fanart = fanart.overlay
+    fanart.attach(skins[first], rotation.vumeter.meter, layer, motion, util.PYGAME_SCREEN.get_size())
     rotation.prepare_next()
     print(
         f"peppy: {len(skins)} skins, {len(pool)} in {selection.corpus!r}, "
@@ -1061,6 +1073,9 @@ def main() -> int:
                 if rotation.rotating:
                     rotation.switch()
             metadata = read_metadata()
+            # ADR-0112: a new list of the artist's photos replaces the old at
+            # once; the next `tick` puts its first one in the frame.
+            fanart.set_paths(metadata.get("fanart"))
             if motion.active:
                 # Laid out, not painted: erasing a title to the layer's own
                 # background would wipe the record or the reels under it.
@@ -1071,6 +1086,12 @@ def main() -> int:
                 dirty = layer.draw(metadata)
                 if dirty:
                     pygame.display.update(dirty)
+        # ADR-0112: the fanart frame changes only at a list change and during
+        # a crossfade; then its area alone is repainted, bottom up, so the
+        # needles, the glass and the text stay over the photo.
+        changed = fanart.tick()
+        if changed is not None:
+            pygame.display.update(motion.compose([changed]))
         # ADR-0097: the ticker moves every frame it has moved a whole pixel.
         ticked = layer.tick()
         if ticked:

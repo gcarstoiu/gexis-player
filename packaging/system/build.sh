@@ -62,7 +62,7 @@ put 644 "$S/05-peppy/files/peppy-meter.txt" "$P/peppymeter/config.txt"
 # Rewritten by the driver (ADR-0051 §3), owned by the service user: placed once.
 put 644 "$S/05-peppy/files/peppy-spectrum.txt" "$DEF/peppy-spectrum.txt"
 put 755 "$S/05-peppy/files/gexis-peppy-driver.py" "$P/driver.py"
-for m in gexis_peppy_render gexis_peppy_motion gexis_peppy_gauges; do
+for m in gexis_peppy_render gexis_peppy_motion gexis_peppy_gauges gexis_peppy_fanart; do
 	put 644 "$S/05-peppy/files/$m.py" "$P/$m.py"
 done
 put 644 "$S/05-peppy/files/badge-slots.json" "$P/badge-slots.json"
