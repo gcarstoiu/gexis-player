@@ -59,6 +59,11 @@ MEMBERS = (
     "var/lib/beszel-agent",
     # ADR-0114: the hub's history, systems and account.
     "var/lib/beszel-hub",
+    # ADR-0115: the Lyrion server's own settings and the playlists it saved -
+    # not its database or artwork cache (a rescan rebuilds them), and not the
+    # music in the Music folder, which can be any size.
+    "var/lib/squeezeboxserver/prefs",
+    "var/lib/gexis-music/Playlists",
     # **Plexamp's claim** (added 2026-09-26, ADR-0090). The third time for the
     # same lesson, and this one was learned the hard way: the card was
     # flashed, the restore put the settings back with `plexamp.enabled` on,

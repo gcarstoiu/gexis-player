@@ -55,6 +55,9 @@ image/stage-gexis/07-beszel/files/beszel-agent-listen-check.sh /usr/lib/gexis/be
 image/stage-gexis/07-beszel/files/plugin.json /usr/share/gexis/plugins/beszel/plugin.json
 image/stage-gexis/07-beszel/files/beszel-hub.service /usr/lib/systemd/system/beszel-hub.service
 image/stage-gexis/07-beszel/files/plugin-hub.json /usr/share/gexis/plugins/beszel-hub/plugin.json
+image/stage-gexis/10-lyrion/files/plugin.json /usr/share/gexis/plugins/lyrion-server/plugin.json
+image/stage-gexis/10-lyrion/files/gexis.conf /etc/systemd/system/lyrionmusicserver.service.d/gexis.conf
+image/stage-gexis/10-lyrion/files/gexis-music.conf /etc/samba/smb.conf.d/gexis-music.conf
 EOF
 
 # **No skins in the image** (ADR-0111 decision 9): neither the old

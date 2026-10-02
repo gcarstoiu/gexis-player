@@ -1,0 +1,8 @@
+---
+_version: 0
+# ADR-0115: written once, before Lyrion's first start, and Lyrion's from then
+# on. The device's own Music folder, and its Playlists folder - which Debian's
+# build of Lyrion leaves unset, so it could not save a playlist at all.
+mediadirs:
+  - /var/lib/gexis-music
+playlistdir: /var/lib/gexis-music/Playlists

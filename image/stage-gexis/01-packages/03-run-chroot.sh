@@ -47,8 +47,9 @@ testparm -s 2>/dev/null | awk '
 	/^$/         { if (section != "" && section != "[global]") print section, available; section = "" }
 	END          { if (section != "" && section != "[global]") print section, available }
 ' | while read -r section available; do
+	# Three since ADR-0115: the Lyrion server's Music.
 	if [ "${section}" != "[pictures]" ] && [ "${section}" != "[backups]" ] \
-		&& [ "${available}" != "No" ]; then
+		&& [ "${section}" != "[music]" ] && [ "${available}" != "No" ]; then
 		echo "ERROR: samba also serves ${section} (ADR-0049: nothing wider than its purpose)" >&2
 		exit 1
 	fi

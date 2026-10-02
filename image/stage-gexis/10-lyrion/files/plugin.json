@@ -1,0 +1,9 @@
+{
+  "id": "lyrion-server",
+  "name": "Lyrion server",
+  "kind": "service",
+  "area": "sources",
+  "unit": "lyrionmusicserver.service",
+  "port": 9000,
+  "settings": []
+}
