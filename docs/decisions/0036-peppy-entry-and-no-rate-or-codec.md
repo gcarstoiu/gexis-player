@@ -1,6 +1,6 @@
 # ADR-0036 — Peppy screen entry: the button, or five minutes of unattended playback; and no sample rate or codec anywhere
 
-**Status:** Accepted; §2 amended 2026-10-02 (the visualiser shows LMS's sample rate)
+**Status:** Accepted; §2 amended twice 2026-10-02 (the visualiser shows a rate that is the file's own: LMS's, and a plugin's that declares it)
 **Date:** 2026-09-16
 **Raised by:** George, settling Phase 5's two open questions before it starts
 **Amends:** [0019](0019-peppy-screen-lifecycle.md) — renames its implicit entry
@@ -60,6 +60,14 @@ previous decision, but might be helpful for the user"*; then *"Let's do A"*.
 - **Where the rate is drawn, the renderer's mark sits in the skin's own box**,
   as the skin was designed (an icon with the rate beside it). Where it is
   not, the mark is centred in the slot measured for the skin.
+
+### Amended again 2026-10-02: a plugin's rate, where it is the file's own
+
+George, asked whether a plugin that reports the playing file's own rate may
+show it: *"Yes"*. A plugin declares `sample_rate_is_source` in its `hello`
+(PLUGIN-CONTRACT.md, added within version 1); LMS declares it too. The
+visualiser shows the rate, and the bit depth plugins may now send, for any
+source that declares it. Spotify still does not.
 
 ## Open — needs George
 

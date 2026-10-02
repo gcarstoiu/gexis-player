@@ -1143,7 +1143,7 @@ async def main() -> None:
                 "artwork_small", "codec", "transport", "repeat")
         fields = {k: str(raw[k]) for k in text if raw.get(k) is not None}
         for number, cast in (("position", float), ("duration", float),
-                             ("sample_rate", int)):
+                             ("sample_rate", int), ("bit_depth", int)):
             try:
                 if raw.get(number) is not None:
                     fields[number] = cast(raw[number])

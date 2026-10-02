@@ -217,6 +217,8 @@ class LmsAdapter(Adapter):
         acquisition_events=frozenset({"power_on"}),
         supports_artwork=True,
         supports_sample_rate=True,
+        # The file's own rate: shown on the visualiser (ADR-0036 as amended).
+        sample_rate_is_source=True,
         volume_managed=True,
         volume_mechanism=VolumeMechanism.DUMMY_MIXER,
         dummy_mixer_card=DUMMY_CARD_LMS,

@@ -26,6 +26,7 @@ def test_to_json_sorts_the_set_fields_for_stable_output():
         "acquisition_events": ["a", "b"],
         "supports_artwork": True,
         "supports_sample_rate": False,
+        "sample_rate_is_source": False,
         "volume_managed": True,
         "volume_mechanism": "dummy_mixer",
         "dummy_mixer_card": "somecard",
@@ -79,6 +80,7 @@ def test_lms_declares_full_metadata_support():
     # correctly for a real library track (HANDOFF.md).
     assert LmsAdapter.capabilities.supports_artwork is True
     assert LmsAdapter.capabilities.supports_sample_rate is True
+    assert LmsAdapter.capabilities.sample_rate_is_source is True, "the file's own: shown (ADR-0036)"
 
 
 def test_spotify_declares_its_acquisition_events():
@@ -93,6 +95,7 @@ def test_spotify_declares_its_acquisition_events():
 def test_spotify_declares_full_metadata_support():
     assert SpotifyAdapter.capabilities.supports_artwork is True
     assert SpotifyAdapter.capabilities.supports_sample_rate is True
+    assert SpotifyAdapter.capabilities.sample_rate_is_source is False, "a decoder's rate: not shown"
 
 
 def test_bluetooth_declares_both_of_its_acquisition_events():

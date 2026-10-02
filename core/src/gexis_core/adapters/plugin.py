@@ -97,6 +97,7 @@ def capabilities_from(raw) -> Capabilities:
         acquisition_events=frozenset(events),
         supports_artwork=bool(raw.get("supports_artwork", False)),
         supports_sample_rate=bool(raw.get("supports_sample_rate", False)),
+        sample_rate_is_source=raw.get("sample_rate_is_source") is True,
         volume_managed=bool(raw.get("volume_managed", False)),
         volume_mechanism=mechanism,
         dummy_mixer_card=raw.get("dummy_mixer_card"),

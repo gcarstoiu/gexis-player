@@ -148,6 +148,11 @@ class Capabilities:
     #: invented when Phase 6 needs it (ADR-0020: hide a control that
     #: doesn't exist, never show one that would silently do nothing).
     controls: frozenset[str] = field(default_factory=frozenset)
+    #: **The rate it reports is the file's own** (ADR-0036 as amended
+    #: 2026-10-02): what the visualiser shows. LMS's is; Spotify's 44.1 kHz
+    #: is a decoder's for a lossy stream, so it does not say so; a plugin
+    #: says so in its `hello` when it is true of it.
+    sample_rate_is_source: bool = False
 
     def to_json(self) -> dict:
         return {
@@ -155,6 +160,7 @@ class Capabilities:
             "acquisition_events": sorted(self.acquisition_events),
             "supports_artwork": self.supports_artwork,
             "supports_sample_rate": self.supports_sample_rate,
+            "sample_rate_is_source": self.sample_rate_is_source,
             "volume_managed": self.volume_managed,
             "volume_mechanism": self.volume_mechanism.value,
             "dummy_mixer_card": self.dummy_mixer_card,

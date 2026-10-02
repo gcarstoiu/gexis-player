@@ -43,6 +43,10 @@ DECLARED = {
     # takeover is its app's leftover is handed one (ADR-0054 §5, amended).
     "volume_handed",
     "controls",
+    # Added 2026-10-02, within contract version 1 and optional like
+    # volume_handed: the rate a renderer reports is the file's own, so the
+    # visualiser shows it (ADR-0036 as amended).
+    "sample_rate_is_source",
 }
 
 #: What an adapter must implement. `run` carries both acquisition edges, so a

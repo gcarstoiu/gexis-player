@@ -56,6 +56,8 @@ class PeppyMetadataWriter:
     def write(self, state: PlaybackState) -> None:
         metadata = state.metadata
         controls = state.controls or {}
+        caps = state.capabilities.get(state.active) if state.active else None
+        source_rate = bool(caps and caps.sample_rate_is_source)
         volume = state.volume
         payload = json.dumps(
             {
@@ -67,11 +69,11 @@ class PeppyMetadataWriter:
                 "position": metadata.position,
                 "duration": metadata.duration,
                 "transport": metadata.transport,
-                # ADR-0036 as amended 2026-10-02: LMS's rate is the file's
-                # own; Spotify's is a decoder's, Bluetooth has none. Only
-                # LMS's reaches the visualiser.
-                "sample_rate": metadata.sample_rate if state.active == "lms" else None,
-                "bit_depth": metadata.bit_depth if state.active == "lms" else None,
+                # ADR-0036 as amended 2026-10-02: only a rate that is the
+                # file's own reaches the visualiser - LMS's, and a plugin's
+                # that says so; Spotify's is a decoder's, Bluetooth has none.
+                "sample_rate": metadata.sample_rate if source_rate else None,
+                "bit_depth": metadata.bit_depth if source_rate else None,
                 # ADR-0097: shown, never acted on. The level playing, whoever
                 # set it; null before the mixer has been read and on fixed
                 # output, which has no level to show.
