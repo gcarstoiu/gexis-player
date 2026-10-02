@@ -466,6 +466,25 @@
     region = name;
   }
 
+  //: **A choice row's warning waits for the choice** (George, 2026-10-02:
+  //: "C" - on a Pixel 10 the Attached screen warning left room for one and
+  //: a half models). A string warning on a choice is about changing it, so it
+  //: shows once something other than the value is picked, with Confirm. A
+  //: text row's (device_name) stays up the whole time: what it warns about
+  //: happens whatever is typed (ADR-0044 §2).
+  function warnsOnChoice(row) {
+    return typeof row?.warn === 'string' && (row.type === 'choice' || row.grouped);
+  }
+  //: **A long list fills a phone** (the same day, "C"): more than this many
+  //: choices and the sheet is the whole screen rather than a card over it.
+  const FULL_SHEET_OPTIONS = 6;
+  const sheetFull = $derived.by(() => {
+    if (wide || !sheet) return false;
+    const n = sheet.grouped ? (region === null ? regions.length : places.length)
+      : (sheet.type === 'choice' || sheet.type === 'multi') ? (sheet.options ?? []).length : 0;
+    return n > FULL_SHEET_OPTIONS;
+  });
+
   async function choose(option) {
     const row = sheet;
     if (String(row.value) === option) {
@@ -481,7 +500,7 @@
     // ADR-0044 §2: a warned option is selected first and committed second.
     // The warning is the whole point of the mechanic and "turn your
     // amplifier down before confirming" cannot be said after the write.
-    if (row.warn?.[option]) {
+    if (row.warn?.[option] || warnsOnChoice(row)) {
       choicePending = option;
       return;
     }
@@ -1168,7 +1187,7 @@
   <div class="scrim" class:is-open={sheet} role="presentation" onclick={closeSheet}></div>
 
   {#if sheet}
-    <div class="sheet" role="dialog" aria-label={sheet.label}>
+    <div class="sheet" class:sheet--full={sheetFull} role="dialog" aria-label={sheet.label}>
       <div class="sheet__head">
         <div class="sheet__title">{sheet.grouped && region !== null ? region : sheet.label}</div>
         {#if sheet.note && !joinItem}<div class="sheet__note">{sheet.note}</div>{/if}
@@ -1179,7 +1198,7 @@
            shown the whole time the sheet is open, because what it describes
            happens whatever is typed (`device_name`); an **object** warns
            about one option and waits until that option is picked. -->
-      {#if typeof sheet.warn === 'string'}
+      {#if typeof sheet.warn === 'string' && (!warnsOnChoice(sheet) || choicePending !== null)}
         <div class="warn">
           <span class="warn__mark">!</span>
           <span class="warn__text">{sheet.warn}</span>
@@ -1224,7 +1243,7 @@
       {:else if sheet.grouped}
         <div class="options" data-noscrollbar>
           {#each places as option (option)}
-            {@const selected = String(sheet.value) === option}
+            {@const selected = choicePending !== null ? choicePending === option : String(sheet.value) === option}
             <button class="option" class:is-selected={selected} type="button" onclick={() => choose(option)}>
               <span class="radio"><span></span></span>
               <span class="option__label">{placeLabel(option)}</span>
@@ -1990,6 +2009,20 @@
      centred on it (design/source/13b/Bar States.dc.html, lib-sheet). On a
      400 px screen the panel's 82% cap leaves a sheet too short to hold a
      list. */
+  /* A long list on a phone: the whole screen, not a card over it. */
+  .sheet.sheet--full {
+    top: 0;
+    left: 0;
+    transform: none;
+    width: 100%;
+    max-width: none;
+    height: 100%;
+    max-height: none;
+    border: none;
+    border-radius: 0;
+    box-shadow: none;
+    padding: 20px 18px;
+  }
   :global(.panel--bar) .sheet {
     top: 12px;
     bottom: 12px;
