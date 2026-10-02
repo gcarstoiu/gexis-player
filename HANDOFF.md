@@ -1,147 +1,102 @@
 # Handoff
 
-Last updated: 2026-09-30 (thirtieth session, on R2D2).
+Last updated: 2026-10-02 (on R2D2).
 
 ## Start here
 
-**Phase 13c (updates over the network) is under way on `phase-13c`**, in the
-worktree `~/projects/gexis-player-13a` (13a merged as PR #41). Images built
-there are hard-linked into `~/projects/gexis-player/image/deploy/` - George
-flashes from there; name the full file when asking, and check
-`/etc/gexis/image.info` after boot before testing anything.
+**Phase 13b (other screens) is built on `phase-13b`, in the main checkout,
+waiting on hardware tests and its PR.** 13c (updates over the network) is
+merged as PR #42 and 13a as PR #41; their narrative is in the archive's
+2026-10-02 block. Releases are published from here to the testing channel:
+**0.5.0 is the latest** (serial 10, 2026-10-02), after 0.3.0-0.3.3 and 0.4.0.
 
-| Step | State |
+| Part of 13b | State |
 |---|---|
-| 0. Tested set measured | Finding 104 |
-| 1. Our parts as Debian packages | **ADR-0107.** Images 833 (first from packages), 849, 852, 856 built; 833 ran on sofa-pi |
-| 2. Releases and the key | **ADR-0108** (amended: a release is four parts - ours, skins, rpi, debian - each a GitHub pre-release **named by its content**, so an unchanged part is never uploaded again; a signed `parts` file on the release page). Key `E63B…ABB7`, subkey only on R2D2, backup printed and on USB, deleted from R2D2. `packaging/release/build.sh` / `publish.sh` (paced ~450 uploads/h after GitHub's secondary rate limit blocked the account for ~20 min on 2026-09-30) |
-| 3. The updater | **Built and shown on sofa-pi** (Finding 105): 833→849→852 updates, a deliberately broken release put back. `gexis-update check / install / scheduled` |
-| 4. Settings migrations | Built |
-| 5. Settings → System → Updates | **Rebuilt to ADR-0110** (George's findings after running an update himself, 2026-10-01): release numbers `x.y.z` from a `v` tag, approved with the notes; the Release tile with one button; the update modal with every step and a download bar; playback stops on consent (no silence wait), nothing resumes; the panel locked behind a full-screen message; night runs 03:00-04:00, only when nothing plays. Release notes signed on each release, shown under Release |
-| 6. Our plugins updating | Met by releases (13a criterion 5, read from the code; a changed Plexamp pin not yet shown) |
-| 7. One update from GitHub | **Done**: sofa-pi 852 → 867 in 56 s (by hand-placed updater, LESSONS 49), 867 → 871 by George himself. Found on the way and fixed: release tags hijacking versions (LESSONS 50), GitHub renaming `~` in 73 file names, packages not reproducible, editing a running publish script (LESSONS 51). **0.3.0** (ADR-0110) published to testing 2026-10-01; **0.3.1** follows once sofa-pi is on 0.3.0, so George sees the new screens. Proposed, not decided: each package file uploaded once, into pools (ADR-0108 amendment, apt and GitHub each tested) |
+| Families, Chromium zoom, screen.env, bar UI | Built, rendered against a fake core (ADR-0109) |
+| The screen list | 110 HDMI models (foonerd's presets, MIT); George's four Waveshare screens marked Tested |
+| Recognising, choosing, Keep this screen? | Built. **Amended 2026-10-02** (George: *"A and C"*): asked only when the picture changes (forced mode, scale, rotation) - the 10.1" is kept without asking, the 13.3" and the bars are asked; after setup the phone says so and the panel waits 2 minutes; a go-back resets Settings too. **Not yet in a release** |
+| Setup's Screen and Visualiser steps | Built; the Visualiser step names the skin count (copy approved) |
+| Skins per screen size (ADR-0111, decisions 1-15) | **All four steps built and in 0.5.0**: five `gexis-skins-<W>x<H>` packages (66-652 MB), none in the image, installed with consent by `gexis-update pack-install`; the visualiser draws the installed pack, a smaller one centred on black; Legal and Credits. A device that kept `gexis-skins` keeps it (marked manual) |
+| Update UX (ADR-0110) | Built and used by George through 0.3.x |
 
-**New users start from an image** (ADR-0105 amended, George: *"A now with B
-later"*): promoting a release to stable attaches `gexis-player.img.xz` (1.14 GiB,
-signed) at `/releases/latest/download/gexis-player.img.xz`; a Raspberry Pi
-Imager listing with the first public release.
+**Next, in order:**
+1. **0.5.1** with the Keep changes, when George asks (notes approved by him
+   first; the release number is approved with them).
+2. **Hardware**, as George's screens allow: the 13.3" (1920 x 1080 - the
+   visualiser's speed on a Pi 4 feeds the hardware requirements, ADR-0111
+   decision 12), the bars' modes and touch, recognition fingerprints for the
+   three screens not yet seen, the letterboxed and centred skins by eye.
+3. **Before the 13b PR** (ask George first): DEVELOPMENT.md's 13b
+   acceptance rewritten to what was built, IMPLEMENTED-DIFFERENTLY entries
+   (upload placement, playlist 420, the bar's deviations), optionally a
+   round-3 brief for Claude Design.
+4. **Phase 13d, DACs** (DEVELOPMENT.md): Volumio's DAC list, the DAC2 HD and
+   IQaudio DAC+ first. An ADR first.
 
-**After 13c, decided (George, 2026-09-30: *"After 13c"*): go-librespot
-0.9.0 -> 0.10.2** (four releases behind: 0.9.1, 0.10.0, 0.10.1, 0.10.2). Read
-their notes for events, audio output and volume; change
-`packaging/go-librespot/pins.sh`; test takeovers both ways, resume and
-volume on the device; publish to testing - the first real use of the update
-path for a component.
+**How a release is made** (each step proven 2026-10-02): tag `vX.Y.Z`
+locally; `make image` (never commit while it packages - a `.dirty` build);
+`image/verify-image.sh` on the image; `packaging/release/build.sh <img>`;
+George approves `notes.txt` (impersonal, New / Fixed / Good to know, no
+restart promises - publish.sh refuses them); `packaging/release/publish.sh
+rX.Y.Z --channel testing`. `packaging/release/out` is a symlink into the
+`gexis-player-13a` worktree, excluded in `.git/info/exclude`. Never edit a
+script while it runs (LESSONS 51).
 
-**Also 2026-09-30:** a restore brings the backup's device name back in all
-four places (it had left LMS and the network disagreeing); a resumed Spotify
-after a core restart is an acquisition; Claude Design's 13b handoff is stored
-on branch `design-13b` (its stale `IMPLEMENTED-DIFFERENTLY.md` not taken), and
-Attached screen / Screen rotation are in ADR-0022's inventory for 13b.
-**Decided:** the output fallback stays (the user picks); passwordless `sudo`
-decided when the first release is made; the GPL source offer for the OS
-packages we publish is checked before then.
-
-
-**Phase 13a (plugins you install and update) is built through criterion 4 on
-`phase-13ac`**, in its own worktree at `~/projects/gexis-player-13a`, and run on
-`sofa-pi` (the second card, 192.168.178.131) with George. Upload from a phone
-with progress and a result, a sandbox under the player's own unit (1 GB,
-enforced - Finding 102), updates that restart a running plugin and keep its
-switch, backups of settings and data, an optional manifest `area`
-(ADR-0086 amended). **Criterion 5 - our own plugins updating from tested
-versions - waits on 13c's repository.** The device runs this branch's core and
-UI by hand; no image has them yet.
-
-**A real streaming receiver was packaged and uploaded as a test plugin** (local
-only, never on GitHub; its files stay in the local archive). It found five bugs in 13a, all
-fixed; the costly one was the release ladder looking for a template unit's
-processes in the wrong cgroup and answering "free" (LESSONS 47). What a
-renderer author should do differently is in `docs/WRITING-A-PLUGIN.md`,
-*What a real renderer taught us*. `tools/handover-check.py` repeats the
-takeover-and-return check on the device (makes sound; 9 of 9 on 2026-09-30).
-
-**Decided 2026-09-30 (George):** installing or removing a plugin keeps
-restarting the core (ADR-0106); a cast a controller sends paused stays paused;
-the DAC's click on a sample-rate change is recorded and accepted (Finding 103),
-a driver-level mute not investigated.
-
-**Phase 13 (first-boot setup) is merged (PR #37).** Its step-4 narrative is in
-the archive's 2026-09-30 block. Its image:
-`image/deploy/2026-09-29-gexis-player-v0.2.1-789-gee6a365.img`, sha256
-`74dc726c…a045`, 83 `verify-image.sh` checks.
-
-**Decided 2026-09-30 (George): the output fallback stays as it is** - *"no.
-The user gets to select"*. A card whose DAC is not the `sndrpihifiberry` the
-shipped `output.conf` names falls back to the first output with a volume
-control (likely the headphone jack), and setup's Output step, which lists the
-DAC by name, is where the user picks it. Not built: a preference for a HAT.
-
-**The `pi` user's passwordless `sudo`** is decided when the first release is
-made, not before (George, 2026-09-30; ADR-0107 decision 3).
-
-**Phase 9 criterion 0's revisit: done 2026-09-29, the waiver stands**
-(Finding 101; George: *"really snappy"*, then *"We go with A"*).
+**Provisioning a card:** do it, don't hand it to George - `udisksctl mount`
+needs no password where `sudo mount` does. A card meant to test setup gets
+the SSH key only, since a saved Wi-Fi skips setup.
 
 ### Branches and PRs
 
 | Branch | State | What is on it |
 |---|---|---|
-| `main` | f073fc2 | Everything to PR #37 (Phase 13, first-boot setup), and the design and brief PRs #38-#40 |
-| `phase-13ac` | ahead of `main`, PR open | ADR-0105 and ADR-0106 accepted; Phase 13a criteria 1-4; ADR-0086 amended (`area`); Findings 102, 103; LESSONS 47; `docs/WRITING-A-PLUGIN.md`; `tools/sample-plugin`, `tools/sample-renderer`, `tools/handover-check.py`; the Spotify resume fix |
+| `main` | 2a1dad7 (origin) | Everything to PR #42 (13c). The local `main` is behind it |
+| `phase-13b` | 80 commits ahead of `origin/main`, **not pushed** since 13b began (139 ahead of `origin/phase-13b`) | 13b and ADR-0109/0110/0111, Findings 106-107, releases 0.4.0 and 0.5.0 |
+| tags | `v0.1.0`-`v0.3.3` pushed; **`v0.4.0` and `v0.5.0` local only** | Push with the 13b PR |
+| `skin-packs` | merged into `phase-13b` | Its worktree under `.claude/worktrees/` can go |
+| `design-13b` | Claude Design's 2026-09-30 handoff | Reference only |
 
-### gexis
+### Devices
 
-- **Its own card is out of the Pi.** The Pi runs the second card as
-  `sofa-pi` (192.168.178.131), with `phase-13ac`'s core and UI by hand, the
-  memory controller on (`cgroup_enable=memory` added to `cmdline.txt` by hand,
-  the original kept as `cmdline.txt.before-memcg`), the test plugin and the
-  sample `tone` renderer (off). gexis's card needs a reflash and restore
-  before it goes back. What follows is gexis's card as it was left.
-- Flashed 2026-09-28 with `image/deploy/2026-09-28-gexis-player-v0.2.1-730-g66d931e.img`
-  (sha256 `942d8582…eb79`, 80 `verify-image.sh` checks pass), provisioned, and
-  George's backup restored. **Restore, then download worked**: Plexamp was
-  fetched at boot in 31 s and runs. Not yet checked: that it came back signed
-  in, and Remove on Plexamp.
-- Runs `phase-13`'s core and UI **installed by hand** (not in an image), and
-  `ap-trial.sh`. On its Wi-Fi it behaves as before: setup not needed. Its
-  setup password is `naccw4n2` (in `/var/lib/gexis/setup-password`).
-  `python3-pytest` is not reinstalled yet.
-- The core's tests run on R2D2 from a venv: `python3 -m venv <dir>` and
-  `pip install -e 'core[test]'` (none existed this session).
-- It holds a saved connection "Pixel 10 Pro Network" from the restore - one of
-  the configured networks ADR-0031's 5-minute retry would look for.
+- **A card flashed 2026-10-02 with `2026-10-02-gexis-player-v0.5.0.img`**
+  (97 `verify-image.sh` checks), SSH key only, set up by George from the
+  phone and his backup restored: *"everything seems in place"*. His finding
+  there - Keep asked at boot while he was at the phone - is what the 13b
+  amendment above answers.
+- **sofa-pi** (192.168.178.131) took every update 852 -> 0.3.3 by George's
+  own hand; whether it is on 0.4.0 or 0.5.0 now was not checked this session.
+- The core's tests run on R2D2 from a venv (`python3 -m venv <dir>`,
+  `pip install -e 'core[test]'`); add pygame to run the render tests too.
 
 ### Decided, not started
 
-- **Phase 13c, updates over the network** (ADR-0105 accepted). 13a's
-  criterion 5 rides on its repository. Then **13b, other screens**, waiting on
-  Claude Design (`design/briefs/13b-screen-families.md`).
-- **Settings as an installed app: not now** (ADR-0102). The HTTPS routes are
-  kept there for later.
+- **Hardware requirements, minimum and recommended** (ADR-0111 decision 12):
+  card space for the skins, and the Pi's load at 1920 x 1080.
+- **go-librespot 0.9.0 -> 0.10.2** (George, 2026-09-30: *"After 13c"*) -
+  the first real update of a component through a release.
+- **New users start from an image** (ADR-0105 amended): promoting to stable
+  attaches the signed image; a Raspberry Pi Imager listing with the first
+  public release, which waits on 13a, 13b and 13c.
+- **The `pi` user's passwordless `sudo`** is decided when the first public
+  release is made (ADR-0107 decision 3).
+- **Settings as an installed app: not now** (ADR-0102).
 
 ### Open, none blocking
 
-- **LMS's power-on reaches the core 1.45-1.5 s after the press** - LMS's own
-  status-push filter, now most of what is left of Finding 091's gap. A plain
-  CometD subscription or the CLI's `listen` would be immediate (ADR-0095, *Not in
-  this record*). **George, 2026-09-28: recorded, no action; he will watch for it
-  in normal use.**
-- **Bluetooth "Not provided", once**, 2026-09-26 22:08: `MediaPlayer1` appeared and
-  no track information ever followed. George could not reproduce it the next
-  morning and suspects the phone's battery saver. Not explained.
-- ~~A paused Spotify is not an acquisition after a core restart~~ - **fixed
-  2026-09-30** on `phase-13ac`: George hit it (a plugin upload restarts the
-  core), it was reproduced on `sofa-pi`, and `playing` now acquires.
-- **The Restore row reads "4 paired"** (seen 2026-09-28): a list row's count is
-  labelled "paired", Bluetooth's word, for backups too. Cosmetic, not fixed.
-- **A phone that opens `/` posts `/panel/painted`** (seen in Finding 099's
-  trial). That call ends the boot animation (ADR-0043 §3), so a phone opening
-  the page during boot would drop the splash before the panel draws. Read
-  from the code, not seen happen.
-- Everything older that is still open is in the archive's 2026-09-27 block:
-  the Squeeze Plex Hub route (decision 2), the timeline-poll lead, cross-rate
-  gaps, Plex lyrics.
+- **PeppyMeter's redraw area for a meter away from the corner** is offset by
+  `meter.y`; letterboxing adds 40 px to it. Whether the driver's partial
+  updates show it as smearing is unchecked (skin-packs report, 2026-10-01).
+- **An image without skins starts `gexis-peppy`, which exits 1** ("no
+  skins") until a pack arrives and the core restarts it. Harmless; one
+  failed unit in the journal.
+- **Choosing a screen restarts the player even when nothing visible
+  changes** - out of the 2026-10-02 amendment's scope.
+- **LMS's power-on reaches the core 1.45-1.5 s after the press** (George,
+  2026-09-28: recorded, no action).
+- **Bluetooth "Not provided", once**, 2026-09-26; not reproduced.
+- **The Restore row reads "4 paired"** - Bluetooth's word for backups too.
+- **A phone that opens `/` posts `/panel/painted`**, read from the code.
+- Older open items are in the archive's 2026-09-27 and 2026-10-02 blocks.
 
 ## Build environment (2026-09-13) — read this before the next build
 
@@ -371,13 +326,16 @@ reverted, currently-flashed image predates this fix.
                                             phone or computer, run it sandboxed,
                                             Remove it; updates from versions we
                                             have tested. ADR first
-13b other screens                        added 2026-09-28 (George): 800x480 to
+13b other screens                        * BUILT on phase-13b; hardware tests
+                                            and the PR to go. Added 2026-09-28
+                                            (George): 800x480 to
                                             1920x1080, bars 1280x400 and 1480x320
                                             (landscape); two layout families;
                                             skins per resolution; recognise the
                                             screen in setup. Finding 100. ADR
                                             first; designs from Claude Design
-13c updates over the network             added 2026-09-28 (George: "Agreed to
+13c updates over the network             * MERGED (PR #42); 13a merged (PR #41).
+                                            Added 2026-09-28 (George: "Agreed to
                                             do before"). **The first public release
                                             image waits on 13a, 13b and 13c**
                                             (George, 2026-09-29). ADR-0021's in-place
@@ -386,6 +344,9 @@ reverted, currently-flashed image predates this fix.
                                             as they come or a tested snapshot
                                             (decide), backup before each update.
                                             ADR first
+13d DACs we have not tested             decided 2026-10-01 (George): after 13b,
+                                            from Volumio's list; the DAC2 HD and
+                                            IQaudio DAC+ first. ADR first
 14 themes                                 cut out of 10. ADR-0016 calls themes
                                             plugins and plugins processes; a
                                             theme has no process - settle that
