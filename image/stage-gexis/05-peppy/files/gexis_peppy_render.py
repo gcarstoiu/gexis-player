@@ -737,10 +737,32 @@ class MetadataLayer:
             self._artwork_key = None
         if self._artwork_source is None or self._art_spins:
             return None
-        if self._artwork_key != (url, dimension):
-            self._artwork = pygame.transform.smoothscale(self._artwork_source, dimension)
-            self._artwork_key = (url, dimension)
+        mask = (self._skin.get("albumart.mask") or "").strip() or None
+        if self._artwork_key != (url, dimension, mask, self._corpus):
+            art = pygame.transform.smoothscale(self._artwork_source, dimension)
+            cut = self._art_mask(mask, dimension) if mask else None
+            if cut is not None:
+                art = art.convert_alpha()
+                art.blit(cut, (0, 0), special_flags=pygame.BLEND_RGBA_MIN)
+            self._artwork = art
+            self._artwork_key = (url, dimension, mask, self._corpus)
         return self._put("art", self._artwork, position)
+
+    def _art_mask(self, name: str, size: tuple[int, int]) -> pygame.Surface | None:
+        """**The skin's own shape for the album art** - `albumart.mask`, a
+        picture in its folder where **black shows the art and white hides
+        it**, as upstream applies it (peppy_screensaver's volumio_basic.py:
+        `putalpha(ImageOps.invert(mask))`). George, 2026-10-02: *"Follow the
+        skin design"*; until then every round well got a square. Thresholded
+        rather than blended, so no numpy is needed on the device; a mask that
+        cannot be read leaves the art square, as before."""
+        try:
+            picture = pygame.transform.smoothscale(pygame.image.load(str(self._corpus / name)).convert(), size)
+        except Exception as exc:  # pygame.error or OSError; the art still shows
+            logger.warning("render: no art mask %s: %s", name, exc)
+            return None
+        shown = pygame.mask.from_threshold(picture, (0, 0, 0), (128, 128, 128, 255))
+        return shown.to_surface(setcolor=(255, 255, 255, 255), unsetcolor=(0, 0, 0, 0))
 
     @staticmethod
     def _fetch(url: str) -> pygame.Surface | None:

@@ -625,3 +625,45 @@ def test_elapsed_and_total_are_drawn_as_upstream_does(screen, tmp_path):
     assert at[(20, 700)][0] == "00:30" and at[(20, 700)][1][2] == "digi" and at[(20, 700)][3] == 21
     assert at[(20, 700)][2] == (255, 255, 255) and at[(20, 700)][5] == "meta"
     assert at[(1100, 700)][0] == "03:20" and at[(1100, 700)][1][2] == "bold" and at[(1100, 700)][2] == (9, 9, 9)
+
+
+def test_the_skin_s_mask_shapes_the_album_art(screen, tmp_path):
+    """George, 2026-10-02: "Follow the skin design" - a round well gets round
+    art (Old Spectrum S+M drew a square in its circle). Black shows the art,
+    white hides it, as upstream inverts it; outside the shape the skin's own
+    background stays."""
+    background = pygame.Surface((1280, 800))
+    background.fill((10, 200, 10))
+    pygame.image.save(background, str(tmp_path / "bgr.png"))
+    mask = pygame.Surface((296, 296))
+    mask.fill((255, 255, 255))
+    pygame.draw.ellipse(mask, (0, 0, 0), mask.get_rect())  # as Old2_Spec_mask.jpg
+    pygame.image.save(mask, str(tmp_path / "round.jpg"))
+    layer = MetadataLayer(screen, tmp_path)
+    layer.set_skin({**SKIN, "albumart.pos": "560,70", "albumart.dimension": "170,170",
+                    "albumart.mask": "round.jpg"})
+    layer._artwork_url = "http://art/"
+    layer._artwork_source = pygame.Surface((640, 640))
+    layer._artwork_source.fill((200, 10, 10))
+    screen.blit(background, (0, 0))  # the engine has drawn the skin by now
+
+    layer.draw(full(artwork="http://art/"))
+
+    near = lambda got, want: all(abs(a - b) <= 4 for a, b in zip(got, want))  # scaling blurs a level or two
+    assert near(screen.get_at((560 + 85, 70 + 85)), (200, 10, 10)), "the art shows inside"
+    assert near(screen.get_at((561, 71)), (10, 200, 10)), "the corner is the skin's background"
+
+
+def test_a_mask_that_cannot_be_read_leaves_the_art_square(screen, tmp_path):
+    background = pygame.Surface((1280, 800))
+    pygame.image.save(background, str(tmp_path / "bgr.png"))
+    layer = MetadataLayer(screen, tmp_path)
+    layer.set_skin({**SKIN, "albumart.pos": "560,70", "albumart.dimension": "170,170",
+                    "albumart.mask": "missing.jpg"})
+    layer._artwork_url = "http://art/"
+    layer._artwork_source = pygame.Surface((640, 640))
+    layer._artwork_source.fill((200, 10, 10))
+
+    layer.draw(full(artwork="http://art/"))
+
+    assert all(abs(a - b) <= 4 for a, b in zip(screen.get_at((561, 71)), (200, 10, 10)))
