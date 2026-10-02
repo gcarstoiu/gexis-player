@@ -74,7 +74,7 @@ Package: $PKG
 Version: $VERSION
 Architecture: all
 Maintainer: Gexis Player <noreply@github.com>
-Depends: adduser, perl (>= 5.14.0), libio-socket-ssl-perl, libcrypt-openssl-rsa-perl, ca-certificates, procps, psmisc, samba
+Depends: adduser, perl (>= 5.14.0), libio-socket-ssl-perl, libcrypt-openssl-rsa-perl, ca-certificates, procps, psmisc, samba, cifs-utils, nfs-common
 Section: sound
 Priority: optional
 Description: Gexis Player's Lyrion server plugin

@@ -67,6 +67,7 @@ from gexis_core.peppy import (
     set_meter_smoothing,
 )
 from gexis_core import lyrion_folders
+from gexis_core.lyrion_shares import Shares as LyrionShares
 from gexis_core.fanart import Fanart
 from gexis_core.peppy_metadata import PeppyMetadataWriter, next_track
 from gexis_core.model import BLANK_METADATA, TrackMetadata
@@ -1681,7 +1682,7 @@ async def main() -> None:
         # made the panel mark two working rows `data-unwired`. `lms_server`
         # is a list too and is already in `wired` above, because something
         # also reads its value.
-        lists={"wifi", "bt_trusted"},
+        lists={"wifi", "bt_trusted", "lyrion-server.shares"},
         on_change=state_store.bump_settings_revision,
     )
 
@@ -2169,16 +2170,32 @@ async def main() -> None:
 
     # ADR-0115: the Lyrion server's music folders - the Music folder, USB
     # disks, network shares - kept in its own list while it is switched on.
+    lyrion_shares = LyrionShares(settings_store)
+
     async def _lyrion_rpc(command: list) -> dict:
         async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=10)) as session:
             async with session.post("http://127.0.0.1:9000/jsonrpc.js",
                                     json={"id": 1, "method": "slim.request", "params": ["", command]}) as r:
                 return (await r.json(content_type=None)).get("result") or {}
 
+    lyrion_wake = asyncio.Event()
+
     async def _lyrion_folders_loop() -> None:
+        """Shares mounted while the server is on and unmounted while it is
+        off; then its folders brought up to date. Woken early when a share
+        is added or forgotten."""
         while True:
-            await asyncio.sleep(LYRION_FOLDERS_S)
-            if settings.value("lyrion-server.enabled") is not True:
+            try:
+                await asyncio.wait_for(lyrion_wake.wait(), LYRION_FOLDERS_S)
+            except asyncio.TimeoutError:
+                pass
+            lyrion_wake.clear()
+            on = settings.value("lyrion-server.enabled") is True
+            try:
+                await asyncio.to_thread(lyrion_shares.mount_all if on else lyrion_shares.unmount_all)
+            except Exception:  # noqa: BLE001 - one bad share must not stop the rest
+                logger.exception("lyrion: shares")
+            if not on:
                 continue
             try:
                 await lyrion_folders.sync(_lyrion_rpc)
@@ -2540,6 +2557,8 @@ async def main() -> None:
         pairing_answer=pairing_agent.answer,
         # ADR-0083: what "restart the device" means is the daemon's to say.
         restore=_restore_done,
+        lyrion_shares=lyrion_shares,
+        lyrion_shares_changed=lambda: lyrion_wake.set(),
         # ADR-0086: the panel asks for a source's mark by id; the daemon is
         # the only thing that knows where manifests live.
         plugins=installed_plugins,
