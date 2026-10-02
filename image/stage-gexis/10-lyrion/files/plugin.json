@@ -1,0 +1,21 @@
+{
+  "id": "lyrion-server",
+  "name": "Lyrion server",
+  "kind": "service",
+  "area": "sources",
+  "unit": "gexis-lyrion.service",
+  "port": 9000,
+  "settings": [
+    {
+      "key": "shares",
+      "type": "list",
+      "label": "Network shares",
+      "marks": "N",
+      "default": null,
+      "kind": "share",
+      "manual": "Add a share",
+      "note": "Music folders on a NAS or a computer, mounted read-only and offered to the server.",
+      "empty": "No shares yet. The Music folder and any USB disk are offered already."
+    }
+  ]
+}

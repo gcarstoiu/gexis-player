@@ -66,6 +66,8 @@ from gexis_core.peppy import (
     set_meter_skins,
     set_meter_smoothing,
 )
+from gexis_core import lyrion_addons, lyrion_folders
+from gexis_core.lyrion_shares import Shares as LyrionShares
 from gexis_core.fanart import Fanart
 from gexis_core.peppy_metadata import PeppyMetadataWriter, next_track
 from gexis_core.model import BLANK_METADATA, TrackMetadata
@@ -264,6 +266,14 @@ NEVER_DRAWN_S = 120.0
 #: After setup, which ends on the phone rather than beside the panel
 #: (ADR-0109 as amended 2026-10-02, George: "C").
 SETUP_KEEP_S = 120.0
+#: How often the Lyrion server's music folders are compared with what is
+#: mounted (ADR-0115): a USB disk plugged in appears within this.
+LYRION_FOLDERS_S = 20.0
+#: ADR-0115: Lyrion's add-ons - restarted after this, to load what it
+#: downloaded; asked again after this, if they are still missing.
+LYRION_ADDONS_RESTART_S = 90.0
+LYRION_ADDONS_RETRY_S = 600.0
+LYRION_ADDONS_DONE = Path("/var/lib/gexis/lyrion-addons.done")
 
 
 def _setup_running(setup: dict | None) -> bool:
@@ -1677,7 +1687,7 @@ async def main() -> None:
         # made the panel mark two working rows `data-unwired`. `lms_server`
         # is a list too and is already in `wired` above, because something
         # also reads its value.
-        lists={"wifi", "bt_trusted"},
+        lists={"wifi", "bt_trusted", "lyrion-server.shares"},
         on_change=state_store.bump_settings_revision,
     )
 
@@ -2162,6 +2172,74 @@ async def main() -> None:
             asyncio.ensure_future(_fanart_ahead(upcoming))
 
     state_store.subscribe(follow_fanart)
+
+    # ADR-0115: the Lyrion server's music folders - the Music folder, USB
+    # disks, network shares - kept in its own list while it is switched on.
+    lyrion_shares = LyrionShares(settings_store)
+
+    async def _lyrion_rpc(command: list) -> dict:
+        async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=10)) as session:
+            async with session.post("http://127.0.0.1:9000/jsonrpc.js",
+                                    json={"id": 1, "method": "slim.request", "params": ["", command]}) as r:
+                return (await r.json(content_type=None)).get("result") or {}
+
+    lyrion_wake = asyncio.Event()
+    #: ADR-0115 decision 12: asked once, through Lyrion's own plugin page; a
+    #: restart loads them; asked again if they are still missing ten minutes
+    #: on. Once they are all in, never again - one removed later stays removed.
+    lyrion_asked = {"at": None, "restarted": False}
+
+    async def _lyrion_addons() -> None:
+        if LYRION_ADDONS_DONE.exists():
+            return
+        async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=60)) as session:
+            async with session.get("http://127.0.0.1:9000" + lyrion_addons.PAGE) as r:
+                page = await r.text(errors="replace")
+            missing = lyrion_addons.missing(page)
+            if not missing:
+                LYRION_ADDONS_DONE.parent.mkdir(parents=True, exist_ok=True)
+                LYRION_ADDONS_DONE.touch()
+                logger.info("lyrion: add-ons installed (%s)", ", ".join(lyrion_addons.WANTED))
+                return
+            now = time.monotonic()
+            if lyrion_asked["at"] is None or now - lyrion_asked["at"] > LYRION_ADDONS_RETRY_S:
+                action, fields = lyrion_addons.submission(page)
+                async with session.post("http://127.0.0.1:9000" + action, data=fields) as r:
+                    logger.info("lyrion: asked Lyrion to install %s (%s)", ", ".join(missing), r.status)
+                lyrion_asked.update(at=now, restarted=False)
+                return
+        if not lyrion_asked["restarted"] and now - lyrion_asked["at"] > LYRION_ADDONS_RESTART_S:
+            # Lyrion loads a plugin it installed only at its next start.
+            lyrion_asked["restarted"] = True
+            await asyncio.create_subprocess_exec("systemctl", "restart", "gexis-lyrion.service")
+
+    async def _lyrion_folders_loop() -> None:
+        """Shares mounted while the server is on and unmounted while it is
+        off; then its folders brought up to date. Woken early when a share
+        is added or forgotten."""
+        while True:
+            try:
+                await asyncio.wait_for(lyrion_wake.wait(), LYRION_FOLDERS_S)
+            except asyncio.TimeoutError:
+                pass
+            lyrion_wake.clear()
+            on = settings.value("lyrion-server.enabled") is True
+            try:
+                await asyncio.to_thread(lyrion_shares.mount_all if on else lyrion_shares.unmount_all)
+            except Exception:  # noqa: BLE001 - one bad share must not stop the rest
+                logger.exception("lyrion: shares")
+            if not on:
+                continue
+            try:
+                await lyrion_folders.sync(_lyrion_rpc)
+            except Exception as exc:  # starting, stopped, scanning: next time
+                logger.debug("lyrion: folders not synced (%r)", exc)
+            try:
+                await _lyrion_addons()
+            except Exception as exc:  # no internet yet, or the server is busy
+                logger.debug("lyrion: add-ons not checked (%r)", exc)
+
+    asyncio.ensure_future(_lyrion_folders_loop())
     # ADR-0040 §1: LMS's own plugin first where it answers, the key-free
     # providers behind it and for the renderers that have no LMS ids.
     http = Http()
@@ -2516,6 +2594,10 @@ async def main() -> None:
         pairing_answer=pairing_agent.answer,
         # ADR-0083: what "restart the device" means is the daemon's to say.
         restore=_restore_done,
+        lyrion_shares=lyrion_shares,
+        lyrion_shares_changed=lambda: lyrion_wake.set(),
+        own_server=lambda: (f"{device_name.address()}:9000"
+                            if settings.value("lyrion-server.enabled") is True and device_name.address() else None),
         # ADR-0086: the panel asks for a source's mark by id; the daemon is
         # the only thing that knows where manifests live.
         plugins=installed_plugins,

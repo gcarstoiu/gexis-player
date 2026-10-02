@@ -10,7 +10,7 @@ for unit in gexis-core gexis-meter gexis-park gexis-kiosk gexis-panel-warmup gex
 	squeezelite go-librespot gexis-bluetooth-setup gexis-splash-backstop.timer; do
 	[ "$(systemctl is-enabled "${unit}")" = enabled ] || { echo "ERROR: ${unit} is not enabled" >&2; exit 1; }
 done
-for unit in beszel-agent beszel-hub plexamp gexis-plexamp; do
+for unit in beszel-agent beszel-hub gexis-lyrion plexamp gexis-plexamp; do
 	[ "$(systemctl is-enabled "${unit}")" = disabled ] || { echo "ERROR: ${unit} should ship disabled" >&2; exit 1; }
 done
 for unit in alsa-restore nmbd samba-ad-dc plymouth-quit plymouth-quit-wait; do

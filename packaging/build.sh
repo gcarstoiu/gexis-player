@@ -70,7 +70,7 @@ mkdir -p packaging/out
 # The skin packs (ADR-0111) are built with the rest, and the release carries
 # them all; the image installs none (decision 9: 01-packages leaves them out).
 SKIN_PACKS="skins-1920x1080 skins-1280x400 skins-1480x320 skins-800x480 skins-1280x800"
-for pkg in ${*:-core ui system skins $SKIN_PACKS peppyalsa peppy-engines go-librespot beszel-agent beszel-hub plexamp player}; do
+for pkg in ${*:-core ui system skins $SKIN_PACKS peppyalsa peppy-engines go-librespot beszel-agent beszel-hub lyrion-server plexamp player}; do
 	case "$pkg" in
 		skins-*) script=/src/packaging/skin-packs/build.sh; extra=${pkg#skins-} ;;
 		*) script="/src/packaging/$pkg/build.sh"; extra="" ;;

@@ -109,6 +109,9 @@ class StateServer:
         radio=None,
         pairing_answer=None,
         restore=None,
+        lyrion_shares=None,
+        lyrion_shares_changed=None,
+        own_server=None,
         plugins=(),
         splash=None,
         setup=None,
@@ -165,6 +168,12 @@ class StateServer:
         #: the daemon owns what "restart the device" means, and a test can
         #: watch it without one.
         self._restore = restore
+        #: ADR-0115: the Lyrion server's network shares.
+        self._lyrion_shares = lyrion_shares
+        self._lyrion_shares_changed = lyrion_shares_changed
+        #: ADR-0115 decision 2: this device's own Lyrion server, offered among
+        #: the servers while it is on - never chosen for the user.
+        self._own_server = own_server
         self._splash = splash
         #: ADR-0104: the setup network's status, for the panel and the phone.
         self._setup = setup
@@ -1208,7 +1217,7 @@ class StateServer:
 
     #: Where a `list` row's items come from - ADR-0044 §1's first open
     #: question, now answered for all three.
-    LIST_SOURCES = ("wifi", "lms_server", "bt_trusted", "restore")
+    LIST_SOURCES = ("wifi", "lms_server", "bt_trusted", "restore", "lyrion-server.shares")
 
     async def _list_row(self, request: web.Request):
         """The `list` row named in the path, or a response explaining why
@@ -1237,6 +1246,10 @@ class StateServer:
             return web.json_response({"items": await wifi.scan()})
         if key == "bt_trusted":
             return web.json_response({"items": await self._bluetooth(bluetooth_devices.known)})
+        if key == "lyrion-server.shares":
+            if self._lyrion_shares is None:
+                return web.json_response({"items": []})
+            return web.json_response({"items": await asyncio.to_thread(self._lyrion_shares.items)})
         if key == "restore":
             # ADR-0083. Read from the share every time: somebody may have
             # copied one in from another machine since the sheet last opened,
@@ -1248,7 +1261,13 @@ class StateServer:
         # the setting stores; the human name is the line underneath.
         current = str(self._settings.value("lms_server") or "")
         items = []
+        own = self._own_server() if self._own_server else None
+        if own:
+            items.append({"name": own, "meta": "This player's own server", "bars": None,
+                          "state": "current" if own == current else "found"})
         for server in await discovery.find_servers():
+            if own and server["address"] == own:
+                continue
             meta = " · ".join(part for part in (server["name"], server["version"]) if part)
             items.append(
                 {
@@ -1270,6 +1289,23 @@ class StateServer:
             action = body.get("action", "join")
         except (ValueError, KeyError, TypeError):
             return web.json_response({"error": 'body must be {"name": ..., "action": ...}'}, status=400)
+        if key == "lyrion-server.shares":
+            # ADR-0115: added, or forgotten; the mount follows in the core's
+            # loop while the server is on.
+            if self._lyrion_shares is None:
+                return web.json_response({"ok": False, "error": "shares are not wired up"})
+            try:
+                if action == "add":
+                    await asyncio.to_thread(self._lyrion_shares.add, name, body.get("user"), body.get("password"))
+                elif action == "forget":
+                    await asyncio.to_thread(self._lyrion_shares.forget, name)
+                else:
+                    return web.json_response({"error": f"unknown action {action}"}, status=400)
+            except ValueError as exc:
+                return web.json_response({"ok": False, "error": f"Needs {exc}"})
+            if self._lyrion_shares_changed is not None:
+                self._lyrion_shares_changed()
+            return web.json_response({"ok": True, "error": None})
         if key == "bt_trusted":
             if action != "forget":
                 return web.json_response({"error": f"unknown action {action}"}, status=400)

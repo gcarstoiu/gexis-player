@@ -147,6 +147,17 @@
       };
     }
     if (!manual) return row;
+    // ADR-0115: a network share is three fields, not one value.
+    if (row.kind === 'share') {
+      return {
+        ...row,
+        type: 'share',
+        label: 'Add a share',
+        note: 'A folder on a NAS or a computer. SMB needs a user and password; NFS needs only the address.',
+        confirm: 'Add',
+        wired: true,
+      };
+    }
     return {
       ...row,
       type: 'text',
@@ -602,7 +613,11 @@
     });
   }
 
+  //: ADR-0115: the share being added.
+  let share = $state({ address: '', user: '', password: '' });
+
   function enterManual() {
+    share = { address: '', user: '', password: '' };
     manual = true;
     draft = String(rowOf(sheetKey)?.value ?? '');
   }
@@ -613,6 +628,8 @@
     // Choosing a server is a write; joining a network is a command. The row
     // that stores a value and the row that performs one are the same type,
     // and `kind` is what tells them apart (ADR-0044 §1).
+    // ADR-0115: a share's row says how it is; Forget is beside it.
+    if (row.kind === 'share') return;
     if (row.kind === 'server') {
       closeSheet();
       // Tapping the server already in use says "that one", so the sheet
@@ -739,6 +756,21 @@
     }
     if (joinItem) {
       doJoin(joinItem.name, draft);
+      return;
+    }
+    if (row.type === 'share') {
+      // ADR-0115: added, then mounted by the core; the list says how that went.
+      const key = sheetKey;
+      const { address, user, password } = share;
+      await command({ name: address.trim(), action: 'add', user: user.trim() || null, password: password || null }, (answer) => {
+        if (!answer.ok) {
+          flash(answer.error ?? 'Could not add it');
+          return;
+        }
+        manual = false;
+        flash(`${address.trim()} added`);
+        openList(key);
+      });
       return;
     }
     if (row.type === 'toggle') {
@@ -1430,6 +1462,15 @@
             <span>{withUnit(String(sheet.max).replace('-', MINUS), sheet.unit)}</span>
           </div>
         </div>
+      {:else if sheet.type === 'share'}
+        <!-- ADR-0115: SMB as //nas/music with a user and a password; NFS as
+             nas:/music, with neither. -->
+        <input class="field" type="text" placeholder="//nas/music or nas:/music" bind:value={share.address}
+          autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="Share address" />
+        <input class="field" type="text" placeholder="User (SMB)" bind:value={share.user}
+          autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="User" />
+        <input class="field" type="password" placeholder="Password (SMB)" bind:value={share.password}
+          autocomplete="off" aria-label="Password" />
       {:else if sheet.wired && sheet.type === 'text'}
         <!-- The panel and the phone take the same input; a panel without a
              keyboard attached reads every setting and changes every one that
@@ -1463,7 +1504,7 @@
             Cancel
           {/if}
         </button>
-        {#if join === 'error' || joinItem || restorePending || choicePending !== null || sheet.type === 'action' || sheet.type === 'toggle' || sheet.type === 'text' || (sheet.type === 'number' && !sheet.wired) || (sheet.type === 'list' && sheet.manual && !searching)}
+        {#if join === 'error' || joinItem || restorePending || choicePending !== null || sheet.type === 'action' || sheet.type === 'toggle' || sheet.type === 'text' || sheet.type === 'share' || (sheet.type === 'number' && !sheet.wired) || (sheet.type === 'list' && sheet.manual && !searching)}
           <button
             class="btn btn--confirm"
             class:btn--danger={sheet.danger || restorePending || choicePending !== null}

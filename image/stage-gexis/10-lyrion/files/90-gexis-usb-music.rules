@@ -1,0 +1,6 @@
+# ADR-0115: a USB disk plugged in is mounted read-only under /media/gexis-usb,
+# by its filesystem's UUID, and the core offers it to the Lyrion server as a
+# music folder. systemd-mount ties the mount to the device, so unplugging it
+# takes the mount away (--collect cleans up after a failed one).
+ACTION=="add", SUBSYSTEM=="block", ENV{ID_BUS}=="usb", ENV{ID_FS_USAGE}=="filesystem", ENV{ID_FS_UUID}=="?*", \
+  RUN{program}+="/usr/bin/systemd-mount --no-block --collect --options=ro,nosuid,nodev,noexec $devnode /media/gexis-usb/$env{ID_FS_UUID}"

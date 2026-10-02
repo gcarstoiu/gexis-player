@@ -465,3 +465,24 @@ async def test_a_device_with_no_wifi_at_all_reports_nothing(monkeypatch):
     wifi._connected = None
     assert await wifi.refresh_connected() is None
     assert wifi.connected_ssid() is None
+
+
+@pytest.mark.asyncio
+async def test_this_player_s_own_server_is_offered_not_chosen(tmp_path, monkeypatch):
+    """ADR-0115 decision 2 (George: "User decides which server to use"): while
+    the Lyrion server plugin is on, it is in the list, once, and nothing is
+    written for the user."""
+    async def find_servers(*_a, **_k):
+        return [{"address": "10.0.0.5:9000", "name": "gexis", "version": "9.1.1", "uuid": ""},
+                {"address": "1.2.3.4:9000", "name": "Home", "version": "9.1.1", "uuid": ""}]
+
+    monkeypatch.setattr(discovery, "find_servers", find_servers)
+    store = SettingsStore(tmp_path / "s.db")
+    settings = Settings(store, registry=LISTS, wired={"lms_server": None})
+    server = StateServer(StateStore({}), settings=settings, own_server=lambda: "10.0.0.5:9000")
+    before = settings.value("lms_server")
+    async with TestClient(TestServer(server.make_app())) as client:
+        items = (await (await client.get("/settings/lms_server/items")).json())["items"]
+    assert [i["name"] for i in items] == ["10.0.0.5:9000", "1.2.3.4:9000"], "first, and only once"
+    assert items[0]["meta"] == "This player's own server" and items[0]["state"] == "found"
+    assert settings.value("lms_server") == before, "offered, never chosen"
