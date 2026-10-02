@@ -45,6 +45,7 @@ image/stage-gexis/05-peppy/files/gexis-peppy-start /usr/bin/gexis-peppy-start
 image/stage-gexis/05-peppy/files/gexis-peppy-driver.py /opt/gexis-peppy/driver.py
 image/stage-gexis/05-peppy/files/gexis_peppy_render.py /opt/gexis-peppy/gexis_peppy_render.py
 image/stage-gexis/05-peppy/files/gexis_peppy_motion.py /opt/gexis-peppy/gexis_peppy_motion.py
+image/stage-gexis/05-peppy/files/gexis_peppy_fanart.py /opt/gexis-peppy/gexis_peppy_fanart.py
 image/stage-gexis/05-peppy/files/gexis_peppy_gauges.py /opt/gexis-peppy/gexis_peppy_gauges.py
 image/stage-gexis/05-peppy/files/badge-slots.json /opt/gexis-peppy/badge-slots.json
 image/stage-gexis/05-peppy/files/peppy-meter.txt /opt/gexis-peppy/peppymeter/config.txt
