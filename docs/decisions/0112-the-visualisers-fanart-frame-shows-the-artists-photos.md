@@ -1,7 +1,7 @@
 # ADR-0112 — The visualiser's fanart frame shows the artist's photos
 
-**Status:** **Proposed** — George decided to do it (2026-10-02: *"Fanart -
-yes, we do it"*); the choices under *For George* are open.
+**Status:** **Accepted** — George, 2026-10-02: *"Fanart - yes, we do it"*,
+then *"1.B 2. Agree 3. Agree 4. 20 seconds is fine."*
 **Phase:** 13b ([DEVELOPMENT.md](../DEVELOPMENT.md)), with ADR-0111's packs.
 **Builds on:**
 - [ADR-0111](0111-skin-sets-follow-the-screen.md) (the packs that carry the
@@ -52,20 +52,17 @@ with nothing are collaborations.
 4. **Bounded:** at most 10 photos per artist, decoded no larger than the
    frame; the cache trimmed oldest first at a fixed size.
 
-## For George
+## Decided (George, 2026-10-02)
 
-1. **Which music gets photos.**
-   - **A:** LMS's own tracks only - the artist id is exact.
-   - **B (recommended):** also Spotify, Bluetooth and plugins, when their
-     artist's name matches an LMS artist exactly. A name that matches
-     nothing gets no photos.
-2. **A collaboration** ("Snoop Dogg feat. Mystikal", "X & Y"): the first
-   named artist's photos (recommended), or none.
+1. **Which music gets photos: B.** LMS's own tracks by artist id; Spotify,
+   Bluetooth and plugins when their artist's name matches an LMS artist
+   exactly (letter case aside). A name that matches nothing gets no photos.
+2. **A collaboration** ("Snoop Dogg feat. Mystikal", "X & Y") gets the first
+   named artist's photos (*"Agree"*).
 3. **An artist with no photos:** the frame shows the skin's own background,
-   as it does today (recommended), or the album art fitted into it.
-4. **How often the photo changes:** every 20 seconds with a crossfade,
-   in the order the plugin gives them (recommended); fixed, no setting. If it
-   should be a setting, it goes to ADR-0022's inventory first.
+   as today (*"Agree"*).
+4. **The photo changes every 20 seconds, with a crossfade,** in the order the
+   plugin gives them. Fixed; not a setting (*"20 seconds is fine"*).
 
 ## Not settled here
 
