@@ -23,7 +23,8 @@ inputs() {
 		# One version for all five: they are built from the same files, and
 		# a pack changes only when one of them does - not with each release.
 		skins-*) echo skins packaging/skin-packs image/stage-gexis/fetch-cached.sh \
-			image/stage-gexis/05-peppy/files/letterbox.py core/src/gexis_core/skin_counts.json ;;
+			image/stage-gexis/05-peppy/files/letterbox.py image/stage-gexis/05-peppy/files/badge-slots.json \
+			core/src/gexis_core/skin_counts.json ;;
 		*) echo . ;;   # the release, and components that carry their own
 	esac
 }

@@ -7,8 +7,9 @@ report and pins.json:
   skin count, the sources with their pins and licences, and each folder;
 - `/usr/share/doc/gexis-skins-<WxH>/copyright`, each source and the licence it
   is taken under (decision 6), `dropped.txt`, every skin, pack and file
-  left out and why (decision 8), and `renamed.txt`, every skin renamed so
-  that no two share a name (decision 13).
+  left out and why (decision 8, and the review), `renamed.txt`, every skin
+  renamed so that no two share a name (decision 13), and `fixed.txt`, every
+  setting corrected (overrides.tsv).
 
     describe.py <report.json> <pins.json> <stage root>
 
@@ -114,6 +115,11 @@ def main(argv: list[str]) -> int:
     d += ["", f"Skins left out as byte-identical repeats ({len(report['dropped_skins'])}):",
           "  (identical keys and values, and identical files behind every file they name)"]
     d += [f"  {s['pack']}: {s['skin']}  =  {s['same_as']}" for s in report["dropped_skins"]] or ["  none"]
+    reviewed = report.get("reviewed", [])
+    d += ["", f"Skins left out after review ({len(reviewed)}): another copy of the same skin",
+          "  draws the metadata as well or better (George, 2026-10-02; packaging/skin-packs/removed.tsv)."]
+    d += [f"  {x['pack']}: {x['skin']}  ->  kept {x['kept']}  ({x['class']}: {x['reason']})"
+          for x in reviewed] or ["  none"]
     d += ["", f"Files left out ({len(report['dropped_files'])}):"]
     d += [f"  {f['pack']}: {f['file']} ({f['reason']})" for f in report["dropped_files"]] or ["  none"]
     (doc / "dropped.txt").write_text("\n".join(d) + "\n")
@@ -125,6 +131,18 @@ def main(argv: list[str]) -> int:
          f"Renamed ({len(report['renamed'])}):"]
     r += [f"  {x['pack']}/{x['file']}: {x['from']}  ->  {x['to']}" for x in report["renamed"]] or ["  none"]
     (doc / "renamed.txt").write_text("\n".join(r) + "\n")
+
+    fixed = report.get("fixed", [])
+    f = [f"Settings {package} corrects (George, 2026-10-02; packaging/skin-packs/overrides.tsv).", "",
+         "One key of one skin each, from the value upstream ships: metadata drawn where it",
+         "cannot be read, or a picture named with a slip of a file the skin's folder has.", "",
+         f"Corrected ({len(fixed)}):"]
+    for x in fixed:
+        was = x["from"] if x["from"] != "-" else "(absent)"
+        f += [f"  {x['pack']}: [{x['skin']}] {x['key']}: {was}  ->  {x['to']}", f"      {x['reason']}"]
+    if not fixed:
+        f.append("  none")
+    (doc / "fixed.txt").write_text("\n".join(f) + "\n")
     return 0
 
 
