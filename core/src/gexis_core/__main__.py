@@ -2358,18 +2358,33 @@ async def main() -> None:
     # panel's first frame; a panel that never draws goes back by itself.
     screen_wait = {"task": None}
 
-    async def _screen_go_back(reason: str) -> None:
-        logger.warning("screen: %s; going back to the screen before", reason)
-        await asyncio.to_thread(screen_apply.revert)
-        # Settings follows: straight to the store, since writing the rows
-        # through Settings would choose the screen again (ADR-0109 as amended
-        # 2026-10-02). None is the row's default: no screen chosen.
+    def _sync_screen_settings() -> None:
+        """**Settings names the screen the device uses**: screen.json is the
+        record, the two rows its reflection. Written straight to the store,
+        since writing the rows through Settings would choose the screen
+        again (ADR-0109 as amended 2026-10-02). None is the row's default:
+        no screen chosen. At start too: a restored backup replaces the
+        settings but not the screen files, which stay the device's - George
+        found Attached screen empty after restoring one from before 13b."""
+        changed = False
         for key, value in screen_apply.settings_of().items():
+            if settings_store.get(key) == value:
+                continue
+            changed = True
             if value is None:
                 settings_store.delete(key)
             else:
                 settings_store.set(key, value)
-        state_store.bump_settings_revision()
+        if changed:
+            logger.info("screen: Settings set to the screen in use")
+            state_store.bump_settings_revision()
+
+    _sync_screen_settings()
+
+    async def _screen_go_back(reason: str) -> None:
+        logger.warning("screen: %s; going back to the screen before", reason)
+        await asyncio.to_thread(screen_apply.revert)
+        _sync_screen_settings()
         state_store.set_screen_confirm(None)
         await asyncio.sleep(1.5)
         await asyncio.create_subprocess_exec("systemctl", "reboot")
