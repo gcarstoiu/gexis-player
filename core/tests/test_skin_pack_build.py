@@ -368,3 +368,45 @@ def test_a_badge_slot_is_measured_from_the_picture(tmp_path):
     Image.new("RGB", (800, 480), (120, 90, 60)).save(tmp_path / "plain.png")
     slot, why = slots.measure({**skin, "screen.bgr": "plain.png"}, tmp_path, (800, 480))
     assert slot is None
+
+
+# ---- display names (George, 2026-10-02: "C") --------------------------------
+
+def test_a_display_name_is_brand_model_variant():
+    import names
+    overrides = names.load_overrides(HERE / "names.tsv")
+    cases = {
+        ("gelo5-420", "113G5_Old Spectrum S+M"): "Old Spectrum · S+M",
+        ("1280x720_g5_710_Turntables", "144G5_01_Naim Turntable"): "Naim · Turntable · art on label",
+        ("1280x720_g5_710_Turntables", "144G5_02_Naim Turntable"): "Naim · Turntable · art as record",
+        ("1280x720_g5_710_Turntables", "144G5_03_Naim Turntable"): "Naim · Turntable · art beside",
+        ("1280x800_t1800_pack7", "t1800_Fisher"): "Fisher",
+        ("1280x800_naim_set", "Naim_Set"): "Naim · Set",
+        ("1280x800_esoteric-grandioso-t1", "esoteric-grandioso-t1"): "Esoteric · Grandioso T1",
+        ("stock", "orange"): "Volumio · Orange",
+        ("stock", "black-white-spectrum"): "Volumio · Black & White · spectrum",
+        ("gelo5", "42G5_Pioneer PLX-500"): "Pioneer · PLX-500",
+        ("gelo5", "33G5_SonyK770 cassette"): "Sony · K770 Cassette",
+        ("gelo5", "81G5_Weston ONLY meters"): "Weston · meters only",
+        ("1920x1080_g5_FanartTape", "405G5_Otari Reel"): "Otari · Reel · fanart",
+        ("1280x720_g5_FanarTurntable", "350G5_Denon DP62 Fanart"): "Denon · DP62 · fanart",
+        ("gelo5", "11G5_Advanced X220"): "Advance · X220",
+        ("800x480_dan_dagostino_mlife", "dan_dagostino_mlife (dan dagostino mlife)"): "Dan D'Agostino · M Life",
+    }
+    for (folder, name), want in cases.items():
+        assert names.label(name, folder, overrides)[0] == want, name
+
+
+def test_names_are_written_unique_and_twins_take_ii(tmp_path):
+    import json
+    import names
+    root = tmp_path / "800x480"
+    for folder, text in (("gelo5", "[12G5_Naim]\n[13G5_Naim 2]\n"), ("800x480_x", "[Naim]\n[Naim2]\n")):
+        d = root / folder / "templates" / "800x480"
+        d.mkdir(parents=True)
+        (d / "meters.txt").write_text(text)
+    assert names.main([str(root), "800x480"]) == 0
+    got = json.loads((root / "names.json").read_text())["names"]
+    assert got["gelo5/12G5_Naim"] == "Naim" and got["800x480_x/Naim"] == "Naim II"
+    assert got["gelo5/13G5_Naim 2"] == "Naim · 2" and got["800x480_x/Naim2"] == "Naim · 2 II"
+    assert len(set(got.values())) == len(got)

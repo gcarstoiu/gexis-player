@@ -1,0 +1,65 @@
+# Display names the rule in names.py gets wrong, by the skin's name with
+# Gelo5's numbering taken off (and a trailing " Fanart"; names.py adds
+# "fanart" back). The label replaces the rule's whole "Brand · Model ·
+# variant", so write the variant here too.
+name	label
+gold	Volumio · Gold
+black-white	Volumio · Black & White
+black-white-spectrum	Volumio · Black & White · spectrum
+black-blue	Volumio · Black & Blue
+black-blue-spectrum	Volumio · Black & Blue · spectrum
+emerald	Volumio · Emerald
+emerald-spectrum	Volumio · Emerald · spectrum
+orange	Volumio · Orange
+dash	Volumio · Dash
+dash-spectrum	Volumio · Dash · spectrum
+galaxy	Volumio · Galaxy
+galaxy-spectrum	Volumio · Galaxy · spectrum
+red	Volumio · Red
+red-spectrum	Volumio · Red · spectrum
+crystal	Volumio · Crystal
+ONLY	Plain
+esoteric-grandioso-t1	Esoteric · Grandioso T1
+Esoteric-T1	Esoteric · T1
+dan_dagostimo_mlife	Dan D'Agostino · M Life
+dan_dagostino_mlife	Dan D'Agostino · M Life
+Dan-Dagostino-MomentumMxV	Dan D'Agostino · Momentum MxV
+VTEBT-RecordPlayer	Pro-Ject · VT-E BT Record Player
+Pro-ject_VTEBT	Pro-Ject · VT-E BT
+Pro-Ject_ACDC	Pro-Ject · AC/DC
+Pro-Ject_DarkSideOfTheMoon	Pro-Ject · Dark Side of the Moon
+Project-Metallica	Pro-Ject · Metallica
+Led Strypes (With Meters-Calibrated)	Led Strypes · meters only
+Led Strypes (With Meters-Calibrated-Metadata)	Led Strypes · art still
+Led Strypes (With Meters-Calibrated-Metadata Rotation)	Led Strypes · art turning
+Led Strypes (With Meters-Calibrated-Metadata) v1	Led Strypes · art still · 1
+Led Strypes (With Meters-Calibrated-Metadata) v2	Led Strypes · art still · 2
+Led Strypes (With Meters-Calibrated-Metadata Rotation) v1	Led Strypes · art turning · 1
+Led Strypes (With Meters-Calibrated-Metadata Rotation) v2	Led Strypes · art turning · 2
+bo_beosound9000	Bang & Olufsen · BeoSound 9000
+mcintosh_mx100	McIntosh · MX100
+Cyrus_40_st	Cyrus · 40 ST
+quad_platina	Quad · Platina
+Linn-LP12	Linn · LP12
+AudioResearch-S200-1	Audio Research · S200 · 1
+AudioResearch-S200-2	Audio Research · S200 · 2
+nad-6100	NAD · 6100
+nad-6325	NAD · 6325
+nad-d3045	NAD · D3045
+nad-m10-1	NAD · M10 · 1
+nad-m10-2	NAD · M10 · 2
+nad-m10-3	NAD · M10 · 3
+nad-m33-1	NAD · M33
+rose-rs150	Rose · RS150
+rose-rs250	Rose · RS250
+TA_Symphonica	T+A · Symphonica
+crab_01	Crab
+minions_01	Minions
+go_fishing	Go Fishing
+southpark	South Park
+southpark2	South Park II
+volumio2	Volumio II
+Redbull	Red Bull
+cassettedeck-2	Cassette Deck · 2
+cassettedeck-3	Cassette Deck · 3
+BandRecorder-1	Band Recorder
