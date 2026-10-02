@@ -56,7 +56,8 @@ image/stage-gexis/07-beszel/files/plugin.json /usr/share/gexis/plugins/beszel/pl
 image/stage-gexis/07-beszel/files/beszel-hub.service /usr/lib/systemd/system/beszel-hub.service
 image/stage-gexis/07-beszel/files/plugin-hub.json /usr/share/gexis/plugins/beszel-hub/plugin.json
 image/stage-gexis/10-lyrion/files/plugin.json /usr/share/gexis/plugins/lyrion-server/plugin.json
-image/stage-gexis/10-lyrion/files/gexis.conf /etc/systemd/system/lyrionmusicserver.service.d/gexis.conf
+image/stage-gexis/10-lyrion/files/gexis-lyrion.service /usr/lib/systemd/system/gexis-lyrion.service
+image/stage-gexis/10-lyrion/files/lyrion.env /usr/share/gexis/components/lyrion.env
 image/stage-gexis/10-lyrion/files/gexis-music.conf /etc/samba/smb.conf.d/gexis-music.conf
 EOF
 

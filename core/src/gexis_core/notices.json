@@ -601,6 +601,18 @@
       ]
     },
     {
+      "name": "Lyrion Music Server",
+      "group": "renderer",
+      "role": "The music server the Lyrion server plugin runs: the player's own library server, off unless you switch it on.",
+      "author": "The Lyrion community; originally Slim Devices and Logitech",
+      "licence": "GPL-2.0 for its server code; its other parts under the terms its own notice names",
+      "url": "https://lyrion.org",
+      "arrives": "Fetched on the device from the Lyrion community when the server is switched on, checked against a pinned checksum; not in the image",
+      "sources": [
+        "downloads.lms-community.org"
+      ]
+    },
+    {
       "name": "MusicBrainz and the Cover Art Archive",
       "group": "services",
       "role": "Album, artist and cover information.",

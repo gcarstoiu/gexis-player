@@ -3,7 +3,7 @@
   "name": "Lyrion server",
   "kind": "service",
   "area": "sources",
-  "unit": "lyrionmusicserver.service",
+  "unit": "gexis-lyrion.service",
   "port": 9000,
   "settings": []
 }
