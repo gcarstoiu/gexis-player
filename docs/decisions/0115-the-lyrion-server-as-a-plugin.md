@@ -21,7 +21,7 @@ the player.
 
 On George's player (0.7.0, measured 2026-10-02): every dependency is present
 but `libcrypt-openssl-rsa-perl`, which joins the image; 3.8 GB of memory with
-2.3 GB available while it plays; 48 GB free on its 57 GB card.
+2.3 GB available (whether it was playing was not checked); 48 GB free on its 57 GB card.
 
 Settled in Phase 13e already (George, 2026-10-02): **music comes first**, and
 the effect of a scan on playback is measured; it **may need more than 13a's
