@@ -38,9 +38,11 @@ per artist, from what it already talks to?
   Discogs serves at most about 600 px - smaller than a 1920×1080 frame needs.
 - **Cost:** a median 747 ms per artist, uncached (the plugin goes to the
   network), in line with Finding 035's 500-900 ms.
-- **Every artist with nothing** in the sample was a collaboration, a
-  numbered track name or an obscure name ("Purple Disco Machine, Dabeull",
-  "Laura Pausini & Andrea Bocelli", "Heydeon").
+- **16 of the 29 with nothing are collaborations** ("X feat. Y", "X & Y",
+  comma- or slash-joined credits); each named artist may well have photos of
+  its own. The other 13 are single names, mostly session musicians and
+  producers (Daz and Reginald Noble among them, both known artists - so a
+  missing photo is not always an obscure artist).
 
 ## What it bears on
 
