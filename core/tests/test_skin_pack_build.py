@@ -370,6 +370,23 @@ def test_a_badge_slot_is_measured_from_the_picture(tmp_path):
     assert slot is None
 
 
+def test_a_box_wider_than_its_window_is_measured_around_the_mark(tmp_path):
+    """slots.py (George, 2026-10-02): the box overflows the window the mark
+    sits in, so the fill around the box fails; the window around the mark,
+    which has room for it, is the slot."""
+    Image = pytest.importorskip("PIL.Image")
+    import slots
+    picture = Image.new("RGB", (800, 480), (120, 90, 60))
+    picture.paste((10, 10, 10), (410, 195, 490, 255))       # a window, 80x60
+    picture.save(tmp_path / "bg.png")
+    skin = {"screen.bgr": "bg.png", "playinfo.type.pos": "380,200", "playinfo.type.dimension": "120,40"}
+    assert slots.measure_box(skin, tmp_path, (800, 480))[0] is None
+    assert slots.measure(skin, tmp_path, (800, 480)) == ([410, 195, 490, 255], "measured around the mark")
+    # A title in that window: the skin's display, not the mark's window.
+    slot, why = slots.measure({**skin, "playinfo.title.pos": "420,240"}, tmp_path, (800, 480))
+    assert slot is None and "around the mark" in why
+
+
 # ---- display names (George, 2026-10-02: "C") --------------------------------
 
 def test_a_display_name_is_brand_model_variant():
