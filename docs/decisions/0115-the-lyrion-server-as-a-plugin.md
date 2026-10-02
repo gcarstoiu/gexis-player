@@ -91,6 +91,15 @@ network share**; and **it ships in our releases**.
    disks and the Music folder, every one offered to the server as a music
    folder.
 
+10. **Playlists are saved in a Playlists folder inside the device's Music
+    folder** (*"A"*): writable by Lyrion, visible through the Music share,
+    carried by backups. Everything else Lyrion writes - its database, artwork
+    cache, preferences and logs - is in its own folders
+    (`/var/lib/squeezeboxserver`, `/var/log/squeezeboxserver`), so the music
+    folders and every network share stay read-only. Debian's build of
+    Lyrion sets no playlist folder at all (its `dirsFor('playlists')` is
+    empty), so this is set for it.
+
 ## Open
 
 - **Which of George's server's add-ons come preinstalled** beyond the two
