@@ -191,7 +191,9 @@ becomes:
 - **The question is asked only when choosing the screen changes the
   picture**: a forced mode (`video=`), a scale or a rotation that differs
   from what the screen shows now. A screen driven at its own mode, at scale 1
-  and unrotated - all four tested Waveshare screens - is kept without asking.
+  and unrotated - of the four tested, the 10.1" HDMI LCD (B) - is kept
+  without asking. The 13.3" (drawn at 1.5) and both bars (a forced mode and
+  a turn) are still asked.
   The question guards against a screen left dark or unreadable, and a change
   that alters nothing cannot do that.
 - **After setup, the phone says the question is coming, and it waits 2
