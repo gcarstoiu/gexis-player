@@ -66,6 +66,7 @@ from gexis_core.peppy import (
     set_meter_skins,
     set_meter_smoothing,
 )
+from gexis_core import lyrion_folders
 from gexis_core.fanart import Fanart
 from gexis_core.peppy_metadata import PeppyMetadataWriter, next_track
 from gexis_core.model import BLANK_METADATA, TrackMetadata
@@ -264,6 +265,9 @@ NEVER_DRAWN_S = 120.0
 #: After setup, which ends on the phone rather than beside the panel
 #: (ADR-0109 as amended 2026-10-02, George: "C").
 SETUP_KEEP_S = 120.0
+#: How often the Lyrion server's music folders are compared with what is
+#: mounted (ADR-0115): a USB disk plugged in appears within this.
+LYRION_FOLDERS_S = 20.0
 
 
 def _setup_running(setup: dict | None) -> bool:
@@ -2162,6 +2166,26 @@ async def main() -> None:
             asyncio.ensure_future(_fanart_ahead(upcoming))
 
     state_store.subscribe(follow_fanart)
+
+    # ADR-0115: the Lyrion server's music folders - the Music folder, USB
+    # disks, network shares - kept in its own list while it is switched on.
+    async def _lyrion_rpc(command: list) -> dict:
+        async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=10)) as session:
+            async with session.post("http://127.0.0.1:9000/jsonrpc.js",
+                                    json={"id": 1, "method": "slim.request", "params": ["", command]}) as r:
+                return (await r.json(content_type=None)).get("result") or {}
+
+    async def _lyrion_folders_loop() -> None:
+        while True:
+            await asyncio.sleep(LYRION_FOLDERS_S)
+            if settings.value("lyrion-server.enabled") is not True:
+                continue
+            try:
+                await lyrion_folders.sync(_lyrion_rpc)
+            except Exception as exc:  # starting, stopped, scanning: next time
+                logger.debug("lyrion: folders not synced (%r)", exc)
+
+    asyncio.ensure_future(_lyrion_folders_loop())
     # ADR-0040 §1: LMS's own plugin first where it answers, the key-free
     # providers behind it and for the renderers that have no LMS ids.
     http = Http()

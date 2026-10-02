@@ -32,6 +32,8 @@ install -D -m 644 "$STAGE_DIR/files/gexis-music.conf" \
 	"$STAGE/etc/samba/smb.conf.d/gexis-music.conf"
 install -D -m 644 "$STAGE_DIR/files/server.prefs" \
 	"$STAGE/usr/share/gexis/defaults/lyrion-server.prefs"
+install -D -m 644 "$STAGE_DIR/files/90-gexis-usb-music.rules" \
+	"$STAGE/usr/lib/udev/rules.d/90-gexis-usb-music.rules"
 
 cat > "$STAGE/DEBIAN/postinst" <<'POST'
 #!/bin/sh
