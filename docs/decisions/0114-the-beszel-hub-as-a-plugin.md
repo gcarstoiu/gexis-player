@@ -1,8 +1,8 @@
 # ADR-0114 — The Beszel hub as a plugin
 
-**Status:** **Proposed** — George, 2026-10-02: Phase 13e (*"Beszel Hub -
+**Status:** **Accepted** — George, 2026-10-02: Phase 13e (*"Beszel Hub -
 same reasoning"*), started early (*"While we wait can we already start with
-the beszel hub?"*). The choices under *For George* are open.
+the beszel hub?"*); the choices below answered the same day.
 **Phase:** 13e ([DEVELOPMENT.md](../DEVELOPMENT.md)).
 **Builds on:**
 - [ADR-0087](0087-the-beszel-agent-is-the-first-service-plugin.md) (the agent, the first plugin that is
@@ -35,22 +35,20 @@ agent.
 4. **The memory cap is 13a's 1 GB** unless measuring shows otherwise; the hub
    is a single Go process with an embedded database.
 
-## For George
+## Decided (George, 2026-10-02)
 
-1. **Its port:** **8095** (recommended; free on the player - measured 2026-10-02 it listens on 22, 139, 445, 3678, 8090, 8091, 32500 and one ephemeral port), or another.
-2. **How it arrives:**
-   - **A (recommended):** in the image, off until switched on, like the
-     agent - 12 MB, no download, no consent question.
-   - **B:** downloaded from the release when switched on, like the skin packs.
-3. **The first account:** made on the hub's own page at the first visit,
-   as upstream does (recommended), or set in Settings beforehand.
-4. **This device's own agent:** when both are on, the agent is connected to
-   the local hub automatically, so the player's own history appears with no
-   copying of keys (recommended), or left to the user as today.
-5. **Settings** (for ADR-0022's inventory, appended only after you confirm):
-   the hub has its own login and settings page, so the plugin itself needs
-   none beyond its switch; the Plugins row shows its address
-   (`http://<name>.local:8095`).
+1. **Port 8095** (*"It's fine"*). Free on the player: measured that day it
+   listens on 22, 139, 445, 3678, 8090, 8091, 32500 and one ephemeral port.
+2. **In the image, off until switched on, like the agent** (*"Off like the
+   agent. Comes with the image."*).
+3. **The first account is made on the hub's own page** at the first visit,
+   as upstream does (*"Created on the hubs own page"*).
+4. **The device's own agent is not connected to it automatically:** the
+   user adds it in the hub, as with any other system (*"Leave connection to
+   user"*).
+5. **No settings beyond the plugin's switch;** the Plugins row shows its
+   address, `http://<name>.local:8095` (*"Agree"*). Nothing goes to
+   ADR-0022's inventory.
 
 ## Not settled here
 
