@@ -349,9 +349,10 @@ reverted, currently-flashed image predates this fix.
                                             IQaudio DAC+ first. ADR first
 13e server plugins                       decided 2026-10-02 (George): after 13d,
                                             before the first public release. Lyrion
-                                            server, Beszel hub, Pi-hole, AdGuard
-                                            Home. ADR first (one DNS at a time,
-                                            playback first, where LMS's music is)
+                                            server and Beszel hub, shipped in our
+                                            releases; music first, scan impact
+                                            measured. Pi-hole and AdGuard deferred.
+                                            ADR first
 14 themes                                 cut out of 10. ADR-0016 calls themes
                                             plugins and plugins processes; a
                                             theme has no process - settle that
