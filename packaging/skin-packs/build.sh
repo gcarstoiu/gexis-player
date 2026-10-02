@@ -110,6 +110,9 @@ python3 "$HERE/describe.py" "$WORK/report.json" "$HERE/pins.json" "$STAGE"
 # Each skin's badge slot, measured here in this pack's pixels; the reviewed
 # 1280x800 table stands for the skins it was reviewed on (slots.py).
 python3 "$HERE/slots.py" "$ROOT" "$SIZE" - "$FILES/badge-slots.json"
+# Each skin's display name, "Brand · Model · variant" (George, 2026-10-02);
+# the skin's own name stays its key. Fails on two skins reading the same.
+python3 "$HERE/names.py" "$ROOT" "$SIZE" "$HERE/names.tsv"
 # Setup names how many skins a screen gets before the device can download
 # anything (ADR-0111 decision 4), from the core's own copy of the counts: a
 # pack that disagrees with it is not built.
