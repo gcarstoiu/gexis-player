@@ -1,8 +1,8 @@
 # ADR-0115 — The Lyrion server as a plugin
 
-**Status:** **Proposed** — George, 2026-10-02: Phase 13e (*"Lyrion server -
-this way an user can have the client and server"*), started that evening.
-The choices under *For George* are open.
+**Status:** **Accepted** — George, 2026-10-02: Phase 13e (*"Lyrion server -
+this way an user can have the client and server"*), its choices answered that
+evening; two small points open below.
 **Phase:** 13e ([DEVELOPMENT.md](../DEVELOPMENT.md)).
 **Builds on:** [ADR-0114](0114-the-beszel-hub-as-a-plugin.md) (a server as a
 `service` plugin, in the image and off), [ADR-0107](0107-our-parts-as-debian-packages.md).
@@ -46,27 +46,38 @@ network share**; and **it ships in our releases**.
 5. **Its preferences in backups;** its database and artwork cache are not
    (rebuilt by a rescan), which keeps backups small.
 
-## For George
+## Decided (George, 2026-10-02)
 
-1. **How it arrives:**
-   - **A (recommended):** in the image, off until switched on, like the
-     hub. The image grows by about 100 MB installed.
-   - **B:** downloaded from the release when switched on.
-2. **The player and its own server:** when the plugin is switched on, the
-   player's Lyrion address becomes this device **automatically**
-   (recommended; Phase 13e criterion 3), and switching it off puts back the
-   address it had. Or left to the user.
-3. **The music folders, as settings** (each for ADR-0022's inventory, after
-   you confirm):
-   - **USB disk:** any USB disk plugged in is mounted read-only and offered
-     to the server (recommended: automatic, no setting).
-   - **The device's own storage:** a folder **Music**, shared on the network
-     like the Pictures share (ADR-0049), so music is copied onto it from a
-     computer (recommended).
-   - **A network share:** settings for its address (`//server/music`), user
-     and password; mounted read-only.
-4. **Where the server's own settings live:** in Lyrion's own web page, as
-   upstream (recommended), with only the music locations in our Settings.
+1. **In the image, off until switched on,** like the hub (*"Agree"*).
+2. **The player does not switch to its own server by itself** (*"User
+   decides which server to use. No automatic switch is made when the
+   lyrion server is turned on"*). Phase 13e criterion 3 changes with it: the
+   player's own server is **offered** where a server is chosen, not chosen
+   for the user.
+3. **The music folders** (*"Agreed to those mentioned"*), each proposed for
+   ADR-0022's inventory before it is built:
+   - **a USB disk**, mounted read-only and offered to the server when plugged
+     in, with no setting;
+   - **a Music folder on the device**, shared on the network like the
+     Pictures share;
+   - **a network share** - which is how a NAS is reached (*"How about mounting
+     network shares from a Nas?"*): its address, user and password, mounted
+     read-only.
+4. **Lyrion's own settings stay on its own web page**; ours hold only the
+   music locations (*"Agree"*).
+5. **Preinstalled Lyrion plugins** (*"Can we also have it pre installed with
+   the material skin and the plugins we already recommend having?"*):
+   **Material Skin**, and **Music & Artist Information**, which the player
+   already relies on for artist photos, biographies and the fanart
+   slideshow (ADR-0040, ADR-0112). Each at a pinned version, enabled, its
+   licence in Legal and Credits.
+
+## Open
+
+- **NFS beside SMB** for the network share: a NAS offers both; NFS needs an
+  address and no password.
+- **Any other plugin George's own server runs** that should come
+  preinstalled.
 
 ## Not settled here
 

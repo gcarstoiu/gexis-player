@@ -2788,8 +2788,9 @@ ADR-0022's inventory first).
    other (13a), sandboxed, with its own status line.
 2. **Playback is unaffected:** no gap or click in a stream from any renderer
    while each server runs under load (an LMS scan), measured on the Pi 4.
-3. **The player finds its own LMS** when that plugin is installed, with no
-   address typed.
+3. **The player offers its own LMS** where a server is chosen, when that
+   plugin is on, with no address typed - and never switches to it by itself
+   (ADR-0115, George: *"User decides which server to use"*).
 4. **Removing a plugin leaves the player as it was,** its data kept or
    deleted as the user chooses.
 
