@@ -640,6 +640,27 @@
     return m ? { ord: m[1], label: m[2] } : { ord: '', label: String(name) };
   }
 
+  //: **Swipe between skins on a phone** (George, 2026-10-02): left for the
+  //: next, right for the one before, in the list's order. Only a mostly
+  //: sideways stroke counts, so scrolling the pane still scrolls.
+  let swipeFrom = null;
+  const SWIPE_PX = 50;
+  function swipeStart(e) {
+    if (wide || e.pointerType === 'mouse') return;
+    swipeFrom = { x: e.clientX, y: e.clientY };
+  }
+  function swipeEnd(e, options) {
+    const from = swipeFrom;
+    swipeFrom = null;
+    if (!from || !pickerView) return;
+    const dx = e.clientX - from.x;
+    const dy = e.clientY - from.y;
+    if (Math.abs(dx) < SWIPE_PX || Math.abs(dx) < 2 * Math.abs(dy)) return;
+    const at = options.indexOf(pickerView);
+    const to = at + (dx < 0 ? 1 : -1);
+    if (at >= 0 && to >= 0 && to < options.length) pickerView = options[to];
+  }
+
   //: The one write the picker makes, from the button under the preview.
   //: **The picker stays open** on the skin just chosen, now In use (George,
   //: 2026-10-02: "once a skin is selected, stay on the selecting screen ...
@@ -1084,7 +1105,13 @@
         {#if viewing}
           {@const p = parts(viewing)}
           {@const isCurrent = viewing === inUse}
-          <div class="pane" class:pane--over={!wide}>
+          <div
+            class="pane"
+            class:pane--over={!wide}
+            onpointerdown={(e) => swipeStart(e)}
+            onpointerup={(e) => swipeEnd(e, options)}
+            onpointercancel={() => (swipeFrom = null)}
+          >
             {#if !wide}
               <div class="pane__back">
                 <button
@@ -2662,6 +2689,9 @@
   }
   /* Below 720px there is no room for both, so the pane covers the list and
      carries its own way back to it. */
+  /* Sideways strokes are ours (the swipe between skins); up and down still
+     scroll the pane. */
+  .pane--over { touch-action: pan-y; }
   .pane--over {
     position: absolute;
     inset: 0;
