@@ -2750,6 +2750,53 @@ what the device can learn by itself:
 5. **A USB DAC is tried once,** if one is to hand. Otherwise its state is
    *Detected*, untried.
 
+### Phase 13e — Server plugins: the other half of what the player uses
+
+**Decided 2026-10-02** (George): its own phase, after 13d and before the
+first public release. Four plugins, each the server side of something a
+player owner already runs, so one box can be both:
+
+1. **Lyrion Music Server** - the player is already its client; with the
+   server too, a household needs no second machine.
+2. **Beszel hub** - the Beszel agent is already a plugin (ADR-0087); the hub
+   is what it reports to.
+3. **Pi-hole** - network-wide ad and tracker blocking.
+4. **AdGuard Home** - the same job, a different product.
+
+**An ADR before anything is built.** What it must settle, each a decision
+for George:
+- **Pi-hole and AdGuard Home both answer DNS on port 53,** so at most one
+  runs at a time. Does the Plugins screen offer both and refuse the second,
+  or offer one?
+- **A DNS server on the player makes the network depend on the player:** if
+  it is off or restarting, every device that uses it stops resolving names.
+  The player gets its address by DHCP today. What a user is told, and whether
+  a fixed address comes with it.
+- **Whether playback stays first.** A server takes CPU and memory from the
+  device whose job is audio: LMS scans a library, the hub keeps history. 13a
+  caps a plugin at 1 GB (Finding 102). Is that cap right for LMS, and is a
+  scan allowed to run while music plays?
+- **Where the music is for LMS:** a USB disk, a network share, or both, and
+  how the user chooses it.
+- **How each arrives:** redistributed from our releases where its licence
+  allows (ADR-0111's way) or fetched on the device (ADR-0100's). The
+  licences, to be confirmed: LMS GPL-2.0, Beszel MIT, Pi-hole EUPL-1.2,
+  AdGuard Home GPL-3.0.
+- **Their settings,** each proposed for ADR-0022's inventory first.
+
+**Acceptance (draft, for the ADR):**
+
+1. **Each installs, runs and is removed** from the Plugins screen like any
+   other (13a), sandboxed, with its own status line.
+2. **Playback is unaffected:** no gap or click in a stream from any renderer
+   while each server runs under load (an LMS scan, a busy DNS), measured on
+   the Pi 4.
+3. **The player finds its own LMS** when that plugin is installed, with no
+   address typed.
+4. **Only one DNS server can be on,** and the Plugins screen says why.
+5. **Removing a plugin leaves the player as it was,** its data kept or
+   deleted as the user chooses.
+
 ### Phase 14 — Themes
 
 **Cut out of Phase 10 on 2026-09-25** (George): *"Themes to be cut out and have

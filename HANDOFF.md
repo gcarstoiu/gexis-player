@@ -347,6 +347,11 @@ reverted, currently-flashed image predates this fix.
 13d DACs we have not tested             decided 2026-10-01 (George): after 13b,
                                             from Volumio's list; the DAC2 HD and
                                             IQaudio DAC+ first. ADR first
+13e server plugins                       decided 2026-10-02 (George): after 13d,
+                                            before the first public release. Lyrion
+                                            server, Beszel hub, Pi-hole, AdGuard
+                                            Home. ADR first (one DNS at a time,
+                                            playback first, where LMS's music is)
 14 themes                                 cut out of 10. ADR-0016 calls themes
                                             plugins and plugins processes; a
                                             theme has no process - settle that
