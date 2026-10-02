@@ -272,6 +272,8 @@ class MetadataLayer:
         self._skin: dict[str, str] = {}
         self._skin_name: str | None = None
         self._slots = load_badge_slots()
+        #: Each skin pack's own slots, by pack root (ADR-0111): read once.
+        self._pack_slots: dict[Path, dict[str, tuple[int, int, int, int]] | None] = {}
         self._background: pygame.Surface | None = None
         self._painted: list[pygame.Rect] = []
         # What `_painted` holds, as drawn: (stratum, picture, where), so an
@@ -350,6 +352,24 @@ class MetadataLayer:
         if image.get_size() != self._screen.get_size():
             image = pygame.transform.smoothscale(image, self._screen.get_size())
         self._background = image
+
+    def _slot_for(self, name: str | None) -> tuple[int, int, int, int] | None:
+        """**Where this skin's badge is centred.** A skin pack (ADR-0111)
+        measures every skin's slot at build time, in that pack's own pixels,
+        into `badge-slots.json` at its root, keyed `<folder>/<skin>`: the
+        skin's directory is `<root>/<folder>/<templates…>/<WxH>`. A skin the
+        pack has no slot for keeps its declared box - never the shipped
+        table's, which is 1280x800's and keyed by name alone. Only a skin
+        outside a pack (an old gexis-skins install) reads that table."""
+        directory = Path(self._corpus)
+        root = directory.parent.parent.parent
+        if root not in self._pack_slots:
+            path = root / "badge-slots.json"
+            self._pack_slots[root] = load_badge_slots(path) if path.is_file() else None
+        pack = self._pack_slots[root]
+        if pack is not None:
+            return pack.get(f"{directory.parent.parent.name}/{name}")
+        return self._slots.get(name or "")
 
     def _meter_background(self, skin: dict[str, str]) -> pygame.Surface | None:
         """**A skin with no `screen.bgr` is drawn by its meter's background
@@ -660,7 +680,7 @@ class MetadataLayer:
         if position is None or source is None:
             return None
         box = parse_size(self._skin.get("playinfo.type.dimension")) or (50, 50)
-        slot = self._slots.get(self._skin_name or "")
+        slot = self._slot_for(self._skin_name)
         if slot is not None:
             # Never larger than the slot: 59G5_Yamaha M85 declares a 95 px box
             # in a 94 px window.

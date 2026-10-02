@@ -436,6 +436,23 @@ def test_a_skin_without_a_slot_keeps_its_declared_box(screen):
     assert rect.center == (position[0] + box[0] // 2, position[1] + box[1] // 2)
 
 
+def test_a_skin_packs_own_slots_are_read_for_its_skins(screen, tmp_path):
+    """ADR-0111: a pack measures its own slots, keyed <folder>/<skin>, and a
+    skin it has none for keeps its declared box - not the shipped table's
+    1280x800 slot for a skin of the same name."""
+    import json
+    directory = tmp_path / "packs" / "1920x1080" / "gelo5" / "templates" / "1920x1080"
+    directory.mkdir(parents=True)
+    (tmp_path / "packs" / "1920x1080" / "badge-slots.json").write_text(json.dumps(
+        {"slots": {"gelo5/measured": [100, 200, 400, 260]}}))
+    layer = MetadataLayer(screen, directory)
+    skin = {"playinfo.type.pos": "110,205", "playinfo.type.dimension": "50,50"}
+    layer._skin, layer._skin_name, layer._corpus = skin, "measured", directory
+    assert layer._badge_rect("spotify").center == (250, 230)
+    layer._skin_name = "101G5_Free S+M"   # in the shipped table, not in this pack
+    assert layer._badge_rect("spotify").center == (135, 230)
+
+
 @pytest.mark.parametrize("source", ["lms", "spotify", "bluetooth"])
 def test_every_badge_leaves_a_margin_to_its_field(screen, source):
     """**George, 2026-09-26:** *"it fits too snuggly vertically ... Some small
