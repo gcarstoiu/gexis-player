@@ -111,6 +111,7 @@ class StateServer:
         restore=None,
         lyrion_shares=None,
         lyrion_shares_changed=None,
+        own_server=None,
         plugins=(),
         splash=None,
         setup=None,
@@ -170,6 +171,9 @@ class StateServer:
         #: ADR-0115: the Lyrion server's network shares.
         self._lyrion_shares = lyrion_shares
         self._lyrion_shares_changed = lyrion_shares_changed
+        #: ADR-0115 decision 2: this device's own Lyrion server, offered among
+        #: the servers while it is on - never chosen for the user.
+        self._own_server = own_server
         self._splash = splash
         #: ADR-0104: the setup network's status, for the panel and the phone.
         self._setup = setup
@@ -1257,7 +1261,13 @@ class StateServer:
         # the setting stores; the human name is the line underneath.
         current = str(self._settings.value("lms_server") or "")
         items = []
+        own = self._own_server() if self._own_server else None
+        if own:
+            items.append({"name": own, "meta": "This player's own server", "bars": None,
+                          "state": "current" if own == current else "found"})
         for server in await discovery.find_servers():
+            if own and server["address"] == own:
+                continue
             meta = " · ".join(part for part in (server["name"], server["version"]) if part)
             items.append(
                 {

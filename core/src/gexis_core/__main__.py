@@ -2596,6 +2596,8 @@ async def main() -> None:
         restore=_restore_done,
         lyrion_shares=lyrion_shares,
         lyrion_shares_changed=lambda: lyrion_wake.set(),
+        own_server=lambda: (f"{device_name.address()}:9000"
+                            if settings.value("lyrion-server.enabled") is True and device_name.address() else None),
         # ADR-0086: the panel asks for a source's mark by id; the daemon is
         # the only thing that knows where manifests live.
         plugins=installed_plugins,
