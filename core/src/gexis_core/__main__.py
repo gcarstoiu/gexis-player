@@ -66,7 +66,7 @@ from gexis_core.peppy import (
     set_meter_skins,
     set_meter_smoothing,
 )
-from gexis_core import lyrion_folders
+from gexis_core import lyrion_addons, lyrion_folders
 from gexis_core.lyrion_shares import Shares as LyrionShares
 from gexis_core.fanart import Fanart
 from gexis_core.peppy_metadata import PeppyMetadataWriter, next_track
@@ -269,6 +269,11 @@ SETUP_KEEP_S = 120.0
 #: How often the Lyrion server's music folders are compared with what is
 #: mounted (ADR-0115): a USB disk plugged in appears within this.
 LYRION_FOLDERS_S = 20.0
+#: ADR-0115: Lyrion's add-ons - restarted after this, to load what it
+#: downloaded; asked again after this, if they are still missing.
+LYRION_ADDONS_RESTART_S = 90.0
+LYRION_ADDONS_RETRY_S = 600.0
+LYRION_ADDONS_DONE = Path("/var/lib/gexis/lyrion-addons.done")
 
 
 def _setup_running(setup: dict | None) -> bool:
@@ -2179,6 +2184,34 @@ async def main() -> None:
                 return (await r.json(content_type=None)).get("result") or {}
 
     lyrion_wake = asyncio.Event()
+    #: ADR-0115 decision 12: asked once, through Lyrion's own plugin page; a
+    #: restart loads them; asked again if they are still missing ten minutes
+    #: on. Once they are all in, never again - one removed later stays removed.
+    lyrion_asked = {"at": None, "restarted": False}
+
+    async def _lyrion_addons() -> None:
+        if LYRION_ADDONS_DONE.exists():
+            return
+        async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=60)) as session:
+            async with session.get("http://127.0.0.1:9000" + lyrion_addons.PAGE) as r:
+                page = await r.text(errors="replace")
+            missing = lyrion_addons.missing(page)
+            if not missing:
+                LYRION_ADDONS_DONE.parent.mkdir(parents=True, exist_ok=True)
+                LYRION_ADDONS_DONE.touch()
+                logger.info("lyrion: add-ons installed (%s)", ", ".join(lyrion_addons.WANTED))
+                return
+            now = time.monotonic()
+            if lyrion_asked["at"] is None or now - lyrion_asked["at"] > LYRION_ADDONS_RETRY_S:
+                action, fields = lyrion_addons.submission(page)
+                async with session.post("http://127.0.0.1:9000" + action, data=fields) as r:
+                    logger.info("lyrion: asked Lyrion to install %s (%s)", ", ".join(missing), r.status)
+                lyrion_asked.update(at=now, restarted=False)
+                return
+        if not lyrion_asked["restarted"] and now - lyrion_asked["at"] > LYRION_ADDONS_RESTART_S:
+            # Lyrion loads a plugin it installed only at its next start.
+            lyrion_asked["restarted"] = True
+            await asyncio.create_subprocess_exec("systemctl", "restart", "gexis-lyrion.service")
 
     async def _lyrion_folders_loop() -> None:
         """Shares mounted while the server is on and unmounted while it is
@@ -2201,6 +2234,10 @@ async def main() -> None:
                 await lyrion_folders.sync(_lyrion_rpc)
             except Exception as exc:  # starting, stopped, scanning: next time
                 logger.debug("lyrion: folders not synced (%r)", exc)
+            try:
+                await _lyrion_addons()
+            except Exception as exc:  # no internet yet, or the server is busy
+                logger.debug("lyrion: add-ons not checked (%r)", exc)
 
     asyncio.ensure_future(_lyrion_folders_loop())
     # ADR-0040 §1: LMS's own plugin first where it answers, the key-free
