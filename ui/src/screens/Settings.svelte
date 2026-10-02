@@ -883,7 +883,7 @@
                       type="button"
                       class="tile__btn"
                       class:tile__btn--go={waiting}
-                      disabled={$update?.active}
+                      class:tile__btn--busy={$update?.active}
                       onclick={() => (updateModal = $update?.active ? 'progress' : waiting ? 'available' : 'check')}
                     >{$update?.active ? 'Updating…' : waiting ? 'Update…' : 'Check for updates'}</button>
                   </span>
@@ -1764,6 +1764,9 @@
     color: var(--accent-lms);
   }
   .tile__btn:disabled { opacity: 0.6; }
+  /* A running install: dimmed as before, but a tap brings back the modal
+     that Hide put away (George, 2026-10-02: "how do I see it again?"). */
+  .tile__btn--busy { opacity: 0.6; }
   .tile__notes { display: block; margin-top: 8px; color: var(--ink-body); }
   .row--readonly:active { transform: none; }
 
