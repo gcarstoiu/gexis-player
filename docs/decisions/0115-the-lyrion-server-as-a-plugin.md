@@ -48,7 +48,9 @@ network share**; and **it ships in our releases**.
 
 ## Decided (George, 2026-10-02)
 
-1. **In the image, off until switched on,** like the hub (*"Agree"*).
+1. ~~In the image, off until switched on, like the hub (*"Agree"*).~~
+   **Replaced by decision 11** the same evening: Lyrion's own notice
+   restricts redistributing parts of it.
 2. **The player does not switch to its own server by itself** (*"User
    decides which server to use. No automatic switch is made when the
    lyrion server is turned on"*). Phase 13e criterion 3 changes with it: the
@@ -100,13 +102,22 @@ network share**; and **it ships in our releases**.
     Lyrion sets no playlist folder at all (its `dirsFor('playlists')` is
     empty), so this is set for it.
 
-## Open
-
-- **Which of George's server's add-ons come preinstalled** beyond the two
-  above. His server runs, besides Lyrion's own: Radio Now Playing 0.0.56 and
-  Squeeze Plex Hub 1.0.1 (read from its plugin page, 2026-10-02).
-- **The settings rows** for the network shares, as a list, for ADR-0022's
-  inventory - appended after George confirms their final shape.
+11. **Lyrion is downloaded by the player, not shipped by us** (*"A"*).
+    Upstream's copyright notice (`/usr/share/doc/lyrionmusicserver/copyright`
+    in 9.1.1) says Slim Devices' *"logos, graphics, animations, and
+    documentation ... are not licensed for redistribution"*, and the CODE2000
+    font it carries is shareware. So, as ADR-0100 does for Plexamp: the
+    image carries our part - the manifest, the unit drop-in, the Music share,
+    the first prefs and Lyrion's dependencies - and the first time the
+    switch is turned on, the device fetches upstream's package from the
+    Lyrion community's own server, checks it against its pinned checksum and
+    installs it, with its progress in the plugin's row. Nothing of upstream's
+    is in our image or our releases.
+12. **Preinstalled add-ons: Material Skin, Music & Artist Information and
+    Radio Now Playing**; not Squeeze Plex Hub (*"Radio now playing can be
+    added. Not squeeze Plex hub"*).
+13. **The network shares' settings are as proposed** (*"Network shares
+    settings are fine"*), now in ADR-0022's inventory.
 
 ## Not settled here
 
