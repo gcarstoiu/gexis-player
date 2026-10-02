@@ -49,6 +49,9 @@ class PeppyMetadataWriter:
     def __init__(self, path: Path = DEFAULT_PATH) -> None:
         self._path = path
         self._last: str | None = None
+        #: ADR-0112: the playing artist's photos on disk, for the skins'
+        #: fanart frame. Set by the fanart follower, empty until it answers.
+        self.fanart: list[str] = []
 
     def write(self, state: PlaybackState) -> None:
         metadata = state.metadata
@@ -79,6 +82,7 @@ class PeppyMetadataWriter:
                 "shuffle": controls.get("shuffle"),
                 "repeat": controls.get("repeat"),
                 "next": next_track(state),
+                "fanart": self.fanart,
                 # The reader advances position itself between writes, so it
                 # needs to know how old this one is.
                 "written_at": time.time(),

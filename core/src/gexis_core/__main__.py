@@ -66,7 +66,8 @@ from gexis_core.peppy import (
     set_meter_skins,
     set_meter_smoothing,
 )
-from gexis_core.peppy_metadata import PeppyMetadataWriter
+from gexis_core.fanart import Fanart
+from gexis_core.peppy_metadata import PeppyMetadataWriter, next_track
 from gexis_core.model import BLANK_METADATA, TrackMetadata
 from gexis_core import settings_migrations, updates
 from gexis_core.settings import SettingsStore
@@ -2091,7 +2092,8 @@ async def main() -> None:
 
     # What the Peppy screen draws (criterion 7). A separate file from
     # currentsong.txt, which is moOde's format for moOde's readers.
-    state_store.subscribe(PeppyMetadataWriter().write)
+    peppy_writer = PeppyMetadataWriter()
+    state_store.subscribe(peppy_writer.write)
 
     # Phase 7 (ADR-0038): the same server, and the same player, the renderer
     # adapter talks to. Radio shares its HTTP session.
@@ -2110,6 +2112,55 @@ async def main() -> None:
     lms.on_restore_transport(lambda: settings.value("restore_transport"))
     artistinfo = LmsArtistInfo(library.rpc, f"http://{config.lms_host}:{config.lms_port}",
                                store=enrichment_cache)
+
+    # ADR-0112: the playing artist's photos for the skins' fanart frame -
+    # LMS's own tracks by id, any other source by an exact LMS name - fetched
+    # on the artist's change and for the next track's artist ahead of it.
+    fanart_session: dict[str, aiohttp.ClientSession] = {}
+
+    async def _fanart_download(url: str) -> bytes | None:
+        session = fanart_session.get("s")
+        if session is None or session.closed:
+            session = fanart_session["s"] = aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=20))
+        try:
+            async with session.get(url) as response:
+                return await response.read() if response.status == 200 else None
+        except (aiohttp.ClientError, asyncio.TimeoutError) as exc:
+            logger.info("fanart: %s not fetched (%r)", url, exc)
+            return None
+
+    fanart = Fanart(library.rpc, _fanart_download, f"http://{config.lms_host}:{config.lms_port}")
+    fanart_follow = {"key": None, "next": None}
+
+    async def _fanart_for(state) -> None:
+        key = fanart_follow["key"]
+        paths = await fanart.for_artist(
+            state.metadata.artist, lms.current_artist_id if state.active == "lms" else None)
+        if fanart_follow["key"] != key:
+            return  # the artist changed while this was fetched
+        peppy_writer.fanart = [str(p) for p in paths]
+        peppy_writer.write(state_store.state)
+
+    async def _fanart_ahead(name: str) -> None:
+        await fanart.for_artist(name)
+
+    def follow_fanart(state) -> None:
+        key = (state.active, state.metadata.artist)
+        if key != fanart_follow["key"]:
+            fanart_follow["key"] = key
+            # Never the last artist's photos over this one's track: this runs
+            # after the writer's own subscription, so it writes again.
+            if peppy_writer.fanart:
+                peppy_writer.fanart = []
+                peppy_writer.write(state)
+            if state.metadata.artist:
+                asyncio.ensure_future(_fanart_for(state))
+        upcoming = (next_track(state) or {}).get("artist")
+        if upcoming and upcoming != fanart_follow["next"]:
+            fanart_follow["next"] = upcoming
+            asyncio.ensure_future(_fanart_ahead(upcoming))
+
+    state_store.subscribe(follow_fanart)
     # ADR-0040 §1: LMS's own plugin first where it answers, the key-free
     # providers behind it and for the renderers that have no LMS ids.
     http = Http()
