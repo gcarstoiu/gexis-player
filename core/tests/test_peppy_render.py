@@ -701,3 +701,22 @@ def test_lms_s_sample_rate_is_drawn_and_the_mark_keeps_its_own_box(screen, tmp_p
     fields = layer._fields(full(sample_rate=44100))
     assert any(f[0] == "44.1 kHz" and f[1][:2] == (700, 520) for f in fields)
     assert not any(f[0] and f[1][:2] == (700, 520) for f in layer._fields(full())), "absent is absent"
+
+
+def test_the_sample_rate_fits_its_own_width(screen, tmp_path):
+    """George, 2026-10-02: it ran beyond its space. Without the bit depth
+    first, then a smaller face."""
+    background = pygame.Surface((1280, 800))
+    pygame.image.save(background, str(tmp_path / "bgr.png"))
+    layer = MetadataLayer(screen, tmp_path)
+    roomy = {**SKIN, "playinfo.samplerate.pos": "700,520,regular", "playinfo.samplerate.maxwidth": "400"}
+    layer.set_skin(roomy)
+    entry = layer._sample_field(full(sample_rate=96000, bit_depth=24), {"regular": 20}, (255, 255, 255), 0)
+    assert entry[0] == "96 kHz 24 bit" and entry[3] == 20
+    for width in (120, 70, 30):
+        layer.set_skin({**roomy, "playinfo.samplerate.maxwidth": str(width)})
+        text, _p, _c, size, box, _s = layer._sample_field(full(sample_rate=96000, bit_depth=24), {"regular": 20}, (255, 255, 255), 0)
+        assert box == width
+        if width >= 70:
+            assert layer.font("regular", size).size(text)[0] <= width, f"fits {width}"
+    assert text == "96 kHz" and size == 12, "never below 60 %: past that it is cut short as any field is"

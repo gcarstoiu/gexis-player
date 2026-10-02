@@ -636,12 +636,16 @@ class MetadataLayer:
         return tuple(entry for entry in entries if entry is not None)
 
     def _sample_field(self, metadata: dict, sizes: dict, colour, maxwidth: int):
-        """**The sample rate, as upstream places it** (volumio_basic.py): at
-        `playinfo.samplerate.pos`, light unless the position names a weight,
-        in the skin's sample-rate colour or else its badge colour - and
-        **never cut short**: the box only aligns the text, and is at least
-        what "-44.1 kHz 24 bit-" needs. Upstream draws nothing for a skin
-        with neither its own width nor a global one; nor does this."""
+        """**The sample rate, in the place the skin gives it** (upstream's
+        volumio_basic.py places it the same way): at `playinfo.samplerate.pos`,
+        light unless the position names a weight, in the skin's sample-rate
+        colour or else its badge colour, inside the skin's own width for it
+        (or the global one). Upstream draws nothing for a skin with neither,
+        and nor does this.
+
+        **It fits rather than runs over** (George, 2026-10-02: "the sampling
+        I've seen going beyond its allocated space"): without the bit depth
+        first, then a smaller face, down to `SAMPLE_MIN_SHARE` of the size."""
         skin = self._skin
         value = skin.get("playinfo.samplerate.pos") or ""
         point = parse_point(value)
@@ -652,9 +656,18 @@ class MetadataLayer:
         if value.count(",") < 2:
             point = (point[0], point[1], "light")
         size = sizes.get(point[2], sizes["regular"])
-        width = max(own, self.font(point[2], size).size("-44.1 kHz 24 bit-")[0])
+        shorter = sample_text({**metadata, "bit_depth": None})
+        for candidate in (text, shorter):
+            if self.font(point[2], size).size(candidate)[0] <= own:
+                text = candidate
+                break
+        else:
+            text = shorter
+            floor = max(6, int(size * SAMPLE_MIN_SHARE))
+            while size > floor and self.font(point[2], size).size(text)[0] > own:
+                size -= 1
         tint = parse_colour(skin.get("playinfo.samplerate.color"), parse_colour(skin.get("playinfo.type.color"), colour))
-        return (text, point, tint, size, width, "meta")
+        return (text, point, tint, size, own, "meta")
 
     def _ticker_line(self, metadata: dict, field):
         """**A ticker skin's title** (ADR-0096 as amended, ADR-0097): 27 of
@@ -865,6 +878,11 @@ def elapsed_time(metadata: dict) -> str | None:
 def total_time(metadata: dict) -> str | None:
     duration = metadata.get("duration")
     return clock(int(duration)) if duration else None
+
+
+#: The smallest the sample rate is drawn, as a share of the skin's size for
+#: it, before it is cut short like any other field.
+SAMPLE_MIN_SHARE = 0.6
 
 
 def sample_text(metadata: dict) -> str | None:
