@@ -1446,8 +1446,9 @@ async def main() -> None:
             logger.warning("screen: %r is not a screen gexis knows; nothing applied", chosen)
             return
         turn = screen_apply.parse_rotation(rotation if rotation is not None else settings.value("rotation"))
-        screen_apply.choose(screen_apply.Applied(model.id, turn))
-        logger.info("screen: %s at %d° chosen; it waits for Keep on the panel", model.id, turn)
+        asks = screen_apply.choose(screen_apply.Applied(model.id, turn))
+        logger.info("screen: %s at %d° chosen; %s", model.id, turn,
+                    "it waits for Keep on the panel" if asks else "the picture is unchanged, so it is kept")
         if _setup_running(state_store.state.setup):
             return
 

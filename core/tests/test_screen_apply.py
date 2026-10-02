@@ -43,10 +43,10 @@ def test_a_bar_s_mode_goes_on_the_kernel_s_command_line_and_comes_off_again(tmp_
 
 
 def test_a_choice_waits_for_keep_and_the_password_stays_fixed_until_then(tmp_path):
-    """Decision 5."""
+    """Decision 5: the 13.3" is drawn at 1.5, which changes the picture."""
     f = files(tmp_path)
     assert not screen_apply.confirmed(f["state"])
-    screen_apply.choose(Applied("waveshare-10.1-hdmi-b", 0), **f, now=1)
+    assert screen_apply.choose(Applied("waveshare-13.3-hdmi-h", 0), **f, now=1) is True
     assert not screen_apply.confirmed(f["state"])
     screen_apply.keep(state=f["state"])
     assert screen_apply.confirmed(f["state"])
@@ -128,3 +128,22 @@ def test_at_first_setup_settings_go_back_to_no_screen(tmp_path):
     screen_apply.choose(Applied("waveshare-7.9-hdmi", 0), **f, now=1)
     screen_apply.revert(**f)
     assert screen_apply.settings_of(f["state"]) == {"screen": None, "rotation": None}
+
+
+def test_a_screen_that_leaves_the_picture_as_it_is_is_kept_without_asking(tmp_path):
+    """ADR-0109 as amended 2026-10-02 (George: "A"): the 10.1" at its own
+    mode, scale 1, unrotated - what an unchosen screen shows already."""
+    f = files(tmp_path)
+    assert screen_apply.choose(Applied("waveshare-10.1-hdmi-b", 0), **f, now=1) is False
+    assert screen_apply.confirmed(f["state"])
+    # turned over, it is a change, and it asks
+    assert screen_apply.choose(Applied("waveshare-10.1-hdmi-b", 180), **f, now=2) is True
+    screen_apply.revert(**f)
+    assert env_of(f["env"])["GEXIS_SCREEN_TRANSFORM"] == "normal"
+
+
+def test_a_forced_mode_or_a_scale_asks(tmp_path):
+    f = files(tmp_path)
+    assert screen_apply.choose(Applied("waveshare-7.9-hdmi", 0), **f, now=1) is True, "video= and a turn"
+    screen_apply.keep(state=f["state"])
+    assert screen_apply.choose(Applied("waveshare-7.9-hdmi", 0), **f, now=2) is False, "the same again"

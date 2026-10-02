@@ -2,8 +2,9 @@
 """Applying a screen (ADR-0109): the chosen model and rotation become
 `/etc/gexis/screen.env`, which the kiosk reads at start, and - when the model
 needs a mode the screen does not offer by itself - a `video=` entry on the
-kernel's command line. Either way the device restarts, and the panel asks
-*Keep this screen?* (decision 5); with no answer it goes back.
+kernel's command line. Either way the device restarts, and - when that
+changes the picture - the panel asks *Keep this screen?* (decision 5, as
+amended 2026-10-02); with no answer it goes back.
 
 **Under full KMS** (this image) the firmware's `hdmi_timings`/`hdmi_mode` from
 the presets do not apply (Finding 100); the kernel's `video=` and the
@@ -86,6 +87,22 @@ def with_video(cmdline: str, video: str | None, connector: str = CONNECTOR) -> s
     return " ".join(words) + "\n"
 
 
+def picture(env: Path = SCREEN_ENV, cmdline: Path = CMDLINE, connector: str = CONNECTOR) -> tuple:
+    """**What the screen shows**, as far as a choice can change it: the
+    forced mode, the scale and the rotation. No screen.env is the screen's
+    own mode at scale 1, unrotated."""
+    try:
+        fields = dict(l.split("=", 1) for l in env.read_text().splitlines() if "=" in l and not l.startswith("#"))
+    except OSError:
+        fields = {}
+    try:
+        words = cmdline.read_text().split()
+    except OSError:
+        words = []
+    video = next((w for w in words if w.startswith(f"video={connector}:")), None)
+    return video, float(fields.get("GEXIS_SCREEN_SCALE", 1)), fields.get("GEXIS_SCREEN_TRANSFORM", "normal")
+
+
 def read_state(path: Path = STATE) -> dict:
     try:
         data = json.loads(path.read_text())
@@ -134,14 +151,22 @@ def write_files(applied: Applied | None, *, env: Path = SCREEN_ENV, cmdline: Pat
 
 
 def choose(applied: Applied, *, state: Path = STATE, env: Path = SCREEN_ENV, cmdline: Path = CMDLINE,
-           now: float | None = None) -> None:
+           now: float | None = None) -> bool:
     """Make `applied` the screen, pending a Keep; remember the one before for
-    going back. The caller restarts the device."""
+    going back. The caller restarts the device.
+
+    **Kept without asking when the picture stays as it is** (ADR-0109 as
+    amended 2026-10-02): the question guards against a screen left dark or
+    unreadable, which a change of nothing but the model's name cannot do.
+    True when it waits for a Keep."""
     data = read_state(state)
     previous = data.get("current") if not data.get("pending") else data.get("previous")
+    before = picture(env, cmdline)
     write_files(applied, env=env, cmdline=cmdline)
-    write_state({"current": applied.to_json(), "previous": previous, "pending": True,
+    asks = picture(env, cmdline) != before
+    write_state({"current": applied.to_json(), "previous": previous, "pending": asks,
                  "since": now if now is not None else time.time()}, state)
+    return asks
 
 
 def keep(*, state: Path = STATE) -> None:
