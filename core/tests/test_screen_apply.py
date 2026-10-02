@@ -147,3 +147,21 @@ def test_a_forced_mode_or_a_scale_asks(tmp_path):
     assert screen_apply.choose(Applied("waveshare-7.9-hdmi", 0), **f, now=1) is True, "video= and a turn"
     screen_apply.keep(state=f["state"])
     assert screen_apply.choose(Applied("waveshare-7.9-hdmi", 0), **f, now=2) is False, "the same again"
+
+
+def test_after_setup_the_question_waits_two_minutes(tmp_path):
+    """ADR-0109 as amended 2026-10-02 (George: "C"): setup ends on the phone."""
+    from gexis_core.__main__ import KEEP_S, SETUP_KEEP_S, screen_question
+
+    f = files(tmp_path)
+    screen_apply.choose(Applied("waveshare-13.3-hdmi-h", 0), **f, now=1, after_setup=True)
+    assert screen_question(screen_apply.read_state(f["state"]))["total"] == SETUP_KEEP_S == 120
+    screen_apply.choose(Applied("waveshare-7.9-hdmi", 0), **f, now=2)
+    assert screen_question(screen_apply.read_state(f["state"]))["total"] == KEEP_S == 30
+
+
+def test_would_ask_writes_nothing(tmp_path):
+    f = files(tmp_path)
+    assert screen_apply.would_ask(Applied("waveshare-13.3-hdmi-h", 0), env=f["env"], cmdline=f["cmdline"])
+    assert not screen_apply.would_ask(Applied("waveshare-10.1-hdmi-b", 0), env=f["env"], cmdline=f["cmdline"])
+    assert not f["env"].exists() and f["cmdline"].read_text() == CMDLINE

@@ -71,6 +71,9 @@
   let headless = $state(false);
   //: ADR-0111 decision 4: asked, never assumed. null until answered.
   let visualiser = $state(null);
+  //: ADR-0109 as amended 2026-10-02: the restart will ask Keep this screen?
+  //: on the panel, which this page says before the phone is put down.
+  let keepQuestion = $state(false);
   //: ADR-0109's Screen step. `screenInfo` is `/setup/screen`: what the screen
   //: reports, the tested model that suggests, every model. `scPick` is a
   //: model's label ("Maker/Model", as Settings stores it).
@@ -301,7 +304,8 @@
     saving = true;
     problem = null;
     try {
-      await json('/setup/finish', { method: 'POST' });
+      const told = await json('/setup/finish', { method: 'POST' });
+      keepQuestion = !!told?.keep_question;
       finished = true;
     } catch (err) {
       problem = err.message;
@@ -429,6 +433,9 @@
             {#if picked}
               <p class="lead">This page is served by the player over its own Wi-Fi, so it stops here. Reconnect this phone to <strong>{picked}</strong>, then open the address below.</p>
             {/if}
+            {#if keepQuestion}
+              <div class="info info--warn"><span class="bar" style="background:#e0a758"></span><span><b>Then go to the player's screen</b><small>It restarts on the screen you chose and asks whether to keep it. Tap Keep on the screen within two minutes, or it goes back to how it was.</small></span></div>
+            {/if}
             <div class="addr-card">
               <div class="label">Open in any browser</div>
               <div class="addr">http://{slug}.local:8090</div>
@@ -449,7 +456,7 @@
                 : "You are connected to the player's own Wi-Fi. Nothing here leaves the room: the device is the only thing this page is talking to."}
             </p>
             <div class="cards">
-              <div class="info"><span class="bar" style="background:#8fc4d8"></span><span><b>About two minutes</b><small>Six questions. Every one of them can be changed later in Settings.</small></span></div>
+              <div class="info"><span class="bar" style="background:#8fc4d8"></span><span><b>About two minutes</b><small>Seven questions. Every one of them can be changed later in Settings.</small></span></div>
               {#if !overLan}
                 <div class="info"><span class="bar" style="background:#7ed6bc"></span><span><b>Keep this phone handy</b><small>When setup finishes, the player leaves its own Wi-Fi for yours and this page stops working. That is by design, not a fault.</small></span></div>
                 <!-- George, 2026-09-29: the page would not load until he

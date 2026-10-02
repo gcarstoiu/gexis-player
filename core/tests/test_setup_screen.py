@@ -138,3 +138,33 @@ def test_headless_drops_the_visualiser_answer(tmp_path):
     assert flow.save({"headless": True}).get("visualiser") is None
     with pytest.raises(ValueError):
         flow.save({"visualiser": "yes"})
+
+
+def _finish_told(flow, net):
+    import asyncio
+
+    async def go():
+        net._state = "open"
+        net._needed = True
+        told = flow.finish()
+        await flow._task
+        return told
+    return asyncio.run(go())
+
+
+def test_finishing_tells_the_phone_whether_keep_will_be_asked(tmp_path, monkeypatch):
+    """ADR-0109 as amended 2026-10-02: the phone says the question is coming."""
+    from gexis_core import screen_apply
+
+    asked = []
+    monkeypatch.setattr(screen_apply, "would_ask", lambda applied, **kw: asked.append(applied) or True)
+    flow, net, *_ = make(tmp_path, FakeNM(devices=NOTHING))
+    flow.save({"ssid": "Home", "password": "hunter22", "screen": PANEL})
+    assert _finish_told(flow, net) == {"keep_question": True}
+    assert asked[0].screen_id == "waveshare-10.1-hdmi-b"
+
+
+def test_headless_is_never_asked(tmp_path):
+    flow, net, *_ = make(tmp_path, FakeNM(devices=NOTHING))
+    flow.save({"ssid": "Home", "password": "hunter22", "headless": True})
+    assert _finish_told(flow, net) == {"keep_question": False}

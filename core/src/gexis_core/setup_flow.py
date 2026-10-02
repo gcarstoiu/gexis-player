@@ -22,7 +22,7 @@ import logging
 import os
 from pathlib import Path
 
-from gexis_core import discovery, screen_detect, screens, setup_network, skin_packs
+from gexis_core import discovery, screen_apply, screen_detect, screens, setup_network, skin_packs
 
 logger = logging.getLogger(__name__)
 
@@ -154,17 +154,31 @@ class SetupFlow:
     def finishing(self) -> bool:
         return self._task is not None and not self._task.done()
 
-    def finish(self) -> None:
+    def finish(self) -> dict:
         """Start applying. Returns at once: the phone is told, and the
-        network step happens `HANDOVER_S` later so that answer arrives."""
+        network step happens `HANDOVER_S` later so that answer arrives.
+        Tells the phone whether the restart will ask *Keep this screen?*
+        (ADR-0109 as amended 2026-10-02), which it says before you leave."""
         if self.finishing:
-            return
+            return {"keep_question": False}
         data = self._read()
         # On Ethernet the Wi-Fi is optional (ADR-0031 amendment 8); without a
         # network at all, it is the one answer setup cannot finish without.
         if not data.get("ssid") and self._network.status()["network"] != "online":
             raise ValueError("no network chosen")
         self._task = asyncio.ensure_future(self._apply(data))
+        return {"keep_question": self._keep_question(data)}
+
+    def _keep_question(self, data: dict) -> bool:
+        model = screens.by_label(data["screen"]) if data.get("screen") and not data.get("headless") else None
+        if model is None:
+            return False
+        try:
+            turn = screen_apply.parse_rotation(self._settings.value("rotation"))
+            return screen_apply.would_ask(screen_apply.Applied(model.id, turn))
+        except Exception as exc:  # a guess for the phone's wording, never a failure
+            logger.info("setup: cannot tell whether Keep will be asked: %s", exc)
+            return True
 
     async def _apply(self, data: dict) -> None:
         old_name = self._settings.value("device_name")

@@ -103,6 +103,21 @@ def picture(env: Path = SCREEN_ENV, cmdline: Path = CMDLINE, connector: str = CO
     return video, float(fields.get("GEXIS_SCREEN_SCALE", 1)), fields.get("GEXIS_SCREEN_TRANSFORM", "normal")
 
 
+def picture_of(applied: Applied, connector: str = CONNECTOR) -> tuple:
+    """`picture()` as it will be once `applied` is written."""
+    screen = screens.by_id(applied.screen_id)
+    if screen is None:
+        raise ValueError(f"no such screen {applied.screen_id!r}")
+    fields = dict(l.split("=", 1) for l in env_for(screen, applied.rotation, connector).splitlines()
+                  if "=" in l and not l.startswith("#"))
+    return video_for(screen, connector), float(fields["GEXIS_SCREEN_SCALE"]), fields["GEXIS_SCREEN_TRANSFORM"]
+
+
+def would_ask(applied: Applied, *, env: Path = SCREEN_ENV, cmdline: Path = CMDLINE) -> bool:
+    """Whether choosing `applied` will ask *Keep this screen?*."""
+    return picture_of(applied) != picture(env, cmdline)
+
+
 def read_state(path: Path = STATE) -> dict:
     try:
         data = json.loads(path.read_text())
@@ -151,21 +166,21 @@ def write_files(applied: Applied | None, *, env: Path = SCREEN_ENV, cmdline: Pat
 
 
 def choose(applied: Applied, *, state: Path = STATE, env: Path = SCREEN_ENV, cmdline: Path = CMDLINE,
-           now: float | None = None) -> bool:
+           now: float | None = None, after_setup: bool = False) -> bool:
     """Make `applied` the screen, pending a Keep; remember the one before for
     going back. The caller restarts the device.
 
     **Kept without asking when the picture stays as it is** (ADR-0109 as
     amended 2026-10-02): the question guards against a screen left dark or
     unreadable, which a change of nothing but the model's name cannot do.
-    True when it waits for a Keep."""
+    True when it waits for a Keep. **After setup** the question waits longer:
+    setup ends on the phone, not beside the panel."""
     data = read_state(state)
     previous = data.get("current") if not data.get("pending") else data.get("previous")
-    before = picture(env, cmdline)
+    asks = would_ask(applied, env=env, cmdline=cmdline)
     write_files(applied, env=env, cmdline=cmdline)
-    asks = picture(env, cmdline) != before
     write_state({"current": applied.to_json(), "previous": previous, "pending": asks,
-                 "since": now if now is not None else time.time()}, state)
+                 "after_setup": after_setup, "since": now if now is not None else time.time()}, state)
     return asks
 
 

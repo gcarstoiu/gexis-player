@@ -1019,10 +1019,10 @@ class StateServer:
         if closed is not None:
             return closed
         try:
-            self._setup_flow.finish()
+            told = self._setup_flow.finish() or {}
         except ValueError as exc:
             return web.json_response({"error": str(exc)}, status=400)
-        return web.json_response({"finishing": True}, status=202)
+        return web.json_response({"finishing": True, **told}, status=202)
 
     async def _handle_painted(self, request: web.Request) -> web.Response:
         """The panel reporting its first painted frame, which is what ends

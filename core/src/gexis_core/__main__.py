@@ -260,6 +260,9 @@ async def _reboot() -> None:
 #: goes back by itself (a dark screen never says it is dark).
 KEEP_S = 30.0
 NEVER_DRAWN_S = 120.0
+#: After setup, which ends on the phone rather than beside the panel
+#: (ADR-0109 as amended 2026-10-02, George: "C").
+SETUP_KEEP_S = 120.0
 
 
 def _setup_running(setup: dict | None) -> bool:
@@ -282,7 +285,7 @@ def screen_question(state: dict, now: float | None = None) -> dict | None:
         "rotation_only": rotation_only,
         "previous_rotation": f"{previous.get('rotation', 0)}°" if previous else "0°",
         "deadline": None,
-        "total": KEEP_S,
+        "total": SETUP_KEEP_S if state.get("after_setup") else KEEP_S,
     }
 
 
@@ -1446,10 +1449,11 @@ async def main() -> None:
             logger.warning("screen: %r is not a screen gexis knows; nothing applied", chosen)
             return
         turn = screen_apply.parse_rotation(rotation if rotation is not None else settings.value("rotation"))
-        asks = screen_apply.choose(screen_apply.Applied(model.id, turn))
+        in_setup = _setup_running(state_store.state.setup)
+        asks = screen_apply.choose(screen_apply.Applied(model.id, turn), after_setup=in_setup)
         logger.info("screen: %s at %d° chosen; %s", model.id, turn,
                     "it waits for Keep on the panel" if asks else "the picture is unchanged, so it is kept")
-        if _setup_running(state_store.state.setup):
+        if in_setup:
             return
 
         async def _restart() -> None:
@@ -2328,10 +2332,11 @@ async def main() -> None:
         question = state_store.state.screen_confirm
         if question is None or question.get("deadline") is not None:
             return
-        state_store.set_screen_confirm({**question, "deadline": time.time() + KEEP_S})
+        total = question.get("total") or KEEP_S
+        state_store.set_screen_confirm({**question, "deadline": time.time() + total})
         if screen_wait["task"] is not None:
             screen_wait["task"].cancel()
-        screen_wait["task"] = asyncio.ensure_future(_screen_countdown(KEEP_S, "nobody kept it within 30 s"))
+        screen_wait["task"] = asyncio.ensure_future(_screen_countdown(total, f"nobody kept it within {total:g} s"))
 
     async def _screen_answer(action: str) -> dict:
         if action == "keep":
