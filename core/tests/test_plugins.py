@@ -336,3 +336,17 @@ def test_a_disabled_unit_is_left_alone(monkeypatch):
                         lambda argv, **kw: (calls.append(argv[1]), Result())[1])
     systemd.restart_if_enabled("beszel-agent.service")
     assert calls == ["is-enabled"]
+
+
+def test_a_plugin_with_a_page_of_its_own_names_its_port():
+    """ADR-0114: the Beszel hub's switch says where to open it."""
+    import json
+    from pathlib import Path
+
+    from gexis_core import plugins
+
+    shipped = json.loads((Path(__file__).parents[2] / "image/stage-gexis/07-beszel/files/plugin-hub.json").read_text())
+    hub = plugins.parse(shipped, built_in=True)
+    assert hub.port == 8095 and hub.unit == "beszel-hub.service"
+    assert plugins.parse({**shipped, "port": "8095"}).port is None, "a number, or nothing"
+    assert plugins.parse({**shipped, "port": 70000}).port is None

@@ -416,6 +416,12 @@ class Settings:
                 if getattr(plugin, "notice", None):
                     # ADR-0098: read and confirmed before it turns on.
                     switches[-1]["warn"] = plugin.notice
+                if getattr(plugin, "port", None):
+                    # ADR-0114: where its own page is - the device's name is
+                    # read when the registry is built, which a rename (a
+                    # restart, ADR-0048) rebuilds.
+                    from gexis_core import device_name as _name
+                    switches[-1]["note"] = f"Open http://{_name.hostname() or 'gexis'}.local:{plugin.port}"
                 if getattr(plugin, "uploaded", False):
                     # ADR-0106: an upload arrives off, and says what it is.
                     switches[-1]["default"] = False

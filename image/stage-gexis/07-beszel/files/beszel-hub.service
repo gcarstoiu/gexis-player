@@ -1,0 +1,32 @@
+[Unit]
+Description=Beszel hub (system-metrics history, ADR-0114)
+Documentation=https://beszel.dev
+After=network-online.target
+Wants=network-online.target
+StartLimitIntervalSec=60
+StartLimitBurst=5
+
+[Service]
+Type=simple
+# ADR-0114: port 8095, because the hub's own default, 8090, is the player's.
+# The first account is made on the hub's own page at the first visit.
+ExecStart=/usr/bin/beszel-hub serve --http 0.0.0.0:8095 --dir /var/lib/beszel-hub
+# Its database (PocketBase): the history, the systems, the account. Under its
+# own state directory so backups carry it (backups.MEMBERS).
+StateDirectory=beszel-hub
+User=beszel
+Group=beszel
+Restart=on-failure
+RestartSec=5
+# 13a's cap for a plugin (Finding 102) until the hub's own use is measured.
+MemoryMax=1G
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+ProtectKernelTunables=yes
+ProtectControlGroups=yes
+RestrictSUIDSGID=yes
+
+[Install]
+WantedBy=multi-user.target

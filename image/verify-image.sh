@@ -53,6 +53,8 @@ image/stage-gexis/05-peppy/files/peppy-spectrum.txt /opt/gexis-peppy/spectrum/co
 image/stage-gexis/07-beszel/files/beszel-agent.service /usr/lib/systemd/system/beszel-agent.service
 image/stage-gexis/07-beszel/files/beszel-agent-listen-check.sh /usr/lib/gexis/beszel-agent-listen-check.sh
 image/stage-gexis/07-beszel/files/plugin.json /usr/share/gexis/plugins/beszel/plugin.json
+image/stage-gexis/07-beszel/files/beszel-hub.service /usr/lib/systemd/system/beszel-hub.service
+image/stage-gexis/07-beszel/files/plugin-hub.json /usr/share/gexis/plugins/beszel-hub/plugin.json
 EOF
 
 # **No skins in the image** (ADR-0111 decision 9): neither the old
@@ -172,6 +174,19 @@ else
 	[ -n "$want_sha" ] || bad "no BESZEL_SHA256 pin found in packaging/beszel-agent/pins.sh"
 fi
 rm -f "$OUT/agent"
+
+# ADR-0114: the hub, the build its pin names (the binary's own checksum, taken
+# from the pinned release on 2026-10-02).
+dfs "dump /usr/bin/beszel-hub $OUT/hub" >/dev/null
+BESZEL_HUB_BINARY_SHA256="2573c4a32ef5dfeda9a13fbf35f2cf8bb2f46f34088ef7f70a407878756dd5c4"
+if [ ! -s "$OUT/hub" ]; then
+	bad "/usr/bin/beszel-hub missing"
+else
+	got="$(sha256sum "$OUT/hub" | cut -d' ' -f1)"
+	[ "$got" = "$BESZEL_HUB_BINARY_SHA256" ] && ok "beszel-hub is the pinned build" \
+		|| bad "beszel-hub sha256 is $got, expected $BESZEL_HUB_BINARY_SHA256"
+fi
+rm -f "$OUT/hub"
 
 # **Not enabled.** An unenrolled device runs nothing, and the switch on the
 # settings screen reads the unit's real state (ADR-0086 as amended) - so a unit
