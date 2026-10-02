@@ -182,6 +182,26 @@ standard, showing the reveal"*. A library row on a bar reveals Play now, Add
 to queue and Add to playlist, as on Standard. The other drops in decision 7
 stand: artist and release info, biography, top tracks, similar artists.
 
+### Amended 2026-10-02: Keep is asked only when the picture changes
+
+George, after the first setup of 0.5.0 asked *Keep this screen?* at boot
+while he was still at the phone: *"A and C. Also fix the defect"*. Decision 5
+becomes:
+
+- **The question is asked only when choosing the screen changes the
+  picture**: a forced mode (`video=`), a scale or a rotation that differs
+  from what the screen shows now. A screen driven at its own mode, at scale 1
+  and unrotated - all four tested Waveshare screens - is kept without asking.
+  The question guards against a screen left dark or unreadable, and a change
+  that alters nothing cannot do that.
+- **After setup, the phone says the question is coming, and it waits 2
+  minutes** rather than 30 s: setup ends on the phone, not beside the panel.
+- **A screen that goes back also goes back in Settings** (the defect): until
+  then, *Attached screen* went on naming the screen that had been undone.
+
+The fixed setup password still waits for a kept screen; one kept without
+asking counts as kept.
+
 ## Not in this record
 
 - The 800 × 480 on real hardware: designed and built, not tested until one is
