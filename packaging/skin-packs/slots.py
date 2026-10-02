@@ -151,6 +151,19 @@ LEFT_ALONE = {
 }
 
 
+#: Measurements George had checked by eye and set aside (2026-10-02: "Going
+#: with whatever recommendation you might have for the doubtful logos"): the
+#: fill ran under the art (Streamer CD), over open wood (Eher, PipeWood) or
+#: into a neighbouring control (LG Syitren). They keep their declared box.
+#: Keyed "<size>/<folder>/<skin>".
+SET_ASIDE = {
+    "1280x800/1280x720_g5_444_rotate/18G5_Streamer CD",
+    "1480x320/gelo5/45G5_Eher only meters",
+    "1280x400/gelo5-220/111G5_PipeWood Spectrum",
+    "1920x1080/1920x1080_g5_FanartCD/305G5_LG_Syitren Fanart",
+}
+
+
 def main(argv: list[str]) -> int:
     root, size_text = Path(argv[0]), argv[1]
     size = tuple(int(v) for v in size_text.split("x"))
@@ -170,6 +183,8 @@ def main(argv: list[str]) -> int:
                     slot, reason = list(reviewed[name][:4]), "reviewed (the shipped table)"
                 elif folder.name in REVIEWED_FOLDERS and name in LEFT_ALONE and reviewed:
                     slot, reason = None, "left alone on review (the shipped table)"
+                elif f"{size_text}/{folder.name}/{name}" in SET_ASIDE:
+                    slot, reason = None, "set aside on review (George, 2026-10-02)"
                 else:
                     slot, reason = measure(options(lines), meters.parent, size)
                 key = f"{folder.name}/{name}"
