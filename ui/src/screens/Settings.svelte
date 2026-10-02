@@ -347,6 +347,8 @@
     if (row.type === 'toggle') return '';
     // A screen reads as its maker and model, not the picker's `Maker/Model`.
     if (row.optionTags && typeof v === 'string') return v.replace('/', ' ');
+    // A skin by the name its pack gives it (George's "Brand · Model").
+    if (row.optionLabels && v != null && row.optionLabels[v]) return row.optionLabels[v];
     // "Not set" is derived from an empty value, never stored as one, so it
     // can never be pre-filled into the field and saved as the real thing. A
     // secret that is set reports only that, never the value (ADR-0044).
@@ -635,9 +637,22 @@
   };
 
   const ORDINAL = /^(\d+)G5_(.*)$/;
-  function parts(name) {
+  function parts(name, row = picker) {
+    // The pack's own name for it, when the pack has one (George, 2026-10-02:
+    // "Brand · Model · variant", no numbers, no underscores).
+    const label = row?.optionLabels?.[name];
+    if (label) return { ord: '', label };
     const m = ORDINAL.exec(String(name));
     return m ? { ord: m[1], label: m[2] } : { ord: '', label: String(name) };
+  }
+
+  //: The picker's order: a catalogue, by name, where the pack names its
+  //: skins; otherwise the corpus order it always had.
+  function byLabel(row) {
+    const options = row.options ?? [];
+    const labels = row.optionLabels;
+    if (!labels) return options;
+    return [...options].sort((a, b) => (labels[a] ?? a).localeCompare(labels[b] ?? b));
   }
 
   //: **Swipe between skins on a phone** (George, 2026-10-02): left for the
@@ -1055,7 +1070,7 @@
   {/if}
 
   {#if picker}
-    {@const options = picker.options ?? []}
+    {@const options = byLabel(picker)}
     {@const inUse = picker.value == null ? null : String(picker.value)}
     {@const viewing = pickerView ?? (wide ? inUse : null)}
     <div class="picker">
@@ -1092,7 +1107,7 @@
               aria-current={option === inUse ? 'true' : undefined}
               onclick={() => (pickerView = option)}
             >
-              <span class="skin__ord">{p.ord}</span>
+              {#if p.ord}<span class="skin__ord">{p.ord}</span>{/if}
               <span class="skin__label">{p.label}</span>
               {#if option === inUse}<span class="skin__check"><span></span></span>{/if}
             </button>
@@ -1135,7 +1150,7 @@
             </div>
             <div class="pane__text">
               <div class="pane__name">{p.label}</div>
-              <div class="pane__meta">{viewing} &nbsp;·&nbsp; {isCurrent ? 'IN USE' : 'NOT IN USE'}</div>
+              <div class="pane__meta">{picker.optionLabels?.[viewing] ? '' : `${viewing}  ·  `}{isCurrent ? 'IN USE' : 'NOT IN USE'}</div>
             </div>
             <button
               class="pane__use"

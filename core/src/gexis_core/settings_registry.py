@@ -539,8 +539,13 @@ class Settings:
         options: dict[str, Callable[[], Any]] | None = None,
         notes: dict[str, Callable[[], str | None]] | None = None,
         seed_path: Path = SEED_PATH,
+        labels: dict[str, Callable[[], dict]] | None = None,
     ) -> None:
         self._store = store
+        #: What each option is called on screen, by `optionsFrom` source,
+        #: where the stored value is a key and not a name to read (the skins'
+        #: section names, ADR-0111: George's "Brand · Model" names).
+        self._labels = labels or {}
         self._groups = registry if registry is not None else load_registry()
         self._rows = {r["key"]: r for g in self._groups for r in g["rows"] if r["type"] != "group"}
         self._defaults = defaults or {}
@@ -653,6 +658,8 @@ class Settings:
                     public["options"] = list(self._options.get(source, tuple)())
                     if source in OPTION_TAGS:
                         public["optionTags"] = OPTION_TAGS[source]()
+                    if source in self._labels:
+                        public["optionLabels"] = self._labels[source]()
                 public["value"] = self.value(row["key"])
                 if row["key"] in self._notes:
                     note = self._notes[row["key"]]()

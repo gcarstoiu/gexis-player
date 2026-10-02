@@ -1518,6 +1518,7 @@ async def main() -> None:
         # ADR-0051 §4: which skins there are depends on where they are
         # installed and on what `skin_corpus` holds, neither of which the
         # registry module can know.
+        labels={"skin_corpus": lambda: skins.labels(skins_at()[0]) if skins_at() else {}},
         options={
             "skin_corpus": skins_offered,
             # ADR-0055 §1: discovered, not written down. Re-read on every

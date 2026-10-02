@@ -17,6 +17,7 @@ day one over a rename.
 """
 from __future__ import annotations
 
+import json
 import logging
 import re
 from dataclasses import dataclass
@@ -378,6 +379,23 @@ def installed(root: Path, pack: str | None = None, resolution: str = RESOLUTION)
 #: projection of six settings, not a record: the database is the record,
 #: and a missing file means the driver keeps what it already has.
 SELECTION_PATH = Path("/run/gexis/visualisation.json")
+
+
+def labels(root: Path) -> dict[str, str]:
+    """**What each skin is called on screen** (George, 2026-10-02: option C,
+    "Brand · Model · variant"): the pack's `names.json`, keyed
+    `<folder>/<skin>`, as a name -> label map. The section names stay the
+    keys everything else uses. A pack without the table (an old gexis-skins)
+    gives none, and the picker shows the names as it always has."""
+    try:
+        table = json.loads((root / "names.json").read_text()).get("names", {})
+    except (OSError, ValueError):
+        return {}
+    out: dict[str, str] = {}
+    for key, label in table.items():
+        _folder, _, name = key.partition("/")
+        out.setdefault(name, str(label))
+    return out
 
 
 def names(root: Path, corpus: str, pack: str | None = None, resolution: str = RESOLUTION) -> list[str]:

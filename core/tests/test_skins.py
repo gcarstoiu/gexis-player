@@ -425,3 +425,18 @@ def test_fanart_is_the_skins_with_a_frame_for_the_artist_whatever_they_are():
     meter = skins.Skin("m", {"meter.type": "circular"})
     assert [s.name for s in skins.in_corpus([turn, plain_turn, meter], "Fanart")] == ["t"]
     assert [s.name for s in skins.in_corpus([turn, plain_turn, meter], "Turntables")] == ["t", "p"]
+
+
+def test_a_pack_s_names_table_gives_each_skin_its_label(tmp_path):
+    """George, 2026-10-02 (option C): "Brand · Model · variant" on screen; the
+    section names stay the keys."""
+    import json
+
+    from gexis_core import skins
+
+    (tmp_path / "names.json").write_text(json.dumps({"names": {
+        "gelo5/144G5_03_Naim Turntable": "Naim · Turntable · art beside",
+        "stock/orange": "Volumio · Orange"}}))
+    assert skins.labels(tmp_path) == {"144G5_03_Naim Turntable": "Naim · Turntable · art beside",
+                                      "orange": "Volumio · Orange"}
+    assert skins.labels(tmp_path / "old-gexis-skins") == {}, "no table: the names as they were"
