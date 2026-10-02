@@ -641,11 +641,12 @@
   }
 
   //: The one write the picker makes, from the button under the preview.
+  //: **The picker stays open** on the skin just chosen, now In use (George,
+  //: 2026-10-02: "once a skin is selected, stay on the selecting screen ...
+  //: User can go back by himself").
   async function pick(name) {
     const row = picker;
     if (!name || String(row.value) === name) return;
-    pickerKey = null;
-    pickerView = null;
     if (await write(row, name)) flash(`${row.label}: ${parts(name).label}`);
   }
 
