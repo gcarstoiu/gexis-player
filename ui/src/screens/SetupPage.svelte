@@ -327,9 +327,11 @@
   //: Non-breaking: "1280 ×" and "800" must not part at a line's end.
   const packSize = $derived(chosenModel?.skins?.replace('x', '\u00a0×\u00a0') ?? '');
   const packLabel = $derived(chosenModel?.skin_count ? `the ${chosenModel.skin_count} skins drawn for ${packSize} screens` : `the set for ${packSize} screens`);
+  //: Two minutes after setup (SETUP_KEEP_S in the core); 30 s is a change
+  //: made later in Settings (George, 2026-10-03, reviewing the copy).
   const pickNote = $derived(
     (chosenModel && !chosenModel.tested ? 'This model has not been tested with gexis. ' : '') +
-      'When setup finishes the player restarts on this screen and asks Keep this screen? on it. If nobody touches Keep within 30 seconds, it goes back.'
+      'When setup finishes the player restarts on this screen and asks Keep this screen? on it. If nobody touches Keep within two minutes, it goes back.'
   );
   //: The preset names carry the panel's own resolution, which the row's note
   //: already gives the way the screen is used ("(400x1280)" on a bar).
