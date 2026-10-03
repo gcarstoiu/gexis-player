@@ -28,7 +28,7 @@
   //
   // `embedded` is the panel too: there the weave is drawn once for the whole
   // panel (PanelBackground.svelte). A phone gets its own, as before.
-  let { onback = null, embedded = false } = $props();
+  let { onback = null, embedded = false, openRow = null, onrowopened = null } = $props();
 
   const WIDE_MIN = 720;
 
@@ -335,6 +335,20 @@
   }
 
   onMount(loadSettings);
+
+  //: Opened on a row from outside (ADR-0109, amended 2026-10-03: *Choose*,
+  //: when a different screen is attached): its page, and its sheet.
+  $effect(() => {
+    if (!openRow || !groups.length) return;
+    const group = groups.find((g) => g.rows.some((r) => r.key === openRow));
+    const row = rowOf(openRow);
+    if (group && row) {
+      cat = group.id;
+      drilled = group.id;
+      openSheet(row);
+    }
+    onrowopened?.();
+  });
 
   function flash(text, ms = 1900) {
     clearTimeout(toastTimer);

@@ -119,6 +119,7 @@ class StateServer:
         screen_seen=None,
         park=None,
         screen_answer=None,
+        screen_new_answer=None,
         on_painted=None,
         upload_plugin=None,
         uninstall_plugin=None,
@@ -188,6 +189,7 @@ class StateServer:
         #: ADR-0109 decision 5: *Keep this screen?* - `keep` or `revert`,
         #: from the panel only.
         self._screen_answer = screen_answer
+        self._screen_new_answer = screen_new_answer
         #: The panel's first frame starts that question's countdown.
         self._on_painted = on_painted
         #: ADR-0106: a package from a phone or computer, and taking one away.
@@ -1069,6 +1071,16 @@ class StateServer:
             self._on_painted()
         return web.json_response({"painted": True, "splash_dropped": dropped})
 
+    async def _handle_screen_new(self, request: web.Request) -> web.Response:
+        """ADR-0109, amended 2026-10-03: the answer to "a different screen is
+        attached" - from the panel or a phone, unlike Keep: choosing is not
+        proving that the picture and the touch work, and Keep still asks
+        that on the panel after the restart."""
+        action = request.match_info["action"]
+        if action not in ("use", "later", "choose") or self._screen_new_answer is None:
+            return web.json_response({"error": f"unknown answer {action}"}, status=404)
+        return web.json_response(await self._screen_new_answer(action))
+
     async def _handle_screen_answer(self, request: web.Request) -> web.Response:
         """**ADR-0109 decision 2: Keep is pressed on the panel only** - a touch
         there proves both the picture and the touch input. Loopback: the
@@ -1450,6 +1462,7 @@ class StateServer:
         app.router.add_post("/touch", self._handle_touch)
         app.router.add_post("/panel/painted", self._handle_painted)
         app.router.add_post("/screen/{action}", self._handle_screen_answer)
+        app.router.add_post("/screen-new/{action}", self._handle_screen_new)
         app.router.add_get("/setup/status", self._handle_setup_status)
         app.router.add_post("/renderers/park", self._handle_park)
         app.router.add_post("/plugins/upload", self._handle_plugin_upload)

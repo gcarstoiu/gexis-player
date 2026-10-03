@@ -117,6 +117,9 @@ export const update = derived(playback, ($s) => $s?.update ?? null);
 //: screen waits for a touch on the panel.
 export const screenConfirm = derived(playback, ($s) => $s?.screen_confirm ?? null);
 export const answerScreen = (answer) => post(`/screen/${answer}`);
+//: ADR-0109, amended 2026-10-03: a different screen attached at start.
+export const screenNew = derived(playback, ($s) => $s?.screen_new ?? null);
+export const answerNewScreen = (answer) => post(`/screen-new/${answer}`);
 
 /** The setup network's password, which the core gives to the panel only. */
 export async function setupPassword() {

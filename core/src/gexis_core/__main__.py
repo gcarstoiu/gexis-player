@@ -18,7 +18,7 @@ from dbus_next import BusType
 from dbus_next.aio import MessageBus
 
 from gexis_core import alsa, bluetooth_adapter_state, bluetooth_agent, device_name, journal, meters, screen_detect, skins, wifi
-from gexis_core import screen_apply, screens, skin_packs, skin_previews
+from gexis_core import screen_apply, screen_watch, screens, skin_packs, skin_previews
 from gexis_core.adapters.base import VolumeMechanism
 from gexis_core.adapters.bluetooth import BluetoothAdapter
 from gexis_core.adapters.lms import LmsAdapter
@@ -2616,6 +2616,9 @@ async def main() -> None:
                 screen_wait["task"].cancel()
             state_store.set_screen_confirm(None)
             logger.info("screen: kept")
+            # ADR-0109, amended 2026-10-03: what a kept screen reports, so a
+            # different one is noticed at the next start.
+            await asyncio.to_thread(lambda: screen_watch.kept(screen_detect.seen()))
             # ADR-0111 decision 2: the kept screen's pack, the old one out.
             _skins_kick()
             return {"kept": True}
@@ -2627,6 +2630,28 @@ async def main() -> None:
         state_store.set_screen_confirm(_question)
         screen_wait["task"] = asyncio.ensure_future(
             _screen_countdown(NEVER_DRAWN_S, "the panel never drew on the new screen"))
+    elif not _setup_running(state_store.state.setup):
+        # ADR-0109, amended 2026-10-03: a different screen attached since
+        # the last start is asked about - not while a Keep or setup is open.
+        try:
+            state_store.set_screen_new(await asyncio.to_thread(
+                lambda: screen_watch.question(screen_detect.seen(), headless=bool(settings.value("headless")))))
+        except Exception:  # noqa: BLE001 - a question not asked is not a player not started
+            logger.exception("screen: the attached screen was not compared")
+
+    async def _screen_new_answer(action: str) -> dict:
+        """Use it (a recognised screen: the usual restart and Keep), Not now
+        (that screen is not asked about again), or Choose (the panel opens the
+        screen list; asked again at the next start if nothing is chosen)."""
+        question = state_store.state.screen_new
+        if question is None:
+            return {"error": "nothing is being asked"}
+        state_store.set_screen_new(None)
+        if action == "later":
+            await asyncio.to_thread(screen_watch.not_now, question["key"])
+        elif action == "use" and question.get("label"):
+            _choose_screen(question["label"])
+        return {"ok": True}
 
     async def _restart_core_soon() -> None:
         """The plugin list and its settings rows are read at start, so a
@@ -2737,6 +2762,7 @@ async def main() -> None:
         screen_seen=screen_detect.seen,
         park=_park_renderers,
         screen_answer=_screen_answer,
+        screen_new_answer=_screen_new_answer,
         on_painted=_screen_painted,
         upload_plugin=_upload_plugin,
         uninstall_plugin=_uninstall_plugin,

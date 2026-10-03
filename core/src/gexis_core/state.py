@@ -67,6 +67,7 @@ class StateStore:
         self._setup: dict | None = None
         self._update: dict | None = None
         self._screen_confirm: dict | None = None
+        self._screen_new: dict | None = None
         #: **ADR-0081: the cover the daemon found for a renderer that sent
         #: none.** `renderer_id -> (track, url)`, applied in `state` below
         #: only where the renderer's own artwork is absent. Keyed on the
@@ -119,6 +120,7 @@ class StateStore:
             setup=dict(self._setup) if self._setup else None,
             update=dict(self._update) if self._update else None,
             screen_confirm=dict(self._screen_confirm) if self._screen_confirm else None,
+            screen_new=dict(self._screen_new) if self._screen_new else None,
         )
 
     def set_active(self, renderer_id: str | None) -> None:
@@ -370,6 +372,13 @@ class StateStore:
         if confirm == self._screen_confirm:
             return
         self._screen_confirm = dict(confirm) if confirm is not None else None
+        self._notify()
+
+    def set_screen_new(self, question: dict | None) -> None:
+        """ADR-0109, amended 2026-10-03: a different screen at start."""
+        if question == self._screen_new:
+            return
+        self._screen_new = dict(question) if question is not None else None
         self._notify()
 
     def bump_settings_revision(self) -> None:

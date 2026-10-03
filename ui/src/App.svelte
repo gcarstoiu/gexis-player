@@ -19,8 +19,9 @@
   import SetupPage from './screens/SetupPage.svelte';
   import { screen } from './lib/family.svelte.js';
   import UpdateScreen from './screens/UpdateScreen.svelte';
-  import { update, connection, hidePeppy, screenConfirm, answerScreen } from './lib/state.js';
+  import { update, connection, hidePeppy, screenConfirm, answerScreen, screenNew, answerNewScreen } from './lib/state.js';
   import KeepScreen from './screens/KeepScreen.svelte';
+  import NewScreen from './screens/NewScreen.svelte';
   import { loadSettings, settingValues } from './lib/settings.js';
   import { loadLibraryRoot } from './lib/library.js';
   import { reportTouch, showPeppy, reportPainted, reportShown } from './lib/state.js';
@@ -272,6 +273,21 @@
     settingsOpen = true;
   }
 
+  //: ADR-0109, amended 2026-10-03: the answer to "a different screen is
+  //: attached". Choose opens Settings on the Attached screen row.
+  let openRow = $state(null);
+  async function answerNew(answer) {
+    try {
+      await answerNewScreen(answer);
+    } catch {
+      return;
+    }
+    if (answer === 'choose') {
+      openRow = 'screen';
+      if (surface === 'panel') openSettings();
+    }
+  }
+
   const openVolume = () => {
     armAutoHide();
     volumeOpen = true;
@@ -391,8 +407,11 @@
   <SetupPage setup={$setup} />
 {:else if surface === 'remote'}
   <!-- ADR-0101: on a phone, Settings and the mini player under it. -->
-  <div class="remote remote--mini"><Settings /></div>
+  <div class="remote remote--mini"><Settings {openRow} onrowopened={() => (openRow = null)} /></div>
   <MiniPlayer />
+  {#if $screenNew}
+    <NewScreen question={$screenNew} onanswer={answerNew} />
+  {/if}
 {:else if surface === 'panel'}
 
 <div class="panel" class:panel--bar={screen.family === 'bar'} data-family={screen.family}>
@@ -410,7 +429,7 @@
        effect. The drawer, idle screen and handoff keep their own. -->
   {#if settingsOpen}
     <div class="screen-layer">
-      <Settings onback={() => (settingsOpen = false)} embedded />
+      <Settings onback={() => (settingsOpen = false)} embedded {openRow} onrowopened={() => (openRow = null)} />
     </div>
   {:else if waitingOpen}
     <div class="screen-layer">
@@ -521,6 +540,10 @@
 
   {#if $pairing}
     <PairingFrame request={$pairing} />
+  {/if}
+
+  {#if $screenNew && !$screenConfirm && !setupShown && !updateLock}
+    <NewScreen question={$screenNew} onanswer={answerNew} />
   {/if}
 
   <!-- ADR-0109 decision 5: above everything but the update lock - the
