@@ -91,6 +91,15 @@ def part(part_dir: Path, assets_json: Path, releases: Path) -> None:
             if tag == part_dir.name:
                 continue
             copy = local.get((tag, name))
+            if copy is not None and sha256(copy) != want:
+                # **One name and version, one content** (found 2026-10-03:
+                # gexis-lyrion-server 9.1.1-2 was published twice with
+                # different bytes; a device fetching 0.8.1 had its copy
+                # replaced by 0.8.0's for the rollback, and the install
+                # stopped). apt keys its cache by name and version, so two
+                # contents under one version is never right: bump it.
+                sys.exit(f"ERROR: {name} is already published in {tag} with different content; "
+                         f"give the package a new version")
             if copy is not None and sha256(copy) == want:
                 old = f"Filename: {fields['Filename']}\n"
                 assert text.count(old) == 1, old

@@ -25,6 +25,13 @@ inputs() {
 		skins-*) echo skins packaging/skin-packs image/stage-gexis/fetch-cached.sh \
 			image/stage-gexis/05-peppy/files/letterbox.py image/stage-gexis/05-peppy/files/badge-slots.json \
 			core/src/gexis_core/skin_counts.json ;;
+		# A third-party component whose package also carries files of ours:
+		# its version is upstream's plus the commit of those files, so a
+		# change of ours is a new version (2026-10-03: gexis-lyrion-server
+		# went out twice as 9.1.1-2 with different bytes).
+		lyrion-server) echo packaging/lyrion-server image/stage-gexis/10-lyrion ;;
+		beszel-hub) echo packaging/beszel-hub image/stage-gexis/07-beszel/files/beszel-hub.service \
+			image/stage-gexis/07-beszel/files/plugin-hub.json ;;
 		*) echo . ;;   # the release, and components that carry their own
 	esac
 }

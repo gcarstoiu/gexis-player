@@ -3,13 +3,14 @@
 # agent's pin. Runs inside gexis-deb-builder (arm64 trixie), with the
 # repository at /src, the download cache at /cache and the output in /out.
 #
-# Versioned by Beszel's own version, as the agent is (ADR-0107: one package
-# per third-party component), so the git version given as $1 is ignored.
+# Versioned by Beszel's own version, then ours: $1 is the commit of this
+# package's own files (packaging/build.sh), so a change to the unit or the
+# manifest is a new version. "-2" sorts after the 0.20.0-1 that went out first.
 set -eu
 STAGE_DIR=/src/image/stage-gexis/07-beszel
 . /src/packaging/beszel-hub/pins.sh
 : "${BESZEL_HUB_VERSION:?} ${BESZEL_HUB_ASSET:?} ${BESZEL_HUB_URL:?} ${BESZEL_HUB_SHA256:?}"
-VERSION="${BESZEL_HUB_VERSION#v}-1"
+VERSION="${BESZEL_HUB_VERSION#v}-2+${1:?the version of our files}"
 PKG=gexis-beszel-hub
 STAGE=/tmp/stage/$PKG
 WORK=/tmp/work/$PKG

@@ -10,12 +10,14 @@
 # unit, the manifest, the Music share, the first prefs, Lyrion's user and
 # folders, and the system packages Lyrion runs on.
 #
-# Versioned by the Lyrion version it fetches, then ours; $1 is ignored.
+# Versioned by the Lyrion version it fetches, then ours: $1 is the commit of
+# this package's own files (packaging/build.sh), so a change of ours is a new
+# version. "-3" sorts after the 9.1.1-2 that went out before this.
 set -eu
 STAGE_DIR=/src/image/stage-gexis/10-lyrion
 . /src/packaging/lyrion-server/pins.sh
 : "${LYRION_VERSION:?}"
-VERSION="${LYRION_VERSION}-2"
+VERSION="${LYRION_VERSION}-3+${1:?the version of our files}"
 PKG=gexis-lyrion-server
 STAGE=/tmp/stage/$PKG
 rm -rf "$STAGE"
