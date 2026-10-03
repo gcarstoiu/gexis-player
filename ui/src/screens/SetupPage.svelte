@@ -300,6 +300,13 @@
     step -= skipped(step - 1) ? 2 : 1;
   }
 
+  //: **The count is what this person meets** (George, 2026-10-03, reviewing
+  //: the copy: "Should be dynamic based on what the user actually sees"):
+  //: seven when the Visualiser step is skipped, eight otherwise.
+  const shownSteps = $derived(STEPS.filter((_, n) => !skipped(n)).length);
+  const shownAt = (n) => STEPS.slice(0, n + 1).filter((_, i) => !skipped(i)).length;
+  const COUNT_WORDS = { 7: 'Seven', 8: 'Eight' };
+
   async function finish() {
     saving = true;
     problem = null;
@@ -404,13 +411,13 @@
     <header>
       <img class="mark" src={mark} alt="" width="34" height="34" />
       <span class="crumb">
-        {step < 0 ? 'First-time setup' : step >= last || finished ? 'Almost done' : `Step ${step + 1} of ${last} · ${STEPS[step][1]}`}
+        {step < 0 ? 'First-time setup' : step >= last || finished ? 'Almost done' : `Step ${shownAt(step)} of ${shownSteps} · ${STEPS[step][1]}`}
       </span>
       {#if setup?.ssid}<span class="over">Over {setup.ssid}</span>{/if}
     </header>
 
     {#if step >= 0 && step < last && !finished}
-      <div class="progress"><div style="width:{Math.round(((step + (valid() ? 1 : 0.35)) / last) * 100)}%; background:{accent}"></div></div>
+      <div class="progress"><div style="width:{Math.round(((shownAt(step) - 1 + (valid() ? 1 : 0.35)) / shownSteps) * 100)}%; background:{accent}"></div></div>
     {/if}
 
     <div class="grid" class:grid--rail={step >= 0 && step < last && !finished}>
@@ -458,7 +465,7 @@
                 : "You are connected to the player's own Wi-Fi. Nothing here leaves the room: the device is the only thing this page is talking to."}
             </p>
             <div class="cards">
-              <div class="info"><span class="bar" style="background:#8fc4d8"></span><span><b>About two minutes</b><small>Eight questions. Every one of them can be changed later in Settings.</small></span></div>
+              <div class="info"><span class="bar" style="background:#8fc4d8"></span><span><b>About two minutes</b><small>{COUNT_WORDS[shownSteps] ?? shownSteps} questions. Every one of them can be changed later in Settings.</small></span></div>
               {#if !overLan}
                 <div class="info"><span class="bar" style="background:#7ed6bc"></span><span><b>Keep this phone handy</b><small>When setup finishes, the player leaves its own Wi-Fi for yours and this page stops working. That is by design, not a fault.</small></span></div>
                 <!-- George, 2026-09-29: the page would not load until he
