@@ -51,6 +51,13 @@ SQUARE_BELOW = 1.3
 #: come back when one can be.
 INTERFACES = frozenset({"hdmi"})
 
+#: **A case is not a screen** (George, 2026-10-03: *"In general the box and
+#: non box i would say are the same"* - his 10.1" (B) came in Waveshare's case,
+#: and the list offered it twice). A preset "with Case" is listed as its panel:
+#: dropped where the bare panel is listed too, renamed where it is not, and a
+#: choice saved under the old name still finds it.
+CASE = re.compile(r"\s+with Case\b", re.IGNORECASE)
+
 #: The maker as the picker shows it, where the preset's first word is not one.
 _MAKER_NAMES = {
     "GeeekPi/52Pi": "GeeekPi",
@@ -108,6 +115,9 @@ def all_screens(path: Path = PRESETS) -> tuple[Screen, ...]:
     for key, preset in raw.items():
         if not isinstance(preset, dict) or "name" not in preset or key in NOT_MODELS:
             continue
+        panel = key.removesuffix("-case")
+        if panel != key and panel in raw:
+            continue
         native = _size(preset.get("native_resolution"))
         if native is None:
             continue
@@ -125,7 +135,7 @@ def all_screens(path: Path = PRESETS) -> tuple[Screen, ...]:
             continue
         if preset.get("type", "hdmi") not in INTERFACES:
             continue
-        maker, model = _maker_and_model(preset["name"])
+        maker, model = _maker_and_model(CASE.sub("", preset["name"]))
         out.append(Screen(
             id=key,
             maker=maker,
@@ -134,7 +144,7 @@ def all_screens(path: Path = PRESETS) -> tuple[Screen, ...]:
             width=used[0],
             height=used[1],
             rotation=rotation,
-            tested=key in TESTED,
+            tested=panel in TESTED,
             video_mode=preset.get("video_mode"),
             notes=preset.get("notes"),
         ))
@@ -142,8 +152,12 @@ def all_screens(path: Path = PRESETS) -> tuple[Screen, ...]:
 
 
 def by_id(screen_id: str) -> Screen | None:
-    return next((s for s in all_screens() if s.id == screen_id), None)
+    found = next((s for s in all_screens() if s.id == screen_id), None)
+    if found is None and screen_id.endswith("-case"):  # merged into its panel
+        found = next((s for s in all_screens() if s.id == screen_id.removesuffix("-case")), None)
+    return found
 
 
 def by_label(label: str) -> Screen | None:
+    label = CASE.sub("", label)
     return next((s for s in all_screens() if s.label == label), None)

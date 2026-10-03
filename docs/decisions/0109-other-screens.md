@@ -204,6 +204,17 @@ becomes:
 The fixed setup password still waits for a kept screen; one kept without
 asking counts as kept.
 
+### Amended 2026-10-03: a case is not a screen
+
+George, 2026-10-03: *"there is a wave share 1280 X 800 and the same box. Now I
+have the box one, but selected is the non box one ... In general the box and
+non box i would say are the same."* Upstream's list names five Waveshare
+panels "with Case"; the case changes nothing the player sets. So a preset
+"with Case" is listed as its panel - **dropped where the bare panel is listed
+(10.1" (B), 7" (H), 10.1" (H), 11.6" (H)), renamed where it is not (10.1" (D)
+and (G))** - and is tested when its panel is. A choice saved under the old
+name or id still finds the panel. HDMI models listed: **106** (was 110).
+
 ## Not in this record
 
 - The 800 × 480 on real hardware: designed and built, not tested until one is
