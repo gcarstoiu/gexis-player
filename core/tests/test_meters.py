@@ -75,6 +75,26 @@ def test_nothing_new_holds_the_last_frame(fifos):
     source.close()
 
 
+def test_a_pause_lets_the_spectrum_fall_like_the_meters(fifos):
+    """George, 2026-10-03: the bars stood when paused while the needles
+    fell. A missed tick holds; a stopped stream reads as silence."""
+    meter, spectrum, (mw, sw) = fifos
+    now = [100.0]
+    source = FifoSource(meter, spectrum, clock=lambda: now[0])
+    os.write(mw, meter_frame(60, 63))
+    os.write(sw, spectrum_frame(tuple(range(30))))
+    source.read()
+    now[0] += 0.05
+    held = source.read()
+    assert held.bands == tuple(range(30)) and held.left == 60, "one tick without a frame holds"
+    now[0] += 0.5
+    paused = source.read()
+    assert paused.bands == (0,) * 30 and (paused.left, paused.right) == (0, 0)
+    os.write(sw, spectrum_frame((5,) * 30))
+    assert source.read().bands == (5,) * 30, "playing again picks up at once"
+    source.close()
+
+
 def test_a_partial_frame_is_not_read_as_levels(fifos):
     meter, spectrum, (mw, _) = fifos
     source = FifoSource(meter, spectrum)
