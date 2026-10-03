@@ -40,9 +40,11 @@ RestartSec=10
 Nice=19
 IOSchedulingClass=idle
 CPUWeight=10
-# More than 13a's 1 GB (George: "Lyrion might need more than 1gb of ram"),
-# until a scan of a real library is measured.
-MemoryMax=2G
+# **The player's memory less 1 GB** (ADR-0115 decision 18), set by the line
+# below at each start; 2 GB was too little for George's 61,362 files on a
+# 4 GB Pi and more than a 2 GB Pi has. This share stands only if it fails.
+MemoryMax=70%
+ExecStartPre=+/usr/lib/gexis/lyrion-memory-limit
 
 [Install]
 WantedBy=multi-user.target
