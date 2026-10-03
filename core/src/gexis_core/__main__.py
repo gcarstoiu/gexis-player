@@ -281,13 +281,14 @@ LYRION_PLUGINS = Path("/var/lib/squeezeboxserver/cache/InstalledPlugins/Plugins"
 def _lyrion_setup_note(marker: Path = LYRION_ADDONS_DONE) -> str | None:
     """**The first start says what it is doing, and for how long** (George,
     2026-10-03: *"The user should be informed that it takes 2 to 3 minutes.
-    Otherwise he won't understand what is happening."*). Until its add-ons
+    Otherwise he won't understand what is happening."*; *"about 3 minutes"*
+    after his own run took 3:00 from switch-on to Material). Until its add-ons
     are in, the server runs in Lyrion's plain skin and restarts once, so its
     switch says so; the row's own "Open http://..." follows."""
     if marker.exists():
         return None
     return (f"Setting up: Lyrion is installing Material Skin and its add-ons, and restarts once on "
-            f"the way. This takes 2 to 3 minutes. Then open http://{device_name.hostname() or 'gexis'}.local:9000")
+            f"the way. This takes about 3 minutes. Then open http://{device_name.hostname() or 'gexis'}.local:9000")
 
 
 def _setup_running(setup: dict | None) -> bool:

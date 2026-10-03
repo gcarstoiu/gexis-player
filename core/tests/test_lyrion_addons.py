@@ -39,7 +39,7 @@ def test_a_page_without_the_form_is_refused():
         la.submission("<html>Server is starting</html>")
 
 
-def test_the_first_start_says_it_takes_two_to_three_minutes_until_the_add_ons_are_in(tmp_path, monkeypatch):
+def test_the_first_start_says_it_takes_about_three_minutes_until_the_add_ons_are_in(tmp_path, monkeypatch):
     """George, 2026-10-03: "The user should be informed that it takes 2 to 3
     minutes. Otherwise he won't understand what is happening." """
     from gexis_core import __main__ as core
@@ -47,7 +47,7 @@ def test_the_first_start_says_it_takes_two_to_three_minutes_until_the_add_ons_ar
     monkeypatch.setattr(core.device_name, "hostname", lambda: "gexis")
     marker = tmp_path / "lyrion-addons.done"
     note = core._lyrion_setup_note(marker)
-    assert "2 to 3 minutes" in note and "restarts once" in note
+    assert "about 3 minutes" in note and "restarts once" in note
     assert note.endswith("open http://gexis.local:9000")
     marker.touch()
     assert core._lyrion_setup_note(marker) is None
