@@ -2319,7 +2319,9 @@ async def main() -> None:
                 # ADR-0115 decision 18: a scan stopped for memory is said on
                 # the server's row until one finishes without a stop.
                 status = await _lyrion_rpc(["serverstatus", 0, 0])
-                if lyrion_watch.update(bool(status.get("rescan"))):
+                highmem = (await _lyrion_rpc(["pref", "dbhighmem", "?"])).get("_p2")
+                highmem = int(highmem) if str(highmem).isdigit() else None
+                if lyrion_watch.update(bool(status.get("rescan")), highmem):
                     state_store.bump_settings_revision()
             except Exception as exc:  # starting: next time
                 logger.debug("lyrion: scan state not read (%r)", exc)

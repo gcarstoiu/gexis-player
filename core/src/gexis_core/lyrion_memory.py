@@ -25,8 +25,10 @@ STOPPED = Path("/var/lib/gexis/lyrion-scan-stopped.json")
 #: Below this the player cannot spare the 1 GB it keeps and still give
 #: Lyrion a useful share (a 1 GB Pi reports about 900 MB).
 MIN_MB = 1536
-#: What the scanner adds per file, measured (Finding 109).
-PER_FILE_KB = 27
+#: What the scanner adds per file, by Lyrion's "Database Memory Config"
+#: (`dbhighmem`), measured with George's 61,362 files (Finding 109): Normal
+#: about 13 KB, High about 27 KB; Maximum's scanner is High's.
+PER_FILE_KB = {0: 13, 1: 27, 2: 27}
 #: Lyrion before its first file: the server, its cache, the kernel's share.
 BASE_MB = 400
 
@@ -49,9 +51,9 @@ def too_small(total: int | None) -> str | None:
             f"player with 2 GB or more.")
 
 
-def files_that_fit(limit_mb: int) -> int:
+def files_that_fit(limit_mb: int, highmem: int = 1) -> int:
     """About how many files a scan fits in `limit_mb`, to the thousand."""
-    fit = max(0, limit_mb - BASE_MB) * 1024 // PER_FILE_KB
+    fit = max(0, limit_mb - BASE_MB) * 1024 // PER_FILE_KB.get(highmem, PER_FILE_KB[1])
     return int(round(fit, -3))
 
 
@@ -76,9 +78,9 @@ def limit_mb(cgroup: Path = CGROUP) -> int | None:
         return None
 
 
-def remember_stopped(limit: int | None, path: Path = STOPPED) -> None:
+def remember_stopped(limit: int | None, highmem: int | None, path: Path = STOPPED) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps({"at": int(time.time()), "limit_mb": limit}))
+    path.write_text(json.dumps({"at": int(time.time()), "limit_mb": limit, "highmem": highmem}))
 
 
 def forget_stopped(path: Path = STOPPED) -> None:
@@ -91,10 +93,19 @@ def stopped_note(path: Path = STOPPED) -> str | None:
         doc = json.loads(path.read_text())
     except (OSError, ValueError):
         return None
-    limit = doc.get("limit_mb")
-    fit = f" About {files_that_fit(limit):,} files fit." if isinstance(limit, int) else ""
-    return ("The last scan was stopped: this library is too large for this player's memory, so "
-            f"part of it is missing.{fit}")
+    limit, highmem = doc.get("limit_mb"), doc.get("highmem")
+    highmem = highmem if highmem in PER_FILE_KB else 1
+    text = ("The last scan was stopped: this library is too large for this player's memory, so "
+            "part of it is missing.")
+    if isinstance(limit, int):
+        text += f" About {files_that_fit(limit, highmem):,} files fit."
+        if highmem != 0:
+            # George, 2026-10-03: "an user with 4gb of ram and more than 90k
+            # tracks can always go to normal and still have the library
+            # scanning."
+            text += (f" Set Database Memory Config to Normal (Lyrion's settings, Performance) and "
+                     f"about {files_that_fit(limit, 0):,} fit; then scan again.")
+    return text
 
 
 class Watch:
@@ -110,14 +121,14 @@ class Watch:
         #: A stop during the scan under way: its end is then no recovery.
         self._stopped = False
 
-    def update(self, scanning: bool) -> bool:
+    def update(self, scanning: bool, highmem: int | None = None) -> bool:
         """True when the note changed."""
         changed = False
         if scanning and not self._scanning:
             self._stopped = False
         kills = oom_kills(self._cgroup)
         if kills is not None and self._seen is not None and kills > self._seen:
-            remember_stopped(limit_mb(self._cgroup), self._path)
+            remember_stopped(limit_mb(self._cgroup), highmem, self._path)
             self._stopped = changed = True
         elif self._scanning and not scanning and not self._stopped and self._path.exists():
             forget_stopped(self._path)

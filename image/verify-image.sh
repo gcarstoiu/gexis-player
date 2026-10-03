@@ -59,6 +59,7 @@ image/stage-gexis/10-lyrion/files/plugin.json /usr/share/gexis/plugins/lyrion-se
 image/stage-gexis/10-lyrion/files/gexis-lyrion.service /usr/lib/systemd/system/gexis-lyrion.service
 image/stage-gexis/10-lyrion/files/lyrion.env /usr/share/gexis/components/lyrion.env
 image/stage-gexis/10-lyrion/files/lyrion-memory-limit /usr/lib/gexis/lyrion-memory-limit
+image/stage-gexis/10-lyrion/files/lyrion-prepare /usr/lib/gexis/lyrion-prepare
 image/stage-gexis/10-lyrion/files/90-gexis-usb-music.rules /usr/lib/udev/rules.d/90-gexis-usb-music.rules
 image/stage-gexis/10-lyrion/files/gexis-music.conf /etc/samba/smb.conf.d/gexis-music.conf
 EOF

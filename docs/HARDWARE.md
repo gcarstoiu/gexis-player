@@ -50,32 +50,43 @@ library.
 
 | | Minimum | Recommended | What it rests on |
 |---|---|---|---|
-| **Memory** | 2 GB Pi: a library of about **16,000 files** (**calculated**) | 4 GB Pi: up to about **90,000 files**; **tested** with 61,362 | See below. A 1 GB Pi is not offered the server (ADR-0115 decision 18). |
+| **Memory** | 2 GB Pi: a library of about **34,000 files** (**calculated**) | 4 GB Pi: about **90,000 files** as set, **187,000** on Normal (**calculated**; 61,362 **tested** on both) | See below. A 1 GB Pi is not offered the server (ADR-0115 decision 18). |
 | **Storage** | About **14 KB per file** on top of the player's needs (**calculated**) | The same | For 61,362 files: library database **151 MB**, artwork cache **670 MB** (Finding 109). |
+| **Speed** | Every answer under 0.2 s on a 4 GB Pi (**tested**) | The same | Lists 25-70 ms, search 136-174 ms, covers 5-17 ms. A server on other hardware answered 2-5 times faster (Finding 109). |
 | **Network** | Wi-Fi | Ethernet for a library on a NAS (**untested**: not compared) | The scans below ran over Wi-Fi from a NAS. |
 
 ### Memory, by library size
 
-While it scans, Lyrion's scanner grows by about **27 KB for every file**, on
-top of about **400 MB** for the server itself (measured on `gexis`,
-2026-10-03: **1,876 MB** at the end of a first scan of 61,362 files). The
-player keeps 1 GB for itself and gives Lyrion the rest (ADR-0115 decision 18).
-The 2 GB and 8 GB rows assume about 1.85 GB and 7.8 GB usable, as a 4 GB Pi
-reports 3.8 GB; neither has been checked on the hardware.
+While it scans, Lyrion's scanner grows with every file, on top of about
+**400 MB** for the server itself. How much per file depends on Lyrion's own
+*Database Memory Config* (Finding 109, 61,362 files on `gexis`, 2026-10-03):
 
-| Pi 4 memory | Lyrion may use | Library that fits a scan |
-|---|---|---|
-| 1 GB | — | not offered |
-| 2 GB | about 0.8 GB | about 16,000 files (**calculated**) |
-| 4 GB | about 2.7 GB | about 90,000 files (**calculated**; 61,362 **tested**) |
-| 8 GB | about 6.8 GB | about 240,000 files (**calculated**) |
+| Database Memory Config | Per file | Lyrion's peak for 61,362 files | Scan time | Search |
+|---|---|---|---|---|
+| Normal | about 13 KB | **1,191 MB** | 1 h 59 min | about 25 ms slower |
+| High | about 27 KB | **1,876 MB** | 2 h 7 min | - |
+| Maximum | as High (its scanner is High's) | not scanned | - | as High |
 
-A library too large for the memory is not scanned in full; the player says
-so on the server's row, with about how many files fit (ADR-0115 decision 18).
-**Still being measured:** whether turning off Lyrion's own `dbhighmem` setting
-(on by itself above 900 MB) lets a smaller Pi scan a larger library. The first
-5,000 files of a scan with it off saved a fixed 40-70 MB, not the per-file
-growth.
+Everything else browsed at the same speed on all three. The player sets
+**Normal on a Pi under 4 GB** and leaves Lyrion's own choice, **High**, on
+4 GB and more (ADR-0115 decision 19); either can be changed on Lyrion's own
+Performance page. The player keeps 1 GB for itself and gives Lyrion the rest
+(decision 18):
+
+| Pi 4 memory | Lyrion may use | As set | On Normal |
+|---|---|---|---|
+| 1 GB | - | not offered | - |
+| 2 GB | about 0.8 GB | about 34,000 files (Normal) | the same |
+| 4 GB | about 2.7 GB | about 90,000 files (High; 61,362 **tested**) | about 187,000 files (61,362 **tested**) |
+| 8 GB | about 6.8 GB | about 240,000 files (High) | about 500,000 files |
+
+All but the tested figures are **calculated**; the 2 GB and 8 GB rows assume
+about 1.85 GB and 7.8 GB usable, as a 4 GB Pi reports 3.8 GB, and neither has
+been checked. **A 4 GB player with a larger library than High fits** -
+roughly 90,000 files and up - can switch to Normal and scan it (George,
+2026-10-03). A library too large for the memory is not scanned in full; the
+player says so on the server's row, with how many files fit, and on High how
+many would on Normal (decision 18).
 
 ### Time
 

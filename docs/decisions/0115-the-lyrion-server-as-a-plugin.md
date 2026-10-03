@@ -184,6 +184,17 @@ cache is counted.
     start only when its library is empty). **B:** whether Lyrion's
     `dbhighmem` - on by itself above 900 MB - is what makes the scanner grow
     is being measured with a full scan with it off.
+19. **Lyrion's database memory is Normal on a player under 4 GB, and
+    Lyrion's own choice (High) on 4 GB and more** (*"Let's go with B"*, of
+    three: A was Normal everywhere, C Lyrion's choice everywhere). Measured
+    on George's library (Finding 109): Normal's scan needed **1,191 MB**
+    against High's **1,876 MB**, finished 8 minutes sooner, and browsed
+    the same; search was about 25 ms slower. Maximum's scanner is High's,
+    and it browsed no faster. Set only in the first preferences, so a
+    choice made on Lyrion's Performance page stands. And George: *"an user
+    with 4gb of ram and more than 90k tracks can always go to normal and
+    still have the library scanning"* - so a scan stopped for memory on High
+    says how many files Normal would fit.
 
 ## Not settled here
 
