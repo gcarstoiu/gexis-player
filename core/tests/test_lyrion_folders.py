@@ -27,7 +27,9 @@ def test_only_mounted_folders_count(tmp_path):
     assert lf.mounted(tmp_path / "absent") == []
 
 
-def test_sync_sets_the_list_and_rescans_only_on_a_change(monkeypatch, tmp_path):
+def test_sync_sets_the_list_and_leaves_the_scan_to_lyrion(monkeypatch, tmp_path):
+    """Lyrion scans a folder added to `mediadirs` by itself; a rescan on top
+    walked all 61,362 files of George's share a second time (2026-10-03)."""
     calls = []
     prefs = {"mediadirs": ["/var/lib/gexis-music"]}
 
@@ -44,7 +46,7 @@ def test_sync_sets_the_list_and_rescans_only_on_a_change(monkeypatch, tmp_path):
     monkeypatch.setattr(lf, "MANAGED", (usb, tmp_path / "shares"))
     assert asyncio.run(lf.sync(rpc, is_mount=lambda p: True)) is True
     assert prefs["mediadirs"] == ["/var/lib/gexis-music", str(usb / "DISK")]
-    assert ["rescan"] in calls
+    assert ["rescan"] not in calls
     calls.clear()
     assert asyncio.run(lf.sync(rpc, is_mount=lambda p: True)) is False
     assert ["rescan"] not in calls

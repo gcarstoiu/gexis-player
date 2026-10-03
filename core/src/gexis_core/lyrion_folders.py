@@ -8,7 +8,11 @@ Lyrion keeps the list itself, in its own preferences, and a user may add
 folders on Lyrion's own page (decision 4). So this never replaces the list:
 it adds the folders it manages that are there, takes away the ones it
 manages that are gone, and leaves every other folder as the user set it.
-A change is followed by a rescan, at the server's own low priority.
+**Lyrion scans on the change itself** (its `Slim/Utils/Prefs.pm`, read
+2026-10-03): a folder added is scanned on its own; a folder taken away wipes
+the library and scans everything again. So nothing here asks for a rescan.
+It did until 2026-10-03, and adding George's NAS share scanned its 61,362
+files and then queued a second walk of them all.
 """
 from __future__ import annotations
 
@@ -53,8 +57,9 @@ def wanted(current: list[str], present: list[str], music: Path = MUSIC,
 
 
 async def sync(rpc: Callable[[list], Awaitable[dict]], is_mount=os.path.ismount) -> bool:
-    """Bring the server's folders up to date; True if they changed (and a
-    rescan was asked for). A server that does not answer changes nothing."""
+    """Bring the server's folders up to date; True if they changed - Lyrion
+    then scans what the change needs. A server that does not answer changes
+    nothing."""
     result = await rpc(["pref", "mediadirs", "?"])
     current = result.get("_p2") or []
     if isinstance(current, str):
@@ -64,6 +69,5 @@ async def sync(rpc: Callable[[list], Awaitable[dict]], is_mount=os.path.ismount)
     if want == list(current):
         return False
     await rpc(["pref", "mediadirs", want])
-    await rpc(["rescan"])
-    logger.info("lyrion: music folders %s (were %s); rescanning", want, current)
+    logger.info("lyrion: music folders %s (were %s); Lyrion scans the change", want, current)
     return True
