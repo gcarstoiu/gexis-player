@@ -15,8 +15,10 @@ from pathlib import Path
 
 NOTES = Path(__file__).with_name("release_notes.json")
 SHOWN = 10
-#: ADR-0116, not settled: where the older ones are.
-OLDER = "https://github.com/gcarstoiu/gexis-player/releases"
+#: ADR-0116 decision 7 (George, 2026-10-03: *"B"*): every release's notes in
+#: CHANGELOG.md, generated from the same file, on `main` - which each release
+#: is merged into.
+OLDER = "https://github.com/gcarstoiu/gexis-player/blob/main/CHANGELOG.md"
 
 
 def _key(version: str) -> tuple[int, ...]:
@@ -40,6 +42,37 @@ def page(path: Path = NOTES, shown: int = SHOWN) -> dict:
     sections = [{"heading": f"{version} · {_day(entry['date'])}", "paragraphs": [], "notes": entry["notes"]}
                 for version, entry in every[:shown]]
     sections.append({"heading": "Older releases", "paragraphs": [
-        f"The last {min(shown, len(every))} releases are here. Every release and its notes are on GitHub:"],
+        f"The last {min(shown, len(every))} releases are here. Every release's notes are on GitHub:"],
         "url": OLDER})
     return {"title": "Change logs", "updated": None, "sections": sections}
+
+
+def markdown(path: Path = NOTES) -> str:
+    """`CHANGELOG.md` at the repository's root, from the same file."""
+    lines = ["# Changelog", "",
+             "Every release of Gexis Player and its notes, newest first. Generated from",
+             "`core/src/gexis_core/release_notes.json` by `python -m gexis_core.changelog` -",
+             "edit that file, not this one. The player shows the last 10 under",
+             "Settings → System → Change logs.", ""]
+    for version, entry in releases(path):
+        lines += [f"## {version} — {_day(entry['date'])}", ""]
+        for line in entry["notes"].splitlines():
+            if line in ("New", "Fixed", "Good to know"):
+                if lines[-1] != "":
+                    lines.append("")
+                lines += [f"### {line}", ""]
+            elif line.startswith("• "):
+                lines.append("- " + line[2:])
+            elif line.strip():
+                lines += [line, ""]
+        if lines[-1] != "":
+            lines.append("")
+    return "\n".join(lines).rstrip() + "\n"
+
+
+if __name__ == "__main__":
+    import sys
+
+    target = Path(sys.argv[1]) if len(sys.argv) > 1 else Path("CHANGELOG.md")
+    target.write_text(markdown())
+    print(f"wrote {target}")

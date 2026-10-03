@@ -1,6 +1,10 @@
 {
  "_about": "Every release's notes, newest first, exactly as published and signed (ADR-0116). publish.sh reads a release's notes from here; Settings -> Change logs shows the last 10.",
  "releases": {
+  "0.8.4": {
+   "date": "2026-10-03",
+   "notes": "New\n• Settings has Change logs, under Updates: what changed in the last 10 releases.\n• A display sold with or without a case is listed once.\nFixed\n• A new Lyrion server installs its add-ons and opens in Material Skin once it is installed.\n• Remove works for an uploaded plugin that a backup brought back without its package.\nGood to know\n• Once an update is installed, its notes are under Change logs rather than Software update."
+  },
   "0.8.3": {
    "date": "2026-10-03",
    "notes": "New\n• Network shares for the Lyrion server are listed by name, each with Forget beside it.\n• A share the scan does not find can be added with \"Add by address\".\nFixed\n• Remove works for the Lyrion server.\n• The Network shares setting no longer shows a share's login details.\nGood to know\n• Removing the Lyrion server also deletes its library, its settings, its add-ons and its network shares. The Music folder and its playlists stay.\n• Network share passwords are no longer kept in the settings or in backups. After restoring a backup onto a new card, enter the password again."

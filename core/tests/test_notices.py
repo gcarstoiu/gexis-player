@@ -110,3 +110,11 @@ def test_every_release_s_notes_follow_the_rules_from_when_they_had_sections():
         lines = entry["notes"].splitlines()
         assert {"New", "Fixed", "Good to know"} & set(lines), version
         assert any(line.startswith("• ") for line in lines), version
+
+
+def test_changelog_md_is_generated_from_the_release_notes():
+    """ADR-0116 decision 7: the page's "older ones" point at it."""
+    from gexis_core import changelog
+
+    assert (ROOT / "CHANGELOG.md").read_text() == changelog.markdown(), \
+        "run: cd core && python -m gexis_core.changelog ../CHANGELOG.md"

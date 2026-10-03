@@ -1,6 +1,6 @@
 # ADR-0116 — Change logs in Settings
 
-**Status:** **Accepted** — George, 2026-10-03; one point open below.
+**Status:** **Accepted** — George, 2026-10-03.
 **Builds on:** [ADR-0110](0110-the-update-experience.md) (the Software update
 tile and its notes), [ADR-0108](0108-how-a-release-is-published-and-found.md) (releases
 and their signed notes).
@@ -44,11 +44,11 @@ player kept them once the next update was found.
    update. Read from the player's own file: it works offline, and shows the
    releases up to the one installed.
 
-## Not settled here
+### Settled the same day (George)
 
-- **Where "older ones" points.** GitHub's releases page lists every player
-  release, but between three and four *Part* entries each (the shared apt
-  parts, ADR-0108), and its search does not filter them out (tried
-  2026-10-03). A `CHANGELOG.md` in the repository, generated from the same
-  file, is clean but current on GitHub only once the branch is merged into
-  `main`. Put to George; the page names the releases page until then.
+7. **Older ones are in `CHANGELOG.md`** (*"B"*, of two: A was GitHub's
+   releases page, where each player release sits among three or four
+   *Part* entries - the shared apt parts, ADR-0108 - that its search does
+   not filter out, tried 2026-10-03). It is generated from the same file,
+   checked current by a test, and the page points at it on `main`. **Each
+   release is merged into `main`** so that page is current.
