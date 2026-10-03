@@ -1249,7 +1249,8 @@ class StateServer:
         if key == "lyrion-server.shares":
             if self._lyrion_shares is None:
                 return web.json_response({"items": []})
-            return web.json_response({"items": await asyncio.to_thread(self._lyrion_shares.items)})
+            # On this thread: it reads the settings store (SQLite, one thread).
+            return web.json_response({"items": self._lyrion_shares.items()})
         if key == "restore":
             # ADR-0083. Read from the share every time: somebody may have
             # copied one in from another machine since the sheet last opened,
@@ -1295,10 +1296,13 @@ class StateServer:
             if self._lyrion_shares is None:
                 return web.json_response({"ok": False, "error": "shares are not wired up"})
             try:
+                # The store on this thread (SQLite, one thread); the unmount,
+                # which can take seconds, in a worker.
                 if action == "add":
-                    await asyncio.to_thread(self._lyrion_shares.add, name, body.get("user"), body.get("password"))
+                    self._lyrion_shares.add(name, body.get("user"), body.get("password"))
                 elif action == "forget":
-                    await asyncio.to_thread(self._lyrion_shares.forget, name)
+                    self._lyrion_shares.forget(name)
+                    await asyncio.to_thread(self._lyrion_shares.release, name)
                 else:
                     return web.json_response({"error": f"unknown action {action}"}, status=400)
             except ValueError as exc:

@@ -1305,7 +1305,21 @@ async def main() -> None:
             logger.exception("components: removing %s failed", name)
         _publish_components()
 
+    #: One change at a time per plugin unit, and the switch read again once
+    #: it is that change's turn (found on George's player, 2026-10-03: off,
+    #: off, on within four seconds started three `systemctl`s at once; a slow
+    #: `disable --now` finished after the `enable --now` and left the Lyrion
+    #: server stopped under a switch that said on). The last tap wins.
+    plugin_unit_locks: dict[str, asyncio.Lock] = {}
+
     async def _apply_plugin_unit(plugin, on: bool) -> None:
+        lock = plugin_unit_locks.setdefault(plugin.unit, asyncio.Lock())
+        async with lock:
+            if plugin.enabled_row is None:
+                on = settings.value(f"{plugin.id}.enabled") is not False
+            await _apply_plugin_unit_now(plugin, on)
+
+    async def _apply_plugin_unit_now(plugin, on: bool) -> None:
         """**A plugin switched on or off** (ADR-0086 as amended).
 
         ADR-0077's machinery, pointed at a plugin's unit instead of a
@@ -2225,7 +2239,10 @@ async def main() -> None:
             lyrion_wake.clear()
             on = settings.value("lyrion-server.enabled") is True
             try:
-                await asyncio.to_thread(lyrion_shares.mount_all if on else lyrion_shares.unmount_all)
+                if on:
+                    await asyncio.to_thread(lyrion_shares.mount_all, lyrion_shares.all())
+                else:
+                    await asyncio.to_thread(lyrion_shares.unmount_all)
             except Exception:  # noqa: BLE001 - one bad share must not stop the rest
                 logger.exception("lyrion: shares")
             if not on:

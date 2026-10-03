@@ -7,6 +7,12 @@ A share is SMB (`//nas/music`, with a user and a password) or NFS
 (`nas:/music`, with neither). They are kept in the settings store under
 `lyrion-server.shares`; an SMB password reaches `mount` only through a
 credentials file readable by root, never on a command line.
+
+**The store is read on the core's own thread, mounting is done in another**
+(found on George's player, 2026-10-03: SQLite refuses a connection from a
+thread that did not open it, and every Add and every loop failed with it).
+So `mount_all`, `unmount_all` and `release` take what they need as
+arguments and never touch the store; everything that does is cheap.
 """
 from __future__ import annotations
 
@@ -76,10 +82,14 @@ class Shares:
         self._save(shares)
 
     def forget(self, address: str) -> None:
-        self._unmount(self._root / slug(address))
-        (self._credentials / f"{slug(address)}.cred").unlink(missing_ok=True)
+        """Out of the list; `release` (in a worker) unmounts it."""
         self._save([s for s in self.all() if s["address"] != address])
         self.errors.pop(address, None)
+
+    def release(self, address: str) -> None:
+        """Unmount a forgotten share and remove its credentials. No store."""
+        self._unmount(self._root / slug(address))
+        (self._credentials / f"{slug(address)}.cred").unlink(missing_ok=True)
 
     def items(self) -> list[dict]:
         """The list's rows: each share and whether it is mounted."""
@@ -95,9 +105,10 @@ class Shares:
             out.append({"name": address, "meta": meta, "bars": None, "state": "saved"})
         return out
 
-    def mount_all(self) -> None:
-        """Every share mounted; any folder here that is no longer one, gone."""
-        wanted = {slug(s["address"]): s for s in self.all()}
+    def mount_all(self, shares: list[dict]) -> None:
+        """Every share in `shares` (as `all()` read them) mounted; any folder
+        here that is no longer one, gone. No store: runs in a worker."""
+        wanted = {slug(s["address"]): s for s in shares}
         self._root.mkdir(parents=True, exist_ok=True)
         for folder in self._root.iterdir():
             if folder.is_dir() and folder.name not in wanted:
