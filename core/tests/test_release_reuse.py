@@ -45,5 +45,17 @@ def test_the_same_bytes_are_fetched_from_the_part_that_has_them(tmp_path):
 
 def test_one_name_and_version_with_two_contents_stops_the_release(tmp_path):
     part, assets, out = release(tmp_path, b"before", b"after")
-    with pytest.raises(SystemExit, match="already published in ours-old with different content"):
+    with pytest.raises(SystemExit, match="already published with different content.*pkg_1_all.deb \\(in ours-old\\)"):
         reuse().part(part, assets, out)
+
+
+def test_an_older_different_copy_does_not_stop_a_release_another_part_matches(tmp_path):
+    """Built before builds were reproducible, an old part may hold other bytes
+    under the same name; a later part holding these exact bytes is reused."""
+    part, assets, out = release(tmp_path, b"before", b"after")
+    later = out / "r0.1.5" / "repos" / "ours-later"
+    later.mkdir(parents=True)
+    (later / "pkg_1_all.deb").write_bytes(b"after")
+    assets.write_text(json.dumps({"ours-old": ["pkg_1_all.deb"], "ours-later": ["pkg_1_all.deb"]}))
+    reuse().part(part, assets, out)
+    assert "Filename: ../ours-later/pkg_1_all.deb" in (part / "Packages").read_text()

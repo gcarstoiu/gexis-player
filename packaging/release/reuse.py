@@ -84,28 +84,31 @@ def part(part_dir: Path, assets_json: Path, releases: Path) -> None:
     packages = part_dir / "Packages"
     text = packages.read_text()
     reused = []
+    clashes = []
     for fields in records(packages):
         name = Path(fields["Filename"]).name
         want = fields["SHA256"]
-        for tag in sorted(holders.get(name, ())):
-            if tag == part_dir.name:
-                continue
-            copy = local.get((tag, name))
-            if copy is not None and sha256(copy) != want:
-                # **One name and version, one content** (found 2026-10-03:
-                # gexis-lyrion-server 9.1.1-2 was published twice with
-                # different bytes; a device fetching 0.8.1 had its copy
-                # replaced by 0.8.0's for the rollback, and the install
-                # stopped). apt keys its cache by name and version, so two
-                # contents under one version is never right: bump it.
-                sys.exit(f"ERROR: {name} is already published in {tag} with different content; "
-                         f"give the package a new version")
-            if copy is not None and sha256(copy) == want:
-                old = f"Filename: {fields['Filename']}\n"
-                assert text.count(old) == 1, old
-                text = text.replace(old, f"Filename: ../{tag}/{name}\n")
-                reused.append(name)
-                break
+        others = [t for t in sorted(holders.get(name, ())) if t != part_dir.name]
+        copies = {t: local[(t, name)] for t in others if (t, name) in local}
+        same = [t for t, copy in copies.items() if sha256(copy) == want]
+        if same:
+            old = f"Filename: {fields['Filename']}\n"
+            assert text.count(old) == 1, old
+            text = text.replace(old, f"Filename: ../{same[-1]}/{name}\n")
+            reused.append(name)
+        elif copies:
+            # **One name and version, one content** (found 2026-10-03:
+            # gexis-lyrion-server 9.1.1-2 was published twice with
+            # different bytes; a device fetching 0.8.1 had its copy
+            # replaced by 0.8.0's for the rollback, and the install
+            # stopped). apt keys its cache by name and version, so a new
+            # content under a published version is never right: bump it.
+            # Copies that differed before reproducible builds are history;
+            # what this refuses is adding one more.
+            clashes.append(f"{name} (in {', '.join(copies)})")
+    if clashes:
+        sys.exit("ERROR: already published with different content - give each a new version: "
+                 + ", ".join(clashes))
     packages.write_text(text)
     for name in reused:
         print(name)
