@@ -1044,6 +1044,25 @@ install, and doing something only the new code does.** Restart what the
 package does not, then check for behaviour the old code cannot produce - not
 a state both share.
 
+**55. A preview removed the release** (2026-10-03, the first previews).
+- **What went wrong.** Previews installed single packages - `gexis-core`,
+  then `gexis-ui` and the Lyrion server - with `apt-get install ./x.deb`.
+  `gexis-player` depends on the exact version of each of the player's
+  packages, so apt resolved the first one by removing it. With no
+  `gexis-player`, the updater has no release: a skin pack would not install
+  ("no release installed to take the pack from"), the update to 0.8.5 would
+  have stopped before starting, and 110 system packages became candidates
+  for an autoremove.
+- **What it looked like.** Each install reported success. The check read
+  apt's "Setting up" lines; the "Remove: gexis-player" line was in the same
+  output and was filtered out.
+- **How it was caught.** By George, five previews later, from a Retry that
+  could not work.
+
+**A preview installs the whole set of one commit, `gexis-player` with it,
+and reads everything apt says it will remove - a removal is never a side
+effect to filter.**
+
 ## Common shape
 
 Every case had a *plausible* substitute for the real target — the build
