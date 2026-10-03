@@ -78,7 +78,10 @@ the SSH key only, since a saved Wi-Fi skips setup.
 
 ### Decided, not started
 
-- **Hardware requirements, minimum and recommended** (ADR-0111 decision 12):
+- **Hardware requirements, minimum and recommended** - **started as
+  `docs/HARDWARE.md`** (George, 2026-10-03), the Lyrion server its own
+  optional section; what is not yet in it is listed at its end
+  (ADR-0111 decision 12):
   card space for the skins, and the Pi's load at 1920 x 1080. **And the
   Lyrion server** (George, 2026-10-03: *"record the results for hardware
   recommendations"*; Finding 109): memory by library size - about 27 KB a
