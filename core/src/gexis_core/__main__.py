@@ -1479,17 +1479,23 @@ async def main() -> None:
     async def _previews_ahead() -> None:
         if previews_state["busy"]:
             return
-        at = skins_at()
-        if not at:
-            return
         previews_state["busy"] = True
         try:
+            # Every pack this player has, not only the screen's (George,
+            # 2026-10-03: "for all resolutions", then "B it is"): a screen
+            # changed to another size finds its pictures made too.
             def pictures() -> list:
-                return [p for skin, where in skins.installed(at[0], resolution=at[1])
-                        if (p := skins.preview_of(skin, where)) is not None]
+                out = []
+                for size in skin_packs.installed():
+                    root = skin_packs.root_of(size)
+                    if root is None:
+                        continue
+                    out += [p for skin, where in skins.installed(root, resolution=f"{size[0]}x{size[1]}")
+                            if (p := skins.preview_of(skin, where)) is not None]
+                return out
             made = await asyncio.to_thread(lambda: skin_previews.make_ahead(pictures()))
             if made:
-                logger.info("skins: %d picker previews made ahead for %s", made, at[1])
+                logger.info("skins: %d picker previews made ahead", made)
         except Exception:  # noqa: BLE001 - the picker still makes one when asked
             logger.exception("skins: previews ahead failed")
         finally:

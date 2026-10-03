@@ -114,4 +114,6 @@ Still the skin's own picture - nothing drawn that the skin does not draw.
   first time around"*): after a pack is installed and whenever the core
   starts with some missing, in one Python at the lowest CPU and I/O priority.
   Measured on George's player: three in 546 ms, so about a minute for the
-  1920 x 1080 pack's 287. One asked for before then is made on the spot.
+  1920 x 1080 pack's 287. For every pack the player has, not only the
+  screen's (George: "for all resolutions", then "B it is" - a player has
+  only the packs it installed). One asked for before then is made on the spot.
