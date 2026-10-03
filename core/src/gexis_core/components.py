@@ -142,20 +142,30 @@ def all_status(directory: Path = PINS, *, status_dir: Path = STATUS,
             for name, pin in pins(directory).items()}
 
 
+#: Where a download may be removed from, and how deep below it at least:
+#: a folder in /opt, or a folder in someone's home - never a home itself.
+PLACES = ((Path("/opt"), 1), (Path("/home"), 2))
+
+
 def remove(name: str, pin: dict[str, str], *, status_dir: Path = STATUS,
-           installed_dir: Path = INSTALLED) -> Path:
+           installed_dir: Path = INSTALLED, places=PLACES) -> Path:
     """**Remove** (ADR-0100, amended 2026-09-28): delete the downloaded software,
     its installed-version stamp and its status, so the row reads *Not
     installed* and switching on downloads it again.
 
     The caller refuses while the plugin is on. Here the only guard is the path:
-    it must be the one the image's own pin names, absolute, and at least three
-    parts long, so an empty or mangled pin cannot become `rm -rf /opt`.
+    it must be the one the image's own pin names, absolute, and inside `/opt`
+    (`/opt/lyrion`) or inside a home directory (`/home/pi/plexamp`) - never
+    one of those itself - so an empty or mangled pin cannot become
+    `rm -rf /opt`. (It asked for three parts below `/` until 2026-10-03, which
+    refused `/opt/lyrion` and left the Lyrion server's Remove doing nothing.)
     Settings and whatever the software wrote outside `DEST` stay (Plexamp's
     sign-in among them)."""
     raw = (pin or {}).get("DEST", "")
     dest = Path(raw)
-    if not raw or not dest.is_absolute() or len(dest.parts) < 4 or ".." in dest.parts:
+    inside = any(dest.is_relative_to(top) and len(dest.parts) - len(top.parts) >= depth
+                 for top, depth in places)
+    if not raw or not dest.is_absolute() or not inside or ".." in dest.parts:
         raise ValueError(f"{name}: refusing to remove {raw!r}")
     for path in (dest, dest.with_name(dest.name + ".old")):
         if path.is_symlink() or path.is_file():

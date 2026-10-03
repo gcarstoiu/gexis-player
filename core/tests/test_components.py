@@ -148,7 +148,8 @@ def test_remove_deletes_the_download_its_stamp_and_its_status(tmp_path):
     (status / "player.json").write_text("{}")
     sign_in = tmp_path / "opt" / "player" / "settings.json"
     sign_in.write_text("kept")
-    components.remove("player", {"DEST": str(dest)}, status_dir=status, installed_dir=installed)
+    components.remove("player", {"DEST": str(dest)}, status_dir=status, installed_dir=installed,
+                      places=((tmp_path, 1),))
     assert not dest.exists() and not old.exists()
     assert not (installed / "player.sha256").exists() and not (status / "player.json").exists()
     assert sign_in.read_text() == "kept", "what the software wrote outside DEST stays"
@@ -157,7 +158,8 @@ def test_remove_deletes_the_download_its_stamp_and_its_status(tmp_path):
 
 
 def test_remove_refuses_a_path_it_should_never_touch(tmp_path):
-    for dest in ("", "relative/path", "/opt", "/opt/x", "/opt/x/../../etc"):
+    for dest in ("", "relative/path", "/opt", "/opt/x/../../etc", "/home", "/home/pi",
+                 "/usr/lib", "/var/lib/gexis", "/etc/gexis"):
         try:
             components.remove("player", {"DEST": dest}, status_dir=tmp_path, installed_dir=tmp_path)
         except ValueError:
@@ -165,6 +167,18 @@ def test_remove_refuses_a_path_it_should_never_touch(tmp_path):
         raise AssertionError(f"{dest!r} was not refused")
 
 
+def test_remove_takes_a_folder_directly_in_opt(tmp_path, monkeypatch):
+    """The Lyrion server's /opt/lyrion (found on George's player, 2026-10-03:
+    Remove was refused and the row did nothing)."""
+    gone = []
+    monkeypatch.setattr(components.shutil, "rmtree", gone.append)
+    monkeypatch.setattr(components.Path, "is_dir", lambda self: self.name == "lyrion")
+    monkeypatch.setattr(components.Path, "is_file", lambda self: False)
+    monkeypatch.setattr(components.Path, "is_symlink", lambda self: False)
+    components.remove("lyrion", {"DEST": "/opt/lyrion"}, status_dir=tmp_path, installed_dir=tmp_path)
+    assert gone == [components.Path("/opt/lyrion")]
+
+
 def test_removing_what_is_not_there_is_not_an_error(tmp_path):
     components.remove("player", {"DEST": str(tmp_path / "a" / "b" / "c")},
-                      status_dir=tmp_path, installed_dir=tmp_path)
+                      status_dir=tmp_path, installed_dir=tmp_path, places=((tmp_path, 1),))
