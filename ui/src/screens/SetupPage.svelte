@@ -489,6 +489,10 @@
                 {#if scan === 'scanning'}
                   <div class="row-spin"><span class="spin" style="border-top-color:#8fc4d8"></span><span>Looking for networks</span></div>
                 {:else}
+                  {#if !nets.length}
+                    <!-- George, 2026-10-03, reviewing the copy: "Add copy to cover this." -->
+                    <div class="info"><span class="bar" style="background:#8fc4d8"></span><span><b>No networks found</b><small>Move the player closer to your router and tap Scan again, or choose Other network to type one in.</small></span></div>
+                  {/if}
                   <div class="list">
                     {#each nets as n (n.name)}
                       <button class="net" onclick={() => { ssid = n.name; pw = ''; hasPassword = false; manualSsid = ''; }}>
@@ -590,6 +594,10 @@
                 <h1>Choose the output</h1>
                 <p class="sub">What the player should send audio to. Stored by name, because card numbers move between boots.</p>
               </div>
+              {#if !outputs.length}
+                <!-- George, 2026-10-03, reviewing the copy: "Add copy to cover this." -->
+                <div class="info"><span class="bar" style="background:#7ed6bc"></span><span><b>No audio output found</b><small>Check that the DAC or HAT is connected, then restart the player. You can carry on and choose one later in Settings.</small></span></div>
+              {/if}
               <div class="list">
                 {#each outputs as o}
                   <button class="net" class:sel={out === o} onclick={() => (out = o)}>
