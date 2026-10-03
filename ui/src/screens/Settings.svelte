@@ -145,7 +145,7 @@
       };
     }
     if (shareBrowse) {
-      return { ...row, label: `Shares on ${shareBrowse.server.name}`, note: 'Tap one to add it.', discover: false, manual: null };
+      return { ...row, label: `Shares on ${shareBrowse.server.name}`, note: 'Tap one to add it.', discover: false, manual: null, hint: null };
     }
     if (joinItem) {
       return {
@@ -392,6 +392,9 @@
       // the connected network's name on the Wi-Fi row - recorded in
       // docs/findings/042 §7 as one more place its prose and its literal
       // disagree.
+      // ADR-0115: the shares are drawn on the row itself, each with its
+      // Forget (George, 2026-10-03: the stored list "look[ed] like just code").
+      if (row.kind === 'share') return (row.items ?? []).length ? '' : 'None added';
       if (v) return String(v);
       // The items are on the row because the daemon seeds a list that does
       // not have to go looking (ADR-0044 §1, amended). A row counting only
@@ -622,10 +625,16 @@
 
   async function doForget(item) {
     const key = sheetKey;
-    await command({ name: item.name, action: 'forget' }, (answer) => {
+    await command({ name: item.address ?? item.name, action: 'forget' }, (answer) => {
       flash(answer.ok ? `${item.name} forgotten` : (answer.error ?? 'Could not forget it'));
       if (answer.ok) openList(key);
     });
+  }
+
+  //: ADR-0115: Forget on the row itself, without opening the sheet.
+  async function forgetShare(row, item) {
+    const answer = await listAction(row.key, { name: item.address ?? item.name, action: 'forget' });
+    flash(answer.ok ? `${item.name} forgotten` : (answer.error ?? 'Could not forget it'));
   }
 
   //: ADR-0115: the share being added.
@@ -675,7 +684,8 @@
       if (item.share && shareBrowse) {
         const key = sheetKey;
         const { user, password } = shareBrowse;
-        await command({ name: item.name, action: 'add', user: user ?? (item.name.startsWith('//') ? 'guest' : null), password }, (answer) => {
+        const address = item.address ?? item.name;
+        await command({ name: address, action: 'add', user: user ?? (address.startsWith('//') ? 'guest' : null), password }, (answer) => {
           if (!answer.ok) {
             flash(answer.error ?? 'Could not add it');
             return;
@@ -1116,6 +1126,28 @@
                     {#if r.type !== 'toggle' && shown(r)}
                       <span class="row__value" class:is-pending={pending(r)}>{shown(r)}</span>
                     {/if}
+                    {#if r.kind === 'share' && r.items?.length}
+                      <!-- ADR-0115: each share by its name, with its Forget
+                           (George, 2026-10-03). Spans, not buttons: the row
+                           is the button that opens the sheet. -->
+                      <span class="shares">
+                        {#each r.items as s (s.address ?? s.name)}
+                          <span class="shares__one">
+                            <span class="shares__text">
+                              <span class="shares__name">{s.name}</span>
+                              {#if s.meta}<span class="item__meta">{s.meta}</span>{/if}
+                            </span>
+                            <span
+                              class="forget"
+                              role="button"
+                              tabindex="0"
+                              onclick={(e) => { e.stopPropagation(); forgetShare(r, s); }}
+                              onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); forgetShare(r, s); } }}
+                            >Forget</span>
+                          </span>
+                        {/each}
+                      </span>
+                    {/if}
                     {#if r.component && ['preparing', 'downloading', 'retrying', 'verifying', 'installing'].includes(($components[r.component] ?? {}).state)}
                       {@const c = $components[r.component]}
                       <span class="dl__bar" class:dl__bar--busy={!downloadShare(c)}>
@@ -1424,7 +1456,7 @@
       {:else if sheet.type === 'list'}
         {#if items.length}
           <div class="items" data-noscrollbar>
-            {#each items as item (item.name)}
+            {#each items as item (item.address ?? item.name)}
               {@const joined = item.state === 'connected' || item.state === 'current'}
               <!-- Only the network in use takes no tap: there is nothing to
                    join. The server in use still does - tapping the one you
@@ -2503,6 +2535,34 @@
     color: rgba(233, 238, 242, 0.6);
     padding: 14px 4px 2px;
     text-wrap: pretty;
+  }
+  /* Below the label and its chevron, the full width, on every screen. */
+  .row__body:has(> .shares) {
+    flex-wrap: wrap;
+  }
+  .shares {
+    order: 10;
+    flex-basis: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding-bottom: 4px;
+  }
+  .shares__one {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .shares__text {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .shares__name {
+    font-size: 17px;
+    overflow-wrap: anywhere;
   }
   .forget {
     flex-shrink: 0;

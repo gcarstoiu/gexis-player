@@ -35,7 +35,7 @@ from aiohttp import web
 from dbus_next import BusType
 from dbus_next.aio import MessageBus
 
-from gexis_core import backups, bluetooth_devices, device_name, discovery, lyrion_scan, skins, wifi
+from gexis_core import backups, bluetooth_devices, device_name, discovery, lyrion_scan, lyrion_shares, skins, wifi
 from gexis_core.adapters.base import TRANSPORT_COMMANDS
 from gexis_core.artistinfo import PHOTO_BACKGROUND, PHOTO_LARGE, PHOTO_THUMB
 from gexis_core.artwork_sweep import ARTIST_NAMESPACE, remembered
@@ -1143,6 +1143,14 @@ class StateServer:
                 if key == "restore":
                     row["items"] = [a.to_item() for a in backups.available()]
                     continue
+                if key == "lyrion-server.shares":
+                    # ADR-0115: the shares added, each with its Forget, on the
+                    # row itself; the stored list - logins included - is not
+                    # what the row shows (George, 2026-10-03: "look like just
+                    # code"), so it is not sent.
+                    row["value"] = None
+                    row["items"] = self._lyrion_shares.items() if self._lyrion_shares else []
+                    continue
                 source = self.SEEDED_LISTS.get(key)
                 if source is None:
                     continue
@@ -1319,8 +1327,9 @@ class StateServer:
                         return web.json_response({"ok": False, "login": True,
                                                   "error": f"{name} needs a user and password to show its shares"})
                     return web.json_response({"ok": True, "error": None, "items": [
-                        {"name": s["address"], "meta": s["comment"] or None, "bars": None, "state": "found",
-                         "share": True} for s in found]})
+                        {"name": lyrion_shares.label(s["address"])[0], "meta": s["comment"] or None,
+                         "bars": None, "state": "found", "share": True, "address": s["address"]}
+                        for s in found]})
                 if action == "add":
                     self._lyrion_shares.add(name, body.get("user"), body.get("password"))
                 elif action == "forget":

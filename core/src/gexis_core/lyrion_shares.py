@@ -47,6 +47,20 @@ def slug(address: str) -> str:
     return f"{readable}-{hashlib.sha256(address.encode()).hexdigest()[:6]}"
 
 
+def label(address: str) -> tuple[str, str]:
+    """(the share's own name, its server's) as a person says them: "Music"
+    and "Tower" for `//Tower.local/Music`, "music" and "nas" for
+    `nas.local:/volume1/music` (George, 2026-10-03: the row read "just
+    code")."""
+    if address.startswith("//"):
+        host, _, path = address[2:].partition("/")
+    else:
+        host, _, path = address.partition(":")
+    name = path.rstrip("/").rsplit("/", 1)[-1] or path or address
+    server = host.removesuffix(".local") or host
+    return name, server
+
+
 class Shares:
     def __init__(self, store, root: Path = ROOT, credentials: Path = CREDENTIALS, run=subprocess.run,
                  is_mount=os.path.ismount) -> None:
@@ -102,7 +116,9 @@ class Shares:
                 meta = f"Not mounted: {self.errors[address]}"
             else:
                 meta = "Waiting for the server to be on"
-            out.append({"name": address, "meta": meta, "bars": None, "state": "saved"})
+            name, server = label(address)
+            out.append({"name": name, "meta": f"On {server} · {meta}", "bars": None, "state": "saved",
+                        "address": address})
         return out
 
     def mount_all(self, shares: list[dict]) -> None:

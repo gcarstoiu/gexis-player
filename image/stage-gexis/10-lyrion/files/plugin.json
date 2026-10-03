@@ -13,7 +13,8 @@
       "marks": "N",
       "default": null,
       "kind": "share",
-      "manual": "Add a share",
+      "manual": "Add by address",
+      "hint": "Not in the list? Some servers do not announce themselves - add the share by its address.",
       "note": "Music folders on a NAS or a computer, mounted read-only and offered to the server.",
       "empty": "No shares found or added. The Music folder and any USB disk are offered already; a share that does not announce itself can be added by its address.",
       "discover": true

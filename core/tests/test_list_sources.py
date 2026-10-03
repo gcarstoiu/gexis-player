@@ -486,3 +486,27 @@ async def test_this_player_s_own_server_is_offered_not_chosen(tmp_path, monkeypa
     assert [i["name"] for i in items] == ["10.0.0.5:9000", "1.2.3.4:9000"], "first, and only once"
     assert items[0]["meta"] == "This player's own server" and items[0]["state"] == "found"
     assert settings.value("lms_server") == before, "offered, never chosen"
+
+
+@pytest.mark.asyncio
+async def test_the_lyrion_shares_row_names_its_shares_and_never_sends_their_logins(tmp_path):
+    """ADR-0115 (George, 2026-10-03: the row read "just code"). The row
+    showed the stored list - `[{"address": ..., "user": ..., "password":
+    ...}]` - so a share's password would have been on the page."""
+    from gexis_core import lyrion_shares
+
+    registry = [{"id": "g", "label": "G", "rows": [
+        {"key": "lyrion-server.shares", "type": "list", "kind": "share", "discover": True}]}]
+    store = SettingsStore(tmp_path / "s.db")
+    settings = Settings(store, registry=registry, wired={"lyrion-server.shares": None})
+    shares = lyrion_shares.Shares(store, root=tmp_path / "mnt", credentials=tmp_path / "cred",
+                                  is_mount=lambda p: False)
+    shares.add("//Tower.local/Music", "me", "s3cret")
+    server = StateServer(StateStore({}), settings=settings, lyrion_shares=shares)
+    async with TestClient(TestServer(server.make_app())) as client:
+        response = await client.get("/settings")
+        text = await response.text()
+        row = _row(await response.json(), "lyrion-server.shares")
+    assert row["value"] is None
+    assert [(i["name"], i["address"]) for i in row["items"]] == [("Music", "//Tower.local/Music")]
+    assert "s3cret" not in text

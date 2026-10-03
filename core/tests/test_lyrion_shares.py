@@ -72,11 +72,11 @@ def test_rows_say_mounted_or_why_not(tmp_path):
     s, _, _ = shares(tmp_path, fail="//nas/locked")
     s.add("//nas/music", "me", "pw")
     s.add("//nas/locked", "me", "wrong")
-    assert {i["meta"] for i in s.items()} == {"Waiting for the server to be on"}
+    assert {i["meta"] for i in s.items()} == {"On nas · Waiting for the server to be on"}
     s.mount_all(s.all())
-    by = {i["name"]: i["meta"] for i in s.items()}
-    assert by["//nas/music"] == "Mounted, read-only"
-    assert by["//nas/locked"].startswith("Not mounted: mount error(13)")
+    by = {i["address"]: i["meta"] for i in s.items()}
+    assert by["//nas/music"] == "On nas · Mounted, read-only"
+    assert by["//nas/locked"].startswith("On nas · Not mounted: mount error(13)")
     assert {i["state"] for i in s.items()} == {"saved"}, "each with its Forget"
 
 
@@ -121,3 +121,19 @@ def test_the_store_is_only_touched_on_the_thread_that_opened_it(tmp_path):
 
     asyncio.run(loop_once())
     assert s.all() == []
+
+
+def test_a_share_reads_as_its_name_on_its_server():
+    """George, 2026-10-03: the row read "just code"."""
+    assert ls.label("//Tower.local/Music") == ("Music", "Tower")
+    assert ls.label("//nas/media/Music/") == ("Music", "nas")
+    assert ls.label("nas.local:/volume1/music") == ("music", "nas")
+
+
+def test_a_row_names_the_share_and_keeps_its_address_for_forget(tmp_path):
+    s, _, _ = shares(tmp_path)
+    s.add("//Tower.local/Music", "guest", None)
+    [item] = s.items()
+    assert item["name"] == "Music" and item["address"] == "//Tower.local/Music"
+    assert item["meta"].startswith("On Tower · ")
+    assert "password" not in item and "user" not in item
