@@ -66,7 +66,7 @@ from gexis_core.peppy import (
     set_meter_skins,
     set_meter_smoothing,
 )
-from gexis_core import lyrion_addons, lyrion_folders
+from gexis_core import lyrion_addons, lyrion_folders, lyrion_memory
 from gexis_core.lyrion_shares import Shares as LyrionShares
 from gexis_core.fanart import Fanart
 from gexis_core.peppy_metadata import PeppyMetadataWriter, next_track
@@ -276,6 +276,30 @@ LYRION_ADDONS_RETRY_S = 600.0
 LYRION_ADDONS_DONE = Path("/var/lib/gexis/lyrion-addons.done")
 #: Where Lyrion puts an add-on it installed (seen on George's player).
 LYRION_PLUGINS = Path("/var/lib/squeezeboxserver/cache/InstalledPlugins/Plugins")
+
+
+def _lyrion_setup_note(marker: Path = LYRION_ADDONS_DONE) -> str | None:
+    """**The first start says what it is doing, and for how long** (George,
+    2026-10-03: *"The user should be informed that it takes 2 to 3 minutes.
+    Otherwise he won't understand what is happening."*; *"about 3 minutes"*
+    after his own run took 3:00 from switch-on to Material). Until its add-ons
+    are in, the server runs in Lyrion's plain skin and restarts once, so its
+    switch says so; the row's own "Open http://..." follows."""
+    if marker.exists():
+        return None
+    return (f"Setting up: Lyrion is installing Material Skin and its add-ons, and restarts once on "
+            f"the way. This takes about 3 minutes. Then open http://{device_name.hostname() or 'gexis'}.local:9000")
+
+
+def _lyrion_note(on: bool) -> str | None:
+    """The Lyrion server's switch, in order: a player too small for it; a scan
+    stopped for memory; the first start under way (ADR-0115 decision 18)."""
+    small = lyrion_memory.too_small(lyrion_memory.total_mb())
+    if small:
+        return small
+    if not on:
+        return None
+    return lyrion_memory.stopped_note() or _lyrion_setup_note()
 
 
 def _setup_running(setup: dict | None) -> bool:
@@ -1565,7 +1589,10 @@ async def main() -> None:
         },
         # The Release row's note: what the waiting or just-installed release
         # says changed (2026-10-01, George).
-        notes={"software_update": updates.whats_new},
+        notes={"software_update": updates.whats_new,
+               # The Lyrion server's first start says what it is doing.
+               **({"lyrion-server.enabled": lambda: _lyrion_note(settings.value("lyrion-server.enabled") is True)}
+                  if any(p.id == "lyrion-server" for p in installed_plugins) else {})},
         # Wired = something reads it (ADR-0035). The token is read on every
         # Popular lookup, so it takes effect as soon as it is typed.
         # Wired = something reads it, or something happens. `lms_server` is
@@ -1717,6 +1744,10 @@ async def main() -> None:
         lists={"wifi", "bt_trusted", "lyrion-server.shares"},
         on_change=state_store.bump_settings_revision,
     )
+    # ADR-0115 decision 18: a 1 GB player is not offered the Lyrion server.
+    lyrion_too_small = lyrion_memory.too_small(lyrion_memory.total_mb())
+    if lyrion_too_small and any(p.id == "lyrion-server" for p in installed_plugins):
+        settings.restrict("lyrion-server.enabled", {True: lyrion_too_small})
 
     # **Every plugin's environment, before anything of theirs is started**
     # (ADR-0088). `/run` is tmpfs, so on a fresh boot none of these files
@@ -2215,6 +2246,7 @@ async def main() -> None:
                 return (await r.json(content_type=None)).get("result") or {}
 
     lyrion_wake = asyncio.Event()
+    lyrion_watch = lyrion_memory.Watch()
     #: ADR-0115 decision 12: asked once, through Lyrion's own plugin page; a
     #: restart loads them; asked again if they are still missing ten minutes
     #: on. Once they are all in, never again - one removed later stays removed.
@@ -2235,6 +2267,7 @@ async def main() -> None:
             LYRION_ADDONS_DONE.parent.mkdir(parents=True, exist_ok=True)
             LYRION_ADDONS_DONE.touch()
             logger.info("lyrion: add-ons installed (%s); Material is the skin", ", ".join(lyrion_addons.WANTED))
+            state_store.bump_settings_revision()  # its switch stops saying "Setting up"
             return
         now = time.monotonic()
         if lyrion_asked["at"] is None or now - lyrion_asked["at"] > LYRION_ADDONS_RETRY_S:
@@ -2275,13 +2308,32 @@ async def main() -> None:
             if not on:
                 continue
             try:
-                await lyrion_folders.sync(_lyrion_rpc)
+                await lyrion_folders.sync(_lyrion_rpc, saved=lyrion_shares.points())
             except Exception as exc:  # starting, stopped, scanning: next time
                 logger.debug("lyrion: folders not synced (%r)", exc)
             try:
                 await _lyrion_addons()
             except Exception as exc:  # no internet yet, or the server is busy
                 logger.debug("lyrion: add-ons not checked (%r)", exc)
+            try:
+                # ADR-0115 decision 18: a scan stopped for memory is said on
+                # the server's row until one finishes without a stop.
+                status = await _lyrion_rpc(["serverstatus", 0, 0])
+                highmem = (await _lyrion_rpc(["pref", "dbhighmem", "?"])).get("_p2")
+                highmem = int(highmem) if str(highmem).isdigit() else None
+                if lyrion_watch.update(bool(status.get("rescan")), highmem):
+                    state_store.bump_settings_revision()
+            except Exception as exc:  # starting: next time
+                logger.debug("lyrion: scan state not read (%r)", exc)
+            if not lyrion_asked.get("versions_off"):
+                # ADR-0100, amended 2026-10-03: we choose its version, so its
+                # page does not offer others - set on servers made before the
+                # seed prefs said so, once per start.
+                try:
+                    await _lyrion_rpc(["pref", "checkVersion", "0"])
+                    lyrion_asked["versions_off"] = True
+                except Exception as exc:  # starting: next time
+                    logger.debug("lyrion: checkVersion not set (%r)", exc)
 
     asyncio.ensure_future(_lyrion_folders_loop())
     # ADR-0040 §1: LMS's own plugin first where it answers, the key-free

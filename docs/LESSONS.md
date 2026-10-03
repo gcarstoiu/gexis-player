@@ -1025,6 +1025,25 @@ compare them.
 version also takes the commit of our files in it, and the release build now
 stops on a name and version already published with different bytes.
 
+**54. Installed is not running** (2026-10-03, the first preview).
+- **What went wrong.** A preview of the core was installed on George's player
+  with `apt-get install ./gexis-core_*.deb` and reported to him as on the
+  player. The core's package does not restart the core - restarts are the
+  updater's (`packaging/core/build.sh`) - so the old core went on running.
+- **What it looked like.** Everything said yes: apt's "Setting up gexis-core
+  (0.8.4+git1...)", `dpkg-query` showing the new version, `systemctl
+  is-active` saying active, and the Lyrion switch's note reading "Open
+  http://..." - which the new code also says once Lyrion is set up, so the
+  old code's answer looked like the new code's.
+- **How it was caught.** A second preview's change (Lyrion's update check
+  turned off) did not happen; the core's start time, 10:17:16, was before
+  either install.
+
+**A preview is running only when the running process is younger than the
+install, and doing something only the new code does.** Restart what the
+package does not, then check for behaviour the old code cannot produce - not
+a state both share.
+
 ## Common shape
 
 Every case had a *plausible* substitute for the real target — the build

@@ -315,6 +315,15 @@
     if (yes && pending) await pending.run();
   }
 
+  //: **An explanation is said once** (George, 2026-10-03: "if a setting opens
+  //: a modal then the explanation should go only in the modal, not the
+  //: overview as well as it clutters the screen"). A row that opens a sheet
+  //: or the skin picker keeps its note there; a switch, a read-only row and
+  //: a document page have nowhere else to say it, so theirs stays.
+  function opensItsOwn(row) {
+    return !['toggle', 'readonly', 'document'].includes(row.type);
+  }
+
   function rowOf(key) {
     for (const g of groups) for (const r of g.rows) if (r.key === key) return r;
     return null;
@@ -1093,7 +1102,7 @@
                         <span class="row__name">{r.label}</span>
                         {#if pending(r)}<span class="dot dot--sm"></span>{/if}
                       </span>
-                      {#if r.note}<span class="row__note">{r.note}</span>{/if}
+                      {#if r.note && !opensItsOwn(r)}<span class="row__note">{r.note}</span>{/if}
                       {#if r.uploaded && (r.key.endsWith('.missing') || !r.value) && !embedded}
                         <!-- ADR-0106: an uploaded plugin is removed from here,
                              switched off first. -->
@@ -1264,6 +1273,7 @@
         <div class="head__text">
           <div class="title" class:title--wide={wide}>{picker.label}</div>
           <div class="subtitle">{options.length} skins</div>
+          {#if picker.note}<div class="head__note">{picker.note}</div>{/if}
         </div>
       </div>
 
@@ -2035,6 +2045,7 @@
   }
 
   .row {
+    position: relative;
     flex-shrink: 0;
     width: 100%;
     container-type: inline-size;
@@ -2075,6 +2086,13 @@
   .row--danger .row__name {
     color: var(--accent-warn);
   }
+  .head__note {
+    margin-top: 4px;
+    font-size: 14px;
+    line-height: 1.4;
+    color: var(--ink-quiet);
+    text-wrap: pretty;
+  }
   .row__note {
     display: block;
     font-size: 14px;
@@ -2100,6 +2118,16 @@
   @container srow (max-width: 520px) {
     .row__body {
       flex-wrap: wrap;
+    }
+    /* The arrow in the middle of the tile, not beside its first line
+       (George, 2026-10-03: "center the arrow on the tiles on mobile"). */
+    .row__body:has(> .chev) {
+      padding-right: 26px;
+    }
+    .row__body > .chev {
+      position: absolute;
+      right: 24px;
+      top: calc(50% - 6px);
     }
     .row__value {
       order: 9;

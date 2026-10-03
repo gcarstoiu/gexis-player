@@ -1,0 +1,25 @@
+#!/bin/sh
+# SPDX-License-Identifier: GPL-3.0-or-later
+#
+# Lyrion's folders and its first preferences, made as root before it starts:
+# Remove deletes them (ADR-0115 decision 14), and the next start must find a
+# new server's settings - Material, no setup wizard, the Music folder - not an
+# empty folder.
+#
+# **Database memory: Normal under 4 GB** (ADR-0115 decision 19; George,
+# 2026-10-03: "B"). Lyrion picks High by itself above 900 MB, and High's
+# scanner needs about twice the memory per file (Finding 109: 1,876 MB
+# against 1,191 MB for 61,362 files), which a 2 GB Pi does not have; a 4 GB
+# one does. Only in the first preferences: what is chosen on Lyrion's own
+# Performance page afterwards is never changed here.
+set -eu
+prefs=/var/lib/squeezeboxserver/prefs
+install -d -o squeezeboxserver -g nogroup "$prefs" /var/lib/squeezeboxserver/cache /var/log/squeezeboxserver
+if [ ! -e "$prefs/server.prefs" ]; then
+	install -m 644 -o squeezeboxserver -g nogroup /usr/share/gexis/defaults/lyrion-server.prefs "$prefs/server.prefs"
+	total_mb=$(( $(awk '/^MemTotal:/ {print $2}' /proc/meminfo) / 1024 ))
+	if [ "$total_mb" -lt 3500 ]; then
+		printf 'dbhighmem: 0\n' >> "$prefs/server.prefs"
+		echo "gexis-lyrion: ${total_mb} MB of memory - database memory Normal"
+	fi
+fi

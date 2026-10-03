@@ -157,6 +157,45 @@ network share**; and **it ships in our releases**.
     value is not sent (commit 19877a6), before this decision; this one
     takes the password out of the store as well.
 
+### Settled 2026-10-03 (George), after scanning his library
+
+Measured on George's player, 2026-10-03 (Finding 109): his NAS share, 61,362
+files, took **2 h 7 min** to scan the first time and **26 min** to check with
+nothing changed; the scanner's own memory grew by about 27 KB a file, to
+**1,876 MB** for Lyrion as a whole - past the 2 GB this record set, once file
+cache is counted.
+
+16. **A saved share stays in Lyrion's list while it is not mounted** (*"clearly
+    A"*, of two: B kept taking it out). Lyrion answers a folder taken out of
+    `mediadirs` by wiping the whole library and scanning everything again
+    (`Slim/Utils/Prefs.pm`), so a NAS that was off when the player started
+    cost a two-hour rescan. Now only **Forget** takes a share out - and then
+    Lyrion does rescan everything, which Forget is for. A full rescan started
+    by hand while a NAS is off would still drop that share's songs until the
+    next one.
+17. *Open:* a USB disk unplugged is still taken out of the list, with the
+    same wipe and full rescan.
+18. **Lyrion's memory follows the player's** (*"A plus B - let's try"*). The
+    limit is the player's memory less 1 GB for the player itself (measured:
+    about 700 MB of Peppy, the screen's browser, Plexamp and the core): 3 GB
+    on a 4 GB Pi, about 1 GB on 2 GB. A scan stopped for memory is said on the
+    server's row, with about how many files fit, rather than leaving half a
+    library unexplained; Lyrion does not retry it by itself (it rescans at
+    start only when its library is empty). **B:** whether Lyrion's
+    `dbhighmem` - on by itself above 900 MB - is what makes the scanner grow
+    is being measured with a full scan with it off.
+19. **Lyrion's database memory is Normal on a player under 4 GB, and
+    Lyrion's own choice (High) on 4 GB and more** (*"Let's go with B"*, of
+    three: A was Normal everywhere, C Lyrion's choice everywhere). Measured
+    on George's library (Finding 109): Normal's scan needed **1,191 MB**
+    against High's **1,876 MB**, finished 8 minutes sooner, and browsed
+    the same; search was about 25 ms slower. Maximum's scanner is High's,
+    and it browsed no faster. Set only in the first preferences, so a
+    choice made on Lyrion's Performance page stands. And George: *"an user
+    with 4gb of ram and more than 90k tracks can always go to normal and
+    still have the library scanning"* - so a scan stopped for memory on High
+    says how many files Normal would fit.
+
 ## Not settled here
 
 - The memory and CPU measured during a scan of George's library, and the

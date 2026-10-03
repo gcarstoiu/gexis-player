@@ -30,6 +30,8 @@ inputs() {
 		# change of ours is a new version (2026-10-03: gexis-lyrion-server
 		# went out twice as 9.1.1-2 with different bytes).
 		lyrion-server) echo packaging/lyrion-server image/stage-gexis/10-lyrion ;;
+		plexamp) echo packaging/plexamp image/stage-gexis/08-plexamp \
+			image/stage-gexis/03-core/files/components/plexamp.env ;;
 		beszel-hub) echo packaging/beszel-hub image/stage-gexis/07-beszel/files/beszel-hub.service \
 			image/stage-gexis/07-beszel/files/plugin-hub.json ;;
 		*) echo . ;;   # the release, and components that carry their own

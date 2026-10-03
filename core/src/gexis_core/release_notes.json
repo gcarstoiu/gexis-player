@@ -1,6 +1,10 @@
 {
  "_about": "Every release's notes, newest first, exactly as published and signed (ADR-0116). publish.sh reads a release's notes from here; Settings -> Change logs shows the last 10.",
  "releases": {
+  "0.8.5": {
+   "date": "2026-10-03",
+   "notes": "New\n• Settings explanations appear once, in the window a setting opens, not also in the overview.\n• On a phone, the arrow sits in the middle of each settings tile.\n• A new Lyrion server says it is setting up and that this takes about 3 minutes.\n• A scan the Lyrion server stopped for lack of memory is said on its row, with how many files fit.\n• Plexamp and the Lyrion server move to a new version as part of the update that brings it.\nFixed\n• Adding a network share no longer scans the library twice.\n• A NAS that is off when the player starts no longer makes the Lyrion server wipe and rescan its library.\nGood to know\n• The Lyrion server may use the player's memory less 1 GB. On a player with less than 4 GB, a new server uses less memory for scanning.\n• A player with 1 GB of memory is not offered the Lyrion server.\n• The Lyrion server no longer offers its own updates; its version comes with the player's updates."
+  },
   "0.8.4": {
    "date": "2026-10-03",
    "notes": "New\n• Settings has Change logs, under Updates: what changed in the last 10 releases.\n• A display sold with or without a case is listed once.\nFixed\n• A new Lyrion server installs its add-ons and opens in Material Skin once it is installed.\n• Remove works for an uploaded plugin that a backup brought back without its package.\nGood to know\n• Once an update is installed, its notes are under Change logs rather than Software update."

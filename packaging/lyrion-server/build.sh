@@ -34,6 +34,8 @@ install -D -m 644 "$STAGE_DIR/files/gexis-music.conf" \
 	"$STAGE/etc/samba/smb.conf.d/gexis-music.conf"
 install -D -m 644 "$STAGE_DIR/files/server.prefs" \
 	"$STAGE/usr/share/gexis/defaults/lyrion-server.prefs"
+install -D -m 755 "$STAGE_DIR/files/lyrion-memory-limit" "$STAGE/usr/lib/gexis/lyrion-memory-limit"
+install -D -m 755 "$STAGE_DIR/files/lyrion-prepare" "$STAGE/usr/lib/gexis/lyrion-prepare"
 install -D -m 644 "$STAGE_DIR/files/90-gexis-usb-music.rules" \
 	"$STAGE/usr/lib/udev/rules.d/90-gexis-usb-music.rules"
 
@@ -65,7 +67,21 @@ fi
 if [ -d /run/systemd/system ]; then
 	systemctl daemon-reload || true
 	systemctl try-reload-or-restart smbd.service 2>/dev/null || true
-	[ -n "$2" ] && systemctl try-restart gexis-lyrion.service || true
+	pinned=
+	# **A new pin is fetched by the update that brings it** (ADR-0100,
+	# amended 2026-10-03). gexis-fetch@ stays active once it has run, so
+	# restarting the software alone never downloads again: stopped, it runs
+	# at the next start - now, where the switch is on, without holding the
+	# update for the download; at the next switch-on otherwise.
+	want=$(sed -n 's/^SHA256=//p' /usr/share/gexis/components/lyrion.env)
+	have=$(cat /var/lib/gexis/components/lyrion.sha256 2>/dev/null || true)
+	if [ -n "$have" ] && [ "$have" != "$want" ]; then
+		on=$(systemctl is-enabled gexis-lyrion.service 2>/dev/null || true)
+		systemctl stop gexis-fetch@lyrion.service || true
+		[ "$on" = enabled ] && systemctl start --no-block gexis-lyrion.service || true
+		pinned=1
+	fi
+	[ -n "$2" ] && [ -z "$pinned" ] && systemctl try-restart gexis-lyrion.service || true
 fi
 exit 0
 POST

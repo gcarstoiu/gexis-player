@@ -33,8 +33,10 @@ merged as PR #42 and 13a as PR #41; their narrative is in the archive's
 4. **Phase 13d, DACs** (DEVELOPMENT.md): Volumio's DAC list, the DAC2 HD and
    IQaudio DAC+ first. An ADR first.
 
-**How a release is made** (each step proven 2026-10-02): George approves
-the notes (impersonal, New / Fixed / Good to know, no restart promises -
+**How a release is made** (each step proven 2026-10-02): run
+`packaging/check-upstream.sh` - a pin behind its maker is tried on George's
+player first, then moved (ADR-0100, amended 2026-10-03); George sees every
+change live on his player before any release; George approves the notes (impersonal, New / Fixed / Good to know, no restart promises -
 publish.sh refuses them); add them, with the day, to
 `core/src/gexis_core/release_notes.json`, regenerate `CHANGELOG.md` (`cd core
 && python -m gexis_core.changelog ../CHANGELOG.md`; a test checks it) and
@@ -42,8 +44,9 @@ commit (ADR-0116: publish.sh takes them from the tagged commit's file, and
 the player shows them under Change logs); tag `vX.Y.Z` locally; `make image` (never commit while it
 packages - a `.dirty` build); `image/verify-image.sh` on the image;
 `packaging/release/build.sh <img>`; `packaging/release/publish.sh rX.Y.Z
---channel testing`; then merge the branch into `main` (ADR-0116 decision 7:
-Change logs points at `main`'s `CHANGELOG.md`). `packaging/release/out` is a symlink into the
+--channel testing`; then push the branch and open a pull request into
+`main` - **George merges it** (2026-10-03; ADR-0116 decision 7: Change logs
+points at `main`'s `CHANGELOG.md`, so it is current once he has). `packaging/release/out` is a symlink into the
 `gexis-player-13a` worktree, excluded in `.git/info/exclude`. Never edit a
 script while it runs (LESSONS 51).
 
@@ -75,8 +78,17 @@ the SSH key only, since a saved Wi-Fi skips setup.
 
 ### Decided, not started
 
-- **Hardware requirements, minimum and recommended** (ADR-0111 decision 12):
-  card space for the skins, and the Pi's load at 1920 x 1080.
+- **Hardware requirements, minimum and recommended** - **started as
+  `docs/HARDWARE.md`** (George, 2026-10-03), the Lyrion server its own
+  optional section; what is not yet in it is listed at its end
+  (ADR-0111 decision 12):
+  card space for the skins, and the Pi's load at 1920 x 1080. **And the
+  Lyrion server** (George, 2026-10-03: *"record the results for hardware
+  recommendations"*; Finding 109): memory by library size - about 27 KB a
+  file while scanning, 1,876 MB for 61,362 files, the player itself needing
+  about 1 GB beside it, so no server on a 1 GB Pi (ADR-0115 decision 18);
+  card space - 151 MB of library and 670 MB of artwork cache for those files;
+  time - 2 h 7 min for a first scan over the network, 26 min to check.
 - **go-librespot 0.9.0 -> 0.10.2** (George, 2026-09-30: *"After 13c"*) -
   the first real update of a component through a release.
 - **New users start from an image** (ADR-0105 amended): promoting to stable

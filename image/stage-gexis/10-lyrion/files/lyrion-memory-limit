@@ -1,0 +1,25 @@
+#!/bin/sh
+# SPDX-License-Identifier: GPL-3.0-or-later
+#
+# ADR-0115 decision 18 (George, 2026-10-03: "A plus B - let's try"): the
+# Lyrion server may use the player's memory less 1 GB, which the player
+# itself needs (measured: about 700 MB of Peppy, the screen's browser,
+# Plexamp and the core). Its scanner grows with the library - 1,876 MB for
+# George's 61,362 files - and a fixed 2 GB stopped that scan on a 4 GB Pi
+# while being more than a 2 GB Pi has.
+#
+# Run as root by gexis-lyrion.service before Lyrion starts, so a card moved
+# to a Pi with more or less memory gets its own limit. Until it has run, the
+# unit's own MemoryMax (a share of the memory) stands.
+#
+# Never fails the start: a limit not set leaves the unit's own share, and a
+# server that does not start because of this line would be worse than that.
+total_kb=$(awk '/^MemTotal:/ {print $2}' /proc/meminfo)
+limit_mb=$(( ${total_kb:-0} / 1024 - 1024 ))
+[ "$limit_mb" -ge 512 ] || limit_mb=512
+if systemctl set-property --runtime gexis-lyrion.service "MemoryMax=${limit_mb}M"; then
+	echo "gexis-lyrion: memory limit ${limit_mb} MB of $(( ${total_kb:-0} / 1024 )) MB"
+else
+	echo "gexis-lyrion: memory limit not set; the unit's own share stands" >&2
+fi
+exit 0
