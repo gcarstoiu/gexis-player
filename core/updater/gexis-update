@@ -24,6 +24,7 @@ before a word of it is believed.
 from __future__ import annotations
 
 import argparse
+import fcntl
 import hashlib
 import json
 import os
@@ -576,6 +577,35 @@ def pack_remove(name: str) -> int:
     return 0
 
 
+#: How long a wait for the other one is, at most, before it is a failure.
+TURN_WAIT_S = 3600
+
+
+def take_turn(waiting) -> object:
+    """**One apt at a time** (found on George's player, 2026-10-03: an update
+    started while a skin pack was downloading failed with "Could not get lock
+    .../apt/archives/lock"). An update and a pack install share apt's
+    download folder; the second now waits for the first, and says so through
+    `waiting()`, rather than failing. The lock is the open file; it goes with
+    the process."""
+    STATE.mkdir(parents=True, exist_ok=True)
+    held = (STATE / "apt-turn.lock").open("w")
+    try:
+        fcntl.flock(held, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        return held
+    except BlockingIOError:
+        waiting()
+    deadline = time.monotonic() + TURN_WAIT_S
+    while time.monotonic() < deadline:
+        time.sleep(2)
+        try:
+            fcntl.flock(held, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            return held
+        except BlockingIOError:
+            continue
+    raise Stop("another update or skin pack download did not finish within an hour")
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     parser.add_argument("action", choices=["check", "install", "scheduled", "pack-install", "pack-remove"])
@@ -584,6 +614,8 @@ def main() -> int:
     args = parser.parse_args()
     if args.action.startswith("pack-"):
         try:
+            _turn = take_turn(lambda: report_pack("downloading", package=args.package,
+                                                  message="waiting for the update to finish"))
             return (pack_install if args.action == "pack-install" else pack_remove)(args.package)
         except Stop as stop:
             report_pack("failed", package=args.package, message=str(stop))
@@ -593,7 +625,9 @@ def main() -> int:
             check(args)
             return 0
         if args.action == "scheduled":
+            _turn = take_turn(lambda: None)
             return scheduled(args)
+        _turn = take_turn(lambda: report("downloading", message="waiting for the skin pack download to finish"))
         return install(args)
     except Stop as stop:
         report("failed", message=str(stop))
