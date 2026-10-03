@@ -274,6 +274,8 @@ LYRION_FOLDERS_S = 20.0
 LYRION_ADDONS_RESTART_S = 90.0
 LYRION_ADDONS_RETRY_S = 600.0
 LYRION_ADDONS_DONE = Path("/var/lib/gexis/lyrion-addons.done")
+#: Where Lyrion puts an add-on it installed (seen on George's player).
+LYRION_PLUGINS = Path("/var/lib/squeezeboxserver/cache/InstalledPlugins/Plugins")
 
 
 def _setup_running(setup: dict | None) -> bool:
@@ -2219,27 +2221,37 @@ async def main() -> None:
     lyrion_asked = {"at": None, "restarted": False}
 
     async def _lyrion_addons() -> None:
+        """**Installed means on disk, not ticked** (found on George's player,
+        2026-10-03): Lyrion ticks an add-on's box as soon as it is asked and
+        installs it only at its next start. Ticked was taken for installed,
+        the restart never came, and Lyrion was left drawing a Material skin
+        it did not have - a page with no skin at all. So: asked, restarted
+        after LYRION_ADDONS_RESTART_S, and done only once every one is in
+        its folder - and only then is Material made the skin."""
         if LYRION_ADDONS_DONE.exists():
             return
-        async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=60)) as session:
-            async with session.get("http://127.0.0.1:9000" + lyrion_addons.PAGE) as r:
-                page = await r.text(errors="replace")
-            missing = lyrion_addons.missing(page)
-            if not missing:
-                LYRION_ADDONS_DONE.parent.mkdir(parents=True, exist_ok=True)
-                LYRION_ADDONS_DONE.touch()
-                logger.info("lyrion: add-ons installed (%s)", ", ".join(lyrion_addons.WANTED))
-                return
-            now = time.monotonic()
-            if lyrion_asked["at"] is None or now - lyrion_asked["at"] > LYRION_ADDONS_RETRY_S:
-                action, fields = lyrion_addons.submission(page)
-                async with session.post("http://127.0.0.1:9000" + action, data=fields) as r:
-                    logger.info("lyrion: asked Lyrion to install %s (%s)", ", ".join(missing), r.status)
-                lyrion_asked.update(at=now, restarted=False)
-                return
+        if all((LYRION_PLUGINS / name).is_dir() for name in lyrion_addons.WANTED):
+            await _lyrion_rpc(["pref", "skin", "material"])
+            LYRION_ADDONS_DONE.parent.mkdir(parents=True, exist_ok=True)
+            LYRION_ADDONS_DONE.touch()
+            logger.info("lyrion: add-ons installed (%s); Material is the skin", ", ".join(lyrion_addons.WANTED))
+            return
+        now = time.monotonic()
+        if lyrion_asked["at"] is None or now - lyrion_asked["at"] > LYRION_ADDONS_RETRY_S:
+            async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=60)) as session:
+                async with session.get("http://127.0.0.1:9000" + lyrion_addons.PAGE) as r:
+                    page = await r.text(errors="replace")
+                missing = lyrion_addons.missing(page)
+                if missing:
+                    action, fields = lyrion_addons.submission(page)
+                    async with session.post("http://127.0.0.1:9000" + action, data=fields) as r:
+                        logger.info("lyrion: asked Lyrion to install %s (%s)", ", ".join(missing), r.status)
+            # Ticked now, by us or before: they are installed at the restart.
+            lyrion_asked.update(at=now, restarted=False)
+            return
         if not lyrion_asked["restarted"] and now - lyrion_asked["at"] > LYRION_ADDONS_RESTART_S:
-            # Lyrion loads a plugin it installed only at its next start.
             lyrion_asked["restarted"] = True
+            logger.info("lyrion: restarting it to install its add-ons")
             await asyncio.create_subprocess_exec("systemctl", "restart", "gexis-lyrion.service")
 
     async def _lyrion_folders_loop() -> None:
