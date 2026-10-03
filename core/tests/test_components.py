@@ -85,6 +85,18 @@ def test_a_plugin_that_downloads_gets_a_row_under_its_switch():
     assert "player.download" not in keys and "player.remove" not in keys
 
 
+def test_a_plugin_that_takes_its_data_says_so_in_its_remove():
+    """ADR-0115 decision 14: the Lyrion server's confirmation says what goes."""
+    class P:
+        id, name, kind, accent, settings, enabled_row, unit = "srv", "Server", "service", None, [], None, "s.service"
+        removes = "Its library goes too."
+
+    groups = Settings.with_plugins(load_registry(), [P()], {"srv": "srv"})
+    rows = [r for g in groups for r in g["rows"]]
+    warn = next(r for r in rows if r.get("key") == "srv.remove")["warn"]
+    assert warn == "This deletes the software Server downloaded. Its library goes too."
+
+
 def test_plugins_are_grouped_by_the_area_they_work_in():
     """George: "beszel is system, plexamp in sources"."""
     class Plex:
@@ -96,7 +108,9 @@ def test_plugins_are_grouped_by_the_area_they_work_in():
     rows = next(g for g in Settings.with_plugins(load_registry(), [Monitor(), Plex()])
                 if g["id"] == "plugins")["rows"]
     order = [(r["type"], r.get("label") if r["type"] == "group" else r["key"]) for r in rows]
-    assert order == [("group", "Sources"), ("toggle", "plex.enabled"), ("group", "System"), ("toggle", "mon.enabled")]
+    # ADR-0111: the visualiser's skins head the screen, as a plugin of ours.
+    assert order == [("group", "Visualiser"), ("toggle", "visualiser_skins"),
+                     ("group", "Sources"), ("toggle", "plex.enabled"), ("group", "System"), ("toggle", "mon.enabled")]
 
 
 def test_a_plugins_notice_is_asked_before_its_switch_turns_on():
@@ -146,7 +160,8 @@ def test_remove_deletes_the_download_its_stamp_and_its_status(tmp_path):
     (status / "player.json").write_text("{}")
     sign_in = tmp_path / "opt" / "player" / "settings.json"
     sign_in.write_text("kept")
-    components.remove("player", {"DEST": str(dest)}, status_dir=status, installed_dir=installed)
+    components.remove("player", {"DEST": str(dest)}, status_dir=status, installed_dir=installed,
+                      places=((tmp_path, 1),))
     assert not dest.exists() and not old.exists()
     assert not (installed / "player.sha256").exists() and not (status / "player.json").exists()
     assert sign_in.read_text() == "kept", "what the software wrote outside DEST stays"
@@ -155,7 +170,8 @@ def test_remove_deletes_the_download_its_stamp_and_its_status(tmp_path):
 
 
 def test_remove_refuses_a_path_it_should_never_touch(tmp_path):
-    for dest in ("", "relative/path", "/opt", "/opt/x", "/opt/x/../../etc"):
+    for dest in ("", "relative/path", "/opt", "/opt/x/../../etc", "/home", "/home/pi",
+                 "/usr/lib", "/var/lib/gexis", "/etc/gexis"):
         try:
             components.remove("player", {"DEST": dest}, status_dir=tmp_path, installed_dir=tmp_path)
         except ValueError:
@@ -163,6 +179,46 @@ def test_remove_refuses_a_path_it_should_never_touch(tmp_path):
         raise AssertionError(f"{dest!r} was not refused")
 
 
+def test_remove_takes_a_folder_directly_in_opt(tmp_path, monkeypatch):
+    """The Lyrion server's /opt/lyrion (found on George's player, 2026-10-03:
+    Remove was refused and the row did nothing)."""
+    gone = []
+    monkeypatch.setattr(components.shutil, "rmtree", gone.append)
+    monkeypatch.setattr(components.Path, "is_dir", lambda self: self.name == "lyrion")
+    monkeypatch.setattr(components.Path, "is_file", lambda self: False)
+    monkeypatch.setattr(components.Path, "is_symlink", lambda self: False)
+    components.remove("lyrion", {"DEST": "/opt/lyrion"}, status_dir=tmp_path, installed_dir=tmp_path)
+    assert gone == [components.Path("/opt/lyrion")]
+
+
 def test_removing_what_is_not_there_is_not_an_error(tmp_path):
     components.remove("player", {"DEST": str(tmp_path / "a" / "b" / "c")},
-                      status_dir=tmp_path, installed_dir=tmp_path)
+                      status_dir=tmp_path, installed_dir=tmp_path, places=((tmp_path, 1),))
+
+
+def test_remove_takes_the_data_its_pin_names(tmp_path):
+    """ADR-0115 decision 14: the Lyrion server's preferences and library."""
+    dest = tmp_path / "opt" / "lyrion"
+    prefs = tmp_path / "lib" / "squeezeboxserver" / "prefs"
+    cache = tmp_path / "lib" / "squeezeboxserver" / "cache"
+    for d in (dest, prefs, cache):
+        d.mkdir(parents=True)
+        (d / "f").write_text("x")
+    components.remove("lyrion", {"DEST": str(dest), "DATA": f"{prefs}:{cache}"},
+                      status_dir=tmp_path, installed_dir=tmp_path,
+                      places=((tmp_path / "opt", 1),), data_places=((tmp_path / "lib", 2),))
+    assert not dest.exists() and not prefs.exists() and not cache.exists()
+    assert (tmp_path / "lib" / "squeezeboxserver").is_dir(), "the program's own folder stays"
+
+
+def test_a_bad_data_path_deletes_nothing(tmp_path):
+    dest = tmp_path / "opt" / "lyrion"
+    dest.mkdir(parents=True)
+    for bad in ("/var/lib", "/var/lib/gexis-core", "relative", "/etc/gexis/x", "/var/lib/a/../../../etc"):
+        try:
+            components.remove("lyrion", {"DEST": str(dest), "DATA": bad}, status_dir=tmp_path,
+                              installed_dir=tmp_path, places=((tmp_path / "opt", 1),))
+        except ValueError:
+            assert dest.is_dir(), f"{bad!r}: the software went before the data was refused"
+            continue
+        raise AssertionError(f"{bad!r} was not refused")

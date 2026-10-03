@@ -252,3 +252,39 @@ def test_a_source_with_no_pipe_is_left_alone():
     original = source.get_latest_pipe_data
     driver.hold_the_last_frame(source)
     assert source.get_latest_pipe_data is original
+
+
+def test_the_spectrum_engine_reads_the_pack_s_own_resolution(tmp_path, monkeypatch):
+    """ADR-0111: `spectrum.folder` follows the skin's home, not 1280x800."""
+    monkeypatch.setattr(driver, "SPECTRUM_DIR", tmp_path)
+    (tmp_path / "config.txt").write_text("[current]\nspectrum = x\nbase.folder = /old\nspectrum.folder = 1280x800\n")
+    home = tmp_path / "packs" / "800x480" / "gelo5" / "templates_spectrum" / "800x480"
+    driver.select_spectrum_section("s", driver.spectrum_base(home), home.name)
+    text = (tmp_path / "config.txt").read_text()
+    assert "spectrum.folder = 800x480" in text
+    assert f"base.folder = {home.parent.parent / 'templates_spectrum'}" in text
+
+
+def test_a_smaller_pack_is_centred_and_a_larger_one_left_alone():
+    """ADR-0111 decision 2: the largest pack that fits, centred on black."""
+    assert driver.centring((800, 480), (1024, 600)) == (112, 60)
+    assert driver.centring((1280, 800), (1280, 800)) is None
+    assert driver.centring((1280, 800), (1024, 600)) is None, "too large: drawn as before"
+    assert driver.centring((1280, 800), None) is None
+
+
+def test_the_screen_size_comes_from_screen_env(tmp_path):
+    env = tmp_path / "screen.env"
+    env.write_text("# ADR-0109\nGEXIS_SCREEN_WIDTH=1920\nGEXIS_SCREEN_HEIGHT=1080\n")
+    assert driver.screen_size(env) == (1920, 1080)
+    assert driver.screen_size(tmp_path / "absent") is None
+
+
+def test_the_driver_s_fanart_pool_matches_the_core_s():
+    """The two processes share words, not code (ADR-0112)."""
+    sel = driver.Selection.__new__(driver.Selection)
+    sel.corpus = "Fanart"
+    skins = {"t": {"vinyl.filename": "v.png", "fanart.pos": "1,2"}, "p": {"vinyl.filename": "v.png"}}
+    assert sel.pool(skins) == ["t"]
+    from gexis_core import skins as core_skins
+    assert set(driver.CORPUS) == set(core_skins.CORPUS)

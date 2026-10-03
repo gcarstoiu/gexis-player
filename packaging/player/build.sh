@@ -22,8 +22,12 @@ version_of() {
 	printf '%s' "$found"
 }
 ours=""
-for pkg in gexis-core gexis-ui gexis-system gexis-skins gexis-peppyalsa gexis-peppy-engines \
-	gexis-go-librespot gexis-beszel-agent gexis-plexamp; do
+# **No skins** (ADR-0111 decisions 9 and 10): the release does not depend on
+# gexis-skins or on a size's pack. A device installs its pack with consent;
+# one that already has gexis-skins keeps it, since apt leaves an installed
+# package alone when nothing depends on it any more.
+for pkg in gexis-core gexis-ui gexis-system gexis-peppyalsa gexis-peppy-engines \
+	gexis-go-librespot gexis-beszel-agent gexis-beszel-hub gexis-lyrion-server gexis-plexamp; do
 	v=$(version_of "$pkg")
 	ours="$ours, $pkg (= $v)"
 done
@@ -34,10 +38,23 @@ done
 ALSA="libasound2t64 (= 1.2.14-1+rpt1+deb13u1)"
 # The operating system's packages the device runs (the stages' lists), minus
 # the five that only compiled peppyalsa, which now arrives built.
-OS="alsa-utils, bluez-alsa-utils, bluez-tools, chromium, grim, labwc, nodejs, plymouth, plymouth-themes, python3-pil, python3-pygame, rfkill, samba, squeezelite, swaybg, wlrctl"
+OS="alsa-utils, bluez-alsa-utils, bluez-tools, chromium, grim, labwc, nodejs, plymouth, plymouth-themes, python3-pil, python3-pygame, rfkill, samba, squeezelite, swaybg, wlr-randr, wlrctl"
 
 install -D -m 644 /src/image/stage-gexis/09-legal/files/COPYING "$STAGE/usr/share/doc/gexis-player/COPYING"
 install -D -m 644 /src/image/stage-gexis/09-legal/files/SOURCE.md "$STAGE/usr/share/doc/gexis-player/SOURCE.md"
+# ADR-0099: peppy_screensaver's MIT notice stays on every device - the
+# visualiser reimplements its turntable, tape and gauge designs - though the
+# stock skins it came with no longer do (ADR-0111). gexis-skins carried it;
+# the release does now, at the same path, which is why the control file says
+# `Replaces: gexis-skins`: a device that keeps gexis-skins (decision 10) hands
+# the file over rather than refusing the update.
+SCREENSAVER_COMMIT="efbd0adf7d527dfed1aeb04fe1541c85b6d3175e"   # as packaging/skins/build.sh
+SCREENSAVER_LICENSE_SHA256="32f33fd11a3263acf22e759fc4482c21cc9296f9d2e3a402639a0fb3a7b3a654"
+. /src/image/stage-gexis/fetch-cached.sh
+fetch_cached "https://raw.githubusercontent.com/foonerd/peppy_screensaver/${SCREENSAVER_COMMIT}/LICENSE" \
+	"$SCREENSAVER_LICENSE_SHA256" /tmp/peppy_screensaver-LICENSE
+install -D -m 644 /tmp/peppy_screensaver-LICENSE \
+	"$STAGE/usr/share/doc/gexis-player/licenses/peppy_screensaver/LICENSE"
 
 cat > "$STAGE/DEBIAN/control" <<CTL
 Package: gexis-player
@@ -45,6 +62,7 @@ Version: $VERSION
 Architecture: all
 Maintainer: Gexis Player <noreply@github.com>
 Depends: ${ours#, }, $ALSA, $OS
+Replaces: gexis-skins
 Section: sound
 Priority: optional
 Description: Gexis Player, one release

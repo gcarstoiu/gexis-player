@@ -28,15 +28,18 @@
   treatment this panel already uses for an attribution.
 -->
 <script>
-  import { onMount } from 'svelte';
+  import { onMount, tick } from 'svelte';
   import { fade } from 'svelte/transition';
   import WeatherIcon from './WeatherIcon.svelte';
+  import { screen } from '../lib/family.svelte.js';
 
   let { ondismiss, settings = {} } = $props();
 
   let page = $state(null);
   let pageLoaded = $state(false);
   let now = $state(new Date());
+  // ADR-0109: the panel's shape, 1280 logical px by the screen's height.
+  let panelHeight = $state(window.innerHeight || 800);
   let spot = $state(randomSpot());
   let weather = $state(null);
   let picture = $state(null);
@@ -70,7 +73,7 @@
   // The contour's colour; its *width* is per element, below. Transparent
   // rather than zero so the widths stay harmless when there is no picture.
   //: **Fill, unless filling would cost too much of the picture.**
-  //: `cover` crops whatever does not match 1280x800, which is right for a
+  //: `cover` crops whatever does not match the panel, which is right for a
   //: photograph taken in landscape and brutal for one taken in portrait: a
   //: phone picture loses about two thirds of its height, centred, and the
   //: screen gives no sign that anything is missing.
@@ -82,7 +85,7 @@
   //: 10%, 4:3 17% - while a square (38%) and anything portrait (65%+) fall
   //: on the other. The shapes that were composed to be looked at wide stay
   //: edge to edge.
-  const PANEL_RATIO = 1280 / 800;
+  const PANEL_RATIO = $derived((screen.family === 'bar' ? screen.width : 1280) / panelHeight);
   const CROP_LIMIT = 0.25;
   const cropped = $derived(
     ratio === null ? 0 : 1 - (ratio < PANEL_RATIO ? ratio / PANEL_RATIO : PANEL_RATIO / ratio)
@@ -100,11 +103,17 @@
   //: The design's own two drift boxes. With the band below, the clock group
   //: is about 640x226 and roams widely; with the weather riding along it is
   //: about 1180x400, so the box tightens to keep that off the edges.
+  //: ADR-0109: the boxes were drawn at 800 tall. On another height the top
+  //: of the box stays where it was and its bottom moves with the screen's
+  //: bottom edge, so the group keeps the 800 margins (720 on the 13.3").
   function randomSpot() {
     const wide = (settings.idle_forecast ?? '3 days') !== 'None';
+    const [top, bottom] = wide ? [17, 55] : [36, 56];
+    const low = (top / 100) * 800;
+    const high = (bottom / 100) * 800 + (panelHeight - 800);
     return {
       x: Math.round(wide ? 29 + Math.random() * 42 : 41 + Math.random() * 14),
-      y: Math.round(wide ? 17 + Math.random() * 38 : 36 + Math.random() * 20),
+      y: Math.round(((low + Math.random() * (high - low)) / panelHeight) * 100),
     };
   }
 
@@ -154,7 +163,10 @@
 
     const tick = setInterval(() => {
       now = new Date();
-      if (now.getSeconds() === 0) spot = randomSpot();
+      if (now.getSeconds() === 0) {
+        spot = randomSpot();
+        if (bar) drift = randomDrift();
+      }
     }, 1000);
     const forecast = setInterval(loadWeather, 15 * 60 * 1000);
     const every = Math.max(1, Number(settings.background_interval ?? 15)) * 60 * 1000;
@@ -234,6 +246,59 @@
       .filter(Boolean)
       .join(' · ')
   );
+
+  //: **ADR-0109, Bar family** (design `Bar Panels` idle, idle-black,
+  //: idle-frame; round 2 rules). One row, centred: the clock, a divider,
+  //: today, and as many forecast days as the width holds. Feels-like, wind
+  //: and the sun pair are dropped by design (review decision 11). The row
+  //: drifts sideways only, ±24 px, inside 48 px of padding.
+  const bar = $derived(screen.family === 'bar');
+  function randomDrift() {
+    return Math.round((Math.random() * 2 - 1) * 24);
+  }
+  let drift = $state(0);
+  //: Round 2: days = clamp(floor((W − 1112) / 136), 0, 3) - the row is
+  //: 1112 + 136 n wide. With the clock off the weather is alone and takes
+  //: all three; with the forecast set to None there are none.
+  const barDays = $derived.by(() => {
+    if (!threeDays) return 0;
+    if (!wantsClock) return 3;
+    return Math.max(0, Math.min(3, Math.floor((screen.width - 1112) / 136)));
+  });
+  //: **The rule assumes today is 360 and a day 100 wide.** Two-digit
+  //: negative temperatures make them about 401 and 138 (round-2 review §2),
+  //: and a 12-hour clock is wider too. So the row is measured: first
+  //: today's type steps down (to 0.8), then a day is dropped, until the row
+  //: fits inside the padding and the drift. Nothing overlaps.
+  let rowEl = $state(null);
+  let todayScale = $state(1);
+  let dropped = $state(0);
+  const shownDays = $derived(drawsWeather ? (weather?.days ?? []).slice(0, Math.max(0, barDays - dropped)) : []);
+  async function fitRow() {
+    todayScale = 1;
+    dropped = 0;
+    await tick();
+    const room = () => screen.width - 2 * 48 - 2 * 24;
+    while (rowEl && rowEl.scrollWidth > room() && todayScale > 0.81) {
+      todayScale = Math.round((todayScale - 0.05) * 100) / 100;
+      await tick();
+    }
+    while (rowEl && rowEl.scrollWidth > room() && dropped < barDays) {
+      dropped += 1;
+      await tick();
+    }
+  }
+  $effect(() => {
+    if (!bar) return;
+    // What the row's width depends on.
+    weather; barDays; wantsClock; twelve; screen.width; rowEl;
+    fitRow();
+  });
+  onMount(() => {
+    if (!bar) return;
+    drift = randomDrift();
+    document.fonts?.ready.then(() => bar && fitRow());
+  });
 </script>
 
 <!-- The same three facts in both layouts: feels-like, wind, and the sun
@@ -266,7 +331,9 @@
   </div>
 {/snippet}
 
-<div class="idle" transition:fade={{ duration: 520 }} style:--stroke={stroke}>
+<svelte:window bind:innerHeight={panelHeight} />
+
+<div class="idle" class:idle--bar={bar} transition:fade={{ duration: 520 }} style:--stroke={stroke}>
   {#if shown && !external}
     {#key shown}
       <div class="picture" in:fade={{ duration: 900 }}>
@@ -297,7 +364,63 @@
   {#if !external}
     <div class="scrim" style:background={scrim}></div>
 
-    {#if wantsClock || (!threeDays && drawsWeather)}
+    {#if bar}
+      {#if wantsClock || drawsWeather || (wantsWeather && weather?.error)}
+        <div class="bi">
+          <div class="bi__row" bind:this={rowEl} style:transform={`translateX(${drift}px)`}>
+            {#if wantsClock}
+              <div class="bi__clockblock">
+                <div class="bi__clock">
+                  {#if twelve}
+                    <span class="bi__hm ink">{now.getHours() % 12 || 12}:{pad(now.getMinutes())}</span>
+                    <span class="bi__s ink">{pad(now.getSeconds())} {now.getHours() < 12 ? 'am' : 'pm'}</span>
+                  {:else}
+                    <span class="bi__hm ink">{pad(now.getHours())}:{pad(now.getMinutes())}</span>
+                    <span class="bi__s ink">{pad(now.getSeconds())}</span>
+                  {/if}
+                </div>
+                <div class="bi__date ink">{date}</div>
+              </div>
+            {/if}
+            {#if drawsWeather}
+              {#if wantsClock}<span class="bi__divider"></span>{/if}
+              <div class="bi__today ink" style:--k={todayScale}>
+                <WeatherIcon condition={weather.now.condition} set={iconSet} size={100} />
+                <div class="bi__todaytext">
+                  <div class="bi__line">
+                    <span class="bi__temp">{degrees(weather.now.temperature)}</span>
+                    {#if today}
+                      <span class="bi__mm">
+                        <span class="bi__max">{degrees(today.max)}</span>
+                        <span class="bi__min">{degrees(today.min)}</span>
+                      </span>
+                    {/if}
+                  </div>
+                  <div class="bi__cond">{WORDS[weather.now.condition] ?? ''}</div>
+                </div>
+              </div>
+              {#if shownDays.length}
+                <div class="bi__days">
+                  {#each shownDays as day (day.date)}
+                    <span class="bi__day">
+                      <span class="bi__dayname ink">{short(day.date)}</span>
+                      <WeatherIcon condition={day.condition} set={iconSet} size={80} />
+                      <span class="bi__daymm ink">
+                        <span class="bi__daymax">{degrees(day.max)}</span>
+                        <span class="bi__daymin">{degrees(day.min)}</span>
+                      </span>
+                    </span>
+                  {/each}
+                </div>
+              {/if}
+            {:else if wantsWeather && weather?.error}
+              {#if wantsClock}<span class="bi__divider"></span>{/if}
+              <span class="bi__said ink">{weather.error}</span>
+            {/if}
+          </div>
+        </div>
+      {/if}
+    {:else if wantsClock || (!threeDays && drawsWeather)}
       <div
         class="clockblock"
         class:clockblock--centred={!threeDays}
@@ -342,7 +465,9 @@
       </div>
     {/if}
 
-    {#if threeDays && drawsWeather}
+    {#if bar}
+      <!-- The bar draws its weather in the row above. -->
+    {:else if threeDays && drawsWeather}
       <div class="band">
         <div class="now ink">
           <WeatherIcon condition={weather.now.condition} set={iconSet} size={132} />
@@ -382,7 +507,7 @@
     {/if}
 
     {#if credits}
-      <div class="credits ink">{credits}</div>
+      <div class="credits ink" class:credits--bar={bar}>{credits}</div>
     {/if}
   {/if}
 
@@ -408,7 +533,7 @@
     top: 0;
     left: 0;
     width: 1280px;
-    height: 800px;
+    height: 100vh;
     z-index: 20;
     overflow: hidden;
     background: #0b1218;
@@ -796,6 +921,162 @@
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+  }
+
+  /* ADR-0109, Bar family: the whole strip, W x 400 - the External URL page
+     too (review decision 10). */
+  .idle--bar {
+    width: 100vw;
+  }
+  .bi {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 48px;
+  }
+  .bi__row {
+    display: flex;
+    align-items: center;
+    gap: 40px;
+    flex-shrink: 0;
+    transition: transform 1400ms cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  .bi__clockblock {
+    flex-shrink: 0;
+  }
+  .bi__clock {
+    display: flex;
+    align-items: baseline;
+    gap: 14px;
+    font-family: var(--font-mono);
+    font-weight: 300;
+    letter-spacing: -0.02em;
+    white-space: nowrap;
+  }
+  .bi__hm {
+    font-size: 150px;
+    line-height: 1;
+  }
+  .bi__s {
+    font-size: 64px;
+    line-height: 1;
+    color: var(--accent-lms);
+  }
+  .bi__date {
+    --stroke-w: 1.5px;
+    margin-top: 18px;
+    font-family: var(--font-mono);
+    font-size: 26px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+  .bi__divider {
+    width: 1px;
+    height: 220px;
+    background: rgba(233, 238, 242, 0.3);
+    flex-shrink: 0;
+  }
+  .bi__today {
+    --k: 1;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    flex-shrink: 0;
+  }
+  .bi__todaytext {
+    min-width: 0;
+  }
+  .bi__line {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    white-space: nowrap;
+  }
+  .bi__temp {
+    font-size: calc(100px * var(--k));
+    font-weight: 300;
+    letter-spacing: -0.03em;
+    line-height: 0.94;
+  }
+  .bi__mm {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .bi__max {
+    --stroke-w: 2px;
+    font-size: calc(40px * var(--k));
+    font-weight: 700;
+    color: var(--accent-artist);
+  }
+  .bi__min {
+    --stroke-w: 2px;
+    font-size: calc(30px * var(--k));
+    color: var(--accent-bluetooth);
+  }
+  /* Two lines at most, 240 wide, as round 2 draws it. */
+  .bi__cond {
+    --stroke-w: 2px;
+    margin-top: 8px;
+    max-width: 240px;
+    font-size: calc(30px * var(--k));
+    line-height: 1.15;
+    font-weight: 600;
+    color: var(--accent-lms);
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  /* A day is as wide as what it says, never under 100: "-12° -18°" is 138. */
+  .bi__days {
+    display: flex;
+    gap: 36px;
+    flex-shrink: 0;
+  }
+  .bi__day {
+    min-width: 100px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    flex-shrink: 0;
+  }
+  .bi__dayname {
+    --stroke-w: 1.5px;
+    font-family: var(--font-mono);
+    font-size: 24px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+  }
+  .bi__daymm {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    white-space: nowrap;
+  }
+  .bi__daymax {
+    --stroke-w: 2px;
+    font-size: 36px;
+    font-weight: 700;
+    color: var(--accent-artist);
+  }
+  .bi__daymin {
+    --stroke-w: 2px;
+    font-size: 28px;
+    color: var(--accent-bluetooth);
+  }
+  .bi__said {
+    font-size: var(--t-body);
+    max-width: 360px;
+  }
+  .credits--bar {
+    left: 64px;
+    right: 64px;
+    bottom: 8px;
   }
 
   .page {

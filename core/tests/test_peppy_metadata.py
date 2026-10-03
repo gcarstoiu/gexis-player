@@ -105,3 +105,24 @@ def test_a_stream_has_no_next_track_and_fixed_output_no_level(tmp_path):
     written = read(path)
     assert written["next"] is None and written["volume"] is None
     assert written["shuffle"] is None and written["repeat"] is None
+
+
+def test_only_a_rate_that_is_the_file_s_own_reaches_the_visualiser(tmp_path):
+    """ADR-0036 as amended 2026-10-02: LMS's, or a plugin's that says so;
+    Spotify's 44.1 kHz is a decoder's, for a lossy stream."""
+    from gexis_core.adapters.base import Capabilities, VolumeMechanism
+
+    def caps(own):
+        return Capabilities(audio_connection="output", acquisition_events=frozenset(), supports_artwork=True,
+                            supports_sample_rate=True, volume_managed=False,
+                            volume_mechanism=VolumeMechanism.SOFTWARE_API, sample_rate_is_source=own)
+
+    path = tmp_path / "nowplaying.json"
+    for active, own in (("lms", True), ("someplugin", True)):
+        PeppyMetadataWriter(path).write(PlaybackState(
+            active=active, capabilities={active: caps(own)},
+            metadata=TrackMetadata(title="T", sample_rate=96000, bit_depth=24)))
+        assert read(path)["sample_rate"] == 96000 and read(path)["bit_depth"] == 24
+    PeppyMetadataWriter(path).write(PlaybackState(
+        active="spotify", capabilities={"spotify": caps(False)}, metadata=TrackMetadata(title="T", sample_rate=44100)))
+    assert read(path)["sample_rate"] is None and read(path)["bit_depth"] is None

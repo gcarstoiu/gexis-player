@@ -79,7 +79,7 @@
               <div style="flex-shrink:0;">
                 <div style="font-size:54px;line-height:1.06;font-weight:700;letter-spacing:-0.015em;text-wrap:pretty;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;">{{ title }}</div>
                 <div style="display:flex;align-items:baseline;gap:12px;margin-top:12px;min-width:0;">
-                  <span onClick="{{ onNpArtist }}" style="font-size:35px;font-weight:600;padding:9px 0;margin:-9px 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex-shrink:0;max-width:60%;color:#f2a48f;" style-active="color:#f8c4b4">{{ artist }}</span>
+                  <span onClick="{{ onNpArtist }}" style="font-size:35px;font-weight:600;padding:9px 0;margin:-9px 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex-shrink:0;max-width:60%;color:#f2a48f;" style-active="color:{{ npArtistActive }}">{{ artist }}</span>
                   <span style="font-size:30px;color:rgba(233,238,242,0.6);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ album }}</span>
                   <span style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:25px;color:rgba(233,238,242,0.6);white-space:nowrap;flex-shrink:0;visibility:{{ yearVisibility }};">{{ year }}</span>
                 </div>
@@ -92,7 +92,7 @@
               <div style="flex-shrink:0;">
                 <div style="font-size:54px;line-height:1.06;font-weight:700;letter-spacing:-0.015em;text-wrap:pretty;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;">{{ title }}</div>
                 <div style="display:flex;align-items:baseline;gap:12px;margin-top:12px;min-width:0;">
-                  <span onClick="{{ onNpArtist }}" style="font-size:35px;font-weight:600;padding:9px 0;margin:-9px 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex-shrink:0;max-width:60%;color:#f2a48f;" style-active="color:#f8c4b4">{{ artist }}</span>
+                  <span onClick="{{ onNpArtist }}" style="font-size:35px;font-weight:600;padding:9px 0;margin:-9px 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex-shrink:0;max-width:60%;color:#f2a48f;" style-active="color:{{ npArtistActive }}">{{ artist }}</span>
                   <span style="font-size:30px;color:rgba(233,238,242,0.6);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ album }}</span>
                   <span style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:25px;color:rgba(233,238,242,0.6);white-space:nowrap;flex-shrink:0;visibility:{{ yearVisibility }};">{{ year }}</span>
                 </div>
@@ -198,7 +198,13 @@
       <div style="display:grid;align-items:center;margin-top:26px;grid-template-columns:1fr auto 1fr;">
         <div style="display:flex;align-items:center;gap:14px;justify-self:start;flex-shrink:0;">
         <div onClick="{{ onBrowse }}" style="width:64px;height:64px;display:flex;align-items:center;justify-content:center;border-radius:50%;background:rgba(233,238,242,0.07);flex-shrink:0;" style-active="transform:scale(0.95)">
-          <div style="width:26px;height:26px;position:relative;flex-shrink:0;">
+          <span style="position:relative;width:22px;height:16px;display:{{ homeSlidersDisplay }};flex-shrink:0;">
+            <span style="position:absolute;left:0;top:3px;width:22px;height:2px;border-radius:1px;background:rgba(233,238,242,0.88);opacity:0.6;display:block;"></span>
+            <span style="position:absolute;top:1px;left:5px;width:6px;height:6px;border-radius:50%;background:rgba(233,238,242,0.88);display:block;"></span>
+            <span style="position:absolute;left:0;top:11px;width:22px;height:2px;border-radius:1px;background:rgba(233,238,242,0.88);opacity:0.6;display:block;"></span>
+            <span style="position:absolute;top:9px;left:13px;width:6px;height:6px;border-radius:50%;background:rgba(233,238,242,0.88);display:block;"></span>
+          </span>
+          <div style="width:26px;height:26px;position:relative;flex-shrink:0;display:{{ homeTilesDisplay }};">
             <div style="position:absolute;inset:1px;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:4px;display:grid;">
               <div style="border-radius:3px;background:rgba(233,238,242,0.85);"></div>
               <div style="border-radius:3px;background:rgba(233,238,242,0.85);"></div>
@@ -261,18 +267,13 @@
         </div>
         <div style="display:flex;align-items:center;gap:14px;justify-self:end;flex-shrink:0;">
           <div onClick="{{ onVolTrigger }}" style="width:60px;height:60px;border-radius:50%;background:rgba(233,238,242,0.07);align-items:center;justify-content:center;position:relative;display:{{ volTriggerDisplay }};" style-active="transform:scale(0.95)">
-            <span style="position:absolute;right:6px;bottom:6px;width:19px;height:19px;border-radius:50%;background:#16232c;box-shadow:0 0 0 2px rgba(22,35,44,0.9);align-items:center;justify-content:center;display:{{ lockBadgeDisplay }};">
-              <span style="position:relative;width:11px;height:12px;display:block;">
-                <span style="position:absolute;left:2px;top:0;width:7px;height:6px;border:2px solid #e0a758;border-bottom:none;border-radius:4px 4px 0 0;box-sizing:border-box;display:block;"></span>
-                <span style="position:absolute;left:0;bottom:0;width:11px;height:7px;border-radius:2px;background:#e0a758;display:block;"></span>
-              </span>
-            </span>
-            <span style="position:relative;width:26px;height:26px;flex-shrink:0;display:block;">
-              <span style="position:absolute;left:0;top:50%;transform:translateY(-50%);width:13px;height:22px;background:{{ vtConeInk }};clip-path:polygon(0 27%,42% 27%,100% 0,100% 100%,42% 73%,0 73%);display:block;"></span>
-              <span style="position:absolute;left:4px;top:50%;width:14px;height:14px;margin-top:-7px;border-radius:50%;box-sizing:border-box;border:2px solid {{ vt1Ink }};clip-path:polygon(50% 10%,100% 0,100% 100%,50% 90%);display:block;"></span>
-              <span style="position:absolute;left:0.5px;top:50%;width:21px;height:21px;margin-top:-10.5px;border-radius:50%;box-sizing:border-box;border:2px solid {{ vt2Ink }};clip-path:polygon(50% 10%,100% 0,100% 100%,50% 90%);display:block;"></span>
-              <span style="position:absolute;left:-2px;top:50%;width:26px;height:26px;margin-top:-13px;border-radius:50%;box-sizing:border-box;border:2px solid {{ vt3Ink }};clip-path:polygon(50% 10%,100% 0,100% 100%,50% 90%);display:block;"></span>
-              <span style="position:absolute;left:1px;top:50%;width:24px;height:2.5px;border-radius:2px;transform:translateY(-50%) rotate(-38deg);transform-origin:center;background:#e0a758;display:{{ vtSlashDisplay }};"></span>
+            <svg width="30" height="30" viewBox="0 0 24 24" fill="none" style="color:#e9eef2;display:{{ lockBadgeDisplay }};"><rect x="5" y="10.5" width="14" height="9.5" rx="2.2" stroke="currentColor" stroke-width="1.8"></rect><path d="M8.4 10.5V7.9a3.6 3.6 0 0 1 7.2 0v2.6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path></svg>
+            <span style="position:relative;width:30px;height:30px;flex-shrink:0;display:{{ vtGlyphDisplay }};">
+              <span style="position:absolute;left:0;top:50%;transform:translateY(-50%);width:15px;height:26px;background:{{ vtConeInk }};clip-path:polygon(0 27%,42% 27%,100% 0,100% 100%,42% 73%,0 73%);display:block;"></span>
+              <span style="position:absolute;left:5px;top:50%;width:16px;height:16px;margin-top:-8px;border-radius:50%;box-sizing:border-box;border:2.5px solid {{ vt1Ink }};clip-path:polygon(50% 10%,100% 0,100% 100%,50% 90%);display:block;"></span>
+              <span style="position:absolute;left:1px;top:50%;width:24px;height:24px;margin-top:-12px;border-radius:50%;box-sizing:border-box;border:2.5px solid {{ vt2Ink }};clip-path:polygon(50% 10%,100% 0,100% 100%,50% 90%);display:block;"></span>
+              <span style="position:absolute;left:-2px;top:50%;width:30px;height:30px;margin-top:-15px;border-radius:50%;box-sizing:border-box;border:2.5px solid {{ vt3Ink }};clip-path:polygon(50% 10%,100% 0,100% 100%,50% 90%);display:block;"></span>
+              <span style="position:absolute;left:1px;top:50%;width:28px;height:3px;border-radius:2px;transform:translateY(-50%) rotate(-38deg);background:#e0a758;display:{{ vtSlashDisplay }};"></span>
             </span>
           </div>
           <div onClick="{{ onQueueOpen }}" style="width:60px;height:60px;border-radius:50%;background:rgba(159,180,232,0.12);border:1px solid rgba(159,180,232,0.3);display:{{ queueBtnDisplay }};flex-direction:column;align-items:center;justify-content:center;gap:5px;position:relative;" style-active="transform:scale(0.95)">
@@ -322,7 +323,7 @@
       <sc-if value="{{ libTopCards }}" hint-placeholder-val="{{ true }}">
         <div style="flex:1;min-width:0;display:flex;flex-direction:column;justify-content:center;gap:30px;box-sizing:border-box;position:relative;padding:{{ topPad }};">
         <div style="display:grid;gap:26px;flex-shrink:0;grid-template-columns:repeat(5,minmax(0,1fr));">
-          <div onClick="{{ onOpenMusic }}" style="border-radius:24px;background:rgba(126,214,188,0.1);border:1px solid rgba(126,214,188,0.3);display:flex;flex-direction:column;justify-content:space-between;padding:26px 24px;box-sizing:border-box;height:{{ topCardH }};" style-active="transform:scale(0.95)">
+          <div onClick="{{ onOpenMusic }}" style="border-radius:24px;background:rgba(126,214,188,0.1);border:1px solid rgba(126,214,188,0.3);display:flex;flex-direction:column;justify-content:space-between;padding:26px 24px;box-sizing:border-box;height:{{ topCardH }};" style-active="transform:scale(0.975)">
             <div style="height:44px;display:flex;align-items:flex-end;gap:7px;">
               <div style="width:8px;height:26px;border-radius:3px;background:#7ed6bc;"></div>
               <div style="width:8px;height:44px;border-radius:3px;background:#7ed6bc;"></div>
@@ -335,7 +336,7 @@
             </div>
           </div>
 
-          <div onClick="{{ onOpenArtists }}" style="border-radius:24px;background:rgba(159,180,232,0.1);border:1px solid rgba(159,180,232,0.3);display:flex;flex-direction:column;justify-content:space-between;padding:26px 24px;box-sizing:border-box;height:{{ topCardH }};" style-active="transform:scale(0.95)">
+          <div onClick="{{ onOpenArtists }}" style="border-radius:24px;background:rgba(159,180,232,0.1);border:1px solid rgba(159,180,232,0.3);display:flex;flex-direction:column;justify-content:space-between;padding:26px 24px;box-sizing:border-box;height:{{ topCardH }};" style-active="transform:scale(0.975)">
             <div style="height:44px;display:flex;align-items:center;gap:0;">
               <div style="width:34px;height:34px;border-radius:50%;background:rgba(159,180,232,0.95);flex-shrink:0;"></div>
               <div style="width:34px;height:34px;border-radius:50%;background:rgba(159,180,232,0.6);flex-shrink:0;margin-left:-11px;"></div>
@@ -347,7 +348,7 @@
             </div>
           </div>
 
-          <div onClick="{{ onOpenPlaylists }}" style="border-radius:24px;background:rgba(242,164,143,0.1);border:1px solid rgba(242,164,143,0.3);display:flex;flex-direction:column;justify-content:space-between;padding:26px 24px;box-sizing:border-box;height:{{ topCardH }};" style-active="transform:scale(0.95)">
+          <div onClick="{{ onOpenPlaylists }}" style="border-radius:24px;background:rgba(242,164,143,0.1);border:1px solid rgba(242,164,143,0.3);display:flex;flex-direction:column;justify-content:space-between;padding:26px 24px;box-sizing:border-box;height:{{ topCardH }};" style-active="transform:scale(0.975)">
             <div style="height:44px;display:flex;align-items:center;gap:10px;">
               <div style="display:flex;flex-direction:column;gap:6px;">
                 <div style="display:flex;align-items:center;gap:8px;"><div style="width:6px;height:6px;border-radius:50%;background:#f2a48f;"></div><div style="width:44px;height:4px;border-radius:2px;background:#f2a48f;"></div></div>
@@ -361,7 +362,7 @@
             </div>
           </div>
 
-          <div onClick="{{ onOpenRadio }}" style="border-radius:24px;background:rgba(233,238,242,0.055);border:1px solid rgba(233,238,242,0.16);display:flex;flex-direction:column;justify-content:space-between;padding:26px 24px;box-sizing:border-box;height:{{ topCardH }};" style-active="transform:scale(0.95)">
+          <div onClick="{{ onOpenRadio }}" style="border-radius:24px;background:rgba(233,238,242,0.055);border:1px solid rgba(233,238,242,0.16);display:flex;flex-direction:column;justify-content:space-between;padding:26px 24px;box-sizing:border-box;height:{{ topCardH }};" style-active="transform:scale(0.975)">
             <div style="height:44px;display:flex;align-items:center;gap:7px;">
               <div style="width:14px;height:14px;border-radius:50%;background:rgba(233,238,242,0.85);flex-shrink:0;"></div>
               <div style="width:14px;height:26px;border-right:3px solid rgba(233,238,242,0.6);border-radius:0 26px 26px 0;flex-shrink:0;"></div>
@@ -373,7 +374,7 @@
             </div>
           </div>
 
-          <div onClick="{{ onSettingsOpen }}" style="border-radius:24px;background:rgba(233,238,242,0.04);border:1px solid rgba(233,238,242,0.12);display:flex;flex-direction:column;justify-content:space-between;padding:26px 24px;box-sizing:border-box;height:{{ topCardH }};" style-active="transform:scale(0.95)">
+          <div onClick="{{ onSettingsOpen }}" style="border-radius:24px;background:rgba(233,238,242,0.04);border:1px solid rgba(233,238,242,0.12);display:flex;flex-direction:column;justify-content:space-between;padding:26px 24px;box-sizing:border-box;height:{{ topCardH }};" style-active="transform:scale(0.975)">
             <div style="height:44px;display:flex;align-items:center;">
               <span style="width:30px;height:30px;position:relative;flex-shrink:0;display:block;">
                 <span style="position:absolute;left:0;right:0;top:7px;height:3px;border-radius:2px;background:rgba(233,238,242,0.38);display:block;"></span>
@@ -397,7 +398,7 @@
             <div style="position:relative;">
               <div data-noscrollbar onScroll="{{ onNewScroll }}" style="display:flex;gap:26px;overflow-x:auto;padding:0 30px 4px;margin:0 -30px;mask-image:{{ newMask }};-webkit-mask-image:{{ newMask }};">
                 <sc-for list="{{ popularArtists }}" as="p" hint-placeholder-count="6">
-                  <div onClick="{{ p.onClick }}" style="width:176px;flex-shrink:0;text-align:center;" style-active="opacity:0.6">
+                  <div onClick="{{ p.onClick }}" style="width:176px;flex-shrink:0;text-align:center;" style-active="transform:scale(0.95)">
                     <div style="width:176px;height:176px;border-radius:50%;overflow:hidden;position:relative;display:flex;align-items:center;justify-content:center;background:{{ p.tint }};box-shadow:inset 0 0 0 1px rgba(255,255,255,0.14);">
                       <img src="artist-photo.webp" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:{{ p.photoDisplay }};" />
                       <span style="font-size:52px;font-weight:700;color:rgba(233,238,242,0.62);display:{{ p.monoDisplay }};">{{ p.initials }}</span>
@@ -418,7 +419,7 @@
             <div style="position:relative;">
               <div data-noscrollbar onScroll="{{ onNewScroll }}" style="display:flex;gap:26px;overflow-x:auto;padding:0 30px 4px;margin:0 -30px;mask-image:{{ newMask }};-webkit-mask-image:{{ newMask }};">
                 <sc-for list="{{ recentArtists }}" as="p" hint-placeholder-count="6">
-                  <div onClick="{{ p.onClick }}" style="width:176px;flex-shrink:0;text-align:center;" style-active="opacity:0.6">
+                  <div onClick="{{ p.onClick }}" style="width:176px;flex-shrink:0;text-align:center;" style-active="transform:scale(0.95)">
                     <div style="width:176px;height:176px;border-radius:50%;overflow:hidden;position:relative;display:flex;align-items:center;justify-content:center;background:{{ p.tint }};box-shadow:inset 0 0 0 1px rgba(255,255,255,0.14);">
                       <img src="artist-photo.webp" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:{{ p.photoDisplay }};" />
                       <span style="font-size:52px;font-weight:700;color:rgba(233,238,242,0.62);display:{{ p.monoDisplay }};">{{ p.initials }}</span>
@@ -439,7 +440,7 @@
             <div style="position:relative;">
               <div data-noscrollbar onScroll="{{ onNewScroll }}" style="display:flex;gap:20px;overflow-x:auto;padding:0 30px 4px;margin:0 -30px;mask-image:{{ newMask }};-webkit-mask-image:{{ newMask }};">
                 <sc-for list="{{ newAlbums }}" as="a" hint-placeholder-count="6">
-                  <div onClick="{{ a.onClick }}" style="width:176px;flex-shrink:0;" style-active="opacity:0.6">
+                  <div onClick="{{ a.onClick }}" style="width:176px;flex-shrink:0;" style-active="transform:scale(0.95)">
                     <div style="width:176px;height:176px;border-radius:14px;overflow:hidden;position:relative;background:#17242d;border:1px solid rgba(233,238,242,0.1);">
                       <img src="album-art.webp" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;" />
                     </div>
@@ -670,7 +671,7 @@
                 </div>
                 <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:26px 20px;">
                   <sc-for list="{{ g.cards }}" as="a" hint-placeholder-count="6">
-                <div onClick="{{ a.onRowClick }}" style="display:flex;flex-direction:column;align-items:center;gap:11px;min-width:0;" style-active="opacity:0.62">
+                <div onClick="{{ a.onRowClick }}" style="display:flex;flex-direction:column;align-items:center;gap:11px;min-width:0;" style-active="transform:scale(0.95)">
                   <div style="width:100%;aspect-ratio:1;border-radius:50%;overflow:hidden;position:relative;background:{{ a.tint }};box-shadow:inset 0 0 0 1px rgba(255,255,255,0.14);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
                     <img src="artist-photo.webp" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:{{ a.photoDisplay }};" />
                     <span style="font-size:40px;font-weight:700;letter-spacing:0.02em;color:rgba(233,238,242,0.62);display:{{ a.monoDisplay }};">{{ a.initials }}</span>
@@ -749,8 +750,7 @@
                 </div>
               </sc-if>
               <sc-if value="{{ netReady }}" hint-placeholder-val="{{ false }}">
-                <div ref="{{ bioRef }}" style="overflow:hidden;font-size:17px;line-height:1.5;color:rgba(233,238,242,0.82);text-wrap:pretty;max-height:{{ bioMax }};">{{ artistBio }}</div>
-                <div onClick="{{ onBioToggle }}" style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:13px;font-weight:600;letter-spacing:0.16em;text-transform:uppercase;color:#9fb4e8;margin-top:10px;padding:10px 0;display:{{ bioToggleDisplay }};" style-active="transform:scale(0.95)">{{ bioToggleLabel }}</div>
+                <div ref="{{ bioRef }}" onClick="{{ onBioToggle }}" style="overflow:hidden;font-size:17px;line-height:1.5;color:rgba(233,238,242,0.82);text-wrap:pretty;max-height:{{ bioMax }};-webkit-mask-image:{{ bioMask }};mask-image:{{ bioMask }};">{{ artistBio }}</div>
                 <div style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:12px;letter-spacing:0.1em;color:rgba(233,238,242,0.6);margin-top:12px;">{{ bioCredit }}</div>
               </sc-if>
               <sc-if value="{{ netError }}" hint-placeholder-val="{{ false }}">
@@ -817,7 +817,7 @@
                 </div>
                 <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(132px,1fr));gap:18px 16px;">
                   <sc-for list="{{ g.items }}" as="d" hint-placeholder-count="4">
-                    <div onClick="{{ d.onClick }}" style="min-width:0;" style-active="opacity:0.6">
+                    <div onClick="{{ d.onClick }}" style="min-width:0;" style-active="transform:scale(0.95)">
                       <div style="width:100%;aspect-ratio:1;border-radius:11px;overflow:hidden;position:relative;background:#17242d;border:1px solid rgba(233,238,242,0.1);">
                         <img src="album-art.webp" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;" />
                       </div>
@@ -845,7 +845,7 @@
               <sc-if value="{{ netReady }}" hint-placeholder-val="{{ false }}">
                 <div data-noscrollbar style="display:flex;gap:18px;overflow-x:auto;padding-bottom:2px;">
                   <sc-for list="{{ artistSimilar }}" as="s" hint-placeholder-count="4">
-                    <div onClick="{{ s.onClick }}" style="width:92px;flex-shrink:0;display:flex;flex-direction:column;align-items:center;gap:9px;" style-active="opacity:0.6">
+                    <div onClick="{{ s.onClick }}" style="width:92px;flex-shrink:0;display:flex;flex-direction:column;align-items:center;gap:9px;" style-active="transform:scale(0.95)">
                       <div style="width:92px;height:92px;border-radius:50%;overflow:hidden;position:relative;background:{{ s.tint }};box-shadow:inset 0 0 0 1px rgba(255,255,255,0.14);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
                         <img src="artist-photo.webp" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:{{ s.photoDisplay }};" />
                         <span style="font-size:26px;font-weight:700;color:rgba(233,238,242,0.62);display:{{ s.monoDisplay }};">{{ s.initials }}</span>
@@ -982,7 +982,7 @@
       </div>
     </div>
 
-    <div onClick="{{ onLibClose }}" onPointerDown="{{ onMiniDown }}" onPointerUp="{{ onMiniUp }}" onPointerLeave="{{ onMiniUp }}" onPointerCancel="{{ onMiniUp }}" style="position:relative;height:104px;flex-shrink:0;border-top:1px solid rgba(233,238,242,0.09);background:{{ miniBg }};display:{{ miniDisplay }};grid-template-columns:1fr auto 1fr;align-items:center;gap:20px;padding:0 40px;opacity:{{ miniOpacity }};">
+    <div onClick="{{ onLibClose }}" onPointerDown="{{ onMiniDown }}" onPointerUp="{{ onMiniUp }}" onPointerLeave="{{ onMiniUp }}" onPointerCancel="{{ onMiniUp }}" style="position:relative;height:104px;flex-shrink:0;border-top:1px solid rgba(233,238,242,0.09);background:{{ miniBg }};display:{{ miniDisplay }};grid-template-columns:1fr auto 1fr;align-items:center;gap:20px;padding:0 40px;transform-origin:50% 100%;transition:transform 90ms ease;transform:{{ miniScale }};opacity:{{ miniOpacity }};">
       <div style="position:absolute;left:0;right:0;top:0;height:2px;background:rgba(233,238,242,0.08);visibility:{{ barVisibility }};">
         <div style="position:absolute;left:0;top:0;bottom:0;background:{{ accent }};opacity:0.6;width:{{ progressPct }};transition:width 400ms linear;"></div>
       </div>
@@ -1004,18 +1004,13 @@
       <div style="display:flex;align-items:center;gap:20px;justify-self:end;flex-shrink:0;">
       <div style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:16px;color:rgba(233,238,242,0.5);flex-shrink:0;visibility:{{ barVisibility }};">{{ elapsed }}</div>
       <div onClick="{{ onMiniVol }}" onPointerDown="{{ onMiniBtnDown }}" style="width:56px;height:56px;border-radius:50%;background:rgba(233,238,242,0.07);align-items:center;justify-content:center;flex-shrink:0;position:relative;display:{{ volTriggerDisplay }};" style-active="transform:scale(0.95)">
-        <span style="position:absolute;right:5px;bottom:5px;width:16px;height:16px;border-radius:50%;background:#101a21;box-shadow:0 0 0 2px rgba(16,26,33,0.9);align-items:center;justify-content:center;display:{{ lockBadgeDisplay }};">
-          <span style="position:relative;width:9px;height:10px;display:block;">
-            <span style="position:absolute;left:1.5px;top:0;width:6px;height:5px;border:1.5px solid #e0a758;border-bottom:none;border-radius:3px 3px 0 0;box-sizing:border-box;display:block;"></span>
-            <span style="position:absolute;left:0;bottom:0;width:9px;height:6px;border-radius:1.5px;background:#e0a758;display:block;"></span>
-          </span>
-        </span>
-        <span style="position:relative;width:24px;height:24px;flex-shrink:0;display:block;">
-              <span style="position:absolute;left:0;top:50%;transform:translateY(-50%);width:12px;height:20px;background:{{ vtConeInk }};clip-path:polygon(0 27%,42% 27%,100% 0,100% 100%,42% 73%,0 73%);display:block;"></span>
-              <span style="position:absolute;left:3.5px;top:50%;width:13px;height:13px;margin-top:-6.5px;border-radius:50%;box-sizing:border-box;border:2px solid {{ vt1Ink }};clip-path:polygon(50% 10%,100% 0,100% 100%,50% 90%);display:block;"></span>
-              <span style="position:absolute;left:0.5px;top:50%;width:19px;height:19px;margin-top:-9.5px;border-radius:50%;box-sizing:border-box;border:2px solid {{ vt2Ink }};clip-path:polygon(50% 10%,100% 0,100% 100%,50% 90%);display:block;"></span>
-              <span style="position:absolute;left:-2px;top:50%;width:24px;height:24px;margin-top:-12px;border-radius:50%;box-sizing:border-box;border:2px solid {{ vt3Ink }};clip-path:polygon(50% 10%,100% 0,100% 100%,50% 90%);display:block;"></span>
-              <span style="position:absolute;left:1px;top:50%;width:22px;height:2.5px;border-radius:2px;transform:translateY(-50%) rotate(-38deg);transform-origin:center;background:#e0a758;display:{{ vtSlashDisplay }};"></span>
+        <svg width="30" height="30" viewBox="0 0 24 24" fill="none" style="color:#e9eef2;display:{{ lockBadgeDisplay }};"><rect x="5" y="10.5" width="14" height="9.5" rx="2.2" stroke="currentColor" stroke-width="1.8"></rect><path d="M8.4 10.5V7.9a3.6 3.6 0 0 1 7.2 0v2.6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path></svg>
+            <span style="position:relative;width:30px;height:30px;flex-shrink:0;display:{{ vtGlyphDisplay }};">
+              <span style="position:absolute;left:0;top:50%;transform:translateY(-50%);width:15px;height:26px;background:{{ vtConeInk }};clip-path:polygon(0 27%,42% 27%,100% 0,100% 100%,42% 73%,0 73%);display:block;"></span>
+              <span style="position:absolute;left:5px;top:50%;width:16px;height:16px;margin-top:-8px;border-radius:50%;box-sizing:border-box;border:2.5px solid {{ vt1Ink }};clip-path:polygon(50% 10%,100% 0,100% 100%,50% 90%);display:block;"></span>
+              <span style="position:absolute;left:1px;top:50%;width:24px;height:24px;margin-top:-12px;border-radius:50%;box-sizing:border-box;border:2.5px solid {{ vt2Ink }};clip-path:polygon(50% 10%,100% 0,100% 100%,50% 90%);display:block;"></span>
+              <span style="position:absolute;left:-2px;top:50%;width:30px;height:30px;margin-top:-15px;border-radius:50%;box-sizing:border-box;border:2.5px solid {{ vt3Ink }};clip-path:polygon(50% 10%,100% 0,100% 100%,50% 90%);display:block;"></span>
+              <span style="position:absolute;left:1px;top:50%;width:28px;height:3px;border-radius:2px;transform:translateY(-50%) rotate(-38deg);background:#e0a758;display:{{ vtSlashDisplay }};"></span>
             </span>
       </div>
       <div onClick="{{ onMiniToggle }}" onPointerDown="{{ onMiniBtnDown }}" style="width:64px;height:64px;border-radius:50%;background:#f2a48f;display:flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:0 0 18px rgba(242,164,143,0.22),0 8px 20px rgba(242,164,143,0.32);" style-active="transform:scale(0.95)">
@@ -1033,7 +1028,7 @@
     </div>
   </div>
 
-  <div style="position:absolute;inset:0;z-index:30;background:rgba(13,21,27,0.95);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:54px;transition:opacity 260ms ease;opacity:{{ handoffOpacity }};pointer-events:{{ handoffPointer }};">
+  <div style="position:absolute;inset:0;z-index:30;background:rgba(13,21,27,0.95);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:54px;transition:{{ handoffTrans }};opacity:{{ handoffOpacity }};pointer-events:{{ handoffPointer }};">
     <div style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:15px;letter-spacing:0.34em;text-transform:uppercase;color:rgba(233,238,242,0.5);animation:npRise 320ms ease both;">Handing off</div>
 
     <div style="display:flex;align-items:center;gap:44px;animation:npRise 380ms ease 60ms both;">
@@ -1094,13 +1089,15 @@
     <img src="artist-photo.webp" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;filter:brightness({{ idleBright }}) saturate(0.9);display:{{ idleArtistBg }};" />
     <img src="album-art.webp" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;filter:brightness({{ idleBright }}) saturate(0.9);display:{{ idleWallpaperBg }};" />
     <div style="position:absolute;inset:0;background:{{ idleScrim }};"></div>
+    <div style="position:absolute;left:56px;right:56px;bottom:7px;z-index:2;font-family:'IBM Plex Mono','Courier New',monospace;font-size:11px;line-height:14px;letter-spacing:0.16em;text-transform:uppercase;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#e9eef2;paint-order:stroke fill;-webkit-text-stroke:{{ idleStroke }};display:{{ idleCreditsDisplay }};">{{ idleCredits }}</div>
 
     <div style="position:absolute;width:max-content;transform:translate(-50%,-50%);transition:left 1400ms cubic-bezier(0.4,0,0.2,1),top 1400ms cubic-bezier(0.4,0,0.2,1);left:{{ clockX }};top:{{ clockY }};display:flex;flex-direction:column;align-items:{{ idleClockAlign }};gap:16px;">
-      <div style="display:flex;align-items:baseline;gap:14px;font-family:'IBM Plex Mono','Courier New',monospace;font-weight:300;letter-spacing:-0.02em;white-space:nowrap;">
+      <div style="align-items:baseline;gap:14px;font-family:'IBM Plex Mono','Courier New',monospace;font-weight:300;letter-spacing:-0.02em;white-space:nowrap;display:{{ idleClockDisplay }};">
         <span style="font-size:132px;line-height:1;color:#e9eef2;paint-order:stroke fill;-webkit-text-stroke:{{ idleStroke }};text-shadow:0 2px 10px rgba(7,11,15,0.55);">{{ clockHM }}</span>
         <span style="font-size:58px;line-height:1;color:#7ed6bc;paint-order:stroke fill;-webkit-text-stroke:{{ idleStroke }};text-shadow:0 2px 10px rgba(7,11,15,0.55);">{{ clockS }}</span>
+        <span style="font-size:58px;line-height:1;color:#7ed6bc;paint-order:stroke fill;-webkit-text-stroke:{{ idleStroke }};text-shadow:0 2px 10px rgba(7,11,15,0.55);display:{{ clockAmPmDisplay }};">{{ clockAmPm }}</span>
       </div>
-      <div style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:26px;letter-spacing:0.2em;text-transform:uppercase;color:#e9eef2;white-space:nowrap;paint-order:stroke fill;-webkit-text-stroke:{{ idleStroke }};text-shadow:0 2px 10px rgba(7,11,15,0.55);">{{ clockDate }}</div>
+      <div style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:26px;letter-spacing:0.2em;text-transform:uppercase;color:#e9eef2;white-space:nowrap;paint-order:stroke fill;-webkit-text-stroke:{{ idleStroke }};text-shadow:0 2px 10px rgba(7,11,15,0.55);display:{{ idleDateDisplay }};">{{ clockDate }}</div>
       <div style="width:100%;height:1px;background:rgba(233,238,242,0.32);margin-top:24px;display:{{ idleZeroDisplay }};"></div>
       <div style="align-items:center;gap:38px;margin-top:24px;display:{{ idleZeroDisplay }};paint-order:stroke fill;-webkit-text-stroke:{{ idleStroke }};text-shadow:0 2px 10px rgba(7,11,15,0.55);">
         <span style="position:relative;width:124px;height:124px;zoom:1.21;flex-shrink:0;display:block;">
@@ -1338,6 +1335,50 @@
 
 
 
+  <div data-screen-label="Waiting home (LMS off)" style="position:absolute;inset:0;z-index:11;background:#101a21;overflow:hidden;display:{{ waitHomeDisplay }};align-items:center;justify-content:center;">
+    <div style="position:absolute;inset:-90px;background:repeating-linear-gradient(38deg,#3f5a6d 0 48px,#2e4453 48px 96px);filter:blur(70px);transform:scale(1.14);"></div>
+    <div onClick="{{ onSettingsOpen }}" aria-label="Settings" style="position:absolute;top:26px;right:26px;width:64px;height:64px;border-radius:18px;border:1px solid rgba(233,238,242,0.14);background:rgba(233,238,242,0.07);box-sizing:border-box;display:flex;align-items:center;justify-content:center;transition:transform 120ms ease, background 120ms ease;" style-active="transform:scale(0.94);background:rgba(233,238,242,0.16)">
+      <span style="position:relative;width:26px;height:18px;display:block;color:#e9eef2;">
+        <span style="position:absolute;left:0;top:4px;width:26px;height:2px;border-radius:1px;background:#e9eef2;opacity:0.55;display:block;"></span>
+        <span style="position:absolute;top:1.5px;left:6px;width:7px;height:7px;border-radius:50%;background:#e9eef2;display:block;"></span>
+        <span style="position:absolute;left:0;top:12px;width:26px;height:2px;border-radius:1px;background:#e9eef2;opacity:0.55;display:block;"></span>
+        <span style="position:absolute;top:9.5px;left:15px;width:7px;height:7px;border-radius:50%;background:#e9eef2;display:block;"></span>
+      </span>
+    </div>
+    <sc-if value="{{ waitHomeNone }}" hint-placeholder-val="{{ false }}">
+      <div style="position:relative;text-align:center;max-width:560px;padding:0 40px;">
+        <div style="font-size:30px;font-weight:700;color:#e9eef2;">No sources</div>
+        <div style="margin-top:12px;font-size:17px;color:rgba(233,238,242,0.6);">Every source is switched off. Settings, top right.</div>
+      </div>
+    </sc-if>
+    <sc-if value="{{ waitHomeServices }}" hint-placeholder-val="{{ false }}">
+      <div style="position:relative;display:flex;align-items:center;justify-content:center;gap:60px;padding:0 48px;">
+        <div style="width:310px;display:flex;flex-direction:column;align-items:center;gap:24px;">
+          <div style="position:relative;width:180px;height:180px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+            <div style="position:absolute;width:180px;height:180px;border-radius:50%;border:2px solid rgba(233,238,242,0.6);box-sizing:border-box;animation:npRing 2800ms ease-out 900ms infinite;"></div>
+            <div style="position:absolute;width:180px;height:180px;border-radius:50%;border:2px solid rgba(233,238,242,0.6);box-sizing:border-box;animation:npRing 2800ms ease-out 2300ms infinite;"></div>
+            <div style="width:162px;height:162px;border-radius:50%;background:rgba(233,238,242,0.07);border:1px solid rgba(233,238,242,0.16);box-sizing:border-box;display:flex;align-items:center;justify-content:center;">{{ waitIconSpotifyXl }}</div>
+          </div>
+          <div style="text-align:center;">
+            <div style="font-size:27px;font-weight:700;color:#e9eef2;white-space:nowrap;">Spotify</div>
+            <div style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:15px;letter-spacing:0.16em;text-transform:uppercase;color:rgba(233,238,242,0.6);margin-top:4px;white-space:nowrap;">Listening</div>
+          </div>
+        </div>
+        <div style="width:310px;display:flex;flex-direction:column;align-items:center;gap:24px;">
+          <div style="position:relative;width:180px;height:180px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+            <div style="position:absolute;width:180px;height:180px;border-radius:50%;border:2px solid rgba(233,238,242,0.6);box-sizing:border-box;animation:npRing 2800ms ease-out 1800ms infinite;"></div>
+            <div style="position:absolute;width:180px;height:180px;border-radius:50%;border:2px solid rgba(233,238,242,0.6);box-sizing:border-box;animation:npRing 2800ms ease-out 400ms infinite;"></div>
+            <div style="width:162px;height:162px;border-radius:50%;background:rgba(233,238,242,0.07);border:1px solid rgba(233,238,242,0.16);box-sizing:border-box;display:flex;align-items:center;justify-content:center;">{{ waitIconBtXl }}</div>
+          </div>
+          <div style="text-align:center;">
+            <div style="font-size:27px;font-weight:700;color:#e9eef2;white-space:nowrap;">Bluetooth</div>
+            <div style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:15px;letter-spacing:0.16em;text-transform:uppercase;color:rgba(233,238,242,0.6);margin-top:4px;white-space:nowrap;">Pairable</div>
+          </div>
+        </div>
+      </div>
+    </sc-if>
+  </div>
+
   <div style="position:absolute;inset:0;z-index:42;overflow:hidden;transition:opacity 180ms ease;opacity:{{ setOpacity }};pointer-events:{{ setPointer }};">
     <dc-import name="Settings" mode="wide" on-back="{{ onSetBack }}" hint-size="100%,100%" style="position:absolute;inset:0;width:100%;height:100%;"></dc-import>
   </div>
@@ -1366,7 +1407,9 @@
       </div>
     <div data-noscrollbar style="flex:1;min-height:0;overflow-y:auto;display:flex;flex-direction:column;gap:3px;">
         <sc-for list="{{ queueItems }}" as="q" hint-placeholder-count="8">
-          <div onClick="{{ q.onPlay }}" style="height:60px;flex-shrink:0;display:flex;align-items:center;gap:15px;padding:0 14px;border-radius:12px;background:{{ q.bg }};" style-active="transform:scale(0.95)">
+          <div onPointerDown="{{ q.onDown }}" onPointerMove="{{ q.onMove }}" onPointerUp="{{ q.onUp }}" onPointerCancel="{{ q.onUp }}" style="height:60px;flex-shrink:0;position:relative;overflow:hidden;border-radius:12px;touch-action:pan-y;opacity:{{ q.rowOpacity }};transition:opacity 120ms linear;">
+          <span aria-hidden="true" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:flex-end;padding-right:22px;border-radius:12px;background:rgba(242,164,143,0.16);font-family:'IBM Plex Mono','Courier New',monospace;font-size:13px;letter-spacing:0.14em;text-transform:uppercase;color:#f2a48f;opacity:{{ q.behindOpacity }};">Remove</span>
+          <div onClick="{{ q.onPlay }}" style="position:relative;height:100%;box-sizing:border-box;display:flex;align-items:center;gap:15px;padding:0 14px;border-radius:12px;background:{{ q.bg }};transform:translateX({{ q.dx }});transition:{{ q.trans }};" style-active="opacity:0.62">
             <span style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:14px;color:{{ q.numInk }};width:24px;flex-shrink:0;">{{ q.num }}</span>
             <span style="width:42px;height:42px;border-radius:8px;overflow:hidden;position:relative;flex-shrink:0;background:#17242d;box-shadow:inset 0 0 0 1px rgba(233,238,242,0.1);display:block;">
               <img src="album-art.webp" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;" />
@@ -1377,10 +1420,7 @@
             </span>
             <span style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:12px;letter-spacing:0.14em;text-transform:uppercase;color:#7ed6bc;flex-shrink:0;display:{{ q.nowDisplay }};">Playing</span>
             <span style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:14px;color:rgba(233,238,242,0.5);flex-shrink:0;display:{{ q.durDisplay }};">{{ q.dur }}</span>
-            <span onClick="{{ q.onRemove }}" style="width:44px;height:44px;border-radius:12px;background:rgba(233,238,242,0.06);border:1px solid rgba(233,238,242,0.14);display:flex;align-items:center;justify-content:center;flex-shrink:0;position:relative;" style-active="transform:scale(0.95)">
-              <span style="position:absolute;width:15px;height:2.5px;border-radius:2px;background:rgba(233,238,242,0.75);transform:rotate(45deg);display:block;"></span>
-              <span style="position:absolute;width:15px;height:2.5px;border-radius:2px;background:rgba(233,238,242,0.75);transform:rotate(-45deg);display:block;"></span>
-            </span>
+          </div>
           </div>
         </sc-for>
         <sc-if value="{{ queueEmpty }}" hint-placeholder-val="{{ false }}">
@@ -1481,7 +1521,7 @@
 
 
 </x-dc>
-<script type="text/x-dc" data-dc-script data-props="{&quot;wxIcons&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;solid&quot;,&quot;duotone&quot;,&quot;neon&quot;],&quot;default&quot;:&quot;solid&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Idle&quot;},&quot;idleBackground&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;artist&quot;,&quot;wallpaper&quot;,&quot;black&quot;],&quot;default&quot;:&quot;artist&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Idle&quot;},&quot;idleForecast&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;3 days&quot;,&quot;none&quot;],&quot;default&quot;:&quot;3 days&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Idle&quot;},&quot;pairing&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Variant&quot;},&quot;homeStrip&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;new-music&quot;,&quot;most-played&quot;,&quot;recent-artists&quot;],&quot;default&quot;:&quot;new-music&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Library&quot;},&quot;homeStripCount&quot;:{&quot;editor&quot;:&quot;int&quot;,&quot;default&quot;:10,&quot;min&quot;:4,&quot;max&quot;:20,&quot;tsType&quot;:&quot;number&quot;,&quot;section&quot;:&quot;Library&quot;},&quot;volumeState&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;normal&quot;,&quot;muted&quot;,&quot;fixed&quot;],&quot;default&quot;:&quot;normal&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Volume&quot;},&quot;artistNetwork&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;auto&quot;,&quot;pending&quot;,&quot;ready&quot;,&quot;error&quot;],&quot;default&quot;:&quot;auto&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Library&quot;},&quot;handoffPreview&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Layout&quot;},&quot;idlePreview&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Layout&quot;},&quot;source&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;lms&quot;,&quot;spotify&quot;,&quot;bluetooth&quot;,&quot;none&quot;],&quot;default&quot;:&quot;lms&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Variant&quot;},&quot;transport&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;playing&quot;,&quot;paused&quot;,&quot;stopped&quot;],&quot;default&quot;:&quot;playing&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Variant&quot;},&quot;content&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;normal&quot;,&quot;long&quot;,&quot;radio&quot;],&quot;default&quot;:&quot;normal&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Variant&quot;},&quot;artwork&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Variant&quot;},&quot;lyrics&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;synced&quot;,&quot;unsynced&quot;,&quot;loading&quot;,&quot;none&quot;],&quot;default&quot;:&quot;synced&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Variant&quot;}}">
+<script type="text/x-dc" data-dc-script data-props="{&quot;idleClock&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Idle&quot;},&quot;clockFormat&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;24 h&quot;,&quot;12 h&quot;],&quot;default&quot;:&quot;24 h&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Idle&quot;},&quot;wxIcons&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;solid&quot;,&quot;duotone&quot;,&quot;neon&quot;],&quot;default&quot;:&quot;solid&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Idle&quot;},&quot;idleBackground&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;artist&quot;,&quot;wallpaper&quot;,&quot;black&quot;],&quot;default&quot;:&quot;artist&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Idle&quot;},&quot;idleForecast&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;3 days&quot;,&quot;none&quot;],&quot;default&quot;:&quot;3 days&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Idle&quot;},&quot;lms&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;on&quot;,&quot;off&quot;,&quot;all off&quot;],&quot;default&quot;:&quot;on&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Variant&quot;},&quot;pairing&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Variant&quot;},&quot;homeStrip&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;new-music&quot;,&quot;most-played&quot;,&quot;recent-artists&quot;],&quot;default&quot;:&quot;new-music&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Library&quot;},&quot;homeStripCount&quot;:{&quot;editor&quot;:&quot;int&quot;,&quot;default&quot;:10,&quot;min&quot;:4,&quot;max&quot;:20,&quot;tsType&quot;:&quot;number&quot;,&quot;section&quot;:&quot;Library&quot;},&quot;volumeState&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;normal&quot;,&quot;muted&quot;,&quot;fixed&quot;],&quot;default&quot;:&quot;normal&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Volume&quot;},&quot;artistNetwork&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;auto&quot;,&quot;pending&quot;,&quot;ready&quot;,&quot;error&quot;],&quot;default&quot;:&quot;auto&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Library&quot;},&quot;handoffPreview&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Layout&quot;},&quot;idlePreview&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Layout&quot;},&quot;source&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;lms&quot;,&quot;spotify&quot;,&quot;bluetooth&quot;,&quot;none&quot;],&quot;default&quot;:&quot;lms&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Variant&quot;},&quot;transport&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;playing&quot;,&quot;paused&quot;,&quot;stopped&quot;],&quot;default&quot;:&quot;playing&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Variant&quot;},&quot;content&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;normal&quot;,&quot;long&quot;,&quot;radio&quot;],&quot;default&quot;:&quot;normal&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Variant&quot;},&quot;artwork&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Variant&quot;},&quot;lyrics&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;synced&quot;,&quot;unsynced&quot;,&quot;loading&quot;,&quot;none&quot;],&quot;default&quot;:&quot;synced&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Variant&quot;}}">
 const RECENT_AGO = ["2 hours ago","Today","Today","Yesterday","Yesterday","2 days ago","3 days ago","4 days ago","Last week","Last week","2 weeks ago","2 weeks ago","3 weeks ago","Last month","Last month","Last month","Last month","2 months ago","2 months ago","3 months ago"];
 const SRC = {
   lms:       { label: 'LMS',       accent: '#7ed6bc' },
@@ -1770,6 +1810,7 @@ class Component extends DCLogic {
     bReveal: null,
     act: null, actStep: 'menu', toast: null, netState: 'pending', bioOpen: false, bioClipped: false,
     queueOpen: false, switcherOpen: false,
+    swipe: { key: null, dx: 0, going: false, live: false },
     queueSource: 'Evening', queueIndex: 3, removed: [], cleared: false,
     playlists: Object.keys(PLAYLIST_TRACKS).map(n => ({ name: n, count: PLAYLIST_TRACKS[n].length })),
     newScrollL: 0, newScrollR: 999,
@@ -2067,6 +2108,20 @@ class Component extends DCLogic {
       idleZeroDisplay: days === 0 ? 'flex' : 'none',
       // with the weather riding along, the clock centres over it
       idleClockAlign: days === 0 ? 'center' : 'flex-start',
+      // idle_clock off: the time and the date go together and the panel is a
+      // picture frame (George, 2026-09-22)
+      idleClockDisplay: this.props.idleClock === false ? 'none' : 'flex',
+      idleDateDisplay: this.props.idleClock === false ? 'none' : 'block',
+      // the credits are the panel's own, not the design's (ADR-0047 §2c):
+      // one line along the bottom, photo first, then the weather's licence
+      idleCredits: [
+        // an artist picture is credited with the artist's name; a wallpaper
+        // with its photographer where Pixabay gives one, then Pixabay
+        (this.props.idleBackground || 'artist') === 'wallpaper' ? 'Photos from Pixabay'
+          : (this.props.idleBackground || 'artist') === 'artist' ? 'Gasca Zurli' : null,
+        this.props.idleWeather === false ? null : 'Weather data by Open-Meteo.com'
+      ].filter(Boolean).join(' \u00b7 '),
+      idleCreditsDisplay: ((this.props.idleBackground || 'artist') !== 'black' || this.props.idleWeather !== false) ? 'block' : 'none',
       idleBandDisplay: days === 0 ? 'none' : 'flex',
       wxDays: FC.slice(0, days).map(d => Object.assign({ name: d[0], max: d[2], min: d[3] }, cond(d[1])))
     };
@@ -2129,12 +2184,14 @@ class Component extends DCLogic {
         }
       });
     }
-    const bt = source === 'bluetooth';
+    // Bluetooth is gexis's own square mark (a phone sending sound, B1),
+    // drawn at the size asked for, like Spotify's (SourceMark.svelte,
+    // ADR-0099; design/assets/SOURCES.md)
     return React.createElement('img', {
-      src: bt ? 'icon-bluetooth.png' : 'icon-spotify.png',
+      src: source === 'bluetooth' ? 'icon-bluetooth.png' : 'icon-spotify.png',
       alt: '',
       style: {
-        height: (bt ? s * 1.12 : s) + 'px',
+        height: s + 'px',
         width: 'auto', flexShrink: 0, display: 'block',
         opacity: opacity == null ? 1 : opacity
       }
@@ -2277,6 +2334,58 @@ class Component extends DCLogic {
     }, 1000);
     requestAnimationFrame(() => this.syncLyricScroll());
   }
+  // QueueRail.svelte (ADR-0062): swipe left past 96px to remove; below 12px
+  // the gesture has not said which axis it is
+  swipeRow(key, sw) {
+    const on = sw.key === key;
+    const dx = on ? (sw.going ? '-100%' : sw.dx + 'px') : '0px';
+    const trans = on && sw.live ? 'none'
+      : on && sw.going ? 'transform 130ms cubic-bezier(0.4,0,1,1)'
+      : 'transform 190ms cubic-bezier(0.2,0.8,0.2,1)';
+    return {
+      dx, trans,
+      behindOpacity: on ? '1' : '0',
+      rowOpacity: on && sw.going ? '0' : '1',
+      onDown: (e) => {
+        if (e.pointerType === 'mouse' && e.button !== 0) return;
+        this._qg = { key, id: e.pointerId, x: e.clientX, y: e.clientY, decided: false };
+      },
+      onMove: (e) => {
+        const g = this._qg;
+        if (!g || e.pointerId !== g.id) return;
+        const mx = e.clientX - g.x, my = e.clientY - g.y;
+        if (!g.decided) {
+          if (Math.abs(my) > 12 && Math.abs(my) >= Math.abs(mx)) { this._qg = null; return; }
+          if (Math.abs(mx) <= 12) return;
+          g.decided = true;
+          e.currentTarget.setPointerCapture(e.pointerId);
+        }
+        this.setState({ swipe: { key, dx: Math.min(0, mx), going: false, live: true } });
+      },
+      onUp: () => {
+        const g = this._qg;
+        this._qg = null;
+        if (!g || !g.decided) return;
+        this._swiped = Date.now();
+        const s = this.state.swipe;
+        if (-s.dx < 96) { this.setState({ swipe: { key: null, dx: 0, going: false, live: false } }); return; }
+        this.setState({ swipe: { ...s, going: true, live: false } });
+        setTimeout(() => this.setState(st => ({
+          removed: st.removed.concat([key]),
+          swipe: { key: null, dx: 0, going: false, live: false }
+        })), 160);
+      }
+    };
+  }
+  // the gesture has nothing to see, so the first removable row opens a
+  // little and closes again, once per run, the first time the rail opens
+  swipeHint(list) {
+    if (this._hinted || list.length < 2) return;
+    this._hinted = true;
+    const key = list[1][0];
+    setTimeout(() => this.setState({ swipe: { key, dx: -70, going: false, live: false } }), 480);
+    setTimeout(() => this.setState({ swipe: { key: null, dx: 0, going: false, live: false } }), 1500);
+  }
   componentDidUpdate(prevProps) {
     this.syncLyricScroll();
     const prev = prevProps.source || 'lms';
@@ -2335,7 +2444,11 @@ class Component extends DCLogic {
     const fullTransport = this.source() === 'lms';
 
     const noRenderer = this.source() === 'none';
-    const libOpen = this.state.library || noRenderer;
+    // ADR-0079: with LMS off there is no library; nothing playing is the
+    // waiting screen, and Now Playing is the root
+    const lmsMode = this.props.lms ?? 'on';
+    const lmsOff = lmsMode !== 'on';
+    const libOpen = !lmsOff && (this.state.library || noRenderer);
     const lp = this.state.libPath;
     const albumNode = this.state.library && this.isAlbumNode(lp);
     const libHasRows = this.libChildren(lp).length > 0;
@@ -2372,7 +2485,9 @@ class Component extends DCLogic {
       accent: src.accent,
       accentBar: 'linear-gradient(90deg,' + src.accent + ',#f2a48f)',
       sourceLabel: src.label,
-      dotAnim: playing ? 'npPulse 2.4s ease-in-out infinite' : 'none',
+      // no pulse on either badge: breathing kept the panel composited at
+      // 60 fps (Finding 056; George, 2026-09-24)
+      dotAnim: 'none',
 
 
       title: c.title,
@@ -2448,7 +2563,10 @@ class Component extends DCLogic {
           volTriggerDisplay: 'flex',
           // in fixed mode the trigger carries a padlock, so the lock reads
           // before the drawer is ever opened
-          lockBadgeDisplay: fixed ? 'flex' : 'none',
+          // fixed output: the padlock stands in for the glyph (ADR-0046); the
+          // glyph is the drawer's 30px one everywhere, whose arcs do not merge
+          lockBadgeDisplay: fixed ? 'block' : 'none',
+          vtGlyphDisplay: fixed ? 'none' : 'block',
           vtConeInk: muted || pct === 0 ? 'rgba(233,238,242,0.45)' : 'rgba(233,238,242,0.85)',
           vt1Ink: !muted && pct > 0 ? 'rgba(233,238,242,0.85)' : 'rgba(233,238,242,0.18)',
           vt2Ink: !muted && pct >= 34 ? 'rgba(233,238,242,0.85)' : 'rgba(233,238,242,0.18)',
@@ -2474,7 +2592,7 @@ class Component extends DCLogic {
       // not what is playing, so the playing track needs its own persistent line
       // the playing artist's name opens that artist's overview
       onNpArtist: () => {
-        if (!ARTIST_INFO[c.artist]) return;
+        if (lmsOff || !ARTIST_INFO[c.artist]) return;
         this.setState({ library: true, drawer: false, queueOpen: false });
         this.openArtist(c.artist);
       },
@@ -2507,8 +2625,10 @@ class Component extends DCLogic {
       // and the discography on a long one. The toggle is measured too — it
       // only appears once the text actually exceeds the cap.
       bioMax: this.state.bioOpen ? 'none' : '132px',
-      bioToggleLabel: this.state.bioOpen ? 'Less' : 'More',
-      bioToggleDisplay: this.state.bioClipped ? 'inline-block' : 'none',
+      // no More/Less: the text itself is the toggle and the bottom fade says
+      // there is more, so the fade is drawn only when something is under it
+      // (George, 2026-09-19)
+      bioMask: !this.state.bioOpen && this.state.bioClipped ? 'linear-gradient(180deg,#000 58%,transparent 100%)' : 'none',
       bioRef: (el) => {
         if (!el) return;
         const clipped = el.scrollHeight > 134;
@@ -2611,9 +2731,19 @@ class Component extends DCLogic {
       })(),
       handoffOpacity: ho ? 1 : 0,
       handoffPointer: ho ? 'auto' : 'none',
+      // appears at once, fades out (George, 2026-09-26)
+      handoffTrans: ho ? 'none' : 'opacity 260ms ease',
       handoffFromLabel: (SRC[ho ? ho.from : 'lms'] || SRC.lms).label,
       handoffToLabel: (SRC[ho ? ho.to : 'bluetooth'] || SRC.lms).label,
       noticeFooterDisplay: noRenderer ? 'flex' : 'none',
+      waitHomeDisplay: lmsOff && noRenderer ? 'flex' : 'none',
+      waitHomeNone: lmsMode === 'all off',
+      waitHomeServices: lmsMode === 'off',
+      waitIconSpotifyXl: this.sourceIcon('spotify', '#e9eef2', 68, 0.72),
+      waitIconBtXl: this.sourceIcon('bluetooth', '#e9eef2', 74, 0.72),
+      homeSlidersDisplay: lmsOff ? 'block' : 'none',
+      homeTilesDisplay: lmsOff ? 'none' : 'block',
+      npArtistActive: lmsOff ? '#f2a48f' : '#f8c4b4',
       waitIconLmsLg: this.sourceIcon('lms', '#7ed6bc', 38, 1),
       waitIconSpotifyLg: this.sourceIcon('spotify', '#e9eef2', 38, 0.72),
       waitIconBtLg: this.sourceIcon('bluetooth', '#e9eef2', 41, 0.72),
@@ -2626,7 +2756,17 @@ class Component extends DCLogic {
       handoffToGlow: hoAccent + '26',
 
       ...this.idleVals(n),
-      clockHM: pad(n.getHours()) + ':' + pad(n.getMinutes()),
+      // 12 h drops the leading zero and puts am/pm after the seconds, at their
+      // size (clock_format, George 2026-09-28)
+      ...(() => {
+        const h12 = (this.props.clockFormat || '24 h') === '12 h';
+        const h = n.getHours();
+        return {
+          clockHM: (h12 ? String(h % 12 || 12) : pad(h)) + ':' + pad(n.getMinutes()),
+          clockAmPm: h12 ? (h < 12 ? 'am' : 'pm') : '',
+          clockAmPmDisplay: h12 ? 'inline' : 'none'
+        };
+      })(),
       clockS: pad(n.getSeconds()),
       clockX: this.clockAt().x + '%',
       clockY: this.clockAt().y + '%',
@@ -2672,20 +2812,21 @@ class Component extends DCLogic {
       queueSourceAction: this.state.cleared ? 'Browse' : 'Change',
       queueEmpty: queueRest.length === 0,
       queueItems: queueList.map((t, i) => {
+        const sw = this.state.swipe;
         const isNow = i === 0 && !this.state.cleared;
         return {
           num: isNow ? '\u25b6' : pad(i), title: t[0], artist: t[1], dur: t[2],
-          bg: isNow ? 'rgba(126,214,188,0.14)' : 'transparent',
+          bg: isNow ? 'linear-gradient(rgba(126,214,188,0.14),rgba(126,214,188,0.14)),#16232c' : '#16232c',
           ink: isNow ? '#7ed6bc' : '#e9eef2',
           numInk: isNow ? '#7ed6bc' : 'rgba(233,238,242,0.55)',
           nowDisplay: isNow ? 'inline' : 'none',
           durDisplay: isNow ? 'none' : 'inline',
 
-          onPlay: () => { if (i > 0) this.setState({ queueIndex: qi + i, position: 0, transportOverride: 'playing' }); },
-          onRemove: (e) => {
-            e.stopPropagation();
-            this.setState(s => ({ removed: s.removed.concat([t[0]]) }));
-            this.flash(t[0] + ' removed');
+          ...this.swipeRow(t[0], sw),
+          onPlay: () => {
+            // the click that ends a swipe is not a tap (QueueRail, 320ms)
+            if (Date.now() - (this._swiped || 0) <= 320) return;
+            if (i > 0) this.setState({ queueIndex: qi + i, position: 0, transportOverride: 'playing' });
           }
         };
       }),
@@ -2693,7 +2834,7 @@ class Component extends DCLogic {
       queuePointer: this.state.queueOpen ? 'auto' : 'none',
       railTransform: 'translateX(' + (this.state.queueOpen ? '0' : '100%') + ')',
       railPointer: this.state.queueOpen ? 'auto' : 'none',
-      onQueueOpen: () => this.setState({ queueOpen: true }),
+      onQueueOpen: () => { this.setState({ queueOpen: true }); this.swipeHint(queueList); },
       onQueueClose: () => this.setState({ queueOpen: false }),
       // nothing to clear once the queue is empty
       clearIdleDisplay: !this.state.cleared && queueRest.length ? 'inline-flex' : 'none',
@@ -2991,7 +3132,9 @@ class Component extends DCLogic {
       onPlayAlbum: () => this.startLms(),
       onQueueAlbum: () => this.flash(this.state.libPath[this.state.libPath.length - 1] + ' added to queue'),
       onLibClose: () => { if (!noRenderer) this.setState({ library: false }); },
-      miniBg: this.state.miniPressed ? 'rgba(36,54,66,0.92)' : 'rgba(18,29,37,0.82)',
+      // press shrinks from the bottom edge; it does not lighten (George, 2026-09-17)
+      miniBg: 'rgba(18,29,37,0.82)',
+      miniScale: this.state.miniPressed ? 'scale(0.995)' : 'none',
       onMiniDown: () => this.setState({ miniPressed: true }),
       onMiniUp: () => { if (this.state.miniPressed) this.setState({ miniPressed: false }); },
       onMiniBtnDown: (e) => e.stopPropagation(),
@@ -3021,7 +3164,9 @@ class Component extends DCLogic {
       },
 
       onViz: () => {},
-      onBrowse: () => this.goLib([], { library: true, drawer: false }),
+      onBrowse: () => lmsOff
+        ? this.setState({ settings: true, drawer: false })
+        : this.goLib([], { library: true, drawer: false }),
       onLyrics: () => {
         if (!hasLyrics || pending) return;
         this.setState(s => ({ panel: s.panel === 'lyrics' ? 'meta' : 'lyrics', drawer: false }));

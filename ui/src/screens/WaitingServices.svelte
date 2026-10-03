@@ -8,6 +8,7 @@
 <script>
   import SourceMark from '../lib/SourceMark.svelte';
   import { sources } from '../lib/state.js';
+  import { screen } from '../lib/family.svelte.js';
 
   // **ADR-0079: `full` promotes this from a footer to the whole screen.** With
   // LMS off there is no library for it to sit under, and "nothing is playing
@@ -48,10 +49,22 @@
   // factor the metrics below use, rounded to whole pixels - and Bluetooth
   // stays the odd one for the reason above.
   const FULL = 1.8;
-  const markSize = $derived((s) => (full ? Math.round(s.size * FULL) : s.size));
+  const markSize = $derived((s) => (bar ? (BAR_MARK[s.id] ?? 56) : full ? Math.round(s.size * FULL) : s.size));
+
+  //: ADR-0109, Bar family (design `Bar Frame` wait; round 2 `Bar States`
+  //: wait-many): the whole screen only (`full`). Up to three stand side by
+  //: side with the name beside the mark, 96 px apart (160 from 1500 wide);
+  //: four or more stand in 200 px columns, 48 apart, the name under the
+  //: mark, and the columns narrow until they fit (five need 1412 px).
+  const bar = $derived(full && screen.family === 'bar');
+  //: Four or more renderers (plugins add them) shrink their columns to fit -
+  //: on a bar (round 2), and on the panel's full-screen waiting home, where
+  //: four 310 px columns ran off both edges at 1280 (found 2026-10-01).
+  const many = $derived((bar || full) && shown.length >= 4);
+  const BAR_MARK = { spotify: 56, bluetooth: 62 };
 </script>
 
-<div class="waiting" class:is-full={full}>
+<div class="waiting" class:is-full={full} class:is-bar={bar} class:is-many={many} class:is-wide={screen.width > 1500}>
   <div class="row">
     {#each shown as s (s.id)}
       <div class="service" class:is-lead={s.lead}>
@@ -193,6 +206,77 @@
     margin-top: 4px;
     white-space: nowrap;
   }
+  /* ADR-0109, Bar family. 150 px rings around a 136 px disc. */
+  .waiting.is-bar {
+    --wait-ring: 150px;
+    --wait-disc: 136px;
+    --wait-col: auto;
+    --wait-gap: 96px;
+    --wait-name: 27px;
+    --wait-stack: 24px;
+    width: 100%;
+    min-width: 0;
+    padding: 0 110px;
+  }
+  .waiting.is-bar.is-wide {
+    --wait-gap: 160px;
+  }
+  .is-bar .service {
+    flex-direction: row;
+  }
+  .is-bar .label {
+    text-align: left;
+  }
+  .waiting.is-bar.is-many {
+    --wait-col: 200px;
+    --wait-gap: 48px;
+    --wait-name: 24px;
+    --wait-stack: 16px;
+  }
+  /* The panel's full-screen waiting home with four or more: held to the
+     panel's width, so the columns shrink to fit as on a bar. */
+  .waiting.is-full.is-many:not(.is-bar) {
+    width: 100%;
+    min-width: 0;
+    --wait-gap: 40px;
+  }
+  .is-many .row {
+    width: 100%;
+    min-width: 0;
+  }
+  .is-many .service {
+    flex-direction: column;
+    flex: 0 1 var(--wait-col);
+    min-width: 0;
+  }
+  .is-many .label {
+    text-align: center;
+    width: 100%;
+    min-width: 0;
+  }
+  .is-many .name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  /* A ring never wider than its column. */
+  .is-many .rings,
+  .is-many .ring {
+    width: min(var(--wait-ring), 100%);
+    height: auto;
+    aspect-ratio: 1;
+  }
+  .is-many .disc {
+    width: 90.7%;
+    height: auto;
+    aspect-ratio: 1;
+  }
+  .is-bar.is-full .status {
+    font-size: 15px;
+  }
+  .is-many.is-full .status {
+    font-size: 14px;
+  }
+
   .is-lead .status {
     color: var(--accent-lms);
   }

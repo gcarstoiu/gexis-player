@@ -53,7 +53,7 @@ ONLY_WHEN_NOT = "not"
 #: Sources a `choice` may draw its options from instead of a literal list
 #: (ADR-0044 §4). Adding one is a code change, not a registry edit, which is
 #: the point: an unknown name is a typo and must fail the load.
-OPTION_SOURCES = {"skin_corpus", "timezones", "output_device"}
+OPTION_SOURCES = {"skin_corpus", "timezones", "output_device", "screens"}
 
 
 @lru_cache(maxsize=1)
@@ -85,7 +85,25 @@ def _timezones() -> tuple[str, ...]:
 #: `tuple` is "nothing, until the daemon injects a real resolver" - a
 #: device that cannot read its corpus or its sound cards gets an empty
 #: picker rather than a crash (ADR-0044 §4).
-OPTION_RESOLVERS = {"timezones": _timezones, "skin_corpus": tuple, "output_device": tuple}
+def _screens() -> tuple[str, ...]:
+    """ADR-0109: the screens gexis offers, as `Maker/Model` for the grouped
+    picker (makers, then that maker's models)."""
+    from . import screens
+    return tuple(s.label for s in screens.all_screens())
+
+
+def _screen_tags() -> dict[str, str]:
+    """ADR-0109 decision 1: each model marked Tested or Untested."""
+    from . import screens
+    return {s.label: "Tested" if s.tested else "Untested" for s in screens.all_screens()}
+
+
+OPTION_RESOLVERS = {"timezones": _timezones, "skin_corpus": tuple, "output_device": tuple,
+                    "screens": _screens}
+
+#: A word beside an option in the picker, by source (round 2's Attached
+#: screen: *Tested* / *Untested* on every model).
+OPTION_TAGS = {"screens": _screen_tags}
 
 logger = logging.getLogger("gexis_core.settings_registry")
 
@@ -398,6 +416,12 @@ class Settings:
                 if getattr(plugin, "notice", None):
                     # ADR-0098: read and confirmed before it turns on.
                     switches[-1]["warn"] = plugin.notice
+                if getattr(plugin, "port", None):
+                    # ADR-0114: where its own page is - the device's name is
+                    # read when the registry is built, which a rename (a
+                    # restart, ADR-0048) rebuilds.
+                    from gexis_core import device_name as _name
+                    switches[-1]["note"] = f"Open http://{_name.hostname() or 'gexis'}.local:{plugin.port}"
                 if getattr(plugin, "uploaded", False):
                     # ADR-0106: an upload arrives off, and says what it is.
                     switches[-1]["default"] = False
@@ -423,8 +447,9 @@ class Settings:
                                  "surfaced": False, "danger": True, "confirm": "Remove",
                                  "note": None,
                                  "warn": f"This deletes the software {plugin.name} downloaded. "
-                                         f"Its settings and sign-in stay on the device. "
-                                         f"Switching {plugin.name} on again downloads it again."})
+                                         + (getattr(plugin, "removes", None)
+                                            or f"Its settings and sign-in stay on the device. "
+                                               f"Switching {plugin.name} on again downloads it again.")})
             if switches and switch_group is None:
                 # A registry with no `plugins` category cannot hold the switch,
                 # and a plugin with no switch is the thing ADR-0086's amendment
@@ -489,7 +514,10 @@ class Settings:
                 continue
             if switch_group is not None:
                 by_area.setdefault(area, []).extend(switches)
-            target["rows"].extend(rows)
+            if getattr(plugin, "first", False):
+                target["rows"][:0] = rows
+            else:
+                target["rows"].extend(rows)
         # **ADR-0106: uploaded plugins a restore brought back without their
         # package.** Not plugins - nothing runs, nothing is switched - only a
         # row saying what to upload again, under its kind.
@@ -521,8 +549,13 @@ class Settings:
         options: dict[str, Callable[[], Any]] | None = None,
         notes: dict[str, Callable[[], str | None]] | None = None,
         seed_path: Path = SEED_PATH,
+        labels: dict[str, Callable[[], dict]] | None = None,
     ) -> None:
         self._store = store
+        #: What each option is called on screen, by `optionsFrom` source,
+        #: where the stored value is a key and not a name to read (the skins'
+        #: section names, ADR-0111: George's "Brand · Model" names).
+        self._labels = labels or {}
         self._groups = registry if registry is not None else load_registry()
         self._rows = {r["key"]: r for g in self._groups for r in g["rows"] if r["type"] != "group"}
         self._defaults = defaults or {}
@@ -633,6 +666,10 @@ class Settings:
                 source = row.get("optionsFrom")
                 if source is not None:
                     public["options"] = list(self._options.get(source, tuple)())
+                    if source in OPTION_TAGS:
+                        public["optionTags"] = OPTION_TAGS[source]()
+                    if source in self._labels:
+                        public["optionLabels"] = self._labels[source]()
                 public["value"] = self.value(row["key"])
                 if row["key"] in self._notes:
                     note = self._notes[row["key"]]()

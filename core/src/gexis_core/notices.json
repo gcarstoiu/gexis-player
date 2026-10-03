@@ -1,6 +1,6 @@
 {
   "_about": "ADR-0099: the one source for Settings -> Legal and Settings -> Credits, and for THIRD-PARTY.md. Every component the image ships, fetches, lets the user install, or was reimplemented from has an entry; core/tests/test_notices.py fails the build when one is missing. The prose is a draft until George approves it; it is not legal advice.",
-  "updated": "2026-09-28",
+  "updated": "2026-10-01",
   "documents": {
     "legal": {
       "title": "Legal",
@@ -310,9 +310,9 @@
       ]
     },
     {
-      "name": "Beszel agent",
+      "name": "Beszel agent and hub",
       "group": "system",
-      "role": "Optional system monitoring, off unless you switch it on.",
+      "role": "Optional system monitoring: the agent reports, the hub keeps the history. Both off unless you switch them on.",
       "author": "henrygd",
       "licence": "MIT",
       "url": "https://github.com/henrygd/beszel",
@@ -360,11 +360,11 @@
     {
       "name": "PeppyMeter screensaver for Volumio",
       "group": "visualiser",
-      "role": "The turntable, tape, progress and icon behaviour our visualiser reimplements, and the stock skins.",
+      "role": "The turntable, tape, progress and icon behaviour our visualiser reimplements, and the 15 stock skins in the 1280 × 800 skins.",
       "author": "foonerd; originally 2aCD; with Wheaten",
       "licence": "MIT (2aCD's original ISC)",
       "url": "https://github.com/foonerd/peppy_screensaver",
-      "arrives": "Fetched at a pinned commit when the image is built; its designs reimplemented in our own code",
+      "arrives": "Fetched at a pinned commit when the image and the 1280 × 800 skins are built; its designs reimplemented in our own code",
       "sources": [
         "codeload.github.com/foonerd/peppy_screensaver"
       ]
@@ -372,26 +372,36 @@
     {
       "name": "Gelo5 skins",
       "group": "skins",
-      "role": "The 84 meter and spectrum skins.",
+      "role": "Meter and spectrum skins, in each screen size's skins.",
       "author": "Gelo5",
       "licence": "No terms of their own; distributed under their hosting repository's GPL-3.0",
       "url": "https://github.com/project-owner/PeppyMeter.doc",
-      "arrives": "Fetched from a pinned release when the image is built",
+      "arrives": "Fetched at a pinned version when the skin packs are built; installed from the player's own release only once the visualiser is agreed to, in setup or under Plugins",
       "sources": [
         "github.com/project-owner/PeppyMeter.doc"
       ]
     },
     {
-      "name": "Turntable, tape and cassette skins",
+      "name": "peppy_templates skins",
       "group": "skins",
-      "role": "The 90 animated skins.",
-      "author": "Gelo5 and Pakit S, collected by foonerd",
+      "role": "Most of each screen size's skins, the turntable, tape and cassette ones among them.",
+      "author": "Gelo5, Pakit S and others, collected by foonerd",
       "licence": "No terms of their own; distributed under their hosting repository's MIT licence",
       "url": "https://github.com/foonerd/peppy_templates",
-      "arrives": "Fetched at a pinned commit when the image is built, letterboxed to the panel",
+      "arrives": "Fetched at a pinned version when the skin packs are built; installed from the player's own release only once the visualiser is agreed to, in setup or under Plugins; the 1280 × 720 ones letterboxed into 1280 × 800",
       "sources": [
         "raw.githubusercontent.com/foonerd/peppy_templates"
       ]
+    },
+    {
+      "name": "Screen presets",
+      "group": "core",
+      "role": "The list of screens Attached screen and setup's Screen step offer: makers, models, resolutions, rotations.",
+      "author": "foonerd (\"Just a nerd\")",
+      "licence": "MIT",
+      "url": "https://github.com/foonerd/pi_screen_setup",
+      "arrives": "display_presets.json 1.5.9 at commit 8c0896b3, kept with its licence in core/src/gexis_core/screens_data/",
+      "sources": []
     },
     {
       "name": "DSEG7",
@@ -588,6 +598,18 @@
       "arrives": "Not in the image. Downloaded from Plex on the device when you switch Plexamp on, checked against a pinned checksum",
       "sources": [
         "plexamp.plex.tv"
+      ]
+    },
+    {
+      "name": "Lyrion Music Server",
+      "group": "renderer",
+      "role": "The music server the Lyrion server plugin runs: the player's own library server, off unless you switch it on.",
+      "author": "The Lyrion community; originally Slim Devices and Logitech",
+      "licence": "GPL-2.0 for its server code; its other parts under the terms its own notice names",
+      "url": "https://lyrion.org",
+      "arrives": "Fetched on the device from the Lyrion community when the server is switched on, checked against a pinned checksum; not in the image",
+      "sources": [
+        "downloads.lms-community.org"
       ]
     },
     {

@@ -10,13 +10,15 @@ import functools
 import logging
 import re
 import subprocess
+import time
 from pathlib import Path
 
 import aiohttp
 from dbus_next import BusType
 from dbus_next.aio import MessageBus
 
-from gexis_core import alsa, bluetooth_adapter_state, bluetooth_agent, device_name, journal, meters, skins, wifi
+from gexis_core import alsa, bluetooth_adapter_state, bluetooth_agent, device_name, journal, meters, screen_detect, skins, wifi
+from gexis_core import screen_apply, screens, skin_packs
 from gexis_core.adapters.base import VolumeMechanism
 from gexis_core.adapters.bluetooth import BluetoothAdapter
 from gexis_core.adapters.lms import LmsAdapter
@@ -61,9 +63,13 @@ from gexis_core.peppy import (
     PeppyController,
     PeppyScreen,
     UnattendedPlayback,
+    set_meter_skins,
     set_meter_smoothing,
 )
-from gexis_core.peppy_metadata import PeppyMetadataWriter
+from gexis_core import lyrion_addons, lyrion_folders
+from gexis_core.lyrion_shares import Shares as LyrionShares
+from gexis_core.fanart import Fanart
+from gexis_core.peppy_metadata import PeppyMetadataWriter, next_track
 from gexis_core.model import BLANK_METADATA, TrackMetadata
 from gexis_core import settings_migrations, updates
 from gexis_core.settings import SettingsStore
@@ -252,6 +258,50 @@ async def _reboot() -> None:
     await asyncio.create_subprocess_exec("systemctl", "reboot")
 
 
+#: ADR-0109 decision 5: how long the panel asks *Keep this screen?*, from its
+#: first frame; and how long a panel that never draws gets before the device
+#: goes back by itself (a dark screen never says it is dark).
+KEEP_S = 30.0
+NEVER_DRAWN_S = 120.0
+#: After setup, which ends on the phone rather than beside the panel
+#: (ADR-0109 as amended 2026-10-02, George: "C").
+SETUP_KEEP_S = 120.0
+#: How often the Lyrion server's music folders are compared with what is
+#: mounted (ADR-0115): a USB disk plugged in appears within this.
+LYRION_FOLDERS_S = 20.0
+#: ADR-0115: Lyrion's add-ons - restarted after this, to load what it
+#: downloaded; asked again after this, if they are still missing.
+LYRION_ADDONS_RESTART_S = 90.0
+LYRION_ADDONS_RETRY_S = 600.0
+LYRION_ADDONS_DONE = Path("/var/lib/gexis/lyrion-addons.done")
+#: Where Lyrion puts an add-on it installed (seen on George's player).
+LYRION_PLUGINS = Path("/var/lib/squeezeboxserver/cache/InstalledPlugins/Plugins")
+
+
+def _setup_running(setup: dict | None) -> bool:
+    return bool(setup and setup.get("network") in ("open", "joining", "failed"))
+
+
+def screen_question(state: dict, now: float | None = None) -> dict | None:
+    """What the panel shows while a screen waits for Keep, or None."""
+    if not state.get("pending") or not state.get("current"):
+        return None
+    current = state["current"]
+    previous = state.get("previous") or None
+    model = screens.by_id(current["screen"])
+    before = screens.by_id(previous["screen"]) if previous else None
+    rotation_only = bool(previous and previous["screen"] == current["screen"])
+    return {
+        "model": f"{model.maker} {model.model}" if model else current["screen"],
+        "untested": bool(model and not model.tested),
+        "previous": (f"{before.maker} {before.model}" if before else None),
+        "rotation_only": rotation_only,
+        "previous_rotation": f"{previous.get('rotation', 0)}°" if previous else "0°",
+        "deadline": None,
+        "total": SETUP_KEEP_S if state.get("after_setup") else KEEP_S,
+    }
+
+
 def read_timezone(localtime: Path = Path("/etc/localtime")) -> str | None:
     # The /etc/localtime link is what the clock uses; /etc/timezone can be
     # stale (timedatectl updates only the link).
@@ -359,6 +409,8 @@ async def main() -> None:
             "without names or marks", plugins.DEFAULT_DIR,
         )
 
+    #: Whether the chosen output can feed the visualiser (ADR-0055 §6).
+    meters_chain = {"ok": True}
     state_store = StateStore(
         {rid: adapter.capabilities for rid, adapter in adapters.items()},
         sources=tuple(p.to_json() for p in installed_plugins),
@@ -701,7 +753,8 @@ async def main() -> None:
         # The monitor watches one card and was spawned for the old one; its
         # own loop restarts it, so ending it is enough to move it.
         volume_bridge.restart_monitor()
-        state_store.set_meters(outputs.needs_plug(chosen.card) is not True)
+        meters_chain["ok"] = outputs.needs_plug(chosen.card) is not True
+        _publish_meters()
         _choose_output_mode()
         state_store.bump_settings_revision()
 
@@ -1008,10 +1061,14 @@ async def main() -> None:
     # re-reading one small file, on the same poll that already carries the
     # track. `settings` is assigned by this very statement and read only when
     # one of these is called, which is after it exists.
-    skins_root = Path(config.peppy_skins_dir)
+    # ADR-0111: the installed pack this screen uses; `peppy_skins_dir` is
+    # where a device that kept today's gexis-skins has it.
+    def skins_at() -> tuple[Path, str] | None:
+        return skin_packs.current(legacy=Path(config.peppy_skins_dir))
 
     def skins_offered() -> list[str]:
-        return skins.names(skins_root, str(settings.value("skin_corpus") or skins.ALL))
+        at = skins_at()
+        return skins.names(at[0], str(settings.value("skin_corpus") or skins.ALL), resolution=at[1]) if at else []
 
     def first_skin() -> str | None:
         offered = skins_offered()
@@ -1098,7 +1155,7 @@ async def main() -> None:
                 "artwork_small", "codec", "transport", "repeat")
         fields = {k: str(raw[k]) for k in text if raw.get(k) is not None}
         for number, cast in (("position", float), ("duration", float),
-                             ("sample_rate", int)):
+                             ("sample_rate", int), ("bit_depth", int)):
             try:
                 if raw.get(number) is not None:
                     fields[number] = cast(raw[number])
@@ -1175,8 +1232,13 @@ async def main() -> None:
         if (name := components.for_plugin(plugin.id)) is not None
     }
 
+    def _all_components() -> dict:
+        status = components.all_status()
+        status["skins"] = skins_status()
+        return status
+
     def _publish_components() -> None:
-        state_store.set_components(components.all_status())
+        state_store.set_components(_all_components())
 
     async def _watch_components() -> None:
         """What each download is doing, to the panel. Twice a second while one
@@ -1184,7 +1246,7 @@ async def main() -> None:
         every two seconds otherwise."""
         while True:
             try:
-                status = await asyncio.to_thread(components.all_status)
+                status = await asyncio.to_thread(_all_components)
                 state_store.set_components(status)
                 busy = any(s.get("state") in components.BUSY for s in status.values())
             except Exception:  # noqa: BLE001 - a watcher that dies tells nobody anything
@@ -1233,10 +1295,21 @@ async def main() -> None:
             logger.warning("components: %s is on; switch it off before removing %s", plugin.id, name)
             return
         fetch = f"gexis-fetch@{name}.service"
+        # ADR-0115 decision 14: the Lyrion server's shares go with it - out
+        # of the list here, on the store's own thread; unmounted, with their
+        # logins, in the worker below.
+        forgotten = lyrion_shares.forget_all() if plugin.id == "lyrion-server" else []
 
         def go() -> None:
             subprocess.run(["systemctl", "stop", plugin.unit, fetch], check=False, capture_output=True)
             subprocess.run(["systemctl", "reset-failed", fetch], check=False, capture_output=True)
+            if plugin.id == "lyrion-server":
+                lyrion_shares.unmount_all()
+                for address in forgotten:
+                    lyrion_shares.release(address)
+                # Its add-ons are in the cache the pin's DATA deletes: asked
+                # for again at the next start.
+                LYRION_ADDONS_DONE.unlink(missing_ok=True)
             components.remove(name, pin)
 
         try:
@@ -1245,7 +1318,21 @@ async def main() -> None:
             logger.exception("components: removing %s failed", name)
         _publish_components()
 
+    #: One change at a time per plugin unit, and the switch read again once
+    #: it is that change's turn (found on George's player, 2026-10-03: off,
+    #: off, on within four seconds started three `systemctl`s at once; a slow
+    #: `disable --now` finished after the `enable --now` and left the Lyrion
+    #: server stopped under a switch that said on). The last tap wins.
+    plugin_unit_locks: dict[str, asyncio.Lock] = {}
+
     async def _apply_plugin_unit(plugin, on: bool) -> None:
+        lock = plugin_unit_locks.setdefault(plugin.unit, asyncio.Lock())
+        async with lock:
+            if plugin.enabled_row is None:
+                on = settings.value(f"{plugin.id}.enabled") is not False
+            await _apply_plugin_unit_now(plugin, on)
+
+    async def _apply_plugin_unit_now(plugin, on: bool) -> None:
         """**A plugin switched on or off** (ADR-0086 as amended).
 
         ADR-0077's machinery, pointed at a plugin's unit instead of a
@@ -1312,6 +1399,106 @@ async def main() -> None:
         if row.get("key")
     }
 
+    # **ADR-0111: the visualiser's skins follow the screen.** One pack per
+    # device; the switch (`visualiser_skins`) says whether there is one. The
+    # updater installs and removes it as root, from the release's own parts;
+    # this only decides what is wanted and starts it. A failed download (no
+    # network yet, during setup) is tried again every few minutes.
+    SKINS_RETRY_S = 300.0
+    UPDATER = "/usr/lib/gexis/gexis-update"
+    skins_state = {"busy": False, "task": None}
+
+    def _publish_meters() -> None:
+        """ADR-0055 §6 and ADR-0111: the visualiser is there when the output
+        can feed it and a skin pack is installed."""
+        state_store.set_meters(bool(meters_chain["ok"]) and bool(skin_packs.installed()))
+
+    def skins_status() -> dict:
+        return skin_packs.status()
+
+    async def _run_updater(*args: str) -> int:
+        proc = await asyncio.create_subprocess_exec(UPDATER, *args)
+        return await proc.wait()
+
+    async def _skins_ensure() -> None:
+        if skins_state["busy"]:
+            return
+        skins_state["busy"] = True
+        try:
+            have = await asyncio.to_thread(skin_packs.installed)
+            if settings.value("visualiser_skins"):
+                want, extra = skin_packs.plan(skin_packs.screen_size(), have)
+                if want is not None:
+                    logger.info("skins: installing %s", skin_packs.package(want))
+                    if await _run_updater("pack-install", skin_packs.package(want)) != 0:
+                        return
+                    have = await asyncio.to_thread(skin_packs.installed)
+                    # Onto the new pack before the old one goes from under it.
+                    await _configure_visualiser()
+                    _, extra = skin_packs.plan(skin_packs.screen_size(), have)
+                if skin_packs.for_screen(*skin_packs.screen_size()) in have:
+                    for size in extra:
+                        await _run_updater("pack-remove", _package_on_disk(size))
+            else:
+                for size in have:
+                    await _run_updater("pack-remove", _package_on_disk(size))
+        finally:
+            skins_state["busy"] = False
+            await _configure_visualiser()
+            _publish_meters()
+            _publish_components()
+
+    async def _configure_visualiser() -> None:
+        """ADR-0111: PeppyMeter draws the pack skins_at() names, at its size.
+        Restarted only when its config changed."""
+        at = skins_at()
+        if at is None:
+            return
+        base = await asyncio.to_thread(skin_packs.first_folder, at[0], at[1])
+        if base is None:
+            return
+        width, height = (int(n) for n in at[1].split("x"))
+        if await asyncio.to_thread(set_meter_skins, Path(config.meter_consumer_config), base, at[1], width, height):
+            await asyncio.create_subprocess_exec("systemctl", "restart", "gexis-peppy.service")
+
+    def _package_on_disk(size: tuple[int, int]) -> str:
+        """A size's package: its pack, or the gexis-skins a device kept."""
+        own = skin_packs.PACKS / f"{size[0]}x{size[1]}" / "pack.json"
+        return skin_packs.package(size) if own.exists() else "gexis-skins"
+
+    def _skins_kick() -> None:
+        asyncio.ensure_future(_skins_ensure())
+
+    async def _skins_loop() -> None:
+        while True:
+            await asyncio.sleep(SKINS_RETRY_S)
+            try:
+                await _skins_ensure()
+            except Exception:  # noqa: BLE001 - a watcher that dies tells nobody anything
+                logger.exception("skins: ensure failed")
+
+    def _choose_screen(label: str | None = None, rotation: str | None = None) -> None:
+        """ADR-0109: write the chosen screen and rotation for the next start
+        (screen.env, and video= for a bar), then restart on it - unless
+        setup is under way, which restarts when it finishes."""
+        chosen = label if label is not None else settings.value("screen")
+        model = screens.by_label(chosen) if chosen else None
+        if model is None:
+            logger.warning("screen: %r is not a screen gexis knows; nothing applied", chosen)
+            return
+        turn = screen_apply.parse_rotation(rotation if rotation is not None else settings.value("rotation"))
+        in_setup = _setup_running(state_store.state.setup)
+        asks = screen_apply.choose(screen_apply.Applied(model.id, turn), after_setup=in_setup)
+        logger.info("screen: %s at %d° chosen; %s", model.id, turn,
+                    "it waits for Keep on the panel" if asks else "the picture is unchanged, so it is kept")
+        if in_setup:
+            return
+
+        async def _restart() -> None:
+            await asyncio.sleep(2.0)
+            await asyncio.create_subprocess_exec("systemctl", "reboot")
+        asyncio.ensure_future(_restart())
+
     settings = Settings(
         settings_store,
         registry=Settings.with_plugins(load_registry(), installed_plugins, downloads,
@@ -1357,6 +1544,9 @@ async def main() -> None:
             # which channel; Software update holds the rest.
             "update_status": lambda: updates.release_line(settings_store.get("update_channel") or "Stable"),
             "software_update": lambda: updates.sentence(),
+            # ADR-0111: on where a pack is already installed - the devices
+            # that had gexis-skins keep it, unasked (decision 10).
+            "visualiser_skins": lambda: bool(skin_packs.installed()),
             "image_build": lambda: " · ".join(x for x in (image_info().get("built"), updates.installed_release()) if x) or "unknown",
             # ADR-0086 as amended: a synthesised switch reads what systemd says
             # about the unit until somebody uses it.
@@ -1365,6 +1555,7 @@ async def main() -> None:
         # ADR-0051 §4: which skins there are depends on where they are
         # installed and on what `skin_corpus` holds, neither of which the
         # registry module can know.
+        labels={"skin_corpus": lambda: skins.labels(skins_at()[0]) if skins_at() else {}},
         options={
             "skin_corpus": skins_offered,
             # ADR-0055 §1: discovered, not written down. Re-read on every
@@ -1427,6 +1618,8 @@ async def main() -> None:
                    _apply_headless(value)
                ),
                # ADR-0103: the journal kept on the card, or not.
+               # ADR-0111: the pack for this screen, in or out.
+               "visualiser_skins": lambda value: _skins_kick(),
                "debug_logs": lambda value: asyncio.ensure_future(
                    _apply_debug_logs(bool(value))
                ),
@@ -1493,6 +1686,11 @@ async def main() -> None:
                "update_install": lambda _=None: updates.start(updates.INSTALL_UNIT),
                "updates": None, "update_channel": None,
                "reboot": lambda _: asyncio.ensure_future(_reboot()),
+               # ADR-0109: a screen or rotation chosen is written for the
+               # next start, and the device restarts on it - unless setup is
+               # under way, which restarts by itself when it finishes.
+               "screen": lambda value: _choose_screen(label=value),
+               "rotation": lambda value: _choose_screen(rotation=value),
                # **ADR-0083.** A backup that stays on the device does not
                # survive the event it exists for, so this writes into a share
                # of its own. `restore` is the other half and is a `list` row -
@@ -1516,7 +1714,7 @@ async def main() -> None:
         # made the panel mark two working rows `data-unwired`. `lms_server`
         # is a list too and is already in `wired` above, because something
         # also reads its value.
-        lists={"wifi", "bt_trusted"},
+        lists={"wifi", "bt_trusted", "lyrion-server.shares"},
         on_change=state_store.bump_settings_revision,
     )
 
@@ -1873,7 +2071,8 @@ async def main() -> None:
     if forced_fixed:
         asyncio.ensure_future(_apply_output_mode())
 
-    state_store.set_meters(meters_available)
+    meters_chain["ok"] = meters_available
+    _publish_meters()
 
     previous_active = state_store.state.active
 
@@ -1931,7 +2130,8 @@ async def main() -> None:
 
     # What the Peppy screen draws (criterion 7). A separate file from
     # currentsong.txt, which is moOde's format for moOde's readers.
-    state_store.subscribe(PeppyMetadataWriter().write)
+    peppy_writer = PeppyMetadataWriter()
+    state_store.subscribe(peppy_writer.write)
 
     # Phase 7 (ADR-0038): the same server, and the same player, the renderer
     # adapter talks to. Radio shares its HTTP session.
@@ -1950,6 +2150,140 @@ async def main() -> None:
     lms.on_restore_transport(lambda: settings.value("restore_transport"))
     artistinfo = LmsArtistInfo(library.rpc, f"http://{config.lms_host}:{config.lms_port}",
                                store=enrichment_cache)
+
+    # ADR-0112: the playing artist's photos for the skins' fanart frame -
+    # LMS's own tracks by id, any other source by an exact LMS name - fetched
+    # on the artist's change and for the next track's artist ahead of it.
+    fanart_session: dict[str, aiohttp.ClientSession] = {}
+
+    async def _fanart_download(url: str) -> bytes | None:
+        session = fanart_session.get("s")
+        if session is None or session.closed:
+            session = fanart_session["s"] = aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=20))
+        try:
+            async with session.get(url) as response:
+                return await response.read() if response.status == 200 else None
+        except (aiohttp.ClientError, asyncio.TimeoutError) as exc:
+            logger.info("fanart: %s not fetched (%r)", url, exc)
+            return None
+
+    fanart = Fanart(library.rpc, _fanart_download, f"http://{config.lms_host}:{config.lms_port}")
+    fanart_follow = {"key": None, "next": None}
+
+    async def _fanart_for(state) -> None:
+        key = fanart_follow["key"]
+        paths = await fanart.for_artist(
+            state.metadata.artist, lms.current_artist_id if state.active == "lms" else None)
+        if fanart_follow["key"] != key:
+            return  # the artist changed while this was fetched
+        peppy_writer.fanart = [str(p) for p in paths]
+        peppy_writer.write(state_store.state)
+
+    async def _fanart_ahead(name: str) -> None:
+        await fanart.for_artist(name)
+
+    def follow_fanart(state) -> None:
+        key = (state.active, state.metadata.artist)
+        if key != fanart_follow["key"]:
+            fanart_follow["key"] = key
+            # Never the last artist's photos over this one's track: this runs
+            # after the writer's own subscription, so it writes again.
+            if peppy_writer.fanart:
+                peppy_writer.fanart = []
+                peppy_writer.write(state)
+            if state.metadata.artist:
+                asyncio.ensure_future(_fanart_for(state))
+        upcoming = (next_track(state) or {}).get("artist")
+        if upcoming and upcoming != fanart_follow["next"]:
+            fanart_follow["next"] = upcoming
+            asyncio.ensure_future(_fanart_ahead(upcoming))
+
+    state_store.subscribe(follow_fanart)
+
+    # ADR-0115: the Lyrion server's music folders - the Music folder, USB
+    # disks, network shares - kept in its own list while it is switched on.
+    lyrion_shares = LyrionShares(settings_store)
+    try:
+        lyrion_shares.migrate()  # ADR-0115 decision 15: passwords out of the store
+    except Exception:  # noqa: BLE001 - the shares still mount from what is there
+        logger.exception("lyrion: moving share passwords out of the store failed")
+
+    async def _lyrion_rpc(command: list) -> dict:
+        async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=10)) as session:
+            async with session.post("http://127.0.0.1:9000/jsonrpc.js",
+                                    json={"id": 1, "method": "slim.request", "params": ["", command]}) as r:
+                return (await r.json(content_type=None)).get("result") or {}
+
+    lyrion_wake = asyncio.Event()
+    #: ADR-0115 decision 12: asked once, through Lyrion's own plugin page; a
+    #: restart loads them; asked again if they are still missing ten minutes
+    #: on. Once they are all in, never again - one removed later stays removed.
+    lyrion_asked = {"at": None, "restarted": False}
+
+    async def _lyrion_addons() -> None:
+        """**Installed means on disk, not ticked** (found on George's player,
+        2026-10-03): Lyrion ticks an add-on's box as soon as it is asked and
+        installs it only at its next start. Ticked was taken for installed,
+        the restart never came, and Lyrion was left drawing a Material skin
+        it did not have - a page with no skin at all. So: asked, restarted
+        after LYRION_ADDONS_RESTART_S, and done only once every one is in
+        its folder - and only then is Material made the skin."""
+        if LYRION_ADDONS_DONE.exists():
+            return
+        if all((LYRION_PLUGINS / name).is_dir() for name in lyrion_addons.WANTED):
+            await _lyrion_rpc(["pref", "skin", "material"])
+            LYRION_ADDONS_DONE.parent.mkdir(parents=True, exist_ok=True)
+            LYRION_ADDONS_DONE.touch()
+            logger.info("lyrion: add-ons installed (%s); Material is the skin", ", ".join(lyrion_addons.WANTED))
+            return
+        now = time.monotonic()
+        if lyrion_asked["at"] is None or now - lyrion_asked["at"] > LYRION_ADDONS_RETRY_S:
+            async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=60)) as session:
+                async with session.get("http://127.0.0.1:9000" + lyrion_addons.PAGE) as r:
+                    page = await r.text(errors="replace")
+                missing = lyrion_addons.missing(page)
+                if missing:
+                    action, fields = lyrion_addons.submission(page)
+                    async with session.post("http://127.0.0.1:9000" + action, data=fields) as r:
+                        logger.info("lyrion: asked Lyrion to install %s (%s)", ", ".join(missing), r.status)
+            # Ticked now, by us or before: they are installed at the restart.
+            lyrion_asked.update(at=now, restarted=False)
+            return
+        if not lyrion_asked["restarted"] and now - lyrion_asked["at"] > LYRION_ADDONS_RESTART_S:
+            lyrion_asked["restarted"] = True
+            logger.info("lyrion: restarting it to install its add-ons")
+            await asyncio.create_subprocess_exec("systemctl", "restart", "gexis-lyrion.service")
+
+    async def _lyrion_folders_loop() -> None:
+        """Shares mounted while the server is on and unmounted while it is
+        off; then its folders brought up to date. Woken early when a share
+        is added or forgotten."""
+        while True:
+            try:
+                await asyncio.wait_for(lyrion_wake.wait(), LYRION_FOLDERS_S)
+            except asyncio.TimeoutError:
+                pass
+            lyrion_wake.clear()
+            on = settings.value("lyrion-server.enabled") is True
+            try:
+                if on:
+                    await asyncio.to_thread(lyrion_shares.mount_all, lyrion_shares.all())
+                else:
+                    await asyncio.to_thread(lyrion_shares.unmount_all)
+            except Exception:  # noqa: BLE001 - one bad share must not stop the rest
+                logger.exception("lyrion: shares")
+            if not on:
+                continue
+            try:
+                await lyrion_folders.sync(_lyrion_rpc)
+            except Exception as exc:  # starting, stopped, scanning: next time
+                logger.debug("lyrion: folders not synced (%r)", exc)
+            try:
+                await _lyrion_addons()
+            except Exception as exc:  # no internet yet, or the server is busy
+                logger.debug("lyrion: add-ons not checked (%r)", exc)
+
+    asyncio.ensure_future(_lyrion_folders_loop())
     # ADR-0040 §1: LMS's own plugin first where it answers, the key-free
     # providers behind it and for the renderers that have no LMS ids.
     http = Http()
@@ -2138,6 +2472,79 @@ async def main() -> None:
             await asyncio.sleep(1 if view.get("active") else 3)
 
     asyncio.ensure_future(_follow_updates())
+    # ADR-0111: the pack this screen wants, now and every few minutes.
+    _skins_kick()
+    asyncio.ensure_future(_skins_loop())
+
+    # **ADR-0109 decision 5: Keep this screen?** A screen chosen before this
+    # start waits for a touch on the panel. The countdown starts at the
+    # panel's first frame; a panel that never draws goes back by itself.
+    screen_wait = {"task": None}
+
+    def _sync_screen_settings() -> None:
+        """**Settings names the screen the device uses**: screen.json is the
+        record, the two rows its reflection. Written straight to the store,
+        since writing the rows through Settings would choose the screen
+        again (ADR-0109 as amended 2026-10-02). None is the row's default:
+        no screen chosen. At start too: a restored backup replaces the
+        settings but not the screen files, which stay the device's - George
+        found Attached screen empty after restoring one from before 13b."""
+        changed = False
+        for key, value in screen_apply.settings_of().items():
+            if settings_store.get(key) == value:
+                continue
+            changed = True
+            if value is None:
+                settings_store.delete(key)
+            else:
+                settings_store.set(key, value)
+        if changed:
+            logger.info("screen: Settings set to the screen in use")
+            state_store.bump_settings_revision()
+
+    _sync_screen_settings()
+
+    async def _screen_go_back(reason: str) -> None:
+        logger.warning("screen: %s; going back to the screen before", reason)
+        await asyncio.to_thread(screen_apply.revert)
+        _sync_screen_settings()
+        state_store.set_screen_confirm(None)
+        await asyncio.sleep(1.5)
+        await asyncio.create_subprocess_exec("systemctl", "reboot")
+
+    async def _screen_countdown(seconds: float, reason: str) -> None:
+        await asyncio.sleep(seconds)
+        if screen_apply.read_state().get("pending"):
+            await _screen_go_back(reason)
+
+    def _screen_painted() -> None:
+        question = state_store.state.screen_confirm
+        if question is None or question.get("deadline") is not None:
+            return
+        total = question.get("total") or KEEP_S
+        state_store.set_screen_confirm({**question, "deadline": time.time() + total})
+        if screen_wait["task"] is not None:
+            screen_wait["task"].cancel()
+        screen_wait["task"] = asyncio.ensure_future(_screen_countdown(total, f"nobody kept it within {total:g} s"))
+
+    async def _screen_answer(action: str) -> dict:
+        if action == "keep":
+            await asyncio.to_thread(screen_apply.keep)
+            if screen_wait["task"] is not None:
+                screen_wait["task"].cancel()
+            state_store.set_screen_confirm(None)
+            logger.info("screen: kept")
+            # ADR-0111 decision 2: the kept screen's pack, the old one out.
+            _skins_kick()
+            return {"kept": True}
+        asyncio.ensure_future(_screen_go_back("the panel asked to go back"))
+        return {"going_back": True}
+
+    _question = screen_question(screen_apply.read_state())
+    if _question is not None:
+        state_store.set_screen_confirm(_question)
+        screen_wait["task"] = asyncio.ensure_future(
+            _screen_countdown(NEVER_DRAWN_S, "the panel never drew on the new screen"))
 
     async def _restart_core_soon() -> None:
         """The plugin list and its settings rows are read at start, so a
@@ -2231,6 +2638,10 @@ async def main() -> None:
         pairing_answer=pairing_agent.answer,
         # ADR-0083: what "restart the device" means is the daemon's to say.
         restore=_restore_done,
+        lyrion_shares=lyrion_shares,
+        lyrion_shares_changed=lambda: lyrion_wake.set(),
+        own_server=lambda: (f"{device_name.address()}:9000"
+                            if settings.value("lyrion-server.enabled") is True and device_name.address() else None),
         # ADR-0086: the panel asks for a source's mark by id; the daemon is
         # the only thing that knows where manifests live.
         plugins=installed_plugins,
@@ -2240,14 +2651,18 @@ async def main() -> None:
         # ADR-0104: first-boot setup and the setup network.
         setup=setup_network,
         setup_flow=setup_flow,
+        # ADR-0109: what the attached screen reports, for the Screen step.
+        screen_seen=screen_detect.seen,
         park=_park_renderers,
+        screen_answer=_screen_answer,
+        on_painted=_screen_painted,
         upload_plugin=_upload_plugin,
         uninstall_plugin=_uninstall_plugin,
         # ADR-0047: the idle screen's two providers.
         weather=forecast,
         wallpapers=wallpapers,
         # ADR-0050: the picker's previews are the skins' own pictures.
-        skins_dir=Path(config.peppy_skins_dir),
+        skins_at=skins_at,
         ui_dir=ui_dir,
     )
 

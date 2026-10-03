@@ -263,6 +263,8 @@ class MotionLayer:
         #: the meter's needles inside a rectangle; either may be absent.
         self.layer = layer
         self.needles = needles
+        #: ADR-0112: draws an overlay fanart frame into an area (FanartFrame.overlay).
+        self.fanart = None
         #: George's two settings (ADR-0096 as amended, ADR-0022 [N]): whether
         #: anything moves at all, and a record's speed in place of the skin's.
         self.animate = True
@@ -440,6 +442,10 @@ class MotionLayer:
                 self.layer.paint(("art",), area)
             if self.needles is not None:
                 self.needles(area)
+            if self.fanart is not None:
+                # ADR-0112: an overlay frame's photo, over the meters and
+                # under the text (a background one is in `_background`).
+                self.fanart(self._screen, area)
             if self.layer is not None:
                 self.layer.paint(("text",), area)
             if self.arm is not None and self.arm.drawn_angle is not None:

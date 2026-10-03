@@ -142,28 +142,63 @@ def all_status(directory: Path = PINS, *, status_dir: Path = STATUS,
             for name, pin in pins(directory).items()}
 
 
+#: Where a download may be removed from, and how deep below it at least:
+#: a folder in /opt, or a folder in someone's home - never a home itself.
+PLACES = ((Path("/opt"), 1), (Path("/home"), 2))
+#: Where a pin's `DATA` may be: two levels inside /var/lib - a program's own
+#: folder's subfolders (`/var/lib/squeezeboxserver/prefs`), never the folder.
+DATA_PLACES = ((Path("/var/lib"), 2),)
+
+
+def _inside(raw: str, places) -> Path | None:
+    path = Path(raw)
+    if not raw or not path.is_absolute() or ".." in path.parts:
+        return None
+    if not any(path.is_relative_to(top) and len(path.parts) - len(top.parts) >= depth
+               for top, depth in places):
+        return None
+    return path
+
+
+def _delete(path: Path) -> None:
+    if path.is_symlink() or path.is_file():
+        path.unlink()
+    elif path.is_dir():
+        shutil.rmtree(path)
+
+
 def remove(name: str, pin: dict[str, str], *, status_dir: Path = STATUS,
-           installed_dir: Path = INSTALLED) -> Path:
+           installed_dir: Path = INSTALLED, places=PLACES, data_places=DATA_PLACES) -> Path:
     """**Remove** (ADR-0100, amended 2026-09-28): delete the downloaded software,
     its installed-version stamp and its status, so the row reads *Not
     installed* and switching on downloads it again.
 
     The caller refuses while the plugin is on. Here the only guard is the path:
-    it must be the one the image's own pin names, absolute, and at least three
-    parts long, so an empty or mangled pin cannot become `rm -rf /opt`.
+    it must be the one the image's own pin names, absolute, and inside `/opt`
+    (`/opt/lyrion`) or inside a home directory (`/home/pi/plexamp`) - never
+    one of those itself - so an empty or mangled pin cannot become
+    `rm -rf /opt`. (It asked for three parts below `/` until 2026-10-03, which
+    refused `/opt/lyrion` and left the Lyrion server's Remove doing nothing.)
     Settings and whatever the software wrote outside `DEST` stay (Plexamp's
-    sign-in among them)."""
+    sign-in among them) - unless the pin names it as `DATA`, colon-separated
+    folders deleted with it (ADR-0115 decision 14: the Lyrion server's
+    preferences and library). Every path is checked before anything is
+    deleted, so a bad one deletes nothing."""
     raw = (pin or {}).get("DEST", "")
-    dest = Path(raw)
-    if not raw or not dest.is_absolute() or len(dest.parts) < 4 or ".." in dest.parts:
+    dest = _inside(raw, places)
+    if dest is None:
         raise ValueError(f"{name}: refusing to remove {raw!r}")
-    for path in (dest, dest.with_name(dest.name + ".old")):
-        if path.is_symlink() or path.is_file():
-            path.unlink()
-        elif path.is_dir():
-            shutil.rmtree(path)
+    data = []
+    for part in filter(None, (pin.get("DATA") or "").split(":")):
+        path = _inside(part, data_places)
+        if path is None:
+            raise ValueError(f"{name}: refusing to remove data {part!r}")
+        data.append(path)
+    for path in (dest, dest.with_name(dest.name + ".old"), *data):
+        _delete(path)
     for stale in (installed_dir / f"{name}.sha256", status_dir / f"{name}.json"):
         stale.unlink(missing_ok=True)
-    logger.info("components: %s removed from %s", name, dest)
+    logger.info("components: %s removed from %s%s", name, dest,
+                f" with {', '.join(map(str, data))}" if data else "")
     return dest
 

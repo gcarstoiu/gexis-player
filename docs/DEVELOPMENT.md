@@ -2718,6 +2718,82 @@ development images and decided before the first public release.
 device checks; 13a's plugin updates and this phase's system updates can be one
 mechanism, and the ADR should say whether they are.
 
+### Phase 13d — DACs we have not tested
+
+**Decided 2026-10-01** (George): its own phase, after 13b, seeded from
+Volumio's list (GPL-3.0-only, so the combined work stays at GPL-3.0), with
+the DAC2 HD and the IQaudio DAC+ as the two tested boards. What is known, and
+what the device can learn by itself:
+[Finding 106](findings/106-what-is-known-about-dacs-without-owning-them.md).
+
+**An ADR before anything is built.** It must settle three things:
+- how detection and the list divide the work;
+- the three states a DAC can be in;
+- the board picker, as a setting for ADR-0022's inventory, proposed to George
+  first.
+
+**Acceptance (draft, for the ADR):**
+
+1. **The volume scale is read from the card,** not the DAC2 HD's constants
+   in `volume.py`. Both boards are driven correctly, as measured, not
+   assumed.
+2. **A board that names itself is recognised**
+   (`/proc/device-tree/hat/product`). A board that does not can be chosen
+   from the list; its overlay is written, the device restarts, and the card
+   appears.
+3. **Every DAC shows one of three states:**
+   - *Tested*: George's two, each with a finding;
+   - *Known*: in the list;
+   - *Detected*: not in the list, working by discovery.
+4. **The IQaudio DAC+ plays bit-perfect through every renderer,** with its
+   own mixer, as the DAC2 HD does today.
+5. **A USB DAC is tried once,** if one is to hand. Otherwise its state is
+   *Detected*, untried.
+
+### Phase 13e — Server plugins: the other half of what the player uses
+
+**Decided 2026-10-02** (George): its own phase, after 13d and before the
+first public release. Plugins that are the server side of something a player
+owner already runs, so one box can be both:
+
+1. **Lyrion Music Server** - the player is already its client; with the
+   server too, a household needs no second machine.
+2. **Beszel hub** - the Beszel agent is already a plugin (ADR-0087); the hub
+   is what it reports to.
+
+**Pi-hole and AdGuard Home are deferred** (George: *"Let's skip the pihole
+and adguard for now as they take away focus from the music aspect"*). When
+they come back: both answer DNS on port 53, so one at a time, and a DNS
+server on the player makes the network depend on it.
+
+**Settled with George the same day:**
+- **Music comes first** (*"music takes priority"*). The impact of an LMS scan
+  on playback is measured, not assumed, and the ADR sets what a scan may do
+  while music plays.
+- **LMS may need more than 13a's 1 GB cap** (*"Lyrion might need more than
+  1gb of ram"*): its limit is set from a measurement.
+- **LMS's music: a USB disk, the device's own storage, or a network share**
+  (*"Usb, local and network share"*).
+- **Both ship in our releases** where their licences allow (*"Normally we
+  should ship these ones"*), as ADR-0111 does the skins. To confirm: LMS
+  GPL-2.0, Beszel MIT.
+
+**An ADR before anything is built**, covering the scan's priority, the memory
+limit, the music locations, and each plugin's settings (proposed for
+ADR-0022's inventory first).
+
+**Acceptance (draft, George: *"Acceptance criteria sound right"*):**
+
+1. **Each installs, runs and is removed** from the Plugins screen like any
+   other (13a), sandboxed, with its own status line.
+2. **Playback is unaffected:** no gap or click in a stream from any renderer
+   while each server runs under load (an LMS scan), measured on the Pi 4.
+3. **The player offers its own LMS** where a server is chosen, when that
+   plugin is on, with no address typed - and never switches to it by itself
+   (ADR-0115, George: *"User decides which server to use"*).
+4. **Removing a plugin leaves the player as it was,** its data kept or
+   deleted as the user chooses.
+
 ### Phase 14 — Themes
 
 **Cut out of Phase 10 on 2026-09-25** (George): *"Themes to be cut out and have

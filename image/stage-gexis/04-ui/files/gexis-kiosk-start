@@ -86,10 +86,28 @@ rm -f "${GEXIS_KIOSK_PROFILE}/SingletonLock" \
 	"${GEXIS_KIOSK_PROFILE}/SingletonCookie" \
 	"${GEXIS_KIOSK_PROFILE}/SingletonSocket"
 
+# ADR-0109: the attached screen (screen.env, from the core). The output is
+# turned before Chromium starts - the bars are portrait panels used sideways -
+# and Chromium's scale makes the page 1280 logical px wide on a Standard
+# screen, 400 tall on a bar, drawn at the screen's own resolution.
+scale=()
+if [ -n "${GEXIS_SCREEN_TRANSFORM:-}" ] && [ "${GEXIS_SCREEN_TRANSFORM}" != normal ]; then
+	if command -v wlr-randr >/dev/null; then
+		wlr-randr --output "${GEXIS_SCREEN_CONNECTOR:-HDMI-A-1}" --transform "${GEXIS_SCREEN_TRANSFORM}" \
+			|| echo "gexis-kiosk: could not turn ${GEXIS_SCREEN_CONNECTOR:-HDMI-A-1} to ${GEXIS_SCREEN_TRANSFORM}" >&2
+	else
+		echo "gexis-kiosk: wlr-randr missing; the screen stays unturned" >&2
+	fi
+fi
+if [ -n "${GEXIS_SCREEN_SCALE:-}" ]; then
+	scale=(--force-device-scale-factor="${GEXIS_SCREEN_SCALE}")
+	echo "gexis-kiosk: ${GEXIS_SCREEN_ID:-screen} (${GEXIS_SCREEN_FAMILY:-standard}), scale ${GEXIS_SCREEN_SCALE}" >&2
+fi
 echo "gexis-kiosk: exec chromium" >&2
 
 exec chromium \
 	"${debug[@]}" \
+	"${scale[@]}" \
 	--ozone-platform=wayland \
 	--kiosk \
 	--noerrdialogs \

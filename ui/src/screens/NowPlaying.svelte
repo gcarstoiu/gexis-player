@@ -6,6 +6,7 @@
   data-unwired="<phase>" until the phase that wires them.
 -->
 <script>
+  import { parseSynced, sungOf, activeAt, anchorOf } from '../lib/lyrics.js';
   import { pressing } from '../lib/press.svelte.js';
   import SourceMark from '../lib/SourceMark.svelte';
   import VolumeIcon from '../lib/VolumeIcon.svelte';
@@ -216,18 +217,7 @@
   // An LRC body is `[mm:ss.xx] text` per line. Lines without a stamp are
   // kept - LRCLIB files carry `[ar:]`-style headers and blank beats - but
   // only stamped ones can be followed.
-  const LRC = /^\[(\d+):(\d+(?:\.\d+)?)\]\s?(.*)$/;
-  const synced = $derived.by(() => {
-    const body = info?.lyrics_synced;
-    if (!body) return [];
-    const out = [];
-    for (const line of body.split('\n')) {
-      const match = LRC.exec(line.trim());
-      if (!match) continue;
-      out.push({ at: Number(match[1]) * 60 + Number(match[2]), text: match[3].trim() });
-    }
-    return out.sort((a, b) => a.at - b.at);
-  });
+  const synced = $derived(parseSynced(info?.lyrics_synced));
   //: **A stamped line with no words is timing, not a lyric.** LRC bodies use
   //: them for the run-in, for instrumental breaks and for the outro, and
   //: following them literally leaves the panel blank in the middle of a song
@@ -235,7 +225,7 @@
   //: (George, on the panel, 2026-09-20). So the words are kept apart from the
   //: timing: these are the lines that have any, each remembering where it sat
   //: so the clock can still be followed.
-  const sungLines = $derived(synced.map((line, i) => ({ ...line, src: i })).filter((l) => l.text));
+  const sungLines = $derived(sungOf(synced));
   const plainLines = $derived((info?.lyrics ?? '').split('\n'));
   //: The design keeps the compact Track panel while the lookup is running,
   //: so the screen does not jump from the tall block to the short one when
@@ -245,28 +235,11 @@
   // Which synced line is current. The playhead interpolates between pushes
   // (playhead.svelte.js), so this follows the same clock the progress bar
   // does rather than a second one.
-  const activeLine = $derived.by(() => {
-    if (!synced.length) return -1;
-    const at = head.elapsed;
-    let index = -1;
-    for (let i = 0; i < synced.length; i += 1) {
-      if (synced[i].at <= at) index = i;
-      else break;
-    }
-    return index;
-  });
+  const activeLine = $derived(synced.length ? activeAt(synced, head.elapsed) : -1);
   //: Which line the panel rests on: the last one that was sung. Through a
   //: gap - or after the final word - it stays there rather than emptying,
   //: and `singing` is false, so it is shown without the highlight.
-  const anchor = $derived.by(() => {
-    if (!sungLines.length) return -1;
-    let n = 0;
-    for (let i = 0; i < sungLines.length; i += 1) {
-      if (sungLines[i].src <= activeLine) n = i;
-      else break;
-    }
-    return n;
-  });
+  const anchor = $derived(anchorOf(sungLines, activeLine));
   const singing = $derived(anchor >= 0 && sungLines[anchor]?.src === activeLine);
 
   //: The design's compact synced view: **three** lines, one either side of
@@ -732,7 +705,7 @@
   .screen {
     position: relative;
     width: 1280px;
-    height: 800px;
+    height: var(--panel-h);
     overflow: hidden;
     user-select: none;
   }
@@ -1521,7 +1494,7 @@
   }
   .bar__left { justify-self: start; display: flex; align-items: center; gap: 14px; }
   .bar__mid { justify-self: center; display: flex; align-items: center; gap: 22px; }
-  .bar__right { justify-self: end; display: flex; align-items: center; gap: 20px; }
+  .bar__right { justify-self: end; display: flex; align-items: center; gap: 14px; }
 
   .btn {
     width: var(--ctl);

@@ -1,0 +1,523 @@
+# ADR-0111, George 2026-10-02 ("Accept it"): skins left out of
+# each pack because another copy of the same skin draws the metadata as well
+# or better. Reviewed on rendered contact sheets; every row names the copy kept.
+# Names are upstream's (before any rename). assemble.py fails on a row that
+# matches no skin, so a moved pin cannot silently keep a duplicate.
+# Classes: a = renders identically; a-lb = letterboxed copy of a native one;
+# a-near = Gelo5's skin and the catalog's revision, both correct, text placed
+# a little differently (Gelo5's kept); b = the removed copy draws the metadata
+# wrongly; george = George's choice.
+size	folder	kind	skin	class	kept	reason
+800x480	800x480_g5_1020_sm	templates	101G5_475A Oscil S+M	a	gelo5-1020: 101G5_475A Oscil S+M	renders the same as the kept copy
+800x480	800x480_g5_1020_sm	templates	106G5_Marschal Spectrum	a	gelo5-1020: 106G5_Marschal Spectrum	renders the same as the kept copy
+800x480	800x480_g5_1020_sm	templates	110G5_Sansui S+M	a	gelo5-1020: 110G5_Sansui S+M	renders the same as the kept copy
+800x480	800x480_g5_1020_sm	templates	102G5_Free S+M	a-near	gelo5-1020: 102G5_Free S+M	text placed within 2 px of the kept copy's
+800x480	800x480_g5_1020_sm	templates	103G5_Kenwood Spectrum	a-near	gelo5-1020: 103G5_Kenwood Spectrum	text placed within 4 px of the kept copy's
+800x480	800x480_g5_1020_sm	templates	104G5_Kenwood Rev S+M	a-near	gelo5-1020: 104G5_Kenwood Rev S+M	text placed within 2 px of the kept copy's
+800x480	800x480_g5_1020_sm	templates	105G5_OldPipe Spectrum	a-near	gelo5-1020: 105G5_OldPipe Spectrum	text placed within 2 px of the kept copy's
+800x480	800x480_g5_1020_sm	templates	107G5_Marantz S+M	a-near	gelo5-1020: 107G5_Marantz S+M	text placed within 4 px of the kept copy's
+800x480	800x480_g5_1020_sm	templates	108G5_Teletronix S+M	a-near	gelo5-1020: 108G5_Teletronix S+M	text placed within 2 px of the kept copy's
+800x480	800x480_g5_1020_sm	templates	109G5_Corrector S+M	a-near	gelo5-1020: 109G5_Corrector S+M	text placed within 5 px of the kept copy's
+1280x400	1280x400_g5_201_meters	templates	01G5_Naim	a	gelo5: 01G5_Naim	renders the same as the kept copy
+1280x400	1280x400_g5_201_meters	templates	02G5_Naim 2	a	gelo5: 02G5_Naim 2	renders the same as the kept copy
+1280x400	1280x400_g5_201_meters	templates	03G5_McIntosh	a	gelo5: 03G5_McIntosh	renders the same as the kept copy
+1280x400	1280x400_g5_201_meters	templates	06G5_Technics TX30	a	gelo5: 06G5_Technics TX30	renders the same as the kept copy
+1280x400	1280x400_g5_201_meters	templates	07G5_Technics_silver	a	gelo5: 07G5_Technics_silver	renders the same as the kept copy
+1280x400	1280x400_g5_201_meters	templates	08G5_Technics_Black	a	gelo5: 08G5_Technics_Black	renders the same as the kept copy
+1280x400	1280x400_g5_201_meters	templates	09G5_Advence	a	gelo5: 09G5_Advence	renders the same as the kept copy
+1280x400	1280x400_g5_210_ms	templates	102G5_Naim S+M	a	gelo5-220: 102G5_Naim S+M	renders the same as the kept copy
+1280x400	1280x400_g5_210_ms	templates	103G5_CD Cover S+M	a	gelo5-220: 103G5_CD Cover S+M	renders the same as the kept copy
+1280x400	1280x400_g5_210_ms	templates	104G5_KeySlight S+M	a	gelo5-220: 104G5_KeySlight S+M	renders the same as the kept copy
+1280x400	1280x400_g5_210_ms	templates	106G5_Teletronix S+M	a	gelo5-220: 106G5_Teletronix S+M	renders the same as the kept copy
+1280x400	1280x400_g5_210_ms	templates	108G5_Kenwood Spectrum	a	gelo5-220: 108G5_Kenwood Spectrum	renders the same as the kept copy
+1280x400	1280x400_g5_210_ms	templates	109G5_Nixie Spectrum	a	gelo5-220: 109G5_Nixie Spectrum	renders the same as the kept copy
+1280x400	1280x400_g5_210_ms	templates	110G5_Nixie2 Spectrum	a	gelo5-220: 110G5_Nixie2 Spectrum	renders the same as the kept copy
+1280x400	1280x400_g5_210_ms	templates	111G5_PipeWood Spectrum	a	gelo5-220: 111G5_PipeWood Spectrum	renders the same as the kept copy
+1280x400	1280x400_g5_210_ms	templates	117G5_ONKYO S+M	a	gelo5-220: 117G5_ONKYO S+M	renders the same as the kept copy
+1280x400	1280x400_g5_210_ms	templates	118G5_Advance S+M	a	gelo5-220: 118G5_Advance S+M	renders the same as the kept copy
+1280x400	1280x400_g5_210_ms	templates	119G5_PeppyP S+M	a	gelo5-220: 119G5_PeppyP S+M	renders the same as the kept copy
+1280x400	1280x400_g5_201_meters	templates	11G5_Adv_X220	a	gelo5: 11G5_Adv_X220	renders the same as the kept copy
+1280x400	1280x400_g5_210_ms	templates	120G5_Sansui	a	gelo5-220: 120G5_Sansui	renders the same as the kept copy
+1280x400	1280x400_g5_201_meters	templates	13G5_Onkyo 5570	a	gelo5: 13G5_Onkyo 5570	renders the same as the kept copy
+1280x400	1280x400_g5_201_meters	templates	15G5_T+A 3000HV	a	gelo5: 15G5_T+A 3000HV	renders the same as the kept copy
+1280x400	1280x400_g5_201_meters	templates	16G5_Turnable Black B	a	gelo5: 16G5_Turnable Black B	renders the same as the kept copy
+1280x400	1280x400_g5_201_meters	templates	18G5_Turnable Black	a	gelo5: 18G5_Turnable Black	renders the same as the kept copy
+1280x400	1280x400_g5_201_meters	templates	19G5_Turnable Green	a	gelo5: 19G5_Turnable Green	renders the same as the kept copy
+1280x400	1280x400_g5_201_meters	templates	20G5_Turnable Blue	a	gelo5: 20G5_Turnable Blue	renders the same as the kept copy
+1280x400	1280x400_g5_202_meters	templates	21G5_Audio Research	a	gelo5: 21G5_Audio Research	renders the same as the kept copy
+1280x400	1280x400_g5_202_meters	templates	22G5_BlackBlur	a	gelo5: 22G5_BlackBlur	renders the same as the kept copy
+1280x400	1280x400_g5_202_meters	templates	23G5_BlueSea_Black	a	gelo5: 23G5_BlueSea_Black	renders the same as the kept copy
+1280x400	1280x400_g5_202_meters	templates	25G5_Classe	a	gelo5: 25G5_Classe	renders the same as the kept copy
+1280x400	1280x400_g5_202_meters	templates	26G5_Dagostino	a	gelo5: 26G5_Dagostino	renders the same as the kept copy
+1280x400	1280x400_g5_202_meters	templates	27G5_Kenwood Rev	a	gelo5: 27G5_Kenwood Rev	renders the same as the kept copy
+1280x400	1280x400_g5_202_meters	templates	28G5_Kenwood Single	a	gelo5: 28G5_Kenwood Single	renders the same as the kept copy
+1280x400	1280x400_g5_202_meters	templates	30G5_Caltec	a	gelo5: 30G5_Caltec	renders the same as the kept copy
+1280x400	gelo5-202	templates	34G5_Onvi	a	gelo5: 34G5_Onvi	renders the same as the kept copy
+1280x400	1280x400_g5_202_meters	templates	34G5_Onvi	a	gelo5: 34G5_Onvi	renders the same as the kept copy
+1280x400	gelo5-202	templates	35G5_Onvi centre	a	gelo5: 35G5_Onvi centre	renders the same as the kept copy
+1280x400	1280x400_g5_202_meters	templates	35G5_Onvi centre	a	gelo5: 35G5_Onvi centre	renders the same as the kept copy
+1280x400	1280x400_g5_202_meters	templates	37G5_PeppyP Bang	a	gelo5: 37G5_PeppyP Bang	renders the same as the kept copy
+1280x400	1280x400_g5_202_meters	templates	38G5_WestonHouse	a	gelo5: 38G5_WestonHouse	renders the same as the kept copy
+1280x400	1280x400_g5_202_meters	templates	39G5_Weston	a	gelo5: 39G5_Weston	renders the same as the kept copy
+1280x400	1280x400_g5_202_meters	templates	40G5_Retro	a	gelo5: 40G5_Retro	renders the same as the kept copy
+1280x400	1280x400_g5_203_meters	templates	43G5_Cayin	a	gelo5: 43G5_Cayin	renders the same as the kept copy
+1280x400	1280x400_g5_203_meters	templates	45G5_SACD Cover	a	gelo5: 45G5_SACD Cover	renders the same as the kept copy
+1280x400	1280x400_g5_203_meters	templates	46G5_Disco	a	gelo5: 46G5_Disco	renders the same as the kept copy
+1280x400	1280x400_g5_203_meters	templates	47G5_Dorrough Vertical	a	gelo5: 47G5_Dorrough Vertical	renders the same as the kept copy
+1280x400	1280x400_g5_203_meters	templates	48G5_Dorrough crooked	a	gelo5: 48G5_Dorrough crooked	renders the same as the kept copy
+1280x400	1280x400_g5_203_meters	templates	49G5_Dorrought horizon	a	gelo5: 49G5_Dorrought horizon	renders the same as the kept copy
+1280x400	1280x400_g5_203_meters	templates	50G5_Led Strips	a	gelo5: 50G5_Led Strips	renders the same as the kept copy
+1280x400	1280x400_g5_203_meters	templates	51G5_Loudspeaker IN	a	gelo5: 51G5_Loudspeaker IN	renders the same as the kept copy
+1280x400	1280x400_g5_203_meters	templates	53G5_Sansui	a	gelo5: 53G5_Sansui	renders the same as the kept copy
+1280x400	1280x400_g5_203_meters	templates	54G5_Unison Research	a	gelo5: 54G5_Unison Research	renders the same as the kept copy
+1280x400	1280x400_g5_203_meters	templates	55G5_Rose3 Line	a	gelo5: 55G5_Rose3 Line	renders the same as the kept copy
+1280x400	1280x400_g5_203_meters	templates	56G5_Rose IN	a	gelo5: 56G5_Rose IN	renders the same as the kept copy
+1280x400	gelo5	templates	57G5_Rose OUT	a	gelo5: 56G5_Rose IN	renders the same as the kept copy
+1280x400	1280x400_g5_203_meters	templates	57G5_Rose OUT	a	gelo5: 56G5_Rose IN	renders the same as the kept copy
+1280x400	1280x400_g5_203_meters	templates	58G5_TechnicsLed	a	gelo5: 58G5_TechnicsLed	renders the same as the kept copy
+1280x400	1280x400_g5_203_meters	templates	60G5_Eher	a	gelo5: 60G5_Eher	renders the same as the kept copy
+1280x400	1280x400_g5_204_meters	templates	61G5_Old Accuphase Only	a	gelo5: 61G5_Old Accuphase Only	renders the same as the kept copy
+1280x400	1280x400_g5_204_meters	templates	62G5_Caltec Blue	a	gelo5: 62G5_Caltec Blue	renders the same as the kept copy
+1280x400	1280x400_g5_204_meters	templates	63G5_Caltec Red	a	gelo5: 63G5_Caltec Red	renders the same as the kept copy
+1280x400	1280x400_g5_204_meters	templates	65G5_BlackBlur only meters	a	gelo5: 65G5_BlackBlur only meters	renders the same as the kept copy
+1280x400	1280x400_g5_204_meters	templates	67G5_Denon Only	a	gelo5: 67G5_Denon Only	renders the same as the kept copy
+1280x400	1280x400_g5_204_meters	templates	71G5_Hartman Only	a	gelo5: 71G5_Hartman Only	renders the same as the kept copy
+1280x400	1280x400_g5_204_meters	templates	74G5_Kenwood Rev only meters	a	gelo5: 74G5_Kenwood Rev only meters	renders the same as the kept copy
+1280x400	1280x400_g5_204_meters	templates	75G5_Line Magnetic	a	gelo5: 75G5_Line Magnetic	renders the same as the kept copy
+1280x400	1280x400_g5_204_meters	templates	76G5_NAD M10 only	a	gelo5: 76G5_NAD M10 only	renders the same as the kept copy
+1280x400	1280x400_g5_205_meters	templates	82G5_Weston ONLY meters	a	gelo5: 82G5_Weston ONLY meters	renders the same as the kept copy
+1280x400	1280x400_g5_205_meters	templates	83G5_Realistic	a	gelo5: 83G5_Realistic	renders the same as the kept copy
+1280x400	1280x400_g5_205_meters	templates	84G5_Rudeer Only	a	gelo5: 84G5_Rudeer Only	renders the same as the kept copy
+1280x400	1280x400_g5_205_meters	templates	86G5_Round 180	a	gelo5: 99G5_Round 180	renders the same as the kept copy
+1280x400	1280x400_g5_205_meters	templates	87G5_Yamaha S3000 Only	a	gelo5: 87G5_Yamaha S3000 Only	renders the same as the kept copy
+1280x400	1280x400_g5_205_meters	templates	89G5_OnkyoM508	a	gelo5: 89G5_OnkyoM508	renders the same as the kept copy
+1280x400	1280x400_g5_205_meters	templates	91G5_Teac	a	gelo5: 91G5_Teac	renders the same as the kept copy
+1280x400	1280x400_g5_205_meters	templates	92G5_SG	a	gelo5: 92G5_SG	renders the same as the kept copy
+1280x400	1280x400_g5_205_meters	templates	93G5_BOSS Orange	a	gelo5: 93G5_BOSS Orange	renders the same as the kept copy
+1280x400	1280x400_g5_205_meters	templates	94G5_Tascam	a	gelo5: 94G5_Tascam	renders the same as the kept copy
+1280x400	1280x400_g5_205_meters	templates	95G5_LED Out ONLY	a	gelo5: 95G5_LED Out ONLY	renders the same as the kept copy
+1280x400	1280x400_g5_205_meters	templates	96G5_Bose Rev	a	gelo5: 96G5_Bose Rev	renders the same as the kept copy
+1280x400	1280x400_g5_205_meters	templates	97G5_Sharp	a	gelo5: 97G5_Sharp	renders the same as the kept copy
+1280x400	1280x400_g5_201_meters	templates	04G5_Accuphase	a-near	gelo5: 04G5_Accuphase	text placed within 0 px of the kept copy's
+1280x400	1280x400_g5_201_meters	templates	05G5_Luxman	a-near	gelo5: 05G5_Luxman	text placed within 4 px of the kept copy's
+1280x400	1280x400_g5_210_ms	templates	105G5_Marschal S+M	a-near	gelo5-220: 105G5_Marschal S+M	text placed within 3 px of the kept copy's
+1280x400	1280x400_g5_210_ms	templates	107G5_Rhode Spectrum	a-near	gelo5-220: 107G5_Rhode Spectrum	text placed within 7 px of the kept copy's
+1280x400	1280x400_g5_201_meters	templates	10G5_Advance2	a-near	gelo5: 10G5_Advance2	seen side by side: both draw the metadata correctly, text placed differently
+1280x400	1280x400_g5_210_ms	templates	112G5_Osciloscope S+M	a-near	gelo5-220: 112G5_Osciloscope S+M	text placed within 4 px of the kept copy's
+1280x400	1280x400_g5_210_ms	templates	113G5_475A OscSpectrum	a-near	gelo5-220: 113G5_475A OscSpectrum	text placed within 3 px of the kept copy's
+1280x400	1280x400_g5_210_ms	templates	114G5_Pioneer S+M	a-near	gelo5-220: 114G5_Pioneer S+M	text placed within 4 px of the kept copy's
+1280x400	1280x400_g5_210_ms	templates	115G5_Marantz S+M	a-near	gelo5-220: 115G5_Marantz S+M	text placed within 2 px of the kept copy's
+1280x400	1280x400_g5_210_ms	templates	116G5_Corrector Spectrum	a-near	gelo5-220: 116G5_Corrector Spectrum	text placed within 2 px of the kept copy's
+1280x400	1280x400_g5_201_meters	templates	12G5_Sony TA-N77	a-near	gelo5: 12G5_Sony TA-N77	text placed within 0 px of the kept copy's
+1280x400	1280x400_g5_201_meters	templates	17G5_TurnOld	a-near	gelo5: 17G5_TurnOld	text placed within 3 px of the kept copy's
+1280x400	1280x400_g5_202_meters	templates	29G5_Klanghelm	a-near	gelo5: 29G5_Klanghelm	text placed within 7 px of the kept copy's
+1280x400	1280x400_g5_202_meters	templates	31G5_Alvin	a-near	gelo5: 31G5_Alvin	text placed within 7 px of the kept copy's
+1280x400	1280x400_g5_202_meters	templates	32G5_Magnetcord	a-near	gelo5: 32G5_Magnetcord	text placed within 9 px of the kept copy's
+1280x400	1280x400_g5_202_meters	templates	33G5_NAD C3050	a-near	gelo5: 33G5_NAD C3050	text placed within 10 px of the kept copy's
+1280x400	1280x400_g5_202_meters	templates	36G5_Old Braun	a-near	gelo5: 36G5_Old Braun	text placed within 10 px of the kept copy's
+1280x400	1280x400_g5_203_meters	templates	41G5_Abrahamsen	a-near	gelo5: 41G5_Abrahamsen	text placed within 3 px of the kept copy's
+1280x400	1280x400_g5_203_meters	templates	42G5_Casette Full	a-near	gelo5: 42G5_Casette Full	text placed within 3 px of the kept copy's
+1280x400	1280x400_g5_203_meters	templates	44G5_CD Cover	a-near	gelo5: 44G5_CD Cover	text placed within 4 px of the kept copy's
+1280x400	1280x400_g5_203_meters	templates	52G5_MarantzCD	a-near	gelo5: 52G5_MarantzCD	text placed within 10 px of the kept copy's
+1280x400	1280x400_g5_203_meters	templates	59G5_Winamp	a-near	gelo5: 59G5_Winamp	text placed within 2 px of the kept copy's
+1280x400	1280x400_g5_205_meters	templates	90G5_Yamaha MX2000	a-near	gelo5: 90G5_Yamaha MX2000	text placed within 5 px of the kept copy's
+1280x400	1280x400_g5_210_ms	templates	101G5_Kenwood S+M	b	gelo5-220: 101G5_Kenwood S+M	1 text(s) off the screen
+1280x400	gelo5	templates	14G5_Krell KAS	a-near	1280x400_g5_201_meters: 14G5_Krell KAS	same design, text placed a little differently; neither draws the metadata wrongly
+1280x400	gelo5	templates	98G5_TCD Deck	a-near	1280x400_g5_205_meters: 98G5_TCD Deck	same design, text placed a little differently; neither draws the metadata wrongly
+1480x320	1480x320_g5_501_meters	templates	02G5_Accuphase Black	a	gelo5: 02G5_Accuphase Black	renders the same as the kept copy
+1480x320	1480x320_g5_501_meters	templates	03G5_Advance X220	a	gelo5: 03G5_Advance X220	renders the same as the kept copy
+1480x320	1480x320_g5_501_meters	templates	04G5_Rose Single Line	a	gelo5: 04G5_Rose Single Line	renders the same as the kept copy
+1480x320	1480x320_g5_501_meters	templates	05G5_Audio Research	a	gelo5: 05G5_Audio Research	renders the same as the kept copy
+1480x320	1480x320_g5_501_meters	templates	06G5_Kenwood Rev	a	gelo5: 06G5_Kenwood Rev	renders the same as the kept copy
+1480x320	1480x320_g5_501_meters	templates	07G5_Kenwood Single	a	gelo5: 07G5_Kenwood Single	renders the same as the kept copy
+1480x320	1480x320_g5_520_ms	templates	103G5_CD Cover S+M	a	gelo5-520: 103G5_CD Cover S+M	renders the same as the kept copy
+1480x320	1480x320_g5_520_ms	templates	104G5_Nixie Spectrum	a	gelo5-520: 104G5_Nixie Spectrum	renders the same as the kept copy
+1480x320	1480x320_g5_520_ms	templates	105G5_Kenwood Spectrum	a	gelo5-520: 105G5_Kenwood Spectrum	renders the same as the kept copy
+1480x320	1480x320_g5_520_ms	templates	106G5_Kenwood Rev S+M	a	gelo5-520: 106G5_Kenwood Rev S+M	renders the same as the kept copy
+1480x320	1480x320_g5_520_ms	templates	107G5_McIntosh S+M	a	gelo5-520: 107G5_McIntosh S+M	renders the same as the kept copy
+1480x320	1480x320_g5_520_ms	templates	109G5_Naim S+M	a	gelo5-520: 109G5_Naim S+M	renders the same as the kept copy
+1480x320	1480x320_g5_501_meters	templates	10G5_Krell KAS	a	gelo5: 10G5_Krell KAS	renders the same as the kept copy
+1480x320	1480x320_g5_520_ms	templates	111G5_Free S+M	a	gelo5-520: 111G5_Free S+M	renders the same as the kept copy
+1480x320	1480x320_g5_520_ms	templates	112G5_475A S+M	a	gelo5-520: 112G5_475A S+M	renders the same as the kept copy
+1480x320	1480x320_g5_520_ms	templates	113G5_Osciloscope S+M	a	gelo5-520: 113G5_Osciloscope S+M	renders the same as the kept copy
+1480x320	1480x320_g5_520_ms	templates	115G5_Corrector Spectrum	a	gelo5-520: 115G5_Corrector Spectrum	renders the same as the kept copy
+1480x320	1480x320_g5_520_ms	templates	117G5_OldPipe S+M	a	gelo5-520: 117G5_OldPipe S+M	renders the same as the kept copy
+1480x320	1480x320_g5_520_ms	templates	119G5_Sony TA212 S+M	a	gelo5-520: 119G5_Sony TA212 S+M	renders the same as the kept copy
+1480x320	1480x320_g5_520_ms	templates	120G5_Akai S+M	a	gelo5-520: 120G5_Akai S+M	renders the same as the kept copy
+1480x320	1480x320_g5_521_ms	templates	122G5_Ampex S+M	a	gelo5-521: 122G5_Ampex S+M	renders the same as the kept copy
+1480x320	1480x320_g5_521_ms	templates	123G5_Accuphase DG68 S+M	a	gelo5-521: 123G5_Accuphase DG68 S+M	renders the same as the kept copy
+1480x320	1480x320_g5_521_ms	templates	124G5_Magnetocord S+M	a	gelo5-521: 124G5_Magnetocord S+M	renders the same as the kept copy
+1480x320	1480x320_g5_521_ms	templates	127G5_CoctailAudio S+M	a	gelo5-521: 127G5_CoctailAudio S+M	renders the same as the kept copy
+1480x320	1480x320_g5_521_ms	templates	128G5_Sharp SA606 S+M	a	gelo5-521: 128G5_Sharp SA606 S+M	renders the same as the kept copy
+1480x320	1480x320_g5_521_ms	templates	129G5_AudioRL S+M	a	gelo5-521: 129G5_AudioRL S+M	renders the same as the kept copy
+1480x320	1480x320_g5_501_meters	templates	12G5_Luxman	a	gelo5: 12G5_Luxman	renders the same as the kept copy
+1480x320	1480x320_g5_521_ms	templates	130G5_Replika S+M	a	gelo5-521: 130G5_Replika S+M	renders the same as the kept copy
+1480x320	1480x320_g5_521_ms	templates	131G5_Emotiva S+M	a	gelo5-521: 131G5_Emotiva S+M	renders the same as the kept copy
+1480x320	1480x320_g5_521_ms	templates	132G5_Denon S+M	a	gelo5-521: 132G5_Denon S+M	renders the same as the kept copy
+1480x320	1480x320_g5_521_ms	templates	133G5_SPL S+M	a	gelo5-521: 133G5_SPL S+M	renders the same as the kept copy
+1480x320	1480x320_g5_521_ms	templates	134G5_Bose S+M	a	gelo5-521: 134G5_Bose S+M	renders the same as the kept copy
+1480x320	1480x320_g5_521_ms	templates	135G5_Hitachi8500 S+M	a	gelo5-521: 135G5_Hitachi8500 S+M	renders the same as the kept copy
+1480x320	1480x320_g5_521_ms	templates	136G5_Sharp1000 S+M	a	gelo5-521: 136G5_Sharp1000 S+M	renders the same as the kept copy
+1480x320	1480x320_g5_501_meters	templates	15G5_McIntosh Mono	a	gelo5: 15G5_McIntosh Mono	renders the same as the kept copy
+1480x320	1480x320_g5_501_meters	templates	17G5_Technics	a	gelo5: 17G5_Technics	renders the same as the kept copy
+1480x320	1480x320_g5_501_meters	templates	19G5_T+A 3000HV	a	gelo5: 19G5_T+A 3000HV	renders the same as the kept copy
+1480x320	1480x320_g5_501_meters	templates	20G5_Turntable Black	a	gelo5: 20G5_Turntable Black	renders the same as the kept copy
+1480x320	1480x320_g5_502_meters	templates	21G5_BlackBlur Vertical	a	gelo5: 21G5_BlackBlur Vertical	renders the same as the kept copy
+1480x320	1480x320_g5_502_meters	templates	27G5_Dark Spotify	a	gelo5: 27G5_Dark Spotify	renders the same as the kept copy
+1480x320	1480x320_g5_502_meters	templates	28G5_Magnetcord	a	gelo5: 28G5_Magnetcord	renders the same as the kept copy
+1480x320	1480x320_g5_502_meters	templates	30G5_Rehringer	a	gelo5: 30G5_Rehringer	renders the same as the kept copy
+1480x320	1480x320_g5_502_meters	templates	32G5_Sansui Vertical	a	gelo5: 32G5_Sansui Vertical	renders the same as the kept copy
+1480x320	1480x320_g5_502_meters	templates	35G5_Gemonti	a	gelo5: 35G5_Gemonti	renders the same as the kept copy
+1480x320	1480x320_g5_502_meters	templates	36G5_Dorrought	a	gelo5: 36G5_Dorrought	renders the same as the kept copy
+1480x320	1480x320_g5_502_meters	templates	37G5_Eversolo	a	gelo5: 37G5_Eversolo	renders the same as the kept copy
+1480x320	1480x320_g5_502_meters	templates	38G5_Modern VU	a	gelo5: 38G5_Modern VU	renders the same as the kept copy
+1480x320	1480x320_g5_502_meters	templates	40G5_Brianworks	a	gelo5: 40G5_Brianworks	renders the same as the kept copy
+1480x320	1480x320_g5_503_meters	templates	41G5_Lush Only	a	gelo5: 41G5_Lush Only	renders the same as the kept copy
+1480x320	1480x320_g5_503_meters	templates	43G5_Technics Gold	a	gelo5: 43G5_Goldtech	renders the same as the kept copy
+1480x320	1480x320_g5_503_meters	templates	44G5_Dorrought only meters	a	gelo5: 44G5_Dorrought only meters	renders the same as the kept copy
+1480x320	1480x320_g5_503_meters	templates	45G5_Eher only meters	a	gelo5: 45G5_Eher only meters	renders the same as the kept copy
+1480x320	1480x320_g5_503_meters	templates	46G5_Free only	a	gelo5: 46G5_DF202	renders the same as the kept copy
+1480x320	1480x320_g5_503_meters	templates	48G5_Mountain only meters	a	gelo5: 48G5_Mountain only meters	renders the same as the kept copy
+1480x320	1480x320_g5_503_meters	templates	49G5_Deviation Only	a	gelo5: 49G5_Deviation Only	renders the same as the kept copy
+1480x320	1480x320_g5_503_meters	templates	50G5_Caltec only meters	a	gelo5: 50G5_Caltec only meters	renders the same as the kept copy
+1480x320	1480x320_g5_503_meters	templates	51G5_CaltecRED only meters	a	gelo5: 51G5_CaltecRED only meters	renders the same as the kept copy
+1480x320	1480x320_g5_503_meters	templates	52G5_PeakLevel only	a	gelo5: 52G5_PeakLevel	renders the same as the kept copy
+1480x320	1480x320_g5_503_meters	templates	54G5_Tonnica	a	gelo5: 54G5_Tonnica	renders the same as the kept copy
+1480x320	1480x320_g5_503_meters	templates	55G5_Marshall	a	gelo5: 55G5_Marshall	renders the same as the kept copy
+1480x320	1480x320_g5_503_meters	templates	56G5_Nixie Spectrum	a	gelo5: 56G5_Nixie Spectrum	renders the same as the kept copy
+1480x320	1480x320_g5_503_meters	templates	57G5_SG ONLY meters	a	gelo5: 57G5_SG ONLY meters	renders the same as the kept copy
+1480x320	1480x320_g5_503_meters	templates	59G5_Yamaha Only	a	gelo5: 59G5_Yamaha Only	renders the same as the kept copy
+1480x320	1480x320_g5_504_meters	templates	61G5_AdvanceX220_ONLY meters	a	gelo5: 61G5_AdvanceX220_ONLY meters	renders the same as the kept copy
+1480x320	1480x320_g5_504_meters	templates	62G5_Rose OUT	a	gelo5: 62G5_Rose OUT	renders the same as the kept copy
+1480x320	gelo5	templates	63G5_Rose IN	a	gelo5: 62G5_Rose OUT	renders the same as the kept copy
+1480x320	1480x320_g5_504_meters	templates	63G5_Rose IN	a	gelo5: 62G5_Rose OUT	renders the same as the kept copy
+1480x320	1480x320_g5_504_meters	templates	65G5_LED Out ONLY	a	gelo5: 65G5_LED Out ONLY	renders the same as the kept copy
+1480x320	1480x320_g5_504_meters	templates	66G5_FM Stereo Only	a	gelo5: 66G5_FM Stereo Only	renders the same as the kept copy
+1480x320	1480x320_g5_504_meters	templates	67G5_Rudeer Only	a	gelo5: 67G5_Rudeer Only	renders the same as the kept copy
+1480x320	1480x320_g5_504_meters	templates	68G5_Tascam Only	a	gelo5: 68G5_Tascam Only	renders the same as the kept copy
+1480x320	1480x320_g5_504_meters	templates	70G5_NAD	a	gelo5: 70G5_NAD	renders the same as the kept copy
+1480x320	1480x320_g5_504_meters	templates	71G5_NAD M10 only	a	gelo5: 71G5_NAD M10 only	renders the same as the kept copy
+1480x320	1480x320_g5_504_meters	templates	72G5_Old Braun	a	gelo5: 72G5_Old Braun	renders the same as the kept copy
+1480x320	1480x320_g5_504_meters	templates	73G5_Namson Only	a	gelo5: 73G5_Namson Only	renders the same as the kept copy
+1480x320	1480x320_g5_504_meters	templates	74G5_Sharp	a	gelo5: 74G5_Sharp	renders the same as the kept copy
+1480x320	1480x320_g5_504_meters	templates	75G5_Hitachi7500 Only	a	gelo5: 75G5_Hitachi7500 Only	renders the same as the kept copy
+1480x320	1480x320_g5_504_meters	templates	76G5_Hartman Only	a	gelo5: 76G5_Hartman Only	renders the same as the kept copy
+1480x320	1480x320_g5_504_meters	templates	77G5_Dagostino	a	gelo5: 77G5_Dagostino	renders the same as the kept copy
+1480x320	1480x320_g5_504_meters	templates	80G5_Bocatech	a	gelo5: 80G5_Bocatech	renders the same as the kept copy
+1480x320	1480x320_g5_501_meters	templates	01G5_Accuphase	a-near	gelo5: 01G5_Accuphase	text placed within 3 px of the kept copy's
+1480x320	1480x320_g5_501_meters	templates	08G5_Klanghelm	a-near	gelo5: 08G5_Klanghelm	text placed within 2 px of the kept copy's
+1480x320	1480x320_g5_501_meters	templates	09G5_Klangheim Mojo	a-near	gelo5: 09G5_Klangheim Mojo	text placed within 5 px of the kept copy's
+1480x320	1480x320_g5_520_ms	templates	101G5_MarschalSpectrum	a-near	gelo5-520: 101G5_MarschalSpectrum	text placed within 3 px of the kept copy's
+1480x320	1480x320_g5_520_ms	templates	102G5_Marschal S+M	a-near	gelo5-520: 102G5_Marschal S+M	text placed within 4 px of the kept copy's
+1480x320	1480x320_g5_520_ms	templates	108G5_Technics S+M	a-near	gelo5-520: 108G5_Technics S+M	text placed within 4 px of the kept copy's
+1480x320	1480x320_g5_520_ms	templates	110G5_Deviation S+M	a-near	gelo5-520: 110G5_Deviation S+M	text placed within 3 px of the kept copy's
+1480x320	1480x320_g5_520_ms	templates	114G5_Pioneer S+M	a-near	gelo5-520: 114G5_Pioneer S+M	text placed within 3 px of the kept copy's
+1480x320	1480x320_g5_520_ms	templates	116G5_RhodeSea_S+M	a-near	gelo5-520: 116G5_RhodeSea_S+M	text placed within 5 px of the kept copy's
+1480x320	1480x320_g5_520_ms	templates	118G5_VU Single S+M	a-near	gelo5-520: 118G5_VU Single S+M	text placed within 0 px of the kept copy's
+1480x320	1480x320_g5_501_meters	templates	11G5_Line Magnetic	a-near	gelo5: 11G5_Line Magnetic	text placed within 0 px of the kept copy's
+1480x320	1480x320_g5_521_ms	templates	121G5_Sony_U909ES S+M	a-near	gelo5-521: 121G5_Sony_U909ES S+M	seen side by side: both draw the metadata correctly, text placed differently
+1480x320	1480x320_g5_521_ms	templates	125G5_Kenwood KA S+M	a-near	gelo5-521: 125G5_Kenwood KA S+M	text placed within 2 px of the kept copy's
+1480x320	1480x320_g5_521_ms	templates	126G5_McIntosh S+M	a-near	gelo5-521: 126G5_McIntosh S+M	text placed within 2 px of the kept copy's
+1480x320	1480x320_g5_501_meters	templates	13G5_McIntosh	a-near	gelo5: 13G5_McIntosh	seen side by side: both draw the metadata correctly, text placed differently
+1480x320	1480x320_g5_501_meters	templates	14G5_McIntosh RED	a-near	gelo5: 14G5_McIntosh RED	seen side by side: both draw the metadata correctly, text placed differently
+1480x320	1480x320_g5_501_meters	templates	18G5_Technics Black	a-near	gelo5: 18G5_Technics Black	text placed within 2 px of the kept copy's
+1480x320	1480x320_g5_502_meters	templates	22G5_BlackBlur	a-near	gelo5: 22G5_BlackBlur	text placed within 0 px of the kept copy's
+1480x320	1480x320_g5_502_meters	templates	23G5_BOSS Red	a-near	gelo5: 23G5_BOSS Red	text placed within 3 px of the kept copy's
+1480x320	1480x320_g5_502_meters	templates	24G5_BOSS Orange	a-near	gelo5: 24G5_BOSS Orange	text placed within 5 px of the kept copy's
+1480x320	1480x320_g5_502_meters	templates	25G5_BOSS green	a-near	gelo5: 25G5_BOSS green	text placed within 5 px of the kept copy's
+1480x320	1480x320_g5_502_meters	templates	26G5_Caltec	a-near	gelo5: 26G5_Caltec	text placed within 4 px of the kept copy's
+1480x320	1480x320_g5_502_meters	templates	29G5_PioneerCT LED	a-near	gelo5: 29G5_PioneerCT LED	text placed within 3 px of the kept copy's
+1480x320	1480x320_g5_502_meters	templates	31G5_Sansui	a-near	gelo5: 31G5_Sansui	text placed within 2 px of the kept copy's
+1480x320	1480x320_g5_502_meters	templates	33G5_Sony TA-N77	a-near	gelo5: 33G5_Sony TA-N77	text placed within 1 px of the kept copy's
+1480x320	1480x320_g5_502_meters	templates	34G5_Yamaha MX2000	a-near	gelo5: 34G5_Yamaha MX2000	text placed within 8 px of the kept copy's
+1480x320	1480x320_g5_502_meters	templates	39G5_Marantz CD	a-near	gelo5: 39G5_Marantz CD	text placed within 6 px of the kept copy's
+1480x320	1480x320_g5_504_meters	templates	69G5_NAD C3050	a-near	gelo5: 69G5_NAD C3050	seen side by side: both draw the metadata correctly, text placed differently
+1480x320	1480x320_g5_501_meters	templates	16G5_Naim	b	gelo5: 16G5_Naim	2 text(s) off the screen
+1280x800	1280x800_g5_420_meters	templates	02G5_Accuphase monoblock	a	gelo5: 02G5_Accuphase monoblock	renders the same as the kept copy
+1280x800	1280x800_g5_420_meters	templates	07G5_McIntosh monoblock	a	gelo5: 07G5_McIntosh monoblock	renders the same as the kept copy
+1280x800	1280x800_g5_420_meters	templates	09G5_McIntosh Tube	a	gelo5: 09G5_McIntosh Tube	renders the same as the kept copy
+1280x800	1280x800_g5_410_ms	templates	101G5_Free S+M	a	gelo5-420: 101G5_Free S+M	renders the same as the kept copy
+1280x800	1280x800_g5_410_ms	templates	103G5_Marschal Spectrum	a	gelo5-420: 103G5_Marschal Spectrum	renders the same as the kept copy
+1280x800	1280x800_g5_410_ms	templates	104G5_Lyngdorf S+M	a	gelo5-420: 104G5_Lyngdorf S+M	renders the same as the kept copy
+1280x800	1280x800_g5_410_ms	templates	106G5_OldPipe Spectrum	a	gelo5-420: 106G5_OldPipe Spectrum	renders the same as the kept copy
+1280x800	1280x800_g5_410_ms	templates	107G5_Marantz S+M	a	gelo5-420: 107G5_Marantz S+M	renders the same as the kept copy
+1280x800	1280x800_g5_410_ms	templates	108G5_Kenwood Rev S+M	a	gelo5-420: 108G5_Kenwood Rev S+M	renders the same as the kept copy
+1280x800	1280x800_g5_410_ms	templates	109G5_475A Oscil S+M	a	gelo5-420: 109G5_475A Oscil S+M	renders the same as the kept copy
+1280x800	1280x800_g5_420_meters	templates	10G5_Kenwood Ver	a	gelo5: 10G5_Kenwood Ver	renders the same as the kept copy
+1280x800	1280x800_g5_410_ms	templates	110G5_PeppyP S+M	a	gelo5-420: 110G5_PeppyP S+M	renders the same as the kept copy
+1280x800	1280x800_g5_410_ms	templates	111G5_Teletronix S+M	a	gelo5-420: 111G5_Teletronix S+M	renders the same as the kept copy
+1280x800	1280x800_g5_410_ms	templates	112G5_KeySlight S+M	a	gelo5-420: 112G5_KeySlight S+M	renders the same as the kept copy
+1280x800	1280x800_g5_420_meters	templates	11G5_Kenwood Rev	a	gelo5: 11G5_Kenwood Rev	renders the same as the kept copy
+1280x800	1280x800_g5_420_meters	templates	12G5_VU Single Yellow	a	gelo5: 12G5_VU Single Yellow	renders the same as the kept copy
+1280x800	1280x800_g5_420_meters	templates	13G5_NAD C3050 Purple	a	gelo5: 13G5_NAD C3050 Purple	renders the same as the kept copy
+1280x800	1280x800_g5_420_meters	templates	14G5_NAD C3050	a	gelo5: 14G5_NAD C3050	renders the same as the kept copy
+1280x800	1280x800_g5_420_meters	templates	16G5_Naim 2	a	gelo5: 16G5_Naim 2	renders the same as the kept copy
+1280x800	1280x800_g5_420_meters	templates	18G5_Sansui	a	gelo5: 18G5_Sansui	renders the same as the kept copy
+1280x800	1280x800_g5_420_meters	templates	19G5_Sansui 2V	a	gelo5: 19G5_Sansui 2V	renders the same as the kept copy
+1280x800	1280x800_g5_421_meters	templates	21G5_BlackBlur	a	gelo5: 21G5_BlackBlur	renders the same as the kept copy
+1280x800	1280x800_g5_421_meters	templates	22G5_Dark Spotify	a	gelo5: 22G5_Dark Spotify	renders the same as the kept copy
+1280x800	1280x800_g5_421_meters	templates	23G5_Hitachi HMA7500 Black	a	gelo5: 23G5_Hitachi HMA7500 Black	renders the same as the kept copy
+1280x800	1280x800_g5_421_meters	templates	25G5_Marantz Silver	a	gelo5: 25G5_Marantz Silver	renders the same as the kept copy
+1280x800	1280x800_g5_421_meters	templates	26G5_Marantz Black	a	gelo5: 26G5_Marantz Black	renders the same as the kept copy
+1280x800	1280x800_g5_421_meters	templates	28G5_Technisc_Black	a	gelo5: 28G5_Technisc_Black	renders the same as the kept copy
+1280x800	1280x800_g5_421_meters	templates	29G5_Technisc_Silver	a	gelo5: 29G5_Technisc_Silver	renders the same as the kept copy
+1280x800	1280x800_g5_421_meters	templates	30G5_Round yellow	a	gelo5: 30G5_Round yellow	renders the same as the kept copy
+1280x800	1280x800_g5_421_meters	templates	32G5_Akai Reverse	a	gelo5: 32G5_Akai Reverse	renders the same as the kept copy
+1280x800	1280x800_g5_421_meters	templates	33G5_ClasseM	a	gelo5: 33G5_ClasseM	renders the same as the kept copy
+1280x800	1280x800_g5_421_meters	templates	34G5_BMC	a	gelo5: 34G5_BMC	renders the same as the kept copy
+1280x800	1280x800_g5_421_meters	templates	35G5_Hartman	a	gelo5: 35G5_Hartman	renders the same as the kept copy
+1280x800	1280x800_g5_421_meters	templates	37G5_TURN Vinyl Green	a	gelo5: 37G5_TURN Vinyl Green	renders the same as the kept copy
+1280x800	1280x800_g5_421_meters	templates	38G5_TURN Vinyl Green 2	a	gelo5: 38G5_TURN Vinyl Green 2	renders the same as the kept copy
+1280x800	1280x800_g5_421_meters	templates	39G5_TURN Vinyl Silver	a	gelo5: 39G5_TURN Vinyl Silver	renders the same as the kept copy
+1280x800	1280x800_g5_421_meters	templates	40G5_TURN Vinyl Black	a	1280x720_g5_710_Turntables: 143G5_TURN Vinyl Black	renders the same as the kept copy
+1280x800	1280x800_g5_422_meters	templates	41G5_Yellowkidney	a	gelo5: 41G5_Yellowkidney	renders the same as the kept copy
+1280x800	1280x800_g5_422_meters	templates	42G5_OLD Meter	a	gelo5: 42G5_OLD Meter	renders the same as the kept copy
+1280x800	1280x800_g5_422_meters	templates	45G5_Triplett	a	gelo5: 45G5_Triplett	renders the same as the kept copy
+1280x800	1280x800_g5_422_meters	templates	46G5_Leben	a	gelo5: 46G5_Leben	renders the same as the kept copy
+1280x800	1280x800_g5_422_meters	templates	48G5_Vertical blue	a	gelo5: 48G5_Vertical blue	renders the same as the kept copy
+1280x800	1280x800_g5_422_meters	templates	51G5_Optonica	a	gelo5: 51G5_Optonica	renders the same as the kept copy
+1280x800	1280x800_g5_422_meters	templates	55G5_Dorrough Vertical	a	gelo5: 55G5_Dorrough Vertical	renders the same as the kept copy
+1280x800	1280x800_g5_422_meters	templates	57G5_Unison Research	a	gelo5: 57G5_Unison Research	renders the same as the kept copy
+1280x800	1280x800_g5_422_meters	templates	58G5_TAPE orange	a	gelo5: 58G5_TAPE orange	renders the same as the kept copy
+1280x800	1280x800_g5_422_meters	templates	60G5_Sound90	a	gelo5: 60G5_Sound90	renders the same as the kept copy
+1280x800	1280x800_g5_423_meters	templates	62G5_Violin	a	gelo5: 63G5_Violin	renders the same as the kept copy
+1280x800	1280x800_g5_423_meters	templates	63G5_Struder	a	gelo5: 64G5_Struder	renders the same as the kept copy
+1280x800	1280x800_g5_423_meters	templates	64G5_J37 Tape	a	gelo5: 65G5_J37 Tape	renders the same as the kept copy
+1280x800	1280x800_g5_423_meters	templates	67G5_Reher Tube	a	gelo5: 68G5_Reher Tube	renders the same as the kept copy
+1280x800	1280x800_g5_423_meters	templates	68G5_Boombox	a	gelo5: 69G5_Boombox	renders the same as the kept copy
+1280x800	1280x800_g5_423_meters	templates	69G5_Nixi Pipe	a	gelo5: 70G5_Nixi Pipe	renders the same as the kept copy
+1280x800	1280x800_g5_423_meters	templates	70G5_Nixi Spectrum	a	gelo5: 71G5_Nixi Spectrum	renders the same as the kept copy
+1280x800	1280x720_g5_701_meters	templates	01G5_McIntosh	a-lb	gelo5: 06G5_McIntosh	letterboxed copy of a native one
+1280x800	1280x720_g5_701_meters	templates	02G5_McIntosh Hybrid	a-lb	gelo5: 08G5_McIntosh Hybrid	letterboxed copy of a native one
+1280x800	1280x720_g5_701_meters	templates	03G5_McIntosh Monoblock	a-lb	gelo5: 07G5_McIntosh monoblock	letterboxed copy of a native one
+1280x800	1280x720_g5_701_meters	templates	04G5_McIntosh Tube	a-lb	gelo5: 09G5_McIntosh Tube	letterboxed copy of a native one
+1280x800	1280x720_g5_701_meters	templates	05G5_Accuphase	a-lb	1280x800_g5_420_meters: 01G5_Accuphase	letterboxed copy of a native one
+1280x800	1280x720_g5_701_meters	templates	06G5_Accuphase Monoblock	a-lb	gelo5: 02G5_Accuphase monoblock	letterboxed copy of a native one
+1280x800	1280x720_g5_701_meters	templates	07G5_Marantz Silver	a-lb	gelo5: 25G5_Marantz Silver	letterboxed copy of a native one
+1280x800	1280x720_g5_701_meters	templates	08G5_Marantz Black	a-lb	gelo5: 26G5_Marantz Black	letterboxed copy of a native one
+1280x800	1280x720_g5_450_sm	templates	103G5_Teletronix S+M	a-lb	gelo5-420: 111G5_Teletronix S+M	letterboxed copy of a native one
+1280x800	1280x720_g5_450_sm	templates	104G5_Old Spectrum S+M	a-lb	gelo5-420: 113G5_Old Spectrum S+M	letterboxed copy of a native one
+1280x800	1280x720_g5_450_sm	templates	105G5_Marantz S+M	a-lb	gelo5-420: 107G5_Marantz S+M	letterboxed copy of a native one
+1280x800	1280x720_g5_450_sm	templates	106G5_Kenwood Spectrum	a-lb	gelo5-420: 105G5_Kenwood Spectrum	letterboxed copy of a native one
+1280x800	1280x720_g5_701_meters	templates	12G5_Audio Research	a-lb	gelo5: 05G5_Audio Research	letterboxed copy of a native one
+1280x800	1280x720_g5_701_meters	templates	14G5_Kenwood Ver	a-lb	gelo5: 10G5_Kenwood Ver	letterboxed copy of a native one
+1280x800	1280x720_g5_701_meters	templates	15G5_Naim green	a-lb	gelo5: 15G5_Naim green	letterboxed copy of a native one
+1280x800	1280x720_g5_702_meters	templates	21G5_Akai Reverse	a-lb	gelo5: 32G5_Akai Reverse	letterboxed copy of a native one
+1280x800	1280x720_g5_702_meters	templates	23G5_Hitachi HCA7500 Silver	a-lb	gelo5: 24G5_Hitachi HCA7500 Silver	letterboxed copy of a native one
+1280x800	1280x720_g5_702_meters	templates	24G5_Luxman Gold	a-lb	gelo5: 47G5_Luxman Gold	letterboxed copy of a native one
+1280x800	1280x720_g5_702_meters	templates	25G5_Leben	a-lb	gelo5: 46G5_Leben	letterboxed copy of a native one
+1280x800	1280x720_g5_702_meters	templates	28G5_T+A	a-lb	gelo5: 44G5_T+A	letterboxed copy of a native one
+1280x800	1280x720_g5_702_meters	templates	29G5_VU Single Yellow	a-lb	gelo5: 12G5_VU Single Yellow	letterboxed copy of a native one
+1280x800	1280x720_g5_702_meters	templates	32G5_ClasseM	a-lb	gelo5: 33G5_ClasseM	letterboxed copy of a native one
+1280x800	1280x720_g5_702_meters	templates	33G5_Klanghelm	a-lb	gelo5: 36G5_Klanghelm	letterboxed copy of a native one
+1280x800	1280x720_g5_702_meters	templates	35G5_TURN Vinyl Green	a-lb	gelo5: 37G5_TURN Vinyl Green	letterboxed copy of a native one
+1280x800	1280x720_g5_702_meters	templates	37G5_TURN Vinyl Silver	a-lb	gelo5: 39G5_TURN Vinyl Silver	letterboxed copy of a native one
+1280x800	1280x720_g5_703_meters	templates	41G5_Sansui	a-lb	gelo5: 18G5_Sansui	letterboxed copy of a native one
+1280x800	1280x720_g5_703_meters	templates	42G5_Sansui 2V	a-lb	gelo5: 19G5_Sansui 2V	letterboxed copy of a native one
+1280x800	1280x720_g5_703_meters	templates	43G5_Dorrough	a-lb	gelo5: 54G5_Dorrough	letterboxed copy of a native one
+1280x800	1280x720_g5_703_meters	templates	45G5_Dorrough Vertical	a-lb	gelo5: 55G5_Dorrough Vertical	letterboxed copy of a native one
+1280x800	1280x720_g5_703_meters	templates	46G5_MarantzCD	a-lb	gelo5: 27G5_MarantzCD	letterboxed copy of a native one
+1280x800	1280x720_g5_703_meters	templates	47G5_Violin	a-lb	gelo5: 63G5_Violin	letterboxed copy of a native one
+1280x800	1280x720_g5_703_meters	templates	51G5_Abrahamsen	a-lb	gelo5: 53G5_Abrahamsen	letterboxed copy of a native one
+1280x800	1280x720_g5_703_meters	templates	52G5_Yamaha M85	a-lb	gelo5: 59G5_Yamaha M85	letterboxed copy of a native one
+1280x800	1280x720_g5_703_meters	templates	57G5_Teac Cassette	a-lb	gelo5: 50G5_Teac Cassette	letterboxed copy of a native one
+1280x800	1280x720_g5_703_meters	templates	58G5_Burmaster	a-lb	1280x800_g5_423_meters: 61G5_Burmaster	letterboxed copy of a native one
+1280x800	1280x720_g5_703_meters	templates	59G5_Fire Rock	a-lb	gelo5: 61G5_Fire Rock	letterboxed copy of a native one
+1280x800	1280x720_g5_703_meters	templates	60G5_HelixOne	a-lb	gelo5: 66G5_HelixOne	letterboxed copy of a native one
+1280x800	1280x720_g5_704_meters	templates	61G5_Berlant	a-lb	gelo5: 03G5_Berlant	letterboxed copy of a native one
+1280x800	1280x720_g5_704_meters	templates	64G5_BMC	a-lb	gelo5: 34G5_BMC	letterboxed copy of a native one
+1280x800	1280x720_g5_704_meters	templates	65G5_Brianworks	a-lb	gelo5: 20G5_Brianworks	letterboxed copy of a native one
+1280x800	1280x720_g5_704_meters	templates	66G5_DAgostini	a-lb	gelo5: 67G5_DAgostini	letterboxed copy of a native one
+1280x800	1280x720_g5_704_meters	templates	67G5_Dark Spotify	a-lb	gelo5: 22G5_Dark Spotify	letterboxed copy of a native one
+1280x800	1280x720_g5_704_meters	templates	69G5_Hartman	a-lb	gelo5: 35G5_Hartman	letterboxed copy of a native one
+1280x800	1280x720_g5_704_meters	templates	70G5_MarkLev	a-lb	1280x800_g5_422_meters: 49G5_MarkLev	letterboxed copy of a native one
+1280x800	1280x720_g5_704_meters	templates	71G5_Vertical blue	a-lb	gelo5: 48G5_Vertical blue	letterboxed copy of a native one
+1280x800	1280x720_g5_704_meters	templates	73G5_Yellowkidney	a-lb	gelo5: 41G5_Yellowkidney	letterboxed copy of a native one
+1280x800	1280x720_g5_704_meters	templates	74G5_Triplett	a-lb	gelo5: 45G5_Triplett	letterboxed copy of a native one
+1280x800	1280x720_g5_704_meters	templates	75G5_OLD Meter	a-lb	gelo5: 42G5_OLD Meter	letterboxed copy of a native one
+1280x800	1280x720_g5_704_meters	templates	76G5_Old2 braun	a-lb	gelo5: 43G5_Old2 braun	letterboxed copy of a native one
+1280x800	1280x720_g5_704_meters	templates	77G5_Rehringer	a-lb	gelo5: 31G5_Rehringer	letterboxed copy of a native one
+1280x800	1280x720_g5_704_meters	templates	78G5_Round yellow	a-lb	gelo5: 30G5_Round yellow	letterboxed copy of a native one
+1280x800	1280x720_g5_704_meters	templates	79G5_J37 Tape	a-lb	gelo5: 65G5_J37 Tape	letterboxed copy of a native one
+1280x800	1280x720_g5_705_meters	templates	82G5_Unison Research	a-lb	gelo5: 57G5_Unison Research	letterboxed copy of a native one
+1280x800	1280x720_g5_705_meters	templates	87G5_Sound90	a-lb	gelo5: 60G5_Sound90	letterboxed copy of a native one
+1280x800	1280x720_g5_705_meters	templates	91G5_BlackBlur	a-lb	gelo5: 21G5_BlackBlur	letterboxed copy of a native one
+1280x800	1280x720_g5_705_meters	templates	96G5_NIxI Pipe	a-lb	gelo5: 70G5_Nixi Pipe	letterboxed copy of a native one
+1280x800	1280x720_g5_705_meters	templates	97G5_Optonica	a-lb	gelo5: 51G5_Optonica	letterboxed copy of a native one
+1280x800	1280x720_custom_01	templates	vertical-turntable-blue	a-lb	1280x800_vertical_blue: vertical-turntable-blue	letterboxed copy of a native one
+1280x800	1280x800_g5_420_meters	templates	03G5_Berlant	a-near	gelo5: 03G5_Berlant	text placed within 5 px of the kept copy's
+1280x800	1280x800_g5_420_meters	templates	04G5_Berlant Purple	a-near	gelo5: 04G5_Berlant Purple	text placed within 9 px of the kept copy's
+1280x800	1280x800_g5_420_meters	templates	05G5_Audio Research	a-near	gelo5: 05G5_Audio Research	text placed within 5 px of the kept copy's
+1280x800	1280x800_g5_420_meters	templates	06G5_McIntosh	a-near	gelo5: 06G5_McIntosh	text placed within 0 px of the kept copy's
+1280x800	1280x800_g5_420_meters	templates	08G5_McIntosh Hybrid	a-near	gelo5: 08G5_McIntosh Hybrid	seen side by side: both draw the metadata correctly, text placed differently
+1280x800	1280x800_g5_410_ms	templates	102G5_Naim S+M	a-near	gelo5-420: 102G5_Naim S+M	text placed within 2 px of the kept copy's
+1280x800	1280x800_g5_410_ms	templates	105G5_Kenwood Spectrum	a-near	gelo5-420: 105G5_Kenwood Spectrum	text placed within 0 px of the kept copy's
+1280x800	1280x800_g5_410_ms	templates	113G5_Old Spectrum S+M	a-near	gelo5-420: 113G5_Old Spectrum S+M	text placed within 0 px of the kept copy's
+1280x800	1280x800_g5_420_meters	templates	15G5_Naim green	a-near	gelo5: 15G5_Naim green	text placed within 7 px of the kept copy's
+1280x800	1280x800_g5_420_meters	templates	17G5_Naim Rev	a-near	gelo5: 17G5_Naim Rev	seen side by side: both draw the metadata correctly, text placed differently
+1280x800	1280x800_g5_420_meters	templates	20G5_Brianworks	a-near	gelo5: 20G5_Brianworks	seen side by side: both draw the metadata correctly, text placed differently
+1280x800	1280x800_g5_421_meters	templates	24G5_Hitachi HCA7500 Silver	a-near	gelo5: 24G5_Hitachi HCA7500 Silver	seen side by side: both draw the metadata correctly, text placed differently
+1280x800	1280x800_g5_421_meters	templates	27G5_MarantzCD	a-near	gelo5: 27G5_MarantzCD	seen side by side: both draw the metadata correctly, text placed differently
+1280x800	1280x800_g5_421_meters	templates	31G5_Rehringer	a-near	gelo5: 31G5_Rehringer	text placed within 12 px of the kept copy's
+1280x800	1280x800_g5_421_meters	templates	36G5_Klanghelm	a-near	gelo5: 36G5_Klanghelm	seen side by side: both draw the metadata correctly, text placed differently
+1280x800	1280x800_g5_422_meters	templates	43G5_Old2 braun	a-near	gelo5: 43G5_Old2 braun	text placed within 10 px of the kept copy's
+1280x800	1280x800_g5_422_meters	templates	44G5_T+A	a-near	gelo5: 44G5_T+A	seen side by side: both draw the metadata correctly, text placed differently
+1280x800	1280x800_g5_422_meters	templates	47G5_Luxman Gold	a-near	gelo5: 47G5_Luxman Gold	text placed within 5 px of the kept copy's
+1280x800	1280x800_g5_422_meters	templates	50G5_Teac Cassette	a-near	gelo5: 50G5_Teac Cassette	text placed within 5 px of the kept copy's
+1280x800	1280x800_g5_422_meters	templates	52G5_PioneerCT	a-near	gelo5: 52G5_PioneerCT	seen side by side: both draw the metadata correctly, text placed differently
+1280x800	1280x800_g5_422_meters	templates	53G5_Abrahamsen	a-near	gelo5: 53G5_Abrahamsen	text placed within 10 px of the kept copy's
+1280x800	1280x800_g5_422_meters	templates	54G5_Dorrough	a-near	gelo5: 54G5_Dorrough	text placed within 7 px of the kept copy's
+1280x800	1280x800_g5_422_meters	templates	56G5_Advence	a-near	gelo5: 56G5_Advence	text placed within 5 px of the kept copy's
+1280x800	1280x800_g5_422_meters	templates	59G5_Yamaha M85	a-near	gelo5: 59G5_Yamaha M85	text placed within 5 px of the kept copy's
+1280x800	1280x800_g5_423_meters	templates	65G5_HelixOne	a-near	gelo5: 66G5_HelixOne	text placed within 5 px of the kept copy's
+1280x800	1280x800_g5_423_meters	templates	66G5_DAgostini	a-near	gelo5: 67G5_DAgostini	seen side by side: both draw the metadata correctly, text placed differently
+1280x800	gelo5	templates	01G5_Accuphase	a-near	1280x800_g5_420_meters: 01G5_Accuphase	same design, text placed a little differently; neither draws the metadata wrongly
+1280x800	1280x720_g5_450_sm	templates	101G5_Lyngdorf S+M	b	gelo5-420: 104G5_Lyngdorf S+M	1 text(s) off the screen
+1280x800	1280x720_g5_450_sm	templates	102G5_Naim S+M	b	gelo5-420: 102G5_Naim S+M	1 text(s) off the screen
+1280x800	1280x720_g5_702_meters	templates	22G5_Hitachi HMA7500 Black	a-lb	gelo5: 23G5_Hitachi HMA7500 Black	letterboxed copy of a native one
+1280x800	1280x720_g5_702_meters	templates	38G5_TURN Vinyl Black	b	1280x720_g5_710_Turntables: 143G5_TURN Vinyl Black	the still copy of the animated one
+1280x800	gelo5	templates	49G5_MarkLev	a-near	1280x800_g5_422_meters: 49G5_MarkLev	same design, text placed a little differently; neither draws the metadata wrongly
+1280x800	gelo5	templates	62G5_Burmaster	b	1280x800_g5_423_meters: 61G5_Burmaster	1 text(s) nearly invisible
+1280x800	gelo5	templates	40G5_TURN Vinyl Black	george	1280x720_g5_710_Turntables: 143G5_TURN Vinyl Black	the still copy of an animated turntable; George chose the animated, letterboxed one
+1920x1080	1920x1080_g5_701_meters	templates	01G5_McIntosh	a	gelo5: 01G5_McIntosh	renders the same as the kept copy
+1920x1080	1920x1080_g5_701_meters	templates	02G5_McIntosh Hybrid	a	gelo5: 02G5_McIntosh Hybrid	renders the same as the kept copy
+1920x1080	1920x1080_g5_701_meters	templates	03G5_McIntosh Monoblock	a	gelo5: 03G5_McIntosh Monoblock	renders the same as the kept copy
+1920x1080	1920x1080_g5_701_meters	templates	04G5_McIntosh Tube	a	gelo5: 04G5_McIntosh Tube	renders the same as the kept copy
+1920x1080	1920x1080_g5_701_meters	templates	05G5_Accuphase	a	gelo5: 05G5_Accuphase	renders the same as the kept copy
+1920x1080	1920x1080_g5_701_meters	templates	07G5_Marantz Silver	a	gelo5: 07G5_Marantz Silver	renders the same as the kept copy
+1920x1080	1920x1080_g5_701_meters	templates	09G5_Technics1600_Silver	a	gelo5: 09G5_Technics1600_Silver	renders the same as the kept copy
+1920x1080	1920x1080_20g5	templates	102G5_Sansui S+M	a	gelo5-720: 102G5_Sansui S+M	renders the same as the kept copy
+1920x1080	1920x1080_20g5	templates	105G5_McIntosh S+M	a	gelo5-720: 105G5_McIntosh S+M	renders the same as the kept copy
+1920x1080	1920x1080_20g5	templates	106G5_Lyngdorf S+M	a	gelo5-720: 106G5_Lyngdorf S+M	renders the same as the kept copy
+1920x1080	1920x1080_20g5	templates	107G5_Nixie S+M	a	gelo5-720: 107G5_Nixie S+M	renders the same as the kept copy
+1920x1080	1920x1080_20g5	templates	109G5_NAD C3050HD S+M	a	gelo5-720: 109G5_NAD C3050HD S+M	renders the same as the kept copy
+1920x1080	1920x1080_g5_701_meters	templates	10G5_Technics1600_Black	a	gelo5: 10G5_Technics1600_Black	renders the same as the kept copy
+1920x1080	1920x1080_20g5	templates	110G5_Advanced X220 S+M	a	gelo5-720: 110G5_Advanced X220 S+M	renders the same as the kept copy
+1920x1080	1920x1080_20g5	templates	115G5_Neon Disco Spectrum	a	gelo5-720: 115G5_Neon Disco Spectrum	renders the same as the kept copy
+1920x1080	1920x1080_20g5	templates	116G5_Marschal Spectrum	a	gelo5-720: 116G5_Marschal Spectrum	renders the same as the kept copy
+1920x1080	1920x1080_20g5	templates	117G5_Marantz S+M	a	gelo5-720: 117G5_Marantz S+M	renders the same as the kept copy
+1920x1080	1920x1080_20g5	templates	119G5_Sansui TU S7	a	gelo5-720: 119G5_Sansui TU S7	renders the same as the kept copy
+1920x1080	1920x1080_g5_701_meters	templates	11G5_Technics1600_Black-Silver	a	gelo5: 11G5_Technics1600_Black-Silver	renders the same as the kept copy
+1920x1080	1920x1080_20g5	templates	120G5_OldPipe Spectrum	a	gelo5-720: 120G5_OldPipe Spectrum	renders the same as the kept copy
+1920x1080	1920x1080_g5_701_meters	templates	13G5_Kenwood Reverse	a	gelo5: 13G5_Kenwood Reverse	renders the same as the kept copy
+1920x1080	1920x1080_g5_701_meters	templates	14G5_Kenwood Ver	a	gelo5: 14G5_Kenwood Ver	renders the same as the kept copy
+1920x1080	1920x1080_g5_701_meters	templates	15G5_Naim green	a	gelo5: 15G5_Naim green	renders the same as the kept copy
+1920x1080	1920x1080_g5_701_meters	templates	16G5_Naim2	a	gelo5: 16G5_Naim2	renders the same as the kept copy
+1920x1080	1920x1080_g5_701_meters	templates	18G5_Advanced X220	a	gelo5: 18G5_Advanced X220	renders the same as the kept copy
+1920x1080	1920x1080_g5_701_meters	templates	19G5_Advanced X220EVO	a	gelo5: 19G5_Advanced X220EVO	renders the same as the kept copy
+1920x1080	1920x1080_g5_701_meters	templates	20G5_Advanced Combi	a	gelo5: 20G5_Advanced Combi	renders the same as the kept copy
+1920x1080	1920x1080_g5_702_meters	templates	21G5_Akai Reverse	a	gelo5: 21G5_Akai Reverse	renders the same as the kept copy
+1920x1080	1920x1080_g5_702_meters	templates	23G5_Hitachi HCA7500 Silver	a	gelo5: 23G5_Hitachi HCA7500 Silver	renders the same as the kept copy
+1920x1080	1920x1080_g5_702_meters	templates	25G5_Leben	a	gelo5: 25G5_Leben	renders the same as the kept copy
+1920x1080	1920x1080_g5_702_meters	templates	27G5_NAD C3050HD	a	gelo5: 27G5_NAD C3050HD	renders the same as the kept copy
+1920x1080	1920x1080_g5_702_meters	templates	31G5_Wadax	a	gelo5: 31G5_Wadax	renders the same as the kept copy
+1920x1080	1920x1080_g5_702_meters	templates	32G5_ClasseM	a	gelo5: 32G5_ClasseM	renders the same as the kept copy
+1920x1080	1920x1080_g5_702_meters	templates	33G5_Klanghelm	a	gelo5: 33G5_Klanghelm	renders the same as the kept copy
+1920x1080	1920x1080_g5_702_meters	templates	34G5_TURN Vinyl Orange	a	gelo5: 34G5_TURN Vinyl Orange	renders the same as the kept copy
+1920x1080	1920x1080_g5_702_meters	templates	35G5_TURN Vinyl Green	a	gelo5: 35G5_TURN Vinyl Green	renders the same as the kept copy
+1920x1080	1920x1080_g5_702_meters	templates	36G5_TURN Vinyl Green2	a	gelo5: 36G5_TURN Vinyl Green2	renders the same as the kept copy
+1920x1080	1920x1080_g5_702_meters	templates	37G5_TURN Vinyl Silver	a	gelo5: 37G5_TURN Vinyl Silver	renders the same as the kept copy
+1920x1080	1920x1080_g5_702_meters	templates	38G5_TURN Vinyl Black	a	1920x1080_g5_710_Turntables: 143G5_TURN Vinyl Black	renders the same as the kept copy
+1920x1080	1920x1080_g5_702_meters	templates	39G5_TURN Vinyl Blue	a	gelo5: 39G5_TURN Vinyl Blue	renders the same as the kept copy
+1920x1080	1920x1080_g5_702_meters	templates	40G5_TAPE	a	gelo5: 40G5_TAPE	renders the same as the kept copy
+1920x1080	1920x1080_g5_703_meters	templates	41G5_Sansui	a	gelo5: 41G5_Sansui	renders the same as the kept copy
+1920x1080	1920x1080_g5_703_meters	templates	42G5_Sansui 2V	a	gelo5: 42G5_Sansui 2V	renders the same as the kept copy
+1920x1080	1920x1080_g5_703_meters	templates	43G5_Dorrough	a	gelo5: 43G5_Dorrough	renders the same as the kept copy
+1920x1080	1920x1080_g5_703_meters	templates	44G5_Dorrough border	a	gelo5: 44G5_Dorrough border	renders the same as the kept copy
+1920x1080	1920x1080_g5_703_meters	templates	47G5_Violin	a	gelo5: 47G5_Violin	renders the same as the kept copy
+1920x1080	1920x1080_g5_703_meters	templates	48G5_PioneerCT Deck	a	gelo5: 48G5_PioneerCT Deck	renders the same as the kept copy
+1920x1080	1920x1080_g5_703_meters	templates	49G5_Pioneer M90	a	gelo5: 49G5_Pioneer M90	renders the same as the kept copy
+1920x1080	1920x1080_g5_703_meters	templates	52G5_Yamaha M85	a	gelo5: 52G5_Yamaha M85	renders the same as the kept copy
+1920x1080	1920x1080_g5_703_meters	templates	54G5_Vincent	a	gelo5: 54G5_Vincent	renders the same as the kept copy
+1920x1080	1920x1080_g5_703_meters	templates	55G5_SKS12 Vertical	a	gelo5: 55G5_SKS12 Vertical	renders the same as the kept copy
+1920x1080	1920x1080_g5_703_meters	templates	59G5_Fire Rock	a	gelo5: 59G5_Fire Rock	renders the same as the kept copy
+1920x1080	1920x1080_g5_704_meters	templates	62G5_BlueSea_White	a	gelo5: 62G5_BlueSea_White	renders the same as the kept copy
+1920x1080	1920x1080_g5_704_meters	templates	63G5_BlueSea_Black	a	gelo5: 63G5_BlueSea_Black	renders the same as the kept copy
+1920x1080	1920x1080_g5_704_meters	templates	64G5_BMC	a	gelo5: 64G5_BMC	renders the same as the kept copy
+1920x1080	1920x1080_g5_704_meters	templates	65G5_Brianworks	a	gelo5: 65G5_Brianworks	renders the same as the kept copy
+1920x1080	1920x1080_g5_704_meters	templates	66G5_DAgostini	a	gelo5: 66G5_DAgostini	renders the same as the kept copy
+1920x1080	1920x1080_g5_704_meters	templates	68G5_Boombox	a	gelo5: 68G5_Boombox	renders the same as the kept copy
+1920x1080	1920x1080_g5_704_meters	templates	69G5_Hartman	a	gelo5: 69G5_Hartman	renders the same as the kept copy
+1920x1080	1920x1080_g5_704_meters	templates	70G5_MarkLev	a	gelo5: 70G5_MarkLev	renders the same as the kept copy
+1920x1080	1920x1080_g5_704_meters	templates	71G5_Vertical blue	a	gelo5: 71G5_Vertical blue	renders the same as the kept copy
+1920x1080	1920x1080_g5_704_meters	templates	72G5_Horizontal blue	a	gelo5: 72G5_Horizontal blue	renders the same as the kept copy
+1920x1080	1920x1080_g5_704_meters	templates	73G5_Yellowkidney	a	gelo5: 73G5_Yellowkidney	renders the same as the kept copy
+1920x1080	1920x1080_g5_704_meters	templates	74G5_Triplett	a	gelo5: 74G5_Triplett	renders the same as the kept copy
+1920x1080	1920x1080_g5_704_meters	templates	75G5_OLD Meter	a	gelo5: 75G5_OLD Meter	renders the same as the kept copy
+1920x1080	1920x1080_g5_704_meters	templates	77G5_Rehringer	a	gelo5: 77G5_Rehringer	renders the same as the kept copy
+1920x1080	1920x1080_g5_704_meters	templates	78G5_Round yellow	a	gelo5: 78G5_Round yellow	renders the same as the kept copy
+1920x1080	1920x1080_g5_704_meters	templates	80G5_Simens	a	gelo5: 80G5_Simens	renders the same as the kept copy
+1920x1080	1920x1080_g5_705_meters	templates	81G5_Struder Tape	a	gelo5: 81G5_Struder Tape	renders the same as the kept copy
+1920x1080	1920x1080_g5_705_meters	templates	82G5_Unison Research	a	gelo5: 82G5_Unison Research	renders the same as the kept copy
+1920x1080	1920x1080_g5_705_meters	templates	83G5_Jericho	a	gelo5: 83G5_Jericho	renders the same as the kept copy
+1920x1080	1920x1080_g5_705_meters	templates	85G5_Gryphon	a	gelo5: 85G5_Gryphon	renders the same as the kept copy
+1920x1080	1920x1080_g5_705_meters	templates	86G5_Onkyo M508	a	gelo5: 86G5_Onkyo M508	renders the same as the kept copy
+1920x1080	1920x1080_g5_705_meters	templates	87G5_Sound90	a	gelo5: 87G5_Sound90	renders the same as the kept copy
+1920x1080	1920x1080_g5_705_meters	templates	88G5_Sony TAN77	a	gelo5: 88G5_Sony TAN77	renders the same as the kept copy
+1920x1080	1920x1080_g5_705_meters	templates	90G5_Vert_Kidney	a	gelo5: 90G5_Vert_Kidney	renders the same as the kept copy
+1920x1080	1920x1080_g5_705_meters	templates	91G5_BlackBlur	a	gelo5: 91G5_BlackBlur	renders the same as the kept copy
+1920x1080	1920x1080_g5_705_meters	templates	93G5_BlackBlur LED	a	gelo5: 93G5_BlackBlur LED	renders the same as the kept copy
+1920x1080	1920x1080_g5_705_meters	templates	94G5_MNN8	a	gelo5: 94G5_MNN8	renders the same as the kept copy
+1920x1080	1920x1080_g5_705_meters	templates	95G5_NeonLight	a	gelo5: 95G5_NeonLight	renders the same as the kept copy
+1920x1080	1920x1080_g5_705_meters	templates	97G5_Optonica	a	gelo5: 97G5_Optonica	renders the same as the kept copy
+1920x1080	1920x1080_g5_705_meters	templates	98G5_Pioneer Deck	a	gelo5: 98G5_Pioneer Deck	renders the same as the kept copy
+1920x1080	1920x1080_g5_701_meters	templates	06G5_Accuphase Monoblock	a-near	gelo5: 06G5_Accuphase Monoblock	seen side by side: both draw the metadata correctly, text placed differently
+1920x1080	1920x1080_g5_701_meters	templates	08G5_Marantz Black	a-near	gelo5: 08G5_Marantz Black	text placed within 5 px of the kept copy's
+1920x1080	1920x1080_20g5	templates	101G5_Free S+M	a-near	gelo5-720: 101G5_Free S+M	text placed within 10 px of the kept copy's
+1920x1080	1920x1080_20g5	templates	103G5_Kenwood S+M	a-near	gelo5-720: 103G5_Kenwood S+M	text placed within 7 px of the kept copy's
+1920x1080	1920x1080_20g5	templates	104G5_Naim S+M	a-near	gelo5-720: 104G5_Naim S+M	seen side by side: both draw the metadata correctly, text placed differently
+1920x1080	1920x1080_20g5	templates	108G5_NIxI2 S+M	a-near	gelo5-720: 108G5_NIxI2 S+M	text placed within 5 px of the kept copy's
+1920x1080	1920x1080_20g5	templates	111G5_Sony TAN77 S+M	a-near	gelo5-720: 111G5_Sony TAN77 S+M	text placed within 0 px of the kept copy's
+1920x1080	1920x1080_20g5	templates	112G5_Kenwood Spectrum	a-near	gelo5-720: 112G5_Kenwood Spectrum	seen side by side: both draw the metadata correctly, text placed differently
+1920x1080	1920x1080_20g5	templates	113G5_M6100Gold Spectrum	a-near	gelo5-720: 113G5_M6100Gold Spectrum	seen side by side: both draw the metadata correctly, text placed differently
+1920x1080	1920x1080_20g5	templates	118G5_Technics S+M	a-near	gelo5-720: 118G5_Technics S+M	seen side by side: both draw the metadata correctly, text placed differently
+1920x1080	1920x1080_g5_701_meters	templates	12G5_Audio Research	a-near	gelo5: 12G5_Audio Research	text placed within 5 px of the kept copy's
+1920x1080	1920x1080_g5_701_meters	templates	17G5_Naim Reverse	a-near	gelo5: 17G5_Naim Reverse	text placed within 5 px of the kept copy's
+1920x1080	1920x1080_g5_702_meters	templates	22G5_Hitachi HMA7500 Black	a-near	gelo5: 22G5_Hitachi HMA7500 Black	text placed within 5 px of the kept copy's
+1920x1080	1920x1080_g5_702_meters	templates	24G5_Luxman Gold	a-near	gelo5: 24G5_Luxman Gold	text placed within 5 px of the kept copy's
+1920x1080	1920x1080_g5_702_meters	templates	26G5_NAD	a-near	gelo5: 26G5_NAD	text placed within 8 px of the kept copy's
+1920x1080	1920x1080_g5_702_meters	templates	28G5_T+A	a-near	gelo5: 28G5_T+A	text placed within 5 px of the kept copy's
+1920x1080	1920x1080_g5_702_meters	templates	29G5_VU Single Yellow	a-near	gelo5: 29G5_VU Single Yellow	text placed within 0 px of the kept copy's
+1920x1080	1920x1080_g5_702_meters	templates	30G5_VU Single Blue	a-near	gelo5: 30G5_VU Single Blue	text placed within 0 px of the kept copy's
+1920x1080	1920x1080_g5_FanartCass	templates	380G5_TDK Big Fanart	a-near	1920x1080_g5_FanarTurntable: 360G5_Turn Big Fanart	text placed within 6 px of the kept copy's
+1920x1080	1920x1080_g5_FanartTape	templates	400G5_Akai77 black	a-near	1920x1080_g5_711_Tape_Recorder: 151G5_Akai77 black	text placed within 3 px of the kept copy's
+1920x1080	1920x1080_g5_703_meters	templates	45G5_Dorrough Vertical	a-near	gelo5: 45G5_Dorrough Vertical	text placed within 0 px of the kept copy's
+1920x1080	1920x1080_g5_703_meters	templates	46G5_MarantzCD	a-near	gelo5: 46G5_MarantzCD	text placed within 2 px of the kept copy's
+1920x1080	1920x1080_g5_703_meters	templates	50G5_Sony	a-near	gelo5: 50G5_Sony	text placed within 2 px of the kept copy's
+1920x1080	1920x1080_g5_703_meters	templates	51G5_Abrahamsen	a-near	gelo5: 51G5_Abrahamsen	seen side by side: both draw the metadata correctly, text placed differently
+1920x1080	1920x1080_g5_703_meters	templates	53G5_Yamaha DJ	a-near	gelo5: 53G5_Yamaha DJ	seen side by side: both draw the metadata correctly, text placed differently
+1920x1080	1920x1080_g5_703_meters	templates	57G5_Teac Cassette	a-near	gelo5: 57G5_Teac Cassette	text placed within 10 px of the kept copy's
+1920x1080	1920x1080_g5_703_meters	templates	60G5_HelixOne	a-near	gelo5: 60G5_HelixOne	text placed within 5 px of the kept copy's
+1920x1080	1920x1080_g5_704_meters	templates	61G5_Berlant	a-near	gelo5: 61G5_Berlant	text placed within 5 px of the kept copy's
+1920x1080	1920x1080_g5_704_meters	templates	67G5_Dark Spotify	a-near	gelo5: 67G5_Dark Spotify	seen side by side: both draw the metadata correctly, text placed differently
+1920x1080	1920x1080_g5_704_meters	templates	76G5_Old2 braun	a-near	gelo5: 76G5_Old2 braun	text placed within 7 px of the kept copy's
+1920x1080	1920x1080_g5_704_meters	templates	79G5_J37 Tape	a-near	gelo5: 79G5_J37 Tape	text placed within 5 px of the kept copy's
+1920x1080	1920x1080_g5_705_meters	templates	84G5_Radio Tann	a-near	gelo5: 84G5_Radio Tann	text placed within 10 px of the kept copy's
+1920x1080	1920x1080_g5_705_meters	templates	89G5_Rotel	a-near	gelo5: 89G5_Rotel	text placed within 10 px of the kept copy's
+1920x1080	1920x1080_g5_705_meters	templates	92G5_BlackBlur Big-Bang	a-near	gelo5: 92G5_BlackBlur Big-Bang	text placed within 10 px of the kept copy's
+1920x1080	1920x1080_g5_705_meters	templates	96G5_NIxI Pipe	a-near	gelo5: 96G5_NIxI Pipe	text placed within 5 px of the kept copy's
+1920x1080	gelo5-720	templates	114G5_Dorrought Spectrum	b	1920x1080_20g5: 114G5_Dorrought Spectrum	draws 1 of the 2 text fields the kept copy draws
+1920x1080	gelo5	templates	38G5_TURN Vinyl Black	b	1920x1080_g5_710_Turntables: 143G5_TURN Vinyl Black	the still copy of the animated one
+1920x1080	gelo5	templates	58G5_Burmaster	b	1920x1080_g5_703_meters: 58G5_Burmaster	1 text(s) nearly invisible
+# George, 2026-10-02 ("We leave it out"): 800x480_g5_711_Tape_Recorder is laid out in
+# 1920x1080 positions on 800x480 pictures upstream - reels misplaced, no metadata.
+800x480	800x480_g5_711_Tape_Recorder	templates	151G5_Akai77 black	george	-	broken upstream: 1920x1080 positions on 800x480 pictures
+800x480	800x480_g5_711_Tape_Recorder	templates	152G5_Akai77_silver	george	-	broken upstream: 1920x1080 positions on 800x480 pictures
+800x480	800x480_g5_711_Tape_Recorder	templates	153G5_Studer A810	george	-	broken upstream: 1920x1080 positions on 800x480 pictures
+800x480	800x480_g5_711_Tape_Recorder	templates	154G5_PioneerRT707_silver	george	-	broken upstream: 1920x1080 positions on 800x480 pictures
+800x480	800x480_g5_711_Tape_Recorder	templates	155G5_Antelope Reel	george	-	broken upstream: 1920x1080 positions on 800x480 pictures
+800x480	800x480_g5_711_Tape_Recorder	templates	156G5_Otari Reel	george	-	broken upstream: 1920x1080 positions on 800x480 pictures
+800x480	800x480_g5_711_Tape_Recorder	templates	157G5_Revox B77	george	-	broken upstream: 1920x1080 positions on 800x480 pictures
+800x480	800x480_g5_711_Tape_Recorder	templates	158G5_Tascam Rec	george	-	broken upstream: 1920x1080 positions on 800x480 pictures
+800x480	800x480_g5_711_Tape_Recorder	templates	159G5_Technics Rec	george	-	broken upstream: 1920x1080 positions on 800x480 pictures
+800x480	800x480_g5_711_Tape_Recorder	templates	159G5_Metaxas Rec	george	-	broken upstream: 1920x1080 positions on 800x480 pictures
+800x480	800x480_g5_711_Tape_Recorder	templates	210G5_Sony TC730	george	-	broken upstream: 1920x1080 positions on 800x480 pictures
+800x480	800x480_g5_711_Tape_Recorder	templates	211G5_Akai GX635	george	-	broken upstream: 1920x1080 positions on 800x480 pictures
+800x480	800x480_g5_711_Tape_Recorder	templates	212G5_TapeAK	george	-	broken upstream: 1920x1080 positions on 800x480 pictures
+800x480	800x480_g5_711_Tape_Recorder	templates	213G5_Fostex Rec	george	-	broken upstream: 1920x1080 positions on 800x480 pictures
+800x480	800x480_g5_711_Tape_Recorder	templates	214G5_TapeAMP	george	-	broken upstream: 1920x1080 positions on 800x480 pictures
+800x480	800x480_g5_711_Tape_Recorder	templates	215G5_Koncert M3401	george	-	broken upstream: 1920x1080 positions on 800x480 pictures
+800x480	800x480_g5_711_Tape_Recorder	templates	216G5_Akai PRO1000	george	-	broken upstream: 1920x1080 positions on 800x480 pictures
+800x480	800x480_g5_711_Tape_Recorder	templates	217G5_MION24	george	-	broken upstream: 1920x1080 positions on 800x480 pictures
+800x480	800x480_g5_711_Tape_Recorder	templates	218G5_Teac X2000	george	-	broken upstream: 1920x1080 positions on 800x480 pictures
+800x480	800x480_g5_711_Tape_Recorder	templates	219G5_Tandberg OLD	george	-	broken upstream: 1920x1080 positions on 800x480 pictures

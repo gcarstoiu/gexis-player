@@ -147,12 +147,14 @@ def notes(path: Path = STATUS) -> str | None:
 
 
 def whats_new(path: Path = STATUS) -> str | None:
-    """The Release row's note: what the waiting or just-installed release
-    says changed, in its own words (2026-10-01, George). None when the
-    release has no notes, or the state is anything else."""
+    """The Release row's note: what the waiting release says changed, in its
+    own words (2026-10-01, George). None when the release has no notes, or
+    the state is anything else - once installed, its notes are under Change
+    logs (ADR-0116: *"Once the update is done though there is no point in
+    [showing] it there anymore"*)."""
     doc = status(path)
     text = doc.get("whats_new")
-    if not text or doc.get("state") not in ("available", "done"):
+    if not text or doc.get("state") != "available":
         return None
     return f"What's new in {short(doc.get('release')) or 'this release'}: {text}"
 

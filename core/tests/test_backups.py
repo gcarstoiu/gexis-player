@@ -28,6 +28,14 @@ def _device(root):
     (root / "var/lib/bluetooth/11:22/info").write_text("paired")
     (root / "var/lib/beszel-agent").mkdir(parents=True)
     (root / "var/lib/beszel-agent/fingerprint").write_text("ec4c41e0")
+    # ADR-0114: the hub's history, systems and account.
+    (root / "var/lib/beszel-hub").mkdir(parents=True)
+    (root / "var/lib/beszel-hub/data.db").write_bytes(b"hub")
+    # ADR-0115: the Lyrion server's settings and saved playlists.
+    (root / "var/lib/squeezeboxserver/prefs").mkdir(parents=True)
+    (root / "var/lib/squeezeboxserver/prefs/server.prefs").write_text("---\n")
+    (root / "var/lib/gexis-music/Playlists").mkdir(parents=True)
+    (root / "var/lib/gexis-music/Playlists/Evening.m3u").write_text("#EXTM3U\n")
     (root / "home/pi/.local/share/Plexamp/Settings").mkdir(parents=True)
     (root / "home/pi/.local/share/Plexamp/Settings/%40Plexamp%3Auser%3Atoken").write_text("Stoken")
     # ADR-0106: an uploaded plugin's data and the list of them.

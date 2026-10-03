@@ -72,6 +72,15 @@ class Plugin:
     accent: str | None = None
     #: The waiting screen's second line - "Listening", "Pairable".
     status: str | None = None
+    #: A web page of its own on this device, by port (ADR-0114: the Beszel
+    #: hub's 8095). Its switch shows `http://<name>.local:<port>`.
+    port: int | None = None
+    #: Its group goes first on its page rather than last (George, 2026-10-03:
+    #: the Lyrion server at the top of Sources, the client beneath it).
+    first: bool = False
+    #: What Remove deletes besides the software, said in its confirmation
+    #: (ADR-0115 decision 14); absent, the settings stay and it says so.
+    removes: str | None = None
     #: `mark.png` beside the manifest, or None. Served at
     #: `/plugins/<id>/mark`, never read from the filesystem by the panel.
     mark: Path | None = None
@@ -164,6 +173,9 @@ def parse(raw: dict, *, directory: Path | None = None, built_in: bool = False) -
         enabled_row=raw.get("enabled_row"),
         accent=raw.get("accent"),
         status=raw.get("status"),
+        port=raw["port"] if isinstance(raw.get("port"), int) and 0 < raw["port"] < 65536 else None,
+        first=raw.get("first") is True,
+        removes=raw["removes"] if isinstance(raw.get("removes"), str) else None,
         notice=raw.get("notice"),
         mark=mark,
         settings=tuple(settings),

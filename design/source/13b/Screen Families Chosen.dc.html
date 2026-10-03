@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Nunito+Sans:ital,opsz,wght@0,6..12,300..800&family=IBM+Plex+Mono:wght@400;600;700&display=swap" rel="stylesheet" />
+<style>html,body{margin:0;padding:0;background:#0c1014;}a{color:#7ed6bc;}a:hover{color:#a8e5d3;}</style>
+</helmet>
+<div style="font-family:'Nunito Sans','Avenir Next','Segoe UI',system-ui,sans-serif;color:#e9eef2;background:#0c1014;min-width:1500px;">
+<section id="top" data-screen-label="Chosen · header" style="padding:48px 56px;display:flex;flex-direction:column;gap:26px;border-bottom:1px solid rgba(233,238,242,0.1);">
+  <div style="display:flex;flex-direction:column;gap:12px;max-width:1000px;">
+    <div style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:13px;letter-spacing:0.2em;text-transform:uppercase;color:rgba(233,238,242,0.6);">gexis · Phase 13b · chosen designs · 30 September 2026</div>
+    <div style="font-size:52px;font-weight:800;letter-spacing:-0.025em;line-height:1.05;">gexis on other screens</div>
+    <div style="font-size:18px;line-height:1.55;color:rgba(233,238,242,0.75);text-wrap:pretty;">The answer to <span style="font-family:'IBM Plex Mono','Courier New',monospace;">design/briefs/13b-screen-families.md</span>: two layout families chosen by aspect, one token set, and the rules that size them. Only the chosen options are here; the explorations are in <a href="Screen Families.dc.html">Screen Families</a>. The Screen step is merged into Setup.dc.html and the Attached screen and Screen rotation rows into Settings.dc.html (2026-09-30); the other boards are study copies, and Now Playing.dc.html is unchanged.</div>
+  </div>
+  <div style="display:flex;align-items:center;gap:14px;">
+    <span style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:12px;letter-spacing:0.14em;text-transform:uppercase;color:rgba(233,238,242,0.6);">Bar boards at</span>
+    <div style="display:flex;flex-wrap:wrap;gap:8px;"><sc-for list="{{ sizeTabs }}" as="v" hint-placeholder-count="6"><div onClick="{{ v.onTap }}" style="padding:10px 18px;border-radius:999px;font-size:15px;font-weight:700;box-sizing:border-box;background:{{ v.bg }};color:{{ v.ink }};border:1px solid {{ v.line }};" style-active="transform:scale(0.96)">{{ v.label }}</div></sc-for></div>
+  </div>
+</section>
+<section id="standard" data-screen-label="Standard family" style="padding:48px 56px;display:flex;flex-direction:column;gap:26px;border-bottom:1px solid rgba(233,238,242,0.1);">
+  <div style="display:flex;flex-direction:column;gap:10px;max-width:1000px;"><div style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:13px;letter-spacing:0.2em;text-transform:uppercase;color:rgba(233,238,242,0.6);">Family 1 · aspect 1.5 to 1.8</div><div style="font-size:34px;font-weight:800;letter-spacing:-0.02em;">Standard: today’s screens, the hero absorbs the height</div><div style="font-size:17px;line-height:1.55;color:rgba(233,238,242,0.75);text-wrap:pretty;">Every screen is laid out at a logical width of 1280 and scaled to the screen’s width (0.625 on 800 × 480, 1.5 on 1920 × 1080). The logical height runs from 711 (aspect 1.8) to 853 (1.5); 16:9, the 13.3″, is 720, and the 7″ 800 × 480 is 768. On each screen one element, the hero, takes the difference; margins, gaps, type and every control keep their 800 values.</div></div>
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:18px;max-width:1500px;"><div style="padding:22px;border-radius:16px;background:rgba(233,238,242,0.04);border:1px solid rgba(233,238,242,0.1);display:flex;flex-direction:column;gap:8px;min-width:0;"><div style="font-size:19px;font-weight:800;">What absorbs, per screen</div><div style="font-size:15px;line-height:1.55;color:rgba(233,238,242,0.75);text-wrap:pretty;"><ul style="margin:0;padding-left:20px;display:flex;flex-direction:column;gap:6px;"><li>Now Playing: the artwork, height − 300 (411 / 500 / 553); the meta column takes the width it frees.</li><li>Library home: cards and New Music tiles scale together, k = (H − 424) / 376 (0.76 / 1 / 1.14).</li><li>Artist page, album: the photo and the cover, × H / 800.</li><li>Browse, Artists, Playlists, Radio, queue, Settings: the list shows more or fewer rows.</li><li>Idle, transition, pairing, volume drawer: nothing; each is centred at its own size.</li></ul></div></div><div style="padding:22px;border-radius:16px;background:rgba(233,238,242,0.04);border:1px solid rgba(233,238,242,0.1);display:flex;flex-direction:column;gap:8px;min-width:0;"><div style="font-size:19px;font-weight:800;">Type</div><div style="font-size:15px;line-height:1.55;color:rgba(233,238,242,0.75);text-wrap:pretty;">Uniform: type scales with the screen, 1.5× on 1920 × 1080 and 0.625× on 800 × 480. Nothing is capped. The smallest type is the 11 and 12 px mono labels, about forty of them, which are 0.85 and 0.9 mm tall on the 7″. Corrected in round 2.</div></div><div style="padding:22px;border-radius:16px;background:rgba(233,238,242,0.04);border:1px solid rgba(233,238,242,0.1);display:flex;flex-direction:column;gap:8px;min-width:0;"><div style="font-size:19px;font-weight:800;">Touch floor: 44 px</div><div style="font-size:15px;line-height:1.55;color:rgba(233,238,242,0.75);text-wrap:pretty;">No target is under 44 logical px and none grows (ADR-0109 decision 4). 44 px is 5.2 mm on the 7″ 800 × 480, 7.5 mm on 1280 × 800 and 10 mm on the 13.3″. Below 44 in the study: row actions (40 px), which take a 44 px hit area around the same glyph, and the Artists alphabet (about 21 px a key), which is a strip you drag along, not keys you tap. Corrected in round 2.</div></div></div>
+  <div style="display:flex;flex-wrap:wrap;gap:8px;"><sc-for list="{{ stdTabs }}" as="v" hint-placeholder-count="6"><div onClick="{{ v.onTap }}" style="padding:10px 18px;border-radius:999px;font-size:15px;font-weight:700;box-sizing:border-box;background:{{ v.bg }};color:{{ v.ink }};border:1px solid {{ v.line }};" style-active="transform:scale(0.96)">{{ v.label }}</div></sc-for></div>
+  <div style="font-size:16px;color:#e9eef2;">{{ stdNote }}</div>
+  <div style="display:flex;flex-wrap:wrap;gap:24px;align-items:flex-start;">
+      <div style="display:flex;flex-direction:column;gap:8px;">
+        <div style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:12px;letter-spacing:0.14em;text-transform:uppercase;color:rgba(233,238,242,0.6);">1280 × 711</div>
+        <div style="width:435px;height:241px;overflow:hidden;border-radius:6px;box-shadow:0 0 0 1px rgba(233,238,242,0.14);position:relative;">
+          <div style="width:1280px;height:711px;transform:scale(0.34);transform-origin:0 0;position:absolute;left:0;top:0;"><dc-import name="Now Playing Height Study" view="{{ stdView }}" h="{{ 711 }}" idle-preview="{{ stdIdle }}" handoff-preview="{{ stdHandoff }}" pairing="{{ stdPairing }}" hint-size="1280px,711px"></dc-import></div>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:8px;">
+        <div style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:12px;letter-spacing:0.14em;text-transform:uppercase;color:rgba(233,238,242,0.6);">1280 × 800</div>
+        <div style="width:435px;height:272px;overflow:hidden;border-radius:6px;box-shadow:0 0 0 1px rgba(233,238,242,0.14);position:relative;">
+          <div style="width:1280px;height:800px;transform:scale(0.34);transform-origin:0 0;position:absolute;left:0;top:0;"><dc-import name="Now Playing Height Study" view="{{ stdView }}" h="{{ 800 }}" idle-preview="{{ stdIdle }}" handoff-preview="{{ stdHandoff }}" pairing="{{ stdPairing }}" hint-size="1280px,800px"></dc-import></div>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:8px;">
+        <div style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:12px;letter-spacing:0.14em;text-transform:uppercase;color:rgba(233,238,242,0.6);">1280 × 853</div>
+        <div style="width:435px;height:290px;overflow:hidden;border-radius:6px;box-shadow:0 0 0 1px rgba(233,238,242,0.14);position:relative;">
+          <div style="width:1280px;height:853px;transform:scale(0.34);transform-origin:0 0;position:absolute;left:0;top:0;"><dc-import name="Now Playing Height Study" view="{{ stdView }}" h="{{ 853 }}" idle-preview="{{ stdIdle }}" handoff-preview="{{ stdHandoff }}" pairing="{{ stdPairing }}" hint-size="1280px,853px"></dc-import></div>
+        </div>
+      </div></div>
+</section>
+<section id="bar-rule" data-screen-label="Bar family · rule" style="padding:48px 56px;display:flex;flex-direction:column;gap:26px;border-bottom:1px solid rgba(233,238,242,0.1);">
+  <div style="display:flex;flex-direction:column;gap:10px;max-width:1000px;"><div style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:13px;letter-spacing:0.2em;text-transform:uppercase;color:rgba(233,238,242,0.6);">Family 2 · aspect 3 to 5, height 320 to 400</div><div style="font-size:34px;font-weight:800;letter-spacing:-0.02em;">Bar: a reduced panel of strips</div><div style="font-size:17px;line-height:1.55;color:rgba(233,238,242,0.75);text-wrap:pretty;">Every bar is laid out at a logical height of 400; its logical width is aspect × 400 (1280 on 1280 × 400, 1850 on 1480 × 320, shown at 0.8). Everything keeps its size; one region per strip takes the width, named with each screen.</div></div>
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:18px;max-width:1500px;"><div style="padding:22px;border-radius:16px;background:rgba(233,238,242,0.04);border:1px solid rgba(233,238,242,0.1);display:flex;flex-direction:column;gap:8px;min-width:0;"><div style="font-size:19px;font-weight:800;">Touch</div><div style="font-size:15px;line-height:1.55;color:rgba(233,238,242,0.75);text-wrap:pretty;">44 px is 6.6 mm on the 7.9″ 1280 × 400 and 7.0 mm on the 11.9″ 1480 × 320. Every bar target is 44 or more (round 2).</div></div><div style="padding:22px;border-radius:16px;background:rgba(233,238,242,0.04);border:1px solid rgba(233,238,242,0.1);display:flex;flex-direction:column;gap:8px;min-width:0;"><div style="font-size:19px;font-weight:800;">Type</div><div style="font-size:15px;line-height:1.55;color:rgba(233,238,242,0.75);text-wrap:pretty;">The standard scale, with display sizes stepped down to fit 400: titles 42 (strip) and 64 (transition, joining), artist 28, album 24, mono times 16, labels 13. Setup keeps its two-metre intent: 40–64 titles, 44 mono values, a 300 px code.</div></div></div>
+</section>
+<section id="strip" data-screen-label="Bar · Now Playing" style="padding:48px 56px;display:flex;flex-direction:column;gap:26px;border-bottom:1px solid rgba(233,238,242,0.1);">
+  <div style="display:flex;flex-direction:column;gap:10px;max-width:1000px;"><div style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:13px;letter-spacing:0.2em;text-transform:uppercase;color:rgba(233,238,242,0.6);">Bar · Now Playing</div><div style="font-size:34px;font-weight:800;letter-spacing:-0.02em;">The strip and its pull-down tray</div><div style="font-size:17px;line-height:1.55;color:rgba(233,238,242,0.75);text-wrap:pretty;">Artwork, title, artist, album and year, the source mark and a lyrics switch; a full-width progress bar; shuffle, previous, play, next and repeat; the queue. The handle under the accent line pulls down a tray with Home, the visualiser and volume; it goes back up by dragging or a tap on the strip. <b style="color:#e9eef2;">Width goes to</b> the progress bar and the tray’s slider.</div></div>
+  <div style="display:flex;flex-wrap:wrap;gap:24px;align-items:flex-start;">
+      <div style="display:flex;flex-direction:column;gap:8px;">
+        <div style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:12px;letter-spacing:0.14em;text-transform:uppercase;color:rgba(233,238,242,0.6);">Strip · {{ barLabel }}</div>
+        <div style="overflow:hidden;border-radius:6px;box-shadow:0 0 0 1px rgba(233,238,242,0.14);position:relative;width:{{ barBoxW }};height:{{ barBoxH }};">
+          <div style="height:400px;transform-origin:0 0;position:absolute;left:0;top:0;width:{{ barWPx }};transform:{{ barScale }};"><dc-import name="Bar Frame" variant="strip" sr="main" pull="down" w="{{ barW }}" hint-size="1280px,400px"></dc-import></div>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:8px;">
+        <div style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:12px;letter-spacing:0.14em;text-transform:uppercase;color:rgba(233,238,242,0.6);">Tray pulled down · {{ barLabel }}</div>
+        <div style="overflow:hidden;border-radius:6px;box-shadow:0 0 0 1px rgba(233,238,242,0.14);position:relative;width:{{ barBoxW }};height:{{ barBoxH }};">
+          <div style="height:400px;transform-origin:0 0;position:absolute;left:0;top:0;width:{{ barWPx }};transform:{{ barScale }};"><dc-import name="Bar Frame" variant="strip" sr="main" pull="down" tray="{{ true }}" w="{{ barW }}" hint-size="1280px,400px"></dc-import></div>
+        </div>
+      </div></div>
+  <div style="display:flex;flex-wrap:wrap;gap:24px;align-items:flex-start;">
+      <div style="display:flex;flex-direction:column;gap:8px;">
+        <div style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:12px;letter-spacing:0.14em;text-transform:uppercase;color:rgba(233,238,242,0.6);">Lyrics on · {{ barLabel }}</div>
+        <div style="overflow:hidden;border-radius:6px;box-shadow:0 0 0 1px rgba(233,238,242,0.14);position:relative;width:{{ barBoxW }};height:{{ barBoxH }};">
+          <div style="height:400px;transform-origin:0 0;position:absolute;left:0;top:0;width:{{ barWPx }};transform:{{ barScale }};"><dc-import name="Bar Frame" variant="strip" sr="main" pull="down" lyrics="{{ true }}" w="{{ barW }}" hint-size="1280px,400px"></dc-import></div>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:8px;">
+        <div style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:12px;letter-spacing:0.14em;text-transform:uppercase;color:rgba(233,238,242,0.6);">Queue · {{ barLabel }}</div>
+        <div style="overflow:hidden;border-radius:6px;box-shadow:0 0 0 1px rgba(233,238,242,0.14);position:relative;width:{{ barBoxW }};height:{{ barBoxH }};">
+          <div style="height:400px;transform-origin:0 0;position:absolute;left:0;top:0;width:{{ barWPx }};transform:{{ barScale }};"><dc-import name="Bar Frame" variant="strip" sr="main" pull="down" queue="{{ true }}" w="{{ barW }}" hint-size="1280px,400px"></dc-import></div>
+        </div>
+      </div></div>
+  <div style="display:flex;flex-wrap:wrap;gap:24px;align-items:flex-start;">
+      <div style="display:flex;flex-direction:column;gap:8px;">
+        <div style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:12px;letter-spacing:0.14em;text-transform:uppercase;color:rgba(233,238,242,0.6);">Volume changed from a phone · {{ barLabel }}</div>
+        <div style="overflow:hidden;border-radius:6px;box-shadow:0 0 0 1px rgba(233,238,242,0.14);position:relative;width:{{ barBoxW }};height:{{ barBoxH }};">
+          <div style="height:400px;transform-origin:0 0;position:absolute;left:0;top:0;width:{{ barWPx }};transform:{{ barScale }};"><dc-import name="Bar Frame" variant="strip" sr="main" pull="down" tray="{{ true }}" tray-vol="48" w="{{ barW }}" hint-size="1280px,400px"></dc-import></div>
+        </div>
+      </div></div>
+  <div style="font-size:15px;line-height:1.55;color:rgba(233,238,242,0.75);max-width:100ch;">The queue is the panel’s rail at its own 470 px, over the strip; rows swipe to remove as on the panel. A volume change from elsewhere brings the tray down by itself and it hides after the drawer’s auto-hide time (3 s), as the drawer does on the panel.</div>
+</section>
+<section id="browse" data-screen-label="Bar · Browse" style="padding:48px 56px;display:flex;flex-direction:column;gap:26px;border-bottom:1px solid rgba(233,238,242,0.1);">
+  <div style="display:flex;flex-direction:column;gap:10px;max-width:1000px;"><div style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:13px;letter-spacing:0.2em;text-transform:uppercase;color:rgba(233,238,242,0.6);">Bar · Browse</div><div style="font-size:34px;font-weight:800;letter-spacing:-0.02em;">Library home and what its tiles open to</div><div style="font-size:17px;line-height:1.55;color:rgba(233,238,242,0.75);text-wrap:pretty;">The panel’s six tiles, scaled, beside a 124 px rail on the right: cover, the renderer’s mark, play, and the progress filling up its inner edge. The home strip (New Music, Most played or Recently played) is a tile. Every library screen shares the frame: a 220 px column with Back (and Home two levels in), the title and count; the content; the rail. The artist page and album drop the column for a full-height picture. <b style="color:#e9eef2;">Width goes to</b> the tiles, panes and rows.</div></div>
+  <div style="display:flex;flex-wrap:wrap;gap:8px;"><sc-for list="{{ libTabs }}" as="v" hint-placeholder-count="6"><div onClick="{{ v.onTap }}" style="padding:10px 18px;border-radius:999px;font-size:15px;font-weight:700;box-sizing:border-box;background:{{ v.bg }};color:{{ v.ink }};border:1px solid {{ v.line }};" style-active="transform:scale(0.96)">{{ v.label }}</div></sc-for></div>
+  <div style="font-size:16px;color:#e9eef2;max-width:110ch;">{{ libNote }}</div>
+  <sc-if value="{{ libIsHome }}" hint-placeholder-val="{{ true }}">
+      <div style="display:flex;flex-direction:column;gap:8px;">
+        <div style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:12px;letter-spacing:0.14em;text-transform:uppercase;color:rgba(233,238,242,0.6);">Library home · {{ barLabel }}</div>
+        <div style="overflow:hidden;border-radius:6px;box-shadow:0 0 0 1px rgba(233,238,242,0.14);position:relative;width:{{ barBoxW }};height:{{ barBoxH }};">
+          <div style="height:400px;transform-origin:0 0;position:absolute;left:0;top:0;width:{{ barWPx }};transform:{{ barScale }};"><dc-import name="Bar Frame" variant="home2" layout="c" w="{{ barW }}" hint-size="1280px,400px"></dc-import></div>
+        </div>
+      </div></sc-if>
+  <sc-if value="{{ libIsLib }}" hint-placeholder-val="{{ false }}">
+      <div style="display:flex;flex-direction:column;gap:8px;">
+        <div style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:12px;letter-spacing:0.14em;text-transform:uppercase;color:rgba(233,238,242,0.6);">{{ libLabel }} · {{ barLabel }}</div>
+        <div style="overflow:hidden;border-radius:6px;box-shadow:0 0 0 1px rgba(233,238,242,0.14);position:relative;width:{{ barBoxW }};height:{{ barBoxH }};">
+          <div style="height:400px;transform-origin:0 0;position:absolute;left:0;top:0;width:{{ barWPx }};transform:{{ barScale }};"><dc-import name="Bar Library" screen="{{ libScreen }}" w="{{ barW }}" hint-size="1280px,400px"></dc-import></div>
+        </div>
+      </div></sc-if>
+</section>
+<section id="moments" data-screen-label="Bar · full-screen moments" style="padding:48px 56px;display:flex;flex-direction:column;gap:26px;border-bottom:1px solid rgba(233,238,242,0.1);">
+  <div style="display:flex;flex-direction:column;gap:10px;max-width:1000px;"><div style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:13px;letter-spacing:0.2em;text-transform:uppercase;color:rgba(233,238,242,0.6);">Bar · full-screen moments</div><div style="font-size:34px;font-weight:800;letter-spacing:-0.02em;">Transition, idle, setup, pairing, and no library</div><div style="font-size:17px;line-height:1.55;color:rgba(233,238,242,0.75);text-wrap:pretty;">The panel’s full-screen states laid out across. Copy and colours are the panel’s.</div></div>
+  <div style="display:flex;flex-wrap:wrap;gap:24px;align-items:flex-start;">
+      <div style="display:flex;flex-direction:column;gap:8px;">
+        <div style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:12px;letter-spacing:0.14em;text-transform:uppercase;color:rgba(233,238,242,0.6);">Transition · {{ barLabel }}</div>
+        <div style="overflow:hidden;border-radius:6px;box-shadow:0 0 0 1px rgba(233,238,242,0.14);position:relative;width:{{ barBoxW }};height:{{ barBoxH }};">
+          <div style="height:400px;transform-origin:0 0;position:absolute;left:0;top:0;width:{{ barWPx }};transform:{{ barScale }};"><dc-import name="Bar Panels" screen="t2" w="{{ barW }}" hint-size="1280px,400px"></dc-import></div>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:8px;">
+        <div style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:12px;letter-spacing:0.14em;text-transform:uppercase;color:rgba(233,238,242,0.6);">Pairing request · {{ barLabel }}</div>
+        <div style="overflow:hidden;border-radius:6px;box-shadow:0 0 0 1px rgba(233,238,242,0.14);position:relative;width:{{ barBoxW }};height:{{ barBoxH }};">
+          <div style="height:400px;transform-origin:0 0;position:absolute;left:0;top:0;width:{{ barWPx }};transform:{{ barScale }};"><dc-import name="Bar Panels" screen="p2" w="{{ barW }}" hint-size="1280px,400px"></dc-import></div>
+        </div>
+      </div></div>
+  <div style="font-size:15px;line-height:1.55;color:rgba(233,238,242,0.75);max-width:100ch;">Transition: the incoming source leads on the right, its accent washing in; <b style="color:#e9eef2;">width goes to</b> the line between. Pairing: the code at 110 px in the centre, the device left, Reject and Accept right, the countdown as a bar along the bottom edge.</div>
+  <div style="display:flex;flex-wrap:wrap;gap:24px;align-items:flex-start;">
+      <div style="display:flex;flex-direction:column;gap:8px;">
+        <div style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:12px;letter-spacing:0.14em;text-transform:uppercase;color:rgba(233,238,242,0.6);">Idle, artist picture · {{ barLabel }}</div>
+        <div style="overflow:hidden;border-radius:6px;box-shadow:0 0 0 1px rgba(233,238,242,0.14);position:relative;width:{{ barBoxW }};height:{{ barBoxH }};">
+          <div style="height:400px;transform-origin:0 0;position:absolute;left:0;top:0;width:{{ barWPx }};transform:{{ barScale }};"><dc-import name="Bar Panels" screen="idle" w="{{ barW }}" hint-size="1280px,400px"></dc-import></div>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:8px;">
+        <div style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:12px;letter-spacing:0.14em;text-transform:uppercase;color:rgba(233,238,242,0.6);">Idle, black · {{ barLabel }}</div>
+        <div style="overflow:hidden;border-radius:6px;box-shadow:0 0 0 1px rgba(233,238,242,0.14);position:relative;width:{{ barBoxW }};height:{{ barBoxH }};">
+          <div style="height:400px;transform-origin:0 0;position:absolute;left:0;top:0;width:{{ barWPx }};transform:{{ barScale }};"><dc-import name="Bar Panels" screen="idle-black" w="{{ barW }}" hint-size="1280px,400px"></dc-import></div>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:8px;">
+        <div style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:12px;letter-spacing:0.14em;text-transform:uppercase;color:rgba(233,238,242,0.6);">Idle, clock off · {{ barLabel }}</div>
+        <div style="overflow:hidden;border-radius:6px;box-shadow:0 0 0 1px rgba(233,238,242,0.14);position:relative;width:{{ barBoxW }};height:{{ barBoxH }};">
+          <div style="height:400px;transform-origin:0 0;position:absolute;left:0;top:0;width:{{ barWPx }};transform:{{ barScale }};"><dc-import name="Bar Panels" screen="idle-frame" w="{{ barW }}" hint-size="1280px,400px"></dc-import></div>
+        </div>
+      </div></div>
+  <div style="font-size:15px;line-height:1.55;color:rgba(233,238,242,0.75);max-width:100ch;">Clock and date, today’s weather, then the forecast: one day at 1280, four at 1850. The clock drifts sideways only. With the clock off it is a picture frame, as on the panel.</div>
+  <div style="display:flex;flex-wrap:wrap;gap:24px;align-items:flex-start;">
+      <div style="display:flex;flex-direction:column;gap:8px;">
+        <div style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:12px;letter-spacing:0.14em;text-transform:uppercase;color:rgba(233,238,242,0.6);">Setup, new device · {{ barLabel }}</div>
+        <div style="overflow:hidden;border-radius:6px;box-shadow:0 0 0 1px rgba(233,238,242,0.14);position:relative;width:{{ barBoxW }};height:{{ barBoxH }};">
+          <div style="height:400px;transform-origin:0 0;position:absolute;left:0;top:0;width:{{ barWPx }};transform:{{ barScale }};"><dc-import name="Bar Panels" screen="s-new" w="{{ barW }}" hint-size="1280px,400px"></dc-import></div>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:8px;">
+        <div style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:12px;letter-spacing:0.14em;text-transform:uppercase;color:rgba(233,238,242,0.6);">Setup, can’t reach its Wi-Fi · {{ barLabel }}</div>
+        <div style="overflow:hidden;border-radius:6px;box-shadow:0 0 0 1px rgba(233,238,242,0.14);position:relative;width:{{ barBoxW }};height:{{ barBoxH }};">
+          <div style="height:400px;transform-origin:0 0;position:absolute;left:0;top:0;width:{{ barWPx }};transform:{{ barScale }};"><dc-import name="Bar Panels" screen="s-lost" w="{{ barW }}" hint-size="1280px,400px"></dc-import></div>
+        </div>
+      </div></div>
+  <div style="display:flex;flex-wrap:wrap;gap:24px;align-items:flex-start;">
+      <div style="display:flex;flex-direction:column;gap:8px;">
+        <div style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:12px;letter-spacing:0.14em;text-transform:uppercase;color:rgba(233,238,242,0.6);">Setup, could not join · {{ barLabel }}</div>
+        <div style="overflow:hidden;border-radius:6px;box-shadow:0 0 0 1px rgba(233,238,242,0.14);position:relative;width:{{ barBoxW }};height:{{ barBoxH }};">
+          <div style="height:400px;transform-origin:0 0;position:absolute;left:0;top:0;width:{{ barWPx }};transform:{{ barScale }};"><dc-import name="Bar Panels" screen="s-fail" w="{{ barW }}" hint-size="1280px,400px"></dc-import></div>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:8px;">
+        <div style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:12px;letter-spacing:0.14em;text-transform:uppercase;color:rgba(233,238,242,0.6);">Setup, joining · {{ barLabel }}</div>
+        <div style="overflow:hidden;border-radius:6px;box-shadow:0 0 0 1px rgba(233,238,242,0.14);position:relative;width:{{ barBoxW }};height:{{ barBoxH }};">
+          <div style="height:400px;transform-origin:0 0;position:absolute;left:0;top:0;width:{{ barWPx }};transform:{{ barScale }};"><dc-import name="Bar Panels" screen="s-joining" w="{{ barW }}" hint-size="1280px,400px"></dc-import></div>
+        </div>
+      </div></div>
+  <div style="font-size:15px;line-height:1.55;color:rgba(233,238,242,0.75);max-width:100ch;">One QR code, to join, with the network’s name and password and the page’s address as text.</div>
+  <div style="display:flex;flex-wrap:wrap;gap:24px;align-items:flex-start;">
+      <div style="display:flex;flex-direction:column;gap:8px;">
+        <div style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:12px;letter-spacing:0.14em;text-transform:uppercase;color:rgba(233,238,242,0.6);">LMS off, nothing playing · {{ barLabel }}</div>
+        <div style="overflow:hidden;border-radius:6px;box-shadow:0 0 0 1px rgba(233,238,242,0.14);position:relative;width:{{ barBoxW }};height:{{ barBoxH }};">
+          <div style="height:400px;transform-origin:0 0;position:absolute;left:0;top:0;width:{{ barWPx }};transform:{{ barScale }};"><dc-import name="Bar Frame" variant="wait" w="{{ barW }}" hint-size="1280px,400px"></dc-import></div>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:8px;">
+        <div style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:12px;letter-spacing:0.14em;text-transform:uppercase;color:rgba(233,238,242,0.6);">Every source off · {{ barLabel }}</div>
+        <div style="overflow:hidden;border-radius:6px;box-shadow:0 0 0 1px rgba(233,238,242,0.14);position:relative;width:{{ barBoxW }};height:{{ barBoxH }};">
+          <div style="height:400px;transform-origin:0 0;position:absolute;left:0;top:0;width:{{ barWPx }};transform:{{ barScale }};"><dc-import name="Bar Frame" variant="wait-none" w="{{ barW }}" hint-size="1280px,400px"></dc-import></div>
+        </div>
+      </div></div>
+  <div style="font-size:15px;line-height:1.55;color:rgba(233,238,242,0.75);max-width:100ch;">With LMS off there is no library: the waiting marks and a Settings button, as on the panel (ADR-0079).</div>
+</section>
+<section id="viz" data-screen-label="Visualiser" style="padding:48px 56px;display:flex;flex-direction:column;gap:26px;border-bottom:1px solid rgba(233,238,242,0.1);">
+  <div style="display:flex;flex-direction:column;gap:10px;max-width:1000px;"><div style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:13px;letter-spacing:0.2em;text-transform:uppercase;color:rgba(233,238,242,0.6);">Both families</div><div style="font-size:34px;font-weight:800;letter-spacing:-0.02em;">The visualiser’s surround</div><div style="font-size:17px;line-height:1.55;color:rgba(233,238,242,0.75);text-wrap:pretty;">In: the visualiser button (in the tray on a bar) or five minutes of playback nobody touches. On screen: the skin and nothing else. Out: a touch anywhere, or a new source, returns to Now Playing; playback stopping keeps the skin five minutes, then idle (ADR-0019, ADR-0036). A screen uses the skins drawn for its exact size; with none, the largest set that fits, centred at 1:1, with opaque black around it, as <span style="${mono};">letterbox.py</span> does for the 720 packs today. The picker offers only that set.</div></div>
+  <div style="display:flex;flex-wrap:wrap;gap:24px;align-items:flex-start;"><div style="display:flex;flex-direction:column;gap:8px;"><div style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:12px;letter-spacing:0.14em;text-transform:uppercase;color:rgba(233,238,242,0.6);">800 × 480</div><div style="width:144px;height:86px;background:#000;border-radius:4px;box-shadow:0 0 0 1px rgba(233,238,242,0.22);display:flex;align-items:center;justify-content:center;"><div style="width:144px;height:86px;background:repeating-linear-gradient(135deg,rgba(126,214,188,0.2) 0 8px,rgba(126,214,188,0.08) 8px 16px);border:1px solid rgba(126,214,188,0.5);box-sizing:border-box;display:flex;align-items:center;justify-content:center;font-family:'IBM Plex Mono','Courier New',monospace;font-size:11px;color:#7ed6bc;text-align:center;padding:4px;">800 × 480 skin</div></div></div><div style="display:flex;flex-direction:column;gap:8px;"><div style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:12px;letter-spacing:0.14em;text-transform:uppercase;color:rgba(233,238,242,0.6);">1280 × 800, a 720 pack</div><div style="width:230px;height:144px;background:#000;border-radius:4px;box-shadow:0 0 0 1px rgba(233,238,242,0.22);display:flex;align-items:center;justify-content:center;"><div style="width:230px;height:130px;background:repeating-linear-gradient(135deg,rgba(126,214,188,0.2) 0 8px,rgba(126,214,188,0.08) 8px 16px);border:1px solid rgba(126,214,188,0.5);box-sizing:border-box;display:flex;align-items:center;justify-content:center;font-family:'IBM Plex Mono','Courier New',monospace;font-size:11px;color:#7ed6bc;text-align:center;padding:4px;">1280 × 720 · 40 px bands</div></div></div><div style="display:flex;flex-direction:column;gap:8px;"><div style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:12px;letter-spacing:0.14em;text-transform:uppercase;color:rgba(233,238,242,0.6);">1440 × 900, no set</div><div style="width:259px;height:162px;background:#000;border-radius:4px;box-shadow:0 0 0 1px rgba(233,238,242,0.22);display:flex;align-items:center;justify-content:center;"><div style="width:230px;height:144px;background:repeating-linear-gradient(135deg,rgba(126,214,188,0.2) 0 8px,rgba(126,214,188,0.08) 8px 16px);border:1px solid rgba(126,214,188,0.5);box-sizing:border-box;display:flex;align-items:center;justify-content:center;font-family:'IBM Plex Mono','Courier New',monospace;font-size:11px;color:#7ed6bc;text-align:center;padding:4px;">1280 × 800 · 80 / 50 px</div></div></div><div style="display:flex;flex-direction:column;gap:8px;"><div style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:12px;letter-spacing:0.14em;text-transform:uppercase;color:rgba(233,238,242,0.6);">1920 × 1080</div><div style="width:346px;height:194px;background:#000;border-radius:4px;box-shadow:0 0 0 1px rgba(233,238,242,0.22);display:flex;align-items:center;justify-content:center;"><div style="width:346px;height:194px;background:repeating-linear-gradient(135deg,rgba(126,214,188,0.2) 0 8px,rgba(126,214,188,0.08) 8px 16px);border:1px solid rgba(126,214,188,0.5);box-sizing:border-box;display:flex;align-items:center;justify-content:center;font-family:'IBM Plex Mono','Courier New',monospace;font-size:11px;color:#7ed6bc;text-align:center;padding:4px;">1920 × 1080 skin</div></div></div></div>
+  <div style="display:flex;flex-wrap:wrap;gap:24px;align-items:flex-start;"><div style="display:flex;flex-direction:column;gap:8px;"><div style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:12px;letter-spacing:0.14em;text-transform:uppercase;color:rgba(233,238,242,0.6);">1280 × 400</div><div style="width:230px;height:72px;background:#000;border-radius:4px;box-shadow:0 0 0 1px rgba(233,238,242,0.22);display:flex;align-items:center;justify-content:center;"><div style="width:230px;height:72px;background:repeating-linear-gradient(135deg,rgba(126,214,188,0.2) 0 8px,rgba(126,214,188,0.08) 8px 16px);border:1px solid rgba(126,214,188,0.5);box-sizing:border-box;display:flex;align-items:center;justify-content:center;font-family:'IBM Plex Mono','Courier New',monospace;font-size:11px;color:#7ed6bc;text-align:center;padding:4px;">1280 × 400 skin</div></div></div><div style="display:flex;flex-direction:column;gap:8px;"><div style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:12px;letter-spacing:0.14em;text-transform:uppercase;color:rgba(233,238,242,0.6);">1480 × 320</div><div style="width:266px;height:58px;background:#000;border-radius:4px;box-shadow:0 0 0 1px rgba(233,238,242,0.22);display:flex;align-items:center;justify-content:center;"><div style="width:266px;height:58px;background:repeating-linear-gradient(135deg,rgba(126,214,188,0.2) 0 8px,rgba(126,214,188,0.08) 8px 16px);border:1px solid rgba(126,214,188,0.5);box-sizing:border-box;display:flex;align-items:center;justify-content:center;font-family:'IBM Plex Mono','Courier New',monospace;font-size:11px;color:#7ed6bc;text-align:center;padding:4px;">1480 × 320 skin</div></div></div><div style="display:flex;flex-direction:column;gap:8px;"><div style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:12px;letter-spacing:0.14em;text-transform:uppercase;color:rgba(233,238,242,0.6);">1600 × 400, no set</div><div style="width:288px;height:72px;background:#000;border-radius:4px;box-shadow:0 0 0 1px rgba(233,238,242,0.22);display:flex;align-items:center;justify-content:center;"><div style="width:230px;height:72px;background:repeating-linear-gradient(135deg,rgba(126,214,188,0.2) 0 8px,rgba(126,214,188,0.08) 8px 16px);border:1px solid rgba(126,214,188,0.5);box-sizing:border-box;display:flex;align-items:center;justify-content:center;font-family:'IBM Plex Mono','Courier New',monospace;font-size:11px;color:#7ed6bc;text-align:center;padding:4px;">1280 × 400 · 160 px bands</div></div></div></div>
+</section>
+<section id="screen" data-screen-label="Screen step and row" style="padding:48px 56px;display:flex;flex-direction:column;gap:26px;border-bottom:1px solid rgba(233,238,242,0.1);">
+  <div style="display:flex;flex-direction:column;gap:10px;max-width:1000px;"><div style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:13px;letter-spacing:0.2em;text-transform:uppercase;color:rgba(233,238,242,0.6);">Phone and Settings</div><div style="font-size:34px;font-weight:800;letter-spacing:-0.02em;">Knowing which screen is attached</div><div style="font-size:17px;line-height:1.55;color:rgba(233,238,242,0.75);text-wrap:pretty;">Setup’s "Is a screen attached?" becomes a Screen step: the model the player recognised, with This is right / Choose another; what the screen reported and a list to choose from; or, with nothing on the screen yet, the list and a warning that the player restarts and tries it. Headless stays the last choice on each. Settings → Display gains Attached screen and Screen rotation, both restarting the player (confirmed).</div></div>
+  <div style="display:flex;flex-wrap:wrap;gap:24px;align-items:flex-start;"><div style="display:flex;flex-direction:column;gap:8px;"><div style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:12px;letter-spacing:0.14em;text-transform:uppercase;color:rgba(233,238,242,0.6);">Recognised</div><div style="width:288px;height:641px;overflow:hidden;border-radius:18px;box-shadow:0 0 0 1px rgba(233,238,242,0.18);position:relative;"><div style="width:412px;height:915px;transform:scale(0.7);transform-origin:0 0;position:absolute;left:0;top:0;"><dc-import name="Setup" screen="recognised" start-at="{{ 6 }}" mode="narrow" hint-size="412px,915px"></dc-import></div></div></div><div style="display:flex;flex-direction:column;gap:8px;"><div style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:12px;letter-spacing:0.14em;text-transform:uppercase;color:rgba(233,238,242,0.6);">Seen, not certain</div><div style="width:288px;height:707px;overflow:hidden;border-radius:18px;box-shadow:0 0 0 1px rgba(233,238,242,0.18);position:relative;"><div style="width:412px;height:1010px;transform:scale(0.7);transform-origin:0 0;position:absolute;left:0;top:0;"><dc-import name="Setup" screen="uncertain" start-at="{{ 6 }}" mode="narrow" hint-size="412px,1010px"></dc-import></div></div></div><div style="display:flex;flex-direction:column;gap:8px;"><div style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:12px;letter-spacing:0.14em;text-transform:uppercase;color:rgba(233,238,242,0.6);">Nothing on the screen yet</div><div style="width:288px;height:882px;overflow:hidden;border-radius:18px;box-shadow:0 0 0 1px rgba(233,238,242,0.18);position:relative;"><div style="width:412px;height:1260px;transform:scale(0.7);transform-origin:0 0;position:absolute;left:0;top:0;"><dc-import name="Setup" screen="none" start-at="{{ 6 }}" mode="narrow" pick="Waveshare 7.9″ HDMI LCD" hint-size="412px,1260px"></dc-import></div></div></div></div>
+  <div style="display:flex;flex-direction:column;gap:8px;"><div style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:12px;letter-spacing:0.14em;text-transform:uppercase;color:rgba(233,238,242,0.6);">Settings → Display, 1280 × 800</div><div style="width:640px;height:400px;overflow:hidden;border-radius:8px;box-shadow:0 0 0 1px rgba(233,238,242,0.14);position:relative;"><div style="width:1280px;height:800px;transform:scale(0.5);transform-origin:0 0;position:absolute;left:0;top:0;"><dc-import name="Settings Screen Row" mode="wide" hint-size="1280px,800px" style="position:absolute;inset:0;width:1280px;height:800px;"></dc-import></div></div></div>
+</section>
+<section id="drops" data-screen-label="Dropped" style="padding:48px 56px;display:flex;flex-direction:column;gap:26px;border-bottom:1px solid rgba(233,238,242,0.1);">
+  <div style="display:flex;flex-direction:column;gap:10px;max-width:1000px;"><div style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:13px;letter-spacing:0.2em;text-transform:uppercase;color:rgba(233,238,242,0.6);">What small and bar screens leave out</div><div style="font-size:34px;font-weight:800;letter-spacing:-0.02em;">Dropped, and where it is instead</div></div>
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:18px;max-width:1500px;"><div style="padding:22px;border-radius:16px;background:rgba(233,238,242,0.04);border:1px solid rgba(233,238,242,0.1);display:flex;flex-direction:column;gap:8px;min-width:0;"><div style="font-size:19px;font-weight:800;">Standard family</div><div style="font-size:15px;line-height:1.55;color:rgba(233,238,242,0.75);text-wrap:pretty;">Nothing. Rule 1b (one hero per screen absorbs the height, everything else keeps its 800 size) keeps every part at every height; 800 × 480 shows the same screens at 0.625.</div></div><div style="padding:22px;border-radius:16px;background:rgba(233,238,242,0.04);border:1px solid rgba(233,238,242,0.1);display:flex;flex-direction:column;gap:8px;min-width:0;"><div style="font-size:19px;font-weight:800;">Bar: Now Playing</div><div style="font-size:15px;line-height:1.55;color:rgba(233,238,242,0.75);text-wrap:pretty;"><ul style="margin:0;padding-left:20px;display:flex;flex-direction:column;gap:6px;"><li>The Track / Lyrics / Artist / Release tabs. Lyrics stay, as a switch beside the source mark.</li><li>Artist info and release info. Not on the bar; the phone does not carry them either, so they are on the standard panel only.</li><li>The home, visualiser and volume buttons move into the tray.</li></ul></div></div><div style="padding:22px;border-radius:16px;background:rgba(233,238,242,0.04);border:1px solid rgba(233,238,242,0.1);display:flex;flex-direction:column;gap:8px;min-width:0;"><div style="font-size:19px;font-weight:800;">Bar: Browse</div><div style="font-size:15px;line-height:1.55;color:rgba(233,238,242,0.75);text-wrap:pretty;"><ul style="margin:0;padding-left:20px;display:flex;flex-direction:column;gap:6px;"><li>The artist page’s biography, top tracks and similar artists.</li><li>The mini player’s title and artist (the rail shows the cover and the mark).</li><li>Creating a playlist stays off the device, as everywhere.</li></ul></div></div><div style="padding:22px;border-radius:16px;background:rgba(233,238,242,0.04);border:1px solid rgba(233,238,242,0.1);display:flex;flex-direction:column;gap:8px;min-width:0;"><div style="font-size:19px;font-weight:800;">Bar: moments</div><div style="font-size:15px;line-height:1.55;color:rgba(233,238,242,0.75);text-wrap:pretty;"><ul style="margin:0;padding-left:20px;display:flex;flex-direction:column;gap:6px;"><li>Setup’s second QR code (to open the page): the address is text instead.</li><li>Idle forecast: one day at 1280 × 400.</li><li>Nothing from transition or pairing.</li></ul></div></div></div>
+</section>
+<section id="settled" data-screen-label="Settled" style="padding:48px 56px;display:flex;flex-direction:column;gap:26px;border-bottom:1px solid rgba(233,238,242,0.1);">
+  <div style="display:flex;flex-direction:column;gap:10px;max-width:1000px;"><div style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:13px;letter-spacing:0.2em;text-transform:uppercase;color:rgba(233,238,242,0.6);">Settled · George, 30 September 2026</div><div style="font-size:34px;font-weight:800;letter-spacing:-0.02em;">Decisions</div></div>
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:18px;max-width:1500px;"><div style="padding:22px;border-radius:16px;background:rgba(233,238,242,0.04);border:1px solid rgba(233,238,242,0.1);display:flex;flex-direction:column;gap:8px;min-width:0;"><div style="font-size:19px;font-weight:800;">Settings on a bar</div><div style="font-size:15px;line-height:1.55;color:rgba(233,238,242,0.75);text-wrap:pretty;">Kept: Settings is a tile on the bar, and opens the panel’s Settings in the content area.</div></div><div style="padding:22px;border-radius:16px;background:rgba(233,238,242,0.04);border:1px solid rgba(233,238,242,0.1);display:flex;flex-direction:column;gap:8px;min-width:0;"><div style="font-size:19px;font-weight:800;">Settings inventory</div><div style="font-size:15px;line-height:1.55;color:rgba(233,238,242,0.75);text-wrap:pretty;">Confirmed: [N] Attached screen and [N] Screen rotation, in Display → Panel, both restarting the player.</div></div><div style="padding:22px;border-radius:16px;background:rgba(233,238,242,0.04);border:1px solid rgba(233,238,242,0.1);display:flex;flex-direction:column;gap:8px;min-width:0;"><div style="font-size:19px;font-weight:800;">Copy</div><div style="font-size:15px;line-height:1.55;color:rgba(233,238,242,0.75);text-wrap:pretty;">Accepted as drawn; to be revised later if needed.</div></div><div style="padding:22px;border-radius:16px;background:rgba(233,238,242,0.04);border:1px solid rgba(233,238,242,0.1);display:flex;flex-direction:column;gap:8px;min-width:0;"><div style="font-size:19px;font-weight:800;">Not measured</div><div style="font-size:15px;line-height:1.55;color:rgba(233,238,242,0.75);text-wrap:pretty;">Physical widths are published panel sizes, not measurements; EDID sizes are not trusted (Finding 100). The bars and the 7″ are untested on hardware.</div></div></div>
+</section>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{}">
+const STD = [
+  ['now', 'Now Playing', 'The artwork: height \u2212 300 (411 / 500 / 553).'],
+  ['home', 'Library home', 'Cards and tiles scale together, 0.76\u00d7 to 1.14\u00d7.'],
+  ['browse', 'Browse', 'The album list shows more or fewer rows.'],
+  ['artists', 'Artists', 'The grid shows more or fewer rows.'],
+  ['artist', 'Artist page', 'The photo, 233 / 262 / 279.'],
+  ['album', 'Album', 'The cover, 235 / 264 / 281.'],
+  ['playlists', 'Playlists', 'The list shows more or fewer rows.'],
+  ['radio', 'Radio', 'The list shows more or fewer rows.'],
+  ['drawer', 'Volume drawer', 'Nothing: the drawer keeps its size.'],
+  ['queue', 'Queue', 'The queue list shows more or fewer rows.'],
+  ['settings', 'Settings', 'The settings list shows more or fewer rows.'],
+  ['idle', 'Idle', 'Nothing: the clock drifts within the height.'],
+  ['handoff', 'Transition', 'Nothing: centred at its own size.'],
+  ['pairing', 'Pairing', 'Nothing: centred at its own size.']
+];
+const LIB = [
+  ['home', 'Library home', 'Six tiles and the rail.'],
+  ['browse', 'Browse', 'Artists, Albums and Tracks as panes side by side; picking in one fills the next.'],
+  ['newmusic', 'New Music', 'The home strip\u2019s albums in one sideways row; Most played or Recently played shows artists.'],
+  ['artists', 'Artists', 'Artist photos and album counts in one sideways row.'],
+  ['artist2', 'Artist page', 'The photo full height with the name over it; Play, Shuffle and the albums beside it.'],
+  ['album2', 'Album', 'The cover full height with the title over it; Play album and Add to queue above the tracks.'],
+  ['playlists', 'Playlists', 'Playlists as cards in one row.'],
+  ['radio', 'Radio', 'Stations as a two-column grid.'],
+  ['settings', 'Settings', 'The panel\u2019s Settings, unchanged, in the content area.']
+];
+const tab = (on, accent, label, onTap) => ({ label, onTap, bg: on ? accent : 'rgba(233,238,242,0.06)', ink: on ? '#0d151c' : '#e9eef2', line: on ? accent : 'rgba(233,238,242,0.14)' });
+class Component extends DCLogic {
+  state = { size: 400, std: 'now', lib: 'home' };
+  renderVals() {
+    const st = this.state;
+    const W = st.size === 400 ? 1280 : 1850, k = st.size === 400 ? 0.5 : 0.4;
+    const v = st.std, panel = v === 'idle' || v === 'handoff' || v === 'pairing';
+    const lib = LIB.find(x => x[0] === st.lib) || LIB[0];
+    return {
+      barW: W, barWPx: W + 'px', barScale: 'scale(' + k + ')',
+      barBoxW: Math.round(W * k) + 'px', barBoxH: Math.round(400 * k) + 'px',
+      barLabel: st.size === 400 ? '1280 \u00d7 400' : '1480 \u00d7 320',
+      sizeTabs: [[400, '1280 \u00d7 400 (7.9\u2033)'], [320, '1480 \u00d7 320 (11.9\u2033)']].map(x => tab(st.size === x[0], '#9fb4e8', x[1], () => this.setState({ size: x[0] }))),
+      stdTabs: STD.map(x => tab(v === x[0], '#7ed6bc', x[1], () => this.setState({ std: x[0] }))),
+      stdNote: (STD.find(x => x[0] === v) || STD[0])[2],
+      stdView: panel ? 'now' : v, stdIdle: v === 'idle', stdHandoff: v === 'handoff', stdPairing: v === 'pairing',
+      libTabs: LIB.map(x => tab(st.lib === x[0], '#f2a48f', x[1], () => this.setState({ lib: x[0] }))),
+      libNote: lib[2], libLabel: lib[1], libScreen: st.lib, libIsHome: st.lib === 'home', libIsLib: st.lib !== 'home'
+    };
+  }
+}
+</script>
+</body>
+</html>

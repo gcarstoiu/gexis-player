@@ -1,0 +1,25 @@
+{
+  "id": "lyrion-server",
+  "name": "Lyrion Server",
+  "kind": "service",
+  "area": "sources",
+  "unit": "gexis-lyrion.service",
+  "port": 9000,
+  "settings": [
+    {
+      "key": "shares",
+      "type": "list",
+      "label": "Network shares",
+      "marks": "N",
+      "default": null,
+      "kind": "share",
+      "manual": "Add by address",
+      "hint": "Not in the list? Some servers do not announce themselves - add the share by its address.",
+      "note": "Music folders on a NAS or a computer, mounted read-only and offered to the server.",
+      "empty": "No shares found or added. The Music folder and any USB disk are offered already; a share that does not announce itself can be added by its address.",
+      "discover": true
+    }
+  ],
+  "first": true,
+  "removes": "Its library, its settings, the add-ons it installed and the network shares with their logins are deleted too. The Music folder and its playlists stay. Switching it on again downloads it and starts a new library."
+}

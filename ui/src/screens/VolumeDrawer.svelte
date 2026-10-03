@@ -5,120 +5,29 @@
   slider position; mute restores the level from before it.
 -->
 <script>
-  import { setVolume, setMute, fixedOutput } from '../lib/state.js';
+  import { fixedOutput } from '../lib/state.js';
+  import { VolumeControl } from '../lib/volumeControl.svelte.js';
   import LockIcon from '../lib/LockIcon.svelte';
   import VolumeIcon from '../lib/VolumeIcon.svelte';
 
   let { open, volume, active, onclose, onexternal, onactivity, onsettled } = $props();
 
-  let dragging = $state(false);
-  let settling = $state(false);
-  let local = $state(0);
-  let toast = $state(null);
-  let toastTimer;
-
-  const muted = $derived(!!volume?.muted);
-  const shown = $derived(dragging || settling ? local : (volume?.percent ?? 0));
-  const pct = $derived(muted ? 0 : shown);
-
-  // A level change the panel did not cause - a phone, most often - opens the
-  // drawer. Ours are recognised by a short window after each command; a
-  // takeover restoring a renderer's remembered level is not a user action.
-  const OWN_WINDOW_MS = 1500;
-  let ownUntil = 0;
-  let activeChangedAt = 0;
-  let last = null;
-  let lastActive;
-  $effect(() => {
-    if (active !== lastActive) {
-      if (lastActive !== undefined) activeChangedAt = performance.now();
-      lastActive = active;
-    }
+  //: The level, dragging, mute and the changes from elsewhere: one copy,
+  //: shared with the bar's tray (lib/volumeControl.svelte.js).
+  const vol = new VolumeControl({
+    volume: () => volume,
+    active: () => active,
+    onexternal: () => onexternal,
+    onsettled: () => onsettled,
   });
-  $effect(() => {
-    const current = volume ? `${volume.percent}/${volume.muted}` : null;
-    const previous = last;
-    last = current;
-    if (previous === null || current === previous) return;
-    const now = performance.now();
-    if (now < ownUntil || dragging || now - activeChangedAt < 3000) return;
-    onexternal?.();
-  });
-  const markOwn = () => (ownUntil = performance.now() + OWN_WINDOW_MS);
-
-  function flash(text) {
-    toast = text;
-    clearTimeout(toastTimer);
-    toastTimer = setTimeout(() => (toast = null), 2200);
-  }
-
-  // One request at a time; while one is in flight only the latest value waits.
-  let inFlight = false;
-  let queued = null;
-  async function send(percent) {
-    if (inFlight) {
-      queued = percent;
-      return;
-    }
-    inFlight = true;
-    markOwn();
-    try {
-      await setVolume(percent);
-      markOwn();
-    } catch (err) {
-      flash(`Volume not changed: ${err.message}`);
-    } finally {
-      inFlight = false;
-    }
-    if (queued !== null) {
-      const next = queued;
-      queued = null;
-      await send(next);
-    } else if (!dragging) {
-      settling = false;
-    }
-  }
-
-  function fromPointer(event) {
-    const r = event.currentTarget.getBoundingClientRect();
-    local = Math.round(Math.min(1, Math.max(0, (event.clientX - r.left) / r.width)) * 100);
-    send(local);
-  }
-
-  function down(event) {
-    dragging = true;
-    settling = true;
-    event.currentTarget.setPointerCapture?.(event.pointerId);
-    fromPointer(event);
-  }
-
-  function move(event) {
-    if (dragging) fromPointer(event);
-  }
-
-  function up() {
-    dragging = false;
-    if (!inFlight && queued === null) settling = false;
-    // **The drawer stops being held open when the finger leaves it**
-    // (George, 2026-09-23: "the volume modal is not going away after the
-    // 3s"). `onactivity` pins it on pointerdown so a drag is never cut off
-    // mid-gesture; without a matching release the pin was permanent, so a
-    // drag on the panel's own slider left the drawer up until somebody
-    // tapped it away.
-    onsettled?.();
-  }
-
-  async function toggleMute() {
-    const next = !muted;
-    markOwn();
-    try {
-      await setMute(next);
-      markOwn();
-      flash(next ? 'Muted' : 'Unmuted');
-    } catch (err) {
-      flash(`Mute not changed: ${err.message}`);
-    }
-  }
+  const muted = $derived(vol.muted);
+  const shown = $derived(vol.shown);
+  const pct = $derived(vol.pct);
+  const toast = $derived(vol.toast);
+  const down = (event) => vol.down(event, event.currentTarget);
+  const move = (event) => vol.move(event, event.currentTarget);
+  const up = () => vol.up();
+  const toggleMute = () => vol.toggleMute();
 </script>
 
 <div class="scrim" class:is-open={open} role="presentation" onclick={onclose}></div>

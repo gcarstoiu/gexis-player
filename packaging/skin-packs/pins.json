@@ -1,0 +1,36 @@
+{
+ "catalog": {
+  "name": "foonerd/peppy_templates",
+  "url": "https://github.com/foonerd/peppy_templates",
+  "commit": "f80c166a9682467f0631c374b6ed4eb088fc6e3c",
+  "index_sha256": "10233dd19dd7d458db1af41ac37a3190ec29d8a402d707f3335085c0445d93a6",
+  "licence": "MIT",
+  "licence_sha256": "32f33fd11a3263acf22e759fc4482c21cc9296f9d2e3a402639a0fb3a7b3a654",
+  "credit": "Copyright (c) 2025 Just a nerd; each pack's authors per the repository's history"
+ },
+ "screensaver": {
+  "name": "foonerd/peppy_screensaver",
+  "url": "https://github.com/foonerd/peppy_screensaver",
+  "commit": "efbd0adf7d527dfed1aeb04fe1541c85b6d3175e",
+  "sha256": "9513bc5e43d38cc5a04b06c166de161604847da449e8db1859b6b299cd6c30b3",
+  "licence": "MIT",
+  "licence_sha256": "32f33fd11a3263acf22e759fc4482c21cc9296f9d2e3a402639a0fb3a7b3a654",
+  "credit": "Copyright (c) 2025 Just a nerd; the stock skins of the PeppyMeter screensaver for Volumio (1280x800 only, ADR-0111 decision 14)"
+ },
+ "gelo5": {
+  "name": "Gelo5 (Grzegorz Pietrzak), from project-owner/PeppyMeter.doc",
+  "url": "https://github.com/project-owner/PeppyMeter.doc/releases/tag/2024.03.02",
+  "release": "https://github.com/project-owner/PeppyMeter.doc/releases/download/2024.03.02",
+  "licence": "GPL-3.0",
+  "licence_url": "https://raw.githubusercontent.com/project-owner/PeppyMeter.doc/5190cbccd740a506d439c106d4ee3ee44a091cf5/LICENSE",
+  "licence_sha256": "589ed823e9a84c56feb95ac58e7cf384626b9cbf4fda2a907bc36e103de1bad2",
+  "credit": "custom meters created by Grzegorz Pietrzak (user Gelo5 on Volumio forum), as the repository's wiki credits them",
+  "sets": {
+   "1920x1080": {"file": "Gelo5_1920x1080.120skins.zip", "sha256": "3cdbb37e8e0e48de3a53811b84eb3e203b98d49372ecddaefc042820905086a4"},
+   "1280x400": {"file": "Gelo5_1280x400.120skins.zip", "sha256": "c4f57ae7cae1e9a24b546d76d34e0596e1b67d7898f521d2821b08938a4eb5ef"},
+   "1480x320": {"file": "Gelo5_1480x320.116skins.zip", "sha256": "78b83e04a36ca3b26bdac13fa2b7e51bb9068ec5ff04716d5569a3cd32782ed5"},
+   "800x480": {"file": "Gelo5_800x480.60skins.zip", "sha256": "4c1d3cd417d95efa09a795b07da19c6df1c79bec458b98d50dbc0ca1adcf2a10"},
+   "1280x800": {"file": "Gelo5_1280x800.84skins.zip", "sha256": "3a0a99b1584915bc375bc6a2d137a22cbb29a45230ffb6e04a8ccb0bab466997"}
+  }
+ }
+}

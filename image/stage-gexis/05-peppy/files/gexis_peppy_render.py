@@ -272,6 +272,9 @@ class MetadataLayer:
         self._skin: dict[str, str] = {}
         self._skin_name: str | None = None
         self._slots = load_badge_slots()
+        self._rate_shown = False
+        #: Each skin pack's own slots, by pack root (ADR-0111): read once.
+        self._pack_slots: dict[Path, dict[str, tuple[int, int, int, int]] | None] = {}
         self._background: pygame.Surface | None = None
         self._painted: list[pygame.Rect] = []
         # What `_painted` holds, as drawn: (stratum, picture, where), so an
@@ -350,6 +353,24 @@ class MetadataLayer:
         if image.get_size() != self._screen.get_size():
             image = pygame.transform.smoothscale(image, self._screen.get_size())
         self._background = image
+
+    def _slot_for(self, name: str | None) -> tuple[int, int, int, int] | None:
+        """**Where this skin's badge is centred.** A skin pack (ADR-0111)
+        measures every skin's slot at build time, in that pack's own pixels,
+        into `badge-slots.json` at its root, keyed `<folder>/<skin>`: the
+        skin's directory is `<root>/<folder>/<templates…>/<WxH>`. A skin the
+        pack has no slot for keeps its declared box - never the shipped
+        table's, which is 1280x800's and keyed by name alone. Only a skin
+        outside a pack (an old gexis-skins install) reads that table."""
+        directory = Path(self._corpus)
+        root = directory.parent.parent.parent
+        if root not in self._pack_slots:
+            path = root / "badge-slots.json"
+            self._pack_slots[root] = load_badge_slots(path) if path.is_file() else None
+        pack = self._pack_slots[root]
+        if pack is not None:
+            return pack.get(f"{directory.parent.parent.name}/{name}")
+        return self._slots.get(name or "")
 
     def _meter_background(self, skin: dict[str, str]) -> pygame.Surface | None:
         """**A skin with no `screen.bgr` is drawn by its meter's background
@@ -572,6 +593,9 @@ class MetadataLayer:
         replaced = self._ticker is not None and (skin.get("playinfo.ticker.replace") or "").strip().lower() == "true"
         shown = {} if replaced else metadata
         upcoming = {} if replaced else (metadata.get("next") or {})
+        sample = self._sample_field(shown, sizes, colour, maxwidth)
+        #: The mark keeps the skin's own box beside a drawn rate (_badge_rect).
+        self._rate_shown = sample is not None
         entries = [
             self._ticker_line(metadata, field),
             field("playinfo.title.pos", shown.get("title"), "playinfo.title.color", "playinfo.title.maxwidth"),
@@ -604,12 +628,46 @@ class MetadataLayer:
                 override_colour=parse_colour(skin.get(f"time.{which}.color"), (255, 255, 255)),
                 stratum="meta", size_key=f"time.{which}.fontsize",
             ) for which, text in (("elapsed", elapsed_time(metadata)), ("total", total_time(metadata)))),
-            # The source is a badge, not text: see _badge_rect.
-            # playinfo.samplerate.pos is never filled: no sample rate and no
-            # codec renders anywhere (ADR-0036). The skins keep the position;
-            # we keep it empty, which is this criterion's own rule.
+            # The source is a badge, not text: see _badge_rect. Beside it,
+            # LMS's sample rate (ADR-0036 as amended 2026-10-02), in the
+            # skin's own colour for it, else its badge colour, as upstream.
+            sample,
         ]
         return tuple(entry for entry in entries if entry is not None)
+
+    def _sample_field(self, metadata: dict, sizes: dict, colour, maxwidth: int):
+        """**The sample rate, in the place the skin gives it** (upstream's
+        volumio_basic.py places it the same way): at `playinfo.samplerate.pos`,
+        light unless the position names a weight, in the skin's sample-rate
+        colour or else its badge colour, inside the skin's own width for it
+        (or the global one). Upstream draws nothing for a skin with neither,
+        and nor does this.
+
+        **It fits rather than runs over** (George, 2026-10-02: "the sampling
+        I've seen going beyond its allocated space"): without the bit depth
+        first, then a smaller face, down to `SAMPLE_MIN_SHARE` of the size."""
+        skin = self._skin
+        value = skin.get("playinfo.samplerate.pos") or ""
+        point = parse_point(value)
+        text = sample_text(metadata)
+        own = int(skin.get("playinfo.samplerate.maxwidth", 0) or 0) or maxwidth
+        if point is None or not text or not own:
+            return None
+        if value.count(",") < 2:
+            point = (point[0], point[1], "light")
+        size = sizes.get(point[2], sizes["regular"])
+        shorter = sample_text({**metadata, "bit_depth": None})
+        for candidate in (text, shorter):
+            if self.font(point[2], size).size(candidate)[0] <= own:
+                text = candidate
+                break
+        else:
+            text = shorter
+            floor = max(6, int(size * SAMPLE_MIN_SHARE))
+            while size > floor and self.font(point[2], size).size(text)[0] > own:
+                size -= 1
+        tint = parse_colour(skin.get("playinfo.samplerate.color"), parse_colour(skin.get("playinfo.type.color"), colour))
+        return (text, point, tint, size, own, "meta")
 
     def _ticker_line(self, metadata: dict, field):
         """**A ticker skin's title** (ADR-0096 as amended, ADR-0097): 27 of
@@ -660,7 +718,10 @@ class MetadataLayer:
         if position is None or source is None:
             return None
         box = parse_size(self._skin.get("playinfo.type.dimension")) or (50, 50)
-        slot = self._slots.get(self._skin_name or "")
+        # Where the rate is drawn beside it, the mark keeps the skin's own
+        # box, as the skin was designed; otherwise it is centred in the
+        # window measured for it (ADR-0036 as amended 2026-10-02).
+        slot = None if self._rate_shown else self._slot_for(self._skin_name)
         if slot is not None:
             # Never larger than the slot: 59G5_Yamaha M85 declares a 95 px box
             # in a 94 px window.
@@ -737,10 +798,32 @@ class MetadataLayer:
             self._artwork_key = None
         if self._artwork_source is None or self._art_spins:
             return None
-        if self._artwork_key != (url, dimension):
-            self._artwork = pygame.transform.smoothscale(self._artwork_source, dimension)
-            self._artwork_key = (url, dimension)
+        mask = (self._skin.get("albumart.mask") or "").strip() or None
+        if self._artwork_key != (url, dimension, mask, self._corpus):
+            art = pygame.transform.smoothscale(self._artwork_source, dimension)
+            cut = self._art_mask(mask, dimension) if mask else None
+            if cut is not None:
+                art = art.convert_alpha()
+                art.blit(cut, (0, 0), special_flags=pygame.BLEND_RGBA_MIN)
+            self._artwork = art
+            self._artwork_key = (url, dimension, mask, self._corpus)
         return self._put("art", self._artwork, position)
+
+    def _art_mask(self, name: str, size: tuple[int, int]) -> pygame.Surface | None:
+        """**The skin's own shape for the album art** - `albumart.mask`, a
+        picture in its folder where **black shows the art and white hides
+        it**, as upstream applies it (peppy_screensaver's volumio_basic.py:
+        `putalpha(ImageOps.invert(mask))`). George, 2026-10-02: *"Follow the
+        skin design"*; until then every round well got a square. Thresholded
+        rather than blended, so no numpy is needed on the device; a mask that
+        cannot be read leaves the art square, as before."""
+        try:
+            picture = pygame.transform.smoothscale(pygame.image.load(str(self._corpus / name)).convert(), size)
+        except Exception as exc:  # pygame.error or OSError; the art still shows
+            logger.warning("render: no art mask %s: %s", name, exc)
+            return None
+        shown = pygame.mask.from_threshold(picture, (0, 0, 0), (128, 128, 128, 255))
+        return shown.to_surface(setcolor=(255, 255, 255, 255), unsetcolor=(0, 0, 0, 0))
 
     @staticmethod
     def _fetch(url: str) -> pygame.Surface | None:
@@ -795,6 +878,23 @@ def elapsed_time(metadata: dict) -> str | None:
 def total_time(metadata: dict) -> str | None:
     duration = metadata.get("duration")
     return clock(int(duration)) if duration else None
+
+
+#: The smallest the sample rate is drawn, as a share of the skin's size for
+#: it, before it is cut short like any other field.
+SAMPLE_MIN_SHARE = 0.6
+
+
+def sample_text(metadata: dict) -> str | None:
+    """**LMS's sample rate, as upstream writes it** ("44.1 kHz 16 bit";
+    ADR-0036 as amended 2026-10-02). The core writes a rate only for LMS;
+    bit depth only where the file says (not MP3)."""
+    rate = metadata.get("sample_rate")
+    if not rate:
+        return None
+    text = f"{rate / 1000:g} kHz"
+    bits = metadata.get("bit_depth")
+    return f"{text} {bits} bit" if bits else text
 
 
 def remaining_time(metadata: dict) -> str | None:

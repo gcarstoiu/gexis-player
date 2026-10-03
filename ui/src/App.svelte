@@ -3,7 +3,10 @@
   import { onMount, untrack } from 'svelte';
   import { connect, active, metadata, volume, handoff, capabilities, available, availability, shuffle, repeat, queue, pairing, fixedOutput, panel, setup } from './lib/state.js';
   import NowPlaying from './screens/NowPlaying.svelte';
+  import BarNowPlaying from './screens/bar/BarNowPlaying.svelte';
+  import BarTray from './screens/bar/BarTray.svelte';
   import Library from './screens/Library.svelte';
+  import BarLibrary from './screens/bar/BarLibrary.svelte';
   import WaitingHome from './screens/WaitingHome.svelte';
   import PanelBackground from './screens/PanelBackground.svelte';
   import IdleScreen from './screens/IdleScreen.svelte';
@@ -14,8 +17,10 @@
   import MiniPlayer from './screens/MiniPlayer.svelte';
   import SetupScreen from './screens/SetupScreen.svelte';
   import SetupPage from './screens/SetupPage.svelte';
+  import { screen } from './lib/family.svelte.js';
   import UpdateScreen from './screens/UpdateScreen.svelte';
-  import { update, connection, hidePeppy } from './lib/state.js';
+  import { update, connection, hidePeppy, screenConfirm, answerScreen } from './lib/state.js';
+  import KeepScreen from './screens/KeepScreen.svelte';
   import { loadSettings, settingValues } from './lib/settings.js';
   import { loadLibraryRoot } from './lib/library.js';
   import { reportTouch, showPeppy, reportPainted, reportShown } from './lib/state.js';
@@ -308,6 +313,19 @@
   // ADR-0032: the panel renders everything; a remote browser only settings.
   let surface = $state(null);
 
+  //: **ADR-0109 decision 5: Keep this screen?** The core asks while a newly
+  //: chosen screen waits; its countdown runs from the panel's first frame
+  //: (`deadline`, this device's clock). Only the panel answers (decision 2).
+  let keepNow = $state(Date.now());
+  $effect(() => {
+    if (!$screenConfirm) return;
+    const id = setInterval(() => (keepNow = Date.now()), 250);
+    return () => clearInterval(id);
+  });
+  const keepLeft = $derived(
+    $screenConfirm?.deadline ? ($screenConfirm.deadline * 1000 - keepNow) / 1000 : ($screenConfirm?.total ?? 30)
+  );
+
   //: **ADR-0110 §6: the panel is locked while it updates.** Up from the
   //: moment an install runs; kept up while the core restarts and the socket
   //: reconnects (nothing else shows in between); then the outcome for a few
@@ -377,7 +395,7 @@
   <MiniPlayer />
 {:else if surface === 'panel'}
 
-<div class="panel">
+<div class="panel" class:panel--bar={screen.family === 'bar'} data-family={screen.family}>
   <!-- One backdrop for the whole panel, so a screen change does not build
        two large blurred layers again (George, 2026-09-17). Exactly one
        screen is mounted over it at a time: the screens are transparent now,
@@ -400,6 +418,21 @@
     </div>
   {:else if libraryOpen}
     <div class="screen-layer">
+      {#if screen.family === 'bar'}
+      <!-- ADR-0109, Bar family: the library as strips and a rail, with
+           Library's props. -->
+      <BarLibrary
+        active={$active}
+        metadata={$metadata}
+        volume={$volume}
+        controls={$active ? ($capabilities[$active]?.controls ?? []) : []}
+        availability={$availability}
+        openArtistNamed={libraryArtist}
+        onclose={() => { libraryRequested = false; libraryArtist = null; }}
+        onsettings={openSettings}
+        onvolume={openVolume}
+      />
+      {:else}
       <Library
         active={$active}
         metadata={$metadata}
@@ -411,16 +444,25 @@
         onsettings={openSettings}
         onvolume={openVolume}
       />
+      {/if}
     </div>
   {:else if $active}
     <div class="screen-layer">
       <!-- ADR-0079: with LMS off the Home button is a Settings button and
            `onartist` is not passed at all, so the artist line is a name rather
            than a link that leads nowhere. -->
+      {#if screen.family === 'bar'}
+        <!-- ADR-0109, Bar family: the strip, with the same props. -->
+        <BarNowPlaying active={$active} metadata={$metadata} volume={$volume} controls={$capabilities[$active]?.controls ?? []} available={$available} shuffle={$shuffle} repeat={$repeat} queue={$queue} onvolume={openVolume} onvisualisation={showVisualisation}
+          rootless={lmsOff}
+          onhome={lmsOff ? openSettings : () => (libraryRequested = true)}
+          onartist={lmsOff ? undefined : (name) => { libraryArtist = name; libraryRequested = true; }} />
+      {:else}
       <NowPlaying active={$active} metadata={$metadata} volume={$volume} controls={$capabilities[$active]?.controls ?? []} available={$available} shuffle={$shuffle} repeat={$repeat} queue={$queue} onvolume={openVolume} onvisualisation={showVisualisation}
         rootless={lmsOff}
         onhome={lmsOff ? openSettings : () => (libraryRequested = true)}
         onartist={lmsOff ? undefined : (name) => { libraryArtist = name; libraryRequested = true; }} />
+      {/if}
     </div>
   {/if}
 
@@ -428,7 +470,24 @@
        The drawer is where the sentence lives - "the answer is where the
        question is asked" - and `{#if $volume}` alone left the padlock
        opening nothing at all. -->
-  {#if $volume || $fixedOutput}
+  {#if screen.family === 'bar'}
+    <!-- ADR-0109, Bar family: the pull-down tray stands where the drawer
+         stands, over every screen. Always mounted: it carries Home and the
+         visualiser as well as the level, so it is needed with no level to
+         show. -->
+    <BarTray
+      open={volumeOpen}
+      volume={$volume}
+      active={$active}
+      onclose={closeVolume}
+      onexternal={openFromExternal}
+      onactivity={keepVolumeOpen}
+      onsettled={armAutoHide}
+      rootless={lmsOff}
+      onhome={lmsOff ? openSettings : () => (libraryRequested = true)}
+      onvisualisation={showVisualisation}
+    />
+  {:else if $volume || $fixedOutput}
     <VolumeDrawer
       open={volumeOpen}
       volume={$volume}
@@ -462,6 +521,21 @@
 
   {#if $pairing}
     <PairingFrame request={$pairing} />
+  {/if}
+
+  <!-- ADR-0109 decision 5: above everything but the update lock - the
+       question is whether this screen works at all. -->
+  {#if $screenConfirm && !updateLock}
+    <KeepScreen
+      model={$screenConfirm.model}
+      previous={$screenConfirm.rotation_only ? $screenConfirm.previous_rotation : ($screenConfirm.previous ?? "the screen's own settings")}
+      untested={$screenConfirm.untested}
+      rotationOnly={$screenConfirm.rotation_only}
+      secondsLeft={keepLeft}
+      total={$screenConfirm.total ?? 30}
+      onkeep={() => answerScreen('keep')}
+      onrevert={() => answerScreen('revert')}
+    />
   {/if}
 
   <!-- ADR-0110 §6: above even setup and pairing - nothing on this panel is
@@ -501,10 +575,20 @@
     padding-bottom: calc(112px + env(safe-area-inset-bottom, 0px));
   }
 
+  /* ADR-0109, Standard family: Chromium's scale factor makes every screen
+     1280 logical px wide; the height is whatever that leaves, and the tokens
+     that follow it are recomputed here, where it is known. */
+  /* ADR-0109, Bar family: 400 logical px tall and as wide as the screen
+     makes it (1280 on 1280x400, 1850 on 1480x320). */
+  .panel--bar {
+    width: 100vw !important;
+  }
   .panel {
+    --panel-h: 100vh;
+    --art: calc(var(--panel-h) - 300px);
     position: relative;
     width: 1280px;
-    height: 800px;
+    height: var(--panel-h);
     overflow: hidden;
   }
 

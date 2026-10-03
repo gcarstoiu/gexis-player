@@ -1,0 +1,48 @@
+[Unit]
+Description=Lyrion Music Server (the Lyrion server plugin, ADR-0115)
+Documentation=https://lyrion.org
+After=network-online.target
+Wants=network-online.target
+# **ADR-0115 decision 11: Lyrion is fetched from the Lyrion community here, not
+# shipped.** The first start downloads it, checks it and unpacks it into
+# /opt/lyrion (gexis-fetch-component, ADR-0100); a later start compares.
+Requires=gexis-fetch@lyrion.service
+After=gexis-fetch@lyrion.service
+StartLimitIntervalSec=120
+StartLimitBurst=3
+
+[Service]
+Type=simple
+User=squeezeboxserver
+Group=nogroup
+# Lyrion warns under the C locale that non-Latin file names may fail
+# (seen 2026-10-02 in the arm64 builder): a music library has those.
+Environment=LANG=C.UTF-8
+# Its folders and first preferences, made here as root ("+") rather than only
+# by the package: Remove deletes them (ADR-0115 decision 14), and the next
+# start must find a new server's settings - Material, no setup wizard, the
+# Music folder - not an empty folder.
+ExecStartPre=+/usr/bin/install -d -o squeezeboxserver -g nogroup /var/lib/squeezeboxserver/prefs /var/lib/squeezeboxserver/cache /var/log/squeezeboxserver
+ExecStartPre=+/bin/sh -c '[ -e /var/lib/squeezeboxserver/prefs/server.prefs ] || install -m 644 -o squeezeboxserver -g nogroup /usr/share/gexis/defaults/lyrion-server.prefs /var/lib/squeezeboxserver/prefs/server.prefs'
+# Lyrion's own places, as its Debian build has them: so its prefs, database
+# and logs stay where Lyrion's documentation says they are.
+ExecStart=/usr/bin/perl /opt/lyrion/slimserver.pl --prefsdir /var/lib/squeezeboxserver/prefs \
+	--cachedir /var/lib/squeezeboxserver/cache --logdir /var/log/squeezeboxserver --charset utf8
+# Upstream's own unit: SIGPIPE is Lyrion's, and HUP reinitialises it.
+IgnoreSIGPIPE=no
+SendSIGHUP=no
+TimeoutStopSec=30
+Restart=on-failure
+RestartSec=10
+# **Music comes first** (George, 2026-10-02: "music takes priority"): the
+# server and its scanner get the processor and the card only when playback
+# does not want them. Phase 13e criterion 2 measures that this is enough.
+Nice=19
+IOSchedulingClass=idle
+CPUWeight=10
+# More than 13a's 1 GB (George: "Lyrion might need more than 1gb of ram"),
+# until a scan of a real library is measured.
+MemoryMax=2G
+
+[Install]
+WantedBy=multi-user.target

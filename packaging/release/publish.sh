@@ -125,11 +125,20 @@ fi
 tag="${1:?usage: publish.sh <tag> [--channel testing]}"
 DEST=packaging/release/out/$tag
 [ -f "$DEST/parts" ] || { echo "ERROR: $DEST has no parts file; build it with packaging/release/build.sh" >&2; exit 1; }
-# **Its notes** (2026-10-01, George): a few plain sentences - what is new,
-# what is fixed, whether it restarts - drafted from the commits and approved
-# by George before this runs. The device shows them under Settings' Release
-# row; the release page carries the same text.
-[ -s "$DEST/notes.txt" ] || { echo "ERROR: $DEST/notes.txt is missing: write the release's notes, approved, first" >&2; exit 1; }
+version=$(gpg --batch --decrypt "$DEST/parts" 2>/dev/null | sed -n 's/^Release: //p')
+# **A release has a number** (ADR-0110 §1): built from a commit tagged
+# v<x.y.z>, so gexis-player is exactly x.y.z. A build between tags is not
+# published.
+[[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "ERROR: $version is not a release number: tag the commit v<x.y.z> (approved with the notes) and build from it" >&2; exit 1; }
+# **Its notes** (2026-10-01, George): what is new and what is fixed, drafted
+# from the commits and approved by George before this runs. **From the
+# tagged commit's release_notes.json** (ADR-0116): the player that release
+# installs shows them under Change logs, so they are in it or the release is
+# not published - one text on the device, on the release page and signed.
+git show "v$version:core/src/gexis_core/release_notes.json" 2>/dev/null \
+	| python3 -c 'import json, sys; print(json.load(sys.stdin)["releases"][sys.argv[1]]["notes"])' "$version" \
+	> "$DEST/notes.txt" 2>/dev/null && [ -s "$DEST/notes.txt" ] \
+	|| { echo "ERROR: v$version's core/src/gexis_core/release_notes.json has no notes for $version: add them, approved, before tagging" >&2; exit 1; }
 # **Sections and bullets** (George, 2026-10-01: not "one big blob of text"):
 # a heading on its own line - New, Fixed, Good to know - then lines starting
 # "• ". The device parses them; the release page gets them as Markdown.
@@ -143,12 +152,6 @@ grep -qxE 'New|Fixed|Good to know' "$DEST/notes.txt" && grep -q '^• ' "$DEST/n
 sed -E 's/^(New|Fixed|Good to know)$/### \1/; s/^• /- /' "$DEST/notes.txt" > "$DEST/notes.md"
 gpg --batch --yes -u "$SIGNER" --clearsign -o "$DEST/notes" "$DEST/notes.txt"
 gpg --batch --verify "$DEST/parts" 2>/dev/null || { echo "ERROR: $DEST/parts does not verify" >&2; exit 1; }
-version=$(gpg --batch --decrypt "$DEST/parts" 2>/dev/null | sed -n 's/^Release: //p')
-# **A release has a number** (ADR-0110 §1): built from a commit tagged
-# v<x.y.z>, so gexis-player is exactly x.y.z. A build between tags is not
-# published.
-[[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "ERROR: $version is not a release number: tag the commit v<x.y.z> (approved with the notes) and build from it" >&2; exit 1; }
-
 # The parts: each a pre-release of its own, never GitHub's "latest".
 for part in "$DEST"/repos/*/; do
 	name=$(basename "$part")

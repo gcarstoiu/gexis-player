@@ -49,10 +49,15 @@ class PeppyMetadataWriter:
     def __init__(self, path: Path = DEFAULT_PATH) -> None:
         self._path = path
         self._last: str | None = None
+        #: ADR-0112: the playing artist's photos on disk, for the skins'
+        #: fanart frame. Set by the fanart follower, empty until it answers.
+        self.fanart: list[str] = []
 
     def write(self, state: PlaybackState) -> None:
         metadata = state.metadata
         controls = state.controls or {}
+        caps = state.capabilities.get(state.active) if state.active else None
+        source_rate = bool(caps and caps.sample_rate_is_source)
         volume = state.volume
         payload = json.dumps(
             {
@@ -64,6 +69,11 @@ class PeppyMetadataWriter:
                 "position": metadata.position,
                 "duration": metadata.duration,
                 "transport": metadata.transport,
+                # ADR-0036 as amended 2026-10-02: only a rate that is the
+                # file's own reaches the visualiser - LMS's, and a plugin's
+                # that says so; Spotify's is a decoder's, Bluetooth has none.
+                "sample_rate": metadata.sample_rate if source_rate else None,
+                "bit_depth": metadata.bit_depth if source_rate else None,
                 # ADR-0097: shown, never acted on. The level playing, whoever
                 # set it; null before the mixer has been read and on fixed
                 # output, which has no level to show.
@@ -74,6 +84,7 @@ class PeppyMetadataWriter:
                 "shuffle": controls.get("shuffle"),
                 "repeat": controls.get("repeat"),
                 "next": next_track(state),
+                "fanart": self.fanart,
                 # The reader advances position itself between writes, so it
                 # needs to know how old this one is.
                 "written_at": time.time(),

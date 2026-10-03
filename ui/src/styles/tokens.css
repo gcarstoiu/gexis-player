@@ -78,7 +78,11 @@
   --ctl:         60px;  /* standard round control                          */
   --ctl-lg:      68px;  /* prev / next                                     */
   --ctl-play:    92px;  /* play / pause                                    */
-  --art:        500px;  /* now playing artwork                             */
+  /* ADR-0109: the panel is 1280 logical px wide on every Standard screen and
+     as tall as the screen makes it (711-853; 800 on the 10.1"). `.panel`
+     sets --panel-h from the viewport; the artwork takes what is left. */
+  --panel-h:    800px;
+  --art:        calc(var(--panel-h) - 300px);  /* now playing artwork: 500 at 800 */
   --pad-screen: 44px 56px 40px;
   --header-h:    96px;
   --ministrip-h: 104px;  /* unreferenced today: MiniStrip.svelte hardcodes it */

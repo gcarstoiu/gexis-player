@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Nunito+Sans:ital,opsz,wght@0,6..12,300..800&family=IBM+Plex+Mono:wght@400;600;700&display=swap" rel="stylesheet" />
+<style>html,body{margin:0;padding:0;background:#0c1014;}a{color:#7ed6bc;}a:hover{color:#a8e5d3;}</style>
+</helmet>
+<div style="min-height:100vh;background:#0c1014;color:#e9eef2;font-family:'Nunito Sans','Avenir Next','Segoe UI',system-ui,sans-serif;">
+
+<section data-screen-label="Round 2" style="padding:56px 56px 40px;display:flex;flex-direction:column;gap:22px;border-bottom:1px solid rgba(233,238,242,0.1);">
+  <div style="display:flex;flex-direction:column;gap:12px;max-width:1000px;">
+    <div style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:13px;letter-spacing:0.2em;text-transform:uppercase;color:rgba(233,238,242,0.6);">gexis · Phase 13b · round 2 · 1 October 2026</div>
+    <div style="font-size:52px;font-weight:800;letter-spacing:-0.025em;line-height:1.05;">What the bars still needed, and the corrections</div>
+    <div style="font-size:18px;line-height:1.55;color:rgba(233,238,242,0.75);text-wrap:pretty;">The answer to <span style="font-family:'IBM Plex Mono','Courier New',monospace;">design/briefs/13b-bar-gaps.md</span> and <span style="font-family:'IBM Plex Mono','Courier New',monospace;">13b-corrections.md</span>. Round 1 is unchanged in <span style="font-family:'IBM Plex Mono','Courier New',monospace;">Screen Families Chosen.dc.html</span>, apart from the claims corrected below. George’s decisions of 30 September (ADR-0109, 4 to 10) are taken as given.</div>
+  </div>
+  <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+    <span style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:13px;letter-spacing:0.16em;text-transform:uppercase;color:rgba(233,238,242,0.6);">Bar width</span>
+    <sc-for list="{{ sizeTabs }}" as="t" hint-placeholder-count="4"><div onClick="{{ t.onTap }}" style="height:44px;padding:0 18px;border-radius:12px;display:flex;align-items:center;font-size:15px;font-weight:700;cursor:pointer;background:{{ t.bg }};color:{{ t.ink }};border:1px solid {{ t.line }};">{{ t.label }}</div></sc-for>
+  </div>
+</section>
+
+<section id="numbers" data-screen-label="Numbers" style="padding:48px 56px;display:flex;flex-direction:column;gap:24px;border-bottom:1px solid rgba(233,238,242,0.1);">
+  <div style="display:flex;flex-direction:column;gap:10px;max-width:1000px;"><div style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:13px;letter-spacing:0.2em;text-transform:uppercase;color:#9fb4e8;">Bars · section 1</div><div style="font-size:34px;font-weight:800;letter-spacing:-0.02em;">One rule for each number</div></div>
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:18px;max-width:1500px;">
+    <div style="padding:22px;border-radius:16px;background:rgba(233,238,242,0.04);border:1px solid rgba(233,238,242,0.1);display:flex;flex-direction:column;gap:8px;"><div style="font-size:19px;font-weight:700;">Forecast days</div><div style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:15px;color:#7ed6bc;">days = floor((W − 1112) / 136), 0 to 3</div><div style="font-size:15px;line-height:1.55;color:rgba(233,238,242,0.75);text-wrap:pretty;">None below 1248 (aspect 3 shows today only), one from 1248, two from 1384, three from 1520. Three is the most, as the Forecast setting says; round 1’s four at 1850 is gone. Both bar files use this rule and nothing else.</div></div>
+    <div style="padding:22px;border-radius:16px;background:rgba(233,238,242,0.04);border:1px solid rgba(233,238,242,0.1);display:flex;flex-direction:column;gap:8px;"><div style="font-size:19px;font-weight:700;">Idle, how it adds up</div><div style="font-size:15px;line-height:1.55;color:rgba(233,238,242,0.75);text-wrap:pretty;">48 padding and 24 drift each side; clock 523; separator with its gaps 81; today 360 (icon 100, gap 20, condition at most 240 on two lines); then 40, and 100 + 36 per day. The clock group drifts sideways by ±24, inside that room. A long condition such as “Thunderstorm, hail” wraps to a second line instead of widening the group.</div></div>
+    <div style="padding:22px;border-radius:16px;background:rgba(233,238,242,0.04);border:1px solid rgba(233,238,242,0.1);display:flex;flex-direction:column;gap:8px;"><div style="font-size:19px;font-weight:700;">Queue rows</div><div style="font-size:15px;line-height:1.55;color:rgba(233,238,242,0.75);text-wrap:pretty;">Clear and the 66 px Playing from row are back, as on the panel’s rail. That leaves three rows of 60 and part of a fourth under the fade, and the list scrolls. Round 1’s five rows were wrong.</div></div>
+    <div style="padding:22px;border-radius:16px;background:rgba(233,238,242,0.04);border:1px solid rgba(233,238,242,0.1);display:flex;flex-direction:column;gap:8px;"><div style="font-size:19px;font-weight:700;">Targets under 44 px</div><div style="font-size:15px;line-height:1.55;color:rgba(233,238,242,0.75);text-wrap:pretty;">The tray’s volume glyph is now a 60 px mute button. The slider knob is 44, and the slider takes a touch anywhere across the tray’s height. The handle’s drag zone is the full-width 44 px band at the strip’s top edge; on the open tray, its bottom 44 px.</div></div>
+  </div>
+  <div style="display:flex;flex-wrap:wrap;gap:24px;align-items:flex-start;">
+    <sc-for list="{{ numBoards }}" as="b" hint-placeholder-count="4"><div style="display:flex;flex-direction:column;gap:8px;"><div style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:12px;letter-spacing:0.14em;text-transform:uppercase;color:rgba(233,238,242,0.6);">{{ b.label }}</div><div style="width:{{ boxW }};height:{{ boxH }};overflow:hidden;border-radius:10px;"><div style="width:{{ wPx }};height:400px;transform:{{ sc }};transform-origin:0 0;">
+      <sc-if value="{{ b.panels }}" hint-placeholder-val="{{ true }}"><dc-import name="Bar Panels" screen="{{ b.screen }}" cond="{{ b.cond }}" drift="{{ b.drift }}" w="{{ W }}" hint-size="100%,400px"></dc-import></sc-if>
+      <sc-if value="{{ b.frame }}" hint-placeholder-val="{{ false }}"><dc-import name="Bar Frame" variant="strip" sr="main" pull="down" queue="{{ b.queue }}" tray="{{ b.tray }}" w="{{ W }}" hint-size="100%,400px"></dc-import></sc-if>
+    </div></div></div></sc-for>
+  </div>
+</section>
+
+<sc-for list="{{ groups }}" as="g" hint-placeholder-count="5">
+<section data-screen-label="{{ g.title }}" style="padding:48px 56px;display:flex;flex-direction:column;gap:24px;border-bottom:1px solid rgba(233,238,242,0.1);">
+  <div style="display:flex;flex-direction:column;gap:10px;max-width:1000px;"><div style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:13px;letter-spacing:0.2em;text-transform:uppercase;color:#9fb4e8;">{{ g.kicker }}</div><div style="font-size:34px;font-weight:800;letter-spacing:-0.02em;">{{ g.title }}</div><div style="font-size:16px;line-height:1.6;color:rgba(233,238,242,0.75);text-wrap:pretty;">{{ g.text }}</div></div>
+  <div style="display:flex;flex-wrap:wrap;gap:24px;align-items:flex-start;">
+    <sc-for list="{{ g.boards }}" as="b" hint-placeholder-count="4"><div style="display:flex;flex-direction:column;gap:8px;max-width:{{ boxW }};"><div style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:12px;letter-spacing:0.14em;text-transform:uppercase;color:rgba(233,238,242,0.6);">{{ b.label }}</div><div style="width:{{ boxW }};height:{{ boxH }};overflow:hidden;border-radius:10px;"><div style="width:{{ wPx }};height:400px;transform:{{ sc }};transform-origin:0 0;">
+      <sc-if value="{{ b.states }}" hint-placeholder-val="{{ true }}"><dc-import name="Bar States" screen="{{ b.screen }}" w="{{ W }}" hint-size="100%,400px"></dc-import></sc-if>
+      <sc-if value="{{ b.panels }}" hint-placeholder-val="{{ false }}"><dc-import name="Bar Panels" screen="{{ b.screen }}" w="{{ W }}" hint-size="100%,400px"></dc-import></sc-if>
+    </div></div><div style="font-size:14px;line-height:1.5;color:rgba(233,238,242,0.68);text-wrap:pretty;display:{{ b.noteDisplay }};">{{ b.note }}</div></div></sc-for>
+  </div>
+</section>
+</sc-for>
+
+<section id="extremes" data-screen-label="Extremes" style="padding:48px 56px;display:flex;flex-direction:column;gap:24px;border-bottom:1px solid rgba(233,238,242,0.1);">
+  <div style="display:flex;flex-direction:column;gap:10px;max-width:1000px;"><div style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:13px;letter-spacing:0.2em;text-transform:uppercase;color:#9fb4e8;">Bars · section 3</div><div style="font-size:34px;font-weight:800;letter-spacing:-0.02em;">The family’s ends: 1200 and 2000</div><div style="font-size:16px;line-height:1.6;color:rgba(233,238,242,0.75);text-wrap:pretty;">Aspect 3 and aspect 5, at 0.4. At 1200 the idle strip shows today without a forecast day, the home tiles step their type down (a tile is under 190 px wide below 1436), and pairing keeps its 88 px code. At 2000 the forecast stops at three and the extra width goes to the gaps. Every other board on this page follows the width buttons at the top.</div></div>
+  <div style="display:grid;grid-template-columns:repeat(2,max-content);gap:24px;align-items:start;overflow-x:auto;">
+    <sc-for list="{{ ends }}" as="e" hint-placeholder-count="2"><div style="display:flex;flex-direction:column;gap:8px;"><div style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:12px;letter-spacing:0.14em;text-transform:uppercase;color:rgba(233,238,242,0.6);">{{ e.label }}</div>
+      <div style="width:{{ e.bw }};height:160px;overflow:hidden;border-radius:10px;"><div style="width:{{ e.wPx }};height:400px;transform:scale(0.4);transform-origin:0 0;"><dc-import name="Bar Frame" variant="strip" sr="main" pull="down" w="{{ e.w }}" hint-size="100%,400px"></dc-import></div></div>
+      <div style="width:{{ e.bw }};height:160px;overflow:hidden;border-radius:10px;"><div style="width:{{ e.wPx }};height:400px;transform:scale(0.4);transform-origin:0 0;"><dc-import name="Bar Panels" screen="idle" w="{{ e.w }}" hint-size="100%,400px"></dc-import></div></div>
+      <div style="width:{{ e.bw }};height:160px;overflow:hidden;border-radius:10px;"><div style="width:{{ e.wPx }};height:400px;transform:scale(0.4);transform-origin:0 0;"><dc-import name="Bar Frame" variant="home2" layout="c" w="{{ e.w }}" hint-size="100%,400px"></dc-import></div></div>
+      <div style="width:{{ e.bw }};height:160px;overflow:hidden;border-radius:10px;"><div style="width:{{ e.wPx }};height:400px;transform:scale(0.4);transform-origin:0 0;"><dc-import name="Bar Panels" screen="p2" w="{{ e.w }}" hint-size="100%,400px"></dc-import></div></div>
+    </div></sc-for>
+  </div>
+</section>
+
+<section id="keep" data-screen-label="Keep this screen" style="padding:48px 56px;display:flex;flex-direction:column;gap:24px;border-bottom:1px solid rgba(233,238,242,0.1);">
+  <div style="display:flex;flex-direction:column;gap:10px;max-width:1000px;"><div style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:13px;letter-spacing:0.2em;text-transform:uppercase;color:#f2a48f;">Corrections · section 3 · new</div><div style="font-size:34px;font-weight:800;letter-spacing:-0.02em;">Keep this screen?</div><div style="font-size:16px;line-height:1.6;color:rgba(233,238,242,0.75);text-wrap:pretty;">On the panel, after a screen or a rotation is chosen and the player has restarted on it. Keep is a touch on the panel itself, so one tap proves the picture and the touch together. The bar along the bottom drains over 30 seconds; with no touch the player goes back to the previous screen, and Go back now does it at once. Until Keep, the setup network keeps its fixed password. An untested model says so here as well as in the list.</div></div>
+  <div style="display:flex;flex-wrap:wrap;gap:24px;align-items:flex-start;">
+    <div style="display:flex;flex-direction:column;gap:8px;"><div style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:12px;letter-spacing:0.14em;text-transform:uppercase;color:rgba(233,238,242,0.6);">Standard · 1280 × 720</div><div style="width:640px;height:360px;overflow:hidden;border-radius:10px;"><div style="width:1280px;height:720px;transform:scale(0.5);transform-origin:0 0;"><dc-import name="Keep This Screen" family="standard" h="{{ 720 }}" hint-size="1280px,720px"></dc-import></div></div></div>
+    <div style="display:flex;flex-direction:column;gap:8px;"><div style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:12px;letter-spacing:0.14em;text-transform:uppercase;color:rgba(233,238,242,0.6);">Standard · 1280 × 768 · untested model</div><div style="width:640px;height:384px;overflow:hidden;border-radius:10px;"><div style="width:1280px;height:768px;transform:scale(0.5);transform-origin:0 0;"><dc-import name="Keep This Screen" family="standard" h="{{ 768 }}" untested="{{ true }}" model="Waveshare 7″ HDMI LCD (C) · 800 × 480" left="{{ 9 }}" hint-size="1280px,768px"></dc-import></div></div></div>
+    <div style="display:flex;flex-direction:column;gap:8px;"><div style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:12px;letter-spacing:0.14em;text-transform:uppercase;color:rgba(233,238,242,0.6);">Bar · {{ barLabel }}</div><div style="width:{{ boxW }};height:{{ boxH }};overflow:hidden;border-radius:10px;"><div style="width:{{ wPx }};height:400px;transform:{{ sc }};transform-origin:0 0;"><dc-import name="Keep This Screen" family="bar" w="{{ W }}" hint-size="100%,400px"></dc-import></div></div></div>
+  </div>
+</section>
+
+<section id="standard" data-screen-label="Standard" style="padding:48px 56px;display:flex;flex-direction:column;gap:24px;border-bottom:1px solid rgba(233,238,242,0.1);">
+  <div style="display:flex;flex-direction:column;gap:10px;max-width:1000px;"><div style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:13px;letter-spacing:0.2em;text-transform:uppercase;color:#f2a48f;">Corrections · section 1</div><div style="font-size:34px;font-weight:800;letter-spacing:-0.02em;">Standard: the real heights, and your three fixes taken back</div><div style="font-size:16px;line-height:1.6;color:rgba(233,238,242,0.75);text-wrap:pretty;">711 is aspect 1.8, not 16:9. The heights that matter are 720 (16:9, the 13.3″) and 768 (the 7″ 800 × 480); 711 and 853 stay as the family’s ends. Rule 1b, now written out in Chosen: one hero per screen takes the height; margins, gaps, type and controls keep their 800 values. Taken back from your side: home cards are never shorter than their content (164, so 720 no longer gives 157); the artist and album columns are as wide as their picture, so they grow with it; and Panel Setup’s code is 260 below 800 and 340 from 800 up. The artist page’s extra height goes to the albums: the biography keeps its measured cap and top tracks keep five rows.</div></div>
+  <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+    <sc-for list="{{ stdTabs }}" as="t" hint-placeholder-count="6"><div onClick="{{ t.onTap }}" style="height:44px;padding:0 16px;border-radius:12px;display:flex;align-items:center;font-size:15px;font-weight:700;cursor:pointer;background:{{ t.bg }};color:{{ t.ink }};border:1px solid {{ t.line }};">{{ t.label }}</div></sc-for>
+  </div>
+  <div style="display:flex;flex-wrap:wrap;gap:20px;align-items:flex-start;">
+    <sc-for list="{{ heights }}" as="h" hint-placeholder-count="5"><div style="display:flex;flex-direction:column;gap:8px;"><div style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:12px;letter-spacing:0.14em;text-transform:uppercase;color:rgba(233,238,242,0.6);">{{ h.label }}</div><div style="width:448px;height:{{ h.bh }};overflow:hidden;border-radius:10px;position:relative;"><div style="width:1280px;height:{{ h.hPx }};transform:scale(0.35);transform-origin:0 0;position:relative;">
+      <dc-import name="Now Playing Height Study" view="{{ stdView }}" h="{{ h.h }}" lms="{{ stdLms }}" sheet-preview="{{ stdSheet }}" hint-size="1280px,800px" style="position:absolute;inset:0;width:1280px;"></dc-import>
+    </div></div></div></sc-for>
+  </div>
+  <div style="display:flex;flex-wrap:wrap;gap:20px;align-items:flex-start;">
+    <div style="display:flex;flex-direction:column;gap:8px;"><div style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:12px;letter-spacing:0.14em;text-transform:uppercase;color:rgba(233,238,242,0.6);">Panel Setup · could not join · 720</div><div style="width:448px;height:252px;overflow:hidden;border-radius:10px;"><div style="width:1280px;height:720px;transform:scale(0.35);transform-origin:0 0;"><dc-import name="Panel Setup" state="could not join" h="{{ 720 }}" hint-size="1280px,720px"></dc-import></div></div></div>
+    <div style="display:flex;flex-direction:column;gap:8px;"><div style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:12px;letter-spacing:0.14em;text-transform:uppercase;color:rgba(233,238,242,0.6);">Panel Setup · could not join · 800</div><div style="width:448px;height:280px;overflow:hidden;border-radius:10px;"><div style="width:1280px;height:800px;transform:scale(0.35);transform-origin:0 0;"><dc-import name="Panel Setup" state="could not join" h="{{ 800 }}" hint-size="1280px,800px"></dc-import></div></div></div>
+  </div>
+</section>
+
+<section id="screenstep" data-screen-label="Screen step" style="padding:48px 56px;display:flex;flex-direction:column;gap:24px;border-bottom:1px solid rgba(233,238,242,0.1);">
+  <div style="display:flex;flex-direction:column;gap:10px;max-width:1000px;"><div style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:13px;letter-spacing:0.2em;text-transform:uppercase;color:#f2a48f;">Corrections · section 2</div><div style="font-size:34px;font-weight:800;letter-spacing:-0.02em;">The Setup Screen step</div><div style="font-size:16px;line-height:1.6;color:rgba(233,238,242,0.75);text-wrap:pretty;">Recognition now only suggests: “Is this your screen?”, “What the screen reports matches this model”, and the suggestion is always a tested model. Choose another opens the whole list, by maker, with no reported block and no filter. In the uncertain state nothing is hidden: models matching the reported resolution come first under their own heading, then every maker. Every model carries Tested or Untested; choosing an untested one says so. Choosing any model says the player will restart on it and ask Keep this screen?. Headless shows its warning when chosen. Tap through them in Setup.dc.html.</div></div>
+  <div style="display:flex;flex-wrap:wrap;gap:24px;align-items:flex-start;">
+    <div style="display:flex;flex-direction:column;gap:8px;"><div style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:12px;letter-spacing:0.14em;text-transform:uppercase;color:rgba(233,238,242,0.6);">Recognised</div><div style="width:412px;height:915px;overflow:hidden;border-radius:14px;position:relative;"><dc-import name="Setup" screen="recognised" start-at="{{ 6 }}" mode="narrow" hint-size="412px,915px" style="position:absolute;inset:0;"></dc-import></div></div>
+    <div style="display:flex;flex-direction:column;gap:8px;"><div style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:12px;letter-spacing:0.14em;text-transform:uppercase;color:rgba(233,238,242,0.6);">Seen, not certain</div><div style="width:412px;height:915px;overflow:hidden;border-radius:14px;position:relative;"><dc-import name="Setup" screen="uncertain" start-at="{{ 6 }}" mode="narrow" hint-size="412px,915px" style="position:absolute;inset:0;"></dc-import></div></div>
+    <div style="display:flex;flex-direction:column;gap:8px;"><div style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:12px;letter-spacing:0.14em;text-transform:uppercase;color:rgba(233,238,242,0.6);">Uncertain · untested model chosen</div><div style="width:412px;height:915px;overflow:hidden;border-radius:14px;position:relative;"><dc-import name="Setup" screen="uncertain" start-at="{{ 6 }}" mode="narrow" pick="Joy-IT 10.1″ RB-LCD-10-2" hint-size="412px,915px" style="position:absolute;inset:0;"></dc-import></div></div>
+  </div>
+</section>
+
+<section id="settings" data-screen-label="Settings" style="padding:48px 56px;display:flex;flex-direction:column;gap:24px;border-bottom:1px solid rgba(233,238,242,0.1);">
+  <div style="display:flex;flex-direction:column;gap:10px;max-width:1000px;"><div style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:13px;letter-spacing:0.2em;text-transform:uppercase;color:#f2a48f;">Corrections · section 4</div><div style="font-size:34px;font-weight:800;letter-spacing:-0.02em;">Settings</div><div style="font-size:16px;line-height:1.6;color:rgba(233,238,242,0.75);text-wrap:pretty;">In Settings.dc.html, as the brief names them. System opens with an Updates group: Release, Check now, Update now (confirmed), Updates (Manual or Automatic) and Update channel (Stable or Testing, with a warning on Testing); the rest is now headed Maintenance. Plugins ends with Upload a plugin, with the panel’s own note and warning; it is hidden when Settings is on the panel, since a file is picked on a phone or a computer. Attached screen opens the same two-step picker as Time zone: makers first, then that maker’s models, each marked Tested or Untested. Screen rotation offers 0° and 180° only. Visualisation gains Skin size: Match the screen, or any installed set’s size. On a bar the sheet takes the full height, as drawn above. Tap Display, Plugins and System below.</div></div>
+  <div style="width:1280px;height:800px;max-width:100%;overflow:hidden;border-radius:14px;position:relative;"><dc-import name="Settings" mode="wide" hint-size="1280px,800px" style="position:absolute;inset:0;width:1280px;height:800px;"></dc-import></div>
+</section>
+
+<section id="docs" data-screen-label="Docs" style="padding:48px 56px 80px;display:flex;flex-direction:column;gap:16px;">
+  <div style="display:flex;flex-direction:column;gap:10px;max-width:1000px;"><div style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:13px;letter-spacing:0.2em;text-transform:uppercase;color:#f2a48f;">Corrections · section 5</div><div style="font-size:34px;font-weight:800;letter-spacing:-0.02em;">Stale references</div><div style="font-size:16px;line-height:1.6;color:rgba(233,238,242,0.75);text-wrap:pretty;">Fixed in the export’s README, BUNDLE-README, settings.md and the Settings Screen Row comment: the rows are [N], new, and R means recorded (ADR-0022); the rows are in Settings.dc.html; the Screen step is in Setup.dc.html (there is no Setup Screen Step.dc.html); the file map uses the repo’s paths. The transport gap in now-playing.css is the prototype’s 14 px.</div></div>
+</section>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+const NOTE = (screen, label, note, kind) => ({ screen, label, note: note || '', noteDisplay: note ? 'block' : 'none', states: kind !== 'panels', panels: kind === 'panels' });
+const GROUPS = [
+  { kicker: 'Bars · section 2', title: 'The Now Playing strip', text: 'Artwork pending is the panel\u2019s placeholder. Bluetooth has no position, so the progress row and its times go and the controls sit at the bottom; shuffle, repeat and the queue go too. A long title ends in an ellipsis; the artist takes at most 62% of its line, the album what is left, and the year stays. Spotify and Bluetooth show their marks; a plugin renderer shows its initial in a ring until its manifest brings a mark. Lyrics: loading is three skeleton lines; plain lyrics are still lines with no highlight that scroll with a drag; synced as round 1; both carry the panel\u2019s credit line. With no lyrics the switch goes, as the Lyrics tab does on the panel. Instrumental is the same as none: the panel has no separate state for it.', boards: [
+    NOTE('strip-pending', 'Artwork pending'), NOTE('strip-bt', 'Bluetooth, no position'), NOTE('strip-long', 'Spotify, long names'), NOTE('strip-plugin', 'A plugin renderer'),
+    NOTE('lyr-loading', 'Lyrics loading'), NOTE('lyr-plain', 'Plain lyrics, unsynced'), NOTE('lyr-synced', 'Synced, with the credit'), NOTE('lyr-none', 'No lyrics: no switch')] },
+  { kicker: 'Bars · section 2', title: 'The pull-down tray', text: 'Fixed output puts the panel\u2019s padlock row where the mute button and the slider were. Muted is amber, as in the drawer: the cone crossed, the fill at nothing, Mute for the number. With no meters the visualiser button goes; with LMS off, Home becomes Settings. The tray comes down over the library too, and over any screen, when the volume changes elsewhere, as the drawer does on the panel, and goes after the drawer\u2019s auto-hide time. The slider fill is the source\u2019s accent, as on the panel; round 1\u2019s ink fill was a mistake.', boards: [
+    NOTE('tray-fixed', 'Fixed output'), NOTE('tray-muted', 'Muted'), NOTE('tray-nometers', 'No meters'), NOTE('tray-lmsoff', 'LMS off'), NOTE('tray-library', 'Over the library')] },
+  { kicker: 'Bars · section 2', title: 'The library', text: 'With nothing playing the rail keeps its place: an empty cover slot, no mark, no progress, and a dimmed play button that does nothing. Artists get a jump strip under the row: thirteen two-letter steps, each at least 44 px wide; a tap jumps to the first artist under it and a drag along the strip scrubs. Playlist detail is the album page\u2019s form: Play and Shuffle, then the tracks in columns. A radio folder mixes folders (with a chevron) and stations in one grid. A toast sits at the bottom centre of the content area. A sheet on a bar takes the full height less 12 px; Attached screen shows makers and models side by side, tested marked, and no search box, because there is no on-screen keyboard: searching is on the phone.', boards: [
+    NOTE('lib-rail-empty', 'Rail, nothing playing'), NOTE('lib-artists', 'Artists, with the jump strip'), NOTE('lib-playlist', 'Playlist detail'), NOTE('lib-folder', 'Radio folder'), NOTE('lib-toast', 'Toast'), NOTE('lib-sheet', 'Settings sheet: Attached screen')] },
+  { kicker: 'Bars · section 2', title: 'Moments', text: 'Pairing ends with the panel\u2019s tick or cross and its word, where the code was, and closes itself. A request with no code puts the device\u2019s name in the middle at 48 px; Accept, Reject and the countdown stay. With LMS off, four or more renderers stand in columns of 200 with their names under the marks: four fit at 1200 and five at 1280; past that the rings step down to 120. A long renderer name on the transition wraps to two lines (52 px, 64 from 1500) in a box of 340 (520), and the line between keeps at least 120. Idle with the clock off is the weather alone, centred; with the weather off, the clock alone, drifting. External URL fills the screen at the bar\u2019s logical size.', boards: [
+    NOTE('pair-paired', 'Paired'), NOTE('pair-not', 'Not paired'), NOTE('pair-expired', 'Request expired'), NOTE('pair-nocode', 'Request with no code'),
+    NOTE('wait-many', 'LMS off, four renderers'), NOTE('t-long', 'Transition, long name'),
+    NOTE('idle-noclock', 'Idle, clock off', '', 'panels'), NOTE('idle-nowx', 'Idle, weather off', '', 'panels'), NOTE('idle-url', 'Idle, External URL')] },
+  { kicker: 'Bars · section 2', title: 'Setup, the six missing and two corrected', text: 'Each from Panel Setup, at the bar\u2019s sizes: titles 40 to 64, mono values 44, a 300 px code. Over Ethernet the only code is the page\u2019s, so the one-code rule reads: the code a phone needs next. Could not join keeps the network\u2019s name and password, as the panel does, beside the reason.', boards: [
+    NOTE('s-starting', 'Starting'), NOTE('s-joined', 'Phone connected'), NOTE('s-page', 'Open the page'), NOTE('s-phone', 'Carry on on your phone'),
+    NOTE('s-done', 'Done, with Lyrion'), NOTE('s-fail-full', 'Could not join'), NOTE('s-failstart', 'Setup network did not start'), NOTE('s-lan', 'Over Ethernet')] }
+];
+const STD = [['now', 'Now Playing'], ['home', 'Library home'], ['artist', 'Artist page'], ['album', 'Album'], ['wait', 'LMS off home'], ['sheet', 'Add to playlist sheet']];
+const tab = (on, accent, label, onTap) => ({ label, onTap, bg: on ? accent : 'rgba(233,238,242,0.06)', ink: on ? '#0d151c' : '#e9eef2', line: on ? accent : 'rgba(233,238,242,0.14)' });
+class Component extends DCLogic {
+  state = { W: 1280, std: 'home' };
+  renderVals() {
+    const W = this.state.W, k = W > 1600 ? 0.4 : 0.5;
+    const v = this.state.std;
+    return {
+      W, wPx: W + 'px', sc: 'scale(' + k + ')', boxW: Math.round(W * k) + 'px', boxH: Math.round(400 * k) + 'px',
+      barLabel: W + ' \u00d7 400',
+      sizeTabs: [[1200, '1200 (aspect 3)'], [1280, '1280 (7.9\u2033)'], [1850, '1850 (11.9\u2033)'], [2000, '2000 (aspect 5)']].map(x => tab(W === x[0], '#9fb4e8', x[1], () => this.setState({ W: x[0] }))),
+      numBoards: [
+        { label: 'Idle, the rule at this width', screen: 'idle', cond: 'Partly cloudy', drift: 0, panels: true, frame: false },
+        { label: 'Idle, a long condition, drifted 24 right', screen: 'idle', cond: 'Thunderstorm, hail', drift: 24, panels: true, frame: false },
+        { label: 'Queue, with Clear and Playing from', queue: true, tray: false, panels: false, frame: true, screen: '', cond: '', drift: 0 },
+        { label: 'Tray: 60 px mute, 44 px knob', queue: false, tray: true, panels: false, frame: true, screen: '', cond: '', drift: 0 }
+      ],
+      groups: GROUPS,
+      ends: [1200, 2000].map(w => ({ w, wPx: w + 'px', bw: Math.round(w * 0.4) + 'px', label: w === 1200 ? '1200 \u00d7 400 (aspect 3)' : '2000 \u00d7 400 (aspect 5)' })),
+      stdTabs: STD.map(x => tab(v === x[0], '#7ed6bc', x[1], () => this.setState({ std: x[0] }))),
+      stdView: v === 'wait' || v === 'sheet' ? (v === 'sheet' ? 'album' : 'home') : v,
+      stdLms: v === 'wait' ? 'off' : 'on', stdSheet: v === 'sheet',
+      heights: [[711, 'aspect 1.8'], [720, '16:9 · 13.3\u2033'], [768, '800 \u00d7 480 · 7\u2033'], [800, 'today'], [853, 'aspect 1.5']].map(h => ({ h: h[0], hPx: h[0] + 'px', bh: Math.round(h[0] * 0.35) + 'px', label: '1280 \u00d7 ' + h[0] + ' · ' + h[1] }))
+    };
+  }
+}
+</script>
+</body>
+</html>

@@ -436,6 +436,23 @@ def test_a_skin_without_a_slot_keeps_its_declared_box(screen):
     assert rect.center == (position[0] + box[0] // 2, position[1] + box[1] // 2)
 
 
+def test_a_skin_packs_own_slots_are_read_for_its_skins(screen, tmp_path):
+    """ADR-0111: a pack measures its own slots, keyed <folder>/<skin>, and a
+    skin it has none for keeps its declared box - not the shipped table's
+    1280x800 slot for a skin of the same name."""
+    import json
+    directory = tmp_path / "packs" / "1920x1080" / "gelo5" / "templates" / "1920x1080"
+    directory.mkdir(parents=True)
+    (tmp_path / "packs" / "1920x1080" / "badge-slots.json").write_text(json.dumps(
+        {"slots": {"gelo5/measured": [100, 200, 400, 260]}}))
+    layer = MetadataLayer(screen, directory)
+    skin = {"playinfo.type.pos": "110,205", "playinfo.type.dimension": "50,50"}
+    layer._skin, layer._skin_name, layer._corpus = skin, "measured", directory
+    assert layer._badge_rect("spotify").center == (250, 230)
+    layer._skin_name = "101G5_Free S+M"   # in the shipped table, not in this pack
+    assert layer._badge_rect("spotify").center == (135, 230)
+
+
 @pytest.mark.parametrize("source", ["lms", "spotify", "bluetooth"])
 def test_every_badge_leaves_a_margin_to_its_field(screen, source):
     """**George, 2026-09-26:** *"it fits too snuggly vertically ... Some small
@@ -625,3 +642,81 @@ def test_elapsed_and_total_are_drawn_as_upstream_does(screen, tmp_path):
     assert at[(20, 700)][0] == "00:30" and at[(20, 700)][1][2] == "digi" and at[(20, 700)][3] == 21
     assert at[(20, 700)][2] == (255, 255, 255) and at[(20, 700)][5] == "meta"
     assert at[(1100, 700)][0] == "03:20" and at[(1100, 700)][1][2] == "bold" and at[(1100, 700)][2] == (9, 9, 9)
+
+
+def test_the_skin_s_mask_shapes_the_album_art(screen, tmp_path):
+    """George, 2026-10-02: "Follow the skin design" - a round well gets round
+    art (Old Spectrum S+M drew a square in its circle). Black shows the art,
+    white hides it, as upstream inverts it; outside the shape the skin's own
+    background stays."""
+    background = pygame.Surface((1280, 800))
+    background.fill((10, 200, 10))
+    pygame.image.save(background, str(tmp_path / "bgr.png"))
+    mask = pygame.Surface((296, 296))
+    mask.fill((255, 255, 255))
+    pygame.draw.ellipse(mask, (0, 0, 0), mask.get_rect())  # as Old2_Spec_mask.jpg
+    pygame.image.save(mask, str(tmp_path / "round.jpg"))
+    layer = MetadataLayer(screen, tmp_path)
+    layer.set_skin({**SKIN, "albumart.pos": "560,70", "albumart.dimension": "170,170",
+                    "albumart.mask": "round.jpg"})
+    layer._artwork_url = "http://art/"
+    layer._artwork_source = pygame.Surface((640, 640))
+    layer._artwork_source.fill((200, 10, 10))
+    screen.blit(background, (0, 0))  # the engine has drawn the skin by now
+
+    layer.draw(full(artwork="http://art/"))
+
+    near = lambda got, want: all(abs(a - b) <= 4 for a, b in zip(got, want))  # scaling blurs a level or two
+    assert near(screen.get_at((560 + 85, 70 + 85)), (200, 10, 10)), "the art shows inside"
+    assert near(screen.get_at((561, 71)), (10, 200, 10)), "the corner is the skin's background"
+
+
+def test_a_mask_that_cannot_be_read_leaves_the_art_square(screen, tmp_path):
+    background = pygame.Surface((1280, 800))
+    pygame.image.save(background, str(tmp_path / "bgr.png"))
+    layer = MetadataLayer(screen, tmp_path)
+    layer.set_skin({**SKIN, "albumart.pos": "560,70", "albumart.dimension": "170,170",
+                    "albumart.mask": "missing.jpg"})
+    layer._artwork_url = "http://art/"
+    layer._artwork_source = pygame.Surface((640, 640))
+    layer._artwork_source.fill((200, 10, 10))
+
+    layer.draw(full(artwork="http://art/"))
+
+    assert all(abs(a - b) <= 4 for a, b in zip(screen.get_at((561, 71)), (200, 10, 10)))
+
+
+def test_lms_s_sample_rate_is_drawn_and_the_mark_keeps_its_own_box(screen, tmp_path):
+    """ADR-0036 as amended 2026-10-02: the rate where the skin reserves it,
+    the renderer's mark back in the skin's declared box beside it."""
+    from gexis_peppy_render import sample_text
+
+    assert sample_text({"sample_rate": 44100}) == "44.1 kHz"
+    assert sample_text({"sample_rate": 96000, "bit_depth": 24}) == "96 kHz 24 bit"
+    assert sample_text({"sample_rate": None}) is None
+    background = pygame.Surface((1280, 800))
+    pygame.image.save(background, str(tmp_path / "bgr.png"))
+    layer = MetadataLayer(screen, tmp_path)
+    layer.set_skin({**SKIN, "playinfo.samplerate.pos": "700,520,regular"})
+    fields = layer._fields(full(sample_rate=44100))
+    assert any(f[0] == "44.1 kHz" and f[1][:2] == (700, 520) for f in fields)
+    assert not any(f[0] and f[1][:2] == (700, 520) for f in layer._fields(full())), "absent is absent"
+
+
+def test_the_sample_rate_fits_its_own_width(screen, tmp_path):
+    """George, 2026-10-02: it ran beyond its space. Without the bit depth
+    first, then a smaller face."""
+    background = pygame.Surface((1280, 800))
+    pygame.image.save(background, str(tmp_path / "bgr.png"))
+    layer = MetadataLayer(screen, tmp_path)
+    roomy = {**SKIN, "playinfo.samplerate.pos": "700,520,regular", "playinfo.samplerate.maxwidth": "400"}
+    layer.set_skin(roomy)
+    entry = layer._sample_field(full(sample_rate=96000, bit_depth=24), {"regular": 20}, (255, 255, 255), 0)
+    assert entry[0] == "96 kHz 24 bit" and entry[3] == 20
+    for width in (120, 70, 30):
+        layer.set_skin({**roomy, "playinfo.samplerate.maxwidth": str(width)})
+        text, _p, _c, size, box, _s = layer._sample_field(full(sample_rate=96000, bit_depth=24), {"regular": 20}, (255, 255, 255), 0)
+        assert box == width
+        if width >= 70:
+            assert layer.font("regular", size).size(text)[0] <= width, f"fits {width}"
+    assert text == "96 kHz" and size == 12, "never below 60 %: past that it is cut short as any field is"

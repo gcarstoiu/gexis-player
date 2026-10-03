@@ -475,3 +475,21 @@ def test_the_screen_says_when_it_goes_up_or_down(monkeypatch):
     screen.show()
     screen.hide()
     assert seen == [True, False]
+
+
+def test_peppymeter_is_pointed_at_the_pack_and_its_size(tmp_path):
+    """ADR-0111: only [current]'s keys; a second call changes nothing."""
+    from pathlib import Path
+
+    from gexis_core.peppy import set_meter_skins
+
+    conf = tmp_path / "config.txt"
+    conf.write_text("# ours\n[current]\nbase.folder = /opt/gexis-peppy/skins/gelo5/templates\n"
+                    "meter.folder = 1280x800\nscreen.width = 1280\nscreen.height = 800\n"
+                    "[sdl.env]\nscreen.width = untouched\n")
+    base = Path("/opt/gexis-peppy/packs/800x480/gelo5/templates")
+    assert set_meter_skins(conf, base, "800x480", 800, 480) is True
+    text = conf.read_text()
+    assert f"base.folder = {base}\nmeter.folder = 800x480\nscreen.width = 800\nscreen.height = 480\n" in text
+    assert text.startswith("# ours\n") and "screen.width = untouched" in text
+    assert set_meter_skins(conf, base, "800x480", 800, 480) is False

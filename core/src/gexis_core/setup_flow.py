@@ -22,7 +22,7 @@ import logging
 import os
 from pathlib import Path
 
-from gexis_core import discovery, setup_network
+from gexis_core import discovery, screen_apply, screen_detect, screens, setup_network, skin_packs
 
 logger = logging.getLogger(__name__)
 
@@ -41,12 +41,18 @@ SETTINGS = {
     "spotify": "spotify_enabled",
     "bluetooth": "bt_enabled",
     "headless": "headless",
+    #: ADR-0109: the Screen step's model, as Settings stores it ("Maker/Model").
+    #: After `headless`, so a device leaving Headless is then given its screen.
+    "screen": "screen",
+    #: ADR-0111 decision 4. Setting it starts the pack's download, which waits
+    #: for the home network (the core retries every five minutes).
+    "visualiser": "visualiser_skins",
 }
-TEXT = ("ssid", "password", "name", "timezone", "clock", "output", "lms")
+TEXT = ("ssid", "password", "name", "timezone", "clock", "output", "lms", "screen")
 #: George, 2026-09-29: a server nobody asked for must not appear. The Music
 #: step asks: find it once on the network, this address, or not at all.
 LMS_MODES = ("find", "address", "off")
-FLAGS = ("hidden", "spotify", "bluetooth", "headless")
+FLAGS = ("hidden", "spotify", "bluetooth", "headless", "visualiser")
 
 
 class SetupFlow:
@@ -122,6 +128,19 @@ class SetupFlow:
                 data[key] = value
             else:
                 raise ValueError(f"unknown answer {key}")
+        # ADR-0109's Screen step: a screen and Headless are one choice. A
+        # model must be one gexis knows and ends Headless; Headless drops it.
+        screen = changes.get("screen")
+        if screen:
+            if screens.by_label(screen) is None:
+                raise ValueError(f"unknown screen {screen}")
+            if changes.get("headless") is True:
+                raise ValueError("choose a screen or headless, not both")
+            data["headless"] = False
+        if changes.get("headless") is True:
+            data.pop("screen", None)
+            # No screen, no visualiser: its step is passed over (ADR-0111).
+            data.pop("visualiser", None)
         # A new password for the network, or another network, is a new try:
         # the last one's error no longer describes anything.
         if "password" in changes or "ssid" in changes:
@@ -135,17 +154,31 @@ class SetupFlow:
     def finishing(self) -> bool:
         return self._task is not None and not self._task.done()
 
-    def finish(self) -> None:
+    def finish(self) -> dict:
         """Start applying. Returns at once: the phone is told, and the
-        network step happens `HANDOVER_S` later so that answer arrives."""
+        network step happens `HANDOVER_S` later so that answer arrives.
+        Tells the phone whether the restart will ask *Keep this screen?*
+        (ADR-0109 as amended 2026-10-02), which it says before you leave."""
         if self.finishing:
-            return
+            return {"keep_question": False}
         data = self._read()
         # On Ethernet the Wi-Fi is optional (ADR-0031 amendment 8); without a
         # network at all, it is the one answer setup cannot finish without.
         if not data.get("ssid") and self._network.status()["network"] != "online":
             raise ValueError("no network chosen")
         self._task = asyncio.ensure_future(self._apply(data))
+        return {"keep_question": self._keep_question(data)}
+
+    def _keep_question(self, data: dict) -> bool:
+        model = screens.by_label(data["screen"]) if data.get("screen") and not data.get("headless") else None
+        if model is None:
+            return False
+        try:
+            turn = screen_apply.parse_rotation(self._settings.value("rotation"))
+            return screen_apply.would_ask(screen_apply.Applied(model.id, turn))
+        except Exception as exc:  # a guess for the phone's wording, never a failure
+            logger.info("setup: cannot tell whether Keep will be asked: %s", exc)
+            return True
 
     async def _apply(self, data: dict) -> None:
         old_name = self._settings.value("device_name")
@@ -187,10 +220,15 @@ class SetupFlow:
         # ADR-0048: a rename takes effect at a restart, and the page's last
         # screen has already sent the phone to the new name.
         renaming = bool(data.get("name") and data["name"] != old_name and self._reboot is not None)
-        self._network.finished(ssid, library, renaming, data.get("name") or old_name)
+        # ADR-0109: a screen chosen here was written for the next start, and
+        # the restart is where *Keep this screen?* is asked.
+        screening = bool(data.get("screen") and self._reboot is not None)
+        restart_for = "name" if renaming and not screening else "screen" if screening and not renaming else \
+            "both" if renaming else None
+        self._network.finished(ssid, library, restart_for, data.get("name") or old_name)
         logger.info("setup: finished; library %s", library)
         await self._sleep(DONE_S)
-        if renaming:
+        if restart_for:
             # **Straight from setup to the restart** (George, 2026-09-29: the
             # home screen blinked in between). The panel keeps the last setup
             # screen, "Restarting to take its new name", until the restart
@@ -244,6 +282,41 @@ class SetupFlow:
                 self._settings.set(key, value)
         except Exception as exc:
             logger.warning("setup: %s not set: %s", key, exc)
+
+
+def _screen_json(screen: screens.Screen) -> dict:
+    return {
+        "id": screen.id,
+        "label": screen.label,
+        "maker": screen.maker,
+        "model": screen.model,
+        "width": screen.width,
+        "height": screen.height,
+        "family": screen.family,
+        "tested": screen.tested,
+        #: ADR-0111: the skin pack this screen gets, which the Visualiser
+        #: step names ("1280x800"), or None if no pack fits it.
+        "skins": _pack_name(screen.width, screen.height),
+        "skin_count": skin_packs.COUNTS.get(_pack_name(screen.width, screen.height) or ""),
+    }
+
+
+def _pack_name(width: int, height: int) -> str | None:
+    size = skin_packs.for_screen(width, height)
+    return f"{size[0]}x{size[1]}" if size else None
+
+
+def screen_choices(report: screen_detect.Seen) -> dict:
+    """**The Screen step's page** (ADR-0109): what the screen reports, the
+    tested model that suggests (or nothing), and every model. The page tells
+    its three states apart from this: a suggestion is *recognised*, a screen
+    connected without one is *uncertain*, nothing connected is *none*."""
+    suggested = screen_detect.suggest(report)
+    return {
+        "seen": report.to_json(),
+        "suggested": _screen_json(suggested) if suggested else None,
+        "models": [_screen_json(s) for s in screens.all_screens()],
+    }
 
 
 async def _raspi_config_country(country: str) -> None:

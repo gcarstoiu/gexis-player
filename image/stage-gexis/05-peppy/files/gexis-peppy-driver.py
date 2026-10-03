@@ -59,6 +59,7 @@ SELECTION_PATH = Path("/run/gexis/visualisation.json")
 METERS, SPECTRUM, BOTH = "meters", "spectrum", "both"
 #: What moves (ADR-0096 as amended), as `gexis_core.skins` decides it.
 TURNTABLE, TAPE = "turntable", "tape"
+FANART = "fanart"
 
 #: The `skin_corpus` words and the kinds each one draws from. The same table
 #: as `gexis_core.skins.CORPUS`; the two processes share no code, so they
@@ -70,6 +71,9 @@ CORPUS = {
     "VU meters + spectrum": (BOTH,),
     "Turntables": (TURNTABLE,),
     "Tapes": (TAPE,),
+    # A feature, not a kind (ADR-0112): any skin with a frame for the
+    # artist's photos. As `gexis_core.skins.FANART`.
+    "Fanart": (FANART,),
     ALL: (METERS, SPECTRUM, BOTH, TURNTABLE, TAPE),
     # Understood, for a selection written before the 2026-09-22 rename.
     "Random": (METERS, SPECTRUM, BOTH, TURNTABLE, TAPE),
@@ -141,7 +145,10 @@ class Selection:
         word we do not know, or one that selects nothing on this pack, falls
         back to everything rather than to a blank screen."""
         wanted = CORPUS.get(self.corpus) or CORPUS[ALL]
-        chosen = [name for name, skin in skins.items() if kind_of(skin) in wanted]
+        if wanted == (FANART,):
+            chosen = [name for name, skin in skins.items() if skin.get("fanart.pos")]
+        else:
+            chosen = [name for name, skin in skins.items() if kind_of(skin) in wanted]
         return chosen or list(skins)
 
 
@@ -330,7 +337,7 @@ def png_width(path: Path) -> int | None:
     return int.from_bytes(header[16:20], "big")
 
 
-def select_spectrum_section(name: str, base_folder: Path | None = None) -> None:
+def select_spectrum_section(name: str, base_folder: Path | None = None, folder: str | None = None) -> None:
     """Point the spectrum engine's own config at one section. Rewritten in
     place: configparser fails hard on a duplicate key, and an appended one
     would stop the process starting.
@@ -348,6 +355,9 @@ def select_spectrum_section(name: str, base_folder: Path | None = None) -> None:
     parser["current"]["spectrum"] = name
     if base_folder is not None:
         parser["current"]["base.folder"] = str(base_folder)
+    # ADR-0111: the pack's resolution folder - `1280x800` only in that pack.
+    if folder:
+        parser["current"]["spectrum.folder"] = folder
     # The engine resolves its sections under `base.folder/spectrum.folder`,
     # so the bar count is read from the same place it will read the rest.
     # The cap is what the *pipe* carries, which is the band count peppyalsa
@@ -506,6 +516,10 @@ class Rotation:
         #: ADR-0096: what moves on a turntable or a tape deck, given each new
         #: skin right after the text layer (it paints over that background).
         self.motion = None
+        #: ADR-0112: the artist's photos in a skin's fanart frame, given each
+        #: new skin after the text and motion layers (it is put into their
+        #: backgrounds and the engine's).
+        self.fanart = None
         self.unseen: list[str] = []
         self.current: str | None = None
         self.prepared: tuple[str, object] | None = None
@@ -642,6 +656,9 @@ class Rotation:
             self.layer.set_skin(skin, self.homes.get(name), name)
             if self.motion is not None and self.homes.get(name) is not None:
                 self.motion.set_skin(skin, self.homes[name], self.layer.background)
+        if self.fanart is not None:
+            self.fanart.attach(skin, meter, self.layer, self.motion,
+                               self.peppy.util.PYGAME_SCREEN.get_size())
         pygame.display.update()
         self.prepare_next()
 
@@ -671,6 +688,7 @@ class SpectrumState:
             BASE_FOLDER,
             SCREEN_HEIGHT,
             SCREEN_WIDTH,
+            SPECTRUM_FOLDER,
             SPECTRUM_X,
             SPECTRUM_Y,
         )
@@ -678,7 +696,7 @@ class SpectrumState:
         here = Path.cwd()
         os.chdir(SPECTRUM_DIR)
         try:
-            select_spectrum_section(name, spectrum_base(home) if home else None)
+            select_spectrum_section(name, spectrum_base(home) if home else None, home.name if home else None)
             spectrum = self.spectrum
             spectrum.config[SCREEN_WIDTH] = width
             spectrum.config[SCREEN_HEIGHT] = height
@@ -690,6 +708,7 @@ class SpectrumState:
             # engine looked for it in Gelo5's.
             if home is not None:
                 spectrum.config[BASE_FOLDER] = str(spectrum_base(home))
+                spectrum.config[SPECTRUM_FOLDER] = home.name
             spectrum.spectrum_configs = spectrum.config_parser.get_spectrum_configs()
             if not spectrum.spectrum_configs:
                 print(f"peppy: spectrum {name!r} missing from the corpus; meters only", file=sys.stderr)
@@ -719,6 +738,67 @@ class SpectrumState:
             self.active = False
         finally:
             os.chdir(here)
+
+
+#: ADR-0109: the attached screen's size, written when a screen is chosen.
+SCREEN_ENV = Path("/etc/gexis/screen.env")
+
+
+def screen_size(env: Path = SCREEN_ENV) -> tuple[int, int] | None:
+    """The attached screen, or None when the file says nothing usable."""
+    try:
+        fields = dict(l.split("=", 1) for l in env.read_text().splitlines() if "=" in l and not l.startswith("#"))
+        return int(fields["GEXIS_SCREEN_WIDTH"]), int(fields["GEXIS_SCREEN_HEIGHT"])
+    except (OSError, KeyError, ValueError):
+        return None
+
+
+def centring(pack: tuple[int, int], screen: tuple[int, int] | None) -> tuple[int, int] | None:
+    """Where a pack smaller than the screen sits, centred (ADR-0111
+    decision 2), or None when it fills the screen - or would not fit, in
+    which case it is drawn as it always was, from the corner."""
+    if screen is None or screen == pack or screen[0] < pack[0] or screen[1] < pack[1]:
+        return None
+    return (screen[0] - pack[0]) // 2, (screen[1] - pack[1]) // 2
+
+
+def moved(rects, dx: int, dy: int):
+    """`pygame.display.update`'s argument, in the window's coordinates:
+    a rect, a list of them (a None in it stays None), or nothing at all."""
+    if rects is None:
+        return None
+    if isinstance(rects, (list, tuple)) and rects and not isinstance(rects[0], (int, float)):
+        return [None if r is None else pygame.Rect(r).move(dx, dy) for r in rects]
+    return pygame.Rect(rects).move(dx, dy)
+
+
+def centre_on_black(util, screen: tuple[int, int] | None) -> tuple[int, int] | None:
+    """**A pack smaller than the screen, centred on black** (ADR-0111).
+
+    The window becomes the whole screen, painted black once, and both
+    engines - and our layers - are handed the pack-sized middle of it as
+    their screen: a subsurface, so whatever they draw lands in place. What
+    they ask to be shown is in their coordinates, so `display.update` is
+    wrapped to move it. Called right after `init_display`, before any meter
+    or spectrum component takes the surface (component.py reads it once).
+    """
+    pack = util.PYGAME_SCREEN.get_size()
+    offset = centring(pack, screen)
+    if offset is None:
+        return None
+    window = pygame.display.set_mode(screen, pygame.NOFRAME)
+    window.fill((0, 0, 0))
+    pygame.display.update()
+    util.PYGAME_SCREEN = window.subsurface(pygame.Rect(offset, pack))
+    real = pygame.display.update
+    dx, dy = offset
+
+    def update(rects=None):
+        return real() if rects is None else real(moved(rects, dx, dy))
+
+    pygame.display.update = update
+    print(f"peppy: {pack[0]}x{pack[1]} centred on a {screen[0]}x{screen[1]} screen")
+    return offset
 
 
 def hold_the_last_frame(data_source) -> None:
@@ -816,6 +896,7 @@ def main() -> int:
     # surface for either engine to draw on.
     peppy.init_display()
     util = peppy.util
+    centre_on_black(util, screen_size())
 
     # The engine parsed its own directory; the other one is adopted into the
     # same config so the factory can build from either.
@@ -874,7 +955,11 @@ def main() -> int:
             util.pygame_screen = util.PYGAME_SCREEN
             util.image_util = SpectrumUtil()
 
-            select_spectrum_section(name, spectrum_base(spectrum_home) if spectrum_home else None)
+            select_spectrum_section(
+                name,
+                spectrum_base(spectrum_home) if spectrum_home else None,
+                spectrum_home.name if spectrum_home else None,
+            )
             os.chdir(SPECTRUM_DIR)  # its config parser reads ./config.txt too
             install_screensaver_shim(name, width, height)
             # `spectrum`, not `spectrum.spectrum`: the engine's own directory
@@ -916,6 +1001,7 @@ def main() -> int:
 
     from gexis_peppy_render import MetadataLayer, read_metadata
     from gexis_peppy_motion import MotionLayer
+    from gexis_peppy_fanart import FanartFrame
 
     rotation = Rotation(peppy, skins, spectrum_state, None, homes, selection)
     rotation.spectrum_ready = spectrum_state.spectrum is not None
@@ -958,6 +1044,10 @@ def main() -> int:
     motion.configure(selection.motion, selection.record_rpm, selection.smooth)
     if first in homes:
         motion.set_skin(skins[first], homes[first], layer.background)
+    fanart = FanartFrame()
+    rotation.fanart = fanart
+    motion.fanart = fanart.overlay
+    fanart.attach(skins[first], rotation.vumeter.meter, layer, motion, util.PYGAME_SCREEN.get_size())
     rotation.prepare_next()
     print(
         f"peppy: {len(skins)} skins, {len(pool)} in {selection.corpus!r}, "
@@ -990,6 +1080,9 @@ def main() -> int:
                 if rotation.rotating:
                     rotation.switch()
             metadata = read_metadata()
+            # ADR-0112: a new list of the artist's photos replaces the old at
+            # once; the next `tick` puts its first one in the frame.
+            fanart.set_paths(metadata.get("fanart"))
             if motion.active:
                 # Laid out, not painted: erasing a title to the layer's own
                 # background would wipe the record or the reels under it.
@@ -1000,6 +1093,12 @@ def main() -> int:
                 dirty = layer.draw(metadata)
                 if dirty:
                     pygame.display.update(dirty)
+        # ADR-0112: the fanart frame changes only at a list change and during
+        # a crossfade; then its area alone is repainted, bottom up, so the
+        # needles, the glass and the text stay over the photo.
+        changed = fanart.tick()
+        if changed is not None:
+            pygame.display.update(motion.compose([changed]))
         # ADR-0097: the ticker moves every frame it has moved a whole pixel.
         ticked = layer.tick()
         if ticked:

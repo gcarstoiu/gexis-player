@@ -1883,6 +1883,10 @@
   }
 
   .root {
+    /* ADR-0109: the strip's share of the height; the artist disc keeps the
+       tile's proportion (168 : 176) so both shapes leave the row one height. */
+    --tile: calc(176px + (var(--panel-h) - 800px) * 176 / 376);
+    --face: calc(168px + (var(--panel-h) - 800px) * 168 / 376);
     flex: 1;
     min-width: 0;
     display: flex;
@@ -1909,7 +1913,12 @@
     justify-content: space-between;
     padding: 26px 24px;
     box-sizing: border-box;
-    height: 200px;
+    /* ADR-0109: on the library home the cards (200) and the New Music
+       strip (176) take the height beyond 800 between them, in that
+       proportion: 200 / 229 at 800 / 853. **Never under 164**, what the icon,
+       name and count need - the rule alone gives 157 at 720 (the handoff
+       review; round 2 took it back as max(200k, 164)). */
+    height: max(164px, calc(200px + (var(--panel-h) - 800px) * 200 / 376));
     transition:
       transform 110ms cubic-bezier(0.2, 0.8, 0.2, 1),
       background 110ms linear,
@@ -2119,7 +2128,7 @@
     display: none;
   }
   .album {
-    width: 176px;
+    width: var(--tile);
     flex-shrink: 0;
     background: none;
     display: block;
@@ -2132,7 +2141,7 @@
     align-items: center;
     gap: 10px;
     flex-shrink: 0;
-    width: 168px;
+    width: var(--face);
     background: none;
     border: 0;
     padding: 0;
@@ -2144,13 +2153,13 @@
     transform: scale(0.95);
   }
   .face__disc {
-    width: 168px;
-    height: 168px;
+    width: var(--face);
+    height: var(--face);
   }
   .album__art {
     display: block;
-    width: 176px;
-    height: 176px;
+    width: var(--tile);
+    height: var(--tile);
     border-radius: 14px;
     overflow: hidden;
     position: relative;
@@ -3063,16 +3072,18 @@
     white-space: nowrap;
   }
 
+  /* ADR-0109: the photo is 262 x H / 800, and the column is the photo's
+     width - the design grew the photo alone, into the gap (handoff review). */
   .artistpage__side {
-    width: 262px;
+    width: calc(var(--panel-h) * 262 / 800);
     flex-shrink: 0;
     display: flex;
     flex-direction: column;
     gap: 16px;
   }
   .artist__disc--big {
-    width: 262px;
-    height: 262px;
+    width: calc(var(--panel-h) * 262 / 800);
+    height: calc(var(--panel-h) * 262 / 800);
   }
   .artist__initials--big {
     font-size: 76px;
@@ -3204,16 +3215,17 @@
     padding: 26px 40px 30px;
     box-sizing: border-box;
   }
+  /* ADR-0109: the cover is 264 x H / 800, its column with it. */
   .albumpage__side {
-    width: 264px;
+    width: calc(var(--panel-h) * 264 / 800);
     flex-shrink: 0;
     display: flex;
     flex-direction: column;
     gap: 18px;
   }
   .albumpage__art {
-    width: 264px;
-    height: 264px;
+    width: calc(var(--panel-h) * 264 / 800);
+    height: calc(var(--panel-h) * 264 / 800);
     border-radius: var(--r-lg);
     overflow: hidden;
     position: relative;

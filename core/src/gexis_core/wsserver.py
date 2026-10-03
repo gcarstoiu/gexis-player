@@ -27,6 +27,7 @@ import json
 import logging
 import random
 import tarfile
+from collections.abc import Callable
 from urllib.parse import quote
 from pathlib import Path
 
@@ -34,7 +35,7 @@ from aiohttp import web
 from dbus_next import BusType
 from dbus_next.aio import MessageBus
 
-from gexis_core import backups, bluetooth_devices, device_name, discovery, skins, wifi
+from gexis_core import backups, bluetooth_devices, device_name, discovery, lyrion_scan, lyrion_shares, skins, wifi
 from gexis_core.adapters.base import TRANSPORT_COMMANDS
 from gexis_core.artistinfo import PHOTO_BACKGROUND, PHOTO_LARGE, PHOTO_THUMB
 from gexis_core.artwork_sweep import ARTIST_NAMESPACE, remembered
@@ -108,16 +109,22 @@ class StateServer:
         radio=None,
         pairing_answer=None,
         restore=None,
+        lyrion_shares=None,
+        lyrion_shares_changed=None,
+        own_server=None,
         plugins=(),
         splash=None,
         setup=None,
         setup_flow=None,
+        screen_seen=None,
         park=None,
+        screen_answer=None,
+        on_painted=None,
         upload_plugin=None,
         uninstall_plugin=None,
         weather=None,
         wallpapers=None,
-        skins_dir: Path | None = None,
+        skins_at: Callable[[], tuple[Path, str] | None] | None = None,
         ui_dir: Path | None = None,
     ) -> None:
         """`activate(renderer_id) -> bool` and `set_volume(percent) -> bool`
@@ -161,14 +168,28 @@ class StateServer:
         #: the daemon owns what "restart the device" means, and a test can
         #: watch it without one.
         self._restore = restore
+        #: ADR-0115: the Lyrion server's network shares.
+        self._lyrion_shares = lyrion_shares
+        self._lyrion_shares_changed = lyrion_shares_changed
+        #: ADR-0115 decision 2: this device's own Lyrion server, offered among
+        #: the servers while it is on - never chosen for the user.
+        self._own_server = own_server
         self._splash = splash
         #: ADR-0104: the setup network's status, for the panel and the phone.
         self._setup = setup
         self._setup_flow = setup_flow
+        #: ADR-0109: `() -> screen_detect.Seen`, what the attached screen
+        #: reports, for setup's Screen step. Injected so a test needs no sysfs.
+        self._screen_seen = screen_seen
         #: George, 2026-09-29: "Why don't we disconnect all renderers upon
         #: reboot? It's a fresh start." Called by gexis-park.service as the
         #: device shuts down.
         self._park = park
+        #: ADR-0109 decision 5: *Keep this screen?* - `keep` or `revert`,
+        #: from the panel only.
+        self._screen_answer = screen_answer
+        #: The panel's first frame starts that question's countdown.
+        self._on_painted = on_painted
         #: ADR-0106: a package from a phone or computer, and taking one away.
         self._upload_plugin = upload_plugin
         self._uninstall_plugin = uninstall_plugin
@@ -177,7 +198,9 @@ class StateServer:
         #: Where the skin packs live (ADR-0050). Read per request rather
         #: than at start: a pack could be added under a running daemon, and
         #: parsing 99 sections costs less than the request that asked.
-        self._skins_dir = Path(skins_dir) if skins_dir else None
+        #: ADR-0111: where the skins are now (root, resolution), asked each
+        #: time - a pack arrives or goes while the core runs.
+        self._skins_at = skins_at
         #: What the idle screen is showing, so the next change is a change.
         #: One value for three sources, because only one of them is on
         #: screen at a time: a file name, a Pixabay id, or an artist.
@@ -505,7 +528,8 @@ class StateServer:
         return web.FileResponse(path)
 
     def _skins(self) -> list[tuple]:
-        return skins.installed(self._skins_dir) if self._skins_dir else []
+        at = self._skins_at() if self._skins_at else None
+        return skins.installed(at[0], resolution=at[1]) if at else []
 
     async def _handle_skins(self, request: web.Request) -> web.Response:
         """Every skin the device has, with what it shows (ADR-0050).
@@ -514,7 +538,7 @@ class StateServer:
         declares `meter.visible` and `spectrum.visible`, and 77 of the 99 on
         this device declare neither - which means a meter.
         """
-        if self._skins_dir is None:
+        if self._skins_at is None:
             return web.json_response({"error": "skins are not wired up"}, status=503)
         chosen = str(self._setting_or_none("skin_corpus") or skins.ALL)
         wanted = skins.CORPUS.get(chosen) or skins.CORPUS[skins.ALL]
@@ -537,7 +561,7 @@ class StateServer:
         declares, beside that skin's own `meters.txt`. A name that is a path
         is simply not a skin.
         """
-        if self._skins_dir is None:
+        if self._skins_at is None:
             return web.json_response({"error": "skins are not wired up"}, status=503)
         wanted = request.match_info["name"]
         for skin, directory in self._skins():
@@ -986,15 +1010,28 @@ class StateServer:
         items = [i for i in await wifi.scan() if i["name"] != setup_network.SSID]
         return web.json_response({"items": items})
 
+    async def _handle_setup_screen(self, request: web.Request) -> web.Response:
+        """ADR-0109: the Screen step - what the screen reports, the tested
+        model that suggests, and every model gexis knows."""
+        closed = self._setup_closed()
+        if closed is not None:
+            return closed
+        if self._screen_seen is None:
+            return web.json_response({"error": "screen detection is not wired up"}, status=503)
+        from gexis_core import setup_flow
+
+        report = await asyncio.to_thread(self._screen_seen)
+        return web.json_response(setup_flow.screen_choices(report))
+
     async def _handle_setup_finish(self, request: web.Request) -> web.Response:
         closed = self._setup_closed()
         if closed is not None:
             return closed
         try:
-            self._setup_flow.finish()
+            told = self._setup_flow.finish() or {}
         except ValueError as exc:
             return web.json_response({"error": str(exc)}, status=400)
-        return web.json_response({"finishing": True}, status=202)
+        return web.json_response({"finishing": True, **told}, status=202)
 
     async def _handle_painted(self, request: web.Request) -> web.Response:
         """The panel reporting its first painted frame, which is what ends
@@ -1009,7 +1046,20 @@ class StateServer:
         reloads reports a first frame again, and a development machine has
         no plymouth at all. Neither is the panel's problem."""
         dropped = self._splash.drop() if self._splash is not None else False
+        if self._on_painted is not None and request.remote in ("127.0.0.1", "::1"):
+            self._on_painted()
         return web.json_response({"painted": True, "splash_dropped": dropped})
+
+    async def _handle_screen_answer(self, request: web.Request) -> web.Response:
+        """**ADR-0109 decision 2: Keep is pressed on the panel only** - a touch
+        there proves both the picture and the touch input. Loopback: the
+        panel's Chromium is on this device; a phone is not."""
+        if request.remote not in ("127.0.0.1", "::1"):
+            return web.json_response({"error": "only the panel answers this"}, status=403)
+        action = request.match_info["action"]
+        if action not in ("keep", "revert") or self._screen_answer is None:
+            return web.json_response({"error": f"unknown answer {action}"}, status=404)
+        return web.json_response(await self._screen_answer(action))
 
     async def _handle_peppy(self, request: web.Request) -> web.Response:
         action = request.match_info["action"]
@@ -1024,9 +1074,11 @@ class StateServer:
 
     async def _handle_notice(self, request: web.Request) -> web.Response:
         """ADR-0099: the Legal and Credits pages, from `notices.json`."""
-        from gexis_core import notices
+        from gexis_core import changelog, notices
 
-        page = notices.document(request.match_info["name"])
+        name = request.match_info["name"]
+        # ADR-0116: the release notes, drawn as a document.
+        page = changelog.page() if name == "changelog" else notices.document(name)
         if page is None:
             return web.json_response({"error": "no such document"}, status=404)
         return web.json_response(page)
@@ -1092,6 +1144,14 @@ class StateServer:
                     continue
                 if key == "restore":
                     row["items"] = [a.to_item() for a in backups.available()]
+                    continue
+                if key == "lyrion-server.shares":
+                    # ADR-0115: the shares added, each with its Forget, on the
+                    # row itself; the stored list - logins included - is not
+                    # what the row shows (George, 2026-10-03: "look like just
+                    # code"), so it is not sent.
+                    row["value"] = None
+                    row["items"] = self._lyrion_shares.items() if self._lyrion_shares else []
                     continue
                 source = self.SEEDED_LISTS.get(key)
                 if source is None:
@@ -1167,7 +1227,7 @@ class StateServer:
 
     #: Where a `list` row's items come from - ADR-0044 §1's first open
     #: question, now answered for all three.
-    LIST_SOURCES = ("wifi", "lms_server", "bt_trusted", "restore")
+    LIST_SOURCES = ("wifi", "lms_server", "bt_trusted", "restore", "lyrion-server.shares")
 
     async def _list_row(self, request: web.Request):
         """The `list` row named in the path, or a response explaining why
@@ -1196,6 +1256,20 @@ class StateServer:
             return web.json_response({"items": await wifi.scan()})
         if key == "bt_trusted":
             return web.json_response({"items": await self._bluetooth(bluetooth_devices.known)})
+        if key == "lyrion-server.shares":
+            if self._lyrion_shares is None:
+                return web.json_response({"items": []})
+            # On this thread: it reads the settings store (SQLite, one thread).
+            saved = self._lyrion_shares.items()
+            # ADR-0115's scan: the servers announcing themselves, after the
+            # shares already added; this device's own left out.
+            own = {device_name.hostname(), f"{device_name.hostname()}.local", device_name.address() or ""}
+            found = await asyncio.to_thread(lyrion_scan.servers, own)
+            for server in found:
+                saved.append({"name": server.name, "bars": None, "state": "found",
+                              "meta": f"{server.kind.upper()} · {server.host} · tap to see its shares",
+                              "server": {"host": server.host, "kind": server.kind}})
+            return web.json_response({"items": saved})
         if key == "restore":
             # ADR-0083. Read from the share every time: somebody may have
             # copied one in from another machine since the sheet last opened,
@@ -1207,7 +1281,13 @@ class StateServer:
         # the setting stores; the human name is the line underneath.
         current = str(self._settings.value("lms_server") or "")
         items = []
+        own = self._own_server() if self._own_server else None
+        if own:
+            items.append({"name": own, "meta": "This player's own server", "bars": None,
+                          "state": "current" if own == current else "found"})
         for server in await discovery.find_servers():
+            if own and server["address"] == own:
+                continue
             meta = " · ".join(part for part in (server["name"], server["version"]) if part)
             items.append(
                 {
@@ -1229,6 +1309,41 @@ class StateServer:
             action = body.get("action", "join")
         except (ValueError, KeyError, TypeError):
             return web.json_response({"error": 'body must be {"name": ..., "action": ...}'}, status=400)
+        if key == "lyrion-server.shares":
+            # ADR-0115: added, or forgotten; the mount follows in the core's
+            # loop while the server is on.
+            if self._lyrion_shares is None:
+                return web.json_response({"ok": False, "error": "shares are not wired up"})
+            try:
+                # The store on this thread (SQLite, one thread); the unmount,
+                # which can take seconds, in a worker.
+                if action == "browse":
+                    # One server's shares, or a request for a login.
+                    target = body.get("server") or {}
+                    server = lyrion_scan.Server(name=name, host=str(target.get("host") or name),
+                                                kind="nfs" if target.get("kind") == "nfs" else "smb")
+                    try:
+                        found = await asyncio.to_thread(lyrion_scan.shares, server, body.get("user") or None,
+                                                        body.get("password") or None)
+                    except lyrion_scan.NeedsLogin:
+                        return web.json_response({"ok": False, "login": True,
+                                                  "error": f"{name} needs a user and password to show its shares"})
+                    return web.json_response({"ok": True, "error": None, "items": [
+                        {"name": lyrion_shares.label(s["address"])[0], "meta": s["comment"] or None,
+                         "bars": None, "state": "found", "share": True, "address": s["address"]}
+                        for s in found]})
+                if action == "add":
+                    self._lyrion_shares.add(name, body.get("user"), body.get("password"))
+                elif action == "forget":
+                    self._lyrion_shares.forget(name)
+                    await asyncio.to_thread(self._lyrion_shares.release, name)
+                else:
+                    return web.json_response({"error": f"unknown action {action}"}, status=400)
+            except ValueError as exc:
+                return web.json_response({"ok": False, "error": f"Needs {exc}"})
+            if self._lyrion_shares_changed is not None:
+                self._lyrion_shares_changed()
+            return web.json_response({"ok": True, "error": None})
         if key == "bt_trusted":
             if action != "forget":
                 return web.json_response({"error": f"unknown action {action}"}, status=400)
@@ -1315,6 +1430,7 @@ class StateServer:
         app.router.add_get("/surface", self._handle_surface)
         app.router.add_post("/touch", self._handle_touch)
         app.router.add_post("/panel/painted", self._handle_painted)
+        app.router.add_post("/screen/{action}", self._handle_screen_answer)
         app.router.add_get("/setup/status", self._handle_setup_status)
         app.router.add_post("/renderers/park", self._handle_park)
         app.router.add_post("/plugins/upload", self._handle_plugin_upload)
@@ -1322,6 +1438,7 @@ class StateServer:
         app.router.add_get("/setup/answers", self._handle_setup_answers)
         app.router.add_post("/setup/answers", self._handle_setup_save)
         app.router.add_get("/setup/networks", self._handle_setup_networks)
+        app.router.add_get("/setup/screen", self._handle_setup_screen)
         app.router.add_post("/setup/finish", self._handle_setup_finish)
         # ADR-0101: the phone's idle toggle, and the panel saying what it shows.
         app.router.add_post("/panel/idle/{action}", self._handle_idle_request)

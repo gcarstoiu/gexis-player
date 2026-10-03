@@ -14,7 +14,7 @@ Artwork 500×500 left, metadata right, progress and transport below. Four meta
 tabs above the title switch the right column between Track, Lyrics, Artist and
 Release without leaving the screen. Source mark top-right — the mark alone, no
 ground, no border and no word: 32px, 44px from the top, 56px from the right,
-in the source accent, pulsing at 2.4s while playing. A 3px accent rule runs
+in the source accent. It does not pulse (Finding 056). A 3px accent rule runs
 along the top edge.
 
 The Track panel's header is one layout whether or not lyrics are there: 54px
@@ -249,13 +249,24 @@ rail shows them:
 
 | id | Rail label | Accent | What it collects |
 |---|---|---|---|
-| `wifi` | Network | `#8fc4d8` | SSID from a scan or typed manually, password with show/hide, Join with connecting and error states |
+| `wifi` | Network | `#8fc4d8` | The Wi-Fi network — see below |
 | `name` | Name | `#e8a0b4` | Device name, with the `.local` address previewed live underneath |
 | `tz` | Time | `#c8a2d8` | Time zone: auto-detected from the network, overridable through region then city, each city showing its current time |
 | `out` | Output | `#7ed6bc` | Audio output, with a tag on the recommended one. Droppable — `askOutput: false` removes the step and the rail entry |
 | `music` | Music | `#9fb4e8` | LMS discovery, then optional Spotify Connect and Bluetooth toggles |
 | `display` | Display | `#8fd9a8` | Headless mode, and the panel's own display options |
 | `review` | Review | `#f2a48f` | Everything above, editable by tapping back to its step |
+
+### The network step
+
+The scan, the network list, then the password form with show/hide. **The step
+saves the choice and does not test it** (`IMPLEMENTED-DIFFERENTLY.md`, phone
+steps; kept by George, 2026-09-30): there is one radio, so the join can only
+happen after the setup page is gone. A wrong password brings setup back within
+about 15 s, opened on Network with the reason and every other answer kept.
+Review reports the SSID.
+
+~~Two cards, Ethernet and Wi-Fi, one interface at a time~~ — struck by George, 2026-09-30: *"strike it. We will need to consider the ethernet later."* (`briefs/13b-handoff-review.md`).
 
 The rail is tappable backwards only: a step that has not been reached does
 nothing. The footer's action reads Start on the welcome pane, Continue
@@ -331,3 +342,30 @@ cross-fade showed the bare backdrop as a blink.
 | handoff | note position, 1–3s, self-dismissing |
 
 No blur transitions, no animated filters, no simultaneous region animations.
+
+---
+
+## Changed 2026-09-30
+
+- **With LMS off (ADR-0079) there is no library.** Nothing playing shows the
+  waiting marks full screen at 1.8× their footer size (180px rings, 162px
+  discs, Spotify mark 68px, Bluetooth 74px, 310px columns 60px apart), each
+  with its name (27px, 700) and status (15px mono, uppercase: Listening,
+  Pairable), and a 64px Settings button 26px from the top right. With every
+  source off it reads **No sources** / "Every source is switched off.
+  Settings, top right." Now Playing's Home button shows the sliders glyph and
+  opens Settings; the artist line is not a link.
+- **Queue rail: no remove button.** A row swipes left; past 96px it removes
+  the track, uncovering *Remove* (13px mono, coral on coral 16%) behind it.
+  Below 12px the gesture has not chosen an axis; vertical wins the list. The
+  first time the rail opens with two or more rows, row 1 opens 70px at 480ms
+  and closes at 1500ms, once per run. A click within 320ms of a swipe is not
+  a tap. Row press is opacity 0.62.
+- **Idle clock off** (`idle_clock`): the time and date go; the panel is a
+  picture frame with its credits line.
+- **Panel setup is one step at a time**, readable from two metres: see
+  `source/Panel Setup.dc.html` and `IMPLEMENTED-DIFFERENTLY.md`.
+- **Other screens (Phase 13b)** are in `source/13b/`, opened from
+  `Screen Families Chosen.dc.html`: the Standard family (1.5–1.8) scaled to a
+  logical width of 1280 with one hero per screen absorbing the height, and the
+  Bar family (3–5) laid out at a logical height of 400.

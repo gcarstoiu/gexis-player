@@ -224,6 +224,15 @@ proposals:
 That makes it **49 settable rows** under 7 group separators, across 6
 categories, 6 wired.
 
+### Changed 2026-09-22
+
+- **The skin picker is a list with a preview**, not a thumbnail grid, and a
+  tap previews without writing. See "Picking a skin" above.
+- **`idle_days` became `idle_forecast`.** It was a 0–5 number; it is now a
+  choice of `3 days` or `None`, because those are the only two the idle
+  screen draws and they are two different layouts.
+- ~~Ethernet joins Wi-Fi under Device (`connection`, `eth_ip`)~~ — struck by George, 2026-09-30: *"strike it. We will need to consider the ethernet later."* (`briefs/13b-handoff-review.md`).
+
 ---
 
 ## Two behaviours to preserve
@@ -294,3 +303,34 @@ both opportunities are now taken:
 Two `list` kinds now exist. `kind: 'server'` items are
 `[address, description, state]` with `state: 'current' | 'found'`, no signal
 bars and no forget action; Wi-Fi items stay `[ssid, meta, bars, state]`.
+
+---
+
+## Changed 2026-09-30
+
+`source/Settings.dc.html` is generated from `core/src/gexis_core/settings_registry.json`
+(phase-13): every surfaced row in the registry's order with its copy. Where
+this file and the source disagree, the source is right; this file has not
+been rewritten row by row.
+
+Confirmed by George for Phase 13b, in `source/Settings.dc.html` (marked [N], new):
+
+| key | type | group | note |
+|---|---|---|---|
+| `screen` | choice | Display → Panel | Label **Attached screen**. The model, from the supported-screens table. Sets the family (Standard or Bar) and the skin set. Restarts the player. |
+| `rotation` | choice | Display → Panel | Label **Screen rotation**. 0° / 180° (ADR-0109 decision 6). Restarts the player. |
+
+## Changed 2026-10-01 (Phase 13b round 2, `briefs/13b-corrections.md` §4)
+
+| key | type | group | note |
+|---|---|---|---|
+| `screen` | choice, `groups: true` | Display → Panel | Now the two-step picker Time zone uses: makers, then that maker's models, each marked Tested or Untested (ADR-0109 decision 1: foonerd's 197 models, George's four tested). |
+| `skin_size` | choice | Display → Visualization | **Skin size**: *Match the screen* (default) or any installed set's size. Each size is a plugin. |
+| `release` | readonly | System → Updates | The installed release and whether a newer one is waiting. |
+| `check_now` | action | System → Updates | Asks the repository; the device also checks daily (ADR-0105 §4). |
+| `update_now` | action, confirmed | System → Updates | Download, back up, wait for silence, install, check, go back on failure (ADR-0105 §4). |
+| `updates` | choice | System → Updates | Manual (default) or Automatic (ADR-0105 §6). |
+| `update_channel` | choice | System → Updates | Stable or Testing; Testing carries a warning. |
+| `plugin_upload` | action, `noPanel` | Plugins → Add | **Upload a plugin**, with `Settings.svelte`'s note and warning. Hidden when Settings is embedded on the panel. |
+
+The rest of System is now headed **Maintenance**.

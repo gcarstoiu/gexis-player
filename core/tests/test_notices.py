@@ -87,3 +87,34 @@ def test_the_repositorys_third_party_list_is_current():
 def test_the_image_ships_the_repositorys_own_licence():
     """The stages cannot see the repository root, so 09-legal keeps a copy."""
     assert (STAGES / "09-legal" / "files" / "COPYING").read_bytes() == (ROOT / "LICENSE").read_bytes()
+
+
+def test_the_change_logs_page_shows_the_last_ten_newest_first():
+    """ADR-0116."""
+    from gexis_core import changelog
+
+    page = changelog.page()
+    releases = [s for s in page["sections"] if s.get("notes")]
+    assert len(releases) == 10
+    assert releases[0]["heading"].startswith(changelog.releases()[0][0] + " · ")
+    assert page["sections"][-1]["url"].startswith("https://github.com/")
+
+
+def test_every_release_s_notes_follow_the_rules_from_when_they_had_sections():
+    """What publish.sh refuses, checked where the notes are written."""
+    from gexis_core import changelog
+
+    for version, entry in changelog.releases():
+        if changelog._key(version) < (0, 4, 0):
+            continue  # prose, as published before the sections (0.4.0)
+        lines = entry["notes"].splitlines()
+        assert {"New", "Fixed", "Good to know"} & set(lines), version
+        assert any(line.startswith("• ") for line in lines), version
+
+
+def test_changelog_md_is_generated_from_the_release_notes():
+    """ADR-0116 decision 7: the page's "older ones" point at it."""
+    from gexis_core import changelog
+
+    assert (ROOT / "CHANGELOG.md").read_text() == changelog.markdown(), \
+        "run: cd core && python -m gexis_core.changelog ../CHANGELOG.md"

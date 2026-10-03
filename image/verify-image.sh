@@ -45,6 +45,7 @@ image/stage-gexis/05-peppy/files/gexis-peppy-start /usr/bin/gexis-peppy-start
 image/stage-gexis/05-peppy/files/gexis-peppy-driver.py /opt/gexis-peppy/driver.py
 image/stage-gexis/05-peppy/files/gexis_peppy_render.py /opt/gexis-peppy/gexis_peppy_render.py
 image/stage-gexis/05-peppy/files/gexis_peppy_motion.py /opt/gexis-peppy/gexis_peppy_motion.py
+image/stage-gexis/05-peppy/files/gexis_peppy_fanart.py /opt/gexis-peppy/gexis_peppy_fanart.py
 image/stage-gexis/05-peppy/files/gexis_peppy_gauges.py /opt/gexis-peppy/gexis_peppy_gauges.py
 image/stage-gexis/05-peppy/files/badge-slots.json /opt/gexis-peppy/badge-slots.json
 image/stage-gexis/05-peppy/files/peppy-meter.txt /opt/gexis-peppy/peppymeter/config.txt
@@ -52,30 +53,33 @@ image/stage-gexis/05-peppy/files/peppy-spectrum.txt /opt/gexis-peppy/spectrum/co
 image/stage-gexis/07-beszel/files/beszel-agent.service /usr/lib/systemd/system/beszel-agent.service
 image/stage-gexis/07-beszel/files/beszel-agent-listen-check.sh /usr/lib/gexis/beszel-agent-listen-check.sh
 image/stage-gexis/07-beszel/files/plugin.json /usr/share/gexis/plugins/beszel/plugin.json
-skins/templates/meters.txt /opt/gexis-peppy/skins/gelo5/templates/1280x800/meters.txt
-skins/templates_spectrum/spectrum.txt /opt/gexis-peppy/skins/gelo5/templates_spectrum/1280x800/spectrum.txt
+image/stage-gexis/07-beszel/files/beszel-hub.service /usr/lib/systemd/system/beszel-hub.service
+image/stage-gexis/07-beszel/files/plugin-hub.json /usr/share/gexis/plugins/beszel-hub/plugin.json
+image/stage-gexis/10-lyrion/files/plugin.json /usr/share/gexis/plugins/lyrion-server/plugin.json
+image/stage-gexis/10-lyrion/files/gexis-lyrion.service /usr/lib/systemd/system/gexis-lyrion.service
+image/stage-gexis/10-lyrion/files/lyrion.env /usr/share/gexis/components/lyrion.env
+image/stage-gexis/10-lyrion/files/90-gexis-usb-music.rules /usr/lib/udev/rules.d/90-gexis-usb-music.rules
+image/stage-gexis/10-lyrion/files/gexis-music.conf /etc/samba/smb.conf.d/gexis-music.conf
 EOF
 
-# The spectrum pack's meters.txt is the one file the build does not install
-# verbatim: two sections named the *spectrum's* blank panel as their meter
-# background, and the gexis-skins build corrects them (Finding 050). So it is
-# compared against the upstream copy *with that correction applied* - the
-# same sed, run here, rather than the check being dropped.
-sm_src="$OUT/meters-expected.txt"
-sed -e '/\[111G5_Teletronix S+M\]/,/\[112G5/ s/Teletronix_bgr\.png/Teletronix.jpg/' \
-	-e '/\[107G5_Marantz S+M\]/,/\[108G5/ s/Marantz_bgr\.png/Marantz.jpg/' \
-	"$REPO/skins/templates_spectrum/meters.txt" > "$sm_src"
-if ! cmp -s "$REPO/skins/templates_spectrum/meters.txt" "$sm_src"; then
-	dfs "dump /opt/gexis-peppy/skins/gelo5/templates_spectrum/1280x800/meters.txt $OUT/one" >/dev/null
-	if cmp -s "$sm_src" "$OUT/one"; then
-		ok "spectrum meters.txt = upstream + the two corrected backgrounds"
-	else
-		bad "spectrum meters.txt is neither upstream nor upstream+correction"
-	fi
-	rm -f "$OUT/one"
+# **No skins in the image** (ADR-0111 decision 9): neither the old
+# gexis-skins nor a size's pack, which a device installs only once the user
+# agrees. Until 2026-10-01 this section compared Gelo5's 1280x800 files and
+# counted each corpus's images; those checks belong to the packs now
+# (packaging/skin-packs/build.sh), and what is asserted here is their absence.
+echo "== no skins in the image (ADR-0111)"
+for gone in /opt/gexis-peppy/skins /opt/gexis-peppy/packs /usr/share/doc/gexis-skins; do
+	dfs "stat $gone" | grep -q 'Inode:' && bad "$gone is in the image" || ok "$gone absent"
+done
+dfs "dump /var/lib/dpkg/status $OUT/status" >/dev/null
+if [ ! -s "$OUT/status" ]; then
+	bad "/var/lib/dpkg/status missing"
+elif grep -qE '^Package: gexis-skins(-[0-9]+x[0-9]+)?$' "$OUT/status"; then
+	bad "a skins package is installed: $(grep -oE '^Package: gexis-skins[^ ]*' "$OUT/status" | tr '\n' ' ')"
 else
-	bad "the meter background correction matched nothing in skins/ (Finding 050)"
+	ok "no gexis-skins package installed"
 fi
+rm -f "$OUT/status"
 
 echo "== files the services must be able to write"
 # The driver rewrites the spectrum engine's config to choose a section - the
@@ -142,10 +146,6 @@ echo "== Peppy"
 for f in peppymeter/peppymeter.py spectrum/spectrum.py fonts/DSEG7Classic-Italic.ttf icons/icon-spotify.png; do
 	dfs "stat /opt/gexis-peppy/$f" | grep -q 'Inode:' && ok "/opt/gexis-peppy/$f" || bad "/opt/gexis-peppy/$f missing"
 done
-for c in gelo5 stock; do
-	n=$(dfs "ls /opt/gexis-peppy/skins/$c/templates/1280x800" | grep -oE '[^ ]+\.(png|jpg)' | wc -l)
-	[ "$n" -ge 10 ] && ok "$c templates: $n images" || bad "$c templates: $n images"
-done
 echo "  viz_timeout default in shipped registry: $(python3 -c "import json; r=json.load(open('$OUT/gexis_core/settings_registry.json')); s=[x for sec in r for x in sec.get('rows',[]) if x.get('key')=='viz_timeout']; print(repr(s[0].get('default')) if s else 'not found')" 2>&1)"
 # **This printed nothing from the refactor that introduced `minutes()` until
 # 2026-09-26**, because it grepped a shape the daemon had stopped having. An
@@ -179,6 +179,19 @@ else
 	[ -n "$want_sha" ] || bad "no BESZEL_SHA256 pin found in packaging/beszel-agent/pins.sh"
 fi
 rm -f "$OUT/agent"
+
+# ADR-0114: the hub, the build its pin names (the binary's own checksum, taken
+# from the pinned release on 2026-10-02).
+dfs "dump /usr/bin/beszel-hub $OUT/hub" >/dev/null
+BESZEL_HUB_BINARY_SHA256="2573c4a32ef5dfeda9a13fbf35f2cf8bb2f46f34088ef7f70a407878756dd5c4"
+if [ ! -s "$OUT/hub" ]; then
+	bad "/usr/bin/beszel-hub missing"
+else
+	got="$(sha256sum "$OUT/hub" | cut -d' ' -f1)"
+	[ "$got" = "$BESZEL_HUB_BINARY_SHA256" ] && ok "beszel-hub is the pinned build" \
+		|| bad "beszel-hub sha256 is $got, expected $BESZEL_HUB_BINARY_SHA256"
+fi
+rm -f "$OUT/hub"
 
 # **Not enabled.** An unenrolled device runs nothing, and the switch on the
 # settings screen reads the unit's real state (ADR-0086 as amended) - so a unit
@@ -342,11 +355,14 @@ fi
 rm -f "$OUT/one"
 
 echo "== ADR-0099: licences and the source offer reach the device"
+# peppy_templates' notice is not here since ADR-0111: nothing of that
+# repository is in the image, and each skin pack carries it in its own
+# /usr/share/doc/gexis-skins-<W>x<H>/. peppy_screensaver's comes with
+# gexis-player now that gexis-skins is not installed.
 for f in /usr/share/doc/gexis-player/COPYING \
          /usr/share/doc/gexis-player/SOURCE.md \
          /usr/share/doc/gexis-player/packages.txt \
          /usr/share/doc/gexis-player/licenses/peppy_screensaver/LICENSE \
-         /usr/share/doc/gexis-player/licenses/peppy_templates/LICENSE \
          /usr/share/doc/gexis-player/licenses/beszel/LICENSE \
          /usr/share/doc/gexis-player/licenses/go-librespot/README \
          /usr/share/doc/gexis-player/licenses/peppyalsa/README \

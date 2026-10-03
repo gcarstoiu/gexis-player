@@ -129,3 +129,38 @@ the repository validates is the config files alone.
   none; their own drawing was not modelled.
 - **Four skins photographed**, not 99. The file-level check is exhaustive;
   the photographs are not.
+
+## Update, 2026-10-01 — the wrong file was ours: the build merged two folders
+
+**Found while building the per-size packs (ADR-0111), by reading the
+archive, not on a screen.** Gelo5's zip ships each Spec&Met set as two
+folders: `template/1280x800_Gelo5 Spec&Met_420/` (meters) and
+`template_spectrum/1280x800_Gelo5 Spec&Met_420/` (spectrum). **Both hold a
+`Teletronix_bgr.png` and a `Marantz_bgr.png`, and they are different
+pictures**:
+
+| file | in `template/` (the meter's) | in `template_spectrum/` |
+|---|---|---|
+| `Teletronix_bgr.png` | 1280×400, the dials | 672×302, the blank panel |
+| `Marantz_bgr.png` | 1280×800 RGBA, the dials | 406×134, the blank panel |
+
+gexis-skins copies the first folder and then the second into one
+(`packaging/skins/build.sh`, after `05-peppy/01-run.sh`), so the spectrum's
+file overwrites the meter's. **Upstream's skins name the right file; the
+merge replaced it.** "That file is the spectrum's panel" above is true of
+the merged folder only. The same merge would overwrite 3 to 14 files per
+set at the other sizes (counted in each 2024.03.02 archive: 1280×400 3,
+1480×320 14, 1920×1080 4, 800×480 4).
+
+**What changes, and what does not:**
+
+- The packs (`packaging/skin-packs/`) keep the two folders apart, as
+  upstream and the catalog lay them out, so nothing is overwritten and no
+  section is rewritten. Their build checks the pictures' bytes instead of
+  the names: a circular meter whose background *is* a spectrum panel fails
+  it. Every pack passes.
+- **Not tested: how the meter's own `_bgr.png` draws.** This correction
+  points those two skins at `screen.bgr` and was photographed clean; the
+  packs give them upstream's file, which nobody has looked at on a panel.
+- Devices with gexis-skins keep the corrected merge (ADR-0111 decision 10);
+  `packaging/skins/build.sh` is unchanged.

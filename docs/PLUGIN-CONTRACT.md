@@ -81,6 +81,7 @@ Every message has a `t` (type). Everything else depends on `t`.
    "dummy_mixer_card": null,
    "volume_over_bluealsa": false,
    "volume_handed": false,
+   "sample_rate_is_source": false,
    "controls": ["play", "pause", "next", "previous", "repeat", "shuffle"]
  },
  "release_ladder": {"polite_grace": 1.0, "sigterm_grace": 2.0, "sigkill_grace": 2.0}}
@@ -148,6 +149,7 @@ Taken from `Adapter` and `Capabilities` as they are. The prose for each is in
 | `capabilities.dummy_mixer_card` | string or null | Only for `dummy_mixer` |
 | `capabilities.volume_over_bluealsa` | bool | ADR-0054 §1 |
 | `capabilities.volume_handed` | bool, optional | **Added 2026-09-28, within version 1.** True when the level the plugin would report at a takeover is only its app's leftover. The core then *hands* it a level (the DAC's, capped by `start_max`) through `set_volume` instead of applying its report. A plugin that declares it should hold back its `volume` reports from its acquisition until that `set_volume` arrives. ADR-0054 §5, as amended |
+| `capabilities.sample_rate_is_source` | bool, optional | **Added 2026-10-02, within version 1.** True when the `sample_rate` (and `bit_depth`) the plugin reports is the playing file's own, not a decoder's rate for a lossy stream. Only then does the visualiser show it (ADR-0036 as amended). Absent is false |
 | `capabilities.controls` | array | Subset of `play`, `pause`, `next`, `previous`, `repeat`, `shuffle`, plus `activate` |
 
 ## Plugin → core
@@ -170,7 +172,7 @@ Taken from `Adapter` and `Capabilities` as they are. The prose for each is in
   harmless.
 - **`metadata`** — fields from `TrackMetadata`; every one optional, absent is
   absent and draws nothing. `track_id`, `title`, `artist`, `album`, `year`,
-  `artwork`, `artwork_small`, `sample_rate`, `codec`, `position`, `duration`,
+  `artwork`, `artwork_small`, `sample_rate` (Hz), `bit_depth` (bits; added 2026-10-02), `codec`, `position`, `duration`,
   `transport`, `source_type`, `shuffle`, `repeat`, `unavailable`.
 - **`queue`** — only a renderer that has one (ADR-0038 §5). Others send a
   stream and no queue.

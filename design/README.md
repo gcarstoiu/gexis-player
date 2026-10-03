@@ -20,7 +20,8 @@ are all final unless a row below says otherwise. Recreate them exactly.
 | `data-contract.md` | Every field each screen needs, mapped to `/state`. Fields the backend does not publish yet are marked NEW. |
 | `settings.md` | Settings row-type vocabulary and the full row inventory. Provisional. |
 | `screens.md` | The other ten screens and the mini strip, described for later phases. |
-| `source/*.dc.html` | The full interactive design — Now Playing, Settings and Setup. Open in a browser. |
+| `source/*.dc.html` | The full interactive design — Now Playing, Settings, Setup (phone) and Panel Setup. Open in a browser. |
+| `source/13b/` | Phase 13b, other screens. Open `Screen Families Chosen.dc.html`. |
 | `assets/` | Service marks and the two sample images. |
 
 ---
@@ -321,6 +322,8 @@ the weather in the `None` state.
 **The skin picker is a list with a preview**, not a thumbnail grid, and
 tapping a row previews without writing the value — see `settings.md`.
 
+~~Ethernet as a choice on both network screens~~ — struck by George, 2026-09-30: *"strike it. We will need to consider the ethernet later."* (`briefs/13b-handoff-review.md`).
+
 **Setup is documented** as `screens.md` §13 and its source is in `source/`.
 It is the second screen the phone sees, and the first thing a new device
 shows at all.
@@ -333,6 +336,59 @@ only. Everything else is the `.dc.html` source plus these documents.
 HTTP server, which is yours to start. Group 1's baseline is updated for the
 tab row; group 6 compares against `source/` live, so it picks up the type
 and source-mark changes on its own.
+
+---
+
+## Changed 2026-09-30
+
+All in `source/`; the plain slice (`now-playing.*`) is updated where it
+covers the change.
+
+**Now Playing.** No pulse on the source mark (Finding 056). Home is 64px with
+a 24px four-tile glyph at 4px gaps. Shuffle and repeat carry a 1px border at
+12% and draw at 66%. The volume glyph is the drawer's 30px one: a 15×26 cone
+and arcs of 16 / 24 / 30 at 2.5px, lit past 0, 34 and 67 percent at 85%,
+unlit at 18%. The right group's gap is 14px. With LMS off the Home button
+opens Settings and the artist line is inert (`screens.md`, Changed
+2026-09-30). The queue rail removes by swipe. Album art, artist photo and the
+Bluetooth mark are the repo's current files (`assets/SOURCES.md`).
+
+**Settings** follows `settings_registry.json` (phase-13) row for row; the
+source file is the inventory. Confirmed for Phase 13b and drawn in
+`Settings.dc.html` (the study copy `source/13b/Settings Screen Row.dc.html` is
+superseded): **[N] Attached screen** and **[N] Screen rotation** in Display →
+Panel, both restarting the player. [N] is a new row; R means *recorded* in
+ADR-0022, not *restart*.
+
+**Setup (phone)** from `SetupPage.svelte`: the blurred weave, the
+mobile-data card on Welcome, Music as three Lyrion choices that gate
+Continue, and Change on Review returning to Review. Phase 13b replaces
+"Is a screen attached?" with a **Screen** step, in `Setup.dc.html` itself
+(there is no separate Setup Screen Step file).
+
+**Panel Setup** from `SetupScreen.svelte`: one step at a time, nothing to
+read under 30px.
+
+**Phase 13b, other screens** — `source/13b/Screen Families Chosen.dc.html`
+is the answer to `briefs/13b-screen-families.md`: the two families, their
+rules, the touch floor (44 px; nothing grows; ADR-0109 decision 4), the type rule (uniform),
+every bar screen, the visualiser's surround, what is dropped, and the
+decisions George settled on 2026-09-30. The Canvas section below still
+describes the 1280 × 800 panel; 13b is how other sizes derive from it.
+
+**Round 2 (2026-10-01)** — `source/13b/Screen Families Round 2.dc.html` answers
+`briefs/13b-bar-gaps.md` and `briefs/13b-corrections.md`: one rule for the
+bar forecast, idle fit and drift, the queue with Clear and Playing from,
+every bar target at 44 px or more, the bar states never drawn
+(`Bar States.dc.html`), the 1200 and 2000 ends, Standard at 720 and 768 with
+the repo's three fixes taken back, the Screen step corrections, the new
+*Keep this screen?* (`Keep This Screen.dc.html`), and Settings: the Updates
+group, Upload a plugin, Attached screen as a two-step picker with tested
+marks, rotation 0° / 180°, and Skin size.
+
+**`verify.html` has not been run against this revision.** It needs a local
+HTTP server. The slice was re-extracted by hand for the changes above;
+`geometry.json` is unchanged, as no landmark moved.
 
 ---
 

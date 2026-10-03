@@ -989,6 +989,42 @@ version is described.
 swap it in after the run ends. *The file on disk is right* is not
 *the file the process reads is right*.
 
+**52. A merge's version came from the commit it merged** (2026-10-02,
+Phase 13b).
+- **What went wrong.** `v0.6.0` was tagged on a merge whose tree equals its
+  second parent's. `packaging/build.sh` versions a package from
+  `git log -1 -- <its inputs>`, and git's history simplification drops a
+  merge that changes nothing against one parent. For the player, whose
+  input is `.`, the commit found was the untagged one below the merge.
+- **What it looked like.** Every check was green. The image was named
+  `v0.6.0` (that comes from `git describe` of HEAD) and passed all 97
+  `verify-image.sh` checks. Inside it, `gexis-player` was
+  `0.5.0+git21.a64768a`.
+- **How it was caught.** By reading the release build's own line,
+  `gexis-player 0.5.0+git21`, before publishing. `publish.sh` would have
+  refused it as "not a release number", but only after the image had been
+  handed over.
+
+**The whole tree's commit is HEAD.** For `.`, `version_for` uses HEAD. An
+image's name and its player's version are two answers to one question;
+compare them.
+
+**53. One version, two packages** (2026-10-03, Phase 13e).
+- **What went wrong.** `gexis-lyrion-server` took its version from Lyrion's
+  alone (9.1.1-2), though it also carries files of ours. Ours changed between
+  0.8.0 and 0.8.1; the version did not.
+- **What it looked like.** Every check passed: the build, 105 image checks,
+  the release build (it uploaded the new file beside the old one under the
+  same name, in a new part), the upload comparison. On George's player the
+  install downloaded 0.8.1's copy, the rollback preparation downloaded 0.8.0's
+  over it - apt keys its cache by name and version - and the install, from
+  downloaded files only, stopped: "Unable to fetch some archives".
+- **How it was caught.** By the device, which went back to 0.8.0 as it should.
+
+**A package's version names its content.** A component with upstream's
+version also takes the commit of our files in it, and the release build now
+stops on a name and version already published with different bytes.
+
 ## Common shape
 
 Every case had a *plausible* substitute for the real target — the build

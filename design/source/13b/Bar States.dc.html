@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Nunito+Sans:ital,opsz,wght@0,6..12,300..800&family=IBM+Plex+Mono:wght@300;400;600;700&display=swap" rel="stylesheet" />
+<style>html,body{margin:0;padding:0;background:#0c1014;}a{color:#7ed6bc;}a:hover{color:#a8e5d3;}@keyframes bsSkel{50%{opacity:0.45;}}</style>
+</helmet>
+<div style="width:{{ wPx }};height:400px;position:relative;overflow:hidden;font-family:'Nunito Sans','Avenir Next','Segoe UI',system-ui,sans-serif;color:#e9eef2;background:#101a21;">
+  <div style="position:absolute;inset:0;background:#37505f;"></div>
+  <div style="position:absolute;inset:0;background:radial-gradient(130% 105% at 20% 42%,rgba(20,33,42,0.62),rgba(13,21,28,0.93));"></div>
+
+  <sc-if value="{{ isStrip }}" hint-placeholder-val="{{ true }}">
+    <div style="position:absolute;left:0;right:0;top:0;height:3px;background:{{ accent }};z-index:3;"></div>
+    <div style="position:absolute;inset:0;display:flex;gap:36px;padding:32px 40px;box-sizing:border-box;">
+      <div style="width:336px;height:336px;border-radius:20px;position:relative;overflow:hidden;background:#17242d;flex-shrink:0;box-shadow:0 20px 48px rgba(0,0,0,0.5);">
+        <sc-if value="{{ artShown }}" hint-placeholder-val="{{ true }}"><img src="album-art.webp" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;" /></sc-if>
+        <sc-if value="{{ artPending }}" hint-placeholder-val="{{ false }}">
+          <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;background:linear-gradient(160deg,rgba(126,214,188,0.07),rgba(242,164,143,0.06));">
+            <div style="width:96px;height:96px;border-radius:50%;border:2px solid rgba(126,214,188,0.4);display:flex;align-items:center;justify-content:center;"><div style="width:24px;height:24px;border-radius:50%;background:rgba(126,214,188,0.45);"></div></div>
+            <span style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:13px;letter-spacing:0.16em;color:rgba(233,238,242,0.6);text-transform:uppercase;">artwork pending</span>
+          </div>
+        </sc-if>
+        <div style="position:absolute;inset:0;border-radius:20px;box-shadow:inset 0 0 0 1px rgba(255,255,255,0.08);"></div>
+      </div>
+      <div style="flex:1;min-width:0;display:flex;flex-direction:column;">
+        <div style="display:flex;align-items:flex-start;gap:20px;">
+          <div style="flex:1;min-width:0;">
+            <sc-if value="{{ metaOn }}" hint-placeholder-val="{{ true }}">
+              <div style="font-size:42px;line-height:1.06;font-weight:700;letter-spacing:-0.015em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ title }}</div>
+              <div style="display:flex;align-items:baseline;gap:12px;margin-top:10px;min-width:0;">
+                <span style="font-size:28px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#f2a48f;flex-shrink:1;min-width:0;max-width:62%;">{{ artist }}</span>
+                <span style="font-size:24px;color:rgba(233,238,242,0.6);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;min-width:0;">{{ album }}</span>
+                <span style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:21px;color:rgba(233,238,242,0.6);white-space:nowrap;flex-shrink:0;display:{{ yearDisplay }};">{{ year }}</span>
+              </div>
+            </sc-if>
+            <sc-if value="{{ lyrHead }}" hint-placeholder-val="{{ false }}">
+              <div style="display:flex;align-items:baseline;gap:12px;min-width:0;"><span style="font-size:24px;font-weight:700;white-space:nowrap;">{{ title }}</span><span style="font-size:20px;font-weight:600;color:#f2a48f;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ artist }}</span></div>
+            </sc-if>
+            <sc-if value="{{ lyrSynced }}" hint-placeholder-val="{{ false }}">
+              <div style="margin-top:10px;display:flex;flex-direction:column;gap:4px;">
+                <div style="font-size:26px;line-height:1.3;font-weight:500;color:rgba(233,238,242,0.85);opacity:0.42;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">So we drive</div>
+                <div style="font-size:26px;line-height:1.3;font-weight:700;color:#f2a48f;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Past the turning, past the town that raised us</div>
+                <div style="font-size:26px;line-height:1.3;font-weight:500;color:rgba(233,238,242,0.85);opacity:0.42;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Radio half a station out of reach</div>
+              </div>
+            </sc-if>
+            <sc-if value="{{ lyrPlain }}" hint-placeholder-val="{{ false }}">
+              <div style="margin-top:10px;display:flex;flex-direction:column;gap:2px;height:104px;overflow:hidden;-webkit-mask-image:linear-gradient(180deg,#000 70%,transparent 100%);mask-image:linear-gradient(180deg,#000 70%,transparent 100%);">
+                <div style="font-size:22px;line-height:1.3;color:rgba(233,238,242,0.85);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Headlights on the ring road, engine keeping time</div>
+                <div style="font-size:22px;line-height:1.3;color:rgba(233,238,242,0.85);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Everyone asleep but the two of us</div>
+                <div style="font-size:22px;line-height:1.3;color:rgba(233,238,242,0.85);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">You counting bridges, me counting exits</div>
+                <div style="font-size:22px;line-height:1.3;color:rgba(233,238,242,0.85);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Nothing left to settle before morning</div>
+              </div>
+            </sc-if>
+            <sc-if value="{{ lyrLoading }}" hint-placeholder-val="{{ false }}">
+              <div style="margin-top:16px;display:flex;flex-direction:column;gap:14px;">
+                <span style="display:block;height:18px;width:62%;border-radius:5px;background:rgba(233,238,242,0.1);animation:bsSkel 1500ms ease-in-out infinite;"></span>
+                <span style="display:block;height:18px;width:80%;border-radius:5px;background:rgba(233,238,242,0.1);animation:bsSkel 1500ms ease-in-out 150ms infinite;"></span>
+                <span style="display:block;height:18px;width:48%;border-radius:5px;background:rgba(233,238,242,0.1);animation:bsSkel 1500ms ease-in-out 300ms infinite;"></span>
+              </div>
+            </sc-if>
+            <div style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:13px;letter-spacing:0.1em;color:rgba(233,238,242,0.6);margin-top:8px;display:{{ creditDisplay }};">From LMS</div>
+          </div>
+          <div style="height:30px;display:flex;align-items:center;flex-shrink:0;">
+            <sc-if value="{{ markLms }}" hint-placeholder-val="{{ true }}"><div style="display:flex;align-items:center;gap:3px;height:30px;"><div style="width:5px;height:15px;border-radius:2px;background:#7ed6bc;"></div><div style="width:5px;height:30px;border-radius:2px;background:#7ed6bc;"></div><div style="width:5px;height:22px;border-radius:2px;background:#7ed6bc;"></div><div style="width:5px;height:26px;border-radius:2px;background:#7ed6bc;"></div></div></sc-if>
+            <sc-if value="{{ markImg }}" hint-placeholder-val="{{ false }}"><img src="{{ markSrc }}" alt="" style="width:30px;height:30px;display:block;" /></sc-if>
+            <sc-if value="{{ markPlugin }}" hint-placeholder-val="{{ false }}"><span style="width:30px;height:30px;border-radius:50%;border:2px solid rgba(233,238,242,0.7);box-sizing:border-box;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:800;color:#e9eef2;">{{ markLetter }}</span></sc-if>
+          </div>
+          <div style="width:60px;height:60px;border-radius:50%;box-sizing:border-box;flex-direction:column;align-items:center;justify-content:center;gap:5px;flex-shrink:0;background:{{ lyrBg }};border:1px solid {{ lyrLine }};display:{{ lyrSwitchDisplay }};">
+            <div style="width:24px;height:3px;border-radius:2px;background:{{ lyrInk }};"></div><div style="width:18px;height:3px;border-radius:2px;background:{{ lyrInk }};"></div><div style="width:24px;height:3px;border-radius:2px;background:{{ lyrInk }};"></div>
+          </div>
+        </div>
+        <div style="margin-top:auto;align-items:center;gap:16px;display:{{ progDisplay }};">
+          <span style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:16px;color:rgba(233,238,242,0.62);flex-shrink:0;">0:44</span>
+          <div style="flex:1;position:relative;height:10px;border-radius:999px;background:rgba(233,238,242,0.13);overflow:hidden;"><div style="position:absolute;left:0;top:0;bottom:0;width:38%;border-radius:999px;background:{{ accent }};"></div></div>
+          <span style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:16px;color:rgba(233,238,242,0.62);flex-shrink:0;">-1:11</span>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr auto 1fr;align-items:center;margin-top:{{ ctlTop }};">
+          <div></div>
+          <div style="display:flex;align-items:center;gap:22px;">
+            <div style="width:60px;height:60px;border-radius:50%;align-items:center;justify-content:center;flex-shrink:0;box-sizing:border-box;background:rgba(233,238,242,0.07);border:1px solid rgba(233,238,242,0.12);display:{{ srDisplay }};"><span style="position:relative;width:32px;height:28px;display:block;"><span style="position:absolute;left:0.5px;top:13.5px;width:17px;height:3px;border-radius:2px;transform:rotate(-54.5deg);display:block;background:rgba(233,238,242,0.66);"></span><span style="position:absolute;left:0.5px;top:13.5px;width:17px;height:3px;border-radius:2px;transform:rotate(54.5deg);display:block;background:rgba(233,238,242,0.66);"></span><span style="position:absolute;left:13px;top:6.5px;width:11px;height:3px;display:block;background:rgba(233,238,242,0.66);"></span><span style="position:absolute;left:13px;top:20.5px;width:11px;height:3px;display:block;background:rgba(233,238,242,0.66);"></span><span style="position:absolute;left:24px;top:3px;width:0;height:0;display:block;border-left:8px solid rgba(233,238,242,0.66);border-top:5px solid transparent;border-bottom:5px solid transparent;"></span><span style="position:absolute;left:24px;top:17px;width:0;height:0;display:block;border-left:8px solid rgba(233,238,242,0.66);border-top:5px solid transparent;border-bottom:5px solid transparent;"></span></span></div>
+            <div style="width:68px;height:68px;border-radius:50%;background:rgba(233,238,242,0.09);display:flex;align-items:center;justify-content:center;flex-shrink:0;"><div style="width:3px;height:19px;background:#e9eef2;border-radius:2px;"></div><div style="width:0;height:0;border-right:13px solid #e9eef2;border-top:10px solid transparent;border-bottom:10px solid transparent;margin-left:3px;"></div></div>
+            <div style="width:92px;height:92px;border-radius:50%;background:#f2a48f;display:flex;align-items:center;justify-content:center;gap:9px;flex-shrink:0;box-shadow:0 0 22px rgba(242,164,143,0.22),0 12px 30px rgba(242,164,143,0.35);"><div style="width:9px;height:34px;border-radius:2px;background:#16232c;"></div><div style="width:9px;height:34px;border-radius:2px;background:#16232c;"></div></div>
+            <div style="width:68px;height:68px;border-radius:50%;background:rgba(233,238,242,0.09);display:flex;align-items:center;justify-content:center;flex-shrink:0;"><div style="width:0;height:0;border-left:13px solid #e9eef2;border-top:10px solid transparent;border-bottom:10px solid transparent;margin-right:3px;"></div><div style="width:3px;height:19px;background:#e9eef2;border-radius:2px;"></div></div>
+            <div style="width:60px;height:60px;border-radius:50%;align-items:center;justify-content:center;flex-shrink:0;box-sizing:border-box;background:rgba(233,238,242,0.07);border:1px solid rgba(233,238,242,0.12);display:{{ srDisplay }};"><span style="position:relative;width:26px;height:26px;display:block;"><span style="position:absolute;left:3px;top:3px;width:15px;height:3px;border-radius:1px;background:rgba(233,238,242,0.66);display:block;"></span><span style="position:absolute;left:3px;top:3px;width:3px;height:14px;border-radius:1px;background:rgba(233,238,242,0.66);display:block;"></span><span style="position:absolute;left:20px;top:9px;width:3px;height:14px;border-radius:1px;background:rgba(233,238,242,0.66);display:block;"></span><span style="position:absolute;left:8px;top:20px;width:15px;height:3px;border-radius:1px;background:rgba(233,238,242,0.66);display:block;"></span><span style="position:absolute;left:17.5px;top:2px;width:0;height:0;border-top:7px solid rgba(233,238,242,0.66);border-left:4px solid transparent;border-right:4px solid transparent;display:block;"></span><span style="position:absolute;left:0.5px;top:17px;width:0;height:0;border-bottom:7px solid rgba(233,238,242,0.66);border-left:4px solid transparent;border-right:4px solid transparent;display:block;"></span></span></div>
+          </div>
+          <div style="justify-self:end;display:{{ queueBtnDisplay }};"><div style="width:60px;height:60px;border-radius:50%;background:rgba(159,180,232,0.12);border:1px solid rgba(159,180,232,0.3);box-sizing:border-box;position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;"><div style="width:26px;height:3px;border-radius:2px;background:#9fb4e8;"></div><div style="width:26px;height:3px;border-radius:2px;background:#9fb4e8;"></div><div style="width:15px;height:3px;border-radius:2px;background:#9fb4e8;"></div><span style="position:absolute;top:-3px;right:-3px;min-width:24px;height:24px;padding:0 6px;border-radius:999px;background:#9fb4e8;color:#0d151c;font-family:'IBM Plex Mono','Courier New',monospace;font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center;box-sizing:border-box;">8</span></div></div>
+        </div>
+      </div>
+    </div>
+    <div style="position:absolute;left:50%;top:12px;width:88px;height:6px;margin-left:-44px;border-radius:3px;background:rgba(233,238,242,0.42);z-index:4;"></div>
+  </sc-if>
+
+  <sc-if value="{{ bgLibHome }}" hint-placeholder-val="{{ false }}">
+    <dc-import name="Bar Frame" variant="home2" layout="c" w="{{ W }}" hint-size="100%,400px" style="position:absolute;inset:0;"></dc-import>
+  </sc-if>
+  <sc-if value="{{ bgRailEmpty }}" hint-placeholder-val="{{ false }}">
+    <dc-import name="Bar Frame" variant="home2" layout="c" nothing="{{ true }}" w="{{ W }}" hint-size="100%,400px" style="position:absolute;inset:0;"></dc-import>
+  </sc-if>
+  <sc-if value="{{ bgAlbum }}" hint-placeholder-val="{{ false }}">
+    <dc-import name="Bar Library" screen="album2" w="{{ W }}" hint-size="100%,400px" style="position:absolute;inset:0;"></dc-import>
+  </sc-if>
+  <sc-if value="{{ bgSettings }}" hint-placeholder-val="{{ false }}">
+    <dc-import name="Bar Library" screen="settings" w="{{ W }}" hint-size="100%,400px" style="position:absolute;inset:0;"></dc-import>
+  </sc-if>
+
+  <sc-if value="{{ trayOn }}" hint-placeholder-val="{{ false }}">
+    <div style="position:absolute;inset:0;background:rgba(8,12,16,0.55);z-index:5;"></div>
+    <div style="position:absolute;left:0;right:0;top:0;height:136px;z-index:6;background:#16232c;box-shadow:0 18px 44px rgba(0,0,0,0.5);display:flex;align-items:center;gap:20px;box-sizing:border-box;border-radius:0 0 24px 24px;padding:0 40px 14px;border-bottom:1px solid rgba(233,238,242,0.12);">
+      <div style="position:absolute;left:50%;bottom:10px;width:88px;height:6px;margin-left:-44px;border-radius:3px;background:rgba(233,238,242,0.42);"></div>
+      <sc-if value="{{ trayHome }}" hint-placeholder-val="{{ true }}"><div style="width:64px;height:64px;border-radius:50%;background:rgba(233,238,242,0.07);display:flex;align-items:center;justify-content:center;flex-shrink:0;"><div style="width:24px;height:24px;display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:4px;"><div style="border-radius:3px;background:rgba(233,238,242,0.85);"></div><div style="border-radius:3px;background:rgba(233,238,242,0.85);"></div><div style="border-radius:3px;background:rgba(233,238,242,0.85);"></div><div style="border-radius:3px;background:rgba(233,238,242,0.85);"></div></div></div></sc-if>
+      <sc-if value="{{ traySettings }}" hint-placeholder-val="{{ false }}"><div style="width:64px;height:64px;border-radius:50%;background:rgba(233,238,242,0.07);display:flex;align-items:center;justify-content:center;flex-shrink:0;"><span style="position:relative;width:22px;height:16px;display:block;"><span style="position:absolute;left:0;top:3px;width:22px;height:2px;border-radius:1px;background:#e9eef2;opacity:0.55;display:block;"></span><span style="position:absolute;top:0.5px;left:5px;width:7px;height:7px;border-radius:50%;background:#e9eef2;display:block;"></span><span style="position:absolute;left:0;top:11px;width:22px;height:2px;border-radius:1px;background:#e9eef2;opacity:0.55;display:block;"></span><span style="position:absolute;top:8.5px;left:12px;width:7px;height:7px;border-radius:50%;background:#e9eef2;display:block;"></span></span></div></sc-if>
+      <div style="width:60px;height:60px;border-radius:50%;background:rgba(233,238,242,0.07);align-items:flex-end;justify-content:center;gap:4px;padding-bottom:20px;box-sizing:border-box;flex-shrink:0;display:{{ trayVisDisplay }};"><span style="width:4px;height:12px;border-radius:2px;background:rgba(233,238,242,0.82);display:block;"></span><span style="width:4px;height:22px;border-radius:2px;background:rgba(233,238,242,0.82);display:block;"></span><span style="width:4px;height:16px;border-radius:2px;background:rgba(233,238,242,0.82);display:block;"></span><span style="width:4px;height:8px;border-radius:2px;background:rgba(233,238,242,0.82);display:block;"></span></div>
+      <div style="width:1px;height:44px;background:rgba(233,238,242,0.14);flex-shrink:0;"></div>
+      <sc-if value="{{ trayLevel }}" hint-placeholder-val="{{ true }}">
+        <div style="width:60px;height:60px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;box-sizing:border-box;background:{{ muteBg }};border:1px solid {{ muteLine }};"><span style="position:relative;width:30px;height:30px;flex-shrink:0;display:block;"><span style="position:absolute;left:0;top:50%;transform:translateY(-50%);width:15px;height:26px;background:{{ volInk }};clip-path:polygon(0 27%,42% 27%,100% 0,100% 100%,42% 73%,0 73%);display:block;"></span><span style="position:absolute;left:5px;top:50%;width:16px;height:16px;margin-top:-8px;border-radius:50%;box-sizing:border-box;border:2.5px solid {{ volInk }};clip-path:polygon(50% 10%,100% 0,100% 100%,50% 90%);display:{{ arcsDisplay }};"></span><span style="position:absolute;left:1px;top:50%;width:24px;height:24px;margin-top:-12px;border-radius:50%;box-sizing:border-box;border:2.5px solid {{ volInk }};clip-path:polygon(50% 10%,100% 0,100% 100%,50% 90%);display:{{ arcsDisplay }};"></span><span style="position:absolute;left:19px;top:50%;width:12px;height:2.5px;margin-top:-1px;border-radius:2px;background:#e0a758;transform:rotate(45deg);display:{{ crossDisplay }};"></span><span style="position:absolute;left:19px;top:50%;width:12px;height:2.5px;margin-top:-1px;border-radius:2px;background:#e0a758;transform:rotate(-45deg);display:{{ crossDisplay }};"></span></span></div>
+        <div style="flex:1;height:10px;border-radius:999px;background:rgba(233,238,242,0.15);position:relative;">
+          <div style="position:absolute;left:0;top:0;bottom:0;border-radius:999px;width:{{ volPct }};background:{{ volFill }};"></div>
+          <div style="position:absolute;top:50%;width:44px;height:44px;margin:-22px 0 0 -22px;border-radius:50%;box-shadow:0 3px 10px rgba(0,0,0,0.45);left:{{ volPct }};background:{{ knobInk }};"></div>
+        </div>
+        <div style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:26px;font-weight:700;width:72px;text-align:right;flex-shrink:0;color:{{ volReadInk }};">{{ volRead }}</div>
+      </sc-if>
+      <sc-if value="{{ trayFixed }}" hint-placeholder-val="{{ false }}">
+        <div style="flex:1;min-width:0;display:flex;align-items:center;gap:20px;min-height:78px;border-radius:18px;background:rgba(233,238,242,0.05);border:1px solid rgba(233,238,242,0.12);padding:0 24px;box-sizing:border-box;">
+          <span style="position:relative;width:30px;height:34px;flex-shrink:0;display:block;"><span style="position:absolute;left:5px;top:0;width:20px;height:16px;border:3px solid rgba(233,238,242,0.7);border-bottom:none;border-radius:10px 10px 0 0;box-sizing:border-box;display:block;"></span><span style="position:absolute;left:0;bottom:0;width:30px;height:20px;border-radius:5px;background:rgba(233,238,242,0.7);display:block;"></span></span>
+          <span style="flex:1;min-width:0;"><span style="font-size:20px;font-weight:600;display:block;">Fixed output</span><span style="font-size:16px;line-height:1.35;color:rgba(233,238,242,0.6);display:block;margin-top:4px;">Level is set downstream. Set it on your amplifier.</span></span>
+          <span style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:15px;letter-spacing:0.14em;text-transform:uppercase;color:rgba(233,238,242,0.55);flex-shrink:0;">100%</span>
+        </div>
+      </sc-if>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ isQueueNote }}" hint-placeholder-val="{{ false }}"><div></div></sc-if>
+
+  <sc-if value="{{ isLib }}" hint-placeholder-val="{{ false }}">
+    <div style="position:absolute;inset:0;display:flex;">
+      <div style="width:220px;flex-shrink:0;display:flex;flex-direction:column;gap:12px;padding:28px 24px;box-sizing:border-box;border-right:1px solid rgba(233,238,242,0.09);">
+        <div style="display:flex;gap:10px;">
+          <div style="width:60px;height:60px;border-radius:50%;background:rgba(233,238,242,0.07);display:flex;align-items:center;justify-content:center;flex-shrink:0;"><div style="width:14px;height:14px;border-left:3px solid #e9eef2;border-bottom:3px solid #e9eef2;transform:rotate(45deg);margin-left:5px;"></div></div>
+          <div style="width:60px;height:60px;border-radius:50%;background:rgba(233,238,242,0.07);align-items:center;justify-content:center;flex-shrink:0;display:{{ libHomeDisplay }};"><span style="width:22px;height:22px;display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:4px;"><span style="border-radius:3px;background:rgba(233,238,242,0.85);"></span><span style="border-radius:3px;background:rgba(233,238,242,0.85);"></span><span style="border-radius:3px;background:rgba(233,238,242,0.85);"></span><span style="border-radius:3px;background:rgba(233,238,242,0.85);"></span></span></div>
+        </div>
+        <div style="font-size:26px;font-weight:700;letter-spacing:-0.01em;margin-top:8px;line-height:1.15;">{{ libTitle }}</div>
+        <div style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:15px;letter-spacing:0.06em;color:rgba(233,238,242,0.6);">{{ libCrumb }}</div>
+      </div>
+      <div style="flex:1;min-width:0;position:relative;display:flex;">
+
+        <sc-if value="{{ isArtists }}" hint-placeholder-val="{{ false }}">
+          <div style="flex:1;min-width:0;display:flex;flex-direction:column;justify-content:center;gap:26px;padding:0 32px;">
+            <div style="display:flex;gap:30px;overflow:hidden;-webkit-mask-image:linear-gradient(90deg,#000 0,#000 calc(100% - 88px),transparent 100%);mask-image:linear-gradient(90deg,#000 0,#000 calc(100% - 88px),transparent 100%);">
+              <sc-for list="{{ artists }}" as="a" hint-placeholder-count="6"><div style="width:200px;flex-shrink:0;text-align:center;">
+                <div style="width:200px;height:200px;border-radius:50%;overflow:hidden;position:relative;background:#17242d;border:1px solid rgba(233,238,242,0.1);box-sizing:border-box;"><img src="artist-photo.webp" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;" /></div>
+                <div style="font-size:18px;font-weight:600;margin-top:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ a.name }}</div>
+                <div style="font-size:15px;color:rgba(233,238,242,0.6);margin-top:3px;">{{ a.sub }}</div>
+              </div></sc-for>
+            </div>
+            <div style="display:flex;gap:6px;">
+              <sc-for list="{{ letters }}" as="l" hint-placeholder-count="13"><div style="flex:1;min-width:44px;height:52px;border-radius:12px;display:flex;align-items:center;justify-content:center;box-sizing:border-box;font-family:'IBM Plex Mono','Courier New',monospace;font-size:16px;font-weight:600;letter-spacing:0.06em;background:{{ l.bg }};border:1px solid {{ l.line }};color:{{ l.ink }};">{{ l.label }}</div></sc-for>
+            </div>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ isPlaylist }}" hint-placeholder-val="{{ false }}">
+          <div style="flex:1;min-width:0;display:flex;gap:28px;padding:28px 0 28px 32px;box-sizing:border-box;">
+            <div style="width:170px;flex-shrink:0;display:flex;flex-direction:column;gap:10px;justify-content:flex-end;">
+              <div style="height:58px;border-radius:16px;background:rgba(126,214,188,0.14);border:1px solid rgba(126,214,188,0.36);display:flex;align-items:center;justify-content:center;gap:12px;"><span style="width:0;height:0;border-left:14px solid #7ed6bc;border-top:9px solid transparent;border-bottom:9px solid transparent;"></span><span style="font-size:19px;font-weight:700;color:#7ed6bc;">Play</span></div>
+              <div style="height:58px;border-radius:16px;background:rgba(233,238,242,0.06);border:1px solid rgba(233,238,242,0.16);display:flex;align-items:center;justify-content:center;"><span style="font-size:19px;font-weight:700;">Shuffle</span></div>
+            </div>
+            <div style="flex:1;min-width:0;display:grid;grid-auto-flow:column;grid-template-rows:repeat(6,52px);grid-auto-columns:300px;gap:2px 16px;align-content:center;overflow:hidden;-webkit-mask-image:linear-gradient(90deg,#000 0,#000 calc(100% - 88px),transparent 100%);mask-image:linear-gradient(90deg,#000 0,#000 calc(100% - 88px),transparent 100%);">
+              <sc-for list="{{ plTracks }}" as="r" hint-placeholder-count="12"><div style="height:52px;display:flex;align-items:center;gap:14px;padding:0 12px;border-radius:10px;">
+                <span style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:15px;color:rgba(233,238,242,0.62);width:26px;flex-shrink:0;">{{ r.num }}</span>
+                <span style="flex:1;min-width:0;"><span style="font-size:18px;font-weight:600;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ r.title }}</span><span style="font-size:14px;color:rgba(233,238,242,0.55);display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ r.artist }}</span></span>
+                <span style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:15px;color:rgba(233,238,242,0.62);flex-shrink:0;">{{ r.dur }}</span>
+              </div></sc-for>
+            </div>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ isFolder }}" hint-placeholder-val="{{ false }}">
+          <div style="flex:1;min-width:0;display:grid;grid-auto-rows:120px;align-content:center;gap:16px;padding:28px 32px;box-sizing:border-box;grid-template-columns:{{ folderCols }};">
+            <sc-for list="{{ folders }}" as="f" hint-placeholder-count="6">
+              <div style="border-radius:20px;background:rgba(233,238,242,0.055);border:1px solid rgba(233,238,242,0.16);display:flex;align-items:center;gap:18px;padding:0 24px;box-sizing:border-box;min-width:0;">
+                <div style="width:60px;height:60px;border-radius:50%;background:rgba(233,238,242,0.07);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                  <sc-if value="{{ f.folder }}" hint-placeholder-val="{{ true }}"><span style="position:relative;width:30px;height:24px;display:block;"><span style="position:absolute;left:0;top:0;width:13px;height:6px;border-radius:3px 3px 0 0;background:rgba(233,238,242,0.6);display:block;"></span><span style="position:absolute;left:0;top:4px;width:30px;height:20px;border-radius:4px;background:rgba(233,238,242,0.85);display:block;"></span></span></sc-if>
+                  <sc-if value="{{ f.station }}" hint-placeholder-val="{{ false }}"><span style="display:flex;align-items:center;gap:5px;"><span style="width:12px;height:12px;border-radius:50%;background:rgba(233,238,242,0.85);display:block;"></span><span style="width:11px;height:22px;border-right:3px solid rgba(233,238,242,0.6);border-radius:0 22px 22px 0;display:block;"></span></span></sc-if>
+                </div>
+                <div style="flex:1;min-width:0;"><div style="font-size:21px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ f.name }}</div><div style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:14px;color:rgba(233,238,242,0.6);margin-top:5px;">{{ f.meta }}</div></div>
+                <span style="width:12px;height:12px;border-right:3px solid rgba(233,238,242,0.55);border-top:3px solid rgba(233,238,242,0.55);transform:rotate(45deg);flex-shrink:0;display:{{ f.chevron }};"></span>
+              </div>
+            </sc-for>
+          </div>
+        </sc-if>
+
+      </div>
+      <div style="width:124px;flex-shrink:0;display:flex;flex-direction:column;align-items:center;gap:16px;padding:28px 0 26px;box-sizing:border-box;border-left:1px solid rgba(233,238,242,0.09);background:rgba(13,21,28,0.35);position:relative;">
+        <div style="position:absolute;left:-1px;top:0;bottom:0;width:3px;background:rgba(233,238,242,0.08);"><div style="position:absolute;left:0;right:0;bottom:0;height:38%;background:#7ed6bc;opacity:0.8;"></div></div>
+        <div style="width:84px;height:84px;border-radius:12px;overflow:hidden;position:relative;flex-shrink:0;background:#17242d;box-shadow:inset 0 0 0 1px rgba(255,255,255,0.1);"><img src="album-art.webp" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;" /></div>
+        <div style="flex:1;display:flex;align-items:center;justify-content:center;"><div style="display:flex;align-items:center;gap:3px;height:26px;"><div style="width:4px;height:13px;border-radius:2px;background:#7ed6bc;"></div><div style="width:4px;height:26px;border-radius:2px;background:#7ed6bc;"></div><div style="width:4px;height:19px;border-radius:2px;background:#7ed6bc;"></div><div style="width:4px;height:23px;border-radius:2px;background:#7ed6bc;"></div></div></div>
+        <div style="width:64px;height:64px;border-radius:50%;background:#f2a48f;display:flex;align-items:center;justify-content:center;gap:6px;flex-shrink:0;box-shadow:0 0 18px rgba(242,164,143,0.22),0 8px 20px rgba(242,164,143,0.32);"><div style="width:6px;height:23px;border-radius:2px;background:#16232c;"></div><div style="width:6px;height:23px;border-radius:2px;background:#16232c;"></div></div>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ isToast }}" hint-placeholder-val="{{ false }}">
+    <div style="position:absolute;z-index:8;bottom:28px;left:{{ toastLeft }};transform:translateX(-50%);background:rgba(22,35,44,0.97);border:1px solid rgba(126,214,188,0.3);border-radius:14px;padding:16px 26px;box-shadow:0 18px 50px rgba(0,0,0,0.5);white-space:nowrap;"><span style="font-size:18px;font-weight:600;">Added to queue</span></div>
+  </sc-if>
+
+  <sc-if value="{{ isSheet }}" hint-placeholder-val="{{ false }}">
+    <div style="position:absolute;inset:0;background:rgba(8,12,16,0.62);z-index:6;"></div>
+    <div style="position:absolute;z-index:7;top:12px;bottom:12px;left:{{ sheetLeft }};width:{{ sheetW }};transform:translateX(-50%);background:#16232c;border:1px solid rgba(233,238,242,0.14);border-radius:20px;box-shadow:0 24px 70px rgba(0,0,0,0.6);display:flex;flex-direction:column;padding:18px 20px 14px;box-sizing:border-box;">
+      <div style="display:flex;align-items:center;gap:14px;flex-shrink:0;">
+        <div style="flex:1;min-width:0;"><div style="font-size:22px;font-weight:700;">Attached screen</div><div style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:13px;letter-spacing:0.06em;color:rgba(233,238,242,0.6);margin-top:3px;">197 models · 4 tested · restarts the player</div></div>
+        <div style="height:44px;padding:0 18px;border-radius:12px;background:rgba(233,238,242,0.06);border:1px solid rgba(233,238,242,0.16);display:flex;align-items:center;font-size:17px;font-weight:700;flex-shrink:0;">Cancel</div>
+      </div>
+      <div style="flex:1;min-height:0;display:flex;gap:12px;margin-top:12px;">
+        <div style="width:200px;flex-shrink:0;display:flex;flex-direction:column;gap:4px;overflow:hidden;">
+          <sc-for list="{{ makers }}" as="m" hint-placeholder-count="3"><div style="height:52px;flex-shrink:0;display:flex;align-items:center;justify-content:space-between;padding:0 14px;border-radius:12px;background:{{ m.bg }};color:{{ m.ink }};"><span style="font-size:18px;font-weight:700;">{{ m.name }}</span><span style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:13px;color:rgba(233,238,242,0.55);">{{ m.count }}</span></div></sc-for>
+        </div>
+        <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:4px;overflow:hidden;border-left:1px solid rgba(233,238,242,0.08);padding-left:12px;-webkit-mask-image:linear-gradient(180deg,#000 85%,transparent 100%);mask-image:linear-gradient(180deg,#000 85%,transparent 100%);">
+          <sc-for list="{{ models }}" as="o" hint-placeholder-count="5"><div style="min-height:52px;flex-shrink:0;display:flex;align-items:center;gap:12px;padding:0 14px;border-radius:12px;box-sizing:border-box;background:{{ o.bg }};border:1px solid {{ o.line }};">
+            <span style="flex:1;min-width:0;"><span style="font-size:17px;font-weight:600;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:{{ o.ink }};">{{ o.name }}</span><span style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:12px;letter-spacing:0.04em;color:rgba(233,238,242,0.55);display:block;margin-top:2px;">{{ o.meta }}</span></span>
+            <span style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:11px;letter-spacing:0.16em;text-transform:uppercase;padding:4px 8px;border-radius:6px;flex-shrink:0;background:{{ o.tagBg }};color:{{ o.tagInk }};">{{ o.tag }}</span>
+          </div></sc-for>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ isPairDone }}" hint-placeholder-val="{{ false }}">
+    <div style="position:absolute;inset:0;background:rgba(13,21,27,0.95);"></div>
+    <div style="position:absolute;inset:0;display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);align-items:center;padding:0 56px;gap:40px;">
+      <div style="display:flex;align-items:center;gap:22px;min-width:0;">
+        <img src="icon-bluetooth.png" alt="" style="width:56px;height:56px;display:block;flex-shrink:0;" />
+        <div style="min-width:0;"><div style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:15px;letter-spacing:0.34em;text-transform:uppercase;color:rgba(233,238,242,0.5);">Pairing request</div><div style="font-size:30px;font-weight:700;margin-top:8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">George’s iPhone</div></div>
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:center;gap:18px;">
+        <sc-if value="{{ pairTick }}" hint-placeholder-val="{{ true }}"><span style="width:84px;height:84px;border-radius:50%;position:relative;display:block;background:rgba(159,180,232,0.18);border:2px solid #9fb4e8;box-sizing:border-box;"><span style="position:absolute;left:24px;top:36px;width:16px;height:3px;border-radius:2px;background:#9fb4e8;transform:rotate(45deg);transform-origin:left center;display:block;"></span><span style="position:absolute;left:35px;top:47px;width:28px;height:3px;border-radius:2px;background:#9fb4e8;transform:rotate(-50deg);transform-origin:left center;display:block;"></span></span></sc-if>
+        <sc-if value="{{ pairCross }}" hint-placeholder-val="{{ false }}"><span style="width:84px;height:84px;border-radius:50%;position:relative;display:block;background:rgba(233,238,242,0.08);border:2px solid rgba(233,238,242,0.4);box-sizing:border-box;"><span style="position:absolute;left:24px;top:38.5px;width:32px;height:3px;border-radius:2px;background:rgba(233,238,242,0.82);transform:rotate(45deg);display:block;"></span><span style="position:absolute;left:24px;top:38.5px;width:32px;height:3px;border-radius:2px;background:rgba(233,238,242,0.82);transform:rotate(-45deg);display:block;"></span></span></sc-if>
+        <span style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:17px;letter-spacing:0.2em;text-transform:uppercase;color:{{ pairInk }};">{{ pairLabel }}</span>
+      </div>
+      <div></div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ isPairNoCode }}" hint-placeholder-val="{{ false }}">
+    <div style="position:absolute;inset:0;background:rgba(13,21,27,0.95);"></div>
+    <div style="position:absolute;left:0;right:0;bottom:0;height:6px;background:rgba(233,238,242,0.08);"><div style="position:absolute;left:0;top:0;bottom:0;width:80%;background:#9fb4e8;"></div></div>
+    <div style="position:absolute;inset:0;display:flex;align-items:center;padding:0 56px;gap:40px;">
+      <div style="width:132px;height:132px;border-radius:50%;border:2px solid #9fb4e8;background:rgba(159,180,232,0.14);display:flex;align-items:center;justify-content:center;flex-shrink:0;"><img src="icon-bluetooth.png" alt="" style="width:52px;height:52px;display:block;" /></div>
+      <div style="flex:1;min-width:0;"><div style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:15px;letter-spacing:0.34em;text-transform:uppercase;color:rgba(233,238,242,0.5);">Pairing request</div><div style="font-size:48px;font-weight:800;letter-spacing:-0.015em;margin-top:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">George’s iPhone</div></div>
+      <div style="display:flex;gap:14px;flex-shrink:0;">
+        <div style="height:74px;padding:0 36px;border-radius:18px;background:rgba(233,238,242,0.07);border:1px solid rgba(233,238,242,0.16);display:flex;align-items:center;font-size:21px;font-weight:700;">Reject</div>
+        <div style="height:74px;padding:0 36px;border-radius:18px;background:rgba(159,180,232,0.2);border:1px solid rgba(159,180,232,0.5);display:flex;align-items:center;font-size:21px;font-weight:700;color:#9fb4e8;">Accept</div>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ isWaitMany }}" hint-placeholder-val="{{ false }}">
+    <div style="position:absolute;top:26px;right:26px;width:64px;height:64px;border-radius:18px;border:1px solid rgba(233,238,242,0.14);background:rgba(233,238,242,0.07);box-sizing:border-box;display:flex;align-items:center;justify-content:center;z-index:2;"><span style="position:relative;width:26px;height:18px;display:block;"><span style="position:absolute;left:0;top:4px;width:26px;height:2px;border-radius:1px;background:#e9eef2;opacity:0.55;display:block;"></span><span style="position:absolute;top:1.5px;left:6px;width:7px;height:7px;border-radius:50%;background:#e9eef2;display:block;"></span><span style="position:absolute;left:0;top:12px;width:26px;height:2px;border-radius:1px;background:#e9eef2;opacity:0.55;display:block;"></span><span style="position:absolute;top:9.5px;left:15px;width:7px;height:7px;border-radius:50%;background:#e9eef2;display:block;"></span></span></div>
+    <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;gap:48px;padding:0 110px;">
+      <sc-for list="{{ renderers }}" as="r" hint-placeholder-count="4">
+        <div style="width:200px;display:flex;flex-direction:column;align-items:center;gap:16px;text-align:center;">
+          <div style="position:relative;width:150px;height:150px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+            <div style="position:absolute;width:150px;height:150px;border-radius:50%;border:2px solid rgba(233,238,242,0.3);box-sizing:border-box;"></div>
+            <div style="width:136px;height:136px;border-radius:50%;background:rgba(233,238,242,0.07);border:1px solid rgba(233,238,242,0.16);box-sizing:border-box;display:flex;align-items:center;justify-content:center;">
+              <sc-if value="{{ r.img }}" hint-placeholder-val="{{ true }}"><img src="{{ r.src }}" alt="" style="width:58px;height:58px;display:block;opacity:0.72;" /></sc-if>
+              <sc-if value="{{ r.letter }}" hint-placeholder-val="{{ false }}"><span style="font-size:52px;font-weight:800;color:rgba(233,238,242,0.72);">{{ r.initial }}</span></sc-if>
+            </div>
+          </div>
+          <div style="min-width:0;width:100%;"><div style="font-size:24px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ r.name }}</div><div style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:14px;letter-spacing:0.16em;text-transform:uppercase;color:rgba(233,238,242,0.6);margin-top:4px;white-space:nowrap;">{{ r.status }}</div></div>
+        </div>
+      </sc-for>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ isTLong }}" hint-placeholder-val="{{ false }}">
+    <div style="position:absolute;inset:0;background:rgba(13,21,27,0.95);"></div>
+    <div style="position:absolute;top:0;bottom:0;right:0;width:62%;background:linear-gradient(90deg,rgba(233,238,242,0),rgba(233,238,242,0.1));"></div>
+    <div style="position:absolute;inset:0;display:flex;align-items:center;padding:0 72px;gap:40px;">
+      <div style="display:flex;align-items:center;gap:18px;opacity:0.55;flex-shrink:0;"><img src="icon-bluetooth.png" alt="" style="width:44px;height:44px;display:block;" /><span style="font-size:26px;font-weight:600;color:rgba(233,238,242,0.7);">Bluetooth</span></div>
+      <div style="flex:1;min-width:120px;height:2px;background:linear-gradient(90deg,rgba(233,238,242,0.12),#e9eef2);"></div>
+      <div style="display:flex;align-items:center;gap:28px;flex-shrink:0;">
+        <div style="width:176px;height:176px;border-radius:50%;border:3px solid rgba(233,238,242,0.8);background:rgba(233,238,242,0.08);display:flex;align-items:center;justify-content:center;flex-shrink:0;"><span style="font-size:84px;font-weight:800;color:#e9eef2;">M</span></div>
+        <div style="max-width:{{ tNameMax }};"><div style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:15px;letter-spacing:0.34em;text-transform:uppercase;color:rgba(233,238,242,0.55);">Handing off to</div><div style="font-size:{{ tNameSize }};line-height:1.02;font-weight:800;letter-spacing:-0.02em;color:#e9eef2;margin-top:6px;text-wrap:balance;">Music Assistant</div></div>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ isUrl }}" hint-placeholder-val="{{ false }}">
+    <div style="position:absolute;inset:0;background:#e9eef2;"></div>
+    <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;color:#101a21;">
+      <span style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:16px;letter-spacing:0.2em;text-transform:uppercase;opacity:0.6;">External URL</span>
+      <span style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:26px;font-weight:600;">{{ urlSize }}</span>
+      <span style="font-size:18px;opacity:0.7;">The page fills the screen at the bar’s logical size. A touch returns to Now Playing.</span>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ isSetup }}" hint-placeholder-val="{{ false }}">
+    <div style="position:absolute;inset:0;background:radial-gradient(130% 105% at 20% 42%,rgba(20,33,42,0.72),rgba(13,21,28,0.96));"></div>
+    <div style="position:absolute;left:40px;right:40px;top:22px;display:flex;align-items:center;gap:14px;z-index:2;"><img src="gexis-mark.svg" alt="" width="32" height="32" style="width:32px;height:32px;display:block;" /><span style="flex:1;font-family:'IBM Plex Mono','Courier New',monospace;font-size:15px;letter-spacing:0.2em;text-transform:uppercase;color:rgba(233,238,242,0.6);">{{ crumb }}</span><span style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:15px;letter-spacing:0.2em;text-transform:uppercase;color:rgba(233,238,242,0.6);display:{{ overDisplay }};">Over gexis-setup</span></div>
+
+    <sc-if value="{{ sHero }}" hint-placeholder-val="{{ false }}">
+      <div style="position:absolute;inset:66px 40px 24px;display:flex;align-items:center;justify-content:center;gap:48px;">
+        <div style="width:176px;height:176px;border-radius:50%;box-sizing:border-box;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:{{ heroInk }};background:{{ heroBg }};border:3px solid {{ heroLine }};">
+          <sc-if value="{{ icTick }}" hint-placeholder-val="{{ false }}"><svg viewBox="0 0 64 64" width="96" height="96"><path d="M16 33 L28 45 L49 21" fill="none" stroke="currentColor" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"></path></svg></sc-if>
+          <sc-if value="{{ icPhone }}" hint-placeholder-val="{{ false }}"><svg viewBox="0 0 64 64" width="88" height="88"><rect x="18" y="5" width="28" height="54" rx="6" fill="none" stroke="currentColor" stroke-width="5"></rect><path d="M28 51 H36" stroke="currentColor" stroke-width="5" stroke-linecap="round"></path></svg></sc-if>
+          <sc-if value="{{ icWarn }}" hint-placeholder-val="{{ false }}"><svg viewBox="0 0 64 64" width="88" height="88"><path d="M32 7 L60 56 H4 Z" fill="none" stroke="currentColor" stroke-width="5" stroke-linejoin="round"></path><path d="M32 24 V39" stroke="currentColor" stroke-width="5.5" stroke-linecap="round"></path><circle cx="32" cy="47.5" r="3.4" fill="currentColor"></circle></svg></sc-if>
+          <sc-if value="{{ icMark }}" hint-placeholder-val="{{ false }}"><img src="gexis-mark.svg" alt="" width="88" height="88" style="width:88px;height:88px;display:block;" /></sc-if>
+        </div>
+        <div style="min-width:0;flex-shrink:1;">
+          <div style="font-size:{{ heroSize }};font-weight:800;letter-spacing:-0.02em;line-height:1.05;">{{ heroTitle }}</div>
+          <div style="font-size:28px;line-height:1.3;color:rgba(233,238,242,0.82);margin-top:12px;display:{{ heroSubDisplay }};">{{ heroSub }}</div>
+          <div style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:18px;color:rgba(233,238,242,0.6);margin-top:12px;display:{{ heroMonoDisplay }};">wlan0 did not come up within 15 s</div>
+        </div>
+        <sc-if value="{{ doneCard }}" hint-placeholder-val="{{ false }}">
+          <div style="display:flex;align-items:center;gap:22px;padding:22px 28px;border-radius:24px;background:rgba(255,255,255,0.05);border:1px solid rgba(233,238,242,0.1);flex-shrink:0;max-width:440px;box-sizing:border-box;">
+            <img src="icon-lyrion.svg" alt="" width="78" height="58" style="width:78px;height:58px;flex-shrink:0;display:block;" />
+            <div style="min-width:0;"><div style="font-size:28px;font-weight:700;">Found your Lyrion server</div><div style="margin-top:6px;font-family:'IBM Plex Mono','Courier New',monospace;font-size:20px;color:rgba(233,238,242,0.82);">Lyrion Music Server · 192.168.1.10:9000</div></div>
+          </div>
+        </sc-if>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ sCode }}" hint-placeholder-val="{{ false }}">
+      <div style="position:absolute;inset:66px 40px 24px;display:flex;align-items:center;gap:48px;">
+        <div style="width:300px;height:300px;margin-top:-10px;flex-shrink:0;border-radius:16px;background:#e9eef2;display:flex;align-items:center;justify-content:center;font-family:'IBM Plex Mono','Courier New',monospace;font-size:18px;letter-spacing:0.14em;text-transform:uppercase;color:#101a21;">QR code</div>
+        <div style="flex-shrink:0;">
+          <div style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:18px;letter-spacing:0.2em;text-transform:uppercase;color:rgba(233,238,242,0.6);">{{ k1 }}</div>
+          <div style="margin:6px 0 22px;font-family:'IBM Plex Mono','Courier New',monospace;font-size:44px;font-weight:700;letter-spacing:0.02em;white-space:nowrap;">{{ v1 }}</div>
+          <div style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:18px;letter-spacing:0.2em;text-transform:uppercase;color:rgba(233,238,242,0.6);display:{{ k2Display }};">{{ k2 }}</div>
+          <div style="margin-top:6px;font-size:{{ v2Size }};font-weight:{{ v2Weight }};font-family:{{ v2Font }};letter-spacing:0.02em;white-space:nowrap;display:{{ k2Display }};">{{ v2 }}</div>
+        </div>
+        <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:14px;">
+          <sc-if value="{{ codeWarnHead }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex;align-items:flex-start;gap:18px;color:#e0a758;"><svg viewBox="0 0 64 64" width="64" height="64" style="flex-shrink:0;"><path d="M32 7 L60 56 H4 Z" fill="none" stroke="currentColor" stroke-width="5" stroke-linejoin="round"></path><path d="M32 24 V39" stroke="currentColor" stroke-width="5.5" stroke-linecap="round"></path><circle cx="32" cy="47.5" r="3.4" fill="currentColor"></circle></svg><div style="font-size:40px;font-weight:800;color:#e9eef2;line-height:1.08;">Could not join Home</div></div>
+          </sc-if>
+          <sc-if value="{{ codePlainHead }}" hint-placeholder-val="{{ true }}">
+            <div style="font-size:40px;font-weight:800;letter-spacing:-0.02em;line-height:1.08;">{{ codeTitle }}</div>
+          </sc-if>
+          <div style="font-size:24px;line-height:1.35;color:rgba(233,238,242,0.82);">{{ codeLine }}</div>
+        </div>
+      </div>
+    </sc-if>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1280,&quot;height&quot;:400},&quot;screen&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;strip-pending&quot;,&quot;strip-bt&quot;,&quot;strip-long&quot;,&quot;strip-plugin&quot;,&quot;lyr-loading&quot;,&quot;lyr-plain&quot;,&quot;lyr-synced&quot;,&quot;lyr-none&quot;,&quot;tray-fixed&quot;,&quot;tray-muted&quot;,&quot;tray-nometers&quot;,&quot;tray-lmsoff&quot;,&quot;tray-library&quot;,&quot;lib-rail-empty&quot;,&quot;lib-artists&quot;,&quot;lib-playlist&quot;,&quot;lib-folder&quot;,&quot;lib-toast&quot;,&quot;lib-sheet&quot;,&quot;pair-paired&quot;,&quot;pair-not&quot;,&quot;pair-expired&quot;,&quot;pair-nocode&quot;,&quot;wait-many&quot;,&quot;t-long&quot;,&quot;idle-url&quot;,&quot;s-joined&quot;,&quot;s-page&quot;,&quot;s-phone&quot;,&quot;s-done&quot;,&quot;s-failstart&quot;,&quot;s-starting&quot;,&quot;s-lan&quot;,&quot;s-fail-full&quot;],&quot;default&quot;:&quot;strip-pending&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;w&quot;:{&quot;editor&quot;:&quot;int&quot;,&quot;default&quot;:1280,&quot;min&quot;:1200,&quot;max&quot;:2000,&quot;tsType&quot;:&quot;number&quot;}}">
+// Phase 13b round 2, Bar family: the states 13b-bar-gaps.md lists as not drawn.
+// Copy, colours and glyphs from Now Playing.dc.html, Panel Setup.dc.html and
+// the round-1 bar boards. Logical height 400; width = aspect x 400 (1200-2000).
+const TRACKS = [['Rempompi', 'Gasca Zurli', '1:55'], ['Somn Usor', 'Cantece Mici', '2:41'], ['Blue Rooms', 'Bime', '5:12'], ['Late Set', 'Bime', '6:38'], ['Mama', 'Cleopatra Stratan', '3:22'], ['Corner Light', 'Bime', '4:55'], ['Trenulet', 'Gasca Zurli', '2:12'], ['Night Bus', 'Bime', '4:01'], ['Ghita', 'Cleopatra Stratan', '3:10'], ['Zurli Dance', 'Gasca Zurli', '2:41'], ['Slow Turn', 'Bime', '5:40'], ['Noapte Buna', 'Gasca Zurli', '3:04']];
+const ARTISTS = [['Andra', '9 albums'], ['Bime', '2 albums'], ['Cantece Mici', '3 albums'], ['Cleopatra Stratan', '4 albums'], ['Gasca Zurli', '12 albums'], ['Various Artists', '41 albums']];
+const LETTERS = ['A–B', 'C–D', 'E–F', 'G–H', 'I–J', 'K–L', 'M–N', 'O–P', 'Q–R', 'S–T', 'U–V', 'W–X', 'Y–Z'];
+const MODELS = [
+  ['Waveshare 10.1\u2033 HDMI LCD (B)', '1280 \u00d7 800 \u00b7 Standard', true, true],
+  ['Waveshare 13.3\u2033 HDMI LCD (H)', '1920 \u00d7 1080 \u00b7 Standard', true],
+  ['Waveshare 7.9\u2033 HDMI LCD', '1280 \u00d7 400 \u00b7 Bar', true],
+  ['Waveshare 11.9\u2033 HDMI LCD', '1480 \u00d7 320 \u00b7 Bar', true],
+  ['Waveshare 7\u2033 HDMI LCD (C)', '800 \u00d7 480 \u00b7 Standard', false]
+];
+const SETUP = {
+  's-joined': { crumb: 'First-time setup', over: true, hero: 'tick', title: 'Phone connected' },
+  's-phone': { crumb: 'First-time setup', over: true, hero: 'phone', title: 'Carry on on your phone', sub: 'This screen shows when the player moves to your network.' },
+  's-done': { crumb: 'First-time setup', hero: 'tick', title: 'Living room is on Home', sub: 'Restarting to take its new name\u2026', card: true },
+  's-failstart': { crumb: 'First-time setup', hero: 'warn', title: 'The setup network did not start', sub: 'Trying again in a moment.', mono: true },
+  's-starting': { crumb: 'First-time setup', hero: 'mark', title: 'Starting setup\u2026' },
+  's-page': { crumb: 'First-time setup', over: true, code: true, k1: 'Or type', v1: '10.42.0.1:8090', k2: 'Your phone may say', v2: '\u201cNo internet\u201d. Stay connected.', title: 'Now open the setup page', line: 'Scan with the same phone' },
+  's-lan': { crumb: 'First-time setup', code: true, k1: 'Or type', v1: '192.168.178.54:8090', title: 'Set up gexis', line: 'Scan with a phone on the same network as this player' },
+  's-fail-full': { crumb: 'Setup network', over: true, code: true, warn: true, k1: 'Network', v1: 'gexis-setup', k2: 'Password', v2: 'k7qm-4hx2', mono2: true, line: 'No network with that name is in range. Everything else you entered is kept.' }
+};
+class Component extends DCLogic {
+  renderVals() {
+    const s = this.props.screen || 'strip-pending';
+    const W = this.props.w || 1280;
+    const strip = /^(strip|lyr|tray-(fixed|muted|nometers|lmsoff))/.test(s);
+    const src = s === 'strip-bt' ? 'bluetooth' : s === 'strip-long' ? 'spotify' : s === 'strip-plugin' ? 'plugin' : 'lms';
+    const accent = { lms: '#7ed6bc', spotify: '#8fd9a8', bluetooth: '#9fb4e8', plugin: '#e9eef2' }[src];
+    const long = s === 'strip-long';
+    const lyr = s === 'lyr-loading' ? 'loading' : s === 'lyr-plain' ? 'plain' : s === 'lyr-synced' ? 'synced' : null;
+    const lyrNone = s === 'lyr-none';
+    const tray = /^tray-/.test(s);
+    const muted = s === 'tray-muted', fixed = s === 'tray-fixed';
+    const vol = muted ? 0 : 62;
+    const lib = s === 'lib-artists' || s === 'lib-playlist' || s === 'lib-folder';
+    const st = SETUP[s];
+    const pairDone = s === 'pair-paired' || s === 'pair-not' || s === 'pair-expired';
+    const contentMid = (220 + (W - 344) / 2) + 'px';
+    return {
+      W, wPx: W + 'px',
+      isStrip: strip, accent,
+      artShown: s !== 'strip-pending', artPending: s === 'strip-pending',
+      title: long ? 'Everything I Said Before About Never Coming Back Here Again (Extended Remaster)' : src === 'bluetooth' ? 'Somn Usor' : 'Rempompi',
+      artist: long ? 'The Very Long Name Ensemble of Greater Amsterdam' : src === 'bluetooth' ? 'Cantece Mici' : 'Gasca Zurli',
+      album: long ? 'Recordings From A House That No Longer Exists, Volume Two' : src === 'bluetooth' ? '' : 'Atentiune, Acceleram!',
+      year: long ? '1998' : '2014', yearDisplay: src === 'bluetooth' ? 'none' : 'inline',
+      metaOn: !lyr, lyrHead: !!lyr, lyrSynced: lyr === 'synced', lyrPlain: lyr === 'plain', lyrLoading: lyr === 'loading',
+      creditDisplay: lyr === 'synced' || lyr === 'plain' ? 'block' : 'none',
+      markLms: src === 'lms', markImg: src === 'spotify' || src === 'bluetooth', markSrc: src === 'spotify' ? 'icon-spotify.png' : 'icon-bluetooth.png',
+      markPlugin: src === 'plugin', markLetter: 'P',
+      lyrSwitchDisplay: lyrNone || src === 'bluetooth' || src === 'spotify' ? 'none' : 'flex',
+      lyrBg: lyr ? 'rgba(242,164,143,0.16)' : 'rgba(233,238,242,0.07)', lyrLine: lyr ? 'rgba(242,164,143,0.45)' : 'rgba(233,238,242,0.12)', lyrInk: lyr ? '#f2a48f' : 'rgba(233,238,242,0.66)',
+      progDisplay: src === 'bluetooth' ? 'none' : 'flex', ctlTop: src === 'bluetooth' ? 'auto' : '22px',
+      srDisplay: src === 'bluetooth' ? 'none' : 'flex', queueBtnDisplay: src === 'bluetooth' ? 'none' : 'block',
+      bgLibHome: s === 'tray-library', bgRailEmpty: s === 'lib-rail-empty', bgAlbum: s === 'lib-toast', bgSettings: s === 'lib-sheet',
+      trayOn: tray, trayHome: s !== 'tray-lmsoff', traySettings: s === 'tray-lmsoff', trayVisDisplay: s === 'tray-nometers' ? 'none' : 'flex',
+      trayLevel: !fixed, trayFixed: fixed,
+      muteBg: muted ? 'rgba(224,167,88,0.14)' : 'rgba(233,238,242,0.07)', muteLine: muted ? 'rgba(224,167,88,0.45)' : 'rgba(233,238,242,0.12)',
+      volInk: muted ? 'rgba(233,238,242,0.45)' : 'rgba(233,238,242,0.85)', arcsDisplay: muted ? 'none' : 'block', crossDisplay: muted ? 'block' : 'none',
+      volPct: vol + '%', volFill: muted ? 'rgba(224,167,88,0.5)' : accent, knobInk: muted ? 'rgba(233,238,242,0.55)' : '#e9eef2',
+      volRead: muted ? 'Mute' : String(vol), volReadInk: muted ? '#e0a758' : '#e9eef2',
+      isQueueNote: false,
+      isLib: lib, isArtists: s === 'lib-artists', isPlaylist: s === 'lib-playlist', isFolder: s === 'lib-folder',
+      libHomeDisplay: s === 'lib-artists' ? 'none' : 'flex',
+      libTitle: s === 'lib-artists' ? 'Artists' : s === 'lib-playlist' ? 'Evening' : 'Germany',
+      libCrumb: s === 'lib-artists' ? '7293 artists' : s === 'lib-playlist' ? '12 tracks \u00b7 47 min' : 'Radio \u00b7 By location',
+      artists: ARTISTS.map(a => ({ name: a[0], sub: a[1] })),
+      letters: LETTERS.map((l, i) => ({ label: l, bg: i === 0 ? 'rgba(159,180,232,0.18)' : 'rgba(233,238,242,0.05)', line: i === 0 ? 'rgba(159,180,232,0.5)' : 'rgba(233,238,242,0.1)', ink: i === 0 ? '#9fb4e8' : 'rgba(233,238,242,0.78)' })),
+      plTracks: TRACKS.map((t, i) => ({ num: String(i + 1).padStart(2, '0'), title: t[0], artist: t[1], dur: t[2] })),
+      folderCols: W > 1500 ? 'repeat(3,minmax(0,1fr))' : 'repeat(2,minmax(0,1fr))',
+      folders: [['Bremen', '12 stations', 1], ['Hamburg', '31 stations', 1], ['Lower Saxony', '48 stations', 1], ['Schleswig-Holstein', '22 stations', 1], ['Deutschlandfunk', '128 kbps', 0], ['NDR 1 Welle Nord', '256 kbps', 0]].slice(0, W > 1500 ? 6 : 4).map(f => ({ name: f[0], meta: f[1], folder: !!f[2], station: !f[2], chevron: f[2] ? 'block' : 'none' })),
+      isToast: s === 'lib-toast', toastLeft: (400 + (W - 524) / 2) + 'px',
+      isSheet: s === 'lib-sheet', sheetLeft: (W - 124) / 2 + 'px', sheetW: Math.min(760, W - 124 - 48) + 'px',
+      makers: [['Waveshare', '5', true], ['Joy-IT', '1']].map(m => ({ name: m[0], count: m[1], bg: m[2] ? 'rgba(126,214,188,0.12)' : 'transparent', ink: m[2] ? '#7ed6bc' : '#e9eef2' })),
+      models: MODELS.map(m => ({ name: m[0], meta: m[1] + (m[3] ? ' \u00b7 in use' : ''), bg: m[3] ? 'rgba(126,214,188,0.1)' : 'rgba(233,238,242,0.03)', line: m[3] ? 'rgba(126,214,188,0.4)' : 'transparent', ink: m[3] ? '#7ed6bc' : '#e9eef2', tag: m[2] ? 'Tested' : 'Untested', tagBg: m[2] ? 'rgba(126,214,188,0.14)' : 'rgba(224,167,88,0.14)', tagInk: m[2] ? '#7ed6bc' : '#e0a758' })),
+      isPairDone: pairDone, pairTick: s === 'pair-paired', pairCross: s !== 'pair-paired',
+      pairLabel: s === 'pair-expired' ? 'Request expired' : s === 'pair-not' ? 'Not paired' : 'Paired', pairInk: s === 'pair-paired' ? '#9fb4e8' : 'rgba(233,238,242,0.72)',
+      isPairNoCode: s === 'pair-nocode',
+      isWaitMany: s === 'wait-many',
+      renderers: [['Spotify', 'Listening', 'icon-spotify.png'], ['Bluetooth', 'Pairable', 'icon-bluetooth.png'], ['Plexamp', 'Listening', null, 'P'], ['Music Assistant', 'Listening', null, 'M']].map(r => ({ name: r[0], status: r[1], src: r[2] || '', img: !!r[2], letter: !r[2], initial: r[3] || '' })),
+      isTLong: s === 't-long', tNameMax: W > 1500 ? '520px' : '340px', tNameSize: W > 1500 ? '64px' : '52px',
+      isUrl: s === 'idle-url', urlSize: W + ' \u00d7 400',
+      isSetup: !!st, crumb: st ? st.crumb : '', overDisplay: st && st.over ? 'block' : 'none',
+      sHero: !!(st && st.hero), sCode: !!(st && st.code),
+      icTick: st && st.hero === 'tick', icPhone: st && st.hero === 'phone', icWarn: st && st.hero === 'warn', icMark: st && st.hero === 'mark',
+      heroInk: st && st.hero === 'warn' ? '#e0a758' : '#7ed6bc', heroBg: st && st.hero === 'warn' ? 'rgba(224,167,88,0.14)' : 'rgba(126,214,188,0.14)', heroLine: st && st.hero === 'warn' ? 'rgba(224,167,88,0.45)' : 'rgba(126,214,188,0.45)',
+      heroTitle: st ? st.title || '' : '', heroSize: st && st.card ? (W > 1500 ? '56px' : '44px') : st && st.title && st.title.length > 24 ? '48px' : '64px',
+      heroSub: st ? st.sub || '' : '', heroSubDisplay: st && st.sub ? 'block' : 'none', heroMonoDisplay: st && st.mono ? 'block' : 'none',
+      doneCard: !!(st && st.card),
+      k1: st ? st.k1 || '' : '', v1: st ? st.v1 || '' : '', k2: st ? st.k2 || '' : '', v2: st ? st.v2 || '' : '', k2Display: st && st.k2 ? 'block' : 'none',
+      v2Size: st && st.mono2 ? '44px' : '26px', v2Weight: st && st.mono2 ? '700' : '600', v2Font: st && st.mono2 ? "'IBM Plex Mono','Courier New',monospace" : 'inherit',
+      codeWarnHead: !!(st && st.warn), codePlainHead: !(st && st.warn), codeTitle: st ? st.title || '' : '', codeLine: st ? st.line || '' : ''
+    };
+  }
+}
+</script>
+</body>
+</html>

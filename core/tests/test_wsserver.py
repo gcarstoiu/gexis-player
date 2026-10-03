@@ -51,6 +51,7 @@ async def test_new_client_receives_the_current_state_on_connect():
         "acquisition_events": ["acquired"],
         "supports_artwork": True,
         "supports_sample_rate": True,
+        "sample_rate_is_source": False,
         "volume_managed": True,
         "volume_mechanism": "software_api",
         "dummy_mixer_card": None,

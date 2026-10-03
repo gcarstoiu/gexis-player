@@ -10,4 +10,14 @@ if [ "${#players[@]}" -ne 1 ] || [ ! -f "${players[0]}" ]; then
 fi
 rm -rf "${ROOTFS_DIR}/tmp/gexis-debs"
 install -d "${ROOTFS_DIR}/tmp/gexis-debs"
-cp "${DEBS}"/*.deb "${ROOTFS_DIR}/tmp/gexis-debs/"
+# **No skins in the image** (ADR-0111 decision 9): nothing is installed
+# without consent, so neither the per-size packs (gexis-skins-<W>x<H>) nor the
+# old gexis-skins go in. The release carries the packs; a device installs its
+# own once the user agrees. Devices that already have gexis-skins keep it
+# (decision 10) - nothing here touches them.
+for deb in "${DEBS}"/*.deb; do
+	case "$(basename "${deb}")" in
+		gexis-skins_*|gexis-skins-*) echo "not in the image (ADR-0111): $(basename "${deb}")" ;;
+		*) cp "${deb}" "${ROOTFS_DIR}/tmp/gexis-debs/" ;;
+	esac
+done

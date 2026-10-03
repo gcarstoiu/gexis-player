@@ -622,6 +622,22 @@
     display: none;
   }
 
+  /* ADR-0109, Bar family: the same rail in 400 logical px, tightened as the
+     design draws it (Bar Frame, queue) so three rows and part of a fourth
+     show, the fourth fading into the edge to say the list goes on. Only a
+     bar matches these; a Standard screen is untouched. */
+  :global(.panel--bar) .rail {
+    padding: 22px 26px 16px;
+  }
+  :global(.panel--bar) .rail__head,
+  :global(.panel--bar) .source {
+    margin-bottom: 12px;
+  }
+  :global(.panel--bar) .rail__list {
+    -webkit-mask-image: linear-gradient(180deg, #000 80%, transparent 100%);
+    mask-image: linear-gradient(180deg, #000 80%, transparent 100%);
+  }
+
   .qrow {
     height: 60px;
     margin-bottom: 3px;

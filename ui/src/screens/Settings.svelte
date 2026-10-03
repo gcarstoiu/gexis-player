@@ -134,6 +134,19 @@
   // pattern for every piece of text this screen takes.
   function asSheet(row) {
     if (!row) return row;
+    if (shareLogin) {
+      return {
+        ...row,
+        type: 'share-login',
+        label: `Sign in to ${shareLogin.name}`,
+        note: 'It shows its shares only to a user it knows. The same user and password are used to mount the one you choose.',
+        confirm: 'Show shares',
+        wired: true,
+      };
+    }
+    if (shareBrowse) {
+      return { ...row, label: `Shares on ${shareBrowse.server.name}`, note: 'Tap one to add it.', discover: false, manual: null, hint: null };
+    }
     if (joinItem) {
       return {
         ...row,
@@ -147,6 +160,17 @@
       };
     }
     if (!manual) return row;
+    // ADR-0115: a network share is three fields, not one value.
+    if (row.kind === 'share') {
+      return {
+        ...row,
+        type: 'share',
+        label: 'Add a share',
+        note: 'A folder on a NAS or a computer. SMB needs a user and password; NFS needs only the address.',
+        confirm: 'Add',
+        wired: true,
+      };
+    }
     return {
       ...row,
       type: 'text',
@@ -345,6 +369,10 @@
   function shown(row) {
     const v = row.value;
     if (row.type === 'toggle') return '';
+    // A screen reads as its maker and model, not the picker's `Maker/Model`.
+    if (row.optionTags && typeof v === 'string') return v.replace('/', ' ');
+    // A skin by the name its pack gives it (George's "Brand · Model").
+    if (row.optionLabels && v != null && row.optionLabels[v]) return row.optionLabels[v];
     // "Not set" is derived from an empty value, never stored as one, so it
     // can never be pre-filled into the field and saved as the real thing. A
     // secret that is set reports only that, never the value (ADR-0044).
@@ -364,6 +392,9 @@
       // the connected network's name on the Wi-Fi row - recorded in
       // docs/findings/042 §7 as one more place its prose and its literal
       // disagree.
+      // ADR-0115: the shares are drawn on the row itself, each with its
+      // Forget (George, 2026-10-03: the stored list "look[ed] like just code").
+      if (row.kind === 'share') return (row.items ?? []).length ? '' : 'None added';
       if (v) return String(v);
       // The items are on the row because the daemon seeds a list that does
       // not have to go looking (ADR-0044 §1, amended). A row counting only
@@ -409,6 +440,8 @@
   const MB = (n) => (n / 1048576).toFixed(1);
   function downloadShare(c) {
     if (c.state === 'verifying' || c.state === 'installing') return 1;
+    // A skin pack (ADR-0111) reports its share as the updater measures it.
+    if (c.share != null) return Math.min(1, Math.max(0, c.share));
     return c.received != null && c.total ? Math.min(1, c.received / c.total) : null;
   }
   function downloadLine(c) {
@@ -441,6 +474,11 @@
   }
 
   function tap(row) {
+    // A read-only row is a disabled button - except an uploaded plugin's,
+    // which holds its Remove: a browser drops every tap inside a disabled
+    // button, and that Remove did nothing (George, 2026-10-03). The row
+    // itself still opens nothing.
+    if (row.type === 'readonly') return;
     if (row.type === 'document') openDocument(row);
     // ADR-0098: a switch with a warning asks before it turns ON - the
     // notice before a plugin's software is downloaded. Off
@@ -460,6 +498,25 @@
     region = name;
   }
 
+  //: **A choice row's warning waits for the choice** (George, 2026-10-02:
+  //: "C" - on a Pixel 10 the Attached screen warning left room for one and
+  //: a half models). A string warning on a choice is about changing it, so it
+  //: shows once something other than the value is picked, with Confirm. A
+  //: text row's (device_name) stays up the whole time: what it warns about
+  //: happens whatever is typed (ADR-0044 §2).
+  function warnsOnChoice(row) {
+    return typeof row?.warn === 'string' && (row.type === 'choice' || row.grouped);
+  }
+  //: **A long list fills a phone** (the same day, "C"): more than this many
+  //: choices and the sheet is the whole screen rather than a card over it.
+  const FULL_SHEET_OPTIONS = 6;
+  const sheetFull = $derived.by(() => {
+    if (wide || !sheet) return false;
+    const n = sheet.grouped ? (region === null ? regions.length : places.length)
+      : (sheet.type === 'choice' || sheet.type === 'multi') ? (sheet.options ?? []).length : 0;
+    return n > FULL_SHEET_OPTIONS;
+  });
+
   async function choose(option) {
     const row = sheet;
     if (String(row.value) === option) {
@@ -475,7 +532,7 @@
     // ADR-0044 §2: a warned option is selected first and committed second.
     // The warning is the whole point of the mechanic and "turn your
     // amplifier down before confirming" cannot be said after the write.
-    if (row.warn?.[option]) {
+    if (row.warn?.[option] || warnsOnChoice(row)) {
       choicePending = option;
       return;
     }
@@ -508,6 +565,8 @@
   function openSheet(row) {
     sheetKey = row.key;
     manual = false;
+    shareBrowse = null;
+    shareLogin = null;
     choicePending = null;
     joinItem = null;
     join = null;
@@ -571,13 +630,49 @@
 
   async function doForget(item) {
     const key = sheetKey;
-    await command({ name: item.name, action: 'forget' }, (answer) => {
+    await command({ name: item.address ?? item.name, action: 'forget' }, (answer) => {
       flash(answer.ok ? `${item.name} forgotten` : (answer.error ?? 'Could not forget it'));
       if (answer.ok) openList(key);
     });
   }
 
+  //: ADR-0115: Forget on the row itself, without opening the sheet.
+  async function forgetShare(row, item) {
+    const answer = await listAction(row.key, { name: item.address ?? item.name, action: 'forget' });
+    flash(answer.ok ? `${item.name} forgotten` : (answer.error ?? 'Could not forget it'));
+  }
+
+  //: ADR-0115: the share being added.
+  let share = $state({ address: '', user: '', password: '' });
+  //: ADR-0115's scan: the server whose shares are shown (with the login
+  //: that showed them), and the server waiting for a login first.
+  let shareBrowse = $state(null);
+  let shareLogin = $state(null);
+  let shareCreds = $state({ user: '', password: '' });
+
+  async function browseShares(item, user = null, password = null) {
+    searching = true;
+    listError = null;
+    await command({ name: item.name, action: 'browse', server: item.server, user, password }, (answer) => {
+      searching = false;
+      if (answer.login) {
+        shareLogin = item;
+        shareCreds = { user: user ?? '', password: '' };
+        if (user) flash(answer.error ?? 'Not accepted');
+        return;
+      }
+      if (!answer.ok) {
+        flash(answer.error ?? 'Could not read its shares');
+        return;
+      }
+      shareBrowse = { server: item, user, password };
+      items = answer.items ?? [];
+      if (!items.length) listError = `${item.name} shows no shares to this user.`;
+    });
+  }
+
   function enterManual() {
+    share = { address: '', user: '', password: '' };
     manual = true;
     draft = String(rowOf(sheetKey)?.value ?? '');
   }
@@ -588,6 +683,32 @@
     // Choosing a server is a write; joining a network is a command. The row
     // that stores a value and the row that performs one are the same type,
     // and `kind` is what tells them apart (ADR-0044 §1).
+    // ADR-0115: a found server shows its shares; a share on it is added with
+    // the login that showed it; a share already added says how it is.
+    if (row.kind === 'share') {
+      if (item.share && shareBrowse) {
+        const key = sheetKey;
+        const { user, password } = shareBrowse;
+        const address = item.address ?? item.name;
+        await command({ name: address, action: 'add', user: user ?? (address.startsWith('//') ? 'guest' : null), password }, (answer) => {
+          if (!answer.ok) {
+            flash(answer.error ?? 'Could not add it');
+            return;
+          }
+          flash(`${item.name} added`);
+          shareBrowse = null;
+          openList(key);
+        });
+      } else if (item.server) {
+        browseShares(item);
+      } else if (item.login) {
+        // ADR-0115 decision 15: restored without its password, which backups
+        // do not carry - typed in again here.
+        share = { address: item.address, user: item.user ?? '', password: '' };
+        manual = true;
+      }
+      return;
+    }
     if (row.kind === 'server') {
       closeSheet();
       // Tapping the server already in use says "that one", so the sheet
@@ -628,20 +749,56 @@
     server: { title: 'Searching the network', note: 'Servers answer within a few seconds.' },
     network: { title: 'Looking for networks', note: 'The adapter sweeps every channel.' },
     device: { title: 'Looking for devices', note: 'Paired devices answer straight away.' },
+    share: { title: 'Looking for shares', note: 'Servers that announce themselves answer within a few seconds.' },
   };
 
   const ORDINAL = /^(\d+)G5_(.*)$/;
-  function parts(name) {
+  function parts(name, row = picker) {
+    // The pack's own name for it, when the pack has one (George, 2026-10-02:
+    // "Brand · Model · variant", no numbers, no underscores).
+    const label = row?.optionLabels?.[name];
+    if (label) return { ord: '', label };
     const m = ORDINAL.exec(String(name));
     return m ? { ord: m[1], label: m[2] } : { ord: '', label: String(name) };
   }
 
+  //: The picker's order: a catalogue, by name, where the pack names its
+  //: skins; otherwise the corpus order it always had.
+  function byLabel(row) {
+    const options = row.options ?? [];
+    const labels = row.optionLabels;
+    if (!labels) return options;
+    return [...options].sort((a, b) => (labels[a] ?? a).localeCompare(labels[b] ?? b));
+  }
+
+  //: **Swipe between skins on a phone** (George, 2026-10-02): left for the
+  //: next, right for the one before, in the list's order. Only a mostly
+  //: sideways stroke counts, so scrolling the pane still scrolls.
+  let swipeFrom = null;
+  const SWIPE_PX = 50;
+  function swipeStart(e) {
+    if (wide || e.pointerType === 'mouse') return;
+    swipeFrom = { x: e.clientX, y: e.clientY };
+  }
+  function swipeEnd(e, options) {
+    const from = swipeFrom;
+    swipeFrom = null;
+    if (!from || !pickerView) return;
+    const dx = e.clientX - from.x;
+    const dy = e.clientY - from.y;
+    if (Math.abs(dx) < SWIPE_PX || Math.abs(dx) < 2 * Math.abs(dy)) return;
+    const at = options.indexOf(pickerView);
+    const to = at + (dx < 0 ? 1 : -1);
+    if (at >= 0 && to >= 0 && to < options.length) pickerView = options[to];
+  }
+
   //: The one write the picker makes, from the button under the preview.
+  //: **The picker stays open** on the skin just chosen, now In use (George,
+  //: 2026-10-02: "once a skin is selected, stay on the selecting screen ...
+  //: User can go back by himself").
   async function pick(name) {
     const row = picker;
     if (!name || String(row.value) === name) return;
-    pickerKey = null;
-    pickerView = null;
     if (await write(row, name)) flash(`${row.label}: ${parts(name).label}`);
   }
 
@@ -679,6 +836,27 @@
     }
     if (joinItem) {
       doJoin(joinItem.name, draft);
+      return;
+    }
+    if (row.type === 'share-login') {
+      const item = shareLogin;
+      shareLogin = null;
+      browseShares(item, shareCreds.user.trim() || null, shareCreds.password || null);
+      return;
+    }
+    if (row.type === 'share') {
+      // ADR-0115: added, then mounted by the core; the list says how that went.
+      const key = sheetKey;
+      const { address, user, password } = share;
+      await command({ name: address.trim(), action: 'add', user: user.trim() || null, password: password || null }, (answer) => {
+        if (!answer.ok) {
+          flash(answer.error ?? 'Could not add it');
+          return;
+        }
+        manual = false;
+        flash(`${address.trim()} added`);
+        openList(key);
+      });
       return;
     }
     if (row.type === 'toggle') {
@@ -745,6 +923,14 @@
     }
     if (region !== null && sheet?.grouped) {
       region = null;
+      return;
+    }
+    // ADR-0115's scan: from a server's shares or its login, back to the list.
+    if (shareBrowse || shareLogin) {
+      const key = sheetKey;
+      shareBrowse = null;
+      shareLogin = null;
+      openList(key);
       return;
     }
     sheetKey = null;
@@ -869,7 +1055,9 @@
                     <span class="row__text">
                       <span class="row__label"><span class="row__name">{r.label}</span></span>
                       <span class="row__value row__value--tile">{r.value}</span>
-                      {#if $update?.whats_new && ['available', 'done'].includes($update?.state)}
+                      <!-- ADR-0116: only while it waits; once installed, its
+                           notes are under Change logs. -->
+                      {#if $update?.whats_new && $update?.state === 'available'}
                         <span class="row__note">What's new in {$update.release}</span>
                         <span class="tile__notes"><ReleaseNotes text={$update.whats_new} /></span>
                       {:else if r.note}<span class="row__note">{r.note}</span>{/if}
@@ -878,7 +1066,7 @@
                       type="button"
                       class="tile__btn"
                       class:tile__btn--go={waiting}
-                      disabled={$update?.active}
+                      class:tile__btn--busy={$update?.active}
                       onclick={() => (updateModal = $update?.active ? 'progress' : waiting ? 'available' : 'check')}
                     >{$update?.active ? 'Updating…' : waiting ? 'Update…' : 'Check for updates'}</button>
                   </span>
@@ -895,7 +1083,7 @@
                   class:row--readonly={r.type === 'readonly'}
                   class:row--dl={!!r.component}
                   type="button"
-                  disabled={r.type === 'readonly'}
+                  disabled={r.type === 'readonly' && !r.uploaded}
                   data-unwired={r.wired ? undefined : 'settings'}
                   onclick={() => tap(r)}
                 >
@@ -949,6 +1137,28 @@
                     </span>
                     {#if r.type !== 'toggle' && shown(r)}
                       <span class="row__value" class:is-pending={pending(r)}>{shown(r)}</span>
+                    {/if}
+                    {#if r.kind === 'share' && r.items?.length}
+                      <!-- ADR-0115: each share by its name, with its Forget
+                           (George, 2026-10-03). Spans, not buttons: the row
+                           is the button that opens the sheet. -->
+                      <span class="shares">
+                        {#each r.items as s (s.address ?? s.name)}
+                          <span class="shares__one">
+                            <span class="shares__text">
+                              <span class="shares__name">{s.name}</span>
+                              {#if s.meta}<span class="item__meta">{s.meta}</span>{/if}
+                            </span>
+                            <span
+                              class="forget"
+                              role="button"
+                              tabindex="0"
+                              onclick={(e) => { e.stopPropagation(); forgetShare(r, s); }}
+                              onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); forgetShare(r, s); } }}
+                            >Forget</span>
+                          </span>
+                        {/each}
+                      </span>
                     {/if}
                     {#if r.component && ['preparing', 'downloading', 'retrying', 'verifying', 'installing'].includes(($components[r.component] ?? {}).state)}
                       {@const c = $components[r.component]}
@@ -1009,6 +1219,9 @@
               {#each section.paragraphs as paragraph, j (j)}
                 <p class="doc__p">{paragraph}</p>
               {/each}
+              <!-- ADR-0116: a release's notes, drawn as the update draws them. -->
+              {#if section.notes}<div class="doc__notes"><ReleaseNotes text={section.notes} /></div>{/if}
+              {#if section.url}<p class="doc__p doc__muted doc__url">{section.url}</p>{/if}
               {#if section.entries}
                 <ul class="doc__list">
                   {#each section.entries as entry, k (k)}
@@ -1029,7 +1242,7 @@
   {/if}
 
   {#if picker}
-    {@const options = picker.options ?? []}
+    {@const options = byLabel(picker)}
     {@const inUse = picker.value == null ? null : String(picker.value)}
     {@const viewing = pickerView ?? (wide ? inUse : null)}
     <div class="picker">
@@ -1066,7 +1279,7 @@
               aria-current={option === inUse ? 'true' : undefined}
               onclick={() => (pickerView = option)}
             >
-              <span class="skin__ord">{p.ord}</span>
+              {#if p.ord}<span class="skin__ord">{p.ord}</span>{/if}
               <span class="skin__label">{p.label}</span>
               {#if option === inUse}<span class="skin__check"><span></span></span>{/if}
             </button>
@@ -1079,7 +1292,13 @@
         {#if viewing}
           {@const p = parts(viewing)}
           {@const isCurrent = viewing === inUse}
-          <div class="pane" class:pane--over={!wide}>
+          <div
+            class="pane"
+            class:pane--over={!wide}
+            onpointerdown={(e) => swipeStart(e)}
+            onpointerup={(e) => swipeEnd(e, options)}
+            onpointercancel={() => (swipeFrom = null)}
+          >
             {#if !wide}
               <div class="pane__back">
                 <button
@@ -1103,7 +1322,7 @@
             </div>
             <div class="pane__text">
               <div class="pane__name">{p.label}</div>
-              <div class="pane__meta">{viewing} &nbsp;·&nbsp; {isCurrent ? 'IN USE' : 'NOT IN USE'}</div>
+              <div class="pane__meta">{picker.optionLabels?.[viewing] ? '' : `${viewing}  ·  `}{isCurrent ? 'IN USE' : 'NOT IN USE'}</div>
             </div>
             <button
               class="pane__use"
@@ -1121,7 +1340,7 @@
   <div class="scrim" class:is-open={sheet} role="presentation" onclick={closeSheet}></div>
 
   {#if sheet}
-    <div class="sheet" role="dialog" aria-label={sheet.label}>
+    <div class="sheet" class:sheet--full={sheetFull} role="dialog" aria-label={sheet.label}>
       <div class="sheet__head">
         <div class="sheet__title">{sheet.grouped && region !== null ? region : sheet.label}</div>
         {#if sheet.note && !joinItem}<div class="sheet__note">{sheet.note}</div>{/if}
@@ -1132,7 +1351,7 @@
            shown the whole time the sheet is open, because what it describes
            happens whatever is typed (`device_name`); an **object** warns
            about one option and waits until that option is picked. -->
-      {#if typeof sheet.warn === 'string'}
+      {#if typeof sheet.warn === 'string' && (!warnsOnChoice(sheet) || choicePending !== null)}
         <div class="warn">
           <span class="warn__mark">!</span>
           <span class="warn__text">{sheet.warn}</span>
@@ -1165,6 +1384,11 @@
             <button class="option" class:is-selected={selected} type="button" onclick={() => chooseRegion(name)}>
               <span class="radio"><span></span></span>
               <span class="option__label">{name.replace(/_/g, ' ')}</span>
+              {#if sheet.optionTags}
+                <!-- Round 2's Attached screen: how many models a maker has. -->
+                {@const n = grouped.filter((o) => o.split('/')[0] === name).length}
+                <span class="option__meta">{n} {n === 1 ? 'model' : 'models'}</span>
+              {/if}
               <span class="chev"></span>
             </button>
           {/each}
@@ -1172,10 +1396,14 @@
       {:else if sheet.grouped}
         <div class="options" data-noscrollbar>
           {#each places as option (option)}
-            {@const selected = String(sheet.value) === option}
+            {@const selected = choicePending !== null ? choicePending === option : String(sheet.value) === option}
             <button class="option" class:is-selected={selected} type="button" onclick={() => choose(option)}>
               <span class="radio"><span></span></span>
               <span class="option__label">{placeLabel(option)}</span>
+              {#if sheet.optionTags?.[option]}
+                <!-- ADR-0109 decision 1: every model says whether it was tested. -->
+                <span class="option__tag" class:option__tag--tested={sheet.optionTags[option] === 'Tested'}>{sheet.optionTags[option]}</span>
+              {/if}
             </button>
           {/each}
         </div>
@@ -1243,7 +1471,7 @@
       {:else if sheet.type === 'list'}
         {#if items.length}
           <div class="items" data-noscrollbar>
-            {#each items as item (item.name)}
+            {#each items as item (item.address ?? item.name)}
               {@const joined = item.state === 'connected' || item.state === 'current'}
               <!-- Only the network in use takes no tap: there is nothing to
                    join. The server in use still does - tapping the one you
@@ -1355,6 +1583,20 @@
             <span>{withUnit(String(sheet.max).replace('-', MINUS), sheet.unit)}</span>
           </div>
         </div>
+      {:else if sheet.type === 'share-login'}
+        <input class="field" type="text" placeholder="User" bind:value={shareCreds.user}
+          autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="User" />
+        <input class="field" type="password" placeholder="Password" bind:value={shareCreds.password}
+          autocomplete="off" aria-label="Password" />
+      {:else if sheet.type === 'share'}
+        <!-- ADR-0115: SMB as //nas/music with a user and a password; NFS as
+             nas:/music, with neither. -->
+        <input class="field" type="text" placeholder="//nas/music or nas:/music" bind:value={share.address}
+          autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="Share address" />
+        <input class="field" type="text" placeholder="User (SMB)" bind:value={share.user}
+          autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="User" />
+        <input class="field" type="password" placeholder="Password (SMB)" bind:value={share.password}
+          autocomplete="off" aria-label="Password" />
       {:else if sheet.wired && sheet.type === 'text'}
         <!-- The panel and the phone take the same input; a panel without a
              keyboard attached reads every setting and changes every one that
@@ -1378,7 +1620,7 @@
         <button class="btn" type="button" disabled={saving} onclick={cancelSheet}>
           {#if join === 'error'}
             Give up
-          {:else if joinItem || (sheet.grouped && region !== null)}
+          {:else if joinItem || shareBrowse || shareLogin || (sheet.grouped && region !== null)}
             Back
           {:else if restorePending}
             Cancel
@@ -1388,7 +1630,7 @@
             Cancel
           {/if}
         </button>
-        {#if join === 'error' || joinItem || restorePending || choicePending !== null || sheet.type === 'action' || sheet.type === 'toggle' || sheet.type === 'text' || (sheet.type === 'number' && !sheet.wired) || (sheet.type === 'list' && sheet.manual && !searching)}
+        {#if join === 'error' || joinItem || restorePending || choicePending !== null || sheet.type === 'action' || sheet.type === 'toggle' || sheet.type === 'text' || sheet.type === 'share' || sheet.type === 'share-login' || (sheet.type === 'number' && !sheet.wired) || (sheet.type === 'list' && sheet.manual && !searching)}
           <button
             class="btn btn--confirm"
             class:btn--danger={sheet.danger || restorePending || choicePending !== null}
@@ -1750,6 +1992,9 @@
     color: var(--accent-lms);
   }
   .tile__btn:disabled { opacity: 0.6; }
+  /* A running install: dimmed as before, but a tap brings back the modal
+     that Hide put away (George, 2026-10-02: "how do I see it again?"). */
+  .tile__btn--busy { opacity: 0.6; }
   .tile__notes { display: block; margin-top: 8px; color: var(--ink-body); }
   .row--readonly:active { transform: none; }
 
@@ -1926,6 +2171,36 @@
     flex-direction: column;
     gap: 18px;
   }
+  /* ADR-0109, Bar family: a sheet is the full height less 12 px above and
+     below, min(760, W - 172) wide on the library's content area (W - 124),
+     centred on it (design/source/13b/Bar States.dc.html, lib-sheet). On a
+     400 px screen the panel's 82% cap leaves a sheet too short to hold a
+     list. */
+  /* A long list on a phone: the whole screen, not a card over it. */
+  .sheet.sheet--full {
+    top: 0;
+    left: 0;
+    transform: none;
+    width: 100%;
+    max-width: none;
+    height: 100%;
+    max-height: none;
+    border: none;
+    border-radius: 0;
+    box-shadow: none;
+    padding: 20px 18px;
+  }
+  :global(.panel--bar) .sheet {
+    top: 12px;
+    bottom: 12px;
+    transform: translateX(-50%);
+    width: min(760px, 100% - 48px);
+    max-width: none;
+    max-height: none;
+    border-radius: 20px;
+    padding: 18px 20px 14px;
+    gap: 12px;
+  }
   .sheet__head {
     flex-shrink: 0;
     min-width: 0;
@@ -2014,6 +2289,27 @@
     text-align: right;
   }
 
+  .option__meta {
+    flex-shrink: 0;
+    font-family: var(--font-mono);
+    font-size: 13px;
+    color: var(--ink-muted);
+  }
+  .option__tag {
+    flex-shrink: 0;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: var(--track-label);
+    text-transform: uppercase;
+    color: var(--ink-quiet);
+    padding: 4px 8px;
+    border-radius: 6px;
+    border: 1px solid rgba(233, 238, 242, 0.14);
+  }
+  .option__tag--tested {
+    color: var(--accent-lms);
+    border-color: rgba(126, 214, 188, 0.4);
+  }
   .option__label {
     flex: 1;
     min-width: 0;
@@ -2255,6 +2551,34 @@
     padding: 14px 4px 2px;
     text-wrap: pretty;
   }
+  /* Below the label and its chevron, the full width, on every screen. */
+  .row__body:has(> .shares) {
+    flex-wrap: wrap;
+  }
+  .shares {
+    order: 10;
+    flex-basis: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding-bottom: 4px;
+  }
+  .shares__one {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .shares__text {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .shares__name {
+    font-size: 17px;
+    overflow-wrap: anywhere;
+  }
   .forget {
     flex-shrink: 0;
     display: inline-flex;
@@ -2478,6 +2802,7 @@
     margin: 22px 0 8px;
   }
   .doc__p { font-size: 15px; line-height: 1.5; margin: 0 0 10px; }
+  .doc__notes { margin: 0 0 18px; }
   .doc__list { list-style: none; margin: 0; padding: 0; }
   .doc__entry {
     padding: 10px 0;
@@ -2608,6 +2933,9 @@
   }
   /* Below 720px there is no room for both, so the pane covers the list and
      carries its own way back to it. */
+  /* Sideways strokes are ours (the swipe between skins); up and down still
+     scroll the pane. */
+  .pane--over { touch-action: pan-y; }
   .pane--over {
     position: absolute;
     inset: 0;

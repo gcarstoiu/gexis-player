@@ -58,6 +58,10 @@ class TrackMetadata:
     #: renderer that has only one size leaves this None and they fall back.
     artwork_small: str | None = None
     sample_rate: int | None = None  # Hz
+    #: Bits per sample, where the source says (LMS's `samplesize`: lossless
+    #: and AAC files, not MP3). Shown only on the visualiser (ADR-0036 as
+    #: amended 2026-10-02).
+    bit_depth: int | None = None
     position: float | None = None  # seconds
     duration: float | None = None  # seconds
     source_type: str | None = None  # renderer_id of whoever supplied this
@@ -109,6 +113,7 @@ class TrackMetadata:
             "artwork": self.artwork,
             "artwork_small": self.artwork_small,
             "sample_rate": self.sample_rate,
+            "bit_depth": self.bit_depth,
             "codec": self.codec,
             "remaining_time": self.remaining_time,
             "source_type": self.source_type,
@@ -268,6 +273,10 @@ class PlaybackState:
     #: `active` while an install runs, which locks the panel. Read from the
     #: updater's status file, so it survives the core's own restart.
     update: dict | None = None
+    #: **ADR-0109: Keep this screen?** - the model now in use, the one it
+    #: goes back to, whether it is untested or only a rotation, and when the
+    #: countdown ends (epoch seconds; None until the panel has drawn).
+    screen_confirm: dict | None = None
 
     @property
     def controls(self) -> dict | None:
@@ -310,4 +319,5 @@ class PlaybackState:
             "panel": dict(self.panel),
             "setup": dict(self.setup) if self.setup else None,
             "update": dict(self.update) if self.update else None,
+            "screen_confirm": dict(self.screen_confirm) if self.screen_confirm else None,
         }

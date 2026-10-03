@@ -39,6 +39,13 @@ catalog pack's licence allows shipping.
 
 ## Visualiser skins, per resolution
 
+> **Corrected 2026-09-30:** the table below shows Gelo5 at 1280 × 800 only,
+> because only the set we ship was looked at. Gelo5 publishes a set for every
+> size George has, in PeppyMeter.doc's release 2024.03.02: 1920 × 1080 (120
+> skins, 325 MB), 1280 × 400 (120, 116 MB), 1480 × 320 (116, 99 MB), 800 × 480
+> (60, 48 MB), also 1024 × 600, 1920 × 480, 1920 × 515 and 3840 × 2160 (found
+> when George said *"More available from gelo5"*).
+
 Skins are bitmaps for one exact resolution; none scales.
 
 | Resolution | PeppyMeter stock | Gelo5 | foonerd catalog (packs / skin names) |

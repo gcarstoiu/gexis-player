@@ -369,3 +369,35 @@ def set_meter_smoothing(window_ms: int, path: Path) -> bool:
         return False
     logger.info("peppy: the needle is averaged over %s samples (%s ms)", samples, samples * METER_POLL_MS)
     return True
+
+
+def set_meter_skins(path: Path, base_folder: Path, meter_folder: str, width: int, height: int) -> bool:
+    """**Point PeppyMeter at the pack this screen uses** (ADR-0111): its
+    `base.folder`, its `meter.folder` and the screen it draws. True if the
+    file changed, and then the caller restarts `gexis-peppy`, which reads it
+    only at start. Rewritten in place, key by key, for the reason
+    `set_meter_smoothing` gives; a key the file lacks is not added."""
+    wanted = {"base.folder": str(base_folder), "meter.folder": meter_folder,
+              "screen.width": str(width), "screen.height": str(height)}
+    try:
+        lines = path.read_text().splitlines(keepends=True)
+    except OSError as exc:
+        logger.warning("peppy: cannot read %s: %s", path, exc)
+        return False
+    out, section = [], None
+    for line in lines:
+        stripped = line.strip()
+        if stripped.startswith("[") and stripped.endswith("]"):
+            section = stripped[1:-1]
+        key = line.split("=")[0].strip() if "=" in line else None
+        # Only [current]: [sdl.env] and the interfaces have keys of their own.
+        out.append(f"{key} = {wanted[key]}\n" if section == "current" and key in wanted else line)
+    if out == lines:
+        return False
+    try:
+        path.write_text("".join(out))
+    except OSError as exc:
+        logger.warning("peppy: cannot write %s: %s", path, exc)
+        return False
+    logger.info("peppy: drawing %s at %s x %s from %s", meter_folder, width, height, base_folder)
+    return True

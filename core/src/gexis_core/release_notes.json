@@ -1,0 +1,57 @@
+{
+ "_about": "Every release's notes, newest first, exactly as published and signed (ADR-0116). publish.sh reads a release's notes from here; Settings -> Change logs shows the last 10.",
+ "releases": {
+  "0.8.4": {
+   "date": "2026-10-03",
+   "notes": "New\n• Settings has Change logs, under Updates: what changed in the last 10 releases.\n• A display sold with or without a case is listed once.\nFixed\n• A new Lyrion server installs its add-ons and opens in Material Skin once it is installed.\n• Remove works for an uploaded plugin that a backup brought back without its package.\nGood to know\n• Once an update is installed, its notes are under Change logs rather than Software update."
+  },
+  "0.8.3": {
+   "date": "2026-10-03",
+   "notes": "New\n• Network shares for the Lyrion server are listed by name, each with Forget beside it.\n• A share the scan does not find can be added with \"Add by address\".\nFixed\n• Remove works for the Lyrion server.\n• The Network shares setting no longer shows a share's login details.\nGood to know\n• Removing the Lyrion server also deletes its library, its settings, its add-ons and its network shares. The Music folder and its playlists stay.\n• Network share passwords are no longer kept in the settings or in backups. After restoring a backup onto a new card, enter the password again."
+  },
+  "0.8.2": {
+   "date": "2026-10-03",
+   "notes": "New\n• Network shares for the Lyrion server can be found with a scan: the servers on the network are listed, then their shares, with a login where the server asks for one.\n• Lyrion Server heads Sources, with Lyrion Client beneath it.\n• A new Lyrion server opens straight into Material Skin, without its setup wizard.\nFixed\n• Adding a network share for the Lyrion server no longer fails.\n• Switching a plugin off and on quickly no longer leaves it stopped while its switch says on.\n• Updating from 0.8.0 to this release installs correctly."
+  },
+  "0.8.1": {
+   "date": "2026-10-03",
+   "notes": "New\n• Network shares for the Lyrion server can be found with a scan: the servers on the network are listed, then their shares, with a login where the server asks for one.\n• Lyrion Server heads Sources, with Lyrion Client beneath it.\n• A new Lyrion server opens straight into Material Skin, without its setup wizard.\nFixed\n• Adding a network share for the Lyrion server no longer fails.\n• Switching a plugin off and on quickly no longer leaves it stopped while its switch says on."
+  },
+  "0.8.0": {
+   "date": "2026-10-02",
+   "notes": "New\n• The Lyrion server can run on the player itself: switched on under Plugins, it is downloaded from the Lyrion community and plays music from the player's own Music folder (shared on the network), from USB disks and from network shares (SMB or NFS) added under Sources. Material Skin, Music & Artist Information and Radio Now Playing are installed with it. The player offers it in the list of servers and never switches to it by itself.\n• The Beszel hub can run on the player: switched on under Plugins, its page is at port 8095 of the player.\n• On a phone, long lists in Settings fill the screen, and a warning appears once an option is chosen, with Confirm.\nGood to know\n• Both plugins are off until switched on.\n• The Lyrion server needs internet access the first time it is switched on."
+  },
+  "0.7.0": {
+   "date": "2026-10-02",
+   "notes": "New\n• Skins have readable names, brand first, such as \"Naim · Turntable · art beside\", and the skin list is sorted by name.\n• The Skins setting has Fanart: the skins that show the artist's photos.\n• On a phone, a swipe left or right moves to the next or previous skin; the list stays open after a skin is chosen.\n• A plugin that reports the playing file's own sample rate shows it on the visualiser.\nFixed\n• Settings shows the attached screen after restoring a backup made before screens could be chosen.\n• The sample rate stays within the space the skin gives it.\n• The player's logo is centred on more skins.\n• During an update, Updating… brings back the progress window after Hide.\nGood to know\n• A skin chosen before keeps its place under its new name."
+  },
+  "0.6.0": {
+   "date": "2026-10-02",
+   "notes": "New\n• Skins with a frame for the artist show a slideshow of the artist's photos, from the Music & Artist Information plugin on the Lyrion server; the photo changes every 20 seconds.\n• Album art takes the shape the skin gives it, such as a circle or a rounded square.\n• While Lyrion plays, the visualiser shows the sample rate where the skin has a place for it.\n• Choosing a screen asks Keep this screen? only when the picture changes. After first-time setup the phone says so, and the screen waits two minutes for Keep.\nFixed\n• Duplicate skins are removed. The sets are smaller: 120 skins at 800 × 480, 147 at 1280 × 400, 138 at 1480 × 320, 286 at 1280 × 800 and 287 at 1920 × 1080.\n• Text that could not be read is corrected in three skins.\n• The player's logo is centred in its place on more skins.\n• After a screen goes back to the previous one, Settings shows the screen in use.\nGood to know\n• An installed skin set is updated with the release, so it gets smaller.\n• The 800 × 480 tape-recorder skins are left out: their layout was made for a larger screen."
+  },
+  "0.5.0": {
+   "date": "2026-10-02",
+   "notes": "New\n• The visualiser's skins now come in a set for each screen size: 800 × 480, 1280 × 400, 1480 × 320, 1280 × 800 and 1920 × 1080. A screen gets the set drawn for its size, or the largest set that fits it, centred on black.\n• The 1280 × 800 set has 432 skins, including the 1280 × 720 designs fitted to the screen.\n• First-time setup asks before installing the visualiser, and says how many skins the screen gets. They are downloaded once the player is on the home network.\n• Plugins has Visualiser skins. Off removes the skins and the visualiser with them; on downloads them again.\nFixed\n• The waiting screen fits four or more sources.\n• Handing over to a plugin without a logo shows its initial in the ring.\nGood to know\n• A player that already has the visualiser keeps its skins as they are. Switching Visualiser skins off and on again fetches the new set for its screen.\n• Settings → Display lists HDMI screens only for now: 110 models."
+  },
+  "0.4.0": {
+   "date": "2026-10-01",
+   "notes": "New\n• Other screens: gexis lays itself out for other standard screens, such as 16:9, and for bar screens (1280 × 400 and 1480 × 320).\n• Settings → Display has Attached screen (181 models, those tested with gexis marked Tested) and Screen rotation. A change restarts the player on the new screen and asks Keep this screen?. Without a touch within 30 seconds it goes back.\n• First-time setup has a Screen step: it recognises a tested screen, or offers the full list, or Headless.\n• A plugin without a logo shows its initial in a circle.\nFixed\n• Setup's Headless warning now says what really happens without a screen.\nGood to know\n• Nothing changes on the screen in use unless another one is chosen.\n• Until a screen has been kept with Keep this screen?, the setup network's password is gexis-setup."
+  },
+  "0.3.3": {
+   "date": "2026-10-01",
+   "notes": "Fixed\n• An update no longer restarts the device just to put back a start-up setting that the first boot removes.\n• Before an update starts, it says that the player restarts, and the device too if the system needs it.\n• Parts of the player that did not change are no longer downloaded again."
+  },
+  "0.3.2": {
+   "date": "2026-10-01",
+   "notes": "New\n• The update has its own tile, Software update; Release now only shows what this device runs.\nGood to know\n• Installing restarts the player; the music stops. No reboot."
+  },
+  "0.3.1": {
+   "date": "2026-10-01",
+   "notes": "Good to know\n• No visible changes: this release lets you try the new update screens.\n• Release notes now show as sections with bullet points.\n• Installing restarts the player; the music stops. No reboot."
+  },
+  "0.3.0": {
+   "date": "2026-10-01",
+   "notes": "What's new: updates are clearer. The Release tile has one button that opens the update: it shows what's new, lists every step as it happens, and shows the download's progress. While updating, the panel shows the progress and can't be used. Release numbers are short now.\nChanged: if music is playing, the update asks before stopping it instead of waiting, and nothing resumes afterwards. Automatic updates run between 3 and 4 at night, only when nothing is playing.\nThis update itself still runs the old way; the new screens apply from the next one. Installing restarts the player; the music stops. No reboot."
+  }
+ }
+}

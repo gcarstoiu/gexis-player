@@ -90,7 +90,11 @@ ARTWORK_ROW = 100
 #: `y` added 2026-09-20 for the album year the design puts beside the album
 #: name. It was reaching the panel from enrichment, which answers about the
 #: *release* a lookup matched rather than about the library's own record.
-METADATA_TAGS = "aldcTKsey"
+#:
+#: `I` (samplesize, bits) added 2026-10-02 for the visualiser's sample-rate
+#: field (ADR-0036 as amended). `T` is in Hz, measured that day against
+#: George's server ("44100"), whatever LMS-CLI.md's table says.
+METADATA_TAGS = "aldcTKseyI"
 
 #: ADR-0053. LMS's volume is 0-100, which is the panel's own scale exactly,
 #: so a position makes the round trip without being renamed (Finding 046
@@ -213,6 +217,8 @@ class LmsAdapter(Adapter):
         acquisition_events=frozenset({"power_on"}),
         supports_artwork=True,
         supports_sample_rate=True,
+        # The file's own rate: shown on the visualiser (ADR-0036 as amended).
+        sample_rate_is_source=True,
         volume_managed=True,
         volume_mechanism=VolumeMechanism.DUMMY_MIXER,
         dummy_mixer_card=DUMMY_CARD_LMS,
@@ -570,10 +576,9 @@ class LmsAdapter(Adapter):
                 # LMS-CLI.md's songinfo table documents tag T ("samplerate")
                 # as "in KHz", but its own worked example returns a raw Hz
                 # value (44100 for 44.1kHz content) - a known doc/reality
-                # mismatch, not this project's assumption. Treated as Hz
-                # here; **not yet confirmed against a live LMS server**, see
-                # HANDOFF.md.
+                # mismatch. Confirmed Hz against George's server, 2026-10-02.
                 sample_rate=int(song["samplerate"]) if "samplerate" in song else None,
+                bit_depth=_as_int(song.get("samplesize")),
                 position=_as_float(result.get("time")),
                 duration=_as_float(result.get("duration")),
                 source_type="lms",

@@ -336,3 +336,34 @@ def test_a_disabled_unit_is_left_alone(monkeypatch):
                         lambda argv, **kw: (calls.append(argv[1]), Result())[1])
     systemd.restart_if_enabled("beszel-agent.service")
     assert calls == ["is-enabled"]
+
+
+def test_a_plugin_with_a_page_of_its_own_names_its_port():
+    """ADR-0114: the Beszel hub's switch says where to open it."""
+    import json
+    from pathlib import Path
+
+    from gexis_core import plugins
+
+    shipped = json.loads((Path(__file__).parents[2] / "image/stage-gexis/07-beszel/files/plugin-hub.json").read_text())
+    hub = plugins.parse(shipped, built_in=True)
+    assert hub.port == 8095 and hub.unit == "beszel-hub.service"
+    assert plugins.parse({**shipped, "port": "8095"}).port is None, "a number, or nothing"
+    assert plugins.parse({**shipped, "port": 70000}).port is None
+
+
+def test_the_lyrion_server_heads_sources_with_the_client_beneath():
+    """George, 2026-10-03: "move Lyrion Server to the top, with the current
+    LMS renamed Lyrion Client right underneath"."""
+    import json
+    from pathlib import Path
+
+    from gexis_core import plugins
+    from gexis_core.settings_registry import Settings, load_registry
+
+    shipped = json.loads((Path(__file__).parents[2] / "image/stage-gexis/10-lyrion/files/plugin.json").read_text())
+    server = plugins.parse(shipped, built_in=True)
+    groups = Settings.with_plugins(load_registry(), [server])
+    sources = next(g for g in groups if g["id"] == "sources")
+    headings = [r["label"] for r in sources["rows"] if r["type"] == "group"]
+    assert headings[:2] == ["Lyrion Server", "Lyrion Client"]
