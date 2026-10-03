@@ -42,8 +42,9 @@ commit (ADR-0116: publish.sh takes them from the tagged commit's file, and
 the player shows them under Change logs); tag `vX.Y.Z` locally; `make image` (never commit while it
 packages - a `.dirty` build); `image/verify-image.sh` on the image;
 `packaging/release/build.sh <img>`; `packaging/release/publish.sh rX.Y.Z
---channel testing`; then merge the branch into `main` (ADR-0116 decision 7:
-Change logs points at `main`'s `CHANGELOG.md`). `packaging/release/out` is a symlink into the
+--channel testing`; then push the branch and open a pull request into
+`main` - **George merges it** (2026-10-03; ADR-0116 decision 7: Change logs
+points at `main`'s `CHANGELOG.md`, so it is current once he has). `packaging/release/out` is a symlink into the
 `gexis-player-13a` worktree, excluded in `.git/info/exclude`. Never edit a
 script while it runs (LESSONS 51).
 

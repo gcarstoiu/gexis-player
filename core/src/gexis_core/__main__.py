@@ -278,6 +278,18 @@ LYRION_ADDONS_DONE = Path("/var/lib/gexis/lyrion-addons.done")
 LYRION_PLUGINS = Path("/var/lib/squeezeboxserver/cache/InstalledPlugins/Plugins")
 
 
+def _lyrion_setup_note(marker: Path = LYRION_ADDONS_DONE) -> str | None:
+    """**The first start says what it is doing, and for how long** (George,
+    2026-10-03: *"The user should be informed that it takes 2 to 3 minutes.
+    Otherwise he won't understand what is happening."*). Until its add-ons
+    are in, the server runs in Lyrion's plain skin and restarts once, so its
+    switch says so; the row's own "Open http://..." follows."""
+    if marker.exists():
+        return None
+    return (f"Setting up: Lyrion is installing Material Skin and its add-ons, and restarts once on "
+            f"the way. This takes 2 to 3 minutes. Then open http://{device_name.hostname() or 'gexis'}.local:9000")
+
+
 def _setup_running(setup: dict | None) -> bool:
     return bool(setup and setup.get("network") in ("open", "joining", "failed"))
 
@@ -1565,7 +1577,11 @@ async def main() -> None:
         },
         # The Release row's note: what the waiting or just-installed release
         # says changed (2026-10-01, George).
-        notes={"software_update": updates.whats_new},
+        notes={"software_update": updates.whats_new,
+               # The Lyrion server's first start says what it is doing.
+               **({"lyrion-server.enabled": lambda: _lyrion_setup_note()
+                   if settings.value("lyrion-server.enabled") is True else None}
+                  if any(p.id == "lyrion-server" for p in installed_plugins) else {})},
         # Wired = something reads it (ADR-0035). The token is read on every
         # Popular lookup, so it takes effect as soon as it is typed.
         # Wired = something reads it, or something happens. `lms_server` is
@@ -2235,6 +2251,7 @@ async def main() -> None:
             LYRION_ADDONS_DONE.parent.mkdir(parents=True, exist_ok=True)
             LYRION_ADDONS_DONE.touch()
             logger.info("lyrion: add-ons installed (%s); Material is the skin", ", ".join(lyrion_addons.WANTED))
+            state_store.bump_settings_revision()  # its switch stops saying "Setting up"
             return
         now = time.monotonic()
         if lyrion_asked["at"] is None or now - lyrion_asked["at"] > LYRION_ADDONS_RETRY_S:
