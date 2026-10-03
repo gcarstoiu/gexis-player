@@ -1328,7 +1328,9 @@
                  from where the image installed it. Nothing is rendered and
                  nothing is cached, so this is one file per tap. -->
             <div class="pane__art">
-              <img src={`/skins/${encodeURIComponent(viewing)}/preview`} alt="" />
+              <!-- ADR-0050, amended 2026-10-03: 960 px wide, made once on the
+                   player - the whole picture was up to 3.7 MB. -->
+              <img src={`/skins/${encodeURIComponent(viewing)}/preview?w=960`} alt="" />
             </div>
             <div class="pane__text">
               <div class="pane__name">{p.label}</div>
