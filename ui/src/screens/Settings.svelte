@@ -474,6 +474,11 @@
   }
 
   function tap(row) {
+    // A read-only row is a disabled button - except an uploaded plugin's,
+    // which holds its Remove: a browser drops every tap inside a disabled
+    // button, and that Remove did nothing (George, 2026-10-03). The row
+    // itself still opens nothing.
+    if (row.type === 'readonly') return;
     if (row.type === 'document') openDocument(row);
     // ADR-0098: a switch with a warning asks before it turns ON - the
     // notice before a plugin's software is downloaded. Off
@@ -1076,7 +1081,7 @@
                   class:row--readonly={r.type === 'readonly'}
                   class:row--dl={!!r.component}
                   type="button"
-                  disabled={r.type === 'readonly'}
+                  disabled={r.type === 'readonly' && !r.uploaded}
                   data-unwired={r.wired ? undefined : 'settings'}
                   onclick={() => tap(r)}
                 >
