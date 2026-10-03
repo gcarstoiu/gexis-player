@@ -110,8 +110,11 @@ the SSH key only, since a saved Wi-Fi skips setup.
 - **New users start from an image** (ADR-0105 amended): promoting to stable
   attaches the signed image; a Raspberry Pi Imager listing with the first
   public release, which waits on 13a, 13b and 13c.
-- **The `pi` user's passwordless `sudo`** is decided when the first public
-  release is made (ADR-0107 decision 3).
+- **Before the first public release** (George's to-do list, 2026-10-03):
+  - **Remove the `pi` user's passwordless `sudo`** (George: *"The removal of
+    sudo should go to first release to-dos"*; ADR-0107 decision 3 left it to
+    then). Development images keep it - Claude's SSH work on `gexis` uses it -
+    so the release image is where it goes.
 - **Settings as an installed app: not now** (ADR-0102).
 
 ### Open, none blocking

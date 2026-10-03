@@ -215,6 +215,17 @@ panels "with Case"; the case changes nothing the player sets. So a preset
 and (G))** - and is tested when its panel is. A choice saved under the old
 name or id still finds the panel. HDMI models listed: **106** (was 110).
 
+### Settled 2026-10-03: Browse on a bar, and the 800 x 480 size
+
+George, 2026-10-03, on the two points DEVELOPMENT.md still listed as owed:
+
+- **A bar keeps Browse; Settings is on the phone only** (*"already answered
+  and we have designs for it. We keep browse and put settings only on the
+  phone"*). The bar designs (round 2) draw it.
+- **800 x 480 stays in the list, untested,** until such a screen is at hand
+  (*"we leave it untested for now. No point in holding off an entire phase for
+  it. Once I have one, we can test"*). It does not hold 13b's close.
+
 ### Amended 2026-10-03: a new screen is noticed at start
 
 George, 2026-10-03, after attaching the 13.3": *"Upon boot couldn't we detect

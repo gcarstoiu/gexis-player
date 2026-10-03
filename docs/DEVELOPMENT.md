@@ -2662,7 +2662,8 @@ Claude Design: the brief George hands over is
    and Credits.
 5. **Each supported screen tried on hardware** before it is in the table.
 
-**Decisions owed:**
+**Decisions owed:** *(settled 2026-10-03, ADR-0109: a bar keeps Browse and
+Settings is on the phone only; 800 x 480 stays untested until one is at hand.)*
 - **Browse and Settings on a bar** (George asked what was meant; not yet
   answered): phone-only on bars, or a one-row Browse on the bar itself.
 - **Settings inventory** (not appended until George confirms): **[N] Screen**
