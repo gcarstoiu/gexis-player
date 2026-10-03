@@ -2603,6 +2603,17 @@ and result, a manifest `area` (ADR-0086 amended), `tools/handover-check.py`.
    `updates` (Manual/Automatic) row is confirmed with George before it is
    surfaced.
 
+**PHASE 13a CLOSED, 2026-10-03** (George: *"Let's close 13 a and c"*).
+Merged as PR #41. Criteria 1-4 met on the device with George (2026-09-30).
+Criterion 5 met by the releases since 0.3 (ADR-0107, ADR-0108): the plugins we
+ship are packages at tested versions. The gap recorded above - *"not yet shown
+with a changed pin"* - was closed on 2026-10-03, and it was not as the record
+said: `gexis-fetch@` stays active once run, so a new pin waited for a reboot.
+Fixed (ADR-0100, amended 2026-10-03): the package carrying a pin re-fetches
+when it changes, and a faked older Lyrion pin on `gexis` was fetched again
+within the update (11 s, the update not held). `packaging/check-upstream.sh`
+says before each release which pins are behind their makers.
+
 ### Phase 13b — Other screens: sizes, bars, and knowing which one is attached
 
 **Before the first public release** (George, 2026-09-29: *"13a, b and c all
@@ -2717,6 +2728,22 @@ development images and decided before the first public release.
 **Shares with 13a:** a catalogue of versions we have tested, signed, which the
 device checks; 13a's plugin updates and this phase's system updates can be one
 mechanism, and the ADR should say whether they are.
+
+**PHASE 13c CLOSED, 2026-10-03** (George: *"Let's close 13 a and c"*).
+Merged as PR #42; ten releases since (0.3.0-0.8.6) have gone through it.
+1. **Met** - our parts are packages and the image is built from them
+   (ADR-0107). 2. **Met** - a signed repository on GitHub Releases, parts named
+   by content (ADR-0108); the key, its subkey and what losing it means are in
+   ADR-0105. 3. **Decided: a tested set** - the image's OS packages, frozen per
+   release (Finding 104). 4. **Met** - settings migrations, tested against the
+   shipped keys. 5. **Met** - a backup before every update, never while
+   playing without consent, going back to the release before on a failure
+   (Finding 105; used for real when 0.8.1 failed to install on George's
+   player). 6. **Met** - Settings → System → Software update, Change logs,
+   Manual / Automatic (ADR-0110, ADR-0116). 7. **Met** - ADR-0105 §7.
+   8. **Met** - Finding 105, measured on `gexis`.
+**Still before the first public release, not part of 13c:** the `pi` user's
+passwordless `sudo` (above).
 
 ### Phase 13d — DACs we have not tested
 

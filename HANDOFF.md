@@ -8,7 +8,7 @@ Last updated: 2026-10-03 (on R2D2).
 0.8.6 went to the testing channel (0.8.6 is serial 19, 2026-10-03), each
 seen on George's player before it was cut.** `main` is merged through 0.8.5
 (PR #44); **PR #45 (0.8.6) waits for George to merge it** - he merges, Claude
-opens. **Phase 13e is closed** (DEVELOPMENT.md); 13b is still open.
+opens. **Phases 13a, 13c and 13e are closed** (DEVELOPMENT.md); 13b is still open.
 
 | What | State |
 |---|---|
@@ -354,7 +354,7 @@ reverted, currently-flashed image predates this fix.
 13 first boot without a network           setup access point; pull forward the
                                             moment a non-developer gets a device
                                             (ADR-0031)
-13a plugins you install and update       decided 2026-09-28 (George): a phase
+13a plugins you install and update       CLOSED 2026-10-03. Decided 2026-09-28 (George): a phase
                                             before themes. Upload a plugin from a
                                             phone or computer, run it sandboxed,
                                             Remove it; updates from versions we
@@ -367,7 +367,7 @@ reverted, currently-flashed image predates this fix.
                                             skins per resolution; recognise the
                                             screen in setup. Finding 100. ADR
                                             first; designs from Claude Design
-13c updates over the network             * MERGED (PR #42); 13a merged (PR #41).
+13c updates over the network             * CLOSED 2026-10-03; MERGED (PR #42); 13a merged (PR #41).
                                             Added 2026-09-28 (George: "Agreed to
                                             do before"). **The first public release
                                             image waits on 13a, 13b and 13c**
