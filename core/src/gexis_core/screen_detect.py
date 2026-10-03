@@ -36,6 +36,10 @@ FINGERPRINTS: dict[str, Fingerprint] = {
     # sofa-pi's panel, 2026-10-01: EDID 5c 36 = "WAV", name "WaveShare",
     # preferred 1280x800; touch 0712:0010 "WaveShare".
     "waveshare-10.1-hdmi-b": Fingerprint(edid_maker="WAV", edid_name="WaveShare", usb="0712:0010"),
+    # George's 13.3" on gexis, 2026-10-03: EDID "RTK" / "RTK FHD" - Realtek's
+    # controller, which many makers' screens report, so the touch controller
+    # (ILI 222a:0001) and 1920x1080 carry the match with it.
+    "waveshare-13.3-hdmi-h": Fingerprint(edid_maker="RTK", edid_name="RTK FHD", usb="222a:0001"),
 }
 
 

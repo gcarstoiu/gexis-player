@@ -18,12 +18,15 @@
 Window.SetBackgroundTopColor(0.063, 0.102, 0.129);     // #101a21
 Window.SetBackgroundBottomColor(0.063, 0.102, 0.129);
 
-// Full-bleed 1280x800, so the sprite sits at the origin and the screen is
-// covered edge to edge whatever mode the panel comes up in.
+// The still is 1280x800, centred on whatever mode the screen comes up in,
+// on the same ground colour (George, 2026-10-03, on the 13.3" at 1920x1080:
+// "The boot logo is not centered"). At the origin it filled the 10.1" and
+// sat in the top-left corner of anything larger, until the panel's own
+// background - centred - took over late in the boot.
 still = Image("still.png");
 sprite = Sprite();
-sprite.SetX(0);
-sprite.SetY(0);
+sprite.SetX(Math.Int((Window.GetWidth() - still.GetWidth()) / 2));
+sprite.SetY(Math.Int((Window.GetHeight() - still.GetHeight()) / 2));
 sprite.SetZ(0);
 sprite.SetImage(still);
 

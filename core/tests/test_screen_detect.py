@@ -55,3 +55,13 @@ def test_nothing_connected_is_nothing_seen(tmp_path):
 
 def test_a_broken_edid_is_read_as_nothing():
     assert screen_detect.parse_edid(b"\x00" * 128) == (None, None, None)
+
+
+def test_the_13_3_inch_is_recognised_by_what_it_reported_on_gexis():
+    """2026-10-03: EDID RTK / RTK FHD, 1920x1080, touch ILI 222a:0001."""
+    seen = screen_detect.Seen(connected=True, connector="HDMI-A-1", edid_maker="RTK",
+                              edid_name="RTK FHD", preferred=(1920, 1080), usb=("2109:3431", "222a:0001"))
+    assert screen_detect.suggest(seen).id == "waveshare-13.3-hdmi-h"
+    other = screen_detect.Seen(connected=True, connector="HDMI-A-1", edid_maker="RTK",
+                               edid_name="RTK FHD", preferred=(1920, 1080), usb=("2109:3431",))
+    assert screen_detect.suggest(other) is None, "a Realtek screen without that touch is not named"
