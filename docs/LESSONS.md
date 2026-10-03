@@ -1009,6 +1009,22 @@ Phase 13b).
 image's name and its player's version are two answers to one question;
 compare them.
 
+**53. One version, two packages** (2026-10-03, Phase 13e).
+- **What went wrong.** `gexis-lyrion-server` took its version from Lyrion's
+  alone (9.1.1-2), though it also carries files of ours. Ours changed between
+  0.8.0 and 0.8.1; the version did not.
+- **What it looked like.** Every check passed: the build, 105 image checks,
+  the release build (it uploaded the new file beside the old one under the
+  same name, in a new part), the upload comparison. On George's player the
+  install downloaded 0.8.1's copy, the rollback preparation downloaded 0.8.0's
+  over it - apt keys its cache by name and version - and the install, from
+  downloaded files only, stopped: "Unable to fetch some archives".
+- **How it was caught.** By the device, which went back to 0.8.0 as it should.
+
+**A package's version names its content.** A component with upstream's
+version also takes the commit of our files in it, and the release build now
+stops on a name and version already published with different bytes.
+
 ## Common shape
 
 Every case had a *plausible* substitute for the real target — the build
