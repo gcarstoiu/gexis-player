@@ -1293,10 +1293,21 @@ async def main() -> None:
             logger.warning("components: %s is on; switch it off before removing %s", plugin.id, name)
             return
         fetch = f"gexis-fetch@{name}.service"
+        # ADR-0115 decision 14: the Lyrion server's shares go with it - out
+        # of the list here, on the store's own thread; unmounted, with their
+        # logins, in the worker below.
+        forgotten = lyrion_shares.forget_all() if plugin.id == "lyrion-server" else []
 
         def go() -> None:
             subprocess.run(["systemctl", "stop", plugin.unit, fetch], check=False, capture_output=True)
             subprocess.run(["systemctl", "reset-failed", fetch], check=False, capture_output=True)
+            if plugin.id == "lyrion-server":
+                lyrion_shares.unmount_all()
+                for address in forgotten:
+                    lyrion_shares.release(address)
+                # Its add-ons are in the cache the pin's DATA deletes: asked
+                # for again at the next start.
+                LYRION_ADDONS_DONE.unlink(missing_ok=True)
             components.remove(name, pin)
 
         try:

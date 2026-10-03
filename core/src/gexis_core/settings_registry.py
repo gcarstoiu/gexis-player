@@ -447,8 +447,9 @@ class Settings:
                                  "surfaced": False, "danger": True, "confirm": "Remove",
                                  "note": None,
                                  "warn": f"This deletes the software {plugin.name} downloaded. "
-                                         f"Its settings and sign-in stay on the device. "
-                                         f"Switching {plugin.name} on again downloads it again."})
+                                         + (getattr(plugin, "removes", None)
+                                            or f"Its settings and sign-in stay on the device. "
+                                               f"Switching {plugin.name} on again downloads it again.")})
             if switches and switch_group is None:
                 # A registry with no `plugins` category cannot hold the switch,
                 # and a plugin with no switch is the thing ADR-0086's amendment

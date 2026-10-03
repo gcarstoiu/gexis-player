@@ -85,6 +85,18 @@ def test_a_plugin_that_downloads_gets_a_row_under_its_switch():
     assert "player.download" not in keys and "player.remove" not in keys
 
 
+def test_a_plugin_that_takes_its_data_says_so_in_its_remove():
+    """ADR-0115 decision 14: the Lyrion server's confirmation says what goes."""
+    class P:
+        id, name, kind, accent, settings, enabled_row, unit = "srv", "Server", "service", None, [], None, "s.service"
+        removes = "Its library goes too."
+
+    groups = Settings.with_plugins(load_registry(), [P()], {"srv": "srv"})
+    rows = [r for g in groups for r in g["rows"]]
+    warn = next(r for r in rows if r.get("key") == "srv.remove")["warn"]
+    assert warn == "This deletes the software Server downloaded. Its library goes too."
+
+
 def test_plugins_are_grouped_by_the_area_they_work_in():
     """George: "beszel is system, plexamp in sources"."""
     class Plex:
@@ -182,3 +194,31 @@ def test_remove_takes_a_folder_directly_in_opt(tmp_path, monkeypatch):
 def test_removing_what_is_not_there_is_not_an_error(tmp_path):
     components.remove("player", {"DEST": str(tmp_path / "a" / "b" / "c")},
                       status_dir=tmp_path, installed_dir=tmp_path, places=((tmp_path, 1),))
+
+
+def test_remove_takes_the_data_its_pin_names(tmp_path):
+    """ADR-0115 decision 14: the Lyrion server's preferences and library."""
+    dest = tmp_path / "opt" / "lyrion"
+    prefs = tmp_path / "lib" / "squeezeboxserver" / "prefs"
+    cache = tmp_path / "lib" / "squeezeboxserver" / "cache"
+    for d in (dest, prefs, cache):
+        d.mkdir(parents=True)
+        (d / "f").write_text("x")
+    components.remove("lyrion", {"DEST": str(dest), "DATA": f"{prefs}:{cache}"},
+                      status_dir=tmp_path, installed_dir=tmp_path,
+                      places=((tmp_path / "opt", 1),), data_places=((tmp_path / "lib", 2),))
+    assert not dest.exists() and not prefs.exists() and not cache.exists()
+    assert (tmp_path / "lib" / "squeezeboxserver").is_dir(), "the program's own folder stays"
+
+
+def test_a_bad_data_path_deletes_nothing(tmp_path):
+    dest = tmp_path / "opt" / "lyrion"
+    dest.mkdir(parents=True)
+    for bad in ("/var/lib", "/var/lib/gexis-core", "relative", "/etc/gexis/x", "/var/lib/a/../../../etc"):
+        try:
+            components.remove("lyrion", {"DEST": str(dest), "DATA": bad}, status_dir=tmp_path,
+                              installed_dir=tmp_path, places=((tmp_path / "opt", 1),))
+        except ValueError:
+            assert dest.is_dir(), f"{bad!r}: the software went before the data was refused"
+            continue
+        raise AssertionError(f"{bad!r} was not refused")

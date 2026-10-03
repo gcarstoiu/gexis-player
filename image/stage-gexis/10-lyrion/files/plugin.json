@@ -20,5 +20,6 @@
       "discover": true
     }
   ],
-  "first": true
+  "first": true,
+  "removes": "Its library, its settings, the add-ons it installed and the network shares with their logins are deleted too. The Music folder and its playlists stay. Switching it on again downloads it and starts a new library."
 }
