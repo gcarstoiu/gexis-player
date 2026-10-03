@@ -130,14 +130,19 @@ def prepare(png_path: str):
         log(f"cannot read {png_path} ({exc}); not painting")
         return None
 
-    # Centre on the ground colour rather than stretching. The build asserts
-    # the still is exactly panel-sized, so this only matters on a panel this
-    # image was not built for - where a letterboxed mark beats a distorted one.
+    # **Fill, as swaybg does** (`--mode fill`, behind the panel): scaled to
+    # cover the screen, keeping its shape, cut evenly at the edges. George,
+    # 2026-10-03, on a 1920x1080 screen: the logo started centred at its own
+    # size and grew "towards the end" - "Either make all smaller or all
+    # larger. No mix." Plymouth's script does the same, so all three stages
+    # draw one size. Never stretched: a distorted mark is worse than a cut.
     if image.size != (width, height):
-        log(f"still is {image.size}, panel is {(width, height)}; centring it")
-        canvas = Image.new("RGB", (width, height), GROUND)
-        canvas.paste(image, ((width - image.width) // 2, (height - image.height) // 2))
-        image = canvas
+        scale = max(width / image.width, height / image.height)
+        size = (max(1, round(image.width * scale)), max(1, round(image.height * scale)))
+        log(f"still is {image.size}, panel is {(width, height)}; filling it at {size}")
+        image = image.resize(size, Image.LANCZOS)
+        left, top = (image.width - width) // 2, (image.height - height) // 2
+        image = image.crop((left, top, left + width, top + height))
 
     pixels = np.asarray(image).astype(np.uint16)
     if bpp == 16:  # RGB565

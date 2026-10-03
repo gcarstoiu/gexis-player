@@ -18,12 +18,15 @@
 Window.SetBackgroundTopColor(0.063, 0.102, 0.129);     // #101a21
 Window.SetBackgroundBottomColor(0.063, 0.102, 0.129);
 
-// The still is 1280x800, centred on whatever mode the screen comes up in,
-// on the same ground colour (George, 2026-10-03, on the 13.3" at 1920x1080:
-// "The boot logo is not centered"). At the origin it filled the 10.1" and
-// sat in the top-left corner of anything larger, until the panel's own
-// background - centred - took over late in the boot.
-still = Image("still.png");
+// The still is 1280x800, scaled to fill whatever mode the screen comes up
+// in - keeping its shape, cut evenly at the edges - and centred: what swaybg
+// (`--mode fill`) and gexis-splash-fb draw after it, so the logo is one size
+// from the first frame to the panel (George, 2026-10-03, on the 13.3" at
+// 1920x1080: first "not centered", then centred but "towards the end the
+// logo is zoomed in ... Either make all smaller or all larger. No mix").
+original = Image("still.png");
+scale = Math.Max(Window.GetWidth() / original.GetWidth(), Window.GetHeight() / original.GetHeight());
+still = original.Scale(Math.Int(original.GetWidth() * scale), Math.Int(original.GetHeight() * scale));
 sprite = Sprite();
 sprite.SetX(Math.Int((Window.GetWidth() - still.GetWidth()) / 2));
 sprite.SetY(Math.Int((Window.GetHeight() - still.GetHeight()) / 2));
