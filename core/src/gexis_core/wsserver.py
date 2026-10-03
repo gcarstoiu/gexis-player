@@ -1074,9 +1074,11 @@ class StateServer:
 
     async def _handle_notice(self, request: web.Request) -> web.Response:
         """ADR-0099: the Legal and Credits pages, from `notices.json`."""
-        from gexis_core import notices
+        from gexis_core import changelog, notices
 
-        page = notices.document(request.match_info["name"])
+        name = request.match_info["name"]
+        # ADR-0116: the release notes, drawn as a document.
+        page = changelog.page() if name == "changelog" else notices.document(name)
         if page is None:
             return web.json_response({"error": "no such document"}, status=404)
         return web.json_response(page)

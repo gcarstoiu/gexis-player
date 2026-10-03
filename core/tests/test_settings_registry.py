@@ -177,6 +177,8 @@ def test_registry_keys_are_the_designs_keys_apart_from_recorded_deviations():
         "clock_format",
         # ADR-0099, 2026-09-27: George asked for both pages.
         "legal", "credits",
+        # ADR-0116, 2026-10-03: George asked for the last 10 releases' notes.
+        "changelog",
         # ADR-0054 §5, amended 2026-09-28: George's cap on the starting level
         # of a renderer that is handed one (Spotify, and a plugin that declares `volume_handed`). The design
         # predates sources that keep their own.
@@ -577,8 +579,8 @@ def test_the_shipped_registry_hides_the_inventoried_rows_and_shows_the_rest():
     # and the channel.
     # **87**: Software update, its own tile (George, 2026-10-01). **89**:
     # Attached screen and Screen rotation (ADR-0109, Phase 13b). **90**:
-    # Visualiser skins (ADR-0111).
-    assert len(rows) == 90
+    # Visualiser skins (ADR-0111). **91**: Change logs (ADR-0116).
+    assert len(rows) == 91
     # 59 since 2026-09-25: `backup` was surfaced and `restore` arrived with
     # it (ADR-0083), so the shown count gains two while the hidden one loses
     # one. **58 since 2026-09-26**, less the threshold row. **60 since
@@ -588,8 +590,9 @@ def test_the_shipped_registry_hides_the_inventoried_rows_and_shows_the_rest():
     # the four Updates rows and `updates` surfaced (2026-09-30).
     # 69 when ADR-0110 folded Check now and Update now into the Release
     # tile; 70 with Software update (George, 2026-10-01); 72 with Attached
-    # screen and Screen rotation; 73 with Visualiser skins.
-    assert len(rows) - len(kept) == 73
+    # screen and Screen rotation; 73 with Visualiser skins; 74 with Change
+    # logs (ADR-0116).
+    assert len(rows) - len(kept) == 74
 
 
 def test_the_clock_can_be_turned_off_without_taking_the_screen_with_it():

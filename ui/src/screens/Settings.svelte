@@ -1055,7 +1055,9 @@
                     <span class="row__text">
                       <span class="row__label"><span class="row__name">{r.label}</span></span>
                       <span class="row__value row__value--tile">{r.value}</span>
-                      {#if $update?.whats_new && ['available', 'done'].includes($update?.state)}
+                      <!-- ADR-0116: only while it waits; once installed, its
+                           notes are under Change logs. -->
+                      {#if $update?.whats_new && $update?.state === 'available'}
                         <span class="row__note">What's new in {$update.release}</span>
                         <span class="tile__notes"><ReleaseNotes text={$update.whats_new} /></span>
                       {:else if r.note}<span class="row__note">{r.note}</span>{/if}
@@ -1217,6 +1219,9 @@
               {#each section.paragraphs as paragraph, j (j)}
                 <p class="doc__p">{paragraph}</p>
               {/each}
+              <!-- ADR-0116: a release's notes, drawn as the update draws them. -->
+              {#if section.notes}<div class="doc__notes"><ReleaseNotes text={section.notes} /></div>{/if}
+              {#if section.url}<p class="doc__p doc__muted doc__url">{section.url}</p>{/if}
               {#if section.entries}
                 <ul class="doc__list">
                   {#each section.entries as entry, k (k)}
@@ -2797,6 +2802,7 @@
     margin: 22px 0 8px;
   }
   .doc__p { font-size: 15px; line-height: 1.5; margin: 0 0 10px; }
+  .doc__notes { margin: 0 0 18px; }
   .doc__list { list-style: none; margin: 0; padding: 0; }
   .doc__entry {
     padding: 10px 0;

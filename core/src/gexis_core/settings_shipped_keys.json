@@ -10,6 +10,7 @@
  "bt_enabled",
  "bt_pairing",
  "bt_trusted",
+ "changelog",
  "clock_format",
  "confidence",
  "credits",

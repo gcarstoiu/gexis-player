@@ -1022,6 +1022,14 @@
         "default": null
       },
       {
+        "key": "changelog",
+        "type": "document",
+        "document": "changelog",
+        "label": "Change logs",
+        "marks": "N",
+        "note": "What changed in the last 10 releases."
+      },
+      {
         "key": "update_check",
         "type": "action",
         "label": "Check now",

@@ -33,12 +33,15 @@ merged as PR #42 and 13a as PR #41; their narrative is in the archive's
 4. **Phase 13d, DACs** (DEVELOPMENT.md): Volumio's DAC list, the DAC2 HD and
    IQaudio DAC+ first. An ADR first.
 
-**How a release is made** (each step proven 2026-10-02): tag `vX.Y.Z`
-locally; `make image` (never commit while it packages - a `.dirty` build);
-`image/verify-image.sh` on the image; `packaging/release/build.sh <img>`;
-George approves `notes.txt` (impersonal, New / Fixed / Good to know, no
-restart promises - publish.sh refuses them); `packaging/release/publish.sh
-rX.Y.Z --channel testing`. `packaging/release/out` is a symlink into the
+**How a release is made** (each step proven 2026-10-02): George approves
+the notes (impersonal, New / Fixed / Good to know, no restart promises -
+publish.sh refuses them); add them, with the day, to
+`core/src/gexis_core/release_notes.json` and commit (ADR-0116: publish.sh
+takes them from the tagged commit's file, and the player shows them under
+Change logs); tag `vX.Y.Z` locally; `make image` (never commit while it
+packages - a `.dirty` build); `image/verify-image.sh` on the image;
+`packaging/release/build.sh <img>`; `packaging/release/publish.sh rX.Y.Z
+--channel testing`. `packaging/release/out` is a symlink into the
 `gexis-player-13a` worktree, excluded in `.git/info/exclude`. Never edit a
 script while it runs (LESSONS 51).
 

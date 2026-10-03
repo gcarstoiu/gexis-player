@@ -58,12 +58,13 @@ def test_the_updates_rows_are_in_system_and_the_channel_warns_on_testing():
     assert rows["update_install"].get("confirm")
 
 
-def test_the_release_row_s_note_says_what_is_new_while_waiting_and_after(tmp_path):
+def test_the_release_row_s_note_says_what_is_new_only_while_waiting(tmp_path):
     """2026-10-01, George: the release's own notes under the Release row."""
     text = "Release notes on the device."
     assert updates.whats_new(write(tmp_path, state="available", release="0.2.2", whats_new=text)) \
         == "What's new in 0.2.2: Release notes on the device."
-    assert updates.whats_new(write(tmp_path, state="done", release="0.2.2", whats_new=text)).startswith("What's new in 0.2.2")
+    assert updates.whats_new(write(tmp_path, state="done", release="0.2.2", whats_new=text)) is None, \
+        "installed: its notes are under Change logs (ADR-0116)"
     assert updates.whats_new(write(tmp_path, state="current", release="0.2.2", whats_new=text)) is None
     assert updates.whats_new(write(tmp_path, state="available", release="0.2.2")) is None
 
