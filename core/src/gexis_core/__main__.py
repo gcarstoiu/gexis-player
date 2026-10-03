@@ -2634,8 +2634,11 @@ async def main() -> None:
         # ADR-0109, amended 2026-10-03: a different screen attached since
         # the last start is asked about - not while a Keep or setup is open.
         try:
+            # The setting on this thread - SQLite answers only the thread that
+            # opened it (as with the Lyrion shares) - the rest in a worker.
+            headless = bool(settings.value("headless"))
             state_store.set_screen_new(await asyncio.to_thread(
-                lambda: screen_watch.question(screen_detect.seen(), headless=bool(settings.value("headless")))))
+                lambda: screen_watch.question(screen_detect.seen(), headless=headless)))
         except Exception:  # noqa: BLE001 - a question not asked is not a player not started
             logger.exception("screen: the attached screen was not compared")
 
