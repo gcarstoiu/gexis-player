@@ -5,6 +5,27 @@ Every release of Gexis Player and its notes, newest first. Generated from
 edit that file, not this one. The player shows the last 10 under
 Settings → System → Change logs.
 
+## 0.8.5 — 3 October 2026
+
+### New
+
+- Settings explanations appear once, in the window a setting opens, not also in the overview.
+- On a phone, the arrow sits in the middle of each settings tile.
+- A new Lyrion server says it is setting up and that this takes about 3 minutes.
+- A scan the Lyrion server stopped for lack of memory is said on its row, with how many files fit.
+- Plexamp and the Lyrion server move to a new version as part of the update that brings it.
+
+### Fixed
+
+- Adding a network share no longer scans the library twice.
+- A NAS that is off when the player starts no longer makes the Lyrion server wipe and rescan its library.
+
+### Good to know
+
+- The Lyrion server may use the player's memory less 1 GB. On a player with less than 4 GB, a new server uses less memory for scanning.
+- A player with 1 GB of memory is not offered the Lyrion server.
+- The Lyrion server no longer offers its own updates; its version comes with the player's updates.
+
 ## 0.8.4 — 3 October 2026
 
 ### New
