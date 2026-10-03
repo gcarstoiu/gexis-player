@@ -12,8 +12,9 @@ manages that are gone, and leaves every other folder as the user set it.
 decision 16; George, 2026-10-03: *"clearly A"*). Lyrion answers a folder
 taken out of its list by wiping the whole library and scanning everything
 again - two hours for George's 61,362 files - so a NAS that is off when the
-player starts must not take its folder out. Only Forget does. A USB disk
-unplugged still goes (decision 17 is open on that).
+player starts must not take its folder out. Only Forget does. **A USB disk
+stays for 7 days after it is unplugged** (decision 17; George: *"decision A,
+but 7 days not more"*), remembered by when it was last seen mounted.
 
 **Lyrion scans on the change itself** (its `Slim/Utils/Prefs.pm`, read
 2026-10-03): a folder added is scanned on its own; a folder taken away wipes
@@ -23,8 +24,10 @@ files and then queued a second walk of them all.
 """
 from __future__ import annotations
 
+import json
 import logging
 import os
+import time
 from pathlib import Path
 from typing import Awaitable, Callable
 
@@ -39,6 +42,32 @@ SHARES = Path("/mnt/gexis-shares")
 #: The folders this module manages: everything under these is ours to add
 #: and to take away.
 MANAGED = (USB, SHARES)
+#: When each USB disk was last seen mounted (decision 17).
+USB_SEEN = Path("/var/lib/gexis/lyrion-usb-seen.json")
+USB_KEEP_S = 7 * 24 * 3600
+
+
+def usb_recent(mounted_now: list[str], path: Path = USB_SEEN, now: float | None = None,
+               keep_s: float = USB_KEEP_S) -> list[str]:
+    """The USB folders seen mounted in the last 7 days, mounted now or not;
+    what is mounted now is remembered as seen now, and older ones forgotten."""
+    now = time.time() if now is None else now
+    try:
+        seen = json.loads(path.read_text())
+        seen = seen if isinstance(seen, dict) else {}
+    except (OSError, ValueError):
+        seen = {}
+    for folder in mounted_now:
+        if folder.startswith(str(USB) + "/"):
+            seen[folder] = now
+    seen = {folder: at for folder, at in seen.items()
+            if isinstance(at, (int, float)) and now - at <= keep_s}
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(json.dumps(seen, indent=1))
+    except OSError:
+        pass
+    return sorted(seen)
 
 
 def mounted(root: Path, is_mount: Callable[[str], bool] = os.path.ismount) -> list[str]:
@@ -65,7 +94,7 @@ def wanted(current: list[str], present: list[str], music: Path = MUSIC,
 
 
 async def sync(rpc: Callable[[list], Awaitable[dict]], is_mount=os.path.ismount,
-               saved: list[str] = ()) -> bool:
+               saved: list[str] = (), usb_seen: Path = USB_SEEN) -> bool:
     """Bring the server's folders up to date; True if they changed - Lyrion
     then scans what the change needs. A server that does not answer changes
     nothing."""
@@ -74,7 +103,8 @@ async def sync(rpc: Callable[[list], Awaitable[dict]], is_mount=os.path.ismount,
     if isinstance(current, str):
         current = [current]
     present = [d for root in MANAGED for d in mounted(root, is_mount)]
-    want = wanted(list(current), present, saved=list(saved))
+    keep = [*saved, *usb_recent(present, usb_seen)]
+    want = wanted(list(current), present, saved=keep)
     if want == list(current):
         return False
     await rpc(["pref", "mediadirs", want])

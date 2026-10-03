@@ -173,8 +173,12 @@ cache is counted.
     Lyrion does rescan everything, which Forget is for. A full rescan started
     by hand while a NAS is off would still drop that share's songs until the
     next one.
-17. *Open:* a USB disk unplugged is still taken out of the list, with the
-    same wipe and full rescan.
+17. **A USB disk stays in the list for 7 days after it is unplugged**
+    (George, 2026-10-03: *"decision A, but 7 days not more"*; B kept taking it
+    out at once). Taking a folder out wipes the whole library and scans
+    everything again, a NAS share included; unplugged for a moment, a disk
+    should cost nothing. Its songs show as missing until it is back. After 7
+    days unplugged it goes, and Lyrion does wipe and rescan then.
 18. **Lyrion's memory follows the player's** (*"A plus B - let's try"*). The
     limit is the player's memory less 1 GB for the player itself (measured:
     about 700 MB of Peppy, the screen's browser, Plexamp and the core): 3 GB

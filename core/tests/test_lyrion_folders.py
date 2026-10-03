@@ -44,11 +44,11 @@ def test_sync_sets_the_list_and_leaves_the_scan_to_lyrion(monkeypatch, tmp_path)
     usb = tmp_path / "usb"
     (usb / "DISK").mkdir(parents=True)
     monkeypatch.setattr(lf, "MANAGED", (usb, tmp_path / "shares"))
-    assert asyncio.run(lf.sync(rpc, is_mount=lambda p: True)) is True
+    assert asyncio.run(lf.sync(rpc, is_mount=lambda p: True, usb_seen=tmp_path / "seen.json")) is True
     assert prefs["mediadirs"] == ["/var/lib/gexis-music", str(usb / "DISK")]
     assert ["rescan"] not in calls
     calls.clear()
-    assert asyncio.run(lf.sync(rpc, is_mount=lambda p: True)) is False
+    assert asyncio.run(lf.sync(rpc, is_mount=lambda p: True, usb_seen=tmp_path / "seen.json")) is False
     assert ["rescan"] not in calls
 
 
@@ -59,3 +59,16 @@ def test_a_saved_share_stays_while_its_nas_is_off():
     current = ["/var/lib/gexis-music", nas, "/mnt/gexis-shares/forgotten-123456"]
     assert lf.wanted(current, [], saved=[nas]) == ["/var/lib/gexis-music", nas], \
         "not mounted, still saved: kept; forgotten: gone"
+
+
+def test_a_usb_disk_stays_seven_days_after_it_is_unplugged(tmp_path, monkeypatch):
+    """ADR-0115 decision 17 (George: "decision A, but 7 days not more")."""
+    seen = tmp_path / "usb-seen.json"
+    disk = "/media/gexis-usb/1234-ABCD"
+    day = 24 * 3600
+    assert lf.usb_recent([disk], seen, now=0) == [disk]
+    assert lf.usb_recent([], seen, now=6 * day) == [disk], "unplugged six days: kept"
+    assert lf.usb_recent([], seen, now=8 * day) == [], "eight days: gone"
+    current = ["/var/lib/gexis-music", disk]
+    lf.usb_recent([disk], seen, now=0)
+    assert lf.wanted(current, [], saved=lf.usb_recent([], seen, now=day)) == current
