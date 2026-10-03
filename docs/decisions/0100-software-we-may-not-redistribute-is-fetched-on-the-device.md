@@ -128,4 +128,11 @@ too."* The other two were leaving it as it was, and deleting on every switch-off
 - A hidden action row, `<plugin>.remove`, beside `<plugin>.download` (Retry).
   It is an action, not a setting, so it adds no ADR-0022 row.
 - **The Legal page says it** for Plexamp.
+- **A plugin may take its data too** (2026-10-03, ADR-0115 decision 14): a pin
+  may name `DATA`, folders the software wrote that Remove deletes with it, and
+  a manifest may say so in its confirmation (`removes`). The Lyrion server
+  does; Plexamp does not, and keeps its sign-in as above. The path rule is now
+  *inside* `/opt` or a home directory for `DEST`, and two levels inside
+  `/var/lib` for `DATA` - never one of those itself. (Four parts refused
+  `/opt/lyrion`, and the Lyrion server's Remove did nothing.)
 

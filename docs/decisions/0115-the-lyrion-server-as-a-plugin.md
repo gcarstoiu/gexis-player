@@ -119,6 +119,44 @@ network share**; and **it ships in our releases**.
 13. **The network shares' settings are as proposed** (*"Network shares
     settings are fine"*), now in ADR-0022's inventory.
 
+### Settled 2026-10-03 (George), after testing on his player
+
+14. **Remove takes everything the Lyrion server made** (*"1. B"*, of three:
+    A kept the network shares, C kept it as it was). ADR-0100's Remove
+    deletes only the downloaded software and keeps the plugin's settings,
+    which is right for Plexamp's sign-in. For the Lyrion server it left a
+    reinstall that was not one - no setup wizard, Material already chosen,
+    the old library - and NAS logins on the device for a server that was
+    gone (George: *"How can I do a full check from scratch for the lyrion
+    server if we store the settings even after a removal?"*). So Remove
+    also deletes:
+    - Lyrion's own folders: its preferences, and its cache - the library
+      database, the artwork and the add-ons it installed
+      (`/var/lib/squeezeboxserver/prefs` and `/cache`, named in the pin as
+      `DATA`);
+    - the network shares, unmounted, with their logins;
+    - the record that the add-ons were installed, so they are installed again.
+
+    **What stays:** the Music folder and its Playlists - they are the user's
+    files, on the Music share. Switching on again downloads Lyrion, seeds
+    its first preferences (the unit does it at start now, not the package
+    at install) and scans the library afresh. The confirmation says so.
+15. **A share's password is kept only where `mount` reads it** (*"2. B"*,
+    of two: A kept it in the settings store). The store - and so
+    `GET /settings` and every backup, whose share any guest on the network
+    can open (ADR-0083) - holds the address and the user; the password is
+    in a root-only file under `/etc/gexis/shares`, which backups do not
+    carry. **The cost, accepted:** after a restore onto a new card, an SMB
+    share says *Needs its password again* and is mounted once it is typed
+    in; a guest share mounts by itself. Stores written before this keep no
+    password past the next start: it moves to its file.
+
+    Found on the way (2026-10-03): the Network shares row drew the stored
+    list itself - `[{"address": ..., "user": ..., "password": ...}]` - so a
+    password was on the page. The row now names its shares and the stored
+    value is not sent (commit 19877a6), before this decision; this one
+    takes the password out of the store as well.
+
 ## Not settled here
 
 - The memory and CPU measured during a scan of George's library, and the
