@@ -22,7 +22,7 @@ on a 1, 2 or 8 GB Pi 4, or on any other model.
 | **Screen** | None (the player runs without one) | An HDMI screen from the tested list | HDMI only (ADR-0109). Tested: Waveshare 10.1" HDMI LCD (B), 1280 x 800, with or without its case. The 13.3" and the two bar screens are listed as tested by ADR-0109 but not yet tried on the hardware. DSI and DPI screens: not supported. |
 | **Network** | Wi-Fi | Wi-Fi or Ethernet | `gexis` runs on Wi-Fi. Internet is needed for updates, skin packs, and anything a plugin downloads (Plexamp, the Lyrion server). |
 | **Power** | Raspberry Pi's 5 V 3 A USB-C supply | Same | Raspberry Pi's own recommendation for the Pi 4; not measured here. |
-| **Cooling** | **Untested** | **Untested** | Under a 2-hour library scan `gexis` peaked at **75.9 °C** with no throttling (2026-10-03, Finding 109); its case and cooling were not recorded. Idle and visualiser temperatures: not measured. |
+| **Cooling** | **Untested** | A heatsink or fan (**calculated**) | Playing music while the Lyrion server scanned, `gexis` reached **79.8 °C** - 0.2 °C below where a Pi 4 starts slowing itself down - without throttling (2026-10-03, Finding 109); a scan alone peaked at 75.9 °C. Its case and cooling were not recorded. Idle and visualiser temperatures: not measured. |
 
 ### Skin packs, by screen size
 
