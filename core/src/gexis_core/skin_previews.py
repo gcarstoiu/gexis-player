@@ -42,6 +42,29 @@ im.save(tmp, "JPEG", quality=82, optimize=True)
 os.replace(tmp, dst)
 """
 
+#: Many at once, one Python: each line of stdin is `source<TAB>target<TAB>width`.
+SCALE_MANY = r"""
+import os, sys
+from PIL import Image
+for line in sys.stdin:
+    try:
+        src, dst, width = line.rstrip("\n").split("\t")
+        width = int(width)
+        if os.path.exists(dst):
+            continue
+        im = Image.open(src)
+        im.draft("RGB", (width, width))
+        im = im.convert("RGB")
+        im.thumbnail((width, width * 4), Image.LANCZOS)
+        im.save(dst + ".tmp", "JPEG", quality=82, optimize=True)
+        os.replace(dst + ".tmp", dst)
+    except Exception as exc:
+        print(f"{line.strip()}: {exc}", file=sys.stderr)
+"""
+
+#: The width the picker asks for, made ahead for every skin.
+AHEAD = 960
+
 _locks: dict[Path, asyncio.Lock] = {}
 
 
@@ -89,3 +112,37 @@ async def scaled(picture: Path, width: int, *, cache: Path = CACHE, run=subproce
         finally:
             _locks.pop(target, None)
     return target if target.is_file() else None
+
+
+def missing(pictures, width: int = AHEAD, cache: Path = CACHE) -> list[tuple[Path, Path]]:
+    """(picture, where its preview goes) for each one not made yet."""
+    out = []
+    for picture in pictures:
+        try:
+            target = path_for(picture, width, cache)
+        except OSError:
+            continue
+        if not target.is_file():
+            out.append((picture, target))
+    return out
+
+
+def make_ahead(pictures, width: int = AHEAD, *, cache: Path = CACHE, run=subprocess.run,
+               keep: int = KEEP) -> int:
+    """**Every skin's preview made before anyone asks** (George, 2026-10-03:
+    *"I would create the thumbs upfront for all, otherwise the user is still
+    facing slowness the first time around"*): after a pack is installed and
+    whenever the core starts with some missing. One Python for all of them,
+    at the lowest priority - music comes first. Returns how many were to make.
+    Blocking: run it in a worker."""
+    todo = missing(pictures, width, cache)
+    if not todo:
+        return 0
+    cache.mkdir(parents=True, exist_ok=True)
+    lines = "".join(f"{src}\t{dst}\t{width}\n" for src, dst in todo)
+    result = run(["nice", "-n", "19", "ionice", "-c", "3", PYTHON, "-c", SCALE_MANY],
+                 input=lines, capture_output=True, text=True, timeout=3600)
+    if result.stderr:
+        logger.warning("skins: some previews not made: %s", result.stderr.strip()[:400])
+    _prune(cache, keep)
+    return len(todo)

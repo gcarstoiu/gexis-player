@@ -336,10 +336,10 @@
 
   onMount(loadSettings);
 
-  function flash(text) {
+  function flash(text, ms = 1900) {
     clearTimeout(toastTimer);
     toast = text;
-    toastTimer = setTimeout(() => (toast = null), 1900);
+    toastTimer = setTimeout(() => (toast = null), ms);
   }
 
   async function write(row, value) {
@@ -640,7 +640,13 @@
   async function doForget(item) {
     const key = sheetKey;
     await command({ name: item.address ?? item.name, action: 'forget' }, (answer) => {
-      flash(answer.ok ? `${item.name} forgotten` : (answer.error ?? 'Could not forget it'));
+      // A phone keeps its half of the pairing, and pairing again fails
+      // silently until it forgets too (George, 2026-10-03: "Yes. Add text").
+      if (answer.ok && key === 'bt_trusted') {
+        flash(`${item.name} forgotten. To pair it again, forget ${deviceName} on it too.`, 6000);
+      } else {
+        flash(answer.ok ? `${item.name} forgotten` : (answer.error ?? 'Could not forget it'));
+      }
       if (answer.ok) openList(key);
     });
   }

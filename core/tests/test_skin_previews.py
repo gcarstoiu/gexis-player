@@ -70,3 +70,25 @@ def test_the_real_scale_makes_a_smaller_jpeg(tmp_path, monkeypatch):
     out = asyncio.run(sp.scaled(src, 960, cache=tmp_path / "cache"))
     with Image.open(out) as im:
         assert im.size == (960, 540) and im.format == "JPEG"
+
+
+def test_every_preview_is_made_ahead_in_one_run_and_only_once(tmp_path):
+    """George, 2026-10-03: "I would create the thumbs upfront for all"."""
+    pictures = []
+    for i in range(3):
+        p = tmp_path / f"skin{i}.png"
+        p.write_bytes(b"png%d" % i)
+        pictures.append(p)
+    calls = []
+
+    def run(command, **kw):
+        calls.append((command, kw["input"]))
+        for line in kw["input"].splitlines():
+            open(line.split("\t")[1], "wb").write(b"jpeg")
+        return subprocess.CompletedProcess(command, 0, "", "")
+
+    cache = tmp_path / "cache"
+    assert sp.make_ahead(pictures, cache=cache, run=run) == 3
+    assert len(calls) == 1 and calls[0][0][:4] == ["nice", "-n", "19", "ionice"], "one Python, lowest priority"
+    assert sp.make_ahead(pictures, cache=cache, run=run) == 0 and len(calls) == 1
+    assert asyncio.run(sp.scaled(pictures[0], 960, cache=cache, run=run)) == sp.path_for(pictures[0], 960, cache)

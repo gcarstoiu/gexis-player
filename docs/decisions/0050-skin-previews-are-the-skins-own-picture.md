@@ -109,3 +109,9 @@ pack (about 70 ms on a Pi 4, in the core's own loop) for every picture.
   changes.
 
 Still the skin's own picture - nothing drawn that the skin does not draw.
+- **Made ahead for every skin** (George, 2026-10-03: *"I would create the
+  thumbs upfront for all, otherwise the user is still facing slowness the
+  first time around"*): after a pack is installed and whenever the core
+  starts with some missing, in one Python at the lowest CPU and I/O priority.
+  Measured on George's player: three in 546 ms, so about a minute for the
+  1920 x 1080 pack's 287. One asked for before then is made on the spot.
