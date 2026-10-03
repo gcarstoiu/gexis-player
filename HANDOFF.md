@@ -79,7 +79,13 @@ the SSH key only, since a saved Wi-Fi skips setup.
 ### Decided, not started
 
 - **Hardware requirements, minimum and recommended** (ADR-0111 decision 12):
-  card space for the skins, and the Pi's load at 1920 x 1080.
+  card space for the skins, and the Pi's load at 1920 x 1080. **And the
+  Lyrion server** (George, 2026-10-03: *"record the results for hardware
+  recommendations"*; Finding 109): memory by library size - about 27 KB a
+  file while scanning, 1,876 MB for 61,362 files, the player itself needing
+  about 1 GB beside it, so no server on a 1 GB Pi (ADR-0115 decision 18);
+  card space - 151 MB of library and 670 MB of artwork cache for those files;
+  time - 2 h 7 min for a first scan over the network, 26 min to check.
 - **go-librespot 0.9.0 -> 0.10.2** (George, 2026-09-30: *"After 13c"*) -
   the first real update of a component through a release.
 - **New users start from an image** (ADR-0105 amended): promoting to stable
