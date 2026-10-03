@@ -458,7 +458,7 @@
                 : "You are connected to the player's own Wi-Fi. Nothing here leaves the room: the device is the only thing this page is talking to."}
             </p>
             <div class="cards">
-              <div class="info"><span class="bar" style="background:#8fc4d8"></span><span><b>About two minutes</b><small>Seven questions. Every one of them can be changed later in Settings.</small></span></div>
+              <div class="info"><span class="bar" style="background:#8fc4d8"></span><span><b>About two minutes</b><small>Eight questions. Every one of them can be changed later in Settings.</small></span></div>
               {#if !overLan}
                 <div class="info"><span class="bar" style="background:#7ed6bc"></span><span><b>Keep this phone handy</b><small>When setup finishes, the player leaves its own Wi-Fi for yours and this page stops working. That is by design, not a fault.</small></span></div>
                 <!-- George, 2026-09-29: the page would not load until he
