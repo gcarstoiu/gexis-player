@@ -263,11 +263,16 @@ def test_the_password_is_shown_only_while_the_network_is_open(tmp_path):
     assert net.status()["password"] is None and net.status()["ssid"] is None
 
 
-def test_a_network_that_does_not_come_up_says_why(tmp_path):
+def test_a_network_that_does_not_come_up_says_why(tmp_path, caplog):
+    """In a sentence on the panel, and in the system's words in the log
+    (George, 2026-10-03: the raw line "needs to be fixed")."""
     nm = FakeNM(devices=NOTHING, hotspot_rc=4)
     net, _ = setup(tmp_path, nm)
-    run(net.open())
-    assert net.status()["network"] == "failed" and "no AP mode" in net.status()["reason"]
+    with caplog.at_level("WARNING"):
+        run(net.open())
+    assert net.status()["network"] == "failed"
+    assert net.status()["reason"] == "Something stopped the player's Wi-Fi from starting."
+    assert "no AP mode" in caplog.text
 
 
 # -- the retry (§3, amendment 7) --------------------------------------------
@@ -429,7 +434,17 @@ def test_a_radio_that_never_comes_says_so_on_the_panel(tmp_path):
     run(net.open())
     assert clock.now == pytest.approx(sn.WLAN_READY_S)
     assert net.status()["network"] == "failed"
-    assert "[wlan0 unavailable; rfkill soft=1 hard=0]" in net.status()["reason"]
+    assert net.status()["reason"] == "The player's Wi-Fi is switched off.", \
+        "a sentence on the panel; the system's line is in the log (George, 2026-10-03)"
+
+
+def test_why_the_setup_network_did_not_start_reads_as_a_sentence():
+    assert sn.start_failure("unavailable", "rfkill soft=1 hard=0") == "The player's Wi-Fi is switched off."
+    assert sn.start_failure("missing", "rfkill unknown").startswith("No Wi-Fi was found on the player.")
+    assert sn.start_failure("disconnected", "rfkill soft=0 hard=0") == \
+        "Something stopped the player's Wi-Fi from starting."
+    for text in (sn.start_failure(r, f) for r in ("missing", "x") for f in ("rfkill unknown", "rfkill soft=0 hard=0")):
+        assert "rfkill" not in text and "wlan0" not in text and "Error" not in text
 
 
 def test_a_setup_network_that_did_not_start_is_tried_again_within_seconds(tmp_path):
