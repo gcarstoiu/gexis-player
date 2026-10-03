@@ -11,9 +11,15 @@
 # Run as root by gexis-lyrion.service before Lyrion starts, so a card moved
 # to a Pi with more or less memory gets its own limit. Until it has run, the
 # unit's own MemoryMax (a share of the memory) stands.
-set -eu
+#
+# Never fails the start: a limit not set leaves the unit's own share, and a
+# server that does not start because of this line would be worse than that.
 total_kb=$(awk '/^MemTotal:/ {print $2}' /proc/meminfo)
-limit_mb=$(( total_kb / 1024 - 1024 ))
+limit_mb=$(( ${total_kb:-0} / 1024 - 1024 ))
 [ "$limit_mb" -ge 512 ] || limit_mb=512
-systemctl set-property --runtime gexis-lyrion.service "MemoryMax=${limit_mb}M"
-echo "gexis-lyrion: memory limit ${limit_mb} MB of $(( total_kb / 1024 )) MB"
+if systemctl set-property --runtime gexis-lyrion.service "MemoryMax=${limit_mb}M"; then
+	echo "gexis-lyrion: memory limit ${limit_mb} MB of $(( ${total_kb:-0} / 1024 )) MB"
+else
+	echo "gexis-lyrion: memory limit not set; the unit's own share stands" >&2
+fi
+exit 0
