@@ -1,37 +1,53 @@
 # Handoff
 
-Last updated: 2026-10-02 (on R2D2).
+Last updated: 2026-10-03 (on R2D2).
 
 ## Start here
 
-**Phase 13b (other screens) is built on `phase-13b`, in the main checkout,
-waiting on hardware tests and its PR.** 13c (updates over the network) is
-merged as PR #42 and 13a as PR #41; their narrative is in the archive's
-2026-10-02 block. Releases are published from here to the testing channel:
-**0.5.0 is the latest** (serial 10, 2026-10-02), after 0.3.0-0.3.3 and 0.4.0.
+**Work continues on `phase-13b` in the main checkout. Releases 0.5.0 to
+0.8.6 went to the testing channel (0.8.6 is serial 19, 2026-10-03), each
+seen on George's player before it was cut.** `main` is merged through 0.8.5
+(PR #44); **PR #45 (0.8.6) waits for George to merge it** - he merges, Claude
+opens. **Phase 13e is closed** (DEVELOPMENT.md); 13b is still open.
 
-| Part of 13b | State |
+| What | State |
 |---|---|
-| Families, Chromium zoom, screen.env, bar UI | Built, rendered against a fake core (ADR-0109) |
-| The screen list | 110 HDMI models (foonerd's presets, MIT); George's four Waveshare screens marked Tested |
-| Recognising, choosing, Keep this screen? | Built. **Amended 2026-10-02** (George: *"A and C"*): asked only when the picture changes (forced mode, scale, rotation) - the 10.1" is kept without asking, the 13.3" and the bars are asked; after setup the phone says so and the panel waits 2 minutes; a go-back resets Settings too. **Not yet in a release** |
-| Setup's Screen and Visualiser steps | Built; the Visualiser step names the skin count (copy approved) |
-| Skins per screen size (ADR-0111, decisions 1-15) | **All four steps built and in 0.5.0**: five `gexis-skins-<W>x<H>` packages (66-652 MB), none in the image, installed with consent by `gexis-update pack-install`; the visualiser draws the installed pack, a smaller one centred on black; Legal and Credits. A device that kept `gexis-skins` keeps it (marked manual) |
-| Update UX (ADR-0110) | Built and used by George through 0.3.x |
+| Lyrion server (ADR-0115, 19 decisions; Finding 109) | Shipped through 0.8.6. Measured on George's 61,362 files: scans 2 h 7 min (High) / 1 h 59 min (Normal), memory 1,876 / 1,191 MB, no audio gaps during a scan. Memory limit = the player's less 1 GB; Normal under 4 GB |
+| Fetched software (ADR-0100 amended) | Pinned versions; `packaging/check-upstream.sh` before each release; a new pin is fetched by the update that brings it |
+| Change logs (ADR-0116) | `release_notes.json` is the one source: the player's page, `CHANGELOG.md` on `main`, the signed notes |
+| Screens (ADR-0109) | The 13.3" tested at 1920 x 1080 and recognised; a case listed once as its panel. **A new screen noticed at start: built, on `gexis` as a preview, waiting for George's test** (swap 13.3" -> 10.1" and start) |
+| Skin picker (ADR-0050 amended) | 960 px previews made ahead for every installed pack |
+| Not yet released, on the branch | The new-screen notice (29a3386, 88ee721); a USB disk kept 7 days after unplugging (ADR-0115 decision 17, ddf088f); Finding 109's playback test; 13e closed |
+
+**`gexis` right now:** a preview (core and player `0.8.6+git2.88ee721`, ui
+`0.8.6+git1`) with the release package installed. Its own Lyrion server is
+rescanning from scratch - started 21:26 for the playback test, about two
+hours. Database memory is High (Lyrion's own, as decision 19 leaves a 4 GB
+Pi). The squeezelite logging drop-in of the test is removed; it lapses at the
+client's next restart.
 
 **Next, in order:**
-1. **0.5.1** with the Keep changes, when George asks (notes approved by him
-   first; the release number is approved with them).
-2. **Hardware**, as George's screens allow: the 13.3" (1920 x 1080 - the
-   visualiser's speed on a Pi 4 feeds the hardware requirements, ADR-0111
-   decision 12), the bars' modes and touch, recognition fingerprints for the
-   three screens not yet seen, the letterboxed and centred skins by eye.
-3. **Before the 13b PR** (ask George first): DEVELOPMENT.md's 13b
-   acceptance rewritten to what was built, IMPLEMENTED-DIFFERENTLY entries
-   (upload placement, playlist 420, the bar's deviations), optionally a
-   round-3 brief for Claude Design.
-4. **Phase 13d, DACs** (DEVELOPMENT.md): Volumio's DAC list, the DAC2 HD and
-   IQaudio DAC+ first. An ADR first.
+1. **George's new-screen test,** then 0.8.7 with it and the USB rule - notes
+   approved by him first.
+2. **The copy review** (George, 2026-10-03): one page per area, built from the
+   code, with screenshots, for him to comment on. **Setup first** - its ~150
+   texts were extracted with seven inconsistencies (Keep's 30 s vs "two
+   minutes", "Seven questions" vs eight steps, raw core errors shown to the
+   user, no empty states for outputs or networks...). The extraction and the
+   phone screenshots were in the session's scratchpad, which does not
+   survive it: regenerate them (a fake core serving `/setup/answers` with a
+   chosen `step` shows each phone step).
+3. **13b's close:** DEVELOPMENT.md's acceptance rewritten to what was built;
+   the two bars still to be tried on the hardware.
+4. **Phase 13d, DACs** (an ADR first).
+5. **docs/HARDWARE.md** is a draft; what it lacks is listed at its end.
+
+**Working rules learned this session** (also in memory): a change is seen on
+George's player before a release is cut, installed as the **whole set of one
+commit, `gexis-player` with it, reading every removal apt reports**
+(LESSONS 55), and the core restarted and checked by behaviour only the new
+code has (LESSONS 54). A setting read for a worker thread is read on the
+core's own thread first (SQLite; it bit twice).
 
 **How a release is made** (each step proven 2026-10-02): run
 `packaging/check-upstream.sh` - a pin behind its maker is tried on George's
@@ -364,7 +380,7 @@ reverted, currently-flashed image predates this fix.
 13d DACs we have not tested             decided 2026-10-01 (George): after 13b,
                                             from Volumio's list; the DAC2 HD and
                                             IQaudio DAC+ first. ADR first
-13e server plugins                       decided 2026-10-02 (George): after 13d,
+13e server plugins                       CLOSED 2026-10-03. Decided 2026-10-02 (George): after 13d,
                                             before the first public release. Lyrion
                                             server and Beszel hub, shipped in our
                                             releases; music first, scan impact

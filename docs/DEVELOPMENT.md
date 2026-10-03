@@ -2794,6 +2794,30 @@ ADR-0022's inventory first).
 4. **Removing a plugin leaves the player as it was,** its data kept or
    deleted as the user chooses.
 
+**PHASE 13e CLOSED, 2026-10-03** (George: *"You can close 13e"*). Released
+in 0.8.0-0.8.6 on branch `phase-13b`; the records are ADR-0114 (the Beszel
+hub), ADR-0115 decisions 1-19 (the Lyrion server) and Finding 109.
+
+1. **Met.** The Lyrion server installs (downloaded on first switch-on), runs
+   and is removed from the Plugins screen - Remove run and switched on again
+   on `gexis` (2026-10-03). The Beszel hub ships in the image and runs on
+   `gexis`; off is its removal (ADR-0114).
+2. **Met, measured** (Finding 109): 46 minutes of playback through the
+   player's Lyrion client while its own server scanned 61,362 files from
+   scratch - 0 underruns and 0 XRUNs in the client's own log, load up to
+   7.05, 79.8 °C without throttling - and George heard nothing. Not
+   measured: other renderers under the same load.
+3. **Met.** The player's own server is offered in the server list ("This
+   player's own server") beside George's other server, which stays in use.
+4. **Met.** Off keeps everything; Remove deletes the server's software,
+   library, settings, add-ons and shares (ADR-0115 decision 14).
+
+**Changed from the plan, by decision:** Lyrion is downloaded on the device,
+not shipped (decision 11, its licence); its memory limit follows the
+player's (decision 18) and a 1 GB Pi is not offered it; its database memory
+is Normal under 4 GB (decision 19). **Left for later:** the scanner's memory
+per file on Pis other than 4 GB, and temperatures with a case (HARDWARE.md).
+
 ### Phase 14 — Themes
 
 **Cut out of Phase 10 on 2026-09-25** (George): *"Themes to be cut out and have
