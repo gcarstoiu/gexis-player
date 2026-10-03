@@ -20,6 +20,7 @@ import math
 import os
 import stat
 import struct
+import time
 from pathlib import Path
 from dataclasses import dataclass
 
@@ -124,10 +125,23 @@ def read_latest_frame(fd: int, frame_size: int) -> bytes | None:
     return data[end - frame_size : end]
 
 
+#: **A pipe silent this long is silence** (George, 2026-10-03: "Why doesn't
+#: the spectrum lines in a visualisation go to 0 when I pause? The vu meters
+#: go to 0."). The audio side sends one silent meter frame when playback
+#: stops and no spectrum frame at all, so the held last frame left the bars
+#: standing. A missed tick is ~33 ms; a stopped stream is a gap many times
+#: that.
+SILENT_AFTER_S = 0.3
+
+
 class FifoSource:
     """Both pipes, polled together."""
 
-    def __init__(self, meter_path: str, spectrum_path: str, bands: int = SPECTRUM_BANDS) -> None:
+    def __init__(self, meter_path: str, spectrum_path: str, bands: int = SPECTRUM_BANDS,
+                 clock=time.monotonic) -> None:
+        self._clock = clock
+        self._meter_at: float | None = None
+        self._spectrum_at: float | None = None
         self._meter_path = meter_path
         self._spectrum_path = spectrum_path
         self._spectrum_frame = bands * 4
@@ -146,8 +160,10 @@ class FifoSource:
         """The current levels. Unchanged values when a pipe has nothing new:
         silence and "no frame this tick" are different things, and only the
         source knows which - holding the last frame is what both upstream
-        consumers do."""
+        consumers do. Nothing for SILENT_AFTER_S is silence, and reads as
+        zero."""
         self.open()
+        now = self._clock()
         left, right = self._last.left, self._last.right
         bands = self._last.bands
 
@@ -155,10 +171,16 @@ class FifoSource:
             frame = read_latest_frame(self._meter_fd, METER_FRAME)
             if frame is not None:
                 left, right = parse_meter(frame)
+                self._meter_at = now
         if self._spectrum_fd is not None:
             frame = read_latest_frame(self._spectrum_fd, self._spectrum_frame)
             if frame is not None:
                 bands = parse_spectrum(frame)
+                self._spectrum_at = now
+        if self._meter_at is not None and now - self._meter_at > SILENT_AFTER_S:
+            left = right = 0
+        if self._spectrum_at is not None and now - self._spectrum_at > SILENT_AFTER_S:
+            bands = (0,) * len(bands)
 
         self._last = Levels(left, right, bands)
         return self._last

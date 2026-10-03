@@ -18,7 +18,7 @@ from dbus_next import BusType
 from dbus_next.aio import MessageBus
 
 from gexis_core import alsa, bluetooth_adapter_state, bluetooth_agent, device_name, journal, meters, screen_detect, skins, wifi
-from gexis_core import screen_apply, screens, skin_packs
+from gexis_core import screen_apply, screens, skin_packs, skin_previews
 from gexis_core.adapters.base import VolumeMechanism
 from gexis_core.adapters.bluetooth import BluetoothAdapter
 from gexis_core.adapters.lms import LmsAdapter
@@ -1471,6 +1471,35 @@ async def main() -> None:
             await _configure_visualiser()
             _publish_meters()
             _publish_components()
+            asyncio.ensure_future(_previews_ahead())
+
+    #: ADR-0050, amended 2026-10-03: every skin's picker picture made ahead.
+    previews_state = {"busy": False}
+
+    async def _previews_ahead() -> None:
+        if previews_state["busy"]:
+            return
+        previews_state["busy"] = True
+        try:
+            # Every pack this player has, not only the screen's (George,
+            # 2026-10-03: "for all resolutions", then "B it is"): a screen
+            # changed to another size finds its pictures made too.
+            def pictures() -> list:
+                out = []
+                for size in skin_packs.installed():
+                    root = skin_packs.root_of(size)
+                    if root is None:
+                        continue
+                    out += [p for skin, where in skins.installed(root, resolution=f"{size[0]}x{size[1]}")
+                            if (p := skins.preview_of(skin, where)) is not None]
+                return out
+            made = await asyncio.to_thread(lambda: skin_previews.make_ahead(pictures()))
+            if made:
+                logger.info("skins: %d picker previews made ahead", made)
+        except Exception:  # noqa: BLE001 - the picker still makes one when asked
+            logger.exception("skins: previews ahead failed")
+        finally:
+            previews_state["busy"] = False
 
     async def _configure_visualiser() -> None:
         """ADR-0111: PeppyMeter draws the pack skins_at() names, at its size.
@@ -2527,6 +2556,7 @@ async def main() -> None:
     # ADR-0111: the pack this screen wants, now and every few minutes.
     _skins_kick()
     asyncio.ensure_future(_skins_loop())
+    asyncio.ensure_future(_previews_ahead())
 
     # **ADR-0109 decision 5: Keep this screen?** A screen chosen before this
     # start waits for a touch on the panel. The countdown starts at the

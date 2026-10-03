@@ -333,3 +333,31 @@ def test_a_kept_gexis_skins_is_marked_installed_by_hand(up, monkeypatch):
     monkeypatch.setattr(up, "run", lambda *a, **k: calls.append(a) or subprocess.CompletedProcess(a, 0, "", ""))
     assert up.install(None) == 0
     assert ("apt-mark", "manual", "gexis-skins") in calls
+
+
+def test_an_update_waits_for_a_pack_download_and_says_so(up, monkeypatch):
+    """Found on George's player, 2026-10-03: the update failed on apt's lock
+    while the core was downloading the 1920x1080 pack. One apt at a time."""
+    import fcntl
+    import threading
+
+    up.STATE.mkdir(parents=True)
+    other = (up.STATE / "apt-turn.lock").open("w")
+    fcntl.flock(other, fcntl.LOCK_EX)          # the pack download, holding it
+    said = []
+    monkeypatch.setattr(up.time, "sleep", lambda s: None)
+    threading.Timer(0.05, other.close).start()  # ...and finishing
+    held = up.take_turn(lambda: said.append("waiting"))
+    assert said == ["waiting"] and held is not None
+
+
+def test_a_turn_not_given_within_the_hour_is_a_failure(up, monkeypatch):
+    import fcntl
+
+    up.STATE.mkdir(parents=True)
+    other = (up.STATE / "apt-turn.lock").open("w")
+    fcntl.flock(other, fcntl.LOCK_EX)
+    monkeypatch.setattr(up, "TURN_WAIT_S", 0)
+    with pytest.raises(up.Stop, match="did not finish within an hour"):
+        up.take_turn(lambda: None)
+    other.close()

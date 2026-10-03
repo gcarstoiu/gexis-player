@@ -336,10 +336,10 @@
 
   onMount(loadSettings);
 
-  function flash(text) {
+  function flash(text, ms = 1900) {
     clearTimeout(toastTimer);
     toast = text;
-    toastTimer = setTimeout(() => (toast = null), 1900);
+    toastTimer = setTimeout(() => (toast = null), ms);
   }
 
   async function write(row, value) {
@@ -640,7 +640,13 @@
   async function doForget(item) {
     const key = sheetKey;
     await command({ name: item.address ?? item.name, action: 'forget' }, (answer) => {
-      flash(answer.ok ? `${item.name} forgotten` : (answer.error ?? 'Could not forget it'));
+      // A phone keeps its half of the pairing, and pairing again fails
+      // silently until it forgets too (George, 2026-10-03: "Yes. Add text").
+      if (answer.ok && key === 'bt_trusted') {
+        flash(`${item.name} forgotten. To pair it again, forget ${deviceName} on it too.`, 6000);
+      } else {
+        flash(answer.ok ? `${item.name} forgotten` : (answer.error ?? 'Could not forget it'));
+      }
       if (answer.ok) openList(key);
     });
   }
@@ -1328,7 +1334,9 @@
                  from where the image installed it. Nothing is rendered and
                  nothing is cached, so this is one file per tap. -->
             <div class="pane__art">
-              <img src={`/skins/${encodeURIComponent(viewing)}/preview`} alt="" />
+              <!-- ADR-0050, amended 2026-10-03: 960 px wide, made once on the
+                   player - the whole picture was up to 3.7 MB. -->
+              <img src={`/skins/${encodeURIComponent(viewing)}/preview?w=960`} alt="" />
             </div>
             <div class="pane__text">
               <div class="pane__name">{p.label}</div>
