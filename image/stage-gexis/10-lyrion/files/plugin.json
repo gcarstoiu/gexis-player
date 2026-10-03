@@ -1,6 +1,6 @@
 {
   "id": "lyrion-server",
-  "name": "Lyrion server",
+  "name": "Lyrion Server",
   "kind": "service",
   "area": "sources",
   "unit": "gexis-lyrion.service",
@@ -17,5 +17,6 @@
       "note": "Music folders on a NAS or a computer, mounted read-only and offered to the server.",
       "empty": "No shares yet. The Music folder and any USB disk are offered already."
     }
-  ]
+  ],
+  "first": true
 }

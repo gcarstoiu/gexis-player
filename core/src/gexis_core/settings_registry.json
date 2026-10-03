@@ -83,7 +83,7 @@
     "rows": [
       {
         "type": "group",
-        "label": "LMS",
+        "label": "Lyrion Client",
         "accent": "#7ed6bc"
       },
       {

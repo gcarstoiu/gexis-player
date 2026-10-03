@@ -6,3 +6,7 @@ _version: 0
 mediadirs:
   - /var/lib/gexis-music
 playlistdir: /var/lib/gexis-music/Playlists
+# George, 2026-10-03: no setup wizard - its plugin list would let Material Skin
+# be unticked - and Material as the skin from the first page.
+wizardDone: 1
+skin: material

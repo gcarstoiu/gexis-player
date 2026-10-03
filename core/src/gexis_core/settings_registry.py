@@ -513,7 +513,10 @@ class Settings:
                 continue
             if switch_group is not None:
                 by_area.setdefault(area, []).extend(switches)
-            target["rows"].extend(rows)
+            if getattr(plugin, "first", False):
+                target["rows"][:0] = rows
+            else:
+                target["rows"].extend(rows)
         # **ADR-0106: uploaded plugins a restore brought back without their
         # package.** Not plugins - nothing runs, nothing is switched - only a
         # row saying what to upload again, under its kind.
