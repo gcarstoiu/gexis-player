@@ -2293,7 +2293,7 @@ async def main() -> None:
             if not on:
                 continue
             try:
-                await lyrion_folders.sync(_lyrion_rpc)
+                await lyrion_folders.sync(_lyrion_rpc, saved=lyrion_shares.points())
             except Exception as exc:  # starting, stopped, scanning: next time
                 logger.debug("lyrion: folders not synced (%r)", exc)
             try:

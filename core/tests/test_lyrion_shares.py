@@ -181,3 +181,10 @@ def test_forgetting_them_all_empties_the_list(tmp_path):
     s.add("nas:/b", None, None)
     assert s.forget_all() == ["//nas/a", "nas:/b"]
     assert s.all() == []
+
+
+def test_points_name_every_saved_share_mounted_or_not(tmp_path):
+    s, _, _ = shares(tmp_path)
+    s.add("//nas/a", "me", "pw")
+    s.add("nas:/b", None, None)
+    assert s.points() == [str(tmp_path / "mnt" / ls.slug("//nas/a")), str(tmp_path / "mnt" / ls.slug("nas:/b"))]

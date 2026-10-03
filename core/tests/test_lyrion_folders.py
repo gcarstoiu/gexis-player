@@ -50,3 +50,12 @@ def test_sync_sets_the_list_and_leaves_the_scan_to_lyrion(monkeypatch, tmp_path)
     calls.clear()
     assert asyncio.run(lf.sync(rpc, is_mount=lambda p: True)) is False
     assert ["rescan"] not in calls
+
+
+def test_a_saved_share_stays_while_its_nas_is_off():
+    """ADR-0115 decision 16: taking a folder out makes Lyrion wipe the whole
+    library and scan everything - two hours for George's share."""
+    nas = "/mnt/gexis-shares/Tower-local-Music-912e8d"
+    current = ["/var/lib/gexis-music", nas, "/mnt/gexis-shares/forgotten-123456"]
+    assert lf.wanted(current, [], saved=[nas]) == ["/var/lib/gexis-music", nas], \
+        "not mounted, still saved: kept; forgotten: gone"

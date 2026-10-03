@@ -101,6 +101,11 @@ class Shares:
         # Mounted again with the new login, not left on the old one.
         self.errors.pop(address, None)
 
+    def points(self) -> list[str]:
+        """Where each saved share is mounted, mounted now or not (ADR-0115
+        decision 16: it stays in Lyrion's list until it is forgotten)."""
+        return [str(self._root / slug(s["address"])) for s in self.all()]
+
     def migrate(self) -> None:
         """Stores written before decision 15 held the password: each moves to
         its file and out of the store. Once, at start."""
