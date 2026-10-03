@@ -2299,6 +2299,15 @@ async def main() -> None:
                 await _lyrion_addons()
             except Exception as exc:  # no internet yet, or the server is busy
                 logger.debug("lyrion: add-ons not checked (%r)", exc)
+            if not lyrion_asked.get("versions_off"):
+                # ADR-0100, amended 2026-10-03: we choose its version, so its
+                # page does not offer others - set on servers made before the
+                # seed prefs said so, once per start.
+                try:
+                    await _lyrion_rpc(["pref", "checkVersion", "0"])
+                    lyrion_asked["versions_off"] = True
+                except Exception as exc:  # starting: next time
+                    logger.debug("lyrion: checkVersion not set (%r)", exc)
 
     asyncio.ensure_future(_lyrion_folders_loop())
     # ADR-0040 §1: LMS's own plugin first where it answers, the key-free

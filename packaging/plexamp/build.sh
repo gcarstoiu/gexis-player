@@ -5,9 +5,9 @@
 # inside gexis-deb-builder, with the repository at /src, the download cache at
 # /cache and the output in /out.
 #
-# Versioned by the gexis-plexamp release it carries, not by this repository
-# (ADR-0107: one package per component), so the git version this script is
-# given as $1 is deliberately ignored.
+# Versioned by the gexis-plexamp release it carries (ADR-0107: one package
+# per component), plus $1 - the commit of this repository's files it also
+# carries, Plexamp's pin among them (ADR-0100, amended 2026-10-03).
 #
 # The pin is read from the image stage that installs it today, so there is
 # one place that names the version and its checksum.
@@ -16,7 +16,10 @@ set -eu
 STAGE_DIR=/src/image/stage-gexis/08-plexamp
 . /src/packaging/plexamp/pins.sh
 : "${PLUGIN_VERSION:?} ${PLUGIN_ASSET:?} ${PLUGIN_URL:?} ${PLUGIN_SHA256:?}"
-VERSION="${PLUGIN_VERSION}-1"
+# The plugin's version, plus the commit of the files of ours this package
+# carries - the pin among them - so a new Plexamp pin is a new version
+# (LESSONS 53: one version, one content).
+VERSION="${PLUGIN_VERSION}-2+${1:?usage: build.sh <version of our files>}"
 
 PKG=gexis-plexamp
 STAGE=/tmp/stage/$PKG
@@ -61,6 +64,20 @@ cat > "$STAGE/DEBIAN/postinst" <<'EOF'
 set -e
 if [ "$1" = configure ] && [ -d /run/systemd/system ]; then
 	systemctl daemon-reload || true
+	pinned=
+	# **A new pin is fetched by the update that brings it** (ADR-0100,
+	# amended 2026-10-03). gexis-fetch@ stays active once it has run, so
+	# restarting the software alone never downloads again: stopped, it runs
+	# at the next start - now, where the switch is on, without holding the
+	# update for the download; at the next switch-on otherwise.
+	want=$(sed -n 's/^SHA256=//p' /usr/share/gexis/components/plexamp.env)
+	have=$(cat /var/lib/gexis/components/plexamp.sha256 2>/dev/null || true)
+	if [ -n "$have" ] && [ "$have" != "$want" ]; then
+		on=$(systemctl is-enabled plexamp.service 2>/dev/null || true)
+		systemctl stop gexis-fetch@plexamp.service || true
+		[ "$on" = enabled ] && systemctl start --no-block plexamp.service || true
+		pinned=1
+	fi
 	if [ -n "$2" ]; then
 		systemctl try-restart gexis-plexamp.service || true
 	fi

@@ -136,3 +136,37 @@ too."* The other two were leaving it as it was, and deleting on every switch-off
   `/var/lib` for `DATA` - never one of those itself. (Four parts refused
   `/opt/lyrion`, and the Lyrion server's Remove did nothing.)
 
+
+## Amended 2026-10-03: how fetched software stays current
+
+George asked how the Lyrion server and Plexamp are updated (*"we initially
+download whatever is the latest version, but then we stay there"*). They are
+not the latest: each is a **pin** - Plexamp 4.13.2, Lyrion 9.1.1 - and the
+player never looks further. Two gaps were found in the code:
+
+- **Nothing watched for a newer version.** A pin moved only if someone
+  thought to move it.
+- **A new pin waited for a reboot.** `gexis-fetch@` is a oneshot with
+  `RemainAfterExit=yes`: once it has run it stays *active*, so an update that
+  restarts the software's unit, or a switch off and on, never runs the fetch
+  again. Only a reboot, or Remove then on, did.
+
+**Decided (George, 2026-10-03), option A of two:** *"We go with A"*. **We
+choose the version, and the player follows promptly.** (B, rejected: the
+player follows each maker's latest itself - sooner, but untried by anyone and
+with no pinned checksum to refuse a bad download.)
+
+- **A check before every release**, `packaging/check-upstream.sh`, reads each
+  maker's own feed - Plex's `headless/version.json`, Lyrion's
+  `lms-server-repository/latest.xml` (its `tararm` entry) - and says which
+  pins are behind. A newer version is tried on George's player as a preview
+  before its pin is released (as every change is since 2026-10-03).
+- **A new pin is fetched by the update that brings it.** The package that
+  carries the pin compares it with what is installed: if they differ, it
+  stops the fetch unit - so it runs again - and, where the switch is on,
+  starts the software again without waiting (`--no-block`: the download
+  must not hold the update). Where the switch is off, the next switch-on
+  downloads the new version.
+- **Lyrion does not offer its own updates** (`checkVersion` off): its page
+  would otherwise announce versions outside the pin, which installing by
+  hand would put out of step with the player.

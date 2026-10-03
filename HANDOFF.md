@@ -33,8 +33,10 @@ merged as PR #42 and 13a as PR #41; their narrative is in the archive's
 4. **Phase 13d, DACs** (DEVELOPMENT.md): Volumio's DAC list, the DAC2 HD and
    IQaudio DAC+ first. An ADR first.
 
-**How a release is made** (each step proven 2026-10-02): George approves
-the notes (impersonal, New / Fixed / Good to know, no restart promises -
+**How a release is made** (each step proven 2026-10-02): run
+`packaging/check-upstream.sh` - a pin behind its maker is tried on George's
+player first, then moved (ADR-0100, amended 2026-10-03); George sees every
+change live on his player before any release; George approves the notes (impersonal, New / Fixed / Good to know, no restart promises -
 publish.sh refuses them); add them, with the day, to
 `core/src/gexis_core/release_notes.json`, regenerate `CHANGELOG.md` (`cd core
 && python -m gexis_core.changelog ../CHANGELOG.md`; a test checks it) and
