@@ -5,6 +5,21 @@ Every release of Gexis Player and its notes, newest first. Generated from
 edit that file, not this one. The player shows the last 10 under
 Settings → System → Change logs.
 
+## 0.8.6 — 3 October 2026
+
+### New
+
+- The skin picker shows each skin straight away: its pictures are made ahead, smaller, on the player.
+- A Waveshare 13.3″ HDMI LCD (H) is recognised when setup offers a screen.
+- After forgetting a Bluetooth device, the message says to forget the player on that device too before pairing again.
+
+### Fixed
+
+- Forgetting a Bluetooth device works again.
+- The spectrum falls to zero when playback pauses, as the meters do.
+- The boot logo is centred on every screen size.
+- An update started while a skin pack is downloading waits for it instead of failing.
+
 ## 0.8.5 — 3 October 2026
 
 ### New
