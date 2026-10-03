@@ -696,6 +696,11 @@
         });
       } else if (item.server) {
         browseShares(item);
+      } else if (item.login) {
+        // ADR-0115 decision 15: restored without its password, which backups
+        // do not carry - typed in again here.
+        share = { address: item.address, user: item.user ?? '', password: '' };
+        manual = true;
       }
       return;
     }

@@ -52,7 +52,7 @@ def test_an_smb_share_needs_a_user_and_an_nfs_one_keeps_no_secret(tmp_path):
     with pytest.raises(ValueError):
         s.add("not an address", "me", "pw")
     s.add("nas:/music", "ignored", "ignored")
-    assert s.all() == [{"address": "nas:/music", "user": None, "password": None}]
+    assert s.all() == [{"address": "nas:/music", "user": None}]
 
 
 def test_mounting_reads_the_password_from_a_root_only_file(tmp_path):
@@ -136,4 +136,48 @@ def test_a_row_names_the_share_and_keeps_its_address_for_forget(tmp_path):
     [item] = s.items()
     assert item["name"] == "Music" and item["address"] == "//Tower.local/Music"
     assert item["meta"].startswith("On Tower · ")
-    assert "password" not in item and "user" not in item
+    assert "password" not in item and "user" not in item, "a user only where it is asked for again"
+
+
+def test_the_store_never_holds_a_password(tmp_path):
+    """ADR-0115 decision 15: GET /settings and every backup read the store."""
+    s, _, _ = shares(tmp_path)
+    s.add("//nas/music", "george", "s3cret")
+    assert "s3cret" not in str(s._store.values)
+    assert s.all() == [{"address": "//nas/music", "user": "george"}]
+    assert (tmp_path / "cred" / f"{ls.slug('//nas/music')}.cred").read_text() == \
+        "username=george\npassword=s3cret\n"
+
+
+def test_a_store_from_before_moves_its_passwords_to_their_files(tmp_path):
+    s, _, _ = shares(tmp_path)
+    s._store.set(ls.KEY, '[{"address": "//nas/music", "user": "me", "password": "pw"}, '
+                         '{"address": "nas:/b", "user": null, "password": null}]')
+    s.migrate()
+    assert s.all() == [{"address": "//nas/music", "user": "me"}, {"address": "nas:/b", "user": None}]
+    assert "password=pw" in (tmp_path / "cred" / f"{ls.slug('//nas/music')}.cred").read_text()
+    s.migrate()  # nothing left to move, and nothing lost
+    assert "password=pw" in (tmp_path / "cred" / f"{ls.slug('//nas/music')}.cred").read_text()
+
+
+def test_a_share_restored_without_its_password_asks_for_it_and_is_not_mounted(tmp_path):
+    """A backup carries the store, not the root-only file."""
+    s, calls, mounted = shares(tmp_path)
+    s._store.set(ls.KEY, '[{"address": "//nas/music", "user": "me"}, {"address": "//nas/open", "user": "guest"}]')
+    s.mount_all(s.all())
+    [locked, guest] = s.items()
+    assert locked["login"] is True and locked["user"] == "me"
+    assert "Needs its password again" in locked["meta"]
+    assert not any("//nas/music" in c for c in calls if c[0] == "mount"), "no mount without a login"
+    assert "login" not in guest and guest["meta"].endswith("Mounted, read-only"), "a guest has none to lose"
+    s.add("//nas/music", "me", "pw")
+    s.mount_all(s.all())
+    assert s.items()[0]["meta"].endswith("Mounted, read-only")
+
+
+def test_forgetting_them_all_empties_the_list(tmp_path):
+    s, _, _ = shares(tmp_path)
+    s.add("//nas/a", "me", "pw")
+    s.add("nas:/b", None, None)
+    assert s.forget_all() == ["//nas/a", "nas:/b"]
+    assert s.all() == []

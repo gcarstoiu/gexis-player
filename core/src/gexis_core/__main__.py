@@ -2190,6 +2190,10 @@ async def main() -> None:
     # ADR-0115: the Lyrion server's music folders - the Music folder, USB
     # disks, network shares - kept in its own list while it is switched on.
     lyrion_shares = LyrionShares(settings_store)
+    try:
+        lyrion_shares.migrate()  # ADR-0115 decision 15: passwords out of the store
+    except Exception:  # noqa: BLE001 - the shares still mount from what is there
+        logger.exception("lyrion: moving share passwords out of the store failed")
 
     async def _lyrion_rpc(command: list) -> dict:
         async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=10)) as session:

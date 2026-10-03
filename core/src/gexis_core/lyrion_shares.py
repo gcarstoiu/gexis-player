@@ -5,8 +5,11 @@ under `/mnt/gexis-shares` and offered to the server by `lyrion_folders`.
 
 A share is SMB (`//nas/music`, with a user and a password) or NFS
 (`nas:/music`, with neither). They are kept in the settings store under
-`lyrion-server.shares`; an SMB password reaches `mount` only through a
-credentials file readable by root, never on a command line.
+`lyrion-server.shares` - the address and the user. **The password is not**
+(ADR-0115 decision 15, George, 2026-10-03: *"B"*): it is written once, when
+the share is added, to a credentials file readable by root - the one `mount`
+reads, never a command line - so neither `GET /settings` nor a backup
+carries it. A share restored without its file asks for the password again.
 
 **The store is read on the core's own thread, mounting is done in another**
 (found on George's player, 2026-10-03: SQLite refuses a connection from a
@@ -90,10 +93,50 @@ class Shares:
             raise ValueError("an address like //nas/music (SMB) or nas:/music (NFS)")
         if which == "smb" and not user:
             raise ValueError("an SMB share needs a user")
+        if which == "smb":
+            self._write_login(address, user, password)
         shares = [s for s in self.all() if s["address"] != address]
-        shares.append({"address": address, "user": user if which == "smb" else None,
-                       "password": password if which == "smb" else None})
+        shares.append({"address": address, "user": user if which == "smb" else None})
         self._save(shares)
+        # Mounted again with the new login, not left on the old one.
+        self.errors.pop(address, None)
+
+    def migrate(self) -> None:
+        """Stores written before decision 15 held the password: each moves to
+        its file and out of the store. Once, at start."""
+        shares = self.all()
+        if not any("password" in s for s in shares):
+            return
+        for share in shares:
+            password = share.pop("password", None)
+            if kind(share["address"]) == "smb" and not self._login(share["address"]).exists():
+                self._write_login(share["address"], share.get("user"), password)
+        self._save(shares)
+        logger.info("lyrion: share passwords moved out of the settings store")
+
+    def forget_all(self) -> list[str]:
+        """Every share out of the list (ADR-0115 decision 14: Remove); the
+        caller `release`s each address returned, in a worker."""
+        addresses = [s["address"] for s in self.all()]
+        self._save([])
+        self.errors.clear()
+        return addresses
+
+    def _login(self, address: str) -> Path:
+        return self._credentials / f"{slug(address)}.cred"
+
+    def _write_login(self, address: str, user: str | None, password: str | None) -> None:
+        self._credentials.mkdir(parents=True, exist_ok=True, mode=0o700)
+        cred = self._login(address)
+        cred.touch(mode=0o600)
+        cred.chmod(0o600)
+        cred.write_text(f"username={user or ''}\npassword={password or ''}\n")
+
+    def _needs_login(self, share: dict) -> bool:
+        """An SMB share whose password is not on this device (restored from a
+        backup, which does not carry it). A guest has none to lose."""
+        return (kind(share["address"]) == "smb" and not self._login(share["address"]).exists()
+                and (share.get("user") or "").lower() != "guest")
 
     def forget(self, address: str) -> None:
         """Out of the list; `release` (in a worker) unmounts it."""
@@ -103,20 +146,25 @@ class Shares:
     def release(self, address: str) -> None:
         """Unmount a forgotten share and remove its credentials. No store."""
         self._unmount(self._root / slug(address))
-        (self._credentials / f"{slug(address)}.cred").unlink(missing_ok=True)
+        self._login(address).unlink(missing_ok=True)
 
     def items(self) -> list[dict]:
         """The list's rows: each share and whether it is mounted."""
         out = []
         for share in self.all():
             address = share["address"]
+            name, server = label(address)
+            if self._needs_login(share):
+                out.append({"name": name, "meta": f"On {server} · Needs its password again - tap to enter it",
+                            "bars": None, "state": "saved", "address": address, "login": True,
+                            "user": share.get("user")})
+                continue
             if self._is_mount(str(self._root / slug(address))):
                 meta = "Mounted, read-only"
             elif address in self.errors:
                 meta = f"Not mounted: {self.errors[address]}"
             else:
                 meta = "Waiting for the server to be on"
-            name, server = label(address)
             out.append({"name": name, "meta": f"On {server} · {meta}", "bars": None, "state": "saved",
                         "address": address})
         return out
@@ -150,10 +198,11 @@ class Shares:
     def _mount(self, share: dict, point: Path) -> str | None:
         address = share["address"]
         if kind(address) == "smb":
-            self._credentials.mkdir(parents=True, exist_ok=True, mode=0o700)
-            cred = self._credentials / f"{slug(address)}.cred"
-            cred.touch(mode=0o600)
-            cred.write_text(f"username={share.get('user') or ''}\npassword={share.get('password') or ''}\n")
+            cred = self._login(address)
+            if not cred.exists():
+                if self._needs_login(share):
+                    return "Needs its password again"
+                self._write_login(address, share.get("user"), None)  # a guest, restored
             command = ["mount", "-t", "cifs", address, str(point), "-o",
                        f"ro,credentials={cred},uid=squeezeboxserver,gid=nogroup,iocharset=utf8,nosuid,nodev,noexec"]
         else:
