@@ -2647,7 +2647,37 @@ Claude Design: the brief George hands over is
   `foonerd/pi_screen_setup` (MIT, credited), **translated to KMS and tried on
   the hardware** — its `hdmi_timings` are not copied as they are.
 
-**Acceptance (draft, to be settled with the ADR)**
+**Acceptance, as decided** (rewritten 2026-10-03 to George's decisions since
+the draft below - George: *"Yes"*; ADR-0109 and its amendments, ADR-0111):
+
+1. **Choosing a screen, and a way back.** Setup's Screen step and Settings'
+   Attached screen and Screen rotation rows: the recognised model suggested,
+   the list to choose from, the choice applied with a restart, and *Keep this
+   screen?* answered on the panel or going back by itself - the phone still
+   reaching the player throughout. **A different screen attached since the
+   last start is noticed and asked about.**
+   *Met on the 10.1" and the 13.3", 2026-10-03; the new-screen notice built,
+   waiting for George's swap test.*
+2. **The standard family on hardware: 1280 x 800 and 1920 x 1080,** every
+   screen, with no touch target under the 44-pixel floor (ADR-0109 decision 4).
+   **800 x 480 stays listed and untested** until such a screen is at hand; it
+   does not hold this phase.
+   *Met: the 10.1" (1280 x 800) and the 13.3" (1920 x 1080), 2026-10-03.*
+3. **The bar family on hardware** - the Waveshare 7.9" (1280 x 400) and 11.9"
+   (1480 x 320): Now Playing, the transition screen, idle, setup's network,
+   password and QR, Browse, the visualiser with the bar skins; **Settings on
+   the phone only**; what a bar drops dropped by design (decision 7).
+   *Open: not yet tried on the bars.*
+4. **Skins by screen size:** one pack per size, downloaded with consent, never
+   in the image; their licences in Legal and Credits (ADR-0111).
+   *Met since 0.5.0.*
+5. **The screen list:** every HDMI model of the presets (106), a case listed
+   as its panel, and **a model marked tested only once it has been tried on
+   the hardware.**
+   *Open: the 7.9" and 11.9" are marked tested and have not been tried -
+   tried in criterion 3, or unmarked.*
+
+**Acceptance (draft, as first written - replaced by the list above)**
 
 1. **A Screen step in setup** and a **Screen** row in Settings → Display: the
    detected model suggested, a list to pick from, the choice applied with a

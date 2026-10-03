@@ -37,8 +37,9 @@ client's next restart.
    phone screenshots were in the session's scratchpad, which does not
    survive it: regenerate them (a fake core serving `/setup/answers` with a
    chosen `step` shows each phone step).
-3. **13b's close:** DEVELOPMENT.md's acceptance rewritten to what was built;
-   the two bars still to be tried on the hardware.
+3. **13b's close** (acceptance rewritten to George's decisions, 2026-10-03):
+   the new-screen swap test, and the 7.9" and 11.9" bars tried on the hardware
+   (or unmarked as tested). Nothing else is open.
 4. **Phase 13d, DACs** (an ADR first).
 5. **docs/HARDWARE.md** is a draft; what it lacks is listed at its end.
 
