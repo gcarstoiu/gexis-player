@@ -15,7 +15,8 @@
       "kind": "share",
       "manual": "Add a share",
       "note": "Music folders on a NAS or a computer, mounted read-only and offered to the server.",
-      "empty": "No shares yet. The Music folder and any USB disk are offered already."
+      "empty": "No shares found or added. The Music folder and any USB disk are offered already; a share that does not announce itself can be added by its address.",
+      "discover": true
     }
   ],
   "first": true

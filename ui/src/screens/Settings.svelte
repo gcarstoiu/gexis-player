@@ -134,6 +134,19 @@
   // pattern for every piece of text this screen takes.
   function asSheet(row) {
     if (!row) return row;
+    if (shareLogin) {
+      return {
+        ...row,
+        type: 'share-login',
+        label: `Sign in to ${shareLogin.name}`,
+        note: 'It shows its shares only to a user it knows. The same user and password are used to mount the one you choose.',
+        confirm: 'Show shares',
+        wired: true,
+      };
+    }
+    if (shareBrowse) {
+      return { ...row, label: `Shares on ${shareBrowse.server.name}`, note: 'Tap one to add it.', discover: false, manual: null };
+    }
     if (joinItem) {
       return {
         ...row,
@@ -544,6 +557,8 @@
   function openSheet(row) {
     sheetKey = row.key;
     manual = false;
+    shareBrowse = null;
+    shareLogin = null;
     choicePending = null;
     joinItem = null;
     join = null;
@@ -615,6 +630,32 @@
 
   //: ADR-0115: the share being added.
   let share = $state({ address: '', user: '', password: '' });
+  //: ADR-0115's scan: the server whose shares are shown (with the login
+  //: that showed them), and the server waiting for a login first.
+  let shareBrowse = $state(null);
+  let shareLogin = $state(null);
+  let shareCreds = $state({ user: '', password: '' });
+
+  async function browseShares(item, user = null, password = null) {
+    searching = true;
+    listError = null;
+    await command({ name: item.name, action: 'browse', server: item.server, user, password }, (answer) => {
+      searching = false;
+      if (answer.login) {
+        shareLogin = item;
+        shareCreds = { user: user ?? '', password: '' };
+        if (user) flash(answer.error ?? 'Not accepted');
+        return;
+      }
+      if (!answer.ok) {
+        flash(answer.error ?? 'Could not read its shares');
+        return;
+      }
+      shareBrowse = { server: item, user, password };
+      items = answer.items ?? [];
+      if (!items.length) listError = `${item.name} shows no shares to this user.`;
+    });
+  }
 
   function enterManual() {
     share = { address: '', user: '', password: '' };
@@ -628,8 +669,26 @@
     // Choosing a server is a write; joining a network is a command. The row
     // that stores a value and the row that performs one are the same type,
     // and `kind` is what tells them apart (ADR-0044 §1).
-    // ADR-0115: a share's row says how it is; Forget is beside it.
-    if (row.kind === 'share') return;
+    // ADR-0115: a found server shows its shares; a share on it is added with
+    // the login that showed it; a share already added says how it is.
+    if (row.kind === 'share') {
+      if (item.share && shareBrowse) {
+        const key = sheetKey;
+        const { user, password } = shareBrowse;
+        await command({ name: item.name, action: 'add', user: user ?? (item.name.startsWith('//') ? 'guest' : null), password }, (answer) => {
+          if (!answer.ok) {
+            flash(answer.error ?? 'Could not add it');
+            return;
+          }
+          flash(`${item.name} added`);
+          shareBrowse = null;
+          openList(key);
+        });
+      } else if (item.server) {
+        browseShares(item);
+      }
+      return;
+    }
     if (row.kind === 'server') {
       closeSheet();
       // Tapping the server already in use says "that one", so the sheet
@@ -670,6 +729,7 @@
     server: { title: 'Searching the network', note: 'Servers answer within a few seconds.' },
     network: { title: 'Looking for networks', note: 'The adapter sweeps every channel.' },
     device: { title: 'Looking for devices', note: 'Paired devices answer straight away.' },
+    share: { title: 'Looking for shares', note: 'Servers that announce themselves answer within a few seconds.' },
   };
 
   const ORDINAL = /^(\d+)G5_(.*)$/;
@@ -758,6 +818,12 @@
       doJoin(joinItem.name, draft);
       return;
     }
+    if (row.type === 'share-login') {
+      const item = shareLogin;
+      shareLogin = null;
+      browseShares(item, shareCreds.user.trim() || null, shareCreds.password || null);
+      return;
+    }
     if (row.type === 'share') {
       // ADR-0115: added, then mounted by the core; the list says how that went.
       const key = sheetKey;
@@ -837,6 +903,14 @@
     }
     if (region !== null && sheet?.grouped) {
       region = null;
+      return;
+    }
+    // ADR-0115's scan: from a server's shares or its login, back to the list.
+    if (shareBrowse || shareLogin) {
+      const key = sheetKey;
+      shareBrowse = null;
+      shareLogin = null;
+      openList(key);
       return;
     }
     sheetKey = null;
@@ -1462,6 +1536,11 @@
             <span>{withUnit(String(sheet.max).replace('-', MINUS), sheet.unit)}</span>
           </div>
         </div>
+      {:else if sheet.type === 'share-login'}
+        <input class="field" type="text" placeholder="User" bind:value={shareCreds.user}
+          autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="User" />
+        <input class="field" type="password" placeholder="Password" bind:value={shareCreds.password}
+          autocomplete="off" aria-label="Password" />
       {:else if sheet.type === 'share'}
         <!-- ADR-0115: SMB as //nas/music with a user and a password; NFS as
              nas:/music, with neither. -->
@@ -1494,7 +1573,7 @@
         <button class="btn" type="button" disabled={saving} onclick={cancelSheet}>
           {#if join === 'error'}
             Give up
-          {:else if joinItem || (sheet.grouped && region !== null)}
+          {:else if joinItem || shareBrowse || shareLogin || (sheet.grouped && region !== null)}
             Back
           {:else if restorePending}
             Cancel
@@ -1504,7 +1583,7 @@
             Cancel
           {/if}
         </button>
-        {#if join === 'error' || joinItem || restorePending || choicePending !== null || sheet.type === 'action' || sheet.type === 'toggle' || sheet.type === 'text' || sheet.type === 'share' || (sheet.type === 'number' && !sheet.wired) || (sheet.type === 'list' && sheet.manual && !searching)}
+        {#if join === 'error' || joinItem || restorePending || choicePending !== null || sheet.type === 'action' || sheet.type === 'toggle' || sheet.type === 'text' || sheet.type === 'share' || sheet.type === 'share-login' || (sheet.type === 'number' && !sheet.wired) || (sheet.type === 'list' && sheet.manual && !searching)}
           <button
             class="btn btn--confirm"
             class:btn--danger={sheet.danger || restorePending || choicePending !== null}

@@ -62,7 +62,9 @@ export async function listAction(key, body) {
   const answer = await response.json().catch(() => ({}));
   if (!response.ok) return { ok: false, error: answer.error ?? `HTTP ${response.status}` };
   if (answer.ok) await loadSettings();
-  return { ok: !!answer.ok, error: answer.error ?? null };
+  // `items` and `login` for a list that browses inside an item (ADR-0115's
+  // network shares: a server's shares, or the login it wants first).
+  return { ok: !!answer.ok, error: answer.error ?? null, items: answer.items ?? null, login: !!answer.login };
 }
 
 /** An `action` row. Nothing called this before `reboot` was wired: `power`

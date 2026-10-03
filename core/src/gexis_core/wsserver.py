@@ -35,7 +35,7 @@ from aiohttp import web
 from dbus_next import BusType
 from dbus_next.aio import MessageBus
 
-from gexis_core import backups, bluetooth_devices, device_name, discovery, skins, wifi
+from gexis_core import backups, bluetooth_devices, device_name, discovery, lyrion_scan, skins, wifi
 from gexis_core.adapters.base import TRANSPORT_COMMANDS
 from gexis_core.artistinfo import PHOTO_BACKGROUND, PHOTO_LARGE, PHOTO_THUMB
 from gexis_core.artwork_sweep import ARTIST_NAMESPACE, remembered
@@ -1250,7 +1250,16 @@ class StateServer:
             if self._lyrion_shares is None:
                 return web.json_response({"items": []})
             # On this thread: it reads the settings store (SQLite, one thread).
-            return web.json_response({"items": self._lyrion_shares.items()})
+            saved = self._lyrion_shares.items()
+            # ADR-0115's scan: the servers announcing themselves, after the
+            # shares already added; this device's own left out.
+            own = {device_name.hostname(), f"{device_name.hostname()}.local", device_name.address() or ""}
+            found = await asyncio.to_thread(lyrion_scan.servers, own)
+            for server in found:
+                saved.append({"name": server.name, "bars": None, "state": "found",
+                              "meta": f"{server.kind.upper()} · {server.host} · tap to see its shares",
+                              "server": {"host": server.host, "kind": server.kind}})
+            return web.json_response({"items": saved})
         if key == "restore":
             # ADR-0083. Read from the share every time: somebody may have
             # copied one in from another machine since the sheet last opened,
@@ -1298,6 +1307,20 @@ class StateServer:
             try:
                 # The store on this thread (SQLite, one thread); the unmount,
                 # which can take seconds, in a worker.
+                if action == "browse":
+                    # One server's shares, or a request for a login.
+                    target = body.get("server") or {}
+                    server = lyrion_scan.Server(name=name, host=str(target.get("host") or name),
+                                                kind="nfs" if target.get("kind") == "nfs" else "smb")
+                    try:
+                        found = await asyncio.to_thread(lyrion_scan.shares, server, body.get("user") or None,
+                                                        body.get("password") or None)
+                    except lyrion_scan.NeedsLogin:
+                        return web.json_response({"ok": False, "login": True,
+                                                  "error": f"{name} needs a user and password to show its shares"})
+                    return web.json_response({"ok": True, "error": None, "items": [
+                        {"name": s["address"], "meta": s["comment"] or None, "bars": None, "state": "found",
+                         "share": True} for s in found]})
                 if action == "add":
                     self._lyrion_shares.add(name, body.get("user"), body.get("password"))
                 elif action == "forget":
