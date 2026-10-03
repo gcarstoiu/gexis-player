@@ -348,6 +348,19 @@ async def test_forgetting_removes_the_bond_not_just_the_trust_flag():
 
 
 @pytest.mark.asyncio
+async def test_forgetting_by_address_works_as_by_name():
+    """Found on George's player, 2026-10-03: the sheet sends a device's
+    address since the network shares' Forget did (0.8.3), and a forget that
+    matched only names answered "That device is not paired"."""
+    from gexis_core import bluetooth_devices as bd
+
+    bus = _Bus(_tree())
+    address = (await bd.known(bus))[0]["address"]
+    assert await bd.forget(bus, address) == (True, None)
+    assert bus.remover.removed == ["/org/bluez/hci0/dev_A"]
+
+
+@pytest.mark.asyncio
 async def test_forgetting_something_that_is_not_paired_says_so():
     from gexis_core import bluetooth_devices as bd
 
