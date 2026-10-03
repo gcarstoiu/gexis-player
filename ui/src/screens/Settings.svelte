@@ -2045,6 +2045,7 @@
   }
 
   .row {
+    position: relative;
     flex-shrink: 0;
     width: 100%;
     container-type: inline-size;
@@ -2117,6 +2118,16 @@
   @container srow (max-width: 520px) {
     .row__body {
       flex-wrap: wrap;
+    }
+    /* The arrow in the middle of the tile, not beside its first line
+       (George, 2026-10-03: "center the arrow on the tiles on mobile"). */
+    .row__body:has(> .chev) {
+      padding-right: 26px;
+    }
+    .row__body > .chev {
+      position: absolute;
+      right: 24px;
+      top: calc(50% - 6px);
     }
     .row__value {
       order: 9;
