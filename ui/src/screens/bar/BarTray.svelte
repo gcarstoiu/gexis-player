@@ -71,6 +71,18 @@
     },
   });
 
+  //: **A swipe up anywhere closes it** (George, 2026-10-04: "Dismissing it
+  //: should work as well with a swipe up") - not only on the close band.
+  //: Still the control under the finger first: a touch that lands on a
+  //: button or the slider is theirs.
+  const OWN = 'button, input, .slider, [role="slider"], .closeband';
+  const bodySwipe = {
+    down(event) { if (!event.target.closest(OWN)) band.down(event); },
+    move: band.move,
+    up: band.up,
+    cancel: band.cancel,
+  };
+
   function goHome() {
     press.act(() => {
       onclose?.();
@@ -95,9 +107,10 @@
   style:transform={`translateY(${shownH - TRAY_H - (shownH ? 0 : 60)}px)`}
   inert={!open}
   role="presentation"
-  onpointerdown={onactivity}
-  onpointerup={onsettled}
-  onpointercancel={onsettled}
+  onpointerdown={(event) => { onactivity?.(event); bodySwipe.down(event); }}
+  onpointermove={bodySwipe.move}
+  onpointerup={(event) => { onsettled?.(event); bodySwipe.up(event); }}
+  onpointercancel={(event) => { onsettled?.(event); bodySwipe.cancel(event); }}
 >
   <div class="closeband" role="button" tabindex="-1" aria-label="Close controls"
     onpointerdown={band.down} onpointermove={band.move} onpointerup={band.up} onpointercancel={band.cancel}></div>
