@@ -24,8 +24,17 @@ Window.SetBackgroundBottomColor(0.063, 0.102, 0.129);
 // from the first frame to the panel (George, 2026-10-03, on the 13.3" at
 // 1920x1080: first "not centered", then centred but "towards the end the
 // logo is zoomed in ... Either make all smaller or all larger. No mix").
+// **A bar fits instead** (George, 2026-10-04: on the 11.9" the logo was
+// "zoomed in a lot"): filling 320 px of height with an 800 px still cut the
+// logo itself. A window at least 2.4 times as wide as tall is a bar
+// (ADR-0109's boundary); the kernel's panel_orientation has already turned it
+// landscape. The other two stages fit a bar too.
 original = Image("still.png");
-scale = Math.Max(Window.GetWidth() / original.GetWidth(), Window.GetHeight() / original.GetHeight());
+if (Window.GetWidth() >= 2.4 * Window.GetHeight()) {
+    scale = Math.Min(Window.GetWidth() / original.GetWidth(), Window.GetHeight() / original.GetHeight());
+} else {
+    scale = Math.Max(Window.GetWidth() / original.GetWidth(), Window.GetHeight() / original.GetHeight());
+}
 still = original.Scale(Math.Int(original.GetWidth() * scale), Math.Int(original.GetHeight() * scale));
 sprite = Sprite();
 sprite.SetX(Math.Int((Window.GetWidth() - still.GetWidth()) / 2));

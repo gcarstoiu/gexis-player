@@ -82,6 +82,38 @@ def set_mode(mode: int, name: str) -> int:
     return 0
 
 
+SCREEN_ENV = "/etc/gexis/screen.env"
+
+
+def read_screen_env(path: str = SCREEN_ENV) -> dict:
+    """The chosen screen (ADR-0109), or nothing: the panel as it comes."""
+    try:
+        with open(path) as handle:
+            return dict(l.strip().split("=", 1) for l in handle if "=" in l and not l.startswith("#"))
+    except OSError:
+        return {}
+
+
+def _turns():
+    """wlr-randr's transform -> (how the landscape picture is turned into the
+    framebuffer, whether the canvas is the framebuffer's sides swapped).
+    **To be confirmed on the bar** (2026-10-04): the direction of 90 and 270
+    is read off the panel, not derived."""
+    try:
+        from PIL import Image
+    except ImportError:
+        return {}
+    return {
+        "normal": (None, False),
+        "90": (Image.Transpose.ROTATE_270, True),
+        "180": (Image.Transpose.ROTATE_180, False),
+        "270": (Image.Transpose.ROTATE_90, True),
+    }
+
+
+TURNS = _turns()
+
+
 def fb_geometry():
     """Width, height, bits per pixel and stride, from the device itself.
 
@@ -130,6 +162,26 @@ def prepare(png_path: str):
         log(f"cannot read {png_path} ({exc}); not painting")
         return None
 
+    # **A turned panel is drawn turned, and a bar's logo fits its height**
+    # (George, 2026-10-04, on the 11.9" bar: "the boot logo is zoomed in a
+    # lot"). The framebuffer is the panel's native portrait 320x1480; the
+    # compositor turns it later (`GEXIS_SCREEN_TRANSFORM`). So the still is
+    # drawn on the landscape canvas the panel will show, then turned into
+    # the framebuffer's orientation. On a bar, *fit*: filling a 1280x800
+    # still into 320 px of height cut the logo itself, here and in swaybg.
+    screen = read_screen_env()
+    turn = TURNS.get(screen.get("GEXIS_SCREEN_TRANSFORM", "normal"))
+    bar = screen.get("GEXIS_SCREEN_FAMILY") == "bar"
+    if turn is not None and turn[1]:
+        width, height = height, width          # the canvas the panel shows
+    if bar:
+        scale = min(width / image.width, height / image.height)
+        size = (max(1, round(image.width * scale)), max(1, round(image.height * scale)))
+        log(f"still is {image.size}, bar is {(width, height)}; fitting it at {size}")
+        fitted = image.resize(size, Image.LANCZOS)
+        canvas = Image.new("RGB", (width, height), image.getpixel((0, 0)))
+        canvas.paste(fitted, ((width - size[0]) // 2, (height - size[1]) // 2))
+        image = canvas
     # **Fill, as swaybg does** (`--mode fill`, behind the panel): scaled to
     # cover the screen, keeping its shape, cut evenly at the edges. George,
     # 2026-10-03, on a 1920x1080 screen: the logo started centred at its own
@@ -143,6 +195,10 @@ def prepare(png_path: str):
         image = image.resize(size, Image.LANCZOS)
         left, top = (image.width - width) // 2, (image.height - height) // 2
         image = image.crop((left, top, left + width, top + height))
+    if turn is not None and turn[0] is not None:
+        image = image.transpose(turn[0])
+        log(f"turned for {screen.get('GEXIS_SCREEN_TRANSFORM')}")
+        width, height = image.size
 
     pixels = np.asarray(image).astype(np.uint16)
     if bpp == 16:  # RGB565

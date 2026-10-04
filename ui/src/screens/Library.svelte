@@ -279,7 +279,7 @@
   }
 
   // LMS's own artist photos, where the server has the plugin (ADR-0040 §1).
-  // Keyed by `<id>` for the grid and `<id>@300` for the page. A server
+  // Keyed by `<id>` for the grid and `<id>@600` for the page. A server
   // without the plugin answers null for everything and the circles keep
   // their initials, which is not a failure state.
   //: Kept in `lib/library.js`, so closing the library does not throw away
@@ -296,7 +296,7 @@
   //: photo store, so an artist the plugin has nothing for - 2Pac - showed
   //: initials next to a picture the daemon had already found.
   const artistPicture = $derived(
-    artistInfo.found?.artist_image ?? photos[`${artist?.id}@300`] ?? null,
+    artistInfo.found?.artist_image ?? photos[`${artist?.id}@600`] ?? null,
   );
 
   //: Hard-wrapped text with blank lines between paragraphs is what both
@@ -686,7 +686,7 @@
       path = [...path, { kind: 'artist', id: entry.id, label: entry.name }];
       // The page's disc is 262px, the grid's card 132px, so the page asks
       // for its own size rather than stretching the grid's thumbnail.
-      if ($artistPhotos[`${entry.id}@300`] === undefined) loadArtistPhotos([entry.id], 300);
+      if ($artistPhotos[`${entry.id}@600`] === undefined) loadArtistPhotos([entry.id], 600);
       // About and Similar artists: ADR-0038 §2 left them undrawn "until
       // Phase 8", and this is Phase 8. Fetched beside the discography
       // rather than before it, so the page arrives without waiting on a

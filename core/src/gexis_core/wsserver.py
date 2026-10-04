@@ -35,7 +35,7 @@ from aiohttp import web
 from dbus_next import BusType
 from dbus_next.aio import MessageBus
 
-from gexis_core import backups, bluetooth_devices, device_name, discovery, lyrion_scan, lyrion_shares, skin_previews, skins, wifi
+from gexis_core import backups, bluetooth_devices, skin_packs, device_name, discovery, lyrion_scan, lyrion_shares, skin_previews, skins, wifi
 from gexis_core.adapters.base import TRANSPORT_COMMANDS
 from gexis_core.artistinfo import PHOTO_BACKGROUND, PHOTO_LARGE, PHOTO_THUMB
 from gexis_core.artwork_sweep import ARTIST_NAMESPACE, remembered
@@ -409,7 +409,9 @@ class StateServer:
             )
         key = str(self._settings.value("wallpaper_key") or "").strip()
         topics = self._settings.value("wallpaper_topics") or []
-        answer = await self._wallpapers.next(key, list(topics), avoid=self._last_background)
+        # A bar asks for wide pictures (George, 2026-10-04).
+        bar = skin_packs.family(*skin_packs.screen_size()) == "bar"
+        answer = await self._wallpapers.next(key, list(topics), avoid=self._last_background, wide=bar)
         if answer.get("file"):
             self._last_background = answer["file"]
             answer = {**answer, "url": f"/idle/wallpaper/{answer['file']}"}

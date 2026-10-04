@@ -44,7 +44,11 @@ logger = logging.getLogger("gexis_core.artistinfo")
 #: page. ADR-0038 §7's ladder, and `.jpg` because the plugin's PNG is 93,939
 #: bytes against 17,999 for the same 200px picture (Finding 035).
 PHOTO_THUMB = 200
-PHOTO_LARGE = 300
+#: **600, not 300** (George, 2026-10-04, on the bars: "The artist picture in
+#: the artist overview is somewhat soft"). A bar's artist page draws it 400
+#: pixels across, and the 13.3" panel's disc is 354 at its 1.5 scale: 300
+#: was being stretched.
+PHOTO_LARGE = 600
 #: The idle screen's background fills the panel, so it asks for the panel's
 #: width (ADR-0047 §1). **Finding 035's rule, the other way round:** the
 #: queue rail's defect was asking for 500 px and drawing 42; asking for 300

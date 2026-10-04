@@ -2879,6 +2879,34 @@ player's (decision 18) and a 1 GB Pi is not offered it; its database memory
 is Normal under 4 GB (decision 19). **Left for later:** the scanner's memory
 per file on Pis other than 4 GB, and temperatures with a case (HARDWARE.md).
 
+### Phase 13f — Lyrion's own menus, plugins included
+
+**Added 2026-10-04** (George: *"can we make a plugin which extends the
+lyrion server navigation. Basically have everything that lyrion has as
+navigation items, including plugins"*, then *"Do it and add it as phase
+13f"*). What a server's own menu tree holds:
+[Finding 110](findings/110-what-lyrion-s-own-menus-hold.md).
+
+**Feasible on what exists:** the Radio screen already walks Lyrion's
+SlimBrowse tree from the core, handing the panel opaque handles rather than
+commands (ADR-0030). 13f widens that walker from the radio branch to the
+home menu, so My Apps - where plugins publish - appears without work per
+plugin.
+
+**An ADR before anything is built.** It must settle:
+- **Where it lives:** a *Lyrion* (or *More*) tile beside our own screens,
+  or in place of some of them.
+- **"As a plugin":** our plugins run software (renderers, services); none
+  adds navigation. A new plugin kind, or built in behind a setting - a
+  setting is proposed for ADR-0022's inventory first.
+- **What stays out:** the player's settings, Turn Off, alarms and sync live
+  in the same tree (Finding 110); the API is open to the LAN by decision
+  (ADR-0028). Which branches are reachable.
+- **The item kinds drawn:** folders, playables (play / add / next), text,
+  redirects; search (typed text - the keyboard is the user's); context
+  menus; and what a streaming plugin adds - **measured on a server with one
+  installed** first.
+
 ### Phase 14 — Themes
 
 **Cut out of Phase 10 on 2026-09-25** (George): *"Themes to be cut out and have

@@ -605,6 +605,16 @@
     flex: 1;
     min-height: 0;
     overflow-y: auto;
+    /* **No scroll anchoring** (George, 2026-10-04, on the bar: "an all of a
+       sudden acceleration and the queue ends up on the last position after
+       having the letters jumbled"). The list builds only the rows on screen
+       (ADR-0067); when a row leaves at the top its spacer grows by the same
+       height, which the browser took for content inserted above and paid
+       back in scroll - so more rows left, and it paid more. Measured with a
+       touch fling: 17 px a frame, then 79, 139, 199, 259 and the end of the
+       queue in 0.3 s; with anchoring off, 18 down to 0, smoothly. The
+       spacers already keep every row where it was. */
+    overflow-anchor: none;
     display: flex;
     flex-direction: column;
     /* **The space between rows belongs to the row**, not to the list. A

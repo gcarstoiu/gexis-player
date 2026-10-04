@@ -1081,6 +1081,36 @@ name every way it could fail and which of them the test touched.** (The
 earlier "50 Hz is easier on the link" was wrong outright: at 1920 x 1080 it
 is the same 148.5 MHz - caught before it was run.)
 
+**57. A swipe that only a script could do** (2026-10-04, the bars' tray).
+- **What went wrong.** A swipe up to close the tray was built and checked by
+  dispatching `PointerEvent`s from the page: it closed. On the bar a finger's
+  swipe did nothing, and the tray closed 2-3 s later on its own timer. The
+  tray left touch to the browser, which took the drag as a pan and sent
+  `pointercancel`; a synthetic event is never cancelled.
+- **What it looked like.** A passing check, with the state read back.
+- **How it was caught.** By George, on the panel.
+
+**A gesture is checked with the input a finger produces** - CDP
+`Input.dispatchTouchEvent` with touch emulation on (`touchswipe.py` in that
+session's scratchpad: 2.86 s without the fix, at once with it) - and the
+check is run once without the fix, to see it fail.
+
+**58. Frames counted, positions not** (2026-10-04, the queue on the bar).
+- **What went wrong.** George saw the queue's letters jumble during a fast
+  scroll. It was measured on the real panel: a steady scripted scroll of 4,
+  12 and 30 px a frame ran at 55-57 fps, and the report blamed the panel's
+  slow pixels. The real cause was a runaway: scroll anchoring paid back
+  every row the windowed list dropped, so a fling accelerated to the end of
+  the queue in 0.3 s.
+- **What it looked like.** Good frame rates, a plausible physical cause, and
+  a video that matched it.
+- **How it was caught.** By George, who tried other lists and found only
+  the queue did it.
+
+**A check of movement logs where things went, every frame, not only how
+often a frame came - and drives it as a person does (a touch fling, not a
+scripted step), since a fixed step never let the list run.**
+
 ## Common shape
 
 Every case had a *plausible* substitute for the real target — the build

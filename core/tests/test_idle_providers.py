@@ -268,6 +268,22 @@ async def test_a_picture_is_downloaded_rather_than_hotlinked(tmp_path):
     assert asked["min_width"] == 1280
 
 
+async def test_a_bar_is_given_wide_pictures_and_the_usual_ones_without_any(tmp_path):
+    """George, 2026-10-04 ("C"): a bar's wallpapers in a bar's shape - at
+    least 2.4 to 1, from a bigger page asked for at a lower height."""
+    wide = {**hit(1, "nature"), "imageWidth": 6000, "imageHeight": 2000}
+    usual = {**hit(2, "nature"), "imageWidth": 1920, "imageHeight": 1080}
+    session = FakeSession(pixabay({"nature": [usual, wide]}))
+    source = Wallpapers(session, tmp_path)
+    for _ in range(10):
+        assert (await source.next("key", ["Nature"], wide=True))["file"] == "1.jpg"
+    asked = [p for url, p in session.calls if "/api/" in url]
+    assert asked[0]["per_page"] == 200 and asked[0]["min_height"] == 400
+    # None wide: the usual pictures, which the idle screen crops to the bar.
+    session = FakeSession(pixabay({"nature": [usual]}))
+    assert (await Wallpapers(session, tmp_path / "b").next("key", ["Nature"], wide=True))["file"] == "2.jpg"
+
+
 async def test_several_topics_are_mixed_rather_than_taken_in_turn(tmp_path, monkeypatch):
     """George, 2026-09-21: *"the photos should come randomly from all the
     categories, not be stuck in only one of the many."* Over many refreshes

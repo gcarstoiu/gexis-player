@@ -9,15 +9,19 @@
   - Progress is a 3 px line on the rail's inner (left) edge, filling **from
     the bottom**, in the source's accent at 0.8. As on the panel's mini
     strip, it is drawn only when the renderer reports a position.
-  - **Nothing playing:** an empty slot, no mark, no progress, and play at
-    0.3 and inert (round 2). This is the bar's whole answer to the panel's
-    waiting services: the rail is where the renderer would be.
+  - **Nothing playing: the renderers waiting, as pulsing marks** - no names,
+    no play (George, 2026-10-04, testing the bars: "When no renderer is
+    connected the current sidebar for currently playing is filled with the
+    pulsating logos - no text, just the logos"). The panel's waiting
+    services, in the rail's width; round 2's empty slot and inert play were
+    read as broken.
 
   A tap anywhere but play opens now playing, as the mini strip does.
 -->
 <script>
   import { enrichedArtwork } from '../../lib/enrichment.js';
   import SourceMark from '../../lib/SourceMark.svelte';
+  import { availability, sources } from '../../lib/state.js';
   import { playhead } from '../../lib/playhead.svelte.js';
   import { playToggle } from '../../lib/playToggle.svelte.js';
 
@@ -37,6 +41,22 @@
     if (supplied && supplied !== failedArtwork) return supplied;
     return $enrichedArtwork && $enrichedArtwork !== failedArtwork ? $enrichedArtwork : null;
   });
+
+  //: The renderers that could play, in the waiting services' order and ring
+  //: delays (WaitingServices.svelte), each a mark in a pulsing ring.
+  const DELAYS = { lms: 0, spotify: 900, bluetooth: 1800 };
+  const waiting = $derived(
+    Object.values($sources).filter((s) => s.kind === 'renderer' && $availability[s.id]),
+  );
+  //: **Sized to how many there are** (George, 2026-10-04: a fifth renderer
+  //: ran off the rail). The rail's height less its padding, shared out: four
+  //: keep the 64 px discs, five come to 59 and six to 47, and the gap
+  //: closes from 22 to 12 when more than four share it.
+  const RAIL_ROOM = 346;
+  const gap = $derived(waiting.length > 4 ? 12 : 22);
+  const disc = $derived(
+    Math.min(64, Math.floor((RAIL_ROOM - gap * Math.max(0, waiting.length - 1)) / Math.max(1, waiting.length))),
+  );
 
   let pressed = $state(false);
   const open = () => active && onopen?.();
@@ -59,6 +79,17 @@
   onpointerleave={() => (pressed = false)}
   onpointercancel={() => (pressed = false)}
 >
+  {#if !active}
+    <div class="waiting" style:gap={`${gap}px`}>
+      {#each waiting as w, i (w.id)}
+        <div class="waiting__one" style:width={`${disc}px`} style:height={`${disc}px`}>
+          <span class="waiting__ring" style:animation-delay={`${DELAYS[w.id] ?? 600 + i * 450}ms`}></span>
+          <SourceMark source={w.id} mark={w.mark} size={Math.round(disc * (w.id === 'bluetooth' ? 0.53 : 0.47))}
+            color={w.id === 'lms' ? 'var(--accent-lms)' : 'var(--ink)'} opacity={w.id === 'lms' ? 1 : 0.72} />
+        </div>
+      {/each}
+    </div>
+  {:else}
   <div class="progress">
     {#if active && head.hasPosition}
       <div class="progress__fill" style:--pos={`${head.percent.toFixed(2)}%`}></div>
@@ -97,9 +128,41 @@
       <span class="i-play"></span>
     {/if}
   </button>
+  {/if}
 </div>
 
 <style>
+  .waiting {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 22px;
+  }
+  .waiting__one {
+    position: relative;
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    display: grid;
+    place-items: center;
+    background: rgba(233, 238, 242, 0.05);
+    border: 1px solid rgba(233, 238, 242, 0.1);
+  }
+  /* The waiting services' ring, at the rail's size. */
+  .waiting__ring {
+    position: absolute;
+    inset: -1px;
+    border-radius: 50%;
+    border: 2px solid rgba(126, 214, 188, 0.5);
+    opacity: 0;
+    animation: railRing 2800ms ease-out infinite;
+  }
+  @keyframes railRing {
+    0% { transform: scale(1); opacity: 0.7; }
+    100% { transform: scale(1.45); opacity: 0; }
+  }
   .rail {
     position: relative;
     width: 124px;

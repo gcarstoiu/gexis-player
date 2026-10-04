@@ -33,7 +33,7 @@ from gexis_core.idle_page import probe as probe_idle_page
 from gexis_core.wallpapers import Wallpapers
 from gexis_core.weather import Weather
 from gexis_core.metadata_file import MetadataFileWriter
-from gexis_core.artistinfo import LmsArtistInfo
+from gexis_core.artistinfo import PHOTO_LARGE, LmsArtistInfo
 from gexis_core.enrichment import (
     CONFIDENCE_MIN,
     PREFETCH_AFTER_S,
@@ -2421,8 +2421,11 @@ async def main() -> None:
             # artists the plugin has nothing for, and this list merges
             # field by field - fanart offers only a picture, so putting it
             # first takes the picture and leaves the biography to LMS.
+            # At the artist page's size, as LMS's own pictures are (600 since
+            # 2026-10-04: the bars' page draws 400, and 300 was soft).
             FanartArtistImage(http, identity, lambda: settings.value("fanart_key"),
-                              proxy_base=f"http://{config.lms_host}:{config.lms_port}"),
+                              proxy_base=f"http://{config.lms_host}:{config.lms_port}",
+                              size=PHOTO_LARGE),
             # The same source, asked for the other shape: the idle screen's
             # background (ADR-0047 §1b). Only the idle route asks for it by
             # name, so no other screen pays for it.
@@ -2595,6 +2598,13 @@ async def main() -> None:
             state_store.bump_settings_revision()
 
     _sync_screen_settings()
+    # A kept screen's boot setting as this version writes it - a bar's
+    # panel orientation (2026-10-04) - for the next start.
+    try:
+        if screen_apply.refresh():
+            logger.info("screen: the kernel's video= brought up to date; it applies at the next start")
+    except OSError:
+        logger.exception("screen: the kept screen's files were not refreshed")
 
     async def _screen_go_back(reason: str) -> None:
         logger.warning("screen: %s; going back to the screen before", reason)

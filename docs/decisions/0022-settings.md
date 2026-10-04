@@ -284,6 +284,14 @@ Testing (George, 2026-10-04: *"all test releases come with the debug on, so
 that logs are kept between reboots"*). Stable keeps it off; a choice made
 either way stands.
 
+### Appended 2026-10-04 — the bars' wallpapers
+
+Confirmed by George, 2026-10-04 (*"Yes you can"*):
+
+| Setting | Mark | Notes |
+|---|---|---|
+| Bar wallpaper shape and crop | [H] | On a bar, Pixabay pictures at least 2.4 times as wide as tall are preferred, from a 200-result page at 400 px minimum height, falling back to the usual ones; the idle screen fills a bar with any picture it can crop by up to 70 %, framed at 35 % from the top (George, "C"). Fixed values, not rows |
+
 ## Settled by prior records
 
 - **Output mode switching is not instantaneous.** Confirmation dialogue, and the

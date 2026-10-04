@@ -89,7 +89,7 @@ async def test_the_artist_page_asks_for_a_larger_photo_than_the_grid():
     large = await info.photos([7452], PHOTO_LARGE)
 
     assert thumb[7452].endswith("image_200x200_o.jpg")
-    assert large[7452].endswith("image_300x300_o.jpg")
+    assert large[7452].endswith("image_600x600_o.jpg")
 
 
 @pytest.mark.asyncio
@@ -561,7 +561,7 @@ async def test_a_remote_photo_can_still_be_asked_for_at_page_size():
 
     large = await info.photos([7700], PHOTO_LARGE)
 
-    assert large[7700].endswith("image_300x300_o.jpg")
+    assert large[7700].endswith("image_600x600_o.jpg")
 
 
 @pytest.mark.asyncio

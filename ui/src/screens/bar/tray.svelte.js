@@ -28,7 +28,9 @@ export function bandDrag(sign, { onmove, onend }) {
       start = event.clientY;
       moved = false;
       dy = 0;
-      event.currentTarget.setPointerCapture?.(event.pointerId);
+      // No target when the slider hands a swipe over (BarTray): it holds
+      // the finger already.
+      event.currentTarget?.setPointerCapture?.(event.pointerId);
       onmove(0);
     },
     move(event) {
