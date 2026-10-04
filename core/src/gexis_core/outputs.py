@@ -23,9 +23,11 @@ from __future__ import annotations
 import logging
 import re
 import subprocess
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import NamedTuple
+
+from gexis_core import mixer_scale
 
 logger = logging.getLogger("gexis_core.outputs")
 
@@ -155,6 +157,8 @@ class Output:
     #: output (ADR-0055 §4).
     control: str | None
     connected: bool = True
+    #: The control's own scale (ADR-0117); None with no control.
+    scale: mixer_scale.Scale | None = field(default=None, compare=False)
 
     @property
     def option(self) -> str:
@@ -169,20 +173,21 @@ def _run(*args: str) -> str:
         return ""
 
 
-def playback_control(card: str) -> str | None:
-    """The card's playback volume control, or None if it has none.
+def playback_control(card: str) -> tuple[str, mixer_scale.Scale] | tuple[None, None]:
+    """The card's playback volume control and its scale, or (None, None).
 
     Read from `amixer contents` rather than `scontrols`, because the
     question is not what controls exist but whether one of them is a
     *playback volume* - `vc4hdmi0` has controls and none of them is.
+
+    **Only a control that says its dB** (ADR-0117 decision 1, (a)): one
+    that does not is passed over, and with none left the output is fixed.
     """
-    contents = _run("amixer", "-c", card, "contents")
-    for name, following in re.findall(
-        r"name='([^']+) Playback Volume'\n([^\n]*)", contents
-    ):
-        if "type=INTEGER" in following:
-            return name
-    return None
+    for name, scale in mixer_scale.playback_controls(_run("amixer", "-c", card, "contents")):
+        if scale is not None:
+            return name, scale
+        logger.warning("outputs: %s's %r gives no dB; not used for volume", card, name)
+    return None, None
 
 
 def _connected(card: str) -> bool:
@@ -213,12 +218,14 @@ def discover() -> list[Output]:
         if card in OURS or any(o.card == card for o in found):
             continue
         label = LABELS.get(card) or re.split(r" HiFi | hifi", description.strip())[0].strip()
+        control, scale = playback_control(card)
         found.append(
             Output(
                 card=card,
                 label=label or card,
-                control=playback_control(card),
+                control=control,
                 connected=_connected(card),
+                scale=scale,
             )
         )
     return found

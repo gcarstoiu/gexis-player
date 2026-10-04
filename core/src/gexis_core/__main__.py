@@ -100,7 +100,8 @@ from gexis_core.volume import (
     renderer_percent_to_value,
     hardware_raw_to_renderer_value,
     fixed_output as volume_fixed_output,
-    HARDWARE_MAX,
+    hardware_max,
+    use_scale,
     set_ceiling_reader,
     set_curve_reader,
     set_fixed_output_reader,
@@ -379,6 +380,8 @@ async def main() -> None:
         # ADR-0055: arbitration asks about the output the device is
         # playing to, not about the card it shipped with (Finding 048 §5).
         alsa.set_card(chosen_output.card)
+        # ADR-0117: raw values mean what this output's control says they do.
+        use_scale(chosen_output.scale)
         if chosen_output.control:
             config = replace(config, mixer_name=chosen_output.control)
         logger.info(
@@ -723,7 +726,7 @@ async def main() -> None:
             # full scale. Written directly: `write_hardware` now refuses
             # every write in this mode, including this one.
             logger.info("output: fixed - DAC to full scale, the panel can no longer lower it")
-            await set_raw(config.mixer_name, HARDWARE_MAX)
+            await set_raw(config.mixer_name, hardware_max())
         else:
             logger.info("output: variable - the device attenuates again")
             _reapply_level()
@@ -772,6 +775,7 @@ async def main() -> None:
         nonlocal forced_fixed
         forced_fixed = chosen.control is None
         alsa.set_card(chosen.card)
+        use_scale(chosen.scale)
         _restrict_output_mode(chosen)
         volume_bridge.set_mixer_name(chosen.control or config.mixer_name)
         # The monitor watches one card and was spawned for the old one; its

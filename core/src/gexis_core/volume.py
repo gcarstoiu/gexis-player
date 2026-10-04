@@ -121,7 +121,7 @@ import time
 from collections.abc import Callable
 from pathlib import Path
 
-from gexis_core import alsa
+from gexis_core import alsa, mixer_scale
 
 logger = logging.getLogger("gexis_core.volume")
 
@@ -131,9 +131,25 @@ logger = logging.getLogger("gexis_core.volume")
 ECHO_WINDOW_S = 0.75
 
 MIXER_DEVICE = "output"
-HARDWARE_MAX = 240  # ADR-0018: 240 steps, 0=mute, 240=0dB
-DB_MIN = -120.0  # raw 0
-DB_STEP = 0.5  # dB per raw step (ADR-0018, confirmed against amixer's own dBscale readout)
+#: **The output's own volume scale** (ADR-0117 decision 1): read from the
+#: card when the output is chosen (`use_scale`). It used to be the DAC2 HD's
+#: as constants (ADR-0018: 240 steps, 0=mute, 240=0dB), which drove every
+#: other control with wrong raw values - the Pi's own headphone jack runs
+#: -10239..400 in 0.01 dB steps. The DAC2 HD's stays the default.
+_scale = mixer_scale.DAC2_HD
+
+
+def use_scale(scale: mixer_scale.Scale | None) -> None:
+    """The scale every raw value below means from now on: the chosen
+    output's, or the DAC2 HD's when it has none (fixed output writes no
+    level but its top)."""
+    global _scale
+    _scale = scale or mixer_scale.DAC2_HD
+
+
+def hardware_max() -> int:
+    """The loudest raw value written: the control's 0 dB, never above it."""
+    return _scale.top
 
 #: **Where the current attenuation is left for the meter service to read**
 #: ([ADR-0057](../../../docs/decisions/0057-the-meters-follow-the-volume.md)).
@@ -472,7 +488,7 @@ def renderer_value_to_percent(value: int, steps: int) -> int:
 
 
 def raw_to_db(raw: int) -> float:
-    """Raw ALSA step (0-240) to dB, per ADR-0018's documented scale.
+    """Raw ALSA step to dB, on the output's own scale (ADR-0117).
 
     Found necessary on hardware, 2026-09-08: reasoning about this
     control in raw-step percentages is actively misleading - it's
@@ -482,12 +498,11 @@ def raw_to_db(raw: int) -> float:
     perceived loudness - clamping a restore floor, comparing renderers'
     levels, anything like that.
     """
-    return DB_MIN + raw * DB_STEP
+    return _scale.db(raw)
 
 
 def db_to_raw(db: float) -> int:
-    raw = round((db - DB_MIN) / DB_STEP)
-    return max(0, min(HARDWARE_MAX, raw))
+    return _scale.raw(db)
 
 
 def publish_attenuation(raw: int, path: Path = ATTENUATION_PATH) -> None:
@@ -742,7 +757,7 @@ async def set_raw(
     mixer_name: str,
     value: int,
     device: str = MIXER_DEVICE,
-    maximum: int = HARDWARE_MAX,
+    maximum: int | None = None,
 ) -> None:
     """Write a raw value to a mixer control.
 
@@ -752,7 +767,10 @@ async def set_raw(
     pushes out to the phone over AVRCP. Its scale is 0-127, not 0-240, so
     the clamp has to travel with the device.
     """
-    value = max(0, min(maximum, value))
+    if maximum is None:
+        value = max(_scale.raw_min, min(hardware_max(), value))
+    else:
+        value = max(0, min(maximum, value))
     key = (device, mixer_name)
     mixer = _MIXERS.get(key)
     if mixer is None:
