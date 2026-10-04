@@ -42,9 +42,52 @@
   const pct = $derived(vol.pct);
   const toast = $derived(vol.toast);
   let rail = $state(null);
-  const down = (event) => vol.down(event, rail);
-  const move = (event) => vol.move(event, rail);
-  const up = () => vol.up();
+  //: **The slider waits to see which way the finger goes** (George,
+  //: 2026-10-04: the swipe up "still doesn't work"). The slider is most of
+  //: the tray, and it took every touch at once - setting the level under the
+  //: finger - so a swipe up that began on it never reached the tray. Now a
+  //: move of 8 px decides: mostly upward closes the tray, anything else is
+  //: the slider, from where the finger first landed. A tap sets the level,
+  //: on lift.
+  const DECIDE = 8;
+  let pending = null;
+  function down(event) {
+    pending = { x: event.clientX, y: event.clientY, id: event.pointerId, way: null };
+    event.currentTarget.setPointerCapture?.(event.pointerId);
+  }
+  function move(event) {
+    if (!pending) return;
+    if (pending.way === null) {
+      const dx = event.clientX - pending.x;
+      const dy = event.clientY - pending.y;
+      if (Math.max(Math.abs(dx), Math.abs(dy)) < DECIDE) return;
+      pending.way = -dy > Math.abs(dx) ? 'close' : 'slide';
+      if (pending.way === 'close') band.down({ clientY: pending.y, pointerId: pending.id });
+      else vol.down({ clientX: pending.x, currentTarget: event.currentTarget, pointerId: pending.id }, rail);
+    }
+    if (pending.way === 'close') band.move(event);
+    else vol.move(event, rail);
+  }
+  function up(event) {
+    if (!pending) return;
+    const way = pending.way;
+    if (way === null) {
+      // A tap: the level where it landed.
+      vol.down({ clientX: pending.x, currentTarget: event.currentTarget, pointerId: pending.id }, rail);
+      vol.up();
+    } else if (way === 'close') {
+      band.up();
+      vol.up();
+    } else {
+      vol.up();
+    }
+    pending = null;
+  }
+  function cancel() {
+    if (pending?.way === 'close') band.cancel();
+    if (pending?.way === 'slide') vol.up();
+    pending = null;
+  }
   const toggleMute = () => vol.toggleMute();
 
   // ---- open, closed and in between -------------------------------------------
@@ -163,7 +206,7 @@
       onpointerdown={down}
       onpointermove={move}
       onpointerup={up}
-      onpointercancel={up}
+      onpointercancel={cancel}
     >
       <div class="rail" bind:this={rail}>
         <div class="fill" class:is-muted={muted} style:width={`${pct}%`}></div>
