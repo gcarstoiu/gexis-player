@@ -450,12 +450,17 @@
               <div class="label">Open in any browser</div>
               <div class="addr">http://{slug}.local:8090</div>
             </div>
-            <div class="note-card" style="--bar: {headless ? '#e0a758' : '#7ed6bc'}">
-              <span class="bar"></span>
-              <span>{headless
-                ? 'Nothing is drawn on the device, so this address is the only way in. Write it down before you close the page.'
-                : 'If the password is not accepted, the player opens its setup network again within about a minute. Join it, and this page picks up where you left off.'}</span>
-            </div>
+            <!-- The password line only when there was a password to refuse: a
+                 secured Wi-Fi was chosen - not over a cable with no Wi-Fi, nor
+                 on an open network (George, 2026-10-04: "Agree"). -->
+            {#if headless || (picked && secured)}
+              <div class="note-card" style="--bar: {headless ? '#e0a758' : '#7ed6bc'}">
+                <span class="bar"></span>
+                <span>{headless
+                  ? 'Nothing is drawn on the device, so this address is the only way in. Write it down before you close the page.'
+                  : 'If the password is not accepted, the player opens its setup network again within about a minute. Join it, and this page picks up where you left off.'}</span>
+              </div>
+            {/if}
           </section>
         {:else if step < 0}
           <section class="pane">
