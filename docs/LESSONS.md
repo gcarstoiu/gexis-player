@@ -1081,6 +1081,20 @@ name every way it could fail and which of them the test touched.** (The
 earlier "50 Hz is easier on the link" was wrong outright: at 1920 x 1080 it
 is the same 148.5 MHz - caught before it was run.)
 
+**57. A swipe that only a script could do** (2026-10-04, the bars' tray).
+- **What went wrong.** A swipe up to close the tray was built and checked by
+  dispatching `PointerEvent`s from the page: it closed. On the bar a finger's
+  swipe did nothing, and the tray closed 2-3 s later on its own timer. The
+  tray left touch to the browser, which took the drag as a pan and sent
+  `pointercancel`; a synthetic event is never cancelled.
+- **What it looked like.** A passing check, with the state read back.
+- **How it was caught.** By George, on the panel.
+
+**A gesture is checked with the input a finger produces** - CDP
+`Input.dispatchTouchEvent` with touch emulation on (`touchswipe.py` in that
+session's scratchpad: 2.86 s without the fix, at once with it) - and the
+check is run once without the fix, to see it fail.
+
 ## Common shape
 
 Every case had a *plausible* substitute for the real target — the build
