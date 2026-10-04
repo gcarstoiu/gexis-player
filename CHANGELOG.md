@@ -5,6 +5,19 @@ Every release of Gexis Player and its notes, newest first. Generated from
 edit that file, not this one. The player shows the last 10 under
 Settings → System → Change logs.
 
+## 0.8.8 — 4 October 2026
+
+### New
+
+- A newly attached screen is used straight away at start, already in its own resolution, with Keep this screen?. A screen the player does not know is laid out from its own resolution, and a panel that stands upright, such as a bar, is turned to landscape.
+- On a bar, Now Playing shows the artist, album and year larger, with the year straight after the album.
+- On the Testing channel, the player's logs are kept across restarts by default, to help track down problems.
+
+### Fixed
+
+- Keep this screen? waits two minutes for every change, including a new screen and a rotation.
+- On a bar's first start, Keep this screen? is drawn on the bar's own layout, so its Keep button can be seen.
+
 ## 0.8.7 — 4 October 2026
 
 ### New
