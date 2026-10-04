@@ -39,7 +39,10 @@
       </span>
       <span class="step__body">
         <span class="step__label">{s.label}</span>
-        {#if s.name === 'download' && s.state === 'active'}
+        <!-- A bar for the two long steps: the download, and since
+             2026-10-04 the install (George: "Right now it's the longest
+             step, but the user is kept in the dark about progress"). -->
+        {#if (s.name === 'download' || s.name === 'install') && s.state === 'active'}
           <span class="step__bar"><span style:width={`${Math.round(share * 100)}%`}></span></span>
           <span class="step__pct">{Math.round(share * 100)} %</span>
         {/if}
