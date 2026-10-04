@@ -2893,7 +2893,10 @@ commands (ADR-0030). 13f widens that walker from the radio branch to the
 home menu, so My Apps - where plugins publish - appears without work per
 plugin.
 
-**An ADR before anything is built.** It must settle:
+**An ADR before anything is built** - drafted ahead as
+[ADR-0118](decisions/0118-lyrion-s-own-menus.md) (George: *"there will be
+more decisions and questions to be asked around it when the time comes"*).
+It must settle:
 - **Where it lives:** a *Lyrion* (or *More*) tile beside our own screens,
   or in place of some of them.
 - **"As a plugin":** our plugins run software (renderers, services); none
