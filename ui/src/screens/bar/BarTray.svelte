@@ -200,6 +200,12 @@
     right: 0;
     top: 0;
     height: 136px;
+    /* **The page's, not the browser's** - without it a finger's drag on the
+       tray became a browser pan, which cancels the swipe up, and the tray
+       closed only when its 3 s timer ran out (George, 2026-10-04: "I do it
+       and then 2 or 3 seconds later it actually does it"). The slider sets
+       its own. */
+    touch-action: none;
     z-index: 13;
     display: flex;
     align-items: center;
