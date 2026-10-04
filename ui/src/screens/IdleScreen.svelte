@@ -86,7 +86,13 @@
   //: on the other. The shapes that were composed to be looked at wide stay
   //: edge to edge.
   const PANEL_RATIO = $derived((screen.family === 'bar' ? screen.width : 1280) / panelHeight);
-  const CROP_LIMIT = 0.25;
+  //: **On a bar, a wide picture fills it** (George, 2026-10-04, "C"): a
+  //: 16:9 picture loses 44% of its height on a 1280 x 400 bar and 61% on a
+  //: 1480 x 320 one, and shown whole it was a small picture between two
+  //: blurred wings. Up to 70% is cropped there, from a point above the
+  //: middle where faces tend to be; a square (78% on the 11.9") or a
+  //: portrait still sits whole on its halo.
+  const CROP_LIMIT = $derived(screen.family === 'bar' ? 0.7 : 0.25);
   const cropped = $derived(
     ratio === null ? 0 : 1 - (ratio < PANEL_RATIO ? ratio / PANEL_RATIO : PANEL_RATIO / ratio)
   );
@@ -560,6 +566,9 @@
   }
   .bg--halo {
     transform: scale(1.12);
+  }
+  .idle--bar .bg:not(.bg--fit):not(.bg--halo) {
+    object-position: 50% 35%;
   }
   .scrim {
     position: absolute;
