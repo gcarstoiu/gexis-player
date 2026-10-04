@@ -156,7 +156,7 @@
   //: on a bar.
   let artistImage = $state({ for: null, url: null });
   const artistPicture = $derived(
-    (artistImage.for === artist?.id ? artistImage.url : null) ?? photos[`${artist?.id}@300`] ?? null,
+    (artistImage.for === artist?.id ? artistImage.url : null) ?? photos[`${artist?.id}@600`] ?? null,
   );
 
   // ---- toasts --------------------------------------------------------------
@@ -259,7 +259,7 @@
       discography = await loadArtistAlbums(entry.id);
       artist = entry;
       path = [...path, { kind: 'artist', id: entry.id, label: entry.name }];
-      if ($artistPhotos[`${entry.id}@300`] === undefined) loadArtistPhotos([entry.id], 300);
+      if ($artistPhotos[`${entry.id}@600`] === undefined) loadArtistPhotos([entry.id], 600);
       artistImage = { for: entry.id, url: null };
       loadArtistInfo(entry.id, entry.name).then((answer) => {
         if (artistImage.for !== entry.id) return;

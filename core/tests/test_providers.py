@@ -545,7 +545,7 @@ async def test_the_sweeps_portrait_answers_without_a_lookup():
         body = await (await client.get("/library/artist-info?id=7452&name=AC%2FDC")).json()
 
     assert body["enrichment"]["artist_image"] == (
-        "http://lms/imageproxy/https://fan/acdc.jpg/image_300x300_o.jpg"
+        "http://lms/imageproxy/https://fan/acdc.jpg/image_600x600_o.jpg"
     )
     # The text is still the plugin's; only the picture changes hands.
     assert body["enrichment"]["biography"] == "From the plugin."
@@ -599,7 +599,7 @@ async def test_fanart_is_not_asked_for_a_picture_we_are_holding():
 
     # Asked for the one the sweep has nothing for, and only that one.
     assert [k.artist for k in asked] == ["nobody"]
-    assert held["enrichment"]["artist_image"].endswith("image_300x300_o.jpg")
+    assert held["enrichment"]["artist_image"].endswith("image_600x600_o.jpg")
     assert missing["enrichment"]["artist_image"] == "http://fanart/net.jpg"
 
 
@@ -640,7 +640,7 @@ async def test_what_is_playing_gets_the_sweeps_portrait_too():
         body = await (await client.get("/enrichment")).json()
 
     assert body["enrichment"]["artist_image"] == (
-        "http://lms/imageproxy/https://fan/daft.jpg/image_300x300_o.jpg"
+        "http://lms/imageproxy/https://fan/daft.jpg/image_600x600_o.jpg"
     )
 
 
