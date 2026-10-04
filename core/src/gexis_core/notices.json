@@ -404,6 +404,16 @@
       "sources": []
     },
     {
+      "name": "DAC board list",
+      "group": "core",
+      "role": "The DAC boards the player can name, and the Sound card board setting offers for a board that cannot name itself: overlays, card names, volume controls.",
+      "author": "Volumio (Michelangelo Guarise and contributors)",
+      "licence": "GPL-3.0",
+      "url": "https://github.com/volumio/volumio3-backend",
+      "arrives": "dacs.json at commit e4cc75ae (last changed at c82d2341a3), kept with its licence in core/src/gexis_core/boards_data/; corrected as boards.py says",
+      "sources": []
+    },
+    {
       "name": "DSEG7",
       "group": "fonts",
       "role": "The seven-segment digits of the visualiser's clocks.",

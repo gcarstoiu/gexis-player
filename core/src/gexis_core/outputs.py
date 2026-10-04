@@ -27,7 +27,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import NamedTuple
 
-from gexis_core import mixer_scale
+from gexis_core import boards, mixer_scale
 
 logger = logging.getLogger("gexis_core.outputs")
 
@@ -183,7 +183,13 @@ def playback_control(card: str) -> tuple[str, mixer_scale.Scale] | tuple[None, N
     **Only a control that says its dB** (ADR-0117 decision 1, (a)): one
     that does not is passed over, and with none left the output is fixed.
     """
-    for name, scale in mixer_scale.playback_controls(_run("amixer", "-c", card, "contents")):
+    controls = mixer_scale.playback_controls(_run("amixer", "-c", card, "contents"))
+    # **The list's name first** when a card has several (ADR-0117): the
+    # IQaudio DAC+'s *Analogue* is a 0 / -6 dB gain switch, *Digital* the
+    # volume.
+    preferred = boards.mixer_for(card)
+    controls.sort(key=lambda c: c[0] != preferred)
+    for name, scale in controls:
         if scale is not None:
             return name, scale
         logger.warning("outputs: %s's %r gives no dB; not used for volume", card, name)
