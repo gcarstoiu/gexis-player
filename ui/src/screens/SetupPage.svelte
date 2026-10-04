@@ -467,8 +467,8 @@
             <h1 class="hero">Set up <span class="word">gexis</span></h1>
             <p class="lead">
               {overLan
-                ? 'Nothing here leaves your network: the player is the only thing this page is talking to.'
-                : "You are connected to the player's own Wi-Fi. Nothing here leaves the room: the device is the only thing this page is talking to."}
+                ? 'This page talks only to the player, over your network.'
+                : "You are connected to the player's own Wi-Fi. This page talks only to the player."}
             </p>
             <div class="cards">
               <div class="info"><span class="bar" style="background:#8fc4d8"></span><span><b>About two minutes</b><small>A few questions. Every one of them can be changed later in Settings.</small></span></div>
