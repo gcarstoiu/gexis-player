@@ -1874,7 +1874,9 @@
     display: grid;
     grid-auto-flow: column;
     grid-template-rows: repeat(2, 120px);
-    grid-auto-columns: calc((100% - (var(--cols) - 1) * 16px) / var(--cols));
+    /* A third of the next column shows, so there is plainly more to the
+       right (George, 2026-10-04: the tiles filled the width exactly). */
+    grid-auto-columns: calc((100% - var(--cols) * 16px) / (var(--cols) + 0.35));
     gap: 16px;
     padding: 0 32px;
     scroll-padding: 0 32px;
