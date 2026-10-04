@@ -48,6 +48,15 @@
   const waiting = $derived(
     Object.values($sources).filter((s) => s.kind === 'renderer' && $availability[s.id]),
   );
+  //: **Sized to how many there are** (George, 2026-10-04: a fifth renderer
+  //: ran off the rail). The rail's height less its padding, shared out: four
+  //: keep the 64 px discs, five come to 59 and six to 47, and the gap
+  //: closes from 22 to 12 when more than four share it.
+  const RAIL_ROOM = 346;
+  const gap = $derived(waiting.length > 4 ? 12 : 22);
+  const disc = $derived(
+    Math.min(64, Math.floor((RAIL_ROOM - gap * Math.max(0, waiting.length - 1)) / Math.max(1, waiting.length))),
+  );
 
   let pressed = $state(false);
   const open = () => active && onopen?.();
@@ -71,11 +80,11 @@
   onpointercancel={() => (pressed = false)}
 >
   {#if !active}
-    <div class="waiting">
+    <div class="waiting" style:gap={`${gap}px`}>
       {#each waiting as w, i (w.id)}
-        <div class="waiting__one">
+        <div class="waiting__one" style:width={`${disc}px`} style:height={`${disc}px`}>
           <span class="waiting__ring" style:animation-delay={`${DELAYS[w.id] ?? 600 + i * 450}ms`}></span>
-          <SourceMark source={w.id} mark={w.mark} size={w.id === 'bluetooth' ? 34 : 30}
+          <SourceMark source={w.id} mark={w.mark} size={Math.round(disc * (w.id === 'bluetooth' ? 0.53 : 0.47))}
             color={w.id === 'lms' ? 'var(--accent-lms)' : 'var(--ink)'} opacity={w.id === 'lms' ? 1 : 0.72} />
         </div>
       {/each}
