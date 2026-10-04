@@ -261,7 +261,9 @@ async def _reboot() -> None:
 #: ADR-0109 decision 5: how long the panel asks *Keep this screen?*, from its
 #: first frame; and how long a panel that never draws gets before the device
 #: goes back by itself (a dark screen never says it is dark).
-KEEP_S = 30.0
+#: Two minutes for every Keep (George, 2026-10-04: "A change to a different
+#: screen should also wait 2 minutes"; a rotation and after setup already did).
+KEEP_S = 120.0
 NEVER_DRAWN_S = 120.0
 #: After setup, which ends on the phone rather than beside the panel
 #: (ADR-0109 as amended 2026-10-02, George: "C").
@@ -1603,6 +1605,10 @@ async def main() -> None:
             # ADR-0111: on where a pack is already installed - the devices
             # that had gexis-skins keep it, unasked (decision 10).
             "visualiser_skins": lambda: bool(skin_packs.installed()),
+            # George, 2026-10-04: "all test releases come with the debug on,
+            # so that logs are kept between reboots" - on by default on the
+            # Testing channel; a choice made either way stands.
+            "debug_logs": lambda: settings_store.get("update_channel") == "Testing",
             "image_build": lambda: " · ".join(x for x in (image_info().get("built"), updates.installed_release()) if x) or "unknown",
             # ADR-0086 as amended: a synthesised switch reads what systemd says
             # about the unit until somebody uses it.

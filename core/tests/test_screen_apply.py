@@ -159,7 +159,7 @@ def test_after_setup_the_question_waits_two_minutes(tmp_path):
     screen_apply.choose(Applied("waveshare-13.3-hdmi-h", 0), **f, now=1, after_setup=True)
     assert screen_question(screen_apply.read_state(f["state"]))["total"] == SETUP_KEEP_S == 120
     screen_apply.choose(Applied("waveshare-7.9-hdmi", 0), **f, now=2)
-    assert screen_question(screen_apply.read_state(f["state"]))["total"] == KEEP_S == 30
+    assert screen_question(screen_apply.read_state(f["state"]))["total"] == KEEP_S == 120, "every Keep waits two minutes (George, 2026-10-04)"
 
 
 def test_would_ask_writes_nothing(tmp_path):
