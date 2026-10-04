@@ -2670,7 +2670,12 @@ the draft below - George: *"Yes"*; ADR-0109 and its amendments, ADR-0111):
    (1480 x 320): Now Playing, the transition screen, idle, setup's network,
    password and QR, Browse, the visualiser with the bar skins; **Settings on
    the phone only**; what a bar drops dropped by design (decision 7).
-   *Open: not yet tried on the bars.*
+   *Met on both bars, 2026-10-04 (George, after the 11.9" and the 7.9":
+   "all good with it"). Found and fixed on the way, released in 0.8.8 and
+   0.8.9: a new screen switched to before the panel starts; Keep waits two
+   minutes; Now Playing, tray, rail, radio, idle and handoff on a bar; the
+   boot logo in the panel's own mode, turned. Both bars were tried at 180°;
+   a bar at 0° is not yet seen.*
 4. **Skins by screen size:** one pack per size, downloaded with consent, never
    in the image; their licences in Legal and Credits (ADR-0111).
    *Met since 0.5.0.*

@@ -175,11 +175,18 @@ def _setup_needed(connections: Path = CONNECTIONS) -> bool:
 def at_start(seen: screen_detect.Seen | None = None, *, headless: bool | None = None,
              setup_needed: bool | None = None, path: Path = STATE, files: dict | None = None) -> str:
     """Before the panel: a different screen is switched to, pending a Keep.
-    Returns what happened - "same", "asks" (a switch here already went back:
-    the core asks), "switched", or "restart" (the kernel's mode changed)."""
+    Returns what happened - "same", "pending" (a switch waits for Keep),
+    "asks" (a switch here already went back: the core asks), "switched", or
+    "restart" (the kernel's mode changed)."""
     from . import screen_apply
     if setup_needed if setup_needed is not None else _setup_needed():
         return "same"
+    # A switch made before this start's restart still waits for Keep - the
+    # core shows that, and nothing here is asked (it logged "asks" for the
+    # 7.9" bar, 2026-10-04, while Keep was on the panel).
+    state = (files or {}).get("state", screen_apply.STATE)
+    if screen_apply.read_state(state).get("pending"):
+        return "pending"
     seen = screen_detect.seen() if seen is None else seen
     q = question(seen, headless=_headless() if headless is None else headless, path=path)
     if q is None:

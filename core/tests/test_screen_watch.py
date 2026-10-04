@@ -107,6 +107,8 @@ def test_a_new_screen_is_switched_to_before_the_panel_and_tried_once(tmp_path):
     env = files["env"].read_text()
     assert "GEXIS_SCREEN_ID=other-1920x1200" in env and "GEXIS_SCREEN_SCALE=1.5" in env
     # Not kept, gone back: the next start asks rather than switching again.
+    from gexis_core import screen_apply
+    screen_apply.revert(**files)
     assert sw.at_start(MONITOR, headless=False, setup_needed=False, path=path, files=files) == "asks"
 
 
@@ -124,3 +126,12 @@ def test_nothing_is_switched_during_setup_headless_or_for_the_same_screen(tmp_pa
     assert sw.at_start(MONITOR, headless=True, setup_needed=False, path=path, files=files) == "same"
     assert sw.at_start(TEN, headless=False, setup_needed=False, path=path, files=files) == "same"
     assert not files["env"].exists()
+
+
+def test_a_switch_waiting_for_keep_after_its_restart_is_left_to_the_core(tmp_path):
+    # The 7.9" bar, 2026-10-04: switched, restarted for its mode, and the
+    # next start found it waiting for Keep - not a screen to ask about.
+    path, files = tmp_path / "seen.json", _files(tmp_path)
+    sw.kept(TEN, path)
+    assert sw.at_start(BAR, headless=False, setup_needed=False, path=path, files=files) == "restart"
+    assert sw.at_start(BAR, headless=False, setup_needed=False, path=path, files=files) == "pending"
