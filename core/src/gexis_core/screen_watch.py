@@ -12,6 +12,13 @@ would read as a new screen; it still counts toward recognising a model
 (`screen_detect.suggest`). "Not now" is remembered for that screen. A player
 that has nothing remembered yet - one updating to this - takes what is
 attached as what was kept, and asks nothing.
+
+**A recognised screen is switched to, not asked about** (amended 2026-10-04;
+George: *"if we know that another display was connected why not show directly
+in the correct resolution and ask the user to keep it?"*). The core does the
+switching; this remembers that it was **tried**, so a switch that went back
+- not kept, or no touch - is asked about at the next start instead of tried
+again, and again.
 """
 from __future__ import annotations
 
@@ -56,6 +63,15 @@ def kept(seen: screen_detect.Seen, path: Path = STATE) -> None:
         return
     doc = _read(path)
     doc["kept"] = k
+    # A screen kept is a fresh start: the next one recognised is switched to.
+    doc.pop("tried", None)
+    _write(doc, path)
+
+
+def tried(k: list, path: Path = STATE) -> None:
+    """A recognised screen was switched to without asking."""
+    doc = _read(path)
+    doc["tried"] = [*[t for t in doc.get("tried", []) if t != k], k]
     _write(doc, path)
 
 
@@ -87,4 +103,6 @@ def question(seen: screen_detect.Seen, *, headless: bool, path: Path = STATE) ->
         "size": k[2],
         "label": model.label if model else None,
         "name": f"{model.maker} {model.model}" if model else None,
+        # Switched to once already and not kept: ask this time.
+        "tried": k in doc.get("tried", []),
     }

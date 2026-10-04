@@ -53,3 +53,22 @@ def test_headless_and_nothing_readable_ask_nothing(tmp_path):
     sw.kept(TEN, path)
     assert sw.question(THIRTEEN, headless=True, path=path) is None
     assert sw.question(screen_detect.Seen(), headless=False, path=path) is None
+
+
+def test_a_recognised_screen_is_switched_to_once_then_asked_about(tmp_path):
+    # Amended 2026-10-04: switched to, not asked about - unless that switch
+    # went back, when the next start asks instead of switching again.
+    path = tmp_path / "seen.json"
+    sw.kept(TEN, path)
+    assert sw.question(THIRTEEN, headless=False, path=path)["tried"] is False
+    sw.tried(sw.key(THIRTEEN), path)
+    assert sw.question(THIRTEEN, headless=False, path=path)["tried"] is True
+
+
+def test_keeping_a_screen_clears_what_was_tried(tmp_path):
+    path = tmp_path / "seen.json"
+    sw.kept(TEN, path)
+    sw.tried(sw.key(THIRTEEN), path)
+    sw.kept(THIRTEEN, path)
+    sw.kept(TEN, path)
+    assert sw.question(THIRTEEN, headless=False, path=path)["tried"] is False

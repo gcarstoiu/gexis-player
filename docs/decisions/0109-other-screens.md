@@ -252,6 +252,34 @@ Also confirmed on the hardware that day: the 1920 x 1080 size, on the
 13.3" (George: *"You can also consider that the 1920 resolution was
 checked"*).
 
+### Amended 2026-10-04: a recognised screen is switched to
+
+George, 2026-10-04, after the swap test: *"if we know that another display
+was connected why not show directly in the correct resolution and ask the
+user to keep it? Why this additional screen that we have now?"* The question
+before the switch was a step of mine, not his: he had asked for "the choice
+to keep the new resolution". **Decided (A):**
+
+- **A recognised screen** - one whose fingerprint was measured here, so
+  today the 10.1" (B) and the 13.3" (H) - **is switched to at start**,
+  without asking: the panel comes up on it with *Keep this screen?*, and
+  goes back by itself if nobody keeps it.
+- **Only the kiosk restarts** when the kernel's mode does not change (no
+  `video=`; true of both tested screens); otherwise the device does, as a
+  choice in Settings does.
+- **A switch that went back is asked about at the next start**, by name as
+  before, rather than tried again - a screen with no working touch would
+  otherwise restart into a Keep nobody can press at every start. Keeping
+  any screen clears this.
+- **Any other screen** - the 106 listed models included, whose fingerprints
+  are unknown - is still asked about, opening the list on its size.
+
+Considered and **postponed** (George: *"Let's leave the crowd sourcing
+post"*): users sending a screen's fingerprint through a pre-filled GitHub
+issue from the phone page, without the EDID serial, so more models become
+recognised. Its open questions - an account-free route, and whether one
+report makes a screen recognised - stay open until it is taken up.
+
 ## Not in this record
 
 - The 800 × 480 on real hardware: designed and built, not tested until one is
