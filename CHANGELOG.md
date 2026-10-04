@@ -5,6 +5,22 @@ Every release of Gexis Player and its notes, newest first. Generated from
 edit that file, not this one. The player shows the last 10 under
 Settings → System → Change logs.
 
+## 0.8.7 — 4 October 2026
+
+### New
+
+- A newly attached screen the player recognises is used straight away at start, with Keep this screen?; if it is not kept, the player goes back to the screen before. Any other new screen is asked about, and the list of screens opens on its size.
+- A USB disk stays in the Lyrion server's list for 7 days after it is unplugged.
+- Setup says so when it finds no Wi-Fi network or no audio output.
+- Setup's step counter counts only the steps that are shown.
+
+### Fixed
+
+- On an artist's page, genres are kept to two rows, so Play and Shuffle are never covered.
+- After setup, Keep this screen? waits two minutes, as it says.
+- When the setup network cannot start, setup says why in a sentence.
+- A skin pack that failed to download is no longer reported as failed once the screen's pack is installed, and a failure is described in plain words.
+
 ## 0.8.6 — 3 October 2026
 
 ### New
