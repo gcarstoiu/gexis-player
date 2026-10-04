@@ -215,6 +215,71 @@ panels "with Case"; the case changes nothing the player sets. So a preset
 and (G))** - and is tested when its panel is. A choice saved under the old
 name or id still finds the panel. HDMI models listed: **106** (was 110).
 
+### Settled 2026-10-03: Browse on a bar, and the 800 x 480 size
+
+George, 2026-10-03, on the two points DEVELOPMENT.md still listed as owed:
+
+- **A bar keeps Browse; Settings is on the phone only** (*"already answered
+  and we have designs for it. We keep browse and put settings only on the
+  phone"*). The bar designs (round 2) draw it.
+- **800 x 480 stays in the list, untested,** until such a screen is at hand
+  (*"we leave it untested for now. No point in holding off an entire phase for
+  it. Once I have one, we can test"*). It does not hold 13b's close.
+
+### Amended 2026-10-03: a new screen is noticed at start
+
+George, 2026-10-03, after attaching the 13.3": *"Upon boot couldn't we detect
+that a new display was connected and give the user the choice to keep the new
+resolution?"* Until now a screen was recognised only in setup's Screen step,
+or when the Attached screen row was opened. **Decided (George, "All three
+decisions in agree with your recommendation"):**
+
+- **What the player remembers:** when a screen is kept, what it reported -
+  EDID maker, name and preferred mode, and the touch controller.
+- **At every start it compares** what is attached with that. If they differ,
+  it asks, on the panel and on the phone page: a recognised tested model by
+  name (*"A Waveshare 13.3" HDMI LCD (H) is attached. Use it?"*), anything
+  else by its size, opening the screen list on that size. A yes goes through
+  the existing restart and Keep, which goes back by itself - the new screen's
+  touch may not work yet, as the 13.3"'s did not (a charge-only cable).
+- **1. Any screen that reports something different** from the one kept is
+  asked about, not only tested ones (A, of A/B).
+- **2. "Not now" is remembered for that screen**, which is not asked about
+  again; a different one is (A, of A/B).
+- **3. A headless player never asks.**
+
+Also confirmed on the hardware that day: the 1920 x 1080 size, on the
+13.3" (George: *"You can also consider that the 1920 resolution was
+checked"*).
+
+### Amended 2026-10-04: a recognised screen is switched to
+
+George, 2026-10-04, after the swap test: *"if we know that another display
+was connected why not show directly in the correct resolution and ask the
+user to keep it? Why this additional screen that we have now?"* The question
+before the switch was a step of mine, not his: he had asked for "the choice
+to keep the new resolution". **Decided (A):**
+
+- **A recognised screen** - one whose fingerprint was measured here, so
+  today the 10.1" (B) and the 13.3" (H) - **is switched to at start**,
+  without asking: the panel comes up on it with *Keep this screen?*, and
+  goes back by itself if nobody keeps it.
+- **Only the kiosk restarts** when the kernel's mode does not change (no
+  `video=`; true of both tested screens); otherwise the device does, as a
+  choice in Settings does.
+- **A switch that went back is asked about at the next start**, by name as
+  before, rather than tried again - a screen with no working touch would
+  otherwise restart into a Keep nobody can press at every start. Keeping
+  any screen clears this.
+- **Any other screen** - the 106 listed models included, whose fingerprints
+  are unknown - is still asked about, opening the list on its size.
+
+Considered and **postponed** (George: *"Let's leave the crowd sourcing
+post"*): users sending a screen's fingerprint through a pre-filled GitHub
+issue from the phone page, without the EDID serial, so more models become
+recognised. Its open questions - an account-free route, and whether one
+report makes a screen recognised - stay open until it is taken up.
+
 ## Not in this record
 
 - The 800 × 480 on real hardware: designed and built, not tested until one is

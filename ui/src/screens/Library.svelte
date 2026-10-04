@@ -565,6 +565,31 @@
     return { update: reset, destroy: () => cancelAnimationFrame(frame) };
   }
 
+  /** The genre pills, kept to two rows (George, 2026-10-04: "avoid long
+   *  tags like the 'alternative rock / post-grunge' and limit to two rows
+   *  max"). Four pills, one of them on two lines, pushed Play under the mini
+   *  strip on the 13.3". A pill too wide for one line of the column is left
+   *  out, then every pill that would start a third row. Measured, not
+   *  counted in letters, so it holds for each screen's column width. */
+  function twoRows(node, _token) {
+    let frame;
+    const fit = () => {
+      const pills = [...node.children];
+      for (const pill of pills) pill.hidden = false;
+      for (const pill of pills) pill.hidden = pill.offsetWidth > node.clientWidth;
+      const tops = [...new Set(pills.filter((p) => !p.hidden).map((p) => p.offsetTop))].sort((a, b) => a - b);
+      const last = tops[1] ?? tops[0];
+      for (const pill of pills) if (!pill.hidden && pill.offsetTop > last) pill.hidden = true;
+    };
+    const later = () => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(fit);
+    };
+    fit();
+    later();
+    return { update: later, destroy: () => cancelAnimationFrame(frame) };
+  }
+
   //: What "a different page" means for the scrollers above.
   const where = $derived(path.map((p) => `${p.kind}:${p.id ?? p.handle ?? p.label}`).join('/'));
 
@@ -1500,7 +1525,7 @@
           <div>
             <div class="artistpage__name">{artist.name}</div>
             {#if genres.length}
-              <div class="artistpage__tags">
+              <div class="artistpage__tags" use:twoRows={genres}>
                 {#each genres as g (g)}
                   <span class="gtag">{g}</span>
                 {/each}
@@ -3348,6 +3373,8 @@
     margin-top: 14px;
   }
   .gtag {
+    /* One line each: a pill that would wrap is left out (twoRows). */
+    white-space: nowrap;
     font-size: var(--t-label);
     font-weight: 600;
     letter-spacing: 0.06em;

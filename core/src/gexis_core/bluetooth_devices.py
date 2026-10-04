@@ -97,7 +97,12 @@ async def forget(bus: MessageBus, name: str) -> tuple[bool, str | None]:
     adapter = await find_adapter(bus)
     if adapter is None:
         return False, "No Bluetooth adapter."
-    match = next((d for d in await known(bus) if d["name"] == name), None)
+    # By address first - what the sheet sends since 0.8.3, and the one that
+    # cannot be two phones - then by name (found on George's player,
+    # 2026-10-03: matching names alone answered "not paired").
+    devices = await known(bus)
+    match = next((d for d in devices if d["address"] and d["address"] == name), None) \
+        or next((d for d in devices if d["name"] == name), None)
     if match is None:
         return False, "That device is not paired."
     try:

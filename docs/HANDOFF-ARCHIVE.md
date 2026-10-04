@@ -5566,3 +5566,40 @@ made, not before (George, 2026-09-30; ADR-0107 decision 3).
 - Everything older that is still open is in the archive's 2026-09-27 block:
   the Squeeze Plex Hub route (decision 2), the timeline-poll lead, cross-rate
   gaps, Plex lyrics.
+
+---
+
+## 2026-10-02 block, moved 2026-10-03
+
+Last updated: 2026-10-02 (on R2D2).
+
+## Start here
+
+**Phase 13b (other screens) is built on `phase-13b`, in the main checkout,
+waiting on hardware tests and its PR.** 13c (updates over the network) is
+merged as PR #42 and 13a as PR #41; their narrative is in the archive's
+2026-10-02 block. Releases are published from here to the testing channel:
+**0.5.0 is the latest** (serial 10, 2026-10-02), after 0.3.0-0.3.3 and 0.4.0.
+
+| Part of 13b | State |
+|---|---|
+| Families, Chromium zoom, screen.env, bar UI | Built, rendered against a fake core (ADR-0109) |
+| The screen list | 110 HDMI models (foonerd's presets, MIT); George's four Waveshare screens marked Tested |
+| Recognising, choosing, Keep this screen? | Built. **Amended 2026-10-02** (George: *"A and C"*): asked only when the picture changes (forced mode, scale, rotation) - the 10.1" is kept without asking, the 13.3" and the bars are asked; after setup the phone says so and the panel waits 2 minutes; a go-back resets Settings too. **Not yet in a release** |
+| Setup's Screen and Visualiser steps | Built; the Visualiser step names the skin count (copy approved) |
+| Skins per screen size (ADR-0111, decisions 1-15) | **All four steps built and in 0.5.0**: five `gexis-skins-<W>x<H>` packages (66-652 MB), none in the image, installed with consent by `gexis-update pack-install`; the visualiser draws the installed pack, a smaller one centred on black; Legal and Credits. A device that kept `gexis-skins` keeps it (marked manual) |
+| Update UX (ADR-0110) | Built and used by George through 0.3.x |
+
+**Next, in order:**
+1. **0.5.1** with the Keep changes, when George asks (notes approved by him
+   first; the release number is approved with them).
+2. **Hardware**, as George's screens allow: the 13.3" (1920 x 1080 - the
+   visualiser's speed on a Pi 4 feeds the hardware requirements, ADR-0111
+   decision 12), the bars' modes and touch, recognition fingerprints for the
+   three screens not yet seen, the letterboxed and centred skins by eye.
+3. **Before the 13b PR** (ask George first): DEVELOPMENT.md's 13b
+   acceptance rewritten to what was built, IMPLEMENTED-DIFFERENTLY entries
+   (upload placement, playlist 420, the bar's deviations), optionally a
+   round-3 brief for Claude Design.
+4. **Phase 13d, DACs** (DEVELOPMENT.md): Volumio's DAC list, the DAC2 HD and
+   IQaudio DAC+ first. An ADR first.

@@ -2603,6 +2603,17 @@ and result, a manifest `area` (ADR-0086 amended), `tools/handover-check.py`.
    `updates` (Manual/Automatic) row is confirmed with George before it is
    surfaced.
 
+**PHASE 13a CLOSED, 2026-10-03** (George: *"Let's close 13 a and c"*).
+Merged as PR #41. Criteria 1-4 met on the device with George (2026-09-30).
+Criterion 5 met by the releases since 0.3 (ADR-0107, ADR-0108): the plugins we
+ship are packages at tested versions. The gap recorded above - *"not yet shown
+with a changed pin"* - was closed on 2026-10-03, and it was not as the record
+said: `gexis-fetch@` stays active once run, so a new pin waited for a reboot.
+Fixed (ADR-0100, amended 2026-10-03): the package carrying a pin re-fetches
+when it changes, and a faked older Lyrion pin on `gexis` was fetched again
+within the update (11 s, the update not held). `packaging/check-upstream.sh`
+says before each release which pins are behind their makers.
+
 ### Phase 13b — Other screens: sizes, bars, and knowing which one is attached
 
 **Before the first public release** (George, 2026-09-29: *"13a, b and c all
@@ -2636,7 +2647,40 @@ Claude Design: the brief George hands over is
   `foonerd/pi_screen_setup` (MIT, credited), **translated to KMS and tried on
   the hardware** — its `hdmi_timings` are not copied as they are.
 
-**Acceptance (draft, to be settled with the ADR)**
+**Acceptance, as decided** (rewritten 2026-10-03 to George's decisions since
+the draft below - George: *"Yes"*; ADR-0109 and its amendments, ADR-0111):
+
+1. **Choosing a screen, and a way back.** Setup's Screen step and Settings'
+   Attached screen and Screen rotation rows: the recognised model suggested,
+   the list to choose from, the choice applied with a restart, and *Keep this
+   screen?* answered on the panel or going back by itself - the phone still
+   reaching the player throughout. **A different screen attached since the
+   last start is noticed and asked about.**
+   *Met on the 10.1" and the 13.3", 2026-10-03. The new screen noticed at
+   start: 10.1" to 13.3" switched to it and kept, 2026-10-04 (George: "It
+   works"), after the 13.3" back to the 10.1" with the question asked, the
+   same day; switched to straight away since ADR-0109's 2026-10-04
+   amendment.*
+2. **The standard family on hardware: 1280 x 800 and 1920 x 1080,** every
+   screen, with no touch target under the 44-pixel floor (ADR-0109 decision 4).
+   **800 x 480 stays listed and untested** until such a screen is at hand; it
+   does not hold this phase.
+   *Met: the 10.1" (1280 x 800) and the 13.3" (1920 x 1080), 2026-10-03.*
+3. **The bar family on hardware** - the Waveshare 7.9" (1280 x 400) and 11.9"
+   (1480 x 320): Now Playing, the transition screen, idle, setup's network,
+   password and QR, Browse, the visualiser with the bar skins; **Settings on
+   the phone only**; what a bar drops dropped by design (decision 7).
+   *Open: not yet tried on the bars.*
+4. **Skins by screen size:** one pack per size, downloaded with consent, never
+   in the image; their licences in Legal and Credits (ADR-0111).
+   *Met since 0.5.0.*
+5. **The screen list:** every HDMI model of the presets (106), a case listed
+   as its panel, and **a model marked tested only once it has been tried on
+   the hardware.**
+   *Open: the 7.9" and 11.9" are marked tested and have not been tried -
+   tried in criterion 3, or unmarked.*
+
+**Acceptance (draft, as first written - replaced by the list above)**
 
 1. **A Screen step in setup** and a **Screen** row in Settings → Display: the
    detected model suggested, a list to pick from, the choice applied with a
@@ -2651,7 +2695,8 @@ Claude Design: the brief George hands over is
    and Credits.
 5. **Each supported screen tried on hardware** before it is in the table.
 
-**Decisions owed:**
+**Decisions owed:** *(settled 2026-10-03, ADR-0109: a bar keeps Browse and
+Settings is on the phone only; 800 x 480 stays untested until one is at hand.)*
 - **Browse and Settings on a bar** (George asked what was meant; not yet
   answered): phone-only on bars, or a one-row Browse on the bar itself.
 - **Settings inventory** (not appended until George confirms): **[N] Screen**
@@ -2717,6 +2762,22 @@ development images and decided before the first public release.
 **Shares with 13a:** a catalogue of versions we have tested, signed, which the
 device checks; 13a's plugin updates and this phase's system updates can be one
 mechanism, and the ADR should say whether they are.
+
+**PHASE 13c CLOSED, 2026-10-03** (George: *"Let's close 13 a and c"*).
+Merged as PR #42; ten releases since (0.3.0-0.8.6) have gone through it.
+1. **Met** - our parts are packages and the image is built from them
+   (ADR-0107). 2. **Met** - a signed repository on GitHub Releases, parts named
+   by content (ADR-0108); the key, its subkey and what losing it means are in
+   ADR-0105. 3. **Decided: a tested set** - the image's OS packages, frozen per
+   release (Finding 104). 4. **Met** - settings migrations, tested against the
+   shipped keys. 5. **Met** - a backup before every update, never while
+   playing without consent, going back to the release before on a failure
+   (Finding 105; used for real when 0.8.1 failed to install on George's
+   player). 6. **Met** - Settings → System → Software update, Change logs,
+   Manual / Automatic (ADR-0110, ADR-0116). 7. **Met** - ADR-0105 §7.
+   8. **Met** - Finding 105, measured on `gexis`.
+**Still before the first public release, not part of 13c:** the `pi` user's
+passwordless `sudo` (above).
 
 ### Phase 13d — DACs we have not tested
 
@@ -2793,6 +2854,30 @@ ADR-0022's inventory first).
    (ADR-0115, George: *"User decides which server to use"*).
 4. **Removing a plugin leaves the player as it was,** its data kept or
    deleted as the user chooses.
+
+**PHASE 13e CLOSED, 2026-10-03** (George: *"You can close 13e"*). Released
+in 0.8.0-0.8.6 on branch `phase-13b`; the records are ADR-0114 (the Beszel
+hub), ADR-0115 decisions 1-19 (the Lyrion server) and Finding 109.
+
+1. **Met.** The Lyrion server installs (downloaded on first switch-on), runs
+   and is removed from the Plugins screen - Remove run and switched on again
+   on `gexis` (2026-10-03). The Beszel hub ships in the image and runs on
+   `gexis`; off is its removal (ADR-0114).
+2. **Met, measured** (Finding 109): 46 minutes of playback through the
+   player's Lyrion client while its own server scanned 61,362 files from
+   scratch - 0 underruns and 0 XRUNs in the client's own log, load up to
+   7.05, 79.8 °C without throttling - and George heard nothing. Not
+   measured: other renderers under the same load.
+3. **Met.** The player's own server is offered in the server list ("This
+   player's own server") beside George's other server, which stays in use.
+4. **Met.** Off keeps everything; Remove deletes the server's software,
+   library, settings, add-ons and shares (ADR-0115 decision 14).
+
+**Changed from the plan, by decision:** Lyrion is downloaded on the device,
+not shipped (decision 11, its licence); its memory limit follows the
+player's (decision 18) and a 1 GB Pi is not offered it; its database memory
+is Normal under 4 GB (decision 19). **Left for later:** the scanner's memory
+per file on Pis other than 4 GB, and temperatures with a case (HARDWARE.md).
 
 ### Phase 14 — Themes
 

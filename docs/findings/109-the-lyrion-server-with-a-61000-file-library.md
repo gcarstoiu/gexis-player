@@ -18,10 +18,9 @@ one warm-up, one at a time, median and slowest. The other server: George's
 `192.168.178.188`, *Lyrion Music Server (Docker)* 9.1.1, 61,225 songs; its
 hardware was not recorded.
 
-**Not measured:** whether a scan can be heard in music playing at the same
-time (nothing played during either scan - Phase 13e criterion 2 is still
-open); a Pi 4 with other than 4 GB, or any other model; a wired network;
-the cost of browsing a whole large library on Maximum.
+**Not measured:** a Pi 4 with other than 4 GB, or any other model; a wired
+network; the cost of browsing a whole large library on Maximum. (Playback
+during a scan was measured later the same day - see the end.)
 
 ## The scans
 
@@ -124,3 +123,31 @@ runs:
 
 The 2 GB and 8 GB rows assume about 1.85 GB and 7.8 GB usable; neither was
 checked. Decision 19 makes Normal the first setting under 4 GB.
+
+## Playback while the server scans (Phase 13e criterion 2)
+
+Measured on `gexis` the same evening, 21:20-22:06: music from George's other
+Lyrion server (the Docker one) through the player's own Lyrion client
+(squeezelite) to the HiFiBerry DAC+ HD, while the player's own Lyrion server
+scanned the 61,362 files from scratch (`wipecache` at 21:26:10, Database
+Memory Config High, the 2,771 MB limit). Gaps were counted by the client
+itself: its output logging was turned up for the test (`-d output=info`), and
+it logs **"output underrun"** and **"XRUN"** when the sound card runs dry -
+that logging was shown working by its "track start" line for every track.
+
+| | Before the scan (5 min) | During the scan (40 min) |
+|---|---|---|
+| Tracks played | 2 | 10 |
+| Underruns or XRUNs | **0** | **0** |
+| Load average | about 3.1 | mean 4.7, highest 7.05 |
+| Temperature | 72.5-73 °C | highest **79.8 °C**, no throttling |
+
+- **Nothing reached the output**: no underrun and no XRUN in 46 minutes of
+  playback, 40 of them under the heaviest load the server makes. Lyrion's
+  lowest CPU and I/O priority (ADR-0115) held.
+- **The temperature came within 0.2 °C of 80 °C**, where a Pi 4 begins to
+  slow itself down. It did not here; a warmer room or a closed case would.
+  Cooling belongs in the hardware recommendations.
+- **Not measured:** what was heard - George listening is the other half of
+  the criterion; other renderers (Spotify, Bluetooth, Plexamp) under the same
+  load; the 30-file-a-second end of a scan on a faster share.

@@ -300,6 +300,14 @@
     step -= skipped(step - 1) ? 2 : 1;
   }
 
+  //: **The count is what this person meets** (George, 2026-10-03, reviewing
+  //: the copy: "Should be dynamic based on what the user actually sees"):
+  //: seven when the Visualiser step is skipped, eight otherwise.
+  const shownSteps = $derived(STEPS.filter((_, n) => !skipped(n)).length);
+  const shownAt = (n) => STEPS.slice(0, n + 1).filter((_, i) => !skipped(i)).length;
+  //: The welcome card names no number: it shows before the screen is known
+  //: (George: "Let's just use a few").
+
   async function finish() {
     saving = true;
     problem = null;
@@ -327,9 +335,11 @@
   //: Non-breaking: "1280 ×" and "800" must not part at a line's end.
   const packSize = $derived(chosenModel?.skins?.replace('x', '\u00a0×\u00a0') ?? '');
   const packLabel = $derived(chosenModel?.skin_count ? `the ${chosenModel.skin_count} skins drawn for ${packSize} screens` : `the set for ${packSize} screens`);
+  //: Two minutes after setup (SETUP_KEEP_S in the core); 30 s is a change
+  //: made later in Settings (George, 2026-10-03, reviewing the copy).
   const pickNote = $derived(
     (chosenModel && !chosenModel.tested ? 'This model has not been tested with gexis. ' : '') +
-      'When setup finishes the player restarts on this screen and asks Keep this screen? on it. If nobody touches Keep within 30 seconds, it goes back.'
+      'When setup finishes the player restarts on this screen and asks Keep this screen? on it. If nobody touches Keep within two minutes, it goes back.'
   );
   //: The preset names carry the panel's own resolution, which the row's note
   //: already gives the way the screen is used ("(400x1280)" on a bar).
@@ -402,13 +412,13 @@
     <header>
       <img class="mark" src={mark} alt="" width="34" height="34" />
       <span class="crumb">
-        {step < 0 ? 'First-time setup' : step >= last || finished ? 'Almost done' : `Step ${step + 1} of ${last} · ${STEPS[step][1]}`}
+        {step < 0 ? 'First-time setup' : step >= last || finished ? 'Almost done' : `Step ${shownAt(step)} of ${shownSteps} · ${STEPS[step][1]}`}
       </span>
       {#if setup?.ssid}<span class="over">Over {setup.ssid}</span>{/if}
     </header>
 
     {#if step >= 0 && step < last && !finished}
-      <div class="progress"><div style="width:{Math.round(((step + (valid() ? 1 : 0.35)) / last) * 100)}%; background:{accent}"></div></div>
+      <div class="progress"><div style="width:{Math.round(((shownAt(step) - 1 + (valid() ? 1 : 0.35)) / shownSteps) * 100)}%; background:{accent}"></div></div>
     {/if}
 
     <div class="grid" class:grid--rail={step >= 0 && step < last && !finished}>
@@ -456,7 +466,7 @@
                 : "You are connected to the player's own Wi-Fi. Nothing here leaves the room: the device is the only thing this page is talking to."}
             </p>
             <div class="cards">
-              <div class="info"><span class="bar" style="background:#8fc4d8"></span><span><b>About two minutes</b><small>Seven questions. Every one of them can be changed later in Settings.</small></span></div>
+              <div class="info"><span class="bar" style="background:#8fc4d8"></span><span><b>About two minutes</b><small>A few questions. Every one of them can be changed later in Settings.</small></span></div>
               {#if !overLan}
                 <div class="info"><span class="bar" style="background:#7ed6bc"></span><span><b>Keep this phone handy</b><small>When setup finishes, the player leaves its own Wi-Fi for yours and this page stops working. That is by design, not a fault.</small></span></div>
                 <!-- George, 2026-09-29: the page would not load until he
@@ -487,6 +497,10 @@
                 {#if scan === 'scanning'}
                   <div class="row-spin"><span class="spin" style="border-top-color:#8fc4d8"></span><span>Looking for networks</span></div>
                 {:else}
+                  {#if !nets.length}
+                    <!-- George, 2026-10-03, reviewing the copy: "Add copy to cover this." -->
+                    <div class="info"><span class="bar" style="background:#8fc4d8"></span><span><b>No networks found</b><small>Move the player closer to your router and tap Scan again, or choose Other network to type one in.</small></span></div>
+                  {/if}
                   <div class="list">
                     {#each nets as n (n.name)}
                       <button class="net" onclick={() => { ssid = n.name; pw = ''; hasPassword = false; manualSsid = ''; }}>
@@ -588,6 +602,10 @@
                 <h1>Choose the output</h1>
                 <p class="sub">What the player should send audio to. Stored by name, because card numbers move between boots.</p>
               </div>
+              {#if !outputs.length}
+                <!-- George, 2026-10-03, reviewing the copy: "Add copy to cover this." -->
+                <div class="info"><span class="bar" style="background:#7ed6bc"></span><span><b>No audio output found</b><small>Check that the DAC or HAT is connected, then restart the player. You can carry on and choose one later in Settings.</small></span></div>
+              {/if}
               <div class="list">
                 {#each outputs as o}
                   <button class="net" class:sel={out === o} onclick={() => (out = o)}>

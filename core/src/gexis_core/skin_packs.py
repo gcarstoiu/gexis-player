@@ -119,9 +119,15 @@ def plan(screen: tuple[int, int], have: list[tuple[int, int]]) -> tuple[tuple[in
 PACK_STATUS = Path("/var/lib/gexis/updates/pack.json")
 
 
-def status(path: Path = PACK_STATUS, packs: Path = PACKS, legacy: Path = LEGACY) -> dict:
+def status(path: Path = PACK_STATUS, packs: Path = PACKS, legacy: Path = LEGACY,
+           screen: tuple[int, int] | None = None) -> dict:
     """The pack's download line, in the shape ADR-0100's rows read
-    (Settings' `downloadLine`): state, label, where from, and the share."""
+    (Settings' `downloadLine`): state, label, where from, and the share.
+
+    **A failure is shown only while it still matters** (found 2026-10-04: a
+    failed fetch of the 1280 x 800 pack, asked for at a start before the
+    13.3" was switched to, stayed on the row after the 13.3"'s own pack was
+    in and nothing was missing)."""
     try:
         doc = json.loads(path.read_text())
     except (OSError, ValueError):
@@ -133,9 +139,11 @@ def status(path: Path = PACK_STATUS, packs: Path = PACKS, legacy: Path = LEGACY)
         size = (doc.get("package") or "").removeprefix("gexis-skins-").replace("x", " × ")
         return {"state": state, "label": f"the {size} skins" if size else label,
                 "from": "the release", "share": doc.get("progress")}
-    if state == "failed":
+    wanted = for_screen(*(screen or screen_size()))
+    if state == "failed" and wanted not in have:
+        message = doc.get("message") or "See the log."
         return {"state": "failed", "label": label, "from": "the release",
-                "error": f"The skins were not installed: {doc.get('message', 'see the log')}"}
+                "error": f"The skins were not installed. {message[:1].upper()}{message[1:]}"}
     if have:
         return {"state": "installed", "label": label, "from": "the release"}
     return {"state": "absent", "label": "the skins for this screen", "from": "the release"}

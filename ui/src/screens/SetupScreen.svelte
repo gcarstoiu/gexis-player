@@ -451,10 +451,10 @@
   .lib b { display: block; font-size: 34px; font-weight: 700; }
   .lib span { display: block; margin-top: 6px; font-family: var(--font-mono); font-size: 28px; color: var(--ink-body); }
   .lib--warn b { color: var(--accent-warn); }
+  /* A sentence now, not the system's line (2026-10-03): the body face. */
   .detail {
     margin: 0;
-    font-family: var(--font-mono);
-    font-size: 20px;
+    font-size: 24px;
     color: var(--ink-quiet);
     max-width: 60ch;
   }
@@ -664,8 +664,7 @@
   }
   .bs__detail {
     margin: 12px 0 0;
-    font-family: var(--font-mono);
-    font-size: 18px;
+    font-size: 20px;
     color: var(--ink-quiet);
   }
   .bs__lib {

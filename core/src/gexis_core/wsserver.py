@@ -35,7 +35,7 @@ from aiohttp import web
 from dbus_next import BusType
 from dbus_next.aio import MessageBus
 
-from gexis_core import backups, bluetooth_devices, device_name, discovery, lyrion_scan, lyrion_shares, skins, wifi
+from gexis_core import backups, bluetooth_devices, device_name, discovery, lyrion_scan, lyrion_shares, skin_previews, skins, wifi
 from gexis_core.adapters.base import TRANSPORT_COMMANDS
 from gexis_core.artistinfo import PHOTO_BACKGROUND, PHOTO_LARGE, PHOTO_THUMB
 from gexis_core.artwork_sweep import ARTIST_NAMESPACE, remembered
@@ -119,6 +119,7 @@ class StateServer:
         screen_seen=None,
         park=None,
         screen_answer=None,
+        screen_new_answer=None,
         on_painted=None,
         upload_plugin=None,
         uninstall_plugin=None,
@@ -188,6 +189,7 @@ class StateServer:
         #: ADR-0109 decision 5: *Keep this screen?* - `keep` or `revert`,
         #: from the panel only.
         self._screen_answer = screen_answer
+        self._screen_new_answer = screen_new_answer
         #: The panel's first frame starts that question's countdown.
         self._on_painted = on_painted
         #: ADR-0106: a package from a phone or computer, and taking one away.
@@ -201,6 +203,7 @@ class StateServer:
         #: ADR-0111: where the skins are now (root, resolution), asked each
         #: time - a pack arrives or goes while the core runs.
         self._skins_at = skins_at
+        self._skins_memo: tuple | None = None
         #: What the idle screen is showing, so the next change is a change.
         #: One value for three sources, because only one of them is on
         #: screen at a time: a file name, a Pixabay id, or an artist.
@@ -528,8 +531,20 @@ class StateServer:
         return web.FileResponse(path)
 
     def _skins(self) -> list[tuple]:
+        """The installed pack's skins, read again only when the pack changes:
+        reading all 287 of the 1920 x 1080 pack takes about 70 ms on a Pi 4,
+        and it ran for every picture the picker showed (George, 2026-10-03:
+        skimming "can get slow")."""
         at = self._skins_at() if self._skins_at else None
-        return skins.installed(at[0], resolution=at[1]) if at else []
+        if not at:
+            return []
+        try:
+            key = (at, at[0].stat().st_mtime_ns)
+        except OSError:
+            key = (at, None)
+        if self._skins_memo is None or self._skins_memo[0] != key:
+            self._skins_memo = (key, skins.installed(at[0], resolution=at[1]))
+        return self._skins_memo[1]
 
     async def _handle_skins(self, request: web.Request) -> web.Response:
         """Every skin the device has, with what it shows (ADR-0050).
@@ -570,6 +585,12 @@ class StateServer:
             picture = skins.preview_of(skin, directory)
             if picture is None:
                 return web.json_response({"error": "that skin has no picture"}, status=404)
+            # ADR-0050, amended 2026-10-03: at the width the picker shows it.
+            width = request.query.get("w", "")
+            if width.isdigit():
+                small = await skin_previews.scaled(picture, int(width))
+                if small is not None:
+                    return web.FileResponse(small, headers={"Cache-Control": "max-age=86400"})
             return web.FileResponse(picture)
         return web.json_response({"error": "no such skin"}, status=404)
 
@@ -1050,6 +1071,16 @@ class StateServer:
             self._on_painted()
         return web.json_response({"painted": True, "splash_dropped": dropped})
 
+    async def _handle_screen_new(self, request: web.Request) -> web.Response:
+        """ADR-0109, amended 2026-10-03: the answer to "a different screen is
+        attached" - from the panel or a phone, unlike Keep: choosing is not
+        proving that the picture and the touch work, and Keep still asks
+        that on the panel after the restart."""
+        action = request.match_info["action"]
+        if action not in ("use", "later", "choose") or self._screen_new_answer is None:
+            return web.json_response({"error": f"unknown answer {action}"}, status=404)
+        return web.json_response(await self._screen_new_answer(action))
+
     async def _handle_screen_answer(self, request: web.Request) -> web.Response:
         """**ADR-0109 decision 2: Keep is pressed on the panel only** - a touch
         there proves both the picture and the touch input. Loopback: the
@@ -1431,6 +1462,7 @@ class StateServer:
         app.router.add_post("/touch", self._handle_touch)
         app.router.add_post("/panel/painted", self._handle_painted)
         app.router.add_post("/screen/{action}", self._handle_screen_answer)
+        app.router.add_post("/screen-new/{action}", self._handle_screen_new)
         app.router.add_get("/setup/status", self._handle_setup_status)
         app.router.add_post("/renderers/park", self._handle_park)
         app.router.add_post("/plugins/upload", self._handle_plugin_upload)

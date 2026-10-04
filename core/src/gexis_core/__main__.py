@@ -18,7 +18,7 @@ from dbus_next import BusType
 from dbus_next.aio import MessageBus
 
 from gexis_core import alsa, bluetooth_adapter_state, bluetooth_agent, device_name, journal, meters, screen_detect, skins, wifi
-from gexis_core import screen_apply, screens, skin_packs
+from gexis_core import screen_apply, screen_watch, screens, skin_packs, skin_previews
 from gexis_core.adapters.base import VolumeMechanism
 from gexis_core.adapters.bluetooth import BluetoothAdapter
 from gexis_core.adapters.lms import LmsAdapter
@@ -1471,6 +1471,35 @@ async def main() -> None:
             await _configure_visualiser()
             _publish_meters()
             _publish_components()
+            asyncio.ensure_future(_previews_ahead())
+
+    #: ADR-0050, amended 2026-10-03: every skin's picker picture made ahead.
+    previews_state = {"busy": False}
+
+    async def _previews_ahead() -> None:
+        if previews_state["busy"]:
+            return
+        previews_state["busy"] = True
+        try:
+            # Every pack this player has, not only the screen's (George,
+            # 2026-10-03: "for all resolutions", then "B it is"): a screen
+            # changed to another size finds its pictures made too.
+            def pictures() -> list:
+                out = []
+                for size in skin_packs.installed():
+                    root = skin_packs.root_of(size)
+                    if root is None:
+                        continue
+                    out += [p for skin, where in skins.installed(root, resolution=f"{size[0]}x{size[1]}")
+                            if (p := skins.preview_of(skin, where)) is not None]
+                return out
+            made = await asyncio.to_thread(lambda: skin_previews.make_ahead(pictures()))
+            if made:
+                logger.info("skins: %d picker previews made ahead", made)
+        except Exception:  # noqa: BLE001 - the picker still makes one when asked
+            logger.exception("skins: previews ahead failed")
+        finally:
+            previews_state["busy"] = False
 
     async def _configure_visualiser() -> None:
         """ADR-0111: PeppyMeter draws the pack skins_at() names, at its size.
@@ -2524,9 +2553,11 @@ async def main() -> None:
             await asyncio.sleep(1 if view.get("active") else 3)
 
     asyncio.ensure_future(_follow_updates())
-    # ADR-0111: the pack this screen wants, now and every few minutes.
-    _skins_kick()
+    # ADR-0111: the pack this screen wants every few minutes - and now, once
+    # the attached screen has been compared (below), so a start that
+    # switches screens does not first fetch the old screen's pack.
     asyncio.ensure_future(_skins_loop())
+    asyncio.ensure_future(_previews_ahead())
 
     # **ADR-0109 decision 5: Keep this screen?** A screen chosen before this
     # start waits for a touch on the panel. The countdown starts at the
@@ -2586,17 +2617,90 @@ async def main() -> None:
                 screen_wait["task"].cancel()
             state_store.set_screen_confirm(None)
             logger.info("screen: kept")
+            # ADR-0109, amended 2026-10-03: what a kept screen reports, so a
+            # different one is noticed at the next start.
+            await asyncio.to_thread(lambda: screen_watch.kept(screen_detect.seen()))
             # ADR-0111 decision 2: the kept screen's pack, the old one out.
             _skins_kick()
             return {"kept": True}
         asyncio.ensure_future(_screen_go_back("the panel asked to go back"))
         return {"going_back": True}
 
+    async def _switch_to_new_screen(question: dict) -> None:
+        """**A recognised screen is used straight away** (ADR-0109, amended
+        2026-10-04): the panel comes up on it with *Keep this screen?*, and
+        goes back by itself if nobody keeps it. Only the kiosk restarts when
+        the kernel's mode stays as it is - true of every tested HDMI screen -
+        the device otherwise. Marked tried first, so a go-back asks next time
+        rather than switching again."""
+        model = screens.by_label(question["label"])
+        if model is None:
+            state_store.set_screen_new(question)
+            return
+        turn = screen_apply.parse_rotation(settings.value("rotation"))
+        applied = screen_apply.Applied(model.id, turn)
+        await asyncio.to_thread(screen_watch.tried, question["key"])
+        reboot = screen_apply.picture()[0] != screen_apply.picture_of(applied)[0]
+        asks = await asyncio.to_thread(screen_apply.choose, applied)
+        _sync_screen_settings()
+        logger.info("screen: %s attached, switched to it; %s", model.id,
+                    "the device restarts" if reboot else "the panel restarts" if asks else "nothing changes on screen")
+        if not asks:
+            await asyncio.to_thread(lambda: screen_watch.kept(screen_detect.seen()))
+            _skins_kick()
+            return
+        if reboot:
+            await asyncio.sleep(2.0)
+            await asyncio.create_subprocess_exec("systemctl", "reboot")
+            return
+        restart = await asyncio.create_subprocess_exec("systemctl", "restart", "gexis-kiosk.service")
+        await restart.wait()
+        # After the restart, so the old panel's first frame cannot start the
+        # countdown meant for the new one.
+        state_store.set_screen_confirm(screen_question(screen_apply.read_state()))
+        screen_wait["task"] = asyncio.ensure_future(
+            _screen_countdown(NEVER_DRAWN_S, "the panel never drew on the new screen"))
+
+    switching = False
     _question = screen_question(screen_apply.read_state())
     if _question is not None:
         state_store.set_screen_confirm(_question)
         screen_wait["task"] = asyncio.ensure_future(
             _screen_countdown(NEVER_DRAWN_S, "the panel never drew on the new screen"))
+    elif not _setup_running(state_store.state.setup):
+        # ADR-0109, amended 2026-10-03: a different screen attached since
+        # the last start is asked about - not while a Keep or setup is open.
+        try:
+            # The setting on this thread - SQLite answers only the thread that
+            # opened it (as with the Lyrion shares) - the rest in a worker.
+            headless = bool(settings.value("headless"))
+            question = await asyncio.to_thread(
+                lambda: screen_watch.question(screen_detect.seen(), headless=headless))
+            if question is not None and question.get("label") and not question.get("tried"):
+                # Beside the start, not before it: the panel it restarts needs the server.
+                # It asks for the new screen's pack itself, once kept.
+                asyncio.ensure_future(_switch_to_new_screen(question))
+                switching = True
+            else:
+                state_store.set_screen_new(question)
+        except Exception:  # noqa: BLE001 - a question not asked is not a player not started
+            logger.exception("screen: the attached screen was not compared")
+    if not switching:
+        _skins_kick()
+
+    async def _screen_new_answer(action: str) -> dict:
+        """Use it (a recognised screen: the usual restart and Keep), Not now
+        (that screen is not asked about again), or Choose (the panel opens the
+        screen list; asked again at the next start if nothing is chosen)."""
+        question = state_store.state.screen_new
+        if question is None:
+            return {"error": "nothing is being asked"}
+        state_store.set_screen_new(None)
+        if action == "later":
+            await asyncio.to_thread(screen_watch.not_now, question["key"])
+        elif action == "use" and question.get("label"):
+            _choose_screen(question["label"])
+        return {"ok": True}
 
     async def _restart_core_soon() -> None:
         """The plugin list and its settings rows are read at start, so a
@@ -2707,6 +2811,7 @@ async def main() -> None:
         screen_seen=screen_detect.seen,
         park=_park_renderers,
         screen_answer=_screen_answer,
+        screen_new_answer=_screen_new_answer,
         on_painted=_screen_painted,
         upload_plugin=_upload_plugin,
         uninstall_plugin=_uninstall_plugin,

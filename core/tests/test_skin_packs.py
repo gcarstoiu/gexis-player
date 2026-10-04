@@ -66,6 +66,20 @@ def test_the_download_line_follows_the_updater(tmp_path):
     assert sp.status(status, packs, legacy) == {"state": "installed", "label": "the 1920 × 1080 skins", "from": "the release"}
 
 
+def test_a_failure_is_not_shown_once_the_screen_s_pack_is_in(tmp_path):
+    # Found 2026-10-04: the 1280 x 800 pack failed at a start before the
+    # 13.3" was switched to; the 13.3"'s pack was in, and the row said failed.
+    packs, legacy, status = tmp_path / "packs", tmp_path / "none", tmp_path / "pack.json"
+    (packs / "1920x1080").mkdir(parents=True)
+    (packs / "1920x1080" / "pack.json").write_text(json.dumps({"size": "1920x1080"}))
+    status.write_text(json.dumps({"state": "failed", "package": "gexis-skins-1280x800",
+                                  "message": "the player could not reach the download."}))
+    assert sp.status(status, packs, legacy, screen=(1920, 1080))["state"] == "installed"
+    line = sp.status(status, packs, legacy, screen=(1280, 800))
+    assert line["state"] == "failed"
+    assert line["error"] == "The skins were not installed. The player could not reach the download."
+
+
 def test_the_screen_size_comes_from_screen_env(tmp_path):
     env = tmp_path / "screen.env"
     assert sp.screen_size(env) == (1280, 800)

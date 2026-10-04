@@ -1,37 +1,63 @@
 # Handoff
 
-Last updated: 2026-10-02 (on R2D2).
+Last updated: 2026-10-04 (on R2D2).
 
 ## Start here
 
-**Phase 13b (other screens) is built on `phase-13b`, in the main checkout,
-waiting on hardware tests and its PR.** 13c (updates over the network) is
-merged as PR #42 and 13a as PR #41; their narrative is in the archive's
-2026-10-02 block. Releases are published from here to the testing channel:
-**0.5.0 is the latest** (serial 10, 2026-10-02), after 0.3.0-0.3.3 and 0.4.0.
+**Work continues on `phase-13b` in the main checkout, and Phase 13d in its
+own worktree, `~/projects/gexis-player-13d` (branch `phase-13d`). Releases
+0.5.0 to 0.8.7 went to the testing channel (0.8.7 is serial 20,
+2026-10-04), each seen on George's player before it was cut.** `main` is
+merged through 0.8.5 (PR #44); **PR #45 carries 0.8.6 and 0.8.7 and waits
+for George to merge it** - he merges, Claude opens. **From 0.8.8, one PR per
+release** (George, 2026-10-04): never push a release onto an open PR.
+**Phases 13a, 13c and 13e are closed** (DEVELOPMENT.md); 13b is still open.
 
-| Part of 13b | State |
+| What | State |
 |---|---|
-| Families, Chromium zoom, screen.env, bar UI | Built, rendered against a fake core (ADR-0109) |
-| The screen list | 110 HDMI models (foonerd's presets, MIT); George's four Waveshare screens marked Tested |
-| Recognising, choosing, Keep this screen? | Built. **Amended 2026-10-02** (George: *"A and C"*): asked only when the picture changes (forced mode, scale, rotation) - the 10.1" is kept without asking, the 13.3" and the bars are asked; after setup the phone says so and the panel waits 2 minutes; a go-back resets Settings too. **Not yet in a release** |
-| Setup's Screen and Visualiser steps | Built; the Visualiser step names the skin count (copy approved) |
-| Skins per screen size (ADR-0111, decisions 1-15) | **All four steps built and in 0.5.0**: five `gexis-skins-<W>x<H>` packages (66-652 MB), none in the image, installed with consent by `gexis-update pack-install`; the visualiser draws the installed pack, a smaller one centred on black; Legal and Credits. A device that kept `gexis-skins` keeps it (marked manual) |
-| Update UX (ADR-0110) | Built and used by George through 0.3.x |
+| Lyrion server (ADR-0115, 19 decisions; Finding 109) | Shipped through 0.8.6. Measured on George's 61,362 files: scans 2 h 7 min (High) / 1 h 59 min (Normal), memory 1,876 / 1,191 MB, no audio gaps during a scan. Memory limit = the player's less 1 GB; Normal under 4 GB |
+| Fetched software (ADR-0100 amended) | Pinned versions; `packaging/check-upstream.sh` before each release; a new pin is fetched by the update that brings it |
+| Change logs (ADR-0116) | `release_notes.json` is the one source: the player's page, `CHANGELOG.md` on `main`, the signed notes |
+| Screens (ADR-0109) | The 13.3" tested at 1920 x 1080 and recognised; a case listed once as its panel. **A new screen at start: a recognised one is switched to with Keep (amended 2026-10-04), any other asked about** - both swaps passed on George's panels, 2026-10-04. Crowd-sourced fingerprints postponed (recorded in the ADR). The 13.3"'s brief blackouts were its HDMI cable (LESSONS 56) |
+| Skin picker (ADR-0050 amended) | 960 px previews made ahead for every installed pack |
+| Released in 0.8.7 | The new-screen notice and its straight switch (29a3386, 88ee721, d91a4bc); a USB disk kept 7 days after unplugging (ADR-0115 decision 17, ddf088f); setup's copy fixes from the review (963857d-034fb33); genre pills kept to two rows on the artist page (7cd3e1b); skin packs fetched from the channel's release when the player's own is unpublished, a stale pack failure no longer shown, failures in words (efd329d); Finding 109's playback test; 13a/13c/13e closed |
+
+**`gexis` right now:** a preview of everything on the branch (core and player
+`0.8.6+git18.efd329d`, ui `0.8.6+git15.7cd3e1b`), on the 13.3" with a new
+cable, kept. **Skin packs now install on a preview** (efd329d: an unpublished
+release takes its pack from the channel's release; shown live, 2026-10-04 -
+before that every preview failed every pack). The album artist screen was measured on that panel through the
+kiosk's DevTools port (since closed): about 55 fps scrolling, photos in about
+half a second - not slower than the 10.1"; a headless Chromium on the device
+had shown 20 fps, an artefact of its software compositing.
 
 **Next, in order:**
-1. **0.5.1** with the Keep changes, when George asks (notes approved by him
-   first; the release number is approved with them).
-2. **Hardware**, as George's screens allow: the 13.3" (1920 x 1080 - the
-   visualiser's speed on a Pi 4 feeds the hardware requirements, ADR-0111
-   decision 12), the bars' modes and touch, recognition fingerprints for the
-   three screens not yet seen, the letterboxed and centred skins by eye.
-3. **Before the 13b PR** (ask George first): DEVELOPMENT.md's 13b
-   acceptance rewritten to what was built, IMPLEMENTED-DIFFERENTLY entries
-   (upload placement, playlist 420, the bar's deviations), optionally a
-   round-3 brief for Claude Design.
-4. **Phase 13d, DACs** (DEVELOPMENT.md): Volumio's DAC list, the DAC2 HD and
-   IQaudio DAC+ first. An ADR first.
+1. **Phase 13d** (ADR-0117, accepted 2026-10-04): built in the worktree,
+   six commits, not on hardware. George tests later: the DAC2 HD unchanged
+   (preview from `phase-13d`), the IQaudio DAC+ chosen under *Sound card
+   board*, and the take-back with a board that is not fitted. **Tests in a
+   worktree:** the scratchpad venv imports the main checkout's
+   `gexis_core`; run them with `PYTHONPATH=src`.
+2. **The copy review** (George, 2026-10-03): one page per area, built from the
+   code, with screenshots, for him to comment on. **Setup is done** (the
+   "Setup Copy" artifact; his comments fixed), with two threads still his:
+   the password line after Finish (only for a secured Wi-Fi?) and
+   "Saving..."/"Connecting..." on Continue/Finish. Settings and the
+   intermediate screens next. The screenshots and fake cores were in the
+   session's scratchpad, which does not survive it: regenerate them (a fake
+   core serving `/setup/answers` with a chosen `step` shows each phone step).
+3. **13b's close** (acceptance rewritten to George's decisions, 2026-10-03):
+   the 7.9" and 11.9" bars tried on the hardware (or unmarked as tested).
+   Nothing else is open.
+4. **Phase 13d, DACs** (an ADR first).
+5. **docs/HARDWARE.md** is a draft; what it lacks is listed at its end.
+
+**Working rules learned this session** (also in memory): a change is seen on
+George's player before a release is cut, installed as the **whole set of one
+commit, `gexis-player` with it, reading every removal apt reports**
+(LESSONS 55), and the core restarted and checked by behaviour only the new
+code has (LESSONS 54). A setting read for a worker thread is read on the
+core's own thread first (SQLite; it bit twice).
 
 **How a release is made** (each step proven 2026-10-02): run
 `packaging/check-upstream.sh` - a pin behind its maker is tried on George's
@@ -44,8 +70,8 @@ commit (ADR-0116: publish.sh takes them from the tagged commit's file, and
 the player shows them under Change logs); tag `vX.Y.Z` locally; `make image` (never commit while it
 packages - a `.dirty` build); `image/verify-image.sh` on the image;
 `packaging/release/build.sh <img>`; `packaging/release/publish.sh rX.Y.Z
---channel testing`; then push the branch and open a pull request into
-`main` - **George merges it** (2026-10-03; ADR-0116 decision 7: Change logs
+--channel testing`; push the tag; then push the branch and open **one**
+pull request into `main` for the release - **George merges it** (2026-10-03; ADR-0116 decision 7: Change logs
 points at `main`'s `CHANGELOG.md`, so it is current once he has). `packaging/release/out` is a symlink into the
 `gexis-player-13a` worktree, excluded in `.git/info/exclude`. Never edit a
 script while it runs (LESSONS 51).
@@ -94,8 +120,11 @@ the SSH key only, since a saved Wi-Fi skips setup.
 - **New users start from an image** (ADR-0105 amended): promoting to stable
   attaches the signed image; a Raspberry Pi Imager listing with the first
   public release, which waits on 13a, 13b and 13c.
-- **The `pi` user's passwordless `sudo`** is decided when the first public
-  release is made (ADR-0107 decision 3).
+- **Before the first public release** (George's to-do list, 2026-10-03):
+  - **Remove the `pi` user's passwordless `sudo`** (George: *"The removal of
+    sudo should go to first release to-dos"*; ADR-0107 decision 3 left it to
+    then). Development images keep it - Claude's SSH work on `gexis` uses it -
+    so the release image is where it goes.
 - **Settings as an installed app: not now** (ADR-0102).
 
 ### Open, none blocking
@@ -338,7 +367,7 @@ reverted, currently-flashed image predates this fix.
 13 first boot without a network           setup access point; pull forward the
                                             moment a non-developer gets a device
                                             (ADR-0031)
-13a plugins you install and update       decided 2026-09-28 (George): a phase
+13a plugins you install and update       CLOSED 2026-10-03. Decided 2026-09-28 (George): a phase
                                             before themes. Upload a plugin from a
                                             phone or computer, run it sandboxed,
                                             Remove it; updates from versions we
@@ -351,7 +380,7 @@ reverted, currently-flashed image predates this fix.
                                             skins per resolution; recognise the
                                             screen in setup. Finding 100. ADR
                                             first; designs from Claude Design
-13c updates over the network             * MERGED (PR #42); 13a merged (PR #41).
+13c updates over the network             * CLOSED 2026-10-03; MERGED (PR #42); 13a merged (PR #41).
                                             Added 2026-09-28 (George: "Agreed to
                                             do before"). **The first public release
                                             image waits on 13a, 13b and 13c**
@@ -364,7 +393,7 @@ reverted, currently-flashed image predates this fix.
 13d DACs we have not tested             decided 2026-10-01 (George): after 13b,
                                             from Volumio's list; the DAC2 HD and
                                             IQaudio DAC+ first. ADR first
-13e server plugins                       decided 2026-10-02 (George): after 13d,
+13e server plugins                       CLOSED 2026-10-03. Decided 2026-10-02 (George): after 13d,
                                             before the first public release. Lyrion
                                             server and Beszel hub, shipped in our
                                             releases; music first, scan impact

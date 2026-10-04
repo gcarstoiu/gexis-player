@@ -24,6 +24,7 @@ before a word of it is believed.
 from __future__ import annotations
 
 import argparse
+import fcntl
 import hashlib
 import json
 import os
@@ -521,6 +522,10 @@ def scheduled(args) -> int:
 
 # --- a skin pack (ADR-0111) -------------------------------------------------
 
+#: What a pack's row says when no release could be read - in words, not
+#: apt's (the reason is in the journal, from apt's own output).
+UNREACHABLE = "The player could not reach the download. It is tried again in a few minutes."
+
 #: The visualiser's packs: one per screen size, from the installed release's
 #: own repositories, verified as an update is.
 PACK = re.compile(r"^gexis-skins-[0-9]+x[0-9]+$")
@@ -536,29 +541,62 @@ def report_pack(state: str, **fields) -> None:
     print(f"pack {state}: {fields.get('message', '')}".rstrip(": "), flush=True)
 
 
+def pack_sources(release: str) -> list[tuple[list[str], list[str]]]:
+    """Where a pack can come from, in order: the installed release's own
+    parts, then the release the channel names now.
+
+    **The second is for a player whose release was never published** (found
+    on gexis, 2026-10-04: a preview, `0.8.6+git16`, failed every pack with
+    "apt could not read r0.8.6-git16..." - there is no such release to read).
+    A pack depends on nothing of the release's, so any published release's
+    pack is a pack that fits. Read lazily: only when the first fails."""
+    def channel_parts() -> tuple[list[str], list[str]] | None:
+        for channel in dict.fromkeys([channel_name(None), "testing"]):
+            try:
+                repos = read_channel(channel)["Repositories"].split()
+            except (Stop, KeyError):
+                continue
+            return repos, repos
+        return None
+    return [lambda: parts_of(release), channel_parts]
+
+
 def pack_install(name: str) -> int:
-    """Install one skin pack from the installed release's parts."""
+    """Install one skin pack from the installed release's parts - or, when
+    that release cannot be read, from the channel's (`pack_sources`)."""
     if not PACK.match(name or ""):
         raise Stop(f"{name!r} is not a skin pack")
     release = installed("gexis-player")
     if not release:
         raise Stop("no release installed to take the pack from")
-    repos, pins = parts_of(release)
-    opts = apt_env(repos, pins)
     PROGRESS.clear()
     PROGRESS["progress"] = 0.0
     report_pack("downloading", package=name, message=f"fetching {name}")
-    if apt(opts, "update").returncode:
-        raise Stop(f"apt could not read {' '.join(repos)}")
+    opts = None
+    for source in pack_sources(release):
+        try:
+            found = source()
+        except Stop:
+            continue
+        if found is None:
+            continue
+        candidate = apt_env(*found)
+        if apt(candidate, "update").returncode == 0:
+            opts = candidate
+            break
+    if opts is None:
+        raise Stop(UNREACHABLE)
     r = apt_download(opts, "--download-only", "install", name,
                      report_as={"package": name, "message": f"fetching {name}"}, reporter=report_pack)
     if r.returncode:
-        raise Stop("download failed: " + why(r))
+        print(f"pack download failed: {why(r)}", flush=True)
+        raise Stop("The download stopped before it finished. It is tried again in a few minutes.")
     PROGRESS["progress"] = 1.0
     report_pack("installing", package=name, message=f"installing {name}")
     r = apt(opts, "--no-download", "install", name)
     if r.returncode:
-        raise Stop("install failed: " + why(r))
+        print(f"pack install failed: {why(r)}", flush=True)
+        raise Stop("They were downloaded but could not be installed. It is tried again in a few minutes.")
     report_pack("installed", package=name, version=installed(name), message=f"{name} installed")
     return 0
 
@@ -576,6 +614,35 @@ def pack_remove(name: str) -> int:
     return 0
 
 
+#: How long a wait for the other one is, at most, before it is a failure.
+TURN_WAIT_S = 3600
+
+
+def take_turn(waiting) -> object:
+    """**One apt at a time** (found on George's player, 2026-10-03: an update
+    started while a skin pack was downloading failed with "Could not get lock
+    .../apt/archives/lock"). An update and a pack install share apt's
+    download folder; the second now waits for the first, and says so through
+    `waiting()`, rather than failing. The lock is the open file; it goes with
+    the process."""
+    STATE.mkdir(parents=True, exist_ok=True)
+    held = (STATE / "apt-turn.lock").open("w")
+    try:
+        fcntl.flock(held, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        return held
+    except BlockingIOError:
+        waiting()
+    deadline = time.monotonic() + TURN_WAIT_S
+    while time.monotonic() < deadline:
+        time.sleep(2)
+        try:
+            fcntl.flock(held, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            return held
+        except BlockingIOError:
+            continue
+    raise Stop("another update or skin pack download did not finish within an hour")
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     parser.add_argument("action", choices=["check", "install", "scheduled", "pack-install", "pack-remove"])
@@ -584,6 +651,8 @@ def main() -> int:
     args = parser.parse_args()
     if args.action.startswith("pack-"):
         try:
+            _turn = take_turn(lambda: report_pack("downloading", package=args.package,
+                                                  message="waiting for the update to finish"))
             return (pack_install if args.action == "pack-install" else pack_remove)(args.package)
         except Stop as stop:
             report_pack("failed", package=args.package, message=str(stop))
@@ -593,7 +662,9 @@ def main() -> int:
             check(args)
             return 0
         if args.action == "scheduled":
+            _turn = take_turn(lambda: None)
             return scheduled(args)
+        _turn = take_turn(lambda: report("downloading", message="waiting for the skin pack download to finish"))
         return install(args)
     except Stop as stop:
         report("failed", message=str(stop))

@@ -326,6 +326,39 @@ def test_a_pack_comes_from_the_installed_release_s_own_parts(up, monkeypatch):
     assert not (up.STATE / "status.json").exists(), "a pack never writes the update's status"
 
 
+def test_a_pack_for_an_unpublished_release_comes_from_the_channel_s(up, monkeypatch):
+    # Found 2026-10-04: a preview (0.8.6+git16) has no release to read, and
+    # every pack failed with apt's words on the row.
+    envs = []
+    monkeypatch.setattr(up, "installed", lambda p: "0.8.6+git16.d91a4bc")
+    monkeypatch.setattr(up, "parts_of", lambda v: (["r0.8.6-git16.d91a4bc"], ["r0.8.6-git16.d91a4bc"]))
+    monkeypatch.setattr(up, "channel_name", lambda given: "testing")
+    monkeypatch.setattr(up, "read_channel", lambda ch: {"Repositories": "ours-f skins-9 rpi-d debian-7"})
+    monkeypatch.setattr(up, "apt_env", lambda repos, pins=None: envs.append(repos) or repos)
+    monkeypatch.setattr(up, "apt", lambda opts, *a, **k: subprocess.CompletedProcess(
+        a, 100 if (a == ("update",) and opts[0].startswith("r0.8.6-git16")) else 0, "", ""))
+    monkeypatch.setattr(up, "apt_download", lambda opts, *a, report_as, reporter=None:
+                        subprocess.CompletedProcess(a, 0, "", ""))
+    up.STATE.mkdir(parents=True, exist_ok=True)
+    assert up.pack_install("gexis-skins-1920x1080") == 0
+    assert envs == [["r0.8.6-git16.d91a4bc"], ["ours-f", "skins-9", "rpi-d", "debian-7"]]
+
+
+def test_a_pack_no_release_can_give_says_so_in_words(up, monkeypatch):
+    monkeypatch.setattr(up, "installed", lambda p: "0.8.6+git16.d91a4bc")
+    monkeypatch.setattr(up, "parts_of", lambda v: (["r-x"], ["r-x"]))
+    def no_channel(ch):
+        raise up.Stop("could not reach it")
+    monkeypatch.setattr(up, "read_channel", no_channel)
+    monkeypatch.setattr(up, "channel_name", lambda given: "stable")
+    monkeypatch.setattr(up, "apt_env", lambda repos, pins=None: repos)
+    monkeypatch.setattr(up, "apt", lambda opts, *a, **k: subprocess.CompletedProcess(a, 100, "", ""))
+    up.STATE.mkdir(parents=True, exist_ok=True)
+    with pytest.raises(up.Stop) as stop:
+        up.pack_install("gexis-skins-1920x1080")
+    assert str(stop.value) == up.UNREACHABLE and "apt" not in str(stop.value)
+
+
 def test_a_kept_gexis_skins_is_marked_installed_by_hand(up, monkeypatch):
     """ADR-0111 decision 10: no release depends on it any more."""
     fake_install(up, monkeypatch)
@@ -333,3 +366,31 @@ def test_a_kept_gexis_skins_is_marked_installed_by_hand(up, monkeypatch):
     monkeypatch.setattr(up, "run", lambda *a, **k: calls.append(a) or subprocess.CompletedProcess(a, 0, "", ""))
     assert up.install(None) == 0
     assert ("apt-mark", "manual", "gexis-skins") in calls
+
+
+def test_an_update_waits_for_a_pack_download_and_says_so(up, monkeypatch):
+    """Found on George's player, 2026-10-03: the update failed on apt's lock
+    while the core was downloading the 1920x1080 pack. One apt at a time."""
+    import fcntl
+    import threading
+
+    up.STATE.mkdir(parents=True)
+    other = (up.STATE / "apt-turn.lock").open("w")
+    fcntl.flock(other, fcntl.LOCK_EX)          # the pack download, holding it
+    said = []
+    monkeypatch.setattr(up.time, "sleep", lambda s: None)
+    threading.Timer(0.05, other.close).start()  # ...and finishing
+    held = up.take_turn(lambda: said.append("waiting"))
+    assert said == ["waiting"] and held is not None
+
+
+def test_a_turn_not_given_within_the_hour_is_a_failure(up, monkeypatch):
+    import fcntl
+
+    up.STATE.mkdir(parents=True)
+    other = (up.STATE / "apt-turn.lock").open("w")
+    fcntl.flock(other, fcntl.LOCK_EX)
+    monkeypatch.setattr(up, "TURN_WAIT_S", 0)
+    with pytest.raises(up.Stop, match="did not finish within an hour"):
+        up.take_turn(lambda: None)
+    other.close()

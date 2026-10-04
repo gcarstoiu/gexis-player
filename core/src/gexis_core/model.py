@@ -277,6 +277,8 @@ class PlaybackState:
     #: goes back to, whether it is untested or only a rotation, and when the
     #: countdown ends (epoch seconds; None until the panel has drawn).
     screen_confirm: dict | None = None
+    #: ADR-0109, amended 2026-10-03: a different screen attached at start.
+    screen_new: dict | None = None
 
     @property
     def controls(self) -> dict | None:
@@ -320,4 +322,5 @@ class PlaybackState:
             "setup": dict(self.setup) if self.setup else None,
             "update": dict(self.update) if self.update else None,
             "screen_confirm": dict(self.screen_confirm) if self.screen_confirm else None,
+            "screen_new": dict(self.screen_new) if self.screen_new else None,
         }

@@ -88,3 +88,32 @@ path is simply not a skin.
 - **No build step means no build assertion.** What guards this is a test
   that every skin in the committed pack names a `screen.bgr`, and the
   route's own 404 for anything it cannot find.
+
+## Amended 2026-10-03: the picker's pictures at the size it shows them
+
+George, on a phone with the 1920 x 1080 pack: *"Skimming through skins on
+phone can get slow after scrolling through a few. It also once locked up and
+the picture wasn't loading anymore even though the name was changing."*
+"Nothing is rendered and nothing is cached" served each skin's whole
+picture - about 530 KB on average and up to 3.7 MB of PNG, which a phone
+decodes to about 8 MB of pixels and keeps - and read all 287 skins of the
+pack (about 70 ms on a Pi 4, in the core's own loop) for every picture.
+
+- **The picker asks for 960 pixels wide**, and gets a JPEG made once from the
+  skin's own picture with the system's Pillow, at low priority, and kept in
+  `/var/cache/gexis-core/skin-previews` (at most 2,000, the oldest going
+  first). Measured on George's player: 154 KB for the largest picture, 645
+  ms to make including Python's start. A picture that cannot be scaled is
+  served whole, as before.
+- **The pack's skins are read once** and again only when the pack's folder
+  changes.
+
+Still the skin's own picture - nothing drawn that the skin does not draw.
+- **Made ahead for every skin** (George, 2026-10-03: *"I would create the
+  thumbs upfront for all, otherwise the user is still facing slowness the
+  first time around"*): after a pack is installed and whenever the core
+  starts with some missing, in one Python at the lowest CPU and I/O priority.
+  Measured on George's player: three in 546 ms, so about a minute for the
+  1920 x 1080 pack's 287. For every pack the player has, not only the
+  screen's (George: "for all resolutions", then "B it is" - a player has
+  only the packs it installed). One asked for before then is made on the spot.

@@ -190,6 +190,15 @@ def rfkill_state(root: Path = RFKILL) -> str:
     return "rfkill unknown"
 
 
+def start_failure(ready: str, radio: str) -> str:
+    """Why the setup network did not start, as the panel says it."""
+    if "soft=1" in radio or "hard=1" in radio:
+        return "The player's Wi-Fi is switched off."
+    if ready == "missing":
+        return "No Wi-Fi was found on the player. Connect it by cable to set it up."
+    return "Something stopped the player's Wi-Fi from starting."
+
+
 def _screen_kept() -> bool:
     from . import screen_apply
     return screen_apply.confirmed()
@@ -504,10 +513,13 @@ class SetupNetwork:
         if rc != 0:
             self._state = "failed"
             said = err.splitlines()[-1] if err else f"nmcli exited {rc}"
-            # What the radio was doing goes with the reason: on a blank card
-            # the panel is the only place anyone can read it.
-            self._reason = f"{said} [wlan0 {ready}; {rfkill_state(self._rfkill)}]"
-            logger.warning("setup: the setup network did not come up: %s", self._reason)
+            radio = rfkill_state(self._rfkill)
+            # **A sentence on the panel, the system's line in the log** (George,
+            # 2026-10-03, reviewing the copy: "This needs to be fixed" - the
+            # panel showed "Error: ... [wlan0 ...; rfkill ...]"). The detail
+            # still matters on a blank card, and the log keeps it whole.
+            self._reason = start_failure(ready, radio)
+            logger.warning("setup: the setup network did not come up: %s [wlan0 %s; %s]", said, ready, radio)
             self._publish()
             return False
         self._state = "open"
