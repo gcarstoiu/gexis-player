@@ -1,6 +1,6 @@
 # ADR-0117 — DACs beyond the two on the bench
 
-**Status:** **Proposed** — three decisions owed to George (below).
+**Status:** **Proposed** — decision 3 confirmed (George, 2026-10-04: *"Let's keep the setting"*); 1 and 2 owed.
 **Builds on:** [ADR-0009](0009-logical-output-device.md) (the output is named,
 never numbered), [ADR-0018](0018-volume-and-output-modes.md) (the DAC2 HD's volume
 scale), [ADR-0055](0055-which-output-the-device-plays-to.md) (which output the
