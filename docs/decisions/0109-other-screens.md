@@ -308,6 +308,32 @@ and at the bar's own width Keep is off the screen entirely.
   start asks about that screen instead of switching again.
 - **Not during setup** (its Screen step decides) **nor headless.**
 
+### Amended 2026-10-04: a bar boots in its own mode, turned
+
+George, on the 11.9" bar: the boot logo was *"zoomed in a lot"*; he chose
+**A** - tell the kernel how the panel is turned. Found on the way, and
+settled on the bar the same evening:
+
+- **A bar's `video=` is its resolution alone**, not the preset's `M@60`. With
+  `M` the kernel calculates CVT timings for 60 Hz, which the bar does not
+  display: it was dark for ~27 s of every boot, until the compositor set the
+  mode its EDID gives (57.7 Hz, 59.4 MHz). Without `M` or a rate the kernel
+  takes the EDID's mode of that size. **Shown:** the logo from the start.
+- **The panel's orientation goes on `video=`** (`panel_orientation=`), so
+  plymouth and the console draw turned; the compositor still turns the panel
+  itself (`wlr-randr --transform`) and does not turn it twice (plane rotation
+  0, measured). A total turn of 90 is `left_side_up`, 270 `right_side_up`:
+  **shown at 270** (the 11.9" at 180°, *"It displayed correctly"*); 90 is its
+  mirror, not yet seen.
+- **The boot stages fit a bar's logo to its height** - plymouth's script,
+  `gexis-splash-fb`, and swaybg behind the compositor - instead of filling,
+  which cut the logo. `gexis-splash-fb` draws on the landscape canvas and
+  turns it into the native portrait framebuffer by the screen's transform.
+- **A bar kept before** has its `video=` brought up to date at the core's
+  next start, for the restart after.
+
+Not yet seen: the 7.9" bar (1280 x 400), and any bar at 0°.
+
 Considered and **postponed** (George: *"Let's leave the crowd sourcing
 post"*): users sending a screen's fingerprint through a pre-filled GitHub
 issue from the phone page, without the EDID serial, so more models become
