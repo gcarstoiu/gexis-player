@@ -441,7 +441,7 @@
           <section class="pane">
             <h1 class="hero">{shownName} is {picked ? 'joining your network' : 'set up'}</h1>
             {#if picked}
-              <p class="lead">This page is served by the player over its own Wi-Fi, so it stops here. Reconnect this phone to <strong>{picked}</strong>, then open the address below.</p>
+              <p class="lead">This page is served by the player over its own Wi-Fi, so it stops here. Check this phone is back on <strong>{picked}</strong>, then open the address below.</p>
             {/if}
             {#if keepQuestion}
               <div class="info info--warn"><span class="bar" style="background:#e0a758"></span><span><b>Then go to the player's screen</b><small>It restarts on the screen you chose and asks whether to keep it. Tap Keep on the screen within two minutes, or it goes back to how it was.</small></span></div>
