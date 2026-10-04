@@ -2682,8 +2682,8 @@ the draft below - George: *"Yes"*; ADR-0109 and its amendments, ADR-0111):
 5. **The screen list:** every HDMI model of the presets (106), a case listed
    as its panel, and **a model marked tested only once it has been tried on
    the hardware.**
-   *Open: the 7.9" and 11.9" are marked tested and have not been tried -
-   tried in criterion 3, or unmarked.*
+   *Met, 2026-10-04: the 7.9" and 11.9" were tried in criterion 3 and stay
+   marked tested.*
 
 **Acceptance (draft, as first written - replaced by the list above)**
 
