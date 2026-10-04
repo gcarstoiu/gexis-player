@@ -261,7 +261,9 @@ async def _reboot() -> None:
 #: ADR-0109 decision 5: how long the panel asks *Keep this screen?*, from its
 #: first frame; and how long a panel that never draws gets before the device
 #: goes back by itself (a dark screen never says it is dark).
-KEEP_S = 30.0
+#: Two minutes for every Keep (George, 2026-10-04: "A change to a different
+#: screen should also wait 2 minutes"; a rotation and after setup already did).
+KEEP_S = 120.0
 NEVER_DRAWN_S = 120.0
 #: After setup, which ends on the phone rather than beside the panel
 #: (ADR-0109 as amended 2026-10-02, George: "C").
@@ -322,7 +324,10 @@ def screen_question(state: dict, now: float | None = None) -> dict | None:
         "rotation_only": rotation_only,
         "previous_rotation": f"{previous.get('rotation', 0)}°" if previous else "0°",
         "deadline": None,
-        "total": SETUP_KEEP_S if state.get("after_setup") else KEEP_S,
+        # Two minutes after setup, and for a rotation (George, 2026-10-04,
+        # testing the bars: "For rotating screen we should also allow 2
+        # minutes and not 30 seconds").
+        "total": SETUP_KEEP_S if state.get("after_setup") or rotation_only else KEEP_S,
     }
 
 
@@ -1600,6 +1605,10 @@ async def main() -> None:
             # ADR-0111: on where a pack is already installed - the devices
             # that had gexis-skins keep it, unasked (decision 10).
             "visualiser_skins": lambda: bool(skin_packs.installed()),
+            # George, 2026-10-04: "all test releases come with the debug on,
+            # so that logs are kept between reboots" - on by default on the
+            # Testing channel; a choice made either way stands.
+            "debug_logs": lambda: settings_store.get("update_channel") == "Testing",
             "image_build": lambda: " · ".join(x for x in (image_info().get("built"), updates.installed_release()) if x) or "unknown",
             # ADR-0086 as amended: a synthesised switch reads what systemd says
             # about the unit until somebody uses it.
@@ -2626,42 +2635,6 @@ async def main() -> None:
         asyncio.ensure_future(_screen_go_back("the panel asked to go back"))
         return {"going_back": True}
 
-    async def _switch_to_new_screen(question: dict) -> None:
-        """**A recognised screen is used straight away** (ADR-0109, amended
-        2026-10-04): the panel comes up on it with *Keep this screen?*, and
-        goes back by itself if nobody keeps it. Only the kiosk restarts when
-        the kernel's mode stays as it is - true of every tested HDMI screen -
-        the device otherwise. Marked tried first, so a go-back asks next time
-        rather than switching again."""
-        model = screens.by_label(question["label"])
-        if model is None:
-            state_store.set_screen_new(question)
-            return
-        turn = screen_apply.parse_rotation(settings.value("rotation"))
-        applied = screen_apply.Applied(model.id, turn)
-        await asyncio.to_thread(screen_watch.tried, question["key"])
-        reboot = screen_apply.picture()[0] != screen_apply.picture_of(applied)[0]
-        asks = await asyncio.to_thread(screen_apply.choose, applied)
-        _sync_screen_settings()
-        logger.info("screen: %s attached, switched to it; %s", model.id,
-                    "the device restarts" if reboot else "the panel restarts" if asks else "nothing changes on screen")
-        if not asks:
-            await asyncio.to_thread(lambda: screen_watch.kept(screen_detect.seen()))
-            _skins_kick()
-            return
-        if reboot:
-            await asyncio.sleep(2.0)
-            await asyncio.create_subprocess_exec("systemctl", "reboot")
-            return
-        restart = await asyncio.create_subprocess_exec("systemctl", "restart", "gexis-kiosk.service")
-        await restart.wait()
-        # After the restart, so the old panel's first frame cannot start the
-        # countdown meant for the new one.
-        state_store.set_screen_confirm(screen_question(screen_apply.read_state()))
-        screen_wait["task"] = asyncio.ensure_future(
-            _screen_countdown(NEVER_DRAWN_S, "the panel never drew on the new screen"))
-
-    switching = False
     _question = screen_question(screen_apply.read_state())
     if _question is not None:
         state_store.set_screen_confirm(_question)
@@ -2676,17 +2649,14 @@ async def main() -> None:
             headless = bool(settings.value("headless"))
             question = await asyncio.to_thread(
                 lambda: screen_watch.question(screen_detect.seen(), headless=headless))
-            if question is not None and question.get("label") and not question.get("tried"):
-                # Beside the start, not before it: the panel it restarts needs the server.
-                # It asks for the new screen's pack itself, once kept.
-                asyncio.ensure_future(_switch_to_new_screen(question))
-                switching = True
-            else:
-                state_store.set_screen_new(question)
+            # A new screen was switched to before the panel started
+            # (`gexis-screen-check`, ADR-0109 as amended 2026-10-04), and a
+            # switch waiting for Keep took the branch above. What is left to
+            # ask about here is a screen whose switch went back.
+            state_store.set_screen_new(question)
         except Exception:  # noqa: BLE001 - a question not asked is not a player not started
             logger.exception("screen: the attached screen was not compared")
-    if not switching:
-        _skins_kick()
+    _skins_kick()
 
     async def _screen_new_answer(action: str) -> dict:
         """Use it (a recognised screen: the usual restart and Keep), Not now

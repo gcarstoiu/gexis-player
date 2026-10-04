@@ -384,16 +384,19 @@
     text-overflow: ellipsis;
   }
   /* Artist at most 62% of the line, the album the rest, the year kept
-     (round 2, *Strip*). */
+     (round 2, *Strip*). **Larger than the design, the year straight after
+     the album** (George, 2026-10-04, on the bars: "increase the size of
+     artist, album and year. Track title should stay the same ... the year
+     ... should just come after the album, not at the end of the line"). */
   .metaline {
     display: flex;
     align-items: baseline;
-    gap: 12px;
-    margin-top: 10px;
+    gap: 14px;
+    margin-top: 12px;
     min-width: 0;
   }
   .artist {
-    font-size: 28px;
+    font-size: 36px;
     font-weight: 600;
     color: var(--accent-artist);
     white-space: nowrap;
@@ -406,7 +409,7 @@
   /* The panel's link: 44px tall to the finger, no taller to the eye. */
   .artist--link {
     font: inherit;
-    font-size: 28px;
+    font-size: 36px;
     font-weight: 600;
     border: none;
     background: none;
@@ -416,17 +419,17 @@
   }
   .artist--link:active:not(:disabled) { color: #f8c4b4; }
   .album {
-    font-size: 24px;
+    font-size: 32px;
     color: rgba(233, 238, 242, 0.6);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    flex: 1;
+    flex: 0 1 auto;
     min-width: 0;
   }
   .year {
     font-family: var(--font-mono);
-    font-size: 21px;
+    font-size: 28px;
     color: var(--ink-quiet);
     white-space: nowrap;
     flex-shrink: 0;

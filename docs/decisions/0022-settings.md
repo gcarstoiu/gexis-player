@@ -277,6 +277,13 @@ recognition.
 | Attached screen | [N] | A choice from the list of supported screens (grouped by maker, from `foonerd/pi_screen_setup`'s presets, Finding 100). Sets the layout family (Standard or Bar) and the visualiser's skin set. The same list as setup's Screen step, where a recognised screen is confirmed or another chosen. Applies at the next restart |
 | Screen rotation | [N] | 0° / 180° (ADR-0109 decision 6, George 2026-09-30: portrait is not designed). 0° is the model's landscape: the two bar screens are portrait panels used sideways (Finding 100), and their list entry carries that turn. Applies at the next restart |
 
+### Changed 2026-10-04 — Debug logs on by default on Testing
+
+`debug_logs` ([R], ADR-0103) defaults **on** when the update channel is
+Testing (George, 2026-10-04: *"all test releases come with the debug on, so
+that logs are kept between reboots"*). Stable keeps it off; a choice made
+either way stands.
+
 ## Settled by prior records
 
 - **Output mode switching is not instantaneous.** Confirmation dialogue, and the

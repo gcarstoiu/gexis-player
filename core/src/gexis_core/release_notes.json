@@ -1,6 +1,10 @@
 {
  "_about": "Every release's notes, newest first, exactly as published and signed (ADR-0116). publish.sh reads a release's notes from here; Settings -> Change logs shows the last 10.",
  "releases": {
+  "0.8.8": {
+   "date": "2026-10-04",
+   "notes": "New\n• A newly attached screen is used straight away at start, already in its own resolution, with Keep this screen?. A screen the player does not know is laid out from its own resolution, and a panel that stands upright, such as a bar, is turned to landscape.\n• On a bar, Now Playing shows the artist, album and year larger, with the year straight after the album.\n• On the Testing channel, the player's logs are kept across restarts by default, to help track down problems.\nFixed\n• Keep this screen? waits two minutes for every change, including a new screen and a rotation.\n• On a bar's first start, Keep this screen? is drawn on the bar's own layout, so its Keep button can be seen."
+  },
   "0.8.7": {
    "date": "2026-10-04",
    "notes": "New\n• A newly attached screen the player recognises is used straight away at start, with Keep this screen?; if it is not kept, the player goes back to the screen before. Any other new screen is asked about, and the list of screens opens on its size.\n• A USB disk stays in the Lyrion server's list for 7 days after it is unplugged.\n• Setup says so when it finds no Wi-Fi network or no audio output.\n• Setup's step counter counts only the steps that are shown.\nFixed\n• On an artist's page, genres are kept to two rows, so Play and Shuffle are never covered.\n• After setup, Keep this screen? waits two minutes, as it says.\n• When the setup network cannot start, setup says why in a sentence.\n• A skin pack that failed to download is no longer reported as failed once the screen's pack is installed, and a failure is described in plain words."
