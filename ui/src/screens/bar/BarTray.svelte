@@ -140,8 +140,12 @@
   }
 </script>
 
+<!-- **The rest of the screen takes the swipe too** (George, 2026-10-04: "a
+     swipe up from the bottom of the display should work"): a swipe up that
+     starts below the tray closes it, and a tap still does. -->
 <div class="scrim" class:is-shown={open || following} style:opacity={shownH / TRAY_H}
-  role="presentation" onclick={onclose}></div>
+  role="presentation"
+  onpointerdown={band.down} onpointermove={band.move} onpointerup={band.up} onpointercancel={band.cancel}></div>
 
 <div
   class="tray"
@@ -226,6 +230,7 @@
     position: absolute;
     inset: 0;
     z-index: 12;
+    touch-action: none;
     background: rgba(8, 12, 16, 0.55);
     pointer-events: none;
     visibility: hidden;
