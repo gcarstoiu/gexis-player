@@ -27,6 +27,7 @@
   to playlist opens Library.svelte's playlist picker, drawn as a bar's sheet.
 -->
 <script>
+  import RadioGlyph from '../../lib/RadioGlyph.svelte';
   import { untrack } from 'svelte';
 
   import {
@@ -939,13 +940,9 @@
               {#each radio.items as row (row.handle)}
                 <button class="rcard" class:is-busy={busy === row.handle} type="button"
                   onclick={() => (row.kind === 'folder' ? openRadio(row.handle, row.label) : playStation(row))}>
-                  <span class="rcard__disc">
-                    {#if row.kind === 'folder'}
-                      <span class="i-folder"><i></i><b></b></span>
-                    {:else}
-                      <span class="i-station"><i></i><b></b></span>
-                    {/if}
-                  </span>
+                  <!-- The standard screen's shape and tint for the category
+                       (George, 2026-10-04). -->
+                  <RadioGlyph label={row.label} station={row.kind === 'station'} card />
                   <span class="rcard__text">
                     <span class="rcard__name">{row.label}</span>
                     {#if row.subtitle}<span class="rcard__meta">{row.subtitle}</span>{/if}
@@ -1900,16 +1897,6 @@
   @keyframes rskel {
     50% { opacity: 0.45; }
   }
-  .rcard__disc {
-    width: 60px;
-    height: 60px;
-    border-radius: 50%;
-    background: var(--ink-fill);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-  }
   .rcard__text {
     flex: 1;
     min-width: 0;
@@ -1930,47 +1917,6 @@
     font-family: var(--font-mono);
     font-size: 14px;
     color: var(--ink-quiet);
-  }
-  .i-folder {
-    position: relative;
-    width: 30px;
-    height: 24px;
-  }
-  .i-folder i {
-    position: absolute;
-    left: 0;
-    top: 0;
-    width: 13px;
-    height: 6px;
-    border-radius: 3px 3px 0 0;
-    background: rgba(233, 238, 242, 0.6);
-  }
-  .i-folder b {
-    position: absolute;
-    left: 0;
-    top: 4px;
-    width: 30px;
-    height: 20px;
-    border-radius: 4px;
-    background: rgba(233, 238, 242, 0.85);
-  }
-  .i-station {
-    display: flex;
-    align-items: center;
-    gap: 5px;
-  }
-  .i-station i {
-    width: 12px;
-    height: 12px;
-    border-radius: 50%;
-    background: rgba(233, 238, 242, 0.85);
-  }
-  .i-station b {
-    width: 11px;
-    height: 22px;
-    border-right: 3px solid rgba(233, 238, 242, 0.6);
-    border-radius: 0 22px 22px 0;
-    box-sizing: content-box;
   }
   .i-chev {
     width: 12px;
