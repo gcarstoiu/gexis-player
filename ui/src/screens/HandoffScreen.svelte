@@ -79,7 +79,14 @@
       {/if}
       <span class="hb__fromname">{label(from)}</span>
     </div>
-    <div class="hb__line"></div>
+    <!-- Notes travel the line, from the old source to the new, as they
+         cross the standard screen's (George, 2026-10-04: the bar's had
+         none). -->
+    <div class="hb__line">
+      <span class="hb__note hb__note--1">&#9834;</span>
+      <span class="hb__note hb__note--2">&#9835;</span>
+      <span class="hb__note hb__note--3">&#9834;</span>
+    </div>
     <div class="hb__to">
       <div class="hb__ring">
         {#if drawable(to)}
@@ -275,10 +282,30 @@
     min-width: 0;
   }
   .hb__line {
+    position: relative;
     flex: 1;
     min-width: 120px;
     height: 2px;
     background: linear-gradient(90deg, rgba(233, 238, 242, 0.12), var(--to-accent));
+  }
+  /* Across the line's whole length - it takes the bar's width, so the
+     standard screen's 68px march would barely move. */
+  .hb__note {
+    position: absolute;
+    left: 0;
+    line-height: 1;
+    color: var(--to-accent);
+    opacity: 0;
+    animation: travel 2200ms linear infinite;
+  }
+  .hb__note--1 { top: -44px; font-size: 40px; }
+  .hb__note--2 { top: -20px; font-size: 32px; animation-delay: 730ms; }
+  .hb__note--3 { top: -50px; font-size: 28px; animation-delay: 1460ms; }
+  @keyframes travel {
+    0% { left: 0; opacity: 0; }
+    15% { opacity: 1; }
+    85% { opacity: 1; }
+    100% { left: calc(100% - 30px); opacity: 0; }
   }
   .hb__to {
     display: flex;
