@@ -2553,8 +2553,9 @@ async def main() -> None:
             await asyncio.sleep(1 if view.get("active") else 3)
 
     asyncio.ensure_future(_follow_updates())
-    # ADR-0111: the pack this screen wants, now and every few minutes.
-    _skins_kick()
+    # ADR-0111: the pack this screen wants every few minutes - and now, once
+    # the attached screen has been compared (below), so a start that
+    # switches screens does not first fetch the old screen's pack.
     asyncio.ensure_future(_skins_loop())
     asyncio.ensure_future(_previews_ahead())
 
@@ -2660,6 +2661,7 @@ async def main() -> None:
         screen_wait["task"] = asyncio.ensure_future(
             _screen_countdown(NEVER_DRAWN_S, "the panel never drew on the new screen"))
 
+    switching = False
     _question = screen_question(screen_apply.read_state())
     if _question is not None:
         state_store.set_screen_confirm(_question)
@@ -2676,11 +2678,15 @@ async def main() -> None:
                 lambda: screen_watch.question(screen_detect.seen(), headless=headless))
             if question is not None and question.get("label") and not question.get("tried"):
                 # Beside the start, not before it: the panel it restarts needs the server.
+                # It asks for the new screen's pack itself, once kept.
                 asyncio.ensure_future(_switch_to_new_screen(question))
+                switching = True
             else:
                 state_store.set_screen_new(question)
         except Exception:  # noqa: BLE001 - a question not asked is not a player not started
             logger.exception("screen: the attached screen was not compared")
+    if not switching:
+        _skins_kick()
 
     async def _screen_new_answer(action: str) -> dict:
         """Use it (a recognised screen: the usual restart and Keep), Not now
