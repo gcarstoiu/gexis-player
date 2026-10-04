@@ -16,7 +16,7 @@ of item would a generic browser have to draw?
   followed an item's own *go* action only when its command was a browse
   (last word `items` or `browselibrary`), never `play`, `add` or `playlist`,
   never a setting; it skipped anything asking for typed text.
-- **Two levels** below each top entry, the first 12 items of each list, the
+- **Two levels** below each top entry (three in My Apps, second walk), the first 12 items of each list, the
   first 100 of each page - a sample of the shapes, not a census.
 
 ## The home menu
