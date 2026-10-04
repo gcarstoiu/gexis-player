@@ -352,7 +352,7 @@
         "label": "Screen rotation",
         "marks": "N",
         "note": "For a screen mounted the other way up.",
-        "warn": "Changing it restarts the player and asks Keep this rotation? on the panel. If nobody touches Keep within 30 seconds, it goes back.",
+        "warn": "Changing it restarts the player and asks Keep this rotation? on the panel. If nobody touches Keep within 2 minutes, it goes back.",
         "options": [
           "0°",
           "180°"

@@ -322,7 +322,10 @@ def screen_question(state: dict, now: float | None = None) -> dict | None:
         "rotation_only": rotation_only,
         "previous_rotation": f"{previous.get('rotation', 0)}°" if previous else "0°",
         "deadline": None,
-        "total": SETUP_KEEP_S if state.get("after_setup") else KEEP_S,
+        # Two minutes after setup, and for a rotation (George, 2026-10-04,
+        # testing the bars: "For rotating screen we should also allow 2
+        # minutes and not 30 seconds").
+        "total": SETUP_KEEP_S if state.get("after_setup") or rotation_only else KEEP_S,
     }
 
 

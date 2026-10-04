@@ -101,6 +101,8 @@ def test_a_rotation_only_change_asks_about_the_rotation(tmp_path):
     screen_apply.choose(Applied("waveshare-10.1-hdmi-b", 180), **f, now=2)
     q = screen_question(screen_apply.read_state(f["state"]))
     assert q["rotation_only"] and q["previous_rotation"] == "0°"
+    # George, 2026-10-04: a rotation waits two minutes, as after setup.
+    assert q["total"] == 120.0
 
 
 def test_a_kept_screen_asks_nothing(tmp_path):
