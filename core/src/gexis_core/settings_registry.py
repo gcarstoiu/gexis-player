@@ -53,7 +53,7 @@ ONLY_WHEN_NOT = "not"
 #: Sources a `choice` may draw its options from instead of a literal list
 #: (ADR-0044 §4). Adding one is a code change, not a registry edit, which is
 #: the point: an unknown name is a typo and must fail the load.
-OPTION_SOURCES = {"skin_corpus", "timezones", "output_device", "screens"}
+OPTION_SOURCES = {"skin_corpus", "timezones", "output_device", "screens", "boards"}
 
 
 @lru_cache(maxsize=1)
@@ -98,12 +98,24 @@ def _screen_tags() -> dict[str, str]:
     return {s.label: "Tested" if s.tested else "Untested" for s in screens.all_screens()}
 
 
+def _boards() -> tuple[str, ...]:
+    """ADR-0117 decision 3: Found by itself, then every board offered."""
+    from . import board_apply
+    return board_apply.options()
+
+
+def _board_tags() -> dict[str, str]:
+    """ADR-0117 decision 2: Tested or Known on every board offered."""
+    from . import board_apply
+    return board_apply.tags()
+
+
 OPTION_RESOLVERS = {"timezones": _timezones, "skin_corpus": tuple, "output_device": tuple,
-                    "screens": _screens}
+                    "screens": _screens, "boards": _boards}
 
 #: A word beside an option in the picker, by source (round 2's Attached
 #: screen: *Tested* / *Untested* on every model).
-OPTION_TAGS = {"screens": _screen_tags}
+OPTION_TAGS = {"screens": _screen_tags, "boards": _board_tags}
 
 logger = logging.getLogger("gexis_core.settings_registry")
 

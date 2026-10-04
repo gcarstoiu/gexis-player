@@ -18,7 +18,7 @@ from dbus_next import BusType
 from dbus_next.aio import MessageBus
 
 from gexis_core import alsa, bluetooth_adapter_state, bluetooth_agent, device_name, journal, meters, screen_detect, skins, wifi
-from gexis_core import screen_apply, screen_watch, screens, skin_packs, skin_previews
+from gexis_core import board_apply, screen_apply, screen_watch, screens, skin_packs, skin_previews
 from gexis_core.adapters.base import VolumeMechanism
 from gexis_core.adapters.bluetooth import BluetoothAdapter
 from gexis_core.adapters.lms import LmsAdapter
@@ -367,6 +367,19 @@ async def main() -> None:
     # whatever board is fitted rather than of this project. Read from the
     # store directly, like `lms_server` above, because it has to be settled
     # before the volume bridges are built.
+    # **ADR-0117 decision 3: a board chosen before this start made its card,
+    # or goes back.** Before the output is resolved, so a go-back is not
+    # first played to. The go-back restarts again, as the choice did.
+    board_missing = board_apply.check([o.card for o in outputs.discover()])
+    if board_missing is not None:
+        settings_store.delete("sound_card_board")
+        logger.warning("board: %s made no sound card; went back, restarting", board_missing)
+
+        async def _board_restart() -> None:
+            await asyncio.sleep(2.0)
+            await asyncio.create_subprocess_exec("systemctl", "reboot")
+        asyncio.ensure_future(_board_restart())
+
     chosen_output = outputs.resolve(settings_store.get("output_device"))
     if chosen_output is None:
         logger.error("outputs: no playback output found at all")
@@ -1544,6 +1557,23 @@ async def main() -> None:
             except Exception:  # noqa: BLE001 - a watcher that dies tells nobody anything
                 logger.exception("skins: ensure failed")
 
+    def _choose_board(value: str) -> None:
+        """ADR-0117 decision 3: the board's overlay written, then a restart;
+        the next start looks for its card (`board_apply.check`)."""
+        try:
+            changed = board_apply.choose(value)
+        except ValueError:
+            logger.warning("board: %r is not a board gexis offers; nothing written", value)
+            return
+        if not changed:
+            return
+        logger.info("board: %s written to config.txt; restarting", value)
+
+        async def _restart() -> None:
+            await asyncio.sleep(2.0)
+            await asyncio.create_subprocess_exec("systemctl", "reboot")
+        asyncio.ensure_future(_restart())
+
     def _choose_screen(label: str | None = None, rotation: str | None = None) -> None:
         """ADR-0109: write the chosen screen and rotation for the next start
         (screen.env, and video= for a bar), then restart on it - unless
@@ -1614,6 +1644,8 @@ async def main() -> None:
             # ADR-0111: on where a pack is already installed - the devices
             # that had gexis-skins keep it, unasked (decision 10).
             "visualiser_skins": lambda: bool(skin_packs.installed()),
+            # ADR-0117: what config.txt loads, which a go-back changes.
+            "sound_card_board": board_apply.setting_value,
             "image_build": lambda: " · ".join(x for x in (image_info().get("built"), updates.installed_release()) if x) or "unknown",
             # ADR-0086 as amended: a synthesised switch reads what systemd says
             # about the unit until somebody uses it.
@@ -1633,6 +1665,7 @@ async def main() -> None:
         # The Release row's note: what the waiting or just-installed release
         # says changed (2026-10-01, George).
         notes={"software_update": updates.whats_new,
+               "sound_card_board": board_apply.note,
                # The Lyrion server's first start says what it is doing.
                **({"lyrion-server.enabled": lambda: _lyrion_note(settings.value("lyrion-server.enabled") is True)}
                   if any(p.id == "lyrion-server" for p in installed_plugins) else {})},
@@ -1760,6 +1793,7 @@ async def main() -> None:
                # next start, and the device restarts on it - unless setup is
                # under way, which restarts by itself when it finishes.
                "screen": lambda value: _choose_screen(label=value),
+               "sound_card_board": lambda value: _choose_board(value),
                "rotation": lambda value: _choose_screen(rotation=value),
                # **ADR-0083.** A backup that stays on the device does not
                # survive the event it exists for, so this writes into a share

@@ -224,6 +224,10 @@ def discover(chosen_board: str | None = None) -> list[Output]:
     *Sound card board* setting), the HAT's EEPROM, or the list."""
     found: list[Output] = []
     product = boards.hat_product()
+    if chosen_board is None:
+        from gexis_core import board_apply
+        written = board_apply.written()
+        chosen_board = written.id if written else None
     # **The device's description, not the card's.** `aplay -l` gives both,
     # and the card's is the driver's module name - "snd_rpi_hifiberry_
     # dacplushd", which is what the first version put in the picker. The

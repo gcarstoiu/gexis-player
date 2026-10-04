@@ -16,6 +16,18 @@
         "warn": "Changing the output stops whatever is playing while the sound card is reopened. An output with no volume control of its own — either HDMI — also takes the volume control off the panel."
       },
       {
+        "key": "sound_card_board",
+        "type": "choice",
+        "label": "Sound card board",
+        "marks": "N",
+        "note": "Most boards and every USB DAC are found by themselves. A board that is not - it does not show under Output - can be chosen here.",
+        "warn": "Choosing a board restarts the player with it. If no sound card appears after the restart, the player goes back to what it had and restarts again.",
+        "options": [],
+        "default": "Found by itself",
+        "optionsFrom": "boards",
+        "grouped": true
+      },
+      {
         "key": "output_mode",
         "type": "choice",
         "label": "Output mode",

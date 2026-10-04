@@ -184,7 +184,10 @@
   // list is every zone this system knows, and `Europe/Berlin` splits at the
   // slash. Level one is the regions, level two the places in one of them.
   const grouped = $derived(sheet?.grouped ? (sheet.options ?? []) : []);
-  const regions = $derived([...new Set(grouped.map((o) => o.split('/')[0]))].sort());
+  // An option with no `/` is a choice of its own, above the groups - Sound
+  // card board's *Found by itself* (ADR-0117).
+  const loose = $derived(grouped.filter((o) => !o.includes('/')));
+  const regions = $derived([...new Set(grouped.filter((o) => o.includes('/')).map((o) => o.split('/')[0]))].sort());
   const places = $derived(
     region === null ? [] : grouped.filter((o) => o.split('/')[0] === region)
   );
@@ -1411,6 +1414,13 @@
            lists rather than one of several hundred. -->
       {#if sheet.grouped && region === null}
         <div class="options" data-noscrollbar>
+          {#each loose as option (option)}
+            {@const selected = choicePending !== null ? choicePending === option : String(sheet.value) === option}
+            <button class="option" class:is-selected={selected} type="button" onclick={() => choose(option)}>
+              <span class="radio"><span></span></span>
+              <span class="option__label">{option}</span>
+            </button>
+          {/each}
           {#each regions as name (name)}
             {@const selected = String(sheet.value ?? '').split('/')[0] === name}
             <button class="option" class:is-selected={selected} type="button" onclick={() => chooseRegion(name)}>
