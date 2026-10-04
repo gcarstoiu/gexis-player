@@ -352,7 +352,7 @@
         "label": "Attached screen",
         "marks": "N",
         "note": "Sets the layout, Standard or Bar, and which visualiser skins are offered.",
-        "warn": "Changing it restarts the player on the new screen. If that changes the picture, the screen asks whether to keep it, and without a touch on Keep within 30 seconds it goes back.",
+        "warn": "Changing it restarts the player on the new screen. If that changes the picture, the screen asks whether to keep it, and without a touch on Keep within 2 minutes it goes back.",
         "options": [],
         "default": null,
         "optionsFrom": "screens",
@@ -364,7 +364,7 @@
         "label": "Screen rotation",
         "marks": "N",
         "note": "For a screen mounted the other way up.",
-        "warn": "Changing it restarts the player and asks Keep this rotation? on the panel. If nobody touches Keep within 30 seconds, it goes back.",
+        "warn": "Changing it restarts the player and asks Keep this rotation? on the panel. If nobody touches Keep within 2 minutes, it goes back.",
         "options": [
           "0°",
           "180°"
@@ -1138,7 +1138,7 @@
         "type": "toggle",
         "label": "Debug logs",
         "marks": "R",
-        "note": "Keeps the device's logs on the card across restarts, up to 100 MB, for tracking down a problem. Off, they are kept in memory and lost at a restart, and switching off deletes the ones kept.",
+        "note": "Keeps the device's logs on the card across restarts, up to 100 MB, for tracking down a problem. Off, they are kept in memory and lost at a restart, and switching off deletes the ones kept. On by default on the Testing channel.",
         "default": false
       },
       {

@@ -285,6 +285,20 @@ Proposed in ADR-0117 decision 3 and confirmed by George, 2026-10-04:
 | Setting | Mark | Notes |
 |---|---|---|
 | Sound card board | [N] | Settings → Audio, and the same choice in setup's Audio step. *Found by itself* (the default: nothing written) or a board from the list (Volumio's, read and corrected). For a board that does not name itself: choosing writes its `dtoverlay=` to `config.txt` and restarts; **if no card appears, the overlay is taken out again by itself** and the row says the board was not found (ADR-0117) |
+### Changed 2026-10-04 — Debug logs on by default on Testing
+
+`debug_logs` ([R], ADR-0103) defaults **on** when the update channel is
+Testing (George, 2026-10-04: *"all test releases come with the debug on, so
+that logs are kept between reboots"*). Stable keeps it off; a choice made
+either way stands.
+
+### Appended 2026-10-04 — the bars' wallpapers
+
+Confirmed by George, 2026-10-04 (*"Yes you can"*):
+
+| Setting | Mark | Notes |
+|---|---|---|
+| Bar wallpaper shape and crop | [H] | On a bar, Pixabay pictures at least 2.4 times as wide as tall are preferred, from a 200-result page at 400 px minimum height, falling back to the usual ones; the idle screen fills a bar with any picture it can crop by up to 70 %, framed at 35 % from the top (George, "C"). Fixed values, not rows |
 
 ## Settled by prior records
 

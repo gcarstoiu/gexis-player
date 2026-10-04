@@ -37,7 +37,7 @@ cp -a "$VENV" "$STAGE/opt/gexis-core/"
 # 03-core), from the same files - one source of truth until the stages go.
 F=/src/image/stage-gexis/03-core/files
 U="$STAGE/usr/lib/systemd/system"
-for unit in gexis-core.service gexis-meter.service gexis-park.service \
+for unit in gexis-core.service gexis-meter.service gexis-park.service gexis-screen-check.service \
 	gexis-uploaded-renderer@.service gexis-uploaded-service@.service gexis-fetch@.service; do
 	install -D -m 644 "$F/$unit" "$U/$unit"
 done
@@ -100,7 +100,11 @@ fi
 # device that updates rather than reboots had no nightly check (found on
 # sofa-pi, 2026-09-30: enabled, inactive, no next run). A timer starting is
 # harmless - it only schedules.
+# ADR-0109 as amended 2026-10-04: a new screen is switched to before the
+# panel starts. On for every device, an updated one included - it only acts
+# at a start.
 if command -v systemctl >/dev/null; then
+	systemctl enable gexis-screen-check.service
 	systemctl enable gexis-update-check.timer
 	if [ -d /run/systemd/system ]; then systemctl start gexis-update-check.timer; fi
 fi

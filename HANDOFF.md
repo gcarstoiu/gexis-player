@@ -4,11 +4,20 @@ Last updated: 2026-10-04 (on R2D2).
 
 ## Start here
 
-**Work continues on `phase-13b` in the main checkout. Releases 0.5.0 to
-0.8.6 went to the testing channel (0.8.6 is serial 19, 2026-10-03), each
-seen on George's player before it was cut.** `main` is merged through 0.8.5
-(PR #44); **PR #45 (0.8.6) waits for George to merge it** - he merges, Claude
-opens. **Phases 13a, 13c and 13e are closed** (DEVELOPMENT.md); 13b is still open.
+**Work continues on `phase-13b` in the main checkout, and Phase 13d in its
+own worktree, `~/projects/gexis-player-13d` (branch `phase-13d`). Releases
+0.5.0 to 0.8.9 went to the testing channel (0.8.9 is serial 22,
+2026-10-04).** `main` is merged through 0.8.8 (PR #46); **the 0.8.9 PR waits
+for George to merge it** - he merges, Claude opens. Next: 13b's last screen
+swaps (George), then testing 13d (its worktree), then **13f, Lyrion's own
+menus** (added 2026-10-04, Finding 110; an ADR first). 0.8.8 was released
+without a preview, at George's word: he tests the bars on releases, not
+previews, and test releases keep their logs across restarts (Debug logs
+default on for Testing). **George is testing the bars on 0.8.8**: the new
+screen switched to before the panel starts (`gexis-screen-check.service`,
+ADR-0109 amended again 2026-10-04) is not yet seen on hardware. **From 0.8.8, one PR per
+release** (George, 2026-10-04): never push a release onto an open PR.
+**Phases 13a, 13b, 13c and 13e are closed** (DEVELOPMENT.md; 13b on 2026-10-04).
 
 | What | State |
 |---|---|
@@ -17,7 +26,7 @@ opens. **Phases 13a, 13c and 13e are closed** (DEVELOPMENT.md); 13b is still ope
 | Change logs (ADR-0116) | `release_notes.json` is the one source: the player's page, `CHANGELOG.md` on `main`, the signed notes |
 | Screens (ADR-0109) | The 13.3" tested at 1920 x 1080 and recognised; a case listed once as its panel. **A new screen at start: a recognised one is switched to with Keep (amended 2026-10-04), any other asked about** - both swaps passed on George's panels, 2026-10-04. Crowd-sourced fingerprints postponed (recorded in the ADR). The 13.3"'s brief blackouts were its HDMI cable (LESSONS 56) |
 | Skin picker (ADR-0050 amended) | 960 px previews made ahead for every installed pack |
-| Not yet released, on the branch | The new-screen notice and its straight switch (29a3386, 88ee721, d91a4bc); a USB disk kept 7 days after unplugging (ADR-0115 decision 17, ddf088f); setup's copy fixes from the review (963857d-034fb33); genre pills kept to two rows on the artist page (7cd3e1b); skin packs fetched from the channel's release when the player's own is unpublished, a stale pack failure no longer shown, failures in words (efd329d); Finding 109's playback test; 13a/13c/13e closed |
+| Released in 0.8.7 | The new-screen notice and its straight switch (29a3386, 88ee721, d91a4bc); a USB disk kept 7 days after unplugging (ADR-0115 decision 17, ddf088f); setup's copy fixes from the review (963857d-034fb33); genre pills kept to two rows on the artist page (7cd3e1b); skin packs fetched from the channel's release when the player's own is unpublished, a stale pack failure no longer shown, failures in words (efd329d); Finding 109's playback test; 13a/13c/13e closed |
 
 **`gexis` right now:** a preview of everything on the branch (core and player
 `0.8.6+git18.efd329d`, ui `0.8.6+git15.7cd3e1b`), on the 13.3" with a new
@@ -29,8 +38,12 @@ half a second - not slower than the 10.1"; a headless Chromium on the device
 had shown 20 fps, an artefact of its software compositing.
 
 **Next, in order:**
-1. **0.8.7** with everything above - notes approved by George first; all of
-   it already previewed on `gexis`.
+1. **Phase 13d** (ADR-0117, accepted 2026-10-04): built in the worktree,
+   six commits, not on hardware. George tests later: the DAC2 HD unchanged
+   (preview from `phase-13d`), the IQaudio DAC+ chosen under *Sound card
+   board*, and the take-back with a board that is not fitted. **Tests in a
+   worktree:** the scratchpad venv imports the main checkout's
+   `gexis_core`; run them with `PYTHONPATH=src`.
 2. **The copy review** (George, 2026-10-03): one page per area, built from the
    code, with screenshots, for him to comment on. **Setup is done** (the
    "Setup Copy" artifact; his comments fixed), with two threads still his:
@@ -39,10 +52,8 @@ had shown 20 fps, an artefact of its software compositing.
    intermediate screens next. The screenshots and fake cores were in the
    session's scratchpad, which does not survive it: regenerate them (a fake
    core serving `/setup/answers` with a chosen `step` shows each phone step).
-3. **13b's close** (acceptance rewritten to George's decisions, 2026-10-03):
-   the 7.9" and 11.9" bars tried on the hardware (or unmarked as tested).
-   Nothing else is open.
-4. **Phase 13d, DACs** (an ADR first).
+3. **Phase 13d, DACs**: ADR-0117 accepted, built in its worktree, being
+   tested on `gexis` (merged up with `phase-13b` for the preview).
 5. **docs/HARDWARE.md** is a draft; what it lacks is listed at its end.
 
 **Working rules learned this session** (also in memory): a change is seen on
@@ -63,8 +74,8 @@ commit (ADR-0116: publish.sh takes them from the tagged commit's file, and
 the player shows them under Change logs); tag `vX.Y.Z` locally; `make image` (never commit while it
 packages - a `.dirty` build); `image/verify-image.sh` on the image;
 `packaging/release/build.sh <img>`; `packaging/release/publish.sh rX.Y.Z
---channel testing`; then push the branch and open a pull request into
-`main` - **George merges it** (2026-10-03; ADR-0116 decision 7: Change logs
+--channel testing`; push the tag; then push the branch and open **one**
+pull request into `main` for the release - **George merges it** (2026-10-03; ADR-0116 decision 7: Change logs
 points at `main`'s `CHANGELOG.md`, so it is current once he has). `packaging/release/out` is a symlink into the
 `gexis-player-13a` worktree, excluded in `.git/info/exclude`. Never edit a
 script while it runs (LESSONS 51).
@@ -77,10 +88,10 @@ the SSH key only, since a saved Wi-Fi skips setup.
 
 | Branch | State | What is on it |
 |---|---|---|
-| `main` | 2a1dad7 (origin) | Everything to PR #42 (13c). The local `main` is behind it |
-| `phase-13b` | 80 commits ahead of `origin/main`, **not pushed** since 13b began (139 ahead of `origin/phase-13b`) | 13b and ADR-0109/0110/0111, Findings 106-107, releases 0.4.0 and 0.5.0 |
-| tags | `v0.1.0`-`v0.3.3` pushed; **`v0.4.0` and `v0.5.0` local only** | Push with the 13b PR |
-| `skin-packs` | merged into `phase-13b` | Its worktree under `.claude/worktrees/` can go |
+| `main` | Merged through 0.8.9 (PR #47) | Every release to date |
+| `phase-13b` | 13b, closed; records since 0.8.9 not yet in a PR | Goes to `main` with the next release's PR |
+| `phase-13d` | Worktree `~/projects/gexis-player-13d`; ADR-0117 and its build, with `phase-13b` merged in | Merged into the release branch once George's tests pass |
+| tags | `v0.1.0`-`v0.8.9` all pushed (2026-10-04) | - |
 | `design-13b` | Claude Design's 2026-09-30 handoff | Reference only |
 
 ### Devices

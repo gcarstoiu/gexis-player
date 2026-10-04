@@ -42,9 +42,52 @@
   const pct = $derived(vol.pct);
   const toast = $derived(vol.toast);
   let rail = $state(null);
-  const down = (event) => vol.down(event, rail);
-  const move = (event) => vol.move(event, rail);
-  const up = () => vol.up();
+  //: **The slider waits to see which way the finger goes** (George,
+  //: 2026-10-04: the swipe up "still doesn't work"). The slider is most of
+  //: the tray, and it took every touch at once - setting the level under the
+  //: finger - so a swipe up that began on it never reached the tray. Now a
+  //: move of 8 px decides: mostly upward closes the tray, anything else is
+  //: the slider, from where the finger first landed. A tap sets the level,
+  //: on lift.
+  const DECIDE = 8;
+  let pending = null;
+  function down(event) {
+    pending = { x: event.clientX, y: event.clientY, id: event.pointerId, way: null };
+    event.currentTarget.setPointerCapture?.(event.pointerId);
+  }
+  function move(event) {
+    if (!pending) return;
+    if (pending.way === null) {
+      const dx = event.clientX - pending.x;
+      const dy = event.clientY - pending.y;
+      if (Math.max(Math.abs(dx), Math.abs(dy)) < DECIDE) return;
+      pending.way = -dy > Math.abs(dx) ? 'close' : 'slide';
+      if (pending.way === 'close') band.down({ clientY: pending.y, pointerId: pending.id });
+      else vol.down({ clientX: pending.x, currentTarget: event.currentTarget, pointerId: pending.id }, rail);
+    }
+    if (pending.way === 'close') band.move(event);
+    else vol.move(event, rail);
+  }
+  function up(event) {
+    if (!pending) return;
+    const way = pending.way;
+    if (way === null) {
+      // A tap: the level where it landed.
+      vol.down({ clientX: pending.x, currentTarget: event.currentTarget, pointerId: pending.id }, rail);
+      vol.up();
+    } else if (way === 'close') {
+      band.up();
+      vol.up();
+    } else {
+      vol.up();
+    }
+    pending = null;
+  }
+  function cancel() {
+    if (pending?.way === 'close') band.cancel();
+    if (pending?.way === 'slide') vol.up();
+    pending = null;
+  }
   const toggleMute = () => vol.toggleMute();
 
   // ---- open, closed and in between -------------------------------------------
@@ -71,6 +114,18 @@
     },
   });
 
+  //: **A swipe up anywhere closes it** (George, 2026-10-04: "Dismissing it
+  //: should work as well with a swipe up") - not only on the close band.
+  //: Still the control under the finger first: a touch that lands on a
+  //: button or the slider is theirs.
+  const OWN = 'button, input, .slider, [role="slider"], .closeband';
+  const bodySwipe = {
+    down(event) { if (!event.target.closest(OWN)) band.down(event); },
+    move: band.move,
+    up: band.up,
+    cancel: band.cancel,
+  };
+
   function goHome() {
     press.act(() => {
       onclose?.();
@@ -85,8 +140,12 @@
   }
 </script>
 
+<!-- **The rest of the screen takes the swipe too** (George, 2026-10-04: "a
+     swipe up from the bottom of the display should work"): a swipe up that
+     starts below the tray closes it, and a tap still does. -->
 <div class="scrim" class:is-shown={open || following} style:opacity={shownH / TRAY_H}
-  role="presentation" onclick={onclose}></div>
+  role="presentation"
+  onpointerdown={band.down} onpointermove={band.move} onpointerup={band.up} onpointercancel={band.cancel}></div>
 
 <div
   class="tray"
@@ -95,9 +154,10 @@
   style:transform={`translateY(${shownH - TRAY_H - (shownH ? 0 : 60)}px)`}
   inert={!open}
   role="presentation"
-  onpointerdown={onactivity}
-  onpointerup={onsettled}
-  onpointercancel={onsettled}
+  onpointerdown={(event) => { onactivity?.(event); bodySwipe.down(event); }}
+  onpointermove={bodySwipe.move}
+  onpointerup={(event) => { onsettled?.(event); bodySwipe.up(event); }}
+  onpointercancel={(event) => { onsettled?.(event); bodySwipe.cancel(event); }}
 >
   <div class="closeband" role="button" tabindex="-1" aria-label="Close controls"
     onpointerdown={band.down} onpointermove={band.move} onpointerup={band.up} onpointercancel={band.cancel}></div>
@@ -150,7 +210,7 @@
       onpointerdown={down}
       onpointermove={move}
       onpointerup={up}
-      onpointercancel={up}
+      onpointercancel={cancel}
     >
       <div class="rail" bind:this={rail}>
         <div class="fill" class:is-muted={muted} style:width={`${pct}%`}></div>
@@ -170,6 +230,7 @@
     position: absolute;
     inset: 0;
     z-index: 12;
+    touch-action: none;
     background: rgba(8, 12, 16, 0.55);
     pointer-events: none;
     visibility: hidden;
@@ -187,6 +248,12 @@
     right: 0;
     top: 0;
     height: 136px;
+    /* **The page's, not the browser's** - without it a finger's drag on the
+       tray became a browser pan, which cancels the swipe up, and the tray
+       closed only when its 3 s timer ran out (George, 2026-10-04: "I do it
+       and then 2 or 3 seconds later it actually does it"). The slider sets
+       its own. */
+    touch-action: none;
     z-index: 13;
     display: flex;
     align-items: center;

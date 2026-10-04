@@ -339,8 +339,8 @@
   //: Non-breaking: "1280 ×" and "800" must not part at a line's end.
   const packSize = $derived(chosenModel?.skins?.replace('x', '\u00a0×\u00a0') ?? '');
   const packLabel = $derived(chosenModel?.skin_count ? `the ${chosenModel.skin_count} skins drawn for ${packSize} screens` : `the set for ${packSize} screens`);
-  //: Two minutes after setup (SETUP_KEEP_S in the core); 30 s is a change
-  //: made later in Settings (George, 2026-10-03, reviewing the copy).
+  //: Two minutes, as every Keep waits since 2026-10-04 (SETUP_KEEP_S and
+  //: KEEP_S in the core).
   const pickNote = $derived(
     (chosenModel && !chosenModel.tested ? 'This model has not been tested with gexis. ' : '') +
       'When setup finishes the player restarts on this screen and asks Keep this screen? on it. If nobody touches Keep within two minutes, it goes back.'

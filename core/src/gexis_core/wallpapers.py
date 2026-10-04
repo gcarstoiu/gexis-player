@@ -67,12 +67,31 @@ PER_PAGE = 50
 MIN_WIDTH = 1280
 MIN_HEIGHT = 800
 
+#: **On a bar, wide pictures only** (George, 2026-10-04, "C": the bars'
+#: wallpapers "do not come in the ratio of a bar which is making them look
+#: strange"). Pixabay has no panorama filter but reports every picture's
+#: size, so the page is filtered here: at least 2.4 to 1, the family boundary
+#: (ADR-0109), which a 1280 x 400 bar crops by at most a quarter. The bar's
+#: page asks for the most results Pixabay gives at once and a lower height,
+#: since panoramas are a small share of any category. A bar whose categories
+#: have none falls back to the usual pictures, which the idle screen crops.
+WIDE_RATIO = 2.4
+WIDE_PER_PAGE = 200
+WIDE_MIN_HEIGHT = 400
+
 #: How many downloaded pictures to keep. A wallpaper is ~200-400 KB, so this
 #: is tens of megabytes on a card with room, and it means a device offline
 #: in the morning still has something to show.
 KEEP = 40
 
 CREDIT_NOTE = "Photos from Pixabay"
+
+
+def _ratio(hit: dict) -> float:
+    try:
+        return float(hit.get("imageWidth") or 0) / float(hit.get("imageHeight") or 1)
+    except (TypeError, ValueError, ZeroDivisionError):
+        return 0.0
 
 #: What "Wallpapers on device" reads. **How files get here is ADR-0047's
 #: open question** and this does not answer it: today they arrive over SSH
@@ -137,12 +156,12 @@ class Wallpapers:
         #: it**, where the cache above evicts as it fills.
         self._local_dir = Path(local_dir) if local_dir else Path(cache_dir).parent / "pictures"
         self._keep = keep
-        self._pages: dict[str, tuple[float, list[dict]]] = {}
+        self._pages: dict[tuple[str, bool], tuple[float, list[dict]]] = {}
         self._lock = asyncio.Lock()
 
     # ── the page a category answers with ────────────────────────────────
 
-    async def _page(self, key: str, category: str) -> list[dict]:
+    async def _page(self, key: str, category: str, wide: bool = False) -> list[dict]:
         """This category's pictures, from cache or from Pixabay.
 
         A failed request leaves whatever is cached in place, including a
@@ -150,7 +169,8 @@ class Wallpapers:
         empty one, and the terms cap how often we may ask, not how long we
         may look at the answer.
         """
-        cached = self._pages.get(category)
+        slot = (category, wide)
+        cached = self._pages.get(slot)
         if cached is not None and time.monotonic() - cached[0] < PAGE_TTL_S:
             return cached[1]
         params = {
@@ -160,9 +180,9 @@ class Wallpapers:
             "orientation": "horizontal",
             "safesearch": "true",
             "min_width": MIN_WIDTH,
-            "min_height": MIN_HEIGHT,
+            "min_height": WIDE_MIN_HEIGHT if wide else MIN_HEIGHT,
             "order": "popular",
-            "per_page": PER_PAGE,
+            "per_page": WIDE_PER_PAGE if wide else PER_PAGE,
         }
         try:
             async with self._session.get(
@@ -178,13 +198,15 @@ class Wallpapers:
             logger.info("wallpapers: %s failed: %s", category, exc)
             return cached[1] if cached else []
         hits = [h for h in (body.get("hits") or []) if h.get("largeImageURL")]
-        self._pages[category] = (time.monotonic(), hits)
-        logger.info("wallpapers: %s has %d pictures", category, len(hits))
+        if wide:
+            hits = [h for h in hits if _ratio(h) >= WIDE_RATIO]
+        self._pages[slot] = (time.monotonic(), hits)
+        logger.info("wallpapers: %s has %d %spictures", category, len(hits), "wide " if wide else "")
         return hits
 
     # ── the picture on screen ───────────────────────────────────────────
 
-    async def next(self, key: str, topics: list[str], avoid: str | None = None) -> dict:
+    async def next(self, key: str, topics: list[str], avoid: str | None = None, wide: bool = False) -> dict:
         """One picture, ready to draw, or an `error` saying why not.
 
         `file` is a name inside the cache directory rather than a URL: what
@@ -201,8 +223,11 @@ class Wallpapers:
             # rather than picked once, so a category that answers with
             # nothing falls through to another instead of blanking the
             # screen until the next change.
-            for category in random.sample(chosen, len(chosen)):
-                hits = await self._page(key, category)
+            # A bar asks for wide pictures first, then the usual ones.
+            rounds = [(c, w) for w in ((True, False) if wide else (False,))
+                      for c in random.sample(chosen, len(chosen))]
+            for category, w in rounds:
+                hits = await self._page(key, category, w)
                 if not hits:
                     continue
                 # Not the one already on screen, when there is another.

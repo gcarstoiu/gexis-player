@@ -151,7 +151,27 @@ def all_screens(path: Path = PRESETS) -> tuple[Screen, ...]:
     return tuple(sorted(out, key=lambda s: (s.maker.lower(), s.model.lower())))
 
 
+#: A screen known only by its own preferred mode (ADR-0109, amended
+#: 2026-10-04): `other-<W>x<H>`, its size as used - landscape - and
+#: `-turned` for a portrait panel used sideways.
+OTHER = re.compile(r"^other-(\d+)x(\d+)(-turned)?$")
+
+
+def other(native_width: int, native_height: int) -> Screen:
+    """**A screen that is in no list, laid out from its own mode.** Used
+    landscape: a panel taller than it is wide is turned (90°, as the listed
+    bars are), so a bar arrives as a bar. Its family follows from the shape."""
+    portrait = native_height > native_width
+    width, height = (native_height, native_width) if portrait else (native_width, native_height)
+    return Screen(id=f"other-{width}x{height}" + ("-turned" if portrait else ""), maker="Other screen", model=f"{width} × {height}",
+                  interface="hdmi", width=width, height=height, rotation=90 if portrait else 0,
+                  tested=False, video_mode=None, notes=None)
+
+
 def by_id(screen_id: str) -> Screen | None:
+    if m := OTHER.match(screen_id or ""):
+        width, height = int(m.group(1)), int(m.group(2))
+        return other(height, width) if m.group(3) else other(width, height)
     found = next((s for s in all_screens() if s.id == screen_id), None)
     if found is None and screen_id.endswith("-case"):  # merged into its panel
         found = next((s for s in all_screens() if s.id == screen_id.removesuffix("-case")), None)

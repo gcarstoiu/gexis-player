@@ -23,7 +23,7 @@ async function get(path) {
 export const libraryRoot = writable({ counts: null, albums: [], strip: null });
 
 /** Artist photo URLs the panel has already been told about, keyed by
- *  `<id>` for the grid and `<id>@300` for the artist page.
+ *  `<id>` for the grid and `<id>@600` for the artist page.
  *
  *  **Module state, not component state.** The library screen is mounted only
  *  while it is open (Phase 7's fix for the black screen it left behind), so

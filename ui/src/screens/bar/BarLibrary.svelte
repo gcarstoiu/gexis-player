@@ -27,6 +27,7 @@
   to playlist opens Library.svelte's playlist picker, drawn as a bar's sheet.
 -->
 <script>
+  import RadioGlyph from '../../lib/RadioGlyph.svelte';
   import { untrack } from 'svelte';
 
   import {
@@ -156,7 +157,7 @@
   //: on a bar.
   let artistImage = $state({ for: null, url: null });
   const artistPicture = $derived(
-    (artistImage.for === artist?.id ? artistImage.url : null) ?? photos[`${artist?.id}@300`] ?? null,
+    (artistImage.for === artist?.id ? artistImage.url : null) ?? photos[`${artist?.id}@600`] ?? null,
   );
 
   // ---- toasts --------------------------------------------------------------
@@ -259,7 +260,7 @@
       discography = await loadArtistAlbums(entry.id);
       artist = entry;
       path = [...path, { kind: 'artist', id: entry.id, label: entry.name }];
-      if ($artistPhotos[`${entry.id}@300`] === undefined) loadArtistPhotos([entry.id], 300);
+      if ($artistPhotos[`${entry.id}@600`] === undefined) loadArtistPhotos([entry.id], 600);
       artistImage = { for: entry.id, url: null };
       loadArtistInfo(entry.id, entry.name).then((answer) => {
         if (artistImage.for !== entry.id) return;
@@ -939,13 +940,9 @@
               {#each radio.items as row (row.handle)}
                 <button class="rcard" class:is-busy={busy === row.handle} type="button"
                   onclick={() => (row.kind === 'folder' ? openRadio(row.handle, row.label) : playStation(row))}>
-                  <span class="rcard__disc">
-                    {#if row.kind === 'folder'}
-                      <span class="i-folder"><i></i><b></b></span>
-                    {:else}
-                      <span class="i-station"><i></i><b></b></span>
-                    {/if}
-                  </span>
+                  <!-- The standard screen's shape and tint for the category
+                       (George, 2026-10-04). -->
+                  <RadioGlyph label={row.label} station={row.kind === 'station'} card />
                   <span class="rcard__text">
                     <span class="rcard__name">{row.label}</span>
                     {#if row.subtitle}<span class="rcard__meta">{row.subtitle}</span>{/if}
@@ -1064,10 +1061,12 @@
     color: var(--ink);
     user-select: none;
   }
+  /* **Now Playing's veil** (George, 2026-10-04, "A"): the darker one this
+     had muted the artwork's colours, and the tiles read as well without it. */
   .veil {
     position: absolute;
     inset: 0;
-    background: radial-gradient(130% 105% at 20% 42%, rgba(20, 33, 42, 0.62), rgba(13, 21, 28, 0.93));
+    background: radial-gradient(130% 105% at 20% 42%, rgba(22, 36, 46, 0.3), rgba(14, 23, 30, 0.86));
   }
   button {
     font: inherit;
@@ -1875,7 +1874,9 @@
     display: grid;
     grid-auto-flow: column;
     grid-template-rows: repeat(2, 120px);
-    grid-auto-columns: calc((100% - (var(--cols) - 1) * 16px) / var(--cols));
+    /* A third of the next column shows, so there is plainly more to the
+       right (George, 2026-10-04: the tiles filled the width exactly). */
+    grid-auto-columns: calc((100% - var(--cols) * 16px) / (var(--cols) + 0.35));
     gap: 16px;
     padding: 0 32px;
     scroll-padding: 0 32px;
@@ -1900,16 +1901,6 @@
   @keyframes rskel {
     50% { opacity: 0.45; }
   }
-  .rcard__disc {
-    width: 60px;
-    height: 60px;
-    border-radius: 50%;
-    background: var(--ink-fill);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-  }
   .rcard__text {
     flex: 1;
     min-width: 0;
@@ -1930,47 +1921,6 @@
     font-family: var(--font-mono);
     font-size: 14px;
     color: var(--ink-quiet);
-  }
-  .i-folder {
-    position: relative;
-    width: 30px;
-    height: 24px;
-  }
-  .i-folder i {
-    position: absolute;
-    left: 0;
-    top: 0;
-    width: 13px;
-    height: 6px;
-    border-radius: 3px 3px 0 0;
-    background: rgba(233, 238, 242, 0.6);
-  }
-  .i-folder b {
-    position: absolute;
-    left: 0;
-    top: 4px;
-    width: 30px;
-    height: 20px;
-    border-radius: 4px;
-    background: rgba(233, 238, 242, 0.85);
-  }
-  .i-station {
-    display: flex;
-    align-items: center;
-    gap: 5px;
-  }
-  .i-station i {
-    width: 12px;
-    height: 12px;
-    border-radius: 50%;
-    background: rgba(233, 238, 242, 0.85);
-  }
-  .i-station b {
-    width: 11px;
-    height: 22px;
-    border-right: 3px solid rgba(233, 238, 242, 0.6);
-    border-radius: 0 22px 22px 0;
-    box-sizing: content-box;
   }
   .i-chev {
     width: 12px;

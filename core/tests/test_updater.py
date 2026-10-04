@@ -236,6 +236,13 @@ def fake_install(up, monkeypatch, *, fail_install=False, answers=True):
             return subprocess.CompletedProcess(args, 100, "", "E: broken")
         return subprocess.CompletedProcess(args, 0, "", "")
     monkeypatch.setattr(up, "apt", apt)
+    def apt_progress(opts, *args, state, report_as, reporter=None, prefix=None, span=(0.0, 1.0)):
+        r = apt(opts, *args, prefix=prefix)
+        if r.returncode == 0:
+            up.PROGRESS["progress"] = span[1]
+            up.report(state, **report_as)
+        return r
+    monkeypatch.setattr(up, "apt_progress", apt_progress)
     def apt_download(opts, *args, report_as):
         up.PROGRESS["progress"] = 0.5
         up.report("downloading", **report_as)
@@ -290,6 +297,34 @@ def test_apt_s_download_status_becomes_the_share_done(up, monkeypatch):
     r = up.apt_download([], "--download-only", "dist-upgrade", report_as={})
     assert r.returncode == 0 and up.PROGRESS["progress"] == 1.0
     assert 0.425 in shares
+
+
+def test_dpkg_s_install_status_moves_the_install_bar_within_its_span(up, monkeypatch):
+    # George, 2026-10-04: the install step showed no progress.
+    lines = ["pmstatus:gexis-core:10.0:Preparing gexis-core\n", "Setting up gexis-core (2) ...\n",
+             "pmstatus:gexis-ui:50:Installing gexis-ui\n", "pmstatus:dpkg-exec:100:Done\n"]
+    class Proc:
+        def __init__(self, *a, **k):
+            self.stdout = iter(lines)
+            self.stderr = io.StringIO("")
+            self.returncode = 0
+        def wait(self):
+            return 0
+    monkeypatch.setattr(up.subprocess, "Popen", Proc)
+    up.STATE.mkdir(parents=True, exist_ok=True)
+    up.PROGRESS.clear()
+    seen = []
+    monkeypatch.setattr(up, "report", lambda state, **f: seen.append((state, up.PROGRESS.get("progress"))))
+    monkeypatch.setattr(up.time, "monotonic", iter(range(0, 100, 2)).__next__)
+    up.apt_progress([], "--no-download", "dist-upgrade", state="installing", report_as={}, span=(0.0, 0.95))
+    assert ("installing", 0.475) in seen and up.PROGRESS["progress"] == 0.95
+
+
+def test_an_install_s_bar_reaches_the_end(up, monkeypatch):
+    seen, _ = fake_install(up, monkeypatch)
+    assert up.install(None) == 0
+    installing = [d.get("progress") for d in seen if d["state"] == "installing"]
+    assert installing[0] == 0.0 and installing[-1] == 1.0
 
 
 def test_only_a_skin_pack_is_installed_or_removed_this_way(up):

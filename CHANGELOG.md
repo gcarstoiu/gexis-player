@@ -5,6 +5,37 @@ Every release of Gexis Player and its notes, newest first. Generated from
 edit that file, not this one. The player shows the last 10 under
 Settings → System → Change logs.
 
+## 0.8.9 — 4 October 2026
+
+### New
+
+- On a bar, Now Playing shows the album art from edge to edge, the lyrics larger and centred without the title above them, and the lyrics button beside the queue.
+- On a bar, the volume tray closes with a swipe up from anywhere, including from the volume slider and the bottom of the screen.
+- On a bar, while nothing plays, the side rail shows the renderers waiting to be used, sized to fit however many there are.
+- On a bar, the idle screen prefers wide pictures and fills the bar with them, and the home screen's background shows the artwork's colours as Now Playing does.
+- On a bar, the radio categories have their own icons and colours, and part of the next column shows when there are more.
+- The update window shows how far the install step has got, as it does for the download.
+
+### Fixed
+
+- Flinging the queue no longer speeds up by itself and jumps to the last track.
+- On a bar, the boot logo appears from the start of the boot, the right way round and whole, instead of after a long blank screen.
+- Artist pictures on the artist page are sharper.
+- On a bar, the handoff animation shows notes travelling between the two sources, and the pull-down handle is centred beside the album art.
+
+## 0.8.8 — 4 October 2026
+
+### New
+
+- A newly attached screen is used straight away at start, already in its own resolution, with Keep this screen?. A screen the player does not know is laid out from its own resolution, and a panel that stands upright, such as a bar, is turned to landscape.
+- On a bar, Now Playing shows the artist, album and year larger, with the year straight after the album.
+- On the Testing channel, the player's logs are kept across restarts by default, to help track down problems.
+
+### Fixed
+
+- Keep this screen? waits two minutes for every change, including a new screen and a rotation.
+- On a bar's first start, Keep this screen? is drawn on the bar's own layout, so its Keep button can be seen.
+
 ## 0.8.7 — 4 October 2026
 
 ### New
