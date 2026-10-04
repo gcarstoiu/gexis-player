@@ -71,11 +71,23 @@ def env_for(screen: screens.Screen, rotation: int, connector: str = CONNECTOR) -
     return "\n".join(lines) + "\n"
 
 
-def video_for(screen: screens.Screen, connector: str = CONNECTOR) -> str | None:
-    """The kernel's `video=` for a model that needs its own mode."""
+#: **The panel's orientation, for the kernel** (George, 2026-10-04, "A": the
+#: boot logo on the 11.9" bar was "zoomed in a lot" - drawn landscape into a
+#: portrait panel). Told through `video=`, the kernel sets the connector's
+#: panel orientation; plymouth draws turned by it, and so does the console.
+#: The compositor turns the panel itself (`TRANSFORMS`). **To be confirmed
+#: on the bar**: which way 90 and 270 go, and that the compositor does not
+#: turn it a second time.
+PANEL_ORIENTATION = {90: "right_side_up", 180: "upside_down", 270: "left_side_up"}
+
+
+def video_for(screen: screens.Screen, connector: str = CONNECTOR, rotation: int = 0) -> str | None:
+    """The kernel's `video=` for a model that needs its own mode - with the
+    panel's orientation when it is used turned."""
     if screen.interface != "hdmi" or not screen.video_mode:
         return None
-    return f"video={connector}:{screen.video_mode}"
+    orientation = PANEL_ORIENTATION.get((screen.rotation + rotation) % 360)
+    return f"video={connector}:{screen.video_mode}" + (f",panel_orientation={orientation}" if orientation else "")
 
 
 def with_video(cmdline: str, video: str | None, connector: str = CONNECTOR) -> str:
@@ -110,7 +122,7 @@ def picture_of(applied: Applied, connector: str = CONNECTOR) -> tuple:
         raise ValueError(f"no such screen {applied.screen_id!r}")
     fields = dict(l.split("=", 1) for l in env_for(screen, applied.rotation, connector).splitlines()
                   if "=" in l and not l.startswith("#"))
-    return video_for(screen, connector), float(fields["GEXIS_SCREEN_SCALE"]), fields["GEXIS_SCREEN_TRANSFORM"]
+    return video_for(screen, connector, applied.rotation), float(fields["GEXIS_SCREEN_SCALE"]), fields["GEXIS_SCREEN_TRANSFORM"]
 
 
 def would_ask(applied: Applied, *, env: Path = SCREEN_ENV, cmdline: Path = CMDLINE) -> bool:
@@ -158,7 +170,7 @@ def write_files(applied: Applied | None, *, env: Path = SCREEN_ENV, cmdline: Pat
         before = cmdline.read_text()
     except OSError:
         return False
-    after = with_video(before.strip(), video_for(screen) if screen else None)
+    after = with_video(before.strip(), video_for(screen, rotation=applied.rotation) if screen else None)
     if after.strip() == before.strip():
         return False
     cmdline.write_text(after)
@@ -182,6 +194,19 @@ def choose(applied: Applied, *, state: Path = STATE, env: Path = SCREEN_ENV, cmd
     write_state({"current": applied.to_json(), "previous": previous, "pending": asks,
                  "after_setup": after_setup, "since": now if now is not None else time.time()}, state)
     return asks
+
+
+def refresh(*, state: Path = STATE, env: Path = SCREEN_ENV, cmdline: Path = CMDLINE) -> bool:
+    """**The kept screen's files as this version writes them** (2026-10-04:
+    a bar's `video=` now carries the panel's orientation, and a bar set up
+    before has it without). Rewritten only when they differ, and not while a
+    choice waits for Keep. True when cmdline.txt changed - for the next
+    start; nothing is restarted."""
+    data = read_state(state)
+    current = data.get("current")
+    if not current or data.get("pending") or screens.by_id(current["screen"]) is None:
+        return False
+    return write_files(Applied(current["screen"], int(current.get("rotation", 0))), env=env, cmdline=cmdline)
 
 
 def keep(*, state: Path = STATE) -> None:

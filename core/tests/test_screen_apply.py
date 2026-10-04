@@ -35,8 +35,13 @@ def test_a_bar_is_turned_and_scaled_to_400_tall():
 def test_a_bar_s_mode_goes_on_the_kernel_s_command_line_and_comes_off_again(tmp_path):
     f = files(tmp_path)
     screen_apply.choose(Applied("waveshare-7.9-hdmi", 0), **f, now=1)
-    assert f["cmdline"].read_text().split()[-1] == "video=HDMI-A-1:400x1280M@60"
+    # With the panel's orientation (George, 2026-10-04, "A"): a bar is a
+    # portrait panel used turned, and the boot screens draw it so.
+    assert f["cmdline"].read_text().split()[-1] == "video=HDMI-A-1:400x1280M@60,panel_orientation=right_side_up"
     assert env_of(f["env"])["GEXIS_SCREEN_ID"] == "waveshare-7.9-hdmi"
+    # Turned the other way up, the orientation follows.
+    screen_apply.choose(Applied("waveshare-7.9-hdmi", 180), **f, now=1.5)
+    assert f["cmdline"].read_text().split()[-1].endswith(",panel_orientation=left_side_up")
     screen_apply.choose(Applied("waveshare-13.3-hdmi-h", 0), **f, now=2)
     assert "video=" not in f["cmdline"].read_text()
     assert f["cmdline"].read_text().count("\n") == 1
@@ -167,3 +172,14 @@ def test_would_ask_writes_nothing(tmp_path):
     assert screen_apply.would_ask(Applied("waveshare-13.3-hdmi-h", 0), env=f["env"], cmdline=f["cmdline"])
     assert not screen_apply.would_ask(Applied("waveshare-10.1-hdmi-b", 0), env=f["env"], cmdline=f["cmdline"])
     assert not f["env"].exists() and f["cmdline"].read_text() == CMDLINE
+
+
+def test_a_bar_kept_before_gets_its_orientation_at_the_next_start(tmp_path):
+    f = files(tmp_path)
+    screen_apply.choose(Applied("waveshare-11.9-hdmi", 0), **f, now=1)
+    screen_apply.keep(state=f["state"])
+    # As a version before 2026-10-04 wrote it: the mode alone.
+    f["cmdline"].write_text(f["cmdline"].read_text().replace(",panel_orientation=right_side_up", ""))
+    assert screen_apply.refresh(**f) is True
+    assert f["cmdline"].read_text().split()[-1].endswith(",panel_orientation=right_side_up")
+    assert screen_apply.refresh(**f) is False, "nothing to do the second time"

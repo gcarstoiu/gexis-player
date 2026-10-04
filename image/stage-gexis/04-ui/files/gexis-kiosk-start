@@ -66,7 +66,14 @@ echo "gexis-kiosk: compositor ready, session script running" >&2
 
 BACKGROUND=/usr/share/gexis/panel-background.png
 if [ -r "${BACKGROUND}" ] && command -v swaybg >/dev/null; then
-	swaybg --mode fill --image "${BACKGROUND}" &
+	# A bar fits the still to its height, as the boot screens now do
+	# (George, 2026-10-04); filling cut the logo. The colour is the still's
+	# own ground, so the sides are seamless.
+	if [ "${GEXIS_SCREEN_FAMILY:-standard}" = bar ]; then
+		swaybg --mode fit --color '#101a21' --image "${BACKGROUND}" &
+	else
+		swaybg --mode fill --image "${BACKGROUND}" &
+	fi
 else
 	echo "gexis-kiosk: no wallpaper (${BACKGROUND}); the handover will be black" >&2
 fi

@@ -2598,6 +2598,13 @@ async def main() -> None:
             state_store.bump_settings_revision()
 
     _sync_screen_settings()
+    # A kept screen's boot setting as this version writes it - a bar's
+    # panel orientation (2026-10-04) - for the next start.
+    try:
+        if screen_apply.refresh():
+            logger.info("screen: the kernel's video= brought up to date; it applies at the next start")
+    except OSError:
+        logger.exception("screen: the kept screen's files were not refreshed")
 
     async def _screen_go_back(reason: str) -> None:
         logger.warning("screen: %s; going back to the screen before", reason)
