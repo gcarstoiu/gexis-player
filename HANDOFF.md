@@ -1,6 +1,6 @@
 # Handoff
 
-Last updated: 2026-10-03 (on R2D2).
+Last updated: 2026-10-04 (on R2D2).
 
 ## Start here
 
@@ -15,31 +15,31 @@ opens. **Phases 13a, 13c and 13e are closed** (DEVELOPMENT.md); 13b is still ope
 | Lyrion server (ADR-0115, 19 decisions; Finding 109) | Shipped through 0.8.6. Measured on George's 61,362 files: scans 2 h 7 min (High) / 1 h 59 min (Normal), memory 1,876 / 1,191 MB, no audio gaps during a scan. Memory limit = the player's less 1 GB; Normal under 4 GB |
 | Fetched software (ADR-0100 amended) | Pinned versions; `packaging/check-upstream.sh` before each release; a new pin is fetched by the update that brings it |
 | Change logs (ADR-0116) | `release_notes.json` is the one source: the player's page, `CHANGELOG.md` on `main`, the signed notes |
-| Screens (ADR-0109) | The 13.3" tested at 1920 x 1080 and recognised; a case listed once as its panel. **A new screen noticed at start: built, on `gexis` as a preview, waiting for George's test** (swap 13.3" -> 10.1" and start) |
+| Screens (ADR-0109) | The 13.3" tested at 1920 x 1080 and recognised; a case listed once as its panel. **A new screen at start: a recognised one is switched to with Keep (amended 2026-10-04), any other asked about** - both swaps passed on George's panels, 2026-10-04. Crowd-sourced fingerprints postponed (recorded in the ADR). The 13.3"'s brief blackouts were its HDMI cable (LESSONS 56) |
 | Skin picker (ADR-0050 amended) | 960 px previews made ahead for every installed pack |
-| Not yet released, on the branch | The new-screen notice (29a3386, 88ee721); a USB disk kept 7 days after unplugging (ADR-0115 decision 17, ddf088f); Finding 109's playback test; 13e closed |
+| Not yet released, on the branch | The new-screen notice and its straight switch (29a3386, 88ee721, d91a4bc); a USB disk kept 7 days after unplugging (ADR-0115 decision 17, ddf088f); setup's copy fixes from the review (963857d-034fb33); genre pills kept to two rows on the artist page (7cd3e1b); Finding 109's playback test; 13a/13c/13e closed |
 
-**`gexis` right now:** a preview (core and player `0.8.6+git2.88ee721`, ui
-`0.8.6+git1`) with the release package installed. Its own Lyrion server is
-rescanning from scratch - started 21:26 for the playback test, about two
-hours. Database memory is High (Lyrion's own, as decision 19 leaves a 4 GB
-Pi). The squeezelite logging drop-in of the test is removed; it lapses at the
-client's next restart.
+**`gexis` right now:** a preview of everything on the branch (core and player
+`0.8.6+git16.d91a4bc`, ui `0.8.6+git15.7cd3e1b`), on the 13.3" with a new
+cable, kept. The album artist screen was measured on that panel through the
+kiosk's DevTools port (since closed): about 55 fps scrolling, photos in about
+half a second - not slower than the 10.1"; a headless Chromium on the device
+had shown 20 fps, an artefact of its software compositing.
 
 **Next, in order:**
-1. **George's new-screen test,** then 0.8.7 with it and the USB rule - notes
-   approved by him first.
+1. **0.8.7** with everything above - notes approved by George first; all of
+   it already previewed on `gexis`.
 2. **The copy review** (George, 2026-10-03): one page per area, built from the
-   code, with screenshots, for him to comment on. **Setup first** - its ~150
-   texts were extracted with seven inconsistencies (Keep's 30 s vs "two
-   minutes", "Seven questions" vs eight steps, raw core errors shown to the
-   user, no empty states for outputs or networks...). The extraction and the
-   phone screenshots were in the session's scratchpad, which does not
-   survive it: regenerate them (a fake core serving `/setup/answers` with a
-   chosen `step` shows each phone step).
+   code, with screenshots, for him to comment on. **Setup is done** (the
+   "Setup Copy" artifact; his comments fixed), with two threads still his:
+   the password line after Finish (only for a secured Wi-Fi?) and
+   "Saving..."/"Connecting..." on Continue/Finish. Settings and the
+   intermediate screens next. The screenshots and fake cores were in the
+   session's scratchpad, which does not survive it: regenerate them (a fake
+   core serving `/setup/answers` with a chosen `step` shows each phone step).
 3. **13b's close** (acceptance rewritten to George's decisions, 2026-10-03):
-   the new-screen swap test, and the 7.9" and 11.9" bars tried on the hardware
-   (or unmarked as tested). Nothing else is open.
+   the 7.9" and 11.9" bars tried on the hardware (or unmarked as tested).
+   Nothing else is open.
 4. **Phase 13d, DACs** (an ADR first).
 5. **docs/HARDWARE.md** is a draft; what it lacks is listed at its end.
 

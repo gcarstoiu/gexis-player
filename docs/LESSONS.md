@@ -1063,6 +1063,24 @@ a state both share.
 and reads everything apt says it will remove - a removal is never a side
 effect to filter.**
 
+**56. A test that cleared the cable** (2026-10-04, the 13.3" panel).
+- **What went wrong.** The 13.3" blanked for a moment every minute or so.
+  The player showed nothing (no hotplug, no underrun, no restart, no
+  undervoltage), so the link was suspected, and the panel was dropped to
+  1080p at 24 Hz - half the data rate - to test it. It still blanked, and I
+  told George the cable was cleared and the panel's HDMI input was left. A
+  new cable stopped it.
+- **What it looked like.** A clean halving test with a clear result. But it
+  tested one thing a cable can fail at, the data rate; a loose or damaged
+  connector drops the signal at any rate. The cable having worked on the
+  10.1" was, likewise, evidence only about the rate.
+- **How it was caught.** By George, who changed the cable anyway.
+
+**A test clears only the mechanism it varied. Before ruling a part out,
+name every way it could fail and which of them the test touched.** (The
+earlier "50 Hz is easier on the link" was wrong outright: at 1920 x 1080 it
+is the same 148.5 MHz - caught before it was run.)
+
 ## Common shape
 
 Every case had a *plausible* substitute for the real target — the build

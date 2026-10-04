@@ -2656,8 +2656,11 @@ the draft below - George: *"Yes"*; ADR-0109 and its amendments, ADR-0111):
    screen?* answered on the panel or going back by itself - the phone still
    reaching the player throughout. **A different screen attached since the
    last start is noticed and asked about.**
-   *Met on the 10.1" and the 13.3", 2026-10-03; the new-screen notice built,
-   waiting for George's swap test.*
+   *Met on the 10.1" and the 13.3", 2026-10-03. The new screen noticed at
+   start: 10.1" to 13.3" switched to it and kept, 2026-10-04 (George: "It
+   works"), after the 13.3" back to the 10.1" with the question asked, the
+   same day; switched to straight away since ADR-0109's 2026-10-04
+   amendment.*
 2. **The standard family on hardware: 1280 x 800 and 1920 x 1080,** every
    screen, with no touch target under the 44-pixel floor (ADR-0109 decision 4).
    **800 x 480 stays listed and untested** until such a screen is at hand; it
