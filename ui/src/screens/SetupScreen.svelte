@@ -249,7 +249,7 @@
   {:else if step === 'joined'}
     {@render barHero('tick', 'Phone connected', 64, null)}
   {:else if step === 'phone'}
-    {@render barHero('phone', 'Carry on on your phone', 64, 'This screen shows when the player moves to your network.')}
+    {@render barHero('phone', 'Carry on on your phone', 64, 'Answer the questions on your phone. When you tap Finish, the player joins your Wi-Fi and this screen shows how it goes.')}
   {:else if step === 'joining'}
     {@render barHero('wifi', `Joining ${setup?.target ?? 'your Wi-Fi'}`, 64, `Check your phone is back on ${setup?.target ?? 'your Wi-Fi'}.`)}
   {:else if step === 'done'}
@@ -314,7 +314,7 @@
         </svg>
       </div>
       <h1 class="huge">Carry on on your phone</h1>
-      <p class="lead">This screen shows when the player moves to your network.</p>
+      <p class="lead">Answer the questions on your phone. When you tap Finish, the player joins your Wi-Fi and this screen shows how it goes.</p>
     {:else if step === 'joining'}
       <div class="big-icon pulse">
         <svg viewBox="0 0 64 64" width="120" height="120" aria-hidden="true">
