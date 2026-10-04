@@ -371,6 +371,16 @@ async def main() -> None:
     if chosen_output is None:
         logger.error("outputs: no playback output found at all")
     else:
+        # **The row shows the output as it is offered now** (ADR-0117): a
+        # board the list names, or a state added, changes its option, and a
+        # choice stored under the old one would match nothing on the row.
+        # Straight to the store, as the screen rows are: through Settings
+        # it would choose the output again.
+        stored = settings_store.get("output_device")
+        if stored and stored != chosen_output.option and \
+                stored.split(outputs.SEP)[0] in (chosen_output.label, chosen_output.aka, chosen_output.card):
+            settings_store.set("output_device", chosen_output.option)
+            logger.info("outputs: the stored choice %r is now offered as %r", stored, chosen_output.option)
         if outputs.write(chosen_output):
             logger.warning(
                 "outputs: output.conf did not match %s and was rewritten; "

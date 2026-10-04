@@ -76,6 +76,9 @@ CONNECTORS = {"vc4hdmi0": "HDMI-A-1", "vc4hdmi1": "HDMI-A-2"}
 #: is connected."* The suffix is display only - `resolve` matches on what
 #: comes before it, so plugging a cable in does not orphan a stored choice.
 UNPLUGGED = " — nothing connected"
+#: What an option adds after the output's name - its state, and
+#: UNPLUGGED - all display only: `resolve` matches on the name before it.
+SEP = " — "
 
 
 #: Formats a renderer actually produces. A card offering none of them
@@ -159,10 +162,17 @@ class Output:
     connected: bool = True
     #: The control's own scale (ADR-0117); None with no control.
     scale: mixer_scale.Scale | None = field(default=None, compare=False)
+    #: ADR-0117 decision 2: Tested, Known or Detected; None for the Pi's
+    #: own outputs.
+    state: str | None = field(default=None, compare=False)
+    #: What the card's driver calls it, when the list names the board
+    #: otherwise - a choice stored under the old name still finds it.
+    aka: str | None = field(default=None, compare=False)
 
     @property
     def option(self) -> str:
-        return self.label if self.connected else self.label + UNPLUGGED
+        shown = f"{self.label}{SEP}{self.state}" if self.state else self.label
+        return shown if self.connected else shown + UNPLUGGED
 
 
 def _run(*args: str) -> str:
@@ -208,9 +218,12 @@ def _connected(card: str) -> bool:
     return True
 
 
-def discover() -> list[Output]:
-    """Every playback output the device actually has, ours excluded."""
+def discover(chosen_board: str | None = None) -> list[Output]:
+    """Every playback output the device actually has, ours excluded - each
+    named, and given its state, as ADR-0117 says: by `chosen_board` (the
+    *Sound card board* setting), the HAT's EEPROM, or the list."""
     found: list[Output] = []
+    product = boards.hat_product()
     # **The device's description, not the card's.** `aplay -l` gives both,
     # and the card's is the driver's module name - "snd_rpi_hifiberry_
     # dacplushd", which is what the first version put in the picker. The
@@ -223,15 +236,18 @@ def discover() -> list[Output]:
     ):
         if card in OURS or any(o.card == card for o in found):
             continue
-        label = LABELS.get(card) or re.split(r" HiFi | hifi", description.strip())[0].strip()
+        label = LABELS.get(card) or re.split(r" HiFi | hifi", description.strip())[0].strip() or card
+        board, state = boards.identify(card, chosen=chosen_board, product=product)
         control, scale = playback_control(card)
         found.append(
             Output(
                 card=card,
-                label=label or card,
+                label=board.name if board else label,
                 control=control,
                 connected=_connected(card),
                 scale=scale,
+                state=state,
+                aka=label if board else None,
             )
         )
     return found
@@ -275,9 +291,9 @@ def resolve(
     for wanted, why in ((stored, "stored"), (current, "configured")):
         if not wanted:
             continue
-        wanted = wanted.split(UNPLUGGED)[0]
+        wanted = wanted.split(SEP)[0]
         for output in available:
-            if wanted in (output.label, output.card):
+            if wanted in (output.label, output.card, output.aka):
                 return output
         logger.warning("outputs: the %s output %r is not here any more", why, wanted)
     for output in available:

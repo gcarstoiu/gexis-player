@@ -63,3 +63,13 @@ numid=3,iface=MIXER,name='Digital Playback Volume'
     name, scale = outputs.playback_control("IQaudIODAC")
     assert name == "Digital" and scale.top == 207
     assert outputs.playback_control("SomeUSB")[0] == "Analogue"
+
+
+def test_an_output_is_offered_with_its_state_and_found_by_its_old_name():
+    from gexis_core.outputs import Output, resolve
+    dac = Output(card="sndrpihifiberry", label="HiFiBerry DAC2 HD", control="DAC",
+                 state="Tested", aka="HiFiBerry DAC+ HD")
+    jack = Output(card="Headphones", label="Headphones (3.5 mm)", control="PCM")
+    assert dac.option == "HiFiBerry DAC2 HD — Tested" and jack.option == "Headphones (3.5 mm)"
+    for stored in ("HiFiBerry DAC+ HD", "HiFiBerry DAC2 HD — Tested", "HiFiBerry DAC2 HD"):
+        assert resolve(stored, [jack, dac], current="Headphones") is dac
