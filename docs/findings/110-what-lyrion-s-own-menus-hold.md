@@ -8,9 +8,10 @@ including plugins."* Before an ADR: what does a Lyrion server's own menu tree
 of item would a generic browser have to draw?
 
 **Scope:**
-- **One server:** George's Lyrion at 192.168.178.188, LMS 9.x, as player
-  `gexis`. Its **My Apps holds one app** (Sounds & Effects): no streaming
-  service plugin was installed, so their menus were **not** seen.
+- **One server:** George's Lyrion, LMS 9.x, as player `gexis`. First walk:
+  its My Apps held one app (Sounds & Effects). **Second walk**, the same
+  day: Qobuz, Spotty, TIDAL (no account), YouTube and Radio Paradise
+  installed.
 - **Read only.** A walker (`lmswalk.py`, that session's scratchpad)
   followed an item's own *go* action only when its command was a browse
   (last word `items` or `browselibrary`), never `play`, `add` or `playlist`,
@@ -49,13 +50,46 @@ Lists run from one item to **954** (Radio Now Playing). My Music's entries
 are `browselibrary items mode:…` - the library our own Browse, Artists,
 Playlists and New Music screens already draw.
 
+## My Apps, with streaming plugins (walked again, the same day)
+
+George then installed **Qobuz**, **Spotty** (Spotify), **TIDAL** (no
+account, so it lists nothing), **YouTube** and **Radio Paradise**. The same
+read-only rules, three levels deep:
+
+| App | Top level | What lies below |
+|---|---|---|
+| Qobuz | 10 entries: Search, My Purchases, My Favourites, My Playlists, Qobuz Playlists, Bestsellers, New Releases, In the Press, Qobuz Selection, Genres | lists of up to **200** albums and playlists (`type=playlist`), the account's own 98 playlists; Search is an input |
+| Spotty | 11: Home, Search, What's New, Top Tracks, Genres and Moods, Popular Playlists, Albums, Artists, Playlists, Podcasts, **Transfer Playback** | playlists and albums by the hundred, tracks (`style=itemplay`), artists with no actions of their own; Transfer Playback lists the account's devices - choosing one would **move playback** |
+| Radio Paradise | 8: six mixes (`type=outline`), two streams | each mix offers its streams in several qualities (FLAC first) |
+| YouTube | 15: categories, and **11 searches** (video, music, channel…) | search-led; categories empty here |
+| TIDAL | nothing without an account | - |
+| Sounds & Effects | 4 groups | short audio clips |
+
+**New kinds of item**, beyond the first walk:
+
+| Kind | Seen in | What a browser must do |
+|---|---|---|
+| Playable container (`type=playlist`) | Qobuz, Spotty | open it, **or** play / add it whole |
+| `type=outline` | Radio Paradise | a folder |
+| `type=url` | YouTube | open a URL-backed list |
+| Item with no actions, the list's `base` deciding | Spotty's artists | resolve the action from the list, as Radio already does |
+| Two-line text (`Title\nArtist`) | Qobuz, Spotty | a title and a subtitle |
+| `more` (context menu) on nearly every list | all apps | an item's menu: favourites, artist, album… |
+| `set-preset-0`…`9` | Radio Paradise, Spotty, Sounds | assign a preset button (a Squeezebox's) |
+
+**Search is central** for the streaming apps (Qobuz, Spotty, YouTube): a
+browser without typed input reaches only their curated lists.
+
+**Speed:** the apps' top lists answered in 5-19 ms; Qobuz's Bestsellers and
+Spotty's Home, in about 20 ms - **just after the walk had opened them**, so
+from Lyrion's cache. A first opening cold, from the service, was not
+measured and will be slower.
+
 ## Not seen, and why it matters
 
-- **A streaming plugin's menus** (Spotty, TIDAL, Qobuz, Deezer…): none was
-  installed. They publish in this format, but they commonly add input
-  items (search), context menus (`more`), and slow first pages from a
-  remote service. A server with one installed is needed before the ADR
-  settles their item kinds.
+- **TIDAL's and Deezer's menus**: TIDAL had no account, Deezer was not
+  installed.
+- **A cold first page** from a streaming service.
 - **Context menus** (`more` actions: add to favourites, artist info) - the
   walker did not open them.
 - **Settings items' kinds** (checkbox, choice, slider) - not opened, by
