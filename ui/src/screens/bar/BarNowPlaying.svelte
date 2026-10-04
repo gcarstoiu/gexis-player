@@ -810,9 +810,11 @@
     z-index: 4;
     touch-action: none;
   }
+  /* Centred on the space right of the art, which now runs edge to edge
+     (George, 2026-10-04), not on the whole bar. */
   .handle {
     position: absolute;
-    left: 50%;
+    left: calc(var(--panel-h) + (100% - var(--panel-h)) / 2);
     top: 12px;
     width: 88px;
     height: 6px;
