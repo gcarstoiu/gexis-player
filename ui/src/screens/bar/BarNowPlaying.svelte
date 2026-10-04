@@ -165,12 +165,9 @@
               {#if year}<span class="year">{year}</span>{/if}
             </div>
           {:else}
-            <!-- Title and artist on one line; the review found the design's
-                 title here had no ellipsis, so both carry one. -->
-            <div class="lyrhead">
-              <span class="lyrhead__title">{metadata?.title ?? ''}</span>
-              <span class="lyrhead__artist">{metadata?.artist ?? ''}</span>
-            </div>
+            <!-- No title and artist over the lyrics (George, 2026-10-04: "remove
+                 the track name and artist to make more space for larger
+                 lyrics"); the lines are centred, and larger. -->
             {#if lyricsState === 'loading'}
               <div class="skel"><span></span><span></span><span></span></div>
             {:else if lyricsState === 'instrumental'}
@@ -201,12 +198,9 @@
           {/if}
         </div>
 
+        <!-- The source's mark at the top right, where the lyrics switch was
+             (George, 2026-10-04); the switch is with the transport. -->
         <span class="mark"><SourceMark source={active} size={30} color="var(--src-accent)" /></span>
-
-        <button class="lyrswitch" class:is-on={lyricsOn} type="button" aria-label="Lyrics" aria-pressed={lyricsOn}
-          onclick={() => (lyricsOn = !lyricsOn)}>
-          <i></i><i></i><i></i>
-        </button>
       </div>
 
       <div class="progress">
@@ -245,6 +239,11 @@
           {/if}
         </div>
         <div class="transport__right">
+          <!-- With play, shuffle and the rest (George, 2026-10-04). -->
+          <button class="lyrswitch" class:is-on={lyricsOn} type="button" aria-label="Lyrics" aria-pressed={lyricsOn}
+            onclick={() => (lyricsOn = !lyricsOn)}>
+            <i></i><i></i><i></i>
+          </button>
           {#if lmsOnly}
             <button class="btn btn--queue" type="button" aria-label="Queue" onclick={() => (queueOpen = true)}>
               <i></i><i></i><i></i>
@@ -289,23 +288,23 @@
     background: var(--src-accent);
   }
 
+  /* **The art from corner to corner** - the bar's full height, against its
+     left edge, no inset (George, 2026-10-04); the rest keeps its margins. */
   .strip__body {
     position: absolute;
     inset: 0;
     display: flex;
     gap: 36px;
-    padding: 32px 40px;
+    padding: 0 40px 0 0;
   }
 
   .art {
     position: relative;
-    width: 336px;
-    height: 336px;
+    width: var(--panel-h);
+    height: var(--panel-h);
     flex-shrink: 0;
-    border-radius: 20px;
     overflow: hidden;
     background: var(--bg-well);
-    box-shadow: 0 20px 48px rgba(0, 0, 0, 0.5);
   }
   .art img {
     position: absolute;
@@ -315,14 +314,7 @@
     object-fit: cover;
     display: block;
   }
-  .art::after {
-    content: '';
-    position: absolute;
-    inset: 0;
-    border-radius: 20px;
-    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
-    pointer-events: none;
-  }
+
   /* The panel's placeholder at the strip's size (Bar States, strip-pending). */
   .art__empty {
     position: absolute;
@@ -362,6 +354,7 @@
     min-width: 0;
     display: flex;
     flex-direction: column;
+    padding: 32px 0;
   }
   .head {
     display: flex;
@@ -437,40 +430,27 @@
   .is-empty { visibility: hidden; }
 
   /* ---- lyrics ---- */
-  .lyrhead {
-    display: flex;
-    align-items: baseline;
-    gap: 12px;
-    min-width: 0;
-  }
-  .lyrhead__title {
-    font-size: 24px;
-    font-weight: 700;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    flex-shrink: 1;
-    min-width: 0;
-  }
-  .lyrhead__artist {
-    font-size: 20px;
-    font-weight: 600;
-    color: var(--accent-artist);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    flex-shrink: 1;
-    min-width: 0;
-    max-width: 62%;
-  }
-  .synced {
-    margin-top: 10px;
+  /* **The lyrics, centred and larger** in the space the title and artist
+     left (George, 2026-10-04): the head takes what the progress leaves, and
+     the lines sit in its middle. */
+  .strip:not([data-lyrics='off']) .head { flex: 1; }
+  .strip:not([data-lyrics='off']) .meta {
+    align-self: stretch;
     display: flex;
     flex-direction: column;
-    gap: 4px;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+  }
+  .strip:not([data-lyrics='off']) .meta > * { max-width: 100%; }
+  .synced {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    width: 100%;
   }
   .synced__line {
-    font-size: 26px;
+    font-size: 34px;
     line-height: 1.3;
     min-height: 1.3em;
     font-weight: 500;
@@ -486,11 +466,11 @@
     color: var(--accent-artist);
   }
   .plain {
-    margin-top: 10px;
     display: flex;
     flex-direction: column;
     gap: 2px;
-    height: 104px;
+    width: 100%;
+    height: 156px;
     overflow-y: auto;
     overscroll-behavior: contain;
     scrollbar-width: none;
@@ -502,9 +482,9 @@
   /* A 26px pitch: what the design shows, where its four lines are squeezed
      into the 104px box (its lines shrink as flex items; these do not). */
   .plain__line {
-    font-size: 22px;
-    line-height: 24px;
-    min-height: 24px;
+    font-size: 30px;
+    line-height: 38px;
+    min-height: 38px;
     color: rgba(233, 238, 242, 0.85);
     white-space: nowrap;
     overflow: hidden;
@@ -673,7 +653,7 @@
     margin-top: 22px;
   }
   .transport__mid { display: flex; align-items: center; gap: 22px; }
-  .transport__right { justify-self: end; display: flex; align-items: center; }
+  .transport__right { justify-self: end; display: flex; align-items: center; gap: 18px; }
 
   .btn {
     width: var(--ctl);
