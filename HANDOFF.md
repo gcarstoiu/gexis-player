@@ -6,10 +6,14 @@ Last updated: 2026-10-04 (on R2D2).
 
 **Work continues on `phase-13b` in the main checkout, and Phase 13d in its
 own worktree, `~/projects/gexis-player-13d` (branch `phase-13d`). Releases
-0.5.0 to 0.8.7 went to the testing channel (0.8.7 is serial 20,
-2026-10-04), each seen on George's player before it was cut.** `main` is
-merged through 0.8.5 (PR #44); **PR #45 carries 0.8.6 and 0.8.7 and waits
-for George to merge it** - he merges, Claude opens. **From 0.8.8, one PR per
+0.5.0 to 0.8.8 went to the testing channel (0.8.8 is serial 21,
+2026-10-04).** `main` is merged through 0.8.7 (PR #45); **PR #46 (0.8.8)
+waits for George to merge it** - he merges, Claude opens. 0.8.8 was released
+without a preview, at George's word: he tests the bars on releases, not
+previews, and test releases keep their logs across restarts (Debug logs
+default on for Testing). **George is testing the bars on 0.8.8**: the new
+screen switched to before the panel starts (`gexis-screen-check.service`,
+ADR-0109 amended again 2026-10-04) is not yet seen on hardware. **From 0.8.8, one PR per
 release** (George, 2026-10-04): never push a release onto an open PR.
 **Phases 13a, 13c and 13e are closed** (DEVELOPMENT.md); 13b is still open.
 
