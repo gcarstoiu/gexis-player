@@ -1,6 +1,6 @@
 # ADR-0117 — DACs beyond the two on the bench
 
-**Status:** **Proposed** — decision 3 confirmed (George, 2026-10-04: *"Let's keep the setting"*); 1 and 2 owed.
+**Status:** **Accepted** — George, 2026-10-04 (decisions below).
 **Builds on:** [ADR-0009](0009-logical-output-device.md) (the output is named,
 never numbered), [ADR-0018](0018-volume-and-output-modes.md) (the DAC2 HD's volume
 scale), [ADR-0055](0055-which-output-the-device-plays-to.md) (which output the
@@ -94,18 +94,37 @@ to judge by on a panel.
   the like). The IQaudio DAC+'s is the overlay's own `unmute_amp`
   parameter, so it needs none. A board whose row needs a script is *Known*
   with a note, and is not offered until someone has one to try.
-- **DSD.** Neither tested board plays it (the DAC2 HD, per the ADR index note on 0003; the IQaudio DAC+ is a PCM5122, PCM only).
+- **DSD** (decision 4). Neither tested board plays it (the DAC2 HD, per the ADR index note on 0003; the IQaudio DAC+ is a PCM5122, PCM only).
 
-## Decisions owed (George)
+## Decided (George, 2026-10-04)
 
-1. **Detection and the list, as in §1?** The card says everything it can;
-   the list names boards and is the only source for one with no EEPROM.
-2. **The three states, as in §2,** shown beside the board's name in
-   Settings and setup?
-3. **The board picker as a setting** - for ADR-0022's inventory, marked
-   **[N]**: *Sound card board*, Settings → Audio and setup's Audio step,
-   default *Found by itself*, with the automatic take-back when no card
-   appears. Not appended to the inventory until confirmed.
+1. **Who does what, as in §1** - the card answers everything it can; the
+   list names boards and is the only source for one with no EEPROM. George
+   asked whether the card can always answer the volume. It cannot, in four
+   cases, and each is settled:
+
+   | Case | The player |
+   |---|---|
+   | The control gives a dB scale | uses it |
+   | No volume control | fixed output, as today (ADR-0046, ADR-0055) |
+   | Several controls (the IQaudio DAC+: *Digital*, and *Analogue*, a 0 / -6 dB gain switch) | the list's mixer name first, else the first `* Playback Volume` |
+   | **A control with no dB information** | **not used for volume: fixed output**, and the row says the board's volume cannot be controlled by the player (**(a)**, George: *"Yes agreed with a"*). Not treated as linear: that is the bunched-up slider ADR-0054 removed |
+   | dB information that is wrong | found only by testing; a *Tested* board may carry corrected values, with its finding |
+
+2. **The three states, as in §2** (*"The three states are fine"*).
+3. **The board picker as a setting** (*"Understood the decision now. Let's
+   keep the setting"*) - appended to ADR-0022's inventory as **[N]**,
+   *Sound card board*.
+4. **DSD is postponed** (*"Let's postpone dsd playback then"*). Found
+   2026-10-04: the Pi's I2S carries PCM only (`bcm2835-i2s.c`: S16, S24,
+   S32), so a board on it can take DSD only as DoP, which ESS Sabre boards
+   decode (four rows of Volumio's list, by their makers' pages - not
+   measured). Today a DSD file plays converted to PCM by squeezelite, which
+   runs without `-D` (read from its options, not played here). DoP would
+   need: a bit-perfect chain checked per board; `-D` only for boards that
+   decode it, since any other plays it as full-scale noise; the meters to
+   recognise DoP, which they would read as full-scale noise; and the
+   board's volume in DSD measured. It needs an ESS board on the bench.
 
 ## Acceptance (from DEVELOPMENT.md's draft)
 
