@@ -18,6 +18,7 @@ Keep. Nothing here restarts anything; the caller does.
 from __future__ import annotations
 
 import json
+import re
 import time
 from dataclasses import dataclass
 from pathlib import Path
@@ -76,9 +77,10 @@ def env_for(screen: screens.Screen, rotation: int, connector: str = CONNECTOR) -
 #: portrait panel). Told through `video=`, the kernel sets the connector's
 #: panel orientation; plymouth draws turned by it, and so does the console.
 #: The compositor turns the panel itself (`TRANSFORMS`). **To be confirmed
-#: on the bar**: which way 90 and 270 go, and that the compositor does not
-#: turn it a second time.
-PANEL_ORIENTATION = {90: "right_side_up", 180: "upside_down", 270: "left_side_up"}
+#: on the bar** - and it was (2026-10-04, the 11.9" at 180, a total turn of
+#: 270): left_side_up drew plymouth upside down, so 90 and 270 are the other
+#: way about; the compositor does not turn it a second time.
+PANEL_ORIENTATION = {90: "left_side_up", 180: "upside_down", 270: "right_side_up"}
 
 
 def video_for(screen: screens.Screen, connector: str = CONNECTOR, rotation: int = 0) -> str | None:
@@ -87,7 +89,15 @@ def video_for(screen: screens.Screen, connector: str = CONNECTOR, rotation: int 
     if screen.interface != "hdmi" or not screen.video_mode:
         return None
     orientation = PANEL_ORIENTATION.get((screen.rotation + rotation) % 360)
-    return f"video={connector}:{screen.video_mode}" + (f",panel_orientation={orientation}" if orientation else "")
+    # **The resolution alone, so the kernel takes the panel's own mode**
+    # (2026-10-04, the 11.9" bar): the presets' `M@60` makes the kernel
+    # calculate CVT timings for 60 Hz, which the bar did not display - it
+    # stayed dark until the compositor set its EDID mode (57.7 Hz, 59.4 MHz),
+    # ~27 s into the boot. Without M or a rate, the kernel picks the EDID's
+    # mode of that size, and calculates one only when there is none.
+    size = re.match(r"\d+x\d+", screen.video_mode)
+    mode = size.group(0) if size else screen.video_mode
+    return f"video={connector}:{mode}" + (f",panel_orientation={orientation}" if orientation else "")
 
 
 def with_video(cmdline: str, video: str | None, connector: str = CONNECTOR) -> str:

@@ -114,7 +114,7 @@ def test_a_bar_needing_its_own_mode_restarts_first(tmp_path):
     path, files = tmp_path / "seen.json", _files(tmp_path)
     sw.kept(TEN, path)
     assert sw.at_start(BAR, headless=False, setup_needed=False, path=path, files=files) == "restart"
-    assert "video=HDMI-A-1:320x1480M@60" in files["cmdline"].read_text()
+    assert "video=HDMI-A-1:320x1480,panel_orientation=left_side_up" in files["cmdline"].read_text()
 
 
 def test_nothing_is_switched_during_setup_headless_or_for_the_same_screen(tmp_path):
