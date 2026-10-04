@@ -959,16 +959,25 @@ class StateServer:
         panel = request.remote in ("127.0.0.1", "::1")
         return web.json_response(self._setup.status() if panel else self._setup.public_status())
 
+    @staticmethod
+    def _setup_error(raw: str, status: int) -> web.Response:
+        """A setup error as the phone shows it - a sentence - with the
+        core's own text in the log (setup_flow.said)."""
+        from gexis_core import setup_flow
+
+        logger.info("setup: answered %s: %s", status, raw)
+        return web.json_response({"error": setup_flow.said(raw)}, status=status)
+
     def _setup_closed(self) -> web.Response | None:
         """ADR-0104: the setup routes answer only while setup is on - the
         setup network is up, or a new device waits to be set up. A configured
         device on its Wi-Fi has Settings for all of this."""
         if self._setup is None or self._setup_flow is None:
-            return web.json_response({"error": "setup is not wired up"}, status=503)
+            return self._setup_error("setup is not wired up", 503)
         status = self._setup.status()
         if status["network"] in ("open", "failed", "joining") or status["needed"]:
             return None
-        return web.json_response({"error": "setup is not running"}, status=409)
+        return self._setup_error("setup is not running", 409)
 
     async def _handle_plugin_upload(self, request: web.Request) -> web.Response:
         """ADR-0106: the package as the request body. Read here with its own
@@ -1020,7 +1029,7 @@ class StateServer:
             body = await request.json()
             return web.json_response(self._setup_flow.save(body))
         except ValueError as exc:
-            return web.json_response({"error": str(exc)}, status=400)
+            return self._setup_error(str(exc), 400)
 
     async def _handle_setup_networks(self, request: web.Request) -> web.Response:
         """A scan, read while hosting (Finding 099: the phone stays on), less
@@ -1040,7 +1049,7 @@ class StateServer:
         if closed is not None:
             return closed
         if self._screen_seen is None:
-            return web.json_response({"error": "screen detection is not wired up"}, status=503)
+            return self._setup_error("screen detection is not wired up", 503)
         from gexis_core import setup_flow
 
         report = await asyncio.to_thread(self._screen_seen)
@@ -1053,7 +1062,7 @@ class StateServer:
         try:
             told = self._setup_flow.finish() or {}
         except ValueError as exc:
-            return web.json_response({"error": str(exc)}, status=400)
+            return self._setup_error(str(exc), 400)
         return web.json_response({"finishing": True, **told}, status=202)
 
     async def _handle_painted(self, request: web.Request) -> web.Response:

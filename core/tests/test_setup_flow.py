@@ -277,3 +277,15 @@ def test_a_screen_chosen_in_setup_restarts_at_the_end_where_keep_is_asked(tmp_pa
     assert net.status()["finished"]["restart_for"] == "screen" and net.status()["finished"]["restarting"]
     net.finished("Home", {"state": "off"}, True, "gexis")
     assert net.status()["finished"]["restart_for"] == "name"
+
+
+def test_the_phone_is_told_in_words_not_the_core_s_text():
+    """George, 2026-10-04: "Human readable errors." The core's own text is
+    for the log."""
+    from gexis_core import setup_flow as sf
+    assert sf.said("no network chosen") == "Choose a Wi-Fi network first, or connect the player by cable."
+    assert sf.said("setup is not running") == "Setup has already finished. Open the player at its address instead."
+    assert sf.said("unknown screen Acme/Panel 9") == "That screen isn't on the list. Choose another, or Headless."
+    assert sf.said("choose a screen or headless, not both") == "Choose a screen or Headless, not both."
+    for raw in ("answers must be an object", "unknown answer colour", "step must be text", "setup is not wired up"):
+        assert sf.said(raw) == "Something went wrong saving that. Try again."
