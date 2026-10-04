@@ -6,9 +6,11 @@ Last updated: 2026-10-04 (on R2D2).
 
 **Work continues on `phase-13b` in the main checkout, and Phase 13d in its
 own worktree, `~/projects/gexis-player-13d` (branch `phase-13d`). Releases
-0.5.0 to 0.8.8 went to the testing channel (0.8.8 is serial 21,
-2026-10-04).** `main` is merged through 0.8.7 (PR #45); **PR #46 (0.8.8)
-waits for George to merge it** - he merges, Claude opens. 0.8.8 was released
+0.5.0 to 0.8.9 went to the testing channel (0.8.9 is serial 22,
+2026-10-04).** `main` is merged through 0.8.8 (PR #46); **the 0.8.9 PR waits
+for George to merge it** - he merges, Claude opens. Next: 13b's last screen
+swaps (George), then testing 13d (its worktree), then **13f, Lyrion's own
+menus** (added 2026-10-04, Finding 110; an ADR first). 0.8.8 was released
 without a preview, at George's word: he tests the bars on releases, not
 previews, and test releases keep their logs across restarts (Debug logs
 default on for Testing). **George is testing the bars on 0.8.8**: the new
