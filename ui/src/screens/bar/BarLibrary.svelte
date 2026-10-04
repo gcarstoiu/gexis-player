@@ -1061,10 +1061,12 @@
     color: var(--ink);
     user-select: none;
   }
+  /* **Now Playing's veil** (George, 2026-10-04, "A"): the darker one this
+     had muted the artwork's colours, and the tiles read as well without it. */
   .veil {
     position: absolute;
     inset: 0;
-    background: radial-gradient(130% 105% at 20% 42%, rgba(20, 33, 42, 0.62), rgba(13, 21, 28, 0.93));
+    background: radial-gradient(130% 105% at 20% 42%, rgba(22, 36, 46, 0.3), rgba(14, 23, 30, 0.86));
   }
   button {
     font: inherit;
