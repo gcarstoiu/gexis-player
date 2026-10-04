@@ -17,7 +17,7 @@ default on for Testing). **George is testing the bars on 0.8.8**: the new
 screen switched to before the panel starts (`gexis-screen-check.service`,
 ADR-0109 amended again 2026-10-04) is not yet seen on hardware. **From 0.8.8, one PR per
 release** (George, 2026-10-04): never push a release onto an open PR.
-**Phases 13a, 13c and 13e are closed** (DEVELOPMENT.md); 13b is still open.
+**Phases 13a, 13b, 13c and 13e are closed** (DEVELOPMENT.md; 13b on 2026-10-04).
 
 | What | State |
 |---|---|
@@ -52,10 +52,8 @@ had shown 20 fps, an artefact of its software compositing.
    intermediate screens next. The screenshots and fake cores were in the
    session's scratchpad, which does not survive it: regenerate them (a fake
    core serving `/setup/answers` with a chosen `step` shows each phone step).
-3. **13b's close** (acceptance rewritten to George's decisions, 2026-10-03):
-   the 7.9" and 11.9" bars tried on the hardware (or unmarked as tested).
-   Nothing else is open.
-4. **Phase 13d, DACs** (an ADR first).
+3. **Phase 13d, DACs**: ADR-0117 accepted, built in its worktree, being
+   tested on `gexis` (merged up with `phase-13b` for the preview).
 5. **docs/HARDWARE.md** is a draft; what it lacks is listed at its end.
 
 **Working rules learned this session** (also in memory): a change is seen on
@@ -90,10 +88,10 @@ the SSH key only, since a saved Wi-Fi skips setup.
 
 | Branch | State | What is on it |
 |---|---|---|
-| `main` | 2a1dad7 (origin) | Everything to PR #42 (13c). The local `main` is behind it |
-| `phase-13b` | 80 commits ahead of `origin/main`, **not pushed** since 13b began (139 ahead of `origin/phase-13b`) | 13b and ADR-0109/0110/0111, Findings 106-107, releases 0.4.0 and 0.5.0 |
-| tags | `v0.1.0`-`v0.3.3` pushed; **`v0.4.0` and `v0.5.0` local only** | Push with the 13b PR |
-| `skin-packs` | merged into `phase-13b` | Its worktree under `.claude/worktrees/` can go |
+| `main` | Merged through 0.8.9 (PR #47) | Every release to date |
+| `phase-13b` | 13b, closed; records since 0.8.9 not yet in a PR | Goes to `main` with the next release's PR |
+| `phase-13d` | Worktree `~/projects/gexis-player-13d`; ADR-0117 and its build, with `phase-13b` merged in | Merged into the release branch once George's tests pass |
+| tags | `v0.1.0`-`v0.8.9` all pushed (2026-10-04) | - |
 | `design-13b` | Claude Design's 2026-09-30 handoff | Reference only |
 
 ### Devices

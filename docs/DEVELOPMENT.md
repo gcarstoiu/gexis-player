@@ -2616,6 +2616,12 @@ says before each release which pins are behind their makers.
 
 ### Phase 13b — Other screens: sizes, bars, and knowing which one is attached
 
+**PHASE 13b CLOSED, 2026-10-04** (George: *"Close 13b"*). All five criteria
+met on the hardware: the 10.1" and 13.3" standard screens, both bars (7.9"
+and 11.9"), a new screen switched to before the panel starts, and the way
+back. Released through 0.8.9. Not seen: 800 x 480 (listed, untested, by
+decision) and a bar at 0°.
+
 **Before the first public release** (George, 2026-09-29: *"13a, b and c all
 needed before release"*).
 
