@@ -107,6 +107,10 @@
   let nets = $state([]);
   let scan = $state('scanning');
   let outputs = $state([]);
+  // ADR-0117: only the Pi's own outputs - a DAC board with no EEPROM is not
+  // seen until it is chosen, which restarts the player, so after setup.
+  const PI_OWN = ['Headphones (3.5 mm)', 'HDMI 1', 'HDMI 2'];
+  const noBoard = $derived(outputs.length > 0 && outputs.every((o) => PI_OWN.includes(o.split(' — ')[0])));
   let zones = $state([]);
   let tick = $state(new Date());
   let finished = $state(false);
@@ -614,6 +618,11 @@
                   </button>
                 {/each}
               </div>
+              {#if noBoard}
+                <!-- George, 2026-10-04: say where a board is chosen, rather
+                     than restart in the middle of setup. -->
+                <div class="info"><span class="bar" style="background:#7ed6bc"></span><span><b>Your board isn't listed?</b><small>Some DAC boards are not found by themselves. After setup, choose yours in Settings → Audio → Sound card board, and the player restarts with it.</small></span></div>
+              {/if}
             </section>
           {:else if id === 'music'}
             <section class="pane">
