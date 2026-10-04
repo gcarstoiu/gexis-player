@@ -1,0 +1,27 @@
+[Unit]
+Description=Gexis: a different screen is switched to before the panel starts
+Documentation=file:///opt/gexis-core/venv/lib/python3.13/site-packages/gexis_core/screen_watch.py
+# ADR-0109, amended 2026-10-04 (George: "we know the screen resolution so we
+# should render in that resolution already, asking the user whether to keep
+# it or not"). The core and the panel read the screen this writes, so it runs
+# before both, and once: a screen attached since the last start comes up in
+# its own layout with Keep this screen?, and goes back by itself.
+#
+# Not during setup: its Screen step decides then.
+After=local-fs.target systemd-udev-trigger.service
+Before=gexis-core.service gexis-kiosk.service
+
+[Service]
+Type=oneshot
+# Udev settled first, at most 10 s, so the touch controller - half of what
+# recognises a tested model - is already listed. Bounded, and `-`: a slow
+# device must not hold the panel (systemd-udev-settle is deprecated and has
+# held boots for minutes elsewhere).
+ExecStartPre=-/usr/bin/udevadm settle --timeout=10
+ExecStart=/opt/gexis-core/venv/bin/python -m gexis_core.screen_watch
+# A comparison that hangs must not hold the panel: it starts on what it had.
+TimeoutStartSec=30
+StandardOutput=journal
+
+[Install]
+WantedBy=multi-user.target

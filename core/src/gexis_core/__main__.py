@@ -2635,42 +2635,6 @@ async def main() -> None:
         asyncio.ensure_future(_screen_go_back("the panel asked to go back"))
         return {"going_back": True}
 
-    async def _switch_to_new_screen(question: dict) -> None:
-        """**A recognised screen is used straight away** (ADR-0109, amended
-        2026-10-04): the panel comes up on it with *Keep this screen?*, and
-        goes back by itself if nobody keeps it. Only the kiosk restarts when
-        the kernel's mode stays as it is - true of every tested HDMI screen -
-        the device otherwise. Marked tried first, so a go-back asks next time
-        rather than switching again."""
-        model = screens.by_label(question["label"])
-        if model is None:
-            state_store.set_screen_new(question)
-            return
-        turn = screen_apply.parse_rotation(settings.value("rotation"))
-        applied = screen_apply.Applied(model.id, turn)
-        await asyncio.to_thread(screen_watch.tried, question["key"])
-        reboot = screen_apply.picture()[0] != screen_apply.picture_of(applied)[0]
-        asks = await asyncio.to_thread(screen_apply.choose, applied)
-        _sync_screen_settings()
-        logger.info("screen: %s attached, switched to it; %s", model.id,
-                    "the device restarts" if reboot else "the panel restarts" if asks else "nothing changes on screen")
-        if not asks:
-            await asyncio.to_thread(lambda: screen_watch.kept(screen_detect.seen()))
-            _skins_kick()
-            return
-        if reboot:
-            await asyncio.sleep(2.0)
-            await asyncio.create_subprocess_exec("systemctl", "reboot")
-            return
-        restart = await asyncio.create_subprocess_exec("systemctl", "restart", "gexis-kiosk.service")
-        await restart.wait()
-        # After the restart, so the old panel's first frame cannot start the
-        # countdown meant for the new one.
-        state_store.set_screen_confirm(screen_question(screen_apply.read_state()))
-        screen_wait["task"] = asyncio.ensure_future(
-            _screen_countdown(NEVER_DRAWN_S, "the panel never drew on the new screen"))
-
-    switching = False
     _question = screen_question(screen_apply.read_state())
     if _question is not None:
         state_store.set_screen_confirm(_question)
@@ -2685,17 +2649,14 @@ async def main() -> None:
             headless = bool(settings.value("headless"))
             question = await asyncio.to_thread(
                 lambda: screen_watch.question(screen_detect.seen(), headless=headless))
-            if question is not None and question.get("label") and not question.get("tried"):
-                # Beside the start, not before it: the panel it restarts needs the server.
-                # It asks for the new screen's pack itself, once kept.
-                asyncio.ensure_future(_switch_to_new_screen(question))
-                switching = True
-            else:
-                state_store.set_screen_new(question)
+            # A new screen was switched to before the panel started
+            # (`gexis-screen-check`, ADR-0109 as amended 2026-10-04), and a
+            # switch waiting for Keep took the branch above. What is left to
+            # ask about here is a screen whose switch went back.
+            state_store.set_screen_new(question)
         except Exception:  # noqa: BLE001 - a question not asked is not a player not started
             logger.exception("screen: the attached screen was not compared")
-    if not switching:
-        _skins_kick()
+    _skins_kick()
 
     async def _screen_new_answer(action: str) -> dict:
         """Use it (a recognised screen: the usual restart and Keep), Not now

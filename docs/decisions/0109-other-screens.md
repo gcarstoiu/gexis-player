@@ -274,6 +274,40 @@ to keep the new resolution". **Decided (A):**
 - **Any other screen** - the 106 listed models included, whose fingerprints
   are unknown - is still asked about, opening the list on its size.
 
+### Amended again 2026-10-04: every new screen, before the panel starts
+
+George, 2026-10-04, testing the bars: the first start on the 11.9" showed
+*Keep this screen?* with no Keep button on the bar (the phone answered it),
+and switching 10.1" <-> 13.3" had drawn in the old screen's layout first. *"The
+expectation is though that we know the screen resolution so we should render
+in that resolution already, asking the user whether to keep it or not. If the
+display gets garbled up, after the 2 minutes we restart with the previous
+setting in place. Also for resolutions like the bar's we should put it into
+landscape automatically. Of course all of these apply on the go changes and
+not when the setup takes care of things."* Reproduced 2026-10-04: drawn on
+a portrait page, the Keep screen's standard layout runs off its right edge,
+and at the bar's own width Keep is off the screen entirely.
+
+- **Decided before the panel starts.** `gexis-screen-check.service`, a
+  oneshot before the core and the panel, compares what is attached with
+  what was kept and switches a different screen at once: the panel's first
+  frame is the new screen's own, with *Keep this screen?*. A change of the
+  kernel's mode (a bar's `video=`) restarts the device first, before
+  anything is drawn. The core no longer switches screens itself.
+- **To what:** the recognised model; else, for a bar, the one listed bar of
+  exactly its mode; else **the screen laid out from its own mode**
+  (`screens.other`, *Other screen W x H*). **Always landscape**: a panel
+  that reports a portrait mode is turned. Only a bar is named by its size -
+  a standard size is any monitor's. Found in the tests: by size alone a
+  1920 x 1200 monitor matched a listed 1200 x 1920 portrait panel and would
+  have been turned on its side, so a listed model must match the mode as the
+  panel reports it.
+- **Keep waits 2 minutes for every change** (George: *"A change to a
+  different screen should also wait 2 minutes"*; a rotation's was raised
+  the same day). Not kept: back to the previous setting, restart; the next
+  start asks about that screen instead of switching again.
+- **Not during setup** (its Screen step decides) **nor headless.**
+
 Considered and **postponed** (George: *"Let's leave the crowd sourcing
 post"*): users sending a screen's fingerprint through a pre-filled GitHub
 issue from the phone page, without the EDID serial, so more models become
