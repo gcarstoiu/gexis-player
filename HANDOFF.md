@@ -17,11 +17,13 @@ opens. **Phases 13a, 13c and 13e are closed** (DEVELOPMENT.md); 13b is still ope
 | Change logs (ADR-0116) | `release_notes.json` is the one source: the player's page, `CHANGELOG.md` on `main`, the signed notes |
 | Screens (ADR-0109) | The 13.3" tested at 1920 x 1080 and recognised; a case listed once as its panel. **A new screen at start: a recognised one is switched to with Keep (amended 2026-10-04), any other asked about** - both swaps passed on George's panels, 2026-10-04. Crowd-sourced fingerprints postponed (recorded in the ADR). The 13.3"'s brief blackouts were its HDMI cable (LESSONS 56) |
 | Skin picker (ADR-0050 amended) | 960 px previews made ahead for every installed pack |
-| Not yet released, on the branch | The new-screen notice and its straight switch (29a3386, 88ee721, d91a4bc); a USB disk kept 7 days after unplugging (ADR-0115 decision 17, ddf088f); setup's copy fixes from the review (963857d-034fb33); genre pills kept to two rows on the artist page (7cd3e1b); Finding 109's playback test; 13a/13c/13e closed |
+| Not yet released, on the branch | The new-screen notice and its straight switch (29a3386, 88ee721, d91a4bc); a USB disk kept 7 days after unplugging (ADR-0115 decision 17, ddf088f); setup's copy fixes from the review (963857d-034fb33); genre pills kept to two rows on the artist page (7cd3e1b); skin packs fetched from the channel's release when the player's own is unpublished, a stale pack failure no longer shown, failures in words (efd329d); Finding 109's playback test; 13a/13c/13e closed |
 
 **`gexis` right now:** a preview of everything on the branch (core and player
-`0.8.6+git16.d91a4bc`, ui `0.8.6+git15.7cd3e1b`), on the 13.3" with a new
-cable, kept. The album artist screen was measured on that panel through the
+`0.8.6+git18.efd329d`, ui `0.8.6+git15.7cd3e1b`), on the 13.3" with a new
+cable, kept. **Skin packs now install on a preview** (efd329d: an unpublished
+release takes its pack from the channel's release; shown live, 2026-10-04 -
+before that every preview failed every pack). The album artist screen was measured on that panel through the
 kiosk's DevTools port (since closed): about 55 fps scrolling, photos in about
 half a second - not slower than the 10.1"; a headless Chromium on the device
 had shown 20 fps, an artefact of its software compositing.
