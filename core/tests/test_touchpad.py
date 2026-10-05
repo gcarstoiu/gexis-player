@@ -62,3 +62,19 @@ async def test_nothing_is_relayed_while_the_touchpad_is_off():
         assert await _next(panel) is None
     finally:
         await client.close()
+
+
+async def test_scrolling_and_zooming_reach_the_panel_and_a_phone_leaving_is_said():
+    """ADR-0121 §2, amended: two fingers scroll and zoom; a phone gone is
+    told to the panel, which zooms back out."""
+    server = StateServer(StateStore({}), settings=Settings())
+    client, panel, phone = await _pair(server)
+    try:
+        await phone.send_str(json.dumps({"t": "scroll", "dx": 0, "dy": -40}))
+        assert await _next(panel) == {"t": "scroll", "dx": 0, "dy": -40}
+        await phone.send_str(json.dumps({"t": "zoom", "by": 1.1}))
+        assert await _next(panel) == {"t": "zoom", "by": 1.1}
+        await phone.close()
+        assert await _next(panel) == {"t": "gone", "phones": 0}
+    finally:
+        await client.close()

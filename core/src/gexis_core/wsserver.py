@@ -290,14 +290,14 @@ class StateServer:
 
     #: What each side may say on the touchpad's socket (ADR-0121 §5). Anything
     #: else is dropped: the core relays these, it does not interpret them.
-    PAD_FROM_PHONE = frozenset({"move", "tap", "text", "key"})
+    PAD_FROM_PHONE = frozenset({"move", "tap", "text", "key", "scroll", "zoom"})
     PAD_FROM_PANEL = frozenset({"over", "focus"})
     PAD_MAX = 2048
 
     async def _handle_touchpad(self, request: web.Request) -> web.WebSocketResponse:
         """**The phone as the panel's touchpad and keyboard** (ADR-0121).
 
-        A phone's moves, taps and typing go to the panel; the panel's "the
+        A phone's moves, taps, typing, scrolling and zooming go to the panel; the panel's "the
         pointer is over a text field" and "a text field has focus" go to the
         phones. Relayed, never turned into a command; dropped while the
         *Phone touchpad* row is off. Its own socket rather than `/state`,
@@ -324,6 +324,12 @@ class StateServer:
                     asyncio.create_task(self._send(other, msg.data))
         finally:
             mine.discard(ws)
+            # A phone gone - its sheet closed, its screen locked, its Wi-Fi
+            # lost - is said to the panels, which zoom back out (ADR-0121 §2).
+            if not panel:
+                left = json.dumps({"t": "gone", "phones": len(self._pad_phones)})
+                for other in list(self._pad_panels):
+                    asyncio.create_task(self._send(other, left))
         return ws
 
     @staticmethod

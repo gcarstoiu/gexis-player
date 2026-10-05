@@ -17,6 +17,8 @@
   import { openTouchpad, takesText } from './touchpad.js';
 
   const HIDE_MS = 5000;
+  //: Pinch: from the panel as it is to three times as large (ADR-0121 §2).
+  const ZOOM_MAX = 3;
 
   let x = $state(window.innerWidth / 2);
   let y = $state(window.innerHeight / 2);
@@ -42,6 +44,7 @@
       pad?.close();
       pad = null;
       shown = false;
+      unzoom();
     };
   });
 
@@ -61,8 +64,8 @@
   function receive(message) {
     switch (message.t) {
       case 'move': {
-        x = Math.max(0, Math.min(window.innerWidth - 1, x + Number(message.dx || 0) * speed));
-        y = Math.max(0, Math.min(window.innerHeight - 1, y + Number(message.dy || 0) * speed));
+        x = edge(x + Number(message.dx || 0) * speed, window.innerWidth, 'x');
+        y = edge(y + Number(message.dy || 0) * speed, window.innerHeight, 'y');
         wake();
         const field = takesText(under());
         if (field !== over) {
@@ -81,7 +84,97 @@
       case 'key':
         key(String(message.key ?? ''));
         break;
+      case 'scroll':
+        wake();
+        scroll(Number(message.dx || 0), Number(message.dy || 0));
+        break;
+      case 'zoom':
+        wake();
+        zoomBy(Number(message.by) || 1);
+        break;
+      case 'gone':
+        // A phone's sheet closed, or the phone went: never leave the panel
+        // zoomed for whoever looks at it next.
+        unzoom();
+        break;
     }
+  }
+
+  // ── Two fingers (ADR-0121 §2, amended 2026-10-05) ─────────────────────
+
+  /** **The content follows the fingers**, as on the phone's own screen:
+   *  fingers up move the list up. What scrolls is the nearest thing under
+   *  the pointer that scrolls that way; the page otherwise. */
+  function scroll(dx, dy) {
+    if (dy) scroller(under(), 'y')?.scrollBy({ top: -dy * speed, behavior: 'instant' });
+    if (dx) scroller(under(), 'x')?.scrollBy({ left: -dx * speed, behavior: 'instant' });
+  }
+
+  function scroller(element, axis) {
+    for (let el = element; el && el !== document.documentElement; el = el.parentElement) {
+      const style = getComputedStyle(el);
+      const overflow = axis === 'y' ? style.overflowY : style.overflowX;
+      const room = axis === 'y' ? el.scrollHeight > el.clientHeight : el.scrollWidth > el.clientWidth;
+      if (room && /(auto|scroll)/.test(overflow)) return el;
+    }
+    return document.scrollingElement;
+  }
+
+  //: The panel's magnification and where its corner sits on the screen.
+  let zoom = 1;
+  let tx = 0;
+  let ty = 0;
+
+  /** Larger or smaller around the pointer: what is under it stays under it. */
+  function zoomBy(by) {
+    const next = Math.max(1, Math.min(ZOOM_MAX, zoom * by));
+    if (next === zoom) return;
+    tx = x - ((x - tx) / zoom) * next;
+    ty = y - ((y - ty) / zoom) * next;
+    zoom = next;
+    paint();
+  }
+
+  function unzoom() {
+    zoom = 1;
+    tx = 0;
+    ty = 0;
+    paint();
+  }
+
+  /** Zoomed, the pointer pushing past an edge moves the view instead. */
+  function edge(to, size, axis) {
+    const inside = Math.max(0, Math.min(size - 1, to));
+    if (zoom > 1 && inside !== to) {
+      if (axis === 'x') tx -= to - inside;
+      else ty -= to - inside;
+      paint();
+    }
+    return inside;
+  }
+
+  /** The whole page drawn at `zoom`, kept covering the screen. */
+  function paint() {
+    const app = document.getElementById('app');
+    if (!app) return;
+    tx = Math.min(0, Math.max(window.innerWidth * (1 - zoom), tx));
+    ty = Math.min(0, Math.max(window.innerHeight * (1 - zoom), ty));
+    if (zoom === 1) {
+      app.style.transform = '';
+      app.style.transformOrigin = '';
+      document.documentElement.classList.remove('panel-zoomed');
+      return;
+    }
+    app.style.transformOrigin = '0 0';
+    app.style.transform = `translate(${tx}px, ${ty}px) scale(${zoom})`;
+    document.documentElement.classList.add('panel-zoomed');
+  }
+
+  /** The pointer lives outside the page it points at: a zoom drawn on the
+   *  page must not carry the pointer with it. */
+  function outside(node) {
+    document.body.appendChild(node);
+    return { destroy: () => node.remove() };
   }
 
   /** A tap where the pointer is: the events a finger's tap would make.
@@ -151,7 +244,7 @@
 </script>
 
 {#if on && shown}
-  <div class="pointer" style:transform={`translate(${x}px, ${y}px)`} aria-hidden="true">
+  <div class="pointer" use:outside style:transform={`translate(${x}px, ${y}px)`} aria-hidden="true">
     <svg viewBox="0 0 24 24" width="30" height="30">
       <path d="M3 2 L3 19 L8 14.5 L11.5 22 L14.5 20.6 L11 13.3 L17.5 13.3 Z" />
     </svg>
@@ -159,6 +252,10 @@
 {/if}
 
 <style>
+  :global(html.panel-zoomed),
+  :global(html.panel-zoomed body) {
+    overflow: hidden;
+  }
   .pointer {
     position: fixed;
     left: 0;
