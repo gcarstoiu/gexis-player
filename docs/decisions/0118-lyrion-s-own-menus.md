@@ -1,8 +1,8 @@
 # ADR-0118 — Lyrion's own menus, plugins included
 
-**Status:** **Accepted in part** - 2026-10-05, George answered A-F (below,
-*Decided*); three smaller questions and the measurements are still owed
-(*Still open*). Drafted 2026-10-04 ahead of Phase 13f.
+**Status:** **Accepted** - 2026-10-05, George answered A-I (below,
+*Decided*); the measurements below confirm the mechanism and do not reopen
+the decisions. Drafted 2026-10-04 ahead of Phase 13f.
 **Builds on:** [ADR-0030](0030-library-typed-radio-slimbrowse.md) (radio: the SlimBrowse walk, by
 handle), [ADR-0028](0028-ui-serving-and-command-channel.md) (the API is open to the LAN by
 decision), [ADR-0106](0106-plugins-you-install-and-update.md) (what a plugin
@@ -83,6 +83,17 @@ streaming services, Radio Paradise, YouTube - lives in that same tree under
   colour, as Browse, Artists, Playlists and Radio do; the lists look like
   ours, not Lyrion's.
 - **A list or tiles switch** (George) on the screens this adds.
+
+- **G. No tile for Lyrion's own top-level Search**: My Music's Search covers
+  the library, and each app has its own.
+- **H. The new tiles' icons and colours are drawn by Claude (Code)**, in the
+  player's palette and icon style, and shown for review; George may replace
+  any of them from Claude Design later (*"changing an icon or a tile is a
+  smaller implementation than the navigation itself"*). A category an app
+  adds later gets a generic icon and the next colour in turn.
+- **I. The list / tiles switch** sits at the top right of each new screen,
+  and **each list remembers its own choice on that device** - not a
+  Settings row. Lists start as lists, albums and playlists as tiles.
 
 ### Not in this iteration (D)
 
