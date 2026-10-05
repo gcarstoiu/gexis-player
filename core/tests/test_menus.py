@@ -222,3 +222,6 @@ async def test_entries_say_what_they_are_and_a_menu_says_it_is_one():
     assert _hint({"params": {"year": "1987"}}, {}) == "year"
     assert _hint({"text": "Qobuz"}, {}) is None
     assert _hint({"commonParams": {"genre_id": "601", "album_id": "9"}}, {}) == "album"
+    # As George's server sends a genre: its own id, a role beside it.
+    assert _hint({"commonParams": {"genre_id": "601"}}, {"params": {"role_id": "1,5", "genre_id": "601"}}) == "genre"
+    assert _hint({"type": "redirect", "text": "Qobuz"}, {}) == "app"

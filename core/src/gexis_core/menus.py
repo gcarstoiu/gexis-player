@@ -52,7 +52,8 @@ LEFT_OUT_ICONS = {"plugins/Spotty/html/images/transfer.png"}
 #: so the panel can give it the shape and tint of its kind (design/screens.md
 #: §8: categories are read by colour and silhouette).
 #: Most specific first: an album in a genre carries both ids.
-HINTS = (("album_id", "album"), ("work_id", "work"), ("artist_id", "artist"), ("role_id", "artist"),
+#: (`role_id` is not one: Lyrion sends it beside a genre's id too.)
+HINTS = (("album_id", "album"), ("work_id", "work"), ("artist_id", "artist"),
          ("folder_id", "folder"), ("year", "year"), ("genre_id", "genre"))
 
 #: One page of a list. Lyrion pages by start and count (Finding 111).
@@ -320,8 +321,17 @@ def _resolve(item: dict, base: dict, name: str, fallback: bool = True) -> tuple[
 
 
 def _hint(item: dict, spec: dict) -> str | None:
-    params = {**(item.get("commonParams") or {}), **(item.get("params") or {}), **(spec.get("params") or {})}
-    return next((word for key, word in HINTS if key in params), None)
+    """What an entry is: an app (Lyrion's `redirect` in My Apps), else by the
+    entry's own identity - `commonParams`, which for a genre is its genre id
+    alone - before what its action carries."""
+    if str(item.get("type") or "") == "redirect":
+        return "app"
+    own = item.get("commonParams") or {}
+    for params in (own, {**(item.get("params") or {}), **(spec.get("params") or {})}):
+        found = next((word for key, word in HINTS if key in params), None)
+        if found:
+            return found
+    return None
 
 
 def _is_browse(cmd) -> bool:
