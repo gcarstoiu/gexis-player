@@ -950,10 +950,15 @@
     if (row.type === 'text') {
       if (await write(row, draft)) {
         sheetKey = null;
-        // A row whose effect is deferred says so. "Saved" on its own reads
-        // as "done", and the device is still advertising the old name
-        // (ADR-0048 §2).
-        flash(row.restart ? `${row.label} saved — restart to use it` : `${row.label} saved`);
+        // A row that takes effect at a restart restarts the device once
+        // saved (ADR-0048, amended 2026-10-05) - and a new name is a new
+        // address, so the toast says where the player comes back.
+        if (row.restart) {
+          const back = row.key === 'device_name' && draft ? ` It comes back as ${hostOf(draft)}.local.` : '';
+          flash(`${row.label} saved. The device is restarting.${back}`, 12000);
+        } else {
+          flash(`${row.label} saved`);
+        }
       }
     }
   }
