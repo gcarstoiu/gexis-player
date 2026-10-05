@@ -56,10 +56,16 @@
     }
   }
 
+  /** Whole pixels go; **the fraction stays for the next frame**. A finger
+   *  starts slowly - under a pixel a frame - and rounding each frame's share
+   *  away held the pointer still and then let it jump (George, 2026-10-05:
+   *  "choppy at the beginning"). */
   function flush() {
     frame = 0;
-    if (pending.dx || pending.dy) pad?.send({ t: 'move', dx: Math.round(pending.dx), dy: Math.round(pending.dy) });
-    pending = { dx: 0, dy: 0 };
+    const dx = Math.trunc(pending.dx);
+    const dy = Math.trunc(pending.dy);
+    if (dx || dy) pad?.send({ t: 'move', dx, dy });
+    pending = { dx: pending.dx - dx, dy: pending.dy - dy };
   }
 
   function padDown(event) {
