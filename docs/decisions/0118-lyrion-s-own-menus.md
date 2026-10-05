@@ -84,6 +84,9 @@ streaming services, Radio Paradise, YouTube - lives in that same tree under
   ours, not Lyrion's.
 - **A list or tiles switch** (George) on the screens this adds.
 
+- **The home row scrolls** (George, 2026-10-05, asked when it was built):
+  the cards keep their size, five in view and the next peeking at the
+  edge; New Music keeps its height. Bars already scroll theirs.
 - **G. No tile for Lyrion's own top-level Search**: My Music's Search covers
   the library, and each app has its own.
 - **H. The new tiles' icons and colours are drawn by Claude (Code)**, in the
