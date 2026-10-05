@@ -806,9 +806,59 @@
   //: A category an app adds sits just before Apps (ADR-0118 A).
   const otherTiles = $derived($menuTiles.filter((t) => t.key === 'other'));
 
+  //: **Read by colour and silhouette, as Radio's categories are**
+  //: (design/screens.md §8; George, 2026-10-05: "the icons are black and
+  //: white, not colourful as the design"). My Music's entries by Lyrion's
+  //: own ids: the group they sit in, their shape, their tint.
+  const MY_MUSIC = {
+    myMusicArtistsAllArtists: ['music', 'mic', '#9fb4e8'],
+    myMusicArtistsComposers: ['music', 'note', '#c8a2d8'],
+    myMusicAlbums: ['music', 'disc', '#7ed6bc'],
+    myMusicAlbumsVariousArtists: ['music', 'disc', '#f2a48f'],
+    myMusicWorks: ['music', 'lines', '#e0a758'],
+    myMusicNewMusic: ['music', 'star', '#7ed6bc'],
+    myMusicGenres: ['category', 'tag', '#f2a48f'],
+    myMusicYears: ['category', 'cal', '#e0a758'],
+    myMusicMusicFolder: ['category', 'folder', '#8fc4d8'],
+    myMusicSearch: ['more', 'search', '#b0bcc4'],
+    opmlselectVirtualLibrary: ['more', 'grid', '#c8a2d8'],
+    opmlselectRemoteLibrary: ['more', 'globe', '#8fc4d8'],
+  };
+  //: My Music's subgroups (George: "there should be some subgroups and
+  //: inside them have tiles"). An entry Lyrion adds later goes in More.
+  const MY_MUSIC_GROUPS = [['music', 'Artists & albums'], ['category', 'By category'], ['more', 'More']];
+  //: The design's tints, for entries named by Lyrion: a genre keeps its
+  //: colour from its name, as an artist's initials do.
+  const MENU_TINTS = ['#7ed6bc', '#e0a758', '#9fb4e8', '#f2a48f', '#c8a2d8', '#8fc4d8', '#b0bcc4'];
+  const HINT_SHAPE = { genre: 'tag', year: 'cal', folder: 'folder', artist: 'mic', album: 'disc', work: 'lines' };
+  function menuTint(label) {
+    let h = 0;
+    for (const ch of label ?? '') h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+    return MENU_TINTS[h % MENU_TINTS.length];
+  }
+  function menuLook(row) {
+    const mine = row.id && MY_MUSIC[row.id];
+    if (mine) return [mine[1], mine[2]];
+    const shape = row.kind === 'search' ? 'search' : HINT_SHAPE[row.hint] ?? (row.kind === 'play' ? 'note' : 'folder');
+    return [shape, menuTint(row.label)];
+  }
+  //: Lyrion's own stock icons are grey; an app's logo and a cover are not.
+  const ownPicture = (row) => row.image && !(row.id && MY_MUSIC[row.id]) && !/:\d+\/html\//.test(row.image);
+  const covered = (rows) =>
+    rows.length > 0 && rows.filter((r) => r.kind === 'container' && ownPicture(r)).length / rows.length >= 0.6;
+
   //: One level at a time, as Radio holds it: the page on screen, the view
   //: it is drawn in, and the search box a search row opened.
   let menu = $state(null);
+  const menuGroups = $derived(
+    menu?.node
+      ? MY_MUSIC_GROUPS.map(([key, label]) => ({
+          key,
+          label,
+          items: menu.items.filter((r) => (MY_MUSIC[r.id]?.[0] ?? 'more') === key),
+        })).filter((g) => g.items.length)
+      : null,
+  );
   let menuView = $state('list');
   let menuMore = false;
   let searching = $state(null);
@@ -1168,7 +1218,7 @@
         <span class="heading__title">{title}</span>
         <span class="heading__crumb">{crumb}</span>
       </div>
-      {#if here?.kind === 'menu' && menu?.items.some((r) => r.kind !== 'text')}
+      {#if here?.kind === 'menu' && menu && !menu.node && menu.items.some((r) => r.kind !== 'text')}
         <!-- ADR-0118 I: list or tiles, remembered for this list. -->
         <button
           class="round round--view"
@@ -1231,7 +1281,7 @@
             {/if}
             <span>
               <span class="card__name">{look === 'apps' ? 'Apps' : tile.label}</span>
-              <span class="card__count">{look === 'mymusic' ? 'From Lyrion' : look === 'apps' ? 'Services and plugins' : look === 'favorites' ? 'Lyrion favourites' : ''}</span>
+              <span class="card__count">{look === 'mymusic' ? 'From Lyrion' : look === 'apps' ? 'Services' : look === 'favorites' ? 'Lyrion favourites' : ''}</span>
             </span>
           </button>
         {/snippet}
@@ -1469,21 +1519,18 @@
         {/each}
       </div>
     {:else if here?.kind === 'menu' && menu}
-      {#snippet thumb(row, big)}
-        <span class="mthumb" class:mthumb--big={big} class:mthumb--round={row.kind === 'folder' && !row.image}>
-          {#if row.image && !failed.has(row.image)}
-            <img src={row.image} alt="" loading="lazy" onerror={() => markFailed(row.image)} />
-          {:else if row.kind === 'search'}
-            <span class="mthumb__search"></span>
-          {:else if row.kind === 'play'}
-            <span class="act__play"></span>
+      {#snippet disc(row, card)}
+        {@const look = menuLook(row)}
+        <span class="rdisc" class:rdisc--card={card} style:--tint={look[1]}>
+          {#if ownPicture(row) && !failed.has(row.image)}
+            <img class="rdisc__img" src={row.image} alt="" loading="lazy" onerror={() => markFailed(row.image)} />
           {:else}
-            <span class="glyph glyph--folders glyph--small"><i></i><i></i></span>
+            <span class="rglyph rglyph--{look[0]}"><i></i><i></i><i></i></span>
           {/if}
         </span>
       {/snippet}
       {#snippet actions(row)}
-        {#if row.can?.length}
+        {#if row.can?.length && row.kind === 'play'}
           <span class="row__actions">
             {#if row.can.includes('play')}<button class="act act--play" type="button" aria-label="Play now" onclick={() => doMenu(row, 'play')}><span class="act__play"></span></button>{/if}
             {#if row.can.includes('next')}<button class="act" type="button" aria-label="Play next" onclick={() => doMenu(row, 'next')}><span class="act__next"><b></b><i></i></span></button>{/if}
@@ -1491,7 +1538,38 @@
           </span>
         {/if}
       {/snippet}
-      {#if menuView === 'tiles'}
+      {#snippet searchBox(row)}
+        {#if searching?.handle === row.handle}
+          <!-- ADR-0118 E: typed from the phone (ADR-0121), not remembered. -->
+          <form class="msearch" onsubmit={submitSearch}>
+            <input class="msearch__field" type="search" placeholder={row.label} bind:value={searchText} />
+            <button class="msearch__go" type="submit">Search</button>
+          </form>
+        {/if}
+      {/snippet}
+      {#snippet card(row)}
+        <button class="rcard" class:is-busy={busy === row.handle} type="button" onclick={() => tapMenu(row)}>
+          {@render disc(row, true)}
+          <span class="rcard__name" class:is-unnamed={!row.label}>{row.label || 'No name'}</span>
+          {#if row.subtitle}<span class="rcard__meta">{row.subtitle}</span>{/if}
+        </button>
+        {@render searchBox(row)}
+      {/snippet}
+      {#if menuGroups}
+        <!-- A menu of Lyrion's own (My Music): its subgroups, cards in each. -->
+        <div class="lists mgroups" use:fromTop={where}>
+          {#each menuGroups as group (group.key)}
+            <div class="group__head">
+              <span class="group__letter mgroups__label">{group.label}</span>
+              <span class="group__rule"></span>
+            </div>
+            <div class="rgrid rgrid--inline">
+              {#each group.items as row (row.handle)}{@render card(row)}{/each}
+            </div>
+          {/each}
+        </div>
+      {:else if menuView === 'tiles' && covered(menu.items)}
+        <!-- Albums and playlists with covers: the cover grid. -->
         <div class="lists mgrid" use:fromTop={where}>
           {#each menu.items as row, i (row.handle ?? `t${i}`)}
             {#if row.kind === 'text'}
@@ -1499,24 +1577,41 @@
             {:else}
               <button class="album mtile" class:is-busy={busy === row.handle} type="button" onclick={() => tapMenu(row)}>
                 <span class="album__art mtile__art">
-                  {@render thumb(row, true)}
+                  {#if ownPicture(row) && !failed.has(row.image)}
+                    <img src={row.image} alt="" loading="lazy" onerror={() => markFailed(row.image)} />
+                  {:else}
+                    {@render disc(row, true)}
+                  {/if}
                 </span>
                 <span class="album__title" class:is-unnamed={!row.label}>{row.label || 'No name'}</span>
                 <span class="album__artist">{row.subtitle ?? ''}</span>
               </button>
-              {#if searching?.handle === row.handle}
-                <form class="msearch msearch--tile" onsubmit={submitSearch}>
-                  <input class="msearch__field" type="search" placeholder={row.label} bind:value={searchText} />
-                  <button class="msearch__go" type="submit">Search</button>
-                </form>
-              {/if}
+              {@render searchBox(row)}
             {/if}
           {:else}
             <div class="pane__empty">Nothing here</div>
           {/each}
           {#if menu.items.length < menu.count}<div class="mmore" use:nearEnd></div>{/if}
         </div>
+      {:else if menuView === 'tiles'}
+        <!-- Categories, genres, years, folders: the design's card grid,
+             three across, each with its own shape and tint. -->
+        <div class="lists mcards" use:fromTop={where}>
+          <div class="rgrid rgrid--inline">
+            {#each menu.items as row, i (row.handle ?? `t${i}`)}
+              {#if row.kind === 'text'}
+                <div class="mtext">{row.label}{#if row.subtitle} · {row.subtitle}{/if}</div>
+              {:else}
+                {@render card(row)}
+              {/if}
+            {:else}
+              <div class="pane__empty">Nothing here</div>
+            {/each}
+          </div>
+          {#if menu.items.length < menu.count}<div class="mmore" use:nearEnd></div>{/if}
+        </div>
       {:else}
+        <!-- Long rows: tracks and stations, and any list asked for so. -->
         <div class="lists" use:fromTop={where}>
           {#each menu.items as row, i (row.handle ?? `t${i}`)}
             {#if row.kind === 'text'}
@@ -1524,7 +1619,11 @@
             {:else}
               <div class="plrow" class:is-busy={busy === row.handle}>
                 <button class="plrow__hit" type="button" onclick={() => tapMenu(row)}>
-                  {@render thumb(row, false)}
+                  {#if ownPicture(row) && row.kind !== 'folder' && !failed.has(row.image)}
+                    <span class="mthumb"><img src={row.image} alt="" loading="lazy" onerror={() => markFailed(row.image)} /></span>
+                  {:else}
+                    {@render disc(row, false)}
+                  {/if}
                   <span class="plrow__text">
                     <!-- A name Lyrion has as empty - 11 of George's 326 genres - is
                          still something to play. -->
@@ -1534,13 +1633,7 @@
                 </button>
                 {@render actions(row)}
               </div>
-              {#if searching?.handle === row.handle}
-                <!-- ADR-0118 E: typed from the phone (ADR-0121), not remembered. -->
-                <form class="msearch" onsubmit={submitSearch}>
-                  <input class="msearch__field" type="search" placeholder={row.label} bind:value={searchText} />
-                  <button class="msearch__go" type="submit">Search</button>
-                </form>
-              {/if}
+              {@render searchBox(row)}
             {/if}
           {:else}
             <div class="pane__empty">Nothing here</div>
@@ -2276,7 +2369,9 @@
   .glyph--heart { align-items: center; }
   .glyph--heart svg { width: 40px; height: 40px; fill: rgba(238, 142, 170, 0.95); }
   /* Apps: four tiles, fading. */
-  .glyph--apps {
+  /* With `.glyph`, which is later in this sheet and would make it a flex row
+     with nothing in it (seen on the panel, 2026-10-05). */
+  .glyph.glyph--apps {
     width: 40px;
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -2388,6 +2483,48 @@
     border-top: 6px solid transparent;
     border-bottom: 6px solid transparent;
   }
+  /* ── Menus drawn as the design's cards (§8) ─────────────────────── */
+  .lists.mgroups,
+  .lists.mcards { display: block; }
+  .mgroups .group__head { padding: 6px 0 14px; }
+  .mgroups .rgrid + .group__head { padding-top: 30px; }
+  .mgroups__label { text-transform: uppercase; color: var(--ink-muted); }
+  /* The grid inside a list that already scrolls and is already inset. */
+  .rgrid.rgrid--inline { overflow: visible; padding: 0; flex: none; }
+  .rgrid .msearch { grid-column: 1 / -1; padding: 0; }
+  .rdisc__img { width: 100%; height: 100%; object-fit: cover; border-radius: inherit; }
+  .rdisc:has(.rdisc__img) { overflow: hidden; background: none; border: 0; }
+  .mtile__art .rdisc { margin: auto; transform: scale(1.6); }
+  /* Six more shapes, drawn as Radio's ten are: in CSS, at full tint. */
+  .rglyph--disc { width: 20px; height: 20px; }
+  .rglyph--disc i:nth-child(1) { inset: 0; background: none; border: 2px solid currentColor; border-radius: 50%; }
+  .rglyph--disc i:nth-child(2) { inset: 5px; background: none; border: 2px solid currentColor; border-radius: 50%; opacity: 0.55; }
+  .rglyph--disc i:nth-child(3) { left: 8px; top: 8px; width: 4px; height: 4px; border-radius: 50%; }
+  .rglyph--tag { width: 20px; height: 20px; }
+  .rglyph--tag i:nth-child(1) {
+    inset: 0; background: none; border: 2px solid currentColor; border-radius: 3px 10px 3px 10px;
+    transform: rotate(-45deg) scale(0.86);
+  }
+  .rglyph--tag i:nth-child(2) { left: 5px; top: 5px; width: 4px; height: 4px; border-radius: 50%; }
+  .rglyph--tag i:nth-child(3) { display: none; }
+  .rglyph--cal { width: 20px; height: 20px; }
+  .rglyph--cal i:nth-child(1) { left: 0; top: 3px; width: 20px; height: 17px; background: none; border: 2px solid currentColor; border-radius: 4px; box-sizing: border-box; }
+  .rglyph--cal i:nth-child(2) { left: 0; top: 8px; width: 20px; height: 2px; }
+  .rglyph--cal i:nth-child(3) { left: 5px; top: 0; width: 2px; height: 6px; box-shadow: 8px 0 0 currentColor; }
+  .rglyph--folder { width: 22px; height: 18px; }
+  .rglyph--folder i:nth-child(1) { left: 0; top: 0; width: 9px; height: 5px; border-radius: 2px 3px 0 0; }
+  .rglyph--folder i:nth-child(2) { left: 0; top: 3px; width: 22px; height: 15px; border-radius: 2px 4px 4px 4px; }
+  .rglyph--folder i:nth-child(3) { display: none; }
+  .rglyph--search { width: 20px; height: 20px; }
+  .rglyph--search i:nth-child(1) { left: 0; top: 0; width: 15px; height: 15px; background: none; border: 2px solid currentColor; border-radius: 50%; box-sizing: border-box; }
+  .rglyph--search i:nth-child(2) { left: 12px; top: 14px; width: 8px; height: 2.5px; border-radius: 2px; transform: rotate(45deg); transform-origin: left; }
+  .rglyph--search i:nth-child(3) { display: none; }
+  .rglyph--grid { width: 20px; height: 20px; }
+  .rglyph--grid i { width: 8px; height: 8px; border-radius: 2px; }
+  .rglyph--grid i:nth-child(1) { left: 0; top: 0; }
+  .rglyph--grid i:nth-child(2) { left: 12px; top: 0; opacity: 0.6; }
+  .rglyph--grid i:nth-child(3) { left: 0; top: 12px; opacity: 0.6; box-shadow: 12px 0 0 currentColor; }
+
   .round--view { margin-left: auto; }
   .plrow__name.is-unnamed,
   .album__title.is-unnamed { color: var(--ink-quiet); font-style: italic; }

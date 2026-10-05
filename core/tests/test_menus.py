@@ -202,3 +202,23 @@ async def test_the_routes_answer_only_with_extended_navigation_on():
         # The Lyrion client off takes Extended navigation with it.
         settings.values["lms_enabled"] = False
         assert (await (await client.get("/menus")).json())["on"] is False
+
+
+
+@pytest.mark.asyncio
+async def test_entries_say_what_they_are_and_a_menu_says_it_is_one():
+    """2026-10-05, George on the screenshots: My Music and Genres in grey.
+    The panel draws them by kind; the core says the kind from Lyrion's own
+    parameters, and My Music's entries carry their ids."""
+    m = menus()
+    tiles = {t["key"]: t for t in await m.tiles()}
+    page = await m.browse(tiles["mymusic"]["handle"])
+    assert page["node"] == "myMusic"
+    assert [r["id"] for r in page["items"]] == ["myMusicAlbums", "myMusicGenres"]
+    genres = await m.browse(page["items"][1]["handle"])
+    assert genres  # the fake answers nothing for browselibrary; the hint is read from params:
+    from gexis_core.menus import _hint
+    assert _hint({"commonParams": {"genre_id": "601"}}, {}) == "genre"
+    assert _hint({"params": {"year": "1987"}}, {}) == "year"
+    assert _hint({"text": "Qobuz"}, {}) is None
+    assert _hint({"commonParams": {"genre_id": "601", "album_id": "9"}}, {}) == "album"
