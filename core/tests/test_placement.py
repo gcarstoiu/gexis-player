@@ -107,3 +107,20 @@ def test_a_close_up_whose_top_half_fits_is_not_called_shrunk():
     p = pl.decide(1280, 853, BAR, faces=[], subject=(0, 700, 0.8), salient=NOTHING)
     assert p.how == "subject" and p.width == 1.0
 
+
+
+def test_a_placement_from_the_detectors_numbers_is_json():
+    """2026-10-05: faces come back as numpy float32, and `json.dumps` of a
+    placement made from them raised - the request failed and the panel kept
+    its picture."""
+    import json
+
+    import numpy as np
+
+    # A 3:2 picture on a 16:10 panel: a 1200 px band in 1280, so the eyes
+    # at 472 put its top 40 px down - inside the picture, not clamped.
+    faces = [(np.float32(400.0), np.float32(90.0), np.float32(472.0))]
+    found = pl.decide(1920, 1280, (1280, 800), faces=faces, subject=None, salient=lambda band: 0.0)
+    assert 0 < found.y < 1
+    assert found.how.startswith("faces")
+    json.dumps(found.to_json())

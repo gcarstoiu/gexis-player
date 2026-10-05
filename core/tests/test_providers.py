@@ -822,6 +822,23 @@ async def test_fanart_falls_back_to_a_background_when_there_is_no_portrait():
 
 
 @pytest.mark.asyncio
+async def test_every_background_an_artist_has_is_kept_for_the_idle_screen():
+    """ADR-0047 §2e, W3: the first as before, and all of them beside it -
+    the idle screen picks among them. Under a new cache name, so answers
+    kept with one picture are asked again."""
+    from gexis_core.providers import FANART_BACKGROUND, FanartArtistImage
+
+    backgrounds = [{"id": str(n), "url": f"https://assets.fanart.tv/fanart/music/acdc/bg{n}.jpg"} for n in range(3)]
+    http = FakeHttp({"ws/2/artist/": MB_ARTIST, "webservice.fanart.tv": {"artistbackground": backgrounds}})
+    provider = FanartArtistImage(http, ArtistIdentity(http), lambda: "a-key", **FANART_BACKGROUND)
+
+    found = (await provider.fetch(KEY)).enrichment
+    assert found.artist_image.endswith("/bg0.jpg")
+    assert [u.rsplit("/", 1)[-1] for u in found.artist_images] == ["bg0.jpg", "bg1.jpg", "bg2.jpg"]
+    assert provider.name == "fanart-bgs"
+
+
+@pytest.mark.asyncio
 async def test_an_artist_fanart_has_no_picture_for_is_missing():
     from gexis_core.providers import FanartArtistImage
 

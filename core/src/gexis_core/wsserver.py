@@ -563,14 +563,11 @@ class StateServer:
         if background == "Artist pictures":
             return await self._artist_picture()
         if background == "Wallpapers on device":
-            names = self._wallpapers.local_names()
-            if not names:
+            # None twice until every one has been shown, and never the one
+            # already on screen when there is another (ADR-0047 §2e).
+            name = self._wallpapers.next_local(avoid=self._last_background)
+            if name is None:
                 return {"error": "No pictures on this device yet."}
-            # Not the one already on screen, when there is another. A folder
-            # of four and a fifteen-minute rotation would otherwise repeat
-            # about one change in four, which reads as the screen being stuck.
-            choices = [n for n in names if n != self._last_background] or names
-            name = random.choice(choices)
             self._last_background = name
             # **Quoted**: a name can now carry folders, spaces and anything
             # else a person types, and it travels as a URL.
@@ -673,15 +670,17 @@ class StateServer:
             return None, None
         try:
             found = await self._enrichment.for_track(
-                TrackKey(artist=fold(name)), only=("fanart-bg", "tadb-bg")
+                TrackKey(artist=fold(name)), only=("fanart-bgs", "tadb-bg")
             )
         except Exception as exc:
             logger.info("idle: fanart unavailable for %r: %s", name, exc)
             return None, None
         if not found.artist_image:
             return None, None
-        # Which one answered: fanart.tv's, or TheAudioDB's (ADR-0120 §3).
-        return found.artist_image, ("theaudiodb" if found.sources[:1] == ("tadb-bg",) else "fanart")
+        # Which one answered: fanart.tv's, or TheAudioDB's (ADR-0120 §3) -
+        # and any of its pictures, not always the first (ADR-0047 §2e, W3).
+        url = random.choice(found.artist_images or (found.artist_image,))
+        return url, ("theaudiodb" if found.sources[:1] == ("tadb-bg",) else "fanart")
 
     async def _handle_local_wallpaper(self, request: web.Request) -> web.StreamResponse:
         """One picture somebody put on this device. Same rule as below: a

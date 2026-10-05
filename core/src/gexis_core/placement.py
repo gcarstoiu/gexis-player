@@ -71,7 +71,10 @@ class Placement:
     how: str = "default"
 
     def to_json(self) -> dict:
-        return {"y": round(self.y, 4), "width": round(self.width, 4), "how": self.how}
+        # Python floats: the detectors' numbers are numpy's, which the JSON
+        # encoder refuses - every picture placed by faces failed its request
+        # until 2026-10-05 (7 of 230 on gexis that afternoon).
+        return {"y": round(float(self.y), 4), "width": round(float(self.width), 4), "how": self.how}
 
 
 class Placer:
