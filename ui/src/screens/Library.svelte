@@ -35,6 +35,8 @@
     libraryAction,
   } from '../lib/library.js';
   import { afterPaint, revealing } from '../lib/chunks.svelte.js';
+  import { settingValues } from '../lib/settings.js';
+  import { menuTiles, loadMenuTiles, browseMenu, menuAct, menuSearch, viewFor, keepView } from '../lib/menus.js';
   import { inView, watchScroller } from '../lib/window.svelte.js';
   import MiniStrip from './MiniStrip.svelte';
   import WaitingServices from './WaitingServices.svelte';
@@ -794,6 +796,110 @@
     }
   }
 
+  // ── ADR-0118: Lyrion's own menus, behind Extended navigation ─────────
+  //: The tiles it adds to Home, asked for again whenever the row changes.
+  $effect(() => {
+    if ($settingValues.lms_extended_nav === true) loadMenuTiles();
+    else menuTiles.set([]);
+  });
+  const tileFor = (key) => $menuTiles.find((t) => t.key === key) ?? null;
+  //: A category an app adds sits just before Apps (ADR-0118 A).
+  const otherTiles = $derived($menuTiles.filter((t) => t.key === 'other'));
+
+  //: One level at a time, as Radio holds it: the page on screen, the view
+  //: it is drawn in, and the search box a search row opened.
+  let menu = $state(null);
+  let menuView = $state('list');
+  let menuMore = false;
+  let searching = $state(null);
+  let searchText = $state('');
+  const menuWhere = () => path.filter((p) => p.kind === 'menu').map((p) => p.label).join('/');
+
+  async function openMenu(handle, label, push = true, page = null) {
+    busy = handle;
+    try {
+      const got = page ?? (await browseMenu(handle));
+      if (push) path = [...path, { kind: 'menu', handle: got.handle ?? handle, label }];
+      menu = { ...got, handle: got.handle ?? handle };
+      searching = null;
+      revealed = null;
+      menuView = viewFor(menuWhere(), menu.items);
+    } catch (err) {
+      flash(err.message);
+      console.info('menus:', err.message);
+    } finally {
+      busy = null;
+    }
+  }
+
+  function openMenuTile(tile) {
+    path = [];
+    openMenu(tile.handle, tile.key === 'apps' ? 'Apps' : tile.label);
+  }
+
+  /** The next page, when the end of the list comes into view. */
+  async function moreMenu() {
+    if (!menu || menuMore || menu.items.length >= menu.count) return;
+    menuMore = true;
+    const showing = menu;
+    try {
+      const next = await browseMenu(showing.handle, showing.items.length);
+      if (menu === showing) menu = { ...showing, items: [...showing.items, ...next.items] };
+    } catch (err) {
+      console.info('menus:', err.message);
+    } finally {
+      menuMore = false;
+    }
+  }
+
+  function nearEnd(node) {
+    const observer = new IntersectionObserver((entries) => {
+      if (entries.some((e) => e.isIntersecting)) moreMenu();
+    }, { rootMargin: '600px' });
+    observer.observe(node);
+    return { destroy: () => observer.disconnect() };
+  }
+
+  function tapMenu(row) {
+    if (row.kind === 'folder' || row.kind === 'container') openMenu(row.handle, row.label);
+    else if (row.kind === 'play') doMenu(row, 'play');
+    else if (row.kind === 'search') {
+      searching = searching?.handle === row.handle ? null : row;
+      searchText = '';
+    }
+  }
+
+  async function doMenu(row, action) {
+    try {
+      await menuAct(row.handle, action);
+      flash(action === 'play' ? `Playing ${row.label}` : action === 'next' ? `${row.label} plays next` : `${row.label} added to the queue`);
+    } catch (err) {
+      flash(err.message);
+      console.info('menus:', err.message);
+    }
+  }
+
+  async function submitSearch(event) {
+    event?.preventDefault();
+    const row = searching;
+    const words = searchText.trim();
+    if (!row || !words) return;
+    busy = row.handle;
+    try {
+      const found = await menuSearch(row.handle, words);
+      await openMenu(found.handle, `“${words}”`, true, found);
+    } catch (err) {
+      flash(err.message);
+    } finally {
+      busy = null;
+    }
+  }
+
+  function switchView() {
+    menuView = menuView === 'tiles' ? 'list' : 'tiles';
+    keepView(menuWhere(), menuView);
+  }
+
   async function openPlaylists() {
     busy = 'playlists';
     try {
@@ -949,11 +1055,18 @@
     if (!path.length) {
       album = null;
       radio = null;
+      menu = null;
       return;
     }
     // Radio holds one level at a time, so stepping back re-reads the level
     // above from the handle that opened it.
     const top = path[path.length - 1];
+    if (top.kind === 'menu') {
+      // As Radio: the level above is read again from its handle.
+      menu = null;
+      openMenu(top.handle, top.label, false);
+      return;
+    }
     if (top.kind === 'radio') {
       // **The items go with the path, not after it.** Going forward the
       // path is pushed last, so the level on screen stays its own until
@@ -1055,6 +1168,21 @@
         <span class="heading__title">{title}</span>
         <span class="heading__crumb">{crumb}</span>
       </div>
+      {#if here?.kind === 'menu' && menu?.items.some((r) => r.kind !== 'text')}
+        <!-- ADR-0118 I: list or tiles, remembered for this list. -->
+        <button
+          class="round round--view"
+          type="button"
+          aria-label={menuView === 'tiles' ? 'Show as a list' : 'Show as tiles'}
+          onclick={switchView}
+        >
+          {#if menuView === 'tiles'}
+            <span class="i-rows"><i></i><i></i><i></i></span>
+          {:else}
+            <span class="i-tiles"><i></i><i></i><i></i><i></i></span>
+          {/if}
+        </button>
+      {/if}
     </div>
   {/if}
 
@@ -1078,7 +1206,36 @@
       </div>
     {:else if atHome}
       <div class="root">
-        <div class="cards">
+        {#snippet menuCard(tile, look)}
+          <!-- ADR-0118: a tile Extended navigation adds, in the player's own
+               style - a shape and a colour of its own (George). -->
+          <button
+            class="card card--{look}"
+            class:is-pressed={pressed === tile.id}
+            class:is-busy={busy === tile.handle}
+            type="button"
+            onpointerdown={() => press(tile.id)}
+            onpointerup={lift}
+            onpointercancel={lift}
+            onclick={() => opening(() => openMenuTile(tile))}
+          >
+            {#if look === 'mymusic'}
+              <span class="glyph glyph--disc"><i></i></span>
+            {:else if look === 'favorites'}
+              <span class="glyph glyph--heart"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20.5 4.4 13A4.9 4.9 0 0 1 11.3 6l.7.7.7-.7a4.9 4.9 0 0 1 6.9 6.9z" /></svg></span>
+            {:else if look === 'apps'}
+              <span class="glyph glyph--apps"><i></i><i></i><i></i><i></i></span>
+            {:else}
+              <span class="glyph glyph--folders"><i></i><i></i></span>
+            {/if}
+            <span>
+              <span class="card__name">{look === 'apps' ? 'Apps' : tile.label}</span>
+              <span class="card__count">{look === 'mymusic' ? 'From Lyrion' : look === 'apps' ? 'Services and plugins' : look === 'favorites' ? 'Lyrion favourites' : ''}</span>
+            </span>
+          </button>
+        {/snippet}
+        <div class="cards" class:cards--more={$menuTiles.length > 0}>
+          {#if tileFor('mymusic')}{@render menuCard(tileFor('mymusic'), 'mymusic')}{/if}
           <button
             class="card card--browse"
             class:is-pressed={pressed === 'browse'}
@@ -1131,6 +1288,7 @@
             </span>
           </button>
 
+          {#if tileFor('favorites')}{@render menuCard(tileFor('favorites'), 'favorites')}{/if}
           <button
             class="card card--radio"
             class:is-pressed={pressed === 'radio'}
@@ -1149,6 +1307,8 @@
             </span>
           </button>
 
+          {#each otherTiles as tile (tile.id)}{@render menuCard(tile, 'other')}{/each}
+          {#if tileFor('apps')}{@render menuCard(tileFor('apps'), 'apps')}{/if}
           <button
             class="card card--settings"
             class:is-pressed={pressed === 'settings'}
@@ -1300,6 +1460,91 @@
           <div class="pane__empty">Nothing here</div>
         {/each}
       </div>
+    {:else if here?.kind === 'menu' && !menu}
+      <!-- A service's page can take a second the first time (Finding 111). -->
+      <div class="lists">
+        {#each [1, 2, 3, 4, 5, 6] as n (n)}
+          <div class="skelrow"></div>
+        {/each}
+      </div>
+    {:else if here?.kind === 'menu' && menu}
+      {#snippet thumb(row, big)}
+        <span class="mthumb" class:mthumb--big={big} class:mthumb--round={row.kind === 'folder' && !row.image}>
+          {#if row.image && !failed.has(row.image)}
+            <img src={row.image} alt="" loading="lazy" onerror={() => markFailed(row.image)} />
+          {:else if row.kind === 'search'}
+            <span class="mthumb__search"></span>
+          {:else if row.kind === 'play'}
+            <span class="act__play"></span>
+          {:else}
+            <span class="glyph glyph--folders glyph--small"><i></i><i></i></span>
+          {/if}
+        </span>
+      {/snippet}
+      {#snippet actions(row)}
+        {#if row.can?.length}
+          <span class="row__actions">
+            {#if row.can.includes('play')}<button class="act act--play" type="button" aria-label="Play now" onclick={() => doMenu(row, 'play')}><span class="act__play"></span></button>{/if}
+            {#if row.can.includes('next')}<button class="act" type="button" aria-label="Play next" onclick={() => doMenu(row, 'next')}><span class="act__next"><b></b><i></i></span></button>{/if}
+            {#if row.can.includes('add')}<button class="act" type="button" aria-label="Add to queue" onclick={() => doMenu(row, 'add')}><span class="act__queue"><i></i><i></i><i></i></span></button>{/if}
+          </span>
+        {/if}
+      {/snippet}
+      {#if menuView === 'tiles'}
+        <div class="lists mgrid" use:fromTop={where}>
+          {#each menu.items as row, i (row.handle ?? `t${i}`)}
+            {#if row.kind === 'text'}
+              <div class="mtext">{row.label}{#if row.subtitle} · {row.subtitle}{/if}</div>
+            {:else}
+              <button class="album mtile" class:is-busy={busy === row.handle} type="button" onclick={() => tapMenu(row)}>
+                <span class="album__art mtile__art">
+                  {@render thumb(row, true)}
+                </span>
+                <span class="album__title">{row.label}</span>
+                <span class="album__artist">{row.subtitle ?? ''}</span>
+              </button>
+              {#if searching?.handle === row.handle}
+                <form class="msearch msearch--tile" onsubmit={submitSearch}>
+                  <input class="msearch__field" type="search" placeholder={row.label} bind:value={searchText} />
+                  <button class="msearch__go" type="submit">Search</button>
+                </form>
+              {/if}
+            {/if}
+          {:else}
+            <div class="pane__empty">Nothing here</div>
+          {/each}
+          {#if menu.items.length < menu.count}<div class="mmore" use:nearEnd></div>{/if}
+        </div>
+      {:else}
+        <div class="lists" use:fromTop={where}>
+          {#each menu.items as row, i (row.handle ?? `t${i}`)}
+            {#if row.kind === 'text'}
+              <div class="mtext">{row.label}{#if row.subtitle} · {row.subtitle}{/if}</div>
+            {:else}
+              <div class="plrow" class:is-busy={busy === row.handle}>
+                <button class="plrow__hit" type="button" onclick={() => tapMenu(row)}>
+                  {@render thumb(row, false)}
+                  <span class="plrow__text">
+                    <span class="plrow__name">{row.label}</span>
+                    {#if row.subtitle}<span class="plrow__meta">{row.subtitle}</span>{/if}
+                  </span>
+                </button>
+                {@render actions(row)}
+              </div>
+              {#if searching?.handle === row.handle}
+                <!-- ADR-0118 E: typed from the phone (ADR-0121), not remembered. -->
+                <form class="msearch" onsubmit={submitSearch}>
+                  <input class="msearch__field" type="search" placeholder={row.label} bind:value={searchText} />
+                  <button class="msearch__go" type="submit">Search</button>
+                </form>
+              {/if}
+            {/if}
+          {:else}
+            <div class="pane__empty">Nothing here</div>
+          {/each}
+          {#if menu.items.length < menu.count}<div class="mmore" use:nearEnd></div>{/if}
+        </div>
+      {/if}
     {:else if here?.kind === 'playlists'}
       <div class="lists">
         {#each playlists as entry (entry.id)}
@@ -1990,6 +2235,157 @@
   .card--playlists .card__count { color: rgba(242, 164, 143, 0.9); }
   .card--radio .card__count { color: var(--ink-muted); }
   .card--settings .card__count { color: var(--ink-quiet); }
+
+  /* ── ADR-0118: the tiles Extended navigation adds ───────────────────
+     **One row that scrolls** (George, 2026-10-05): the cards keep their
+     size, five in view and the next peeking at the edge. */
+  .cards--more {
+    grid-template-columns: none;
+    grid-auto-flow: column;
+    grid-auto-columns: calc((100% - 4 * 26px) / 5.35);
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scrollbar-width: none;
+    scroll-snap-type: x proximity;
+  }
+  .cards--more::-webkit-scrollbar { display: none; }
+  .cards--more .card { scroll-snap-align: start; }
+  .card--mymusic { --card: 236, 198, 122; }
+  .card--favorites { --card: 238, 142, 170; }
+  .card--apps { --card: 184, 160, 238; }
+  .card--other { --card: 140, 196, 214; }
+  .card--mymusic .card__count { color: rgba(236, 198, 122, 0.9); }
+  .card--favorites .card__count { color: rgba(238, 142, 170, 0.9); }
+  .card--apps .card__count { color: rgba(184, 160, 238, 0.9); }
+  .card--other .card__count { color: rgba(140, 196, 214, 0.9); }
+  .card.is-busy { opacity: 0.6; }
+  /* My Music: a record. */
+  .glyph--disc { align-items: center; }
+  .glyph--disc i {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    box-sizing: border-box;
+    background: radial-gradient(circle, rgb(236, 198, 122) 0 5px, transparent 5.5px 9px, rgba(236, 198, 122, 0.35) 9.5px 12px, transparent 12.5px);
+    border: 5px solid rgba(236, 198, 122, 0.95);
+  }
+  /* Favourites: a heart. */
+  .glyph--heart { align-items: center; }
+  .glyph--heart svg { width: 40px; height: 40px; fill: rgba(238, 142, 170, 0.95); }
+  /* Apps: four tiles, fading. */
+  .glyph--apps {
+    width: 40px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 5px;
+    align-content: center;
+  }
+  .glyph--apps i { height: 17px; border-radius: 5px; background: rgb(184, 160, 238); }
+  .glyph--apps i:nth-child(2) { opacity: 0.7; }
+  .glyph--apps i:nth-child(3) { opacity: 0.5; }
+  .glyph--apps i:nth-child(4) { opacity: 0.3; }
+  /* A category an app adds, and a folder without a picture: two folders. */
+  .glyph--folders { position: relative; width: 44px; align-items: center; }
+  .glyph--folders i {
+    position: absolute;
+    width: 32px;
+    height: 24px;
+    border-radius: 4px 9px 5px 5px;
+    background: rgb(140, 196, 214);
+    left: 10px;
+    top: 14px;
+  }
+  .glyph--folders i:first-child { left: 2px; top: 6px; opacity: 0.45; }
+  .glyph--small { transform: scale(0.62); }
+
+  /* The lists' pictures: Lyrion's cover or icon, else our own shape. */
+  .mthumb {
+    width: 54px;
+    height: 54px;
+    border-radius: 11px;
+    background: rgba(233, 238, 242, 0.06);
+    border: 1px solid rgba(233, 238, 242, 0.12);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    flex-shrink: 0;
+    box-sizing: border-box;
+  }
+  .mthumb img { width: 100%; height: 100%; object-fit: cover; }
+  .mthumb--big { width: 100%; height: 100%; border: 0; border-radius: 0; background: none; }
+  .mthumb--big .glyph--small { transform: scale(1.4); }
+  .mthumb__search {
+    width: 18px;
+    height: 18px;
+    border: 3px solid rgba(233, 238, 242, 0.85);
+    border-radius: 50%;
+    position: relative;
+  }
+  .mthumb__search::after {
+    content: '';
+    position: absolute;
+    width: 9px;
+    height: 3px;
+    border-radius: 2px;
+    background: rgba(233, 238, 242, 0.85);
+    right: -9px;
+    bottom: -5px;
+    transform: rotate(45deg);
+  }
+  .mgrid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(var(--tile, 176px), 1fr));
+    gap: 26px 22px;
+    align-content: start;
+  }
+  .mtile { width: auto; text-align: left; }
+  .mtile__art { width: 100%; height: auto; aspect-ratio: 1; display: flex; }
+  .mtext {
+    grid-column: 1 / -1;
+    padding: 10px 14px;
+    font-size: var(--t-meta);
+    color: var(--ink-quiet);
+  }
+  .msearch {
+    display: flex;
+    gap: 12px;
+    padding: 6px 14px 14px 84px;
+  }
+  .msearch--tile { grid-column: 1 / -1; padding-left: 0; }
+  .msearch__field {
+    flex: 1;
+    height: 52px;
+    padding: 0 18px;
+    border-radius: 14px;
+    border: 1px solid rgba(233, 238, 242, 0.2);
+    background: rgba(233, 238, 242, 0.06);
+    color: var(--ink);
+    font: 500 20px var(--font-ui);
+  }
+  .msearch__go {
+    height: 52px;
+    padding: 0 26px;
+    border-radius: 14px;
+    border: 1px solid rgba(126, 214, 188, 0.4);
+    background: rgba(126, 214, 188, 0.16);
+    color: var(--accent-lms);
+    font: 700 18px var(--font-ui);
+  }
+  .mmore { height: 1px; grid-column: 1 / -1; }
+  /* Play next: a bar, then the play mark. */
+  .act__next { display: flex; align-items: center; gap: 3px; }
+  .act__next b { width: 3px; height: 13px; border-radius: 1px; background: rgba(233, 238, 242, 0.9); }
+  .act__next i {
+    width: 0;
+    height: 0;
+    border-left: 9px solid rgba(233, 238, 242, 0.9);
+    border-top: 6px solid transparent;
+    border-bottom: 6px solid transparent;
+  }
+  .round--view { margin-left: auto; }
+  .i-rows { width: 22px; height: 18px; display: flex; flex-direction: column; justify-content: space-between; }
+  .i-rows i { height: 3.5px; border-radius: 2px; background: var(--ink-strong); }
 
   .glyph {
     height: 44px;

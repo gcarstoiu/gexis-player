@@ -125,6 +125,18 @@
         "surfaced": false
       },
       {
+        "key": "lms_extended_nav",
+        "type": "toggle",
+        "label": "Extended navigation",
+        "marks": "N",
+        "note": "Lyrion's own menus on the home screen: My Music, Favourites, Apps, and what the apps add.",
+        "default": false,
+        "onlyWhen": [
+          "lms_enabled",
+          true
+        ]
+      },
+      {
         "key": "plugins",
         "type": "action",
         "label": "Plugins",

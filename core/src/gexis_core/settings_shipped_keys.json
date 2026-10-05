@@ -38,6 +38,7 @@
  "legal",
  "listenbrainz_token",
  "lms_enabled",
+ "lms_extended_nav",
  "lms_player",
  "lms_server",
  "log_level",
