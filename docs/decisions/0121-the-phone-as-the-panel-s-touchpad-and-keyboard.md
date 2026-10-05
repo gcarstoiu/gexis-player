@@ -41,7 +41,12 @@ of its own, needs only taps to leave, which a tap anywhere already does.
 ### 2. In the volume sheet (A)
 
 The phone's volume sheet extends upwards: a touchpad area above the slider.
-One finger moves the pointer; a tap taps. **Nothing else (D)**: no
+One finger moves the pointer; a tap taps. **Relative, as a laptop's
+touchpad** (George, 2026-10-05: *"the phone touch area moves the pointer in
+the screen relative to its initial position. This way bars don't have a
+problem"*): the touch area is not mapped onto the screen; a finger's
+movement moves the pointer from where it is, by an amount *Pointer speed*
+sets, so a 1280 x 400 bar and a 1920 x 1080 panel take the same touchpad. **Nothing else (D)**: no
 two-finger volume, no swipes for tracks, no scrolling gesture - "working in
 a simple manner" first. Scrolling a panel list from the phone is **not** in
 this record; lists scroll by touch on the panel, as today.
