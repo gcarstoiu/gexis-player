@@ -285,6 +285,10 @@ def plan(opts: list[str], version: str) -> list[tuple[str, str | None, str]]:
 
 # --- the steps ---------------------------------------------------------------
 
+#: The most of a release's notes kept - far above any release's so far.
+NOTES_MAX = 8000
+
+
 def release_notes(version: str) -> str | None:
     """What a release says changed (2026-10-01, George: release notes on the
     device): `r<tag>/notes`, clearsigned by the release key like the channel.
@@ -302,7 +306,10 @@ def release_notes(version: str) -> str | None:
         print(f"{tag}'s notes are not signed by the release key; not shown", flush=True)
         return None
     text = verified.stdout.decode(errors="replace").strip()
-    return text[:1200] or None
+    # A guard on what goes into the status file, not an edit: 1200 cut 0.9.0's
+    # notes (1,979 characters) and 0.9.1's mid-word on every screen that shows
+    # them (George, 2026-10-05).
+    return text[:NOTES_MAX] or None
 
 
 def check(args) -> tuple[str, dict] | None:

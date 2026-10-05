@@ -192,6 +192,15 @@ def test_a_release_s_signed_notes_are_read(up, monkeypatch):
     assert up.release_notes("0.2.1+git900.abc1234") == "New: release notes."
 
 
+def test_a_release_s_notes_are_kept_whole(up, monkeypatch):
+    """2026-10-05: notes were cut at 1,200 characters - 0.9.0's and 0.9.1's
+    ended mid-word ("Starting volume is now b") on the phone's dialog."""
+    notes = "New\n" + "\n".join(f"• Change number {n}, said in a sentence of its own." for n in range(40))
+    assert len(notes) > 1900
+    serve(monkeypatch, up, notes + "\n")
+    assert up.release_notes("0.2.1+git900.abc1234") == notes
+
+
 def test_notes_that_do_not_verify_are_not_shown(up, monkeypatch):
     serve(monkeypatch, up, "anything", verified=False)
     assert up.release_notes("0.2.1+git900.abc1234") is None
