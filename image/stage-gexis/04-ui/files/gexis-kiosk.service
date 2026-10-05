@@ -40,6 +40,9 @@ EnvironmentFile=/etc/gexis/kiosk.env
 # ADR-0109: the attached screen, written by the core when one is chosen.
 # Absent until then: the screen's own mode, Standard at its own size.
 EnvironmentFile=-/etc/gexis/screen.env
+# No system cursor (ADR-0121): labwc's own arrow stayed on a panel driven
+# from the phone. The theme is one transparent pixel (packaging/system).
+Environment=XCURSOR_THEME=gexis-blank
 # ADR-0043, corrected 2026-09-19 on the first device that ever booted it.
 #
 # Plymouth is DRM master for as long as it runs. The original design held
