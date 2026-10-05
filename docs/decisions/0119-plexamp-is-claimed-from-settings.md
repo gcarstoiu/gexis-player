@@ -99,7 +99,7 @@ input - beside George's claimed one, which was not touched:
   403`, and a failed probe of a phone's player on the LAN.
 
 - **The name Plex shows is `PLEXAMP_PLAYER_NAME`'s**: George's Authorized
-  Devices listed the test player as `gexis-claimtest`. He removed it.
+  Devices listed the test player as `gexis-claimtest` (left for him to remove).
 
 ## How it is built
 
