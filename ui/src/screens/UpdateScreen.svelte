@@ -13,7 +13,7 @@
 
   //: `outcome` is null while it runs, then `done` or `failed` for the few
   //: seconds App shows it before going on.
-  let { update = null, reconnecting = false, outcome = null } = $props();
+  let { update = null, reconnecting = false, outcome = null, oncontinue = null } = $props();
 
   const restarting = $derived(update?.reboot && update?.steps?.restart === 'active');
 </script>
@@ -31,11 +31,18 @@
     <span class="lock__crumb">Software update</span>
   </header>
 
-  <div class="lock__main">
+  <div class="lock__main" class:lock__main--notes={outcome === 'done' && update?.whats_new}>
     {#if outcome === 'done'}
       <h1>Updated to {update?.installed}</h1>
       {#if update?.whats_new}<div class="lock__notes"><ReleaseNotes text={update.whats_new} large /></div>{/if}
-      <p class="lead">Everything is paused or disconnected.</p>
+      <div class="lock__foot">
+        <p class="lead">Everything is paused or disconnected.</p>
+        {#if update?.whats_new && oncontinue}
+          <!-- With notes the screen waits for this (or two minutes), so they
+               can be read (2026-10-05). -->
+          <button type="button" class="lock__continue" onclick={oncontinue}>Continue</button>
+        {/if}
+      </div>
     {:else if outcome === 'failed'}
       <h1>Did not update</h1>
       <p class="lead">Back on {update?.installed}. {update?.message ?? ''}</p>
@@ -99,7 +106,55 @@
     text-align: left;
     min-width: 520px;
   }
-  .lock__notes { max-width: 900px; }
+  /* **Long notes scroll** (George, 2026-10-05: 0.9.0's ran off the screen
+     and could not be moved). Their own scroll box, so a vertical swipe
+     works here while the rest of the lock still refuses touch: a browser
+     reads touch-action only up to the nearest scroll box. */
+  .lock__notes {
+    max-width: 900px;
+    flex: 0 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    touch-action: pan-y;
+    text-align: left;
+    padding-right: 8px;
+  }
+  /* **With notes, the notes get the height**: a smaller title on a short
+     screen, and the line and Continue on one row below them - on a
+     1280x400 bar the notes had 11 px otherwise (measured 2026-10-05). */
+  .lock__main--notes {
+    justify-content: flex-start;
+    gap: min(34px, 3.5vh);
+  }
+  .lock__main--notes h1 {
+    font-size: min(60px, 9vh);
+    flex: none;
+  }
+  .lock__main--notes .lock__notes {
+    flex: 1 1 auto;
+  }
+  .lock__main--notes .lead {
+    font-size: min(30px, 5.5vh);
+  }
+  .lock__foot {
+    flex: none;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: 14px 28px;
+  }
+  .lock__continue {
+    flex: none;
+    padding: 14px 40px;
+    border: 0;
+    border-radius: var(--r-pill, 999px);
+    background: var(--accent-lms);
+    color: var(--bg-base);
+    font: 700 22px var(--font-ui);
+    touch-action: manipulation;
+  }
   .lead {
     margin: 0;
     font-size: 30px;

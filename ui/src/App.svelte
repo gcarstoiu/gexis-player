@@ -347,8 +347,21 @@
   //: reconnects (nothing else shows in between); then the outcome for a few
   //: seconds, and a reload when the release changed the page's own files.
   const OUTCOME_MS = 6000;
+  //: **With notes to read, until Continue** (George, 2026-10-05: 0.9.0's
+  //: notes could not all be seen). The limit is for a panel nobody watches.
+  const NOTES_MS = 120000;
+  let outcomeTimer;
+  function leaveUpdate(changed) {
+    clearTimeout(outcomeTimer);
+    if (changed) location.reload();
+    else {
+      updateLock = false;
+      updateOutcome = null;
+    }
+  }
   let updateLock = $state(false);
   let updateOutcome = $state(null);
+  let updateChanged = false;
   let loadedRelease = null;
   $effect(() => {
     const u = $update;
@@ -363,13 +376,9 @@
     if (u && ['done', 'failed'].includes(u.state)) {
       updateOutcome = u.state;
       const changed = u.state === 'done' && u.installed && u.installed !== loadedRelease;
-      setTimeout(() => {
-        if (changed) location.reload();
-        else {
-          updateLock = false;
-          updateOutcome = null;
-        }
-      }, OUTCOME_MS);
+      updateChanged = changed;
+      const notes = u.state === 'done' && u.whats_new;
+      outcomeTimer = setTimeout(() => leaveUpdate(changed), notes ? NOTES_MS : OUTCOME_MS);
     }
   });
   async function showVisualisation() {
@@ -564,7 +573,8 @@
   <!-- ADR-0110 §6: above even setup and pairing - nothing on this panel is
        usable while its software is being replaced. -->
   {#if updateLock}
-    <UpdateScreen update={$update} reconnecting={$connection !== 'open'} outcome={updateOutcome} />
+    <UpdateScreen update={$update} reconnecting={$connection !== 'open'} outcome={updateOutcome}
+                  oncontinue={() => leaveUpdate(updateChanged)} />
   {/if}
 </div>
 {/if}
