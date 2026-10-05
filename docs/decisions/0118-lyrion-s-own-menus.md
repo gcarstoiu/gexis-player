@@ -95,10 +95,21 @@ streaming services, Radio Paradise, YouTube - lives in that same tree under
   and **each list remembers its own choice on that device** - not a
   Settings row. Lists start as lists, albums and playlists as tiles.
 
+- **J. Entries that write are hidden this iteration** (George, 2026-10-05:
+  *"Not yet, next iteration"*). Finding 111 found one where context menus
+  do not reach: Qobuz's *Add Release '…' to Qobuz favourites*, on an
+  album's own page, opened like a folder (`qobuz items`) and writing to the
+  account. **Told apart mechanically, not by its words**: its action
+  carries `nextWindow: parent` - go back once it is done - where the
+  page's folders carry none, and a station's play carries `nowPlaying`. A
+  browse-command item whose action names any `nextWindow` but `nowPlaying`
+  is an action, and is left out (read 2026-10-05 from the album page,
+  without opening the entry).
+
 ### Not in this iteration (D)
 
 - **Context menus** (`more`): add to favourites, go to the artist or album,
-  an app's own extras.
+  an app's own extras - and the entries J hides, which belong with them.
 - **Spotty's Transfer Playback**, which moves playback to another device.
 - **Preset assignment** (`set-preset-N`), which rewrites a Squeezebox's
   buttons.
