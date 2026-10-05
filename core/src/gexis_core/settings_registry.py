@@ -742,7 +742,10 @@ class Settings:
                         public["optionTags"] = OPTION_TAGS[source]()
                     if source in self._labels:
                         public["optionLabels"] = self._labels[source]()
-                public["value"] = self.value(row["key"])
+                # The value already worked out for `visible`: a row's
+                # default can be a system read, and every one was being made
+                # twice per request (2026-10-05).
+                public["value"] = values[row["key"]]
                 if row["key"] in self._notes:
                     note = self._notes[row["key"]]()
                     if note:

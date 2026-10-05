@@ -28,10 +28,13 @@ release** (George, 2026-10-04): never push a release onto an open PR.
 | Skin picker (ADR-0050 amended) | 960 px previews made ahead for every installed pack |
 | Released in 0.8.7 | The new-screen notice and its straight switch (29a3386, 88ee721, d91a4bc); a USB disk kept 7 days after unplugging (ADR-0115 decision 17, ddf088f); setup's copy fixes from the review (963857d-034fb33); genre pills kept to two rows on the artist page (7cd3e1b); skin packs fetched from the channel's release when the player's own is unpublished, a stale pack failure no longer shown, failures in words (efd329d); Finding 109's playback test; 13a/13c/13e closed |
 
-**`gexis` right now (2026-10-05):** the 13d preview with `phase-13b` merged
-in (core, ui and player `0.8.9+git46.2227d78`, gexis-system
-`0.8.9+git35.ab56c0c`, gexis-plexamp `0.3.0-2+0.8.9+git35.ab56c0c` with the
-unreleased 0.4.0 plugin files laid over it), on the 13.3" with a new cable. **Skin packs now install on a preview** (efd329d: an unpublished
+**`gexis` right now (2026-10-05, afternoon):** the 13d preview with
+`phase-13b` merged in (core, ui and player `0.8.9+git57.7c61218`,
+gexis-system `0.8.9+git44.83e89ad`, **gexis-go-librespot `0.9.0-2`** - Spotify
+without loudness normalisation, ADR-0052 §6 amended at George's word -
+gexis-plexamp `0.3.0-2+0.8.9+git35.ab56c0c` with the unreleased 0.4.0 plugin
+files laid over it), on the 13.3" with a new cable. **George to compare**
+Spotify and LMS's Qobuz app on the same song at 100. **Skin packs now install on a preview** (efd329d: an unpublished
 release takes its pack from the channel's release; shown live, 2026-10-04 -
 before that every preview failed every pack). The album artist screen was measured on that panel through the
 kiosk's DevTools port (since closed): about 55 fps scrolling, photos in about

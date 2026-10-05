@@ -12,7 +12,29 @@ export const settingsError = writable(null);
  *  guess the hostname from the name. */
 export const settingsDevice = writable({ name: null, hostname: null, address: null });
 
-export async function loadSettings() {
+//: One reload at a time. A save is followed by the settings revision every
+//: open screen hears, and each used to start its own full reload on top of
+//: the one the save asked for - three in a row on the player, each half a
+//: second (2026-10-05). Asked for while one runs, it runs once more after.
+let loading = null;
+let again = false;
+
+export function loadSettings() {
+  if (loading) {
+    again = true;
+    return loading;
+  }
+  loading = fetchSettings().finally(() => {
+    loading = null;
+    if (again) {
+      again = false;
+      loadSettings();
+    }
+  });
+  return loading;
+}
+
+async function fetchSettings() {
   try {
     const response = await fetch('/settings');
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
@@ -83,6 +105,9 @@ export async function writeSetting(key, value) {
     body: JSON.stringify({ value }),
   });
   const body = await response.json().catch(() => ({}));
-  if (response.ok) await loadSettings();
+  // The answer is the save; the list catches up behind it. Waiting for the
+  // reload held the sheet's button disabled for seconds on the player
+  // (George, 2026-10-05).
+  if (response.ok) loadSettings();
   return { ok: response.ok, status: response.status, error: body.error };
 }

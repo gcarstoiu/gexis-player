@@ -78,3 +78,32 @@ def test_a_row_s_note_can_follow_the_device(tmp_path):
     assert row().get("note") is None
     note["text"] = "What's new in 0.2.2: something"
     assert row()["note"] == "What's new in 0.2.2: something"
+
+
+def test_the_installed_release_is_asked_of_dpkg_once_per_change(tmp_path, monkeypatch):
+    """2026-10-05: four Settings rows read it on every GET /settings, at
+    31 ms a dpkg-query - most of a slow save. Asked again only when dpkg's
+    status file changes."""
+    import os
+    import subprocess as sp
+
+    from gexis_core import updates
+
+    calls = []
+    answers = iter(["0.8.9+git1.aaa", "0.9.0"])
+
+    def run(*args, **kwargs):
+        calls.append(args)
+        return sp.CompletedProcess(args, 0, next(answers), "")
+
+    monkeypatch.setattr(updates.subprocess, "run", run)
+    monkeypatch.setattr(updates, "_installed", (None, None))
+    status = tmp_path / "status"
+    status.write_text("x")
+    os.utime(status, (1000, 1000))
+    assert updates.installed_release(status) == "0.8.9+git1.aaa"
+    assert updates.installed_release(status) == "0.8.9+git1.aaa"
+    assert len(calls) == 1
+    os.utime(status, (2000, 2000))  # an install
+    assert updates.installed_release(status) == "0.9.0"
+    assert len(calls) == 2
