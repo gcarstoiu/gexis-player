@@ -35,25 +35,27 @@ release** (George, 2026-10-04): never push a release onto an open PR.
 | Skin picker (ADR-0050 amended) | 960 px previews made ahead for every installed pack |
 | Released in 0.8.7 | The new-screen notice and its straight switch (29a3386, 88ee721, d91a4bc); a USB disk kept 7 days after unplugging (ADR-0115 decision 17, ddf088f); setup's copy fixes from the review (963857d-034fb33); genre pills kept to two rows on the artist page (7cd3e1b); skin packs fetched from the channel's release when the player's own is unpublished, a stale pack failure no longer shown, failures in words (efd329d); Finding 109's playback test; 13a/13c/13e closed |
 
-**`gexis` right now (2026-10-05, afternoon):** the 13d preview with
-`phase-13b` merged in (core and player `0.8.9+git86.0d130e3`, ui `0.8.9+git77.a4b056c` - with
-**ADR-0120 steps 1-3**: backgrounds placed by what they show, OpenCV 5.0.0
-and both models in the core; TheAudioDB for artist backgrounds and the
-artwork updates; Pexels beside Pixabay, its key row empty), gexis-system `0.8.9+git44.83e89ad`,
-gexis-go-librespot `0.9.0-2` (Spotify without normalisation),
-gexis-plexamp `0.3.0-2+0.8.9+git35.ab56c0c` with the unreleased 0.4.0 plugin
-files laid over it; on the 13.3" with a new cable. George to watch the bar's
-idle screen.
+**`gexis` right now (2026-10-05, evening):** the 13d preview with
+`phase-13b` merged in - core `0.9.0+git17.8ebb7c1`, player and ui
+`0.9.0+git19.5e61762`: 0.9.0, the post-0.9.0 fixes and **ADR-0121's
+touchpad**; on the 10.1" 1280 x 800 (the 13.3" FHD jammed the Wi-Fi). Its
+volume read 100 % after the touchpad tests, nothing playing - whether a
+test tap set it is unknown (LESSONS 59); left as it was.
 
 **Next, in order:**
-0. **Fixes after 0.9.0, built and waiting to go on gexis** (George's
-   findings, 2026-10-05): an update stops whoever is playing (4f1684d); the
-   starting volume holds 3 s after Spotify takes over (e10b93e); Starting
-   volume beside Spotify's switch, rows may carry several conditions
-   (1ef73a8); the panel's post-update notes scroll and wait for Continue
-   (1f5cd5f). The phone's notes scrolled in every test - George to say where
-   they stuck. **Then ADR-0121** (accepted 2026-10-05): the phone as the
-   panel's touchpad and keyboard, before 13f; its four measurements first.
+0. **Fixes after 0.9.0, on gexis, unreleased** (George's findings,
+   2026-10-05): an update stops whoever is playing (4f1684d); the starting
+   volume holds 3 s after Spotify takes over (e10b93e); Starting volume
+   beside Spotify's switch (1ef73a8); the panel's post-update notes scroll
+   and wait for Continue (1f5cd5f). The phone's notes scrolled in every
+   test - George sends a screenshot next time.
+0. **ADR-0121, the phone as touchpad and keyboard: built and on gexis**
+   (1c46f74, a56430d, 6181168). Three of its four measurements done and in
+   the ADR (31 ms round trip; taps drive the panel after two fixes; the
+   kiosk 16-23 % of one core while moving). **Owed: George tries it on his
+   Android** - open the volume sheet on the phone, move onto a text field,
+   tap: the keyboard should open. Drags (queue order, list scrolling) are
+   out by decision D. Not measured during playback.
 0. **ADR-0120, bar backgrounds** (accepted 2026-10-05): step 1 (placement)
    and step 2 (TheAudioDB for
    backgrounds and the Enrichment updates, its key row) built and live on
