@@ -1672,6 +1672,8 @@ async def main() -> None:
         wired={"idle_url": None, "idle_timeout": None, "drawer_on_external": None,
                "drawer_autohide": None, "phone_touchpad": None, "pointer_speed": None,
                "pointer_style": None, "listenbrainz_token": None,
+               # ADR-0118 B: read by the menus route and the panel's home.
+               "lms_extended_nav": None,
                "fanart_key": None, "lms_server": None,
                # ADR-0059: read on every ask through `gate` and
                # `confidence_min`, so nothing has to happen on the write.
