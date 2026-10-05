@@ -842,8 +842,13 @@
     const shape = row.kind === 'search' ? 'search' : HINT_SHAPE[row.hint] ?? (row.kind === 'play' ? 'note' : 'folder');
     return [shape, menuTint(row.label)];
   }
-  //: Lyrion's own stock icons are grey; an app's logo and a cover are not.
-  const ownPicture = (row) => row.image && !(row.id && MY_MUSIC[row.id]) && !/:\d+\/html\//.test(row.image);
+  //: **Our own shapes for folders**, Lyrion's pictures only where they are
+  //: the thing itself: a cover, or an app's logo. A plugin's category icons
+  //: are white silhouettes (Spotty's, seen 2026-10-05), and live where its
+  //: logo does, so a folder's picture cannot be told apart by its path.
+  const ownPicture = (row) =>
+    !!row.image && !(row.id && MY_MUSIC[row.id]) && (row.kind !== 'folder' || row.hint === 'app')
+    && !/:\d+\/html\//.test(row.image);
   const covered = (rows) =>
     rows.length > 0 && rows.filter((r) => r.kind === 'container' && ownPicture(r)).length / rows.length >= 0.6;
 
