@@ -420,6 +420,40 @@
         ]
       },
       {
+        "key": "phone_touchpad",
+        "type": "toggle",
+        "label": "Phone touchpad",
+        "marks": "N",
+        "note": "A touchpad in the phone's volume sheet that moves a pointer on this screen, taps, and types into its text fields.",
+        "default": true,
+        "onlyWhen": [
+          "headless",
+          false
+        ]
+      },
+      {
+        "key": "pointer_speed",
+        "type": "number",
+        "label": "Pointer speed",
+        "marks": "N",
+        "note": "How far the pointer moves for a finger's movement on the phone.",
+        "min": 50,
+        "max": 300,
+        "step": 25,
+        "unit": "%",
+        "default": 100,
+        "onlyWhen": [
+          [
+            "headless",
+            false
+          ],
+          [
+            "phone_touchpad",
+            true
+          ]
+        ]
+      },
+      {
         "type": "group",
         "label": "Home screen",
         "accent": "#c8a2d8",

@@ -247,6 +247,10 @@ class StateServer:
         self._ui_dir = ui_dir
         self._clients: set[web.WebSocketResponse] = set()
         store.subscribe(self._broadcast)
+        #: ADR-0121: the touchpad's own socket, the panel's (loopback) and the
+        #: phones' apart. `/state` stays publish-only (ADR-0028).
+        self._pad_panels: set[web.WebSocketResponse] = set()
+        self._pad_phones: set[web.WebSocketResponse] = set()
 
     def _broadcast(self, state: PlaybackState) -> None:
         if not self._clients:
@@ -283,6 +287,55 @@ class StateServer:
             self._clients.discard(ws)
             logger.info("wsserver: client disconnected (%d remaining)", len(self._clients))
         return ws
+
+    #: What each side may say on the touchpad's socket (ADR-0121 §5). Anything
+    #: else is dropped: the core relays these, it does not interpret them.
+    PAD_FROM_PHONE = frozenset({"move", "tap", "text", "key"})
+    PAD_FROM_PANEL = frozenset({"over", "focus"})
+    PAD_MAX = 2048
+
+    async def _handle_touchpad(self, request: web.Request) -> web.WebSocketResponse:
+        """**The phone as the panel's touchpad and keyboard** (ADR-0121).
+
+        A phone's moves, taps and typing go to the panel; the panel's "the
+        pointer is over a text field" and "a text field has focus" go to the
+        phones. Relayed, never turned into a command; dropped while the
+        *Phone touchpad* row is off. Its own socket rather than `/state`,
+        which stays publish-only (ADR-0028)."""
+        ws = web.WebSocketResponse(heartbeat=20)
+        await ws.prepare(request)
+        panel = self._from_panel(request)
+        mine, theirs, allowed = ((self._pad_panels, self._pad_phones, self.PAD_FROM_PANEL) if panel
+                                 else (self._pad_phones, self._pad_panels, self.PAD_FROM_PHONE))
+        mine.add(ws)
+        try:
+            async for msg in ws:
+                if msg.type != aiohttp.WSMsgType.TEXT or len(msg.data) > self.PAD_MAX:
+                    continue
+                if not self._touchpad_on():
+                    continue
+                try:
+                    kind = json.loads(msg.data).get("t")
+                except (ValueError, AttributeError):
+                    continue
+                if kind not in allowed:
+                    continue
+                for other in list(theirs):
+                    asyncio.create_task(self._send(other, msg.data))
+        finally:
+            mine.discard(ws)
+        return ws
+
+    @staticmethod
+    def _from_panel(request: web.Request) -> bool:
+        """The panel arrives on loopback, a phone from the LAN (ADR-0035 §6)."""
+        return request.remote in ("127.0.0.1", "::1")
+
+    def _touchpad_on(self) -> bool:
+        try:
+            return self._settings is None or self._settings.value("phone_touchpad") is not False
+        except Exception:  # noqa: BLE001 - a registry without the row keeps it on
+            return True
 
     async def _handle_activate(self, request: web.Request) -> web.Response:
         renderer_id = request.match_info["renderer_id"]
@@ -1607,6 +1660,7 @@ class StateServer:
         app.router.add_get("/idle/wallpaper/local/{name:.*}", self._handle_local_wallpaper)
         app.router.add_get("/idle/wallpaper/{name}", self._handle_wallpaper_file)
         app.router.add_get("/surface", self._handle_surface)
+        app.router.add_get("/touchpad", self._handle_touchpad)
         app.router.add_post("/touch", self._handle_touch)
         app.router.add_post("/panel/painted", self._handle_painted)
         app.router.add_post("/screen/{action}", self._handle_screen_answer)
