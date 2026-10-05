@@ -48,6 +48,7 @@ QOBUZ_ALBUM_PAGE = {
          "actions": {"go": {"cmd": ["qobuz", "items"], "nextWindow": "parent",
                             "params": {"menu": "qobuz", "item_id": "5.2.11"}}}},
         {"text": "Genre: Metal", "type": "text", "style": "itemNoAction"},
+        {"text": "__TAGGEDINPUT__", "actions": {"go": {"cmd": ["qobuz", "items"], "params": {"item_id": "5.9"}}}},
     ],
 }
 

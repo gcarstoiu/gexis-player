@@ -1179,7 +1179,8 @@
           {#if menuView === 'tiles'}
             <span class="i-rows"><i></i><i></i><i></i></span>
           {:else}
-            <span class="i-tiles"><i></i><i></i><i></i><i></i></span>
+            <!-- Nine, not Home's four: the two sit in the same header. -->
+            <span class="i-grid"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span>
           {/if}
         </button>
       {/if}
@@ -2333,7 +2334,9 @@
     bottom: -5px;
     transform: rotate(45deg);
   }
-  .mgrid {
+  /* `.lists` scrolls; this lays it out as a grid - the two classes
+     together, so `.lists`' own column (later in this sheet) does not win. */
+  .lists.mgrid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(var(--tile, 176px), 1fr));
     gap: 26px 22px;
@@ -2384,6 +2387,8 @@
     border-bottom: 6px solid transparent;
   }
   .round--view { margin-left: auto; }
+  .i-grid { width: 22px; height: 22px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 3px; }
+  .i-grid i { border-radius: 1.5px; background: var(--ink-strong); }
   .i-rows { width: 22px; height: 18px; display: flex; flex-direction: column; justify-content: space-between; }
   .i-rows i { height: 3.5px; border-radius: 2px; background: var(--ink-strong); }
 

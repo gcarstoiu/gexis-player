@@ -182,6 +182,10 @@ class LyrionMenus:
         """One item as the panel draws it, or None when it is left out."""
         if str(item.get("icon") or "") in LEFT_OUT_ICONS:
             return None
+        if any(token in str(item.get("text") or "") for token in ("__TAGGEDINPUT__", "__INPUT__")):
+            # Lyrion's own placeholder for typed text, shown as a remembered
+            # search in Qobuz's Search (seen 2026-10-05): nothing to draw.
+            return None
         go, params = _resolve(item, base, item.get("goAction") or "go")
         kind_word = str(item.get("type") or "")
         if go is None or kind_word == "text" or item.get("style") == "itemNoAction":
