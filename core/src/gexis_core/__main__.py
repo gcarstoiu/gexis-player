@@ -1717,7 +1717,7 @@ async def main() -> None:
         # reads the rest as it draws. None of them needs a callback, and all
         # of them are wired, because something reads every one.
         wired={"idle_url": None, "idle_timeout": None, "drawer_on_external": None,
-               "drawer_autohide": None, "listenbrainz_token": None,
+               "drawer_autohide": None, "phone_touchpad": None, "pointer_speed": None, "listenbrainz_token": None,
                "fanart_key": None, "lms_server": None,
                # ADR-0059: read on every ask through `gate` and
                # `confidence_min`, so nothing has to happen on the write.

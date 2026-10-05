@@ -11,8 +11,108 @@
 <script>
   import { active, metadata, volume, fixedOutput, meters, panel, setVolume, showPeppy, hidePeppy, requestIdle } from '../lib/state.js';
   import SourceMark from '../lib/SourceMark.svelte';
+  import { settingValues } from '../lib/settings.js';
+  import { openTouchpad } from '../lib/touchpad.js';
 
   let open = $state(false);
+
+  // ── ADR-0121: the touchpad and keyboard for the panel ────────────────
+  //: Relative, as a laptop's touchpad: moves are sent as distances, and the
+  //: panel scales them by Pointer speed. Open only while the sheet is.
+  const TAP_MS = 300;
+  const TAP_MOVE = 10;
+  const touchpad = $derived(open && $settingValues.phone_touchpad !== false);
+  let pad = null;
+  let overField = $state(false);
+  let typing = $state(false);
+  let typeEl = $state(null);
+  let typed = '';
+  let touchStart = null;
+  let last = null;
+  let travelled = 0;
+  let pending = { dx: 0, dy: 0 };
+  let frame = 0;
+
+  $effect(() => {
+    if (!touchpad) return;
+    pad = openTouchpad((message) => {
+      if (message.t === 'over') overField = !!message.field;
+      if (message.t === 'focus' && !message.field) stopTyping();
+    });
+    return () => {
+      pad?.close();
+      pad = null;
+      overField = false;
+      stopTyping();
+    };
+  });
+
+  function stopTyping() {
+    typing = false;
+    typed = '';
+    if (typeEl) {
+      typeEl.value = '';
+      typeEl.blur();
+    }
+  }
+
+  function flush() {
+    frame = 0;
+    if (pending.dx || pending.dy) pad?.send({ t: 'move', dx: Math.round(pending.dx), dy: Math.round(pending.dy) });
+    pending = { dx: 0, dy: 0 };
+  }
+
+  function padDown(event) {
+    event.currentTarget.setPointerCapture(event.pointerId);
+    touchStart = { at: performance.now() };
+    last = { x: event.clientX, y: event.clientY };
+    travelled = 0;
+  }
+
+  function padMove(event) {
+    if (!last) return;
+    const dx = event.clientX - last.x;
+    const dy = event.clientY - last.y;
+    last = { x: event.clientX, y: event.clientY };
+    travelled += Math.abs(dx) + Math.abs(dy);
+    pending = { dx: pending.dx + dx, dy: pending.dy + dy };
+    if (!frame) frame = requestAnimationFrame(flush);
+  }
+
+  function padUp() {
+    if (!touchStart) return;
+    const quick = performance.now() - touchStart.at < TAP_MS && travelled < TAP_MOVE;
+    touchStart = null;
+    last = null;
+    if (!quick) return;
+    // **The keyboard opens inside this same touch** (ADR-0121 §4): the panel
+    // said in advance that the pointer is over a text field.
+    if (overField && typeEl) {
+      typeEl.value = '';
+      typed = '';
+      typeEl.focus();
+      typing = true;
+    }
+    pad?.send({ t: 'tap' });
+  }
+
+  /** What changed in the hidden field, sent as text and backspaces - so a
+   *  keyboard's suggestions and corrections arrive as the panel needs them. */
+  function typedInput() {
+    const now = typeEl.value;
+    let same = 0;
+    while (same < typed.length && same < now.length && typed[same] === now[same]) same += 1;
+    for (let i = same; i < typed.length; i += 1) pad?.send({ t: 'key', key: 'Backspace' });
+    if (now.length > same) pad?.send({ t: 'text', text: now.slice(same) });
+    typed = now;
+  }
+
+  function typedKey(event) {
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      pad?.send({ t: 'key', key: 'Enter' });
+    }
+  }
   let dragging = $state(false);
   let settling = $state(false);
   let local = $state(0);
@@ -114,6 +214,33 @@
     </span>
     <span class="mini__chev" class:is-open={open}></span>
   </button>
+
+  {#if touchpad}
+    <!-- ADR-0121: a touchpad for the panel, above the slider. -->
+    <div
+      class="mini__pad"
+      role="application"
+      aria-label="Touchpad for the player's screen"
+      onpointerdown={padDown}
+      onpointermove={padMove}
+      onpointerup={padUp}
+      onpointercancel={() => { touchStart = null; last = null; }}
+    >
+      <span class="mini__pad-hint">{typing ? 'Typing on the player' : overField ? 'Tap to type' : 'Touchpad'}</span>
+    </div>
+    <input
+      class="mini__type"
+      bind:this={typeEl}
+      type="text"
+      autocomplete="off"
+      autocorrect="off"
+      spellcheck="false"
+      aria-label="Text for the player's screen"
+      oninput={typedInput}
+      onkeydown={typedKey}
+      onblur={() => (typing = false)}
+    />
+  {/if}
 
   <div class="mini__row">
     {#if $fixedOutput}
@@ -317,6 +444,39 @@
   }
   .mini--open .mini__slider {
     flex-basis: calc(100% - 64px);
+  }
+  .mini__pad {
+    height: 180px;
+    border-radius: 16px;
+    border: 1px solid rgba(233, 238, 242, 0.14);
+    background: rgba(233, 238, 242, 0.05);
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    padding-bottom: 10px;
+    box-sizing: border-box;
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+  .mini__pad-hint {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--ink-muted);
+  }
+  /* Focusable, so the phone's keyboard opens for it, and out of sight. */
+  .mini__type {
+    position: absolute;
+    left: 0;
+    bottom: 0;
+    width: 1px;
+    height: 1px;
+    opacity: 0;
+    border: 0;
+    padding: 0;
+    font-size: 16px;
   }
   .mini__note {
     font-size: var(--t-meta);

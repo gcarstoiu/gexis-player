@@ -19,6 +19,7 @@
   import SetupPage from './screens/SetupPage.svelte';
   import { screen } from './lib/family.svelte.js';
   import UpdateScreen from './screens/UpdateScreen.svelte';
+  import PanelPointer from './lib/PanelPointer.svelte';
   import { update, connection, hidePeppy, screenConfirm, answerScreen, screenNew, answerNewScreen } from './lib/state.js';
   import KeepScreen from './screens/KeepScreen.svelte';
   import NewScreen from './screens/NewScreen.svelte';
@@ -576,6 +577,9 @@
     <UpdateScreen update={$update} reconnecting={$connection !== 'open'} outcome={updateOutcome}
                   oncontinue={() => leaveUpdate(updateChanged)} />
   {/if}
+
+  <!-- ADR-0121: a phone's pointer, over everything, while one controls. -->
+  <PanelPointer />
 </div>
 {/if}
 

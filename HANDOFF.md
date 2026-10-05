@@ -46,6 +46,14 @@ files laid over it; on the 13.3" with a new cable. George to watch the bar's
 idle screen.
 
 **Next, in order:**
+0. **Fixes after 0.9.0, built and waiting to go on gexis** (George's
+   findings, 2026-10-05): an update stops whoever is playing (4f1684d); the
+   starting volume holds 3 s after Spotify takes over (e10b93e); Starting
+   volume beside Spotify's switch, rows may carry several conditions
+   (1ef73a8); the panel's post-update notes scroll and wait for Continue
+   (1f5cd5f). The phone's notes scrolled in every test - George to say where
+   they stuck. **Then ADR-0121** (accepted 2026-10-05): the phone as the
+   panel's touchpad and keyboard, before 13f; its four measurements first.
 0. **ADR-0120, bar backgrounds** (accepted 2026-10-05): step 1 (placement)
    and step 2 (TheAudioDB for
    backgrounds and the Enrichment updates, its key row) built and live on
