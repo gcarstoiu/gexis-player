@@ -1419,3 +1419,30 @@ async def test_saving_the_device_name_from_settings_restarts_the_device(store):
     settings.set("device_name", "Hall")  # setup's way in
     await asyncio.sleep(0)
     assert restarted == ["device_name"]
+
+
+def test_every_row_shown_and_editable_is_wired():
+    """2026-10-05: TheAudioDB key, Pexels API key (ADR-0120) and Pointer
+    style (ADR-0121) were shown in Settings and refused every write - none
+    was in `__main__`'s `wired`, and nothing checked. A row the panel shows
+    for editing is wired there, or listed here with the reason it is not."""
+    source = (Path(__file__).parent.parent / "src" / "gexis_core" / "__main__.py").read_text()
+    # The `wired={...}` argument itself: a key read elsewhere in the file is
+    # not a key that accepts writes.
+    start = source.index("wired={") + len("wired=")
+    depth = 0
+    for end in range(start, len(source)):
+        depth += {"{": 1, "}": -1}.get(source[end], 0)
+        if depth == 0:
+            break
+    main = source[start:end + 1]
+    editable = {"toggle", "number", "choice", "text", "multi"}
+    not_wired_on_purpose = {
+        # Rows the panel shows but answers itself, or that another path writes.
+    }
+    missing = sorted(
+        r["key"] for g in json.loads((Path(__file__).parent.parent / "src" / "gexis_core" / "settings_registry.json").read_text()) for r in g["rows"]
+        if r.get("key") and r.get("type") in editable and r.get("surfaced", True)
+        and f'"{r["key"]}"' not in main and r["key"] not in not_wired_on_purpose
+    )
+    assert not missing, f"shown for editing, not wired in __main__: {missing}"

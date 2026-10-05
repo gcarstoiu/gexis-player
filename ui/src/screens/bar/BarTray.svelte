@@ -158,6 +158,8 @@
   onpointermove={bodySwipe.move}
   onpointerup={(event) => { onsettled?.(event); bodySwipe.up(event); }}
   onpointercancel={(event) => { onsettled?.(event); bodySwipe.cancel(event); }}
+  onpointerenter={(event) => event.pointerType === 'mouse' && onactivity?.(event)}
+  onpointerleave={(event) => event.pointerType === 'mouse' && onsettled?.(event)}
 >
   <div class="closeband" role="button" tabindex="-1" aria-label="Close controls"
     onpointerdown={band.down} onpointermove={band.move} onpointerup={band.up} onpointercancel={band.cancel}></div>

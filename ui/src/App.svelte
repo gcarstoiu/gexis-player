@@ -112,15 +112,25 @@
   // left the drawer up indefinitely and no later change from elsewhere
   // could arm the timer either - `openFromExternal` returned early for a
   // drawer in that state (George, 2026-09-23).
-  function keepVolumeOpen() {
+  //
+  // **And while the phone's pointer rests on it** (ADR-0121; George,
+  // 2026-10-05: "while the cursor is above the modal, it should not be
+  // dismissed"): the pointer entering holds it, leaving lets the timer run.
+  // A tap made there lifts like a finger, which alone would arm the timer.
+  let pointerOver = false;
+  function keepVolumeOpen(event) {
+    if (event?.type === 'pointerenter' && event.pointerType === 'mouse') pointerOver = true;
     clearTimeout(autoHide);
     autoHide = null;
   }
-  function armAutoHide() {
+  function armAutoHide(event) {
+    if (event?.type === 'pointerleave' && event.pointerType === 'mouse') pointerOver = false;
+    if (pointerOver) return;
     clearTimeout(autoHide);
     autoHide = setTimeout(closeVolume, AUTO_HIDE_MS);
   }
   function closeVolume() {
+    pointerOver = false;
     keepVolumeOpen();
     volumeOpen = false;
   }

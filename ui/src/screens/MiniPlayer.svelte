@@ -84,6 +84,9 @@
   //: How far two fingers go together, or apart, before the gesture is
   //: decided - a scroll or a zoom, which it then stays until they lift.
   const DECIDE = 12;
+  //: How far in from the right and bottom edges a finger scrolls.
+  const EDGE = 40;
+  let edge = null;
   const fingers = new Map();
   //: 'one' (moving and tapping), 'two' (undecided), 'scroll', 'zoom', or
   //: 'done' - after two fingers, nothing until every finger has lifted.
@@ -113,6 +116,11 @@
       touchStart = { at: performance.now() };
       last = { x: event.clientX, y: event.clientY };
       travelled = 0;
+      // **The scroll lines** (George, 2026-10-05): one finger along the
+      // right edge scrolls up and down, along the bottom sideways - the
+      // content following the finger, as two fingers do.
+      const r = event.currentTarget.getBoundingClientRect();
+      edge = event.clientX > r.right - EDGE ? 'y' : event.clientY > r.bottom - EDGE ? 'x' : null;
     } else if (fingers.size === 2 && gesture === 'one') {
       // The second finger: no tap, no pointer movement, until decided.
       gesture = 'two';
@@ -132,7 +140,9 @@
       const dy = event.clientY - last.y;
       last = { x: event.clientX, y: event.clientY };
       travelled += Math.abs(dx) + Math.abs(dy);
-      pending = { dx: pending.dx + dx, dy: pending.dy + dy };
+      if (edge === 'y') scrolled = { dx: 0, dy: scrolled.dy + dy };
+      else if (edge === 'x') scrolled = { dx: scrolled.dx + dx, dy: 0 };
+      else pending = { dx: pending.dx + dx, dy: pending.dy + dy };
       soon();
       return;
     }
@@ -340,6 +350,8 @@
       onpointercancel={padCancel}
       onmousedown={(event) => event.preventDefault()}
     >
+      <span class="mini__pad-line mini__pad-line--y" aria-hidden="true"></span>
+      <span class="mini__pad-line mini__pad-line--x" aria-hidden="true"></span>
       <span class="mini__pad-hint">{typing ? 'Typing on the player' : overField ? 'Tap to type' : 'Touchpad'}</span>
     </div>
     <input
@@ -577,11 +589,34 @@
     display: flex;
     align-items: flex-end;
     justify-content: center;
-    padding-bottom: 10px;
+    padding-bottom: 32px;
     box-sizing: border-box;
     touch-action: none;
     user-select: none;
     -webkit-user-select: none;
+  }
+  .mini__pad {
+    position: relative;
+  }
+  /* The scroll lines: drawn thin, answering a finger anywhere within 40 px
+     of the edge. */
+  .mini__pad-line {
+    position: absolute;
+    border-radius: 2px;
+    background: rgba(233, 238, 242, 0.22);
+    pointer-events: none;
+  }
+  .mini__pad-line--y {
+    right: 18px;
+    top: 18px;
+    bottom: 40px;
+    width: 3px;
+  }
+  .mini__pad-line--x {
+    left: 18px;
+    right: 40px;
+    bottom: 18px;
+    height: 3px;
   }
   .mini__pad-hint {
     font-family: var(--font-mono);
