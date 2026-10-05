@@ -9,8 +9,16 @@ idle backgrounds that do not repeat (ADR-0047 §2e), and the post-0.9.0
 fixes. **PR #49 into `main` waits for George** (0.9.0's, #48, is merged).
 The image is `image/deploy/2026-10-05-gexis-player-v0.9.1.img` in the main
 checkout; 111 checks passed. Phase 13d stays open (board tests).
-**Next: 13f** - ADR-0118's questions A-F put to George on 2026-10-05, with
-recommendations; the read-only measurements wait on his answers.
+**13f under way** (ADR-0118 accepted 2026-10-05, A-J; Finding 111):
+Extended navigation row (5d7076d); the core walker `menus.py` and
+`/menus*` routes (6783022); the standard panel's tiles, lists, tiles view
+and search (5c09075, 1f08d1a) - **on gexis as preview 0.9.1+git17,
+Extended navigation switched on there** for George to try. **Next: the
+bar family's screens** (BarLibrary), then George's try. Also on that
+preview: the update screen ends on the steps until Done; the install bar
+by package size; notes no longer cut (ADR-0110 amended) - these take
+effect from the update after the one that delivers them, so 0.9.2's
+notes must stay under 1,200 characters.
 
 ## Start here
 

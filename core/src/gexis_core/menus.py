@@ -48,6 +48,13 @@ LEFT_OUT_IDS = {"myMusicArtistsAlbumArtists", "myMusicPlaylists"}
 #: Entries left out by their icon (see the module's docstring).
 LEFT_OUT_ICONS = {"plugins/Spotty/html/images/transfer.png"}
 
+#: What an entry is, from the parameter Lyrion names it by - not its words -
+#: so the panel can give it the shape and tint of its kind (design/screens.md
+#: §8: categories are read by colour and silhouette).
+#: Most specific first: an album in a genre carries both ids.
+HINTS = (("album_id", "album"), ("work_id", "work"), ("artist_id", "artist"), ("role_id", "artist"),
+         ("folder_id", "folder"), ("year", "year"), ("genre_id", "genre"))
+
 #: One page of a list. Lyrion pages by start and count (Finding 111).
 PAGE = 100
 #: How big an item's picture is asked for.
@@ -174,7 +181,9 @@ class LyrionMenus:
             if row:
                 rows.append(row)
         page = rows[start:start + count]
-        return {"title": spec.get("title"), "count": len(rows), "start": start, "items": page}
+        # `node`: a menu of Lyrion's own, drawn as the panel's grouped cards.
+        return {"title": spec.get("title"), "count": len(rows), "start": start, "items": page,
+                "node": spec["node"]}
 
     # --- one item -----------------------------------------------------
 
@@ -239,6 +248,10 @@ class LyrionMenus:
             "subtitle": text[1],
             "image": self._image(item),
             "can": sorted((spec.get("actions") or {}).keys()),
+            # Lyrion's own id for a menu entry (My Music's), and what an
+            # entry in a list is: the panel's looks key on these.
+            "id": str(item.get("id") or "") or None,
+            "hint": _hint(item, spec),
         }
 
     def _image(self, item: dict) -> str | None:
@@ -304,6 +317,11 @@ def _resolve(item: dict, base: dict, name: str, fallback: bool = True) -> tuple[
     bag = action.get("itemsParams")
     params.update((item.get(bag) or {}) if bag else (item.get("params") or {}))
     return action, params
+
+
+def _hint(item: dict, spec: dict) -> str | None:
+    params = {**(item.get("commonParams") or {}), **(item.get("params") or {}), **(spec.get("params") or {})}
+    return next((word for key, word in HINTS if key in params), None)
 
 
 def _is_browse(cmd) -> bool:

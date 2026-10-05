@@ -54,13 +54,15 @@ function views() {
   }
 }
 
-/** The view a list was last left in, or its default: tiles for a list of
- *  albums and playlists, a list otherwise. */
+/** The view a list was last left in, or its default: **tiles for
+ *  branches** - albums and playlists as covers, categories, genres and years
+ *  as the design's tinted cards (George, 2026-10-05: "inside them have
+ *  tiles") - and long rows for what plays, tracks and stations. */
 export function viewFor(where, items) {
   const kept = views()[where];
   if (kept === 'list' || kept === 'tiles') return kept;
-  const containers = items.filter((i) => i.kind === 'container').length;
-  return items.length && containers / items.length >= 0.6 ? 'tiles' : 'list';
+  const branches = items.filter((i) => i.kind === 'folder' || i.kind === 'container').length;
+  return items.length && branches / items.length >= 0.6 ? 'tiles' : 'list';
 }
 
 export function keepView(where, view) {
