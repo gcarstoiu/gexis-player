@@ -72,8 +72,10 @@ focus or the sheet closes.
 
 ### 5. Messages
 
-Over the existing connection, relayed by the core to the panel and never
-turned into a Lyrion command:
+Over **a socket of their own, `/touchpad`** (built 2026-10-05: `/state` stays
+publish-only, as ADR-0028 decided - commands are requests), relayed by the
+core between the panel (on loopback) and the phones (from the LAN), dropped
+while *Phone touchpad* is off, and never turned into a Lyrion command:
 
 - phone → panel: pointer movement (relative), tap, text inserted,
   backspace, enter;
