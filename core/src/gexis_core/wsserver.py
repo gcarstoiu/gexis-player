@@ -1128,6 +1128,9 @@ class StateServer:
             return web.json_response({"error": "loopback only"}, status=403)
         if self._park is None:
             return web.json_response({"parked": False})
+        # `?stop=all`: an update's, which stops whoever is playing too.
+        if request.query.get("stop") == "all":
+            return web.json_response({"parked": bool(await self._park(stop_all=True))})
         return web.json_response({"parked": bool(await self._park())})
 
     async def _handle_setup_answers(self, request: web.Request) -> web.Response:

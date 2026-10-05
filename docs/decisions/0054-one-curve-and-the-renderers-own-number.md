@@ -280,3 +280,14 @@ app's leftover. George chose the cap for such a renderer too, the same day.
   is any plugin that declares the new capability **`volume_handed`**
   (PLUGIN-CONTRACT.md).
 
+## Amended 2026-10-05: the starting volume holds for 3 seconds
+
+George: *"Last time I connected to spotify and started playing it actually
+didn't respect the 60%. It was at 100% from the begining."* gexis's log:
+the core lowered the DAC to 60 and handed Spotify 60 at 14:19:34.58; at
+14:19:35.46 Spotify reported 100 and the core followed it to full scale - a
+phone sends its own slider's position as it takes a Spotify Connect device.
+For 3 s after the starting level is handed, a report above it is answered
+by handing the level again, not followed (`start_guard.py`); a lower one is
+followed, and after the 3 s every report is.
+
