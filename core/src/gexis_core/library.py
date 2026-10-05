@@ -182,6 +182,12 @@ class LmsLibrary:
         except (aiohttp.ClientError, TimeoutError) as exc:
             raise LibraryUnavailable(str(exc)) from exc
 
+    @property
+    def base_url(self) -> str:
+        """The server's own address, for pictures the menus name by path
+        (ADR-0118)."""
+        return self._base
+
     async def rpc(self, command: list, player: str = "", timeout: float | None = None) -> dict:
         """One JSON-RPC call on this library's session. Public because the
         radio browser (radio.py) and the artist-information plugin

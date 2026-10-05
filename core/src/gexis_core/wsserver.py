@@ -57,6 +57,7 @@ from dataclasses import replace
 
 from gexis_core.enrichment import Enrichment, TrackKey, fold
 from gexis_core.library import LibraryUnavailable, NoPlayer, NotFound
+from gexis_core.menus import MenusUnavailable
 from gexis_core.radio import RadioUnavailable, UnknownHandle
 from gexis_core.model import PlaybackState
 from gexis_core.settings_registry import (
@@ -129,6 +130,7 @@ class StateServer:
         notes=None,
         enrichment=None,
         radio=None,
+        menus=None,
         pairing_answer=None,
         restore=None,
         restart_device=None,
@@ -182,6 +184,8 @@ class StateServer:
         self._artistinfo = artistinfo
         self._enrichment = enrichment
         self._radio = radio
+        #: ADR-0118: Lyrion's own menus, behind Extended navigation.
+        self._menus = menus
         self._pairing_answer = pairing_answer
         #: **ADR-0086.** The installed manifests, so `/plugins/{id}/mark` can
         #: find a file. Held by id rather than searched per request: the set is
@@ -843,6 +847,78 @@ class StateServer:
             return web.json_response({"error": str(exc)}, status=409)
         except LibraryUnavailable as exc:
             return web.json_response({"error": f"LMS unreachable: {exc}"}, status=502)
+
+    # --- ADR-0118: Lyrion's own menus -------------------------------------
+
+    def _menus_off(self) -> web.Response | None:
+        """Behind Extended navigation, off by default (ADR-0118 B)."""
+        if self._menus is None:
+            return web.json_response({"error": "menus are not wired up"}, status=503)
+        try:
+            on = self._settings is not None and self._settings.value("lms_extended_nav") is True \
+                and self._settings.value("lms_enabled") is not False
+        except Exception:  # noqa: BLE001 - a registry without the row keeps it off
+            on = False
+        return None if on else web.json_response({"error": "Extended navigation is off"}, status=409)
+
+    async def _menus_answer(self, call) -> web.Response:
+        try:
+            return web.json_response(await call)
+        except UnknownHandle as exc:
+            return web.json_response({"error": f"unknown handle: {exc}"}, status=404)
+        except MenusUnavailable as exc:
+            return web.json_response({"error": f"Lyrion unreachable: {exc}"}, status=502)
+
+    async def _handle_menus(self, request: web.Request) -> web.Response:
+        """The tiles Extended navigation adds to the home screen; none, and
+        `on: false`, while it is off - so the panel asks once and knows."""
+        if self._menus is None:
+            return web.json_response({"on": False, "tiles": []})
+        if self._menus_off() is not None:
+            return web.json_response({"on": False, "tiles": []})
+        try:
+            return web.json_response({"on": True, "tiles": await self._menus.tiles()})
+        except MenusUnavailable as exc:
+            return web.json_response({"on": True, "tiles": [], "error": f"Lyrion unreachable: {exc}"})
+
+    async def _handle_menus_browse(self, request: web.Request) -> web.Response:
+        """`?at=<handle>&start=&count=`: one page of a list, by handle."""
+        off = self._menus_off()
+        if off is not None:
+            return off
+        try:
+            start = int(request.query.get("start", 0))
+            count = int(request.query.get("count", 100))
+        except ValueError:
+            return web.json_response({"error": "start and count are numbers"}, status=400)
+        return await self._menus_answer(self._menus.browse(request.query.get("at", ""), start, count))
+
+    async def _handle_menus_act(self, request: web.Request) -> web.Response:
+        """`{"handle", "action": "play"|"add"|"next"}` - what Lyrion itself
+        offers for an item this core issued (ADR-0118 D)."""
+        off = self._menus_off()
+        if off is not None:
+            return off
+        try:
+            body = await request.json()
+            handle, action = str(body["handle"]), str(body.get("action", "play"))
+        except (ValueError, KeyError, TypeError):
+            return web.json_response({"error": 'expected {"handle": ..., "action": ...}'}, status=400)
+        if action not in ("play", "add", "next"):
+            return web.json_response({"error": f"unknown action {action}"}, status=404)
+        return await self._menus_answer(self._menus.act(handle, action))
+
+    async def _handle_menus_search(self, request: web.Request) -> web.Response:
+        """`{"handle", "text"}`: a search item, answered (ADR-0118 E)."""
+        off = self._menus_off()
+        if off is not None:
+            return off
+        try:
+            body = await request.json()
+            handle, text = str(body["handle"]), str(body["text"])
+        except (ValueError, KeyError, TypeError):
+            return web.json_response({"error": 'expected {"handle": ..., "text": ...}'}, status=400)
+        return await self._menus_answer(self._menus.search(handle, text))
 
     async def _handle_radio(self, request: web.Request) -> web.Response:
         """ADR-0038 §5: the panel browses by handle, never by command. No
@@ -1718,6 +1794,10 @@ class StateServer:
         app.router.add_get("/skins", self._handle_skins)
         app.router.add_get("/skins/{name:.*}/preview", self._handle_skin_preview)
         app.router.add_get("/plugins/{id}/mark", self._handle_plugin_mark)
+        app.router.add_get("/menus", self._handle_menus)
+        app.router.add_get("/menus/browse", self._handle_menus_browse)
+        app.router.add_post("/menus/act", self._handle_menus_act)
+        app.router.add_post("/menus/search", self._handle_menus_search)
         app.router.add_get("/radio", self._handle_radio)
         app.router.add_post("/radio/play", self._handle_radio_play)
         app.router.add_get("/library/artist-photos", self._handle_artist_photos)

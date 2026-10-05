@@ -23,6 +23,7 @@ from gexis_core.adapters.base import VolumeMechanism
 from gexis_core.adapters.bluetooth import BluetoothAdapter
 from gexis_core.adapters.lms import LmsAdapter
 from gexis_core.library import LmsLibrary
+from gexis_core.menus import LyrionMenus
 from gexis_core.radio import RadioBrowser
 from gexis_core.adapters.spotify import SpotifyAdapter
 from gexis_core.arbitration import Supervisor
@@ -2820,6 +2821,9 @@ async def main() -> None:
         # ADR-0038 §8: the one SlimBrowse subtree, browsed by handles the
         # core issues.
         radio=RadioBrowser(library.rpc, lambda: lms.player_id),
+        # ADR-0118: Lyrion's own menus, by the same handles, behind
+        # Extended navigation.
+        menus=LyrionMenus(library.rpc, lambda: lms.player_id, lambda: library.base_url),
         # ADR-0045: the panel's answer, back to the agent that is holding
         # BlueZ's handshake open waiting for it.
         pairing_answer=pairing_agent.answer,
