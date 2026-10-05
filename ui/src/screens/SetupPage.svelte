@@ -540,7 +540,11 @@
                       <input type={showPw ? 'text' : 'password'} bind:value={pw} placeholder={hasPassword ? 'Saved — type to replace it' : 'Network password'} autocomplete="off" spellcheck="false" />
                       <button type="button" class="chip in" onclick={() => (showPw = !showPw)}>{showPw ? 'Hide' : 'Show'}</button>
                     </span>
-                    <span class="hint">{hasPassword && !pw ? 'Saved. The player tries it at the end of setup.' : 'At least 8 characters. The player tries it at the end of setup.'}</span>
+                    <!-- No hint for a new password (George, 2026-10-05: "Not
+                         needed"); the saved one's line waits on his answer. -->
+                    {#if hasPassword && !pw}
+                      <span class="hint">Saved. The player tries it at the end of setup.</span>
+                    {/if}
                   </label>
                 {:else}
                   <span class="hint">This network is open — no password needed.</span>
