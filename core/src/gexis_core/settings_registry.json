@@ -425,7 +425,7 @@
       {
         "key": "home_strip",
         "type": "choice",
-        "label": "Strip below the tiles",
+        "label": "Home screen list",
         "marks": "N",
         "note": "What the home screen shows.",
         "options": [
@@ -662,7 +662,7 @@
         "note": "Today's weather is always shown. 3 days adds a three-day forecast beside it.",
         "options": [
           "3 days",
-          "None"
+          "Today only"
         ],
         "default": "3 days",
         "onlyWhen": [
@@ -1034,7 +1034,11 @@
       {
         "type": "group",
         "label": "Visualiser",
-        "accent": "#c8a2d8"
+        "accent": "#c8a2d8",
+        "onlyWhen": [
+          "headless",
+          false
+        ]
       },
       {
         "key": "visualiser_skins",

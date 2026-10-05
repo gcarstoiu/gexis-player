@@ -367,7 +367,7 @@ class StateServer:
         if not place:
             return web.json_response({"error": "No location set yet."})
         # `idle_forecast` is two layouts, not a count (design, 2026-09-22).
-        # **Both need today**: the None layout still draws the current
+        # **Both need today**: the Today only layout still draws the current
         # conditions with today's high and low, so the fetch is one day
         # rather than none.
         forecast = str(self._settings.value("idle_forecast") or "3 days")

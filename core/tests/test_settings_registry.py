@@ -1345,7 +1345,7 @@ def test_headless_hides_every_setting_that_needs_a_screen(store):
         "drawer_on_external", "drawer_autohide", "home_strip", "home_strip_count",
         "idle_screen", "idle_timeout", "viz_timeout", "viz_stop", "skin_corpus",
         "spectrum_smoothing", "skin_motion", "show_transition", "handoff_duration",
-        "enrichment", "lyrics", "confidence", "fanart_key",
+        "enrichment", "lyrics", "confidence", "fanart_key", "visualiser_skins",
     }
     settings.set("headless", False)
     assert needs_a_screen - {"home_strip", "home_strip_count"} <= shown()

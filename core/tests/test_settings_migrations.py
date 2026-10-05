@@ -72,3 +72,20 @@ def test_a_store_from_a_newer_release_is_left_alone(tmp_path):
 
 def test_the_schema_key_is_not_a_setting():
     assert sm.SCHEMA_KEY not in registry_keys()
+
+
+def test_a_stored_none_forecast_becomes_today_only(tmp_path):
+    """George, 2026-10-05: the forecast's second layout is "Today only". A
+    device that chose "None" keeps that layout under its new name, and the
+    new name is one the registry offers."""
+    store = SettingsStore(tmp_path / "s.db")
+    store.set("idle_forecast", "None")
+    sm.migrate(store)
+    assert store.get("idle_forecast") == "Today only"
+    options = next(r["options"] for g in json.loads(REGISTRY.read_text()) for r in g["rows"]
+                   if r.get("key") == "idle_forecast")
+    assert store.get("idle_forecast") in options and "None" not in options
+    other = SettingsStore(tmp_path / "t.db")
+    other.set("idle_forecast", "3 days")
+    sm.migrate(other)
+    assert other.get("idle_forecast") == "3 days"

@@ -79,7 +79,12 @@ def convert(key: str, change: Callable[[Any], Any], note: str) -> Migration:
 
 
 #: In the order they shipped. Append only.
-MIGRATIONS: tuple[Migration, ...] = ()
+MIGRATIONS: tuple[Migration, ...] = (
+    # George, on the Settings copy review (2026-10-05): the forecast's
+    # second layout still shows today's weather, so it is not "None".
+    convert("idle_forecast", lambda v: "Today only" if v == "None" else v,
+            "idle_forecast: None is called Today only"),
+)
 
 
 def migrate(store, migrations: tuple[Migration, ...] = MIGRATIONS) -> int:

@@ -435,13 +435,13 @@ async def test_the_weather_route_reads_the_rows(tmp_path):
         # 2026-09-22), so the payload names which.
         assert body["forecast"] == "3 days"
 
-        # **"None" still fetches today.** That layout drops the three-day
+        # **"Today only" still fetches today.** That layout drops the three-day
         # band and keeps the current conditions, which carry today's high
         # and low - a day count of zero would empty the screen it is meant
         # to simplify.
-        settings.set("idle_forecast", "None")
+        settings.set("idle_forecast", "Today only")
         body = await (await client.get("/idle/weather")).json()
-        assert body["forecast"] == "None"
+        assert body["forecast"] == "Today only"
         assert body["now"]["temperature"] == 17.4 and body["days"]
         # Off is not an error, and not an empty forecast either.
         settings.set("idle_weather", False)

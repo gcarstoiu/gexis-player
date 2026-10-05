@@ -53,9 +53,9 @@
   const wantsWeather = $derived(settings.idle_weather !== false && !external);
   //: `idle_forecast` is two layouts, not a count (design, 2026-09-22):
   //: **3 days** puts a band across the bottom and lets the clock drift in
-  //: the upper area; **None** drops the band and brings the current
+  //: the upper area; **Today only** ("None" until 2026-10-05) drops the band and brings the current
   //: conditions up under the clock, which then centres over them.
-  const threeDays = $derived((settings.idle_forecast ?? '3 days') !== 'None');
+  const threeDays = $derived((settings.idle_forecast ?? '3 days') === '3 days');
   const iconSet = $derived(settings.idle_icons ?? 'Solid');
   //: `idle_clock`, George's row (2026-09-22): *"this way a user can
   //: actually use the panel as a photo frame only"*. The date goes with
@@ -113,7 +113,7 @@
   //: of the box stays where it was and its bottom moves with the screen's
   //: bottom edge, so the group keeps the 800 margins (720 on the 13.3").
   function randomSpot() {
-    const wide = (settings.idle_forecast ?? '3 days') !== 'None';
+    const wide = (settings.idle_forecast ?? '3 days') === '3 days';
     const [top, bottom] = wide ? [17, 55] : [36, 56];
     const low = (top / 100) * 800;
     const high = (bottom / 100) * 800 + (panelHeight - 800);
