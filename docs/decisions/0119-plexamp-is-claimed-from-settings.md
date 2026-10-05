@@ -148,6 +148,6 @@ named `gexis`.
 again - its volume, and anything set in its own settings screens (none is
 set by this project). Its audio device is unset, which is "Follows System
 Output": [ADR-0085](0085-the-alsa-default-is-our-output.md)'s default, the
-chosen output, through the meter. Playback after the new claim was not tried
-(it would have made sound in George's room unasked).
+chosen output, through the meter. **Playback after the new claim: George, the same day -** *"it plays and
+the meters work"* - the DAC, through the meter.
 
