@@ -424,7 +424,7 @@
         "type": "toggle",
         "label": "Phone touchpad",
         "marks": "N",
-        "note": "A touchpad in the phone's volume sheet that moves a pointer on this screen, taps, and types into its text fields.",
+        "note": "A touchpad in the phone's volume sheet that moves a pointer on this screen, taps, types into its text fields, scrolls with two fingers and zooms with a pinch.",
         "default": true,
         "onlyWhen": [
           "headless",
@@ -442,6 +442,28 @@
         "step": 25,
         "unit": "%",
         "default": 150,
+        "onlyWhen": [
+          [
+            "headless",
+            false
+          ],
+          [
+            "phone_touchpad",
+            true
+          ]
+        ]
+      },
+      {
+        "key": "pointer_style",
+        "type": "choice",
+        "label": "Pointer style",
+        "marks": "N",
+        "note": "How the pointer the phone moves looks on this screen.",
+        "options": [
+          "Dot",
+          "Arrow"
+        ],
+        "default": "Dot",
         "onlyWhen": [
           [
             "headless",
