@@ -18,7 +18,7 @@ from dbus_next import BusType
 from dbus_next.aio import MessageBus
 
 from gexis_core import alsa, bluetooth_adapter_state, bluetooth_agent, device_name, journal, meters, screen_detect, skins, wifi
-from gexis_core import screen_apply, screen_watch, screens, skin_packs, skin_previews
+from gexis_core import placement, screen_apply, screen_watch, screens, skin_packs, skin_previews
 from gexis_core.adapters.base import VolumeMechanism
 from gexis_core.adapters.bluetooth import BluetoothAdapter
 from gexis_core.adapters.lms import LmsAdapter
@@ -2789,6 +2789,9 @@ async def main() -> None:
         # ADR-0083: what "restart the device" means is the daemon's to say.
         restore=_restore_done,
         restart_device=_restart_for,
+        # ADR-0120: backgrounds placed by what they show. The models load on
+        # the first picture, not at start.
+        placer=placement.Placer(),
         lyrion_shares=lyrion_shares,
         lyrion_shares_changed=lambda: lyrion_wake.set(),
         own_server=lambda: (f"{device_name.address()}:9000"

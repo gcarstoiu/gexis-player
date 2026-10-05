@@ -68,3 +68,34 @@ def test_the_real_models_place_a_real_picture(tmp_path):
     placer = pl.Placer(models=models)
     artist = next((SCRATCH / "artists").glob("*.jpg"))
     assert placer.place(artist.read_bytes(), BAR).how.startswith("faces")
+
+
+async def test_the_route_passes_over_a_picture_too_big_and_places_the_next():
+    """ADR-0120 §2: skipped for the next one; the panel gets `place`."""
+    from aiohttp.test_utils import TestClient, TestServer
+
+    from gexis_core.state import StateStore
+    from gexis_core.wsserver import StateServer
+
+    class Placer:
+        def place(self, data, screen):
+            assert screen == (1280, 400)
+            return pl.Placement(skip=True, how="faces, too big") if data == b"close" else pl.Placement(y=0.2, how="faces")
+
+    server = StateServer(StateStore({}), placer=Placer())
+    server._settings = object()
+    server._wallpapers = object()
+    pictures = iter([{"url": "/a.jpg"}, {"url": "/b.jpg"}])
+
+    async def next_background():
+        return next(pictures)
+
+    async def picture_bytes(url):
+        return b"close" if url == "/a.jpg" else b"fine"
+
+    server._next_background = next_background
+    server._picture_bytes = picture_bytes
+    async with TestClient(TestServer(server.make_app())) as client:
+        body = await (await client.get("/idle/wallpaper?w=1280&h=400")).json()
+    assert body["url"] == "/b.jpg"
+    assert body["place"] == {"y": 0.2, "width": 1.0, "how": "faces"}

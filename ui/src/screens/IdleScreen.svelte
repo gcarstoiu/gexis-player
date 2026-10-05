@@ -40,6 +40,7 @@
   let now = $state(new Date());
   // ADR-0109: the panel's shape, 1280 logical px by the screen's height.
   let panelHeight = $state(window.innerHeight || 800);
+  let panelWidth = $state(window.innerWidth || 1280);
   let spot = $state(randomSpot());
   let weather = $state(null);
   let picture = $state(null);
@@ -96,7 +97,13 @@
   const cropped = $derived(
     ratio === null ? 0 : 1 - (ratio < PANEL_RATIO ? ratio / PANEL_RATIO : PANEL_RATIO / ratio)
   );
-  const fit = $derived(cropped > CROP_LIMIT);
+  //: ADR-0120: where the core placed this picture by what it shows -
+  //: `y` the band's height on the picture, `width` the share of the screen
+  //: it fills (under 1, over its own blur). Without it, the old rule.
+  const place = $derived(picture?.place ?? null);
+  const shrunk = $derived(place ? place.width < 0.999 : false);
+  const fit = $derived(place ? false : cropped > CROP_LIMIT);
+  const position = $derived(place ? `50% ${(place.y * 100).toFixed(1)}%` : null);
 
   const stroke = $derived(black ? 'transparent' : 'rgba(46, 57, 66, 0.92)');
   const scrim = $derived(black ? 'rgba(11, 18, 24, 0.93)' : 'rgba(7, 11, 15, 0.06)');
@@ -139,7 +146,8 @@
     if (external || background === 'Black') return;
     let answer;
     try {
-      const response = await fetch('/idle/wallpaper');
+      // The size, so the core places the picture for this screen (ADR-0120).
+      const response = await fetch(`/idle/wallpaper?w=${Math.round(panelWidth)}&h=${Math.round(panelHeight)}`);
       answer = response.ok ? await response.json() : null;
     } catch {
       answer = null;
@@ -337,13 +345,13 @@
   </div>
 {/snippet}
 
-<svelte:window bind:innerHeight={panelHeight} />
+<svelte:window bind:innerHeight={panelHeight} bind:innerWidth={panelWidth} />
 
 <div class="idle" class:idle--bar={bar} transition:fade={{ duration: 520 }} style:--stroke={stroke}>
   {#if shown && !external}
     {#key shown}
       <div class="picture" in:fade={{ duration: 900 }}>
-        {#if fit}
+        {#if fit || shrunk}
           <!-- The same picture, out of focus and filling the screen, so a
                tall one sits on its own colour rather than on black bars.
                **Static**, not a backdrop filter: ADR-0041 bans live
@@ -362,6 +370,9 @@
           class:bg--fit={fit}
           src={shown}
           alt=""
+          style:object-position={position}
+          style:width={shrunk ? `${(place.width * 100).toFixed(1)}%` : null}
+          style:left={shrunk ? `${((1 - place.width) * 50).toFixed(1)}%` : null}
           style:filter={`brightness(${brightness}) saturate(0.9)`}
         />
       </div>
@@ -567,6 +578,7 @@
   .bg--halo {
     transform: scale(1.12);
   }
+  /* Without a placement from the core (ADR-0120), the old fixed band. */
   .idle--bar .bg:not(.bg--fit):not(.bg--halo) {
     object-position: 50% 35%;
   }
