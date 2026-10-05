@@ -1501,7 +1501,7 @@
                 <span class="album__art mtile__art">
                   {@render thumb(row, true)}
                 </span>
-                <span class="album__title">{row.label}</span>
+                <span class="album__title" class:is-unnamed={!row.label}>{row.label || 'No name'}</span>
                 <span class="album__artist">{row.subtitle ?? ''}</span>
               </button>
               {#if searching?.handle === row.handle}
@@ -1526,7 +1526,9 @@
                 <button class="plrow__hit" type="button" onclick={() => tapMenu(row)}>
                   {@render thumb(row, false)}
                   <span class="plrow__text">
-                    <span class="plrow__name">{row.label}</span>
+                    <!-- A name Lyrion has as empty - 11 of George's 326 genres - is
+                         still something to play. -->
+                    <span class="plrow__name" class:is-unnamed={!row.label}>{row.label || 'No name'}</span>
                     {#if row.subtitle}<span class="plrow__meta">{row.subtitle}</span>{/if}
                   </span>
                 </button>
@@ -2387,6 +2389,8 @@
     border-bottom: 6px solid transparent;
   }
   .round--view { margin-left: auto; }
+  .plrow__name.is-unnamed,
+  .album__title.is-unnamed { color: var(--ink-quiet); font-style: italic; }
   .i-grid { width: 22px; height: 22px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 3px; }
   .i-grid i { border-radius: 1.5px; background: var(--ink-strong); }
   .i-rows { width: 22px; height: 18px; display: flex; flex-direction: column; justify-content: space-between; }
