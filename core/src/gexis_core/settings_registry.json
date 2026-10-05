@@ -10,17 +10,17 @@
         "type": "choice",
         "label": "Output",
         "marks": "R",
-        "note": "Where the sound goes. HDMI costs three things: it has no volume control of its own, so the level is fixed; the Pi carries HDMI audio in a format that has to be converted to, so it is no longer bit-perfect; and the visualiser gets no levels from it. The headphone jack and the DAC keep all three.",
+        "note": "Where the sound goes. Over HDMI the volume is fixed, the sound is not bit-perfect and the visualiser does not move.",
         "optionsFrom": "output_device",
         "default": null,
-        "warn": "Changing the output stops whatever is playing while the sound card is reopened. An output with no volume control of its own — either HDMI — also takes the volume control off the panel."
+        "warn": "Playback stops while the output changes. An output with no volume control of its own, such as HDMI, has no volume slider."
       },
       {
         "key": "output_mode",
         "type": "choice",
         "label": "Output mode",
         "marks": "R",
-        "note": "Only variable is built and hardware-verified. Fixed hides the volume control everywhere and applies after stop.",
+        "note": "Variable: the volume is set on the player. Fixed: the player always plays at full level, for an amplifier that sets the volume itself. The change applies when playback next stops.",
         "options": [
           "Variable",
           "Fixed"
@@ -141,7 +141,7 @@
         "type": "action",
         "label": "Update album covers",
         "marks": "R",
-        "note": "The same walk, for every album rather than only the ones with no cover. One of the two runs at a time.",
+        "note": "Looks up every album's cover on fanart.tv and uses it in place of LMS's, keeping LMS's where fanart has none. Checks all of them, every time. Runs in the background; playback is not interrupted. One update runs at a time.",
         "default": null,
         "onlyWhen": [
           "lms_enabled",
@@ -273,7 +273,7 @@
         "type": "toggle",
         "label": "Reclaim LMS when a session ends",
         "marks": "N",
-        "note": "Never done by design. Opting in reintroduces the spurious reclaims that were measured.",
+        "note": "When Spotify, Bluetooth or Plexamp stops, Lyrion takes the player back. A phone that locks can end a Spotify session, and switch the player to Lyrion without warning.",
         "default": false
       },
       {
@@ -693,7 +693,7 @@
       },
       {
         "type": "group",
-        "label": "Visualization",
+        "label": "Visualiser",
         "accent": "#c8a2d8"
       },
       {
@@ -760,7 +760,7 @@
       },
       {
         "type": "group",
-        "label": "Visualisation tweaks",
+        "label": "Visualiser tweaks",
         "accent": "#c8a2d8"
       },
       {
