@@ -37,7 +37,7 @@ release** (George, 2026-10-04): never push a release onto an open PR.
 
 **`gexis` right now (2026-10-05, evening):** the 13d preview with
 `phase-13b` merged in - core `0.9.0+git17.8ebb7c1`, player and ui
-core `0.9.0+git25.01a56ee`, player `0.9.0+git30.63c8953`, system `0.8.9+git87.5b4042c`: 0.9.0, the post-0.9.0 fixes and
+core, player and ui `0.9.0+git35.a3b75ab`, system `0.8.9+git87.5b4042c`: 0.9.0, the post-0.9.0 fixes and
 **ADR-0121's touchpad** with George's first four changes; on the 10.1" 1280 x 800 (the 13.3" FHD jammed the Wi-Fi). Its
 volume read 100 % after the touchpad tests, nothing playing - whether a
 test tap set it is unknown (LESSONS 59); left as it was.
@@ -58,10 +58,13 @@ test tap set it is unknown (LESSONS 59); left as it was.
    Android** - he found no text field; Settings' text rows (e.g. Pexels API
    key, empty) have one. **No system cursor on the panel** since fd106a5 + 5b4042c
    (a blank labwc cursor theme in gexis-system; on gexis, checked by grim
-   -c). **Waiting on George's answers**: two-finger scrolling and pinch to
-   zoom (amend decision D), and his two cursor sets from Claude Design
-   (`Gexis_DAC_Player_3.zip`: *mouse* arrow and *remote* dot, a Pointer
-   style row for ADR-0022) - questions asked 2026-10-05. Drags (queue order, list scrolling) are
+   -c). **Gestures and pointer styles built and on gexis**
+   (George took every recommendation, 2026-10-05; ADR-0121 §2-3 amended,
+   Pointer style in ADR-0022): two fingers scroll (7ea1f87), pinch zooms
+   1-3x and zooms out when the phone leaves; Dot and Arrow from Claude
+   Design's *Cursors* handoff (`Gexis_DAC_Player_3.zip`), Dot first.
+   Checked through a local relay, not on George's phone; the zoom's cost
+   on the Pi is not measured. Drags (queue order, list scrolling) are
    out by decision D. Not measured during playback.
 0. **ADR-0120, bar backgrounds** (accepted 2026-10-05): step 1 (placement)
    and step 2 (TheAudioDB for
