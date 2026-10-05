@@ -664,7 +664,7 @@
               <div>
                 <h1>{recOk ? 'Is this your screen?' : scState === 'none' ? 'Nothing on the screen yet?' : scChoose ? 'Choose your screen' : 'Which screen is this?'}</h1>
                 <p class="sub">{recOk
-                  ? 'What the screen reports matches this model. It sets the layout and the visualiser skins.'
+                  ? 'What the screen reports matches this model.'
                   : scState === 'none' ? 'Some screens need their settings before they show anything. Choose yours and the player will try it.'
                   : scChoose ? 'Every model gexis knows, by maker.'
                   : 'The screen said who made it and its resolution, but not which model. Choose it from the list.'}</p>
