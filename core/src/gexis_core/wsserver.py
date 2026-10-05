@@ -109,6 +109,7 @@ class StateServer:
         radio=None,
         pairing_answer=None,
         restore=None,
+        restart_device=None,
         lyrion_shares=None,
         lyrion_shares_changed=None,
         own_server=None,
@@ -169,6 +170,12 @@ class StateServer:
         #: the daemon owns what "restart the device" means, and a test can
         #: watch it without one.
         self._restore = restore
+        #: **A row that takes effect at a restart, restarts** (ADR-0048,
+        #: amended 2026-10-05): saving the device name from Settings reboots,
+        #: after the answer. Here, in the route, and not in the row's own
+        #: callback - first-time setup writes the same row and must not
+        #: reboot halfway through.
+        self._restart_device = restart_device
         #: ADR-0115: the Lyrion server's network shares.
         self._lyrion_shares = lyrion_shares
         self._lyrion_shares_changed = lyrion_shares_changed
@@ -1254,7 +1261,24 @@ class StateServer:
             value = body["value"]
         except (ValueError, KeyError, TypeError):
             return web.json_response({"error": 'body must be {"value": ...}'}, status=400)
-        return self._settings_call(lambda: {"key": key, "value": self._settings.set(key, value)})
+        before = self._settings_value(key)
+        response = self._settings_call(lambda: {"key": key, "value": self._settings.set(key, value)})
+        if (response.status == 200 and self._restart_device is not None
+                and self._settings_restarts(key) and self._settings_value(key) != before):
+            asyncio.ensure_future(self._restart_device(key))
+        return response
+
+    def _settings_value(self, key: str):
+        try:
+            return self._settings.value(key)
+        except Exception:  # noqa: BLE001 - the write below says what is wrong
+            return None
+
+    def _settings_restarts(self, key: str) -> bool:
+        try:
+            return bool(self._settings.row(key).get("restart"))
+        except Exception:  # noqa: BLE001
+            return False
 
     async def _handle_setting_action(self, request: web.Request) -> web.Response:
         if self._settings is None:

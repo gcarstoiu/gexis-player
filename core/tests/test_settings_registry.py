@@ -517,12 +517,15 @@ def test_the_device_name_warning_says_what_this_device_does():
     *restarts the services*. **It does not**: ADR-0048 writes all four and
     applies none of them until the next restart, on purpose, so the drop's
     sentence would describe a device that does not exist. The mechanic is
-    the design's; the wording is this device's."""
+    the design's; the wording is this device's.
+
+    **Amended 2026-10-05:** saving it from Settings now restarts the device
+    (George: *"It should restart the device"*), so the warning says that -
+    his sentence again, replacing his 2026-09-22 one."""
     row = next(r for r in _rows() if r["key"] == "device_name")
     assert isinstance(row["warn"], str)
     assert row["restart"] is True
-    # George's own sentence, 2026-09-22.
-    assert row["warn"] == "Change only takes place after a restart of the device."
+    assert row["warn"] == "Changing it will restart the device."
 
 
 def test_the_shipped_registry_hides_the_inventoried_rows_and_shows_the_rest():
@@ -1354,3 +1357,29 @@ def test_headless_hides_every_setting_that_needs_a_screen(store):
     assert {"headless", "screen", "rotation"} <= shown(), "the switch back stays"
     enrich = next(g for g in settings.to_json() if g["id"] == "enrich")
     assert not any(r["visible"] for r in enrich["rows"] if r.get("key"))
+
+
+async def test_saving_the_device_name_from_settings_restarts_the_device(store):
+    """ADR-0048, amended 2026-10-05 (George: "It should restart the device").
+    The route restarts, not the row's callback: setup writes the same row
+    through `Settings.set` and must not reboot halfway through."""
+    import asyncio
+
+    restarted = []
+
+    async def restart(key):
+        restarted.append(key)
+
+    state = StateStore({})
+    settings = Settings(store, registry=load_registry(), wired={"device_name": lambda v: None})
+    server = StateServer(state, settings=settings, restart_device=restart)
+    async with TestClient(TestServer(server.make_app())) as client:
+        assert (await client.put("/settings/device_name", json={"value": "Kitchen"})).status == 200
+        await asyncio.sleep(0)
+        assert restarted == ["device_name"]
+        await client.put("/settings/device_name", json={"value": "Kitchen"})
+        await asyncio.sleep(0)
+        assert restarted == ["device_name"], "the same name again restarts nothing"
+    settings.set("device_name", "Hall")  # setup's way in
+    await asyncio.sleep(0)
+    assert restarted == ["device_name"]

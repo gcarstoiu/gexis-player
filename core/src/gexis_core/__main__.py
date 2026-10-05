@@ -253,6 +253,15 @@ async def _restore_done() -> None:
     await asyncio.create_subprocess_exec("systemctl", "reboot")
 
 
+async def _restart_for(key: str) -> None:
+    """**ADR-0048, amended 2026-10-05: a rename restarts the device**
+    (George: *"It should restart the device"*). The pause lets the answer -
+    and the toast that says so - reach whoever saved it first."""
+    logger.warning("settings: %s changed; restarting the device to apply it", key)
+    await asyncio.sleep(1.5)
+    await asyncio.create_subprocess_exec("systemctl", "reboot")
+
+
 async def _reboot() -> None:
     logger.info("reboot: requested from settings")
     await asyncio.create_subprocess_exec("systemctl", "reboot")
@@ -2774,6 +2783,7 @@ async def main() -> None:
         pairing_answer=pairing_agent.answer,
         # ADR-0083: what "restart the device" means is the daemon's to say.
         restore=_restore_done,
+        restart_device=_restart_for,
         lyrion_shares=lyrion_shares,
         lyrion_shares_changed=lambda: lyrion_wake.set(),
         own_server=lambda: (f"{device_name.address()}:9000"
