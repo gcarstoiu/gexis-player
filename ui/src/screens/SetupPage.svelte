@@ -794,7 +794,10 @@
           <div class="foot">
             {#if step > 0}<button class="ghost" onclick={back}>Back</button>{/if}
             <button class="primary" style="--c:{accent}" disabled={!valid() || saving} onclick={next}>
-              {step < 0 ? 'Start' : id === 'review' ? 'Finish and connect' : 'Continue'}
+              <!-- Saying what is happening, not only dimming (George,
+                   2026-10-05: "Agreed"). -->
+              {saving ? (id === 'review' ? 'Connecting…' : 'Saving…')
+                : step < 0 ? 'Start' : id === 'review' ? 'Finish and connect' : 'Continue'}
             </button>
           </div>
         {/if}
