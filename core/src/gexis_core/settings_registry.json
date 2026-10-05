@@ -279,7 +279,11 @@
         "label": "Show transition screen",
         "marks": "N",
         "note": null,
-        "default": true
+        "default": true,
+        "onlyWhen": [
+          "headless",
+          false
+        ]
       },
       {
         "key": "handoff_duration",
@@ -379,7 +383,7 @@
         "type": "toggle",
         "label": "Headless",
         "marks": "R",
-        "note": "Disables the local screen entirely.",
+        "note": "Turns the player's screen off. Every setting that only affects the screen is hidden while this is on.",
         "default": false
       },
       {
@@ -388,7 +392,11 @@
         "label": "Show volume when changed elsewhere",
         "marks": "N",
         "note": "A phone’s volume change opens the drawer; the panel’s own changes do not.",
-        "default": true
+        "default": true,
+        "onlyWhen": [
+          "headless",
+          false
+        ]
       },
       {
         "key": "drawer_autohide",
@@ -399,19 +407,27 @@
         "max": 30,
         "unit": "s",
         "note": "When a change from elsewhere opened it.",
-        "default": 3
+        "default": 3,
+        "onlyWhen": [
+          "headless",
+          false
+        ]
       },
       {
         "type": "group",
         "label": "Home screen",
-        "accent": "#c8a2d8"
+        "accent": "#c8a2d8",
+        "onlyWhen": [
+          "headless",
+          false
+        ]
       },
       {
         "key": "home_strip",
         "type": "choice",
         "label": "Strip below the tiles",
         "marks": "N",
-        "note": "What the library root shows under its five cards.",
+        "note": "What the home screen shows.",
         "options": [
           "New music",
           "Most played artists",
@@ -441,14 +457,18 @@
       {
         "type": "group",
         "label": "Idle screen",
-        "accent": "#c8a2d8"
+        "accent": "#c8a2d8",
+        "onlyWhen": [
+          "headless",
+          false
+        ]
       },
       {
         "key": "idle_screen",
         "type": "choice",
         "label": "Screen",
         "marks": "R",
-        "note": "The built-in screen shows the clock and weather. An external page replaces it entirely.",
+        "note": "The built-in screen shows the clock and weather. An external page loads the URL provided.",
         "options": [
           "Built in",
           "External URL"
@@ -483,7 +503,7 @@
         "type": "choice",
         "label": "Background",
         "marks": "N",
-        "note": "Artist pictures come from the library. Online wallpapers come from Pixabay and need a key; on-device wallpapers are read from local storage.",
+        "note": "Artist pictures come from the library. Online wallpapers come from Pixabay and need a key. On-device wallpapers are read from local storage.",
         "options": [
           "Artist pictures",
           "Wallpapers online",
@@ -501,7 +521,7 @@
         "type": "number",
         "label": "Background brightness",
         "marks": "N",
-        "note": "How bright the picture behind the clock is. The design's own value is 62%, which is what keeps white type readable over a photograph.",
+        "note": "Brightness of the background picture. Recommended: 62%.",
         "min": 20,
         "max": 100,
         "step": 5,
@@ -519,7 +539,7 @@
         "type": "number",
         "label": "Change the picture every",
         "marks": "N",
-        "note": "How often the background changes — artist pictures, online wallpapers and the player's own, all of them.",
+        "note": "How often the background changes — artist pictures, online wallpapers and the player's own.",
         "min": 1,
         "max": 60,
         "unit": "min",
@@ -536,7 +556,7 @@
         "type": "text",
         "label": "Wallpaper API key",
         "marks": "N",
-        "note": "A free Pixabay key, one per player. Pixabay allows a background feature inside a product like this one, but not a key shipped with it.",
+        "note": "A Pixabay key, from a free account. Use one per player to avoid throttling.",
         "secret": true,
         "placeholder": "Pixabay API key",
         "default": null,
@@ -586,7 +606,7 @@
         "type": "toggle",
         "label": "Clock",
         "marks": "N",
-        "note": "The time and the date, over the background. Turn it off and the panel is a picture frame.",
+        "note": "The time and the date, over the background.",
         "default": true,
         "onlyWhen": [
           "idle_screen",
@@ -598,7 +618,7 @@
         "type": "choice",
         "label": "Clock format",
         "marks": "N",
-        "note": "How the idle screen's clock tells the time. Also asked in first-time setup.",
+        "note": null,
         "options": [
           "24 h",
           "12 h"
@@ -614,7 +634,7 @@
         "type": "toggle",
         "label": "Weather",
         "marks": "N",
-        "note": "Forecasts come from Open-Meteo, which needs no key and no account.",
+        "note": "Forecasts come from Open-Meteo.",
         "default": true,
         "onlyWhen": [
           "idle_screen",
@@ -626,7 +646,7 @@
         "type": "text",
         "label": "Location",
         "marks": "N",
-        "note": "A place name, looked up once. The player stores where it is, not what was typed.",
+        "note": "A city or place name. It can be changed at any time.",
         "placeholder": "City, country",
         "default": null,
         "onlyWhen": [
@@ -639,7 +659,7 @@
         "type": "choice",
         "label": "Forecast",
         "marks": "N",
-        "note": "Three days beside the clock, or today's conditions alone. They are two layouts, not one with a row hidden.",
+        "note": "Today's weather is always shown. 3 days adds a three-day forecast beside it.",
         "options": [
           "3 days",
           "None"
@@ -670,14 +690,18 @@
       {
         "type": "group",
         "label": "Visualiser",
-        "accent": "#c8a2d8"
+        "accent": "#c8a2d8",
+        "onlyWhen": [
+          "headless",
+          false
+        ]
       },
       {
         "key": "viz_timeout",
         "type": "number",
         "label": "Timeout",
         "marks": "R",
-        "note": "How long music plays untouched before the visualiser takes the screen.",
+        "note": "How long music plays before the visualiser takes the screen, counted from the last tap or skip.",
         "min": 1,
         "max": 60,
         "unit": "min",
@@ -688,7 +712,7 @@
         "type": "number",
         "label": "Stop when nothing is playing",
         "marks": "N",
-        "note": "How long silence lasts before the visualiser gives the screen back. Without it the meter sits over the idle screen until somebody taps it.",
+        "note": "How long silence lasts before the visualiser gives the screen back.",
         "min": 1,
         "max": 60,
         "unit": "min",
@@ -697,9 +721,9 @@
       {
         "key": "skin_corpus",
         "type": "choice",
-        "label": "Skins",
+        "label": "Skin type",
         "marks": "R",
-        "note": "What the visualiser draws from: needles, bars, both together, a turntable or a tape deck, or the skins that show the artist's photos (Fanart). All takes any of them. Which skin, and whether it changes with the track, is the row below.",
+        "note": "The kind of skin the visualiser picks from.",
         "options": [
           "VU meters",
           "Spectrum",
@@ -737,7 +761,11 @@
       {
         "type": "group",
         "label": "Visualiser tweaks",
-        "accent": "#c8a2d8"
+        "accent": "#c8a2d8",
+        "onlyWhen": [
+          "headless",
+          false
+        ]
       },
       {
         "key": "spectrum_smoothing",
@@ -804,7 +832,7 @@
         "type": "choice",
         "label": "Rotation",
         "marks": "N",
-        "note": "Stepped redraws a turning record or reel eight times a second; smooth redraws it every frame it moves. Smooth roughly doubles what the visualiser costs - measured on a turntable skin, 44 % of one processor core stepped against 87 % smooth.",
+        "note": "Stepped redraws a turning record or reel eight times a second. Smooth redraws it every frame it moves, at the expense of more CPU usage.",
         "options": [
           "Stepped",
           "Smooth"
@@ -822,6 +850,10 @@
     "label": "Enrichment",
     "subtitle": "Lyrics and artist info",
     "accent": "#e8a0b4",
+    "onlyWhen": [
+      "headless",
+      false
+    ],
     "rows": [
       {
         "key": "enrichment",
