@@ -574,14 +574,13 @@
             <section class="pane">
               <div>
                 <h1>Set the clock</h1>
-                <p class="sub">The idle screen is mostly a clock, so this is worth getting right.</p>
               </div>
               {#if tzMode === 'auto'}
                 <div class="tz">
                   <div class="grow"><div class="label">{setup?.needed ? 'Read from this phone' : 'The player’s time zone'}</div><div class="tz-name">{tzLabel}</div></div>
                   <div class="clock">{fmt(tick, tz || 'UTC')}</div>
                 </div>
-                <button class="ghost" onclick={() => { tzMode = 'region'; tzRegion = null; }}>Choose by hand</button>
+                <button class="ghost" onclick={() => { tzMode = 'region'; tzRegion = null; }}>Set manually</button>
               {:else if tzMode === 'region'}
                 <div class="list">
                   <div class="back-row"><button class="back" aria-label="Back" onclick={() => (tzMode = 'auto')}><span></span></button><span class="label">Region</span></div>
