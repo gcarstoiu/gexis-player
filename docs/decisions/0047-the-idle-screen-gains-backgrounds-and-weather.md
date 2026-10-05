@@ -293,6 +293,28 @@ beside the data; Pixabay asks that users be shown where the images come from.
 This record does not settle where the credit goes; it settles that the screen
 cannot ship without it.
 
+### 2e. No picture twice until every one has been shown (2026-10-05)
+
+George, 2026-10-05: *"When having animals selected it feels I am getting
+always the same backgrounds, maybe in a different order"*. Measured on
+gexis: one category, a change a minute, and a pool of **one page of 50** -
+52 pictures drawn 230 times in an afternoon - and the page was always the
+top of Pixabay's *popular* order, which moves slowly, so the next day's 50
+were mostly the same. Every category reaches at least 500 pictures with
+our filters (600 different in three pages of 200). His answers, every
+recommendation taken:
+
+- **W1: 200 a page, and a different page each day**, turning through three
+  (600 pictures). Still one request per category per day; Pexels the same
+  way with its own most (80).
+- **W2: no repeat until the pool is spent**, then it starts again - for the
+  online wallpapers and for **Wallpapers on device**. What has been shown,
+  and the day's page, are kept on disk, so a restart neither repeats nor
+  asks Pixabay again (its terms ask for a day's cache; the page was in
+  memory and was asked for again at every restart - eight times that day).
+- **W3: an artist's background at random** among those fanart publishes,
+  not always its first.
+
 ### 3. The timeout is counted from when playback stops
 
 Already true of ADR-0033's definition — idle is *not playing and not touched*.
