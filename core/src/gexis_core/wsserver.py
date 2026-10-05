@@ -563,14 +563,11 @@ class StateServer:
         if background == "Artist pictures":
             return await self._artist_picture()
         if background == "Wallpapers on device":
-            names = self._wallpapers.local_names()
-            if not names:
+            # None twice until every one has been shown, and never the one
+            # already on screen when there is another (ADR-0047 §2e).
+            name = self._wallpapers.next_local(avoid=self._last_background)
+            if name is None:
                 return {"error": "No pictures on this device yet."}
-            # Not the one already on screen, when there is another. A folder
-            # of four and a fifteen-minute rotation would otherwise repeat
-            # about one change in four, which reads as the screen being stuck.
-            choices = [n for n in names if n != self._last_background] or names
-            name = random.choice(choices)
             self._last_background = name
             # **Quoted**: a name can now carry folders, spaces and anything
             # else a person types, and it travels as a URL.

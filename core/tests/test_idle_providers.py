@@ -409,6 +409,77 @@ async def test_the_picture_on_screen_is_not_the_next_one(tmp_path):
         assert first["url"] == again["url"] == "/idle/wallpaper/local/a.png"
 
 
+async def test_no_picture_comes_twice_until_every_one_has_been_shown(tmp_path):
+    """ADR-0047 §2e (George, 2026-10-05: *"always the same backgrounds,
+    maybe in a different order"*): a round through the whole page, then
+    another - never starting with the one just shown."""
+    session = FakeSession(pixabay({"animals": [hit(n, "animals") for n in range(6)]}))
+    source = Wallpapers(session, tmp_path)
+    last = None
+    rounds = []
+    for _ in range(3):
+        seen = []
+        for _ in range(6):
+            answer = await source.next("key", ["Animals"], avoid=last)
+            assert answer["file"] != last
+            last = answer["file"]
+            seen.append(last)
+        rounds.append(seen)
+    assert all(sorted(r) == sorted(f"{n}.jpg" for n in range(6)) for r in rounds), rounds
+
+
+async def test_a_page_of_200_and_a_different_one_each_day(tmp_path, monkeypatch):
+    """ADR-0047 §2e: the most Pixabay gives, turning through three pages by
+    the date; a category without that many pages falls back to its first."""
+    from gexis_core import wallpapers as wp
+
+    session = FakeSession(pixabay({"animals": [hit(1, "animals")]}))
+    days = iter([wp.datetime.date(2026, 10, d) for d in (5, 6, 7)])
+    monkeypatch.setattr(wp.Wallpapers, "_today_page", staticmethod(
+        lambda: 1 + next(days).toordinal() % wp.PAGES))
+    pages = []
+    for d in range(3):
+        await Wallpapers(session, tmp_path / str(d)).next("key", ["Animals"])
+    asked = [p for url, p in session.calls if "/api/" in url]
+    assert {p["per_page"] for p in asked} == {200}
+    assert sorted(p["page"] for p in asked) == [1, 2, 3]
+
+    def short(url, params):
+        if "/api/" in url:
+            return (400, {}) if params["page"] > 1 else (200, {"hits": [hit(9, "animals")]})
+        return (200, b"\xff\xd8")
+    monkeypatch.setattr(wp.Wallpapers, "_today_page", staticmethod(lambda: 3))
+    session = FakeSession(short)
+    assert (await Wallpapers(session, tmp_path / "short").next("key", ["Animals"]))["file"] == "9.jpg"
+    assert [p["page"] for url, p in session.calls if "/api/" in url] == [3, 1]
+
+
+async def test_a_restart_neither_asks_again_nor_starts_the_pictures_over(tmp_path):
+    """ADR-0047 §2e: the page and what was shown are on disk. Pixabay's day
+    of cache held only while the core ran; it was asked again at every
+    restart - eight times on 2026-10-05."""
+    session = FakeSession(pixabay({"animals": [hit(n, "animals") for n in range(4)]}))
+    first = Wallpapers(session, tmp_path)
+    shown = [(await first.next("key", ["Animals"]))["file"] for _ in range(2)]
+    again = Wallpapers(session, tmp_path)
+    rest = [(await again.next("key", ["Animals"]))["file"] for _ in range(2)]
+    assert sum("/api/" in url for url, _ in session.calls) == 1
+    assert sorted(shown + rest) == [f"{n}.jpg" for n in range(4)]
+
+
+async def test_the_devices_own_pictures_come_round_once_each_too(tmp_path):
+    pictures = tmp_path / "pictures"
+    pictures.mkdir()
+    names = [f"{c}.png" for c in "abcde"]
+    for name in names:
+        (pictures / name).write_bytes(b"x")
+    source = Wallpapers(FakeSession(pixabay({})), tmp_path / "cache", local_dir=pictures)
+    first = [source.next_local() for _ in range(5)]
+    assert sorted(first) == names
+    second = [source.next_local(avoid=first[-1]) for _ in range(1)]
+    assert second[0] != first[-1]
+
+
 # ── the routes ────────────────────────────────────────────────────────────
 
 
