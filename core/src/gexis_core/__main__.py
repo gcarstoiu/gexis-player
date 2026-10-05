@@ -1670,7 +1670,8 @@ async def main() -> None:
         # reads the rest as it draws. None of them needs a callback, and all
         # of them are wired, because something reads every one.
         wired={"idle_url": None, "idle_timeout": None, "drawer_on_external": None,
-               "drawer_autohide": None, "phone_touchpad": None, "pointer_speed": None, "listenbrainz_token": None,
+               "drawer_autohide": None, "phone_touchpad": None, "pointer_speed": None,
+               "pointer_style": None, "listenbrainz_token": None,
                "fanart_key": None, "lms_server": None,
                # ADR-0059: read on every ask through `gate` and
                # `confidence_min`, so nothing has to happen on the write.
@@ -1679,6 +1680,9 @@ async def main() -> None:
                "idle_screen": None, "idle_background": None,
                "background_brightness": None, "background_interval": None,
                "wallpaper_key": None, "wallpaper_topics": None,
+               # ADR-0120: read on every fetch. Missed when they were added -
+               # shown and refusing every write until 2026-10-05.
+               "pexels_key": None, "theaudiodb_key": None,
                "idle_weather": None,
                "weather_location": None, "idle_forecast": None,
                "idle_icons": None,
