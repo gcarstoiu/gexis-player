@@ -6,6 +6,8 @@
   data-unwired="<phase>" until the phase that wires them.
 -->
 <script>
+  import { onDestroy, untrack } from 'svelte';
+  import { lyricsAsk, lyricsShown } from '../lib/panelView.js';
   import { parseSynced, sungOf, activeAt, anchorOf } from '../lib/lyrics.js';
   import { pressing } from '../lib/press.svelte.js';
   import SourceMark from '../lib/SourceMark.svelte';
@@ -85,6 +87,20 @@
   // exactly when the strip is on show (George, 2026-09-18: no cover on the
   // strip for a Bluetooth track whose cover had been found).
   let tab = $state('track');
+  //: ADR-0101 as amended 2026-10-05: the phone's Lyrics toggle - applied
+  //: once and cleared - and what this screen shows, told back.
+  $effect(() => {
+    const a = $lyricsAsk;
+    if (!a) return;
+    untrack(() => {
+      tab = a.on ? 'lyrics' : 'track';
+      lyricsAsk.set(null);
+    });
+  });
+  $effect(() => {
+    lyricsShown.set(tab === 'lyrics');
+  });
+  onDestroy(() => lyricsShown.set(false));
   const artistInfo = $derived($trackEnrichment);
 
   const initialsOf = (name) =>

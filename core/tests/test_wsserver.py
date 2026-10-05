@@ -580,6 +580,38 @@ async def test_the_panel_says_whether_its_idle_screen_is_up():
 
 
 @pytest.mark.asyncio
+async def test_the_phones_home_now_playing_and_lyrics_reach_the_panel():
+    """ADR-0101 as amended 2026-10-05: each ask numbered and counted as
+    attention; Now playing, Lyrics and Track refused while nothing plays."""
+    store = StateStore(_caps("lms"))
+    peppy = _Peppy()
+    server = StateServer(store, peppy=peppy)
+    async with TestClient(TestServer(server.make_app())) as client:
+        assert (await client.post("/panel/go/home")).status == 200
+        first = store.state.panel["view_request"]
+        assert first["to"] == "home" and peppy.touches == 1
+        for to in ("now", "lyrics", "track"):
+            assert (await client.post(f"/panel/go/{to}")).status == 409, f"{to} with nothing playing"
+        assert store.state.panel["view_request"] == first
+        store.set_active("lms")
+        assert (await client.post("/panel/go/lyrics")).status == 200
+        ask = store.state.panel["view_request"]
+        assert ask["to"] == "lyrics" and ask["seq"] == first["seq"] + 1
+        assert (await client.post("/panel/go/sideways")).status == 404
+
+
+@pytest.mark.asyncio
+async def test_the_panel_says_whether_its_lyrics_are_shown():
+    store = StateStore(_caps("lms"))
+    server = StateServer(store)
+    async with TestClient(TestServer(server.make_app())) as client:
+        assert (await client.post("/panel/shown", json={"lyrics": True})).status == 200
+        assert store.state.panel["lyrics"] is True and store.state.panel["idle"] is False
+        assert (await client.post("/panel/shown", json={"idle": True, "lyrics": False})).status == 200
+        assert store.state.panel["idle"] is True and store.state.panel["lyrics"] is False
+
+
+@pytest.mark.asyncio
 async def test_the_web_app_manifest_and_icons_are_served_at_the_root(tmp_path):
     """ADR-0102 (a test): a phone installs Settings from these."""
     from gexis_core.wsserver import APP_FILES

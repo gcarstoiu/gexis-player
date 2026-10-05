@@ -63,7 +63,8 @@ class StateStore:
         self._pictures_revision = 0
         self._pairing: dict | None = None
         self._components: dict = {}
-        self._panel: dict = {"visualiser": False, "idle": False, "idle_request": None}
+        self._panel: dict = {"visualiser": False, "idle": False, "idle_request": None,
+                             "lyrics": False, "view_request": None}
         self._setup: dict | None = None
         self._update: dict | None = None
         self._screen_confirm: dict | None = None
@@ -359,6 +360,13 @@ class StateStore:
         seq = ((self._panel.get("idle_request") or {}).get("seq") or 0) + 1
         # `at` so a panel that reloads later does not act on an old ask.
         self.set_panel(idle_request={"show": bool(show), "seq": seq, "at": time.time()})
+
+    def request_view(self, to: str) -> None:
+        """ADR-0101 as amended 2026-10-05: a phone asks the panel for Home,
+        Now playing, or Now playing on its Lyrics or Track tab. Numbered, as
+        the idle ask is."""
+        seq = ((self._panel.get("view_request") or {}).get("seq") or 0) + 1
+        self.set_panel(view_request={"to": to, "seq": seq, "at": time.time()})
 
     def set_update(self, update: dict | None) -> None:
         """ADR-0110: what the updater is doing, on a change only."""

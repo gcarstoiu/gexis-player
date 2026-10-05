@@ -1114,16 +1114,38 @@ class StateServer:
         self._store.request_idle(action == "show")
         return web.json_response({"idle": action})
 
+    #: ADR-0101 as amended: where a phone may send the panel.
+    VIEWS = ("home", "now", "lyrics", "track")
+
+    async def _handle_view_request(self, request: web.Request) -> web.Response:
+        """**ADR-0101 as amended 2026-10-05: Home, Now playing and Lyrics from
+        the phone's sheet.** Attention first, as the idle toggle is; then the
+        ask goes to the panel in the state it listens to. Now Playing exists
+        only while a source is active, so the three that lead there are
+        refused without one."""
+        to = request.match_info["to"]
+        if to not in self.VIEWS:
+            return web.json_response({"error": f"unknown view {to}"}, status=404)
+        if to != "home" and self._store.state.active is None:
+            return web.json_response({"error": "nothing is playing"}, status=409)
+        if self._peppy is not None:
+            self._peppy.on_touch()
+        self._store.request_view(to)
+        return web.json_response({"view": to})
+
     async def _handle_panel_shown(self, request: web.Request) -> web.Response:
-        """ADR-0101: the panel reporting whether its idle screen is up, so the
-        phone's toggle says what the panel shows - whatever changed it."""
+        """ADR-0101: the panel reporting whether its idle screen is up - and,
+        as amended, whether its lyrics are - so the phone's toggles say what
+        the panel shows, whatever changed it."""
         try:
             body = await request.json()
-            idle = bool(body["idle"])
-        except (ValueError, KeyError, TypeError):
-            return web.json_response({"error": 'body must be {"idle": <bool>}'}, status=400)
-        self._store.set_panel(idle=idle)
-        return web.json_response({"idle": idle})
+            shown = {key: bool(body[key]) for key in ("idle", "lyrics") if key in body}
+        except (ValueError, TypeError, AttributeError):
+            shown = {}
+        if not shown:
+            return web.json_response({"error": 'body must be {"idle": <bool>, "lyrics": <bool>}'}, status=400)
+        self._store.set_panel(**shown)
+        return web.json_response(shown)
 
     async def _handle_setup_status(self, request: web.Request) -> web.Response:
         """ADR-0104 §5: whether setup is needed and the setup network's state.
@@ -1683,6 +1705,7 @@ class StateServer:
         # ADR-0101: the phone's idle toggle, and the panel saying what it shows.
         app.router.add_post("/panel/idle/{action}", self._handle_idle_request)
         app.router.add_post("/panel/shown", self._handle_panel_shown)
+        app.router.add_post("/panel/go/{to}", self._handle_view_request)
         app.router.add_post("/peppy/{action}", self._handle_peppy)
         app.router.add_get("/settings", self._handle_settings)
         app.router.add_get("/notices/{name}", self._handle_notice)

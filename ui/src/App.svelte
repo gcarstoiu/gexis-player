@@ -26,6 +26,7 @@
   import { loadSettings, settingValues } from './lib/settings.js';
   import { loadLibraryRoot } from './lib/library.js';
   import { reportTouch, showPeppy, reportPainted, reportShown } from './lib/state.js';
+  import { lyricsAsk, lyricsShown } from './lib/panelView.js';
 
   // ADR-0033: idle is "not playing and not touched", one timeout everywhere.
   // From settings (idle_timeout, minutes); `?idle_seconds=` overrides it for testing.
@@ -243,7 +244,49 @@
   $effect(() => {
     const shown = idle;
     if (surface !== 'panel') return;
-    reportShown(shown).catch(() => {});
+    reportShown({ idle: shown }).catch(() => {});
+  });
+
+  //: **ADR-0101 as amended 2026-10-05: Home, Now playing and Lyrics from the
+  //: phone.** Applied once per ask, as the idle ask is, and attention like a
+  //: touch. Home is the library's root (a fresh one - wherever the library
+  //: had got to), or the root screen with LMS off; the others close what
+  //: covers Now Playing, and Lyrics and Track set its tab.
+  let appliedViewAsk = null;
+  let libraryHome = $state(0);
+  $effect(() => {
+    const ask = $panel.view_request;
+    if (surface !== 'panel' || !ask || ask.seq === appliedViewAsk) return;
+    appliedViewAsk = ask.seq;
+    if (ask.at && Date.now() / 1000 - ask.at > 60) return;
+    untrack(() => {
+      idle = false;
+      askedIdle = false;
+      touches += 1;
+      settingsOpen = false;
+      closeVolume();
+      libraryArtist = null;
+      if (ask.to === 'home') {
+        libraryRequested = !lmsOff;
+        libraryHome += 1;
+        return;
+      }
+      if (!$active) return;
+      libraryRequested = false;
+      if (ask.to === 'lyrics' || ask.to === 'track') lyricsAsk.set({ on: ask.to === 'lyrics' });
+    });
+  });
+
+  let reportedLyrics = null;
+  //: ...and whether the lyrics are what the glass shows: Now Playing up,
+  //: nothing over it, its lyrics on.
+  $effect(() => {
+    const showing =
+      $lyricsShown && !!$active && !libraryOpen && !settingsOpen && !idle && !$panel.visualiser;
+    // The state this reads arrives every second; the core hears a change.
+    if (surface !== 'panel' || showing === reportedLyrics) return;
+    reportedLyrics = showing;
+    reportShown({ lyrics: showing }).catch(() => (reportedLyrics = null));
   });
 
   // The library is a layer over now playing (source/Now Playing.dc.html). It
@@ -469,6 +512,7 @@
       {#if screen.family === 'bar'}
       <!-- ADR-0109, Bar family: the library as strips and a rail, with
            Library's props. -->
+      {#key libraryHome}
       <BarLibrary
         active={$active}
         metadata={$metadata}
@@ -480,7 +524,9 @@
         onsettings={openSettings}
         onvolume={openVolume}
       />
+      {/key}
       {:else}
+      {#key libraryHome}
       <Library
         active={$active}
         metadata={$metadata}
@@ -492,6 +538,7 @@
         onsettings={openSettings}
         onvolume={openVolume}
       />
+      {/key}
       {/if}
     </div>
   {:else if $active}

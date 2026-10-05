@@ -9,7 +9,7 @@
   that its app keeps a volume of its own.
 -->
 <script>
-  import { active, metadata, volume, fixedOutput, meters, panel, setVolume, showPeppy, hidePeppy, requestIdle } from '../lib/state.js';
+  import { active, metadata, volume, fixedOutput, meters, panel, setVolume, showPeppy, hidePeppy, requestIdle, goTo } from '../lib/state.js';
   import SourceMark from '../lib/SourceMark.svelte';
   import { settingValues } from '../lib/settings.js';
   import { openTouchpad } from '../lib/touchpad.js';
@@ -306,6 +306,16 @@
       say(`Visualiser: ${err.message}`);
     }
   }
+  //: ADR-0101 as amended 2026-10-05: where the panel goes. Now playing and
+  //: Lyrics need something playing (N2); Home is always there.
+  async function go(to, what) {
+    try {
+      await goTo(to);
+    } catch (err) {
+      say(`${what}: ${err.message}`);
+    }
+  }
+
   async function toggleIdle() {
     try {
       await requestIdle(!$panel.idle);
@@ -417,6 +427,31 @@
       {#if open}<span>Idle screen</span>{/if}
     </button>
   </div>
+
+  {#if open}
+    <!-- ADR-0101 as amended 2026-10-05: the panel's screens, from here. -->
+    <div class="mini__row mini__nav">
+      <button class="mini__toggle" type="button" onclick={() => go('home', 'Home')}>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 11.5 12 5l8 6.5M6.5 10v9h11v-9" /></svg>
+        <span>Home</span>
+      </button>
+      <button class="mini__toggle" type="button" disabled={!$active} onclick={() => go('now', 'Now playing')}>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8" /><path d="M10.5 9v6l4.5-3z" /></svg>
+        <span>Now playing</span>
+      </button>
+      <button
+        class="mini__toggle"
+        class:is-on={!!$active && $panel.lyrics}
+        type="button"
+        disabled={!$active}
+        aria-pressed={!!$active && !!$panel.lyrics}
+        onclick={() => go($panel.lyrics ? 'track' : 'lyrics', 'Lyrics')}
+      >
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 7h14M5 12h9M5 17h11" /></svg>
+        <span>Lyrics</span>
+      </button>
+    </div>
+  {/if}
 
   {#if note}<div class="mini__note" role="status">{note}</div>{/if}
 </div>
@@ -550,6 +585,13 @@
     font-size: var(--t-meta);
     cursor: pointer;
     flex: none;
+  }
+  .mini__toggle:disabled {
+    opacity: 0.38;
+    cursor: default;
+  }
+  .mini__nav {
+    flex-wrap: wrap;
   }
   .mini__toggle.is-on {
     background: var(--src-accent);
