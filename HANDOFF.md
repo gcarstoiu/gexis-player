@@ -2,6 +2,13 @@
 
 Last updated: 2026-10-05 (on R2D2).
 
+**0.9.0 released 2026-10-05 on Testing (serial 23), from `phase-13d`** -
+13b's work, 13d's DAC work (Phase 13d stays open: the board tests are
+still George's), ADR-0119 (Plexamp claimed from Settings; gexis-plexamp
+0.4.0 published and pinned) and ADR-0120 (backgrounds). The PR into `main`
+waits for George. The image is `image/deploy/2026-10-05-gexis-player-v0.9.0.img`
+in the main checkout.
+
 ## Start here
 
 **Work continues on `phase-13b` in the main checkout, and Phase 13d in its
