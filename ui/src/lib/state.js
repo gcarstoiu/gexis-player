@@ -104,7 +104,7 @@ export const pairing = derived(playback, ($s) => $s?.pairing ?? null);
 // ADR-0100 as amended: what each plugin's download is doing, live.
 export const components = derived(playback, ($s) => $s?.components ?? {});
 //: ADR-0101: what the panel shows, and the phone's last idle request.
-export const panel = derived(playback, ($s) => $s?.panel ?? { visualiser: false, idle: false, idle_request: null });
+export const panel = derived(playback, ($s) => $s?.panel ?? { visualiser: false, idle: false, idle_request: null, lyrics: false, view_request: null });
 
 /** ADR-0104: first-boot setup and the setup network, or null before the core
  *  has decided. Never carries the password: the panel asks `/setup/status`
@@ -158,7 +158,10 @@ export const showPeppy = () => post('/peppy/show');
 export const hidePeppy = () => post('/peppy/hide');
 //: ADR-0101: the phone's idle toggle, and the panel saying what it shows.
 export const requestIdle = (show) => post(`/panel/idle/${show ? 'show' : 'hide'}`);
-export const reportShown = (idle) => post('/panel/shown', { idle });
+// `{ idle }`, `{ lyrics }` or both: what the panel shows (ADR-0101).
+export const reportShown = (shown) => post('/panel/shown', shown);
+// ADR-0101 as amended 2026-10-05: 'home', 'now', 'lyrics' or 'track'.
+export const goTo = (to) => post(`/panel/go/${to}`);
 
 /** Accept or reject the open pairing request. A 409 means the window closed
  *  while the finger was moving - the answer did not land, and the frame has
